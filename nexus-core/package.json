@@ -10,7 +10,9 @@
     "seed": "ts-node src/scripts/seed.ts",
     "seed:reset": "ts-node src/scripts/seed.ts --reset",
     "turn": "node turn-server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
@@ -37,8 +39,10 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.2.3",
     "@types/sanitize-html": "^2.16.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "node-turn": "^0.0.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
