@@ -9,6 +9,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [0.3.1] — 2026-02-27
+
+### Fixed
+- **Screen sharing in voice channels** — the feature existed but did nothing (video was only shown locally, never sent to peers)
+  - `voice.ts`: `startScreenShare()` now adds the video track to all active `RTCPeerConnection`s and triggers renegotiation (`createOffer` → `voice:offer`) for each peer
+  - `voice.ts`: `stopScreenShare()` removes video senders and renegotiates to signal end of share
+  - `voice.ts`: `ontrack` handler now splits audio/video — video tracks go to `remoteScreenStore`
+  - `MediaCenter.svelte`: rewritten to use `startScreenShare`/`stopScreenShare` from `voice.ts`
+  - Remote screens visible inside MediaCenter panel (with username + live badge)
+  - Clip recording (rolling 60s) now connected to the actual shared stream
+
+---
+
 ## [0.3.0] — 2026-02-27
 
 ### Added
