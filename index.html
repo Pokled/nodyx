@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nexus — Go Nexus</title>
-<meta name="description" content="Le successeur de Discord. Forum, chat, vocal, IA locale, P2P. Sans GAFA. Sans surveillance. Open source. Go Nexus.">
+<meta name="description" content="Le successeur des géants. Forum, chat, vocal, IA locale, réseau P2P. Open source, indépendant, souverain.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --void: #050508;
@@ -20,8 +20,8 @@
     --cyan-dim: #0e7490;
     --green: #10b981;
     --text: #e2e8f0;
-    --text-dim: #64748b;
-    --text-muted: #334155;
+    --text-dim: #94a3b8;
+    --text-muted: #475569;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,6 +40,7 @@
     background: var(--accent-glow); border-radius: 50%;
     pointer-events: none; z-index: 9999;
     transition: transform 0.1s; mix-blend-mode: screen;
+    box-shadow: 0 0 10px var(--accent-glow);
   }
   .cursor-ring {
     position: fixed; width: 32px; height: 32px;
@@ -202,9 +203,8 @@
   }
   .btn-secondary:hover { border-color: var(--accent); color: var(--accent-glow); }
 
-  /* EVOLUTION BAR */
   .evolution-bar {
-    position: absolute; bottom: 48px; left: 37%; transform: translateX(-50%);
+    position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
     display: flex; align-items: center; gap: 0;
     opacity: 0; animation: fadeUp 0.8s ease forwards 1.1s;
     border: 1px solid var(--border); overflow: hidden;
@@ -231,7 +231,6 @@
     background: linear-gradient(135deg, var(--accent-bright), var(--cyan));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
-  .evo-arrow { color: var(--text-muted); padding: 0 4px; font-size: 12px; }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
 
@@ -343,7 +342,6 @@
     font-family: 'Space Mono', monospace; font-size: 10px;
     color: var(--accent-bright); min-width: 24px; margin-top: 2px;
   }
-  .chain-content {}
   .chain-title {
     font-family: 'Syne', sans-serif; font-weight: 700;
     font-size: 15px; color: white; margin-bottom: 6px;
@@ -549,10 +547,21 @@
   .reveal { opacity: 0; transform: translateY(32px); transition: all 0.7s ease; }
   .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  /* Divider */
   .full-divider {
     border: none; border-top: 1px solid var(--border);
     margin: 0; position: relative; z-index: 1;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    nav { padding: 20px 24px; }
+    .nav-links { gap: 20px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .audio-grid { grid-template-columns: 1fr; gap: 40px; }
+    .innovations-grid { grid-template-columns: 1fr; }
+    .ai-grid { grid-template-columns: 1fr; }
+    .manifesto-grid { grid-template-columns: 1fr; gap: 40px; }
+    .evolution-bar { position: relative; bottom: auto; margin-top: 40px; }
   }
 </style>
 </head>
@@ -571,9 +580,9 @@
     <li><a href="#audio">Audio</a></li>
     <li><a href="#ai">IA Locale</a></li>
     <li><a href="#manifesto">Manifeste</a></li>
-    <li><a href="https://github.com" target="_blank">GitHub ↗</a></li>
+    <li><a href="https://github.com/Pokled/Nexus" target="_blank">GitHub ↗</a></li>
   </ul>
-  <a href="#waitlist" class="nav-cta"><span>Go Nexus →</span></a>
+  <a href="https://pokled.ddns.net" class="nav-cta" target="_blank"><span>Lancer l'app →</span></a>
 </nav>
 
 <!-- HERO -->
@@ -597,17 +606,17 @@
   </p>
 
   <p class="hero-desc">
-    Le premier réseau communautaire avec <strong>IA locale</strong>, <strong>audio studio</strong>
-    et réseau <strong>P2P insubmersible</strong>. Open source, sans GAFA,
-    sans surveillance. Vous l'installez, vous le possédez.
+    Le premier réseau communautaire alliant <strong>IA locale</strong>, <strong>audio studio</strong>
+    et résilience <strong>P2P</strong>. <strong>Open source, indépendant, souverain.</strong>
+    Vous l'installez, vous le possédez.
   </p>
 
   <div class="hero-actions">
-    <a href="#waitlist" class="btn-primary">
+    <a href="https://pokled.ddns.net" class="btn-primary" target="_blank">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      Rejoindre la liste d'attente
+      Découvrir l'alpha
     </a>
-    <a href="https://github.com" class="btn-secondary" target="_blank">
+    <a href="https://github.com/Pokled/Nexus" class="btn-secondary" target="_blank">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
       Code source
     </a>
@@ -660,7 +669,7 @@
   <div class="reveal">
     <div class="section-label">Fonctionnalités</div>
     <h2 class="section-title">Un lieu de vie,<br>pas un outil</h2>
-    <p class="section-desc">On ne "consomme" pas Nexus, on y habite. Forum, chat, vocal, IA — la suite complète, dans un seul exécutable.</p>
+    <p class="section-desc">On ne "consomme" pas Nexus, on y habite. Forum, chat, vocal, IA — la suite complète, dans un seul écosystème.</p>
   </div>
 
   <div class="features-grid reveal">
@@ -677,16 +686,16 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
       </div>
       <div class="feature-title">Chat temps réel</div>
-      <div class="feature-desc">Salons instantanés. Mentions, réactions, historique. La réaction rapide de votre communauté, sans quitter Nexus.</div>
-      <span class="feature-tag soon">Phase 2</span>
+      <div class="feature-desc">Salons instantanés. Mentions, réactions, historique, et même des bots communautaires. La réaction rapide, sans quitter Nexus.</div>
+      <span class="feature-tag">Disponible</span>
     </div>
     <div class="feature-card">
       <div class="feature-icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
       </div>
       <div class="feature-title">Salons vocaux</div>
-      <div class="feature-desc">Tables rondes visuelles pour les petits groupes. Vue scène pour les grandes assemblées. Audio 3D spatial. WebRTC P2P direct.</div>
-      <span class="feature-tag soon">Phase 2</span>
+      <div class="feature-desc">Tables rondes visuelles pour petits groupes. Vue scène pour les grandes assemblées. Audio 3D spatial et diagnostic réseau intégré.</div>
+      <span class="feature-tag">Disponible</span>
     </div>
     <div class="feature-card">
       <div class="feature-icon">
@@ -701,8 +710,8 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
       </div>
       <div class="feature-title">Moddable à l'infini</div>
-      <div class="feature-desc">Un plugin = un dossier. Themes, bots, intégrations. La communauté construit sur Nexus sans toucher au core.</div>
-      <span class="feature-tag soon">Phase 2</span>
+      <div class="feature-desc">Un plugin = un dossier. Thèmes, bots, intégrations. La communauté construit sur Nexus sans toucher au core.</div>
+      <span class="feature-tag">Disponible</span>
     </div>
     <div class="feature-card">
       <div class="feature-icon">
@@ -772,7 +781,7 @@
             <div class="chain-num">🎵</div>
             <div class="chain-content">
               <div class="chain-title">Platine P2P synchronisée</div>
-              <div class="chain-desc">MP3, FLAC ou flux web en synchronisation millimètrée entre tous les participants. La musique n'est plus un bot, c'est un membre.</div>
+              <div class="chain-desc">MP3, FLAC ou flux web en synchronisation millimètrée entre tous les participants. La musique devient un membre du groupe.</div>
               <span class="chain-tech">P2P · NTP-like sync</span>
             </div>
           </div>
@@ -799,7 +808,7 @@
     <!-- INNOVATIONS -->
     <div style="margin-top:80px" class="reveal">
       <div class="section-label">Innovations</div>
-      <h3 style="font-family:'Syne',sans-serif;font-weight:800;font-size:36px;letter-spacing:-1px;color:white;margin-bottom:48px">Les idées qui n'existent<br>nulle part ailleurs</h3>
+      <h3 style="font-family:'Syne',sans-serif;font-weight:800;font-size:36px;letter-spacing:-1px;color:white;margin-bottom:48px">Des idées qui n'existent<br>nulle part ailleurs</h3>
     </div>
 
     <div class="innovations-grid reveal">
@@ -818,7 +827,7 @@
       <div class="innovation-card">
         <span class="innovation-emoji">🌑</span>
         <div class="innovation-title">Zones d'Ombre</div>
-        <div class="innovation-desc">Dans un grand salon, faites glisser votre avatar contre un autre pour créer une bulle privée. Vous vous entendez à 100%, le reste du salon devient un murmure à 30%.</div>
+        <div class="innovation-desc">Dans un grand salon, faites glisser votre avatar contre un autre pour créer une bulle privée. Vous vous entendez à 100%, le reste devient un murmure à 30%.</div>
         <div class="innovation-effect">"Les apartés, sans quitter la pièce."</div>
       </div>
       <div class="innovation-card">
@@ -853,7 +862,7 @@
         <div class="ai-card">
           <span class="ai-card-icon">🛡️</span>
           <div class="ai-card-title">Modération Augmentée</div>
-          <div class="ai-card-desc">Une IA qui aide les admins à maintenir une ambiance saine, sans armée de modérateurs humains. Détection de contenu toxique, suggestions d'action, résumés de conflits.</div>
+          <div class="ai-card-desc">Une IA qui aide les admins à maintenir une ambiance saine. Détection de contenu toxique (Nexus Guard Protocol), suggestions d'action, résumés de conflits.</div>
           <span class="ai-pill">Local · Privé</span>
         </div>
       </div>
@@ -868,7 +877,7 @@
           </div>
           <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
             <div style="color:var(--green);font-size:13px;min-width:16px">✓</div>
-            <div style="font-size:14px;color:var(--text-dim)"><strong style="color:var(--text);font-weight:400">Zéro coût d'API</strong> — Pas d'abonnement OpenAI, Claude, ou autre</div>
+            <div style="font-size:14px;color:var(--text-dim)"><strong style="color:var(--text);font-weight:400">Zéro coût d'API</strong> — Pas d'abonnement à des services cloud</div>
           </div>
           <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
             <div style="color:var(--green);font-size:13px;min-width:16px">✓</div>
@@ -897,9 +906,9 @@
   <div class="manifesto-grid reveal">
     <div>
       <div class="section-label">Manifeste</div>
-      <h2 class="section-title">Nous avons<br>des principes.<br>Pas des excuses.</h2>
-      <p class="section-desc" style="margin-bottom:32px">Ces règles sont inscrites dans la licence. Elles ne peuvent être changées par personne — ni par nous, ni par un investisseur, ni par une acquisition.</p>
-      <p style="font-family:'Space Mono',monospace;font-size:12px;color:var(--accent-bright);margin-bottom:12px">"On ne demande pas la permission aux GAFA pour exister."</p>
+      <h2 class="section-title">Bâtir une alternative,<br>pas juste un outil</h2>
+      <p class="section-desc" style="margin-bottom:32px">Ces règles sont inscrites dans la licence. Elles ne peuvent être changées par personne — ni par nous, ni par un investisseur.</p>
+      <p style="font-family:'Space Mono',monospace;font-size:12px;color:var(--accent-bright);margin-bottom:12px">"Nous ne demandons la permission à personne pour exister."</p>
       <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted)">"Fork us if we betray you."</p>
     </div>
     <div class="manifesto-items">
@@ -962,7 +971,7 @@
 
   <div style="display:flex;gap:0;justify-content:center;border:1px solid var(--border);max-width:600px;margin:0 auto" class="reveal">
     <div style="padding:32px 40px;text-align:center;border-right:1px solid var(--border);flex:1">
-      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:36px;color:white">15€</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:36px;color:white">0€</div>
       <div style="font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-top:6px">Par an, domaine inclus</div>
     </div>
     <div style="padding:32px 40px;text-align:center;border-right:1px solid var(--border);flex:1">
@@ -982,25 +991,28 @@
 <div class="waitlist-section" id="waitlist">
   <div class="waitlist-box reveal">
     <h2 class="waitlist-title">Go Nexus.</h2>
-    <p class="waitlist-sub">L'alpha arrive. Soyez parmi les premiers à construire votre communauté.</p>
-    <form class="waitlist-form" onsubmit="handleSubmit(event)">
-      <input type="email" class="waitlist-input" placeholder="votre@email.com" required id="emailInput">
-      <button type="submit" class="waitlist-submit" id="submitBtn">Rejoindre →</button>
-    </form>
-    <p id="successMsg" style="display:none;margin-top:24px;font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">✓ Vous êtes sur la liste. On vous contacte en premier.</p>
-    <p style="margin-top:24px;font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted)">Pas de spam. Pas de revente. Juste Nexus.</p>
+    <p class="waitlist-sub">L'alpha est en ligne. Venez construire votre communauté dès maintenant.</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <a href="https://pokled.ddns.net" class="btn-primary" target="_blank">
+        Accéder à l'application
+      </a>
+      <a href="https://github.com/Pokled/Nexus" class="btn-secondary" target="_blank">
+        Voir sur GitHub
+      </a>
+    </div>
+    <p style="margin-top:32px;font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted)">Pas de piège. Pas de SaaS. Juste du logiciel libre.</p>
   </div>
 </div>
 
 <footer>
   <div class="footer-logo">NEXUS</div>
   <ul class="footer-links">
-    <li><a href="#">Manifeste</a></li>
-    <li><a href="#">Documentation</a></li>
-    <li><a href="https://github.com" target="_blank">GitHub</a></li>
-    <li><a href="#">AGPL-3.0</a></li>
+    <li><a href="#manifesto">Manifeste</a></li>
+    <li><a href="https://pokled.ddns.net" target="_blank">L'application</a></li>
+    <li><a href="https://github.com/Pokled/Nexus" target="_blank">GitHub</a></li>
+    <li><a href="https://github.com/Pokled/Nexus/blob/main/LICENSE" target="_blank">AGPL-3.0</a></li>
   </ul>
-  <div class="footer-copy">© 2026 — "Go Nexus."</div>
+  <div class="footer-copy">© 2026 — "Le réseau, ce sont les gens."</div>
 </footer>
 
 <script>
@@ -1035,14 +1047,16 @@
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  // Form
-  function handleSubmit(e) {
-    e.preventDefault();
-    document.getElementById('submitBtn').textContent = '✓ Dans la liste';
-    document.getElementById('submitBtn').style.background = '#059669';
-    document.getElementById('emailInput').disabled = true;
-    document.getElementById('successMsg').style.display = 'block';
-  }
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if(target) {
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
 </script>
 </body>
 </html>
