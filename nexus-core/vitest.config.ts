@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
+    typecheck: { tsconfig: './tsconfig.test.json' },
     globals: true,
     setupFiles: ['./src/tests/setup.ts'],
     include: ['src/tests/**/*.test.ts'],

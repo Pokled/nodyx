@@ -139,7 +139,6 @@ app.get('/threads', {
     SELECT 
       t.*,
       c.name as category_name,
-      c.slug as category_slug,
       c.description as category_description,
       u.username as author_username,
       u.avatar as author_avatar,
@@ -169,7 +168,7 @@ app.get('/threads', {
   const [categoryInfo] = rows.length > 0 ? [{
     id: category_id,
     name: rows[0].category_name || 'Discussions',
-    slug: rows[0].category_slug || category_id,
+    slug: category_id,
     description: rows[0].category_description || null
   }] : [{
     id: category_id,
