@@ -259,6 +259,13 @@ export function registerSocketIO(server: Server): void {
         // ignore
       }
     })
+    // ── voice:request_snapshot — re-envoie le snapshot des canaux vocaux ────────
+    // Utile quand le client navigue vers la page chat alors que le socket était
+    // déjà connecté (le snapshot initial a été envoyé avant que le listener soit monté).
+    socket.on('voice:request_snapshot', async () => {
+      await sendVoiceSnapshot(socket, server)
+    })
+
     // ── Voice (WebRTC signaling) ───────────────────────────────────────────────
     registerVoiceHandlers(socket, server)
   })

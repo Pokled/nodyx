@@ -7,6 +7,7 @@
         localScreenStore,
         remoteScreenStore,
         voiceStore,
+        type DisplaySurface,
     } from '$lib/voice'
 
     // ── Derived state ──────────────────────────────────────────────
@@ -95,6 +96,13 @@
             destroy()              { node.srcObject = null },
         }
     }
+
+    // ── Source picker ─────────────────────────────────────────────
+    const SOURCES: { surface: DisplaySurface; icon: string; label: string; desc: string }[] = [
+        { surface: 'monitor', icon: '🖥️', label: 'Écran entier',     desc: 'Tout votre bureau' },
+        { surface: 'window',  icon: '🪟',  label: 'Application',      desc: 'Une fenêtre ouverte' },
+        { surface: 'browser', icon: '🌐',  label: 'Onglet',           desc: 'Un onglet navigateur' },
+    ]
 </script>
 
 <div class="p-4 space-y-4">
@@ -106,14 +114,7 @@
             Media Hub
         </h3>
 
-        {#if !isSharing}
-            <button
-                onclick={startScreenShare}
-                class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-1.5"
-            >
-                🖥️ Partager
-            </button>
-        {:else}
+        {#if isSharing}
             <button
                 onclick={stopScreenShare}
                 class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 animate-pulse"
@@ -123,15 +124,41 @@
         {/if}
     </div>
 
-    <!-- ── Local screen preview ─────────────────────────────────── -->
-    <div class="relative bg-black rounded-xl overflow-hidden border border-gray-700 aspect-video group">
-        <video
-            bind:this={localVideoElem}
-            autoplay playsinline muted
-            class="w-full h-full object-contain"
-        ></video>
+    {#if !isSharing}
 
-        {#if localStream}
+        <!-- ── Picker source ─────────────────────────────────── -->
+        <div>
+            <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">
+                Que souhaitez-vous partager ?
+            </p>
+            <div class="grid grid-cols-3 gap-2">
+                {#each SOURCES as src}
+                    <button
+                        onclick={() => startScreenShare(src.surface)}
+                        class="flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-700
+                               bg-gray-800/60 hover:bg-indigo-600/20 hover:border-indigo-500/60
+                               transition-all duration-200 group/src text-center cursor-pointer"
+                    >
+                        <span class="text-2xl group-hover/src:scale-110 transition-transform duration-200 leading-none">
+                            {src.icon}
+                        </span>
+                        <span class="text-xs font-semibold text-gray-200 leading-tight">{src.label}</span>
+                        <span class="text-[10px] text-gray-500 leading-tight">{src.desc}</span>
+                    </button>
+                {/each}
+            </div>
+        </div>
+
+    {:else}
+
+        <!-- ── Live preview ───────────────────────────────────── -->
+        <div class="relative bg-black rounded-xl overflow-hidden border border-gray-700 aspect-video group">
+            <video
+                bind:this={localVideoElem}
+                autoplay playsinline muted
+                class="w-full h-full object-contain"
+            ></video>
+
             <!-- Controls on hover -->
             <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <button
@@ -145,20 +172,15 @@
                     title="Sauvegarder le dernier clip (60s)"
                 >🎞️</button>
             </div>
+
             <!-- Recording indicator -->
             <div class="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded-full">
                 <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
                 <span class="text-[10px] text-red-400 font-bold">EN DIRECT</span>
             </div>
-        {:else}
-            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-600">
-                <span class="text-4xl opacity-50">🖥️</span>
-                <p class="text-xs text-center px-4">
-                    Cliquez sur <strong class="text-gray-400">Partager</strong> pour diffuser votre écran aux participants
-                </p>
-            </div>
-        {/if}
-    </div>
+        </div>
+
+    {/if}
 
     <!-- ── Remote screens ──────────────────────────────────────── -->
     {#if remoteScreens.size > 0}

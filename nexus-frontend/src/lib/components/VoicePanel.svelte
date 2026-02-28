@@ -6,10 +6,12 @@
         type VoicePeer, type PeerStats, type NetQuality,
     } from '$lib/voice'
 
-    import MediaCenter from './MediaCenter.svelte';
-    import { onMount } from 'svelte';
-    
-    let showMediaHub = $state(false);
+    import MediaCenter    from './MediaCenter.svelte'
+    import VoiceSettings from './VoiceSettings.svelte'
+    import { onMount } from 'svelte'
+
+    let showMediaHub      = $state(false)
+    let showVoiceSettings = $state(false)
 
     const vs       = $derived($voiceStore)
     const peers    = $derived(vs.peers)
@@ -322,10 +324,10 @@
                 <div class="absolute -inset-1 bg-gradient-to-r from-indigo-600/20 to-violet-600/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
                 <!-- Barre principale -->
-                <div class='relative flex items-center gap-3 rounded-xl 
+                <div class='relative flex items-center gap-3 rounded-xl
                             bg-gradient-to-r from-gray-900/95 via-gray-900/95 to-gray-900/95
-                            border border-indigo-500/30 shadow-2xl backdrop-blur-md 
-                            px-4 py-3 overflow-hidden
+                            border border-indigo-500/30 shadow-2xl backdrop-blur-md
+                            px-4 py-3
                             transition-all duration-300 hover:border-indigo-500/50'>
                     
                     <!-- Effets de lumière animés -->
@@ -449,42 +451,17 @@
                     <div class='flex items-center gap-1 shrink-0' style="z-index: 100;">
 
                         <!-- Media Center -->
-                        <div class="relative" style="z-index: 101;">
-                            <button 
-                                onclick={() => showMediaHub = !showMediaHub}
-                                class='p-2 rounded-lg transition-all duration-200 transform hover:scale-110 active:scale-95 relative
-                                       {showMediaHub 
-                                           ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/50 ring-2 ring-indigo-400/50' 
-                                           : 'bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 hover:shadow-lg hover:shadow-indigo-500/20 border border-gray-700 hover:border-indigo-500/30'}'
-                                title="Partage d'écran & Capture"
-                                style="pointer-events: auto; position: relative; z-index: 102;"
-                            >
-                                <span class="text-sm block {showMediaHub ? 'animate-pulse' : ''}">🖥️</span>
-                            </button>
-
-                            {#if showMediaHub}
-                                <div class="absolute bottom-full mb-4 right-0 w-[400px] z-[200] 
-                                            animate-in fade-in slide-in-from-bottom-4 duration-300"
-                                     style="pointer-events: auto;">
-                                    <div class="relative bg-gradient-to-b from-gray-900 to-gray-950 
-                                                border border-indigo-500/30 rounded-2xl shadow-2xl shadow-indigo-500/20 
-                                                overflow-hidden backdrop-blur-md">
-                                        <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
-                                        <MediaCenter />
-                                        <button 
-                                            onclick={() => showMediaHub = false}
-                                            class="absolute top-4 right-4 text-gray-500 hover:text-white 
-                                                   bg-black/40 w-7 h-7 rounded-full flex items-center justify-center 
-                                                   backdrop-blur-sm border border-gray-700 hover:border-indigo-500/50
-                                                   transition-all duration-200 hover:scale-110"
-                                            style="pointer-events: auto; z-index: 201;"
-                                        >
-                                            <span class="text-sm">✕</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            {/if}
-                        </div>
+                        <button
+                            onclick={() => showMediaHub = !showMediaHub}
+                            class='p-2 rounded-lg transition-all duration-200 transform hover:scale-110 active:scale-95 relative
+                                   {showMediaHub
+                                       ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/50 ring-2 ring-indigo-400/50'
+                                       : 'bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 hover:shadow-lg hover:shadow-indigo-500/20 border border-gray-700 hover:border-indigo-500/30'}'
+                            title="Partage d'écran & Capture"
+                            style="pointer-events: auto; position: relative; z-index: 102;"
+                        >
+                            <span class="text-sm block {showMediaHub ? 'animate-pulse' : ''}">🖥️</span>
+                        </button>
 
                         <!-- Mute -->
                         <button
@@ -564,6 +541,21 @@
                             </button>
                         {/if}
 
+                        <!-- ⚙️ Paramètres son -->
+                        <button
+                            onclick={() => { showVoiceSettings = !showVoiceSettings; showMediaHub = false }}
+                            class='px-2 py-1.5 rounded-lg transition-all duration-200 transform hover:scale-110 active:scale-95 relative
+                                   flex items-center gap-1
+                                   {showVoiceSettings
+                                       ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-500/50 ring-2 ring-amber-400/50"
+                                       : "bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-700 hover:border-amber-500/30"}'
+                            title="Paramètres son & micro"
+                            style="pointer-events: auto; position: relative; z-index: 102;"
+                        >
+                            <span class="text-base leading-none">⚙️</span>
+                            <span class="text-[11px] font-medium">Son</span>
+                        </button>
+
                         <!-- Séparateur -->
                         <div class='w-px h-6 bg-gradient-to-b from-transparent via-gray-700 to-transparent mx-1' style="pointer-events: none;"></div>
 
@@ -588,6 +580,58 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- ── MediaCenter popup ─────────────────────────────────────────
+                     IMPORTANT : placé ICI, en dehors du div overflow-hidden de la
+                     barre principale, mais toujours à l'intérieur du div.relative
+                     parent, pour que absolute bottom-full soit visible.
+                ─────────────────────────────────────────────────────────────── -->
+                {#if showMediaHub}
+                    <div class="absolute bottom-full mb-2 right-0 w-[400px] z-[200]
+                                animate-in fade-in slide-in-from-bottom-4 duration-300"
+                         style="pointer-events: auto;">
+                        <div class="relative bg-gradient-to-b from-gray-900 to-gray-950
+                                    border border-indigo-500/30 rounded-2xl shadow-2xl shadow-indigo-500/20
+                                    overflow-hidden backdrop-blur-md">
+                            <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
+                            <MediaCenter />
+                            <button
+                                onclick={() => showMediaHub = false}
+                                class="absolute top-4 right-4 text-gray-500 hover:text-white
+                                       bg-black/40 w-7 h-7 rounded-full flex items-center justify-center
+                                       backdrop-blur-sm border border-gray-700 hover:border-indigo-500/50
+                                       transition-all duration-200 hover:scale-110"
+                                style="pointer-events: auto; z-index: 201;"
+                            >
+                                <span class="text-sm">✕</span>
+                            </button>
+                        </div>
+                    </div>
+                {/if}
+
+                <!-- ── VoiceSettings popup ────────────────────────────────────── -->
+                {#if showVoiceSettings}
+                    <div class="absolute bottom-full mb-2 right-0 w-[340px] z-[200]
+                                animate-in fade-in slide-in-from-bottom-4 duration-300"
+                         style="pointer-events: auto;">
+                        <div class="relative bg-gradient-to-b from-gray-900 to-gray-950
+                                    border border-amber-500/30 rounded-2xl shadow-2xl shadow-amber-500/10
+                                    overflow-hidden backdrop-blur-md">
+                            <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
+                            <VoiceSettings />
+                            <button
+                                onclick={() => showVoiceSettings = false}
+                                class="absolute top-4 right-4 text-gray-500 hover:text-white
+                                       bg-black/40 w-7 h-7 rounded-full flex items-center justify-center
+                                       backdrop-blur-sm border border-gray-700 hover:border-amber-500/50
+                                       transition-all duration-200 hover:scale-110"
+                                style="pointer-events: auto; z-index: 201;"
+                            >
+                                <span class="text-sm">✕</span>
+                            </button>
+                        </div>
+                    </div>
+                {/if}
             </div>
         </div>
     </div>

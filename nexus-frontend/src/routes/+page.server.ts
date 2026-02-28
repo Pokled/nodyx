@@ -10,14 +10,28 @@ export const load: PageServerLoad = async ({ fetch }) => {
 	]);
 
 	const [infoJson, catJson, threadsJson, featuredJson] = await Promise.all([
-		infoRes.json(),
-		catRes.json(),
-		threadsRes.json(),
-		featuredRes.json(),
+		infoRes.ok  ? infoRes.json()     : {},
+		catRes.ok   ? catRes.json()      : {},
+		threadsRes.ok  ? threadsRes.json()  : {},
+		featuredRes.ok ? featuredRes.json() : {},
 	]);
 
 	return {
-		instance:   infoJson,
+		// Normalisation défensive : si l'API est down au démarrage, on ne crashe pas
+		instance: {
+			name:         infoJson.name         ?? 'Nexus',
+			description:  infoJson.description  ?? '',
+			language:     infoJson.language      ?? 'fr',
+			country:      infoJson.country       ?? '',
+			slug:         infoJson.slug          ?? '',
+			community_id: infoJson.community_id  ?? null,
+			member_count: infoJson.member_count  ?? 0,
+			online_count: infoJson.online_count  ?? 0,
+			thread_count: infoJson.thread_count  ?? 0,
+			post_count:   infoJson.post_count    ?? 0,
+			logo_url:     infoJson.logo_url      ?? null,
+			banner_url:   infoJson.banner_url    ?? null,
+		},
 		categories: catJson.categories      ?? [],
 		threads:    threadsJson.threads      ?? [],
 		articles:   featuredJson.articles    ?? [],

@@ -212,6 +212,11 @@
 			voiceChannelMembers = { ...voiceChannelMembers, [channelId]: members };
 		});
 
+		// Demander un snapshot vocal immédiatement après avoir branché le listener.
+		// Nécessaire quand le socket était déjà connecté (navigation SvelteKit) —
+		// le snapshot initial a été envoyé avant le montage de ce composant.
+		sock.emit('voice:request_snapshot');
+
 		// Join first channel
 		if (selectedChannel) sock.emit('chat:join', selectedChannel.id);
 	}
@@ -234,15 +239,8 @@
 
 		// Inject TURN server if configured in env (PUBLIC_TURN_URL=turn:host:port)
 		if (PUBLIC_TURN_URL) {
-			// Extract host:port from turn:host:port
-			const host = PUBLIC_TURN_URL.replace(/^turns?:/, '')
 			const srv: RTCIceServer = {
-				urls: [
-					`turn:${host}`,
-					`turn:${host}?transport=tcp`,
-					`turn:${host.replace(/:\d+$/, ':443')}?transport=tcp`,
-					`turns:${host.replace(/:\d+$/, ':443')}`,
-				],
+				urls: PUBLIC_TURN_URL,
 			}
 			if (PUBLIC_TURN_USERNAME)   srv.username   = PUBLIC_TURN_USERNAME
 			if (PUBLIC_TURN_CREDENTIAL) srv.credential = PUBLIC_TURN_CREDENTIAL
@@ -584,9 +582,14 @@
 						</p>
 
 						<!-- ── Table Ronde ── -->
-						{@const totalSeats = voiceState.peers.length + 1}
 						{@const mySeat = voiceState.mySeatIndex ?? 0}
 						{@const R = 108}
+						<!-- Trier les seatIndex pour gérer les indices non-contigus après qu'un user quitte.
+						     Ex: seats 0 et 2 avec totalSeats=2 → (2-0+2)%2 = 0 → superposition.
+						     La solution: positionner selon l'ordre dans la liste triée, pas la valeur absolue. -->
+						{@const allSeatsSorted = [...new Set([mySeat, ...voiceState.peers.map(p => p.seatIndex)])].sort((a, b) => a - b)}
+						{@const totalSeats = allSeatsSorted.length}
+						{@const myPosIdx = allSeatsSorted.indexOf(mySeat)}
 
 						<div class="relative mx-auto select-none" style="width:288px;height:288px;">
 							<!-- Table circulaire -->
@@ -610,8 +613,9 @@
 
 							<!-- Peers -->
 							{#each voiceState.peers as peer (peer.socketId)}
-								{@const relSeat = ((peer.seatIndex - mySeat + totalSeats) % totalSeats)}
-								{@const angle = relSeat / totalSeats * 2 * Math.PI}
+								{@const peerPosIdx = allSeatsSorted.indexOf(peer.seatIndex)}
+								{@const relPos    = ((peerPosIdx - myPosIdx) + totalSeats) % totalSeats}
+								{@const angle     = relPos / totalSeats * 2 * Math.PI}
 								{@const px = Math.sin(angle) * R}
 								{@const py = Math.cos(angle) * R}
 								<div class="absolute flex flex-col items-center gap-1"

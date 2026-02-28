@@ -18,16 +18,16 @@ if (!EXTERNAL_IP) {
 }
 
 const server = new TurnServer({
-  authMech: 'long-term',
+  authMech: 'none',
   credentials: { [USER]: PASSWORD },
   listeningPort: PORT,
   listeningIps: ['0.0.0.0'],
   relayIps: [RELAY_IP],
-  externalIp: EXTERNAL_IP,
+  externalIps: EXTERNAL_IP,
   minPort: 49152,
   maxPort: 55440,
   realm: REALM,
-  debugLevel: 'WARN',
+  debugLevel: 'ALL',
 })
 
 server.start()
