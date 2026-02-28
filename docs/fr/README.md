@@ -208,7 +208,6 @@ Après `npm run seed` :
 
 | Email | Mot de passe | Rôle |
 |---|---|---|
-| `alice@nexus.demo` | `demo1234` | owner (linux) |
 | `bob@nexus.demo` | `demo1234` | membre |
 | `charlie@nexus.demo` | `demo1234` | owner (gaming) |
 
