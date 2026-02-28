@@ -5,7 +5,7 @@
 
   <p><strong>Self-hosted, open-source, decentralized community platform.<br/>Forum + real-time chat + voice channels — on your own server, under your own control.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-v0.3.3-7c3aed)](CHANGELOG.md)
+  [![Version](https://img.shields.io/badge/version-v0.4.0-7c3aed)](CHANGELOG.md)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
   [![CI](https://github.com/Pokled/Nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nexus/actions/workflows/ci.yml)
   [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL-green)](docs/en/ARCHITECTURE.md)
@@ -13,7 +13,7 @@
 
 ---
 
-> **[→ Live demo: pokled.ddns.net](https://pokled.ddns.net)** *(self-hosted instance — may occasionally be offline)*
+> **[→ Live: nexusnode.app](https://nexusnode.app)** — official instance, production VPS
 
 > ⚠️ **Alpha stage** — Forum, real-time chat, and voice channels are functional. P2P federation, global directory, and mobile apps are still in development. Not yet recommended for large-scale production use.
 
@@ -82,11 +82,12 @@ Discussions, tutorials, collective knowledge — invisible to Google, inaccessib
 | Screen sharing | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | P2P voice (no Big Tech relay) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | No account required to read | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Community directory** | ✅ | ❌ | ⚠️ | ❌ | ✅ | ❌ |
 | Open source | ✅ AGPL | ❌ | ✅ Apache | ✅ GPL | ✅ AGPL | ✅ GPL |
 | Forum + Chat + Voice in one | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
 
-> Nexus is the only self-hosted platform combining an **indexed forum**, **real-time chat**, and **P2P voice** in a single install.
-> Matrix has chat+voice but no indexed forum. Discourse has forum+chat but no voice.
+> Nexus is the only self-hosted platform combining an **indexed forum**, **real-time chat**, **P2P voice**, and a **federated community directory** in a single install.
+> Matrix has chat+voice but no indexed forum. Discourse has forum+chat but no voice. Lemmy has a directory but no voice or real-time chat.
 
 ---
 
@@ -138,7 +139,7 @@ French guide: [docs/fr/README.md](docs/fr/README.md)
 | SEO (sitemap, RSS, JSON-LD) | ✅ Done |
 | Self-hosted TURN server | ✅ Done |
 | Meilisearch | ⏳ Phase 2 |
-| Instance directory | ⏳ Phase 2 |
+| Instance directory + auto DNS | ✅ Done |
 | WireGuard P2P mesh | ⏳ Phase 3 |
 | Mobile (Capacitor) / Desktop (Tauri) | ⏳ Phase 5 |
 
