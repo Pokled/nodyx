@@ -2,17 +2,20 @@
 	import type { PageData } from './$types';
 
 	interface NexusInstance {
-		id:          number
-		name:        string
-		slug:        string
-		url:         string
-		description: string | null
-		language:    string
-		status:      string
-		subdomain:   string | null
-		member_count: number
-		last_ping:   string | null
-		created_at:  string
+		id:           number
+		name:         string
+		slug:         string
+		url:          string
+		description:  string | null
+		language:     string
+		country:      string | null
+		theme:        string | null
+		members:      number
+		online:       number
+		version:      string | null
+		status:       string
+		last_seen:    string | null
+		registered_at: string
 	}
 
 	let { data }: { data: PageData } = $props()
@@ -34,24 +37,23 @@
 			if (langFilter !== 'all' && i.language !== langFilter) return false
 			if (searchQuery) {
 				const q = searchQuery.toLowerCase()
-				return (i.name.toLowerCase().includes(q))
+				return i.name.toLowerCase().includes(q)
 				    || (i.description?.toLowerCase().includes(q) ?? false)
-				    || (i.slug.toLowerCase().includes(q))
+				    || i.slug.toLowerCase().includes(q)
 			}
 			return true
 		})
 	)
 
-	const totalMembers = $derived(filtered.reduce((s, i) => s + (i.member_count ?? 0), 0))
+	const totalMembers = $derived(filtered.reduce((s, i) => s + (i.members ?? 0), 0))
 
 	function instanceUrl(i: NexusInstance): string {
-		return i.subdomain ? `https://${i.subdomain}` : i.url
+		return `https://${i.slug}.nexusnode.app`
 	}
 
 	function isOnline(i: NexusInstance): boolean {
-		if (!i.last_ping) return false
-		const diff = Date.now() - new Date(i.last_ping).getTime()
-		return diff < 5 * 60 * 1000 // 5 min
+		if (!i.last_seen) return false
+		return Date.now() - new Date(i.last_seen).getTime() < 5 * 60 * 1000
 	}
 </script>
 
@@ -85,7 +87,7 @@
 				<div class="text-xs text-gray-500">instances</div>
 			</div>
 			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
-				<div class="text-xl font-bold text-white">{instances.reduce((s,i)=>s+(i.member_count??0),0).toLocaleString('fr-FR')}</div>
+				<div class="text-xl font-bold text-white">{instances.reduce((s,i)=>s+(i.members??0),0).toLocaleString('fr-FR')}</div>
 				<div class="text-xs text-gray-500">membres</div>
 			</div>
 		</div>
@@ -94,7 +96,6 @@
 
 <!-- ── Filters ────────────────────────────────────────────────────────────── -->
 <div class="flex flex-wrap gap-4 mb-6">
-	<!-- Search -->
 	<div class="relative flex-1 min-w-[200px]">
 		<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
 		     fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +112,6 @@
 		/>
 	</div>
 
-	<!-- Language filter -->
 	<div class="flex gap-1 flex-wrap">
 		{#each LANGUAGES as l}
 			<button
@@ -151,10 +151,8 @@
 			<div class="flex flex-col rounded-xl border border-gray-800 bg-gray-900/50
 			            hover:border-indigo-800/60 hover:bg-gray-900/80 transition-all group p-5">
 
-				<!-- Top row: avatar + status -->
 				<div class="flex items-start justify-between mb-3">
 					<div class="flex items-center gap-3">
-						<!-- Avatar initials -->
 						<div class="w-10 h-10 rounded-lg bg-indigo-900 flex items-center justify-center
 						            text-base font-bold text-indigo-200 select-none shrink-0">
 							{instance.name.charAt(0).toUpperCase()}
@@ -163,38 +161,39 @@
 							<h2 class="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors leading-tight">
 								{instance.name}
 							</h2>
-							<span class="text-xs text-gray-600 font-mono">
-								{instance.subdomain ?? instance.slug + '.nexusnode.app'}
-							</span>
+							<span class="text-xs text-gray-600 font-mono">{instance.slug}.nexusnode.app</span>
 						</div>
 					</div>
 
-					<!-- Online status dot -->
 					<div class="flex items-center gap-1.5 shrink-0">
 						<span class="w-2 h-2 rounded-full {isOnline(instance) ? 'bg-green-400' : 'bg-gray-600'}"></span>
 						<span class="text-xs text-gray-600">{isOnline(instance) ? 'en ligne' : 'hors ligne'}</span>
 					</div>
 				</div>
 
-				<!-- Description -->
 				<p class="text-xs text-gray-400 leading-relaxed line-clamp-2 flex-1 mb-4">
 					{instance.description ?? 'Aucune description.'}
 				</p>
 
-				<!-- Tags row -->
 				<div class="flex flex-wrap items-center gap-1.5 mb-4">
-					<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
-						{instance.language.toUpperCase()}
-					</span>
-					<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500 border border-gray-700 font-mono">
-						{instance.member_count ?? 0} membres
+					{#if instance.language}
+						<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
+							{instance.language.toUpperCase()}
+						</span>
+					{/if}
+					{#if instance.theme}
+						<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
+							{instance.theme}
+						</span>
+					{/if}
+					<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500 border border-gray-700">
+						{instance.members ?? 0} membres
 					</span>
 				</div>
 
-				<!-- Stats + CTA -->
 				<div class="flex items-center justify-between pt-3 border-t border-gray-800/60">
 					<div class="text-xs text-gray-600">
-						Depuis {new Date(instance.created_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+						Depuis {new Date(instance.registered_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
 					</div>
 					<a
 						href={instanceUrl(instance)}
@@ -215,13 +214,12 @@
 	</div>
 {/if}
 
-<!-- ── Register your instance CTA ────────────────────────────────────────── -->
+<!-- ── Register CTA ───────────────────────────────────────────────────────── -->
 <div class="mt-10 rounded-xl border border-dashed border-indigo-900/60 bg-indigo-950/20 p-8 text-center">
 	<div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-900/60
 	            border border-indigo-800 mb-4">
 		<svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-			      d="M12 4v16m8-8H4"/>
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
 		</svg>
 	</div>
 	<h3 class="text-lg font-semibold text-white mb-2">Vous avez une instance Nexus ?</h3>
@@ -233,8 +231,7 @@
 	<div class="flex flex-wrap gap-3 justify-center">
 		<a
 			href="https://github.com/NexusNetwork-app/nexus"
-			target="_blank"
-			rel="noopener"
+			target="_blank" rel="noopener"
 			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-700 hover:bg-indigo-600
 			       text-sm font-semibold text-white transition-colors"
 		>
@@ -242,15 +239,12 @@
 		</a>
 		<a
 			href="https://github.com/NexusNetwork-app/nexus"
-			target="_blank"
-			rel="noopener"
+			target="_blank" rel="noopener"
 			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700
 			       border border-gray-700 text-sm font-semibold text-gray-200 transition-colors"
 		>
 			Installer Nexus
 		</a>
 	</div>
-	<p class="text-xs text-gray-600 mt-4">
-		Sous-domaine gratuit · SSL automatique · AGPL-3.0
-	</p>
+	<p class="text-xs text-gray-600 mt-4">Sous-domaine gratuit · SSL automatique · AGPL-3.0</p>
 </div>
