@@ -1,114 +1,23 @@
 <script lang="ts">
-	// ── Mock instances — will be replaced by the real nexus-directory API (Phase 2) ──
+	import type { PageData } from './$types';
+
 	interface NexusInstance {
-		subdomain:   string     // name.nexus.io
+		id:          number
 		name:        string
-		description: string
-		language:    string     // ISO 639-1
-		country:     string     // ISO 3166-1 alpha-2
-		theme:       string
-		members:     number
-		online:      number
-		online_status: 'up' | 'down'
-		version:     string
-		registered:  string     // YYYY-MM
+		slug:        string
+		url:         string
+		description: string | null
+		language:    string
+		status:      string
+		subdomain:   string | null
+		member_count: number
+		last_ping:   string | null
+		created_at:  string
 	}
 
-	const INSTANCES: NexusInstance[] = [
-		{
-			subdomain:    'linux-fr',
-			name:         'Linux & Open Source',
-			description:  'La communauté francophone du logiciel libre. Kernel, distros, homelab, actualités.',
-			language:     'fr', country: 'FR', theme: 'tech',
-			members: 1247, online: 34, online_status: 'up', version: '1.0.0', registered: '2026-02',
-		},
-		{
-			subdomain:    'rust-developers',
-			name:         'Rust Developers',
-			description:  'A global community for Rust programmers. No gatekeeping, just good code.',
-			language:     'en', country: 'US', theme: 'tech',
-			members: 3891, online: 112, online_status: 'up', version: '1.0.0', registered: '2026-02',
-		},
-		{
-			subdomain:    'gaming-quebec',
-			name:         'Gaming Québécois',
-			description:  'Jeux vidéo, eSport et sessions multijoueur pour les gamers du Québec.',
-			language:     'fr', country: 'CA', theme: 'gaming',
-			members: 834, online: 61, online_status: 'up', version: '1.0.0', registered: '2026-02',
-		},
-		{
-			subdomain:    'photo-berlin',
-			name:         'Fotografie Berlin',
-			description:  'Für Fotografen in Berlin und Brandenburg. Street, portrait, analog.',
-			language:     'de', country: 'DE', theme: 'creative',
-			members: 562, online: 18, online_status: 'up', version: '1.0.0', registered: '2026-03',
-		},
-		{
-			subdomain:    'homelab-eu',
-			name:         'Homelab Europe',
-			description:  'Self-hosting, NAS, Proxmox, NixOS, and everything in between.',
-			language:     'en', country: 'EU', theme: 'tech',
-			members: 1423, online: 47, online_status: 'up', version: '1.0.0', registered: '2026-03',
-		},
-		{
-			subdomain:    'musique-paris',
-			name:         'Musique & Production',
-			description:  'Beatmakers, compositeurs, ingés son. Partage, critique, collab.',
-			language:     'fr', country: 'FR', theme: 'creative',
-			members: 389, online: 12, online_status: 'up', version: '1.0.0', registered: '2026-03',
-		},
-		{
-			subdomain:    'cybersec-eu',
-			name:         'CyberSec Europe',
-			description:  'CTF, pentesting, threat intel, OSINT. For defenders and ethical hackers.',
-			language:     'en', country: 'EU', theme: 'tech',
-			members: 734, online: 29, online_status: 'up', version: '1.0.0', registered: '2026-03',
-		},
-		{
-			subdomain:    'anime-world',
-			name:         'Anime & Manga World',
-			description:  'Global community for anime and manga fans. Reviews, recs, art shares.',
-			language:     'en', country: 'JP', theme: 'culture',
-			members: 5134, online: 203, online_status: 'up', version: '1.0.0', registered: '2026-03',
-		},
-		{
-			subdomain:    'sciences-libres',
-			name:         'Sciences Libres',
-			description:  'Astronomie, physique, biologie. La science accessible à tous, sans jargon inutile.',
-			language:     'fr', country: 'FR', theme: 'science',
-			members: 278, online: 9, online_status: 'up', version: '1.0.0', registered: '2026-04',
-		},
-		{
-			subdomain:    'indie-gamedev',
-			name:         'Indie Game Dev',
-			description:  'Solo devs and small studios sharing progress, feedback, and dev logs.',
-			language:     'en', country: 'US', theme: 'gaming',
-			members: 1612, online: 55, online_status: 'up', version: '1.0.0', registered: '2026-04',
-		},
-		{
-			subdomain:    'cuisine-fr',
-			name:         'Cuisine & Gastronomie',
-			description:  'Recettes, techniques, restaurants, vins. Pour les passionnés de bonne table.',
-			language:     'fr', country: 'FR', theme: 'culture',
-			members: 456, online: 14, online_status: 'up', version: '1.0.0', registered: '2026-04',
-		},
-		{
-			subdomain:    'astro-amateur',
-			name:         'Astronomie Amateur',
-			description:  'Observations, matériel, astrophoto. Pour ceux qui regardent le ciel la nuit.',
-			language:     'fr', country: 'FR', theme: 'science',
-			members: 198, online: 6, online_status: 'up', version: '1.0.0', registered: '2026-04',
-		},
-	]
+	let { data }: { data: PageData } = $props()
 
-	const THEMES = [
-		{ key: 'all',      label: 'Tous' },
-		{ key: 'tech',     label: '💻 Tech' },
-		{ key: 'gaming',   label: '🎮 Gaming' },
-		{ key: 'creative', label: '🎨 Créatif' },
-		{ key: 'science',  label: '🔬 Science' },
-		{ key: 'culture',  label: '🎌 Culture' },
-	]
+	const instances: NexusInstance[] = data.instances ?? []
 
 	const LANGUAGES = [
 		{ key: 'all', label: 'Toutes' },
@@ -117,40 +26,32 @@
 		{ key: 'de',  label: '🇩🇪 Deutsch' },
 	]
 
-	let themeFilter    = $state('all')
-	let langFilter     = $state('all')
-	let searchQuery    = $state('')
+	let langFilter  = $state('all')
+	let searchQuery = $state('')
 
 	const filtered = $derived(
-		INSTANCES.filter(i => {
-			if (themeFilter !== 'all' && i.theme !== themeFilter) return false
-			if (langFilter  !== 'all' && i.language !== langFilter) return false
+		instances.filter(i => {
+			if (langFilter !== 'all' && i.language !== langFilter) return false
 			if (searchQuery) {
 				const q = searchQuery.toLowerCase()
-				return i.name.toLowerCase().includes(q)
-				    || i.description.toLowerCase().includes(q)
-				    || i.subdomain.toLowerCase().includes(q)
+				return (i.name.toLowerCase().includes(q))
+				    || (i.description?.toLowerCase().includes(q) ?? false)
+				    || (i.slug.toLowerCase().includes(q))
 			}
 			return true
 		})
 	)
 
-	const totalMembers = $derived(filtered.reduce((s, i) => s + i.members, 0))
-	const totalOnline  = $derived(filtered.reduce((s, i) => s + i.online,  0))
+	const totalMembers = $derived(filtered.reduce((s, i) => s + (i.member_count ?? 0), 0))
 
-	function flag(country: string): string {
-		if (!country || country.length !== 2 || country === 'EU') return '🌐'
-		return country.toUpperCase().split('').map(c =>
-			String.fromCodePoint(0x1f1e6 - 65 + c.charCodeAt(0))
-		).join('')
+	function instanceUrl(i: NexusInstance): string {
+		return i.subdomain ? `https://${i.subdomain}` : i.url
 	}
 
-	const THEME_COLORS: Record<string, string> = {
-		tech:     'bg-blue-900/50 text-blue-400 border-blue-800/50',
-		gaming:   'bg-purple-900/50 text-purple-400 border-purple-800/50',
-		creative: 'bg-pink-900/50 text-pink-400 border-pink-800/50',
-		science:  'bg-cyan-900/50 text-cyan-400 border-cyan-800/50',
-		culture:  'bg-orange-900/50 text-orange-400 border-orange-800/50',
+	function isOnline(i: NexusInstance): boolean {
+		if (!i.last_ping) return false
+		const diff = Date.now() - new Date(i.last_ping).getTime()
+		return diff < 5 * 60 * 1000 // 5 min
 	}
 </script>
 
@@ -180,16 +81,12 @@
 		<!-- Network stats -->
 		<div class="flex gap-4 text-center shrink-0">
 			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
-				<div class="text-xl font-bold text-white">{INSTANCES.length}</div>
+				<div class="text-xl font-bold text-white">{instances.length}</div>
 				<div class="text-xs text-gray-500">instances</div>
 			</div>
 			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
-				<div class="text-xl font-bold text-white">{INSTANCES.reduce((s,i)=>s+i.members,0).toLocaleString('fr-FR')}</div>
+				<div class="text-xl font-bold text-white">{instances.reduce((s,i)=>s+(i.member_count??0),0).toLocaleString('fr-FR')}</div>
 				<div class="text-xs text-gray-500">membres</div>
-			</div>
-			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
-				<div class="text-xl font-bold text-green-400">{INSTANCES.reduce((s,i)=>s+i.online,0)}</div>
-				<div class="text-xs text-gray-500">en ligne</div>
 			</div>
 		</div>
 	</div>
@@ -214,21 +111,6 @@
 		/>
 	</div>
 
-	<!-- Theme filter -->
-	<div class="flex gap-1 flex-wrap">
-		{#each THEMES as t}
-			<button
-				onclick={() => themeFilter = t.key}
-				class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-				       {themeFilter === t.key
-				         ? 'bg-indigo-700 text-white'
-				         : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800'}"
-			>
-				{t.label}
-			</button>
-		{/each}
-	</div>
-
 	<!-- Language filter -->
 	<div class="flex gap-1 flex-wrap">
 		{#each LANGUAGES as l}
@@ -248,16 +130,18 @@
 <!-- ── Results count ──────────────────────────────────────────────────────── -->
 <div class="flex items-center justify-between mb-4 text-xs text-gray-600">
 	<span>{filtered.length} instance{filtered.length > 1 ? 's' : ''} trouvée{filtered.length > 1 ? 's' : ''}</span>
-	{#if themeFilter !== 'all' || langFilter !== 'all' || searchQuery}
-		<span class="text-gray-500">
-			{totalMembers.toLocaleString('fr-FR')} membres ·
-			<span class="text-green-600">{totalOnline} en ligne</span>
-		</span>
+	{#if langFilter !== 'all' || searchQuery}
+		<span class="text-gray-500">{totalMembers.toLocaleString('fr-FR')} membres</span>
 	{/if}
 </div>
 
 <!-- ── Grid ───────────────────────────────────────────────────────────────── -->
-{#if filtered.length === 0}
+{#if instances.length === 0}
+	<div class="text-center py-16 border border-dashed border-gray-800 rounded-xl">
+		<p class="text-gray-500 mb-2">Aucune instance enregistrée pour l'instant.</p>
+		<p class="text-xs text-gray-600">Soyez la première communauté du réseau Nexus !</p>
+	</div>
+{:else if filtered.length === 0}
 	<div class="text-center py-16 border border-dashed border-gray-800 rounded-xl">
 		<p class="text-gray-500">Aucune instance ne correspond à ces filtres.</p>
 	</div>
@@ -279,51 +163,43 @@
 							<h2 class="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors leading-tight">
 								{instance.name}
 							</h2>
-							<span class="text-xs text-gray-600 font-mono">{instance.subdomain}.nexus.io</span>
+							<span class="text-xs text-gray-600 font-mono">
+								{instance.subdomain ?? instance.slug + '.nexusnode.app'}
+							</span>
 						</div>
 					</div>
 
 					<!-- Online status dot -->
 					<div class="flex items-center gap-1.5 shrink-0">
-						<span class="w-2 h-2 rounded-full {instance.online_status === 'up' ? 'bg-green-400' : 'bg-gray-600'}"></span>
-						<span class="text-xs text-gray-600">{instance.online_status === 'up' ? 'en ligne' : 'hors ligne'}</span>
+						<span class="w-2 h-2 rounded-full {isOnline(instance) ? 'bg-green-400' : 'bg-gray-600'}"></span>
+						<span class="text-xs text-gray-600">{isOnline(instance) ? 'en ligne' : 'hors ligne'}</span>
 					</div>
 				</div>
 
 				<!-- Description -->
 				<p class="text-xs text-gray-400 leading-relaxed line-clamp-2 flex-1 mb-4">
-					{instance.description}
+					{instance.description ?? 'Aucune description.'}
 				</p>
 
 				<!-- Tags row -->
 				<div class="flex flex-wrap items-center gap-1.5 mb-4">
-					<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border
-					             {THEME_COLORS[instance.theme] ?? 'bg-gray-800 text-gray-400 border-gray-700'}">
-						{THEMES.find(t => t.key === instance.theme)?.label ?? instance.theme}
-					</span>
 					<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
-						{flag(instance.country)} {instance.language.toUpperCase()}
+						{instance.language.toUpperCase()}
 					</span>
 					<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500 border border-gray-700 font-mono">
-						v{instance.version}
+						{instance.member_count ?? 0} membres
 					</span>
 				</div>
 
 				<!-- Stats + CTA -->
 				<div class="flex items-center justify-between pt-3 border-t border-gray-800/60">
-					<div class="flex items-center gap-3 text-xs text-gray-500">
-						<span>
-							<span class="text-gray-300 font-medium">{instance.members.toLocaleString('fr-FR')}</span>
-							membres
-						</span>
-						<span class="text-green-500">
-							<span class="font-medium">{instance.online}</span> en ligne
-						</span>
+					<div class="text-xs text-gray-600">
+						Depuis {new Date(instance.created_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
 					</div>
 					<a
-						href="https://{instance.subdomain}.nexus.io"
+						href={instanceUrl(instance)}
 						target="_blank"
-						rel="noopener"
+						rel="noopener noreferrer"
 						class="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors
 						       flex items-center gap-1"
 					>
@@ -351,12 +227,12 @@
 	<h3 class="text-lg font-semibold text-white mb-2">Vous avez une instance Nexus ?</h3>
 	<p class="text-sm text-gray-400 max-w-md mx-auto mb-5">
 		Enregistrez-la dans l'annuaire et recevez un sous-domaine gratuit
-		<code class="text-indigo-400">votre-nom.nexus.io</code>.
+		<code class="text-indigo-400">votre-nom.nexusnode.app</code>.
 		Votre communauté devient visible dans le réseau.
 	</p>
 	<div class="flex flex-wrap gap-3 justify-center">
 		<a
-			href="https://github.com/nexus"
+			href="https://github.com/NexusNetwork-app/nexus"
 			target="_blank"
 			rel="noopener"
 			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-700 hover:bg-indigo-600
@@ -365,7 +241,7 @@
 			Enregistrer mon instance
 		</a>
 		<a
-			href="https://github.com/nexus"
+			href="https://github.com/NexusNetwork-app/nexus"
 			target="_blank"
 			rel="noopener"
 			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700
