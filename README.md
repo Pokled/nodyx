@@ -72,6 +72,7 @@ Discussions, tutorials, collective knowledge — invisible to Google, inaccessib
 | Forum indexed by Google | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | Real-time chat | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ |
 | Voice channels | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Screen sharing | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | P2P voice (no Big Tech relay) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | No account required to read | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | Open source | ✅ AGPL | ❌ | ✅ Apache | ✅ GPL | ✅ AGPL | ✅ GPL |
@@ -150,6 +151,8 @@ English guide coming soon — contributions welcome.
 - [Architecture](docs/fr/ARCHITECTURE.md) — How it's built
 - [Roadmap](docs/fr/ROADMAP.md) — Where we're going
 - [Contributing](docs/en/CONTRIBUTING.md) — How to contribute
+- [Audio Engine](docs/en/AUDIO.md) — Broadcast EQ, RNNoise, audio chain explained
+- [Neural Engine](docs/en/NEURAL-ENGINE.md) — Local AI with Ollama
 - [Specs](docs/specs/) — Functional specifications
 
 ---
