@@ -9,6 +9,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [0.3.3] — 2026-02-28
+
+### Fixed
+- **Forum:** erreur 500 sur toutes les pages catégories — la requête SQL `GET /forums/threads` référençait `c.slug` (colonne inexistante sur la table `categories`)
+- **TipTap:** warning "Duplicate extension names: link, underline" — StarterKit v3 inclut désormais ces extensions par défaut ; désactivées dans StarterKit, conservées avec leur config personnalisée
+
+### Build
+- `tsconfig.json` : exclut `src/tests/` du build de production — `npm run build` propre sans erreurs de test
+- `tsconfig.test.json` : nouveau fichier dédié à vitest (`noEmit: true`, inclut les tests)
+
+### Docs
+- Documentation EN/FR complète — README, ARCHITECTURE, ROADMAP, MANIFESTO, CONTRIBUTING traduits intégralement
+- `docs/en/specs/` : 8 specs traduites (002 à 013)
+- `docs/fr/` : AUDIO et NEURAL-ENGINE ajoutés
+- Tous les liens internes `docs/` corrigés
+- README racine : diagramme réseau P2P, notice alpha, badge version mis à jour
+
+---
+
 ## [0.3.2] — 2026-02-28
 
 ### Fixed
@@ -112,7 +131,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 - **AI assistant** — local Ollama integration (no cloud dependency)
 - **13 SQL migrations** — complete schema from users to voice channels
 
-[Unreleased]: https://github.com/Pokled/Nexus/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/Pokled/Nexus/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/Pokled/Nexus/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/Pokled/Nexus/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Pokled/Nexus/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Pokled/Nexus/compare/v0.2.0...v0.3.0

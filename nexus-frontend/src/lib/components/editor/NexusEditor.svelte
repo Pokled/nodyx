@@ -143,7 +143,7 @@
 		editor = new Editor({
 			element: editorEl!,
 			extensions: [
-				StarterKit.configure({ codeBlock: false }),
+				StarterKit.configure({ codeBlock: false, link: false, underline: false }),
 				Underline,
 				TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
 				Link.configure({ openOnClick: false, autolink: true }),
