@@ -126,7 +126,7 @@
     <title>Neural Engine — Admin Nexus</title>
 </svelte:head>
 
-<div class="max-w-4xl space-y-6 font-sans p-4">
+<div class="space-y-6 font-sans">
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold text-white tracking-tight">

@@ -43,7 +43,7 @@
 			: $page.url.pathname.startsWith(href)
 </script>
 
-<div class="min-h-screen bg-gray-950 flex">
+<div class="flex flex-1 min-h-0">
 
 	<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
 	<aside class="w-56 shrink-0 border-r border-gray-800 bg-gray-900 flex flex-col">

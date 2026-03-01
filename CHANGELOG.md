@@ -9,6 +9,39 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [0.5.0] — 2026-03-01
+
+### Added
+- **nexus-relay** — Rust P2P relay infrastructure (Phase 3.0-A ✅)
+  - `nexus-relay server` — deployed on VPS: TCP:7443 (relay clients) + HTTP:7001 (Caddy proxy), tokio async, DashMap in-memory registry
+  - `nexus-relay client` — 9MB static binary, outbound TCP connection only — **zero open ports, zero domain required**
+  - Automatic `slug.nexusnode.app` provisioning — slug reserved in DB at registration, DNS wildcard served by relay proxy
+  - Exponential backoff reconnection (1s → 2s → 4s → max 30s)
+  - `install.sh` — option 2 "Nexus Relay (recommended)" → auto-downloads binary, generates systemd service, full URL without touching a router
+  - `nexus-relay-client.service` — systemd unit, auto-restart, enabled on boot
+  - GitHub Releases `v0.1.0-relay` + `v0.1.1-relay` — amd64 + arm64 static binaries
+  - **Validated:** Raspberry Pi 4, zero open ports, zero Cloudflare account → `https://test.nexusnode.app` live ✅
+- **Voice channel member interaction panel**
+  - Click any member in the voice channel sidebar → opens their real-time stats in VoicePanel (RTT, jitter, packet loss, volume slider)
+  - Click yourself ("vous") → green self-monitoring panel: live audio level meter, muted / deafened / PTT status badges
+  - Interaction buttons per peer: Profile link, Direct Message (functional), File sharing + Mini-game (coming soon)
+  - `voicePanel.ts` — shared Svelte writable store for cross-component panel targeting (discriminated union: `{ type: 'peer', socketId } | { type: 'self', username, avatar } | null`)
+- **VoicePanel sidebar** — redesigned as a fixed-position left sidebar (Galaxy Bar layout)
+  - Participant list with clickable member rows, animated connection indicator, member count badge
+  - VoiceSettings popup — fixed-position (`bottom-24 left-1/2`), 360px wide, escapes sidebar overflow with backdrop blur overlay
+
+### Fixed
+- **nexus-relay concurrent requests** — relay client was processing requests sequentially. With Socket.IO long-polling (pingInterval 8s), one user's blocking GET delayed all others → relay server 10s timeout → 504 Gateway Timeout → Socket.IO disconnect → presence sidebar empty. Fixed by spawning a tokio task per request; writes are serialized via `mpsc`. Timeout ladder: `pingInterval(8s) < reqwest(12s) < relay-server(15s)`
+- **online_count off-by-default** — `/info` and `/admin/stats` counted `redis.keys('nexus:heartbeat:*')` (set on API calls, 15 min TTL). Active Socket.IO session ≠ recent API call → count dropped to 0 after 15 min of browse-only activity. Fixed: `io.in('presence').fetchSockets()` — Socket.IO presence room as the source of truth, deduplicated by `userId`
+
+### Infrastructure
+- `relay.nexusnode.app` — DNS A record (grey cloud, no Cloudflare proxy) for direct TCP:7443 relay client connections
+- UFW: port 7443/tcp opened on the VPS for relay client inbound connections
+- `nexus-relay.service` — systemd unit active on VPS, ~1.3MB RAM, Restart=on-failure
+- Caddy: `*.nexusnode.app` now routes to `localhost:7001` (nexus-relay HTTP proxy) instead of `localhost:3000` — relay handles routing (tunnel → active relay, 302 → DB URL, 404 → unknown)
+
+---
+
 ## [0.4.0] — 2026-02-28
 
 ### Added
@@ -190,7 +223,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 - **AI assistant** — local Ollama integration (no cloud dependency)
 - **13 SQL migrations** — complete schema from users to voice channels
 
-[Unreleased]: https://github.com/Pokled/Nexus/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/Pokled/Nexus/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Pokled/Nexus/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Pokled/Nexus/compare/v0.3.3...v0.4.1
 [0.3.3]: https://github.com/Pokled/Nexus/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/Pokled/Nexus/compare/v0.3.1...v0.3.2

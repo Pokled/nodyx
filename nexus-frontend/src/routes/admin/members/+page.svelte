@@ -29,7 +29,7 @@
 
 <svelte:head><title>Membres — Admin Nexus</title></svelte:head>
 
-<div class="max-w-5xl">
+<div>
 	<div class="flex items-center justify-between mb-6">
 		<div>
 			<h1 class="text-2xl font-bold text-white">Membres</h1>

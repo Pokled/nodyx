@@ -16,7 +16,7 @@
 
 <svelte:head><title>Tags — Admin Nexus</title></svelte:head>
 
-<div class="max-w-2xl">
+<div>
 	<h1 class="text-2xl font-bold text-white mb-6">Tags</h1>
 
 	{#if form?.error}

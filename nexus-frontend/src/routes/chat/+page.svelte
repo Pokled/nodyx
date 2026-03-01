@@ -9,6 +9,7 @@
 	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT, togglePTTMode, setPeerVolume } from '$lib/voice';
 	import type { Socket } from 'socket.io-client';
 	import MediaCenter from '$lib/components/MediaCenter.svelte';
+	import { voicePanelTarget } from '$lib/voicePanel';
 
 	let { data }: { data: PageData } = $props();
 
@@ -438,6 +439,15 @@
 	const myUsername = $derived(((data as unknown as { user?: { username?: string } }).user?.username) ?? '');
 	const myAvatar   = $derived(((data as unknown as { user?: { avatar?: string | null } }).user?.avatar) ?? null);
 
+	function openVoiceMemberPanel(m: { username: string; avatar: string | null }) {
+		if (m.username === myUsername) {
+			voicePanelTarget.set({ type: 'self', username: myUsername, avatar: myAvatar })
+		} else {
+			const peer = voiceState.peers.find((p: any) => p.username === m.username)
+			if (peer) voicePanelTarget.set({ type: 'peer', socketId: peer.socketId })
+		}
+	}
+
 </script>
 
 <svelte:head><title>Chat — Nexus</title></svelte:head>
@@ -446,7 +456,7 @@
 <div class="fixed top-14 bottom-0 lg:left-[220px] xl:right-[220px] left-0 right-0 flex overflow-hidden bg-gray-950 border-l border-gray-800 z-10">
 
 	<!-- ── Channel sidebar ──────────────────────────────────────────────────── -->
-	<aside class="w-48 shrink-0 border-r border-gray-800 bg-gray-900 flex flex-col">
+	<aside class="w-56 shrink-0 border-r border-gray-800 bg-gray-900 flex flex-col">
 		<div class="h-12 flex items-center px-4 border-b border-gray-800">
 			<span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Canaux</span>
 		</div>
@@ -505,7 +515,14 @@
 						{#if members.length > 0}
 							<div class="flex flex-col gap-0.5 pl-6 pt-0.5 pb-1.5">
 								{#each members.slice(0, 6) as m}
-									<div class="flex items-center gap-1.5">
+									{@const isMe = m.username === myUsername}
+									{@const isInVoice = inThisChannel}
+									<button
+										onclick={() => isInVoice ? openVoiceMemberPanel(m) : undefined}
+										class="flex items-center gap-1.5 w-full text-left rounded px-1 py-0.5 -mx-1 transition-colors
+										       {isInVoice ? 'hover:bg-gray-800/60 cursor-pointer' : 'cursor-default'}"
+										title={isInVoice ? (isMe ? 'Voir mes stats audio' : `Voir les stats de ${m.username}`) : m.username}
+									>
 										{#if m.avatar}
 											<img src={m.avatar} alt={m.username} class="w-4 h-4 rounded-full object-cover shrink-0 {m.speaking ? 'ring-1 ring-green-400' : ''}" />
 										{:else}
@@ -513,8 +530,15 @@
 												{m.username.charAt(0).toUpperCase()}
 											</div>
 										{/if}
-										<span class="text-xs text-gray-400 truncate leading-tight">{m.username}</span>
-									</div>
+										<span class="text-xs truncate leading-tight {isMe ? 'text-green-400' : 'text-gray-400'}">
+											{m.username}{isMe ? ' (vous)' : ''}
+										</span>
+										{#if isInVoice}
+											<svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 text-gray-700 shrink-0 ml-auto opacity-0 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+												<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+											</svg>
+										{/if}
+									</button>
 								{/each}
 								{#if members.length > 6}
 									<span class="text-[10px] text-gray-600 pl-5">+{members.length - 6} autres</span>
@@ -543,6 +567,9 @@
 				<button onclick={() => voiceError = null} class="mt-2 text-[10px] text-red-500 hover:text-red-300 underline">Fermer</button>
 			</div>
 		{/if}
+
+		<!-- Voice controls (sidebar footer Discord-style) -->
+		<VoicePanel mode="sidebar" />
 	</aside>
 
 	<!-- ── Main chat area ───────────────────────────────────────────────────── -->
@@ -891,9 +918,6 @@
 		{/if}
 	</div>
 </div>
-
-<!-- ── Voice panel (floating bar) ──────────────────────────────────────────── -->
-<VoicePanel />
 
 <!-- ── Rich editor modal ───────────────────────────────────────────────────── -->
 {#if showRichModal}

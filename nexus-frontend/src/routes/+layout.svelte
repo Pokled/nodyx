@@ -327,7 +327,7 @@
 			</div>
 
 			<!-- Bouton ajouter / découvrir -->
-			<div class="px-3 py-3 shrink-0 border-t border-gray-800">
+			<div class="px-3 pt-3.5 pb-3 shrink-0 border-t border-gray-800">
 				<a href="/communities" class="flex items-center gap-2.5 px-3 py-2 rounded-xl border border-dashed border-gray-700 hover:border-indigo-500/60 hover:bg-indigo-950/30 text-gray-500 hover:text-indigo-300 transition-all group">
 					<div class="w-6 h-6 rounded-full border border-dashed border-current flex items-center justify-center shrink-0">
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
@@ -355,7 +355,7 @@
                 </div>
             {/if}
 
-            <div class="w-full flex-1 flex flex-col {$page.url.pathname.startsWith('/chat') ? '' : 'max-w-5xl mx-auto px-4 py-8'}">
+            <div class="w-full flex-1 flex flex-col {$page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/admin') ? '' : 'max-w-5xl mx-auto px-4 py-8'}">
                 {@render children()}
             </div>
         </main>

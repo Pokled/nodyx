@@ -9,6 +9,9 @@
     import MediaCenter    from './MediaCenter.svelte'
     import VoiceSettings from './VoiceSettings.svelte'
     import { onMount } from 'svelte'
+    import { voicePanelTarget } from '$lib/voicePanel'
+
+    let { mode = 'float' }: { mode?: 'float' | 'sidebar' } = $props()
 
     let showMediaHub      = $state(false)
     let showVoiceSettings = $state(false)
@@ -31,6 +34,25 @@
     // ── Popup état ────────────────────────────────────────────────
     let selectedPeer: VoicePeer | null = $state(null)
     let peerVolumes: Record<string, number> = $state({})
+    let selfInfo: { username: string; avatar: string | null } | null = $state(null)
+
+    // ── Déclenché depuis l'extérieur via store ─────────────────────
+    $effect(() => {
+        const target = $voicePanelTarget
+        if (!target) return
+        voicePanelTarget.set(null) // consommer
+        if (target.type === 'self') {
+            selfInfo = { username: target.username, avatar: target.avatar }
+            selectedPeer = null
+        } else if (target.type === 'peer') {
+            const peer = peers.find(p => p.socketId === target.socketId)
+            if (peer) {
+                selectedPeer = peer
+                if (!(peer.socketId in peerVolumes)) peerVolumes[peer.socketId] = 100
+                selfInfo = null
+            }
+        }
+    })
 
     function openPeerPanel(peer: VoicePeer) {
         selectedPeer = selectedPeer?.socketId === peer.socketId ? null : peer
@@ -126,6 +148,86 @@
 </script>
 
 {#if vs.active}
+    <!-- ── Panneau "Vous" ──────────────────────────────────────────── -->
+    {#if selfInfo !== null}
+        {@const si = selfInfo}
+        <div class='fixed inset-0 z-40 backdrop-blur-sm bg-black/20'
+             role='button' tabindex='-1'
+             onclick={() => selfInfo = null}
+             onkeydown={e => e.key === 'Escape' && (selfInfo = null)}
+             aria-label='Fermer'></div>
+
+        <div class='fixed bottom-16 left-1/2 -translate-x-1/2 z-50 w-72 rounded-2xl
+                    bg-gradient-to-b from-gray-900 to-gray-950
+                    border border-green-500/30 shadow-2xl shadow-green-500/10
+                    overflow-hidden backdrop-blur-sm
+                    animate-in fade-in slide-in-from-bottom-4 duration-300'>
+            <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500 to-transparent"></div>
+
+            <!-- En-tête -->
+            <div class='flex items-center gap-3 px-4 pt-4 pb-3 border-b border-gray-800/60'>
+                {#if si.avatar}
+                    <img src={si.avatar} alt={si.username}
+                         class='w-11 h-11 rounded-full object-cover ring-2 ring-green-400 shadow-lg shadow-green-500/20'/>
+                {:else}
+                    <div class='w-11 h-11 rounded-full bg-gradient-to-br from-green-600 to-emerald-600
+                                flex items-center justify-center text-sm font-bold text-white
+                                ring-2 ring-green-400 shadow-lg shadow-green-500/20'>
+                        {si.username.charAt(0).toUpperCase()}
+                    </div>
+                {/if}
+                <div class='flex-1 min-w-0'>
+                    <p class='text-sm font-semibold text-white truncate flex items-center gap-2'>
+                        {si.username}
+                        <span class='text-[8px] px-1.5 py-0.5 rounded-full bg-green-900/60 text-green-400 border border-green-700/50'>Vous</span>
+                    </p>
+                    <p class='text-xs text-green-400 mt-0.5'>Connecté en vocal</p>
+                </div>
+                <button onclick={() => selfInfo = null} aria-label='Fermer'
+                    class='text-gray-500 hover:text-white hover:bg-gray-800/60 rounded-lg p-1.5 transition-all'>
+                    <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'>
+                        <path stroke-linecap='round' stroke-linejoin='round' d='M6 18L18 6M6 6l12 12'/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Statut audio -->
+            <div class='px-4 py-3 space-y-2 border-b border-gray-800/60'>
+                <p class='text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2'>
+                    <span class="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
+                    Audio local
+                </p>
+                <!-- Niveau mic -->
+                <div class='flex items-center gap-2'>
+                    <span class='text-xs text-gray-400 w-16 shrink-0'>Niveau mic</span>
+                    <div class='flex-1 h-2 bg-gray-800 rounded-full overflow-hidden'>
+                        <div class='h-full rounded-full transition-all duration-75 {levelColor}' style='width:{level}%'></div>
+                    </div>
+                    <span class='text-xs font-mono text-gray-400 w-8 text-right'>{level}%</span>
+                </div>
+                <!-- Statuts -->
+                <div class='flex items-center gap-2 flex-wrap'>
+                    <span class='text-[11px] px-2 py-0.5 rounded-full border font-medium
+                                 {muted ? "bg-red-900/40 text-red-400 border-red-700/50" : "bg-green-900/40 text-green-400 border-green-700/50"}'>
+                        {muted ? '🔇 Muet' : '🎙️ Micro actif'}
+                    </span>
+                    <span class='text-[11px] px-2 py-0.5 rounded-full border font-medium
+                                 {deafened ? "bg-red-900/40 text-red-400 border-red-700/50" : "bg-gray-800 text-gray-500 border-gray-700"}'>
+                        {deafened ? '🔕 Sourd' : '🔊 Son actif'}
+                    </span>
+                    {#if pttMode}
+                        <span class='text-[11px] px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-400 border border-orange-700/50 font-medium'>
+                            🎤 PTT
+                        </span>
+                    {/if}
+                </div>
+                <p class='text-[10px] text-gray-600 italic'>
+                    Les stats réseau ne sont pas disponibles pour votre propre connexion.
+                </p>
+            </div>
+        </div>
+    {/if}
+
     {#if selectedPeer !== null}
         {@const selPeer = selectedPeer}
         {@const stats   = statsMap.get(selPeer.socketId)}
@@ -280,16 +382,15 @@
             </div>
 
             <!-- Actions -->
-            <div class='px-3 py-3 flex gap-2'>
+            <div class='px-3 pt-3 pb-1 grid grid-cols-2 gap-2'>
                 <a
                     href='/users/{selPeer.username}'
                     onclick={closePanel}
-                    class='flex-1 flex items-center justify-center gap-1.5 py-2 
-                           rounded-lg bg-gray-800/80 hover:bg-indigo-600/80 
-                           text-gray-300 hover:text-white text-xs font-medium 
+                    class='flex items-center justify-center gap-1.5 py-2
+                           rounded-lg bg-gray-800/80 hover:bg-indigo-600/80
+                           text-gray-300 hover:text-white text-xs font-medium
                            transition-all duration-200 transform hover:scale-105 active:scale-95
-                           border border-gray-700 hover:border-indigo-500/50
-                           shadow-lg hover:shadow-indigo-500/20'
+                           border border-gray-700 hover:border-indigo-500/50'
                 >
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
                         <path stroke-linecap='round' stroke-linejoin='round' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'/>
@@ -299,13 +400,12 @@
                 <a
                     href='/chat?dm={selPeer.username}'
                     onclick={closePanel}
-                    class='flex-1 flex items-center justify-center gap-1.5 py-2 
-                           rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 
+                    class='flex items-center justify-center gap-1.5 py-2
+                           rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600
                            hover:from-indigo-500 hover:to-violet-500
-                           text-white text-xs font-bold uppercase tracking-wider
+                           text-white text-xs font-bold
                            transition-all duration-200 transform hover:scale-105 active:scale-95
-                           border border-indigo-400/30 shadow-lg shadow-indigo-600/30
-                           hover:shadow-indigo-500/50'
+                           border border-indigo-400/30 shadow-lg shadow-indigo-600/30'
                 >
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
                         <path stroke-linecap='round' stroke-linejoin='round' d='M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'/>
@@ -313,9 +413,34 @@
                     Message
                 </a>
             </div>
+            <!-- Interactions futures -->
+            <div class='px-3 pb-3 grid grid-cols-2 gap-2 mt-2'>
+                <button disabled title='Partage de fichier — bientôt'
+                    class='flex items-center justify-center gap-1.5 py-2
+                           rounded-lg bg-gray-800/40 text-gray-600 text-xs
+                           border border-gray-800 cursor-not-allowed select-none'>
+                    <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                        <path stroke-linecap='round' stroke-linejoin='round' d='M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13'/>
+                    </svg>
+                    <span>Fichier</span>
+                    <span class='text-[9px] text-gray-700 font-medium uppercase tracking-wider'>bientôt</span>
+                </button>
+                <button disabled title='Mini-jeu — bientôt'
+                    class='flex items-center justify-center gap-1.5 py-2
+                           rounded-lg bg-gray-800/40 text-gray-600 text-xs
+                           border border-gray-800 cursor-not-allowed select-none'>
+                    <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                        <rect x='2' y='6' width='20' height='12' rx='2'/>
+                        <path stroke-linecap='round' stroke-linejoin='round' d='M6 12h4m-2-2v4M15 11h.01M18 11h.01'/>
+                    </svg>
+                    <span>Mini-jeu</span>
+                    <span class='text-[9px] text-gray-700 font-medium uppercase tracking-wider'>bientôt</span>
+                </button>
+            </div>
         </div>
     {/if}
 
+    {#if mode === 'float'}
     <!-- Barre vocale flottante -->
     <div class='fixed bottom-0 left-0 lg:left-[220px] right-0 z-40 pointer-events-none'>
         <div class='mx-auto max-w-4xl px-4 pb-2 pointer-events-auto'>
@@ -635,6 +760,146 @@
             </div>
         </div>
     </div>
+    {:else}
+    <!-- ── Sidebar voice footer (Discord-style) ───────────────────────── -->
+    <div class="border-t border-green-900/40 bg-green-950/10 shrink-0">
+
+        <!-- Status + level -->
+        <div class="px-3 pt-2 pb-1 flex items-center gap-2">
+            <div class="relative shrink-0">
+                <span class="w-2 h-2 rounded-full block
+                             {level > 8 && !muted ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}"></span>
+                {#if level > 8 && !muted}
+                    <span class="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-60"></span>
+                {/if}
+            </div>
+            <span class="text-xs text-green-400 font-medium flex-1 truncate">Vocal actif</span>
+            <span class="text-xs text-gray-600 tabular-nums">{peers.length + 1}</span>
+        </div>
+
+        <!-- Level bar -->
+        <div class="px-3 pb-2">
+            <div class="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-75 {levelColor}"
+                     style="width:{level}%"></div>
+            </div>
+        </div>
+
+        <!-- Peer avatars -->
+        {#if peers.length > 0}
+            <div class="px-3 pb-2 flex items-center gap-1 flex-wrap">
+                {#each peers.slice(0, 5) as peer (peer.socketId)}
+                    {@const pStats   = statsMap.get(peer.socketId)}
+                    {@const pQuality = getQuality(pStats)}
+                    <button
+                        onclick={() => openPeerPanel(peer)}
+                        title="{peer.username}"
+                        class="relative focus:outline-none shrink-0"
+                    >
+                        {#if peer.avatar}
+                            <img src={peer.avatar} alt={peer.username}
+                                class="w-6 h-6 rounded-full object-cover border border-gray-800
+                                       {peer.speaking ? 'ring-1 ring-green-400' : ''}"/>
+                        {:else}
+                            <div class="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center
+                                        text-[8px] font-bold text-white border border-gray-800
+                                        {peer.speaking ? 'ring-1 ring-green-400' : ''}">
+                                {peer.username.charAt(0).toUpperCase()}
+                            </div>
+                        {/if}
+                        <span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-gray-900
+                                     {qualityDotClass(pQuality)}"></span>
+                    </button>
+                {/each}
+                {#if peers.length > 5}
+                    <span class="text-[10px] text-gray-600 pl-0.5">+{peers.length - 5}</span>
+                {/if}
+            </div>
+        {/if}
+
+        <!-- Controls row -->
+        <div class="relative">
+            <div class="flex items-center px-1.5 pb-2 gap-0.5">
+
+                <!-- Mute -->
+                <button onclick={toggleMute} title={muted ? 'Réactiver le micro' : 'Couper le micro'}
+                    class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
+                           {muted ? 'text-red-400 bg-red-900/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
+                    {#if muted}
+                        <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                            <line x1='1' y1='1' x2='23' y2='23'/>
+                            <path d='M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6'/>
+                            <path d='M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23'/>
+                            <line x1='12' y1='19' x2='12' y2='23'/><line x1='8' y1='23' x2='16' y2='23'/>
+                        </svg>
+                    {:else}
+                        <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                            <path d='M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z'/>
+                            <path d='M19 10v2a7 7 0 0 1-14 0v-2'/>
+                            <line x1='12' y1='19' x2='12' y2='23'/><line x1='8' y1='23' x2='16' y2='23'/>
+                        </svg>
+                    {/if}
+                </button>
+
+                <!-- Deafen -->
+                <button onclick={toggleDeafen} title={deafened ? 'Réactiver le son' : 'Se rendre sourd'}
+                    class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
+                           {deafened ? 'text-red-400 bg-red-900/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
+                    <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                        <path d='M3 18v-6a9 9 0 0 1 18 0v6'/>
+                        <path d='M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z'/>
+                    </svg>
+                </button>
+
+                <!-- Settings audio -->
+                <button onclick={() => { showVoiceSettings = !showVoiceSettings; showMediaHub = false }}
+                    title="Paramètres audio"
+                    class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
+                           {showVoiceSettings ? 'text-amber-400 bg-amber-900/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
+                    <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                        <circle cx='12' cy='12' r='3'/>
+                        <path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/>
+                    </svg>
+                </button>
+
+                <!-- Quitter -->
+                <button onclick={leaveVoice} title="Quitter le vocal"
+                    class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
+                           text-red-500 hover:text-red-400 hover:bg-red-900/20">
+                    <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'>
+                        <path stroke-linecap='round' stroke-linejoin='round' d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v1'/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- VoiceSettings popup (fixed, échappe la sidebar) -->
+            {#if showVoiceSettings}
+                <div class="fixed inset-0 z-[199] backdrop-blur-sm bg-black/20"
+                     role="button" tabindex="-1"
+                     onclick={() => showVoiceSettings = false}
+                     onkeydown={e => e.key === 'Escape' && (showVoiceSettings = false)}
+                     aria-label="Fermer les paramètres audio">
+                </div>
+                <div class="fixed bottom-24 left-1/2 -translate-x-1/2 w-[360px] z-[200]
+                            animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div class="relative bg-gradient-to-b from-gray-900 to-gray-950
+                                border border-amber-500/30 rounded-2xl shadow-2xl shadow-amber-500/10
+                                overflow-hidden backdrop-blur-md">
+                        <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
+                        <VoiceSettings />
+                        <button onclick={() => showVoiceSettings = false}
+                            class="absolute top-4 right-4 text-gray-500 hover:text-white
+                                   bg-black/40 w-7 h-7 rounded-full flex items-center justify-center
+                                   backdrop-blur-sm border border-gray-700 hover:border-amber-500/50
+                                   transition-all duration-200 hover:scale-110">
+                            <span class="text-sm">✕</span>
+                        </button>
+                    </div>
+                </div>
+            {/if}
+        </div>
+    </div>
+    {/if}
 {/if}
 
 <style>

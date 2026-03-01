@@ -5,7 +5,7 @@
 
   <p><strong>Self-hosted, open-source, decentralized community platform.<br/>Forum + real-time chat + voice channels — on your own server, under your own control.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-v0.4.1-7c3aed)](CHANGELOG.md)
+  [![Version](https://img.shields.io/badge/version-v0.5.0-7c3aed)](CHANGELOG.md)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
   [![CI](https://github.com/Pokled/Nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nexus/actions/workflows/ci.yml)
   [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL-green)](docs/en/ARCHITECTURE.md)
@@ -103,7 +103,8 @@ Discussions, tutorials, collective knowledge — invisible to Google, inaccessib
 | Editor | TipTap (WYSIWYG) |
 | Real-time | Socket.IO |
 | Voice | WebRTC P2P mesh |
-| TURN relay | node-turn (self-hosted) |
+| TURN relay | coturn (self-hosted) |
+| **P2P relay** | **Rust — tokio + hyper (nexus-relay)** |
 
 ---
 
@@ -111,13 +112,23 @@ Discussions, tutorials, collective knowledge — invisible to Google, inaccessib
 
 ### ⚡ One-click install (recommended)
 
-One command. 5 questions. Everything configured automatically.
+One command. A few questions. Everything configured automatically.
 
 ```bash
 git clone https://github.com/Pokled/Nexus.git
 cd Nexus
 sudo bash install.sh
 ```
+
+The installer offers **three network modes**:
+
+| Mode | Requirements | Result |
+|---|---|---|
+| **Open ports** | Ports 80 + 443 open, domain or IP | Let's Encrypt HTTPS, full control |
+| **Nexus Relay** ⭐ | Nothing — outbound TCP only | `yourcommunity.nexusnode.app` in minutes |
+| **Cloudflare Tunnel** | CF account + own domain | Your custom domain, no open ports |
+
+> **Nexus Relay** is the recommended default — works on a Raspberry Pi behind a home router, no domain, no port forwarding, no Cloudflare account.
 
 The script installs and configures Node.js, PostgreSQL, Redis, coturn (TURN relay), Caddy (HTTPS), and PM2. It detects your public IP, generates secure secrets, bootstraps the community, and creates your admin account. **No manual configuration needed.**
 
@@ -146,15 +157,17 @@ docker-compose up -d
 | Full-text search (PostgreSQL FTS) | ✅ Done |
 | Real-time chat (Socket.IO) | ✅ Done |
 | Voice channels (WebRTC P2P) | ✅ Done |
-| Screen sharing | ✅ Done |
+| Screen sharing + clip recording | ✅ Done |
 | Admin panel | ✅ Done |
 | SEO (sitemap, RSS, JSON-LD) | ✅ Done |
-| Self-hosted TURN server | ✅ Done |
+| Self-hosted TURN server (coturn) | ✅ Done |
 | One-click installer (`install.sh`) | ✅ Done |
-| Instance directory | ✅ Done |
 | Instance directory + auto DNS | ✅ Done |
-| Meilisearch | ⏳ Phase 2 |
-| WireGuard P2P mesh | ⏳ Phase 3 |
+| **nexus-relay — P2P relay (no domain, no open ports)** | ✅ **Done** — Phase 3.0-A |
+| **Voice member stats & interaction panel** | ✅ **Done** |
+| Rust STUN/TURN server (`nexus-turn`) | ⏳ Phase 3.0-B |
+| WireGuard P2P mesh (inter-instance) | ⏳ Phase 3.0-C |
+| File sharing + collaborative whiteboard | ⏳ Phase 4 |
 | Mobile (Capacitor) / Desktop (Tauri) | ⏳ Phase 5 |
 
 ---

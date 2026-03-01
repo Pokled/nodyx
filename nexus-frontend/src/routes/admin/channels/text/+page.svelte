@@ -26,7 +26,7 @@
 
 <svelte:head><title>Canaux texte — Admin Nexus</title></svelte:head>
 
-<div class="max-w-3xl space-y-8">
+<div class="space-y-8">
 
 	<div>
 		<h1 class="text-2xl font-bold text-white mb-1">Canaux textuels</h1>

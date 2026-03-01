@@ -54,7 +54,7 @@
 
 <svelte:head><title>Paramètres — Admin Nexus</title></svelte:head>
 
-<div class="max-w-3xl">
+<div>
 	<h1 class="text-2xl font-bold text-white mb-2">Paramètres de l'instance</h1>
 	<p class="text-sm text-gray-500 mb-8">
 		Configuration et identité visuelle de votre communauté Nexus.

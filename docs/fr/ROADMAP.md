@@ -226,9 +226,15 @@ nexus-core    (Fastify/Node.js) ────────────────
 ### 3.1 — Salons vocaux — Interface & Modes avancés
 *(couche réseau déjà en place — Phase 2.4)*
 
-- [ ] Interface complète des salons vocaux (rejoindre/quitter, liste des participants)
+- [x] VoicePanel sidebar — panneau gauche fixe avec liste des participants (Galaxy Bar layout)
+- [x] Panneau d'interaction membre — cliquer sur un membre → stats réseau temps réel (RTT / jitter / perte de paquets) + curseur de volume
+- [x] Panneau self-monitoring — cliquer sur soi → jauge audio live, badges muted / deafened / PTT
+- [x] Popup VoiceSettings — modal large en position fixe (360px), échappe le débordement de la sidebar avec overlay backdrop
+- [x] Boutons d'interaction par pair — lien Profil, Message Direct, Partage de fichier + Mini-jeu (à venir)
 - [ ] Mode Table Ronde — WebRTC P2P direct (2 à 8 personnes, faible latence)
 - [ ] Mode Amphithéâtre — diffusion 1→N (9 à 25+ personnes, vidéo sur "toile")
+- [ ] Mini-jeux entre membres — petits jeux en duo dans le salon vocal (premier jeu : TBD)
+- [ ] Partage de fichiers entre membres vocaux — transfert P2P direct dans le salon
 - [ ] Nodes-as-a-Service — un Raspberry Pi peut devenir relais de flux média pour soulager le serveur principal
 
 ### 3.2 — Réseau maillé inter-instances
@@ -292,5 +298,5 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 ---
 
-*Version 1.4 — 1er mars 2026*
+*Version 1.5 — 1er mars 2026*
 *"Le P2P est l'âme. Rust est le corps."*

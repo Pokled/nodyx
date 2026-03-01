@@ -22,7 +22,7 @@
 
 <svelte:head><title>Canaux vocaux — Admin Nexus</title></svelte:head>
 
-<div class="max-w-3xl">
+<div>
 	<div class="flex items-center gap-3 mb-2">
 		<h1 class="text-2xl font-bold text-white">Canaux vocaux</h1>
 		<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-900/40 text-green-300 border border-green-800/40">

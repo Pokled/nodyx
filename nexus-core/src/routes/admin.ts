@@ -6,11 +6,12 @@
 
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { db, redis } from '../config/database'
+import { db } from '../config/database'
 import { adminOnly } from '../middleware/adminOnly'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
 import * as ChannelModel from '../models/channel'
+import { io } from '../socket/io'
 import { randomUUID } from 'crypto'
 import { createWriteStream, mkdirSync } from 'fs'
 import { pipeline } from 'stream/promises'
@@ -73,7 +74,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (_req, reply) => {
     const communityId = await getCommunityId()
 
-    const [usersRes, threadsRes, postsRes, catRes, heartbeatKeys] = await Promise.all([
+    const [usersRes, threadsRes, postsRes, catRes, presenceSockets] = await Promise.all([
       db.query(`SELECT COUNT(*)::int AS total,
                        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::int AS new_this_week
                 FROM users`),
@@ -91,8 +92,11 @@ export default async function adminRoutes(app: FastifyInstance) {
                 JOIN categories c ON c.id = t.category_id
                 WHERE c.community_id = $1`, [communityId]),
       db.query(`SELECT COUNT(*)::int AS total FROM categories WHERE community_id = $1`, [communityId]),
-      redis.keys('nexus:heartbeat:*'),
+      io ? io.in('presence').fetchSockets() : Promise.resolve([]),
     ])
+
+    const seenOnline = new Set<string>()
+    for (const s of presenceSockets) { if (s.data.userId) seenOnline.add(s.data.userId) }
 
     // Activity by day — last 7 days
     const activityRes = await db.query(
@@ -124,7 +128,7 @@ export default async function adminRoutes(app: FastifyInstance) {
       threads:  threadsRes.rows[0],
       posts:    postsRes.rows[0],
       categories: catRes.rows[0],
-      online:   heartbeatKeys.length,
+      online:   seenOnline.size,
       activity_last_7_days: activityRes.rows,
       top_contributors:     topContribRes.rows,
     })

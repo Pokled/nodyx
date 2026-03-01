@@ -20,7 +20,7 @@
 
 <svelte:head><title>Dashboard — Admin Nexus</title></svelte:head>
 
-<div class="max-w-5xl">
+<div>
 	<h1 class="text-2xl font-bold text-white mb-6">Dashboard</h1>
 
 	<!-- Stat cards -->

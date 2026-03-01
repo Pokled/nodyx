@@ -23,7 +23,7 @@
 
 <svelte:head><title>Catégories — Admin Nexus</title></svelte:head>
 
-<div class="max-w-4xl">
+<div>
 	<h1 class="text-2xl font-bold text-white mb-6">Catégories</h1>
 
 	{#if form?.error}

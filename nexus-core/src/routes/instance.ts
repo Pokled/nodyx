@@ -7,12 +7,13 @@
  */
 
 import { FastifyInstance } from 'fastify'
-import { db, redis } from '../config/database'
+import { db } from '../config/database'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as CommunityModel from '../models/community'
 import * as ThreadModel from '../models/thread'
 import * as TagModel from '../models/tag'
+import { io } from '../socket/io'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -62,17 +63,20 @@ export default async function instanceRoutes(app: FastifyInstance) {
   app.get('/info', { preHandler: [rateLimit] }, async (_request, reply) => {
     const communityId = await getCommunityId()
 
-    const [memberRes, threadRes, postRes, heartbeatKeys, brandingRes] = await Promise.all([
+    const [memberRes, threadRes, postRes, presenceSockets, brandingRes] = await Promise.all([
       db.query(`SELECT COUNT(*)::int AS count FROM users`),
       db.query(`SELECT COUNT(*)::int AS count FROM threads`),
       db.query(`SELECT COUNT(*)::int AS count FROM posts`),
-      redis.keys('nexus:heartbeat:*'),
+      io ? io.in('presence').fetchSockets() : Promise.resolve([]),
       communityId
         ? db.query<{ logo_url: string | null; banner_url: string | null }>(
             `SELECT logo_url, banner_url FROM communities WHERE id = $1`, [communityId]
           )
         : Promise.resolve({ rows: [{ logo_url: null, banner_url: null }] }),
     ])
+
+    const seen = new Set<string>()
+    for (const s of presenceSockets) { if (s.data.userId) seen.add(s.data.userId) }
 
     const branding = brandingRes.rows[0] ?? { logo_url: null, banner_url: null }
 
@@ -84,7 +88,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       slug:        process.env.NEXUS_COMMUNITY_SLUG        || '',
       community_id: communityId,
       member_count: memberRes.rows[0].count,
-      online_count: heartbeatKeys.length,
+      online_count: seen.size,
       thread_count: threadRes.rows[0].count,
       post_count:   postRes.rows[0].count,
       logo_url:     branding.logo_url,

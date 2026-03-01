@@ -226,9 +226,15 @@ nexus-core    (Fastify/Node.js) ────────────────
 ### 3.1 — Voice Channels — Interface & Advanced Modes
 *(network layer already in place — Phase 2.4)*
 
-- [ ] Complete voice channel interface (join/leave, participant list)
+- [x] VoicePanel sidebar — fixed-position left panel with participant list (Galaxy Bar layout)
+- [x] Voice member interaction panel — click any member → real-time network stats (RTT / jitter / packet loss) + volume slider
+- [x] Self-monitoring panel — click yourself → live audio level meter, muted / deafened / PTT status badges
+- [x] VoiceSettings popup — large fixed-position modal (360px), escapes sidebar overflow with backdrop overlay
+- [x] Interaction buttons per peer — Profile link, Direct Message, File sharing + Mini-game (coming soon)
 - [ ] Round Table mode — direct WebRTC P2P (2 to 8 people, low latency)
 - [ ] Amphitheater mode — 1→N broadcast (9 to 25+ people, video on "screen")
+- [ ] Member mini-games — lightweight in-voice games between two members (first: TBD)
+- [ ] File sharing between voice members — direct P2P transfer in voice channel
 - [ ] Nodes-as-a-Service — a Raspberry Pi can become a media relay to relieve the main server
 
 ### 3.2 — Inter-instance mesh network
@@ -292,5 +298,5 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 ---
 
-*Version 1.4 — March 1, 2026*
+*Version 1.5 — March 1, 2026*
 *"P2P is the soul. Rust is the body."*
