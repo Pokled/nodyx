@@ -211,6 +211,17 @@ step "Configuration de PostgreSQL"
 systemctl enable postgresql --quiet
 systemctl start postgresql
 
+# Wait for PostgreSQL to accept connections (socket may take a few seconds)
+info "Attente du démarrage de PostgreSQL..."
+for _pg_i in {1..30}; do
+  if sudo -u postgres pg_isready -q 2>/dev/null; then
+    ok "PostgreSQL prêt"
+    break
+  fi
+  [[ $_pg_i -eq 30 ]] && die "PostgreSQL n'a pas démarré dans les temps.\nVérifie : sudo systemctl status postgresql"
+  sleep 2
+done
+
 # Create role + database (idempotent)
 sudo -u postgres psql -c "
   DO \$\$ BEGIN
