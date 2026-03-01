@@ -10,7 +10,7 @@
 
 - [Avant de commencer](#-avant-de-commencer)
 - [Où héberger ?](#-où-héberger-)
-- [Ai-je besoin d'un nom de domaine ?](#-ai-je-besoin-dun-nom-de-domaine-)
+- [Ai-je besoin d'un nom de domaine ?](#-ai-je-besoin-dun-nom-de-domaine-) — [Guide complet des domaines →](DOMAIN.md)
 - [Quels ports ouvrir ?](#-quels-ports-ouvrir-)
 - [Installation — La méthode simple](#-installation--la-méthode-simple-recommandée)
 - [Utilisateurs Windows — Guide WSL](#-utilisateurs-windows--guide-wsl)
@@ -130,37 +130,25 @@ Tu peux faire tourner Nexus sur Windows 10/11 via WSL2 (Sous-système Windows po
 
 ## 🌐 Ai-je besoin d'un nom de domaine ?
 
-**Réponse courte : Non !** Si tu n'as pas de domaine, l'installateur crée automatiquement un domaine gratuit de type `46-225-20-193.sslip.io` (basé sur l'IP de ton serveur). Ce domaine est reconnu par Let's Encrypt → HTTPS fonctionne sans rien acheter.
+**Réponse courte : Non !** Pour un VPS avec `install.sh`, l'installateur crée automatiquement un domaine gratuit `46-225-20-193.sslip.io` + un alias mémorable `ton-slug.nexusnode.app`. HTTPS fonctionne sans rien acheter.
 
-En plus, tu reçois un alias mémorable `ton-slug.nexusnode.app` qui redirige vers ton instance.
+**Pour `install_tunnel.sh` (Cloudflare Tunnel)**, un vrai domaine à toi est obligatoire — les sous-domaines gratuits de type No-IP ou DuckDNS ne fonctionnent pas.
 
-**Si tu as ton propre domaine** (`macommunaute.fr`), c'est encore mieux :
-- URL plus lisible et professionnelle
-- Meilleure indexation Google (nom de domaine personnalisé)
-- Tu peux le migrer plus tard sans tout réinstaller
+> 📖 **[→ Guide complet des domaines : types, compatibilité, arbre de décision, où acheter](DOMAIN.md)**
+>
+> Tu y trouveras notamment pourquoi No-IP/DuckDNS sont incompatibles avec Cloudflare Tunnel, et un tableau comparatif de toutes les options.
 
-> **Résumé :** sslip.io = domaine fonctionnel immédiat, certificat HTTPS automatique, aucune configuration. Ton domaine = meilleure présence, même fonctionnement.
+**En résumé rapide :**
 
-**Registrars de domaines recommandés :**
+| Situation | Solution |
+|---|---|
+| VPS, ports 80/443 ouverts, pas de domaine | `install.sh` → sslip.io + nexusnode.app gratuits |
+| VPS, ports 80/443 ouverts, domaine perso | `install.sh` → entre ton domaine |
+| Maison, pas de ports ouverts, domaine CF | `install_tunnel.sh` |
+| Maison, pas de ports ouverts, No-IP/DuckDNS | ❌ non compatible — [voir DOMAIN.md](DOMAIN.md) |
+| Maison, pas de ports ouverts, pas de domaine | Achète un domaine ~1€/an — [voir DOMAIN.md](DOMAIN.md) |
 
-| Registrar | Prix/an | Notes |
-|---|---|---|
-| [Namecheap](https://namecheap.com) | ~10$ | Super UI, WHOIS gratuit |
-| [Cloudflare Registrar](https://cloudflare.com/registrar) | Au coût (~8$) | Pas de marge, DNS gratuit |
-| [Gandi](https://gandi.net) | ~15€ | Hébergeur français, éthique |
-| [OVH](https://ovh.com) | ~7€ | Hébergeur français |
-
-**Configuration DNS (pointer ton domaine vers ton serveur) :**
-
-Une fois ton domaine acheté, ajoute un **enregistrement A** dans ton panneau DNS :
-
-```
-Type  Nom     Valeur          TTL
-A     @       IP_SERVEUR      300
-A     www     IP_SERVEUR      300
-```
-
-> 💡 **Astuce Cloudflare :** Si tu utilises Cloudflare comme DNS, tu peux activer le nuage orange (proxy) pour HTTP/HTTPS — ça te donne une protection DDoS gratuite. **Cependant, désactive le proxy (nuage gris) pour tout sous-domaine TURN** — les salons vocaux ne fonctionneront pas à travers le proxy Cloudflare.
+> 💡 **Astuce Cloudflare :** Si tu utilises Cloudflare comme DNS, active le nuage orange (proxy) pour HTTP/HTTPS — protection DDoS gratuite. **Désactive le proxy (nuage gris) pour tout sous-domaine TURN** — les salons vocaux ne passent pas par le proxy CF.
 
 ---
 

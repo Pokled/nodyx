@@ -8,7 +8,7 @@
 
 - [Before You Start](#-before-you-start)
 - [Where to Host?](#-where-to-host)
-- [Do I Need a Domain Name?](#-do-i-need-a-domain-name)
+- [Do I Need a Domain Name?](#-do-i-need-a-domain-name) — [Complete Domain Guide →](DOMAIN.md)
 - [Which Ports to Open?](#-which-ports-to-open)
 - [Installation — The Easy Way](#-installation--the-easy-way-recommended)
 - [Windows Users — WSL Guide](#-windows-users--wsl-guide)
@@ -128,37 +128,25 @@ You can run Nexus on Windows 10/11 using WSL2 (Windows Subsystem for Linux). Thi
 
 ## 🌐 Do I Need a Domain Name?
 
-**Short answer: No!** If you don't have a domain, the installer automatically creates a free domain like `46-225-20-193.sslip.io` (based on your server IP). This domain is recognized by Let's Encrypt → HTTPS works with zero configuration and zero cost.
+**Short answer: No!** For a VPS with `install.sh`, the installer automatically creates a free domain `46-225-20-193.sslip.io` + a memorable alias `your-slug.nexusnode.app`. HTTPS works without buying anything.
 
-You also get a memorable alias `your-slug.nexusnode.app` that redirects to your instance.
+**For `install_tunnel.sh` (Cloudflare Tunnel)**, a real domain you own is required — free subdomains like No-IP or DuckDNS do not work.
 
-**If you have your own domain** (`mycommunity.com`), even better:
-- More readable and professional URL
-- Better Google indexing (custom domain name)
-- Easy to migrate later without reinstalling
+> 📖 **[→ Complete Domain Guide: types, compatibility, decision tree, where to buy](DOMAIN.md)**
+>
+> Covers why No-IP/DuckDNS are incompatible with Cloudflare Tunnel, and a full comparison table of all options.
 
-> **Summary:** sslip.io = working domain immediately, automatic HTTPS, no setup. Your own domain = better presence, same functionality.
+**Quick summary:**
 
-**Recommended domain registrars:**
+| Situation | Solution |
+|---|---|
+| VPS, ports 80/443 open, no domain | `install.sh` → sslip.io + nexusnode.app free |
+| VPS, ports 80/443 open, custom domain | `install.sh` → enter your domain |
+| Home server, no open ports, CF domain | `install_tunnel.sh` |
+| Home server, no open ports, No-IP/DuckDNS | ❌ not compatible — [see DOMAIN.md](DOMAIN.md) |
+| Home server, no open ports, no domain | Buy a domain ~$1/year — [see DOMAIN.md](DOMAIN.md) |
 
-| Registrar | Price/year | Notes |
-|---|---|---|
-| [Namecheap](https://namecheap.com) | ~$10 | Great UI, free WHOIS privacy |
-| [Cloudflare Registrar](https://cloudflare.com/registrar) | At cost (~$8) | No markup, free DNS |
-| [Gandi](https://gandi.net) | ~$15 | French provider, ethical |
-| [OVH](https://ovh.com) | ~$7 | French provider |
-
-**DNS setup (point your domain to your server):**
-
-Once you have a domain, add an **A record** in your DNS panel:
-
-```
-Type  Name    Value           TTL
-A     @       YOUR_SERVER_IP  300
-A     www     YOUR_SERVER_IP  300
-```
-
-> 💡 **Cloudflare tip:** If you use Cloudflare as your DNS provider, you can enable the orange cloud (proxy) for HTTP/HTTPS — it gives you DDoS protection for free. **However, disable the proxy (grey cloud) for any TURN subdomain** — voice channels won't work through Cloudflare's proxy.
+> 💡 **Cloudflare tip:** If you use Cloudflare as your DNS provider, enable the orange cloud (proxy) for HTTP/HTTPS — free DDoS protection. **Disable the proxy (grey cloud) for any TURN subdomain** — voice channels won't work through CF's proxy.
 
 ---
 
