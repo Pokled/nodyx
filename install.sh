@@ -85,16 +85,35 @@ else
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  CONFIGURATION — 5 questions
+#  CONFIGURATION — questions interactives
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Configuration de ton instance"
 echo ""
 
-prompt   DOMAIN          "Nom de domaine (ex: moncommunaute.fr)"
+# 1 — Communauté
 prompt   COMMUNITY_NAME  "Nom de la communauté (ex: Linux France)"
 COMMUNITY_SLUG_DEFAULT=$(slugify "$COMMUNITY_NAME")
-prompt   COMMUNITY_SLUG  "Slug unique de la communauté" "$COMMUNITY_SLUG_DEFAULT"
+prompt   COMMUNITY_SLUG  "Identifiant unique (slug)" "$COMMUNITY_SLUG_DEFAULT"
 prompt   COMMUNITY_LANG  "Langue principale (fr/en/de/es/it/pt)" "fr"
+
+# 2 — Domaine (optionnel)
+echo ""
+echo -e "  ${BOLD}Domaine de ton instance${RESET}"
+echo -e "  ┌─ Si tu as un domaine (ex: ${CYAN}moncommunaute.fr${RESET}), entre-le ci-dessous."
+echo -e "  └─ Sinon, appuie sur ${BOLD}Entrée${RESET} → domaine gratuit ${CYAN}${PUBLIC_IP//./-}.sslip.io${RESET} utilisé automatiquement."
+echo ""
+read -rp "$(echo -e "  ${CYAN}?${RESET} Domaine (Entrée pour obtenir un domaine gratuit): ")" DOMAIN
+
+DOMAIN_IS_AUTO=false
+if [[ -z "$DOMAIN" ]]; then
+  # Derive a sslip.io domain from the public IP — resolves to this VPS, Caddy auto-TLS works
+  DOMAIN="${PUBLIC_IP//./-}.sslip.io"
+  DOMAIN_IS_AUTO=true
+  ok "Domaine automatique : ${BOLD}${DOMAIN}${RESET}"
+  info "sslip.io résout automatiquement vers ${PUBLIC_IP} — certificat HTTPS géré par Caddy."
+fi
+
+# 3 — Compte administrateur
 echo ""
 echo -e "  ${BOLD}Compte administrateur${RESET}"
 prompt        ADMIN_USERNAME "Nom d'utilisateur admin"
@@ -103,10 +122,10 @@ prompt_secret ADMIN_PASSWORD "Mot de passe admin"
 
 echo ""
 echo -e "  ${BOLD}Récapitulatif :${RESET}"
-echo -e "  Domaine    : ${CYAN}$DOMAIN${RESET}"
-echo -e "  Communauté : ${CYAN}$COMMUNITY_NAME${RESET} (slug: $COMMUNITY_SLUG)"
-echo -e "  Langue     : ${CYAN}$COMMUNITY_LANG${RESET}"
-echo -e "  Admin      : ${CYAN}$ADMIN_USERNAME${RESET} <$ADMIN_EMAIL>"
+echo -e "  Domaine    : ${CYAN}${DOMAIN}${RESET}$(${DOMAIN_IS_AUTO} && echo ' (sslip.io automatique)' || true)"
+echo -e "  Communauté : ${CYAN}${COMMUNITY_NAME}${RESET} (slug: ${COMMUNITY_SLUG})"
+echo -e "  Langue     : ${CYAN}${COMMUNITY_LANG}${RESET}"
+echo -e "  Admin      : ${CYAN}${ADMIN_USERNAME}${RESET} <${ADMIN_EMAIL}>"
 echo ""
 read -rp "$(echo -e "  ${BOLD}Continuer ? [O/n] ${RESET}")" confirm
 [[ "${confirm,,}" == "n" ]] && die "Installation annulée."
@@ -466,18 +485,24 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 #  OPTIONAL — FREE nexusnode.app SUBDOMAIN
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Sous-domaine gratuit nexusnode.app (optionnel)"
+step "Sous-domaine gratuit nexusnode.app"
 
 NEXUS_SUBDOMAIN=""
 NEXUS_DIRECTORY_TOKEN=""
 NEXUS_DIRECTORY_URL="https://nexusnode.app/api/directory"
 
 echo ""
-echo -e "  Tu peux obtenir un sous-domaine gratuit : ${BOLD}${COMMUNITY_SLUG}.nexusnode.app${RESET}"
-echo -e "  Cela permet à tes utilisateurs d'accéder à ton instance sans domaine propre."
-echo -e "  (Tu peux toujours utiliser ton propre domaine ${CYAN}${DOMAIN}${RESET} en même temps.)"
-echo ""
-read -rp "$(echo -e "  Activer ${BOLD}${COMMUNITY_SLUG}.nexusnode.app${RESET} ? [O/n] ")" want_subdomain
+if $DOMAIN_IS_AUTO; then
+  # No custom domain → the nexusnode.app alias is extra useful as a readable URL
+  echo -e "  Tu n'as pas de domaine propre : ${BOLD}${COMMUNITY_SLUG}.nexusnode.app${RESET} va être activé"
+  echo -e "  automatiquement comme alias mémorable pour ton instance."
+  want_subdomain="o"
+else
+  echo -e "  Alias optionnel : ${BOLD}${COMMUNITY_SLUG}.nexusnode.app${RESET}"
+  echo -e "  Redirige vers ton instance — utile comme raccourci mémorable."
+  echo ""
+  read -rp "$(echo -e "  Activer ${BOLD}${COMMUNITY_SLUG}.nexusnode.app${RESET} ? [O/n] ")" want_subdomain
+fi
 
 if [[ "${want_subdomain,,}" != "n" ]]; then
   info "Enregistrement auprès du directory nexusnode.app..."

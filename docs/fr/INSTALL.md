@@ -127,12 +127,16 @@ Tu peux faire tourner Nexus sur Windows 10/11 via WSL2 (Sous-système Windows po
 
 ## 🌐 Ai-je besoin d'un nom de domaine ?
 
-**Réponse courte : Pas forcément !** L'installateur te propose un sous-domaine gratuit `ton-slug.nexusnode.app` si tu n'en as pas. Tu pourras ajouter ton propre domaine plus tard.
+**Réponse courte : Non !** Si tu n'as pas de domaine, l'installateur crée automatiquement un domaine gratuit de type `46-225-20-193.sslip.io` (basé sur l'IP de ton serveur). Ce domaine est reconnu par Let's Encrypt → HTTPS fonctionne sans rien acheter.
 
-Si tu veux tout de même ton propre domaine (`macommunaute.fr`), sans ça :
-- Tu accèdes à Nexus uniquement via l'IP (ex: `http://46.225.20.193`)
-- Pas d'HTTPS automatique (Caddy a besoin d'un domaine pour Let's Encrypt)
-- Ton forum ne sera pas indexé par Google
+En plus, tu reçois un alias mémorable `ton-slug.nexusnode.app` qui redirige vers ton instance.
+
+**Si tu as ton propre domaine** (`macommunaute.fr`), c'est encore mieux :
+- URL plus lisible et professionnelle
+- Meilleure indexation Google (nom de domaine personnalisé)
+- Tu peux le migrer plus tard sans tout réinstaller
+
+> **Résumé :** sslip.io = domaine fonctionnel immédiat, certificat HTTPS automatique, aucune configuration. Ton domaine = meilleure présence, même fonctionnement.
 
 **Registrars de domaines recommandés :**
 
@@ -199,19 +203,27 @@ sudo bash install.sh
 
 > 🔐 Le script doit être exécuté en root (ou avec sudo). Il installe des paquets système, configure le pare-feu et met en place les services.
 
-### Étape 3 — Réponds à 5 questions
+### Étape 3 — Réponds aux questions
 
 L'installateur va te demander :
 
 ```
-? Nom de domaine (ex: macommunaute.fr): macommunaute.fr
 ? Nom de la communauté (ex: Linux France): Ma Super Communauté
-? Slug unique de la communauté: ma-super-communaute
-? Langue principale (fr/en/de/es/it/pt): fr
+? Identifiant unique (slug) [ma-super-communaute]:
+? Langue principale (fr/en/de/es/it/pt) [fr]:
+
+  Domaine de ton instance
+  ┌─ Si tu as un domaine (ex: moncommunaute.fr), entre-le ci-dessous.
+  └─ Sinon, appuie sur Entrée → domaine gratuit 46-225-20-193.sslip.io utilisé automatiquement.
+
+? Domaine (Entrée pour obtenir un domaine gratuit): macommunaute.fr   ← ou Entrée pour sslip.io
+
 ? Nom d'utilisateur admin: alice
 ? Email admin: alice@exemple.fr
 ? Mot de passe admin: ••••••••
 ```
+
+> 💡 **Pas de domaine ?** Appuie sur Entrée — ton instance sera accessible sur `46-225-20-193.sslip.io` avec HTTPS automatique. Tu peux changer pour ton propre domaine plus tard.
 
 C'est tout. Le script s'occupe du reste automatiquement (≈ 3 à 10 minutes selon la vitesse de ton serveur).
 

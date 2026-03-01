@@ -127,12 +127,16 @@ You can run Nexus on Windows 10/11 using WSL2 (Windows Subsystem for Linux). Thi
 
 ## 🌐 Do I Need a Domain Name?
 
-**Short answer: Not necessarily!** The installer offers you a free `your-slug.nexusnode.app` subdomain if you don't have one. You can always add your own domain later.
+**Short answer: No!** If you don't have a domain, the installer automatically creates a free domain like `46-225-20-193.sslip.io` (based on your server IP). This domain is recognized by Let's Encrypt → HTTPS works with zero configuration and zero cost.
 
-If you still want your own domain (`mycommunity.com`), without one:
-- You can only access Nexus via IP address (e.g., `http://46.225.20.193`)
-- You won't get automatic HTTPS (Caddy needs a domain for Let's Encrypt)
-- Your forum won't be indexed by Google
+You also get a memorable alias `your-slug.nexusnode.app` that redirects to your instance.
+
+**If you have your own domain** (`mycommunity.com`), even better:
+- More readable and professional URL
+- Better Google indexing (custom domain name)
+- Easy to migrate later without reinstalling
+
+> **Summary:** sslip.io = working domain immediately, automatic HTTPS, no setup. Your own domain = better presence, same functionality.
 
 **Recommended domain registrars:**
 
@@ -199,19 +203,27 @@ sudo bash install.sh
 
 > 🔐 The script must run as root (or with sudo). It installs system packages, configures the firewall, and sets up services.
 
-### Step 3 — Answer 5 questions
+### Step 3 — Answer the questions
 
 The installer will ask you:
 
 ```
-? Domain name (e.g. mycommunity.com): mycommunity.com
 ? Community name (e.g. Linux France): My Awesome Community
-? Unique community slug: my-awesome-community
-? Primary language (fr/en/de/es/it/pt): en
+? Unique identifier (slug) [my-awesome-community]:
+? Primary language (fr/en/de/es/it/pt) [en]:
+
+  Instance domain
+  ┌─ If you have a domain (e.g. mycommunity.com), enter it below.
+  └─ Otherwise, press Enter → free domain 46-225-20-193.sslip.io used automatically.
+
+? Domain (press Enter for a free domain): mycommunity.com   ← or Enter for sslip.io
+
 ? Admin username: alice
 ? Admin email: alice@example.com
 ? Admin password: ••••••••
 ```
+
+> 💡 **No domain?** Just press Enter — your instance will be accessible at `46-225-20-193.sslip.io` with automatic HTTPS. You can switch to your own domain later.
 
 That's it. The script handles everything else automatically (≈ 3–10 minutes depending on your server speed).
 
