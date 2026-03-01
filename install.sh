@@ -362,7 +362,7 @@ if $RELAY_MODE; then
     *) die "Architecture non supportée pour Nexus Relay : $_ARCH (supporté: x86_64, aarch64)" ;;
   esac
 
-  _RELAY_VERSION="v0.1.0-relay"
+  _RELAY_VERSION="v0.1.1-relay"
   _RELAY_URL="https://github.com/Pokled/Nexus/releases/download/${_RELAY_VERSION}/nexus-relay-linux-${_RELAY_ARCH}"
 
   info "Téléchargement nexus-relay ${_RELAY_VERSION} (${_RELAY_ARCH})..."
