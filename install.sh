@@ -526,12 +526,19 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
     NEXUS_DIRECTORY_TOKEN="$REGISTER_TOKEN"
     NEXUS_SUBDOMAIN="${REGISTER_SLUG:-${COMMUNITY_SLUG}.nexusnode.app}"
     ok "Enregistré ! Sous-domaine : ${BOLD}https://${NEXUS_SUBDOMAIN}${RESET}"
-    info "Le DNS sera actif dans ~30 secondes (vérification de ton domaine en cours)."
+    info "Le DNS sera actif dans ~30 secondes."
     info "Sauvegarde le token directory — nécessaire pour les heartbeats et la désinscription."
   else
-    warn "Enregistrement échoué (le directory n'a peut-être pas pu vérifier ton domaine)."
-    warn "Réponse : $(echo "$REGISTER_RESPONSE" | head -c 200)"
-    warn "Tu peux réessayer manuellement plus tard sur https://nexusnode.app"
+    # Check for slug conflict (409) — common on reinstall
+    if echo "$REGISTER_RESPONSE" | grep -q 'Slug already taken'; then
+      warn "Le slug '${COMMUNITY_SLUG}' est déjà enregistré dans le directory."
+      warn "Si c'est une réinstallation, l'ancienne entrée doit être supprimée d'abord."
+      warn "Contacte le support nexusnode.app ou utilise un slug différent."
+    else
+      warn "Enregistrement échoué."
+      warn "Réponse : $(echo "$REGISTER_RESPONSE" | head -c 200)"
+      warn "Tu peux réessayer manuellement plus tard sur https://nexusnode.app"
+    fi
   fi
 else
   info "Sous-domaine gratuit ignoré. Tu utiliseras https://${DOMAIN}"
