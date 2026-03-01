@@ -48,9 +48,10 @@ prompt() {
 }
 
 prompt_secret() {
-  local var="$1" msg="$2"
+  local var="$1" msg="$2" minlen="${3:-1}"
   local val=''
-  while [[ -z "$val" ]]; do
+  while [[ ${#val} -lt $minlen ]]; do
+    [[ -n "$val" ]] && echo -e "  ${YELLOW}⚠${RESET}  Mot de passe trop court (minimum ${minlen} caractères)."
     read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val
     echo
   done
@@ -94,6 +95,10 @@ echo ""
 prompt   COMMUNITY_NAME  "Nom de la communauté (ex: Linux France)"
 COMMUNITY_SLUG_DEFAULT=$(slugify "$COMMUNITY_NAME")
 prompt   COMMUNITY_SLUG  "Identifiant unique (slug)" "$COMMUNITY_SLUG_DEFAULT"
+COMMUNITY_SLUG=$(slugify "$COMMUNITY_SLUG")
+if [[ ${#COMMUNITY_SLUG} -lt 3 ]]; then
+  die "Le slug est trop court après sanitisation (min 3 caractères). Choisis un nom plus long."
+fi
 prompt   COMMUNITY_LANG  "Langue principale (fr/en/de/es/it/pt)" "fr"
 
 # 2 — Mode réseau
@@ -132,7 +137,7 @@ echo ""
 echo -e "  ${BOLD}Compte administrateur${RESET}"
 prompt        ADMIN_USERNAME "Nom d'utilisateur admin"
 prompt        ADMIN_EMAIL    "Email admin"
-prompt_secret ADMIN_PASSWORD "Mot de passe admin"
+prompt_secret ADMIN_PASSWORD "Mot de passe admin (min 8 caractères)" 8
 
 echo ""
 echo -e "  ${BOLD}Récapitulatif :${RESET}"
