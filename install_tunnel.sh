@@ -150,7 +150,26 @@ while ! $_domain_ok; do
   DOMAIN="${DOMAIN#https://}"; DOMAIN="${DOMAIN#http://}"
   DOMAIN="${DOMAIN%/}";        DOMAIN="${DOMAIN// /}"
   if [[ -z "$DOMAIN" ]]; then
-    echo -e "  ${RED}✘  Le domaine est obligatoire en mode Cloudflare Tunnel.${RESET}"
+    echo ""
+    echo -e "  ${YELLOW}${BOLD}┌─ Pourquoi un domaine est-il obligatoire ici ? ──────────────┐${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}                                                              ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}  CF Tunnel crée un ${BOLD}CNAME dans ta zone DNS Cloudflare${RESET}.      ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}  Il a besoin d'accès à un domaine ${BOLD}que tu possèdes${RESET}.         ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}  ${CYAN}nexusnode.app${RESET} est notre zone — tu n'y as pas accès.       ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}                                                              ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}  ${BOLD}Tes options :${RESET}                                                ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}  ${GREEN}1.${RESET} Achète un domaine (~1€/an) chez ${CYAN}porkbun.com${RESET}            ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}     ou ${CYAN}namecheap.com${RESET}, ajoute-le à Cloudflare, reviens ici.  ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}                                                              ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}  ${GREEN}2.${RESET} Si tu peux ouvrir les ports 80/443 sur ta box,        ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}     utilise ${BOLD}install.sh${RESET} — il donne un sous-domaine gratuit   ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}     ${CYAN}${PUBLIC_IP//./-}.sslip.io${RESET} automatiquement.                 ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}│${RESET}                                                              ${YELLOW}${BOLD}│${RESET}"
+    echo -e "  ${YELLOW}${BOLD}└──────────────────────────────────────────────────────────────┘${RESET}"
+    echo ""
+    read -rp "$(echo -e "  Quitter et utiliser ${BOLD}install.sh${RESET} à la place ? [O/n] ")" _switch
+    [[ "${_switch,,}" != "n" ]] && die "Lance ${BOLD}bash install.sh${RESET} si tu peux ouvrir les ports,\n   ou achète un domaine et reviens sur ${BOLD}bash install_tunnel.sh${RESET}."
+    echo ""
   elif [[ "$DOMAIN" != *.* ]]; then
     echo -e "  ${RED}✘  '${DOMAIN}' ne ressemble pas à un domaine valide (pas de point).${RESET}"
   else
