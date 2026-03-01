@@ -410,6 +410,29 @@ Cloudflare Tunnel creates an **outbound** connection from your server to Cloudfl
 
 > 💡 No domain? Nexus gives you one for free: during installation, your instance automatically gets a **`your-slug.nexusnode.app`** subdomain. No purchase needed.
 
+---
+
+> 🚀 **`install_tunnel.sh` automates the entire setup!**
+>
+> Once your Cloudflare account and domain are ready **(Step 1 below only)**, simply run:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Pokled/Nexus/main/install_tunnel.sh -o install_tunnel.sh
+> sudo bash install_tunnel.sh
+> ```
+>
+> The script handles everything:
+> - Detects your server architecture (arm64, amd64…)
+> - Installs Nexus completely (PostgreSQL, Redis, coturn, PM2…)
+> - Downloads and installs `cloudflared`
+> - Guides you step by step through the Cloudflare login (a URL to open in your browser)
+> - Creates the tunnel, generates `config.yml`, registers DNS automatically
+> - Installs the systemd service and verifies everything is working
+>
+> **Steps 2–9 below are for reference only** — useful to understand what's happening, but you don't need to run them manually.
+
+---
+
 #### Step 1 — Create a Cloudflare account
 
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) and create a free account
