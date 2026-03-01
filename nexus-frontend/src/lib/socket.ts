@@ -40,10 +40,13 @@ export async function initSocket(token: string, initialCount: number): Promise<v
 
   _socket = ioClient(baseUrl, {
     auth:       { token },
-    // polling first: connects immediately through the relay without a 10s
-    // WebSocket handshake delay. WebSocket upgrade is tried afterwards and
-    // used automatically when available (direct HTTPS instances).
-    transports: ['polling', 'websocket'],
+    // WebSocket first: if it fails (relay strips Upgrade headers → 400 from
+    // Engine.IO), Socket.IO falls back to polling on a FRESH session.
+    // ['polling', 'websocket'] is wrong here: the WebSocket upgrade probe
+    // sent AFTER a polling session is established gets a malformed 400 from
+    // Engine.IO (no Upgrade header through relay), which corrupts the session
+    // and causes all subsequent polls to return 400 too.
+    transports: ['websocket', 'polling'],
   })
   
 
