@@ -37,11 +37,7 @@ export async function initSocket(token: string, initialCount: number): Promise<v
 
   _socket = ioClient(baseUrl, {
     auth:       { token },
-    // polling first so the connection works through the Nexus Relay (which
-    // forwards HTTP but does not support WebSocket upgrades). Once polling
-    // is established, Socket.IO will automatically upgrade to WebSocket
-    // when a direct connection is available.
-    transports: ['polling', 'websocket'],
+    transports: ['websocket', 'polling'],
   })
   
 
