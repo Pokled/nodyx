@@ -50,7 +50,7 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
   request.user = payload
 
   // Track online presence — fire-and-forget, 15-minute TTL per user
-  redis.setex(`heartbeat:${payload.userId}`, 900, '1').catch(() => {})
+  redis.setex(`nexus:heartbeat:${payload.userId}`, 900, '1').catch(() => {})
 }
 
 // Attaches user if a valid token is present, but never rejects
@@ -63,7 +63,7 @@ export async function optionalAuth(request: FastifyRequest, _reply: FastifyReply
     const alive = await redis.exists(`session:${token}`)
     if (alive) {
       request.user = payload
-      redis.setex(`heartbeat:${payload.userId}`, 900, '1').catch(() => {})
+      redis.setex(`nexus:heartbeat:${payload.userId}`, 900, '1').catch(() => {})
     }
   } catch {
     // Invalid token — silently ignored

@@ -99,6 +99,18 @@ export default async function authRoutes(app: FastifyInstance) {
     const token = signToken(user.id, user.username)
     await redis.set(`session:${token}`, user.id, 'EX', SESSION_TTL)
 
+    // Ensure user is in community_members (handles cases where auto-join
+    // failed during registration, e.g. community wasn't created yet)
+    const communityId = await getDefaultCommunityId()
+    if (communityId) {
+      await db.query(
+        `INSERT INTO community_members (community_id, user_id, role)
+         VALUES ($1, $2, 'member')
+         ON CONFLICT DO NOTHING`,
+        [communityId, user.id]
+      )
+    }
+
     const { password: _, ...publicUser } = user
     return reply.send({ token, user: publicUser })
   })
