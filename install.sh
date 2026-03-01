@@ -121,7 +121,7 @@ JWT_SECRET=$(gen_secret)
 TURN_USER="nexus"
 TURN_CREDENTIAL=$(gen_pass)
 NEXUS_DIR="/opt/nexus"
-REPO_URL="https://github.com/Nexus-Community/nexus.git"  # à adapter si besoin
+REPO_URL="https://github.com/Pokled/Nexus.git"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  SYSTEM PACKAGES
@@ -130,9 +130,11 @@ step "Installation des dépendances système"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
+# git first — needed to clone the repo, and most VPS images don't ship with it
+apt-get install -y -q git 2>/dev/null
 apt-get install -y -q \
   curl wget gnupg2 ca-certificates lsb-release \
-  openssl ufw git build-essential \
+  openssl ufw build-essential \
   postgresql postgresql-contrib \
   redis-server \
   coturn \
@@ -273,7 +275,7 @@ if [[ -d "$NEXUS_DIR/.git" ]]; then
   git -C "$NEXUS_DIR" pull --ff-only
 else
   info "Clonage du dépôt dans $NEXUS_DIR..."
-  git clone --depth 1 "$REPO_URL" "$NEXUS_DIR"
+  GIT_TERMINAL_PROMPT=0 git clone --depth 1 "$REPO_URL" "$NEXUS_DIR"
 fi
 ok "Code Nexus présent dans $NEXUS_DIR"
 

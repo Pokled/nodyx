@@ -47,9 +47,22 @@
 | CentOS / RHEL / Fedora | ❌ Not supported | Use Docker instead |
 | Raspberry Pi OS | ✅ Supported | Use 64-bit version |
 
+### Only One Prerequisite — Git
+
+The installer needs `git` to clone the Nexus repository. Most VPS images don't include it by default. Install it first:
+
+```bash
+# Ubuntu / Debian
+sudo apt-get update && sudo apt-get install -y git
+
+# That's it. The installer handles everything else.
+```
+
+---
+
 ### What `install.sh` Installs Automatically
 
-You don't need to install anything manually. The script handles:
+You don't need to install anything else manually. The script handles:
 
 - **Node.js 20 LTS** — JavaScript runtime
 - **PostgreSQL 16** — Main database
@@ -114,9 +127,9 @@ You can run Nexus on Windows 10/11 using WSL2 (Windows Subsystem for Linux). Thi
 
 ## 🌐 Do I Need a Domain Name?
 
-**Short answer: Yes, for production. No, for local testing.**
+**Short answer: Not necessarily!** The installer offers you a free `your-slug.nexusnode.app` subdomain if you don't have one. You can always add your own domain later.
 
-A domain name like `mycommunity.com` is what your users will type in their browser. Without one:
+If you still want your own domain (`mycommunity.com`), without one:
 - You can only access Nexus via IP address (e.g., `http://46.225.20.193`)
 - You won't get automatic HTTPS (Caddy needs a domain for Let's Encrypt)
 - Your forum won't be indexed by Google
@@ -615,6 +628,72 @@ cd ../nexus-frontend && npm install && npm run build && pm2 restart nexus-fronte
 ```
 
 > 💡 **Migrations run automatically** — the backend applies any new SQL migrations on startup.
+
+---
+
+## 🗑️ Clean Uninstall
+
+If you want to completely remove Nexus from your server:
+
+```bash
+# 1. Stop and remove PM2 processes
+pm2 delete nexus-core nexus-frontend
+pm2 save
+
+# 2. Remove PM2 startup hook
+pm2 unstartup systemd
+
+# 3. Remove the Nexus directory
+rm -rf /opt/nexus
+
+# 4. Drop the PostgreSQL database and user
+sudo -u postgres psql -c "DROP DATABASE IF EXISTS nexus;"
+sudo -u postgres psql -c "DROP ROLE IF EXISTS nexus_user;"
+
+# 5. Remove Caddy configuration
+sudo rm -f /etc/caddy/Caddyfile
+sudo systemctl restart caddy
+
+# 6. Stop and disable coturn
+sudo systemctl stop coturn
+sudo systemctl disable coturn
+sudo rm -f /etc/turnserver.conf
+
+# 7. Remove firewall rules (optional)
+sudo ufw --force reset
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+sudo ufw --force enable
+
+# 8. Remove credentials file
+rm -f /root/nexus-credentials.txt
+```
+
+> ⚠️ **Uploads** (avatars, banners, etc.) are stored in `/opt/nexus/nexus-core/uploads/`. Back them up before deleting if you want to keep user files.
+
+### Uninstall system packages (optional)
+
+Only do this if you installed these packages exclusively for Nexus:
+
+```bash
+# Remove coturn
+sudo apt-get remove --purge -y coturn
+
+# Remove Caddy
+sudo apt-get remove --purge -y caddy
+sudo rm -f /etc/apt/sources.list.d/caddy-stable.list
+
+# Remove Redis (only if no other service uses it)
+sudo apt-get remove --purge -y redis-server
+
+# Remove PostgreSQL (DANGER: removes all databases on this server)
+# sudo apt-get remove --purge -y postgresql postgresql-contrib
+# sudo rm -rf /var/lib/postgresql/
+
+# Remove Node.js
+# sudo apt-get remove --purge -y nodejs
+```
 
 ---
 
