@@ -172,7 +172,8 @@ apt-get install -y -q $_SYS_PKGS 2>/dev/null
 ok "Paquets système installés"
 
 # Node.js 20 LTS
-if ! command -v node &>/dev/null || [[ "$(node -e 'process.stdout.write(process.version.split(\".\")[0].slice(1))')" -lt 20 ]]; then
+_NODE_MAJOR=$(node --version 2>/dev/null | sed 's/v//;s/\..*//' || echo 0)
+if ! command -v node &>/dev/null || [[ "$_NODE_MAJOR" -lt 20 ]]; then
   info "Installation de Node.js 20 LTS..."
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
   apt-get install -y -q nodejs >/dev/null 2>&1
@@ -209,18 +210,37 @@ fi
 step "Configuration de PostgreSQL"
 
 systemctl enable postgresql --quiet
-systemctl start postgresql
+systemctl start postgresql 2>/dev/null || true
 
-# Wait for PostgreSQL to accept connections (socket may take a few seconds)
+# Wait for PostgreSQL to accept connections (socket may take a few seconds on RPi)
 info "Attente du démarrage de PostgreSQL..."
-for _pg_i in {1..30}; do
+_PG_READY=false
+for _pg_i in {1..15}; do
   if sudo -u postgres pg_isready -q 2>/dev/null; then
-    ok "PostgreSQL prêt"
-    break
+    _PG_READY=true; break
   fi
-  [[ $_pg_i -eq 30 ]] && die "PostgreSQL n'a pas démarré dans les temps.\nVérifie : sudo systemctl status postgresql"
   sleep 2
 done
+
+# Fallback: cluster may not exist yet (fresh RPi install) — create it
+if ! $_PG_READY; then
+  info "Cluster PostgreSQL absent — création automatique..."
+  _PG_VER=$(ls /usr/lib/postgresql/ 2>/dev/null | sort -Vr | head -1)
+  if [[ -n "$_PG_VER" ]]; then
+    pg_createcluster "$_PG_VER" main --start 2>/dev/null || true
+    systemctl restart "postgresql@${_PG_VER}-main" 2>/dev/null \
+      || systemctl restart postgresql 2>/dev/null || true
+    for _pg_i in {1..15}; do
+      if sudo -u postgres pg_isready -q 2>/dev/null; then
+        _PG_READY=true; break
+      fi
+      sleep 2
+    done
+  fi
+fi
+
+$_PG_READY || die "PostgreSQL n'a pas démarré après 60s.\nVérifie : sudo systemctl status postgresql  |  sudo pg_lsclusters"
+ok "PostgreSQL prêt"
 
 # Create role + database (idempotent)
 sudo -u postgres psql -c "
