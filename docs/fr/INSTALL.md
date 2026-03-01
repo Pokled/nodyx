@@ -15,6 +15,7 @@
 - [Installation — La méthode simple](#-installation--la-méthode-simple-recommandée)
 - [Utilisateurs Windows — Guide WSL](#-utilisateurs-windows--guide-wsl)
 - [Serveur maison / Derrière un routeur (NAT)](#-serveur-maison--derrière-un-routeur-nat)
+- [Héberger SANS ouvrir de ports (Cloudflare Tunnel, Tailscale)](#-héberger-chez-soi-sans-ouvrir-de-ports)
 - [Derrière un VPN ou WireGuard](#-derrière-un-vpn-ou-wireguard)
 - [Erreurs fréquentes et solutions](#-erreurs-fréquentes-et-solutions)
 - [Après l'installation](#-après-linstallation)
@@ -384,6 +385,207 @@ Certains FAI utilisent le CG-NAT — ta connexion partage une IP publique avec d
    ssh -R 80:localhost:80 -R 443:localhost:443 user@IP_VPS -N
    ```
 3. **Utilise Cloudflare Tunnel** — gratuit, sans redirection de ports, sans VPS (mais Cloudflare voit ton trafic)
+
+---
+
+## 🚇 Héberger chez soi SANS ouvrir de ports
+
+Tu veux faire tourner Nexus sur un Raspberry Pi (ou un vieux PC) à la maison, mais tu ne veux pas — ou ne peux pas — ouvrir les ports 80/443 sur ton routeur ? Pas de panique, il existe des solutions gratuites et simples.
+
+### Pourquoi les ports sont-ils nécessaires ? (explication pour débutant)
+
+Imagine que ton serveur est une maison. Pour que les visiteurs du monde entier puissent sonner à ta porte, il faut :
+1. Que ta maison ait une **adresse visible de l'extérieur** (IP publique)
+2. Que la **porte soit ouverte** (ports 80 et 443 redirigés depuis ta box vers ton serveur)
+
+Si tu ne veux pas ouvrir ces portes, il faut passer par un **tunnel** — un intermédiaire qui reçoit les visiteurs pour toi et les fait entrer par une porte de service que tu contrôles, sans exposer ta maison directement.
+
+> ⚠️ **Important :** Sans HTTPS, les **salons vocaux ne fonctionneront pas** — les navigateurs refusent d'accéder au micro/caméra sur HTTP non sécurisé. Une solution tunnel est obligatoire pour utiliser toutes les fonctionnalités de Nexus.
+
+---
+
+### 🌩️ Solution 1 — Cloudflare Tunnel *(recommandée, 100% gratuite)*
+
+Cloudflare Tunnel crée une connexion **sortante** depuis ton serveur vers les serveurs Cloudflare. Aucun port à ouvrir. Cloudflare reçoit les visiteurs et les transmet à ton serveur via ce tunnel.
+
+**Ce qu'il te faut :**
+- Un compte Cloudflare gratuit → [dash.cloudflare.com](https://dash.cloudflare.com)
+- Un nom de domaine (~1€/an chez [Porkbun](https://porkbun.com) ou [Namecheap](https://namecheap.com))
+
+> 💡 Tu n'as pas de domaine ? Cloudflare propose des domaines `.workers.dev` gratuits, mais avec des limitations. Pour Nexus, un vrai domaine à 1€/an est très recommandé.
+
+#### Étape 1 — Crée un compte Cloudflare
+
+1. Va sur [dash.cloudflare.com](https://dash.cloudflare.com) et crée un compte gratuit
+2. Clique sur **"Add a site"** et entre ton nom de domaine
+3. Choisis le plan **Free** (0€/mois)
+4. Cloudflare te donne deux **serveurs DNS** à configurer (ex: `aria.ns.cloudflare.com`)
+5. Va dans le panneau de gestion de ton registrar (là où tu as acheté le domaine) et remplace les DNS par ceux de Cloudflare
+6. Attends 5-30 minutes que la propagation se fasse (Cloudflare te le confirme par email)
+
+#### Étape 2 — Installe `cloudflared` sur ton serveur
+
+Sur ton Raspberry Pi / serveur Ubuntu/Debian :
+
+```bash
+# Télécharge cloudflared (vérifie l'architecture : arm64 pour Raspberry Pi 4, amd64 pour PC)
+# Raspberry Pi 4 (arm64) :
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 \
+     -o /usr/local/bin/cloudflared
+chmod +x /usr/local/bin/cloudflared
+
+# PC classique (amd64) :
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+     -o /usr/local/bin/cloudflared
+chmod +x /usr/local/bin/cloudflared
+
+# Vérifie que ça fonctionne :
+cloudflared --version
+```
+
+#### Étape 3 — Connecte-toi à Cloudflare
+
+```bash
+cloudflared tunnel login
+```
+
+👆 Cette commande affiche un lien URL. **Copie-le** et ouvre-le dans ton navigateur. Connecte-toi à ton compte Cloudflare et autorise l'accès. Un fichier de certificat est automatiquement téléchargé sur ton serveur (dans `~/.cloudflared/cert.pem`).
+
+#### Étape 4 — Crée le tunnel
+
+```bash
+# Remplace "ma-communaute" par le nom que tu veux
+cloudflared tunnel create ma-communaute
+```
+
+Cette commande crée un fichier de configuration dans `~/.cloudflared/`. Note l'**ID du tunnel** qui s'affiche (ex: `6ff42ae2-765d-4adf-8112-31c55c1551ef`).
+
+#### Étape 5 — Configure le tunnel
+
+Crée le fichier de configuration :
+
+```bash
+nano ~/.cloudflared/config.yml
+```
+
+Colle ce contenu (remplace `TUNNEL_ID` par l'ID de l'étape 4, et `moncommunaute.fr` par ton domaine) :
+
+```yaml
+tunnel: TUNNEL_ID
+credentials-file: /root/.cloudflared/TUNNEL_ID.json
+
+ingress:
+  # Le frontend (interface web)
+  - hostname: moncommunaute.fr
+    service: http://localhost:4173
+  # L'API backend
+  - hostname: api.moncommunaute.fr
+    service: http://localhost:3000
+  # Route par défaut (obligatoire)
+  - service: http_status:404
+```
+
+#### Étape 6 — Crée les entrées DNS
+
+```bash
+# Pointe moncommunaute.fr vers le tunnel
+cloudflared tunnel route dns ma-communaute moncommunaute.fr
+
+# Pointe api.moncommunaute.fr vers le tunnel
+cloudflared tunnel route dns ma-communaute api.moncommunaute.fr
+```
+
+Ces commandes créent automatiquement les enregistrements DNS dans Cloudflare. Aucune manipulation manuelle dans le panneau DNS.
+
+#### Étape 7 — Lance le tunnel (test)
+
+```bash
+cloudflared tunnel run ma-communaute
+```
+
+Si tout va bien, tu verras `INF Connection established` dans les logs. Ouvre `https://moncommunaute.fr` dans ton navigateur — Nexus doit s'afficher !
+
+#### Étape 8 — Lance le tunnel automatiquement au démarrage
+
+Pour que le tunnel démarre tout seul quand ton serveur redémarre :
+
+```bash
+# Installe cloudflared comme service système
+cloudflared service install
+
+# Active et démarre le service
+systemctl enable cloudflared
+systemctl start cloudflared
+
+# Vérifie que c'est bien lancé
+systemctl status cloudflared
+```
+
+#### Étape 9 — Configure Nexus pour utiliser ce domaine
+
+Lors de l'installation, entre ton domaine `moncommunaute.fr` quand l'installateur te le demande. Caddy sera configuré, mais dans le cas d'un tunnel Cloudflare, **tu peux désactiver Caddy** (Cloudflare gère le HTTPS) :
+
+```bash
+systemctl stop caddy
+systemctl disable caddy
+```
+
+Puis modifie le Caddyfile ou configure directement Nexus pour écouter en HTTP (pas HTTPS) sur localhost — le tunnel Cloudflare s'occupe de chiffrer la connexion.
+
+> 💡 **Le TURN vocal :** Le tunnel Cloudflare ne supporte pas UDP, donc les **salons vocaux utiliseront ton TURN relay** à l'IP de ton serveur. Pour que ça fonctionne, le port **3478 UDP** doit être ouvert sur ton routeur. C'est le seul port indispensable pour la voix. Si tu ne peux pas l'ouvrir, la voix ne fonctionnera qu'en mode relay TCP (dégradé).
+
+---
+
+### 🦎 Solution 2 — Tailscale Funnel *(gratuit, aucun domaine nécessaire)*
+
+Tailscale Funnel expose ton serveur sur internet via le réseau Tailscale, sans ouvrir de ports. Tu obtiens une URL HTTPS gratuite du type `https://monserveur.tail1234.ts.net`.
+
+**Ce qu'il te faut :**
+- Un compte Tailscale gratuit → [tailscale.com](https://tailscale.com)
+
+#### Étape 1 — Installe Tailscale
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+```
+
+#### Étape 2 — Connecte-toi
+
+```bash
+tailscale up
+```
+
+Un lien s'affiche → ouvre-le dans ton navigateur et connecte-toi à ton compte Tailscale.
+
+#### Étape 3 — Active Funnel
+
+```bash
+# Expose le frontend (port 4173) sur internet
+tailscale funnel 4173
+```
+
+Tailscale te donne une URL HTTPS publique (ex: `https://monserveur.tail1234.ts.net`). Utilise cette URL lors de l'installation de Nexus quand on te demande le domaine.
+
+> ⚠️ **Limitations de Tailscale Funnel :** L'URL gratuite est en `.ts.net` (pas personnalisable sans abonnement), et le débit est limité sur le plan gratuit. Convient pour une petite communauté ou pour tester.
+
+---
+
+### 🖥️ Solution 3 — Un petit VPS *(la plus simple et la plus fiable)*
+
+Franchement, pour une communauté sérieuse et accessible 24h/24, **un VPS reste la meilleure option**. C'est moins cher qu'une abonnement Netflix et ça évite tous ces problèmes de tunnels.
+
+| Hébergeur | Prix/mois | Specs | Idéal pour |
+|---|---|---|---|
+| [Hetzner](https://hetzner.com/cloud) | 3,29€ | 2 vCPU, 4 Go RAM | ✅ Petite communauté (recommandé) |
+| [Hetzner](https://hetzner.com/cloud) | 5,39€ | 2 vCPU, 8 Go RAM | ✅ Communauté active |
+| [OVH VPS](https://ovhcloud.com/fr/vps/) | 3,99€ | 1 vCPU, 2 Go RAM | ✅ Débutant, serveur FR |
+| [Scaleway](https://scaleway.com) | 3,60€ | 2 vCPU, 2 Go RAM | ✅ Datacenter France/Europe |
+
+Sur un VPS :
+- IP publique fixe incluse
+- Ports 80/443 ouverts par défaut
+- `bash install.sh` et c'est terminé en 10 minutes
+- Accès 24h/24 garanti
 
 ---
 

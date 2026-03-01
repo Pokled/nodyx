@@ -13,6 +13,7 @@
 - [Installation — The Easy Way](#-installation--the-easy-way-recommended)
 - [Windows Users — WSL Guide](#-windows-users--wsl-guide)
 - [Home Server / Behind NAT](#-home-server--behind-nat)
+- [Hosting WITHOUT Opening Ports (Cloudflare Tunnel, Tailscale)](#-hosting-at-home-without-opening-ports)
 - [Behind a VPN or WireGuard](#-behind-a-vpn-or-wireguard)
 - [Common Errors & Fixes](#-common-errors--fixes)
 - [After Installation](#-after-installation)
@@ -380,6 +381,207 @@ Some ISPs use CGNAT — your home connection shares a public IP with hundreds of
    ssh -R 80:localhost:80 -R 443:localhost:443 user@VPS_IP -N
    ```
 3. **Use Cloudflare Tunnel** — free, no port forwarding needed, no VPS needed (but Cloudflare sees your traffic)
+
+---
+
+## 🚇 Hosting at Home WITHOUT Opening Ports
+
+Want to run Nexus on a Raspberry Pi (or an old PC) at home, but don't want — or can't — open ports 80/443 on your router? No worries, there are free and simple solutions.
+
+### Why Are Ports Required? (beginner explanation)
+
+Think of your server as a house. For visitors from all over the world to ring your doorbell, you need:
+1. Your house to have a **visible address** (public IP)
+2. The **door to be open** (ports 80 and 443 forwarded from your router to your server)
+
+If you don't want to open those doors, you use a **tunnel** — a middleman that receives visitors for you and lets them in through a service entrance you control, without exposing your house directly.
+
+> ⚠️ **Important:** Without HTTPS, **voice channels won't work** — browsers refuse to access the microphone/camera on non-secure HTTP. A tunnel solution is required to use all Nexus features.
+
+---
+
+### 🌩️ Solution 1 — Cloudflare Tunnel *(recommended, 100% free)*
+
+Cloudflare Tunnel creates an **outbound** connection from your server to Cloudflare's servers. No ports to open. Cloudflare receives visitors and forwards them to your server through this tunnel.
+
+**What you need:**
+- A free Cloudflare account → [dash.cloudflare.com](https://dash.cloudflare.com)
+- A domain name (~$1/year at [Porkbun](https://porkbun.com) or [Namecheap](https://namecheap.com))
+
+> 💡 No domain? Cloudflare offers free `.workers.dev` domains, but with limitations. For Nexus, a real domain at $1/year is highly recommended.
+
+#### Step 1 — Create a Cloudflare account
+
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) and create a free account
+2. Click **"Add a site"** and enter your domain name
+3. Choose the **Free** plan ($0/month)
+4. Cloudflare gives you two **nameservers** (e.g., `aria.ns.cloudflare.com`)
+5. Go to your registrar's control panel (where you bought the domain) and replace the DNS servers with Cloudflare's
+6. Wait 5–30 minutes for propagation (Cloudflare will confirm by email)
+
+#### Step 2 — Install `cloudflared` on your server
+
+On your Raspberry Pi / Ubuntu/Debian server:
+
+```bash
+# Download cloudflared (check your architecture: arm64 for Raspberry Pi 4, amd64 for PC)
+# Raspberry Pi 4 (arm64):
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 \
+     -o /usr/local/bin/cloudflared
+chmod +x /usr/local/bin/cloudflared
+
+# Regular PC (amd64):
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+     -o /usr/local/bin/cloudflared
+chmod +x /usr/local/bin/cloudflared
+
+# Verify it works:
+cloudflared --version
+```
+
+#### Step 3 — Log in to Cloudflare
+
+```bash
+cloudflared tunnel login
+```
+
+👆 This command shows a URL. **Copy it** and open it in your browser. Log in to your Cloudflare account and grant access. A certificate file is automatically downloaded to your server (in `~/.cloudflared/cert.pem`).
+
+#### Step 4 — Create the tunnel
+
+```bash
+# Replace "my-community" with whatever name you want
+cloudflared tunnel create my-community
+```
+
+This creates a config file in `~/.cloudflared/`. Note the **tunnel ID** shown (e.g., `6ff42ae2-765d-4adf-8112-31c55c1551ef`).
+
+#### Step 5 — Configure the tunnel
+
+Create the config file:
+
+```bash
+nano ~/.cloudflared/config.yml
+```
+
+Paste this content (replace `TUNNEL_ID` with your ID from Step 4, and `mycommunity.com` with your domain):
+
+```yaml
+tunnel: TUNNEL_ID
+credentials-file: /root/.cloudflared/TUNNEL_ID.json
+
+ingress:
+  # The frontend (web interface)
+  - hostname: mycommunity.com
+    service: http://localhost:4173
+  # The backend API
+  - hostname: api.mycommunity.com
+    service: http://localhost:3000
+  # Default route (required)
+  - service: http_status:404
+```
+
+#### Step 6 — Create the DNS entries
+
+```bash
+# Point mycommunity.com to the tunnel
+cloudflared tunnel route dns my-community mycommunity.com
+
+# Point api.mycommunity.com to the tunnel
+cloudflared tunnel route dns my-community api.mycommunity.com
+```
+
+These commands automatically create DNS records in Cloudflare. No manual DNS panel work needed.
+
+#### Step 7 — Start the tunnel (test)
+
+```bash
+cloudflared tunnel run my-community
+```
+
+If everything works, you'll see `INF Connection established` in the logs. Open `https://mycommunity.com` in your browser — Nexus should appear!
+
+#### Step 8 — Start the tunnel automatically on boot
+
+So the tunnel starts by itself when your server reboots:
+
+```bash
+# Install cloudflared as a system service
+cloudflared service install
+
+# Enable and start the service
+systemctl enable cloudflared
+systemctl start cloudflared
+
+# Check it's running
+systemctl status cloudflared
+```
+
+#### Step 9 — Configure Nexus to use this domain
+
+During installation, enter your domain `mycommunity.com` when the installer asks. Caddy will be configured, but with a Cloudflare Tunnel you can **disable Caddy** (Cloudflare handles HTTPS):
+
+```bash
+systemctl stop caddy
+systemctl disable caddy
+```
+
+Then configure Nexus to listen on HTTP (not HTTPS) on localhost — the Cloudflare Tunnel handles encryption.
+
+> 💡 **About voice channels:** Cloudflare Tunnel doesn't support UDP, so **voice channels will use your TURN relay** at your server's IP. For this to work, port **3478 UDP** must be open on your router. It's the only port strictly needed for voice. If you can't open it, voice will still work but in TCP relay mode (slightly higher latency).
+
+---
+
+### 🦎 Solution 2 — Tailscale Funnel *(free, no domain needed)*
+
+Tailscale Funnel exposes your server to the internet via the Tailscale network, without opening ports. You get a free HTTPS URL like `https://myserver.tail1234.ts.net`.
+
+**What you need:**
+- A free Tailscale account → [tailscale.com](https://tailscale.com)
+
+#### Step 1 — Install Tailscale
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+```
+
+#### Step 2 — Log in
+
+```bash
+tailscale up
+```
+
+A link appears → open it in your browser and sign in to your Tailscale account.
+
+#### Step 3 — Enable Funnel
+
+```bash
+# Expose the frontend (port 4173) to the internet
+tailscale funnel 4173
+```
+
+Tailscale gives you a public HTTPS URL (e.g., `https://myserver.tail1234.ts.net`). Use this URL during Nexus installation when asked for your domain.
+
+> ⚠️ **Tailscale Funnel limitations:** The free URL is in `.ts.net` (not customizable without a subscription), and bandwidth is limited on the free plan. Suitable for a small community or testing.
+
+---
+
+### 🖥️ Solution 3 — A small VPS *(the simplest and most reliable)*
+
+Honestly, for a serious community accessible 24/7, **a VPS is the best option**. It costs less than a Netflix subscription and avoids all these tunnel headaches.
+
+| Provider | Price/month | Specs | Best for |
+|---|---|---|---|
+| [Hetzner](https://hetzner.com/cloud) | €3.29 | 2 vCPU, 4 GB RAM | ✅ Small community (recommended) |
+| [Hetzner](https://hetzner.com/cloud) | €5.39 | 2 vCPU, 8 GB RAM | ✅ Active community |
+| [OVH VPS](https://ovhcloud.com/en/vps/) | €3.99 | 1 vCPU, 2 GB RAM | ✅ Beginner, EU server |
+| [Scaleway](https://scaleway.com) | €3.60 | 2 vCPU, 2 GB RAM | ✅ France/Europe datacenter |
+
+With a VPS:
+- Fixed public IP included
+- Ports 80/443 open by default
+- `bash install.sh` and you're done in 10 minutes
+- 24/7 guaranteed uptime
 
 ---
 
