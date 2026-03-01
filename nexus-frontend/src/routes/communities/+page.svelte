@@ -230,7 +230,7 @@
 	</p>
 	<div class="flex flex-wrap gap-3 justify-center">
 		<a
-			href="https://github.com/NexusNetwork-app/nexus"
+			href="https://github.com/Pokled/Nexus"
 			target="_blank" rel="noopener"
 			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-700 hover:bg-indigo-600
 			       text-sm font-semibold text-white transition-colors"
@@ -238,7 +238,7 @@
 			Enregistrer mon instance
 		</a>
 		<a
-			href="https://github.com/NexusNetwork-app/nexus"
+			href="https://github.com/Pokled/Nexus"
 			target="_blank" rel="noopener"
 			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700
 			       border border-gray-700 text-sm font-semibold text-gray-200 transition-colors"
