@@ -170,7 +170,7 @@ nexus-core    (Fastify/Node.js) ────────────────
                                     │                     │
                                     │  ┌───────────────┐  │
                                     │  │ Relay Client  │  │
-                                    │  │ (QUIC/tokio)  │  │
+                                    │  │ (TCP/tokio)   │  │
                                     │  └───────────────┘  │
                                     │  ┌───────────────┐  │
                                     │  │ STUN/TURN     │  │
@@ -186,17 +186,19 @@ nexus-core    (Fastify/Node.js) ────────────────
                                     └─────────────────────┘
 ```
 
-#### Phase 3.0-A — `nexus-relay-client` (first deliverable)
+#### Phase 3.0-A — `nexus-relay-client` ✅ VALIDATED — March 1, 2026
 
 > Replaces `install_tunnel.sh` + Cloudflare Tunnel. Zero domain required. Zero open ports.
+> **Tested in real conditions: Raspberry Pi 4, no open ports, no Cloudflare account.**
 
-- [ ] Static Rust binary (~3MB) — `tokio` + `quinn` (QUIC) + `serde_json` + `clap`
-- [ ] Outbound QUIC connection to `relay.nexusnode.app` (our infrastructure)
-- [ ] Bidirectional HTTP/WebSocket forwarding (application tunnel)
-- [ ] Automatic `slug.nexusnode.app` registration without DNS or CF account
-- [ ] Automatic reconnection with exponential backoff
+- [x] Static Rust binary (9MB) — `tokio` + `hyper` + `tokio-postgres` + `clap` + `dashmap`
+- [x] Outbound TCP connection to `relay.nexusnode.app:7443` (our infrastructure)
+- [x] Bidirectional HTTP forwarding (JSON framing, 4-byte length prefix)
+- [x] Automatic `slug.nexusnode.app` registration without DNS or CF account
+- [x] Automatic reconnection with exponential backoff (1s → 2s → 4s → max 30s)
+- [x] GitHub Release `v0.1.0-relay` — amd64 + arm64 binaries
 - [ ] Integration in `install.sh`: option 3 "Nexus Relay (recommended)"
-- [ ] `nexus-relay.service` systemd unit
+- [ ] Client-side systemd service (`nexus-relay-client.service`)
 
 **User result:** `bash install.sh` → choose "Relay" → get `mycommunity.nexusnode.app` **with zero network configuration**.
 

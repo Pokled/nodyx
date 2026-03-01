@@ -186,17 +186,19 @@ nexus-core    (Fastify/Node.js) ────────────────
                                     └─────────────────────┘
 ```
 
-#### Phase 3.0-A — `nexus-relay-client` (premier livrable)
+#### Phase 3.0-A — `nexus-relay-client` ✅ VALIDÉE — 1er mars 2026
 
 > Remplace `install_tunnel.sh` + Cloudflare Tunnel. Zéro domaine requis. Zéro port à ouvrir.
+> **Testé en conditions réelles : Raspberry Pi 4, aucun port ouvert, aucun compte Cloudflare.**
 
-- [ ] Binaire Rust statique (~3MB) — `tokio` + `quinn` (QUIC) + `serde_json` + `clap`
-- [ ] Connexion QUIC sortante vers `relay.nexusnode.app` (notre infra)
-- [ ] Forward HTTP/WebSocket bidirectionnel (tunnel applicatif)
-- [ ] Enregistrement automatique `slug.nexusnode.app` sans DNS ni CF account
-- [ ] Reconnexion automatique avec backoff exponentiel
+- [x] Binaire Rust statique (9MB) — `tokio` + `hyper` + `tokio-postgres` + `clap` + `dashmap`
+- [x] Connexion TCP sortante vers `relay.nexusnode.app:7443` (notre infra)
+- [x] Forward HTTP bidirectionnel (JSON framing 4-byte length prefix)
+- [x] Enregistrement automatique `slug.nexusnode.app` sans DNS ni CF account
+- [x] Reconnexion automatique avec backoff exponentiel (1s → 2s → 4s → max 30s)
+- [x] GitHub Release `v0.1.0-relay` — binaires amd64 + arm64
 - [ ] Intégration dans `install.sh` : option 3 "Nexus Relay (recommandé)"
-- [ ] Service systemd `nexus-relay.service`
+- [ ] Service systemd côté client (`nexus-relay-client.service`)
 
 **Résultat utilisateur :** `bash install.sh` → choisir "Relay" → obtenir `moncommunaute.nexusnode.app` **sans aucune configuration réseau**.
 
