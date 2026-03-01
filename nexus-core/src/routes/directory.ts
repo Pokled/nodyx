@@ -159,16 +159,12 @@ export default async function directoryRoutes(app: FastifyInstance) {
 
     const instance = result.rows[0];
 
-    // Async: verify URL reachability + resolve IP + create DNS record
+    // Async: create DNS record + activate immediately
+    // URL reachability is NOT checked at registration time — the instance may be
+    // mid-install (cert still being issued, Caddy warming up). Activation is instant;
+    // the ping heartbeat keeps the directory up to date once the node is live.
     setImmediate(async () => {
       try {
-        const isReachable = await checkUrl(url);
-        if (!isReachable) {
-          console.log(`[Directory] ${slug} URL not reachable, keeping pending`);
-          return;
-        }
-
-        // Utiliser l'IP VPS depuis l'env — jamais via dnsLookup (retournerait l'IP Cloudflare)
         const vpsIp = process.env.VPS_IP;
         if (!vpsIp) throw new Error('VPS_IP not set in .env');
 
