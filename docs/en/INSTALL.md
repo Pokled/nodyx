@@ -408,7 +408,7 @@ Cloudflare Tunnel creates an **outbound** connection from your server to Cloudfl
 - A free Cloudflare account → [dash.cloudflare.com](https://dash.cloudflare.com)
 - A domain name (~$1/year at [Porkbun](https://porkbun.com) or [Namecheap](https://namecheap.com))
 
-> 💡 No domain? Cloudflare offers free `.workers.dev` domains, but with limitations. For Nexus, a real domain at $1/year is highly recommended.
+> 💡 No domain? Nexus gives you one for free: during installation, your instance automatically gets a **`your-slug.nexusnode.app`** subdomain. No purchase needed.
 
 #### Step 1 — Create a Cloudflare account
 
