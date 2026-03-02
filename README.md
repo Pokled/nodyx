@@ -171,7 +171,7 @@ docker-compose up -d
 | **Feature Garden** (community feature voting with seeds) | ✅ **Done** — v0.6 |
 | **Federated asset directory** (cross-instance asset sharing) | ✅ **Done** — v0.7 |
 | **Whispers** (ephemeral chat rooms, 1h TTL) | ✅ **Done** — v0.7 |
-| nexus-relay — P2P TCP tunnel (no domain, no open ports) | ⏳ Planned |
+| **nexus-relay** — P2P TCP tunnel (no domain, no open ports) | ✅ **Done** — Phase 3.0-A |
 | Rust STUN/TURN server (`nexus-turn`) | ⏳ Planned |
 | WireGuard P2P mesh (inter-instance) | ⏳ Planned |
 | File sharing + collaborative whiteboard | ⏳ Planned |

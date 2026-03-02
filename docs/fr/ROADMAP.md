@@ -235,13 +235,37 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] Forward HTTP bidirectionnel (JSON framing 4-byte length prefix)
 - [x] Enregistrement automatique `slug.nexusnode.app` sans DNS ni CF account
 - [x] Reconnexion automatique avec backoff exponentiel (1s → 2s → 4s → max 30s)
-- [x] GitHub Release `v0.1.0-relay` — binaires amd64 + arm64
+- [x] GitHub Release `v0.1.1-relay` — binaires amd64 + arm64 (fix traitement concurrent)
 - [x] Intégration dans `install.sh` : option 2 "Nexus Relay (recommandé)"
 - [x] Service systemd côté client (`nexus-relay-client.service`)
 
 **Résultat utilisateur :** `bash install.sh` → choisir "Relay" → obtenir `moncommunaute.nexusnode.app` **sans aucune configuration réseau**.
 
-#### Phase 3.0-B — `nexus-turn` (remplace coturn)
+#### Phase 3.0-B — Browser P2P Nodes (WebRTC DataChannels) 🔨 PROCHAINE ÉTAPE
+
+> Les navigateurs des utilisateurs deviennent des nœuds actifs.
+> Communication directe entre pairs sans intermédiaire serveur.
+> **Réutilise le signaling existant de `voice.ts`** — zéro nouvelle infrastructure serveur.
+
+**Approche :** WebRTC DataChannels natifs + signaling Socket.IO existant (pattern voice.ts)
+**Pas pour ce POC :** libp2p (surcharge), DHT (2027+)
+
+**v0.8 — POC deux navigateurs :**
+- [ ] Ajouter events `p2p:offer`, `p2p:answer`, `p2p:ice` dans `voice.ts` (3 lignes — même pattern que `voice:offer/answer/ice`)
+- [ ] Créer `nexus-frontend/src/lib/p2p.ts` — gestionnaire RTCPeerConnection + DataChannel
+- [ ] Découverte de pair via Socket.IO existant (handshake polite/impolite — un seul initiateur)
+- [ ] Utiliser le coturn de l'instance (déjà installé) — pas de STUN tiers
+- [ ] Handler `ondatachannel` côté répondeur (crucial — sinon le répondeur ne reçoit jamais le canal)
+- [ ] Indicateur UI "⚡ P2P direct" / "☁️ Serveur" dans l'interface chat
+- [ ] Test validé : deux navigateurs, DataChannel direct confirmé, messages hors serveur
+
+**v0.9 — Mesh 1-N :**
+- [ ] Gérer plusieurs connexions pair simultanées (Map de RTCPeerConnections)
+- [ ] Broadcast découverte : qui d'autre est connecté ?
+- [ ] Fallback gracieux si WebRTC échoue (NAT strict, firewall)
+- [ ] Transfert d'assets entre pairs (téléchargement depuis le pair le plus proche)
+
+#### Phase 3.0-C — `nexus-turn` (remplace coturn)
 
 > coturn est un projet C des années 2000. Complexe à configurer, surface d'attaque importante.
 
@@ -250,14 +274,18 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [ ] Logs structurés (JSON), métriques Prometheus
 - [ ] ~5MB statique, configuration zéro à l'installation
 
-#### Phase 3.0-C — `nexus-p2p` core (vision long terme)
+#### Phase 3.0-D — `nexus-p2p` core (vision long terme 2027-2028)
 
 > Le cœur distribué. Quand un nœud veut contacter un autre nœud directement, sans passer par nous.
+> Réseau immortel : chaque donnée répliquée sur 3+ nœuds, auto-guérison.
 
 - [ ] DHT Kademlia (via `libp2p`) — découverte de pairs sans serveur central
 - [ ] WireGuard (via `wireguard-rs`) — tunnel chiffré direct entre instances volontaires
 - [ ] ICE/STUN natif — traversée NAT sans coturn pour les connexions P2P
 - [ ] API IPC exposée à nexus-core : `relay.register(slug)`, `peer.connect(slug)`, `network.peers()`
+- [ ] Gossip protocol — propagation naturelle de l'état du réseau
+- [ ] CRDTs — données sans conflit entre nœuds (compteurs de likes, présence distribuée)
+- [ ] Réplication facteur 3 — auto-guérison si un nœud tombe
 - [ ] Si `nexusnode.app` est inaccessible, les nœuds se trouvent via DHT (résilience)
 
 ---
@@ -337,5 +365,5 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 ---
 
-*Version 1.5 — 1er mars 2026*
+*Version 1.6 — 2 mars 2026*
 *"Le P2P est l'âme. Rust est le corps."*
