@@ -14,6 +14,11 @@ export interface VoicePeer {
 
 const _voiceSeats = new Map<string, Map<string, number>>()
 
+// ── P2P channel registry ───────────────────────────────────────────────────────
+// channelId → Set of socketIds willing to do P2P in that text channel
+
+const _p2pChannels = new Map<string, Set<string>>()
+
 function assignSeat(channelId: string, socketId: string): number {
   if (!_voiceSeats.has(channelId)) _voiceSeats.set(channelId, new Map())
   const seats = _voiceSeats.get(channelId)!
@@ -156,6 +161,40 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
     socket.to(voiceRoom(channelId)).emit('voice:stats', { from: socket.id, rtt })
   })
 
+  // ── P2P signaling — Browser-to-browser WebRTC DataChannels ──────────────
+  // Discovery: join/leave the P2P pool for a text channel
+  socket.on('p2p:join', (channelId: string) => {
+    if (!channelId) return
+    if (!_p2pChannels.has(channelId)) _p2pChannels.set(channelId, new Set())
+    const pool = _p2pChannels.get(channelId)!
+    const existingPeers = [...pool].filter(id => id !== socket.id)
+    pool.add(socket.id)
+    // Tell the newcomer who's already in the pool
+    socket.emit('p2p:peers', { channelId, peers: existingPeers })
+    // Tell existing peers a new candidate arrived
+    for (const peerId of existingPeers) {
+      server.to(peerId).emit('p2p:new_peer', { channelId, peerId: socket.id })
+    }
+  })
+
+  socket.on('p2p:leave', (channelId: string) => {
+    const pool = _p2pChannels.get(channelId)
+    if (!pool) return
+    pool.delete(socket.id)
+    if (pool.size === 0) _p2pChannels.delete(channelId)
+  })
+
+  // Signaling — forwarded to target socket only (same pattern as voice:offer/answer/ice)
+  socket.on('p2p:offer',  ({ to, sdp, channelId }: { to: string; sdp: unknown; channelId: string }) => {
+    server.to(to).emit('p2p:offer',  { from: socket.id, sdp, channelId })
+  })
+  socket.on('p2p:answer', ({ to, sdp, channelId }: { to: string; sdp: unknown; channelId: string }) => {
+    server.to(to).emit('p2p:answer', { from: socket.id, sdp, channelId })
+  })
+  socket.on('p2p:ice',    ({ to, candidate, channelId }: { to: string; candidate: unknown; channelId: string }) => {
+    server.to(to).emit('p2p:ice',    { from: socket.id, candidate, channelId })
+  })
+
   // ── Cleanup on disconnect ─────────────────────────────────────────────────
   socket.on('disconnect', async () => {
     // Leave all voice rooms and notify peers
@@ -168,6 +207,11 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
         // Exclude this socket manually — socket.rooms not yet cleared at disconnect
         await broadcastVoiceChannelUpdate(server, channelId, socket.id)
       }
+    }
+    // Clean up P2P registry
+    for (const [channelId, pool] of _p2pChannels) {
+      pool.delete(socket.id)
+      if (pool.size === 0) _p2pChannels.delete(channelId)
     }
   })
 }

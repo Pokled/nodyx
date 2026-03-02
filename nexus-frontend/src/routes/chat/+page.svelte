@@ -11,6 +11,7 @@
 	import type { Socket } from 'socket.io-client';
 	import MediaCenter from '$lib/components/MediaCenter.svelte';
 	import { voicePanelTarget } from '$lib/voicePanel';
+	import { p2pManager, p2pStatus, p2pPeerCount } from '$lib/p2p';
 
 	let { data }: { data: PageData } = $props();
 
@@ -167,10 +168,14 @@
 		pickerMsgId = null;
 		editingMsg = null;
 		s.emit('chat:join', channel.id);
+		// P2P — join the DataChannel pool for this text channel
+		if ((channel as any).type !== 'voice') p2pManager.joinChannel(channel.id);
 	}
 
 	function setupSocketListeners(sock: Socket) {
 		s = sock;
+		// P2P — attach to the existing Socket.IO instance
+		p2pManager.init(sock);
 
 		// Re-join on reconnect
 		sock.on('connect', () => {
@@ -255,6 +260,7 @@
 
 	onDestroy(() => {
 		if (s && selectedChannel) s.emit('chat:leave', selectedChannel.id);
+		p2pManager.leaveChannel();
 		if (typingThrottle) clearTimeout(typingThrottle);
 		Object.values(typingMap).forEach((e) => clearTimeout(e.timer));
 		if (browser) {
@@ -685,6 +691,25 @@
 					{#if selectedChannel.description}
 						<span class="text-gray-500 text-sm hidden sm:inline">— {selectedChannel.description}</span>
 					{/if}
+					<!-- P2P connection indicator -->
+					<div class="ml-auto flex items-center">
+						{#if $p2pStatus === 'p2p'}
+							<span
+								class="flex items-center gap-1 text-xs text-yellow-400 font-mono"
+								title="{$p2pPeerCount} pair{$p2pPeerCount > 1 ? 's' : ''} connecté{$p2pPeerCount > 1 ? 's' : ''} en direct"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+									<path d="M13 2L4.09 12.96A1 1 0 005 14h7v8l8.91-10.96A1 1 0 0020 10h-7V2z"/>
+								</svg>
+								P2P · {$p2pPeerCount}
+							</span>
+						{:else if $p2pStatus === 'connecting'}
+							<span class="flex items-center gap-1 text-xs text-gray-600 font-mono" title="Recherche de pairs…">
+								<span class="w-1.5 h-1.5 rounded-full bg-gray-600 animate-pulse"></span>
+								P2P
+							</span>
+						{/if}
+					</div>
 				</div>
 
 			<!-- Messages -->
