@@ -240,7 +240,7 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 **User result:** `bash install.sh` → choose "Relay" → get `mycommunity.nexusnode.app` **with zero network configuration**.
 
-#### Phase 3.0-B — Browser P2P Nodes (WebRTC DataChannels) 🔨 NEXT STEP
+#### Phase 3.0-B — Browser P2P Nodes (WebRTC DataChannels) ✅ POC VALIDATED — March 2, 2026
 
 > Users' browsers become active relay nodes.
 > Direct peer-to-peer communication without server intermediary.
@@ -249,14 +249,16 @@ nexus-core    (Fastify/Node.js) ────────────────
 **Approach:** Native WebRTC DataChannels + existing Socket.IO signaling (voice.ts pattern)
 **Not in this POC:** libp2p (overkill), DHT (2027+)
 
-**v0.8 — Two-browser POC:**
-- [ ] Add `p2p:offer`, `p2p:answer`, `p2p:ice` events to `voice.ts` (3 lines — same pattern as `voice:offer/answer/ice`)
-- [ ] Create `nexus-frontend/src/lib/p2p.ts` — RTCPeerConnection + DataChannel manager
-- [ ] Peer discovery via existing Socket.IO (polite/impolite handshake — single initiator only)
-- [ ] Use instance's own coturn (already installed) — no third-party STUN
-- [ ] `ondatachannel` handler on responder side (critical — without it, responder never receives the channel)
-- [ ] UI indicator "⚡ P2P direct" / "☁️ Server" in chat interface
-- [ ] Validated test: two browsers, direct DataChannel confirmed, messages not going through server
+**v0.8 — Two-browser POC ✅:**
+- [x] Add `p2p:offer`, `p2p:answer`, `p2p:ice` events to `voice.ts` (3 lines — same pattern as `voice:offer/answer/ice`)
+- [x] Create `nexus-frontend/src/lib/p2p.ts` — RTCPeerConnection + DataChannel manager
+- [x] Peer discovery via existing Socket.IO (polite/impolite handshake — single initiator only)
+- [x] Use instance's own coturn (already installed) — no third-party STUN
+- [x] `ondatachannel` handler on responder side (critical — without it, responder never receives the channel)
+- [x] UI indicator "⚡ P2P · N" in the text channel header (yellow when active, pulsing gray while connecting)
+- [x] Validated test: two browsers, direct DataChannel confirmed, messages not going through server
+
+**User result:** join any text channel → the ⚡ P2P indicator appears automatically when another member is present. Zero configuration.
 
 **v0.9 — 1-N Mesh:**
 - [ ] Handle multiple simultaneous peer connections (Map of RTCPeerConnections)
