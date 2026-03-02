@@ -3,6 +3,8 @@
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { goto } from '$app/navigation'
 	import { page } from '$app/stores'
+	import { p2pManager, p2pAssetPeers } from '$lib/p2p'
+	import { browser } from '$app/environment'
 
 	let { data }: { data: PageData } = $props()
 	const asset = $derived(data.asset)
@@ -30,9 +32,12 @@
 	// Token from layout data (HttpOnly cookie — not accessible via document.cookie)
 	const token = $derived(($page.data as any).token as string | null)
 
-	let equipping    = $state(false)
-	let equipToast   = $state<'ok' | 'err' | null>(null)
-	let equipTimer   = $state<ReturnType<typeof setTimeout> | null>(null)
+	let equipping      = $state(false)
+	let equipToast     = $state<'ok' | 'err' | null>(null)
+	let equipTimer     = $state<ReturnType<typeof setTimeout> | null>(null)
+	let downloadSource = $state<'server' | 'p2p' | null>(null)
+
+	const p2pAvailable = $derived(browser && $p2pAssetPeers.has(asset.id))
 
 	function fileUrl(path: string) {
 		return `${PUBLIC_API_URL.replace('/api/v1', '')}/uploads/${path}`
@@ -43,11 +48,31 @@
 	}
 
 	async function downloadAsset() {
-		const url  = fileUrl(asset.file_path)
+		const filename = asset.original_filename ?? `${asset.name}.${asset.mime_type?.split('/')[1] ?? 'webp'}`
+		let buffer: ArrayBuffer | null = null
+
+		// Try P2P first if a peer has it
+		if (p2pAvailable) {
+			buffer = await p2pManager.requestAsset(asset.id)
+			if (buffer) downloadSource = 'p2p'
+		}
+
+		// Fallback: fetch from server, then announce to peers
+		if (!buffer) {
+			const res = await fetch(fileUrl(asset.file_path))
+			buffer = await res.arrayBuffer()
+			downloadSource = 'server'
+			p2pManager.announceAsset(asset.id, buffer)
+		}
+
+		const blob = new Blob([buffer], { type: asset.mime_type ?? 'application/octet-stream' })
+		const url  = URL.createObjectURL(blob)
 		const link = document.createElement('a')
 		link.href     = url
-		link.download = asset.original_filename ?? `${asset.name}.${asset.mime_type?.split('/')[1] ?? 'webp'}`
+		link.download = filename
 		link.click()
+		setTimeout(() => URL.revokeObjectURL(url), 10_000)
+		setTimeout(() => { downloadSource = null }, 4000)
 	}
 
 	let whispering = $state(false)
@@ -166,9 +191,16 @@
 					{/if}
 					<button
 						onclick={downloadAsset}
-						class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors"
+						class="relative px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors
+						       {p2pAvailable ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-indigo-600 hover:bg-indigo-500'}"
+						title={p2pAvailable ? 'Un pair P2P a cet asset — téléchargement direct ⚡' : 'Télécharger depuis le serveur'}
 					>
-						Télécharger
+						{#if p2pAvailable}⚡{/if} Télécharger
+						{#if downloadSource === 'p2p'}
+							<span class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-yellow-400 text-yellow-900 text-[9px] font-black leading-none">P2P</span>
+						{:else if downloadSource === 'server'}
+							<span class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-gray-600 text-gray-300 text-[9px] font-black leading-none">srv</span>
+						{/if}
 					</button>
 				</div>
 			</div>
