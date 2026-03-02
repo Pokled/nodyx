@@ -234,13 +234,37 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] Bidirectional HTTP forwarding (JSON framing, 4-byte length prefix)
 - [x] Automatic `slug.nexusnode.app` registration without DNS or CF account
 - [x] Automatic reconnection with exponential backoff (1s → 2s → 4s → max 30s)
-- [x] GitHub Release `v0.1.0-relay` — amd64 + arm64 binaries
+- [x] GitHub Release `v0.1.1-relay` — amd64 + arm64 binaries (fix: concurrent request handling)
 - [x] Integration in `install.sh`: option 2 "Nexus Relay (recommended)"
 - [x] Client-side systemd service (`nexus-relay-client.service`)
 
 **User result:** `bash install.sh` → choose "Relay" → get `mycommunity.nexusnode.app` **with zero network configuration**.
 
-#### Phase 3.0-B — `nexus-turn` (replaces coturn)
+#### Phase 3.0-B — Browser P2P Nodes (WebRTC DataChannels) 🔨 NEXT STEP
+
+> Users' browsers become active relay nodes.
+> Direct peer-to-peer communication without server intermediary.
+> **Reuses the existing `voice.ts` signaling** — zero new server infrastructure needed.
+
+**Approach:** Native WebRTC DataChannels + existing Socket.IO signaling (voice.ts pattern)
+**Not in this POC:** libp2p (overkill), DHT (2027+)
+
+**v0.8 — Two-browser POC:**
+- [ ] Add `p2p:offer`, `p2p:answer`, `p2p:ice` events to `voice.ts` (3 lines — same pattern as `voice:offer/answer/ice`)
+- [ ] Create `nexus-frontend/src/lib/p2p.ts` — RTCPeerConnection + DataChannel manager
+- [ ] Peer discovery via existing Socket.IO (polite/impolite handshake — single initiator only)
+- [ ] Use instance's own coturn (already installed) — no third-party STUN
+- [ ] `ondatachannel` handler on responder side (critical — without it, responder never receives the channel)
+- [ ] UI indicator "⚡ P2P direct" / "☁️ Server" in chat interface
+- [ ] Validated test: two browsers, direct DataChannel confirmed, messages not going through server
+
+**v0.9 — 1-N Mesh:**
+- [ ] Handle multiple simultaneous peer connections (Map of RTCPeerConnections)
+- [ ] Discovery broadcast: who else is connected?
+- [ ] Graceful fallback if WebRTC fails (strict NAT, firewall)
+- [ ] Asset transfer between peers (download from nearest peer)
+
+#### Phase 3.0-C — `nexus-turn` (replaces coturn)
 
 > coturn is a 2000s C project. Complex to configure, significant attack surface.
 
@@ -249,14 +273,18 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [ ] Structured logs (JSON), Prometheus metrics
 - [ ] ~5MB static, zero configuration at install
 
-#### Phase 3.0-C — `nexus-p2p` core (long-term vision)
+#### Phase 3.0-D — `nexus-p2p` core (long-term vision 2027-2028)
 
 > The distributed core. When a node wants to contact another node directly, without going through us.
+> Immortal network: every piece of data replicated on 3+ nodes, auto-healing.
 
 - [ ] Kademlia DHT (via `libp2p`) — peer discovery without central server
 - [ ] WireGuard (via `wireguard-rs`) — encrypted direct tunnel between voluntary instances
 - [ ] Native ICE/STUN — NAT traversal without coturn for P2P connections
 - [ ] IPC API exposed to nexus-core: `relay.register(slug)`, `peer.connect(slug)`, `network.peers()`
+- [ ] Gossip protocol — natural state propagation across the network
+- [ ] CRDTs — conflict-free distributed data (like counters, presence)
+- [ ] Replication factor 3 — auto-healing if a node goes down
 - [ ] If `nexusnode.app` is unreachable, nodes find each other via DHT (resilience)
 
 ---
@@ -336,5 +364,5 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 ---
 
-*Version 1.5 — March 1, 2026*
+*Version 1.6 — March 2, 2026*
 *"P2P is the soul. Rust is the body."*
