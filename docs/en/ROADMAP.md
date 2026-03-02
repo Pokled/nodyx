@@ -260,9 +260,10 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 **User result:** join any text channel → the ⚡ P2P indicator appears automatically when another member is present. Zero configuration.
 
-**v0.9 — 1-N Mesh:**
-- [ ] Handle multiple simultaneous peer connections (Map of RTCPeerConnections)
-- [ ] Discovery broadcast: who else is connected?
+**v0.9 — 1-N Mesh 🔨 IN PROGRESS:**
+- [x] Handle multiple simultaneous peer connections (Map of RTCPeerConnections — already in p2p.ts)
+- [x] Instant P2P typing indicators (~1–5ms, animated Discord-style bouncing dots)
+- [x] Optimistic reactions + spring physics pop animation (arrives before server roundtrip)
 - [ ] Graceful fallback if WebRTC fails (strict NAT, firewall)
 - [ ] Asset transfer between peers (download from nearest peer)
 

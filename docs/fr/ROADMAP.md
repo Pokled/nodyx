@@ -261,9 +261,10 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 **Résultat utilisateur :** rejoindre un canal texte → l'indicateur ⚡ P2P apparaît automatiquement quand un autre membre est présent. Zéro configuration.
 
-**v0.9 — Mesh 1-N :**
-- [ ] Gérer plusieurs connexions pair simultanées (Map de RTCPeerConnections)
-- [ ] Broadcast découverte : qui d'autre est connecté ?
+**v0.9 — Mesh 1-N 🔨 EN COURS :**
+- [x] Gérer plusieurs connexions pair simultanées (Map de RTCPeerConnections — déjà dans p2p.ts)
+- [x] Indicateurs de frappe P2P instantanés (~1–5ms, dots animés style Discord)
+- [x] Réactions optimistes + pop animation spring physics (arrive avant le serveur)
 - [ ] Fallback gracieux si WebRTC échoue (NAT strict, firewall)
 - [ ] Transfert d'assets entre pairs (téléchargement depuis le pair le plus proche)
 
