@@ -96,11 +96,11 @@
 		uploadError = ''
 
 		const form = new FormData()
-		form.append('file',        uploadFile)
 		form.append('name',        uploadName)
 		form.append('description', uploadDescription)
 		form.append('asset_type',  uploadType)
 		form.append('tags',        uploadTags)
+		form.append('file',        uploadFile) // must be last — @fastify/multipart only sees fields before the file
 
 		const res = await fetch(`${PUBLIC_API_URL}/api/v1/assets`, {
 			method:  'POST',
