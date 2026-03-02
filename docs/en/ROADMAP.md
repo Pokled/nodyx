@@ -260,12 +260,12 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 **User result:** join any text channel → the ⚡ P2P indicator appears automatically when another member is present. Zero configuration.
 
-**v0.9 — 1-N Mesh 🔨 IN PROGRESS:**
+**v0.9 — 1-N Mesh ✅ DELIVERED — March 2, 2026:**
 - [x] Handle multiple simultaneous peer connections (Map of RTCPeerConnections — already in p2p.ts)
 - [x] Instant P2P typing indicators (~1–5ms, animated Discord-style bouncing dots)
 - [x] Optimistic reactions + spring physics pop animation (arrives before server roundtrip)
 - [x] Graceful fallback if WebRTC fails (12s ICE timeout, subtle toast, _hadAttempt/_hadSuccess flags)
-- [ ] Asset transfer between peers (download from nearest peer)
+- [x] Asset transfer between peers (32 KB chunks, p2p:asset:* protocol, p2pAssetPeers store, ⚡ yellow button)
 
 #### Phase 3.0-C — `nexus-turn` (replaces coturn)
 
