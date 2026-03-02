@@ -27,6 +27,13 @@
 			],
 		},
 		{
+			section: 'Contenu',
+			items: [
+				{ href: '/admin/assets', label: 'Assets',  icon: '🖼️' },
+				{ href: '/admin/garden', label: 'Jardin',  icon: '🌱' },
+			],
+		},
+		{
 			section: 'Instance',
 			items: [
 				{ href: '/admin/settings', label: 'Paramètres', icon: '⚙️' },

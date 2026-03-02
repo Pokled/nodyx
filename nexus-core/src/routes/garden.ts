@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/auth'
+import { adminOnly } from '../middleware/adminOnly'
 import { rateLimit } from '../middleware/rateLimit'
 import { validate } from '../middleware/validate'
 import {
@@ -11,6 +12,7 @@ import {
   type SeedCategory,
   type GrowthStage,
 } from '../services/gardenService'
+import { db } from '../config/database'
 
 const VALID_CATEGORIES = ['feature', 'design', 'plugin', 'event'] as const
 const VALID_STAGES     = ['germe', 'pousse', 'fleur', 'fruit'] as const
@@ -82,5 +84,43 @@ export default async function gardenRoutes(app: FastifyInstance) {
       }
       throw err
     }
+  })
+
+  // ── GET /api/v1/garden/seeds/admin/all — All seeds (admin) ─────────────────
+  app.get('/seeds/admin/all', {
+    preHandler: [adminOnly],
+  }, async (req, reply) => {
+    const { rows } = await db.query(
+      `SELECT s.*, u.username AS planter_username
+       FROM feature_seeds s
+       LEFT JOIN users u ON u.id = s.planted_by
+       ORDER BY s.water_count DESC, s.planted_at DESC
+       LIMIT 200`
+    )
+    return reply.send({ seeds: rows })
+  })
+
+  // ── DELETE /api/v1/garden/seeds/:id — Admin delete a seed ──────────────────
+  app.delete<{ Params: { id: string } }>('/seeds/:id', {
+    preHandler: [adminOnly],
+  }, async (req, reply) => {
+    const { rows } = await db.query(
+      `DELETE FROM feature_seeds WHERE id = $1 RETURNING id`,
+      [req.params.id]
+    )
+    if (!rows[0]) return reply.code(404).send({ error: 'Graine introuvable.' })
+    return reply.send({ ok: true })
+  })
+
+  // ── PATCH /api/v1/garden/seeds/:id/harvest — Admin mark as implemented ─────
+  app.patch<{ Params: { id: string } }>('/seeds/:id/harvest', {
+    preHandler: [adminOnly],
+  }, async (req, reply) => {
+    const { rows } = await db.query(
+      `UPDATE feature_seeds SET harvest_date = NOW() WHERE id = $1 RETURNING id, harvest_date`,
+      [req.params.id]
+    )
+    if (!rows[0]) return reply.code(404).send({ error: 'Graine introuvable.' })
+    return reply.send({ ok: true, harvest_date: rows[0].harvest_date })
   })
 }

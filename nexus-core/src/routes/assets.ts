@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/auth'
+import { adminOnly } from '../middleware/adminOnly'
 import { rateLimit } from '../middleware/rateLimit'
 import { validate } from '../middleware/validate'
 import {
@@ -11,6 +12,7 @@ import {
   deleteAsset,
   type AssetType,
 } from '../services/assetService'
+import { db } from '../config/database'
 
 const VALID_TYPES = ['frame', 'banner', 'font', 'badge', 'sticker', 'theme', 'emoji', 'sound'] as const
 
@@ -100,5 +102,48 @@ export default async function assetRoutes(app: FastifyInstance) {
   app.get<{ Params: { userId: string } }>('/user/:userId', async (req, reply) => {
     const assets = await listUserAssets(req.params.userId)
     return reply.send({ assets })
+  })
+
+  // ── GET /api/v1/assets/admin/all — All assets incl. banned (admin) ─────────
+  app.get('/admin/all', {
+    preHandler: [adminOnly],
+  }, async (req, reply) => {
+    const { rows } = await db.query(
+      `SELECT a.*, u.username AS creator_username
+       FROM community_assets a
+       LEFT JOIN users u ON u.id = a.creator_id
+       ORDER BY a.created_at DESC
+       LIMIT 200`
+    )
+    return reply.send({ assets: rows })
+  })
+
+  // ── DELETE /api/v1/assets/:id/force — Admin force-delete any asset ─────────
+  app.delete<{ Params: { id: string } }>('/:id/force', {
+    preHandler: [adminOnly],
+  }, async (req, reply) => {
+    const { rows } = await db.query<{ file_path: string; thumbnail_path: string | null }>(
+      `DELETE FROM community_assets WHERE id = $1 RETURNING file_path, thumbnail_path`,
+      [req.params.id]
+    )
+    if (!rows[0]) return reply.code(404).send({ error: 'Asset introuvable.' })
+    const { file_path, thumbnail_path } = rows[0]
+    const fs = await import('fs/promises')
+    const path = await import('path')
+    await fs.unlink(path.join(process.cwd(), 'uploads', file_path)).catch(() => {})
+    if (thumbnail_path) await fs.unlink(path.join(process.cwd(), 'uploads', thumbnail_path)).catch(() => {})
+    return reply.send({ ok: true })
+  })
+
+  // ── PATCH /api/v1/assets/:id/ban — Admin toggle ban ────────────────────────
+  app.patch<{ Params: { id: string } }>('/:id/ban', {
+    preHandler: [adminOnly],
+  }, async (req, reply) => {
+    const { rows } = await db.query<{ is_banned: boolean }>(
+      `UPDATE community_assets SET is_banned = NOT is_banned WHERE id = $1 RETURNING is_banned`,
+      [req.params.id]
+    )
+    if (!rows[0]) return reply.code(404).send({ error: 'Asset introuvable.' })
+    return reply.send({ is_banned: rows[0].is_banned })
   })
 }
