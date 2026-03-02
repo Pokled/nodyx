@@ -64,15 +64,17 @@ export async function uploadAsset(opts: {
   let thumbPath: string | null = null
 
   if (isImage) {
-    // Resize to max dimension, convert to WebP
-    finalBuffer = await sharp(buffer)
+    const isAnimated = mimeType === 'image/gif' || mimeType === 'image/webp'
+
+    // Resize to max dimension, convert to WebP (preserve all frames for animated GIF/WebP)
+    finalBuffer = await sharp(buffer, { animated: isAnimated })
       .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 85 })
       .toBuffer()
     finalMime = 'image/webp'
     filePath  = `assets/${hash}.webp`
 
-    // Generate thumbnail
+    // Generate thumbnail — first frame only, no animation
     const thumbBuffer = await sharp(buffer)
       .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'cover' })
       .webp({ quality: 75 })
