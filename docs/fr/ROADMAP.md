@@ -265,7 +265,7 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] Gérer plusieurs connexions pair simultanées (Map de RTCPeerConnections — déjà dans p2p.ts)
 - [x] Indicateurs de frappe P2P instantanés (~1–5ms, dots animés style Discord)
 - [x] Réactions optimistes + pop animation spring physics (arrive avant le serveur)
-- [ ] Fallback gracieux si WebRTC échoue (NAT strict, firewall)
+- [x] Fallback gracieux si WebRTC échoue (ICE timeout 12s, toast discret, flags _hadAttempt/_hadSuccess)
 - [ ] Transfert d'assets entre pairs (téléchargement depuis le pair le plus proche)
 
 #### Phase 3.0-C — `nexus-turn` (remplace coturn)

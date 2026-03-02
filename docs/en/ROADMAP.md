@@ -264,7 +264,7 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] Handle multiple simultaneous peer connections (Map of RTCPeerConnections — already in p2p.ts)
 - [x] Instant P2P typing indicators (~1–5ms, animated Discord-style bouncing dots)
 - [x] Optimistic reactions + spring physics pop animation (arrives before server roundtrip)
-- [ ] Graceful fallback if WebRTC fails (strict NAT, firewall)
+- [x] Graceful fallback if WebRTC fails (12s ICE timeout, subtle toast, _hadAttempt/_hadSuccess flags)
 - [ ] Asset transfer between peers (download from nearest peer)
 
 #### Phase 3.0-C — `nexus-turn` (replaces coturn)
