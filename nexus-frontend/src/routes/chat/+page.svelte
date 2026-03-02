@@ -11,7 +11,7 @@
 	import type { Socket } from 'socket.io-client';
 	import MediaCenter from '$lib/components/MediaCenter.svelte';
 	import { voicePanelTarget } from '$lib/voicePanel';
-	import { p2pManager, p2pStatus, p2pPeerCount } from '$lib/p2p';
+	import { p2pManager, p2pStatus, p2pPeerCount, p2pFallback } from '$lib/p2p';
 
 	let { data }: { data: PageData } = $props();
 
@@ -1034,6 +1034,17 @@
 		{/if}
 	</div>
 </div>
+
+<!-- ── P2P fallback toast ──────────────────────────────────────────────────── -->
+{#if $p2pFallback}
+	<div
+		class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-4 py-2.5 bg-gray-900/95 border border-gray-700/60 rounded-xl shadow-2xl backdrop-blur-sm z-50"
+		transition:fade={{ duration: 280 }}
+	>
+		<div class="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></div>
+		<span class="text-xs text-gray-400 font-medium whitespace-nowrap">Relais serveur actif — connexion directe indisponible</span>
+	</div>
+{/if}
 
 <!-- ── Rich editor modal ───────────────────────────────────────────────────── -->
 {#if showRichModal}
