@@ -241,7 +241,7 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 **Résultat utilisateur :** `bash install.sh` → choisir "Relay" → obtenir `moncommunaute.nexusnode.app` **sans aucune configuration réseau**.
 
-#### Phase 3.0-B — Browser P2P Nodes (WebRTC DataChannels) 🔨 PROCHAINE ÉTAPE
+#### Phase 3.0-B — Browser P2P Nodes (WebRTC DataChannels) ✅ POC VALIDÉ — 2 mars 2026
 
 > Les navigateurs des utilisateurs deviennent des nœuds actifs.
 > Communication directe entre pairs sans intermédiaire serveur.
@@ -250,14 +250,16 @@ nexus-core    (Fastify/Node.js) ────────────────
 **Approche :** WebRTC DataChannels natifs + signaling Socket.IO existant (pattern voice.ts)
 **Pas pour ce POC :** libp2p (surcharge), DHT (2027+)
 
-**v0.8 — POC deux navigateurs :**
-- [ ] Ajouter events `p2p:offer`, `p2p:answer`, `p2p:ice` dans `voice.ts` (3 lignes — même pattern que `voice:offer/answer/ice`)
-- [ ] Créer `nexus-frontend/src/lib/p2p.ts` — gestionnaire RTCPeerConnection + DataChannel
-- [ ] Découverte de pair via Socket.IO existant (handshake polite/impolite — un seul initiateur)
-- [ ] Utiliser le coturn de l'instance (déjà installé) — pas de STUN tiers
-- [ ] Handler `ondatachannel` côté répondeur (crucial — sinon le répondeur ne reçoit jamais le canal)
-- [ ] Indicateur UI "⚡ P2P direct" / "☁️ Serveur" dans l'interface chat
-- [ ] Test validé : deux navigateurs, DataChannel direct confirmé, messages hors serveur
+**v0.8 — POC deux navigateurs ✅ :**
+- [x] Ajouter events `p2p:offer`, `p2p:answer`, `p2p:ice` dans `voice.ts` (3 lignes — même pattern que `voice:offer/answer/ice`)
+- [x] Créer `nexus-frontend/src/lib/p2p.ts` — gestionnaire RTCPeerConnection + DataChannel
+- [x] Découverte de pair via Socket.IO existant (handshake polite/impolite — un seul initiateur)
+- [x] Utiliser le coturn de l'instance (déjà installé) — pas de STUN tiers
+- [x] Handler `ondatachannel` côté répondeur (crucial — sinon le répondeur ne reçoit jamais le canal)
+- [x] Indicateur UI "⚡ P2P · N" dans l'en-tête du canal texte (jaune si actif, gris pulsant si connexion en cours)
+- [x] Test validé : deux navigateurs, DataChannel direct confirmé, messages hors serveur
+
+**Résultat utilisateur :** rejoindre un canal texte → l'indicateur ⚡ P2P apparaît automatiquement quand un autre membre est présent. Zéro configuration.
 
 **v0.9 — Mesh 1-N :**
 - [ ] Gérer plusieurs connexions pair simultanées (Map de RTCPeerConnections)
