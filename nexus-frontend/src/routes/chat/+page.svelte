@@ -19,7 +19,8 @@
 	$effect(() => { localChannels = (data.channels ?? []).slice(); });
 
 	// data.user comes from layout — cast through unknown to extract id safely
-	const userId    = $derived(((data as unknown as { user?: { id?: string } }).user?.id) ?? '');
+	const userId          = $derived(((data as unknown as { user?: { id?: string } }).user?.id) ?? '');
+	const currentUsername = $derived(((data as unknown as { user?: { username?: string } }).user?.username) ?? '');
 	const token     = $derived(data.token as string | null);
 	const isAdmin   = $derived(
 		((data as any)?.user?.role === 'owner' || (data as any)?.user?.role === 'admin')
@@ -58,7 +59,9 @@
 
 	// Emoji picker
 	const QUICK_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
-	let pickerMsgId = $state<string | null>(null);
+	let pickerMsgId    = $state<string | null>(null);
+	// P2P reaction flash — messageId → Set of emojis currently animating
+	let reactionFlash  = $state(new Map<string, Set<string>>());
 
 	// Inline edit
 	let editingMsg = $state<{ id: string; content: string } | null>(null);
@@ -252,6 +255,8 @@
 			});
 		}
 
+		// P2P message bus (typing + reactions from peers)
+		window.addEventListener('p2p:message', handleP2PMessage);
 		// Close picker on outside click
 		document.addEventListener('click', onDocClick);
 		document.addEventListener('keydown', handleGlobalKeydown);
@@ -264,6 +269,7 @@
 		if (typingThrottle) clearTimeout(typingThrottle);
 		Object.values(typingMap).forEach((e) => clearTimeout(e.timer));
 		if (browser) {
+			window.removeEventListener('p2p:message', handleP2PMessage);
 			document.removeEventListener('click', onDocClick);
 			document.removeEventListener('keydown', handleGlobalKeydown);
 			document.removeEventListener('keyup', handleGlobalKeyup);
@@ -339,10 +345,12 @@
 	}
 
 	async function handleInput() {
-		// Typing indicator (throttled)
+		// Typing indicator (throttled) — server + P2P fast path
 		if (s && selectedChannel) {
 			if (!typingThrottle) {
 				s.emit('chat:typing', selectedChannel.id);
+				// P2P fast path: peers see it near-instantly (~1–5ms vs ~100ms)
+				p2pManager.send({ type: 'p2p:typing', userId, username: currentUsername });
 				typingThrottle = setTimeout(() => { typingThrottle = null; }, 2000);
 			}
 		}
@@ -389,10 +397,78 @@
 		pickerMsgId = pickerMsgId === msgId ? null : msgId;
 	}
 
+	// Apply a reaction optimistically (add or toggle off) for a given reactor
+	function applyReactionOptimistic(msgs: typeof messages, messageId: string, emoji: string, reactorId: string): typeof messages {
+		return msgs.map(m => {
+			if (m.id !== messageId) return m;
+			const reactions = m.reactions ? [...m.reactions] : [];
+			const idx = reactions.findIndex(r => r.emoji === emoji);
+			if (idx >= 0) {
+				const r = reactions[idx];
+				const alreadyReacted = r.userReactedIds.includes(reactorId);
+				if (alreadyReacted) {
+					const newCount = r.count - 1;
+					if (newCount <= 0) return { ...m, reactions: reactions.filter((_, i) => i !== idx) };
+					return { ...m, reactions: reactions.map((r2, i) => i === idx
+						? { ...r2, count: newCount, userReactedIds: r2.userReactedIds.filter(id => id !== reactorId) }
+						: r2
+					)};
+				} else {
+					return { ...m, reactions: reactions.map((r2, i) => i === idx
+						? { ...r2, count: r2.count + 1, userReactedIds: [...r2.userReactedIds, reactorId] }
+						: r2
+					)};
+				}
+			} else {
+				return { ...m, reactions: [...reactions, { emoji, count: 1, userReactedIds: [reactorId] }] };
+			}
+		});
+	}
+
+	// Trigger a brief pop animation on a reaction bubble (P2P path)
+	function flashReaction(messageId: string, emoji: string) {
+		const set = new Set(reactionFlash.get(messageId) ?? []);
+		set.add(emoji);
+		reactionFlash = new Map(reactionFlash).set(messageId, set);
+		setTimeout(() => {
+			const current = reactionFlash.get(messageId);
+			if (current) { current.delete(emoji); reactionFlash = new Map(reactionFlash); }
+		}, 550);
+	}
+
 	function reactTo(messageId: string, emoji: string) {
 		if (!s) return;
+		// Optimistic local update — no waiting for server roundtrip
+		messages = applyReactionOptimistic(messages, messageId, emoji, userId);
+		flashReaction(messageId, emoji);
+		// P2P broadcast — peers see it near-instantly
+		p2pManager.send({ type: 'p2p:reaction', messageId, emoji, userId, username: currentUsername });
+		// Server — source of truth (will overwrite with authoritative state)
 		s.emit('chat:react', { messageId, emoji });
 		pickerMsgId = null;
+	}
+
+	// P2P message handler — typing + reactions from peers
+	function handleP2PMessage(e: Event) {
+		const data = (e as CustomEvent).detail;
+		if (!data?.type) return;
+
+		if (data.type === 'p2p:typing') {
+			const { userId: uid, username } = data;
+			if (uid === userId) return; // ignore own echoes
+			if (typingMap[uid]) clearTimeout(typingMap[uid].timer);
+			const timer = setTimeout(() => {
+				typingMap = Object.fromEntries(Object.entries(typingMap).filter(([k]) => k !== uid));
+			}, 3000);
+			typingMap = { ...typingMap, [uid]: { username, timer } };
+		}
+
+		if (data.type === 'p2p:reaction') {
+			const { messageId, emoji, userId: reactorId } = data;
+			if (reactorId === userId) return; // ignore own echoes
+			messages = applyReactionOptimistic(messages, messageId, emoji, reactorId);
+			flashReaction(messageId, emoji);
+		}
 	}
 
 	// ── Inline edit ───────────────────────────────────────────────────────────
@@ -694,20 +770,26 @@
 					<!-- P2P connection indicator -->
 					<div class="ml-auto flex items-center">
 						{#if $p2pStatus === 'p2p'}
-							<span
-								class="flex items-center gap-1 text-xs text-yellow-400 font-mono"
-								title="{$p2pPeerCount} pair{$p2pPeerCount > 1 ? 's' : ''} connecté{$p2pPeerCount > 1 ? 's' : ''} en direct"
+							<div
+								class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-yellow-400/10 border border-yellow-400/20 cursor-default"
+								title="{$p2pPeerCount} pair{$p2pPeerCount > 1 ? 's' : ''} connecté{$p2pPeerCount > 1 ? 's' : ''} directement — zéro serveur"
 							>
-								<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+								<div class="relative flex-shrink-0">
+									<div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+									<div class="absolute inset-0 w-2 h-2 rounded-full bg-yellow-400 animate-ping opacity-60"></div>
+								</div>
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-yellow-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
 									<path d="M13 2L4.09 12.96A1 1 0 005 14h7v8l8.91-10.96A1 1 0 0020 10h-7V2z"/>
 								</svg>
-								P2P · {$p2pPeerCount}
-							</span>
+								<span class="text-[10px] font-black text-yellow-400 uppercase tracking-widest">P2P</span>
+								<span class="text-[10px] font-bold text-yellow-300/60">·</span>
+								<span class="text-[10px] font-black text-yellow-300">{$p2pPeerCount}</span>
+							</div>
 						{:else if $p2pStatus === 'connecting'}
-							<span class="flex items-center gap-1 text-xs text-gray-600 font-mono" title="Recherche de pairs…">
-								<span class="w-1.5 h-1.5 rounded-full bg-gray-600 animate-pulse"></span>
-								P2P
-							</span>
+							<div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg" title="Recherche de pairs P2P…">
+								<div class="w-1.5 h-1.5 rounded-full bg-gray-600 animate-pulse"></div>
+								<span class="text-[10px] font-black text-gray-600 uppercase tracking-widest">P2P</span>
+							</div>
 						{/if}
 					</div>
 				</div>
@@ -810,7 +892,8 @@
                     <button
                         onclick={() => reactTo(msg.id, r.emoji)}
                         class="flex items-center gap-2 px-2.5 py-1 rounded-lg border transition-all text-[11px] font-black
-                               {r.userReactedIds.includes(userId) ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 shadow-lg shadow-indigo-500/10 scale-105' : 'border-gray-800 bg-gray-800/40 text-gray-500 hover:border-gray-500'}"
+                               {r.userReactedIds.includes(userId) ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 shadow-lg shadow-indigo-500/10 scale-105' : 'border-gray-800 bg-gray-800/40 text-gray-500 hover:border-gray-500'}
+                               {reactionFlash.get(msg.id)?.has(r.emoji) ? 'p2p-pop' : ''}"
                     >
                         <span>{r.emoji}</span>
                         <span class="text-[10px]">{r.count}</span>
@@ -868,14 +951,21 @@
 
 			<!-- Typing indicator -->
 			{#if typingUsers.length > 0}
-				<div class="px-4 pb-1 text-xs text-gray-500 italic h-5">
-					{#if typingUsers.length === 1}
-						{typingUsers[0]} est en train d'écrire…
-					{:else if typingUsers.length === 2}
-						{typingUsers[0]} et {typingUsers[1]} sont en train d'écrire…
-					{:else}
-						Plusieurs personnes écrivent…
-					{/if}
+				<div class="px-4 pb-1 h-5 flex items-center gap-2" transition:fade={{ duration: 120 }}>
+					<div class="flex items-center gap-0.5 shrink-0">
+						<span class="typing-dot" style="animation-delay: 0ms"></span>
+						<span class="typing-dot" style="animation-delay: 160ms"></span>
+						<span class="typing-dot" style="animation-delay: 320ms"></span>
+					</div>
+					<span class="text-[11px] text-gray-500 font-semibold">
+						{#if typingUsers.length === 1}
+							{typingUsers[0]} écrit…
+						{:else if typingUsers.length === 2}
+							{typingUsers[0]} et {typingUsers[1]} écrivent…
+						{:else}
+							Plusieurs personnes écrivent…
+						{/if}
+					</span>
 				</div>
 			{:else}
 				<div class="h-5"></div>
@@ -992,6 +1082,35 @@
 {/if}
 
 <style>
+
+	/* ── P2P animations ───────────────────────────────────────────────────── */
+
+	/* Typing dots — three bouncing orbs */
+	.typing-dot {
+		display: inline-block;
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: #818cf8; /* indigo-400 */
+		animation: typing-bounce 1.1s infinite ease-in-out;
+	}
+	@keyframes typing-bounce {
+		0%, 55%, 100% { transform: translateY(0);   opacity: 0.4; }
+		27%            { transform: translateY(-5px); opacity: 1;   }
+	}
+
+	/* Reaction pop — spring physics burst when a P2P reaction arrives */
+	.p2p-pop {
+		animation: reaction-pop 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+	}
+	@keyframes reaction-pop {
+		0%   { transform: scale(1);    filter: brightness(1);   }
+		35%  { transform: scale(1.55); filter: brightness(1.4); }
+		65%  { transform: scale(0.88); filter: brightness(1.1); }
+		100% { transform: scale(1.05); filter: brightness(1);   }
+	}
+
+	/* ── Message rows ─────────────────────────────────────────────────────── */
 
 	.message-row {
     border-left: 3px solid transparent;
