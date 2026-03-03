@@ -300,11 +300,57 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] Self-monitoring panel — click yourself → live audio level meter, muted / deafened / PTT status badges
 - [x] VoiceSettings popup — large fixed-position modal (360px), escapes sidebar overflow with backdrop overlay
 - [x] Interaction buttons per peer — Profile link, Direct Message, File sharing + Mini-game (coming soon)
-- [ ] Round Table mode — direct WebRTC P2P (2 to 8 people, low latency)
 - [ ] Amphitheater mode — 1→N broadcast (9 to 25+ people, video on "screen")
-- [ ] Member mini-games — lightweight in-voice games between two members (first: TBD)
-- [ ] File sharing between voice members — direct P2P transfer in voice channel
 - [ ] Nodes-as-a-Service — a Raspberry Pi can become a media relay to relieve the main server
+
+#### v1.0 — Collaborative Table ⏳ PLANNED
+*(P2P DataChannels foundation operational — v0.9)*
+
+> *The voice channel becomes a living space: play, work, listen to music, share files — all in one window. First self-hosted open-source to combine all four use cases.*
+
+**Visual Foundation**
+- [ ] SVG oval table — avatars positioned on ellipse (me = always at bottom, `getAvatarPositions` algorithm)
+- [ ] Clear central zone (drag & drop, same SVG plane)
+- [ ] Avatar click → context menu (whisper, profile, challenge, mute)
+- [ ] `table:*` protocol in DataChannels (state, event, object:move/add/remove)
+- [ ] Host arbitrator — single source of truth, automatic election when host leaves
+- [ ] State persistence in DB (30s snapshot) + restore on reconnect
+- [ ] Audio waves on avatars (AnalyserNode + CSS custom property `--voice-intensity`)
+
+**Files & Presence**
+- [ ] Drag & drop file → shared on table for everyone (temporary)
+- [ ] Pin 📎 — file stays visible even when owner is offline
+- [ ] Drag file onto avatar → opens a Whisper with the file attached
+- [ ] Presence states: 🎙️ in voice / 🪑 at table / 🎮 in game
+
+**Widgets**
+- [ ] Random spin "Who goes first?" (CSS animation, result visible to all)
+- [ ] Shared timer — Pomodoro / Blitz / Custom (AudioContext for end sound)
+- [ ] Persistent session scoreboard
+- [ ] Stage mode — "Take the floor" (quick vote, priority mic, others -20dB)
+- [ ] Spectator mode — forum members observe without participating (separate Socket.IO room)
+- [ ] Exportable session history (text or PDF)
+
+**Collaborative Jukebox**
+- [ ] Web Audio API player (play/pause/next) — P2P sync, original quality, no compression
+- [ ] Individual volume (GainNode + localStorage, never broadcast to others)
+- [ ] Cover art: ID3 tags → MusicBrainz → Apple iTunes → IndexedDB cache
+- [ ] Collaborative playlists saved to DB
+- [ ] 👍👎 votes + smart priority queue
+- [ ] Crossfade between tracks (two overlapping GainNodes)
+- [ ] Timecode reactions (SoundCloud-style) — stored in DB, reappear on replay
+- [ ] Sleep timer with progressive fadeout
+
+**Templates & Plugins**
+- [ ] Template selector (host picks, broadcasts `table:theme:set` to all)
+- [ ] 3 official templates: Brasserie de Nuit, Table de Feutre, Pierre & Braise
+- [ ] Plugin system `plugins/table-templates/` — first example for community developers
+
+**Games (sequential progression)**
+- [ ] RPG dice (d4–d100) — 3D CSS animation + roll history visible to all
+- [ ] Chess — `chess.js` + SVG board + FEN state sync via DataChannel
+- [ ] Poker — state machine + per-player AES-GCM hand encryption
+- [ ] RPG / Warhammer — hex map, tokens (Library assets), fog of war *(long term)*
 
 ### 3.2 — Inter-instance mesh network
 *(depends on Phase 3.0-C)*
@@ -328,7 +374,7 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [ ] **Nexus Guard Protocol — TypeScript integration**: migrate toxicity scoring engine into `nexus-core/src/socket/index.ts` as a `chat:send` middleware — score 0–10, configurable threshold via `.env`, logged to DB
 - [ ] Guard Protocol — configurable threshold via admin panel (no restart)
 - [ ] Guard Protocol — reliable URL blocking (regex + configurable whitelist)
-- [ ] Plugin marketplace — stable API for third-party extensions
+- [ ] Plugin marketplace — stable API for third-party extensions (foundations laid in `plugins/`)
 - [ ] Distributed data sharding for large files (inspired by IPFS/BitTorrent — voluntary nodes)
 
 ---
@@ -367,5 +413,5 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 ---
 
-*Version 1.6 — March 2, 2026*
+*Version 1.7 — March 2, 2026*
 *"P2P is the soul. Rust is the body."*

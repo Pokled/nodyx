@@ -301,11 +301,57 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] Panneau self-monitoring — cliquer sur soi → jauge audio live, badges muted / deafened / PTT
 - [x] Popup VoiceSettings — modal large en position fixe (360px), échappe le débordement de la sidebar avec overlay backdrop
 - [x] Boutons d'interaction par pair — lien Profil, Message Direct, Partage de fichier + Mini-jeu (à venir)
-- [ ] Mode Table Ronde — WebRTC P2P direct (2 à 8 personnes, faible latence)
 - [ ] Mode Amphithéâtre — diffusion 1→N (9 à 25+ personnes, vidéo sur "toile")
-- [ ] Mini-jeux entre membres — petits jeux en duo dans le salon vocal (premier jeu : TBD)
-- [ ] Partage de fichiers entre membres vocaux — transfert P2P direct dans le salon
 - [ ] Nodes-as-a-Service — un Raspberry Pi peut devenir relais de flux média pour soulager le serveur principal
+
+#### v1.0 — Table Collaborative ⏳ PLANIFIÉE
+*(fondation P2P DataChannels opérationnelle — v0.9)*
+
+> *Le salon vocal devient un espace de vie : jouer, travailler, écouter de la musique, partager des fichiers — tout dans la même fenêtre. Premier open-source self-hosted à combiner ces 4 usages.*
+
+**Fondation visuelle**
+- [ ] Table SVG ovale — avatars positionnés sur ellipse (moi = toujours en bas, algo `getAvatarPositions`)
+- [ ] Zone centrale dégagée (drag & drop, même plan SVG)
+- [ ] Clic avatar → menu contextuel (chuchoter, profil, défier, sourdine)
+- [ ] Protocole `table:*` dans les DataChannels (state, event, object:move/add/remove)
+- [ ] Arbitre hôte — source de vérité unique, élection automatique au départ de l'hôte
+- [ ] Persistance de l'état en DB (snapshot 30s) + restauration à la reconnexion
+- [ ] Ondes audio sur les avatars (AnalyserNode + CSS custom property `--voice-intensity`)
+
+**Fichiers & présence**
+- [ ] Drag & drop fichier → partagé sur la table pour tous (temporaire)
+- [ ] Épinglage 📎 — fichier reste visible même si l'owner est offline
+- [ ] Drag fichier sur un avatar → ouvre un Whisper avec le fichier
+- [ ] États de présence : 🎙️ vocal / 🪑 à table / 🎮 en jeu
+
+**Widgets**
+- [ ] Roue aléatoire "Qui commence ?" (CSS animation, résultat visible de tous)
+- [ ] Timer partagé — Pomodoro / Blitz / Custom (AudioContext pour le son de fin)
+- [ ] Tableau des scores persistant par session
+- [ ] Mode scène — "Prendre la parole" (vote rapide, mic prioritaire, autres -20dB)
+- [ ] Mode spectateur — membres du forum observent sans participer (Socket.IO room séparée)
+- [ ] Historique exportable de session (texte ou PDF)
+
+**Jukebox collaboratif**
+- [ ] Lecteur Web Audio API (play/pause/next) — synchro P2P, qualité originale
+- [ ] Volume individuel (GainNode + localStorage, jamais broadcasté)
+- [ ] Cover art : tags ID3 → MusicBrainz → Apple iTunes → cache IndexedDB
+- [ ] Playlists collaboratives sauvegardées en DB
+- [ ] Votes 👍👎 + file d'attente prioritaire intelligente
+- [ ] Crossfade entre morceaux (deux GainNode en overlap)
+- [ ] Réactions timecode (style SoundCloud) — stockées en DB, réapparaissent à la réécoute
+- [ ] Sleep timer avec fondu sortant progressif
+
+**Templates & plugins**
+- [ ] Sélecteur de template (hôte choisit, broadcaste `table:theme:set` à tous)
+- [ ] 3 templates officiels : Brasserie de Nuit, Table de Feutre, Pierre & Braise
+- [ ] Système de plugins `plugins/table-templates/` — premier exemple pour les devs communautaires
+
+**Jeux (progression séquentielle)**
+- [ ] Dés RPG (d4–d100) — animation CSS 3D + historique visible de tous
+- [ ] Échecs — `chess.js` + plateau SVG + sync état FEN via DataChannel
+- [ ] Poker — machine à états + chiffrement AES-GCM des mains par joueur
+- [ ] RPG / Warhammer — carte hexagonale, tokens (assets de la Bibliothèque), brouillard de guerre *(long terme)*
 
 ### 3.2 — Réseau maillé inter-instances
 *(dépend de Phase 3.0-C)*
@@ -329,7 +375,7 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [ ] **Nexus Guard Protocol — intégration TypeScript** : migrer le moteur de scoring toxicité dans `nexus-core/src/socket/index.ts` comme middleware `chat:send` — score 0–10, seuil configurable via `.env`, logs en DB
 - [ ] Guard Protocol — seuil configurable via panneau admin (sans redémarrage)
 - [ ] Guard Protocol — blocage URL fiable (regex + whitelist configurable)
-- [ ] Marketplace plugins — API stable pour extensions tierces
+- [ ] Marketplace plugins — API stable pour extensions tierces (fondations posées dans `plugins/`)
 - [ ] Data Sharding distribué pour les fichiers lourds (inspiration IPFS/BitTorrent — nœuds volontaires)
 
 ---
@@ -368,5 +414,5 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 ---
 
-*Version 1.6 — 2 mars 2026*
+*Version 1.7 — 2 mars 2026*
 *"Le P2P est l'âme. Rust est le corps."*

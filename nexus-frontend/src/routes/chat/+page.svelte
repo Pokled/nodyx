@@ -7,11 +7,14 @@
 	import { linkifyHtml } from '$lib/linkify';
 	import NexusEditor from '$lib/components/editor/NexusEditor.svelte';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
+	import Table     from '$lib/components/Table.svelte';
 	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT, togglePTTMode, setPeerVolume } from '$lib/voice';
 	import type { Socket } from 'socket.io-client';
 	import MediaCenter from '$lib/components/MediaCenter.svelte';
+	import VoiceJukebox from '$lib/components/VoiceJukebox.svelte';
 	import { voicePanelTarget } from '$lib/voicePanel';
 	import { p2pManager, p2pStatus, p2pPeerCount, p2pFallback } from '$lib/p2p';
+	import { jukeboxStore } from '$lib/jukebox';
 
 	let { data }: { data: PageData } = $props();
 
@@ -91,17 +94,23 @@
 		BUSY:     'Microphone utilisé par une autre application. Fermez-la et réessayez.',
 	};
 
-	async function handleJoinVoice(ch: Channel) {
+	// Sélectionner un salon vocal (sidebar) — ne connecte pas, ne déconnecte pas
+	function handleJoinVoice(ch: Channel) {
 		if (!s) return;
 		voiceError = null;
-		// Switch main area view to this voice channel
 		if (selectedChannel && (selectedChannel as any).type !== 'voice') {
 			s.emit('chat:leave', selectedChannel.id);
 		}
 		selectedChannel = ch;
 		messages = [];
+	}
+
+	// Rejoindre explicitement le salon sélectionné (bouton dans la Table)
+	async function joinCurrentVoiceChannel() {
+		if (!s || !selectedChannel) return;
+		const ch = selectedChannel;
 		try {
-			if (voiceState.channelId === ch.id) { leaveVoice(); return; }
+			if (voiceState.channelId === ch.id) return;  // déjà connecté
 			if (voiceState.active) leaveVoice();
 			await joinVoice(ch.id, s);
 		} catch (err: any) {
@@ -524,6 +533,15 @@
 	const myUsername = $derived(((data as unknown as { user?: { username?: string } }).user?.username) ?? '');
 	const myAvatar   = $derived(((data as unknown as { user?: { avatar?: string | null } }).user?.avatar) ?? null);
 
+	// ── Jukebox toolbar ────────────────────────────────────────────────────────
+	let showJukebox = $state(false);
+	const jbState   = $derived($jukeboxStore);
+	const jbToolbarLabel = $derived(
+		jbState.track
+			? (jbState.track.title.length > 28 ? jbState.track.title.slice(0, 28) + '…' : jbState.track.title)
+			: 'Jukebox'
+	);
+
 	function openVoiceMemberPanel(m: { username: string; avatar: string | null }) {
 		if (m.username === myUsername) {
 			voicePanelTarget.set({ type: 'self', username: myUsername, avatar: myAvatar })
@@ -664,100 +682,91 @@
 
 			{#if (selectedChannel as any).type === 'voice'}
 				<!-- ── Voice room view ───────────────────────────────────────────── -->
-				<div class="h-12 shrink-0 border-b border-gray-800 bg-gray-900/50 flex items-center gap-2 px-4">
+
+				<!-- Channel header -->
+				<div class="h-12 shrink-0 border-b border-gray-800/60 bg-[#0e0c09]/80 flex items-center gap-2 px-4">
 					<span class="text-xl">🔊</span>
-					<span class="font-semibold text-white">{selectedChannel.name}</span>
+					<span class="font-semibold text-gray-100">{selectedChannel.name}</span>
 					{#if selectedChannel.description}
-						<span class="text-gray-500 text-sm hidden sm:inline">— {selectedChannel.description}</span>
+						<span class="text-gray-600 text-sm hidden sm:inline">— {selectedChannel.description}</span>
+					{/if}
+					{#if voiceState.active && voiceState.channelId === selectedChannel.id}
+						<span class="ml-auto flex items-center gap-1.5 text-xs text-amber-600/80">
+							<span class="w-1.5 h-1.5 rounded-full bg-amber-500/80 animate-pulse shrink-0"></span>
+							{voiceState.peers.length + 1} connecté{voiceState.peers.length > 0 ? 's' : ''}
+						</span>
 					{/if}
 				</div>
 
-				<div class="flex-1 flex flex-col items-center justify-center gap-6 px-4">
-					{#if voiceState.active && voiceState.channelId === selectedChannel.id}
-						<p class="text-xs text-green-400 flex items-center gap-1.5">
-							<span class="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0"></span>
-							Vocal actif · {voiceState.peers.length + 1} connecté{voiceState.peers.length > 0 ? 's' : ''}
-						</p>
-
-						<!-- ── Table Ronde ── -->
-						{@const mySeat = voiceState.mySeatIndex ?? 0}
-						{@const R = 108}
-						<!-- Trier les seatIndex pour gérer les indices non-contigus après qu'un user quitte.
-						     Ex: seats 0 et 2 avec totalSeats=2 → (2-0+2)%2 = 0 → superposition.
-						     La solution: positionner selon l'ordre dans la liste triée, pas la valeur absolue. -->
-						{@const allSeatsSorted = [...new Set([mySeat, ...voiceState.peers.map(p => p.seatIndex)])].sort((a, b) => a - b)}
-						{@const totalSeats = allSeatsSorted.length}
-						{@const myPosIdx = allSeatsSorted.indexOf(mySeat)}
-
-						<div class="relative mx-auto select-none" style="width:288px;height:288px;">
-							<!-- Table circulaire -->
-							<div class="absolute inset-6 rounded-full border border-gray-700/40 bg-gray-900/20 flex items-center justify-center">
-								<span class="text-xs text-gray-700">{selectedChannel.name}</span>
-							</div>
-
-							<!-- Mon avatar (relSeat = 0 → bas, 6 o'clock) — sin(0)=0, cos(0)*108=108 -->
-							<div class="absolute flex flex-col items-center gap-1"
-								style="left:calc(50% + 0px - 28px);top:calc(50% + {R}px - 28px);">
-								{#if myAvatar}
-									<img src={myAvatar} alt={myUsername}
-										class="w-14 h-14 rounded-full object-cover ring-2 transition-all {voiceState.muted ? 'ring-gray-700' : voiceState.mySpeaking ? 'ring-green-400 ring-offset-2 ring-offset-gray-950' : 'ring-gray-600'}" />
-								{:else}
-									<div class="w-14 h-14 rounded-full bg-indigo-700 flex items-center justify-center text-lg font-bold text-white ring-2 transition-all {voiceState.muted ? 'ring-gray-700' : voiceState.mySpeaking ? 'ring-green-400 ring-offset-2 ring-offset-gray-950' : 'ring-gray-600'}">
-										{(myUsername || 'M').charAt(0).toUpperCase()}
-									</div>
-								{/if}
-								<span class="text-[10px] text-gray-400">Vous{voiceState.muted ? ' 🔇' : ''}</span>
-							</div>
-
-							<!-- Peers -->
-							{#each voiceState.peers as peer (peer.socketId)}
-								{@const peerPosIdx = allSeatsSorted.indexOf(peer.seatIndex)}
-								{@const relPos    = ((peerPosIdx - myPosIdx) + totalSeats) % totalSeats}
-								{@const angle     = relPos / totalSeats * 2 * Math.PI}
-								{@const px = Math.sin(angle) * R}
-								{@const py = Math.cos(angle) * R}
-								<div class="absolute flex flex-col items-center gap-1"
-									style="left:calc(50% + {px}px - 28px);top:calc(50% + {py}px - 28px);">
-									{#if peer.avatar}
-										<img src={peer.avatar} alt={peer.username}
-											
-											class="w-14 h-14 rounded-full object-cover ring-2 transition-all {peer.speaking ? 'ring-green-400 ring-offset-2 ring-offset-gray-950 speaking-active' : 'ring-gray-700'}"/>
-									{:else}
-										<div class="w-14 h-14 rounded-full bg-indigo-700 flex items-center justify-center text-lg font-bold text-white ring-2 transition-all {peer.speaking ? 'ring-green-400 ring-offset-2 ring-offset-gray-950' : 'ring-gray-700'}">
-											{peer.username.charAt(0).toUpperCase()}
-										</div>
-									{/if}
-									<span class="text-[10px] text-gray-400 truncate max-w-[60px]">{peer.username}</span>
-									{#if peer.iceState && peer.iceState !== 'connected' && peer.iceState !== 'completed'}
-										<span class="text-[10px] px-1 py-0.5 rounded {peer.iceState === 'failed' || peer.iceState === 'disconnected' ? 'bg-red-900/50 text-red-400' : 'bg-yellow-900/50 text-yellow-400'}">
-											{peer.iceState}
-										</span>
-									{/if}
-									<input type="range" min="0" max="200" value="100"
-										class="w-12 h-1 accent-indigo-500"
-										title="Volume"
-										oninput={(e) => setPeerVolume(peer.socketId, parseInt((e.currentTarget as HTMLInputElement).value) / 100)}
-									/>
-								</div>
-							{/each}
-						</div>
-
-						{#if voiceState.peers.length === 0}
-							<p class="text-sm text-gray-600">Personne d'autre n'est connecté pour le moment.</p>
+				<!-- Voice toolbar -->
+				<div class="h-10 shrink-0 flex items-center gap-1 px-3" style="background:rgba(12,10,7,0.95); border-bottom:1px solid rgba(200,145,74,0.10);">
+					<!-- Jukebox button -->
+					<button
+						onclick={() => showJukebox = !showJukebox}
+						class="flex items-center gap-1.5 px-3 h-7 rounded-lg text-xs font-medium transition-all focus:outline-none"
+						style="
+							background:{showJukebox ? 'rgba(200,145,74,0.18)' : (jbState.track ? 'rgba(200,145,74,0.10)' : 'transparent')};
+							color:{showJukebox || jbState.track ? '#c8914a' : '#6b6460'};
+							border:1px solid {showJukebox ? 'rgba(200,145,74,0.35)' : (jbState.track ? 'rgba(200,145,74,0.20)' : 'rgba(200,145,74,0.08)')};"
+					>
+						{#if jbState.track && jbState.playing}
+							<span class="relative flex w-2 h-2 shrink-0">
+								<span class="absolute inline-flex h-full w-full rounded-full bg-amber-500/60 animate-ping"></span>
+								<span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+							</span>
+						{:else}
+							<span class="text-sm leading-none">♫</span>
 						{/if}
-					{:else}
-						<!-- Not joined yet -->
-						<div class="flex flex-col items-center gap-4 text-gray-500">
-							<span class="text-7xl opacity-20 select-none">🔊</span>
-							<p class="text-sm">Vous n'êtes pas connecté à ce salon vocal.</p>
-							<button
-								onclick={() => handleJoinVoice(selectedChannel!)}
-								class="px-6 py-2.5 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-semibold transition-colors flex items-center gap-2"
-							>
-								<span>🎙️</span> Rejoindre le vocal
-							</button>
-						</div>
-					{/if}
+						<span>{jbToolbarLabel}</span>
+					</button>
+
+					<!-- Separator -->
+					<div class="w-px h-5 mx-1" style="background:rgba(200,145,74,0.10);"></div>
+
+					<!-- Video share (stub) -->
+					<button
+						disabled
+						title="Partage vidéo (bientôt)"
+						class="flex items-center gap-1.5 px-3 h-7 rounded-lg text-xs transition-all focus:outline-none opacity-30 cursor-not-allowed"
+						style="color:#6b6460; border:1px solid rgba(200,145,74,0.08);"
+					>📺 Vidéo</button>
+
+					<!-- File share (stub) -->
+					<button
+						disabled
+						title="Partage de fichiers (bientôt)"
+						class="flex items-center gap-1.5 px-3 h-7 rounded-lg text-xs transition-all focus:outline-none opacity-30 cursor-not-allowed"
+						style="color:#6b6460; border:1px solid rgba(200,145,74,0.08);"
+					>📁 Fichiers</button>
+
+					<!-- Games (stub) -->
+					<button
+						disabled
+						title="Jeux (bientôt)"
+						class="flex items-center gap-1.5 px-3 h-7 rounded-lg text-xs transition-all focus:outline-none opacity-30 cursor-not-allowed"
+						style="color:#6b6460; border:1px solid rgba(200,145,74,0.08);"
+					>🎮 Jeux</button>
+				</div>
+
+				<!-- Jukebox panel (expandable) -->
+				{#if showJukebox}
+					<VoiceJukebox
+						joined={voiceState.active && voiceState.channelId === selectedChannel.id}
+						me={{ username: myUsername }}
+					/>
+				{/if}
+
+				<!-- Table (takes remaining space) -->
+				<div class="flex-1 overflow-hidden bg-[#0d0b08] flex items-center justify-center">
+					<Table
+						channelName={selectedChannel.name}
+						channelId={selectedChannel.id}
+						me={{ username: myUsername, avatar: myAvatar }}
+						{token}
+						joined={voiceState.active && voiceState.channelId === selectedChannel.id}
+						onjoin={joinCurrentVoiceChannel}
+						socket={s}
+					/>
 				</div>
 
 			{:else}
@@ -1208,24 +1217,4 @@
     }
 }
 
-.speaking-active {
-    position: relative;
-    animation: breath 2s infinite ease-in-out;
-    z-index: 2;  /* L'avatar au-dessus */
-}
-
-.speaking-active::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(222, 74, 215, 0.6) 0%, transparent 70%);
-    animation: sound-wave 1.5s infinite;
-    pointer-events: none;
-    z-index: 1;  /* L'onde juste derrière l'avatar */
-}
 </style>
