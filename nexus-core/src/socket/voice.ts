@@ -161,6 +161,18 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
     socket.to(voiceRoom(channelId)).emit('voice:stats', { from: socket.id, rtt })
   })
 
+  // ── jukebox:update — relay jukebox state to all voice room peers ──────────
+  socket.on('jukebox:update', ({ channelId, state }: { channelId: string; state: unknown }) => {
+    if (!channelId) return
+    socket.to(voiceRoom(channelId)).emit('jukebox:update', { from: socket.id, state })
+  })
+
+  // ── jukebox:request_sync — ask current peers to re-broadcast state ────────
+  socket.on('jukebox:request_sync', (channelId: string) => {
+    if (!channelId) return
+    socket.to(voiceRoom(channelId)).emit('jukebox:request_sync', { from: socket.id })
+  })
+
   // ── P2P signaling — Browser-to-browser WebRTC DataChannels ──────────────
   // Discovery: join/leave the P2P pool for a text channel
   socket.on('p2p:join', (channelId: string) => {
