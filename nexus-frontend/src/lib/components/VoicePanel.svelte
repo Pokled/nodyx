@@ -3,6 +3,7 @@
         voiceStore, leaveVoice, toggleMute, toggleDeafen, togglePTTMode,
         startPTT, stopPTT, inputLevel, setPeerVolume,
         peerStatsStore, getQuality,
+        startScreenShare, stopScreenShare, screenShareStore,
         type VoicePeer, type PeerStats, type NetQuality,
     } from '$lib/voice'
 
@@ -16,13 +17,14 @@
     let showMediaHub      = $state(false)
     let showVoiceSettings = $state(false)
 
-    const vs       = $derived($voiceStore)
-    const peers    = $derived(vs.peers)
-    const muted    = $derived(vs.muted)
-    const deafened = $derived(vs.deafened)
-    const pttMode  = $derived(vs.pttMode)
-    const level    = $derived($inputLevel)
-    const statsMap = $derived($peerStatsStore)
+    const vs        = $derived($voiceStore)
+    const peers     = $derived(vs.peers)
+    const muted     = $derived(vs.muted)
+    const deafened  = $derived(vs.deafened)
+    const pttMode   = $derived(vs.pttMode)
+    const level     = $derived($inputLevel)
+    const statsMap  = $derived($peerStatsStore)
+    const isSharing = $derived($screenShareStore)
 
     const levelColor = $derived(
         level > 70 ? 'bg-red-500' :
@@ -586,6 +588,22 @@
                             style="pointer-events: auto; position: relative; z-index: 102;"
                         >
                             <span class="text-sm block {showMediaHub ? 'animate-pulse' : ''}">🖥️</span>
+                        </button>
+
+                        <!-- Partage d'écran -->
+                        <button
+                            onclick={() => { isSharing ? stopScreenShare() : startScreenShare('monitor'); showMediaHub = false }}
+                            class='p-2 rounded-lg transition-all duration-200 transform hover:scale-110 active:scale-95 relative
+                                   {isSharing
+                                       ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/50 ring-2 ring-emerald-400/50"
+                                       : "bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 hover:shadow-lg hover:shadow-emerald-500/20 border border-gray-700 hover:border-emerald-500/30"}'
+                            title={isSharing ? 'Arrêter le partage' : "Partager l'écran"}
+                            style="pointer-events: auto; position: relative; z-index: 102;"
+                        >
+                            <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4 {isSharing ? "animate-pulse" : ""}' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                                <rect x='2' y='3' width='20' height='14' rx='2'/>
+                                <path d='M8 21h8M12 17v4'/>
+                            </svg>
                         </button>
 
                         <!-- Mute -->
