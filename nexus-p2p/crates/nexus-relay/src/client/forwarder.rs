@@ -20,7 +20,10 @@ pub async fn handle_request(
     let url = format!("http://127.0.0.1:{local_port}{path}");
     debug!("Forwarding {method} {url}");
 
-    let body_bytes = B64.decode(&body_b64).unwrap_or_default();
+    let body_bytes = B64.decode(&body_b64).unwrap_or_else(|e| {
+        warn!("Failed to decode request body base64 (id={id}): {e}");
+        vec![]
+    });
 
     let client = match reqwest::Client::builder()
         // Slightly above pingInterval (8s) so long polls complete before timeout.
@@ -35,8 +38,13 @@ pub async fn handle_request(
         }
     };
 
-    let method_parsed = reqwest::Method::from_bytes(method.as_bytes())
-        .unwrap_or(reqwest::Method::GET);
+    let method_parsed = match reqwest::Method::from_bytes(method.as_bytes()) {
+        Ok(m)  => m,
+        Err(_) => {
+            warn!("Invalid HTTP method '{method}' in relay request {id}");
+            return error_response(id, 400, "Invalid HTTP method");
+        }
+    };
 
     let mut req = client.request(method_parsed, &url).body(body_bytes);
 

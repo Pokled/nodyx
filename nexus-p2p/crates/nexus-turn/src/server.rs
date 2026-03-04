@@ -2,14 +2,62 @@
 // Handles STUN Binding + full TURN Allocate/Relay flow.
 // RFC 5389 (STUN) + RFC 5766 (TURN) + RFC 5245 (ICE).
 
+use dashmap::DashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::net::UdpSocket;
 use tracing::{debug, info, warn};
 
 use crate::allocation::{new_registry, spawn_eviction_task, Allocation, Registry};
 use crate::auth::{extract_mi_input, mi_key, validate_credentials, verify_message_integrity};
 use crate::protocol::*;
+
+// ── Security limits ───────────────────────────────────────────────────────────
+
+/// Max UDP packets per second from a single source IP (unauthenticated flood protection).
+const RATE_LIMIT_PER_SEC: u32  = 30;
+/// Max concurrent TURN allocations across all clients.
+const MAX_TOTAL_ALLOC:    usize = 1000;
+/// Max concurrent TURN allocations from a single client IP.
+const MAX_ALLOC_PER_IP:   usize = 10;
+/// Max permission entries per allocation (CreatePermission spam protection).
+const MAX_PERM_PER_ALLOC: usize = 50;
+
+// ── Per-IP rate limiter ───────────────────────────────────────────────────────
+
+/// Token-bucket rate limiter: at most `max_per_sec` packets per second per IP.
+/// Excess packets are dropped before a tokio task is spawned.
+struct RateLimiter {
+    map:         DashMap<IpAddr, (u32, u64)>,  // (count_this_sec, window_start_secs)
+    max_per_sec: u32,
+}
+
+impl RateLimiter {
+    fn new(max_per_sec: u32) -> Self {
+        Self { map: DashMap::new(), max_per_sec }
+    }
+
+    /// Returns `true` if the packet is allowed; `false` if it should be dropped.
+    fn allow(&self, ip: IpAddr) -> bool {
+        let now = rl_now_secs();
+        let mut entry = self.map.entry(ip).or_insert((0, now));
+        if entry.1 < now {
+            // New one-second window — reset counter.
+            *entry = (1, now);
+            true
+        } else if entry.0 < self.max_per_sec {
+            entry.0 += 1;
+            true
+        } else {
+            false  // quota exceeded this second
+        }
+    }
+}
+
+fn rl_now_secs() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+}
 
 // ── Server config ─────────────────────────────────────────────────────────────
 
@@ -27,6 +75,8 @@ pub async fn run(socket: Arc<UdpSocket>, cfg: Arc<TurnConfig>) -> anyhow::Result
     let registry: Registry = new_registry();
     spawn_eviction_task(Arc::clone(&registry));
 
+    let rate_limiter = Arc::new(RateLimiter::new(RATE_LIMIT_PER_SEC));
+
     info!(
         addr   = %socket.local_addr()?,
         realm  = %cfg.realm,
@@ -41,6 +91,12 @@ pub async fn run(socket: Arc<UdpSocket>, cfg: Arc<TurnConfig>) -> anyhow::Result
             Ok(v) => v,
             Err(e) => { warn!("recv_from error: {e}"); continue; }
         };
+
+        // Drop without spawning a task if this source IP is flooding.
+        if !rate_limiter.allow(src.ip()) {
+            debug!("TURN: rate limited {} — dropping packet", src.ip());
+            continue;
+        }
 
         let raw = buf[..len].to_vec();
         let sock = Arc::clone(&socket);
@@ -136,6 +192,21 @@ async fn handle_allocate(
     if !verify_mi_for_request(&raw, &username, &cfg.realm, &password) {
         send_error(socket, &msg, src, 401, "Unauthorized",
                    Some((&cfg.realm, &cfg.nonce))).await;
+        return;
+    }
+
+    // Allocation quota checks (port exhaustion + memory protection)
+    if registry.len() >= MAX_TOTAL_ALLOC {
+        warn!("TURN: max total allocations ({MAX_TOTAL_ALLOC}) reached — rejecting {src}");
+        send_error(socket, &msg, src, 486, "Allocation Quota Reached", None).await;
+        return;
+    }
+    let alloc_per_ip = registry.iter()
+        .filter(|e| e.value().client_addr.ip() == src.ip())
+        .count();
+    if alloc_per_ip >= MAX_ALLOC_PER_IP {
+        warn!("TURN: per-IP allocation quota ({MAX_ALLOC_PER_IP}) reached for {}", src.ip());
+        send_error(socket, &msg, src, 486, "Allocation Quota Reached", None).await;
         return;
     }
 
@@ -288,6 +359,13 @@ async fn handle_create_permission(
             return;
         }
     };
+
+    // Limit total permission entries per allocation (CreatePermission spam protection)
+    if alloc.permissions.len() >= MAX_PERM_PER_ALLOC {
+        warn!("TURN: permission quota ({MAX_PERM_PER_ALLOC}) reached for {src}");
+        send_error(socket, &msg, src, 486, "Allocation Quota Reached", None).await;
+        return;
+    }
 
     // Add all XOR-PEER-ADDRESS attrs as permissions
     for (attr_type, value) in &msg.attributes {
