@@ -1,0 +1,38 @@
+[package]
+name = "nexus-turn"
+version = "0.1.0"
+edition = "2021"
+description = "Nexus STUN/TURN relay — replaces coturn with a Rust-native implementation"
+
+[[bin]]
+name = "nexus-turn"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Crypto — HMAC-SHA1 for TURN credentials, MD5 for message-integrity key
+hmac    = "0.12"
+sha1    = "0.10"
+md-5    = "0.10"
+base64  = "0.22"
+
+# CLI
+clap    = { version = "4", features = ["derive", "env"] }
+anyhow  = "1"
+
+# Logging
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Utilities
+rand     = "0.8"
+dashmap  = "6"
+bytes    = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

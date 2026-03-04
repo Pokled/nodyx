@@ -156,8 +156,7 @@ DB_NAME="nexus"
 DB_USER="nexus_user"
 DB_PASSWORD=$(gen_pass)
 JWT_SECRET=$(gen_secret)
-TURN_USER="nexus"
-TURN_CREDENTIAL=$(gen_pass)
+TURN_SECRET=$(gen_secret)
 NEXUS_DIR="/opt/nexus"
 REPO_URL="https://github.com/Pokled/Nexus.git"
 
@@ -171,7 +170,6 @@ apt-get update -q
 # git first — needed to clone the repo, and most VPS images don't ship with it
 apt-get install -y -q git 2>/dev/null
 _SYS_PKGS="curl wget gnupg2 ca-certificates lsb-release openssl ufw build-essential postgresql postgresql-contrib redis-server"
-if ! $RELAY_MODE; then _SYS_PKGS="$_SYS_PKGS coturn"; fi
 # shellcheck disable=SC2086
 apt-get install -y -q $_SYS_PKGS 2>/dev/null
 ok "Paquets système installés"
@@ -290,42 +288,60 @@ systemctl start redis-server
 ok "Redis démarré"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  COTURN (TURN/STUN relay pour WebRTC) — ignoré en mode Relay
+#  NEXUS-TURN (STUN/TURN Rust natif — remplace coturn) — ignoré en mode Relay
 # ═══════════════════════════════════════════════════════════════════════════════
 if ! $RELAY_MODE; then
-  step "Configuration de coturn (relay vocal)"
+  step "Installation de nexus-turn (relay vocal WebRTC)"
 
-  cat > /etc/turnserver.conf <<TURN
-# Nexus TURN relay — généré par install.sh
-listening-port=3478
-tls-listening-port=5349
+  _ARCH=$(uname -m)
+  case "$_ARCH" in
+    x86_64)  _TURN_ARCH="amd64" ;;
+    aarch64) _TURN_ARCH="arm64" ;;
+    *) die "Architecture non supportée pour nexus-turn : $_ARCH" ;;
+  esac
 
-listening-ip=0.0.0.0
-external-ip=${PUBLIC_IP}
+  _TURN_VERSION="v0.1.0-turn"
+  _TURN_URL="https://github.com/Pokled/Nexus/releases/download/${_TURN_VERSION}/nexus-turn-linux-${_TURN_ARCH}"
+  info "Téléchargement nexus-turn ${_TURN_VERSION} (${_TURN_ARCH})..."
+  curl -sL "$_TURN_URL" -o /usr/local/bin/nexus-turn
+  chmod +x /usr/local/bin/nexus-turn
 
-realm=${DOMAIN}
+  # Fichier de configuration (secret partagé avec nexus-core)
+  cat > /etc/nexus-turn.env <<TURNENV
+TURN_PUBLIC_IP=${PUBLIC_IP}
+TURN_REALM=${DOMAIN}
+TURN_SECRET=${TURN_SECRET}
+TURN_PORT=3478
+TURN_TTL=86400
+TURNENV
+  chmod 600 /etc/nexus-turn.env
 
-# Credentials statiques
-user=${TURN_USER}:${TURN_CREDENTIAL}
+  # Service systemd
+  cat > /etc/systemd/system/nexus-turn.service <<SVC
+[Unit]
+Description=Nexus TURN Server (WebRTC relay)
+After=network.target
 
-# Sécurité
-no-loopback-peers
-no-multicast-peers
-fingerprint
+[Service]
+EnvironmentFile=/etc/nexus-turn.env
+ExecStart=/usr/local/bin/nexus-turn server \
+  --udp-port \${TURN_PORT} \
+  --public-ip \${TURN_PUBLIC_IP} \
+  --realm \${TURN_REALM} \
+  --secret \${TURN_SECRET} \
+  --ttl \${TURN_TTL}
+Restart=on-failure
+RestartSec=5s
+User=root
 
-# Plage de ports relais
-min-port=49152
-max-port=65535
+[Install]
+WantedBy=multi-user.target
+SVC
 
-# Logs
-log-file=/var/log/coturn.log
-simple-log
-no-cli
-TURN
-
-  systemctl enable coturn --quiet
-  systemctl restart coturn
-  ok "coturn configuré et démarré (IP: ${PUBLIC_IP}, port: 3478)"
+  systemctl daemon-reload
+  systemctl enable nexus-turn --quiet
+  systemctl restart nexus-turn
+  ok "nexus-turn démarré (IP: ${PUBLIC_IP}, port UDP 3478)"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -420,6 +436,11 @@ REDIS_PORT=6379
 
 # Frontend (CORS)
 FRONTEND_URL=https://${DOMAIN}
+
+# TURN relay (nexus-turn) — credentials dynamiques par utilisateur
+TURN_PUBLIC_IP=${PUBLIC_IP:-}
+TURN_SECRET=${TURN_SECRET:-}
+TURN_PORT=3478
 COREENV
 
 info "Installation des dépendances backend..."
@@ -434,28 +455,16 @@ ok "Backend prêt"
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Configuration du frontend (nexus-frontend)"
 
-if $RELAY_MODE; then
-  cat > "${NEXUS_DIR}/nexus-frontend/.env" <<FEENV
+cat > "${NEXUS_DIR}/nexus-frontend/.env" <<FEENV
 # Généré par install.sh — ne pas modifier manuellement
 
 PUBLIC_API_URL=https://${DOMAIN}
+# Les credentials TURN sont désormais générés dynamiquement par nexus-core (nexus-turn).
+# Ces variables sont conservées pour compatibilité avec d'éventuelles instances existantes.
 PUBLIC_TURN_URL=
 PUBLIC_TURN_USERNAME=
 PUBLIC_TURN_CREDENTIAL=
 FEENV
-else
-  # TURN URL : on utilise l'IP directement pour contourner les proxys DNS (Cloudflare, etc.)
-  TURN_PUBLIC_URL="turn:${PUBLIC_IP}:3478"
-
-  cat > "${NEXUS_DIR}/nexus-frontend/.env" <<FEENV
-# Généré par install.sh — ne pas modifier manuellement
-
-PUBLIC_API_URL=https://${DOMAIN}
-PUBLIC_TURN_URL=${TURN_PUBLIC_URL}
-PUBLIC_TURN_USERNAME=${TURN_USER}
-PUBLIC_TURN_CREDENTIAL=${TURN_CREDENTIAL}
-FEENV
-fi
 
 info "Installation des dépendances frontend..."
 cd "${NEXUS_DIR}/nexus-frontend"
@@ -708,9 +717,8 @@ CREDS_FILE="/root/nexus-credentials.txt"
 # Prépare les blocs conditionnels pour le fichier credentials
 _CREDS_TURN=""
 if ! $RELAY_MODE; then
-  _CREDS_TURN="TURN URL         : turn:${PUBLIC_IP}:3478
-TURN user        : ${TURN_USER}
-TURN credential  : ${TURN_CREDENTIAL}"
+  _CREDS_TURN="TURN relay       : turn:${PUBLIC_IP}:3478 (nexus-turn)
+TURN secret      : ${TURN_SECRET}"
 fi
 _CREDS_RELAY=""
 if $RELAY_MODE; then
@@ -779,7 +787,7 @@ _wait_https() {
 # ── Services système ──────────────────────────────────────────────────────────
 _hc_sect "Services système"
 _HC_SVCS="postgresql redis-server caddy"
-if ! $RELAY_MODE; then _HC_SVCS="$_HC_SVCS coturn"; fi
+if ! $RELAY_MODE; then _HC_SVCS="$_HC_SVCS nexus-turn"; fi
 if $RELAY_MODE; then _HC_SVCS="$_HC_SVCS nexus-relay-client"; fi
 for _svc in $_HC_SVCS; do
   if systemctl is-active --quiet "$_svc" 2>/dev/null; then
@@ -884,7 +892,7 @@ if ! $RELAY_MODE && [[ -n "$NEXUS_SUBDOMAIN" ]]; then
 fi
 echo -e "  ${BOLD}Admin     :${RESET} ${ADMIN_USERNAME} / ${ADMIN_EMAIL}"
 if ! $RELAY_MODE; then
-  echo -e "  ${BOLD}Vocal     :${RESET} TURN relay sur ${PUBLIC_IP}:3478"
+  echo -e "  ${BOLD}Vocal     :${RESET} nexus-turn STUN/TURN sur ${PUBLIC_IP}:3478 (UDP)"
 fi
 if $RELAY_MODE; then
   echo -e "  ${BOLD}Relay     :${RESET} tunnel TCP → relay.nexusnode.app:7443"

@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "crates/nexus-relay",
+    "crates/nexus-turn",
 ]
 resolver = "2"

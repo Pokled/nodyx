@@ -11,25 +11,26 @@ export { voiceSettingsStore } from './voiceSettings'
 export type { VoiceSettings } from './voiceSettings'
 
 // ── ICE Configuration ─────────────────────────────────────────────
+// Priority: dynamic servers from voice:init (nexus-turn) > static env vars (legacy coturn).
 
-const BASE_STUN: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
-]
-
-// TURN relay — configured per-instance via PUBLIC_TURN_* env vars.
-// If not set, the instance runs P2P-only (users behind symmetric NAT / CGNAT
-// may not be able to connect). Each admin can deploy coturn on their VPS and
-// set PUBLIC_TURN_URL / PUBLIC_TURN_USERNAME / PUBLIC_TURN_CREDENTIAL.
+// Fallback STUN servers used only when nexus-turn is not configured.
 import {
   PUBLIC_TURN_URL,
   PUBLIC_TURN_USERNAME,
   PUBLIC_TURN_CREDENTIAL,
 } from '$env/static/public'
 
+// Dynamic ICE servers received from nexus-core via voice:init.
+// null = not received yet. [] = received but nexus-turn not configured.
+let _dynamicIceServers: RTCIceServer[] | null = null
+
 function getIceServers(): RTCIceServer[] {
-  const servers: RTCIceServer[] = [...BASE_STUN]
+  // Dynamic creds from nexus-turn (set on voice:init)
+  if (_dynamicIceServers !== null && _dynamicIceServers.length > 0) {
+    return _dynamicIceServers
+  }
+  // Legacy static env vars (backward-compat with coturn)
+  const servers: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
   if (PUBLIC_TURN_URL) {
     servers.push({
       urls:       PUBLIC_TURN_URL,
@@ -948,11 +949,13 @@ export function stopScreenShare(): void {
 
 // ── Socket event handlers ─────────────────────────────────────────
 
-function onVoiceInit({ channelId, peers, mySeatIndex }: {
+function onVoiceInit({ channelId, peers, mySeatIndex, iceServers }: {
   channelId:   string
   peers:       { socketId: string; userId: string; username: string; avatar: string | null; seatIndex: number }[]
   mySeatIndex: number
+  iceServers?: RTCIceServer[]
 }): void {
+  if (iceServers && iceServers.length > 0) _dynamicIceServers = iceServers
   for (const [sid, pc] of _peerConns) {
     destroyPeerAudio(sid)
     pc.close()
