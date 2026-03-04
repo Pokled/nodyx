@@ -1,9 +1,9 @@
 <div align="center">
   <img src="docs/img/nexus-logo.png" alt="Nexus" width="220"/>
 
-  <p><em>"The network is the people."</em></p>
+  <h3><em>"The network is the people."</em></h3>
 
-  <p><strong>Self-hosted, open-source, decentralized community platform.<br/>Forum + real-time chat + voice channels — on your own server, under your own control.</strong></p>
+  <p><strong>The community platform that no one can take from you.<br/>Forum + Chat + Voice + P2P Canvas — on your server, under your control, forever.</strong></p>
 
   [![Version](https://img.shields.io/badge/version-v0.9.0-7c3aed)](CHANGELOG.md)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
@@ -13,30 +13,109 @@
 
 ---
 
-> **[→ Live: nexusnode.app](https://nexusnode.app)** — official instance, production VPS
-
-> ⚠️ **Alpha stage** — Forum, real-time chat, voice channels, asset library, garden, whispers, federated directory, nexus-relay (P2P TCP tunnel) and nexus-turn (Rust STUN/TURN) are functional. WireGuard mesh and mobile apps are still in development. Not yet recommended for large-scale production use.
+> **[→ Live demo: nexusnode.app](https://nexusnode.app)** — official instance, production VPS
 
 ---
 
-## Why Nexus?
+## The internet broke something.
 
-Discord, Facebook and Slack locked millions of communities into private silos.
-Discussions, tutorials, collective knowledge — invisible to Google, inaccessible without an account, doomed to disappear when the platform closes.
+Discord, Facebook, Slack — they didn't build communities. They captured them.
 
-**Nexus fixes that.**
+Ten years of discussions. Tutorials. Collective knowledge. Memories.
+Locked in silos. Invisible to search engines. Gone when the platform decides.
 
-- **Self-hosted** — runs on a Raspberry Pi, a €3 VPS, or your own server
-- **One instance = one community** — no multi-tenant platform, no data sharing
-- **P2P by design** — no central point of failure
-- **Forum indexed by Google** — your knowledge belongs to the internet
-- **Real-time chat + voice** — WebRTC P2P mesh, self-hosted TURN relay
-- **Open source** — AGPL-3.0, forever
+**You never owned any of it.**
 
-<div align="center">
-  <img src="docs/img/Nexus-reseau.png" alt="Nexus network architecture — self-hosted, P2P, federated" width="700"/>
-  <p><em>Your instance. Your users. Your data. No central server.</em></p>
-</div>
+---
+
+## Nexus gives it back.
+
+One command. Your server. Your rules. Your community — permanently.
+
+```bash
+git clone https://github.com/Pokled/Nexus.git && sudo bash install.sh
+```
+
+Works on a Raspberry Pi behind a home router. No domain. No open ports. No cloud account.
+
+---
+
+## What makes Nexus different
+
+### It's the only platform with all of this in a single install
+
+| | **Nexus** | Discord | Matrix | Discourse | Lemmy |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Self-hosted | ✅ | ❌ | ✅ | ✅ | ✅ |
+| Forum indexed by Google | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Real-time chat | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| Voice channels | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Screen sharing | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **P2P voice — zero Big Tech relay** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Collaborative P2P canvas** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **P2P DataChannels (instant typing, reactions)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Home server (no port forwarding)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Federated community directory** | ✅ | ❌ | ⚠️ | ❌ | ✅ |
+| **Asset library (frames, badges, banners)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Ephemeral whisper rooms** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Open source | ✅ AGPL | ❌ | ✅ | ✅ | ✅ |
+
+> Nexus is the only self-hosted platform combining an **indexed forum**, **real-time chat**, **P2P voice**, **collaborative canvas**, and a **federated directory** in a single install.
+
+---
+
+## The P2P Stack — 100% handwritten Rust
+
+This is where Nexus goes further than anyone else.
+
+### nexus-turn — Rust STUN/TURN server *(replaces coturn)*
+
+coturn is the industry standard — a mature C server used by Signal, Jitsi, Matrix.
+We replaced it with a **2.9MB Rust binary** that does exactly what Nexus needs. Nothing more.
+
+```
+RFC 5389 (STUN) + RFC 5766 (TURN)
+HMAC-SHA1 time-based credentials (username={expires}:{userId})
+Rate limiting + allocation quotas + ban map
+tokio async runtime — UDP:3478
+Zero coturn dependency on production
+```
+
+### nexus-relay — Rust P2P TCP tunnel *(no domain, no open ports)*
+
+A Raspberry Pi under your desk. No domain. No router port forwarding. No Cloudflare account.
+Run Nexus anyway.
+
+```
+nexus-relay server  →  listens TCP:7443 + HTTP:7001
+nexus-relay client  →  persistent TCP tunnel → exposes local port 80
+```
+
+- Automatic reconnection with exponential backoff (1s → 30s max)
+- JWT authentication per instance
+- Routing by slug: `yourclub.nexusnode.app` → proxied to the Pi behind your router
+- Validated on a real Raspberry Pi 4 with zero open ports ✅
+
+### WebRTC DataChannels — P2P without the server
+
+Messages between peers that never touch the server.
+
+- **Instant typing indicators** — < 5ms local latency (vs 80-200ms via server)
+- **Optimistic emoji reactions** — appear instantly, server confirms in background
+- **P2P file transfer** — assets shared directly between peers
+- **Graceful fallback** — if DataChannel unavailable (strict NAT), Socket.IO takes over transparently
+
+### NexusCanvas — Collaborative P2P whiteboard
+
+Draw together in real time. Synchronized via existing DataChannels.
+No server touches the data. Session-only by default.
+
+```
+CRDT Last-Write-Wins per element (UUID + timestamp)
+canvas:op / canvas:clear / canvas:cursor  →  P2P DataChannels
+Voice-aware cursors: peer cursor pulses when they're speaking
+PNG export (browser-native) + text recap posted to chat channel
+```
 
 ---
 
@@ -71,29 +150,67 @@ Discussions, tutorials, collective knowledge — invisible to Google, inaccessib
 
 ---
 
-## How Nexus compares
+## Quick Start
 
-|  | **Nexus** | Discord | Matrix | Discourse | Lemmy | NodeBB |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Self-hosted | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Forum indexed by Google | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Real-time chat | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ |
-| Voice channels | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Screen sharing | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| P2P voice (no Big Tech relay) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| No account required to read | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| **Community directory** | ✅ | ❌ | ⚠️ | ❌ | ✅ | ❌ |
-| **Asset library & profiles** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Ephemeral whisper rooms** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Open source | ✅ AGPL | ❌ | ✅ Apache | ✅ GPL | ✅ AGPL | ✅ GPL |
-| Forum + Chat + Voice in one | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
+### One-click install (recommended)
 
-> Nexus is the only self-hosted platform combining an **indexed forum**, **real-time chat**, **P2P voice**, and a **federated community directory** in a single install.
-> Matrix has chat+voice but no indexed forum. Discourse has forum+chat but no voice. Lemmy has a directory but no voice or real-time chat.
+```bash
+git clone https://github.com/Pokled/Nexus.git
+cd Nexus
+sudo bash install.sh
+```
+
+The installer offers **three network modes**:
+
+| Mode | Requirements | Result |
+|---|---|---|
+| **Open ports** | Ports 80 + 443, domain or IP | Let's Encrypt HTTPS, full control |
+| **Nexus Relay** ⭐ | Nothing — outbound TCP only | `yourclub.nexusnode.app` in minutes |
+| **Cloudflare Tunnel** | CF account + own domain | Your custom domain, no open ports |
+
+> **Nexus Relay** is the recommended default — works on a Raspberry Pi behind a home router.
+> No domain. No port forwarding. No cloud account. Just run the script.
+
+Installs automatically: Node.js, PostgreSQL, Redis, nexus-turn (Rust STUN/TURN), Caddy (HTTPS), PM2.
+Generates secrets, bootstraps the database, creates your admin account.
+**No manual configuration.**
+
+> Supported: Ubuntu 22.04/24.04, Debian 11/12. Windows → [WSL guide](docs/en/INSTALL.md#windows)
+
+→ **[Complete installation guide (EN)](docs/en/INSTALL.md)**
+→ **[Guide d'installation complet (FR)](docs/fr/INSTALL.md)**
+
+### Docker
+
+```bash
+git clone https://github.com/Pokled/Nexus.git
+cd Nexus
+cp nexus-core/.env.example nexus-core/.env
+docker-compose up -d
+```
 
 ---
 
-## Stack
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Your Browser                         │
+└──────────────┬──────────────────────────────┬───────────────┘
+               │ HTTP / WebSocket             │ WebRTC P2P
+               ▼                             ▼
+┌──────────────────────────┐    ┌────────────────────────────┐
+│   nexus-core (Fastify)   │    │  Direct peer connection     │
+│   nexus-frontend (Svelte)│    │  DataChannels + Canvas      │
+│   PostgreSQL + Redis      │    │  Voice + Screen share       │
+└──────────────────────────┘    └────────────────────────────┘
+               │                             │
+        ┌──────┴──────┐               ┌──────┴──────┐
+        │ nexus-relay │               │ nexus-turn  │
+        │ (Rust TCP)  │               │ (Rust TURN) │
+        │ home server │               │ NAT bypass  │
+        └─────────────┘               └─────────────┘
+```
 
 | Layer | Technology |
 |---|---|
@@ -106,75 +223,67 @@ Discussions, tutorials, collective knowledge — invisible to Google, inaccessib
 | Real-time | Socket.IO |
 | Voice | WebRTC P2P mesh |
 | TURN relay | **nexus-turn** — Rust, self-hosted, hardened |
-| **P2P relay** | **nexus-relay** — Rust, tokio + hyper |
+| P2P relay | **nexus-relay** — Rust, tokio + hyper |
+| Collaborative canvas | **NexusCanvas** — CRDT LWW, P2P DataChannels |
 
 ---
 
-## Quick Start
+## What's built. What's coming.
 
-### ⚡ One-click install (recommended)
+### Done
 
-One command. A few questions. Everything configured automatically.
-
-```bash
-git clone https://github.com/Pokled/Nexus.git
-cd Nexus
-sudo bash install.sh
-```
-
-The installer offers **three network modes**:
-
-| Mode | Requirements | Result |
-|---|---|---|
-| **Open ports** | Ports 80 + 443 open, domain or IP | Let's Encrypt HTTPS, full control |
-| **Nexus Relay** ⭐ | Nothing — outbound TCP only | `yourcommunity.nexusnode.app` in minutes |
-| **Cloudflare Tunnel** | CF account + own domain | Your custom domain, no open ports |
-
-> **Nexus Relay** is the recommended default — works on a Raspberry Pi behind a home router, no domain, no port forwarding, no Cloudflare account.
-
-The script installs and configures Node.js, PostgreSQL, Redis, nexus-turn (Rust STUN/TURN relay), Caddy (HTTPS), and PM2. It detects your public IP, generates secure secrets, bootstraps the community, and creates your admin account. **No manual configuration needed.**
-
-> Supported: Ubuntu 22.04/24.04, Debian 11/12. Windows users → [WSL guide](docs/en/INSTALL.md#-windows-users--wsl-guide).
-
-→ **[Complete installation guide (EN)](docs/en/INSTALL.md)** — VPS, WSL, home server, NAT, common errors, tips
-→ **[Guide d'installation complet (FR)](docs/fr/INSTALL.md)** — VPS, WSL, serveur maison, NAT, erreurs, astuces
-
-### Docker
-
-```bash
-git clone https://github.com/Pokled/Nexus.git
-cd Nexus
-cp nexus-core/.env.example nexus-core/.env
-# Edit nexus-core/.env with your community settings
-docker-compose up -d
-```
-
----
-
-## Project Status
-
-| Feature | Status |
+| Feature | Version |
 |---|---|
-| Forum (categories, threads, posts, reactions, tags) | ✅ Done |
-| Full-text search (PostgreSQL FTS) | ✅ Done |
-| Real-time chat (Socket.IO) + clickable URLs | ✅ Done |
-| Voice channels (WebRTC P2P) | ✅ Done |
-| Screen sharing + clip recording | ✅ Done |
-| Admin panel | ✅ Done |
-| SEO (sitemap, RSS, JSON-LD) | ✅ Done |
-| One-click installer (`install.sh`) | ✅ Done |
-| Instance directory + auto DNS | ✅ Done |
-| Voice member stats & interaction panel | ✅ Done |
-| **Community asset library** (frames, banners, badges…) | ✅ **Done** — v0.6 |
-| **Profile asset slots** (equip assets on your profile) | ✅ **Done** — v0.6 |
-| **Feature Garden** (community feature voting with seeds) | ✅ **Done** — v0.6 |
-| **Federated asset directory** (cross-instance asset sharing) | ✅ **Done** — v0.7 |
-| **Whispers** (ephemeral chat rooms, 1h TTL) | ✅ **Done** — v0.7 |
-| **nexus-relay** — P2P TCP tunnel (no domain, no open ports) | ✅ **Done** — Phase 3.0-A |
-| **nexus-turn** — Rust STUN/TURN, rate-limited, hardened (replaces coturn) | ✅ **Done** — Phase 3.0-C |
-| WireGuard P2P mesh (inter-instance) | ⏳ Planned |
-| File sharing + collaborative whiteboard | ⏳ Planned |
-| Mobile (Capacitor) / Desktop (Tauri) | ⏳ Planned |
+| Forum (categories, threads, posts, reactions, tags) | v0.1 |
+| Full-text search (PostgreSQL FTS) | v0.1 |
+| Real-time chat (Socket.IO) | v0.1 |
+| Voice channels (WebRTC P2P) | v0.1 |
+| Screen sharing + clip recording | v0.2 |
+| Admin panel | v0.2 |
+| SEO (sitemap, RSS, JSON-LD) | v0.3 |
+| One-click installer | v0.4 |
+| Instance directory + auto DNS | v0.5 |
+| nexus-relay — Rust P2P TCP tunnel | v0.5 |
+| Community asset library (frames, banners, badges) | v0.6 |
+| Feature Garden — community voting with organic growth stages | v0.6 |
+| Federated asset directory (cross-instance sharing) | v0.7 |
+| Whispers — ephemeral encrypted chat rooms (1h TTL) | v0.7 |
+| P2P DataChannels — instant typing, optimistic reactions | v0.8 |
+| nexus-turn — Rust STUN/TURN replacing coturn | v0.9 |
+| **NexusCanvas — collaborative P2P whiteboard in voice channels** | **v0.9** |
+
+### Coming
+
+| Feature | SPEC |
+|---|---|
+| **Event Calendar** — organizer-grade, OSM maps, Google Rich Snippets | [SPEC 011](docs/en/specs/011-nexus-event-calendar/SPEC.md) |
+| **Global Search** — inter-instance mesh index, Meilisearch, P2P fallback | [SPEC 010](docs/en/specs/010-nexus-global-search/SPEC.md) |
+| **Nodes** — durable structured knowledge, community-validated via Garden | [SPEC 013](docs/en/specs/013-node/SPEC.md) |
+| **Galaxy Bar** — multi-instance switcher, decentralized SSO | [SPEC 012](docs/en/specs/012-nexus-galaxy-bar/SPEC.md) |
+| Mobile (Capacitor) / Desktop (Tauri) | — |
+
+---
+
+## The Vision
+
+Nexus is not a Discord alternative.
+
+It is a different answer to a different question.
+
+Discord asked: *"How do we grow fast and capture communities?"*
+Nexus asks: *"How do we give communities sovereignty over their own existence?"*
+
+Every Nexus instance is a sovereign node. It runs where you run it — a VPS, a Pi, a spare laptop. It stores what you choose to store. It shares what you choose to share. It shuts down when you decide — not when a company pivots.
+
+The internet was decentralized by design. SMTP, IRC, NNTP — anyone could run a server and talk to anyone else's server. That was the promise. Big Tech centralized it into silos over two decades.
+
+**Nexus is the promise, kept.**
+
+And it spreads the same way. Each instance that goes live exposes others to the idea. Each public event indexed by Google brings in someone new. Each community that chooses sovereignty inspires another. The R0 is in the architecture.
+
+We are not building a product. We are rebuilding infrastructure for human communities.
+
+> *"Fork us if we betray you."* — AGPL-3.0
 
 ---
 
@@ -182,8 +291,8 @@ docker-compose up -d
 
 | Language | Docs |
 |---|---|
-| 🇫🇷 Français | [docs/fr/](docs/fr/) |
 | 🇬🇧 English | [docs/en/](docs/en/) |
+| 🇫🇷 Français | [docs/fr/](docs/fr/) |
 | 🇪🇸 Español | *coming soon* |
 | 🇮🇹 Italiano | *coming soon* |
 | 🇩🇪 Deutsch | *coming soon* |
@@ -191,39 +300,42 @@ docker-compose up -d
 - [Manifesto](docs/en/MANIFESTO.md) — Why Nexus exists
 - [Architecture](docs/en/ARCHITECTURE.md) — How it's built
 - [Roadmap](docs/en/ROADMAP.md) — Where we're going
-- [Contributing](docs/en/CONTRIBUTING.md) — How to contribute
-- [Audio Engine](docs/en/AUDIO.md) — Broadcast EQ, RNNoise, audio chain explained
+- [Audio Engine](docs/en/AUDIO.md) — Broadcast EQ, RNNoise, full audio chain
 - [Neural Engine](docs/en/NEURAL-ENGINE.md) — Local AI with Ollama
-- [Specs](docs/specs/) — Functional specifications (FR) / [EN](docs/en/specs/)
+- [Specs](docs/en/specs/) — All functional specifications
+- [Ideas](docs/ideas/) — Design thinking in progress
 
 ---
 
 ## Contributing
 
-Nexus belongs to its community. All contributions are welcome.
+Nexus belongs to its community.
 
-1. Browse [open Issues](https://github.com/Pokled/Nexus/issues) or start a [Discussion](https://github.com/Pokled/Nexus/discussions)
+1. Browse [open Issues](https://github.com/Pokled/Nexus/issues) or open a [Discussion](https://github.com/Pokled/Nexus/discussions)
 2. Read [CONTRIBUTING.md](docs/en/CONTRIBUTING.md) before opening a PR
-3. Commits follow [Conventional Commits](https://www.conventionalcommits.org/), written in **English**
+3. Commits follow [Conventional Commits](https://www.conventionalcommits.org/), written in English
 
-Where to contribute freely — no validation required:
+Contribute freely — no prior validation required:
 
 ```
-nexus-plugins/    →  Build plugins
-nexus-themes/     →  Build themes
-docs/             →  Improve or translate documentation
-i18n/             →  Translate into your language
+docs/        →  improve or translate documentation
+docs/ideas/  →  design thinking, UX proposals, new ideas
 ```
 
-The **core** (`nexus-core/src/`) requires discussion first — open an Issue.
+The core (`nexus-core/src/`) requires discussion first — open an Issue.
 
 ---
 
 ## License
 
-**AGPL-3.0** — If Nexus ever betrays its principles, this license explicitly allows
-anyone to fork the project and continue it in the spirit of the [Manifesto](docs/en/MANIFESTO.md).
+**AGPL-3.0** — The strongest open source license for networked software.
+
+If you use Nexus, even over a network, your modifications must be open source.
+If Nexus ever betrays its principles, this license lets anyone fork it and continue in the spirit of the [Manifesto](docs/en/MANIFESTO.md).
 
 ---
 
-*Born February 18, 2026. "Fork us if we betray you."*
+<div align="center">
+  <p><em>Born February 18, 2026.</em></p>
+  <p><strong>"Fork us if we betray you."</strong></p>
+</div>
