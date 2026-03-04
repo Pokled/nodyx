@@ -278,7 +278,7 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] MESSAGE-INTEGRITY vérification (MD5 key + HMAC-SHA1, RFC 5389 §15.4)
 - [x] nexus-core génère les creds par utilisateur → `voice:init` Socket.IO (pas d'IPC)
 - [x] ChannelBind / ChannelData (optimisation relay, moins d'overhead header)
-- [x] 2.9MB statique, `install.sh` intégré, service systemd, GitHub Release `v0.1.0-turn`
+- [x] 2.9MB statique, `install.sh` intégré, service systemd, GitHub Release `v0.1.1-turn`
 
 #### Phase 3.0-D — `nexus-p2p` core (vision long terme 2027-2028)
 
