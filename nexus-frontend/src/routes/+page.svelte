@@ -9,16 +9,6 @@
 	const threads = $derived(data.threads);
 	const articles = $derived(data.articles);
 
-	// Language flag emoji from ISO code
-	function flag(country: string): string {
-		if (!country || country.length !== 2) return '🌐';
-		return country
-			.toUpperCase()
-			.split('')
-			.map(c => String.fromCodePoint(0x1f1e6 - 65 + c.charCodeAt(0)))
-			.join('');
-	}
-
 	function timeAgo(dateStr: string): string {
 		const diff = Date.now() - new Date(dateStr).getTime();
 		const m = Math.floor(diff / 60000);
@@ -51,101 +41,72 @@
 	})}</script>`}
 </svelte:head>
 
-<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
-<section class="relative -mx-4 sm:-mx-6 -mt-8 mb-10 px-6 py-12 overflow-hidden
-                bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950
-                border-b border-gray-800">
+<!-- ── Identity band ──────────────────────────────────────────────────── -->
+<div class="relative -mx-4 sm:-mx-6 -mt-8 mb-8 border-b border-gray-800/80 bg-gray-900/70">
+	<div class="px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
 
-	<!-- Background pattern -->
-	<div class="absolute inset-0 opacity-5"
-	     style="background-image: radial-gradient(circle at 1px 1px, rgb(99 102 241) 1px, transparent 0); background-size: 32px 32px;"></div>
-
-	<div class="relative max-w-5xl mx-auto">
-		<!-- Community badges -->
-		<div class="flex flex-wrap items-center gap-2 mb-4">
-			<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
-			             bg-indigo-900/60 text-indigo-300 border border-indigo-800/60">
-				<span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-				Instance Nexus
-			</span>
-			{#if instance.language}
-				<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
-				             bg-gray-800 text-gray-400 border border-gray-700">
-					{flag(instance.country)} {instance.language.toUpperCase()}
-					{#if instance.country} · {instance.country}{/if}
-				</span>
+		<!-- Left: description + stats -->
+		<div class="flex-1 min-w-0">
+			{#if instance.description}
+				<p class="text-sm text-gray-300 font-medium truncate">{instance.description}</p>
 			{/if}
-		</div>
-
-		<!-- Name + description -->
-		<h1 class="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-3">
-			{instance.name}
-		</h1>
-		{#if instance.description}
-			<p class="text-lg text-gray-400 max-w-2xl leading-relaxed mb-8">
-				{instance.description}
-			</p>
-		{/if}
-
-		<!-- Stats row -->
-		<div class="flex flex-wrap items-center gap-6 mb-8">
-			<div class="flex items-center gap-2">
-				<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-					      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
-				</svg>
-				<span class="text-sm text-gray-400">
-					<span class="font-semibold text-white">{instance.member_count.toLocaleString('fr-FR')}</span>
-					{instance.member_count > 1 ? 'membres' : 'membre'}
-				</span>
-			</div>
-
-			<div class="flex items-center gap-2">
-				<span class="w-2 h-2 rounded-full bg-green-400"></span>
-				<span class="text-sm text-gray-400">
-					<span class="font-semibold text-green-400">{instance.online_count}</span>
-					en ligne
-				</span>
-			</div>
-
-			<div class="flex items-center gap-2">
-				<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-					      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-				</svg>
-				<span class="text-sm text-gray-400">
-					<span class="font-semibold text-white">{instance.thread_count.toLocaleString('fr-FR')}</span>
-					fils · <span class="font-semibold text-white">{instance.post_count.toLocaleString('fr-FR')}</span> messages
-				</span>
-			</div>
-		</div>
-
-		<!-- CTA buttons -->
-		<div class="flex flex-wrap gap-3">
-			{#if data.user}
-				<a href="/users/{data.user.username}"
-				   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500
-				          text-sm font-semibold text-white transition-colors shadow-lg shadow-indigo-900/30">
-					Voir mon profil
-				</a>
-			{:else}
-				<a href="/auth/register"
-				   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500
-				          text-sm font-semibold text-white transition-colors shadow-lg shadow-indigo-900/30">
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+			<div class="flex items-center gap-4 mt-1 flex-wrap">
+				<span class="flex items-center gap-1.5 text-xs text-gray-500">
+					<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+						      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
 					</svg>
-					Rejoindre la communauté
+					<span class="font-semibold text-gray-300">{instance.member_count.toLocaleString('fr-FR')}</span> membres
+				</span>
+				<span class="flex items-center gap-1.5 text-xs text-gray-500">
+					<span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+					<span class="font-semibold text-green-400">{instance.online_count}</span> en ligne
+				</span>
+				<span class="text-xs text-gray-500">
+					<span class="font-semibold text-gray-400">{instance.thread_count.toLocaleString('fr-FR')}</span> fils
+					· <span class="font-semibold text-gray-400">{instance.post_count.toLocaleString('fr-FR')}</span> messages
+				</span>
+			</div>
+		</div>
+
+		<!-- Right: search + action -->
+		<div class="flex items-center gap-2 shrink-0">
+			<form action="/search" method="get" class="relative">
+				<svg class="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-500 pointer-events-none"
+				     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+				</svg>
+				<input
+					name="q"
+					type="search"
+					placeholder="Rechercher…"
+					class="w-44 sm:w-56 pl-8 pr-3 py-1.5 text-sm bg-gray-800/80 border border-gray-700/80
+					       rounded-lg text-gray-300 placeholder-gray-600
+					       focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30
+					       transition-colors"
+				/>
+			</form>
+			{#if data.user && categories.length > 0}
+				<a href="/forum/{categories[0].id}/new"
+				   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+				          bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white
+				          transition-colors whitespace-nowrap">
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+					</svg>
+					Nouveau sujet
 				</a>
-				<a href="/auth/login"
-				   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700
-				          border border-gray-700 text-sm font-semibold text-gray-200 transition-colors">
-					Se connecter
+			{:else if !data.user}
+				<a href="/auth/register"
+				   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+				          bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white
+				          transition-colors whitespace-nowrap">
+					Rejoindre
 				</a>
 			{/if}
 		</div>
 	</div>
-</section>
+</div>
 
 <!-- ── Articles mis en avant ──────────────────────────────────────────────── -->
 {#if articles.length > 0}
