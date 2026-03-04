@@ -300,7 +300,7 @@ if ! $RELAY_MODE; then
     *) die "Architecture non supportée pour nexus-turn : $_ARCH" ;;
   esac
 
-  _TURN_VERSION="v0.1.1-turn"
+  _TURN_VERSION="v0.1.2-p2p"
   _TURN_URL="https://github.com/Pokled/Nexus/releases/download/${_TURN_VERSION}/nexus-turn-linux-${_TURN_ARCH}"
   info "Téléchargement nexus-turn ${_TURN_VERSION} (${_TURN_ARCH})..."
   curl -sL "$_TURN_URL" -o /usr/local/bin/nexus-turn
@@ -378,7 +378,7 @@ if $RELAY_MODE; then
     *) die "Architecture non supportée pour Nexus Relay : $_ARCH (supporté: x86_64, aarch64)" ;;
   esac
 
-  _RELAY_VERSION="v0.1.1-relay"
+  _RELAY_VERSION="v0.1.2-p2p"
   _RELAY_URL="https://github.com/Pokled/Nexus/releases/download/${_RELAY_VERSION}/nexus-relay-linux-${_RELAY_ARCH}"
 
   info "Téléchargement nexus-relay ${_RELAY_VERSION} (${_RELAY_ARCH})..."
