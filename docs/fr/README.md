@@ -312,6 +312,8 @@ Nous ne construisons pas un produit. Nous reconstruisons une infrastructure pour
 - [Moteur neural](NEURAL-ENGINE.md) — IA locale avec Ollama
 - [Spécifications](../en/specs/) — Toutes les specs fonctionnelles
 - [Idées](../ideas/) — Réflexions de design en cours
+- [**NEXUS-ETHER**](../ideas/NEXUS-ETHER.md) — La vision couche physique (LoRa / radio HF / ionosphère)
+- [**NEXUS-ETHER Guide**](../ideas/NEXUS-ETHER-GUIDE.md) — Comment participer : CB, radioamateurs, LoRa, renaissance des radios régionales
 
 ---
 
