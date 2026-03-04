@@ -382,6 +382,73 @@ Le signal était là. Il fallait un endroit où il pouvait atterrir.
 
 ---
 
+## L'ionosphère — le réseau que personne ne peut acheter
+
+C'est là que ça devient vraiment inconfortable pour les grands groupes.
+
+L'ionosphère est une couche de l'atmosphère terrestre, entre 80 et 400 km d'altitude.
+Elle réfléchit les ondes radio HF (3–30 MHz) comme un miroir courbe.
+
+Un signal émis depuis un village de Bretagne peut rebondir sur l'ionosphère
+et être reçu à New York, Dakar, ou Tokyo.
+
+```
+Paris → ionosphère → New York
+        ↕ rebond
+        → Dakar → ionosphère → Tokyo
+```
+
+**Sans satellite. Sans câble sous-marin. Sans compte cloud. Sans permission.**
+Juste de la physique. De la même physique qui existait avant internet.
+De la même physique qui existera après.
+
+### Ce que ça signifie pour NEXUS-RADIO
+
+Une station de radio communautaire avec un émetteur HF de 100W et une antenne filaire
+faite maison (15€ de fil de cuivre tendu entre deux arbres) peut diffuser son programme
+**à l'autre bout du monde.**
+
+Pas en streaming. Pas avec une carte de crédit. Pas avec un CDN.
+Avec de la physique.
+
+Et les CRDT deltas du forum Nexus — les mêmes qui synchronisent NexusCanvas en temps réel —
+voyagent sur ces ondes en JS8Call ou VARA HF.
+
+```
+Radio communautaire, Creuse, France :
+  → Programme audio diffusé en HF 14 MHz
+  → Reçu à Buenos Aires par un radioamateur qui a un RTL-SDR (~25€)
+  → Les CRDT deltas du forum arrivent avec le signal audio
+  → L'état du forum Nexus se reconstitue localement
+  → L'auditeur argentin peut lire les discussions du village de Creuse
+  → Et répondre. Via son émetteur. Ses mots remontent vers l'ionosphère.
+  → Et atterrissent dans le village, le lendemain matin.
+```
+
+### Ce qui rend les "gros" incapables de répondre
+
+Spotify peut acheter des serveurs. Google peut acheter des câbles sous-marins.
+Apple peut acheter des satellites.
+
+**Personne ne peut acheter l'ionosphère.**
+
+C'est de la physique solaire. Elle se recharge chaque jour avec l'énergie du soleil.
+Elle fonctionnait avant internet. Elle fonctionnera après.
+
+Une communauté Nexus avec un émetteur HF et une antenne dans un arbre
+est **structurellement indestructible** par n'importe quelle puissance commerciale ou étatique.
+
+Pas de serveur à couper. Pas de domaine à saisir. Pas de compte à fermer.
+Pas de datacenter à rançonner.
+
+Juste des ondes. Et des gens de l'autre côté.
+
+> *"Seems like an awful waste of space."*
+>
+> Non, David. Pas du tout.
+
+---
+
 ## Connexion avec NEXUS-ETHER
 
 NEXUS-RADIO et NEXUS-ETHER ne sont pas deux projets.
