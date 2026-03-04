@@ -1,4 +1,7 @@
+use dashmap::DashMap;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use tokio_postgres::Client as PgClient;
@@ -7,6 +10,47 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
 
 use crate::protocol::{ClientMessage, ServerMessage, read_msg, write_msg};
 use super::registry::{PendingRequest, Registry, RelayResponse, TunnelHandle};
+
+// ── Auth failure rate limiter ─────────────────────────────────────────────────
+// Protects against token brute-force attempts on the TCP relay port (7443).
+
+/// Max failed auth attempts from a single IP within AUTH_WINDOW_SECS before banning.
+const MAX_AUTH_FAILURES:  u32 = 5;
+/// Time window for counting failures (seconds).
+const AUTH_WINDOW_SECS:   u64 = 60;
+/// How long a banned IP is refused connections (seconds).
+const BAN_DURATION_SECS:  u64 = 300;  // 5 minutes
+
+/// Maps source IP → (failed_attempts, first_failure_unix_secs).
+type BanMap = Arc<DashMap<IpAddr, (u32, u64)>>;
+
+fn auth_now_secs() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+}
+
+fn is_auth_banned(ban_map: &DashMap<IpAddr, (u32, u64)>, ip: IpAddr) -> bool {
+    if let Some(entry) = ban_map.get(&ip) {
+        let (attempts, since) = *entry;
+        attempts >= MAX_AUTH_FAILURES && auth_now_secs().saturating_sub(since) < BAN_DURATION_SECS
+    } else {
+        false
+    }
+}
+
+fn record_auth_failure(ban_map: &DashMap<IpAddr, (u32, u64)>, ip: IpAddr) {
+    let now = auth_now_secs();
+    ban_map.entry(ip)
+        .and_modify(|(count, since)| {
+            if now.saturating_sub(*since) > AUTH_WINDOW_SECS {
+                // Reset: first failure in a new window
+                *count = 1;
+                *since = now;
+            } else {
+                *count += 1;
+            }
+        })
+        .or_insert((1, now));
+}
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -18,14 +62,36 @@ pub async fn run(
     let listener = TcpListener::bind(bind).await?;
     info!("TCP relay listener on {bind}");
 
+    let ban_map: BanMap = Arc::new(DashMap::new());
+
+    // Periodic cleanup: remove ban entries that have fully expired.
+    {
+        let ban_map_c = ban_map.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(BAN_DURATION_SECS)).await;
+                let now = auth_now_secs();
+                ban_map_c.retain(|_, (_, since)| now.saturating_sub(*since) < BAN_DURATION_SECS);
+            }
+        });
+    }
+
     loop {
         match listener.accept().await {
             Ok((stream, addr)) => {
+                // Reject connections from banned IPs before doing any I/O or DB work.
+                if is_auth_banned(&ban_map, addr.ip()) {
+                    warn!("Relay: auth-banned IP {} — dropping connection", addr.ip());
+                    drop(stream);
+                    continue;
+                }
+
                 info!("Relay client connected from {addr}");
                 let registry = registry.clone();
-                let pg = pg.clone();
+                let pg       = pg.clone();
+                let ban_map  = ban_map.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = handle_client(stream, registry, pg).await {
+                    if let Err(e) = handle_client(stream, addr, registry, pg, ban_map).await {
                         warn!("Relay client {addr} disconnected: {e}");
                     }
                 });
@@ -39,8 +105,10 @@ pub async fn run(
 
 async fn handle_client(
     mut stream: TcpStream,
+    addr: SocketAddr,
     registry: Registry,
     pg: Arc<PgClient>,
+    ban_map: BanMap,
 ) -> anyhow::Result<()> {
     // 1. Expect Register as the very first message.
     let Some(ClientMessage::Register { slug, token }) =
@@ -66,6 +134,10 @@ async fn handle_client(
         .await?;
 
     if row.is_none() {
+        record_auth_failure(&ban_map, addr.ip());
+        warn!("Relay: auth failure from {} (slug='{}') — {} attempt(s)",
+              addr.ip(), slug,
+              ban_map.get(&addr.ip()).map(|e| e.0).unwrap_or(1));
         write_msg(
             &mut stream,
             &ServerMessage::Registered {
@@ -123,7 +195,10 @@ async fn handle_client(
         loop {
             match read_msg::<_, ClientMessage>(&mut reader).await {
                 Ok(Some(ClientMessage::Response { id, status, headers, body_b64 })) => {
-                    let body = B64.decode(&body_b64).unwrap_or_default();
+                    let body = B64.decode(&body_b64).unwrap_or_else(|e| {
+                        warn!("Relay: base64 decode error on response id={id}: {e}");
+                        vec![]
+                    });
                     if let Some((_, tx)) = pending_b.remove(&id) {
                         let _ = tx.send(RelayResponse { status, headers, body });
                     }
