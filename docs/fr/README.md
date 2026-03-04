@@ -314,6 +314,7 @@ Nous ne construisons pas un produit. Nous reconstruisons une infrastructure pour
 - [Idées](../ideas/) — Réflexions de design en cours
 - [**NEXUS-ETHER**](../ideas/NEXUS-ETHER.md) — La vision couche physique (LoRa / radio HF / ionosphère)
 - [**NEXUS-ETHER Guide**](../ideas/NEXUS-ETHER-GUIDE.md) — Comment participer : CB, radioamateurs, LoRa, renaissance des radios régionales
+- [**NEXUS-RADIO**](../ideas/NEXUS-RADIO.md) — Nexus comme tuner radio : de nouvelles stations vont naître parce qu'elles ont enfin une communauté
 
 ---
 

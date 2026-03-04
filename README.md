@@ -314,6 +314,7 @@ We are not building a product. We are rebuilding infrastructure for human commun
 - [Ideas](docs/ideas/) — Design thinking in progress
 - [**NEXUS-ETHER**](docs/ideas/NEXUS-ETHER.md) — The physical layer vision (LoRa / HF radio / ionosphere)
 - [**NEXUS-ETHER Guide**](docs/ideas/NEXUS-ETHER-GUIDE.md) — How to participate: CB, HAM radio, LoRa, regional radio revival
+- [**NEXUS-RADIO**](docs/ideas/NEXUS-RADIO.md) — Nexus as a radio tuner: new stations born because they finally have a community
 
 ---
 
