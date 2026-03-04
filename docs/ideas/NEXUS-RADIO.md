@@ -423,6 +423,58 @@ Quelqu'un doit documenter comment un nœud HF (JS8Call) peut aussi devenir une "
 
 ---
 
+## Le modèle économique — la régie coopérative
+
+C'est la pièce qui manquait à toutes les radios qui sont mortes.
+
+### Le problème des petites stations
+
+Une radio associative avec 80 auditeurs ne peut pas négocier avec un annonceur.
+Elle n'a pas le poids. Elle n'a pas les contacts. Elle n'a pas le temps.
+Résultat : zéro revenus, dépendance aux subventions, mort lente.
+
+### La solution Nexus-Radio : mutualisation des audiences
+
+200 stations Nexus-Radio avec 80 auditeurs chacune = **16 000 auditeurs locaux/régionaux.**
+Un artisan, une salle de concert, un événement régional — ils paient pour ça.
+Pas parce que c'est "internet". Parce que c'est **leur bassin de vie**.
+
+```
+nexusnode.app/radio
+  → régie publicitaire coopérative
+  → annonceurs locaux/régionaux déposent leurs spots audio
+  → spots distribués aux stations de la région ciblée
+  → revenus partagés automatiquement
+
+Répartition :
+  80% → la station (son infrastructure, ses animateurs)
+  20% → nexusnode.app (maintenance serveurs, développement Nexus)
+```
+
+### Pourquoi ce n'est pas de la pub Big Tech
+
+- Aucun tracking. Aucun profil utilisateur. Aucun pixel.
+- Les annonceurs ciblent par **région géographique** et **genre de station** — pas par données personnelles.
+- Le boulanger du village cible les auditeurs de sa commune. Pas les "personnes intéressées par la boulangerie".
+- Les stations choisissent quels annonceurs elles acceptent. Droit de refus total.
+- L'argent circule entre locaux. Il ne quitte pas la région.
+
+### Ce que ça change pour les stations
+
+Une radio associative qui diffuse 4h/semaine avec 80 auditeurs locaux
+peut générer **200–500€/mois** de revenus publicitaires via la régie.
+
+Ce n'est pas une fortune. C'est assez pour :
+- Payer le VPS ou le Raspberry Pi
+- Couvrir la licence SACEM
+- Garder l'antenne allumée
+
+Et pour nexusnode.app, c'est le modèle qui rend l'infrastructure **auto-suffisante**.
+Pas de VC. Pas de levée de fonds. Pas d'actionnaire à satisfaire.
+**La communauté finance sa propre infrastructure. En diffusant de la pub locale.**
+
+---
+
 ## Pourquoi maintenant
 
 Parce que les outils existent. Parce que les gens existent.

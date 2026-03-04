@@ -66,6 +66,8 @@ Works on a Raspberry Pi behind a home router. No domain. No open ports. No cloud
 | **Federated community directory** | ✅ | ❌ | ⚠️ | ❌ | ✅ |
 | **Asset library (frames, badges, banners)** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Ephemeral whisper rooms** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Integrated internet radio tuner** | 📻 Soon | ❌ | ❌ | ❌ | ❌ |
+| **Cooperative radio ad network** | 📻 Soon | ❌ | ❌ | ❌ | ❌ |
 | Open source | ✅ AGPL | ❌ | ✅ | ✅ | ✅ |
 
 > Nexus is the only self-hosted platform combining an **indexed forum**, **real-time chat**, **P2P voice**, **collaborative canvas**, and a **federated directory** in a single install.

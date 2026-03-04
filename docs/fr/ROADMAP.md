@@ -20,6 +20,7 @@
 | Phase 4 | Enrichissement de la plateforme | ⏳ Planifiée |
 | Phase 5 | Mobile et réputation | ⏳ Planifiée |
 | **Phase Horizon** | NEXUS-ETHER — Souveraineté de la couche physique | 🌌 Vision |
+| **Phase Radio** | NEXUS-RADIO — Tuner radio internet + régie publicitaire coopérative | 📻 Vision |
 
 ---
 
@@ -477,5 +478,55 @@ Ce n'est pas une feature pour demain. C'est un **appel à contributeurs :**
 
 ---
 
-*Version 1.8 — 4 mars 2026*
-*"Le P2P est l'âme. Rust est le corps. La radio est la résilience."*
+## PHASE RADIO — NEXUS-RADIO
+### La radio internet qui a enfin une raison d'exister.
+
+> *"50 000 opérateurs de radio internet qui émettent dans le vide. Nexus est la réponse."*
+
+Le problème que personne n'a résolu : 100 000+ stations radio internet à leur apogée.
+Moins de 5% avaient plus de 10 auditeurs simultanés.
+Pas parce que les programmes étaient mauvais. Parce qu'il n'existait aucune structure
+pour transformer des auditeurs simultanés en communauté.
+
+**Les stations qui ont survécu** avaient une couche communautaire structurellement attachée.
+**Les stations qui sont mortes** avaient des auditeurs, mais pas de communauté.
+
+L'inversion que Nexus rend possible :
+```
+Stations mortes    :  broadcast → espoir de communauté
+Stations vivantes  :  communauté → broadcast comme expression
+```
+
+**Une instance Nexus EST la couche communautaire.** Une station qui tourne Nexus obtient :
+- Forum (archives, discussions, notes d'émission — indexées par Google)
+- Chat en direct (les auditeurs réagissent en temps réel pendant les émissions)
+- Salons vocaux (studio ouvert, coulisses, questions/réponses en direct)
+- Garden (la communauté vote les prochains programmes)
+
+**La régie coopérative — le modèle économique manquant :**
+
+Une petite station avec 80 auditeurs ne peut pas négocier avec des annonceurs seule.
+Mais 200 stations Nexus-Radio avec 80 auditeurs chacune = **16 000 auditeurs locaux**.
+Un artisan, un boulanger, un événement régional paie pour cette portée.
+
+```
+nexusnode.app/radio
+  → régie publicitaire coopérative
+  → annonceurs locaux/régionaux déposent leurs spots audio
+  → spots distribués aux stations de la région ciblée
+  → revenus partagés : 80% station / 20% infrastructure nexusnode.app
+```
+
+Pas de tracking. Pas de profils utilisateurs. Ciblage géographique uniquement.
+Le boulanger du village finance la radio du village qui tourne sur un Pi dans le village.
+**L'argent reste local. L'infrastructure reste libre.**
+
+De nouvelles stations vont voir le jour parce qu'elles ont enfin une communauté.
+Et parce qu'elles peuvent enfin se financer.
+
+→ **[Vision complète : docs/ideas/NEXUS-RADIO.md](../ideas/NEXUS-RADIO.md)**
+
+---
+
+*Version 1.9 — 4 mars 2026*
+*"Le P2P est l'âme. Rust est le corps. La radio est la résilience. La communauté est la raison."*

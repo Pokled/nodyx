@@ -20,6 +20,7 @@
 | Phase 4 | Platform enrichment | ⏳ Planned |
 | Phase 5 | Mobile and reputation | ⏳ Planned |
 | **Phase Horizon** | NEXUS-ETHER — Physical layer sovereignty | 🌌 Vision |
+| **Phase Radio** | NEXUS-RADIO — Internet radio tuner + cooperative ad network | 📻 Vision |
 
 ---
 
@@ -473,5 +474,54 @@ This is not a tomorrow feature. It is a **call to contributors:**
 
 ---
 
-*Version 1.8 — March 4, 2026*
-*"P2P is the soul. Rust is the body. Radio is the resilience."*
+## PHASE RADIO — NEXUS-RADIO
+### Internet radio that finally has a reason to exist.
+
+> *"50,000 internet radio operators broadcasting into the void. Nexus is the signal back."*
+
+The problem no one solved: 100,000+ internet radio stations existed at their peak.
+Less than 5% had more than 10 simultaneous listeners.
+Not because the programs were bad. Because there was no structure to turn simultaneous listeners into a community.
+
+**Stations that survived** had a community layer structurally attached.
+**Stations that died** had audiences but not communities.
+
+The inversion Nexus makes possible:
+```
+Dead stations   :  broadcast → hope for community
+Living stations :  community → broadcast as expression
+```
+
+**A Nexus instance IS the community layer.** A radio station that runs Nexus gets:
+- Forum (archives, discussions, show notes — indexed by Google)
+- Live chat (listeners react in real-time during broadcasts)
+- Voice channels (open studio, backstage, listener Q&A)
+- Garden (community votes on upcoming programs)
+
+**The cooperative ad network — the missing economic model:**
+
+A small station with 80 listeners can't negotiate with advertisers alone.
+But 200 Nexus-Radio stations with 80 listeners each = **16,000 local listeners**.
+A local baker, artisan, or event can pay for that reach.
+
+```
+nexusnode.app/radio
+  → cooperative advertising network
+  → local/regional advertisers deposit audio spots
+  → spots distributed to stations in the targeted region
+  → revenue split: 80% station / 20% nexusnode.app infrastructure
+```
+
+No tracking. No user profiling. Geographic targeting only.
+The baker from the village funds the village radio that runs on a Raspberry Pi in the village.
+**The money stays local. The infrastructure stays free.**
+
+New stations will emerge because they finally have a community.
+And because they can finally sustain themselves.
+
+→ **[Full vision: docs/ideas/NEXUS-RADIO.md](../ideas/NEXUS-RADIO.md)**
+
+---
+
+*Version 1.9 — March 4, 2026*
+*"P2P is the soul. Rust is the body. Radio is the resilience. Community is the reason."*

@@ -66,6 +66,8 @@ Fonctionne sur un Raspberry Pi derrière une box FAI. Sans domaine. Sans ouvrir 
 | **Annuaire fédéré de communautés** | ✅ | ❌ | ⚠️ | ❌ | ✅ |
 | **Bibliothèque d'assets (cadres, badges, bannières)** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Salles whisper éphémères** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Tuner radio internet intégré** | 📻 Bientôt | ❌ | ❌ | ❌ | ❌ |
+| **Régie publicitaire coopérative radio** | 📻 Bientôt | ❌ | ❌ | ❌ | ❌ |
 | Open source | ✅ AGPL | ❌ | ✅ | ✅ | ✅ |
 
 > Nexus est la seule plateforme auto-hébergée combinant un **forum indexé**, **chat temps réel**, **voix P2P**, **canvas collaboratif** et un **annuaire fédéré** en une seule installation.
