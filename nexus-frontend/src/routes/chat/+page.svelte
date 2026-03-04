@@ -6,7 +6,8 @@
 	import { socket, getSocket } from '$lib/socket';
 	import { linkifyHtml } from '$lib/linkify';
 	import NexusEditor from '$lib/components/editor/NexusEditor.svelte';
-	import VoicePanel from '$lib/components/VoicePanel.svelte';
+	import VoicePanel    from '$lib/components/VoicePanel.svelte';
+	import NexusCanvas   from '$lib/components/NexusCanvas.svelte';
 	import Table     from '$lib/components/Table.svelte';
 	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT, togglePTTMode, setPeerVolume } from '$lib/voice';
 	import type { Socket } from 'socket.io-client';
@@ -84,6 +85,12 @@
 	const voiceState    = $derived($voiceStore);
 	const textChannels  = $derived(localChannels.filter((c: Channel) => (c as any).type !== 'voice'));
 	const voiceChannels = $derived(localChannels.filter((c: Channel) => (c as any).type === 'voice'));
+	// Channel where the canvas session recap will be posted (prefer selected text channel)
+	const canvasRecapChannelId = $derived(
+		selectedChannel && (selectedChannel as any).type !== 'voice'
+			? selectedChannel.id
+			: (textChannels[0]?.id ?? null)
+	);
 	let voiceError = $state<string | null>(null);
 	let voiceChannelMembers = $state<Record<string, { userId: string; username: string; avatar: string | null; seatIndex?: number }[]>>({});
 
@@ -535,6 +542,7 @@
 
 	// ── Jukebox toolbar ────────────────────────────────────────────────────────
 	let showJukebox = $state(false);
+	let showCanvas  = $state(false);
 	const jbState   = $derived($jukeboxStore);
 	const jbToolbarLabel = $derived(
 		jbState.track
@@ -723,6 +731,30 @@
 					<!-- Separator -->
 					<div class="w-px h-5 mx-1" style="background:rgba(200,145,74,0.10);"></div>
 
+					<!-- 🎨 Table collaborative -->
+					<button
+						onclick={() => showCanvas = !showCanvas}
+						class="flex items-center gap-1.5 px-3 h-7 rounded-lg text-xs font-medium transition-all focus:outline-none"
+						style="
+							background:{showCanvas ? 'rgba(168,85,247,0.18)' : 'transparent'};
+							color:{showCanvas ? '#c084fc' : '#6b6460'};
+							border:1px solid {showCanvas ? 'rgba(168,85,247,0.35)' : 'rgba(168,85,247,0.08)'};"
+						title="Table collaborative P2P"
+					>
+						{#if showCanvas}
+							<span class="relative flex w-2 h-2 shrink-0">
+								<span class="absolute inline-flex h-full w-full rounded-full bg-violet-400/60 animate-ping"></span>
+								<span class="relative inline-flex rounded-full h-2 w-2 bg-violet-400"></span>
+							</span>
+						{:else}
+							<span class="text-sm leading-none">🎨</span>
+						{/if}
+						<span>Tableau</span>
+					</button>
+
+					<!-- Separator -->
+					<div class="w-px h-5 mx-1" style="background:rgba(200,145,74,0.10);"></div>
+
 					<!-- Video share (stub) -->
 					<button
 						disabled
@@ -768,6 +800,17 @@
 						socket={s}
 					/>
 				</div>
+
+				<!-- NexusCanvas overlay — Table collaborative P2P -->
+				{#if showCanvas}
+					<NexusCanvas
+						channelId={canvasRecapChannelId}
+						socket={s}
+						userId={userId}
+						username={myUsername}
+						onclose={() => showCanvas = false}
+					/>
+				{/if}
 
 			{:else}
 				<!-- ── Text chat ──────────────────────────────────────────────────── -->
