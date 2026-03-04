@@ -9,7 +9,8 @@
 	import VoicePanel    from '$lib/components/VoicePanel.svelte';
 	import NexusCanvas   from '$lib/components/NexusCanvas.svelte';
 	import Table     from '$lib/components/Table.svelte';
-	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT, togglePTTMode, setPeerVolume } from '$lib/voice';
+	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT, togglePTTMode, setPeerVolume,
+	         localScreenStore, remoteScreenStore, screenShareStore } from '$lib/voice';
 	import type { Socket } from 'socket.io-client';
 	import MediaCenter from '$lib/components/MediaCenter.svelte';
 	import VoiceJukebox from '$lib/components/VoiceJukebox.svelte';
@@ -92,6 +93,19 @@
 			: (textChannels[0]?.id ?? null)
 	);
 	let voiceError = $state<string | null>(null);
+	let showScreenShare = $state(false);
+	const localScreen   = $derived($localScreenStore);
+	const remoteScreens = $derived($remoteScreenStore);
+	const anyScreenSharing = $derived($screenShareStore || $remoteScreenStore.size > 0);
+	$effect(() => { if (anyScreenSharing) showScreenShare = true; });
+
+	function srcStream(node: HTMLVideoElement, stream: MediaStream | null) {
+		node.srcObject = stream ?? null;
+		return {
+			update(s: MediaStream | null) { node.srcObject = s ?? null; },
+			destroy() { node.srcObject = null; }
+		};
+	}
 	let voiceChannelMembers = $state<Record<string, { userId: string; username: string; avatar: string | null; seatIndex?: number }[]>>({});
 
 	const VOICE_ERRORS: Record<string, string> = {
@@ -755,13 +769,26 @@
 					<!-- Separator -->
 					<div class="w-px h-5 mx-1" style="background:rgba(200,145,74,0.10);"></div>
 
-					<!-- Video share (stub) -->
+					<!-- Video share -->
 					<button
-						disabled
-						title="Partage vidéo (bientôt)"
-						class="flex items-center gap-1.5 px-3 h-7 rounded-lg text-xs transition-all focus:outline-none opacity-30 cursor-not-allowed"
-						style="color:#6b6460; border:1px solid rgba(200,145,74,0.08);"
-					>📺 Vidéo</button>
+						onclick={() => showScreenShare = !showScreenShare}
+						title={anyScreenSharing ? "Afficher/masquer le partage d'écran" : "Partage d'écran (actif quand quelqu'un partage)"}
+						class="flex items-center gap-1.5 px-3 h-7 rounded-lg text-xs font-medium transition-all focus:outline-none {anyScreenSharing ? '' : 'opacity-40'}"
+						style="
+							background:{showScreenShare && anyScreenSharing ? 'rgba(59,130,246,0.18)' : 'transparent'};
+							color:{anyScreenSharing ? '#60a5fa' : '#6b6460'};
+							border:1px solid {showScreenShare && anyScreenSharing ? 'rgba(59,130,246,0.35)' : (anyScreenSharing ? 'rgba(59,130,246,0.20)' : 'rgba(200,145,74,0.08)')};"
+					>
+						{#if anyScreenSharing}
+							<span class="relative flex w-2 h-2 shrink-0">
+								<span class="absolute inline-flex h-full w-full rounded-full bg-blue-400/60 animate-ping"></span>
+								<span class="relative inline-flex rounded-full h-2 w-2 bg-blue-400"></span>
+							</span>
+						{:else}
+							<span class="text-sm leading-none">📺</span>
+						{/if}
+						Vidéo
+					</button>
 
 					<!-- File share (stub) -->
 					<button
@@ -786,6 +813,25 @@
 						joined={voiceState.active && voiceState.channelId === selectedChannel.id}
 						me={{ username: myUsername }}
 					/>
+				{/if}
+
+				<!-- Screen share panel -->
+				{#if showScreenShare && (localScreen || remoteScreens.size > 0)}
+					<div class="shrink-0 bg-black border-b border-gray-800/60 flex items-center justify-center gap-3 p-3" style="max-height:40vh; overflow:auto;">
+						{#if localScreen}
+							<div class="relative flex-shrink-0 h-44 rounded-lg overflow-hidden bg-gray-900 border border-gray-700">
+								<video class="h-full object-contain" autoplay muted playsinline use:srcStream={localScreen}></video>
+								<span class="absolute bottom-1 left-2 text-xs text-white bg-black/70 px-1.5 py-0.5 rounded">Vous</span>
+							</div>
+						{/if}
+						{#each [...remoteScreens.entries()] as [socketId, stream] (socketId)}
+							{@const peer = voiceState.peers.find(p => p.socketId === socketId)}
+							<div class="relative flex-shrink-0 h-44 rounded-lg overflow-hidden bg-gray-900 border border-gray-700">
+								<video class="h-full object-contain" autoplay playsinline use:srcStream={stream}></video>
+								<span class="absolute bottom-1 left-2 text-xs text-white bg-black/70 px-1.5 py-0.5 rounded">{peer?.username ?? 'Peer'}</span>
+							</div>
+						{/each}
+					</div>
 				{/if}
 
 				<!-- Table (takes remaining space) -->
