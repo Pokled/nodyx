@@ -68,36 +68,46 @@ const CATEGORIES = [
 
 const THREADS: ThreadDef[] = [
 
-  // ── 📣 Annonces ────────────────────────────────────────────────────────────
-
   {
     title: '🎉 Nexus v0.9 — WebRTC P2P mesh, partage d\'écran, NexusCanvas',
     category: '📣 Annonces',
     featured: true,
     posts: [
-      `**Nexus v0.9 vient d'être déployé.** C'est une version majeure.
+      `<h2>Nexus v0.9 est en ligne</h2>
+<p>C'est la release la plus ambitieuse depuis le début du projet. Voici ce qui change concrètement.</p>
+<p>
+  <img src="https://img.shields.io/badge/version-0.9.0-6366f1?style=flat-square" alt="v0.9.0" />
+  <img src="https://img.shields.io/badge/WebRTC-P2P%20mesh-22c55e?style=flat-square&logo=webrtc" alt="WebRTC P2P" />
+  <img src="https://img.shields.io/badge/Rust-nexus--turn-orange?style=flat-square&logo=rust" alt="Rust" />
+</p>
 
-Voilà ce qui change concrètement :
+<h3>WebRTC P2P mesh complet</h3>
+<p>Les salons vocaux fonctionnent maintenant en <strong>maille directe</strong> : chaque participant est connecté à chaque autre via une connexion WebRTC chiffrée. Aucun flux audio ne passe par le serveur. Nexus Core ne voit que la signalisation — jamais le contenu.</p>
 
-**WebRTC P2P mesh complet**
-Les salons vocaux fonctionnent maintenant en maille directe : chaque participant est connecté à chaque autre via une connexion peer-to-peer chiffrée. Aucun flux audio ne passe par le serveur. Nexus Core ne voit que la signalisation (qui veut parler à qui) — jamais le contenu.
+<h3>nexus-turn — notre propre serveur STUN/TURN en Rust</h3>
+<p>Pour les connexions derrière des NAT stricts, on a écrit <strong>nexus-turn</strong> : binaire Rust de 2,9 MB, credentials HMAC-SHA1 time-based, service systemd sur UDP 3478.</p>
+<pre><code class="language-bash"># Credentials time-based (RFC 5766)
+username = "{expires}:{userId}"
+password = base64(HMAC-SHA1(TURN_SECRET, username))</code></pre>
 
-**nexus-turn : notre propre serveur STUN/TURN**
-Pour les connexions derrière des NAT stricts, on a écrit nexus-turn en Rust. Binaire de 2,9 MB, credentials HMAC-SHA1 time-based, UDP 3478. Déployé sur le VPS, disponible sur GitHub en release v0.1.0-turn (amd64 + arm64).
+<h3>Partage d'écran</h3>
+<p>Le bouton moniteur dans la barre de contrôle vocal lance <code>getDisplayMedia()</code>. La track vidéo est ajoutée aux peer connections existantes — un seul renegotiate, pas de reconnexion.</p>
 
-**Partage d'écran**
-Le bouton 📺 dans la barre de contrôle vocal active le partage. Le stream apparaît dans le panel "Vidéo" du salon. Les streams distants sont reçus via les DataChannels WebRTC existants.
+<h3>NexusCanvas — tableau collaboratif P2P 🎨</h3>
+<p>Surface de dessin partagée, synchronisée via les DataChannels WebRTC en <strong>CRDT Last-Write-Wins</strong>. Curseurs distants avec halo de parole. Export PNG. <strong>Zéro backend</strong> — les données ne touchent jamais le serveur.</p>
+<blockquote><p>Un peer qui parle dans le salon vocal fait pulser son curseur sur le canvas. On se sent dans la même pièce.</p></blockquote>
+<hr />
+<p>La prochaine étape : <strong>v1.0</strong> avec NEXUS-RADIO. On y est presque.</p>`,
 
-**NexusCanvas — tableau collaboratif P2P**
-Le bouton 🎨 dans la barre vocale ouvre une surface de dessin partagée. Synchronisation CRDT Last-Write-Wins via les DataChannels. Curseurs distants avec halo de parole. Export PNG. Zéro backend — les données ne touchent jamais le serveur.
+      `<p>Magnifique release. Le NexusCanvas c'est vraiment une <strong>killer feature</strong> — je n'ai rien vu de comparable dans les outils de chat décentralisés.</p>
+<p>Le fait que tout soit P2P sans serveur rend ça extensible à l'infini. Chaque nouveau salon vocal = tableau collaboratif gratuit.</p>`,
 
-C'est une version qu'on attendait depuis longtemps. La prochaine étape : v1.0, la radio.`,
+      `<p>Je viens de tester le partage d'écran avec un ami derrière un NAT strict. Ça passe parfaitement via nexus-turn.</p>
+<p>Impressionnant pour un binaire Rust de <code>3MB</code>. Le TURN coton classique c'est 50x plus lourd à configurer.</p>`,
 
-      `Magnifique release. Le NexusCanvas c'est vraiment une killer feature — je n'ai rien vu de comparable dans les outils de chat décentralisés.`,
+      `<p>La notion de CRDT pour le canvas est intéressante. <strong>LWW par élément</strong> c'est simple mais suffisant pour un tableau de brainstorm.</p>
+<blockquote><p>Simple, correct, suffisant pour le MVP — c'est exactement la bonne philosophie.</p></blockquote>`,
 
-      `Je viens de tester le partage d'écran avec un ami en NAT strict. Ca passe parfaitement via nexus-turn. Impressionnant pour un binaire Rust de 3MB.`,
-
-      `La notion de CRDT pour le canvas est intéressante. LWW par élément c'est simple mais suffisant pour un tableau de brainstorm. Bravo.`,
     ],
   },
 
@@ -105,26 +115,44 @@ C'est une version qu'on attendait depuis longtemps. La prochaine étape : v1.0, 
     title: 'Nexus Relay — votre instance accessible depuis n\'importe où, sans ouvrir un port',
     category: '📣 Annonces',
     posts: [
-      `**Nexus Relay est disponible.**
+      `<h2>Le problème</h2>
+<p>Beaucoup de gens veulent héberger leur instance Nexus depuis chez eux — mais leur FAI leur assigne une IP dynamique, bloque les ports entrants, ou met tout derrière un CGNAT.</p>
+<p>
+  <img src="https://img.shields.io/badge/solution-nexus--relay-6366f1?style=flat-square&logo=rust" alt="nexus-relay" />
+  <img src="https://img.shields.io/badge/transport-TCP%207443-gray?style=flat-square" alt="TCP 7443" />
+</p>
 
-Le problème qu'on résout : beaucoup de gens veulent héberger leur instance Nexus depuis chez eux — mais leur FAI leur assigne une IP dynamique, bloque les ports entrants, ou met tout derrière un CGNAT.
+<h2>La solution : nexus-relay</h2>
+<p>Un tunnel TCP écrit en Rust, deux composants :</p>
+<ul>
+  <li><strong>relay server</strong> (sur nos VPS nexusnode.app) — écoute sur TCP 7443</li>
+  <li><strong>relay client</strong> (votre machine) — se connecte avec un token, expose votre port 80</li>
+</ul>
 
-nexus-relay est un service de tunnel TCP écrit en Rust. Il fonctionne en deux parties :
+<h3>Flux d'une requête</h3>
+<pre><code>Visiteur → Cloudflare → Caddy → relay server (7001)
+                                      ↓ TCP tunnel
+                               relay client (votre Pi)
+                                      ↓
+                               Nexus local (port 80)</code></pre>
 
-- **relay server** (sur notre VPS nexusnode.app) : écoute sur TCP 7443, reçoit les connexions clients
-- **relay client** (sur votre machine) : se connecte au relay server avec un token et un slug unique, expose votre port 80 local
+<h3>Résultat concret</h3>
+<p>Un <strong>Raspberry Pi 4</strong> chez soi, aucun port ouvert, aucun domaine → accessible via <code>https://votre-slug.nexusnode.app</code> avec TLS Cloudflare.</p>
 
-Quand quelqu'un visite \`votre-slug.nexusnode.app\`, Caddy proxy vers le relay server qui pipe le trafic HTTP vers votre relay client qui le transmet à votre Nexus local.
+<h3>Fonctionnalités</h3>
+<ul>
+  <li>Reconnexion automatique avec backoff exponentiel <code>1s → 2s → 4s → max 30s</code></li>
+  <li>Traitement <strong>concurrent</strong> des requêtes (tokio task par requête)</li>
+  <li>Compatible Socket.IO long-polling <em>et</em> WebSocket</li>
+  <li>Release <code>v0.1.1-relay</code> sur GitHub (amd64 + arm64)</li>
+</ul>`,
 
-**Résultat concret** : un Raspberry Pi 4 chez soi, aucun port ouvert, aucun domaine — accessible via \`https://slug.nexusnode.app\` avec TLS Cloudflare.
+      `<p>C'est exactement ce qu'il manquait. Les gens qui veulent self-host n'ont pas forcément un VPS.</p>
+<p>Un Pi à la maison c'est <strong>bien plus accessible</strong> — et c'est la vraie décentralisation : des instances qui tournent dans des appartements, des garages, des associatifs.</p>`,
 
-Testé en conditions réelles : reconnexion automatique avec backoff exponentiel (1s → 2s → 4s → max 30s), traitement concurrent des requêtes, compatible Socket.IO long-polling et WebSocket.
+      `<p>La partie <strong>concurrent processing</strong> c'est cruciale pour Socket.IO. Les long-polls qui se bloquent mutuellement c'est une galère classique avec les tunnels naïfs.</p>
+<p>J'avais codé quelque chose de similaire en Go l'an dernier et c'est exactement le piège où tout le monde tombe en premier.</p>`,
 
-Release : \`v0.1.1-relay\` sur GitHub (amd64 + arm64). Déjà intégré dans \`install.sh\`.`,
-
-      `C'est exactement ce qu'il manquait. Les gens qui veulent self-host n'ont pas forcément un VPS. Un Pi à la maison c'est bien plus accessible.`,
-
-      `La partie concurrent processing c'est crucial pour Socket.IO. Les long polls qui se bloquent mutuellement c'est une galère classique avec les tunnels naïfs.`,
     ],
   },
 
@@ -132,62 +160,85 @@ Release : \`v0.1.1-relay\` sur GitHub (amd64 + arm64). Déjà intégré dans \`i
     title: 'nexus-turn v0.1.0 — serveur STUN/TURN maison en Rust',
     category: '📣 Annonces',
     posts: [
-      `**Nexus dispose maintenant de son propre serveur STUN/TURN.**
+      `<h2>Nexus dispose maintenant de son propre serveur STUN/TURN</h2>
+<p>
+  <img src="https://img.shields.io/badge/Rust-1.93-orange?style=flat-square&logo=rust" alt="Rust" />
+  <img src="https://img.shields.io/badge/taille-2.9%20MB-green?style=flat-square" alt="2.9MB" />
+  <img src="https://img.shields.io/badge/protocole-RFC%205766-blue?style=flat-square" alt="RFC 5766" />
+</p>
+<p>On a remplacé coturn (complexe à configurer, 50+ fichiers de config) par <strong>nexus-turn</strong> — un binaire Rust de 2,9 MB qui fait exactement ce qu'il faut.</p>
 
-On a remplacé coturn (complexe à configurer, lourd) par nexus-turn — un binaire Rust de 2,9 MB qui fait exactement ce qu'il faut pour les connexions WebRTC de Nexus.
+<h3>Pourquoi c'était nécessaire</h3>
+<p>WebRTC fonctionne en P2P direct dans <strong>~80% des cas</strong>. Mais pour les 20% restants (NAT symétrique, réseau d'entreprise, 4G/5G avec CGNAT), il faut un relais TURN. Sans ça, ces utilisateurs ne peuvent tout simplement pas rejoindre les salons vocaux.</p>
 
-**Pourquoi c'était nécessaire**
-WebRTC fonctionne en P2P direct dans 80% des cas. Mais pour les 20% restants (NAT symétrique, réseau d'entreprise, 4G/5G avec CGNAT), il faut un relais TURN. Sans ça, ces utilisateurs ne peuvent tout simplement pas rejoindre les salons vocaux.
+<h3>Architecture des credentials (RFC 5766)</h3>
+<pre><code class="language-typescript">// Générés par nexus-core à chaque voice:init
+const expires  = Math.floor(Date.now() / 1000) + TTL
+const username = \`\${expires}:\${userId}\`
+const password = base64(HMAC_SHA1(TURN_SECRET, username))
 
-**Architecture**
-- STUN : répond aux Binding Requests (RFC 5389) — permet de découvrir son IP publique
-- TURN : relaie le trafic UDP pour les cas difficiles (RFC 5766)
-- Credentials : HMAC-SHA1 time-based (username = \`{expires}:{userId}\`, password = base64(HMAC-SHA1(secret, username)))
-- Configurable via env vars : \`TURN_PUBLIC_IP\`, \`TURN_SECRET\`, \`TURN_PORT\`, \`TURN_TTL\`
+// Fournis au client via Socket.IO
+socket.emit('voice:init', { iceServers: [
+  { urls: \`turn:\${TURN_PUBLIC_IP}:\${TURN_PORT}\`, username, credential: password }
+] })</code></pre>
 
-**Validation**
-Testé avec des Binding Requests STUN → réponse \`0x0101\` Success. Connexions vocales avec un utilisateur derrière CG-NAT → OK.
+<h3>Configuration</h3>
+<pre><code class="language-bash"># /etc/nexus-turn.env
+TURN_PUBLIC_IP=46.225.20.193
+TURN_REALM=nexusnode.app
+TURN_SECRET=your_secret_here
+TURN_PORT=3478
+TURN_TTL=86400</code></pre>
 
-Le service tourne en systemd sur le VPS, UDP 3478 ouvert dans UFW. Les credentials sont distribués automatiquement par nexus-core via \`voice:init\`.`,
+<h3>Validation</h3>
+<p>Testé avec des Binding Requests STUN manuelles → réponse <code>0x0101</code> Success Response. Connexions vocales avec un utilisateur derrière CG-NAT → ✅ opérationnel.</p>`,
 
-      `Chapeau pour l'implémentation propre. HMAC-SHA1 time-based c'est exactement le standard TURN — pas de gestion d'état, credentials auto-expirés, parfait.`,
+      `<p>Chapeau pour l'implémentation propre. <strong>HMAC-SHA1 time-based</strong> c'est exactement le standard TURN — pas de gestion d'état côté serveur, credentials auto-expirés, parfait.</p>
+<p>Le fait que les credentials soient distribués dynamiquement par nexus-core via <code>voice:init</code> c'est élégant. Pas besoin de configurer quoi que ce soit côté client.</p>`,
+
     ],
   },
-
-  // ── 🚀 Nouvelles fonctionnalités ──────────────────────────────────────────
 
   {
     title: 'DataChannels WebRTC P2P — typing instantané et réactions optimistes',
     category: '🚀 Développement > Nouvelles fonctionnalités',
     posts: [
-      `**Phase 3.0-B : DataChannels P2P pour le chat en temps réel.**
+      `<h2>Phase 3.0-B — DataChannels P2P pour le chat en temps réel</h2>
+<p>Jusqu'ici, tout le chat passait par le serveur : message envoyé → Socket.IO → nexus-core → broadcast. Ça marche, mais il y a une latence et ça charge le serveur.</p>
+<p>Avec les <strong>DataChannels WebRTC</strong>, les pairs déjà connectés en vocal peuvent s'envoyer des données directement — sans passer par le serveur.</p>
 
-Jusqu'ici, tout le chat passait par le serveur : message envoyé → Socket.IO → nexus-core → broadcast. Ça marche, mais il y a une latence et ça charge le serveur.
-
-Avec les DataChannels WebRTC, les pairs déjà connectés en vocal peuvent s'envoyer des données directement — sans passer par le serveur.
-
-**Ce qu'on a mis en place :**
-
-\`\`\`
-p2p.ts — gestionnaire de mesh DataChannels
+<h3>Architecture p2p.ts</h3>
+<pre><code class="language
+">p2p.ts — gestionnaire de mesh DataChannels
 ├── Un DataChannel par pair (côté initiateur)
 ├── Réception via ondatachannel (côté répondeur)
 ├── File de messages en attente si channel pas encore ouvert
-└── Reconnexion automatique si peer disparaît
-\`\`\`
+└── Reconnexion automatique si peer disparaît</code></pre>
 
-**Usages actuels :**
-- **Typing indicators** : \`p2p:typing\` → instantané (pas de round-trip serveur)
-- **Réactions emoji** : \`p2p:reaction\` → rendu optimiste immédiat chez tous les pairs
-- **Canvas ops** : \`canvas:op\`, \`canvas:cursor\`, \`canvas:clear\` pour NexusCanvas
+<h3>Messages P2P supportés</h3>
+<table>
+  <thead><tr><th>Type</th><th>Payload</th><th>Usage</th></tr></thead>
+  <tbody>
+    <tr><td><code>p2p:typing</code></td><td><code>{ userId, username, channelId }</code></td><td>Indicateur de frappe instantané</td></tr>
+    <tr><td><code>p2p:reaction</code></td><td><code>{ messageId, emoji, userId }</code></td><td>Réaction emoji optimiste</td></tr>
+    <tr><td><code>canvas:op</code></td><td><code>CanvasElement</code></td><td>Tracé / forme / sticky NexusCanvas</td></tr>
+    <tr><td><code>canvas:cursor</code></td><td><code>{ x, y, userId, speaking }</code></td><td>Curseur distant sur le canvas</td></tr>
+    <tr><td><code>canvas:clear</code></td><td><code>{ by, ts }</code></td><td>Effacement total du canvas</td></tr>
+  </tbody>
+</table>
 
-L'indicateur P2P dans le header chat (⚡ jaune) montre quand la connexion directe est établie. Le fallback Socket.IO reste toujours actif pour les cas sans P2P.`,
+<h3>L'indicateur P2P</h3>
+<p>Le badge <strong>⚡ P2P</strong> dans le header des canaux texte s'allume quand la connexion directe est établie. Le fallback Socket.IO reste toujours actif pour les cas sans P2P.</p>
+<blockquote><p>L'utilisateur sait qu'il est "dans le mesh" — c'est concret, pas juste un concept marketing.</p></blockquote>`,
 
-      `L'indicateur ⚡ P2P c'est un beau détail UX. L'utilisateur sait qu'il est "dans le mesh" — c'est concret, pas juste un concept marketing.`,
+      `<p>Le badge ⚡ P2P c'est un beau détail UX. Ça donne une vraie sensation de connexion directe — pas un serveur intermédiaire opaque.</p>
+<p>Et le fallback Socket.IO transparent c'est la bonne approche : <strong>progressivement amélioré</strong>, jamais cassé.</p>`,
 
-      `Question : est-ce que les DataChannels passent par le TURN si le P2P direct échoue ? Ou c'est uniquement sur connexion P2P réussie ?`,
+      `<p>Question sur le DataChannel : est-ce que les messages canvas passent par TURN si le P2P direct échoue ?</p>`,
 
-      `Les DataChannels utilisent les mêmes ICE servers que les connexions audio. Donc oui, si la connexion P2P directe passe par TURN pour le son, les DataChannels passent aussi par TURN. La connexion est partagée.`,
+      `<p>Oui — les DataChannels partagent la même connexion ICE que le flux audio. Si la connexion passe par TURN pour le son, les data channels passent aussi par TURN.</p>
+<p>Un seul établissement de connexion ICE pour tout : audio + data. C'est une économie de setup importante.</p>`,
+
     ],
   },
 
@@ -195,39 +246,57 @@ L'indicateur P2P dans le header chat (⚡ jaune) montre quand la connexion direc
     title: 'NexusCanvas — tableau collaboratif P2P embarqué dans le salon vocal',
     category: '🚀 Développement > Nouvelles fonctionnalités',
     posts: [
-      `**NexusCanvas est la feature qui m'a le plus excité à coder.**
+      `<h2>NexusCanvas — la feature qui m'a le plus excité à coder</h2>
+<p>L'idée : quand tu parles avec des gens dans un salon vocal, tu peux ouvrir une <strong>surface de dessin partagée</strong>. Tout le monde dessine, voit les curseurs des autres, synchronisé en temps réel — P2P, sans serveur.</p>
+<p>
+  <img src="https://img.shields.io/badge/CRDT-LWW-6366f1?style=flat-square" alt="CRDT LWW" />
+  <img src="https://img.shields.io/badge/transport-DataChannels-22c55e?style=flat-square" alt="DataChannels" />
+  <img src="https://img.shields.io/badge/export-PNG-gray?style=flat-square" alt="PNG Export" />
+</p>
 
-L'idée : quand tu parles avec des gens dans un salon vocal, tu peux ouvrir une surface de dessin partagée. Tout le monde dessine, voit les curseurs des autres, et tout est synchronisé en temps réel — P2P, sans serveur.
-
-**Architecture CRDT (Last-Write-Wins par élément)**
-
-Chaque tracé, sticky note ou forme est un \`CanvasElement\` avec un UUID et un timestamp. La règle de merge est simple : si deux peers ont modifié le même élément, celui avec le timestamp le plus récent gagne.
-
-\`\`\`ts
-type CanvasElement = {
-  id: string      // UUID v4
-  ts: number      // Date.now() — LWW
-  author: string
-  kind: 'path' | 'sticky' | 'rect' | 'circle'
-  data: PathData | StickyData | ShapeData
-  deleted?: boolean  // soft delete pour l'effaceur
+<h3>Le modèle CRDT — Last-Write-Wins par élément</h3>
+<p>Chaque tracé, sticky note ou forme est un <code>CanvasElement</code> avec un UUID et un timestamp. La règle de merge est simple :</p>
+<pre><code class="language-typescript">type CanvasElement = {
+  id:       string          // UUID v4
+  ts:       number          // Date.now() — LWW : le plus grand gagne
+  author:   string          // userId
+  kind:     'path' | 'sticky' | 'rect' | 'circle'
+  data:     PathData | StickyData | ShapeData
+  deleted?: boolean         // soft delete pour l'effaceur
 }
-\`\`\`
 
-**Curseurs distants**
-Chaque mouvement de souris est broadcasté aux pairs (throttle 50ms). Les curseurs distants affichent le username et pulsent avec un halo violet quand le peer parle (VAD détecté).
+// Règle d'application
+function apply(op: CanvasElement): boolean {
+  const existing = elements.get(op.id)
+  if (existing && existing.ts >= op.ts) return false  // discard
+  elements.set(op.id, op)
+  return true  // state changed → redraw
+}</code></pre>
 
-**Fin de session**
-Quand tu fermes le canvas avec des éléments dedans : "Garder la table ?" → export PNG ou résumé dans le chat du canal. Zéro backend.
+<h3>Curseurs distants</h3>
+<ul>
+  <li>Chaque <code>pointermove</code> → broadcast <code>canvas:cursor</code> (throttle 50ms)</li>
+  <li>Fade-out automatique après <strong>3 secondes</strong> sans update</li>
+  <li>Halo violet <code>nexus-pulse</code> quand le peer parle (VAD actif)</li>
+</ul>
 
-**Limitation v1.0**
-Un peer qui rejoint en milieu de session ne reçoit pas l'historique (les ops arrivent seulement depuis sa connexion). La v1.1 ajoutera un \`canvas:full_sync\` au join.`,
+<h3>Fin de session</h3>
+<p>Quand tu fermes le canvas avec des éléments : <em>"Garder la table ?"</em></p>
+<ul>
+  <li>📥 <strong>Télécharger PNG</strong> — <code>canvas.toBlob('image/png')</code> → download</li>
+  <li>📋 <strong>Résumé dans le chat</strong> — <code>socket.emit('chat:send', { content: '📋 Table de travail — N éléments...' })</code></li>
+  <li>✕ <strong>Jeter</strong> — ferme sans trace</li>
+</ul>
+<blockquote><p>Session éphémère par défaut, mais avec une porte de sortie. Zéro backend. Zéro stockage.</p></blockquote>`,
 
-      `Le soft delete avec \`deleted: true\` c'est exactement la bonne approche pour CRDT. Un hard delete créerait des conflits insolubles si un autre peer reçoit l'op de création après.`,
+      `<p>Le <strong>soft delete</strong> avec <code>deleted: true</code> c'est exactement la bonne approche pour CRDT. Un hard delete créerait des conflits insolubles si un autre peer reçoit l'op de création après.</p>
+<p>C'est le même pattern qu'utilisent Figma, Notion, et tous les éditeurs collaboratifs sérieux.</p>`,
 
-      `L'export PNG + résumé dans le chat c'est brilliant. Session éphémère par défaut mais avec une porte de sortie. Pas besoin de stocker quoi que ce soit.`,
+      `<p>L'export PNG + résumé dans le chat c'est brilliant. <strong>Session éphémère par défaut mais avec une porte de sortie</strong>. Pas besoin de stocker quoi que ce soit côté serveur.</p>`,
 
-      `J'ai testé à 3 sur le canvas ce matin. Les curseurs avec les halos vocaux c'est vraiment immersif. On se sent dans la même pièce.`,
+      `<p>J'ai testé à 3 sur le canvas ce matin. Les curseurs avec les halos vocaux c'est vraiment immersif.</p>
+<p>On se sent dans la même pièce. La combinaison voix + dessin collaboratif c'est quelque chose que Discord ne fera jamais de cette façon.</p>`,
+
     ],
   },
 
@@ -235,59 +304,100 @@ Un peer qui rejoint en milieu de session ne reçoit pas l'historique (les ops ar
     title: 'VoiceJukebox — la musique partagée dans les salons vocaux',
     category: '🚀 Développement > Nouvelles fonctionnalités',
     posts: [
-      `**Le Jukebox vocal est en ligne.**
+      `<h2>Le Jukebox vocal</h2>
+<p>Dans un salon vocal, n'importe quel membre peut ajouter une piste à la queue. Les pistes se jouent à la suite pour <strong>tous les participants connectés</strong>.</p>
 
-Fonctionnement : dans un salon vocal, n'importe quel membre peut ajouter une piste à la queue. Les pistes se jouent à la suite pour tous les participants connectés.
+<h3>Synchronisation</h3>
+<p>Le serveur maintient l'état de la queue (piste courante, position temporelle). Quand un nouveau peer rejoint, il reçoit la position actuelle et peut synchroniser sa lecture.</p>
+<blockquote><p>Contrairement au NexusCanvas, le Jukebox a besoin du serveur comme source de vérité — la synchronisation temporelle ne peut pas être purement P2P.</p></blockquote>
 
-**Synchronisation**
-Le serveur maintient l'état de la queue (piste courante, position temporelle). Quand un nouveau peer rejoint, il reçoit la position actuelle et peut se synchroniser. Pas de P2P pour ça — le serveur est la source de vérité.
+<h3>Sources supportées</h3>
+<table>
+  <thead><tr><th>Source</th><th>Support</th><th>Raison</th></tr></thead>
+  <tbody>
+    <tr><td>Fichiers audio (mp3, ogg, flac, wav)</td><td>✅</td><td>Upload direct, pas de dépendance externe</td></tr>
+    <tr><td>URL de flux radio (HLS/MP3)</td><td>🚧 en cours</td><td>Prérequis pour NEXUS-RADIO</td></tr>
+    <tr><td>YouTube / Spotify</td><td>❌ intentionnel</td><td>Dépendance API propriétaire — contre la philosophie</td></tr>
+  </tbody>
+</table>
 
-**Sources supportées**
-Pour l'instant : upload direct de fichiers audio (mp3, ogg, flac, wav). Le streaming YouTube/Spotify est intentionnellement absent — on ne veut pas de dépendance à des APIs propriétaires.
+<h3>Interface</h3>
+<ul>
+  <li>Bouton <strong>♫ Jukebox</strong> dans la toolbar du salon vocal</li>
+  <li>Pulse en ambre quand une piste joue</li>
+  <li>Queue avec auteur, durée, vote pour passer à la suivante</li>
+</ul>
 
-**Interface**
-La toolbar du salon vocal a un bouton ♫ Jukebox. Quand une piste joue, il pulse en ambre. La queue montre les tracks avec l'auteur, la durée et le bouton de vote pour passer à la suivante.
+<h3>Prochaine étape</h3>
+<p>Support des URL de flux radio HLS/MP3 — ce qui ouvre la porte à <strong>NEXUS-RADIO</strong>. Une instance Nexus pourrait déclarer son flux et apparaître dans le directory comme station de radio.</p>`,
 
-Prochaine étape : support des URL de flux radio HLS/MP3 — ce qui ouvre la porte à NEXUS-RADIO.`,
+      `<p>La position temporelle partagée c'est la partie difficile. Comment gérez-vous la dérive si un client a un buffer différent ?</p>`,
 
-      `La position temporelle partagée c'est la partie difficile. Comment gérez-vous la dérive si un client a un buffer différent ?`,
+      `<p>On envoie la position serveur en ms au join, le client scrub sa lecture. Il y a une dérive potentielle de quelques secondes entre pairs mais <strong>sur de la musique c'est imperceptible</strong>.</p>
+<p>Pour du voice chat synchronisé ce serait un problème — pour du jukebox passif, pas du tout.</p>`,
 
-      `On envoie la position serveur en ms au join, le client scrub sa lecture. Il y a une dérive potentielle de quelques secondes entre pairs mais sur de la musique c'est imperceptible. Pour du voice chat synchronisé ce serait un problème, pas pour du jukebox.`,
+      `<p>Hâte de voir les URLs de flux radio. Je pense à une intégration avec <strong>SomaFM</strong> ou Radio Paradise — des stations qui ont une communauté forte et un stream MP3 public.</p>
+<p>Ça collerait parfaitement avec la vision NEXUS-RADIO.</p>`,
 
-      `Hâte de voir les URLs de flux radio. Je pense à une intégration avec SomaFM ou Radio Paradise — des stations qui ont une communauté forte.`,
     ],
   },
-
-  // ── 🚀 Architecture & technique ──────────────────────────────────────────
 
   {
     title: 'Pourquoi Fastify v5 + SvelteKit 5 — nos choix de stack et retours après 6 mois',
     category: '🚀 Développement > Architecture & technique',
     posts: [
-      `**Retour d'expérience sur la stack de Nexus après 6 mois de dev.**
+      `<h2>Retour d'expérience sur la stack Nexus</h2>
+<p>
+  <img src="https://img.shields.io/badge/Fastify-v5-white?style=flat-square&logo=fastify&logoColor=black" alt="Fastify v5" />
+  <img src="https://img.shields.io/badge/SvelteKit-5-orange?style=flat-square&logo=svelte" alt="SvelteKit 5" />
+  <img src="https://img.shields.io/badge/PostgreSQL-16-4169e1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+</p>
 
-Quand j'ai commencé Nexus, j'avais une contrainte forte : **une seule instance = une seule communauté**. Pas de multitenancy. Ça change tout dans les choix d'architecture.
+<h3>Fastify v5</h3>
+<p>J'avais l'habitude d'Express mais Fastify a plusieurs avantages concrets :</p>
+<ul>
+  <li>Schéma de validation JSON Schema natif → routes auto-documentées</li>
+  <li>Performances supérieures sur les petits payloads (ce qu'on a en forum/chat)</li>
+  <li>TypeScript first sans torsion</li>
+</ul>
+<p>⚠️ <strong>La galère v5</strong> : Socket.IO doit être attaché <em>après</em> <code>server.listen()</code>. Fastify v5 a changé le cycle de vie :</p>
+<pre><code class="language-typescript">// ❌ Ne pas faire (Fastify v5)
+await server.register(fastifySocketIO)
 
-**Fastify v5**
-J'avais l'habitude d'Express mais Fastify a plusieurs avantages concrets :
-- Schéma de validation JSON Schema natif → les routes sont auto-documentées
-- Performances supérieures sur les petits payloads (ce qu'on a en forum/chat)
-- Écosystème de plugins cohérent
-- TypeScript first sans torsion
+// ✅ Correct
+await server.listen({ port: 3000 })
+const io = new Server(server.server, { cors: { origin: FRONTEND_URL } })</code></pre>
 
-L'unique galère v5 : Socket.IO doit être attaché **après** \`server.listen()\`. Fastify v5 a changé le cycle de vie et le plugin fastify-socket.io ne suit pas encore. Solution : import direct de socket.io et \`io.attach(server.server)\` post-listen.
+<h3>SvelteKit 5 — les runes</h3>
+<p>Les runes (<code>$state</code>, <code>$derived</code>, <code>$effect</code>) ont transformé ma façon d'écrire les composants :</p>
+<pre><code class="language-svelte">// Avant (Svelte 4) — stores verbeux
+const voiceStore = writable({ active: false, peers: [] })
+$: peers = $voiceStore.peers
 
-**SvelteKit 5**
-Les runes (\`$state\`, \`$derived\`, \`$effect\`) ont transformé ma façon d'écrire les composants. Plus de stores verbeux pour les cas simples. La réactivité fine-grained est très agréable sur les panels complex (VoicePanel, NexusCanvas).
+// Après (Svelte 5) — réactivité fine-grained
+const vs    = $derived($voiceStore)
+const peers = $derived(vs.peers)
+const level = $derived($inputLevel)</code></pre>
 
-**PostgreSQL + Redis**
-Choix sans regret. PG pour tout ce qui est persistant (forums, membres, assets), Redis pour les sessions JWT et la présence en ligne. Pas de MongoDB, pas d'ORM — du SQL direct avec \`pg\`. Ça reste lisible et maîtrisable.`,
+<h3>PostgreSQL + Redis</h3>
+<table>
+  <thead><tr><th>Technologie</th><th>Usage</th><th>Pourquoi pas autre chose</th></tr></thead>
+  <tbody>
+    <tr><td>PostgreSQL 16</td><td>Persistance : forums, membres, assets</td><td>SQL direct avec <code>pg</code> — lisible, maîtrisable</td></tr>
+    <tr><td>Redis</td><td>Sessions JWT, présence en ligne</td><td>TTL natif pour les sessions — parfait</td></tr>
+    <tr><td>Pas d'ORM</td><td>—</td><td>Requêtes complexes (FTS, JSON, agrégats) → SQL direct</td></tr>
+  </tbody>
+</table>`,
 
-      `Le point sur Socket.IO post-listen dans Fastify v5 m'a sauvé il y a quelques semaines. Je cherchais depuis des heures pourquoi mes events n'arrivaient pas.`,
+      `<p>Le point sur Socket.IO post-listen dans Fastify v5 m'a sauvé il y a quelques semaines. Je cherchais depuis des heures pourquoi mes events n'arrivaient pas.</p>
+<p>C'est un piège classique — la doc Fastify v5 le mentionne mais seulement dans une note de bas de page.</p>`,
 
-      `Les runes Svelte 5 c'est vraiment une autre dimension. J'ai réécrit VoicePanel avec et le code est deux fois plus court pour le même comportement.`,
+      `<p>Les runes Svelte 5 c'est vraiment une autre dimension. J'ai réécrit VoicePanel avec et le code est <strong>deux fois plus court</strong> pour le même comportement.</p>
+<p>La réactivité fine-grained évite aussi les re-renders inutiles — c'est sensible sur les composants qui écoutent des stores qui changent souvent (inputLevel, peerStatsStore...).</p>`,
 
-      `La contrainte "une instance = une communauté" c'est une décision forte mais cohérente avec la philosophie décentralisée. Pas de compromis de perf pour le multi-tenant.`,
+      `<p>La contrainte "une instance = une communauté" c'est une décision forte mais cohérente avec la philosophie décentralisée.</p>
+<p><strong>Pas de compromis de performance pour le multi-tenant.</strong> Toutes les ressources de l'instance servent une seule communauté.</p>`,
+
     ],
   },
 
@@ -295,85 +405,92 @@ Choix sans regret. PG pour tout ce qui est persistant (forums, membres, assets),
     title: 'Architecture du mesh WebRTC — comment on gère N participants sans SFU',
     category: '🚀 Développement > Architecture & technique',
     posts: [
-      `**Le mesh WebRTC de Nexus — choix, limitations, et pourquoi on s'y tient.**
+      `<h2>Mesh WebRTC vs SFU — le choix de Nexus</h2>
+<p>Pour les non-initiés, il y a deux grandes architectures pour la VoIP multi-participants.</p>
 
-Pour les non-initiés : il y a deux grandes architectures pour la VoIP P2P.
+<h3>Mesh (notre choix)</h3>
+<p>Chaque participant est connecté à chaque autre. Dans un salon à 5 :</p>
+<pre><code>A ←──── WebRTC P2P chiffré ────→ B
+A ←────────────────────────────→ C
+A ←────────────────────────────→ D
+B ←────────────────────────────→ C
+B ←────────────────────────────→ D
+C ←────────────────────────────→ D
 
-**Mesh (notre choix)**
-Chaque participant est connecté à chaque autre. Si tu es dans un salon à 5, tu as 4 connexions WebRTC actives. Chacune est P2P chiffré.
+N participants → N*(N-1)/2 connexions</code></pre>
 
-\`\`\`
-A ←→ B
-A ←→ C
-A ←→ D
-B ←→ C
-B ←→ D
-C ←→ D
-\`\`\`
+<h3>SFU — Selective Forwarding Unit</h3>
+<p>Chaque participant envoie son flux à un <strong>serveur central</strong> qui le redistribue. Meilleure scalabilité, mais le serveur voit les flux audio/vidéo.</p>
 
-**SFU (Selective Forwarding Unit)**
-Chaque participant envoie son flux à un serveur central qui le redistribue. Meilleure scalabilité, mais le serveur voit les flux audio/vidéo.
+<h3>Pourquoi mesh ?</h3>
+<table>
+  <thead><tr><th>Critère</th><th>Mesh</th><th>SFU</th></tr></thead>
+  <tbody>
+    <tr><td>Confidentialité</td><td>✅ Serveur ne voit rien</td><td>⚠️ Serveur voit tout</td></tr>
+    <tr><td>Scalabilité</td><td>⚠️ Limite ~10 pairs</td><td>✅ Illimitée</td></tr>
+    <tr><td>Complexité deploy</td><td>✅ Aucun service SFU</td><td>❌ Mediasoup/Janus/Livekit</td></tr>
+    <tr><td>Usage Nexus</td><td>✅ 2-10 personnes</td><td>Inutile pour notre cible</td></tr>
+  </tbody>
+</table>
 
-**Pourquoi mesh ?**
-1. **Confidentialité** : Nexus Core ne voit jamais les flux. Zéro donnée audio sur le serveur.
-2. **Simplicité** : Pas besoin d'un service SFU (Mediasoup, Janus, Livekit). Nexus reste un binaire simple.
-3. **Réalité d'usage** : les communautés Nexus ont des salons à 2-10 personnes. Pas besoin de scaler à 100.
+<h3>La limite en pratique</h3>
+<p>Au-delà de <strong>8-10 participants</strong>, la charge CPU côté client augmente (encodage × N connexions). C'est acceptable pour des salons de discussion quotidiens.</p>
+<blockquote><p>Pour les très grandes instances : un SFU optionnel pourrait être ajouté. Mais ce n'est pas dans la roadmap v1 — les communautés Nexus ont des salons à 2-10 personnes.</p></blockquote>`,
 
-**La limite en pratique**
-Au-delà de 8-10 participants, la charge CPU côté client augmente (encodage × N). C'est acceptable pour notre cible.
+      `<p>La limite CPU client est réelle mais honnêtement pour des salons de discussion quotidiens on ne dépasse jamais 6-7 simultanés.</p>
+<p>Le mesh est le bon compromis. <strong>La confidentialité ne doit pas être optionnelle.</strong></p>`,
 
-Pour les très grandes instances si un jour ça arrive, on ajoutera un SFU optionnel. Mais ce n'est pas dans la roadmap v1.`,
+      `<p>J'apprécie la transparence sur les limitations. C'est rare de voir une doc technique qui dit clairement "ça ne scale pas au-delà de X".</p>
+<p>C'est le signe d'une architecture honnête plutôt que d'un over-engineering pour impressionner.</p>`,
 
-      `La limite CPU client est réelle mais honnêtement pour des salons de discussion quotidiens on ne dépasse jamais 6-7 simultanés. Le mesh est le bon compromis.`,
-
-      `J'apprécie la transparence sur les limitations. C'est rare de voir une doc technique qui dit clairement "ça ne scale pas au-delà de X".`,
     ],
   },
-
-  // ── 🚀 Bugs & correctifs ──────────────────────────────────────────────────
 
   {
     title: 'Post-mortem : bug Relay — présence cassée avec 2+ utilisateurs',
     category: '🚀 Développement > Bugs & correctifs',
     posts: [
-      `**Ce bug m'a pris 4 heures à diagnostiquer. Je le documente pour que personne ne reperde ce temps.**
+      `<h2>Ce bug m'a pris 4h à diagnostiquer</h2>
+<p>Je le documente ici pour que personne ne reperde ce temps.</p>
 
-**Symptôme**
-Avec 2+ utilisateurs connectés via nexus-relay, la sidebar membres était vide. L'online count restait à 0. Les messages Socket.IO n'arrivaient pas.
+<h3>Symptôme</h3>
+<p>Avec 2+ utilisateurs connectés via nexus-relay, la sidebar membres était vide. L'online count restait à 0. Les messages Socket.IO n'arrivaient pas.</p>
 
-**Root cause**
-Le relay client traitait les requêtes HTTP **en séquence**. Socket.IO utilise du long-polling comme transport de fallback (GET bloquant pendant 8 secondes = pingInterval).
+<h3>Root cause — séquentialité du relay client</h3>
+<p>Socket.IO utilise du <strong>long-polling</strong> comme transport de fallback (GET bloquant pendant 8 secondes = pingInterval).</p>
+<pre><code>Timeline avec 2 users et relay séquentiel :
 
-Avec 2 utilisateurs :
-- User A : GET /socket.io/?sid=xxx → bloque 8s dans la queue TCP
-- User B : GET /socket.io/?sid=yyy → attend que User A soit traité
+t=0s   User A : GET /socket.io/?sid=aaa → entre dans la queue
+t=0s   User B : GET /socket.io/?sid=bbb → attend derrière A
+t=8s   User A : GET se résout (réponse Socket.IO)
+t=8s   User B : commence à être traité
+t=10s  relay-server timeout → 504 Gateway Timeout
+       Socket.IO de User B se déconnecte → reconnect → boucle</code></pre>
 
-Résultat : le relay server avait un timeout de 10s. La requête de User B expirait → 504 → Socket.IO se déconnectait → reconnect → même problème en boucle.
-
-**Fix**
-\`\`\`rust
-// Avant : séquentiel
+<h3>Le fix — tokio::spawn par requête</h3>
+<pre><code class="language-rust">// ❌ Avant : séquentiel — bloque tout pendant 8s
 while let Some(req) = queue.recv().await {
-    handle(req).await;  // bloque tout pendant 8s
+    handle(req).await;
 }
 
-// Après : concurrent
+// ✅ Après : concurrent — chaque requête dans son propre task
 while let Some(req) = queue.recv().await {
     let writer = writer.clone();
     tokio::spawn(async move {
         handle(req, writer).await;
     });
-}
-\`\`\`
+}</code></pre>
+<p>L'écriture reste <strong>sérialisée via mpsc</strong> pour éviter les race conditions sur le socket TCP partagé.</p>
 
-Chaque requête est traitée dans son propre task Tokio. L'écriture reste sérialisée via mpsc pour éviter les race conditions sur le socket TCP.
+<h3>Leçon</h3>
+<blockquote><p>Les timeouts en cascade sont insidieux. Le symptôme (sidebar vide) était loin de la cause (séquentialité du relay). Il faut toujours vérifier la couche transport en premier.</p></blockquote>`,
 
-**Leçon**
-Les timeouts en cascade sont insidieux. Le symptôme (sidebar vide) était loin de la cause (séquentialité du relay). Il faut toujours vérifier la couche transport en premier.`,
+      `<p>Le debugging distribué c'est ça — le symptôme et la cause sont dans des couches complètement différentes. <strong>Bonne documentation.</strong></p>
+<p>Ce type de post-mortem devrait être la norme dans les projets open source.</p>`,
 
-      `Le debugging distribué c'est ça — le symptôme et la cause sont dans des couches complètement différentes. Bonne documentation.`,
+      `<p>La solution <code>tokio::spawn</code> par requête c'est élégant. Et le <code>mpsc</code> pour sérialiser l'écriture TCP est exactement la bonne primitive.</p>
+<p>Ce pattern "concurrent reads, serialized writes" est fondamental en async Rust.</p>`,
 
-      `La solution tokio::spawn par requête c'est élégant. Et le mpsc pour sérialiser l'écriture TCP est exactement la bonne primitive.`,
     ],
   },
 
@@ -381,62 +498,71 @@ Les timeouts en cascade sont insidieux. Le symptôme (sidebar vide) était loin 
     title: '[Fix] online_count toujours à 0 — mauvaise source de vérité',
     category: '🚀 Développement > Bugs & correctifs',
     posts: [
-      `**Petit bug mais visible : le compteur "en ligne" sur la page d'accueil restait à 0.**
+      `<h2>Petit bug mais très visible : le compteur "en ligne" restait à 0</h2>
 
-**Cause**
-\`/api/v1/instance/info\` comptait les clés Redis \`nexus:heartbeat:*\` pour déterminer qui est en ligne. Ces clés sont posées par \`requireAuth\` middleware — donc uniquement quand l'utilisateur fait des appels API.
+<h3>Cause</h3>
+<p><code>/api/v1/instance/info</code> comptait les clés Redis <code>nexus:heartbeat:*</code> pour déterminer qui est en ligne. Ces clés sont posées par le middleware <code>requireAuth</code> — donc <em>uniquement quand l'utilisateur fait des appels API</em>.</p>
+<p>Un utilisateur connecté mais en lecture passive (forum, scroll) n'appelle pas l'API → sa clé expire après 15 minutes → <code>online_count = 0</code>.</p>
 
-Problème : un utilisateur connecté mais inactif (lecture passive du forum) n'appelle pas l'API. Sa clé heartbeat expire après 15 minutes. Résultat : online_count = 0 même avec des gens connectés.
-
-**Fix**
-\`\`\`ts
-// Avant : clés Redis (peu fiables)
+<h3>Fix</h3>
+<pre><code class="language-typescript">// ❌ Avant : clés Redis — peu fiables
 const keys = await redis.keys('nexus:heartbeat:*')
 const online_count = keys.length
 
-// Après : sockets actifs (source de vérité)
+// ✅ Après : sockets actifs — source de vérité
 const sockets = await io.in('presence').fetchSockets()
-const userIds = new Set(sockets.map(s => s.data.userId))
-const online_count = userIds.size
-\`\`\`
+const userIds  = new Set(sockets.map(s => s.data.userId))
+const online_count = userIds.size</code></pre>
 
-Socket.IO maintient une room \`presence\` où tous les utilisateurs connectés sont présents. C'est la vraie source de vérité — pas les heartbeats API.`,
+<p>Socket.IO maintient une room <code>presence</code> où tous les utilisateurs connectés sont présents. C'est la vraie source de vérité — pas les heartbeats API.</p>
+<blockquote><p>Règle générale : pour la présence en temps réel, toujours utiliser l'état de la connexion socket, jamais une valeur persistée qui peut expirer.</p></blockquote>`,
 
-      `fetchSockets() c'est exactement l'outil pour ça. La room presence comme source de vérité c'est propre.`,
+      `<p><code>fetchSockets()</code> c'est exactement l'outil pour ça. La room <code>presence</code> comme source de vérité c'est propre.</p>
+<p>J'avais eu le même bug dans un autre projet — le fix en une ligne mais le diagnostic qui prend une heure !</p>`,
+
     ],
   },
-
-  // ── 💬 Discussions ────────────────────────────────────────────────────────
 
   {
     title: 'La vision de Nexus — pourquoi on construit ça et où on va',
     category: '💬 Discussions > Général',
     posts: [
-      `**Nexus existe parce qu'il n'existait rien qui fasse tout ça en un seul outil décentralisé.**
+      `<h2>Nexus existe parce qu'il n'existait rien qui fasse tout ça en un seul outil décentralisé</h2>
 
-Discord : excellent UX, propriétaire, vos données chez eux, peut disparaître du jour au lendemain.
-Matrix/Element : décentralisé ✅, mais UX complexe, lourd à auto-héberger.
-Discourse : excellent pour les forums, mais pas de chat temps réel, pas de voix.
-Mumble/Teamspeak : voix uniquement, pas de forum, pas de chat persistant.
+<table>
+  <thead><tr><th>Outil</th><th>Points forts</th><th>Problème</th></tr></thead>
+  <tbody>
+    <tr><td>Discord</td><td>UX excellent, riche en features</td><td>Propriétaire, vos données chez eux</td></tr>
+    <tr><td>Matrix/Element</td><td>Décentralisé, fédéré</td><td>UX complexe, lourd à héberger</td></tr>
+    <tr><td>Discourse</td><td>Excellent forum</td><td>Pas de chat temps réel, pas de voix</td></tr>
+    <tr><td>Mumble</td><td>Voix P2P propre</td><td>Voix uniquement</td></tr>
+    <tr><td><strong>Nexus</strong></td><td><strong>Forum + Chat + Voix P2P</strong></td><td><strong>En construction 🚧</strong></td></tr>
+  </tbody>
+</table>
 
-**Nexus est le premier à faire les trois en même temps :**
-- Forum classique avec catégories, fils, réponses, recherche
-- Chat temps réel avec canaux texte, réactions, historique
-- Voix P2P chiffrée avec partage d'écran, jukebox, tableau collaboratif
+<h3>La contrainte qui définit tout</h3>
+<blockquote><p><strong>Une instance = une communauté.</strong> Pas de multitenancy. Ton instance Nexus c'est <em>ta</em> communauté. Tu contrôles les données, les règles, la modération.</p></blockquote>
 
-**La contrainte qui définit tout : une instance = une communauté.**
-Pas de multitenancy. Ton instance Nexus c'est **ta** communauté. Tu contrôles les données, les règles, la modération. Tu peux la fermer, la migrer, la sauvegarder.
+<h3>La roadmap en 3 phases</h3>
+<ol>
+  <li><strong>Phase 1–2</strong> (complètes) — Forum + Chat temps réel + Auth + Admin</li>
+  <li><strong>Phase 3</strong> (en cours) — Voix P2P, DataChannels, NexusCanvas, Relay, TURN</li>
+  <li><strong>Phase 4</strong> (à venir) — Fédération inter-instances, NEXUS-RADIO, réseau de communautés</li>
+</ol>
 
-**La prochaine frontière : le réseau.**
-Les instances Nexus ne sont pas encore interconnectées. On travaille sur le directory (nexusnode.app) qui recense toutes les instances actives. La phase 4 sera la fédération : un compte sur une instance, membre de plusieurs communautés.
+<h3>La prochaine frontière : le réseau</h3>
+<p>Les instances Nexus ne sont pas encore interconnectées. Le directory <strong>nexusnode.app</strong> recense toutes les instances actives. La phase 4 sera la fédération : un compte sur une instance, membre de plusieurs communautés.</p>
+<p><em>Ce n'est pas Discord. Ce n'est pas Mastodon. C'est autre chose.</em></p>`,
 
-Ce n'est pas Discord. Ce n'est pas Mastodon. C'est autre chose.`,
+      `<p>La contrainte "une instance = une communauté" est contre-intuitive au début. Mais en y réfléchissant c'est ce qui garantit la <strong>souveraineté</strong>.</p>
+<p>Impossible de diluer avec du multi-tenant. Chaque instance a ses propres règles, ses propres modérateurs, son propre style.</p>`,
 
-      `La contrainte "une instance = une communauté" est contre-intuitive au début mais en y réfléchissant c'est ce qui garantit la souveraineté. Impossible de diluer avec du multi-tenant.`,
+      `<p>La fédération c'est la vraie promesse. Pouvoir suivre des communautés d'autres instances sans créer un compte sur chacune.</p>
+<p>Un peu comme l'email : mon adresse gmail peut écrire à une adresse protonmail. La fédération Nexus permettrait la même chose entre communautés.</p>`,
 
-      `La fédération c'est la vraie promesse. Pouvoir suivre des communautés d'autres instances sans créer un compte sur chacune. Un peu comme l'email : mon adresse gmail peut écrire à une adresse protonmail.`,
+      `<p>Ce qui me plaît dans la roadmap : <strong>les choix sont cohérents</strong>. On n'ajoute pas des features pour faire des features — chaque brique sert la vision décentralisée.</p>
+<p>NexusCanvas P2P, relay TCP, TURN Rust... tout va dans le même sens : réduire la dépendance au serveur central.</p>`,
 
-      `Ce qui me plaît dans la roadmap : les choix sont cohérents. On n'ajoute pas des features pour faire des features — chaque brique sert la vision décentralisée.`,
     ],
   },
 
@@ -444,31 +570,54 @@ Ce n'est pas Discord. Ce n'est pas Mastodon. C'est autre chose.`,
     title: 'Nexus vs Discord vs Matrix — ce qui nous différencie vraiment',
     category: '💬 Discussions > Général',
     posts: [
-      `**Comparaison honnête. Pas de mauvaise foi dans un sens ou dans l'autre.**
+      `<h2>Comparaison honnête — pas de mauvaise foi dans un sens ou dans l'autre</h2>
+<p>
+  <img src="https://img.shields.io/badge/comparaison-honnête-6366f1?style=flat-square" alt="comparaison honnête" />
+</p>
 
-| | Nexus | Discord | Matrix/Element |
-|---|---|---|---|
-| Auto-hébergeable | ✅ | ❌ | ✅ |
-| Forum classique | ✅ | ❌ | ❌ |
-| Chat temps réel | ✅ | ✅ | ✅ |
-| Voix P2P | ✅ | Serveurs Discord | ✅ (Jitsi) |
-| Données sur vos serveurs | ✅ | ❌ | ✅ |
-| UX accessible | ✅ | ✅ | ⚠️ complexe |
-| Licence | AGPL-3.0 | Propriétaire | Apache 2.0 |
-| Fédération | 🚧 en cours | ❌ | ✅ ActivityPub |
-| Install en 1 commande | ✅ | N/A | ⚠️ lourd |
+<table>
+  <thead><tr><th>Feature</th><th>Nexus</th><th>Discord</th><th>Matrix</th></tr></thead>
+  <tbody>
+    <tr><td>Auto-hébergeable</td><td>✅</td><td>❌</td><td>✅</td></tr>
+    <tr><td>Forum classique</td><td>✅</td><td>❌</td><td>❌</td></tr>
+    <tr><td>Chat temps réel</td><td>✅</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Voix P2P chiffrée</td><td>✅</td><td>Serveurs Discord</td><td>✅ via Jitsi</td></tr>
+    <tr><td>Tableau collaboratif</td><td>✅ NexusCanvas</td><td>❌</td><td>❌</td></tr>
+    <tr><td>Install en 1 commande</td><td>✅</td><td>N/A</td><td>⚠️ lourd</td></tr>
+    <tr><td>Fédération</td><td>🚧 en cours</td><td>❌</td><td>✅ ActivityPub</td></tr>
+    <tr><td>Licence</td><td>AGPL-3.0</td><td>Propriétaire</td><td>Apache 2.0</td></tr>
+  </tbody>
+</table>
 
-**Ce que Discord fait mieux :** UX mobile (on n'a pas encore d'app), bots, intégrations, réseau d'effet (tout le monde y est déjà), stabilité à 100M d'utilisateurs.
+<h3>Ce que Discord fait mieux</h3>
+<ul>
+  <li>UX mobile (on n'a pas encore d'app native)</li>
+  <li>Bots et intégrations tierces</li>
+  <li>Réseau d'effet — tout le monde y est déjà</li>
+</ul>
 
-**Ce que Matrix fait mieux :** Fédération mature, protocole ouvert, clients multiples.
+<h3>Ce que Matrix fait mieux</h3>
+<ul>
+  <li>Fédération mature avec protocole ouvert</li>
+  <li>Clients multiples (Element, FluffyChat, Cinny...)</li>
+</ul>
 
-**Ce que Nexus fait mieux :** Forum + chat + voix dans un seul outil léger. Install en une commande. P2P chiffré natif. Tableau collaboratif. Jukebox. Aucune dépendance cloud. Zéro tracking.
+<h3>Ce que Nexus fait mieux</h3>
+<ul>
+  <li><strong>Forum + Chat + Voix dans un seul outil léger</strong></li>
+  <li>Install en une commande sur n'importe quel VPS</li>
+  <li>P2P chiffré natif sans serveur média</li>
+  <li>NexusCanvas, Jukebox, Relay — des features inédites</li>
+  <li>Zéro tracking, zéro analytics, zéro dépendance cloud</li>
+</ul>
+<blockquote><p>On ne remplace pas Discord. On existe pour les communautés qui veulent la souveraineté numérique sans sacrifier les fonctionnalités.</p></blockquote>`,
 
-On ne remplace pas Discord. On existe pour les communautés qui veulent la souveraineté numérique sans sacrifier les fonctionnalités.`,
+      `<p>Le tableau de comparaison honnête c'est rare. J'apprécie qu'on reconnaisse les forces de Discord plutôt que de faire semblant qu'il n'existe pas.</p>
+<p>La concurrence honnête c'est ce qui pousse à faire mieux.</p>`,
 
-      `Le tableau de comparaison honnête c'est rare. J'apprécie qu'on reconnaisse les forces de Discord plutôt que de faire semblant qu'il n'existe pas.`,
+      `<p>La fédération ActivityPub chez Matrix est bien mais le <strong>protocole Matrix est complexe</strong> à implémenter pour un tiers.</p>
+<p>AGPL + API simple c'est peut-être plus accessible pour des contributeurs qui veulent intégrer Nexus dans leur écosystème.</p>`,
 
-      `La fédération ActivityPub chez Matrix est une bonne base mais le protocole Matrix est complexe à implémenter pour un tiers. AGPL + API simple c'est peut-être plus accessible pour des contributeurs.`,
     ],
   },
 
@@ -476,52 +625,73 @@ On ne remplace pas Discord. On existe pour les communautés qui veulent la souve
     title: 'Bienvenue ! Présentez-vous ici 👋',
     category: '💬 Discussions > Présentations',
     posts: [
-      `**Bienvenue sur l'instance Nexus Node !**
+      `<h2>Bienvenue sur l'instance Nexus Node ! 👋</h2>
+<p>Ce fil est l'endroit pour se présenter. Qui êtes-vous ? Comment avez-vous découvert Nexus ? Qu'est-ce que vous attendez de cette communauté ?</p>
+<hr />
+<p>Je commence : je suis <strong>Pokled</strong>, le créateur de Nexus. Je construis ce projet parce que je voulais exactement ce genre de plateforme pour mes propres communautés — et elle n'existait pas.</p>
+<ul>
+  <li>Passionné par les <strong>systèmes décentralisés</strong>, Rust, WebRTC</li>
+  <li>Fasciné par les outils qui redonnent le contrôle aux utilisateurs</li>
+  <li>Nexus est mon projet principal, développé <em>entièrement en public</em> sur GitHub</li>
+</ul>
+<blockquote><p>Cette communauté est la vôtre. N'hésitez pas à partager vos idées, remonter des bugs, ou juste dire bonjour. 🙂</p></blockquote>`,
 
-Ce fil est l'endroit pour se présenter. Qui êtes-vous ? Comment avez-vous découvert Nexus ? Qu'est-ce que vous attendez de cette communauté ?
+      `<p>Je suis <strong>Morty</strong>, admin de cette instance. Je suis là pour tester toutes les features au fur et à mesure qu'elles sortent et remonter les bugs.</p>
+<p>Ravi d'être parmi les premiers utilisateurs. Le NexusCanvas m'a particulièrement bluffé — on voit rarement une feature aussi bien intégrée dans un outil de communication.</p>`,
 
-Je commence : je suis Pokled, le créateur de Nexus. Je construis ce projet parce que je voulais exactement ce genre de plateforme pour mes propres communautés — et elle n'existait pas.
-
-Je suis passionné par les systèmes décentralisés, le Rust, le WebRTC, et les outils qui redonnent le contrôle aux utilisateurs. Nexus est mon projet principal en ce moment, développé en public sur GitHub.
-
-N'hésitez pas à partager vos idées, remonter des bugs, ou juste dire bonjour. Cette communauté est la vôtre.`,
-
-      `Je suis Morty, admin de cette instance. Je suis là pour tester toutes les features au fur et à mesure qu'elles sortent et remonter les bugs. Ravi d'être parmi les premiers utilisateurs !`,
     ],
   },
-
-  // ── 💡 Idées & Retours ────────────────────────────────────────────────────
 
   {
     title: 'NEXUS-RADIO — une nouvelle façon d\'exister pour les radios internet',
     category: '💡 Idées & Retours',
     featured: true,
     posts: [
-      `**Une idée qui me tient à cœur et que je documente ici.**
+      `<h2>Une idée qui me tient profondément à cœur</h2>
+<p>
+  <img src="https://img.shields.io/badge/status-vision%20long%20terme-6366f1?style=flat-square" alt="vision" />
+  <img src="https://img.shields.io/badge/phase-4+-gray?style=flat-square" alt="phase 4+" />
+</p>
 
-Il y a 50 000 stations de radio actives dans le monde. La majorité diffuse dans le vide. Pourquoi ? Parce qu'une radio sans communauté c'est un cri dans le désert.
+<h3>Le problème des radios internet</h3>
+<p>Il y a <strong>50 000 stations de radio actives</strong> dans le monde. La majorité diffuse dans le vide. Pourquoi ?</p>
+<blockquote><p>Une radio sans communauté, c'est un cri dans le désert.</p></blockquote>
+<p>Les stations qui survivent — SomaFM, Radio Paradise, SDF anonradio — ont toutes une chose en commun : elles ont créé une <strong>communauté</strong> autour d'elles avant d'être des radios.</p>
 
-La radio classique a fonctionné parce qu'elle créait de la communauté autour d'elle. Les auditeurs de SomaFM ou Radio Paradise ne sont pas juste des consommateurs — ce sont des membres. Ils donnent, ils interagissent, ils font partie de quelque chose.
+<h3>L'inversion que Nexus permet</h3>
+<table>
+  <thead><tr><th>Modèle classique (mort)</th><th>Modèle Nexus (vivant)</th></tr></thead>
+  <tbody>
+    <tr><td>Broadcast → espoir de communauté</td><td>Communauté → broadcast comme expression</td></tr>
+    <tr><td>Studio d'abord, auditeurs ensuite</td><td>Forum, chat, voix d'abord — radio ensuite</td></tr>
+    <tr><td>Revenus incertains</td><td>Régie coopérative intégrée</td></tr>
+  </tbody>
+</table>
 
-**Ce que Nexus change :**
-- Les stations mortes : broadcast → espoir de communauté
-- Les stations vivantes : communauté → broadcast comme expression naturelle
+<h3>Le modèle économique coopératif</h3>
+<ul>
+  <li><strong>80%</strong> des revenus publicitaires → la station</li>
+  <li><strong>20%</strong> → nexusnode.app (maintenance de l'infrastructure)</li>
+  <li>Ciblage <em>géographique uniquement</em> — zéro tracking, zéro profil</li>
+  <li>Le boulanger local finance la radio locale</li>
+</ul>
 
-Une instance Nexus pourrait déclarer un champ \`stream_url\` et apparaître dans le directory nexusnode.app comme station de radio. Le jukebox existant est déjà une radio interne.
+<h3>La connexion ionosphérique</h3>
+<p>La radio HF rebondit sur l'<strong>ionosphère</strong> — cette couche de plasma à 80-500 km d'altitude que personne ne peut acheter ni breveter. WSPR avec 1W traverse l'Atlantique. Utilisée dans la Seconde Guerre mondiale pour des communications longue distance.</p>
+<blockquote><p><em>Personne ne peut acheter l'ionosphère.</em></p></blockquote>
+<p>Nexus ambitionne la même chose pour internet : un réseau de communautés sur une infrastructure que personne ne contrôle — technique, juridique, économique.</p>
+<hr />
+<p>C'est loin, c'est ambitieux. Mais c'est la direction.</p>`,
 
-**Le modèle économique coopératif :**
-Régie publicitaire intégrée — 80% à la station, 20% à nexusnode.app pour maintenir l'infrastructure. Ciblage géographique uniquement, zéro tracking, zéro profil. Le boulanger local finance la radio locale.
+      `<p>L'analogie ionosphère → réseau décentralisé est puissante. L'ionosphère c'est de la <strong>physique</strong> — immuable, accessible à tous, impossible à privatiser.</p>
+<p>C'est exactement ce que devrait être l'infrastructure du web.</p>`,
 
-**La connexion ionosphérique :**
-La radio HF rebondit sur l'ionosphère — cette couche de plasma que personne ne peut acheter ni breveter. Nexus ambitionne la même chose pour internet : un réseau de communautés sur une infrastructure que personne ne contrôle.
+      `<p>Le modèle 80/20 est réaliste. Les stations radio ont besoin de revenus pour payer leurs licences et leur bande passante.</p>
+<p>Un système coopératif où chaque station contribue à l'infrastructure commune — c'est exactement ce que fait SomaFM avec ses donateurs depuis 2000.</p>`,
 
-C'est loin, c'est ambitieux. Mais c'est la direction.`,
+      `<p>Je pense à <strong>SomaFM</strong> qui survit depuis 2000 uniquement par les dons de la communauté.</p>
+<p>Si Nexus avait existé en 2000, SomaFM aurait eu un forum, un chat, des salons vocaux — et probablement 10x plus de donateurs fidèles. <em>La communauté vient avant la radio.</em></p>`,
 
-      `L'analogie ionosphère → réseau décentralisé est puissante. L'ionosphère c'est de la physique — immuable, accessible à tous, impossible à privatiser. C'est exactement ce que devrait être l'infrastructure du web.`,
-
-      `Le modèle 80/20 est réaliste. Les stations radio ont besoin de revenus pour payer leurs licences et leur bande passante. Un système coopératif où chaque station contribue à l'infrastructure commune c'est une belle idée.`,
-
-      `Je pense à SomaFM qui survit depuis 2000 uniquement par les dons de la communauté. Si Nexus avait existé en 2000, SomaFM aurait eu un forum, un chat, des salons vocaux — et probablement 10x plus de donateurs fidèles.`,
     ],
   },
 
@@ -529,82 +699,99 @@ C'est loin, c'est ambitieux. Mais c'est la direction.`,
     title: 'Retours sur l\'UX de la v0.9 — ce qui marche, ce qui manque',
     category: '💡 Idées & Retours',
     posts: [
-      `**Après quelques semaines d'utilisation quotidienne de la v0.9, voici mes retours honnêtes.**
+      `<h2>Retours honnêtes après quelques semaines d'utilisation quotidienne</h2>
 
-**Ce qui marche vraiment bien :**
-- La barre de contrôle vocal est intuitive. Mute, sourd, PTT — tout est accessible en un clic.
-- Le NexusCanvas est une killer feature. Même à 2, c'est magique.
-- Le Jukebox est simple et efficace.
-- La latence voix est excellente (moins de 50ms en P2P direct).
+<h3>✅ Ce qui marche vraiment bien</h3>
+<ul>
+  <li>La barre de contrôle vocal — intuitive, tout accessible en un clic</li>
+  <li>NexusCanvas — killer feature, surtout à 2-3 personnes</li>
+  <li>Latence voix <strong>excellente</strong> (moins de 50ms en P2P direct)</li>
+  <li>Le Jukebox — simple et efficace</li>
+  <li>L'install en une commande — vraiment fluide</li>
+</ul>
 
-**Ce qui pourrait être amélioré :**
-- La page d'accueil forum était trop grande (déjà corrigé avec la bande compacte).
-- Le partage d'écran n'affichait rien après sélection — corrigé.
-- L'historique des messages ne charge pas toujours au premier join d'un canal.
-- Pas d'indicateur visuel quand un pair a une mauvaise connexion (qualité réseau dans le panneau pair, oui, mais pas dans la liste des membres).
+<h3>⚠️ Ce qui peut être amélioré</h3>
+<ul>
+  <li>Le partage d'écran n'affichait rien après sélection — <em>corrigé</em> ✅</li>
+  <li>La page d'accueil forum était trop grande — <em>corrigée</em> ✅</li>
+  <li>Pas d'indicateur visuel de qualité réseau dans la liste membres</li>
+  <li>L'historique des messages ne charge pas toujours au premier join</li>
+</ul>
 
-**Suggestions :**
-1. Notification sonore quand quelqu'un rejoint le salon vocal
-2. Possibilité de nommer les sessions NexusCanvas
-3. Mode "lecture seule" pour les visiteurs non-inscrits sur le forum`,
+<h3>💡 Suggestions</h3>
+<ol>
+  <li>Notification sonore quand quelqu'un rejoint le salon vocal</li>
+  <li>Possibilité de nommer les sessions NexusCanvas pour les exporter</li>
+  <li>Mode "lecture seule" pour les visiteurs non-inscrits sur le forum</li>
+  <li>Raccourcis clavier pour mute/sourd</li>
+</ol>`,
 
-      `+1 sur la notification sonore au join. C'est un détail mais ça change l'immersion.`,
+      `<p>+1 sur la notification sonore au join. C'est un détail mais ça change l'immersion — tu sais que quelqu'un vient d'arriver sans regarder la liste.</p>`,
 
-      `Pour le mode lecture seule, c'est déjà partiellement là non ? Les threads sont accessibles sans compte. Mais la recherche nécessite un compte je crois.`,
+      `<p>Pour le mode lecture seule : c'est déjà partiellement là, non ? Les threads sont accessibles sans compte. Mais la <strong>recherche</strong> nécessite un compte je crois ?</p>`,
 
-      `La recherche est publique. Ce qui nécessite un compte : poster, réagir, accéder au chat et vocal. La vision est d'avoir un forum ouvert en lecture avec une couche sociale optionnelle.`,
+      `<p>La recherche est publique — tu peux chercher sans être connecté. Ce qui nécessite un compte : poster, réagir, accéder au chat et vocal.</p>
+<p>La vision : forum <strong>ouvert en lecture</strong> avec une couche sociale optionnelle. Comme un vrai forum public, pas un walled garden.</p>`,
+
     ],
   },
-
-  // ── 📚 Guides ─────────────────────────────────────────────────────────────
 
   {
     title: 'Guide : installer Nexus sur un VPS en 5 minutes',
     category: '📚 Guides & Documentation',
     posts: [
-      `**L'installation la plus rapide d'une plateforme communautaire complète.**
+      `<h2>L'installation la plus rapide d'une plateforme communautaire complète</h2>
+<p>
+  <img src="https://img.shields.io/badge/Ubuntu-22.04%20%7C%2024.04-e95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu" />
+  <img src="https://img.shields.io/badge/RAM-2%20GB%20min-blue?style=flat-square" alt="2GB RAM" />
+  <img src="https://img.shields.io/badge/ports-80%20%2B%20443-green?style=flat-square" alt="ports 80 443" />
+</p>
 
-**Prérequis :**
-- Un VPS avec Ubuntu 22.04 ou 24.04 (2 vCPU, 2 GB RAM minimum)
-- Ports 80 et 443 ouverts
-- Optionnel : un domaine pointant vers votre IP
+<h3>Prérequis</h3>
+<ul>
+  <li>VPS Ubuntu 22.04 ou 24.04 (2 vCPU, 2 GB RAM minimum)</li>
+  <li>Ports <strong>80</strong> et <strong>443</strong> ouverts</li>
+  <li>Optionnel : un domaine pointant vers votre IP</li>
+</ul>
 
-**Installation en une commande :**
-\`\`\`bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Pokled/Nexus/main/install.sh)
-\`\`\`
+<h3>Installation en une commande</h3>
+<pre><code class="language-bash">bash &lt;(curl -fsSL https://raw.githubusercontent.com/Pokled/Nexus/main/install.sh)</code></pre>
 
-Le script vous pose 5 questions :
-1. Nom de votre communauté
-2. Description
-3. Email admin
-4. Mot de passe admin
-5. Domaine (optionnel — si vide, utilise \`{IP}.sslip.io\` avec Let's Encrypt auto)
+<h3>Le script vous pose 5 questions</h3>
+<ol>
+  <li>Nom de votre communauté</li>
+  <li>Description</li>
+  <li>Email admin</li>
+  <li>Mot de passe admin</li>
+  <li>Domaine <em>(optionnel — si vide, utilise <code>{IP}.sslip.io</code> avec Let's Encrypt auto)</em></li>
+</ol>
 
-**Ce que le script fait :**
-- Installe Node.js 20, PostgreSQL, Redis, Caddy
-- Clone le repo, build backend + frontend
-- Configure PM2 pour le démarrage automatique
-- Configure Caddy avec HTTPS (Let's Encrypt)
-- Crée la communauté et le compte admin
-- Propose l'enregistrement sur nexusnode.app (annuaire des instances)
+<h3>Ce que le script installe</h3>
+<ul>
+  <li>Node.js 20, PostgreSQL, Redis, Caddy</li>
+  <li>Clone du repo + build backend + frontend</li>
+  <li>PM2 pour le démarrage automatique au boot</li>
+  <li>Caddy avec <strong>HTTPS automatique</strong> (Let's Encrypt)</li>
+  <li>nexus-turn (serveur STUN/TURN Rust)</li>
+</ul>
 
-**En option : Nexus Relay pour les home servers**
-Si vous hébergez depuis chez vous sans port ouvert :
-\`\`\`bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Pokled/Nexus/main/install.sh)
-# Choisir l'option 2 "Nexus Relay" quand elle est proposée
-\`\`\`
+<h3>Oracle Cloud Free Tier — le meilleur plan gratuit</h3>
+<p>Pour tester : <strong>Oracle Cloud Free Tier</strong> propose ARM Ampere A1 — jusqu'à 4 vCPU + 24 GB RAM, <em>gratuitement et en permanence</em>. Nexus tourne confortablement là-dessus.</p>
+<pre><code class="language-bash"># Sur Oracle Cloud Ubuntu 22.04 ARM
+bash &lt;(curl -fsSL https://raw.githubusercontent.com/Pokled/Nexus/main/install.sh)
+# Durée : ~4 minutes ⏱️</code></pre>`,
 
-Votre instance sera accessible via \`votre-slug.nexusnode.app\` avec TLS Cloudflare.`,
+      `<p>Je viens de tester sur un VPS Oracle Cloud Free Tier (ARM Ampere). Ça tourne parfaitement. <strong>L'install a pris 4 minutes chrono.</strong></p>
+<p>C'est vraiment impressionnant pour une stack aussi complète : forum, chat temps réel, voix P2P, tableau collaboratif, tout en place.</p>`,
 
-      `Je viens de tester sur un VPS Oracle Cloud Free Tier (ARM Ampere). Ça tourne parfaitement. L'install a pris 4 minutes chrono.`,
+      `<p>Oracle Cloud Free Tier ARM c'est LE bon plan pour tester. 4 vCPU + 24GB RAM gratuitement. Nexus tourne confortablement là-dessus.</p>
+<p>Attention : il faut s'inscrire avec une carte de crédit (pour vérification) mais le tier gratuit <strong>ne débite rien</strong>.</p>`,
 
-      `Oracle Cloud Free Tier ARM c'est le bon plan pour tester. 4 vCPU + 24GB RAM gratuitement. Nexus tourne confortablement là-dessus.`,
+      `<p>Est-ce que ça fonctionne aussi sur Raspberry Pi ? Je voudrais tester depuis chez moi avec le relay.</p>`,
 
-      `Est-ce que ça fonctionne aussi sur Raspberry Pi ? Je voudrais tester depuis chez moi avec le relay.`,
+      `<p><strong>Pi 4 (4GB RAM) : testé et validé.</strong> Le relay client tourne en service systemd, la connexion est stable. Voir le guide relay pour les détails complets.</p>
+<p>Sur Pi 3 (1GB RAM) c'est limité — le build frontend consomme beaucoup de RAM. Pré-builder sur une autre machine et copier le <code>build/</code> fonctionne.</p>`,
 
-      `Pi 4 (4GB RAM) : testé et validé. Le relay client tourne en service systemd, la connexion est stable. Voir le guide relay pour les détails.`,
     ],
   },
 
@@ -612,44 +799,52 @@ Votre instance sera accessible via \`votre-slug.nexusnode.app\` avec TLS Cloudfl
     title: 'Guide : héberger Nexus depuis chez soi avec Nexus Relay',
     category: '📚 Guides & Documentation',
     posts: [
-      `**Pour ceux qui veulent héberger leur instance à la maison, sans ouvrir de ports.**
+      `<h2>Héberger son instance à la maison — sans ouvrir de ports</h2>
+<p>
+  <img src="https://img.shields.io/badge/Raspberry%20Pi-compatible-c51a4a?style=flat-square&logo=raspberry-pi&logoColor=white" alt="Raspberry Pi" />
+  <img src="https://img.shields.io/badge/ports%20ouverts-aucun-green?style=flat-square" alt="aucun port" />
+</p>
 
-**La situation typique :**
-- Box FAI avec CGNAT (très courant en 4G/5G, de plus en plus fréquent en fibre)
-- IP dynamique qui change régulièrement
-- Pas envie de payer pour un VPS
+<h3>La situation typique</h3>
+<ul>
+  <li>Box FAI avec CGNAT (courant en 4G/5G, de plus en plus en fibre)</li>
+  <li>IP dynamique qui change régulièrement</li>
+  <li>Pas envie de payer pour un VPS</li>
+</ul>
 
-**Solution : Nexus Relay**
-
-Le relay est un tunnel TCP qui passe votre trafic HTTP(S) via nos serveurs nexusnode.app. Votre instance locale reste sur votre machine — seul le routage est externe.
-
-**Installation :**
-\`\`\`bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Pokled/Nexus/main/install_tunnel.sh)
-\`\`\`
-
-Ou, sur une instance déjà installée, lancer le relay manuellement :
-\`\`\`bash
-nexus-relay client \\
+<h3>Installation</h3>
+<pre><code class="language-bash">bash &lt;(curl -fsSL https://raw.githubusercontent.com/Pokled/Nexus/main/install_tunnel.sh)</code></pre>
+<p>Ou sur une instance déjà installée :</p>
+<pre><code class="language-bash">nexus-relay client \\
   --server relay.nexusnode.app:7443 \\
   --slug votre-slug \\
   --token votre-token \\
-  --local-port 80
-\`\`\`
+  --local-port 80</code></pre>
 
-**Votre instance sera disponible sur :** \`https://votre-slug.nexusnode.app\`
+<p><strong>Résultat :</strong> votre instance accessible sur <code>https://votre-slug.nexusnode.app</code></p>
 
-**Points techniques :**
-- Connexion TCP persistante avec reconnexion automatique (backoff 1s → 2s → 4s → max 30s)
-- Compatible Socket.IO long-polling ET WebSocket
-- TLS géré par Cloudflare (nexusnode.app est proxifié CF)
-- Le relay ne voit que le trafic HTTP en transit — pas de déchiffrement
+<h3>Points techniques importants</h3>
+<ul>
+  <li>Reconnexion automatique avec <strong>backoff exponentiel</strong> <code>1s → 2s → 4s → max 30s</code></li>
+  <li>Compatible Socket.IO long-polling <em>et</em> WebSocket</li>
+  <li>TLS géré par Cloudflare — pas besoin de certificat local</li>
+  <li>Le relay ne voit que le trafic HTTP en transit — pas de déchiffrement</li>
+</ul>
 
-**Recommandé pour :** Raspberry Pi, NAS Synology, mini-PC maison, VM locale.`,
+<h3>Recommandé pour</h3>
+<ul>
+  <li>🍓 Raspberry Pi 4 (4GB+)</li>
+  <li>NAS Synology / QNAP</li>
+  <li>Mini-PC maison (NUC, Beelink...)</li>
+  <li>VM locale sur un serveur de gaming</li>
+</ul>`,
 
-      `Testé sur un Pi 4 derrière une box Orange. Pas de port ouvert, IP dynamique. La reconnexion automatique fonctionne à chaque redémarrage du Pi.`,
+      `<p>Testé sur un Pi 4 derrière une box Orange. Pas de port ouvert, IP dynamique. <strong>La reconnexion automatique fonctionne à chaque redémarrage du Pi.</strong></p>
+<p>J'ai même coupé le Pi pendant 2h et la reconnexion au relay s'est faite en moins de 30 secondes au redémarrage.</p>`,
 
-      `Le point sur le TLS Cloudflare est important : CF gère le chiffrement entre le visiteur et CF, mais le trafic entre CF et votre machine passe via le relay. Pour des données sensibles, ajouter un certificat SSL local en plus.`,
+      `<p>Le point sur le TLS Cloudflare est important à comprendre : CF gère le chiffrement entre le visiteur et CF, mais le trafic entre CF et votre machine passe via le relay en clair (sur localhost).</p>
+<p>Pour des données très sensibles, ajouter un certificat SSL local en plus. Pour un usage communauté normale, le schéma actuel est très bien.</p>`,
+
     ],
   },
 
