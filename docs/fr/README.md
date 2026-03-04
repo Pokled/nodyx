@@ -13,6 +13,14 @@
 
 ---
 
+<div align="center">
+
+[🇬🇧 English](../../README.md) · [🇫🇷 Français](README.md)
+
+</div>
+
+---
+
 > **[→ Instance live : nexusnode.app](https://nexusnode.app)** — instance officielle, VPS de production
 
 ---
