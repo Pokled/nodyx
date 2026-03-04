@@ -52,7 +52,7 @@
 </svelte:head>
 
 <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
-<section class="relative -mx-4 -mt-8 mb-10 px-6 py-12 overflow-hidden
+<section class="relative -mx-4 sm:-mx-6 -mt-8 mb-10 px-6 py-12 overflow-hidden
                 bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950
                 border-b border-gray-800">
 

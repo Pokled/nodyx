@@ -357,7 +357,7 @@
                 </div>
             {/if}
 
-            <div class="w-full flex-1 flex flex-col {$page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/users/') ? '' : 'max-w-5xl mx-auto px-4 py-8'}">
+            <div class="w-full flex-1 flex flex-col {$page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/users/') ? '' : $page.url.pathname === '/' || $page.url.pathname.startsWith('/forum') ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8'}">
                 {@render children()}
             </div>
         </main>
