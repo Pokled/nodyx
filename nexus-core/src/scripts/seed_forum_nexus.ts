@@ -76,9 +76,9 @@ const THREADS: ThreadDef[] = [
       `<h2>Nexus v0.9 est en ligne</h2>
 <p>C'est la release la plus ambitieuse depuis le début du projet. Voici ce qui change concrètement.</p>
 <p>
-  <img src="https://img.shields.io/badge/version-0.9.0-6366f1?style=flat-square" alt="v0.9.0" />
-  <img src="https://img.shields.io/badge/WebRTC-P2P%20mesh-22c55e?style=flat-square&logo=webrtc" alt="WebRTC P2P" />
-  <img src="https://img.shields.io/badge/Rust-nexus--turn-orange?style=flat-square&logo=rust" alt="Rust" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">v0.9.0</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#22c55e;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">WebRTC P2P</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#f97316;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">Rust</span>
 </p>
 
 <h3>WebRTC P2P mesh complet</h3>
@@ -118,8 +118,8 @@ password = base64(HMAC-SHA1(TURN_SECRET, username))</code></pre>
       `<h2>Le problème</h2>
 <p>Beaucoup de gens veulent héberger leur instance Nexus depuis chez eux — mais leur FAI leur assigne une IP dynamique, bloque les ports entrants, ou met tout derrière un CGNAT.</p>
 <p>
-  <img src="https://img.shields.io/badge/solution-nexus--relay-6366f1?style=flat-square&logo=rust" alt="nexus-relay" />
-  <img src="https://img.shields.io/badge/transport-TCP%207443-gray?style=flat-square" alt="TCP 7443" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">nexus-relay</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6b7280;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">TCP 7443</span>
 </p>
 
 <h2>La solution : nexus-relay</h2>
@@ -162,9 +162,9 @@ password = base64(HMAC-SHA1(TURN_SECRET, username))</code></pre>
     posts: [
       `<h2>Nexus dispose maintenant de son propre serveur STUN/TURN</h2>
 <p>
-  <img src="https://img.shields.io/badge/Rust-1.93-orange?style=flat-square&logo=rust" alt="Rust" />
-  <img src="https://img.shields.io/badge/taille-2.9%20MB-green?style=flat-square" alt="2.9MB" />
-  <img src="https://img.shields.io/badge/protocole-RFC%205766-blue?style=flat-square" alt="RFC 5766" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#f97316;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">Rust</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">2.9MB</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#3b82f6;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">RFC 5766</span>
 </p>
 <p>On a remplacé coturn (complexe à configurer, 50+ fichiers de config) par <strong>nexus-turn</strong> — un binaire Rust de 2,9 MB qui fait exactement ce qu'il faut.</p>
 
@@ -249,9 +249,9 @@ TURN_TTL=86400</code></pre>
       `<h2>NexusCanvas — la feature qui m'a le plus excité à coder</h2>
 <p>L'idée : quand tu parles avec des gens dans un salon vocal, tu peux ouvrir une <strong>surface de dessin partagée</strong>. Tout le monde dessine, voit les curseurs des autres, synchronisé en temps réel — P2P, sans serveur.</p>
 <p>
-  <img src="https://img.shields.io/badge/CRDT-LWW-6366f1?style=flat-square" alt="CRDT LWW" />
-  <img src="https://img.shields.io/badge/transport-DataChannels-22c55e?style=flat-square" alt="DataChannels" />
-  <img src="https://img.shields.io/badge/export-PNG-gray?style=flat-square" alt="PNG Export" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">CRDT LWW</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#22c55e;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">DataChannels</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6b7280;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">PNG Export</span>
 </p>
 
 <h3>Le modèle CRDT — Last-Write-Wins par élément</h3>
@@ -348,9 +348,9 @@ function apply(op: CanvasElement): boolean {
     posts: [
       `<h2>Retour d'expérience sur la stack Nexus</h2>
 <p>
-  <img src="https://img.shields.io/badge/Fastify-v5-white?style=flat-square&logo=fastify&logoColor=black" alt="Fastify v5" />
-  <img src="https://img.shields.io/badge/SvelteKit-5-orange?style=flat-square&logo=svelte" alt="SvelteKit 5" />
-  <img src="https://img.shields.io/badge/PostgreSQL-16-4169e1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">Fastify v5</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#f97316;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">SvelteKit 5</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">PostgreSQL</span>
 </p>
 
 <h3>Fastify v5</h3>
@@ -572,7 +572,7 @@ const online_count = userIds.size</code></pre>
     posts: [
       `<h2>Comparaison honnête — pas de mauvaise foi dans un sens ou dans l'autre</h2>
 <p>
-  <img src="https://img.shields.io/badge/comparaison-honnête-6366f1?style=flat-square" alt="comparaison honnête" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">comparaison honnête</span>
 </p>
 
 <table>
@@ -649,8 +649,8 @@ const online_count = userIds.size</code></pre>
     posts: [
       `<h2>Une idée qui me tient profondément à cœur</h2>
 <p>
-  <img src="https://img.shields.io/badge/status-vision%20long%20terme-6366f1?style=flat-square" alt="vision" />
-  <img src="https://img.shields.io/badge/phase-4+-gray?style=flat-square" alt="phase 4+" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">vision</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6b7280;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">phase 4+</span>
 </p>
 
 <h3>Le problème des radios internet</h3>
@@ -742,9 +742,9 @@ const online_count = userIds.size</code></pre>
     posts: [
       `<h2>L'installation la plus rapide d'une plateforme communautaire complète</h2>
 <p>
-  <img src="https://img.shields.io/badge/Ubuntu-22.04%20%7C%2024.04-e95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu" />
-  <img src="https://img.shields.io/badge/RAM-2%20GB%20min-blue?style=flat-square" alt="2GB RAM" />
-  <img src="https://img.shields.io/badge/ports-80%20%2B%20443-green?style=flat-square" alt="ports 80 443" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">Ubuntu</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#3b82f6;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">2GB RAM</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">ports 80 443</span>
 </p>
 
 <h3>Prérequis</h3>
@@ -801,8 +801,8 @@ bash &lt;(curl -fsSL https://raw.githubusercontent.com/Pokled/Nexus/main/install
     posts: [
       `<h2>Héberger son instance à la maison — sans ouvrir de ports</h2>
 <p>
-  <img src="https://img.shields.io/badge/Raspberry%20Pi-compatible-c51a4a?style=flat-square&logo=raspberry-pi&logoColor=white" alt="Raspberry Pi" />
-  <img src="https://img.shields.io/badge/ports%20ouverts-aucun-green?style=flat-square" alt="aucun port" />
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">Raspberry Pi</span>
+  <span style="display:inline-block;padding:1px 8px;border-radius:4px;background:#6366f1;color:white;font-size:11px;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">aucun port</span>
 </p>
 
 <h3>La situation typique</h3>
@@ -1001,18 +1001,21 @@ async function seed() {
       [AUTHOR_USERNAME]
     )
 
-    // Timestamps étalés sur les derniers 30 jours pour donner du relief
+    // Timestamps strictement croissants : OP le plus ancien, dernière réponse la plus récente
     const now = Date.now()
     const spread = 30 * 24 * 60 * 60 * 1000
+    const n = t.posts.length
 
-    for (let i = 0; i < t.posts.length; i++) {
+    for (let i = 0; i < n; i++) {
       // OP = Pokled ; réponses = démo users en round-robin ou Pokled si aucun
       let postAuthorId = authorId
       if (i > 0 && demoUsers.length > 0) {
         postAuthorId = demoUsers[(i - 1) % demoUsers.length].id
       }
 
-      const ageOffset = Math.floor(Math.random() * spread * (1 - i / t.posts.length))
+      // i=0 (OP) → oldest (~30j ago) ; i=n-1 (last reply) → most recent (~1j ago)
+      const fraction = n === 1 ? 1 : i / (n - 1)
+      const ageOffset = Math.floor(spread * (1 - fraction * 0.97))
       const createdAt = new Date(now - ageOffset)
 
       await db.query(
