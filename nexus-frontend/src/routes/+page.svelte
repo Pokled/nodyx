@@ -241,14 +241,14 @@
 							class="flex items-start gap-3 p-3 rounded-lg border border-gray-800/60 bg-gray-900/40
 							       hover:border-indigo-800/60 hover:bg-gray-900/80 transition-all group"
 						>
-							<!-- Author avatar -->
-							{#if thread.author_avatar}
-								<img src={thread.author_avatar} alt={thread.author_username}
+							<!-- Last poster avatar -->
+							{#if thread.last_poster_avatar}
+								<img src={thread.last_poster_avatar} alt={thread.last_poster_username}
 									 class="shrink-0 w-7 h-7 rounded-full object-cover mt-0.5" />
 							{:else}
 								<div class="shrink-0 w-7 h-7 rounded-full bg-indigo-800 flex items-center justify-center
 								            text-xs font-bold text-indigo-200 mt-0.5">
-									{initials(thread.author_username)}
+									{initials(thread.last_poster_username ?? thread.author_username)}
 								</div>
 							{/if}
 
