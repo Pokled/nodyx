@@ -166,10 +166,15 @@
 					<!-- Footer: author + date + CTA -->
 					<div class="mt-3 pt-3 border-t border-gray-800 flex items-center justify-between gap-2">
 						<div class="flex items-center gap-2 min-w-0">
-							<div class="shrink-0 w-5 h-5 rounded-full bg-indigo-800 flex items-center
-							            justify-center text-[10px] font-bold text-indigo-200">
-								{initials(article.authorUsername)}
-							</div>
+							{#if article.authorAvatar}
+								<img src={article.authorAvatar} alt={article.authorUsername}
+								     class="shrink-0 w-5 h-5 rounded-full object-cover" />
+							{:else}
+								<div class="shrink-0 w-5 h-5 rounded-full bg-indigo-800 flex items-center
+								            justify-center text-[10px] font-bold text-indigo-200">
+									{initials(article.authorUsername)}
+								</div>
+							{/if}
 							<span class="text-xs text-gray-500 truncate">
 								{article.authorUsername} · {timeAgo(article.createdAt)}
 							</span>
@@ -237,10 +242,15 @@
 							       hover:border-indigo-800/60 hover:bg-gray-900/80 transition-all group"
 						>
 							<!-- Author avatar -->
-							<div class="shrink-0 w-7 h-7 rounded-full bg-indigo-800 flex items-center justify-center
-							            text-xs font-bold text-indigo-200 mt-0.5">
-								{initials(thread.author_username)}
-							</div>
+							{#if thread.author_avatar}
+								<img src={thread.author_avatar} alt={thread.author_username}
+									 class="shrink-0 w-7 h-7 rounded-full object-cover mt-0.5" />
+							{:else}
+								<div class="shrink-0 w-7 h-7 rounded-full bg-indigo-800 flex items-center justify-center
+								            text-xs font-bold text-indigo-200 mt-0.5">
+									{initials(thread.author_username)}
+								</div>
+							{/if}
 
 							<!-- Content -->
 							<div class="flex-1 min-w-0">
