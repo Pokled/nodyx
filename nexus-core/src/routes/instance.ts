@@ -124,7 +124,11 @@ export default async function instanceRoutes(app: FastifyInstance) {
          u.username AS author_username,
          u.avatar   AS author_avatar,
          (SELECT COUNT(*)::int FROM posts p WHERE p.thread_id = t.id) AS post_count,
-         (SELECT MAX(p2.created_at) FROM posts p2 WHERE p2.thread_id = t.id) AS last_post_at
+         (SELECT MAX(p2.created_at) FROM posts p2 WHERE p2.thread_id = t.id) AS last_post_at,
+         (SELECT u2.username FROM posts lp JOIN users u2 ON u2.id = lp.author_id
+          WHERE lp.thread_id = t.id ORDER BY lp.created_at DESC LIMIT 1) AS last_poster_username,
+         (SELECT u2.avatar FROM posts lp JOIN users u2 ON u2.id = lp.author_id
+          WHERE lp.thread_id = t.id ORDER BY lp.created_at DESC LIMIT 1) AS last_poster_avatar
        FROM threads t
        JOIN categories c ON c.id = t.category_id
        JOIN users     u ON u.id = t.author_id
