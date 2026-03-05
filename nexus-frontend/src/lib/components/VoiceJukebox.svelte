@@ -1,11 +1,11 @@
 <script lang="ts">
 	import {
-		jukeboxStore, jukeboxVolume, jukeboxMuted,
+		jukeboxStore, jukeboxVolume, jukeboxMuted, jukeboxAutoplayBlocked,
 		jukeboxPlay, jukeboxPause, jukeboxSeek, jukeboxClear,
 		jukeboxSkipNext, jukeboxSkipPrev,
 		jukeboxToggleRepeat, jukeboxToggleShuffle,
 		jukeboxLoad, jukeboxAddToQueue, jukeboxVote, jukeboxRemoveFromQueue,
-		jukeboxSetVolume, jukeboxToggleMute,
+		jukeboxSetVolume, jukeboxToggleMute, jukeboxUnblock,
 		jukeboxReplayFromHistory,
 		parseYouTubeUrl, fmtTime,
 	} from '$lib/jukebox'
@@ -17,9 +17,10 @@
 
 	let { joined, me }: Props = $props()
 
-	const jb    = $derived($jukeboxStore)
-	const vol   = $derived($jukeboxVolume)
-	const muted = $derived($jukeboxMuted)
+	const jb             = $derived($jukeboxStore)
+	const vol            = $derived($jukeboxVolume)
+	const muted          = $derived($jukeboxMuted)
+	const autoplayBlocked = $derived($jukeboxAutoplayBlocked)
 
 	// ── Theme ──────────────────────────────────────────────────────────────────
 	const accent      = '#c8914a'
@@ -145,6 +146,18 @@
 		</div>
 
 	{:else}
+		<!-- ── Autoplay blocked banner ───────────────────────────────────────── -->
+		{#if autoplayBlocked}
+			<button
+				onclick={jukeboxUnblock}
+				class="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold focus:outline-none transition-opacity hover:opacity-90"
+				style="background:rgba(200,145,74,0.18); color:{accent}; border-bottom:1px solid rgba(200,145,74,0.2); animation:nexus-pulse 2s ease-in-out infinite;"
+			>
+				<span>▶</span>
+				<span>Cliquer pour synchroniser la lecture</span>
+			</button>
+		{/if}
+
 		<!-- ── Now Playing ──────────────────────────────────────────────────── -->
 		<div class="px-4 pt-3 pb-2">
 			<div class="flex items-center gap-3">

@@ -56,8 +56,9 @@ function _lsBool(key: string, def: boolean) {
   const v = localStorage.getItem(key)
   return v !== null ? v === '1' : def
 }
-export const jukeboxVolume = writable<number>(_lsNum('jb_vol', 80))
-export const jukeboxMuted  = writable<boolean>(_lsBool('jb_muted', false))
+export const jukeboxVolume         = writable<number>(_lsNum('jb_vol', 80))
+export const jukeboxMuted          = writable<boolean>(_lsBool('jb_muted', false))
+export const jukeboxAutoplayBlocked = writable<boolean>(false)
 
 // ── Internal state ────────────────────────────────────────────────────────────
 
@@ -68,6 +69,7 @@ let _ytPlayer:  any           = null
 let _ytReady    = false
 let _pendingOp: (() => void) | null = null
 let _progressTick: ReturnType<typeof setInterval> | null = null
+let _suppressBroadcast = false  // prevents broadcasting during local unblock
 
 // ── YouTube URL parsing ───────────────────────────────────────────────────────
 
@@ -151,6 +153,22 @@ export function jukeboxToggleMute(): void {
   else { _ytPlayer.unMute(); _ytPlayer.setVolume(get(jukeboxVolume)) }
 }
 
+// Called by user click — clears the autoplay-blocked banner and resumes playback
+export function jukeboxUnblock(): void {
+  jukeboxAutoplayBlocked.set(false)
+  if (!_ytPlayer || !_ytReady) return
+  const state = get(jukeboxStore)
+  if (state.playing && state.track) {
+    const target = _livePosition(state)
+    // Suppress broadcast for 3s: loadVideoById triggers onStateChange(1) which calls
+    // _broadcastState() with getCurrentTime()≈0 before seek resolves — this would
+    // send position=0 to Morty who would rewind to 0 and broadcast back, creating a loop.
+    _suppressBroadcast = true
+    _ytPlayer.loadVideoById({ videoId: state.track.videoId, startSeconds: Math.floor(target) })
+    setTimeout(() => { _suppressBroadcast = false }, 3000)
+  }
+}
+
 // ── Sync helpers ──────────────────────────────────────────────────────────────
 
 function _livePosition(state: JukeboxState): number {
@@ -159,6 +177,7 @@ function _livePosition(state: JukeboxState): number {
 }
 
 function _broadcastState(): void {
+  if (_suppressBroadcast) return
   if (!_socket || !_channelId || !_ytPlayer || !_ytReady) return
   const playing  = _ytPlayer.getPlayerState?.() === 1
   const position = _ytPlayer.getCurrentTime?.() ?? 0
@@ -187,6 +206,14 @@ function _applyState(state: JukeboxState): void {
         if (state.playing) {
           _ytPlayer.playVideo()
           setTimeout(() => _ytPlayer?.playVideo(), 600)
+          // Detect browser autoplay blockage (socket event ≠ user gesture)
+          // State 1=playing, 3=buffering → OK ; anything else → blocked
+          setTimeout(() => {
+            const ps = _ytPlayer?.getPlayerState?.()
+            if (ps !== 1 && ps !== 3 && get(jukeboxStore).playing) {
+              jukeboxAutoplayBlocked.set(true)
+            }
+          }, 2000)
         } else {
           setTimeout(() => _ytPlayer?.pauseVideo(), 800)
         }
@@ -194,8 +221,18 @@ function _applyState(state: JukeboxState): void {
         // Same video: sync position if drift > 2.5s
         const cur = _ytPlayer.getCurrentTime?.() ?? 0
         if (Math.abs(cur - target) > 2.5) _ytPlayer.seekTo(target, true)
-        if (state.playing) _ytPlayer.playVideo()
-        else               _ytPlayer.pauseVideo()
+        if (state.playing) {
+          _ytPlayer.playVideo()
+          // Detect blockage for same-video play commands too
+          setTimeout(() => {
+            const ps = _ytPlayer?.getPlayerState?.()
+            if (ps !== 1 && ps !== 3 && get(jukeboxStore).playing) {
+              jukeboxAutoplayBlocked.set(true)
+            }
+          }, 2000)
+        } else {
+          _ytPlayer.pauseVideo()
+        }
       }
     } else {
       _ytPlayer.stopVideo?.()
@@ -309,6 +346,7 @@ export function cleanupJukebox(socket: Socket): void {
   _socket    = null
   _channelId = null
   jukeboxStore.set({ ..._INIT })
+  jukeboxAutoplayBlocked.set(false)
 }
 
 // ── Public API — user actions ─────────────────────────────────────────────────
@@ -317,6 +355,7 @@ export function jukeboxLoad(url: string): boolean {
   const videoId = parseYouTubeUrl(url)
   if (!videoId) return false
 
+  jukeboxAutoplayBlocked.set(false)
   // ── Lancement direct dans le contexte du geste utilisateur ───────────────
   // Ne jamais mettre d'await avant ce bloc — le navigateur bloque playVideo()
   // si on sort du stack frame du clic (règle autoplay Chrome/Firefox).
@@ -368,6 +407,7 @@ export function jukeboxLoad(url: string): boolean {
 }
 
 export function jukeboxPlay(): void {
+  jukeboxAutoplayBlocked.set(false)
   _ytPlayer?.playVideo()
   setTimeout(_broadcastState, 200)
 }
