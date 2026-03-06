@@ -8,11 +8,15 @@ export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 		redirect(303, `/auth/login?redirectTo=/forum/${params.category}/new`);
 	}
 
-	// Load available tags for this community
-	const tagsRes = await apiFetch(fetch, '/instance/tags');
-	const { tags } = tagsRes.ok ? await tagsRes.json() : { tags: [] };
+	// Charger les tags et l'arbre des catégories
+	const [tagsRes, catsRes] = await Promise.all([
+		apiFetch(fetch, '/instance/tags'),
+		apiFetch(fetch, '/instance/categories'),
+	]);
+	const { tags }       = tagsRes.ok ? await tagsRes.json() : { tags: [] };
+	const { categories } = catsRes.ok ? await catsRes.json() : { categories: [] };
 
-	return { tags, token };
+	return { tags, categories, currentCategoryId: params.category, token };
 };
 
 export const actions: Actions = {
@@ -33,11 +37,14 @@ export const actions: Actions = {
 
 		const pollJson = form.get('poll_json') as string | null;
 
+		// La catégorie finale vient du formulaire (peut différer de params.category)
+		const categoryId = (form.get('category_id') as string) || params.category;
+
 		const res  = await apiFetch(fetch, '/forums/threads', {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${token}` },
 			body: JSON.stringify({
-				category_id: params.category,
+				category_id: categoryId,
 				title,
 				content,
 				tag_ids: tagIds.filter(Boolean),
@@ -65,6 +72,6 @@ export const actions: Actions = {
 			}
 		}
 
-		redirect(303, `/forum/${params.category}/${json.thread.id}`);
+		redirect(303, `/forum/${categoryId}/${json.thread.id}`);
 	}
 };

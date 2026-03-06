@@ -11,6 +11,34 @@
 	let selectedTagIds = $state<string[]>([]);
 	let submitting = $state(false);
 
+	// ── Sélecteur catégorie / sous-catégorie ──────────────────────────────
+	type CatNode = { id: string; name: string; children: CatNode[] };
+
+	function findInitial(cats: CatNode[], targetId: string): { parentId: string; subId: string | null } {
+		for (const cat of cats) {
+			if (cat.id === targetId) return { parentId: cat.id, subId: null };
+			for (const child of cat.children ?? []) {
+				if (child.id === targetId) return { parentId: cat.id, subId: child.id };
+			}
+		}
+		return { parentId: cats[0]?.id ?? targetId, subId: null };
+	}
+
+	const rootCategories = $derived((data.categories ?? []) as CatNode[]);
+	const initial        = $derived(findInitial(rootCategories, data.currentCategoryId ?? ''));
+
+	let selectedParentId = $state(initial.parentId);
+	let selectedSubId    = $state<string | null>(initial.subId);
+
+	const selectedParent  = $derived(rootCategories.find(c => c.id === selectedParentId));
+	const subcategories   = $derived(selectedParent?.children ?? []);
+	const finalCategoryId = $derived(selectedSubId || selectedParentId);
+
+	function onParentChange(e: Event) {
+		selectedParentId = (e.currentTarget as HTMLSelectElement).value;
+		selectedSubId    = null;
+	}
+
 	// ── Sondage optionnel ──────────────────────────────────────────────────
 	let showPollSection = $state(false);
 	let pollConfig      = $state<any>(null);
@@ -30,7 +58,7 @@
 </svelte:head>
 
 <div class="max-w-3xl">
-	<a href="/forum/{$page.params.category}" class="text-sm text-gray-500 hover:text-gray-300">← Retour</a>
+	<a href="/forum/{finalCategoryId}" class="text-sm text-gray-500 hover:text-gray-300">← Retour</a>
 	<h1 class="mt-2 text-2xl font-bold text-white mb-6">Nouveau sujet</h1>
 
 	{#if form?.error}
@@ -50,6 +78,33 @@
 		}}
 		class="space-y-5"
 	>
+		<!-- Sélecteur catégorie + sous-catégorie -->
+		<div>
+			<label class="block text-sm text-gray-400 mb-2">Catégorie</label>
+			<div class="flex flex-wrap gap-2">
+				<select
+					onchange={onParentChange}
+					class="flex-1 min-w-[180px] rounded bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+				>
+					{#each rootCategories as cat}
+						<option value={cat.id} selected={cat.id === selectedParentId}>{cat.name}</option>
+					{/each}
+				</select>
+				{#if subcategories.length > 0}
+					<select
+						onchange={(e) => selectedSubId = (e.currentTarget as HTMLSelectElement).value || null}
+						class="flex-1 min-w-[180px] rounded bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+					>
+						<option value="">— Sans sous-catégorie —</option>
+						{#each subcategories as sub}
+							<option value={sub.id} selected={sub.id === selectedSubId}>{sub.name}</option>
+						{/each}
+					</select>
+				{/if}
+			</div>
+			<input type="hidden" name="category_id" value={finalCategoryId} />
+		</div>
+
 		<div>
 			<label for="title" class="block text-sm text-gray-400 mb-1">
 				Titre <span class="text-gray-600 text-xs">(3–300 caractères)</span>
@@ -160,7 +215,7 @@
 			>
 				{submitting ? 'Publication...' : 'Publier le sujet'}
 			</button>
-			<a href="/forum/{$page.params.category}" class="rounded bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">Annuler</a>
+			<a href="/forum/{finalCategoryId}" class="rounded bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">Annuler</a>
 		</div>
 	</form>
 </div>
