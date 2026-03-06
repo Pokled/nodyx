@@ -4,10 +4,12 @@
 
   // ── Props ────────────────────────────────────────────────────────────────────
 
-  let { token, channelId, onCreated, onClose }: {
+  let { token, channelId, threadId, onCreated, onCollect, onClose }: {
     token:      string | null
     channelId:  number | string | null
+    threadId?:  string | null
     onCreated?: (poll: any) => void
+    onCollect?: (data: any) => void  // mode inline : ne soumet pas l'API, renvoie la config
     onClose?:   () => void
   } = $props()
 
@@ -151,6 +153,7 @@
       show_results: showResults,
       closes_at:    closesAt ? new Date(closesAt).toISOString() : null,
       channel_id:   channelId ? String(channelId) : null,
+      thread_id:    threadId  ? String(threadId)  : null,
       options: options
         .filter(o => o.label.trim())
         .map(o => ({
@@ -160,6 +163,13 @@
           date_start:  o.date_start ? new Date(o.date_start).toISOString() : undefined,
           date_end:    o.date_end   ? new Date(o.date_end).toISOString()   : undefined,
         })),
+    }
+
+    // Mode collecte (nouveau sujet) : on ne soumet pas l'API, on passe la config au parent
+    if (onCollect) {
+      onCollect(payload)
+      submitting = false
+      return
     }
 
     try {

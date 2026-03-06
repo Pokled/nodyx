@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 	const tagsRes = await apiFetch(fetch, '/instance/tags');
 	const { tags } = tagsRes.ok ? await tagsRes.json() : { tags: [] };
 
-	return { tags };
+	return { tags, token };
 };
 
 export const actions: Actions = {
@@ -31,6 +31,8 @@ export const actions: Actions = {
 			return fail(400, { error: 'Le titre et le contenu sont obligatoires.' });
 		}
 
+		const pollJson = form.get('poll_json') as string | null;
+
 		const res  = await apiFetch(fetch, '/forums/threads', {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${token}` },
@@ -45,6 +47,22 @@ export const actions: Actions = {
 
 		if (!res.ok) {
 			return fail(res.status, { error: json.error });
+		}
+
+		// Si un sondage est joint, le créer avec le thread_id
+		if (pollJson) {
+			try {
+				const pollData = JSON.parse(pollJson);
+				pollData.thread_id = json.thread.id;
+				pollData.channel_id = null;
+				await apiFetch(fetch, '/polls', {
+					method: 'POST',
+					headers: { Authorization: `Bearer ${token}` },
+					body: JSON.stringify(pollData),
+				});
+			} catch {
+				// Sondage non critique : on redirige quand même
+			}
 		}
 
 		redirect(303, `/forum/${params.category}/${json.thread.id}`);
