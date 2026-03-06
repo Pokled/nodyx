@@ -155,6 +155,7 @@ export async function getHistory(
        cm.edited_at,
        cm.is_deleted,
        cm.created_at,
+       cm.poll_id,
        CASE WHEN cm.is_deleted THEN NULL ELSE cm.content END AS content,
        u.username  AS author_username,
        u.avatar    AS author_avatar,

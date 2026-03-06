@@ -155,7 +155,8 @@ export default async function pollRoutes(app: FastifyInstance) {
     const communityId = await getCommunityId()
     if (!communityId) return reply.code(503).send({ error: 'Community not configured' })
 
-    let where = `c.community_id = $1`
+    // Filtre communauté : via le canal (chat) ou via la catégorie forum du thread
+    let where = `(ch.community_id = $1 OR tcat.community_id = $1 OR (p.channel_id IS NULL AND p.thread_id IS NULL))`
     const params: unknown[] = [communityId]
     let idx = 2
 
@@ -185,8 +186,7 @@ export default async function pollRoutes(app: FastifyInstance) {
       JOIN users u ON u.id = p.created_by
       LEFT JOIN channels ch ON ch.id = p.channel_id
       LEFT JOIN threads th ON th.id = p.thread_id
-      LEFT JOIN forum_categories fc ON fc.id = th.category_id
-      LEFT JOIN communities c ON c.id = ch.community_id OR c.id = fc.community_id OR (p.channel_id IS NULL AND p.thread_id IS NULL AND c.id = $1)
+      LEFT JOIN categories tcat ON tcat.id = th.category_id
       WHERE ${where}
       ORDER BY p.created_at DESC
       LIMIT $${idx + 1} OFFSET $${idx + 2}
