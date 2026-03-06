@@ -58,12 +58,13 @@ export async function runMigrations(): Promise<void> {
   for (const file of files) {
     const version = file.replace('.sql', '')
 
-    const { rowCount } = await db.query(
+    // rowCount is null for SELECT in node-postgres — use rows.length instead
+    const { rows: applied_rows } = await db.query(
       'SELECT 1 FROM schema_migrations WHERE version = $1',
       [version]
     )
 
-    if (rowCount && rowCount > 0) continue
+    if (applied_rows.length > 0) continue
 
     console.log(`[migrate] Applying ${file}...`)
     const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8')

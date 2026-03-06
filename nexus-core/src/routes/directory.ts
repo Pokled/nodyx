@@ -164,10 +164,21 @@ export default async function directoryRoutes(app: FastifyInstance) {
     // mid-install (cert still being issued, Caddy warming up). Activation is instant;
     // the ping heartbeat keeps the directory up to date once the node is live.
     setImmediate(async () => {
-      try {
-        const vpsIp = process.env.VPS_IP;
-        if (!vpsIp) throw new Error('VPS_IP not set in .env');
+      const vpsIp = process.env.VPS_IP;
+      const hasCf  = !!(process.env.CF_TOKEN && process.env.CF_ZONE_ID);
 
+      // Activate without DNS record if CF credentials or VPS_IP are missing
+      if (!vpsIp || !hasCf) {
+        const reason = !vpsIp ? 'VPS_IP not set' : 'CF credentials missing';
+        console.warn(`[Directory] ${slug} — skipping DNS creation (${reason}), activating directly.`);
+        await db.query(
+          `UPDATE directory_instances SET status='active' WHERE id=$1`,
+          [instance.id]
+        ).catch(() => {});
+        return;
+      }
+
+      try {
         const recordId = await createCloudflareSubdomain(slug, vpsIp);
 
         await db.query(
