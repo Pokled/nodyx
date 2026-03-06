@@ -64,6 +64,102 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [0.9.0] — 2026-03-04
+
+### Added
+- **NexusCanvas** — tableau blanc collaboratif P2P dans les salons vocaux
+  - CRDT LWW (Last-Write-Wins) par élément — convergence garantie sans conflit
+  - Curseurs distants en temps réel (throttle 50ms, fade 4s, halo vocal si `speaking: true`)
+  - Outils : stylo, post-it, rect, cercle, effaceur, colorpicker, undo local, clear all
+  - Grille de fond CSS `radial-gradient` dark (dots)
+  - Export PNG + envoi du récap dans le canal texte au choix
+  - Protocole `canvas:op` via DataChannels P2P
+- **Jukebox collaboratif** — lecteur audio synchronisé dans les salons vocaux
+  - Web Audio API — play/pause/next en sync P2P
+  - Queue collaborative, historique de session
+  - Volume individuel (GainNode + localStorage, jamais broadcasté)
+  - Autoplay unblock automatique (gestion politique navigateur)
+  - VoiceToolbar : boutons Jukebox / Canvas / Screenshare + controls row compact
+- **nexus-turn** — STUN/TURN Rust natif remplace coturn (Phase 3.0-C ✅)
+  - Binaire 2.9MB statique (tokio + RFC 5389/5766)
+  - Credentials dynamiques HMAC-SHA1 time-based (coturn `use-auth-secret` compatible)
+  - MESSAGE-INTEGRITY vérification, ChannelBind / ChannelData
+  - Rate limiter UDP par IP (30 pkt/sec) + quotas allocations (10/IP, 1000 total)
+  - Migration : nexus-core génère les creds par utilisateur → `voice:init` Socket.IO
+  - `install.sh` intégré, service systemd, GitHub Release `v0.1.2-p2p` (amd64 + arm64)
+- **P2P asset transfer** — transfert de fichiers entre pairs via DataChannels
+  - Protocole `p2p:asset:*` (chunks 32 Ko, indicateur de progression)
+  - Store `p2pAssetPeers`, bouton ⚡ jaune dans la sidebar
+- **Partage d'écran** — améliorations
+  - Bouton screen share restauré dans la barre de controls + sidebar
+  - Flux vidéo distants affichés dans le salon vocal
+
+### Fixed
+- P2P DataChannel restait actif à la navigation (déconnexion propre ajoutée)
+- Admin branding file upload — mauvaise URL + token null
+- Seed forum : ordre des posts + images de badges externes remplacées
+- Homepage : vraies images d'avatars sur les articles + derniers posts
+
+---
+
+## [0.8.0] — 2026-03-02
+
+### Added
+- **Phase 3.0-B — Browser P2P DataChannels** ✅ POC validé
+  - `nexus-frontend/src/lib/p2p.ts` — gestionnaire RTCPeerConnection + DataChannel
+  - Signaling via Socket.IO existant (events `p2p:offer`, `p2p:answer`, `p2p:ice`)
+  - Handshake polite/impolite — un seul initiateur, pas de collision
+  - Indicateur UI `⚡ P2P · N` dans l'en-tête du canal texte (jaune si actif, gris pulsant si en cours)
+  - Fallback gracieux WebRTC (timeout ICE 12s, toast discret)
+- **Indicateurs de frappe P2P instantanés** — ~1–5ms via DataChannel (dots animés style Discord)
+- **Réactions optimistes** — animation spring physics, arrive avant confirmation serveur
+- **Transfert d'assets P2P** — premier prototype (chunks 32 Ko)
+
+### Fixed
+- Fallback ICE : flag `_hadAttempt`/`_hadSuccess` pour éviter double toast
+- Plusieurs connexions pairs simultanées (Map de RTCPeerConnections)
+
+---
+
+## [0.7.0] — 2026-03-01
+
+### Added
+- **Bibliothèque d'assets communautaire**
+  - Upload multipart avec compression Sharp → WebP + thumbnail auto
+  - Catégories : cadres, bannières, badges, stickers, avatars, fonds
+  - Recherche full-text FR, filtres, tri popularité
+  - Limite 5 MB (augmentée à 12 MB en v1.0.0)
+  - Routes `POST/GET/DELETE /api/v1/assets` + `/api/v1/assets/user/:id`
+  - Page `/library` — galerie avec filtres + upload
+  - Page `/library/[id]` — détail, like, équipement, bouton Chuchoter
+  - Profil utilisateur — affichage des assets équipés (frame, banner, badge, wallpaper)
+  - Page `/users/me/edit` — gestion des slots d'assets
+  - Admin — pages gestion assets + jardin
+- **Jardin de fonctionnalités** (Garden)
+  - `feature_seeds` — propositions de fonctionnalités votables
+  - `seed_waters` — vote unique par utilisateur (409 si double vote)
+  - Page `/garden` — propositions, barre de progression, arrosage one-shot, toast "déjà voté"
+  - Routes `POST/GET /api/v1/garden/seeds` + `POST /api/v1/garden/seeds/:id/water`
+- **Fédération d'assets** — snapshot des assets vers le directory nexusnode.app
+  - Migration 021 — `directory_assets`
+  - Route `POST /api/directory/assets` + `GET /api/directory/assets/search`
+  - Onglet "🌐 Toutes les instances" dans `/library`
+  - Scheduler : push assets toutes les heures
+- **Chuchotements (Whispers)** — salons de chat éphémères
+  - Migration 022 — `whisper_rooms` + `whisper_messages`
+  - Socket.IO events `whisper:*` (join, leave, message, typing, history, expired)
+  - Page `/whisper/[id]` — salon temps réel style iMessage, TTL affiché
+  - Bouton "🤫 Chuchoter" sur les pages asset
+  - Scheduler : nettoyage des whispers expirés toutes les 10 minutes
+- **`linkify.ts`** — URLs cliquables dans le chat et les whispers (sans XSS)
+- **Migrations 017–022** (name_color, community_assets, feature_seeds, profile_assets, directory_assets, whisper_rooms)
+- **Slug `fix`** — `GIF` préservés sans conversion WebP (animation conservée)
+
+### Fixed
+- `@fastify/multipart` : fichier doit être en dernier dans FormData (champs collectés avant le fichier)
+
+---
+
 ## [0.5.0] — 2026-03-01
 
 ### Added
@@ -280,6 +376,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 [Unreleased]: https://github.com/Pokled/Nexus/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/Pokled/Nexus/compare/v1.0.0...v1.1.0
+[0.9.0]: https://github.com/Pokled/Nexus/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/Pokled/Nexus/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/Pokled/Nexus/compare/v0.5.0...v0.7.0
 [0.5.0]: https://github.com/Pokled/Nexus/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Pokled/Nexus/compare/v0.3.3...v0.4.1
 [0.3.3]: https://github.com/Pokled/Nexus/compare/v0.3.2...v0.3.3

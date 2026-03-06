@@ -23,9 +23,6 @@ Caddyfile.dev
 ecosystem.config.js
 nexus-core/turn-server.js
 
-# Plugins (contenu communautaire local, non versionné)
-plugins/
-
 # Uploads utilisateurs (données personnelles)
 nexus-core/uploads/avatars/*
 nexus-core/uploads/banners/*
