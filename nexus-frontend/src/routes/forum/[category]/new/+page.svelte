@@ -3,12 +3,18 @@
 	import { page } from '$app/stores';
 	import type { ActionData, PageData } from './$types';
 	import NexusEditor from '$lib/components/editor/NexusEditor.svelte';
+	import PollCreator from '$lib/components/PollCreator.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const tags = $derived(data.tags ?? []);
 	let selectedTagIds = $state<string[]>([]);
 	let submitting = $state(false);
+
+	// ── Sondage optionnel ──────────────────────────────────────────────────
+	let showPollSection = $state(false);
+	let pollConfig      = $state<any>(null);
+	let pollJson        = $derived(pollConfig ? JSON.stringify(pollConfig) : '');
 
 	function toggleTag(id: string) {
 		if (selectedTagIds.includes(id)) {
@@ -96,6 +102,55 @@
 				{/each}
 			</div>
 		{/if}
+
+		<!-- Sondage optionnel -->
+		<div>
+			{#if !showPollSection}
+				<button
+					type="button"
+					onclick={() => showPollSection = true}
+					class="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
+				>
+					<span>📊</span>
+					<span>Joindre un sondage à ce sujet <span class="text-gray-600 text-xs">(optionnel)</span></span>
+				</button>
+			{:else}
+				<div class="rounded-lg border border-indigo-900/50 bg-gray-900/50 p-4">
+					<div class="flex items-center justify-between mb-3">
+						<span class="text-sm font-medium text-indigo-300">📊 Sondage joint</span>
+						{#if pollConfig}
+							<div class="flex items-center gap-2">
+								<span class="text-xs text-green-400">✓ Configuré</span>
+								<button type="button" onclick={() => { pollConfig = null; showPollSection = false; }}
+									class="text-xs text-gray-500 hover:text-red-400 transition-colors">Retirer</button>
+							</div>
+						{:else}
+							<button type="button" onclick={() => showPollSection = false}
+								class="text-xs text-gray-500 hover:text-gray-300 transition-colors">Annuler</button>
+						{/if}
+					</div>
+					{#if !pollConfig}
+						<PollCreator
+							token={data.token}
+							channelId={null}
+							onCollect={(cfg) => { pollConfig = cfg; }}
+							onClose={() => showPollSection = false}
+						/>
+					{:else}
+						<div class="text-sm text-gray-400">
+							<span class="font-medium text-white">{pollConfig.title}</span>
+							<span class="ml-2 text-gray-600">·</span>
+							<span class="ml-2">{pollConfig.options.length} options</span>
+							<button type="button" onclick={() => pollConfig = null}
+								class="ml-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Modifier</button>
+						</div>
+					{/if}
+				</div>
+				{#if pollConfig}
+					<input type="hidden" name="poll_json" value={pollJson} />
+				{/if}
+			{/if}
+		</div>
 
 		<div class="flex items-center gap-3">
 			<button

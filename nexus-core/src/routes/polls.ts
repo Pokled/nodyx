@@ -143,13 +143,14 @@ export default async function pollRoutes(app: FastifyInstance) {
   // ── GET / — liste des sondages ─────────────────────────────────────────────
 
   app.get<{
-    Querystring: { limit?: string; offset?: string; status?: string; channel_id?: string }
+    Querystring: { limit?: string; offset?: string; status?: string; channel_id?: string; thread_id?: string }
   }>('/', { preHandler: [requireAuth] }, async (req, reply) => {
     const userId = (req as any).user!.userId
     const limit  = Math.min(Number(req.query.limit ?? 20), 50)
     const offset = Number(req.query.offset ?? 0)
     const status = req.query.status  // 'active' | 'closed' | undefined = all
     const channelFilter = req.query.channel_id
+    const threadFilter  = req.query.thread_id
 
     const communityId = await getCommunityId()
     if (!communityId) return reply.code(503).send({ error: 'Community not configured' })
@@ -161,6 +162,10 @@ export default async function pollRoutes(app: FastifyInstance) {
     if (channelFilter) {
       where += ` AND p.channel_id = $${idx++}`
       params.push(channelFilter)
+    }
+    if (threadFilter) {
+      where += ` AND p.thread_id = $${idx++}`
+      params.push(threadFilter)
     }
     if (status === 'active') {
       where += ` AND p.closed_at IS NULL AND (p.closes_at IS NULL OR p.closes_at > NOW())`
@@ -179,7 +184,9 @@ export default async function pollRoutes(app: FastifyInstance) {
       FROM polls p
       JOIN users u ON u.id = p.created_by
       LEFT JOIN channels ch ON ch.id = p.channel_id
-      LEFT JOIN communities c ON c.id = ch.community_id OR (p.channel_id IS NULL AND c.id = $1)
+      LEFT JOIN threads th ON th.id = p.thread_id
+      LEFT JOIN forum_categories fc ON fc.id = th.category_id
+      LEFT JOIN communities c ON c.id = ch.community_id OR c.id = fc.community_id OR (p.channel_id IS NULL AND p.thread_id IS NULL AND c.id = $1)
       WHERE ${where}
       ORDER BY p.created_at DESC
       LIMIT $${idx + 1} OFFSET $${idx + 2}
@@ -206,6 +213,7 @@ export default async function pollRoutes(app: FastifyInstance) {
       show_results?: boolean
       closes_at?:   string | null
       channel_id?:  string | null
+      thread_id?:   string | null
       options:      Array<{
         label:       string
         description?: string
@@ -220,7 +228,7 @@ export default async function pollRoutes(app: FastifyInstance) {
       title, description, type = 'choice',
       multiple = false, max_choices = null,
       anonymous = false, show_results = true,
-      closes_at = null, channel_id = null,
+      closes_at = null, channel_id = null, thread_id = null,
       options,
     } = req.body
 
@@ -243,11 +251,11 @@ export default async function pollRoutes(app: FastifyInstance) {
       await client.query('BEGIN')
 
       const { rows: [poll] } = await client.query(`
-        INSERT INTO polls (created_by, channel_id, title, description, type,
+        INSERT INTO polls (created_by, channel_id, thread_id, title, description, type,
                            multiple, max_choices, anonymous, show_results, closes_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
-      `, [userId, channel_id, title.trim(), description?.trim() ?? null,
+      `, [userId, channel_id, thread_id, title.trim(), description?.trim() ?? null,
           type, multiple, max_choices, anonymous, show_results,
           closes_at ? new Date(closes_at) : null])
 
@@ -473,6 +481,9 @@ export default async function pollRoutes(app: FastifyInstance) {
     if (poll.channel_id) {
       io?.to(`channel:${poll.channel_id}`).emit('poll:updated', payload)
     }
+    if (poll.thread_id) {
+      io?.to(`thread:${poll.thread_id}`).emit('poll:updated', payload)
+    }
 
     return reply.send({ success: true, ...payload })
   })
@@ -503,6 +514,9 @@ export default async function pollRoutes(app: FastifyInstance) {
       if (poll.channel_id) {
         io?.to(`channel:${poll.channel_id}`).emit('poll:updated', payload)
       }
+      if (poll.thread_id) {
+        io?.to(`thread:${poll.thread_id}`).emit('poll:updated', payload)
+      }
 
       return reply.send({ success: true, ...payload })
     }
@@ -530,6 +544,9 @@ export default async function pollRoutes(app: FastifyInstance) {
 
       if (poll.channel_id) {
         io?.to(`channel:${poll.channel_id}`).emit('poll:closed', { poll_id: id })
+      }
+      if (poll.thread_id) {
+        io?.to(`thread:${poll.thread_id}`).emit('poll:closed', { poll_id: id })
       }
 
       return reply.send({ success: true })

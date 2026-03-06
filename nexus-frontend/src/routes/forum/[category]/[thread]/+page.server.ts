@@ -2,7 +2,9 @@ import { error, redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch } from '$lib/api';
 
-export const load: PageServerLoad = async ({ fetch, params }) => {
+export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
+	const token = cookies.get('token') ?? null;
+
 	const res  = await apiFetch(fetch, `/forums/threads/${params.thread}`);
 	const json = await res.json();
 
@@ -10,7 +12,19 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 		error(res.status, json.error ?? 'Thread introuvable');
 	}
 
-	return { thread: json.thread, posts: json.posts };
+	// Charger le sondage lié à ce thread (s'il existe)
+	let poll: any = null;
+	if (token) {
+		const pollRes = await apiFetch(fetch, `/polls?thread_id=${params.thread}&limit=1`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		if (pollRes.ok) {
+			const pollJson = await pollRes.json();
+			poll = pollJson.polls?.[0] ?? null;
+		}
+	}
+
+	return { thread: json.thread, posts: json.posts, poll, token };
 };
 
 export const actions: Actions = {

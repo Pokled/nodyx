@@ -5,6 +5,8 @@
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
 	import NexusEditor from '$lib/components/editor/NexusEditor.svelte';
 	import PostReactions from '$lib/components/PostReactions.svelte';
+	import PollCard from '$lib/components/PollCard.svelte';
+	import PollCreator from '$lib/components/PollCreator.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -22,6 +24,14 @@
 	let editingTitle  = $state(false);
 	let titleInput    = $state('');
 	let submitting    = $state(false);
+
+	// ── Sondage du thread ─────────────────────────────────────────────────
+	let threadPoll     = $state(data.poll ?? null);
+	let showPollCreator = $state(false);
+
+	const canAddPoll = $derived(
+		user && !threadPoll && (user.id === thread.author_id || isMod)
+	);
 
 	function startEditTitle() {
 		titleInput   = thread.title;
@@ -322,6 +332,39 @@
 		</div>
 	</div>
 </div>
+
+<!-- ── Sondage du thread ────────────────────────────────────────────────────── -->
+{#if threadPoll}
+	<div class="mb-6">
+		<PollCard
+			pollId={threadPoll.id}
+			inline={false}
+			token={data.token}
+			socket={null}
+		/>
+	</div>
+{:else if canAddPoll}
+	<div class="mb-6">
+		<button
+			type="button"
+			onclick={() => showPollCreator = true}
+			class="flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
+		>
+			<span>📊</span>
+			<span>Ajouter un sondage à ce sujet</span>
+		</button>
+	</div>
+{/if}
+
+{#if showPollCreator}
+	<PollCreator
+		token={data.token}
+		channelId={null}
+		threadId={thread.id}
+		onCreated={(poll) => { threadPoll = poll; showPollCreator = false; }}
+		onClose={() => showPollCreator = false}
+	/>
+{/if}
 
 <!-- ── Liste des posts (inchangée, mais on peut ajouter des séparateurs visuels) ── -->
 <div class="space-y-4 mt-6">
