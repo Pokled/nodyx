@@ -204,6 +204,7 @@
 				{/if}
 				<a href="/library" class="px-3 py-2 rounded text-sm transition-colors {isActive('/library') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Bibliothèque</a>
 				<a href="/garden" class="px-3 py-2 rounded text-sm transition-colors {isActive('/garden') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Jardin</a>
+				<a href="/polls" class="px-3 py-2 rounded text-sm transition-colors {isActive('/polls') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Sondages</a>
 			</div>
 			<div class="flex items-center gap-1 shrink-0">
 				<a href="/search" class="p-2 rounded text-gray-400 hover:text-white hover:bg-gray-800/60 transition-colors" title="Rechercher">
