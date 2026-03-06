@@ -105,7 +105,7 @@
 			>
 				{submitting ? 'Publication...' : 'Publier le sujet'}
 			</button>
-			<a href="/forum/{$page.params.category}" class="text-sm text-gray-500 hover:text-gray-300">Annuler</a>
+			<a href="/forum/{$page.params.category}" class="rounded bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">Annuler</a>
 		</div>
 	</form>
 </div>
