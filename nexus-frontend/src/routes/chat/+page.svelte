@@ -8,6 +8,8 @@
 	import NexusEditor from '$lib/components/editor/NexusEditor.svelte';
 	import EmojiPicker from '$lib/components/EmojiPicker.svelte';
 	import ChannelSidebar from '$lib/components/ChannelSidebar.svelte';
+	import PollCard    from '$lib/components/PollCard.svelte';
+	import PollCreator from '$lib/components/PollCreator.svelte';
 	import VoiceRoom from '$lib/components/VoiceRoom.svelte';
 	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT } from '$lib/voice';
 	import type { Socket } from 'socket.io-client';
@@ -44,6 +46,8 @@
 		reply_to_id?:       string | null;
 		reply_to_username?: string | null;
 		reply_to_content?:  string | null;
+		poll_id?:           string | null;
+		poll?:              any;
 	};
 
 	// ── State ─────────────────────────────────────────────────────────────────
@@ -103,6 +107,9 @@
 	let showRichModal = $state(false);
 	let richContent   = $state('');
 	let editorKey     = $state(0);
+
+	// Poll creator
+	let showPollCreator = $state(false);
 
 	// ── Voice ─────────────────────────────────────────────────────────────────
 	const voiceState    = $derived($voiceStore);
@@ -885,7 +892,10 @@
 										<button onclick={confirmEdit} class="text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest underline">Valider</button>
 									</div>
 								</div>
-							{:else}
+							{:else if msg.poll_id}
+							<!-- ── Sondage intégré ── -->
+							<PollCard pollId={msg.poll_id} inline={true} {token} socket={s} />
+						{:else}
 								<div class="nexus-prose text-sm text-gray-300 leading-relaxed break-words">
 									{@html linkifyHtml(msg.content ?? '')}
 									{#if shouldGroup && msg.edited_at}
@@ -1138,6 +1148,12 @@
 						class="px-2 py-2 m-1 rounded transition-colors shrink-0 text-xs font-bold {showGifPicker ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}"
 						title="Envoyer un GIF"
 					>GIF</button>
+					<!-- Poll button -->
+					<button
+						onclick={() => showPollCreator = true}
+						class="px-2 py-2 m-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors shrink-0 text-sm"
+						title="Créer un sondage"
+					>📊</button>
 					<!-- Rich editor button -->
 					<button
 						onclick={() => { showRichModal = true; }}
@@ -1168,6 +1184,16 @@
 		{/if}
 	</div>
 </div>
+
+<!-- ── Poll creator modal ─────────────────────────────────────────────────── -->
+{#if showPollCreator}
+	<PollCreator
+		{token}
+		channelId={selectedChannel?.id ?? null}
+		onCreated={() => showPollCreator = false}
+		onClose={() => showPollCreator = false}
+	/>
+{/if}
 
 <!-- ── P2P fallback toast ──────────────────────────────────────────────────── -->
 {#if $p2pFallback}

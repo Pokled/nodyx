@@ -19,6 +19,7 @@ import directoryRoutes    from './routes/directory'
 import assetRoutes        from './routes/assets'
 import gardenRoutes       from './routes/garden'
 import whisperRoutes      from './routes/whispers'
+import pollRoutes         from './routes/polls'
 import { setIO }           from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
@@ -81,6 +82,7 @@ server.register(directoryRoutes,     { prefix: '/api' })
 server.register(assetRoutes,         { prefix: '/api/v1/assets' })
 server.register(gardenRoutes,        { prefix: '/api/v1/garden' })
 server.register(whisperRoutes,       { prefix: '/api/v1/whispers' })
+server.register(pollRoutes,          { prefix: '/api/v1/polls' })
 
 const start = async () => {
   await runMigrations()
