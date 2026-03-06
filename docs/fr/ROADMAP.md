@@ -17,7 +17,7 @@
 | **Phase 2** | Chat temps réel + Annuaire + Identité réseau | ✅ Complète |
 | **Phase 2.5** | Personnalisation communautaire + Fédération légère | ✅ Complète |
 | **Phase 3** | Infrastructure P2P + Fondation Rust | 🔨 En cours |
-| **Phase 4** | Enrichissement de la plateforme | 🔨 En cours (v1.0 partiel) |
+| **Phase 4** | Enrichissement de la plateforme | 🔨 En cours (v1.1 partiel) |
 | Phase 5 | Mobile et réputation | ⏳ Planifiée |
 | **Phase Horizon** | NEXUS-ETHER — Souveraineté de la couche physique | 🌌 Vision |
 | **Phase Radio** | NEXUS-RADIO — Tuner radio internet + régie publicitaire coopérative | 📻 Vision |
@@ -380,6 +380,13 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] **Système de thèmes de profil** (v1.0) — 6 presets (Défaut, Minuit, Forêt, Chaleur, Rose, Verre), moteur CSS variables (`--p-bg`, `--p-card-bg`, `--p-accent`…), éditeur live avec color pickers, propagation dans toute l'app (nav, sidebars, fond)
 - [x] **UI responsive mobile** (v1.0) — drawer de canaux, barre de navigation basse, VoicePanel accessible sur mobile, forum + admin responsives
 - [x] **Bibliothèque d'assets 12 Mo** (v1.0) — limite augmentée (était 5 Mo), conseils de design par type d'asset
+- [x] **Chat — Réponses/citations** (v1.1) — reply_to_id, barre de prévisualisation dans l'input, citation inline dans le message
+- [x] **Chat — Messages épinglés** (v1.1) — bannière sticky dans le header du canal, épinglage/désépinglage admin
+- [x] **Chat — Aperçus de liens** (v1.1) — unfurl Open Graph côté serveur, cache Redis 1h, cartes sous les messages
+- [x] **Chat — Badge de mention** (v1.1) — bulle rouge sur l'icône Chat, séparé de la cloche de notifications
+- [x] **Présence — Statuts personnalisés** (v1.1) — emoji + texte, 8 presets, persisté Redis 24h, visible de tous dans la sidebar
+- [x] **Présence — Membres hors ligne** (v1.1) — section collapsible dans la sidebar, avatars niveaux de gris
+- [x] **Plugins** (v1.1) — fondation `plugins/` avec 3 table-templates officiels (Brasserie de Nuit, Table de Feutre, Pierre & Braise)
 
 **Connaissance & Découverte :**
 - [ ] **Calendrier d'événements** — grade organisateur, cartes OSM, Rich Snippets Google, alertes Socket.IO 15min — [SPEC 011](../en/specs/011-nexus-event-calendar/SPEC.md)
@@ -531,5 +538,5 @@ Et parce qu'elles peuvent enfin se financer.
 
 ---
 
-*Version 1.9 — 4 mars 2026*
+*Version 2.0 — 6 mars 2026*
 *"Le P2P est l'âme. Rust est le corps. La radio est la résilience. La communauté est la raison."*

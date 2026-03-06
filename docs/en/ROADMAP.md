@@ -17,7 +17,7 @@
 | **Phase 2** | Real-time Chat + Directory + Network Identity | ✅ Complete |
 | **Phase 2.5** | Community customization + Light federation | ✅ Complete |
 | **Phase 3** | P2P Infrastructure + Rust Foundation | 🔨 In Progress |
-| **Phase 4** | Platform enrichment | 🔨 In Progress (v1.0 partial) |
+| **Phase 4** | Platform enrichment | 🔨 In Progress (v1.1 partial) |
 | Phase 5 | Mobile and reputation | ⏳ Planned |
 | **Phase Horizon** | NEXUS-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NEXUS-RADIO — Internet radio tuner + cooperative ad network | 📻 Vision |
@@ -376,6 +376,13 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] **Profile theme system** (v1.0) — 6 built-in presets (Défaut, Minuit, Forêt, Chaleur, Rose, Verre), CSS variable engine (`--p-bg`, `--p-card-bg`, `--p-accent`…), live editor with color pickers, app-wide propagation (nav, sidebars, background)
 - [x] **Mobile-responsive UI** (v1.0) — chat channel drawer, bottom navigation bar, VoicePanel accessible on mobile, responsive forum + admin pages
 - [x] **Asset library 12 MB** (v1.0) — raised from 5 MB, per-type upload design guidelines
+- [x] **Chat — Reply/quote system** (v1.1) — reply_to_id on messages, preview bar in input, inline quote in message
+- [x] **Chat — Pinned messages** (v1.1) — sticky banner in channel header, admin pin/unpin
+- [x] **Chat — Link previews** (v1.1) — server-side Open Graph unfurl, Redis cache 1h, preview cards below messages
+- [x] **Chat — Mention badge** (v1.1) — red bubble on Chat nav icon when @mentioned, separate from notification bell
+- [x] **Presence — Custom user status** (v1.1) — emoji + text, 8 presets, persisted in Redis 24h, visible in sidebar
+- [x] **Presence — Offline members list** (v1.1) — collapsible section in sidebar, grayscale avatars
+- [x] **Plugins** (v1.1) — `plugins/` foundation with 3 official table-templates (Brasserie de Nuit, Table de Feutre, Pierre & Braise)
 
 **Knowledge & Discovery:**
 - [ ] **Event Calendar** — organizer-grade, OSM maps, JSON-LD Google Rich Snippets, Socket.IO 15min alerts — [SPEC 011](../en/specs/011-nexus-event-calendar/SPEC.md)
@@ -526,5 +533,5 @@ And because they can finally sustain themselves.
 
 ---
 
-*Version 1.9 — March 4, 2026*
+*Version 2.0 — March 6, 2026*
 *"P2P is the soul. Rust is the body. Radio is the resilience. Community is the reason."*

@@ -9,6 +9,32 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.1.0] — 2026-03-06
+
+### Added
+- **Chat — Système de réponses/citations** — `reply_to_id` sur les messages, barre de prévisualisation dans l'input, citation inline avec bordure colorée dans le message
+- **Chat — Messages épinglés** — un admin peut épingler un message par canal, bannière sticky dans le header du canal, masquable, désépinglage admin
+- **Chat — Aperçus de liens (Open Graph)** — unfurl côté serveur avec cache Redis 1h, cartes de prévisualisation (titre, description, image, site_name) sous les messages
+- **Chat — Badge de mention** — bulle rouge sur l'icône Chat dans la navigation quand un utilisateur est @mentionné (séparé de la cloche de notifications générale)
+- **Chat — Barre d'actions messages** — réponse (↩️), édition (propres messages), épinglage (admin), suppression, copie
+- **Présence — Statuts personnalisés** — emoji + texte libre, 8 presets (En réunion, Distrait, BRB…), persisté dans Redis 24h, visible dans la sidebar pour tous les membres
+- **Présence — Statut dans le panel de profil** — bouton de statut rapide au-dessus des liens du dropdown, ouvre la modale de statut
+- **Présence — Liste des membres hors ligne** — section collapsible "Hors ligne — N" en bas de la sidebar, avatars en niveaux de gris, opacité 50%
+- **Auth — Mot de passe oublié** — flow complet (token email, TTL 1h, migration 025, emailService.ts)
+- **Migration 025** — table `password_reset_tokens` (userId, token hash, expiration)
+- **Migration 026** — `reply_to_id` sur `channel_messages` + `pinned_message_id` sur `channels`
+- **Plugins** — dossier `plugins/` (retiré du .gitignore) avec README et 3 table-templates officiels (Brasserie de Nuit, Table de Feutre, Pierre & Braise)
+- **Nouveaux composants** — `ChannelSidebar.svelte`, `EmojiPicker.svelte`, `VoiceRoom.svelte`
+- **GET /api/v1/instance/members** — liste complète des membres pour la sidebar hors-ligne
+
+### Fixed
+- **Voice en mode Relay** — `TURN_PUBLIC_IP` vide = zéro ICE server → voix impossible en NAT strict. `voice.ts` lit désormais `STUN_FALLBACK_URLS` et `install.sh` injecte deux STUN Google publics en mode Relay
+- **install.sh — Version** — enregistrement auprès du directory avec `"0.4.1"` → corrigé en `"1.0.0"`
+- **install.sh — Description communauté** — jamais renseignée (créée vide en SQL), `NEXUS_COMMUNITY_DESCRIPTION` absent du `.env` → prompt ajouté, variable injectée
+- **install.sh — Pays** — `NEXUS_COMMUNITY_COUNTRY` toujours vide → prompt ajouté
+
+---
+
 ## [1.0.0] — 2026-03-05
 
 ### Added
@@ -252,7 +278,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 - **AI assistant** — local Ollama integration (no cloud dependency)
 - **13 SQL migrations** — complete schema from users to voice channels
 
-[Unreleased]: https://github.com/Pokled/Nexus/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Pokled/Nexus/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Pokled/Nexus/compare/v1.0.0...v1.1.0
 [0.5.0]: https://github.com/Pokled/Nexus/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Pokled/Nexus/compare/v0.3.3...v0.4.1
 [0.3.3]: https://github.com/Pokled/Nexus/compare/v0.3.2...v0.3.3
