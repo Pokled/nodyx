@@ -31,6 +31,18 @@ declare module 'socket.io' {
   }
 }
 
+// ── Input guards ─────────────────────────────────────────────────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isUuid(v: unknown): v is string {
+  return typeof v === 'string' && UUID_RE.test(v)
+}
+
+function isString(v: unknown): v is string {
+  return typeof v === 'string'
+}
+
 // ── Sanitize (same config as forums.ts) ───────────────────────────────────────
 
 const ALLOWED_TAGS = [
@@ -45,7 +57,9 @@ const ALLOWED_TAGS = [
 ]
 
 const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
-  '*':      ['class', 'style', 'data-align', 'data-type'],
+  '*':      ['class', 'data-align', 'data-type'],
+  'span':   ['class', 'style', 'data-align', 'data-type'],  // TipTap highlights/colors sur spans uniquement
+  'p':      ['class', 'style', 'data-align', 'data-type'],  // alignement de paragraphes
   'a':      ['href', 'target', 'rel'],
   'img':    ['src', 'alt', 'width', 'height'],
   'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
@@ -230,7 +244,7 @@ export function registerSocketIO(server: Server): void {
 
     // ── chat:join ─────────────────────────────────────────────────────────────
     socket.on('chat:join', async (channelId: string) => {
-      if (!channelId) return
+      if (!isUuid(channelId)) return
 
       const channel = await ChannelModel.findById(channelId).catch(() => null)
       if (!channel) return
@@ -247,16 +261,18 @@ export function registerSocketIO(server: Server): void {
 
     // ── chat:leave ────────────────────────────────────────────────────────────
     socket.on('chat:leave', (channelId: string) => {
-      if (channelId) socket.leave(`channel:${channelId}`)
+      if (isUuid(channelId)) socket.leave(`channel:${channelId}`)
     })
 
     // ── chat:send ─────────────────────────────────────────────────────────────
     socket.on('chat:send', async (data: { channelId: string; content: string; replyToId?: string | null }) => {
       const { channelId, content, replyToId } = data ?? {}
-      if (!channelId || !content?.trim()) return
+      if (!isUuid(channelId) || !isString(content)) return
+      if (content.length > 20000) return  // limite avant sanitization (DoS)
+      if (replyToId !== undefined && replyToId !== null && !isUuid(replyToId)) return
 
       const sanitized = sanitize(content.trim())
-      if (!sanitized || sanitized.length > 4000) return
+      if (!sanitized || sanitized.length > 10000) return
 
       try {
         const message = await ChannelModel.addMessage({
@@ -295,14 +311,14 @@ export function registerSocketIO(server: Server): void {
     // ── chat:typing ───────────────────────────────────────────────────────────
     // Throttled by client — just broadcast to others in the room
     socket.on('chat:typing', (channelId: string) => {
-      if (!channelId) return
+      if (!isUuid(channelId)) return
       socket.to(`channel:${channelId}`).emit('chat:typing', { userId, username })
     })
 
     // ── chat:react ────────────────────────────────────────────────────────────
     socket.on('chat:react', async (data: { messageId: string; emoji: string }) => {
       const { messageId, emoji } = data ?? {}
-      if (!messageId || !emoji) return
+      if (!isUuid(messageId) || !isString(emoji) || emoji.length > 64) return
 
       try {
         const { reactions } = await ChannelModel.toggleReaction(messageId, userId, emoji)
@@ -323,10 +339,11 @@ export function registerSocketIO(server: Server): void {
     // ── chat:edit ─────────────────────────────────────────────────────────────
     socket.on('chat:edit', async (data: { messageId: string; content: string }) => {
       const { messageId, content } = data ?? {}
-      if (!messageId || !content?.trim()) return
+      if (!isUuid(messageId) || !isString(content)) return
+      if (content.length > 20000) return
 
       const sanitized = sanitize(content.trim())
-      if (!sanitized || sanitized.length > 4000) return
+      if (!sanitized || sanitized.length > 10000) return
 
       try {
         const updated = await ChannelModel.editMessage(messageId, userId, sanitized)
@@ -347,7 +364,7 @@ export function registerSocketIO(server: Server): void {
     // ── chat:delete ───────────────────────────────────────────────────────────
     socket.on('chat:delete', async (data: { messageId: string }) => {
       const { messageId } = data ?? {}
-      if (!messageId) return
+      if (!isUuid(messageId)) return
 
       try {
         const { rows: roleRows } = await db.query(
@@ -368,7 +385,8 @@ export function registerSocketIO(server: Server): void {
     // ── chat:pin ──────────────────────────────────────────────────────────────
     socket.on('chat:pin', async (data: { channelId: string; messageId: string | null }) => {
       const { channelId, messageId } = data ?? {}
-      if (!channelId) return
+      if (!isUuid(channelId)) return
+      if (messageId !== null && !isUuid(messageId)) return
 
       try {
         const { rows: roleRows } = await db.query(
@@ -403,5 +421,80 @@ export function registerSocketIO(server: Server): void {
 
     // ── Voice (WebRTC signaling) ───────────────────────────────────────────────
     registerVoiceHandlers(socket, server)
+
+    // ── DM events ─────────────────────────────────────────────────────────────
+
+    // dm:send — envoyer un message dans une conversation
+    socket.on('dm:send', async (data: { conversationId: string; content: string }) => {
+      try {
+        if (!isUuid(data?.conversationId) || !isString(data?.content)) return
+        const raw = data.content.trim()
+        if (!raw || raw.length > 20000) return
+
+        // Vérifier que l'user est participant
+        const { rows: [part] } = await db.query(
+          `SELECT 1 FROM dm_participants WHERE conversation_id = $1 AND user_id = $2`,
+          [data.conversationId, userId]
+        )
+        if (!part) return
+
+        const clean = sanitize(raw)
+
+        const { rows: [msg] } = await db.query<{
+          id: string; conversation_id: string; sender_id: string;
+          content: string; created_at: Date;
+        }>(`
+          INSERT INTO dm_messages (conversation_id, sender_id, content)
+          VALUES ($1, $2, $3)
+          RETURNING id, conversation_id, sender_id, content, created_at
+        `, [data.conversationId, userId, clean])
+
+        const payload = {
+          ...msg,
+          sender_username:   username,
+          sender_avatar:     socket.data.avatar ?? null,
+          sender_name_color: socket.data.nameColor ?? null,
+        }
+
+        // Émettre à tous les participants via leurs rooms personnelles
+        const { rows: participants } = await db.query<{ user_id: string }>(
+          `SELECT user_id FROM dm_participants WHERE conversation_id = $1`,
+          [data.conversationId]
+        )
+        for (const p of participants) {
+          server.to(`user:${p.user_id}`).emit('dm:message', payload)
+        }
+      } catch (err) {
+        console.error('[dm:send] Error:', err)
+      }
+    })
+
+    // dm:typing — indicateur de frappe (throttlé côté client)
+    socket.on('dm:typing', (conversationId: string) => {
+      if (!isUuid(conversationId)) return
+      db.query<{ user_id: string }>(
+        `SELECT user_id FROM dm_participants WHERE conversation_id = $1 AND user_id != $2`,
+        [conversationId, userId]
+      ).then(({ rows }) => {
+        for (const p of rows) {
+          server.to(`user:${p.user_id}`).emit('dm:typing', { conversationId, userId, username })
+        }
+      }).catch(() => {})
+    })
+
+    // dm:read — marquer comme lu et confirmer
+    socket.on('dm:read', async (conversationId: string) => {
+      if (!isUuid(conversationId)) return
+      try {
+        await db.query(
+          `UPDATE dm_participants SET last_read_at = now()
+           WHERE conversation_id = $1 AND user_id = $2`,
+          [conversationId, userId]
+        )
+        socket.emit('dm:read_ack', { conversationId })
+      } catch (err) {
+        console.error('[dm:read] Error:', err)
+      }
+    })
   })
 }

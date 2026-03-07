@@ -45,6 +45,35 @@ async function forgotPasswordRateLimit(request: FastifyRequest, reply: FastifyRe
   }
 }
 
+// Rate limit strict pour login : 10 tentatives / 15 min / IP
+async function loginRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const key   = `login_rate:${request.ip}`
+  const count = await redis.incr(key)
+  if (count === 1) await redis.expire(key, 15 * 60)
+  if (count > 10) {
+    const ttl = await redis.ttl(key)
+    reply.header('Retry-After', String(ttl))
+    return reply.code(429).send({
+      error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
+      code:  'RATE_LIMITED',
+    })
+  }
+}
+
+// Rate limit pour register : 5 comptes / heure / IP
+async function registerRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const key   = `register_rate:${request.ip}`
+  const count = await redis.incr(key)
+  if (count === 1) await redis.expire(key, 60 * 60)
+  if (count > 5) {
+    reply.header('Retry-After', String(60 * 60))
+    return reply.code(429).send({
+      error: 'Trop de créations de compte depuis cette IP. Réessayez dans une heure.',
+      code:  'RATE_LIMITED',
+    })
+  }
+}
+
 // Supprime toutes les sessions Redis d'un utilisateur (invalidation post-reset)
 async function invalidateUserSessions(userId: string): Promise<void> {
   let cursor = '0'
@@ -81,7 +110,7 @@ function signToken(userId: string, username: string): string {
 export default async function authRoutes(app: FastifyInstance) {
   // POST /api/v1/auth/register
   app.post('/register', {
-    preHandler: [rateLimit, validate({ body: RegisterBody })],
+    preHandler: [rateLimit, registerRateLimit, validate({ body: RegisterBody })],
   }, async (request, reply) => {
     const { username, email, password } = request.body as z.infer<typeof RegisterBody>
 
@@ -117,17 +146,17 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // POST /api/v1/auth/login
   app.post('/login', {
-    preHandler: [rateLimit, validate({ body: LoginBody })],
+    preHandler: [rateLimit, loginRateLimit, validate({ body: LoginBody })],
   }, async (request, reply) => {
     const { email, password } = request.body as z.infer<typeof LoginBody>
 
     const user = await UserModel.findByEmail(email)
-    if (!user) {
-      return reply.code(401).send({ error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' })
-    }
 
-    const valid = await UserModel.verifyPassword(password, user.password)
-    if (!valid) {
+    // Toujours exécuter bcrypt pour éviter les timing attacks par énumération d'emails
+    const DUMMY_HASH = '$2b$12$invalidhashusedtopreventimaginarytimingattacksXXXXXXXXXX'
+    const valid = await UserModel.verifyPassword(password, user?.password ?? DUMMY_HASH)
+
+    if (!user || !valid) {
       return reply.code(401).send({ error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' })
     }
 

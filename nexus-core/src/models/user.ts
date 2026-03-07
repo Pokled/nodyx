@@ -24,7 +24,7 @@ export type PublicUser = Omit<User, 'password'>
 
 export async function findById(id: string): Promise<PublicUser | null> {
   const { rows } = await db.query<PublicUser>(
-    `SELECT id, username, email, avatar, bio, points, created_at, updated_at
+    `SELECT id, username, email, avatar, bio, points, created_at, updated_at, linked_instances
      FROM users WHERE id = $1`,
     [id]
   )

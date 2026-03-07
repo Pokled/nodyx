@@ -1,5 +1,8 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { page } from '$app/stores';
+	import { invalidateAll } from '$app/navigation';
+	import { PUBLIC_API_URL } from '$env/static/public';
 
 	interface NexusInstance {
 		id:           number
@@ -16,11 +19,53 @@
 		status:       string
 		last_seen:    string | null
 		registered_at: string
+		logo_url:     string | null
+		banner_url:   string | null
 	}
 
 	let { data }: { data: PageData } = $props()
 
 	const instances = $derived<NexusInstance[]>(data.instances ?? [])
+	const user      = $derived($page.data.user)
+
+	// Slugs liés — initialisé depuis le serveur, puis géré localement (pas de $effect pour éviter le conflit avec invalidateAll)
+	let linkedSlugs = $state<string[]>(($page.data.user as any)?.linked_instances ?? [])
+
+	let linkLoading = $state<string | null>(null) // slug en cours
+
+	async function toggleLink(slug: string) {
+		if (!user || linkLoading) return
+		const action = linkedSlugs.includes(slug) ? 'remove' : 'add'
+		linkLoading = slug
+		// Mise à jour optimiste immédiate
+		linkedSlugs = action === 'add'
+			? [...linkedSlugs, slug]
+			: linkedSlugs.filter(s => s !== slug)
+		try {
+			const res = await fetch(`${PUBLIC_API_URL}/api/v1/users/me/linked-instances`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${$page.data.token}` },
+				body: JSON.stringify({ action, slug }),
+			})
+			const json = await res.json()
+			if (res.ok) {
+				linkedSlugs = json.linked_instances ?? []
+				invalidateAll() // rafraîchit la Galaxy Bar sans await pour ne pas bloquer l'UI
+			} else {
+				// Rollback en cas d'erreur
+				linkedSlugs = action === 'add'
+					? linkedSlugs.filter(s => s !== slug)
+					: [...linkedSlugs, slug]
+			}
+		} catch {
+			// Rollback réseau
+			linkedSlugs = action === 'add'
+				? linkedSlugs.filter(s => s !== slug)
+				: [...linkedSlugs, slug]
+		} finally {
+			linkLoading = null
+		}
+	}
 
 	const LANGUAGES = [
 		{ key: 'all', label: 'Toutes' },
@@ -48,7 +93,7 @@
 	const totalMembers = $derived(filtered.reduce((s, i) => s + (i.members ?? 0), 0))
 
 	function instanceUrl(i: NexusInstance): string {
-		return `https://${i.slug}.nexusnode.app`
+		return i.url
 	}
 
 	function isOnline(i: NexusInstance): boolean {
@@ -149,15 +194,35 @@
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 		{#each filtered as instance}
 			<div class="flex flex-col rounded-xl border border-gray-800 bg-gray-900/50
-			            hover:border-indigo-800/60 hover:bg-gray-900/80 transition-all group p-5">
+			            hover:border-indigo-800/60 hover:bg-gray-900/80 transition-all group overflow-hidden">
 
-				<div class="flex items-start justify-between mb-3">
-					<div class="flex items-center gap-3">
-						<div class="w-10 h-10 rounded-lg bg-indigo-900 flex items-center justify-center
-						            text-base font-bold text-indigo-200 select-none shrink-0">
-							{instance.name.charAt(0).toUpperCase()}
+				<!-- Bannière -->
+				<div class="relative h-24 shrink-0 bg-gradient-to-br from-indigo-950 to-gray-900">
+					{#if instance.banner_url}
+						<img src={instance.banner_url} alt="" class="absolute inset-0 w-full h-full object-cover opacity-70" />
+					{/if}
+					<!-- Badge online flottant -->
+					<div class="absolute top-2 right-2 flex items-center gap-1.5
+					            bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5">
+						<span class="w-1.5 h-1.5 rounded-full {isOnline(instance) ? 'bg-green-400' : 'bg-gray-500'}"></span>
+						<span class="text-xs text-gray-300">{isOnline(instance) ? 'en ligne' : 'hors ligne'}</span>
+					</div>
+				</div>
+
+				<div class="relative z-10 px-5 pb-5 flex flex-col flex-1">
+					<!-- Logo + nom (logo chevauche la bannière) -->
+					<div class="flex items-end gap-3 -mt-6 mb-3">
+						<div class="w-12 h-12 rounded-xl border-2 border-gray-800 bg-indigo-900
+						            flex items-center justify-center shrink-0 overflow-hidden shadow-lg">
+							{#if instance.logo_url}
+								<img src={instance.logo_url} alt={instance.name} class="w-full h-full object-cover" />
+							{:else}
+								<span class="text-lg font-bold text-indigo-200 select-none">
+									{instance.name.charAt(0).toUpperCase()}
+								</span>
+							{/if}
 						</div>
-						<div>
+						<div class="pb-0.5">
 							<h2 class="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors leading-tight">
 								{instance.name}
 							</h2>
@@ -165,49 +230,68 @@
 						</div>
 					</div>
 
-					<div class="flex items-center gap-1.5 shrink-0">
-						<span class="w-2 h-2 rounded-full {isOnline(instance) ? 'bg-green-400' : 'bg-gray-600'}"></span>
-						<span class="text-xs text-gray-600">{isOnline(instance) ? 'en ligne' : 'hors ligne'}</span>
-					</div>
-				</div>
+					<p class="text-xs text-gray-400 leading-relaxed line-clamp-2 flex-1 mb-4">
+						{instance.description ?? 'Aucune description.'}
+					</p>
 
-				<p class="text-xs text-gray-400 leading-relaxed line-clamp-2 flex-1 mb-4">
-					{instance.description ?? 'Aucune description.'}
-				</p>
-
-				<div class="flex flex-wrap items-center gap-1.5 mb-4">
-					{#if instance.language}
-						<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
-							{instance.language.toUpperCase()}
+					<div class="flex flex-wrap items-center gap-1.5 mb-4">
+						{#if instance.language}
+							<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
+								{instance.language.toUpperCase()}
+							</span>
+						{/if}
+						{#if instance.theme}
+							<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
+								{instance.theme}
+							</span>
+						{/if}
+						<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500 border border-gray-700">
+							{instance.members ?? 0} membres
 						</span>
-					{/if}
-					{#if instance.theme}
-						<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
-							{instance.theme}
-						</span>
-					{/if}
-					<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500 border border-gray-700">
-						{instance.members ?? 0} membres
-					</span>
-				</div>
-
-				<div class="flex items-center justify-between pt-3 border-t border-gray-800/60">
-					<div class="text-xs text-gray-600">
-						Depuis {new Date(instance.registered_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
 					</div>
-					<a
-						href={instanceUrl(instance)}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors
-						       flex items-center gap-1"
-					>
-						Visiter
-						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-							      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-						</svg>
-					</a>
+
+					<div class="flex items-center justify-between pt-3 border-t border-gray-800/60 gap-2">
+						<div class="text-xs text-gray-600 shrink-0">
+							Depuis {new Date(instance.registered_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+						</div>
+						<div class="flex items-center gap-2">
+							{#if user}
+								{@const linked = linkedSlugs.includes(instance.slug)}
+								<button
+									onclick={() => toggleLink(instance.slug)}
+									disabled={linkLoading === instance.slug}
+									title={linked ? 'Retirer de ma Galaxy Bar' : "J'ai un compte ici"}
+									class="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg transition-colors
+									       {linked
+									         ? 'bg-indigo-900/60 text-indigo-300 hover:bg-red-900/40 hover:text-red-400 border border-indigo-800/60'
+									         : 'bg-gray-800 text-gray-400 hover:bg-indigo-900/40 hover:text-indigo-300 border border-gray-700'}"
+								>
+									{#if linkLoading === instance.slug}
+										<svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+									{:else if linked}
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+										Lié
+									{:else}
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+										J'ai un compte
+									{/if}
+								</button>
+							{/if}
+							<a
+								href={instanceUrl(instance)}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors
+								       flex items-center gap-1"
+							>
+								Visiter
+								<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+									      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+								</svg>
+							</a>
+						</div>
+					</div>
 				</div>
 			</div>
 		{/each}

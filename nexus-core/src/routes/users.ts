@@ -1,8 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
-import { createWriteStream, mkdirSync } from 'fs'
-import { pipeline } from 'stream/promises'
+import { mkdirSync } from 'fs'
 import path from 'path'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
@@ -10,6 +9,7 @@ import { validate } from '../middleware/validate'
 import * as UserModel from '../models/user'
 import { db, redis } from '../config/database'
 import { io } from '../socket/io'
+import { scanBuffer } from '../services/fileScanner'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 const ALLOWED_MIME  = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -67,6 +67,27 @@ async function getCommunityIdForUsers(): Promise<string | null> {
 }
 
 export default async function userRoutes(app: FastifyInstance) {
+
+  // GET /api/v1/users/search?q=... — recherche d'utilisateurs par pseudo (pour les DMs)
+  app.get('/search', {
+    preHandler: [rateLimit, requireAuth],
+  }, async (request, reply) => {
+    const { q } = request.query as { q?: string }
+    if (!q || q.trim().length < 2) return reply.send({ users: [] })
+
+    const { rows } = await db.query(`
+      SELECT u.id, u.username, u.avatar, p.name_color
+      FROM   users u
+      LEFT JOIN user_profiles p ON p.user_id = u.id
+      WHERE  u.username ILIKE $1
+      AND    u.id != $2
+      ORDER  BY u.username ASC
+      LIMIT  10
+    `, [`%${q.trim()}%`, request.user!.userId])
+
+    return reply.send({ users: rows })
+  })
+
   // GET /api/v1/users/me
   app.get('/me', {
     preHandler: [rateLimit, requireAuth],
@@ -91,6 +112,38 @@ export default async function userRoutes(app: FastifyInstance) {
       grade = rows[0]?.grade_name ? { name: rows[0].grade_name, color: rows[0].grade_color! } : null
     }
     return reply.send({ user: { ...user, role, grade } })
+  })
+
+  // PATCH /api/v1/users/me/linked-instances — ajouter ou retirer une instance liée
+  app.patch('/me/linked-instances', {
+    preHandler: [rateLimit, requireAuth],
+  }, async (request, reply) => {
+    const body = request.body as { action: 'add' | 'remove'; slug: string }
+    if (!body?.action || !body?.slug) {
+      return reply.code(400).send({ error: 'action et slug requis' })
+    }
+    if (!['add', 'remove'].includes(body.action)) {
+      return reply.code(400).send({ error: 'action doit être "add" ou "remove"' })
+    }
+    // slug : lettres, chiffres, tirets, 1-50 chars
+    if (!/^[a-z0-9-]{1,50}$/.test(body.slug)) {
+      return reply.code(400).send({ error: 'slug invalide' })
+    }
+
+    const op = body.action === 'add'
+      ? `array_append(COALESCE(linked_instances, '{}'), $1::text)`
+      : `array_remove(COALESCE(linked_instances, '{}'), $1::text)`
+
+    const { rows } = await db.query<{ linked_instances: string[] }>(
+      `UPDATE users
+       SET linked_instances = (
+         SELECT array_agg(DISTINCT x) FROM unnest(${op}) x
+       )
+       WHERE id = $2
+       RETURNING linked_instances`,
+      [body.slug, request.user!.userId]
+    )
+    return reply.send({ linked_instances: rows[0]?.linked_instances ?? [] })
   })
 
   // PATCH /api/v1/users/me/profile
@@ -322,7 +375,7 @@ export default async function userRoutes(app: FastifyInstance) {
 
   // POST /api/v1/users/me/upload?type=avatar|banner|font — upload file from client PC
   app.post('/me/upload', {
-    preHandler: [requireAuth],
+    preHandler: [rateLimit, requireAuth],
   }, async (request, reply) => {
     const { type } = request.query as { type?: string }
     if (!type || !ALLOWED_TYPES.includes(type)) {
@@ -331,6 +384,9 @@ export default async function userRoutes(app: FastifyInstance) {
 
     const data = await request.file()
     if (!data) return reply.code(400).send({ error: 'No file provided' })
+
+    // Charger le buffer en mémoire pour le scan (limité à 12 MB par fastifyMultipart)
+    const fileBuffer = await data.toBuffer()
 
     if (type === 'font') {
       // Accept fonts by mimetype OR by file extension (browsers vary)
@@ -341,11 +397,17 @@ export default async function userRoutes(app: FastifyInstance) {
       if (!isFont) {
         return reply.code(400).send({ error: 'Format non supporté (TTF, OTF, WOFF, WOFF2)' })
       }
+
+      const scan = scanBuffer(fileBuffer, data.mimetype)
+      if (!scan.ok) {
+        return reply.code(400).send({ error: `Fichier rejeté : ${scan.reason}` })
+      }
+
       const ext = filename_lc.split('.').pop() ?? 'ttf'
       const dir  = path.join(UPLOADS_DIR, 'fonts')
       mkdirSync(dir, { recursive: true })
       const fname = `${randomUUID()}.${ext}`
-      await pipeline(data.file, createWriteStream(path.join(dir, fname)))
+      await import('fs/promises').then(fs => fs.writeFile(path.join(dir, fname), fileBuffer))
       // Derive a safe CSS font-family name from the original filename
       const familyName = (data.filename ?? 'CustomFont')
         .replace(/\.[^.]+$/, '')
@@ -359,13 +421,20 @@ export default async function userRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Format non supporté (JPEG, PNG, WebP, GIF)' })
     }
 
+    // Les images passent par sharp dans assetService, mais on scanne quand même
+    // les magic bytes pour détecter les fichiers déguisés (ex: EXE renommé en .jpg)
+    const imgScan = scanBuffer(fileBuffer, data.mimetype)
+    if (!imgScan.ok) {
+      return reply.code(400).send({ error: `Fichier rejeté : ${imgScan.reason}` })
+    }
+
     const ext     = data.mimetype.split('/')[1].replace('jpeg', 'jpg')
     const folder  = `${type}s` // 'avatars' or 'banners'
     const filename = `${randomUUID()}.${ext}`
     const dir      = path.join(UPLOADS_DIR, folder)
     mkdirSync(dir, { recursive: true })
 
-    await pipeline(data.file, createWriteStream(path.join(dir, filename)))
+    await import('fs/promises').then(fs => fs.writeFile(path.join(dir, filename), fileBuffer))
 
     const relativePath = `/uploads/${folder}/${filename}`
     return reply.send({ url: relativePath })

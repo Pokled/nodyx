@@ -12,9 +12,26 @@ import {
   deleteAsset,
   type AssetType,
 } from '../services/assetService'
+import { scanBuffer } from '../services/fileScanner'
 import { db } from '../config/database'
 
 const VALID_TYPES = ['frame', 'banner', 'font', 'badge', 'sticker', 'theme', 'emoji', 'sound'] as const
+
+const ALLOWED_MIME_BY_TYPE: Record<string, readonly string[]> = {
+  frame:   ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  banner:  ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  badge:   ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  sticker: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  emoji:   ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  font:    [
+    'font/ttf', 'font/otf', 'font/woff', 'font/woff2',
+    'application/font-woff', 'application/font-woff2',
+    'application/x-font-ttf', 'application/x-font-opentype',
+    'application/octet-stream',
+  ],
+  sound:   ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/flac'],
+  theme:   ['application/json', 'text/plain'],
+}
 
 const SearchQuery = z.object({
   q:      z.string().optional(),
@@ -44,11 +61,21 @@ export default async function assetRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: `Type invalide. Valeurs possibles : ${VALID_TYPES.join(', ')}` })
     }
 
+    const allowedMimes = ALLOWED_MIME_BY_TYPE[assetType]
+    if (!allowedMimes.includes(data.mimetype)) {
+      return reply.code(400).send({ error: `Type MIME non autorisé pour "${assetType}". Types acceptés : ${allowedMimes.join(', ')}` })
+    }
+
     const tags = tagsRaw
       ? tagsRaw.split(',').map(t => t.trim()).filter(t => t.length > 0)
       : []
 
     const buffer = await data.toBuffer()
+
+    const scan = scanBuffer(buffer, data.mimetype)
+    if (!scan.ok) {
+      return reply.code(400).send({ error: `Fichier rejeté : ${scan.reason}` })
+    }
 
     try {
       const asset = await uploadAsset({
@@ -70,7 +97,7 @@ export default async function assetRoutes(app: FastifyInstance) {
 
   // ── GET /api/v1/assets — Search public assets ──────────────────────────────
   app.get('/', {
-    preHandler: [validate({ query: SearchQuery })],
+    preHandler: [rateLimit, validate({ query: SearchQuery })],
   }, async (req, reply) => {
     const q = req.query as z.infer<typeof SearchQuery>
     const assets = await searchAssets({
@@ -83,7 +110,7 @@ export default async function assetRoutes(app: FastifyInstance) {
   })
 
   // ── GET /api/v1/assets/:id — Get asset metadata ────────────────────────────
-  app.get<{ Params: { id: string } }>('/:id', async (req, reply) => {
+  app.get<{ Params: { id: string } }>('/:id', { preHandler: [rateLimit] }, async (req, reply) => {
     const asset = await getAssetMeta(req.params.id)
     if (!asset) return reply.code(404).send({ error: 'Asset introuvable.' })
     return reply.send({ asset })
@@ -91,7 +118,7 @@ export default async function assetRoutes(app: FastifyInstance) {
 
   // ── DELETE /api/v1/assets/:id — Delete own asset ───────────────────────────
   app.delete<{ Params: { id: string } }>('/:id', {
-    preHandler: [requireAuth],
+    preHandler: [rateLimit, requireAuth],
   }, async (req, reply) => {
     const deleted = await deleteAsset(req.params.id, req.user!.userId)
     if (!deleted) return reply.code(404).send({ error: 'Asset introuvable ou non autorisé.' })

@@ -23,6 +23,7 @@ export interface OnlineMember {
 
 export const unreadCountStore:   Writable<number>          = writable(0)
 export const chatMentionStore:   Writable<number>          = writable(0)
+export const dmUnreadStore:      Writable<number>          = writable(0)
 export const socket:             Writable<Socket | null>   = writable(null)
 export const onlineMembersStore: Writable<OnlineMember[]>  = writable([])
 export const tokenStore:         Writable<string | null>   = writable(null)
@@ -123,6 +124,21 @@ export async function initSocket(token: string, initialCount: number): Promise<v
         return updated
       })
     )
+  })
+
+  // ── DM ─────────────────────────────────────────────────────────────────────
+  // Incrémenter le badge DM quand un message arrive d'un autre utilisateur
+  _socket.on('dm:message', (msg: { sender_id: string }) => {
+    import('$app/stores').then(({ page }) => {
+      let currentPath = ''
+      page.subscribe(p => { currentPath = p.url.pathname })()
+      // Ne pas incrémenter si l'user est déjà sur la conversation
+      if (!currentPath.startsWith('/dm/')) {
+        dmUnreadStore.update(n => n + 1)
+      }
+    }).catch(() => {
+      dmUnreadStore.update(n => n + 1)
+    })
   })
 
   socket.set(_socket)

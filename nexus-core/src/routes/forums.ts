@@ -47,7 +47,9 @@ const ALLOWED_TAGS = [
 ]
 
 const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
-  '*':      ['class', 'style', 'data-align', 'data-type'],
+  '*':      ['class', 'data-align', 'data-type'],
+  'span':   ['class', 'style', 'data-align', 'data-type'],
+  'p':      ['class', 'style', 'data-align', 'data-type'],
   'a':      ['href', 'target', 'rel'],
   'img':    ['src', 'alt', 'width', 'height'],
   'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],

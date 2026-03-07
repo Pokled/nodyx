@@ -16,6 +16,7 @@
 import { FastifyInstance } from 'fastify'
 import { db } from '../config/database'
 import { requireAuth } from '../middleware/auth'
+import { rateLimit } from '../middleware/rateLimit'
 import { io } from '../socket/io'
 import * as ChannelModel from '../models/channel'
 
@@ -144,7 +145,7 @@ export default async function pollRoutes(app: FastifyInstance) {
 
   app.get<{
     Querystring: { limit?: string; offset?: string; status?: string; channel_id?: string; thread_id?: string }
-  }>('/', { preHandler: [requireAuth] }, async (req, reply) => {
+  }>('/', { preHandler: [rateLimit, requireAuth] }, async (req, reply) => {
     const userId = (req as any).user!.userId
     const limit  = Math.min(Number(req.query.limit ?? 20), 50)
     const offset = Number(req.query.offset ?? 0)
@@ -222,7 +223,7 @@ export default async function pollRoutes(app: FastifyInstance) {
         date_end?:   string
       }>
     }
-  }>('/', { preHandler: [requireAuth] }, async (req, reply) => {
+  }>('/', { preHandler: [rateLimit, requireAuth] }, async (req, reply) => {
     const userId = (req as any).user!.userId
     const {
       title, description, type = 'choice',
@@ -321,7 +322,7 @@ export default async function pollRoutes(app: FastifyInstance) {
   // ── GET /:id — détail complet ──────────────────────────────────────────────
 
   app.get<{ Params: { id: string } }>(
-    '/:id', { preHandler: [requireAuth] },
+    '/:id', { preHandler: [rateLimit, requireAuth] },
     async (req, reply) => {
       const userId = (req as any).user!.userId
       const { id }  = req.params
@@ -368,7 +369,7 @@ export default async function pollRoutes(app: FastifyInstance) {
   // ── DELETE /:id — supprimer ────────────────────────────────────────────────
 
   app.delete<{ Params: { id: string } }>(
-    '/:id', { preHandler: [requireAuth] },
+    '/:id', { preHandler: [rateLimit, requireAuth] },
     async (req, reply) => {
       const userId = (req as any).user!.userId
       const { id }  = req.params
@@ -394,7 +395,7 @@ export default async function pollRoutes(app: FastifyInstance) {
     Body: {
       votes: Array<{ option_id: string; value?: number }>
     }
-  }>('/:id/vote', { preHandler: [requireAuth] }, async (req, reply) => {
+  }>('/:id/vote', { preHandler: [rateLimit, requireAuth] }, async (req, reply) => {
     const userId = (req as any).user!.userId
     const { id }  = req.params
     const { votes } = req.body
@@ -491,7 +492,7 @@ export default async function pollRoutes(app: FastifyInstance) {
   // ── DELETE /:id/vote — retirer son vote ────────────────────────────────────
 
   app.delete<{ Params: { id: string } }>(
-    '/:id/vote', { preHandler: [requireAuth] },
+    '/:id/vote', { preHandler: [rateLimit, requireAuth] },
     async (req, reply) => {
       const userId = (req as any).user!.userId
       const { id }  = req.params
@@ -525,7 +526,7 @@ export default async function pollRoutes(app: FastifyInstance) {
   // ── POST /:id/close — fermer manuellement ─────────────────────────────────
 
   app.post<{ Params: { id: string } }>(
-    '/:id/close', { preHandler: [requireAuth] },
+    '/:id/close', { preHandler: [rateLimit, requireAuth] },
     async (req, reply) => {
       const userId = (req as any).user!.userId
       const { id }  = req.params

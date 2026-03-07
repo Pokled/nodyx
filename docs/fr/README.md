@@ -41,7 +41,7 @@ Enfermés dans des silos. Invisibles pour les moteurs de recherche. Disparus qua
 Une commande. Ton serveur. Tes règles. Ta communauté — définitivement.
 
 ```bash
-git clone https://github.com/Pokled/Nexus.git && sudo bash install.sh
+git clone https://github.com/Pokled/Nexus.git && cd Nexus && sudo bash install.sh
 ```
 
 Fonctionne sur un Raspberry Pi derrière une box FAI. Sans domaine. Sans ouvrir un port. Sans compte cloud.

@@ -5,7 +5,7 @@ import { PUBLIC_API_URL } from '$env/static/public'
 // Browser : URL relative → proxy Vite en dev, reverse proxy (Caddy) en prod
 // PRIVATE_API_SSR_URL dans .env permet aux instances secondaires de cibler un port différent
 export const API_URL = browser
-	? PUBLIC_API_URL
+	? `${PUBLIC_API_URL}/api/v1`
 	: (process.env.PRIVATE_API_SSR_URL ?? 'http://127.0.0.1:3000/api/v1')
 
 export interface ApiError {

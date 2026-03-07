@@ -20,6 +20,7 @@ import assetRoutes        from './routes/assets'
 import gardenRoutes       from './routes/garden'
 import whisperRoutes      from './routes/whispers'
 import pollRoutes         from './routes/polls'
+import dmRoutes           from './routes/dm'
 import { setIO }           from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
@@ -28,8 +29,11 @@ import { startScheduler }  from './scheduler'
 const server = Fastify({ logger: true })
 
 // ── CORS (pour les appels fetch client-side : upload, chat, mentions) ────────
+const corsOrigin = process.env.FRONTEND_URL
+  || (process.env.NODE_ENV === 'production' ? false : true)
+
 server.register(fastifyCors, {
-  origin:      process.env.FRONTEND_URL || true, // true = accepte toutes les origines en dev
+  origin:      corsOrigin,
   credentials: true,
   methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 })
@@ -83,6 +87,7 @@ server.register(assetRoutes,         { prefix: '/api/v1/assets' })
 server.register(gardenRoutes,        { prefix: '/api/v1/garden' })
 server.register(whisperRoutes,       { prefix: '/api/v1/whispers' })
 server.register(pollRoutes,          { prefix: '/api/v1/polls' })
+server.register(dmRoutes,            { prefix: '/api/v1/dm' })
 
 const start = async () => {
   await runMigrations()

@@ -63,6 +63,33 @@ step() {
   echo -e "${BOLD}━━━  $*  ━━━${RESET}"
 }
 
+_HC_SPIN=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+
+# run_bg "label" cmd [args...] — exécute une commande en arrière-plan avec spinner animé
+# Affiche le temps écoulé en temps réel. Dump les dernières lignes du log en cas d'erreur.
+run_bg() {
+  local label="$1"; shift
+  local log; log=$(mktemp /tmp/nexus_bg_XXXXXX.log)
+  local pid si=0 elapsed=0 rc=0
+  "$@" >"$log" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    printf "\r  ${CYAN}%s${RESET}  %s  ${YELLOW}%ds${RESET}   " \
+      "${_HC_SPIN[$((si % 10))]}" "$label" "$elapsed"
+    si=$((si+1)); sleep 1; elapsed=$((elapsed+1))
+  done
+  wait "$pid" || rc=$?
+  printf "\r\033[2K"
+  if [[ $rc -ne 0 ]]; then
+    echo -e "  ${RED}✘${RESET}  Échec : $label"
+    echo -e "  ${YELLOW}── Dernières lignes ──────────────────────────────────────${RESET}"
+    tail -25 "$log" | sed 's/^/     /'
+    echo -e "  ${YELLOW}──────────────────────────────────────────────────────────${RESET}"
+  fi
+  rm -f "$log"
+  return $rc
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PREFLIGHT
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -73,6 +100,24 @@ banner
 # OS check
 if ! grep -qiE 'ubuntu|debian' /etc/os-release 2>/dev/null; then
   die "OS non supporté. Utilise Ubuntu 22.04/24.04 ou Debian 11/12."
+fi
+
+# RAM check — le build SvelteKit nécessite au moins 512 MB libres
+_RAM_FREE_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $7}' || echo 9999)
+if [[ "$_RAM_FREE_MB" -lt 400 ]]; then
+  warn "RAM disponible faible : ${_RAM_FREE_MB} MB (recommandé : 512 MB+)"
+  warn "Le build frontend peut échouer sur les machines avec peu de RAM."
+  warn "Astuce : sudo fallocate -l 1G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile"
+  read -rp "$(echo -e "  ${BOLD}Continuer quand même ? [o/N] ${RESET}")" _ram_confirm
+  [[ "${_ram_confirm,,}" != "o" ]] && die "Installation annulée — ajoute du swap et relance."
+fi
+
+# Disk check — npm + build = ~700 MB minimum
+_DISK_FREE_MB=$(df -m /opt 2>/dev/null | awk 'NR==2{print $4}' || echo 9999)
+if [[ "$_DISK_FREE_MB" -lt 1024 ]]; then
+  warn "Espace disque faible sur /opt : ${_DISK_FREE_MB} MB (recommandé : 1 GB+)"
+  read -rp "$(echo -e "  ${BOLD}Continuer quand même ? [o/N] ${RESET}")" _disk_confirm
+  [[ "${_disk_confirm,,}" != "o" ]] && die "Installation annulée — libère de l'espace et relance."
 fi
 
 # Detect external IP
@@ -451,12 +496,14 @@ if $RELAY_MODE; then
     >> "${NEXUS_DIR}/nexus-core/.env"
 fi
 
-info "Installation des dépendances backend..."
 cd "${NEXUS_DIR}/nexus-core"
-npm install --silent 2>/dev/null
-info "Build du backend..."
-npm run build 2>&1 | tail -3
-ok "Backend prêt"
+run_bg "npm install (backend)..." npm install --no-fund --no-audit \
+  || die "npm install backend échoué. Vérifie ta connexion Internet."
+run_bg "Compilation TypeScript (backend)..." npm run build \
+  || die "Build backend échoué. Vérifie les logs ci-dessus."
+[[ -f "${NEXUS_DIR}/nexus-core/dist/index.js" ]] \
+  || die "dist/index.js absent — le build TypeScript n'a pas produit de sortie."
+ok "Backend compilé"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  NEXUS-FRONTEND — .env + build
@@ -474,12 +521,14 @@ PUBLIC_TURN_USERNAME=
 PUBLIC_TURN_CREDENTIAL=
 FEENV
 
-info "Installation des dépendances frontend..."
 cd "${NEXUS_DIR}/nexus-frontend"
-npm install --silent 2>/dev/null
-info "Build du frontend (peut prendre quelques minutes)..."
-npm run build 2>&1 | tail -5
-ok "Frontend prêt"
+run_bg "npm install (frontend)..." npm install --no-fund --no-audit \
+  || die "npm install frontend échoué. Vérifie ta connexion Internet."
+run_bg "Build SvelteKit (peut durer 2-5 min sur ARM)..." npm run build \
+  || die "Build frontend échoué. Vérifie les logs ci-dessus."
+[[ -f "${NEXUS_DIR}/nexus-frontend/build/index.js" ]] \
+  || die "build/index.js absent — le build SvelteKit n'a pas produit de sortie."
+ok "Frontend compilé"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CADDY
@@ -554,35 +603,73 @@ pm2 save
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 | tail -1 | bash 2>/dev/null || true
 ok "PM2 configuré et lancé"
 
+info "Vérification du démarrage des processus (5s)..."
+sleep 5
+for _app in nexus-core nexus-frontend; do
+  _st=$(pm2 list 2>/dev/null | grep " ${_app} " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
+  if [[ "$_st" == "online" ]]; then
+    ok "  $_app — online"
+  else
+    warn "$_app — statut : ${_st}"
+    warn "Logs de démarrage :"
+    pm2 logs "$_app" --lines 20 --nostream 2>/dev/null || true
+  fi
+done
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  WAIT FOR BACKEND + BOOTSTRAP (community + admin)
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Initialisation de la communauté et du compte administrateur"
 
-info "Attente du démarrage du backend (migrations DB incluses)..."
-for i in {1..30}; do
+_BACKEND_READY=false
+_bw_si=0; _bw_elapsed=0
+for _bw_i in {1..90}; do
   if curl -sf http://localhost:3000/api/v1/instance/info >/dev/null 2>&1; then
-    ok "Backend opérationnel"
+    printf "\r\033[2K"
+    ok "Backend opérationnel (${_bw_elapsed}s)"
+    _BACKEND_READY=true
     break
   fi
-  [[ $i -eq 30 ]] && warn "Backend long à démarrer — continue quand même..."
-  sleep 2
+  printf "\r  ${CYAN}%s${RESET}  Backend en démarrage (migrations incluses)...  ${YELLOW}%ds${RESET}   " \
+    "${_HC_SPIN[$((${_bw_si} % 10))]}" "$_bw_elapsed"
+  _bw_si=$((_bw_si+1)); sleep 2; _bw_elapsed=$((_bw_elapsed+2))
+done
+printf "\r\033[2K"
+
+if ! $_BACKEND_READY; then
+  warn "Backend non opérationnel après 180s."
+  warn "Logs PM2 (nexus-core) :"
+  pm2 logs nexus-core --lines 35 --nostream 2>/dev/null || true
+  warn "Pour relancer : cd ${NEXUS_DIR} && pm2 restart nexus-core"
+  warn "Pour déboguer : pm2 logs nexus-core"
+  warn "Tentative de création du compte admin quand même..."
+fi
+
+# Register admin account — retry jusqu'à 3 fois (backend peut encore démarrer)
+_REGISTER_OK=false
+for _reg_try in 1 2 3; do
+  HTTP_CODE=$(curl -s -o /tmp/nexus_register.json -w "%{http_code}" \
+    -X POST http://localhost:3000/api/v1/auth/register \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"username\": \"${ADMIN_USERNAME}\",
+      \"email\": \"${ADMIN_EMAIL}\",
+      \"password\": \"${ADMIN_PASSWORD}\"
+    }" 2>/dev/null || echo "000")
+  if [[ "$HTTP_CODE" == "201" || "$HTTP_CODE" == "200" ]]; then
+    ok "Compte '${ADMIN_USERNAME}' créé"
+    _REGISTER_OK=true; break
+  elif [[ "$HTTP_CODE" == "409" ]]; then
+    ok "Compte '${ADMIN_USERNAME}' déjà existant (réinstallation ?)"
+    _REGISTER_OK=true; break
+  else
+    warn "Tentative ${_reg_try}/3 — HTTP ${HTTP_CODE} : $(cat /tmp/nexus_register.json 2>/dev/null | head -c 200)"
+    [[ $_reg_try -lt 3 ]] && { info "Retry dans 8s..."; sleep 8; }
+  fi
 done
 
-# Register admin account via API (no community yet → auto-join skipped)
-HTTP_CODE=$(curl -s -o /tmp/nexus_register.json -w "%{http_code}" \
-  -X POST http://localhost:3000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"username\": \"${ADMIN_USERNAME}\",
-    \"email\": \"${ADMIN_EMAIL}\",
-    \"password\": \"${ADMIN_PASSWORD}\"
-  }")
-
-if [[ "$HTTP_CODE" == "201" || "$HTTP_CODE" == "200" ]]; then
-  ok "Compte '${ADMIN_USERNAME}' créé"
-else
-  warn "Inscription API échouée (HTTP $HTTP_CODE) : $(cat /tmp/nexus_register.json 2>/dev/null)"
+if ! $_REGISTER_OK; then
+  warn "Inscription impossible après 3 tentatives."
   warn "Tu pourras créer ton compte sur https://${DOMAIN}/auth/register"
 fi
 
@@ -665,6 +752,14 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
       info "Le DNS sera actif dans ~30 secondes."
       info "Sauvegarde le token directory — nécessaire pour les heartbeats et la désinscription."
     fi
+    # Injecter le token dans .env + redémarrer nexus-core pour activer les heartbeats
+    {
+      printf "\n# Annuaire nexusnode.app\n"
+      printf "DIRECTORY_TOKEN=%s\n" "${NEXUS_DIRECTORY_TOKEN}"
+      printf "SELF_URL=http://127.0.0.1:3000\n"
+      printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
+    } >> "${NEXUS_DIR}/nexus-core/.env"
+    cd "${NEXUS_DIR}" && pm2 restart nexus-core 2>/dev/null || true
   else
     # Check for slug conflict (409) — common on reinstall
     if echo "$REGISTER_RESPONSE" | grep -q 'Slug already taken'; then
@@ -761,13 +856,63 @@ GARDE CE FICHIER EN LIEU SÛR — ne le partage jamais.
 CREDS
 chmod 600 "$CREDS_FILE"
 
+# ── Génération du script de mise à jour ───────────────────────────────────────
+UPDATE_SCRIPT="/usr/local/bin/nexus-update"
+cat > "$UPDATE_SCRIPT" <<'UPDATESCRIPT'
+#!/usr/bin/env bash
+# nexus-update — Met à jour Nexus vers la dernière version
+set -euo pipefail
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+ok()   { echo -e "${GREEN}✔${RESET}  $*"; }
+info() { echo -e "${CYAN}→${RESET}  $*"; }
+warn() { echo -e "${YELLOW}⚠${RESET}  $*"; }
+die()  { echo -e "${RED}✘  $*${RESET}" >&2; exit 1; }
+UPDATESCRIPT
+
+# Injecter NEXUS_DIR (résolu au moment de l'install)
+cat >> "$UPDATE_SCRIPT" <<UPDATESCRIPT2
+NEXUS_DIR="${NEXUS_DIR}"
+UPDATESCRIPT2
+
+cat >> "$UPDATE_SCRIPT" <<'UPDATESCRIPT3'
+
+[[ $EUID -ne 0 ]] && die "Lance en root : sudo nexus-update"
+echo -e "\n${BOLD}━━━  Mise à jour Nexus  ━━━${RESET}\n"
+
+info "Récupération des dernières modifications..."
+git -C "$NEXUS_DIR" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits."
+
+info "Rebuild backend..."
+cd "${NEXUS_DIR}/nexus-core"
+npm install --no-fund --no-audit --silent
+npm run build || die "Build backend échoué."
+ok "Backend compilé"
+
+info "Rebuild frontend..."
+cd "${NEXUS_DIR}/nexus-frontend"
+npm install --no-fund --no-audit --silent
+npm run build || die "Build frontend échoué."
+ok "Frontend compilé"
+
+info "Redémarrage des services..."
+cd "$NEXUS_DIR"
+pm2 restart ecosystem.config.js --update-env
+pm2 save
+
+echo ""
+ok "Nexus mis à jour et redémarré."
+pm2 list
+UPDATESCRIPT3
+
+chmod +x "$UPDATE_SCRIPT"
+ok "Script de mise à jour : ${BOLD}nexus-update${RESET} (sudo nexus-update)"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  HEALTH CHECK
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Vérification post-installation"
 
 HC_PASS=0; HC_WARN=0; HC_FAIL=0
-_HC_SPIN=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
 
 _hc_pass() { HC_PASS=$((HC_PASS+1)); echo -e "  ${GREEN}✔${RESET}  $*"; }
 _hc_warn() { HC_WARN=$((HC_WARN+1)); echo -e "  ${YELLOW}⚠${RESET}  $*"; }
@@ -906,18 +1051,37 @@ if $RELAY_MODE; then
   echo -e "  ${BOLD}Relay     :${RESET} tunnel TCP → relay.nexusnode.app:7443"
 fi
 echo ""
-echo -e "  ${CYAN}Les credentials sont sauvegardés dans :${RESET}"
-echo -e "  ${BOLD}${CREDS_FILE}${RESET}"
+echo -e "  ${CYAN}Credentials sauvegardés dans :${RESET} ${BOLD}${CREDS_FILE}${RESET}"
 echo ""
-echo -e "  ${BOLD}Commandes utiles :${RESET}"
-echo -e "  pm2 list                          → état des services"
-echo -e "  pm2 logs nexus-core               → logs backend"
-echo -e "  pm2 logs nexus-frontend           → logs frontend"
-echo -e "  pm2 restart all                   → redémarrer tout"
+echo -e "  ${BOLD}${CYAN}▸ Gestion des services${RESET}"
+echo -e "  pm2 list                           → état de nexus-core + nexus-frontend"
+echo -e "  pm2 logs nexus-core                → logs backend en temps réel"
+echo -e "  pm2 logs nexus-frontend            → logs frontend en temps réel"
+echo -e "  pm2 restart all                    → redémarrer tout"
+echo -e "  pm2 stop all / pm2 start all       → arrêt / démarrage"
 if $RELAY_MODE; then
-  echo -e "  systemctl status nexus-relay-client → état du tunnel relay"
-  echo -e "  journalctl -u nexus-relay-client -f  → logs du tunnel relay"
+  echo ""
+  echo -e "  ${BOLD}${CYAN}▸ Tunnel Relay${RESET}"
+  echo -e "  systemctl status nexus-relay-client  → état du tunnel"
+  echo -e "  journalctl -u nexus-relay-client -f  → logs du tunnel"
+  echo -e "  systemctl restart nexus-relay-client → redémarrer le tunnel"
 fi
+echo ""
+echo -e "  ${BOLD}${CYAN}▸ Mise à jour${RESET}"
+echo -e "  sudo nexus-update                  → git pull + rebuild + restart en une commande"
+echo ""
+echo -e "  ${BOLD}${CYAN}▸ Base de données${RESET}"
+echo -e "  sudo -u postgres psql ${DB_NAME}   → console PostgreSQL"
+echo -e "  sudo -u postgres pg_dump ${DB_NAME} > backup_nexus_\$(date +%F).sql"
+echo -e "                                     → sauvegarde de la base"
+echo ""
+echo -e "  ${BOLD}${CYAN}▸ Diagnostic${RESET}"
+echo -e "  curl -s http://localhost:3000/api/v1/instance/info | python3 -m json.tool"
+echo -e "                                     → état du backend"
+echo -e "  systemctl status caddy             → état du proxy"
+echo -e "  caddy validate --config /etc/caddy/Caddyfile"
+echo -e "                                     → valider la config Caddy"
+echo -e "  sudo cat ${CREDS_FILE}             → revoir les credentials"
 echo ""
 if $RELAY_MODE; then
   echo -e "  ${GREEN}✔  Mode Relay actif — aucun port à ouvrir, aucun DNS à configurer.${RESET}"

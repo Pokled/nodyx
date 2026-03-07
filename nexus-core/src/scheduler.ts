@@ -20,12 +20,26 @@ async function pingDirectory(io: Server) {
     const membersResult = await db.query('SELECT COUNT(*) AS count FROM users')
     const members = parseInt(membersResult.rows[0]?.count ?? '0', 10)
     const online  = io.sockets.sockets.size
-    const apiBase = process.env.SELF_URL ?? 'http://localhost:3000'
+    // SELF_URL = URL interne de CETTE instance (ex: http://127.0.0.1:3001)
+    // DIRECTORY_API_URL = URL interne du directory principal (ex: http://127.0.0.1:3000)
+    //   → pour l'instance principale les deux sont identiques
+    //   → pour une instance secondaire sur le même VPS, DIRECTORY_API_URL pointe vers 3000
+    //   → pour une instance distante, DIRECTORY_API_URL = https://nexusnode.app
+    const selfUrl      = process.env.FRONTEND_URL ?? process.env.SELF_URL ?? 'http://localhost:3000'
+    const directoryUrl = process.env.DIRECTORY_API_URL ?? process.env.SELF_URL ?? 'http://localhost:3000'
 
-    const res = await fetch(`${apiBase}/api/directory/ping`, {
+    // Récupère le branding depuis la communauté locale
+    const brandingResult = await db.query(
+      `SELECT logo_url, banner_url FROM communities ORDER BY created_at ASC LIMIT 1`
+    )
+    const brandRow   = brandingResult.rows[0]
+    const logo_url   = brandRow?.logo_url   ? `${selfUrl}${brandRow.logo_url}`   : null
+    const banner_url = brandRow?.banner_url ? `${selfUrl}${brandRow.banner_url}` : null
+
+    const res = await fetch(`${directoryUrl}/api/directory/ping`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ token, members, online }),
+      body:    JSON.stringify({ token, members, online, logo_url, banner_url }),
     })
 
     if (res.ok) {

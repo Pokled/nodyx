@@ -9,6 +9,42 @@ import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as ChannelModel from '../models/channel'
 import { redis } from '../config/database'
+import dns from 'dns/promises'
+import net from 'net'
+
+// ── SSRF guard — bloque les IPs privées / loopback / link-local ───────────────
+
+function isPrivateIp(ip: string): boolean {
+  // IPv6 loopback et private
+  if (ip === '::1' || ip === '::') return true
+  if (ip.startsWith('fc') || ip.startsWith('fd')) return true  // fc00::/7
+  if (ip.startsWith('fe80')) return true                        // link-local
+
+  // IPv4
+  if (!net.isIPv4(ip)) return false
+  const parts = ip.split('.').map(Number)
+  const [a, b] = parts
+  return (
+    a === 10 ||                          // 10.0.0.0/8
+    a === 127 ||                         // 127.0.0.0/8 loopback
+    a === 0 ||                           // 0.0.0.0/8
+    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
+    (a === 192 && b === 168) ||          // 192.168.0.0/16
+    (a === 169 && b === 254) ||          // 169.254.0.0/16 link-local (cloud metadata)
+    (a === 100 && b >= 64 && b <= 127)   // 100.64.0.0/10 shared address space
+  )
+}
+
+async function isSsrfSafe(hostname: string): Promise<boolean> {
+  // Rejeter les adresses IP directes privées
+  if (net.isIP(hostname)) return !isPrivateIp(hostname)
+  try {
+    const { address } = await dns.lookup(hostname)
+    return !isPrivateIp(address)
+  } catch {
+    return false
+  }
+}
 
 // ── Resolve instance community (cached) ──────────────────────────────────────
 
@@ -66,13 +102,18 @@ export default async function chatRoutes(app: FastifyInstance) {
     const { url } = request.query as { url?: string }
     if (!url) return reply.code(400).send({ error: 'Missing url' })
 
-    // Basic URL validation
+    // Validation URL + protection SSRF
     let parsed: URL
     try {
       parsed = new URL(url)
       if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Bad protocol')
     } catch {
       return reply.code(400).send({ error: 'Invalid url' })
+    }
+
+    const safe = await isSsrfSafe(parsed.hostname)
+    if (!safe) {
+      return reply.code(400).send({ error: 'URL non autorisée' })
     }
 
     // Check Redis cache (TTL 1h)

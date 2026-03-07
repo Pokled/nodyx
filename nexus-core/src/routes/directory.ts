@@ -107,7 +107,8 @@ export default async function directoryRoutes(app: FastifyInstance) {
   app.get('/directory', async (_req, reply) => {
     const result = await db.query(`
       SELECT id, slug, name, description, url, language, country, theme,
-             members, online, version, status, last_seen, registered_at
+             members, online, version, status, last_seen, registered_at,
+             logo_url, banner_url
       FROM directory_instances
       WHERE status = 'active'
       ORDER BY members DESC, registered_at ASC
@@ -203,20 +204,22 @@ export default async function directoryRoutes(app: FastifyInstance) {
   });
 
   // POST /api/directory/ping — heartbeat
-  app.post<{ Body: { token: string; members?: number; online?: number } }>(
+  app.post<{ Body: { token: string; members?: number; online?: number; logo_url?: string | null; banner_url?: string | null } }>(
     '/directory/ping',
     async (req, reply) => {
-      const { token, members, online } = req.body;
+      const { token, members, online, logo_url, banner_url } = req.body;
       if (!token) return reply.status(400).send({ error: 'token required' });
 
       const result = await db.query(
         `UPDATE directory_instances
-         SET last_seen = NOW(),
-             members = COALESCE($2, members),
-             online  = COALESCE($3, online)
+         SET last_seen  = NOW(),
+             members    = COALESCE($2, members),
+             online     = COALESCE($3, online),
+             logo_url   = COALESCE($4, logo_url),
+             banner_url = COALESCE($5, banner_url)
          WHERE token = $1
          RETURNING slug, status`,
-        [token, members ?? null, online ?? null]
+        [token, members ?? null, online ?? null, logo_url ?? null, banner_url ?? null]
       );
 
       if (result.rows.length === 0) {

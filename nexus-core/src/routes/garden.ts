@@ -88,7 +88,7 @@ export default async function gardenRoutes(app: FastifyInstance) {
 
   // ── GET /api/v1/garden/seeds/admin/all — All seeds (admin) ─────────────────
   app.get('/seeds/admin/all', {
-    preHandler: [adminOnly],
+    preHandler: [rateLimit, adminOnly],
   }, async (req, reply) => {
     const { rows } = await db.query(
       `SELECT s.*, u.username AS planter_username
@@ -102,7 +102,7 @@ export default async function gardenRoutes(app: FastifyInstance) {
 
   // ── DELETE /api/v1/garden/seeds/:id — Admin delete a seed ──────────────────
   app.delete<{ Params: { id: string } }>('/seeds/:id', {
-    preHandler: [adminOnly],
+    preHandler: [rateLimit, adminOnly],
   }, async (req, reply) => {
     const { rows } = await db.query(
       `DELETE FROM feature_seeds WHERE id = $1 RETURNING id`,
@@ -114,7 +114,7 @@ export default async function gardenRoutes(app: FastifyInstance) {
 
   // ── PATCH /api/v1/garden/seeds/:id/harvest — Admin mark as implemented ─────
   app.patch<{ Params: { id: string } }>('/seeds/:id/harvest', {
-    preHandler: [adminOnly],
+    preHandler: [rateLimit, adminOnly],
   }, async (req, reply) => {
     const { rows } = await db.query(
       `UPDATE feature_seeds SET harvest_date = NOW() WHERE id = $1 RETURNING id, harvest_date`,

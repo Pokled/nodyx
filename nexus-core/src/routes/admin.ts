@@ -488,7 +488,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // POST /api/v1/admin/branding/upload?type=logo|banner — upload image file
   app.post('/branding/upload', {
-    preHandler: [adminOnly],
+    preHandler: [rateLimit, adminOnly],
   }, async (request, reply) => {
     const { type } = request.query as { type?: string }
     if (!type || !['logo', 'banner'].includes(type)) {

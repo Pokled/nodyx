@@ -5,7 +5,7 @@
 	import type { LayoutData } from './$types';
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
-	import { initSocket, unreadCountStore, chatMentionStore, onlineMembersStore, getSocket } from '$lib/socket';
+	import { initSocket, unreadCountStore, chatMentionStore, dmUnreadStore, onlineMembersStore, getSocket } from '$lib/socket';
 	import { tryAutoConnect } from '$lib/socket';
 	import type { UserStatus } from '$lib/socket';
 	import { resolveTheme, themeToVars } from '$lib/profileThemes';
@@ -16,6 +16,7 @@
 	const user            = $derived(data.user);
 	const unreadCount     = $derived($unreadCountStore);
 	const chatMentions    = $derived($chatMentionStore);
+	const dmUnread        = $derived($dmUnreadStore);
 	const onlineMembers   = $derived($onlineMembersStore);
 
 	// Reset chat mention badge when user is on /chat
@@ -24,9 +25,18 @@
 			chatMentionStore.set(0)
 		}
 	})
-	const communityName   = $derived(data.communityName ?? 'Nexus');
-	const communityLogo   = $derived((data as any).communityLogoUrl  as string | null);
-	const communityBanner = $derived((data as any).communityBannerUrl as string | null);
+	const communityName      = $derived(data.communityName ?? 'Nexus');
+	const communityLogo      = $derived((data as any).communityLogoUrl  as string | null);
+	const communityBanner    = $derived((data as any).communityBannerUrl as string | null);
+	const networkInstances   = $derived((data as any).networkInstances as Array<{
+		slug: string; name: string; url: string;
+		logo_url: string | null; members: number; online: number; last_seen: string | null;
+	}> ?? []);
+
+	function instanceOnline(last_seen: string | null): boolean {
+		if (!last_seen) return false;
+		return Date.now() - new Date(last_seen).getTime() < 5 * 60 * 1000;
+	}
 	const memberCount     = $derived((data as any).memberCount as number ?? 0);
 
 	const isActive = (href: string) =>
@@ -213,6 +223,12 @@
 							<span class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold px-1 flex items-center justify-center">{chatMentions > 9 ? '9+' : chatMentions}</span>
 						{/if}
 					</a>
+					<a href="/dm" class="relative px-3 py-2 rounded text-sm transition-colors {isActive('/dm') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">
+						Messages
+						{#if dmUnread > 0}
+							<span class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold px-1 flex items-center justify-center">{dmUnread > 9 ? '9+' : dmUnread}</span>
+						{/if}
+					</a>
 				{/if}
 				<a href="/library" class="px-3 py-2 rounded text-sm transition-colors {isActive('/library') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Bibliothèque</a>
 				<a href="/garden" class="px-3 py-2 rounded text-sm transition-colors {isActive('/garden') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Jardin</a>
@@ -303,7 +319,8 @@
 								</div>
 								<div class="border-t border-gray-700/60 mx-3"></div>
 								<div class="py-1.5">
-									{#each [{ icon: '📊', label: 'Mon activité' }, { icon: '👫', label: 'Amis' }, { icon: '✉️', label: 'Messages privés' }, { icon: '🏆', label: 'Mes badges' }, { icon: '⚙️', label: 'Préférences' }] as item}
+									<a href="/settings" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">⚙️</span><span>Paramètres</span></a>
+									{#each [{ icon: '📊', label: 'Mon activité' }, { icon: '👫', label: 'Amis' }, { icon: '🏆', label: 'Mes badges' }] as item}
 										<div class="flex items-center gap-3 px-4 py-2 text-sm text-gray-600 cursor-not-allowed select-none">
 											<span class="text-base opacity-50">{item.icon}</span><span class="flex-1">{item.label}</span><span class="text-[10px] uppercase tracking-wider text-gray-700 font-medium">bientôt</span>
 										</div>
@@ -409,24 +426,67 @@
 			<!-- Séparateur -->
 			<div class="mx-4 border-t border-gray-800 mb-2 shrink-0"></div>
 
-			<!-- Galaxy Network — Phase 3 (SPEC 012) -->
-			<div class="flex-1 px-3 pb-3 overflow-y-auto overflow-x-hidden flex flex-col items-center justify-center gap-2 text-center">
-				<div class="w-10 h-10 rounded-2xl bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center">
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
-					</svg>
-				</div>
-				<p class="text-[11px] text-gray-600 leading-relaxed px-2">Réseau inter-communautés<br>bientôt disponible</p>
+			<!-- Galaxy Network — autres instances du réseau -->
+			<div class="flex-1 px-3 pb-3 overflow-y-auto overflow-x-hidden flex flex-col gap-1">
+				{#if networkInstances.length > 0}
+					<p class="text-[10px] uppercase tracking-widest text-gray-600 font-semibold px-1 mb-1 mt-1">Réseau</p>
+					{#each networkInstances as inst}
+						{@const online = instanceOnline(inst.last_seen)}
+						<a
+							href={inst.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							title="{inst.name}{online ? ' · en ligne' : ''}"
+							class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-gray-800/60 transition-colors group"
+						>
+							<!-- Logo ou initiale -->
+							<div class="relative shrink-0">
+								<div class="w-8 h-8 rounded-lg bg-indigo-900 border border-gray-700
+								            flex items-center justify-center overflow-hidden">
+									{#if inst.logo_url}
+										<img src={inst.logo_url} alt={inst.name} class="w-full h-full object-cover" />
+									{:else}
+										<span class="text-xs font-bold text-indigo-200">
+											{inst.name.charAt(0).toUpperCase()}
+										</span>
+									{/if}
+								</div>
+								<!-- Pastille online -->
+								<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-gray-900
+								             {online ? 'bg-green-400' : 'bg-gray-600'}"></span>
+							</div>
+							<div class="min-w-0">
+								<p class="text-xs font-medium text-gray-300 group-hover:text-white truncate transition-colors">
+									{inst.name}
+								</p>
+								<p class="text-[10px] text-gray-600 truncate">{inst.members} membres</p>
+							</div>
+						</a>
+					{/each}
+				{:else}
+					<div class="flex-1 flex flex-col items-center justify-center gap-2 text-center">
+						<p class="text-[11px] text-gray-600 leading-relaxed px-2">Aucune autre instance<br>dans le réseau</p>
+					</div>
+				{/if}
 			</div>
 
-			<!-- Bouton ajouter / découvrir -->
-			<div class="px-3 pt-3.5 pb-3 shrink-0 border-t border-gray-800">
+			<!-- Bouton ajouter / découvrir + Settings -->
+			<div class="px-3 pt-3.5 pb-3 shrink-0 border-t border-gray-800 flex flex-col gap-1.5">
 				<a href="/communities" class="flex items-center gap-2.5 px-3 py-2 rounded-xl border border-dashed border-gray-700 hover:border-indigo-500/60 hover:bg-indigo-950/30 text-gray-500 hover:text-indigo-300 transition-all group">
 					<div class="w-6 h-6 rounded-full border border-dashed border-current flex items-center justify-center shrink-0">
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
 					</div>
 					<span class="text-xs font-medium">Découvrir des communautés</span>
 				</a>
+				{#if user}
+				<a href="/settings" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-600 hover:text-gray-300 hover:bg-gray-800/50 transition-colors group">
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<circle cx="12" cy="12" r="3"/>
+						<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+					</svg>
+					<span class="text-xs font-medium">Paramètres</span>
+				</a>
+				{/if}
 			</div>
 		</aside>
 
@@ -591,6 +651,21 @@
 				</span>
 			{/if}
 			<span class="text-[10px] font-medium">Chat</span>
+		</a>
+		{/if}
+
+		<!-- Messages privés (si connecté) -->
+		{#if user}
+		<a href="/dm" class="flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] gap-0.5 relative {isActive('/dm') ? 'text-indigo-400' : 'text-gray-500'}">
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-4 4v-4z"/>
+			</svg>
+			{#if dmUnread > 0}
+				<span class="absolute top-1.5 right-[calc(50%-14px)] min-w-[16px] h-4 rounded-full bg-indigo-500 text-white text-[9px] font-bold px-1 flex items-center justify-center">
+					{dmUnread > 9 ? '9+' : dmUnread}
+				</span>
+			{/if}
+			<span class="text-[10px] font-medium">DMs</span>
 		</a>
 		{/if}
 
