@@ -674,14 +674,13 @@ fi
 # Register admin account — retry jusqu'à 3 fois (backend peut encore démarrer)
 _REGISTER_OK=false
 for _reg_try in 1 2 3; do
+  _REG_JSON=$(python3 -c "import json,sys; print(json.dumps({'username':sys.argv[1],'email':sys.argv[2],'password':sys.argv[3]}))" \
+    "$ADMIN_USERNAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD" 2>/dev/null \
+    || printf '{"username":"%s","email":"%s","password":"%s"}' "$ADMIN_USERNAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD")
   HTTP_CODE=$(curl -s -o /tmp/nexus_register.json -w "%{http_code}" \
     -X POST http://localhost:3000/api/v1/auth/register \
     -H "Content-Type: application/json" \
-    -d "{
-      \"username\": \"${ADMIN_USERNAME}\",
-      \"email\": \"${ADMIN_EMAIL}\",
-      \"password\": \"${ADMIN_PASSWORD}\"
-    }" 2>/dev/null || echo "000")
+    -d "$_REG_JSON" 2>/dev/null || echo "000")
   if [[ "$HTTP_CODE" == "201" || "$HTTP_CODE" == "200" ]]; then
     ok "Compte '${ADMIN_USERNAME}' créé"
     _REGISTER_OK=true; break
@@ -782,6 +781,7 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
     {
       printf "\n# Annuaire nexusnode.app\n"
       printf "DIRECTORY_TOKEN=%s\n" "${NEXUS_DIRECTORY_TOKEN}"
+      printf "DIRECTORY_API_URL=https://nexusnode.app\n"
       printf "SELF_URL=http://127.0.0.1:3000\n"
       printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
     } >> "${NEXUS_DIR}/nexus-core/.env"
