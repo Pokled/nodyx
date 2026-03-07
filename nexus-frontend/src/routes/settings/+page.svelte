@@ -1,6 +1,7 @@
 <script lang="ts">
     import NetworkDoctor from '$lib/components/NetworkDoctor.svelte';
     import { page } from '$app/stores';
+    import { invalidateAll } from '$app/navigation';
     import { PUBLIC_API_URL } from '$env/static/public';
 
     // ── Instances liées (Galaxy Bar) ──────────────────────────────────────────
@@ -9,12 +10,12 @@
     let linkedSlugs = $state<string[]>([]);
     $effect(() => { linkedSlugs = user?.linked_instances ?? [] });
 
-    // Directory pour avoir le nom + logo de chaque instance connue
-    const networkInstances = $derived($page.data.networkInstances as Array<{
+    // Toutes les instances du directory (pour validation + noms/logos)
+    const directoryInstances = $derived($page.data.directoryInstances as Array<{
         slug: string; name: string; url: string; logo_url: string | null;
     }> ?? []);
 
-    let newSlug  = $state('');
+    let newSlug   = $state('');
     let slugError = $state('');
     let slugLoading = $state(false);
 
@@ -24,6 +25,10 @@
         if (!slug) return;
         if (!/^[a-z0-9-]{1,50}$/.test(slug)) { slugError = 'Slug invalide (lettres, chiffres, tirets)'; return; }
         if (linkedSlugs.includes(slug)) { slugError = 'Déjà ajouté'; return; }
+        if (!directoryInstances.find(i => i.slug === slug)) {
+            slugError = 'Instance introuvable dans l\'annuaire';
+            return;
+        }
 
         slugLoading = true;
         try {
@@ -36,6 +41,7 @@
             if (!res.ok) { slugError = json.error ?? 'Erreur'; return; }
             linkedSlugs = json.linked_instances ?? [];
             newSlug = '';
+            invalidateAll();
         } finally {
             slugLoading = false;
         }
@@ -48,7 +54,10 @@
             body: JSON.stringify({ action: 'remove', slug }),
         });
         const json = await res.json();
-        if (res.ok) linkedSlugs = json.linked_instances ?? [];
+        if (res.ok) {
+            linkedSlugs = json.linked_instances ?? [];
+            invalidateAll();
+        }
     }
 </script>
 
@@ -76,7 +85,7 @@
             {#if linkedSlugs.length > 0}
                 <div class="flex flex-col gap-2 mb-6">
                     {#each linkedSlugs as slug}
-                        {@const known = networkInstances.find(i => i.slug === slug)}
+                        {@const known = directoryInstances.find(i => i.slug === slug)}
                         <div class="flex items-center justify-between gap-3 px-3 py-2.5
                                     rounded-lg border border-gray-800 bg-gray-900/60">
                             <div class="flex items-center gap-2.5">
@@ -90,7 +99,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-white">{known?.name ?? slug}</p>
-                                    <p class="text-xs text-gray-600 font-mono">{slug}.nexusnode.app</p>
+                                    <p class="text-xs text-gray-600 font-mono">{known?.url ?? slug + '.nexusnode.app'}</p>
                                 </div>
                             </div>
                             <button
@@ -107,33 +116,41 @@
             {/if}
 
             <!-- Ajouter une instance -->
-            <div class="flex gap-2">
-                <div class="flex-1 relative">
-                    <input
-                        type="text"
-                        bind:value={newSlug}
-                        placeholder="slug (ex: french-godot)"
-                        onkeydown={(e) => e.key === 'Enter' && addInstance()}
-                        class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-700
-                               text-sm text-gray-200 placeholder-gray-600
-                               focus:outline-none focus:border-indigo-600 transition-colors"
-                    />
-                    {#if slugError}
-                        <p class="absolute -bottom-5 left-0 text-xs text-red-400">{slugError}</p>
-                    {/if}
+            {#if directoryInstances.length > 0}
+                <div class="flex gap-2">
+                    <div class="flex-1 relative">
+                        <input
+                            list="directory-slugs"
+                            type="text"
+                            bind:value={newSlug}
+                            placeholder="slug (ex: french-godot)"
+                            onkeydown={(e) => e.key === 'Enter' && addInstance()}
+                            class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-700
+                                   text-sm text-gray-200 placeholder-gray-600
+                                   focus:outline-none focus:border-indigo-600 transition-colors"
+                        />
+                        <datalist id="directory-slugs">
+                            {#each directoryInstances.filter(i => !linkedSlugs.includes(i.slug)) as inst}
+                                <option value={inst.slug}>{inst.name}</option>
+                            {/each}
+                        </datalist>
+                        {#if slugError}
+                            <p class="absolute -bottom-5 left-0 text-xs text-red-400">{slugError}</p>
+                        {/if}
+                    </div>
+                    <button
+                        onclick={addInstance}
+                        disabled={slugLoading}
+                        class="px-4 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50
+                               text-sm font-semibold text-white transition-colors"
+                    >
+                        {slugLoading ? '…' : 'Ajouter'}
+                    </button>
                 </div>
-                <button
-                    onclick={addInstance}
-                    disabled={slugLoading}
-                    class="px-4 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50
-                           text-sm font-semibold text-white transition-colors"
-                >
-                    {slugLoading ? '…' : 'Ajouter'}
-                </button>
-            </div>
-            <p class="text-xs text-gray-700 mt-7">
-                Le slug est le sous-domaine de l'instance — ex: <code class="text-indigo-500">french-godot</code> pour <code class="text-gray-500">french-godot.nexusnode.app</code>
-            </p>
+                <p class="text-xs text-gray-700 mt-7">
+                    Le slug est le sous-domaine de l'instance — ex: <code class="text-indigo-500">french-godot</code> pour <code class="text-gray-500">french-godot.nexusnode.app</code>
+                </p>
+            {/if}
         </section>
         {/if}
     </div>

@@ -63,5 +63,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request }) => {
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances };
 };
