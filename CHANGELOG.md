@@ -9,6 +9,42 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.2.0] — 2026-03-07
+
+### Added
+- **Sondages (Polls)** — système complet dans le chat ET le forum
+  - 3 types : choix unique, planning (schedule), classement (ranking)
+  - Résultats en temps réel via Socket.IO, clôture par l'auteur ou un admin
+  - Bouton 📊 dans l'input du chat, intégration à la création de sujet forum
+  - Composants `PollCard.svelte` (affichage + vote) et `PollCreator.svelte`
+  - Migrations 028 (tables polls/options/votes + `channel_messages.poll_id`) et 029 (`polls.thread_id`)
+- **Messages Privés (DM)** — messagerie 1-to-1 temps réel
+  - Route dédiée `/dm/:username`, inbox triée par dernier message
+  - Socket.IO room `dm:<userId>` — livraison instantanée, badge de non-lus
+- **Galaxy Bar — instances liées** — affichage des instances Nexus fédérées dans la barre latérale gauche
+  - Liste dynamique depuis le directory, indicateur d'état (en ligne / hors ligne)
+  - Navigation rapide entre communautés
+- **Forum — sélecteur catégorie/sous-catégorie** — formulaire de nouveau sujet avec dropdown hiérarchique, navigation URL persistée
+- **uninstall.sh** — script de désinstallation complète interactif
+  - Double confirmation avant toute suppression
+  - Suppression sélective : PM2, Caddy, Redis, PostgreSQL, nexus-turn, nexus-relay, UFW
+- **nexus-update** — script `/usr/local/bin/nexus-update` généré à l'install pour mettre à jour Nexus en une commande
+
+### Fixed
+- **Installer — Redis sur Debian Trixie / Raspberry Pi** — service marqué "static" → `systemctl unmask` ajouté ; répertoires `/var/lib/redis` et `/var/log/redis` créés avant le démarrage (cause de crash "No such file or directory")
+- **Installer — Spinners animés** — progression visible pendant `npm install` et `npm run build` (surtout utile sur ARM lent)
+- **Installer — Détection crash PM2** — vérification `online` 5s après `pm2 start`, dump des logs si crash
+- **Installer — Attente backend** — timeout porté à 180s avec spinner animé (était 60s silencieux)
+- **Installer — Enregistrement admin** — 3 tentatives avec délai 8s, gestion des codes 409 (réinstall)
+- **Installer — README** — `cd Nexus` manquant dans la commande one-liner
+- **SSR — URL API** — configurable via `PRIVATE_API_SSR_URL` pour les environnements non-standard
+- **Polls — persistance** — `getMessages` n'incluait pas `poll_id` dans le SELECT → sondages perdus au refresh
+- **Polls — messages vides** — contrainte `content NOT NULL` → insérer `''` pour les messages de type poll
+- **Forum — bouton Annuler** — couleur et navigation corrigées (URL absolue avec paramètres de catégorie)
+- **online_count** — comptait les heartbeats Redis (TTL 15min) au lieu de `io.fetchSockets()` → comptage exact
+
+---
+
 ## [1.1.0] — 2026-03-06
 
 ### Added
