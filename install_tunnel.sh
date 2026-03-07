@@ -336,8 +336,27 @@ ok "Base de données '${DB_NAME}' prête"
 #  REDIS
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Configuration de Redis"
-systemctl enable redis-server --quiet
-systemctl start redis-server
+systemctl unmask redis-server 2>/dev/null || true
+systemctl enable redis-server --quiet 2>/dev/null || true
+systemctl start redis-server 2>/dev/null || true
+
+_REDIS_OK=false
+for _ri in {1..10}; do
+  if redis-cli ping 2>/dev/null | grep -q PONG; then
+    _REDIS_OK=true; break
+  fi
+  sleep 2
+done
+
+if ! $_REDIS_OK; then
+  warn "systemctl redis-server échoué — tentative de démarrage direct..."
+  redis-server --daemonize yes --logfile /var/log/redis/redis-server.log \
+    --dir /var/lib/redis 2>/dev/null || true
+  sleep 3
+  redis-cli ping 2>/dev/null | grep -q PONG && _REDIS_OK=true || true
+fi
+
+$_REDIS_OK || die "Redis n'a pas démarré.\nVérifie : sudo journalctl -xeu redis-server"
 ok "Redis démarré"
 
 # ═══════════════════════════════════════════════════════════════════════════════
