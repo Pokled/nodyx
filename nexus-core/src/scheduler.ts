@@ -25,8 +25,8 @@ async function pingDirectory(io: Server) {
     //   → pour l'instance principale les deux sont identiques
     //   → pour une instance secondaire sur le même VPS, DIRECTORY_API_URL pointe vers 3000
     //   → pour une instance distante, DIRECTORY_API_URL = https://nexusnode.app
-    const selfUrl      = process.env.FRONTEND_URL ?? process.env.SELF_URL ?? 'http://localhost:3000'
-    const directoryUrl = process.env.DIRECTORY_API_URL ?? process.env.SELF_URL ?? 'http://localhost:3000'
+    const selfUrl      = (process.env.FRONTEND_URL ?? process.env.SELF_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+    const directoryUrl = (process.env.DIRECTORY_API_URL ?? process.env.SELF_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 
     // Récupère le branding depuis la communauté locale
     const brandingResult = await db.query(
@@ -56,8 +56,8 @@ async function pingDirectory(io: Server) {
 
 async function pushAssetsToDirectory() {
   const token   = process.env.DIRECTORY_TOKEN
-  const selfUrl = process.env.FRONTEND_URL ?? process.env.SELF_URL ?? 'http://localhost:3000'
-  const apiBase = process.env.SELF_URL ?? 'http://localhost:3000'
+  const selfUrl = (process.env.FRONTEND_URL ?? process.env.SELF_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+  const apiBase = (process.env.SELF_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 
   if (!token) return  // pas inscrit au directory, on skip
 
