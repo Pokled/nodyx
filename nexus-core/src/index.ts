@@ -102,7 +102,7 @@ const start = async () => {
     // Attach Socket.IO after listen() — fastify-socket.io is incompatible with Fastify v5
     const io = new Server(server.server, {
       cors: {
-        origin:      process.env.FRONTEND_URL || 'http://localhost:5173',
+        origin:      (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, ''),
         credentials: true,
       },
       // Keep ping interval under the relay server's request timeout (~11s).
