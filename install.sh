@@ -120,6 +120,11 @@ if [[ "$_DISK_FREE_MB" -lt 1024 ]]; then
   [[ "${_disk_confirm,,}" != "o" ]] && die "Installation annulée — libère de l'espace et relance."
 fi
 
+# Bootstrap curl (needed before the main package install step)
+if ! command -v curl &>/dev/null; then
+  apt-get install -y -q curl >/dev/null 2>&1 || true
+fi
+
 # Detect external IP
 step "Détection de l'IP publique"
 PUBLIC_IP=$(curl -s --max-time 5 https://api.ipify.org || curl -s --max-time 5 https://ifconfig.me || true)
