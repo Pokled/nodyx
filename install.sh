@@ -331,6 +331,10 @@ ok "Base de données '${DB_NAME}' prête"
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Configuration de Redis"
 # Sur Debian Trixie+, le service redis est "static" — il faut d'abord le unmask
+# Garantir que les répertoires Redis existent (peuvent manquer après purge partielle)
+mkdir -p /var/lib/redis /var/log/redis
+chown redis:redis /var/lib/redis /var/log/redis 2>/dev/null || true
+chmod 750 /var/lib/redis /var/log/redis 2>/dev/null || true
 systemctl unmask redis-server 2>/dev/null || true
 systemctl enable redis-server --quiet 2>/dev/null || true
 systemctl start redis-server 2>/dev/null || true
