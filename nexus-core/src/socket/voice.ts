@@ -39,6 +39,8 @@ export interface VoicePeer {
 
 // ── Seat management ───────────────────────────────────────────────────────────
 
+const VOICE_MAX_SEATS = 25
+
 const _voiceSeats = new Map<string, Map<string, number>>()
 
 // ── P2P channel registry ───────────────────────────────────────────────────────
@@ -46,12 +48,14 @@ const _voiceSeats = new Map<string, Map<string, number>>()
 
 const _p2pChannels = new Map<string, Set<string>>()
 
-function assignSeat(channelId: string, socketId: string): number {
+// Returns the assigned seat index, or null if the channel is full
+function assignSeat(channelId: string, socketId: string): number | null {
   if (!_voiceSeats.has(channelId)) _voiceSeats.set(channelId, new Map())
   const seats = _voiceSeats.get(channelId)!
   const taken = new Set(seats.values())
+  if (taken.size >= VOICE_MAX_SEATS) return null
   let seat = 0
-  while (taken.has(seat) && seat < 8) seat++
+  while (taken.has(seat)) seat++
   seats.set(socketId, seat)
   return seat
 }
@@ -112,6 +116,10 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
     // Assign seat BEFORE any await to prevent race condition when two users join simultaneously
     const mySeat = assignSeat(channelId, socket.id)
+    if (mySeat === null) {
+      socket.emit('voice:full', { channelId, max: VOICE_MAX_SEATS })
+      return
+    }
 
     // Collect current peers (exclude self — handles rejoin case)
     const existing = await server.in(room).fetchSockets()

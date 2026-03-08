@@ -2,7 +2,7 @@
     import {
         voiceStore, leaveVoice, toggleMute, toggleDeafen, togglePTTMode,
         startPTT, stopPTT, inputLevel, setPeerVolume,
-        peerStatsStore, getQuality,
+        peerStatsStore, getQuality, voiceFullStore,
         startScreenShare, stopScreenShare, screenShareStore,
         type VoicePeer, type PeerStats, type NetQuality,
     } from '$lib/voice'
@@ -148,6 +148,18 @@
         }
     })
 </script>
+
+{#if $voiceFullStore && mode === 'float'}
+    <div class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50
+                flex items-center gap-2.5 px-4 py-3 rounded-xl
+                bg-red-900/90 border border-red-700/60 backdrop-blur-sm shadow-xl
+                text-sm text-red-200 font-medium pointer-events-none">
+        <svg class="w-4 h-4 shrink-0 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+        </svg>
+        Canal vocal complet ({$voiceFullStore.max} participants max)
+    </div>
+{/if}
 
 {#if vs.active}
     <!-- ── Panneau "Vous" ──────────────────────────────────────────── -->

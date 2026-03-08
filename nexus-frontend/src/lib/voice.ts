@@ -100,6 +100,9 @@ export type NetQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown'
 
 export const peerStatsStore = writable<Map<string, PeerStats>>(new Map())
 
+// Set briefly when the server rejects a voice:join (channel full)
+export const voiceFullStore = writable<{ channelId: string; max: number } | null>(null)
+
 // ── Screen share stores ────────────────────────────────────────────
 export const screenShareStore  = writable<boolean>(false)
 export const localScreenStore  = writable<MediaStream | null>(null)
@@ -763,6 +766,7 @@ export async function joinVoice(channelId: string, socket: Socket): Promise<void
   socket.on('voice:ice',         onICE)
   socket.on('voice:speaking',    onSpeaking)
   socket.on('voice:stats',       onPeerStats)
+  socket.on('voice:full',        onVoiceFull)
 
   _onSocketReconnect = () => {
     console.debug('[voice] Socket reconnected — rejoining voice room')
@@ -795,6 +799,7 @@ export function leaveVoice(): void {
     _socket.off('voice:ice',         onICE)
     _socket.off('voice:speaking',    onSpeaking)
     _socket.off('voice:stats',       onPeerStats)
+    _socket.off('voice:full',        onVoiceFull)
     if (_onSocketReconnect) {
       _socket.off('connect', _onSocketReconnect)
       _onSocketReconnect = null
@@ -1097,4 +1102,11 @@ function onPeerStats({ from, rtt }: { from: string; rtt: number | null }): void 
     map.set(from, { ...cur, theirRtt: rtt })
     return new Map(map)
   })
+}
+
+function onVoiceFull({ channelId, max }: { channelId: string; max: number }): void {
+  voiceFullStore.set({ channelId, max })
+  leaveVoice()
+  // Auto-clear the error after 5s
+  setTimeout(() => voiceFullStore.set(null), 5000)
 }
