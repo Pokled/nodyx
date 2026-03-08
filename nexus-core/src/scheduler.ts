@@ -174,12 +174,111 @@ export async function announceThreadsToDirectory() {
       const ids = rows.map(r => r.id)
       await db.query(`UPDATE threads SET last_indexed_at = NOW() WHERE id = ANY($1)`, [ids])
       console.log(`[Scheduler] Global Search — ${ids.length} thread(s) annoncés`)
+
+      // Gossip — propager aussi aux pairs directs
+      await gossipToPeers({ instance_slug: slug, instance_url: selfUrl, threads })
     } else {
       console.warn(`[Scheduler] Global Search announce failed: HTTP ${res.status}`)
     }
   } catch (err) {
     console.error('[Scheduler] Global Search announce error:', err)
   }
+}
+
+// ── Announce events (Gossip Protocol) ────────────────────────────────────────
+
+export async function announceEventsToDirectory() {
+  if (!process.env.NEXUS_GLOBAL_INDEXING || process.env.NEXUS_GLOBAL_INDEXING !== 'true') return
+
+  const token        = process.env.DIRECTORY_TOKEN
+  const directoryUrl = (process.env.DIRECTORY_API_URL ?? 'https://nexusnode.app').replace(/\/$/, '')
+  if (!token) return
+
+  try {
+    const { rows } = await db.query<{
+      id: string; title: string; description: string | null; location: string | null;
+      starts_at: string; ends_at: string | null; tags: string[]; is_cancelled: boolean;
+    }>(
+      `SELECT id, title,
+              LEFT(REGEXP_REPLACE(description, '<[^>]*>', '', 'g'), 250) AS description,
+              location, starts_at, ends_at, tags, is_cancelled
+       FROM events
+       WHERE is_public = true
+         AND is_cancelled = false
+         AND (last_indexed_at IS NULL OR updated_at > last_indexed_at)
+       LIMIT 50`
+    )
+
+    if (rows.length === 0) return
+
+    const selfUrl = (process.env.FRONTEND_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+    const slug    = process.env.NEXUS_COMMUNITY_SLUG ?? 'unknown'
+
+    const events = rows.map(e => ({
+      event_id:      e.id,
+      title:         e.title,
+      description:   e.description ?? '',
+      location:      e.location,
+      starts_at:     e.starts_at,
+      ends_at:       e.ends_at,
+      tags:          e.tags,
+      is_cancelled:  e.is_cancelled,
+      instance_url:  selfUrl,
+      instance_slug: slug,
+    }))
+
+    // ── Push au directory ──
+    const res = await fetch(`${directoryUrl}/api/directory/gossip/receive`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ instance_slug: slug, instance_url: selfUrl, events }),
+    })
+
+    if (res.ok) {
+      const ids = rows.map(r => r.id)
+      await db.query(`UPDATE events SET last_indexed_at = NOW() WHERE id = ANY($1)`, [ids])
+      console.log(`[Scheduler] Events gossip → directory — ${ids.length} event(s)`)
+    } else {
+      console.warn(`[Scheduler] Events gossip failed: HTTP ${res.status}`)
+    }
+
+    // ── Propagation aux pairs gossip (GOSSIP_PEERS=url1,url2) ──
+    await gossipToPeers({ instance_slug: slug, instance_url: selfUrl, events })
+
+  } catch (err) {
+    console.error('[Scheduler] Events gossip error:', err)
+  }
+}
+
+// ── Gossip — propagation aux pairs directs ────────────────────────────────────
+
+async function gossipToPeers(payload: {
+  instance_slug: string; instance_url: string;
+  threads?: any[]; events?: any[];
+}) {
+  const peersEnv = process.env.GOSSIP_PEERS ?? ''
+  const peers    = peersEnv.split(',').map(p => p.trim()).filter(Boolean)
+  if (peers.length === 0) return
+
+  await Promise.allSettled(peers.map(async (peerUrl) => {
+    try {
+      const url = `${peerUrl.replace(/\/$/, '')}/api/directory/gossip/receive`
+      const res = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+        signal:  AbortSignal.timeout(8000),
+      })
+      if (res.ok) {
+        const json = await res.json() as { indexed: number }
+        console.log(`[Gossip] → ${peerUrl} — ${json.indexed} item(s) propagé(s)`)
+      } else {
+        console.warn(`[Gossip] → ${peerUrl} — HTTP ${res.status}`)
+      }
+    } catch (err: any) {
+      console.warn(`[Gossip] → ${peerUrl} — erreur: ${err.message}`)
+    }
+  }))
 }
 
 // ── Whisper cleanup ───────────────────────────────────────────────────────────
@@ -211,11 +310,18 @@ export function startScheduler(io: Server) {
   // Nettoyage des whisper rooms expirées (toutes les 10 min)
   setInterval(() => cleanupWhisperRooms(), WHISPER_CLEANUP_MS)
 
-  // Global Search — announce threads (60s au démarrage, puis toutes les 10 min)
+  // Global Search + Gossip — announce threads + events (60s démarrage, toutes les 10 min)
   if (process.env.NEXUS_GLOBAL_INDEXING === 'true') {
     setTimeout(() => announceThreadsToDirectory(), 60_000)
     setInterval(() => announceThreadsToDirectory(), GLOBAL_INDEX_INTERVAL_MS)
+
+    setTimeout(() => announceEventsToDirectory(), 90_000)
+    setInterval(() => announceEventsToDirectory(), GLOBAL_INDEX_INTERVAL_MS)
   }
 
-  console.log('[Scheduler] Démarré — ping directory 5min, assets push 1h, whisper cleanup 10min, global search 10min')
+  const hasPeers = (process.env.GOSSIP_PEERS ?? '').trim().length > 0
+  console.log(
+    '[Scheduler] Démarré — ping 5min, assets 1h, whisper 10min, global search 10min' +
+    (hasPeers ? `, gossip peers: ${process.env.GOSSIP_PEERS}` : '')
+  )
 }

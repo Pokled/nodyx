@@ -441,10 +441,14 @@ export default async function directoryRoutes(app: FastifyInstance) {
 
         await db.query(
           `INSERT INTO network_index
-             (instance_slug, instance_url, thread_id, thread_slug, category_id, category_slug, title, excerpt, tags, reply_count, search_vector)
-           VALUES ($1, $2, $3::uuid, $4, $5::uuid, $6, $7, $8, $9::text[], $10,
-             to_tsvector('simple', $7 || ' ' || $8 || ' ' || array_to_string($9::text[], ' ')))
-           ON CONFLICT (instance_slug, thread_id) DO UPDATE SET
+             (instance_slug, instance_url, content_type, content_id,
+              thread_id, thread_slug, category_id, category_slug,
+              title, excerpt, tags, reply_count, search_vector)
+           VALUES ($1, $2, 'thread', $3::uuid,
+                   $3::uuid, $4, $5::uuid, $6,
+                   $7, $8, $9::text[], $10,
+                   to_tsvector('simple', $7 || ' ' || $8 || ' ' || array_to_string($9::text[], ' ')))
+           ON CONFLICT (instance_slug, content_type, content_id) DO UPDATE SET
              thread_slug   = EXCLUDED.thread_slug,
              category_id   = EXCLUDED.category_id,
              category_slug = EXCLUDED.category_slug,
@@ -464,39 +468,146 @@ export default async function directoryRoutes(app: FastifyInstance) {
     }
   );
 
-  // GET /api/directory/search?q=&tags=&page=&limit= — cross-instance search
+  // ── POST /api/directory/gossip/receive — Gossip Protocol (peer-to-peer) ──
+  // Une instance reçoit des données (threads + events) d'un autre pair,
+  // les stocke dans son network_index local.
+  // Pas besoin d'être enregistré sur le directory — n'importe quel pair
+  // peut envoyer du contenu public.
+  app.post<{ Body: { instance_slug: string; instance_url: string; threads?: any[]; events?: any[] } }>(
+    '/directory/gossip/receive',
+    async (req, reply) => {
+      const { instance_slug, instance_url, threads = [], events = [] } = req.body;
+      if (!instance_slug || !instance_url) {
+        return reply.status(400).send({ error: 'instance_slug and instance_url required' });
+      }
+
+      // Validation basique de l'URL (empêche les injections de domaine)
+      try { new URL(instance_url); } catch {
+        return reply.status(400).send({ error: 'invalid instance_url' });
+      }
+
+      let indexed = 0;
+
+      // ── Threads ──
+      for (const t of threads) {
+        if (!t.thread_id || !t.title) continue;
+        const excerpt = String(t.excerpt ?? '').slice(0, 300);
+        const tags    = Array.isArray(t.tags) ? t.tags.map(String) : [];
+        const replies = parseInt(t.reply_count ?? '0', 10) || 0;
+
+        await db.query(
+          `INSERT INTO network_index
+             (instance_slug, instance_url, content_type, content_id,
+              thread_id, thread_slug, category_id, category_slug,
+              title, excerpt, tags, reply_count, search_vector)
+           VALUES ($1, $2, 'thread', $3::uuid,
+                   $3::uuid, $4, $5::uuid, $6,
+                   $7, $8, $9::text[], $10,
+                   to_tsvector('simple', $7 || ' ' || $8 || ' ' || array_to_string($9::text[], ' ')))
+           ON CONFLICT (instance_slug, content_type, content_id) DO UPDATE SET
+             thread_slug   = EXCLUDED.thread_slug,
+             category_id   = EXCLUDED.category_id,
+             category_slug = EXCLUDED.category_slug,
+             title         = EXCLUDED.title,
+             excerpt       = EXCLUDED.excerpt,
+             tags          = EXCLUDED.tags,
+             reply_count   = EXCLUDED.reply_count,
+             updated_at    = NOW(),
+             search_vector = EXCLUDED.search_vector`,
+          [instance_slug, instance_url, t.thread_id, t.thread_slug ?? null,
+           t.category_id ?? null, t.category_slug ?? null, t.title, excerpt, tags, replies]
+        );
+        indexed++;
+      }
+
+      // ── Events ──
+      for (const e of events) {
+        if (!e.event_id || !e.title || !e.starts_at) continue;
+        const excerpt = String(e.description ?? '').slice(0, 300);
+        const tags    = Array.isArray(e.tags) ? e.tags.map(String) : [];
+
+        await db.query(
+          `INSERT INTO network_index
+             (instance_slug, instance_url, content_type, content_id,
+              title, excerpt, tags, starts_at, ends_at, location, is_cancelled, search_vector)
+           VALUES ($1, $2, 'event', $3::uuid,
+                   $4, $5, $6::text[], $7::timestamptz, $8::timestamptz, $9, $10,
+                   to_tsvector('simple', $4 || ' ' || $5 || ' ' || array_to_string($6::text[], ' ')))
+           ON CONFLICT (instance_slug, content_type, content_id) DO UPDATE SET
+             title        = EXCLUDED.title,
+             excerpt      = EXCLUDED.excerpt,
+             tags         = EXCLUDED.tags,
+             starts_at    = EXCLUDED.starts_at,
+             ends_at      = EXCLUDED.ends_at,
+             location     = EXCLUDED.location,
+             is_cancelled = EXCLUDED.is_cancelled,
+             updated_at   = NOW(),
+             search_vector = EXCLUDED.search_vector`,
+          [instance_slug, instance_url, e.event_id,
+           e.title, excerpt, tags,
+           e.starts_at, e.ends_at ?? null, e.location ?? null, e.is_cancelled ?? false]
+        );
+        indexed++;
+      }
+
+      return reply.send({ ok: true, indexed });
+    }
+  );
+
+  // GET /api/directory/search?q=&type=&upcoming=&page=&limit= — cross-instance search
+  // type: 'all' | 'thread' | 'event'  (défaut: 'all')
+  // upcoming: 'true' — filtre événements futurs uniquement
   app.get('/directory/search', async (req, reply) => {
-    const { q, page = '1', limit: rawLimit = '20' } = req.query as Record<string, string>;
-    const limit  = Math.min(parseInt(rawLimit, 10) || 20, 50);
-    const offset = (Math.max(parseInt(page, 10) || 1, 1) - 1) * limit;
+    const {
+      q, page = '1', limit: rawLimit = '20',
+      type = 'all', upcoming,
+    } = req.query as Record<string, string>;
+    const limit    = Math.min(parseInt(rawLimit, 10) || 20, 50);
+    const offset   = (Math.max(parseInt(page, 10) || 1, 1) - 1) * limit;
+    const onlyType = type !== 'all' ? type : null;
+    const onlyUpcoming = upcoming === 'true';
 
     let rows: any[];
 
+    const typeFilter    = onlyType     ? `AND ni.content_type = '${onlyType}'` : '';
+    const upcomingFilter = onlyUpcoming ? `AND (ni.content_type != 'event' OR ni.starts_at >= NOW())` : '';
+
     if (q?.trim()) {
       const { rows: r } = await db.query(
-        `SELECT ni.instance_slug, ni.instance_url, ni.thread_id, ni.thread_slug,
-                ni.category_id, ni.category_slug, ni.title, ni.excerpt, ni.tags, ni.reply_count, ni.updated_at,
+        `SELECT ni.instance_slug, ni.instance_url, ni.content_type, ni.content_id,
+                ni.thread_id, ni.thread_slug, ni.category_id, ni.category_slug,
+                ni.title, ni.excerpt, ni.tags, ni.reply_count, ni.updated_at,
+                ni.starts_at, ni.ends_at, ni.location, ni.is_cancelled,
                 ts_rank(ni.search_vector, websearch_to_tsquery('simple', $1)) AS rank
          FROM network_index ni
          WHERE ni.search_vector @@ websearch_to_tsquery('simple', $1)
+           ${typeFilter} ${upcomingFilter}
          ORDER BY rank DESC, ni.reply_count DESC, ni.updated_at DESC
          LIMIT $2 OFFSET $3`,
         [q.trim(), limit, offset]
       );
       rows = r;
     } else {
+      // Sans query : threads triés par activité, events triés par date
+      const orderBy = onlyType === 'event'
+        ? 'ni.starts_at ASC'
+        : 'ni.updated_at DESC';
+
       const { rows: r } = await db.query(
-        `SELECT ni.instance_slug, ni.instance_url, ni.thread_id, ni.thread_slug,
-                ni.category_id, ni.category_slug, ni.title, ni.excerpt, ni.tags, ni.reply_count, ni.updated_at,
+        `SELECT ni.instance_slug, ni.instance_url, ni.content_type, ni.content_id,
+                ni.thread_id, ni.thread_slug, ni.category_id, ni.category_slug,
+                ni.title, ni.excerpt, ni.tags, ni.reply_count, ni.updated_at,
+                ni.starts_at, ni.ends_at, ni.location, ni.is_cancelled,
                 1.0 AS rank
          FROM network_index ni
-         ORDER BY ni.updated_at DESC
+         WHERE 1=1 ${typeFilter} ${upcomingFilter}
+         ORDER BY ${orderBy}
          LIMIT $1 OFFSET $2`,
         [limit, offset]
       );
       rows = r;
     }
 
-    return reply.send({ results: rows, query: q ?? null });
+    return reply.send({ results: rows, query: q ?? null, type: type ?? 'all' });
   });
 }
