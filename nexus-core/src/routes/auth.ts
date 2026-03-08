@@ -200,16 +200,36 @@ export default async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' })
     }
 
+    // Block banned users — check Redis first (fast), then DB as fallback for pre-existing bans
+    const redisBanned = await redis.exists(`banned:${user.id}`)
+    if (redisBanned) {
+      return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
+    }
+    const loginCommunityId = await getDefaultCommunityId()
+    if (loginCommunityId) {
+      const { rows: banRows } = await db.query(
+        `SELECT 1 FROM community_bans WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
+        [loginCommunityId, user.id]
+      )
+      if (banRows.length > 0) {
+        // Populate Redis cache for future checks
+        await redis.set(`banned:${user.id}`, '1')
+        return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
+      }
+    }
+
     const token = signToken(user.id, user.username)
     await redis.set(`session:${token}`, user.id, 'EX', SESSION_TTL)
 
-    // Ensure user is in community_members (handles cases where auto-join
-    // failed during registration, e.g. community wasn't created yet)
+    // Ensure user is in community_members — only if not banned
     const communityId = await getDefaultCommunityId()
     if (communityId) {
       await db.query(
         `INSERT INTO community_members (community_id, user_id, role)
-         VALUES ($1, $2, 'member')
+         SELECT $1, $2, 'member'
+         WHERE NOT EXISTS (
+           SELECT 1 FROM community_bans WHERE community_id = $1 AND user_id = $2
+         )
          ON CONFLICT DO NOTHING`,
         [communityId, user.id]
       )

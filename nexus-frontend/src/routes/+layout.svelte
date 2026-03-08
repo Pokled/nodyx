@@ -14,6 +14,7 @@
 	let { children, data }: { children: any; data: LayoutData } = $props();
 
 	const user            = $derived(data.user);
+	const isBanned        = $derived(data.user?.is_banned === true);
 	const unreadCount     = $derived($unreadCountStore);
 	const chatMentions    = $derived($chatMentionStore);
 	const dmUnread        = $derived($dmUnreadStore);
@@ -192,7 +193,8 @@
 	<nav class="border-b border-gray-800 sticky top-0 z-50 shrink-0"
 	     style="background: var(--p-card-bg); border-color: var(--p-card-border)">
 		<div class="px-4 flex items-center gap-1 h-14">
-			<!-- Hamburger Galaxy Bar — mobile only -->
+			<!-- Hamburger Galaxy Bar — mobile only (hidden for banned users) -->
+			{#if !isBanned}
 			<button
 				class="lg:hidden mr-1 p-2 rounded min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors
 				       {gallerySidebarOpen ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}"
@@ -210,9 +212,11 @@
 					</svg>
 				{/if}
 			</button>
+			{/if}
 			<a href="/" class="text-lg font-bold text-white tracking-tight mr-4 shrink-0 max-w-[180px] truncate">
 				{communityName}
 			</a>
+			{#if !isBanned}
 			<div class="hidden lg:flex items-center gap-1 flex-1">
 				<a href="/" class="px-3 py-2 rounded text-sm transition-colors {isActive('/') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Forum</a>
 				<a href="/communities" class="px-3 py-2 rounded text-sm transition-colors {isActive('/communities') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Annuaire</a>
@@ -234,6 +238,9 @@
 				<a href="/garden" class="px-3 py-2 rounded text-sm transition-colors {isActive('/garden') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Jardin</a>
 				<a href="/polls" class="px-3 py-2 rounded text-sm transition-colors {isActive('/polls') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Sondages</a>
 			</div>
+			{:else}
+			<div class="flex-1"></div>
+			{/if}
 			<div class="flex items-center gap-1 shrink-0">
 				<a href="/search" class="p-2 rounded text-gray-400 hover:text-white hover:bg-gray-800/60 transition-colors" title="Rechercher">
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -348,8 +355,8 @@
 	<!-- ══ BODY ═══════════════════════════════════════════════════════════════ -->
 	<div class="flex flex-1">
 
-		<!-- ── Backdrop Galaxy Bar — mobile ───────────────────────────────────── -->
-		{#if gallerySidebarOpen}
+		<!-- ── Backdrop Galaxy Bar — mobile (hidden for banned users) ─────────── -->
+		{#if !isBanned && gallerySidebarOpen}
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div class="lg:hidden fixed inset-0 bg-black/60 z-[54] backdrop-blur-sm"
 		     role="button" tabindex="-1" aria-label="Fermer le menu"
@@ -358,7 +365,8 @@
 		     transition:fade={{ duration: 200 }}></div>
 		{/if}
 
-		<!-- ── Galaxy Bar (gauche, 220px) ─────────────────────────────────────── -->
+		<!-- ── Galaxy Bar (gauche, 220px) — hidden for banned users ──────────── -->
+		{#if !isBanned}
 		<aside
 			id="galaxy-sidebar"
 			class="flex flex-col fixed left-0 top-14 bottom-0 w-[280px] lg:w-[220px]
@@ -489,10 +497,11 @@
 				{/if}
 			</div>
 		</aside>
+		{/if}
 
 		<!-- ── Contenu principal ───────────────────────────────────────────────── -->
 		<div class="flex-1 overflow-hidden">
-		<main class="h-full overflow-y-auto min-w-0 lg:pl-[220px] xl:mr-[220px]" style="padding-bottom: var(--bottom-nav-h)">
+		<main class="h-full overflow-y-auto min-w-0 {isBanned ? '' : 'lg:pl-[220px] xl:mr-[220px]'}" style="padding-bottom: var(--bottom-nav-h)">
             {#if communityBanner && ($page.url.pathname === '/' || $page.url.pathname.startsWith('/forum'))}
                 <div class="relative w-full h-32 overflow-hidden">
                     <img src={communityBanner} alt="Bannière" class="w-full h-full object-cover" />
@@ -626,7 +635,8 @@
 
 	</div>
 
-	<!-- ══ BOTTOM NAV mobile (lg:hidden) ═══════════════════════════════════ -->
+	<!-- ══ BOTTOM NAV mobile (lg:hidden) — hidden for banned users ═════════ -->
+	{#if !isBanned}
 	<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-45 border-t border-gray-800 flex items-stretch"
 	     style="background: var(--p-card-bg); border-color: var(--p-card-border); padding-bottom: env(safe-area-inset-bottom, 0px)">
 
@@ -712,6 +722,7 @@
 		</a>
 		{/if}
 	</nav>
+	{/if}
 </div>
 
 <!-- ── Status modal ──────────────────────────────────────────────────────── -->

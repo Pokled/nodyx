@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { db } from '../config/database'
+import { db, redis } from '../config/database'
 import { adminOnly } from '../middleware/adminOnly'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
@@ -159,6 +159,10 @@ export default async function adminRoutes(app: FastifyInstance) {
        JOIN users u ON u.id = cm.user_id
        LEFT JOIN community_grades cg ON cg.id = cm.grade_id
        WHERE cm.community_id = $1
+         AND NOT EXISTS (
+           SELECT 1 FROM community_bans cb
+           WHERE cb.community_id = $1 AND cb.user_id = cm.user_id
+         )
        ORDER BY
          CASE cm.role
            WHEN 'owner'     THEN 1
@@ -339,6 +343,9 @@ export default async function adminRoutes(app: FastifyInstance) {
       ).catch(() => {})
     }
 
+    // Mark user as banned in Redis — blocks requireAuth immediately
+    await redis.set(`banned:${userId}`, '1')
+
     // Kick active socket connections for this user immediately
     if (io) {
       const sockets = await io.in(`user:${userId}`).fetchSockets()
@@ -362,6 +369,8 @@ export default async function adminRoutes(app: FastifyInstance) {
       `DELETE FROM community_bans WHERE community_id = $1 AND user_id = $2`,
       [communityId, userId]
     )
+    // Remove Redis ban flag so user can log in again
+    await redis.del(`banned:${userId}`)
     return reply.send({ ok: true })
   })
 

@@ -47,6 +47,12 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
     return reply.code(401).send({ error: 'Session expired', code: 'SESSION_EXPIRED' })
   }
 
+  // Reject banned users immediately — key is set by the ban route
+  const isBanned = await redis.exists(`banned:${payload.userId}`)
+  if (isBanned) {
+    return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
+  }
+
   request.user = payload
 
   // Track online presence — fire-and-forget, 15-minute TTL per user

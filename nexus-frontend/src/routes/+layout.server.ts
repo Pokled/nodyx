@@ -15,7 +15,7 @@ function normalizeUrl(url: string | null): string | null {
 	return url;
 }
 
-export const load: LayoutServerLoad = async ({ fetch, cookies, request }) => {
+export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) => {
 	const token = cookies.get('token');
 
 	const [infoRes, userRes, directoryRes] = await Promise.all([
@@ -48,8 +48,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request }) => {
 
 	// Redirect banned users to the /banned page
 	if (user?.is_banned) {
-		const path = new URL(request.url).pathname;
-		if (path !== '/banned' && !path.startsWith('/reset-password')) {
+		if (url.pathname !== '/banned' && !url.pathname.startsWith('/reset-password')) {
 			throw redirect(302, '/banned');
 		}
 	}

@@ -98,6 +98,12 @@ async function authenticateSocket(socket: Socket, next: (err?: Error) => void) {
     return next(new Error('Session expired'))
   }
 
+  // Reject banned users before they join any room
+  const isBanned = await redis.exists(`banned:${payload.userId}`)
+  if (isBanned) {
+    return next(new Error('Banned'))
+  }
+
   socket.data.userId   = payload.userId
   socket.data.username = payload.username
   next()
