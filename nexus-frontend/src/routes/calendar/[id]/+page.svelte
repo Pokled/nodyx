@@ -138,9 +138,7 @@
 		{#if ev.description && ev.description !== '<p></p>'}
 			<div class="rounded-2xl border border-gray-800 bg-gray-900/50 p-6">
 				<h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Description</h2>
-				<div class="prose prose-invert prose-sm max-w-none text-gray-300
-				            prose-headings:text-white prose-a:text-emerald-400 prose-a:no-underline hover:prose-a:underline
-				            prose-blockquote:border-l-emerald-600 prose-code:text-emerald-300">
+				<div class="nexus-prose">
 					{@html ev.description}
 				</div>
 			</div>
