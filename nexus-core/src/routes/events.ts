@@ -104,7 +104,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
               e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
               e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
               e.created_at, e.updated_at,
-              u.id AS author_id, u.username AS author_name, u.avatar_url AS author_avatar,
+              u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
               (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going') AS going_count,
               (SELECT er2.status FROM event_rsvps er2 WHERE er2.event_id = e.id AND er2.user_id = $3 LIMIT 1) AS my_rsvp
        FROM events e
@@ -126,7 +126,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
               e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
               e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
               e.created_at, e.updated_at,
-              u.id AS author_id, u.username AS author_name, u.avatar_url AS author_avatar,
+              u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
               (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going')    AS going_count,
               (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'maybe')   AS maybe_count,
               (SELECT er2.status FROM event_rsvps er2 WHERE er2.event_id = e.id AND er2.user_id = $2 LIMIT 1) AS my_rsvp
@@ -140,7 +140,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
     let attendees: any[] = []
     if (rows[0].rsvp_enabled) {
       const { rows: rsvps } = await db.query(
-        `SELECT er.status, u.id, u.username, u.avatar_url
+        `SELECT er.status, u.id, u.username, u.avatar
          FROM event_rsvps er JOIN users u ON u.id = er.user_id
          WHERE er.event_id = $1 ORDER BY er.created_at ASC`,
         [req.params.id]
@@ -299,7 +299,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       )
 
       const { rows: userData } = await db.query(
-        `SELECT id, username, avatar_url FROM users WHERE id = $1`,
+        `SELECT id, username, avatar FROM users WHERE id = $1`,
         [userId]
       )
       io?.emit('event:rsvp', { eventId: req.params.id, user: userData[0], status: req.body.status })
