@@ -346,6 +346,28 @@ export default async function adminRoutes(app: FastifyInstance) {
     // Mark user as banned in Redis — blocks requireAuth immediately
     await redis.set(`banned:${userId}`, '1')
 
+    // Delete all existing sessions for this user so cached tokens stop working.
+    // Sessions are stored as session:<token> with value = userId.
+    // We scan all session:* keys and delete those belonging to the banned user.
+    try {
+      const stream = redis.scanStream({ match: 'session:*', count: 100 })
+      const sessionKeysToDelete: string[] = []
+      await new Promise<void>((resolve, reject) => {
+        stream.on('data', (keys: string[]) => {
+          // ioredis strips keyPrefix from scanStream results, so keys are 'session:<token>'
+          for (const key of keys) sessionKeysToDelete.push(key)
+        })
+        stream.on('end', resolve)
+        stream.on('error', reject)
+      })
+      if (sessionKeysToDelete.length > 0) {
+        // Fetch values in batch and delete sessions belonging to bannedUser
+        const values = await redis.mget(...sessionKeysToDelete)
+        const toDelete = sessionKeysToDelete.filter((_, i) => values[i] === userId)
+        if (toDelete.length > 0) await redis.del(...toDelete)
+      }
+    } catch { /* non-critical */ }
+
     // Kick active socket connections for this user immediately
     if (io) {
       const sockets = await io.in(`user:${userId}`).fetchSockets()
