@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { PageData } from './$types';
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
 	import NexusEditor from '$lib/components/editor/NexusEditor.svelte';
@@ -54,23 +55,33 @@
 </script>
 
 <svelte:head>
-	<title>{thread.title} — Nexus</title>
+	<title>{thread.title} — {$page.data.communityName ?? 'Nexus'}</title>
 	<meta name="description" content="Discussion : {thread.title} par {thread.author_username}" />
-	<meta property="og:title"       content="{thread.title} — Nexus" />
+	<link rel="canonical" href={$page.url.href} />
+	<meta property="og:title"       content="{thread.title} — {$page.data.communityName ?? 'Nexus'}" />
 	<meta property="og:description" content="Discussion par {thread.author_username} · {thread.post_count} réponse(s) · {thread.views} vues" />
 	<meta property="og:type"        content="article" />
-	<meta property="og:image"       content={thread.author_avatar ? `https://pokled.ddns.net${thread.author_avatar}` : '/default-og-image.png'} />
+	<meta property="og:url"         content={$page.url.href} />
+	<meta property="og:image"       content={$page.data.communityBannerUrl ?? $page.data.communityLogoUrl ?? `${$page.url.origin}/default-og-image.png`} />
+	<meta property="og:site_name"   content={$page.data.communityName ?? 'Nexus'} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		"@context": "https://schema.org",
 		"@type": "DiscussionForumPosting",
 		"headline": thread.title,
+		"url": $page.url.href,
 		"author": { "@type": "Person", "name": thread.author_username },
 		"datePublished": thread.created_at,
+		"dateModified": thread.updated_at ?? thread.created_at,
 		"commentCount": thread.post_count,
 		"interactionStatistic": {
 			"@type": "InteractionCounter",
 			"interactionType": "https://schema.org/ViewAction",
 			"userInteractionCount": thread.views
+		},
+		"isPartOf": {
+			"@type": "DiscussionForumPosting",
+			"name": $page.data.communityName ?? 'Nexus',
+			"url": $page.url.origin + '/forum'
 		}
 	})}</script>`}
 </svelte:head>

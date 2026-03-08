@@ -66,7 +66,7 @@
 			{:else}
 				<div class="space-y-2">
 					{#each threads as thread}
-						<a href="/forum/{thread.category_id}/{thread.id}"
+						<a href="/forum/{thread.category_id}/{thread.slug ?? thread.id}"
 							class="block rounded-lg border border-gray-800 bg-gray-900 px-5 py-4 hover:border-indigo-700 transition-colors">
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex-1 min-w-0">

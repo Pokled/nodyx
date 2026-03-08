@@ -1,65 +1,71 @@
 import type { RequestHandler } from './$types';
 import { apiFetch } from '$lib/api';
 
-const BASE_URL = 'https://nexus.example.com'; // remplacé par PUBLIC_SITE_URL en prod
+function escapeXml(str: string): string {
+	return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-function url(path: string, lastmod?: string, priority = '0.7', changefreq = 'weekly') {
-	return `
-  <url>
-    <loc>${BASE_URL}${path}</loc>
-    ${lastmod ? `<lastmod>${new Date(lastmod).toISOString().split('T')[0]}</lastmod>` : ''}
+function flattenCategories(cats: any[]): any[] {
+	return cats.flatMap((c: any) => [c, ...flattenCategories(c.children ?? [])]);
+}
+
+function urlEntry(loc: string, lastmod?: string, priority = '0.7', changefreq = 'weekly') {
+	return `  <url>
+    <loc>${escapeXml(loc)}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
     <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>
   </url>`;
 }
 
-export const GET: RequestHandler = async ({ fetch }) => {
-	const urls: string[] = [];
+export const GET: RequestHandler = async ({ fetch, url }) => {
+	const origin = url.origin;
+	const entries: string[] = [];
 
 	// Pages statiques
-	urls.push(url('/', undefined, '1.0', 'daily'));
+	entries.push(urlEntry(origin, undefined, '1.0', 'daily'));
+	entries.push(urlEntry(`${origin}/forum`, undefined, '0.9', 'daily'));
 
-	// Communautés et catégories
 	try {
-		const commRes  = await apiFetch(fetch, '/communities');
-		const { communities } = await commRes.json();
+		const catsRes = await apiFetch(fetch, '/instance/categories');
+		if (catsRes.ok) {
+			const { categories } = await catsRes.json();
+			const flat = flattenCategories(categories ?? []);
 
-		for (const community of communities ?? []) {
-			urls.push(url(`/c/${community.slug}`, community.updated_at, '0.8', 'daily'));
+			// Page de chaque catégorie
+			for (const cat of flat) {
+				entries.push(urlEntry(`${origin}/forum/${cat.id}`, undefined, '0.8', 'daily'));
+			}
 
-			const catRes  = await apiFetch(fetch, `/forums/${community.slug}`);
-			const { categories } = await catRes.json();
+			// Threads — fetch toutes les catégories en parallèle
+			const threadBatches = await Promise.all(
+				flat.map((cat: any) =>
+					apiFetch(fetch, `/forums/threads?category_id=${cat.id}&limit=500`)
+						.then(r => r.ok ? r.json() : { threads: [] })
+						.then(j => (j.threads ?? []) as any[])
+						.catch(() => [] as any[])
+				)
+			);
 
-			for (const category of categories ?? []) {
-				urls.push(url(`/forum/${category.id}`, category.updated_at, '0.8', 'daily'));
-
-				// Threads de chaque catégorie
-				const threadRes  = await apiFetch(fetch, `/forums/threads?category_id=${category.id}&limit=100`);
-				const { threads } = await threadRes.json();
-
-				for (const thread of threads ?? []) {
-					urls.push(url(
-						`/forum/${category.id}/${thread.id}`,
-						thread.updated_at,
-						'0.6',
-						'weekly'
-					));
+			for (const threads of threadBatches) {
+				for (const t of threads) {
+					const lastmod = new Date(t.updated_at || t.created_at).toISOString().split('T')[0];
+					entries.push(urlEntry(`${origin}/forum/${t.category_id}/${t.id}`, lastmod, '0.7', 'weekly'));
 				}
 			}
 		}
 	} catch {
-		// Si l'API est down, on retourne au moins les pages statiques
+		// API indisponible — on retourne au moins les pages statiques
 	}
 
 	const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.join('')}
+${entries.join('\n')}
 </urlset>`;
 
 	return new Response(sitemap, {
 		headers: {
-			'Content-Type': 'application/xml',
-			'Cache-Control': 'public, max-age=3600'
-		}
+			'Content-Type': 'application/xml; charset=utf-8',
+			'Cache-Control': 'public, max-age=3600',
+		},
 	});
 };

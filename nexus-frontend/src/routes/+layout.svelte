@@ -181,6 +181,8 @@
 	{#if communityLogo}
 		<link rel="icon" href={communityLogo} />
 	{/if}
+	<meta property="og:site_name" content={communityName} />
+	<meta name="theme-color" content="#6366f1" />
 	<!-- Preload all Google Font presets (avatar/username effects) -->
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />

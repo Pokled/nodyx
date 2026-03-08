@@ -3,16 +3,36 @@ import { db } from '../config/database'
 // ── Types ────────────────────────────────────────────────────
 
 export interface Thread {
-  id:          string
-  category_id: string
-  author_id:   string
-  title:       string
-  is_pinned:   boolean
-  is_locked:   boolean
-  is_featured: boolean
-  views:       number
-  created_at:  Date
-  updated_at:  Date
+  id:              string
+  category_id:     string
+  author_id:       string
+  title:           string
+  slug:            string | null
+  is_pinned:       boolean
+  is_locked:       boolean
+  is_featured:     boolean
+  is_indexed:      boolean
+  views:           number
+  created_at:      Date
+  updated_at:      Date
+  last_indexed_at: Date | null
+}
+
+// ── Slug generation ──────────────────────────────────────────
+
+export function generateSlug(title: string, id: string): string {
+  const base = title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')   // strip accents
+    .replace(/[^a-z0-9\s-]/g, '')       // keep letters, digits, spaces, hyphens
+    .trim()
+    .replace(/\s+/g, '-')               // spaces → hyphens
+    .replace(/-{2,}/g, '-')             // collapse consecutive hyphens
+    .slice(0, 80)                        // max 80 chars for the title part
+    .replace(/-$/, '')                   // strip trailing hyphen
+  const suffix = id.replace(/-/g, '').slice(0, 8)
+  return `${base}-${suffix}`
 }
 
 export interface FeaturedThread {
@@ -36,7 +56,9 @@ export interface ThreadSummary extends Thread {
 
 // ── Queries ──────────────────────────────────────────────────
 
-export async function findById(id: string): Promise<ThreadSummary | null> {
+// Accepts either a UUID or a slug
+export async function findById(idOrSlug: string): Promise<ThreadSummary | null> {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug)
   const { rows } = await db.query<ThreadSummary>(
     `SELECT t.*,
             u.username AS author_username,
@@ -45,9 +67,9 @@ export async function findById(id: string): Promise<ThreadSummary | null> {
      FROM threads t
      JOIN users u        ON u.id = t.author_id
      LEFT JOIN posts p   ON p.thread_id = t.id
-     WHERE t.id = $1
+     WHERE ${isUuid ? 't.id = $1' : 't.slug = $1'}
      GROUP BY t.id, u.username, u.avatar`,
-    [id]
+    [idOrSlug]
   )
   return rows[0] ?? null
 }
@@ -80,13 +102,22 @@ export async function create(data: {
   author_id:   string
   title:       string
 }): Promise<Thread> {
-  const { rows } = await db.query<Thread>(
+  // Insert without slug first to get the generated UUID
+  const { rows: inserted } = await db.query<Thread>(
     `INSERT INTO threads (category_id, author_id, title)
      VALUES ($1, $2, $3)
      RETURNING *`,
     [data.category_id, data.author_id, data.title]
   )
-  return rows[0]
+  const thread = inserted[0]
+
+  // Generate and persist the slug
+  const slug = generateSlug(data.title, thread.id)
+  const { rows } = await db.query<Thread>(
+    `UPDATE threads SET slug = $1 WHERE id = $2 RETURNING *`,
+    [slug, thread.id]
+  )
+  return rows[0] ?? thread
 }
 
 export async function update(id: string, data: {

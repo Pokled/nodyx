@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { fly, fade } from 'svelte/transition';
 	import type { FlyParams, FadeParams } from 'svelte/transition';
+	import { page } from '$app/stores';
 
 	let { data }: { data: PageData } = $props();
 
@@ -242,8 +243,15 @@
 </script>
 
 <svelte:head>
-	<title>{categoryName} — Nexus</title>
-    <meta name="description" content="Liste des discussions dans {categoryName} — forum Nexus" />
+	<title>{categoryName} — {$page.data.communityName ?? 'Nexus'}</title>
+	<meta name="description" content="Discussions dans {categoryName} — forum {$page.data.communityName ?? 'Nexus'}" />
+	<link rel="canonical" href={$page.url.href} />
+	<meta property="og:title"       content="{categoryName} — {$page.data.communityName ?? 'Nexus'}" />
+	<meta property="og:description" content="Discussions dans {categoryName} — forum {$page.data.communityName ?? 'Nexus'}" />
+	<meta property="og:type"        content="website" />
+	<meta property="og:url"         content={$page.url.href} />
+	<meta property="og:image"       content={$page.data.communityBannerUrl ?? $page.data.communityLogoUrl ?? `${$page.url.origin}/default-og-image.png`} />
+	<meta property="og:site_name"   content={$page.data.communityName ?? 'Nexus'} />
 </svelte:head>
 
 <!-- EN-TÊTE DE CATÉGORIE -->
@@ -546,7 +554,7 @@
 			
 			<!-- CORRECTION ICI : utilisation de categoryId au lieu de category?.id -->
 			<a
-				href="/forum/{categoryId}/{thread.id}"
+				href="/forum/{categoryId}/{thread.slug ?? thread.id}"
 				class="group relative flex flex-wrap sm:flex-nowrap items-center gap-4 rounded-xl 
 					   border border-gray-800 bg-gradient-to-r from-gray-900 to-gray-900/80
 					   px-5 py-4 hover:border-indigo-700/50 hover:shadow-lg hover:shadow-indigo-600/10 

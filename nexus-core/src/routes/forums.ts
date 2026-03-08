@@ -86,7 +86,7 @@ const CreateThreadBody = z.object({
 })
 
 const CreatePostBody = z.object({
-  thread_id: z.string().uuid(),
+  thread_id: z.string().min(1), // accepts UUID or slug — resolved server-side
   content:   z.string().min(1),
 })
 
@@ -240,14 +240,17 @@ app.get('/threads', {
       return reply.code(404).send({ error: 'Thread not found', code: 'NOT_FOUND' })
     }
 
+    // Always use the resolved UUID — id may be a slug
+    const threadId = thread.id
+
     const [posts, tags] = await Promise.all([
-      PostModel.listByThread(id, {
+      PostModel.listByThread(threadId, {
         limit:    query.limit  ? Number(query.limit)  : undefined,
         offset:   query.offset ? Number(query.offset) : undefined,
         viewerId,
       }),
-      TagModel.getTagsForThread(id),
-      ThreadModel.incrementViews(id),
+      TagModel.getTagsForThread(threadId),
+      ThreadModel.incrementViews(threadId),
     ])
 
     return reply.send({ thread: { ...thread, tags }, posts })
@@ -268,13 +271,16 @@ app.get('/threads', {
       return reply.code(403).send({ error: 'Thread is locked', code: 'THREAD_LOCKED' })
     }
 
+    // Always use resolved UUID — thread_id may be a slug
+    const resolvedThreadId = thread.id
+
     // Check if user is banned from this community
     const { rows: banRows } = await db.query(
       `SELECT 1 FROM community_bans cb
        JOIN categories cat ON cat.community_id = cb.community_id
        JOIN threads t ON t.category_id = cat.id
        WHERE cb.user_id = $1 AND t.id = $2 LIMIT 1`,
-      [userId, thread_id]
+      [userId, resolvedThreadId]
     )
     if (banRows.length > 0) {
       return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
@@ -282,7 +288,7 @@ app.get('/threads', {
 
     const sanitized = sanitize(content)
     const post = await PostModel.create({
-      thread_id,
+      thread_id: resolvedThreadId,
       author_id: userId,
       content:   sanitized,
     })
@@ -398,9 +404,12 @@ app.get('/threads', {
       return reply.code(404).send({ error: 'Thread not found', code: 'NOT_FOUND' })
     }
 
+    // Always use resolved UUID — id may be a slug
+    const threadId = thread.id
+
     const userId   = request.user!.userId
     const isAuthor = thread.author_id === userId
-    const modAccess = await isMod(userId, id)
+    const modAccess = await isMod(userId, threadId)
 
     if (!isAuthor && !modAccess) {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
@@ -411,21 +420,21 @@ app.get('/threads', {
       if (!body.title?.trim()) {
         return reply.code(403).send({ error: 'Authors can only edit the title', code: 'FORBIDDEN' })
       }
-      const updated = await ThreadModel.update(id, { title: body.title.trim() })
+      const updated = await ThreadModel.update(threadId, { title: body.title.trim() })
       return reply.send({ thread: updated })
     }
 
     // Mod/owner actions
     if (body.delete) {
-      await ThreadModel.remove(id)
+      await ThreadModel.remove(threadId)
       return reply.code(204).send()
     }
 
     if (body.tag_ids !== undefined) {
-      await TagModel.setThreadTags(id, body.tag_ids)
+      await TagModel.setThreadTags(threadId, body.tag_ids)
     }
 
-    const updated = await ThreadModel.update(id, {
+    const updated = await ThreadModel.update(threadId, {
       title:       body.title?.trim() || undefined,
       is_pinned:   body.is_pinned,
       is_locked:   body.is_locked,

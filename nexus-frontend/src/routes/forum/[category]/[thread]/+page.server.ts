@@ -12,10 +12,16 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 		error(res.status, json.error ?? 'Thread introuvable');
 	}
 
+	// Redirect UUID-based URLs to canonical slug URL (301 for SEO)
+	const thread = json.thread;
+	if (thread.slug && params.thread !== thread.slug) {
+		redirect(301, `/forum/${params.category}/${thread.slug}`);
+	}
+
 	// Charger le sondage lié à ce thread (s'il existe)
 	let poll: any = null;
 	if (token) {
-		const pollRes = await apiFetch(fetch, `/polls?thread_id=${params.thread}&limit=1`, {
+		const pollRes = await apiFetch(fetch, `/polls?thread_id=${thread.id}&limit=1`, {
 			headers: { Authorization: `Bearer ${token}` },
 		});
 		if (pollRes.ok) {

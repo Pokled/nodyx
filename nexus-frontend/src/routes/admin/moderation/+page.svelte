@@ -62,7 +62,7 @@
 					<tr class="bg-gray-900/30 hover:bg-gray-900/60 transition-colors">
 						<!-- Title -->
 						<td class="px-4 py-3 max-w-[280px]">
-							<a href="/forum/{thread.category_id}/{thread.id}"
+							<a href="/forum/{thread.category_id}/{thread.slug ?? thread.id}"
 								class="font-medium text-white hover:text-indigo-300 transition-colors line-clamp-1 text-sm">
 								{thread.title}
 							</a>
