@@ -55,7 +55,7 @@ Fonctionne sur un Raspberry Pi derrière une box FAI. Sans domaine. Sans ouvrir 
 | | **Nexus** | Discord | Matrix | Discourse | Lemmy |
 |---|:---:|:---:|:---:|:---:|:---:|
 | Auto-hébergé | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Forum indexé par Google | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Forum indexé (Google, Bing, Brave, Qwant...) | ✅ | ❌ | ❌ | ✅ | ✅ |
 | Chat temps réel | ✅ | ✅ | ✅ | ⚠️ | ❌ |
 | Salons vocaux | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Partage d'écran | ✅ | ✅ | ✅ | ❌ | ❌ |
@@ -348,7 +348,7 @@ Internet était décentralisé par conception. SMTP, IRC, NNTP — n'importe qui
 
 **Nexus, c'est la promesse tenue.**
 
-Et elle se propage de la même façon. Chaque instance qui se lance expose d'autres à l'idée. Chaque événement public indexé par Google attire quelqu'un de nouveau. Chaque communauté qui choisit la souveraineté en inspire une autre. Le R0 est dans l'architecture.
+Et elle se propage de la même façon. Chaque instance qui se lance expose d'autres à l'idée. Chaque événement public indexé par les moteurs de recherche attire quelqu'un de nouveau. Chaque communauté qui choisit la souveraineté en inspire une autre. Le R0 est dans l'architecture.
 
 Nous ne construisons pas un produit. Nous reconstruisons une infrastructure pour les communautés humaines.
 

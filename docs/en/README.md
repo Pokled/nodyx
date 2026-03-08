@@ -15,7 +15,7 @@ Discussions, tutorials, collective knowledge — invisible to Google, inaccessib
 
 **Nexus fixes that.**
 
-- Public forums **indexable by Google**
+- Public forums **indexed by all search engines** (Google, Bing, Brave, Qwant...)
 - Reactions, thanks, tags, full-text search
 - Real-time community chat *(Phase 2)*
 - Voice / screen sharing *(Phase 3)*

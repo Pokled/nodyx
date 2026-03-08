@@ -99,7 +99,7 @@ A non-developer can:
 2. Configure their instance via the interactive installer ✅
 3. Create categories, threads, and tags ✅
 4. Manage their community via the admin panel ✅
-5. Be found on Google ✅
+5. Be found on search engines (Google, Bing, Brave, Qwant...) ✅
 
 ---
 
@@ -516,7 +516,7 @@ Living stations :  community → broadcast as expression
 ```
 
 **A Nexus instance IS the community layer.** A radio station that runs Nexus gets:
-- Forum (archives, discussions, show notes — indexed by Google)
+- Forum (archives, discussions, show notes — indexed by all search engines)
 - Live chat (listeners react in real-time during broadcasts)
 - Voice channels (open studio, backstage, listener Q&A)
 - Garden (community votes on upcoming programs)
