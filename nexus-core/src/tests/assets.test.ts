@@ -9,7 +9,7 @@ vi.mock('../config/database', () => ({
     query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
   },
   redis: {
-    exists: vi.fn().mockResolvedValue(1),
+    exists: vi.fn().mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1)),
     setex:  vi.fn().mockResolvedValue('OK'),
     incr:   vi.fn().mockResolvedValue(1),
     expire: vi.fn().mockResolvedValue(1),
@@ -156,7 +156,7 @@ describe('DELETE /api/v1/assets/:id', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(redis.exists).mockResolvedValue(1 as any)
+    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
     app = await buildApp(a => a.register(assetRoutes, { prefix: '/api/v1/assets' }))
   })
 

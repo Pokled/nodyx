@@ -5,13 +5,18 @@ import { buildApp } from './helpers/buildApp'
 
 vi.mock('../config/database', () => ({
   db: {
-    query: vi.fn().mockResolvedValue({ rows: [{ id: 'community-uuid' }], rowCount: 1 }),
+    query: vi.fn().mockImplementation((sql: string) => {
+      if (typeof sql === 'string' && (sql.includes('community_bans') || sql.includes('ip_bans') || sql.includes('email_bans'))) {
+        return Promise.resolve({ rows: [], rowCount: 0 })
+      }
+      return Promise.resolve({ rows: [{ id: 'community-uuid' }], rowCount: 1 })
+    }),
   },
   redis: {
     set:   vi.fn().mockResolvedValue('OK'),
     del:   vi.fn().mockResolvedValue(1),
     get:   vi.fn().mockResolvedValue(null),
-    exists: vi.fn().mockResolvedValue(1),
+    exists: vi.fn().mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1)),
     incr:  vi.fn().mockResolvedValue(1),
     expire: vi.fn().mockResolvedValue(1),
     setex: vi.fn().mockResolvedValue('OK'),
@@ -243,9 +248,10 @@ describe('POST /api/v1/auth/logout', () => {
       { expiresIn: '7d' }
     )
 
-    // Redis reports the session as alive
+    // Redis reports the session as alive, and user is not banned
     const { redis } = await import('../config/database')
-    vi.mocked(redis.exists).mockResolvedValueOnce(1 as any)
+    vi.mocked(redis.exists).mockResolvedValueOnce(1 as any)  // session alive
+    vi.mocked(redis.exists).mockResolvedValueOnce(0 as any)  // not banned
 
     const res = await app.inject({
       method: 'POST',

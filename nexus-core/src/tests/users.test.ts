@@ -9,7 +9,7 @@ vi.mock('../config/database', () => ({
     query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
   },
   redis: {
-    exists: vi.fn().mockResolvedValue(1),
+    exists: vi.fn().mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1)),
     set:    vi.fn().mockResolvedValue('OK'),
     del:    vi.fn().mockResolvedValue(1),
     setex:  vi.fn().mockResolvedValue('OK'),
@@ -60,7 +60,7 @@ describe('PATCH /api/v1/users/me/profile', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(redis.exists).mockResolvedValue(1 as any)
+    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
     vi.mocked(db.query).mockResolvedValue({ rows: [FAKE_PROFILE], rowCount: 1 } as any)
     app = await buildApp(a => a.register(userRoutes, { prefix: '/api/v1/users' }))
   })
@@ -204,7 +204,7 @@ describe('GET /api/v1/users/me', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(redis.exists).mockResolvedValue(1 as any)
+    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
     app = await buildApp(a => a.register(userRoutes, { prefix: '/api/v1/users' }))
   })
 

@@ -89,7 +89,8 @@ describe('requireAuth middleware', () => {
   })
 
   it('passes and attaches user when token + session are valid', async () => {
-    vi.mocked(redis.exists).mockResolvedValueOnce(1 as any)
+    vi.mocked(redis.exists).mockResolvedValueOnce(1 as any)  // session alive
+    vi.mocked(redis.exists).mockResolvedValueOnce(0 as any)  // not banned
 
     const token = makeToken()
     const res = await app.inject({
@@ -131,7 +132,8 @@ describe('optionalAuth middleware', () => {
   })
 
   it('attaches user when valid token is provided', async () => {
-    vi.mocked(redis.exists).mockResolvedValueOnce(1 as any)
+    vi.mocked(redis.exists).mockResolvedValueOnce(1 as any)  // session alive
+    vi.mocked(redis.exists).mockResolvedValueOnce(0 as any)  // not banned
 
     const token = makeToken()
     const res = await app.inject({
