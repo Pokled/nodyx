@@ -114,9 +114,18 @@ export default async function authRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { username, email, password } = request.body as z.infer<typeof RegisterBody>
 
-    const [existingEmail, existingUsername] = await Promise.all([
+    const clientIp = request.ip
+
+    const [existingEmail, existingUsername, ipBan, emailBan] = await Promise.all([
       UserModel.findByEmail(email),
       UserModel.findByUsername(username),
+      db.query(`SELECT 1 FROM ip_bans WHERE ip = $1::inet LIMIT 1`, [clientIp]),
+      db.query(
+        `SELECT 1 FROM email_bans
+         WHERE $1 = email OR $1 LIKE '%@' || email
+         LIMIT 1`,
+        [email]
+      ),
     ])
 
     if (existingEmail) {
@@ -125,8 +134,17 @@ export default async function authRoutes(app: FastifyInstance) {
     if (existingUsername) {
       return reply.code(409).send({ error: 'Username already taken', code: 'USERNAME_TAKEN' })
     }
+    if (ipBan.rows.length > 0) {
+      return reply.code(403).send({ error: 'Registration not allowed', code: 'FORBIDDEN' })
+    }
+    if (emailBan.rows.length > 0) {
+      return reply.code(403).send({ error: 'Registration not allowed', code: 'FORBIDDEN' })
+    }
 
     const user  = await UserModel.create({ username, email, password })
+    // Store registration IP
+    await db.query(`UPDATE users SET registration_ip = $1::inet WHERE id = $2`, [clientIp, user.id]).catch(() => {})
+
     const token = signToken(user.id, user.username)
     await redis.set(`session:${token}`, user.id, 'EX', SESSION_TTL)
 
@@ -150,7 +168,14 @@ export default async function authRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { email, password } = request.body as z.infer<typeof LoginBody>
 
-    const user = await UserModel.findByEmail(email)
+    const [user, ipBanRes] = await Promise.all([
+      UserModel.findByEmail(email),
+      db.query(`SELECT 1 FROM ip_bans WHERE ip = $1::inet LIMIT 1`, [request.ip]),
+    ])
+
+    if (ipBanRes.rows.length > 0) {
+      return reply.code(403).send({ error: 'Access denied', code: 'FORBIDDEN' })
+    }
 
     // Toujours exécuter bcrypt pour éviter les timing attacks par énumération d'emails
     const DUMMY_HASH = '$2b$12$invalidhashusedtopreventimaginarytimingattacksXXXXXXXXXX'

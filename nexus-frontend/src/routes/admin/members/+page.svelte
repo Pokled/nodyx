@@ -47,10 +47,14 @@
 	)
 
 	const bans: Array<{ user_id: string; username: string; email: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = data.bans ?? []
+	const ipBans: Array<{ ip: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = data.ipBans ?? []
+	const emailBans: Array<{ email: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = data.emailBans ?? []
 
 	// ── Ban modal ─────────────────────────────────────────────────────────────
-	let banTarget = $state<{ userId: string; username: string } | null>(null)
-	let banReason = $state('')
+	let banTarget  = $state<{ userId: string; username: string } | null>(null)
+	let banReason  = $state('')
+	let banIp      = $state(false)
+	let banEmail   = $state(false)
 
 	const ROLE_COLORS: Record<string, string> = {
 		owner:     'bg-yellow-900/50 text-yellow-400 border-yellow-800/50',
@@ -189,7 +193,7 @@
 										</button>
 									</form>
 									<button
-										onclick={() => { banTarget = { userId: member.user_id, username: member.username }; banReason = '' }}
+										onclick={() => { banTarget = { userId: member.user_id, username: member.username }; banReason = ''; banIp = false; banEmail = false }}
 										class="text-xs text-red-500 hover:text-red-400 font-medium"
 									>
 										Bannir
@@ -263,6 +267,96 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- ── IPs bannies ─────────────────────────────────────────────────────── -->
+	{#if ipBans.length > 0}
+		<div class="mt-8">
+			<h2 class="text-base font-semibold text-white mb-1">IPs bannies <span class="text-gray-600 font-normal text-sm">({ipBans.length})</span></h2>
+			<p class="text-xs text-gray-600 mb-4">Aucune inscription ni connexion possible depuis ces adresses IP.</p>
+			<div class="rounded-xl border border-orange-900/40 overflow-hidden">
+				<table class="w-full text-sm">
+					<thead class="bg-orange-950/20 border-b border-orange-900/40 text-xs text-orange-400/70 uppercase tracking-wider">
+						<tr>
+							<th class="px-4 py-3 text-left">IP</th>
+							<th class="px-4 py-3 text-left">Raison</th>
+							<th class="px-4 py-3 text-left">Banni par</th>
+							<th class="px-4 py-3 text-left">Date</th>
+							<th class="px-4 py-3 text-right">Action</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-orange-900/20">
+						{#each ipBans as ban}
+							<tr class="bg-orange-950/10 hover:bg-orange-950/20 transition-colors">
+								<td class="px-4 py-3 font-mono text-sm text-orange-300">{ban.ip}</td>
+								<td class="px-4 py-3 text-xs text-gray-500">
+									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">—</span>{/if}
+								</td>
+								<td class="px-4 py-3 text-xs text-gray-500">{ban.banned_by_username ?? '—'}</td>
+								<td class="px-4 py-3 text-xs text-gray-500">{new Date(ban.banned_at).toLocaleDateString('fr-FR')}</td>
+								<td class="px-4 py-3 text-right">
+									<form method="POST" action="?/unbanIp" use:enhance class="inline">
+										<input type="hidden" name="ip" value={ban.ip} />
+										<button
+											type="submit"
+											onclick={(e) => { if (!confirm(`Lever le ban IP ${ban.ip} ?`)) e.preventDefault() }}
+											class="text-xs text-green-500 hover:text-green-400"
+										>
+											Retirer
+										</button>
+									</form>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
+
+	<!-- ── Emails bannis ───────────────────────────────────────────────────── -->
+	{#if emailBans.length > 0}
+		<div class="mt-8">
+			<h2 class="text-base font-semibold text-white mb-1">Emails bannis <span class="text-gray-600 font-normal text-sm">({emailBans.length})</span></h2>
+			<p class="text-xs text-gray-600 mb-4">Impossible de s'inscrire avec ces adresses ou domaines email.</p>
+			<div class="rounded-xl border border-yellow-900/40 overflow-hidden">
+				<table class="w-full text-sm">
+					<thead class="bg-yellow-950/20 border-b border-yellow-900/40 text-xs text-yellow-400/70 uppercase tracking-wider">
+						<tr>
+							<th class="px-4 py-3 text-left">Email / Domaine</th>
+							<th class="px-4 py-3 text-left">Raison</th>
+							<th class="px-4 py-3 text-left">Banni par</th>
+							<th class="px-4 py-3 text-left">Date</th>
+							<th class="px-4 py-3 text-right">Action</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-yellow-900/20">
+						{#each emailBans as ban}
+							<tr class="bg-yellow-950/10 hover:bg-yellow-950/20 transition-colors">
+								<td class="px-4 py-3 font-mono text-sm text-yellow-300">{ban.email}</td>
+								<td class="px-4 py-3 text-xs text-gray-500">
+									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">—</span>{/if}
+								</td>
+								<td class="px-4 py-3 text-xs text-gray-500">{ban.banned_by_username ?? '—'}</td>
+								<td class="px-4 py-3 text-xs text-gray-500">{new Date(ban.banned_at).toLocaleDateString('fr-FR')}</td>
+								<td class="px-4 py-3 text-right">
+									<form method="POST" action="?/unbanEmail" use:enhance class="inline">
+										<input type="hidden" name="email" value={ban.email} />
+										<button
+											type="submit"
+											onclick={(e) => { if (!confirm(`Lever le ban email ${ban.email} ?`)) e.preventDefault() }}
+											class="text-xs text-green-500 hover:text-green-400"
+										>
+											Retirer
+										</button>
+									</form>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <!-- Ban confirmation modal -->
@@ -282,10 +376,12 @@
 				<button onclick={() => banTarget = null} class="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
 			</div>
 			<p class="text-sm text-gray-400 mb-4">
-				L'utilisateur sera exclu de la communauté et ne pourra plus la rejoindre. Cette action est réversible depuis la liste des bannis.
+				L'utilisateur sera exclu de la communauté et ne pourra plus la rejoindre.
 			</p>
 			<form method="POST" action="?/ban" use:enhance onsubmit={() => banTarget = null}>
 				<input type="hidden" name="user_id" value={banTarget.userId} />
+				<input type="hidden" name="ban_ip" value={banIp ? 'true' : 'false'} />
+				<input type="hidden" name="ban_email" value={banEmail ? 'true' : 'false'} />
 				<div class="mb-4">
 					<label class="block text-xs text-gray-500 mb-1.5">Raison <span class="text-gray-700">(optionnel)</span></label>
 					<input
@@ -296,6 +392,22 @@
 						class="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-200
 						       placeholder-gray-600 focus:outline-none focus:border-red-700 transition-colors"
 					/>
+				</div>
+				<div class="flex flex-col gap-2 mb-5">
+					<label class="flex items-center gap-2.5 cursor-pointer group">
+						<input type="checkbox" bind:checked={banIp}
+							class="w-4 h-4 rounded border-gray-600 bg-gray-800 accent-orange-600 cursor-pointer" />
+						<span class="text-sm text-gray-300 group-hover:text-white transition-colors">
+							Bannir l'adresse IP d'inscription
+						</span>
+					</label>
+					<label class="flex items-center gap-2.5 cursor-pointer group">
+						<input type="checkbox" bind:checked={banEmail}
+							class="w-4 h-4 rounded border-gray-600 bg-gray-800 accent-yellow-600 cursor-pointer" />
+						<span class="text-sm text-gray-300 group-hover:text-white transition-colors">
+							Bannir l'adresse email
+						</span>
+					</label>
 				</div>
 				<div class="flex gap-2 justify-end">
 					<button type="button" onclick={() => banTarget = null}

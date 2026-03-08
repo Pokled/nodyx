@@ -290,27 +290,56 @@ export default async function adminRoutes(app: FastifyInstance) {
     const { userId }  = request.params as { userId: string }
     const communityId = await getCommunityId()
     const adminUser   = (request as any).user as { userId: string }
-    const body        = (request.body ?? {}) as { reason?: string }
+    const body        = (request.body ?? {}) as { reason?: string; ban_ip?: boolean; ban_email?: boolean }
 
-    const { rows: check } = await db.query(
-      `SELECT role FROM community_members WHERE community_id = $1 AND user_id = $2`,
+    // Fetch user info (role + registration_ip + email)
+    const { rows: userRows } = await db.query(
+      `SELECT u.email, u.registration_ip,
+              cm.role
+       FROM users u
+       LEFT JOIN community_members cm ON cm.community_id = $1 AND cm.user_id = u.id
+       WHERE u.id = $2`,
       [communityId, userId]
     )
-    if (check[0]?.role === 'owner') return reply.code(403).send({ error: 'Cannot ban the owner' })
+    if (!userRows[0]) return reply.code(404).send({ error: 'User not found' })
+    if (userRows[0].role === 'owner') return reply.code(403).send({ error: 'Cannot ban the owner' })
 
-    // Insert ban (upsert — idempotent)
+    const { email, registration_ip } = userRows[0]
+
+    // Insert community ban (upsert — idempotent)
     await db.query(
       `INSERT INTO community_bans (community_id, user_id, banned_by, reason)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (community_id, user_id) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
       [communityId, userId, adminUser.userId, body.reason ?? null]
     )
-    // Also remove from members if still present
+    // Remove from members if still present
     await db.query(
       `DELETE FROM community_members WHERE community_id = $1 AND user_id = $2`,
       [communityId, userId]
     )
-    return reply.send({ ok: true })
+
+    // Optional: ban IP
+    if (body.ban_ip && registration_ip) {
+      await db.query(
+        `INSERT INTO ip_bans (ip, reason, banned_by)
+         VALUES ($1::inet, $2, $3)
+         ON CONFLICT (ip) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
+        [registration_ip, body.reason ?? null, adminUser.userId]
+      ).catch(() => {})
+    }
+
+    // Optional: ban email
+    if (body.ban_email && email) {
+      await db.query(
+        `INSERT INTO email_bans (email, reason, banned_by)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (email) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
+        [email, body.reason ?? null, adminUser.userId]
+      ).catch(() => {})
+    }
+
+    return reply.send({ ok: true, registration_ip: registration_ip ?? null })
   })
 
   // DELETE /api/v1/admin/members/:userId/ban — unban
@@ -324,6 +353,86 @@ export default async function adminRoutes(app: FastifyInstance) {
       `DELETE FROM community_bans WHERE community_id = $1 AND user_id = $2`,
       [communityId, userId]
     )
+    return reply.send({ ok: true })
+  })
+
+  // ── IP Bans ────────────────────────────────────────────────────────────────
+
+  // GET /api/v1/admin/ip-bans
+  app.get('/ip-bans', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (_req, reply) => {
+    const { rows } = await db.query(
+      `SELECT ib.ip, ib.reason, ib.banned_at, u.username AS banned_by_username
+       FROM ip_bans ib
+       LEFT JOIN users u ON u.id = ib.banned_by
+       ORDER BY ib.banned_at DESC`
+    )
+    return reply.send(rows)
+  })
+
+  // POST /api/v1/admin/ip-bans
+  app.post('/ip-bans', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (request, reply) => {
+    const adminUser = (request as any).user as { userId: string }
+    const body = (request.body ?? {}) as { ip: string; reason?: string }
+    if (!body.ip) return reply.code(400).send({ error: 'ip required' })
+    await db.query(
+      `INSERT INTO ip_bans (ip, reason, banned_by)
+       VALUES ($1::inet, $2, $3)
+       ON CONFLICT (ip) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
+      [body.ip, body.reason ?? null, adminUser.userId]
+    )
+    return reply.send({ ok: true })
+  })
+
+  // DELETE /api/v1/admin/ip-bans/:ip
+  app.delete('/ip-bans/:ip', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (request, reply) => {
+    const { ip } = request.params as { ip: string }
+    await db.query(`DELETE FROM ip_bans WHERE ip = $1::inet`, [ip])
+    return reply.send({ ok: true })
+  })
+
+  // ── Email Bans ─────────────────────────────────────────────────────────────
+
+  // GET /api/v1/admin/email-bans
+  app.get('/email-bans', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (_req, reply) => {
+    const { rows } = await db.query(
+      `SELECT eb.email, eb.reason, eb.banned_at, u.username AS banned_by_username
+       FROM email_bans eb
+       LEFT JOIN users u ON u.id = eb.banned_by
+       ORDER BY eb.banned_at DESC`
+    )
+    return reply.send(rows)
+  })
+
+  // POST /api/v1/admin/email-bans
+  app.post('/email-bans', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (request, reply) => {
+    const adminUser = (request as any).user as { userId: string }
+    const body = (request.body ?? {}) as { email: string; reason?: string }
+    if (!body.email) return reply.code(400).send({ error: 'email required' })
+    await db.query(
+      `INSERT INTO email_bans (email, reason, banned_by)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (email) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
+      [body.email, body.reason ?? null, adminUser.userId]
+    )
+    return reply.send({ ok: true })
+  })
+
+  // DELETE /api/v1/admin/email-bans/:email
+  app.delete('/email-bans/:email', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (request, reply) => {
+    const { email } = request.params as { email: string }
+    await db.query(`DELETE FROM email_bans WHERE email = $1`, [decodeURIComponent(email)])
     return reply.send({ ok: true })
   })
 
