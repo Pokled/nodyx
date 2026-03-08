@@ -802,6 +802,7 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
       printf "DIRECTORY_API_URL=https://nexusnode.app\n"
       printf "SELF_URL=http://127.0.0.1:3000\n"
       printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
+      printf "NEXUS_GLOBAL_INDEXING=false\n"
     } >> "${NEXUS_DIR}/nexus-core/.env"
     cd "${NEXUS_DIR}" && pm2 restart nexus-core 2>/dev/null || true
   else
