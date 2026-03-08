@@ -76,11 +76,11 @@ async function canManageEvent(userId: string, eventId: string): Promise<boolean>
 export default async function eventsRoutes(app: FastifyInstance) {
 
   // GET /events
-  app.get('/events', { preHandler: [optionalAuth] }, async (req, reply) => {
+  app.get('/', { preHandler: [optionalAuth] }, async (req, reply) => {
     const q = req.query as Record<string, string>
     const limit   = Math.min(parseInt(q.limit  ?? '20', 10) || 20, 50)
     const offset  = parseInt(q.offset ?? '0', 10) || 0
-    const userId  = (req as any).user?.id ?? null
+    const userId  = (req as any).user?.userId ?? null
     const showPast = q.past === 'true'
     const filterTags: string[] = q.tags ? q.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
 
@@ -119,8 +119,8 @@ export default async function eventsRoutes(app: FastifyInstance) {
   })
 
   // GET /events/:id
-  app.get<{ Params: { id: string } }>('/events/:id', { preHandler: [optionalAuth] }, async (req, reply) => {
-    const userId = (req as any).user?.id ?? null
+  app.get<{ Params: { id: string } }>('/:id', { preHandler: [optionalAuth] }, async (req, reply) => {
+    const userId = (req as any).user?.userId ?? null
     const { rows } = await db.query(
       `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
               e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
@@ -154,10 +154,10 @@ export default async function eventsRoutes(app: FastifyInstance) {
 
   // POST /events
   app.post<{ Body: z.infer<typeof CreateEventSchema> }>(
-    '/events',
+    '/',
     { preHandler: [rateLimit, requireAuth, validate({ body: CreateEventSchema })] },
     async (req, reply) => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user.userId
       const body   = req.body
 
       const { rows: comm } = await db.query(
@@ -198,10 +198,10 @@ export default async function eventsRoutes(app: FastifyInstance) {
 
   // PATCH /events/:id
   app.patch<{ Params: { id: string }; Body: z.infer<typeof UpdateEventSchema> }>(
-    '/events/:id',
+    '/:id',
     { preHandler: [rateLimit, requireAuth, validate({ body: UpdateEventSchema })] },
     async (req, reply) => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user.userId
       if (!(await canManageEvent(userId, req.params.id))) {
         return reply.status(403).send({ error: 'Non autorise' })
       }
@@ -250,10 +250,10 @@ export default async function eventsRoutes(app: FastifyInstance) {
 
   // DELETE /events/:id
   app.delete<{ Params: { id: string } }>(
-    '/events/:id',
+    '/:id',
     { preHandler: [rateLimit, requireAuth] },
     async (req, reply) => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user.userId
       if (!(await canManageEvent(userId, req.params.id))) {
         return reply.status(403).send({ error: 'Non autorise' })
       }
@@ -266,10 +266,10 @@ export default async function eventsRoutes(app: FastifyInstance) {
 
   // POST /events/:id/rsvp
   app.post<{ Params: { id: string }; Body: z.infer<typeof RsvpSchema> }>(
-    '/events/:id/rsvp',
+    '/:id/rsvp',
     { preHandler: [rateLimit, requireAuth, validate({ body: RsvpSchema })] },
     async (req, reply) => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user.userId
 
       const { rows: ev } = await db.query(
         `SELECT id, rsvp_enabled, max_attendees,
@@ -309,10 +309,10 @@ export default async function eventsRoutes(app: FastifyInstance) {
 
   // DELETE /events/:id/rsvp
   app.delete<{ Params: { id: string } }>(
-    '/events/:id/rsvp',
+    '/:id/rsvp',
     { preHandler: [rateLimit, requireAuth] },
     async (req, reply) => {
-      const userId = (req as any).user.id
+      const userId = (req as any).user.userId
       await db.query(
         `DELETE FROM event_rsvps WHERE event_id = $1 AND user_id = $2`,
         [req.params.id, userId]
