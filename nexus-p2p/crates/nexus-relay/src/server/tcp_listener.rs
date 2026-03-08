@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
-use tokio_postgres::Client as PgClient;
+use super::db::DbPool;
 use tracing::{error, info, warn};
 use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
 
@@ -57,7 +57,7 @@ fn record_auth_failure(ban_map: &DashMap<IpAddr, (u32, u64)>, ip: IpAddr) {
 pub async fn run(
     bind: &str,
     registry: Registry,
-    pg: Arc<PgClient>,
+    pg: Arc<DbPool>,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(bind).await?;
     info!("TCP relay listener on {bind}");
@@ -107,7 +107,7 @@ async fn handle_client(
     mut stream: TcpStream,
     addr: SocketAddr,
     registry: Registry,
-    pg: Arc<PgClient>,
+    pg: Arc<DbPool>,
     ban_map: BanMap,
 ) -> anyhow::Result<()> {
     // 1. Expect Register as the very first message.

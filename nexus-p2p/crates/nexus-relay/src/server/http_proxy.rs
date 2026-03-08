@@ -6,7 +6,7 @@ use hyper::{body::Incoming, Request, Response, StatusCode};
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
-use tokio_postgres::Client as PgClient;
+use super::db::DbPool;
 use tracing::{error, info};
 use uuid::Uuid;
 use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
@@ -19,7 +19,7 @@ use super::registry::{PendingRequest, Registry};
 pub async fn run(
     bind: &str,
     registry: Registry,
-    pg: Arc<PgClient>,
+    pg: Arc<DbPool>,
     main_slug: String,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(bind).await?;
@@ -51,7 +51,7 @@ pub async fn run(
 async fn handle_request(
     req: Request<Incoming>,
     registry: Registry,
-    pg: Arc<PgClient>,
+    pg: Arc<DbPool>,
     main_slug: String,
 ) -> Result<Response<Full<Bytes>>, hyper::Error> {
     // Extract slug from Host header (slug.nexusnode.app → slug).
