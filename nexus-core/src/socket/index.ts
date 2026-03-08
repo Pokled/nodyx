@@ -116,6 +116,18 @@ export function registerSocketIO(server: Server): void {
 
     // ── Presence tracking (async init) ────────────────────────────────────────
     ;(async () => {
+      // Disconnect banned users immediately
+      const { rows: banRows } = await db.query(
+        `SELECT 1 FROM community_bans cb
+         JOIN communities c ON c.id = cb.community_id
+         WHERE cb.user_id = $1 LIMIT 1`,
+        [userId]
+      ).catch(() => ({ rows: [] }))
+      if (banRows.length > 0) {
+        socket.emit('banned', { message: 'You have been banned from this community.' })
+        socket.disconnect(true)
+        return
+      }
       // Fetch avatar + name_color + grade + restore status from Redis
       try {
         const { rows } = await db.query<{
@@ -275,6 +287,15 @@ export function registerSocketIO(server: Server): void {
       if (!sanitized || sanitized.length > 10000) return
 
       try {
+        // Check ban before writing message
+        const { rows: banCheck } = await db.query(
+          `SELECT 1 FROM community_bans cb
+           JOIN channels ch ON ch.community_id = cb.community_id
+           WHERE cb.user_id = $1 AND ch.id = $2 LIMIT 1`,
+          [userId, channelId]
+        )
+        if (banCheck.length > 0) return
+
         const message = await ChannelModel.addMessage({
           channel_id:   channelId,
           author_id:    userId,

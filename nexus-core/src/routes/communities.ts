@@ -5,6 +5,7 @@ import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as CommunityModel from '../models/community'
 import * as GradeModel from '../models/grade'
+import { db } from '../config/database'
 
 const GradeBody = z.object({
   name:        z.string().min(1).max(100),
@@ -90,6 +91,14 @@ export default async function communityRoutes(app: FastifyInstance) {
     const existing = await CommunityModel.getMember(community.id, request.user!.userId)
     if (existing) {
       return reply.code(409).send({ error: 'Already a member', code: 'ALREADY_MEMBER' })
+    }
+
+    const { rows: banRows } = await db.query(
+      `SELECT 1 FROM community_bans WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
+      [community.id, request.user!.userId]
+    )
+    if (banRows.length > 0) {
+      return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
     }
 
     await CommunityModel.addMember(community.id, request.user!.userId, 'member')
