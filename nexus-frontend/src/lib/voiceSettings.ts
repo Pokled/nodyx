@@ -31,7 +31,7 @@ const DEFAULTS: VoiceSettings = {
   rnnoiseEnabled:       false,   // off par défaut (package optionnel)
   broadcastModeEnabled: false,
   broadcastIntensity:   0.6,
-  bitrate:              64,
+  bitrate:              32,
 }
 
 function _load(): VoiceSettings {

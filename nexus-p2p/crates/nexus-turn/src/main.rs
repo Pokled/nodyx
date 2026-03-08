@@ -1,6 +1,6 @@
 // ── nexus-turn ────────────────────────────────────────────────────────────────
 // STUN/TURN server — replaces coturn in the Nexus P2P stack.
-// RFC 5389 (STUN) + RFC 5766 (TURN)
+// RFC 5389 (STUN) + RFC 5766 (TURN) + RFC 6062 (TURN-over-TCP)
 //
 // Usage:
 //   nexus-turn server --udp-port 3478 --realm nexusnode.app --public-ip 1.2.3.4
@@ -26,7 +26,8 @@ use tokio::net::UdpSocket;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use server::{run, TurnConfig};
+use crate::allocation::new_registry;
+use server::{run, run_tcp, TurnConfig};
 
 // ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,9 @@ async fn main() -> Result<()> {
                     .with_context(|| format!("Failed to bind UDP {bind_addr}"))?
             );
 
+            // Shared allocation registry — UDP and TCP clients share the same pool.
+            let registry = new_registry();
+
             // Generate a fresh nonce at startup (used in 401 challenges)
             let nonce: String = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
@@ -102,12 +106,17 @@ async fn main() -> Result<()> {
             });
 
             info!(
-                "nexus-turn v{} — STUN/TURN on udp:{udp_port} | public_ip={}",
+                "nexus-turn v{} — STUN/TURN on udp:{udp_port} + tcp:{udp_port} | public_ip={}",
                 env!("CARGO_PKG_VERSION"),
                 cfg.public_ip
             );
 
-            run(socket, cfg).await?;
+            // Run UDP and TCP listeners concurrently on the shared registry.
+            // If either exits, the whole process exits.
+            tokio::select! {
+                r = run(socket, Arc::clone(&cfg), Arc::clone(&registry)) => r?,
+                r = run_tcp(udp_port, Arc::clone(&cfg), Arc::clone(&registry)) => r?,
+            }
         }
     }
 

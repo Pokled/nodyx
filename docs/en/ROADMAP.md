@@ -17,7 +17,7 @@
 | **Phase 2** | Real-time Chat + Directory + Network Identity | ✅ Complete |
 | **Phase 2.5** | Community customization + Light federation | ✅ Complete |
 | **Phase 3** | P2P Infrastructure + Rust Foundation | 🔨 In Progress |
-| **Phase 4** | Platform enrichment | 🔨 In Progress (v1.1 partial) |
+| **Phase 4** | Platform enrichment | 🔨 In Progress (v1.3 partial) |
 | Phase 5 | Mobile and reputation | ⏳ Planned |
 | **Phase Horizon** | NEXUS-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NEXUS-RADIO — Internet radio tuner + cooperative ad network | 📻 Vision |
@@ -269,16 +269,22 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] Graceful fallback if WebRTC fails (12s ICE timeout, subtle toast, _hadAttempt/_hadSuccess flags)
 - [x] Asset transfer between peers (32 KB chunks, p2p:asset:* protocol, p2pAssetPeers store, ⚡ yellow button)
 
-#### Phase 3.0-C — `nexus-turn` (replaces coturn) ✅ VALIDATED — March 4, 2026
+#### Phase 3.0-C — `nexus-turn` (replaces coturn) ✅ VALIDATED — March 4, 2026 / Updated March 8, 2026
 
 > coturn is a 2000s C project. Complex to configure, significant attack surface.
 > **Replaced by a 2.9MB Rust binary — zero dependency, dynamic credentials.**
 
 - [x] STUN/TURN server in Rust — RFC 5389 (STUN) + RFC 5766 (TURN)
 - [x] HMAC-SHA1 time-based credentials (username={expires}:{userId})
-- [x] Rate limiter UDP per IP (30 pkt/sec) + allocation quotas + ban map
+- [x] MESSAGE-INTEGRITY on all TURN success responses (RFC 5389 §10.3) — required for Firefox/Chrome relay
+- [x] **TURN-over-TCP (RFC 6062)** — TCP:3478 alongside UDP:3478, shared allocation registry
+- [x] RFC 4571 framing (2-byte big-endian length prefix per TCP message)
+- [x] `ResponseSink` abstraction — all TURN handlers transport-agnostic (UDP and TCP unified)
+- [x] Rate limiter UDP per IP (30 pkt/sec) + allocation quotas (MAX_LIFETIME=300s) + ban map
 - [x] 2.9MB static binary, integrated in `install.sh`, systemd service
 - [x] Validated: STUN Binding Request → 0x0101 Binding Success ✅
+- [x] **Voice — Relay failover**: auto-switches to `iceTransportPolicy: relay` after sustained high packet loss (>25% × 3 polls)
+- [x] **Voice — Opus tuning**: 32 kbps default, DTX off, mono, FEC on — optimized for VPN/lossy links
 
 #### Phase 3.0-D — `nexus-p2p` core (long-term vision 2027-2028)
 
@@ -383,6 +389,13 @@ nexus-core    (Fastify/Node.js) ────────────────
 - [x] **Presence — Custom user status** (v1.1) — emoji + text, 8 presets, persisted in Redis 24h, visible in sidebar
 - [x] **Presence — Offline members list** (v1.1) — collapsible section in sidebar, grayscale avatars
 - [x] **Plugins** (v1.1) — `plugins/` foundation with 3 official table-templates (Brasserie de Nuit, Table de Feutre, Pierre & Braise)
+- [x] **Direct Messages (DMs)** (v1.2) — private 1:1 conversations, `dm_conversations` + `dm_messages`, unread badge, Socket.IO `dm:send/typing/read`
+- [x] **Polls** (v1.2) — in chat (📊 button) and forum (thread creation + standalone), 3 types: choice / schedule / ranking, real-time Socket.IO results
+- [x] **Ban system** (v1.2) — IP ban, email ban, multi-layer enforcement (register, login, middleware), admin UI
+- [x] **nexus-turn — TURN-over-TCP** (v1.3) — RFC 6062, TCP:3478, VPN/firewall bypass for voice
+- [x] **nexus-turn — MESSAGE-INTEGRITY fix** (v1.3) — RFC 5389 §10.3, relay now works in Firefox, Chrome, all WebRTC clients
+- [x] **Voice — Relay failover** (v1.3) — auto-restart ICE with `iceTransportPolicy: relay` after 3 consecutive high-loss polls
+- [x] **Voice — Opus optimized** (v1.3) — 32 kbps default, DTX off, mono, FEC on
 
 **Knowledge & Discovery:**
 - [ ] **Event Calendar** — organizer-grade, OSM maps, JSON-LD Google Rich Snippets, Socket.IO 15min alerts — [SPEC 011](../en/specs/011-nexus-event-calendar/SPEC.md)
@@ -533,5 +546,5 @@ And because they can finally sustain themselves.
 
 ---
 
-*Version 2.0 — March 6, 2026*
+*Version 2.1 — March 8, 2026*
 *"P2P is the soul. Rust is the body. Radio is the resilience. Community is the reason."*

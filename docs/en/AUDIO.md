@@ -111,17 +111,19 @@ The **Intensity** slider (0–100%) scales all three band gains proportionally. 
 
 ### Opus Bitrate
 
-**Options:** 32 kbps / **64 kbps** (default) / 128 kbps
+**Options:** **32 kbps** (default) / 64 kbps / 128 kbps
 
 Controls the Opus codec bitrate applied to the next peer connection.
 
 | Bitrate | Use case |
 |---|---|
-| 32 kbps | Low bandwidth, voice only |
-| 64 kbps | Default — excellent quality/bandwidth balance |
+| **32 kbps** | **Default — voice-optimized, works on VPNs and congested links** |
+| 64 kbps | Higher quality, good bandwidth |
 | 128 kbps | High-quality audio, music, or recording streams |
 
 Changes take effect on the **next connection** (reconnect to the voice channel to apply).
+
+> **Additional codec settings (v1.3):** DTX (Discontinuous Transmission) is disabled by default — it causes audio bursts when speech resumes on lossy links. Mono is forced to halve the bitrate without impacting voice intelligibility. FEC (Forward Error Correction) remains enabled for packet-loss resilience.
 
 ---
 

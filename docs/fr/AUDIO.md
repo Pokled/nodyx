@@ -111,17 +111,19 @@ Le curseur **Intensité** (0–100%) met à l'échelle les gains des trois bande
 
 ### Débit Opus
 
-**Options :** 32 kbps / **64 kbps** (défaut) / 128 kbps
+**Options :** **32 kbps** (défaut) / 64 kbps / 128 kbps
 
 Contrôle le débit du codec Opus appliqué à la prochaine connexion pair.
 
 | Débit | Cas d'utilisation |
 |---|---|
-| 32 kbps | Faible bande passante, voix uniquement |
-| 64 kbps | Défaut — excellent équilibre qualité/bande passante |
+| **32 kbps** | **Défaut — optimisé voix, fonctionne via VPN et liens congestionnés** |
+| 64 kbps | Meilleure qualité, bonne bande passante |
 | 128 kbps | Audio haute qualité, musique ou flux d'enregistrement |
 
 Les changements prennent effet à la **prochaine connexion** (reconnectez-vous au salon vocal pour les appliquer).
+
+> **Paramètres codec additionnels (v1.3) :** Le DTX (Discontinuous Transmission) est désactivé par défaut — il provoque des rafales audio à la reprise de parole sur les liens à perte. Le mono est forcé pour réduire de moitié le débit sans impacter l'intelligibilité vocale. Le FEC (Forward Error Correction) reste actif pour la résilience face aux pertes de paquets.
 
 ---
 

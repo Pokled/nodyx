@@ -5,7 +5,7 @@
 
   <p><strong>The community platform that no one can take from you.<br/>Forum + Chat + Voice + P2P Canvas — on your server, under your control, forever.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-v1.1.0-7c3aed)](CHANGELOG.md)
+  [![Version](https://img.shields.io/badge/version-v1.3.0-7c3aed)](CHANGELOG.md)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
   [![CI](https://github.com/Pokled/Nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nexus/actions/workflows/ci.yml)
   [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
@@ -85,10 +85,11 @@ coturn is the industry standard — a mature C server used by Signal, Jitsi, Mat
 We replaced it with a **2.9MB Rust binary** that does exactly what Nexus needs. Nothing more.
 
 ```
-RFC 5389 (STUN) + RFC 5766 (TURN)
+RFC 5389 (STUN) + RFC 5766 (TURN) + RFC 6062 (TURN-over-TCP)
 HMAC-SHA1 time-based credentials (username={expires}:{userId})
-Rate limiting + allocation quotas + ban map
-tokio async runtime — UDP:3478
+MESSAGE-INTEGRITY on all responses (RFC 5389 §10.3) — Firefox/Chrome compliant
+Rate limiting + allocation quotas (MAX_LIFETIME=300s) + ban map
+tokio async runtime — UDP:3478 + TCP:3478 (VPN/firewall bypass)
 Zero coturn dependency on production
 ```
 
@@ -310,6 +311,15 @@ Database migrations are applied automatically on startup — no manual SQL neede
 | **Profile theme system** — 6 presets, per-user app-wide CSS engine, live editor | **v1.0** |
 | **Mobile-responsive UI** — chat drawer, bottom nav, voice accessible on mobile | **v1.0** |
 | **Asset library 12 MB** + per-type upload design guidelines | **v1.0** |
+| **Chat — Reply/quote, pinned messages, link previews, @mention badge** | **v1.1** |
+| **Presence — Custom status** (emoji + text, 8 presets) **+ offline members list** | **v1.1** |
+| **Direct Messages (DMs)** — private 1:1 conversations with unread badge | **v1.2** |
+| **Polls** — in chat and forum, 3 types (choice/schedule/ranking), real-time results | **v1.2** |
+| **Ban system** — IP ban, email ban, multi-layer enforcement | **v1.2** |
+| **nexus-turn — TURN-over-TCP** (RFC 6062) — voice works through VPNs and strict firewalls | **v1.3** |
+| **nexus-turn — MESSAGE-INTEGRITY** fix — relay candidates now accepted by all browsers | **v1.3** |
+| **Voice — Relay failover** — auto-switches to TURN relay on sustained packet loss | **v1.3** |
+| **Voice — Opus tuning** — 32 kbps default, DTX off, mono for high-loss links | **v1.3** |
 
 ### Coming
 

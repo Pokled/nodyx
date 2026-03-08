@@ -121,8 +121,14 @@ export function getQuality(stats: PeerStats | undefined): NetQuality {
 
 // ── Stats polling internals ───────────────────────────────────────
 
-const _statsIntervals = new Map<string, ReturnType<typeof setInterval>>()
-const _prevPackets    = new Map<string, { received: number; lost: number }>()
+const _statsIntervals    = new Map<string, ReturnType<typeof setInterval>>()
+const _prevPackets       = new Map<string, { received: number; lost: number }>()
+// High packet-loss relay failover: track consecutive high-loss readings per peer.
+// After 3 consecutive polls (≈6s) above the threshold, try relay-only ICE restart.
+const _highLossCount     = new Map<string, number>()
+const _relayRestartDone  = new Set<string>()
+const HIGH_LOSS_THRESHOLD = 25   // %
+const HIGH_LOSS_POLLS     = 3    // consecutive readings before relay restart
 
 async function _pollStats(socketId: string, channelId: string): Promise<void> {
   const pc = _peerConns.get(socketId)
@@ -151,7 +157,7 @@ async function _pollStats(socketId: string, channelId: string): Promise<void> {
         const lost     = r.packetsLost     ?? 0
         if (prev) {
           const dRec  = received - prev.received
-          const dLost = lost     - prev.lost
+          const dLost = Math.max(0, lost - prev.lost) // guard against counter reset
           const total = dRec + dLost
           if (total > 0) packetLoss = Math.round((dLost / total) * 1000) / 10
         }
@@ -169,7 +175,56 @@ async function _pollStats(socketId: string, channelId: string): Promise<void> {
     if (rtt !== null && _socket) {
       _socket.emit('voice:stats', { channelId, rtt })
     }
+
+    // ── High-loss relay failover ────────────────────────────────────
+    // If packet loss stays above threshold for HIGH_LOSS_POLLS consecutive polls
+    // (~6s) AND TURN relay is configured, switch the connection to relay-only.
+    if (packetLoss !== null && connectionType !== 'relay') {
+      if (packetLoss > HIGH_LOSS_THRESHOLD) {
+        _highLossCount.set(socketId, (_highLossCount.get(socketId) ?? 0) + 1)
+        const count = _highLossCount.get(socketId)!
+        if (count >= HIGH_LOSS_POLLS && !_relayRestartDone.has(socketId)
+            && _dynamicIceServers && _dynamicIceServers.length > 0) {
+          _relayRestartDone.add(socketId)
+          _highLossCount.delete(socketId)
+          console.warn(`[voice] sustained ${packetLoss}% loss for ${socketId.slice(0,6)} — relay restart`)
+          _attemptRelayRestart(socketId, channelId)
+        }
+      } else {
+        _highLossCount.delete(socketId)
+      }
+    }
   } catch { /* peer déconnecté */ }
+}
+
+/**
+ * Bascule la connexion vers relay-only (iceTransportPolicy: 'relay') sans
+ * couper l'audio. Utilise setConfiguration() + ICE restart pour forcer le
+ * chemin TURN, contournant les VPN et firewalls qui dégradent le chemin direct.
+ */
+function _attemptRelayRestart(socketId: string, channelId: string): void {
+  const pc = _peerConns.get(socketId)
+  if (!pc || pc.connectionState === 'closed') return
+  // Only the initiator sends the re-offer (avoid collision)
+  if (!_initiatorMap.get(socketId)) return
+  if (pc.signalingState !== 'stable') return
+  try {
+    pc.setConfiguration({
+      iceServers:          _dynamicIceServers ?? [],
+      iceTransportPolicy:  'relay',
+    })
+    pc.createOffer({ iceRestart: true })
+      .then(offer => {
+        if (pc.signalingState !== 'stable') return
+        return pc.setLocalDescription(offer).then(() => {
+          _socket?.emit('voice:offer', { to: socketId, sdp: pc.localDescription, channelId })
+          console.info(`[voice] relay restart offer sent to ${socketId.slice(0,6)}`)
+        })
+      })
+      .catch(e => console.warn('[voice] relay restart failed:', e))
+  } catch (e) {
+    console.warn('[voice] setConfiguration (relay) failed:', e)
+  }
 }
 
 function _startStatsPolling(socketId: string, channelId: string): void {
@@ -183,6 +238,8 @@ function _stopStatsPolling(socketId: string): void {
   const t = _statsIntervals.get(socketId)
   if (t) { clearInterval(t); _statsIntervals.delete(socketId) }
   _prevPackets.delete(socketId)
+  _highLossCount.delete(socketId)
+  _relayRestartDone.delete(socketId)
   peerStatsStore.update(map => { map.delete(socketId); return new Map(map) })
 }
 
@@ -293,6 +350,13 @@ async function _buildLocalChain(rawStream: MediaStream): Promise<MediaStream> {
   eqAir.connect(gain)
   gain.connect(dest)
 
+  // Chrome suspend les AudioContexts sans connexion à ctx.destination.
+  // Un GainNode à 0 vers la sortie système garde le contexte actif (silencieux pour l'utilisateur).
+  const keepAlive = ctx.createGain()
+  keepAlive.gain.value = 0
+  gain.connect(keepAlive)
+  keepAlive.connect(ctx.destination)
+
   _localChain = { ctx, hp, eqMud, eqPres, eqAir, gain, dest }
   return dest.stream
 }
@@ -339,6 +403,28 @@ export async function updateLocalAudio(patch: Partial<VoiceSettings>): Promise<v
 // Reconnect handler — stored as named ref so it can be properly removed
 let _onSocketReconnect: (() => void) | null = null
 
+// ── AudioContext keep-alive ───────────────────────────────────────
+// Chrome peut suspendre l'AudioContext quand l'onglet passe en arrière-plan.
+// On reprend dès que l'onglet redevient visible.
+let _visibilityHandler: (() => void) | null = null
+
+function _startContextKeepAlive(): void {
+  _stopContextKeepAlive()
+  _visibilityHandler = () => {
+    if (document.visibilityState === 'visible' && _localChain?.ctx.state === 'suspended') {
+      _localChain.ctx.resume().catch(() => {})
+    }
+  }
+  document.addEventListener('visibilitychange', _visibilityHandler)
+}
+
+function _stopContextKeepAlive(): void {
+  if (_visibilityHandler) {
+    document.removeEventListener('visibilitychange', _visibilityHandler)
+    _visibilityHandler = null
+  }
+}
+
 // ── Peer audio chains ─────────────────────────────────────────────
 //
 // Chaîne de traitement pour chaque peer entrant :
@@ -371,7 +457,13 @@ function createPeerAudio(socketId: string, stream: MediaStream): void {
   audioEl.srcObject = stream
   audioEl.autoplay  = true
   audioEl.volume    = 1.0
-  audioEl.play().catch(() => { /* résolu au prochain geste utilisateur */ })
+  audioEl.play().catch(() => {
+    // Chrome desktop bloque l'autoplay si le contexte geste-utilisateur a expiré.
+    // On réessaie au prochain clic ou frappe clavier (une seule fois suffit).
+    const retry = () => audioEl.play().catch(() => {})
+    document.addEventListener('click',   retry, { once: true })
+    document.addEventListener('keydown', retry, { once: true })
+  })
 
   // ── AudioContext uniquement pour VAD (niveau d'entrée → indicateur "parle")
   // Si le contexte est suspendu, on perd juste l'indicateur visuel — l'audio joue quand même.
@@ -429,7 +521,7 @@ export function setPeerVolume(socketId: string, value: number): void {
 
 // ── Opus SDP tuning ───────────────────────────────────────────────
 
-function applyOpusTuning(sdp: string, bitrateKbps = 64): string {
+function applyOpusTuning(sdp: string, bitrateKbps = 32): string {
   const rtpMatch = sdp.match(/a=rtpmap:(\d+) opus\/48000\/2/)
   if (!rtpMatch) return sdp
   const pt      = rtpMatch[1]
@@ -447,15 +539,17 @@ function applyOpusTuning(sdp: string, bitrateKbps = 64): string {
         maxaveragebitrate: bpsStr,
         maxplaybackrate:   '48000',
         useinbandfec:      '1',
-        usedtx:            '1',
+        usedtx:            '0', // DTX off: silence gaps cause bursts on resume — worse under loss
         cbr:               '0',
+        stereo:            '0', // mono: halves bandwidth
+        sprop_stereo:      '0',
       }
       return `a=fmtp:${pt} ${Object.entries(merged).map(([k, v]) => v ? `${k}=${v}` : k).join(';')}`
     })
   } else {
     return sdp.replace(
       `a=rtpmap:${pt} opus/48000/2\r\n`,
-      `a=rtpmap:${pt} opus/48000/2\r\na=fmtp:${pt} maxaveragebitrate=${bpsStr};maxplaybackrate=48000;useinbandfec=1;usedtx=1;cbr=0\r\n`,
+      `a=rtpmap:${pt} opus/48000/2\r\na=fmtp:${pt} maxaveragebitrate=${bpsStr};maxplaybackrate=48000;useinbandfec=1;usedtx=0;cbr=0;stereo=0;sprop-stereo=0\r\n`,
     )
   }
 }
@@ -782,6 +876,7 @@ export async function joinVoice(channelId: string, socket: Socket): Promise<void
   })
 
   startLocalVAD(channelId)
+  _startContextKeepAlive()
 }
 
 export function leaveVoice(): void {
@@ -807,6 +902,7 @@ export function leaveVoice(): void {
   }
 
   if (_rejoinTimer) { clearTimeout(_rejoinTimer); _rejoinTimer = null }
+  _stopContextKeepAlive()
 
   for (const [sid, pc] of _peerConns) {
     destroyPeerAudio(sid)

@@ -5,7 +5,7 @@
 
   <p><strong>La plateforme communautaire que personne ne peut te prendre.<br/>Forum + Chat + Voix + Canvas P2P — sur ton serveur, sous ton contrôle, pour toujours.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-v1.0.0-7c3aed)](../../CHANGELOG.md)
+  [![Version](https://img.shields.io/badge/version-v1.3.0-7c3aed)](../../CHANGELOG.md)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
   [![CI](https://github.com/Pokled/Nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nexus/actions/workflows/ci.yml)
   [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](ARCHITECTURE.md)
@@ -85,10 +85,11 @@ coturn est le standard industriel — un serveur C mature utilisé par Signal, J
 On l'a remplacé par un **binaire Rust de 2,9MB** qui fait exactement ce dont Nexus a besoin. Rien de plus.
 
 ```
-RFC 5389 (STUN) + RFC 5766 (TURN)
+RFC 5389 (STUN) + RFC 5766 (TURN) + RFC 6062 (TURN-over-TCP)
 Credentials HMAC-SHA1 time-based (username={expires}:{userId})
-Rate limiting + quotas d'allocation + ban map
-tokio async runtime — UDP:3478
+MESSAGE-INTEGRITY sur toutes les réponses (RFC 5389 §10.3) — Firefox/Chrome conforme
+Rate limiting + quotas d'allocation (MAX_LIFETIME=300s) + ban map
+tokio async runtime — UDP:3478 + TCP:3478 (bypass VPN/firewall)
 Zéro dépendance coturn en production
 ```
 
@@ -310,6 +311,15 @@ Les migrations de base de données sont appliquées automatiquement au démarrag
 | **Système de thèmes de profil** — 6 presets, CSS vars, éditeur live, app entière | **v1.0** |
 | **UI responsive mobile** — drawer de chat, nav bas, voix accessible sur mobile | **v1.0** |
 | **Bibliothèque d'assets 12 Mo** + conseils de design par type d'asset | **v1.0** |
+| **Chat — Réponses/citations, messages épinglés, aperçus de liens, badge @mention** | **v1.1** |
+| **Présence — Statut personnalisé** (emoji + texte, 8 presets) **+ membres hors ligne** | **v1.1** |
+| **Messages privés (DMs)** — conversations 1:1 avec badge non-lu | **v1.2** |
+| **Sondages** — dans le chat et le forum, 3 types (choix/planning/classement), résultats temps réel | **v1.2** |
+| **Système de ban** — ban IP, ban email, enforcement multi-couches | **v1.2** |
+| **nexus-turn — TURN-over-TCP** (RFC 6062) — voix fonctionnelle via VPN et firewall stricts | **v1.3** |
+| **nexus-turn — MESSAGE-INTEGRITY** — candidats relay acceptés par tous les navigateurs | **v1.3** |
+| **Voix — Relay failover** — bascule automatique vers TURN relay sur perte de paquets élevée | **v1.3** |
+| **Voix — Opus optimisé** — 32 kbps par défaut, DTX désactivé, mono pour liens dégradés | **v1.3** |
 
 ### À venir
 

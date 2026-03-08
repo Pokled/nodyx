@@ -9,6 +9,41 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.3.0] — 2026-03-08
+
+### Added
+- **Système de ban complet** — protection multi-couches contre les abus
+  - IP ban + email ban : les comptes recréés depuis la même IP ou avec le même email sont bloqués dès l'inscription
+  - Déconnexion socket immédiate au moment du ban (le modérateur n'a pas à attendre)
+  - Enforcement à toutes les couches : login, socket.io, API, `instance/members`, `communities/join`
+  - Page `/banned` dédiée, redirection automatique dès l'événement `banned` Socket.IO
+  - Panel admin : formulaire de ban avec motif, durée optionnelle, confirmation modale
+  - Migration 030 : `community_bans` (userId, reason, bannedBy, expiresAt, ipBan, emailBan)
+- **nexus-turn — TURN over TCP (RFC 6062)** — les utilisateurs derrière VPN ou firewall strict peuvent désormais utiliser les salons vocaux
+  - Écoute simultanée UDP:3478 + TCP:3478 — même binaire, même configuration
+  - Framing RFC 4571 : préfixe 2 octets big-endian par message
+  - Registry partagée UDP/TCP — une seule allocation par client quel que soit le transport
+  - ICE server URL ajouté automatiquement : `turn:IP:3478?transport=tcp`
+- **nexus-turn — MESSAGE-INTEGRITY sur les réponses** (RFC 5389 §10.3)
+  - Les réponses TURN (Allocate, Refresh, CreatePermission, ChannelBind) incluent désormais le champ MESSAGE-INTEGRITY obligatoire
+  - Fixe le problème fondamental : Firefox et Chrome rejetaient silencieusement les réponses sans MI → aucun relay candidate généré → TURN inutilisable en relay
+
+### Fixed
+- **Voice — Relay failover automatique** — détection de qualité dégradée et bascule relay
+  - Si la perte de paquets dépasse 25% pendant 3 polls consécutifs (~6s), la connexion bascule en relay-only via `pc.setConfiguration({ iceTransportPolicy: 'relay' })` + ICE restart
+  - Bascule silencieuse (sans coupure audio) — spécialement conçu pour les utilisateurs VPN
+- **Voice — Opus optimisé pour les liens à forte perte**
+  - Bitrate par défaut : 64 kbps → **32 kbps** (paquets plus petits, meilleure résistance à la perte)
+  - DTX (Discontinuous Transmission) désactivé : les silences généraient des bursts au retour de la parole
+  - Mono forcé (`stereo=0`) : la voix ne nécessite pas la stéréo, réduit encore la bande passante
+  - FEC (in-band Forward Error Correction) maintenu : `useinbandfec=1`
+- **Voice — Calcul packet loss** — `Math.max(0, dLost)` protège contre les deltas négatifs lors d'un ICE restart
+- **nexus-turn — Quota allocation** — `MAX_LIFETIME` plafonné à 300s (Firefox demandait 3600s → quota saturé en ~25 reconnexions → vocal bloqué 1h)
+- **Socket.IO — Transport polling-first** — `transports: ['polling', 'websocket']` — nexus-relay strip le header `Upgrade`, le WebSocket seul en premier tentait indéfiniment → `online_count = 0` sur toutes les instances relay
+- **Salons vocaux — Capacité portée à 25** — limite relevée + enforcement côté serveur + notification `voice:full` côté client
+
+---
+
 ## [1.2.0] — 2026-03-07
 
 ### Added

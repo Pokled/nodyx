@@ -23,6 +23,8 @@ function buildIceServers(userId: string): object[] {
     const username   = `${expires}:${userId}`
     const credential = crypto.createHmac('sha1', secret).update(username).digest('base64')
     servers.push({ urls: `turn:${ip}:${port}`, username, credential })
+    // TURN-over-TCP (RFC 6062) — penetrates VPNs and strict firewalls that block UDP
+    servers.push({ urls: `turn:${ip}:${port}?transport=tcp`, username, credential })
   }
   return servers
 }

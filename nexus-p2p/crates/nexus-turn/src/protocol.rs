@@ -40,8 +40,12 @@ pub const ATTR_REQUESTED_TRANSPORT:    u16 = 0x0019;
 pub const ATTR_SOFTWARE:               u16 = 0x8022;
 
 // Default TURN allocation lifetime (seconds)
-pub const DEFAULT_LIFETIME: u32 = 600;
-pub const MAX_LIFETIME:     u32 = 3600;
+// MAX_LIFETIME doit rester court : Firefox demande 3600s par défaut, ce qui remplissait
+// le quota (50 par IP) en ~25 reconnexions et bloquait le vocal pendant 1h.
+// 300s = 5min : les allocations stales expirent vite ; les connexions actives
+// auto-refresh toutes les ~2min, elles survivent normalement.
+pub const DEFAULT_LIFETIME: u32 = 300;
+pub const MAX_LIFETIME:     u32 = 300;
 
 // ── STUN Message ──────────────────────────────────────────────────────────────
 
