@@ -125,10 +125,10 @@ export async function announceThreadsToDirectory() {
 
   try {
     const { rows } = await db.query<{
-      id: string; slug: string | null; title: string;
+      id: string; slug: string | null; title: string; category_id: string;
       excerpt: string | null; reply_count: number; tags: string[]
     }>(
-      `SELECT t.id, t.slug, t.title,
+      `SELECT t.id, t.slug, t.title, t.category_id,
               LEFT(REGEXP_REPLACE(
                 (SELECT p.content FROM posts p WHERE p.thread_id = t.id ORDER BY p.created_at ASC LIMIT 1),
                 '<[^>]*>', '', 'g'
@@ -151,12 +151,13 @@ export async function announceThreadsToDirectory() {
     const slug    = process.env.NEXUS_COMMUNITY_SLUG ?? 'unknown'
 
     const threads = rows.map(t => ({
-      thread_id:   t.id,
-      thread_slug: t.slug,
-      title:       t.title,
-      excerpt:     t.excerpt ?? '',
-      tags:        t.tags,
-      reply_count: t.reply_count,
+      thread_id:     t.id,
+      thread_slug:   t.slug,
+      category_id:   t.category_id,
+      title:         t.title,
+      excerpt:       t.excerpt ?? '',
+      tags:          t.tags,
+      reply_count:   t.reply_count,
       instance_url:  selfUrl,
       instance_slug: slug,
     }))
