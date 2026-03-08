@@ -100,18 +100,26 @@ export default async function userRoutes(app: FastifyInstance) {
     const communityId = await getCommunityIdForUsers()
     let role: string | null = null
     let grade: { name: string; color: string } | null = null
+    let is_banned = false
     if (communityId) {
-      const { rows } = await db.query<{ role: string; grade_name: string | null; grade_color: string | null }>(
-        `SELECT cm.role, cg.name AS grade_name, cg.color AS grade_color
-         FROM community_members cm
-         LEFT JOIN community_grades cg ON cg.id = cm.grade_id
-         WHERE cm.user_id = $1 AND cm.community_id = $2`,
-        [request.user!.userId, communityId]
-      )
-      role  = rows[0]?.role ?? null
-      grade = rows[0]?.grade_name ? { name: rows[0].grade_name, color: rows[0].grade_color! } : null
+      const [memberRows, banRows] = await Promise.all([
+        db.query<{ role: string; grade_name: string | null; grade_color: string | null }>(
+          `SELECT cm.role, cg.name AS grade_name, cg.color AS grade_color
+           FROM community_members cm
+           LEFT JOIN community_grades cg ON cg.id = cm.grade_id
+           WHERE cm.user_id = $1 AND cm.community_id = $2`,
+          [request.user!.userId, communityId]
+        ),
+        db.query(
+          `SELECT 1 FROM community_bans WHERE user_id = $1 AND community_id = $2 LIMIT 1`,
+          [request.user!.userId, communityId]
+        ),
+      ])
+      role      = memberRows.rows[0]?.role ?? null
+      grade     = memberRows.rows[0]?.grade_name ? { name: memberRows.rows[0].grade_name, color: memberRows.rows[0].grade_color! } : null
+      is_banned = banRows.rows.length > 0
     }
-    return reply.send({ user: { ...user, role, grade } })
+    return reply.send({ user: { ...user, role, grade, is_banned } })
   })
 
   // PATCH /api/v1/users/me/linked-instances — ajouter ou retirer une instance liée

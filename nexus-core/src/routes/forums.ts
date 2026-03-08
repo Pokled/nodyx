@@ -191,6 +191,20 @@ app.get('/threads', {
   }, async (request, reply) => {
     const { category_id, title, content, tag_ids } = request.body as z.infer<typeof CreateThreadBody>
 
+    // Check if user is banned from this community
+    const { rows: catRows } = await db.query<{ community_id: string }>(
+      `SELECT community_id FROM categories WHERE id = $1 LIMIT 1`, [category_id]
+    )
+    if (catRows[0]) {
+      const { rows: banRows } = await db.query(
+        `SELECT 1 FROM community_bans WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
+        [catRows[0].community_id, request.user!.userId]
+      )
+      if (banRows.length > 0) {
+        return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
+      }
+    }
+
     const thread = await ThreadModel.create({
       category_id,
       author_id: request.user!.userId,
@@ -252,6 +266,18 @@ app.get('/threads', {
     }
     if (thread.is_locked) {
       return reply.code(403).send({ error: 'Thread is locked', code: 'THREAD_LOCKED' })
+    }
+
+    // Check if user is banned from this community
+    const { rows: banRows } = await db.query(
+      `SELECT 1 FROM community_bans cb
+       JOIN categories cat ON cat.community_id = cb.community_id
+       JOIN threads t ON t.category_id = cat.id
+       WHERE cb.user_id = $1 AND t.id = $2 LIMIT 1`,
+      [userId, thread_id]
+    )
+    if (banRows.length > 0) {
+      return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
     }
 
     const sanitized = sanitize(content)

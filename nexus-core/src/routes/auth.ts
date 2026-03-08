@@ -116,7 +116,9 @@ export default async function authRoutes(app: FastifyInstance) {
 
     const clientIp = request.ip
 
-    const [existingEmail, existingUsername, ipBan, emailBan] = await Promise.all([
+    const maxMembers = process.env.NEXUS_MAX_MEMBERS ? parseInt(process.env.NEXUS_MAX_MEMBERS, 10) : null
+
+    const [existingEmail, existingUsername, ipBan, emailBan, memberCount] = await Promise.all([
       UserModel.findByEmail(email),
       UserModel.findByUsername(username),
       db.query(`SELECT 1 FROM ip_bans WHERE ip = $1::inet LIMIT 1`, [clientIp]),
@@ -126,6 +128,16 @@ export default async function authRoutes(app: FastifyInstance) {
          LIMIT 1`,
         [email]
       ),
+      maxMembers
+        ? db.query<{ count: number }>(
+            `SELECT COUNT(*)::int AS count FROM users u
+             WHERE NOT EXISTS (
+               SELECT 1 FROM community_bans cb
+               JOIN communities c ON c.id = cb.community_id
+               WHERE cb.user_id = u.id LIMIT 1
+             )`
+          )
+        : Promise.resolve(null),
     ])
 
     if (existingEmail) {
@@ -139,6 +151,9 @@ export default async function authRoutes(app: FastifyInstance) {
     }
     if (emailBan.rows.length > 0) {
       return reply.code(403).send({ error: 'Registration not allowed', code: 'FORBIDDEN' })
+    }
+    if (maxMembers !== null && memberCount && memberCount.rows[0].count >= maxMembers) {
+      return reply.code(403).send({ error: 'This instance has reached its member limit', code: 'INSTANCE_FULL' })
     }
 
     const user  = await UserModel.create({ username, email, password })

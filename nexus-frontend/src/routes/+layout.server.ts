@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { apiFetch } from '$lib/api';
 import { env } from '$env/dynamic/public';
@@ -44,6 +45,14 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request }) => {
 	}
 
 	const { user } = await userRes.json();
+
+	// Redirect banned users to the /banned page
+	if (user?.is_banned) {
+		const path = new URL(request.url).pathname;
+		if (path !== '/banned' && !path.startsWith('/reset-password')) {
+			throw redirect(302, '/banned');
+		}
+	}
 
 	// Fetch notifications + user profile theme in parallel (non-blocking)
 	let unreadCount = 0;
