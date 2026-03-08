@@ -14,13 +14,30 @@ import { io } from '../socket/io'
 
 const ALLOWED_TAGS = [
   'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-  'h1', 'h2', 'h3', 'blockquote', 'ul', 'ol', 'li', 'a',
+  'h1', 'h2', 'h3', 'h4',
+  'ul', 'ol', 'li',
+  'blockquote', 'hr',
+  'a', 'img',
+  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+  'div', 'span',
+  'iframe',
 ]
+
+const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
+  '*':      ['class', 'data-align', 'data-type', 'data-two-cols', 'data-col'],
+  'span':   ['class', 'style', 'data-align', 'data-type'],
+  'p':      ['class', 'style', 'data-align', 'data-type'],
+  'a':      ['href', 'target', 'rel'],
+  'img':    ['src', 'alt', 'width', 'height', 'data-align'],
+  'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
+  'th':     ['rowspan', 'colspan'],
+  'td':     ['rowspan', 'colspan'],
+}
 
 function sanitize(html: string): string {
   return sanitizeHtml(html, {
     allowedTags:       ALLOWED_TAGS,
-    allowedAttributes: { a: ['href', 'target', 'rel'] },
+    allowedAttributes: ALLOWED_ATTRS,
   })
 }
 

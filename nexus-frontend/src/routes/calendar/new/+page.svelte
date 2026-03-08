@@ -55,7 +55,7 @@
 			const fd = new FormData();
 			fd.append('name',        file.name.replace(/\.[^.]+$/, ''));
 			fd.append('description', '');
-			fd.append('asset_type',  'image');
+			fd.append('asset_type',  'banner');
 			fd.append('is_public',   'true');
 			fd.append('file',        file);
 
