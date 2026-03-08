@@ -261,6 +261,72 @@ export default async function adminRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
+  // ── Bans ───────────────────────────────────────────────────────────────────
+
+  // GET /api/v1/admin/bans — list banned users
+  app.get('/bans', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (_req, reply) => {
+    const communityId = await getCommunityId()
+    const { rows } = await db.query(
+      `SELECT
+         cb.user_id, cb.banned_at, cb.reason,
+         u.username, u.email, u.avatar,
+         bu.username AS banned_by_username
+       FROM community_bans cb
+       JOIN users u  ON u.id  = cb.user_id
+       LEFT JOIN users bu ON bu.id = cb.banned_by
+       WHERE cb.community_id = $1
+       ORDER BY cb.banned_at DESC`,
+      [communityId]
+    )
+    return reply.send(rows)
+  })
+
+  // POST /api/v1/admin/members/:userId/ban — ban member (kick + blacklist)
+  app.post('/members/:userId/ban', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (request, reply) => {
+    const { userId }  = request.params as { userId: string }
+    const communityId = await getCommunityId()
+    const adminUser   = (request as any).user as { userId: string }
+    const body        = (request.body ?? {}) as { reason?: string }
+
+    const { rows: check } = await db.query(
+      `SELECT role FROM community_members WHERE community_id = $1 AND user_id = $2`,
+      [communityId, userId]
+    )
+    if (check[0]?.role === 'owner') return reply.code(403).send({ error: 'Cannot ban the owner' })
+
+    // Insert ban (upsert — idempotent)
+    await db.query(
+      `INSERT INTO community_bans (community_id, user_id, banned_by, reason)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (community_id, user_id) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
+      [communityId, userId, adminUser.userId, body.reason ?? null]
+    )
+    // Also remove from members if still present
+    await db.query(
+      `DELETE FROM community_members WHERE community_id = $1 AND user_id = $2`,
+      [communityId, userId]
+    )
+    return reply.send({ ok: true })
+  })
+
+  // DELETE /api/v1/admin/members/:userId/ban — unban
+  app.delete('/members/:userId/ban', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (request, reply) => {
+    const { userId }  = request.params as { userId: string }
+    const communityId = await getCommunityId()
+
+    await db.query(
+      `DELETE FROM community_bans WHERE community_id = $1 AND user_id = $2`,
+      [communityId, userId]
+    )
+    return reply.send({ ok: true })
+  })
+
   // ── Threads (moderation) ───────────────────────────────────────────────────
 
   app.get('/threads', {
