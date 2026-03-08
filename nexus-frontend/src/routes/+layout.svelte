@@ -57,10 +57,10 @@
 	let showOffline = $state(false)
 
 	onMount(async () => {
-		if (data.user && data.token) {
-			// SSR provided a valid session — use it directly
+		if (data.user && data.token && !data.user.is_banned) {
+			// SSR provided a valid session — use it directly (skip if banned)
 			initSocket(data.token, data.unreadCount ?? 0)
-		} else {
+		} else if (!data.user?.is_banned) {
 			// No SSR session (guest page) — try reconnecting from stored token
 			tryAutoConnect()
 		}

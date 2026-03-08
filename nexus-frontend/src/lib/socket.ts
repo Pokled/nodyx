@@ -130,7 +130,9 @@ export async function initSocket(token: string, initialCount: number): Promise<v
   // Server disconnects the socket and emits 'banned' when an admin bans the user.
   // Redirect immediately to /banned so the user can't keep browsing.
   _socket.on('banned', () => {
-    window.location.href = '/banned'
+    if (window.location.pathname !== '/banned') {
+      window.location.href = '/banned'
+    }
   })
 
   // ── DM ─────────────────────────────────────────────────────────────────────
