@@ -225,6 +225,26 @@ cp nexus-core/.env.example nexus-core/.env
 docker-compose up -d
 ```
 
+### Updating an existing instance
+
+Run this single command from the Nexus directory on your server:
+
+```bash
+# If installed in ~/nexus
+cd ~/nexus && git pull && \
+  cd nexus-core && npm run build && sudo pm2 restart nexus-core && \
+  cd ../nexus-frontend && npm run build && sudo pm2 restart nexus-frontend
+```
+
+```bash
+# If installed in /opt/nexus
+cd /opt/nexus && git pull && \
+  cd nexus-core && npm run build && sudo pm2 restart nexus-core && \
+  cd ../nexus-frontend && npm run build && sudo pm2 restart nexus-frontend
+```
+
+Database migrations are applied automatically on startup — no manual SQL needed.
+
 ---
 
 ## Architecture
