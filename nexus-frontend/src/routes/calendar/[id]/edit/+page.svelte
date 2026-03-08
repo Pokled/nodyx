@@ -12,6 +12,7 @@
 	let coverPreview   = $state<string | null>(ev.cover_url ?? null);
 	let coverUrl       = $state(ev.cover_url ?? '');
 	let uploadingCover = $state(false);
+	let uploadError    = $state<string | null>(null);
 
 	// Dates → format datetime-local (YYYY-MM-DDTHH:mm)
 	function toLocal(iso: string | null): string {
@@ -52,11 +53,12 @@
 		reader.readAsDataURL(file);
 
 		uploadingCover = true;
+		uploadError    = null;
 		try {
 			const fd = new FormData();
 			fd.append('name',        file.name.replace(/\.[^.]+$/, ''));
 			fd.append('description', '');
-			fd.append('asset_type',  'image');
+			fd.append('asset_type',  'banner');
 			fd.append('is_public',   'true');
 			fd.append('file',        file);
 
@@ -67,9 +69,15 @@
 			});
 			if (res.ok) {
 				const json = await res.json();
-				const base = PUBLIC_API_URL.replace('/api/v1', '');
-				coverUrl = `${base}/uploads/${json.asset?.file_path ?? ''}`;
+				coverUrl = `${PUBLIC_API_URL}/uploads/${json.asset?.file_path ?? ''}`;
+			} else {
+				const json = await res.json().catch(() => ({}));
+				uploadError = json.error ?? `Erreur ${res.status} lors de l'upload`;
+				coverPreview = null;
 			}
+		} catch (err) {
+			uploadError = "Erreur réseau lors de l'upload";
+			coverPreview = null;
 		} finally {
 			uploadingCover = false;
 		}
@@ -144,8 +152,11 @@
 					{/if}
 					<input type="file" accept="image/*" onchange={onCoverChange} class="sr-only"/>
 				</label>
+				{#if uploadError}
+					<p class="mt-2 text-xs text-red-400">{uploadError}</p>
+				{/if}
 				{#if coverPreview && coverUrl !== (ev.cover_url ?? '')}
-					<button type="button" onclick={() => { coverPreview = null; coverUrl = ''; }}
+					<button type="button" onclick={() => { coverPreview = null; coverUrl = ''; uploadError = null; }}
 					        class="mt-2 text-xs text-red-400 hover:text-red-300 transition-colors">
 						Supprimer l'image
 					</button>
