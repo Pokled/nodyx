@@ -99,7 +99,7 @@ Une personne non-développeur peut :
 2. Configurer son instance via l'installeur interactif ✅
 3. Créer des catégories, des threads, des tags ✅
 4. Administrer sa communauté via le panneau admin ✅
-5. Être trouvé sur Google ✅
+5. Être trouvé sur les moteurs de recherche (Google, Bing, Brave, Qwant...) ✅
 
 ---
 
@@ -520,7 +520,7 @@ Stations vivantes  :  communauté → broadcast comme expression
 ```
 
 **Une instance Nexus EST la couche communautaire.** Une station qui tourne Nexus obtient :
-- Forum (archives, discussions, notes d'émission — indexées par Google)
+- Forum (archives, discussions, notes d'émission — indexées par tous les moteurs de recherche)
 - Chat en direct (les auditeurs réagissent en temps réel pendant les émissions)
 - Salons vocaux (studio ouvert, coulisses, questions/réponses en direct)
 - Garden (la communauté vote les prochains programmes)

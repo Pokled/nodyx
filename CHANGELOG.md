@@ -9,6 +9,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.4.0] — 2026-03-08
+
+### Added
+- **Slug URLs** — threads accessibles via URLs lisibles et indexables par les moteurs de recherche
+  - Format : `/forum/[category]/mon-titre-de-thread-XXXXXXXX` (NFD accent-stripping + suffixe UUID)
+  - Redirect 301 automatique des anciens UUID vers le slug canonique
+  - `scripts/regen-slugs.ts` — script de régénération pour les instances existantes
+- **SEO complet** — chaque page forum correctement balisée
+  - `<link rel="canonical">` sur toutes les pages thread et catégorie
+  - OpenGraph complet : `og:url`, `og:image` (banner communautaire), `og:site_name`, `og:type`
+  - JSON-LD `DiscussionForumPosting` avec `url`, `dateModified`, `isPartOf`, `interactionStatistic`
+  - `og:site_name` + `theme-color` injectés globalement via le layout
+- **`/sitemap.xml` dynamique** — toutes les catégories et threads publics avec `lastmod` et priorité
+  - Fetch en parallèle par catégorie, cache 1h, regeneration automatique
+  - `robots.txt` déjà référencé (était présent, maintenant actif)
+- **Migration 036** — colonnes `slug`, `is_indexed`, `last_indexed_at` sur `threads`
+  - Infrastructure prête pour le Global Search (SPEC 010)
+
+### Fixed
+- `forums.ts GET /threads/:id` — toutes les queries suivantes (posts, tags, views) utilisent `thread.id` (UUID résolu) et non le slug brut
+- `forums.ts POST /posts` — `thread_id` résolu en UUID avant insert FK et vérification de ban
+- `forums.ts PATCH /threads/:id` — `isMod`, `update`, `remove`, `setThreadTags` utilisent `thread.id`
+- `CreatePostBody` Zod — `thread_id` accepte string (UUID ou slug), résolution côté serveur
+- `+page.server.ts` — requête polls utilise `thread.id` et non `params.thread` (slug)
+- Suppression de `pokled.ddns.net` hardcodé dans `og:image` (vestige d'une instance de dev)
+
+---
+
 ## [1.3.0] — 2026-03-08
 
 ### Added
