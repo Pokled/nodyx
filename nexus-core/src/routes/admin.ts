@@ -152,14 +152,14 @@ export default async function adminRoutes(app: FastifyInstance) {
          WHERE c.community_id = $1 AND p.created_at > NOW() - INTERVAL '7 days'
          GROUP BY day ORDER BY day ASC`,
         [communityId]
-      ),
+      ).catch(() => ({ rows: [] as any[] })),
       db.query(
         `SELECT DATE(joined_at) AS day, COUNT(*)::int AS new_members
          FROM community_members
          WHERE community_id = $1 AND joined_at > NOW() - INTERVAL '7 days'
          GROUP BY day ORDER BY day ASC`,
         [communityId]
-      ),
+      ).catch(() => ({ rows: [] as any[] })),
     ])
 
     // Merge posts + new_members by day
@@ -183,7 +183,7 @@ export default async function adminRoutes(app: FastifyInstance) {
        ORDER BY post_count DESC
        LIMIT 5`,
       [communityId]
-    )
+    ).catch(() => ({ rows: [] as any[] }))
 
     // Recent registrations (last 5)
     const recentMembersRes = await db.query(
@@ -194,7 +194,7 @@ export default async function adminRoutes(app: FastifyInstance) {
        ORDER BY cm.joined_at DESC
        LIMIT 5`,
       [communityId]
-    )
+    ).catch(() => ({ rows: [] as any[] }))
 
     return reply.send({
       users:    usersRes.rows[0],

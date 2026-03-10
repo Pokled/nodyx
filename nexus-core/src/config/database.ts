@@ -10,6 +10,9 @@ export const db = new Pool({
   database: process.env.DB_NAME,
   user:     process.env.DB_USER,
   password: process.env.DB_PASSWORD,
+  max:                    20,    // default 10 — raised for parallel admin + layout queries
+  idleTimeoutMillis:   30000,
+  connectionTimeoutMillis: 5000, // fail fast instead of blocking indefinitely
 })
 
 export const redis = new Redis({
