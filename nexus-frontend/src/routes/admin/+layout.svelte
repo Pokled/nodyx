@@ -36,10 +36,11 @@
 		{
 			section: 'Instance',
 			items: [
-				{ href: '/admin/settings', label: 'Paramètres', icon: '⚙️' },
-				{ href: '/admin/status',   label: 'Statut réseau', icon: '🌐' },
-				{ href: '/admin/ai', label: 'Neural Engine', icon: '🧠' },
-				{ href: '/admin/logs',     label: 'Logs',       icon: '📋', soon: true },
+				{ href: '/admin/announcements', label: 'Annonces',      icon: '📢' },
+				{ href: '/admin/settings',      label: 'Paramètres',    icon: '⚙️' },
+				{ href: '/admin/status',        label: 'Statut réseau', icon: '🌐' },
+				{ href: '/admin/ai',            label: 'Neural Engine', icon: '🧠' },
+				{ href: '/admin/logs',          label: 'Logs',          icon: '📋', soon: true },
 			],
 		},
 	]

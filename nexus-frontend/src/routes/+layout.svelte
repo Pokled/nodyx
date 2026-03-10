@@ -15,6 +15,11 @@
 
 	const user            = $derived(data.user);
 	const isBanned        = $derived(data.user?.is_banned === true);
+	const announcement    = $derived((data as any).activeAnnouncement as { id: string; message: string; color: string } | null);
+	let announcementDismissed = $state<string | null>(null)
+	const showAnnouncement = $derived(
+		announcement !== null && announcementDismissed !== announcement?.id
+	)
 	const unreadCount     = $derived($unreadCountStore);
 	const chatMentions    = $derived($chatMentionStore);
 	const dmUnread        = $derived($dmUnreadStore);
@@ -506,6 +511,34 @@
 		<!-- ── Contenu principal ───────────────────────────────────────────────── -->
 		<div class="flex-1 overflow-hidden">
 		<main class="h-full overflow-y-auto min-w-0 {isBanned ? '' : 'lg:pl-[220px] xl:mr-[220px]'}" style="padding-bottom: var(--bottom-nav-h)">
+
+            <!-- ── System announcement banner ─────────────────────────────────── -->
+            {#if showAnnouncement && announcement}
+                {@const colorClass = {
+                    indigo: 'bg-indigo-950/90 border-indigo-700/60 text-indigo-100',
+                    amber:  'bg-amber-950/90  border-amber-700/60  text-amber-100',
+                    green:  'bg-green-950/90  border-green-700/60  text-green-100',
+                    red:    'bg-red-950/90    border-red-700/60    text-red-100',
+                    sky:    'bg-sky-950/90    border-sky-700/60    text-sky-100',
+                    rose:   'bg-rose-950/90   border-rose-700/60   text-rose-100',
+                }[announcement.color] ?? 'bg-indigo-950/90 border-indigo-700/60 text-indigo-100'}
+                <div class="border-b px-4 py-2.5 flex items-center gap-3 text-sm {colorClass}">
+                    <svg class="w-4 h-4 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                    </svg>
+                    <span class="flex-1 font-medium">{announcement.message}</span>
+                    <button
+                        onclick={() => announcementDismissed = announcement!.id}
+                        class="shrink-0 opacity-60 hover:opacity-100 transition-opacity ml-2"
+                        aria-label="Fermer l'annonce"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            {/if}
+
             {#if communityBanner && ($page.url.pathname === '/' || $page.url.pathname.startsWith('/forum'))}
                 <div class="relative w-full h-32 overflow-hidden">
                     <img src={communityBanner} alt="Bannière" class="w-full h-full object-cover" />

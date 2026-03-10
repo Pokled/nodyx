@@ -821,7 +821,6 @@ export default async function adminRoutes(app: FastifyInstance) {
     }
 
     const { to } = request.body as { to: string }
-    const communityName = process.env.NEXUS_COMMUNITY_NAME ?? 'Nexus'
 
     try {
       await sendPasswordResetEmail({
@@ -838,5 +837,71 @@ export default async function adminRoutes(app: FastifyInstance) {
         hint: `Vérifiez vos identifiants SMTP dans .env — voir docs/fr/EMAIL.md`,
       })
     }
+  })
+
+  // ── Announcements ─────────────────────────────────────────────────────────
+
+  // GET  /admin/announcements — list all
+  app.get('/announcements', { preHandler: [adminOnly] }, async (_request, reply) => {
+    const { rows } = await db.query(
+      `SELECT id, message, color, is_active, created_at, expires_at
+       FROM system_announcements
+       ORDER BY created_at DESC`
+    )
+    return reply.send({ announcements: rows })
+  })
+
+  // POST /admin/announcements — create
+  app.post('/announcements', { preHandler: [adminOnly] }, async (request, reply) => {
+    const { message, color, expires_at } = request.body as {
+      message: string; color?: string; expires_at?: string | null
+    }
+    if (!message?.trim()) return reply.code(400).send({ error: 'message requis' })
+
+    const validColors = ['indigo', 'amber', 'green', 'red', 'sky', 'rose']
+    const safeColor = validColors.includes(color ?? '') ? color : 'indigo'
+
+    const { rows } = await db.query(
+      `INSERT INTO system_announcements (message, color, expires_at)
+       VALUES ($1, $2, $3)
+       RETURNING id, message, color, is_active, created_at, expires_at`,
+      [message.trim(), safeColor, expires_at ?? null]
+    )
+    return reply.code(201).send({ announcement: rows[0] })
+  })
+
+  // PATCH /admin/announcements/:id — toggle active / update
+  app.patch('/announcements/:id', { preHandler: [adminOnly] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const { is_active, message, color } = request.body as {
+      is_active?: boolean; message?: string; color?: string
+    }
+
+    const sets: string[] = []
+    const vals: unknown[] = []
+    let idx = 1
+
+    if (is_active !== undefined) { sets.push(`is_active = $${idx++}`); vals.push(is_active) }
+    if (message)                 { sets.push(`message = $${idx++}`);   vals.push(message.trim()) }
+    if (color)                   { sets.push(`color = $${idx++}`);     vals.push(color) }
+
+    if (sets.length === 0) return reply.code(400).send({ error: 'rien à mettre à jour' })
+
+    vals.push(id)
+    const { rows } = await db.query(
+      `UPDATE system_announcements SET ${sets.join(', ')}
+       WHERE id = $${idx}
+       RETURNING id, message, color, is_active, created_at, expires_at`,
+      vals
+    )
+    if (!rows[0]) return reply.code(404).send({ error: 'not found' })
+    return reply.send({ announcement: rows[0] })
+  })
+
+  // DELETE /admin/announcements/:id
+  app.delete('/announcements/:id', { preHandler: [adminOnly] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    await db.query(`DELETE FROM system_announcements WHERE id = $1`, [id])
+    return reply.send({ ok: true })
   })
 }
