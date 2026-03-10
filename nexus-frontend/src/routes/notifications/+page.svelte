@@ -1,6 +1,17 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
+	import { unreadCountStore } from '$lib/socket';
+	import { goto } from '$app/navigation';
+
+	async function markReadAndNavigate(notif: any) {
+		if (!notif.is_read) {
+			unreadCountStore.update(n => Math.max(0, n - 1))
+			// Fire-and-forget — cookie httpOnly envoyé automatiquement (same-origin)
+			fetch(`/api/v1/notifications/${notif.id}/read`, { method: 'PATCH' }).catch(() => {})
+		}
+		goto(notifLink(notif))
+	}
 
 	let { data }: { data: PageData } = $props();
 
@@ -49,7 +60,12 @@
 			{/if}
 		</h1>
 		{#if unread > 0}
-			<form method="POST" action="?/markAllRead" use:enhance>
+			<form method="POST" action="?/markAllRead" use:enhance={() => {
+				return async ({ update }) => {
+					unreadCountStore.set(0)
+					await update({ reset: false })
+				}
+			}}>
 				<button type="submit"
 					class="px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
 					Tout marquer comme lu
@@ -93,17 +109,22 @@
 					<!-- Actions -->
 					<div class="flex items-center gap-2 shrink-0">
 						{#if notif.category_id && notif.thread_id}
-							<a href={notifLink(notif)}
+							<button
+								onclick={() => markReadAndNavigate(notif)}
 								class="text-xs text-indigo-400 hover:text-indigo-300">
 								Voir →
-							</a>
+							</button>
 						{/if}
 						{#if !notif.is_read}
 							<form method="POST" action="?/markRead" use:enhance={() => {
-								return async ({ update }) => { await update({ reset: false }) }
+								return async ({ update }) => {
+									unreadCountStore.update(n => Math.max(0, n - 1))
+									await update({ reset: false })
+								}
 							}}>
 								<input type="hidden" name="id" value={notif.id} />
-								<button type="submit" class="text-xs text-gray-600 hover:text-gray-400">
+								<button type="submit" title="Marquer comme lu"
+									class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-colors bg-gray-800 text-gray-500 hover:bg-indigo-900/40 hover:text-indigo-300">
 									✓
 								</button>
 							</form>

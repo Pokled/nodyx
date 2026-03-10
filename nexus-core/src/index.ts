@@ -34,8 +34,20 @@ const server = Fastify({ logger: true, trustProxy: true })
 const corsOrigin = process.env.FRONTEND_URL
   || (process.env.NODE_ENV === 'production' ? false : true)
 
+// Signet PWA origin (signet.nexusnode.app ou équivalent auto-hébergé)
+const signetOrigin = process.env.SIGNET_URL || null
+
 server.register(fastifyCors, {
-  origin:      corsOrigin,
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true) // SSR / curl
+    const allowed = [
+      typeof corsOrigin === 'string' ? corsOrigin : null,
+      signetOrigin,
+    ].filter(Boolean) as string[]
+    if (typeof corsOrigin === 'boolean' && corsOrigin) return cb(null, true)
+    if (allowed.some(o => origin === o || origin.startsWith(o))) return cb(null, true)
+    cb(new Error('CORS: origin non autorisée'), false)
+  },
   credentials: true,
   methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 })

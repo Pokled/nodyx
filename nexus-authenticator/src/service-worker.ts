@@ -73,7 +73,7 @@ self.addEventListener('push', (event) => {
 	})
 
 	event.waitUntil(
-		self.registration.showNotification('Nexus — Demande de connexion', {
+		self.registration.showNotification('Nexus Signet — Demande de connexion', {
 			body: `Hub : ${hubName}\nÀ : ${time}${payload.sourceIp ? `\nDepuis : ${payload.sourceIp}` : ''}`,
 			icon: '/icons/icon-192.png',
 			badge: '/icons/icon-192.png',

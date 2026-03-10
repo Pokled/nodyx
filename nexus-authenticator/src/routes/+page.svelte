@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { goto } from '$app/navigation'
-	import { getAllDevices } from '$lib/storage'
+	import { getAllDevices, savePendingChallenge } from '$lib/storage'
 	import { pollChallenges } from '$lib/hub'
 
 	onMount(async () => {
@@ -17,6 +17,8 @@
 			try {
 				const challenges = await pollChallenges(device.hubUrl, device.deviceToken)
 				if (challenges.length > 0) {
+					// Sauvegarder dans IndexedDB avant de rediriger
+					await savePendingChallenge(challenges[0])
 					goto(`/approve?challengeId=${challenges[0].id}&deviceId=${device.id}`)
 					return
 				}

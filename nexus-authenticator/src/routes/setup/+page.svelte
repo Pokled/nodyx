@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
+	import { onMount } from 'svelte'
 	import { generateKeyPair, exportPublicKey, encryptPrivateKey } from '$lib/crypto'
 	import { saveDevice, generateDeviceId } from '$lib/storage'
 	import { registerDevice, pingHub } from '$lib/hub'
@@ -16,6 +17,30 @@
 	let error = $state('')
 	let loading = $state(false)
 
+	// Pré-remplissage depuis le QR code (?hub=...&token=...)
+	onMount(async () => {
+		const params = new URLSearchParams(window.location.search)
+		const hub   = params.get('hub')
+		const token = params.get('token')
+		if (hub && token) {
+			hubUrl = hub
+			enrollmentToken = token
+			// Vérification automatique du hub puis passage direct à la passphrase
+			loading = true
+			step = 'hub'
+			try {
+				const info = await pingHub(hub)
+				if (!info.authenticator) throw new Error('Cette communauté ne supporte pas encore Nexus Signet.')
+				hubName = info.name
+				step = 'passphrase'
+			} catch (e: unknown) {
+				error = e instanceof Error ? e.message : 'Communauté inaccessible — vérifiez l\'URL'
+			} finally {
+				loading = false
+			}
+		}
+	})
+
 	async function checkHub() {
 		error = ''
 		loading = true
@@ -23,12 +48,12 @@
 			const url = hubUrl.trim().replace(/\/$/, '')
 			if (!url.startsWith('https://')) throw new Error('L\'URL doit commencer par https://')
 			const info = await pingHub(url)
-			if (!info.authenticator) throw new Error('Ce Hub ne supporte pas Nexus Authenticator.')
+			if (!info.authenticator) throw new Error('Cette communauté ne supporte pas encore Nexus Signet.')
 			hubUrl = url
 			hubName = info.name
 			step = 'passphrase'
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Hub inaccessible'
+			error = e instanceof Error ? e.message : 'Communauté inaccessible — vérifiez l\'URL'
 		} finally {
 			loading = false
 		}
@@ -95,25 +120,25 @@
 					style="background: var(--color-accent-glow); color: var(--color-accent); border: 1px solid var(--color-accent)">
 					◈
 				</div>
-				<h1 class="text-2xl font-bold tracking-tight">Nexus Authenticator</h1>
+				<h1 class="text-2xl font-bold tracking-tight">Nexus Signet</h1>
 				<p class="text-center text-sm leading-relaxed" style="color: var(--color-text-muted)">
-					Authentification cryptographique pour vos instances Nexus.<br/>
-					Zéro dépendance. Votre clé ne quitte jamais cet appareil.
+					Connectez-vous à votre communauté Nexus<br/>
+					sans mot de passe, depuis votre téléphone.
 				</p>
 			</div>
 
 			<div class="w-full rounded-xl p-4 flex flex-col gap-3 text-sm" style="background: var(--color-surface); border: 1px solid var(--color-border)">
 				<div class="flex items-start gap-3">
 					<span style="color: var(--color-accent)">①</span>
-					<span>Connexion à votre Hub Nexus</span>
+					<span>Entrez l'adresse de votre communauté Nexus</span>
 				</div>
 				<div class="flex items-start gap-3">
 					<span style="color: var(--color-accent)">②</span>
-					<span>Création d'une paire de clés ECDSA P-256</span>
+					<span>Collez le token généré depuis vos paramètres</span>
 				</div>
 				<div class="flex items-start gap-3">
 					<span style="color: var(--color-accent)">③</span>
-					<span>Clé privée chiffrée localement avec votre passphrase</span>
+					<span>Choisissez une passphrase — votre clé reste sur cet appareil</span>
 				</div>
 			</div>
 
@@ -121,31 +146,37 @@
 				onclick={() => step = 'hub'}
 				class="w-full py-3 rounded-xl font-semibold text-white transition-opacity hover:opacity-90"
 				style="background: var(--color-accent)">
-				Commencer la configuration
+				Commencer
 			</button>
 		</div>
 
 	{:else if step === 'hub'}
-		<!-- ── URL du Hub ──────────────────────────────────────────────────────── -->
+		<!-- ── URL de la communauté ────────────────────────────────────────────── -->
 		<div class="w-full max-w-sm flex flex-col gap-6">
 			<div class="flex flex-col gap-1">
-				<h2 class="text-xl font-bold">Votre Hub Nexus</h2>
-				<p class="text-sm" style="color: var(--color-text-muted)">Entrez l'URL de votre instance Hub</p>
+				<h2 class="text-xl font-bold">Votre communauté Nexus</h2>
+				<p class="text-sm" style="color: var(--color-text-muted)">
+					C'est l'adresse du site Nexus où vous avez votre compte.
+				</p>
 			</div>
 
 			<div class="flex flex-col gap-3">
 				<div class="flex flex-col gap-1.5">
 					<label class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-muted)">
-						URL du Hub
+						Adresse de votre communauté
 					</label>
 					<input
 						type="url"
 						bind:value={hubUrl}
-						placeholder="https://hub.mondomaine.fr"
+						placeholder="https://ma-communaute.nexusnode.app"
 						class="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
 						style="background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text)"
 						onkeydown={(e) => e.key === 'Enter' && checkHub()}
 					/>
+					<p class="text-xs" style="color: var(--color-text-muted)">
+						Exemple : <span style="color: var(--color-accent)">https://french-godot.nexusnode.app</span><br/>
+						C'est l'URL que vous utilisez pour vous connecter d'habitude.
+					</p>
 				</div>
 
 				<div class="flex flex-col gap-1.5">
@@ -183,21 +214,27 @@
 		<!-- ── Passphrase ──────────────────────────────────────────────────────── -->
 		<div class="w-full max-w-sm flex flex-col gap-6">
 			<div class="flex flex-col gap-1">
-				<h2 class="text-xl font-bold">Passphrase</h2>
+				<h2 class="text-xl font-bold">Choisissez une passphrase</h2>
 				<p class="text-sm" style="color: var(--color-text-muted)">
-					Hub détecté : <span style="color: var(--color-accent)">{hubName || hubUrl}</span>
+					Communauté : <span style="color: var(--color-accent)">{hubName || hubUrl}</span>
 				</p>
 			</div>
 
-			<div class="rounded-xl p-4 text-sm" style="background: var(--color-surface); border: 1px solid var(--color-border)">
+			<div class="rounded-xl p-4 text-sm flex flex-col gap-2" style="background: var(--color-surface); border: 1px solid var(--color-border)">
+				<p style="color: var(--color-text)">
+					<strong>Ce n'est pas votre mot de passe Nexus.</strong>
+				</p>
 				<p style="color: var(--color-text-muted)">
-					Cette passphrase chiffre votre clé privée sur cet appareil.<br/>
-					Elle <strong style="color: var(--color-text)">n'est jamais envoyée</strong> au Hub.<br/>
-					Vous la saisirez à chaque approbation.
+					C'est un code secret propre à cet appareil, qui protège votre clé de connexion stockée ici.<br/>
+					Vous le saisirez chaque fois que vous approuverez une connexion depuis ce téléphone.
+				</p>
+				<p class="text-xs" style="color: var(--color-text-muted); opacity: 0.6">
+					Il n'est jamais envoyé à votre communauté. Notez-le — il est impossible à récupérer.
 				</p>
 			</div>
 
 			<div class="flex flex-col gap-3">
+				{#if !enrollmentToken}
 				<div class="flex flex-col gap-1.5">
 					<label class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-muted)">
 						Token d'enregistrement
@@ -205,22 +242,23 @@
 					<input
 						type="text"
 						bind:value={enrollmentToken}
-						placeholder="Généré depuis les paramètres du Hub"
+						placeholder="Token généré dans vos paramètres Nexus"
 						class="w-full px-4 py-3 rounded-xl text-sm outline-none font-mono"
 						style="background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text)"
 					/>
 					<p class="text-xs" style="color: var(--color-text-muted)">
-						Connectez-vous à votre Hub → Paramètres → Sécurité → Générer un token Authenticator
+						Sur votre communauté Nexus → Paramètres → Nexus Signet → "+ Générer"
 					</p>
 				</div>
+				{/if}
 				<div class="flex flex-col gap-1.5">
 					<label class="text-xs font-medium uppercase tracking-wider" style="color: var(--color-text-muted)">
-						Passphrase (min. 8 caractères)
+						Votre passphrase (min. 8 caractères)
 					</label>
 					<input
 						type="password"
 						bind:value={passphrase}
-						placeholder="••••••••••••"
+						placeholder="Choisissez un code secret pour cet appareil"
 						class="w-full px-4 py-3 rounded-xl text-sm outline-none"
 						style="background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text)"
 					/>
@@ -284,7 +322,7 @@
 			</div>
 
 			<div class="w-full rounded-xl p-4 text-sm flex flex-col gap-2" style="background: var(--color-surface); border: 1px solid var(--color-border)">
-				<p style="color: var(--color-text-muted)">La prochaine fois que vous vous connecterez à Hub, une notification apparaîtra ici pour approbation.</p>
+				<p style="color: var(--color-text-muted)">La prochaine fois que vous vous connecterez à votre communauté, une notification apparaîtra ici pour approbation.</p>
 			</div>
 
 			<button

@@ -2,7 +2,91 @@
     import NetworkDoctor from '$lib/components/NetworkDoctor.svelte';
     import { page } from '$app/stores';
     import { invalidateAll } from '$app/navigation';
-    import { PUBLIC_API_URL } from '$env/static/public';
+    import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$env/static/public';
+    import { tick } from 'svelte';
+
+    // ── Nexus Signet ──────────────────────────────────────────────────────────
+    type SignetDevice = { id: string; label: string; created_at: string; last_used_at: string | null }
+
+    let signetDevices     = $state<SignetDevice[]>([])
+    let signetDevicesLoaded = $state(false)
+    let signetToken       = $state<string | null>(null)
+    let signetTokenExpiry = $state<string | null>(null)
+    let signetGenerating  = $state(false)
+    let signetCopied      = $state(false)
+    let signetRevoking    = $state<string | null>(null)
+    let signetQrCanvas    = $state<HTMLCanvasElement | null>(null)
+    let signetQrLink      = $state<string | null>(null)
+
+    async function loadSignetDevices() {
+        const token = ($page.data as any).token as string | null
+        if (!token) return
+        try {
+            const res = await fetch(`${PUBLIC_API_URL}/api/auth/devices`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            if (res.ok) {
+                const j = await res.json()
+                signetDevices = j.devices ?? []
+            }
+        } catch {}
+        signetDevicesLoaded = true
+    }
+
+    async function generateSignetToken() {
+        const token = ($page.data as any).token as string | null
+        if (!token) return
+        signetGenerating = true
+        signetToken = null
+        signetQrLink = null
+        try {
+            const res = await fetch(`${PUBLIC_API_URL}/api/auth/enrollment-tokens`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            if (res.ok) {
+                const j = await res.json()
+                signetToken = j.token
+                signetTokenExpiry = j.expiresAt
+                signetQrLink = `${PUBLIC_SIGNET_URL}/setup?hub=${encodeURIComponent(PUBLIC_API_URL)}&token=${encodeURIComponent(j.token)}`
+                // Génère le QR code après le prochain tick (canvas doit être dans le DOM)
+                await tick()
+                if (signetQrCanvas) {
+                    const QRCode = (await import('qrcode')).default
+                    await QRCode.toCanvas(signetQrCanvas, signetQrLink, {
+                        width: 200, margin: 1,
+                        color: { dark: '#fbbf24', light: '#0a0a0a' }
+                    })
+                }
+            }
+        } catch {}
+        signetGenerating = false
+    }
+
+    async function revokeSignetDevice(deviceId: string) {
+        const token = ($page.data as any).token as string | null
+        if (!token) return
+        signetRevoking = deviceId
+        try {
+            await fetch(`${PUBLIC_API_URL}/api/auth/devices/${deviceId}/admin`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            signetDevices = signetDevices.filter(d => d.id !== deviceId)
+        } catch {}
+        signetRevoking = null
+    }
+
+    function copySignetToken() {
+        if (!signetToken) return
+        navigator.clipboard.writeText(signetToken)
+        signetCopied = true
+        setTimeout(() => signetCopied = false, 2000)
+    }
+
+    $effect(() => {
+        if ($page.data.user) loadSignetDevices()
+    })
 
     // ── Instances liées (Galaxy Bar) ──────────────────────────────────────────
 
@@ -151,6 +235,100 @@
                     Le slug est le sous-domaine de l'instance — ex: <code class="text-indigo-500">french-godot</code> pour <code class="text-gray-500">french-godot.nexusnode.app</code>
                 </p>
             {/if}
+        </section>
+        {/if}
+
+        <!-- ── Nexus Signet ──────────────────────────────────────────────── -->
+        {#if user}
+        <section>
+            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-[0.2em] mb-2">Nexus Signet</h2>
+            <p class="text-xs text-gray-600 mb-6">
+                Connexion sans mot de passe via votre téléphone. Clé privée ECDSA P-256 chiffrée localement — elle ne quitte jamais votre appareil.
+            </p>
+
+            <!-- Appareils enregistrés -->
+            {#if signetDevicesLoaded}
+                {#if signetDevices.length > 0}
+                    <div class="flex flex-col gap-2 mb-6">
+                        {#each signetDevices as device (device.id)}
+                            <div class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                                style="background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.15)">
+                                <div class="flex items-center gap-3">
+                                    <span style="color: #fbbf24">◈</span>
+                                    <div>
+                                        <p class="text-sm font-medium text-white">{device.label}</p>
+                                        <p class="text-xs text-gray-600">
+                                            Enregistré le {new Date(device.created_at).toLocaleDateString('fr-FR')}
+                                            {#if device.last_used_at}
+                                                · Utilisé le {new Date(device.last_used_at).toLocaleDateString('fr-FR')}
+                                            {/if}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onclick={() => revokeSignetDevice(device.id)}
+                                    disabled={signetRevoking === device.id}
+                                    class="text-xs px-2.5 py-1 rounded-lg disabled:opacity-50 transition-opacity"
+                                    style="color: rgb(248,113,113); background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2)">
+                                    {signetRevoking === device.id ? '…' : 'Révoquer'}
+                                </button>
+                            </div>
+                        {/each}
+                    </div>
+                {:else}
+                    <p class="text-sm text-gray-600 mb-6">Aucun appareil Signet enregistré.</p>
+                {/if}
+            {:else}
+                <p class="text-xs text-gray-700 mb-6">Chargement…</p>
+            {/if}
+
+            <!-- Générer un token d'enregistrement -->
+            <div class="rounded-xl p-5" style="background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.2)">
+                <div class="flex items-start justify-between gap-4 mb-3">
+                    <div>
+                        <p class="text-sm font-semibold text-white">Ajouter un appareil</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Génère un token à usage unique (15 min) à coller dans l'app Nexus Signet.</p>
+                    </div>
+                    <button
+                        onclick={generateSignetToken}
+                        disabled={signetGenerating}
+                        class="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 transition-all shrink-0"
+                        style="background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.4); color: #fbbf24">
+                        {signetGenerating ? '…' : '+ Générer'}
+                    </button>
+                </div>
+
+                {#if signetToken}
+                    <!-- QR Code — scannez depuis le téléphone -->
+                    <div class="mt-4 flex flex-col items-center gap-3">
+                        <p class="text-xs text-gray-500 self-start">Scannez ce QR code depuis votre téléphone :</p>
+                        <div class="rounded-xl p-3" style="background: #0a0a0a; border: 1px solid rgba(251,191,36,0.3)">
+                            <canvas bind:this={signetQrCanvas}></canvas>
+                        </div>
+                        <a
+                            href={signetQrLink}
+                            target="_blank"
+                            class="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                            style="color: #fbbf24; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25)">
+                            Ouvrir le lien sur ce navigateur →
+                        </a>
+                    </div>
+                    <!-- Token brut (fallback) -->
+                    <details class="mt-3">
+                        <summary class="text-xs text-gray-700 cursor-pointer select-none">Afficher le token texte (saisie manuelle)</summary>
+                        <div class="mt-2 rounded-lg p-3 flex items-center gap-3" style="background: rgba(0,0,0,0.4); border: 1px solid rgba(251,191,36,0.2)">
+                            <code class="flex-1 text-xs font-mono break-all" style="color: #fbbf24">{signetToken}</code>
+                            <button
+                                onclick={copySignetToken}
+                                class="text-xs px-2.5 py-1 rounded shrink-0 transition-colors"
+                                style="color: {signetCopied ? 'rgb(74,222,128)' : 'rgb(156,163,175)'}; border: 1px solid {signetCopied ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)'}">
+                                {signetCopied ? '✓ Copié' : 'Copier'}
+                            </button>
+                        </div>
+                    </details>
+                    <p class="text-xs text-gray-700 mt-2">Expire dans 15 minutes · Usage unique</p>
+                {/if}
+            </div>
         </section>
         {/if}
     </div>

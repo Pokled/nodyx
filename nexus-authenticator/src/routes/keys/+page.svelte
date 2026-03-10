@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { goto } from '$app/navigation'
-	import { getAllDevices, deleteDevice } from '$lib/storage'
+	import { getAllDevices, deleteDevice, savePendingChallenge } from '$lib/storage'
 	import { revokeDevice, pollChallenges } from '$lib/hub'
 	import type { DeviceRecord } from '$lib/storage'
 
@@ -31,7 +31,7 @@
 				const challenges = await pollChallenges(device.hubUrl, device.deviceToken)
 				count += challenges.length
 				if (challenges.length > 0) {
-					// Redirige directement vers le premier challenge
+					await savePendingChallenge(challenges[0])
 					goto(`/approve?challengeId=${challenges[0].id}&deviceId=${device.id}`)
 					return
 				}
@@ -68,7 +68,7 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div class="flex flex-col gap-0.5">
-			<h1 class="text-xl font-bold">◈ Nexus Auth</h1>
+			<h1 class="text-xl font-bold">◈ Nexus Signet</h1>
 			<p class="text-xs" style="color: var(--color-text-muted)">Appareils enregistrés</p>
 		</div>
 		<button

@@ -1,7 +1,7 @@
 {
-  "name": "Nexus Authenticator",
-  "short_name": "Nexus Auth",
-  "description": "Authentification sécurisée pour vos instances Nexus",
+  "name": "Nexus Signet",
+  "short_name": "Signet",
+  "description": "Authentification cryptographique ECDSA pour vos instances Nexus",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",

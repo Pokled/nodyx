@@ -130,6 +130,7 @@ const RejectBody = z.object({
 
 const CreateChallengeBody = z.object({
   deviceId: z.string().uuid().optional(),
+  username: z.string().min(1).optional(),
   hubUrl:   z.string().url()
 })
 
@@ -156,16 +157,6 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.userId
 
-    // Vérifier que l'utilisateur est admin
-    const { rows } = await db.query(
-      `SELECT role FROM community_members
-       WHERE user_id = $1
-       ORDER BY joined_at ASC LIMIT 1`,
-      [userId]
-    )
-    if (rows[0]?.role !== 'admin') {
-      return reply.code(403).send({ error: 'Admin only', code: 'FORBIDDEN' })
-    }
 
     const token = crypto.randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + ENROLLMENT_TOKEN_TTL_SEC * 1000)
@@ -271,14 +262,30 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Invalid payload' })
     }
-    const { deviceId, hubUrl } = parsed.data
+    const { deviceId: rawDeviceId, username, hubUrl } = parsed.data
 
-    // Si deviceId fourni, vérifier qu'il existe
+    // Résolution deviceId : fourni directement ou via username
+    let resolvedDeviceId = rawDeviceId ?? null
     let userId: string | null = null
-    if (deviceId) {
+
+    if (!resolvedDeviceId && username) {
+      // Cherche le premier appareil enregistré pour cet utilisateur
+      const { rows } = await db.query(
+        `SELECT d.id, d.user_id
+         FROM authenticator_devices d
+         JOIN users u ON u.id = d.user_id
+         WHERE u.username = $1
+         ORDER BY d.created_at ASC
+         LIMIT 1`,
+        [username]
+      )
+      if (!rows[0]) return reply.code(404).send({ error: 'No device registered for this user', code: 'NO_DEVICE' })
+      resolvedDeviceId = rows[0].id
+      userId = rows[0].user_id
+    } else if (resolvedDeviceId) {
       const { rows } = await db.query(
         `SELECT user_id FROM authenticator_devices WHERE id = $1`,
-        [deviceId]
+        [resolvedDeviceId]
       )
       if (!rows[0]) return reply.code(404).send({ error: 'Device not found' })
       userId = rows[0].user_id
@@ -293,7 +300,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
          (challenge, device_id, user_id, source_ip, hub_url, expires_at)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, challenge, issued_at, expires_at`,
-      [challengeBytes, deviceId ?? null, userId, sourceIp, hubUrl, expiresAt]
+      [challengeBytes, resolvedDeviceId, userId, sourceIp, hubUrl, expiresAt]
     )
 
     const row = rows[0]

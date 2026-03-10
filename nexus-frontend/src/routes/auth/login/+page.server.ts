@@ -10,7 +10,26 @@ export const load: PageServerLoad = async ({ url }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ fetch, request, cookies }) => {
+	/** Pose le cookie httpOnly après approbation Nexus Signet côté client */
+	signet: async ({ request, cookies }) => {
+		const form       = await request.formData()
+		const token      = form.get('token')      as string | null
+		const redirectTo = form.get('redirectTo') as string | null
+
+		if (!token) return fail(400, { error: 'Token manquant', redirectTo })
+
+		cookies.set('token', token, {
+			path:     '/',
+			httpOnly: true,
+			sameSite: 'lax',
+			secure:   false,
+			maxAge:   60 * 60 * 24 * 7
+		})
+
+		redirect(303, redirectTo && redirectTo.startsWith('/') ? redirectTo : '/')
+	},
+
+	login: async ({ fetch, request, cookies }) => {
 		const form       = await request.formData();
 		const email      = form.get('email')      as string;
 		const password   = form.get('password')   as string;

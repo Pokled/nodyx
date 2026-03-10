@@ -2,6 +2,7 @@
 	import type { PageData, ActionData } from './$types'
 	import { enhance } from '$app/forms'
 	import { page } from '$app/stores'
+	import { onMount } from 'svelte'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 	const i = data.instance
@@ -9,6 +10,45 @@
 	// Branding state
 	let logoUrl   = $state<string>(i.logo_url   ?? '')
 	let bannerUrl = $state<string>(i.banner_url ?? '')
+
+	// SMTP state
+	let smtp = $state<{ configured: boolean; host: string | null; port: number; from: string | null } | null>(null)
+	let smtpTestTo      = $state('')
+	let smtpTesting     = $state(false)
+	let smtpTestResult  = $state<{ ok: boolean; message: string } | null>(null)
+
+	onMount(async () => {
+		const token = ($page.data as any).token as string | null
+		if (!token) return
+		try {
+			const res = await fetch('/api/v1/admin/smtp/status', {
+				headers: { Authorization: `Bearer ${token}` }
+			})
+			if (res.ok) smtp = await res.json()
+		} catch {}
+	})
+
+	async function sendSmtpTest() {
+		const token = ($page.data as any).token as string | null
+		if (!token || !smtpTestTo.trim()) return
+		smtpTesting = true
+		smtpTestResult = null
+		try {
+			const res = await fetch('/api/v1/admin/smtp/test', {
+				method: 'POST',
+				headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ to: smtpTestTo.trim() })
+			})
+			const json = await res.json()
+			smtpTestResult = res.ok
+				? { ok: true,  message: json.message ?? 'Email envoyé !' }
+				: { ok: false, message: json.error   ?? 'Erreur inconnue' }
+		} catch {
+			smtpTestResult = { ok: false, message: 'Impossible de contacter le serveur' }
+		} finally {
+			smtpTesting = false
+		}
+	}
 
 	let logoMode   = $state<'url' | 'file'>('url')
 	let bannerMode = $state<'url' | 'file'>('url')
@@ -237,6 +277,70 @@
 				</div>
 			{/each}
 		</div>
+	</div>
+
+	<!-- ── Email (SMTP) ─────────────────────────────────────────────────────── -->
+	<div class="rounded-xl border border-gray-800 bg-gray-900/40 p-6 mb-5">
+		<h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Email (SMTP)</h2>
+		<p class="text-xs text-gray-600 mb-5">Utilisé pour les réinitialisations de mot de passe. Optionnel.</p>
+
+		{#if smtp === null}
+			<p class="text-xs text-gray-600">Chargement…</p>
+		{:else}
+			<!-- Statut -->
+			<div class="flex items-center gap-3 mb-5">
+				<span class="w-2.5 h-2.5 rounded-full shrink-0 {smtp.configured ? 'bg-green-500' : 'bg-gray-600'}"></span>
+				<span class="text-sm {smtp.configured ? 'text-green-400' : 'text-gray-500'}">
+					{smtp.configured ? 'SMTP configuré' : 'Non configuré — réinitialisation manuelle uniquement'}
+				</span>
+			</div>
+
+			{#if smtp.configured}
+				<!-- Infos -->
+				<div class="space-y-2 mb-5 text-sm">
+					<div class="flex items-center justify-between">
+						<span class="text-gray-400">Serveur</span>
+						<span class="font-mono text-xs text-gray-200">{smtp.host}:{smtp.port}</span>
+					</div>
+					<div class="flex items-center justify-between">
+						<span class="text-gray-400">Expéditeur</span>
+						<span class="font-mono text-xs text-gray-200">{smtp.from ?? '—'}</span>
+					</div>
+				</div>
+
+				<!-- Test -->
+				<div class="flex gap-2">
+					<input
+						type="email"
+						bind:value={smtpTestTo}
+						placeholder="votre@email.com"
+						class="flex-1 rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+					/>
+					<button
+						onclick={sendSmtpTest}
+						disabled={smtpTesting || !smtpTestTo.trim()}
+						class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-sm font-semibold text-white transition-colors shrink-0"
+					>
+						{smtpTesting ? 'Envoi…' : 'Tester'}
+					</button>
+				</div>
+
+				{#if smtpTestResult}
+					<p class="mt-3 text-sm rounded-lg px-4 py-2.5 {smtpTestResult.ok
+						? 'bg-green-900/30 border border-green-800/50 text-green-400'
+						: 'bg-red-900/30 border border-red-800/50 text-red-400'}">
+						{smtpTestResult.message}
+					</p>
+				{/if}
+			{:else}
+				<!-- Non configuré — aide -->
+				<div class="rounded-lg border border-gray-700 bg-gray-800/40 px-4 py-3 text-xs text-gray-400 space-y-1">
+					<p>Sans SMTP, tu peux générer un lien de reset depuis <strong class="text-gray-300">Admin → Membres</strong> et l'envoyer manuellement.</p>
+					<p>Pour configurer : ajoute <code class="text-indigo-400">SMTP_HOST</code>, <code class="text-indigo-400">SMTP_USER</code> et <code class="text-indigo-400">SMTP_PASS</code> dans ton fichier <code class="text-indigo-400">.env</code>, puis redémarre Nexus.</p>
+					<p class="mt-2"><a href="https://github.com/Pokled/Nexus/blob/main/docs/fr/EMAIL.md" target="_blank" rel="noopener" class="text-indigo-400 underline">Voir le guide complet →</a></p>
+				</div>
+			{/if}
+		{/if}
 	</div>
 
 	<!-- ── How to edit ──────────────────────────────────────────────────────── -->
