@@ -7,6 +7,9 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
+	// Local mutable copy of seeds for optimistic updates
+	let seeds = $state(data.seeds.map((s: any) => ({ ...s })))
+
 	const CATEGORIES = [
 		{ value: '', label: 'Toutes' },
 		{ value: 'feature', label: '✨ Fonctionnalité' },
@@ -62,7 +65,12 @@
 			showToast(q.msg, q.emoji)
 			return
 		}
-		await invalidateAll()
+		// Optimistic local update — no full page re-fetch
+		const seed = seeds.find((s: any) => s.id === seedId)
+		if (seed) {
+			seed.watered_by_me = true
+			seed.water_count += 1
+		}
 	}
 
 	function growthPercent(stage: string, count: number): number {
@@ -110,10 +118,11 @@
 				<p class="mb-3 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">{form.error}</p>
 			{/if}
 			<form method="POST" action="?/plant" use:enhance={() => {
-				return ({ result }) => {
+				return async ({ result, update }) => {
 					if (result.type === 'success' && (result.data as { planted?: boolean })?.planted) {
 						showForm = false
-						invalidateAll()
+						await update({ reset: true })
+						seeds = data.seeds.map((s: any) => ({ ...s }))
 					}
 				}
 			}} class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -162,7 +171,7 @@
 	</div>
 
 	<!-- Seeds list -->
-	{#if data.seeds.length === 0}
+	{#if seeds.length === 0}
 		<div class="text-center py-16 text-gray-500">
 			<p class="text-5xl mb-3">🏜️</p>
 			<p class="font-medium">Le jardin est vide</p>
@@ -170,7 +179,7 @@
 		</div>
 	{:else}
 		<div class="flex flex-col gap-3">
-			{#each data.seeds as seed}
+			{#each seeds as seed}
 				{@const stage = STAGE_META[seed.growth_stage] ?? STAGE_META.germe}
 				{@const pct   = growthPercent(seed.growth_stage, seed.water_count)}
 				<div class="p-4 rounded-xl border border-gray-800 bg-gray-900 hover:border-gray-700 transition-colors">
@@ -218,7 +227,7 @@
 		</div>
 
 		<!-- Pagination -->
-		{#if data.seeds.length === 30}
+		{#if seeds.length === 30}
 			<div class="flex justify-center mt-8">
 				<a
 					href="?{new URLSearchParams({ category: data.category, offset: String(data.offset + 30) })}"

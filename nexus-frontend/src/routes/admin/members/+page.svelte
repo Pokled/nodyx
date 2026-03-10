@@ -38,10 +38,11 @@
 		navigator.clipboard.writeText(text)
 	}
 
-	let search = $state('')
+	let search  = $state('')
+	let members = $state(data.members.map((m: any) => ({ ...m })))
 
 	const filtered = $derived(
-		data.members.filter((m: any) =>
+		members.filter((m: any) =>
 			!search || m.username.toLowerCase().includes(search.toLowerCase())
 		)
 	)
@@ -126,11 +127,18 @@
 									owner
 								</span>
 							{:else}
-								<form method="POST" action="?/changeRole" use:enhance class="inline">
+								<form method="POST" action="?/changeRole" use:enhance={() => {
+									return async ({ update }) => { await update({ reset: false }) }
+								}} class="inline">
 									<input type="hidden" name="user_id" value={member.user_id} />
 									<select
 										name="role"
-										onchange={(e) => (e.currentTarget as HTMLSelectElement).form?.submit()}
+										onchange={(e) => {
+											const newRole = (e.currentTarget as HTMLSelectElement).value
+											const m = members.find((x: any) => x.user_id === member.user_id)
+											if (m) m.role = newRole;
+											(e.currentTarget as HTMLSelectElement).form?.submit()
+										}}
 										class="rounded border px-2 py-0.5 text-xs font-medium cursor-pointer bg-transparent
 										       focus:outline-none {ROLE_COLORS[member.role]}"
 									>

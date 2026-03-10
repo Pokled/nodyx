@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { page } from '$app/stores';
-	import { invalidateAll } from '$app/navigation';
 	import { PUBLIC_API_URL } from '$env/static/public';
 
 	interface NexusInstance {
@@ -28,7 +27,7 @@
 	const instances = $derived<NexusInstance[]>(data.instances ?? [])
 	const user      = $derived($page.data.user)
 
-	// Slugs liés — initialisé depuis le serveur, puis géré localement (pas de $effect pour éviter le conflit avec invalidateAll)
+	// Slugs liés — initialisé depuis le serveur, puis géré localement (optimistic updates)
 	let linkedSlugs = $state<string[]>(($page.data.user as any)?.linked_instances ?? [])
 
 	let linkLoading = $state<string | null>(null) // slug en cours
@@ -50,7 +49,6 @@
 			const json = await res.json()
 			if (res.ok) {
 				linkedSlugs = json.linked_instances ?? []
-				invalidateAll() // rafraîchit la Galaxy Bar sans await pour ne pas bloquer l'UI
 			} else {
 				// Rollback en cas d'erreur
 				linkedSlugs = action === 'add'

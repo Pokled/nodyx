@@ -35,6 +35,7 @@
 	let equipping      = $state(false)
 	let equipToast     = $state<'ok' | 'err' | null>(null)
 	let equipTimer     = $state<ReturnType<typeof setTimeout> | null>(null)
+	let equipped       = $state(false)
 	let downloadSource = $state<'server' | 'p2p' | null>(null)
 
 	const p2pAvailable = $derived(browser && $p2pAssetPeers.has(asset.id))
@@ -108,6 +109,7 @@
 		})
 		equipping = false
 		if (equipTimer) clearTimeout(equipTimer)
+		if (res.ok) { equipped = true }
 		equipToast = res.ok ? 'ok' : 'err'
 		equipTimer = setTimeout(() => { equipToast = null }, 3500)
 	}
@@ -173,11 +175,11 @@
 					{#if canEquip}
 						<button
 							onclick={equipAsset}
-							disabled={equipping}
-							class="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50
-							       text-sm font-semibold text-white transition-colors"
+							disabled={equipping || equipped}
+							class="px-4 py-2 rounded-lg disabled:opacity-50 text-sm font-semibold text-white transition-colors
+							       {equipped ? 'bg-gray-700 cursor-default' : 'bg-emerald-700 hover:bg-emerald-600'}"
 						>
-							{equipping ? '…' : equipLabel}
+							{equipping ? '…' : equipped ? '✓ Équipé' : equipLabel}
 						</button>
 					{/if}
 					{#if me}

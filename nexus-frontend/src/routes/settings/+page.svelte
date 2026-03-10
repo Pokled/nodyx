@@ -1,7 +1,7 @@
 <script lang="ts">
     import NetworkDoctor from '$lib/components/NetworkDoctor.svelte';
     import { page } from '$app/stores';
-    import { invalidateAll } from '$app/navigation';
+
     import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$env/static/public';
     import { tick } from 'svelte';
 
@@ -125,7 +125,6 @@
             if (!res.ok) { slugError = json.error ?? 'Erreur'; return; }
             linkedSlugs = json.linked_instances ?? [];
             newSlug = '';
-            invalidateAll();
         } finally {
             slugLoading = false;
         }
@@ -140,7 +139,6 @@
         const json = await res.json();
         if (res.ok) {
             linkedSlugs = json.linked_instances ?? [];
-            invalidateAll();
         }
     }
 </script>
