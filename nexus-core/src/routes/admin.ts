@@ -76,7 +76,8 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (_req, reply) => {
     const communityId = await getCommunityId()
 
-    const [usersRes, threadsRes, postsRes, catRes, presenceSockets] = await Promise.all([
+    const [usersRes, threadsRes, postsRes, catRes, presenceSockets,
+           eventsRes, pollsRes, assetsRes, chatRes, dmRes] = await Promise.all([
       db.query(`SELECT COUNT(*)::int AS total,
                        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::int AS new_this_week
                 FROM users`),
@@ -95,21 +96,59 @@ export default async function adminRoutes(app: FastifyInstance) {
                 WHERE c.community_id = $1`, [communityId]),
       db.query(`SELECT COUNT(*)::int AS total FROM categories WHERE community_id = $1`, [communityId]),
       io ? io.in('presence').fetchSockets() : Promise.resolve([]),
+      // Events
+      db.query(`SELECT COUNT(*)::int AS total,
+                       COUNT(*) FILTER (WHERE starts_at >= NOW() AND is_cancelled = false)::int AS upcoming
+                FROM events`).catch(() => ({ rows: [{ total: 0, upcoming: 0 }] })),
+      // Polls
+      db.query(`SELECT COUNT(*)::int AS total,
+                       COUNT(*) FILTER (WHERE closed_at IS NULL)::int AS open
+                FROM polls`).catch(() => ({ rows: [{ total: 0, open: 0 }] })),
+      // Assets
+      db.query(`SELECT COUNT(*)::int AS total
+                FROM community_assets
+                WHERE is_public = true AND is_banned = false`).catch(() => ({ rows: [{ total: 0 }] })),
+      // Chat messages
+      db.query(`SELECT COUNT(*)::int AS total,
+                       COUNT(*) FILTER (WHERE cm.created_at > NOW() - INTERVAL '7 days')::int AS new_this_week
+                FROM channel_messages cm
+                JOIN channels ch ON ch.id = cm.channel_id
+                WHERE ch.community_id = $1`, [communityId]).catch(() => ({ rows: [{ total: 0, new_this_week: 0 }] })),
+      // DM conversations
+      db.query(`SELECT COUNT(*)::int AS total FROM dm_conversations`).catch(() => ({ rows: [{ total: 0 }] })),
     ])
 
     const seenOnline = new Set<string>()
     for (const s of presenceSockets) { if (s.data.userId) seenOnline.add(s.data.userId) }
 
-    // Activity by day — last 7 days
-    const activityRes = await db.query(
-      `SELECT DATE(p.created_at) AS day, COUNT(*)::int AS posts
-       FROM posts p
-       JOIN threads t ON t.id = p.thread_id
-       JOIN categories c ON c.id = t.category_id
-       WHERE c.community_id = $1 AND p.created_at > NOW() - INTERVAL '7 days'
-       GROUP BY day ORDER BY day ASC`,
-      [communityId]
-    )
+    // Activity by day — last 7 days (posts + new members)
+    const [activityRes, membersActivityRes] = await Promise.all([
+      db.query(
+        `SELECT DATE(p.created_at) AS day, COUNT(*)::int AS posts
+         FROM posts p
+         JOIN threads t ON t.id = p.thread_id
+         JOIN categories c ON c.id = t.category_id
+         WHERE c.community_id = $1 AND p.created_at > NOW() - INTERVAL '7 days'
+         GROUP BY day ORDER BY day ASC`,
+        [communityId]
+      ),
+      db.query(
+        `SELECT DATE(joined_at) AS day, COUNT(*)::int AS new_members
+         FROM community_members
+         WHERE community_id = $1 AND joined_at > NOW() - INTERVAL '7 days'
+         GROUP BY day ORDER BY day ASC`,
+        [communityId]
+      ),
+    ])
+
+    // Merge posts + new_members by day
+    const membersByDay: Record<string, number> = {}
+    for (const r of membersActivityRes.rows) membersByDay[r.day] = r.new_members
+    const activity = activityRes.rows.map((r: any) => ({
+      day: r.day,
+      posts: r.posts,
+      new_members: membersByDay[r.day] ?? 0,
+    }))
 
     // Top contributors (last 30 days)
     const topContribRes = await db.query(
@@ -125,14 +164,31 @@ export default async function adminRoutes(app: FastifyInstance) {
       [communityId]
     )
 
+    // Recent registrations (last 5)
+    const recentMembersRes = await db.query(
+      `SELECT u.username, u.avatar, u.email, cm.joined_at, cm.role
+       FROM community_members cm
+       JOIN users u ON u.id = cm.user_id
+       WHERE cm.community_id = $1
+       ORDER BY cm.joined_at DESC
+       LIMIT 5`,
+      [communityId]
+    )
+
     return reply.send({
       users:    usersRes.rows[0],
       threads:  threadsRes.rows[0],
       posts:    postsRes.rows[0],
       categories: catRes.rows[0],
       online:   seenOnline.size,
-      activity_last_7_days: activityRes.rows,
+      events:   eventsRes.rows[0],
+      polls:    pollsRes.rows[0],
+      assets:   assetsRes.rows[0],
+      chat:     chatRes.rows[0],
+      dms:      dmRes.rows[0],
+      activity_last_7_days: activity,
       top_contributors:     topContribRes.rows,
+      recent_members:       recentMembersRes.rows,
     })
   })
 
