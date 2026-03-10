@@ -63,15 +63,16 @@ describe('GET /api/v1/admin/stats', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
-    // community id + stats queries (7 db.query calls in GET /stats)
+    // Stats endpoint makes 13 db.query calls total:
+    // 1 getCommunityId + 8 Promise.all (users/threads/posts/categories/events/polls/assets/chat/dm)
+    // + 2 activity Promise.all + 1 topContrib + 1 recentMembers
     vi.mocked(db.query)
       .mockResolvedValueOnce({ rows: [{ id: COMMUNITY_UUID }], rowCount: 1 } as any) // getCommunityId
       .mockResolvedValueOnce({ rows: [STATS_ROW], rowCount: 1 } as any)              // users count
       .mockResolvedValueOnce({ rows: [{ total: 5, new_this_week: 1, locked: 0, pinned: 0 }], rowCount: 1 } as any) // threads
       .mockResolvedValueOnce({ rows: [{ total: 20, new_this_week: 3 }], rowCount: 1 } as any) // posts
       .mockResolvedValueOnce({ rows: [{ total: 4 }], rowCount: 1 } as any)            // categories
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)                        // activity last 7 days
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)                        // top contributors
+      .mockResolvedValue({ rows: [], rowCount: 0 } as any)                            // all remaining queries (events/polls/assets/chat/dm/activity/topContrib/recentMembers)
 
     app = await buildApp(a => a.register(adminRoutes, { prefix: '/api/v1/admin' }))
   })
@@ -200,8 +201,8 @@ describe('PATCH /api/v1/admin/members/:userId', () => {
       if (typeof sql === 'string' && sql.includes('SELECT id FROM communities')) {
         return { rows: [{ id: COMMUNITY_UUID }], rowCount: 1 } as any
       }
-      if (typeof sql === 'string' && sql.includes('SELECT role FROM community_members')) {
-        return { rows: [{ role: 'member' }], rowCount: 1 } as any
+      if (typeof sql === 'string' && sql.includes('community_members') && !sql.includes('SELECT id FROM communities')) {
+        return { rows: [{ role: 'member', username: 'testuser' }], rowCount: 1 } as any
       }
       // UPDATE community_members
       return { rows: [], rowCount: 1 } as any
