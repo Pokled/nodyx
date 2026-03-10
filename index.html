@@ -3,22 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nexus — Go Nexus</title>
-<meta name="description" content="Le successeur des géants. Forum, chat, vocal, IA locale, réseau P2P. Open source, indépendant, souverain.">
+<title>Nexus — La plateforme communautaire libre</title>
+<meta name="description" content="Forum + chat + vocal + P2P. Open source, auto-hébergé, sans surveillance. Une communauté = une instance. AGPL-3.0.">
+<meta property="og:title" content="Nexus — La plateforme communautaire libre">
+<meta property="og:description" content="Forum + chat + vocal + P2P. Open source, auto-hébergé, sans surveillance. Une communauté = une instance.">
+<meta property="og:image" content="https://pokled.github.io/Nexus/docs/img/Site_Nexus.io_presentation.png">
+<link rel="icon" href="nexus-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --void: #050508;
-    --deep: #0a0a12;
-    --surface: #0f0f1a;
-    --border: #1a1a2e;
+    --void: #040407;
+    --deep: #08080f;
+    --surface: #0e0e1a;
+    --surface2: #131322;
+    --border: #1c1c30;
+    --border2: #252540;
     --accent: #7c3aed;
     --accent-bright: #a855f7;
     --accent-glow: #c084fc;
+    --accent-dim: rgba(124,58,237,0.15);
     --cyan: #06b6d4;
     --cyan-dim: #0e7490;
     --green: #10b981;
+    --green-dim: rgba(16,185,129,0.15);
+    --red: #ef4444;
+    --yellow: #f59e0b;
     --text: #e2e8f0;
     --text-dim: #94a3b8;
     --text-muted: #475569;
@@ -35,6 +45,7 @@
     cursor: none;
   }
 
+  /* ── CUSTOM CURSOR ── */
   .cursor {
     position: fixed; width: 8px; height: 8px;
     background: var(--accent-glow); border-radius: 50%;
@@ -49,17 +60,18 @@
     transition: all 0.15s ease; mix-blend-mode: screen;
   }
 
+  /* ── GRID BACKGROUND ── */
   body::before {
     content: '';
     position: fixed; inset: 0;
     background-image:
-      linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(124,58,237,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.025) 1px, transparent 1px);
     background-size: 60px 60px;
     pointer-events: none; z-index: 0;
   }
 
-  /* NAV */
+  /* ── NAVIGATION ── */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
@@ -68,564 +80,604 @@
     transition: all 0.3s;
   }
   nav.scrolled {
-    background: rgba(5,5,8,0.85);
+    background: rgba(4,4,7,0.92);
     border-color: var(--border);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(24px);
   }
   .nav-logo {
-    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
     letter-spacing: -0.5px; color: white; text-decoration: none;
     display: flex; align-items: center; gap: 10px;
   }
-  .nav-logo-dot {
-    width: 8px; height: 8px; background: var(--accent-bright);
-    border-radius: 50%; box-shadow: 0 0 12px var(--accent-bright);
-    animation: pulse 2s infinite;
+  .nav-logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 16px rgba(124,58,237,0.4);
   }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
-  .nav-links { display: flex; align-items: center; gap: 40px; list-style: none; }
+  .nav-logo-icon svg { width: 18px; height: 18px; }
+  .nav-links { display: flex; align-items: center; gap: 36px; list-style: none; }
   .nav-links a {
-    font-family: 'Space Mono', monospace; font-size: 11px;
+    font-family: 'Space Mono', monospace; font-size: 10px;
     color: var(--text-dim); text-decoration: none;
     text-transform: uppercase; letter-spacing: 2px; transition: color 0.2s;
   }
-  .nav-links a:hover { color: var(--accent-glow); }
+  .nav-links a:hover { color: white; }
   .nav-cta {
-    font-family: 'Space Mono', monospace; font-size: 11px;
+    font-family: 'Space Mono', monospace; font-size: 10px;
     text-transform: uppercase; letter-spacing: 2px;
-    padding: 10px 24px; border: 1px solid var(--accent);
-    color: var(--accent-glow); text-decoration: none;
-    transition: all 0.2s; position: relative; overflow: hidden;
+    padding: 10px 24px; background: var(--accent);
+    color: white; text-decoration: none;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(124,58,237,0.3);
   }
-  .nav-cta::before {
-    content: ''; position: absolute; inset: 0;
-    background: var(--accent); transform: translateX(-100%); transition: transform 0.2s;
-  }
-  .nav-cta:hover::before { transform: translateX(0); }
-  .nav-cta:hover { color: white; }
-  .nav-cta span { position: relative; z-index: 1; }
+  .nav-cta:hover { background: var(--accent-bright); box-shadow: 0 0 32px rgba(168,85,247,0.4); }
 
-  /* HERO */
+  /* ── HERO ── */
   .hero {
     position: relative; min-height: 100vh;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    text-align: center; padding: 120px 24px 120px;
+    text-align: center; padding: 140px 24px 100px;
     z-index: 1; overflow: hidden;
   }
   .orb {
     position: absolute; border-radius: 50%;
-    filter: blur(80px); pointer-events: none;
+    filter: blur(100px); pointer-events: none;
   }
   .orb-1 {
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%);
-    top: -100px; left: 50%; transform: translateX(-50%);
-    animation: float1 8s ease-in-out infinite;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%);
+    top: -150px; left: 50%; transform: translateX(-50%);
+    animation: float1 9s ease-in-out infinite;
   }
   .orb-2 {
-    width: 400px; height: 400px;
-    background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%);
-    bottom: 0; left: 10%; animation: float2 10s ease-in-out infinite;
+    width: 450px; height: 450px;
+    background: radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%);
+    bottom: -50px; left: 5%; animation: float2 11s ease-in-out infinite;
   }
   .orb-3 {
-    width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%);
-    top: 30%; right: 5%; animation: float3 7s ease-in-out infinite;
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%);
+    top: 25%; right: 0%; animation: float3 8s ease-in-out infinite;
   }
-  @keyframes float1 { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-30px)} }
-  @keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-20px)} }
-  @keyframes float3 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(25px)} }
+  @keyframes float1 { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-40px)} }
+  @keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-25px)} }
+  @keyframes float3 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(30px)} }
 
-  .hero-badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 16px; border: 1px solid var(--border);
+  .hero-version {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 7px 18px; border: 1px solid var(--border2);
     background: rgba(124,58,237,0.08);
     font-family: 'Space Mono', monospace; font-size: 10px;
     text-transform: uppercase; letter-spacing: 3px;
-    color: var(--accent-glow); margin-bottom: 40px;
-    opacity: 0; animation: fadeUp 0.8s ease forwards 0.2s;
+    color: var(--text-dim); margin-bottom: 36px;
+    opacity: 0; animation: fadeUp 0.7s ease forwards 0.2s;
   }
-  .hero-badge-dot {
+  .hero-version-dot {
     width: 6px; height: 6px; background: var(--green);
     border-radius: 50%; box-shadow: 0 0 8px var(--green);
-    animation: pulse 1.5s infinite;
+    animation: dotPulse 2s infinite;
   }
+  @keyframes dotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.75)} }
+  .hero-version strong { color: var(--green); }
 
   .hero-title {
     font-family: 'Syne', sans-serif; font-weight: 800;
-    font-size: clamp(52px, 9vw, 120px);
-    line-height: 0.95; letter-spacing: -3px; margin-bottom: 0px;
-    opacity: 0; animation: fadeUp 0.8s ease forwards 0.4s;
+    font-size: clamp(48px, 8.5vw, 110px);
+    line-height: 0.93; letter-spacing: -3px;
+    margin-bottom: 32px;
+    opacity: 0; animation: fadeUp 0.8s ease forwards 0.35s;
   }
-  .hero-title-line1 { display: block; color: white; }
-  .hero-title-line2 {
+  .hero-title-l1 { display: block; color: white; }
+  .hero-title-l2 {
     display: block;
-    background: linear-gradient(135deg, var(--accent-bright), var(--cyan));
+    background: linear-gradient(135deg, var(--accent-bright) 0%, var(--cyan) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
 
-  .hero-gonexus {
-    font-family: 'Space Mono', monospace; font-size: clamp(13px, 2vw, 18px);
-    letter-spacing: 6px; text-transform: uppercase;
-    color: var(--text-muted); margin: 28px 0 40px;
-    opacity: 0; animation: fadeUp 0.8s ease forwards 0.55s;
+  .hero-sub {
+    font-size: clamp(15px, 2vw, 19px); line-height: 1.65;
+    color: var(--text-dim); max-width: 600px; margin-bottom: 48px;
+    opacity: 0; animation: fadeUp 0.8s ease forwards 0.5s;
   }
-  .hero-gonexus span { color: var(--accent-glow); }
+  .hero-sub strong { color: var(--text); font-weight: 500; }
 
-  .hero-desc {
-    max-width: 560px; font-size: 17px; line-height: 1.7;
-    color: var(--text-dim); margin-bottom: 56px;
-    opacity: 0; animation: fadeUp 0.8s ease forwards 0.7s;
-  }
-  .hero-desc strong { color: var(--text); font-weight: 400; }
-
-  .hero-actions {
-    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
-    opacity: 0; animation: fadeUp 0.8s ease forwards 0.9s;
+  .hero-ctas {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp 0.8s ease forwards 0.65s;
   }
 
   .btn-primary {
     display: inline-flex; align-items: center; gap: 10px;
-    padding: 16px 40px; background: var(--accent); color: white;
-    font-family: 'Space Mono', monospace; font-size: 12px;
+    padding: 16px 36px; background: var(--accent); color: white;
+    font-family: 'Space Mono', monospace; font-size: 11px;
     text-transform: uppercase; letter-spacing: 2px; text-decoration: none;
-    position: relative; overflow: hidden; transition: all 0.3s;
-    box-shadow: 0 0 40px rgba(124,58,237,0.3);
+    transition: all 0.25s;
+    box-shadow: 0 0 40px rgba(124,58,237,0.35);
   }
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 60px rgba(124,58,237,0.5); }
+  .btn-primary:hover { background: var(--accent-bright); transform: translateY(-2px); box-shadow: 0 8px 48px rgba(168,85,247,0.4); }
   .btn-secondary {
     display: inline-flex; align-items: center; gap: 10px;
-    padding: 16px 40px; border: 1px solid var(--border);
+    padding: 16px 36px; border: 1px solid var(--border2);
     color: var(--text-dim); font-family: 'Space Mono', monospace;
-    font-size: 12px; text-transform: uppercase; letter-spacing: 2px;
-    text-decoration: none; transition: all 0.3s; background: rgba(255,255,255,0.02);
+    font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+    text-decoration: none; transition: all 0.25s;
   }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent-glow); }
+  .btn-secondary:hover { border-color: var(--accent); color: white; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 16px 28px; color: var(--text-muted);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 2px;
+    text-decoration: none; transition: color 0.2s;
+  }
+  .btn-ghost:hover { color: var(--text-dim); }
 
-  .evolution-bar {
-    position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 0;
-    opacity: 0; animation: fadeUp 0.8s ease forwards 1.1s;
+  .hero-stats {
+    display: flex; gap: 0; margin-top: 72px;
     border: 1px solid var(--border); overflow: hidden;
+    opacity: 0; animation: fadeUp 0.8s ease forwards 0.85s;
   }
-  .evo-item {
-    padding: 12px 28px; text-align: center;
-    font-family: 'Space Mono', monospace;
-    border-right: 1px solid var(--border);
+  .hero-stat {
+    padding: 18px 32px; text-align: center; border-right: 1px solid var(--border);
+    background: rgba(255,255,255,0.01);
   }
-  .evo-item:last-child { border-right: none; }
-  .evo-era {
-    font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
-    color: var(--text-muted); display: block; margin-bottom: 4px;
+  .hero-stat:last-child { border-right: none; }
+  .hero-stat-val {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 26px; color: white; display: block;
   }
-  .evo-name {
-    font-size: 13px; font-weight: 700; display: block;
-  }
-  .evo-item.past .evo-name { color: var(--text-muted); text-decoration: line-through; }
-  .evo-item.current .evo-name { color: var(--text-dim); }
-  .evo-item.future {
-    background: rgba(124,58,237,0.1);
-  }
-  .evo-item.future .evo-name {
-    background: linear-gradient(135deg, var(--accent-bright), var(--cyan));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  .hero-stat-val.accent { color: var(--accent-bright); }
+  .hero-stat-label {
+    font-family: 'Space Mono', monospace; font-size: 8px;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: var(--text-muted); display: block; margin-top: 4px;
   }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
 
-  /* MARQUEE */
+  /* ── MARQUEE ── */
   .marquee-wrap {
     position: relative; z-index: 1;
     border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-    overflow: hidden; padding: 14px 0; background: rgba(124,58,237,0.03);
+    overflow: hidden; padding: 13px 0; background: rgba(124,58,237,0.02);
   }
   .marquee-track {
     display: flex; gap: 48px;
-    animation: marquee 25s linear infinite; white-space: nowrap;
+    animation: marquee 30s linear infinite; white-space: nowrap;
   }
   .marquee-item {
     display: flex; align-items: center; gap: 12px;
-    font-family: 'Space Mono', monospace; font-size: 10px;
+    font-family: 'Space Mono', monospace; font-size: 9px;
     text-transform: uppercase; letter-spacing: 3px;
     color: var(--text-muted); flex-shrink: 0;
   }
-  .marquee-dot { width: 4px; height: 4px; background: var(--accent); border-radius: 50%; }
+  .marquee-dot { width: 3px; height: 3px; background: var(--accent-bright); border-radius: 50%; }
   @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
 
-  /* SECTIONS */
-  .section-wrap {
+  /* ── SECTIONS ── */
+  .section {
     position: relative; z-index: 1;
-    padding: 120px 48px; max-width: 1200px; margin: 0 auto;
+    max-width: 1200px; margin: 0 auto; padding: 120px 48px;
   }
   .section-label {
-    font-family: 'Space Mono', monospace; font-size: 10px;
+    font-family: 'Space Mono', monospace; font-size: 9px;
     text-transform: uppercase; letter-spacing: 4px;
     color: var(--accent-bright); margin-bottom: 20px;
     display: flex; align-items: center; gap: 12px;
   }
   .section-label::before {
-    content: ''; display: block; width: 24px; height: 1px; background: var(--accent-bright);
+    content: ''; display: block; width: 20px; height: 1px; background: var(--accent-bright);
   }
   .section-title {
     font-family: 'Syne', sans-serif; font-weight: 800;
-    font-size: clamp(36px, 5vw, 64px);
-    line-height: 1.05; letter-spacing: -2px; color: white; margin-bottom: 24px;
+    font-size: clamp(32px, 5vw, 60px);
+    line-height: 1.0; letter-spacing: -2px; color: white; margin-bottom: 20px;
   }
   .section-desc {
     font-size: 17px; line-height: 1.7;
-    color: var(--text-dim); max-width: 560px;
+    color: var(--text-dim); max-width: 520px;
   }
+  .section-divider { border: none; border-top: 1px solid var(--border); position: relative; z-index: 1; }
 
-  /* FEATURES GRID */
-  .features-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 1px; background: var(--border);
-    margin-top: 80px; border: 1px solid var(--border);
+  /* ── PROBLEM SECTION ── */
+  .problem-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border); margin-top: 64px;
   }
-  .feature-card {
-    background: var(--deep); padding: 48px 40px;
-    transition: background 0.3s; position: relative; overflow: hidden;
+  .problem-card {
+    background: var(--deep); padding: 40px 36px; position: relative;
   }
-  .feature-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    opacity: 0; transition: opacity 0.3s;
-  }
-  .feature-card:hover { background: var(--surface); }
-  .feature-card:hover::before { opacity: 1; }
-  .feature-icon {
-    width: 48px; height: 48px; border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 28px; color: var(--accent-bright);
-    background: rgba(124,58,237,0.05);
-  }
-  .feature-title {
-    font-family: 'Syne', sans-serif; font-weight: 700;
-    font-size: 20px; color: white; margin-bottom: 12px; letter-spacing: -0.5px;
-  }
-  .feature-desc { font-size: 14px; line-height: 1.7; color: var(--text-dim); }
-  .feature-tag {
-    display: inline-block; margin-top: 20px;
+  .problem-card-platform {
     font-family: 'Space Mono', monospace; font-size: 9px;
-    text-transform: uppercase; letter-spacing: 2px;
-    padding: 4px 10px; border: 1px solid var(--border); color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 3px;
+    color: var(--text-muted); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
   }
-  .feature-tag.soon { border-color: var(--cyan-dim); color: var(--cyan); }
-  .feature-tag.ai { border-color: var(--green); color: var(--green); }
+  .problem-card-platform-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-discord { background: #5865f2; box-shadow: 0 0 6px #5865f2; }
+  .dot-matrix { background: #0dbd8b; box-shadow: 0 0 6px #0dbd8b; }
+  .dot-teamspeak { background: #2c5f8a; box-shadow: 0 0 6px #2c5f8a; }
+  .problem-card-title {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 18px; color: white; margin-bottom: 12px;
+  }
+  .problem-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .problem-list li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; line-height: 1.5; color: var(--text-dim);
+  }
+  .problem-list li::before { content: '✗'; color: var(--red); flex-shrink: 0; margin-top: 1px; }
+  .problem-nexus {
+    background: var(--surface); border-top: 2px solid var(--accent);
+  }
+  .problem-nexus .problem-card-title { color: var(--accent-glow); }
+  .problem-nexus .problem-list li::before { content: '✓'; color: var(--green); }
 
-  /* AUDIO SECTION */
-  .audio-section {
-    position: relative; z-index: 1;
-    background: linear-gradient(180deg, transparent, rgba(124,58,237,0.04), transparent);
+  /* ── FEATURES WALL ── */
+  .features-wall {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+    margin-top: 64px;
+  }
+  .fw-card {
+    background: var(--deep); padding: 28px 24px;
+    transition: background 0.25s; cursor: default; position: relative; overflow: hidden;
+  }
+  .fw-card:hover { background: var(--surface); }
+  .fw-card:hover .fw-bar { width: 100%; }
+  .fw-bar {
+    position: absolute; top: 0; left: 0; height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    width: 0; transition: width 0.4s ease;
+  }
+  .fw-icon { font-size: 22px; margin-bottom: 14px; display: block; }
+  .fw-name {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 14px; color: white; margin-bottom: 6px;
+  }
+  .fw-desc { font-size: 12px; line-height: 1.6; color: var(--text-muted); }
+
+  /* ── SCREENSHOTS ── */
+  .screenshots-section {
+    background: linear-gradient(180deg, transparent, rgba(124,58,237,0.03), transparent);
     border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    position: relative; z-index: 1; overflow: hidden;
   }
-  .audio-inner {
-    max-width: 1200px; margin: 0 auto; padding: 120px 48px;
+  .screenshots-inner { max-width: 1200px; margin: 0 auto; padding: 120px 48px; }
+  .screen-tabs {
+    display: flex; gap: 0; border: 1px solid var(--border);
+    margin-top: 48px; margin-bottom: 0; overflow: hidden;
   }
-  .audio-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 80px;
-    align-items: start; margin-top: 80px;
+  .screen-tab {
+    padding: 12px 24px; font-family: 'Space Mono', monospace;
+    font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--text-muted); cursor: pointer; border: none;
+    background: var(--deep); border-right: 1px solid var(--border);
+    transition: all 0.2s;
   }
-  .audio-chain {
-    display: flex; flex-direction: column; gap: 1px;
-    border: 1px solid var(--border);
+  .screen-tab:last-child { border-right: none; }
+  .screen-tab.active { background: var(--surface2); color: var(--accent-glow); }
+  .screen-tab:hover:not(.active) { background: var(--surface); color: var(--text-dim); }
+  .screen-display {
+    border: 1px solid var(--border); border-top: none;
+    background: var(--deep); position: relative;
+    overflow: hidden;
   }
-  .chain-step {
-    display: flex; align-items: flex-start; gap: 20px;
-    padding: 24px 28px; border-bottom: 1px solid var(--border);
-    transition: background 0.2s; position: relative;
+  .screen-titlebar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
   }
-  .chain-step:last-child { border-bottom: none; }
-  .chain-step:hover { background: rgba(124,58,237,0.04); }
-  .chain-num {
-    font-family: 'Space Mono', monospace; font-size: 10px;
-    color: var(--accent-bright); min-width: 24px; margin-top: 2px;
+  .screen-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .screen-url {
+    flex: 1; background: var(--deep); border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 2px; margin-left: 8px;
+    font-family: 'Space Mono', monospace; font-size: 9px; color: var(--text-muted);
   }
-  .chain-title {
-    font-family: 'Syne', sans-serif; font-weight: 700;
-    font-size: 15px; color: white; margin-bottom: 6px;
+  .screen-img-wrap {
+    position: relative; display: none;
   }
-  .chain-desc { font-size: 13px; line-height: 1.6; color: var(--text-dim); }
-  .chain-tech {
+  .screen-img-wrap.active { display: block; }
+  .screen-img-wrap img {
+    width: 100%; display: block;
+    max-height: 500px; object-fit: cover; object-position: top;
+  }
+
+  /* ── VOICE / P2P SECTION ── */
+  .voice-inner { max-width: 1200px; margin: 0 auto; padding: 120px 48px; }
+  .voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; margin-top: 64px; }
+  .voice-chain { border: 1px solid var(--border); }
+  .voice-step {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+  .voice-step:last-child { border-bottom: none; }
+  .voice-step:hover { background: rgba(124,58,237,0.03); }
+  .voice-step-num {
     font-family: 'Space Mono', monospace; font-size: 9px;
-    text-transform: uppercase; letter-spacing: 2px;
-    color: var(--accent-bright); margin-top: 6px; display: block;
+    color: var(--accent-bright); min-width: 22px; margin-top: 2px;
   }
-
-  /* INNOVATIONS GRID */
-  .innovations-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr);
-    gap: 1px; background: var(--border);
-    border: 1px solid var(--border);
-  }
-  .innovation-card {
-    background: var(--deep); padding: 40px;
-    transition: background 0.3s; position: relative;
-  }
-  .innovation-card:hover { background: var(--surface); }
-  .innovation-emoji {
-    font-size: 28px; margin-bottom: 16px; display: block;
-  }
-  .innovation-title {
+  .voice-step-title {
     font-family: 'Syne', sans-serif; font-weight: 700;
-    font-size: 18px; color: white; margin-bottom: 10px;
+    font-size: 14px; color: white; margin-bottom: 4px;
   }
-  .innovation-desc { font-size: 14px; line-height: 1.7; color: var(--text-dim); }
-  .innovation-effect {
-    margin-top: 16px; padding: 12px 16px;
-    background: rgba(124,58,237,0.05); border-left: 2px solid var(--accent);
-    font-size: 13px; color: var(--text-dim); font-style: italic;
+  .voice-step-desc { font-size: 12px; line-height: 1.6; color: var(--text-dim); }
+  .voice-step-tag {
+    font-family: 'Space Mono', monospace; font-size: 8px;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: var(--accent-bright); margin-top: 4px; display: block;
   }
+  .voice-features-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .voice-feat {
+    background: var(--deep); padding: 16px 20px;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13px; color: var(--text-dim); transition: background 0.2s;
+  }
+  .voice-feat:hover { background: var(--surface); }
+  .voice-feat-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
 
-  /* AI SECTION */
-  .ai-section {
-    position: relative; z-index: 1;
-  }
-  .ai-inner {
-    max-width: 1200px; margin: 0 auto; padding: 120px 48px;
-  }
-  .ai-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 80px;
-    align-items: center; margin-top: 60px;
-  }
-  .ai-card {
+  /* ── FEDERATION ── */
+  .fed-inner { max-width: 1200px; margin: 0 auto; padding: 120px 48px; }
+  .fed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; margin-top: 64px; }
+  .fed-nodes {
+    position: relative; height: 340px;
+    display: flex; align-items: center; justify-content: center;
     border: 1px solid var(--border); background: var(--deep);
-    padding: 40px; position: relative; overflow: hidden;
-    transition: all 0.3s;
   }
-  .ai-card:hover { border-color: var(--green); background: var(--surface); }
-  .ai-card-icon {
-    font-size: 32px; margin-bottom: 20px; display: block;
+  .fed-ring {
+    position: absolute; border: 1px solid rgba(124,58,237,0.12);
+    border-radius: 50%; animation: ringFade 4s ease-in-out infinite;
   }
-  .ai-card-title {
-    font-family: 'Syne', sans-serif; font-weight: 700;
-    font-size: 20px; color: white; margin-bottom: 12px;
+  .fed-ring-1 { width: 160px; height: 160px; }
+  .fed-ring-2 { width: 270px; height: 270px; animation-delay: 0.6s; }
+  .fed-ring-3 { width: 320px; height: 320px; animation-delay: 1.2s; border-style: dashed; }
+  @keyframes ringFade { 0%,100%{opacity:0.2} 50%{opacity:0.6} }
+  .fed-center {
+    position: absolute; width: 64px; height: 64px;
+    background: var(--accent); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 48px rgba(124,58,237,0.5); z-index: 2;
+    animation: centerGlow 3s ease-in-out infinite;
   }
-  .ai-card-desc { font-size: 14px; line-height: 1.7; color: var(--text-dim); }
-  .ai-pill {
-    display: inline-block; margin-top: 16px; padding: 4px 12px;
-    border: 1px solid var(--green); color: var(--green);
-    font-family: 'Space Mono', monospace; font-size: 9px;
+  @keyframes centerGlow {
+    0%,100%{box-shadow:0 0 48px rgba(124,58,237,0.5)}
+    50%{box-shadow:0 0 80px rgba(124,58,237,0.7)}
+  }
+  .fed-node {
+    position: absolute; width: 36px; height: 36px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.3s;
+  }
+  .fed-node.active { border-color: var(--accent); box-shadow: 0 0 12px rgba(124,58,237,0.3); background: var(--accent-dim); }
+  .fed-node:hover { border-color: var(--accent-bright); }
+  .fed-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .fed-item {
+    background: var(--deep); padding: 20px 24px;
+    display: flex; align-items: flex-start; gap: 14px; transition: background 0.2s;
+  }
+  .fed-item:hover { background: var(--surface); }
+  .fed-item-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .fed-item-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; color: white; margin-bottom: 4px; }
+  .fed-item-desc { font-size: 12px; line-height: 1.5; color: var(--text-dim); }
+  .fed-item-tag {
+    font-family: 'Space Mono', monospace; font-size: 8px;
     text-transform: uppercase; letter-spacing: 2px;
-  }
-  .ai-cards-stack {
-    display: flex; flex-direction: column; gap: 16px;
+    color: var(--cyan); margin-top: 6px; display: block;
   }
 
-  /* MANIFESTO */
-  .manifesto-section {
-    max-width: 1200px; margin: 0 auto;
-    padding: 40px 48px 120px; position: relative; z-index: 1;
+  /* ── INSTALL SECTION ── */
+  .install-inner { max-width: 1200px; margin: 0 auto; padding: 120px 48px; }
+  .install-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-top: 64px; }
+  .install-option { background: var(--deep); padding: 40px; transition: background 0.25s; }
+  .install-option:hover { background: var(--surface); }
+  .install-option.featured { background: var(--surface2); border-top: 2px solid var(--accent); }
+  .install-badge {
+    font-family: 'Space Mono', monospace; font-size: 8px;
+    text-transform: uppercase; letter-spacing: 2px;
+    padding: 3px 10px; border: 1px solid var(--accent);
+    color: var(--accent-bright); margin-bottom: 20px; display: inline-block;
   }
-  .manifesto-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 80px; align-items: center;
+  .install-title {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 20px; color: white; margin-bottom: 8px;
   }
-  .manifesto-items {
-    display: flex; flex-direction: column; gap: 0;
-    border: 1px solid var(--border);
+  .install-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; line-height: 1.6; }
+  .install-code {
+    background: var(--void); border: 1px solid var(--border);
+    padding: 16px 20px; font-family: 'Space Mono', monospace;
+    font-size: 11px; line-height: 1.8; color: var(--text-dim);
+    overflow-x: auto; position: relative;
   }
+  .install-code .cmd-line { color: var(--green); }
+  .install-code .cmd-comment { color: var(--text-muted); }
+  .install-code .cmd-accent { color: var(--accent-glow); }
+
+  /* ── COMPARISON TABLE ── */
+  .compare-inner { max-width: 1200px; margin: 0 auto; padding: 120px 48px; }
+  .compare-table {
+    width: 100%; border-collapse: collapse;
+    border: 1px solid var(--border); margin-top: 64px;
+    font-size: 13px;
+  }
+  .compare-table th {
+    padding: 16px 20px; text-align: center;
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 2px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .compare-table th:first-child { text-align: left; color: var(--text-muted); }
+  .compare-table th.col-nexus {
+    background: var(--surface2);
+    color: var(--accent-glow);
+    border-bottom: 2px solid var(--accent);
+  }
+  .compare-table td {
+    padding: 14px 20px; text-align: center;
+    border-bottom: 1px solid var(--border); color: var(--text-dim);
+    background: var(--deep);
+  }
+  .compare-table td:first-child {
+    text-align: left; font-size: 12px; font-weight: 500;
+    color: var(--text); background: var(--surface);
+  }
+  .compare-table td.col-nexus { background: rgba(124,58,237,0.04); }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table tr:hover td { background: rgba(255,255,255,0.01); }
+  .compare-table tr:hover td.col-nexus { background: rgba(124,58,237,0.07); }
+  .ct-yes { color: var(--green); font-size: 15px; }
+  .ct-no { color: var(--red); font-size: 14px; opacity: 0.7; }
+  .ct-partial { color: var(--yellow); font-size: 12px; font-family: 'Space Mono', monospace; }
+
+  /* ── MANIFESTO ── */
+  .manifesto-inner { max-width: 1200px; margin: 0 auto; padding: 120px 48px; }
+  .manifesto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+  .manifesto-list { border: 1px solid var(--border); }
   .manifesto-item {
-    display: flex; align-items: flex-start; gap: 20px;
-    padding: 24px 32px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 22px 28px; border-bottom: 1px solid var(--border);
     transition: background 0.2s;
   }
   .manifesto-item:last-child { border-bottom: none; }
-  .manifesto-item:hover { background: rgba(124,58,237,0.04); }
+  .manifesto-item:hover { background: rgba(124,58,237,0.03); }
   .manifesto-check {
-    width: 20px; height: 20px; border: 1px solid var(--accent);
+    width: 18px; height: 18px; border: 1px solid var(--accent);
     display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; margin-top: 2px; color: var(--accent-bright); font-size: 11px;
+    flex-shrink: 0; margin-top: 1px; color: var(--accent-bright); font-size: 10px;
   }
   .manifesto-x {
-    width: 20px; height: 20px; border: 1px solid var(--text-muted);
+    width: 18px; height: 18px; border: 1px solid var(--text-muted);
     display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; margin-top: 2px; color: var(--text-muted); font-size: 11px;
+    flex-shrink: 0; margin-top: 1px; color: var(--text-muted); font-size: 10px;
   }
-  .manifesto-text { font-size: 14px; line-height: 1.6; color: var(--text-dim); }
-  .manifesto-text strong { color: var(--text); font-weight: 400; }
+  .manifesto-text { font-size: 13px; line-height: 1.6; color: var(--text-dim); }
+  .manifesto-text strong { color: var(--text); font-weight: 500; }
+  .manifesto-quote {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(28px, 3.5vw, 48px); color: white;
+    line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 28px;
+  }
+  .manifesto-quote em { color: var(--accent-glow); font-style: normal; }
+  .manifesto-byline {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--accent-bright); margin-bottom: 8px;
+  }
+  .manifesto-date { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text-muted); }
 
-  /* NETWORK */
-  .network-section {
-    max-width: 1200px; margin: 0 auto;
-    padding: 40px 48px 120px; position: relative; z-index: 1; text-align: center;
-  }
-  .network-viz {
-    position: relative; height: 360px; margin: 80px 0 60px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .network-ring {
-    position: absolute; border: 1px solid rgba(124,58,237,0.15);
-    border-radius: 50%; animation: ringPulse 4s ease-in-out infinite;
-  }
-  .network-ring-1 { width: 180px; height: 180px; }
-  .network-ring-2 { width: 300px; height: 300px; animation-delay: 0.5s; }
-  .network-ring-3 { width: 420px; height: 420px; animation-delay: 1s; border-style: dashed; }
-  @keyframes ringPulse { 0%,100%{opacity:0.3} 50%{opacity:0.7} }
-  .network-center {
-    position: absolute; width: 80px; height: 80px;
-    background: var(--accent); border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 60px rgba(124,58,237,0.6), 0 0 120px rgba(124,58,237,0.2);
-    z-index: 2; animation: centerPulse 3s ease-in-out infinite;
-  }
-  @keyframes centerPulse {
-    0%,100%{box-shadow:0 0 60px rgba(124,58,237,0.6),0 0 120px rgba(124,58,237,0.2)}
-    50%{box-shadow:0 0 80px rgba(124,58,237,0.8),0 0 160px rgba(124,58,237,0.3)}
-  }
-  .network-node {
-    position: absolute; width: 40px; height: 40px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-size: 16px; transition: all 0.3s;
-  }
-  .network-node:hover { border-color: var(--accent); box-shadow: 0 0 20px rgba(124,58,237,0.3); }
-  .network-node.active { background: rgba(124,58,237,0.1); border-color: var(--accent); box-shadow: 0 0 16px rgba(124,58,237,0.3); }
-
-  /* WAITLIST */
-  .waitlist-section {
-    max-width: 1200px; margin: 0 auto;
-    padding: 40px 48px 120px; position: relative; z-index: 1;
-  }
-  .waitlist-box {
+  /* ── CTA ── */
+  .cta-inner { max-width: 1200px; margin: 0 auto; padding: 80px 48px 120px; }
+  .cta-box {
     border: 1px solid var(--border); background: var(--deep);
     padding: 80px; text-align: center; position: relative; overflow: hidden;
   }
-  .waitlist-box::before {
-    content: ''; position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
-    width: 400px; height: 400px;
-    background: radial-gradient(circle, rgba(124,58,237,0.1) 0%, transparent 70%);
+  .cta-box::before {
+    content: ''; position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%);
     pointer-events: none;
   }
-  .waitlist-title {
+  .cta-title {
     font-family: 'Syne', sans-serif; font-weight: 800;
-    font-size: clamp(32px, 4vw, 56px);
+    font-size: clamp(32px, 5vw, 64px);
     letter-spacing: -2px; color: white; margin-bottom: 16px; position: relative;
   }
-  .waitlist-sub {
-    font-size: 16px; color: var(--text-dim);
-    margin-bottom: 48px; position: relative;
+  .cta-sub {
+    font-size: 17px; color: var(--text-dim); margin-bottom: 48px; position: relative;
+    max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.6;
   }
-  .waitlist-form {
-    display: flex; gap: 0; max-width: 480px;
-    margin: 0 auto; position: relative;
+  .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; position: relative; }
+  .cta-note {
+    margin-top: 32px; font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--text-muted); position: relative;
   }
-  .waitlist-input {
-    flex: 1; padding: 16px 24px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-right: none; color: var(--text);
-    font-family: 'Space Mono', monospace; font-size: 12px;
-    outline: none; transition: border-color 0.2s;
-  }
-  .waitlist-input:focus { border-color: var(--accent); }
-  .waitlist-input::placeholder { color: var(--text-muted); }
-  .waitlist-submit {
-    padding: 16px 32px; background: var(--accent); border: none;
-    color: white; font-family: 'Space Mono', monospace; font-size: 11px;
-    text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
-  }
-  .waitlist-submit:hover { background: var(--accent-bright); }
 
-  /* FOOTER */
+  /* ── FOOTER ── */
   footer {
     position: relative; z-index: 1;
     border-top: 1px solid var(--border); padding: 48px;
     max-width: 1200px; margin: 0 auto;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
   }
-  .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--text-dim); }
-  .footer-links { display: flex; gap: 32px; list-style: none; }
+  .footer-logo {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .footer-links { display: flex; gap: 28px; list-style: none; flex-wrap: wrap; }
   .footer-links a {
-    font-family: 'Space Mono', monospace; font-size: 10px;
+    font-family: 'Space Mono', monospace; font-size: 9px;
     text-transform: uppercase; letter-spacing: 2px;
     color: var(--text-muted); text-decoration: none; transition: color 0.2s;
   }
   .footer-links a:hover { color: var(--accent-glow); }
-  .footer-copy { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text-muted); }
+  .footer-copy { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--text-muted); }
 
-  .reveal { opacity: 0; transform: translateY(32px); transition: all 0.7s ease; }
+  /* ── REVEAL ── */
+  .reveal { opacity: 0; transform: translateY(28px); transition: all 0.7s ease; }
   .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  .full-divider {
-    border: none; border-top: 1px solid var(--border);
-    margin: 0; position: relative; z-index: 1;
-  }
-
-  /* HAMBURGER */
+  /* ── HAMBURGER ── */
   .nav-hamburger {
     display: none; flex-direction: column; justify-content: center; gap: 5px;
     background: none; border: none; cursor: pointer; padding: 6px; z-index: 101;
   }
-  .nav-hamburger span {
-    display: block; width: 22px; height: 1px; background: var(--text-dim); transition: all 0.3s;
-  }
-  nav.menu-open .nav-hamburger span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+  .nav-hamburger span { display: block; width: 22px; height: 1px; background: var(--text-dim); transition: all 0.3s; }
+  nav.menu-open .nav-hamburger span:nth-child(1) { transform: rotate(45deg) translate(4px,4px); }
   nav.menu-open .nav-hamburger span:nth-child(2) { opacity: 0; transform: translateX(-8px); }
-  nav.menu-open .nav-hamburger span:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
+  nav.menu-open .nav-hamburger span:nth-child(3) { transform: rotate(-45deg) translate(4px,-4px); }
 
-  /* RESPONSIVE — TABLET */
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1024px) {
+    .features-wall { grid-template-columns: repeat(3,1fr); }
+    .install-options { grid-template-columns: 1fr; }
+    .compare-table { font-size: 11px; }
+    .compare-table th, .compare-table td { padding: 12px 14px; }
+  }
+
   @media (max-width: 900px) {
     nav { padding: 16px 20px; }
     .nav-hamburger { display: flex; }
     .nav-cta { display: none; }
     .nav-links {
       display: none; position: absolute; top: 100%; left: 0; right: 0;
-      background: rgba(5,5,8,0.97); backdrop-filter: blur(20px);
+      background: rgba(4,4,7,0.97); backdrop-filter: blur(20px);
       flex-direction: column; padding: 8px 0;
       border-bottom: 1px solid var(--border); gap: 0;
     }
     .nav-links li { border-bottom: 1px solid var(--border); }
-    .nav-links li:first-child { border-top: 1px solid var(--border); }
-    .nav-links a { display: block; padding: 16px 24px; font-size: 11px; letter-spacing: 2px; }
+    .nav-links a { display: block; padding: 16px 24px; }
     nav.menu-open .nav-links { display: flex; }
 
-    .section-wrap { padding: 80px 24px; }
-    .audio-inner { padding: 80px 24px; }
-    .ai-inner { padding: 80px 24px; }
-    .manifesto-section { padding: 40px 24px 80px; }
-    .network-section { padding: 40px 24px 80px; }
-    .waitlist-section { padding: 40px 24px 80px; }
-    footer { padding: 40px 24px; flex-direction: column; gap: 24px; text-align: center; }
-    .footer-links { flex-wrap: wrap; justify-content: center; gap: 16px; }
+    .section { padding: 80px 24px; }
+    .screenshots-inner, .voice-inner, .fed-inner, .install-inner, .compare-inner, .manifesto-inner { padding: 80px 24px; }
+    .cta-inner { padding: 40px 24px 80px; }
+    footer { padding: 40px 24px; flex-direction: column; text-align: center; }
 
-    .features-grid { grid-template-columns: 1fr; }
-    .audio-grid { grid-template-columns: 1fr; gap: 40px; }
-    .innovations-grid { grid-template-columns: 1fr; }
-    .ai-grid { grid-template-columns: 1fr; }
+    .problem-grid { grid-template-columns: 1fr; }
+    .features-wall { grid-template-columns: repeat(2,1fr); }
+    .voice-grid { grid-template-columns: 1fr; gap: 40px; }
+    .fed-grid { grid-template-columns: 1fr; gap: 40px; }
     .manifesto-grid { grid-template-columns: 1fr; gap: 40px; }
-    .evolution-bar { position: relative; bottom: auto; margin-top: 40px; }
+    .hero-stats { flex-direction: column; }
+    .hero-stat { border-right: none; border-bottom: 1px solid var(--border); }
+    .hero-stat:last-child { border-bottom: none; }
+    .compare-table { display: block; overflow-x: auto; }
+    .fed-nodes { height: 260px; }
+    .fed-ring-3 { width: 240px; height: 240px; }
   }
 
-  /* RESPONSIVE — MOBILE */
   @media (max-width: 600px) {
     .cursor, .cursor-ring { display: none !important; }
     body { cursor: auto; }
-
-    .hero { padding: 100px 20px 60px; }
-    .hero-gonexus { letter-spacing: 3px; font-size: 11px; }
-    .evolution-bar { width: 100%; }
-    .evo-item { padding: 10px 12px; flex: 1; }
-    .evo-era { font-size: 8px; letter-spacing: 1px; }
-    .evo-name { font-size: 11px; }
-
-    .network-viz { height: 220px; overflow: hidden; margin: 40px 0 20px; }
-    .network-ring-1 { width: 120px; height: 120px; }
-    .network-ring-2 { width: 200px; height: 200px; }
-    .network-ring-3 { width: 280px; height: 280px; }
-    .network-center { width: 56px; height: 56px; }
-    .network-node { width: 30px; height: 30px; font-size: 12px; }
-    .network-stats { flex-direction: column !important; }
-    .network-stat { padding: 20px 24px !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; }
-    .network-stat:last-child { border-bottom: none !important; }
-
-    .feature-card { padding: 32px 20px; }
-    .innovation-card { padding: 28px 20px; }
-    .ai-card { padding: 28px 20px; }
-    .manifesto-item { padding: 18px 20px; }
-    .chain-step { padding: 18px 20px; }
-
-    .waitlist-box { padding: 48px 24px; }
+    .features-wall { grid-template-columns: 1fr; }
+    .screen-tabs { flex-wrap: wrap; }
+    .screen-tab { flex: 1; min-width: 80px; }
+    .hero-stats { display: none; }
+    .cta-box { padding: 48px 24px; }
   }
 </style>
 </head>
@@ -634,454 +686,832 @@
 <div class="cursor" id="cursor"></div>
 <div class="cursor-ring" id="cursorRing"></div>
 
+<!-- ─────────────────────── NAV ─────────────────────── -->
 <nav id="nav">
   <a href="#" class="nav-logo">
-    <div class="nav-logo-dot"></div>
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      </svg>
+    </div>
     NEXUS
   </a>
   <ul class="nav-links">
     <li><a href="#features">Fonctionnalités</a></li>
-    <li><a href="#audio">Audio</a></li>
-    <li><a href="#ai">IA Locale</a></li>
+    <li><a href="#screenshots">Aperçu</a></li>
+    <li><a href="#install">Installation</a></li>
+    <li><a href="#compare">Comparatif</a></li>
     <li><a href="#manifesto">Manifeste</a></li>
     <li><a href="https://github.com/Pokled/Nexus" target="_blank">GitHub ↗</a></li>
   </ul>
   <button class="nav-hamburger" id="navHamburger" aria-label="Menu"><span></span><span></span><span></span></button>
-  <a href="https://nexusnode.app" class="nav-cta" target="_blank"><span>Lancer l'app →</span></a>
+  <a href="https://nexusnode.app" class="nav-cta" target="_blank">Lancer l'app →</a>
 </nav>
 
-<!-- HERO -->
+<!-- ─────────────────────── HERO ─────────────────────── -->
 <div class="hero">
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
   <div class="orb orb-3"></div>
 
-  <div class="hero-badge">
-    <div class="hero-badge-dot"></div>
-    Alpha en développement — Rejoignez le mouvement
+  <div class="hero-version">
+    <div class="hero-version-dot"></div>
+    <strong>v1.7.2</strong>&nbsp;— Production — Open Source AGPL-3.0
   </div>
 
   <h1 class="hero-title">
-    <span class="hero-title-line1">GO</span>
-    <span class="hero-title-line2">NEXUS</span>
+    <span class="hero-title-l1">La communauté</span>
+    <span class="hero-title-l2">que vous possédez</span>
   </h1>
 
-  <p class="hero-gonexus">
-    Hier : TeamSpeak &nbsp;·&nbsp; Aujourd'hui : Discord &nbsp;·&nbsp; <span>Demain : Nexus</span>
+  <p class="hero-sub">
+    Forum + chat + vocal + DMs + calendrier + P2P.
+    <strong>Auto-hébergé, indexé par Google, zéro surveillance.</strong>
+    Une instance = une communauté souveraine.
   </p>
 
-  <p class="hero-desc">
-    Le premier réseau communautaire alliant <strong>IA locale</strong>, <strong>audio studio</strong>
-    et résilience <strong>P2P</strong>. <strong>Open source, indépendant, souverain.</strong>
-    Vous l'installez, vous le possédez.
-  </p>
-
-  <div class="hero-actions">
+  <div class="hero-ctas">
     <a href="https://nexusnode.app" class="btn-primary" target="_blank">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      Découvrir l'alpha
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Essayer la démo
     </a>
-    <a href="https://github.com/Pokled/Nexus" class="btn-secondary" target="_blank">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-      Code source
+    <a href="#install" class="btn-secondary">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Installer (5 min)
+    </a>
+    <a href="https://github.com/Pokled/Nexus" class="btn-ghost" target="_blank">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      Code source ↗
     </a>
   </div>
 
-  <div class="evolution-bar">
-    <div class="evo-item past">
-      <span class="evo-era">2003 → 2017</span>
-      <span class="evo-name">TeamSpeak</span>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <span class="hero-stat-val accent">23</span>
+      <span class="hero-stat-label">Fonctionnalités</span>
     </div>
-    <div class="evo-item current">
-      <span class="evo-era">2015 → aujourd'hui</span>
-      <span class="evo-name">Discord</span>
+    <div class="hero-stat">
+      <span class="hero-stat-val">AGPL</span>
+      <span class="hero-stat-label">Licence libre</span>
     </div>
-    <div class="evo-item future">
-      <span class="evo-era">2026 → demain</span>
-      <span class="evo-name">⚡ NEXUS</span>
+    <div class="hero-stat">
+      <span class="hero-stat-val accent">P2P</span>
+      <span class="hero-stat-label">Réseau distribué</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-val">0€</span>
+      <span class="hero-stat-label">Abonnement</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hero-stat-val accent">WebRTC</span>
+      <span class="hero-stat-label">Vocal natif</span>
     </div>
   </div>
 </div>
 
-<!-- MARQUEE -->
+<!-- ─────────────────────── MARQUEE ─────────────────────── -->
 <div class="marquee-wrap">
   <div class="marquee-track">
-    <div class="marquee-item"><div class="marquee-dot"></div>Forum décentralisé</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Chat temps réel</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Audio Opus 48kHz</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>DeepFilterNet IA</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Audio 3D Spatial</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Ollama Local AI</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>WireGuard P2P</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Self-hosted</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Forum SEO-ready</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Chat Socket.IO</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Vocal WebRTC</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Partage d'écran</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Messages privés</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Calendrier & RSVP</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>NexusCanvas P2P</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Jukebox collaboratif</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Nexus Signet ECDSA</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Fédération Galaxy Bar</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Recherche globale FTS</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>nexus-relay Rust</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>nexus-turn STUN/TURN</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Self-hosted Docker</div>
     <div class="marquee-item"><div class="marquee-dot"></div>Open Source AGPL</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Zéro publicité</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Forum décentralisé</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Chat temps réel</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Audio Opus 48kHz</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>DeepFilterNet IA</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Audio 3D Spatial</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Ollama Local AI</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>WireGuard P2P</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Self-hosted</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Zéro tracking</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Forum SEO-ready</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Chat Socket.IO</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Vocal WebRTC</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Partage d'écran</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Messages privés</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Calendrier & RSVP</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>NexusCanvas P2P</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Jukebox collaboratif</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Nexus Signet ECDSA</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Fédération Galaxy Bar</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Recherche globale FTS</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>nexus-relay Rust</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>nexus-turn STUN/TURN</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Self-hosted Docker</div>
     <div class="marquee-item"><div class="marquee-dot"></div>Open Source AGPL</div>
-    <div class="marquee-item"><div class="marquee-dot"></div>Zéro publicité</div>
+    <div class="marquee-item"><div class="marquee-dot"></div>Zéro tracking</div>
   </div>
 </div>
 
-<!-- FEATURES -->
-<div class="section-wrap" id="features">
+<!-- ─────────────────────── PROBLEM ─────────────────────── -->
+<div class="section reveal" id="why">
+  <div class="section-label">Pourquoi Nexus existe</div>
+  <h2 class="section-title">Vos communautés méritent<br>mieux que ça.</h2>
+  <p class="section-desc">Discord, Matrix, TeamSpeak ont tous des compromis inacceptables. Nexus n'en a aucun.</p>
+
+  <div class="problem-grid reveal">
+    <div class="problem-card">
+      <div class="problem-card-platform">
+        <div class="problem-card-platform-dot dot-discord"></div>
+        Discord
+      </div>
+      <div class="problem-card-title">Vos données, leur produit</div>
+      <ul class="problem-list">
+        <li>Données vendues à des annonceurs</li>
+        <li>Serveurs fermés, non indexés par Google</li>
+        <li>Code propriétaire, boîte noire totale</li>
+        <li>Peut fermer du jour au lendemain</li>
+        <li>Compte requis pour lire quoi que ce soit</li>
+      </ul>
+    </div>
+    <div class="problem-card">
+      <div class="problem-card-platform">
+        <div class="problem-card-platform-dot dot-matrix"></div>
+        Matrix / Element
+      </div>
+      <div class="problem-card-title">Complexe et fragmenté</div>
+      <ul class="problem-list">
+        <li>Pas de forum structuré, pas de SEO</li>
+        <li>UX difficile pour les non-techs</li>
+        <li>Pas de vocal P2P natif intégré</li>
+        <li>Installation lourde et technique</li>
+        <li>Pas de calendrier, pas de polls</li>
+      </ul>
+    </div>
+    <div class="problem-card problem-nexus">
+      <div class="problem-card-platform">
+        <div class="problem-card-platform-dot" style="background:var(--accent);box-shadow:0 0 6px var(--accent)"></div>
+        Nexus
+      </div>
+      <div class="problem-card-title">Tout le reste, sans les compromis</div>
+      <ul class="problem-list">
+        <li>Forum indexé par Google, Bing, Brave</li>
+        <li>Chat + vocal + DMs + calendrier intégrés</li>
+        <li>Auto-hébergé, vos données restent chez vous</li>
+        <li>P2P distribué, aucun serveur central</li>
+        <li>Open source AGPL — lisible et forkable</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ─────────────────────── FEATURES WALL ─────────────────────── -->
+<div class="section" id="features">
   <div class="reveal">
-    <div class="section-label">Fonctionnalités</div>
-    <h2 class="section-title">Un lieu de vie,<br>pas un outil</h2>
-    <p class="section-desc">On ne "consomme" pas Nexus, on y habite. Forum, chat, vocal, IA — la suite complète, dans un seul écosystème.</p>
+    <div class="section-label">Fonctionnalités v1.7.2</div>
+    <h2 class="section-title">23 fonctionnalités.<br>Toutes en production.</h2>
+    <p class="section-desc">Pas de roadmap fantôme. Pas de "bientôt disponible". Tout ce qui est listé ci-dessous fonctionne aujourd'hui.</p>
   </div>
 
-  <div class="features-grid reveal">
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      </div>
-      <div class="feature-title">Forum structuré</div>
-      <div class="feature-desc">Catégories et sous-catégories infinies. Éditeur WYSIWYG avec GIFs, vidéos embarquées, code coloré. Mémoire longue de la communauté.</div>
-      <span class="feature-tag">Disponible</span>
+  <div class="features-wall reveal">
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">💬</span>
+      <div class="fw-name">Forum structuré</div>
+      <div class="fw-desc">Catégories, sous-catégories, éditeur WYSIWYG, réactions, remerciements, tags, slugs SEO</div>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-      </div>
-      <div class="feature-title">Chat temps réel</div>
-      <div class="feature-desc">Salons instantanés. Mentions, réactions, historique, et même des bots communautaires. La réaction rapide, sans quitter Nexus.</div>
-      <span class="feature-tag">Disponible</span>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🔍</span>
+      <div class="fw-name">Recherche full-text</div>
+      <div class="fw-desc">PostgreSQL tsvector + index GIN, extraits en surbrillance, rapide et précis</div>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
-      </div>
-      <div class="feature-title">Salons vocaux</div>
-      <div class="feature-desc">Tables rondes visuelles pour petits groupes. Vue scène pour les grandes assemblées. Audio 3D spatial et diagnostic réseau intégré.</div>
-      <span class="feature-tag">Disponible</span>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">⚡</span>
+      <div class="fw-name">Chat temps réel</div>
+      <div class="fw-desc">Socket.IO — salons, réponses, épingles, aperçus de liens, @mentions</div>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>
-      </div>
-      <div class="feature-title">Profils riches</div>
-      <div class="feature-desc">Avatar, bio, tags, widgets GitHub, Twitch, Spotify. Grades personnalisés et colorés. Réputation par communauté.</div>
-      <span class="feature-tag">Disponible</span>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🎙️</span>
+      <div class="fw-name">Salons vocaux</div>
+      <div class="fw-desc">WebRTC P2P mesh — mute, sourdine, PTT, filtre bruit, partage d'écran</div>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      </div>
-      <div class="feature-title">Moddable à l'infini</div>
-      <div class="feature-desc">Un plugin = un dossier. Thèmes, bots, intégrations. La communauté construit sur Nexus sans toucher au core.</div>
-      <span class="feature-tag">Disponible</span>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">📺</span>
+      <div class="fw-name">Partage d'écran</div>
+      <div class="fw-desc">WebRTC screen share + enregistrement de clips directement dans le navigateur</div>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      </div>
-      <div class="feature-title">Un clic, c'est lancé</div>
-      <div class="feature-desc">Exécutable unique Windows/Linux/Mac. PostgreSQL et Redis embarqués. Tourne sur un Raspberry Pi 4 ou un vieux FX-8370.</div>
-      <span class="feature-tag">Disponible</span>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">✉️</span>
+      <div class="fw-name">Messages privés</div>
+      <div class="fw-desc">DMs 1:1 avec badge de non-lus, en temps réel via Socket.IO</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">📅</span>
+      <div class="fw-name">Calendrier & Événements</div>
+      <div class="fw-desc">CRUD, RSVP, cartes OSM, image de couverture, rich snippets JSON-LD</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">📊</span>
+      <div class="fw-name">Sondages</div>
+      <div class="fw-desc">Choix multiple, planification, classement — dans le chat et le forum</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🎨</span>
+      <div class="fw-name">NexusCanvas</div>
+      <div class="fw-desc">Tableau blanc collaboratif P2P dans les salons vocaux — CRDT LWW sync</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🎵</span>
+      <div class="fw-name">Jukebox P2P</div>
+      <div class="fw-desc">Queue YouTube collaborative, votes — synchronisé entre tous les participants</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🔔</span>
+      <div class="fw-name">Notifications</div>
+      <div class="fw-desc">Réponse, remerciement, @mention — badge, centre, purge auto 30 jours</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🛡️</span>
+      <div class="fw-name">Panel admin</div>
+      <div class="fw-desc">Dashboard, membres, grades, bannissements IP/email, modération</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🌐</span>
+      <div class="fw-name">SEO complet</div>
+      <div class="fw-desc">Sitemap, RSS, robots.txt, JSON-LD, URLs canoniques — indexé par tous les moteurs</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🖼️</span>
+      <div class="fw-name">Bibliothèque d'assets</div>
+      <div class="fw-desc">Cadres, bannières, badges, stickers, sons, thèmes, polices — transfert P2P</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🎭</span>
+      <div class="fw-name">Thèmes profil</div>
+      <div class="fw-desc">6 presets, CSS par utilisateur, éditeur live — personnalisation complète</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">📱</span>
+      <div class="fw-name">Mobile UI</div>
+      <div class="fw-desc">Navigation bottom, drawer chat, vocal sur mobile — expérience native-like</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🌍</span>
+      <div class="fw-name">Recherche globale</div>
+      <div class="fw-desc">Index FTS cross-instances, UI /discover — trouvez des sujets sur tout le réseau</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🔗</span>
+      <div class="fw-name">Fédération</div>
+      <div class="fw-desc">Annuaire d'instances, Galaxy Bar — switchez entre communautés sans quitter l'app</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">📡</span>
+      <div class="fw-name">Gossip Protocol</div>
+      <div class="fw-desc">Indexation cross-instances des événements et sujets — réseau décentralisé</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🔑</span>
+      <div class="fw-name">Nexus Signet</div>
+      <div class="fw-desc">Auth sans mot de passe — ECDSA P-256, clé dans votre navigateur, jamais sur le serveur</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">🚇</span>
+      <div class="fw-name">nexus-relay</div>
+      <div class="fw-desc">Tunnel TCP Rust — hébergez depuis chez vous sans ouvrir de ports, sans IPv6</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">📶</span>
+      <div class="fw-name">nexus-turn</div>
+      <div class="fw-desc">STUN/TURN Rust natif — vocal même derrière VPN, CGNAT, ou réseau restrictif</div>
+    </div>
+    <div class="fw-card">
+      <div class="fw-bar"></div>
+      <span class="fw-icon">⚡</span>
+      <div class="fw-name">DataChannels P2P</div>
+      <div class="fw-desc">Saisie instantanée, réactions optimistes, transfert de fichiers — zéro latence serveur</div>
     </div>
   </div>
 </div>
 
-<hr class="full-divider">
+<hr class="section-divider">
 
-<!-- AUDIO SECTION -->
-<div class="audio-section" id="audio">
-  <div class="audio-inner">
+<!-- ─────────────────────── SCREENSHOTS ─────────────────────── -->
+<div class="screenshots-section" id="screenshots">
+  <div class="screenshots-inner">
     <div class="reveal">
-      <div class="section-label">Audio & Immersion</div>
-      <h2 class="section-title">"Le son n'est pas<br>une option,<br>c'est l'émotion."</h2>
-      <p class="section-desc">Qualité studio par défaut, même avec un micro médiocre. Nexus traite, corrige, améliore — en local, sans cloud.</p>
+      <div class="section-label">Aperçu</div>
+      <h2 class="section-title">Voilà à quoi ça ressemble.</h2>
+      <p class="section-desc">L'interface réelle de Nexus — pas une maquette Figma.</p>
     </div>
 
-    <div class="audio-grid reveal">
-      <div>
-        <div style="font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);margin-bottom:20px">Chaîne de traitement</div>
-        <div class="audio-chain">
-          <div class="chain-step">
-            <div class="chain-num">01</div>
-            <div class="chain-content">
-              <div class="chain-title">Codec Opus Full-Band</div>
-              <div class="chain-desc">Échantillonnage 48kHz — qualité CD par défaut. Latence ultra-faible, compression adaptative.</div>
-              <span class="chain-tech">Opus · WebRTC</span>
-            </div>
-          </div>
-          <div class="chain-step">
-            <div class="chain-num">02</div>
-            <div class="chain-content">
-              <div class="chain-title">DeepFilterNet (IA Locale)</div>
-              <div class="chain-desc">Deep learning ultra-léger en WASM. Suppression totale des bruits — clavier, travaux, vent. Aucune donnée n'est envoyée.</div>
-              <span class="chain-tech">DeepFilterNet · WASM · Local</span>
-            </div>
-          </div>
-          <div class="chain-step">
-            <div class="chain-num">03</div>
-            <div class="chain-content">
-              <div class="chain-title">Ducking natif</div>
-              <div class="chain-desc">La musique baisse automatiquement dès qu'une voix est détectée. La conversation prime toujours.</div>
-              <span class="chain-tech">WebAudio API</span>
-            </div>
-          </div>
-          <div class="chain-step">
-            <div class="chain-num">04</div>
-            <div class="chain-content">
-              <div class="chain-title">Auto-Gain & Limiteur</div>
-              <div class="chain-desc">Personne ne sature, personne n'est inaudible. Nexus nivelle intelligemment tous les volumes.</div>
-              <span class="chain-tech">DSP · Normalization</span>
-            </div>
-          </div>
+    <div class="reveal" style="margin-top:48px">
+      <div class="screen-tabs">
+        <button class="screen-tab active" onclick="switchTab('forum')">Forum</button>
+        <button class="screen-tab" onclick="switchTab('chat')">Chat</button>
+        <button class="screen-tab" onclick="switchTab('vocal')">Vocal</button>
+        <button class="screen-tab" onclick="switchTab('admin')">Admin</button>
+        <button class="screen-tab" onclick="switchTab('annuaire')">Fédération</button>
+      </div>
+      <div class="screen-display">
+        <div class="screen-titlebar">
+          <div class="screen-dot" style="background:#ef4444"></div>
+          <div class="screen-dot" style="background:#f59e0b"></div>
+          <div class="screen-dot" style="background:#10b981"></div>
+          <div class="screen-url" id="screenUrl">nexusnode.app/forum</div>
         </div>
-      </div>
-
-      <div>
-        <div style="font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);margin-bottom:20px">Social Jukebox</div>
-        <div class="audio-chain" style="margin-bottom:32px">
-          <div class="chain-step">
-            <div class="chain-num">🎵</div>
-            <div class="chain-content">
-              <div class="chain-title">Platine P2P synchronisée</div>
-              <div class="chain-desc">MP3, FLAC ou flux web en synchronisation millimètrée entre tous les participants. La musique devient un membre du groupe.</div>
-              <span class="chain-tech">P2P · NTP-like sync</span>
-            </div>
-          </div>
-          <div class="chain-step">
-            <div class="chain-num">🗳️</div>
-            <div class="chain-content">
-              <div class="chain-title">File d'attente démocratique</div>
-              <div class="chain-desc">Upvote / Downvote sur la playlist en cours. La communauté choisit ce qu'elle écoute. Ensemble.</div>
-              <span class="chain-tech">Vote system · Realtime</span>
-            </div>
-          </div>
-          <div class="chain-step">
-            <div class="chain-num">🌊</div>
-            <div class="chain-content">
-              <div class="chain-title">Visualiseurs réactifs</div>
-              <div class="chain-desc">L'interface réagit aux fréquences. Les bordures de la table ronde pulsent avec la musique.</div>
-              <span class="chain-tech">WebAudio FFT · Canvas</span>
-            </div>
-          </div>
+        <div class="screen-img-wrap active" id="tab-forum">
+          <img src="docs/img/Forum_Api-Nexus.png" alt="Nexus — Forum">
         </div>
-      </div>
-    </div>
-
-    <!-- INNOVATIONS -->
-    <div style="margin-top:80px" class="reveal">
-      <div class="section-label">Innovations</div>
-      <h3 style="font-family:'Syne',sans-serif;font-weight:800;font-size:36px;letter-spacing:-1px;color:white;margin-bottom:48px">Des idées qui n'existent<br>nulle part ailleurs</h3>
-    </div>
-
-    <div class="innovations-grid reveal">
-      <div class="innovation-card">
-        <span class="innovation-emoji">🌐</span>
-        <div class="innovation-title">Mur de Son Spatial (3D)</div>
-        <div class="innovation-desc">Si l'avatar de votre ami est à gauche sur la table ronde, vous l'entendez à gauche dans votre casque. Plus il s'approche, plus c'est intime.</div>
-        <div class="innovation-effect">"On recrée la proximité physique dans le numérique."</div>
-      </div>
-      <div class="innovation-card">
-        <span class="innovation-emoji">🌍</span>
-        <div class="innovation-title">Traducteur Universel</div>
-        <div class="innovation-desc">Whisper via Ollama transcrit et traduit en direct. Sous-titres flottants au-dessus de chaque avatar. Un Français et un Japonais dans le même vocal.</div>
-        <div class="innovation-effect">"La barrière de la langue explose. En local, sans cloud."</div>
-      </div>
-      <div class="innovation-card">
-        <span class="innovation-emoji">🌑</span>
-        <div class="innovation-title">Zones d'Ombre</div>
-        <div class="innovation-desc">Dans un grand salon, faites glisser votre avatar contre un autre pour créer une bulle privée. Vous vous entendez à 100%, le reste devient un murmure à 30%.</div>
-        <div class="innovation-effect">"Les apartés, sans quitter la pièce."</div>
-      </div>
-      <div class="innovation-card">
-        <span class="innovation-emoji">⏪</span>
-        <div class="innovation-title">Capsule Temporelle</div>
-        <div class="innovation-desc">Un bouton "Instant Replay" qui rembobine les 30 dernières secondes grâce au tampon local. "Il a dit quoi ? J'ai pas entendu." — Plus jamais.</div>
-        <div class="innovation-effect">"Contrôle total sur le flux temporel de la discussion."</div>
+        <div class="screen-img-wrap" id="tab-chat">
+          <img src="docs/img/Chat-Texte_Api-Nexus.png" alt="Nexus — Chat">
+        </div>
+        <div class="screen-img-wrap" id="tab-vocal">
+          <img src="docs/img/Salon-vocal_Api-Nexus.png" alt="Nexus — Salons vocaux">
+        </div>
+        <div class="screen-img-wrap" id="tab-admin">
+          <img src="docs/img/AdminPanel_Instance_Api-Nexus.png" alt="Nexus — Panel Admin">
+        </div>
+        <div class="screen-img-wrap" id="tab-annuaire">
+          <img src="docs/img/Annuaire_instances_Api-Nexus.png" alt="Nexus — Annuaire Fédération">
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<hr class="full-divider">
+<hr class="section-divider">
 
-<!-- AI SECTION -->
-<div class="ai-section" id="ai">
-  <div class="ai-inner">
+<!-- ─────────────────────── VOICE ─────────────────────── -->
+<div style="position:relative;z-index:1">
+  <div class="voice-inner">
     <div class="reveal">
-      <div class="section-label">IA Souveraine</div>
-      <h2 class="section-title">L'IA au service<br>des utilisateurs,<br>pas des régies pub</h2>
-      <p class="section-desc">Nexus intègre Ollama — une IA qui tourne localement sur votre nœud. Vos discussions ne sortent jamais pour entraîner des modèles obscurs.</p>
+      <div class="section-label">Vocal & Temps réel</div>
+      <h2 class="section-title">P2P natif.<br>Pas de serveur vocal central.</h2>
+      <p class="section-desc">Le son passe directement d'un navigateur à l'autre via WebRTC. Nexus n'écoute rien.</p>
     </div>
 
-    <div class="ai-grid reveal">
-      <div class="ai-cards-stack">
-        <div class="ai-card">
-          <span class="ai-card-icon">🧠</span>
-          <div class="ai-card-title">Assistant de Savoir</div>
-          <div class="ai-card-desc">L'IA indexe votre forum pour répondre instantanément : <em>"Quel était le fix pour le bug de son sur Debian dont on a parlé mardi ?"</em> La mémoire collective de votre communauté, accessible en une question.</div>
-          <span class="ai-pill">Ollama · Local</span>
-        </div>
-        <div class="ai-card">
-          <span class="ai-card-icon">🛡️</span>
-          <div class="ai-card-title">Modération Augmentée</div>
-          <div class="ai-card-desc">Une IA qui aide les admins à maintenir une ambiance saine. Détection de contenu toxique (Nexus Guard Protocol), suggestions d'action, résumés de conflits.</div>
-          <span class="ai-pill">Local · Privé</span>
+    <div class="voice-grid reveal">
+      <div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);margin-bottom:16px">Architecture WebRTC</div>
+        <div class="voice-chain">
+          <div class="voice-step">
+            <div class="voice-step-num">01</div>
+            <div>
+              <div class="voice-step-title">Mesh P2P direct</div>
+              <div class="voice-step-desc">Chaque participant est connecté à tous les autres. Aucun audio ne transite par le serveur Nexus.</div>
+              <span class="voice-step-tag">WebRTC · ICE · DTLS</span>
+            </div>
+          </div>
+          <div class="voice-step">
+            <div class="voice-step-num">02</div>
+            <div>
+              <div class="voice-step-title">Signalisation Socket.IO</div>
+              <div class="voice-step-desc">Le serveur sert uniquement à l'échange des offres SDP et candidats ICE — pas d'audio.</div>
+              <span class="voice-step-tag">SDP · ICE Candidates</span>
+            </div>
+          </div>
+          <div class="voice-step">
+            <div class="voice-step-num">03</div>
+            <div>
+              <div class="voice-step-title">nexus-turn en fallback</div>
+              <div class="voice-step-desc">Derrière VPN, CGNAT ou réseau d'entreprise — nexus-turn (Rust) garantit la connexion.</div>
+              <span class="voice-step-tag">STUN/TURN · Rust</span>
+            </div>
+          </div>
+          <div class="voice-step">
+            <div class="voice-step-num">04</div>
+            <div>
+              <div class="voice-step-title">DataChannels en parallèle</div>
+              <div class="voice-step-desc">Saisie instantanée, réactions optimistes, transfert de fichiers — sur le même mesh P2P.</div>
+              <span class="voice-step-tag">RTCDataChannel · P2P</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div style="border:1px solid var(--border);padding:48px;background:var(--deep)">
-        <div style="font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);margin-bottom:32px">Pourquoi Ollama ?</div>
-
-        <div style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border)">
-          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
-            <div style="color:var(--green);font-size:13px;min-width:16px">✓</div>
-            <div style="font-size:14px;color:var(--text-dim)"><strong style="color:var(--text);font-weight:400">Confidentialité totale</strong> — Vos données ne bougent pas de votre serveur</div>
-          </div>
-          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
-            <div style="color:var(--green);font-size:13px;min-width:16px">✓</div>
-            <div style="font-size:14px;color:var(--text-dim)"><strong style="color:var(--text);font-weight:400">Zéro coût d'API</strong> — Pas d'abonnement à des services cloud</div>
-          </div>
-          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
-            <div style="color:var(--green);font-size:13px;min-width:16px">✓</div>
-            <div style="font-size:14px;color:var(--text-dim)"><strong style="color:var(--text);font-weight:400">Modèles libres</strong> — Llama, Mistral, Qwen — vous choisissez</div>
-          </div>
-          <div style="padding:20px 24px;display:flex;gap:16px;align-items:flex-start">
-            <div style="color:var(--green);font-size:13px;min-width:16px">✓</div>
-            <div style="font-size:14px;color:var(--text-dim)"><strong style="color:var(--text);font-weight:400">Open source</strong> — Pas de boîte noire, pas de surprise</div>
-          </div>
-        </div>
-
-        <div style="margin-top:32px;padding:20px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);font-family:'Space Mono',monospace;font-size:11px;color:var(--green);line-height:1.6">
-          $ ollama run llama3<br>
-          &gt; Nexus AI ready. Running locally.<br>
-          &gt; No data leaves your node. Ever.
+      <div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);margin-bottom:16px">Fonctionnalités vocales</div>
+        <div class="voice-features-list">
+          <div class="voice-feat"><div class="voice-feat-dot"></div>Mute / Sourdine individuelle</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>Push-to-talk (PTT)</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>Filtre de bruit (AudioContext)</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>Partage d'écran + clip recording</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>NexusCanvas — tableau blanc collaboratif</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>Jukebox YouTube collaboratif</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>Vocal sur mobile (bottom drawer)</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>nexus-relay pour home servers</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>Diagnostics réseau intégrés</div>
+          <div class="voice-feat"><div class="voice-feat-dot"></div>Réglages audio persistants (localStorage)</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<hr class="full-divider">
+<hr class="section-divider">
 
-<!-- MANIFESTO -->
-<div class="manifesto-section" id="manifesto">
-  <div class="manifesto-grid reveal">
-    <div>
-      <div class="section-label">Manifeste</div>
-      <h2 class="section-title">Bâtir une alternative,<br>pas juste un outil</h2>
-      <p class="section-desc" style="margin-bottom:32px">Ces règles sont inscrites dans la licence. Elles ne peuvent être changées par personne — ni par nous, ni par un investisseur.</p>
-      <p style="font-family:'Space Mono',monospace;font-size:12px;color:var(--accent-bright);margin-bottom:12px">"Nous ne demandons la permission à personne pour exister."</p>
-      <p style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted)">"Fork us if we betray you."</p>
+<!-- ─────────────────────── FEDERATION ─────────────────────── -->
+<div style="position:relative;z-index:1;background:linear-gradient(180deg,transparent,rgba(124,58,237,0.02),transparent)">
+  <div class="fed-inner">
+    <div class="reveal">
+      <div class="section-label">Réseau & Fédération</div>
+      <h2 class="section-title">Un réseau sans<br>point de défaillance central.</h2>
+      <p class="section-desc">Chaque instance est indépendante. Ensemble, elles forment un internet de communautés.</p>
     </div>
-    <div class="manifesto-items">
-      <div class="manifesto-item">
-        <div class="manifesto-check">✓</div>
-        <div class="manifesto-text"><strong>Open Source AGPL pour toujours</strong> — Le code est public. Les forks sont les bienvenus.</div>
+
+    <div class="fed-grid reveal">
+      <div class="fed-nodes">
+        <div class="fed-ring fed-ring-3"></div>
+        <div class="fed-ring fed-ring-2"></div>
+        <div class="fed-ring fed-ring-1"></div>
+        <div class="fed-node active" style="top:50%;left:50%;transform:translate(-50%,-110px)">🇫🇷</div>
+        <div class="fed-node active" style="top:50%;left:50%;transform:translate(75px,-35px)">🇩🇪</div>
+        <div class="fed-node active" style="top:50%;left:50%;transform:translate(75px,45px)">🇨🇦</div>
+        <div class="fed-node active" style="top:50%;left:50%;transform:translate(-50%,85px)">🇯🇵</div>
+        <div class="fed-node active" style="top:50%;left:50%;transform:translate(-115px,45px)">🇧🇷</div>
+        <div class="fed-node" style="top:50%;left:50%;transform:translate(-115px,-35px)">🇦🇺</div>
+        <div class="fed-node" style="top:50%;left:50%;transform:translate(-50%,-155px);opacity:0.4">🇺🇸</div>
+        <div class="fed-node" style="top:50%;left:50%;transform:translate(130px,-50%);opacity:0.4">🇬🇧</div>
+        <div class="fed-center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="3" fill="white"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="white" stroke-width="1.5" fill="none"/></svg>
+        </div>
       </div>
-      <div class="manifesto-item">
-        <div class="manifesto-check">✓</div>
-        <div class="manifesto-text"><strong>Vous possédez vos données</strong> — Hébergé chez vous. Pas de backup envoyé ailleurs. Jamais.</div>
-      </div>
-      <div class="manifesto-item">
-        <div class="manifesto-check">✓</div>
-        <div class="manifesto-text"><strong>Zéro publicité</strong> — Ni maintenant, ni dans 10 ans, ni contre paiement.</div>
-      </div>
-      <div class="manifesto-item">
-        <div class="manifesto-check">✓</div>
-        <div class="manifesto-text"><strong>Insubmersible</strong> — Pas de bouton off central. Tant qu'un nœud vit, la communauté existe.</div>
-      </div>
-      <div class="manifesto-item">
-        <div class="manifesto-x">✗</div>
-        <div class="manifesto-text"><strong>Pas de Google OAuth</strong> — Google ne saura pas qui utilise Nexus, ni quand.</div>
-      </div>
-      <div class="manifesto-item">
-        <div class="manifesto-x">✗</div>
-        <div class="manifesto-text"><strong>Pas de VC, pas d'acquisition</strong> — Nexus ne sera jamais vendu à un grand groupe.</div>
+
+      <div class="fed-list">
+        <div class="fed-item">
+          <div class="fed-item-icon">🔗</div>
+          <div>
+            <div class="fed-item-title">Galaxy Bar</div>
+            <div class="fed-item-desc">Basculez entre plusieurs instances Nexus en un clic, sans vous déconnecter. Votre identité, vos communautés, une seule interface.</div>
+            <span class="fed-item-tag">Multi-instance switcher</span>
+          </div>
+        </div>
+        <div class="fed-item">
+          <div class="fed-item-icon">📡</div>
+          <div>
+            <div class="fed-item-title">Gossip Protocol</div>
+            <div class="fed-item-desc">Les threads et événements se propagent automatiquement entre instances opt-in. Le savoir d'une communauté devient visible à toutes.</div>
+            <span class="fed-item-tag">Cross-instance indexing</span>
+          </div>
+        </div>
+        <div class="fed-item">
+          <div class="fed-item-icon">🔍</div>
+          <div>
+            <div class="fed-item-title">Recherche globale /discover</div>
+            <div class="fed-item-desc">Un moteur de recherche full-text qui traverse toutes les instances fédérées. Trouvez une discussion sur n'importe quelle instance du réseau.</div>
+            <span class="fed-item-tag">FTS cross-instance</span>
+          </div>
+        </div>
+        <div class="fed-item">
+          <div class="fed-item-icon">🚇</div>
+          <div>
+            <div class="fed-item-title">nexus-relay — Héberger depuis chez soi</div>
+            <div class="fed-item-desc">Un tunnel TCP Rust qui expose votre instance sans ouvrir de port sur votre box. Votre communauté sur votre vieux PC sous le bureau.</div>
+            <span class="fed-item-tag">Rust · TCP tunnel · No port forward</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<hr class="full-divider">
+<hr class="section-divider">
 
-<!-- NETWORK -->
-<div class="network-section" id="network">
-  <div class="reveal">
-    <div class="section-label" style="justify-content:center">Réseau P2P</div>
-    <h2 class="section-title">Plus on est nombreux,<br>plus on est forts</h2>
-    <p class="section-desc" style="margin:0 auto 0;max-width:500px">Chaque instance Nexus contribue au réseau. La bande passante croît avec la communauté. Le réseau n'a pas de bouton off.</p>
-  </div>
+<!-- ─────────────────────── INSTALL ─────────────────────── -->
+<div style="position:relative;z-index:1" id="install">
+  <div class="install-inner">
+    <div class="reveal">
+      <div class="section-label">Installation</div>
+      <h2 class="section-title">Votre instance,<br>en 5 minutes.</h2>
+      <p class="section-desc">Node.js 20+, PostgreSQL 16, Redis 7. Ou juste Docker.</p>
+    </div>
 
-  <div class="network-viz">
-    <div class="network-ring network-ring-3"></div>
-    <div class="network-ring network-ring-2"></div>
-    <div class="network-ring network-ring-1"></div>
-    <div class="network-node active" style="top:50%;left:50%;transform:translate(-50%,-130px)">🇫🇷</div>
-    <div class="network-node active" style="top:50%;left:50%;transform:translate(80px,-50px)">🇩🇪</div>
-    <div class="network-node active" style="top:50%;left:50%;transform:translate(80px,30px)">🇨🇦</div>
-    <div class="network-node active" style="top:50%;left:50%;transform:translate(-50%,90px)">🇯🇵</div>
-    <div class="network-node active" style="top:50%;left:50%;transform:translate(-130px,30px)">🇧🇷</div>
-    <div class="network-node" style="top:50%;left:50%;transform:translate(-130px,-50px)">🇦🇺</div>
-    <div class="network-node" style="top:50%;left:50%;transform:translate(-50%,-190px);opacity:0.5">🇺🇸</div>
-    <div class="network-node" style="top:50%;left:50%;transform:translate(150px,-50%);opacity:0.5">🇬🇧</div>
-    <div class="network-node" style="top:50%;left:50%;transform:translate(-50%,150px);opacity:0.5">🇰🇷</div>
-    <div class="network-node" style="top:50%;left:50%;transform:translate(-200px,-50%);opacity:0.5">🌐</div>
-    <div class="network-center">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="white" stroke-width="2" fill="none"/></svg>
+    <div class="install-options reveal">
+      <div class="install-option featured">
+        <div class="install-badge">Recommandé</div>
+        <div class="install-title">Docker</div>
+        <div class="install-desc">La méthode la plus simple. Toutes les dépendances incluses dans les conteneurs.</div>
+        <div class="install-code">
+<span class="cmd-comment"># Cloner le dépôt</span>
+<span class="cmd-line">git clone https://github.com/Pokled/Nexus</span>
+<span class="cmd-line">cd Nexus/nexus-core</span>
+<span class="cmd-comment"># Configurer votre communauté</span>
+<span class="cmd-line">cp .env.example .env</span>
+<span class="cmd-comment"># Démarrer</span>
+<span class="cmd-line">docker-compose up -d</span>
+<span class="cmd-comment"># API disponible sur :3000</span>
+        </div>
+      </div>
+      <div class="install-option">
+        <div class="install-title">Manuel (Linux/Mac)</div>
+        <div class="install-desc">Contrôle total sur chaque composant. Recommandé pour les serveurs de production.</div>
+        <div class="install-code">
+<span class="cmd-comment"># Prérequis : Node 20+, PG 16, Redis 7</span>
+<span class="cmd-line">cd nexus-core && npm install</span>
+<span class="cmd-line">cp .env.example .env</span>
+<span class="cmd-comment"># Éditer .env puis :</span>
+<span class="cmd-line">npm run dev    <span class="cmd-comment"># développement</span></span>
+<span class="cmd-line">npm run build  <span class="cmd-comment"># production</span></span>
+<span class="cmd-line">npm start      <span class="cmd-comment"># démarrer</span></span>
+        </div>
+      </div>
+      <div class="install-option">
+        <div class="install-title">Windows (PowerShell)</div>
+        <div class="install-desc">Script d'installation automatique — Node.js, PostgreSQL, Redis, service Windows.</div>
+        <div class="install-code">
+<span class="cmd-comment"># Ouvrir PowerShell en Administrateur</span>
+<span class="cmd-line">.\scripts\Install-Nexus.ps1</span>
+<span class="cmd-comment"># Ou chemin personnalisé :</span>
+<span class="cmd-line">.\scripts\Install-Nexus.ps1 \</span>
+  <span class="cmd-accent">-NexusPath "D:\Apps\Nexus"</span>
+<span class="cmd-comment"># Installe Chocolatey, Node, PG,</span>
+<span class="cmd-comment"># Redis, NSSM (service auto-start)</span>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="network-stats reveal" style="display:flex;gap:0;justify-content:center;border:1px solid var(--border);max-width:600px;margin:0 auto">
-    <div class="network-stat" style="padding:32px 40px;text-align:center;border-right:1px solid var(--border);flex:1">
-      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:36px;color:white">0€</div>
-      <div style="font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-top:6px">Par an, domaine inclus</div>
-    </div>
-    <div class="network-stat" style="padding:32px 40px;text-align:center;border-right:1px solid var(--border);flex:1">
-      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:36px;color:white">∞</div>
-      <div style="font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-top:6px">Instances supportées</div>
-    </div>
-    <div class="network-stat" style="padding:32px 40px;text-align:center;flex:1">
-      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:36px;color:white">P2P</div>
-      <div style="font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-top:6px">Bande passante distribuée</div>
+    <div class="reveal" style="margin-top:48px;border:1px solid var(--border);background:var(--deep);padding:32px;display:flex;gap:32px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px">
+        <div style="font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);margin-bottom:8px">Reverse proxy recommandé</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:white;margin-bottom:6px">Caddy — SSL automatique</div>
+        <div style="font-size:13px;color:var(--text-dim);line-height:1.6">Caddy gère vos certificats SSL via Let's Encrypt automatiquement. Zéro configuration manuelle. Un fichier <code style="color:var(--accent-glow);font-size:11px">Caddyfile</code> suffit.</div>
+      </div>
+      <div class="install-code" style="flex:2;min-width:280px;margin-top:0">
+<span class="cmd-comment"># Caddyfile minimal</span>
+<span class="cmd-accent">votre-domaine.com</span> {
+  <span class="cmd-line">reverse_proxy /api/*     localhost:3000</span>
+  <span class="cmd-line">reverse_proxy /socket.io/* localhost:3000</span>
+  <span class="cmd-line">reverse_proxy *          localhost:4173</span>
+}
+      </div>
     </div>
   </div>
 </div>
 
-<hr class="full-divider">
+<hr class="section-divider">
 
-<!-- WAITLIST -->
-<div class="waitlist-section" id="waitlist">
-  <div class="waitlist-box reveal">
-    <h2 class="waitlist-title">Go Nexus.</h2>
-    <p class="waitlist-sub">L'alpha est en ligne. Venez construire votre communauté dès maintenant.</p>
-    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-      <a href="https://nexusnode.app" class="btn-primary" target="_blank">
-        Accéder à l'application
-      </a>
-      <a href="https://github.com/Pokled/Nexus" class="btn-secondary" target="_blank">
-        Voir sur GitHub
-      </a>
+<!-- ─────────────────────── COMPARISON ─────────────────────── -->
+<div style="position:relative;z-index:1" id="compare">
+  <div class="compare-inner">
+    <div class="reveal">
+      <div class="section-label">Comparatif</div>
+      <h2 class="section-title">Nexus vs les autres.</h2>
+      <p class="section-desc">Une comparaison honnête sur les critères qui comptent vraiment pour une communauté.</p>
     </div>
-    <p style="margin-top:32px;font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted)">Pas de piège. Pas de SaaS. Juste du logiciel libre.</p>
+
+    <div class="reveal" style="overflow-x:auto;margin-top:64px">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="col-nexus">⚡ Nexus</th>
+            <th>Discord</th>
+            <th>Matrix</th>
+            <th>TeamSpeak</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Open Source</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span> AGPL-3.0</td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-yes">✓</span> Apache 2.0</td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Auto-hébergement</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-yes">✓</span></td>
+            <td><span class="ct-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Zéro tracking / pub</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-yes">✓</span></td>
+            <td><span class="ct-partial">Partiel</span></td>
+          </tr>
+          <tr>
+            <td>Forum structuré + SEO</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Indexé par Google</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-partial">Partiel</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Chat temps réel</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-yes">✓</span></td>
+            <td><span class="ct-yes">✓</span></td>
+            <td><span class="ct-partial">Basique</span></td>
+          </tr>
+          <tr>
+            <td>Vocal P2P WebRTC</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-partial">Serveur central</span></td>
+            <td><span class="ct-partial">Jitsi externe</span></td>
+            <td><span class="ct-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Partage d'écran</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-yes">✓</span></td>
+            <td><span class="ct-partial">Via Jitsi</span></td>
+            <td><span class="ct-yes">✓</span></td>
+          </tr>
+          <tr>
+            <td>Messages privés (DMs)</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-yes">✓</span></td>
+            <td><span class="ct-yes">✓</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Calendrier & Événements</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-partial">Basique</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Sondages</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span> Chat + Forum</td>
+            <td><span class="ct-partial">Chat seulement</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Tableau blanc collaboratif</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span> P2P</td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Fédération inter-instances</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-yes">✓</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Auth sans mot de passe</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span> ECDSA P-256</td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Hébergement sans port ouvert</td>
+            <td class="col-nexus"><span class="ct-yes">✓</span> nexus-relay</td>
+            <td><span class="ct-no">N/A</span></td>
+            <td><span class="ct-no">✗</span></td>
+            <td><span class="ct-no">✗</span></td>
+          </tr>
+          <tr>
+            <td>Coût</td>
+            <td class="col-nexus"><span class="ct-yes" style="font-size:13px">0€</span></td>
+            <td><span class="ct-partial">Nitro $9.99/mois</span></td>
+            <td><span class="ct-yes" style="font-size:13px">0€</span></td>
+            <td><span class="ct-partial">3€ / slot</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
+<hr class="section-divider">
+
+<!-- ─────────────────────── MANIFESTO ─────────────────────── -->
+<div style="position:relative;z-index:1;background:linear-gradient(180deg,transparent,rgba(124,58,237,0.02),transparent)" id="manifesto">
+  <div class="manifesto-inner">
+    <div class="manifesto-grid reveal">
+      <div>
+        <div class="section-label">Manifeste</div>
+        <blockquote class="manifesto-quote">
+          "Le réseau,<br>ce sont <em>les gens</em>."
+        </blockquote>
+        <p class="manifesto-byline">— Nexus Manifesto, 18 février 2026</p>
+        <p class="manifesto-date" style="margin-bottom:32px">"Fork us if we betray you."</p>
+        <p style="font-size:14px;line-height:1.7;color:var(--text-dim)">
+          Ces règles sont inscrites dans la licence AGPL-3.0. Elles ne peuvent être changées
+          par personne — ni par nous, ni par un investisseur, ni par une acquisition.
+          Si Nexus trahit ses principes, le Manifeste autorise explicitement tout le monde à forker.
+        </p>
+      </div>
+      <div class="manifesto-list">
+        <div class="manifesto-item">
+          <div class="manifesto-check">✓</div>
+          <div class="manifesto-text"><strong>Open Source AGPL pour toujours</strong> — Le code est public. Les forks sont les bienvenus. Le code vous appartient.</div>
+        </div>
+        <div class="manifesto-item">
+          <div class="manifesto-check">✓</div>
+          <div class="manifesto-text"><strong>Vous possédez vos données</strong> — Hébergé chez vous. Pas de backup envoyé ailleurs. Jamais.</div>
+        </div>
+        <div class="manifesto-item">
+          <div class="manifesto-check">✓</div>
+          <div class="manifesto-text"><strong>Zéro publicité</strong> — Ni maintenant, ni dans 10 ans, ni contre paiement.</div>
+        </div>
+        <div class="manifesto-item">
+          <div class="manifesto-check">✓</div>
+          <div class="manifesto-text"><strong>Forum indexable</strong> — Le savoir d'une communauté appartient à internet, pas à une boîte privée.</div>
+        </div>
+        <div class="manifesto-item">
+          <div class="manifesto-x">✗</div>
+          <div class="manifesto-text"><strong>Pas de VC, pas d'acquisition</strong> — Nexus ne sera jamais vendu à un grand groupe.</div>
+        </div>
+        <div class="manifesto-item">
+          <div class="manifesto-x">✗</div>
+          <div class="manifesto-text"><strong>Pas de Google OAuth</strong> — Google ne saura pas qui utilise Nexus, ni quand.</div>
+        </div>
+        <div class="manifesto-item">
+          <div class="manifesto-x">✗</div>
+          <div class="manifesto-text"><strong>Pas de serveur central unique</strong> — Pas de bouton off. Tant qu'un nœud vit, la communauté existe.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ─────────────────────── CTA ─────────────────────── -->
+<div style="position:relative;z-index:1">
+  <div class="cta-inner">
+    <div class="cta-box reveal">
+      <h2 class="cta-title">Votre communauté.<br>Vos règles.</h2>
+      <p class="cta-sub">Nexus est en production, stable, utilisé. Installez votre instance en 5 minutes ou explorez la démo.</p>
+      <div class="cta-btns">
+        <a href="https://nexusnode.app" class="btn-primary" target="_blank">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Voir la démo
+        </a>
+        <a href="#install" class="btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Installer Nexus
+        </a>
+        <a href="https://github.com/Pokled/Nexus" class="btn-ghost" target="_blank">
+          Code source ↗
+        </a>
+      </div>
+      <p class="cta-note">Pas de SaaS. Pas de carte bleue. Juste du logiciel libre. — AGPL-3.0</p>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────── FOOTER ─────────────────────── -->
 <footer>
-  <div class="footer-logo">NEXUS</div>
+  <div class="footer-logo">
+    <div class="nav-logo-icon" style="width:24px;height:24px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      </svg>
+    </div>
+    NEXUS
+  </div>
   <ul class="footer-links">
     <li><a href="#manifesto">Manifeste</a></li>
-    <li><a href="https://nexusnode.app" target="_blank">L'application</a></li>
+    <li><a href="#install">Installation</a></li>
+    <li><a href="#compare">Comparatif</a></li>
+    <li><a href="https://nexusnode.app" target="_blank">Démo</a></li>
     <li><a href="https://github.com/Pokled/Nexus" target="_blank">GitHub</a></li>
     <li><a href="https://github.com/Pokled/Nexus/blob/main/LICENSE" target="_blank">AGPL-3.0</a></li>
+    <li><a href="https://github.com/Pokled/Nexus/issues" target="_blank">Issues</a></li>
   </ul>
   <div class="footer-copy">© 2026 — "Le réseau, ce sont les gens."</div>
 </footer>
 
 <script>
-  // Cursor
+  // ── Custom Cursor ──
   const cursor = document.getElementById('cursor');
   const ring = document.getElementById('cursorRing');
   let mx = 0, my = 0, rx = 0, ry = 0;
@@ -1090,29 +1520,28 @@
     cursor.style.left = mx - 4 + 'px';
     cursor.style.top = my - 4 + 'px';
   });
-  function animRing() {
+  (function animRing() {
     rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
     ring.style.left = rx - 16 + 'px'; ring.style.top = ry - 16 + 'px';
     requestAnimationFrame(animRing);
-  }
-  animRing();
+  })();
   document.querySelectorAll('a, button, input').forEach(el => {
     el.addEventListener('mouseenter', () => { cursor.style.transform='scale(2)'; ring.style.transform='scale(1.5)'; ring.style.borderColor='var(--accent-glow)'; });
     el.addEventListener('mouseleave', () => { cursor.style.transform='scale(1)'; ring.style.transform='scale(1)'; ring.style.borderColor='var(--accent)'; });
   });
 
-  // Nav
+  // ── Nav scroll ──
   window.addEventListener('scroll', () => {
     document.getElementById('nav').classList.toggle('scrolled', scrollY > 60);
   });
 
-  // Reveal
+  // ── Reveal on scroll ──
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
-  }, { threshold: 0.1 });
+  }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  // Hamburger menu
+  // ── Hamburger ──
   const hamburger = document.getElementById('navHamburger');
   const navEl = document.getElementById('nav');
   hamburger.addEventListener('click', () => navEl.classList.toggle('menu-open'));
@@ -1120,16 +1549,29 @@
     a.addEventListener('click', () => navEl.classList.remove('menu-open'));
   });
 
-  // Smooth scroll for anchor links
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-      e.preventDefault();
-      const target = document.querySelector(this.getAttribute('href'));
-      if(target) {
-        target.scrollIntoView({ behavior: 'smooth' });
-      }
+  // ── Smooth anchor scroll ──
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', function(e) {
+      const t = document.querySelector(this.getAttribute('href'));
+      if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
     });
   });
+
+  // ── Screenshots tabs ──
+  const tabUrls = {
+    forum: 'nexusnode.app/forum',
+    chat: 'nexusnode.app/chat',
+    vocal: 'nexusnode.app/chat  [salon vocal actif]',
+    admin: 'nexusnode.app/admin',
+    annuaire: 'nexusnode.app/communities'
+  };
+  function switchTab(name) {
+    document.querySelectorAll('.screen-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.screen-img-wrap').forEach(w => w.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('screenUrl').textContent = tabUrls[name];
+  }
 </script>
 </body>
 </html>
