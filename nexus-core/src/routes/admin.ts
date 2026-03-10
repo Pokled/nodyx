@@ -65,6 +65,27 @@ const CreateChannelBody = z.object({
 
 const ReorderChannelsBody = z.object({ ids: z.array(z.string().uuid()).min(1) })
 
+// ── Audit log helper ──────────────────────────────────────────────────────────
+
+async function logAction(
+  actorId: string,
+  action: string,
+  targetType: string | null,
+  targetId: string | null,
+  targetLabel: string | null,
+  metadata: Record<string, unknown> = {}
+): Promise<void> {
+  try {
+    const { rows } = await db.query(`SELECT username FROM users WHERE id = $1`, [actorId])
+    const actorUsername = rows[0]?.username ?? 'unknown'
+    await db.query(
+      `INSERT INTO admin_audit_log (actor_id, actor_username, action, target_type, target_id, target_label, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [actorId, actorUsername, action, targetType, targetId, targetLabel, JSON.stringify(metadata)]
+    )
+  } catch { /* never fail the main operation */ }
+}
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 export default async function adminRoutes(app: FastifyInstance) {
@@ -241,10 +262,11 @@ export default async function adminRoutes(app: FastifyInstance) {
     const { userId }  = request.params as { userId: string }
     const body        = request.body as z.infer<typeof PatchMemberBody>
     const communityId = await getCommunityId()
+    const adminUser   = (request as any).user as { userId: string }
 
     // Cannot change owner's role
     const { rows: check } = await db.query(
-      `SELECT role FROM community_members WHERE community_id = $1 AND user_id = $2`,
+      `SELECT cm.role, u.username FROM community_members cm JOIN users u ON u.id = cm.user_id WHERE cm.community_id = $1 AND cm.user_id = $2`,
       [communityId, userId]
     )
     if (!check[0]) return reply.code(404).send({ error: 'Member not found' })
@@ -255,6 +277,8 @@ export default async function adminRoutes(app: FastifyInstance) {
         `UPDATE community_members SET role = $1 WHERE community_id = $2 AND user_id = $3`,
         [body.role, communityId, userId]
       )
+      logAction(adminUser.userId, 'change_role', 'user', userId, check[0].username,
+        { old_role: check[0].role, new_role: body.role })
     }
 
     return reply.send({ ok: true })
@@ -319,9 +343,10 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { userId }  = request.params as { userId: string }
     const communityId = await getCommunityId()
+    const adminUser   = (request as any).user as { userId: string }
 
     const { rows: check } = await db.query(
-      `SELECT role FROM community_members WHERE community_id = $1 AND user_id = $2`,
+      `SELECT cm.role, u.username FROM community_members cm JOIN users u ON u.id = cm.user_id WHERE cm.community_id = $1 AND cm.user_id = $2`,
       [communityId, userId]
     )
     if (!check[0]) return reply.code(404).send({ error: 'Member not found' })
@@ -331,6 +356,7 @@ export default async function adminRoutes(app: FastifyInstance) {
       `DELETE FROM community_members WHERE community_id = $1 AND user_id = $2`,
       [communityId, userId]
     )
+    logAction(adminUser.userId, 'kick_member', 'user', userId, check[0].username, {})
     return reply.send({ ok: true })
   })
 
@@ -367,7 +393,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     // Fetch user info (role + registration_ip + email)
     const { rows: userRows } = await db.query(
-      `SELECT u.email, u.registration_ip,
+      `SELECT u.username, u.email, u.registration_ip,
               cm.role
        FROM users u
        LEFT JOIN community_members cm ON cm.community_id = $1 AND cm.user_id = u.id
@@ -377,7 +403,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     if (!userRows[0]) return reply.code(404).send({ error: 'User not found' })
     if (userRows[0].role === 'owner') return reply.code(403).send({ error: 'Cannot ban the owner' })
 
-    const { email, registration_ip } = userRows[0]
+    const { username: targetUsername, email, registration_ip } = userRows[0]
 
     // Insert community ban (upsert — idempotent)
     await db.query(
@@ -446,6 +472,8 @@ export default async function adminRoutes(app: FastifyInstance) {
       }
     }
 
+    logAction(adminUser.userId, 'ban_user', 'user', userId, targetUsername,
+      { reason: body.reason ?? null, ban_ip: !!body.ban_ip, ban_email: !!body.ban_email })
     return reply.send({ ok: true, registration_ip: registration_ip ?? null })
   })
 
@@ -455,6 +483,9 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { userId }  = request.params as { userId: string }
     const communityId = await getCommunityId()
+    const adminUser   = (request as any).user as { userId: string }
+
+    const { rows: targetRows } = await db.query(`SELECT username FROM users WHERE id = $1`, [userId])
 
     await db.query(
       `DELETE FROM community_bans WHERE community_id = $1 AND user_id = $2`,
@@ -462,6 +493,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     )
     // Remove Redis ban flag so user can log in again
     await redis.del(`banned:${userId}`)
+    logAction(adminUser.userId, 'unban_user', 'user', userId, targetRows[0]?.username ?? null, {})
     return reply.send({ ok: true })
   })
 
@@ -599,6 +631,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body   = request.body as z.infer<typeof PatchThreadBody>
+    const adminUser = (request as any).user as { userId: string }
 
     const fields: string[] = []
     const values: unknown[] = []
@@ -617,6 +650,13 @@ export default async function adminRoutes(app: FastifyInstance) {
     )
     if (!rows[0]) return reply.code(404).send({ error: 'Thread not found' })
 
+    if (body.is_pinned !== undefined) {
+      logAction(adminUser.userId, body.is_pinned ? 'pin_thread' : 'unpin_thread', 'thread', id, rows[0].title, {})
+    }
+    if (body.is_locked !== undefined) {
+      logAction(adminUser.userId, body.is_locked ? 'lock_thread' : 'unlock_thread', 'thread', id, rows[0].title, {})
+    }
+
     return reply.send({ thread: rows[0] })
   })
 
@@ -624,8 +664,12 @@ export default async function adminRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, adminOnly],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    const adminUser = (request as any).user as { userId: string }
+
+    const { rows: threadRows } = await db.query(`SELECT title FROM threads WHERE id = $1`, [id])
     const { rowCount } = await db.query(`DELETE FROM threads WHERE id = $1`, [id])
     if (!rowCount) return reply.code(404).send({ error: 'Thread not found' })
+    logAction(adminUser.userId, 'delete_thread', 'thread', id, threadRows[0]?.title ?? null, {})
     return reply.send({ ok: true })
   })
 
@@ -853,6 +897,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // POST /admin/announcements — create
   app.post('/announcements', { preHandler: [adminOnly] }, async (request, reply) => {
+    const adminUser = (request as any).user as { userId: string }
     const { message, color, expires_at } = request.body as {
       message: string; color?: string; expires_at?: string | null
     }
@@ -867,6 +912,8 @@ export default async function adminRoutes(app: FastifyInstance) {
        RETURNING id, message, color, is_active, created_at, expires_at`,
       [message.trim(), safeColor, expires_at ?? null]
     )
+    logAction(adminUser.userId, 'create_announcement', 'announcement', rows[0].id,
+      message.trim().slice(0, 60), { color: safeColor })
     return reply.code(201).send({ announcement: rows[0] })
   })
 
@@ -901,7 +948,45 @@ export default async function adminRoutes(app: FastifyInstance) {
   // DELETE /admin/announcements/:id
   app.delete('/announcements/:id', { preHandler: [adminOnly] }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    const adminUser = (request as any).user as { userId: string }
+    const { rows: annRows } = await db.query(`SELECT message FROM system_announcements WHERE id = $1`, [id])
     await db.query(`DELETE FROM system_announcements WHERE id = $1`, [id])
+    logAction(adminUser.userId, 'delete_announcement', 'announcement', id,
+      annRows[0]?.message?.slice(0, 60) ?? null, {})
     return reply.send({ ok: true })
+  })
+
+  // ── Audit log ─────────────────────────────────────────────────────────────
+
+  // GET /admin/audit-log
+  app.get('/audit-log', { preHandler: [adminOnly] }, async (request, reply) => {
+    const q = request.query as { limit?: string; offset?: string; action?: string; actor?: string }
+    const limit  = Math.min(Number(q.limit  ?? 50), 200)
+    const offset = Number(q.offset ?? 0)
+
+    const conditions: string[] = []
+    const params: unknown[] = []
+    let idx = 1
+
+    if (q.action) { conditions.push(`action = $${idx++}`); params.push(q.action) }
+    if (q.actor)  { conditions.push(`actor_username ILIKE $${idx++}`); params.push(`%${q.actor}%`) }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const { rows } = await db.query(
+      `SELECT id, actor_id, actor_username, action, target_type, target_id, target_label, metadata, created_at
+       FROM admin_audit_log
+       ${where}
+       ORDER BY created_at DESC
+       LIMIT $${idx++} OFFSET $${idx}`,
+      [...params, limit, offset]
+    )
+
+    const { rows: countRows } = await db.query(
+      `SELECT COUNT(*)::int AS total FROM admin_audit_log ${where}`,
+      params
+    )
+
+    return reply.send({ entries: rows, total: countRows[0].total, limit, offset })
   })
 }

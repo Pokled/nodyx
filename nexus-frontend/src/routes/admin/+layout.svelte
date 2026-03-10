@@ -16,7 +16,8 @@
 				{ href: '/admin/grades',      label: 'Grades',       icon: '🏅' },
 				{ href: '/admin/categories',  label: 'Catégories',   icon: '📁' },
 				{ href: '/admin/moderation',  label: 'Modération',   icon: '🛡️' },
-			{ href: '/admin/tags',        label: 'Tags',         icon: '🏷️' },
+				{ href: '/admin/tags',        label: 'Tags',         icon: '🏷️' },
+				{ href: '/admin/audit-log',   label: 'Journal',      icon: '📋' },
 			],
 		},
 		{
@@ -40,7 +41,6 @@
 				{ href: '/admin/settings',      label: 'Paramètres',    icon: '⚙️' },
 				{ href: '/admin/status',        label: 'Statut réseau', icon: '🌐' },
 				{ href: '/admin/ai',            label: 'Neural Engine', icon: '🧠' },
-				{ href: '/admin/logs',          label: 'Logs',          icon: '📋', soon: true },
 			],
 		},
 	]
