@@ -39,4 +39,14 @@ export const actions: Actions = {
 			headers: { Authorization: `Bearer ${token}` }
 		});
 	},
+
+	clearRead: async ({ fetch, cookies }) => {
+		const token = cookies.get('token');
+		if (!token) redirect(303, '/auth/login');
+
+		await apiFetch(fetch, '/notifications/read', {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` }
+		});
+	},
 };

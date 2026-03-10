@@ -37,4 +37,12 @@ export default async function notificationRoutes(app: FastifyInstance) {
     await NotificationModel.markAllAsRead(request.user!.userId)
     return reply.code(204).send()
   })
+
+  // DELETE /api/v1/notifications/read — supprime toutes les notifications lues
+  app.delete('/read', {
+    preHandler: [rateLimit, requireAuth],
+  }, async (request, reply) => {
+    const deleted = await NotificationModel.deleteAllRead(request.user!.userId)
+    return reply.send({ deleted })
+  })
 }

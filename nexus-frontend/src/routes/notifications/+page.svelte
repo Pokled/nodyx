@@ -7,7 +7,6 @@
 	async function markReadAndNavigate(notif: any) {
 		if (!notif.is_read) {
 			unreadCountStore.update(n => Math.max(0, n - 1))
-			// Fire-and-forget — cookie httpOnly envoyé automatiquement (same-origin)
 			fetch(`/api/v1/notifications/${notif.id}/read`, { method: 'PATCH' }).catch(() => {})
 		}
 		goto(notifLink(notif))
@@ -15,8 +14,9 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const notifications = $derived(data.notifications ?? []);
+	let notifications = $state((data.notifications ?? []).map((n: any) => ({ ...n })));
 	const unread = $derived(notifications.filter((n: any) => !n.is_read).length);
+	const readCount = $derived(notifications.filter((n: any) => n.is_read).length);
 
 	const TYPE_ICON: Record<string, string> = {
 		thread_reply: '💬',
@@ -59,20 +59,39 @@
 				<span class="ml-2 text-sm font-normal text-indigo-400">({unread} non lue{unread > 1 ? 's' : ''})</span>
 			{/if}
 		</h1>
-		{#if unread > 0}
-			<form method="POST" action="?/markAllRead" use:enhance={() => {
-				return async ({ update }) => {
-					unreadCountStore.set(0)
-					await update({ reset: false })
-				}
-			}}>
-				<button type="submit"
-					class="px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
-					Tout marquer comme lu
-				</button>
-			</form>
-		{/if}
+		<div class="flex items-center gap-2">
+			{#if unread > 0}
+				<form method="POST" action="?/markAllRead" use:enhance={() => {
+					return async ({ update }) => {
+						unreadCountStore.set(0)
+						notifications = notifications.map((n: any) => ({ ...n, is_read: true }))
+						await update({ reset: false })
+					}
+				}}>
+					<button type="submit"
+						class="px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
+						Tout marquer comme lu
+					</button>
+				</form>
+			{/if}
+			{#if readCount > 0}
+				<form method="POST" action="?/clearRead" use:enhance={() => {
+					return async ({ update }) => {
+						notifications = notifications.filter((n: any) => !n.is_read)
+						await update({ reset: false })
+					}
+				}}>
+					<button type="submit"
+						class="px-3 py-1.5 rounded-lg border border-red-900/50 text-xs text-red-500/70 hover:text-red-400 hover:border-red-700 transition-colors">
+						Effacer les lues
+					</button>
+				</form>
+			{/if}
+		</div>
 	</div>
+
+	<!-- Info purge automatique -->
+	<p class="text-xs text-gray-600 mb-4">Les notifications lues sont automatiquement supprimées après 30 jours.</p>
 
 	{#if notifications.length === 0}
 		<div class="rounded-xl border border-gray-800 bg-gray-900/50 px-6 py-12 text-center">
@@ -119,6 +138,8 @@
 							<form method="POST" action="?/markRead" use:enhance={() => {
 								return async ({ update }) => {
 									unreadCountStore.update(n => Math.max(0, n - 1))
+									const n = notifications.find((x: any) => x.id === notif.id)
+									if (n) n.is_read = true
 									await update({ reset: false })
 								}
 							}}>

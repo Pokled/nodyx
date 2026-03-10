@@ -7,10 +7,11 @@
 import { db } from './config/database'
 import { Server } from 'socket.io'
 
-const PING_INTERVAL_MS        = 5  * 60 * 1000  // 5 minutes
-const ASSET_PUSH_INTERVAL_MS  = 60 * 60 * 1000  // 1 heure
-const WHISPER_CLEANUP_MS      = 10 * 60 * 1000  // 10 minutes
-const GLOBAL_INDEX_INTERVAL_MS = 10 * 60 * 1000  // 10 minutes
+const PING_INTERVAL_MS         = 5  * 60 * 1000        // 5 minutes
+const ASSET_PUSH_INTERVAL_MS   = 60 * 60 * 1000        // 1 heure
+const WHISPER_CLEANUP_MS       = 10 * 60 * 1000        // 10 minutes
+const GLOBAL_INDEX_INTERVAL_MS = 10 * 60 * 1000        // 10 minutes
+const NOTIF_PURGE_INTERVAL_MS  = 24 * 60 * 60 * 1000  // 24 heures
 
 // ── Ping directory ────────────────────────────────────────────────────────────
 
@@ -281,6 +282,21 @@ async function gossipToPeers(payload: {
   }))
 }
 
+// ── Purge notifications lues (> 30 jours) ────────────────────────────────────
+
+async function purgeOldNotifications() {
+  try {
+    const { rowCount } = await db.query(
+      `DELETE FROM notifications WHERE is_read = true AND created_at < NOW() - INTERVAL '30 days'`
+    )
+    if (rowCount && rowCount > 0) {
+      console.log(`[Scheduler] Notifications — ${rowCount} notification(s) lue(s) de plus de 30j supprimée(s)`)
+    }
+  } catch (err) {
+    console.error('[Scheduler] Notifications purge error:', err)
+  }
+}
+
 // ── Whisper cleanup ───────────────────────────────────────────────────────────
 
 async function cleanupWhisperRooms() {
@@ -310,6 +326,10 @@ export function startScheduler(io: Server) {
   // Nettoyage des whisper rooms expirées (toutes les 10 min)
   setInterval(() => cleanupWhisperRooms(), WHISPER_CLEANUP_MS)
 
+  // Purge des notifications lues de plus de 30 jours (toutes les 24h, 2min au démarrage)
+  setTimeout(() => purgeOldNotifications(), 2 * 60 * 1000)
+  setInterval(() => purgeOldNotifications(), NOTIF_PURGE_INTERVAL_MS)
+
   // Global Search + Gossip — announce threads + events (60s démarrage, toutes les 10 min)
   if (process.env.NEXUS_GLOBAL_INDEXING === 'true') {
     setTimeout(() => announceThreadsToDirectory(), 60_000)
@@ -321,7 +341,7 @@ export function startScheduler(io: Server) {
 
   const hasPeers = (process.env.GOSSIP_PEERS ?? '').trim().length > 0
   console.log(
-    '[Scheduler] Démarré — ping 5min, assets 1h, whisper 10min, global search 10min' +
+    '[Scheduler] Démarré — ping 5min, assets 1h, whisper 10min, global search 10min, notif purge 24h' +
     (hasPeers ? `, gossip peers: ${process.env.GOSSIP_PEERS}` : '')
   )
 }
