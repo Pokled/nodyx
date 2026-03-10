@@ -22,6 +22,7 @@
 - [Common Errors & Fixes](#-common-errors--fixes)
 - [After Installation](#-after-installation)
 - [Tips & Tricks](#-tips--tricks)
+- [Setting up email →](EMAIL.md)
 
 ---
 

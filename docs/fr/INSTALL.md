@@ -24,6 +24,7 @@
 - [Erreurs fréquentes et solutions](#-erreurs-fréquentes-et-solutions)
 - [Après l'installation](#-après-linstallation)
 - [Conseils et astuces](#-conseils-et-astuces)
+- [Configurer les emails →](EMAIL.md)
 
 ---
 

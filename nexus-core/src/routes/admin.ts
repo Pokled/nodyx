@@ -13,6 +13,7 @@ import { rateLimit } from '../middleware/rateLimit'
 import * as ChannelModel from '../models/channel'
 import { generateCategorySlug } from '../models/community'
 import { io } from '../socket/io'
+import { isSmtpConfigured, sendPasswordResetEmail } from '../services/emailService'
 import { randomUUID, createHash, randomBytes } from 'crypto'
 import { createWriteStream, mkdirSync } from 'fs'
 import { pipeline } from 'stream/promises'
@@ -237,11 +238,22 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`
 
+    let emailSent = false
+    if (isSmtpConfigured()) {
+      try {
+        await sendPasswordResetEmail({ to: user.email, username: user.username, resetUrl })
+        emailSent = true
+      } catch {
+        // SMTP configuré mais échec — on retourne quand même le lien
+      }
+    }
+
     return reply.send({
-      username:  user.username,
-      email:     user.email,
-      reset_url: resetUrl,
+      username:   user.username,
+      email:      user.email,
+      reset_url:  resetUrl,
       expires_at: expiresAt.toISOString(),
+      email_sent: emailSent,
     })
   })
 
@@ -725,5 +737,50 @@ export default async function adminRoutes(app: FastifyInstance) {
     await pipeline(data.file, createWriteStream(path.join(dir, filename)))
 
     return reply.send({ url: `/uploads/${folder}/${filename}` })
+  })
+
+  // ── SMTP status + test ────────────────────────────────────────────────────
+
+  app.get('/smtp/status', {
+    preHandler: [rateLimit, adminOnly],
+  }, async (_request, reply) => {
+    return reply.send({
+      configured: isSmtpConfigured(),
+      host: process.env.SMTP_HOST ?? null,
+      port: Number(process.env.SMTP_PORT ?? 587),
+      from: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? null,
+    })
+  })
+
+  app.post('/smtp/test', {
+    preHandler: [rateLimit, adminOnly],
+    schema: { body: { type: 'object', required: ['to'], properties: { to: { type: 'string' } } } },
+  }, async (request, reply) => {
+    if (!isSmtpConfigured()) {
+      return reply.code(503).send({
+        error: 'SMTP non configuré. Ajoutez SMTP_HOST, SMTP_USER et SMTP_PASS dans le fichier .env.',
+        code: 'SMTP_NOT_CONFIGURED',
+        doc: 'https://github.com/Pokled/Nexus/blob/main/docs/fr/EMAIL.md',
+      })
+    }
+
+    const { to } = request.body as { to: string }
+    const communityName = process.env.NEXUS_COMMUNITY_NAME ?? 'Nexus'
+
+    try {
+      await sendPasswordResetEmail({
+        to,
+        username: 'Admin',
+        resetUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/reset-password/test-smtp`,
+      })
+      return reply.send({ success: true, message: `Email de test envoyé à ${to}` })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erreur inconnue'
+      return reply.code(500).send({
+        error: `Échec de l'envoi : ${message}`,
+        code: 'SMTP_SEND_FAILED',
+        hint: `Vérifiez vos identifiants SMTP dans .env — voir docs/fr/EMAIL.md`,
+      })
+    }
   })
 }

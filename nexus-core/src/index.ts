@@ -21,13 +21,14 @@ import gardenRoutes       from './routes/garden'
 import whisperRoutes      from './routes/whispers'
 import pollRoutes         from './routes/polls'
 import dmRoutes           from './routes/dm'
-import eventRoutes        from './routes/events'
-import { setIO }           from './socket/io'
+import eventRoutes           from './routes/events'
+import authenticatorRoutes   from './routes/authenticator'
+import { setIO }              from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
 import { startScheduler }  from './scheduler'
 
-const server = Fastify({ logger: true })
+const server = Fastify({ logger: true, trustProxy: true })
 
 // ── CORS (pour les appels fetch client-side : upload, chat, mentions) ────────
 const corsOrigin = process.env.FRONTEND_URL
@@ -89,9 +90,17 @@ server.register(gardenRoutes,        { prefix: '/api/v1/garden' })
 server.register(whisperRoutes,       { prefix: '/api/v1/whispers' })
 server.register(pollRoutes,          { prefix: '/api/v1/polls' })
 server.register(dmRoutes,            { prefix: '/api/v1/dm' })
-server.register(eventRoutes,         { prefix: '/api/v1/events' })
+server.register(eventRoutes,          { prefix: '/api/v1/events' })
+server.register(authenticatorRoutes,  { prefix: '/api/auth' })
 
 const start = async () => {
+  // Validate critical environment variables at startup.
+  const jwtSecret = process.env.JWT_SECRET ?? ''
+  if (jwtSecret.length < 32) {
+    console.error('FATAL: JWT_SECRET must be at least 32 characters. Refusing to start.')
+    process.exit(1)
+  }
+
   await runMigrations()
 
   try {

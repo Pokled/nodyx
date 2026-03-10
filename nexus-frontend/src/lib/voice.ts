@@ -562,7 +562,7 @@ function createPeerConn(
   isInitiator: boolean,
 ): RTCPeerConnection {
   const iceConfig = getIceServers()
-  console.debug(`[ICE config] ${remoteSocketId.slice(0,6)} servers:`, iceConfig.map(s => s.urls))
+  console.debug(`[ICE config] ${remoteSocketId.slice(0,6)} servers: ${iceConfig.length}`)
   const pc = new RTCPeerConnection({
     iceServers: iceConfig,
     // Pré-collecte 2 candidats (dont relay TURN) avant de démarrer ICE
@@ -626,8 +626,8 @@ function createPeerConn(
       // Log candidate type pour diagnostic ICE
       const type = candidate.type ?? 'unknown'
       const proto = candidate.protocol ?? ''
-      const addr  = candidate.address ?? ''
-      console.debug(`[ICE gather] ${remoteSocketId.slice(0,6)} candidate: ${type} ${proto} ${addr}`)
+      // Do NOT log candidate.address — real IPs must not appear in browser console.
+      console.debug(`[ICE gather] ${remoteSocketId.slice(0,6)} candidate: ${type} ${proto}`)
       if (_socket) _socket.emit('voice:ice', { to: remoteSocketId, candidate, channelId })
     } else {
       console.debug(`[ICE gather] ${remoteSocketId.slice(0,6)} — gathering complete`)

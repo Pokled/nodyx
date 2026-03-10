@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+	--color-bg: #0a0a0f;
+	--color-surface: #111118;
+	--color-surface-2: #1a1a24;
+	--color-border: #2a2a3a;
+	--color-accent: #7c6aff;
+	--color-accent-glow: rgba(124, 106, 255, 0.3);
+	--color-success: #4ade80;
+	--color-danger: #f87171;
+	--color-text: #e8e8f0;
+	--color-text-muted: #6b6b85;
+}
+
+* {
+	box-sizing: border-box;
+	-webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+	height: 100%;
+	overscroll-behavior: none;
+}
+
+input, button {
+	font-family: inherit;
+}

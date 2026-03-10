@@ -13,9 +13,20 @@ import {
   type AssetType,
 } from '../services/assetService'
 import { scanBuffer } from '../services/fileScanner'
-import { db } from '../config/database'
+import { db, redis } from '../config/database'
 
 const VALID_TYPES = ['frame', 'banner', 'font', 'badge', 'sticker', 'theme', 'emoji', 'sound'] as const
+
+// Per-user upload quota: 200 MB per 24h rolling window.
+const UPLOAD_QUOTA_BYTES   = 200 * 1024 * 1024 // 200 MB
+const UPLOAD_QUOTA_WINDOW  = 86400              // 24h in seconds
+
+async function checkUploadQuota(userId: string, fileSize: number): Promise<boolean> {
+  const key   = `upload_quota:${userId}`
+  const total = await redis.incrby(key, fileSize)
+  if (total === fileSize) await redis.expire(key, UPLOAD_QUOTA_WINDOW) // first upload in window
+  return total <= UPLOAD_QUOTA_BYTES
+}
 
 const ALLOWED_MIME_BY_TYPE: Record<string, readonly string[]> = {
   frame:   ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
@@ -71,6 +82,11 @@ export default async function assetRoutes(app: FastifyInstance) {
       : []
 
     const buffer = await data.toBuffer()
+
+    const withinQuota = await checkUploadQuota(userId, buffer.length)
+    if (!withinQuota) {
+      return reply.code(429).send({ error: 'Quota d\'upload dépassé (200 Mo / 24h).' })
+    }
 
     const scan = scanBuffer(buffer, data.mimetype)
     if (!scan.ok) {
