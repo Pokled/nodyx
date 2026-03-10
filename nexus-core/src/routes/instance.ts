@@ -232,4 +232,21 @@ export default async function instanceRoutes(app: FastifyInstance) {
 
     return reply.send({ articles })
   })
+
+  // GET /api/v1/instance/announcement — active announcement (public)
+  app.get('/announcement', async (_request, reply) => {
+    try {
+      const { rows } = await db.query(
+        `SELECT id, message, color
+         FROM system_announcements
+         WHERE is_active = true
+           AND (expires_at IS NULL OR expires_at > NOW())
+         ORDER BY created_at DESC
+         LIMIT 1`
+      )
+      return reply.send({ announcement: rows[0] ?? null })
+    } catch {
+      return reply.send({ announcement: null })
+    }
+  })
 }

@@ -18,15 +18,18 @@ function normalizeUrl(url: string | null): string | null {
 export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) => {
 	const token = cookies.get('token');
 
-	const [infoRes, userRes, directoryRes] = await Promise.all([
+	const [infoRes, userRes, directoryRes, announcementRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),
 		token
 			? apiFetch(fetch, '/users/me', { headers: { Authorization: `Bearer ${token}` } })
 			: Promise.resolve(null),
 		fetch(DIRECTORY_URL).catch(() => null),
+		apiFetch(fetch, '/instance/announcement').catch(() => null),
 	]);
 
 	const infoJson = infoRes.ok ? await infoRes.json() : null;
+	const announcementJson = announcementRes?.ok ? await announcementRes.json().catch(() => null) : null;
+	const activeAnnouncement: { id: string; message: string; color: string } | null = announcementJson?.announcement ?? null;
 	const communityName: string      = infoJson?.name       ?? 'Nexus';
 	const communityLogoUrl: string | null   = normalizeUrl(infoJson?.logo_url   ?? null);
 	const communityBannerUrl: string | null = normalizeUrl(infoJson?.banner_url ?? null);
@@ -41,7 +44,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (directoryJson?.instances ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [] };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], activeAnnouncement };
 	}
 
 	const { user } = await userRes.json();
@@ -71,5 +74,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement };
 };
