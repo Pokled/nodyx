@@ -44,7 +44,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (directoryJson?.instances ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], activeAnnouncement };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement };
 	}
 
 	const { user } = await userRes.json();
