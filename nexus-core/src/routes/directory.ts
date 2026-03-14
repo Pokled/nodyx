@@ -113,7 +113,7 @@ export default async function directoryRoutes(app: FastifyInstance) {
       WHERE status = 'active'
         AND (
           last_seen IS NULL
-          OR last_seen > NOW() - INTERVAL '2 hours'
+          OR last_seen > NOW() - INTERVAL '15 minutes'
         )
       ORDER BY members DESC, registered_at ASC
     `);
