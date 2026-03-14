@@ -50,11 +50,11 @@ slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' |
 prompt() {
   local var="$1" msg="$2" default="${3:-}" val=''
   if [[ -n "$default" ]]; then
-    read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val
+    read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val </dev/tty
     val="${val:-$default}"
   else
     while [[ -z "$val" ]]; do
-      read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val
+      read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
     done
   fi
   printf -v "$var" '%s' "$val"
@@ -65,7 +65,7 @@ prompt_secret() {
   local val=''
   while [[ ${#val} -lt $minlen ]]; do
     [[ -n "$val" ]] && echo -e "  ${YELLOW}⚠${RESET}  Mot de passe trop court (minimum ${minlen} caractères)."
-    read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val
+    read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
     echo
   done
   printf -v "$var" '%s' "$val"
