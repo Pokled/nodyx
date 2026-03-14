@@ -245,6 +245,7 @@
 				<a href="/garden" class="px-3 py-2 rounded text-sm transition-colors {isActive('/garden') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Jardin</a>
 				<a href="/polls" class="px-3 py-2 rounded text-sm transition-colors {isActive('/polls') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Sondages</a>
 				<a href="/calendar" class="px-3 py-2 rounded text-sm transition-colors {isActive('/calendar') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Calendrier</a>
+				<a href="/tasks" class="px-3 py-2 rounded text-sm transition-colors {isActive('/tasks') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Tâches</a>
 				<a href="/discover" class="px-3 py-2 rounded text-sm transition-colors {isActive('/discover') ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}">Découvrir</a>
 			</div>
 			{:else}

@@ -23,6 +23,7 @@ import pollRoutes         from './routes/polls'
 import dmRoutes           from './routes/dm'
 import eventRoutes           from './routes/events'
 import authenticatorRoutes   from './routes/authenticator'
+import taskRoutes            from './routes/tasks'
 import { setIO }              from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
@@ -104,6 +105,7 @@ server.register(pollRoutes,          { prefix: '/api/v1/polls' })
 server.register(dmRoutes,            { prefix: '/api/v1/dm' })
 server.register(eventRoutes,          { prefix: '/api/v1/events' })
 server.register(authenticatorRoutes,  { prefix: '/api/auth' })
+server.register(taskRoutes,           { prefix: '/api/v1/tasks' })
 
 const start = async () => {
   // Validate critical environment variables at startup.
