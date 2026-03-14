@@ -115,6 +115,21 @@ if ! grep -qiE 'ubuntu|debian' /etc/os-release 2>/dev/null; then
   die "OS non supporté. Utilise Ubuntu 22.04/24.04 ou Debian 11/12/13."
 fi
 
+# Architecture check — Rollup 4 (Vite 7) n'a pas de binaire natif pour ARM 32-bit
+_ARCH=$(uname -m)
+if [[ "$_ARCH" == "armv7l" || "$_ARCH" == "armv6l" ]]; then
+  die "Architecture ARM 32-bit (${_ARCH}) non supportée.\n\
+  Vite 7 / Rollup 4 nécessite un OS 64-bit.\n\
+  Sur Raspberry Pi : active le mode 64-bit dans /boot/config.txt (arm_64bit=1)\n\
+  ou installe Raspberry Pi OS 64-bit (recommandé pour Pi 3B+ et supérieur)."
+fi
+
+# Sur ARM64 : installer explicitement le binaire Rollup natif
+# (npm optionalDependencies peut le rater dans certaines configs ARM)
+if [[ "$_ARCH" == "aarch64" ]]; then
+  info "Architecture ARM64 détectée — le binaire Rollup sera vérifié après npm install."
+fi
+
 # RAM check — le build SvelteKit nécessite au moins 512 MB libres
 _RAM_FREE_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $7}' || echo 9999)
 if [[ "$_RAM_FREE_MB" -lt 400 ]]; then
@@ -568,7 +583,18 @@ FEENV
 cd "${NEXUS_DIR}/nexus-frontend"
 run_bg "npm install (frontend)..." npm install --no-fund --no-audit \
   || die "npm install frontend échoué. Vérifie ta connexion Internet."
-run_bg "Build SvelteKit (peut durer 2-5 min sur ARM)..." npm run build \
+
+# Sur ARM64 : s'assurer que le binaire natif Rollup est bien présent
+# (évite l'erreur "traceVariable / tick from svelte" avec le fallback JS)
+if [[ "$(uname -m)" == "aarch64" ]]; then
+  if [[ ! -f "node_modules/@rollup/rollup-linux-arm64-gnu/rollup.linux-arm64-gnu.node" ]]; then
+    info "Binaire Rollup ARM64 absent — installation forcée..."
+    npm install @rollup/rollup-linux-arm64-gnu --no-save --no-fund --no-audit 2>/dev/null || true
+  fi
+fi
+
+run_bg "Build SvelteKit (peut durer 2-5 min sur ARM)..." \
+  NODE_OPTIONS="--max-old-space-size=1024" npm run build \
   || die "Build frontend échoué. Vérifie les logs ci-dessus."
 [[ -f "${NEXUS_DIR}/nexus-frontend/build/index.js" ]] \
   || die "build/index.js absent — le build SvelteKit n'a pas produit de sortie."
