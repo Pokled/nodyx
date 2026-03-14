@@ -20,6 +20,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
   - Modal d'édition complète avec sélecteur de membre pour l'assignation
   - Permissions : tout membre peut créer tableaux et cartes ; gestion colonnes réservée au créateur + admin/mod
   - Migration 047 (`task_boards`, `task_columns`, `task_cards`)
+- **Alerte de mise à jour dans le panel admin** — bannière indigo affichée dès qu'une nouvelle version est disponible sur GitHub, avec lien vers les notes de version ; vérification via l'API GitHub Releases, résultat mis en cache Redis 6h
+- **Numéro de version** affiché sur la page d'accueil dans la section "Cette instance" (ex: `Nexus v1.8.0`) — lu depuis la variable d'environnement `NEXUS_VERSION`
+- **Directory réseau — instances hors ligne masquées** — `GET /directory` filtre désormais les instances dont `last_seen > 30 minutes` ; seules les instances actives apparaissent dans la Galaxy Bar et sur `/admin/status`
 
 ### Fixed
 - **Raspberry Pi ARM64 (Pi 4/5)** — `install.sh` : installation forcée de `@rollup/rollup-linux-arm64-gnu` si absent après `npm install` (évite l'erreur `traceVariable / tick from svelte` due au fallback JS de Rollup 4 sans binaire natif)
