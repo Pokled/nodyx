@@ -198,7 +198,7 @@
 				<!-- Bannière -->
 				<div class="relative h-24 shrink-0 bg-gradient-to-br from-indigo-950 to-gray-900">
 					{#if instance.banner_url}
-						<img src={instance.banner_url} alt="" class="absolute inset-0 w-full h-full object-cover opacity-70" />
+						<img src={instance.banner_url.startsWith('http') ? instance.banner_url : instance.url.replace(/\/$/, '') + instance.banner_url} alt="" class="absolute inset-0 w-full h-full object-cover opacity-70" />
 					{/if}
 					<!-- Badge online flottant -->
 					<div class="absolute top-2 right-2 flex items-center gap-1.5
@@ -214,7 +214,7 @@
 						<div class="w-12 h-12 rounded-xl border-2 border-gray-800 bg-indigo-900
 						            flex items-center justify-center shrink-0 overflow-hidden shadow-lg">
 							{#if instance.logo_url}
-								<img src={instance.logo_url} alt={instance.name} class="w-full h-full object-cover" />
+								<img src={instance.logo_url.startsWith('http') ? instance.logo_url : instance.url.replace(/\/$/, '') + instance.logo_url} alt={instance.name} class="w-full h-full object-cover" />
 							{:else}
 								<span class="text-lg font-bold text-indigo-200 select-none">
 									{instance.name.charAt(0).toUpperCase()}

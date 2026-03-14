@@ -176,7 +176,7 @@
                                 <div class="w-7 h-7 rounded-lg bg-indigo-900 border border-gray-700
                                             flex items-center justify-center overflow-hidden shrink-0">
                                     {#if known?.logo_url}
-                                        <img src={known.logo_url} alt={known.name} class="w-full h-full object-cover" />
+                                        <img src={known.logo_url.startsWith('http') ? known.logo_url : known.url.replace(/\/$/, '') + known.logo_url} alt={known.name} class="w-full h-full object-cover" />
                                     {:else}
                                         <span class="text-xs font-bold text-indigo-300">{slug.charAt(0).toUpperCase()}</span>
                                     {/if}

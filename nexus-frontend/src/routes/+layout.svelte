@@ -462,7 +462,7 @@
 								<div class="w-8 h-8 rounded-lg bg-indigo-900 border border-gray-700
 								            flex items-center justify-center overflow-hidden">
 									{#if inst.logo_url}
-										<img src={inst.logo_url} alt={inst.name} class="w-full h-full object-cover" />
+										<img src={inst.logo_url.startsWith('http') ? inst.logo_url : inst.url.replace(/\/$/, '') + inst.logo_url} alt={inst.name} class="w-full h-full object-cover" />
 									{:else}
 										<span class="text-xs font-bold text-indigo-200">
 											{inst.name.charAt(0).toUpperCase()}
