@@ -16,5 +16,11 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, url }) => {
 	if (!res.ok) error(503, 'Service temporairement indisponible')
 
 	const stats = await res.json()
-	return { token, stats }
+
+	const updateRes = await apiFetch(fetch, '/admin/update-check', {
+		headers: { Authorization: `Bearer ${token}` },
+	}).catch(() => null)
+	const updateCheck = updateRes?.ok ? await updateRes.json().catch(() => null) : null
+
+	return { token, stats, updateCheck }
 }

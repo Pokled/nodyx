@@ -839,6 +839,45 @@ export default async function adminRoutes(app: FastifyInstance) {
     return reply.send({ url: `/uploads/${folder}/${filename}` })
   })
 
+  // ── Update check ─────────────────────────────────────────────────────────
+
+  app.get('/update-check', { preHandler: [rateLimit, adminOnly] }, async (_request, reply) => {
+    const CACHE_KEY = 'nexus:update_check'
+    const CURRENT = process.env.NEXUS_VERSION ?? '1.8.0'
+
+    const cached = await redis.get(CACHE_KEY).catch(() => null)
+    if (cached) return reply.send(JSON.parse(cached))
+
+    try {
+      const ghRes = await fetch('https://api.github.com/repos/Pokled/Nexus/releases/latest', {
+        headers: { 'User-Agent': 'Nexus-Instance/1.0', Accept: 'application/vnd.github+json' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!ghRes.ok) throw new Error(`GitHub API ${ghRes.status}`)
+
+      const ghJson = await ghRes.json() as { tag_name: string; html_url: string }
+      const latest = (ghJson.tag_name ?? '').replace(/^v/, '')
+      const parseVer = (v: string) => v.split('.').map(Number)
+      const [cMaj, cMin, cPat] = parseVer(CURRENT)
+      const [lMaj, lMin, lPat] = parseVer(latest)
+      const has_update =
+        lMaj > cMaj ||
+        (lMaj === cMaj && lMin > cMin) ||
+        (lMaj === cMaj && lMin === cMin && lPat > cPat)
+
+      const payload = {
+        current_version: CURRENT,
+        latest_version:  latest,
+        has_update,
+        release_url: ghJson.html_url,
+      }
+      await redis.set(CACHE_KEY, JSON.stringify(payload), 'EX', 6 * 3600).catch(() => {})
+      return reply.send(payload)
+    } catch {
+      return reply.send({ current_version: CURRENT, latest_version: null, has_update: false, release_url: null })
+    }
+  })
+
   // ── SMTP status + test ────────────────────────────────────────────────────
 
   app.get('/smtp/status', {

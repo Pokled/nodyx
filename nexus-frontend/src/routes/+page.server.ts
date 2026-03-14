@@ -32,6 +32,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
 			post_count:   infoJson.post_count    ?? 0,
 			logo_url:     infoJson.logo_url      ?? null,
 			banner_url:   infoJson.banner_url    ?? null,
+			version:      infoJson.version       ?? null,
 		},
 		categories: catJson.categories      ?? [],
 		threads:    threadsJson.threads      ?? [],

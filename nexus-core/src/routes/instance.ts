@@ -7,6 +7,8 @@
  */
 
 import { FastifyInstance } from 'fastify'
+
+const NEXUS_VERSION = process.env.NEXUS_VERSION ?? '1.8.0'
 import { db } from '../config/database'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
@@ -86,6 +88,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       language:    process.env.NEXUS_COMMUNITY_LANGUAGE    || 'fr',
       country:     process.env.NEXUS_COMMUNITY_COUNTRY     || '',
       slug:        process.env.NEXUS_COMMUNITY_SLUG        || '',
+      version:     NEXUS_VERSION,
       community_id: communityId,
       member_count: memberRes.rows[0].count,
       online_count: seen.size,

@@ -286,7 +286,7 @@
 			<div class="space-y-2 text-xs text-gray-500">
 				<div class="flex items-center justify-between">
 					<span>Logiciel</span>
-					<span class="text-gray-400 font-medium">Nexus</span>
+					<span class="text-gray-400 font-medium">Nexus{#if instance.version}&thinsp;<span class="text-gray-600 font-mono">v{instance.version}</span>{/if}</span>
 				</div>
 				<div class="flex items-center justify-between">
 					<span>Réseau</span>

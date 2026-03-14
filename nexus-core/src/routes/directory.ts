@@ -111,6 +111,8 @@ export default async function directoryRoutes(app: FastifyInstance) {
              logo_url, banner_url
       FROM directory_instances
       WHERE status = 'active'
+        AND last_seen IS NOT NULL
+        AND last_seen > NOW() - INTERVAL '30 minutes'
       ORDER BY members DESC, registered_at ASC
     `);
     return reply.send({ instances: result.rows });

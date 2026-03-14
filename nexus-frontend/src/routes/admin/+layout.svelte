@@ -110,6 +110,26 @@
 	<!-- ── Main content ─────────────────────────────────────────────────────── -->
 	<div class="flex-1 flex flex-col min-w-0">
 
+		<!-- Update banner -->
+		{#if data.updateCheck?.has_update}
+			<div class="bg-indigo-900/70 border-b border-indigo-700/50 px-6 py-2.5 flex items-center justify-between gap-4 shrink-0">
+				<div class="flex items-center gap-2.5 text-sm">
+					<span class="text-indigo-300 font-semibold">Mise à jour disponible</span>
+					<span class="text-indigo-400">v{data.updateCheck.current_version} → v{data.updateCheck.latest_version}</span>
+				</div>
+				{#if data.updateCheck.release_url}
+					<a
+						href={data.updateCheck.release_url}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-xs font-medium text-indigo-200 hover:text-white bg-indigo-700/60 hover:bg-indigo-600 px-3 py-1.5 rounded-lg transition-colors shrink-0"
+					>
+						Voir les notes de version
+					</a>
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Top bar -->
 		<header class="h-14 border-b border-gray-800 bg-gray-900/50 flex items-center justify-between px-6 shrink-0">
 			<nav class="text-sm text-gray-500 flex items-center gap-1.5">
