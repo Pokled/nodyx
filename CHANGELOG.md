@@ -9,6 +9,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.8.0] — 2026-03-14
+
+### Added
+- **Système de tâches léger** — Kanban par communauté, accessible sur `/tasks`
+  - Tableaux avec 3 colonnes par défaut (À faire / En cours / Terminé)
+  - Colonnes configurables : nom, couleur (9 variantes), ajout/suppression
+  - Cartes : titre, description, assignation, échéance, priorité (basse/normale/haute/urgente)
+  - Drag & drop natif HTML5 entre colonnes (zéro dépendance)
+  - Modal d'édition complète avec sélecteur de membre pour l'assignation
+  - Permissions : tout membre peut créer tableaux et cartes ; gestion colonnes réservée au créateur + admin/mod
+  - Migration 047 (`task_boards`, `task_columns`, `task_cards`)
+
+### Fixed
+- **Raspberry Pi ARM64 (Pi 4/5)** — `install.sh` : installation forcée de `@rollup/rollup-linux-arm64-gnu` si absent après `npm install` (évite l'erreur `traceVariable / tick from svelte` due au fallback JS de Rollup 4 sans binaire natif)
+- **ARM32 bloqué** (`armv7l`/`armv6l`) — message d'erreur explicite avec instruction pour passer en OS 64-bit
+- **Build ARM** — `NODE_OPTIONS=--max-old-space-size=1024` ajouté sur le build frontend
+
+---
+
 ## [1.7.0] — 2026-03-10
 
 ### Added

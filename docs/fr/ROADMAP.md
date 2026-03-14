@@ -412,7 +412,7 @@ nexus-core    (Fastify/Node.js) ────────────────
 
 **Outils :**
 - [ ] Partage de fichiers (hébergé sur le nœud, pas de CDN central)
-- [ ] Système de tâches léger (Trello-like, par communauté)
+- [x] **Système de tâches léger** (v1.8) — Kanban par communauté, colonnes configurables, cartes avec assignation/échéance/priorité, drag & drop natif, `/tasks`
 - [ ] Ollama IA locale — assistant de savoir (indexe le forum local)
 - [ ] **Nexus Guard Protocol** — middleware scoring toxicité dans `chat:send`, seuil configurable, logs DB
 - [ ] Marketplace plugins — API stable pour extensions tierces (fondations dans `plugins/`)
