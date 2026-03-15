@@ -5,7 +5,7 @@
 
   <p><strong>The community platform that no one can take from you.<br/>Forum + Chat + Voice + P2P Canvas — on your server, under your control, forever.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-v1.7.2-7c3aed)](CHANGELOG.md)
+  [![Version](https://img.shields.io/badge/version-v1.8.1-7c3aed)](CHANGELOG.md)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
   [![CI](https://github.com/Pokled/Nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nexus/actions/workflows/ci.yml)
   [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
@@ -337,6 +337,15 @@ Database migrations are applied automatically on startup — no manual SQL neede
 | **QR enrollment** — scan from settings to skip manual token entry | v1.7 |
 | **Optimistic UI** — all mutations update local state instantly (no page re-fetches) | v1.7 |
 | **Notification center** — purge automatique 30j + effacer les lues | v1.7 |
+
+### v1.8
+
+| Feature | Version |
+|---|---|
+| **Tasks / Kanban** — per-community boards, drag & drop, assignees, priorities, deadlines | v1.8 |
+| **Update alert** — admin banner when a new GitHub release is available (Redis-cached 6h) | v1.8 |
+| **Instance version display** — "Nexus v1.8.x" shown on home page from `NEXUS_VERSION` env | v1.8 |
+| **Security audit** — PATCH /cards permission fix, health 503, HOST binding, enrollment adminOnly, rate limit on /announcement, moderators can manage tags | v1.8.1 |
 
 ### Coming
 

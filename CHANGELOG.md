@@ -9,6 +9,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.8.1] — 2026-03-15
+
+### Security
+- **`PATCH /cards/:id` — permission check ajouté** — n'importe quel membre authentifié pouvait modifier n'importe quelle carte (titre, description, assigné, priorité, déplacement de colonne). Le handler vérifie désormais que l'utilisateur est créateur de la carte, créateur du tableau, ou admin/mod (même logique que le DELETE).
+- **`POST /api/auth/enrollment-tokens` — restreint aux admins** — la route d'émission de tokens Signet n'était protégée que par `requireAuth`. Ajout de `adminOnly` en preHandler.
+- **`ecosystem.config.js` — HOST: 127.0.0.1** — le frontend SvelteKit SSR écoutait sur `0.0.0.0:5173` en production. Ajout de `HOST: '127.0.0.1'` pour lier sur localhost uniquement derrière Caddy.
+- **`/api/v1/health` — HTTP 503 si DB down** — le catch renvoyait `{ status: 'error' }` avec HTTP 200 → tout monitoring considérait l'instance saine même si la DB était déconnectée. Fix : `reply.code(503).send(...)`.
+
+### Fixed
+- **`tasks.ts` — cache `getCommunityId()`** — la fonction refaisait une requête DB à chaque appel. Ajout d'un cache module-level `_communityId` (même pattern que `admin.ts`).
+- **`tasks.ts` — try/catch sur toutes les routes** — les 9 handlers propagaient les erreurs DB en 500 non maîtrisé. Chaque handler est maintenant enveloppé dans un try/catch avec `reply.code(500).send({ error: 'Internal server error' })`.
+- **`/api/v1/instance/announcement` — rateLimit ajouté** — route appelée à chaque chargement de page (layout.server.ts), exposée au flood sans protection.
+- **`instance.ts POST /tags` — modérateurs autorisés** — les modérateurs étaient bloqués à tort pour créer/supprimer des tags (incohérent avec les autres routes où mods = admins).
+- **Version corrigée** — `nexus-core/package.json` et `nexus-frontend/package.json` passés de `1.0.0` à `1.8.0` ; `GET /` retournait `version: '0.1.0'` → lit désormais `process.env.NEXUS_VERSION ?? '1.8.0'`.
+- **`install.sh` — bannière et version** — bannière affichait `v1.0`, enregistrement directory hardcodait `"1.0.0"` → corrigés en `v1.8` et `${NEXUS_VERSION:-1.8.0}`.
+- **`admin/ai` — Neural Engine** — `selectModel()` appelait `POST /api/v1/admin/neural/set-model` (route inexistante) avec token depuis `localStorage` (violation de la convention HttpOnly cookie). Remplacé par un no-op avec bannière "En développement".
+- **`.env.example` — variables manquantes documentées** — `nexus-core/.env.example` : ajout de `GOSSIP_PEERS`, `STUN_FALLBACK_URLS`, `SIGNET_URL`, `VPS_IP`, `CF_TOKEN`, `CF_ZONE_ID` ; `nexus-frontend/.env.example` : `PUBLIC_API_URL` corrigé (était `/api/v1` → maintenant la racine du domaine), ajout de `PRIVATE_API_SSR_URL` et `PUBLIC_DIRECTORY_URL`.
+
+### Added
+- **Previews SVG pour les table-templates** — `brasserie-de-nuit`, `pierre-et-braise`, `table-de-feutre` : fichier `preview.svg` (280×160px) créé pour chaque template officiel, requis par la future UI de sélection.
+
+---
+
 ## [1.8.0] — 2026-03-14
 
 ### Added
@@ -551,7 +574,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 - **AI assistant** — local Ollama integration (no cloud dependency)
 - **13 SQL migrations** — complete schema from users to voice channels
 
-[Unreleased]: https://github.com/Pokled/Nexus/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Pokled/Nexus/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/Pokled/Nexus/compare/v1.8.0...v1.8.1
+[1.8.0]: https://github.com/Pokled/Nexus/compare/v1.7.0...v1.8.0
+[1.7.0]: https://github.com/Pokled/Nexus/compare/v1.6.0...v1.7.0
+[1.6.0]: https://github.com/Pokled/Nexus/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/Pokled/Nexus/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/Pokled/Nexus/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/Pokled/Nexus/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/Pokled/Nexus/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Pokled/Nexus/compare/v1.0.0...v1.1.0
 [0.9.0]: https://github.com/Pokled/Nexus/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Pokled/Nexus/compare/v0.7.0...v0.8.0

@@ -70,19 +70,19 @@ server.register(fastifyMultipart, {
 server.get('/', async () => {
   return {
     name: 'Nexus',
-    version: '0.1.0',
+    version: process.env.NEXUS_VERSION ?? '1.8.0',
     message: getRandomFortune(),
     status: 'alive'
   }
 })
 
-server.get('/api/v1/health', async () => {
+server.get('/api/v1/health', async (request, reply) => {
   try {
     await db.query('SELECT 1')
     await redis.ping()
-    return { status: 'ok',    database: 'connected',    cache: 'connected'    }
+    return reply.send({ status: 'ok', database: 'connected', cache: 'connected' })
   } catch {
-    return { status: 'error', database: 'disconnected', cache: 'disconnected' }
+    return reply.code(503).send({ status: 'error', database: 'disconnected', cache: 'disconnected' })
   }
 })
 

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 160" width="280" height="160">
+  <!-- Fond général — noir feutre -->
+  <rect width="280" height="160" fill="#0c0f0d"/>
+
+  <!-- Lueur verte tapis -->
+  <radialGradient id="glow-tf" cx="50%" cy="52%" r="50%">
+    <stop offset="0%" stop-color="#2d7a4a" stop-opacity="0.18"/>
+    <stop offset="100%" stop-color="#0c0f0d" stop-opacity="0"/>
+  </radialGradient>
+  <ellipse cx="140" cy="82" rx="128" ry="74" fill="url(#glow-tf)"/>
+
+  <!-- Table ovale — surface feutre vert sombre -->
+  <ellipse cx="140" cy="82" rx="98" ry="52" fill="#0f1f15" stroke="#1a3020" stroke-width="3"/>
+  <!-- Texture feutre — hachures diagonales très subtiles -->
+  <pattern id="felt" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#2d7a4a" stroke-width="0.3" stroke-opacity="0.12"/>
+  </pattern>
+  <ellipse cx="140" cy="82" rx="98" ry="52" fill="url(#felt)"/>
+  <!-- Liseré intérieur poker -->
+  <ellipse cx="140" cy="82" rx="86" ry="41" fill="none" stroke="#2d7a4a" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 3"/>
+  <!-- Reflet feutre -->
+  <ellipse cx="118" cy="69" rx="26" ry="7" fill="#4ade80" fill-opacity="0.04"/>
+
+  <!-- Avatars joueurs -->
+  <!-- Bas centre (moi) -->
+  <circle cx="140" cy="130" r="10" fill="#1a3020" stroke="#2d7a4a" stroke-width="1.5"/>
+  <circle cx="140" cy="127" r="4" fill="#2d7a4a" fill-opacity="0.9"/>
+  <!-- Haut centre -->
+  <circle cx="140" cy="32" r="9" fill="#1a3020" stroke="#7a9f88" stroke-width="1"/>
+  <circle cx="140" cy="29" r="3.5" fill="#7a9f88" fill-opacity="0.6"/>
+  <!-- Gauche -->
+  <circle cx="32" cy="80" r="9" fill="#1a3020" stroke="#7a9f88" stroke-width="1"/>
+  <circle cx="32" cy="77" r="3.5" fill="#7a9f88" fill-opacity="0.6"/>
+  <!-- Droite -->
+  <circle cx="248" cy="80" r="9" fill="#1a3020" stroke="#7a9f88" stroke-width="1"/>
+  <circle cx="248" cy="77" r="3.5" fill="#7a9f88" fill-opacity="0.6"/>
+  <!-- Haut-gauche -->
+  <circle cx="68" cy="42" r="8" fill="#1a3020" stroke="#7a9f88" stroke-width="1"/>
+  <circle cx="68" cy="39" r="3" fill="#7a9f88" fill-opacity="0.5"/>
+  <!-- Haut-droite -->
+  <circle cx="212" cy="42" r="8" fill="#1a3020" stroke="#7a9f88" stroke-width="1"/>
+  <circle cx="212" cy="39" r="3" fill="#7a9f88" fill-opacity="0.5"/>
+
+  <!-- Onde vocale verte -->
+  <circle cx="140" cy="130" r="14" fill="none" stroke="#4ade80" stroke-width="1.2" stroke-opacity="0.5"/>
+  <circle cx="140" cy="130" r="18" fill="none" stroke="#4ade80" stroke-width="0.6" stroke-opacity="0.22"/>
+
+  <!-- Cartes à jouer widget -->
+  <rect x="122" y="70" width="14" height="20" rx="2" fill="#d4ede0" transform="rotate(-8 129 80)"/>
+  <rect x="132" y="68" width="14" height="20" rx="2" fill="#d4ede0" transform="rotate(2 139 78)"/>
+  <rect x="142" y="70" width="14" height="20" rx="2" fill="#d4ede0" transform="rotate(10 149 80)"/>
+  <!-- Symboles cartes -->
+  <text x="126" y="80" font-size="7" fill="#c0392b" transform="rotate(-8 129 80)">♥</text>
+  <text x="136" y="78" font-size="7" fill="#111" transform="rotate(2 139 78)">♠</text>
+  <text x="146" y="80" font-size="7" fill="#c0392b" transform="rotate(10 149 80)">♦</text>
+
+  <!-- Label -->
+  <text x="140" y="152" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="#7a9f88" letter-spacing="1.5">TABLE DE FEUTRE</text>
+</svg>

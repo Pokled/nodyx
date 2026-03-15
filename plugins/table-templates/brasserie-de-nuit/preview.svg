@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 160" width="280" height="160">
+  <!-- Fond général -->
+  <rect width="280" height="160" fill="#131210"/>
+
+  <!-- Lueur ambiante ambre -->
+  <radialGradient id="glow-bn" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#c8914a" stop-opacity="0.12"/>
+    <stop offset="100%" stop-color="#131210" stop-opacity="0"/>
+  </radialGradient>
+  <ellipse cx="140" cy="80" rx="130" ry="75" fill="url(#glow-bn)"/>
+
+  <!-- Table ovale — surface bois -->
+  <ellipse cx="140" cy="82" rx="98" ry="52" fill="#1c1814" stroke="#2d2520" stroke-width="3"/>
+  <!-- Grain bois subtil -->
+  <ellipse cx="140" cy="82" rx="90" ry="44" fill="none" stroke="#c8914a" stroke-width="0.4" stroke-opacity="0.15"/>
+  <line x1="60" y1="76" x2="220" y2="76" stroke="#c8914a" stroke-width="0.3" stroke-opacity="0.1"/>
+  <line x1="62" y1="82" x2="218" y2="82" stroke="#c8914a" stroke-width="0.3" stroke-opacity="0.1"/>
+  <line x1="60" y1="88" x2="220" y2="88" stroke="#c8914a" stroke-width="0.3" stroke-opacity="0.1"/>
+  <!-- Reflet de table -->
+  <ellipse cx="120" cy="68" rx="35" ry="10" fill="#c8914a" fill-opacity="0.04"/>
+
+  <!-- Avatars joueurs — cercle autour de la table -->
+  <!-- Bas centre (moi) -->
+  <circle cx="140" cy="130" r="10" fill="#2d2520" stroke="#c8914a" stroke-width="1.5"/>
+  <circle cx="140" cy="127" r="4" fill="#c8914a" fill-opacity="0.7"/>
+  <!-- Haut centre -->
+  <circle cx="140" cy="32" r="9" fill="#2d2520" stroke="#9a8f82" stroke-width="1"/>
+  <circle cx="140" cy="29" r="3.5" fill="#9a8f82" fill-opacity="0.6"/>
+  <!-- Gauche -->
+  <circle cx="32" cy="80" r="9" fill="#2d2520" stroke="#9a8f82" stroke-width="1"/>
+  <circle cx="32" cy="77" r="3.5" fill="#9a8f82" fill-opacity="0.6"/>
+  <!-- Droite -->
+  <circle cx="248" cy="80" r="9" fill="#2d2520" stroke="#9a8f82" stroke-width="1"/>
+  <circle cx="248" cy="77" r="3.5" fill="#9a8f82" fill-opacity="0.6"/>
+  <!-- Haut-gauche -->
+  <circle cx="68" cy="42" r="8" fill="#2d2520" stroke="#9a8f82" stroke-width="1"/>
+  <circle cx="68" cy="39" r="3" fill="#9a8f82" fill-opacity="0.5"/>
+  <!-- Haut-droite -->
+  <circle cx="212" cy="42" r="8" fill="#2d2520" stroke="#9a8f82" stroke-width="1"/>
+  <circle cx="212" cy="39" r="3" fill="#9a8f82" fill-opacity="0.5"/>
+
+  <!-- Onde vocale sur le joueur actif (bas) -->
+  <circle cx="140" cy="130" r="14" fill="none" stroke="#c8914a" stroke-width="1" stroke-opacity="0.5"/>
+  <circle cx="140" cy="130" r="18" fill="none" stroke="#c8914a" stroke-width="0.6" stroke-opacity="0.25"/>
+
+  <!-- Jukebox widget -->
+  <rect x="116" y="71" width="48" height="22" rx="4" fill="#2d2520" stroke="#c8914a" stroke-width="0.8" stroke-opacity="0.6"/>
+  <circle cx="127" cy="82" r="5" fill="#1c1814" stroke="#c8914a" stroke-width="0.8" stroke-opacity="0.7"/>
+  <circle cx="127" cy="82" r="2" fill="#c8914a" fill-opacity="0.6"/>
+  <rect x="136" y="76" width="20" height="2" rx="1" fill="#c8914a" fill-opacity="0.5"/>
+  <rect x="136" y="81" width="14" height="2" rx="1" fill="#9a8f82" fill-opacity="0.4"/>
+  <rect x="136" y="86" width="17" height="2" rx="1" fill="#9a8f82" fill-opacity="0.3"/>
+
+  <!-- Label -->
+  <text x="140" y="152" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="#9a8f82" letter-spacing="1.5">BRASSERIE DE NUIT</text>
+</svg>

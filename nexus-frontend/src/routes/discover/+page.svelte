@@ -9,6 +9,12 @@
 	let upcoming = $state(data.upcoming === 'true');
 	let searching = $state(false);
 
+	$effect(() => {
+		query    = data.q ?? '';
+		type     = data.type ?? 'all';
+		upcoming = data.upcoming === 'true';
+	});
+
 	function formatDate(iso: string) {
 		return new Date(iso).toLocaleDateString('fr-FR', {
 			day: '2-digit', month: 'short', year: 'numeric'

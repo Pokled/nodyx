@@ -183,7 +183,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
     if (!communityId) return reply.code(404).send({ error: 'Community not found', code: 'NOT_FOUND' })
 
     const member = await CommunityModel.getMember(communityId, request.user!.userId)
-    if (!member || member.role === 'member' || member.role === 'moderator') {
+    if (!member || member.role === 'member') {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
     }
 
@@ -206,7 +206,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
     if (!communityId) return reply.code(404).send({ error: 'Community not found', code: 'NOT_FOUND' })
 
     const member = await CommunityModel.getMember(communityId, request.user!.userId)
-    if (!member || member.role === 'member' || member.role === 'moderator') {
+    if (!member || member.role === 'member') {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
     }
 
@@ -237,7 +237,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
   })
 
   // GET /api/v1/instance/announcement — active announcement (public)
-  app.get('/announcement', async (_request, reply) => {
+  app.get('/announcement', { preHandler: [rateLimit] }, async (_request, reply) => {
     try {
       const { rows } = await db.query(
         `SELECT id, message, color
