@@ -4,7 +4,10 @@ Ce dossier contient les plugins officiels et communautaires pour Nexus.
 
 Un plugin est un bundle autonome qui étend les fonctionnalités de Nexus
 **sans modifier le code source principal**. Chaque plugin est un dossier
-avec un fichier `plugin.json` et ses ressources.
+contenant un fichier manifeste et ses ressources.
+
+> Le fichier manifeste s'appelle différemment selon la catégorie :
+> `template.json` pour les `table-templates/`, `plugin.json` pour les futures catégories backend.
 
 ---
 

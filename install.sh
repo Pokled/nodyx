@@ -759,17 +759,22 @@ fi
 
 # Bootstrap community + make admin owner — done directly in PostgreSQL
 # (The API requires a community to exist before any admin action)
+# Escape single quotes for SQL safety (e.g. "L'Atelier" → "L''Atelier")
+COMMUNITY_NAME_SQL="${COMMUNITY_NAME//\'/\'\'}"
+COMMUNITY_DESC_SQL="${COMMUNITY_DESC//\'/\'\'}"
+ADMIN_EMAIL_SQL="${ADMIN_EMAIL//\'/\'\'}"
+
 USER_ID=$(sudo -u postgres psql -d "$DB_NAME" -tc \
-  "SELECT id FROM users WHERE lower(email)=lower('${ADMIN_EMAIL}');" 2>/dev/null | tr -d ' \n')
+  "SELECT id FROM users WHERE lower(email)=lower('${ADMIN_EMAIL_SQL}');" 2>/dev/null | tr -d ' \n')
 
 if [[ -n "$USER_ID" ]]; then
   sudo -u postgres psql -d "$DB_NAME" <<SQL >/dev/null
     -- Create the instance community
     INSERT INTO communities (name, slug, description, owner_id, is_public)
     VALUES (
-      '${COMMUNITY_NAME}',
+      '${COMMUNITY_NAME_SQL}',
       '${COMMUNITY_SLUG}',
-      '${COMMUNITY_DESC}',
+      '${COMMUNITY_DESC_SQL}',
       '${USER_ID}',
       true
     )

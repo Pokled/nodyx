@@ -106,8 +106,8 @@
                 <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-widest italic">Millennium Falcor Meter</h3>
                 <p class="text-[10px] text-gray-500 font-medium">NODE DIAGNOSTICS v2.0</p>
             </div>
-            <button 
-                on:click={startTest} 
+            <button
+                onclick={startTest}
                 disabled={diag.status === 'testing'}
                 class="bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-800 text-white text-[10px] font-black px-4 py-1.5 rounded-full transition-all uppercase italic"
             >
