@@ -24,7 +24,7 @@
 ---
 
 <div align="center">
-  <img src="docs/img/Index_Api-Nexus.png" alt="Nexus — community home" width="860"/>
+  <img src="docs/img/hero.png" alt="Nexus — community home" width="860"/>
 </div>
 
 ---
