@@ -56,46 +56,11 @@
     }
 
     /**
-     * Active un modèle sur le Core Nexus
-     * Utilise 'nexus_token' pour l'autorisation
+     * TODO: backend /api/v1/admin/neural/set-model non encore implémenté
+     * Réservé pour une future intégration Ollama native dans nexus-core
      */
-    async function selectModel(name: string) {
-        if (status.currentModel === name || isUpdating) return;
-
-        isUpdating = true;
-
-        try {
-            // Utilisation de la clé correcte détectée : nexus_token
-            const token = localStorage.getItem("nexus_token");
-
-            const response = await fetch("/api/v1/admin/neural/set-model", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ name }),
-            });
-
-            if (response.status === 401) {
-                alert("Session expirée ou droits insuffisants (401).");
-                return;
-            }
-
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                status.currentModel = name;
-                console.log(`[Neural Engine] Modèle ${name} activé.`);
-            } else {
-                alert("Erreur Core : " + (data.error || "Inconnue"));
-            }
-        } catch (err) {
-            console.error("Erreur API:", err);
-            alert("Impossible de joindre le Core Nexus.");
-        } finally {
-            isUpdating = false;
-        }
+    function selectModel(_name: string) {
+        // no-op intentionnel — backend non implémenté
     }
 
     /**
@@ -127,6 +92,9 @@
 </svelte:head>
 
 <div class="space-y-6 font-sans">
+    <div class="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">
+        <span class="font-semibold">En développement</span> — L'intégration Ollama dans nexus-core n'est pas encore disponible. Le scan local fonctionne, mais l'activation d'un modèle n'a pas d'effet.
+    </div>
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold text-white tracking-tight">

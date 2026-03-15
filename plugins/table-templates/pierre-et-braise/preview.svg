@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 160" width="280" height="160">
+  <!-- Fond général — noir anthracite -->
+  <rect width="280" height="160" fill="#111114"/>
+
+  <!-- Lueur braise rouge -->
+  <radialGradient id="glow-pb" cx="50%" cy="55%" r="48%">
+    <stop offset="0%" stop-color="#c0392b" stop-opacity="0.16"/>
+    <stop offset="100%" stop-color="#111114" stop-opacity="0"/>
+  </radialGradient>
+  <ellipse cx="140" cy="84" rx="130" ry="72" fill="url(#glow-pb)"/>
+
+  <!-- Table ovale — surface pierre anthracite -->
+  <ellipse cx="140" cy="82" rx="98" ry="52" fill="#1a1614" stroke="#2a2220" stroke-width="3"/>
+  <!-- Texture pierre — craquelures subtiles -->
+  <line x1="85"  y1="65" x2="105" y2="95" stroke="#c0392b" stroke-width="0.4" stroke-opacity="0.08"/>
+  <line x1="155" y1="60" x2="170" y2="100" stroke="#c0392b" stroke-width="0.3" stroke-opacity="0.07"/>
+  <line x1="120" y1="58" x2="135" y2="106" stroke="#c0392b" stroke-width="0.3" stroke-opacity="0.06"/>
+  <ellipse cx="140" cy="82" rx="88" ry="43" fill="none" stroke="#c0392b" stroke-width="0.5" stroke-opacity="0.12"/>
+  <!-- Reflet pierre -->
+  <ellipse cx="115" cy="68" rx="28" ry="8" fill="#e84545" fill-opacity="0.03"/>
+
+  <!-- Avatars joueurs -->
+  <!-- Bas centre (moi) -->
+  <circle cx="140" cy="130" r="10" fill="#2a2220" stroke="#c0392b" stroke-width="1.5"/>
+  <circle cx="140" cy="127" r="4" fill="#c0392b" fill-opacity="0.8"/>
+  <!-- Haut centre -->
+  <circle cx="140" cy="32" r="9" fill="#2a2220" stroke="#8a8480" stroke-width="1"/>
+  <circle cx="140" cy="29" r="3.5" fill="#8a8480" fill-opacity="0.6"/>
+  <!-- Gauche -->
+  <circle cx="32" cy="80" r="9" fill="#2a2220" stroke="#8a8480" stroke-width="1"/>
+  <circle cx="32" cy="77" r="3.5" fill="#8a8480" fill-opacity="0.6"/>
+  <!-- Droite -->
+  <circle cx="248" cy="80" r="9" fill="#2a2220" stroke="#8a8480" stroke-width="1"/>
+  <circle cx="248" cy="77" r="3.5" fill="#8a8480" fill-opacity="0.6"/>
+  <!-- Haut-gauche -->
+  <circle cx="68" cy="42" r="8" fill="#2a2220" stroke="#8a8480" stroke-width="1"/>
+  <circle cx="68" cy="39" r="3" fill="#8a8480" fill-opacity="0.5"/>
+  <!-- Haut-droite -->
+  <circle cx="212" cy="42" r="8" fill="#2a2220" stroke="#8a8480" stroke-width="1"/>
+  <circle cx="212" cy="39" r="3" fill="#8a8480" fill-opacity="0.5"/>
+
+  <!-- Onde vocale braise -->
+  <circle cx="140" cy="130" r="14" fill="none" stroke="#e84545" stroke-width="1.2" stroke-opacity="0.55"/>
+  <circle cx="140" cy="130" r="18" fill="none" stroke="#e84545" stroke-width="0.7" stroke-opacity="0.25"/>
+
+  <!-- Dés widget (d20) -->
+  <polygon points="140,66 152,74 148,87 132,87 128,74" fill="#2a2220" stroke="#c0392b" stroke-width="0.9" stroke-opacity="0.7"/>
+  <text x="140" y="83" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" font-weight="bold" fill="#c0392b" fill-opacity="0.8">20</text>
+
+  <!-- Label -->
+  <text x="140" y="152" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="#8a8480" letter-spacing="1.5">PIERRE &amp; BRAISE</text>
+</svg>

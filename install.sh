@@ -48,7 +48,7 @@ banner() {
   ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
 EOF
   echo -e "${RESET}"
-  echo -e "  ${BOLD}Nexus Node Installer${RESET} — v1.0"
+  echo -e "  ${BOLD}Nexus Node Installer${RESET} — v1.8"
   echo -e "  Forum + Chat + Voice • AGPL-3.0\n"
 }
 
@@ -822,7 +822,7 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
       \"slug\":        \"${COMMUNITY_SLUG}\",
       \"url\":         \"https://${DOMAIN}\",
       \"language\":    \"${COMMUNITY_LANG}\",
-      \"version\":     \"1.0.0\"
+      \"version\":     \"${NEXUS_VERSION:-1.8.0}\"
     }" 2>/dev/null || true)
 
   REGISTER_TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)

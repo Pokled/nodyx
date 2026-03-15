@@ -19,6 +19,7 @@ import crypto, { webcrypto } from 'crypto'
 import jwt from 'jsonwebtoken'
 import { db, redis } from '../config/database'
 import { requireAuth } from '../middleware/auth'
+import { adminOnly }  from '../middleware/adminOnly'
 
 // JwkPublicKey n'est pas dans lib ES2022 sans DOM — on définit le minimum nécessaire
 type JwkPublicKey = Record<string, unknown>
@@ -151,9 +152,9 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
 
   // ── Enrollment tokens — admin uniquement ──────────────────────────────────
 
-  /** Génère un token d'enregistrement à usage unique (15 min) */
+  /** Génère un token d'enregistrement à usage unique (15 min) — admin uniquement */
   app.post('/enrollment-tokens', {
-    preHandler: requireAuth
+    preHandler: [requireAuth, adminOnly]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.userId
 
