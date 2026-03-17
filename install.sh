@@ -623,7 +623,7 @@ NODYX_COMMUNITY_SLUG=${COMMUNITY_SLUG}
 NODYX_COMMUNITY_DESCRIPTION=${COMMUNITY_DESC}
 NODYX_COMMUNITY_LANGUAGE=${COMMUNITY_LANG}
 NODYX_COMMUNITY_COUNTRY=${COMMUNITY_COUNTRY}
-NODYX_VERSION=1.9.0
+NODYX_VERSION=1.8.1
 
 # Serveur
 PORT=3000
@@ -927,7 +927,7 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
       \"slug\":        \"${COMMUNITY_SLUG}\",
       \"url\":         \"https://${DOMAIN}\",
       \"language\":    \"${COMMUNITY_LANG}\",
-      \"version\":     \"${NODYX_VERSION:-1.8.0}\"
+      \"version\":     \"${NODYX_VERSION:-1.8.1}\"
     }" 2>/dev/null || true)
 
   REGISTER_TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
