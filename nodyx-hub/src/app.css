@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+@theme {
+  --color-space: #020408;
+  --color-space-card: rgba(8, 12, 28, 0.92);
+  --color-space-border: rgba(56, 78, 180, 0.2);
+  --color-online: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-accent: #3b82f6;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: #020408;
+  color: #f1f5f9;
+  font-family: system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #020408; }
+::-webkit-scrollbar-thumb { background: rgba(56,78,180,0.4); border-radius: 3px; }
+
+/* Status orb animations */
+@keyframes orb-pulse {
+  0%, 100% { box-shadow: 0 0 6px currentColor, 0 0 12px currentColor; opacity: 1; }
+  50% { box-shadow: 0 0 12px currentColor, 0 0 24px currentColor; opacity: 0.7; }
+}
+@keyframes ring-expand {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.orb-online {
+  color: #10b981;
+  animation: orb-pulse 2s ease-in-out infinite;
+}
+.orb-warning {
+  color: #f59e0b;
+  animation: orb-pulse 1.5s ease-in-out infinite;
+}
+.orb-danger { color: #ef4444; }
+.orb-inactive { color: #475569; }
+
+/* Glass card */
+.glass-card {
+  background: rgba(8, 12, 28, 0.92);
+  border: 1px solid rgba(56, 78, 180, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+}
+
+/* Map container */
+#hub-map {
+  width: 100%;
+  height: 100%;
+  background: #030610;
+}
+
+/* Leaflet dark overrides */
+.leaflet-tile-pane { filter: brightness(0.85) saturate(1.1); }
+.leaflet-control-zoom a {
+  background: rgba(8,12,28,0.95) !important;
+  color: #94a3b8 !important;
+  border-color: rgba(56,78,180,0.3) !important;
+}
+
+/* Map marker glow */
+.map-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  position: relative;
+}
+.map-dot::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0.4;
+  animation: ring-expand 2s ease-out infinite;
+}
+.map-dot-online { background: #10b981; color: #10b981; box-shadow: 0 0 8px #10b981; }
+.map-dot-warning { background: #f59e0b; color: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+.map-dot-danger  { background: #ef4444; color: #ef4444; }
+.map-dot-banned  { background: #475569; color: #475569; }
+
+/* Mono data */
+.mono { font-family: var(--font-mono); }
+
+/* Metric value */
+.metric-val {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Log line colors */
+.log-info  { color: #94a3b8; }
+.log-warn  { color: #f59e0b; }
+.log-error { color: #ef4444; }
+
+/* Input dark */
+.input-dark {
+  background: rgba(8,12,28,0.8);
+  border: 1px solid rgba(56,78,180,0.3);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  color: #f1f5f9;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-dark:focus { border-color: #3b82f6; }
+
+/* Btn */
+.btn-primary {
+  background: rgba(59,130,246,0.2);
+  border: 1px solid rgba(59,130,246,0.5);
+  color: #93c5fd;
+  border-radius: 8px;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: rgba(59,130,246,0.35);
+  border-color: #3b82f6;
+  color: #fff;
+}
+.btn-danger {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.4);
+  color: #fca5a5;
+  border-radius: 8px;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.btn-danger:hover {
+  background: rgba(239,68,68,0.3);
+  border-color: #ef4444;
+  color: #fff;
+}
+.btn-success {
+  background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.4);
+  color: #6ee7b7;
+  border-radius: 8px;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.btn-success:hover {
+  background: rgba(16,185,129,0.3);
+  border-color: #10b981;
+  color: #fff;
+}

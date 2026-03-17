@@ -9,25 +9,25 @@ dist/
 
 # Claude Code
 .claude/
-nexus-core/.claude/
+nodyx-core/.claude/
 
 # Fichiers IA/context privés
 nexus-docs/discussions.MD
-nexus-core/CURSOR_CONTEXT.MD
+nodyx-core/CURSOR_CONTEXT.MD
 .nexus-context/
-nexus-core/NEXUS_CONTEXT.md
-nexus-core/NEXUS_CONTENT_RESUME.MD
+nodyx-core/NEXUS_CONTEXT.md
+nodyx-core/NEXUS_CONTENT_RESUME.MD
 
 # Configs personnelles (utiliser les .example)
 Caddyfile.dev
 ecosystem.config.js
-nexus-core/turn-server.js
+nodyx-core/turn-server.js
 
 # Uploads utilisateurs (données personnelles)
-nexus-core/uploads/avatars/*
-nexus-core/uploads/banners/*
-nexus-core/uploads/logos/*
-nexus-core/uploads/assets/*
-!nexus-core/uploads/avatars/.gitkeep
-!nexus-core/uploads/banners/.gitkeep
-!nexus-core/uploads/logos/.gitkeep
+nodyx-core/uploads/avatars/*
+nodyx-core/uploads/banners/*
+nodyx-core/uploads/logos/*
+nodyx-core/uploads/assets/*
+!nodyx-core/uploads/avatars/.gitkeep
+!nodyx-core/uploads/banners/.gitkeep
+!nodyx-core/uploads/logos/.gitkeep
