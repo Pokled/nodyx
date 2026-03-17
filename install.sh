@@ -38,18 +38,31 @@ info() { echo -e "${CYAN}→${RESET}  $*"; }
 warn() { echo -e "${YELLOW}⚠${RESET}  $*"; }
 die()  { echo -e "${RED}✘  $*${RESET}" >&2; exit 1; }
 banner() {
+  [[ -t 1 ]] && clear 2>/dev/null || true
   echo -e "${BOLD}${CYAN}"
   cat <<'EOF'
-  ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗
-  ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝
-  ██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗
-  ██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║
-  ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║
-  ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
+  ███╗   ██╗ ██████╗ ██████╗ ██╗   ██╗██╗  ██╗
+  ████╗  ██║██╔═══██╗██╔══██╗╚██╗ ██╔╝╚██╗██╔╝
+  ██╔██╗ ██║██║   ██║██║  ██║ ╚████╔╝  ╚███╔╝
+  ██║╚██╗██║██║   ██║██║  ██║ ██╔╝██╗  ██╔██╗
+  ██║ ╚████║╚██████╔╝██████╔╝██╔╝  ██╗██╔╝ ██╗
+  ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝   ╚═╝╚═╝  ╚═╝
 EOF
   echo -e "${RESET}"
-  echo -e "  ${BOLD}Nodyx Node Installer${RESET} — v1.8"
-  echo -e "  Forum + Chat + Voice • AGPL-3.0\n"
+  echo -e "  ${CYAN}$(printf '═%.0s' {1..52})${RESET}"
+  echo -e "  ${CYAN}║${RESET}  ${BOLD}Node Installer v1.9${RESET}  ·  Forum · Chat · Voice  ${CYAN}  ║${RESET}"
+  echo -e "  ${CYAN}║${RESET}  AGPL-3.0  ·  ${CYAN}github.com/Pokled/Nodyx${RESET}            ${CYAN}║${RESET}"
+  echo -e "  ${CYAN}$(printf '═%.0s' {1..52})${RESET}"
+  echo ""
+  local _os; _os=$(grep -oP 'PRETTY_NAME="\K[^"]+' /etc/os-release 2>/dev/null || echo "Linux")
+  local _arch; _arch=$(uname -m)
+  local _ram; _ram=$(free -h 2>/dev/null | awk '/^Mem/{print $2}' || echo "?")
+  local _disk; _disk=$(df -h / 2>/dev/null | awk 'NR==2{print $4}' || echo "?")
+  echo -e "  ${CYAN}◈${RESET}  OS      ${BOLD}${_os}${RESET}"
+  echo -e "  ${CYAN}◈${RESET}  Arch    ${BOLD}${_arch}${RESET}"
+  echo -e "  ${CYAN}◈${RESET}  RAM     ${BOLD}${_ram}${RESET}"
+  echo -e "  ${CYAN}◈${RESET}  Disk    ${BOLD}${_disk} disponibles${RESET}"
+  echo ""
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -81,9 +94,43 @@ prompt_secret() {
   printf -v "$var" '%s' "$val"
 }
 
+prompt_secret_confirm() {
+  local var="$1" msg="$2" minlen="${3:-1}"
+  local val='' val2=''
+  while true; do
+    while [[ ${#val} -lt $minlen ]]; do
+      [[ -n "$val" ]] && echo -e "  ${YELLOW}⚠${RESET}  Mot de passe trop court (minimum ${minlen} caractères)."
+      read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
+      echo
+    done
+    read -rsp "$(echo -e "  ${CYAN}?${RESET} Confirmez le mot de passe: ")" val2 </dev/tty
+    echo
+    if [[ "$val" == "$val2" ]]; then
+      break
+    else
+      echo -e "  ${RED}✘${RESET}  Les mots de passe ne correspondent pas. Réessayez."
+      val=''; val2=''
+    fi
+  done
+  printf -v "$var" '%s' "$val"
+}
+
+_STEP_N=0
+
 step() {
+  _STEP_N=$((_STEP_N + 1))
+  local _num; printf -v _num '%02d' "$_STEP_N"
   echo ""
-  echo -e "${BOLD}━━━  $*  ━━━${RESET}"
+  echo -e "  ${BOLD}${CYAN}┌─ [${_num}] $(printf '─%.0s' {1..46})┐${RESET}"
+  echo -e "  ${BOLD}${CYAN}│${RESET}  ${BOLD}$*${RESET}"
+  echo -e "  ${BOLD}${CYAN}└$(printf '─%.0s' {1..52})┘${RESET}"
+}
+
+conf_section() {
+  echo ""
+  echo -e "  ${BOLD}${CYAN}◈  $1${RESET}"
+  echo -e "  ${CYAN}$(printf '·%.0s' {1..52})${RESET}"
+  echo ""
 }
 
 _HC_SPIN=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
@@ -179,7 +226,7 @@ fi
 step "Configuration de ton instance"
 echo ""
 
-# 1 — Communauté
+conf_section "01  Identité de la communauté"
 prompt   COMMUNITY_NAME  "Nom de la communauté (ex: Linux France)"
 COMMUNITY_SLUG_DEFAULT=$(slugify "$COMMUNITY_NAME")
 prompt   COMMUNITY_SLUG  "Identifiant unique (slug)" "$COMMUNITY_SLUG_DEFAULT"
@@ -191,9 +238,8 @@ prompt   COMMUNITY_LANG  "Langue principale (fr/en/de/es/it/pt)" "fr"
 prompt   COMMUNITY_DESC    "Description courte (optionnel)" ""
 prompt   COMMUNITY_COUNTRY "Pays (ex: FR, BE, CH) — optionnel" ""
 
-# 2 — Mode réseau
-echo ""
-echo -e "  ${BOLD}Mode de connexion réseau${RESET}"
+conf_section "02  Mode de connexion réseau"
+echo -e "  ${BOLD}Choisis comment ton instance sera accessible depuis Internet :${RESET}"
 echo -e "  ┌─ ${BOLD}[1] Domaine personnel${RESET}  — tu as un domaine (ex: moncommunaute.fr) et les ports 80/443 sont ouverts"
 echo -e "  ├─ ${BOLD}[2] Nodyx Relay${RESET}         — ${GREEN}recommandé${RESET} — aucun port à ouvrir, aucun domaine requis (RPi, box, ...)"
 echo -e "  └─ ${BOLD}[3] sslip.io auto${RESET}       — domaine gratuit automatique, ports 80/443 ouverts requis"
@@ -222,21 +268,54 @@ case "$NET_MODE" in
     ;;
 esac
 
-# 3 — Compte administrateur
-echo ""
-echo -e "  ${BOLD}Compte administrateur${RESET}"
+conf_section "03  Compte administrateur"
 prompt        ADMIN_USERNAME "Nom d'utilisateur admin"
 prompt        ADMIN_EMAIL    "Email admin"
-prompt_secret ADMIN_PASSWORD "Mot de passe admin (min 8 caractères)" 8
+prompt_secret_confirm ADMIN_PASSWORD "Mot de passe admin (min 8 caractères)" 8
+
+conf_section "04  Configuration email (SMTP)"
+echo -e "  Vérification de compte, reset de mot de passe, notifications."
+echo -e "  Compatible avec ${BOLD}Resend, Gmail, Mailgun, OVH${RESET} ou tout serveur SMTP."
+echo ""
+read -rp "$(echo -e "  ${CYAN}?${RESET} Configurer le SMTP maintenant ? [o/N]: ")" want_smtp </dev/tty
+want_smtp="${want_smtp:-n}"
+
+SMTP_HOST=""
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER=""
+SMTP_PASS=""
+SMTP_FROM=""
+
+if [[ "${want_smtp,,}" == "o" ]]; then
+  prompt   SMTP_HOST   "Hôte SMTP (ex: smtp.resend.com)"
+  prompt   SMTP_PORT   "Port SMTP" "587"
+  read -rp "$(echo -e "  ${CYAN}?${RESET} TLS forcé (port 465) ? [o/N]: ")" _smtp_tls </dev/tty
+  [[ "${_smtp_tls,,}" == "o" ]] && SMTP_SECURE="true" && SMTP_PORT="465"
+  prompt   SMTP_USER   "Utilisateur SMTP (ex: resend ou user@domain.com)"
+  prompt_secret SMTP_PASS "Mot de passe / clé SMTP" 1
+  prompt   SMTP_FROM   "Adresse expéditeur (ex: noreply@moncommunaute.fr)"
+  ok "SMTP configuré (${SMTP_HOST}:${SMTP_PORT})"
+else
+  info "SMTP ignoré — les emails seront désactivés. Configurable plus tard dans nodyx-core/.env"
+fi
 
 echo ""
-echo -e "  ${BOLD}Récapitulatif :${RESET}"
-echo -e "  Domaine    : ${CYAN}${DOMAIN}${RESET}$(${DOMAIN_IS_AUTO} && echo ' (sslip.io automatique)' || true)"
-echo -e "  Communauté : ${CYAN}${COMMUNITY_NAME}${RESET} (slug: ${COMMUNITY_SLUG})"
-echo -e "  Langue     : ${CYAN}${COMMUNITY_LANG}${RESET}"
-echo -e "  Admin      : ${CYAN}${ADMIN_USERNAME}${RESET} <${ADMIN_EMAIL}>"
+echo -e "  ${BOLD}${CYAN}┌─────────────────────────────────────────────────┐${RESET}"
+echo -e "  ${BOLD}${CYAN}│              Récapitulatif                      │${RESET}"
+echo -e "  ${BOLD}${CYAN}├─────────────────────────────────────────────────┤${RESET}"
+echo -e "  ${CYAN}│${RESET}  Domaine    : ${BOLD}${DOMAIN}${RESET}$(${DOMAIN_IS_AUTO} && echo " ${CYAN}(sslip.io auto)${RESET}" || true)"
+echo -e "  ${CYAN}│${RESET}  Communauté : ${BOLD}${COMMUNITY_NAME}${RESET} (slug: ${COMMUNITY_SLUG})"
+echo -e "  ${CYAN}│${RESET}  Langue     : ${BOLD}${COMMUNITY_LANG}${RESET}"
+echo -e "  ${CYAN}│${RESET}  Admin      : ${BOLD}${ADMIN_USERNAME}${RESET} <${ADMIN_EMAIL}>"
+if [[ -n "$SMTP_HOST" ]]; then
+echo -e "  ${CYAN}│${RESET}  SMTP       : ${BOLD}${SMTP_HOST}:${SMTP_PORT}${RESET} (from: ${SMTP_FROM})"
+else
+echo -e "  ${CYAN}│${RESET}  SMTP       : ${YELLOW}non configuré${RESET}"
+fi
+echo -e "  ${BOLD}${CYAN}└─────────────────────────────────────────────────┘${RESET}"
 echo ""
-read -rp "$(echo -e "  ${BOLD}Continuer ? [O/n] ${RESET}")" confirm
+read -rp "$(echo -e "  ${BOLD}Lancer l'installation ? [O/n] ${RESET}")" confirm
 [[ "${confirm,,}" == "n" ]] && die "Installation annulée."
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -531,7 +610,7 @@ NODYX_COMMUNITY_SLUG=${COMMUNITY_SLUG}
 NODYX_COMMUNITY_DESCRIPTION=${COMMUNITY_DESC}
 NODYX_COMMUNITY_LANGUAGE=${COMMUNITY_LANG}
 NODYX_COMMUNITY_COUNTRY=${COMMUNITY_COUNTRY}
-NODYX_VERSION=1.8.0
+NODYX_VERSION=1.9.0
 
 # Serveur
 PORT=3000
@@ -559,6 +638,14 @@ FRONTEND_URL=https://${DOMAIN}
 TURN_PUBLIC_IP=${PUBLIC_IP:-}
 TURN_SECRET=${TURN_SECRET:-}
 TURN_PORT=3478
+
+# SMTP
+SMTP_HOST=${SMTP_HOST}
+SMTP_PORT=${SMTP_PORT}
+SMTP_SECURE=${SMTP_SECURE}
+SMTP_USER=${SMTP_USER}
+SMTP_PASS=${SMTP_PASS}
+SMTP_FROM=${SMTP_FROM:-noreply@${DOMAIN}}
 COREENV
 # En mode Relay, ajouter des STUN publics en fallback (pas de nexus-turn)
 if $RELAY_MODE; then
@@ -799,7 +886,7 @@ step "Sous-domaine gratuit nexusnode.app"
 
 NODYX_SUBDOMAIN=""
 NODYX_DIRECTORY_TOKEN=""
-NODYX_DIRECTORY_URL="https://nexusnode.app/api/directory"
+NODYX_DIRECTORY_URL="https://nodyx.org/api/directory"
 
 echo ""
 # En mode Relay ou auto-domaine, le sous-domaine nexusnode.app est obligatoire/automatique.
@@ -845,7 +932,7 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
     {
       printf "\n# Annuaire nexusnode.app\n"
       printf "DIRECTORY_TOKEN=%s\n" "${NODYX_DIRECTORY_TOKEN}"
-      printf "DIRECTORY_API_URL=https://nexusnode.app\n"
+      printf "DIRECTORY_API_URL=https://nodyx.org\n"
       printf "SELF_URL=http://127.0.0.1:3000\n"
       printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
       printf "NODYX_GLOBAL_INDEXING=true\n"
@@ -939,6 +1026,7 @@ JWT secret       : ${JWT_SECRET}
 
 ${_CREDS_TURN}
 ${_CREDS_RELAY}
+$([ -n "$SMTP_HOST" ] && printf "SMTP host        : %s:%s\nSMTP user        : %s\nSMTP pass        : %s\nSMTP from        : %s" "$SMTP_HOST" "$SMTP_PORT" "$SMTP_USER" "$SMTP_PASS" "$SMTP_FROM")
 Nodyx dir        : ${NODYX_DIR}
 $([ -n "$NODYX_SUBDOMAIN" ] && echo "Sous-domaine     : https://${NODYX_SUBDOMAIN}")
 $([ -n "$NODYX_DIRECTORY_TOKEN" ] && echo "Directory token  : ${NODYX_DIRECTORY_TOKEN}")
@@ -1126,59 +1214,63 @@ echo ""
 #  SUMMARY
 # ═══════════════════════════════════════════════════════════════════════════════
 echo ""
-echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════════╗${RESET}"
-echo -e "${GREEN}${BOLD}║           ✔  Nodyx installé avec succès !        ║${RESET}"
-echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════════════╝${RESET}"
-echo ""
-echo -e "  ${BOLD}Instance  :${RESET} https://${DOMAIN}"
+echo -e "${GREEN}${BOLD}"
+cat <<'LOGO'
+  ╔══════════════════════════════════════════════════════════════╗
+  ║                                                              ║
+  ║    ✦   N O D Y X   ·   I N S T A N C E   O N L I N E   ✦  ║
+  ║                                                              ║
+  ╠══════════════════════════════════════════════════════════════╣
+LOGO
+echo -e "${RESET}"
+echo -e "     ${BOLD}Instance   ${GREEN}https://${DOMAIN}${RESET}"
 if ! $RELAY_MODE && [[ -n "$NODYX_SUBDOMAIN" ]]; then
-  echo -e "  ${BOLD}Alias     :${RESET} https://${NODYX_SUBDOMAIN} ${CYAN}(nexusnode.app)${RESET}"
+  echo -e "     ${BOLD}Alias      ${CYAN}https://${NODYX_SUBDOMAIN}${RESET}"
 fi
-echo -e "  ${BOLD}Admin     :${RESET} ${ADMIN_USERNAME} / ${ADMIN_EMAIL}"
+echo -e "     ${BOLD}Admin      ${RESET}${ADMIN_USERNAME}  ·  ${ADMIN_EMAIL}"
 if ! $RELAY_MODE; then
-  echo -e "  ${BOLD}Vocal     :${RESET} nexus-turn STUN/TURN sur ${PUBLIC_IP}:3478 (UDP)"
+  echo -e "     ${BOLD}Vocal      ${RESET}stun/turn:${PUBLIC_IP}:3478 (nexus-turn)"
 fi
 if $RELAY_MODE; then
-  echo -e "  ${BOLD}Relay     :${RESET} tunnel TCP → relay.nexusnode.app:7443"
+  echo -e "     ${BOLD}Relay      ${RESET}tunnel → relay.nexusnode.app:7443"
 fi
+echo -e "     ${BOLD}Version    ${RESET}1.9.0"
+echo -e "     ${BOLD}Dossier    ${RESET}${NODYX_DIR}"
 echo ""
-echo -e "  ${CYAN}Credentials sauvegardés dans :${RESET} ${BOLD}${CREDS_FILE}${RESET}"
+echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
-echo -e "  ${BOLD}${CYAN}▸ Gestion des services${RESET}"
-echo -e "  pm2 list                           → état de nodyx-core + nodyx-frontend"
-echo -e "  pm2 logs nodyx-core                → logs backend en temps réel"
-echo -e "  pm2 logs nodyx-frontend            → logs frontend en temps réel"
-echo -e "  pm2 restart all                    → redémarrer tout"
-echo -e "  pm2 stop all / pm2 start all       → arrêt / démarrage"
+echo -e "     ${BOLD}${CYAN}▸ Gestion${RESET}"
+echo -e "       pm2 list                         état des services"
+echo -e "       pm2 logs nodyx-core              logs backend temps réel"
+echo -e "       pm2 restart all                  redémarrer tout"
+echo ""
+echo -e "     ${BOLD}${CYAN}▸ Mise à jour${RESET}"
+echo -e "       sudo nodyx-update                git pull + rebuild + restart"
+echo ""
+echo -e "     ${BOLD}${CYAN}▸ Base de données${RESET}"
+echo -e "       sudo -u postgres psql ${DB_NAME}"
+echo -e "       sudo -u postgres pg_dump ${DB_NAME} > backup_\$(date +%F).sql"
+echo ""
+echo -e "     ${BOLD}${CYAN}▸ Diagnostic${RESET}"
+echo -e "       systemctl status caddy"
+echo -e "       curl -s http://localhost:3000/api/v1/instance/info | python3 -m json.tool"
 if $RELAY_MODE; then
   echo ""
-  echo -e "  ${BOLD}${CYAN}▸ Tunnel Relay${RESET}"
-  echo -e "  systemctl status nexus-relay-client  → état du tunnel"
-  echo -e "  journalctl -u nexus-relay-client -f  → logs du tunnel"
-  echo -e "  systemctl restart nexus-relay-client → redémarrer le tunnel"
+  echo -e "     ${BOLD}${CYAN}▸ Tunnel Relay${RESET}"
+  echo -e "       systemctl status nexus-relay-client"
+  echo -e "       journalctl -u nexus-relay-client -f"
 fi
 echo ""
-echo -e "  ${BOLD}${CYAN}▸ Mise à jour${RESET}"
-echo -e "  sudo nodyx-update                  → git pull + rebuild + restart en une commande"
+echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
-echo -e "  ${BOLD}${CYAN}▸ Base de données${RESET}"
-echo -e "  sudo -u postgres psql ${DB_NAME}   → console PostgreSQL"
-echo -e "  sudo -u postgres pg_dump ${DB_NAME} > backup_nodyx_\$(date +%F).sql"
-echo -e "                                     → sauvegarde de la base"
-echo ""
-echo -e "  ${BOLD}${CYAN}▸ Diagnostic${RESET}"
-echo -e "  curl -s http://localhost:3000/api/v1/instance/info | python3 -m json.tool"
-echo -e "                                     → état du backend"
-echo -e "  systemctl status caddy             → état du proxy"
-echo -e "  caddy validate --config /etc/caddy/Caddyfile"
-echo -e "                                     → valider la config Caddy"
-echo -e "  sudo cat ${CREDS_FILE}             → revoir les credentials"
+echo -e "     ${BOLD}Credentials →  ${CYAN}${CREDS_FILE}${RESET}"
+echo -e "     ${CYAN}(garde ce fichier en lieu sûr — ne le partage jamais)${RESET}"
 echo ""
 if $RELAY_MODE; then
-  echo -e "  ${GREEN}✔  Mode Relay actif — aucun port à ouvrir, aucun DNS à configurer.${RESET}"
-  echo -e "  ${CYAN}   Le tunnel est géré automatiquement par nexus-relay-client.${RESET}"
+  echo -e "     ${GREEN}✔  Mode Relay — aucun port à ouvrir, aucun DNS à configurer.${RESET}"
 else
-  echo -e "  ${YELLOW}⚠  Assure-toi que ton DNS pointe vers ${PUBLIC_IP}${RESET}"
-  echo -e "  ${YELLOW}   Le certificat SSL sera généré automatiquement par Caddy.${RESET}"
+  echo -e "     ${YELLOW}⚠  Assure-toi que ton DNS ${BOLD}${DOMAIN}${RESET}${YELLOW} pointe vers ${PUBLIC_IP}${RESET}"
 fi
+echo ""
+echo -e "${GREEN}${BOLD}  ╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo ""
