@@ -199,7 +199,7 @@
 					<p class="text-sm font-semibold text-white">Nodyx Signet</p>
 					<p class="text-xs" style="color: rgb(156,163,175)">Connexion sans mot de passe · ECDSA P-256</p>
 				</div>
-				<a href="https://signet.nexusnode.app" target="_blank" rel="noopener"
+				<a href="https://signet.nodyx.org" target="_blank" rel="noopener"
 					class="ml-auto text-xs px-2 py-1 rounded-lg shrink-0 transition-opacity hover:opacity-80"
 					style="color: #fbbf24; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2)">
 					Obtenir l'app →

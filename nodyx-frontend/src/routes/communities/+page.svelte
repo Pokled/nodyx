@@ -225,7 +225,7 @@
 							<h2 class="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors leading-tight">
 								{instance.name}
 							</h2>
-							<span class="text-xs text-gray-600 font-mono">{instance.slug}.nexusnode.app</span>
+							<span class="text-xs text-gray-600 font-mono">{instance.url.replace('https://', '')}</span>
 						</div>
 					</div>
 
@@ -308,7 +308,7 @@
 	<h3 class="text-lg font-semibold text-white mb-2">Vous avez une instance Nodyx ?</h3>
 	<p class="text-sm text-gray-400 max-w-md mx-auto mb-5">
 		Enregistrez-la dans l'annuaire et recevez un sous-domaine gratuit
-		<code class="text-indigo-400">votre-nom.nexusnode.app</code>.
+		<code class="text-indigo-400">votre-nom.nodyx.org</code>.
 		Votre communauté devient visible dans le réseau.
 	</p>
 	<div class="flex flex-wrap gap-3 justify-center">

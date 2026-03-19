@@ -3,7 +3,7 @@ import type { LayoutServerLoad } from './$types';
 import { apiFetch } from '$lib/api';
 import { env } from '$env/dynamic/public';
 
-const DIRECTORY_URL = (env.PUBLIC_DIRECTORY_URL ?? 'https://nexusnode.app') + '/api/directory';
+const DIRECTORY_URL = (env.PUBLIC_DIRECTORY_URL ?? 'https://nodyx.org') + '/api/directory';
 
 // URLs stored in DB may include http://localhost:3000 prefix (legacy uploads)
 // Normalize to relative path so browser fetches via Vite proxy / reverse proxy
