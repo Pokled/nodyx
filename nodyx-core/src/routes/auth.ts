@@ -129,7 +129,7 @@ export default async function authRoutes(app: FastifyInstance) {
       db.query(`SELECT 1 FROM ip_bans WHERE ip = $1::inet LIMIT 1`, [clientIp]),
       db.query(
         `SELECT 1 FROM email_bans
-         WHERE $1 = email OR $1 LIKE '%@' || email
+         WHERE $1 = email OR split_part($1, '@', 2) = email
          LIMIT 1`,
         [email]
       ),

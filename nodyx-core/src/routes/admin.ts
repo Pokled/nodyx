@@ -15,6 +15,7 @@ import { generateCategorySlug } from '../models/community'
 import { io } from '../socket/io'
 import { invalidateUserSessions } from './auth'
 import { isSmtpConfigured, sendPasswordResetEmail } from '../services/emailService'
+import { scanBuffer } from '../services/fileScanner'
 import { randomUUID, createHash, randomBytes } from 'crypto'
 import { createWriteStream, mkdirSync } from 'fs'
 import { pipeline } from 'stream/promises'
@@ -825,12 +826,22 @@ export default async function adminRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Format non supporté (JPEG, PNG, WebP, GIF)' })
     }
 
+    // Buffer the file so we can scan magic bytes before writing to disk
+    const chunks: Buffer[] = []
+    for await (const chunk of data.file) chunks.push(chunk as Buffer)
+    const fileBuffer = Buffer.concat(chunks)
+
+    const scan = scanBuffer(fileBuffer, data.mimetype)
+    if (!scan.ok) {
+      return reply.code(400).send({ error: `Fichier rejeté : ${scan.reason}` })
+    }
+
     const ext      = data.mimetype.split('/')[1].replace('jpeg', 'jpg')
     const folder   = `${type}s`
     const filename = `${randomUUID()}.${ext}`
     const dir      = path.join(UPLOADS_DIR, folder)
     mkdirSync(dir, { recursive: true })
-    await pipeline(data.file, createWriteStream(path.join(dir, filename)))
+    await import('fs/promises').then(fs => fs.writeFile(path.join(dir, filename), fileBuffer))
 
     return reply.send({ url: `/uploads/${folder}/${filename}` })
   })

@@ -107,11 +107,24 @@ export async function assignToMember(
   communityId: string,
   userId: string,
   gradeId: string | null
-): Promise<boolean> {
+): Promise<{ found: boolean; gradeValid: boolean }> {
+  // Atomic: verify grade belongs to this community in the same statement
   const { rowCount } = await db.query(
     `UPDATE community_members SET grade_id = $1
-     WHERE community_id = $2 AND user_id = $3`,
+     WHERE community_id = $2 AND user_id = $3
+     AND (
+       $1 IS NULL
+       OR EXISTS (SELECT 1 FROM community_grades WHERE id = $1 AND community_id = $2)
+     )`,
     [gradeId, communityId, userId]
   )
-  return (rowCount ?? 0) > 0
+  if ((rowCount ?? 0) > 0) return { found: true, gradeValid: true }
+
+  // Distinguish "grade not in community" from "member not found"
+  const { rows } = await db.query(
+    `SELECT 1 FROM community_members WHERE community_id = $1 AND user_id = $2`,
+    [communityId, userId]
+  )
+  const found = rows.length > 0
+  return { found, gradeValid: !found } // if member found, grade was invalid
 }

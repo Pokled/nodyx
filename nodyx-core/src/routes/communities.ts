@@ -247,17 +247,12 @@ export default async function communityRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'Admin required', code: 'FORBIDDEN' })
     }
 
-    // Verify grade belongs to this community (if not null)
-    if (grade_id !== null) {
-      const grade = await GradeModel.findById(grade_id)
-      if (!grade || grade.community_id !== community.id) {
-        return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
-      }
-    }
-
-    const updated = await GradeModel.assignToMember(community.id, userId, grade_id)
-    if (!updated) {
+    const result = await GradeModel.assignToMember(community.id, userId, grade_id)
+    if (!result.found) {
       return reply.code(404).send({ error: 'Member not found', code: 'NOT_FOUND' })
+    }
+    if (!result.gradeValid) {
+      return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
     }
 
     return reply.send({ ok: true })

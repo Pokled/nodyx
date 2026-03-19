@@ -381,7 +381,7 @@ export default async function directoryRoutes(app: FastifyInstance) {
   }>('/directory/assets/search', async (req, reply) => {
     const { q, type, instance_slug, limit: lStr, offset: oStr } = req.query;
     const limit  = Math.min(parseInt(lStr  ?? '24', 10), 50);
-    const offset = Math.max(parseInt(oStr  ?? '0',  10), 0);
+    const offset = Math.min(Math.max(parseInt(oStr  ?? '0',  10), 0), 10_000);
 
     const conditions: string[] = [];
     const params: unknown[]    = [];
