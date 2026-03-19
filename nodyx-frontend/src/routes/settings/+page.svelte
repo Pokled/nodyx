@@ -143,6 +143,87 @@
             linkedSlugs = json.linked_instances ?? [];
         }
     }
+
+    // ── Notifications Push ────────────────────────────────────────────────────
+
+    let pushSupported  = $state(false)
+    let pushEnabled    = $state(false)
+    let pushLoading    = $state(false)
+    let pushError      = $state('')
+    let vapidPublicKey = $state<string | null>(null)
+
+    $effect(() => {
+        if (typeof window === 'undefined') return
+        pushSupported = 'serviceWorker' in navigator && 'PushManager' in window
+        if (!pushSupported) return
+
+        // Vérifier si déjà abonné
+        navigator.serviceWorker.ready.then(async reg => {
+            const sub = await reg.pushManager.getSubscription()
+            pushEnabled = !!sub
+        })
+
+        // Charger la clé VAPID publique
+        fetch('/api/v1/notifications/vapid-public-key')
+            .then(r => r.ok ? r.json() : null)
+            .then(j => { if (j?.publicKey) vapidPublicKey = j.publicKey })
+            .catch(() => {})
+    })
+
+    function urlBase64ToUint8Array(base64String: string): Uint8Array {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4)
+        const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+        const raw     = atob(base64)
+        return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
+    }
+
+    async function togglePush() {
+        const token = ($page.data as any).token as string | null
+        if (!token || !pushSupported) return
+        pushLoading = true
+        pushError   = ''
+
+        try {
+            const reg = await navigator.serviceWorker.ready
+            const existing = await reg.pushManager.getSubscription()
+
+            if (pushEnabled && existing) {
+                // Désabonnement
+                await existing.unsubscribe()
+                await fetch('/api/v1/notifications/subscribe', {
+                    method:  'DELETE',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body:    JSON.stringify({ endpoint: existing.endpoint }),
+                })
+                pushEnabled = false
+            } else {
+                // Abonnement
+                if (!vapidPublicKey) { pushError = 'Push non configuré sur ce serveur'; return }
+                const perm = await Notification.requestPermission()
+                if (perm !== 'granted') { pushError = 'Permission refusée par le navigateur'; return }
+
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                })
+
+                const subJson = sub.toJSON()
+                await fetch('/api/v1/notifications/subscribe', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body:    JSON.stringify({
+                        endpoint: subJson.endpoint,
+                        keys: { p256dh: subJson.keys?.p256dh, auth: subJson.keys?.auth },
+                    }),
+                })
+                pushEnabled = true
+            }
+        } catch (err: any) {
+            pushError = err?.message ?? 'Erreur inconnue'
+        } finally {
+            pushLoading = false
+        }
+    }
 </script>
 
 <div class="min-h-screen bg-[#050505] text-white p-8">
@@ -156,6 +237,40 @@
             <h2 class="text-sm font-bold text-gray-500 uppercase tracking-[0.2em] mb-6">Infrastructure & Réseau</h2>
             <NetworkDoctor />
         </section>
+
+        <!-- ── Notifications Push ────────────────────────────────────────────── -->
+        {#if pushSupported && $page.data.user}
+        <section>
+            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-[0.2em] mb-2">Notifications Push</h2>
+            <p class="text-xs text-gray-600 mb-6">
+                Recevez des notifications même lorsque l'onglet est fermé — mentions, messages privés, réponses.
+            </p>
+            <div class="flex items-center gap-4">
+                <button
+                    onclick={togglePush}
+                    disabled={pushLoading || !vapidPublicKey}
+                    class="flex items-center gap-3 px-4 py-2 rounded-lg border transition-all text-sm font-medium
+                           {pushEnabled
+                             ? 'bg-violet-600/20 border-violet-500 text-violet-300 hover:bg-violet-600/30'
+                             : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    {#if pushLoading}
+                        <span class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                    {:else}
+                        <span class="text-base">{pushEnabled ? '🔔' : '🔕'}</span>
+                    {/if}
+                    {pushEnabled ? 'Notifications activées' : 'Activer les notifications'}
+                </button>
+                {#if !vapidPublicKey}
+                    <span class="text-xs text-gray-600">Non configuré sur ce serveur</span>
+                {/if}
+            </div>
+            {#if pushError}
+                <p class="text-xs text-red-400 mt-3">{pushError}</p>
+            {/if}
+        </section>
+        {/if}
 
         <!-- ── Instances liées ──────────────────────────────────────────────── -->
         {#if user}

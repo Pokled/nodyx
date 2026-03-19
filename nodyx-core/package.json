@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:reset": "ts-node src/scripts/seed.ts --reset",
+    "generate-esy": "ts-node src/scripts/generate-esy.ts",
     "turn": "node turn-server.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -33,6 +34,7 @@
     "sanitize-html": "^2.17.1",
     "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
+    "web-push": "^3.6.7",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -42,6 +44,7 @@
     "@types/node": "^25.2.3",
     "@types/nodemailer": "^7.0.11",
     "@types/sanitize-html": "^2.16.0",
+    "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^4.0.18",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",

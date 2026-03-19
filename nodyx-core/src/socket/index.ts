@@ -9,6 +9,7 @@ import * as ChannelModel from '../models/channel'
 import * as NotificationModel from '../models/notification'
 import { resolveMentions } from '../utils/mentions'
 import { io } from './io'
+import { sendPushToUser } from '../routes/notifications'
 
 interface JwtPayload {
   userId:   string
@@ -363,6 +364,14 @@ export function registerSocketIO(server: Server): void {
             // Separate chat-specific mention badge (won't mix with forum notifications)
             io.to(`user:${notifiedUserId}`).emit('chat:mention')
           }
+          // Web Push si l'utilisateur n'est pas connecté en temps réel
+          sendPushToUser(notifiedUserId, {
+            title: `@${username} vous a mentionné`,
+            body:  sanitized.slice(0, 80),
+            type:  'mention',
+            tag:   'chat-mention',
+            url:   '/chat',
+          }).catch(() => {})
         }
       } catch {
         // Silently ignore DB errors (e.g. channel deleted)
