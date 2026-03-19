@@ -43,6 +43,13 @@ regex-lite  = "0.1"
 # HTML sanitization (gossip inputs)
 ammonia = "4"
 
+# Auth — bcrypt + JWT + email
+bcrypt          = "0.15"
+jsonwebtoken    = "9"
+sha2            = "0.10"
+lettre          = { version = "0.11", features = ["tokio1-native-tls", "smtp-transport", "builder"] }
+async-trait     = "0.1"
+
 # Env + errors + logging
 dotenvy             = "0.15"
 anyhow              = "1"

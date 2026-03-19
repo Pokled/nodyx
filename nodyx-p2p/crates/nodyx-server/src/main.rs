@@ -1,5 +1,7 @@
 mod error;
+mod extractors;
 mod routes;
+mod services;
 mod state;
 
 use sqlx::postgres::PgPoolOptions;
@@ -53,7 +55,22 @@ async fn main() -> anyhow::Result<()> {
         .user_agent("Nodyx-Server/0.1")
         .build()?;
 
-    let state = AppState { db, redis, http };
+    // ── Auth secrets ──────────────────────────────────────────────────────────
+    let jwt_secret = std::env::var("JWT_SECRET")
+        .expect("JWT_SECRET env var is required");
+
+    // Pre-compute a bcrypt hash used for constant-time login checks when user not found.
+    // This prevents timing-based user enumeration: we always run bcrypt regardless of
+    // whether the user exists.
+    let dummy_bcrypt_hash = tokio::task::spawn_blocking(|| {
+        bcrypt::hash("nodyx-dummy-timing-protection-8x9z", 12)
+            .expect("Failed to compute dummy bcrypt hash on startup")
+    })
+    .await?;
+
+    tracing::info!("Auth secrets ready");
+
+    let state = AppState { db, redis, http, jwt_secret, dummy_bcrypt_hash };
 
     // ── Router ────────────────────────────────────────────────────────────────
     let app = routes::build(state);
