@@ -7,11 +7,15 @@ const config = {
 
     kit: {
         adapter: adapter(),
-        
+
         // Désactive le check d'origine CSRF (dev multi-host : 192.168.x.x, DDNS, etc.)
         csrf: {
             checkOrigin: false,
-        }
+        },
+
+        serviceWorker: {
+            register: true,
+        },
     }
 };
 
