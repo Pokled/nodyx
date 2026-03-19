@@ -38,7 +38,6 @@ const ALLOWED_MIME_BY_TYPE: Record<string, readonly string[]> = {
     'font/ttf', 'font/otf', 'font/woff', 'font/woff2',
     'application/font-woff', 'application/font-woff2',
     'application/x-font-ttf', 'application/x-font-opentype',
-    'application/octet-stream',
   ],
   sound:   ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/flac'],
   theme:   ['application/json', 'text/plain'],

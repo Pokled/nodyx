@@ -257,12 +257,32 @@ export async function announceEventsToDirectory() {
 
 // ── Gossip — propagation aux pairs directs ────────────────────────────────────
 
+function isPrivatePeerUrl(rawUrl: string): boolean {
+  try {
+    const { hostname, protocol } = new URL(rawUrl)
+    const h = hostname.toLowerCase()
+    if (h === 'localhost' || h === '127.0.0.1' || h === '::1') return true
+    if (h.startsWith('192.168.') || h.startsWith('10.')) return true
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true
+    if (h.startsWith('169.254.') || h.startsWith('100.64.')) return true
+    if (h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80')) return true
+    if (process.env.NODE_ENV === 'production' && protocol !== 'https:') return true
+    return false
+  } catch {
+    return true // URL invalide → rejeter
+  }
+}
+
 async function gossipToPeers(payload: {
   instance_slug: string; instance_url: string;
   threads?: any[]; events?: any[];
 }) {
   const peersEnv = process.env.GOSSIP_PEERS ?? ''
-  const peers    = peersEnv.split(',').map(p => p.trim()).filter(Boolean)
+  const peers    = peersEnv
+    .split(',')
+    .map(p => p.trim())
+    .filter(Boolean)
+    .filter(p => !isPrivatePeerUrl(p)) // Anti-SSRF : rejeter IPs privées
   if (peers.length === 0) return
 
   const selfToken = process.env.DIRECTORY_TOKEN ?? ''

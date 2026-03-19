@@ -30,6 +30,22 @@ async function isMod(userId: string, threadId: string): Promise<boolean> {
   return role === 'owner' || role === 'admin' || role === 'moderator'
 }
 
+// Check if userId is owner or admin (not moderator) in the community that owns a thread
+// Used for privileged operations: lock thread, pin thread
+async function isAdmin(userId: string, threadId: string): Promise<boolean> {
+  const { rows } = await db.query<{ role: string }>(
+    `SELECT cm.role
+     FROM community_members cm
+     JOIN categories cat ON cat.community_id = cm.community_id
+     JOIN threads t ON t.category_id = cat.id
+     WHERE t.id = $1 AND cm.user_id = $2
+     LIMIT 1`,
+    [threadId, userId]
+  )
+  const role = rows[0]?.role
+  return role === 'owner' || role === 'admin'
+}
+
 // Get author_id of a post (used for thanks)
 async function getPostAuthor(postId: string): Promise<{ author_id: string; thread_id: string } | null> {
   return PostModel.getAuthorAndThread(postId)
@@ -423,8 +439,8 @@ app.get('/threads', {
     // Always use resolved UUID — id may be a slug
     const threadId = thread.id
 
-    const userId   = request.user!.userId
-    const isAuthor = thread.author_id === userId
+    const userId    = request.user!.userId
+    const isAuthor  = thread.author_id === userId
     const modAccess = await isMod(userId, threadId)
 
     if (!isAuthor && !modAccess) {
@@ -438,6 +454,14 @@ app.get('/threads', {
       }
       const updated = await ThreadModel.update(threadId, { title: body.title.trim() })
       return reply.send({ thread: updated })
+    }
+
+    // Pin / lock are restricted to owner or admin (not moderator)
+    if ((body.is_pinned !== undefined || body.is_locked !== undefined)) {
+      const adminAccess = await isAdmin(userId, threadId)
+      if (!adminAccess) {
+        return reply.code(403).send({ error: 'Only admins and owners can pin or lock threads', code: 'FORBIDDEN' })
+      }
     }
 
     // Mod/owner actions

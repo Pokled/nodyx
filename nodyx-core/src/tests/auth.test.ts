@@ -16,7 +16,7 @@ vi.mock('../config/database', () => ({
     set:   vi.fn().mockResolvedValue('OK'),
     del:   vi.fn().mockResolvedValue(1),
     get:   vi.fn().mockResolvedValue(null),
-    exists: vi.fn().mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1)),
+    exists: vi.fn().mockImplementation((key: string) => Promise.resolve((key.startsWith('banned:') || key.startsWith('nodyx:banned:')) ? 0 : 1)),
     incr:     vi.fn().mockResolvedValue(1),
     expire:   vi.fn().mockResolvedValue(1),
     setex:    vi.fn().mockResolvedValue('OK'),

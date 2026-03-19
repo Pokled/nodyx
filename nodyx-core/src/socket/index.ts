@@ -1,5 +1,6 @@
 import { registerVoiceHandlers, sendVoiceSnapshot } from './voice'
 import { registerWhisperHandlers } from './whisper'
+import { checkRateLimit } from './rateLimiter'
 import { Server, Socket } from 'socket.io'
 import jwt from 'jsonwebtoken'
 import sanitizeHtml from 'sanitize-html'
@@ -93,14 +94,21 @@ async function authenticateSocket(socket: Socket, next: (err?: Error) => void) {
     return next(new Error('Invalid token'))
   }
 
-  const alive = await redis.exists(`session:${token}`)
-  if (!alive) {
+  // Accept both Node.js-issued sessions (session:) and Rust-issued sessions (nodyx:session:)
+  const [nodeSession, nodyx_session] = await Promise.all([
+    redis.exists(`session:${token}`),
+    redis.exists(`nodyx:session:${token}`),
+  ])
+  if (!nodeSession && !nodyx_session) {
     return next(new Error('Session expired'))
   }
 
-  // Reject banned users before they join any room
-  const isBanned = await redis.exists(`banned:${payload.userId}`)
-  if (isBanned) {
+  // Reject banned users before they join any room (check both key prefixes)
+  const [isBannedNode, isBannedNodyx] = await Promise.all([
+    redis.exists(`banned:${payload.userId}`),
+    redis.exists(`nodyx:banned:${payload.userId}`),
+  ])
+  if (isBannedNode || isBannedNodyx) {
     return next(new Error('Banned'))
   }
 
@@ -179,7 +187,7 @@ export function registerSocketIO(server: Server): void {
       }
 
       // Restore status from Redis (persists across reconnects within session)
-      const savedStatus = await redis.get(`nodyx:status:${userId}`).catch(() => null)
+      const savedStatus = await redis.get(`status:${userId}`).catch(() => null)
       socket.data.status = savedStatus ? JSON.parse(savedStatus) : null
 
       socket.join('presence')
@@ -237,15 +245,20 @@ export function registerSocketIO(server: Server): void {
 
     // ── presence:set_status ────────────────────────────────────────────────────
     socket.on('presence:set_status', async (data: { emoji: string; text: string } | null) => {
+      if (!checkRateLimit(userId, 'presence:set_status')) return
       const status = data && (data.emoji || data.text)
-        ? { emoji: (data.emoji ?? '').slice(0, 8), text: (data.text ?? '').slice(0, 60) }
+        ? {
+            emoji: (data.emoji ?? '').slice(0, 8),
+            // Strip tout HTML du texte de statut avant broadcast
+            text:  sanitizeHtml((data.text ?? '').slice(0, 60), { allowedTags: [], allowedAttributes: {} }),
+          }
         : null
 
       // Persist in Redis with 24h TTL (survives reconnects in same day session)
       if (status) {
-        await redis.set(`nodyx:status:${userId}`, JSON.stringify(status), 'EX', 86400).catch(() => {})
+        await redis.set(`status:${userId}`, JSON.stringify(status), 'EX', 86400).catch(() => {})
       } else {
-        await redis.del(`nodyx:status:${userId}`).catch(() => {})
+        await redis.del(`status:${userId}`).catch(() => {})
       }
 
       // Update all sockets of this user
@@ -263,6 +276,15 @@ export function registerSocketIO(server: Server): void {
     // ── chat:join ─────────────────────────────────────────────────────────────
     socket.on('chat:join', async (channelId: string) => {
       if (!isUuid(channelId)) return
+
+      // Contrôle d'accès : l'utilisateur doit être membre de la communauté du canal
+      const { rows: access } = await db.query(
+        `SELECT 1 FROM channels c
+         JOIN community_members cm ON c.community_id = cm.community_id
+         WHERE c.id = $1 AND cm.user_id = $2 LIMIT 1`,
+        [channelId, userId]
+      ).catch(() => ({ rows: [] as any[] }))
+      if (!access.length) return
 
       const channel = await ChannelModel.findById(channelId).catch(() => null)
       if (!channel) return
@@ -284,10 +306,22 @@ export function registerSocketIO(server: Server): void {
 
     // ── chat:send ─────────────────────────────────────────────────────────────
     socket.on('chat:send', async (data: { channelId: string; content: string; replyToId?: string | null }) => {
+      if (!checkRateLimit(userId, 'chat:send')) return
       const { channelId, content, replyToId } = data ?? {}
       if (!isUuid(channelId) || !isString(content)) return
       if (content.length > 20000) return  // limite avant sanitization (DoS)
       if (replyToId !== undefined && replyToId !== null && !isUuid(replyToId)) return
+
+      // Contrôle d'accès : le socket doit avoir rejoint ce canal via chat:join (qui vérifie membership)
+      // Double-check DB pour éviter les races après expulsion de la communauté
+      if (!socket.rooms.has(`channel:${channelId}`)) return
+      const { rows: memberCheck } = await db.query(
+        `SELECT 1 FROM channels c
+         JOIN community_members cm ON c.community_id = cm.community_id
+         WHERE c.id = $1 AND cm.user_id = $2 LIMIT 1`,
+        [channelId, userId]
+      ).catch(() => ({ rows: [] as any[] }))
+      if (!memberCheck.length) return
 
       const sanitized = sanitize(content.trim())
       if (!sanitized || sanitized.length > 10000) return
@@ -338,12 +372,14 @@ export function registerSocketIO(server: Server): void {
     // ── chat:typing ───────────────────────────────────────────────────────────
     // Throttled by client — just broadcast to others in the room
     socket.on('chat:typing', (channelId: string) => {
+      if (!checkRateLimit(userId, 'chat:typing')) return
       if (!isUuid(channelId)) return
       socket.to(`channel:${channelId}`).emit('chat:typing', { userId, username })
     })
 
     // ── chat:react ────────────────────────────────────────────────────────────
     socket.on('chat:react', async (data: { messageId: string; emoji: string }) => {
+      if (!checkRateLimit(userId, 'chat:react')) return
       const { messageId, emoji } = data ?? {}
       if (!isUuid(messageId) || !isString(emoji) || emoji.length > 64) return
 
@@ -365,6 +401,7 @@ export function registerSocketIO(server: Server): void {
 
     // ── chat:edit ─────────────────────────────────────────────────────────────
     socket.on('chat:edit', async (data: { messageId: string; content: string }) => {
+      if (!checkRateLimit(userId, 'chat:edit')) return
       const { messageId, content } = data ?? {}
       if (!isUuid(messageId) || !isString(content)) return
       if (content.length > 20000) return
@@ -453,6 +490,7 @@ export function registerSocketIO(server: Server): void {
 
     // dm:send — envoyer un message dans une conversation
     socket.on('dm:send', async (data: { conversationId: string; content: string }) => {
+      if (!checkRateLimit(userId, 'dm:send')) return
       try {
         if (!isUuid(data?.conversationId) || !isString(data?.content)) return
         const raw = data.content.trim()
@@ -498,6 +536,7 @@ export function registerSocketIO(server: Server): void {
 
     // dm:typing — indicateur de frappe (throttlé côté client)
     socket.on('dm:typing', (conversationId: string) => {
+      if (!checkRateLimit(userId, 'dm:typing')) return
       if (!isUuid(conversationId)) return
       db.query<{ user_id: string }>(
         `SELECT user_id FROM dm_participants WHERE conversation_id = $1 AND user_id != $2`,

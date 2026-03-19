@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io'
 import * as crypto from 'crypto'
+import { checkRateLimit } from './rateLimiter'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function isUuid(v: unknown): v is string { return typeof v === 'string' && UUID_RE.test(v) }
@@ -201,12 +202,13 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── voice:speaking — VAD indicator ───────────────────────────────────────
   socket.on('voice:speaking', ({ channelId, speaking }: { channelId: string; speaking: boolean }) => {
+    if (!checkRateLimit(userId, 'voice:speaking')) return
     socket.to(voiceRoom(channelId)).emit('voice:speaking', { socketId: socket.id, userId, speaking })
   })
 
   // ── voice:ping — keep presence alive + refresh sidebar for caller ──────────
   socket.on('voice:ping', async (channelId: string) => {
-    if (!channelId) return
+    if (!isUuid(channelId)) return
     await broadcastVoiceChannelUpdate(server, channelId)
   })
 
@@ -218,6 +220,7 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── jukebox:update — relay jukebox state to all voice room peers ──────────
   socket.on('jukebox:update', ({ channelId, state }: { channelId: string; state: unknown }) => {
+    if (!checkRateLimit(userId, 'jukebox:update')) return
     if (!isUuid(channelId)) return
     if (!socket.rooms.has(voiceRoom(channelId))) return
     const serialized = JSON.stringify(state)
@@ -256,12 +259,21 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // Signaling — forwarded to target socket only (same pattern as voice:offer/answer/ice)
   socket.on('p2p:offer',  ({ to, sdp, channelId }: { to: string; sdp: unknown; channelId: string }) => {
+    if (!isUuid(channelId)) return
+    const pool = _p2pChannels.get(channelId)
+    if (!pool || !pool.has(socket.id) || !pool.has(to)) return  // sender et target doivent être dans le pool
     server.to(to).emit('p2p:offer',  { from: socket.id, sdp, channelId })
   })
   socket.on('p2p:answer', ({ to, sdp, channelId }: { to: string; sdp: unknown; channelId: string }) => {
+    if (!isUuid(channelId)) return
+    const pool = _p2pChannels.get(channelId)
+    if (!pool || !pool.has(socket.id) || !pool.has(to)) return
     server.to(to).emit('p2p:answer', { from: socket.id, sdp, channelId })
   })
   socket.on('p2p:ice',    ({ to, candidate, channelId }: { to: string; candidate: unknown; channelId: string }) => {
+    if (!isUuid(channelId)) return
+    const pool = _p2pChannels.get(channelId)
+    if (!pool || !pool.has(socket.id) || !pool.has(to)) return
     server.to(to).emit('p2p:ice',    { from: socket.id, candidate, channelId })
   })
 

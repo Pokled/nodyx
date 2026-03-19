@@ -33,6 +33,7 @@ export default async function whisperRoutes(app: FastifyInstance) {
     { preHandler: [requireAuth] },
     async (req, reply) => {
       const { id } = req.params
+      const userId = (req as any).user!.userId
 
       const { rows: rooms } = await db.query(
         `SELECT id, creator_id, context_type, context_id, context_label, name,
@@ -46,6 +47,11 @@ export default async function whisperRoutes(app: FastifyInstance) {
       }
 
       const room = rooms[0]
+
+      // Contrôle d'accès : seul le créateur peut accéder à la room
+      if (room.creator_id !== userId) {
+        return reply.status(403).send({ error: 'Access denied', code: 'FORBIDDEN' })
+      }
 
       // Check if expired
       if (new Date(room.expires_at) < new Date()) {

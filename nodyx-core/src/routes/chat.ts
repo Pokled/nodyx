@@ -15,6 +15,18 @@ import net from 'net'
 // ── SSRF guard — bloque les IPs privées / loopback / link-local ───────────────
 
 function isPrivateIp(ip: string): boolean {
+  // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1) — bypass critique
+  const mapped4 = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
+  if (mapped4) return isPrivateIp(mapped4[1])
+  // IPv4-in-IPv6 hex notation (e.g. ::ffff:7f00:0001 = 127.0.0.1)
+  const mapped4hex = ip.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i)
+  if (mapped4hex) {
+    const a = parseInt(mapped4hex[1], 16)
+    const b = parseInt(mapped4hex[2], 16)
+    const ipv4 = `${(a >> 8) & 0xff}.${a & 0xff}.${(b >> 8) & 0xff}.${b & 0xff}`
+    return isPrivateIp(ipv4)
+  }
+
   // IPv6 loopback et private
   if (ip === '::1' || ip === '::') return true
   if (ip.startsWith('fc') || ip.startsWith('fd')) return true  // fc00::/7

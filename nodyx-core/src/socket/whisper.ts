@@ -18,6 +18,7 @@
 import { Server, Socket } from 'socket.io'
 import sanitizeHtml from 'sanitize-html'
 import { db } from '../config/database'
+import { checkRateLimit } from './rateLimiter'
 
 const MAX_CONTENT_LENGTH = 2000
 
@@ -50,6 +51,17 @@ export function registerWhisperHandlers(io: Server, socket: Socket): void {
         socket.emit('whisper:expired', { roomId }); return
       }
 
+      // Contrôle d'accès : seul le créateur ou un participant existant peut accéder
+      if (room.creator_id !== userId) {
+        const { rows: wasParticipant } = await db.query(
+          `SELECT 1 FROM whisper_messages WHERE room_id = $1 AND user_id = $2 LIMIT 1`,
+          [roomId, userId]
+        )
+        if (!wasParticipant.length) {
+          socket.emit('whisper:expired', { roomId }); return
+        }
+      }
+
       socket.join(`whisper:${roomId}`)
 
       // History (last 50)
@@ -78,6 +90,7 @@ export function registerWhisperHandlers(io: Server, socket: Socket): void {
 
   // ── whisper:message ─────────────────────────────────────────────────────────
   socket.on('whisper:message', async ({ roomId, content }: { roomId: string; content: string }) => {
+    if (!checkRateLimit(userId, 'whisper:message')) return
     if (!roomId || !content) return
 
     const clean = sanitize(content)
@@ -117,6 +130,7 @@ export function registerWhisperHandlers(io: Server, socket: Socket): void {
 
   // ── whisper:typing ──────────────────────────────────────────────────────────
   socket.on('whisper:typing', ({ roomId }: { roomId: string }) => {
+    if (!checkRateLimit(userId, 'whisper:typing')) return
     if (!roomId) return
     socket.to(`whisper:${roomId}`).emit('whisper:typing', { roomId, userId, username })
   })

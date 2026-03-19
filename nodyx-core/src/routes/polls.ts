@@ -406,27 +406,26 @@ export default async function pollRoutes(app: FastifyInstance) {
 
     if (!votes?.length) return reply.code(400).send({ error: 'votes array required' })
 
-    const { rows: [poll] } = await db.query(`SELECT * FROM polls WHERE id = $1`, [id])
-    if (!poll) return reply.code(404).send({ error: 'Poll not found' })
-    if (!isOpen(poll))  return reply.code(409).send({ error: 'Poll is closed' })
+    // Validation préliminaire sans lock (fail-fast)
+    const { rows: [pollPre] } = await db.query(`SELECT id, type, multiple, max_choices FROM polls WHERE id = $1`, [id])
+    if (!pollPre) return reply.code(404).send({ error: 'Poll not found' })
 
     // Validation des votes selon le type
-    if (poll.type === 'choice') {
-      if (!poll.multiple && votes.length > 1)
+    if (pollPre.type === 'choice') {
+      if (!pollPre.multiple && votes.length > 1)
         return reply.code(400).send({ error: 'This poll allows only one choice' })
-      if (poll.max_choices && votes.length > poll.max_choices)
-        return reply.code(400).send({ error: `Maximum ${poll.max_choices} choices` })
+      if (pollPre.max_choices && votes.length > pollPre.max_choices)
+        return reply.code(400).send({ error: `Maximum ${pollPre.max_choices} choices` })
     }
 
-    if (poll.type === 'schedule') {
-      // Chaque vote doit avoir une valeur 0/1/2
+    if (pollPre.type === 'schedule') {
       for (const v of votes) {
         if (v.value === undefined || ![0, 1, 2].includes(v.value))
           return reply.code(400).send({ error: 'schedule votes require value 0 (no), 1 (maybe), 2 (yes)' })
       }
     }
 
-    if (poll.type === 'ranking') {
+    if (pollPre.type === 'ranking') {
       const ranks = votes.map(v => v.value ?? 0)
       const sorted = [...ranks].sort((a, b) => a - b)
       if (sorted[0] !== 1 || sorted[sorted.length - 1] !== sorted.length)
@@ -443,8 +442,20 @@ export default async function pollRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Invalid option_id(s)' })
 
     const client = await (db as any).connect()
+    let poll: any
     try {
       await client.query('BEGIN')
+
+      // Re-vérifier l'état du sondage DANS la transaction avec verrou
+      // Empêche la race condition : admin ferme le poll entre le check et le vote
+      const { rows: [lockedPoll] } = await client.query(
+        `SELECT * FROM polls WHERE id = $1 FOR UPDATE`, [id]
+      )
+      if (!lockedPoll || !isOpen(lockedPoll)) {
+        await client.query('ROLLBACK')
+        return reply.code(409).send({ error: 'Poll is closed' })
+      }
+      poll = lockedPoll
 
       // Pour choice et ranking : supprimer les votes précédents de cet utilisateur
       if (poll.type !== 'schedule') {

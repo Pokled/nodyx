@@ -45,12 +45,12 @@ async function forgotPasswordRateLimit(request: FastifyRequest, reply: FastifyRe
   }
 }
 
-// Rate limit strict pour login : 10 tentatives / 15 min / IP
+// Rate limit strict pour login : 5 tentatives / 15 min / IP
 async function loginRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const key   = `login_rate:${request.ip}`
   const count = await redis.incr(key)
   if (count === 1) await redis.expire(key, 15 * 60)
-  if (count > 10) {
+  if (count > 5) {
     const ttl = await redis.ttl(key)
     reply.header('Retry-After', String(ttl))
     return reply.code(429).send({

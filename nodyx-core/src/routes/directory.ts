@@ -40,10 +40,24 @@ async function cfRequest(method: string, path: string, body?: object) {
   return res.json() as Promise<any>;
 }
 
+function isPrivateHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase()
+  if (h === 'localhost' || h === '127.0.0.1' || h === '::1') return true
+  if (h.startsWith('192.168.') || h.startsWith('10.')) return true
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true
+  if (h.startsWith('169.254.') || h.startsWith('100.64.')) return true
+  if (h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80')) return true
+  return false
+}
+
 async function checkUrl(url: string): Promise<boolean> {
   return new Promise((resolve) => {
     try {
       const parsed = new URL(url);
+      // Bloquer les adresses privées / loopback (anti-SSRF)
+      if (isPrivateHostname(parsed.hostname)) return resolve(false);
+      // En production, exiger HTTPS
+      if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') return resolve(false);
       const lib = parsed.protocol === 'https:' ? https : http;
       const req = lib.request(
         { hostname: parsed.hostname, path: '/', method: 'HEAD', timeout: 5000 },
@@ -516,10 +530,11 @@ export default async function directoryRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: 'instance_slug and instance_url required' });
       }
 
-      // Validation du schéma HTTPS
+      // Validation du schéma HTTPS + rejet des IPs privées (anti-SSRF / directory poisoning)
       try {
         const parsed = new URL(instance_url);
-        if (parsed.protocol !== 'https:') throw new Error();
+        if (parsed.protocol !== 'https:') throw new Error('https required');
+        if (isPrivateHostname(parsed.hostname)) throw new Error('private ip');
       } catch {
         return reply.status(400).send({ error: 'invalid instance_url' });
       }
@@ -539,7 +554,7 @@ export default async function directoryRoutes(app: FastifyInstance) {
         // Sanitize : texte brut uniquement (strip HTML)
         const title   = sanitizeHtml(String(t.title), { allowedTags: [], allowedAttributes: {} }).slice(0, 200);
         const excerpt = sanitizeHtml(String(t.excerpt ?? ''), { allowedTags: [], allowedAttributes: {} }).slice(0, 300);
-        const tags    = Array.isArray(t.tags) ? t.tags.map(String) : [];
+        const tags    = Array.isArray(t.tags) ? t.tags.slice(0, 50).map(String) : [];
         const replies = parseInt(t.reply_count ?? '0', 10) || 0;
 
         await db.query(

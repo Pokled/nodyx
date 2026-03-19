@@ -582,7 +582,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     const communityId = await getCommunityId()
     const q = request.query as { limit?: string; offset?: string; category_id?: string }
     const limit  = Math.min(Number(q.limit  ?? 50), 100)
-    const offset = Number(q.offset ?? 0)
+    const offset = Math.max(0, Math.min(Number(q.offset ?? 0), 100000))
 
     let where = `c.community_id = $1`
     const params: unknown[] = [communityId]
@@ -1011,7 +1011,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.get('/audit-log', { preHandler: [adminOnly] }, async (request, reply) => {
     const q = request.query as { limit?: string; offset?: string; action?: string; actor?: string }
     const limit  = Math.min(Number(q.limit  ?? 50), 200)
-    const offset = Number(q.offset ?? 0)
+    const offset = Math.max(0, Math.min(Number(q.offset ?? 0), 100000))
 
     const conditions: string[] = []
     const params: unknown[] = []

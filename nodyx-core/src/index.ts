@@ -46,7 +46,7 @@ server.register(fastifyCors, {
       signetOrigin,
     ].filter(Boolean) as string[]
     if (typeof corsOrigin === 'boolean' && corsOrigin) return cb(null, true)
-    if (allowed.some(o => origin === o || origin.startsWith(o))) return cb(null, true)
+    if (allowed.some(o => origin === o)) return cb(null, true)
     cb(new Error('CORS: origin non autorisée'), false)
   },
   credentials: true,
@@ -113,6 +113,10 @@ const start = async () => {
   if (jwtSecret.length < 32) {
     console.error('FATAL: JWT_SECRET must be at least 32 characters. Refusing to start.')
     process.exit(1)
+  }
+
+  if (process.env.NODE_ENV === 'production' && !process.env.REDIS_PASSWORD) {
+    console.warn('[Security] REDIS_PASSWORD not set — Redis is running without authentication')
   }
 
   await runMigrations()

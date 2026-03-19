@@ -92,7 +92,16 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth],
   }, async (request, reply) => {
     const { q } = request.query as { q?: string }
-    if (!q || q.trim().length < 2) return reply.send({ users: [] })
+    if (!q || q.trim().length < 3) return reply.send({ users: [] })
+
+    // Rate limit per-user : max 20 recherches/min (clé Redis search_rate:{userId})
+    const userId = request.user!.userId
+    const ratKey = `search_rate:${userId}`
+    const count  = await redis.incr(ratKey)
+    if (count === 1) await redis.expire(ratKey, 60)
+    if (count > 20) {
+      return reply.code(429).send({ error: 'Too many search requests, please slow down.', code: 'RATE_LIMITED' })
+    }
 
     const { rows } = await db.query(`
       SELECT u.id, u.username, u.avatar, p.name_color
@@ -102,7 +111,7 @@ export default async function userRoutes(app: FastifyInstance) {
       AND    u.id != $2
       ORDER  BY u.username ASC
       LIMIT  10
-    `, [`%${q.trim()}%`, request.user!.userId])
+    `, [`%${q.trim()}%`, userId])
 
     return reply.send({ users: rows })
   })
@@ -488,5 +497,46 @@ export default async function userRoutes(app: FastifyInstance) {
     }
 
     return reply.send({ user })
+  })
+
+  // PATCH /api/v1/users/me/public-key — store user's ECDH public key (E2E DM encryption)
+  // The public key is a base64-encoded ECDH P-256 SubjectPublicKeyInfo (spki) key.
+  // The private key NEVER leaves the browser.
+  app.patch('/me/public-key', {
+    preHandler: [rateLimit, requireAuth],
+  }, async (request, reply) => {
+    const me = request.user!.userId
+    const { public_key } = request.body as { public_key?: string }
+
+    if (!public_key || typeof public_key !== 'string') {
+      return reply.code(400).send({ error: 'public_key required', code: 'BAD_REQUEST' })
+    }
+    // Validate: must be a valid base64 string (spki format, ~92 chars for P-256)
+    if (!/^[A-Za-z0-9+/=]{80,200}$/.test(public_key)) {
+      return reply.code(400).send({ error: 'Invalid public_key format', code: 'BAD_REQUEST' })
+    }
+
+    await db.query(
+      `UPDATE users SET public_key = $1 WHERE id = $2`,
+      [public_key, me]
+    )
+
+    return reply.send({ ok: true })
+  })
+
+  // GET /api/v1/users/:username/public-key — retrieve a user's ECDH public key
+  // Required by the sender to derive the shared ECDH secret before encrypting a DM.
+  app.get('/:username/public-key', {
+    preHandler: [rateLimit, requireAuth],
+  }, async (request, reply) => {
+    const { username } = request.params as { username: string }
+    const { rows } = await db.query<{ public_key: string | null }>(
+      `SELECT public_key FROM users WHERE username = $1 LIMIT 1`,
+      [username]
+    )
+    if (!rows[0]) {
+      return reply.code(404).send({ error: 'User not found', code: 'NOT_FOUND' })
+    }
+    return reply.send({ public_key: rows[0].public_key ?? null })
   })
 }

@@ -7,15 +7,34 @@
  */
 
 import { FastifyInstance } from 'fastify'
+import * as fs   from 'fs'
+import * as path from 'path'
 
 const NODYX_VERSION = process.env.NODYX_VERSION ?? '1.8.0'
-import { db } from '../config/database'
+import { db, redis } from '../config/database'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as CommunityModel from '../models/community'
 import * as ThreadModel from '../models/thread'
 import * as TagModel from '../models/tag'
 import { io } from '../socket/io'
+
+// ── ESY Key (lazy-loaded once from disk) ─────────────────────────────────────
+
+let _esyKey: Record<string, unknown> | null = null
+
+function loadEsyKey(): Record<string, unknown> | null {
+  if (_esyKey) return _esyKey
+  const esyPath = process.env.ESY_KEY_PATH
+    ?? path.resolve(process.cwd(), '..', 'instance.esy')
+  if (!fs.existsSync(esyPath)) return null
+  try {
+    _esyKey = JSON.parse(fs.readFileSync(esyPath, 'utf8'))
+    return _esyKey
+  } catch {
+    return null
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -251,5 +270,56 @@ export default async function instanceRoutes(app: FastifyInstance) {
     } catch {
       return reply.send({ announcement: null })
     }
+  })
+
+  // POST /api/v1/instance/status — set/clear the current user's presence status
+  // Uses HTTP so it works even if the socket connection is still establishing.
+  app.post('/status', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const userId = request.user!.userId
+    const body = request.body as { emoji?: string; text?: string } | null
+
+    const status = body && (body.emoji || body.text)
+      ? { emoji: (body.emoji ?? '').slice(0, 8), text: (body.text ?? '').slice(0, 60) }
+      : null
+
+    if (status) {
+      await redis.set(`status:${userId}`, JSON.stringify(status), 'EX', 86400).catch(() => {})
+    } else {
+      await redis.del(`status:${userId}`).catch(() => {})
+    }
+
+    // Update all sockets of this user and broadcast to presence room
+    if (io) {
+      const sockets = await io.in('presence').fetchSockets()
+      sockets.filter(s => s.data.userId === userId).forEach(s => { (s.data as any).status = status })
+      io.to('presence').emit('presence:status_update', { userId, status })
+    }
+
+    return reply.send({ ok: true, status })
+  })
+
+  // GET /api/v1/instance/esy-public — ESY barbarization params (auth required)
+  // Returns the full ESY key so the browser can run barbarize/debarbarize locally.
+  // Requires authentication to avoid leaking the permutation to anonymous crawlers.
+  app.get('/esy-public', { preHandler: [rateLimit, requireAuth] }, async (_request, reply) => {
+    const key = loadEsyKey()
+    if (!key) {
+      return reply.code(503).send({
+        error:   'ESY key not generated. Run: npm run generate-esy',
+        code:    'ESY_NOT_CONFIGURED',
+        enabled: false,
+      })
+    }
+    // Expose ALL fields needed by the client (permutation, inverse, seed, rounds, glyphs)
+    return reply.send({
+      enabled:             true,
+      version:             key.version,
+      permutation:         key.permutation,
+      inverse_permutation: key.inverse_permutation,
+      noise_seed:          key.noise_seed,
+      rounds:              key.rounds,
+      glyphs:              key.glyphs,
+      fingerprint:         key.fingerprint,
+    })
   })
 }
