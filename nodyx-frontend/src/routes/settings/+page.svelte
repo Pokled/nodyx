@@ -183,7 +183,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-medium text-white">{known?.name ?? slug}</p>
-                                    <p class="text-xs text-gray-600 font-mono">{known?.url ?? slug + '.nexusnode.app'}</p>
+                                    <p class="text-xs text-gray-600 font-mono">{known?.url ?? slug + '.nodyx.org'}</p>
                                 </div>
                             </div>
                             <button
@@ -232,7 +232,7 @@
                     </button>
                 </div>
                 <p class="text-xs text-gray-700 mt-7">
-                    Le slug est le sous-domaine de l'instance — ex: <code class="text-indigo-500">french-godot</code> pour <code class="text-gray-500">french-godot.nexusnode.app</code>
+                    Le slug est le sous-domaine de l'instance — ex: <code class="text-indigo-500">french-godot</code> pour <code class="text-gray-500">french-godot.nodyx.org</code>
                 </p>
             {/if}
         </section>

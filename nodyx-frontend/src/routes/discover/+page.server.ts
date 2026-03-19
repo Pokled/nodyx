@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { env } from '$env/dynamic/public';
 
-const DIRECTORY_URL = (env.PUBLIC_DIRECTORY_URL ?? 'https://nexusnode.app').replace(/\/$/, '');
+const DIRECTORY_URL = (env.PUBLIC_DIRECTORY_URL ?? 'https://nodyx.org').replace(/\/$/, '');
 
 export const load: PageServerLoad = async ({ fetch, url }) => {
 	const q        = url.searchParams.get('q')?.trim() ?? '';
