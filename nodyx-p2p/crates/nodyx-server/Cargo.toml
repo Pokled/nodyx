@@ -1,0 +1,57 @@
+[package]
+name = "nodyx-server"
+version = "0.1.0"
+edition = "2021"
+description = "Nodyx API server — Axum/Rust backend (Phase 3)"
+
+[[bin]]
+name = "nodyx-server"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP framework
+axum = { version = "0.7", features = ["macros"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Database
+sqlx = { version = "0.7", features = [
+    "postgres",
+    "runtime-tokio-native-tls",
+    "uuid",
+    "chrono",
+] }
+
+# Redis
+redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
+
+# HTTP client (Cloudflare API, URL checks)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Serialization
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+chrono      = { version = "0.4", features = ["serde"] }
+uuid        = { version = "1", features = ["v4", "serde"] }
+rand        = "0.8"
+hex         = "0.4"
+url         = "2"
+regex-lite  = "0.1"
+
+# HTML sanitization (gossip inputs)
+ammonia = "4"
+
+# Env + errors + logging
+dotenvy             = "0.15"
+anyhow              = "1"
+thiserror           = "1"
+tracing             = "0.1"
+tracing-subscriber  = { version = "0.3", features = ["env-filter", "fmt"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
