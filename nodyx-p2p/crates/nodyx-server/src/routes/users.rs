@@ -133,7 +133,7 @@ async fn me_handler(
         "SELECT row_to_json(t) FROM (
            SELECT
              u.id, u.username, u.email, u.avatar, u.points, u.created_at,
-             u.email_verified,
+             u.email_verified, u.linked_instances,
              p.display_name, p.avatar_url, p.banner_url, p.bio, p.status,
              p.location, p.tags, p.links, p.github_username, p.name_color,
              p.name_glow, p.name_glow_intensity, p.name_animation,

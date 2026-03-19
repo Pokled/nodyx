@@ -376,7 +376,7 @@ async fn login_handler(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(body): Json<LoginBody>,
-) -> Result<impl IntoResponse, ApiError> {
+) -> Result<axum::response::Response, ApiError> {
     let email    = body.email.trim().to_lowercase();
     let password = body.password.clone();
     let client_ip = extract_ip(&headers, &ConnectInfo(addr));
@@ -419,9 +419,15 @@ async fn login_handler(
         }
     };
 
-    // Block if email not verified
+    // Block if email not verified — specific code for frontend
     if user.email_verified == Some(false) {
-        return Err(ApiError::Forbidden);
+        return Ok((
+            axum::http::StatusCode::FORBIDDEN,
+            Json(serde_json::json!({
+                "error": "Veuillez confirmer votre adresse email avant de vous connecter.",
+                "code":  "EMAIL_NOT_VERIFIED"
+            })),
+        ).into_response());
     }
 
     // Ban check — Redis first, then DB fallback
@@ -464,7 +470,7 @@ async fn login_handler(
     Ok(Json(serde_json::json!({
         "token": token,
         "user": { "id": user.id, "username": user.username, "email": user.email }
-    })))
+    })).into_response())
 }
 
 // ── POST /api/v1/auth/logout ──────────────────────────────────────────────────

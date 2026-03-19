@@ -337,22 +337,38 @@ async fn stats_handler(
     let heartbeat_keys: Vec<String> = redis.keys("heartbeat:*").await.unwrap_or_default();
     let online_count = heartbeat_keys.len();
 
-    // Activity last 7 days
-    let activity: Vec<Value> = sqlx::query_scalar::<_, Value>(
-        "SELECT row_to_json(t) FROM (
-           SELECT DATE(p.created_at) AS day, COUNT(*)::int AS posts
-           FROM posts p JOIN threads t ON t.id = p.thread_id
-           JOIN categories c ON c.id = t.category_id
-           WHERE c.community_id = $1 AND p.created_at > NOW() - INTERVAL '7 days'
-           GROUP BY day ORDER BY day ASC
-         ) t"
+    // Activity last 7 days (posts + new members merged by day)
+    let posts_rows: Vec<(chrono::NaiveDate, i32)> = sqlx::query_as(
+        "SELECT DATE(p.created_at) AS day, COUNT(*)::int AS posts
+         FROM posts p JOIN threads t ON t.id = p.thread_id
+         JOIN categories c ON c.id = t.category_id
+         WHERE c.community_id = $1 AND p.created_at > NOW() - INTERVAL '7 days'
+         GROUP BY day ORDER BY day ASC"
     )
     .bind(community_id)
     .fetch_all(&state.db)
     .await
-    .unwrap_or_default()
-    .into_iter()
-    .collect();
+    .unwrap_or_default();
+
+    let member_rows: Vec<(chrono::NaiveDate, i32)> = sqlx::query_as(
+        "SELECT DATE(joined_at) AS day, COUNT(*)::int AS new_members
+         FROM community_members
+         WHERE community_id = $1 AND joined_at > NOW() - INTERVAL '7 days'
+         GROUP BY day ORDER BY day ASC"
+    )
+    .bind(community_id)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+
+    use std::collections::HashMap;
+    let mut members_by_day: HashMap<chrono::NaiveDate, i32> = HashMap::new();
+    for (day, count) in member_rows { members_by_day.insert(day, count); }
+
+    let activity: Vec<Value> = posts_rows.into_iter().map(|(day, posts)| {
+        let new_members = members_by_day.get(&day).copied().unwrap_or(0);
+        serde_json::json!({ "day": day.to_string(), "posts": posts, "new_members": new_members })
+    }).collect();
 
     let top_contributors: Vec<Value> = sqlx::query_scalar::<_, Value>(
         "SELECT row_to_json(t) FROM (
@@ -638,7 +654,7 @@ async fn bans_handler(
     .into_iter()
     .collect();
 
-    Ok(Json(serde_json::json!({ "bans": bans })))
+    Ok(Json(Value::Array(bans)))
 }
 
 // ── POST /admin/members/:id/ban ───────────────────────────────────────────────
