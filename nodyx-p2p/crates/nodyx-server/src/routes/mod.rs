@@ -4,6 +4,7 @@ pub mod forums;
 pub mod notifications;
 pub mod polls;
 pub mod search;
+pub mod tasks;
 pub mod users;
 
 use axum::{middleware, Router};
@@ -18,6 +19,7 @@ pub fn build(state: AppState) -> Router {
         .nest("/api/v1", forums::router())
         .nest("/api/v1", notifications::router())
         .nest("/api/v1", polls::router())
+        .nest("/api/v1", tasks::router())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             directory::subdomain_redirect,
