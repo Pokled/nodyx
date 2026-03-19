@@ -48,7 +48,7 @@ fn extract_subdomain(host: &str) -> Option<String> {
     Some(slug.to_string())
 }
 
-fn client_ip(headers: &HeaderMap, peer: SocketAddr) -> String {
+pub fn client_ip(headers: &HeaderMap, peer: SocketAddr) -> String {
     headers
         .get("x-forwarded-for")
         .and_then(|h| h.to_str().ok())
