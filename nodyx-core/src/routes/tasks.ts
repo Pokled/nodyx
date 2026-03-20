@@ -458,7 +458,17 @@ export default async function taskRoutes(app: FastifyInstance) {
     const params: unknown[] = []
     if (body.title       !== undefined) { params.push(body.title);        updates.push(`title = $${params.length}`) }
     if (body.description !== undefined) { params.push(body.description);  updates.push(`description = $${params.length}`) }
-    if (body.assignee_id !== undefined) { params.push(body.assignee_id);  updates.push(`assignee_id = $${params.length}`) }
+    if (body.assignee_id !== undefined) {
+      // null = désassigner ; sinon vérifier que l'assignee appartient à cette communauté
+      if (body.assignee_id !== null) {
+        const { rows: [assigneeOk] } = await db.query(
+          `SELECT 1 FROM community_members WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
+          [communityId, body.assignee_id]
+        )
+        if (!assigneeOk) return reply.code(400).send({ error: 'Invalid assignee for this community' })
+      }
+      params.push(body.assignee_id);  updates.push(`assignee_id = $${params.length}`)
+    }
     if (body.due_date    !== undefined) { params.push(body.due_date);     updates.push(`due_date = $${params.length}`) }
     if (body.priority    !== undefined) { params.push(body.priority);     updates.push(`priority = $${params.length}`) }
     if (body.column_id   !== undefined) {

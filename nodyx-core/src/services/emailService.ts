@@ -23,6 +23,12 @@ function createTransport() {
   })
 }
 
+// ── Sanitize display strings against SMTP header injection ───────────────────
+// Strip CR/LF characters that could be used to inject additional email headers.
+function sanitizeHeader(value: string): string {
+  return value.replace(/[\r\n]/g, '')
+}
+
 // ── Email verification ────────────────────────────────────────────────────────
 
 export async function sendVerificationEmail(opts: {
@@ -34,8 +40,9 @@ export async function sendVerificationEmail(opts: {
     throw new Error('SMTP non configuré sur cette instance')
   }
 
-  const { to, username, verifyUrl } = opts
-  const communityName = process.env.NODYX_COMMUNITY_NAME ?? 'Nodyx'
+  const { to, verifyUrl } = opts
+  const username      = sanitizeHeader(opts.username)
+  const communityName = sanitizeHeader(process.env.NODYX_COMMUNITY_NAME ?? 'Nodyx')
   const from = process.env.SMTP_FROM ?? process.env.SMTP_USER!
 
   const transport = createTransport()
@@ -111,8 +118,9 @@ export async function sendPasswordResetEmail(opts: {
     throw new Error('SMTP non configuré sur cette instance')
   }
 
-  const { to, username, resetUrl } = opts
-  const communityName = process.env.NODYX_COMMUNITY_NAME ?? 'Nodyx'
+  const { to, resetUrl } = opts
+  const username      = sanitizeHeader(opts.username)
+  const communityName = sanitizeHeader(process.env.NODYX_COMMUNITY_NAME ?? 'Nodyx')
   const from = process.env.SMTP_FROM ?? process.env.SMTP_USER!
 
   const transport = createTransport()

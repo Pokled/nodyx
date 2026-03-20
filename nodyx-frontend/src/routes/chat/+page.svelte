@@ -428,7 +428,10 @@
 
 	function sendGif(url: string) {
 		if (!s || !selectedChannel) return;
-		const content = `<img src="${url}" alt="GIF" style="max-width:360px;border-radius:8px;">`;
+		// Only allow https GIF URLs — prevents data:/javascript: injection in img src
+		if (!/^https:\/\//i.test(url)) return;
+		const safeUrl = url.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+		const content = `<img src="${safeUrl}" alt="GIF" style="max-width:360px;border-radius:8px;">`;
 		s.emit('chat:send', { channelId: selectedChannel.id, content });
 		showGifPicker = false;
 		gifQuery = '';

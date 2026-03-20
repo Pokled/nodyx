@@ -35,7 +35,7 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
 
   let payload: JwtPayload
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload
+    payload = jwt.verify(token, process.env.JWT_SECRET!, { algorithms: ['HS256'] }) as JwtPayload
   } catch {
     return reply.code(401).send({ error: 'Invalid or expired token', code: 'UNAUTHORIZED' })
   }
@@ -70,7 +70,7 @@ export async function optionalAuth(request: FastifyRequest, _reply: FastifyReply
   if (!token) return
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload
+    const payload = jwt.verify(token, process.env.JWT_SECRET!, { algorithms: ['HS256'] }) as JwtPayload
     const [nodeSession, nodyx_session] = await Promise.all([
       redis.exists(`session:${token}`),
       redis.exists(`nodyx:session:${token}`),

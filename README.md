@@ -5,7 +5,7 @@
 
   <p><strong>The community platform that no one can take from you.<br/>Forum + Chat + Voice + P2P Canvas — on your server, under your control, forever.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-v1.8.1-7c3aed)](CHANGELOG.md)
+  [![Version](https://img.shields.io/badge/version-v1.8.2-7c3aed)](CHANGELOG.md)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
   [![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
   [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
@@ -29,7 +29,7 @@
 
 ---
 
-> **[→ Live demo: nexusnode.app](https://nexusnode.app)** — official instance, production VPS
+> **[→ Live demo: nodyx.org](https://nodyx.org)** — official instance, production VPS
 
 ---
 
@@ -126,7 +126,7 @@ nodyx-relay client  →  persistent TCP tunnel → exposes local port 80
 
 - Automatic reconnection with exponential backoff (1s → 30s max)
 - JWT authentication per instance
-- Routing by slug: `yourclub.nexusnode.app` → proxied to the Pi behind your router
+- Routing by slug: `yourclub.nodyx.org` → proxied to the Pi behind your router
 - Validated on a real Raspberry Pi 4 with zero open ports ✅
 
 ### WebRTC DataChannels — P2P without the server
@@ -223,7 +223,7 @@ The installer offers **three network modes**:
 | Mode | Requirements | Result |
 |---|---|---|
 | **Open ports** | Ports 80 + 443, domain or IP | Let's Encrypt HTTPS, full control |
-| **Nodyx Relay** ⭐ | Nothing — outbound TCP only | `yourclub.nexusnode.app` in minutes |
+| **Nodyx Relay** ⭐ | Nothing — outbound TCP only | `yourclub.nodyx.org` in minutes |
 | **Cloudflare Tunnel** | CF account + own domain | Your custom domain, no open ports |
 
 > **Nodyx Relay** is the recommended default — works on a Raspberry Pi behind a home router.
@@ -351,7 +351,7 @@ Database migrations are applied automatically on startup — no manual SQL neede
 | **Global Search** — cross-instance FTS index, `/discover` UI | v1.5 |
 | **Event Calendar** — CRUD, RSVP, OSM maps, cover image, rich snippets | v1.6 |
 | **Gossip Protocol** — event federation across instances | v1.6 |
-| **Nodyx Signet** — passwordless ECDSA P-256 auth PWA at `signet.nexusnode.app` | v1.7 |
+| **Nodyx Signet** — passwordless ECDSA P-256 auth PWA at `signet.nodyx.org` | v1.7 |
 | **QR enrollment** — scan from settings to skip manual token entry | v1.7 |
 | **Optimistic UI** — all mutations update local state instantly (no page re-fetches) | v1.7 |
 | **Notification center** — purge automatique 30j + effacer les lues | v1.7 |
@@ -364,13 +364,17 @@ Database migrations are applied automatically on startup — no manual SQL neede
 | **Update alert** — admin banner when a new GitHub release is available (Redis-cached 6h) | v1.8 |
 | **Instance version display** — "Nodyx v1.8.x" shown on home page from `NODYX_VERSION` env | v1.8 |
 | **Security audit** — PATCH /cards permission fix, health 503, HOST binding, enrollment adminOnly, rate limit on /announcement, moderators can manage tags | v1.8.1 |
+| **Full paranoid security audit** — 38 vulnerabilities fixed: SQLi (gardenService, notifications), JWT algorithm confusion, SSRF/DNS rebinding (unfurl), Socket.IO IDOR (chat:react, chat:delete, voice:stats, jukebox), CSS/XSS injection (profile themes, font CSS, GIF URLs), auth hardening (enrollment rate limit, logout session cleanup, ban checks), crypto (WebP RIFF validation, SMTP header injection), DB SSL support | v1.8.2 |
 
 ### Coming
 
 | Feature | Notes |
 |---|---|
 | **Nodes** — durable structured knowledge, community-validated via Garden | [SPEC 013](docs/en/specs/013-node/SPEC.md) |
+| **DMs end-to-end encrypted** — ECDH key exchange + AES-256-GCM | [Spec](docs/ideas/DM_ARCHITECTURE.md) |
+| **Plugin system** — external contributor API (fullstack hooks) | [Spec](docs/ideas/PLUGIN_SYSTEM.md) |
 | Mobile (Capacitor) / Desktop (Tauri) | — |
+| Rust migration — nodyx-server (Axum) replacing nodyx-core progressively | [memory/phase3_rust.md] |
 
 ---
 

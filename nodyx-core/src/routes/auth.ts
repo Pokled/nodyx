@@ -108,7 +108,7 @@ function signToken(userId: string, username: string): string {
   return jwt.sign(
     { userId, username },
     process.env.JWT_SECRET!,
-    { expiresIn: '7d' }
+    { expiresIn: '7d', algorithm: 'HS256' }
   )
 }
 
@@ -271,8 +271,12 @@ export default async function authRoutes(app: FastifyInstance) {
   app.post('/logout', {
     preHandler: [requireAuth],
   }, async (request, reply) => {
-    const token = request.headers.authorization!.slice(7)
-    await redis.del(`session:${token}`)
+    const token  = request.headers.authorization!.slice(7)
+    const userId = (request as any).user.userId
+    await Promise.all([
+      redis.del(`session:${token}`),
+      redis.srem(`user_sessions:${userId}`, token),
+    ])
     return reply.send({ message: 'Logged out' })
   })
 

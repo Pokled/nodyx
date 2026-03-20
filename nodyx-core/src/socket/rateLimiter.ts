@@ -29,7 +29,10 @@ export const RATE_RULES: Record<string, RuleConfig> = {
   'whisper:message':      { limit: 5,  windowMs: 1_000  },
   'whisper:typing':       { limit: 3,  windowMs: 1_000  },
   'voice:speaking':       { limit: 10, windowMs: 1_000  },
-  'jukebox:update':       { limit: 5,  windowMs: 1_000  },
+  'jukebox:update':         { limit: 5,  windowMs: 1_000  },
+  'jukebox:request_sync':   { limit: 3,  windowMs: 1_000  },
+  'voice:ping':             { limit: 3,  windowMs: 1_000  },
+  'voice:stats':            { limit: 10, windowMs: 1_000  },
 }
 
 // Clé composite : `${userId}::${eventKey}`

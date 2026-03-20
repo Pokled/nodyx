@@ -91,7 +91,9 @@ export function ensureFontLoaded(fontFamily: string | null | undefined, fontUrl:
   if (!browser || !fontUrl || !fontFamily || _injectedFonts.has(fontUrl)) return
   const style = document.createElement('style')
   style.setAttribute('data-nodyx-font', fontFamily)
-  style.textContent = `@font-face { font-family: '${CSS.escape(fontFamily)}'; src: url('${fontUrl}'); font-display: swap; }`
+  // Escape single quotes and backslashes in fontUrl before injecting into CSS string
+  const safeFontUrl = fontUrl.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+  style.textContent = `@font-face { font-family: '${CSS.escape(fontFamily)}'; src: url('${safeFontUrl}'); font-display: swap; }`
   document.head.appendChild(style)
   _injectedFonts.add(fontUrl)
 }
@@ -121,7 +123,9 @@ export function buildNameStyle(
   }
 
   if (fontFamily) {
-    parts.push(`font-family: '${fontFamily}', sans-serif`)
+    // Escape quotes/backslashes to prevent CSS injection in font-family string
+    const safeFontFamily = fontFamily.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    parts.push(`font-family: '${safeFontFamily}', sans-serif`)
   }
 
   return parts.join('; ')

@@ -549,12 +549,18 @@ export default async function directoryRoutes(app: FastifyInstance) {
       let indexed = 0;
 
       // ── Threads ──
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       for (const t of threads) {
         if (!t.thread_id || !t.title) continue;
+        // Validate UUID format — PostgreSQL would throw otherwise, causing unhandled errors
+        if (!UUID_RE.test(String(t.thread_id))) continue;
+        if (t.category_id && !UUID_RE.test(String(t.category_id))) continue;
         // Sanitize : texte brut uniquement (strip HTML)
         const title   = sanitizeHtml(String(t.title), { allowedTags: [], allowedAttributes: {} }).slice(0, 200);
         const excerpt = sanitizeHtml(String(t.excerpt ?? ''), { allowedTags: [], allowedAttributes: {} }).slice(0, 300);
-        const tags    = Array.isArray(t.tags) ? t.tags.slice(0, 50).map(String) : [];
+        const tags    = Array.isArray(t.tags)
+          ? t.tags.slice(0, 20).map((tag: unknown) => String(tag).slice(0, 50))
+          : [];
         const replies = parseInt(t.reply_count ?? '0', 10) || 0;
 
         await db.query(
@@ -585,6 +591,7 @@ export default async function directoryRoutes(app: FastifyInstance) {
       // ── Events ──
       for (const e of events) {
         if (!e.event_id || !e.title || !e.starts_at) continue;
+        if (!UUID_RE.test(String(e.event_id))) continue;
         const title   = sanitizeHtml(String(e.title), { allowedTags: [], allowedAttributes: {} }).slice(0, 200);
         const excerpt = sanitizeHtml(String(e.description ?? ''), { allowedTags: [], allowedAttributes: {} }).slice(0, 300);
         const tags    = Array.isArray(e.tags) ? e.tags.map((tag: unknown) => sanitizeHtml(String(tag), { allowedTags: [], allowedAttributes: {} }).slice(0, 50)) : [];
