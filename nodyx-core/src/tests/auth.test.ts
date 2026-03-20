@@ -22,6 +22,7 @@ vi.mock('../config/database', () => ({
     setex:    vi.fn().mockResolvedValue('OK'),
     ttl:      vi.fn().mockResolvedValue(60),
     sadd:     vi.fn().mockResolvedValue(1),
+    srem:     vi.fn().mockResolvedValue(1),
     smembers: vi.fn().mockResolvedValue([]),
   },
 }))
