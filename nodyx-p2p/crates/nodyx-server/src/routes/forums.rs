@@ -53,7 +53,7 @@ fn sanitize(html: &str) -> String {
     let tag_attrs: HashMap<&str, HashSet<&str>> = HashMap::from([
         ("span",   HashSet::from_iter(["class", "style", "data-align", "data-type"])),
         ("p",      HashSet::from_iter(["class", "style", "data-align", "data-type"])),
-        ("a",      HashSet::from_iter(["href", "target", "rel"])),
+        ("a",      HashSet::from_iter(["href", "target"])),  // "rel" géré automatiquement par ammonia (noopener noreferrer)
         ("img",    HashSet::from_iter(["src", "alt", "width", "height"])),
         ("iframe", HashSet::from_iter(["src", "width", "height", "frameborder", "allowfullscreen", "allow"])),
         ("th",     HashSet::from_iter(["rowspan", "colspan"])),

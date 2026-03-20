@@ -56,9 +56,13 @@
 	// All community members (for offline section in presence sidebar)
 	let allMembers = $state<{ user_id: string; username: string; avatar: string | null }[]>([])
 
-	// Offline = members who are NOT currently in the online list
+	// Offline = members who are NOT currently in the online list AND are not the current user
+	// The logged-in user is always considered online (belt-and-suspenders against race conditions)
 	const offlineMembers = $derived(
-		allMembers.filter(m => !onlineMembers.some(o => o.userId === m.user_id))
+		allMembers.filter(m =>
+			m.user_id !== (user as any)?.id &&
+			!onlineMembers.some(o => o.userId === m.user_id)
+		)
 	)
 	let showOffline = $state(false)
 
@@ -66,6 +70,30 @@
 		if (data.user && data.token && !data.user.is_banned) {
 			// SSR provided a valid session — use it directly (skip if banned)
 			initSocket(data.token, data.unreadCount ?? 0)
+
+			// Optimistically add current user to the online store immediately.
+			// presence:init will override with server-authoritative data once the
+			// socket connects, but this prevents the user from seeing themselves
+			// in the offline section during the connection window.
+			const uid = (data.user as any).id as string | undefined
+			if (uid && !onlineMembers.some(o => o.userId === uid)) {
+				onlineMembersStore.update(list => {
+					if (list.some(m => m.userId === uid)) return list
+					return [...list, {
+						userId:            uid,
+						username:          data.user!.username,
+						avatar:            (data.user as any).avatar ?? null,
+						nameColor:         null,
+						nameGlow:          null,
+						nameGlowIntensity: null,
+						nameAnimation:     null,
+						nameFontFamily:    null,
+						nameFontUrl:       null,
+						grade:             null,
+						status:            null,
+					}]
+				})
+			}
 		} else if (!data.user?.is_banned) {
 			// No SSR session (guest page) — try reconnecting from stored token
 			tryAutoConnect()
@@ -165,20 +193,44 @@
 		showStatusModal = true
 	}
 
-	function saveStatus() {
-		const sock = getSocket()
-		if (!sock) return
+	async function saveStatus() {
 		const payload = (statusEmoji || statusText)
 			? { emoji: statusEmoji.trim(), text: statusText.trim() }
 			: null
-		sock.emit('presence:set_status', payload)
 		showStatusModal = false
+
+		// Optimistic local update — UI reflects the change immediately
+		const uid = (user as any)?.id as string | undefined
+		if (uid) {
+			onlineMembersStore.update(list =>
+				list.map(m => m.userId === uid ? { ...m, status: payload } : m)
+			)
+		}
+
+		try {
+			await fetch('/api/v1/instance/status', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.token}` },
+				body: JSON.stringify(payload ?? {}),
+			})
+		} catch { /* ignore network errors */ }
 	}
 
-	function clearStatus() {
-		const sock = getSocket()
-		if (sock) sock.emit('presence:set_status', null)
+	async function clearStatus() {
 		showStatusModal = false
+		const uid = (user as any)?.id as string | undefined
+		if (uid) {
+			onlineMembersStore.update(list =>
+				list.map(m => m.userId === uid ? { ...m, status: null } : m)
+			)
+		}
+		try {
+			await fetch('/api/v1/instance/status', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.token}` },
+				body: JSON.stringify({}),
+			})
+		} catch { /* ignore */ }
 	}
 </script>
 

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use axum::{
     extract::FromRequestParts,
-    http::request::Parts,
+    http::{request::Parts, HeaderMap},
 };
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use redis::AsyncCommands;
@@ -82,4 +82,40 @@ impl FromRequestParts<AppState> for AuthUser {
             token,
         })
     }
+}
+
+/// Try to extract a user_id from `Authorization: Bearer <token>` without failing.
+/// Used for routes that support optional authentication (viewerId).
+pub async fn optional_auth(headers: &HeaderMap, state: &AppState) -> Option<Uuid> {
+    let auth_header = headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())?;
+
+    if !auth_header.starts_with("Bearer ") {
+        return None;
+    }
+    let token = &auth_header[7..];
+
+    let mut validation = Validation::new(Algorithm::HS256);
+    validation.set_required_spec_claims(&["exp", "userId", "username"]);
+
+    let token_data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(state.jwt_secret.as_bytes()),
+        &validation,
+    )
+    .ok()?;
+
+    let exists: bool = state
+        .redis
+        .clone()
+        .exists(format!("session:{}", token))
+        .await
+        .unwrap_or(false);
+
+    if !exists {
+        return None;
+    }
+
+    Uuid::parse_str(&token_data.claims.user_id).ok()
 }

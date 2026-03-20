@@ -37,3 +37,4 @@ nodyx-core/uploads/fonts/*
 nodyx-hub/.env
 nodyx-hub/hub.db
 nodyx-hub/build/
+instance.esy
