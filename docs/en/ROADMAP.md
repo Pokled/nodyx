@@ -1,5 +1,5 @@
 # NODYX — Roadmap
-### Version 1.4 — The realistic path
+### Version 1.8 — The sovereign stack
 
 ---
 
@@ -16,11 +16,12 @@
 | **Phase 1** | Forum MVP + Admin | ✅ Complete |
 | **Phase 2** | Real-time Chat + Directory + Network Identity | ✅ Complete |
 | **Phase 2.5** | Community customization + Light federation | ✅ Complete |
-| **Phase 3** | P2P Infrastructure + Rust Foundation | 🔨 In Progress |
-| **Phase 4** | Platform enrichment | 🔨 In Progress (v1.7) |
-| Phase 5 | Mobile and reputation | ⏳ Planned |
+| **Phase 3** | P2P Infrastructure + Rust Foundation | ✅ Complete |
+| **Phase 4** | Platform enrichment (v1.4 → v1.8) | ✅ Complete |
+| **Phase 4.5** | Security hardening (v1.8.2) | ✅ Complete |
+| Phase 5 | Mobile + Nodes + Reputation | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
-| **Phase Radio** | NODYX-RADIO — Internet radio tuner + cooperative ad network | 📻 Vision |
+| **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
 
 ---
 
@@ -171,7 +172,7 @@ A non-developer can:
 
 ---
 
-## PHASE 3 — P2P Infrastructure + Rust Foundation
+## PHASE 3 — P2P Infrastructure + Rust Foundation ✅ COMPLETE
 ### Goal: Break free from third-party network dependencies. Build the decentralized core.
 
 > *"P2P is the soul. Rust is the body."*
@@ -183,7 +184,7 @@ A non-developer can:
 
 ---
 
-### 3.0 — `nodyx-p2p`: The Rust Foundation 🔨 IN PROGRESS
+### 3.0 — `nodyx-p2p`: The Rust Foundation ✅ COMPLETE
 
 #### Why Rust here?
 
@@ -374,10 +375,10 @@ nodyx-core    (Fastify/Node.js) ────────────────
 
 ---
 
-## PHASE 4 — Platform enrichment
+## PHASE 4 — Platform enrichment (v1.4 → v1.8) ✅ COMPLETE
 ### Goal: Nodyx becomes the complete community platform
 
-**Already delivered early:**
+**Delivered:**
 - [x] **NodyxCanvas** (v0.9) — P2P collaborative whiteboard in voice channels (CRDT LWW, voice-aware cursors, PNG export)
 - [x] **Profile theme system** (v1.0) — 6 built-in presets (Défaut, Minuit, Forêt, Chaleur, Rose, Verre), CSS variable engine (`--p-bg`, `--p-card-bg`, `--p-accent`…), live editor with color pickers, app-wide propagation (nav, sidebars, background)
 - [x] **Mobile-responsive UI** (v1.0) — chat channel drawer, bottom navigation bar, VoicePanel accessible on mobile, responsive forum + admin pages
@@ -402,29 +403,70 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [x] **Admin — Enriched Dashboard** (v1.7) — extended stats (events/polls/assets/chat/DMs), dual 7-day activity chart (posts + new members), top 5 contributors, recent registrations
 - [x] **System Announcements** (v1.7) — color-coded banners (6 variants) admin-created, user-dismissible, optional expiry, live preview — `/admin/announcements`
 - [x] **Moderation Log** (v1.7) — audit trail for 11 admin action types, action/actor filters, pagination — `/admin/audit-log`, migrations 045-046
-
-**Knowledge & Discovery:**
-- [ ] **Nodes** — durable structured knowledge, Anchors, community-validated via Garden — [SPEC 013](../en/specs/013-node/SPEC.md)
-- [ ] **Galaxy Bar** — multi-instance switcher, decentralized SSO, bio-luminescent notifications — [SPEC 012](../en/specs/012-nodyx-galaxy-bar/SPEC.md)
-
-**Tools:**
-- [ ] File sharing (hosted on the node, no central CDN)
 - [x] **Lightweight task system** (v1.8) — community Kanban boards, configurable columns, cards with assignee/due date/priority, native HTML5 drag & drop, `/tasks`
-- [ ] Local Ollama AI — knowledge assistant (indexes local forum)
-- [ ] **Nodyx Guard Protocol** — toxicity scoring middleware in `chat:send`, configurable threshold, DB logs
-- [ ] Plugin marketplace — stable API for third-party extensions (foundations in `plugins/`)
 
 ---
 
-## PHASE 5 — Mobile and reputation
-### Goal: Nodyx in everyone's pocket
+## PHASE 4.5 — Security Hardening ✅ COMPLETE
+### Goal: Harden every surface area before Phase 5 opens the platform to broader use
 
-- [ ] iOS app via Capacitor
-- [ ] Android app via Capacitor
-- [ ] Desktop via Tauri (.exe/.app/.sh ~10MB, standalone)
-- [ ] NodyxPoints — inter-instance community reputation system
-- [ ] Badges and levels
-- [ ] Documented public API for third-party developers
+> *"Shipped fast. Now make it bulletproof."*
+> Full security audit conducted March 2026 — before any Phase 5 work begins.
+
+### Audit scope and results
+
+- **38 vulnerabilities** identified and fixed across the entire codebase
+- Zero TypeScript compilation errors after all fixes
+- All fixes deployed to production without downtime
+
+### Vulnerability categories fixed
+
+**SQL Injection**
+- [x] `gardenService` — parameterized queries replacing raw string interpolation
+- [x] `notifications` routes — all dynamic filters hardened
+
+**JWT**
+- [x] Algorithm confusion attack — explicit `algorithms: ['HS256']` enforced on all `jwt.verify()` calls
+
+**SSRF / DNS Rebinding**
+- [x] Open Graph unfurl (`chat:unfurl`) — private IP range blocklist (RFC 1918 + loopback + link-local), hostname resolution check before fetch
+
+**Socket.IO IDOR**
+- [x] `chat:react` — ownership/membership check before applying reaction
+- [x] `chat:delete` — author or admin validation, no cross-channel deletion
+- [x] `voice:stats` — channel membership verified before exposing peer stats
+- [x] `jukebox` events — room membership enforced on all queue mutations
+
+**CSS / XSS Injection**
+- [x] Profile themes — CSS variable values sanitized, no `url()` / `expression()` / `javascript:` allowed
+- [x] Font CSS injection — `font-family` values restricted to allowlist
+- [x] GIF URLs — scheme validation + domain allowlist before rendering
+
+**Authentication**
+- [x] Enrollment rate limiting — Nodyx Signet registration endpoint protected
+- [x] Logout session cleanup — JWT invalidated in Redis on explicit logout
+- [x] Assignee validation — task assignee must be a community member
+
+**Cryptography / Input**
+- [x] WebP RIFF validation — asset uploads verify magic bytes before Sharp processing
+- [x] SMTP header injection — newline stripping on all user-supplied email headers
+
+---
+
+## PHASE 5 — Mobile + Nodes + Reputation
+### Goal: Nodyx in everyone's pocket, with structured knowledge and end-to-end privacy
+
+- [ ] **Nodes** (SPEC 013) — durable structured knowledge, Anchors, community-validated via Garden — [SPEC 013](../en/specs/013-node/SPEC.md)
+- [ ] **DMs end-to-end encrypted** — ECDH key exchange + AES-256-GCM per-message encryption, keys never leave the client
+- [ ] **Plugin system** — stable external contributor API, plugin marketplace foundations (`plugins/` directory already in place)
+- [ ] **Mobile — iOS** via Capacitor
+- [ ] **Mobile — Android** via Capacitor
+- [ ] **Desktop** via Tauri (.exe/.app/.sh ~10MB, standalone)
+- [ ] **Rust migration** — `nodyx-server` Axum crate replacing nodyx-core progressively (directory → auth → search → users → forums → Socket.IO)
+- [ ] **NodyxPoints** — inter-instance community reputation system
+- [ ] **Badges and levels**
+- [ ] **Galaxy Bar** — multi-instance switcher, decentralized SSO, bio-luminescent notifications — [SPEC 012](../en/specs/012-nodyx-galaxy-bar/SPEC.md)
+- [ ] **Documented public API** for third-party developers
 
 ---
 
@@ -550,5 +592,5 @@ And because they can finally sustain themselves.
 
 ---
 
-*Version 2.1 — March 8, 2026*
+*Version 2.2 — March 2026*
 *"P2P is the soul. Rust is the body. Radio is the resilience. Community is the reason."*
