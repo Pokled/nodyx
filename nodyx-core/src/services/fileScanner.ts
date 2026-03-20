@@ -61,7 +61,8 @@ const EXPECTED_MAGIC: Record<string, MagicGroup> = {
   'image/png':   [{ bytes: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] }],
   'image/gif':   [{ bytes: [0x47, 0x49, 0x46, 0x38, 0x37, 0x61] },   // GIF87a
                   { bytes: [0x47, 0x49, 0x46, 0x38, 0x39, 0x61] }],  // GIF89a
-  'image/webp':  [{ bytes: [0x52, 0x49, 0x46, 0x46] }],              // RIFF (+ "WEBP" à offset 8)
+  // WebP is validated via a dedicated check in scanBuffer (RIFF + "WEBP" at offset 8)
+  'image/webp':  [{ bytes: [0x52, 0x49, 0x46, 0x46] }],              // RIFF header (step 1 of 2)
 
   // Fonts
   'font/woff':                       [{ bytes: [0x77, 0x4F, 0x46, 0x46] }],
@@ -140,6 +141,15 @@ export function scanBuffer(buf: Buffer, mimeType: string): ScanResult {
         ok:     false,
         reason: `Le contenu du fichier ne correspond pas au type déclaré (${mimeType})`,
       }
+    }
+  }
+
+  // 3b — WebP : vérifier que "WEBP" est présent à l'offset 8 (RIFF est partagé avec AVI/WAV)
+  if (mimeType === 'image/webp') {
+    const isWebP = buf.length >= 12
+      && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+    if (!isWebP) {
+      return { ok: false, reason: 'Fichier RIFF non-WebP refusé (AVI/WAV déguisé en WebP)' }
     }
   }
 

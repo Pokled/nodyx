@@ -90,7 +90,7 @@ async function authenticateSocket(socket: Socket, next: (err?: Error) => void) {
 
   let payload: JwtPayload
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload
+    payload = jwt.verify(token, process.env.JWT_SECRET!, { algorithms: ['HS256'] }) as JwtPayload
   } catch {
     return next(new Error('Invalid token'))
   }
@@ -189,7 +189,11 @@ export function registerSocketIO(server: Server): void {
 
       // Restore status from Redis (persists across reconnects within session)
       const savedStatus = await redis.get(`status:${userId}`).catch(() => null)
-      socket.data.status = savedStatus ? JSON.parse(savedStatus) : null
+      try {
+        socket.data.status = savedStatus ? JSON.parse(savedStatus) : null
+      } catch {
+        socket.data.status = null
+      }
 
       socket.join('presence')
 
@@ -383,6 +387,7 @@ export function registerSocketIO(server: Server): void {
     socket.on('chat:typing', (channelId: string) => {
       if (!checkRateLimit(userId, 'chat:typing')) return
       if (!isUuid(channelId)) return
+      if (!socket.rooms.has(`channel:${channelId}`)) return
       socket.to(`channel:${channelId}`).emit('chat:typing', { userId, username })
     })
 
@@ -393,9 +398,12 @@ export function registerSocketIO(server: Server): void {
       if (!isUuid(messageId) || !isString(emoji) || emoji.length > 64) return
 
       try {
-        const { reactions } = await ChannelModel.toggleReaction(messageId, userId, emoji)
+        // Vérifier que l'utilisateur est membre du channel contenant ce message
         const msgInfo = await ChannelModel.findMessageById(messageId)
         if (!msgInfo) return
+        if (!socket.rooms.has(`channel:${msgInfo.channel_id}`)) return
+
+        const { reactions } = await ChannelModel.toggleReaction(messageId, userId, emoji)
 
         if (io) {
           io.to(`channel:${msgInfo.channel_id}`).emit('chat:reaction_update', {
@@ -440,9 +448,16 @@ export function registerSocketIO(server: Server): void {
       if (!isUuid(messageId)) return
 
       try {
+        // Récupérer le channel du message pour scoper la vérification admin
+        const msgInfo = await ChannelModel.findMessageById(messageId)
+        if (!msgInfo) return
+
+        // Vérifier admin/owner dans la communauté du channel spécifique (pas n'importe quelle communauté)
         const { rows: roleRows } = await db.query(
-          `SELECT 1 FROM community_members WHERE user_id = $1 AND role IN ('admin', 'owner') LIMIT 1`,
-          [userId]
+          `SELECT 1 FROM community_members cm
+           JOIN channels c ON c.community_id = cm.community_id
+           WHERE c.id = $1 AND cm.user_id = $2 AND cm.role IN ('admin', 'owner') LIMIT 1`,
+          [msgInfo.channel_id, userId]
         )
         const byAdmin = roleRows.length > 0
         const { ok, channelId } = await ChannelModel.deleteMessage(messageId, userId, byAdmin)
@@ -548,7 +563,9 @@ export function registerSocketIO(server: Server): void {
       if (!checkRateLimit(userId, 'dm:typing')) return
       if (!isUuid(conversationId)) return
       db.query<{ user_id: string }>(
-        `SELECT user_id FROM dm_participants WHERE conversation_id = $1 AND user_id != $2`,
+        // AND user_id = $2 vérifie que l'émetteur est bien participant de cette conversation
+        `SELECT user_id FROM dm_participants WHERE conversation_id = $1 AND user_id != $2
+         AND EXISTS (SELECT 1 FROM dm_participants WHERE conversation_id = $1 AND user_id = $2)`,
         [conversationId, userId]
       ).then(({ rows }) => {
         for (const p of rows) {

@@ -11,6 +11,8 @@ import * as ChannelModel from '../models/channel'
 import { redis } from '../config/database'
 import dns from 'dns/promises'
 import net from 'net'
+import https from 'https'
+import http from 'http'
 
 // ── SSRF guard — bloque les IPs privées / loopback / link-local ───────────────
 
@@ -31,6 +33,7 @@ function isPrivateIp(ip: string): boolean {
   if (ip === '::1' || ip === '::') return true
   if (ip.startsWith('fc') || ip.startsWith('fd')) return true  // fc00::/7
   if (ip.startsWith('fe80')) return true                        // link-local
+  if (ip.startsWith('2001:db8')) return true                    // documentation (RFC 3849)
 
   // IPv4
   if (!net.isIPv4(ip)) return false
@@ -47,14 +50,18 @@ function isPrivateIp(ip: string): boolean {
   )
 }
 
-async function isSsrfSafe(hostname: string): Promise<boolean> {
-  // Rejeter les adresses IP directes privées
-  if (net.isIP(hostname)) return !isPrivateIp(hostname)
+/**
+ * Résout le hostname UNE FOIS et retourne l'IP résolue si sûre, null sinon.
+ * On retourne l'IP pour que le fetch l'utilise directement (anti-DNS rebinding).
+ */
+async function resolveSsrfSafe(hostname: string): Promise<string | null> {
+  // Adresse IP directe — valider sans DNS
+  if (net.isIP(hostname)) return isPrivateIp(hostname) ? null : hostname
   try {
     const { address } = await dns.lookup(hostname)
-    return !isPrivateIp(address)
+    return isPrivateIp(address) ? null : address
   } catch {
-    return false
+    return null
   }
 }
 
@@ -123,8 +130,10 @@ export default async function chatRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Invalid url' })
     }
 
-    const safe = await isSsrfSafe(parsed.hostname)
-    if (!safe) {
+    // Résolution DNS unique — l'IP est utilisée directement pour la connexion
+    // (anti-DNS rebinding : le même résultat est utilisé pour la validation ET la connexion)
+    const resolvedIp = await resolveSsrfSafe(parsed.hostname)
+    if (!resolvedIp) {
       return reply.code(400).send({ error: 'URL non autorisée' })
     }
 
@@ -136,9 +145,33 @@ export default async function chatRoutes(app: FastifyInstance) {
     }
 
     try {
-      const res = await fetch(parsed.toString(), {
-        headers: { 'User-Agent': 'NodyxBot/1.0 (link preview)' },
-        signal: AbortSignal.timeout(4000),
+      // Connexion directe à l'IP résolue pour éviter le DNS rebinding.
+      // Pour HTTPS : servername = hostname original pour la vérification TLS/SNI.
+      const res = await new Promise<{ ok: boolean; text: () => Promise<string> }>((resolve, reject) => {
+        const isHttps = parsed.protocol === 'https:'
+        const mod = isHttps ? https : http
+        const port = parsed.port ? Number(parsed.port) : (isHttps ? 443 : 80)
+        const options: https.RequestOptions = {
+          hostname: resolvedIp,
+          port,
+          path: (parsed.pathname || '/') + parsed.search,
+          method: 'GET',
+          headers: { 'Host': parsed.hostname, 'User-Agent': 'NodyxBot/1.0 (link preview)' },
+          ...(isHttps ? { servername: parsed.hostname } : {}),
+          timeout: 4000,
+        }
+        const req = mod.request(options, (res2) => {
+          if (!res2.statusCode || res2.statusCode < 200 || res2.statusCode >= 400) {
+            return resolve({ ok: false, text: async () => '' })
+          }
+          let data = ''
+          res2.setEncoding('utf8')
+          res2.on('data', (chunk: string) => { if (data.length < 512_000) data += chunk })
+          res2.on('end', () => resolve({ ok: true, text: async () => data }))
+        })
+        req.on('error', reject)
+        req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')) })
+        req.end()
       })
       if (!res.ok) return reply.code(422).send({ error: 'Fetch failed' })
 

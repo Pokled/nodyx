@@ -406,6 +406,16 @@ export default async function pollRoutes(app: FastifyInstance) {
 
     if (!votes?.length) return reply.code(400).send({ error: 'votes array required' })
 
+    // Vérification ban (un user banni ne peut pas voter)
+    const communityId = await getCommunityId()
+    if (communityId) {
+      const { rows: [ban] } = await db.query(
+        `SELECT 1 FROM community_bans WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
+        [communityId, userId]
+      )
+      if (ban) return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
+    }
+
     // Validation préliminaire sans lock (fail-fast)
     const { rows: [pollPre] } = await db.query(`SELECT id, type, multiple, max_choices FROM polls WHERE id = $1`, [id])
     if (!pollPre) return reply.code(404).send({ error: 'Poll not found' })

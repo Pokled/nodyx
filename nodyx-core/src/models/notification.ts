@@ -92,7 +92,8 @@ export async function deleteAllRead(userId: string): Promise<number> {
 // Purge globale : supprime les notifications lues de plus de 30 jours
 export async function purgeOldRead(daysOld = 30): Promise<number> {
   const { rowCount } = await db.query(
-    `DELETE FROM notifications WHERE is_read = true AND created_at < NOW() - INTERVAL '${daysOld} days'`
+    `DELETE FROM notifications WHERE is_read = true AND created_at < NOW() - ($1 * INTERVAL '1 day')`,
+    [daysOld]
   )
   return rowCount ?? 0
 }

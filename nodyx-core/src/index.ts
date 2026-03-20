@@ -116,7 +116,7 @@ const start = async () => {
   }
 
   if (process.env.NODE_ENV === 'production' && !process.env.REDIS_PASSWORD) {
-    console.warn('[Security] REDIS_PASSWORD not set — Redis is running without authentication')
+    console.warn('[Security] REDIS_PASSWORD not set — Redis est exposé sans authentification. Si Redis écoute sur 0.0.0.0, définissez REDIS_PASSWORD dans .env.')
   }
 
   await runMigrations()
@@ -137,6 +137,11 @@ const start = async () => {
         ],
         credentials: true,
       },
+      // Polling en premier : établit la session de manière fiable sur les instances
+      // directes ET relay (qui strip le header Upgrade WebSocket).
+      // Socket.IO sonde ensuite une upgrade WebSocket : sur les instances directes
+      // elle réussit ; sur relay elle échoue gracieusement et reste sur polling.
+      transports: ['polling', 'websocket'],
       // Keep ping interval under the relay server's request timeout (~11s).
       // Without this, long-polling connections are held open for 25s and the
       // relay proxy kills them before the server can respond, causing repeated

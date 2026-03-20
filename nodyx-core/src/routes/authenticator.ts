@@ -94,7 +94,7 @@ function signToken(userId: string, username: string): string {
   return jwt.sign(
     { userId, username },
     process.env.JWT_SECRET!,
-    { expiresIn: '7d' }
+    { expiresIn: '7d', algorithm: 'HS256' }
   )
 }
 
@@ -106,6 +106,18 @@ async function approveRateLimit(request: FastifyRequest, reply: FastifyReply) {
   if (count === 1) await redis.expire(key, 60)
   if (count > 10) {
     return reply.code(429).send({ error: 'Trop de tentatives', code: 'RATE_LIMITED' })
+  }
+}
+
+// 3 tentatives max par IP sur 5 minutes — l'espace de 256 bits du token le rend
+// non-bruteforçable par définition, mais sans rate limit un attaquant pourrait
+// inonder la DB et les logs.
+async function enrollRateLimit(request: FastifyRequest, reply: FastifyReply) {
+  const key = `auth_enroll_rate:${request.ip}`
+  const count = await redis.incr(key)
+  if (count === 1) await redis.expire(key, 300) // fenêtre 5 min
+  if (count > 3) {
+    return reply.code(429).send({ error: 'Trop de tentatives d\'enregistrement', code: 'RATE_LIMITED' })
   }
 }
 
@@ -174,7 +186,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
 
   // ── Enregistrement appareil ────────────────────────────────────────────────
 
-  app.post('/devices/register', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/devices/register', { preHandler: enrollRateLimit }, async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = RegisterDeviceBody.safeParse(request.body)
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Invalid payload', details: parsed.error.issues })

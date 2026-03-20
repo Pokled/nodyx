@@ -13,6 +13,8 @@ export const db = new Pool({
   max:                    20,    // default 10 — raised for parallel admin + layout queries
   idleTimeoutMillis:   30000,
   connectionTimeoutMillis: 5000, // fail fast instead of blocking indefinitely
+  // DB_SSL=true active le TLS pour les connexions PostgreSQL distantes (ex: managed DB)
+  ...(process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: true } } : {}),
 })
 
 export const redis = new Redis({

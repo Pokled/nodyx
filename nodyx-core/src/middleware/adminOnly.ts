@@ -31,7 +31,7 @@ export async function adminOnly(request: FastifyRequest, reply: FastifyReply): P
 
   let payload: JwtPayload
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload
+    payload = jwt.verify(token, process.env.JWT_SECRET!, { algorithms: ['HS256'] }) as JwtPayload
   } catch {
     return reply.code(401).send({ error: 'Invalid or expired token', code: 'UNAUTHORIZED' })
   }

@@ -96,11 +96,17 @@ export async function listSeeds(opts: {
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  let waterExpr = 'false'
+  if (requesterId) {
+    params.push(requesterId)
+    waterExpr = `EXISTS(SELECT 1 FROM seed_waters w WHERE w.seed_id = s.id AND w.user_id = $${params.length})`
+  }
   params.push(limit, offset)
 
   const { rows } = await db.query<SeedRow & { watered_by_me: boolean }>(
     `SELECT s.*,
-       ${requesterId ? `EXISTS(SELECT 1 FROM seed_waters w WHERE w.seed_id = s.id AND w.user_id = '${requesterId}')` : 'false'} AS watered_by_me
+       ${waterExpr} AS watered_by_me
      FROM feature_seeds s
      ${where}
      ORDER BY s.water_count DESC, s.planted_at DESC
@@ -117,12 +123,18 @@ export async function listSeeds(opts: {
 // ── Get a single seed ─────────────────────────────────────────────────────────
 
 export async function getSeed(id: string, requesterId?: string): Promise<SeedWithStage | null> {
+  const queryParams: unknown[] = [id]
+  let waterExpr = 'false'
+  if (requesterId) {
+    queryParams.push(requesterId)
+    waterExpr = `EXISTS(SELECT 1 FROM seed_waters w WHERE w.seed_id = s.id AND w.user_id = $2)`
+  }
   const { rows } = await db.query<SeedRow & { watered_by_me: boolean }>(
     `SELECT s.*,
-       ${requesterId ? `EXISTS(SELECT 1 FROM seed_waters w WHERE w.seed_id = s.id AND w.user_id = '${requesterId}')` : 'false'} AS watered_by_me
+       ${waterExpr} AS watered_by_me
      FROM feature_seeds s
      WHERE s.id = $1`,
-    [id]
+    queryParams
   )
   if (!rows[0]) return null
   return { ...rows[0], growth_stage: growthStage(rows[0].water_count) }

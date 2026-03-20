@@ -31,10 +31,11 @@ const httpsUrlOrNull = z.string().max(500).refine(
   { message: 'URL must use HTTPS or point to /uploads/' }
 ).nullable().optional()
 
-// Font URL : uploads locaux uniquement (prévention CSS injection / SSRF)
+// Font URL : uploads locaux uniquement + caractères CSS-sûrs (prévention CSS injection)
+// Le chemin est injecté dans @font-face { src: url('...') } — les guillemets et backslashes sont interdits
 const localFontUrl = z.string().max(500).refine(
-  v => v.startsWith('/uploads/'),
-  { message: 'Font URL must point to /uploads/' }
+  v => v.startsWith('/uploads/') && !/['"\\]/.test(v),
+  { message: 'Font URL must point to /uploads/ and must not contain quotes or backslashes' }
 ).nullable().optional()
 
 const PatchProfileBody = z.object({
@@ -55,17 +56,35 @@ const PatchProfileBody = z.object({
   youtube_channel:    z.string().max(200).optional().nullable(),
   twitter_username:   z.string().max(100).optional().nullable(),
   instagram_username: z.string().max(100).optional().nullable(),
-  website_url:        z.string().url().max(500).optional().nullable(),
+  website_url:        z.string().url().max(500).refine(
+    v => /^https?:\/\//i.test(v),
+    { message: 'Only http/https URLs allowed' }
+  ).optional().nullable(),
   name_color:           z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   name_glow:            z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   name_glow_intensity:  z.number().int().min(5).max(40).optional().nullable(),
   name_animation:       z.enum(['pulse', 'shake', 'float', 'glitch', 'rainbow', 'glow-pulse', 'none']).optional().nullable(),
-  name_font_family:     z.string().max(100).optional().nullable(),
+  // Caractères CSS-sûrs uniquement — injecté dans font-family: '...' (prévention CSS injection)
+  name_font_family:     z.string().max(100).regex(/^[a-zA-Z0-9 _\-]+$/).optional().nullable(),
   name_font_url:        localFontUrl,
   banner_asset_id:      z.string().uuid().optional().nullable(),
   frame_asset_id:       z.string().uuid().optional().nullable(),
   badge_asset_id:       z.string().uuid().optional().nullable(),
-  metadata:             z.record(z.string(), z.unknown()).optional(),
+  metadata: z.object({
+    theme: z.object({
+      bg:          z.string().max(100).optional(),
+      cardBg:      z.string().max(100).optional(),
+      cardBorder:  z.string().max(100).optional(),
+      accent:      z.string().max(100).optional(),
+      text:        z.string().max(100).optional(),
+      textMuted:   z.string().max(100).optional(),
+      // bgImage : HTTPS uniquement — injecté dans background:url("...") (prévention CSS injection)
+      bgImage:     z.string().url().max(500).refine(
+        v => /^https:\/\//i.test(v),
+        { message: 'bgImage must use HTTPS' }
+      ).optional().or(z.literal('')).optional(),
+    }).optional(),
+  }).optional(),
 })
 
 const GITHUB_CACHE_TTL = 3600 // 1 hour
@@ -425,12 +444,8 @@ export default async function userRoutes(app: FastifyInstance) {
     const fileBuffer = await data.toBuffer()
 
     if (type === 'font') {
-      // Accept fonts by mimetype OR by file extension (browsers vary)
-      const filename_lc = data.filename?.toLowerCase() ?? ''
-      const isFont = ALLOWED_FONTS.includes(data.mimetype)
-        || filename_lc.endsWith('.ttf') || filename_lc.endsWith('.otf')
-        || filename_lc.endsWith('.woff') || filename_lc.endsWith('.woff2')
-      if (!isFont) {
+      // Valider sur le MIME type uniquement (pas le filename — spoofable)
+      if (!ALLOWED_FONTS.includes(data.mimetype)) {
         return reply.code(400).send({ error: 'Format non supporté (TTF, OTF, WOFF, WOFF2)' })
       }
 
@@ -439,7 +454,14 @@ export default async function userRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: `Fichier rejeté : ${scan.reason}` })
       }
 
-      const ext = filename_lc.split('.').pop() ?? 'ttf'
+      // Derive extension from MIME type (not filename)
+      const mimeToExt: Record<string, string> = {
+        'font/ttf': 'ttf', 'application/x-font-ttf': 'ttf',
+        'font/otf': 'otf', 'application/x-font-otf': 'otf',
+        'font/woff': 'woff', 'application/font-woff': 'woff',
+        'font/woff2': 'woff2', 'application/font-woff2': 'woff2',
+      }
+      const ext = mimeToExt[data.mimetype] ?? 'ttf'
       const dir  = path.join(UPLOADS_DIR, 'fonts')
       mkdirSync(dir, { recursive: true })
       const fname = `${randomUUID()}.${ext}`

@@ -9,6 +9,61 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.8.2] — 2026-03-20
+
+### Security — Full Paranoid Audit (38 vulnerabilities fixed)
+
+**Critical — SQL Injection**
+- **`gardenService.ts`** — `requesterId` interpolated directly into SQL template literal → full parameterized query with `$N` placeholder
+- **`models/notification.ts`** — `daysOld` interpolated into `INTERVAL '${daysOld} days'` → parameterized via `$1 * INTERVAL '1 day'`
+
+**Critical — JWT Algorithm Confusion**
+- **`middleware/auth.ts`**, **`middleware/adminOnly.ts`**, **`socket/index.ts`** — `jwt.verify()` without explicit algorithm → added `{ algorithms: ['HS256'] }` on all verify calls
+- **`routes/auth.ts`**, **`routes/authenticator.ts`** — `jwt.sign()` without explicit algorithm → added `{ algorithm: 'HS256' }` on all sign calls
+
+**High — SSRF / DNS Rebinding**
+- **`routes/chat.ts` — `/unfurl`** — two-step DNS resolution (validate then fetch) vulnerable to DNS rebinding: attacker resolves to safe IP, then re-resolves to `127.0.0.1` during fetch → replaced `fetch()` with a custom `https.request()`/`http.request()` that connects directly to the pre-resolved IP (single DNS lookup, anti-rebinding)
+- **`routes/chat.ts` — `isPrivateIp()`** — missing IPv6 documentation prefix `2001:db8::/32` (RFC 3849) → added
+
+**High — Socket.IO IDOR & Missing Guards**
+- **`socket/index.ts` — `chat:typing`** — no room membership check → user could broadcast typing to any channel UUID → added `socket.rooms.has()` guard
+- **`socket/index.ts` — `chat:react`** — no channel membership check → user could toggle reactions on messages of channels they're not in → added `findMessageById()` + `socket.rooms.has()` pre-check
+- **`socket/index.ts` — `chat:delete`** — admin check used `community_members WHERE user_id = $1` (any community) → admin of community A could delete messages of community B → scoped to `JOIN channels ON community_id` of the specific message
+- **`socket/voice.ts` — `voice:stats`** — no room check, no rate limit → any authenticated user could broadcast to any voice room → added room check + rate limit (10/s)
+- **`socket/voice.ts` — `voice:ping`** — no rate limit → spam triggered expensive `fetchSockets()` on every call → added rate limit (3/s)
+- **`socket/voice.ts` — `jukebox:request_sync`** — no rate limit, no room check, no UUID validation → full DoS vector → added all three guards
+- **`socket/index.ts` — `dm:typing`** — no participant check → any user could spoof typing to any conversation ID → added `EXISTS (SELECT 1 FROM dm_participants WHERE user_id = $2)` subquery
+
+**High — XSS / CSS Injection**
+- **`routes/users.ts` — `website_url`** — `z.string().url()` accepts `javascript:` protocol → added `.refine(v => /^https?:\/\//i.test(v))`
+- **`routes/users.ts` — `name_font_family`** — free string, injected in `font-family: '...'` CSS → added regex `^[a-zA-Z0-9 _\-]+$`
+- **`routes/users.ts` — `localFontUrl`** — `/uploads/` path without quote restriction, injected in `@font-face { src: url('...') }` → added `!/['"\\]/.test(v)` guard
+- **`routes/users.ts` — `metadata.theme.bgImage`** — unvalidated, injected in `background: url("...")` → added strict Zod schema (HTTPS only)
+- **`lib/nameEffects.ts`** (frontend) — `fontUrl` and `fontFamily` not escaped in CSS string context → added backslash + single-quote escaping before injection
+- **`lib/profileThemes.ts`** (frontend) — `bgImage` from JSONB injected without validation → added `https://` guard (defense in depth)
+- **`routes/chat/+page.svelte`** (frontend) — GIF URL injected unescaped in `<img src="...">` template → added `https://` validation + `"` / `'` encoding
+
+**Medium — Crypto / File Validation**
+- **`services/fileScanner.ts` — WebP**  — RIFF magic bytes shared with AVI/WAV; `offset 8` ("WEBP") not checked → added dedicated step-2 check after EXPECTED_MAGIC validation
+- **`services/emailService.ts`** — `username` and `communityName` embedded in email templates without sanitization → added `sanitizeHeader()` stripping `\r\n` (SMTP header injection)
+- **`routes/users.ts` — font upload`** — extension derived from `data.filename` (client-controlled), not MIME type → switched to `mimeToExt` lookup table
+
+**Medium — Auth & Access Control**
+- **`routes/authenticator.ts` — `POST /devices/register`** — no rate limit on enrollment token endpoint → added `enrollRateLimit` (3 req/5min/IP)
+- **`routes/tasks.ts` — `PATCH /cards/:id` assignee**  — `assignee_id` accepted without membership check → added `community_members` validation before update
+- **`routes/polls.ts` — `POST /:id/vote`** — no ban check → banned users could still vote → added `community_bans` lookup
+- **`routes/auth.ts` — logout`** — `redis.del(session:token)` without cleaning `user_sessions:userId` index → added `redis.srem()`
+- **`routes/directory.ts` — gossip receive`** — UUID not validated before PostgreSQL `::uuid` cast (throws unhandled error on malformed input) → added `UUID_RE.test()` skip
+
+**Low / Infrastructure**
+- **`config/database.ts`** — PostgreSQL SSL not configurable → added `DB_SSL=true` opt-in with `rejectUnauthorized: true`
+- **`index.ts` — Socket.IO`** — transports not explicitly set (relay strips Upgrade header) → added `transports: ['polling', 'websocket']`, `pingInterval: 8000`, `pingTimeout: 4000`
+- **`socket/rateLimiter.ts`** — added rules for `voice:stats` (10/s), `voice:ping` (3/s), `jukebox:request_sync` (3/s)
+- **`socket/voice.ts` — `voice:stats`** — `rtt` accepted `NaN` / `Infinity` → added `isFinite()` check
+- **`socket/index.ts`** — `JSON.parse` on Redis status data without try-catch → wrapped in try/catch
+
+---
+
 ## [1.8.1] — 2026-03-15
 
 ### Security

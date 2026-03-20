@@ -123,8 +123,10 @@ export function themeToVars(t: ProfileThemeVars): string {
 
 /** Build the inline style string injected on .profile-scope */
 export function themeToStyle(t: ProfileThemeVars): string {
-	const bg = t.bgImage
-		? `url("${t.bgImage}") center/cover no-repeat, ${t.bg}`
+	// Validate bgImage: only allow https URLs to prevent data:/javascript: CSS injection
+	const safeImage = t.bgImage && /^https:\/\//i.test(t.bgImage) ? t.bgImage : ''
+	const bg = safeImage
+		? `url("${safeImage}") center/cover no-repeat, ${t.bg}`
 		: t.bg
 	return [
 		`--p-bg:${t.bg}`,

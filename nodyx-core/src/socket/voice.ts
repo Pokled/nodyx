@@ -208,14 +208,20 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── voice:ping — keep presence alive + refresh sidebar for caller ──────────
   socket.on('voice:ping', async (channelId: string) => {
+    if (!checkRateLimit(userId, 'voice:ping')) return
     if (!isUuid(channelId)) return
+    if (!socket.rooms.has(voiceRoom(channelId))) return
     await broadcastVoiceChannelUpdate(server, channelId)
   })
 
   // ── voice:stats — relay RTT broadcast to room peers ───────────────────────
-  socket.on('voice:stats', ({ channelId, rtt }: { channelId: string; rtt: number | null }) => {
-    if (!channelId) return
-    socket.to(voiceRoom(channelId)).emit('voice:stats', { from: socket.id, rtt })
+  socket.on('voice:stats', ({ channelId, rtt }: { channelId: string; rtt: unknown }) => {
+    if (!checkRateLimit(userId, 'voice:stats')) return
+    if (!isUuid(channelId)) return
+    if (!socket.rooms.has(voiceRoom(channelId))) return
+    // Reject non-finite numbers (NaN, Infinity, -Infinity) to prevent UI corruption
+    if (rtt !== null && (typeof rtt !== 'number' || !isFinite(rtt))) return
+    socket.to(voiceRoom(channelId)).emit('voice:stats', { from: socket.id, rtt: rtt as number | null })
   })
 
   // ── jukebox:update — relay jukebox state to all voice room peers ──────────
@@ -230,7 +236,9 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── jukebox:request_sync — ask current peers to re-broadcast state ────────
   socket.on('jukebox:request_sync', (channelId: string) => {
-    if (!channelId) return
+    if (!checkRateLimit(userId, 'jukebox:request_sync')) return
+    if (!isUuid(channelId)) return
+    if (!socket.rooms.has(voiceRoom(channelId))) return
     socket.to(voiceRoom(channelId)).emit('jukebox:request_sync', { from: socket.id })
   })
 
