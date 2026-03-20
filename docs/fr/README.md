@@ -5,23 +5,41 @@
 
   <p><strong>La plateforme communautaire que personne ne peut te prendre.<br/>Forum + Chat + Voix + Canvas P2P — sur ton serveur, sous ton contrôle, pour toujours.</strong></p>
 
-  [![Version](https://img.shields.io/badge/version-v1.7.2-7c3aed)](../../CHANGELOG.md)
+  [![Version](https://img.shields.io/badge/version-v1.8.2-7c3aed)](../../CHANGELOG.md)
   [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
   [![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
   [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](ARCHITECTURE.md)
+
+  <sub>⭐ Si Nodyx te parle, une étoile aide d'autres personnes à le trouver — et nous permet de continuer.</sub>
 </div>
 
 ---
 
 <div align="center">
 
-[🇬🇧 English](../../README.md) · [🇫🇷 Français](README.md)
+<a href="../../README.md"><img src="https://flagcdn.com/16x12/gb.png" alt="EN"> English</a> · <a href="README.md"><img src="https://flagcdn.com/16x12/fr.png" alt="FR"> Français</a>
 
 </div>
 
 ---
 
-> **[→ Instance live : nexusnode.app](https://nexusnode.app)** — instance officielle, VPS de production
+<div align="center">
+  <img src="../img/hero.png" alt="Nodyx — accueil communauté" width="860"/>
+</div>
+
+---
+
+> **[→ Instance live : nodyx.org](https://nodyx.org)** — instance officielle, VPS de production
+
+---
+
+## Pourquoi Nodyx
+
+- **Discord** enferme les communautés dans une plateforme privée — tes 10 ans d'historique disparaissent s'ils ferment ou te bannissent
+- **Les forums** sont lents et fragmentés — pas de voix, pas de temps réel, invisibles dans le quotidien de tes membres
+- **Les outils auto-hébergés** combinent rarement chat + voix + base de connaissances en une seule installation
+
+Nodyx les réunit. Une commande. Ton serveur. Pour toujours.
 
 ---
 
@@ -55,7 +73,7 @@ Fonctionne sur un Raspberry Pi derrière une box FAI. Sans domaine. Sans ouvrir 
 | | **Nodyx** | Discord | Matrix | Discourse | Lemmy |
 |---|:---:|:---:|:---:|:---:|:---:|
 | Auto-hébergé | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Forum indexé (Google, Bing, Brave, Qwant...) | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Forum indexé par Google | ✅ | ❌ | ❌ | ✅ | ✅ |
 | Chat temps réel | ✅ | ✅ | ✅ | ⚠️ | ❌ |
 | Salons vocaux | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Partage d'écran | ✅ | ✅ | ✅ | ❌ | ❌ |
@@ -85,7 +103,7 @@ C'est là que Nodyx va plus loin que n'importe qui d'autre.
 ### nodyx-turn — Serveur STUN/TURN en Rust *(remplace coturn)*
 
 coturn est le standard industriel — un serveur C mature utilisé par Signal, Jitsi, Matrix.
-On l'a remplacé par un **binaire Rust de 2,9MB** qui fait exactement ce dont Nodyx a besoin. Rien de plus.
+On l'a remplacé par un **binaire Rust de 2,9 Mo** qui fait exactement ce dont Nodyx a besoin. Rien de plus.
 
 ```
 RFC 5389 (STUN) + RFC 5766 (TURN) + RFC 6062 (TURN-over-TCP)
@@ -108,7 +126,7 @@ nodyx-relay client  →  tunnel TCP persistant → expose le port 80 local
 
 - Reconnexion automatique avec backoff exponentiel (1s → 30s max)
 - Authentification JWT par instance
-- Routing par slug : `tonclub.nexusnode.app` → proxifié vers le Pi derrière ta box
+- Routing par slug : `tonclub.nodyx.org` → proxifié vers le Pi derrière ta box
 - Validé sur un vrai Raspberry Pi 4 sans aucun port ouvert ✅
 
 ### WebRTC DataChannels — P2P sans serveur
@@ -205,7 +223,7 @@ Le script propose **trois modes réseau** :
 | Mode | Prérequis | Résultat |
 |---|---|---|
 | **Ports ouverts** | Ports 80 + 443, domaine ou IP | HTTPS Let's Encrypt, contrôle total |
-| **Nodyx Relay** ⭐ | Rien — TCP sortant seulement | `tonclub.nexusnode.app` en quelques minutes |
+| **Nodyx Relay** ⭐ | Rien — TCP sortant seulement | `tonclub.nodyx.org` en quelques minutes |
 | **Cloudflare Tunnel** | Compte CF + domaine personnel | Ton domaine, sans ouvrir un port |
 
 > **Nodyx Relay** est le mode par défaut recommandé — fonctionne sur un Raspberry Pi derrière une box FAI.
@@ -305,17 +323,17 @@ Les migrations de base de données sont appliquées automatiquement au démarrag
 | Annuaire des instances + DNS auto | v0.5 |
 | nodyx-relay — Tunnel TCP P2P Rust | v0.5 |
 | Bibliothèque d'assets communautaire (cadres, bannières, badges) | v0.6 |
-| Jardin des features — vote communautaire avec stades de croissance | v0.6 |
+| Jardin des features — vote communautaire avec stades de croissance organiques | v0.6 |
 | Annuaire d'assets fédéré (partage cross-instance) | v0.7 |
 | Whispers — salles de chat éphémères chiffrées (TTL 1h) | v0.7 |
 | DataChannels P2P — frappe instantanée, réactions optimistes | v0.8 |
 | nodyx-turn — STUN/TURN Rust remplaçant coturn | v0.9 |
 | **NodyxCanvas — tableau blanc collaboratif P2P dans les salons vocaux** | **v0.9** |
-| **Système de thèmes de profil** — 6 presets, CSS vars, éditeur live, app entière | **v1.0** |
+| **Système de thèmes de profil** — 6 presets, moteur CSS par utilisateur, éditeur live | **v1.0** |
 | **UI responsive mobile** — drawer de chat, nav bas, voix accessible sur mobile | **v1.0** |
 | **Bibliothèque d'assets 12 Mo** + conseils de design par type d'asset | **v1.0** |
 | **Chat — Réponses/citations, messages épinglés, aperçus de liens, badge @mention** | **v1.1** |
-| **Présence — Statut personnalisé** (emoji + texte, 8 presets) **+ membres hors ligne** | **v1.1** |
+| **Présence — Statut personnalisé** (emoji + texte, 8 presets) **+ liste des membres hors ligne** | **v1.1** |
 | **Messages privés (DMs)** — conversations 1:1 avec badge non-lu | **v1.2** |
 | **Sondages** — dans le chat et le forum, 3 types (choix/planning/classement), résultats temps réel | **v1.2** |
 | **Système de ban** — ban IP, ban email, enforcement multi-couches | **v1.2** |
@@ -333,10 +351,20 @@ Les migrations de base de données sont appliquées automatiquement au démarrag
 | **Recherche globale** — index FTS cross-instance, UI `/discover` | v1.5 |
 | **Calendrier d'événements** — CRUD, RSVP, cartes OSM, image de couverture, rich snippets | v1.6 |
 | **Protocole Gossip** — fédération des événements entre instances | v1.6 |
-| **Nodyx Signet** — auth sans mot de passe ECDSA P-256 PWA sur `signet.nexusnode.app` | v1.7 |
+| **Nodyx Signet** — auth sans mot de passe ECDSA P-256 PWA sur `signet.nodyx.org` | v1.7 |
 | **Enrollment QR** — scanner depuis les paramètres pour éviter la saisie manuelle du token | v1.7 |
-| **UI optimiste** — toutes les mutations mettent à jour l'état local sans re-fetch de page | v1.7 |
+| **UI optimiste** — toutes les mutations mettent à jour l'état local instantanément (sans re-fetch) | v1.7 |
 | **Centre de notifications** — purge automatique 30j + bouton effacer les lues | v1.7 |
+
+### v1.8
+
+| Fonctionnalité | Version |
+|---|---|
+| **Tâches / Kanban** — tableaux par communauté, drag & drop, assignés, priorités, échéances | v1.8 |
+| **Alerte de mise à jour** — bannière admin quand une nouvelle release GitHub est disponible (cache Redis 6h) | v1.8 |
+| **Affichage de la version** — "Nodyx v1.8.x" affiché sur la page d'accueil via la variable `NODYX_VERSION` | v1.8 |
+| **Audit de sécurité** — correctif permissions PATCH /cards, health 503, binding HOST, enrollment adminOnly, rate limit sur /announcement, modérateurs peuvent gérer les tags | v1.8.1 |
+| **Audit de sécurité complet** — 38 vulnérabilités corrigées (SQLi, XSS, JWT, SSRF, IDOR, CSS injection, Socket.IO) | v1.8.2 |
 
 ### À venir
 
@@ -374,11 +402,11 @@ Nous ne construisons pas un produit. Nous reconstruisons une infrastructure pour
 
 | Langue | Docs |
 |---|---|
-| 🇫🇷 Français | [docs/fr/](.) |
-| 🇬🇧 English | [docs/en/](../en/) |
-| 🇪🇸 Español | *à venir* |
-| 🇮🇹 Italiano | *à venir* |
-| 🇩🇪 Deutsch | *à venir* |
+| <img src="https://flagcdn.com/16x12/fr.png" alt="FR"> Français | [docs/fr/](.) |
+| <img src="https://flagcdn.com/16x12/gb.png" alt="EN"> English | [docs/en/](../en/) |
+| <img src="https://flagcdn.com/16x12/es.png" alt="ES"> Español | *à venir* |
+| <img src="https://flagcdn.com/16x12/it.png" alt="IT"> Italiano | *à venir* |
+| <img src="https://flagcdn.com/16x12/de.png" alt="DE"> Deutsch | *à venir* |
 
 - [Manifeste](MANIFESTO.md) — Pourquoi Nodyx existe
 - [Architecture](ARCHITECTURE.md) — Comment c'est construit
@@ -386,10 +414,10 @@ Nous ne construisons pas un produit. Nous reconstruisons une infrastructure pour
 - [Moteur audio](AUDIO.md) — EQ broadcast, RNNoise, chaîne audio complète
 - [Moteur neural](NEURAL-ENGINE.md) — IA locale avec Ollama
 - [Spécifications](../en/specs/) — Toutes les specs fonctionnelles
-- [Idées](../ideas/) — Réflexions de design en cours
-- [**NODYX-ETHER**](../ideas/NODYX-ETHER.md) — La vision couche physique (LoRa / radio HF / ionosphère)
-- [**NODYX-ETHER Guide**](../ideas/NODYX-ETHER-GUIDE.md) — Comment participer : CB, radioamateurs, LoRa, renaissance des radios régionales
-- [**NODYX-RADIO**](../ideas/NODYX-RADIO.md) — Nodyx comme tuner radio : de nouvelles stations vont naître parce qu'elles ont enfin une communauté
+- [Idées](../../docs/ideas/) — Réflexions de design en cours
+- [**NODYX-ETHER**](../../docs/ideas/NODYX-ETHER.md) — La vision couche physique (LoRa / radio HF / ionosphère)
+- [**NODYX-ETHER Guide**](../../docs/ideas/NODYX-ETHER-GUIDE.md) — Comment participer : CB, radioamateurs, LoRa, renaissance des radios régionales
+- [**NODYX-RADIO**](../../docs/ideas/NODYX-RADIO.md) — Nodyx comme tuner radio : de nouvelles stations vont naître parce qu'elles ont enfin une communauté
 
 ---
 
@@ -423,6 +451,5 @@ Si Nodyx trahit ses principes un jour, cette licence permet à n'importe qui de 
 
 <div align="center">
   <p><em>Né le 18 février 2026.</em></p>
-  <p><em>Superviseure officielle : <strong>Iris</strong> — approuve chaque commit depuis le premier jour. 🐱</em></p>
   <p><strong>"Fork us if we betray you."</strong></p>
 </div>
