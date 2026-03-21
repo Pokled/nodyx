@@ -32,6 +32,7 @@ vi.mock('../models/user', () => ({
   findByUsername:  vi.fn(),
   create:          vi.fn(),
   verifyPassword:  vi.fn(),
+  hashPassword:    vi.fn().mockResolvedValue('$argon2id$v=19$m=65536,t=3,p=4$fakehash'),
 }))
 
 // ── Imports (after mocks) ─────────────────────────────────────
