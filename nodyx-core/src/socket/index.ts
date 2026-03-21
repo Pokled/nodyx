@@ -10,6 +10,7 @@ import * as NotificationModel from '../models/notification'
 import { resolveMentions } from '../utils/mentions'
 import { io } from './io'
 import { sendPushToUser } from '../routes/notifications'
+import { checkHtmlContent } from '../services/contentFilter'
 
 interface JwtPayload {
   userId:   string
@@ -45,7 +46,7 @@ function isString(v: unknown): v is string {
   return typeof v === 'string'
 }
 
-// ── Sanitize (same config as forums.ts) ───────────────────────────────────────
+// ── Sanitize ──────────────────────────────────────────────────────────────────
 
 const ALLOWED_TAGS = [
   'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
@@ -60,13 +61,57 @@ const ALLOWED_TAGS = [
 
 const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
   '*':      ['class', 'data-align', 'data-type'],
-  'span':   ['class', 'style', 'data-align', 'data-type'],  // TipTap highlights/colors sur spans uniquement
-  'p':      ['class', 'style', 'data-align', 'data-type'],  // alignement de paragraphes
+  'span':   ['class', 'style', 'data-align', 'data-type'],
+  'p':      ['class', 'style', 'data-align', 'data-type'],
   'a':      ['href', 'target', 'rel'],
   'img':    ['src', 'alt', 'width', 'height'],
   'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
   'th':     ['rowspan', 'colspan'],
   'td':     ['rowspan', 'colspan'],
+}
+
+// ── Content security — images & links ─────────────────────────────────────────
+
+// Seules les images hébergées sur ce serveur ou issues des CDN GIF sont autorisées.
+// Tout <img src="https://site-externe.com/..."> est supprimé silencieusement.
+const ALLOWED_IMG_HOSTS = new Set([
+  'media.tenor.com', 'c.tenor.com', 'media1.tenor.com', 'tenor.com',
+  'media.giphy.com', 'media0.giphy.com', 'media1.giphy.com',
+  'media2.giphy.com', 'media3.giphy.com', 'i.giphy.com',
+])
+
+function isAllowedImgSrc(src: string): boolean {
+  if (!src) return false
+  if (src.startsWith('/uploads/')) return true
+  if (src.startsWith('data:image/')) return true  // images collées depuis le presse-papiers
+  try {
+    return ALLOWED_IMG_HOSTS.has(new URL(src).hostname)
+  } catch {
+    return false
+  }
+}
+
+// Domaines bloqués dans les liens <a href> (contenu illicite / adulte connu)
+// L'admin peut étendre la liste via la variable d'environnement BLOCKED_LINK_DOMAINS
+// (liste de domaines séparés par des virgules).
+const _envBlocked = (process.env.BLOCKED_LINK_DOMAINS ?? '')
+  .split(',').map(d => d.trim().toLowerCase()).filter(Boolean)
+
+const BLOCKED_LINK_DOMAINS = new Set([
+  'pornhub.com', 'xvideos.com', 'xhamster.com', 'xnxx.com',
+  'redtube.com', 'youporn.com', 'tube8.com', 'spankbang.com',
+  'tnaflix.com', 'drtuber.com', 'beeg.com', 'txxx.com',
+  ..._envBlocked,
+])
+
+function isBlockedHref(href: string): boolean {
+  if (!href) return false
+  try {
+    const hostname = new URL(href).hostname.toLowerCase().replace(/^www\./, '')
+    return BLOCKED_LINK_DOMAINS.has(hostname)
+  } catch {
+    return false
+  }
 }
 
 function sanitize(raw: string): string {
@@ -77,6 +122,13 @@ function sanitize(raw: string): string {
       'www.youtube.com', 'youtube.com', 'www.youtube-nocookie.com',
       'player.vimeo.com', 'vimeo.com',
     ],
+    // Supprime les <img> dont le src n'est pas sur ce serveur ou un CDN GIF autorisé
+    // Supprime les <a> pointant vers des domaines illicites connus
+    exclusiveFilter: (frame) => {
+      if (frame.tag === 'img') return !isAllowedImgSrc(frame.attribs?.src ?? '')
+      if (frame.tag === 'a')   return isBlockedHref(frame.attribs?.href ?? '')
+      return false
+    },
   })
 }
 
@@ -250,7 +302,7 @@ export function registerSocketIO(server: Server): void {
 
     // ── presence:set_status ────────────────────────────────────────────────────
     socket.on('presence:set_status', async (data: { emoji: string; text: string } | null) => {
-      if (!checkRateLimit(userId, 'presence:set_status')) return
+      if (checkRateLimit(userId, 'presence:set_status')) return
       const status = data && (data.emoji || data.text)
         ? {
             emoji: (data.emoji ?? '').slice(0, 8),
@@ -311,7 +363,11 @@ export function registerSocketIO(server: Server): void {
 
     // ── chat:send ─────────────────────────────────────────────────────────────
     socket.on('chat:send', async (data: { channelId: string; content: string; replyToId?: string | null }) => {
-      if (!checkRateLimit(userId, 'chat:send')) return
+      const rateLimitMs = checkRateLimit(userId, 'chat:send')
+      if (rateLimitMs) {
+        socket.emit('chat:rate_limited', { retryAfter: rateLimitMs })
+        return
+      }
       const { channelId, content, replyToId } = data ?? {}
       if (!isUuid(channelId) || !isString(content)) return
       if (content.length > 20000) return  // limite avant sanitization (DoS)
@@ -330,6 +386,12 @@ export function registerSocketIO(server: Server): void {
 
       const sanitized = sanitize(content.trim())
       if (!sanitized || sanitized.length > 10000) return
+
+      const contentCheck = checkHtmlContent(sanitized)
+      if (!contentCheck.ok) {
+        socket.emit('chat:blocked', { reason: contentCheck.reason })
+        return
+      }
 
       try {
         // Check ban before writing message
@@ -385,7 +447,7 @@ export function registerSocketIO(server: Server): void {
     // ── chat:typing ───────────────────────────────────────────────────────────
     // Throttled by client — just broadcast to others in the room
     socket.on('chat:typing', (channelId: string) => {
-      if (!checkRateLimit(userId, 'chat:typing')) return
+      if (checkRateLimit(userId, 'chat:typing')) return
       if (!isUuid(channelId)) return
       if (!socket.rooms.has(`channel:${channelId}`)) return
       socket.to(`channel:${channelId}`).emit('chat:typing', { userId, username })
@@ -393,7 +455,7 @@ export function registerSocketIO(server: Server): void {
 
     // ── chat:react ────────────────────────────────────────────────────────────
     socket.on('chat:react', async (data: { messageId: string; emoji: string }) => {
-      if (!checkRateLimit(userId, 'chat:react')) return
+      if (checkRateLimit(userId, 'chat:react')) return
       const { messageId, emoji } = data ?? {}
       if (!isUuid(messageId) || !isString(emoji) || emoji.length > 64) return
 
@@ -418,13 +480,19 @@ export function registerSocketIO(server: Server): void {
 
     // ── chat:edit ─────────────────────────────────────────────────────────────
     socket.on('chat:edit', async (data: { messageId: string; content: string }) => {
-      if (!checkRateLimit(userId, 'chat:edit')) return
+      if (checkRateLimit(userId, 'chat:edit')) return
       const { messageId, content } = data ?? {}
       if (!isUuid(messageId) || !isString(content)) return
       if (content.length > 20000) return
 
       const sanitized = sanitize(content.trim())
       if (!sanitized || sanitized.length > 10000) return
+
+      const editCheck = checkHtmlContent(sanitized)
+      if (!editCheck.ok) {
+        socket.emit('chat:blocked', { reason: editCheck.reason })
+        return
+      }
 
       try {
         const updated = await ChannelModel.editMessage(messageId, userId, sanitized)
@@ -514,7 +582,7 @@ export function registerSocketIO(server: Server): void {
 
     // dm:send — envoyer un message dans une conversation
     socket.on('dm:send', async (data: { conversationId: string; content: string }) => {
-      if (!checkRateLimit(userId, 'dm:send')) return
+      if (checkRateLimit(userId, 'dm:send')) return
       try {
         if (!isUuid(data?.conversationId) || !isString(data?.content)) return
         const raw = data.content.trim()
@@ -528,6 +596,12 @@ export function registerSocketIO(server: Server): void {
         if (!part) return
 
         const clean = sanitize(raw)
+
+        const dmCheck = checkHtmlContent(clean)
+        if (!dmCheck.ok) {
+          socket.emit('chat:blocked', { reason: dmCheck.reason })
+          return
+        }
 
         const { rows: [msg] } = await db.query<{
           id: string; conversation_id: string; sender_id: string;
@@ -560,7 +634,7 @@ export function registerSocketIO(server: Server): void {
 
     // dm:typing — indicateur de frappe (throttlé côté client)
     socket.on('dm:typing', (conversationId: string) => {
-      if (!checkRateLimit(userId, 'dm:typing')) return
+      if (checkRateLimit(userId, 'dm:typing')) return
       if (!isUuid(conversationId)) return
       db.query<{ user_id: string }>(
         // AND user_id = $2 vérifie que l'émetteur est bien participant de cette conversation

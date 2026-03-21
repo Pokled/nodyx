@@ -3,8 +3,10 @@
  *
  * Algorithme : sliding window counter.
  * On garde pour chaque (userId, eventKey) un tableau de timestamps.
- * À chaque appel, on purge les timestamps hors fenêtre, on en ajoute un,
- * puis on compare le compte au plafond.
+ * À chaque appel, on purge les timestamps hors de la fenêtre maximale,
+ * puis on vérifie chaque règle (plusieurs règles possibles par event).
+ *
+ * Retourne 0 si l'action est autorisée, ou le délai d'attente en ms (>0) si bloquée.
  *
  * Pas de Redis : overhead inutile pour du rate-limit in-process.
  * La Map est nettoyée toutes les 5 minutes pour éviter les fuites mémoire.
@@ -17,42 +19,45 @@ interface RuleConfig {
   windowMs: number
 }
 
-// Catalogue des règles par event
-export const RATE_RULES: Record<string, RuleConfig> = {
-  'chat:send':            { limit: 5,  windowMs: 1_000  },
-  'chat:typing':          { limit: 3,  windowMs: 1_000  },
-  'chat:react':           { limit: 10, windowMs: 1_000  },
-  'chat:edit':            { limit: 5,  windowMs: 1_000  },
-  'dm:send':              { limit: 5,  windowMs: 1_000  },
-  'dm:typing':            { limit: 3,  windowMs: 1_000  },
-  'presence:set_status':  { limit: 2,  windowMs: 5_000  },
-  'whisper:message':      { limit: 5,  windowMs: 1_000  },
-  'whisper:typing':       { limit: 3,  windowMs: 1_000  },
-  'voice:speaking':       { limit: 10, windowMs: 1_000  },
-  'jukebox:update':         { limit: 5,  windowMs: 1_000  },
-  'jukebox:request_sync':   { limit: 3,  windowMs: 1_000  },
-  'voice:ping':             { limit: 3,  windowMs: 1_000  },
-  'voice:stats':            { limit: 10, windowMs: 1_000  },
+// Catalogue des règles par event — plusieurs règles possibles par event
+export const RATE_RULES: Record<string, RuleConfig[]> = {
+  // Anti-spam chat : burst court + soutenu court
+  'chat:send': [
+    { limit: 5,  windowMs: 3_000  },  // max 5 messages en 3 s  → cooldown max ~3 s
+    { limit: 15, windowMs: 15_000 },  // max 15 messages en 15 s → cooldown max ~15 s
+  ],
+  'chat:typing':          [{ limit: 3,  windowMs: 1_000  }],
+  'chat:react':           [{ limit: 10, windowMs: 1_000  }],
+  'chat:edit':            [{ limit: 5,  windowMs: 1_000  }],
+  'dm:send':              [{ limit: 5,  windowMs: 1_000  }],
+  'dm:typing':            [{ limit: 3,  windowMs: 1_000  }],
+  'presence:set_status':  [{ limit: 2,  windowMs: 5_000  }],
+  'whisper:message':      [{ limit: 5,  windowMs: 1_000  }],
+  'whisper:typing':       [{ limit: 3,  windowMs: 1_000  }],
+  'voice:speaking':       [{ limit: 10, windowMs: 1_000  }],
+  'jukebox:update':       [{ limit: 5,  windowMs: 1_000  }],
+  'jukebox:request_sync': [{ limit: 3,  windowMs: 1_000  }],
+  'voice:ping':           [{ limit: 3,  windowMs: 1_000  }],
+  'voice:stats':          [{ limit: 10, windowMs: 1_000  }],
 }
 
 // Clé composite : `${userId}::${eventKey}`
 type BucketKey = string
 
-// Chaque bucket est un tableau de timestamps (ms)
+// Chaque bucket est un tableau de timestamps (ms), trié croissant
 const _buckets = new Map<BucketKey, number[]>()
 
 /**
  * Vérifie si l'action est autorisée pour cet utilisateur sur cet event.
  *
- * @returns `true` → autorisé, `false` → bloqué (rate limit atteint)
+ * @returns `0` → autorisé ; `>0` → bloqué, valeur = délai d'attente en ms
  */
-export function checkRateLimit(userId: string, eventKey: string): boolean {
-  const rule = RATE_RULES[eventKey]
-  if (!rule) return true  // Pas de règle → toujours autorisé
+export function checkRateLimit(userId: string, eventKey: string): number {
+  const rules = RATE_RULES[eventKey]
+  if (!rules) return 0  // Pas de règle → toujours autorisé
 
   const key: BucketKey = `${userId}::${eventKey}`
   const now = Date.now()
-  const cutoff = now - rule.windowMs
 
   // Récupère ou crée le bucket
   let timestamps = _buckets.get(key)
@@ -61,19 +66,31 @@ export function checkRateLimit(userId: string, eventKey: string): boolean {
     _buckets.set(key, timestamps)
   }
 
-  // Purge les timestamps hors fenêtre (sliding window)
+  // Purge les timestamps plus vieux que la fenêtre maximale (optimisation mémoire)
+  const maxWindow = Math.max(...rules.map(r => r.windowMs))
+  const globalCutoff = now - maxWindow
   let i = 0
-  while (i < timestamps.length && timestamps[i] < cutoff) i++
+  while (i < timestamps.length && timestamps[i] < globalCutoff) i++
   if (i > 0) timestamps.splice(0, i)
 
-  // Vérifie le plafond
-  if (timestamps.length >= rule.limit) {
-    return false  // Rate limit atteint
+  // Vérifie chaque règle — bloque sur la première violation
+  for (const rule of rules) {
+    const cutoff = now - rule.windowMs
+    let count = 0
+    for (const t of timestamps) {
+      if (t >= cutoff) count++
+    }
+    if (count >= rule.limit) {
+      // RetryAfter : temps avant que le plus ancien timestamp de la fenêtre expire
+      const oldest = timestamps.find(t => t >= cutoff)
+      const retryAfter = oldest !== undefined ? oldest + rule.windowMs - now : rule.windowMs
+      return Math.max(1, retryAfter)
+    }
   }
 
-  // Enregistre ce nouvel appel
+  // Toutes les règles passent — enregistre ce nouvel appel
   timestamps.push(now)
-  return true
+  return 0
 }
 
 // ── Nettoyage périodique ───────────────────────────────────────────────────────
@@ -85,12 +102,11 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1_000
 function cleanupBuckets(): void {
   const now = Date.now()
   for (const [key, timestamps] of _buckets) {
-    // Détermine la fenêtre maximale possible pour cette clé
     const eventKey = key.split('::')[1]
-    const rule = RATE_RULES[eventKey]
-    const windowMs = rule?.windowMs ?? 60_000
+    const rules = RATE_RULES[eventKey]
+    const maxWindowMs = rules ? Math.max(...rules.map(r => r.windowMs)) : 60_000
 
-    const cutoff = now - windowMs
+    const cutoff = now - maxWindowMs
     const validCount = timestamps.filter(t => t >= cutoff).length
     if (validCount === 0) {
       _buckets.delete(key)

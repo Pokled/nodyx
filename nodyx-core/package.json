@@ -1,6 +1,6 @@
 {
   "name": "nodyx-core",
-  "version": "1.8.2",
+  "version": "1.9.0",
   "description": "Nodyx Core - Sanctuaire du projet. Le noyau intouchable.",
   "main": "index.js",
   "scripts": {
@@ -24,6 +24,7 @@
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
     "@types/pg": "^8.16.0",
+    "argon2": "^0.44.0",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.3.1",
     "fastify": "^5.7.4",

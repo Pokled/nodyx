@@ -1017,8 +1017,9 @@ export default async function adminRoutes(app: FastifyInstance) {
     const params: unknown[] = []
     let idx = 1
 
-    if (q.action) { conditions.push(`action = $${idx++}`); params.push(q.action) }
-    if (q.actor)  { conditions.push(`actor_username ILIKE $${idx++}`); params.push(`%${q.actor}%`) }
+    // Troncature défensive pour éviter les ReDoS via ILIKE sur de longues chaînes
+    if (q.action) { conditions.push(`action = $${idx++}`); params.push(String(q.action).slice(0, 100)) }
+    if (q.actor)  { conditions.push(`actor_username ILIKE $${idx++}`); params.push(`%${String(q.actor).slice(0, 50)}%`) }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 

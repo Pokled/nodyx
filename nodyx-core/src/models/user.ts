@@ -1,7 +1,20 @@
 import bcrypt from 'bcrypt'
+import argon2 from 'argon2'
 import { db } from '../config/database'
 
 const BCRYPT_ROUNDS = 12
+
+// OWASP-recommended Argon2id params (2026)
+const ARGON2_OPTIONS: argon2.Options = {
+  type:        argon2.argon2id,
+  memoryCost:  65536,  // 64 MB
+  timeCost:    3,
+  parallelism: 4,
+}
+
+export async function hashPassword(plain: string): Promise<string> {
+  return argon2.hash(plain, ARGON2_OPTIONS)
+}
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -55,7 +68,7 @@ export async function create(data: {
   email:    string
   password: string
 }): Promise<PublicUser> {
-  const hashed = await bcrypt.hash(data.password, BCRYPT_ROUNDS)
+  const hashed = await hashPassword(data.password)
   const { rows } = await db.query<PublicUser>(
     `INSERT INTO users (username, email, password)
      VALUES ($1, $2, $3)
@@ -91,5 +104,9 @@ export async function update(id: string, data: {
 }
 
 export async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
-  return bcrypt.compare(plain, hashed)
+  // Support migration transparente bcrypt → argon2id
+  if (hashed.startsWith('$2b$') || hashed.startsWith('$2a$')) {
+    return bcrypt.compare(plain, hashed)
+  }
+  return argon2.verify(hashed, plain)
 }

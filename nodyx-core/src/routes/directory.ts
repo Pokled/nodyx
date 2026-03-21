@@ -415,28 +415,40 @@ export default async function directoryRoutes(app: FastifyInstance) {
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // Order: FTS rank if query, else most recent
-    const orderBy = q
-      ? `ts_rank(da.search_vector, plainto_tsquery('french', $${params.indexOf(q) + 1})) DESC, da.announced_at DESC`
-      : `da.announced_at DESC`;
-
+    // Whitelist ORDER BY — aucun fragment dynamique dans le SQL
+    const qParamIdx = q ? params.indexOf(q) + 1 : null
     params.push(limit, offset);
-    const limitClause  = `LIMIT $${params.length - 1} OFFSET $${params.length}`;
+    const limitClause = `LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
-    const { rows: assets } = await db.query(
-      `SELECT da.id, da.instance_id, da.instance_slug,
-              da.remote_asset_id, da.asset_type, da.name, da.description,
-              da.tags, da.file_hash, da.file_url, da.thumbnail_url,
-              da.file_size, da.mime_type, da.downloads,
-              da.canonical_instance_id, da.announced_at,
-              di.name AS instance_name, di.url AS instance_url
-       FROM directory_assets da
-       JOIN directory_instances di ON di.id = da.instance_id AND di.status = 'active'
-       ${where}
-       ORDER BY ${orderBy}
-       ${limitClause}`,
-      params
-    );
+    const { rows: assets } = qParamIdx !== null
+      ? await db.query(
+          `SELECT da.id, da.instance_id, da.instance_slug,
+                  da.remote_asset_id, da.asset_type, da.name, da.description,
+                  da.tags, da.file_hash, da.file_url, da.thumbnail_url,
+                  da.file_size, da.mime_type, da.downloads,
+                  da.canonical_instance_id, da.announced_at,
+                  di.name AS instance_name, di.url AS instance_url
+           FROM directory_assets da
+           JOIN directory_instances di ON di.id = da.instance_id AND di.status = 'active'
+           ${where}
+           ORDER BY ts_rank(da.search_vector, plainto_tsquery('french', $${qParamIdx})) DESC, da.announced_at DESC
+           ${limitClause}`,
+          params
+        )
+      : await db.query(
+          `SELECT da.id, da.instance_id, da.instance_slug,
+                  da.remote_asset_id, da.asset_type, da.name, da.description,
+                  da.tags, da.file_hash, da.file_url, da.thumbnail_url,
+                  da.file_size, da.mime_type, da.downloads,
+                  da.canonical_instance_id, da.announced_at,
+                  di.name AS instance_name, di.url AS instance_url
+           FROM directory_assets da
+           JOIN directory_instances di ON di.id = da.instance_id AND di.status = 'active'
+           ${where}
+           ORDER BY da.announced_at DESC
+           ${limitClause}`,
+          params
+        );
 
     // Total count (without limit)
     const countParams = params.slice(0, params.length - 2);
@@ -667,28 +679,30 @@ export default async function directoryRoutes(app: FastifyInstance) {
       const { rows: r } = await db.query(sql, params);
       rows = r;
     } else {
-      // Sans query : threads triés par activité, events triés par date
-      // orderBy est dérivé d'un booléen — jamais de l'input utilisateur
-      const orderBy = onlyType === 'event' ? 'ni.starts_at ASC' : 'ni.updated_at DESC';
-      const params: unknown[] = [];
-      let sql = `SELECT ni.instance_slug, ni.instance_url, ni.content_type, ni.content_id,
+      // Sans query — deux requêtes distinctes selon le type (pas de fragment SQL dynamique)
+      const isEventOnly = onlyType === 'event'
+      const baseSelect = `SELECT ni.instance_slug, ni.instance_url, ni.content_type, ni.content_id,
                 ni.thread_id, ni.thread_slug, ni.category_id, ni.category_slug,
                 ni.title, ni.excerpt, ni.tags, ni.reply_count, ni.updated_at,
                 ni.starts_at, ni.ends_at, ni.location, ni.is_cancelled,
                 1.0 AS rank
          FROM network_index ni
-         WHERE 1=1`;
+         WHERE 1=1`
+      const baseParams: unknown[] = []
+      let baseWhere = ''
       if (onlyType) {
-        params.push(onlyType);
-        sql += ` AND ni.content_type = $${params.length}`;
+        baseParams.push(onlyType)
+        baseWhere += ` AND ni.content_type = $${baseParams.length}`
       }
       if (onlyUpcoming) {
-        sql += ` AND (ni.content_type != 'event' OR ni.starts_at >= NOW())`;
+        baseWhere += ` AND (ni.content_type != 'event' OR ni.starts_at >= NOW())`
       }
-      params.push(limit, offset);
-      sql += ` ORDER BY ${orderBy}
-         LIMIT $${params.length - 1} OFFSET $${params.length}`;
-      const { rows: r } = await db.query(sql, params);
+      baseParams.push(limit, offset)
+      const limitSuffix = ` LIMIT $${baseParams.length - 1} OFFSET $${baseParams.length}`
+
+      const { rows: r } = isEventOnly
+        ? await db.query(`${baseSelect}${baseWhere} ORDER BY ni.starts_at ASC${limitSuffix}`, baseParams)
+        : await db.query(`${baseSelect}${baseWhere} ORDER BY ni.updated_at DESC${limitSuffix}`, baseParams)
       rows = r;
     }
 

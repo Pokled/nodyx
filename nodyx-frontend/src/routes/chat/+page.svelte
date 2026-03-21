@@ -81,6 +81,15 @@
 	const typingUsers = $derived(Object.values(typingMap).map((e) => e.username));
 	let typingThrottle: ReturnType<typeof setTimeout> | null = null;
 
+	// Anti-spam cooldown
+	let rateLimitedUntil = $state(0);
+	const isRateLimited  = $derived(rateLimitedUntil > Date.now());
+	let rateLimitTimer: ReturnType<typeof setInterval> | null = null;
+
+	// Content filter feedback
+	let blockedNotice = $state<string | null>(null);
+	let blockedTimer: ReturnType<typeof setTimeout> | null = null;
+
 	// Emoji picker
 	let pickerMsgId    = $state<string | null>(null);
 	// P2P reaction flash — messageId → Set of emojis currently animating
@@ -263,6 +272,25 @@
 			if (channelId !== selectedChannel?.id) return;
 			pinnedMessage = message;
 			showPinned = true;
+		});
+
+		sock.on('chat:blocked', ({ reason }: { reason: string }) => {
+			blockedNotice = reason ?? 'Message refusé : contenu interdit';
+			if (blockedTimer) clearTimeout(blockedTimer);
+			blockedTimer = setTimeout(() => { blockedNotice = null; }, 5000);
+		});
+
+		sock.on('chat:rate_limited', ({ retryAfter }: { retryAfter: number }) => {
+			rateLimitedUntil = Date.now() + retryAfter;
+			if (rateLimitTimer) clearInterval(rateLimitTimer);
+			// Force reactivity re-check every second so the countdown updates
+			rateLimitTimer = setInterval(() => {
+				if (Date.now() >= rateLimitedUntil) {
+					if (rateLimitTimer) clearInterval(rateLimitTimer);
+					rateLimitTimer = null;
+					rateLimitedUntil = 0;
+				}
+			}, 500);
 		});
 
 		sock.on('voice:channel_update', ({ channelId, members }: { channelId: string; members: { userId: string; username: string; avatar: string | null }[] }) => {
@@ -1163,16 +1191,31 @@
 					</div>
 				{/if}
 
-				<div class="flex gap-2 bg-gray-800 rounded-lg border border-gray-700 focus-within:border-indigo-600 transition-colors">
+				{#if blockedNotice}
+					<div class="flex items-center gap-2 px-3 py-2 mb-1 bg-red-950/60 border border-red-600/60 rounded-lg text-xs text-red-300">
+						<span>⛔</span>
+						<span>{blockedNotice}</span>
+					</div>
+				{/if}
+
+				{#if isRateLimited}
+					<div class="flex items-center gap-2 px-3 py-2 mb-1 bg-red-900/40 border border-red-700/60 rounded-lg text-xs text-red-300">
+						<span>⏱</span>
+						<span>Anti-spam actif — réessaie dans {Math.ceil((rateLimitedUntil - Date.now()) / 1000)} s</span>
+					</div>
+				{/if}
+
+				<div class="flex gap-2 bg-gray-800 rounded-lg border {isRateLimited ? 'border-red-700/60' : 'border-gray-700 focus-within:border-indigo-600'} transition-colors">
 					<textarea
 						id="chat-input"
-						class="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-100 placeholder-gray-600 resize-none outline-none max-h-32"
-						placeholder="Message #{selectedChannel.slug}"
+						class="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-100 placeholder-gray-600 resize-none outline-none max-h-32 disabled:opacity-50"
+						placeholder={isRateLimited ? 'Anti-spam actif…' : `Message #${selectedChannel.slug}`}
 						rows={1}
 						maxlength={2000}
 						bind:value={inputText}
 						onkeydown={handleKeydown}
 						oninput={handleInput}
+						disabled={isRateLimited}
 					></textarea>
 					<!-- GIF button — always visible -->
 					<button
@@ -1195,10 +1238,10 @@
 					>✏️</button>
 					<button
 						onclick={sendMessage}
-						disabled={!inputText.trim()}
-						class="px-3 py-2 m-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors shrink-0"
+						disabled={!inputText.trim() || isRateLimited}
+						class="px-3 py-2 m-1.5 rounded {isRateLimited ? 'bg-red-700/60 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'} disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors shrink-0"
 					>
-						Envoyer
+						{isRateLimited ? '⏱' : 'Envoyer'}
 					</button>
 				</div>
 				<p class="text-xs text-gray-700 mt-1">Entrée pour envoyer · Maj+Entrée pour saut de ligne · Ctrl+Maj+E pour l'éditeur riche</p>

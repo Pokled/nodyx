@@ -3,12 +3,25 @@ import { z } from 'zod'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import bcrypt from 'bcrypt'
+import fs from 'fs'
 import { db, redis } from '../config/database'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as UserModel from '../models/user'
 import { isSmtpConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService'
+
+// ── Discord security alerts ───────────────────────────────────────────────────
+
+async function sendSecurityAlert(embed: object): Promise<void> {
+  const url = process.env.SECURITY_DISCORD_WEBHOOK
+  if (!url) return
+  fetch(url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ embeds: [embed] }),
+  }).catch(() => {})
+}
 
 // Cache the community id for auto-join on register
 let _defaultCommunityId: string | null = null
@@ -165,6 +178,19 @@ export default async function authRoutes(app: FastifyInstance) {
     // Store registration IP
     await db.query(`UPDATE users SET registration_ip = $1::inet WHERE id = $2`, [clientIp, user.id]).catch(() => {})
 
+    // Alerte Discord nouvelle inscription
+    sendSecurityAlert({
+      title:  '👤 Nouvelle inscription',
+      color:  0x57f287,
+      fields: [
+        { name: 'Pseudo',  value: `**${username}**`,   inline: true  },
+        { name: 'Email',   value: email,                inline: true  },
+        { name: 'IP',      value: `\`${clientIp}\``,   inline: false },
+      ],
+      timestamp: new Date().toISOString(),
+      footer:    { text: 'nodyx-security-monitor' },
+    })
+
     // Auto-join the instance community as 'member'
     const communityId = await getDefaultCommunityId()
     if (communityId) {
@@ -215,7 +241,38 @@ export default async function authRoutes(app: FastifyInstance) {
     const DUMMY_HASH = '$2b$12$invalidhashusedtopreventimaginarytimingattacksXXXXXXXXXX'
     const valid = await UserModel.verifyPassword(password, user?.password ?? DUMMY_HASH)
 
+    // Rehash silencieux bcrypt → argon2id au premier login réussi
+    if (user && valid && (user.password.startsWith('$2b$') || user.password.startsWith('$2a$'))) {
+      UserModel.hashPassword(password)
+        .then(newHash => db.query('UPDATE users SET password = $1 WHERE id = $2', [newHash, user.id]))
+        .catch(() => {})
+    }
+
     if (!user || !valid) {
+      const realIp = (request.headers['cf-connecting-ip'] as string) || request.ip
+      const logLine = `${new Date().toISOString()} INVALID_CREDENTIALS ip=${realIp}\n`
+      fs.appendFile('/var/log/nodyx-auth.log', logLine, () => {})
+
+      // Alerte brute force : compteur par email ciblé, alerte au 3ème échec
+      if (user) {
+        const bfKey   = `bf:${user.id}`
+        const bfCount = await redis.incr(bfKey)
+        if (bfCount === 1) await redis.expire(bfKey, 900) // fenêtre 15 min
+        if (bfCount === 3) {
+          sendSecurityAlert({
+            title:  '⚠️ Brute force détecté',
+            color:  0xff9900,
+            fields: [
+              { name: 'Compte ciblé', value: `**${user.username}** (${email})`, inline: false },
+              { name: 'IP',           value: `\`${realIp}\``,                   inline: true  },
+              { name: 'Tentatives',   value: `${bfCount} en 15 min`,           inline: true  },
+            ],
+            timestamp: new Date().toISOString(),
+            footer:    { text: 'nodyx-security-monitor' },
+          })
+        }
+      }
+
       return reply.code(401).send({ error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' })
     }
 
@@ -246,6 +303,25 @@ export default async function authRoutes(app: FastifyInstance) {
     await redis.set(`session:${token}`, user.id, 'EX', SESSION_TTL)
     await trackSession(user.id, token)
 
+    // Détection connexion depuis une nouvelle IP
+    const loginIp    = (request.headers['cf-connecting-ip'] as string) || request.ip
+    const knownIpKey = `known_ip:${user.id}`
+    const knownIp    = await redis.get(knownIpKey)
+    await redis.set(knownIpKey, loginIp, 'EX', 60 * 60 * 24 * 30) // 30 jours
+    if (knownIp && knownIp !== loginIp) {
+      sendSecurityAlert({
+        title:  '🌍 Connexion depuis une nouvelle IP',
+        color:  0xffa500,
+        fields: [
+          { name: 'Compte',      value: `**${user.username}**`, inline: false },
+          { name: 'IP connue',   value: `\`${knownIp}\``,       inline: true  },
+          { name: 'Nouvelle IP', value: `\`${loginIp}\``,       inline: true  },
+        ],
+        timestamp: new Date().toISOString(),
+        footer:    { text: 'nodyx-security-monitor' },
+      })
+    }
+
     // Ensure user is in community_members — only if not banned
     const communityId = await getDefaultCommunityId()
     if (communityId) {
@@ -264,6 +340,28 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     const { password: _, ...publicUser } = user
+
+    // Alerte connexion admin/owner
+    const realIpLogin = (request.headers['cf-connecting-ip'] as string) || request.ip
+    db.query(
+      `SELECT role FROM community_members
+       WHERE user_id = $1 AND role IN ('admin', 'owner') LIMIT 1`,
+      [user.id]
+    ).then(({ rows }) => {
+      if (rows.length > 0) {
+        sendSecurityAlert({
+          title:  '🔑 Connexion admin',
+          color:  0x5865f2,
+          fields: [
+            { name: 'Compte', value: `**${user.username}** (${rows[0].role})`, inline: true },
+            { name: 'IP',     value: `\`${realIpLogin}\``,                     inline: true },
+          ],
+          timestamp: new Date().toISOString(),
+          footer:    { text: 'nodyx-security-monitor' },
+        })
+      }
+    }).catch(() => {})
+
     return reply.send({ token, user: publicUser })
   })
 

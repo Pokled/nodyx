@@ -114,23 +114,40 @@ export default async function eventsRoutes(app: FastifyInstance) {
       params.push(filterTags)
     }
 
-    const order = showPast ? 'DESC' : 'ASC'
+    // Whitelist assertion — jamais de valeur utilisateur dans ORDER BY
+    const safeOrder: 'ASC' | 'DESC' = showPast ? 'DESC' : 'ASC'
 
-    const { rows: events } = await db.query(
-      `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
-              e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
-              e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
-              e.created_at, e.updated_at,
-              u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
-              (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going') AS going_count,
-              (SELECT er2.status FROM event_rsvps er2 WHERE er2.event_id = e.id AND er2.user_id = $3 LIMIT 1) AS my_rsvp
-       FROM events e
-       LEFT JOIN users u ON u.id = e.author_id
-       WHERE ${where} AND e.is_cancelled = false
-       ORDER BY e.starts_at ${order}
-       LIMIT $1 OFFSET $2`,
-      params
-    )
+    const { rows: events } = safeOrder === 'DESC'
+      ? await db.query(
+          `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
+                  e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
+                  e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
+                  e.created_at, e.updated_at,
+                  u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
+                  (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going') AS going_count,
+                  (SELECT er2.status FROM event_rsvps er2 WHERE er2.event_id = e.id AND er2.user_id = $3 LIMIT 1) AS my_rsvp
+           FROM events e
+           LEFT JOIN users u ON u.id = e.author_id
+           WHERE ${where} AND e.is_cancelled = false
+           ORDER BY e.starts_at DESC
+           LIMIT $1 OFFSET $2`,
+          params
+        )
+      : await db.query(
+          `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
+                  e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
+                  e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
+                  e.created_at, e.updated_at,
+                  u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
+                  (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going') AS going_count,
+                  (SELECT er2.status FROM event_rsvps er2 WHERE er2.event_id = e.id AND er2.user_id = $3 LIMIT 1) AS my_rsvp
+           FROM events e
+           LEFT JOIN users u ON u.id = e.author_id
+           WHERE ${where} AND e.is_cancelled = false
+           ORDER BY e.starts_at ASC
+           LIMIT $1 OFFSET $2`,
+          params
+        )
 
     return reply.send({ events })
   })

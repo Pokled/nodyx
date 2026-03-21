@@ -19,6 +19,7 @@
 | **Phase 3** | P2P Infrastructure + Rust Foundation | ✅ Complete |
 | **Phase 4** | Platform enrichment (v1.4 → v1.8) | ✅ Complete |
 | **Phase 4.5** | Security hardening (v1.8.2) | ✅ Complete |
+| **Phase 4.6** | Active defense & runtime security (v1.9.0) | ✅ Complete |
 | Phase 5 | Mobile + Nodes + Reputation | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
@@ -450,6 +451,27 @@ nodyx-core    (Fastify/Node.js) ────────────────
 **Cryptography / Input**
 - [x] WebP RIFF validation — asset uploads verify magic bytes before Sharp processing
 - [x] SMTP header injection — newline stripping on all user-supplied email headers
+
+---
+
+## PHASE 4.6 — Active Defense & Runtime Security ✅ COMPLETE
+### Goal: Turn the platform into an active defender — detect, deter, and alert in real time
+
+> *"The best firewall is one that thinks."*
+> Phase 4.6 builds on the static hardening of 4.5 with dynamic, runtime security systems.
+
+- [x] **Honeypot** — 25+ scanner paths trapped (`.env`, `.git`, `wp-admin`, `phpmyadmin`, shells, backups…); tarpit 3–7s; geolocation; terminal scare page; DB logging + fail2ban auto-ban
+- [x] **fail2ban** — 5 jails: SSH, SSH repeat offenders (permanent), HTTP auth brute force, honeypot (7 days), permanent blacklist
+- [x] **`nodyx-auth.log`** — auth route now feeds the fail2ban jail on every failed login (was previously inert)
+- [x] **Permanent IP blacklist** — `nodyx-permban` jail (`bantime = -1`) + DB `ip_bans` for known bad actors
+- [x] **Discord security monitoring** — real-time embeds for honeypot hits, brute force, admin login, new IP detection, new registrations
+- [x] **Argon2id** — new password hashing standard (OWASP 2026); bcrypt hashes transparently migrated on next login
+- [x] **Chat anti-spam** — dual sliding window rate limiter (burst + sustained); client-side cooldown UI
+- [x] **Content filter** — Nazi/hate symbols (6 Unicode codepoints), image allowlist (Tenor/Giphy only), configurable domain blocklist
+- [x] **Optional NSFW scan** — `nsfwjs` + TensorFlow.js on image upload (`NSFW_SCAN=true`)
+- [x] **Upload rate limiting** — 10 uploads / 10 minutes / user
+- [x] **Email verification** — mandatory when SMTP configured; login blocked for unverified accounts
+- [x] **Log rotation** — daily rotation, 90-day retention, compressed
 
 ---
 

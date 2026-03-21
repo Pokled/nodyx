@@ -16,9 +16,11 @@
 | **Phase 1** | Forum MVP + Admin | ✅ Complète |
 | **Phase 2** | Chat temps réel + Annuaire + Identité réseau | ✅ Complète |
 | **Phase 2.5** | Personnalisation communautaire + Fédération légère | ✅ Complète |
-| **Phase 3** | Infrastructure P2P + Fondation Rust | 🔨 En cours |
-| **Phase 4** | Enrichissement de la plateforme | 🔨 En cours (v1.7) |
-| Phase 5 | Mobile et réputation | ⏳ Planifiée |
+| **Phase 3** | Infrastructure P2P + Fondation Rust | ✅ Complète |
+| **Phase 4** | Enrichissement de la plateforme (v1.4 → v1.8) | ✅ Complète |
+| **Phase 4.5** | Durcissement sécurité (v1.8.2) | ✅ Complète |
+| **Phase 4.6** | Défense active & sécurité runtime (v1.9.0) | ✅ Complète |
+| Phase 5 | Mobile + Nodes + Réputation | 🔨 En cours |
 | **Phase Horizon** | NODYX-ETHER — Souveraineté de la couche physique | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Tuner radio internet + régie publicitaire coopérative | 📻 Vision |
 

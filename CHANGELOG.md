@@ -9,6 +9,67 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.9.0] — 2026-03-21
+
+### Security — Active Defense & Runtime Security
+
+**Honeypot**
+- New honeypot system trapping ~25 common scanner paths (`/.env`, `/.git/config`, `/wp-admin`, `/phpmyadmin`, `/shell.php`, `/backup.sql`, etc.)
+- Tarpit: 3–7 second artificial delay burns attacker time/threads
+- Real-time geolocation (country, city, ISP) via ip-api.com
+- Scary terminal-style 403 page showing attacker's own IP, location, ISP and legal warning (Code Pénal art. 323-1)
+- All hits logged to DB (`honeypot_hits` table — migration 056) + `/var/log/nodyx-honeypot.log`
+- Optional Discord webhook notification per hit (`HONEYPOT_DISCORD_WEBHOOK`)
+- Automatic 7-day IP ban via fail2ban on first hit
+
+**fail2ban**
+- Installed and configured: 4 jails — `sshd` (24h), `sshd-ddos` (permanent after 3 bans), `nodyx-auth` (1h after 5 failed logins), `nodyx-honeypot` (7 days on first hit), `nodyx-permban` (permanent)
+- `nodyx-auth.log` now fed by `auth.ts` on every `INVALID_CREDENTIALS` event (was previously unfed)
+- `nodyx-auth` jail `maxretry` corrected to 5 (matching the Redis rate limiter window)
+- Log rotation configured for both security log files (daily, 90-day retention, compressed)
+
+**Permanent IP blacklist**
+- New fail2ban jail `nodyx-permban` with `bantime = -1` for definitively blocked IPs
+- Known bad actors banned at 3 levels: DB `ip_bans`, fail2ban permanent, application layer
+
+**Discord security monitoring** (`SECURITY_DISCORD_WEBHOOK`)
+- Alert on brute force: notified on 3rd consecutive failed login attempt against the same account
+- Alert on admin login: every successful owner/admin authentication logged with IP
+- Alert on new IP: login from an IP different from the last known IP triggers an orange warning embed
+- Alert on new registration: every account creation logged with username, email and IP
+
+**Password hashing — Argon2id migration**
+- New accounts now hashed with Argon2id (OWASP 2026 recommendation): 64 MB memory, 3 iterations, 4 threads
+- Existing bcrypt hashes remain fully valid — no forced password reset
+- Transparent rehash: on successful login with a bcrypt hash, password is silently upgraded to Argon2id in the background
+
+**Chat & content security**
+- Anti-spam rate limiter on `chat:send`: dual sliding window (5 msg/3s burst + 15 msg/15s sustained)
+- Client feedback: `chat:rate_limited` event with `retryAfter` ms + cooldown UI banner
+- `chat:blocked` event for content violations with reason
+- Image allowlist: only Tenor and Giphy CDN hostnames allowed in `<img>` tags
+- Domain blocklist: configurable via `BLOCKED_LINK_DOMAINS` env var
+- Nazi/hate symbol filter: 6 Unicode codepoints blocked platform-wide (swastika, SS runes, Othala)
+- Content filter applied to: chat messages, forum posts/replies, profile fields (display_name, bio, status, location)
+- Optional NSFW image scan on upload via `nsfwjs` + TensorFlow.js (`NSFW_SCAN=true`)
+
+**Upload rate limiting**
+- `POST /api/v1/users/me/upload` now rate-limited: 10 uploads per 10 minutes per user
+
+**Email verification**
+- Registration now requires email verification when SMTP is configured
+- Login blocked for unverified accounts with clear error message
+- Resend verification endpoint + dedicated pending page
+
+**SQL injection hardening (additional)**
+- All remaining `ORDER BY ${variable}` patterns replaced with two-query branching (no dynamic SQL fragments)
+- `admin.ts` audit log: `.slice(0, 100)` on query params before ILIKE
+
+**Other**
+- `verify-email` cookie: `secure: true` enforced in production
+
+---
+
 ## [1.8.2] — 2026-03-20
 
 ### Security — Full Paranoid Audit (38 vulnerabilities fixed)

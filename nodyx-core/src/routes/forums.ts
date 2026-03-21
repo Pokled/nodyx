@@ -13,6 +13,7 @@ import * as TagModel from '../models/tag'
 import * as NotificationModel from '../models/notification'
 import { resolveMentions } from '../utils/mentions'
 import { db } from '../config/database'
+import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
 
 // Check if userId is owner/admin/moderator in the community that owns a thread
@@ -73,11 +74,50 @@ const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
   'td':     ['rowspan', 'colspan'],
 }
 
+// Images autorisées : serveur propre + CDN GIF uniquement
+const ALLOWED_IMG_HOSTS_FORUM = new Set([
+  'media.tenor.com', 'c.tenor.com', 'media1.tenor.com', 'tenor.com',
+  'media.giphy.com', 'media0.giphy.com', 'media1.giphy.com',
+  'media2.giphy.com', 'media3.giphy.com', 'i.giphy.com',
+])
+
+function isAllowedImgSrcForum(src: string): boolean {
+  if (!src) return false
+  if (src.startsWith('/uploads/')) return true
+  if (src.startsWith('data:image/')) return true
+  try {
+    return ALLOWED_IMG_HOSTS_FORUM.has(new URL(src).hostname)
+  } catch {
+    return false
+  }
+}
+
+const _envBlockedForum = (process.env.BLOCKED_LINK_DOMAINS ?? '')
+  .split(',').map(d => d.trim().toLowerCase()).filter(Boolean)
+
+const BLOCKED_LINK_DOMAINS_FORUM = new Set([
+  'pornhub.com', 'xvideos.com', 'xhamster.com', 'xnxx.com',
+  'redtube.com', 'youporn.com', 'tube8.com', 'spankbang.com',
+  'tnaflix.com', 'drtuber.com', 'beeg.com', 'txxx.com',
+  ..._envBlockedForum,
+])
+
 function sanitize(raw: string): string {
   return sanitizeHtml(raw, {
     allowedTags: ALLOWED_TAGS,
     allowedAttributes: ALLOWED_ATTRS,
     allowedIframeHostnames: ['www.youtube.com', 'youtube.com', 'www.youtube-nocookie.com', 'player.vimeo.com', 'vimeo.com'],
+    exclusiveFilter: (frame) => {
+      if (frame.tag === 'img') return !isAllowedImgSrcForum(frame.attribs?.src ?? '')
+      if (frame.tag === 'a') {
+        const href = frame.attribs?.href ?? ''
+        try {
+          const hostname = new URL(href).hostname.toLowerCase().replace(/^www\./, '')
+          return BLOCKED_LINK_DOMAINS_FORUM.has(hostname)
+        } catch { return false }
+      }
+      return false
+    },
   })
 }
 
@@ -244,10 +284,21 @@ app.get('/threads', {
     })
 
     // Create the opening post (sanitize HTML from WYSIWYG editor)
+    const sanitizedContent = sanitize(content)
+    const threadContentCheck = checkHtmlContent(sanitizedContent)
+    if (!threadContentCheck.ok) {
+      return reply.code(422).send({ error: threadContentCheck.reason, code: 'CONTENT_BLOCKED' })
+    }
+    // Also check the title (plain text)
+    const titleCheck = checkHtmlContent(title)
+    if (!titleCheck.ok) {
+      return reply.code(422).send({ error: titleCheck.reason, code: 'CONTENT_BLOCKED' })
+    }
+
     const post = await PostModel.create({
       thread_id: thread.id,
       author_id: request.user!.userId,
-      content: sanitize(content),
+      content: sanitizedContent,
     })
 
     // Attach tags if provided
@@ -319,6 +370,11 @@ app.get('/threads', {
     }
 
     const sanitized = sanitize(content)
+    const replyContentCheck = checkHtmlContent(sanitized)
+    if (!replyContentCheck.ok) {
+      return reply.code(422).send({ error: replyContentCheck.reason, code: 'CONTENT_BLOCKED' })
+    }
+
     const post = await PostModel.create({
       thread_id: resolvedThreadId,
       author_id: userId,
@@ -390,7 +446,13 @@ app.get('/threads', {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
     }
 
-    const post = await PostModel.updateContent(id, sanitize(content))
+    const editSanitized = sanitize(content)
+    const editCheck = checkHtmlContent(editSanitized)
+    if (!editCheck.ok) {
+      return reply.code(422).send({ error: editCheck.reason, code: 'CONTENT_BLOCKED' })
+    }
+
+    const post = await PostModel.updateContent(id, editSanitized)
     return reply.send({ post })
   })
 

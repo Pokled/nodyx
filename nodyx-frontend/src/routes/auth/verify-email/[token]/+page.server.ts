@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 		path:     '/',
 		httpOnly: true,
 		sameSite: 'lax',
-		secure:   false,
+		secure:   true,
 		maxAge:   60 * 60 * 24 * 7,
 	});
 

@@ -24,6 +24,7 @@ import dmRoutes           from './routes/dm'
 import eventRoutes           from './routes/events'
 import authenticatorRoutes   from './routes/authenticator'
 import taskRoutes            from './routes/tasks'
+import honeypotRoutes        from './routes/honeypot'
 import { setIO }              from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
@@ -70,7 +71,7 @@ server.register(fastifyMultipart, {
 server.get('/', async () => {
   return {
     name: 'Nodyx',
-    version: process.env.NODYX_VERSION ?? '1.8.0',
+    version: process.env.NODYX_VERSION ?? '1.9.0',
     message: getRandomFortune(),
     status: 'alive'
   }
@@ -106,6 +107,7 @@ server.register(dmRoutes,            { prefix: '/api/v1/dm' })
 server.register(eventRoutes,          { prefix: '/api/v1/events' })
 server.register(authenticatorRoutes,  { prefix: '/api/auth' })
 server.register(taskRoutes,           { prefix: '/api/v1/tasks' })
+server.register(honeypotRoutes,       { prefix: '/api/v1' })
 
 const start = async () => {
   // Validate critical environment variables at startup.

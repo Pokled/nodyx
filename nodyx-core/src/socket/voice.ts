@@ -202,13 +202,13 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── voice:speaking — VAD indicator ───────────────────────────────────────
   socket.on('voice:speaking', ({ channelId, speaking }: { channelId: string; speaking: boolean }) => {
-    if (!checkRateLimit(userId, 'voice:speaking')) return
+    if (checkRateLimit(userId, 'voice:speaking')) return
     socket.to(voiceRoom(channelId)).emit('voice:speaking', { socketId: socket.id, userId, speaking })
   })
 
   // ── voice:ping — keep presence alive + refresh sidebar for caller ──────────
   socket.on('voice:ping', async (channelId: string) => {
-    if (!checkRateLimit(userId, 'voice:ping')) return
+    if (checkRateLimit(userId, 'voice:ping')) return
     if (!isUuid(channelId)) return
     if (!socket.rooms.has(voiceRoom(channelId))) return
     await broadcastVoiceChannelUpdate(server, channelId)
@@ -216,7 +216,7 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── voice:stats — relay RTT broadcast to room peers ───────────────────────
   socket.on('voice:stats', ({ channelId, rtt }: { channelId: string; rtt: unknown }) => {
-    if (!checkRateLimit(userId, 'voice:stats')) return
+    if (checkRateLimit(userId, 'voice:stats')) return
     if (!isUuid(channelId)) return
     if (!socket.rooms.has(voiceRoom(channelId))) return
     // Reject non-finite numbers (NaN, Infinity, -Infinity) to prevent UI corruption
@@ -226,7 +226,7 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── jukebox:update — relay jukebox state to all voice room peers ──────────
   socket.on('jukebox:update', ({ channelId, state }: { channelId: string; state: unknown }) => {
-    if (!checkRateLimit(userId, 'jukebox:update')) return
+    if (checkRateLimit(userId, 'jukebox:update')) return
     if (!isUuid(channelId)) return
     if (!socket.rooms.has(voiceRoom(channelId))) return
     const serialized = JSON.stringify(state)
@@ -236,7 +236,7 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── jukebox:request_sync — ask current peers to re-broadcast state ────────
   socket.on('jukebox:request_sync', (channelId: string) => {
-    if (!checkRateLimit(userId, 'jukebox:request_sync')) return
+    if (checkRateLimit(userId, 'jukebox:request_sync')) return
     if (!isUuid(channelId)) return
     if (!socket.rooms.has(voiceRoom(channelId))) return
     socket.to(voiceRoom(channelId)).emit('jukebox:request_sync', { from: socket.id })

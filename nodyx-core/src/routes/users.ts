@@ -11,6 +11,8 @@ import * as UserModel from '../models/user'
 import { db, redis } from '../config/database'
 import { io } from '../socket/io'
 import { scanBuffer } from '../services/fileScanner'
+import { scanImageNSFW } from '../services/nsfwScanner'
+import { checkContent } from '../services/contentFilter'
 
 const IMAGE_MAX_WIDTH  = 4096
 const IMAGE_MAX_HEIGHT = 4096
@@ -185,19 +187,26 @@ export default async function userRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'slug invalide' })
     }
 
-    const op = body.action === 'add'
-      ? `array_append(COALESCE(linked_instances, '{}'), $1::text)`
-      : `array_remove(COALESCE(linked_instances, '{}'), $1::text)`
-
-    const { rows } = await db.query<{ linked_instances: string[] }>(
-      `UPDATE users
-       SET linked_instances = COALESCE((
-         SELECT array_agg(DISTINCT x) FROM unnest(${op}) x
-       ), '{}')
-       WHERE id = $2
-       RETURNING linked_instances`,
-      [body.slug, request.user!.userId]
-    )
+    // Deux requêtes distinctes — aucun fragment SQL dynamique
+    const { rows } = body.action === 'add'
+      ? await db.query<{ linked_instances: string[] }>(
+          `UPDATE users
+           SET linked_instances = COALESCE((
+             SELECT array_agg(DISTINCT x) FROM unnest(array_append(COALESCE(linked_instances, '{}'), $1::text)) x
+           ), '{}')
+           WHERE id = $2
+           RETURNING linked_instances`,
+          [body.slug, request.user!.userId]
+        )
+      : await db.query<{ linked_instances: string[] }>(
+          `UPDATE users
+           SET linked_instances = COALESCE((
+             SELECT array_agg(DISTINCT x) FROM unnest(array_remove(COALESCE(linked_instances, '{}'), $1::text)) x
+           ), '{}')
+           WHERE id = $2
+           RETURNING linked_instances`,
+          [body.slug, request.user!.userId]
+        )
     return reply.send({ linked_instances: rows[0]?.linked_instances ?? [] })
   })
 
@@ -206,6 +215,13 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth, validate({ body: PatchProfileBody })],
   }, async (request, reply) => {
     const data = request.body as z.infer<typeof PatchProfileBody>
+
+    // Filtre contenu haineux sur les champs texte libres
+    const textsToCheck = [data.display_name, data.bio, data.status, data.location].filter(Boolean) as string[]
+    for (const t of textsToCheck) {
+      const fc = checkContent(t)
+      if (!fc.ok) return reply.code(422).send({ error: fc.reason, code: 'CONTENT_BLOCKED' })
+    }
 
     const fields: string[] = []
     const values: unknown[] = []
@@ -430,7 +446,18 @@ export default async function userRoutes(app: FastifyInstance) {
 
   // POST /api/v1/users/me/upload?type=avatar|banner|font — upload file from client PC
   app.post('/me/upload', {
-    preHandler: [rateLimit, requireAuth],
+    preHandler: [rateLimit, requireAuth, async (request, reply) => {
+      // Rate limit upload : 10 fichiers / 10 minutes / user
+      const userId = (request.user as any)?.userId
+      if (!userId) return
+      const key   = `upload_rate:${userId}`
+      const count = await redis.incr(key)
+      if (count === 1) await redis.expire(key, 600)
+      if (count > 10) {
+        reply.header('Retry-After', String(await redis.ttl(key)))
+        return reply.code(429).send({ error: 'Trop d\'uploads. Réessayez dans quelques minutes.', code: 'RATE_LIMITED' })
+      }
+    }],
   }, async (request, reply) => {
     const { type } = request.query as { type?: string }
     if (!type || !ALLOWED_TYPES.includes(type)) {
@@ -483,6 +510,12 @@ export default async function userRoutes(app: FastifyInstance) {
     const imgScan = scanBuffer(fileBuffer, data.mimetype)
     if (!imgScan.ok) {
       return reply.code(400).send({ error: `Fichier rejeté : ${imgScan.reason}` })
+    }
+
+    // Scan NSFW (si NSFW_SCAN=true dans .env et nsfwjs installé)
+    const nsfwScan = await scanImageNSFW(fileBuffer)
+    if (!nsfwScan.ok) {
+      return reply.code(422).send({ error: nsfwScan.reason })
     }
 
     // Vérifier les dimensions (protection contre decompression bomb)

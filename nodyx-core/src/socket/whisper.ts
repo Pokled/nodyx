@@ -90,7 +90,7 @@ export function registerWhisperHandlers(io: Server, socket: Socket): void {
 
   // ── whisper:message ─────────────────────────────────────────────────────────
   socket.on('whisper:message', async ({ roomId, content }: { roomId: string; content: string }) => {
-    if (!checkRateLimit(userId, 'whisper:message')) return
+    if (checkRateLimit(userId, 'whisper:message')) return
     if (!roomId || !content) return
 
     const clean = sanitize(content)
@@ -130,7 +130,7 @@ export function registerWhisperHandlers(io: Server, socket: Socket): void {
 
   // ── whisper:typing ──────────────────────────────────────────────────────────
   socket.on('whisper:typing', ({ roomId }: { roomId: string }) => {
-    if (!checkRateLimit(userId, 'whisper:typing')) return
+    if (checkRateLimit(userId, 'whisper:typing')) return
     if (!roomId) return
     socket.to(`whisper:${roomId}`).emit('whisper:typing', { roomId, userId, username })
   })
