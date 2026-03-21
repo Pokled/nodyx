@@ -20,6 +20,7 @@
 | **Phase 4** | Enrichissement de la plateforme (v1.4 → v1.8) | ✅ Complète |
 | **Phase 4.5** | Durcissement sécurité (v1.8.2) | ✅ Complète |
 | **Phase 4.6** | Défense active & sécurité runtime (v1.9.0) | ✅ Complète |
+| **Phase 4.7** | Double authentification — TOTP + Nodyx Signet 2FA (v1.9.1) | ✅ Complète |
 | Phase 5 | Mobile + Nodes + Réputation | 🔨 En cours |
 | **Phase Horizon** | NODYX-ETHER — Souveraineté de la couche physique | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Tuner radio internet + régie publicitaire coopérative | 📻 Vision |
@@ -418,6 +419,18 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [ ] Ollama IA locale — assistant de savoir (indexe le forum local)
 - [ ] **Nodyx Guard Protocol** — middleware scoring toxicité dans `chat:send`, seuil configurable, logs DB
 - [ ] Marketplace plugins — API stable pour extensions tierces (fondations dans `plugins/`)
+
+---
+
+## PHASE 4.7 — Double authentification (2FA) ✅ COMPLÈTE
+### Objectif : ajouter un second facteur fort sans sacrifier l'expérience utilisateur
+
+- [x] **TOTP (RFC 6238)** — compatible avec toutes les apps d'authentification (Google Authenticator, Aegis, Bitwarden) ; setup QR code ; session pending Redis 5 min
+- [x] **2FA via Nodyx Signet** — si l'utilisateur a un appareil Signet enregistré, Signet est utilisé comme second facteur (ECDSA P-256 > secret TOTP partagé) ; réutilisation complète de l'infrastructure challenge/approbation existante
+- [x] **Chaîne de priorité** — Signet > TOTP > connexion directe ; le système sélectionne automatiquement le facteur le plus fort disponible
+- [x] **Interface Settings** — activer/désactiver le 2FA avec affichage QR code et flux de confirmation
+- [x] **Interface Login** — second step transparent : saisie code TOTP ou déclenchement automatique de l'écran d'attente Signet
+- [x] **Rebuild PWA Nodyx Signet** — placeholders `nexusnode.app` remplacés par `nodyx.org`
 
 ---
 

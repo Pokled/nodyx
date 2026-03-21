@@ -9,6 +9,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.9.1] — 2026-03-21
+
+### Security — 2FA & Nodyx Signet
+
+**2FA TOTP (RFC 6238)**
+- New 2FA system using time-based one-time passwords (TOTP) compatible with any authenticator app (Google Authenticator, Aegis, Bitwarden)
+- Migration 057: `totp_enabled` + `totp_secret` columns on `users` table
+- New routes: `POST /api/v1/auth/totp/setup` (QR code generation), `/confirm` (activation), `/disable`, `/validate` (login step 2), `GET /status`
+- Two-step login: password OK → if TOTP enabled, returns `{ requires_totp, totp_pending }` → Redis-backed 5-min pending session → JWT only after valid code
+- Frontend: TOTP step in login page + full setup/disable flow in Settings
+
+**2FA via Nodyx Signet (prioritaire)**
+- If user has a registered Signet device, Signet is used as the 2nd factor instead of TOTP (stronger: ECDSA P-256 vs shared secret)
+- After password verification, backend checks `authenticator_devices` → if device found, returns `{ requires_signet: true, username }`
+- Login page auto-triggers the Signet approval flow (push notification on phone) without any user input
+- Approved Signet challenge → JWT issued → cookie set (full reuse of existing Signet infra)
+- Priority: Signet > TOTP > direct login
+
+**Nodyx Signet PWA rebuild**
+- Rebuilt with fixed URLs: placeholders updated from `nexusnode.app` to `nodyx.org`
+
+---
+
 ## [1.9.0] — 2026-03-21
 
 ### Security — Active Defense & Runtime Security

@@ -4,7 +4,17 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let submitting = $state(false);
+	let submitting     = $state(false);
+	let totpCode       = $state('');
+	let totpSubmitting = $state(false);
+
+	// Auto-déclenche Signet quand le backend retourne requires_signet après password OK
+	$effect(() => {
+		if (form?.requires_signet && form?.username && signetState === 'idle') {
+			signetUsername = form.username as string
+			signetStart()
+		}
+	})
 
 	// ── Nodyx Signet ──────────────────────────────────────────────────────────
 	type SignetState = 'idle' | 'waiting' | 'approved' | 'rejected' | 'expired' | 'error'
@@ -98,6 +108,133 @@
 		</div>
 	{/if}
 
+	{#if form?.requires_signet}
+		<!-- ── Étape 2 : approbation Signet ─────────────────────────────────── -->
+		<div class="rounded-xl border p-6"
+			style="border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.04)">
+			<div class="flex items-center gap-3 mb-5">
+				<div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-bold shrink-0"
+					style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35); color: #fbbf24">
+					◈
+				</div>
+				<div>
+					<p class="text-sm font-semibold text-white">Vérification via Nodyx Signet</p>
+					<p class="text-xs mt-0.5" style="color: rgb(156,163,175)">
+						Mot de passe validé — approuvez la connexion depuis votre téléphone.
+					</p>
+				</div>
+			</div>
+
+			{#if signetState === 'idle' || signetState === 'waiting'}
+				<div class="flex flex-col items-center gap-4 py-2">
+					<div class="relative">
+						<div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold"
+							style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.4); color: #fbbf24">
+							◈
+						</div>
+						<div class="absolute inset-0 rounded-2xl animate-ping opacity-20"
+							style="background: rgba(251,191,36,0.3)"></div>
+					</div>
+					<div class="text-center">
+						<p class="text-sm font-semibold text-white">En attente d'approbation</p>
+						<p class="text-xs mt-1" style="color: rgb(156,163,175)">Ouvrez Nodyx Signet et approuvez la demande</p>
+					</div>
+					{#if signetError}
+						<p class="text-xs text-center" style="color: rgb(248,113,113)">{signetError}</p>
+					{/if}
+				</div>
+
+			{:else if signetState === 'approved'}
+				<form bind:this={signetFormRef} method="POST" action="?/signet">
+					<input type="hidden" name="token" value={signetToken} />
+					<input type="hidden" name="redirectTo" value={form?.redirectTo ?? data.redirectTo} />
+				</form>
+				<div class="flex flex-col items-center gap-3 py-3">
+					<div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+						style="background: rgba(74,222,128,0.1); border: 2px solid rgb(74,222,128)">✓</div>
+					<p class="text-sm font-semibold" style="color: rgb(74,222,128)">Approuvé — connexion en cours…</p>
+				</div>
+
+			{:else if signetState === 'rejected'}
+				<div class="flex flex-col items-center gap-3 py-3">
+					<div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+						style="background: rgba(248,113,113,0.1); border: 2px solid rgb(248,113,113)">✕</div>
+					<p class="text-sm font-semibold mb-1" style="color: rgb(248,113,113)">Demande refusée</p>
+					<p class="text-xs" style="color: rgb(156,163,175)">Reconnectez-vous pour réessayer.</p>
+					<a href="/auth/login" class="text-xs underline mt-1" style="color: #fbbf24">Retour au login</a>
+				</div>
+
+			{:else if signetState === 'expired'}
+				<div class="flex flex-col items-center gap-3 py-3">
+					<p class="text-sm" style="color: rgb(156,163,175)">Challenge expiré.</p>
+					<a href="/auth/login" class="text-xs underline" style="color: #fbbf24">Retour au login</a>
+				</div>
+
+			{:else if signetState === 'error'}
+				<div class="flex flex-col items-center gap-3 py-3">
+					<p class="text-xs text-center mb-2" style="color: rgb(248,113,113)">{signetError}</p>
+					<a href="/auth/login" class="text-xs underline" style="color: #fbbf24">Retour au login</a>
+				</div>
+			{/if}
+		</div>
+
+	{:else if form?.requires_totp}
+		<!-- ── Étape 2 : code TOTP ──────────────────────────────────────────── -->
+		<div class="mb-6 rounded-xl border border-indigo-700/40 bg-indigo-900/10 px-5 py-4">
+			<div class="flex items-center gap-3 mb-3">
+				<span class="text-2xl">🔐</span>
+				<div>
+					<p class="text-sm font-semibold text-white">Vérification à deux facteurs</p>
+					<p class="text-xs text-gray-500 mt-0.5">Entrez le code affiché dans votre application d'authentification.</p>
+				</div>
+			</div>
+			{#if form?.error}
+				<p class="mb-3 rounded bg-red-900/40 border border-red-700/50 px-3 py-2 text-xs text-red-300">{form.error}</p>
+			{/if}
+			<form
+				method="POST"
+				action="?/totp"
+				use:enhance={() => {
+					totpSubmitting = true;
+					return async ({ result }) => {
+						if (result.type === 'redirect') {
+							window.location.href = result.location;
+						} else {
+							totpSubmitting = false;
+							const { applyAction } = await import('$app/forms');
+							await applyAction(result);
+						}
+					};
+				}}
+				class="space-y-3"
+			>
+				<input type="hidden" name="totp_pending" value={form.totp_pending} />
+				<input type="hidden" name="redirectTo"   value={form.redirectTo ?? data.redirectTo} />
+				<input
+					name="code"
+					type="text"
+					inputmode="numeric"
+					pattern="[0-9]{6}"
+					maxlength="6"
+					bind:value={totpCode}
+					placeholder="000 000"
+					autocomplete="one-time-code"
+					class="w-full rounded bg-gray-800 border border-gray-700 px-3 py-2.5 text-white text-center
+					       text-xl font-mono tracking-[0.5em] focus:outline-none focus:border-indigo-500"
+				/>
+				<button
+					type="submit"
+					disabled={totpSubmitting || totpCode.length < 6}
+					class="w-full rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed
+					       px-4 py-2 text-sm font-semibold text-white transition-colors"
+				>
+					{totpSubmitting ? 'Vérification...' : 'Confirmer'}
+				</button>
+			</form>
+		</div>
+
+	{:else}
+
 	{#if form?.error}
 		{#if form.code === 'EMAIL_NOT_VERIFIED'}
 			<div class="mb-4 rounded border border-amber-700/50 bg-amber-900/20 px-4 py-3 text-sm text-amber-300">
@@ -178,7 +315,10 @@
 		<a href="/auth/register" class="text-indigo-400 hover:text-indigo-300">S'inscrire</a>
 	</p>
 
-	<!-- ── Nodyx Signet ───────────────────────────────────────────────────── -->
+	{/if}
+
+	<!-- ── Nodyx Signet (passwordless) — masqué pendant le flow 2FA Signet ── -->
+	{#if !form?.requires_signet}
 	<div class="mt-8">
 		<div class="flex items-center gap-3 mb-4">
 			<div class="flex-1 h-px bg-gray-800"></div>
@@ -280,4 +420,5 @@
 			{/if}
 		</div>
 	</div>
+	{/if}
 </div>

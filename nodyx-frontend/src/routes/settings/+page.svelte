@@ -90,6 +90,90 @@
         if ($page.data.user) loadSignetDevices()
     })
 
+    // ── 2FA TOTP ──────────────────────────────────────────────────────────────
+
+    type TotpStep = 'idle' | 'setup' | 'confirm' | 'disable'
+
+    let totpEnabled   = $state(false)
+    let totpLoaded    = $state(false)
+    let totpStep      = $state<TotpStep>('idle')
+    let totpQr        = $state<string | null>(null)
+    let totpSecret    = $state<string | null>(null)
+    let totpCode      = $state('')
+    let totpError     = $state('')
+    let totpLoading   = $state(false)
+    let totpSuccess   = $state('')
+
+    $effect(() => {
+        const token = ($page.data as any).token as string | null
+        if (!token || totpLoaded) return
+        fetch('/api/v1/auth/totp/status', { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : null)
+            .then(j => { if (j) totpEnabled = j.totp_enabled })
+            .catch(() => {})
+            .finally(() => { totpLoaded = true })
+    })
+
+    async function totpStartSetup() {
+        const token = ($page.data as any).token as string | null
+        if (!token) return
+        totpLoading = true; totpError = ''
+        try {
+            const res = await fetch('/api/v1/auth/totp/setup', {
+                method: 'POST', headers: { Authorization: `Bearer ${token}` }
+            })
+            const j = await res.json()
+            if (!res.ok) { totpError = j.error ?? 'Erreur'; return }
+            totpQr = j.qr; totpSecret = j.secret
+            totpStep = 'setup'
+        } catch { totpError = 'Impossible de contacter le serveur.' }
+        totpLoading = false
+    }
+
+    async function totpConfirm() {
+        const token = ($page.data as any).token as string | null
+        if (!token || !totpCode) return
+        totpLoading = true; totpError = ''
+        try {
+            const res = await fetch('/api/v1/auth/totp/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ code: totpCode })
+            })
+            const j = await res.json()
+            if (!res.ok) { totpError = j.error ?? 'Code incorrect'; totpLoading = false; return }
+            totpEnabled = true; totpStep = 'idle'
+            totpCode = ''; totpQr = null; totpSecret = null
+            totpSuccess = '2FA activé avec succès !'
+            setTimeout(() => totpSuccess = '', 4000)
+        } catch { totpError = 'Erreur réseau.' }
+        totpLoading = false
+    }
+
+    async function totpDisable() {
+        const token = ($page.data as any).token as string | null
+        if (!token || !totpCode) return
+        totpLoading = true; totpError = ''
+        try {
+            const res = await fetch('/api/v1/auth/totp/disable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ code: totpCode })
+            })
+            const j = await res.json()
+            if (!res.ok) { totpError = j.error ?? 'Code incorrect'; totpLoading = false; return }
+            totpEnabled = false; totpStep = 'idle'
+            totpCode = ''
+            totpSuccess = '2FA désactivé.'
+            setTimeout(() => totpSuccess = '', 4000)
+        } catch { totpError = 'Erreur réseau.' }
+        totpLoading = false
+    }
+
+    function totpCancel() {
+        totpStep = 'idle'; totpCode = ''; totpError = ''; totpQr = null; totpSecret = null
+    }
+
     // ── Instances liées (Galaxy Bar) ──────────────────────────────────────────
 
     const user = $derived($page.data.user as { linked_instances?: string[] } | null);
@@ -349,6 +433,128 @@
                 <p class="text-xs text-gray-700 mt-7">
                     Le slug est le sous-domaine de l'instance — ex: <code class="text-indigo-500">french-godot</code> pour <code class="text-gray-500">french-godot.nodyx.org</code>
                 </p>
+            {/if}
+        </section>
+        {/if}
+
+        <!-- ── 2FA TOTP ──────────────────────────────────────────────────── -->
+        {#if $page.data.user}
+        <section>
+            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-[0.2em] mb-2">Double authentification (2FA)</h2>
+            <p class="text-xs text-gray-600 mb-6">
+                Protégez votre compte avec un code à usage unique généré par une application comme Google Authenticator, Aegis ou Bitwarden.
+            </p>
+
+            {#if totpSuccess}
+                <div class="mb-4 rounded-lg border border-green-700/40 bg-green-900/10 px-4 py-2.5 text-sm text-green-400">
+                    {totpSuccess}
+                </div>
+            {/if}
+
+            {#if totpStep === 'idle'}
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-block w-2 h-2 rounded-full {totpEnabled ? 'bg-green-500' : 'bg-gray-600'}"></span>
+                        <span class="text-sm {totpEnabled ? 'text-green-400' : 'text-gray-500'}">
+                            {totpEnabled ? '2FA activé' : '2FA désactivé'}
+                        </span>
+                    </div>
+                    {#if totpEnabled}
+                        <button
+                            onclick={() => { totpStep = 'disable'; totpCode = ''; totpError = '' }}
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium border border-red-700/40 bg-red-900/10 text-red-400
+                                   hover:bg-red-900/20 transition-colors"
+                        >Désactiver</button>
+                    {:else}
+                        <button
+                            onclick={totpStartSetup}
+                            disabled={totpLoading}
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium border border-indigo-700/50 bg-indigo-900/10 text-indigo-400
+                                   hover:bg-indigo-900/20 disabled:opacity-50 transition-colors"
+                        >{totpLoading ? '…' : 'Activer le 2FA'}</button>
+                    {/if}
+                </div>
+
+            {:else if totpStep === 'setup'}
+                <div class="rounded-xl border border-indigo-700/30 bg-indigo-900/5 p-5 space-y-5">
+                    <div>
+                        <p class="text-sm font-semibold text-white mb-1">1. Scannez ce QR code</p>
+                        <p class="text-xs text-gray-500 mb-4">Ouvrez votre application d'authentification et scannez ce code.</p>
+                        {#if totpQr}
+                            <div class="inline-block rounded-xl p-3 bg-white">
+                                <img src={totpQr} alt="QR code 2FA" class="w-44 h-44" />
+                            </div>
+                        {/if}
+                        {#if totpSecret}
+                            <details class="mt-3">
+                                <summary class="text-xs text-gray-600 cursor-pointer select-none">Saisie manuelle (clé secrète)</summary>
+                                <code class="block mt-2 text-xs font-mono text-indigo-400 bg-gray-900 rounded px-3 py-2 break-all border border-gray-800">
+                                    {totpSecret}
+                                </code>
+                            </details>
+                        {/if}
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-white mb-1">2. Entrez le code de confirmation</p>
+                        <p class="text-xs text-gray-500 mb-3">Saisissez le code à 6 chiffres affiché dans votre application.</p>
+                        {#if totpError}
+                            <p class="mb-2 text-xs text-red-400">{totpError}</p>
+                        {/if}
+                        <div class="flex gap-2">
+                            <input
+                                type="text"
+                                inputmode="numeric"
+                                pattern="[0-9]{6}"
+                                maxlength="6"
+                                bind:value={totpCode}
+                                placeholder="000000"
+                                onkeydown={(e) => e.key === 'Enter' && totpCode.length === 6 && totpConfirm()}
+                                class="w-36 rounded-lg px-3 py-2 text-center font-mono text-lg tracking-widest
+                                       bg-gray-900 border border-gray-700 text-white focus:outline-none focus:border-indigo-500"
+                            />
+                            <button
+                                onclick={totpConfirm}
+                                disabled={totpLoading || totpCode.length < 6}
+                                class="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-700 hover:bg-indigo-600
+                                       disabled:opacity-50 text-white transition-colors"
+                            >{totpLoading ? '…' : 'Activer'}</button>
+                            <button onclick={totpCancel} class="px-3 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            {:else if totpStep === 'disable'}
+                <div class="rounded-xl border border-red-700/30 bg-red-900/5 p-5">
+                    <p class="text-sm font-semibold text-white mb-1">Désactiver le 2FA</p>
+                    <p class="text-xs text-gray-500 mb-4">Confirmez avec le code de votre application pour désactiver la double authentification.</p>
+                    {#if totpError}
+                        <p class="mb-3 text-xs text-red-400">{totpError}</p>
+                    {/if}
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            inputmode="numeric"
+                            pattern="[0-9]{6}"
+                            maxlength="6"
+                            bind:value={totpCode}
+                            placeholder="000000"
+                            onkeydown={(e) => e.key === 'Enter' && totpCode.length === 6 && totpDisable()}
+                            class="w-36 rounded-lg px-3 py-2 text-center font-mono text-lg tracking-widest
+                                   bg-gray-900 border border-gray-700 text-white focus:outline-none focus:border-indigo-600"
+                        />
+                        <button
+                            onclick={totpDisable}
+                            disabled={totpLoading || totpCode.length < 6}
+                            class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-700 hover:bg-red-600
+                                   disabled:opacity-50 text-white transition-colors"
+                        >{totpLoading ? '…' : 'Désactiver'}</button>
+                        <button onclick={totpCancel} class="px-3 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+                            Annuler
+                        </button>
+                    </div>
+                </div>
             {/if}
         </section>
         {/if}

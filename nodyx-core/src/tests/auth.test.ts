@@ -6,7 +6,7 @@ import { buildApp } from './helpers/buildApp'
 vi.mock('../config/database', () => ({
   db: {
     query: vi.fn().mockImplementation((sql: string) => {
-      if (typeof sql === 'string' && (sql.includes('community_bans') || sql.includes('ip_bans') || sql.includes('email_bans'))) {
+      if (typeof sql === 'string' && (sql.includes('community_bans') || sql.includes('ip_bans') || sql.includes('email_bans') || sql.includes('authenticator_devices'))) {
         return Promise.resolve({ rows: [], rowCount: 0 })
       }
       return Promise.resolve({ rows: [{ id: 'community-uuid' }], rowCount: 1 })

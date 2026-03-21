@@ -20,6 +20,7 @@
 | **Phase 4** | Platform enrichment (v1.4 → v1.8) | ✅ Complete |
 | **Phase 4.5** | Security hardening (v1.8.2) | ✅ Complete |
 | **Phase 4.6** | Active defense & runtime security (v1.9.0) | ✅ Complete |
+| **Phase 4.7** | 2FA — TOTP + Nodyx Signet as 2nd factor (v1.9.1) | ✅ Complete |
 | Phase 5 | Mobile + Nodes + Reputation | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
@@ -472,6 +473,21 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [x] **Upload rate limiting** — 10 uploads / 10 minutes / user
 - [x] **Email verification** — mandatory when SMTP configured; login blocked for unverified accounts
 - [x] **Log rotation** — daily rotation, 90-day retention, compressed
+
+---
+
+## PHASE 4.7 — Two-Factor Authentication ✅ COMPLETE
+### Goal: Add a strong second factor without sacrificing UX
+
+> *"Something you know + something you have."*
+> Phase 4.7 layers cryptographic 2FA on top of the existing auth stack, with Nodyx Signet as the premium path.
+
+- [x] **TOTP (RFC 6238)** — compatible with any authenticator app (Google Authenticator, Aegis, Bitwarden); QR code setup; 6-digit confirmation; Redis-backed 5-min pending session
+- [x] **2FA via Nodyx Signet** — if user has a registered Signet device, Signet is used as 2nd factor (ECDSA P-256 > shared TOTP secret); full reuse of existing challenge/approval infrastructure
+- [x] **Priority chain** — Signet > TOTP > direct login; system selects the strongest available factor automatically
+- [x] **Settings UI** — enable/disable 2FA with QR code display and confirmation code flow
+- [x] **Login UI** — seamless second-step: TOTP code input or Signet auto-triggered waiting screen
+- [x] **Nodyx Signet PWA rebuild** — stale `nexusnode.app` placeholders replaced with `nodyx.org`
 
 ---
 

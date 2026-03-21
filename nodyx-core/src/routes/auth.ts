@@ -10,6 +10,7 @@ import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as UserModel from '../models/user'
 import { isSmtpConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService'
+import { getUserTotp, TOTP_PENDING_TTL } from './totp'
 
 // ── Discord security alerts ───────────────────────────────────────────────────
 
@@ -297,6 +298,31 @@ export default async function authRoutes(app: FastifyInstance) {
         await redis.set(`banned:${user.id}`, '1')
         return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
       }
+    }
+
+    // ── 2FA Signet — prioritaire sur TOTP ────────────────────────────────────
+    // Si l'user a au moins un appareil Signet enregistré, on délègue le 2ème
+    // facteur à Signet (plus fort qu'un TOTP code) — même flow que le login
+    // passwordless mais déclenché automatiquement après vérification password.
+    const { rows: signetDevices } = await db.query<{ id: string }>(
+      `SELECT id FROM authenticator_devices WHERE user_id = $1 LIMIT 1`,
+      [user.id]
+    )
+    if (signetDevices.length > 0) {
+      return reply.send({ requires_signet: true, username: user.username })
+    }
+
+    // ── 2FA TOTP — si activé, on émet un token pending au lieu du vrai token ──
+    const { totp_enabled } = await getUserTotp(user.id)
+    if (totp_enabled) {
+      const token       = signToken(user.id, user.username)
+      const pendingId   = crypto.randomUUID()
+      await redis.set(
+        `totp_pending:${pendingId}`,
+        JSON.stringify({ userId: user.id, token }),
+        'EX', TOTP_PENDING_TTL
+      )
+      return reply.send({ requires_totp: true, totp_pending: pendingId })
     }
 
     const token = signToken(user.id, user.username)
