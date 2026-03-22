@@ -674,11 +674,20 @@ function buildScaryPage(
       <div class="section-title">// 04 — Client system fingerprint</div>
       <div class="row"><span class="key">Screen resolution</span><span class="val warn" id="js-screen">scanning…</span></div>
       <div class="row"><span class="key">Color depth</span><span class="val dim" id="js-depth">—</span></div>
+      <div class="row"><span class="key">Device pixel ratio</span><span class="val dim" id="js-dpr">—</span></div>
       <div class="row"><span class="key">Operating system</span><span class="val warn" id="js-platform">—</span></div>
-      <div class="row"><span class="key">Language</span><span class="val dim" id="js-lang">—</span></div>
+      <div class="row"><span class="key">Language(s)</span><span class="val dim" id="js-lang">—</span></div>
       <div class="row"><span class="key">CPU cores</span><span class="val amber" id="js-cores">—</span></div>
-      <div class="row"><span class="key">Timezone (client)</span><span class="val dim" id="js-tz">—</span></div>
+      <div class="row"><span class="key">RAM (approx.)</span><span class="val amber" id="js-ram">—</span></div>
+      <div class="row"><span class="key">GPU renderer</span><span class="val warn" id="js-gpu">computing…</span></div>
+      <div class="row"><span class="key">Timezone (browser)</span><span class="val dim" id="js-tz">—</span></div>
+      <div class="row"><span class="key">Timezone (IP geo)</span><span class="val dim">${geo.timezone}</span></div>
+      <div class="row"><span class="key">VPN detected (TZ mismatch)</span><span class="val" id="js-vpn">analysing…</span></div>
+      <div class="row"><span class="key">Touch points</span><span class="val dim" id="js-touch">—</span></div>
+      <div class="row"><span class="key">Network type</span><span class="val dim" id="js-net">—</span></div>
       <div class="row"><span class="key">Browser plugins</span><span class="val dim" id="js-plugins">—</span></div>
+      <div class="row"><span class="key">Fonts detected</span><span class="val dim" id="js-fonts">—</span></div>
+      <div class="row"><span class="key">Audio fingerprint</span><span class="val dim" id="js-audio">computing…</span></div>
       <div class="row"><span class="key">Canvas fingerprint</span><span class="val amber" id="js-fp">computing…</span></div>
       <div id="fp-warning"><span>⚠ EMPREINTE RECONNUE — </span><span id="fp-warning-text"></span></div>
     </div>` : ''}
@@ -753,10 +762,14 @@ ${isBrowser ? `
   try {
     document.getElementById('js-screen').textContent   = screen.width + 'x' + screen.height;
     document.getElementById('js-depth').textContent    = screen.colorDepth + ' bits';
-    document.getElementById('js-platform').textContent = navigator.platform || navigator.userAgentData?.platform || '—';
-    document.getElementById('js-lang').textContent     = navigator.language + ' (' + (navigator.languages||[]).join(', ') + ')';
+    document.getElementById('js-dpr').textContent      = (window.devicePixelRatio || 1).toFixed(2) + 'x';
+    document.getElementById('js-platform').textContent = navigator.platform || (navigator.userAgentData && navigator.userAgentData.platform) || '—';
+    document.getElementById('js-lang').textContent     = navigator.language + ' [' + (navigator.languages||[navigator.language]).join(', ') + ']';
     document.getElementById('js-cores').textContent    = (navigator.hardwareConcurrency || '?') + ' logical cores';
+    document.getElementById('js-ram').textContent      = navigator.deviceMemory ? navigator.deviceMemory + ' GB (approx.)' : 'non exposé';
     document.getElementById('js-tz').textContent       = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.getElementById('js-touch').textContent    = (navigator.maxTouchPoints || 0) + ' points';
+    document.getElementById('js-net').textContent      = (navigator.connection && navigator.connection.effectiveType) ? navigator.connection.effectiveType : 'non exposé';
     document.getElementById('js-plugins').textContent  = (navigator.plugins ? navigator.plugins.length : 0) + ' plugins detected';
     // Canvas fingerprint
     var c = document.createElement('canvas');
@@ -773,28 +786,115 @@ ${isBrowser ? `
       fpHash = fp.slice(0,32).toUpperCase();
       document.getElementById('js-fp').textContent = fpHash;
     }
-    // Feature 2 — envoyer le fingerprint au serveur
-    if(fpHash) {
-      fetch('/api/v1/_hp_fp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          incident_id: '${incidentId}',
-          fp_hash: fpHash,
-          screen: screen.width + 'x' + screen.height,
-          cores: navigator.hardwareConcurrency || 0,
-          tz: Intl.DateTimeFormat().resolvedOptions().timeZone
-        })
-      }).then(function(r){ return r.json(); }).then(function(data){
-        if(data && data.seen) {
-          var warn = document.getElementById('fp-warning');
-          var txt  = document.getElementById('fp-warning-text');
-          if(warn && txt) {
-            txt.textContent = 'Déjà détecté ' + data.visits + ' fois' + (data.otherIps && data.otherIps.length > 0 ? ' depuis ' + data.otherIps.join(', ') : '');
-            warn.style.display = 'block';
-          }
+    // GPU via WebGL (UNMASKED_RENDERER = carte graphique exacte)
+    var gpuVendor = '', gpuRenderer = '';
+    try {
+      var glc = document.createElement('canvas');
+      var gl = glc.getContext('webgl') || glc.getContext('experimental-webgl');
+      if(gl) {
+        var dbgExt = gl.getExtension('WEBGL_debug_renderer_info');
+        if(dbgExt) {
+          gpuVendor   = gl.getParameter(dbgExt.UNMASKED_VENDOR_WEBGL)   || '';
+          gpuRenderer = gl.getParameter(dbgExt.UNMASKED_RENDERER_WEBGL) || '';
+        } else {
+          gpuVendor   = gl.getParameter(gl.VENDOR)   || '';
+          gpuRenderer = gl.getParameter(gl.RENDERER) || '';
         }
-      }).catch(function(){});
+        var gpuEl = document.getElementById('js-gpu');
+        if(gpuEl && gpuRenderer) gpuEl.textContent = gpuRenderer + (gpuVendor ? ' / ' + gpuVendor : '');
+      }
+    } catch(e) {}
+
+    // Audio fingerprint (signature matérielle unique)
+    var audioFP = '';
+    try {
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(AudioCtx) {
+        var actx = new AudioCtx({ sampleRate: 44100 });
+        var osc  = actx.createOscillator();
+        var comp = actx.createDynamicsCompressor();
+        var anal = actx.createAnalyser();
+        osc.connect(comp); comp.connect(anal); anal.connect(actx.destination);
+        osc.type = 'triangle'; osc.frequency.value = 440;
+        osc.start(0);
+        var fbuf = new Float32Array(anal.frequencyBinCount);
+        anal.getFloatFrequencyData(fbuf);
+        osc.stop(0); actx.close();
+        audioFP = Array.from(fbuf.slice(0,8)).map(function(v){ return (Math.round(v*100)/100).toString(); }).join('|');
+        var afEl = document.getElementById('js-audio');
+        if(afEl) afEl.textContent = audioFP ? audioFP.slice(0,40) + '…' : 'non disponible';
+      }
+    } catch(e) { var ae2 = document.getElementById('js-audio'); if(ae2) ae2.textContent = 'non disponible'; }
+
+    // Polices disponibles (détection canvas)
+    var fontsCount = 0;
+    try {
+      var testFonts = ['Arial','Helvetica','Times New Roman','Courier New','Georgia','Verdana',
+        'Impact','Comic Sans MS','Palatino Linotype','Tahoma','Ubuntu','DejaVu Sans',
+        'Segoe UI','Roboto','SF Pro','Noto Sans','Open Sans'];
+      var fc2 = document.createElement('canvas'); fc2.width=200; fc2.height=30;
+      var cx2 = fc2.getContext('2d');
+      cx2.font='12px monospace';
+      var bw = cx2.measureText('Wabcdefghijklm0123456789').width;
+      fontsCount = testFonts.filter(function(f){
+        cx2.font='12px '+f+',monospace';
+        return Math.abs(cx2.measureText('Wabcdefghijklm0123456789').width - bw) > 0.1;
+      }).length;
+      var ffEl = document.getElementById('js-fonts');
+      if(ffEl) ffEl.textContent = fontsCount + '/' + testFonts.length + ' reconnus';
+    } catch(e) {}
+
+    // Comportement (temps de réaction — human vs bot)
+    var pageLoadTs = Date.now();
+    var firstMouseMove = 0;
+    document.addEventListener('mousemove', function(){ if(!firstMouseMove) firstMouseMove = Date.now() - pageLoadTs; }, { once: true, passive: true });
+
+    // Feature — envoyer l'intelligence complète au serveur
+    if(fpHash) {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      var geoTz = '${geo.timezone}'; // timezone côté serveur (ip-api.com)
+      var vpnSuspect = (tz && geoTz && geoTz !== '—' && tz !== geoTz);
+      if(vpnSuspect) {
+        var vpnEl = document.getElementById('js-vpn');
+        if(vpnEl) { vpnEl.textContent = 'DÉTECTÉ — TZ navigateur: ' + tz + ' / IP géo: ' + geoTz; vpnEl.style.color='#ff4444'; }
+      }
+
+      setTimeout(function(){
+        fetch('/api/v1/_hp_fp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            incident_id:     '${incidentId}',
+            fp_hash:         fpHash,
+            screen:          screen.width + 'x' + screen.height,
+            cores:           navigator.hardwareConcurrency || 0,
+            tz:              tz,
+            gpu_vendor:      gpuVendor,
+            gpu_renderer:    gpuRenderer,
+            device_memory:   navigator.deviceMemory || 0,
+            languages:       (navigator.languages || [navigator.language]).join(','),
+            dpr:             window.devicePixelRatio || 1,
+            touch_points:    navigator.maxTouchPoints || 0,
+            connection_type: (navigator.connection && navigator.connection.effectiveType) || '',
+            audio_fp:        audioFP,
+            fonts_count:     fontsCount,
+            color_depth:     screen.colorDepth || 0,
+            tz_mismatch:     vpnSuspect,
+            browser_tz:      tz,
+            geo_tz:          geoTz,
+            time_to_action:  firstMouseMove || 0,
+          })
+        }).then(function(r){ return r.json(); }).then(function(data){
+          if(data && data.seen) {
+            var warn = document.getElementById('fp-warning');
+            var txt  = document.getElementById('fp-warning-text');
+            if(warn && txt) {
+              txt.textContent = 'Déjà détecté ' + data.visits + ' fois' + (data.otherIps && data.otherIps.length > 0 ? ' depuis ' + data.otherIps.join(', ') : '');
+              warn.style.display = 'block';
+            }
+          }
+        }).catch(function(){});
+      }, 800); // délai court pour laisser audio FP se terminer
     }
   } catch(e){}
 })();
@@ -1102,8 +1202,19 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
   })
 
   // ── POST /_hp_fp — Fingerprint persistant ─────────────────────────────────
-  fastify.post<{ Body: { incident_id?: string; fp_hash?: string; screen?: string; cores?: number; tz?: string } }>('/_hp_fp', async (request, reply) => {
-    const { incident_id, fp_hash, screen, cores, tz } = request.body ?? {}
+  fastify.post<{ Body: {
+    incident_id?: string; fp_hash?: string; screen?: string; cores?: number; tz?: string;
+    gpu_vendor?: string; gpu_renderer?: string; device_memory?: number; languages?: string;
+    dpr?: number; touch_points?: number; connection_type?: string; audio_fp?: string;
+    fonts_count?: number; color_depth?: number; tz_mismatch?: boolean;
+    browser_tz?: string; geo_tz?: string; time_to_action?: number;
+  } }>('/_hp_fp', async (request, reply) => {
+    const {
+      incident_id, fp_hash, screen, cores, tz,
+      gpu_vendor, gpu_renderer, device_memory, languages,
+      dpr, touch_points, connection_type, audio_fp,
+      fonts_count, color_depth, tz_mismatch, browser_tz, geo_tz, time_to_action,
+    } = request.body ?? {}
 
     if (!incident_id || !/^HP-[A-Z0-9]+-[A-Z0-9]+$/.test(incident_id)) return reply.code(400).send({})
     if (!fp_hash || !/^[A-F0-9]{8,64}$/.test(fp_hash)) return reply.code(400).send({})
@@ -1117,16 +1228,41 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
 
     try {
       // Upsert fingerprint
+      const behavior = time_to_action ? { time_to_action_ms: time_to_action } : null
+
       const { rows } = await db.query<{ visits: number; ip_list: string[]; incident_ids: string[]; first_seen: string }>(
-        `INSERT INTO honeypot_fingerprints (fp_hash, visits, ip_list, incident_ids, screen, cores, tz, first_seen, last_seen)
-         VALUES ($1, 1, ARRAY[$2::text], ARRAY[$3::text], $4, $5, $6, NOW(), NOW())
+        `INSERT INTO honeypot_fingerprints
+           (fp_hash, visits, ip_list, incident_ids, screen, cores, tz,
+            gpu_vendor, gpu_renderer, device_memory, languages, dpr, touch_points,
+            connection_type, audio_fp, fonts_count, color_depth, behavior_json,
+            first_seen, last_seen)
+         VALUES ($1, 1, ARRAY[$2::text], ARRAY[$3::text], $4, $5, $6,
+                 $7, $8, $9, $10, $11, $12,
+                 $13, $14, $15, $16, $17,
+                 NOW(), NOW())
          ON CONFLICT (fp_hash) DO UPDATE SET
-           visits       = honeypot_fingerprints.visits + 1,
-           ip_list      = CASE WHEN $2 = ANY(honeypot_fingerprints.ip_list) THEN honeypot_fingerprints.ip_list ELSE array_append(honeypot_fingerprints.ip_list, $2::text) END,
-           incident_ids = array_append(honeypot_fingerprints.incident_ids, $3::text),
-           last_seen    = NOW()
+           visits          = honeypot_fingerprints.visits + 1,
+           ip_list         = CASE WHEN $2 = ANY(honeypot_fingerprints.ip_list) THEN honeypot_fingerprints.ip_list ELSE array_append(honeypot_fingerprints.ip_list, $2::text) END,
+           incident_ids    = array_append(honeypot_fingerprints.incident_ids, $3::text),
+           gpu_vendor      = COALESCE($7,  honeypot_fingerprints.gpu_vendor),
+           gpu_renderer    = COALESCE($8,  honeypot_fingerprints.gpu_renderer),
+           device_memory   = COALESCE($9,  honeypot_fingerprints.device_memory),
+           languages       = COALESCE($10, honeypot_fingerprints.languages),
+           dpr             = COALESCE($11, honeypot_fingerprints.dpr),
+           touch_points    = COALESCE($12, honeypot_fingerprints.touch_points),
+           connection_type = COALESCE($13, honeypot_fingerprints.connection_type),
+           audio_fp        = COALESCE($14, honeypot_fingerprints.audio_fp),
+           fonts_count     = COALESCE($15, honeypot_fingerprints.fonts_count),
+           color_depth     = COALESCE($16, honeypot_fingerprints.color_depth),
+           last_seen       = NOW()
          RETURNING visits, ip_list, incident_ids, first_seen`,
-        [fp_hash, ip, incident_id, screen || null, cores || null, tz || null]
+        [
+          fp_hash, ip, incident_id, screen || null, cores || null, tz || null,
+          gpu_vendor || null, gpu_renderer || null, device_memory || null, languages || null,
+          dpr || null, touch_points ?? null, connection_type || null,
+          audio_fp || null, fonts_count ?? null, color_depth || null,
+          behavior ? JSON.stringify(behavior) : null,
+        ]
       )
 
       const row     = rows[0]
@@ -1151,6 +1287,10 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
                   { name: 'Visites',       value: `${visits}`,                                             inline: true  },
                   { name: 'Canvas FP',     value: `\`${fp_hash}\``,                                       inline: false },
                   { name: 'IPs connues',   value: ipList.map((x: string) => `\`${x}\``).join(', ') || '—', inline: false },
+                  ...(tz_mismatch ? [{ name: '🔥 VPN DÉTECTÉ — TZ mismatch', value: `Browser: \`${browser_tz}\` / IP géo: \`${geo_tz}\``, inline: false }] : []),
+                  ...(gpu_renderer ? [{ name: 'GPU', value: `\`${gpu_renderer}\``, inline: false }] : []),
+                  ...(languages ? [{ name: 'Langue(s)', value: `\`${languages}\``, inline: true }] : []),
+                  ...(device_memory ? [{ name: 'RAM', value: `${device_memory} GB`, inline: true }] : []),
                   { name: 'Incident',      value: `\`${incident_id}\``,                                   inline: false },
                 ],
                 timestamp: new Date().toISOString(),
@@ -1313,5 +1453,137 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
     }
 
     return reply.code(200).send(PIXEL_PNG)
+  })
+
+  // ── GET /_hp_cert/:incidentId — Rapport CERT-FR complet ───────────────────
+  // Génère un rapport structuré avec toutes les données de l'incident
+  // pour transmission au CERT-FR / OCS / forces de l'ordre.
+  fastify.get<{ Params: { incidentId: string } }>('/_hp_cert/:incidentId', async (request, reply) => {
+    const { incidentId } = request.params
+    if (!incidentId || !/^HP-[A-Z0-9]+-[A-Z0-9]+$/.test(incidentId)) {
+      return reply.code(400).send({ error: 'invalid incident id' })
+    }
+
+    // Vérification admin (header secret ou paramètre)
+    const secret = process.env.CERT_REPORT_SECRET || process.env.JWT_SECRET
+    const provided = request.headers['x-cert-secret'] || (request.query as Record<string, string>)['secret']
+    if (!secret || provided !== secret) return reply.code(403).send({ error: 'unauthorized' })
+
+    // Collecter toutes les données de l'incident
+    const [hitRow, fpRow, credRow, pixelRows, rtcRows] = await Promise.all([
+      db.query(`SELECT * FROM honeypot_hits WHERE incident_id = $1 LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_fingerprints WHERE $1 = ANY(incident_ids) LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_credential_attempts WHERE incident_id = $1 LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_pixel_hits WHERE incident_id = $1 ORDER BY viewed_at`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT ip FROM honeypot_hits WHERE incident_id = $1 LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+    ])
+
+    const hit  = (hitRow as any).rows[0]
+    const fp   = (fpRow  as any).rows[0]
+    const cred = (credRow as any).rows[0]
+
+    if (!hit) return reply.code(404).send({ error: 'incident not found' })
+
+    const tzMismatch = fp?.tz && hit.timezone && fp.tz !== hit.timezone
+
+    const report = {
+      cert_report: {
+        format_version: '1.0',
+        generated_at:   new Date().toISOString(),
+        generated_by:   'Nodyx Security Honeypot v1.9.2',
+        platform:       process.env.NEXUS_COMMUNITY_NAME || 'Nodyx Instance',
+        incident_id:    incidentId,
+      },
+      incident: {
+        timestamp:       hit.created_at,
+        attack_type:     cred ? 'credential_harvesting' : 'unauthorized_access_attempt',
+        targeted_path:   hit.path,
+        http_method:     hit.method,
+        user_agent:      hit.user_agent,
+        tool_detected:   detectTool(hit.user_agent || ''),
+        evidence_hash:   evidenceHash(incidentId, hit.ip, hit.path, hit.created_at),
+      },
+      attacker: {
+        ip_address:      hit.ip,
+        ip_version:      hit.ip?.includes(':') ? 'IPv6' : 'IPv4',
+        geolocation: {
+          country:  hit.country,
+          city:     hit.city,
+          isp:      hit.isp,
+          org:      hit.org,
+          timezone: hit.timezone,
+          lat:      hit.lat,
+          lon:      hit.lon,
+        },
+        anonymization: {
+          proxy:          hit.proxy,
+          hosting:        hit.hosting,
+          mobile:         hit.mobile,
+          vpn_suspected:  tzMismatch,
+          vpn_evidence:   tzMismatch ? `Browser TZ: ${fp.tz} / IP geo TZ: ${hit.timezone}` : null,
+        },
+        device_fingerprint: fp ? {
+          canvas_hash:    fp.fp_hash,
+          screen:         fp.screen,
+          cpu_cores:      fp.cores,
+          ram_gb:         fp.device_memory,
+          gpu_renderer:   fp.gpu_renderer,
+          gpu_vendor:     fp.gpu_vendor,
+          browser_tz:     fp.tz,
+          languages:      fp.languages,
+          dpr:            fp.dpr,
+          touch_points:   fp.touch_points,
+          connection:     fp.connection_type,
+          audio_fp:       fp.audio_fp,
+          fonts_detected: fp.fonts_count,
+          color_depth:    fp.color_depth,
+          recurrence: {
+            total_visits:   fp.visits,
+            known_ips:      fp.ip_list,
+            first_seen:     fp.first_seen,
+            last_seen:      fp.last_seen,
+          },
+        } : null,
+      },
+      credentials_captured: cred ? {
+        username:     cred.username,
+        password:     cred.password,
+        login_path:   cred.login_path,
+        attempted_at: cred.attempted_at,
+      } : null,
+      pixel_tracking: {
+        total_views:  (pixelRows as any).rows.length,
+        views:        (pixelRows as any).rows.map((r: any) => ({
+          viewed_at:  r.viewed_at,
+          ip:         r.ip,
+          user_agent: r.user_agent,
+          referer:    r.referer,
+        })),
+      },
+      legal: {
+        applicable_laws: [
+          'Code Pénal français art. 323-1 — Accès frauduleux à un système informatique (2 ans / 60 000 €)',
+          'Code Pénal français art. 323-2 — Entrave à un STAD (3 ans / 45 000 €)',
+          'EU Directive 2013/40/EU — Attaques contre les systèmes d\'information',
+          'GDPR Art. 32 — Obligation de sécurité des données',
+        ],
+        isp_contact:     `abuse@${(hit.isp || '').toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}.net`,
+        cert_fr:         'https://www.cert.ssi.gouv.fr/contact/',
+        cybermalveillance: 'https://www.cybermalveillance.gouv.fr',
+        reporting_note:  'Ce rapport est généré automatiquement par le système de défense Nodyx. Toutes les données sont horodatées et hashées. L\'empreinte SHA-256 permet de vérifier l\'intégrité du dossier.',
+      },
+      headers_raw: hit.headers,
+    }
+
+    // Sauvegarder le rapport généré
+    db.query(
+      `INSERT INTO honeypot_cert_reports (incident_id, report_json) VALUES ($1, $2)`,
+      [incidentId, JSON.stringify(report)]
+    ).catch(() => {})
+
+    return reply.code(200)
+      .header('Content-Type', 'application/json; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="CERT-${incidentId}-${new Date().toISOString().slice(0,10)}.json"`)
+      .send(report)
   })
 }
