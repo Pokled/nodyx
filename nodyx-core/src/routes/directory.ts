@@ -121,8 +121,21 @@ export default async function directoryRoutes(app: FastifyInstance) {
         [slug]
       )
       if (rows[0]?.url) {
-        // Valider le schéma avant redirection (prévention open redirect)
-        if (!rows[0].url.startsWith('https://')) return
+        // Valider l'URL : schéma HTTPS + hostname non-privé (prévention open redirect)
+        let parsed: URL
+        try { parsed = new URL(rows[0].url) } catch { return }
+        if (parsed.protocol !== 'https:') return
+        const hn = parsed.hostname
+        // Rejeter IPs privées, localhost, et loopback (SSRF + phishing mitigation)
+        if (
+          hn === 'localhost' ||
+          /^127\./.test(hn) ||
+          /^10\./.test(hn) ||
+          /^172\.(1[6-9]|2\d|3[01])\./.test(hn) ||
+          /^192\.168\./.test(hn) ||
+          /^::1$/.test(hn) ||
+          /^0\.0\.0\.0/.test(hn)
+        ) return
         // Preserve path + query so deep links work (e.g. community.nodyx.org/forum/thread/42)
         const target = rows[0].url.replace(/\/$/, '') + (req.url === '/' ? '' : req.url)
         return reply.redirect(target, 302)

@@ -2,6 +2,9 @@ import { FastifyInstance } from 'fastify'
 import { db, redis } from '../config/database.js'
 import crypto from 'crypto'
 import fs from 'fs'
+import { reportHoneypotToMISP } from '../services/mispService.js'
+import { enrichIP, type OSINTResult } from '../services/osintService.js'
+import { sendCERTEmail } from '../services/certEmailService.js'
 
 // 1×1 transparent PNG — served by the tracking pixel endpoint
 const PIXEL_PNG = Buffer.from(
@@ -606,6 +609,19 @@ function buildScaryPage(
   #fp-warning { display:none; margin-top:0.5rem; padding:0.4rem 0.6rem;
                 background:rgba(255,0,0,0.08); border:1px solid #550000; border-radius:3px; }
   #fp-warning span { color:#ff4444; font-weight:bold; font-size:0.8em; }
+  /* L'Effet Procureur */
+  #procureur { margin-top:1.2rem; padding:1rem 1.2rem; border:1px solid #550000;
+               background:#0a0000; border-radius:3px; min-height:2.5rem; }
+  #procureur .p-line { font-size:0.82em; line-height:2; white-space:pre; }
+  #procureur .p-cursor { display:inline-block; width:8px; height:13px;
+                         background:#ff4444; animation:blink 0.7s step-end infinite;
+                         vertical-align:middle; margin-left:2px; }
+  #procureur .p-bar-wrap { margin:0.3rem 0 0.1rem; }
+  #procureur .p-bar-label { font-size:0.75em; color:#884444; }
+  #procureur .p-bar { height:5px; background:#1a0000; border-radius:2px; overflow:hidden; margin-top:2px; }
+  #procureur .p-bar-fill { height:100%; border-radius:2px; width:0%; transition:width 0.05s linear; }
+  @keyframes proc-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  #procureur.flash { animation:proc-flash 0.15s ease 3; }
 </style>
 </head>
 <body>
@@ -724,6 +740,8 @@ function buildScaryPage(
       </div>
     </div>
 
+    <div id="procureur"><span class="p-cursor"></span></div>
+
     <div class="legal">
       <p>This access attempt has been recorded in full: IP, headers, tool fingerprint, geolocation, canvas fingerprint and timestamp are archived as legal evidence.</p>
       <p>Unauthorized access to a computer system is a criminal offence — Code Pénal art. 323-1 (up to 2 years imprisonment, €60 000 fine) and EU Directive 2013/40/EU.</p>
@@ -754,6 +772,110 @@ function buildScaryPage(
     var m = Math.floor(s/60), sec = s%60;
     el.textContent = String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
   }, 1000);
+})();
+
+// ── ALARME STRIDENTE ─────────────────────────────────────────────────────────
+(function(){
+  var fired = false;
+  function playAlarm() {
+    if (fired) return; fired = true;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      var ctx = new AC();
+      function tone(freq, start, dur, vol) {
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.type = 'square';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0, ctx.currentTime + start);
+        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.01);
+        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + dur - 0.02);
+        g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime + start);
+        o.stop(ctx.currentTime + start + dur + 0.01);
+      }
+      // Sirène : 150 cycles = ~27 secondes schedulées dans le buffer audio
+      // Persiste après fermeture d'onglet sur Chromium/Linux (thread audio séparé)
+      for (var i = 0; i < 150; i++) {
+        var t0 = i * 0.18;
+        tone(960, t0,        0.08, 0.30);
+        tone(480, t0 + 0.09, 0.08, 0.24);
+      }
+      // Toutes les 3 secondes : bip grave de rappel (encore plus flippant)
+      for (var j = 0; j < 9; j++) {
+        tone(180, j * 3.0 + 2.5, 0.35, 0.20);
+      }
+    } catch(e) {}
+  }
+  ['mousemove','scroll','keydown','touchstart','click'].forEach(function(ev) {
+    document.addEventListener(ev, playAlarm, { once: true, passive: true });
+  });
+})();
+
+// ── L'EFFET PROCUREUR ────────────────────────────────────────────────────────
+(function(){
+  var box = document.getElementById('procureur');
+  if (!box) return;
+
+  var anonLevel = '${geo.proxy ? 'PARTIELLE — Proxy/VPN détecté' : geo.hosting ? 'PARTIELLE — IP datacenter' : 'AUCUNE — Connexion résidentielle directe ⚠'}';
+  var vpnFlag   = '${geo.proxy || geo.hosting ? 'OUI' : 'NON — IP directement attribuable'}';
+
+  var LINES = [
+    { t: '█ DOSSIER PÉNAL OUVERT',                                     c: '#ff3333', d: 600  },
+    { t: '█ Réf. ${incidentId}',                                        c: '#ff9944', d: 1300 },
+    { t: '',                                                              c: '',        d: 1900 },
+    { t: '  IP source ............. ${escHtml(ip)}',                    c: '#ffcc00', d: 2400 },
+    { t: '  FAI ................... ${escHtml(geo.isp)}',               c: '#e8e8e8', d: 3000 },
+    { t: '  Localisation .......... ${escHtml(geo.city)}, ${escHtml(geo.country)}', c: '#e8e8e8', d: 3600 },
+    { t: '  Anonymisation ......... ' + anonLevel,                       c: '#ffaa00', d: 4300 },
+    { t: '',                                                              c: '',        d: 4900 },
+    { t: '  Art. 323-1 CP ......... ACCÈS FRAUDULEUX — CARACTÉRISÉ',    c: '#ff4444', d: 5400 },
+    { t: '  Art. 323-2 CP ......... ENTRAVE STAD — EN ÉVALUATION',      c: '#ff6644', d: 6100 },
+    { t: '',                                                              c: '',        d: 6700 },
+    { t: '  [TRANSMISSION EN COURS]',                                    c: '#33ff33', d: 7200, bar: true, label: 'CERT-FR → ANSSI', col: '#33ff33' },
+    { t: '  [TRANSMISSION EN COURS]',                                    c: '#33aaff', d: 9800, bar: true, label: 'MISP → Europol / Interpol', col: '#33aaff' },
+    { t: '',                                                              c: '',        d: 12400 },
+    { t: '  Votre dossier est complet. Vous pouvez partir.',             c: '#888',    d: 13000 },
+    { t: '  Il ne partira pas.',                                         c: '#ff3333', d: 14000 },
+  ];
+
+  // Vider le box et supprimer le curseur initial
+  box.innerHTML = '';
+
+  LINES.forEach(function(line) {
+    setTimeout(function() {
+      if (line.bar) {
+        // Barre de progression
+        var wrap = document.createElement('div');
+        wrap.className = 'p-bar-wrap';
+        wrap.innerHTML =
+          '<div class="p-bar-label" style="color:' + line.col + '">' + line.label + '</div>' +
+          '<div class="p-bar"><div class="p-bar-fill" style="background:' + line.col + '"></div></div>';
+        box.appendChild(wrap);
+        // Flash du box
+        box.classList.add('flash');
+        setTimeout(function(){ box.classList.remove('flash'); }, 500);
+        // Remplissage barre
+        var fill = wrap.querySelector('.p-bar-fill');
+        var pct  = 0;
+        var iv = setInterval(function(){
+          pct += 1.2;
+          if (pct >= 100) { pct = 100; clearInterval(iv); }
+          fill.style.width = pct + '%';
+        }, 22);
+      } else {
+        var div = document.createElement('div');
+        div.className = 'p-line';
+        div.style.color = line.c || '#e8e8e8';
+        div.textContent = line.t;
+        box.appendChild(div);
+        // Scroll automatique
+        box.scrollTop = box.scrollHeight;
+      }
+    }, line.d);
+  });
 })();
 
 ${isBrowser ? `
@@ -1028,6 +1150,21 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
               }]
             })
           }).catch(() => {})
+          // MISP — honeytoken
+          reportHoneypotToMISP({
+            incidentId, ip,
+            path: originalPath, method, userAgent,
+            country: geo.country, city: geo.city, isp: geo.isp, timezone: geo.timezone,
+            proxy: geo.proxy, hosting: geo.hosting,
+            incidentType: 'honeytoken',
+          }).catch(() => {})
+          // Email CERT — honeytoken
+          sendCERTEmail({
+            incidentId, ip,
+            city: geo.city, country: geo.country, isp: geo.isp,
+            proxy: geo.proxy, hosting: geo.hosting,
+            incidentType: 'honeytoken',
+          }).catch(() => {})
         } else if (canary) {
           fetch(webhookUrl, {
             method:  'POST',
@@ -1049,6 +1186,21 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
                 footer:    { text: 'nodyx-security-monitor · canary-file' },
               }]
             })
+          }).catch(() => {})
+          // MISP — canary file
+          reportHoneypotToMISP({
+            incidentId, ip,
+            path: originalPath, method, userAgent,
+            country: geo.country, city: geo.city, isp: geo.isp, timezone: geo.timezone,
+            proxy: geo.proxy, hosting: geo.hosting,
+            incidentType: 'canary',
+          }).catch(() => {})
+          // Email CERT — canary file
+          sendCERTEmail({
+            incidentId, ip,
+            city: geo.city, country: geo.country, isp: geo.isp,
+            proxy: geo.proxy, hosting: geo.hosting,
+            incidentType: 'canary',
           }).catch(() => {})
         } else if (isLogin) {
           // Faux login servi — pas de notif ici, la notif arrive quand ils soumettent les credentials
@@ -1076,6 +1228,14 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
                 footer:    { text: 'nodyx-security-monitor' },
               }]
             })
+          }).catch(() => {})
+          // MISP — scan (filtré automatiquement si scan+VPN)
+          reportHoneypotToMISP({
+            incidentId, ip,
+            path: originalPath, method, userAgent,
+            country: geo.country, city: geo.city, isp: geo.isp, timezone: geo.timezone,
+            proxy: geo.proxy, hosting: geo.hosting,
+            incidentType: 'scan',
           }).catch(() => {})
         }
       }
@@ -1170,6 +1330,23 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
         })
       }).catch(() => {})
     }
+
+    // MISP — credential harvest
+    reportHoneypotToMISP({
+      incidentId, ip,
+      path: loginPath, method: 'POST', userAgent,
+      country: geo.country, city: geo.city, isp: geo.isp, timezone: geo.timezone,
+      proxy: geo.proxy, hosting: geo.hosting,
+      incidentType: 'credential_harvest',
+      username: username.slice(0, 64),
+    }).catch(() => {})
+    // Email CERT — credential harvest
+    sendCERTEmail({
+      incidentId, ip,
+      city: geo.city, country: geo.country, isp: geo.isp,
+      proxy: geo.proxy, hosting: geo.hosting,
+      incidentType: 'credential_harvest',
+    }).catch(() => {})
 
     // Rediriger vers la scary page via le honeypot principal
     const newIncidentId = genIncidentId()
@@ -1298,6 +1475,39 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
               }]
             })
           }).catch(() => {})
+
+          // Email CERT — récidiviste
+          getGeoInfo(ip).then(geo => sendCERTEmail({
+            incidentId:   incident_id,
+            ip,
+            city:         geo.city,
+            country:      geo.country,
+            isp:          geo.isp,
+            proxy:        geo.proxy,
+            hosting:      geo.hosting,
+            incidentType: 'fingerprint_recurrence',
+          })).catch(() => {})
+          // MISP — récidiviste
+          getGeoInfo(ip).then(geo => reportHoneypotToMISP({
+            incidentId:   incident_id,
+            ip,
+            path:         '/_hp_fp',
+            method:       'POST',
+            userAgent:    '',
+            country:      geo.country,
+            city:         geo.city,
+            isp:          geo.isp,
+            timezone:     geo.timezone,
+            proxy:        geo.proxy,
+            hosting:      geo.hosting,
+            incidentType: 'fingerprint_recurrence',
+            canvasFp:     fp_hash,
+            gpuRenderer:  gpu_renderer,
+            browserTz:    browser_tz,
+            languages:    languages,
+            fpVisits:     visits,
+            knownIps:     ipList,
+          })).catch(() => {})
         }
       }
 
@@ -1478,11 +1688,19 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
       db.query(`SELECT ip FROM honeypot_hits WHERE incident_id = $1 LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
     ])
 
-    const hit  = (hitRow as any).rows[0]
-    const fp   = (fpRow  as any).rows[0]
+    const hit  = (hitRow  as any).rows[0]
+    const fp   = (fpRow   as any).rows[0]
     const cred = (credRow as any).rows[0]
 
     if (!hit) return reply.code(404).send({ error: 'incident not found' })
+
+    // Enrichissement OSINT (parallèle — ne bloque pas si API down)
+    const osint: OSINTResult = await enrichIP(hit.ip).catch(() => ({
+      ip: hit.ip, enriched_at: new Date().toISOString(),
+      abuseipdb: null, virustotal: null, shodan: null,
+      threat_score: 0, threat_level: 'low' as const,
+      summary: 'Enrichissement OSINT indisponible.',
+    }))
 
     const tzMismatch = fp?.tz && hit.timezone && fp.tz !== hit.timezone
 
@@ -1560,6 +1778,7 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
           referer:    r.referer,
         })),
       },
+      osint_enrichment: osint,
       legal: {
         applicable_laws: [
           'Code Pénal français art. 323-1 — Accès frauduleux à un système informatique (2 ans / 60 000 €)',
@@ -1585,5 +1804,500 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
       .header('Content-Type', 'application/json; charset=utf-8')
       .header('Content-Disposition', `attachment; filename="CERT-${incidentId}-${new Date().toISOString().slice(0,10)}.json"`)
       .send(report)
+  })
+
+  // ── GET /_hp_cert/:incidentId/md — Rapport Markdown lisible humain ──────────
+  // Destiné aux autorités françaises : CERT-FR, OCLCTIC, gendarmerie, ANSSI.
+  fastify.get<{ Params: { incidentId: string } }>('/_hp_cert/:incidentId/md', async (request, reply) => {
+    const { incidentId } = request.params
+    if (!incidentId || !/^HP-[A-Z0-9]+-[A-Z0-9]+$/.test(incidentId)) {
+      return reply.code(400).send('ID incident invalide')
+    }
+
+    const secret   = process.env.CERT_REPORT_SECRET || process.env.JWT_SECRET
+    const provided = request.headers['x-cert-secret'] || (request.query as Record<string, string>)['secret']
+    if (!secret || provided !== secret) return reply.code(403).send('Non autorisé')
+
+    const [hitRow, fpRow, credRow, pixelRows] = await Promise.all([
+      db.query(`SELECT * FROM honeypot_hits WHERE incident_id = $1 LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_fingerprints WHERE $1 = ANY(incident_ids) LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_credential_attempts WHERE incident_id = $1 LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_pixel_hits WHERE incident_id = $1 ORDER BY viewed_at`, [incidentId]).catch(() => ({ rows: [] })),
+    ])
+
+    const hit  = (hitRow  as any).rows[0]
+    const fp   = (fpRow   as any).rows[0]
+    const cred = (credRow as any).rows[0]
+    if (!hit) return reply.code(404).send('Incident introuvable')
+
+    const osint = await enrichIP(hit.ip).catch(() => null)
+    const evHash = evidenceHash(incidentId, hit.ip, hit.path, hit.created_at)
+    const tool   = detectTool(hit.user_agent || '')
+    const date   = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
+    const hitDate = new Date(hit.created_at).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
+    const tzMismatch = fp?.tz && hit.timezone && fp.tz !== hit.timezone
+    const pixelList = (pixelRows as any).rows
+
+    const threatIcon = osint
+      ? ({ critical: '🔴 CRITIQUE', high: '🟠 ÉLEVÉ', medium: '🟡 MOYEN', low: '🟢 FAIBLE' })[osint.threat_level] ?? '⚪ INCONNU'
+      : '⚪ NON ÉVALUÉ'
+
+    const lines: string[] = []
+    const ln = (...l: string[]) => lines.push(...l)
+
+    ln(
+      `# RAPPORT D'INCIDENT SÉCURITÉ INFORMATIQUE`,
+      ``,
+      `> **CLASSIFICATION :** TLP:AMBER — Diffusion restreinte aux autorités compétentes`,
+      `> **Référence :** \`${incidentId}\``,
+      `> **Généré le :** ${date}`,
+      `> **Plateforme :** ${process.env.NEXUS_COMMUNITY_NAME || 'Nodyx Instance'} (nodyx.org)`,
+      `> **Intégrité SHA-256 :** \`${evHash}\``,
+      ``,
+      `---`,
+      ``,
+      `## 1. RÉSUMÉ EXÉCUTIF`,
+      ``,
+    )
+
+    const attackType = cred
+      ? 'Collecte de credentials sur faux formulaire d\'authentification'
+      : 'Accès non autorisé à ressource sensible détectée par honeypot'
+
+    ln(
+      `| Champ | Valeur |`,
+      `|---|---|`,
+      `| **Type d'attaque** | ${attackType} |`,
+      `| **Date/Heure** | ${hitDate} |`,
+      `| **IP Attaquant** | \`${hit.ip}\` (${hit.ip?.includes(':') ? 'IPv6' : 'IPv4'}) |`,
+      `| **Localisation** | ${hit.city || '—'}, ${hit.country || '—'} |`,
+      `| **FAI / ASN** | ${hit.isp || '—'} |`,
+      `| **Niveau de menace OSINT** | ${threatIcon} |`,
+      `| **Score OSINT** | ${osint?.threat_score ?? 'N/A'} / 100 |`,
+      ``,
+      osint?.summary ? `**Synthèse OSINT :** ${osint.summary}` : '',
+      ``,
+      `---`,
+      ``,
+      `## 2. PROFIL DE L'ATTAQUANT`,
+      ``,
+      `### 2.1 Identification réseau`,
+      ``,
+      `\`\`\``,
+      `IP            : ${hit.ip}`,
+      `Version       : ${hit.ip?.includes(':') ? 'IPv6' : 'IPv4'}`,
+      `FAI           : ${hit.isp || '—'}`,
+      `Organisation  : ${hit.org || '—'}`,
+      `Pays          : ${hit.country || '—'}`,
+      `Ville         : ${hit.city || '—'}`,
+      `Timezone IP   : ${hit.timezone || '—'}`,
+      `Coordonnées   : ${hit.lat || '—'}, ${hit.lon || '—'}`,
+      `\`\`\``,
+      ``,
+      `### 2.2 Anonymisation détectée`,
+      ``,
+      `| Indicateur | Valeur |`,
+      `|---|---|`,
+      `| Proxy / VPN exit node | ${hit.proxy ? '**OUI** ⚠' : 'Non'} |`,
+      `| IP datacenter/hébergeur | ${hit.hosting ? '**OUI** ⚠' : 'Non'} |`,
+      `| Réseau mobile | ${hit.mobile ? 'Oui' : 'Non'} |`,
+      `| Discordance timezone (VPN) | ${tzMismatch ? `**OUI** ⚠ — navigateur: \`${fp.tz}\` / IP: \`${hit.timezone}\`` : 'Non'} |`,
+      ``,
+    )
+
+    if (fp) {
+      ln(
+        `### 2.3 Empreinte navigateur (fingerprint persistant)`,
+        ``,
+        `| Attribut | Valeur |`,
+        `|---|---|`,
+        `| **Canvas Hash** | \`${fp.fp_hash}\` |`,
+        `| GPU (WebGL) | ${fp.gpu_renderer || '—'} |`,
+        `| Mémoire RAM | ${fp.device_memory ? `${fp.device_memory} GB` : '—'} |`,
+        `| Résolution | ${fp.screen || '—'} |`,
+        `| Cœurs CPU | ${fp.cores || '—'} |`,
+        `| Langue(s) | ${fp.languages || '—'} |`,
+        `| Timezone navigateur | ${fp.tz || '—'} |`,
+        `| Points de contact | ${fp.touch_points ?? '—'} |`,
+        `| Connexion | ${fp.connection_type || '—'} |`,
+        `| Audio FP | ${fp.audio_fp ? `\`${fp.audio_fp}\`` : '—'} |`,
+        `| Polices détectées | ${fp.fonts_count ?? '—'} |`,
+        `| Profondeur couleur | ${fp.color_depth ? `${fp.color_depth} bits` : '—'} |`,
+        ``,
+        `**Récurrence :** ${fp.visits} visite(s) — première détection : ${fp.first_seen ? new Date(fp.first_seen).toISOString().slice(0,10) : '—'}`,
+        fp.ip_list && fp.ip_list.length > 1
+          ? `\n**IPs connues pour ce fingerprint :** ${fp.ip_list.map((x: string) => `\`${x}\``).join(', ')}`
+          : '',
+        ``,
+      )
+    }
+
+    ln(
+      `---`,
+      ``,
+      `## 3. DÉTAILS DE L'INCIDENT`,
+      ``,
+      `\`\`\``,
+      `Méthode HTTP  : ${hit.method}`,
+      `Path ciblé    : ${hit.path}`,
+      `User-Agent    : ${hit.user_agent || '—'}`,
+      `Outil détecté : ${tool.name} (${tool.type})`,
+      `\`\`\``,
+      ``,
+    )
+
+    if (cred) {
+      ln(
+        `### 3.1 Credentials capturés`,
+        ``,
+        `> ⚠ **DONNÉES SENSIBLES** — À traiter avec discrétion`,
+        ``,
+        `| Champ | Valeur |`,
+        `|---|---|`,
+        `| Nom d'utilisateur | \`${cred.username || '(vide)'}\` |`,
+        `| Mot de passe tenté | \`${cred.password || '(vide)'}\` |`,
+        `| Path de connexion | \`${cred.login_path || '—'}\` |`,
+        `| Horodatage | ${new Date(cred.attempted_at).toISOString().replace('T',' ').slice(0,19)} UTC |`,
+        ``,
+      )
+    }
+
+    if (pixelList.length > 0) {
+      ln(
+        `### 3.2 Tracking pixel (emails/documents ouverts)`,
+        ``,
+        `| # | Date | IP | User-Agent |`,
+        `|---|---|---|---|`,
+        ...pixelList.map((r: any, i: number) =>
+          `| ${i+1} | ${new Date(r.viewed_at).toISOString().replace('T',' ').slice(0,19)} UTC | \`${r.ip || '—'}\` | ${(r.user_agent || '—').slice(0,60)} |`
+        ),
+        ``,
+      )
+    }
+
+    if (osint) {
+      ln(
+        `---`,
+        ``,
+        `## 4. ENRICHISSEMENT OSINT`,
+        ``,
+        `> Données collectées automatiquement depuis AbuseIPDB, VirusTotal et Shodan.`,
+        `> Horodatage : ${osint.enriched_at}`,
+        ``,
+      )
+
+      if (osint.abuseipdb) {
+        const a = osint.abuseipdb
+        ln(
+          `### 4.1 AbuseIPDB`,
+          ``,
+          `| Indicateur | Valeur |`,
+          `|---|---|`,
+          `| Score d'abus | **${a.score}%** ${a.score >= 80 ? '🔴' : a.score >= 50 ? '🟠' : a.score >= 20 ? '🟡' : '🟢'} |`,
+          `| Signalements (90j) | ${a.totalReports} |`,
+          `| Dernier signalement | ${a.lastReported ? new Date(a.lastReported).toISOString().slice(0,10) : '—'} |`,
+          `| Nœud Tor | ${a.isTor ? '**Oui** ⚠' : 'Non'} |`,
+          `| Proxy public | ${a.isPublicProxy ? '**Oui** ⚠' : 'Non'} |`,
+          `| Type d'usage | ${a.usageType} |`,
+          `| Domaine associé | ${a.domain} |`,
+          ``,
+        )
+      } else {
+        ln(`### 4.1 AbuseIPDB`, ``, `> Clé API non configurée ou service indisponible.`, ``)
+      }
+
+      if (osint.virustotal) {
+        const vt = osint.virustotal
+        ln(
+          `### 4.2 VirusTotal`,
+          ``,
+          `| Moteurs | Résultat |`,
+          `|---|---|`,
+          `| Malveillants | **${vt.malicious}** |`,
+          `| Suspects | ${vt.suspicious} |`,
+          `| Inoffensifs | ${vt.harmless} |`,
+          `| Non analysés | ${vt.undetected} |`,
+          vt.categories.length > 0 ? `| Catégories | ${vt.categories.join(', ')} |` : '',
+          vt.lastAnalysisDate ? `| Dernière analyse | ${vt.lastAnalysisDate.slice(0,10)} |` : '',
+          ``,
+        )
+      } else {
+        ln(`### 4.2 VirusTotal`, ``, `> Clé API non configurée ou service indisponible.`, ``)
+      }
+
+      if (osint.shodan) {
+        const s = osint.shodan
+        ln(
+          `### 4.3 Shodan`,
+          ``,
+          `| Attribut | Valeur |`,
+          `|---|---|`,
+          `| Ports ouverts | ${s.ports.length > 0 ? s.ports.join(', ') : '—'} |`,
+          `| Système d'exploitation | ${s.os || '—'} |`,
+          `| Organisation | ${s.org || '—'} |`,
+          s.hostnames.length > 0 ? `| Hostnames | ${s.hostnames.join(', ')} |` : '',
+          s.vulns.length > 0 ? `| **CVE connues** | **${s.vulns.join(', ')}** ⚠ |` : '',
+          s.lastUpdate ? `| Dernière mise à jour | ${s.lastUpdate.slice(0,10)} |` : '',
+          ``,
+        )
+      } else {
+        ln(`### 4.3 Shodan`, ``, `> Clé API non configurée ou service indisponible.`, ``)
+      }
+    }
+
+    ln(
+      `---`,
+      ``,
+      `## 5. CADRE LÉGAL`,
+      ``,
+      `### Infractions caractérisées`,
+      ``,
+      `| Article | Infraction | Peine maximale |`,
+      `|---|---|---|`,
+      `| **CP art. 323-1** | Accès frauduleux à un système de traitement automatisé de données | 2 ans / 60 000 € |`,
+      `| **CP art. 323-2** | Entrave au fonctionnement d'un STAD | 3 ans / 45 000 € |`,
+      `| **EU 2013/40/EU** | Directive européenne sur les attaques contre les systèmes d'information | — |`,
+      `| **RGPD art. 32** | Violation de l'obligation de sécurité des données | jusqu'à 4% CA mondial |`,
+      cred ? `| **CP art. 323-3** | Extraction frauduleuse de données | 5 ans / 150 000 € |` : '',
+      ``,
+      `### Contact FAI pour signalement`,
+      ``,
+      `- **FAI identifié :** ${hit.isp || '—'}`,
+      `- **Email abuse :** \`abuse@${(hit.isp || 'isp').toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}.net\``,
+      `- **RIPE NCC :** https://apps.db.ripe.net/db-web-ui/query?searchtext=${encodeURIComponent(hit.ip || '')}`,
+      ``,
+      `---`,
+      ``,
+      `## 6. ACTIONS RECOMMANDÉES`,
+      ``,
+      `- [ ] Transmettre ce rapport au **CERT-FR** : https://www.cert.ssi.gouv.fr/contact/`,
+      `- [ ] Déposer plainte à l'**OCLCTIC** (Office Central de Lutte contre la Criminalité liée aux TIC)`,
+      `- [ ] Signaler sur **cybermalveillance.gouv.fr** : https://www.cybermalveillance.gouv.fr`,
+      `- [ ] Notifier le FAI via son adresse abuse`,
+      osint?.abuseipdb ? `- [ ] Signaler sur **AbuseIPDB** : https://www.abuseipdb.com/report` : '',
+      `- [ ] Conserver ce rapport et les logs bruts comme preuve`,
+      ``,
+      `---`,
+      ``,
+      `## 7. INTÉGRITÉ DU RAPPORT`,
+      ``,
+      `\`\`\``,
+      `SHA-256 incident : ${evHash}`,
+      `Généré par       : Nodyx Security Honeypot v1.9.2`,
+      `Horodatage       : ${date}`,
+      `Format           : Nodyx CERT Report v1.0 (Markdown)`,
+      `\`\`\``,
+      ``,
+      `> *Ce rapport est généré automatiquement par le système de défense Nodyx.*`,
+      `> *Les données sont horodatées et hashées pour garantir leur intégrité devant un tribunal.*`,
+      `> *"Fork us if we betray you." — AGPL-3.0*`,
+    )
+
+    const md = lines.filter(l => l !== undefined).join('\n')
+    const filename = `NODYX-CERT-${incidentId}-${new Date().toISOString().slice(0,10)}.md`
+
+    return reply.code(200)
+      .header('Content-Type', 'text/markdown; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="${filename}"`)
+      .send(md)
+  })
+
+  // ── POST /_hp_cert/:incidentId/send-cert — Envoi manuel vers CERT-FR ────────
+  // Déclenché depuis Olympus Hub par l'admin — envoie le rapport complet + lettre
+  fastify.post<{ Params: { incidentId: string } }>('/_hp_cert/:incidentId/send-cert', async (request, reply) => {
+    const { incidentId } = request.params
+    if (!incidentId || !/^HP-[A-Z0-9]+-[A-Z0-9]+$/.test(incidentId)) {
+      return reply.code(400).send({ error: 'invalid incident id' })
+    }
+
+    const secret   = process.env.CERT_REPORT_SECRET || process.env.JWT_SECRET
+    const provided = request.headers['x-cert-secret'] || (request.query as Record<string, string>)['secret']
+    if (!secret || provided !== secret) return reply.code(403).send({ error: 'unauthorized' })
+
+    if (!process.env.CERT_EMAIL_TO) return reply.code(400).send({ error: 'CERT_EMAIL_TO non configuré' })
+
+    // Collecter les données
+    const [hitRow, fpRow, credRow, pixelRows] = await Promise.all([
+      db.query(`SELECT * FROM honeypot_hits WHERE incident_id = $1 LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_fingerprints WHERE $1 = ANY(incident_ids) LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_credential_attempts WHERE incident_id = $1 LIMIT 1`, [incidentId]).catch(() => ({ rows: [] })),
+      db.query(`SELECT * FROM honeypot_pixel_hits WHERE incident_id = $1 ORDER BY viewed_at`, [incidentId]).catch(() => ({ rows: [] })),
+    ])
+
+    const hit  = (hitRow  as any).rows[0]
+    const fp   = (fpRow   as any).rows[0]
+    const cred = (credRow as any).rows[0]
+    if (!hit) return reply.code(404).send({ error: 'incident not found' })
+
+    const osint = await enrichIP(hit.ip).catch(() => null)
+    const tool  = detectTool(hit.user_agent || '')
+    const date  = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
+    const threatIcon = osint
+      ? ({ critical: 'CRITIQUE', high: 'ÉLEVÉ', medium: 'MOYEN', low: 'FAIBLE' })[osint.threat_level] ?? 'INCONNU'
+      : 'NON ÉVALUÉ'
+
+    // ── Lettre de présentation Nodyx ─────────────────────────────────────────
+    const intro = `À l'équipe CERT-FR,
+
+Je me permets de vous contacter au nom de Nodyx (https://nodyx.org), une plateforme
+communautaire open source auto-hébergée, publiée sous licence AGPL-3.0.
+
+Nodyx est un projet citoyen dont la mission est de reconstruire un internet humain,
+décentralisé et souverain — sans dépendance aux grandes plateformes américaines.
+
+Notre système de défense intégré (honeypot) capture et documente en temps réel les
+tentatives d'intrusion, de collecte de credentials et d'accès frauduleux sur nos
+instances. Les données collectées sont horodatées, hashées (SHA-256) et structurées
+selon les standards de signalement.
+
+Nous souhaitons vous signaler l'incident suivant, détecté sur notre infrastructure :
+
+  Référence    : ${incidentId}
+  Type         : ${cred ? 'Collecte de credentials' : 'Accès non autorisé'}
+  IP source    : ${hit.ip}
+  Localisation : ${hit.city || '—'}, ${hit.country || '—'}
+  FAI          : ${hit.isp || '—'}
+  Niveau OSINT : ${threatIcon}
+  Date         : ${date}
+${osint?.summary ? `\n  Synthèse     : ${osint.summary}\n` : ''}
+Nous n'avons rien à cacher. Nous sommes entièrement disposés à :
+  — Vous donner un accès complet à toutes les preuves collectées
+  — Vous fournir les logs bruts, headers HTTP et fingerprints navigateur
+  — Collaborer avec vos équipes sur toute investigation en cours
+  — Vous ouvrir un accès à notre dashboard de monitoring (Olympus Hub)
+
+Le rapport complet est joint à cet email au format Markdown structuré.
+
+Nous contribuons volontairement à la sécurité de l'internet français et européen.
+Nodyx est un outil de la communauté, au service de la communauté — et des autorités.
+
+En vous remerciant pour votre action au service de la cybersécurité.
+
+Cordialement,
+
+Nodyx Security
+https://nodyx.org — AGPL-3.0
+Contact : ${process.env.CERT_REPLY_TO || 'security@nodyx.org'}
+
+---
+Infractions caractérisées :
+  Code Pénal art. 323-1 — Accès frauduleux à un STAD (2 ans / 60 000 €)
+  Code Pénal art. 323-2 — Entrave au fonctionnement d'un STAD (3 ans / 45 000 €)
+  EU Directive 2013/40/EU — Attaques contre les systèmes d'information
+${cred ? '  Code Pénal art. 323-3 — Extraction frauduleuse de données (5 ans / 150 000 €)\n' : ''}`
+
+    // Rapport markdown joint
+    const evHash   = evidenceHash(incidentId, hit.ip, hit.path, hit.created_at)
+    const pixelList = (pixelRows as any).rows
+    const tzMismatch = fp?.tz && hit.timezone && fp.tz !== hit.timezone
+
+    const mdLines: string[] = [
+      `# RAPPORT D'INCIDENT — ${incidentId}`,
+      ``,
+      `> **Classification :** TLP:AMBER`,
+      `> **Généré le :** ${date}`,
+      `> **SHA-256 :** \`${evHash}\``,
+      ``,
+      `## Attaquant`,
+      ``,
+      `| Champ | Valeur |`,
+      `|---|---|`,
+      `| IP | \`${hit.ip}\` |`,
+      `| Localisation | ${hit.city || '—'}, ${hit.country || '—'} |`,
+      `| FAI | ${hit.isp || '—'} |`,
+      `| Proxy/VPN | ${hit.proxy ? '**OUI**' : 'Non'} |`,
+      `| IP directe | ${!hit.proxy && !hit.hosting ? '**OUI — attribuable**' : 'Non'} |`,
+      tzMismatch ? `| VPN (TZ mismatch) | **OUI** — navigateur: \`${fp.tz}\` / IP: \`${hit.timezone}\` |` : '',
+      ``,
+      `## Incident`,
+      ``,
+      `| Champ | Valeur |`,
+      `|---|---|`,
+      `| Type | ${cred ? 'Credential Harvest' : 'Accès non autorisé'} |`,
+      `| Méthode | ${hit.method} |`,
+      `| Path ciblé | \`${hit.path}\` |`,
+      `| Outil | ${tool.name} (${tool.type}) |`,
+      `| User-Agent | \`${(hit.user_agent || '—').slice(0, 120)}\` |`,
+      ``,
+      fp ? [
+        `## Fingerprint navigateur`,
+        ``,
+        `| Attribut | Valeur |`,
+        `|---|---|`,
+        `| Canvas Hash | \`${fp.fp_hash}\` |`,
+        `| GPU | ${fp.gpu_renderer || '—'} |`,
+        `| RAM | ${fp.device_memory ? `${fp.device_memory} GB` : '—'} |`,
+        `| Langues | ${fp.languages || '—'} |`,
+        `| Récurrence | ${fp.visits} visite(s) |`,
+        fp.ip_list?.length > 1 ? `| IPs connues | ${fp.ip_list.join(', ')} |` : '',
+        ``,
+      ].join('\n') : '',
+      cred ? [
+        `## Credentials capturés`,
+        ``,
+        `| Champ | Valeur |`,
+        `|---|---|`,
+        `| Username | \`${cred.username || '(vide)'}\` |`,
+        `| Password tenté | \`${cred.password || '(vide)'}\` |`,
+        ``,
+      ].join('\n') : '',
+      osint ? [
+        `## Enrichissement OSINT`,
+        ``,
+        `| Source | Résultat |`,
+        `|---|---|`,
+        osint.abuseipdb ? `| AbuseIPDB | Score ${osint.abuseipdb.score}% — ${osint.abuseipdb.totalReports} signalement(s) |` : '',
+        osint.virustotal ? `| VirusTotal | ${osint.virustotal.malicious} moteur(s) malveillant(s) |` : '',
+        `| Niveau global | **${threatIcon}** (${osint.threat_score}/100) |`,
+        ``,
+      ].join('\n') : '',
+      pixelList.length > 0 ? `## Pixel tracking\n\n${pixelList.length} ouverture(s) détectée(s)\n` : '',
+      `---`,
+      `*Nodyx Security Honeypot — nodyx.org — AGPL-3.0*`,
+    ]
+
+    const markdownReport = mdLines.filter(Boolean).join('\n')
+
+    // Envoi — bypass rate limit pour envoi manuel
+    const from    = process.env.CERT_FROM    || process.env.SMTP_FROM || 'security@nodyx.org'
+    const replyTo = process.env.CERT_REPLY_TO || ''
+    const to      = process.env.CERT_EMAIL_TO!
+
+    try {
+      const nodemailer = await import('nodemailer')
+      const transport  = nodemailer.default.createTransport({
+        host:   process.env.SMTP_HOST!,
+        port:   Number(process.env.SMTP_PORT ?? 587),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth:   { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! },
+      })
+
+      await transport.sendMail({
+        from,
+        to,
+        replyTo: replyTo || undefined,
+        subject: `[NODYX-CERT] ${cred ? 'Credential Harvest' : 'Accès non autorisé'} — ${incidentId} — ${hit.city || '—'}, ${hit.country || '—'}`,
+        text:    intro,
+        attachments: [{
+          filename:    `NODYX-CERT-${incidentId}-${new Date().toISOString().slice(0,10)}.md`,
+          content:     markdownReport,
+          contentType: 'text/markdown',
+        }],
+        headers: {
+          'X-Nodyx-Incident': incidentId,
+          'X-Nodyx-Manual':   'true',
+        },
+      })
+
+      // Log en DB
+      db.query(
+        `INSERT INTO honeypot_cert_reports (incident_id, report_json, sent_to) VALUES ($1, $2, $3)`,
+        [incidentId, JSON.stringify({ sent_at: new Date().toISOString(), to }), to]
+      ).catch(() => {})
+
+      return reply.code(200).send({ ok: true, sent_to: to })
+    } catch (err: any) {
+      return reply.code(500).send({ error: err?.message || 'SMTP error' })
+    }
   })
 }
