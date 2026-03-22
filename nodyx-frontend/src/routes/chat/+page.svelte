@@ -526,11 +526,13 @@
 		replyTo = null;
 	}
 
+	function htmlToText(html: string): string {
+		return new DOMParser().parseFromString(html, 'text/html').body.textContent ?? ''
+	}
+
 	// ── Reply / Pin ───────────────────────────────────────────────────────────
 	function startReply(msg: Message) {
-		const tmp = document.createElement('div');
-		tmp.innerHTML = msg.content ?? '';
-		const plain = tmp.textContent ?? '';
+		const plain = htmlToText(msg.content ?? '');
 		replyTo = { id: msg.id, author_username: msg.author_username, content: plain.slice(0, 80) };
 		longPressMsg = null;
 		// Focus textarea
@@ -684,9 +686,7 @@
 	// ── Inline edit ───────────────────────────────────────────────────────────
 	function startEdit(msg: Message) {
 		// Strip HTML to plain text for editing
-		const tmp = document.createElement('div');
-		tmp.innerHTML = msg.content ?? '';
-		editingMsg = { id: msg.id, content: tmp.textContent ?? '' };
+		editingMsg = { id: msg.id, content: htmlToText(msg.content ?? '') };
 	}
 
 	function confirmEdit() {

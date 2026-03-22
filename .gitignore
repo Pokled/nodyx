@@ -18,6 +18,12 @@ nodyx-core/CURSOR_CONTEXT.MD
 nodyx-core/NEXUS_CONTEXT.md
 nodyx-core/NEXUS_CONTENT_RESUME.MD
 
+# Documents sécurité sensibles — NE JAMAIS publier
+*SECURITY-TODO*
+*SECURITE-CREDENTIALS*
+docs/ideas/SECURITE-*.md
+docs/ideas/*-SECURITY-*.md
+
 # Configs personnelles (utiliser les .example)
 Caddyfile.dev
 ecosystem.config.js

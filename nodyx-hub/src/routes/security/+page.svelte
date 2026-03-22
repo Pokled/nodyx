@@ -104,6 +104,23 @@
 
   const allTools     = $derived([...new Set(data.recentHits.map((h: any) => h.tool))].sort());
   const allCountries = $derived([...new Set(data.recentHits.map((h: any) => h.country).filter(Boolean))].sort());
+
+  // CERT-FR reporting
+  let certStatus = $state<Record<string, 'idle' | 'sending' | 'sent' | 'error'>>({});
+  async function sendToCERT(incidentId: string) {
+    certStatus = { ...certStatus, [incidentId]: 'sending' };
+    try {
+      const res = await fetch('/api/send-cert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ incidentId }),
+      });
+      const json = await res.json();
+      certStatus = { ...certStatus, [incidentId]: res.ok ? 'sent' : 'error' };
+    } catch {
+      certStatus = { ...certStatus, [incidentId]: 'error' };
+    }
+  }
 </script>
 
 <div style="padding: 1.5rem; max-width: 1600px; margin: 0 auto;">
@@ -839,6 +856,46 @@
                             </div>
                           {/each}
                         </div>
+                      </div>
+                    {/if}
+
+                    <!-- CERT-FR action -->
+                    {#if true}
+                      {@const cs = certStatus[hit.incident_id] ?? 'idle'}
+                      <div style="grid-column:1/-1; margin-top:0.25rem; padding-top:0.75rem; border-top:1px solid rgba(239,68,68,0.1); display:flex; align-items:center; gap:0.75rem;">
+                        <button
+                          onclick={() => sendToCERT(hit.incident_id)}
+                          disabled={cs === 'sending' || cs === 'sent'}
+                          style="
+                            display:flex; align-items:center; gap:0.4rem;
+                            background:{cs === 'sent' ? 'rgba(16,185,129,0.12)' : cs === 'error' ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.1)'};
+                            border:1px solid {cs === 'sent' ? 'rgba(16,185,129,0.4)' : cs === 'error' ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.3)'};
+                            color:{cs === 'sent' ? '#6ee7b7' : '#fca5a5'};
+                            border-radius:6px; padding:0.35rem 0.875rem;
+                            font-size:0.72rem; font-family:monospace; cursor:{cs === 'sending' || cs === 'sent' ? 'default' : 'pointer'};
+                            transition:all 0.2s; font-weight:600; letter-spacing:0.04em;
+                          "
+                        >
+                          {#if cs === 'sending'}
+                            <span style="display:inline-block; animation:spin 0.8s linear infinite;">⟳</span> Envoi en cours…
+                          {:else if cs === 'sent'}
+                            ✓ Transmis au CERT
+                          {:else if cs === 'error'}
+                            ✕ Echec — réessayer
+                          {:else}
+                            ⚑ Transmettre au CERT-FR
+                          {/if}
+                        </button>
+                        {#if cs === 'sent'}
+                          <span style="font-size:0.68rem; color:#475569; font-family:monospace;">
+                            Rapport envoyé — incident {hit.incident_id} signalé
+                          </span>
+                        {/if}
+                        {#if cs === 'error'}
+                          <span style="font-size:0.68rem; color:#ef4444; font-family:monospace;">
+                            Vérifiez la config SMTP dans .env
+                          </span>
+                        {/if}
                       </div>
                     {/if}
                   </div>

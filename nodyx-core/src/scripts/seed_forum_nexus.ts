@@ -184,7 +184,7 @@ socket.emit('voice:init', { iceServers: [
 
 <h3>Configuration</h3>
 <pre><code class="language-bash"># /etc/nodyx-turn.env
-TURN_PUBLIC_IP=46.225.20.193
+TURN_PUBLIC_IP=YOUR_SERVER_IP
 TURN_REALM=nodyx.org
 TURN_SECRET=your_secret_here
 TURN_PORT=3478
