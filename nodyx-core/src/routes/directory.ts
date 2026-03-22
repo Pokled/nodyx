@@ -42,11 +42,22 @@ async function cfRequest(method: string, path: string, body?: object) {
 
 function isPrivateHostname(hostname: string): boolean {
   const h = hostname.toLowerCase()
-  if (h === 'localhost' || h === '127.0.0.1' || h === '::1') return true
+  // Loopback
+  if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '0.0.0.0') return true
+  // IPv6-mapped IPv4 (e.g. ::ffff:127.0.0.1 or [::ffff:7f00:1])
+  if (/^::ffff:/i.test(h)) {
+    const v4 = h.slice(7)
+    if (isPrivateHostname(v4)) return true
+  }
+  // RFC 1918 private ranges
   if (h.startsWith('192.168.') || h.startsWith('10.')) return true
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true
+  // Link-local + CGNAT
   if (h.startsWith('169.254.') || h.startsWith('100.64.')) return true
+  // IPv6 private (ULA, link-local)
   if (h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80')) return true
+  // Other loopback range (127.x.x.x)
+  if (/^127\./.test(h)) return true
   return false
 }
 
@@ -184,6 +195,9 @@ export default async function directoryRoutes(app: FastifyInstance) {
       const parsed = new URL(url);
       if (parsed.protocol !== 'https:') {
         return reply.status(400).send({ error: 'URL must use HTTPS' });
+      }
+      if (isPrivateHostname(parsed.hostname)) {
+        return reply.status(400).send({ error: 'Private or reserved IP addresses are not allowed' });
       }
     } catch {
       return reply.status(400).send({ error: 'Invalid URL' });
