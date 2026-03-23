@@ -13,12 +13,16 @@
 
 <div class="app">
   <Header />
-  <div class="body">
-    <Sidebar {currentSlug} />
-    <main class="content" id="main-content">
-      {@render children()}
-    </main>
-  </div>
+  {#if $page.url.pathname === '/'}
+    {@render children()}
+  {:else}
+    <div class="body">
+      <Sidebar {currentSlug} />
+      <main class="content" id="main-content">
+        {@render children()}
+      </main>
+    </div>
+  {/if}
 </div>
 
 <style>
