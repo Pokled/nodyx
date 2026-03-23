@@ -301,7 +301,8 @@
 
   <!-- Scroll indicator -->
   <div class="scroll-hint" aria-hidden="true">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    <span class="scroll-hint-text">Discover more</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
   </div>
 </section>
 
@@ -606,7 +607,7 @@
 
 .hero {
   position: relative;
-  min-height: calc(100vh - var(--header-height));
+  min-height: min(88vh, 860px);
   display: flex;
   flex-direction: column;
   background: #030712;
@@ -851,15 +852,25 @@
 /* Scroll hint */
 .scroll-hint {
   display: flex;
-  justify-content: center;
-  padding: 1.5rem 0 2.5rem;
-  color: #334155;
-  animation: bounce-down 2s ease-in-out infinite;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1.25rem 0 2rem;
+  color: #475569;
+  animation: bounce-down 2.2s ease-in-out infinite;
+}
+
+.scroll-hint-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
 @keyframes bounce-down {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(5px); }
+  0%, 100% { transform: translateY(0); opacity: 0.8; }
+  50%       { transform: translateY(6px); opacity: 1; }
 }
 
 /* ── Stat bar ────────────────────────────────────────────────────────────── */
