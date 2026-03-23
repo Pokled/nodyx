@@ -1,22 +1,40 @@
 <div align="center">
-  <img src="docs/img/nodyx-logo.png" alt="Nodyx" width="220"/>
 
-  <h3><em>"The network is the people."</em></h3>
+<svg width="72" height="72" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="8" fill="#3b82f6"/>
+  <circle cx="16" cy="16" r="5" fill="white" opacity="0.9"/>
+  <circle cx="6"  cy="8"  r="2.5" fill="white" opacity="0.6"/>
+  <circle cx="26" cy="8"  r="2.5" fill="white" opacity="0.6"/>
+  <circle cx="6"  cy="24" r="2.5" fill="white" opacity="0.6"/>
+  <circle cx="26" cy="24" r="2.5" fill="white" opacity="0.6"/>
+  <line x1="6"  y1="8"  x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.5"/>
+  <line x1="26" y1="8"  x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.5"/>
+  <line x1="6"  y1="24" x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.5"/>
+  <line x1="26" y1="24" x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.5"/>
+</svg>
 
-  <p><strong>The community platform that no one can take from you.<br/>Forum + Chat + Voice + P2P Canvas — on your server, under your control, forever.</strong></p>
+# Nodyx
 
-  [![Version](https://img.shields.io/badge/version-v1.9.2-7c3aed)](CHANGELOG.md)
-  [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-  [![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
-  [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
+### *"The network is the people."*
 
-  <sub>⭐ If Nodyx resonates with you, a star helps others find it — and keeps us going.</sub>
+**The community platform that no one can take from you.**
+Forum + Chat + Voice + P2P Canvas — on your server, under your control, forever.
+
+[![Version](https://img.shields.io/badge/version-v1.9.2-7c3aed)](CHANGELOG.md)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
+[![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
+
+<sub>⭐ If Nodyx resonates with you, a star helps others find it — and keeps us going.</sub>
+
 </div>
 
 ---
 
 <div align="center">
 
+**[📖 Documentation → nodyx.dev](https://nodyx.dev)** &nbsp;·&nbsp;
+**[🚀 Live demo → nodyx.org](https://nodyx.org)** &nbsp;·&nbsp;
 <a href="README.md"><img src="https://flagcdn.com/16x12/gb.png" alt="EN"> English</a> · <a href="docs/fr/README.md"><img src="https://flagcdn.com/16x12/fr.png" alt="FR"> Français</a>
 
 </div>
@@ -26,10 +44,6 @@
 <div align="center">
   <img src="docs/img/hero.png" alt="Nodyx — community home" width="860"/>
 </div>
-
----
-
-> **[→ Live demo: nodyx.org](https://nodyx.org)** — official instance, production VPS
 
 ---
 
@@ -59,7 +73,7 @@ Locked in silos. Invisible to search engines. Gone when the platform decides.
 One command. Your server. Your rules. Your community — permanently.
 
 ```bash
-git clone https://github.com/Pokled/Nodyx.git && cd Nodyx && sudo bash install.sh
+curl -fsSL https://nodyx.org/install.sh | bash
 ```
 
 Works on a Raspberry Pi behind a home router. No domain. No open ports. No cloud account.
@@ -68,29 +82,28 @@ Works on a Raspberry Pi behind a home router. No domain. No open ports. No cloud
 
 ## What makes Nodyx different
 
-### It's the only platform with all of this in a single install
+### The only platform with all of this in a single install
 
 | | **Nodyx** | Discord | Matrix | Discourse | Lemmy |
 |---|:---:|:---:|:---:|:---:|:---:|
 | Self-hosted | ✅ | ❌ | ✅ | ✅ | ✅ |
+| Open source | ✅ AGPL | ❌ | ✅ | ✅ | ✅ |
 | Forum indexed by Google | ✅ | ❌ | ❌ | ✅ | ✅ |
 | Real-time chat | ✅ | ✅ | ✅ | ⚠️ | ❌ |
 | Voice channels | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Screen sharing | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **P2P voice — zero Big Tech relay** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Collaborative P2P canvas** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **P2P DataChannels (instant typing, reactions)** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Home server (no port forwarding)** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Federated community directory** | ✅ | ❌ | ⚠️ | ❌ | ✅ |
-| **Asset library (frames, badges, banners)** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Ephemeral whisper rooms** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Passwordless login (ECDSA P-256 PWA)** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **P2P collaborative Jukebox (YouTube queue)** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Event calendar (OSM maps, RSVP, SEO)** | ✅ | ❌ | ❌ | ⚠️ | ❌ |
-| **Cross-instance global search** | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **Per-user profile themes (app-wide)** | ✅ | ❌ | ❌ | ❌ | ❌ |
-
-| Open source | ✅ AGPL | ❌ | ✅ | ✅ | ✅ |
+| P2P voice — zero Big Tech relay | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Collaborative P2P canvas | ✅ | ❌ | ❌ | ❌ | ❌ |
+| P2P DataChannels (instant typing, reactions) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Home server (no port forwarding) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Federated community directory | ✅ | ❌ | ⚠️ | ❌ | ✅ |
+| Asset library (frames, badges, banners) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Ephemeral whisper rooms | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Passwordless login (ECDSA P-256 PWA) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| P2P collaborative Jukebox (YouTube queue) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Event calendar (OSM maps, RSVP, SEO) | ✅ | ❌ | ❌ | ⚠️ | ❌ |
+| Cross-instance global search | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Per-user profile themes (app-wide) | ✅ | ❌ | ❌ | ❌ | ❌ |
 
 > Nodyx is the only self-hosted platform combining an **indexed forum**, **real-time chat**, **P2P voice**, **collaborative canvas**, and a **federated directory** in a single install.
 
@@ -133,7 +146,7 @@ nodyx-relay client  →  persistent TCP tunnel → exposes local port 80
 
 Messages between peers that never touch the server.
 
-- **Instant typing indicators** — < 5ms local latency (vs 80-200ms via server)
+- **Instant typing indicators** — < 5ms local latency (vs 80–200ms via server)
 - **Optimistic emoji reactions** — appear instantly, server confirms in background
 - **P2P file transfer** — assets shared directly between peers
 - **Graceful fallback** — if DataChannel unavailable (strict NAT), Socket.IO takes over transparently
@@ -187,82 +200,50 @@ PNG export (browser-native) + text recap posted to chat channel
 
 ### Prerequisites
 
-The installer handles everything automatically, but your system needs at least **`curl`** or **`wget`** to download and start it, and **`git`** if you clone the repo manually.
-
-On a **fresh Ubuntu / Debian server** these are often missing:
+The installer handles everything automatically. Your system only needs **`curl`** and **`git`** to get started.
 
 ```bash
 # Ubuntu / Debian
 apt-get install -y git curl
 ```
 
-> `git` and `curl` are the **only two things** you need to install manually.
-> Everything else (Node.js, PostgreSQL, Redis, Caddy, PM2…) is installed by the script.
+### One-click install
 
-### One-click install (recommended)
-
-**Option A — clone first, then run:**
 ```bash
-git clone https://github.com/Pokled/Nodyx.git
-cd Nodyx
-sudo bash install.sh
+curl -fsSL https://nodyx.org/install.sh | bash
 ```
 
-**Option B — single command with `curl` (no `git` needed):**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh | sudo bash
-```
+Or clone first:
 
-**Option C — single command with `wget` (if `curl` is not installed):**
 ```bash
-wget -qO- https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh | sudo bash
+git clone https://github.com/Pokled/Nodyx.git && cd Nodyx && sudo bash install.sh
 ```
 
 The installer offers **three network modes**:
 
 | Mode | Requirements | Result |
 |---|---|---|
-| **Open ports** | Ports 80 + 443, domain or IP | Let's Encrypt HTTPS, full control |
 | **Nodyx Relay** ⭐ | Nothing — outbound TCP only | `yourclub.nodyx.org` in minutes |
+| **Open ports** | Ports 80 + 443, domain or IP | Let's Encrypt HTTPS, full control |
 | **Cloudflare Tunnel** | CF account + own domain | Your custom domain, no open ports |
 
 > **Nodyx Relay** is the recommended default — works on a Raspberry Pi behind a home router.
 > No domain. No port forwarding. No cloud account. Just run the script.
 
 Installs automatically: Node.js, PostgreSQL, Redis, nodyx-turn (Rust STUN/TURN), Caddy (HTTPS), PM2.
-Generates secrets, bootstraps the database, creates your admin account.
-**No manual configuration.**
+Generates secrets, bootstraps the database, creates your admin account. **No manual configuration.**
 
-> Supported: Ubuntu 22.04 / 24.04, Debian 11 / 12 / 13. Windows → [WSL guide](docs/en/INSTALL.md#windows)
+> Supported: Ubuntu 22.04 / 24.04, Debian 11 / 12 / 13.
 
 → **[Complete installation guide (EN)](docs/en/INSTALL.md)**
 → **[Guide d'installation complet (FR)](docs/fr/INSTALL.md)**
 
-### Docker
-
-```bash
-git clone https://github.com/Pokled/Nodyx.git
-cd Nodyx
-cp nodyx-core/.env.example nodyx-core/.env
-docker-compose up -d
-```
-
 ### Updating an existing instance
 
-Run this single command from the Nodyx directory on your server:
-
 ```bash
-# If installed in ~/nodyx
-cd ~/nodyx && git pull && \
-  cd nodyx-core && npm run build && sudo pm2 restart nodyx-core && \
-  cd ../nodyx-frontend && npm run build && sudo pm2 restart nodyx-frontend
-```
-
-```bash
-# If installed in /opt/nodyx
 cd /opt/nodyx && git pull && \
-  cd nodyx-core && npm run build && sudo pm2 restart nodyx-core && \
-  cd ../nodyx-frontend && npm run build && sudo pm2 restart nodyx-frontend
+  cd nodyx-core && npm run build && pm2 restart nodyx-core && \
+  cd ../nodyx-frontend && npm run build && pm2 restart nodyx-frontend
 ```
 
 Database migrations are applied automatically on startup — no manual SQL needed.
@@ -308,7 +289,8 @@ Database migrations are applied automatically on startup — no manual SQL neede
 
 ## What's built. What's coming.
 
-### Done
+<details>
+<summary><b>v0.1 → v1.3 — Foundation</b></summary>
 
 | Feature | Version |
 |---|---|
@@ -323,68 +305,48 @@ Database migrations are applied automatically on startup — no manual SQL neede
 | Instance directory + auto DNS | v0.5 |
 | nodyx-relay — Rust P2P TCP tunnel | v0.5 |
 | Community asset library (frames, banners, badges) | v0.6 |
-| Feature Garden — community voting with organic growth stages | v0.6 |
+| Feature Garden — community voting | v0.6 |
 | Federated asset directory (cross-instance sharing) | v0.7 |
 | Whispers — ephemeral encrypted chat rooms (1h TTL) | v0.7 |
 | P2P DataChannels — instant typing, optimistic reactions | v0.8 |
 | nodyx-turn — Rust STUN/TURN replacing coturn | v0.9 |
-| **NodyxCanvas — collaborative P2P whiteboard in voice channels** | **v0.9** |
-| **Profile theme system** — 6 presets, per-user app-wide CSS engine, live editor | **v1.0** |
-| **Mobile-responsive UI** — chat drawer, bottom nav, voice accessible on mobile | **v1.0** |
-| **Asset library 12 MB** + per-type upload design guidelines | **v1.0** |
-| **Chat — Reply/quote, pinned messages, link previews, @mention badge** | **v1.1** |
-| **Presence — Custom status** (emoji + text, 8 presets) **+ offline members list** | **v1.1** |
-| **Direct Messages (DMs)** — private 1:1 conversations with unread badge | **v1.2** |
-| **Polls** — in chat and forum, 3 types (choice/schedule/ranking), real-time results | **v1.2** |
-| **Ban system** — IP ban, email ban, multi-layer enforcement | **v1.2** |
-| **nodyx-turn — TURN-over-TCP** (RFC 6062) — voice works through VPNs and strict firewalls | **v1.3** |
-| **nodyx-turn — MESSAGE-INTEGRITY** fix — relay candidates now accepted by all browsers | **v1.3** |
-| **Voice — Relay failover** — auto-switches to TURN relay on sustained packet loss | **v1.3** |
-| **Voice — Opus tuning** — 32 kbps default, DTX off, mono for high-loss links | **v1.3** |
+| NodyxCanvas — collaborative P2P whiteboard | v0.9 |
+| Profile theme system — 6 presets, per-user app-wide CSS engine | v1.0 |
+| Mobile-responsive UI | v1.0 |
+| Chat — Reply/quote, pinned messages, link previews, @mention badge | v1.1 |
+| Presence — Custom status + offline members list | v1.1 |
+| Direct Messages (DMs) — private 1:1 conversations | v1.2 |
+| Polls — in chat and forum, 3 types, real-time results | v1.2 |
+| Ban system — IP ban, email ban, multi-layer enforcement | v1.2 |
+| nodyx-turn — TURN-over-TCP (RFC 6062) | v1.3 |
+| Voice — Relay failover + Opus tuning | v1.3 |
 
-### v1.4 → v1.7
+</details>
 
-| Feature | Version |
-|---|---|
-| **Thread slug URLs + full SEO** (canonical, OG, JSON-LD, sitemap) | v1.4 |
-| **Category slugs** + subcategories display on parent page | v1.5 |
-| **Global Search** — cross-instance FTS index, `/discover` UI | v1.5 |
-| **Event Calendar** — CRUD, RSVP, OSM maps, cover image, rich snippets | v1.6 |
-| **Gossip Protocol** — event federation across instances | v1.6 |
-| **Nodyx Signet** — passwordless ECDSA P-256 auth PWA at `signet.nodyx.org` | v1.7 |
-| **QR enrollment** — scan from settings to skip manual token entry | v1.7 |
-| **Optimistic UI** — all mutations update local state instantly (no page re-fetches) | v1.7 |
-| **Notification center** — purge automatique 30j + effacer les lues | v1.7 |
-
-### v1.8
+<details>
+<summary><b>v1.4 → v1.9 — Current</b></summary>
 
 | Feature | Version |
 |---|---|
-| **Tasks / Kanban** — per-community boards, drag & drop, assignees, priorities, deadlines | v1.8 |
-| **Update alert** — admin banner when a new GitHub release is available (Redis-cached 6h) | v1.8 |
-| **Instance version display** — "Nodyx v1.8.x" shown on home page from `NODYX_VERSION` env | v1.8 |
-| **Security audit** — PATCH /cards permission fix, health 503, HOST binding, enrollment adminOnly, rate limit on /announcement, moderators can manage tags | v1.8.1 |
-| **Full paranoid security audit** — 38 vulnerabilities fixed: SQLi, JWT algorithm confusion, SSRF/DNS rebinding, Socket.IO IDOR, CSS/XSS injection, auth hardening, WebP RIFF validation, SMTP header injection | v1.8.2 |
+| Thread slug URLs + full SEO (canonical, OG, JSON-LD, sitemap) | v1.4 |
+| Category slugs + subcategories | v1.5 |
+| Global Search — cross-instance FTS index, /discover UI | v1.5 |
+| Event Calendar — CRUD, RSVP, OSM maps, cover image, rich snippets | v1.6 |
+| Gossip Protocol — event federation across instances | v1.6 |
+| Nodyx Signet — passwordless ECDSA P-256 auth PWA | v1.7 |
+| QR enrollment + Optimistic UI + Notification center | v1.7 |
+| Tasks / Kanban — per-community boards, drag & drop, deadlines | v1.8 |
+| Update alert + Instance version display | v1.8 |
+| Full paranoid security audit — 38 vulnerabilities fixed | v1.8.2 |
+| Honeypot — 25+ scanner paths trapped; tarpit; geolocation; DB logging | v1.9.0 |
+| fail2ban — 5 jails: SSH, brute force, honeypot (7d), permanent blacklist | v1.9.0 |
+| Argon2id — OWASP 2026 password hashing | v1.9.0 |
+| 2FA TOTP (RFC 6238) + 2FA via Nodyx Signet | v1.9.1 |
+| Credential harvesting traps + Canary files + Canvas fingerprint | v1.9.2 |
+| Slowloris inverse — byte-by-byte streaming burns attacker threads 45–90s | v1.9.2 |
+| Olympus Hub security dashboard | v1.9.2 |
 
-### v1.9
-
-| Feature | Version |
-|---|---|
-| **Honeypot** — 25+ scanner paths trapped; tarpit 3–7s; geolocation; terminal scare page; DB logging + fail2ban auto-ban | v1.9.0 |
-| **fail2ban** — 5 jails: SSH, brute force, honeypot (7d), permanent blacklist | v1.9.0 |
-| **Discord security alerts** — real-time embeds for honeypot hits, brute force, admin logins, new registrations | v1.9.0 |
-| **Argon2id** — OWASP 2026 password hashing; transparent bcrypt migration on next login | v1.9.0 |
-| **Chat anti-spam + content filter** — dual sliding window rate limiter, hate symbol filter, NSFW image scan (optional) | v1.9.0 |
-| **Email verification** — mandatory when SMTP configured; login blocked for unverified accounts | v1.9.0 |
-| **2FA TOTP (RFC 6238)** — compatible with any authenticator app; QR code setup; Redis-backed pending session | v1.9.1 |
-| **2FA via Nodyx Signet** — ECDSA P-256 as 2nd factor; Signet > TOTP > direct login priority chain | v1.9.1 |
-| **Tracking pixel** — 1×1 PNG in scary page detects revisits; Discord alert on return visits | v1.9.2 |
-| **Credential harvesting traps** — fake WordPress/phpMyAdmin/admin login forms; captured to DB + Discord | v1.9.2 |
-| **Canary files** — realistic fake `.env`, SQL dumps, `id_rsa`, `wp-config.php` etc. with deterministic PRNG per IP | v1.9.2 |
-| **Canvas fingerprint** — persistent attacker fingerprint across IPs; visit counter; recurring attacker detection | v1.9.2 |
-| **Honeytokens** — invisible + quasi-invisible links in scary page HTML; high-confidence human attacker signal | v1.9.2 |
-| **Slowloris inverse** — byte-by-byte streaming via `reply.hijack()` burns attacker threads for 45–90s | v1.9.2 |
-| **Olympus Hub security dashboard** — Pièges actifs, Credential harvest table, Attaquants récurrents (fingerprints) | v1.9.2 |
+</details>
 
 ### Coming
 
@@ -394,7 +356,7 @@ Database migrations are applied automatically on startup — no manual SQL neede
 | **DMs end-to-end encrypted** — ECDH key exchange + AES-256-GCM | [Spec](docs/ideas/DM_ARCHITECTURE.md) |
 | **Plugin system** — external contributor API (fullstack hooks) | [Spec](docs/ideas/PLUGIN_SYSTEM.md) |
 | Mobile (Capacitor) / Desktop (Tauri) | — |
-| Rust migration — nodyx-server (Axum) replacing nodyx-core progressively | [memory/phase3_rust.md] |
+| Rust migration — nodyx-server (Axum) replacing nodyx-core progressively | — |
 
 ---
 
@@ -413,9 +375,7 @@ The internet was decentralized by design. SMTP, IRC, NNTP — anyone could run a
 
 **Nodyx is the promise, kept.**
 
-And it spreads the same way. Each instance that goes live exposes others to the idea. Each public event indexed by Google brings in someone new. Each community that chooses sovereignty inspires another. The R0 is in the architecture.
-
-We are not building a product. We are rebuilding infrastructure for human communities.
+And it spreads the same way. Each instance that goes live exposes others to the idea. Each public event indexed by Google brings in someone new. Each community that chooses sovereignty inspires another.
 
 > *"Fork us if we betray you."* — AGPL-3.0
 
@@ -425,22 +385,18 @@ We are not building a product. We are rebuilding infrastructure for human commun
 
 | Language | Docs |
 |---|---|
-| <img src="https://flagcdn.com/16x12/gb.png" alt="EN"> English | [docs/en/](docs/en/) |
+| <img src="https://flagcdn.com/16x12/gb.png" alt="EN"> English | [nodyx.dev](https://nodyx.dev) · [docs/en/](docs/en/) |
 | <img src="https://flagcdn.com/16x12/fr.png" alt="FR"> Français | [docs/fr/](docs/fr/) |
 | <img src="https://flagcdn.com/16x12/es.png" alt="ES"> Español | *coming soon* |
-| <img src="https://flagcdn.com/16x12/it.png" alt="IT"> Italiano | *coming soon* |
 | <img src="https://flagcdn.com/16x12/de.png" alt="DE"> Deutsch | *coming soon* |
 
+- [**nodyx.dev**](https://nodyx.dev) — Full documentation wiki
 - [Manifesto](docs/en/MANIFESTO.md) — Why Nodyx exists
 - [Architecture](docs/en/ARCHITECTURE.md) — How it's built
 - [Roadmap](docs/en/ROADMAP.md) — Where we're going
 - [Audio Engine](docs/en/AUDIO.md) — Broadcast EQ, RNNoise, full audio chain
 - [Neural Engine](docs/en/NEURAL-ENGINE.md) — Local AI with Ollama
-- [Specs](docs/en/specs/) — All functional specifications
-- [Ideas](docs/ideas/) — Design thinking in progress
 - [**NODYX-ETHER**](docs/ideas/NODYX-ETHER.md) — The physical layer vision (LoRa / HF radio / ionosphere)
-- [**NODYX-ETHER Guide**](docs/ideas/NODYX-ETHER-GUIDE.md) — How to participate: CB, HAM radio, LoRa, regional radio revival
-- [**NODYX-RADIO**](docs/ideas/NODYX-RADIO.md) — Nodyx as a radio tuner: new stations born because they finally have a community
 
 ---
 
