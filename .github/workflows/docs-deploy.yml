@@ -41,3 +41,4 @@ jobs:
 
             echo "── done ──"
             pm2 show nodyx-docs | grep -E "status|restart"
+
