@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  %sveltekit.head%
+</head>
+<body>
+  <div id="svelte">%sveltekit.body%</div>
+  <script>
+    // Apply saved theme before first paint
+    const t = localStorage.getItem('theme')
+    if (t) document.documentElement.setAttribute('data-theme', t)
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches)
+      document.documentElement.setAttribute('data-theme', 'dark')
+  </script>
+</body>
+</html>
