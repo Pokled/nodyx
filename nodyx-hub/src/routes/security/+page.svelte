@@ -105,6 +105,36 @@
   const allTools     = $derived([...new Set(data.recentHits.map((h: any) => h.tool))].sort());
   const allCountries = $derived([...new Set(data.recentHits.map((h: any) => h.country).filter(Boolean))].sort());
 
+  // Threat Score OSINT
+  type ThreatFactor = { label: string; points: number; detail?: string };
+  type OSINTResult  = {
+    threat_score: number;
+    threat_level: 'low' | 'medium' | 'high' | 'critical';
+    factors: ThreatFactor[];
+    summary: string;
+    enriched_at: string;
+    abuseipdb?: { score: number; totalReports: number; isTor: boolean; isPublicProxy: boolean; usageType: string; isp: string; countryCode: string } | null;
+    virustotal?: { malicious: number; suspicious: number } | null;
+    shodan?: { ports: number[]; vulns: string[] } | null;
+  };
+  let osintCache  = $state<Record<string, OSINTResult | 'loading' | 'error'>>({});
+
+  async function loadOSINT(ip: string) {
+    if (osintCache[ip]) return;
+    osintCache = { ...osintCache, [ip]: 'loading' };
+    try {
+      const res = await fetch(`/api/osint?ip=${encodeURIComponent(ip)}`);
+      const json = await res.json();
+      osintCache = { ...osintCache, [ip]: res.ok ? json : 'error' };
+    } catch {
+      osintCache = { ...osintCache, [ip]: 'error' };
+    }
+  }
+
+  const LEVEL_COLOR: Record<string, string> = {
+    critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#22c55e',
+  };
+
   // CERT-FR reporting
   let certStatus = $state<Record<string, 'idle' | 'sending' | 'sent' | 'error'>>({});
   async function sendToCERT(incidentId: string) {
@@ -755,7 +785,7 @@
             {@const isExp = expanded.has(hit.incident_id)}
             <!-- Main row -->
             <tr
-              onclick={() => toggleRow(hit.incident_id)}
+              onclick={() => { toggleRow(hit.incident_id); if (!expanded.has(hit.incident_id)) loadOSINT(hit.ip); }}
               style="
                 border-bottom: {isExp ? '0' : '1px solid rgba(56,78,180,0.06)'};
                 cursor:pointer;
@@ -856,6 +886,45 @@
                             </div>
                           {/each}
                         </div>
+                      </div>
+                    {/if}
+
+                    <!-- Threat Score OSINT -->
+                    {#if true}
+                      {@const osint = osintCache[hit.ip]}
+                      <div style="grid-column:1/-1; margin-top:0.5rem; padding:0.75rem 1rem; background:#050a05; border:1px solid rgba(51,255,51,0.08); border-radius:4px; font-family:monospace;">
+                        {#if !osint}
+                          <span style="font-size:0.7rem; color:#2a5a2a;">Threat Score — cliquer pour charger</span>
+                        {:else if osint === 'loading'}
+                          <span style="font-size:0.7rem; color:#2a7a2a; animation:blink 1s step-end infinite;">⟳ Enrichissement OSINT en cours…</span>
+                        {:else if osint === 'error'}
+                          <span style="font-size:0.7rem; color:#ef4444;">OSINT indisponible (clés API non configurées)</span>
+                        {:else}
+                          {@const lvlColor = LEVEL_COLOR[osint.threat_level] ?? '#94a3b8'}
+                          <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                            <span style="font-size:0.68rem; color:#2a7a2a; text-transform:uppercase; letter-spacing:0.1em;">Threat Score</span>
+                            <span style="font-size:1.4rem; font-weight:bold; color:{lvlColor}; line-height:1;">{osint.threat_score}<span style="font-size:0.7rem; color:#475569;">/100</span></span>
+                            <span style="font-size:0.7rem; font-weight:600; color:{lvlColor}; border:1px solid {lvlColor}40; border-radius:3px; padding:0.1rem 0.5rem; letter-spacing:0.08em;">{osint.threat_level.toUpperCase()}</span>
+                          </div>
+                          <!-- Barre de score -->
+                          <div style="height:4px; background:#0d200d; border-radius:2px; margin-bottom:0.6rem; overflow:hidden;">
+                            <div style="height:100%; width:{osint.threat_score}%; background:{lvlColor}; border-radius:2px; transition:width 0.6s ease;"></div>
+                          </div>
+                          <!-- Facteurs -->
+                          {#if osint.factors && osint.factors.length > 0}
+                            <div style="display:flex; flex-direction:column; gap:0.2rem;">
+                              {#each osint.factors as f, fi}
+                                <div style="display:flex; align-items:baseline; gap:0.5rem; font-size:0.72rem;">
+                                  <span style="color:#2a5a2a; flex-shrink:0;">{fi === osint.factors.length - 1 ? '└─' : '├─'}</span>
+                                  <span style="color:#94a3b8; flex:1;">{f.label}{f.detail ? ` — ${f.detail}` : ''}</span>
+                                  <span style="color:{lvlColor}; font-weight:600; white-space:nowrap;">+{f.points} pts</span>
+                                </div>
+                              {/each}
+                            </div>
+                          {:else}
+                            <div style="font-size:0.72rem; color:#475569;">{osint.summary}</div>
+                          {/if}
+                        {/if}
                       </div>
                     {/if}
 

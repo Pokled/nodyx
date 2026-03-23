@@ -1694,12 +1694,18 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
 
     if (!hit) return reply.code(404).send({ error: 'incident not found' })
 
+    // Récurrence de l'IP dans le honeypot
+    const { rows: [recRow] } = await db.query(
+      `SELECT COUNT(*)::int AS cnt FROM honeypot_hits WHERE ip = $1`, [hit.ip]
+    ).catch(() => ({ rows: [{ cnt: 0 }] }))
+    const recurrence: number = recRow?.cnt ?? 0
+
     // Enrichissement OSINT (parallèle — ne bloque pas si API down)
-    const osint: OSINTResult = await enrichIP(hit.ip).catch(() => ({
+    const osint: OSINTResult = await enrichIP(hit.ip, recurrence).catch(() => ({
       ip: hit.ip, enriched_at: new Date().toISOString(),
       abuseipdb: null, virustotal: null, shodan: null,
       threat_score: 0, threat_level: 'low' as const,
-      summary: 'Enrichissement OSINT indisponible.',
+      factors: [], summary: 'Enrichissement OSINT indisponible.',
     }))
 
     const tzMismatch = fp?.tz && hit.timezone && fp.tz !== hit.timezone
@@ -2299,5 +2305,28 @@ ${cred ? '  Code Pénal art. 323-3 — Extraction frauduleuse de données (5 ans
     } catch (err: any) {
       return reply.code(500).send({ error: err?.message || 'SMTP error' })
     }
+  })
+
+  // ── GET /api/v1/honeypot/osint?ip= — Threat Score à la demande ────────────
+  // Appelé par Olympus Hub pour afficher le breakdown dans la page sécurité.
+  // Protégé par le secret JWT (header X-Internal-Secret).
+  fastify.get<{ Querystring: { ip?: string } }>('/honeypot/osint', async (request, reply) => {
+    const secret   = process.env.JWT_SECRET
+    const provided = request.headers['x-internal-secret'] as string | undefined
+    if (!secret || provided !== secret) return reply.code(403).send({ error: 'unauthorized' })
+
+    const ip = (request.query as { ip?: string }).ip?.trim()
+    if (!ip) return reply.code(400).send({ error: 'ip required' })
+
+    // Récurrence
+    const { rows: [recRow] } = await db.query(
+      `SELECT COUNT(*)::int AS cnt FROM honeypot_hits WHERE ip = $1`, [ip]
+    ).catch(() => ({ rows: [{ cnt: 0 }] }))
+    const recurrence: number = recRow?.cnt ?? 0
+
+    const osint = await enrichIP(ip, recurrence).catch(() => null)
+    if (!osint) return reply.code(503).send({ error: 'enrichment failed' })
+
+    return reply.send(osint)
   })
 }

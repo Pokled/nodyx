@@ -49,6 +49,12 @@ export interface ShodanResult {
   org:        string | null
 }
 
+export interface ThreatFactor {
+  label:   string
+  points:  number
+  detail?: string
+}
+
 export interface OSINTResult {
   ip:           string
   enriched_at:  string
@@ -57,6 +63,7 @@ export interface OSINTResult {
   shodan:       ShodanResult | null
   threat_score: number                   // 0-100 calculé
   threat_level: 'low' | 'medium' | 'high' | 'critical'
+  factors:      ThreatFactor[]           // détail par contributeur
   summary:      string
 }
 
@@ -196,33 +203,97 @@ async function queryShodan(ip: string): Promise<ShodanResult | null> {
 // ── Score de menace ───────────────────────────────────────────────────────────
 
 function computeThreatScore(
-  abuse:  AbuseIPDBResult | null,
-  vt:     VirusTotalResult | null,
-  shodan: ShodanResult | null,
-): number {
+  abuse:      AbuseIPDBResult | null,
+  vt:         VirusTotalResult | null,
+  shodan:     ShodanResult | null,
+  recurrence: number = 0,
+): { score: number; factors: ThreatFactor[] } {
+  const factors: ThreatFactor[] = []
   let score = 0
 
   if (abuse) {
-    score += abuse.score * 0.55
-    if (abuse.isTor)                  score += 12
-    if (abuse.isPublicProxy)          score += 6
-    if (abuse.totalReports > 100)     score += 5
-    if (abuse.totalReports > 500)     score += 5
+    // Score AbuseIPDB : contribution principale (0-55 pts)
+    const abuseContrib = Math.round(abuse.score * 0.55)
+    if (abuseContrib > 0) {
+      factors.push({
+        label:  'Score AbuseIPDB',
+        points: abuseContrib,
+        detail: `${abuse.score}% de confiance — ${abuse.totalReports} signalement(s) sur 90 jours`,
+      })
+      score += abuseContrib
+    }
+
+    if (abuse.isTor) {
+      factors.push({ label: 'Nœud Tor confirmé', points: 12 })
+      score += 12
+    }
+
+    if (abuse.isPublicProxy) {
+      factors.push({ label: 'Proxy public', points: 6 })
+      score += 6
+    }
+
+    if (abuse.totalReports > 500) {
+      factors.push({ label: 'Récidiviste massif (+500 signalements)', points: 10 })
+      score += 10
+    } else if (abuse.totalReports > 100) {
+      factors.push({ label: 'Récidiviste (+100 signalements)', points: 5 })
+      score += 5
+    }
+
+    const datacenterTypes = ['data center', 'web hosting', 'transit', 'content delivery network']
+    if (datacenterTypes.some(t => (abuse.usageType ?? '').toLowerCase().includes(t))) {
+      factors.push({ label: 'IP datacenter/hébergement', points: 10, detail: abuse.usageType })
+      score += 10
+    }
   }
 
   if (vt) {
     const total   = vt.malicious + vt.suspicious + vt.harmless + vt.undetected
     const vtScore = total > 0 ? ((vt.malicious + vt.suspicious * 0.5) / total) * 100 : 0
-    score += vtScore * 0.35
+    const vtContrib = Math.round(vtScore * 0.35)
+    if (vtContrib > 0) {
+      factors.push({
+        label:  'Détections VirusTotal',
+        points: vtContrib,
+        detail: `${vt.malicious} moteur(s) malveillant(s), ${vt.suspicious} suspect(s)`,
+      })
+      score += vtContrib
+    }
   }
 
   if (shodan) {
-    if (shodan.vulns.length > 0)      score += 8
-    if (shodan.vulns.length > 3)      score += 5
-    if (shodan.ports.length > 15)     score += 3
+    if (shodan.vulns.length > 3) {
+      factors.push({
+        label:  'CVEs critiques (Shodan)',
+        points: 13,
+        detail: shodan.vulns.slice(0, 5).join(', '),
+      })
+      score += 13
+    } else if (shodan.vulns.length > 0) {
+      factors.push({
+        label:  'CVEs connues (Shodan)',
+        points: 8,
+        detail: shodan.vulns.join(', '),
+      })
+      score += 8
+    }
+    if (shodan.ports.length > 15) {
+      factors.push({ label: 'Exposition réseau élevée (>15 ports ouverts)', points: 3 })
+      score += 3
+    }
   }
 
-  return Math.min(100, Math.round(score))
+  // Récurrence honeypot
+  if (recurrence >= 10) {
+    factors.push({ label: `Récidiviste honeypot (${recurrence} visites)`, points: 10 })
+    score += 10
+  } else if (recurrence >= 3) {
+    factors.push({ label: `Retour honeypot (${recurrence} visites)`, points: 5 })
+    score += 5
+  }
+
+  return { score: Math.min(100, Math.round(score)), factors }
 }
 
 function buildSummary(
@@ -256,22 +327,32 @@ function buildSummary(
 
 // ── Export principal ──────────────────────────────────────────────────────────
 
-export async function enrichIP(ip: string): Promise<OSINTResult> {
+export async function enrichIP(ip: string, recurrence = 0): Promise<OSINTResult> {
   const blank = (summary: string): OSINTResult => ({
     ip, enriched_at: new Date().toISOString(),
     abuseipdb: null, virustotal: null, shodan: null,
-    threat_score: 0, threat_level: 'low', summary,
+    threat_score: 0, threat_level: 'low', factors: [], summary,
   })
 
   if (!ip || ip.startsWith('127.') || ip.startsWith('10.') || ip === '::1') {
     return blank('IP locale — pas d\'enrichissement OSINT.')
   }
 
-  // Cache Redis 24h
+  // Cache Redis 24h — clé inclut la récurrence pour invalidation si elle change
   const cacheKey = `osint:${ip}`
   try {
     const cached = await redis.get(cacheKey)
-    if (cached) return JSON.parse(cached) as OSINTResult
+    if (cached) {
+      const parsed = JSON.parse(cached) as OSINTResult
+      // Recalcul si la récurrence a augmenté depuis le cache
+      if (recurrence > 0 && parsed.factors) {
+        const prevRec = parsed.factors.find(f => f.label.includes('honeypot'))
+        const prevCount = prevRec ? parseInt(prevRec.detail?.match(/\d+/)?.[0] ?? '0') : 0
+        if (recurrence <= prevCount) return parsed
+      } else {
+        return parsed
+      }
+    }
   } catch { /* ignore */ }
 
   // Requêtes parallèles — ne bloque pas si une source est down
@@ -281,7 +362,7 @@ export async function enrichIP(ip: string): Promise<OSINTResult> {
     queryShodan(ip),
   ])
 
-  const threatScore = computeThreatScore(abuse, vt, shodan)
+  const { score: threatScore, factors } = computeThreatScore(abuse, vt, shodan, recurrence)
   const threatLevel: OSINTResult['threat_level'] =
     threatScore >= 80 ? 'critical' :
     threatScore >= 50 ? 'high'     :
@@ -295,6 +376,7 @@ export async function enrichIP(ip: string): Promise<OSINTResult> {
     shodan,
     threat_score: threatScore,
     threat_level: threatLevel,
+    factors,
     summary:      buildSummary(threatScore, abuse, vt, shodan),
   }
 
