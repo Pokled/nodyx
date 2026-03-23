@@ -25,7 +25,9 @@ marked.use(markedHighlight({
 const renderer = new marked.Renderer()
 
 // Code blocks: wrap with copy button + optional filename
-renderer.code = function({ text, lang }) {
+// marked v12 API: code(code, language, isEscaped)
+renderer.code = function(code: string, lang?: string) {
+  const text     = code
   const language = lang?.split(':')[0] || 'plaintext'
   const filename = lang?.includes(':') ? lang.split(':')[1] : null
   const highlighted = hljs.getLanguage(language)
@@ -49,7 +51,8 @@ renderer.code = function({ text, lang }) {
 }
 
 // Headings: add anchor ids
-renderer.heading = function({ text, depth }) {
+// marked v12 API: heading(text, depth, raw)
+renderer.heading = function(text: string, depth: number) {
   const id = text
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
