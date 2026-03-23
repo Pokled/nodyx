@@ -1,17 +1,6 @@
 <div align="center">
 
-<svg width="72" height="72" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="8" fill="#3b82f6"/>
-  <circle cx="16" cy="16" r="5" fill="white" opacity="0.9"/>
-  <circle cx="6"  cy="8"  r="2.5" fill="white" opacity="0.6"/>
-  <circle cx="26" cy="8"  r="2.5" fill="white" opacity="0.6"/>
-  <circle cx="6"  cy="24" r="2.5" fill="white" opacity="0.6"/>
-  <circle cx="26" cy="24" r="2.5" fill="white" opacity="0.6"/>
-  <line x1="6"  y1="8"  x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.5"/>
-  <line x1="26" y1="8"  x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.5"/>
-  <line x1="6"  y1="24" x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.5"/>
-  <line x1="26" y1="24" x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.5"/>
-</svg>
+<img src="docs/img/nodyx-icon.svg" alt="Nodyx" width="80"/>
 
 # Nodyx
 
