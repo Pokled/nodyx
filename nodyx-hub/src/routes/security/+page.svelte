@@ -785,7 +785,7 @@
             {@const isExp = expanded.has(hit.incident_id)}
             <!-- Main row -->
             <tr
-              onclick={() => { toggleRow(hit.incident_id); if (!expanded.has(hit.incident_id)) loadOSINT(hit.ip); }}
+              onclick={() => { if (!expanded.has(hit.incident_id)) loadOSINT(hit.ip); toggleRow(hit.incident_id); }}
               style="
                 border-bottom: {isExp ? '0' : '1px solid rgba(56,78,180,0.06)'};
                 cursor:pointer;
