@@ -219,7 +219,7 @@
     <span>Nodyx Security Honeypot — <a href="https://nodyx.org" style="color:#3b82f6;text-decoration:none;">nodyx.org</a> — AGPL-3.0</span>
     <span>Contact sécurité : <a href="mailto:security@nodyx.org" style="color:#3b82f6;text-decoration:none;">security@nodyx.org</a></span>
     <span>
-      <a href="https://github.com/Pokled/Nexus" target="_blank" style="color:#64748b;text-decoration:none;">GitHub</a>
+      <a href="https://github.com/Pokled/nodyx" target="_blank" style="color:#64748b;text-decoration:none;">GitHub</a>
     </span>
   </div>
 
