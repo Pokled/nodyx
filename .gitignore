@@ -44,3 +44,4 @@ nodyx-hub/.env
 nodyx-hub/hub.db
 nodyx-hub/build/
 instance.esy
+nodyx-docs/static/demo-honeypot.html
