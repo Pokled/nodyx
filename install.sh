@@ -71,7 +71,13 @@ gen_pass()    { openssl rand -base64 18 | tr -d '/+='; }
 slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'; }
 
 # ── Version ────────────────────────────────────────────────────────────────────
-NODYX_VERSION="1.9.0"
+NODYX_VERSION="1.9.3"
+INSTALLER_VERSION="1.9.3"
+#
+# TODO — Phase 6 (quand RHEL/Rocky/Alma sera ajouté) :
+#   Refacto modulaire en install/ (apt vs dnf, firewall, package names).
+#   Un seul install.sh entry point, des modules sourcés par fonction.
+#   NE PAS FAIRE avant d'avoir un vrai cas d'usage RHEL à tester.
 
 prompt() {
   local var="$1" msg="$2" default="${3:-}" val=''
