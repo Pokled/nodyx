@@ -147,21 +147,15 @@ async function authenticateSocket(socket: Socket, next: (err?: Error) => void) {
     return next(new Error('Invalid token'))
   }
 
-  // Accept both Node.js-issued sessions (session:) and Rust-issued sessions (nodyx:session:)
-  const [nodeSession, nodyx_session] = await Promise.all([
-    redis.exists(`session:${token}`),
-    redis.exists(`nodyx:session:${token}`),
-  ])
-  if (!nodeSession && !nodyx_session) {
+  // Confirm session is alive — ioredis keyPrefix 'nodyx:' applied automatically
+  const alive = await redis.exists(`session:${token}`)
+  if (!alive) {
     return next(new Error('Session expired'))
   }
 
-  // Reject banned users before they join any room (check both key prefixes)
-  const [isBannedNode, isBannedNodyx] = await Promise.all([
-    redis.exists(`banned:${payload.userId}`),
-    redis.exists(`nodyx:banned:${payload.userId}`),
-  ])
-  if (isBannedNode || isBannedNodyx) {
+  // Reject banned users before they join any room
+  const isBanned = await redis.exists(`banned:${payload.userId}`)
+  if (isBanned) {
     return next(new Error('Banned'))
   }
 

@@ -107,7 +107,7 @@ server.addHook('onRequest', async (request, reply) => {
       ip.startsWith('::ffff:127.') || ip.startsWith('172.16.')) return
 
   try {
-    const blocked = await redis.sismember('nodyx:blocklist', ip)
+    const blocked = await redis.sismember('blocklist', ip)
     if (blocked) {
       return reply.code(403).send({ error: 'Access denied' })
     }

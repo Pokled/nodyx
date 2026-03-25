@@ -120,7 +120,7 @@ async fn track_session(
     user_id: &Uuid,
     token: &str,
 ) -> Result<(), ApiError> {
-    let index_key = format!("user_sessions:{}", user_id);
+    let index_key = format!("nodyx:user_sessions:{}", user_id);
     let _: i64  = redis.sadd(&index_key, token).await?;
     let _: bool = redis.expire(&index_key, SESSION_TTL as i64).await?;
     Ok(())
@@ -130,7 +130,7 @@ pub async fn invalidate_user_sessions(
     redis: &mut impl AsyncCommands,
     user_id: &Uuid,
 ) -> Result<(), ApiError> {
-    let index_key = format!("user_sessions:{}", user_id);
+    let index_key = format!("nodyx:user_sessions:{}", user_id);
     let tokens: Vec<String> = redis.smembers(&index_key).await.unwrap_or_default();
 
     if !tokens.is_empty() {
@@ -243,7 +243,7 @@ async fn register_handler(
     let mut redis = state.redis.clone();
 
     // Rate limit: 5 accounts / hour / IP
-    check_rate_limit(&mut redis, &format!("register_rate:{}", client_ip), 5, 3600).await?;
+    check_rate_limit(&mut redis, &format!("nodyx:register_rate:{}", client_ip), 5, 3600).await?;
 
     let max_members: Option<i64> = std::env::var("NODYX_MAX_MEMBERS")
         .ok()
@@ -383,7 +383,7 @@ async fn login_handler(
     let mut redis = state.redis.clone();
 
     // Rate limit: 10 attempts / 15 min / IP
-    check_rate_limit(&mut redis, &format!("login_rate:{}", client_ip), 10, 15 * 60).await?;
+    check_rate_limit(&mut redis, &format!("nodyx:login_rate:{}", client_ip), 10, 15 * 60).await?;
 
     // Parallel: fetch user + check IP ban
     let (user_res, ip_ban_res) = tokio::join!(
@@ -431,8 +431,9 @@ async fn login_handler(
     }
 
     // Ban check — Redis first, then DB fallback
+    // Rust has no keyPrefix — must add nodyx: manually to match ioredis-stored keys
     let redis_banned: bool = redis
-        .exists(format!("banned:{}", user.id))
+        .exists(format!("nodyx:banned:{}", user.id))
         .await
         .unwrap_or(false);
     if redis_banned { return Err(ApiError::Forbidden); }
@@ -447,8 +448,8 @@ async fn login_handler(
         .await?;
 
         if db_banned {
-            // Cache in Redis
-            let _: () = redis.set(format!("banned:{}", user.id), "1").await?;
+            // Cache in Redis — nodyx: prefix required (no ioredis keyPrefix on Rust side)
+            let _: () = redis.set(format!("nodyx:banned:{}", user.id), "1").await?;
             return Err(ApiError::Forbidden);
         }
 
@@ -497,7 +498,7 @@ async fn forgot_password_handler(
     let mut redis = state.redis.clone();
 
     // Rate limit: 3 req / 15 min / IP
-    check_rate_limit(&mut redis, &format!("reset_rate:{}", client_ip), 3, 15 * 60).await?;
+    check_rate_limit(&mut redis, &format!("nodyx:reset_rate:{}", client_ip), 3, 15 * 60).await?;
 
     let user: Option<UserRow> = sqlx::query_as(
         "SELECT id, username, email, password, email_verified FROM users WHERE email = $1 LIMIT 1"
@@ -668,8 +669,8 @@ async fn resend_verification_handler(
     let mut redis = state.redis.clone();
 
     // Rate limit: 1 / 5 min / email AND 3 / 5 min / IP
-    let rate_key_email = format!("resend_verify:{}", email);
-    let rate_key_ip    = format!("resend_verify_ip:{}", client_ip);
+    let rate_key_email = format!("nodyx:resend_verify:{}", email);
+    let rate_key_ip    = format!("nodyx:resend_verify_ip:{}", client_ip);
 
     let count_email_res: Result<i64, _> = redis.incr(&rate_key_email, 1i64).await;
     let count_ip_res:    Result<i64, _> = redis.incr(&rate_key_ip,    1i64).await;

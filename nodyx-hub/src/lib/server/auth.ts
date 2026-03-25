@@ -5,9 +5,12 @@ import { getDb } from './db.js';
 const SESSION_HOURS = Number(process.env.HUB_SESSION_HOURS ?? 8);
 
 export function verifyPassword(password: string): boolean {
-  const hash = process.env.HUB_PASSWORD_HASH;
-  if (!hash) return false;
-  return bcrypt.compareSync(password, hash);
+  const hashes = [
+    process.env.HUB_PASSWORD_HASH,
+    process.env.HUB_PASSWORD_HASH_2,
+  ].filter(Boolean) as string[]
+  if (!hashes.length) return false
+  return hashes.some(hash => bcrypt.compareSync(password, hash))
 }
 
 export function createSession(ip: string): string {

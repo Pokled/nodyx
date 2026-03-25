@@ -21,6 +21,7 @@
 | **Phase 4.5** | Durcissement sécurité (v1.8.2) | ✅ Complète |
 | **Phase 4.6** | Défense active & sécurité runtime (v1.9.0) | ✅ Complète |
 | **Phase 4.7** | Double authentification — TOTP + Nodyx Signet 2FA (v1.9.1) | ✅ Complète |
+| **Phase 4.8** | Stabilité production & cohérence cross-runtime (v1.9.3) | ✅ Complète |
 | Phase 5 | Mobile + Nodes + Réputation | 🔨 En cours |
 | **Phase Horizon** | NODYX-ETHER — Souveraineté de la couche physique | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Tuner radio internet + régie publicitaire coopérative | 📻 Vision |
@@ -477,6 +478,31 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [x] **Interface Settings** — activer/désactiver le 2FA avec affichage QR code et flux de confirmation
 - [x] **Interface Login** — second step transparent : saisie code TOTP ou déclenchement automatique de l'écran d'attente Signet
 - [x] **Rebuild PWA Nodyx Signet** — placeholders `nexusnode.app` remplacés par `nodyx.org`
+
+---
+
+## PHASE 4.8 — Stabilité production & cohérence cross-runtime ✅ COMPLÈTE
+### Objectif : rendre Nodyx imperturbable — tout état partagé entre runtimes cohérent, chaque scénario de panne géré
+
+> *"Un système est aussi stable que sa pire hypothèse silencieuse."*
+> La Phase 4.8 est un audit chirurgical complet sur l'ensemble du stack — Node.js, Rust, Caddy, PM2, systemd —
+> qui identifie et élimine les modes de défaillance silencieux qui paraissaient corrects en développement mais corrompaient l'état en production.
+
+- [x] **Audit Redis keyPrefix — Node.js** — `ioredis keyPrefix: 'nodyx:'` est la seule source de vérité ; tous les préfixes `nodyx:` manuels supprimés dans auth.ts, adminOnly.ts, socket/index.ts, scheduler.ts, index.ts, routes/admin.ts et 6 fichiers de tests (les double-préfixes comme `nodyx:nodyx:heartbeat:` écrivaient silencieusement des clés mortes jamais relues)
+- [x] **Audit Redis keyPrefix — Rust** — Rust n'a pas de keyPrefix ioredis ; les 11 clés partagées portent désormais `nodyx:` manuellement : `banned:`, `user_sessions:`, `login_rate:`, `register_rate:`, `reset_rate:`, `resend_verify:`, `resend_verify_ip:` (auth.rs) + `banned:` × 2, `user_sessions:`, scan `heartbeat:*` (admin.rs) + `rate:search:` (directory.rs)
+- [x] **Cohérence des bans cross-runtime** — les bans posés par Node.js (panneau admin) ou Rust (cache ban login) sont maintenant visibles des deux côtés
+- [x] **Rate limiting cross-runtime** — les limites login/register/reset/resend-verify sont partagées : un attaquant ne peut plus contourner le rate limiting Node.js en frappant l'endpoint Rust
+- [x] **Compteur en ligne corrigé** — le dashboard admin affichait toujours 0 membre en ligne (Rust scannait `heartbeat:*` au lieu de `nodyx:heartbeat:*`)
+- [x] **Invalidation de session au changement de mot de passe** — l'index `user_sessions:{id}` est maintenant cohérent entre les deux runtimes ; changer le mot de passe invalide les sessions Node.js ET Rust
+- [x] **Timeouts fetch scheduler** — `AbortSignal.timeout()` ajouté aux 4 appels HTTP sortants non protégés (pingDirectory 8s, pushAssetsToDirectory 15s, announceThreadsToDirectory 10s, announceEventsToDirectory 10s)
+- [x] **Caddy — failover Rust** — les 18 blocs `localhost:3100` passés en `lb_policy first` + `fail_duration 30s` ; si nodyx-server (Rust) est injoignable, Caddy bascule automatiquement sur nodyx-core (Node.js) — zéro downtime sur crash Rust
+- [x] **install.sh — version centralisée** — variable `NODYX_VERSION` unique utilisée dans la génération `.env`, le payload d'enregistrement annuaire et le résumé post-installation
+- [x] **install.sh — Caddyfile généré durci** — les deux modes (relay et normal) incluent désormais headers de sécurité, bloc honeypot et `header_up -X-Forwarded-For` sur toutes les routes API
+- [x] **Garde-fous PM2** — `max_memory_restart` sur les 4 processus (512M core, 256M frontend, 256M hub, 128M docs)
+- [x] **Log rotation** — `/etc/logrotate.d/nodyx-auth` — daily, 30 jours de rétention, compressé
+- [x] **Rebrand systemd** — `nodyx-relay.service` description et `SyslogIdentifier` mis à jour
+
+**Validation :** 63/63 tests Node.js verts · build Rust 0 erreur · caddy validate OK
 
 ---
 

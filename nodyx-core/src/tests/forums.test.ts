@@ -7,7 +7,7 @@ import { buildApp } from './helpers/buildApp'
 vi.mock('../config/database', () => ({
   db: { query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }) },
   redis: {
-    exists: vi.fn().mockImplementation((key: string) => Promise.resolve((key.startsWith('banned:') || key.startsWith('nodyx:banned:')) ? 0 : 1)),
+    exists: vi.fn().mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1)),
     setex:  vi.fn().mockResolvedValue('OK'),
     incr:   vi.fn().mockResolvedValue(1),
     expire: vi.fn().mockResolvedValue(1),
@@ -143,7 +143,7 @@ describe('POST /api/v1/forums/threads', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve((key.startsWith('banned:') || key.startsWith('nodyx:banned:')) ? 0 : 1))
+    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
     vi.mocked(redis.incr).mockResolvedValue(1 as any)
     vi.mocked(redis.expire).mockResolvedValue(1 as any)
     app = await buildApp(a => a.register(forumRoutes, { prefix: '/api/v1/forums' }))
@@ -202,7 +202,7 @@ describe('POST /api/v1/forums/posts', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve((key.startsWith('banned:') || key.startsWith('nodyx:banned:')) ? 0 : 1))
+    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
     vi.mocked(redis.incr).mockResolvedValue(1 as any)
     vi.mocked(redis.expire).mockResolvedValue(1 as any)
     app = await buildApp(a => a.register(forumRoutes, { prefix: '/api/v1/forums' }))

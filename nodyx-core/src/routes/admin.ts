@@ -849,7 +849,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   // ── Update check ─────────────────────────────────────────────────────────
 
   app.get('/update-check', { preHandler: [rateLimit, adminOnly] }, async (_request, reply) => {
-    const CACHE_KEY = 'nodyx:update_check'
+    const CACHE_KEY = 'update_check'
     const CURRENT = process.env.NODYX_VERSION ?? '1.8.0'
 
     const cached = await redis.get(CACHE_KEY).catch(() => null)

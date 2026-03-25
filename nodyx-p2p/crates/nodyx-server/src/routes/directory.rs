@@ -61,7 +61,7 @@ async fn rate_limit_search(
     ip: &str,
     redis: &mut redis::aio::ConnectionManager,
 ) -> Result<(), ApiError> {
-    let key = format!("rate:search:{ip}");
+    let key = format!("nodyx:rate:search:{ip}");
     let count: i64 = redis.incr(&key, 1i64).await?;
     if count == 1 {
         let _: () = redis.expire(&key, 60).await?;
