@@ -5,7 +5,7 @@
  * autour du développement de Nodyx, postés par Pokled.
  *
  * Usage:
- *   cd nexus-core
+ *   cd nodyx-core
  *   npx tsx src/scripts/seed_forum_nodyx.ts
  *   npx tsx src/scripts/seed_forum_nodyx.ts --reset  (supprime les catégories créées)
  */
@@ -172,7 +172,7 @@ password = base64(HMAC-SHA1(TURN_SECRET, username))</code></pre>
 <p>WebRTC fonctionne en P2P direct dans <strong>~80% des cas</strong>. Mais pour les 20% restants (NAT symétrique, réseau d'entreprise, 4G/5G avec CGNAT), il faut un relais TURN. Sans ça, ces utilisateurs ne peuvent tout simplement pas rejoindre les salons vocaux.</p>
 
 <h3>Architecture des credentials (RFC 5766)</h3>
-<pre><code class="language-typescript">// Générés par nexus-core à chaque voice:init
+<pre><code class="language-typescript">// Générés par nodyx-core à chaque voice:init
 const expires  = Math.floor(Date.now() / 1000) + TTL
 const username = \`\${expires}:\${userId}\`
 const password = base64(HMAC_SHA1(TURN_SECRET, username))
@@ -194,7 +194,7 @@ TURN_TTL=86400</code></pre>
 <p>Testé avec des Binding Requests STUN manuelles → réponse <code>0x0101</code> Success Response. Connexions vocales avec un utilisateur derrière CG-NAT → ✅ opérationnel.</p>`,
 
       `<p>Chapeau pour l'implémentation propre. <strong>HMAC-SHA1 time-based</strong> c'est exactement le standard TURN — pas de gestion d'état côté serveur, credentials auto-expirés, parfait.</p>
-<p>Le fait que les credentials soient distribués dynamiquement par nexus-core via <code>voice:init</code> c'est élégant. Pas besoin de configurer quoi que ce soit côté client.</p>`,
+<p>Le fait que les credentials soient distribués dynamiquement par nodyx-core via <code>voice:init</code> c'est élégant. Pas besoin de configurer quoi que ce soit côté client.</p>`,
 
     ],
   },
@@ -204,7 +204,7 @@ TURN_TTL=86400</code></pre>
     category: '🚀 Développement > Nouvelles fonctionnalités',
     posts: [
       `<h2>Phase 3.0-B — DataChannels P2P pour le chat en temps réel</h2>
-<p>Jusqu'ici, tout le chat passait par le serveur : message envoyé → Socket.IO → nexus-core → broadcast. Ça marche, mais il y a une latence et ça charge le serveur.</p>
+<p>Jusqu'ici, tout le chat passait par le serveur : message envoyé → Socket.IO → nodyx-core → broadcast. Ça marche, mais il y a une latence et ça charge le serveur.</p>
 <p>Avec les <strong>DataChannels WebRTC</strong>, les pairs déjà connectés en vocal peuvent s'envoyer des données directement — sans passer par le serveur.</p>
 
 <h3>Architecture p2p.ts</h3>

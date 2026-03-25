@@ -1,7 +1,7 @@
 /**
  * Nodyx Jukebox — synchronized YouTube player via Socket.IO voice room relay.
  *
- * Transport  : jukebox:update / jukebox:request_sync (relayed by nexus-core voice socket)
+ * Transport  : jukebox:update / jukebox:request_sync (relayed by nodyx-core voice socket)
  * Sync model : host emits state { videoId, playing, position, syncedAt }
  *              peers apply position + elapsed time drift on receive
  */

@@ -1126,7 +1126,7 @@
 								<div class="p-4 space-y-3">
 									<p class="text-xs font-semibold text-white">GIFs non configurés</p>
 									<p class="text-xs text-gray-400 leading-relaxed">
-										Ajoutez une clé gratuite dans <code class="bg-gray-800 px-1 rounded text-indigo-300">/var/www/nodyx/nexus-frontend/.env</code> puis rebuild :
+										Ajoutez une clé gratuite dans <code class="bg-gray-800 px-1 rounded text-indigo-300">/var/www/nexus/nodyx-frontend/.env</code> puis rebuild :
 									</p>
 									<div class="space-y-1.5 text-xs text-gray-500">
 										<div class="bg-gray-800 rounded p-2 font-mono">

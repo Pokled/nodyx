@@ -4,7 +4,7 @@ import { db } from '../config/database'
 
 // ── Migration runner ──────────────────────────────────────────────────────────
 //
-// Runs all pending SQL migrations in nexus-core/src/migrations/ in order.
+// Runs all pending SQL migrations in nodyx-core/src/migrations/ in order.
 // Tracks applied migrations in the schema_migrations table.
 // Safe to call on every server start — already-applied migrations are skipped.
 

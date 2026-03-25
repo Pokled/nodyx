@@ -1,5 +1,5 @@
 /**
- * Scheduler — tâches périodiques de nexus-core
+ * Scheduler — tâches périodiques de nodyx-core
  * - Ping directory toutes les 5 minutes (membres + online)
  * - Push assets publics locaux → directory toutes les heures (v0.7 fédération)
  * - Announce threads au Global Search toutes les 10 min (SPEC 010, opt-in)

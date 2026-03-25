@@ -1715,7 +1715,7 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
         format_version: '1.0',
         generated_at:   new Date().toISOString(),
         generated_by:   'Nodyx Security Honeypot v1.9.2',
-        platform:       process.env.NEXUS_COMMUNITY_NAME || 'Nodyx Instance',
+        platform:       process.env.NODYX_COMMUNITY_NAME || 'Nodyx Instance',
         incident_id:    incidentId,
       },
       incident: {
@@ -1857,7 +1857,7 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
       `> **CLASSIFICATION :** TLP:AMBER — Diffusion restreinte aux autorités compétentes`,
       `> **Référence :** \`${incidentId}\``,
       `> **Généré le :** ${date}`,
-      `> **Plateforme :** ${process.env.NEXUS_COMMUNITY_NAME || 'Nodyx Instance'} (nodyx.org)`,
+      `> **Plateforme :** ${process.env.NODYX_COMMUNITY_NAME || 'Nodyx Instance'} (nodyx.org)`,
       `> **Intégrité SHA-256 :** \`${evHash}\``,
       ``,
       `---`,

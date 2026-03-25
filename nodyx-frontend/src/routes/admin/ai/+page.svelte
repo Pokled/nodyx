@@ -57,7 +57,7 @@
 
     /**
      * TODO: backend /api/v1/admin/neural/set-model non encore implémenté
-     * Réservé pour une future intégration Ollama native dans nexus-core
+     * Réservé pour une future intégration Ollama native dans nodyx-core
      */
     function selectModel(_name: string) {
         // no-op intentionnel — backend non implémenté
@@ -93,7 +93,7 @@
 
 <div class="space-y-6 font-sans">
     <div class="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">
-        <span class="font-semibold">En développement</span> — L'intégration Ollama dans nexus-core n'est pas encore disponible. Le scan local fonctionne, mais l'activation d'un modèle n'a pas d'effet.
+        <span class="font-semibold">En développement</span> — L'intégration Ollama dans nodyx-core n'est pas encore disponible. Le scan local fonctionne, mais l'activation d'un modèle n'a pas d'effet.
     </div>
     <div class="flex items-center justify-between">
         <div>

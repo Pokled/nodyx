@@ -6,7 +6,7 @@ import type { HandleFetch } from '@sveltejs/kit';
 // their own frontend). The directory API is public — no auth needed, no CORS.
 //
 // Also forwards the real client IP to the internal backend via X-Forwarded-For.
-// Without this, all SSR requests appear as 127.0.0.1 in nexus-core, breaking
+// Without this, all SSR requests appear as 127.0.0.1 in nodyx-core, breaking
 // IP bans, rate limiting, and registration_ip tracking.
 export const handleFetch: HandleFetch = ({ event, request, fetch }) => {
 	const url = request.url;

@@ -1,6 +1,6 @@
 /**
  * One-shot script — Génère les slugs de toutes les catégories existantes.
- * Usage: cd nexus-core && npx ts-node scripts/regen-category-slugs.ts
+ * Usage: cd nodyx-core && npx ts-node scripts/regen-category-slugs.ts
  */
 import 'dotenv/config'
 import { db } from '../src/config/database'

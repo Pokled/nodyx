@@ -1,7 +1,7 @@
 /**
  * One-shot script — Regénère les slugs de tous les threads existants
  * avec la fonction TypeScript (NFD + unaccent correct).
- * Usage: cd nexus-core && npx ts-node scripts/regen-slugs.ts
+ * Usage: cd nodyx-core && npx ts-node scripts/regen-slugs.ts
  */
 import 'dotenv/config'
 import { db } from '../src/config/database'

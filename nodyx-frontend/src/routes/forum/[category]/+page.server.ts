@@ -1,4 +1,4 @@
-// H:\Projets\Nodyx\nexus-frontend\src\routes\forum\[category]\ +page.server.ts
+// H:\Projets\Nodyx\nodyx-frontend\src\routes\forum\[category]\ +page.server.ts
 
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
