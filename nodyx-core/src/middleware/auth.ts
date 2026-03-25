@@ -40,28 +40,26 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
     return reply.code(401).send({ error: 'Invalid or expired token', code: 'UNAUTHORIZED' })
   }
 
-  // Confirm session is still alive in Redis (check both Node.js and Rust session key prefixes)
-  const [nodeSession, nodyx_session] = await Promise.all([
-    redis.exists(`session:${token}`),
-    redis.exists(`nodyx:session:${token}`),
-  ])
-  if (!nodeSession && !nodyx_session) {
+  // Confirm session is still alive in Redis
+  // ioredis keyPrefix 'nodyx:' is applied automatically — never add it manually
+  // Node.js sessions: written as 'session:{token}' → stored at 'nodyx:session:{token}'
+  // Rust sessions: written as 'nodyx:session:{token}' literally → also stored at 'nodyx:session:{token}'
+  // One check covers both.
+  const alive = await redis.exists(`session:${token}`)
+  if (!alive) {
     return reply.code(401).send({ error: 'Session expired', code: 'SESSION_EXPIRED' })
   }
 
-  // Reject banned users immediately (check both Node.js and Rust ban key prefixes)
-  const [isBannedNode, isBannedNodyx] = await Promise.all([
-    redis.exists(`banned:${payload.userId}`),
-    redis.exists(`nodyx:banned:${payload.userId}`),
-  ])
-  if (isBannedNode || isBannedNodyx) {
+  // Reject banned users immediately
+  const isBanned = await redis.exists(`banned:${payload.userId}`)
+  if (isBanned) {
     return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
   }
 
   request.user = payload
 
   // Track online presence — fire-and-forget, 15-minute TTL per user
-  redis.setex(`nodyx:heartbeat:${payload.userId}`, 900, '1').catch(() => {})
+  redis.setex(`heartbeat:${payload.userId}`, 900, '1').catch(() => {})
 }
 
 // Attaches user if a valid token is present, but never rejects
@@ -71,13 +69,10 @@ export async function optionalAuth(request: FastifyRequest, _reply: FastifyReply
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET!, { algorithms: ['HS256'] }) as JwtPayload
-    const [nodeSession, nodyx_session] = await Promise.all([
-      redis.exists(`session:${token}`),
-      redis.exists(`nodyx:session:${token}`),
-    ])
-    if (nodeSession || nodyx_session) {
+    const alive = await redis.exists(`session:${token}`)
+    if (alive) {
       request.user = payload
-      redis.setex(`nodyx:heartbeat:${payload.userId}`, 900, '1').catch(() => {})
+      redis.setex(`heartbeat:${payload.userId}`, 900, '1').catch(() => {})
     }
   } catch {
     // Invalid token — silently ignored

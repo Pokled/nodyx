@@ -142,7 +142,7 @@ async fn log_action(
 /// Invalide toutes les sessions Redis d'un utilisateur.
 async fn invalidate_user_sessions(redis: &redis::aio::ConnectionManager, user_id: Uuid) {
     let mut r = redis.clone();
-    let index_key = format!("user_sessions:{}", user_id);
+    let index_key = format!("nodyx:user_sessions:{}", user_id);
     let tokens: Vec<String> = r.smembers(&index_key).await.unwrap_or_default();
     for token in &tokens {
         let _: i64 = r.del(format!("nodyx:session:{}", token)).await.unwrap_or(0);
@@ -334,7 +334,8 @@ async fn stats_handler(
 
     // Online count via Redis heartbeat keys
     let mut redis = state.redis.clone();
-    let heartbeat_keys: Vec<String> = redis.keys("heartbeat:*").await.unwrap_or_default();
+    // nodyx: prefix required — ioredis (Node.js) stores as nodyx:heartbeat:*, Rust has no keyPrefix
+    let heartbeat_keys: Vec<String> = redis.keys("nodyx:heartbeat:*").await.unwrap_or_default();
     let online_count = heartbeat_keys.len();
 
     // Activity last 7 days (posts + new members merged by day)
@@ -744,7 +745,7 @@ async fn ban_handler(
 
     // Redis: ban flag + invalidate sessions
     let mut redis = state.redis.clone();
-    let _: () = redis.set(format!("banned:{}", user_id), "1").await.unwrap_or(());
+    let _: () = redis.set(format!("nodyx:banned:{}", user_id), "1").await.unwrap_or(());
     invalidate_user_sessions(&state.redis, user_id).await;
 
     let db = state.db.clone();
@@ -786,7 +787,7 @@ async fn unban_handler(
         .await?;
 
     let mut redis = state.redis.clone();
-    let _: i64 = redis.del(format!("banned:{}", user_id)).await.unwrap_or(0);
+    let _: i64 = redis.del(format!("nodyx:banned:{}", user_id)).await.unwrap_or(0);
 
     let db = state.db.clone();
     let actor_id = auth.user_id;

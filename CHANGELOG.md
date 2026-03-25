@@ -9,6 +9,46 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.9.3] — 2026-03-25
+
+### Stability — Production hardening & cross-runtime Redis coherence
+
+**Redis keyPrefix audit — Node.js (Sprint 1)**
+- Removed all manual `nodyx:` prefixes from Node.js code — ioredis `keyPrefix: 'nodyx:'` handles this automatically
+- `auth.ts` — single `session:{token}` check (was dual check `nodyx:session:` + `session:` — double-prefix always returned 0)
+- `adminOnly.ts` — same fix + `heartbeat:{userId}` corrected
+- `socket/index.ts` — `authenticateSocket` single session + `banned:{userId}` corrected
+- `scheduler.ts` — `blocklist` / `blocklist:tmp` (was `nodyx:blocklist` / `nodyx:blocklist:tmp`)
+- `index.ts` — blocklist IP check corrected
+- `routes/admin.ts` — `update_check` cache key corrected (was `nodyx:update_check`)
+- 6 test files — dead condition `|| key.startsWith('nodyx:banned:')` removed from Redis mock
+
+**Redis keyPrefix audit — Rust nodyx-server (Sprint 4)**
+- Rust has no ioredis keyPrefix — all shared keys must carry `nodyx:` manually
+- `routes/auth.rs` — 7 keys fixed: `banned:`, `user_sessions:`, `login_rate:`, `register_rate:`, `reset_rate:`, `resend_verify:`, `resend_verify_ip:`
+- `routes/admin.rs` — 3 keys fixed: `banned:` (ban/unban), `user_sessions:` (invalidate sessions), `heartbeat:*` scan (online_count was always 0)
+- `routes/directory.rs` — `rate:search:` fixed
+- **Impact**: bans now cross-visible between Node.js and Rust runtimes; rate limiting shared; online count functional; session invalidation on password change covers both runtimes
+
+**install.sh — version centralization (Sprint 2)**
+- Single `NODYX_VERSION="1.9.0"` variable at top of script — used consistently in `.env` generation, directory registration, post-install summary (was 3 different hardcoded values: 1.8.1, 1.8.2, 1.9.0)
+- Both Caddyfile blocks (relay + normal mode) now include: security headers (X-Frame-Options, CSP, HSTS, X-Content-Type-Options, Referrer-Policy, `-Server`), honeypot block (25 scanner paths), `header_up -X-Forwarded-For` on all API reverse_proxy blocks
+- PM2 ecosystem template now includes `max_memory_restart` (512M core, 256M frontend)
+
+**Scheduler — fetch timeouts (Sprint 3)**
+- `AbortSignal.timeout()` added to all 4 previously unguarded fetch calls: `pingDirectory` (8s), `pushAssetsToDirectory` (15s), `announceThreadsToDirectory` (10s), `announceEventsToDirectory` (10s)
+
+**Caddy — Rust failover (Sprint 3)**
+- All 18 `localhost:3100` blocks (9 external nodyx.org + 9 internal :3099) switched to `lb_policy first` + `fail_duration 30s` with `localhost:3000` as fallback
+- If nodyx-server (Rust) is down, Caddy automatically routes to nodyx-core (Node.js) within 30 seconds — zero manual intervention
+
+**Infrastructure**
+- PM2 `max_memory_restart`: core 512M, frontend 256M, hub 256M, docs 128M — automatic restart on OOM
+- `/etc/logrotate.d/nodyx-auth` — daily rotation, 30-day retention, compressed
+- `nodyx-relay.service` — `SyslogIdentifier` and description rebranded to `nodyx-relay`
+
+---
+
 ## [1.9.2] — 2026-03-21
 
 ### Security — Advanced Honeypot Suite

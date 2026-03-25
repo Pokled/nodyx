@@ -70,6 +70,9 @@ gen_secret()  { openssl rand -hex 32; }
 gen_pass()    { openssl rand -base64 18 | tr -d '/+='; }
 slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'; }
 
+# ── Version ────────────────────────────────────────────────────────────────────
+NODYX_VERSION="1.9.0"
+
 prompt() {
   local var="$1" msg="$2" default="${3:-}" val=''
   if [[ -n "$default" ]]; then
@@ -623,7 +626,7 @@ NODYX_COMMUNITY_SLUG=${COMMUNITY_SLUG}
 NODYX_COMMUNITY_DESCRIPTION=${COMMUNITY_DESC}
 NODYX_COMMUNITY_LANGUAGE=${COMMUNITY_LANG}
 NODYX_COMMUNITY_COUNTRY=${COMMUNITY_COUNTRY}
-NODYX_VERSION=1.8.1
+NODYX_VERSION=${NODYX_VERSION}
 
 # Serveur
 PORT=3000
@@ -725,23 +728,68 @@ if $RELAY_MODE; then
   # TLS est géré en amont par le serveur nodyx-relay sur nodyx.org.
   cat > /etc/caddy/Caddyfile <<CADDY
 :80 {
-    reverse_proxy /api/*       localhost:3000
-    reverse_proxy /uploads/*   localhost:3000
-    reverse_proxy /socket.io/* localhost:3000
-    reverse_proxy *            localhost:4173
-
     encode gzip
+
+    header {
+        X-Content-Type-Options  "nosniff"
+        X-Frame-Options         "SAMEORIGIN"
+        Referrer-Policy         "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
+    handle @honeypot {
+        rewrite * /api/v1/_hp?p={http.request.uri.path}
+        reverse_proxy localhost:3000 {
+            header_up -X-Forwarded-For
+        }
+    }
+
+    reverse_proxy /api/* localhost:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy /uploads/* localhost:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy /socket.io/* localhost:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy * localhost:4173
 }
 CADDY
 else
   cat > /etc/caddy/Caddyfile <<CADDY
 ${DOMAIN} {
-    reverse_proxy /api/*       localhost:3000
-    reverse_proxy /uploads/*   localhost:3000
-    reverse_proxy /socket.io/* localhost:3000
-    reverse_proxy *            localhost:4173
-
     encode gzip
+
+    header {
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "camera=(self), microphone=(self), geolocation=(self)"
+        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+
+    @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
+    handle @honeypot {
+        rewrite * /api/v1/_hp?p={http.request.uri.path}
+        reverse_proxy localhost:3000 {
+            header_up -X-Forwarded-For
+        }
+    }
+
+    reverse_proxy /api/* localhost:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy /uploads/* localhost:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy /socket.io/* localhost:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy * localhost:4173
 }
 CADDY
 fi
@@ -767,6 +815,7 @@ module.exports = {
       script: 'dist/index.js',
       cwd: '${NODYX_DIR}/nodyx-core',
       watch: false,
+      max_memory_restart: '512M',
       env: { NODE_ENV: 'production' },
     },
     {
@@ -774,6 +823,7 @@ module.exports = {
       script: 'build/index.js',
       cwd: '${NODYX_DIR}/nodyx-frontend',
       watch: false,
+      max_memory_restart: '256M',
       env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1' },
     },
   ],
@@ -927,7 +977,7 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
       \"slug\":        \"${COMMUNITY_SLUG}\",
       \"url\":         \"https://${DOMAIN}\",
       \"language\":    \"${COMMUNITY_LANG}\",
-      \"version\":     \"${NODYX_VERSION:-1.8.1}\"
+      \"version\":     \"${NODYX_VERSION}\"
     }" 2>/dev/null || true)
 
   REGISTER_TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
@@ -1247,7 +1297,7 @@ fi
 if $RELAY_MODE; then
   echo -e "     ${BOLD}Relay      ${RESET}tunnel → relay.nodyx.org:7443"
 fi
-echo -e "     ${BOLD}Version    ${RESET}1.9.0"
+echo -e "     ${BOLD}Version    ${RESET}${NODYX_VERSION}"
 echo -e "     ${BOLD}Dossier    ${RESET}${NODYX_DIR}"
 echo ""
 echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"

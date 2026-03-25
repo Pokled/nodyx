@@ -48,6 +48,7 @@ async function pingDirectory(io: Server) {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ token, members, online, logo_url, banner_url }),
+      signal:  AbortSignal.timeout(8_000),
     })
 
     if (res.ok) {
@@ -106,7 +107,8 @@ async function pushAssetsToDirectory() {
         'Content-Type':  'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ assets }),
+      body:   JSON.stringify({ assets }),
+      signal: AbortSignal.timeout(15_000),
     })
 
     if (res.ok) {
@@ -174,6 +176,7 @@ export async function announceThreadsToDirectory() {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ token, threads }),
+      signal:  AbortSignal.timeout(10_000),
     })
 
     if (res.ok) {
@@ -238,6 +241,7 @@ export async function announceEventsToDirectory() {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body:    JSON.stringify({ instance_slug: slug, instance_url: selfUrl, events }),
+      signal:  AbortSignal.timeout(10_000),
     })
 
     if (res.ok) {
@@ -325,19 +329,19 @@ async function pullBlocklist() {
     if (!Array.isArray(json.ips)) return
 
     if (json.ips.length === 0) {
-      await redis.del('nodyx:blocklist')
+      await redis.del('blocklist')
       return
     }
 
     // Rebuild atomically: write to temp key then rename
-    const tmpKey = `nodyx:blocklist:tmp`
+    const tmpKey = `blocklist:tmp`
     await redis.del(tmpKey)
     const CHUNK = 500
     for (let i = 0; i < json.ips.length; i += CHUNK) {
       await redis.sadd(tmpKey, ...json.ips.slice(i, i + CHUNK))
     }
-    await redis.rename(tmpKey, 'nodyx:blocklist')
-    await redis.expire('nodyx:blocklist', 35 * 60)  // 35 min TTL (buffer over 30 min pull)
+    await redis.rename(tmpKey, 'blocklist')
+    await redis.expire('blocklist', 35 * 60)  // 35 min TTL (buffer over 30 min pull)
 
     if (json.count > 0) {
       console.log(`[Scheduler] Blocklist sync — ${json.count} IP(s) bloquée(s)`)

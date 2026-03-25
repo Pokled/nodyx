@@ -21,6 +21,7 @@
 | **Phase 4.5** | Security hardening (v1.8.2) | ✅ Complete |
 | **Phase 4.6** | Active defense & runtime security (v1.9.0) | ✅ Complete |
 | **Phase 4.7** | 2FA — TOTP + Nodyx Signet as 2nd factor (v1.9.1) | ✅ Complete |
+| **Phase 4.8** | Production stability & cross-runtime hardening (v1.9.3) | ✅ Complete |
 | Phase 5 | Mobile + Nodes + Reputation | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
@@ -495,6 +496,31 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [x] **Settings UI** — enable/disable 2FA with QR code display and confirmation code flow
 - [x] **Login UI** — seamless second-step: TOTP code input or Signet auto-triggered waiting screen
 - [x] **Nodyx Signet PWA rebuild** — stale `nexusnode.app` placeholders replaced with `nodyx.org`
+
+---
+
+## PHASE 4.8 — Production stability & cross-runtime hardening ✅ COMPLETE
+### Goal: Make Nodyx imperturbable — every shared state between runtimes consistent, every failure scenario handled
+
+> *"A system is only as stable as its weakest assumption."*
+> Phase 4.8 is a full surgical audit across the entire stack — Node.js, Rust, Caddy, PM2, systemd —
+> identifying and eliminating silent failure modes that looked fine in development but would corrupt state in production.
+
+- [x] **Redis keyPrefix audit — Node.js** — `ioredis keyPrefix: 'nodyx:'` is the single source of truth; all manual `nodyx:` prefixes removed from auth.ts, adminOnly.ts, socket/index.ts, scheduler.ts, index.ts, routes/admin.ts and 6 test files (double-prefix like `nodyx:nodyx:heartbeat:` was silently writing dead keys)
+- [x] **Redis keyPrefix audit — Rust** — Rust has no ioredis keyPrefix; all 11 shared keys now carry `nodyx:` prefix manually: `banned:`, `user_sessions:`, `login_rate:`, `register_rate:`, `reset_rate:`, `resend_verify:`, `resend_verify_ip:` (auth.rs), `banned:` × 2 + `user_sessions:` + `heartbeat:*` scan (admin.rs), `rate:search:` (directory.rs)
+- [x] **Cross-runtime ban coherence** — bans set by Node.js (admin panel) or Rust (login ban-cache) are now visible to both runtimes
+- [x] **Cross-runtime rate limiting** — login/register/reset/resend-verify rate limits are now shared: an attacker can no longer bypass Node.js rate limiting by hitting the Rust endpoint
+- [x] **Online count fixed** — admin dashboard online member count was always 0 (Rust was scanning `heartbeat:*` instead of `nodyx:heartbeat:*`)
+- [x] **Session invalidation on password change** — `user_sessions:{id}` index now consistent between both runtimes; changing password invalidates sessions from both Node.js and Rust logins
+- [x] **Scheduler fetch timeouts** — `AbortSignal.timeout()` added to all 4 previously unguarded outbound HTTP calls (pingDirectory 8s, pushAssetsToDirectory 15s, announceThreadsToDirectory 10s, announceEventsToDirectory 10s)
+- [x] **Caddy — Rust failover** — all 18 `localhost:3100` blocks switched to `lb_policy first` + `fail_duration 30s`; if nodyx-server (Rust) is unreachable, Caddy automatically falls back to nodyx-core (Node.js) — zero downtime on Rust crash
+- [x] **install.sh — version centralized** — single `NODYX_VERSION` variable used consistently across `.env` generation, directory registration payload, and post-install summary
+- [x] **install.sh — generated Caddyfile hardened** — both relay and normal mode now include security headers, honeypot block, and `header_up -X-Forwarded-For` on all API routes
+- [x] **PM2 memory guards** — `max_memory_restart` added to all 4 processes (512M core, 256M frontend, 256M hub, 128M docs)
+- [x] **Log rotation** — `/etc/logrotate.d/nodyx-auth` — daily, 30-day retention, compressed
+- [x] **systemd rebrand** — `nodyx-relay.service` description and `SyslogIdentifier` updated to `nodyx-relay`
+
+**Validation:** 63/63 Node.js tests green · Rust build 0 errors · Caddy validate OK
 
 ---
 
