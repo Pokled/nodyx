@@ -6,7 +6,7 @@
 	let { data }: { data: PageData } = $props()
 
 	const isAdminOrMod = $derived(
-		data.user?.role === 'admin' || data.user?.role === 'moderator'
+		data.user?.role === 'owner' || data.user?.role === 'admin' || data.user?.role === 'moderator'
 	)
 
 	function formatDate(iso: string) {

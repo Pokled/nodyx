@@ -285,8 +285,22 @@ export function registerSocketIO(server: Server): void {
       }
     })().catch(() => {})
 
+    // ── Periodic ban check — catches bans issued by Rust (nodyx-server) ─────────
+    // Node.js bans kick immediately via io.in(); Rust bans only write Redis.
+    // Every 30s we re-check the banned: key so no banned user stays connected.
+    const banCheckInterval = setInterval(async () => {
+      if (!socket.connected) { clearInterval(banCheckInterval); return }
+      const stillBanned = await redis.exists(`banned:${userId}`).catch(() => 0)
+      if (stillBanned) {
+        clearInterval(banCheckInterval)
+        socket.emit('banned', { message: 'You have been banned from this community.' })
+        socket.disconnect(true)
+      }
+    }, 30_000)
+
     // Broadcast offline only when the user's last tab closes
     socket.on('disconnect', async () => {
+      clearInterval(banCheckInterval)
       const remaining = await server.in('presence').fetchSockets()
       const stillOnline = remaining.some(s => s.data.userId === userId)
       if (!stillOnline) {
