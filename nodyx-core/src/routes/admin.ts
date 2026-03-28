@@ -42,6 +42,11 @@ async function getCommunityId(): Promise<string | null> {
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
+const PatchModuleBody = z.object({
+  enabled: z.boolean().optional(),
+  config:  z.record(z.string(), z.unknown()).optional(),
+})
+
 const PatchMemberBody = z.object({
   role: z.enum(['admin', 'moderator', 'member']).optional(),
 })
@@ -1038,5 +1043,70 @@ export default async function adminRoutes(app: FastifyInstance) {
     )
 
     return reply.send({ entries: rows, total: countRows[0].total, limit, offset })
+  })
+
+  // ── Modules — public (no auth) ───────────────────────────────────────────
+  // Returns the enabled state of all modules. Safe to expose publicly —
+  // no config data, no sensitive info. Used by the frontend global layout.
+
+  app.get('/modules/public', async (_req, reply) => {
+    const { rows } = await db.query(
+      `SELECT id, family, enabled FROM modules ORDER BY family, id`
+    )
+    return reply.send({ modules: rows })
+  })
+
+  // ── Modules — admin list ─────────────────────────────────────────────────
+
+  app.get('/modules', { preHandler: [rateLimit, adminOnly] }, async (_req, reply) => {
+    const { rows } = await db.query(
+      `SELECT id, family, enabled, config, updated_at FROM modules ORDER BY family, id`
+    )
+    return reply.send(rows)
+  })
+
+  // ── Modules — toggle / configure ─────────────────────────────────────────
+
+  app.patch('/modules/:id', {
+    preHandler: [rateLimit, adminOnly, validate({ body: PatchModuleBody })],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body   = request.body   as { enabled?: boolean; config?: Record<string, unknown> }
+
+    const { rows: existing } = await db.query(
+      `SELECT id, family FROM modules WHERE id = $1`,
+      [id]
+    )
+    if (!existing.length) {
+      return reply.code(404).send({ error: 'Module introuvable.' })
+    }
+    if (existing[0].family === 'core') {
+      return reply.code(403).send({ error: 'core_module', message: 'Les modules core ne peuvent pas être modifiés.' })
+    }
+
+    const setParts: string[] = ['updated_at = NOW()']
+    const values:   unknown[] = []
+    let   i = 1
+
+    if (body.enabled !== undefined) { setParts.push(`enabled = $${i++}`); values.push(body.enabled) }
+    if (body.config  !== undefined) { setParts.push(`config = $${i++}`);  values.push(JSON.stringify(body.config)) }
+    values.push(id)
+
+    await db.query(
+      `UPDATE modules SET ${setParts.join(', ')} WHERE id = $${i}`,
+      values
+    )
+
+    // Invalidate Redis cache so requireModule sees the change immediately
+    await redis.del(`module:${id}:enabled`)
+
+    await logAction(
+      (request as any).user.userId,
+      'module_toggle',
+      'module', id, id,
+      { enabled: body.enabled, config: body.config }
+    )
+
+    return reply.send({ success: true })
   })
 }

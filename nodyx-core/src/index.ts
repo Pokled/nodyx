@@ -26,6 +26,7 @@ import authenticatorRoutes   from './routes/authenticator'
 import taskRoutes            from './routes/tasks'
 import honeypotRoutes        from './routes/honeypot'
 import totpRoutes            from './routes/totp'
+import wikiRoutes            from './routes/wiki'
 import { setIO }              from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
@@ -138,6 +139,7 @@ server.register(authenticatorRoutes,  { prefix: '/api/auth' })
 server.register(taskRoutes,           { prefix: '/api/v1/tasks' })
 server.register(honeypotRoutes,       { prefix: '/api/v1' })
 server.register(totpRoutes,           { prefix: '/api/v1/auth/totp' })
+server.register(wikiRoutes,           { prefix: '/api/v1/wiki' })
 
 const start = async () => {
   // Validate critical environment variables at startup.

@@ -303,6 +303,7 @@
 		} else if (path.startsWith('/communities'))  { crumbs.push({ label: 'Annuaire' });
 		} else if (path.startsWith('/polls'))        { crumbs.push({ label: 'Sondages' });
 		} else if (path.startsWith('/tasks'))        { crumbs.push({ label: 'Tâches' });
+		} else if (path.startsWith('/wiki'))         { crumbs.push({ label: 'Wiki' });
 		} else if (path.startsWith('/library'))      { crumbs.push({ label: 'Bibliothèque' });
 		} else if (path.startsWith('/search'))       { crumbs.push({ label: 'Recherche' });
 		} else if (path.startsWith('/garden'))       { crumbs.push({ label: 'Jardin' });
@@ -704,6 +705,7 @@
 							{ href: '/library',  label: 'Bibliothèque', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
 							{ href: '/garden',   label: 'Jardin',      icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' },
 							{ href: '/discover', label: 'Découvrir',   icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+							...((data as any).modules?.wiki ? [{ href: '/wiki', label: 'Wiki', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' }] : []),
 						] as item}
 						<a href={item.href}
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"

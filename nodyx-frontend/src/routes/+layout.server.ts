@@ -18,16 +18,24 @@ function normalizeUrl(url: string | null): string | null {
 export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) => {
 	const token = cookies.get('token');
 
-	const [infoRes, userRes, directoryRes, announcementRes] = await Promise.all([
+	const [infoRes, userRes, directoryRes, announcementRes, modulesRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),
 		token
 			? apiFetch(fetch, '/users/me', { headers: { Authorization: `Bearer ${token}` } })
 			: Promise.resolve(null),
 		globalThis.fetch(DIRECTORY_URL).catch(() => null),
 		apiFetch(fetch, '/instance/announcement').catch(() => null),
+		apiFetch(fetch, '/admin/modules/public').catch(() => null),
 	]);
 
 	const infoJson = infoRes.ok ? await infoRes.json() : null;
+
+	// Module enabled state — used to gate nav items and page access
+	const modulesJson = modulesRes?.ok ? await modulesRes.json().catch(() => null) : null
+	const modules: Record<string, boolean> = {}
+	for (const m of (modulesJson?.modules ?? [])) {
+		modules[m.id] = m.enabled
+	}
 	const announcementJson = announcementRes?.ok ? await announcementRes.json().catch(() => null) : null;
 	const activeAnnouncement: { id: string; message: string; color: string } | null = announcementJson?.announcement ?? null;
 	const communityName: string      = infoJson?.name       ?? 'Nodyx';
@@ -44,7 +52,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (directoryJson?.instances ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules };
 	}
 
 	const { user } = await userRes.json();
@@ -74,5 +82,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules };
 };

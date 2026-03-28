@@ -154,8 +154,8 @@ The CRDT handles the rest — packets may arrive out of order, duplicated, or ho
 
 | Technology | Project | Status |
 |---|---|---|
+| **Crypto mesh networking stack** | **[Reticulum Network Stack](https://reticulum.network)** | **Active — Python, transport-agnostic, E2E encrypted, delay-tolerant** |
 | LoRa mesh messaging | [Meshtastic](https://meshtastic.org) | Production, thousands of nodes |
-| Transport-agnostic crypto networking | [Reticulum Network Stack](https://reticulum.network) | Active, designed for exactly this |
 | HF digital text over radio | [JS8Call](http://js8call.com) | Active amateur radio community |
 | Email over HF radio | [Winlink](https://winlink.org) | Decades of use, global coverage |
 | Software-defined radio (SDR) | RTL-SDR, HackRF | €25–300, widely available |
@@ -165,27 +165,96 @@ We are not inventing new physics. We are connecting existing pieces with the rig
 
 ---
 
-## The Architecture Sketch
+## Reticulum — The Foundation We Won't Rebuild From Scratch
+
+> "ou améliorer Reticulum et le faire à notre sauce"
+
+Someone already solved the hardest part.
+
+[Reticulum Network Stack](https://reticulum.network) is an open-source cryptographic networking stack designed from the ground up for exactly the scenario NODYX-ETHER describes:
+- Works over LoRa, serial, TCP, I2P, any interface
+- Transport-agnostic — the application doesn't care what carries the bytes
+- End-to-end encrypted by design (Curve25519 + AES-128)
+- Delay-tolerant: messages propagate even with intermittent connectivity
+- No central authority, no IP addresses, no infrastructure requirement
+- Runs on Raspberry Pi Zero
+
+This is not a coincidence of features. **This is the exact problem Reticulum was built to solve.**
+
+### What Reticulum Gives Us
+
+```
+Reticulum handles:
+  ├── Addressing (Destination = public key hash, not IP)
+  ├── Routing (propagation mesh, announce/path-find)
+  ├── Encryption (all traffic, always, zero config)
+  ├── Fragmentation + reassembly (low-bandwidth links)
+  ├── Delivery acknowledgments
+  └── Transport interfaces (serial, LoRa, TCP, UDP, I2P, Pipe)
+
+Nodyx adds on top:
+  ├── Community data structures (forum, chat, events)
+  ├── CRDT sync (eventually-consistent state)
+  ├── Web UI (the thing that makes it human)
+  ├── Voice (WebRTC over normal links, CRDT-only over mesh)
+  └── Federation protocol (gossip, directory, relay)
+```
+
+### The Gap We Fill
+
+Reticulum is brilliant infrastructure with no community platform layer.
+It ships with [Nomad Network](https://github.com/markqvist/NomadNetwork) — a terminal-based BBS.
+Good for a certain type of user. Not for a village in a disaster zone. Not for a neighborhood trying to self-organize.
+
+**Nodyx-ether is Reticulum + a real community platform.**
+
+### Strategy: Fork, Contribute, Extend
+
+We don't rewrite Reticulum. We:
+1. **Bridge it** — `nodyx-ether` speaks Reticulum protocol natively
+2. **Port the core to Rust** — the Python implementation is solid but won't run on microcontrollers or WASM. A Rust port opens embedded hardware and browser-side mesh participation.
+3. **Contribute upstream** — improvements to fragmentation, CRDT-friendly transport, better LoRa drivers go back to the Reticulum project
+4. **Build the layer above** — the community platform that turns a mesh network into a living space
+
+```
+"Fork us if we betray you."  ← Nodyx manifesto
+"Reticulum is the postal service. Nodyx is the town square."
+```
+
+---
+
+## The Architecture Sketch (Reticulum as Foundation)
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                  nodyx-core (Fastify)               │
 │              CRDT store — eventually consistent      │
 └───────────────────────┬─────────────────────────────┘
-                        │ CRDT delta ops
+                        │ CRDT delta ops (serialized)
                         ▼
 ┌─────────────────────────────────────────────────────┐
-│              nodyx-relay (multi-path)               │
+│          nodyx-relay (multi-path orchestrator)       │
+└───────────────────────┬─────────────────────────────┘
+                        │ Reticulum Packet Protocol
+                        ▼
+┌─────────────────────────────────────────────────────┐
+│        nodyx-ether (Reticulum Rust bridge)           │
 ├─────────────┬──────────────┬────────────┬───────────┤
-│  ethernet   │  wifi-mesh   │   lora     │ hf-radio  │
-│  (fiber)    │  (ad-hoc)    │  (LoRa32)  │ (20MHz)   │
+│  TCP/UDP    │  wifi-mesh   │   LoRa     │ HF radio  │
+│  (internet) │  (ad-hoc)    │  (LoRa32)  │ (20 MHz)  │
 └─────────────┴──────────────┴────────────┴───────────┘
       │               │              │           │
-  internet        0-10 km        0-50 km     0-3000 km
+  internet        0–10 km        0–50 km     0–3000 km
   (normal)       (no infra)    (rural)     (ionosphere)
+
+Legend:
+  nodyx-relay  → exists today (Rust, TCP tunnel)
+  nodyx-ether  → future (Reticulum Rust bridge)
+  nodyx-sync   → future (CRDT over Reticulum transport)
 ```
 
-One Nodyx. Four physical layers. The community survives all of them failing except the last.
+One Nodyx. One protocol stack. Every physical medium.
+**The community survives all of them failing except the last.**
 
 ---
 
@@ -234,16 +303,23 @@ Radio waves don't need permission.
 
 ```
 nodyx-p2p/
-├── nodyx-turn/          ← exists (Rust STUN/TURN)
-├── nodyx-relay/         ← exists (Rust TCP tunnel)
-└── nodyx-ether/         ← future
-    ├── nodyx-modem/     ← software modem (HF encoding)
-    ├── nodyx-mesh/      ← LoRa / WiFi-adhoc mesh relay
-    └── nodyx-sync/      ← CRDT delta serialization (Cap'n Proto / FlatBuffers)
+├── nodyx-turn/               ← exists (Rust STUN/TURN)
+├── nodyx-relay/              ← exists (Rust TCP tunnel)
+└── nodyx-ether/              ← future (Reticulum Rust bridge)
+    ├── reticulum-rs/         ← Rust port of Reticulum core protocol
+    │   ├── src/identity.rs   ← Destination = Curve25519 key pair
+    │   ├── src/link.rs       ← Encrypted link establishment
+    │   ├── src/transport.rs  ← Routing, announce, path-find
+    │   └── src/interfaces/   ← LoRa, Serial, TCP, UDP backends
+    ├── nodyx-modem/          ← software modem (HF / FT8-style encoding)
+    ├── nodyx-mesh/           ← LoRa / WiFi-adhoc interface driver
+    └── nodyx-sync/           ← CRDT delta serialization over Reticulum
+        │                        (Cap'n Proto / FlatBuffers)
+        └── src/crdt.rs       ← LWW ops → Reticulum packets → remote CRDT apply
 ```
 
-The workspace is already Rust. The CRDT is already written.
-The next binary is waiting.
+The workspace is already Rust. The CRDT is already written. Reticulum's protocol is documented and open.
+The next binary is waiting — and it has a blueprint.
 
 ---
 
@@ -251,7 +327,7 @@ The next binary is waiting.
 
 Genius is not inventing. It's connecting.
 
-Every piece of this vision already existed. CRDTs, LoRa, HF radio, Rust, Meshtastic — all of it was already there, scattered across garages, amateur radio clubs, research papers, and open source repositories. The missing piece was not technology. It was the will to connect them around a simple human question:
+Every piece of this vision already existed. CRDTs, LoRa, HF radio, Rust, Meshtastic, Reticulum — all of it was already there, scattered across garages, amateur radio clubs, research papers, and open source repositories. The missing piece was not technology. It was the will to connect them around a simple human question:
 
 *"What happens to the community when the cable gets cut?"*
 
@@ -275,6 +351,6 @@ That's not a feature. That's the whole point.
 
 ---
 
-*Written March 2026 — Nodyx v0.9.0*
+*Written March 2026 — Nodyx v1.9.3 — updated to incorporate Reticulum Network Stack as transport foundation*
 *"The network is the people. And people have always found ways to communicate."*
 *AGPL-3.0 — Fork us if we betray you.*

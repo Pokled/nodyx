@@ -35,6 +35,12 @@
 			],
 		},
 		{
+			section: 'Plateforme',
+			items: [
+				{ href: '/admin/modules', label: 'Modules', icon: '🧩' },
+			],
+		},
+		{
 			section: 'Instance',
 			items: [
 				{ href: '/admin/announcements', label: 'Annonces',      icon: '📢' },
