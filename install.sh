@@ -151,8 +151,8 @@ _ROLLBACK_STEPS=()
 _rollback_register() { _ROLLBACK_STEPS+=("$1"); }
 
 _nodyx_rollback() {
-  $_INSTALL_COMPLETE && return 0
   local _ec=$?
+  $_INSTALL_COMPLETE && return 0
   [[ ${#_ROLLBACK_STEPS[@]} -eq 0 && $_ec -eq 0 ]] && return 0
   echo ""
   echo -e "${RED}${BOLD}  ✘  Installation échouée (code: ${_ec}) — rollback en cours...${RESET}"
@@ -541,6 +541,7 @@ if $_EXISTING; then
   # ── Chemin rapide upgrade/repair : pas de reconfiguration interactive ──
   if [[ "$INSTALL_MODE" == "upgrade" || "$INSTALL_MODE" == "repair" ]]; then
     _nodyx_upgrade "${_INSTALLED_VERSION:-?}" "$NODYX_VERSION" "$_NODYX_CHECK_DIR"
+    _INSTALL_COMPLETE=true
     exit 0
   fi
 
