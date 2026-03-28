@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types'
 	import { MODULE_DISPLAY, FAMILY_META, FAMILY_ORDER, type ModuleFamily } from '$lib/modules'
+	import { page } from '$app/stores'
 
 	let { data }: { data: PageData } = $props()
 
@@ -42,17 +43,22 @@
 	async function toggle(id: string, currentlyEnabled: boolean) {
 		if (saving[id]) return
 		const display = MODULE_DISPLAY[id]
-		if (display?.core) return  // core modules are locked
+		if (display?.core) return              // core modules are locked
+		if (display?.status === 'soon') return // not yet implemented
 
 		// Optimistic update
 		moduleState[id] = !currentlyEnabled
 		saving[id]      = true
 
 		try {
+			const token = $page.data.token as string | null
 			const res = await fetch(`/api/v1/admin/modules/${id}`, {
 				method:  'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body:    JSON.stringify({ enabled: !currentlyEnabled }),
+				headers: {
+					'Content-Type':  'application/json',
+					'Authorization': `Bearer ${token}`,
+				},
+				body: JSON.stringify({ enabled: !currentlyEnabled }),
 			})
 
 			if (res.ok) {
@@ -144,33 +150,34 @@
 				<!-- Cards grid -->
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 					{#each modules as mod}
-						{@const display = MODULE_DISPLAY[mod.id]}
-						{@const enabled = moduleState[mod.id] ?? false}
-						{@const isCore  = display?.core ?? false}
+						{@const display  = MODULE_DISPLAY[mod.id]}
+						{@const enabled  = moduleState[mod.id] ?? false}
+						{@const isCore   = display?.core ?? false}
+						{@const isSoon   = display?.status === 'soon'}
 						{@const isSaving = saving[mod.id] ?? false}
 
 						<div
 							class="relative rounded-xl border transition-all duration-200 overflow-hidden group
-							       {isCore
+							       {isCore || isSoon
 							         ? 'bg-gray-900/40 border-gray-800/60'
 							         : enabled
 							           ? 'bg-gray-900/80 border-gray-700/80 shadow-lg'
 							           : 'bg-gray-900/30 border-gray-800/40'}"
-							style={enabled && !isCore ? `box-shadow: 0 0 0 1px ${display?.color ?? '#7c3aed'}22, 0 4px 20px ${display?.color ?? '#7c3aed'}11` : ''}
+							style={enabled && !isCore && !isSoon ? `box-shadow: 0 0 0 1px ${display?.color ?? '#7c3aed'}22, 0 4px 20px ${display?.color ?? '#7c3aed'}11` : ''}
 						>
 							<!-- Enabled glow bar -->
-							{#if enabled && !isCore}
+							{#if enabled && !isCore && !isSoon}
 								<div class="absolute top-0 left-0 right-0 h-px"
 								     style="background: linear-gradient(90deg, transparent, {display?.color ?? '#7c3aed'}88, transparent)"></div>
 							{/if}
 
 							<div class="p-4">
-								<!-- Top row: icon + toggle -->
+								<!-- Top row: icon + badge/toggle -->
 								<div class="flex items-start justify-between gap-2 mb-3">
 									<!-- Icon badge -->
 									<div class="relative">
-										<div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 transition-opacity
-										            {!enabled && !isCore ? 'opacity-40' : ''}"
+										<div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0
+										            {isSoon || (!enabled && !isCore) ? 'opacity-35' : ''}"
 										     style="background: {display?.color ?? '#374151'}18; border: 1px solid {display?.color ?? '#374151'}33">
 											{display?.icon ?? '📦'}
 										</div>
@@ -181,7 +188,7 @@
 										{/if}
 									</div>
 
-									<!-- Toggle or lock -->
+									<!-- Core lock / Soon badge / Toggle -->
 									{#if isCore}
 										<div class="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-800/60 rounded-lg px-2 py-1">
 											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,6 +196,14 @@
 												      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
 											</svg>
 											<span>Core</span>
+										</div>
+									{:else if isSoon}
+										<div class="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-800/40 rounded-lg px-2 py-1 border border-gray-700/40">
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+												      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											<span>Bientôt</span>
 										</div>
 									{:else}
 										<button
@@ -209,11 +224,13 @@
 								<!-- Name + description -->
 								<div class="mb-2.5">
 									<div class="flex items-center gap-2 mb-1">
-										<span class="text-sm font-semibold {!enabled && !isCore ? 'text-gray-500' : 'text-white'}">
+										<span class="text-sm font-semibold {isSoon || (!enabled && !isCore) ? 'text-gray-500' : 'text-white'}">
 											{display?.name ?? mod.id}
 										</span>
 										{#if isCore}
 											<span class="text-[10px] text-gray-600 font-medium">Toujours actif</span>
+										{:else if isSoon}
+											<span class="text-[10px] text-gray-600 font-medium">En développement</span>
 										{:else}
 											<span class="text-[10px] font-medium {enabled ? 'text-green-500' : 'text-gray-600'}">
 												{enabled ? '● actif' : '○ inactif'}
