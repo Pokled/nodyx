@@ -112,6 +112,10 @@ _nodyx_upgrade() {
   for _old_proc in nexus-core nexus-frontend nodyx-core nodyx-frontend; do
     pm2 delete "$_old_proc" 2>/dev/null || true
   done
+  # Libérer les ports même si les process appartiennent à un autre utilisateur
+  for _port in 3000 4173; do
+    fuser -k "${_port}/tcp" 2>/dev/null || true
+  done
 
   info "Récupération du code..."
   git config --global --add safe.directory "$dir" 2>/dev/null || true
