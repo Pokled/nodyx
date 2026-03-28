@@ -41,8 +41,10 @@ async function pingDirectory(io: Server) {
       `SELECT logo_url, banner_url FROM communities ORDER BY created_at ASC LIMIT 1`
     )
     const brandRow   = brandingResult.rows[0]
-    const logo_url   = brandRow?.logo_url   ? `${selfUrl}${brandRow.logo_url}`   : null
-    const banner_url = brandRow?.banner_url ? `${selfUrl}${brandRow.banner_url}` : null
+    const toAbsolute = (u: string | null) =>
+      u ? (u.startsWith('http') ? u : `${selfUrl}${u}`) : null
+    const logo_url   = toAbsolute(brandRow?.logo_url   ?? null)
+    const banner_url = toAbsolute(brandRow?.banner_url ?? null)
 
     const res = await fetch(`${directoryUrl}/api/directory/ping`, {
       method:  'POST',
