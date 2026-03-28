@@ -108,9 +108,10 @@ _nodyx_upgrade() {
     pm2 set pm2-logrotate:retain 7 2>/dev/null || true
   fi
 
-  # Arrêter les anciens processus PM2 root (migration)
-  pm2 delete nodyx-core     2>/dev/null || true
-  pm2 delete nodyx-frontend 2>/dev/null || true
+  # Arrêter les anciens processus PM2 root (migration nexus-* → nodyx-*)
+  for _old_proc in nexus-core nexus-frontend nodyx-core nodyx-frontend; do
+    pm2 delete "$_old_proc" 2>/dev/null || true
+  done
 
   info "Récupération du code..."
   git config --global --add safe.directory "$dir" 2>/dev/null || true
