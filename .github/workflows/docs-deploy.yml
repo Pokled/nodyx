@@ -37,8 +37,8 @@ jobs:
             npm run build
 
             echo "── restart ──"
-            pm2 restart nodyx-docs
+            sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-docs
 
             echo "── done ──"
-            pm2 show nodyx-docs | grep -E "status|restart"
+            sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 show nodyx-docs | grep -E "status|restart"
 
