@@ -1615,19 +1615,55 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
     } >> "${NODYX_DIR}/nodyx-core/.env"
     cd "${NODYX_DIR}" && runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core 2>/dev/null || true
   else
-    # Check for slug conflict (409) — common on reinstall
+    # Check for slug conflict (409) — common on reinstall / machine change
     if echo "$REGISTER_RESPONSE" | grep -q 'Slug already taken'; then
       warn "Le slug '${COMMUNITY_SLUG}' est déjà enregistré dans le directory."
-      warn "Si c'est une réinstallation, l'ancienne entrée doit être supprimée d'abord."
-      warn "Contacte le support nodyx.org ou utilise un slug différent."
+      if $RELAY_MODE; then
+        echo ""
+        echo -e "  ${BOLD}Options :${RESET}"
+        echo -e "  ${GREEN}[1]${RESET} Choisir un slug différent maintenant"
+        echo -e "  ${YELLOW}[2]${RESET} Annuler (contacte le support nodyx.org pour libérer le slug)"
+        echo ""
+        read -rp "$(echo -e "  ${BOLD}Choix [1-2] (défaut: 1): ${RESET}")" _slug_choice </dev/tty
+        _slug_choice="${_slug_choice:-1}"
+        if [[ "$_slug_choice" == "1" ]]; then
+          read -rp "$(echo -e "  ${BOLD}Nouveau slug (lettres, chiffres, tirets) : ${RESET}")" _new_slug </dev/tty
+          _new_slug="${_new_slug:-}"
+          if [[ -z "$_new_slug" ]]; then
+            die "Slug vide — installation annulée."
+          fi
+          COMMUNITY_SLUG="$_new_slug"
+          REGISTER_RESPONSE=$(curl -fsSL -X POST "https://nodyx.org/api/directory/register" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"slug\":        \"${COMMUNITY_SLUG}\",
+              \"name\":        \"${COMMUNITY_NAME}\",
+              \"url\":         \"https://${COMMUNITY_SLUG}.nodyx.org\",
+              \"language\":    \"${COMMUNITY_LANG}\",
+              \"version\":     \"${NODYX_VERSION}\"
+            }" 2>/dev/null || true)
+          REGISTER_TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
+          REGISTER_SLUG=$(echo "$REGISTER_RESPONSE" | grep -o '"subdomain":"[^"]*"' | cut -d'"' -f4 || true)
+          if [[ -n "$REGISTER_TOKEN" ]]; then
+            NODYX_DIRECTORY_TOKEN="$REGISTER_TOKEN"
+            NODYX_SUBDOMAIN="${REGISTER_SLUG:-${COMMUNITY_SLUG}.nodyx.org}"
+            ok "Enregistré ! Sous-domaine : ${BOLD}https://${NODYX_SUBDOMAIN}${RESET}"
+          else
+            die "Enregistrement échoué avec le nouveau slug. Vérifie ta connexion et réessaie."
+          fi
+        else
+          die "Installation annulée. Contacte le support nodyx.org pour libérer le slug '${COMMUNITY_SLUG}'."
+        fi
+      else
+        warn "Si c'est une réinstallation, l'ancienne entrée sera écrasée au prochain ping."
+      fi
     else
       warn "Enregistrement échoué."
       warn "Réponse : $(echo "$REGISTER_RESPONSE" | head -c 200)"
       warn "Tu peux réessayer manuellement plus tard sur https://nodyx.org"
-    fi
-    # En mode Relay, l'enregistrement est indispensable — le tunnel ne peut pas démarrer sans token.
-    if $RELAY_MODE; then
-      die "Enregistrement au directory échoué. Le mode Relay nécessite un slug valide. Vérifie ta connexion Internet et réessaie."
+      if $RELAY_MODE; then
+        die "Enregistrement au directory échoué. Le mode Relay nécessite un slug valide."
+      fi
     fi
   fi
 else
