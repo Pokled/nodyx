@@ -104,7 +104,7 @@
 	aria-label="Canaux"
 	class="
 		flex flex-col border-r border-gray-800 bg-gray-900 transition-transform duration-300 ease-in-out
-		max-lg:fixed max-lg:top-14 max-lg:bottom-0 max-lg:left-0 max-lg:z-[60] max-lg:w-[280px]
+		max-lg:fixed max-lg:top-12 max-lg:bottom-0 max-lg:left-0 max-lg:z-[60] max-lg:w-[280px]
 		lg:w-56 lg:shrink-0
 		{drawerOpen ? 'translate-x-0' : 'max-lg:-translate-x-full'}
 	"

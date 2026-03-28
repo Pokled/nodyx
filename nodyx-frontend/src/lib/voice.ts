@@ -108,6 +108,14 @@ export const screenShareStore  = writable<boolean>(false)
 export const localScreenStore  = writable<MediaStream | null>(null)
 export const remoteScreenStore = writable<Map<string, MediaStream>>(new Map())
 
+// ── Voice channel member roster (populated by socket voice:channel_update) ──
+export interface VoiceChannelMember { userId: string; username: string; avatar: string | null }
+export const voiceChannelMembersStore = writable<Record<string, VoiceChannelMember[]>>({})
+
+// ── Voice join/leave toast events ────────────────────────────────────────────
+export interface VoiceEvent { id: string; username: string; avatar: string | null; action: 'join' | 'leave'; channelName: string }
+export const voiceEventsStore = writable<VoiceEvent[]>([])
+
 export function getQuality(stats: PeerStats | undefined): NetQuality {
   if (!stats) return 'unknown'
   const rtt  = stats.rtt ?? stats.theirRtt

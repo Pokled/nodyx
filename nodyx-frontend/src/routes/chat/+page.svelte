@@ -2,6 +2,8 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { socket, getSocket } from '$lib/socket';
 	import { linkifyHtml } from '$lib/linkify';
@@ -11,7 +13,7 @@
 	import PollCard    from '$lib/components/PollCard.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import VoiceRoom from '$lib/components/VoiceRoom.svelte';
-	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT } from '$lib/voice';
+	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT, voiceChannelMembersStore, voiceEventsStore } from '$lib/voice';
 	import type { Socket } from 'socket.io-client';
 	import { voicePanelTarget } from '$lib/voicePanel';
 	import { p2pManager, p2pStatus, p2pPeerCount, p2pFallback } from '$lib/p2p';
@@ -60,7 +62,20 @@
 
 	// ── State ─────────────────────────────────────────────────────────────────
 	let selectedChannel = $state<Channel | null>(null);
-	$effect(() => { if (!selectedChannel && localChannels.length > 0) selectedChannel = localChannels[0]; });
+
+	// Select channel from URL ?channel=id param, or default to first text channel
+	$effect(() => {
+		if (localChannels.length === 0) return;
+		const urlChannelId = $page.url.searchParams.get('channel');
+		if (urlChannelId) {
+			const found = localChannels.find((c: any) => c.id === urlChannelId);
+			if (found && found.id !== selectedChannel?.id) selectedChannel = found;
+		} else if (!selectedChannel) {
+			const def = localChannels.find((c: any) => c.type === 'text') ?? localChannels[0];
+			// Navigate to default channel so URL stays in sync
+			if (def) goto(`/chat?channel=${def.id}`, { replaceState: true });
+		}
+	});
 	let messages        = $state<Message[]>([]);
 	// Ensure custom fonts are loaded whenever messages change
 	$effect(() => {
@@ -72,8 +87,10 @@
 	});
 	let inputText       = $state('');
 	let messagesEl      = $state<HTMLDivElement | null>(null);
-	let isLoadingOld    = $state(false);
-	let noMoreHistory   = $state(false);
+	let isLoadingOld        = $state(false);
+	let noMoreHistory       = $state(false);
+	let isAtBottom          = $state(true);
+	let unreadWhileScrolled = $state(0);
 
 	// Typing indicators
 	type TypingEntry = { username: string; timer: ReturnType<typeof setTimeout> };
@@ -147,6 +164,14 @@
 
 	// ── Voice ─────────────────────────────────────────────────────────────────
 	const voiceState    = $derived($voiceStore);
+
+	// Son de déconnexion quand leaveVoice() est appelé depuis n'importe où (VoicePanel…)
+	let _prevVoiceActive = false;
+	$effect(() => {
+		const active = voiceState.active;
+		if (_prevVoiceActive && !active) playVoiceChime('self_leave');
+		_prevVoiceActive = active;
+	});
 	const textChannels  = $derived(localChannels.filter((c: Channel) => (c as any).type !== 'voice'));
 	const voiceChannels = $derived(localChannels.filter((c: Channel) => (c as any).type === 'voice'));
 	// Channel where the canvas session recap will be posted (prefer selected text channel)
@@ -175,6 +200,7 @@
 		}
 		selectedChannel = ch;
 		messages = [];
+		goto(`/chat?channel=${ch.id}`, { replaceState: true });
 	}
 
 	// Rejoindre explicitement le salon sélectionné (bouton dans la Table)
@@ -183,8 +209,9 @@
 		const ch = selectedChannel;
 		try {
 			if (voiceState.channelId === ch.id) return;  // déjà connecté
-			if (voiceState.active) leaveVoice();
+			if (voiceState.active) { playVoiceChime('self_leave'); leaveVoice(); }
 			await joinVoice(ch.id, s);
+			playVoiceChime('self_join');
 		} catch (err: any) {
 			voiceError = VOICE_ERRORS[err.message] ?? VOICE_ERRORS['DENIED'];
 		}
@@ -214,6 +241,7 @@
 			s.emit('chat:leave', selectedChannel.id);
 		}
 		selectedChannel = channel;
+		goto(`/chat?channel=${channel.id}`, { replaceState: true });
 		messages = [];
 		noMoreHistory = false;
 		pickerMsgId = null;
@@ -245,7 +273,11 @@
 		sock.on('chat:message', (msg: Message) => {
 			if (msg.channel_id !== selectedChannel?.id) return;
 			messages = [...messages, normalizeMsg(msg)];
-			scrollToBottom();
+			if (isAtBottom) {
+				scrollToBottom();
+			} else {
+				unreadWhileScrolled++;
+			}
 		});
 
 		sock.on('chat:typing', ({ userId: uid, username }: { userId: string; username: string }) => {
@@ -293,8 +325,27 @@
 			}, 500);
 		});
 
+		const vcSnapshotInit = new Set<string>();
 		sock.on('voice:channel_update', ({ channelId, members }: { channelId: string; members: { userId: string; username: string; avatar: string | null }[] }) => {
+			const isFirst = !vcSnapshotInit.has(channelId);
+			vcSnapshotInit.add(channelId);
+			if (!isFirst) {
+				const prev = voiceChannelMembers[channelId] ?? [];
+				const ch   = localChannels.find((c: any) => c.id === channelId);
+				const chName = ch?.name ?? '';
+				for (const m of members) {
+					if (!prev.find(p => p.userId === m.userId)) {
+						pushVoiceToast(m.username, m.avatar, 'join', chName);
+					}
+				}
+				for (const m of prev) {
+					if (!members.find(p => p.userId === m.userId)) {
+						pushVoiceToast(m.username, m.avatar ?? null, 'leave', chName);
+					}
+				}
+			}
 			voiceChannelMembers = { ...voiceChannelMembers, [channelId]: members };
+			voiceChannelMembersStore.update(s => ({ ...s, [channelId]: members }));
 		});
 
 		// Demander un snapshot vocal immédiatement après avoir branché le listener.
@@ -334,6 +385,45 @@
 				linkPreviews = new Map(linkPreviews).set(url, data);
 			}
 		} catch { /* ignore */ }
+	}
+
+	// ── Sons vocaux (Web Audio API — aucun fichier externe) ───────────────────
+	function playVoiceChime(type: 'self_join' | 'self_leave' | 'peer_join' | 'peer_leave') {
+		if (!browser) return;
+		try {
+			const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+			const master = ctx.createGain();
+			master.connect(ctx.destination);
+			const now = ctx.currentTime;
+
+			const note = (freq: number, start: number, dur: number, vol = 0.11) => {
+				const osc = ctx.createOscillator();
+				const env = ctx.createGain();
+				osc.type = 'sine';
+				osc.frequency.value = freq;
+				osc.connect(env);
+				env.connect(master);
+				env.gain.setValueAtTime(0, now + start);
+				env.gain.linearRampToValueAtTime(vol, now + start + 0.018);
+				env.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+				osc.start(now + start);
+				osc.stop(now + start + dur + 0.05);
+			};
+
+			if      (type === 'self_join')  { note(880, 0, 0.22, 0.14); note(1320, 0.13, 0.30, 0.12); }
+			else if (type === 'self_leave') { note(660, 0, 0.20, 0.12); note(440,  0.11, 0.28, 0.10); }
+			else if (type === 'peer_join')  { note(1100, 0, 0.22, 0.08); }
+			else                            { note(660,  0, 0.22, 0.07); }
+
+			setTimeout(() => ctx.close(), 1500);
+		} catch { /* AudioContext non dispo (SSR / test) */ }
+	}
+
+	function pushVoiceToast(username: string, avatar: string | null, action: 'join' | 'leave', channelName: string) {
+		const id = Math.random().toString(36).slice(2);
+		voiceEventsStore.update(evts => [...evts, { id, username, avatar, action, channelName }]);
+		setTimeout(() => voiceEventsStore.update(evts => evts.filter(e => e.id !== id)), 4000);
+		playVoiceChime(action === 'join' ? 'peer_join' : 'peer_leave');
 	}
 
 	function extractUrls(content: string | null): string[] {
@@ -478,10 +568,16 @@
 	async function scrollToBottom() {
 		await tick();
 		if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+		isAtBottom = true;
+		unreadWhileScrolled = 0;
 	}
 
 	async function handleScroll() {
-		if (!messagesEl || isLoadingOld || noMoreHistory || messages.length === 0) return;
+		if (!messagesEl) return;
+		const distFromBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
+		isAtBottom = distFromBottom < 80;
+		if (isAtBottom) unreadWhileScrolled = 0;
+		if (isLoadingOld || noMoreHistory || messages.length === 0) return;
 		if (messagesEl.scrollTop > 80) return;
 
 		isLoadingOld = true;
@@ -745,28 +841,30 @@
 
 <svelte:head><title>Chat — Nodyx</title></svelte:head>
 
-<!-- Full-height layout -->
-<div class="fixed top-14 bottom-0 lg:left-[220px] xl:right-[220px] left-0 right-0 flex overflow-hidden bg-gray-950 border-l border-gray-800 z-10">
+<!-- Full-height layout — left offset accounts for icon bar (72px) + channel sidebar (220px) = 292px -->
+<div class="fixed top-12 bottom-0 lg:left-[292px] xl:right-[220px] left-0 right-0 flex overflow-hidden z-10" style="background: #080810">
 
-	<!-- ── Channel sidebar ──────────────────────────────────────────────────── -->
-	<ChannelSidebar
-		{textChannels}
-		{voiceChannels}
-		selectedChannelId={selectedChannel?.id ?? null}
-		{voiceState}
-		{voiceChannelMembers}
-		{isAdmin}
-		{myUsername}
-		{myAvatar}
-		{token}
-		{voiceError}
-		bind:drawerOpen
-		bind:localChannels
-		onjoinChannel={joinChannel}
-		onjoinVoice={handleJoinVoice}
-		onopenVoiceMemberPanel={openVoiceMemberPanel}
-		ondismissVoiceError={() => voiceError = null}
-	/>
+	<!-- ── Channel sidebar — mobile drawer only (layout sidebar handles desktop) ── -->
+	<div class="lg:hidden">
+		<ChannelSidebar
+			{textChannels}
+			{voiceChannels}
+			selectedChannelId={selectedChannel?.id ?? null}
+			{voiceState}
+			{voiceChannelMembers}
+			{isAdmin}
+			{myUsername}
+			{myAvatar}
+			{token}
+			{voiceError}
+			bind:drawerOpen
+			bind:localChannels
+			onjoinChannel={joinChannel}
+			onjoinVoice={handleJoinVoice}
+			onopenVoiceMemberPanel={openVoiceMemberPanel}
+			ondismissVoiceError={() => voiceError = null}
+		/>
+	</div>
 
 	<!-- ── Main chat area ───────────────────────────────────────────────────── -->
 	<div class="flex-1 flex flex-col min-w-0">
@@ -792,40 +890,40 @@
 			{:else}
 				<!-- ── Text chat ──────────────────────────────────────────────────── -->
 				<!-- Header -->
-				<div class="h-12 shrink-0 border-b border-gray-800 bg-gray-900/50 flex items-center gap-2 px-4">
-					<button class="lg:hidden -ml-1 mr-1 p-2 rounded text-gray-400 hover:text-white hover:bg-gray-800/60 min-w-[44px] min-h-[44px] flex items-center justify-center"
+				<div class="h-11 shrink-0 flex items-center gap-3 px-4" style="background: #0d0d12; border-bottom: 1px solid rgba(255,255,255,.06)">
+					<!-- Mobile hamburger -->
+					<button class="lg:hidden shrink-0 p-1.5 transition-colors" style="color: #6b7280"
 					        onclick={() => drawerOpen = true} aria-label="Ouvrir les canaux" aria-expanded={drawerOpen} aria-controls="channels-drawer">
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
 						</svg>
 					</button>
-					<span class="text-gray-500 font-mono">#</span>
-					<span class="font-semibold text-white">{selectedChannel.name}</span>
-					{#if selectedChannel.description}
-						<span class="text-gray-500 text-sm hidden sm:inline">— {selectedChannel.description}</span>
-					{/if}
-					<!-- P2P connection indicator -->
-					<div class="ml-auto flex items-center">
+					<!-- Channel name -->
+					<div class="flex items-center gap-2 min-w-0">
+						<span class="text-sm font-black shrink-0" style="color: #a78bfa; font-family: 'Space Grotesk', sans-serif">#</span>
+						<span class="text-sm font-bold truncate" style="color: #e2e8f0; font-family: 'Space Grotesk', sans-serif">{selectedChannel.name}</span>
+						{#if selectedChannel.description}
+							<span class="hidden sm:inline text-[11px] truncate" style="color: #374151; border-left: 1px solid rgba(255,255,255,.08); padding-left: 0.75rem; margin-left: 0.25rem">{selectedChannel.description}</span>
+						{/if}
+					</div>
+					<!-- P2P indicator -->
+					<div class="ml-auto flex items-center gap-2 shrink-0">
 						{#if $p2pStatus === 'p2p'}
-							<div
-								class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-yellow-400/10 border border-yellow-400/20 cursor-default"
-								title="{$p2pPeerCount} pair{$p2pPeerCount > 1 ? 's' : ''} connecté{$p2pPeerCount > 1 ? 's' : ''} directement — zéro serveur"
-							>
-								<div class="relative flex-shrink-0">
-									<div class="w-2 h-2 rounded-full bg-yellow-400"></div>
-									<div class="absolute inset-0 w-2 h-2 rounded-full bg-yellow-400 animate-ping opacity-60"></div>
-								</div>
-								<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-yellow-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-									<path d="M13 2L4.09 12.96A1 1 0 005 14h7v8l8.91-10.96A1 1 0 0020 10h-7V2z"/>
-								</svg>
-								<span class="text-[10px] font-black text-yellow-400 uppercase tracking-widest">P2P</span>
-								<span class="text-[10px] font-bold text-yellow-300/60">·</span>
-								<span class="text-[10px] font-black text-yellow-300">{$p2pPeerCount}</span>
+							<div class="flex items-center gap-1.5 px-2 h-6 cursor-default"
+							     style="background: rgba(234,179,8,.06); border: 1px solid rgba(234,179,8,.2)"
+							     title="{$p2pPeerCount} pair{$p2pPeerCount > 1 ? 's' : ''} connecté{$p2pPeerCount > 1 ? 's' : ''} directement">
+								<span class="relative flex h-1.5 w-1.5 shrink-0">
+									<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background: #eab308"></span>
+									<span class="relative inline-flex h-1.5 w-1.5 rounded-full" style="background: #eab308"></span>
+								</span>
+								<svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="#eab308"><path d="M13 2L4.09 12.96A1 1 0 005 14h7v8l8.91-10.96A1 1 0 0020 10h-7V2z"/></svg>
+								<span class="text-[10px] font-black uppercase tracking-wider" style="color: #eab308">P2P</span>
+								<span class="text-[10px] font-black tabular-nums" style="color: #ca8a04">{$p2pPeerCount}</span>
 							</div>
 						{:else if $p2pStatus === 'connecting'}
-							<div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg" title="Recherche de pairs P2P…">
-								<div class="w-1.5 h-1.5 rounded-full bg-gray-600 animate-pulse"></div>
-								<span class="text-[10px] font-black text-gray-600 uppercase tracking-widest">P2P</span>
+							<div class="flex items-center gap-1.5 px-2 h-6" style="border: 1px solid rgba(255,255,255,.05)">
+								<span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #374151"></span>
+								<span class="text-[10px] font-black uppercase tracking-wider" style="color: #374151">P2P</span>
 							</div>
 						{/if}
 					</div>
@@ -833,36 +931,29 @@
 
 			<!-- Pinned message banner -->
 			{#if pinnedMessage && showPinned}
-				<div class="shrink-0 flex items-center gap-2 px-4 py-1.5 bg-indigo-950/60 border-b border-indigo-900/40 text-xs">
-					<svg class="w-3.5 h-3.5 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/>
-					</svg>
-					<span class="text-indigo-300 font-semibold shrink-0">Épinglé</span>
-					<span class="text-gray-400 truncate">
-						<span class="text-gray-500">{pinnedMessage.author_username} :</span>
-						{pinnedMessage.content?.replace(/<[^>]*>/g, '').slice(0, 120) ?? ''}
+				<div class="shrink-0 flex items-center gap-2.5 px-4 py-1.5 text-xs" style="background: rgba(124,58,237,.06); border-bottom: 1px solid rgba(124,58,237,.15)">
+					<svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="#a78bfa"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
+					<span class="font-black uppercase tracking-wider shrink-0 text-[10px]" style="color: #a78bfa; font-family: 'Space Grotesk', sans-serif">Épinglé</span>
+					<span class="truncate flex-1" style="color: #6b7280">
+						<span class="font-semibold" style="color: #4b5563">{pinnedMessage.author_username} · </span>{pinnedMessage.content?.replace(/<[^>]*>/g, '').slice(0, 120) ?? ''}
 					</span>
 					{#if isAdmin}
-						<button
-							onclick={() => s?.emit('chat:pin', { channelId: selectedChannel?.id, messageId: null })}
-							class="ml-auto shrink-0 text-gray-600 hover:text-white transition-colors text-base leading-none"
-							title="Désépingler"
-						>×</button>
+						<button onclick={() => s?.emit('chat:pin', { channelId: selectedChannel?.id, messageId: null })}
+						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #374151" title="Désépingler">×</button>
 					{:else}
-						<button
-							onclick={() => showPinned = false}
-							class="ml-auto shrink-0 text-gray-700 hover:text-gray-400 transition-colors text-base leading-none"
-							title="Masquer"
-						>×</button>
+						<button onclick={() => showPinned = false}
+						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #374151" title="Masquer">×</button>
 					{/if}
 				</div>
 			{/if}
 
 			<!-- Messages -->
+			<div class="flex-1 relative min-h-0">
 			<div
-                class="flex-1 overflow-y-auto px-4 py-4 space-y-1 custom-scrollbar"
+                class="absolute inset-0 overflow-y-auto px-0 py-3 space-y-0 custom-scrollbar"
                 bind:this={messagesEl}
                 onscroll={handleScroll}
+                style="scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.06) transparent"
             >
 				{#if isLoadingOld}
 					<p class="text-center text-xs text-gray-600 py-2">Chargement…</p>
@@ -873,10 +964,10 @@
 
 				{#each messageGroups as group (group.day)}
 					<!-- Day separator -->
-					<div class="flex items-center gap-2 my-3">
-						<div class="flex-1 h-px bg-gray-800"></div>
-						<span class="text-xs text-gray-600 shrink-0">{group.day}</span>
-						<div class="flex-1 h-px bg-gray-800"></div>
+					<div class="flex items-center gap-3 my-4 px-4">
+						<div class="flex-1 h-px" style="background: linear-gradient(to right, transparent, rgba(255,255,255,.06))"></div>
+						<span class="text-[10px] font-black uppercase tracking-[.15em] px-3 py-1 shrink-0" style="color: #374151; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05); font-family: 'Space Grotesk', sans-serif">{group.day}</span>
+						<div class="flex-1 h-px" style="background: linear-gradient(to left, transparent, rgba(255,255,255,.06))"></div>
 					</div>
 
 					{#each group.messages as msg, i (msg.id)}
@@ -886,24 +977,30 @@
 					{@const shouldGroup = isSameAuthor && timeDiff < 5 && !msg.is_deleted && !prevMsg.is_deleted}
 					{@const actionsVisible = pickerMsgId === msg.id || longPressMsg === msg.id}
 					<div
-						class="group message-row flex items-start gap-4 px-3 py-1 rounded-xl transition-all relative hover:bg-white/[0.02] {shouldGroup ? 'mt-0' : 'mt-4'}"
+						class="group message-row relative flex items-start gap-3 px-4 transition-all {shouldGroup ? 'py-px' : 'pt-2.5 pb-px'}"
+						style="background: transparent"
+						onmouseenter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.018)'}
+						onmouseleave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
 						ontouchstart={() => handleTouchStart(msg.id)}
 						ontouchend={handleTouchEnd}
 						ontouchmove={handleTouchEnd}
 					>
-						<!-- Avatar -->
-						<div class="w-10 shrink-0 flex justify-center pt-1">
+						<!-- Left accent bar on hover -->
+						<span class="absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style="background: linear-gradient(to bottom, #7c3aed44, #06b6d444)"></span>
+						<!-- Avatar / time -->
+						<div class="w-9 shrink-0 flex justify-center" style="padding-top: 2px">
 							{#if !shouldGroup}
 								{#if msg.author_avatar}
 									<img src={msg.author_avatar} alt={msg.author_username}
-										class="w-10 h-10 rounded-2xl object-cover shadow-xl border border-white/5" />
+										class="w-9 h-9 object-cover" style="outline: 1px solid rgba(255,255,255,.07)" />
 								{:else}
-									<div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center font-black text-[10px] text-white shadow-lg border border-white/10 select-none">
+									<div class="w-9 h-9 flex items-center justify-center font-black text-[11px] text-white select-none"
+									     style="background: linear-gradient(135deg, #7c3aed80, #0e7490)">
 										{msg.author_username.charAt(0).toUpperCase()}
 									</div>
 								{/if}
 							{:else}
-								<span class="text-[9px] font-black text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity pt-2 select-none">
+								<span class="text-[9px] tabular-nums opacity-0 group-hover:opacity-100 transition-opacity select-none" style="color: #374151; padding-top: 3px">
 									{formatTime(msg.created_at)}
 								</span>
 							{/if}
@@ -912,29 +1009,29 @@
 						<!-- Content -->
 						<div class="min-w-0 flex-1">
 							{#if !shouldGroup}
-								<div class="flex items-baseline gap-2 mb-1">
-																	<button
+								<div class="flex items-baseline gap-2 mb-0.5">
+									<button
 										type="button"
 										class="text-sm font-black cursor-pointer leading-none hover:brightness-125 transition-all {buildAnimClass({ nameAnimation: msg.author_name_animation })}"
-										style={buildNameStyle({ nameColor: msg.author_name_color, nameGlow: msg.author_name_glow, nameGlowIntensity: msg.author_name_glow_intensity, nameFontFamily: msg.author_name_font_family }, '#ffffff')}
+										style={buildNameStyle({ nameColor: msg.author_name_color, nameGlow: msg.author_name_glow, nameGlowIntensity: msg.author_name_glow_intensity, nameFontFamily: msg.author_name_font_family }, '#e2e8f0')}
 										onclick={(e) => openProfilePopup(e, msg.author_username)}
 									>
 										{msg.author_username}
 									</button>
-									<span class="text-[10px] text-gray-600 font-bold uppercase tracking-tighter">
+									<span class="text-[10px] tabular-nums" style="color: #374151">
 										{formatTime(msg.created_at)}
 									</span>
 									{#if msg.edited_at && !msg.is_deleted}
-										<span class="text-[10px] text-gray-700 italic">(modifié)</span>
+										<span class="text-[10px] italic" style="color: #374151">(modifié)</span>
 									{/if}
 								</div>
 							{/if}
 
 							<!-- Reply quote -->
 							{#if msg.reply_to_id && !msg.is_deleted}
-								<div class="flex items-start gap-1.5 mb-1.5 pl-2 border-l-2 border-indigo-600/50 opacity-70">
-									<span class="text-[10px] text-indigo-400 font-bold shrink-0">{msg.reply_to_username}</span>
-									<span class="text-[10px] text-gray-500 truncate">{msg.reply_to_content?.replace(/<[^>]*>/g, '').slice(0, 100) ?? '— message supprimé —'}</span>
+								<div class="flex items-center gap-2 mb-1.5 pl-2 py-0.5 opacity-70" style="border-left: 2px solid #7c3aed">
+									<span class="text-[10px] font-bold shrink-0" style="color: #a78bfa">{msg.reply_to_username}</span>
+									<span class="text-[10px] truncate" style="color: #4b5563">{msg.reply_to_content?.replace(/<[^>]*>/g, '').slice(0, 100) ?? '— message supprimé —'}</span>
 								</div>
 							{/if}
 
@@ -957,7 +1054,7 @@
 							<!-- ── Sondage intégré ── -->
 							<PollCard pollId={msg.poll_id} inline={true} {token} socket={s} />
 						{:else}
-								<div class="nodyx-prose text-sm text-gray-300 leading-relaxed break-words">
+								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: #d1d5db">
 									{@html linkifyHtml(msg.content ?? '')}
 									{#if shouldGroup && msg.edited_at}
 										<span class="text-[9px] text-gray-700 italic ml-2">(modifié)</span>
@@ -993,34 +1090,19 @@
 								{/each}
 							{/if}
 
-							<!-- Reactions + add-reaction -->
-							{#if !msg.is_deleted}
-								<div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+							<!-- Reactions — only rendered when there are reactions (no height when empty) -->
+							{#if !msg.is_deleted && msg.reactions.length > 0}
+								<div class="flex flex-wrap items-center gap-1.5 mt-1">
 									{#each msg.reactions as r (r.emoji)}
 										<button
 											onclick={() => reactTo(msg.id, r.emoji)}
-											class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all text-[11px] font-black
-												{r.userReactedIds.includes(userId) ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 shadow-lg shadow-indigo-500/10' : 'border-gray-800 bg-gray-800/40 text-gray-500 hover:border-gray-600 hover:bg-gray-800'}
-												{reactionFlash.get(msg.id)?.has(r.emoji) ? 'p2p-pop' : ''}"
+											class="flex items-center gap-1 px-2 h-6 transition-all text-[11px] font-bold {reactionFlash.get(msg.id)?.has(r.emoji) ? 'p2p-pop' : ''}"
+											style="{r.userReactedIds.includes(userId) ? 'background: rgba(124,58,237,.18); border: 1px solid rgba(124,58,237,.45); color: #c4b5fd; box-shadow: 0 0 8px rgba(124,58,237,.15)' : 'background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); color: #6b7280'}"
 										>
 											<span>{r.emoji}</span>
 											<span>{r.count}</span>
 										</button>
 									{/each}
-
-									<!-- Add-reaction button (hover or after long-press) -->
-									<div data-picker class="relative {pickerMsgId === msg.id ? '' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'} transition-opacity">
-										<button
-											onclick={() => toggleEmojiPicker(msg.id)}
-											class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-800 bg-gray-900 text-gray-500 hover:text-white hover:border-gray-600 transition-all text-sm"
-											title="Ajouter une réaction"
-										>+</button>
-										{#if pickerMsgId === msg.id}
-											<div data-picker class="absolute left-0 bottom-full mb-1 z-40">
-												<EmojiPicker onselect={(emoji) => reactTo(msg.id, emoji)} />
-											</div>
-										{/if}
-									</div>
 								</div>
 							{/if}
 						</div>
@@ -1029,39 +1111,65 @@
 						{#if !msg.is_deleted}
 							<div
 								data-msg-actions
-								class="{actionsVisible ? 'flex' : 'hidden group-hover:flex'} gap-1 absolute right-4 -top-3.5 bg-gray-900 border border-gray-800 rounded-xl px-1.5 py-1 shadow-2xl z-20"
+								class="{actionsVisible ? 'flex' : 'hidden group-hover:flex'} items-center gap-0.5 absolute right-4 -top-4 px-1 py-1 shadow-2xl z-20"
+								style="background: #0d0d12; border: 1px solid rgba(255,255,255,.08)"
 							>
-								<button
-									onclick={() => startReply(msg)}
-									class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors text-xs"
-									title="Répondre"
-								>↩️</button>
+								<!-- Réagir -->
+								<div data-picker class="relative">
+									<button onclick={() => toggleEmojiPicker(msg.id)} title="Réagir"
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+									</button>
+									{#if pickerMsgId === msg.id}
+										<div data-picker class="absolute right-0 bottom-full mb-1 z-40">
+											<EmojiPicker onselect={(emoji) => reactTo(msg.id, emoji)} />
+										</div>
+									{/if}
+								</div>
+								<span class="w-px h-4 mx-0.5" style="background: rgba(255,255,255,.07)"></span>
+								<!-- Répondre -->
+								<button onclick={() => startReply(msg)} title="Répondre"
+								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+								        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+								</button>
 								{#if msg.author_id === userId}
-									<button
-										onclick={() => startEdit(msg)}
-										class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors text-xs"
-										title="Modifier"
-									>✏️</button>
+									<!-- Modifier -->
+									<button onclick={() => startEdit(msg)} title="Modifier"
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+									</button>
 								{/if}
 								{#if isAdmin}
-									<button
-										onclick={() => pinMessage(msg)}
-										class="p-1.5 rounded-lg transition-colors text-xs {pinnedMessage?.id === msg.id ? 'text-indigo-400' : 'text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10'}"
-										title={pinnedMessage?.id === msg.id ? 'Désépingler' : 'Épingler'}
-									>📌</button>
+									<!-- Épingler -->
+									<button onclick={() => pinMessage(msg)} title={pinnedMessage?.id === msg.id ? 'Désépingler' : 'Épingler'}
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: {pinnedMessage?.id === msg.id ? '#a78bfa' : '#4b5563'}"
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = pinnedMessage?.id === msg.id ? '#a78bfa' : '#4b5563'}>
+										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+									</button>
 								{/if}
 								{#if msg.author_id === userId || isAdmin}
-									<button
-										onclick={() => confirmDelete(msg.id)}
-										class="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors text-xs"
-										title="Supprimer"
-									>🗑️</button>
+									<!-- Supprimer -->
+									<button onclick={() => confirmDelete(msg.id)} title="Supprimer"
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#ef4444'}
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+									</button>
 								{/if}
-								<button
-									onclick={() => { navigator.clipboard.writeText(msg.content?.replace(/<[^>]*>/g, '') ?? '') }}
-									class="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors text-xs"
-									title="Copier"
-								>📋</button>
+								<!-- Copier -->
+								<button onclick={() => { navigator.clipboard.writeText(msg.content?.replace(/<[^>]*>/g, '') ?? '') }} title="Copier"
+								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+								        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#9ca3af'}
+								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+								</button>
 							</div>
 						{/if}
 					</div>
@@ -1069,31 +1177,56 @@
 				{/each}
 
 				{#if messages.length === 0}
-					<p class="text-center text-gray-600 text-sm mt-8">Aucun message. Soyez le premier !</p>
+					<div class="flex flex-col items-center justify-center gap-3 mt-16 px-8">
+						<div class="w-12 h-12 flex items-center justify-center" style="background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.15)">
+							<svg class="w-6 h-6" fill="none" stroke="#7c3aed" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+						</div>
+						<p class="text-sm font-semibold text-center" style="color: #4b5563; font-family: 'Space Grotesk', sans-serif">Aucun message pour l'instant</p>
+						<p class="text-xs text-center" style="color: #374151">Soyez le premier à écrire dans <span style="color: #a78bfa"># {selectedChannel.name}</span></p>
+					</div>
 				{/if}
 			</div>
 
-			<!-- Typing indicator -->
-			{#if typingUsers.length > 0}
-				<div class="px-4 pb-1 h-5 flex items-center gap-2" transition:fade={{ duration: 120 }}>
-					<div class="flex items-center gap-0.5 shrink-0">
-						<span class="typing-dot" style="animation-delay: 0ms"></span>
-						<span class="typing-dot" style="animation-delay: 160ms"></span>
-						<span class="typing-dot" style="animation-delay: 320ms"></span>
-					</div>
-					<span class="text-[11px] text-gray-500 font-semibold">
-						{#if typingUsers.length === 1}
-							{typingUsers[0]} écrit…
-						{:else if typingUsers.length === 2}
-							{typingUsers[0]} et {typingUsers[1]} écrivent…
-						{:else}
-							Plusieurs personnes écrivent…
-						{/if}
+			<!-- Scroll to bottom button -->
+			{#if !isAtBottom}
+				<button
+					onclick={scrollToBottom}
+					class="absolute bottom-3 right-4 z-10 flex items-center gap-2 pl-3 pr-2.5 py-1.5 transition-all duration-200 scroll-bottom-btn"
+					style="background: rgba(13,13,20,0.95); border: 1px solid rgba(124,58,237,0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);"
+					transition:fade={{ duration: 120 }}
+				>
+					<span class="text-xs font-semibold" style="color: #a78bfa;">
+						{#if unreadWhileScrolled > 0}{unreadWhileScrolled} nouveau{unreadWhileScrolled > 1 ? 'x' : ''}{:else}Retour en bas{/if}
 					</span>
-				</div>
-			{:else}
-				<div class="h-5"></div>
+					<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2.5" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+					</svg>
+				</button>
 			{/if}
+
+			</div><!-- end messages wrapper -->
+
+			<!-- Typing indicator -->
+			<div class="h-5 px-4 flex items-center gap-2">
+				{#if typingUsers.length > 0}
+					<div class="flex items-center gap-1.5" transition:fade={{ duration: 120 }}>
+						<div class="flex items-center gap-0.5 shrink-0">
+							<span class="typing-dot" style="animation-delay: 0ms"></span>
+							<span class="typing-dot" style="animation-delay: 160ms"></span>
+							<span class="typing-dot" style="animation-delay: 320ms"></span>
+						</div>
+						<span class="text-[10px] font-semibold italic" style="color: #4b5563">
+							{#if typingUsers.length === 1}
+								<span style="color: #a78bfa">{typingUsers[0]}</span> écrit…
+							{:else if typingUsers.length === 2}
+								<span style="color: #a78bfa">{typingUsers[0]}</span> et <span style="color: #a78bfa">{typingUsers[1]}</span> écrivent…
+							{:else}
+								Plusieurs personnes écrivent…
+							{/if}
+						</span>
+					</div>
+				{/if}
+			</div>
 
 			<!-- Input area -->
 			<div class="px-4 shrink-0" style="padding-bottom: max(1rem, var(--bottom-nav-h))">
@@ -1180,14 +1313,12 @@
 
 				<!-- Reply preview bar -->
 				{#if replyTo}
-					<div class="flex items-center gap-2 px-3 py-1.5 mb-1 bg-gray-800/80 border border-gray-700 rounded-lg text-xs">
-						<span class="text-indigo-400 shrink-0">↩ {replyTo.author_username}</span>
-						<span class="text-gray-500 truncate flex-1">{replyTo.content}</span>
-						<button
-							onclick={() => replyTo = null}
-							class="shrink-0 text-gray-600 hover:text-white transition-colors text-base leading-none"
-							title="Annuler la réponse"
-						>×</button>
+					<div class="flex items-center gap-2.5 px-3 py-1.5 mb-2 text-xs" style="background: rgba(124,58,237,.08); border-left: 2px solid #7c3aed">
+						<svg class="w-3 h-3 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+						<span class="font-bold shrink-0" style="color: #a78bfa">{replyTo.author_username}</span>
+						<span class="truncate flex-1" style="color: #4b5563">{replyTo.content?.replace(/<[^>]*>/g, '').slice(0, 80) ?? ''}</span>
+						<button onclick={() => replyTo = null} title="Annuler"
+						        class="shrink-0 w-4 h-4 flex items-center justify-center text-sm leading-none transition-colors" style="color: #374151">×</button>
 					</div>
 				{/if}
 
@@ -1205,11 +1336,13 @@
 					</div>
 				{/if}
 
-				<div class="flex gap-2 bg-gray-800 rounded-lg border {isRateLimited ? 'border-red-700/60' : 'border-gray-700 focus-within:border-indigo-600'} transition-colors">
+				<div class="flex items-end gap-2 px-3 py-2 transition-all" style="background: rgba(255,255,255,.04); border: 1px solid {isRateLimited ? 'rgba(239,68,68,.4)' : 'rgba(255,255,255,.08)'}">
+					<!-- Textarea -->
 					<textarea
 						id="chat-input"
-						class="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-100 placeholder-gray-600 resize-none outline-none max-h-32 disabled:opacity-50"
-						placeholder={isRateLimited ? 'Anti-spam actif…' : `Message #${selectedChannel.slug}`}
+						class="flex-1 bg-transparent py-1.5 text-sm resize-none outline-none max-h-32 disabled:opacity-50"
+						style="color: #e2e8f0; font-family: inherit; scrollbar-width: thin"
+						placeholder={isRateLimited ? 'Anti-spam actif…' : `Message dans # ${selectedChannel.name}`}
 						rows={1}
 						maxlength={2000}
 						bind:value={inputText}
@@ -1217,34 +1350,43 @@
 						oninput={handleInput}
 						disabled={isRateLimited}
 					></textarea>
-					<!-- GIF button — always visible -->
-					<button
-						data-gif-picker
-						onclick={() => { showGifPicker = !showGifPicker; if (showGifPicker && gifProvider) gifQuery = ''; }}
-						class="px-2 py-2 m-1 rounded transition-colors shrink-0 text-xs font-bold {showGifPicker ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}"
-						title="Envoyer un GIF"
-					>GIF</button>
-					<!-- Poll button -->
-					<button
-						onclick={() => showPollCreator = true}
-						class="px-2 py-2 m-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors shrink-0 text-sm"
-						title="Créer un sondage"
-					>📊</button>
-					<!-- Rich editor button -->
-					<button
-						onclick={() => { showRichModal = true; }}
-						class="px-2 py-2 m-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors shrink-0 text-sm"
-						title="Éditeur riche (Ctrl+Maj+E)"
-					>✏️</button>
-					<button
-						onclick={sendMessage}
-						disabled={!inputText.trim() || isRateLimited}
-						class="px-3 py-2 m-1.5 rounded {isRateLimited ? 'bg-red-700/60 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'} disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors shrink-0"
-					>
-						{isRateLimited ? '⏱' : 'Envoyer'}
-					</button>
+					<!-- Toolbar -->
+					<div class="flex items-center gap-0.5 shrink-0 pb-0.5">
+						<!-- GIF -->
+						<button data-gif-picker onclick={() => { showGifPicker = !showGifPicker; if (showGifPicker && gifProvider) gifQuery = ''; }}
+						        title="GIF"
+						        class="w-7 h-7 flex items-center justify-center text-[10px] font-black uppercase tracking-wide transition-colors"
+						        style="color: {showGifPicker ? '#a78bfa' : '#4b5563'}; background: {showGifPicker ? 'rgba(124,58,237,.12)' : 'transparent'}">GIF</button>
+						<!-- Poll -->
+						<button onclick={() => showPollCreator = true} title="Créer un sondage"
+						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+						</button>
+						<!-- Rich editor -->
+						<button onclick={() => showRichModal = true} title="Éditeur riche (Ctrl+Maj+E)"
+						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+						</button>
+						<!-- Divider -->
+						<span class="w-px h-4 mx-1" style="background: rgba(255,255,255,.07)"></span>
+						<!-- Send -->
+						<button onclick={sendMessage} disabled={!inputText.trim() || isRateLimited}
+						        class="w-7 h-7 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, #7c3aed, #0e7490)' : 'rgba(255,255,255,.06)'}; color: {inputText.trim() ? '#fff' : '#4b5563'}"
+						        title={isRateLimited ? 'Anti-spam…' : 'Envoyer (Entrée)'}>
+							{#if isRateLimited}
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+							{:else}
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+							{/if}
+						</button>
+					</div>
 				</div>
-				<p class="text-xs text-gray-700 mt-1">Entrée pour envoyer · Maj+Entrée pour saut de ligne · Ctrl+Maj+E pour l'éditeur riche</p>
+				<p class="text-[10px] mt-1" style="color: #1f2937">↵ Envoyer · ⇧↵ Saut de ligne · ⌃⇧E Éditeur riche</p>
 			</div>
 
 			{/if}<!-- end voice/text branch -->
@@ -1338,6 +1480,19 @@
 {/if}
 
 <style>
+
+	/* ── Scroll to bottom button ──────────────────────────────────────────── */
+	.scroll-bottom-btn {
+		animation: scroll-btn-in 150ms ease-out;
+	}
+	@keyframes scroll-btn-in {
+		from { opacity: 0; transform: translateY(6px); }
+		to   { opacity: 1; transform: translateY(0); }
+	}
+	.scroll-bottom-btn:hover {
+		border-color: rgba(124, 58, 237, 0.7) !important;
+		box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 12px rgba(124,58,237,0.15) !important;
+	}
 
 	/* ── P2P animations ───────────────────────────────────────────────────── */
 

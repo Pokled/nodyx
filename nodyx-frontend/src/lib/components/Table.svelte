@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { voiceStore, setPeerVolume, inputLevel } from '$lib/voice'
+	import { voiceStore, setPeerVolume, inputLevel, peerStatsStore, getQuality } from '$lib/voice'
 	import { jukeboxStore, initJukebox, cleanupJukebox, mountYTPlayer, jukeboxLoad } from '$lib/jukebox'
 	import { goto } from '$app/navigation'
 	import { PUBLIC_API_URL } from '$env/static/public'
@@ -17,27 +17,23 @@
 
 	let { channelName, channelId, me, token, joined, onjoin, socket }: Props = $props()
 
-	const vs = $derived($voiceStore)
-	const jb = $derived($jukeboxStore)
+	const vs       = $derived($voiceStore)
+	const jb       = $derived($jukeboxStore)
+	const statsMap = $derived($peerStatsStore)
 
-	// ── Layout ─────────────────────────────────────────────────────────────────
-	const S  = 960
-	const C  = S / 2
-	const RT = 256   // rayon table
-	const RA = 320   // rayon avatars
-
-	// ── Brasserie de Nuit ──────────────────────────────────────────────────────
-	const T = {
-		bg:          '#131210',
-		tableBg:     '#1c1814',
-		tableRim:    '#2d2520',
-		accent:      '#c8914a',
-		voiceRing:   '#c8914a',
-		textPrimary: '#e8e0d5',
-		textMuted:   '#9a8f82',
+	type NetQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown'
+	const QUALITY_COLOR: Record<NetQuality, string> = {
+		excellent: '#4ade80',
+		good:      '#86efac',
+		fair:      '#facc15',
+		poor:      '#f87171',
+		unknown:   '#374151',
+	}
+	const QUALITY_BARS: Record<NetQuality, number> = {
+		excellent: 3, good: 3, fair: 2, poor: 1, unknown: 0,
 	}
 
-	// ── Audio-réactif : inputLevel 0-100 → niveau lissé 0-1 ───────────────────
+	// ── Audio-réactif : inputLevel 0-100 → niveau lissé 0-1 ──────────────────
 	let _targetLevel = 0
 	let _myLevel     = $state(0)
 
@@ -52,17 +48,16 @@
 		return () => { unsub(); cancelAnimationFrame(raf) }
 	})
 
-	// ── Jukebox init / cleanup ─────────────────────────────────────────────────
+	// ── Jukebox init / cleanup ────────────────────────────────────────────────
 	$effect(() => {
 		if (!joined || !socket) return
 		initJukebox(socket, channelId, me.username)
 		const id = ytContainerId
-		// $effect runs after DOM update, safe to mount immediately
 		mountYTPlayer(id).catch(() => {})
 		return () => { cleanupJukebox(socket!) }
 	})
 
-	// ── Types ──────────────────────────────────────────────────────────────────
+	// ── Types ─────────────────────────────────────────────────────────────────
 	interface Player {
 		id:        string
 		username:  string
@@ -72,9 +67,8 @@
 		muted?:    boolean
 		socketId?: string
 	}
-	interface Positioned extends Player { x: number; y: number }
 
-	// ── Players — vides si pas encore rejoint ──────────────────────────────────
+	// ── Players ───────────────────────────────────────────────────────────────
 	const players = $derived<Player[]>(
 		!joined ? [] : [
 			{ id: 'me', username: me.username, avatar: me.avatar, isMe: true, speaking: vs.mySpeaking, muted: vs.muted },
@@ -89,19 +83,22 @@
 		]
 	)
 
-	function getPositions(list: Player[]): Positioned[] {
-		if (list.length === 0) return []
-		return list.map((p, i) => {
-			const angle = (2 * Math.PI / list.length) * i + Math.PI / 2
-			return { ...p, x: C + RA * Math.cos(angle), y: C + RA * Math.sin(angle) }
-		})
-	}
-	const positioned = $derived(getPositions(players))
+	// ── Grid cols ─────────────────────────────────────────────────────────────
+	const gridCols = $derived(
+		players.length <= 1 ? 1 :
+		players.length <= 4 ? 2 :
+		players.length <= 9 ? 3 : 4
+	)
+	const gridMax = $derived(
+		gridCols === 1 ? '280px' :
+		gridCols === 2 ? '560px' :
+		gridCols === 3 ? '720px' : '940px'
+	)
 
-	// ── Sourdine locale ────────────────────────────────────────────────────────
+	// ── Local mute ────────────────────────────────────────────────────────────
 	let mutedPeers = $state<Set<string>>(new Set())
 
-	function toggleMutePeer(p: Positioned) {
+	function toggleMutePeer(p: Player) {
 		if (!p.socketId) return
 		if (mutedPeers.has(p.socketId)) { mutedPeers.delete(p.socketId); setPeerVolume(p.socketId, 1) }
 		else { mutedPeers.add(p.socketId); setPeerVolume(p.socketId, 0) }
@@ -109,16 +106,22 @@
 		closeMenu()
 	}
 
-	// ── Menu contextuel ────────────────────────────────────────────────────────
-	let menuPlayer = $state<Positioned | null>(null)
+	// ── Context menu ──────────────────────────────────────────────────────────
+	let menuPlayer = $state<Player | null>(null)
+	let menuX = $state(0)
+	let menuY = $state(0)
 
-	function openMenu(p: Positioned, e: MouseEvent) {
+	function openMenu(p: Player, e: MouseEvent) {
 		e.stopPropagation()
-		menuPlayer = menuPlayer?.id === p.id ? null : p
+		if (menuPlayer?.id === p.id) { closeMenu(); return }
+		menuPlayer = p
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+		menuX = Math.min(rect.right + 8, window.innerWidth - 200)
+		menuY = Math.min(rect.top, window.innerHeight - 160)
 	}
 	function closeMenu() { menuPlayer = null }
 
-	async function whisperPeer(p: Positioned) {
+	async function whisperPeer(p: Player) {
 		closeMenu()
 		if (!token) { goto('/auth/login'); return }
 		const res = await fetch(`${PUBLIC_API_URL}/api/v1/whispers`, {
@@ -129,10 +132,9 @@
 		if (res.ok) { const { room } = await res.json(); goto(`/whisper/${room.id}`) }
 	}
 
-	// ── Jukebox UI ─────────────────────────────────────────────────────────────
+	// ── Jukebox URL input ─────────────────────────────────────────────────────
 	let showJukeboxInput = $state(false)
 	let jukeboxUrl       = $state('')
-
 	let jukeboxError     = $state('')
 
 	const fid           = $derived(channelId.replace(/[^a-z0-9]/gi, ''))
@@ -142,372 +144,351 @@
 		if (!jukeboxUrl.trim()) return
 		jukeboxError = ''
 		const ok = jukeboxLoad(jukeboxUrl.trim())
-		if (ok) {
-			showJukeboxInput = false
-			jukeboxUrl = ''
-		} else {
-			jukeboxError = 'Lien YouTube invalide. Exemples : youtube.com/watch?v=... ou youtu.be/...'
-		}
+		if (ok) { showJukeboxInput = false; jukeboxUrl = '' }
+		else { jukeboxError = 'Lien YouTube invalide. Exemples : youtube.com/watch?v=... ou youtu.be/...' }
 	}
-
-
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 <div
-	class="relative select-none mx-auto shrink-0"
-	style="width:{S}px; height:{S}px; background: radial-gradient(ellipse 72% 72% at 50% 50%, #1f1b16 0%, {T.bg} 62%, #09080700 100%);"
+	class="relative w-full h-full flex flex-col overflow-hidden select-none"
+	style="background: #07070f;"
 	onclick={closeMenu}
 >
 
-	<!-- ── Table SVG ─────────────────────────────────────────────────────────── -->
-	<svg width={S} height={S} class="absolute inset-0 pointer-events-none">
-		<defs>
-			<!-- Grain bois -->
-			<filter id="grain{fid}" x="-20%" y="-20%" width="140%" height="140%">
-				<feTurbulence type="fractalNoise" baseFrequency="0.65 0.12"
-					numOctaves="4" seed="7" result="noise"/>
-				<feColorMatrix type="saturate" values="0" in="noise" result="bw"/>
-				<feComponentTransfer in="bw" result="tex">
-					<feFuncA type="linear" slope="0.10"/>
-				</feComponentTransfer>
-				<feBlend in="SourceGraphic" in2="tex" mode="multiply"/>
-			</filter>
+	<!-- ── Ambient background ──────────────────────────────────────────────── -->
+	<div class="absolute inset-0 pointer-events-none overflow-hidden">
+		<!-- Static orbs -->
+		<div class="absolute -top-64 -left-64 w-[700px] h-[700px]"
+		     style="background: radial-gradient(circle, rgba(124,58,237,0.05) 0%, transparent 65%); filter: blur(80px);"></div>
+		<div class="absolute -bottom-64 -right-64 w-[700px] h-[700px]"
+		     style="background: radial-gradient(circle, rgba(6,182,212,0.04) 0%, transparent 65%); filter: blur(80px);"></div>
+		<!-- Audio-reactive center glow -->
+		<div class="absolute inset-0 flex items-center justify-center"
+		     style="opacity: {(0.3 + _myLevel * 0.7).toFixed(2)}; transition: opacity 80ms linear;">
+			<div class="w-[600px] h-[600px]"
+			     style="background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 55%); filter: blur(100px);"></div>
+		</div>
+	</div>
 
-			<!-- Surface bois -->
-			<radialGradient id="surf{fid}" cx="44%" cy="38%" r="70%">
-				<stop offset="0%"   stop-color={T.tableBg}/>
-				<stop offset="100%" stop-color="#0f0d0a"/>
-			</radialGradient>
+	{#if !joined}
 
-			<!-- Rebord -->
-			<radialGradient id="rim{fid}" cx="44%" cy="38%" r="70%">
-				<stop offset="0%"   stop-color={T.tableRim}/>
-				<stop offset="100%" stop-color="#1a1510"/>
-			</radialGradient>
+		<!-- ── Join screen ──────────────────────────────────────────────────── -->
+		<div class="flex-1 flex flex-col items-center justify-center gap-10 p-8 relative z-10">
 
-			<!-- Lueur ambrée — s'intensifie avec ma voix -->
-			<radialGradient id="glow{fid}" cx="50%" cy="46%" r="58%">
-				<stop offset="0%"   stop-color={T.accent} stop-opacity={0.06 + _myLevel * 0.20}/>
-				<stop offset="70%"  stop-color={T.accent} stop-opacity={0.01 + _myLevel * 0.05}/>
-				<stop offset="100%" stop-color={T.accent} stop-opacity="0"/>
-			</radialGradient>
+			<div class="text-center space-y-1.5">
+				<p class="text-[10px] font-black uppercase tracking-[0.25em] text-gray-700">Canal vocal</p>
+				<h2 class="text-3xl font-black text-white tracking-tight">{channelName}</h2>
+			</div>
 
-			<!-- Dégradé étiquette vinyle -->
-			<radialGradient id="label{fid}" cx="35%" cy="30%" r="75%">
-				<stop offset="0%"   stop-color="#d4a06a"/>
-				<stop offset="100%" stop-color="#8b5e2e"/>
-			</radialGradient>
-		</defs>
+			<!-- Join button with pulsing halos -->
+			<button
+				onclick={onjoin}
+				class="group relative flex items-center justify-center focus:outline-none"
+				style="width: 176px; height: 176px;"
+			>
+				<!-- Halo rings -->
+				<div class="absolute inset-0 rounded-full join-ring"></div>
+				<div class="absolute inset-0 rounded-full join-ring" style="animation-delay: 0.8s;"></div>
+				<div class="absolute inset-[10px] rounded-full join-ring" style="animation-delay: 0.4s; border-color: rgba(6,182,212,0.3);"></div>
 
-		<!-- Ombre portée -->
-		<circle cx={C} cy={C + 6} r={RT + 14} fill="rgba(0,0,0,0.55)"/>
+				<!-- Button disk -->
+				<div class="relative w-36 h-36 rounded-full flex flex-col items-center justify-center gap-2.5
+				            group-hover:scale-105 transition-all duration-300"
+				     style="background: linear-gradient(145deg, rgba(124,58,237,0.25) 0%, rgba(6,182,212,0.12) 100%);
+				            border: 1px solid rgba(124,58,237,0.45);
+				            box-shadow: 0 0 60px rgba(124,58,237,0.18), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.06);">
+					<svg class="w-10 h-10" fill="none" stroke="white" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:0.9;">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+					</svg>
+					<span class="text-[11px] font-black uppercase tracking-[0.18em] text-white/75">Rejoindre</span>
+				</div>
+			</button>
 
-		<!-- Rebord -->
-		<circle cx={C} cy={C} r={RT + 9} fill="url(#rim{fid})"/>
+			<p class="text-xs text-gray-700">Microphone requis pour participer</p>
+		</div>
 
-		<!-- Surface bois -->
-		<circle cx={C} cy={C} r={RT} fill="url(#surf{fid})" filter="url(#grain{fid})"/>
+	{:else}
 
-		<!-- Lueur ambiante — respire + réagit à la voix -->
-		<circle class="table-glow" cx={C} cy={C} r={RT - 12} fill="url(#glow{fid})"/>
+		<!-- ── Players stage grid ──────────────────────────────────────────── -->
+		<div class="flex-1 flex items-center justify-center p-6 relative z-10 overflow-auto">
+			<div
+				class="grid gap-3 w-full"
+				style="grid-template-columns: repeat({gridCols}, minmax(0, 1fr)); max-width: {gridMax};"
+			>
+				{#each players as p (p.id)}
+					{@const isMutedLocal  = !p.isMe && !!p.socketId && mutedPeers.has(p.socketId)}
+					{@const isSpeaking    = p.speaking && !((p.isMe && vs.muted) || isMutedLocal)}
+					{@const myActive      = p.isMe && !vs.muted && _myLevel > 0.04}
+					{@const pStats        = !p.isMe && p.socketId ? statsMap.get(p.socketId) : undefined}
+					{@const quality       = getQuality(pStats) as NetQuality}
+					{@const qColor        = QUALITY_COLOR[quality]}
+					{@const qBars         = QUALITY_BARS[quality]}
+					{@const glowLevel     = p.isMe ? _myLevel : (isSpeaking ? 0.6 : 0)}
+					{@const borderOpacity = isSpeaking ? (0.35 + glowLevel * 0.3).toFixed(2) : myActive ? (0.12 + _myLevel * 0.5).toFixed(2) : '0.05'}
+					{@const shadowSize    = isSpeaking ? (16 + glowLevel * 20).toFixed(0) : myActive ? (8 + _myLevel * 24).toFixed(0) : '0'}
+					{@const shadowAlpha   = isSpeaking ? (0.12 + glowLevel * 0.12).toFixed(2) : myActive ? (0.06 + _myLevel * 0.18).toFixed(2) : '0'}
+					{@const ringSize      = myActive ? (1.5 + _myLevel * 2.5).toFixed(1) : isSpeaking ? '2.5' : '1.5'}
+					{@const ringAlpha     = myActive ? (0.35 + _myLevel * 0.55).toFixed(2) : isSpeaking ? '0.7' : '0.08'}
 
-		<!-- Liseré intérieur décoratif -->
-		<circle cx={C} cy={C} r={RT - 6} fill="none" stroke={T.accent} stroke-width="0.8" opacity="0.20"/>
-
-		<!-- ── Zone Jukebox (centre de la table, visible quand joined) ────────── -->
-		{#if joined}
-			<g transform="translate({C}, {C})">
-
-				{#if jb.track}
-					<!-- ── Vinyle ───────────────────────────────────────────────── -->
-
-					<!-- Ombre du vinyle -->
-					<ellipse cx="0" cy="8" rx="82" ry="14" fill="rgba(0,0,0,0.45)"/>
-
-					<!-- Corps du vinyle (rotatif) -->
-					<g class="vinyl-disc {jb.playing ? '' : 'paused'}">
-						<!-- Disque principal -->
-						<circle r="80" fill="#0b0908"/>
-						<!-- Sillons -->
-						{#each [74, 67, 60, 53, 46, 39] as gr}
-							<circle r={gr} fill="none" stroke="#181410" stroke-width="1.5"/>
-						{/each}
-						<!-- Étiquette centrale -->
-						<circle r="26" fill="url(#label{fid})" opacity="0.92"/>
-						<!-- Reflet sur étiquette -->
-						<ellipse cx="-7" cy="-7" rx="7" ry="4.5" fill="white" opacity="0.13" transform="rotate(-35)"/>
-						<!-- Trou de broche -->
-						<circle r="3.5" fill="#0b0908"/>
-					</g>
-
-					<!-- Titre de la piste (hors rotation) -->
-					<text
-						y="106"
-						text-anchor="middle"
-						font-size="10.5"
-						font-family="ui-sans-serif, system-ui, sans-serif"
-						fill={T.textMuted}
-						opacity="0.75"
+					<!-- svelte-ignore a11y_interactive_supports_focus -->
+					<div
+						role={p.isMe ? undefined : 'button'}
+						class="relative flex flex-col items-center gap-4 py-7 px-4 transition-all duration-150"
+						style="
+							background: {isSpeaking || myActive ? 'rgba(124,58,237,0.07)' : 'rgba(13,13,20,0.9)'};
+							border: 1px solid rgba(124,58,237,{borderOpacity});
+							box-shadow: 0 0 {shadowSize}px rgba(124,58,237,{shadowAlpha}), 0 2px 12px rgba(0,0,0,0.5);
+							cursor: {p.isMe ? 'default' : 'pointer'};
+						"
+						onclick={(e) => { if (!p.isMe) openMenu(p, e) }}
 					>
-						{jb.track.title.length > 40 ? jb.track.title.slice(0, 40) + '…' : jb.track.title}
-					</text>
 
-				{:else}
-					<!-- ── Pas de piste — icône Jukebox discrète ────────────────── -->
-					<circle r="50" fill="rgba(200,145,74,0.04)" stroke={T.accent} stroke-width="0.7" stroke-dasharray="3 4" opacity="0.22"/>
-					<text y="8"  text-anchor="middle" font-size="28" opacity="0.18" fill={T.accent}>♫</text>
-					<text y="26" text-anchor="middle" font-size="9" font-family="ui-sans-serif, system-ui, sans-serif" fill={T.textMuted} opacity="0.30">Jukebox</text>
-				{/if}
+						<!-- Avatar + rings -->
+						<div class="relative flex items-center justify-center">
+							<!-- Outer speak ring (peers) -->
+							{#if isSpeaking && !p.isMe}
+								<div class="absolute rounded-full speak-ring"
+								     style="inset: -8px; border: 1.5px solid rgba(124,58,237,0.35);"></div>
+								<div class="absolute rounded-full speak-ring"
+								     style="inset: -14px; border: 1px solid rgba(124,58,237,0.18); animation-delay: 0.55s;"></div>
+							{/if}
 
-			</g>
+							{#if p.avatar}
+								<img
+									src={p.avatar} alt={p.username}
+									class="w-[72px] h-[72px] rounded-full object-cover relative z-10"
+									style="
+										box-shadow: 0 0 0 {ringSize}px rgba(124,58,237,{ringAlpha}), 0 4px 20px rgba(0,0,0,0.7);
+										transition: box-shadow 60ms linear;
+									"
+								/>
+							{:else}
+								<div
+									class="w-[72px] h-[72px] rounded-full flex items-center justify-center text-2xl font-black text-white relative z-10"
+									style="
+										background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+										box-shadow: 0 0 0 {ringSize}px rgba(124,58,237,{ringAlpha}), 0 4px 20px rgba(0,0,0,0.7);
+										transition: box-shadow 60ms linear;
+									"
+								>
+									{p.username.charAt(0).toUpperCase()}
+								</div>
+							{/if}
+
+							<!-- Mute badge -->
+							{#if (p.isMe && vs.muted) || isMutedLocal}
+								<div class="absolute -bottom-1 -right-1 z-20 w-5 h-5 rounded-full flex items-center justify-center"
+								     style="background: #0d0d12; border: 1px solid rgba(239,68,68,0.5);">
+									<svg class="w-2.5 h-2.5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+									</svg>
+								</div>
+							{/if}
+						</div>
+
+						<!-- Quality indicator (peers only, top-right corner) -->
+					{#if !p.isMe && pStats}
+						<div class="absolute top-2.5 right-2.5 flex items-end gap-[2px]" title="Qualité réseau : {quality}">
+							{#each [1,2,3] as bar}
+								<div class="w-[3px] rounded-sm transition-colors duration-500"
+								     style="height: {4 + bar * 3}px; background: {bar <= qBars ? qColor : 'rgba(255,255,255,0.1)'};">
+								</div>
+							{/each}
+						</div>
+					{/if}
+
+					<!-- Name + EQ bars -->
+						<div class="flex flex-col items-center gap-1.5">
+							<span
+								class="text-xs font-semibold tracking-wide truncate max-w-[120px] transition-colors duration-200"
+								style="color: {isSpeaking || myActive ? '#c4b5fd' : '#6b7280'};"
+							>
+								{p.isMe ? 'Vous' : p.username}
+							</span>
+
+							<!-- EQ bars when active -->
+							<div class="flex items-end gap-[2px] h-3 transition-opacity duration-200"
+							     style="opacity: {isSpeaking || myActive ? 1 : 0};">
+								<div class="w-[3px] rounded-sm eq-bar" style="background: #7c3aed; animation-delay: 0.00s;"></div>
+								<div class="w-[3px] rounded-sm eq-bar" style="background: #8b5cf6; animation-delay: 0.18s;"></div>
+								<div class="w-[3px] rounded-sm eq-bar" style="background: #a78bfa; animation-delay: 0.08s;"></div>
+								<div class="w-[3px] rounded-sm eq-bar" style="background: #8b5cf6; animation-delay: 0.25s;"></div>
+								<div class="w-[3px] rounded-sm eq-bar" style="background: #7c3aed; animation-delay: 0.13s;"></div>
+							</div>
+						</div>
+
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<!-- ── Jukebox bar ─────────────────────────────────────────────────── -->
+		{#if jb.track}
+			<div class="shrink-0 flex items-center gap-3 px-5 py-2.5 relative z-10"
+			     style="background: rgba(7,7,15,0.95); border-top: 1px solid rgba(255,255,255,0.04);">
+				<!-- Mini vinyl disc -->
+				<div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center vinyl-mini {jb.playing ? '' : 'paused'}"
+				     style="background: radial-gradient(circle, #1c1814 0%, #0b0908 100%);
+				            border: 1px solid rgba(200,145,74,0.3);
+				            box-shadow: 0 0 10px rgba(200,145,74,0.12);">
+					<div class="w-2 h-2 rounded-full" style="background: rgba(200,145,74,0.55);"></div>
+				</div>
+				<div class="flex-1 min-w-0">
+					<p class="text-xs font-semibold text-gray-300 truncate">{jb.track.title}</p>
+					<p class="text-[10px] text-gray-600">{jb.playing ? 'Jukebox · En lecture' : 'Jukebox · En pause'}</p>
+				</div>
+				<button
+					class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none"
+					style="color: rgba(200,145,74,0.55); border: 1px solid rgba(200,145,74,0.15);"
+					onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(200,145,74,0.9)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(200,145,74,0.4)' }}
+					onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(200,145,74,0.55)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(200,145,74,0.15)' }}
+					onclick={(e) => { e.stopPropagation(); showJukeboxInput = true }}
+				>
+					Changer
+				</button>
+			</div>
+		{:else if joined}
+			<div class="shrink-0 flex items-center justify-center px-5 py-2 relative z-10"
+			     style="border-top: 1px solid rgba(255,255,255,0.03);">
+				<button
+					class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none jukebox-idle"
+					style="color: rgba(200,145,74,0.28);"
+					onclick={(e) => { e.stopPropagation(); showJukeboxInput = true }}
+				>
+					<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+					</svg>
+					Lancer le Jukebox
+				</button>
+			</div>
 		{/if}
 
-	</svg>
-
-	<!-- ── Bouton transparent "Rejoindre le Jukebox" (clickable sur l'icône) ── -->
-	<!-- Séparé du SVG pour garder pointer-events:none sur tout le SVG -->
-	{#if joined && !jb.track}
-		<button
-			class="absolute rounded-full focus:outline-none"
-			style="left:{C - 50}px; top:{C - 50}px; width:100px; height:100px; background:transparent; cursor:pointer; z-index:5;"
-			onclick={(e) => { e.stopPropagation(); showJukeboxInput = true }}
-			title="Ouvrir le Jukebox"
-		/>
 	{/if}
 
-	<!-- ── Player "stop" overlay (clic sur le vinyle) ────────────────────────── -->
-	{#if joined && jb.track}
-		<button
-			class="absolute rounded-full focus:outline-none"
-			style="left:{C - 80}px; top:{C - 80}px; width:160px; height:160px; background:transparent; cursor:pointer; z-index:5;"
-			onclick={(e) => { e.stopPropagation(); showJukeboxInput = true }}
-			title="Changer la piste"
-		/>
-	{/if}
-
-	<!-- ── Lecteur YouTube caché (audio uniquement) ──────────────────────────── -->
-	<!-- Container fixed 0×0 avec overflow:hidden — le player YouTube interne (200×113)
-	     existe dans le DOM avec des dimensions légitimes mais n'est pas visible.
-	     Évite l'artefact visuel et les restrictions autoplay Chrome sur les mini-iframes. -->
+	<!-- ── YouTube hidden player ─────────────────────────────────────────────── -->
 	{#if joined}
 		<div style="position:fixed; bottom:0; right:0; width:0; height:0; overflow:hidden; pointer-events:none; z-index:-1;">
 			<div id={ytContainerId}></div>
 		</div>
 	{/if}
 
-	<!-- ── Bouton "Rejoindre" — affiché avant de rejoindre ───────────────────── -->
-	{#if !joined}
-		<!-- svelte-ignore a11y_consider_explicit_label -->
-		<div class="absolute inset-0 flex items-center justify-center z-20">
-			<button
-				onclick={onjoin}
-				class="group relative flex items-center justify-center focus:outline-none"
-				style="width:168px; height:168px;"
-			>
-				<!-- Halo externe pulsant -->
-				<div class="absolute inset-0 rounded-full join-halo"
-				     style="background: radial-gradient(circle, {T.accent}55 0%, transparent 70%); filter:blur(20px);"></div>
-
-				<!-- Cercle principal -->
-				<div class="relative w-40 h-40 rounded-full flex flex-col items-center justify-center gap-3
-				            group-hover:scale-105 transition-transform duration-300"
-				     style="background: rgba(26,21,16,0.95);
-				            border: 1.5px solid {T.accent}60;
-				            box-shadow: 0 0 40px rgba(200,145,74,0.10), inset 0 1px 0 rgba(255,255,255,0.04);">
-					<span class="text-4xl">🎙️</span>
-					<span class="text-[11px] font-semibold tracking-[0.18em] uppercase"
-					      style="color:{T.accent};">Rejoindre</span>
-				</div>
-			</button>
-		</div>
-	{/if}
-
-	<!-- ── Avatars ───────────────────────────────────────────────────────────── -->
-	{#each positioned as p (p.id)}
-		{@const isMutedLocal = !p.isMe && !!p.socketId && mutedPeers.has(p.socketId)}
-		{@const peerRing     = p.speaking ? T.voiceRing
-		                     : (p.isMe && p.muted) || isMutedLocal ? '#374151'
-		                     : T.accent + '55'}
-		<!-- Anneau audio-réactif pour moi, statique pour les peers -->
-		{@const myGlow   = (2.5 + _myLevel * 3.5).toFixed(1)}
-		{@const myAlpha1 = (0.25 + _myLevel * 0.75).toFixed(2)}
-		{@const myAlpha2 = (_myLevel * 0.55).toFixed(2)}
-		{@const myOuter  = (_myLevel * 34).toFixed(0)}
-		{@const boxShadow = p.isMe
-			? (vs.muted
-				? '0 0 0 2.5px #374151'
-				: `0 0 0 ${myGlow}px rgba(200,145,74,${myAlpha1}), 0 0 ${myOuter}px rgba(200,145,74,${myAlpha2})`)
-			: `0 0 0 2.5px ${peerRing}, 0 0 ${p.speaking ? 18 : 0}px ${T.voiceRing}70`}
-
-		<button
-			class="absolute flex flex-col items-center gap-1.5 focus:outline-none"
-			style="left:{p.x - 40}px; top:{p.y - 40}px; cursor:{p.isMe ? 'default' : 'pointer'};"
-			onclick={(e) => { if (!p.isMe) openMenu(p, e) }}
-			title={p.isMe ? 'Vous' : p.username}
-		>
-			<div class="relative w-20 h-20">
-
-				<!-- Ondes concentriques (peers qui parlent) -->
-				{#if p.speaking && !p.isMe}
-					<div class="speak-ring absolute inset-0 rounded-full"
-					     style="border:2px solid {T.voiceRing}55; animation-delay:0s;"></div>
-					<div class="speak-ring absolute inset-0 rounded-full"
-					     style="border:2px solid {T.voiceRing}38; animation-delay:0.53s;"></div>
-					<div class="speak-ring absolute inset-0 rounded-full"
-					     style="border:2px solid {T.voiceRing}22; animation-delay:1.06s;"></div>
-				{/if}
-
-				<!-- Avatar — "posé sur la table" -->
-				<div class="relative z-10 w-20 h-20"
-				     style="filter:drop-shadow(0 6px 14px rgba(0,0,0,0.85));">
-					{#if p.avatar}
-						<img
-							src={p.avatar} alt={p.username}
-							class="w-20 h-20 rounded-full object-cover"
-							style="box-shadow:{boxShadow}; transition: box-shadow 80ms linear;"
-						/>
-					{:else}
-						<div
-							class="w-20 h-20 rounded-full flex items-center justify-center text-xl font-bold text-white"
-							style="background:{T.accent}; box-shadow:{boxShadow}; transition: box-shadow 80ms linear;"
-						>
-							{p.username.charAt(0).toUpperCase()}
-						</div>
-					{/if}
-				</div>
-
-				<!-- Badges statut -->
-				{#if p.isMe && vs.muted}
-					<span class="absolute -bottom-1 -right-1 z-20 w-6 h-6 rounded-full flex items-center justify-center text-xs"
-					      style="background:{T.bg}; border:1px solid {T.accent}30;">🔇</span>
-				{:else if isMutedLocal}
-					<span class="absolute -bottom-1 -right-1 z-20 w-6 h-6 rounded-full flex items-center justify-center text-xs"
-					      style="background:{T.bg}; border:1px solid {T.accent}30;">🔕</span>
-				{/if}
-
-			</div>
-
-			<!-- Nom — s'illumine quand on parle -->
-			<span
-				class="text-[11px] truncate max-w-[90px] leading-none px-2.5 py-1 rounded-full transition-all duration-300"
-				style="background:rgba(0,0,0,0.5);
-				       color:{p.speaking ? T.textPrimary : T.textMuted};
-				       {p.speaking ? `text-shadow:0 0 12px ${T.accent}80; box-shadow:0 0 12px ${T.accent}28;` : ''}"
-			>
-				{p.isMe ? 'Vous' : p.username}
-			</span>
-		</button>
-	{/each}
-
-	<!-- ── Panel URL Jukebox ──────────────────────────────────────────────────── -->
+	<!-- ── Jukebox URL overlay ───────────────────────────────────────────────── -->
 	{#if showJukeboxInput}
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div
 			class="absolute inset-0 z-50 flex items-center justify-center"
-			style="background: rgba(13,11,8,0.7); backdrop-filter:blur(4px);"
+			style="background: rgba(7,7,15,0.8); backdrop-filter: blur(12px);"
 			onclick={() => { showJukeboxInput = false; jukeboxError = '' }}
 		>
-			<!-- Panel -->
 			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 			<div
-				class="rounded-2xl p-7 w-[440px]"
-				style="background: rgba(20,17,13,0.98);
-				       border: 1px solid {T.accent}28;
-				       box-shadow: 0 24px 60px rgba(0,0,0,0.75), 0 0 0 0.5px rgba(255,255,255,0.05);"
+				class="w-[440px] p-7"
+				style="background: rgba(13,13,20,0.98);
+				       border: 1px solid rgba(255,255,255,0.07);
+				       box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.03);"
 				onclick={(e) => e.stopPropagation()}
 			>
-				<!-- Header -->
-				<div class="flex items-center gap-3 mb-5">
-					<div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
-					     style="background: rgba(200,145,74,0.12); border:1px solid {T.accent}30;">
-						♫
+				<div class="flex items-center gap-3 mb-6">
+					<div class="w-9 h-9 flex items-center justify-center shrink-0"
+					     style="background: rgba(200,145,74,0.1); border: 1px solid rgba(200,145,74,0.25);">
+						<svg class="w-4 h-4" fill="none" stroke="rgba(200,145,74,0.9)" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+						</svg>
 					</div>
 					<div>
-						<h3 class="text-sm font-semibold" style="color:{T.textPrimary};">Jukebox</h3>
-						<p class="text-[10px]" style="color:{T.textMuted};">Colle un lien YouTube pour tous</p>
+						<h3 class="text-sm font-bold text-gray-100">Jukebox</h3>
+						<p class="text-[11px] text-gray-600">Diffuse un lien YouTube pour tout le canal</p>
 					</div>
 					<button
-						class="ml-auto w-7 h-7 rounded-full flex items-center justify-center text-xs hover:bg-white/10 transition-colors focus:outline-none"
-						style="color:{T.textMuted};"
+						class="ml-auto w-7 h-7 flex items-center justify-center text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-colors focus:outline-none"
 						onclick={() => { showJukeboxInput = false; jukeboxError = '' }}
 					>
-						✕
+						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+						</svg>
 					</button>
 				</div>
 
-				<!-- Input -->
 				<input
 					type="url"
 					bind:value={jukeboxUrl}
 					placeholder="https://www.youtube.com/watch?v=..."
-					class="w-full rounded-xl px-4 py-3 text-sm focus:outline-none mb-3"
+					class="w-full px-4 py-3 text-sm text-gray-200 focus:outline-none mb-3"
 					style="background: rgba(255,255,255,0.04);
-					       border: 1px solid {T.accent}25;
-					       color: {T.textPrimary};
-					       caret-color: {T.accent};"
+					       border: 1px solid rgba(255,255,255,0.08);
+					       caret-color: #7c3aed;"
 					onkeydown={(e) => { if (e.key === 'Enter') handleJukeboxLoad() }}
 				/>
 
 				{#if jukeboxError}
-					<p class="text-[10px] mb-3 px-1" style="color:#f87171;">{jukeboxError}</p>
+					<p class="text-[11px] mb-3 text-red-400">{jukeboxError}</p>
 				{/if}
 
-				<!-- Bouton -->
 				<button
-					class="w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 focus:outline-none"
-					style="background:{T.accent}; color:#0d0b08; box-shadow:0 0 20px {T.accent}30;"
+					class="w-full py-2.5 text-sm font-bold transition-all duration-200 focus:outline-none"
+					style="background: rgba(200,145,74,0.9); color: #07070f; box-shadow: 0 0 24px rgba(200,145,74,0.25);"
 					onclick={handleJukeboxLoad}
 				>
-					▶  Lancer pour tous
+					Lancer pour tous
 				</button>
 
-				<!-- Exemples -->
-				<p class="text-[10px] mt-4 leading-relaxed text-center" style="color:{T.textMuted}; opacity:0.55;">
-					Fonctionne avec youtube.com/watch, youtu.be et /shorts
+				<p class="text-[10px] mt-4 text-center text-gray-700">
+					Compatible youtube.com/watch, youtu.be et /shorts
 				</p>
 			</div>
 		</div>
 	{/if}
 
-	<!-- ── Menu contextuel ───────────────────────────────────────────────────── -->
+	<!-- ── Context menu (fixed) ──────────────────────────────────────────────── -->
 	{#if menuPlayer}
 		{@const mp      = menuPlayer}
 		{@const isMuted = !!mp.socketId && mutedPeers.has(mp.socketId)}
-		{@const ml      = Math.min(mp.x + 44, S - 190)}
-		{@const mt      = Math.max(mp.y - 88, 4)}
 
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div
-			class="absolute z-50 rounded-xl backdrop-blur-sm py-1.5 min-w-[168px]"
-			style="left:{ml}px; top:{mt}px;
-			       background:rgba(20,17,13,0.97);
-			       border:1px solid {T.accent}22;
-			       box-shadow:0 20px 40px rgba(0,0,0,0.7);"
+			class="fixed z-[9999] py-1.5 min-w-[172px]"
+			style="left: {menuX}px; top: {menuY}px;
+			       background: rgba(13,13,20,0.98);
+			       border: 1px solid rgba(255,255,255,0.07);
+			       box-shadow: 0 20px 50px rgba(0,0,0,0.8);"
 			onclick={(e) => e.stopPropagation()}
 		>
-			<div class="px-3 py-1.5 mb-1" style="border-bottom:1px solid {T.accent}18;">
-				<p class="text-xs font-semibold truncate" style="color:{T.textPrimary};">{mp.username}</p>
+			<div class="px-3 py-2 mb-0.5" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+				<p class="text-xs font-bold text-gray-200 truncate">{mp.username}</p>
 			</div>
 
 			<button onclick={() => goto(`/users/${mp.username}`)}
-				class="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-white/5 transition-colors"
-				style="color:{T.textMuted};">
-				<span>👤</span> Voir le profil
+				class="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-white/[.04] transition-colors text-gray-500 hover:text-gray-200">
+				<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+				</svg>
+				Voir le profil
 			</button>
 
 			<button onclick={() => whisperPeer(mp)}
-				class="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-white/5 transition-colors"
-				style="color:{T.textMuted};">
-				<span>🤫</span> Chuchoter
+				class="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-white/[.04] transition-colors text-gray-500 hover:text-gray-200">
+				<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
+				</svg>
+				Chuchoter
 			</button>
 
-			<div class="mt-1 pt-1" style="border-top:1px solid {T.accent}18;">
+			<div class="mt-0.5 pt-0.5" style="border-top: 1px solid rgba(255,255,255,0.05);">
 				<button onclick={() => toggleMutePeer(mp)}
-					class="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-white/5 transition-colors"
-					style="color:{isMuted ? T.accent : T.textMuted};">
-					<span>{isMuted ? '🔔' : '🔕'}</span>
-					{isMuted ? 'Réactiver' : 'Sourdine locale'}
+					class="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-white/[.04] transition-colors"
+					style="color: {isMuted ? '#a78bfa' : '#6b7280'};">
+					{#if isMuted}
+						<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/>
+						</svg>
+						Réactiver
+					{:else}
+						<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/>
+						</svg>
+						Sourdine locale
+					{/if}
 				</button>
 			</div>
 		</div>
@@ -516,43 +497,49 @@
 </div>
 
 <style>
-	/* ── Vinyle rotatif ─────────────────────────────────────────────────────── */
+	/* ── Halo bouton rejoindre ───────────────────────────────────────────── */
+	@keyframes join-ring-pulse {
+		0%   { transform: scale(1);   opacity: 0.5; }
+		100% { transform: scale(1.7); opacity: 0;   }
+	}
+	.join-ring {
+		border: 1px solid rgba(124, 58, 237, 0.35);
+		animation: join-ring-pulse 2.2s ease-out infinite;
+	}
+
+	/* ── Ondes concentriques — peers qui parlent ─────────────────────────── */
+	@keyframes speak-ring {
+		0%   { transform: scale(1);   opacity: 0.6; }
+		100% { transform: scale(2.2); opacity: 0;   }
+	}
+	.speak-ring {
+		animation: speak-ring 1.6s ease-out infinite;
+	}
+
+	/* ── Barres égaliseur ────────────────────────────────────────────────── */
+	@keyframes eq-dance {
+		0%, 100% { height: 25%; }
+		50%       { height: 100%; }
+	}
+	.eq-bar {
+		height: 100%;
+		animation: eq-dance 0.75s ease-in-out infinite;
+	}
+
+	/* ── Mini vinyle Jukebox ─────────────────────────────────────────────── */
 	@keyframes vinyl-spin {
 		from { transform: rotate(0deg); }
 		to   { transform: rotate(360deg); }
 	}
-	.vinyl-disc {
-		animation: vinyl-spin 3.5s linear infinite;
-		transform-origin: 0 0;
+	.vinyl-mini {
+		animation: vinyl-spin 2.8s linear infinite;
 	}
-	.vinyl-disc.paused {
+	.vinyl-mini.paused {
 		animation-play-state: paused;
 	}
 
-	/* ── Ondes concentriques — peers qui parlent ───────────────────────────── */
-	@keyframes ring-spread {
-		0%   { transform: scale(1);   opacity: 0.55; }
-		100% { transform: scale(2.7); opacity: 0;    }
-	}
-	.speak-ring {
-		animation: ring-spread 1.6s ease-out infinite;
-	}
-
-	/* ── Respiration ambiante de la table ──────────────────────────────────── */
-	@keyframes glow-breathe {
-		0%, 100% { opacity: 0.7; }
-		50%       { opacity: 1.0; }
-	}
-	.table-glow {
-		animation: glow-breathe 5s ease-in-out infinite;
-	}
-
-	/* ── Halo du bouton "Rejoindre" ────────────────────────────────────────── */
-	@keyframes halo-pulse {
-		0%, 100% { opacity: 0.18; transform: scale(1);    }
-		50%       { opacity: 0.38; transform: scale(1.08); }
-	}
-	.join-halo {
-		animation: halo-pulse 2.8s ease-in-out infinite;
+	/* ── Hover Jukebox idle ──────────────────────────────────────────────── */
+	.jukebox-idle:hover {
+		color: rgba(200, 145, 74, 0.75) !important;
 	}
 </style>
