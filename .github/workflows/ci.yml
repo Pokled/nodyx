@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Tests (nodyx-core)
+  test-node:
+    name: Node.js — typecheck + tests
     runs-on: ubuntu-latest
 
     steps:
@@ -19,14 +19,47 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: nodyx-core/package-lock.json
 
       - name: Install dependencies
         working-directory: nodyx-core
         run: npm ci
 
-      - name: Run tests
+      - name: TypeScript — typecheck
+        working-directory: nodyx-core
+        run: npx tsc --noEmit
+
+      - name: Vitest — run tests
         working-directory: nodyx-core
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-secret-at-least-32-chars-long' }}
           NODE_ENV: test
         run: npm test
+
+  test-rust:
+    name: Rust — build + tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            nodyx-p2p/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('nodyx-p2p/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Rust — build
+        working-directory: nodyx-p2p
+        run: cargo build -p nodyx-server
+
+      - name: Rust — tests
+        working-directory: nodyx-p2p
+        run: cargo test -p nodyx-server

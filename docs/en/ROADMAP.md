@@ -22,6 +22,7 @@
 | **Phase 4.6** | Active defense & runtime security (v1.9.0) | ✅ Complete |
 | **Phase 4.7** | 2FA — TOTP + Nodyx Signet as 2nd factor (v1.9.1) | ✅ Complete |
 | **Phase 4.8** | Production stability & cross-runtime hardening (v1.9.3) | ✅ Complete |
+| **Phase 4.9** | Process isolation, test coverage & CI hardening (v1.9.4) | ✅ Complete |
 | Phase 5 | Mobile + Nodes + Reputation | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
@@ -521,6 +522,21 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [x] **systemd rebrand** — `nodyx-relay.service` description and `SyslogIdentifier` updated to `nodyx-relay`
 
 **Validation:** 63/63 Node.js tests green · Rust build 0 errors · Caddy validate OK
+
+---
+
+## PHASE 4.9 — Process isolation, test coverage & CI hardening ✅ COMPLETE
+### Goal: Zero root processes, full test coverage across both runtimes, reproducible CI pipeline
+
+- [x] **Process isolation — User=nodyx** — All application processes now run as the dedicated `nodyx` system user; only systemd and code-server remain root. Covers: `nexus-turn.service` (was root), `pm2-nodyx.service` (replaces `pm2-root.service`), `nodyx-relay.service` and `nodyx-server.service` (already nodyx). `/home/nodyx` created with PM2_HOME.
+- [x] **File permission tightening** — `nodyx-frontend/.env` and `nodyx-hub/.env` changed from 644 (world-readable) to `root:nodyx 640`; `uploads/` directory transferred to `nodyx:nodyx`
+- [x] **Node.js test suite — 181/181** — 6 new test files covering modules, polls, search, notifications, wiki, middleware-extended. Root causes fixed: `vi.resetAllMocks()` destroying Redis mock implementations, module-level `_communityId` cache isolation, `db.connect()` transaction mocking
+- [x] **Rust test suite — 18/18** — First Rust tests written for `nodyx-server`: `error.rs` (11 tests — all HTTP status codes, JSON body format, internal error no-leak, `Retry-After` header) + `extractors.rs` (7 tests — `Claims` serde rename, JWT decode, wrong secret rejection, expired token, malformed token)
+- [x] **Critical dependency pinning** — Security-sensitive packages pinned to exact versions in `nodyx-core/package.json`: `fastify`, `socket.io`, `jsonwebtoken`, `argon2`, `bcrypt`, `pg`, `ioredis`, `web-push` — prevents silent upgrades breaking production
+- [x] **CI pipeline hardened** — GitHub Actions updated: two parallel jobs (`test-node`, `test-rust`), npm cache, `npx tsc --noEmit` typecheck gate before vitest, Rust build + test with cargo cache
+- [x] **Migration gap filled** — `052_placeholder.sql` added to close the sequence gap between 051 and 053
+
+**Validation:** 181/181 Node.js tests green · 18/18 Rust tests green · TypeScript 0 errors · All services active as nodyx user
 
 ---
 
