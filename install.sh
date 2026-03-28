@@ -1,21 +1,29 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Nodyx — One-click node installer
-#  Supports : Ubuntu 22.04 / 24.04, Debian 11 / 12 / 13
+#  Nodyx — Installeur one-click / One-click installer
+#  Ubuntu 22.04 / 24.04  ·  Debian 11 / 12 / 13  ·  ARM64 supporté
 #
-#  Prérequis / Prerequisites:
-#    Sur un système minimal, installez d'abord git et curl :
-#    On a minimal system, install git and curl first:
-#      apt-get install -y git curl
+#  ── Installation (recommandé) ───────────────────────────────────────────────
 #
-#  Usage — Option A (clone + run) :
-#    git clone https://github.com/Pokled/Nodyx.git && cd Nodyx && sudo bash install.sh
-#
-#  Usage — Option B (curl, sans git / without git) :
 #    curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh | sudo bash
 #
-#  Usage — Option C (wget, si curl absent / if curl missing) :
+#  ── Mise à jour d'une instance existante ────────────────────────────────────
+#
+#    curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh | sudo bash -s -- --upgrade
+#
+#  ── Installation silencieuse (CI/CD, Ansible) ───────────────────────────────
+#
+#    curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh | sudo bash -s -- \
+#      --domain=ma-communaute.fr  --name="Ma Communauté"  --slug=ma-communaute \
+#      --admin-user=admin  --admin-email=admin@ma-communaute.fr \
+#      --admin-password=MonMotDePasse  --yes
+#
+#  ── Autres options ──────────────────────────────────────────────────────────
+#
 #    wget -qO- https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh | sudo bash
+#    git clone https://github.com/Pokled/Nodyx.git && cd Nodyx && sudo bash install.sh
+#    sudo bash install.sh --help       (liste tous les flags)
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
