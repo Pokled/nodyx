@@ -9,6 +9,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.9.4] — 2026-03-28
+
+### Security — Process isolation
+- All application processes now run as `nodyx` system user — `nexus-turn.service` switched from `User=root` to `User=nodyx`; `pm2-root.service` replaced by `pm2-nodyx.service` (`User=nodyx`, `PM2_HOME=/home/nodyx/.pm2`)
+- `/home/nodyx` created with correct ownership (nodyx:nodyx 750)
+- `nodyx-frontend/.env` and `nodyx-hub/.env` permissions tightened: 644 → `root:nodyx 640`
+- `uploads/` directory transferred to `nodyx:nodyx`
+
+### Testing — Node.js 181/181
+- 6 new test files: `modules.test.ts`, `polls.test.ts`, `search.test.ts`, `notifications.test.ts`, `wiki.test.ts`, `middleware-extended.test.ts`
+- Fixed `vi.resetAllMocks()` pattern — `restoreRedis()` helper added to all `beforeEach` blocks to restore `redis.exists` and `redis.setex` implementations destroyed by reset
+- Fixed module-level `_communityId` cache isolation across test runs using SQL-content-aware `mockImplementation`
+- Fixed `db.connect()` transaction mocking for polls routes with `makeMockClient()` helper
+
+### Testing — Rust 18/18
+- First Rust unit tests for `nodyx-server`: `error.rs` (11 tests — HTTP status mapping, JSON body format, internal error leak prevention, `Retry-After` header on 429) and `extractors.rs` (7 tests — `Claims` serde `userId` rename, JWT decode, wrong secret rejection, expired token rejection, malformed token rejection)
+
+### Stability
+- Critical dependencies pinned to exact versions: `fastify@5.8.2`, `socket.io@4.8.3`, `jsonwebtoken@9.0.3`, `argon2@0.44.0`, `bcrypt@6.0.0`, `pg@8.18.0`, `ioredis@5.9.3`, `web-push@3.6.7`
+- CI pipeline: two parallel jobs (`test-node`, `test-rust`), npm + cargo cache, `tsc --noEmit` typecheck gate, Rust build + tests
+- Migration sequence gap closed: `052_placeholder.sql` added between 051 and 053
+
+---
+
 ## [1.9.3] — 2026-03-25
 
 ### Stability — Production hardening & cross-runtime Redis coherence

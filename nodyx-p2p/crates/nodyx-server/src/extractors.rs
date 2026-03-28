@@ -119,3 +119,130 @@ pub async fn optional_auth(headers: &HeaderMap, state: &AppState) -> Option<Uuid
 
     Uuid::parse_str(&token_data.claims.user_id).ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jsonwebtoken::{encode, EncodingKey, Header};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn now_secs() -> usize {
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as usize
+    }
+
+    fn make_token(user_id: &str, username: &str, secret: &str) -> String {
+        let payload = serde_json::json!({
+            "userId":   user_id,
+            "username": username,
+            "exp": now_secs() + 3600,
+            "iat": now_secs(),
+        });
+        encode(
+            &Header::default(),
+            &payload,
+            &EncodingKey::from_secret(secret.as_bytes()),
+        )
+        .unwrap()
+    }
+
+    // ── Claims serde ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn claims_deserializes_user_id_renamed_field() {
+        // userId (camelCase) → user_id (snake_case) via #[serde(rename = "userId")]
+        let json = r#"{"userId":"abc-123","username":"testuser","exp":9999999999,"iat":0}"#;
+        let claims: Claims = serde_json::from_str(json).unwrap();
+        assert_eq!(claims.user_id, "abc-123");
+        assert_eq!(claims.username, "testuser");
+    }
+
+    #[test]
+    fn claims_rejects_missing_user_id() {
+        let json = r#"{"username":"testuser","exp":9999999999,"iat":0}"#;
+        let result: Result<Claims, _> = serde_json::from_str(json);
+        assert!(result.is_err(), "Claims without userId must fail deserialization");
+    }
+
+    #[test]
+    fn claims_rejects_missing_username() {
+        let json = r#"{"userId":"abc","exp":9999999999,"iat":0}"#;
+        let result: Result<Claims, _> = serde_json::from_str(json);
+        assert!(result.is_err(), "Claims without username must fail deserialization");
+    }
+
+    // ── JWT decode ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn jwt_decodes_valid_token_with_correct_secret() {
+        let secret = "test-jwt-secret";
+        let token = make_token("user-uuid-1", "pokled", secret);
+
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["exp", "userId", "username"]);
+
+        let data = decode::<Claims>(
+            &token,
+            &DecodingKey::from_secret(secret.as_bytes()),
+            &validation,
+        );
+        assert!(data.is_ok());
+        let claims = data.unwrap().claims;
+        assert_eq!(claims.user_id, "user-uuid-1");
+        assert_eq!(claims.username, "pokled");
+    }
+
+    #[test]
+    fn jwt_rejects_token_signed_with_wrong_secret() {
+        let token = make_token("user-uuid-1", "pokled", "correct-secret");
+
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["exp", "userId", "username"]);
+
+        let result = decode::<Claims>(
+            &token,
+            &DecodingKey::from_secret(b"wrong-secret"),
+            &validation,
+        );
+        assert!(result.is_err(), "JWT signed with wrong secret must be rejected");
+    }
+
+    #[test]
+    fn jwt_rejects_expired_token() {
+        let secret = "test-jwt-secret";
+        let expired_payload = serde_json::json!({
+            "userId":   "user-uuid-1",
+            "username": "pokled",
+            "exp": 1000u64,   // epoch 1000 — expired since 1970-01-01T00:16:40Z
+            "iat": 0u64,
+        });
+        let token = encode(
+            &Header::default(),
+            &expired_payload,
+            &EncodingKey::from_secret(secret.as_bytes()),
+        )
+        .unwrap();
+
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["exp", "userId", "username"]);
+
+        let result = decode::<Claims>(
+            &token,
+            &DecodingKey::from_secret(secret.as_bytes()),
+            &validation,
+        );
+        assert!(result.is_err(), "Expired JWT must be rejected");
+    }
+
+    #[test]
+    fn jwt_rejects_malformed_token() {
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["exp", "userId", "username"]);
+
+        let result = decode::<Claims>(
+            "not.a.valid.jwt",
+            &DecodingKey::from_secret(b"secret"),
+            &validation,
+        );
+        assert!(result.is_err(), "Malformed JWT must be rejected");
+    }
+}
