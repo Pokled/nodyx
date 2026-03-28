@@ -92,6 +92,26 @@ _nodyx_upgrade() {
   fi
   echo ""
 
+  # Garantir que l'utilisateur système 'nodyx' existe (peut manquer sur les anciennes installs)
+  if ! id -u nodyx &>/dev/null; then
+    info "Création de l'utilisateur système 'nodyx' (migration depuis root PM2)..."
+    useradd -r -s /usr/sbin/nologin -m -d /home/nodyx nodyx
+    ok "Utilisateur 'nodyx' créé"
+  fi
+  mkdir -p /home/nodyx/.pm2/logs
+  chown -R nodyx:nodyx /home/nodyx/.pm2 2>/dev/null || true
+
+  # pm2-logrotate si absent
+  if ! pm2 list 2>/dev/null | grep -q 'pm2-logrotate'; then
+    npm install -g pm2-logrotate --silent 2>/dev/null || true
+    pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
+    pm2 set pm2-logrotate:retain 7 2>/dev/null || true
+  fi
+
+  # Arrêter les anciens processus PM2 root (migration)
+  pm2 delete nodyx-core     2>/dev/null || true
+  pm2 delete nodyx-frontend 2>/dev/null || true
+
   info "Récupération du code..."
   git -C "$dir" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits manuellement."
   ok "Code à jour"
