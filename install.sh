@@ -113,7 +113,8 @@ _nodyx_upgrade() {
   pm2 delete nodyx-frontend 2>/dev/null || true
 
   info "Récupération du code..."
-  git -c safe.directory="$dir" -C "$dir" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits manuellement."
+  git config --global --add safe.directory "$dir" 2>/dev/null || true
+  git -C "$dir" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits manuellement."
   ok "Code à jour"
 
   info "Rebuild backend (nodyx-core)..."
