@@ -560,8 +560,24 @@ fi
 _check_port()    { ss -tlnp "sport = :$1" 2>/dev/null | grep -q LISTEN; }
 _get_port_proc() { ss -tlnp "sport = :$1" 2>/dev/null | grep -oP 'users:\(\("\K[^"]+' | head -1 || echo ""; }
 
-declare -A _PORT_BLOCKER_MAP   # service → "ports..."
+# Port conflict detection — tableau associatif remplacé par deux listes parallèles
+# (compatibilité bash 4.x/5.x ARM, évite l'erreur set -u sur declare -A vide)
+_PORT_BLOCKER_SVCS=()   # noms de services bloquants
+_PORT_BLOCKER_PORTS=()  # ports correspondants (même index)
 _PORT_CADDY_FOUND=false
+
+_pb_add() {
+  local svc="$1" port="$2"
+  local i
+  for i in "${!_PORT_BLOCKER_SVCS[@]}"; do
+    if [[ "${_PORT_BLOCKER_SVCS[$i]}" == "$svc" ]]; then
+      _PORT_BLOCKER_PORTS[$i]+="${port} "
+      return
+    fi
+  done
+  _PORT_BLOCKER_SVCS+=("$svc")
+  _PORT_BLOCKER_PORTS+=("${port} ")
+}
 
 for _port in 80 443 3000 4173; do
   if _check_port "$_port"; then
@@ -572,35 +588,33 @@ for _port in 80 443 3000 4173; do
         if [[ "$_port" == "80" || "$_port" == "443" ]]; then
           _PORT_CADDY_FOUND=true
         else
-          _PORT_BLOCKER_MAP["caddy"]+="${_port} "
+          _pb_add "caddy" "$_port"
         fi ;;
       nginx|apache2|httpd)
-        _PORT_BLOCKER_MAP["$_proc_base"]+="${_port} " ;;
+        _pb_add "$_proc_base" "$_port" ;;
       "")
-        # Process name not found via ss — try lsof/fuser fallback
         _proc_fb=$(lsof -ti ":${_port}" 2>/dev/null | xargs -I{} ps -p {} -o comm= 2>/dev/null | head -1 || true)
-        [[ -n "$_proc_fb" ]] && _PORT_BLOCKER_MAP["${_proc_fb}"]+="${_port} " \
-                              || _PORT_BLOCKER_MAP["inconnu"]+="${_port} "
+        _pb_add "${_proc_fb:-inconnu}" "$_port"
         ;;
       *)
-        _PORT_BLOCKER_MAP["${_proc_base}"]+="${_port} " ;;
+        _pb_add "$_proc_base" "$_port" ;;
     esac
   fi
 done
 
 $_PORT_CADDY_FOUND && info "Caddy déjà présent sur 80/443 — il sera reconfiguré automatiquement."
 
-if [[ ${#_PORT_BLOCKER_MAP[@]} -gt 0 ]]; then
+if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
   echo ""
   echo -e "  ${YELLOW}${BOLD}⚠  Services en conflit avec les ports requis par Nodyx :${RESET}"
-  for _svc in "${!_PORT_BLOCKER_MAP[@]}"; do
-    echo -e "  ${YELLOW}  ● ${BOLD}${_svc}${RESET}${YELLOW} → port(s) ${_PORT_BLOCKER_MAP[$_svc]}${RESET}"
+  for _i in "${!_PORT_BLOCKER_SVCS[@]}"; do
+    echo -e "  ${YELLOW}  ● ${BOLD}${_PORT_BLOCKER_SVCS[$_i]}${RESET}${YELLOW} → port(s) ${_PORT_BLOCKER_PORTS[$_i]}${RESET}"
   done
   echo ""
 
   # Services connus qu'on peut arrêter proprement
   _stoppable=()
-  for _svc in "${!_PORT_BLOCKER_MAP[@]}"; do
+  for _svc in "${_PORT_BLOCKER_SVCS[@]}"; do
     if [[ "$_svc" =~ ^(nginx|apache2|httpd)$ ]] && systemctl is-active --quiet "$_svc" 2>/dev/null; then
       _stoppable+=("$_svc")
     fi
