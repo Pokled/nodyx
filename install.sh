@@ -1675,7 +1675,22 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
           if [[ -n "$REGISTER_TOKEN" ]]; then
             NODYX_DIRECTORY_TOKEN="$REGISTER_TOKEN"
             NODYX_SUBDOMAIN="${REGISTER_SLUG:-${COMMUNITY_SLUG}.nodyx.org}"
+            DOMAIN="${COMMUNITY_SLUG}.nodyx.org"
             ok "Enregistré ! Sous-domaine : ${BOLD}https://${NODYX_SUBDOMAIN}${RESET}"
+            # Injecter le token dans .env + mettre à jour le domaine partout
+            {
+              printf "\n# Annuaire nodyx.org\n"
+              printf "DIRECTORY_TOKEN=%s\n" "${NODYX_DIRECTORY_TOKEN}"
+              printf "DIRECTORY_API_URL=https://nodyx.org\n"
+              printf "SELF_URL=http://127.0.0.1:3000\n"
+              printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
+              printf "NODYX_GLOBAL_INDEXING=true\n"
+            } >> "${NODYX_DIR}/nodyx-core/.env"
+            # Mettre à jour FRONTEND_URL, PUBLIC_API_URL et ORIGIN avec le nouveau slug
+            sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=https://${DOMAIN}|" "${NODYX_DIR}/nodyx-core/.env"
+            sed -i "s|^PUBLIC_API_URL=.*|PUBLIC_API_URL=https://${DOMAIN}|" "${NODYX_DIR}/nodyx-frontend/.env"
+            sed -i "s|ORIGIN: 'https://[^']*'|ORIGIN: 'https://${DOMAIN}'|g" "${NODYX_DIR}/ecosystem.config.js"
+            cd "${NODYX_DIR}" && runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core 2>/dev/null || true
           else
             die "Enregistrement échoué avec le nouveau slug. Vérifie ta connexion et réessaie."
           fi
