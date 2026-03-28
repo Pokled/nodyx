@@ -47,6 +47,7 @@
 		return Date.now() - new Date(last_seen).getTime() < 5 * 60 * 1000;
 	}
 	const memberCount     = $derived((data as any).memberCount as number ?? 0);
+	const mods            = $derived((data as any).modules as Record<string, boolean> ?? {});
 
 	const isActive = (href: string) =>
 		href === '/'
@@ -672,11 +673,11 @@
 					   style="color: #374151">Navigation</p>
 					<div class="space-y-px">
 						{#each [
-							{ href: '/',         label: 'Accueil',    icon: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z' },
-							{ href: '/forum',    label: 'Forum',      icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-							{ href: '/chat',     label: 'Chat',       icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' },
-							{ href: '/dm',       label: 'Messages',   icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-						] as item}
+							{ href: '/',         label: 'Accueil',    icon: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',                                                                                                                                                 show: true },
+							{ href: '/forum',    label: 'Forum',      icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',                          show: true },
+							{ href: '/chat',     label: 'Chat',       icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',                                                                                                                                    show: mods.chat !== false },
+							{ href: '/dm',       label: 'Messages',   icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',                                                                                    show: mods.dm !== false },
+						].filter(i => i.show) as item}
 						<a href={item.href}
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"
 						   style="color: {isActive(item.href) ? '#e2e8f0' : '#6b7280'}; background: {isActive(item.href) ? 'rgba(124,58,237,.12)' : 'transparent'}">
@@ -699,14 +700,14 @@
 					   style="color: #374151">Modules</p>
 					<div class="space-y-px">
 						{#each [
-							{ href: '/calendar', label: 'Calendrier',  icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-							{ href: '/polls',    label: 'Sondages',    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-							{ href: '/tasks',    label: 'Tâches',      icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-							{ href: '/library',  label: 'Bibliothèque', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-							{ href: '/garden',   label: 'Jardin',      icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' },
-							{ href: '/discover', label: 'Découvrir',   icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-							...((data as any).modules?.wiki ? [{ href: '/wiki', label: 'Wiki', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' }] : []),
-						] as item}
+							{ href: '/calendar', label: 'Calendrier',   icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',                                                                                                                                                                                                          show: mods.calendar !== false },
+							{ href: '/polls',    label: 'Sondages',     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',                                                                                          show: mods.polls !== false },
+							{ href: '/tasks',    label: 'Tâches',       icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',                                                                                                                                                    show: mods.tasks !== false },
+							{ href: '/wiki',     label: 'Wiki',         icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',                                             show: !!mods.wiki },
+							{ href: '/library',  label: 'Bibliothèque', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',                                             show: true },
+							{ href: '/garden',   label: 'Jardin',       icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',                                                                                                                                            show: true },
+							{ href: '/discover', label: 'Découvrir',    icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',                                                                                         show: true },
+						].filter(i => i.show) as item}
 						<a href={item.href}
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"
 						   style="color: {isActive(item.href) ? '#e2e8f0' : '#6b7280'}; background: {isActive(item.href) ? 'rgba(124,58,237,.12)' : 'transparent'}">
@@ -724,12 +725,13 @@
 				</div>
 
 				<!-- COMMUNICATIONS -->
-				{#if layoutTextChannels.length > 0 || layoutVoiceChannels.length > 0}
+				{#if (layoutTextChannels.length > 0 && mods.chat !== false) || (layoutVoiceChannels.length > 0 && mods.voice !== false)}
 				<div>
 					<p class="px-2 mb-1.5 text-[9px] uppercase tracking-[.2em] font-black"
 					   style="color: #374151">Communications</p>
 					<div class="space-y-px">
-						{#each layoutTextChannels as ch}
+						{#if mods.chat !== false}
+					{#each layoutTextChannels as ch}
 						{@const chActive = activeChatChannelId === ch.id}
 						<a href="/chat?channel={ch.id}"
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"
@@ -741,6 +743,8 @@
 							<span class="text-xs truncate">{ch.name}</span>
 						</a>
 						{/each}
+					{/if}
+					{#if mods.voice !== false}
 						{#each layoutVoiceChannels as ch}
 						{@const chActive = activeChatChannelId === ch.id}
 						{@const inThis   = voiceState.active && voiceState.channelId === ch.id}
@@ -801,6 +805,7 @@
 							</div>
 						{/if}
 						{/each}
+					{/if}
 					</div>
 				</div>
 				{/if}
