@@ -132,15 +132,15 @@ _nodyx_upgrade() {
 
   info "Redémarrage des services..."
   chown -R nodyx:nodyx "$dir" 2>/dev/null || true
-  sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart "${dir}/ecosystem.config.js" --update-env 2>/dev/null \
-    || sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${dir}/ecosystem.config.js" --update-env
-  sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 save
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart "${dir}/ecosystem.config.js" --update-env 2>/dev/null \
+    || runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${dir}/ecosystem.config.js" --update-env
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
 
   _new_ver=$(node -p "require('${dir}/nodyx-core/package.json').version" 2>/dev/null || echo "$to_ver")
   echo ""
   echo -e "  ${GREEN}${BOLD}✔  Nodyx v${_new_ver} opérationnel${RESET}"
   echo ""
-  sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null || true
   echo ""
 }
 
@@ -437,7 +437,7 @@ if command -v pm2 &>/dev/null && pm2 list 2>/dev/null | grep -qE 'nodyx-core|nod
   _EXISTING_MSGS+=("  ● Processus PM2 actifs (daemon root)")
 fi
 # Processus PM2 actifs (user nodyx)
-if id -u nodyx &>/dev/null && sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -qE 'nodyx-core|nodyx-frontend'; then
+if id -u nodyx &>/dev/null && runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -qE 'nodyx-core|nodyx-frontend'; then
   _EXISTING=true
   _EXISTING_MSGS+=("  ● Processus PM2 actifs (daemon nodyx)")
 fi
@@ -1392,13 +1392,13 @@ chown -R nodyx:nodyx "${NODYX_DIR}"
 # Arrêter les anciens processus nodyx (root ou nodyx) sans toucher aux autres apps PM2
 pm2 delete nodyx-core     2>/dev/null || true
 pm2 delete nodyx-frontend 2>/dev/null || true
-sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-core     2>/dev/null || true
-sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-frontend  2>/dev/null || true
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-core     2>/dev/null || true
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-frontend  2>/dev/null || true
 
 # Démarrer les apps sous l'utilisateur nodyx
-_rollback_register "sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-core nodyx-frontend 2>/dev/null || true #rollback PM2"
-sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env
-sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 save
+_rollback_register "runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-core nodyx-frontend 2>/dev/null || true #rollback PM2"
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
 
 # Service systemd pm2-nodyx (démarrage automatique au boot)
 cat > /etc/systemd/system/pm2-nodyx.service <<SVC
@@ -1432,14 +1432,14 @@ ok "PM2 configuré sous l'utilisateur 'nodyx'"
 info "Vérification du démarrage des processus (5s)..."
 sleep 5
 for _app in nodyx-core nodyx-frontend; do
-  _st=$(sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null \
+  _st=$(runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null \
     | grep " ${_app} " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
   if [[ "$_st" == "online" ]]; then
     ok "  $_app — online"
   else
     warn "$_app — statut : ${_st}"
     warn "Logs de démarrage :"
-    sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 logs "$_app" --lines 20 --nostream 2>/dev/null || true
+    runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs "$_app" --lines 20 --nostream 2>/dev/null || true
   fi
 done
 
@@ -1466,9 +1466,9 @@ printf "\r\033[2K"
 if ! $_BACKEND_READY; then
   warn "Backend non opérationnel après 180s."
   warn "Logs PM2 (nodyx-core) :"
-  sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core --lines 35 --nostream 2>/dev/null || true
-  warn "Pour relancer : sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core"
-  warn "Pour déboguer : sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core"
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core --lines 35 --nostream 2>/dev/null || true
+  warn "Pour relancer : runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core"
+  warn "Pour déboguer : runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core"
   warn "Tentative de création du compte admin quand même..."
 fi
 
@@ -1592,7 +1592,7 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
       printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
       printf "NODYX_GLOBAL_INDEXING=true\n"
     } >> "${NODYX_DIR}/nodyx-core/.env"
-    cd "${NODYX_DIR}" && sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core 2>/dev/null || true
+    cd "${NODYX_DIR}" && runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core 2>/dev/null || true
   else
     # Check for slug conflict (409) — common on reinstall
     if echo "$REGISTER_RESPONSE" | grep -q 'Slug already taken'; then
@@ -1730,12 +1730,12 @@ ok "Frontend compilé"
 
 info "Redémarrage des services..."
 cd "$NODYX_DIR"
-sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart ecosystem.config.js --update-env
-sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 save
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart ecosystem.config.js --update-env
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
 
 echo ""
 ok "Nodyx mis à jour et redémarré."
-sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list
 UPDATESCRIPT3
 
 chmod +x "$UPDATE_SCRIPT"
@@ -1780,7 +1780,7 @@ done
 # ── Applications PM2 ─────────────────────────────────────────────────────────
 _sect "Applications PM2"
 for _app in nodyx-core nodyx-frontend; do
-  _raw=$(sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 show "$_app" 2>/dev/null || echo "")
+  _raw=$(runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 show "$_app" 2>/dev/null || echo "")
   _status=$(echo "$_raw" | grep -i '│ status' | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
   _mem=$(echo "$_raw" | grep -iE 'heap size|memory usage' | grep -oE '[0-9.]+ ?(mb|gb)' -i | head -1 || echo "?")
   _restarts=$(echo "$_raw" | grep -i 'restart' | grep -oE '[0-9]+' | tail -1 || echo "?")
@@ -1788,7 +1788,7 @@ for _app in nodyx-core nodyx-frontend; do
   if [[ "$_status" == "online" ]]; then
     _pass "$_app" "↑${_uptime}  mem:${_mem}  restarts:${_restarts}"
   else
-    _fail "$_app" "[${_status}] — sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart ${_app}"
+    _fail "$_app" "[${_status}] — runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart ${_app}"
   fi
 done
 
@@ -1931,12 +1931,12 @@ done
 # ── Nodyx (PM2) ───────────────────────────────────────────────────────────────
 _hc_sect "Nodyx (PM2)"
 for _app in nodyx-core nodyx-frontend; do
-  _pm2=$(sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null \
+  _pm2=$(runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null \
     | grep " $_app " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
   if [[ "$_pm2" == "online" ]]; then
     _hc_pass "$_app"
   else
-    _hc_fail "$_app  ${YELLOW}[${_pm2}] — sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart $_app${RESET}"
+    _hc_fail "$_app  ${YELLOW}[${_pm2}] — runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart $_app${RESET}"
   fi
 done
 
@@ -2040,9 +2040,9 @@ echo ""
 echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
 echo -e "     ${BOLD}${CYAN}▸ Gestion${RESET}"
-echo -e "       sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list"
-echo -e "       sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core"
-echo -e "       sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart all"
+echo -e "       runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
+echo -e "       runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core"
+echo -e "       runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart all"
 echo -e "       ${CYAN}# ou via systemd :${RESET}"
 echo -e "       sudo systemctl restart pm2-nodyx"
 echo ""
