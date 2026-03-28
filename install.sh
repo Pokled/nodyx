@@ -70,9 +70,156 @@ gen_secret()  { openssl rand -hex 32; }
 gen_pass()    { openssl rand -base64 18 | tr -d '/+='; }
 slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'; }
 
+# Retourne 0 (true) si $1 > $2 en semver
+version_gt() { [[ "$(printf '%s\n' "$1" "$2" | sort -V | tail -1)" == "$1" ]] && [[ "$1" != "$2" ]]; }
+
+# Chemin rapide : mise à jour / réparation sans reconfiguration
+_nodyx_upgrade() {
+  local from_ver="$1" to_ver="$2" dir="$3"
+  echo ""
+  if [[ "$from_ver" != "$to_ver" ]]; then
+    echo -e "${GREEN}${BOLD}  ━━━  Mise à jour Nodyx v${from_ver} → v${to_ver}  ━━━${RESET}"
+  else
+    echo -e "${CYAN}${BOLD}  ━━━  Réparation Nodyx v${from_ver}  ━━━${RESET}"
+  fi
+  echo ""
+
+  info "Récupération du code..."
+  git -C "$dir" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits manuellement."
+  ok "Code à jour"
+
+  info "Rebuild backend (nodyx-core)..."
+  cd "${dir}/nodyx-core"
+  npm install --no-fund --no-audit --silent || die "npm install backend échoué."
+  npm run build || die "Build backend échoué. Consulte les logs ci-dessus."
+  ok "Backend compilé"
+
+  info "Rebuild frontend (nodyx-frontend)..."
+  cd "${dir}/nodyx-frontend"
+  export NODE_OPTIONS="--max-old-space-size=1024"
+  npm install --no-fund --no-audit --silent || die "npm install frontend échoué."
+  npm run build || die "Build frontend échoué."
+  unset NODE_OPTIONS
+  ok "Frontend compilé"
+
+  info "Redémarrage des services..."
+  chown -R nodyx:nodyx "$dir" 2>/dev/null || true
+  sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart "${dir}/ecosystem.config.js" --update-env 2>/dev/null \
+    || sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${dir}/ecosystem.config.js" --update-env
+  sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 save
+
+  _new_ver=$(node -p "require('${dir}/nodyx-core/package.json').version" 2>/dev/null || echo "$to_ver")
+  echo ""
+  echo -e "  ${GREEN}${BOLD}✔  Nodyx v${_new_ver} opérationnel${RESET}"
+  echo ""
+  sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null || true
+  echo ""
+}
+
+# ── Rollback trap ─────────────────────────────────────────────────────────────
+_INSTALL_COMPLETE=false
+_ROLLBACK_STEPS=()
+
+_rollback_register() { _ROLLBACK_STEPS+=("$1"); }
+
+_nodyx_rollback() {
+  $_INSTALL_COMPLETE && return 0
+  local _ec=$?
+  [[ ${#_ROLLBACK_STEPS[@]} -eq 0 && $_ec -eq 0 ]] && return 0
+  echo ""
+  echo -e "${RED}${BOLD}  ✘  Installation échouée (code: ${_ec}) — rollback en cours...${RESET}"
+  for (( _ri=${#_ROLLBACK_STEPS[@]}-1; _ri>=0; _ri-- )); do
+    info "  ↩ ${_ROLLBACK_STEPS[$_ri]%%#*}"
+    eval "${_ROLLBACK_STEPS[$_ri]}" 2>/dev/null || true
+  done
+  echo ""
+  echo -e "${YELLOW}  État partiel possible. Lance ${BOLD}sudo nodyx-doctor${RESET}${YELLOW} pour diagnostiquer.${RESET}"
+  echo ""
+}
+trap '_nodyx_rollback' EXIT
+
+# ── Auto-backup DB avant action destructive ───────────────────────────────────
+_auto_backup_db() {
+  local reason="${1:-pre-action}"
+  [[ "${_DB_EXISTS:-false}" == "true" ]] || return 0
+  local bak="/root/nodyx-db-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+  info "Sauvegarde automatique de la DB (${reason})..."
+  if sudo -u postgres pg_dump nodyx 2>/dev/null | gzip > "$bak"; then
+    local sz; sz=$(du -sh "$bak" 2>/dev/null | cut -f1 || echo "?")
+    ok "Sauvegarde : ${BOLD}${bak}${RESET}  (${sz})"
+    _rollback_register "warn 'Restaurer la DB si besoin : sudo gunzip -c ${bak} | sudo -u postgres psql nodyx'"
+  else
+    warn "Sauvegarde DB échouée (DB vide ou inaccessible) — on continue."
+    rm -f "$bak"
+  fi
+}
+
 # ── Version ────────────────────────────────────────────────────────────────────
-NODYX_VERSION="1.9.3"
-INSTALLER_VERSION="1.9.3"
+NODYX_VERSION="1.9.4"
+INSTALLER_VERSION="1.9.4"
+
+# ── CLI flags ─────────────────────────────────────────────────────────────────
+_FORCE_MODE=""        # upgrade | repair | reinstall | wipe (bypass detection menu)
+_AUTO_YES=false       # --yes : passer toutes les confirmations
+SKIP_TURN=false       # --no-turn
+SKIP_SUBDOMAIN=false  # --no-subdomain
+_ARG_DOMAIN=""  _ARG_SLUG=""  _ARG_NAME=""
+_ARG_ADMIN_USER=""  _ARG_ADMIN_EMAIL=""  _ARG_ADMIN_PASS=""
+
+for _arg in "$@"; do
+  case "$_arg" in
+    --upgrade)            _FORCE_MODE="upgrade"   ;;
+    --repair)             _FORCE_MODE="repair"    ;;
+    --reinstall)          _FORCE_MODE="reinstall" ;;
+    --wipe)               _FORCE_MODE="wipe"      ;;
+    --yes|-y)             _AUTO_YES=true           ;;
+    --no-turn)            SKIP_TURN=true           ;;
+    --no-subdomain)       SKIP_SUBDOMAIN=true      ;;
+    --domain=*)           _ARG_DOMAIN="${_arg#*=}" ;;
+    --slug=*)             _ARG_SLUG="${_arg#*=}"   ;;
+    --name=*)             _ARG_NAME="${_arg#*=}"   ;;
+    --admin-user=*)       _ARG_ADMIN_USER="${_arg#*=}"  ;;
+    --admin-email=*)      _ARG_ADMIN_EMAIL="${_arg#*=}" ;;
+    --admin-password=*)   _ARG_ADMIN_PASS="${_arg#*=}"  ;;
+    --help|-h)
+      echo ""
+      echo "  Usage: bash install.sh [OPTIONS]"
+      echo ""
+      echo "  Modes (bypass du menu de détection) :"
+      echo "    --upgrade          Mettre à jour l'instance existante (rebuild+restart)"
+      echo "    --repair           Réparer sans reconfigurer (rebuild+restart)"
+      echo "    --reinstall        Réinstaller en préservant la DB"
+      echo "    --wipe             Réinstaller + effacer la DB (DANGER)"
+      echo ""
+      echo "  Configuration (évite les prompts) :"
+      echo "    --domain=DOMAIN         Domaine de l'instance"
+      echo "    --slug=SLUG             Identifiant de la communauté"
+      echo "    --name=NAME             Nom de la communauté"
+      echo "    --admin-user=USER       Nom d'utilisateur admin"
+      echo "    --admin-email=EMAIL     Email admin"
+      echo "    --admin-password=PASS   Mot de passe admin"
+      echo ""
+      echo "  Options :"
+      echo "    --yes, -y          Répondre oui à toutes les confirmations"
+      echo "    --no-turn          Ne pas installer nodyx-turn"
+      echo "    --no-subdomain     Ne pas enregistrer le sous-domaine nodyx.org"
+      echo "    --help             Afficher cette aide"
+      echo ""
+      exit 0 ;;
+    --*) warn "Flag inconnu : ${_arg} (ignoré)" ;;
+  esac
+done
+
+# Raccourci : --yes confirme automatiquement (remplace read -rp pour les confirmations)
+_confirm() {
+  # Usage: _confirm "message" [default=o]  → retourne 0 si oui, 1 si non
+  local msg="$1" default="${2:-o}"
+  if $_AUTO_YES; then info "${msg} → oui (--yes)"; return 0; fi
+  read -rp "$(echo -e "  ${BOLD}${msg} [O/n]: ${RESET}")" _c </dev/tty
+  _c="${_c:-$default}"
+  [[ "${_c,,}" != "n" ]]
+}
+
 #
 # TODO — Phase 6 (quand RHEL/Rocky/Alma sera ajouté) :
 #   Refacto modulaire en install/ (apt vs dnf, firewall, package names).
@@ -81,6 +228,12 @@ INSTALLER_VERSION="1.9.3"
 
 prompt() {
   local var="$1" msg="$2" default="${3:-}" val=''
+  # Si la variable est déjà pré-remplie (via CLI arg), sauter le prompt
+  local _preset="${!var:-}"
+  if [[ -n "$_preset" ]]; then
+    info "${msg}: ${BOLD}${_preset}${RESET}  ${CYAN}(pré-rempli)${RESET}"
+    return
+  fi
   if [[ -n "$default" ]]; then
     read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val </dev/tty
     val="${val:-$default}"
@@ -196,22 +349,268 @@ if [[ "$_ARCH" == "aarch64" ]]; then
   info "Architecture ARM64 détectée — le binaire Rollup sera vérifié après npm install."
 fi
 
-# RAM check — le build SvelteKit nécessite au moins 512 MB libres
+# RAM check — auto-swap si insuffisant (ne pas juste avertir, corriger)
 _RAM_FREE_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $7}' || echo 9999)
-if [[ "$_RAM_FREE_MB" -lt 400 ]]; then
-  warn "RAM disponible faible : ${_RAM_FREE_MB} MB (recommandé : 512 MB+)"
-  warn "Le build frontend peut échouer sur les machines avec peu de RAM."
-  warn "Astuce : sudo fallocate -l 1G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile"
-  read -rp "$(echo -e "  ${BOLD}Continuer quand même ? [o/N] ${RESET}")" _ram_confirm
-  [[ "${_ram_confirm,,}" != "o" ]] && die "Installation annulée — ajoute du swap et relance."
+_SWAP_TOTAL_MB=$(free -m 2>/dev/null | awk '/^Swap/{print $2}' || echo 0)
+if [[ "$_RAM_FREE_MB" -lt 512 ]]; then
+  warn "RAM disponible : ${_RAM_FREE_MB} MB (recommandé : 512 MB+)"
+  if [[ $(( _RAM_FREE_MB + _SWAP_TOTAL_MB )) -lt 512 ]]; then
+    info "RAM + swap insuffisants — création automatique d'un swapfile 1 GB..."
+    if [[ ! -f /swapfile ]]; then
+      fallocate -l 1G /swapfile 2>/dev/null \
+        || dd if=/dev/zero of=/swapfile bs=1M count=1024 status=none
+      chmod 600 /swapfile
+      mkswap /swapfile >/dev/null
+      swapon /swapfile
+      grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+      ok "Swapfile 1 GB créé, activé et persistant (ajouté dans /etc/fstab)"
+    else
+      swapon /swapfile 2>/dev/null || true
+      ok "Swapfile existant (/swapfile) activé"
+    fi
+  else
+    ok "RAM faible (${_RAM_FREE_MB} MB) compensée par le swap (${_SWAP_TOTAL_MB} MB) — OK"
+  fi
 fi
 
 # Disk check — npm + build = ~700 MB minimum
 _DISK_FREE_MB=$(df -m /opt 2>/dev/null | awk 'NR==2{print $4}' || echo 9999)
 if [[ "$_DISK_FREE_MB" -lt 1024 ]]; then
   warn "Espace disque faible sur /opt : ${_DISK_FREE_MB} MB (recommandé : 1 GB+)"
-  read -rp "$(echo -e "  ${BOLD}Continuer quand même ? [o/N] ${RESET}")" _disk_confirm
-  [[ "${_disk_confirm,,}" != "o" ]] && die "Installation annulée — libère de l'espace et relance."
+  _confirm "Continuer quand même ?" || die "Installation annulée — libère de l'espace et relance."
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  DÉTECTION INTELLIGENTE — instance existante, ports, autres apps PM2
+# ═══════════════════════════════════════════════════════════════════════════════
+INSTALL_MODE="fresh"   # fresh | upgrade | repair | reinstall | wipe
+_NODYX_CHECK_DIR="/opt/nodyx"
+
+# ── 1. Instance Nodyx existante ──────────────────────────────────────────────
+_INSTALLED_VERSION=""
+_EXISTING=false
+_DB_EXISTS=false
+_DB_TABLE_COUNT=0
+_EXISTING_MSGS=()
+
+# Lire la version depuis package.json (sans démarrer le serveur)
+if [[ -f "${_NODYX_CHECK_DIR}/nodyx-core/package.json" ]]; then
+  _INSTALLED_VERSION=$(node -p "require('${_NODYX_CHECK_DIR}/nodyx-core/package.json').version" 2>/dev/null || true)
+fi
+# Fallback : interroger l'API si elle est en cours d'exécution
+if [[ -z "$_INSTALLED_VERSION" ]]; then
+  _INSTALLED_VERSION=$(curl -sf --max-time 3 http://localhost:3000/api/v1/instance/info 2>/dev/null \
+    | grep -o '"version":"[^"]*"' | cut -d'"' -f4 || true)
+fi
+
+# Processus PM2 actifs (user root)
+if command -v pm2 &>/dev/null && pm2 list 2>/dev/null | grep -qE 'nodyx-core|nodyx-frontend'; then
+  _EXISTING=true
+  _EXISTING_MSGS+=("  ● Processus PM2 actifs (daemon root)")
+fi
+# Processus PM2 actifs (user nodyx)
+if id -u nodyx &>/dev/null && sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -qE 'nodyx-core|nodyx-frontend'; then
+  _EXISTING=true
+  _EXISTING_MSGS+=("  ● Processus PM2 actifs (daemon nodyx)")
+fi
+# Répertoire d'installation
+if [[ -d "$_NODYX_CHECK_DIR" ]]; then
+  _EXISTING=true
+  _EXISTING_MSGS+=("  ● Répertoire ${_NODYX_CHECK_DIR}${_INSTALLED_VERSION:+ (v${_INSTALLED_VERSION})}")
+fi
+# Base de données PostgreSQL
+if command -v psql &>/dev/null \
+   && sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='nodyx'" 2>/dev/null | grep -q 1; then
+  _EXISTING=true
+  _DB_EXISTS=true
+  _DB_TABLE_COUNT=$(sudo -u postgres psql -d nodyx -tc \
+    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" \
+    2>/dev/null | tr -d ' \n' || echo 0)
+  _EXISTING_MSGS+=("  ● Base de données PostgreSQL 'nodyx' (${_DB_TABLE_COUNT} tables)")
+fi
+
+if $_EXISTING; then
+  echo ""
+
+  # ── Titre contextuel selon la situation ──
+  if [[ -n "$_INSTALLED_VERSION" ]] && version_gt "$NODYX_VERSION" "$_INSTALLED_VERSION"; then
+    echo -e "  ${GREEN}${BOLD}↑  Mise à jour disponible : v${_INSTALLED_VERSION} → v${NODYX_VERSION}${RESET}"
+  elif [[ -n "$_INSTALLED_VERSION" ]] && version_gt "$_INSTALLED_VERSION" "$NODYX_VERSION"; then
+    echo -e "  ${RED}${BOLD}⚠  Régression détectée : version installée v${_INSTALLED_VERSION} > installeur v${NODYX_VERSION}${RESET}"
+  elif [[ -n "$_INSTALLED_VERSION" ]]; then
+    echo -e "  ${CYAN}${BOLD}≡  Instance Nodyx v${_INSTALLED_VERSION} déjà installée sur ce serveur${RESET}"
+  else
+    echo -e "  ${YELLOW}${BOLD}⚠  Une installation Nodyx semble déjà présente${RESET}"
+  fi
+  echo ""
+  for _msg in "${_EXISTING_MSGS[@]}"; do echo -e "  ${YELLOW}${_msg}${RESET}"; done
+  echo ""
+
+  # ── Menu adapté à la situation ──
+  _cancel_opt=2
+  if [[ -n "$_INSTALLED_VERSION" ]] && version_gt "$NODYX_VERSION" "$_INSTALLED_VERSION"; then
+    # MISE À JOUR disponible
+    _cancel_opt=$($_DB_EXISTS && echo 4 || echo 3)
+    echo -e "  ${BOLD}Que souhaites-tu faire ?${RESET}"
+    echo -e "  ${GREEN}[1]${RESET} ${BOLD}Mettre à jour vers v${NODYX_VERSION}${RESET} — données et config préservées ${GREEN}(recommandé)${RESET}"
+    echo -e "  ${CYAN}[2]${RESET} Réinstaller complètement — reconfigurer tout, données DB préservées"
+    if $_DB_EXISTS; then
+      echo -e "  ${RED}[3]${RESET} Réinitialiser ${RED}(DANGER)${RESET} — reconfigurer + ${RED}EFFACER la base de données${RESET}"
+      echo -e "  ${YELLOW}[4]${RESET} Annuler"
+    else
+      echo -e "  ${YELLOW}[3]${RESET} Annuler"
+    fi
+    echo ""
+    read -rp "$(echo -e "  ${BOLD}Choix [1-${_cancel_opt}] (défaut: 1): ${RESET}")" _det_choice </dev/tty
+    _det_choice="${_det_choice:-1}"
+    case "$_det_choice" in
+      1) INSTALL_MODE="upgrade"   ;;
+      2) INSTALL_MODE="reinstall" ;;
+      3) $_DB_EXISTS && INSTALL_MODE="wipe" || die "Installation annulée." ;;
+      4) die "Installation annulée." ;;
+      *) die "Choix invalide — installation annulée." ;;
+    esac
+
+  elif [[ -n "$_INSTALLED_VERSION" ]] && version_gt "$_INSTALLED_VERSION" "$NODYX_VERSION"; then
+    # RÉGRESSION (installé > installeur)
+    echo -e "  ${BOLD}Que souhaites-tu faire ?${RESET}"
+    echo -e "  ${CYAN}[1]${RESET} Réparer l'installation actuelle — rebuild + restart, sans changer de version"
+    echo -e "  ${RED}[2]${RESET} Forcer la réinstallation en v${NODYX_VERSION} ${RED}(rétrogradation — déconseillé)${RESET}"
+    echo -e "  ${YELLOW}[3]${RESET} Annuler ${YELLOW}(recommandé)${RESET}"
+    echo ""
+    read -rp "$(echo -e "  ${BOLD}Choix [1-3] (défaut: 3): ${RESET}")" _det_choice </dev/tty
+    _det_choice="${_det_choice:-3}"
+    case "$_det_choice" in
+      1) INSTALL_MODE="repair"    ;;
+      2) INSTALL_MODE="reinstall" ;;
+      *) die "Installation annulée." ;;
+    esac
+
+  else
+    # MÊME VERSION ou version inconnue
+    _cancel_opt=$($_DB_EXISTS && echo 4 || echo 3)
+    echo -e "  ${BOLD}Que souhaites-tu faire ?${RESET}"
+    echo -e "  ${CYAN}[1]${RESET} Réparer — rebuild + restart sans reconfigurer"
+    echo -e "  ${CYAN}[2]${RESET} Réinstaller complètement — reconfigurer tout, données DB préservées"
+    if $_DB_EXISTS; then
+      echo -e "  ${RED}[3]${RESET} Réinitialiser ${RED}(DANGER)${RESET} — reconfigurer + ${RED}EFFACER la base de données${RESET}"
+      echo -e "  ${YELLOW}[4]${RESET} Annuler"
+    else
+      echo -e "  ${YELLOW}[3]${RESET} Annuler"
+    fi
+    echo ""
+    read -rp "$(echo -e "  ${BOLD}Choix [1-${_cancel_opt}] (défaut: ${_cancel_opt}): ${RESET}")" _det_choice </dev/tty
+    _det_choice="${_det_choice:-${_cancel_opt}}"
+    case "$_det_choice" in
+      1) INSTALL_MODE="repair"    ;;
+      2) INSTALL_MODE="reinstall" ;;
+      3) $_DB_EXISTS && INSTALL_MODE="wipe" || die "Installation annulée." ;;
+      4) die "Installation annulée." ;;
+      *) die "Choix invalide — installation annulée." ;;
+    esac
+  fi
+
+  # ── Chemin rapide upgrade/repair : pas de reconfiguration interactive ──
+  if [[ "$INSTALL_MODE" == "upgrade" || "$INSTALL_MODE" == "repair" ]]; then
+    _nodyx_upgrade "${_INSTALLED_VERSION:-?}" "$NODYX_VERSION" "$_NODYX_CHECK_DIR"
+    exit 0
+  fi
+
+  [[ "$INSTALL_MODE" == "wipe" ]]      && warn "⚠  La base de données 'nodyx' sera entièrement effacée !"
+  [[ "$INSTALL_MODE" == "reinstall" ]] && warn "Réinstallation — données DB préservées, toute la config sera régénérée."
+  echo ""
+fi
+
+# ── 2. Conflits de ports ─────────────────────────────────────────────────────
+_check_port()    { ss -tlnp "sport = :$1" 2>/dev/null | grep -q LISTEN; }
+_get_port_proc() { ss -tlnp "sport = :$1" 2>/dev/null | grep -oP 'users:\(\("\K[^"]+' | head -1 || echo ""; }
+
+declare -A _PORT_BLOCKER_MAP   # service → "ports..."
+_PORT_CADDY_FOUND=false
+
+for _port in 80 443 3000 4173; do
+  if _check_port "$_port"; then
+    _proc=$(_get_port_proc "$_port")
+    _proc_base="${_proc%%:*}"   # nginx:master → nginx
+    case "$_proc_base" in
+      caddy)
+        if [[ "$_port" == "80" || "$_port" == "443" ]]; then
+          _PORT_CADDY_FOUND=true
+        else
+          _PORT_BLOCKER_MAP["caddy"]+="${_port} "
+        fi ;;
+      nginx|apache2|httpd)
+        _PORT_BLOCKER_MAP["$_proc_base"]+="${_port} " ;;
+      "")
+        # Process name not found via ss — try lsof/fuser fallback
+        _proc_fb=$(lsof -ti ":${_port}" 2>/dev/null | xargs -I{} ps -p {} -o comm= 2>/dev/null | head -1 || true)
+        [[ -n "$_proc_fb" ]] && _PORT_BLOCKER_MAP["${_proc_fb}"]+="${_port} " \
+                              || _PORT_BLOCKER_MAP["inconnu"]+="${_port} "
+        ;;
+      *)
+        _PORT_BLOCKER_MAP["${_proc_base}"]+="${_port} " ;;
+    esac
+  fi
+done
+
+$_PORT_CADDY_FOUND && info "Caddy déjà présent sur 80/443 — il sera reconfiguré automatiquement."
+
+if [[ ${#_PORT_BLOCKER_MAP[@]} -gt 0 ]]; then
+  echo ""
+  echo -e "  ${YELLOW}${BOLD}⚠  Services en conflit avec les ports requis par Nodyx :${RESET}"
+  for _svc in "${!_PORT_BLOCKER_MAP[@]}"; do
+    echo -e "  ${YELLOW}  ● ${BOLD}${_svc}${RESET}${YELLOW} → port(s) ${_PORT_BLOCKER_MAP[$_svc]}${RESET}"
+  done
+  echo ""
+
+  # Services connus qu'on peut arrêter proprement
+  _stoppable=()
+  for _svc in "${!_PORT_BLOCKER_MAP[@]}"; do
+    if [[ "$_svc" =~ ^(nginx|apache2|httpd)$ ]] && systemctl is-active --quiet "$_svc" 2>/dev/null; then
+      _stoppable+=("$_svc")
+    fi
+  done
+
+  if [[ ${#_stoppable[@]} -gt 0 ]]; then
+    echo -e "  ${BOLD}Options :${RESET}"
+    echo -e "  ${GREEN}[1]${RESET} Arrêter et désactiver ${BOLD}${_stoppable[*]}${RESET} — libère les ports ${GREEN}(recommandé)${RESET}"
+    echo -e "  ${CYAN}[2]${RESET} Continuer sans arrêter — risque de conflit au démarrage de Caddy"
+    echo -e "  ${YELLOW}[3]${RESET} Annuler"
+    echo ""
+    read -rp "$(echo -e "  ${BOLD}Choix [1-3] (défaut: 1): ${RESET}")" _port_choice </dev/tty
+    _port_choice="${_port_choice:-1}"
+    case "$_port_choice" in
+      1)
+        for _svc in "${_stoppable[@]}"; do
+          systemctl stop    "$_svc" 2>/dev/null || true
+          systemctl disable "$_svc" 2>/dev/null || true
+          ok "${_svc} arrêté et désactivé"
+        done ;;
+      2) warn "Services laissés en place — Caddy pourrait échouer à démarrer sur 80/443." ;;
+      *) die "Installation annulée — résous les conflits de ports et relance." ;;
+    esac
+  else
+    echo -e "  ${YELLOW}Arrête les services concernés manuellement puis relance l'installation.${RESET}"
+    read -rp "$(echo -e "  ${BOLD}Continuer quand même ? [o/N]: ${RESET}")" _port_force </dev/tty
+    [[ "${_port_force,,}" != "o" ]] && die "Installation annulée."
+  fi
+fi
+
+# ── 3. Autres processus PM2 ──────────────────────────────────────────────────
+if command -v pm2 &>/dev/null; then
+  _other_pm2=$(pm2 list --no-color 2>/dev/null \
+    | awk '/│/ && (/ online / || / stopped / || / errored /) && !/nodyx-core|nodyx-frontend/ {
+        for(i=1;i<=NF;i++) if($i!~/^[│┼]$/ && $i~/^[a-zA-Z0-9]/) {print $i; break}
+      }' | grep -v '^$' || true)
+  if [[ -n "$_other_pm2" ]]; then
+    echo ""
+    echo -e "  ${CYAN}${BOLD}ℹ  D'autres applications PM2 tournent sur ce serveur :${RESET}"
+    while IFS= read -r _proc; do echo -e "  ${CYAN}  ● ${_proc}${RESET}"; done <<< "$_other_pm2"
+    echo ""
+    echo -e "  ${CYAN}→ Elles ne seront PAS modifiées. Seuls 'nodyx-core' et 'nodyx-frontend' sont gérés.${RESET}"
+    echo ""
+    _confirm "Continuer ?" || die "Installation annulée."
+  fi
 fi
 
 # Bootstrap curl (needed before the main package install step)
@@ -229,11 +628,62 @@ else
   ok "IP publique : ${BOLD}$PUBLIC_IP${RESET}"
 fi
 
+# ── _FORCE_MODE bypass : si flag CLI, court-circuiter le menu de détection ──
+if [[ -n "$_FORCE_MODE" ]]; then
+  INSTALL_MODE="$_FORCE_MODE"
+  info "Mode forcé via CLI : ${BOLD}${INSTALL_MODE}${RESET}"
+  if [[ "$INSTALL_MODE" == "upgrade" || "$INSTALL_MODE" == "repair" ]]; then
+    [[ -d "$_NODYX_CHECK_DIR" ]] || die "Aucune installation trouvée dans ${_NODYX_CHECK_DIR} — impossible de ${INSTALL_MODE}."
+    _installed_ver=$(node -p "require('${_NODYX_CHECK_DIR}/nodyx-core/package.json').version" 2>/dev/null || echo "?")
+    _nodyx_upgrade "$_installed_ver" "$NODYX_VERSION" "$_NODYX_CHECK_DIR"
+    _INSTALL_COMPLETE=true
+    exit 0
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  VÉRIFICATION DE LA CONNECTIVITÉ RÉSEAU
+# ═══════════════════════════════════════════════════════════════════════════════
+step "Vérification de la connectivité réseau"
+
+_NET_FAIL=false
+_net_check() {
+  local label="$1" url="$2"
+  if curl -sf --max-time 7 --head "$url" >/dev/null 2>&1 \
+  || curl -sf --max-time 7       "$url" >/dev/null 2>&1; then
+    ok "  ${label}"
+  else
+    warn "  ${label}  ${YELLOW}← non joignable${RESET}"
+    _NET_FAIL=true
+  fi
+}
+_net_check "GitHub"              "https://api.github.com"
+_net_check "npm registry"        "https://registry.npmjs.org"
+_net_check "nodesource.com"      "https://deb.nodesource.com"
+_net_check "Caddy packages"      "https://dl.cloudsmith.io/public/caddy/stable"
+_net_check "nodyx.org directory" "https://nodyx.org"
+
+if $_NET_FAIL; then
+  echo ""
+  warn "Certaines dépendances réseau sont injoignables."
+  warn "L'installation risque d'échouer à l'étape npm install ou apt-get."
+  _confirm "Continuer quand même ?" \
+    || die "Corrige la connectivité réseau (pare-feu ? DNS ?) et relance."
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CONFIGURATION — questions interactives
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Configuration de ton instance"
 echo ""
+
+# Pré-remplissage depuis les CLI args (prompt() sautera les vars déjà définies)
+[[ -n "$_ARG_NAME" ]]        && COMMUNITY_NAME="$_ARG_NAME"
+[[ -n "$_ARG_SLUG" ]]        && COMMUNITY_SLUG="$_ARG_SLUG"
+[[ -n "$_ARG_ADMIN_USER" ]]  && ADMIN_USERNAME="$_ARG_ADMIN_USER"
+[[ -n "$_ARG_ADMIN_EMAIL" ]] && ADMIN_EMAIL="$_ARG_ADMIN_EMAIL"
+[[ -n "$_ARG_ADMIN_PASS" ]]  && ADMIN_PASSWORD="$_ARG_ADMIN_PASS"
+[[ -n "$_ARG_DOMAIN" ]]      && DOMAIN="$_ARG_DOMAIN"
 
 conf_section "01  Identité de la communauté"
 prompt   COMMUNITY_NAME  "Nom de la communauté (ex: Linux France)"
@@ -309,23 +759,46 @@ else
   info "SMTP ignoré — les emails seront désactivés. Configurable plus tard dans nodyx-core/.env"
 fi
 
+# ── DNS pre-check (Let's Encrypt échouera si DNS ne pointe pas ici) ─────────
+if ! $RELAY_MODE && ! $DOMAIN_IS_AUTO && [[ -n "${DOMAIN:-}" ]]; then
+  info "Vérification DNS de ${BOLD}${DOMAIN}${RESET}..."
+  _dns_ip=$(getent hosts "$DOMAIN" 2>/dev/null | awk '{print $1}' | head -1 || true)
+  if [[ -z "$_dns_ip" ]]; then
+    echo ""
+    warn "DNS ${BOLD}${DOMAIN}${RESET} — non résolu (domaine non configuré ou propagation en cours)."
+    warn "Let's Encrypt ne pourra pas générer de certificat TLS."
+    echo -e "  ${CYAN}→ Configure ton enregistrement A : ${BOLD}${DOMAIN}${RESET}${CYAN} → ${PUBLIC_IP}${RESET}"
+    _confirm "Continuer quand même ?" \
+      || die "Configure le DNS d'abord : ${DOMAIN} → ${PUBLIC_IP}, puis relance."
+  elif [[ "$_dns_ip" != "$PUBLIC_IP" ]]; then
+    echo ""
+    warn "DNS ${BOLD}${DOMAIN}${RESET} → ${RED}${_dns_ip}${RESET}  (IP de ce serveur : ${PUBLIC_IP})"
+    warn "Mismatch ! Let's Encrypt va échouer — Caddy ne peut pas valider le domaine."
+    echo -e "  ${CYAN}→ Mets à jour l'enregistrement A chez ton registrar.${RESET}"
+    _confirm "Continuer quand même ?" \
+      || die "Corrige le DNS (${DOMAIN} doit pointer vers ${PUBLIC_IP}) puis relance."
+  else
+    ok "DNS ${DOMAIN} → ${_dns_ip}  ✔"
+  fi
+fi
+
 echo ""
-echo -e "  ${BOLD}${CYAN}┌─────────────────────────────────────────────────┐${RESET}"
-echo -e "  ${BOLD}${CYAN}│              Récapitulatif                      │${RESET}"
-echo -e "  ${BOLD}${CYAN}├─────────────────────────────────────────────────┤${RESET}"
+echo -e "  ${BOLD}${CYAN}┌──────────────────────────────────────────────────┐${RESET}"
+echo -e "  ${BOLD}${CYAN}│              Récapitulatif                       │${RESET}"
+echo -e "  ${BOLD}${CYAN}├──────────────────────────────────────────────────┤${RESET}"
 echo -e "  ${CYAN}│${RESET}  Domaine    : ${BOLD}${DOMAIN}${RESET}$(${DOMAIN_IS_AUTO} && echo " ${CYAN}(sslip.io auto)${RESET}" || true)"
 echo -e "  ${CYAN}│${RESET}  Communauté : ${BOLD}${COMMUNITY_NAME}${RESET} (slug: ${COMMUNITY_SLUG})"
 echo -e "  ${CYAN}│${RESET}  Langue     : ${BOLD}${COMMUNITY_LANG}${RESET}"
 echo -e "  ${CYAN}│${RESET}  Admin      : ${BOLD}${ADMIN_USERNAME}${RESET} <${ADMIN_EMAIL}>"
+echo -e "  ${CYAN}│${RESET}  Mode       : ${BOLD}${INSTALL_MODE}${RESET}"
 if [[ -n "$SMTP_HOST" ]]; then
 echo -e "  ${CYAN}│${RESET}  SMTP       : ${BOLD}${SMTP_HOST}:${SMTP_PORT}${RESET} (from: ${SMTP_FROM})"
 else
 echo -e "  ${CYAN}│${RESET}  SMTP       : ${YELLOW}non configuré${RESET}"
 fi
-echo -e "  ${BOLD}${CYAN}└─────────────────────────────────────────────────┘${RESET}"
+echo -e "  ${BOLD}${CYAN}└──────────────────────────────────────────────────┘${RESET}"
 echo ""
-read -rp "$(echo -e "  ${BOLD}Lancer l'installation ? [O/n] ${RESET}")" confirm
-[[ "${confirm,,}" == "n" ]] && die "Installation annulée."
+_confirm "Lancer l'installation ?" || die "Installation annulée."
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  GENERATED SECRETS
@@ -384,6 +857,25 @@ if ! command -v pm2 &>/dev/null; then
 else
   ok "PM2 déjà présent"
 fi
+
+# PM2 log-rotate
+if ! pm2 list 2>/dev/null | grep -q 'pm2-logrotate'; then
+  npm install -g pm2-logrotate --silent 2>/dev/null || true
+  pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
+  pm2 set pm2-logrotate:retain 7 2>/dev/null || true
+  ok "pm2-logrotate configuré (50M, 7 jours)"
+fi
+
+# ── Création de l'utilisateur système 'nodyx' ────────────────────────────────
+step "Création de l'utilisateur système"
+if ! id -u nodyx &>/dev/null; then
+  useradd -r -s /usr/sbin/nologin -m -d /home/nodyx nodyx
+  ok "Utilisateur système 'nodyx' créé (/home/nodyx)"
+else
+  ok "Utilisateur système 'nodyx' déjà présent"
+fi
+mkdir -p /home/nodyx/.pm2/logs
+chown -R nodyx:nodyx /home/nodyx/.pm2
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  POSTGRESQL
@@ -447,6 +939,21 @@ sudo -u postgres psql -c "
     END IF;
   END \$\$;
 " >/dev/null
+
+# Sauvegarde automatique avant toute action destructive (wipe ou reinstall)
+if [[ "$INSTALL_MODE" == "wipe" || "$INSTALL_MODE" == "reinstall" ]]; then
+  _auto_backup_db "$INSTALL_MODE"
+fi
+
+# Mode wipe : supprimer la base existante proprement
+if [[ "$INSTALL_MODE" == "wipe" ]]; then
+  info "Mode réinitialisation — suppression de la base de données existante..."
+  sudo -u postgres psql -c \
+    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" \
+    >/dev/null 2>/dev/null || true
+  sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_NAME};" >/dev/null
+  ok "Base de données '${DB_NAME}' supprimée"
+fi
 
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" \
   | grep -q 1 \
@@ -542,7 +1049,7 @@ ExecStart=/usr/local/bin/nodyx-turn server \
   --ttl \${TURN_TTL}
 Restart=on-failure
 RestartSec=5s
-User=root
+User=nodyx
 
 [Install]
 WantedBy=multi-user.target
@@ -559,6 +1066,14 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 step "Configuration du pare-feu"
 
+# Sauvegarde des règles UFW existantes avant reset
+if command -v ufw &>/dev/null && ufw status 2>/dev/null | grep -q 'Status: active'; then
+  _ufw_bak="/root/ufw-backup-$(date +%Y%m%d-%H%M%S).rules"
+  ufw status verbose > "$_ufw_bak" 2>/dev/null || true
+  warn "Règles UFW existantes sauvegardées dans ${_ufw_bak}"
+fi
+
+_rollback_register "warn 'UFW modifié — restaure manuellement si besoin : ufw --force reset && ufw allow ssh && ufw --force enable'"
 ufw --force reset >/dev/null 2>&1
 ufw default deny incoming >/dev/null 2>&1
 ufw default allow outgoing >/dev/null 2>&1
@@ -617,6 +1132,13 @@ else
   GIT_TERMINAL_PROMPT=0 git clone --depth 1 "$REPO_URL" "$NODYX_DIR"
 fi
 ok "Code Nodyx présent dans $NODYX_DIR"
+
+# Lire la version réelle depuis le dépôt (évite les décalages avec la version hardcodée)
+_PKG_VER=$(node -p "require('${NODYX_DIR}/nodyx-core/package.json').version" 2>/dev/null || true)
+if [[ -n "$_PKG_VER" ]]; then
+  NODYX_VERSION="$_PKG_VER"
+  info "Version détectée depuis le dépôt : ${NODYX_VERSION}"
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  NODYX-CORE — .env + build
@@ -836,24 +1358,60 @@ module.exports = {
 }
 PM2
 
-cd "$NODYX_DIR"
-pm2 delete nodyx-core    2>/dev/null || true
+# Donner la propriété du répertoire à l'utilisateur nodyx
+chown -R nodyx:nodyx "${NODYX_DIR}"
+
+# Arrêter les anciens processus nodyx (root ou nodyx) sans toucher aux autres apps PM2
+pm2 delete nodyx-core     2>/dev/null || true
 pm2 delete nodyx-frontend 2>/dev/null || true
-pm2 startOrRestart ecosystem.config.js --update-env
-pm2 save
-pm2 startup systemd -u root --hp /root >/dev/null 2>&1 | tail -1 | bash 2>/dev/null || true
-ok "PM2 configuré et lancé"
+sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-core     2>/dev/null || true
+sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-frontend  2>/dev/null || true
+
+# Démarrer les apps sous l'utilisateur nodyx
+_rollback_register "sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-core nodyx-frontend 2>/dev/null || true #rollback PM2"
+sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env
+sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 save
+
+# Service systemd pm2-nodyx (démarrage automatique au boot)
+cat > /etc/systemd/system/pm2-nodyx.service <<SVC
+[Unit]
+Description=PM2 process manager (nodyx)
+Documentation=https://pm2.keymetrics.io/
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=forking
+User=nodyx
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PM2_HOME=/home/nodyx/.pm2
+PIDFile=/home/nodyx/.pm2/pm2.pid
+Restart=on-failure
+ExecStart=$(which pm2) start ${NODYX_DIR}/ecosystem.config.js
+ExecReload=$(which pm2) reload all
+ExecStop=$(which pm2) kill
+
+[Install]
+WantedBy=multi-user.target
+SVC
+
+systemctl daemon-reload
+systemctl enable pm2-nodyx --quiet
+ok "PM2 configuré sous l'utilisateur 'nodyx'"
 
 info "Vérification du démarrage des processus (5s)..."
 sleep 5
 for _app in nodyx-core nodyx-frontend; do
-  _st=$(pm2 list 2>/dev/null | grep " ${_app} " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
+  _st=$(sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null \
+    | grep " ${_app} " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
   if [[ "$_st" == "online" ]]; then
     ok "  $_app — online"
   else
     warn "$_app — statut : ${_st}"
     warn "Logs de démarrage :"
-    pm2 logs "$_app" --lines 20 --nostream 2>/dev/null || true
+    sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 logs "$_app" --lines 20 --nostream 2>/dev/null || true
   fi
 done
 
@@ -880,9 +1438,9 @@ printf "\r\033[2K"
 if ! $_BACKEND_READY; then
   warn "Backend non opérationnel après 180s."
   warn "Logs PM2 (nodyx-core) :"
-  pm2 logs nodyx-core --lines 35 --nostream 2>/dev/null || true
-  warn "Pour relancer : cd ${NODYX_DIR} && pm2 restart nodyx-core"
-  warn "Pour déboguer : pm2 logs nodyx-core"
+  sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core --lines 35 --nostream 2>/dev/null || true
+  warn "Pour relancer : sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core"
+  warn "Pour déboguer : sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core"
   warn "Tentative de création du compte admin quand même..."
 fi
 
@@ -1006,7 +1564,7 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
       printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
       printf "NODYX_GLOBAL_INDEXING=true\n"
     } >> "${NODYX_DIR}/nodyx-core/.env"
-    cd "${NODYX_DIR}" && pm2 restart nodyx-core 2>/dev/null || true
+    cd "${NODYX_DIR}" && sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core 2>/dev/null || true
   else
     # Check for slug conflict (409) — common on reinstall
     if echo "$REGISTER_RESPONSE" | grep -q 'Slug already taken'; then
@@ -1046,7 +1604,7 @@ Restart=on-failure
 RestartSec=5s
 StartLimitIntervalSec=60
 StartLimitBurst=5
-User=root
+User=nodyx
 
 [Install]
 WantedBy=multi-user.target
@@ -1144,16 +1702,160 @@ ok "Frontend compilé"
 
 info "Redémarrage des services..."
 cd "$NODYX_DIR"
-pm2 restart ecosystem.config.js --update-env
-pm2 save
+sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart ecosystem.config.js --update-env
+sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 save
 
 echo ""
 ok "Nodyx mis à jour et redémarré."
-pm2 list
+sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list
 UPDATESCRIPT3
 
 chmod +x "$UPDATE_SCRIPT"
 ok "Script de mise à jour : ${BOLD}nodyx-update${RESET} (sudo nodyx-update)"
+
+# ── Génération du script de diagnostic nodyx-doctor ──────────────────────────
+DOCTOR_SCRIPT="/usr/local/bin/nodyx-doctor"
+cat > "$DOCTOR_SCRIPT" <<'DOCTORHEAD'
+#!/usr/bin/env bash
+set -euo pipefail
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+_pass() { printf "  ${GREEN}✔${RESET}  %-42s %s\n" "$1" "${2:-}"; }
+_warn() { printf "  ${YELLOW}⚠${RESET}  %-42s %s\n" "$1" "${2:-}"; }
+_fail() { printf "  ${RED}✘${RESET}  %-42s %s\n" "$1" "${2:-}"; }
+_sect() { echo ""; echo -e "  ${BOLD}${CYAN}▸ $1${RESET}"; echo -e "  ${CYAN}$(printf '─%.0s' {1..52})${RESET}"; }
+DOCTORHEAD
+
+cat >> "$DOCTOR_SCRIPT" <<DOCTORVARS
+NODYX_DIR="${NODYX_DIR}"
+DOMAIN="${DOMAIN}"
+DB_NAME="${DB_NAME}"
+DOCTORVARS
+
+cat >> "$DOCTOR_SCRIPT" <<'DOCTORBODY'
+[[ $EUID -ne 0 ]] && { echo "Lance en root : sudo nodyx-doctor"; exit 1; }
+echo ""
+echo -e "${BOLD}  ━━━  nodyx-doctor — Diagnostic complet  ━━━${RESET}"
+
+# ── Services système ──────────────────────────────────────────────────────────
+_sect "Services système"
+for _svc in postgresql redis-server caddy nodyx-turn pm2-nodyx; do
+  if ! systemctl list-unit-files "${_svc}.service" 2>/dev/null | grep -q "$_svc"; then continue; fi
+  if systemctl is-active --quiet "$_svc" 2>/dev/null; then
+    _since=$(systemctl show "$_svc" -p ActiveEnterTimestamp 2>/dev/null \
+      | cut -d= -f2 | sed 's/  */ /g' | awk '{print $3,$4}' 2>/dev/null || echo "?")
+    _pass "$_svc" "actif depuis ${_since}"
+  else
+    _fail "$_svc" "(inactif — sudo systemctl start ${_svc})"
+  fi
+done
+
+# ── Applications PM2 ─────────────────────────────────────────────────────────
+_sect "Applications PM2"
+for _app in nodyx-core nodyx-frontend; do
+  _raw=$(sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 show "$_app" 2>/dev/null || echo "")
+  _status=$(echo "$_raw" | grep -i '│ status' | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
+  _mem=$(echo "$_raw" | grep -iE 'heap size|memory usage' | grep -oE '[0-9.]+ ?(mb|gb)' -i | head -1 || echo "?")
+  _restarts=$(echo "$_raw" | grep -i 'restart' | grep -oE '[0-9]+' | tail -1 || echo "?")
+  _uptime=$(echo "$_raw" | grep -i 'uptime' | grep -oP '\d+[smhd/]+\d*[smhd]*' | head -1 || echo "?")
+  if [[ "$_status" == "online" ]]; then
+    _pass "$_app" "↑${_uptime}  mem:${_mem}  restarts:${_restarts}"
+  else
+    _fail "$_app" "[${_status}] — sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart ${_app}"
+  fi
+done
+
+# ── Santé API ─────────────────────────────────────────────────────────────────
+_sect "Santé API"
+_t0=$(date +%s%3N)
+_api_body=$(curl -sf --max-time 5 http://localhost:3000/api/v1/instance/info 2>/dev/null || echo "")
+_t1=$(date +%s%3N)
+if [[ -n "$_api_body" ]]; then
+  _ver=$(echo "$_api_body" | grep -o '"version":"[^"]*"' | cut -d'"' -f4 || echo "?")
+  _ms=$(( _t1 - _t0 ))
+  _pass "API /api/v1/instance/info" "v${_ver}  (${_ms}ms)"
+else
+  _fail "API /api/v1/instance/info" "(non joignable — nodyx-core en cours ?)"
+fi
+
+# ── Certificat TLS ────────────────────────────────────────────────────────────
+if [[ -n "${DOMAIN:-}" ]]; then
+  _sect "Certificat TLS"
+  _cert_end=$(echo | timeout 5 openssl s_client -connect "${DOMAIN}:443" \
+    -servername "$DOMAIN" 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2 || echo "")
+  if [[ -n "$_cert_end" ]]; then
+    _days=$(( ( $(date -d "$_cert_end" +%s 2>/dev/null || echo 0) - $(date +%s) ) / 86400 ))
+    if   [[ $_days -gt 30 ]]; then _pass "${DOMAIN}" "expire dans ${_days} jours"
+    elif [[ $_days -gt  7 ]]; then _warn "${DOMAIN}" "expire dans ${_days} jours — renouvellement bientôt"
+    else                           _fail "${DOMAIN}" "expire dans ${_days} jours — URGENT"
+    fi
+  else
+    _warn "${DOMAIN}" "(TLS non accessible depuis ce serveur)"
+  fi
+fi
+
+# ── Base de données ───────────────────────────────────────────────────────────
+_sect "Base de données"
+if sudo -u postgres pg_isready -q 2>/dev/null; then
+  _tables=$(sudo -u postgres psql -d "$DB_NAME" -tc \
+    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" \
+    2>/dev/null | tr -d ' \n' || echo "?")
+  _dbsz=$(sudo -u postgres psql -d "$DB_NAME" -tc \
+    "SELECT pg_size_pretty(pg_database_size('${DB_NAME}'))" 2>/dev/null | tr -d ' \n' || echo "?")
+  _pass "PostgreSQL '${DB_NAME}'" "${_tables} tables  ${_dbsz}"
+else
+  _fail "PostgreSQL" "(pg_isready échoué)"
+fi
+
+if redis-cli ping 2>/dev/null | grep -q PONG; then
+  _rmem=$(redis-cli info memory 2>/dev/null | grep 'used_memory_human' | cut -d: -f2 | tr -d '[:space:]' || echo "?")
+  _rkeys=$(redis-cli dbsize 2>/dev/null | tr -d '[:space:]' || echo "?")
+  _pass "Redis" "mem:${_rmem}  clés:${_rkeys}"
+else
+  _fail "Redis" "(ping échoué — sudo systemctl start redis-server)"
+fi
+
+# ── Ressources système ────────────────────────────────────────────────────────
+_sect "Ressources système"
+_ram_free=$(free -m 2>/dev/null | awk '/^Mem/{print $7}')
+_ram_total=$(free -m 2>/dev/null | awk '/^Mem/{print $2}')
+_swap=$(free -m 2>/dev/null | awk '/^Swap/{print $2}')
+[[ "$_ram_free" -gt 300 ]] \
+  && _pass "RAM disponible" "${_ram_free} MB / ${_ram_total} MB" \
+  || _warn "RAM disponible" "${_ram_free} MB / ${_ram_total} MB  (ajouterle swap !)"
+[[ "$_swap" -gt 0 ]] \
+  && _pass "Swap" "${_swap} MB" \
+  || _warn "Swap" "aucun swapfile — ajouter : fallocate -l 1G /swapfile && mkswap /swapfile && swapon /swapfile"
+
+_disk_avail=$(df -h "${NODYX_DIR}" 2>/dev/null | awk 'NR==2{print $4}' || echo "?")
+_disk_pct=$(df "${NODYX_DIR}" 2>/dev/null | awk 'NR==2{gsub(/%/,"",$5); print $5}' || echo 0)
+[[ "$_disk_pct" -lt 80 ]] \
+  && _pass "Disque ${NODYX_DIR}" "${_disk_avail} libres  (${_disk_pct}% utilisé)" \
+  || _warn "Disque ${NODYX_DIR}" "${_disk_avail} libres  (${_disk_pct}% utilisé — attention)"
+
+# ── Sécurité ──────────────────────────────────────────────────────────────────
+_sect "Sécurité"
+_jwt=$(grep '^JWT_SECRET=' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null | cut -d= -f2 || echo "")
+[[ "${#_jwt}" -ge 32 ]] \
+  && _pass "JWT_SECRET" "(${#_jwt} chars — fort)" \
+  || _fail "JWT_SECRET" "trop court (${#_jwt} chars) — régénère dans nodyx-core/.env !"
+_smtp=$(grep '^SMTP_HOST=' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null | cut -d= -f2 || echo "")
+[[ -n "$_smtp" ]] \
+  && _pass "SMTP" "configuré (${_smtp})" \
+  || _warn "SMTP" "non configuré — emails désactivés"
+ufw status 2>/dev/null | grep -q 'Status: active' \
+  && _pass "UFW pare-feu" "actif" \
+  || _warn "UFW pare-feu" "inactif ! (sudo ufw enable)"
+
+# ── Score final ───────────────────────────────────────────────────────────────
+echo ""
+echo -e "  ${CYAN}$(printf '═%.0s' {1..52})${RESET}"
+echo -e "  ${BOLD}nodyx-doctor${RESET}  |  $(date '+%Y-%m-%d %H:%M:%S')  |  ${NODYX_DIR}"
+echo -e "  ${CYAN}$(printf '═%.0s' {1..52})${RESET}"
+echo ""
+DOCTORBODY
+
+chmod +x "$DOCTOR_SCRIPT"
+ok "Script de diagnostic  : ${BOLD}nodyx-doctor${RESET} (sudo nodyx-doctor)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  HEALTH CHECK
@@ -1201,11 +1903,12 @@ done
 # ── Nodyx (PM2) ───────────────────────────────────────────────────────────────
 _hc_sect "Nodyx (PM2)"
 for _app in nodyx-core nodyx-frontend; do
-  _pm2=$(pm2 list 2>/dev/null | grep " $_app " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
+  _pm2=$(sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null \
+    | grep " $_app " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
   if [[ "$_pm2" == "online" ]]; then
     _hc_pass "$_app"
   else
-    _hc_fail "$_app  ${YELLOW}[${_pm2}] — pm2 restart $_app${RESET}"
+    _hc_fail "$_app  ${YELLOW}[${_pm2}] — sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart $_app${RESET}"
   fi
 done
 
@@ -1309,9 +2012,11 @@ echo ""
 echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
 echo -e "     ${BOLD}${CYAN}▸ Gestion${RESET}"
-echo -e "       pm2 list                         état des services"
-echo -e "       pm2 logs nodyx-core              logs backend temps réel"
-echo -e "       pm2 restart all                  redémarrer tout"
+echo -e "       sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 list"
+echo -e "       sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core"
+echo -e "       sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart all"
+echo -e "       ${CYAN}# ou via systemd :${RESET}"
+echo -e "       sudo systemctl restart pm2-nodyx"
 echo ""
 echo -e "     ${BOLD}${CYAN}▸ Mise à jour${RESET}"
 echo -e "       sudo nodyx-update                git pull + rebuild + restart"
@@ -1321,6 +2026,7 @@ echo -e "       sudo -u postgres psql ${DB_NAME}"
 echo -e "       sudo -u postgres pg_dump ${DB_NAME} > backup_\$(date +%F).sql"
 echo ""
 echo -e "     ${BOLD}${CYAN}▸ Diagnostic${RESET}"
+echo -e "       sudo nodyx-doctor               rapport complet (services, TLS, DB, RAM...)"
 echo -e "       systemctl status caddy"
 echo -e "       curl -s http://localhost:3000/api/v1/instance/info | python3 -m json.tool"
 if $RELAY_MODE; then
@@ -1343,3 +2049,6 @@ fi
 echo ""
 echo -e "${GREEN}${BOLD}  ╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo ""
+
+# Marquer l'installation comme complète — désactive le rollback trap
+_INSTALL_COMPLETE=true
