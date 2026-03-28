@@ -5,7 +5,7 @@ import { apiFetch } from '$lib/api'
 export const load: PageServerLoad = async ({ parent }) => {
 	const { token, user } = await parent()
 	if (!token) redirect(302, '/auth/login?redirectTo=/wiki/new')
-	if (!user || (user.role !== 'admin' && user.role !== 'moderator')) redirect(302, '/wiki')
+	if (!user || !['owner', 'admin', 'moderator'].includes(user.role)) redirect(302, '/wiki')
 	return {}
 }
 

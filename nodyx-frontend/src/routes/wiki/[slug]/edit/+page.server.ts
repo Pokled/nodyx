@@ -18,6 +18,7 @@ export const load: PageServerLoad = async ({ fetch, parent, params }) => {
 
 	// Only author or admin/mod can edit
 	const canEdit =
+		user?.role === 'owner' ||
 		user?.role === 'admin' ||
 		user?.role === 'moderator' ||
 		user?.username === wikiPage.author_username

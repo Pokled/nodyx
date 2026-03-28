@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { PageData } from './$types'
+	import { page } from '$app/stores'
 
 	let { data }: { data: PageData } = $props()
 
 	const pg = $derived(data.wikiPage)
 	const canEdit = $derived(
+		data.user?.role === 'owner' ||
 		data.user?.role === 'admin' ||
 		data.user?.role === 'moderator' ||
 		data.user?.username === pg?.author_username
@@ -18,7 +20,11 @@
 
 	async function deletePage() {
 		if (!confirm(`Supprimer définitivement « ${pg.title} » ?`)) return
-		const res = await fetch(`/api/v1/wiki/${pg.slug}`, { method: 'DELETE' })
+		const token = $page.data.token as string | null
+		const res = await fetch(`/api/v1/wiki/${pg.slug}`, {
+			method: 'DELETE',
+			headers: token ? { Authorization: `Bearer ${token}` } : {},
+		})
 		if (res.ok) window.location.href = '/wiki'
 	}
 </script>
@@ -55,7 +61,7 @@
 					</svg>
 					Modifier
 				</a>
-				{#if data.user?.role === 'admin' || data.user?.role === 'moderator'}
+				{#if data.user?.role === 'owner' || data.user?.role === 'admin' || data.user?.role === 'moderator'}
 					<button onclick={deletePage}
 					        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-red-900/40 text-gray-500 hover:text-red-400 text-xs font-medium transition-colors">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,16 +107,8 @@
 		{/if}
 	</div>
 
-	<!-- Content — rendered HTML from NodyxEditor (trusted authors only) -->
-	<div class="prose prose-invert prose-sm max-w-none
-	            prose-headings:font-bold prose-headings:text-white
-	            prose-p:text-gray-300 prose-p:leading-relaxed
-	            prose-a:text-violet-400 prose-a:no-underline hover:prose-a:underline
-	            prose-code:text-cyan-300 prose-code:bg-gray-800/60 prose-code:px-1 prose-code:rounded
-	            prose-pre:bg-gray-900/80 prose-pre:border prose-pre:border-gray-700/60
-	            prose-blockquote:border-violet-500/50 prose-blockquote:text-gray-400
-	            prose-hr:border-gray-800
-	            prose-img:rounded-xl">
+	<!-- Content — rendered HTML from NodyxEditor -->
+	<div class="nodyx-prose">
 		{@html pg?.content ?? ''}
 	</div>
 

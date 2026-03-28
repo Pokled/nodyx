@@ -80,7 +80,7 @@ export default async function wikiRoutes(app: FastifyInstance) {
       SELECT w.id, w.slug, w.title, w.excerpt, w.category,
              w.is_public, w.views, w.created_at, w.updated_at,
              u.username   AS author_username,
-             u.avatar_url AS author_avatar
+             u.avatar AS author_avatar
       FROM wiki_pages w
       LEFT JOIN users u ON u.id = w.author_id
       WHERE 1=1`
@@ -109,7 +109,7 @@ export default async function wikiRoutes(app: FastifyInstance) {
       `SELECT w.id, w.slug, w.title, w.content, w.excerpt,
               w.category, w.is_public, w.views, w.created_at, w.updated_at,
               u.username   AS author_username,
-              u.avatar_url AS author_avatar,
+              u.avatar AS author_avatar,
               e.username   AS editor_username
        FROM wiki_pages w
        LEFT JOIN users u ON u.id = w.author_id
@@ -204,7 +204,7 @@ export default async function wikiRoutes(app: FastifyInstance) {
     const { slug } = request.params as { slug: string }
 
     const role = await getUserRole(user.userId)
-    if (!['admin', 'moderator'].includes(role)) {
+    if (!['owner', 'admin', 'moderator'].includes(role)) {
       return reply.code(403).send({ error: 'Seuls les admins et modérateurs peuvent supprimer des pages wiki.' })
     }
 
