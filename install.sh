@@ -142,6 +142,34 @@ _nodyx_upgrade() {
     || runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${dir}/ecosystem.config.js" --update-env
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
 
+  # ── Relay client : recréer le service s'il est absent (upgrade depuis ancienne install) ──
+  local _env_file="${dir}/nodyx-core/.env"
+  local _dir_token; _dir_token=$(grep '^DIRECTORY_TOKEN=' "$_env_file" 2>/dev/null | cut -d= -f2- || true)
+  local _slug;      _slug=$(grep '^NODYX_COMMUNITY_SLUG=' "$_env_file" 2>/dev/null | cut -d= -f2- || true)
+  if [[ -n "$_dir_token" && -n "$_slug" ]] && ! systemctl is-active --quiet nodyx-relay-client 2>/dev/null; then
+    if [[ -f /usr/local/bin/nodyx-relay ]]; then
+      info "Relay client absent ou inactif — reconfiguration..."
+      cat > /etc/systemd/system/nodyx-relay-client.service <<_SVC
+[Unit]
+Description=Nodyx Relay Client
+After=network.target
+[Service]
+ExecStart=/usr/local/bin/nodyx-relay client --server relay.nodyx.org:7443 --slug ${_slug} --token ${_dir_token} --local-port 80
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=5
+User=nodyx
+[Install]
+WantedBy=multi-user.target
+_SVC
+      systemctl daemon-reload
+      systemctl enable nodyx-relay-client --quiet
+      systemctl start nodyx-relay-client
+      ok "Relay client redémarré — tunnel vers relay.nodyx.org actif"
+    fi
+  fi
+
   _new_ver=$(node -p "require('${dir}/nodyx-core/package.json').version" 2>/dev/null || echo "$to_ver")
   echo ""
   echo -e "  ${GREEN}${BOLD}✔  Nodyx v${_new_ver} opérationnel${RESET}"
