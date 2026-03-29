@@ -37,6 +37,22 @@ if [[ ! -t 0 ]]; then
   exec bash "$_SELF" "$@" </dev/tty
 fi
 
+# ── Auto-update si lancé directement (fichier local potentiellement ancien) ───
+# On se télécharge dans /tmp et on compare ; si différent → relance la version fraîche.
+# _NODYX_SELFUPDATE=1 empêche la récursion.
+if [[ -z "${_NODYX_SELFUPDATE:-}" ]] && [[ -z "${_NODYX_NO_SELFUPDATE:-}" ]]; then
+  _FRESH=$(mktemp /tmp/nodyx_install_XXXXXX.sh)
+  if curl -fsSL --max-time 10 https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh \
+       -o "$_FRESH" 2>/dev/null; then
+    if ! diff -q "$_FRESH" "$0" &>/dev/null 2>&1; then
+      chmod +x "$_FRESH"
+      export _NODYX_SELFUPDATE=1
+      exec bash "$_FRESH" "$@"
+    fi
+  fi
+  rm -f "$_FRESH" 2>/dev/null || true
+fi
+
 # ── Colours ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
@@ -1832,6 +1848,7 @@ cat >> "$UPDATE_SCRIPT" <<'UPDATESCRIPT3'
 echo -e "\n${BOLD}━━━  Mise à jour Nodyx  ━━━${RESET}\n"
 
 info "Récupération des dernières modifications..."
+git -C "$NODYX_DIR" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json 2>/dev/null || true
 git -C "$NODYX_DIR" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits."
 
 info "Rebuild backend..."
