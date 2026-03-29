@@ -109,6 +109,8 @@
 	// Theme
 	const theme = $derived(resolveTheme(profile.metadata?.theme))
 	const scopeStyle = $derived(themeToStyle(theme))
+	// Accent hex direct — used for inline gradient blobs (avoids CSS var chain issues)
+	const accent = $derived(theme.accent ?? '#6366f1')
 
 	// Level rank label
 	const rankLabel = $derived(
@@ -140,22 +142,28 @@
      ═══════════════════════════════════════════════════════════════ -->
 <div class="relative w-full" style="height: 320px">
 
-	<!-- Banner image layer -->
-	<div class="absolute inset-0 overflow-hidden">
+	<!-- Banner layers -->
+	<div class="absolute inset-0 overflow-hidden" style="background: var(--p-bg)">
+
+		<!-- Aurora blobs — always rendered, even with a banner image -->
+		<div class="profile-aurora-a" style="background: radial-gradient(ellipse 70% 80% at 20% 50%, {accent}55, transparent)"></div>
+		<div class="profile-aurora-b" style="background: radial-gradient(ellipse 50% 70% at 75% 30%, {accent}30, transparent)"></div>
+		<div class="profile-aurora-c" style="background: radial-gradient(ellipse 40% 60% at 50% 80%, {accent}20, transparent)"></div>
+
+		<!-- User banner image — on top of the aurora -->
 		{#if bannerSrc}
 			<img
 				src={bannerSrc}
 				alt=""
 				aria-hidden="true"
-				class="w-full h-full object-cover"
+				class="absolute inset-0 w-full h-full object-cover"
+				style="opacity: 0.55; mix-blend-mode: luminosity"
 			/>
-		{:else}
-			<!-- Default animated gradient banner -->
-			<div class="w-full h-full profile-default-banner" style="--accent: var(--p-accent)"></div>
 		{/if}
-		<!-- Bottom gradient to blend into page bg -->
-		<div class="absolute inset-0" style="background: linear-gradient(to bottom, transparent 30%, color-mix(in srgb, var(--p-bg) 90%, transparent) 100%)"></div>
-		<div class="absolute inset-0" style="background: linear-gradient(to right, color-mix(in srgb, var(--p-bg) 20%, transparent), transparent 60%)"></div>
+
+		<!-- Gradient overlays for text readability -->
+		<div class="absolute inset-0" style="background: linear-gradient(to bottom, transparent 20%, {accent}0a 60%, var(--p-bg) 100%)"></div>
+		<div class="absolute inset-0" style="background: linear-gradient(to right, var(--p-bg) 0%, transparent 40%)"></div>
 	</div>
 
 	<!-- Action button — top right -->
@@ -510,28 +518,41 @@
 </div><!-- end .profile-scope -->
 
 <style>
-	/* ── Default banner gradient ──────────────────────────────────── */
-	.profile-default-banner {
-		background: linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--accent) 20%, #0f0f1a) 0%,
-			#0f0f1a 40%,
-			color-mix(in srgb, var(--accent) 10%, #0f0f1a) 100%
-		);
-		position: relative;
-		overflow: hidden;
-	}
-	.profile-default-banner::before {
-		content: '';
+	/* ── Aurora banner blobs ─────────────────────────────────────── */
+	.profile-aurora-a,
+	.profile-aurora-b,
+	.profile-aurora-c {
 		position: absolute;
 		inset: 0;
-		background: radial-gradient(ellipse 80% 60% at 20% 50%, color-mix(in srgb, var(--accent) 25%, transparent), transparent 70%);
 	}
-	.profile-default-banner::after {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: radial-gradient(ellipse 50% 40% at 80% 30%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+	.profile-aurora-a {
+		animation: aurora-drift-a 7s ease-in-out infinite;
+		transform-origin: 20% 50%;
+	}
+	.profile-aurora-b {
+		animation: aurora-drift-b 9s ease-in-out infinite;
+		transform-origin: 75% 30%;
+	}
+	.profile-aurora-c {
+		animation: aurora-drift-c 11s ease-in-out infinite;
+		transform-origin: 50% 80%;
+	}
+	@keyframes aurora-drift-a {
+		0%   { transform: scale(1)    translateY(0);    opacity: 0.85; }
+		33%  { transform: scale(1.12) translateY(-8%);  opacity: 1;    }
+		66%  { transform: scale(0.95) translateY(5%);   opacity: 0.7;  }
+		100% { transform: scale(1)    translateY(0);    opacity: 0.85; }
+	}
+	@keyframes aurora-drift-b {
+		0%   { transform: scale(1)    translateX(0);    opacity: 0.7;  }
+		40%  { transform: scale(1.08) translateX(-6%);  opacity: 1;    }
+		80%  { transform: scale(1.02) translateX(4%);   opacity: 0.75; }
+		100% { transform: scale(1)    translateX(0);    opacity: 0.7;  }
+	}
+	@keyframes aurora-drift-c {
+		0%   { transform: scale(1)    translateY(0)   opacity: 0.5; }
+		50%  { transform: scale(1.15) translateY(-6%) opacity: 0.8; }
+		100% { transform: scale(1)    translateY(0)   opacity: 0.5; }
 	}
 
 	/* ── Avatar ring ──────────────────────────────────────────────── */
