@@ -69,7 +69,16 @@
 		const urlChannelId = $page.url.searchParams.get('channel');
 		if (urlChannelId) {
 			const found = localChannels.find((c: any) => c.id === urlChannelId);
-			if (found && found.id !== selectedChannel?.id) selectedChannel = found;
+			if (found && found.id !== selectedChannel?.id) {
+				if (s) {
+					// Socket ready: use joinChannel so socket rooms + state are properly reset
+					joinChannel(found);
+				} else {
+					// Socket not yet ready: set selectedChannel so the connect handler
+					// can emit chat:join once the socket connects
+					selectedChannel = found;
+				}
+			}
 		} else if (!selectedChannel) {
 			const def = localChannels.find((c: any) => c.type === 'text') ?? localChannels[0];
 			// Navigate to default channel so URL stays in sync
