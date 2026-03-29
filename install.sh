@@ -119,6 +119,8 @@ _nodyx_upgrade() {
 
   info "Récupération du code..."
   git config --global --add safe.directory "$dir" 2>/dev/null || true
+  # Réinitialiser les fichiers générés (package-lock.json…) pour débloquer le pull
+  git -C "$dir" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json 2>/dev/null || true
   git -C "$dir" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits manuellement."
   ok "Code à jour"
 
@@ -1091,14 +1093,17 @@ if ! $RELAY_MODE; then
   _TURN_VERSION="v0.1.2-p2p"
   _TURN_URL="https://github.com/Pokled/Nodyx/releases/download/${_TURN_VERSION}/nodyx-turn-linux-${_TURN_ARCH}"
   info "Téléchargement nodyx-turn ${_TURN_VERSION} (${_TURN_ARCH})..."
-  if ! curl -fsSL --max-time 60 "$_TURN_URL" -o /usr/local/bin/nodyx-turn; then
+  _TURN_TMP="$(mktemp /tmp/nodyx-turn.XXXXXX)"
+  if ! curl -fsSL --max-time 60 "$_TURN_URL" -o "$_TURN_TMP"; then
+    rm -f "$_TURN_TMP"
     die "Impossible de télécharger nodyx-turn.\nURL : ${_TURN_URL}\nVérifie ta connexion et que la release ${_TURN_VERSION} existe sur GitHub."
   fi
-  if ! file /usr/local/bin/nodyx-turn 2>/dev/null | grep -q ELF; then
-    rm -f /usr/local/bin/nodyx-turn
+  if ! file "$_TURN_TMP" 2>/dev/null | grep -q ELF; then
+    rm -f "$_TURN_TMP"
     die "Le fichier téléchargé n'est pas un binaire valide.\nURL : ${_TURN_URL}"
   fi
-  chmod +x /usr/local/bin/nodyx-turn
+  chmod +x "$_TURN_TMP"
+  mv -f "$_TURN_TMP" /usr/local/bin/nodyx-turn
 
   # Fichier de configuration (secret partagé avec nodyx-core)
   cat > /etc/nodyx-turn.env <<TURNENV
