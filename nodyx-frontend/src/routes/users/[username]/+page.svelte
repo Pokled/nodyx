@@ -265,7 +265,7 @@
      XP STRIP — full width, cinematic
      ═══════════════════════════════════════════════════════════════ -->
 <div class="max-w-6xl mx-auto px-6 mb-6">
-	<div class="profile-xp-strip rounded-md p-5" style="--accent: {accent}">
+	<div class="profile-xp-strip rounded-sm p-5" style="--accent: {accent}">
 		<div class="flex items-center justify-between mb-3 gap-4 flex-wrap">
 			<div class="flex items-center gap-3">
 				<span class="text-4xl font-black tabular-nums leading-none profile-xp-level"
@@ -312,7 +312,7 @@
 
 			<!-- Identity card: location + since -->
 			{#if profile.location || true}
-				<div class="rounded-md p-4 space-y-3"
+				<div class="p-4 space-y-3"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 					{#if profile.location}
 						<div class="flex items-center gap-2.5">
@@ -346,7 +346,7 @@
 
 			<!-- Tags -->
 			{#if profile.tags?.length > 0}
-				<div class="rounded-md p-4"
+				<div class="p-4"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Tags</p>
 					<div class="flex flex-wrap gap-1.5">
@@ -362,7 +362,7 @@
 
 			<!-- Social networks -->
 			{#if socialLinks.length > 0}
-				<div class="rounded-md p-4"
+				<div class="p-4"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Réseaux</p>
 					<ul class="space-y-1.5">
@@ -405,21 +405,21 @@
 			{/if}
 
 			<!-- Showcase placeholder — future home of badges, karma, achievements -->
-			<div class="rounded-md p-4"
+			<div class="p-4"
 			     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 				<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Showcase</p>
 				<div class="flex flex-wrap gap-2">
-					<div class="w-10 h-10 rounded flex items-center justify-center text-lg"
+					<div class="w-10 h-10 flex items-center justify-center text-lg"
 					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
 					     title="Bientôt disponible">
 						🔒
 					</div>
-					<div class="w-10 h-10 rounded flex items-center justify-center text-lg"
+					<div class="w-10 h-10 flex items-center justify-center text-lg"
 					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
 					     title="Bientôt disponible">
 						🔒
 					</div>
-					<div class="w-10 h-10 rounded flex items-center justify-center text-lg"
+					<div class="w-10 h-10 flex items-center justify-center text-lg"
 					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
 					     title="Bientôt disponible">
 						🔒
@@ -436,10 +436,10 @@
 			<!-- Stats row -->
 			<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 				{#each stats as stat}
-					<div class="profile-stat-card rounded-md p-4 text-center group"
+					<div class="profile-stat-card p-4 text-center group"
 					     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 						<div class="flex justify-center mb-2">
-							<div class="w-8 h-8 rounded-md flex items-center justify-center transition-all group-hover:scale-110"
+							<div class="w-8 h-8 rounded flex items-center justify-center transition-all group-hover:scale-110"
 							     style="background: color-mix(in srgb, var(--p-accent) 15%, transparent)">
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--p-accent)">
 									<path stroke-linecap="round" stroke-linejoin="round" d={stat.icon}/>
@@ -454,7 +454,7 @@
 
 			<!-- Bio -->
 			{#if profile.bio}
-				<div class="rounded-md p-5"
+				<div class="p-5"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 					<p class="text-xs uppercase tracking-widest font-medium mb-4" style="color: var(--p-text-muted)">À propos</p>
 					<div class="flex gap-4">
@@ -474,13 +474,13 @@
 
 			<!-- Custom links -->
 			{#if profile.links?.length > 0}
-				<div class="rounded-md p-5"
+				<div class="p-5"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Liens</p>
 					<div class="grid grid-cols-2 gap-2">
 						{#each profile.links as link}
 							<a href={link.url} target="_blank" rel="noopener noreferrer"
-							   class="flex items-center justify-between gap-3 p-3 rounded-md transition-all group hover:scale-[1.02]"
+							   class="flex items-center justify-between gap-3 p-3 transition-all group hover:scale-[1.02]"
 							   style="background: color-mix(in srgb, var(--p-card-border) 40%, transparent); border: 1px solid var(--p-card-border)">
 								<span class="text-sm font-medium truncate" style="color: var(--p-accent)">{link.label}</span>
 								<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--p-text-muted)">
@@ -494,7 +494,7 @@
 
 			<!-- Empty state -->
 			{#if !profile.bio && !profile.github_username && !profile.links?.length}
-				<div class="rounded-md p-10 text-center"
+				<div class="p-10 text-center"
 				     style="background: color-mix(in srgb, var(--p-card-bg) 60%, transparent); border: 1px solid var(--p-card-border)">
 					<p class="text-4xl mb-3">✨</p>
 					<p class="text-sm font-medium" style="color: var(--p-text-muted)">Ce profil est encore vide.</p>
@@ -573,7 +573,7 @@
 		display: inline-flex;
 		align-items: center;
 		padding: 3px 10px;
-		border-radius: 4px;
+		border-radius: 2px;
 		font-size: 0.75rem;
 		font-weight: 900;
 		letter-spacing: 0.08em;
@@ -627,7 +627,7 @@
 		align-items: center;
 		gap: 6px;
 		padding: 6px 14px;
-		border-radius: 6px;
+		border-radius: 3px;
 		background: rgba(0,0,0,0.5);
 		backdrop-filter: blur(8px);
 		border: 1px solid rgba(255,255,255,0.12);
