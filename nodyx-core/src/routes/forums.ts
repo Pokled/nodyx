@@ -596,6 +596,11 @@ app.get('/threads', {
       }).catch(() => {})
     }
 
+    // Emit points update to author in real time (add or remove)
+    if (io) {
+      io.to(`user:${post.author_id}`).emit('user:points_updated', { points: result.new_points })
+    }
+
     return reply.send(result)
   })
 }

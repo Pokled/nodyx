@@ -3,6 +3,7 @@
 	import GitHubWidget from '$lib/components/widgets/GitHubWidget.svelte'
 	import { page } from '$app/stores'
 	import { resolveTheme, themeToStyle } from '$lib/profileThemes'
+	import { socket } from '$lib/socket'
 
 	let { data }: { data: PageData } = $props()
 	const profile = $derived(data.profile)
@@ -14,13 +15,27 @@
 	// Initials fallback
 	const initials = $derived((profile.display_name || profile.username).trim().charAt(0).toUpperCase())
 
+	// Live points — synced from server data, updated in real time via socket
+	let livePoints = $state(profile.points)
+	$effect(() => { livePoints = profile.points })
+
+	$effect(() => {
+		const sock = $socket
+		if (!sock) return
+		function onPointsUpdated(data: { points: number }) {
+			livePoints = data.points
+		}
+		sock.on('user:points_updated', onPointsUpdated)
+		return () => { sock.off('user:points_updated', onPointsUpdated) }
+	})
+
 	// Level from points — sqrt progression (0-99=1, 100-399=2, 400-899=3…)
-	const level = $derived(Math.max(1, Math.floor(Math.sqrt(Math.max(0, profile.points) / 10))))
+	const level = $derived(Math.max(1, Math.floor(Math.sqrt(Math.max(0, livePoints) / 10))))
 	const levelMin = $derived(level * level * 10)
 	const levelMax = $derived((level + 1) * (level + 1) * 10)
 	const levelProgress = $derived(
 		levelMax > levelMin
-			? Math.min(100, Math.round(((profile.points - levelMin) / (levelMax - levelMin)) * 100))
+			? Math.min(100, Math.round(((livePoints - levelMin) / (levelMax - levelMin)) * 100))
 			: 100
 	)
 
@@ -45,7 +60,7 @@
 	const stats = $derived([
 		{ label: 'Posts', value: Number(profile.post_count ?? 0).toLocaleString('fr-FR'), icon: '✍️' },
 		{ label: 'Threads', value: Number(profile.thread_count ?? 0).toLocaleString('fr-FR'), icon: '💬' },
-		{ label: 'Points', value: Number(profile.points ?? 0).toLocaleString('fr-FR'), icon: '⭐' },
+		{ label: 'Points', value: Number(livePoints ?? 0).toLocaleString('fr-FR'), icon: '⭐' },
 		{ label: 'Jours sur Nodyx', value: daysSince.toLocaleString('fr-FR'), icon: '📅' },
 	])
 
