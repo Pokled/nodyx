@@ -104,7 +104,7 @@ async function approveRateLimit(request: FastifyRequest, reply: FastifyReply) {
   const key = `auth_approve_rate:${request.ip}`
   const count = await redis.incr(key)
   if (count === 1) await redis.expire(key, 60)
-  if (count > 3) {  // 3/min — opération de sécurité critique
+  if (count > 10) {  // 10/min — assez pour les tests + usage normal
     return reply.code(429).send({ error: 'Trop de tentatives', code: 'RATE_LIMITED' })
   }
 }
