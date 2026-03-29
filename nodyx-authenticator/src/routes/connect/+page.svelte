@@ -32,7 +32,7 @@
 		pollNonce   = params.get('nonce') ?? ''
 
 		if (!instanceUrl || !challengeId || !challenge) {
-			error = 'Lien invalide — paramètres manquants.'
+			error = `Lien invalide — paramètres manquants.\ninstance="${instanceUrl}" challengeId="${challengeId}" challenge="${challenge ? challenge.slice(0,10)+'…' : ''}"`
 			return
 		}
 
@@ -71,32 +71,19 @@
 			// Signer le challenge
 			const signed = await signChallenge(privateKey, challenge)
 
-			// Envoyer à l'instance via approve-cross
-			const res = await fetch(`${instanceUrl}/api/auth/challenges/approve-cross`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					signature:   signed.signature,
-					challenge:   signed.challenge,
-					pubkey:      selectedDevice.publicKey,
-					deviceId:    selectedDevice.id,
-					deviceLabel: selectedDevice.label
-				})
-			})
+			// Construire l'URL de retour vers l'instance (navigation browser = zéro CORS)
+			const completeUrl = new URL(`${instanceUrl}/auth/signet-complete`)
+			completeUrl.searchParams.set('challenge',    signed.challenge)
+			completeUrl.searchParams.set('signature',    signed.signature)
+			completeUrl.searchParams.set('pubkey',       JSON.stringify(selectedDevice.publicKey))
+			completeUrl.searchParams.set('deviceId',     selectedDevice.id)
+			completeUrl.searchParams.set('deviceLabel',  selectedDevice.label)
 
-			const json = await res.json()
-
-			if (!res.ok) {
-				throw new Error(json.error ?? `Erreur ${res.status}`)
-			}
-
-			isNewUser       = json.isNewUser ?? false
-			createdUsername = json.username  ?? ''
-			result = 'approved'
+			// Redirection browser — le serveur de l'instance pose le cookie et redirige vers /
+			window.location.href = completeUrl.toString()
 
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Erreur lors de la connexion'
-		} finally {
 			loading = false
 		}
 	}

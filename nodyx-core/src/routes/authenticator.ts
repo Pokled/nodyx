@@ -564,7 +564,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
       [sessionToken, userId, challengeRow.id]
     )
 
-    return reply.send({ success: true, isNewUser: !existingDevice[0], username })
+    return reply.send({ success: true, isNewUser: !existingDevice[0], username, token: sessionToken })
   })
 
   /** Refus — l'app refuse la demande */
