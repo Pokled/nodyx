@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { goto } from '$app/navigation'
 	import type { PageData, ActionData } from './$types'
 	import { PROFILE_PRESETS, resolveTheme, themeToStyle, type ProfileThemeVars } from '$lib/profileThemes'
 	import { FONT_PRESETS, ANIM_PRESETS, ensureFontLoaded, buildNameStyle, buildAnimClass } from '$lib/nameEffects'
@@ -8,6 +9,7 @@
 	const profile = $derived(data.profile)
 
 	let submitting = $state(false)
+	let displayName = $state<string>(profile.display_name ?? '')
 	let nameColor = $state<string>(profile.name_color ?? '#ffffff')
 	let nameGlowEnabled   = $state<boolean>(!!profile.name_glow)
 	let nameGlow          = $state<string>(profile.name_glow ?? '#6366f1')
@@ -220,7 +222,14 @@
 	method="POST"
 	use:enhance={() => {
 		submitting = true
-		return async ({ update }) => { await update(); submitting = false }
+		return async ({ result, update }) => {
+			if (result.type === 'redirect') {
+				await goto(result.location, { invalidateAll: true })
+			} else {
+				await update()
+			}
+			submitting = false
+		}
 	}}
 	class="max-w-5xl mx-auto px-6 pb-16 space-y-4"
 >
@@ -246,7 +255,7 @@
 			<div>
 				<label for="display_name" class="block text-xs text-gray-400 mb-1.5 font-medium">Nom affiché</label>
 				<input id="display_name" name="display_name" type="text" maxlength="100"
-					value={profile.display_name ?? ''}
+					bind:value={displayName}
 					placeholder="Ton nom public"
 					class="w-full rounded-lg bg-gray-800/70 border border-gray-700 px-3 py-2.5 text-sm text-white
 					       placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-colors" />
@@ -264,7 +273,7 @@
 					<div class="flex-1">
 						<p class="text-sm font-semibold truncate drop-shadow"
 						   style="color: {nameColor}">
-							{profile.display_name || profile.username || 'Aperçu du pseudo'}
+							{displayName || profile.username || 'Aperçu du pseudo'}
 						</p>
 						<p class="text-xs" style="color: {nameColor}b3">@{profile.username}</p>
 					</div>
