@@ -80,6 +80,7 @@
 		uploadingLogo = true
 		await uploadBrandingFile('logo', file)
 		uploadingLogo = false
+		logoMode = 'url'
 	}
 
 	async function handleBannerFile(e: Event) {
@@ -88,6 +89,7 @@
 		uploadingBanner = true
 		await uploadBrandingFile('banner', file)
 		uploadingBanner = false
+		bannerMode = 'url'
 	}
 </script>
 
