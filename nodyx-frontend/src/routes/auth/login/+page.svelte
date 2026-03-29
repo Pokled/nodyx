@@ -109,18 +109,15 @@
 			Explore Nodyx librement avec l'un des comptes ci-dessous.
 			Toutes les données sont réinitialisées chaque nuit à minuit.
 		</p>
-		<div class="grid grid-cols-2 gap-2 text-xs mb-2">
+		<div class="space-y-1.5 text-xs mb-2">
 			{#each ['alice', 'bob', 'charlie', 'admin'] as u}
-			<div class="rounded-lg px-3 py-2 flex items-center justify-between"
+			<div class="rounded-lg px-3 py-2 flex items-center justify-between gap-2"
 				style="background: rgba(0,0,0,0.25); border: 1px solid rgba(99,102,241,0.2)">
-				<span class="font-mono text-white">{u}</span>
-				<span style="color: rgb(156,163,175)">demo1234</span>
+				<span class="font-mono text-white shrink-0">{u}@demo.nodyx.org</span>
+				<span class="shrink-0" style="color: rgb(156,163,175)">demo1234</span>
 			</div>
 			{/each}
 		</div>
-		<p class="text-xs text-center" style="color: rgb(107,114,128)">
-			Mot de passe identique pour tous les comptes
-		</p>
 	</div>
 	{/if}
 
