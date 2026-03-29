@@ -1184,14 +1184,19 @@ if $RELAY_MODE; then
   _RELAY_URL="https://github.com/Pokled/Nodyx/releases/download/${_RELAY_VERSION}/nodyx-relay-linux-${_RELAY_ARCH}"
 
   info "Téléchargement nodyx-relay ${_RELAY_VERSION} (${_RELAY_ARCH})..."
-  if ! curl -fsSL --max-time 60 "$_RELAY_URL" -o /usr/local/bin/nodyx-relay; then
+  _RELAY_TMP="$(mktemp /tmp/nodyx-relay.XXXXXX)"
+  if ! curl -fsSL --max-time 60 "$_RELAY_URL" -o "$_RELAY_TMP"; then
+    rm -f "$_RELAY_TMP"
     die "Impossible de télécharger nodyx-relay.\nURL : ${_RELAY_URL}\nVérifie ta connexion et que la release ${_RELAY_VERSION} existe sur GitHub."
   fi
   # Vérifier que c'est bien un binaire ELF (pas une page HTML d'erreur)
-  if ! file /usr/local/bin/nodyx-relay 2>/dev/null | grep -q ELF; then
-    rm -f /usr/local/bin/nodyx-relay
+  if ! file "$_RELAY_TMP" 2>/dev/null | grep -q ELF; then
+    rm -f "$_RELAY_TMP"
     die "Le fichier téléchargé n'est pas un binaire valide (release introuvable ?).\nURL : ${_RELAY_URL}"
   fi
+  # mv atomique : fonctionne même si l'ancien binaire est en cours d'exécution
+  chmod +x "$_RELAY_TMP"
+  mv -f "$_RELAY_TMP" /usr/local/bin/nodyx-relay
   chmod +x /usr/local/bin/nodyx-relay
   ok "nodyx-relay $(/usr/local/bin/nodyx-relay --version 2>&1 || echo '?') installé"
 fi
