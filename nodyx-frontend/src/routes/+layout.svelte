@@ -144,18 +144,14 @@
 	// ── User dropdown ──────────────────────────────────────────────────────────
 	let dropdownOpen = $state(false)
 
-	const MILESTONES = [0, 100, 250, 500, 1000, 2000, 4000, 8000, 15000]
+	// XP info — formule sqrt identique à ProfileCard / MiniProfileCard / page profil
 	const xpInfo = $derived((() => {
-		const pts = user?.points ?? 0
-		let idx = 0
-		for (let i = 0; i < MILESTONES.length - 1; i++) {
-			if (pts >= MILESTONES[i]) idx = i
-			else break
-		}
-		const from = MILESTONES[idx]
-		const to   = MILESTONES[idx + 1] ?? null
-		const pct  = to ? Math.min(100, Math.round((pts - from) / (to - from) * 100)) : 100
-		return { pts, from, to, pct }
+		const pts   = user?.points ?? 0
+		const level = Math.max(1, Math.floor(Math.sqrt(Math.max(0, pts) / 10)))
+		const from  = level * level * 10
+		const to    = (level + 1) * (level + 1) * 10
+		const pct   = Math.min(100, Math.round(((pts - from) / (to - from)) * 100))
+		return { pts, from, to, pct, level }
 	})())
 
 	function gradeTextColor(hex: string): string {
@@ -488,7 +484,7 @@
 										<div class="h-1.5 rounded-full bg-gray-700 overflow-hidden">
 											<div class="h-full rounded-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all" style="width: {xpInfo.pct}%"></div>
 										</div>
-										{#if xpInfo.to}<div class="text-[10px] text-gray-600 mt-1">Encore {(xpInfo.to - xpInfo.pts).toLocaleString('fr-FR')} pts pour le prochain palier</div>{/if}
+										<div class="text-[10px] text-gray-600 mt-1">Encore {(xpInfo.to - xpInfo.pts).toLocaleString('fr-FR')} pts pour le niveau {xpInfo.level + 1}</div>
 									</div>
 								</div>
 								<!-- Status quick-set -->
