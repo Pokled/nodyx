@@ -54,9 +54,9 @@
 	const visibleTags = $derived(tags.slice(0, 3))
 
 	// Level calculation — same formula as MiniProfileCard and profile page
-	const level       = $derived(Math.max(1, Math.floor(Math.sqrt(Math.max(0, points) / 10))))
-	const levelMin    = $derived(level * level * 10)
-	const levelMax    = $derived((level + 1) * (level + 1) * 10)
+	const level       = $derived(Math.floor(Math.sqrt(Math.max(0, points) / 10)) + 1)
+	const levelMin    = $derived((level - 1) * (level - 1) * 10)
+	const levelMax    = $derived(level * level * 10)
 	const levelProgress = $derived(
 		levelMax > levelMin
 			? Math.min(100, Math.round(((points - levelMin) / (levelMax - levelMin)) * 100))

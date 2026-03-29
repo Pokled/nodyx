@@ -147,9 +147,9 @@
 	// XP info — formule sqrt identique à ProfileCard / MiniProfileCard / page profil
 	const xpInfo = $derived((() => {
 		const pts   = user?.points ?? 0
-		const level = Math.max(1, Math.floor(Math.sqrt(Math.max(0, pts) / 10)))
-		const from  = level * level * 10
-		const to    = (level + 1) * (level + 1) * 10
+		const level = Math.floor(Math.sqrt(Math.max(0, pts) / 10)) + 1
+		const from  = (level - 1) * (level - 1) * 10
+		const to    = level * level * 10
 		const pct   = Math.min(100, Math.round(((pts - from) / (to - from)) * 100))
 		return { pts, from, to, pct, level }
 	})())

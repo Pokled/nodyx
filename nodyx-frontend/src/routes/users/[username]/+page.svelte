@@ -29,10 +29,11 @@
 		return () => { sock.off('user:points_updated', onPointsUpdated) }
 	})
 
-	// Level from points — sqrt progression (0-99=1, 100-399=2, 400-899=3…)
-	const level = $derived(Math.max(1, Math.floor(Math.sqrt(Math.max(0, livePoints) / 10))))
-	const levelMin = $derived(level * level * 10)
-	const levelMax = $derived((level + 1) * (level + 1) * 10)
+	// Level from points — sqrt progression, +1 offset so level 1 starts at 0 pts
+	// level 1: 0–9 pts, level 2: 10–39 pts, level 3: 40–89 pts…
+	const level = $derived(Math.floor(Math.sqrt(Math.max(0, livePoints) / 10)) + 1)
+	const levelMin = $derived((level - 1) * (level - 1) * 10)
+	const levelMax = $derived(level * level * 10)
 	const levelProgress = $derived(
 		levelMax > levelMin
 			? Math.min(100, Math.round(((livePoints - levelMin) / (levelMax - levelMin)) * 100))
