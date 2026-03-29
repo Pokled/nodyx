@@ -115,6 +115,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       post_count:   postRes.rows[0].count,
       logo_url:     branding.logo_url,
       banner_url:   branding.banner_url,
+      demo_mode:    process.env.NODYX_DEMO_MODE === 'true',
     })
   })
 
