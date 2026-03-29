@@ -18,7 +18,7 @@ function setCookieAndRedirect(cookies: any, token: string, redirectTo: string | 
 		secure:   true,
 		maxAge:   60 * 60 * 24 * 7
 	})
-	redirect(303, redirectTo && redirectTo.startsWith('/') ? redirectTo : '/')
+	redirect(303, redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/')
 }
 
 export const actions: Actions = {

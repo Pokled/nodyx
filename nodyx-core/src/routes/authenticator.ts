@@ -71,12 +71,8 @@ async function verifyEcdsaSignature(
       ['verify']
     )
 
-    // Décode la signature base64url
-    const b64 = signatureBase64url
-      .replace(/-/g, '+')
-      .replace(/_/g, '/')
-      .padEnd(signatureBase64url.length + ((4 - (signatureBase64url.length % 4)) % 4), '=')
-    const sigBuffer = Buffer.from(b64, 'base64')
+    // Décode la signature base64url (Node.js 18+ natif)
+    const sigBuffer = Buffer.from(signatureBase64url, 'base64url')
 
     const encoder = new TextEncoder()
     return await webcrypto.subtle.verify(
@@ -493,7 +489,15 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
         [JSON.stringify(pubkey), deviceId]
       )
     } else {
-      // Appareil inconnu → créer un compte automatiquement
+      // Appareil inconnu → vérifier le rate limit de création de compte (3/IP/heure)
+      const creationKey = `account_creation:${request.ip}`
+      const creationCount = await redis.incr(creationKey)
+      if (creationCount === 1) await redis.expire(creationKey, 3600)
+      if (creationCount > 3) {
+        return reply.code(429).send({ error: 'Trop de créations de compte. Réessayez dans une heure.', code: 'RATE_LIMITED' })
+      }
+
+      // Créer un compte automatiquement
       // Générer un username unique basé sur les 8 premiers chars du deviceId
       const baseUsername = `user_${deviceId.replace(/-/g, '').slice(0, 8)}`
       let finalUsername = baseUsername
@@ -601,7 +605,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
       [challengeId]
     )
     if (!rows[0]) return reply.code(404).send({ error: 'Challenge not found' })
-    if (rows[0].poll_nonce && rows[0].poll_nonce !== nonce) {
+    if (!rows[0].poll_nonce || rows[0].poll_nonce !== nonce) {
       return reply.code(403).send({ error: 'Forbidden' })
     }
 
@@ -618,14 +622,16 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
 
     const response: { status: string; token?: string } = { status: row.status }
 
-    // Si approuvé, on retourne le token de session une seule fois puis on le efface
-    if (row.status === 'approved' && row.session_token) {
-      response.token = row.session_token
-      // On efface le token de session après l'avoir retourné (one-time)
-      await db.query(
-        `UPDATE authenticator_challenges SET session_token = NULL WHERE id = $1`,
+    // Si approuvé, récupérer le token de manière atomique (évite la race condition)
+    if (row.status === 'approved') {
+      const { rows: tokenRows } = await db.query(
+        `UPDATE authenticator_challenges
+         SET session_token = NULL
+         WHERE id = $1 AND session_token IS NOT NULL
+         RETURNING session_token`,
         [challengeId]
       )
+      if (tokenRows[0]) response.token = tokenRows[0].session_token
     }
 
     return reply.send(response)
