@@ -614,10 +614,60 @@
 		finally { isLoadingOld = false; }
 	}
 
+	// ── Slash commands ────────────────────────────────────────────────────────
+	const EIGHT_BALL = [
+		'Oui, absolument.', 'C\'est certain.', 'Sans aucun doute.', 'Oui.', 'Tu peux compter dessus.',
+		'Très probablement.', 'Les perspectives sont bonnes.', 'Les signes pointent vers oui.',
+		'Réponse floue, réessaie.', 'Demande plus tard.', 'Difficile à dire maintenant.',
+		'Impossible de prédire pour l\'instant.', 'Ne compte pas dessus.', 'Ma réponse est non.',
+		'Mes sources disent non.', 'Les perspectives ne sont pas bonnes.', 'Très douteux.',
+	];
+
+	function parseSlashCommand(text: string): string | null {
+		if (!text.startsWith('/')) return null;
+		const parts = text.slice(1).split(' ');
+		const cmd   = parts[0].toLowerCase();
+		const args  = parts.slice(1);
+		const u     = `<strong>${currentUsername}</strong>`;
+
+		switch (cmd) {
+			case 'roll': {
+				const match = (args[0] ?? '1d6').match(/^(\d{1,2})d(\d{1,4})$/i);
+				const n     = match ? Math.min(parseInt(match[1]), 10)    : 1;
+				const sides = match ? Math.min(parseInt(match[2]), 10000) : 6;
+				const rolls = Array.from({ length: n }, () => Math.floor(Math.random() * sides) + 1);
+				const total = rolls.reduce((a, b) => a + b, 0);
+				const detail = n > 1 ? ` <em>(${rolls.join(' + ')})</em>` : '';
+				return `🎲 ${u} lance un <strong>${n}d${sides}</strong>${detail} → <strong>${total}</strong>`;
+			}
+			case 'flip': {
+				const r = Math.random() < 0.5 ? 'Pile 🪙' : 'Face ✨';
+				return `🪙 ${u} lance une pièce → <strong>${r}</strong>`;
+			}
+			case '8ball': {
+				const q = args.length ? ` « ${args.join(' ')} »` : '';
+				const a = EIGHT_BALL[Math.floor(Math.random() * EIGHT_BALL.length)];
+				return `🎱 ${u}${q} → <em>${a}</em>`;
+			}
+			case 'rps': {
+				const opts   = ['🪨', '📄', '✂️'];
+				const wins   = { '🪨': '✂️', '📄': '🪨', '✂️': '📄' };
+				const me     = opts.includes(args[0]) ? args[0] : opts[Math.floor(Math.random() * 3)];
+				const bot    = opts[Math.floor(Math.random() * 3)];
+				const result = me === bot ? 'Égalité !' : wins[me as keyof typeof wins] === bot ? `${u} gagne 🏆` : 'Le bot gagne 🤖';
+				return `✊ ${u} joue ${me} contre le bot ${bot} → <strong>${result}</strong>`;
+			}
+			default:
+				return null; // Commande inconnue → message normal
+		}
+	}
+
 	// ── Send ──────────────────────────────────────────────────────────────────
 	function sendMessage() {
 		if (!s || !selectedChannel || !inputText.trim()) return;
-		s.emit('chat:send', { channelId: selectedChannel.id, content: inputText.trim(), replyToId: replyTo?.id ?? null });
+		const cmdResult = parseSlashCommand(inputText.trim());
+		const content   = cmdResult ?? inputText.trim();
+		s.emit('chat:send', { channelId: selectedChannel.id, content, replyToId: replyTo?.id ?? null });
 		inputText = '';
 		showMentions = false;
 		replyTo = null;
@@ -1376,7 +1426,7 @@
 						id="chat-input"
 						class="flex-1 bg-transparent py-1.5 text-sm resize-none outline-none max-h-32 disabled:opacity-50"
 						style="color: #e2e8f0; font-family: inherit; scrollbar-width: thin"
-						placeholder={isRateLimited ? 'Anti-spam actif…' : `Message dans # ${selectedChannel.name}`}
+						placeholder={isRateLimited ? 'Anti-spam actif…' : `Message dans # ${selectedChannel.name}  ·  /roll /flip /8ball /rps`}
 						rows={1}
 						maxlength={2000}
 						bind:value={inputText}
