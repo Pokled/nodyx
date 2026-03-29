@@ -134,7 +134,10 @@
 		avatarPreview  = URL.createObjectURL(file)
 		avatarError    = ''
 		avatarUploading = true
-		try { avatarUrl = await uploadFile('avatar', file) }
+		try {
+			avatarUrl  = await uploadFile('avatar', file)
+			avatarMode = 'url'
+		}
 		catch (err: unknown) { avatarError = err instanceof Error ? err.message : 'Erreur upload' }
 		finally { avatarUploading = false }
 	}
@@ -145,7 +148,10 @@
 		bannerPreview  = URL.createObjectURL(file)
 		bannerError    = ''
 		bannerUploading = true
-		try { bannerUrl = await uploadFile('banner', file) }
+		try {
+			bannerUrl  = await uploadFile('banner', file)
+			bannerMode = 'url'
+		}
 		catch (err: unknown) { bannerError = err instanceof Error ? err.message : 'Erreur upload' }
 		finally { bannerUploading = false }
 	}
@@ -488,7 +494,7 @@
 					{#each FONT_PRESETS as preset}
 						<button
 							type="button"
-							onclick={() => { nameFontFamily = preset.family }}
+							onclick={() => { nameFontFamily = preset.family; nameFontUrl = null }}
 							class="px-2 py-1.5 rounded-lg text-xs border transition-all text-center
 							       {nameFontFamily === preset.family
 									 ? 'border-indigo-500 bg-indigo-950/50 text-white'
