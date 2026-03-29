@@ -53,7 +53,7 @@
 		}
 	}
 
-	const githubPromise = fetchGitHub()
+	const githubPromise = $derived(fetchGitHub())
 </script>
 
 {#await githubPromise}
