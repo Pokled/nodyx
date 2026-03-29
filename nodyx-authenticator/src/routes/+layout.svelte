@@ -12,7 +12,7 @@
 
 		const currentPath = $page.url.pathname
 		const done = await isSetupDone()
-		if (!done && !currentPath.startsWith('/setup')) {
+		if (!done && !currentPath.startsWith('/setup') && !currentPath.startsWith('/connect')) {
 			goto('/setup')
 		}
 	})

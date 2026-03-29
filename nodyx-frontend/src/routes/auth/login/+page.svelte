@@ -67,31 +67,83 @@
 			}
 			const { challengeId, pollNonce } = await res.json()
 			signetChallengeId = challengeId
-
-			// Poll toutes les 2 secondes
-			signetPollInterval = setInterval(async () => {
-				try {
-					const poll = await fetch(`/api/auth/challenges/status/${challengeId}?nonce=${pollNonce}`)
-					if (!poll.ok) return
-					const j = await poll.json()
-					if (j.status === 'approved' && j.token) {
-						clearInterval(signetPollInterval!)
-						signetToken = j.token
-						signetState = 'approved'
-					} else if (j.status === 'rejected') {
-						clearInterval(signetPollInterval!)
-						signetState = 'rejected'
-					} else if (j.status === 'expired') {
-						clearInterval(signetPollInterval!)
-						signetState = 'expired'
-					}
-				} catch {}
-			}, 2000)
-
+			signetStartPolling(challengeId, pollNonce)
 		} catch {
 			signetError = 'Impossible de contacter le serveur.'
 			signetState = 'error'
 		}
+	}
+
+	// ── Mode QR cross-instance (sans compte pré-existant) ─────────────────────
+	let signetQrMode     = $state(false)
+	let signetQrUrl      = $state('')
+	let signetQrCanvas   = $state<HTMLCanvasElement | null>(null)
+
+	async function signetStartCross() {
+		signetError = ''
+		signetQrMode = true
+		signetState = 'waiting'
+		try {
+			const res = await fetch('/api/auth/challenges/create', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ hubUrl: window.location.origin })
+			})
+			if (!res.ok) {
+				const j = await res.json()
+				signetError = j.error ?? 'Erreur lors de la création du challenge.'
+				signetState = 'error'
+				return
+			}
+			const { challengeId, challenge, pollNonce } = await res.json()
+			signetChallengeId = challengeId
+
+			// Construire l'URL pour la PWA Signet
+			const signetUrl = new URL('https://signet.nodyx.org/connect')
+			signetUrl.searchParams.set('instance', window.location.origin)
+			signetUrl.searchParams.set('challengeId', challengeId)
+			signetUrl.searchParams.set('challenge', challenge)
+			signetUrl.searchParams.set('nonce', pollNonce)
+			signetQrUrl = signetUrl.toString()
+
+			// Générer le QR
+			const QRCode = (await import('qrcode')).default
+			if (signetQrCanvas) {
+				await QRCode.toCanvas(signetQrCanvas, signetQrUrl, { width: 200, margin: 1, color: { dark: '#ffffff', light: '#00000000' } })
+			}
+
+			signetStartPolling(challengeId, pollNonce)
+		} catch {
+			signetError = 'Impossible de contacter le serveur.'
+			signetState = 'error'
+		}
+	}
+
+	function signetStartPolling(challengeId: string, pollNonce: string) {
+		signetPollInterval = setInterval(async () => {
+			try {
+				const poll = await fetch(`/api/auth/challenges/status/${challengeId}?nonce=${pollNonce}`)
+				if (!poll.ok) return
+				const j = await poll.json()
+				if (j.status === 'approved' && j.token) {
+					clearInterval(signetPollInterval!)
+					signetToken = j.token
+					signetState = 'approved'
+				} else if (j.status === 'rejected') {
+					clearInterval(signetPollInterval!)
+					signetState = 'rejected'
+				} else if (j.status === 'expired') {
+					clearInterval(signetPollInterval!)
+					signetState = 'expired'
+				}
+			} catch {}
+		}, 2000)
+	}
+
+	function signetResetFull() {
+		signetReset()
+		signetQrMode = false
+		signetQrUrl  = ''
 	}
 </script>
 
@@ -366,6 +418,7 @@
 			</div>
 
 			{#if signetState === 'idle' || signetState === 'error'}
+				<!-- Connexion compte existant -->
 				<div class="flex gap-2">
 					<input
 						type="text"
@@ -373,7 +426,7 @@
 						placeholder="Votre identifiant"
 						onkeydown={(e) => e.key === 'Enter' && signetStart()}
 						class="flex-1 rounded-lg px-3 py-2 text-sm text-white focus:outline-none transition-colors"
-						style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.2); focus-border-color: rgba(251,191,36,0.5)"
+						style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.2)"
 					/>
 					<button
 						onclick={signetStart}
@@ -383,29 +436,64 @@
 						Signer →
 					</button>
 				</div>
+
+				<!-- Séparateur + bouton première connexion -->
+				<div class="mt-3 pt-3" style="border-top: 1px solid rgba(251,191,36,0.1)">
+					<p class="text-xs mb-2" style="color: rgb(107,114,128)">Première visite sur cette instance ?</p>
+					<button
+						onclick={signetStartCross}
+						class="w-full py-2 rounded-lg text-sm font-medium transition-all"
+						style="background: rgba(251,191,36,0.06); border: 1px dashed rgba(251,191,36,0.3); color: #fbbf24">
+						Scanner avec Signet · Créer mon compte →
+					</button>
+				</div>
+
 				{#if signetError}
 					<p class="mt-2 text-xs" style="color: rgb(248,113,113)">{signetError}</p>
 				{/if}
 
 			{:else if signetState === 'waiting'}
-				<div class="flex flex-col items-center gap-4 py-3">
-					<!-- Icône pulsante -->
-					<div class="relative">
-						<div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold"
-							style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.4); color: #fbbf24">
-							◈
+				{#if signetQrMode}
+					<!-- Mode QR cross-instance -->
+					<div class="flex flex-col items-center gap-3 py-2">
+						<p class="text-sm font-semibold text-white">Scannez avec Nodyx Signet</p>
+						<canvas bind:this={signetQrCanvas}
+							class="rounded-xl"
+							style="background: rgba(0,0,0,0.4); padding: 8px">
+						</canvas>
+						<p class="text-xs text-center" style="color: rgb(156,163,175)">
+							Votre compte sera créé automatiquement à la première connexion.
+						</p>
+						{#if signetQrUrl}
+							<a href={signetQrUrl} target="_blank" rel="noopener"
+								class="text-xs underline" style="color: rgba(251,191,36,0.6)">
+								Ouvrir sur cet appareil →
+							</a>
+						{/if}
+						<button onclick={signetResetFull} class="text-xs" style="color: rgb(107,114,128)">
+							Annuler
+						</button>
+					</div>
+				{:else}
+					<!-- Mode challenge classique (compte existant) -->
+					<div class="flex flex-col items-center gap-4 py-3">
+						<div class="relative">
+							<div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold"
+								style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.4); color: #fbbf24">
+								◈
+							</div>
+							<div class="absolute inset-0 rounded-2xl animate-ping opacity-20"
+								style="background: rgba(251,191,36,0.3)"></div>
 						</div>
-						<div class="absolute inset-0 rounded-2xl animate-ping opacity-20"
-							style="background: rgba(251,191,36,0.3)"></div>
+						<div class="text-center">
+							<p class="text-sm font-semibold text-white">En attente d'approbation</p>
+							<p class="text-xs mt-1" style="color: rgb(156,163,175)">Ouvrez Nodyx Signet sur votre téléphone et approuvez la demande</p>
+						</div>
+						<button onclick={signetReset} class="text-xs" style="color: rgb(107,114,128)">
+							Annuler
+						</button>
 					</div>
-					<div class="text-center">
-						<p class="text-sm font-semibold text-white">En attente d'approbation</p>
-						<p class="text-xs mt-1" style="color: rgb(156,163,175)">Ouvrez Nodyx Signet sur votre téléphone et approuvez la demande</p>
-					</div>
-					<button onclick={signetReset} class="text-xs" style="color: rgb(107,114,128)">
-						Annuler
-					</button>
-				</div>
+				{/if}
 
 			{:else if signetState === 'approved'}
 				<!-- Soumission automatique via $effect -->

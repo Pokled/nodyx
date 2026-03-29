@@ -148,6 +148,15 @@ const CreateChallengeBody = z.object({
   hubUrl:   z.string().url()
 })
 
+// Flow cross-instance : Signet arrive avec sa pubkey, sans compte pré-existant
+const ApproveCrossBody = z.object({
+  signature:   z.string().min(1),
+  challenge:   z.string().min(1),
+  pubkey:      z.object({ algorithm: z.string(), key: z.record(z.string(), z.unknown()) }),
+  deviceId:    z.string().uuid(),
+  deviceLabel: z.string().min(1).max(100).default('Mon appareil')
+})
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 export default async function authenticatorRoutes(app: FastifyInstance) {
@@ -279,6 +288,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
     const { deviceId: rawDeviceId, username, hubUrl } = parsed.data
 
     // Résolution deviceId : fourni directement ou via username
+    // Mode anonyme (cross-instance) : ni username ni deviceId → challenge ouvert
     let resolvedDeviceId = rawDeviceId ?? null
     let userId: string | null = null
 
@@ -304,6 +314,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
       if (!rows[0]) return reply.code(404).send({ error: 'Device not found' })
       userId = rows[0].user_id
     }
+    // else : mode anonyme cross-instance — resolvedDeviceId et userId restent null
 
     const challengeBytes = crypto.randomBytes(32).toString('base64url')
     const pollNonce = crypto.randomBytes(16).toString('hex')
@@ -424,6 +435,136 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
     )
 
     return reply.send({ success: true })
+  })
+
+  /**
+   * Approbation cross-instance — la PWA Signet arrive sur une instance inconnue.
+   * Pas de device token — la pubkey identifie l'utilisateur.
+   * Si la pubkey n'est pas connue → création automatique du compte.
+   */
+  app.post('/challenges/approve-cross', {
+    preHandler: approveRateLimit
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const parsed = ApproveCrossBody.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Invalid payload', details: parsed.error.issues })
+    }
+    const { signature, challenge, pubkey, deviceId, deviceLabel } = parsed.data
+
+    // 1. Récupérer le challenge anonyme (device_id IS NULL, statut pending)
+    const { rows: challengeRows } = await db.query(
+      `SELECT * FROM authenticator_challenges
+       WHERE challenge = $1
+         AND device_id IS NULL
+         AND status = 'pending'
+         AND expires_at > NOW()`,
+      [challenge]
+    )
+    if (!challengeRows[0]) {
+      return reply.code(404).send({ error: 'Challenge not found or expired', code: 'NOT_FOUND' })
+    }
+    const challengeRow = challengeRows[0]
+
+    // 2. Vérifier la signature ECDSA avec la pubkey fournie
+    const valid = await verifyEcdsaSignature(pubkey.key as JwkPublicKey, signature, challenge)
+    if (!valid) {
+      return reply.code(401).send({ error: 'Invalid signature', code: 'INVALID_SIGNATURE' })
+    }
+
+    // 3. Chercher si un device avec ce deviceId existe déjà sur cette instance
+    const { rows: existingDevice } = await db.query(
+      `SELECT d.*, u.username
+       FROM authenticator_devices d
+       JOIN users u ON u.id = d.user_id
+       WHERE d.id = $1`,
+      [deviceId]
+    )
+
+    let userId: string
+    let username: string
+
+    if (existingDevice[0]) {
+      // Appareil connu → login direct
+      userId   = existingDevice[0].user_id
+      username = existingDevice[0].username
+      // Mettre à jour la clé publique si elle a changé (rotation)
+      await db.query(
+        `UPDATE authenticator_devices SET public_key = $1, last_used_at = NOW() WHERE id = $2`,
+        [JSON.stringify(pubkey), deviceId]
+      )
+    } else {
+      // Appareil inconnu → créer un compte automatiquement
+      // Générer un username unique basé sur les 8 premiers chars du deviceId
+      const baseUsername = `user_${deviceId.replace(/-/g, '').slice(0, 8)}`
+      let finalUsername = baseUsername
+      let suffix = 0
+      while (true) {
+        const { rows } = await db.query(
+          `SELECT 1 FROM users WHERE username = $1`, [finalUsername]
+        )
+        if (!rows[0]) break
+        suffix++
+        finalUsername = `${baseUsername}_${suffix}`
+      }
+
+      // Email fictif unique — jamais exposé, jamais utilisé pour le login
+      const fakeEmail = `signet_${deviceId.replace(/-/g, '')}@signet.local`
+
+      // Mot de passe aléatoire — inutilisable (compte Signet-only)
+      const randomPassword = crypto.randomBytes(32).toString('hex')
+
+      // Créer l'utilisateur
+      const { rows: newUser } = await db.query(
+        `INSERT INTO users (username, email, password)
+         VALUES ($1, $2, $3)
+         RETURNING id, username`,
+        [finalUsername, fakeEmail, randomPassword]
+      )
+      userId   = newUser[0].id
+      username = newUser[0].username
+
+      // Ajouter à la communauté
+      const { rows: community } = await db.query(
+        `SELECT id FROM communities ORDER BY created_at ASC LIMIT 1`
+      )
+      if (community[0]) {
+        await db.query(
+          `INSERT INTO community_members (community_id, user_id, role)
+           VALUES ($1, $2, 'member')
+           ON CONFLICT DO NOTHING`,
+          [community[0].id, userId]
+        )
+      }
+
+      // Créer le profil utilisateur
+      await db.query(
+        `INSERT INTO user_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
+        [userId]
+      )
+
+      // Enregistrer l'appareil Signet
+      const deviceToken = crypto.randomBytes(32).toString('hex')
+      await db.query(
+        `INSERT INTO authenticator_devices (id, user_id, label, public_key, device_token)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [deviceId, userId, deviceLabel, JSON.stringify(pubkey), deviceToken]
+      )
+    }
+
+    // 4. Créer la session JWT
+    const sessionToken = signToken(userId, username)
+    await redis.setex(`session:${sessionToken}`, SESSION_TTL, userId)
+    await trackSession(userId, sessionToken)
+
+    // 5. Marquer le challenge comme approuvé
+    await db.query(
+      `UPDATE authenticator_challenges
+       SET status = 'approved', session_token = $1, user_id = $2
+       WHERE id = $3`,
+      [sessionToken, userId, challengeRow.id]
+    )
+
+    return reply.send({ success: true, isNewUser: !existingDevice[0], username })
   })
 
   /** Refus — l'app refuse la demande */
