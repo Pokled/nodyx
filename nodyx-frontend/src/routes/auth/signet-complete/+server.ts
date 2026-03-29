@@ -42,7 +42,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   const json = await res.json().catch(() => ({})) as Record<string, unknown>
 
   if (!res.ok) {
-    throw error(res.status as 400 | 401 | 404 | 429 | 500, (json.error as string) ?? `Erreur ${res.status}`)
+    const msg = (json.error as string) ?? `Erreur ${res.status}`
+    redirect(303, `/auth/login?signet_error=${encodeURIComponent(msg)}`)
   }
 
   const token = json.token as string | undefined
