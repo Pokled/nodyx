@@ -36,9 +36,9 @@
 	let cardEl   = $state<HTMLDivElement | null>(null)
 
 	// Level calculation — same formula as profile page
-	const level       = $derived(profile ? Math.max(1, Math.floor(Math.sqrt(Math.max(0, profile.points) / 10))) : 1)
-	const levelMin    = $derived(level * level * 10)
-	const levelMax    = $derived((level + 1) * (level + 1) * 10)
+	const level       = $derived(profile ? Math.floor(Math.sqrt(Math.max(0, profile.points) / 10)) + 1 : 1)
+	const levelMin    = $derived((level - 1) * (level - 1) * 10)
+	const levelMax    = $derived(level * level * 10)
 	const levelProgress = $derived(
 		profile && levelMax > levelMin
 			? Math.min(100, Math.round(((profile.points - levelMin) / (levelMax - levelMin)) * 100))
