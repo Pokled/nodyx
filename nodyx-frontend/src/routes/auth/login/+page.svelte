@@ -19,9 +19,9 @@
 	// ── Nodyx Signet ──────────────────────────────────────────────────────────
 	type SignetState = 'idle' | 'waiting' | 'approved' | 'rejected' | 'expired' | 'error'
 
-	let signetState   = $state<SignetState>('idle')
+	let signetState    = $state<SignetState>(data.signetError ? 'error' : 'idle')
 	let signetUsername = $state('')
-	let signetError   = $state('')
+	let signetError    = $state(data.signetError ?? '')
 	let signetToken   = $state('')
 	let signetChallengeId = $state('')
 	let signetPollInterval: ReturnType<typeof setInterval> | null = null
@@ -127,8 +127,21 @@
 				const j = await poll.json()
 				if (j.status === 'approved' && j.token) {
 					clearInterval(signetPollInterval!)
-					signetToken = j.token
-					signetState = 'approved'
+					if (signetQrMode) {
+						// Flow cross-instance : fetch direct pour poser le cookie, puis navigation
+						try {
+							await fetch('?/signet', {
+								method: 'POST',
+								credentials: 'same-origin',
+								headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+								body: new URLSearchParams({ token: j.token, redirectTo: data.redirectTo || '/' })
+							})
+						} catch {}
+						window.location.href = data.redirectTo || '/'
+					} else {
+						signetToken = j.token
+						signetState = 'approved'
+					}
 				} else if (j.status === 'rejected') {
 					clearInterval(signetPollInterval!)
 					signetState = 'rejected'
