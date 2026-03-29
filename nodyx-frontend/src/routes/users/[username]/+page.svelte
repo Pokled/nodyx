@@ -544,9 +544,9 @@
 		100% { transform: scale(1);    opacity: 0.75; }
 	}
 	@keyframes aurora-breathe-b {
-		0%   { transform: scale(1.05); opacity: 0.55; }
-		50%  { transform: scale(0.9);  opacity: 0.85; }
-		100% { transform: scale(1.05); opacity: 0.55; }
+		0%   { transform: scale(1);    opacity: 0.55; }
+		50%  { transform: scale(1.12); opacity: 0.85; }
+		100% { transform: scale(1);    opacity: 0.55; }
 	}
 	@keyframes aurora-breathe-c {
 		0%   { transform: scale(1);    opacity: 0.35; }
