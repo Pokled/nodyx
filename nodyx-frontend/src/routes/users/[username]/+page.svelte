@@ -59,10 +59,10 @@
 
 	// Stats cards
 	const stats = $derived([
-		{ label: 'Posts', value: Number(profile.post_count ?? 0).toLocaleString('fr-FR'), icon: '✍️' },
-		{ label: 'Threads', value: Number(profile.thread_count ?? 0).toLocaleString('fr-FR'), icon: '💬' },
-		{ label: 'Points', value: Number(livePoints ?? 0).toLocaleString('fr-FR'), icon: '⭐' },
-		{ label: 'Jours sur Nodyx', value: daysSince.toLocaleString('fr-FR'), icon: '📅' },
+		{ label: 'Posts', value: Number(profile.post_count ?? 0).toLocaleString('fr-FR'), icon: 'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z', color: 'indigo' },
+		{ label: 'Threads', value: Number(profile.thread_count ?? 0).toLocaleString('fr-FR'), icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z', color: 'violet' },
+		{ label: 'Points XP', value: Number(livePoints ?? 0).toLocaleString('fr-FR'), icon: 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z', color: 'yellow' },
+		{ label: 'Jours actif', value: daysSince.toLocaleString('fr-FR'), icon: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5', color: 'teal' },
 	])
 
 	// Social links — only show those that are set
@@ -71,33 +71,28 @@
 			label: 'GitHub',
 			url: `https://github.com/${profile.github_username}`,
 			handle: profile.github_username,
-			color: 'text-gray-300',
 		},
 		profile.twitter_username && {
 			label: 'Twitter / X',
 			url: `https://twitter.com/${profile.twitter_username}`,
 			handle: `@${profile.twitter_username}`,
-			color: 'text-sky-400',
 		},
 		profile.instagram_username && {
 			label: 'Instagram',
 			url: `https://instagram.com/${profile.instagram_username}`,
 			handle: `@${profile.instagram_username}`,
-			color: 'text-pink-400',
 		},
 		profile.youtube_channel && {
 			label: 'YouTube',
 			url: profile.youtube_channel.startsWith('http') ? profile.youtube_channel : `https://youtube.com/${profile.youtube_channel}`,
 			handle: profile.youtube_channel,
-			color: 'text-red-400',
 		},
 		profile.website_url && {
 			label: 'Site web',
 			url: profile.website_url,
 			handle: profile.website_url.replace(/^https?:\/\//, '').replace(/\/$/, ''),
-			color: 'text-indigo-400',
 		},
-	].filter(Boolean) as { label: string; url: string; handle: string; color: string }[])
+	].filter(Boolean) as { label: string; url: string; handle: string }[])
 
 	const title = $derived(`${profile.display_name || profile.username} — Nodyx`)
 	const description = $derived(
@@ -114,6 +109,17 @@
 	// Theme
 	const theme = $derived(resolveTheme(profile.metadata?.theme))
 	const scopeStyle = $derived(themeToStyle(theme))
+
+	// Level rank label
+	const rankLabel = $derived(
+		level >= 50 ? 'Légende' :
+		level >= 30 ? 'Expert' :
+		level >= 20 ? 'Vétéran' :
+		level >= 10 ? 'Confirmé' :
+		level >= 5  ? 'Actif' :
+		level >= 2  ? 'Novice' :
+		'Découvreur'
+	)
 </script>
 
 <svelte:head>
@@ -127,35 +133,36 @@
 	<meta property="og:type" content="profile" />
 </svelte:head>
 
-<!-- ── Profile scope — CSS variables injected here ─────────────────────── -->
 <div class="profile-scope min-h-full -mx-4 sm:-mx-6 px-0" style={scopeStyle}>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     BANNER — avatar + name embedded inside, button top-right
+     HERO — Banner + identity passport
      ═══════════════════════════════════════════════════════════════ -->
-<div class="relative w-full h-40 sm:h-64" style="background: linear-gradient(135deg, color-mix(in srgb, var(--p-bg) 60%, var(--p-accent) 40%), var(--p-bg))">
+<div class="relative w-full" style="height: 320px">
 
-	<!-- Image layer (clipped to banner bounds) -->
+	<!-- Banner image layer -->
 	<div class="absolute inset-0 overflow-hidden">
 		{#if bannerSrc}
 			<img
 				src={bannerSrc}
-				alt="Bannière de {profile.display_name || profile.username}"
+				alt=""
+				aria-hidden="true"
 				class="w-full h-full object-cover"
 			/>
+		{:else}
+			<!-- Default animated gradient banner -->
+			<div class="w-full h-full profile-default-banner" style="--accent: var(--p-accent)"></div>
 		{/if}
-		<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-		<div class="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30"></div>
+		<!-- Bottom gradient to blend into page bg -->
+		<div class="absolute inset-0" style="background: linear-gradient(to bottom, transparent 30%, color-mix(in srgb, var(--p-bg) 90%, transparent) 100%)"></div>
+		<div class="absolute inset-0" style="background: linear-gradient(to right, color-mix(in srgb, var(--p-bg) 20%, transparent), transparent 60%)"></div>
 	</div>
 
-	<!-- Action button — top-right corner, inside banner -->
+	<!-- Action button — top right -->
 	{#if isOwnProfile}
 		<a
 			href="/users/me/edit"
-			class="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3.5 py-1.5
-			       rounded-lg bg-black/50 backdrop-blur-sm border border-white/10
-			       hover:bg-black/70 hover:border-white/20 text-xs text-gray-200 hover:text-white
-			       transition-all font-medium"
+			class="profile-action-btn absolute top-4 right-4 z-20"
 		>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
@@ -165,73 +172,130 @@
 	{:else if me}
 		<a
 			href="/chat"
-			class="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3.5 py-1.5
-			       rounded-lg backdrop-blur-sm border border-white/20
-			       text-xs text-white transition-all font-medium"
-			style="background: color-mix(in srgb, var(--p-accent) 70%, transparent)"
+			class="profile-action-btn absolute top-4 right-4 z-20"
+			style="background: color-mix(in srgb, var(--p-accent) 30%, rgba(0,0,0,0.5)); border-color: color-mix(in srgb, var(--p-accent) 50%, transparent)"
 		>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
 			</svg>
-			Message
+			Envoyer un message
 		</a>
 	{/if}
 
-	<!-- Avatar + Name — anchored at banner bottom, avatar overflows below -->
+	<!-- Identity passport — anchored at banner bottom -->
 	<div class="absolute bottom-0 inset-x-0 z-10">
-		<div class="max-w-6xl mx-auto px-6 flex items-end gap-5">
+		<div class="max-w-6xl mx-auto px-6 flex items-end gap-6 pb-6">
 
-			<!-- Avatar: translate-y-1/2 makes it half-overflow below the banner -->
-			<div class="relative w-28 h-28 shrink-0 translate-y-1/2">
-				<div class="w-full h-full rounded-full border-4 overflow-hidden
-				            shadow-2xl ring-1 ring-white/10"
-				     style="border-color: var(--p-bg); background: var(--p-accent)">
-					{#if profile.avatar_url}
-						<img src={profile.avatar_url} alt="Avatar de {profile.display_name || profile.username}" class="w-full h-full object-cover" />
-					{:else}
-						<div class="w-full h-full flex items-center justify-center text-white text-4xl font-bold select-none"
-						     aria-hidden="true">{initials}</div>
-					{/if}
+			<!-- Avatar with frame -->
+			<div class="relative shrink-0 translate-y-10">
+				<div class="profile-avatar-ring w-32 h-32" style="--accent: var(--p-accent)">
+					<div class="w-full h-full rounded-full overflow-hidden"
+					     style="background: var(--p-accent)">
+						{#if profile.avatar_url}
+							<img src={profile.avatar_url} alt="Avatar de {profile.display_name || profile.username}" class="w-full h-full object-cover" />
+						{:else}
+							<div class="w-full h-full flex items-center justify-center text-white text-5xl font-black select-none"
+							     aria-hidden="true">{initials}</div>
+						{/if}
+					</div>
 				</div>
-				<!-- Frame overlay -->
 				{#if frameSrc}
-					<img src={frameSrc} alt="Cadre" class="absolute inset-0 w-full h-full pointer-events-none select-none" />
+					<img src={frameSrc} alt="" aria-hidden="true"
+					     class="absolute inset-[-4px] w-[calc(100%+8px)] h-[calc(100%+8px)] pointer-events-none select-none" />
+				{/if}
+				<!-- Online dot -->
+				<span class="absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 profile-online-dot"
+				      style="border-color: var(--p-bg); background: #22c55e"
+				      title="En ligne"></span>
+			</div>
+
+			<!-- Name + meta -->
+			<div class="pb-1 min-w-0 flex-1">
+				<div class="flex flex-wrap items-center gap-2 mb-1">
+					<h1 class="text-3xl font-black leading-tight drop-shadow-lg truncate"
+					    style="color: {profile.name_color || '#ffffff'}">
+						{profile.display_name || profile.username}
+					</h1>
+					<!-- Level badge — prominent -->
+					<span class="profile-level-badge shrink-0" style="--accent: var(--p-accent)">
+						LVL {level}
+					</span>
+				</div>
+
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="text-sm font-medium drop-shadow" style="color: rgba(255,255,255,0.6)">
+						@{profile.username}
+					</span>
+					{#if profile.grade_name && profile.grade_color}
+						<span class="text-xs font-semibold rounded px-2 py-0.5 shrink-0"
+						      style="background-color: {profile.grade_color}; color: {gradeTextColor(profile.grade_color)}">
+							{profile.grade_name}
+						</span>
+					{/if}
+					{#if badgeSrc}
+						<img src={badgeSrc} alt={profile.badge_asset_name ?? 'Badge'}
+						     title={profile.badge_asset_name ?? 'Badge'}
+						     class="w-10 h-10 rounded object-contain drop-shadow" />
+					{/if}
+					<span class="text-xs px-2 py-0.5 rounded-full font-medium"
+					      style="background: color-mix(in srgb, var(--p-accent) 15%, transparent); color: var(--p-accent); border: 1px solid color-mix(in srgb, var(--p-accent) 30%, transparent)">
+						{rankLabel}
+					</span>
+				</div>
+
+				{#if profile.status}
+					<p class="mt-1.5 text-sm drop-shadow" style="color: rgba(255,255,255,0.55)">
+						{profile.status}
+					</p>
 				{/if}
 			</div>
 
-			<!-- Name + @username + grade -->
-			<div class="pb-5 min-w-0">
-				<h1
-					class="text-2xl font-bold leading-tight truncate drop-shadow-lg"
-					style="color: {profile.name_color || '#ffffff'}"
-				>
-					{profile.display_name || profile.username}
-				</h1>
-				<p
-					class="text-sm drop-shadow font-medium"
-					style="color: {profile.name_color ? profile.name_color + 'b3' : 'var(--p-text-muted)'}"
-				>
-					@{profile.username}
-				</p>
-				{#if profile.grade_name && profile.grade_color}
-					<span
-						class="inline-block mt-1.5 text-xs font-semibold rounded px-2 py-0.5"
-						style="background-color: {profile.grade_color}; color: {gradeTextColor(profile.grade_color)}"
-					>
-						{profile.grade_name}
-					</span>
-				{/if}
-				{#if badgeSrc}
-					<img src={badgeSrc} alt={profile.badge_asset_name ?? 'Badge'} title={profile.badge_asset_name ?? 'Badge'}
-						class="inline-block mt-1.5 ml-1 w-14 h-14 rounded object-contain drop-shadow" />
-				{/if}
-			</div>
 		</div>
 	</div>
 </div>
 
-<!-- Spacer: half of avatar height -->
-<div class="h-16" style="background: var(--p-bg)"></div>
+<!-- Spacer = avatar overflow -->
+<div class="h-12" style="background: var(--p-bg)"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     XP STRIP — full width, cinematic
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="max-w-6xl mx-auto px-6 mb-6">
+	<div class="profile-xp-strip rounded-2xl p-5" style="--accent: var(--p-accent)">
+		<div class="flex items-center justify-between mb-3 gap-4 flex-wrap">
+			<div class="flex items-center gap-3">
+				<span class="text-4xl font-black tabular-nums leading-none profile-xp-level"
+				      style="color: var(--p-accent)">{level}</span>
+				<div>
+					<p class="text-xs uppercase tracking-widest font-bold mb-0.5" style="color: var(--p-text-muted)">Niveau</p>
+					<p class="text-sm font-semibold" style="color: var(--p-text)">{rankLabel}</p>
+				</div>
+			</div>
+			<div class="text-right">
+				<p class="text-sm font-bold tabular-nums" style="color: var(--p-text)">{livePoints.toLocaleString('fr-FR')} pts</p>
+				<p class="text-xs" style="color: var(--p-text-muted)">
+					{levelMax > livePoints
+						? `Encore ${(levelMax - livePoints).toLocaleString('fr-FR')} pts pour le niveau ${level + 1}`
+						: 'Niveau maximum atteint !'}
+				</p>
+			</div>
+		</div>
+
+		<!-- XP bar with shimmer -->
+		<div class="relative h-3 rounded-full overflow-hidden" style="background: color-mix(in srgb, var(--p-accent) 12%, rgba(0,0,0,0.3))">
+			<div
+				class="profile-xp-bar h-full rounded-full"
+				style="width: {levelProgress}%; background: linear-gradient(90deg, color-mix(in srgb, var(--p-accent) 70%, #8b5cf6), var(--p-accent))"
+			></div>
+		</div>
+
+		<!-- XP milestones -->
+		<div class="flex justify-between mt-1.5">
+			<span class="text-[10px] tabular-nums" style="color: var(--p-text-muted)">{levelMin.toLocaleString('fr-FR')} pts</span>
+			<span class="text-[10px] tabular-nums" style="color: var(--p-text-muted)">{levelMax.toLocaleString('fr-FR')} pts</span>
+		</div>
+	</div>
+</div>
 
 <!-- ═══════════════════════════════════════════════════════════════
      MAIN — 2-column layout
@@ -240,46 +304,39 @@
 	<div class="flex flex-col sm:flex-row gap-5 items-start">
 
 		<!-- ─── LEFT SIDEBAR ─────────────────────────────────────────── -->
-		<aside class="w-full sm:w-72 sm:shrink-0 space-y-3">
+		<aside class="w-full sm:w-64 sm:shrink-0 space-y-3">
 
-			<!-- Level card -->
-			<div class="rounded-xl p-4 backdrop-blur-sm"
-			     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-				<div class="flex items-center justify-between mb-3">
-					<span class="text-xs uppercase tracking-widest font-medium" style="color: var(--p-text-muted)">Niveau</span>
-					<span class="text-3xl font-black leading-none" style="color: var(--p-accent)">
-						{level}
-					</span>
-				</div>
-				<!-- XP bar -->
-				<div class="h-1.5 rounded-full overflow-hidden" style="background: color-mix(in srgb, var(--p-card-border) 80%, transparent)">
-					<div
-						class="h-full rounded-full transition-all"
-						style="width: {levelProgress}%; background: var(--p-accent)"
-					></div>
-				</div>
-				<div class="flex justify-between mt-1.5">
-					<span class="text-[11px]" style="color: var(--p-text-muted)">{profile.points.toLocaleString('fr-FR')} pts</span>
-					<span class="text-[11px]" style="color: var(--p-text-muted)">{levelMax.toLocaleString('fr-FR')} pts</span>
-				</div>
-			</div>
-
-			<!-- Status + Location -->
-			{#if profile.status || profile.location}
-				<div class="rounded-xl p-4 space-y-2.5"
+			<!-- Identity card: location + since -->
+			{#if profile.location || true}
+				<div class="rounded-xl p-4 space-y-3"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-					{#if profile.status}
-						<div class="flex items-center gap-2.5 text-sm" style="color: var(--p-text)">
-							<span class="text-base shrink-0">💬</span>
-							<span class="leading-snug">{profile.status}</span>
-						</div>
-					{/if}
 					{#if profile.location}
-						<div class="flex items-center gap-2.5 text-sm" style="color: var(--p-text-muted)">
-							<span class="text-base shrink-0">📍</span>
-							<span class="leading-snug">{profile.location}</span>
+						<div class="flex items-center gap-2.5">
+							<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--p-text-muted)">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
+							</svg>
+							<span class="text-sm" style="color: var(--p-text)">{profile.location}</span>
 						</div>
 					{/if}
+					<div class="flex items-center gap-2.5">
+						<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--p-text-muted)">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
+						</svg>
+						<div>
+							<p class="text-xs" style="color: var(--p-text-muted)">Membre depuis</p>
+							<p class="text-sm font-medium" style="color: var(--p-text)">{memberSinceFormatted}</p>
+						</div>
+					</div>
+					<div class="flex items-center gap-2.5">
+						<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--p-text-muted)">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+						</svg>
+						<div>
+							<p class="text-xs" style="color: var(--p-text-muted)">Présence</p>
+							<p class="text-sm font-medium" style="color: var(--p-text)">{daysSince.toLocaleString('fr-FR')} jours</p>
+						</div>
+					</div>
 				</div>
 			{/if}
 
@@ -291,7 +348,7 @@
 					<div class="flex flex-wrap gap-1.5">
 						{#each profile.tags as tag}
 							<span class="rounded-full px-2.5 py-0.5 text-xs font-medium"
-							      style="background: color-mix(in srgb, var(--p-accent) 15%, transparent); border: 1px solid color-mix(in srgb, var(--p-accent) 30%, transparent); color: var(--p-accent)">
+							      style="background: color-mix(in srgb, var(--p-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--p-accent) 25%, transparent); color: var(--p-accent)">
 								#{tag}
 							</span>
 						{/each}
@@ -304,14 +361,14 @@
 				<div class="rounded-xl p-4"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Réseaux</p>
-					<ul class="space-y-2">
+					<ul class="space-y-1.5">
 						{#each socialLinks as social}
 							<li>
 								<a href={social.url} target="_blank" rel="noopener noreferrer"
-								   class="flex items-center gap-3 py-1.5 group">
-									<span class="w-5 h-5 shrink-0 transition-colors" style="color: var(--p-text-muted)">
+								   class="flex items-center gap-3 py-1.5 px-2 rounded-lg transition-all group hover:bg-white/5">
+									<span class="w-4 h-4 shrink-0" style="color: var(--p-text-muted)">
 										{#if social.label === 'GitHub'}
-											<svg viewBox="0 0 16 16" class="w-5 h-5 fill-current" aria-hidden="true">
+											<svg viewBox="0 0 16 16" class="w-4 h-4 fill-current" aria-hidden="true">
 												<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
 											</svg>
 										{:else if social.label === 'Twitter / X'}
@@ -333,8 +390,8 @@
 										{/if}
 									</span>
 									<div class="min-w-0">
-										<p class="text-xs leading-none" style="color: var(--p-text-muted)">{social.label}</p>
-										<p class="text-sm truncate group-hover:underline" style="color: var(--p-accent)">{social.handle}</p>
+										<p class="text-[10px] uppercase tracking-wide leading-none mb-0.5" style="color: var(--p-text-muted)">{social.label}</p>
+										<p class="text-xs truncate font-medium group-hover:underline" style="color: var(--p-accent)">{social.handle}</p>
 									</div>
 								</a>
 							</li>
@@ -343,12 +400,28 @@
 				</div>
 			{/if}
 
-			<!-- Member since -->
-			<div class="rounded-xl p-4 text-center"
+			<!-- Showcase placeholder — future home of badges, karma, achievements -->
+			<div class="rounded-xl p-4"
 			     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-				<p class="text-xs uppercase tracking-widest font-medium" style="color: var(--p-text-muted)">Membre depuis</p>
-				<p class="text-sm font-semibold mt-1.5" style="color: var(--p-text)">{memberSinceFormatted}</p>
-				<p class="text-xs mt-0.5" style="color: var(--p-text-muted)">{daysSince.toLocaleString('fr-FR')} jours sur Nodyx</p>
+				<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Showcase</p>
+				<div class="flex flex-wrap gap-2">
+					<div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
+					     title="Bientôt disponible">
+						🔒
+					</div>
+					<div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
+					     title="Bientôt disponible">
+						🔒
+					</div>
+					<div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
+					     title="Bientôt disponible">
+						🔒
+					</div>
+				</div>
+				<p class="text-[10px] mt-2" style="color: var(--p-text-muted)">Badges & récompenses — bientôt</p>
 			</div>
 
 		</aside>
@@ -359,9 +432,16 @@
 			<!-- Stats row -->
 			<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 				{#each stats as stat}
-					<div class="rounded-xl p-4 text-center transition-colors"
+					<div class="profile-stat-card rounded-xl p-4 text-center group"
 					     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-						<p class="text-xs uppercase tracking-widest font-medium mb-2" style="color: var(--p-text-muted)">{stat.icon}</p>
+						<div class="flex justify-center mb-2">
+							<div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all group-hover:scale-110"
+							     style="background: color-mix(in srgb, var(--p-accent) 15%, transparent)">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--p-accent)">
+									<path stroke-linecap="round" stroke-linejoin="round" d={stat.icon}/>
+								</svg>
+							</div>
+						</div>
 						<p class="text-2xl font-black tabular-nums leading-none" style="color: var(--p-text)">{stat.value}</p>
 						<p class="text-xs mt-1.5 font-medium" style="color: var(--p-text-muted)">{stat.label}</p>
 					</div>
@@ -372,8 +452,11 @@
 			{#if profile.bio}
 				<div class="rounded-xl p-5"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">À propos</p>
-					<p class="whitespace-pre-line text-sm leading-relaxed" style="color: var(--p-text)">{profile.bio}</p>
+					<p class="text-xs uppercase tracking-widest font-medium mb-4" style="color: var(--p-text-muted)">À propos</p>
+					<div class="flex gap-4">
+						<div class="w-0.5 rounded-full shrink-0 self-stretch" style="background: var(--p-accent); opacity: 0.4"></div>
+						<p class="whitespace-pre-line text-sm leading-relaxed" style="color: var(--p-text)">{profile.bio}</p>
+					</div>
 				</div>
 			{/if}
 
@@ -393,12 +476,10 @@
 					<div class="grid grid-cols-2 gap-2">
 						{#each profile.links as link}
 							<a href={link.url} target="_blank" rel="noopener noreferrer"
-							   class="flex items-center justify-between gap-3 p-3 rounded-lg transition-all group"
+							   class="flex items-center justify-between gap-3 p-3 rounded-lg transition-all group hover:scale-[1.02]"
 							   style="background: color-mix(in srgb, var(--p-card-border) 40%, transparent); border: 1px solid var(--p-card-border)">
 								<span class="text-sm font-medium truncate" style="color: var(--p-accent)">{link.label}</span>
-								<svg class="w-3.5 h-3.5 shrink-0 transition-colors" fill="none" stroke="currentColor"
-								     stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"
-								     style="color: var(--p-text-muted)">
+								<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--p-text-muted)">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
 								</svg>
 							</a>
@@ -411,12 +492,12 @@
 			{#if !profile.bio && !profile.github_username && !profile.links?.length}
 				<div class="rounded-xl p-10 text-center"
 				     style="background: color-mix(in srgb, var(--p-card-bg) 60%, transparent); border: 1px solid var(--p-card-border)">
-					<p class="text-4xl mb-3">👤</p>
-					<p class="text-sm" style="color: var(--p-text-muted)">Ce profil est encore vide.</p>
+					<p class="text-4xl mb-3">✨</p>
+					<p class="text-sm font-medium" style="color: var(--p-text-muted)">Ce profil est encore vide.</p>
 					{#if isOwnProfile}
-						<a href="/users/me/edit" class="inline-block mt-3 text-sm underline underline-offset-2"
+						<a href="/users/me/edit" class="inline-block mt-3 text-sm font-semibold underline underline-offset-2"
 						   style="color: var(--p-accent)">
-							Compléter mon profil →
+							Donne-lui vie →
 						</a>
 					{/if}
 				</div>
@@ -427,3 +508,125 @@
 </div>
 
 </div><!-- end .profile-scope -->
+
+<style>
+	/* ── Default banner gradient ──────────────────────────────────── */
+	.profile-default-banner {
+		background: linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--accent) 20%, #0f0f1a) 0%,
+			#0f0f1a 40%,
+			color-mix(in srgb, var(--accent) 10%, #0f0f1a) 100%
+		);
+		position: relative;
+		overflow: hidden;
+	}
+	.profile-default-banner::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(ellipse 80% 60% at 20% 50%, color-mix(in srgb, var(--accent) 25%, transparent), transparent 70%);
+	}
+	.profile-default-banner::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(ellipse 50% 40% at 80% 30%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+	}
+
+	/* ── Avatar ring ──────────────────────────────────────────────── */
+	.profile-avatar-ring {
+		position: relative;
+		border-radius: 9999px;
+		padding: 3px;
+		background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 40%, transparent));
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-bg) 80%, transparent), 0 0 32px color-mix(in srgb, var(--accent) 40%, transparent);
+	}
+
+	/* ── Online dot pulse ─────────────────────────────────────────── */
+	.profile-online-dot {
+		animation: profile-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+	@keyframes profile-pulse {
+		0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+		50%       { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
+	}
+
+	/* ── Level badge ──────────────────────────────────────────────── */
+	.profile-level-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 3px 10px;
+		border-radius: 999px;
+		font-size: 0.75rem;
+		font-weight: 900;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 18%, rgba(0,0,0,0.5));
+		border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+		backdrop-filter: blur(8px);
+		box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
+	}
+
+	/* ── XP strip ─────────────────────────────────────────────────── */
+	.profile-xp-strip {
+		background: color-mix(in srgb, var(--accent) 6%, var(--p-card-bg, #1a1a2e));
+		border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--p-card-border, rgba(255,255,255,0.06)));
+		backdrop-filter: blur(12px);
+	}
+
+	/* ── XP bar shimmer ───────────────────────────────────────────── */
+	.profile-xp-bar {
+		position: relative;
+		overflow: hidden;
+		transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+	.profile-xp-bar::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+		animation: profile-shimmer 2.5s infinite;
+		transform: translateX(-100%);
+	}
+	@keyframes profile-shimmer {
+		100% { transform: translateX(200%); }
+	}
+
+	/* ── XP level number glow ─────────────────────────────────────── */
+	.profile-xp-level {
+		text-shadow: 0 0 20px color-mix(in srgb, var(--p-accent) 60%, transparent);
+	}
+
+	/* ── Stat cards hover ─────────────────────────────────────────── */
+	.profile-stat-card {
+		transition: transform 0.15s, border-color 0.15s;
+	}
+	.profile-stat-card:hover {
+		transform: translateY(-2px);
+		border-color: color-mix(in srgb, var(--p-accent) 30%, transparent);
+	}
+
+	/* ── Action button ────────────────────────────────────────────── */
+	.profile-action-btn {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 14px;
+		border-radius: 8px;
+		background: rgba(0,0,0,0.5);
+		backdrop-filter: blur(8px);
+		border: 1px solid rgba(255,255,255,0.12);
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: #e2e8f0;
+		transition: all 0.15s;
+		text-decoration: none;
+	}
+	.profile-action-btn:hover {
+		background: rgba(0,0,0,0.7);
+		border-color: rgba(255,255,255,0.22);
+		color: #fff;
+	}
+</style>
