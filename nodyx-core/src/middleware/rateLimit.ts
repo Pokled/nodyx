@@ -7,7 +7,13 @@ const MAX_REQUESTS   = 100
 // ── Middleware ───────────────────────────────────────────────
 
 export async function rateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const ip  = request.ip
+  // Prefer real client IP from Cloudflare or reverse proxy headers
+  const ip = (
+    (request.headers['cf-connecting-ip'] as string) ||
+    (request.headers['x-real-ip'] as string) ||
+    (request.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
+    request.ip
+  )
   const key = `rate:${ip}`
 
   const count = await redis.incr(key)
