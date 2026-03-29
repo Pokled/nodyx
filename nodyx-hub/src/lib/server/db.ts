@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.resolve(__dirname, '../../../../../hub.db');
+const DB_PATH = process.env.HUB_DB_PATH ?? path.resolve(__dirname, '../../../../../hub.db');
 
 let _db: Database.Database | null = null;
 

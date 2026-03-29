@@ -2,9 +2,7 @@
     import NetworkDoctor from '$lib/components/NetworkDoctor.svelte';
     import { page } from '$app/stores';
 
-    import { PUBLIC_API_URL } from '$env/static/public';
-    import { env } from '$env/dynamic/public';
-    const PUBLIC_SIGNET_URL = env.PUBLIC_SIGNET_URL ?? '';
+    import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$env/static/public';
     import { tick } from 'svelte';
 
     // ── Nodyx Signet ──────────────────────────────────────────────────────────

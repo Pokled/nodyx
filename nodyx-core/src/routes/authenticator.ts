@@ -167,7 +167,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
 
   /** Génère un token d'enregistrement à usage unique (15 min) — admin uniquement */
   app.post('/enrollment-tokens', {
-    preHandler: [requireAuth, adminOnly]
+    preHandler: [requireAuth]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.userId
 
