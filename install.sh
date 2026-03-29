@@ -197,7 +197,15 @@ _nodyx_rollback() {
     eval "${_ROLLBACK_STEPS[$_ri]}" 2>/dev/null || true
   done
   echo ""
-  echo -e "${YELLOW}  État partiel possible. Lance ${BOLD}sudo nodyx-doctor${RESET}${YELLOW} pour diagnostiquer.${RESET}"
+  if [[ -x /usr/local/bin/nodyx-doctor ]]; then
+    echo -e "${YELLOW}  État partiel possible. Lance ${BOLD}sudo nodyx-doctor${RESET}${YELLOW} pour diagnostiquer.${RESET}"
+  else
+    echo -e "${YELLOW}  État partiel possible. Commandes de diagnostic rapide :${RESET}"
+    echo -e "${YELLOW}    • PM2  : ${BOLD}runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list${RESET}"
+    echo -e "${YELLOW}    • Logs : ${BOLD}journalctl -u nodyx-core -n 50${RESET}"
+    echo -e "${YELLOW}    • DB   : ${BOLD}sudo -u postgres psql -c '\\l'${RESET}"
+    echo -e "${YELLOW}  Relance l'installeur pour terminer la configuration.${RESET}"
+  fi
   echo ""
 }
 trap '_nodyx_rollback' EXIT
