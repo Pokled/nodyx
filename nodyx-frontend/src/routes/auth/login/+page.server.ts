@@ -4,8 +4,9 @@ import { apiFetch } from '$lib/api';
 
 export const load: PageServerLoad = async ({ url }) => {
 	return {
-		redirectTo:   url.searchParams.get('redirectTo') ?? '/',
+		redirectTo:    url.searchParams.get('redirectTo') ?? '/',
 		passwordReset: url.searchParams.get('reset') === '1',
+		signetError:   url.searchParams.get('signet_error') ?? null,
 	};
 };
 
