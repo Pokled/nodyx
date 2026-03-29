@@ -19,6 +19,7 @@
 	import { p2pManager, p2pStatus, p2pPeerCount, p2pFallback } from '$lib/p2p';
 	import MiniProfileCard from '$lib/components/MiniProfileCard.svelte';
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects';
+	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -765,6 +766,18 @@
 		longPressMsg = null;
 	}
 
+	// ── Réactions flottantes Twitch-style ──────────────────────────────────────
+	const FLOAT_EMOJIS = ['🔥', '❤️', '😂', '👀', '💯', '🎉', '😎', '🚀', '👏', '💀'];
+	let floatCooldown = $state(false);
+
+	function floatReact(emoji: string) {
+		if (!s || !selectedChannel || floatCooldown) return;
+		floatCooldown = true;
+		const x = 0.05 + Math.random() * 0.82;  // position horizontale aléatoire 5–87%
+		s.emit('chat:float_reaction', { channelId: selectedChannel.id, emoji, x });
+		setTimeout(() => { floatCooldown = false; }, 280);
+	}
+
 	// P2P message handler — typing + reactions from peers
 	function handleP2PMessage(e: Event) {
 		const data = (e as CustomEvent).detail;
@@ -1237,6 +1250,18 @@
 				{/if}
 			</div>
 
+			<!-- Float reaction bar -->
+			<div class="px-4 py-1.5 flex items-center gap-1 overflow-x-auto" style="scrollbar-width: none; border-top: 1px solid rgba(255,255,255,.04)">
+				{#each FLOAT_EMOJIS as emoji}
+					<button
+						onclick={() => floatReact(emoji)}
+						disabled={floatCooldown || !selectedChannel}
+						class="fr-bar-btn"
+						title="Réaction flottante"
+					>{emoji}</button>
+				{/each}
+			</div>
+
 			<!-- Input area -->
 			<div class="px-4 shrink-0" style="padding-bottom: max(1rem, var(--bottom-nav-h))">
 				<!-- @mention dropdown -->
@@ -1400,6 +1425,9 @@
 
 			{/if}<!-- end voice/text branch -->
 
+		<!-- Réactions flottantes — overlay fixe sur toute la page -->
+		<FloatingReactions />
+
 		{:else}
 			<!-- No channel -->
 			<div class="flex-1 flex items-center justify-center flex-col gap-3 text-gray-600">
@@ -1528,6 +1556,37 @@
 		35%  { transform: scale(1.55); filter: brightness(1.4); }
 		65%  { transform: scale(0.88); filter: brightness(1.1); }
 		100% { transform: scale(1.05); filter: brightness(1);   }
+	}
+
+	/* ── Float reaction bar buttons ──────────────────────────────────────── */
+	.fr-bar-btn {
+		flex-shrink:     0;
+		width:           2rem;
+		height:          2rem;
+		display:         flex;
+		align-items:     center;
+		justify-content: center;
+		font-size:       1.1rem;
+		border-radius:   0.5rem;
+		background:      transparent;
+		border:          1px solid transparent;
+		cursor:          pointer;
+		transition:      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+		                 background 0.1s,
+		                 border-color 0.1s;
+		user-select:     none;
+	}
+	.fr-bar-btn:hover:not(:disabled) {
+		transform:    scale(1.3);
+		background:   rgba(255, 255, 255, 0.06);
+		border-color: rgba(255, 255, 255, 0.1);
+	}
+	.fr-bar-btn:active:not(:disabled) {
+		transform: scale(0.9);
+	}
+	.fr-bar-btn:disabled {
+		opacity: 0.45;
+		cursor:  not-allowed;
 	}
 
 	/* ── Message rows ─────────────────────────────────────────────────────── */

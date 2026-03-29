@@ -486,6 +486,20 @@ export function registerSocketIO(server: Server): void {
       }
     })
 
+    // ── chat:float_reaction — réactions flottantes Twitch-style ──────────────
+    socket.on('chat:float_reaction', (data: { channelId: string; emoji: string; x: number }) => {
+      if (checkRateLimit(userId, 'chat:float_reaction')) return
+      const { channelId, emoji, x } = data ?? {}
+      if (!isUuid(channelId) || !isString(emoji) || emoji.length > 64) return
+      if (!socket.rooms.has(`channel:${channelId}`)) return
+      if (!io) return
+      io.to(`channel:${channelId}`).emit('chat:float_reaction', {
+        emoji,
+        x: typeof x === 'number' ? Math.max(0, Math.min(1, x)) : 0.5,
+        username,
+      })
+    })
+
     // ── chat:edit ─────────────────────────────────────────────────────────────
     socket.on('chat:edit', async (data: { messageId: string; content: string }) => {
       if (checkRateLimit(userId, 'chat:edit')) return

@@ -28,6 +28,7 @@ export const RATE_RULES: Record<string, RuleConfig[]> = {
   ],
   'chat:typing':          [{ limit: 3,  windowMs: 1_000  }],
   'chat:react':           [{ limit: 10, windowMs: 1_000  }],
+  'chat:float_reaction':  [{ limit: 4,  windowMs: 1_000  }],  // réactions flottantes Twitch-style
   'chat:edit':            [{ limit: 5,  windowMs: 1_000  }],
   'dm:send':              [{ limit: 5,  windowMs: 1_000  }],
   'dm:typing':            [{ limit: 3,  windowMs: 1_000  }],
