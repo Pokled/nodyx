@@ -172,7 +172,7 @@
 
 			<!-- Avatar with frame -->
 			<div class="relative shrink-0 translate-y-10">
-				<div class="profile-avatar-ring w-32 h-32" style="--accent: var(--p-accent)">
+				<div class="profile-avatar-ring w-32 h-32" style="--accent: {accent}">
 					<div class="w-full h-full rounded-full overflow-hidden"
 					     style="background: var(--p-accent)">
 						{#if profile.avatar_url}
@@ -201,7 +201,7 @@
 						{profile.display_name || profile.username}
 					</h1>
 					<!-- Level badge — prominent -->
-					<span class="profile-level-badge shrink-0" style="--accent: var(--p-accent)">
+					<span class="profile-level-badge shrink-0" style="--accent: {accent}">
 						LVL {level}
 					</span>
 				</div>
@@ -265,7 +265,7 @@
      XP STRIP — full width, cinematic
      ═══════════════════════════════════════════════════════════════ -->
 <div class="max-w-6xl mx-auto px-6 mb-6">
-	<div class="profile-xp-strip rounded-2xl p-5" style="--accent: var(--p-accent)">
+	<div class="profile-xp-strip rounded-xl p-5" style="--accent: {accent}">
 		<div class="flex items-center justify-between mb-3 gap-4 flex-wrap">
 			<div class="flex items-center gap-3">
 				<span class="text-4xl font-black tabular-nums leading-none profile-xp-level"
@@ -568,28 +568,25 @@
 		50%       { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
 	}
 
-	/* ── Level badge ──────────────────────────────────────────────── */
+	/* ── Level badge — flat, cohérent avec le shell ──────────────── */
 	.profile-level-badge {
 		display: inline-flex;
 		align-items: center;
 		padding: 3px 10px;
-		border-radius: 999px;
+		border-radius: 6px;
 		font-size: 0.75rem;
 		font-weight: 900;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--accent);
-		background: color-mix(in srgb, var(--accent) 18%, rgba(0,0,0,0.5));
-		border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-		backdrop-filter: blur(8px);
-		box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
+		background: color-mix(in srgb, var(--accent) 15%, rgba(0,0,0,0.6));
+		border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
 	}
 
-	/* ── XP strip ─────────────────────────────────────────────────── */
+	/* ── XP strip — flat, pas de blur ────────────────────────────── */
 	.profile-xp-strip {
-		background: color-mix(in srgb, var(--accent) 6%, var(--p-card-bg, #1a1a2e));
-		border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--p-card-border, rgba(255,255,255,0.06)));
-		backdrop-filter: blur(12px);
+		background: var(--p-card-bg, #111827);
+		border: 1px solid var(--p-card-border, #1f2937);
 	}
 
 	/* ── XP bar shimmer ───────────────────────────────────────────── */
