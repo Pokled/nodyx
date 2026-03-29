@@ -166,30 +166,6 @@
 		<div class="absolute inset-0" style="background: linear-gradient(to right, var(--p-bg) 0%, transparent 40%)"></div>
 	</div>
 
-	<!-- Action button — top right -->
-	{#if isOwnProfile}
-		<a
-			href="/users/me/edit"
-			class="profile-action-btn absolute top-4 right-4 z-20"
-		>
-			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
-			</svg>
-			Modifier le profil
-		</a>
-	{:else if me}
-		<a
-			href="/chat"
-			class="profile-action-btn absolute top-4 right-4 z-20"
-			style="background: color-mix(in srgb, var(--p-accent) 30%, rgba(0,0,0,0.5)); border-color: color-mix(in srgb, var(--p-accent) 50%, transparent)"
-		>
-			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
-			</svg>
-			Envoyer un message
-		</a>
-	{/if}
-
 	<!-- Identity passport — anchored at banner bottom -->
 	<div class="absolute bottom-0 inset-x-0 z-10">
 		<div class="max-w-6xl mx-auto px-6 flex items-end gap-6 pb-6">
@@ -255,6 +231,26 @@
 					<p class="mt-1.5 text-sm drop-shadow" style="color: rgba(255,255,255,0.55)">
 						{profile.status}
 					</p>
+				{/if}
+			</div>
+
+			<!-- Action button — inside max-w-6xl, aligned bottom-right -->
+			<div class="ml-auto pb-2 shrink-0">
+				{#if isOwnProfile}
+					<a href="/users/me/edit" class="profile-action-btn">
+						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+						</svg>
+						Modifier le profil
+					</a>
+				{:else if me}
+					<a href="/chat" class="profile-action-btn"
+					   style="background: color-mix(in srgb, var(--p-accent) 30%, rgba(0,0,0,0.5)); border-color: color-mix(in srgb, var(--p-accent) 50%, transparent)">
+						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
+						</svg>
+						Envoyer un message
+					</a>
 				{/if}
 			</div>
 
