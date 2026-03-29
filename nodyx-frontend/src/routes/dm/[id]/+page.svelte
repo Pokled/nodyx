@@ -29,7 +29,23 @@
 	let messages: DmMessage[] = $state(data.messages ?? [])
 	let conversations: Conversation[] = $state(data.conversations ?? [])
 	let conversation: Conversation | null = $state(data.conversation ?? null)
-	let conversationId = data.conversationId
+	let conversationId = $state(data.conversationId)
+
+	// Quand on switch d'interlocuteur, SvelteKit réutilise le composant sans le détruire.
+	// On réinitialise l'état local dès que data change (nouveau [id] dans l'URL).
+	$effect(() => {
+		if (data.conversationId === conversationId) return
+		conversationId = data.conversationId
+		conversation = data.conversation ?? null
+		messages = data.messages ?? []
+		hasMore = (data.messages ?? []).length >= 50
+		messageInput = ''
+		typingLabel = ''
+		typingUsers.clear()
+		markRead()
+		dmUnreadStore.set(0)
+		tick().then(() => scrollToBottom())
+	})
 
 	let messageInput = $state('')
 	let messagesEl: HTMLDivElement | null = $state(null)
