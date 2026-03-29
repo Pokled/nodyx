@@ -9,7 +9,7 @@ export async function toggleThanks(
   postId:   string,
   userId:   string,
   authorId: string
-): Promise<{ added: boolean; new_count: number }> {
+): Promise<{ added: boolean; new_count: number; new_points: number }> {
   if (userId === authorId) {
     throw new Error('Cannot thank your own post')
   }
@@ -30,11 +30,17 @@ export async function toggleThanks(
     added = true
   }
 
-  const { rows } = await db.query<{ count: number }>(
-    `SELECT COUNT(*)::int AS count FROM post_thanks WHERE post_id = $1`,
-    [postId]
-  )
-  return { added, new_count: rows[0].count }
+  const [thanksResult, pointsResult] = await Promise.all([
+    db.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM post_thanks WHERE post_id = $1`,
+      [postId]
+    ),
+    db.query<{ points: number }>(
+      `SELECT points FROM users WHERE id = $1`,
+      [authorId]
+    ),
+  ])
+  return { added, new_count: thanksResult.rows[0].count, new_points: pointsResult.rows[0].points }
 }
 
 // Bulk fetch thanks for a list of post IDs

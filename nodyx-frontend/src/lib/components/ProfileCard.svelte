@@ -53,6 +53,16 @@
 	// Show at most 3 tags per spec
 	const visibleTags = $derived(tags.slice(0, 3))
 
+	// Level calculation — same formula as MiniProfileCard and profile page
+	const level       = $derived(Math.max(1, Math.floor(Math.sqrt(Math.max(0, points) / 10))))
+	const levelMin    = $derived(level * level * 10)
+	const levelMax    = $derived((level + 1) * (level + 1) * 10)
+	const levelProgress = $derived(
+		levelMax > levelMin
+			? Math.min(100, Math.round(((points - levelMin) / (levelMax - levelMin)) * 100))
+			: 100
+	)
+
 	/**
 	 * Determine whether to use white or black text on the grade badge
 	 * based on the perceived luminance of the hex color.
@@ -110,8 +120,17 @@
 			</span>
 		{/if}
 
-		<!-- Points -->
+		<!-- Points + Level -->
 		<span class="text-xs text-yellow-400">{points} pts</span>
+		<div class="w-full px-1">
+			<div class="flex items-center justify-between mb-0.5">
+				<span class="text-[9px] text-gray-500 uppercase tracking-widest">Niv.</span>
+				<span class="text-[10px] font-black text-indigo-400">{level}</span>
+			</div>
+			<div class="h-1 rounded-full bg-gray-800 overflow-hidden">
+				<div class="h-full rounded-full bg-indigo-500" style="width: {levelProgress}%"></div>
+			</div>
+		</div>
 
 		<!-- Tags (max 3) -->
 		{#if visibleTags.length > 0}
@@ -166,6 +185,12 @@
 			{/if}
 
 			<span class="text-sm text-yellow-400">{points} pts</span>
+			<div class="flex items-center gap-2 mt-0.5">
+				<span class="text-xs font-black text-indigo-400">Niv. {level}</span>
+				<div class="flex-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+					<div class="h-full rounded-full bg-indigo-500" style="width: {levelProgress}%"></div>
+				</div>
+			</div>
 
 			{#if visibleTags.length > 0}
 				<ul class="flex flex-wrap gap-1.5 mt-1" aria-label="Tags">
