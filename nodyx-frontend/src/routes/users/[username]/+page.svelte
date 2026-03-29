@@ -146,9 +146,9 @@
 	<div class="absolute inset-0 overflow-hidden" style="background: var(--p-bg)">
 
 		<!-- Aurora blobs — always rendered, even with a banner image -->
-		<div class="profile-aurora-a" style="background: radial-gradient(ellipse 70% 80% at 20% 50%, {accent}55, transparent)"></div>
-		<div class="profile-aurora-b" style="background: radial-gradient(ellipse 50% 70% at 75% 30%, {accent}30, transparent)"></div>
-		<div class="profile-aurora-c" style="background: radial-gradient(ellipse 40% 60% at 50% 80%, {accent}20, transparent)"></div>
+		<div class="profile-aurora-a" style="background: radial-gradient(ellipse 70% 90% at 20% 55%, {accent}cc, transparent 65%)"></div>
+		<div class="profile-aurora-b" style="background: radial-gradient(ellipse 55% 75% at 78% 35%, {accent}77, transparent 65%)"></div>
+		<div class="profile-aurora-c" style="background: radial-gradient(ellipse 45% 65% at 55% 85%, {accent}44, transparent 65%)"></div>
 
 		<!-- User banner image — on top of the aurora -->
 		{#if bannerSrc}
@@ -526,33 +526,32 @@
 		inset: 0;
 	}
 	.profile-aurora-a {
-		animation: aurora-drift-a 7s ease-in-out infinite;
-		transform-origin: 20% 50%;
+		animation: aurora-breathe-a 6s ease-in-out infinite;
+		transform-origin: 20% 55%;
 	}
 	.profile-aurora-b {
-		animation: aurora-drift-b 9s ease-in-out infinite;
-		transform-origin: 75% 30%;
+		animation: aurora-breathe-b 9s ease-in-out infinite;
+		transform-origin: 78% 35%;
 	}
 	.profile-aurora-c {
-		animation: aurora-drift-c 11s ease-in-out infinite;
-		transform-origin: 50% 80%;
+		animation: aurora-breathe-c 12s ease-in-out infinite;
+		transform-origin: 55% 85%;
 	}
-	@keyframes aurora-drift-a {
-		0%   { transform: scale(1)    translateY(0);    opacity: 0.85; }
-		33%  { transform: scale(1.12) translateY(-8%);  opacity: 1;    }
-		66%  { transform: scale(0.95) translateY(5%);   opacity: 0.7;  }
-		100% { transform: scale(1)    translateY(0);    opacity: 0.85; }
+	/* Scale + opacity uniquement — pas de translate pour éviter les bordures vides */
+	@keyframes aurora-breathe-a {
+		0%   { transform: scale(1);    opacity: 0.75; }
+		50%  { transform: scale(1.18); opacity: 1;    }
+		100% { transform: scale(1);    opacity: 0.75; }
 	}
-	@keyframes aurora-drift-b {
-		0%   { transform: scale(1)    translateX(0);    opacity: 0.7;  }
-		40%  { transform: scale(1.08) translateX(-6%);  opacity: 1;    }
-		80%  { transform: scale(1.02) translateX(4%);   opacity: 0.75; }
-		100% { transform: scale(1)    translateX(0);    opacity: 0.7;  }
+	@keyframes aurora-breathe-b {
+		0%   { transform: scale(1.05); opacity: 0.55; }
+		50%  { transform: scale(0.9);  opacity: 0.85; }
+		100% { transform: scale(1.05); opacity: 0.55; }
 	}
-	@keyframes aurora-drift-c {
-		0%   { transform: scale(1)    translateY(0)   opacity: 0.5; }
-		50%  { transform: scale(1.15) translateY(-6%) opacity: 0.8; }
-		100% { transform: scale(1)    translateY(0)   opacity: 0.5; }
+	@keyframes aurora-breathe-c {
+		0%   { transform: scale(1);    opacity: 0.35; }
+		50%  { transform: scale(1.25); opacity: 0.6;  }
+		100% { transform: scale(1);    opacity: 0.35; }
 	}
 
 	/* ── Avatar ring ──────────────────────────────────────────────── */
