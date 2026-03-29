@@ -693,9 +693,16 @@ if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
       *) die "Installation annulée — résous les conflits de ports et relance." ;;
     esac
   else
-    echo -e "  ${YELLOW}Arrête les services concernés manuellement puis relance l'installation.${RESET}"
-    read -rp "$(echo -e "  ${BOLD}Continuer quand même ? [o/N]: ${RESET}")" _port_force </dev/tty
+    echo -e "  ${YELLOW}L'installeur peut tenter de libérer les ports automatiquement (fuser -k).${RESET}"
+    read -rp "$(echo -e "  ${BOLD}Libérer les ports et continuer ? [o/N]: ${RESET}")" _port_force </dev/tty
     [[ "${_port_force,,}" != "o" ]] && die "Installation annulée."
+    for _bp in "${_PORT_BLOCKER_PORTS[@]}"; do
+      for _p in $_bp; do
+        fuser -k "${_p}/tcp" 2>/dev/null || true
+      done
+    done
+    sleep 1
+    ok "Ports libérés"
   fi
 fi
 
