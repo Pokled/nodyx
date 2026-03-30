@@ -257,19 +257,18 @@
 </svelte:head>
 
 <!-- EN-TÊTE DE CATÉGORIE -->
-<div class="relative mb-8 overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30 p-8 shadow-xl">
+<div class="relative mb-8 overflow-hidden border border-white/[.06] bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30 p-8">
 	<!-- Effets de lumière -->
 	<div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
-	<div class="absolute -top-20 -right-20 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl"></div>
-	<div class="absolute -bottom-20 -left-20 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl"></div>
-	
+	<div class="absolute -top-20 -right-20 w-80 h-80 bg-indigo-600/10 blur-3xl"></div>
+	<div class="absolute -bottom-20 -left-20 w-80 h-80 bg-violet-600/10 blur-3xl"></div>
+
 	<div class="relative flex flex-wrap items-start justify-between gap-6">
 		<div class="flex items-start gap-6">
 			<!-- Icône de catégorie -->
 			<div class="relative">
-				<div class="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 
-							flex items-center justify-center text-2xl sm:text-4xl shadow-xl shadow-indigo-600/30
-							ring-4 ring-indigo-500/20">
+				<div class="w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-600 to-violet-600
+							flex items-center justify-center text-2xl sm:text-4xl shadow-xl shadow-indigo-600/30">
 					{getCategoryIcon()}
 				</div>
 			</div>
@@ -281,25 +280,25 @@
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
 					</svg>
-					<span class="text-sm font-medium text-indigo-400">{categoryName}</span> 
+					<span class="text-sm font-medium text-indigo-400">{categoryName}</span>
 				</div>
 
 				<h1 class="text-2xl sm:text-4xl font-bold text-white tracking-tight mb-2">{categoryName}</h1>
 
 				<!-- Stats de la catégorie -->
 				<div class="flex flex-wrap items-center gap-4 mt-4">
-					<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800/60 border border-gray-700">
+					<div class="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 border border-gray-700">
 						<span class="text-xs text-gray-400">Total</span>
 						<span class="text-sm font-bold text-white">{categoryStats.total}</span>
 					</div>
 					{#if categoryStats.pinned > 0}
-						<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-900/20 border border-indigo-800/50">
+						<div class="flex items-center gap-2 px-3 py-1.5 bg-indigo-900/20 border border-indigo-800/50">
 							<span class="text-xs text-indigo-400">📌 Épinglés</span>
 							<span class="text-sm font-bold text-indigo-400">{categoryStats.pinned}</span>
 						</div>
 					{/if}
 					{#if categoryStats.unanswered > 0}
-						<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-900/20 border border-yellow-800/50">
+						<div class="flex items-center gap-2 px-3 py-1.5 bg-yellow-900/20 border border-yellow-800/50">
 							<span class="text-xs text-yellow-400">❓ Sans réponse</span>
 							<span class="text-sm font-bold text-yellow-400">{categoryStats.unanswered}</span>
 						</div>
@@ -318,11 +317,11 @@
 			{#each subcategories as sub}
 				<a
 					href="/forum/{sub.slug ?? sub.id}"
-					class="flex items-start gap-3 rounded-xl border border-gray-800 bg-gray-900/60
+					class="flex items-start gap-3 border border-gray-800 bg-gray-900/60
 					       px-4 py-3.5 hover:border-indigo-700/60 hover:bg-gray-900
 					       transition-all group"
 				>
-					<div class="mt-0.5 w-8 h-8 rounded-lg bg-indigo-600/15 border border-indigo-600/20
+					<div class="mt-0.5 w-8 h-8 bg-indigo-600/15 border border-indigo-600/20
 					            flex items-center justify-center flex-shrink-0 text-indigo-400
 					            group-hover:bg-indigo-600/25 transition-colors">
 						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -360,7 +359,7 @@
 				type="text"
 				placeholder="Rechercher un sujet..."
 				bind:value={searchQuery}
-				class="w-full pl-10 pr-4 py-2.5 rounded-lg bg-gray-800/80 border border-gray-700 
+				class="w-full pl-10 pr-4 py-2.5 bg-gray-800/80 border border-gray-700
 					   text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500
 					   transition-colors"
 			/>
@@ -400,9 +399,9 @@
 	<div class="flex flex-wrap items-center gap-2">
 		<!-- Filtre dropdown -->
 		<div class="relative" bind:this={filterButtonRef}>
-			<button 
+			<button
 				onclick={() => filterDropdownOpen = !filterDropdownOpen}
-				class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800/80 border border-gray-700 
+				class="flex items-center gap-2 px-4 py-2 bg-gray-800/80 border border-gray-700
 					   text-gray-300 hover:text-white hover:border-indigo-500/50 transition-all duration-200"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -410,17 +409,17 @@
 				</svg>
 				<span class="text-sm hidden sm:inline">Filtre : {filterLabels[filterBy]}</span>
 				<span class="text-sm sm:hidden">Filtre</span>
-				<span class="ml-1 px-1.5 py-0.5 rounded-full bg-indigo-600/30 text-indigo-400 text-xs">
-					{filterBy !== 'all' ? filteredThreads.length : ''}
-				</span>
+				{#if filterBy !== 'all'}
+					<span class="ml-1 px-1.5 py-0.5 bg-indigo-600/30 text-indigo-400 text-xs">{filteredThreads.length}</span>
+				{/if}
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1 text-gray-500 transition-transform duration-200 {filterDropdownOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
 				</svg>
 			</button>
 
 			{#if filterDropdownOpen}
-				<div 
-					class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl bg-gray-900 border border-gray-700 shadow-2xl shadow-indigo-500/10 overflow-hidden z-50"
+				<div
+					class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-gray-900 border border-gray-700 shadow-2xl shadow-indigo-500/10 overflow-hidden z-50"
 					transition:fly={{ y: -10, duration: 200 }}
 				>
 					<div class="py-1">
@@ -459,9 +458,9 @@
 
 		<!-- Tri dropdown -->
 		<div class="relative" bind:this={sortButtonRef}>
-			<button 
+			<button
 				onclick={() => sortDropdownOpen = !sortDropdownOpen}
-				class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800/80 border border-gray-700 
+				class="flex items-center gap-2 px-4 py-2 bg-gray-800/80 border border-gray-700
 					   text-gray-300 hover:text-white hover:border-indigo-500/50 transition-all duration-200"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -475,8 +474,8 @@
 			</button>
 
 			{#if sortDropdownOpen}
-				<div 
-					class="absolute right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-xl bg-gray-900 border border-gray-700 shadow-2xl shadow-indigo-500/10 overflow-hidden z-50"
+				<div
+					class="absolute right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-gray-900 border border-gray-700 shadow-2xl shadow-indigo-500/10 overflow-hidden z-50"
 					transition:fly={{ y: -10, duration: 200 }}
 				>
 					<div class="py-1">
@@ -516,10 +515,8 @@
 		{#if user}
 			<a
 				href="/forum/{categoryId}/new"
-				class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 
-					   hover:from-indigo-500 hover:to-violet-500 px-5 py-2 text-sm font-semibold text-white 
-					   transition-all duration-200 shadow-lg shadow-indigo-600/30 hover:shadow-indigo-500/50 
-					   transform hover:scale-105"
+				class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500
+					   px-5 py-2 text-sm font-semibold text-white transition-colors"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -548,8 +545,8 @@
 
 <!-- LISTE DES SUJETS -->
 {#if paginatedThreads.length === 0}
-	<div class="flex flex-col items-center justify-center py-20 px-4 rounded-2xl border border-dashed border-gray-800 bg-gray-900/50">
-		<div class="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+	<div class="flex flex-col items-center justify-center py-20 px-4 border border-dashed border-gray-800 bg-gray-900/50">
+		<div class="w-24 h-24 bg-gray-800 flex items-center justify-center mb-4">
 			<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 			</svg>
@@ -571,7 +568,7 @@
 			{/if}
 		</p>
 		{#if user && !searchQuery}
-			<a href="/forum/{categoryId}/new" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors">
+			<a href="/forum/{categoryId}/new" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors">
 				Créer le premier sujet
 			</a>
 		{/if}
@@ -583,7 +580,7 @@
 			{#if index === 0 && thread.is_pinned && filterBy === 'all' && currentPage === 1}
 				<div class="flex items-center gap-2 mt-2 mb-3">
 					<div class="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
-					<span class="text-xs font-medium text-indigo-400 px-3 py-1 rounded-full bg-indigo-900/20 border border-indigo-800/50 flex items-center gap-1">
+					<span class="text-xs font-medium text-indigo-400 px-3 py-1 bg-indigo-900/20 border border-indigo-800/50 flex items-center gap-1">
 						📌 Sujets épinglés
 					</span>
 					<div class="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
@@ -593,43 +590,27 @@
 			{@const lastPoster = getLastPoster(thread)}
 			{@const isNew = new Date(thread.updated_at || thread.created_at) > new Date(Date.now() - 24*60*60*1000)}
 			
-			<!-- CORRECTION ICI : utilisation de categoryId au lieu de category?.id -->
 			<a
 				href="/forum/{categoryId}/{thread.slug ?? thread.id}"
-				class="group relative flex flex-wrap sm:flex-nowrap items-center gap-4 rounded-xl 
-					   border border-gray-800 bg-gradient-to-r from-gray-900 to-gray-900/80
-					   px-5 py-4 hover:border-indigo-700/50 hover:shadow-lg hover:shadow-indigo-600/10 
-					   transition-all duration-300 overflow-hidden"
+				class="group relative flex flex-wrap sm:flex-nowrap items-center gap-4
+					   border border-white/[.06] bg-gray-900/60
+					   px-5 py-4 hover:border-indigo-700/50 hover:bg-gray-900
+					   transition-colors duration-200 overflow-hidden"
 			>
 				<!-- ... reste du code identique ... -->
 				<!-- Avatar créateur -->
 				<div class="relative flex-shrink-0 hidden sm:block">
 					{#if thread.author_avatar}
-						<img 
-							src={thread.author_avatar} 
+						<img
+							src={thread.author_avatar}
 							alt={thread.author_username}
 							class="w-10 h-10 rounded-full object-cover ring-2 ring-gray-700 group-hover:ring-indigo-500/30 transition-all"
 						/>
 					{:else}
-						<div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 
+						<div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600
 									flex items-center justify-center text-sm font-bold text-white
 									ring-2 ring-gray-700 group-hover:ring-indigo-500/30 transition-all">
 							{thread.author_username.charAt(0).toUpperCase()}
-						</div>
-					{/if}
-					
-					<!-- Badges sur avatar -->
-					{#if thread.is_pinned}
-						<div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 
-									flex items-center justify-center text-[10px] border-2 border-gray-900
-									shadow-lg shadow-indigo-600/50">
-							📌
-						</div>
-					{:else if isNew}
-						<div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-green-500 
-									flex items-center justify-center text-[8px] border-2 border-gray-900
-									shadow-lg shadow-green-500/50 animate-pulse">
-							NEW
 						</div>
 					{/if}
 				</div>
@@ -638,20 +619,23 @@
 				<div class="flex-1 min-w-0">
 					<!-- Badges -->
 					<div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+						{#if thread.is_pinned}
+							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-indigo-400 bg-indigo-900/20 border border-indigo-800/50 px-2 py-0.5">
+								📌 Épinglé
+							</span>
+						{/if}
 						{#if thread.is_locked}
-							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5 rounded-full">
+							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5">
 								🔒 Verrouillé
 							</span>
 						{/if}
-						
 						{#if thread.is_featured}
-							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-yellow-400 bg-yellow-900/30 border border-yellow-800/50 px-2 py-0.5 rounded-full">
+							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-yellow-400 bg-yellow-900/30 border border-yellow-800/50 px-2 py-0.5">
 								⭐ À la une
 							</span>
 						{/if}
-						
 						{#each (thread.tags || []).slice(0, 2) as tag}
-							<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+							<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium"
 								style="background-color: {tag.color}22; color: {tag.color}; border: 1px solid {tag.color}44">
 								{tag.name}
 							</span>
@@ -698,7 +682,7 @@
 				<!-- Stats et dernier posteur -->
 				<div class="flex items-center gap-4 shrink-0">
 					<!-- Compteur de réponses -->
-					<div class="flex flex-col items-center px-3 py-1.5 rounded-lg bg-gray-800/80 border border-gray-700 group-hover:border-indigo-700/50 transition-colors min-w-[60px]">
+					<div class="flex flex-col items-center px-3 py-1.5 border border-white/[.06] group-hover:border-indigo-700/50 transition-colors min-w-[60px] text-center">
 						<span class="text-lg font-bold text-indigo-400 leading-none">{thread.post_count}</span>
 						<span class="text-[10px] text-gray-500 uppercase tracking-wider">réponses</span>
 					</div>
@@ -738,47 +722,44 @@
 			sur <span class="text-white font-medium">{filteredThreads.length}</span> sujets
 		</div>
 		
-		<div class="flex items-center gap-2 order-1 sm:order-2">
+		<div class="flex items-center gap-1 order-1 sm:order-2">
 			<!-- Page précédente -->
-			<button 
+			<button
 				onclick={() => goToPage(currentPage - 1)}
 				disabled={currentPage === 1}
-				class="w-9 h-9 rounded-lg bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600 
-					   disabled:opacity-30 disabled:cursor-not-allowed transition-all 
+				class="w-9 h-9 bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600
+					   disabled:opacity-30 disabled:cursor-not-allowed transition-all
 					   flex items-center justify-center"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
 				</svg>
 			</button>
-			
-			<!-- Pages -->
-			<div class="flex items-center gap-1">
-				{#each { length: Math.min(5, totalPages) } as _, i}
-					{@const pageNum = (() => {
-						if (totalPages <= 5) return i + 1;
-						if (currentPage <= 3) return i + 1;
-						if (currentPage >= totalPages - 2) return totalPages - 4 + i;
-						return currentPage - 2 + i;
-					})()}
-					<button
-						onclick={() => goToPage(pageNum)}
-						class="w-9 h-9 rounded-lg text-sm font-medium transition-all
-							   {currentPage === pageNum 
-								   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' 
-								   : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'}"
-					>
-						{pageNum}
-					</button>
-				{/each}
-			</div>
-			
+
+			{#each { length: Math.min(5, totalPages) } as _, i}
+				{@const pageNum = (() => {
+					if (totalPages <= 5) return i + 1;
+					if (currentPage <= 3) return i + 1;
+					if (currentPage >= totalPages - 2) return totalPages - 4 + i;
+					return currentPage - 2 + i;
+				})()}
+				<button
+					onclick={() => goToPage(pageNum)}
+					class="w-9 h-9 text-sm font-medium transition-all
+						   {currentPage === pageNum
+							   ? 'bg-indigo-600 text-white'
+							   : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'}"
+				>
+					{pageNum}
+				</button>
+			{/each}
+
 			<!-- Page suivante -->
-			<button 
+			<button
 				onclick={() => goToPage(currentPage + 1)}
 				disabled={currentPage === totalPages}
-				class="w-9 h-9 rounded-lg bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600 
-					   disabled:opacity-30 disabled:cursor-not-allowed transition-all 
+				class="w-9 h-9 bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600
+					   disabled:opacity-30 disabled:cursor-not-allowed transition-all
 					   flex items-center justify-center"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -786,14 +767,14 @@
 				</svg>
 			</button>
 		</div>
-		
+
 		<!-- Sélecteur d'éléments par page -->
 		<div class="flex items-center gap-2 order-3">
 			<span class="text-xs text-gray-600 hidden sm:inline">Afficher</span>
-			<select 
+			<select
 				bind:value={itemsPerPage}
 				onchange={() => goToPage(1)}
-				class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-300 
+				class="bg-gray-800 border border-gray-700 px-3 py-1.5 text-sm text-gray-300
 					   focus:outline-none focus:border-indigo-500 cursor-pointer"
 			>
 				<option value="10">10 par page</option>

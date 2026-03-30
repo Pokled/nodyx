@@ -58,7 +58,7 @@
 
 {#await githubPromise}
 	<!-- Loading skeleton -->
-	<div class="rounded-lg border border-gray-700 bg-gray-900 p-4 animate-pulse">
+	<div class="border border-gray-700 bg-gray-900 p-4 animate-pulse">
 		<div class="h-4 bg-gray-700 rounded w-32 mb-3"></div>
 		<div class="flex items-center gap-3 mb-3">
 			<div class="w-10 h-10 bg-gray-700 rounded-full"></div>
@@ -75,7 +75,7 @@
 
 {:then data}
 	{#if data}
-		<div class="rounded-lg border border-gray-700 bg-gray-900 overflow-hidden">
+		<div class="border border-gray-700 bg-gray-900 overflow-hidden">
 			<!-- Header -->
 			<div class="flex items-center gap-2 px-4 py-3 bg-gray-800 border-b border-gray-700">
 				<svg viewBox="0 0 16 16" class="w-4 h-4 text-gray-300 fill-current" aria-hidden="true">

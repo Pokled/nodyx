@@ -101,13 +101,31 @@
 
 	let avatarUrl     = $state<string>(profile.avatar_url ?? '')
 	let bannerUrl     = $state<string>(profile.banner_url ?? '')
+	// bannerPreview can also come from banner_asset_path (uploaded file via community_assets)
+	const initialBannerPreview = profile.banner_asset_path
+		? `/uploads/${profile.banner_asset_path}`
+		: (profile.banner_url ?? '')
 	let avatarPreview = $state<string>(profile.avatar_url ?? '')
-	let bannerPreview = $state<string>(profile.banner_url ?? '')
+	let bannerPreview = $state<string>(initialBannerPreview)
+
+	let clearAvatar = $state(false)
+	let clearBanner = $state(false)
 
 	let avatarUploading = $state(false)
 	let bannerUploading = $state(false)
 	let avatarError     = $state('')
 	let bannerError     = $state('')
+
+	function deleteAvatar() {
+		avatarUrl     = ''
+		avatarPreview = ''
+		clearAvatar   = true
+	}
+	function deleteBanner() {
+		bannerUrl     = ''
+		bannerPreview = ''
+		clearBanner   = true
+	}
 
 	const initials = $derived((profile.display_name || profile.username || '?').charAt(0).toUpperCase())
 
@@ -236,6 +254,9 @@
 	<!-- Hidden inputs for upload URLs -->
 	<input type="hidden" name="avatar_url" value={avatarUrl} />
 	<input type="hidden" name="banner_url" value={bannerUrl} />
+	<!-- Explicit delete flags — send '1' to clear asset_id too -->
+	<input type="hidden" name="clear_avatar" value={clearAvatar ? '1' : ''} />
+	<input type="hidden" name="clear_banner" value={clearBanner ? '1' : ''} />
 	<!-- Hidden inputs for name effects -->
 	<input type="hidden" name="name_glow" value={nameGlowEnabled ? nameGlow : ''} />
 	<input type="hidden" name="name_glow_intensity" value={nameGlowIntensity} />
@@ -319,7 +340,18 @@
 
 			<!-- Avatar -->
 			<div>
-				<p class="text-xs text-gray-400 font-medium mb-2">Avatar</p>
+				<div class="flex items-center justify-between mb-2">
+					<p class="text-xs text-gray-400 font-medium">Avatar</p>
+					{#if avatarPreview}
+						<button type="button" onclick={deleteAvatar}
+							class="text-[11px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+							Supprimer
+						</button>
+					{/if}
+				</div>
 				<div class="flex items-center gap-3 mb-3">
 					<div class="w-14 h-14 rounded-full overflow-hidden bg-indigo-800 border-2 border-gray-700 shrink-0">
 						{#if avatarPreview}
@@ -359,12 +391,23 @@
 
 			<!-- Bannière -->
 			<div>
-				<p class="text-xs text-gray-400 font-medium mb-2">Bannière de profil</p>
+				<div class="flex items-center justify-between mb-2">
+					<p class="text-xs text-gray-400 font-medium">Bannière de profil</p>
+					{#if bannerPreview}
+						<button type="button" onclick={deleteBanner}
+							class="text-[11px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+							Supprimer
+						</button>
+					{/if}
+				</div>
 				{#if bannerPreview}
 					<img src={bannerPreview} alt="Aperçu bannière" class="w-full h-16 object-cover rounded-lg mb-2 border border-gray-700" />
 				{:else}
 					<div class="w-full h-16 rounded-lg bg-gray-800/50 border border-gray-700 flex items-center justify-center text-gray-600 text-xs mb-2">
-						Aucune bannière
+						Bannière générative active
 					</div>
 				{/if}
 				<div class="flex gap-1 mb-2">

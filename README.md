@@ -9,7 +9,7 @@
 **The community platform that no one can take from you.**
 Forum + Chat + Voice + P2P Canvas — on your server, under your control, forever.
 
-[![Version](https://img.shields.io/badge/version-v1.9.4-7c3aed)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.9.5-7c3aed)](CHANGELOG.md)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
@@ -334,6 +334,11 @@ Database migrations are applied automatically on startup — no manual SQL neede
 | Credential harvesting traps + Canary files + Canvas fingerprint | v1.9.2 |
 | Slowloris inverse — byte-by-byte streaming burns attacker threads 45–90s | v1.9.2 |
 | Olympus Hub security dashboard | v1.9.2 |
+| Process isolation — all processes under `nodyx` system user | v1.9.4 |
+| 181 Node.js tests + 18 Rust unit tests + CI pipeline | v1.9.4 |
+| **Living Profile** — Generative banner (Lissajous/FNV-1a), Reputation rings (SVG animated), Activity heatmap (53×7, streak, record) | v1.9.5 |
+| Parallax hero, rotating avatar arcs, Timeline, `/reputation` transparent formulas | v1.9.5 |
+| Forum redesign — flat design, zero radius, full-width content | v1.9.5 |
 
 </details>
 

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { PageData } from './$types'
 	import GitHubWidget from '$lib/components/widgets/GitHubWidget.svelte'
+	import ReputationRings from '$lib/components/ReputationRings.svelte'
+	import GenerativeBanner from '$lib/components/GenerativeBanner.svelte'
+	import ActivityHeatmap from '$lib/components/ActivityHeatmap.svelte'
 	import { page } from '$app/stores'
 	import { resolveTheme, themeToStyle } from '$lib/profileThemes'
 	import { socket } from '$lib/socket'
@@ -112,6 +115,55 @@
 	// Accent hex direct — used for inline gradient blobs (avoids CSS var chain issues)
 	const accent = $derived(theme.accent ?? '#6366f1')
 
+	// Reputation Rings — computed from existing data, no backend needed
+	const ringLongevity  = $derived(Math.min(1, daysSince / 365))
+	const ringQuality    = $derived(Math.min(1, livePoints / 500))
+	const ringEngagement = $derived(
+		(() => {
+			const posts   = Number(profile.post_count   ?? 0)
+			const threads = Number(profile.thread_count ?? 0)
+			if (posts + threads === 0) return 0
+			// Ratio threads / (posts + threads) — création vs réponse
+			return Math.min(1, (threads * 2) / Math.max(1, posts + threads))
+		})()
+	)
+
+	// ── Parallax ────────────────────────────────────────────────────
+	let parallaxY = $state(0)
+	$effect(() => {
+		function onScroll() { parallaxY = window.scrollY }
+		window.addEventListener('scroll', onScroll, { passive: true })
+		return () => window.removeEventListener('scroll', onScroll)
+	})
+
+	// ── Timeline jalons ─────────────────────────────────────────────
+	interface Milestone { label: string; detail: string; reached: boolean; accent?: boolean }
+	const timeline = $derived((() => {
+		const created = new Date(profile.created_at)
+		const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+		const add = (days: number) => new Date(created.getTime() + days * 86_400_000)
+		const posts   = Number(profile.post_count   ?? 0)
+		const threads = Number(profile.thread_count ?? 0)
+
+		const items: Milestone[] = [
+			{ label: 'Arrivée',           detail: fmt(created),    reached: true, accent: true },
+			{ label: '1er post',          detail: 'Brisé la glace',reached: posts >= 1 },
+			{ label: '1ère discussion',   detail: 'Ouvert un fil', reached: threads >= 1 },
+			{ label: '1 mois',            detail: fmt(add(30)),    reached: daysSince >= 30 },
+			{ label: 'Niveau 5',          detail: '160 XP',        reached: level >= 5 },
+			{ label: '10 posts',          detail: 'Contributeur',  reached: posts >= 10 },
+			{ label: '3 mois',            detail: fmt(add(90)),    reached: daysSince >= 90 },
+			{ label: 'Niveau 10',         detail: '810 XP',        reached: level >= 10 },
+			{ label: '50 posts',          detail: 'Régulier',      reached: posts >= 50 },
+			{ label: '6 mois',            detail: fmt(add(180)),   reached: daysSince >= 180 },
+			{ label: 'Niveau 20',         detail: '3 610 XP',      reached: level >= 20 },
+			{ label: '1 an',              detail: fmt(add(365)),   reached: daysSince >= 365, accent: true },
+			{ label: 'Niveau 30',         detail: '8 910 XP',      reached: level >= 30 },
+			{ label: '2 ans',             detail: fmt(add(730)),   reached: daysSince >= 730, accent: true },
+		]
+		return items
+	})())
+
 	// Level rank label
 	const rankLabel = $derived(
 		level >= 50 ? 'Légende' :
@@ -145,21 +197,20 @@
 	<!-- Banner layers -->
 	<div class="absolute inset-0 overflow-hidden" style="background: var(--p-bg)">
 
-		<!-- Aurora blobs — always rendered, even with a banner image -->
-		<div class="profile-aurora-a" style="background: radial-gradient(ellipse 70% 90% at 20% 55%, {accent}cc, transparent 65%)"></div>
-		<div class="profile-aurora-b" style="background: radial-gradient(ellipse 55% 75% at 78% 35%, {accent}77, transparent 65%)"></div>
-		<div class="profile-aurora-c" style="background: radial-gradient(ellipse 45% 65% at 55% 85%, {accent}44, transparent 65%)"></div>
-
-		<!-- User banner image — on top of the aurora -->
-		{#if bannerSrc}
-			<img
-				src={bannerSrc}
-				alt=""
-				aria-hidden="true"
-				class="absolute inset-0 w-full h-full object-cover"
-				style="opacity: 0.55; mix-blend-mode: luminosity"
-			/>
-		{/if}
+		<!-- Parallax wrapper — moves at 35% of scroll speed -->
+		<div class="absolute inset-0 will-change-transform"
+		     style="transform: translateY({Math.min(parallaxY * 0.35, 60)}px)">
+			{#if bannerSrc}
+				<img src={bannerSrc} alt="" aria-hidden="true"
+				     class="absolute inset-0 w-full h-full object-cover"
+				     style="opacity: 0.55; mix-blend-mode: luminosity"/>
+				<div class="profile-aurora-a" style="background: radial-gradient(ellipse 70% 90% at 20% 55%, {accent}cc, transparent 65%)"></div>
+				<div class="profile-aurora-b" style="background: radial-gradient(ellipse 55% 75% at 78% 35%, {accent}77, transparent 65%)"></div>
+				<div class="profile-aurora-c" style="background: radial-gradient(ellipse 45% 65% at 55% 85%, {accent}44, transparent 65%)"></div>
+			{:else}
+				<GenerativeBanner username={profile.username} />
+			{/if}
+		</div>
 
 		<!-- Gradient overlays for text readability -->
 		<div class="absolute inset-0" style="background: linear-gradient(to bottom, transparent 20%, {accent}0a 60%, var(--p-bg) 100%)"></div>
@@ -171,7 +222,31 @@
 		<div class="max-w-6xl mx-auto px-6 flex items-end gap-6 pb-6">
 
 			<!-- Avatar with frame -->
-			<div class="relative shrink-0 translate-y-10">
+			<div class="relative shrink-0 translate-y-10" style="width:128px;height:128px;overflow:visible">
+				<!-- Spinning arcs (SVG-native animateTransform) -->
+				<svg class="absolute pointer-events-none select-none"
+				     style="inset:-14px;width:calc(100% + 28px);height:calc(100% + 28px);z-index:20"
+				     viewBox="0 0 156 156" aria-hidden="true">
+					<!-- Arc 1 — clockwise, 3.5s -->
+					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="2.5"
+					        stroke-linecap="round" stroke-dasharray="55 403" opacity="0.85">
+						<animateTransform attributeName="transform" type="rotate"
+						  from="0 78 78" to="360 78 78" dur="3.5s" repeatCount="indefinite"/>
+					</circle>
+					<!-- Arc 2 — counter-clockwise, 7s -->
+					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="1.5"
+					        stroke-linecap="round" stroke-dasharray="22 436" stroke-dashoffset="-200" opacity="0.45">
+						<animateTransform attributeName="transform" type="rotate"
+						  from="0 78 78" to="-360 78 78" dur="7s" repeatCount="indefinite"/>
+					</circle>
+					<!-- Dot — fast clockwise, 2s -->
+					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="3.5"
+					        stroke-linecap="round" stroke-dasharray="6 452" opacity="0.9">
+						<animateTransform attributeName="transform" type="rotate"
+						  from="90 78 78" to="450 78 78" dur="2s" repeatCount="indefinite"/>
+					</circle>
+				</svg>
+
 				<div class="profile-avatar-ring w-32 h-32" style="--accent: {accent}">
 					<div class="w-full h-full rounded-full overflow-hidden"
 					     style="background: var(--p-accent)">
@@ -211,7 +286,7 @@
 						@{profile.username}
 					</span>
 					{#if profile.grade_name && profile.grade_color}
-						<span class="text-xs font-semibold rounded px-2 py-0.5 shrink-0"
+						<span class="text-xs font-semibold px-2 py-0.5 shrink-0"
 						      style="background-color: {profile.grade_color}; color: {gradeTextColor(profile.grade_color)}">
 							{profile.grade_name}
 						</span>
@@ -219,7 +294,7 @@
 					{#if badgeSrc}
 						<img src={badgeSrc} alt={profile.badge_asset_name ?? 'Badge'}
 						     title={profile.badge_asset_name ?? 'Badge'}
-						     class="w-10 h-10 rounded object-contain drop-shadow" />
+						     class="w-10 h-10 object-contain drop-shadow" />
 					{/if}
 					<span class="text-xs px-2 py-0.5 rounded-full font-medium"
 					      style="background: color-mix(in srgb, var(--p-accent) 15%, transparent); color: var(--p-accent); border: 1px solid color-mix(in srgb, var(--p-accent) 30%, transparent)">
@@ -265,7 +340,7 @@
      XP STRIP — full width, cinematic
      ═══════════════════════════════════════════════════════════════ -->
 <div class="max-w-6xl mx-auto px-6 mb-6">
-	<div class="profile-xp-strip rounded-sm p-5" style="--accent: {accent}">
+	<div class="profile-xp-strip p-5" style="--accent: {accent}">
 		<div class="flex items-center justify-between mb-3 gap-4 flex-wrap">
 			<div class="flex items-center gap-3">
 				<span class="text-4xl font-black tabular-nums leading-none profile-xp-level"
@@ -369,7 +444,7 @@
 						{#each socialLinks as social}
 							<li>
 								<a href={social.url} target="_blank" rel="noopener noreferrer"
-								   class="flex items-center gap-3 py-1.5 px-2 rounded transition-all group hover:bg-white/5">
+								   class="flex items-center gap-3 py-1.5 px-2 transition-all group hover:bg-white/5">
 									<span class="w-4 h-4 shrink-0" style="color: var(--p-text-muted)">
 										{#if social.label === 'GitHub'}
 											<svg viewBox="0 0 16 16" class="w-4 h-4 fill-current" aria-hidden="true">
@@ -433,13 +508,21 @@
 		<!-- ─── MAIN CONTENT ─────────────────────────────────────────── -->
 		<main class="flex-1 min-w-0 space-y-4">
 
+			<!-- Reputation Rings -->
+			<ReputationRings
+				longevity={ringLongevity}
+				quality={ringQuality}
+				engagement={ringEngagement}
+				accent={accent}
+			/>
+
 			<!-- Stats row -->
 			<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 				{#each stats as stat}
 					<div class="profile-stat-card p-4 text-center group"
 					     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 						<div class="flex justify-center mb-2">
-							<div class="w-8 h-8 rounded flex items-center justify-center transition-all group-hover:scale-110"
+							<div class="w-8 h-8 flex items-center justify-center transition-all group-hover:scale-110"
 							     style="background: color-mix(in srgb, var(--p-accent) 15%, transparent)">
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--p-accent)">
 									<path stroke-linecap="round" stroke-linejoin="round" d={stat.icon}/>
@@ -491,6 +574,32 @@
 					</div>
 				</div>
 			{/if}
+
+			<!-- Activity Heatmap -->
+			<div class="p-5" style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
+				<ActivityHeatmap username={profile.username} accent={accent} />
+			</div>
+
+			<!-- Timeline parcours -->
+			<div class="p-5" style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
+				<p class="text-xs uppercase tracking-widest font-medium mb-4" style="color: var(--p-text-muted)">Parcours</p>
+				<div class="relative">
+					<div class="absolute left-[7px] top-2 bottom-2 w-px" style="background: var(--p-card-border)"></div>
+					<ol class="space-y-3 pl-6">
+						{#each timeline as item}
+							<li class="relative flex items-start gap-3 {item.reached ? '' : 'opacity-35'}">
+								<div class="absolute -left-6 mt-0.5 w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-colors"
+								     style="background: {item.reached ? (item.accent ? accent : 'var(--p-card-bg)') : 'var(--p-card-bg)'}; border-color: {item.reached ? accent : 'var(--p-card-border)'}; {item.accent && item.reached ? `box-shadow: 0 0 8px ${accent}88` : ''}">
+								</div>
+								<div class="min-w-0">
+									<span class="text-xs font-semibold" style="color: {item.reached && item.accent ? accent : item.reached ? 'var(--p-text)' : 'var(--p-text-muted)'}">{item.label}</span>
+									<span class="text-[10px] ml-2" style="color: var(--p-text-muted)">{item.detail}</span>
+								</div>
+							</li>
+						{/each}
+					</ol>
+				</div>
+			</div>
 
 			<!-- Empty state -->
 			{#if !profile.bio && !profile.github_username && !profile.links?.length}
@@ -556,7 +665,11 @@
 		border-radius: 9999px;
 		padding: 3px;
 		background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 40%, transparent));
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-bg) 80%, transparent), 0 0 32px color-mix(in srgb, var(--accent) 40%, transparent);
+		animation: avatar-glow-breathe 3s ease-in-out infinite;
+	}
+	@keyframes avatar-glow-breathe {
+		0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-bg) 80%, transparent), 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent); }
+		50%       { box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-bg) 80%, transparent), 0 0 48px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 80px color-mix(in srgb, var(--accent) 25%, transparent); }
 	}
 
 	/* ── Online dot pulse ─────────────────────────────────────────── */

@@ -73,6 +73,16 @@ export const actions: Actions = {
 			body['links'] = links
 		}
 
+		// If banner_url was cleared (empty string → null above), also wipe banner_asset_id
+		// so the JOIN no longer returns a stale asset path
+		if (body['banner_url'] === null || form.get('clear_banner') === '1') {
+			body['banner_url']      = null
+			body['banner_asset_id'] = null
+		}
+		if (body['avatar_url'] === null || form.get('clear_avatar') === '1') {
+			body['avatar_url'] = null
+		}
+
 		// Profile theme — stored in metadata.theme
 		const metadataThemeRaw = form.get('metadata_theme') as string | null
 		if (metadataThemeRaw) {

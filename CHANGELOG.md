@@ -9,6 +9,64 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [1.9.5] — 2026-03-30
+
+### Living Profile — User profile enrichment
+
+**Generative Banner (`GenerativeBanner.svelte`)**
+- Unique SVG banner per username — deterministic Lissajous curves via FNV-1a 32-bit hash (SSR-safe, no SHA-256)
+- 3 animated curves (CW 80s / CCW 55s / CW 120s + breathe) via SVG-native `animateTransform` — works everywhere without CSS transform-origin hacks
+- Per-user color palette (triadic HSL), grain texture filter, vignette gradient
+- Displayed only when no custom banner is set — zero visual collision
+
+**Reputation Rings (`ReputationRings.svelte`)**
+- 3 concentric SVG rings: Longevity (days since registration / 365), Quality (XP / 500), Engagement (threads × 2 / posts + threads)
+- `animateTransform` rotating arcs — CSS transform-origin on SVG `<g>` is unreliable cross-browser; fixed with SVG-native animation
+- Click → `/reputation` transparent explanation page
+- Tooltips on hover per ring (label + value)
+
+**Activity Heatmap (`ActivityHeatmap.svelte`)**
+- GitHub-style 53 × 7 grid, last 365 days, aligned to Monday (ISO week start)
+- 5 intensity levels via `color-mix(in srgb)` from user accent
+- Tooltip: `position: fixed` + `getBoundingClientRect()` — escapes `overflow-x: auto` containers without scrollbar artifacts
+- Stats: total contributions, current streak, all-time record
+
+**Backend — Activity endpoint**
+- `GET /api/v1/users/:username/activity` — SQL UNION of posts + threads, grouped by `date_trunc('day')`, 365-day window
+- Returns `{ activity: [{ date: 'YYYY-MM-DD', count: number }] }`
+
+**Profile hero**
+- Parallax banner: scrolls at 35% of page speed, capped at 60px translateY
+- SVG arcs rotating around avatar (3 circles, `animateTransform`, glow pulse CSS)
+- Delete avatar / delete banner buttons — server action clears both `banner_url` AND `banner_asset_id` together (fixed stale JOIN returning old asset path)
+
+**Timeline**
+- Temporal milestones + XP thresholds, positioned at the very bottom of the profile
+
+**`/reputation` page**
+- Full transparent formula documentation: Longevity, Quality (with λ exponential decay `e^{-λt}` for future Merci system), Engagement
+- Note: Q currently uses XP fallback until the Merci backend is deployed
+
+### Forum Redesign — Flat & wide
+
+**Width**
+- Forum index: removed `max-w-5xl mx-auto` wrapper — content now fills the full available width between sidebars (layout already provides padding)
+
+**No radius**
+- Removed all `rounded-2xl`, `rounded-xl`, `rounded-lg`, `rounded` across all 4 forum files
+- `rounded-full` preserved for avatars only
+- Affected: category header, subcategory cards, search input, filter/sort dropdowns, thread rows, badge pills (pinned/locked/featured/tags), stats counters, pagination buttons, mod action buttons, empty state, new thread form selects/inputs/buttons
+
+**Thread rows**
+- Simplified hover state (border + background only, no scale/shadow theatrics)
+- Badge indicators moved into inline chips — no more overlay dots on avatars
+- Reply counter: flat border card instead of rounded pill
+
+**Buttons**
+- "New thread", "Publish", "Cancel", filter/sort triggers: all flat — consistent with the rest of the shell
+
+---
+
 ## [1.9.4] — 2026-03-28
 
 ### Security — Process isolation

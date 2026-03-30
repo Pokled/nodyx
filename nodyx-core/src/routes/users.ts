@@ -444,6 +444,51 @@ export default async function userRoutes(app: FastifyInstance) {
     return reply.send(data)
   })
 
+  // GET /api/v1/users/:username/activity — heatmap data (last 365 days)
+  app.get('/:username/activity', {
+    preHandler: [rateLimit],
+  }, async (request, reply) => {
+    const { username } = request.params as { username: string }
+
+    // Resolve user id
+    const { rows: userRows } = await db.query(
+      `SELECT id FROM users WHERE username = $1 LIMIT 1`,
+      [username]
+    )
+    if (!userRows[0]) {
+      return reply.code(404).send({ error: 'User not found', code: 'NOT_FOUND' })
+    }
+    const userId = userRows[0].id
+
+    // One query — union posts + threads, group by date
+    // Returns: date (YYYY-MM-DD), count
+    const { rows } = await db.query(
+      `SELECT
+         to_char(day, 'YYYY-MM-DD') AS date,
+         SUM(cnt)::int AS count
+       FROM (
+         SELECT date_trunc('day', created_at) AS day, COUNT(*) AS cnt
+         FROM posts
+         WHERE author_id = $1
+           AND created_at >= NOW() - INTERVAL '365 days'
+         GROUP BY day
+
+         UNION ALL
+
+         SELECT date_trunc('day', created_at) AS day, COUNT(*) AS cnt
+         FROM threads
+         WHERE author_id = $1
+           AND created_at >= NOW() - INTERVAL '365 days'
+         GROUP BY day
+       ) sub
+       GROUP BY day
+       ORDER BY day ASC`,
+      [userId]
+    )
+
+    return reply.send({ activity: rows })
+  })
+
   // POST /api/v1/users/me/upload?type=avatar|banner|font — upload file from client PC
   app.post('/me/upload', {
     preHandler: [rateLimit, requireAuth, async (request, reply) => {

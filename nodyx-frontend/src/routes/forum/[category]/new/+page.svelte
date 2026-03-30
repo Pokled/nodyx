@@ -62,7 +62,7 @@
 	<h1 class="mt-2 text-2xl font-bold text-white mb-6">Nouveau sujet</h1>
 
 	{#if form?.error}
-		<p class="mb-4 rounded bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
+		<p class="mb-4bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
 			{form.error}
 		</p>
 	{/if}
@@ -84,7 +84,7 @@
 			<div class="flex flex-wrap gap-2">
 				<select
 					onchange={onParentChange}
-					class="flex-1 min-w-[180px] rounded bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+					class="flex-1 min-w-[180px]bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
 				>
 					{#each rootCategories as cat}
 						<option value={cat.id} selected={cat.id === selectedParentId}>{cat.name}</option>
@@ -93,7 +93,7 @@
 				{#if subcategories.length > 0}
 					<select
 						onchange={(e) => selectedSubId = (e.currentTarget as HTMLSelectElement).value || null}
-						class="flex-1 min-w-[180px] rounded bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+						class="flex-1 min-w-[180px]bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
 					>
 						<option value="">— Sans sous-catégorie —</option>
 						{#each subcategories as sub}
@@ -117,7 +117,7 @@
 				minlength="3"
 				maxlength="300"
 				placeholder="Titre de votre sujet..."
-				class="w-full rounded bg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+				class="w-fullbg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
 			/>
 		</div>
 
@@ -140,7 +140,7 @@
 						<button
 							type="button"
 							onclick={() => toggleTag(tag.id)}
-							class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer"
+							class="inline-flex items-center px-2.5 py-1 text-xs font-medium border transition-colors cursor-pointer"
 							style="
 								background-color: {selectedTagIds.includes(tag.id) ? tag.color + '33' : 'transparent'};
 								color: {tag.color};
@@ -164,13 +164,13 @@
 				<button
 					type="button"
 					onclick={() => showPollSection = true}
-					class="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
+					class="flex items-center gap-2 px-3 py-2border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
 				>
 					<span>📊</span>
 					<span>Joindre un sondage à ce sujet <span class="text-gray-600 text-xs">(optionnel)</span></span>
 				</button>
 			{:else}
-				<div class="rounded-lg border border-indigo-900/50 bg-gray-900/50 p-4">
+				<div class="border border-indigo-900/50 bg-gray-900/50 p-4">
 					<div class="flex items-center justify-between mb-3">
 						<span class="text-sm font-medium text-indigo-300">📊 Sondage joint</span>
 						{#if pollConfig}
@@ -211,11 +211,11 @@
 			<button
 				type="submit"
 				disabled={submitting}
-				class="rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 text-sm font-semibold text-white transition-colors"
+				class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 text-sm font-semibold text-white transition-colors"
 			>
 				{submitting ? 'Publication...' : 'Publier le sujet'}
 			</button>
-			<a href="/forum/{finalCategoryId}" class="rounded bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">Annuler</a>
+			<a href="/forum/{finalCategoryId}" class="bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">Annuler</a>
 		</div>
 	</form>
 </div>
