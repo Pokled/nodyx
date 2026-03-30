@@ -1,9 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
+  const { data } = $props()
+
   let copied = $state(false)
   let canvasEl = $state<HTMLCanvasElement | null>(null)
-  let instanceCount = $state<number | null>(null)
+
+  const instanceCount = $derived(data.instanceCount as number | null)
 
   const INSTALL_CMD = 'curl -fsSL https://nodyx.org/install.sh | bash'
 
@@ -12,17 +15,6 @@
     copied = true
     setTimeout(() => { copied = false }, 2000)
   }
-
-  // ── Live instance count ────────────────────────────────────────────────────
-  onMount(async () => {
-    try {
-      const r = await fetch('https://nodyx.org/api/directory')
-      if (r.ok) {
-        const d = await r.json()
-        instanceCount = d.total ?? (Array.isArray(d.instances) ? d.instances.length : null)
-      }
-    } catch { /* ignore — static fallback */ }
-  })
 
   // ── Animated node graph ────────────────────────────────────────────────────
   onMount(() => {
