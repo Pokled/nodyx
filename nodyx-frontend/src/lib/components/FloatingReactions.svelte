@@ -80,13 +80,15 @@
 
 <style>
 	.fr-emoji {
-		position:       absolute;
-		font-size:      2rem;
-		line-height:    1;
-		user-select:    none;
-		pointer-events: none;
-		animation:      fr-float 2.6s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
-		filter:         drop-shadow(0 2px 8px rgba(0, 0, 0, 0.55));
+		position:            absolute;
+		font-size:           2rem;
+		line-height:         1;
+		user-select:         none;
+		pointer-events:      none;
+		animation:           fr-float 2.6s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+		filter:              drop-shadow(0 2px 8px rgba(0, 0, 0, 0.55));
+		will-change:         transform, opacity;
+		backface-visibility: hidden;
 	}
 
 	.fr-emoji--combo {

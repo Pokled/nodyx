@@ -23,6 +23,7 @@
 | **Phase 4.7** | 2FA — TOTP + Nodyx Signet as 2nd factor (v1.9.1) | ✅ Complete |
 | **Phase 4.8** | Production stability & cross-runtime hardening (v1.9.3) | ✅ Complete |
 | **Phase 4.9** | Process isolation, test coverage & CI hardening (v1.9.4) | ✅ Complete |
+| **Phase 4.10** | Living Profile + Forum Redesign (v1.9.5) | ✅ Complete |
 | Phase 5 | Mobile + Nodes + Reputation | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
@@ -540,9 +541,28 @@ nodyx-core    (Fastify/Node.js) ────────────────
 
 ---
 
+## PHASE 4.10 — Living Profile + Forum Redesign ✅ COMPLETE (v1.9.5)
+### Goal: Profiles that breathe, a forum that looks like a serious platform
+
+- [x] **Generative Banner** — unique Lissajous SVG per username, deterministic FNV-1a hash, SSR-safe, animated via `animateTransform`
+- [x] **Reputation Rings** — 3 animated concentric SVG rings (Longevity / Quality / Engagement), tooltips, link to `/reputation`
+- [x] **Activity Heatmap** — 53×7 GitHub-style grid, streak + record stats, fixed-position tooltip escaping `overflow-x: auto`
+- [x] **Activity endpoint** — `GET /api/v1/users/:username/activity` (UNION posts + threads, 365-day window)
+- [x] **Parallax hero** — banner scrolls at 35% of page speed, capped 60px
+- [x] **Avatar arcs** — 3 rotating SVG circles via `animateTransform` + glow pulse
+- [x] **Timeline** — temporal milestones + XP thresholds at bottom of profile
+- [x] **`/reputation` page** — full transparent formula documentation (Longevity, Quality with λ decay, Engagement)
+- [x] **Delete avatar / delete banner** — clears both `banner_url` AND `banner_asset_id` atomically
+- [x] **Forum redesign** — flat design, zero `rounded-*` (except avatars), full-width content, consistent with shell aesthetic
+
+---
+
 ## PHASE 5 — Mobile + Nodes + Reputation
 ### Goal: Nodyx in everyone's pocket, with structured knowledge and end-to-end privacy
 
+- [ ] **Bio enrichie Markdown** — TipTap editor on profile bio (TipTap already in project)
+- [ ] **Système Merci backend** — `thanks` table, real Q score with λ decay (`e^{-λt}` weighting), migration 064
+- [ ] **Shareable profile card** — `/users/:username/card` SSR image (avatar + rings + stats), OG meta
 - [ ] **Nodes** (SPEC 013) — durable structured knowledge, Anchors, community-validated via Garden — [SPEC 013](../en/specs/013-node/SPEC.md)
 - [ ] **DMs end-to-end encrypted** — ECDH key exchange + AES-256-GCM per-message encryption, keys never leave the client
 - [ ] **Plugin system** — stable external contributor API, plugin marketplace foundations (`plugins/` directory already in place)

@@ -99,12 +99,12 @@
 		
 		<!-- Partage / Actions rapides -->
 		<div class="flex items-center gap-2">
-			<button class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-indigo-400 transition-colors" title="Partager">
+			<button class="p-2bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-indigo-400 transition-colors" title="Partager">
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
 				</svg>
 			</button>
-			<button class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-yellow-400 transition-colors" title="Suivre">
+			<button class="p-2bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-yellow-400 transition-colors" title="Suivre">
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
 				</svg>
@@ -113,32 +113,26 @@
 	</div>
 
 	<!-- Carte d'identité du thread avec avatar du créateur -->
-	<div class="relative overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900 to-gray-950 p-6 shadow-xl">
+	<div class="relative overflow-hidden border border-white/[.06] bg-gray-900 p-6">
 		<!-- Effet de glow subtil -->
 		<div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
-		
+
 		<div class="flex items-start gap-3 sm:gap-6">
 			<!-- Avatar du créateur (grand cercle) -->
 			<div class="relative flex-shrink-0">
 				{#if thread.author_avatar}
-					<img 
-						src={thread.author_avatar} 
+					<img
+						src={thread.author_avatar}
 						alt={thread.author_username}
 						class="w-12 h-12 sm:w-20 sm:h-20 rounded-full object-cover ring-4 ring-indigo-500/20 shadow-2xl"
 					/>
 				{:else}
-					<div class="w-12 h-12 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 
+					<div class="w-12 h-12 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600
 								flex items-center justify-center text-3xl font-bold text-white
 								ring-4 ring-indigo-500/20 shadow-2xl">
 						{thread.author_username.charAt(0).toUpperCase()}
 					</div>
 				{/if}
-				<!-- Badge créateur -->
-				<div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-indigo-600 
-							flex items-center justify-center text-xs border-2 border-gray-900 shadow-lg"
-					 title="Créateur du sujet">
-					👑
-				</div>
 			</div>
 
 			<!-- Infos principales -->
@@ -146,22 +140,22 @@
 				<!-- Badges du thread -->
 				<div class="flex flex-wrap items-center gap-2 mb-2">
 					{#if thread.is_pinned}
-						<span class="inline-flex items-center gap-1 text-xs font-medium text-indigo-400 bg-indigo-900/30 border border-indigo-800/50 px-2 py-0.5 rounded-full">
+						<span class="inline-flex items-center gap-1 text-xs font-medium text-indigo-400 bg-indigo-900/30 border border-indigo-800/50 px-2 py-0.5">
 							📌 Épinglé
 						</span>
 					{/if}
 					{#if thread.is_locked}
-						<span class="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5 rounded-full">
+						<span class="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5">
 							🔒 Verrouillé
 						</span>
 					{/if}
 					{#if thread.is_featured}
-						<span class="inline-flex items-center gap-1 text-xs font-medium text-yellow-400 bg-yellow-900/30 border border-yellow-800/50 px-2 py-0.5 rounded-full">
+						<span class="inline-flex items-center gap-1 text-xs font-medium text-yellow-400 bg-yellow-900/30 border border-yellow-800/50 px-2 py-0.5">
 							⭐ À la une
 						</span>
 					{/if}
 					{#each (thread.tags ?? []) as tag}
-						<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+						<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium"
 							style="background-color: {tag.color}22; color: {tag.color}; border: 1px solid {tag.color}55">
 							{tag.name}
 						</span>
@@ -186,14 +180,14 @@
 							maxlength="300"
 							required
 							autofocus
-							class="flex-1 rounded-lg bg-gray-800 border border-indigo-600 px-3 py-2 text-white text-xl font-bold focus:outline-none focus:border-indigo-400"
+							class="flex-1bg-gray-800 border border-indigo-600 px-3 py-2 text-white text-xl font-bold focus:outline-none focus:border-indigo-400"
 						/>
 						<button type="submit"
-							class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
+							class="px-4 py-2bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
 							Enregistrer
 						</button>
 						<button type="button" onclick={() => editingTitle = false}
-							class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm text-gray-300 transition-colors">
+							class="px-4 py-2bg-gray-700 hover:bg-gray-600 text-sm text-gray-300 transition-colors">
 							Annuler
 						</button>
 					</form>
@@ -204,7 +198,7 @@
 							<button
 								type="button"
 								onclick={startEditTitle}
-								class="opacity-0 group-hover/title:opacity-100 transition-opacity mt-1 p-1.5 rounded text-gray-600 hover:text-gray-300 hover:bg-gray-800"
+								class="opacity-0 group-hover/title:opacity-100 transition-opacity mt-1 p-1.5text-gray-600 hover:text-gray-300 hover:bg-gray-800"
 								title="Modifier le titre"
 							>
 								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -231,7 +225,7 @@
 					<!-- Statistiques -->
 					<div class="flex items-center gap-3">
 						<!-- Vues -->
-						<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 rounded-full border border-gray-700">
+						<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 border border-gray-700">
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 								<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -241,7 +235,7 @@
 						</div>
 
 						<!-- Réponses -->
-						<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 rounded-full border border-gray-700">
+						<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 border border-gray-700">
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 							</svg>
@@ -251,7 +245,7 @@
 
 						<!-- Dernier posteur (si existe) -->
 						{#if lastPost && lastPost.author_username !== thread.author_username}
-							<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 rounded-full border border-gray-700">
+							<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 border border-gray-700">
 								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
 								</svg>
@@ -281,7 +275,7 @@
 					}}>
 						<input type="hidden" name="is_pinned" value={!thread.is_pinned} />
 						<button type="submit"
-							class="w-full px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors
+							class="w-full px-3 py-1.5border text-xs font-medium transition-colors
 							{thread.is_pinned
 								? 'border-indigo-700 text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/40'
 								: 'border-gray-700 text-gray-400 hover:text-indigo-400 hover:border-indigo-700'}">
@@ -295,7 +289,7 @@
 					}}>
 						<input type="hidden" name="is_locked" value={!thread.is_locked} />
 						<button type="submit"
-							class="w-full px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors
+							class="w-full px-3 py-1.5border text-xs font-medium transition-colors
 							{thread.is_locked
 								? 'border-amber-700 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40'
 								: 'border-gray-700 text-gray-400 hover:text-amber-400 hover:border-amber-700'}">
@@ -309,7 +303,7 @@
 					}}>
 						<input type="hidden" name="is_featured" value={!thread.is_featured} />
 						<button type="submit"
-							class="w-full px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors
+							class="w-full px-3 py-1.5border text-xs font-medium transition-colors
 							{thread.is_featured
 								? 'border-yellow-700 text-yellow-400 bg-yellow-900/20 hover:bg-yellow-900/40'
 								: 'border-gray-700 text-gray-400 hover:text-yellow-400 hover:border-yellow-700'}">
@@ -321,19 +315,19 @@
 					{#if !confirmDeleteThread}
 						<button type="button"
 							onclick={() => confirmDeleteThread = true}
-							class="w-full px-3 py-1.5 rounded-lg border border-red-800 text-xs font-medium text-red-400 hover:bg-red-900/20 transition-colors">
+							class="w-full px-3 py-1.5border border-red-800 text-xs font-medium text-red-400 hover:bg-red-900/20 transition-colors">
 							🗑 Supprimer
 						</button>
 					{:else}
 						<div class="flex flex-col gap-1">
 							<span class="text-xs text-red-400 text-center">Confirmer ?</span>
 							<form method="POST" action="?/deleteThread" use:enhance>
-								<button type="submit" class="w-full px-2 py-1 rounded bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
+								<button type="submit" class="w-full px-2 py-1bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
 									Oui, supprimer
 								</button>
 							</form>
 							<button type="button" onclick={() => confirmDeleteThread = false}
-								class="w-full px-2 py-1 rounded bg-gray-700 text-xs text-gray-300 hover:bg-gray-600">
+								class="w-full px-2 py-1bg-gray-700 text-xs text-gray-300 hover:bg-gray-600">
 								Annuler
 							</button>
 						</div>
@@ -359,7 +353,7 @@
 		<button
 			type="button"
 			onclick={() => showPollCreator = true}
-			class="flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
+			class="flex items-center gap-2 px-4 py-2border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
 		>
 			<span>📊</span>
 			<span>Ajouter un sondage à ce sujet</span>
@@ -392,7 +386,7 @@
 			</div>
 		{/if}
 
-		<article class="flex flex-wrap sm:flex-nowrap gap-4 rounded-lg border border-gray-800 bg-gradient-to-r from-gray-900 to-gray-900/80 p-4 hover:border-indigo-900/50 transition-colors duration-300">
+		<article class="flex flex-wrap sm:flex-nowrap gap-4 border border-white/[.06] bg-gray-900/60 p-4 hover:border-indigo-900/50 transition-colors duration-200">
 			<!-- Profil auteur -->
 			<ProfileCard
 				username={post.author_username}
@@ -430,7 +424,7 @@
 							{#if canEdit(post) && editingPostId !== post.id}
 								<button type="button"
 									onclick={() => { editingPostId = post.id; deletingPostId = null }}
-									class="px-2 py-1 rounded text-xs text-gray-500 hover:text-indigo-400 hover:bg-indigo-900/20 transition-colors"
+									class="px-2 py-1text-xs text-gray-500 hover:text-indigo-400 hover:bg-indigo-900/20 transition-colors"
 									title="Modifier ce message">
 									✏️ Éditer
 								</button>
@@ -439,7 +433,7 @@
 								{#if deletingPostId !== post.id}
 									<button type="button"
 										onclick={() => { deletingPostId = post.id; editingPostId = null }}
-										class="px-2 py-1 rounded text-xs text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
+										class="px-2 py-1text-xs text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
 										title="Supprimer ce message">
 										🗑 Supprimer
 									</button>
@@ -454,11 +448,11 @@
 									}} class="inline-flex items-center gap-1 ml-1">
 										<input type="hidden" name="post_id" value={post.id} />
 										<button type="submit"
-											class="px-2 py-1 rounded bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
+											class="px-2 py-1bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
 											Oui
 										</button>
 										<button type="button" onclick={() => deletingPostId = null}
-											class="px-2 py-1 rounded bg-gray-700 text-xs text-gray-300 hover:bg-gray-600">
+											class="px-2 py-1bg-gray-700 text-xs text-gray-300 hover:bg-gray-600">
 											Non
 										</button>
 									</form>
@@ -487,12 +481,12 @@
 						/>
 						<div class="flex gap-2">
 							<button type="submit"
-								class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-colors">
+								class="px-3 py-1.5bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-colors">
 								Enregistrer
 							</button>
 							<button type="button"
 								onclick={() => editingPostId = null}
-								class="px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 transition-colors">
+								class="px-3 py-1.5bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 transition-colors">
 								Annuler
 							</button>
 						</div>
@@ -548,7 +542,7 @@
 				<button
 					type="submit"
 					disabled={submitting}
-					class="rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-4 py-2 text-sm font-semibold text-white transition-colors"
+					class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-4 py-2 text-sm font-semibold text-white transition-colors"
 				>
 					{submitting ? 'Publication...' : 'Publier la réponse'}
 				</button>
@@ -557,7 +551,7 @@
 	{:else}
 		<div class="mt-8 border-t border-gray-800 pt-6 text-center">
 			<p class="text-sm text-gray-500 mb-3">Vous devez être connecté pour répondre.</p>
-			<a href="/auth/login" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
+			<a href="/auth/login" class="inline-flex items-center gap-2 px-4 py-2bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
 				Se connecter
 			</a>
 		</div>
