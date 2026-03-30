@@ -16,7 +16,7 @@
   // ── Live instance count ────────────────────────────────────────────────────
   onMount(async () => {
     try {
-      const r = await fetch('https://nodyx.org/api/v1/directory/instances?limit=1')
+      const r = await fetch('https://nodyx.org/api/directory')
       if (r.ok) {
         const d = await r.json()
         instanceCount = d.total ?? (Array.isArray(d.instances) ? d.instances.length : null)
