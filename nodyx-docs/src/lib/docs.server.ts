@@ -47,10 +47,8 @@ function slugifyHeading(text: string): string {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // strip markdown links  [text](url) → text
     .replace(/[*_`]/g, '')            // strip markdown syntax  *, _, `
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')         // strip remaining non-word chars
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')              // collapse multiple dashes
-    .replace(/^-|-$/g, '')            // trim leading/trailing dashes
+    .replace(/[^\w\s-]/g, '')         // strip remaining non-word chars (emojis → space)
+    .replace(/\s+/g, '-')             // spaces → dashes (emoji at start → leading dash)
     .slice(0, 80)
 }
 
