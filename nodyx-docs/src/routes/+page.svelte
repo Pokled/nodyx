@@ -203,8 +203,14 @@
     {
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
       title: 'Living Profiles',
-      desc: 'Generative animated banners, reputation rings, activity heatmaps, XP levels and custom name effects. Identity, not just an avatar.',
+      desc: 'Generative animated banners, reputation rings, activity heatmaps, XP levels and custom name effects. Plus a shareable invite card for Discord & social.',
       color: '#a855f7',
+    },
+    {
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+      title: 'Social Feed',
+      desc: 'A chronological follow feed — posts, replies, resonances. No algorithm, no engagement trap. Just the people you chose to follow.',
+      color: '#10b981',
     },
     {
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
@@ -368,7 +374,7 @@
     </div>
     <div class="stat-sep"></div>
     <div class="stat">
-      <span class="stat-val">49</span>
+      <span class="stat-val">53</span>
       <span class="stat-label">DB migrations</span>
     </div>
     <div class="stat-sep"></div>
@@ -418,8 +424,8 @@
       <span class="manifesto-mark">"</span>
     </div>
     <p class="manifesto-sub">
-      One instance = one community. No algorithmic feeds, no engagement traps,<br>
-      no data brokers. Just a space that belongs to your people.
+      One instance = one community. Chronological feeds, no algorithmic manipulation,<br>
+      no engagement traps, no data brokers. Just a space that belongs to your people.
     </p>
     <a href="/manifesto" class="manifesto-cta">Read the manifesto</a>
   </div>
@@ -478,7 +484,7 @@
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Reputation rings</strong> — concentric SVG arcs tracking posts, replies, reactions
+          <strong>Reputation rings</strong> — concentric SVG arcs tracking posts, replies, reactions, updated live
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
@@ -487,6 +493,14 @@
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
           <strong>XP levels &amp; grades</strong> — sqrt-based progression, custom colors, animated name effects
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Shareable invite card</strong> — <code style="font-size:0.8em;background:rgba(255,255,255,0.07);padding:0.1em 0.3em">/users/:username/card</code> generates a rich OG image for Discord &amp; social shares
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Follow system</strong> — follow members, build your feed, see who resonates with your posts
         </li>
       </ul>
     </div>
@@ -551,6 +565,164 @@
         </div>
         <div class="lp-heatmap-label">Activity — last 12 weeks</div>
       </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- REPUTATION & STATS                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-inner rep-layout">
+
+    <div class="rep-text">
+      <div class="section-label">REPUTATION SYSTEM</div>
+      <h2 class="section-title" style="margin-bottom: 1rem;">A score that actually means something.</h2>
+      <p class="rep-intro">
+        Nodyx tracks every meaningful action — forum posts, replies, reactions, chat participation —
+        and translates them into a transparent, community-owned reputation score.
+        No black box, no pay-to-win. Just real contribution.
+      </p>
+      <ul class="lp-features">
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Public leaderboard</strong> — top contributors ranked by reputation score, visible to all
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Detailed breakdown</strong> — posts, replies, reactions, chat, events — each category tracked separately
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Animated progress curves</strong> — SVG reputation rings that grow and pulse with your activity
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Open formula</strong> — the scoring algorithm is in the codebase, auditable, forkable
+        </li>
+      </ul>
+      <div class="rep-cta-row">
+        <a href="https://nodyx.org/reputation" target="_blank" rel="noopener noreferrer" class="cta-secondary">
+          See it live →
+        </a>
+      </div>
+    </div>
+
+    <!-- Reputation rings mockup -->
+    <div class="rep-rings-wrap" aria-hidden="true">
+      <div class="rep-rings">
+        <!-- Outer ring — Posts -->
+        <svg class="rep-ring-svg rep-ring-svg--1" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="72" fill="none" stroke="rgba(99,102,241,0.1)" stroke-width="6"/>
+          <circle cx="80" cy="80" r="72" fill="none" stroke="#6366f1" stroke-width="6"
+            stroke-dasharray="452" stroke-dashoffset="113"
+            stroke-linecap="round" transform="rotate(-90 80 80)"/>
+        </svg>
+        <!-- Mid ring — Replies -->
+        <svg class="rep-ring-svg rep-ring-svg--2" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="58" fill="none" stroke="rgba(139,92,246,0.1)" stroke-width="5"/>
+          <circle cx="80" cy="80" r="58" fill="none" stroke="#8b5cf6" stroke-width="5"
+            stroke-dasharray="364" stroke-dashoffset="91"
+            stroke-linecap="round" transform="rotate(-90 80 80)"/>
+        </svg>
+        <!-- Inner ring — Reactions -->
+        <svg class="rep-ring-svg rep-ring-svg--3" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="44" fill="none" stroke="rgba(6,182,212,0.1)" stroke-width="4"/>
+          <circle cx="80" cy="80" r="44" fill="none" stroke="#06b6d4" stroke-width="4"
+            stroke-dasharray="276" stroke-dashoffset="69"
+            stroke-linecap="round" transform="rotate(-90 80 80)"/>
+        </svg>
+        <!-- Center -->
+        <div class="rep-rings-center">
+          <span class="rep-score">4 821</span>
+          <span class="rep-score-lbl">reputation</span>
+        </div>
+      </div>
+      <div class="rep-legend">
+        <div class="rep-legend-item"><span class="rep-dot" style="background:#6366f1"></span>Forum posts</div>
+        <div class="rep-legend-item"><span class="rep-dot" style="background:#8b5cf6"></span>Replies</div>
+        <div class="rep-legend-item"><span class="rep-dot" style="background:#06b6d4"></span>Reactions</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SOCIAL FEED                                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section section-alt">
+  <div class="section-inner feed-showcase-layout">
+
+    <!-- Left: feed mockup -->
+    <div class="feed-mockup" aria-hidden="true">
+      <div class="feed-mock-header">
+        <span class="feed-mock-title">Fil d'actu</span>
+        <span class="feed-mock-sub">Posts des personnes que vous suivez</span>
+      </div>
+      <div class="feed-mock-post">
+        <div class="feed-mock-avatar feed-mock-avatar--a"></div>
+        <div class="feed-mock-body">
+          <div class="feed-mock-meta"><strong>nekr0s</strong> <span>@nekr0s · 2min</span></div>
+          <div class="feed-mock-text">Just shipped the new audio pipeline. Noise cancellation is <strong>wild</strong> now 🎙️</div>
+          <div class="feed-mock-actions">
+            <span class="feed-mock-action">↩ 3 réponses</span>
+            <span class="feed-mock-action feed-mock-action--active">♥ 14</span>
+          </div>
+        </div>
+      </div>
+      <div class="feed-mock-post">
+        <div class="feed-mock-avatar feed-mock-avatar--b"></div>
+        <div class="feed-mock-body">
+          <div class="feed-mock-meta"><strong>solara</strong> <span>@solara · 18min</span></div>
+          <div class="feed-mock-text">Anyone else find that Nodyx voice rooms are just <em>better</em> for focus sessions?</div>
+          <div class="feed-mock-actions">
+            <span class="feed-mock-action">↩ répondre</span>
+            <span class="feed-mock-action">♥ 7</span>
+          </div>
+        </div>
+      </div>
+      <div class="feed-mock-post feed-mock-post--faded">
+        <div class="feed-mock-avatar feed-mock-avatar--c"></div>
+        <div class="feed-mock-body">
+          <div class="feed-mock-meta"><strong>drift</strong> <span>@drift · 1h</span></div>
+          <div class="feed-mock-text">The reputation leaderboard is live. Let's gooo</div>
+          <div class="feed-mock-actions">
+            <span class="feed-mock-action">↩ 1 réponse</span>
+            <span class="feed-mock-action">♥ 22</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: text -->
+    <div class="feed-showcase-text">
+      <div class="section-label">SOCIAL FEED</div>
+      <h2 class="section-title" style="margin-bottom: 1rem;">Your community, in real time.</h2>
+      <p class="rep-intro">
+        Follow the people you care about. See their posts as they happen.
+        Reply, resonate — that's it. No algorithm deciding what you see, no engagement
+        engineering, no ads.
+      </p>
+      <ul class="lp-features">
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Chronological, always</strong> — newest first, no ranking, no surprises
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Rich posts</strong> — TipTap editor with formatting, images, links, code blocks
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Résonances</strong> — our take on likes, with a pulse animation for popular posts
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Inline thread replies</strong> — expand replies directly in the feed, no page jump
+        </li>
+      </ul>
     </div>
 
   </div>
@@ -1898,4 +2070,138 @@
   letter-spacing: 0.07em;
   font-weight: 600;
 }
+
+/* ── Reputation section ───────────────────────────────────────────────────── */
+.rep-layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4rem;
+  align-items: center;
+}
+@media (max-width: 768px) {
+  .rep-layout { grid-template-columns: 1fr; gap: 2.5rem; }
+}
+.rep-intro {
+  font-size: 0.9375rem;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+}
+.rep-cta-row { margin-top: 1.75rem; }
+
+.rep-rings-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  flex-shrink: 0;
+}
+.rep-rings {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+.rep-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.rep-ring-svg--1 { animation: ring-spin 12s linear infinite; }
+.rep-ring-svg--2 { animation: ring-spin 9s linear infinite reverse; }
+.rep-ring-svg--3 { animation: ring-spin 6s linear infinite; }
+@keyframes ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.rep-rings-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+.rep-score     { font-size: 1.25rem; font-weight: 800; color: rgba(255,255,255,0.9); letter-spacing: -0.5px; }
+.rep-score-lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); font-weight: 600; }
+
+.rep-legend { display: flex; flex-direction: column; gap: 0.375rem; }
+.rep-legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: rgba(255,255,255,0.4); }
+.rep-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Social Feed showcase ─────────────────────────────────────────────────── */
+.feed-showcase-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+@media (max-width: 768px) {
+  .feed-showcase-layout { grid-template-columns: 1fr; gap: 2.5rem; }
+  .feed-mockup { order: 2; }
+  .feed-showcase-text { order: 1; }
+}
+
+.feed-mockup {
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.015);
+  overflow: hidden;
+}
+.feed-mock-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.feed-mock-title { font-size: 0.8rem; font-weight: 800; color: rgba(255,255,255,0.85); }
+.feed-mock-sub   { font-size: 0.65rem; color: rgba(255,255,255,0.25); }
+
+.feed-mock-post {
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.feed-mock-post:hover { background: rgba(255,255,255,0.02); }
+.feed-mock-post--faded { opacity: 0.5; }
+.feed-mock-post:last-child { border-bottom: none; }
+
+.feed-mock-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+}
+.feed-mock-avatar--a { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.feed-mock-avatar--b { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
+.feed-mock-avatar--c { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+
+.feed-mock-body { flex: 1; min-width: 0; }
+.feed-mock-meta {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 0.25rem;
+  display: flex;
+  gap: 0.375rem;
+  align-items: baseline;
+}
+.feed-mock-meta span { color: rgba(255,255,255,0.25); font-weight: 400; }
+.feed-mock-text {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+  margin-bottom: 0.375rem;
+}
+.feed-mock-actions {
+  display: flex;
+  gap: 1rem;
+}
+.feed-mock-action {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.25);
+  cursor: default;
+}
+.feed-mock-action--active { color: #f43f5e; }
+
+.feed-showcase-text .rep-intro { margin-bottom: 1.5rem; }
 </style>
