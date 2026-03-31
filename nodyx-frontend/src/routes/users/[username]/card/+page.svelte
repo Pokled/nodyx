@@ -262,7 +262,7 @@
 	<!-- ── Footer actions ─────────────────────────────────────────────────── -->
 	<div class="card-footer">
 		<!-- Nodyx branding -->
-		<a href="/" class="nodyx-brand" aria-label="Nodyx">
+		<a href="/" target="_blank" rel="noopener noreferrer" class="nodyx-brand" aria-label="Nodyx">
 			<svg width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true">
 				<rect width="32" height="32" rx="4" fill="#6366f1" opacity="0.9"/>
 				<circle cx="16" cy="16" r="5" fill="white" opacity="0.9"/>
