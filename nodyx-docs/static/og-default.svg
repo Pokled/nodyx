@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#030712"/>
+      <stop offset="100%" stop-color="#0d0d20"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur-glow">
+      <feGaussianBlur stdDeviation="40" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Glow orbs -->
+  <circle cx="200" cy="200" r="280" fill="#6366f1" opacity="0.06"/>
+  <circle cx="1050" cy="450" r="220" fill="#8b5cf6" opacity="0.05"/>
+  <circle cx="600" cy="600" r="300" fill="#06b6d4" opacity="0.04"/>
+
+  <!-- Grid lines -->
+  <g stroke="#ffffff" stroke-opacity="0.03" stroke-width="1">
+    <line x1="0" y1="105" x2="1200" y2="105"/>
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="525" x2="1200" y2="525"/>
+    <line x1="150" y1="0" x2="150" y2="630"/>
+    <line x1="300" y1="0" x2="300" y2="630"/>
+    <line x1="450" y1="0" x2="450" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="750" y1="0" x2="750" y2="630"/>
+    <line x1="900" y1="0" x2="900" y2="630"/>
+    <line x1="1050" y1="0" x2="1050" y2="630"/>
+  </g>
+
+  <!-- Node network — decorative dots + lines -->
+  <g opacity="0.18">
+    <line x1="900" y1="120" x2="1050" y2="200" stroke="#6366f1" stroke-width="1.5"/>
+    <line x1="1050" y1="200" x2="1100" y2="350" stroke="#6366f1" stroke-width="1.5"/>
+    <line x1="1100" y1="350" x2="950" y2="450" stroke="#6366f1" stroke-width="1.5"/>
+    <line x1="950" y1="450" x2="900" y2="120" stroke="#6366f1" stroke-width="1"/>
+    <line x1="900" y1="120" x2="1100" y2="350" stroke="#8b5cf6" stroke-width="0.8" stroke-dasharray="4 4"/>
+    <circle cx="900" cy="120" r="5" fill="#a78bfa"/>
+    <circle cx="1050" cy="200" r="4" fill="#818cf8"/>
+    <circle cx="1100" cy="350" r="6" fill="#6366f1"/>
+    <circle cx="950" cy="450" r="4" fill="#a78bfa"/>
+    <circle cx="1020" cy="300" r="3" fill="#c4b5fd"/>
+  </g>
+
+  <!-- Left accent bar -->
+  <rect x="80" y="180" width="4" height="270" rx="2" fill="url(#accent)"/>
+
+  <!-- Logo text -->
+  <text x="108" y="265" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-weight="900" font-size="92" letter-spacing="-3"
+        fill="url(#accent)">Nodyx</text>
+
+  <!-- Tagline -->
+  <text x="110" y="320" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-weight="400" font-size="26" fill="#94a3b8" letter-spacing="0.5">
+    Self-hosted · Open-source · Decentralized
+  </text>
+
+  <!-- Feature pills -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" font-weight="600">
+    <rect x="110" y="355" width="110" height="32" rx="16" fill="#1e1b4b" stroke="#4338ca" stroke-width="1"/>
+    <text x="165" y="375" text-anchor="middle" fill="#a5b4fc">Forum</text>
+
+    <rect x="234" y="355" width="100" height="32" rx="16" fill="#1e1b4b" stroke="#4338ca" stroke-width="1"/>
+    <text x="284" y="375" text-anchor="middle" fill="#a5b4fc">Chat</text>
+
+    <rect x="348" y="355" width="110" height="32" rx="16" fill="#1e1b4b" stroke="#4338ca" stroke-width="1"/>
+    <text x="403" y="375" text-anchor="middle" fill="#a5b4fc">Voice</text>
+
+    <rect x="472" y="355" width="94" height="32" rx="16" fill="#1e1b4b" stroke="#4338ca" stroke-width="1"/>
+    <text x="519" y="375" text-anchor="middle" fill="#a5b4fc">P2P</text>
+  </g>
+
+  <!-- Bottom line -->
+  <text x="110" y="430" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="18" fill="#4b5563">
+    nodyx.dev — Official Documentation
+  </text>
+
+  <!-- Border frame -->
+  <rect x="1" y="1" width="1198" height="628" rx="0" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="2"/>
+</svg>
