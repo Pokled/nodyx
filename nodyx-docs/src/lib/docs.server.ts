@@ -2,23 +2,12 @@ import { readFile, readdir } from 'fs/promises'
 import { existsSync }        from 'fs'
 import { join, resolve }     from 'path'
 import { marked }            from 'marked'
-import { markedHighlight }   from 'marked-highlight'
 import hljs                  from 'highlight.js'
 import { slugToFile }        from './nav.js'
 
 // Resolve docs directory relative to the repo root
 const REPO_ROOT = resolve(process.cwd(), '..')
 const DOCS_DIR  = join(REPO_ROOT, 'docs', 'en')
-
-// ── Highlight.js integration ──────────────────────────────────────────────────
-
-marked.use(markedHighlight({
-  langPrefix: 'hljs language-',
-  highlight(code, lang) {
-    const language = hljs.getLanguage(lang) ? lang : 'plaintext'
-    return hljs.highlight(code, { language }).value
-  },
-}))
 
 // ── Custom renderer ───────────────────────────────────────────────────────────
 
