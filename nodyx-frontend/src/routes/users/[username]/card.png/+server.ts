@@ -72,13 +72,14 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 	const c1  = `hsl(${hue}, 65%, 30%)`
 	const c2  = `hsl(${(hue + 60) % 360}, 55%, 25%)`
 
-	// Fetch avatar as data URL — resolve relative URLs against the local frontend
+	// Fetch avatar as data URL — field is avatar_url (absolute URL)
 	let avatarDataUrl: string | null = null
-	if (profile.avatar) {
+	const rawAvatar = profile.avatar_url ?? profile.avatar ?? null
+	if (rawAvatar) {
 		try {
-			const avatarUrl = profile.avatar.startsWith('http')
-				? profile.avatar
-				: `http://127.0.0.1:5173${profile.avatar}`
+			const avatarUrl = rawAvatar.startsWith('http')
+				? rawAvatar
+				: `http://127.0.0.1:5173${rawAvatar}`
 			const r = await fetch(avatarUrl)
 			if (r.ok) {
 				const buf = await r.arrayBuffer()

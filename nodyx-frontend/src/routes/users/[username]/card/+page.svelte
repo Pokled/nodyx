@@ -173,8 +173,8 @@
 				<div class="ring ring-outer"></div>
 				<div class="ring ring-mid"></div>
 				<div class="avatar-shell">
-					{#if profile.avatar}
-						<img src={profile.avatar} alt={displayName} class="avatar-img" />
+					{#if profile.avatar_url ?? profile.avatar}
+						<img src={profile.avatar_url ?? profile.avatar} alt={displayName} class="avatar-img" />
 					{:else}
 						<div class="avatar-fallback">{initials}</div>
 					{/if}
