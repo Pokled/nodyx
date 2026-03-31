@@ -39,14 +39,25 @@ renderer.code = function(code: string, lang?: string) {
 </div>`
 }
 
+// ── Shared heading slug function ──────────────────────────────────────────────
+// Works on both rendered HTML (from renderer.heading) and raw markdown (from extractHeadings)
+function slugifyHeading(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, '')          // strip HTML tags  (<code>, <strong>, etc.)
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // strip markdown links  [text](url) → text
+    .replace(/[*_`]/g, '')            // strip markdown syntax  *, _, `
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')         // strip remaining non-word chars
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')              // collapse multiple dashes
+    .replace(/^-|-$/g, '')            // trim leading/trailing dashes
+    .slice(0, 80)
+}
+
 // Headings: add anchor ids
 // marked v12 API: heading(text, depth, raw)
 renderer.heading = function(text: string, depth: number) {
-  const id = text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .slice(0, 80)
+  const id = slugifyHeading(text)
   return `<h${depth} id="${id}">${text}<a class="anchor" href="#${id}" aria-hidden="true">#</a></h${depth}>\n`
 }
 
@@ -85,8 +96,9 @@ function extractHeadings(md: string): Heading[] {
   const regex = /^#{1,3}\s+(.+)$/gm
   for (const m of md.matchAll(regex)) {
     const level = (m[0].match(/^#+/) ?? [''])[0].length
-    const text  = m[1].replace(/\*\*/g, '').replace(/`/g, '')
-    const id    = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').slice(0, 80)
+    const raw   = m[1]
+    const text  = raw.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`]/g, '')
+    const id    = slugifyHeading(raw)
     headings.push({ level, text, id })
   }
   return headings
