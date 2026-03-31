@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"@jitsi/rnnoise-wasm": "^0.2.1",
+		"@resvg/resvg-js": "^2.6.2",
 		"@tiptap/core": "^3.20.0",
 		"@tiptap/extension-character-count": "^3.20.0",
 		"@tiptap/extension-code-block-lowlight": "^3.20.0",
@@ -47,6 +48,7 @@
 		"lowlight": "^3.3.0",
 		"lucide-svelte": "^0.575.0",
 		"qrcode": "^1.5.4",
+		"satori": "^0.26.0",
 		"socket.io-client": "^4.8.3"
 	}
 }

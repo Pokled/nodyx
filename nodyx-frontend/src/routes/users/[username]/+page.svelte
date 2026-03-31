@@ -312,12 +312,22 @@
 			<!-- Action button — inside max-w-6xl, aligned bottom-right -->
 			<div class="ml-auto pb-2 shrink-0">
 				{#if isOwnProfile}
-					<a href="/users/me/edit" class="profile-action-btn">
-						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
-						</svg>
-						Modifier le profil
-					</a>
+					<div class="flex items-center gap-2">
+						<a href="/users/{profile.username}/card" target="_blank" class="profile-action-btn"
+						   style="background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.3)"
+						   title="Voir ma carte de visite partageable">
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+							</svg>
+							Carte
+						</a>
+						<a href="/users/me/edit" class="profile-action-btn">
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+							</svg>
+							Modifier
+						</a>
+					</div>
 				{:else if me}
 					<a href="/chat" class="profile-action-btn"
 					   style="background: color-mix(in srgb, var(--p-accent) 30%, rgba(0,0,0,0.5)); border-color: color-mix(in srgb, var(--p-accent) 50%, transparent)">
