@@ -47,6 +47,7 @@
     participant_count: number
     user_votes:        Array<{ option_id: string; value: number }>
     results:           PollOption[] | null
+    created_by?:       string
   }
 
   let { pollId, inline = true, token, socket }: {

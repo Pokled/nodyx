@@ -51,6 +51,7 @@
 		is_featured: boolean;
 		tags?: Tag[];
 		posts?: Post[];
+		slug?: string;
 	};
 
 	type Post = {

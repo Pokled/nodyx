@@ -225,7 +225,7 @@
 			await joinVoice(ch.id, s);
 			playVoiceChime('self_join');
 		} catch (err: any) {
-			voiceError = VOICE_ERRORS[err.message] ?? VOICE_ERRORS['DENIED'];
+			voiceError = (VOICE_ERRORS as Record<string, string>)[err.message] ?? VOICE_ERRORS['DENIED'];
 		}
 	}
 
@@ -1137,7 +1137,7 @@
 								<!-- Link preview card -->
 								{#each extractUrls(msg.content) as previewUrl (previewUrl)}
 									{@const preview = linkPreviews.get(previewUrl)}
-									{#if preview && preview !== false && (preview.title || preview.image)}
+									{#if preview && typeof preview === 'object' && (preview.title || preview.image)}
 										<a
 											href={previewUrl}
 											target="_blank"
