@@ -32,7 +32,8 @@ export const LOCALES: LocaleMeta[] = [
 import fr from './locales/fr.json'
 import en from './locales/en.json'
 
-const messages: Record<Locale, Record<string, string>> = { fr, en }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const messages: Record<Locale, Record<string, any>> = { fr, en }
 
 // ── Store locale ──────────────────────────────────────────────────────────────
 

@@ -69,6 +69,9 @@ jobs:
           PUBLIC_API_URL: http://localhost:3000/api/v1
           PUBLIC_DIRECTORY_URL: https://nodyx.org
           PUBLIC_SIGNET_URL: ''
+          PUBLIC_TURN_URL: ''
+          PUBLIC_TURN_USERNAME: ''
+          PUBLIC_TURN_CREDENTIAL: ''
         run: npm run check
 
       - name: SvelteKit — build production
@@ -77,6 +80,9 @@ jobs:
           PUBLIC_API_URL: http://localhost:3000/api/v1
           PUBLIC_DIRECTORY_URL: https://nodyx.org
           PUBLIC_SIGNET_URL: ''
+          PUBLIC_TURN_URL: ''
+          PUBLIC_TURN_USERNAME: ''
+          PUBLIC_TURN_CREDENTIAL: ''
         run: npm run build
 
   # ── 3. nodyx-p2p — Rust build + tests ─────────────────────────────────────
