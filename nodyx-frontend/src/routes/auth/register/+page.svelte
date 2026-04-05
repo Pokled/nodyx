@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import type { ActionData } from './$types';
 	import { enhance } from '$app/forms';
+
+	const tFn = $derived($t)
 
 	let { form }: { form: ActionData } = $props();
 
@@ -42,19 +45,19 @@
 
 	// Messages courts pour tenir sur 2 lignes dans la bulle (~33 cars/ligne)
 	const message = $derived(
-		mood === 'loading'                                         ? 'Création en cours...'              :
-		mood === 'error'                                           ? 'Les mots de passe diffèrent !'     :
-		focusedField === 'email' && emailNoAt                      ? 'Il manque un @ !'                  :
-		focusedField === 'email' && emailNoDot                     ? 'Il manque un point après le @'     :
-		mood === 'warning'                                         ? 'Email invalide.'                   :
-		mood === 'happy'                                           ? 'Parfait, tu peux t\'inscrire !'    :
-		focusedField === 'username' && usernameShort               ? 'Minimum 3 caractères !'            :
-		focusedField === 'username'                                ? 'Pseudo unique sur l\'instance.'    :
-		focusedField === 'email'                                   ? 'Reste sur cette instance.'         :
-		focusedField === 'password' && !pwdOk && password.length   ? 'Encore ' + (8 - password.length) + ' caractère' + (8 - password.length > 1 ? 's' : '') + '...' :
-		focusedField === 'password'                                ? 'Minimum 8 caractères !'            :
-		focusedField === 'confirm_password'                        ? 'Répète le même mot de passe.'      :
-		'Bienvenue ! Remplis le formulaire.'
+		mood === 'loading'                                         ? tFn('auth.register.creating')              :
+		mood === 'error'                                           ? tFn('auth.register.password_mismatch')     :
+		focusedField === 'email' && emailNoAt                      ? tFn('auth.register.missing_at')                  :
+		focusedField === 'email' && emailNoDot                     ? tFn('auth.register.missing_dot_after_at')     :
+		mood === 'warning'                                         ? tFn('auth.register.invalid_email')                   :
+		mood === 'happy'                                           ? tFn('auth.register.all_good_message')    :
+		focusedField === 'username' && usernameShort               ? tFn('auth.register.username_min_3')            :
+		focusedField === 'username'                                ? tFn('auth.register.username_hint')    :
+		focusedField === 'email'                                   ? tFn('auth.register.email_hint')         :
+		focusedField === 'password' && !pwdOk && password.length   ? tFn('auth.register.password_chars_remaining', { n: String(8 - password.length), s: 8 - password.length > 1 ? 's' : '' }) :
+		focusedField === 'password'                                ? tFn('auth.register.password_min_8')            :
+		focusedField === 'confirm_password'                        ? tFn('auth.register.repeat_password_message')      :
+		tFn('auth.register.welcome_message')
 	)
 
 	const isError = $derived(mood === 'error' || mood === 'warning')
@@ -74,15 +77,15 @@
 
 	const emailInlineError = $derived(
 		emailError ? (
-			!email.includes('@')            ? 'Il manque un @' :
-			emailNoDot                      ? 'Il manque un point après le @' :
-			'Adresse email invalide'
+			!email.includes('@')            ? tFn('auth.register.email_inline_missing_at') :
+			emailNoDot                      ? tFn('auth.register.missing_dot_after_at') :
+			tFn('auth.register.email_inline_invalid')
 		) : null
 	)
 </script>
 
 <svelte:head>
-	<title>Inscription — Nodyx</title>
+	<title>{tFn('auth.register.title')} — Nodyx</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl">
@@ -90,7 +93,7 @@
 
 		<!-- ── Form ─────────────────────────────────────────────────────── -->
 		<div class="w-full max-w-sm order-2 lg:order-1">
-			<h1 class="text-2xl font-bold text-white mb-6">Créer un compte</h1>
+			<h1 class="text-2xl font-bold text-white mb-6">{tFn('auth.register.title')}</h1>
 
 			{#if form?.error}
 				<p class="mb-4 rounded bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
@@ -115,7 +118,7 @@
 				class="space-y-4"
 			>
 				<div>
-					<label for="username" class="block text-sm text-gray-400 mb-1">Nom d'utilisateur</label>
+					<label for="username" class="block text-sm text-gray-400 mb-1">{tFn('auth.register.username_label')}</label>
 					<input
 						id="username" name="username" type="text"
 						required minlength="3" maxlength="50" autocomplete="username"
@@ -127,16 +130,16 @@
 					/>
 					<div class="mt-1.5 h-4 flex items-center justify-between text-xs">
 						{#if usernameShort}
-							<span class="text-red-400">Minimum 3 caractères</span>
+							<span class="text-red-400">{tFn('auth.register.username_min_3_error')}</span>
 						{:else}
-							<span class="text-gray-600">3 à 50 caractères · unique sur l'instance</span>
+							<span class="text-gray-600">{tFn('auth.register.username_hint_text')}</span>
 						{/if}
 						<span class="{username.length < 3 ? 'text-gray-700' : 'text-gray-500'}">{username.length}/50</span>
 					</div>
 				</div>
 
 				<div>
-					<label for="email" class="block text-sm text-gray-400 mb-1">Email</label>
+					<label for="email" class="block text-sm text-gray-400 mb-1">{tFn('common.email')}</label>
 					<input
 						id="email" name="email" type="email"
 						required autocomplete="email"
@@ -150,7 +153,7 @@
 				</div>
 
 				<div>
-					<label for="password" class="block text-sm text-gray-400 mb-1">Mot de passe</label>
+					<label for="password" class="block text-sm text-gray-400 mb-1">{tFn('common.password')}</label>
 					<input
 						id="password" name="password" type="password"
 						required minlength="8" autocomplete="new-password"
@@ -163,14 +166,14 @@
 					<div class="mt-1.5 h-4 flex items-center gap-1.5 text-xs">
 						<span class="{pwdOk ? 'text-green-400' : 'text-gray-500'}">{pwdOk ? '✓' : '○'}</span>
 						<span class="{pwdOk ? 'text-green-400' : 'text-gray-500'}">
-							8 caractères minimum{!pwdOk && password.length > 0 ? ' (' + password.length + '/8)' : ''}
+							{tFn('auth.register.password_min_chars_label')}{!pwdOk && password.length > 0 ? ' (' + password.length + '/8)' : ''}
 						</span>
 					</div>
 				</div>
 
 				<div>
 					<label for="confirm_password" class="block text-sm text-gray-400 mb-1">
-						Confirmer le mot de passe
+						{tFn('auth.register.confirm_password_label')}
 					</label>
 					<input
 						id="confirm_password" name="confirm_password" type="password"
@@ -182,7 +185,7 @@
 						       {pwdMismatch ? 'border border-red-600' : 'border border-gray-700 focus:border-indigo-500'}"
 					/>
 					<p class="mt-1 h-4 text-xs text-red-400">
-						{pwdMismatch ? 'Les mots de passe ne correspondent pas.' : ''}
+						{pwdMismatch ? tFn('auth.register.password_mismatch_error') : ''}
 					</p>
 				</div>
 
@@ -193,13 +196,13 @@
 					       disabled:opacity-50 disabled:cursor-not-allowed
 					       {canSubmit ? 'bg-green-600 hover:bg-green-500' : 'bg-indigo-600 hover:bg-indigo-500'}"
 				>
-					{submitting ? 'Création...' : "S'inscrire"}
+					{submitting ? tFn('auth.register.submitting') : tFn('auth.register.button')}
 				</button>
 			</form>
 
 			<p class="mt-4 text-center text-sm text-gray-500">
-				Déjà un compte ?
-				<a href="/auth/login" class="text-indigo-400 hover:text-indigo-300">Se connecter</a>
+				{tFn('auth.register.already_has_account')}
+				<a href="/auth/login" class="text-indigo-400 hover:text-indigo-300">{tFn('auth.login_link')}</a>
 			</p>
 		</div>
 

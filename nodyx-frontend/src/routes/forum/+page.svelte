@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { page } from '$app/stores';
+	import { t } from '$lib/i18n';
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
 
@@ -14,10 +16,10 @@
 		const m = Math.floor(diff / 60000);
 		const h = Math.floor(m / 60);
 		const d = Math.floor(h / 24);
-		if (m < 1)  return 'maintenant';
+		if (m < 1)  return tFn('common.time.now');
 		if (m < 60) return `${m}min`;
 		if (h < 24) return `${h}h`;
-		return `${d}j`;
+		return `${d}${tFn('common.time.d')}`;
 	}
 
 	// Toutes les catégories racines + leurs enfants à plat
@@ -33,13 +35,13 @@
 	<!-- ── Header ──────────────────────────────────────────────────────── -->
 	<div class="flex items-center justify-between mb-8">
 		<div>
-			<h1 class="text-2xl font-black text-white tracking-tight">Forum</h1>
-			<p class="text-sm text-gray-500 mt-0.5">Discussions, guides et annonces de la communauté</p>
+			<h1 class="text-2xl font-black text-white tracking-tight">{tFn('nav.forum')}</h1>
+			<p class="text-sm text-gray-500 mt-0.5">{tFn('forum.subtitle')}</p>
 		</div>
 		{#if user}
 			<a href="/forum/{categories[0]?.slug ?? categories[0]?.id}/new"
 			   class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-widest transition-colors">
-				+ Nouveau sujet
+				{tFn('forum.new_topic')}
 			</a>
 		{/if}
 	</div>
@@ -76,7 +78,7 @@
 					<div class="flex items-center gap-6 shrink-0 text-right">
 						<div class="hidden sm:flex flex-col items-end">
 							<span class="text-sm font-bold text-gray-300 tabular-nums">{cat.thread_count ?? 0}</span>
-							<span class="text-[10px] text-gray-600 uppercase tracking-wide">Sujets</span>
+							<span class="text-[10px] text-gray-600 uppercase tracking-wide">{tFn('common.topics')}</span>
 						</div>
 						<svg class="w-4 h-4 text-gray-700 group-hover:text-indigo-400 transition-colors"
 						     fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -124,7 +126,7 @@
 		<aside class="space-y-4">
 			<div class="border border-white/[.06]" style="background: rgba(255,255,255,.025)">
 				<div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
-					<span class="text-[10px] font-black uppercase tracking-[.15em] text-gray-500">Activité récente</span>
+					<span class="text-[10px] font-black uppercase tracking-[.15em] text-gray-500">{tFn('forum.recent_activity')}</span>
 				</div>
 				<div class="divide-y divide-white/[.04]">
 					{#each recentThreads.slice(0, 8) as thread, i}
@@ -146,7 +148,7 @@
 						</div>
 					</a>
 					{:else}
-						<div class="px-4 py-6 text-xs text-gray-700 text-center">Aucune activité</div>
+						<div class="px-4 py-6 text-xs text-gray-700 text-center">{tFn('forum.no_activity')}</div>
 					{/each}
 				</div>
 			</div>

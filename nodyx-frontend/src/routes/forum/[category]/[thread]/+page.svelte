@@ -8,6 +8,9 @@
 	import PostReactions from '$lib/components/PostReactions.svelte';
 	import PollCard from '$lib/components/PollCard.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
+	import { t } from '$lib/i18n';
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
 
@@ -40,7 +43,7 @@
 	}
 
 	function formatDate(iso: string) {
-		return new Date(iso).toLocaleDateString('fr-FR', {
+		return new Date(iso).toLocaleDateString([], {
 			day: '2-digit', month: 'short', year: 'numeric',
 			hour: '2-digit', minute: '2-digit'
 		});
@@ -59,7 +62,7 @@
 	<meta name="description" content="Discussion : {thread.title} par {thread.author_username}" />
 	<link rel="canonical" href={$page.url.href} />
 	<meta property="og:title"       content="{thread.title} — {$page.data.communityName ?? 'Nodyx'}" />
-	<meta property="og:description" content="Discussion par {thread.author_username} · {thread.post_count} réponse(s) · {thread.views} vues" />
+	<meta property="og:description" content="Discussion par {thread.author_username} · {thread.post_count} {tFn('forum.replies_label')} · {thread.views} {tFn('forum.views')}" />
 	<meta property="og:type"        content="article" />
 	<meta property="og:url"         content={$page.url.href} />
 	<meta property="og:image"       content={$page.data.communityBannerUrl ?? $page.data.communityLogoUrl ?? `${$page.url.origin}/default-og-image.png`} />
@@ -94,17 +97,17 @@
 			<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
 			</svg>
-			<span>Retour au forum</span>
+			{tFn('forum.back_to_forum')}
 		</a>
 		
 		<!-- Partage / Actions rapides -->
 		<div class="flex items-center gap-2">
-			<button class="p-2bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-indigo-400 transition-colors" title="Partager">
+			<button class="p-2bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-indigo-400 transition-colors" title={tFn('forum.action_share')}>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
 				</svg>
 			</button>
-			<button class="p-2bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-yellow-400 transition-colors" title="Suivre">
+			<button class="p-2bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-yellow-400 transition-colors" title={tFn('forum.action_follow')}>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
 				</svg>
@@ -199,7 +202,7 @@
 								type="button"
 								onclick={startEditTitle}
 								class="opacity-0 group-hover/title:opacity-100 transition-opacity mt-1 p-1.5text-gray-600 hover:text-gray-300 hover:bg-gray-800"
-								title="Modifier le titre"
+								title={tFn('forum.edit_title')}
 							>
 								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 									<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -231,7 +234,7 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 							</svg>
 							<span class="font-medium text-gray-300">{thread.views}</span>
-							<span class="text-gray-600 text-xs">vues</span>
+							<span class="text-gray-600 text-xs">{tFn('forum.views')}</span>
 						</div>
 
 						<!-- Réponses -->
@@ -240,7 +243,7 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 							</svg>
 							<span class="font-medium text-gray-300">{thread.post_count}</span>
-							<span class="text-gray-600 text-xs">réponses</span>
+							<span class="text-gray-600 text-xs">{tFn('forum.replies_label')}</span>
 						</div>
 
 						<!-- Dernier posteur (si existe) -->
@@ -249,7 +252,7 @@
 								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
 								</svg>
-								<span class="text-xs text-gray-500">Dernier:</span>
+								<span class="text-xs text-gray-500">{tFn('forum.last_poster')}</span>
 								<div class="flex items-center gap-1">
 									{#if lastPost.author_avatar}
 										<img src={lastPost.author_avatar} alt="" class="w-5 h-5 rounded-full object-cover ring-1 ring-indigo-500/30" />
@@ -279,7 +282,7 @@
 							{thread.is_pinned
 								? 'border-indigo-700 text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/40'
 								: 'border-gray-700 text-gray-400 hover:text-indigo-400 hover:border-indigo-700'}">
-							📌 {thread.is_pinned ? 'Désépingler' : 'Épingler'}
+							{thread.is_pinned ? tFn('forum.unpin') : tFn('forum.pin')}
 						</button>
 					</form>
 
@@ -293,7 +296,7 @@
 							{thread.is_locked
 								? 'border-amber-700 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40'
 								: 'border-gray-700 text-gray-400 hover:text-amber-400 hover:border-amber-700'}">
-							🔒 {thread.is_locked ? 'Déverrouiller' : 'Verrouiller'}
+							{thread.is_locked ? tFn('forum.unlock') : tFn('forum.lock')}
 						</button>
 					</form>
 
@@ -307,7 +310,7 @@
 							{thread.is_featured
 								? 'border-yellow-700 text-yellow-400 bg-yellow-900/20 hover:bg-yellow-900/40'
 								: 'border-gray-700 text-gray-400 hover:text-yellow-400 hover:border-yellow-700'}">
-							⭐ {thread.is_featured ? 'Rétrograder' : 'Promouvoir'}
+							{thread.is_featured ? tFn('forum.unfeature') : tFn('forum.feature')}
 						</button>
 					</form>
 
@@ -320,7 +323,7 @@
 						</button>
 					{:else}
 						<div class="flex flex-col gap-1">
-							<span class="text-xs text-red-400 text-center">Confirmer ?</span>
+							<span class="text-xs text-red-400 text-center">{tFn('forum.confirm')}</span>
 							<form method="POST" action="?/deleteThread" use:enhance>
 								<button type="submit" class="w-full px-2 py-1bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
 									Oui, supprimer
@@ -356,7 +359,7 @@
 			class="flex items-center gap-2 px-4 py-2border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
 		>
 			<span>📊</span>
-			<span>Ajouter un sondage à ce sujet</span>
+			<span>{tFn('forum.add_poll_thread')}</span>
 		</button>
 	</div>
 {/if}
@@ -381,7 +384,7 @@
 					<div class="w-full border-t border-gray-800"></div>
 				</div>
 				<div class="relative bg-gray-950 px-4 text-xs text-gray-700">
-					Réponse #{index + 1}
+					{tFn('forum.reply_number', { n: String(index + 1) })}
 				</div>
 			</div>
 		{/if}
@@ -411,7 +414,7 @@
 					<div class="flex items-center gap-2">
 						<span class="text-xs text-gray-500">{formatDate(post.created_at)}</span>
 						{#if post.is_edited}
-							<span class="text-xs text-gray-600 italic">(modifié)</span>
+							<span class="text-xs text-gray-600 italic">{tFn('forum.edited')}</span>
 						{/if}
 						
 						<!-- Numéro de post pour référence -->
@@ -439,7 +442,7 @@
 									</button>
 								{:else}
 									<!-- Confirmation suppression -->
-									<span class="text-xs text-red-400">Confirmer ?</span>
+									<span class="text-xs text-red-400">{tFn('forum.confirm')}</span>
 									<form method="POST" action="?/deletePost" use:enhance={() => {
 										return async ({ update }) => {
 											deletingPostId = null
@@ -519,7 +522,7 @@
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
 				</svg>
-				Répondre à la discussion
+				{tFn('forum.reply_to')}
 			</h2>
 			<form method="POST" action="?/reply"
 				use:enhance={() => {
@@ -535,7 +538,7 @@
 				{#key replyKey}
 					<NodyxEditor
 						name="content"
-						placeholder="Votre réponse..."
+						placeholder={tFn('forum.reply_placeholder')}
 						compact={true}
 					/>
 				{/key}
@@ -544,13 +547,13 @@
 					disabled={submitting}
 					class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-4 py-2 text-sm font-semibold text-white transition-colors"
 				>
-					{submitting ? 'Publication...' : 'Publier la réponse'}
+					{submitting ? tFn('common.publishing') : tFn('forum.publish_reply')}
 				</button>
 			</form>
 		</div>
 	{:else}
 		<div class="mt-8 border-t border-gray-800 pt-6 text-center">
-			<p class="text-sm text-gray-500 mb-3">Vous devez être connecté pour répondre.</p>
+			<p class="text-sm text-gray-500 mb-3">{tFn('forum.must_login_reply')}</p>
 			<a href="/auth/login" class="inline-flex items-center gap-2 px-4 py-2bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
 				Se connecter
 			</a>
@@ -561,6 +564,6 @@
 		<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
 		</svg>
-		Ce sujet est verrouillé.
+		{tFn('forum.thread_locked')}
 	</p>
 {/if}

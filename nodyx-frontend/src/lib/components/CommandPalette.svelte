@@ -2,6 +2,9 @@
   import { goto } from '$app/navigation'
   import { onMount, tick } from 'svelte'
   import { browser } from '$app/environment'
+  import { t } from '$lib/i18n'
+
+  const tFn = $derived($t)
 
   interface Props {
     open: boolean
@@ -80,31 +83,31 @@
   // ── Static commands ───────────────────────────────────────────────────────
   const staticCommands = $derived((() => {
     const cmds: Command[] = [
-      { id: 'home',   group: 'GO TO',  label: 'Accueil',        sub: '/',                paths: ICONS.home,    action: () => navigate('/'),               keywords: ['home', 'accueil', 'index'] },
-      { id: 'forum',  group: 'GO TO',  label: 'Forum',          sub: '/forum',           paths: ICONS.forum,   action: () => navigate('/forum'),          keywords: ['forum', 'discussion', 'threads'] },
-      { id: 'chat',   group: 'GO TO',  label: 'Chat en direct', sub: '/chat',            paths: ICONS.chat,    action: () => navigate('/chat'),           keywords: ['chat', 'live', 'messages', 'channel'] },
-      { id: 'discover', group: 'GO TO', label: 'Découvrir',     sub: '/discover',        paths: ICONS.discover, action: () => navigate('/discover'),      keywords: ['discover', 'instances', 'réseau', 'network'] },
+      { id: 'home',   group: 'GO TO',  label: tFn('nav.home'),        sub: '/',                paths: ICONS.home,    action: () => navigate('/'),               keywords: ['home', 'accueil', 'index'] },
+      { id: 'forum',  group: 'GO TO',  label: tFn('nav.forum'),          sub: '/forum',           paths: ICONS.forum,   action: () => navigate('/forum'),          keywords: ['forum', 'discussion', 'threads'] },
+      { id: 'chat',   group: 'GO TO',  label: tFn('nav.chat'), sub: '/chat',            paths: ICONS.chat,    action: () => navigate('/chat'),           keywords: ['chat', 'live', 'messages', 'channel'] },
+      { id: 'discover', group: 'GO TO', label: tFn('nav.discover'),     sub: '/discover',        paths: ICONS.discover, action: () => navigate('/discover'),      keywords: ['discover', 'instances', 'réseau', 'network'] },
     ]
 
     if (user) {
       cmds.push(
-        { id: 'profile',       group: 'GO TO',    label: 'Mon profil',          sub: `/users/${user.username}`, paths: ICONS.user,    action: () => navigate(`/users/${user.username}`), keywords: ['profile', 'profil', 'compte', user.username] },
-        { id: 'notifications', group: 'GO TO',    label: 'Notifications',       sub: '/notifications',          paths: ICONS.bell,    action: () => navigate('/notifications'),          keywords: ['notif', 'notifications', 'alertes'] },
-        { id: 'dm',            group: 'GO TO',    label: 'Messages privés',     sub: '/dm',                     paths: ICONS.dm,      action: () => navigate('/dm'),                    keywords: ['dm', 'message', 'privé', 'direct'] },
-        { id: 'new-thread',    group: 'ACTIONS',  label: 'Nouveau sujet',       sub: 'Créer une discussion',    paths: ICONS.plus,    action: () => navigate('/forum'),                 keywords: ['new', 'thread', 'sujet', 'créer', 'post', 'nouveau'] },
-        { id: 'settings',      group: 'ACTIONS',  label: 'Paramètres du compte', sub: '/settings',             paths: ICONS.gear,    action: () => navigate('/settings'),              keywords: ['settings', 'paramètres', 'compte', 'config'] },
+        { id: 'profile',       group: 'GO TO',    label: tFn('nav.my_profile'),          sub: `/users/${user.username}`, paths: ICONS.user,    action: () => navigate(`/users/${user.username}`), keywords: ['profile', 'profil', 'compte', user.username] },
+        { id: 'notifications', group: 'GO TO',    label: tFn('nav.notifications'),       sub: '/notifications',          paths: ICONS.bell,    action: () => navigate('/notifications'),          keywords: ['notif', 'notifications', 'alertes'] },
+        { id: 'dm',            group: 'GO TO',    label: tFn('nav.direct_messages'),     sub: '/dm',                     paths: ICONS.dm,      action: () => navigate('/dm'),                    keywords: ['dm', 'message', 'privé', 'direct'] },
+        { id: 'new-thread',    group: 'ACTIONS',  label: tFn('nav.new_thread'),       sub: 'Créer une discussion',    paths: ICONS.plus,    action: () => navigate('/forum'),                 keywords: ['new', 'thread', 'sujet', 'créer', 'post', 'nouveau'] },
+        { id: 'settings',      group: 'ACTIONS',  label: tFn('nav.account_settings'), sub: '/settings',             paths: ICONS.gear,    action: () => navigate('/settings'),              keywords: ['settings', 'paramètres', 'compte', 'config'] },
       )
     }
 
     if (user?.role === 'admin' || user?.role === 'owner') {
       cmds.push(
-        { id: 'admin', group: 'GO TO', label: 'Administration', sub: '/admin', paths: ICONS.shield, action: () => navigate('/admin'), keywords: ['admin', 'administration', 'panel', 'modération'] },
+        { id: 'admin', group: 'GO TO', label: tFn('nav.admin'), sub: '/admin', paths: ICONS.shield, action: () => navigate('/admin'), keywords: ['admin', 'administration', 'panel', 'modération'] },
       )
     }
 
     if (user) {
       cmds.push(
-        { id: 'members', group: 'GO TO', label: 'Membres', sub: '/users', paths: ICONS.users, action: () => navigate('/users'), keywords: ['membres', 'users', 'communauté'] },
+        { id: 'members', group: 'GO TO', label: tFn('nav.members'), sub: '/users', paths: ICONS.users, action: () => navigate('/users'), keywords: ['membres', 'users', 'communauté'] },
       )
     }
 
@@ -218,7 +221,7 @@
       class="kp-palette"
       role="dialog"
       aria-modal="true"
-      aria-label="Palette de commandes"
+      aria-label={tFn('command_palette.label')}
     >
       <!-- Search input -->
       <div class="kp-input-row">
@@ -230,7 +233,7 @@
           bind:this={inputEl}
           bind:value={query}
           type="text"
-          placeholder="Rechercher ou naviguer..."
+          placeholder={tFn('command_palette.search_placeholder')}
           class="kp-input"
           autocomplete="off"
           spellcheck="false"
@@ -245,7 +248,7 @@
       <div class="kp-results" bind:this={listEl} role="listbox">
         {#if filtered.total === 0}
           <div class="kp-empty">
-            Aucun résultat pour <span class="kp-empty-query">"{query}"</span>
+            {tFn('command_palette.no_results', { query })}
           </div>
         {:else}
           {#each filtered.result as row (row.type === 'group' ? 'g-' + row.label : row.cmd.id)}
@@ -283,11 +286,11 @@
 
       <!-- Footer hints -->
       <div class="kp-footer">
-        <span class="kp-hint"><kbd>↑</kbd><kbd>↓</kbd> naviguer</span>
-        <span class="kp-hint"><kbd>↩</kbd> ouvrir</span>
-        <span class="kp-hint"><kbd>Esc</kbd> fermer</span>
+        <span class="kp-hint"><kbd>↑</kbd><kbd>↓</kbd> {tFn('command_palette.navigate_hint')}</span>
+        <span class="kp-hint"><kbd>↩</kbd> {tFn('command_palette.open_hint')}</span>
+        <span class="kp-hint"><kbd>Esc</kbd> {tFn('command_palette.close_hint')}</span>
         <span class="kp-hint kp-hint--right">
-          {filtered.total} résultat{filtered.total !== 1 ? 's' : ''}
+          {tFn(filtered.total !== 1 ? 'command_palette.results_count_plural' : 'command_palette.results_count', { n: String(filtered.total) })}
         </span>
       </div>
     </div>
@@ -461,9 +464,6 @@
   color: rgba(255, 255, 255, 0.2);
 }
 
-.kp-empty-query {
-  color: rgba(255, 255, 255, 0.38);
-}
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
 .kp-footer {

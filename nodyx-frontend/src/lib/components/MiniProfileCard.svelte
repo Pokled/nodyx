@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import { onMount } from 'svelte'
 	import { browser } from '$app/environment'
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects'
+
+	const tFn = $derived($t)
 
 	interface Props {
 		username: string
@@ -112,7 +115,7 @@
 	class="fixed inset-0 z-[200]"
 	role="button"
 	tabindex="-1"
-	aria-label="Fermer le profil"
+	aria-label={tFn('profile.close_card_aria_label')}
 	onclick={onclose}
 ></div>
 
@@ -123,7 +126,7 @@
 	style={cardStyle}
 	role="dialog"
 	aria-modal="true"
-	aria-label="Mini profil de {username}"
+	aria-label={tFn('profile.mini_card_aria_label', { username })}
 >
 	{#if loading}
 		<!-- Skeleton -->
@@ -153,7 +156,7 @@
 				onclick={onclose}
 				class="absolute top-2 right-2 text-[10px] text-gray-500 hover:text-gray-300 transition-colors px-2 py-1 rounded bg-black/30 hover:bg-black/50"
 			>
-				Voir le profil →
+				{tFn('profile.view_full_profile')}
 			</a>
 		</div>
 
@@ -187,7 +190,7 @@
 			<!-- Level + XP bar -->
 			<div class="mb-2">
 				<div class="flex items-center justify-between mb-1">
-					<span class="text-[10px] text-gray-500 uppercase tracking-widest font-medium">Niveau</span>
+					<span class="text-[10px] text-gray-500 uppercase tracking-widest font-medium">{tFn('user.level')}</span>
 					<span class="text-sm font-black text-indigo-400">{level}</span>
 				</div>
 				<div class="h-1.5 rounded-full bg-gray-800 overflow-hidden">
@@ -195,8 +198,8 @@
 					     style="width: {levelProgress}%"></div>
 				</div>
 				<div class="flex justify-between mt-0.5">
-					<span class="text-[9px] text-gray-600">{profile.points.toLocaleString('fr-FR')} pts</span>
-					<span class="text-[9px] text-gray-600">{levelMax.toLocaleString('fr-FR')} pts</span>
+					<span class="text-[9px] text-gray-600">{profile.points.toLocaleString([])} pts</span>
+					<span class="text-[9px] text-gray-600">{levelMax.toLocaleString([])} pts</span>
 				</div>
 			</div>
 
@@ -217,6 +220,6 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="p-6 text-center text-xs text-gray-600">Profil introuvable</div>
+		<div class="p-6 text-center text-xs text-gray-600">{tFn('profile.not_found')}</div>
 	{/if}
 </div>

@@ -3,6 +3,9 @@
 	import { apiFetch } from '$lib/api'
 	import { page } from '$app/stores'
 	import { dmUnreadStore } from '$lib/socket'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data } = $props()
 
@@ -76,10 +79,10 @@
 		const d = new Date(iso)
 		const now = new Date()
 		const diff = now.getTime() - d.getTime()
-		if (diff < 60_000) return 'maintenant'
+		if (diff < 60_000) return tFn('dm.now')
 		if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}min`
-		if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-		return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+		if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+		return d.toLocaleDateString([], { day: 'numeric', month: 'short' })
 	}
 
 	function truncate(s: string | null, n = 50): string {
@@ -89,7 +92,7 @@
 </script>
 
 <svelte:head>
-	<title>Messages privés</title>
+	<title>{tFn('dm.title')}</title>
 </svelte:head>
 
 <div class="max-w-2xl mx-auto px-4 py-6">
@@ -101,8 +104,8 @@
 			</svg>
 		</div>
 		<div>
-			<h1 class="text-lg font-bold text-white">Messages privés</h1>
-			<p class="text-xs text-gray-500">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+			<h1 class="text-lg font-bold text-white">{tFn('dm.title')}</h1>
+			<p class="text-xs text-gray-500">{conversations.length !== 1 ? tFn('dm.n_conversations_plural', { n: String(conversations.length) }) : tFn('dm.n_conversations', { n: String(conversations.length) })}</p>
 		</div>
 	</div>
 
@@ -116,7 +119,7 @@
 				type="text"
 				bind:value={searchQuery}
 				oninput={onSearchInput}
-				placeholder="Nouveau message — chercher un utilisateur…"
+				placeholder={tFn('dm.search_placeholder')}
 				class="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
 			/>
 			{#if searching}
@@ -140,7 +143,7 @@
 							</div>
 						{/if}
 						<span class="text-sm text-white font-medium">{u.username}</span>
-						<span class="ml-auto text-xs text-indigo-400">Envoyer un message →</span>
+						<span class="ml-auto text-xs text-indigo-400">{tFn('dm.send_message')}</span>
 					</button>
 				{/each}
 			</div>
@@ -153,8 +156,8 @@
 			<svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-4 4v-4z"/>
 			</svg>
-			<p class="text-sm">Aucune conversation</p>
-			<p class="text-xs mt-1">Cherche un utilisateur ci-dessus pour commencer</p>
+			<p class="text-sm">{tFn('dm.no_conversations')}</p>
+			<p class="text-xs mt-1">{tFn('dm.no_conversations_hint')}</p>
 		</div>
 	{:else}
 		<div class="space-y-1">
@@ -186,9 +189,9 @@
 						</div>
 						<p class="text-xs text-gray-500 truncate mt-0.5">
 							{#if conv.last_message_content}
-								{conv.last_message_sender_id === currentUserId ? 'Vous : ' : ''}{truncate(conv.last_message_content)}
+								{conv.last_message_sender_id === currentUserId ? tFn('dm.you_prefix') : ''}{truncate(conv.last_message_content)}
 							{:else}
-								<span class="italic">Aucun message</span>
+								<span class="italic">{tFn('dm.no_message')}</span>
 							{/if}
 						</p>
 					</div>

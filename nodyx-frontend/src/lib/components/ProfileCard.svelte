@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects'
+
+	const tFn = $derived($t)
 
 	export interface ProfileCardProps {
 		username: string
@@ -47,7 +50,7 @@
 	// Format "Membre depuis mois année"
 	const memberSinceFormatted = $derived(() => {
 		const d = new Date(memberSince)
-		return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+		return d.toLocaleDateString([], { month: 'long', year: 'numeric' })
 	})
 
 	// Show at most 3 tags per spec
@@ -84,7 +87,7 @@
 	-->
 	<aside class="flex flex-col items-center gap-2 w-28 shrink-0 text-center">
 		<!-- Avatar -->
-		<a href="/users/{username}" class="block" aria-label="Profil de {displayName || username}">
+		<a href="/users/{username}" class="block" aria-label={tFn('profile.card_aria_label', { name: displayName || username })}>
 			{#if avatarUrl}
 				<img
 					src={avatarUrl}
@@ -124,7 +127,7 @@
 		<span class="text-xs text-yellow-400">{points} pts</span>
 		<div class="w-full px-1">
 			<div class="flex items-center justify-between mb-0.5">
-				<span class="text-[9px] text-gray-500 uppercase tracking-widest">Niv.</span>
+				<span class="text-[9px] text-gray-500 uppercase tracking-widest">{tFn('profile.level_abbreviation')}</span>
 				<span class="text-[10px] font-black text-indigo-400">{level}</span>
 			</div>
 			<div class="h-1 rounded-full bg-gray-800 overflow-hidden">
@@ -143,7 +146,7 @@
 
 		<!-- Member since -->
 		<span class="text-xs text-gray-500">
-			Membre depuis<br />{memberSinceFormatted()}
+			{tFn('profile.member_since_label')}<br />{memberSinceFormatted()}
 		</span>
 	</aside>
 
@@ -186,7 +189,7 @@
 
 			<span class="text-sm text-yellow-400">{points} pts</span>
 			<div class="flex items-center gap-2 mt-0.5">
-				<span class="text-xs font-black text-indigo-400">Niv. {level}</span>
+				<span class="text-xs font-black text-indigo-400">{tFn('profile.level_label_with_number', { n: String(level) })}</span>
 				<div class="flex-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
 					<div class="h-full rounded-full bg-indigo-500" style="width: {levelProgress}%"></div>
 				</div>
@@ -200,7 +203,7 @@
 				</ul>
 			{/if}
 
-			<span class="text-xs text-gray-500 mt-1">Membre depuis {memberSinceFormatted()}</span>
+			<span class="text-xs text-gray-500 mt-1">{tFn('profile.member_since_label')} {memberSinceFormatted()}</span>
 		</div>
 	</div>
 {/if}

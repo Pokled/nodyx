@@ -14,6 +14,8 @@
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import { voiceStore, voiceChannelMembersStore, voiceEventsStore } from '$lib/voice';
+	import { locale, t } from '$lib/i18n';
+	const tFn = $derived($t)
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
 
@@ -72,6 +74,7 @@
 	let showOffline = $state(false)
 
 	onMount(async () => {
+		locale.init()
 		if (data.user && data.token && !data.user.is_banned) {
 			// SSR provided a valid session — use it directly (skip if banned)
 			initSocket(data.token, data.unreadCount ?? 0)
@@ -203,16 +206,16 @@
 	let statusEmoji     = $state('')
 	let statusText      = $state('')
 
-	const PRESET_STATUSES = [
-		{ emoji: '💼', text: 'Au travail' },
-		{ emoji: '🎮', text: 'En train de jouer' },
-		{ emoji: '🎵', text: 'En train d\'écouter' },
-		{ emoji: '📚', text: 'En train de lire' },
-		{ emoji: '🍕', text: 'En pause déj' },
-		{ emoji: '🤔', text: 'Réfléchis' },
-		{ emoji: '😴', text: 'Ne pas déranger' },
-		{ emoji: '🏃', text: 'De retour plus tard' },
-	]
+	const PRESET_STATUSES = $derived([
+		{ emoji: '💼', text: tFn('status.working') },
+		{ emoji: '🎮', text: tFn('status.gaming') },
+		{ emoji: '🎵', text: tFn('status.listening') },
+		{ emoji: '📚', text: tFn('status.reading') },
+		{ emoji: '🍕', text: tFn('status.lunch') },
+		{ emoji: '🤔', text: tFn('status.thinking') },
+		{ emoji: '😴', text: tFn('status.dnd') },
+		{ emoji: '🏃', text: tFn('status.back_later') },
+	])
 
 	// Load custom fonts for online members whenever the list changes
 	$effect(() => {
@@ -277,34 +280,34 @@
 		if (path === '/') return [];
 		const crumbs: { label: string; href?: string }[] = [];
 		if (path.startsWith('/forum')) {
-			crumbs.push({ label: 'Forum', href: '/forum' });
+			crumbs.push({ label: tFn('nav.forum'), href: '/forum' });
 			if (d?.category?.name) {
 				const name = (d.category.name as string).replace(/^\p{Emoji}\s*/u, '');
 				crumbs.push({ label: name, href: `/forum/${d.category.slug ?? d.category.id}` });
 			}
 			if (d?.thread?.title) crumbs.push({ label: d.thread.title });
 		} else if (path.startsWith('/chat')) {
-			crumbs.push({ label: 'Chat' });
+			crumbs.push({ label: tFn('nav.chat') });
 			const chId = $page.url.searchParams.get('channel');
 			if (chId) {
 				const ch = layoutChannels.find(c => c.id === chId);
 				if (ch) crumbs.push({ label: (ch.type === 'voice' ? '🔊 ' : '# ') + ch.name });
 			}
-		} else if (path.startsWith('/dm'))           { crumbs.push({ label: 'Messages' });
-		} else if (path.startsWith('/calendar'))     { crumbs.push({ label: 'Calendrier' });
-		} else if (path.startsWith('/discover'))     { crumbs.push({ label: 'Découvrir' });
-		} else if (path.startsWith('/admin'))        { crumbs.push({ label: 'Administration' });
-		} else if (path.startsWith('/notifications')){ crumbs.push({ label: 'Notifications' });
-		} else if (path.startsWith('/settings'))     { crumbs.push({ label: 'Paramètres' });
-		} else if (path.startsWith('/users/me/edit')){ crumbs.push({ label: 'Modifier mon profil' });
-		} else if (path.startsWith('/users/'))       { crumbs.push({ label: path.split('/')[2] ?? 'Profil' });
-		} else if (path.startsWith('/communities'))  { crumbs.push({ label: 'Annuaire' });
-		} else if (path.startsWith('/polls'))        { crumbs.push({ label: 'Sondages' });
-		} else if (path.startsWith('/tasks'))        { crumbs.push({ label: 'Tâches' });
-		} else if (path.startsWith('/wiki'))         { crumbs.push({ label: 'Wiki' });
-		} else if (path.startsWith('/library'))      { crumbs.push({ label: 'Bibliothèque' });
-		} else if (path.startsWith('/search'))       { crumbs.push({ label: 'Recherche' });
-		} else if (path.startsWith('/garden'))       { crumbs.push({ label: 'Jardin' });
+		} else if (path.startsWith('/dm'))           { crumbs.push({ label: tFn('nav.dm') });
+		} else if (path.startsWith('/calendar'))     { crumbs.push({ label: tFn('nav.calendar') });
+		} else if (path.startsWith('/discover'))     { crumbs.push({ label: tFn('nav.discover') });
+		} else if (path.startsWith('/admin'))        { crumbs.push({ label: tFn('nav.admin') });
+		} else if (path.startsWith('/notifications')){ crumbs.push({ label: tFn('nav.notifications') });
+		} else if (path.startsWith('/settings'))     { crumbs.push({ label: tFn('nav.settings') });
+		} else if (path.startsWith('/users/me/edit')){ crumbs.push({ label: tFn('nav.edit_profile') });
+		} else if (path.startsWith('/users/'))       { crumbs.push({ label: path.split('/')[2] ?? tFn('nav.profile') });
+		} else if (path.startsWith('/communities'))  { crumbs.push({ label: tFn('nav.communities') });
+		} else if (path.startsWith('/polls'))        { crumbs.push({ label: tFn('nav.polls') });
+		} else if (path.startsWith('/tasks'))        { crumbs.push({ label: tFn('nav.tasks') });
+		} else if (path.startsWith('/wiki'))         { crumbs.push({ label: tFn('nav.wiki') });
+		} else if (path.startsWith('/library'))      { crumbs.push({ label: tFn('nav.library') });
+		} else if (path.startsWith('/search'))       { crumbs.push({ label: tFn('nav.search') });
+		} else if (path.startsWith('/garden'))       { crumbs.push({ label: tFn('nav.garden') });
 		} else {
 			const seg = path.split('/')[1];
 			if (seg) crumbs.push({ label: seg.charAt(0).toUpperCase() + seg.slice(1) });
@@ -360,7 +363,7 @@
 			class="lg:hidden shrink-0 p-1.5 flex items-center justify-center transition-colors"
 			style="color: {gallerySidebarOpen ? '#fff' : '#6b7280'}"
 			onclick={() => gallerySidebarOpen = !gallerySidebarOpen}
-			aria-label="Menu communauté" aria-expanded={gallerySidebarOpen} aria-controls="galaxy-sidebar">
+			aria-label={tFn('nav.community_menu')} aria-expanded={gallerySidebarOpen} aria-controls="galaxy-sidebar">
 			{#if gallerySidebarOpen}
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -415,12 +418,12 @@
 			onclick={() => paletteOpen = true}
 			class="hidden lg:flex items-center gap-2 px-3 h-7 w-56 transition-colors"
 			style="background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); cursor: text; text-align: left;"
-			aria-label="Ouvrir la palette de commandes (Ctrl+K)"
+			aria-label={tFn('common.command_palette_hint')}
 		>
 			<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: #3b3f52; flex-shrink:0">
 				<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
 			</svg>
-			<span class="flex-1 text-xs truncate" style="color: #3b3f52; font-family: 'Space Grotesk', sans-serif">Rechercher ou naviguer…</span>
+			<span class="flex-1 text-xs truncate" style="color: #3b3f52; font-family: 'Space Grotesk', sans-serif">{tFn('common.search_navigate')}</span>
 			<div style="display:flex;gap:2px;flex-shrink:0">
 				<kbd style="font-size:0.6rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:0.05rem 0.28rem;color:rgba(255,255,255,.18);font-family:ui-monospace,monospace">Ctrl</kbd>
 				<kbd style="font-size:0.6rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:0.05rem 0.28rem;color:rgba(255,255,255,.18);font-family:ui-monospace,monospace">K</kbd>
@@ -434,7 +437,7 @@
 				<a href="/notifications"
 				   class="relative p-2 transition-colors"
 				   style="color: {isActive('/notifications') ? '#a78bfa' : '#6b7280'}"
-				   title="Notifications">
+				   title={tFn('nav.notifications')}>
 					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
 					</svg>
@@ -446,7 +449,7 @@
 				<a href="/dm"
 				   class="relative p-2 transition-colors"
 				   style="color: {isActive('/dm') ? '#a78bfa' : '#6b7280'}"
-				   title="Messages privés">
+				   title={tFn('nav.dm')}>
 					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-4 4v-4z"/>
 					</svg>
@@ -492,19 +495,18 @@
 											{#if user.grade}
 												<span class="inline-block text-[11px] font-medium rounded px-1.5 py-0.5 mt-0.5" style="background-color: {user.grade.color}; color: {gradeTextColor(user.grade.color)}">{user.grade.name}</span>
 											{:else}
-												<span class="text-xs text-gray-500">Membre</span>
+												<span class="text-xs text-gray-500">{tFn('common.member')}</span>
 											{/if}
 										</div>
 									</div>
 									<div class="mt-3">
 										<div class="flex justify-between items-center mb-1">
-											<span class="text-[11px] text-gray-400">{#if xpInfo.to}{xpInfo.pts.toLocaleString('fr-FR')} / {xpInfo.to.toLocaleString('fr-FR')} pts{:else}{xpInfo.pts.toLocaleString('fr-FR')} pts · Max{/if}</span>
+											<span class="text-[11px] text-gray-400">{#if xpInfo.to}{xpInfo.pts.toLocaleString()} / {xpInfo.to.toLocaleString()} pts{:else}{xpInfo.pts.toLocaleString()} pts · Max{/if}</span>
 											<span class="text-[11px] text-indigo-400 font-medium">{xpInfo.pct}%</span>
 										</div>
 										<div class="h-1.5 rounded-full bg-gray-700 overflow-hidden">
 											<div class="h-full rounded-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all" style="width: {xpInfo.pct}%"></div>
 										</div>
-										<div class="text-[10px] text-gray-600 mt-1">Encore {(xpInfo.to - xpInfo.pts).toLocaleString('fr-FR')} pts pour le niveau {xpInfo.level + 1}</div>
 									</div>
 								</div>
 								<!-- Status quick-set -->
@@ -517,27 +519,27 @@
 										{#if myStatus?.text}
 											<span class="text-xs text-gray-300 truncate block">{myStatus.text}</span>
 										{:else}
-											<span class="text-xs text-gray-600">Définir un statut…</span>
+											<span class="text-xs text-gray-600">{tFn('common.set_status')}</span>
 										{/if}
 									</span>
 									<svg class="w-3.5 h-3.5 text-gray-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
 								</button>
 
 								<div class="py-1.5">
-									<a href="/users/{user.username}" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">👤</span><span>Mon profil</span></a>
-									<a href="/users/me/edit" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">✏️</span><span>Modifier mon profil</span></a>
+									<a href="/users/{user.username}" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">👤</span><span>{tFn('user.my_profile')}</span></a>
+									<a href="/users/me/edit" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">✏️</span><span>{tFn('user.edit_profile')}</span></a>
 									<a href="/notifications" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors">
-										<span class="text-base">🔔</span><span class="flex-1">Notifications</span>
+										<span class="text-base">🔔</span><span class="flex-1">{tFn('nav.notifications')}</span>
 										{#if unreadCount > 0}<span class="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>{/if}
 									</a>
 								</div>
 								<div class="border-t border-gray-700/60 mx-3"></div>
 								<div class="py-1.5">
-									<a href="/settings" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">⚙️</span><span>Paramètres</span></a>
-									<a href="https://nodyx.dev" target="_blank" rel="noopener" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">📖</span><span>Documentation</span></a>
-									{#each [{ icon: '📊', label: 'Mon activité' }, { icon: '👫', label: 'Amis' }, { icon: '🏆', label: 'Mes badges' }] as item}
+									<a href="/settings" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">⚙️</span><span>{tFn('nav.settings')}</span></a>
+									<a href="https://nodyx.dev" target="_blank" rel="noopener" onclick={() => dropdownOpen = false} class="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"><span class="text-base">📖</span><span>{tFn('nav.documentation')}</span></a>
+									{#each [{ icon: '📊', label: tFn('user.my_activity') }, { icon: '👫', label: tFn('user.friends') }, { icon: '🏆', label: tFn('user.badges') }] as item}
 										<div class="flex items-center gap-3 px-4 py-2 text-sm text-gray-600 cursor-not-allowed select-none">
-											<span class="text-base opacity-50">{item.icon}</span><span class="flex-1">{item.label}</span><span class="text-[10px] uppercase tracking-wider text-gray-700 font-medium">bientôt</span>
+											<span class="text-base opacity-50">{item.icon}</span><span class="flex-1">{item.label}</span><span class="text-[10px] uppercase tracking-wider text-gray-700 font-medium">{tFn('common.soon')}</span>
 										</div>
 									{/each}
 								</div>
@@ -545,7 +547,7 @@
 								<div class="py-1.5">
 									<form method="POST" action="/auth/logout">
 										<button type="submit" class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-400 hover:text-red-400 hover:bg-gray-800/60 transition-colors text-left">
-											<span class="text-base">🚪</span><span>Déconnexion</span>
+											<span class="text-base">🚪</span><span>{tFn('common.logout')}</span>
 										</button>
 									</form>
 								</div>
@@ -555,10 +557,10 @@
 			{:else}
 				<a href="/auth/login"
 				   class="px-2.5 h-6 flex items-center text-xs transition-colors"
-				   style="color: #9ca3af; border: 1px solid rgba(255,255,255,.06)">Connexion</a>
+				   style="color: #9ca3af; border: 1px solid rgba(255,255,255,.06)">{tFn('common.login')}</a>
 				<a href="/auth/register"
 				   class="px-2.5 h-6 flex items-center text-xs font-bold transition-colors"
-				   style="background: #7c3aed; color: #fff">Inscription</a>
+				   style="background: #7c3aed; color: #fff">{tFn('common.register')}</a>
 			{/if}
 		</div>
 	</nav>
@@ -570,7 +572,7 @@
 		{#if !isBanned && gallerySidebarOpen}
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div class="lg:hidden fixed inset-0 bg-black/60 z-[54] backdrop-blur-sm"
-		     role="button" tabindex="-1" aria-label="Fermer le menu"
+		     role="button" tabindex="-1" aria-label={tFn('common.close_menu')}
 		     onclick={() => gallerySidebarOpen = false}
 		     onkeydown={e => e.key === 'Escape' && (gallerySidebarOpen = false)}
 		     transition:fade={{ duration: 200 }}></div>
@@ -624,7 +626,7 @@
 			{/each}
 
 			<!-- Add / discover -->
-			<a href="/communities" title="Découvrir des communautés"
+			<a href="/communities" title={tFn('nav.discover_title')}
 			   class="w-11 h-11 flex items-center justify-center rounded-full shrink-0
 			          border-2 border-dashed border-gray-600 hover:border-indigo-500
 			          text-gray-500 hover:text-indigo-400 transition-all duration-200
@@ -643,7 +645,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
 					</svg>
 				</a>
-				<a href="/settings" title="Paramètres"
+				<a href="/settings" title={tFn('nav.settings')}
 				   class="w-11 h-11 flex items-center justify-center rounded-[30%]
 				          hover:rounded-[40%] bg-gray-800 hover:bg-gray-700 transition-all
 				          text-gray-500 hover:text-gray-300">
@@ -670,7 +672,7 @@
 			style="background: #12121a; border-right: 1px solid rgba(255,255,255,.05)"
 			role={gallerySidebarOpen ? 'dialog' : undefined}
 			aria-modal={gallerySidebarOpen ? 'true' : undefined}
-			aria-label="Menu communauté">
+			aria-label={tFn('nav.community_menu')}>
 
 			<!-- Community header -->
 			<div class="flex items-center justify-between px-4 py-3 shrink-0"
@@ -695,14 +697,14 @@
 				<!-- NAVIGATION -->
 				<div>
 					<p class="px-2 mb-1.5 text-[9px] uppercase tracking-[.2em] font-black"
-					   style="color: #374151">Navigation</p>
+					   style="color: #374151">{tFn('nav.section.navigation')}</p>
 					<div class="space-y-px">
 						{#each [
-							{ href: '/',         label: 'Accueil',    icon: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',                                                                                                                                                 show: true },
+							{ href: '/',         label: tFn('nav.home'),    icon: 'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',                                                                                                                                                 show: true },
 							{ href: '/feed',     label: 'Fil d\'actu', icon: 'M3 12h18M3 6h18M3 18h18',                                                                                                                                                               show: !!user },
-							{ href: '/forum',    label: 'Forum',      icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',                          show: true },
-							{ href: '/chat',     label: 'Chat',       icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',                                                                                                                                    show: mods.chat !== false },
-							{ href: '/dm',       label: 'Messages',   icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',                                                                                    show: mods.dm !== false },
+							{ href: '/forum',    label: tFn('nav.forum'),   icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',                          show: true },
+							{ href: '/chat',     label: tFn('nav.chat'),    icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z',                                                                                                                                    show: mods.chat !== false },
+							{ href: '/dm',       label: tFn('nav.dm'),      icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',                                                                                    show: mods.dm !== false },
 						].filter(i => i.show) as item}
 						<a href={item.href}
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"
@@ -723,16 +725,16 @@
 				<!-- MODULES -->
 				<div>
 					<p class="px-2 mb-1.5 text-[9px] uppercase tracking-[.2em] font-black"
-					   style="color: #374151">Modules</p>
+					   style="color: #374151">{tFn('nav.section.modules')}</p>
 					<div class="space-y-px">
 						{#each [
-							{ href: '/calendar', label: 'Calendrier',   icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',                                                                                                                                                                                                          show: mods.calendar !== false },
-							{ href: '/polls',    label: 'Sondages',     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',                                                                                          show: mods.polls !== false },
-							{ href: '/tasks',    label: 'Tâches',       icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',                                                                                                                                                    show: mods.tasks !== false },
-							{ href: '/wiki',     label: 'Wiki',         icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',                                             show: !!mods.wiki },
-							{ href: '/library',  label: 'Bibliothèque', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',                                             show: true },
-							{ href: '/garden',   label: 'Jardin',       icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',                                                                                                                                            show: true },
-							{ href: '/discover', label: 'Découvrir',    icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',                                                                                         show: true },
+							{ href: '/calendar', label: tFn('nav.calendar'),   icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',                                                                                                                                                                                                          show: mods.calendar !== false },
+							{ href: '/polls',    label: tFn('nav.polls'),     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',                                                                                          show: mods.polls !== false },
+							{ href: '/tasks',    label: tFn('nav.tasks'),       icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',                                                                                                                                                    show: mods.tasks !== false },
+							{ href: '/wiki',     label: tFn('nav.wiki'),         icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',                                             show: !!mods.wiki },
+							{ href: '/library',  label: tFn('nav.library'), icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',                                             show: true },
+							{ href: '/garden',   label: tFn('nav.garden'),       icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',                                                                                                                                            show: true },
+							{ href: '/discover', label: tFn('nav.discover'),    icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',                                                                                         show: true },
 						].filter(i => i.show) as item}
 						<a href={item.href}
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"
@@ -754,7 +756,7 @@
 				{#if (layoutTextChannels.length > 0 && mods.chat !== false) || (layoutVoiceChannels.length > 0 && mods.voice !== false)}
 				<div>
 					<p class="px-2 mb-1.5 text-[9px] uppercase tracking-[.2em] font-black"
-					   style="color: #374151">Communications</p>
+					   style="color: #374151">{tFn('nav.section.communications')}</p>
 					<div class="space-y-px">
 						{#if mods.chat !== false}
 					{#each layoutTextChannels as ch}
@@ -777,7 +779,7 @@
 						{@const members  = inThis
 							? [
 								...voiceState.peers.map((p: any) => ({ username: p.username, avatar: p.avatar ?? null, speaking: p.speaking ?? false, muted: p.muted ?? false, isMe: false })),
-								{ username: user?.username ?? 'Vous', avatar: user?.avatar ?? null, speaking: voiceState.mySpeaking, muted: voiceState.muted, isMe: true },
+								{ username: user?.username ?? tFn('common.you'), avatar: user?.avatar ?? null, speaking: voiceState.mySpeaking, muted: voiceState.muted, isMe: true },
 							]
 							: (vcMembers[ch.id] ?? []).map((m: any) => ({ ...m, speaking: false, muted: false, isMe: false }))}
 						<a href="/chat?channel={ch.id}"
@@ -815,7 +817,7 @@
 										</div>
 										<span class="text-xs truncate flex-1"
 										      style="color: {m.speaking ? '#86efac' : m.isMe ? '#a78bfa' : '#6b7280'};">
-											{m.isMe ? 'Vous' : m.username}
+											{m.isMe ? tFn('common.you') : m.username}
 										</span>
 										{#if m.muted}
 											<svg class="w-3 h-3 shrink-0 ml-auto" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24" style="opacity:0.65;" title="En sourdine">
@@ -826,7 +828,7 @@
 									</div>
 								{/each}
 								{#if members.length > 6}
-									<span class="text-[10px] pl-6" style="color: #374151">+{members.length - 6} autres</span>
+									<span class="text-[10px] pl-6" style="color: #374151">{tFn('common.others_more', { n: members.length - 6 })}</span>
 								{/if}
 							</div>
 						{/if}
@@ -860,7 +862,7 @@
 				<div class="flex-1 min-w-0">
 					<div class="text-xs font-bold truncate" style="color: #e2e8f0; font-family: 'Space Grotesk', sans-serif">{user.username}</div>
 					<div class="text-[10px] uppercase tracking-wide" style="color: {user.role === 'owner' || user.role === 'admin' ? '#a78bfa' : '#4b5563'}; font-weight: 700">
-						{user.role === 'owner' ? 'Owner' : user.role === 'admin' ? 'Admin' : 'Membre'}
+						{user.role === 'owner' ? 'Owner' : user.role === 'admin' ? 'Admin' : tFn('common.member')}
 					</div>
 				</div>
 				<button onclick={openStatusModal} title="Statut" class="shrink-0 transition-colors" style="color: #374151">
@@ -920,7 +922,7 @@
 			<!-- ── Header ──────────────────────────────────────────────────────── -->
 			<div class="shrink-0 px-4 py-3 flex items-center justify-between"
 			     style="border-bottom: 1px solid rgba(255,255,255,.05); background: rgba(255,255,255,.02)">
-				<span class="text-[10px] font-black uppercase tracking-[.18em]" style="color: #374151; font-family: 'Space Grotesk', sans-serif">Membres</span>
+				<span class="text-[10px] font-black uppercase tracking-[.18em]" style="color: #374151; font-family: 'Space Grotesk', sans-serif">{tFn('common.members')}</span>
 				{#if user}
 					<div class="flex items-center gap-1.5">
 						<span class="relative flex h-1.5 w-1.5">
@@ -981,7 +983,7 @@
 									{#if hasStatus}
 										<div class="text-[10px] truncate leading-tight mt-px" style="color: #4b5563">{member.status?.emoji} {member.status?.text}</div>
 									{:else if isMe}
-										<div class="text-[10px] leading-tight mt-px transition-colors group-hover:opacity-80" style="color: #374151">Définir un statut…</div>
+										<div class="text-[10px] leading-tight mt-px transition-colors group-hover:opacity-80" style="color: #374151">{tFn('common.set_status')}</div>
 									{/if}
 								</div>
 							</svelte:element>
@@ -1027,7 +1029,7 @@
 									{#if hasStatus}
 										<div class="text-[10px] truncate leading-tight mt-px" style="color: #4b5563">{member.status?.emoji} {member.status?.text}</div>
 									{:else if isMe}
-										<div class="text-[10px] leading-tight mt-px" style="color: #374151">Définir un statut…</div>
+										<div class="text-[10px] leading-tight mt-px" style="color: #374151">{tFn('common.set_status')}</div>
 									{/if}
 								</div>
 							</svelte:element>
@@ -1184,7 +1186,7 @@
 				<polyline stroke-linecap="round" stroke-linejoin="round" points="10 17 15 12 10 7"/>
 				<line x1="15" y1="12" x2="3" y2="12"/>
 			</svg>
-			<span class="text-[10px] font-medium">Connexion</span>
+			<span class="text-[10px] font-medium">{tFn("common.login")}</span>
 		</a>
 		{/if}
 	</nav>

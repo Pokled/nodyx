@@ -8,6 +8,9 @@
 	import { resolveTheme, themeToStyle } from '$lib/profileThemes'
 	import { socket } from '$lib/socket'
 	import { apiFetch } from '$lib/api'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props()
 	const profile = $derived(data.profile)
@@ -46,7 +49,7 @@
 
 	// Formatted dates
 	const memberSinceFormatted = $derived(
-		new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+		new Date(profile.created_at).toLocaleDateString([], { month: 'long', year: 'numeric' })
 	)
 	const daysSince = $derived(
 		Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24))
@@ -63,10 +66,10 @@
 
 	// Stats cards
 	const stats = $derived([
-		{ label: 'Posts', value: Number(profile.post_count ?? 0).toLocaleString('fr-FR'), icon: 'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z', color: 'indigo' },
-		{ label: 'Threads', value: Number(profile.thread_count ?? 0).toLocaleString('fr-FR'), icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z', color: 'violet' },
-		{ label: 'Points XP', value: Number(livePoints ?? 0).toLocaleString('fr-FR'), icon: 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z', color: 'yellow' },
-		{ label: 'Jours actif', value: daysSince.toLocaleString('fr-FR'), icon: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5', color: 'teal' },
+		{ label: tFn('user.stat_posts'), value: Number(profile.post_count ?? 0).toLocaleString(), icon: 'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z', color: 'indigo' },
+		{ label: tFn('user.stat_threads'), value: Number(profile.thread_count ?? 0).toLocaleString(), icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z', color: 'violet' },
+		{ label: tFn('user.stat_xp'), value: Number(livePoints ?? 0).toLocaleString(), icon: 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z', color: 'yellow' },
+		{ label: tFn('user.stat_active_days'), value: daysSince.toLocaleString(), icon: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5', color: 'teal' },
 	])
 
 	// Social links — only show those that are set
@@ -92,7 +95,7 @@
 			handle: profile.youtube_channel,
 		},
 		profile.website_url && {
-			label: 'Site web',
+			label: tFn('user.website'),
 			url: profile.website_url,
 			handle: profile.website_url.replace(/^https?:\/\//, '').replace(/\/$/, ''),
 		},
@@ -100,7 +103,7 @@
 
 	const title = $derived(`${profile.display_name || profile.username} — Nodyx`)
 	const description = $derived(
-		profile.bio ? profile.bio.slice(0, 160) : `Profil de ${profile.display_name || profile.username} sur Nodyx.`
+		profile.bio ? profile.bio.slice(0, 160) : `${profile.display_name || profile.username}`
 	)
 
 	// Equipped assets — build display URLs from relative file paths
@@ -141,39 +144,39 @@
 	interface Milestone { label: string; detail: string; reached: boolean; accent?: boolean }
 	const timeline = $derived((() => {
 		const created = new Date(profile.created_at)
-		const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+		const fmt = (d: Date) => d.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' })
 		const add = (days: number) => new Date(created.getTime() + days * 86_400_000)
 		const posts   = Number(profile.post_count   ?? 0)
 		const threads = Number(profile.thread_count ?? 0)
 
 		const items: Milestone[] = [
-			{ label: 'Arrivée',           detail: fmt(created),    reached: true, accent: true },
-			{ label: '1er post',          detail: 'Brisé la glace',reached: posts >= 1 },
-			{ label: '1ère discussion',   detail: 'Ouvert un fil', reached: threads >= 1 },
-			{ label: '1 mois',            detail: fmt(add(30)),    reached: daysSince >= 30 },
-			{ label: 'Niveau 5',          detail: '160 XP',        reached: level >= 5 },
-			{ label: '10 posts',          detail: 'Contributeur',  reached: posts >= 10 },
-			{ label: '3 mois',            detail: fmt(add(90)),    reached: daysSince >= 90 },
-			{ label: 'Niveau 10',         detail: '810 XP',        reached: level >= 10 },
-			{ label: '50 posts',          detail: 'Régulier',      reached: posts >= 50 },
-			{ label: '6 mois',            detail: fmt(add(180)),   reached: daysSince >= 180 },
-			{ label: 'Niveau 20',         detail: '3 610 XP',      reached: level >= 20 },
-			{ label: '1 an',              detail: fmt(add(365)),   reached: daysSince >= 365, accent: true },
-			{ label: 'Niveau 30',         detail: '8 910 XP',      reached: level >= 30 },
-			{ label: '2 ans',             detail: fmt(add(730)),   reached: daysSince >= 730, accent: true },
+			{ label: tFn('user.milestone_arrival'),         detail: fmt(created),    reached: true, accent: true },
+			{ label: tFn('user.milestone_first_post'),      detail: tFn('user.milestone_broke_ice'), reached: posts >= 1 },
+			{ label: tFn('user.milestone_first_thread'),   detail: tFn('user.milestone_opened_thread'), reached: threads >= 1 },
+			{ label: tFn('user.milestone_1_month'),        detail: fmt(add(30)),    reached: daysSince >= 30 },
+			{ label: tFn('user.milestone_level5'),         detail: '160 XP',        reached: level >= 5 },
+			{ label: tFn('user.milestone_10_posts'),       detail: tFn('user.milestone_contributor'), reached: posts >= 10 },
+			{ label: tFn('user.milestone_3_months'),       detail: fmt(add(90)),    reached: daysSince >= 90 },
+			{ label: tFn('user.milestone_level10'),        detail: '810 XP',        reached: level >= 10 },
+			{ label: tFn('user.milestone_50_posts'),       detail: tFn('user.milestone_regular'), reached: posts >= 50 },
+			{ label: tFn('user.milestone_6_months'),       detail: fmt(add(180)),   reached: daysSince >= 180 },
+			{ label: tFn('user.milestone_level20'),        detail: '3 610 XP',      reached: level >= 20 },
+			{ label: tFn('user.milestone_1_year'),         detail: fmt(add(365)),   reached: daysSince >= 365, accent: true },
+			{ label: tFn('user.milestone_level30'),        detail: '8 910 XP',      reached: level >= 30 },
+			{ label: tFn('user.milestone_2_years'),        detail: fmt(add(730)),   reached: daysSince >= 730, accent: true },
 		]
 		return items
 	})())
 
 	// Level rank label
 	const rankLabel = $derived(
-		level >= 50 ? 'Légende' :
-		level >= 30 ? 'Expert' :
-		level >= 20 ? 'Vétéran' :
-		level >= 10 ? 'Confirmé' :
-		level >= 5  ? 'Actif' :
-		level >= 2  ? 'Novice' :
-		'Découvreur'
+		level >= 50 ? tFn('user.rank_legend') :
+		level >= 30 ? tFn('user.rank_expert') :
+		level >= 20 ? tFn('user.rank_veteran') :
+		level >= 10 ? tFn('user.rank_confirmed') :
+		level >= 5  ? tFn('user.rank_active') :
+		level >= 2  ? tFn('user.rank_novice') :
+		tFn('user.rank_explorer')
 	)
 
 	// ── Follow system ──────────────────────────────────────────────
@@ -341,7 +344,7 @@
 				<!-- Online dot -->
 				<span class="absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 profile-online-dot"
 				      style="border-color: var(--p-bg); background: #22c55e"
-				      title="En ligne"></span>
+				      title={tFn('common.online')}></span>
 			</div>
 
 			<!-- Name + meta -->
@@ -388,12 +391,12 @@
 				<div class="flex items-center gap-3 mt-1.5">
 					<a href="/users/{profile.username}/followers" class="profile-follow-count">
 						<span class="profile-follow-count-num">{fmt(followersCount)}</span>
-						<span class="profile-follow-count-label">abonnés</span>
+						<span class="profile-follow-count-label">{tFn('user.followers')}</span>
 					</a>
 					<span class="profile-follow-sep"></span>
 					<a href="/users/{profile.username}/following" class="profile-follow-count">
 						<span class="profile-follow-count-num">{fmt(followingCount)}</span>
-						<span class="profile-follow-count-label">abonnements</span>
+						<span class="profile-follow-count-label">{tFn('user.following_count')}</span>
 					</a>
 				</div>
 			</div>
@@ -404,7 +407,7 @@
 					<div class="flex items-center gap-2">
 						<a href="/users/{profile.username}/card" target="_blank" class="profile-action-btn"
 						   style="background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.3)"
-						   title="Voir ma carte de visite partageable">
+						   title={tFn('user.share_card')}>
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
 							</svg>
@@ -414,7 +417,7 @@
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
 							</svg>
-							Modifier
+							{tFn('user.edit_btn')}
 						</a>
 					</div>
 				{:else if me}
@@ -446,7 +449,7 @@
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
 							</svg>
-							Message
+							{tFn('user.message_btn')}
 						</a>
 					</div>
 				{/if}
@@ -469,16 +472,16 @@
 				<span class="text-4xl font-black tabular-nums leading-none profile-xp-level"
 				      style="color: var(--p-accent)">{level}</span>
 				<div>
-					<p class="text-xs uppercase tracking-widest font-bold mb-0.5" style="color: var(--p-text-muted)">Niveau</p>
+					<p class="text-xs uppercase tracking-widest font-bold mb-0.5" style="color: var(--p-text-muted)">{tFn('user.level')}</p>
 					<p class="text-sm font-semibold" style="color: var(--p-text)">{rankLabel}</p>
 				</div>
 			</div>
 			<div class="text-right">
-				<p class="text-sm font-bold tabular-nums" style="color: var(--p-text)">{livePoints.toLocaleString('fr-FR')} pts</p>
+				<p class="text-sm font-bold tabular-nums" style="color: var(--p-text)">{livePoints.toLocaleString()} pts</p>
 				<p class="text-xs" style="color: var(--p-text-muted)">
 					{levelMax > livePoints
-						? `Encore ${(levelMax - livePoints).toLocaleString('fr-FR')} pts pour le niveau ${level + 1}`
-						: 'Niveau maximum atteint !'}
+						? tFn('user.xp_remaining', { n: (levelMax - livePoints).toLocaleString(), next: String(level + 1) })
+						: tFn('user.max_level')}
 				</p>
 			</div>
 		</div>
@@ -493,8 +496,8 @@
 
 		<!-- XP milestones -->
 		<div class="flex justify-between mt-1.5">
-			<span class="text-[10px] tabular-nums" style="color: var(--p-text-muted)">{levelMin.toLocaleString('fr-FR')} pts</span>
-			<span class="text-[10px] tabular-nums" style="color: var(--p-text-muted)">{levelMax.toLocaleString('fr-FR')} pts</span>
+			<span class="text-[10px] tabular-nums" style="color: var(--p-text-muted)">{levelMin.toLocaleString()} pts</span>
+			<span class="text-[10px] tabular-nums" style="color: var(--p-text-muted)">{levelMax.toLocaleString()} pts</span>
 		</div>
 	</div>
 </div>
@@ -526,7 +529,7 @@
 							<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
 						</svg>
 						<div>
-							<p class="text-xs" style="color: var(--p-text-muted)">Membre depuis</p>
+							<p class="text-xs" style="color: var(--p-text-muted)">{tFn('user.member_since')}</p>
 							<p class="text-sm font-medium" style="color: var(--p-text)">{memberSinceFormatted}</p>
 						</div>
 					</div>
@@ -535,8 +538,8 @@
 							<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
 						</svg>
 						<div>
-							<p class="text-xs" style="color: var(--p-text-muted)">Présence</p>
-							<p class="text-sm font-medium" style="color: var(--p-text)">{daysSince.toLocaleString('fr-FR')} jours</p>
+							<p class="text-xs" style="color: var(--p-text-muted)">{tFn('user.presence')}</p>
+							<p class="text-sm font-medium" style="color: var(--p-text)">{daysSince.toLocaleString()} {tFn('user.days')}</p>
 						</div>
 					</div>
 				</div>
@@ -562,7 +565,7 @@
 			{#if socialLinks.length > 0}
 				<div class="p-4"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Réseaux</p>
+					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">{tFn('user.networks')}</p>
 					<ul class="space-y-1.5">
 						{#each socialLinks as social}
 							<li>
@@ -605,11 +608,11 @@
 			<!-- Showcase placeholder — future home of badges, karma, achievements -->
 			<div class="p-4"
 			     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-				<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Showcase</p>
+				<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">{tFn('user.showcase')}</p>
 				<div class="flex flex-wrap gap-2">
 					<div class="w-10 h-10 flex items-center justify-center text-lg"
 					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
-					     title="Bientôt disponible">
+					     title={tFn('user.coming_soon')}>
 						🔒
 					</div>
 					<div class="w-10 h-10 flex items-center justify-center text-lg"
@@ -623,7 +626,7 @@
 						🔒
 					</div>
 				</div>
-				<p class="text-[10px] mt-2" style="color: var(--p-text-muted)">Badges & récompenses — bientôt</p>
+				<p class="text-[10px] mt-2" style="color: var(--p-text-muted)">{tFn('user.badges_soon')}</p>
 			</div>
 
 		</aside>
@@ -637,7 +640,7 @@
 					onclick={() => activeTab = 'about'}
 					class="profile-tab"
 					class:profile-tab--active={activeTab === 'about'}
-				>À propos</button>
+				>{tFn('user.tab_about')}</button>
 				<button
 					onclick={() => activeTab = 'posts'}
 					class="profile-tab"
@@ -684,7 +687,7 @@
 			{#if profile.bio}
 				<div class="p-5"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-					<p class="text-xs uppercase tracking-widest font-medium mb-4" style="color: var(--p-text-muted)">À propos</p>
+					<p class="text-xs uppercase tracking-widest font-medium mb-4" style="color: var(--p-text-muted)">{tFn('user.about_section')}</p>
 					<div class="flex gap-4">
 						<div class="w-0.5 rounded-full shrink-0 self-stretch" style="background: var(--p-accent); opacity: 0.4"></div>
 						<p class="whitespace-pre-line text-sm leading-relaxed" style="color: var(--p-text)">{profile.bio}</p>
@@ -704,7 +707,7 @@
 			{#if profile.links?.length > 0}
 				<div class="p-5"
 				     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">Liens</p>
+					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">{tFn('user.links_section')}</p>
 					<div class="grid grid-cols-2 gap-2">
 						{#each profile.links as link}
 							<a href={link.url} target="_blank" rel="noopener noreferrer"
@@ -727,7 +730,7 @@
 
 			<!-- Timeline parcours -->
 			<div class="p-5" style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-				<p class="text-xs uppercase tracking-widest font-medium mb-4" style="color: var(--p-text-muted)">Parcours</p>
+				<p class="text-xs uppercase tracking-widest font-medium mb-4" style="color: var(--p-text-muted)">{tFn('user.journey')}</p>
 				<div class="relative">
 					<div class="absolute left-[7px] top-2 bottom-2 w-px" style="background: var(--p-card-border)"></div>
 					<ol class="space-y-3 pl-6">
@@ -751,7 +754,7 @@
 				<div class="p-10 text-center"
 				     style="background: color-mix(in srgb, var(--p-card-bg) 60%, transparent); border: 1px solid var(--p-card-border)">
 					<p class="text-4xl mb-3">✨</p>
-					<p class="text-sm font-medium" style="color: var(--p-text-muted)">Ce profil est encore vide.</p>
+					<p class="text-sm font-medium" style="color: var(--p-text-muted)">{tFn('user.empty_profile')}</p>
 					{#if isOwnProfile}
 						<a href="/users/me/edit" class="inline-block mt-3 text-sm font-semibold underline underline-offset-2"
 						   style="color: var(--p-accent)">
@@ -770,10 +773,10 @@
 				{#if userPosts.length === 0}
 					<div class="p-10 text-center"
 					     style="background: color-mix(in srgb, var(--p-card-bg) 60%, transparent); border: 1px solid var(--p-card-border)">
-						<p class="text-sm font-medium" style="color: var(--p-text-muted)">Aucun post pour l'instant.</p>
+						<p class="text-sm font-medium" style="color: var(--p-text-muted)">{tFn('user.no_posts')}</p>
 						{#if isOwnProfile}
 							<a href="/feed" class="inline-block mt-3 text-sm font-semibold underline underline-offset-2"
-							   style="color: var(--p-accent)">Publier un post →</a>
+							   style="color: var(--p-accent)">{tFn('user.publish_post_cta')}</a>
 						{/if}
 					</div>
 				{:else}
@@ -814,7 +817,7 @@
 						<button onclick={loadMorePosts} disabled={postsLoading}
 						        class="w-full py-3 text-sm font-medium transition-colors"
 						        style="color: var(--p-text-muted); border: 1px solid var(--p-card-border); background: var(--p-card-bg)">
-							{postsLoading ? 'Chargement…' : 'Voir plus'}
+							{postsLoading ? tFn('common.loading') : tFn('user.see_more')}
 						</button>
 					{/if}
 				{/if}

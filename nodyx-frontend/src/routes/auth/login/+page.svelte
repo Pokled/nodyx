@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import type { ActionData, PageData } from './$types';
 	import { enhance } from '$app/forms';
+
+	const tFn = $derived($t)
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -43,7 +46,7 @@
 	}
 
 	async function signetStart() {
-		if (!signetUsername.trim()) { signetError = 'Entrez votre identifiant.'; return }
+		if (!signetUsername.trim()) { signetError = tFn('auth.signet.enter_username_error'); return }
 		signetError = ''
 		signetState = 'waiting'
 
@@ -59,8 +62,8 @@
 			if (!res.ok) {
 				const j = await res.json()
 				const msg = j.code === 'NO_DEVICE'
-					? 'Aucun appareil Nodyx Signet enregistré pour cet utilisateur.'
-					: (j.error ?? 'Erreur lors de la création du challenge.')
+					? tFn('auth.signet.no_device')
+					: (j.error ?? tFn('auth.signet.challenge_error'))
 				signetError = msg
 				signetState = 'error'
 				return
@@ -69,7 +72,7 @@
 			signetChallengeId = challengeId
 			signetStartPolling(challengeId, pollNonce)
 		} catch {
-			signetError = 'Impossible de contacter le serveur.'
+			signetError = tFn('auth.signet.server_error')
 			signetState = 'error'
 		}
 	}
@@ -91,7 +94,7 @@
 			})
 			if (!res.ok) {
 				const j = await res.json()
-				signetError = j.error ?? 'Erreur lors de la création du challenge.'
+				signetError = j.error ?? tFn('auth.signet.challenge_error')
 				signetState = 'error'
 				return
 			}
@@ -114,7 +117,7 @@
 
 			signetStartPolling(challengeId, pollNonce)
 		} catch {
-			signetError = 'Impossible de contacter le serveur.'
+			signetError = tFn('auth.signet.server_error')
 			signetState = 'error'
 		}
 	}
@@ -161,18 +164,17 @@
 </script>
 
 <svelte:head>
-	<title>Connexion — Nodyx</title>
+	<title>{tFn('auth.login.title')} — Nodyx</title>
 </svelte:head>
 
 <div class="mx-auto max-w-sm">
-	<h1 class="text-2xl font-bold text-white mb-6">Connexion</h1>
+	<h1 class="text-2xl font-bold text-white mb-6">{tFn('auth.login.title')}</h1>
 
 	{#if data.demoMode}
 	<div class="mb-6 rounded-xl border p-4" style="border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.06)">
-		<p class="text-sm font-semibold text-white mb-2">Instance de démonstration</p>
+		<p class="text-sm font-semibold text-white mb-2">{tFn('auth.demo.title')}</p>
 		<p class="text-xs mb-3" style="color: rgb(156,163,175)">
-			Explore Nodyx librement avec l'un des comptes ci-dessous.
-			Toutes les données sont réinitialisées chaque nuit à minuit.
+			{tFn('auth.demo.description')}
 		</p>
 		<div class="space-y-1.5 text-xs mb-2">
 			{#each ['alice', 'bob', 'charlie', 'admin'] as u}
@@ -188,7 +190,7 @@
 
 	{#if data.passwordReset}
 		<div class="mb-4 rounded border border-green-700/50 bg-green-900/20 px-4 py-2.5 text-sm text-green-300">
-			✓ Mot de passe réinitialisé. Connectez-vous avec votre nouveau mot de passe.
+			{tFn('auth.password_reset.success_message')}
 		</div>
 	{/if}
 
@@ -202,9 +204,9 @@
 					◈
 				</div>
 				<div>
-					<p class="text-sm font-semibold text-white">Vérification via Nodyx Signet</p>
+					<p class="text-sm font-semibold text-white">{tFn('auth.signet.verification_title')}</p>
 					<p class="text-xs mt-0.5" style="color: rgb(156,163,175)">
-						Mot de passe validé — approuvez la connexion depuis votre téléphone.
+						{tFn('auth.signet.verify_description')}
 					</p>
 				</div>
 			</div>
@@ -220,8 +222,8 @@
 							style="background: rgba(251,191,36,0.3)"></div>
 					</div>
 					<div class="text-center">
-						<p class="text-sm font-semibold text-white">En attente d'approbation</p>
-						<p class="text-xs mt-1" style="color: rgb(156,163,175)">Ouvrez Nodyx Signet et approuvez la demande</p>
+						<p class="text-sm font-semibold text-white">{tFn('common.waiting_approval')}</p>
+						<p class="text-xs mt-1" style="color: rgb(156,163,175)">{tFn('auth.signet.open_app_message')}</p>
 					</div>
 					{#if signetError}
 						<p class="text-xs text-center" style="color: rgb(248,113,113)">{signetError}</p>
@@ -236,28 +238,28 @@
 				<div class="flex flex-col items-center gap-3 py-3">
 					<div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
 						style="background: rgba(74,222,128,0.1); border: 2px solid rgb(74,222,128)">✓</div>
-					<p class="text-sm font-semibold" style="color: rgb(74,222,128)">Approuvé — connexion en cours…</p>
+					<p class="text-sm font-semibold" style="color: rgb(74,222,128)">{tFn('auth.signet.approved_logging_in')}</p>
 				</div>
 
 			{:else if signetState === 'rejected'}
 				<div class="flex flex-col items-center gap-3 py-3">
 					<div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
 						style="background: rgba(248,113,113,0.1); border: 2px solid rgb(248,113,113)">✕</div>
-					<p class="text-sm font-semibold mb-1" style="color: rgb(248,113,113)">Demande refusée</p>
-					<p class="text-xs" style="color: rgb(156,163,175)">Reconnectez-vous pour réessayer.</p>
-					<a href="/auth/login" class="text-xs underline mt-1" style="color: #fbbf24">Retour au login</a>
+					<p class="text-sm font-semibold mb-1" style="color: rgb(248,113,113)">{tFn('auth.signet.request_rejected')}</p>
+					<p class="text-xs" style="color: rgb(156,163,175)">{tFn('auth.signet.retry_message')}</p>
+					<a href="/auth/login" class="text-xs underline mt-1" style="color: #fbbf24">{tFn('auth.signet.back_to_login')}</a>
 				</div>
 
 			{:else if signetState === 'expired'}
 				<div class="flex flex-col items-center gap-3 py-3">
-					<p class="text-sm" style="color: rgb(156,163,175)">Challenge expiré.</p>
-					<a href="/auth/login" class="text-xs underline" style="color: #fbbf24">Retour au login</a>
+					<p class="text-sm" style="color: rgb(156,163,175)">{tFn('auth.signet.challenge_expired')}</p>
+					<a href="/auth/login" class="text-xs underline" style="color: #fbbf24">{tFn('auth.signet.back_to_login')}</a>
 				</div>
 
 			{:else if signetState === 'error'}
 				<div class="flex flex-col items-center gap-3 py-3">
 					<p class="text-xs text-center mb-2" style="color: rgb(248,113,113)">{signetError}</p>
-					<a href="/auth/login" class="text-xs underline" style="color: #fbbf24">Retour au login</a>
+					<a href="/auth/login" class="text-xs underline" style="color: #fbbf24">{tFn('auth.signet.back_to_login')}</a>
 				</div>
 			{/if}
 		</div>
@@ -268,8 +270,8 @@
 			<div class="flex items-center gap-3 mb-3">
 				<span class="text-2xl">🔐</span>
 				<div>
-					<p class="text-sm font-semibold text-white">Vérification à deux facteurs</p>
-					<p class="text-xs text-gray-500 mt-0.5">Entrez le code affiché dans votre application d'authentification.</p>
+					<p class="text-sm font-semibold text-white">{tFn('auth.totp.title')}</p>
+					<p class="text-xs text-gray-500 mt-0.5">{tFn('auth.totp.enter_code_instruction')}</p>
 				</div>
 			</div>
 			{#if form?.error}
@@ -312,7 +314,7 @@
 					class="w-full rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed
 					       px-4 py-2 text-sm font-semibold text-white transition-colors"
 				>
-					{totpSubmitting ? 'Vérification...' : 'Confirmer'}
+					{totpSubmitting ? tFn('common.verifying') : tFn('auth.totp.confirm_button')}
 				</button>
 			</form>
 		</div>
@@ -322,10 +324,10 @@
 	{#if form?.error}
 		{#if form.code === 'EMAIL_NOT_VERIFIED'}
 			<div class="mb-4 rounded border border-amber-700/50 bg-amber-900/20 px-4 py-3 text-sm text-amber-300">
-				<p class="font-semibold mb-1">Email non vérifié</p>
+				<p class="font-semibold mb-1">{tFn('auth.email_not_verified')}</p>
 				<p class="text-amber-400/80">{form.error}</p>
 				<a href="/auth/verify-pending" class="mt-2 inline-block underline text-amber-300 hover:text-amber-200">
-					Renvoyer l'email de confirmation
+					{tFn('auth.resend_verification_email')}
 				</a>
 			</div>
 		{:else}
@@ -357,7 +359,7 @@
 		<input type="hidden" name="redirectTo" value={form?.redirectTo ?? data.redirectTo} />
 
 		<div>
-			<label for="email" class="block text-sm text-gray-400 mb-1">Email</label>
+			<label for="email" class="block text-sm text-gray-400 mb-1">{tFn('common.email')}</label>
 			<input
 				id="email"
 				name="email"
@@ -370,9 +372,9 @@
 
 		<div>
 			<div class="flex items-center justify-between mb-1">
-				<label for="password" class="text-sm text-gray-400">Mot de passe</label>
+				<label for="password" class="text-sm text-gray-400">{tFn('common.password')}</label>
 				<a href="/auth/forgot-password" class="text-xs text-indigo-400 hover:text-indigo-300">
-					Mot de passe oublié ?
+					{tFn('auth.forgot_password_link')}
 				</a>
 			</div>
 			<input
@@ -390,13 +392,13 @@
 			disabled={submitting}
 			class="w-full rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-sm font-semibold text-white transition-colors"
 		>
-			{submitting ? 'Connexion...' : 'Se connecter'}
+			{submitting ? tFn('auth.login.submitting') : tFn('auth.login.button')}
 		</button>
 	</form>
 
 	<p class="mt-4 text-center text-sm text-gray-500">
-		Pas de compte ?
-		<a href="/auth/register" class="text-indigo-400 hover:text-indigo-300">S'inscrire</a>
+		{tFn('auth.login.no_account_prompt')}
+		<a href="/auth/register" class="text-indigo-400 hover:text-indigo-300">{tFn('auth.register_link')}</a>
 	</p>
 
 	{/if}
@@ -406,7 +408,7 @@
 	<div class="mt-8">
 		<div class="flex items-center gap-3 mb-4">
 			<div class="flex-1 h-px bg-gray-800"></div>
-			<span class="text-xs text-gray-600 uppercase tracking-widest">ou</span>
+			<span class="text-xs text-gray-600 uppercase tracking-widest">{tFn('common.or')}</span>
 			<div class="flex-1 h-px bg-gray-800"></div>
 		</div>
 
@@ -421,12 +423,12 @@
 				</div>
 				<div>
 					<p class="text-sm font-semibold text-white">Nodyx Signet</p>
-					<p class="text-xs" style="color: rgb(156,163,175)">Connexion sans mot de passe · ECDSA P-256</p>
+					<p class="text-xs" style="color: rgb(156,163,175)">{tFn('auth.signet.tagline')}</p>
 				</div>
 				<a href="https://signet.nodyx.org" target="_blank" rel="noopener"
 					class="ml-auto text-xs px-2 py-1 rounded-lg shrink-0 transition-opacity hover:opacity-80"
 					style="color: #fbbf24; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2)">
-					Obtenir l'app →
+					{tFn('auth.signet.get_app_button')}
 				</a>
 			</div>
 
@@ -436,7 +438,7 @@
 					<input
 						type="text"
 						bind:value={signetUsername}
-						placeholder="Votre identifiant"
+						placeholder={tFn('auth.signet.username_placeholder')}
 						onkeydown={(e) => e.key === 'Enter' && signetStart()}
 						class="flex-1 rounded-lg px-3 py-2 text-sm text-white focus:outline-none transition-colors"
 						style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.2)"
@@ -446,18 +448,18 @@
 						disabled={!signetUsername.trim()}
 						class="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40 transition-all shrink-0"
 						style="background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.4); color: #fbbf24">
-						Signer →
+						{tFn('auth.signet.sign_button')}
 					</button>
 				</div>
 
 				<!-- Séparateur + bouton première connexion -->
 				<div class="mt-3 pt-3" style="border-top: 1px solid rgba(251,191,36,0.1)">
-					<p class="text-xs mb-2" style="color: rgb(107,114,128)">Première visite sur cette instance ?</p>
+					<p class="text-xs mb-2" style="color: rgb(107,114,128)">{tFn('auth.signet.first_visit_prompt')}</p>
 					<button
 						onclick={signetStartCross}
 						class="w-full py-2 rounded-lg text-sm font-medium transition-all"
 						style="background: rgba(251,191,36,0.06); border: 1px dashed rgba(251,191,36,0.3); color: #fbbf24">
-						Scanner avec Signet · Créer mon compte →
+						{tFn('auth.signet.scan_and_create_button')}
 					</button>
 				</div>
 
@@ -469,22 +471,22 @@
 				{#if signetQrMode}
 					<!-- Mode QR cross-instance -->
 					<div class="flex flex-col items-center gap-3 py-2">
-						<p class="text-sm font-semibold text-white">Scannez avec Nodyx Signet</p>
+						<p class="text-sm font-semibold text-white">{tFn('auth.signet.scan_instruction')}</p>
 						<canvas bind:this={signetQrCanvas}
 							class="rounded-xl"
 							style="background: rgba(0,0,0,0.4); padding: 8px">
 						</canvas>
 						<p class="text-xs text-center" style="color: rgb(156,163,175)">
-							Votre compte sera créé automatiquement à la première connexion.
+							{tFn('auth.signet.auto_create_message')}
 						</p>
 						{#if signetQrUrl}
 							<a href={signetQrUrl} target="_blank" rel="noopener"
 								class="text-xs underline" style="color: rgba(251,191,36,0.6)">
-								Ouvrir sur cet appareil →
+								{tFn('auth.signet.open_on_device_link')}
 							</a>
 						{/if}
 						<button onclick={signetResetFull} class="text-xs" style="color: rgb(107,114,128)">
-							Annuler
+							{tFn('common.cancel')}
 						</button>
 					</div>
 				{:else}
@@ -499,8 +501,8 @@
 								style="background: rgba(251,191,36,0.3)"></div>
 						</div>
 						<div class="text-center">
-							<p class="text-sm font-semibold text-white">En attente d'approbation</p>
-							<p class="text-xs mt-1" style="color: rgb(156,163,175)">Ouvrez Nodyx Signet sur votre téléphone et approuvez la demande</p>
+							<p class="text-sm font-semibold text-white">{tFn('common.waiting_approval')}</p>
+							<p class="text-xs mt-1" style="color: rgb(156,163,175)">{tFn('auth.signet.open_phone_approve_message')}</p>
 						</div>
 						<button onclick={signetReset} class="text-xs" style="color: rgb(107,114,128)">
 							Annuler
@@ -519,7 +521,7 @@
 						style="background: rgba(74,222,128,0.1); border: 2px solid rgb(74,222,128)">
 						✓
 					</div>
-					<p class="text-sm font-semibold" style="color: rgb(74,222,128)">Approuvé — connexion en cours…</p>
+					<p class="text-sm font-semibold" style="color: rgb(74,222,128)">{tFn('auth.signet.approved_logging_in')}</p>
 				</div>
 
 			{:else if signetState === 'rejected'}
@@ -528,14 +530,14 @@
 						style="background: rgba(248,113,113,0.1); border: 2px solid rgb(248,113,113)">
 						✕
 					</div>
-					<p class="text-sm font-semibold" style="color: rgb(248,113,113)">Demande refusée</p>
-					<button onclick={signetReset} class="text-xs underline" style="color: rgb(156,163,175)">Réessayer</button>
+					<p class="text-sm font-semibold" style="color: rgb(248,113,113)">{tFn('auth.signet.request_rejected')}</p>
+					<button onclick={signetReset} class="text-xs underline" style="color: rgb(156,163,175)">{tFn('common.retry')}</button>
 				</div>
 
 			{:else if signetState === 'expired'}
 				<div class="flex flex-col items-center gap-3 py-3">
-					<p class="text-sm" style="color: rgb(156,163,175)">Challenge expiré (90 secondes).</p>
-					<button onclick={signetReset} class="text-xs underline" style="color: #fbbf24">Réessayer</button>
+					<p class="text-sm" style="color: rgb(156,163,175)">{tFn('auth.signet.challenge_expired_90s')}</p>
+					<button onclick={signetReset} class="text-xs underline" style="color: #fbbf24">{tFn('common.retry')}</button>
 				</div>
 			{/if}
 		</div>

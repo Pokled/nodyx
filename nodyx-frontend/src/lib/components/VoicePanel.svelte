@@ -10,6 +10,7 @@
     import MediaCenter    from './MediaCenter.svelte'
     import VoiceSettings from './VoiceSettings.svelte'
     import { onMount } from 'svelte'
+    import { t } from '$lib/i18n'
     import { voicePanelTarget } from '$lib/voicePanel'
 
     let { mode = 'float', extraClass = '' }: { mode?: 'float' | 'sidebar'; extraClass?: string } = $props()
@@ -25,6 +26,8 @@
     const level     = $derived($inputLevel)
     const statsMap  = $derived($peerStatsStore)
     const isSharing = $derived($screenShareStore)
+
+    const tFn = $derived($t)
 
     const levelColor = $derived(
         level > 70 ? 'bg-red-500' :
@@ -70,13 +73,13 @@
 
     // ── Qualité réseau ────────────────────────────────────────────
 
-    const QUALITY_LABELS: Record<NetQuality, string> = {
-        excellent: 'Excellent',
-        good:      'Bon',
-        fair:      'Moyen',
-        poor:      'Mauvais',
-        unknown:   'Inconnu',
-    }
+    const QUALITY_LABELS = $derived<Record<NetQuality, string>>({
+        excellent: tFn('voice.quality_excellent'),
+        good:      tFn('voice.quality_good'),
+        fair:      tFn('voice.quality_fair'),
+        poor:      tFn('voice.quality_poor'),
+        unknown:   tFn('voice.quality_unknown'),
+    })
 
     function qualityBars(q: NetQuality): number {
         return { excellent: 4, good: 3, fair: 2, poor: 1, unknown: 0 }[q]
@@ -157,7 +160,7 @@
         <svg class="w-4 h-4 shrink-0 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
         </svg>
-        Canal vocal complet ({$voiceFullStore.max} participants max)
+        {tFn('voice.channel_full', { max: String($voiceFullStore.max) })}
     </div>
 {/if}
 
@@ -169,7 +172,7 @@
              role='button' tabindex='-1'
              onclick={() => selfInfo = null}
              onkeydown={e => e.key === 'Escape' && (selfInfo = null)}
-             aria-label='Fermer'></div>
+             aria-label={tFn('voice.close_panel')}></div>
 
         <div class='fixed bottom-16 left-1/2 -translate-x-1/2 z-50 w-72 rounded-2xl
                     bg-gradient-to-b from-gray-900 to-gray-950
@@ -193,11 +196,11 @@
                 <div class='flex-1 min-w-0'>
                     <p class='text-sm font-semibold text-white truncate flex items-center gap-2'>
                         {si.username}
-                        <span class='text-[8px] px-1.5 py-0.5 rounded-full bg-green-900/60 text-green-400 border border-green-700/50'>Vous</span>
+                        <span class='text-[8px] px-1.5 py-0.5 rounded-full bg-green-900/60 text-green-400 border border-green-700/50'>{tFn('voice.you_badge')}</span>
                     </p>
-                    <p class='text-xs text-green-400 mt-0.5'>Connecté en vocal</p>
+                    <p class='text-xs text-green-400 mt-0.5'>{tFn('voice.connected')}</p>
                 </div>
-                <button onclick={() => selfInfo = null} aria-label='Fermer'
+                <button onclick={() => selfInfo = null} aria-label={tFn('voice.close_panel')}
                     class='text-gray-500 hover:text-white hover:bg-gray-800/60 rounded-lg p-1.5 transition-all'>
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'>
                         <path stroke-linecap='round' stroke-linejoin='round' d='M6 18L18 6M6 6l12 12'/>
@@ -209,11 +212,11 @@
             <div class='px-4 py-3 space-y-2 border-b border-gray-800/60'>
                 <p class='text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2'>
                     <span class="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
-                    Audio local
+                    {tFn('voice.audio_local')}
                 </p>
                 <!-- Niveau mic -->
                 <div class='flex items-center gap-2'>
-                    <span class='text-xs text-gray-400 w-16 shrink-0'>Niveau mic</span>
+                    <span class='text-xs text-gray-400 w-16 shrink-0'>{tFn('voice.mic_level')}</span>
                     <div class='flex-1 h-2 bg-gray-800 rounded-full overflow-hidden'>
                         <div class='h-full rounded-full transition-all duration-75 {levelColor}' style='width:{level}%'></div>
                     </div>
@@ -223,11 +226,11 @@
                 <div class='flex items-center gap-2 flex-wrap'>
                     <span class='text-[11px] px-2 py-0.5 rounded-full border font-medium
                                  {muted ? "bg-red-900/40 text-red-400 border-red-700/50" : "bg-green-900/40 text-green-400 border-green-700/50"}'>
-                        {muted ? '🔇 Muet' : '🎙️ Micro actif'}
+                        {muted ? tFn('voice.muted') : tFn('voice.mic_active')}
                     </span>
                     <span class='text-[11px] px-2 py-0.5 rounded-full border font-medium
                                  {deafened ? "bg-red-900/40 text-red-400 border-red-700/50" : "bg-gray-800 text-gray-500 border-gray-700"}'>
-                        {deafened ? '🔕 Sourd' : '🔊 Son actif'}
+                        {deafened ? tFn('voice.deafened') : tFn('voice.sound_active')}
                     </span>
                     {#if pttMode}
                         <span class='text-[11px] px-2 py-0.5 rounded-full bg-orange-900/40 text-orange-400 border border-orange-700/50 font-medium'>
@@ -236,7 +239,7 @@
                     {/if}
                 </div>
                 <p class='text-[10px] text-gray-600 italic'>
-                    Les stats réseau ne sont pas disponibles pour votre propre connexion.
+                    {tFn('voice.own_stats_unavailable')}
                 </p>
             </div>
         </div>
@@ -255,7 +258,7 @@
             role='button' tabindex='-1'
             onclick={closePanel}
             onkeydown={e => e.key === 'Escape' && closePanel()}
-            aria-label='Fermer le panneau'
+            aria-label={tFn('voice.close_panel')}
         ></div>
 
         <!-- Panneau popup -->
@@ -309,7 +312,7 @@
                 
                 <button
                     onclick={closePanel}
-                    aria-label='Fermer'
+                    aria-label={tFn('voice.close_panel')}
                     class='text-gray-500 hover:text-white hover:bg-gray-800/60 rounded-lg p-1.5 transition-all duration-200 transform hover:scale-110'
                 >
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'>
@@ -322,43 +325,43 @@
             <div class='px-4 py-3 space-y-1.5 border-b border-gray-800/60'>
                 <p class='text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2'>
                     <span class="w-1 h-1 rounded-full bg-indigo-400 animate-pulse"></span>
-                    Réseau
+                    {tFn('voice.network_section')}
                 </p>
 
                 <div class='grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs'>
                     <div class='flex justify-between group hover:bg-gray-800/40 p-1 rounded transition-colors'>
-                        <span class='text-gray-400'>Votre ping</span>
+                        <span class='text-gray-400'>{tFn('voice.your_ping')}</span>
                         <span class='font-mono text-white group-hover:text-indigo-400 transition-colors'>{fmtRtt(stats?.rtt ?? null)}</span>
                     </div>
                     <div class='flex justify-between group hover:bg-gray-800/40 p-1 rounded transition-colors'>
-                        <span class='text-gray-400'>Leur ping</span>
+                        <span class='text-gray-400'>{tFn('voice.their_ping')}</span>
                         <span class='font-mono text-white group-hover:text-indigo-400 transition-colors'>{fmtRtt(stats?.theirRtt ?? null)}</span>
                     </div>
                     <div class='flex justify-between group hover:bg-gray-800/40 p-1 rounded transition-colors'>
-                        <span class='text-gray-400'>Perte paquets</span>
+                        <span class='text-gray-400'>{tFn('voice.packet_loss')}</span>
                         <span class='font-mono {(stats?.packetLoss ?? 0) > 5 ? "text-red-400" : "text-white group-hover:text-indigo-400"}'>{fmtLoss(stats?.packetLoss ?? null)}</span>
                     </div>
                     <div class='flex justify-between group hover:bg-gray-800/40 p-1 rounded transition-colors'>
-                        <span class='text-gray-400'>Gigue</span>
+                        <span class='text-gray-400'>{tFn('voice.jitter')}</span>
                         <span class='font-mono {(stats?.jitter ?? 0) > 30 ? "text-yellow-400" : "text-white group-hover:text-indigo-400"}'>{fmtJitter(stats?.jitter ?? null)}</span>
                     </div>
                 </div>
 
                 <div class='flex items-center justify-between pt-1 mt-1 border-t border-gray-800/40'>
-                    <span class='text-xs text-gray-400'>Connexion</span>
+                    <span class='text-xs text-gray-400'>{tFn('voice.connection')}</span>
                     {#if stats?.connectionType === 'relay'}
                         <span class='text-[10px] px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-300 font-medium border border-blue-700/50 flex items-center gap-1'>
                             <span class="w-1 h-1 rounded-full bg-blue-400 animate-pulse"></span>
-                            Relay TURN
+                            {tFn('voice.relay_turn')}
                         </span>
                     {:else if stats?.connectionType === 'direct'}
                         <span class='text-[10px] px-2 py-0.5 rounded-full bg-green-900/60 text-green-300 font-medium border border-green-700/50 flex items-center gap-1'>
                             <span class="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
-                            Direct P2P
+                            {tFn('voice.direct_p2p')}
                         </span>
                     {:else}
                         <span class='text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-500 font-medium border border-gray-700'>
-                            Inconnu
+                            {tFn('voice.unknown_connection')}
                         </span>
                     {/if}
                 </div>
@@ -367,7 +370,7 @@
             <!-- Volume -->
             <div class='px-4 py-3 border-b border-gray-800/60 group'>
                 <div class='flex items-center justify-between mb-1.5'>
-                    <span class='text-xs text-gray-400 group-hover:text-indigo-400 transition-colors'>Volume local</span>
+                    <span class='text-xs text-gray-400 group-hover:text-indigo-400 transition-colors'>{tFn('voice.local_volume')}</span>
                     <span class='text-xs font-mono text-white bg-gray-800 px-2 py-0.5 rounded-full border border-gray-700 group-hover:border-indigo-500/50 transition-all'>
                         {vol}%
                     </span>
@@ -409,7 +412,7 @@
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
                         <path stroke-linecap='round' stroke-linejoin='round' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'/>
                     </svg>
-                    Profil
+                    {tFn('voice.profile_btn')}
                 </a>
                 <a
                     href='/chat?dm={selPeer.username}'
@@ -424,22 +427,22 @@
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
                         <path stroke-linecap='round' stroke-linejoin='round' d='M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'/>
                     </svg>
-                    Message
+                    {tFn('voice.message_btn')}
                 </a>
             </div>
             <!-- Interactions futures -->
             <div class='px-3 pb-3 grid grid-cols-2 gap-2 mt-2'>
-                <button disabled title='Partage de fichier — bientôt'
+                <button disabled title={tFn('voice.file_btn_title')}
                     class='flex items-center justify-center gap-1.5 py-2
                            rounded-lg bg-gray-800/40 text-gray-600 text-xs
                            border border-gray-800 cursor-not-allowed select-none'>
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
                         <path stroke-linecap='round' stroke-linejoin='round' d='M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13'/>
                     </svg>
-                    <span>Fichier</span>
-                    <span class='text-[9px] text-gray-700 font-medium uppercase tracking-wider'>bientôt</span>
+                    <span>{tFn('voice.file_btn')}</span>
+                    <span class='text-[9px] text-gray-700 font-medium uppercase tracking-wider'>{tFn('voice.coming_soon')}</span>
                 </button>
-                <button disabled title='Mini-jeu — bientôt'
+                <button disabled title={tFn('voice.game_btn_title')}
                     class='flex items-center justify-center gap-1.5 py-2
                            rounded-lg bg-gray-800/40 text-gray-600 text-xs
                            border border-gray-800 cursor-not-allowed select-none'>
@@ -447,8 +450,8 @@
                         <rect x='2' y='6' width='20' height='12' rx='2'/>
                         <path stroke-linecap='round' stroke-linejoin='round' d='M6 12h4m-2-2v4M15 11h.01M18 11h.01'/>
                     </svg>
-                    <span>Mini-jeu</span>
-                    <span class='text-[9px] text-gray-700 font-medium uppercase tracking-wider'>bientôt</span>
+                    <span>{tFn('voice.game_btn')}</span>
+                    <span class='text-[9px] text-gray-700 font-medium uppercase tracking-wider'>{tFn('voice.coming_soon')}</span>
                 </button>
             </div>
         </div>
@@ -485,8 +488,8 @@
                         </div>
                         
                         <span class='text-xs text-green-300 font-medium truncate flex items-center gap-1'>
-                            <span class="hidden sm:inline">Vocal ·</span> 
-                            {peers.length + 1} participant{peers.length > 0 ? 's' : ''}
+                            <span class="hidden sm:inline">{tFn('voice.voice_label')}</span> 
+                            {peers.length + 1} {peers.length > 0 ? tFn('voice.participant_plural') : tFn('voice.participant')}
                         </span>
                         
                         <div class='w-16 h-2 bg-gray-800 rounded-full overflow-hidden shrink-0 ring-1 ring-gray-700'>
@@ -513,7 +516,7 @@
                                 data-peer-id={peer.socketId}
                                 class='relative focus:outline-none hover:z-20 group/avatar transition-all duration-200 {i >= 3 ? "hidden sm:flex" : "flex"}'
                                 style="z-index: {10 + peers.indexOf(peer)};"
-                                title='{peer.username} — cliquer pour les détails'
+                                title={tFn('voice.peer_click_details', { username: peer.username })}
                             >
                                 {#if peer.avatar}
                                     <img
@@ -603,7 +606,7 @@
                                    {showMediaHub
                                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/50 ring-2 ring-indigo-400/50'
                                        : 'bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 hover:shadow-lg hover:shadow-indigo-500/20 border border-gray-700 hover:border-indigo-500/30'}'
-                            title="Partage d'écran & Capture"
+                            title={tFn('voice.screenshare_title')}
                             style="pointer-events: auto; position: relative; z-index: 102;"
                         >
                             <span class="text-sm block {showMediaHub ? 'animate-pulse' : ''}">🖥️</span>
@@ -674,7 +677,7 @@
                                    {pttMode
                                        ? 'bg-gradient-to-r from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-900/50 ring-1 ring-orange-700/50'
                                        : 'bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 hover:shadow-lg hover:shadow-indigo-500/20 border border-gray-700 hover:border-indigo-500/30'}'
-                            title='Push-to-Talk (Alt pour parler)'
+                            title={tFn('voice.ptt_title')}
                             style="pointer-events: auto; position: relative; z-index: 101;"
                         >
                             <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
@@ -699,7 +702,7 @@
                                 style="text-shadow: 0 1px 2px rgba(0,0,0,0.3); pointer-events: auto; position: relative; z-index: 101;"
                             >
                                 <span class="text-sm">🎤</span>
-                                <span class="hidden sm:inline">PARLER</span>
+                                <span class="hidden sm:inline">{tFn('voice.speak_button')}</span>
                             </button>
                         {/if}
 
@@ -711,11 +714,11 @@
                                    {showVoiceSettings
                                        ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-500/50 ring-2 ring-amber-400/50"
                                        : "bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-700 hover:border-amber-500/30"}'
-                            title="Paramètres son & micro"
+                            title={tFn('voice.sound_settings_title')}
                             style="pointer-events: auto; position: relative; z-index: 102;"
                         >
                             <span class="text-base leading-none">⚙️</span>
-                            <span class="text-[11px] font-medium">Son</span>
+                            <span class="text-[11px] font-medium">{tFn('voice.sound_label')}</span>
                         </button>
 
                         <!-- ··· bouton mobile-only (ouvre VoiceSettings) -->
@@ -724,7 +727,7 @@
                             class='sm:hidden p-2 rounded-lg bg-gray-800/80 text-gray-300 border border-gray-700
                                    min-w-[44px] min-h-[44px] flex items-center justify-center
                                    transition-all duration-200'
-                            title='Paramètres'
+                            title={tFn('voice.settings_title')}
                             style="pointer-events: auto; position: relative; z-index: 101;"
                         >
                             <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'>
@@ -746,13 +749,13 @@
                                    text-white shadow-lg shadow-red-900/50
                                    flex items-center gap-1.5 min-w-[44px] min-h-[44px] justify-center
                                    ring-1 ring-red-700/50 hover:ring-red-600/50'
-                            title='Quitter le salon vocal'
+                            title={tFn('voice.leave_channel_title')}
                             style="pointer-events: auto; position: relative; z-index: 101;"
                         >
                             <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'>
                                 <path stroke-linecap='round' stroke-linejoin='round' d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v1'/>
                             </svg>
-                            <span class="hidden sm:inline">Quitter</span>
+                            <span class="hidden sm:inline">{tFn('voice.leave_button')}</span>
                         </button>
                     </div>
                 </div>
@@ -772,7 +775,7 @@
                             <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
                             <!-- Header fermeture mobile-only -->
                             <div class="sm:hidden flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/95 shrink-0">
-                                <span class="text-sm font-semibold text-white">Partage d'écran</span>
+                                <span class="text-sm font-semibold text-white">{tFn('voice.screenshare_title')}</span>
                                 <button onclick={() => showMediaHub = false}
                                         class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -808,7 +811,7 @@
                             <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
                             <!-- Header fermeture mobile-only -->
                             <div class="sm:hidden flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/95 shrink-0">
-                                <span class="text-sm font-semibold text-white">Paramètres audio</span>
+                                <span class="text-sm font-semibold text-white">{tFn('voice.audio_settings_title')}</span>
                                 <button onclick={() => showVoiceSettings = false}
                                         class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -939,7 +942,7 @@
 
                 <!-- Settings audio -->
                 <button onclick={() => { showVoiceSettings = !showVoiceSettings; showMediaHub = false }}
-                    title="Paramètres audio"
+                    title={tFn('voice.audio_settings_title')}
                     class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
                            {showVoiceSettings ? 'text-amber-400 bg-amber-900/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
@@ -949,7 +952,7 @@
                 </button>
 
                 <!-- Quitter -->
-                <button onclick={leaveVoice} title="Quitter le vocal"
+                <button onclick={leaveVoice} title={tFn('voice.leave_voice_title')}
                     class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
                            text-red-500 hover:text-red-400 hover:bg-red-900/20">
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'>

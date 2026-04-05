@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
+	import { t } from '$lib/i18n'
 
 	let {
 		name       = 'content',
-		placeholder = 'Rédigez votre contenu...',
+		placeholder = '',
 		initialContent = '',
 		compact    = false,
 		onchange   = (_html: string) => {},
@@ -14,6 +15,12 @@
 		compact?:        boolean
 		onchange?:       (html: string) => void
 	} = $props()
+
+	// ── i18n ─────────────────────────────────────────────────────────────────
+	const tFn = $derived($t)
+
+	// ── Placeholder (i18n fallback) ─────────────────────────────────────────
+	const resolvedPlaceholder = $derived(placeholder || tFn('editor.default_placeholder'))
 
 	// ── DOM refs ──────────────────────────────────────────────────────────────
 	let editorEl    = $state<HTMLElement | undefined>(undefined)
@@ -152,7 +159,7 @@
 				Table.configure({ resizable: false }),
 				TableRow, TableCell, TableHeader,
 				Color, TextStyle,
-				Placeholder.configure({ placeholder }),
+				Placeholder.configure({ placeholder: resolvedPlaceholder }),
 				CharacterCount,
 				CodeBlockLowlight.configure({ lowlight }),
 				NodyxTwoCols, NodyxColumn,
@@ -291,11 +298,11 @@
 
 		<!-- Inline formatting -->
 		<div class="flex items-center gap-0.5">
-			<button type="button" onclick={() => toggleAny('bold')}      class="tb-btn {a.bold      ? 'active' : ''}" title="Gras (Ctrl+B)">         <b>B</b></button>
-			<button type="button" onclick={() => toggleAny('italic')}    class="tb-btn {a.italic    ? 'active' : ''}" title="Italique (Ctrl+I)">  <i>I</i></button>
-			<button type="button" onclick={() => toggleAny('underline')} class="tb-btn {a.underline ? 'active' : ''}" title="Souligné (Ctrl+U)">  <u>U</u></button>
-			<button type="button" onclick={() => toggleAny('strike')}    class="tb-btn {a.strike    ? 'active' : ''}" title="Barré">               <s>S</s></button>
-			<button type="button" onclick={() => toggleAny('code')}      class="tb-btn {a.code      ? 'active' : ''}" title="Code inline">
+			<button type="button" onclick={() => toggleAny('bold')}      class="tb-btn {a.bold      ? 'active' : ''}" title={tFn('editor.bold')}>         <b>B</b></button>
+			<button type="button" onclick={() => toggleAny('italic')}    class="tb-btn {a.italic    ? 'active' : ''}" title={tFn('editor.italic')}>  <i>I</i></button>
+			<button type="button" onclick={() => toggleAny('underline')} class="tb-btn {a.underline ? 'active' : ''}" title={tFn('editor.underline')}>  <u>U</u></button>
+			<button type="button" onclick={() => toggleAny('strike')}    class="tb-btn {a.strike    ? 'active' : ''}" title={tFn('editor.strikethrough')}>               <s>S</s></button>
+			<button type="button" onclick={() => toggleAny('code')}      class="tb-btn {a.code      ? 'active' : ''}" title={tFn('editor.code_inline')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
 			</button>
 		</div>
@@ -304,9 +311,9 @@
 
 		<!-- Headings -->
 		<div class="flex items-center gap-0.5">
-			<button type="button" onclick={() => toggleAny('h1')} class="tb-btn text-xs font-bold {a.h1 ? 'active' : ''}" title="Titre H1">H1</button>
-			<button type="button" onclick={() => toggleAny('h2')} class="tb-btn text-xs font-bold {a.h2 ? 'active' : ''}" title="Titre H2">H2</button>
-			<button type="button" onclick={() => toggleAny('h3')} class="tb-btn text-xs font-bold {a.h3 ? 'active' : ''}" title="Titre H3">H3</button>
+			<button type="button" onclick={() => toggleAny('h1')} class="tb-btn text-xs font-bold {a.h1 ? 'active' : ''}" title={tFn('editor.heading_1')}>H1</button>
+			<button type="button" onclick={() => toggleAny('h2')} class="tb-btn text-xs font-bold {a.h2 ? 'active' : ''}" title={tFn('editor.heading_2')}>H2</button>
+			<button type="button" onclick={() => toggleAny('h3')} class="tb-btn text-xs font-bold {a.h3 ? 'active' : ''}" title={tFn('editor.heading_3')}>H3</button>
 		</div>
 
 		<div class="tb-sep"></div>
@@ -314,15 +321,15 @@
 		<!-- Blocks -->
 		<div class="flex items-center gap-0.5">
 			<!-- Blockquote -->
-			<button type="button" onclick={() => toggleAny('quote')} class="tb-btn {a.quote ? 'active' : ''}" title="Citation">
+			<button type="button" onclick={() => toggleAny('quote')} class="tb-btn {a.quote ? 'active' : ''}" title={tFn('editor.blockquote')}>
 				<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
 			</button>
 			<!-- Code block -->
-			<button type="button" onclick={() => toggleAny('codeBlock')} class="tb-btn {a.codeBlock ? 'active' : ''}" title="Bloc de code">
+			<button type="button" onclick={() => toggleAny('codeBlock')} class="tb-btn {a.codeBlock ? 'active' : ''}" title={tFn('editor.code_block')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" stroke-width="2"/><path d="M9 9l-3 3 3 3M15 9l3 3-3 3M13 7l-2 10" stroke-width="2" stroke-linecap="round"/></svg>
 			</button>
 			<!-- HR -->
-			<button type="button" onclick={() => toggleAny('hr')} class="tb-btn" title="Séparateur horizontal">
+			<button type="button" onclick={() => toggleAny('hr')} class="tb-btn" title={tFn('editor.hr')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2.5" d="M4 12h16"/></svg>
 			</button>
 		</div>
@@ -331,10 +338,10 @@
 
 		<!-- Lists -->
 		<div class="flex items-center gap-0.5">
-			<button type="button" onclick={() => toggleAny('bullet')}  class="tb-btn {a.bullet  ? 'active' : ''}" title="Liste à puces">
+			<button type="button" onclick={() => toggleAny('bullet')}  class="tb-btn {a.bullet  ? 'active' : ''}" title={tFn('editor.bullet_list')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="7" r="1.5" fill="currentColor"/><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="5" cy="17" r="1.5" fill="currentColor"/><path stroke-linecap="round" stroke-width="2" d="M9 7h11M9 12h11M9 17h11"/></svg>
 			</button>
-			<button type="button" onclick={() => toggleAny('ordered')} class="tb-btn {a.ordered ? 'active' : ''}" title="Liste numérotée">
+			<button type="button" onclick={() => toggleAny('ordered')} class="tb-btn {a.ordered ? 'active' : ''}" title={tFn('editor.ordered_list')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M9 7h11M9 12h11M9 17h11"/><text x="2" y="9" font-size="6" fill="currentColor">1.</text><text x="2" y="14" font-size="6" fill="currentColor">2.</text><text x="2" y="19" font-size="6" fill="currentColor">3.</text></svg>
 			</button>
 		</div>
@@ -343,16 +350,16 @@
 
 		<!-- Alignements -->
 		<div class="flex items-center gap-0.5">
-			<button type="button" onclick={() => toggleAny('left')}    class="tb-btn {a.left    ? 'active' : ''}" title="Aligner à gauche">
+			<button type="button" onclick={() => toggleAny('left')}    class="tb-btn {a.left    ? 'active' : ''}" title={tFn('editor.align_left')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 6h18M3 10h12M3 14h18M3 18h12"/></svg>
 			</button>
-			<button type="button" onclick={() => toggleAny('center')}  class="tb-btn {a.center  ? 'active' : ''}" title="Centrer">
+			<button type="button" onclick={() => toggleAny('center')}  class="tb-btn {a.center  ? 'active' : ''}" title={tFn('editor.align_center')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 6h18M6 10h12M3 14h18M6 18h12"/></svg>
 			</button>
-			<button type="button" onclick={() => toggleAny('right')}   class="tb-btn {a.right   ? 'active' : ''}" title="Aligner à droite">
+			<button type="button" onclick={() => toggleAny('right')}   class="tb-btn {a.right   ? 'active' : ''}" title={tFn('editor.align_right')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 6h18M9 10h12M3 14h18M9 18h12"/></svg>
 			</button>
-			<button type="button" onclick={() => toggleAny('justify')} class="tb-btn {a.justify ? 'active' : ''}" title="Justifier">
+			<button type="button" onclick={() => toggleAny('justify')} class="tb-btn {a.justify ? 'active' : ''}" title={tFn('editor.align_justify')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 6h18M3 10h18M3 14h18M3 18h18"/></svg>
 			</button>
 		</div>
@@ -361,12 +368,12 @@
 
 		<!-- Couleur texte -->
 		<div class="relative">
-			<button type="button" onclick={() => { showColor = !showColor; showEmoji = showLink = showImage = showVideo = showTable = false }} class="tb-btn" title="Couleur du texte">
+			<button type="button" onclick={() => { showColor = !showColor; showEmoji = showLink = showImage = showVideo = showTable = false }} class="tb-btn" title={tFn('editor.text_color')}>
 				<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M7 20h10M12 4l5 12H7L12 4z"/></svg>
 			</button>
 			{#if showColor}
 			<div class="popup w-48 grid grid-cols-6 gap-1 p-2">
-				<button type="button" onclick={() => editor?.chain().focus().unsetColor().run()} class="col-span-6 text-xs text-gray-400 hover:text-white text-left mb-1">Réinitialiser</button>
+				<button type="button" onclick={() => editor?.chain().focus().unsetColor().run()} class="col-span-6 text-xs text-gray-400 hover:text-white text-left mb-1">{tFn('editor.color_reset')}</button>
 				{#each COLORS as c}
 					<button type="button" onclick={() => setColor(c)} class="w-6 h-6 rounded border border-gray-700 hover:scale-110 transition-transform" style="background:{c}" title={c}></button>
 				{/each}
@@ -378,15 +385,15 @@
 
 		<!-- Lien -->
 		<div class="relative">
-			<button type="button" onclick={() => { showLink = !showLink; showColor = showEmoji = showImage = showVideo = showTable = false }} class="tb-btn {a.link ? 'active' : ''}" title="Insérer un lien">
+			<button type="button" onclick={() => { showLink = !showLink; showColor = showEmoji = showImage = showVideo = showTable = false }} class="tb-btn {a.link ? 'active' : ''}" title={tFn('editor.insert_link')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
 			</button>
 			{#if showLink}
 			<div class="popup w-72 flex flex-col gap-2 p-3">
 				<input type="url" bind:value={linkUrl} placeholder="https://..." class="popup-input" onkeydown={e => e.key === 'Enter' && insertLink()} />
 				<div class="flex gap-2">
-					<button type="button" onclick={insertLink} class="flex-1 popup-btn-primary">Insérer</button>
-					{#if a.link}<button type="button" onclick={() => { editor?.chain().focus().unsetLink().run(); showLink = false }} class="popup-btn-danger">Supprimer</button>{/if}
+					<button type="button" onclick={insertLink} class="flex-1 popup-btn-primary">{tFn('editor.insert')}</button>
+					{#if a.link}<button type="button" onclick={() => { editor?.chain().focus().unsetLink().run(); showLink = false }} class="popup-btn-danger">{tFn('editor.delete_link')}</button>{/if}
 				</div>
 			</div>
 			{/if}
@@ -394,43 +401,43 @@
 
 		<!-- Image -->
 		<div class="relative">
-			<button type="button" onclick={() => { showImage = !showImage; showColor = showEmoji = showLink = showVideo = showTable = false }} class="tb-btn" title="Insérer une image">
+			<button type="button" onclick={() => { showImage = !showImage; showColor = showEmoji = showLink = showVideo = showTable = false }} class="tb-btn" title={tFn('editor.insert_image')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15l-5-5L5 21"/></svg>
 			</button>
 			{#if showImage}
 			<div class="popup w-80 flex flex-col gap-2 p-3">
-				<input type="url" bind:value={imageUrl} placeholder="URL de l'image…" class="popup-input" />
-				<input type="text" bind:value={imageAlt} placeholder="Texte alternatif (alt)…" class="popup-input" />
+				<input type="url" bind:value={imageUrl} placeholder={tFn('editor.image_url_placeholder')} class="popup-input" />
+				<input type="text" bind:value={imageAlt} placeholder={tFn('editor.image_alt_placeholder')} class="popup-input" />
 				<div class="flex gap-1">
-					{#each [['left','← Gauche'],['center','Centré'],['right','Droite →'],['full','Pleine largeur']] as [v, label]}
+					{#each [['left', tFn('editor.img_align_left')],['center', tFn('editor.img_align_center')],['right', tFn('editor.img_align_right')],['full', tFn('editor.img_align_full')]] as [v, label]}
 						<button type="button" onclick={() => imageAlign = v as any}
 							class="flex-1 text-xs px-2 py-1 rounded border transition-colors {imageAlign === v ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300' : 'border-gray-700 text-gray-500 hover:border-gray-500'}">
 							{label}
 						</button>
 					{/each}
 				</div>
-				<button type="button" onclick={insertImage} class="popup-btn-primary">Insérer</button>
+				<button type="button" onclick={insertImage} class="popup-btn-primary">{tFn('editor.insert')}</button>
 			</div>
 			{/if}
 		</div>
 
 		<!-- Vidéo YouTube -->
 		<div class="relative">
-			<button type="button" onclick={() => { showVideo = !showVideo; showColor = showEmoji = showLink = showImage = showTable = false }} class="tb-btn" title="Intégrer une vidéo YouTube">
+			<button type="button" onclick={() => { showVideo = !showVideo; showColor = showEmoji = showLink = showImage = showTable = false }} class="tb-btn" title={tFn('editor.insert_video')}>
 				<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
 			</button>
 			{#if showVideo}
 			<div class="popup w-80 flex flex-col gap-2 p-3">
-				<p class="text-xs text-gray-500">Coller une URL YouTube, Vimeo…</p>
+				<p class="text-xs text-gray-500">{tFn('editor.video_hint')}</p>
 				<input type="url" bind:value={videoUrl} placeholder="https://youtu.be/…" class="popup-input" onkeydown={e => e.key === 'Enter' && insertVideo()} />
-				<button type="button" onclick={insertVideo} class="popup-btn-primary">Intégrer la vidéo</button>
+				<button type="button" onclick={insertVideo} class="popup-btn-primary">{tFn('editor.embed_video')}</button>
 			</div>
 			{/if}
 		</div>
 
 		<!-- Emoji -->
 		<div class="relative">
-			<button type="button" onclick={() => { showEmoji = !showEmoji; showColor = showLink = showImage = showVideo = showTable = false }} class="tb-btn text-base" title="Insérer un emoji">😊</button>
+			<button type="button" onclick={() => { showEmoji = !showEmoji; showColor = showLink = showImage = showVideo = showTable = false }} class="tb-btn text-base" title={tFn('editor.insert_emoji')}>😊</button>
 			{#if showEmoji}
 			<div class="popup w-72 p-2 grid grid-cols-10 gap-0.5 max-h-48 overflow-y-auto">
 				{#each EMOJIS as e}
@@ -443,7 +450,7 @@
 		<div class="tb-sep"></div>
 
 		<!-- Deux colonnes -->
-		<button type="button" onclick={() => toggleAny('twoCols')} class="tb-btn" title="Disposition en 2 colonnes">
+		<button type="button" onclick={() => toggleAny('twoCols')} class="tb-btn" title={tFn('editor.two_cols')}>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="9" height="18" rx="1.5" stroke-width="2"/><rect x="13" y="3" width="9" height="18" rx="1.5" stroke-width="2"/></svg>
 		</button>
 
@@ -451,24 +458,24 @@
 
 		<!-- Table -->
 		<div class="relative">
-			<button type="button" onclick={() => { showTable = !showTable; showColor = showEmoji = showLink = showImage = showVideo = false }} class="tb-btn {a.table ? 'active' : ''}" title="Tableau">
+			<button type="button" onclick={() => { showTable = !showTable; showColor = showEmoji = showLink = showImage = showVideo = false }} class="tb-btn {a.table ? 'active' : ''}" title={tFn('editor.table')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><path stroke-width="1.5" d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
 			</button>
 			{#if showTable}
 			<div class="popup w-52 p-2 flex flex-col gap-1">
 				{#if !a.table}
-					<button type="button" onclick={() => { toggleAny('insertTable'); showTable = false }} class="table-btn">+ Insérer un tableau (3×3)</button>
+					<button type="button" onclick={() => { toggleAny('insertTable'); showTable = false }} class="table-btn">{tFn('editor.insert_table')}</button>
 				{:else}
-					<p class="text-xs text-gray-500 px-1 mb-1">Lignes</p>
-					<button type="button" onclick={() => toggleAny('addRowBefore')} class="table-btn">+ Ligne avant</button>
-					<button type="button" onclick={() => toggleAny('addRowAfter')}  class="table-btn">+ Ligne après</button>
-					<button type="button" onclick={() => toggleAny('delRow')}       class="table-btn danger">– Supprimer ligne</button>
-					<p class="text-xs text-gray-500 px-1 mt-1 mb-1">Colonnes</p>
-					<button type="button" onclick={() => toggleAny('addColBefore')} class="table-btn">+ Colonne avant</button>
-					<button type="button" onclick={() => toggleAny('addColAfter')}  class="table-btn">+ Colonne après</button>
-					<button type="button" onclick={() => toggleAny('delCol')}       class="table-btn danger">– Supprimer colonne</button>
+					<p class="text-xs text-gray-500 px-1 mb-1">{tFn('editor.rows')}</p>
+					<button type="button" onclick={() => toggleAny('addRowBefore')} class="table-btn">{tFn('editor.add_row_before')}</button>
+					<button type="button" onclick={() => toggleAny('addRowAfter')}  class="table-btn">{tFn('editor.add_row_after')}</button>
+					<button type="button" onclick={() => toggleAny('delRow')}       class="table-btn danger">{tFn('editor.del_row')}</button>
+					<p class="text-xs text-gray-500 px-1 mt-1 mb-1">{tFn('editor.cols')}</p>
+					<button type="button" onclick={() => toggleAny('addColBefore')} class="table-btn">{tFn('editor.add_col_before')}</button>
+					<button type="button" onclick={() => toggleAny('addColAfter')}  class="table-btn">{tFn('editor.add_col_after')}</button>
+					<button type="button" onclick={() => toggleAny('delCol')}       class="table-btn danger">{tFn('editor.del_col')}</button>
 					<hr class="border-gray-700 my-1"/>
-					<button type="button" onclick={() => { toggleAny('delTable'); showTable = false }} class="table-btn danger">🗑 Supprimer le tableau</button>
+					<button type="button" onclick={() => { toggleAny('delTable'); showTable = false }} class="table-btn danger">{tFn('editor.del_table')}</button>
 				{/if}
 			</div>
 			{/if}
@@ -486,7 +493,7 @@
 	<!-- ── Footer: character count ─────────────────────────────────────── -->
 	{#if editor && !compact}
 	<div class="px-4 py-1.5 border-t border-gray-800 flex justify-end">
-		<span class="text-xs text-gray-600">{charCount} caractère{charCount > 1 ? 's' : ''}</span>
+		<span class="text-xs text-gray-600">{tFn(charCount > 1 ? 'editor.char_count_plural' : 'editor.char_count', { n: String(charCount) })}</span>
 	</div>
 	{/if}
 </div>

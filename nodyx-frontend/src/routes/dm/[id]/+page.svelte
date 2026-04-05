@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import { onMount, onDestroy, tick } from 'svelte'
 	import { page } from '$app/stores'
 	import { getSocket, dmUnreadStore } from '$lib/socket'
 	import { apiFetch } from '$lib/api'
+
+	const tFn = $derived($t)
 
 	let { data } = $props()
 
@@ -116,8 +119,8 @@
 	function updateTypingLabel() {
 		const names = [...typingUsers.values()].map(v => v.username)
 		if (names.length === 0) typingLabel = ''
-		else if (names.length === 1) typingLabel = `${names[0]} écrit…`
-		else typingLabel = `${names.join(', ')} écrivent…`
+		else if (names.length === 1) typingLabel = tFn('dm.user_typing', { user: names[0] })
+		else typingLabel = tFn('dm.users_typing', { users: names.join(', ') })
 	}
 
 	function markRead() {
@@ -209,16 +212,16 @@
 
 	function formatTime(iso: string): string {
 		const d = new Date(iso)
-		return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+		return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 	}
 
 	function formatDate(iso: string): string {
 		const d = new Date(iso)
 		const now = new Date()
-		if (d.toDateString() === now.toDateString()) return 'Aujourd\'hui'
+		if (d.toDateString() === now.toDateString()) return tFn('common.today')
 		const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
-		if (d.toDateString() === yesterday.toDateString()) return 'Hier'
-		return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+		if (d.toDateString() === yesterday.toDateString()) return tFn('common.yesterday')
+		return d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })
 	}
 
 	// Regrouper les messages avec séparateurs de date
@@ -248,7 +251,7 @@
 </script>
 
 <svelte:head>
-	<title>DM — {conversation?.other_username ?? 'Messages privés'}</title>
+	<title>DM — {conversation?.other_username ?? tFn('dm.title')}</title>
 </svelte:head>
 
 <!-- Layout deux colonnes : sidebar conversations + vue active -->
@@ -257,8 +260,8 @@
 	<!-- Sidebar conversations (masquée sur mobile) -->
 	<aside class="hidden sm:flex flex-col w-64 border-r border-gray-800 shrink-0 bg-gray-950/40">
 		<div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-			<span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Messages privés</span>
-			<a href="/dm" class="text-gray-500 hover:text-white transition-colors" title="Nouvelle conversation">
+			<span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{tFn('dm.sidebar_title')}</span>
+			<a href="/dm" class="text-gray-500 hover:text-white transition-colors" title={tFn('dm.new_conversation_tooltip')}>
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
 				</svg>
@@ -356,7 +359,7 @@
 							<!-- Bulle -->
 							{#if msg.deleted_at}
 								<div class="px-3 py-2 rounded-2xl text-xs italic text-gray-600 bg-gray-800/40 border border-gray-800">
-									Message supprimé
+									{tFn('dm.deleted_message')}
 								</div>
 							{:else}
 								<div class="relative px-3 py-2 rounded-2xl text-sm break-words
@@ -370,7 +373,7 @@
 										<button
 											onclick={() => deleteMessage(msg.id)}
 											class="absolute -left-7 top-1 opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-red-400"
-											title="Supprimer"
+											title={tFn('common.delete')}
 										>
 											<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 												<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/>
@@ -409,7 +412,7 @@
 					bind:value={messageInput}
 					onkeydown={onKeydown}
 					oninput={emitTyping}
-					placeholder="Message privé…"
+					placeholder={tFn('dm.message_placeholder')}
 					rows="1"
 					class="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none resize-none max-h-32 leading-relaxed"
 					style="field-sizing: content;"
@@ -418,7 +421,7 @@
 					onclick={sendMessage}
 					disabled={!messageInput.trim() || sendingMsg}
 					class="shrink-0 p-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-					title="Envoyer"
+					title={tFn('common.send')}
 				>
 					<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<line x1="22" y1="2" x2="11" y2="13"/>
@@ -426,7 +429,7 @@
 					</svg>
 				</button>
 			</div>
-			<p class="text-[10px] text-gray-700 mt-1.5 text-right">Entrée pour envoyer · Maj+Entrée pour retour à la ligne</p>
+			<p class="text-[10px] text-gray-700 mt-1.5 text-right">{tFn('dm.send_instructions')}</p>
 		</div>
 
 	</div>

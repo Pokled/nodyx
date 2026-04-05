@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import type { PageData } from './$types';
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
 
@@ -19,7 +22,7 @@
 </script>
 
 <svelte:head>
-	<title>{q ? `Recherche : ${q}` : 'Recherche'} — Nodyx</title>
+	<title>{q ? tFn('page_title.search_results', { q }) : tFn('nav.search')} — Nodyx</title>
 </svelte:head>
 
 <div class="max-w-3xl">
@@ -31,7 +34,7 @@
 			name="q"
 			type="search"
 			bind:value={query}
-			placeholder="Rechercher..."
+			placeholder={tFn('common.search_placeholder')}
 			class="flex-1 rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
 		/>
 		<button type="submit"
@@ -48,21 +51,21 @@
 				class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px
 				{activeTab === 'threads' ? 'border-indigo-500 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}"
 			>
-				Sujets ({threads.length})
+				{tFn('search.threads_tab', { n: String(threads.length) })}
 			</button>
 			<button
 				onclick={() => activeTab = 'posts'}
 				class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px
 				{activeTab === 'posts' ? 'border-indigo-500 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}"
 			>
-				Messages ({posts.length})
+				{tFn('search.posts_tab', { n: String(posts.length) })}
 			</button>
 		</div>
 
 		<!-- Thread results -->
 		{#if activeTab === 'threads'}
 			{#if threads.length === 0}
-				<p class="text-gray-500 text-sm">Aucun sujet trouvé pour « {q} ».</p>
+				<p class="text-gray-500 text-sm">{tFn('search.no_threads_found', { q })}</p>
 			{:else}
 				<div class="space-y-2">
 					{#each threads as thread}
@@ -92,7 +95,7 @@
 		<!-- Post results -->
 		{#if activeTab === 'posts'}
 			{#if posts.length === 0}
-				<p class="text-gray-500 text-sm">Aucun message trouvé pour « {q} ».</p>
+				<p class="text-gray-500 text-sm">{tFn('search.no_posts_found', { q })}</p>
 			{:else}
 				<div class="space-y-2">
 					{#each posts as post}
@@ -100,7 +103,7 @@
 							class="block rounded-lg border border-gray-800 bg-gray-900 px-5 py-4 hover:border-indigo-700 transition-colors">
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex-1 min-w-0">
-									<p class="text-xs text-gray-500 mb-1">Dans : {post.thread_title}</p>
+									<p class="text-xs text-gray-500 mb-1">{tFn('search.in_thread', { title: post.thread_title })}</p>
 									{#if post.headline}
 										<p class="text-sm text-gray-300">
 											{@html post.headline}
@@ -118,7 +121,7 @@
 			{/if}
 		{/if}
 	{:else}
-		<p class="text-gray-500 text-sm">Entrez un terme pour rechercher dans les sujets et messages.</p>
+		<p class="text-gray-500 text-sm">{tFn('search.empty_state')}</p>
 	{/if}
 </div>
 

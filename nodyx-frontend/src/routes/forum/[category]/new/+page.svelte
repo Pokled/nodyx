@@ -4,6 +4,9 @@
 	import type { ActionData, PageData } from './$types';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
+	import { t } from '$lib/i18n';
+
+	const tFn = $derived($t)
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -54,12 +57,12 @@
 </script>
 
 <svelte:head>
-	<title>Nouveau sujet — Nodyx</title>
+	<title>{tFn('forum.create_topic')} — Nodyx</title>
 </svelte:head>
 
 <div class="max-w-3xl">
-	<a href="/forum/{finalCategoryId}" class="text-sm text-gray-500 hover:text-gray-300">← Retour</a>
-	<h1 class="mt-2 text-2xl font-bold text-white mb-6">Nouveau sujet</h1>
+	<a href="/forum/{finalCategoryId}" class="text-sm text-gray-500 hover:text-gray-300">{tFn('common.back')}</a>
+	<h1 class="mt-2 text-2xl font-bold text-white mb-6">{tFn('forum.create_topic')}</h1>
 
 	{#if form?.error}
 		<p class="mb-4bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
@@ -80,7 +83,7 @@
 	>
 		<!-- Sélecteur catégorie + sous-catégorie -->
 		<div>
-			<label class="block text-sm text-gray-400 mb-2">Catégorie</label>
+			<label class="block text-sm text-gray-400 mb-2">{tFn('forum.category')}</label>
 			<div class="flex flex-wrap gap-2">
 				<select
 					onchange={onParentChange}
@@ -95,7 +98,7 @@
 						onchange={(e) => selectedSubId = (e.currentTarget as HTMLSelectElement).value || null}
 						class="flex-1 min-w-[180px]bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
 					>
-						<option value="">— Sans sous-catégorie —</option>
+						<option value="">{tFn('forum.no_subcategory')}</option>
 						{#each subcategories as sub}
 							<option value={sub.id} selected={sub.id === selectedSubId}>{sub.name}</option>
 						{/each}
@@ -107,7 +110,7 @@
 
 		<div>
 			<label for="title" class="block text-sm text-gray-400 mb-1">
-				Titre <span class="text-gray-600 text-xs">(3–300 caractères)</span>
+				{tFn('forum.title_label')} <span class="text-gray-600 text-xs">{tFn('forum.title_hint')}</span>
 			</label>
 			<input
 				id="title"
@@ -116,16 +119,16 @@
 				required
 				minlength="3"
 				maxlength="300"
-				placeholder="Titre de votre sujet..."
+				placeholder={tFn('forum.title_placeholder')}
 				class="w-fullbg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
 			/>
 		</div>
 
 		<div>
-			<label class="block text-sm text-gray-400 mb-2">Message</label>
+			<label class="block text-sm text-gray-400 mb-2">{tFn('forum.message_label')}</label>
 			<NodyxEditor
 				name="content"
-				placeholder="Rédigez votre message..."
+				placeholder={tFn('forum.message_placeholder')}
 			/>
 		</div>
 
@@ -167,15 +170,15 @@
 					class="flex items-center gap-2 px-3 py-2border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
 				>
 					<span>📊</span>
-					<span>Joindre un sondage à ce sujet <span class="text-gray-600 text-xs">(optionnel)</span></span>
+					<span>{tFn('forum.attach_poll')} <span class="text-gray-600 text-xs">{tFn('common.optional')}</span></span>
 				</button>
 			{:else}
 				<div class="border border-indigo-900/50 bg-gray-900/50 p-4">
 					<div class="flex items-center justify-between mb-3">
-						<span class="text-sm font-medium text-indigo-300">📊 Sondage joint</span>
+						<span class="text-sm font-medium text-indigo-300">{tFn('forum.poll_attached')}</span>
 						{#if pollConfig}
 							<div class="flex items-center gap-2">
-								<span class="text-xs text-green-400">✓ Configuré</span>
+								<span class="text-xs text-green-400">{tFn('forum.poll_configured')}</span>
 								<button type="button" onclick={() => { pollConfig = null; showPollSection = false; }}
 									class="text-xs text-gray-500 hover:text-red-400 transition-colors">Retirer</button>
 							</div>
@@ -195,7 +198,7 @@
 						<div class="text-sm text-gray-400">
 							<span class="font-medium text-white">{pollConfig.title}</span>
 							<span class="ml-2 text-gray-600">·</span>
-							<span class="ml-2">{pollConfig.options.length} options</span>
+							<span class="ml-2">{tFn('forum.poll_n_options', { n: String(pollConfig.options.length) })}</span>
 							<button type="button" onclick={() => pollConfig = null}
 								class="ml-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Modifier</button>
 						</div>
@@ -213,7 +216,7 @@
 				disabled={submitting}
 				class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 text-sm font-semibold text-white transition-colors"
 			>
-				{submitting ? 'Publication...' : 'Publier le sujet'}
+				{submitting ? tFn('common.publishing') : tFn('forum.publish_topic')}
 			</button>
 			<a href="/forum/{finalCategoryId}" class="bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">Annuler</a>
 		</div>

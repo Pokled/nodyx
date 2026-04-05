@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
   import { fade, fly } from 'svelte/transition'
   import { flip } from 'svelte/animate'
 
@@ -49,29 +52,29 @@
 
   // ── Type descriptors ─────────────────────────────────────────────────────────
 
-  const TYPE_INFO = [
+  const TYPE_INFO = $derived([
     {
       type:    'choice' as PollType,
       icon:    '📊',
-      label:   'Choix',
-      desc:    'Vote classique — une ou plusieurs options. Résultats en temps réel avec barres de progression.',
-      example: 'Quelle fonctionnalité en priorité ? Quelle heure pour le meeting ?',
+      label:   tFn('poll.type_choice_label'),
+      desc:    tFn('poll.type_choice_desc'),
+      example: tFn('poll.type_choice_example'),
     },
     {
       type:    'schedule' as PollType,
       icon:    '📅',
-      label:   'Planning',
-      desc:    'Style Doodle — chaque participant vote OUI / PEUT-ÊTRE / NON sur des créneaux. Le meilleur créneau est mis en avant.',
-      example: 'Disponibilité pour la réunion vendredi, samedi ou dimanche ?',
+      label:   tFn('poll.type_schedule_label'),
+      desc:    tFn('poll.type_schedule_desc'),
+      example: tFn('poll.type_schedule_example'),
     },
     {
       type:    'ranking' as PollType,
       icon:    '🏆',
-      label:   'Classement',
-      desc:    'Glisse pour classer les options par ordre de préférence. Score calculé automatiquement.',
-      example: 'Votre film préféré de la soirée ? Quel projet attaquer en premier ?',
+      label:   tFn('poll.type_ranking_label'),
+      desc:    tFn('poll.type_ranking_desc'),
+      example: tFn('poll.type_ranking_example'),
     },
-  ]
+  ])
 
   // ── Option management ────────────────────────────────────────────────────────
 
@@ -109,7 +112,7 @@
       const end    = new Date(start.getTime() + 60 * 60 * 1000) // +1h
       return {
         id:          crypto.randomUUID(),
-        label:       `${new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(start)} à ${time}`,
+        label:       `${new Intl.DateTimeFormat([], { weekday: 'long', day: 'numeric', month: 'long' }).format(start)} à ${time}`,
         description: '',
         image_url:   '',
         date_start:  start.toISOString().slice(0, 16),
@@ -238,12 +241,12 @@
 
           <!-- Titre -->
           <div class="field">
-            <label for="poll-title">Question *</label>
+            <label for="poll-title">{tFn('poll.question_label')}</label>
             <input
               id="poll-title"
               type="text"
               bind:value={title}
-              placeholder="Quelle est votre question ?"
+              placeholder={tFn('poll.question_placeholder')}
               maxlength="500"
               autofocus
             />
@@ -253,21 +256,21 @@
           <div class="field">
             <label for="poll-desc">Description <span class="optional">(optionnel)</span></label>
             <textarea id="poll-desc" bind:value={description} rows="2"
-              placeholder="Contexte supplémentaire…"></textarea>
+              placeholder={tFn('poll.description_placeholder')}></textarea>
           </div>
 
           <!-- Générateur rapide de créneaux (schedule) -->
           {#if pollType === 'schedule'}
             <div class="bulk-generator">
-              <h4>Générateur de créneaux</h4>
+              <h4>{tFn('poll.schedule.slot_generator_title')}</h4>
               <div class="bulk-row">
                 <div class="field">
-                  <label>Date</label>
+                  <label>{tFn('common.date')}</label>
                   <input type="date" bind:value={bulkDate} />
                 </div>
                 <div class="field">
-                  <label>Horaires (HH:MM, séparés par des virgules)</label>
-                  <input type="text" bind:value={bulkTimeSlots} placeholder="09:00,14:00,18:00" />
+                  <label>{tFn('poll.schedule.times_label')}</label>
+                  <input type="text" bind:value={bulkTimeSlots} placeholder={tFn('poll.schedule.times_placeholder')} />
                 </div>
               </div>
               <button class="btn-generate" onclick={generateScheduleSlots} disabled={!bulkDate}>
@@ -281,7 +284,7 @@
             <div class="options-header">
               <h4>Options * <span class="optional">({options.filter(o => o.label.trim()).length}/{options.length})</span></h4>
               {#if options.length < 20}
-                <button class="btn-add-opt" onclick={addOption}>+ Ajouter</button>
+                <button class="btn-add-opt" onclick={addOption}>{tFn('poll.add_option_button')}</button>
               {/if}
             </div>
 
@@ -303,7 +306,7 @@
                         <input
                           type="text"
                           bind:value={opt.label}
-                          placeholder="Libellé du créneau"
+                          placeholder={tFn('poll.schedule.slot_label_placeholder')}
                           class="input-label-sched"
                         />
                       </div>
@@ -311,14 +314,14 @@
                       <input
                         type="text"
                         bind:value={opt.label}
-                        placeholder="Option {i + 1}"
+                        placeholder={tFn('poll.option_placeholder', { n: String(i + 1) })}
                         maxlength="250"
                       />
                       {#if opt.label.trim()}
                         <input
                           type="text"
                           bind:value={opt.description}
-                          placeholder="Description courte (optionnel)"
+                          placeholder={tFn('poll.option_description_placeholder')}
                           maxlength="200"
                           class="input-opt-desc"
                         />
@@ -328,12 +331,12 @@
 
                   <!-- Move up / down -->
                   <div class="opt-move">
-                    <button onclick={() => moveOption(i, i - 1)} disabled={i === 0} title="Monter">↑</button>
-                    <button onclick={() => moveOption(i, i + 1)} disabled={i === options.length - 1} title="Descendre">↓</button>
+                    <button onclick={() => moveOption(i, i - 1)} disabled={i === 0} title={tFn('common.move_up_tooltip')}>↑</button>
+                    <button onclick={() => moveOption(i, i + 1)} disabled={i === options.length - 1} title={tFn('common.move_down_tooltip')}>↓</button>
                   </div>
 
                   {#if options.length > 2}
-                    <button class="opt-remove" onclick={() => removeOption(i)} title="Supprimer">✕</button>
+                    <button class="opt-remove" onclick={() => removeOption(i)} title={tFn('common.delete_tooltip')}>✕</button>
                   {/if}
                 </div>
               {/each}
@@ -343,17 +346,17 @@
 
         <!-- Colonne droite — paramètres -->
         <div class="form-col-settings">
-          <h4>Paramètres</h4>
+          <h4>{tFn('poll.settings_section_title')}</h4>
 
           {#if pollType === 'choice'}
             <label class="toggle-row">
               <input type="checkbox" bind:checked={multiple} />
-              <span>Choix multiples</span>
+              <span>{tFn('poll.multiple_choice_label')}</span>
             </label>
 
             {#if multiple}
               <div class="field sub-field" in:fly={{ y: -6, duration: 150 }}>
-                <label for="max-choices">Max. choix par personne</label>
+                <label for="max-choices">{tFn('poll.max_choices_label')}</label>
                 <input id="max-choices" type="number" bind:value={maxChoices}
                   min="2" max="20" placeholder="Illimité" />
               </div>
@@ -362,16 +365,16 @@
 
           <label class="toggle-row">
             <input type="checkbox" bind:checked={anonymous} />
-            <span>Votes anonymes</span>
+            <span>{tFn('poll.anonymous_votes_label')}</span>
           </label>
 
           <label class="toggle-row">
             <input type="checkbox" bind:checked={showResults} />
-            <span>Afficher les résultats avant vote</span>
+            <span>{tFn('poll.show_results_before_vote_label')}</span>
           </label>
 
           <div class="field">
-            <label for="closes-at">Fermeture automatique</label>
+            <label for="closes-at">{tFn('poll.auto_close_label')}</label>
             <input id="closes-at" type="datetime-local" bind:value={closesAt} />
           </div>
 
@@ -384,13 +387,13 @@
             {#if pollType === 'choice' && multiple}
               <div class="recap-row">
                 <span class="recap-icon">☑</span>
-                <span>Choix multiples{maxChoices ? ` (max ${maxChoices})` : ''}</span>
+                <span>{tFn('poll.recap_multiple_choices', { max: maxChoices ? ` (max ${maxChoices})` : '' })}</span>
               </div>
             {/if}
             {#if anonymous}
               <div class="recap-row">
                 <span class="recap-icon">🔒</span>
-                <span>Votes anonymes</span>
+                <span>{tFn('poll.anonymous_votes_label')}</span>
               </div>
             {/if}
             {#if closesAt}
@@ -409,7 +412,7 @@
   <!-- Footer -->
   {#if step === 'form'}
     <div class="creator-footer">
-      <button class="btn-back" onclick={() => step = 'type'}>← Type</button>
+      <button class="btn-back" onclick={() => step = 'type'}>{tFn('poll.back_to_type_button')}</button>
 
       {#if error}
         <span class="footer-error">{error}</span>

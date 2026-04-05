@@ -20,6 +20,8 @@
 	import MiniProfileCard from '$lib/components/MiniProfileCard.svelte';
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects';
 	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
+	import { t } from '$lib/i18n';
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
 
@@ -193,12 +195,12 @@
 	let voiceError = $state<string | null>(null);
 	let voiceChannelMembers = $state<Record<string, { userId: string; username: string; avatar: string | null; seatIndex?: number }[]>>({});
 
-	const VOICE_ERRORS: Record<string, string> = {
-		INSECURE: 'WebRTC exige HTTPS ou localhost. Accède via http://localhost:5173 sur ce PC, ou attends la mise en production avec Caddy (HTTPS).',
-		DENIED:   'Microphone bloqué. Vérifier : 1) Paramètres Windows → Confidentialité → Microphone → autoriser les applis bureau ; 2) Icône ⓘ dans la barre d\'adresse → Paramètres du site → Microphone → Autoriser.',
-		NOTFOUND: 'Aucun microphone détecté sur cet appareil.',
-		BUSY:     'Microphone utilisé par une autre application. Fermez-la et réessayez.',
-	};
+	const VOICE_ERRORS = $derived({
+		INSECURE: tFn('chat.voice.insecure'),
+		DENIED:   tFn('chat.voice.denied'),
+		NOTFOUND: tFn('chat.voice.notfound'),
+		BUSY:     tFn('chat.voice.busy'),
+	});
 
 	// Sélectionner un salon vocal (sidebar) — ne connecte pas, ne déconnecte pas
 	function handleJoinVoice(ch: Channel) {
@@ -317,7 +319,7 @@
 		});
 
 		sock.on('chat:blocked', ({ reason }: { reason: string }) => {
-			blockedNotice = reason ?? 'Message refusé : contenu interdit';
+			blockedNotice = reason ?? tFn('chat.message_refused');
 			if (blockedTimer) clearTimeout(blockedTimer);
 			blockedTimer = setTimeout(() => { blockedNotice = null; }, 5000);
 		});
@@ -983,7 +985,7 @@
 						{#if $p2pStatus === 'p2p'}
 							<div class="flex items-center gap-1.5 px-2 h-6 cursor-default"
 							     style="background: rgba(234,179,8,.06); border: 1px solid rgba(234,179,8,.2)"
-							     title="{$p2pPeerCount} pair{$p2pPeerCount > 1 ? 's' : ''} connecté{$p2pPeerCount > 1 ? 's' : ''} directement">
+							     title="{tFn('chat.p2p_peers', { n: String($p2pPeerCount) })}">
 								<span class="relative flex h-1.5 w-1.5 shrink-0">
 									<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background: #eab308"></span>
 									<span class="relative inline-flex h-1.5 w-1.5 rounded-full" style="background: #eab308"></span>
@@ -1031,7 +1033,7 @@
 					<p class="text-center text-xs text-gray-600 py-2">Chargement…</p>
 				{/if}
 				{#if noMoreHistory && messages.length > 0}
-					<p class="text-center text-xs text-gray-700 py-2">— Début de l'historique —</p>
+					<p class="text-center text-xs text-gray-700 py-2">{tFn('chat.history_start')}</p>
 				{/if}
 
 				{#each messageGroups as group (group.day)}
@@ -1103,12 +1105,12 @@
 							{#if msg.reply_to_id && !msg.is_deleted}
 								<div class="flex items-center gap-2 mb-1.5 pl-2 py-0.5 opacity-70" style="border-left: 2px solid #7c3aed">
 									<span class="text-[10px] font-bold shrink-0" style="color: #a78bfa">{msg.reply_to_username}</span>
-									<span class="text-[10px] truncate" style="color: #4b5563">{msg.reply_to_content?.replace(/<[^>]*>/g, '').slice(0, 100) ?? '— message supprimé —'}</span>
+									<span class="text-[10px] truncate" style="color: #4b5563">{msg.reply_to_content?.replace(/<[^>]*>/g, '').slice(0, 100) ?? tFn('chat.deleted')}</span>
 								</div>
 							{/if}
 
 							{#if msg.is_deleted}
-								<em class="text-xs text-gray-600 italic select-none">— message supprimé —</em>
+								<em class="text-xs text-gray-600 italic select-none">{tFn('chat.deleted')}</em>
 							{:else if editingMsg?.id === msg.id}
 								<div class="bg-gray-800 p-2 rounded-xl border border-indigo-500/50 mt-1 shadow-2xl">
 									<textarea
@@ -1253,8 +1255,8 @@
 						<div class="w-12 h-12 flex items-center justify-center" style="background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.15)">
 							<svg class="w-6 h-6" fill="none" stroke="#7c3aed" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
 						</div>
-						<p class="text-sm font-semibold text-center" style="color: #4b5563; font-family: 'Space Grotesk', sans-serif">Aucun message pour l'instant</p>
-						<p class="text-xs text-center" style="color: #374151">Soyez le premier à écrire dans <span style="color: #a78bfa"># {selectedChannel.name}</span></p>
+						<p class="text-sm font-semibold text-center" style="color: #4b5563; font-family: 'Space Grotesk', sans-serif">{tFn('chat.no_messages')}</p>
+						<p class="text-xs text-center" style="color: #374151">{tFn('chat.empty_channel', { channel: selectedChannel.name })}</p>
 					</div>
 				{/if}
 			</div>
@@ -1289,11 +1291,11 @@
 						</div>
 						<span class="text-[10px] font-semibold italic" style="color: #4b5563">
 							{#if typingUsers.length === 1}
-								<span style="color: #a78bfa">{typingUsers[0]}</span> écrit…
+								<span style="color: #a78bfa">{typingUsers[0]}</span> {tFn('chat.typing_suffix_one')}
 							{:else if typingUsers.length === 2}
-								<span style="color: #a78bfa">{typingUsers[0]}</span> et <span style="color: #a78bfa">{typingUsers[1]}</span> écrivent…
+								<span style="color: #a78bfa">{typingUsers[0]}</span> {tFn('chat.typing_and')} <span style="color: #a78bfa">{typingUsers[1]}</span> {tFn('chat.typing_suffix_plural')}
 							{:else}
-								Plusieurs personnes écrivent…
+								{tFn('chat.typing_many')}
 							{/if}
 						</span>
 					</div>
@@ -1341,7 +1343,7 @@
 							{#if !gifProvider}
 								<!-- No key configured — setup instructions -->
 								<div class="p-4 space-y-3">
-									<p class="text-xs font-semibold text-white">GIFs non configurés</p>
+									<p class="text-xs font-semibold text-white">{tFn('chat.gif_not_configured')}</p>
 									<p class="text-xs text-gray-400 leading-relaxed">
 										Ajoutez une clé gratuite dans <code class="bg-gray-800 px-1 rounded text-indigo-300">/var/www/nexus/nodyx-frontend/.env</code> puis rebuild :
 									</p>
@@ -1363,7 +1365,7 @@
 								<div class="p-2 border-b border-gray-800">
 									<input
 										type="text"
-										placeholder="Rechercher un GIF…"
+										placeholder={tFn('chat.gif_search')}
 										bind:value={gifQuery}
 										oninput={onGifInput}
 										class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-600"
@@ -1371,11 +1373,11 @@
 								</div>
 								<div class="p-2 grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto" style="scrollbar-width:thin;">
 									{#if gifLoading}
-										<div class="col-span-3 text-center py-4 text-xs text-gray-500">Recherche…</div>
+										<div class="col-span-3 text-center py-4 text-xs text-gray-500">{tFn('chat.gif_searching')}</div>
 									{:else if gifResults.length === 0 && gifQuery}
-										<div class="col-span-3 text-center py-4 text-xs text-gray-500">Aucun résultat</div>
+										<div class="col-span-3 text-center py-4 text-xs text-gray-500">{tFn('chat.gif_no_results')}</div>
 									{:else if gifResults.length === 0}
-										<div class="col-span-3 text-center py-4 text-xs text-gray-500">Tapez pour rechercher</div>
+										<div class="col-span-3 text-center py-4 text-xs text-gray-500">{tFn('chat.gif_type_to_search')}</div>
 									{:else}
 										{#each gifResults as gif (gif.id)}
 											<button
@@ -1388,7 +1390,7 @@
 									{/if}
 								</div>
 								<div class="px-3 py-1.5 border-t border-gray-800 text-[10px] text-gray-600 text-right capitalize">
-									Powered by {gifProvider}
+									{tFn('chat.gif_powered_by', { provider: gifProvider })}
 								</div>
 							{/if}
 						</div>
@@ -1416,7 +1418,7 @@
 				{#if isRateLimited}
 					<div class="flex items-center gap-2 px-3 py-2 mb-1 bg-red-900/40 border border-red-700/60 rounded-lg text-xs text-red-300">
 						<span>⏱</span>
-						<span>Anti-spam actif — réessaie dans {Math.ceil((rateLimitedUntil - Date.now()) / 1000)} s</span>
+						<span>{tFn('chat.antispam', { s: String(Math.ceil((rateLimitedUntil - Date.now()) / 1000)) })}</span>
 					</div>
 				{/if}
 
@@ -1426,7 +1428,7 @@
 						id="chat-input"
 						class="flex-1 bg-transparent py-1.5 text-sm resize-none outline-none max-h-32 disabled:opacity-50"
 						style="color: #e2e8f0; font-family: inherit; scrollbar-width: thin"
-						placeholder={isRateLimited ? 'Anti-spam actif…' : `Message dans # ${selectedChannel.name}  ·  /roll /flip /8ball /rps`}
+						placeholder={isRateLimited ? tFn('chat.antispam_loading') : tFn('chat.input_placeholder', { channel: selectedChannel.name })}
 						rows={1}
 						maxlength={2000}
 						bind:value={inputText}
@@ -1442,14 +1444,14 @@
 						        class="w-7 h-7 flex items-center justify-center text-[10px] font-black uppercase tracking-wide transition-colors"
 						        style="color: {showGifPicker ? '#a78bfa' : '#4b5563'}; background: {showGifPicker ? 'rgba(124,58,237,.12)' : 'transparent'}">GIF</button>
 						<!-- Poll -->
-						<button onclick={() => showPollCreator = true} title="Créer un sondage"
+						<button onclick={() => showPollCreator = true} title={tFn('chat.new_poll')}
 						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
 						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
 						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
 						</button>
 						<!-- Rich editor -->
-						<button onclick={() => showRichModal = true} title="Éditeur riche (Ctrl+Maj+E)"
+						<button onclick={() => showRichModal = true} title={tFn('chat.rich_editor')}
 						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
 						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
 						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
@@ -1461,7 +1463,7 @@
 						<button onclick={sendMessage} disabled={!inputText.trim() || isRateLimited}
 						        class="w-7 h-7 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
 						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, #7c3aed, #0e7490)' : 'rgba(255,255,255,.06)'}; color: {inputText.trim() ? '#fff' : '#4b5563'}"
-						        title={isRateLimited ? 'Anti-spam…' : 'Envoyer (Entrée)'}>
+						        title={isRateLimited ? tFn('chat.antispam_loading') : tFn('chat.send')}>
 							{#if isRateLimited}
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
 							{:else}
@@ -1548,7 +1550,7 @@
 					disabled={!richContent.trim()}
 					class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-sm text-white font-medium transition-colors"
 				>
-					Envoyer
+					{tFn('chat.send')}
 				</button>
 			</div>
 		</div>

@@ -4,9 +4,24 @@
 
     import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$env/static/public';
     import { tick } from 'svelte';
+    import { t, locale, LOCALES, type Locale } from '$lib/i18n';
+    import { get } from 'svelte/store';
+
+    // ── i18n — Svelte 5 runes-compatible reactive wrappers ────────────────────
+    // $t and $locale are legacy store subscriptions; wrapping in $derived ensures
+    // Svelte 5's rune dependency tracker re-renders the component on locale change.
+    const tFn          = $derived($t)
+    const currentLocale = $derived($locale)
 
     // ── Navigation ────────────────────────────────────────────────────────────
     let activeSection = $state('network')
+    let langSaved     = $state(false)
+
+    function setLocale(code: Locale) {
+        locale.setLocale(code)
+        langSaved = true
+        setTimeout(() => langSaved = false, 2000)
+    }
 
     // ── Nodyx Signet ──────────────────────────────────────────────────────────
     type SignetDevice = { id: string; label: string; created_at: string; last_used_at: string | null }
@@ -144,7 +159,7 @@
             if (!res.ok) { totpError = j.error ?? 'Code incorrect'; totpLoading = false; return }
             totpEnabled = true; totpStep = 'idle'
             totpCode = ''; totpQr = null; totpSecret = null
-            totpSuccess = '2FA activé avec succès !'
+            totpSuccess = get(t)('settings.security.2fa.success_enabled')
             setTimeout(() => totpSuccess = '', 4000)
         } catch { totpError = 'Erreur réseau.' }
         totpLoading = false
@@ -164,7 +179,7 @@
             if (!res.ok) { totpError = j.error ?? 'Code incorrect'; totpLoading = false; return }
             totpEnabled = false; totpStep = 'idle'
             totpCode = ''
-            totpSuccess = '2FA désactivé.'
+            totpSuccess = get(t)('settings.security.2fa.success_disabled')
             setTimeout(() => totpSuccess = '', 4000)
         } catch { totpError = 'Erreur réseau.' }
         totpLoading = false
@@ -314,21 +329,21 @@
 
         <!-- Header -->
         <div class="sb-header">
-            <a href="/" class="sb-back" title="Retour">
+            <a href="/" class="sb-back" title={tFn('common.back')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 5l-7 7 7 7"/>
                 </svg>
-                Retour
+                {tFn('common.back')}
             </a>
             <div class="sb-title-block">
-                <span class="sb-eyebrow">Mon compte</span>
-                <h1 class="sb-title">Paramètres</h1>
+                <span class="sb-eyebrow">{tFn('settings.my_account')}</span>
+                <h1 class="sb-title">{tFn('settings.title')}</h1>
             </div>
         </div>
 
         <!-- Nav items -->
         <nav class="sb-nav">
-            <div class="sb-section-label">Général</div>
+            <div class="sb-section-label">{tFn('settings.nav.general')}</div>
 
             <button class="sb-item {activeSection === 'network' ? 'active' : ''}"
                     onclick={() => activeSection = 'network'}>
@@ -337,7 +352,7 @@
                         <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                     </svg>
                 </span>
-                <span class="sb-label">Réseau</span>
+                <span class="sb-label">{tFn('settings.network.label')}</span>
             </button>
 
             <button class="sb-item {activeSection === 'notifications' ? 'active' : ''}"
@@ -347,7 +362,7 @@
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                     </svg>
                 </span>
-                <span class="sb-label">Notifications</span>
+                <span class="sb-label">{tFn('settings.notifications.label')}</span>
                 {#if pushEnabled}
                     <span class="sb-badge-dot" style="background:#4ade80"></span>
                 {/if}
@@ -360,13 +375,13 @@
                         <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
                     </svg>
                 </span>
-                <span class="sb-label">Instances</span>
+                <span class="sb-label">{tFn('settings.instances.label')}</span>
                 {#if linkedSlugs.length > 0}
                     <span class="sb-badge">{linkedSlugs.length}</span>
                 {/if}
             </button>
 
-            <div class="sb-section-label" style="margin-top: 16px">Sécurité</div>
+            <div class="sb-section-label" style="margin-top: 16px">{tFn('settings.nav.security')}</div>
 
             <button class="sb-item {activeSection === 'security' ? 'active' : ''}"
                     onclick={() => activeSection = 'security'}>
@@ -375,7 +390,7 @@
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                     </svg>
                 </span>
-                <span class="sb-label">Double auth (2FA)</span>
+                <span class="sb-label">{tFn('settings.security.label')}</span>
                 {#if totpEnabled}
                     <span class="sb-badge-dot" style="background:#4ade80"></span>
                 {:else if totpLoaded}
@@ -390,13 +405,13 @@
                         <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
                     </svg>
                 </span>
-                <span class="sb-label">Nodyx Signet</span>
+                <span class="sb-label">{tFn('settings.signet.label')}</span>
                 {#if signetDevices.length > 0}
                     <span class="sb-badge">{signetDevices.length}</span>
                 {/if}
             </button>
 
-            <div class="sb-section-label" style="margin-top: 16px">Préférences</div>
+            <div class="sb-section-label" style="margin-top: 16px">{tFn('settings.nav.preferences')}</div>
 
             <button class="sb-item {activeSection === 'language' ? 'active' : ''}"
                     onclick={() => activeSection = 'language'}>
@@ -405,16 +420,15 @@
                         <path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>
                     </svg>
                 </span>
-                <span class="sb-label">Langue</span>
-                <span class="sb-chip">Bientôt</span>
+                <span class="sb-label">{tFn('settings.language.label')}</span>
             </button>
         </nav>
 
         <!-- Footer -->
         <div class="sb-footer">
-            <div class="sb-version">Nodyx v1.9.5</div>
+            <div class="sb-version">{tFn('settings.version')}</div>
             <a href="https://nodyx.dev" target="_blank" rel="noopener" class="sb-docs-link">
-                Documentation →
+                {tFn('settings.docs')}
             </a>
         </div>
     </aside>
@@ -432,8 +446,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="s-pane-title">Réseau & Infrastructure</h2>
-                    <p class="s-pane-desc">Diagnostics en temps réel de la connectivité, du relay P2P et de la latence backend.</p>
+                    <h2 class="s-pane-title">{tFn('settings.network.title')}</h2>
+                    <p class="s-pane-desc">{tFn('settings.network.desc')}</p>
                 </div>
             </div>
             <div class="s-card">
@@ -452,8 +466,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="s-pane-title">Notifications</h2>
-                    <p class="s-pane-desc">Recevez des alertes même lorsque l'onglet est fermé — mentions, DMs, réponses.</p>
+                    <h2 class="s-pane-title">{tFn('settings.notifications.title')}</h2>
+                    <p class="s-pane-desc">{tFn('settings.notifications.desc')}</p>
                 </div>
             </div>
 
@@ -461,11 +475,11 @@
             <div class="s-card">
                 <div class="s-row">
                     <div class="s-row-info">
-                        <div class="s-row-title">Notifications Push</div>
+                        <div class="s-row-title">{tFn('settings.notifications.push.title')}</div>
                         <div class="s-row-sub">
                             {pushEnabled
-                                ? 'Votre navigateur est abonné. Vous recevez des alertes en temps réel.'
-                                : 'Activez pour recevoir des alertes même onglet fermé.'}
+                                ? tFn('settings.notifications.push.enabled_desc')
+                                : tFn('settings.notifications.push.disabled_desc')}
                         </div>
                     </div>
                     <button
@@ -485,7 +499,7 @@
                 {#if !vapidPublicKey}
                 <div class="s-info-banner">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-                    Push non configuré sur ce serveur — définissez <code>VAPID_PUBLIC_KEY</code> dans l'environnement.
+                    {tFn('settings.notifications.push.not_configured_hint')}
                 </div>
                 {/if}
                 {#if pushError}
@@ -495,13 +509,12 @@
 
             <div class="s-card s-card-muted">
                 <p class="s-hint-text">
-                    Les notifications n'envoient <strong>aucune donnée à des services tiers</strong>.
-                    Le serveur Nodyx envoie directement au navigateur via Web Push (RFC 8030).
+                    {tFn('settings.notifications.privacy')}
                 </p>
             </div>
             {:else if !pushSupported}
             <div class="s-card s-card-muted">
-                <p class="s-hint-text">Votre navigateur ne supporte pas les notifications Push.</p>
+                <p class="s-hint-text">{tFn('settings.notifications.push.unsupported')}</p>
             </div>
             {/if}
         </div>
@@ -517,8 +530,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="s-pane-title">Galaxy Bar — Instances</h2>
-                    <p class="s-pane-desc">Gérez les instances Nodyx épinglées dans votre barre latérale gauche pour un accès rapide.</p>
+                    <h2 class="s-pane-title">{tFn('settings.instances.title')}</h2>
+                    <p class="s-pane-desc">{tFn('settings.instances.desc')}</p>
                 </div>
             </div>
 
@@ -554,22 +567,22 @@
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:12px">
                     <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
                 </svg>
-                <p>Aucune instance liée pour l'instant.</p>
-                <p style="font-size:11px;opacity:0.5;margin-top:4px">Ajoutez une instance ci-dessous pour l'épingler dans la Galaxy Bar.</p>
+                <p>{tFn('settings.instances.empty')}</p>
+                <p style="font-size:11px;opacity:0.5;margin-top:4px">{tFn('settings.instances.empty_hint')}</p>
             </div>
             {/if}
 
             <!-- Ajouter -->
             {#if directoryInstances.length > 0}
             <div class="s-card">
-                <div class="s-row-title" style="margin-bottom:10px">Ajouter une instance</div>
+                <div class="s-row-title" style="margin-bottom:10px">{tFn('settings.instances.add_title')}</div>
                 <div class="s-add-instance-row">
                     <div class="s-input-wrap" style="flex:1;position:relative">
                         <input
                             list="directory-slugs"
                             type="text"
                             bind:value={newSlug}
-                            placeholder="slug — ex: french-godot"
+                            placeholder={tFn('settings.instances.placeholder')}
                             onkeydown={(e) => e.key === 'Enter' && addInstance()}
                             class="s-input"
                         />
@@ -587,7 +600,7 @@
                     <p class="s-field-error">{slugError}</p>
                 {/if}
                 <p class="s-hint-text" style="margin-top:10px">
-                    Le slug est le sous-domaine — ex: <code>french-godot</code> pour <code>french-godot.nodyx.org</code>
+                    {tFn('settings.instances.slug_hint', { slug: 'french-godot' })}
                 </p>
             </div>
             {/if}
@@ -605,8 +618,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="s-pane-title">Double authentification</h2>
-                    <p class="s-pane-desc">Protégez votre compte avec un code à usage unique (TOTP) — Google Authenticator, Aegis, Bitwarden.</p>
+                    <h2 class="s-pane-title">{tFn('settings.security.title')}</h2>
+                    <p class="s-pane-desc">{tFn('settings.security.desc')}</p>
                 </div>
             </div>
 
@@ -619,16 +632,16 @@
             <div class="s-card">
                 <div class="s-row">
                     <div class="s-row-info">
-                        <div class="s-row-title">Authentification à deux facteurs</div>
+                        <div class="s-row-title">{tFn('settings.security.2fa.title')}</div>
                         <div class="s-row-sub">
                             {totpEnabled
-                                ? 'Votre compte est protégé par un second facteur d\'authentification.'
-                                : 'Non activé — votre compte est vulnérable si votre mot de passe est compromis.'}
+                                ? tFn('settings.security.2fa.enabled_desc')
+                                : tFn('settings.security.2fa.disabled_desc')}
                         </div>
                     </div>
                     <div class="s-status-pill {totpEnabled ? 'active' : 'inactive'}">
                         <span class="s-status-dot"></span>
-                        {totpEnabled ? 'Actif' : 'Inactif'}
+                        {totpEnabled ? tFn('common.active') : tFn('common.inactive')}
                     </div>
                 </div>
                 {#if totpError}
@@ -639,13 +652,13 @@
                         <button
                             onclick={() => { totpStep = 'disable'; totpCode = ''; totpError = '' }}
                             class="s-ghost-danger-btn"
-                        >Désactiver le 2FA</button>
+                        >{tFn('settings.security.2fa.disable')}</button>
                     {:else}
                         <button
                             onclick={totpStartSetup}
                             disabled={totpLoading}
                             class="s-primary-btn"
-                        >{totpLoading ? '…' : 'Activer le 2FA'}</button>
+                        >{totpLoading ? '…' : tFn('settings.security.2fa.enable')}</button>
                     {/if}
                 </div>
             </div>
@@ -656,8 +669,8 @@
                 <div class="totp-step">
                     <div class="totp-step-num">1</div>
                     <div class="totp-step-content">
-                        <p class="s-row-title">Scannez le QR code</p>
-                        <p class="s-row-sub" style="margin-bottom:16px">Ouvrez votre application d'authentification et scannez.</p>
+                        <p class="s-row-title">{tFn('settings.security.2fa.step1')}</p>
+                        <p class="s-row-sub" style="margin-bottom:16px">{tFn('settings.security.2fa.step1_hint')}</p>
                         {#if totpQr}
                         <div class="totp-qr-wrap">
                             <img src={totpQr} alt="QR code 2FA" />
@@ -665,7 +678,7 @@
                         {/if}
                         {#if totpSecret}
                         <details style="margin-top:12px">
-                            <summary class="s-hint-text" style="cursor:pointer;user-select:none">Saisie manuelle (clé secrète)</summary>
+                            <summary class="s-hint-text" style="cursor:pointer;user-select:none">{tFn('settings.security.2fa.manual_key')}</summary>
                             <code class="totp-secret">{totpSecret}</code>
                         </details>
                         {/if}
@@ -677,8 +690,8 @@
                 <div class="totp-step">
                     <div class="totp-step-num">2</div>
                     <div class="totp-step-content">
-                        <p class="s-row-title">Confirmez avec le code</p>
-                        <p class="s-row-sub" style="margin-bottom:12px">Saisissez le code à 6 chiffres affiché dans votre app.</p>
+                        <p class="s-row-title">{tFn('settings.security.2fa.step2')}</p>
+                        <p class="s-row-sub" style="margin-bottom:12px">{tFn('settings.security.2fa.step2_hint')}</p>
                         {#if totpError}
                             <div class="s-error-banner" style="margin-bottom:10px">{totpError}</div>
                         {/if}
@@ -694,9 +707,9 @@
                                 class="s-input totp-input"
                             />
                             <button onclick={totpConfirm} disabled={totpLoading || totpCode.length < 6} class="s-primary-btn">
-                                {totpLoading ? '…' : 'Activer'}
+                                {totpLoading ? '…' : tFn('common.enable')}
                             </button>
-                            <button onclick={totpCancel} class="s-ghost-btn">Annuler</button>
+                            <button onclick={totpCancel} class="s-ghost-btn">{tFn('common.cancel')}</button>
                         </div>
                     </div>
                 </div>
@@ -705,8 +718,8 @@
             <!-- Disable -->
             {:else if totpStep === 'disable'}
             <div class="s-card" style="border-color: rgba(239,68,68,0.2)">
-                <p class="s-row-title">Désactiver le 2FA</p>
-                <p class="s-row-sub" style="margin-bottom:16px">Confirmez avec le code de votre application pour désactiver la protection.</p>
+                <p class="s-row-title">{tFn('settings.security.2fa.disable_title')}</p>
+                <p class="s-row-sub" style="margin-bottom:16px">{tFn('settings.security.2fa.disable_hint')}</p>
                 {#if totpError}
                     <div class="s-error-banner" style="margin-bottom:12px">{totpError}</div>
                 {/if}
@@ -723,9 +736,9 @@
                     />
                     <button onclick={totpDisable} disabled={totpLoading || totpCode.length < 6}
                             class="s-primary-btn" style="background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.3)">
-                        {totpLoading ? '…' : 'Désactiver'}
+                        {totpLoading ? '…' : tFn('common.disable')}
                     </button>
-                    <button onclick={totpCancel} class="s-ghost-btn">Annuler</button>
+                    <button onclick={totpCancel} class="s-ghost-btn">{tFn('common.cancel')}</button>
                 </div>
             </div>
             {/if}
@@ -733,8 +746,7 @@
             <!-- Info -->
             <div class="s-card s-card-muted">
                 <p class="s-hint-text">
-                    Les codes TOTP (RFC 6238) sont générés hors-ligne sur votre appareil.
-                    Aucune donnée ne transite par un serveur tiers.
+                    {tFn('settings.security.2fa.privacy')}
                 </p>
             </div>
         </div>
@@ -750,8 +762,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="s-pane-title">Nodyx Signet</h2>
-                    <p class="s-pane-desc">Connexion sans mot de passe via votre téléphone. Clé ECDSA P-256 stockée localement — elle ne quitte jamais votre appareil.</p>
+                    <h2 class="s-pane-title">{tFn('settings.signet.title')}</h2>
+                    <p class="s-pane-desc">{tFn('settings.signet.desc')}</p>
                 </div>
             </div>
 
@@ -765,9 +777,9 @@
                         <div class="s-instance-info">
                             <div class="s-instance-name">{device.label}</div>
                             <div class="s-instance-url">
-                                Enregistré le {new Date(device.created_at).toLocaleDateString('fr-FR')}
+                                {tFn('settings.signet.registered_at', { date: new Date(device.created_at).toLocaleDateString() })}
                                 {#if device.last_used_at}
-                                    · Utilisé le {new Date(device.last_used_at).toLocaleDateString('fr-FR')}
+                                    {tFn('settings.signet.used_at', { date: new Date(device.last_used_at).toLocaleDateString() })}
                                 {/if}
                             </div>
                         </div>
@@ -775,7 +787,7 @@
                             onclick={() => revokeSignetDevice(device.id)}
                             disabled={signetRevoking === device.id}
                             class="s-danger-btn"
-                        >{signetRevoking === device.id ? '…' : 'Révoquer'}</button>
+                        >{signetRevoking === device.id ? '…' : tFn('common.revoke')}</button>
                     </div>
                     {/each}
                 </div>
@@ -784,8 +796,8 @@
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:12px">
                         <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
                     </svg>
-                    <p>Aucun appareil Signet enregistré.</p>
-                    <p style="font-size:11px;opacity:0.5;margin-top:4px">Générez un token ci-dessous pour associer votre téléphone.</p>
+                    <p>{tFn('settings.signet.no_devices')}</p>
+                    <p style="font-size:11px;opacity:0.5;margin-top:4px">{tFn('settings.signet.no_devices_hint')}</p>
                 </div>
                 {/if}
             {:else}
@@ -798,37 +810,37 @@
             <div class="s-card signet-add-card">
                 <div class="s-row">
                     <div class="s-row-info">
-                        <div class="s-row-title">Ajouter un appareil</div>
-                        <div class="s-row-sub">Token à usage unique, valable 15 minutes.</div>
+                        <div class="s-row-title">{tFn('settings.signet.add_device')}</div>
+                        <div class="s-row-sub">{tFn('settings.signet.add_hint')}</div>
                     </div>
                     <button
                         onclick={generateSignetToken}
                         disabled={signetGenerating}
                         class="s-primary-btn signet-gen-btn"
-                    >{signetGenerating ? '…' : '+ Générer'}</button>
+                    >{signetGenerating ? '…' : tFn('common.generate')}</button>
                 </div>
 
                 {#if signetToken}
                 <div class="signet-token-block">
-                    <p class="s-hint-text" style="margin-bottom:12px">Scannez depuis votre téléphone ou ouvrez le lien sur ce navigateur :</p>
+                    <p class="s-hint-text" style="margin-bottom:12px">{tFn('settings.signet.qr_hint')}</p>
                     <div class="signet-qr-wrap">
                         <canvas bind:this={signetQrCanvas}></canvas>
                     </div>
                     {#if signetQrLink}
                     <a href={signetQrLink} target="_blank" class="signet-open-link">
-                        Ouvrir le lien →
+                        {tFn('common.open_link')}
                     </a>
                     {/if}
                     <details style="margin-top:16px">
-                        <summary class="s-hint-text" style="cursor:pointer;user-select:none">Afficher le token texte (saisie manuelle)</summary>
+                        <summary class="s-hint-text" style="cursor:pointer;user-select:none">{tFn('settings.signet.manual_token')}</summary>
                         <div class="signet-token-raw">
                             <code>{signetToken}</code>
                             <button onclick={copySignetToken} class="signet-copy-btn {signetCopied ? 'copied' : ''}">
-                                {signetCopied ? '✓ Copié' : 'Copier'}
+                                {signetCopied ? tFn('common.copied') : tFn('common.copy')}
                             </button>
                         </div>
                     </details>
-                    <p class="s-hint-text" style="margin-top:10px;opacity:0.5">Expire dans 15 minutes · Usage unique</p>
+                    <p class="s-hint-text" style="margin-top:10px;opacity:0.5">{tFn('settings.signet.expiry')}</p>
                 </div>
                 {/if}
             </div>
@@ -845,27 +857,28 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="s-pane-title">Langue de l'interface</h2>
-                    <p class="s-pane-desc">Choisissez la langue d'affichage de Nodyx — français ou anglais.</p>
+                    <h2 class="s-pane-title">{tFn('settings.language.title')}</h2>
+                    <p class="s-pane-desc">{tFn('settings.language.desc')}</p>
                 </div>
             </div>
 
-            <div class="s-card lang-coming-soon">
-                <div class="lang-badge">Bientôt disponible</div>
-                <p style="font-size:14px;color:#6b7280;line-height:1.6;margin-top:12px">
-                    La traduction complète de l'interface (FR / EN) est en cours de développement.<br>
-                    Vous pourrez choisir votre langue ici dès la prochaine version majeure.
-                </p>
+            <div class="s-card">
+                {#if langSaved}
+                <div class="s-success-banner" style="margin-bottom:16px">{tFn('settings.language.saved')}</div>
+                {/if}
                 <div class="lang-flags">
-                    <div class="lang-flag-item active">
-                        <span class="lang-flag">🇫🇷</span>
-                        <span class="lang-flag-label">Français</span>
-                        <span class="lang-flag-active">Actuel</span>
-                    </div>
-                    <div class="lang-flag-item">
-                        <span class="lang-flag" style="opacity:0.35">🇬🇧</span>
-                        <span class="lang-flag-label" style="opacity:0.35">English</span>
-                    </div>
+                    {#each LOCALES as loc}
+                    <button
+                        onclick={() => setLocale(loc.code)}
+                        class="lang-flag-item {currentLocale === loc.code ? 'active' : ''}"
+                    >
+                        <span class="lang-flag">{loc.flag}</span>
+                        <span class="lang-flag-label">{loc.label}</span>
+                        {#if currentLocale === loc.code}
+                        <span class="lang-flag-active">{tFn('common.current')}</span>
+                        {/if}
+                    </button>
+                    {/each}
                 </div>
             </div>
         </div>
@@ -1439,35 +1452,27 @@
 .signet-copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.3); }
 
 /* ── Langue ──────────────────────────────────────────────────────────────── */
-.lang-coming-soon { text-align: center; padding: 36px 24px; }
-.lang-badge {
-    display: inline-flex;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #34d399;
-    background: rgba(16,185,129,0.1);
-    border: 1px solid rgba(16,185,129,0.25);
-    padding: 4px 12px;
-    border-radius: 5px;
-}
 .lang-flags {
     display: flex;
     justify-content: center;
     gap: 16px;
-    margin-top: 24px;
+    padding: 8px 0;
 }
 .lang-flag-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 16px 24px;
+    padding: 16px 28px;
     border-radius: 8px;
     border: 1px solid rgba(255,255,255,0.06);
     background: rgba(255,255,255,0.02);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    color: inherit;
+    font-family: inherit;
 }
+.lang-flag-item:hover { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); }
 .lang-flag-item.active { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.05); }
 .lang-flag { font-size: 28px; }
 .lang-flag-label { font-size: 13px; font-weight: 600; color: #6b7280; }

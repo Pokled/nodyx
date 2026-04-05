@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import type { PageData } from './$types'
 	import { page } from '$app/stores'
 	import { apiFetch } from '$lib/api'
 	import { onMount } from 'svelte'
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props()
 
@@ -195,7 +198,7 @@
 </script>
 
 <svelte:head>
-	<title>Fil d'actu — Nodyx</title>
+	<title>{tFn('feed.title')} — Nodyx</title>
 </svelte:head>
 
 <div class="feed-root">
@@ -203,8 +206,8 @@
 	<div class="feed-header">
 		<div class="feed-header-inner">
 			<div>
-				<h1 class="feed-title">Fil d'actu</h1>
-				<p class="feed-sub">Posts des personnes que vous suivez</p>
+				<h1 class="feed-title">{tFn('feed.title')}</h1>
+				<p class="feed-sub">{tFn('feed.subtitle')}</p>
 			</div>
 			<a href="/discover" class="feed-explore-btn">
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -226,7 +229,7 @@
 						<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
 						</svg>
-						Réponse à <strong>@{replyTo.username}</strong>
+						{tFn('feed.reply_banner', { username: replyTo.username })}
 						<button onclick={() => replyTo = null} class="composer-reply-close">×</button>
 					</div>
 				{/if}
@@ -245,7 +248,7 @@
 							{#key editorKey}
 								<NodyxEditor
 									compact={true}
-									placeholder={replyTo ? `Répondre à @${replyTo.username}…` : `Quoi de neuf, ${me?.display_name || me?.username} ?`}
+									placeholder={replyTo ? tFn('feed.reply_placeholder', { username: replyTo.username }) : tFn('feed.composer_placeholder', { name: me?.display_name || me?.username || '' })}
 									onchange={(html) => { content = html; composing = true }}
 								/>
 							{/key}
@@ -254,14 +257,14 @@
 						<!-- Media preview -->
 						{#if mediaUrl}
 							<div class="composer-media-preview">
-								<img src={mediaUrl} alt="Pièce jointe" class="composer-media-img" />
-								<button onclick={() => mediaUrl = null} class="composer-media-remove" title="Retirer">×</button>
+								<img src={mediaUrl} alt={tFn('feed.attachment_alt')} class="composer-media-img" />
+								<button onclick={() => mediaUrl = null} class="composer-media-remove" title={tFn('feed.remove_media_title')}>×</button>
 							</div>
 						{/if}
 
 						<div class="composer-toolbar">
 							<!-- Image upload -->
-							<label class="composer-media-btn" title="Ajouter une image" class:composer-media-btn--loading={mediaUploading}>
+							<label class="composer-media-btn" title={tFn('feed.add_image_title')} class:composer-media-btn--loading={mediaUploading}>
 								{#if mediaUploading}
 									<svg class="w-4 h-4 spin" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
@@ -294,7 +297,7 @@
 									disabled={isEmpty || charLeft < 0 || sending}
 									class="composer-submit"
 								>
-									{sending ? '…' : replyTo ? 'Répondre' : 'Publier'}
+									{sending ? '…' : replyTo ? tFn('feed.reply') : tFn('feed.publish')}
 								</button>
 							</div>
 						</div>
@@ -310,9 +313,9 @@
 							<path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z"/>
 						</svg>
 					</div>
-					<p class="feed-empty-title">Votre fil est vide pour l'instant</p>
-					<p class="feed-empty-sub">Suivez des membres de la communauté pour voir leurs posts ici.</p>
-					<a href="/discover" class="feed-empty-cta">Découvrir des membres →</a>
+					<p class="feed-empty-title">{tFn('feed.empty_title')}</p>
+					<p class="feed-empty-sub">{tFn('feed.empty_sub')}</p>
+					<a href="/discover" class="feed-empty-cta">{tFn('feed.empty_cta')}</a>
 				</div>
 			{:else}
 				<div class="posts-list">
@@ -383,7 +386,7 @@
 												onclick={() => toggleReplies(post)}
 												class="post-action-btn post-replies-btn"
 												class:post-replies-btn--open={repliesOpen[post.id]}
-												title={repliesOpen[post.id] ? 'Masquer les réponses' : 'Voir les réponses'}
+												title={repliesOpen[post.id] ? tFn('feed.hide_replies') : tFn('feed.show_replies')}
 											>
 												{#if repliesLoading[post.id]}
 													<svg class="w-3 h-3 spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -396,7 +399,7 @@
 														<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
 													</svg>
 												{/if}
-												<span>{fmt(post.replies_count)} réponse{post.replies_count > 1 ? 's' : ''}</span>
+												<span>{tFn(post.replies_count > 1 ? 'feed.replies_count_plural' : 'feed.replies_count', { n: fmt(post.replies_count) })}</span>
 											</button>
 										{/if}
 
@@ -405,7 +408,7 @@
 											onclick={() => toggleLike(post)}
 											class="post-action-btn post-resonance-btn"
 											class:post-resonance-btn--active={post.liked_by_me}
-											aria-label={post.liked_by_me ? 'Retirer la résonance' : 'Résonner'}
+											aria-label={post.liked_by_me ? tFn('feed.unresonate') : tFn('feed.resonate')}
 										>
 											<span class="resonance-icon">
 												{#if post.liked_by_me}
@@ -509,7 +512,7 @@
 							<span></span><span></span><span></span>
 						</div>
 					{:else if !hasMore}
-						<p class="feed-end">Vous avez tout vu · <a href="/forum">Aller au forum →</a></p>
+						<p class="feed-end">{tFn('feed.end_of_feed')}</p>
 					{/if}
 				</div>
 			{/if}
@@ -518,7 +521,7 @@
 		<!-- ── Sidebar ──────────────────────────────────────────────────────── -->
 		<aside class="feed-sidebar">
 			<div class="sidebar-card">
-				<p class="sidebar-title">Votre profil</p>
+				<p class="sidebar-title">{tFn('feed.your_profile')}</p>
 				<a href="/users/{me?.username}" class="sidebar-me">
 					<div class="sidebar-me-avatar">
 						{#if me?.avatar_url}
@@ -536,7 +539,7 @@
 
 			{#if suggested.length > 0}
 				<div class="sidebar-card">
-					<p class="sidebar-title">Suggestions</p>
+					<p class="sidebar-title">{tFn('feed.suggestions')}</p>
 					<ul class="space-y-3">
 						{#each suggested as user}
 							<li class="flex items-center gap-3">
@@ -551,7 +554,7 @@
 									<a href="/users/{user.username}" class="sidebar-suggest-name">{user.display_name || user.username}</a>
 									<p class="sidebar-suggest-handle">@{user.username}</p>
 								</div>
-								<a href="/users/{user.username}" class="sidebar-follow-btn">Voir</a>
+								<a href="/users/{user.username}" class="sidebar-follow-btn">{tFn('feed.view_btn')}</a>
 							</li>
 						{/each}
 					</ul>

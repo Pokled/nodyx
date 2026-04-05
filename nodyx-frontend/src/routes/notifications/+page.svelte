@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
 	import { unreadCountStore } from '$lib/socket';
 	import { goto } from '$app/navigation';
+
+	const tFn = $derived($t)
 
 	async function markReadAndNavigate(notif: any) {
 		if (!notif.is_read) {
@@ -25,9 +28,9 @@
 	};
 
 	const TYPE_LABEL: Record<string, string> = {
-		thread_reply: 'a répondu à votre sujet',
-		post_thanks:  'a remercié votre message',
-		mention:      'vous a mentionné',
+		thread_reply: tFn('notifications.thread_reply_label'),
+		post_thanks:  tFn('notifications.post_thanks_label'),
+		mention:      tFn('notifications.mention_label'),
 	};
 
 	function formatDate(iso: string) {
@@ -48,7 +51,7 @@
 </script>
 
 <svelte:head>
-	<title>Notifications — Nodyx</title>
+	<title>{tFn('nav.notifications')} — Nodyx</title>
 </svelte:head>
 
 <div class="max-w-2xl">
@@ -56,7 +59,7 @@
 		<h1 class="text-2xl font-bold text-white">
 			Notifications
 			{#if unread > 0}
-				<span class="ml-2 text-sm font-normal text-indigo-400">({unread} non lue{unread > 1 ? 's' : ''})</span>
+				<span class="ml-2 text-sm font-normal text-indigo-400">{tFn('notifications.unread_count', { n: String(unread), s: unread > 1 ? 's' : '' })}</span>
 			{/if}
 		</h1>
 		<div class="flex items-center gap-2">
@@ -91,11 +94,11 @@
 	</div>
 
 	<!-- Info purge automatique -->
-	<p class="text-xs text-gray-600 mb-4">Les notifications lues sont automatiquement supprimées après 30 jours.</p>
+	<p class="text-xs text-gray-600 mb-4">{tFn('notifications.auto_purge_info')}</p>
 
 	{#if notifications.length === 0}
 		<div class="rounded-xl border border-gray-800 bg-gray-900/50 px-6 py-12 text-center">
-			<p class="text-gray-500">Aucune notification pour le moment.</p>
+			<p class="text-gray-500">{tFn('notifications.empty_state')}</p>
 		</div>
 	{:else}
 		<div class="space-y-2">

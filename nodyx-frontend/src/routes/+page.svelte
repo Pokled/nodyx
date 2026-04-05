@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { onMount, onDestroy } from 'svelte';
+	import { t } from '$lib/i18n';
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
 
@@ -14,10 +16,10 @@
 		const m = Math.floor(diff / 60000);
 		const h = Math.floor(m / 60);
 		const d = Math.floor(h / 24);
-		if (m < 1)  return 'maintenant';
+		if (m < 1)  return tFn('common.time.now');
 		if (m < 60) return `${m}min`;
 		if (h < 24) return `${h}h`;
-		return `${d}j`;
+		return `${d}${tFn('common.time.d')}`;
 	}
 
 	// ── Slideshow ──────────────────────────────────────────────────────────
@@ -236,10 +238,10 @@
 		<!-- Stats row -->
 		<div class="flex flex-wrap items-stretch gap-0.5">
 			{#each [
-				{ value: instance.member_count.toLocaleString('fr-FR'), label: 'Membres',  color: '#a78bfa', glow: true },
-				{ value: String(instance.online_count),                  label: 'En ligne', color: '#4ade80', online: true },
-				{ value: instance.thread_count.toLocaleString('fr-FR'), label: 'Sujets',   color: '#67e8f9', glow: false },
-				{ value: instance.post_count.toLocaleString('fr-FR'),   label: 'Messages', color: '#94a3b8', glow: false },
+				{ value: instance.member_count.toLocaleString(), label: tFn('common.members'),  color: '#a78bfa', glow: true },
+				{ value: String(instance.online_count),                  label: tFn('common.online'), color: '#4ade80', online: true },
+				{ value: instance.thread_count.toLocaleString(), label: tFn('common.topics'),   color: '#67e8f9', glow: false },
+				{ value: instance.post_count.toLocaleString(),   label: tFn('nav.dm'), color: '#94a3b8', glow: false },
 			] as stat}
 				<div class="flex flex-col items-center justify-center px-6 py-2 gap-0.5"
 				     style="background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06)">
@@ -263,18 +265,18 @@
 					<a href="/forum/{data.categories?.[0]?.slug ?? data.categories?.[0]?.id ?? ''}/new"
 					   class="sg px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
 					   style="background: linear-gradient(135deg, #7c3aed 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
-						+ Nouveau sujet
+						{tFn('common.new_topic')}
 					</a>
 				{:else}
 					<a href="/auth/login"
 					   class="sg px-4 py-2.5 text-sm font-bold uppercase tracking-wider transition-all"
 					   style="color: #9ca3af; border: 1px solid rgba(255,255,255,.1)">
-						Connexion
+						{tFn('common.login')}
 					</a>
 					<a href="/auth/register"
 					   class="sg px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
 					   style="background: linear-gradient(135deg, #7c3aed 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
-						Rejoindre
+						{tFn('common.join')}
 					</a>
 				{/if}
 			</div>
@@ -295,15 +297,15 @@
 			<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/>
 			</svg>
-			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #a78bfa">Actualités</span>
+			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #a78bfa">{tFn('home.news')}</span>
 		</div>
 		<p class="sg text-sm font-bold leading-snug line-clamp-2 group-hover:text-violet-200 transition-colors" style="color: #e2e8f0">{heroArticle.title}</p>
 		<span class="text-[10px] mt-auto" style="color: #4b5563">{heroArticle.categoryName}</span>
 	</a>
 	{:else}
 	<div class="tile glass flex flex-col gap-2.5 p-5">
-		<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #a78bfa">Actualités</span>
-		<p class="text-sm" style="color: #4b5563">Aucun article</p>
+		<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #a78bfa">{tFn('home.news')}</span>
+		{tFn('common.no_article')}
 	</div>
 	{/if}
 
@@ -315,15 +317,15 @@
 			<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#67e8f9" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h8z"/>
 			</svg>
-			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #67e8f9">Forum</span>
+			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #67e8f9">{tFn('home.forum')}</span>
 		</div>
 		<p class="sg text-sm font-bold leading-snug line-clamp-2 group-hover:text-cyan-200 transition-colors" style="color: #e2e8f0">{recentThreads[0].title}</p>
 		<span class="text-[10px] mt-auto" style="color: #4b5563">{recentThreads[0].category_name}</span>
 	</a>
 	{:else}
 	<a href="/forum" class="tile glass flex flex-col gap-2.5 p-5">
-		<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #67e8f9">Forum</span>
-		<p class="text-sm" style="color: #4b5563">Voir les discussions</p>
+		<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #67e8f9">{tFn('home.forum')}</span>
+		{tFn('home.view_discussions')}
 	</a>
 	{/if}
 
@@ -331,10 +333,10 @@
 	<div class="tile glass flex flex-col gap-2.5 p-5">
 		<div class="flex items-center gap-2">
 			<span class="w-2 h-2 rounded-full opulse" style="background:#4ade80"></span>
-			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #4ade80">En ligne</span>
+			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #4ade80">{tFn('home.online_members')}</span>
 		</div>
 		<p class="sg font-black text-4xl tabular-nums" style="color: #fff">{instance.online_count}</p>
-		<span class="text-[10px] mt-auto" style="color: #4b5563">{instance.member_count.toLocaleString('fr-FR')} membres au total</span>
+		<span class="text-[10px] mt-auto" style="color: #4b5563">{tFn('common.members_total', { count: instance.member_count.toLocaleString() })}</span>
 	</div>
 
 	<!-- Tile 4 — Chat -->
@@ -343,10 +345,10 @@
 			<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#fb923c" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
 			</svg>
-			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #fb923c">Chat live</span>
+			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #fb923c">{tFn('home.live_chat')}</span>
 		</div>
-		<p class="sg text-sm font-bold group-hover:text-orange-200 transition-colors" style="color: #e2e8f0">Rejoindre le salon</p>
-		<span class="text-[10px] mt-auto" style="color: #4b5563">Discussion en temps réel</span>
+		<p class="sg text-sm font-bold group-hover:text-orange-200 transition-colors" style="color: #e2e8f0">{tFn('home.join_channel')}</p>
+		<span class="text-[10px] mt-auto" style="color: #4b5563">{tFn('home.realtime')}</span>
 	</a>
 </div>
 
@@ -414,7 +416,7 @@
 					<a href="/forum/{slide.categoryId}/{slide.id}"
 					   class="sg ml-auto group flex items-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
 					   style="background: linear-gradient(135deg, rgba(124,58,237,.55), rgba(6,182,212,.25)); border: 1px solid rgba(124,58,237,.45)">
-						Lire l'article
+						{tFn('common.read_article')}
 						<svg class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
 						</svg>
@@ -439,7 +441,7 @@
 							<button onclick={() => { slidePrev(); startTimers(); }}
 							        class="w-8 h-8 flex items-center justify-center transition-all"
 							        style="border: 1px solid rgba(255,255,255,.08); color: #6b7280"
-							        aria-label="Précédent"
+							        aria-label={tFn('common.back')}
 							        onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.5)'}
 							        onmouseleave={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.08)'}>
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
@@ -457,7 +459,7 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="flex items-center justify-center h-full" style="color: #374151">Aucun article</div>
+			<div class="flex items-center justify-center h-full" style="color: #374151">{tFn('common.no_article')}</div>
 		{/if}
 	</div>
 
@@ -465,9 +467,9 @@
 	<div class="flex flex-col" style="background: #0d0d12">
 		<div class="flex items-center justify-between px-5 py-3.5 shrink-0"
 		     style="border-bottom: 1px solid rgba(255,255,255,.05)">
-			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #6b7280">Activité forum</span>
+			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #6b7280">{tFn('home.forum_activity')}</span>
 			<a href="/forum" class="sg text-[10px] font-bold uppercase tracking-wide transition-colors" style="color: #4b5563" onmouseenter={e => (e.target as HTMLElement).style.color='#a78bfa'} onmouseleave={e => (e.target as HTMLElement).style.color='#4b5563'}>
-				tout voir
+				{tFn('common.view_all')}
 			</a>
 		</div>
 
@@ -503,7 +505,7 @@
 				{/if}
 			</a>
 			{:else}
-				<div class="flex items-center justify-center h-24" style="color: #374151; font-size: .75rem">Aucune activité</div>
+				<div class="flex items-center justify-center h-24" style="color: #374151; font-size: .75rem">{tFn('common.no_activity')}</div>
 			{/each}
 		</div>
 
@@ -513,7 +515,7 @@
 			   style="color: #6b7280; border: 1px solid rgba(255,255,255,.06)"
 			   onmouseenter={e => { (e.currentTarget as HTMLElement).style.color='#a78bfa'; (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.25)'; }}
 			   onmouseleave={e => { (e.currentTarget as HTMLElement).style.color='#6b7280'; (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.06)'; }}>
-				Voir le forum
+				{tFn('home.view_forum')}
 				<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
 			</a>
 		</div>
@@ -527,11 +529,11 @@
 <section class="px-6 py-8" style="border-bottom: 1px solid rgba(255,255,255,.05); background: #08080d">
 
 	<div class="flex items-center gap-4 mb-6">
-		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: #67e8f9">Derniers sujets</span>
+		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: #67e8f9">{tFn('home.latest_topics')}</span>
 		<div class="flex-1 h-px" style="background: linear-gradient(to right, rgba(6,182,212,.2), transparent)"></div>
 		<a href="/forum" class="sg text-[10px] font-bold uppercase tracking-widest transition-colors" style="color: #4b5563"
 		   onmouseenter={e => (e.target as HTMLElement).style.color='#67e8f9'} onmouseleave={e => (e.target as HTMLElement).style.color='#4b5563'}>
-			Tout voir →
+			{tFn('common.see_all')}
 		</a>
 	</div>
 
@@ -586,7 +588,7 @@
 <section class="px-6 py-8" style="background: #0a0a0f">
 
 	<div class="flex items-center gap-4 mb-6">
-		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: #a78bfa">Articles</span>
+		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: #a78bfa">{tFn('home.articles')}</span>
 		<div class="flex-1 h-px" style="background: linear-gradient(to right, rgba(124,58,237,.2), transparent)"></div>
 	</div>
 

@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
   import { onMount, onDestroy } from 'svelte'
   import { page } from '$app/stores'
   import { fly, fade } from 'svelte/transition'
@@ -77,7 +80,7 @@
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      if (!res.ok) { error = data.error ?? 'Erreur'; return }
+      if (!res.ok) { error = data.error ?? tFn('common.error'); return }
       poll = data.poll
 
       // Initialiser les sélections depuis user_votes
@@ -146,11 +149,11 @@
 
   // ── Vote — schedule ──────────────────────────────────────────────────────────
 
-  const SCHEDULE_VALS = [
-    { value: 2, label: '✓', cls: 'sv-yes',   title: 'Oui' },
-    { value: 1, label: '~', cls: 'sv-maybe', title: 'Peut-être' },
-    { value: 0, label: '✗', cls: 'sv-no',    title: 'Non' },
-  ]
+  const SCHEDULE_VALS = $derived([
+    { value: 2, label: '✓', cls: 'sv-yes',   title: tFn('poll.schedule.yes_title') },
+    { value: 1, label: '~', cls: 'sv-maybe', title: tFn('poll.schedule.maybe_title') },
+    { value: 0, label: '✗', cls: 'sv-no',    title: tFn('poll.schedule.no_title') },
+  ])
 
   function cycleSchedule(optId: string) {
     if (!poll?.is_open) return
@@ -212,7 +215,7 @@
           user_votes:        votes as any,
         }
       } else {
-        error = data.error ?? 'Erreur lors du vote'
+        error = data.error ?? tFn('poll.vote_error')
       }
     } finally {
       voting = false
@@ -253,15 +256,15 @@
 
   // ── Helpers d'affichage ───────────────────────────────────────────────────────
 
-  const TYPE_LABEL: Record<string, string> = {
-    choice:   '📊 Choix',
-    schedule: '📅 Planning',
-    ranking:  '🏆 Classement',
-  }
+  const TYPE_LABEL = $derived({
+		choice:   tFn('poll.type_choice'),
+		schedule: tFn('poll.type_schedule'),
+		ranking:  tFn('poll.type_ranking'),
+	})
 
   function formatDate(iso: string | null): string {
     if (!iso) return ''
-    return new Intl.DateTimeFormat('fr-FR', {
+    return new Intl.DateTimeFormat([], {
       weekday: 'short', day: 'numeric', month: 'short',
       hour:    '2-digit', minute: '2-digit',
     }).format(new Date(iso))
@@ -270,7 +273,7 @@
   function timeLeft(iso: string | null): string | null {
     if (!iso) return null
     const diff = new Date(iso).getTime() - Date.now()
-    if (diff <= 0) return 'Expiré'
+    if (diff <= 0) return tFn('common.expired')
     const h = Math.floor(diff / 3600000)
     const m = Math.floor((diff % 3600000) / 60000)
     if (h > 48) return `${Math.floor(h / 24)}j`
@@ -314,7 +317,7 @@
     <div class="poll-skeleton short"></div>
   </div>
 {:else if error}
-  <div class="poll-card poll-error">Sondage indisponible</div>
+  <div class="poll-card poll-error">{tFn('poll.unavailable')}</div>
 {:else if poll}
   <div class="poll-card" class:poll-closed={!poll.is_open} class:poll-inline={inline}>
 
@@ -323,12 +326,12 @@
       <div class="poll-meta">
         <span class="poll-type-badge">{TYPE_LABEL[poll.type]}</span>
         {#if !poll.is_open}
-          <span class="poll-status-badge closed">Fermé</span>
+          <span class="poll-status-badge closed">{tFn('poll.closed_badge')}</span>
         {:else if poll.closes_at}
           <span class="poll-status-badge open">⏱ {timeLeft(poll.closes_at)}</span>
         {/if}
         {#if poll.anonymous}
-          <span class="poll-status-badge anon">🔒 Anonyme</span>
+          <span class="poll-status-badge anon">{tFn('poll.anonymous_badge')}</span>
         {/if}
       </div>
 
@@ -339,13 +342,13 @@
       {/if}
 
       <div class="poll-stats">
-        <span>{poll.participant_count} participant{poll.participant_count !== 1 ? 's' : ''}</span>
+        <span>{tFn(poll.participant_count !== 1 ? 'poll.participant_count_plural' : 'poll.participant_count', { n: String(poll.participant_count) })}</span>
         {#if poll.type === 'choice'}
           <span>·</span>
-          <span>{totalChoiceVotes} vote{totalChoiceVotes !== 1 ? 's' : ''}</span>
+          <span>{tFn(totalChoiceVotes !== 1 ? 'poll.vote_count_plural' : 'poll.vote_count', { n: String(totalChoiceVotes) })}</span>
         {/if}
         <span>·</span>
-        <span class="poll-creator">par {poll.creator_username}</span>
+        <span class="poll-creator">{tFn('poll.by_creator', { username: poll.creator_username })}</span>
       </div>
     </div>
 
@@ -395,9 +398,9 @@
         <div class="schedule-best-slot">
           <span class="best-icon">⭐</span>
           <div>
-            <div class="best-label">Meilleur créneau</div>
+            <div class="best-label">{tFn('poll.schedule.best_slot_title')}</div>
             <div class="best-date">{formatDate(bestSlot.date_start)}</div>
-            <div class="best-count">{bestSlot.yes_count} OUI · {bestSlot.maybe_count} PEUT-ÊTRE</div>
+            <div class="best-count">{tFn('poll.schedule.best_slot_count', { yes: String(bestSlot.yes_count), maybe: String(bestSlot.maybe_count) })}</div>
           </div>
         </div>
       {/if}
@@ -429,7 +432,7 @@
               <button
                 class="schedule-vote-btn {sv?.cls ?? 'sv-unset'}"
                 onclick={() => cycleSchedule(opt.id)}
-                title={sv?.title ?? 'Cliquer pour voter'}
+                title={sv?.title ?? tFn('poll.schedule.click_to_vote')}
               >
                 {sv?.label ?? '?'}
               </button>
@@ -447,7 +450,7 @@
     {:else if poll.type === 'ranking'}
       <!-- ═══ RANKING ═══ -->
       {#if !hasVoted && canVote}
-        <p class="ranking-hint">Glisse les options pour les classer (1er = meilleur)</p>
+        <p class="ranking-hint">{tFn('poll.ranking.drag_to_rank')}</p>
         <div class="ranking-list">
           {#each rankingOrder as optId, i (optId)}
             {@const opt = poll.results?.find(o => o.id === optId) ?? { id: optId, label: '?' } as PollOption}
@@ -481,7 +484,7 @@
               </div>
               <span class="rank-score">{opt.score} pts</span>
               {#if opt.avg_rank !== null}
-                <span class="rank-avg">rang moy. {opt.avg_rank}</span>
+                <span class="rank-avg">{tFn('poll.ranking.avg_rank_label', { n: String(opt.avg_rank) })}</span>
               {/if}
             </div>
           {/each}
@@ -498,20 +501,20 @@
             onclick={submitVote}
             disabled={voting || (poll.type === 'choice' && selectedIds.size === 0)}
           >
-            {voting ? '…' : 'Voter'}
+            {voting ? '…' : tFn('poll.vote_button')}
           </button>
         {:else}
           <button class="btn-revote" onclick={removeVote} disabled={voting}>
-            Modifier mon vote
+            {tFn('poll.change_vote_button')}
           </button>
         {/if}
 
         {#if isCreator}
-          <button class="btn-close-poll" onclick={closePoll}>Clore le sondage</button>
+          <button class="btn-close-poll" onclick={closePoll}>{tFn('poll.close_poll_button')}</button>
         {/if}
       </div>
     {:else}
-      <div class="poll-closed-banner">Sondage terminé</div>
+      <div class="poll-closed-banner">{tFn('poll.closed_banner')}</div>
     {/if}
 
     {#if error}

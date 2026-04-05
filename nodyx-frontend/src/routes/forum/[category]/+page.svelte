@@ -3,6 +3,9 @@
 	import { fly, fade } from 'svelte/transition';
 	import type { FlyParams, FadeParams } from 'svelte/transition';
 	import { page } from '$app/stores';
+	import { t } from '$lib/i18n';
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
 
@@ -174,7 +177,7 @@
 
 	// ── Formatage ────────────────────────────────────────────────────
 	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('fr-FR', {
+		return new Date(iso).toLocaleDateString([], {
 			day: '2-digit', month: 'short', year: 'numeric'
 		});
 	}
@@ -187,11 +190,11 @@
 		const diffHours = Math.floor(diffMins / 60);
 		const diffDays = Math.floor(diffHours / 24);
 
-		if (diffMins < 1) return "À l'instant";
-		if (diffMins < 60) return `Il y a ${diffMins} min`;
-		if (diffHours < 24) return `Il y a ${diffHours} h`;
-		if (diffDays === 1) return "Hier";
-		if (diffDays < 7) return `Il y a ${diffDays} jours`;
+		if (diffMins < 1) return tFn('forum.ago_now');
+		if (diffMins < 60) return tFn('forum.ago_min', { n: String(diffMins) });
+		if (diffHours < 24) return tFn('forum.ago_h', { n: String(diffHours) });
+		if (diffDays === 1) return tFn('forum.ago_yesterday');
+		if (diffDays < 7) return tFn('forum.ago_days', { n: String(diffDays) });
 		return formatDate(iso);
 	}
 
@@ -202,20 +205,20 @@
 	}
 
 	// ── Labels ───────────────────────────────────────────────────────
-	const sortLabels: Record<SortOption, string> = {
-		recent: 'Plus récents',
-		popular: 'Plus populaires',
-		views: 'Plus vus',
-		lastReply: 'Dernière réponse'
-	};
+	const sortLabels = $derived<Record<SortOption, string>>({
+		recent: tFn('forum.sort_recent'),
+		popular: tFn('forum.sort_popular'),
+		views: tFn('forum.sort_views'),
+		lastReply: tFn('forum.sort_last_reply')
+	});
 
-	const filterLabels: Record<FilterType, string> = {
-		all: 'Tous les sujets',
-		pinned: 'Épinglés uniquement',
-		unanswered: 'Sans réponse',
-		popular: 'Populaires (+10 réponses)',
-		today: "Créés aujourd'hui"
-	};
+	const filterLabels = $derived<Record<FilterType, string>>({
+		all: tFn('forum.filter_all'),
+		pinned: tFn('forum.filter_pinned'),
+		unanswered: tFn('forum.filter_unanswered'),
+		popular: tFn('forum.filter_popular_10'),
+		today: tFn('forum.filter_today')
+	});
 
 	// ── Stats de la catégorie ────────────────────────────────────────
 	const categoryStats = $derived({
@@ -276,7 +279,7 @@
 			<div>
 				<!-- Fil d'Ariane -->
 				<div class="flex items-center gap-2 mb-2">
-					<a href="/" class="text-sm text-gray-500 hover:text-indigo-400 transition-colors">Accueil</a>
+					<a href="/" class="text-sm text-gray-500 hover:text-indigo-400 transition-colors">{tFn('nav.home')}</a>
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
 					</svg>
@@ -288,18 +291,18 @@
 				<!-- Stats de la catégorie -->
 				<div class="flex flex-wrap items-center gap-4 mt-4">
 					<div class="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 border border-gray-700">
-						<span class="text-xs text-gray-400">Total</span>
+						<span class="text-xs text-gray-400">{tFn('forum.total')}</span>
 						<span class="text-sm font-bold text-white">{categoryStats.total}</span>
 					</div>
 					{#if categoryStats.pinned > 0}
 						<div class="flex items-center gap-2 px-3 py-1.5 bg-indigo-900/20 border border-indigo-800/50">
-							<span class="text-xs text-indigo-400">📌 Épinglés</span>
+							<span class="text-xs text-indigo-400">{tFn('forum.pinned_stat')}</span>
 							<span class="text-sm font-bold text-indigo-400">{categoryStats.pinned}</span>
 						</div>
 					{/if}
 					{#if categoryStats.unanswered > 0}
 						<div class="flex items-center gap-2 px-3 py-1.5 bg-yellow-900/20 border border-yellow-800/50">
-							<span class="text-xs text-yellow-400">❓ Sans réponse</span>
+							<span class="text-xs text-yellow-400">{tFn('forum.unanswered_stat')}</span>
 							<span class="text-sm font-bold text-yellow-400">{categoryStats.unanswered}</span>
 						</div>
 					{/if}
@@ -312,7 +315,7 @@
 <!-- SOUS-CATÉGORIES -->
 {#if subcategories.length > 0}
 	<div class="mb-6">
-		<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Sous-catégories</h2>
+		<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{tFn('forum.subcategories')}</h2>
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 			{#each subcategories as sub}
 				<a
@@ -336,7 +339,7 @@
 							<p class="text-xs text-gray-500 mt-0.5 line-clamp-1">{sub.description}</p>
 						{/if}
 						{#if sub.thread_count > 0}
-							<p class="text-xs text-gray-600 mt-1">{sub.thread_count} sujet{sub.thread_count > 1 ? 's' : ''}</p>
+							<p class="text-xs text-gray-600 mt-1">{sub.thread_count} {tFn('common.topics').toLowerCase()}</p>
 						{/if}
 					</div>
 					<svg class="w-4 h-4 text-gray-700 group-hover:text-indigo-500 transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -357,7 +360,7 @@
 			<input
 				bind:this={searchInputRef}
 				type="text"
-				placeholder="Rechercher un sujet..."
+				placeholder={tFn('forum.search_placeholder')}
 				bind:value={searchQuery}
 				class="w-full pl-10 pr-4 py-2.5 bg-gray-800/80 border border-gray-700
 					   text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500
@@ -382,7 +385,7 @@
 		<div class="flex items-center gap-3 text-xs">
 			<div class="flex items-center gap-1.5">
 				<span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-				<span class="text-gray-500">Actif</span>
+				<span class="text-gray-500">{tFn('forum.legend_active')}</span>
 			</div>
 			<div class="flex items-center gap-1.5">
 				<span class="w-2 h-2 rounded-full bg-yellow-500"></span>
@@ -390,7 +393,7 @@
 			</div>
 			<div class="flex items-center gap-1.5">
 				<span class="w-2 h-2 rounded-full bg-green-500"></span>
-				<span class="text-gray-500">Nouveau</span>
+				<span class="text-gray-500">{tFn('forum.legend_new')}</span>
 			</div>
 		</div>
 	</div>
@@ -407,8 +410,8 @@
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
 				</svg>
-				<span class="text-sm hidden sm:inline">Filtre : {filterLabels[filterBy]}</span>
-				<span class="text-sm sm:hidden">Filtre</span>
+				<span class="text-sm hidden sm:inline">{tFn('forum.filter_label_full', { label: filterLabels[filterBy] })}</span>
+				<span class="text-sm sm:hidden">{tFn('forum.filter_label_short')}</span>
 				{#if filterBy !== 'all'}
 					<span class="ml-1 px-1.5 py-0.5 bg-indigo-600/30 text-indigo-400 text-xs">{filteredThreads.length}</span>
 				{/if}
@@ -466,8 +469,8 @@
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0h4m-4-4v12m0 0l-4-4m4 4l4-4" />
 				</svg>
-				<span class="text-sm hidden sm:inline">Tri : {sortLabels[sortBy]}</span>
-				<span class="text-sm sm:hidden">Tri</span>
+				<span class="text-sm hidden sm:inline">{tFn('forum.sort_label_full', { label: sortLabels[sortBy] })}</span>
+				<span class="text-sm sm:hidden">{tFn('forum.sort_label_short')}</span>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1 text-gray-500 transition-transform duration-200 {sortDropdownOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
 				</svg>
@@ -521,7 +524,7 @@
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
 				</svg>
-				Nouveau sujet
+				{tFn('forum.new_topic_btn')}
 			</a>
 		{/if}
 	</div>
@@ -538,7 +541,7 @@
 			onclick={() => searchQuery = ''}
 			class="text-xs text-gray-600 hover:text-gray-400 transition-colors"
 		>
-			Effacer la recherche
+			Effacer
 		</button>
 	</div>
 {/if}
@@ -553,16 +556,16 @@
 		</div>
 		<h3 class="text-xl font-semibold text-white mb-2">
 			{#if searchQuery}
-				Aucun résultat pour "{searchQuery}"
+				{tFn('forum.no_filter_results')}
 			{:else if filterBy !== 'all'}
-				Aucun sujet avec ce filtre
+				{tFn('forum.no_filter_results')}
 			{:else}
-				Aucune discussion dans cette catégorie
+				{tFn('forum.no_topics_in_category')}
 			{/if}
 		</h3>
 		<p class="text-sm text-gray-500 text-center max-w-sm mb-6">
 			{#if searchQuery}
-				Essayez d'autres mots-clés ou modifiez vos filtres
+				{tFn('forum.try_keywords')}
 			{:else}
 				Soyez le premier à lancer une discussion !
 			{/if}
@@ -581,7 +584,7 @@
 				<div class="flex items-center gap-2 mt-2 mb-3">
 					<div class="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
 					<span class="text-xs font-medium text-indigo-400 px-3 py-1 bg-indigo-900/20 border border-indigo-800/50 flex items-center gap-1">
-						📌 Sujets épinglés
+						{tFn('forum.pinned_header')}
 					</span>
 					<div class="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
 				</div>
@@ -621,17 +624,17 @@
 					<div class="flex flex-wrap items-center gap-1.5 mb-1.5">
 						{#if thread.is_pinned}
 							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-indigo-400 bg-indigo-900/20 border border-indigo-800/50 px-2 py-0.5">
-								📌 Épinglé
+								{tFn('forum.badge_pinned')}
 							</span>
 						{/if}
 						{#if thread.is_locked}
 							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5">
-								🔒 Verrouillé
+								{tFn('forum.badge_locked')}
 							</span>
 						{/if}
 						{#if thread.is_featured}
 							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-yellow-400 bg-yellow-900/30 border border-yellow-800/50 px-2 py-0.5">
-								⭐ À la une
+								{tFn('forum.badge_featured')}
 							</span>
 						{/if}
 						{#each (thread.tags || []).slice(0, 2) as tag}
@@ -674,7 +677,7 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 								<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 							</svg>
-							<span>{thread.views || 0} vues</span>
+							<span>{thread.views || 0} {tFn('forum.views')}</span>
 						</div>
 					</div>
 				</div>
@@ -684,14 +687,14 @@
 					<!-- Compteur de réponses -->
 					<div class="flex flex-col items-center px-3 py-1.5 border border-white/[.06] group-hover:border-indigo-700/50 transition-colors min-w-[60px] text-center">
 						<span class="text-lg font-bold text-indigo-400 leading-none">{thread.post_count}</span>
-						<span class="text-[10px] text-gray-500 uppercase tracking-wider">réponses</span>
+						<span class="text-[10px] text-gray-500 uppercase tracking-wider">{tFn('forum.replies_label')}</span>
 					</div>
 
 					<!-- Dernier posteur -->
 					{#if lastPoster}
 						<div class="flex items-center gap-2 pl-2 border-l border-gray-800">
 							<div class="text-right hidden sm:block">
-								<p class="text-[10px] text-gray-600">Dernière réponse</p>
+								<p class="text-[10px] text-gray-600">{tFn('forum.last_reply')}</p>
 								<p class="text-xs font-medium text-gray-300">{lastPoster.author_username}</p>
 								<p class="text-[9px] text-gray-700">{formatRelativeTime(lastPoster.created_at)}</p>
 							</div>
@@ -717,9 +720,7 @@
 	<!-- PAGINATION PROFESSIONNELLE -->
 	<div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
 		<div class="text-sm text-gray-600 order-2 sm:order-1">
-			Affichage de <span class="text-white font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> 
-			à <span class="text-white font-medium">{Math.min(currentPage * itemsPerPage, filteredThreads.length)}</span> 
-			sur <span class="text-white font-medium">{filteredThreads.length}</span> sujets
+			{tFn('forum.showing', { from: String((currentPage - 1) * itemsPerPage + 1), to: String(Math.min(currentPage * itemsPerPage, filteredThreads.length)), total: String(filteredThreads.length) })}
 		</div>
 		
 		<div class="flex items-center gap-1 order-1 sm:order-2">
@@ -770,7 +771,7 @@
 
 		<!-- Sélecteur d'éléments par page -->
 		<div class="flex items-center gap-2 order-3">
-			<span class="text-xs text-gray-600 hidden sm:inline">Afficher</span>
+			<span class="text-xs text-gray-600 hidden sm:inline">{tFn('forum.display')}</span>
 			<select
 				bind:value={itemsPerPage}
 				onchange={() => goToPage(1)}

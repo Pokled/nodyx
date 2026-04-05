@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nodyx | The Flux</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-primary": "#452a1a",
+              "tertiary-fixed-dim": "#d2c5b8",
+              "error-container": "#5a1b1b",
+              "surface-variant": "#3d342d",
+              "surface-dim": "#1e1a17",
+              "secondary-fixed": "#f2e9e1",
+              "surface-container-lowest": "#14110f",
+              "tertiary": "#f9f6f3",
+              "on-primary-fixed-variant": "#633112",
+              "on-primary-container": "#ff8a4d",
+              "inverse-surface": "#f2e9e1",
+              "on-surface-variant": "#b8a99a",
+              "on-background": "#e8e1da",
+              "on-secondary-fixed": "#2d2319",
+              "surface-container-high": "#2d2722",
+              "inverse-on-surface": "#1e1a17",
+              "outline-variant": "#4d4239",
+              "on-tertiary-fixed": "#211b15",
+              "surface-container": "#241f1b",
+              "background": "#1a1614",
+              "tertiary-container": "#4a423b",
+              "secondary": "#d5c3b2",
+              "on-primary": "#2d1405",
+              "on-error-container": "#ffdada",
+              "primary": "#ff7b33",
+              "on-surface": "#e8e1da",
+              "on-secondary-container": "#d5c3b2",
+              "secondary-fixed-dim": "#d5c3b2",
+              "primary-fixed-dim": "#ff9e66",
+              "outline": "#7a6e63",
+              "surface-container-low": "#1d1916",
+              "on-error": "#ffffff",
+              "secondary-container": "#4d4239",
+              "on-primary-fixed": "#2d1405",
+              "primary-container": "#4d2309",
+              "on-tertiary-fixed-variant": "#61574d",
+              "on-tertiary": "#3b342d",
+              "surface-bright": "#453d36",
+              "surface-tint": "#ff7b33",
+              "surface-container-highest": "#362f29",
+              "surface": "#1a1614",
+              "primary-fixed": "#ff8a4d",
+              "tertiary-fixed": "#f2e9e1",
+              "on-secondary": "#2d2319",
+              "on-tertiary-container": "#918476",
+              "error": "#ff5449",
+              "on-secondary-fixed-variant": "#453a2f"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style type="text/tailwindcss">
+        body { background-color: #1a1614; color: #e8e1da; font-family: 'Inter', sans-serif; }
+        .font-space { font-family: 'Space Grotesk', sans-serif; }
+        .glass { background: rgba(26, 22, 20, 0.7); backdrop-filter: blur(20px); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .active-node { font-variation-settings: 'FILL' 1; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #14110f; }
+        ::-webkit-scrollbar-thumb { background: #4d4239; border: 1px solid #2d2722; }
+        .molten-glow {
+            box-shadow: 0 0 15px rgba(255, 123, 51, 0.4), inset 0 0 5px rgba(255, 200, 100, 0.2);
+        }
+        .molten-text {
+            color: #ff8a4d;
+            text-shadow: 0 0 8px rgba(255, 138, 77, 0.5);
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden selection:bg-primary-container selection:text-primary-fixed">
+<nav class="fixed left-0 top-0 h-full z-50 flex flex-col bg-[#14110f]/90 backdrop-blur-xl h-screen w-20 lg:w-64 border-r border-[#3d342d] shadow-[10px_0_30px_rgba(0,0,0,0.5)] font-['Space_Grotesk'] tracking-tight">
+<div class="p-6 mb-8 border-b border-[#3d342d]/30">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-[#ff7b33] flex items-center justify-center shadow-[0_0_20px_rgba(255,123,51,0.4)]">
+<span class="material-symbols-outlined text-[#1a1614] text-2xl font-bold" data-icon="hub">hub</span>
+</div>
+<div class="hidden lg:block">
+<h1 class="text-2xl font-bold text-[#e8e1da] tracking-tighter uppercase">Nodyx</h1>
+<p class="text-[10px] uppercase tracking-[0.2em] text-[#ff8a4d] font-bold">Industrial Core</p>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-4 text-[#b8a99a] hover:text-[#ff8a4d] px-6 py-4 hover:bg-[#2d2722] transition-all duration-300 border-l-4 border-transparent" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="hidden lg:block">Home</span>
+</a>
+<a class="flex items-center gap-4 bg-[#ff7b33]/10 text-[#ff8a4d] border-l-4 border-[#ff7b33] px-6 py-4 transition-all duration-300" href="#">
+<span class="material-symbols-outlined active-node" data-icon="explore">explore</span>
+<span class="hidden lg:block">Explore</span>
+</a>
+<a class="flex items-center gap-4 text-[#b8a99a] hover:text-[#ff8a4d] px-6 py-4 hover:bg-[#2d2722] transition-all duration-300 border-l-4 border-transparent" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="hidden lg:block">Nodes</span>
+</a>
+<a class="flex items-center gap-4 text-[#b8a99a] hover:text-[#ff8a4d] px-6 py-4 hover:bg-[#2d2722] transition-all duration-300 border-l-4 border-transparent" href="#">
+<span class="material-symbols-outlined" data-icon="chat_bubble">chat_bubble</span>
+<span class="hidden lg:block">Messages</span>
+</a>
+<a class="flex items-center gap-4 text-[#b8a99a] hover:text-[#ff8a4d] px-6 py-4 hover:bg-[#2d2722] transition-all duration-300 border-l-4 border-transparent" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="hidden lg:block">Settings</span>
+</a>
+</div>
+<div class="p-6 border-t border-[#3d342d]/30">
+<button class="w-full bg-transparent border-2 border-[#ff7b33]/60 text-[#ff7b33] py-3 rounded-none font-bold hidden lg:flex items-center justify-center gap-2 hover:bg-[#ff7b33] hover:text-[#1a1614] transition-all duration-300 active:scale-95 uppercase tracking-widest text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                Forge Node
+            </button>
+<div class="mt-6 flex items-center gap-3">
+<div class="relative">
+<img alt="User Profile Profile" class="w-10 h-10 rounded border-2 border-[#ff7b33]/40" data-alt="Close-up portrait of a tech professional with soft blue lighting and futuristic aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrUKSTPSt_FLBPXgsn0AhbRoRpA__gaSQt_YHYVglk3SDoxUGrrbctuXf-mU3mIWuvzLyELKcsOUieRhMIME1I8SrCu-q0ocZM7j5Bm2bYSqAozGVQRc_wVGvli2jX4-KCSppB8L5C1jbdh6Fsve1YlV1ds-Z4L6wZ8R-OG7TL-oAOh6KvzjYvcphNfSZR-WiHOei-_dNEtFU8DL2vYqF5KZtrvynB6XsO9eNrspMrXPIDDJ2dsSs9KVusFcs_m8smkh3buIuI5tc"/>
+<div class="absolute -bottom-1 -right-1 w-3 h-3 bg-[#ff7b33] border-2 border-[#14110f] rounded-full"></div>
+</div>
+<div class="hidden lg:block overflow-hidden">
+<p class="text-sm font-bold text-[#e8e1da] truncate">Alex Thorne</p>
+<p class="text-[10px] text-[#7a6e63] truncate uppercase tracking-tighter">Core-Node-772</p>
+</div>
+</div>
+</div>
+</nav>
+<header class="fixed top-0 right-0 left-20 lg:left-64 z-40 flex justify-between items-center px-8 h-16 bg-[#1a1614]/80 backdrop-blur-md border-b border-[#3d342d] font-['Space_Grotesk'] uppercase text-[10px] tracking-[0.2em]">
+<div class="flex items-center gap-8">
+<div class="relative w-64 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#7a6e63] text-sm" data-icon="search">search</span>
+<input class="w-full bg-[#14110f] border-none border-b-2 border-[#3d342d] focus:border-[#ff7b33] focus:ring-0 py-2 pl-10 text-[#e8e1da] placeholder-[#4d4239] transition-colors" placeholder="Scan the flux..." type="text"/>
+</div>
+<nav class="hidden xl:flex items-center gap-8">
+<a class="text-[#ff7b33] border-b-2 border-[#ff7b33] pb-1 font-bold" href="#">Network</a>
+<a class="text-[#b8a99a] hover:text-[#e8e1da] transition-colors" href="#">Protocol</a>
+<a class="text-[#b8a99a] hover:text-[#e8e1da] transition-colors" href="#">Governance</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<button class="relative text-[#b8a99a] hover:text-[#ff7b33] transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-[#ff7b33] rounded-full molten-glow"></span>
+</button>
+<button class="flex items-center gap-3 px-4 py-2 bg-[#2d2722] border border-[#4d4239] text-[#ff8a4d] hover:border-[#ff7b33] transition-all group">
+<span class="material-symbols-outlined text-sm" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-bold tracking-normal uppercase text-[10px]">0.442 NDX</span>
+</button>
+</div>
+</header>
+<main class="ml-20 lg:ml-64 pt-16 min-h-screen flex bg-[#1a1614]">
+<div class="flex-1 max-w-4xl mx-auto px-6 lg:px-12 py-12">
+<header class="mb-14 border-l-4 border-[#ff7b33] pl-6">
+<h2 class="text-6xl font-headline font-bold text-[#e8e1da] tracking-tighter mb-2 uppercase italic">The Flux</h2>
+<p class="text-[#b8a99a] font-body text-sm uppercase tracking-widest opacity-80">Decentralized synchronization // Industrial Grid</p>
+</header>
+<div class="space-y-16">
+<article class="relative group">
+<div class="flex gap-8">
+<div class="flex flex-col items-center gap-3 pt-2">
+<button class="w-10 h-10 flex items-center justify-center rounded border border-[#3d342d] hover:border-[#ff7b33] text-[#7a6e63] hover:text-[#ff7b33] hover:bg-[#ff7b33]/5 transition-all">
+<span class="material-symbols-outlined" data-icon="expand_less">expand_less</span>
+</button>
+<span class="font-headline font-bold text-[#ff8a4d] text-base tracking-tighter molten-text">2.4k</span>
+<button class="w-10 h-10 flex items-center justify-center rounded border border-[#3d342d] hover:border-[#ff5449] text-[#7a6e63] hover:text-[#ff5449] hover:bg-[#ff5449]/5 transition-all">
+<span class="material-symbols-outlined" data-icon="expand_more">expand_more</span>
+</button>
+<div class="w-1 h-full bg-gradient-to-b from-[#3d342d] to-transparent mt-4 opacity-50"></div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-4">
+<img alt="Author" class="w-7 h-7 rounded grayscale hover:grayscale-0 transition-all border border-[#4d4239]" data-alt="Macro photo of abstract blue glowing electronic circuit board parts" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDH9t-frCgfZHqj3fGI4pgSFOvX6zMTT9H-736e0tQVYv9NmqI8Tjrazok48F9mu-4C76BQM80AwOPDjfW82CXM5GYfP999yqor027IQ_RKBTqo4Sph2pKjG_bpctvHtvCS6cPviEfxlRdVEKMBwZs4PTPGjv-d8jExnzfdbhHIEV5O20-lDkmsiaz43fOHXCohpwV5PbWN6NlkIdGVOyErXRKgqB7FUi5j-a35sqZT-lx7eXUh0PFVx_JsBWbiIFWG6HnVTZV4gPg"/>
+<span class="text-xs font-bold text-[#e8e1da] font-headline tracking-widest uppercase">Vector_Lab</span>
+<span class="text-[10px] text-[#7a6e63] uppercase tracking-widest">• 2h ago</span>
+<span class="ml-auto px-3 py-1 rounded-none bg-[#2d2722] text-[10px] text-[#ff8a4d] border border-[#ff8a4d]/30 uppercase tracking-[0.2em] font-headline font-bold">Architecture</span>
+</div>
+<h3 class="text-3xl font-headline font-bold text-[#e8e1da] mb-5 leading-tight group-hover:text-[#ff7b33] transition-colors tracking-tight">Procedural Node-Based Texturing in WebGL 5.0</h3>
+<div class="mb-6 rounded-none overflow-hidden bg-[#14110f] aspect-video relative group/media border border-[#3d342d] shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+<img alt="3D Procedural Texture" class="w-full h-full object-cover transition-transform duration-1000 group-hover/media:scale-110 sepia-[0.3] brightness-90" data-alt="Intricate 3D render of iridescent geometric crystalline structures floating in a dark void with neon blue highlights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcHzw876Si9nW9eIaZyVPjQxd02JQi3NrilkInbdawRR7NZZCjRkYzlyxdsWmEklv0zglooVLLkggK_Wf63krr2LgISRy92i5hqocfBKntSKPIgL6cHiCMCz55lFXk2GaFtSri9BQAEJO-rNcP8TfYj0f7iDTCiXWinDefxjxCLKmqKmCPCFciw3cZZcovRdbC02fV8XK1rhXBki2izbdugkduos-89w1gjZmkj_mdmt8dY7n0mCwgFpEpSQZVkkx08YfPektdeAI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-[#1a1614] to-transparent opacity-60"></div>
+<div class="absolute bottom-5 left-5 flex gap-2">
+<span class="px-3 py-1 bg-[#1a1614]/80 backdrop-blur-md border border-[#ff7b33]/40 rounded-none text-[10px] text-[#ff8a4d] flex items-center gap-2 font-bold tracking-widest">
+<span class="material-symbols-outlined text-[14px]" data-icon="view_in_ar">view_in_ar</span> 3D INTERACTIVE
+                                    </span>
+</div>
+</div>
+<p class="text-[#b8a99a] leading-relaxed mb-8 font-body text-sm border-l border-[#3d342d] pl-6 italic">
+                                Exploring the efficiency of fragment-shader calculated displacements versus geometry-based noise. The goal is to achieve sub-millisecond draw calls for complex organic surfaces within the Nodyx ecosystem.
+                            </p>
+<div class="flex items-center gap-8 text-[#7a6e63]">
+<button class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:text-[#ff8a4d] transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="chat_bubble_outline">chat_bubble_outline</span> 128 Nodes
+                                </button>
+<button class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:text-[#ff8a4d] transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="share">share</span> Connect
+                                </button>
+<button class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:text-[#ff8a4d] transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="bookmark_border">bookmark_border</span> Archive
+                                </button>
+</div>
+</div>
+</div>
+</article>
+<article class="relative group">
+<div class="flex gap-8">
+<div class="flex flex-col items-center gap-3 pt-2">
+<button class="w-10 h-10 flex items-center justify-center rounded border border-[#3d342d] hover:border-[#ff7b33] text-[#7a6e63] hover:text-[#ff7b33] hover:bg-[#ff7b33]/5 transition-all">
+<span class="material-symbols-outlined" data-icon="expand_less">expand_less</span>
+</button>
+<span class="font-headline font-bold text-[#ff8a4d] text-base tracking-tighter molten-text">892</span>
+<button class="w-10 h-10 flex items-center justify-center rounded border border-[#3d342d] hover:border-[#ff5449] text-[#7a6e63] hover:text-[#ff5449] hover:bg-[#ff5449]/5 transition-all">
+<span class="material-symbols-outlined" data-icon="expand_more">expand_more</span>
+</button>
+<div class="w-1 h-full bg-gradient-to-b from-[#3d342d] to-transparent mt-4 opacity-50"></div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-4">
+<img alt="Author" class="w-7 h-7 rounded grayscale hover:grayscale-0 transition-all border border-[#4d4239]" data-alt="Cyberpunk style avatar with neon accents and futuristic eyewear" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuMpZPN1e8Bsx7vlHl0dUNJ76uQavGMPo-rjbZ8IKGXtY7TldF5acE5aQWIcbJh3H160d4kFwK9nIZ9hrsliZF24rdc2MaGwBSkwj8punJaahsiSwBjJzAAmQxNDQ80NahLv-6L0rxrltPnekkksMULPNbstVVR6jkRwq7MPoKEY46tBZ-G2tCkOD_-QjwhHpCATmqs8xjpL1mC1revu5ak6c4O0P4iTjCv9OEOLQ1SFGBa_OzpiC7raHlY1TIEIPEFyq9eyTx9DQ"/>
+<span class="text-xs font-bold text-[#e8e1da] font-headline tracking-widest uppercase">Root_User</span>
+<span class="text-[10px] text-[#7a6e63] uppercase tracking-widest">• 5h ago</span>
+<span class="ml-auto px-3 py-1 rounded-none bg-[#2d2722] text-[10px] text-[#ff8a4d] border border-[#ff8a4d]/30 uppercase tracking-[0.2em] font-headline font-bold">Protocol</span>
+</div>
+<h3 class="text-3xl font-headline font-bold text-[#e8e1da] mb-5 leading-tight group-hover:text-[#ff7b33] transition-colors tracking-tight">Optimizing P2P Propagation</h3>
+<div class="mb-6 rounded-none bg-[#14110f] border-l-4 border-[#ff7b33] p-6 font-mono text-sm overflow-x-auto shadow-inner">
+<div class="flex items-center gap-2 mb-4">
+<div class="w-2 h-2 bg-[#ff5449] molten-glow"></div>
+<div class="w-2 h-2 bg-[#ff8a4d] opacity-50"></div>
+<div class="w-2 h-2 bg-[#7a6e63] opacity-30"></div>
+<span class="ml-4 text-[10px] text-[#7a6e63] tracking-widest uppercase font-headline font-bold">propagation_logic.rs</span>
+</div>
+<pre class="text-[#b8a99a]"><code><span class="text-[#ff8a4d] font-bold">fn</span> <span class="text-[#e8e1da]">sync_nodes</span>(network: &amp;Network) -&gt; PropagationResult {
+    <span class="text-[#7a6e63] italic">// Broadcast to prioritized cluster nodes first</span>
+    <span class="text-[#ff8a4d] font-bold">let</span> clusters = network.get_priority_clusters();
+    <span class="text-[#e8e1da]">clusters.iter().map(|c| {</span>
+        <span class="text-[#ff8a4d] font-bold">let</span> latency = c.ping();
+        <span class="text-[#e8e1da]">c.dispatch_payload(payload, latency)</span>
+    <span class="text-[#e8e1da]">}).collect()</span>
+}</code></pre>
+</div>
+<p class="text-[#b8a99a] leading-relaxed mb-8 font-body text-sm border-l border-[#3d342d] pl-6 italic">
+                                By prioritizing nodes with a proven reputation score and lower latency, we've managed to decrease global state synchronization time by 42%. This patch is currently in review for Protocol v2.4.
+                            </p>
+<div class="flex items-center gap-8 text-[#7a6e63]">
+<button class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:text-[#ff8a4d] transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="chat_bubble_outline">chat_bubble_outline</span> 42 Nodes
+                                </button>
+<button class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:text-[#ff8a4d] transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="terminal">terminal</span> Clone Node
+                                </button>
+</div>
+</div>
+</div>
+</article>
+</div>
+</div>
+<aside class="hidden xl:flex w-96 border-l border-[#3d342d] flex-col py-12 px-8 gap-12 bg-[#14110f]/40">
+<section>
+<h4 class="font-headline text-[10px] uppercase tracking-[0.3em] text-[#ff8a4d] mb-8 flex items-center gap-3 font-bold">
+<span class="w-2 h-2 bg-[#ff7b33] molten-glow animate-pulse"></span>
+                    CORE STATUS // ACTIVE
+                </h4>
+<div class="space-y-4">
+<div class="bg-[#1d1916] rounded-none p-6 border border-[#3d342d] relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-16 h-16 bg-[#ff7b33]/5 -mr-8 -mt-8 rotate-45"></div>
+<div class="flex justify-between items-start mb-5">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-[#7a6e63] mb-2 font-bold">Global Hashrate</p>
+<p class="text-3xl font-headline font-bold text-[#e8e1da] tracking-tighter">42.8 EH/s</p>
+</div>
+<span class="text-[10px] text-[#ff8a4d] font-black font-headline bg-[#ff8a4d]/10 px-2 py-1">+2.4%</span>
+</div>
+<div class="h-2 bg-[#3d342d] rounded-none overflow-hidden">
+<div class="h-full bg-gradient-to-r from-[#633112] to-[#ff7b33] w-3/4 shadow-[0_0_10px_rgba(255,123,51,0.5)]"></div>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h4 class="font-headline text-[10px] uppercase tracking-[0.3em] text-[#7a6e63] mb-8 font-bold">Trending Sectors</h4>
+<div class="space-y-8">
+<div class="flex items-center gap-5 group cursor-pointer">
+<div class="w-12 h-12 rounded-none bg-[#241f1b] flex items-center justify-center border border-[#3d342d] group-hover:border-[#ff7b33] group-hover:bg-[#ff7b33]/5 transition-all">
+<span class="material-symbols-outlined text-[#7a6e63] group-hover:text-[#ff8a4d]" data-icon="data_object">data_object</span>
+</div>
+<div>
+<p class="text-sm font-bold text-[#e8e1da] font-headline group-hover:text-[#ff7b33] transition-colors tracking-tight uppercase">L2_Zero_Knowledge</p>
+<p class="text-[10px] text-[#7a6e63] uppercase tracking-widest mt-1">1,402 active units</p>
+</div>
+</div>
+<div class="flex items-center gap-5 group cursor-pointer">
+<div class="w-12 h-12 rounded-none bg-[#241f1b] flex items-center justify-center border border-[#3d342d] group-hover:border-[#ff7b33] group-hover:bg-[#ff7b33]/5 transition-all">
+<span class="material-symbols-outlined text-[#7a6e63] group-hover:text-[#ff8a4d]" data-icon="token">token</span>
+</div>
+<div>
+<p class="text-sm font-bold text-[#e8e1da] font-headline group-hover:text-[#ff7b33] transition-colors tracking-tight uppercase">Synthetic_Assets</p>
+<p class="text-[10px] text-[#7a6e63] uppercase tracking-widest mt-1">892 active units</p>
+</div>
+</div>
+<div class="flex items-center gap-5 group cursor-pointer">
+<div class="w-12 h-12 rounded-none bg-[#241f1b] flex items-center justify-center border border-[#3d342d] group-hover:border-[#ff7b33] group-hover:bg-[#ff7b33]/5 transition-all">
+<span class="material-symbols-outlined text-[#7a6e63] group-hover:text-[#ff8a4d]" data-icon="privacy_tip">privacy_tip</span>
+</div>
+<div>
+<p class="text-sm font-bold text-[#e8e1da] font-headline group-hover:text-[#ff7b33] transition-colors tracking-tight uppercase">Dark_Pool_Liquidity</p>
+<p class="text-[10px] text-[#7a6e63] uppercase tracking-widest mt-1">2.1k active units</p>
+</div>
+</div>
+</div>
+<button class="mt-10 text-[10px] font-headline font-black text-[#ff8a4d]/80 hover:text-[#ff7b33] transition-all flex items-center gap-2 uppercase tracking-[0.2em] border-b border-transparent hover:border-[#ff7b33] pb-1">
+                    VIEW ALL NETWORK NODES <span class="material-symbols-outlined text-[12px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</section>
+<section class="mt-auto">
+<div class="bg-gradient-to-br from-[#2d1405] to-[#1a1614] rounded-none p-6 border border-[#ff7b33]/20 relative overflow-hidden group shadow-2xl">
+<div class="absolute top-0 right-0 w-32 h-32 bg-[#ff7b33]/10 blur-[40px] rounded-full -mr-16 -mt-16"></div>
+<h5 class="text-xl font-headline font-bold text-[#e8e1da] mb-3 uppercase italic tracking-tighter">Protocol Governance</h5>
+<p class="text-xs text-[#b8a99a] mb-8 leading-relaxed font-medium italic opacity-80 border-l-2 border-[#ff7b33]/30 pl-4">Cast your vote on Proposal #082: Increasing Block Reward Dispersion.</p>
+<button class="w-full py-4 bg-[#ff7b33] text-[#1a1614] rounded-none text-[10px] font-black font-headline uppercase tracking-[0.3em] hover:bg-[#ff8a4d] transition-all active:scale-[0.98] molten-glow">
+                        Execute Vote
+                    </button>
+</div>
+</section>
+</aside>
+</main>
+<button class="fixed bottom-10 right-10 w-16 h-16 bg-[#ff7b33] rounded-none flex items-center justify-center shadow-[0_10px_40px_rgba(255,123,51,0.4)] hover:translate-y-[-4px] active:scale-95 transition-all group z-50 border-2 border-[#ff8a4d]">
+<span class="material-symbols-outlined text-[#1a1614] text-3xl font-black group-hover:rotate-180 transition-transform duration-700" data-icon="construction">construction</span>
+<div class="absolute inset-0 border border-[#1a1614] m-1 opacity-20"></div>
+</button>
+
+</body></html>
