@@ -218,9 +218,17 @@
 		if (document.hasFocus()) markRead()
 	}
 
-	function onDmEdited({ msgId, content, conversation_id }: { msgId: string; content: string; conversation_id: string }) {
+	async function onDmEdited({ msgId, content, conversation_id }: { msgId: string; content: string; conversation_id: string }) {
 		if (conversation_id !== conversationId) return
-		messages = messages.map(m => m.id === msgId ? { ...m, content, edited_at: new Date().toISOString() } : m)
+		const orig = messages.find(m => m.id === msgId)
+		if (orig?.is_encrypted && peerPublicKey && orig.encryption_nonce) {
+			const plain = await decryptDM(content, orig.encryption_nonce, peerPublicKey, data.token)
+			messages = messages.map(m => m.id === msgId
+				? { ...m, content, _decrypted: plain ?? undefined, _decryptFailed: plain === null, edited_at: new Date().toISOString() }
+				: m)
+		} else {
+			messages = messages.map(m => m.id === msgId ? { ...m, content, edited_at: new Date().toISOString() } : m)
+		}
 	}
 
 	function onDmDeleted({ msgId, conversation_id }: { msgId: string; conversation_id: string }) {
@@ -238,11 +246,25 @@
 		editingContent = ''
 	}
 
-	function saveEdit() {
+	async function saveEdit() {
 		const content = editingContent.trim()
 		if (!content || !editingMsgId) return
 		const sock = getSocket()
-		if (sock) sock.emit('dm:edit', { msgId: editingMsgId, content })
+		const msgBeingEdited = messages.find(m => m.id === editingMsgId)
+
+		if (msgBeingEdited?.is_encrypted && peerPublicKey) {
+			// Re-chiffrer le nouveau contenu
+			try {
+				const { ciphertext, nonce } = await encryptDM(content, peerPublicKey, data.token)
+				if (sock) sock.emit('dm:edit', { msgId: editingMsgId, content: ciphertext, encryption_nonce: nonce })
+				// Optimistic local update
+				messages = messages.map(m => m.id === editingMsgId
+					? { ...m, content: ciphertext, _decrypted: content, edited_at: new Date().toISOString() }
+					: m)
+			} catch { /* échec chiffrement — annuler */ }
+		} else {
+			if (sock) sock.emit('dm:edit', { msgId: editingMsgId, content })
+		}
 		editingMsgId = null
 		editingContent = ''
 	}
@@ -614,16 +636,14 @@
 							<!-- Actions hover -->
 							{#if isMine && !msg.deleted_at && editingMsgId !== msg.id}
 								<div class="flex gap-0.5 mb-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-									{#if !msg.is_encrypted}
-										<button onclick={() => startEdit(msg)}
-											class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-indigo-400 transition-colors"
-											title={tFn('common.edit')}>
-											<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-												<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-												<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-											</svg>
-										</button>
-									{/if}
+									<button onclick={() => startEdit(msg)}
+										class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-indigo-400 transition-colors"
+										title={tFn('common.edit')}>
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+											<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+										</svg>
+									</button>
 									<button onclick={() => deleteMessage(msg.id)}
 										class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-red-400 transition-colors"
 										title={tFn('common.delete')}>

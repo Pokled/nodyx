@@ -683,11 +683,17 @@ export function registerSocketIO(server: Server): void {
           [data.msgId]
         )
         if (!msg || msg.sender_id !== userId) return
-        if (msg.is_encrypted) return  // on n'édite pas les messages chiffrés
 
-        const clean = sanitize(raw)
-        const dmCheck = checkHtmlContent(clean)
-        if (!dmCheck.ok) return
+        let clean: string
+        if (msg.is_encrypted) {
+          // Message chiffré : valider base64, ne pas sanitizer
+          if (!/^[A-Za-z0-9+\/=\n]{1,20000}$/.test(raw)) return
+          clean = raw
+        } else {
+          clean = sanitize(raw)
+          const dmCheck = checkHtmlContent(clean)
+          if (!dmCheck.ok) return
+        }
 
         await db.query(
           `UPDATE dm_messages SET content = $1, edited_at = now() WHERE id = $2`,
