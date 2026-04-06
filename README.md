@@ -9,7 +9,7 @@
 **The community platform that no one can take from you.**
 Forum + Chat + Voice + P2P Canvas — on your server, under your control, forever.
 
-[![Version](https://img.shields.io/badge/version-v1.9.5-7c3aed)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.0.0-7c3aed)](CHANGELOG.md)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
@@ -313,7 +313,7 @@ Database migrations are applied automatically on startup — no manual SQL neede
 </details>
 
 <details>
-<summary><b>v1.4 → v1.9 — Current</b></summary>
+<summary><b>v1.4 → v1.9 — Security & Polish</b></summary>
 
 | Feature | Version |
 |---|---|
@@ -342,13 +342,30 @@ Database migrations are applied automatically on startup — no manual SQL neede
 
 </details>
 
+<details open>
+<summary><b>v2.0 — Private & Sovereign Communications 🔒</b></summary>
+
+| Feature | Version |
+|---|---|
+| **DM E2E encryption** — ECDH P-256 + AES-256-GCM, private key never leaves the browser (IndexedDB non-extractable) | v2.0 |
+| **ESY Barbare layer** — per-instance byte-permutation obfuscation on top of AES-GCM, server sees only opaque ciphertext | v2.0 |
+| **E2E shield** — live indicator in DM header (green pulse = active, orange = partial), ESY fingerprint tooltip | v2.0 |
+| **Barbarize animation** — sender sees obfuscated text during encryption, receiver sees it decipher in real-time | v2.0 |
+| **DM message edit** — inline edit with re-encryption for E2E messages, real-time propagation via socket | v2.0 |
+| **DM message delete** — real-time soft-delete propagated to all participants instantly | v2.0 |
+| **DM full-width redesign** — split layout, glassmorphism sidebar, iMessage-style bubbles, grouped messages | v2.0 |
+| **AudioContext shared** — single context for all peer VAD (Chrome 6-context limit fix) | v2.0 |
+
+</details>
+
 ### Coming
 
 | Feature | Notes |
 |---|---|
+| **DM reactions** — emoji reactions on private messages | — |
 | **Nodes** — durable structured knowledge, community-validated via Garden | [SPEC 013](docs/en/specs/013-node/SPEC.md) |
-| **DMs end-to-end encrypted** — ECDH key exchange + AES-256-GCM | [Spec](docs/ideas/DM_ARCHITECTURE.md) |
-| **Plugin system** — external contributor API (fullstack hooks) | [Spec](docs/ideas/PLUGIN_SYSTEM.md) |
+| **Module system** — 26 activatable modules from admin panel (CMS-style) | [Spec](.claude/ideas/MODULE_SYSTEM.md) |
+| **Discord import** — bulk import channels, threads, reactions, avatars | — |
 | Mobile (Capacitor) / Desktop (Tauri) | — |
 | Rust migration — nodyx-server (Axum) replacing nodyx-core progressively | — |
 

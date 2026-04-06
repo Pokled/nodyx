@@ -1,6 +1,6 @@
 {
   "name": "nodyx-core",
-  "version": "1.9.4",
+  "version": "2.0.0",
   "description": "Nodyx Core - Sanctuaire du projet. Le noyau intouchable.",
   "main": "index.js",
   "scripts": {
