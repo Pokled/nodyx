@@ -461,8 +461,12 @@ let _visibilityHandler: (() => void) | null = null
 function _startContextKeepAlive(): void {
   _stopContextKeepAlive()
   _visibilityHandler = () => {
-    if (document.visibilityState === 'visible' && _localChain?.ctx.state === 'suspended') {
+    if (document.visibilityState !== 'visible') return
+    if (_localChain?.ctx.state === 'suspended') {
       _localChain.ctx.resume().catch(() => {})
+    }
+    if (_peerVADCtx?.state === 'suspended') {
+      _peerVADCtx.resume().catch(() => {})
     }
   }
   document.addEventListener('visibilitychange', _visibilityHandler)
@@ -490,13 +494,26 @@ function _stopContextKeepAlive(): void {
 
 interface PeerAudio {
   audioEl:     HTMLAudioElement
-  ctx:         AudioContext | null  // null si la création AudioContext échoue
   source:      MediaStreamAudioSourceNode | null  // référence explicite pour disconnect()
   analyser:    AnalyserNode | null
   vadInterval: ReturnType<typeof setInterval>
 }
 
 const _peerAudio = new Map<string, PeerAudio>()
+
+// ── Shared AudioContext for all peer VAD ──────────────────────────
+// Un seul contexte partagé pour tous les peers (vs un par peer).
+// Chrome limite à 6 AudioContexts/origine — avec 5 peers + localChain on atteignait la limite.
+// Créé au premier peer, fermé seulement dans leaveVoice().
+let _peerVADCtx: AudioContext | null = null
+
+function _getOrCreatePeerVADCtx(): AudioContext {
+  if (!_peerVADCtx || _peerVADCtx.state === 'closed') {
+    _peerVADCtx = new AudioContext({ sampleRate: 48000 })
+    _peerVADCtx.resume().catch(() => {})
+  }
+  return _peerVADCtx
+}
 
 function createPeerAudio(socketId: string, stream: MediaStream): void {
   destroyPeerAudio(socketId)
@@ -516,14 +533,13 @@ function createPeerAudio(socketId: string, stream: MediaStream): void {
     document.addEventListener('keydown', retry, { once: true })
   })
 
-  // ── AudioContext uniquement pour VAD (niveau d'entrée → indicateur "parle")
+  // ── AudioContext partagé pour VAD (niveau d'entrée → indicateur "parle")
+  // Réutilise _peerVADCtx (un seul contexte pour tous les peers) au lieu d'en créer un par peer.
   // Si le contexte est suspendu, on perd juste l'indicateur visuel — l'audio joue quand même.
-  // sampleRate: 48000 — cohérent avec le codec Opus WebRTC.
-  let ctx:     AudioContext | null = null
   let source:  MediaStreamAudioSourceNode | null = null
   let analyser: AnalyserNode | null = null
   try {
-    ctx = new AudioContext({ sampleRate: 48000 })
+    const ctx = _getOrCreatePeerVADCtx()
     source   = ctx.createMediaStreamSource(stream)
     analyser = ctx.createAnalyser()
     analyser.fftSize = 512
@@ -531,9 +547,7 @@ function createPeerAudio(socketId: string, stream: MediaStream): void {
     source.connect(analyser)
     // Pas de connexion à ctx.destination ni à MediaStreamDestination —
     // le son sort déjà via audioEl.srcObject = stream
-    ctx.resume().catch(() => {})
   } catch {
-    ctx      = null
     source   = null
     analyser = null
   }
@@ -550,7 +564,7 @@ function createPeerAudio(socketId: string, stream: MediaStream): void {
     }))
   }, 100)
 
-  _peerAudio.set(socketId, { audioEl, ctx, source, analyser, vadInterval })
+  _peerAudio.set(socketId, { audioEl, source, analyser, vadInterval })
 }
 
 function destroyPeerAudio(socketId: string): void {
@@ -559,10 +573,10 @@ function destroyPeerAudio(socketId: string): void {
     clearInterval(node.vadInterval)
     node.audioEl.pause()
     node.audioEl.srcObject = null
-    // Déconnecter explicitement avant de fermer le contexte
+    // Déconnecter les nœuds du contexte partagé — ne pas fermer le contexte lui-même
+    // (_peerVADCtx est fermé une seule fois dans leaveVoice)
     try { node.source?.disconnect()  } catch { /* déjà déconnecté */ }
     try { node.analyser?.disconnect() } catch { /* déjà déconnecté */ }
-    node.ctx?.close().catch(() => {})
     _peerAudio.delete(socketId)
   }
   _stopStatsPolling(socketId)
@@ -981,6 +995,12 @@ export function leaveVoice(): void {
   _localStream = null
   _teardownLocalChain()
   _processedStream = null
+
+  // Fermer le contexte VAD partagé (tous les peers ont déjà été détruits ci-dessus)
+  if (_peerVADCtx) {
+    _peerVADCtx.close().catch(() => {})
+    _peerVADCtx = null
+  }
 
   _screenStream?.getTracks().forEach(t => t.stop())
   _screenStream = null
