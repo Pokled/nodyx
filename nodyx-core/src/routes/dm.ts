@@ -136,7 +136,7 @@ export default async function dmRoutes(app: FastifyInstance) {
 
     const { rows: messages } = await db.query(`
       SELECT
-        m.id, m.conversation_id, m.sender_id, m.content, m.created_at, m.deleted_at,
+        m.id, m.conversation_id, m.sender_id, m.content, m.created_at, m.deleted_at, m.edited_at,
         m.is_encrypted, m.encryption_nonce,
         u.username        AS sender_username,
         u.avatar          AS sender_avatar,

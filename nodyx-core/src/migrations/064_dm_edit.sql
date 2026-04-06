@@ -1,0 +1,2 @@
+-- 064 — DM message editing
+ALTER TABLE dm_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ DEFAULT NULL;

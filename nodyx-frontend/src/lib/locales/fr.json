@@ -1081,5 +1081,6 @@
   "dm.encrypted_message": "Message chiffré E2E",
   "dm.decrypt_failed": "Impossible de déchiffrer",
   "dm.e2e_tooltip_active": "Chiffrement bout en bout actif",
-  "dm.e2e_tooltip_partial": "Chiffrement partiel — l'autre n'a pas encore activé E2E"
+  "dm.e2e_tooltip_partial": "Chiffrement partiel — l'autre n'a pas encore activé E2E",
+  "common.edited": "modifié"
 }

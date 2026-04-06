@@ -669,6 +669,48 @@ export function registerSocketIO(server: Server): void {
       }
     })
 
+    // dm:edit — modifier un message DM (sender uniquement, pas chiffré)
+    socket.on('dm:edit', async (data: { msgId: string; content: string }) => {
+      if (checkRateLimit(userId, 'dm:edit')) return
+      try {
+        if (!isUuid(data?.msgId) || !isString(data?.content)) return
+        const raw = data.content.trim()
+        if (!raw || raw.length > 20000) return
+
+        // Vérifier ownership + non chiffré + non supprimé
+        const { rows: [msg] } = await db.query<{ sender_id: string; conversation_id: string; is_encrypted: boolean }>(
+          `SELECT sender_id, conversation_id, is_encrypted FROM dm_messages WHERE id = $1 AND deleted_at IS NULL`,
+          [data.msgId]
+        )
+        if (!msg || msg.sender_id !== userId) return
+        if (msg.is_encrypted) return  // on n'édite pas les messages chiffrés
+
+        const clean = sanitize(raw)
+        const dmCheck = checkHtmlContent(clean)
+        if (!dmCheck.ok) return
+
+        await db.query(
+          `UPDATE dm_messages SET content = $1, edited_at = now() WHERE id = $2`,
+          [clean, data.msgId]
+        )
+
+        // Notifier les participants
+        const { rows: participants } = await db.query<{ user_id: string }>(
+          `SELECT user_id FROM dm_participants WHERE conversation_id = $1`,
+          [msg.conversation_id]
+        )
+        for (const p of participants) {
+          server.to(`user:${p.user_id}`).emit('dm:edited', {
+            msgId: data.msgId,
+            content: clean,
+            conversation_id: msg.conversation_id,
+          })
+        }
+      } catch (err) {
+        console.error('[dm:edit] Error:', err)
+      }
+    })
+
     // dm:typing — indicateur de frappe (throttlé côté client)
     socket.on('dm:typing', (conversationId: string) => {
       if (checkRateLimit(userId, 'dm:typing')) return

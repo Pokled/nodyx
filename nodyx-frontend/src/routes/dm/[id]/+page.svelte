@@ -25,6 +25,7 @@
 		deleted_at: string | null
 		is_encrypted?: boolean
 		encryption_nonce?: string | null
+		edited_at?: string | null
 		// Texte déchiffré en local (jamais persisté)
 		_decrypted?: string
 		_decryptFailed?: boolean
@@ -127,6 +128,9 @@
 	let hasMore = $state(messages.length >= 50)
 	let currentUserId = $state('')
 	let sendingMsg = $state(false)
+	// Édition inline
+	let editingMsgId: string | null = $state(null)
+	let editingContent = $state('')
 
 	onMount(async () => {
 		const res = await apiFetch(fetch, '/users/me', {
@@ -145,10 +149,12 @@
 		// Écoute socket DM — attendre que le socket soit prêt si nécessaire
 		const attachListeners = (sock: ReturnType<typeof getSocket>) => {
 			if (!sock) return
-			sock.off('dm:message', onDmMessage)  // éviter les doublons
+			sock.off('dm:message', onDmMessage)
 			sock.off('dm:typing', onDmTyping)
+			sock.off('dm:edited', onDmEdited)
 			sock.on('dm:message', onDmMessage)
 			sock.on('dm:typing', onDmTyping)
+			sock.on('dm:edited', onDmEdited)
 			sock.on('dm:read_ack', () => {})
 		}
 		const sock = getSocket()
@@ -208,6 +214,35 @@
 		}
 
 		if (document.hasFocus()) markRead()
+	}
+
+	function onDmEdited({ msgId, content, conversation_id }: { msgId: string; content: string; conversation_id: string }) {
+		if (conversation_id !== conversationId) return
+		messages = messages.map(m => m.id === msgId ? { ...m, content, edited_at: new Date().toISOString() } : m)
+	}
+
+	function startEdit(msg: DmMessage) {
+		editingMsgId = msg.id
+		editingContent = msg.content
+	}
+
+	function cancelEdit() {
+		editingMsgId = null
+		editingContent = ''
+	}
+
+	function saveEdit() {
+		const content = editingContent.trim()
+		if (!content || !editingMsgId) return
+		const sock = getSocket()
+		if (sock) sock.emit('dm:edit', { msgId: editingMsgId, content })
+		editingMsgId = null
+		editingContent = ''
+	}
+
+	function onEditKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() }
+		if (e.key === 'Escape') cancelEdit()
 	}
 
 	function onDmTyping({ conversationId: cid, userId, username }: { conversationId: string; userId: string; username: string }) {
@@ -581,6 +616,20 @@
 											+ (first ? 'rounded-t-2xl rounded-bl-2xl rounded-br-md' : last ? 'rounded-b-2xl rounded-tl-2xl rounded-tr-md' : 'rounded-l-2xl rounded-r-md')
 										: 'bg-white/[0.07] border border-white/[0.06] text-gray-100 '
 											+ (first ? 'rounded-t-2xl rounded-br-2xl rounded-bl-md' : last ? 'rounded-b-2xl rounded-tr-2xl rounded-tl-md' : 'rounded-r-2xl rounded-l-md')}">
+									{#if editingMsgId === msg.id}
+									<!-- Mode édition inline -->
+									<textarea
+										bind:value={editingContent}
+										onkeydown={onEditKeydown}
+										rows="1"
+										class="w-full bg-transparent outline-none resize-none text-sm text-white leading-relaxed"
+										style="field-sizing: content;"
+									></textarea>
+									<div class="flex gap-1.5 mt-1.5">
+										<button onclick={saveEdit} class="text-[10px] px-2 py-0.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Entrée</button>
+										<button onclick={cancelEdit} class="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] text-gray-400 transition-colors">Échap</button>
+									</div>
+								{:else}
 									{displayContent(msg)}
 
 									<!-- Lock badge si message chiffré -->
@@ -593,7 +642,29 @@
 										</span>
 									{/if}
 
-									{#if isMine}
+									{#if isMine && !msg.is_encrypted}
+										<!-- Bouton édition -->
+										<button
+											onclick={() => startEdit(msg)}
+											class="absolute -left-14 top-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 rounded-lg hover:bg-white/[0.06] text-gray-700 hover:text-indigo-400"
+											title={tFn('common.edit')}
+										>
+											<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+												<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+												<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+											</svg>
+										</button>
+										<!-- Bouton suppression -->
+										<button
+											onclick={() => deleteMessage(msg.id)}
+											class="absolute -left-8 top-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 rounded-lg hover:bg-white/[0.06] text-gray-700 hover:text-red-400"
+											title={tFn('common.delete')}
+										>
+											<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+												<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/>
+											</svg>
+										</button>
+									{:else if isMine && msg.is_encrypted}
 										<button
 											onclick={() => deleteMessage(msg.id)}
 											class="absolute -left-8 top-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 rounded-lg hover:bg-white/[0.06] text-gray-700 hover:text-red-400"
@@ -604,11 +675,15 @@
 											</svg>
 										</button>
 									{/if}
+								{/if}
 								</div>
 							{/if}
 
 							{#if last}
-								<span class="text-[10px] text-gray-700 mt-1 px-1">{formatTime(msg.created_at)}</span>
+								<span class="text-[10px] text-gray-700 mt-1 px-1">
+									{formatTime(msg.created_at)}
+									{#if msg.edited_at}<span class="italic"> · {tFn('common.edited')}</span>{/if}
+								</span>
 							{/if}
 						</div>
 					</div>
