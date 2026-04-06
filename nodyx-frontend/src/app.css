@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* ── Overscroll élastique macOS/iOS — évite la barre blanche ────────────────
+   Le navigateur révèle html/body quand on tire au-delà du bord.
+   On force la couleur sombre pour que ça soit invisible.                    */
+html, body {
+  background-color: #06060a;
+  overscroll-behavior: none;
+}
+
 /* ── Theme CSS vars (définis dynamiquement par +layout.svelte via appVars) ──
    Portée actuelle :
      · Layout chrome (nav, galaxy bar, members bar, bottom nav) ✓

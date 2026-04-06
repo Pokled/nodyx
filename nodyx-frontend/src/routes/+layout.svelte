@@ -1251,15 +1251,55 @@
 				</div>
 			</div>
 			{:else}
-				<!-- Not logged in -->
-				<div class="flex-1 flex flex-col items-center justify-center gap-4 px-5 text-center">
-					<div class="w-10 h-10 flex items-center justify-center" style="background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.2)">
-						<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color: #7c3aed"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+				<!-- Not logged in — invite card -->
+				<a href="/auth/login" class="guest-members-card" aria-label="Se connecter pour voir les membres">
+
+					<!-- Radar animé -->
+					<div class="guest-radar">
+						<div class="guest-radar-ring r1"></div>
+						<div class="guest-radar-ring r2"></div>
+						<div class="guest-radar-ring r3"></div>
+						<!-- Icône centrale -->
+						<div class="guest-radar-core">
+							<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+								<circle cx="9" cy="7" r="4"/>
+								<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+								<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+							</svg>
+						</div>
 					</div>
-					<p class="text-[11px] leading-relaxed" style="color: #4b5563">
-						<a href="/auth/login" class="font-bold transition-colors" style="color: #a78bfa">Connecte-toi</a><br/>pour voir qui est en ligne
-					</p>
-				</div>
+
+					<!-- Avatars fantômes -->
+					<div class="guest-ghosts">
+						{#each ['M','J','A','K','S','T','R','L'] as letter, i}
+						<div class="guest-ghost" style="--gi:{i}; --gc:{['#818cf8','#a78bfa','#34d399','#fb923c','#f472b6','#67e8f9','#facc15','#f87171'][i]}">
+							{letter}
+						</div>
+						{/each}
+					</div>
+
+					<!-- Live badge + compteur -->
+					<div class="guest-live-row">
+						<span class="guest-live-dot"></span>
+						<span class="guest-live-label">
+							{memberCount > 0 ? `${memberCount} membre${memberCount > 1 ? 's' : ''}` : 'Communauté active'}
+						</span>
+					</div>
+
+					<!-- Texte -->
+					<p class="guest-tagline">Connecte-toi pour voir<br>qui est en ligne</p>
+
+					<!-- CTA -->
+					<div class="guest-cta">
+						<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+							<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+							<polyline points="10 17 15 12 10 7"/>
+							<line x1="15" y1="12" x2="3" y2="12"/>
+						</svg>
+						Se connecter
+					</div>
+				</a>
 			{/if}
 		</aside>
 
@@ -1482,6 +1522,168 @@
 {/if}
 
 <style>
+/* ── Guest members sidebar ───────────────────────────────────────────────── */
+.guest-members-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+	gap: 18px;
+	padding: 28px 16px;
+	text-decoration: none;
+	cursor: pointer;
+	position: relative;
+	overflow: hidden;
+	transition: background 0.3s;
+}
+.guest-members-card::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at 50% 40%, rgba(139,92,246,0.07) 0%, transparent 70%);
+	pointer-events: none;
+	transition: opacity 0.4s;
+	opacity: 1;
+}
+.guest-members-card:hover::before { opacity: 1.6; }
+.guest-members-card:hover { background: rgba(139,92,246,0.04); }
+
+/* Radar */
+.guest-radar {
+	position: relative;
+	width: 72px;
+	height: 72px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+.guest-radar-ring {
+	position: absolute;
+	border-radius: 50%;
+	border: 1px solid rgba(139,92,246,0.35);
+	animation: guest-ping 2.4s ease-out infinite;
+}
+.r1 { width: 72px; height: 72px; animation-delay: 0s; }
+.r2 { width: 72px; height: 72px; animation-delay: 0.8s; }
+.r3 { width: 72px; height: 72px; animation-delay: 1.6s; }
+@keyframes guest-ping {
+	0%   { transform: scale(0.4); opacity: 0.8; border-color: rgba(139,92,246,0.5); }
+	100% { transform: scale(1.9); opacity: 0; }
+}
+.guest-radar-core {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: rgba(139,92,246,0.12);
+	border: 1px solid rgba(139,92,246,0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #a78bfa;
+	position: relative;
+	z-index: 1;
+	transition: background 0.3s, border-color 0.3s;
+}
+.guest-members-card:hover .guest-radar-core {
+	background: rgba(139,92,246,0.2);
+	border-color: rgba(139,92,246,0.5);
+}
+
+/* Ghost avatars */
+.guest-ghosts {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 6px;
+	width: 100%;
+	max-width: 160px;
+}
+.guest-ghost {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: rgba(255,255,255,0.04);
+	border: 1px solid rgba(255,255,255,0.08);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 10px;
+	font-weight: 700;
+	color: var(--gc);
+	filter: blur(0.5px);
+	opacity: 0.55;
+	animation: guest-ghost-float 3s ease-in-out infinite;
+	animation-delay: calc(var(--gi) * 0.3s);
+	transition: opacity 0.3s, filter 0.3s;
+}
+.guest-members-card:hover .guest-ghost {
+	opacity: 0.8;
+	filter: blur(0px);
+}
+@keyframes guest-ghost-float {
+	0%, 100% { transform: translateY(0px); }
+	50%       { transform: translateY(-3px); }
+}
+
+/* Live row */
+.guest-live-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.guest-live-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #4ade80;
+	box-shadow: 0 0 6px rgba(74,222,128,0.6);
+	animation: guest-live-pulse 1.8s ease-in-out infinite;
+	flex-shrink: 0;
+}
+@keyframes guest-live-pulse {
+	0%, 100% { box-shadow: 0 0 6px rgba(74,222,128,0.6); }
+	50%       { box-shadow: 0 0 12px rgba(74,222,128,0.9), 0 0 20px rgba(74,222,128,0.3); }
+}
+.guest-live-label {
+	font-size: 11px;
+	font-weight: 700;
+	color: #4ade80;
+	letter-spacing: 0.03em;
+}
+
+/* Tagline */
+.guest-tagline {
+	font-size: 11px;
+	line-height: 1.6;
+	color: #6b7280;
+	text-align: center;
+	margin: 0;
+}
+
+/* CTA */
+.guest-cta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 9px 18px;
+	border-radius: 20px;
+	background: rgba(139,92,246,0.12);
+	border: 1px solid rgba(139,92,246,0.25);
+	color: #c4b5fd;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.guest-members-card:hover .guest-cta {
+	background: rgba(139,92,246,0.22);
+	border-color: rgba(139,92,246,0.5);
+	color: #e9d5ff;
+	box-shadow: 0 0 18px rgba(139,92,246,0.25);
+}
+
 /* ── Voice channel member cards ─────────────────────────────────────────── */
 .vc-member-card {
 	border-radius: 0;
