@@ -1333,6 +1333,8 @@ cat > "${NODYX_DIR}/nodyx-frontend/.env" <<FEENV
 # Généré par install.sh — ne pas modifier manuellement
 
 PUBLIC_API_URL=https://${DOMAIN}
+# SSR bypass — nodyx-frontend contacte nodyx-core directement sans passer par Caddy
+PRIVATE_API_SSR_URL=http://127.0.0.1:${NODYX_CORE_PORT:-3000}/api/v1
 # Nodyx Signet (authentificateur optionnel) — laisser vide si non utilisé
 PUBLIC_SIGNET_URL=
 # Les credentials TURN sont désormais générés dynamiquement par nodyx-core (nodyx-turn).
