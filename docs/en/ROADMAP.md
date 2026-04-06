@@ -1,5 +1,5 @@
 # NODYX — Roadmap
-### Version 1.8 — The sovereign stack
+### Version 2.0 — Private & Sovereign Communications
 
 ---
 
@@ -9,7 +9,7 @@
 
 ---
 
-## CURRENT STATE — March 2026
+## CURRENT STATE — April 2026
 
 | Phase | Title | Status |
 |---|---|---|
@@ -24,7 +24,8 @@
 | **Phase 4.8** | Production stability & cross-runtime hardening (v1.9.3) | ✅ Complete |
 | **Phase 4.9** | Process isolation, test coverage & CI hardening (v1.9.4) | ✅ Complete |
 | **Phase 4.10** | Living Profile + Forum Redesign (v1.9.5) | ✅ Complete |
-| Phase 5 | Mobile + Nodes + Reputation | 🔨 In Progress |
+| **Phase 4.11** | Private & Sovereign Communications — E2E DMs (v2.0) | ✅ Complete |
+| Phase 5 | Mobile + Nodes + Reactions + Discord import | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
 
@@ -557,15 +558,32 @@ nodyx-core    (Fastify/Node.js) ────────────────
 
 ---
 
-## PHASE 5 — Mobile + Nodes + Reputation
-### Goal: Nodyx in everyone's pocket, with structured knowledge and end-to-end privacy
+## PHASE 4.11 — Private & Sovereign Communications ✅ COMPLETE (v2.0)
+### Goal: DMs that no server can read — not even yours
 
-- [ ] **Bio enrichie Markdown** — TipTap editor on profile bio (TipTap already in project)
-- [ ] **Système Merci backend** — `thanks` table, real Q score with λ decay (`e^{-λt}` weighting), migration 064
+- [x] **ECDH P-256 keypair** — generated in the browser, private key stored as non-extractable `CryptoKey` in IndexedDB, never leaves the client
+- [x] **AES-256-GCM encryption** — per-message random 12-byte IV, authenticated ciphertext stored in database
+- [x] **ESY Barbare layer** — per-instance second obfuscation layer on top of AES-GCM (byte-permutation table + xorshift32 PRNG noise, N rounds). Server sees only opaque base64
+- [x] **`instance.esy`** — generated once per instance, fingerprinted (`SHA-256` truncated), served via `/api/v1/instance/esy-public`
+- [x] **E2E shield** in DM header — green pulsing dot (both active), orange (partial), ESY fingerprint on hover
+- [x] **Barbarize animation** — expéditeur voit le texte se brouiller pendant le chiffrement, réceptionnaire voit la bulle se déchiffrer en temps réel (350ms)
+- [x] **Message edit with re-encryption** — editing an E2E message re-encrypts with the full ECDH + AES + ESY chain
+- [x] **Real-time delete** — soft-delete propagated instantly to all participants via Socket.IO
+- [x] **DM full-width redesign** — split layout glassmorphism, iMessage-style grouped bubbles
+- [x] **AudioContext fix** — single shared context for all peer VAD (Chrome 6-context-per-origin limit)
+
+---
+
+## PHASE 5 — Mobile + Nodes + Reactions
+### Goal: Nodyx in everyone's pocket, with structured knowledge
+
+- [ ] **DM reactions** — emoji reactions on private messages
+- [ ] **Discord import** — bulk import channels, threads, reactions, avatars from a Discord server export
+- [ ] **Bio enrichie Markdown** — TipTap editor on profile bio
+- [ ] **Système Merci backend** — `thanks` table, real Q score with λ decay (`e^{-λt}` weighting)
 - [ ] **Shareable profile card** — `/users/:username/card` SSR image (avatar + rings + stats), OG meta
 - [ ] **Nodes** (SPEC 013) — durable structured knowledge, Anchors, community-validated via Garden — [SPEC 013](../en/specs/013-node/SPEC.md)
-- [ ] **DMs end-to-end encrypted** — ECDH key exchange + AES-256-GCM per-message encryption, keys never leave the client
-- [ ] **Plugin system** — stable external contributor API, plugin marketplace foundations (`plugins/` directory already in place)
+- [ ] **Module system** — 26 activatable modules from admin panel (CMS-style, Joomla-inspired)
 - [ ] **Mobile — iOS** via Capacitor
 - [ ] **Mobile — Android** via Capacitor
 - [ ] **Desktop** via Tauri (.exe/.app/.sh ~10MB, standalone)

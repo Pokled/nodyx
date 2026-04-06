@@ -44,7 +44,7 @@ Instances discover each other through the **nodyx-directory** — the global reg
 
 ## Project status
 
-**v1.9.2 — Production**
+**v2.0.0 — Private & Sovereign Communications**
 
 ```
 Forum                       ✓  Categories, threads, posts, reactions, thanks, tags, slugs
@@ -57,7 +57,10 @@ Screen sharing              ✓  WebRTC screen share + clip recording
 P2P DataChannels            ✓  Instant typing, optimistic reactions, file transfer
 NodyxCanvas                 ✓  Collaborative P2P whiteboard in voice channels
 Notifications               ✓  reply, thanks, @mention — badge, center, auto-purge 30d
-Direct messages             ✓  1:1 DMs with unread badge
+Direct messages             ✓  1:1 DMs — E2E encrypted (ECDH P-256 + AES-256-GCM + ESY layer)
+  ↳ E2E shield              ✓  Live indicator (green/orange), ESY fingerprint tooltip
+  ↳ Barbarize animation     ✓  Encryption visualized — glyphs scramble then reveal in real-time
+  ↳ Edit & delete           ✓  Inline edit with re-encryption, real-time delete for all participants
 Polls                       ✓  Choice / schedule / ranking — in chat and forum
 Ban system                  ✓  User ban, IP ban, email ban
 Asset library               ✓  Frames, banners, badges, stickers, sounds, themes, fonts
