@@ -610,30 +610,30 @@
 							</div>
 						{/if}
 
-						<!-- Actions flottantes au hover (edit + delete) -->
-						{#if isMine && !msg.deleted_at && editingMsgId !== msg.id}
-							<div class="self-center mr-1.5 flex gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-								{#if !msg.is_encrypted}
-									<button onclick={() => startEdit(msg)}
-										class="p-1 rounded-lg hover:bg-white/[0.06] text-gray-600 hover:text-indigo-400 transition-colors"
-										title={tFn('common.edit')}>
-										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-											<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-											<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+						<div class="max-w-[68%] flex flex-col {isMine ? 'items-end' : 'items-start'}">
+							<!-- Actions hover -->
+							{#if isMine && !msg.deleted_at && editingMsgId !== msg.id}
+								<div class="flex gap-0.5 mb-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+									{#if !msg.is_encrypted}
+										<button onclick={() => startEdit(msg)}
+											class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-indigo-400 transition-colors"
+											title={tFn('common.edit')}>
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+												<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+												<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+											</svg>
+										</button>
+									{/if}
+									<button onclick={() => deleteMessage(msg.id)}
+										class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-red-400 transition-colors"
+										title={tFn('common.delete')}>
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/>
 										</svg>
 									</button>
-								{/if}
-								<button onclick={() => deleteMessage(msg.id)}
-									class="p-1 rounded-lg hover:bg-white/[0.06] text-gray-600 hover:text-red-400 transition-colors"
-									title={tFn('common.delete')}>
-									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-										<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/>
-									</svg>
-								</button>
-							</div>
-						{/if}
+								</div>
+							{/if}
 
-						<div class="max-w-[68%] flex flex-col {isMine ? 'items-end' : 'items-start'}">
 							{#if msg.deleted_at}
 								<div class="px-3 py-2 rounded-2xl text-xs italic text-gray-700 bg-white/[0.03] border border-white/[0.05]">
 									{tFn('dm.deleted_message')}
