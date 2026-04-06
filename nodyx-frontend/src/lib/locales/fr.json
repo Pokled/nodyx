@@ -1070,5 +1070,12 @@
   "voice.sound_settings_title": "Paramètres son & micro",
   "voice.sound_label": "Son",
   "voice.audio_settings_title": "Paramètres audio",
-  "voice.leave_voice_title": "Quitter le vocal"
+  "voice.leave_voice_title": "Quitter le vocal",
+  "dm.private_message": "Message privé",
+  "dm.back": "Retour aux messages",
+  "dm.view_profile": "Voir le profil",
+  "dm.select_conversation": "Choisissez une conversation",
+  "dm.select_conversation_hint": "Sélectionnez un message à gauche ou cherchez un membre pour en démarrer un.",
+  "dm.search_new_hint": "Cherchez un membre pour écrire",
+  "dm.message_placeholder_user": "Message à {{user}}…"
 }

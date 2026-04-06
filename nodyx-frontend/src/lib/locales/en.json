@@ -1070,5 +1070,12 @@
   "voice.sound_settings_title": "Sound & mic settings",
   "voice.sound_label": "Sound",
   "voice.audio_settings_title": "Audio settings",
-  "voice.leave_voice_title": "Leave voice"
+  "voice.leave_voice_title": "Leave voice",
+  "dm.private_message": "Private message",
+  "dm.back": "Back to messages",
+  "dm.view_profile": "View profile",
+  "dm.select_conversation": "Your messages",
+  "dm.select_conversation_hint": "Select a conversation on the left, or search for a member to start a new one.",
+  "dm.search_new_hint": "Search for someone to message",
+  "dm.message_placeholder_user": "Message {{user}}…"
 }
