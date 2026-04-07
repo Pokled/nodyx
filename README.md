@@ -248,9 +248,9 @@ Database migrations are applied automatically on startup — no manual SQL neede
                │ HTTP / WebSocket             │ WebRTC P2P
                ▼                             ▼
 ┌──────────────────────────┐    ┌────────────────────────────┐
-│   nodyx-core (Fastify)   │    │  Direct peer connection     │
-│   nodyx-frontend (Svelte)│    │  DataChannels + Canvas      │
-│   PostgreSQL + Redis      │    │  Voice + Screen share       │
+│   nodyx-core (Fastify)   │    │  Direct peer connection    │
+│   nodyx-frontend (Svelte)│    │  DataChannels + Canvas     │
+│   PostgreSQL + Redis     │    │  Voice + Screen share      │
 └──────────────────────────┘    └────────────────────────────┘
                │                             │
         ┌──────┴──────┐               ┌──────┴──────┐
