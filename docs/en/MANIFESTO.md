@@ -30,7 +30,7 @@ Nodyx is a decentralized, open source, free community communication platform.
 
 It is the forum of the 2000s that hasn't aged, but has matured. It is Ventrilo with encryption. It is phpBB with a 2026 interface. It is TeamSpeak without a proprietary server. It is a place where a community can live, create, share, and grow — on its own terms, on its own machines.
 
-Nodyx is made of modular building blocks. Anyone can add, modify, and share them. Just as Joomla did for websites, Nodyx does for digital communities.
+Nodyx is made of modular building blocks. Anyone can add, modify, and share them. Nodyx does for digital communities what CMS platforms did for websites.
 
 The Nodyx network is the people themselves. Not datacenters. Not shareholders. People.
 

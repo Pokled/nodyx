@@ -583,7 +583,7 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [ ] **Système Merci backend** — `thanks` table, real Q score with λ decay (`e^{-λt}` weighting)
 - [ ] **Shareable profile card** — `/users/:username/card` SSR image (avatar + rings + stats), OG meta
 - [ ] **Nodes** (SPEC 013) — durable structured knowledge, Anchors, community-validated via Garden — [SPEC 013](../en/specs/013-node/SPEC.md)
-- [ ] **Module system** — 26 activatable modules from admin panel (CMS-style, Joomla-inspired)
+- [ ] **Module system** — 26 activatable modules from admin panel (CMS-style, CMS-inspired)
 - [ ] **Mobile — iOS** via Capacitor
 - [ ] **Mobile — Android** via Capacitor
 - [ ] **Desktop** via Tauri (.exe/.app/.sh ~10MB, standalone)
