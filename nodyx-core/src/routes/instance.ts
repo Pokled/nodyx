@@ -302,6 +302,26 @@ export default async function instanceRoutes(app: FastifyInstance) {
   // GET /api/v1/instance/esy-public — ESY barbarization params (auth required)
   // Returns the full ESY key so the browser can run barbarize/debarbarize locally.
   // Requires authentication to avoid leaking the permutation to anonymous crawlers.
+  // GET /api/v1/instance/events-public — prochains événements publics (no auth, pour la homepage)
+  app.get('/events-public', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { limit = '4' } = request.query as { limit?: string }
+    const lim = Math.min(Math.max(1, Number(limit) || 4), 10)
+    const communityId = await getCommunityId()
+    const { rows } = await db.query(`
+      SELECT id, title, description, location, starts_at, ends_at, is_all_day,
+             cover_url, tags, rsvp_enabled,
+             (SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id) AS rsvp_count
+      FROM   events e
+      WHERE  is_public    = true
+      AND    is_cancelled = false
+      AND    starts_at    > now()
+      ${communityId ? 'AND community_id = $2' : ''}
+      ORDER  BY starts_at ASC
+      LIMIT  $1
+    `, communityId ? [lim, communityId] : [lim])
+    return reply.send({ events: rows })
+  })
+
   app.get('/esy-public', { preHandler: [rateLimit, requireAuth] }, async (_request, reply) => {
     const key = loadEsyKey()
     if (!key) {

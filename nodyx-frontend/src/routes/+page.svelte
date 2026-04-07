@@ -6,9 +6,11 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const instance = $derived(data.instance);
-	const threads  = $derived(data.threads);
-	const articles = $derived(data.articles);
+	const instance     = $derived(data.instance);
+	const threads      = $derived(data.threads);
+	const articles     = $derived(data.articles);
+	const publicEvents = $derived((data as any).publicEvents as any[] ?? []);
+	const mods         = $derived((data as any).modules as Record<string, boolean> ?? {});
 
 	function timeAgo(dateStr: string): string {
 		if (!dateStr) return '';
@@ -665,6 +667,96 @@
 		{/each}
 	</div>
 	{/if}
+</section>
+{/if}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     AGENDA PUBLIC (module events-public)
+════════════════════════════════════════════════════════════════════════ -->
+{#if mods['events-public'] !== false && publicEvents.length > 0}
+<section class="px-6 py-10" style="background: #07070c; border-top: 1px solid rgba(255,255,255,.05)">
+	<div class="max-w-6xl mx-auto">
+		<!-- Header -->
+		<div class="flex items-end justify-between mb-6">
+			<div>
+				<div class="flex items-center gap-2 mb-1">
+					<span class="text-[10px] font-bold tracking-widest uppercase" style="color: #06b6d4">Agenda</span>
+				</div>
+				<h2 class="text-xl font-bold text-white">Prochains événements</h2>
+			</div>
+			<a href="/calendar" class="flex items-center gap-1.5 text-xs font-medium transition-colors"
+				style="color: #06b6d4"
+				onmouseenter={e => (e.currentTarget as HTMLElement).style.color='#67e8f9'}
+				onmouseleave={e => (e.currentTarget as HTMLElement).style.color='#06b6d4'}>
+				Voir tout
+				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+				</svg>
+			</a>
+		</div>
+
+		<!-- Cards -->
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			{#each publicEvents as ev}
+				{@const d  = new Date(ev.starts_at)}
+				{@const day = d.toLocaleDateString(instance.language === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric' })}
+				{@const mon = d.toLocaleDateString(instance.language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short' })}
+				{@const time = ev.is_all_day ? (instance.language === 'fr' ? 'Journée entière' : 'All day') : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+				<a href="/calendar" class="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200"
+					style="background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);"
+					onmouseenter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(6,182,212,.35)'; (e.currentTarget as HTMLElement).style.background = 'rgba(6,182,212,.06)' }}
+					onmouseleave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.07)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)' }}>
+
+					<!-- Cover or date block -->
+					{#if ev.cover_url}
+						<div class="h-28 overflow-hidden relative">
+							<img src={ev.cover_url} alt={ev.title} class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"/>
+							<div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,.6) 0%, transparent 60%)"></div>
+							<!-- Date badge -->
+							<div class="absolute top-2.5 left-2.5 flex flex-col items-center justify-center w-11 h-11 rounded-xl text-white font-bold"
+								style="background: rgba(6,182,212,.85); backdrop-filter: blur(4px)">
+								<span class="text-base leading-none">{day}</span>
+								<span class="text-[9px] uppercase tracking-wider opacity-90">{mon}</span>
+							</div>
+						</div>
+					{:else}
+						<!-- Date block (no cover) -->
+						<div class="flex items-center gap-3 px-4 pt-4 pb-2">
+							<div class="flex flex-col items-center justify-center w-11 h-11 rounded-xl shrink-0 font-bold text-white"
+								style="background: linear-gradient(135deg, #0891b2, #06b6d4)">
+								<span class="text-base leading-none">{day}</span>
+								<span class="text-[9px] uppercase tracking-wider opacity-90">{mon}</span>
+							</div>
+							<div class="h-px flex-1" style="background: rgba(6,182,212,.2)"></div>
+						</div>
+					{/if}
+
+					<!-- Content -->
+					<div class="flex flex-col flex-1 px-4 {ev.cover_url ? 'pt-3' : 'pt-1'} pb-4 gap-1.5">
+						<p class="text-sm font-semibold text-white leading-snug line-clamp-2 group-hover:text-cyan-300 transition-colors">{ev.title}</p>
+						{#if ev.location}
+							<div class="flex items-center gap-1 text-[11px]" style="color: #6b7280">
+								<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+									<path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+								</svg>
+								<span class="truncate">{ev.location}</span>
+							</div>
+						{/if}
+						<div class="flex items-center justify-between mt-auto pt-1.5">
+							<span class="text-[10px] font-medium" style="color: #06b6d4">{time}</span>
+							{#if ev.rsvp_enabled}
+								<span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+									style="background: rgba(6,182,212,.15); color: #67e8f9; border: 1px solid rgba(6,182,212,.25)">
+									RSVP
+								</span>
+							{/if}
+						</div>
+					</div>
+				</a>
+			{/each}
+		</div>
+	</div>
 </section>
 {/if}
 

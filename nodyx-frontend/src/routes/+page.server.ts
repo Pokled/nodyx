@@ -1,20 +1,24 @@
 import type { PageServerLoad } from './$types';
 import { apiFetch } from '$lib/api';
 
-export const load: PageServerLoad = async ({ fetch }) => {
-	const [infoRes, catRes, threadsRes, featuredRes] = await Promise.all([
+export const load: PageServerLoad = async ({ fetch, parent }) => {
+	const { modules } = await parent()
+
+	const [infoRes, catRes, threadsRes, featuredRes, eventsRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),
 		apiFetch(fetch, '/instance/categories'),
 		apiFetch(fetch, '/instance/threads/recent'),
 		apiFetch(fetch, '/instance/threads/featured'),
+		modules['events-public'] ? apiFetch(fetch, '/instance/events-public?limit=4') : Promise.resolve(null),
 	]);
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const [infoJson, catJson, threadsJson, featuredJson]: any[] = await Promise.all([
+	const [infoJson, catJson, threadsJson, featuredJson, eventsJson]: any[] = await Promise.all([
 		infoRes.ok  ? infoRes.json()     : {},
 		catRes.ok   ? catRes.json()      : {},
 		threadsRes.ok  ? threadsRes.json()  : {},
 		featuredRes.ok ? featuredRes.json() : {},
+		eventsRes?.ok  ? eventsRes.json()   : {},
 	]);
 
 	return {
@@ -34,8 +38,9 @@ export const load: PageServerLoad = async ({ fetch }) => {
 			banner_url:   infoJson.banner_url    ?? null,
 			version:      infoJson.version       ?? null,
 		},
-		categories: catJson.categories      ?? [],
-		threads:    threadsJson.threads      ?? [],
-		articles:   featuredJson.articles    ?? [],
+		categories:    catJson.categories      ?? [],
+		threads:       threadsJson.threads      ?? [],
+		articles:      featuredJson.articles    ?? [],
+		publicEvents:  eventsJson?.events       ?? [],
 	};
 };
