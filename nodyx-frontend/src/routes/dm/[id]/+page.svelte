@@ -228,13 +228,14 @@
 		if (document.hasFocus()) markRead()
 	}
 
-	async function onDmEdited({ msgId, content, conversation_id }: { msgId: string; content: string; conversation_id: string }) {
+	async function onDmEdited({ msgId, content, conversation_id, encryption_nonce }: { msgId: string; content: string; conversation_id: string; encryption_nonce?: string }) {
 		if (conversation_id !== conversationId) return
 		const orig = messages.find(m => m.id === msgId)
-		if (orig?.is_encrypted && peerPublicKey && orig.encryption_nonce) {
-			const plain = await decryptDM(content, orig.encryption_nonce, peerPublicKey, data.token)
+		const nonce = encryption_nonce ?? orig?.encryption_nonce
+		if (orig?.is_encrypted && peerPublicKey && nonce) {
+			const plain = await decryptDM(content, nonce, peerPublicKey, data.token)
 			messages = messages.map(m => m.id === msgId
-				? { ...m, content, _decrypted: plain ?? undefined, _decryptFailed: plain === null, edited_at: new Date().toISOString() }
+				? { ...m, content, encryption_nonce: nonce, _decrypted: plain ?? undefined, _decryptFailed: plain === null, edited_at: new Date().toISOString() }
 				: m)
 		} else {
 			messages = messages.map(m => m.id === msgId ? { ...m, content, edited_at: new Date().toISOString() } : m)
@@ -262,7 +263,7 @@
 
 	function startEdit(msg: DmMessage) {
 		editingMsgId = msg.id
-		editingContent = msg.content
+		editingContent = msg.is_encrypted ? (msg._decrypted ?? '') : msg.content
 	}
 
 	function cancelEdit() {

@@ -142,17 +142,25 @@ export async function getPublicKeyB64(): Promise<string | null> {
 
 /**
  * Enregistre la clé publique sur le serveur.
- * Idempotent — appelé à chaque connexion pour garantir la synchro.
+ * N'envoie le PATCH que si la clé a changé depuis la dernière registration.
  */
 export async function registerPublicKey(token: string): Promise<boolean> {
   if (!browser) return false
   try {
     const b64 = await initKeyPair()
+
+    // Éviter d'écraser une clé identique sur le serveur à chaque chargement
+    const lastRegistered = localStorage.getItem('nodyx_e2e_registered_key')
+    if (lastRegistered === b64) return true  // déjà à jour
+
     const res = await fetch('/api/v1/users/me/public-key', {
       method:  'PATCH',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify({ public_key: b64 }),
     })
+    if (res.ok) {
+      localStorage.setItem('nodyx_e2e_registered_key', b64)
+    }
     return res.ok
   } catch {
     return false
@@ -359,24 +367,44 @@ export async function decryptDM(
 ): Promise<string | null> {
   if (!browser) return null
   try {
-    if (!_keys) await initKeyPair()
+    if (!_keys) {
+      console.warn('[E2E] _keys null — calling initKeyPair()')
+      await initKeyPair()
+    }
 
-    const esy       = await loadEsyKey(token)
-    const sharedKey = await _deriveSharedKey(theirPublicKeyB64)
+    let esy: EsyKey
+    try {
+      esy = await loadEsyKey(token)
+    } catch (e) {
+      console.error('[E2E] loadEsyKey failed:', e)
+      return null
+    }
+
+    let sharedKey: CryptoKey
+    try {
+      sharedKey = await _deriveSharedKey(theirPublicKeyB64)
+    } catch (e) {
+      console.error('[E2E] _deriveSharedKey failed (bad peerPublicKey?):', e)
+      return null
+    }
 
     // Débarbarisation ESY
     const aesBytes = _esyDebarbarize(_b64ToU8(ciphertext), esy)
 
     // AES-256-GCM
-    const decoded = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: _b64ToU8(nonce).buffer as ArrayBuffer },
-      sharedKey,
-      aesBytes.buffer as ArrayBuffer
-    )
-
-    return new TextDecoder().decode(decoded)
-  } catch {
-    // Clé manquante, message tampered, ou E2E pas encore initialisé
+    try {
+      const decoded = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: _b64ToU8(nonce).buffer as ArrayBuffer },
+        sharedKey,
+        aesBytes.buffer as ArrayBuffer
+      )
+      return new TextDecoder().decode(decoded)
+    } catch (e) {
+      console.error('[E2E] AES-GCM decrypt failed (wrong key or corrupted ciphertext):', e)
+      return null
+    }
+  } catch (err) {
+    console.error('[E2E] decryptDM unexpected error:', err)
     return null
   }
 }

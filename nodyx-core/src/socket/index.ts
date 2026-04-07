@@ -690,7 +690,7 @@ export function registerSocketIO(server: Server): void {
     })
 
     // dm:edit — modifier un message DM (sender uniquement, pas chiffré)
-    socket.on('dm:edit', async (data: { msgId: string; content: string }) => {
+    socket.on('dm:edit', async (data: { msgId: string; content: string; encryption_nonce?: string }) => {
       if (checkRateLimit(userId, 'dm:edit')) return
       try {
         if (!isUuid(data?.msgId) || !isString(data?.content)) return
@@ -715,21 +715,33 @@ export function registerSocketIO(server: Server): void {
           if (!dmCheck.ok) return
         }
 
-        await db.query(
-          `UPDATE dm_messages SET content = $1, edited_at = now() WHERE id = $2`,
-          [clean, data.msgId]
-        )
+        if (msg.is_encrypted && typeof data.encryption_nonce === 'string'
+            && /^[A-Za-z0-9+\/=]{16,32}$/.test(data.encryption_nonce)) {
+          await db.query(
+            `UPDATE dm_messages SET content = $1, encryption_nonce = $2, edited_at = now() WHERE id = $3`,
+            [clean, data.encryption_nonce, data.msgId]
+          )
+        } else {
+          await db.query(
+            `UPDATE dm_messages SET content = $1, edited_at = now() WHERE id = $2`,
+            [clean, data.msgId]
+          )
+        }
 
         // Notifier les participants
         const { rows: participants } = await db.query<{ user_id: string }>(
           `SELECT user_id FROM dm_participants WHERE conversation_id = $1`,
           [msg.conversation_id]
         )
+        const newNonce = msg.is_encrypted && typeof data.encryption_nonce === 'string'
+          ? data.encryption_nonce
+          : undefined
         for (const p of participants) {
           server.to(`user:${p.user_id}`).emit('dm:edited', {
             msgId: data.msgId,
             content: clean,
             conversation_id: msg.conversation_id,
+            encryption_nonce: newNonce,
           })
         }
       } catch (err) {

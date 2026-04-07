@@ -10,6 +10,7 @@
 	let polling = $state(false)
 	let pendingCount = $state(0)
 	let confirmRevoke: string | null = $state(null)
+	let hubErrors: Record<string, string> = $state({})  // deviceId → message d'erreur
 
 	onMount(async () => {
 		await refresh()
@@ -24,6 +25,7 @@
 
 	async function checkForChallenges() {
 		polling = true
+		hubErrors = {}
 		let count = 0
 		for (const device of devices) {
 			if (!device.deviceToken) continue
@@ -35,8 +37,13 @@
 					goto(`/approve?challengeId=${challenges[0].id}&deviceId=${device.id}`)
 					return
 				}
-			} catch {
-				// Hub inaccessible
+			} catch (err: any) {
+				hubErrors = {
+					...hubErrors,
+					[device.id]: err?.message?.includes('fetch')
+						? `Hub inaccessible — vérifiez que ${device.hubUrl.replace(/^https?:\/\//, '')} est joignable`
+						: (err?.message ?? 'Erreur de connexion au hub')
+				}
 			}
 		}
 		pendingCount = count
@@ -114,7 +121,8 @@
 	{:else}
 		<div class="flex flex-col gap-3">
 			{#each devices as device (device.id)}
-				<div class="rounded-2xl p-4 flex flex-col gap-3" style="background: var(--color-surface); border: 1px solid var(--color-border)">
+				<div class="rounded-2xl p-4 flex flex-col gap-3"
+					style="background: var(--color-surface); border: 1px solid {hubErrors[device.id] ? 'rgba(248,113,113,0.35)' : 'var(--color-border)'}">
 					<div class="flex items-start justify-between gap-2">
 						<div class="flex flex-col gap-1">
 							<p class="font-semibold">{device.label}</p>
@@ -122,8 +130,26 @@
 								{device.hubUrl.replace(/^https?:\/\//, '')}
 							</p>
 						</div>
-						<div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style="background: var(--color-success)"></div>
+						<!-- Indicateur de statut : rouge si erreur, vert sinon -->
+						<div class="flex items-center gap-1.5 mt-0.5 flex-shrink-0">
+							{#if hubErrors[device.id]}
+								<span class="text-xs font-semibold" style="color: var(--color-danger)">Hors ligne</span>
+								<div class="w-2 h-2 rounded-full flex-shrink-0" style="background: var(--color-danger)"></div>
+							{:else if !polling}
+								<div class="w-2 h-2 rounded-full flex-shrink-0" style="background: var(--color-success)"></div>
+							{:else}
+								<div class="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style="background: #f59e0b"></div>
+							{/if}
+						</div>
 					</div>
+
+					<!-- Message d'erreur hub inaccessible -->
+					{#if hubErrors[device.id]}
+					<div class="rounded-xl px-3 py-2 text-xs" style="background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: var(--color-danger)">
+						⚠ {hubErrors[device.id]}
+					</div>
+					{/if}
+
 					<div class="flex items-center justify-between text-xs" style="color: var(--color-text-muted)">
 						<span>Enregistré le {formatDate(device.createdAt)}</span>
 						<button
