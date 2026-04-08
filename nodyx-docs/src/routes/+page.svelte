@@ -1148,6 +1148,141 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- MODULE SYSTEM                                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section mod-section">
+  <div class="section-inner">
+
+    <div class="mod-header">
+      <div class="section-label">MODULE SYSTEM</div>
+      <h2 class="section-title">One platform. Every community.</h2>
+      <p class="section-sub">Activate only what you need. No CLI. No rebuild. No restart. One click from the admin panel.</p>
+    </div>
+
+    <!-- Two-face concept -->
+    <div class="mod-faces">
+      <div class="mod-face mod-face-public">
+        <div class="mod-face-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <div class="mod-face-label">Public Face</div>
+        <div class="mod-face-desc">Your community's website — visible without an account. Hero, news, events, gallery, contact form, sponsors.</div>
+        <div class="mod-face-tag">No login required</div>
+      </div>
+      <div class="mod-face-sep">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+      <div class="mod-face mod-face-internal">
+        <div class="mod-face-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="mod-face-label">Internal Face</div>
+        <div class="mod-face-desc">The platform your members actually use — forum, chat, voice, wiki, calendar, DMs, tasks.</div>
+        <div class="mod-face-tag">Members only</div>
+      </div>
+    </div>
+
+    <!-- Module families grid -->
+    <div class="mod-families">
+
+      <div class="mod-family">
+        <div class="mod-family-header">
+          <span class="mod-family-dot" style="background:#6366f1"></span>
+          <span class="mod-family-name">Core</span>
+          <span class="mod-family-hint">Always active</span>
+        </div>
+        <div class="mod-cards">
+          <div class="mod-card mod-card-core"><span class="mod-card-icon">🔐</span><span>Auth</span></div>
+          <div class="mod-card mod-card-core"><span class="mod-card-icon">👥</span><span>Members</span></div>
+          <div class="mod-card mod-card-core"><span class="mod-card-icon">💬</span><span>Forum</span></div>
+          <div class="mod-card mod-card-core"><span class="mod-card-icon">⚙️</span><span>Admin</span></div>
+        </div>
+      </div>
+
+      <div class="mod-family">
+        <div class="mod-family-header">
+          <span class="mod-family-dot" style="background:#3b82f6"></span>
+          <span class="mod-family-name">Community</span>
+          <span class="mod-family-hint">Internal tools</span>
+        </div>
+        <div class="mod-cards">
+          <div class="mod-card"><span class="mod-card-icon">⚡</span><span>Chat</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🎤</span><span>Voice</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🔒</span><span>DMs</span></div>
+          <div class="mod-card"><span class="mod-card-icon">📅</span><span>Calendar</span></div>
+          <div class="mod-card"><span class="mod-card-icon">📖</span><span>Wiki</span></div>
+          <div class="mod-card"><span class="mod-card-icon">📁</span><span>Files</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🗳️</span><span>Polls</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🏆</span><span>Leaderboard</span></div>
+          <div class="mod-card"><span class="mod-card-icon">✅</span><span>Tasks</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🎨</span><span>Canvas</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🎵</span><span>Jukebox</span></div>
+          <div class="mod-card"><span class="mod-card-icon">📌</span><span>Announce</span></div>
+        </div>
+      </div>
+
+      <div class="mod-family">
+        <div class="mod-family-header">
+          <span class="mod-family-dot" style="background:#06b6d4"></span>
+          <span class="mod-family-name">Website</span>
+          <span class="mod-family-hint">Public face</span>
+        </div>
+        <div class="mod-cards">
+          <div class="mod-card"><span class="mod-card-icon">🌟</span><span>Hero</span></div>
+          <div class="mod-card"><span class="mod-card-icon">📰</span><span>News</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🖼️</span><span>Gallery</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🗺️</span><span>Map</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🛒</span><span>Shop</span></div>
+          <div class="mod-card"><span class="mod-card-icon">✉️</span><span>Newsletter</span></div>
+          <div class="mod-card"><span class="mod-card-icon">❓</span><span>FAQ</span></div>
+          <div class="mod-card"><span class="mod-card-icon">📞</span><span>Contact</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🤝</span><span>Sponsors</span></div>
+        </div>
+      </div>
+
+      <div class="mod-family">
+        <div class="mod-family-header">
+          <span class="mod-family-dot" style="background:#f59e0b"></span>
+          <span class="mod-family-name">Integration</span>
+          <span class="mod-family-hint">External connections</span>
+        </div>
+        <div class="mod-cards">
+          <div class="mod-card"><span class="mod-card-icon">📡</span><span>RSS</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🔗</span><span>Webhook</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🔄</span><span>iCal Sync</span></div>
+          <div class="mod-card"><span class="mod-card-icon">🔑</span><span>OAuth</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Activation flow -->
+    <div class="mod-flow">
+      <div class="mod-flow-step">
+        <div class="mod-flow-num">1</div>
+        <div class="mod-flow-text">Open <strong>Admin → Modules</strong></div>
+      </div>
+      <div class="mod-flow-arrow">→</div>
+      <div class="mod-flow-step">
+        <div class="mod-flow-num">2</div>
+        <div class="mod-flow-text">Click <strong>Enable</strong></div>
+      </div>
+      <div class="mod-flow-arrow">→</div>
+      <div class="mod-flow-step">
+        <div class="mod-flow-num">3</div>
+        <div class="mod-flow-text">Done. <strong>Zero downtime.</strong></div>
+      </div>
+    </div>
+
+    <div class="mod-cta-row">
+      <a href="/module-system" class="cta-secondary">Read the full spec →</a>
+      <span class="mod-badge-coming">Coming in v2.2</span>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- FINAL CTA                                                                -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <section class="final-cta">
@@ -1192,6 +1327,13 @@
         <a href="/install">Installation</a>
         <a href="/domain">Domain</a>
         <a href="/email">Email</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Module System</div>
+        <a href="/module-system">Overview</a>
+        <a href="/module-system#the-4-module-families">Module families</a>
+        <a href="/module-system#activation-flow">Activation flow</a>
+        <a href="/module-system#module-manifest">Module manifest</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">Widget SDK</div>
@@ -1962,6 +2104,230 @@
   border: 1px solid #f59e0b30;
   border-radius: 100px;
   padding: 0.25em 0.7em;
+}
+
+/* ── Module System ───────────────────────────────────────────────────────── */
+
+.mod-section { padding: 5rem 0; background: #05050a; }
+
+.mod-header { text-align: center; margin-bottom: 3.5rem; }
+
+/* Two-face concept */
+.mod-faces {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 4rem;
+  flex-wrap: wrap;
+}
+
+.mod-face {
+  flex: 1;
+  min-width: 220px;
+  max-width: 340px;
+  border-radius: 12px;
+  padding: 1.75rem;
+  border: 1px solid rgba(255,255,255,.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mod-face-public {
+  background: linear-gradient(135deg, rgba(6,182,212,.06) 0%, rgba(6,182,212,.02) 100%);
+  border-color: rgba(6,182,212,.18);
+}
+
+.mod-face-internal {
+  background: linear-gradient(135deg, rgba(99,102,241,.06) 0%, rgba(99,102,241,.02) 100%);
+  border-color: rgba(99,102,241,.18);
+}
+
+.mod-face-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 0.25rem;
+}
+
+.mod-face-public .mod-face-icon  { background: rgba(6,182,212,.12); color: #06b6d4; border: 1px solid rgba(6,182,212,.2); }
+.mod-face-internal .mod-face-icon { background: rgba(99,102,241,.12); color: #818cf8; border: 1px solid rgba(99,102,241,.2); }
+
+.mod-face-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.mod-face-public .mod-face-label  { color: #06b6d4; }
+.mod-face-internal .mod-face-label { color: #818cf8; }
+
+.mod-face-desc {
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.mod-face-tag {
+  margin-top: 0.5rem;
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.mod-face-public .mod-face-tag  { background: rgba(6,182,212,.1); color: #06b6d4; border: 1px solid rgba(6,182,212,.2); }
+.mod-face-internal .mod-face-tag { background: rgba(99,102,241,.1); color: #818cf8; border: 1px solid rgba(99,102,241,.2); }
+
+.mod-face-sep { color: rgba(255,255,255,.15); flex-shrink: 0; }
+
+/* Families */
+.mod-families {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 3rem;
+}
+
+.mod-family {
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px;
+  padding: 1.25rem;
+  background: rgba(255,255,255,.02);
+}
+
+.mod-family-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mod-family-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mod-family-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.mod-family-hint {
+  font-size: 0.68rem;
+  color: #374151;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.mod-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mod-card {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  font-size: 0.7rem;
+  color: #9ca3af;
+  white-space: nowrap;
+  transition: border-color .15s, color .15s;
+}
+
+.mod-card:hover {
+  border-color: rgba(255,255,255,.14);
+  color: #d1d5db;
+}
+
+.mod-card-core {
+  background: rgba(99,102,241,.06);
+  border-color: rgba(99,102,241,.15);
+  color: #a5b4fc;
+}
+
+.mod-card-icon { font-size: 0.75rem; }
+
+/* Activation flow */
+.mod-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.06);
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.mod-flow-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mod-flow-num {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: rgba(99,102,241,.15);
+  border: 1px solid rgba(99,102,241,.3);
+  color: #818cf8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.mod-flow-text {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+.mod-flow-text strong { color: #e2e8f0; }
+
+.mod-flow-arrow { color: rgba(255,255,255,.15); font-size: 1rem; }
+
+.mod-cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.mod-badge-coming {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(245,158,11,.08);
+  border: 1px solid rgba(245,158,11,.2);
+  color: #fbbf24;
+}
+
+@media (max-width: 900px) {
+  .mod-families { grid-template-columns: repeat(2, 1fr); }
+  .mod-faces { flex-direction: column; align-items: stretch; }
+  .mod-face-sep { transform: rotate(90deg); align-self: center; }
+}
+
+@media (max-width: 500px) {
+  .mod-families { grid-template-columns: 1fr; }
 }
 
 /* ── Final CTA ───────────────────────────────────────────────────────────── */

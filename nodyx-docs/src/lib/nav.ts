@@ -32,6 +32,13 @@ export const nav: NavSection[] = [
     ],
   },
   {
+    title: 'Module System',
+    icon:  'layers',
+    items: [
+      { title: 'Module System Overview', slug: 'module-system', badge: 'v2.2' },
+    ],
+  },
+  {
     title: 'Widget SDK',
     icon:  'puzzle',
     items: [
