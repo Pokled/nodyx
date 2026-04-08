@@ -975,6 +975,179 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- HOMEPAGE BUILDER + WIDGET SDK                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section section-alt hb-section">
+  <div class="section-inner hb-layout">
+
+    <!-- LEFT: text -->
+    <div class="hb-text">
+      <div class="section-label" style="color:#a78bfa; border-color:#a78bfa30; background:#a78bfa10">
+        HOMEPAGE BUILDER + WIDGET SDK
+      </div>
+      <h2 class="section-title" style="margin-bottom:1rem">
+        Your homepage,<br>
+        <span class="hb-gradient">your rules.</span>
+      </h2>
+      <p class="hb-intro">
+        Nodyx ships with a drag-and-drop Homepage Builder and a full Widget SDK.
+        Place banners, stats, video players and custom content in 11 layout zones —
+        or build your own widget from scratch and install it in one click.
+      </p>
+
+      <ul class="lp-features" style="margin-bottom: 2rem">
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>11 layout zones</strong> — banner, hero, sidebar, footer columns, half/trio grids
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>4 native widgets</strong> included — Hero Banner, Stats Bar, Join Card, Announcement
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Install any widget</strong> — upload a <code>.zip</code>, done. No rebuild, no deploy
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>Build your own</strong> — plain JS, Shadow DOM, no framework needed
+        </li>
+      </ul>
+
+      <!-- Widget SDK card -->
+      <div class="hb-sdk-card">
+        <div class="hb-sdk-header">
+          <div class="hb-sdk-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+          </div>
+          <div>
+            <div class="hb-sdk-title">Widget SDK</div>
+            <div class="hb-sdk-sub">Two files. Zero build tools. Works for everyone.</div>
+          </div>
+        </div>
+        <div class="hb-sdk-files">
+          <div class="hb-sdk-file">
+            <span class="hb-sdk-file-name">manifest.json</span>
+            <span class="hb-sdk-file-desc">id, label, version, config fields</span>
+          </div>
+          <div class="hb-sdk-file">
+            <span class="hb-sdk-file-name">widget.iife.js</span>
+            <span class="hb-sdk-file-desc">Custom Element — Shadow DOM isolated</span>
+          </div>
+        </div>
+        <a href="/create-widget" class="hb-sdk-cta">
+          Read the step-by-step guide
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- RIGHT: visual mockup -->
+    <div class="hb-mockup" aria-hidden="true">
+
+      <!-- Browser chrome -->
+      <div class="hb-browser">
+        <div class="hb-browser-bar">
+          <div class="hb-browser-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="hb-browser-url">nodyx.org/admin/homepage</div>
+        </div>
+        <div class="hb-browser-body">
+
+          <!-- Zones map -->
+          <div class="hb-zones">
+
+            <!-- Banner -->
+            <div class="hb-zone hb-zone-full hb-zone-active">
+              <span class="hb-zone-label">banner</span>
+              <div class="hb-zone-widget">
+                <span class="hb-zone-widget-icon">📢</span>
+                <span>Announcement Banner</span>
+              </div>
+            </div>
+
+            <!-- Hero -->
+            <div class="hb-zone hb-zone-full" style="height:52px">
+              <span class="hb-zone-label">hero</span>
+              <div class="hb-zone-widget">
+                <span class="hb-zone-widget-icon">🌟</span>
+                <span>Hero Banner</span>
+              </div>
+            </div>
+
+            <!-- Stats bar -->
+            <div class="hb-zone hb-zone-full hb-zone-stats">
+              <span class="hb-zone-label">stats-bar</span>
+              <div class="hb-zone-stats-row">
+                <span>👥 1,240</span>
+                <span>🟢 38 online</span>
+                <span>💬 5,830 posts</span>
+              </div>
+            </div>
+
+            <!-- Half / Half -->
+            <div class="hb-zone-row">
+              <div class="hb-zone hb-zone-half hb-zone-custom">
+                <span class="hb-zone-label">half-1</span>
+                <div class="hb-zone-widget">
+                  <span class="hb-zone-widget-icon">🎬</span>
+                  <span>Video Player</span>
+                  <span class="hb-zone-ext-badge">ext</span>
+                </div>
+              </div>
+              <div class="hb-zone hb-zone-half">
+                <span class="hb-zone-label">half-2</span>
+                <span class="hb-zone-empty">+ Add widget</span>
+              </div>
+            </div>
+
+            <!-- Footer cols -->
+            <div class="hb-zone-row">
+              <div class="hb-zone hb-zone-third">
+                <span class="hb-zone-label">footer-1</span>
+                <div class="hb-zone-widget" style="font-size:9px">
+                  <span class="hb-zone-widget-icon">👋</span>
+                  <span>Join Card</span>
+                </div>
+              </div>
+              <div class="hb-zone hb-zone-third">
+                <span class="hb-zone-label">footer-2</span>
+                <span class="hb-zone-empty">+ Add widget</span>
+              </div>
+              <div class="hb-zone hb-zone-third">
+                <span class="hb-zone-label">footer-3</span>
+                <span class="hb-zone-empty">+ Add widget</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Floating widget card -->
+      <div class="hb-floating-card">
+        <div class="hb-floating-header">
+          <span class="hb-floating-icon">🎬</span>
+          <div>
+            <div class="hb-floating-name">Video Player</div>
+            <div class="hb-floating-id">video-player · v1.0.0 · Nodyx</div>
+          </div>
+          <span class="hb-floating-ext">installed</span>
+        </div>
+        <div class="hb-floating-code">
+          <span class="hb-code-kw">customElements</span><span class="hb-code-op">.</span><span class="hb-code-fn">define</span><span class="hb-code-op">(</span><span class="hb-code-str">'nodyx-widget-video-player'</span><span class="hb-code-op">, ...)</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- FINAL CTA                                                                -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <section class="final-cta">
@@ -1019,6 +1192,13 @@
         <a href="/install">Installation</a>
         <a href="/domain">Domain</a>
         <a href="/email">Email</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Widget SDK</div>
+        <a href="/create-widget">Create a widget</a>
+        <a href="/create-widget#step-2-write-the-manifestjson">manifest.json</a>
+        <a href="/create-widget#step-3-write-the-widget-code">Widget code</a>
+        <a href="/create-widget#going-further">Going further</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">Architecture</div>
@@ -2602,5 +2782,313 @@
 /* Responsive */
 @media (max-width: 860px) {
   .e2e-layout { grid-template-columns: 1fr; gap: 2.5rem; }
+}
+
+/* ── Homepage Builder + Widget SDK ──────────────────────────────────────── */
+
+.hb-section { padding: 5rem 0; }
+
+.hb-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5rem;
+  align-items: center;
+}
+
+.hb-gradient {
+  background: linear-gradient(135deg, #a78bfa, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hb-intro {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin: 0 0 1.75rem;
+  max-width: 480px;
+}
+
+/* SDK card */
+.hb-sdk-card {
+  background: var(--bg);
+  border: 1px solid rgba(167,139,250,.2);
+  padding: 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hb-sdk-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 0 0, rgba(167,139,250,.06), transparent 60%);
+  pointer-events: none;
+}
+
+.hb-sdk-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.hb-sdk-icon {
+  width: 32px; height: 32px;
+  background: rgba(167,139,250,.12);
+  border: 1px solid rgba(167,139,250,.2);
+  display: flex; align-items: center; justify-content: center;
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.hb-sdk-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.hb-sdk-sub   { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+
+.hb-sdk-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.hb-sdk-file {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.05);
+}
+
+.hb-sdk-file-name {
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.78rem;
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.hb-sdk-file-desc { font-size: 0.72rem; color: var(--text-muted); }
+
+.hb-sdk-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #a78bfa;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(167,139,250,.3);
+  background: rgba(167,139,250,.08);
+  transition: background 0.15s, border-color 0.15s;
+}
+.hb-sdk-cta:hover {
+  background: rgba(167,139,250,.15);
+  border-color: rgba(167,139,250,.5);
+}
+
+/* Browser mockup */
+.hb-mockup {
+  position: relative;
+}
+
+.hb-browser {
+  border: 1px solid rgba(255,255,255,.08);
+  background: #0a0a0f;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+
+.hb-browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  background: rgba(255,255,255,.03);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.hb-browser-dots {
+  display: flex; gap: 5px; flex-shrink: 0;
+}
+.hb-browser-dots span {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: rgba(255,255,255,.12);
+}
+.hb-browser-dots span:first-child { background: rgba(239,68,68,.4); }
+.hb-browser-dots span:nth-child(2) { background: rgba(251,191,36,.4); }
+.hb-browser-dots span:last-child  { background: rgba(74,222,128,.4); }
+
+.hb-browser-url {
+  flex: 1;
+  font-size: 0.68rem;
+  font-family: monospace;
+  color: rgba(255,255,255,.25);
+  background: rgba(255,255,255,.04);
+  padding: 0.25rem 0.75rem;
+  text-align: center;
+}
+
+.hb-browser-body { padding: 0.75rem; }
+
+/* Zones */
+.hb-zones {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hb-zone-row {
+  display: flex;
+  gap: 5px;
+}
+
+.hb-zone {
+  position: relative;
+  border: 1px dashed rgba(255,255,255,.1);
+  padding: 0.4rem 0.5rem;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: border-color 0.15s;
+}
+
+.hb-zone-full  { width: 100%; }
+.hb-zone-half  { flex: 1; }
+.hb-zone-third { flex: 1; }
+
+.hb-zone-active {
+  border-color: rgba(167,139,250,.4);
+  background: rgba(167,139,250,.04);
+}
+
+.hb-zone-stats {
+  border-color: rgba(6,182,212,.3);
+  background: rgba(6,182,212,.03);
+  height: 32px;
+}
+
+.hb-zone-custom {
+  border-color: rgba(6,182,212,.4);
+  background: rgba(6,182,212,.04);
+}
+
+.hb-zone-label {
+  position: absolute;
+  top: 3px; left: 5px;
+  font-size: 8px;
+  font-family: monospace;
+  color: rgba(255,255,255,.18);
+  letter-spacing: .04em;
+  pointer-events: none;
+}
+
+.hb-zone-widget {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 10px;
+  color: rgba(255,255,255,.5);
+  font-weight: 600;
+}
+
+.hb-zone-widget-icon { font-size: 11px; }
+
+.hb-zone-ext-badge {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 4px;
+  background: rgba(6,182,212,.12);
+  border: 1px solid rgba(6,182,212,.25);
+  color: #06b6d4;
+  letter-spacing: .04em;
+}
+
+.hb-zone-empty {
+  font-size: 9px;
+  color: rgba(255,255,255,.12);
+  font-weight: 600;
+  letter-spacing: .03em;
+}
+
+.hb-zone-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 9px;
+  color: rgba(6,182,212,.7);
+  font-weight: 600;
+}
+
+/* Floating card */
+.hb-floating-card {
+  position: absolute;
+  bottom: -1.25rem;
+  right: -1.5rem;
+  background: #0d0d16;
+  border: 1px solid rgba(167,139,250,.3);
+  padding: 0.75rem 1rem;
+  width: 240px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(167,139,250,.08);
+}
+
+.hb-floating-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.hb-floating-icon { font-size: 18px; flex-shrink: 0; }
+
+.hb-floating-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.9);
+}
+
+.hb-floating-id {
+  font-size: 0.65rem;
+  font-family: monospace;
+  color: rgba(255,255,255,.25);
+  margin-top: 1px;
+}
+
+.hb-floating-ext {
+  margin-left: auto;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  background: rgba(74,222,128,.1);
+  border: 1px solid rgba(74,222,128,.2);
+  color: #4ade80;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.hb-floating-code {
+  font-size: 0.67rem;
+  font-family: 'Fira Code', monospace;
+  padding: 0.4rem 0.6rem;
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(255,255,255,.05);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hb-code-kw  { color: #818cf8; }
+.hb-code-op  { color: rgba(255,255,255,.3); }
+.hb-code-fn  { color: #06b6d4; }
+.hb-code-str { color: #4ade80; }
+
+@media (max-width: 1024px) {
+  .hb-layout { grid-template-columns: 1fr; gap: 3rem; }
+  .hb-floating-card { display: none; }
 }
 </style>

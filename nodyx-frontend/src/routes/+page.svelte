@@ -2,6 +2,8 @@
 	import type { PageData } from './$types';
 	import { onMount, onDestroy } from 'svelte';
 	import { t } from '$lib/i18n';
+	import WidgetZone from '$lib/components/homepage/WidgetZone.svelte';
+	import type { HomepagePosition } from '$lib/types/homepage';
 	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
@@ -11,6 +13,18 @@
 	const articles     = $derived(data.articles);
 	const publicEvents = $derived((data as any).publicEvents as any[] ?? []);
 	const mods         = $derived((data as any).modules as Record<string, boolean> ?? {});
+	const hpPositions      = $derived((data as any).homepagePositions as HomepagePosition[] ?? []);
+	const user             = $derived((data as any).user ?? null);
+	const installedWidgets = $derived((data as any).installedWidgets as Record<string, { entry: string }> ?? {});
+
+	// Helper: get widgets for a position from homepage builder data
+	function posWidgets(posId: string) {
+		return hpPositions.find(p => p.id === posId)?.widgets ?? []
+	}
+	// Helper: is position active (has at least 1 enabled widget via the builder)
+	function hasPos(posId: string): boolean {
+		return posWidgets(posId).some(w => w.enabled)
+	}
 
 	function timeAgo(dateStr: string): string {
 		if (!dateStr) return '';
@@ -197,8 +211,19 @@
 <div class="dotbg min-h-full hp-root">
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     HERO — communauté + stats
+     BANNER — position 'banner' (WidgetZone)
 ════════════════════════════════════════════════════════════════════════ -->
+{#if hasPos('banner')}
+	<WidgetZone widgets={posWidgets('banner')} {instance} {user} layout="full" {installedWidgets} />
+{/if}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     HERO — position 'hero' (WidgetZone) ou fallback hardcodé
+════════════════════════════════════════════════════════════════════════ -->
+{#if hasPos('hero')}
+	<WidgetZone widgets={posWidgets('hero')} {instance} {user} layout="full" {installedWidgets} />
+{:else}
+<!-- Fallback hero hardcodé (tant qu'aucun widget n'est configuré) -->
 <section class="relative overflow-hidden noise" style="background: #0a0a0f; border-bottom: 1px solid rgba(255,255,255,.05); min-height: 220px">
 
 	<!-- Banner bg -->
@@ -286,6 +311,23 @@
 		</div>
 	</div>
 </section>
+{/if}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     STATS-BAR — position 'stats-bar' (WidgetZone) — remplace les stats inline
+════════════════════════════════════════════════════════════════════════ -->
+{#if hasPos('stats-bar')}
+	<div class="flex flex-wrap px-8 py-3 gap-0.5" style="background:#0d0d12; border-bottom:1px solid rgba(255,255,255,.05)">
+		<WidgetZone widgets={posWidgets('stats-bar')} {instance} {user} layout="full" {installedWidgets} />
+	</div>
+{/if}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MAIN — position 'main' (WidgetZone) — above main content
+════════════════════════════════════════════════════════════════════════ -->
+{#if hasPos('main')}
+	<WidgetZone widgets={posWidgets('main')} {instance} {user} layout="full" {installedWidgets} />
+{/if}
 
 <!-- ═══════════════════════════════════════════════════════════════════
      MODULES ROW — 4 quick tiles
@@ -526,6 +568,16 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
+     SIDEBAR — position 'sidebar' (WidgetZone) — join-card etc.
+════════════════════════════════════════════════════════════════════════ -->
+{#if hasPos('sidebar')}
+	<div class="px-6 py-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+	     style="border-bottom:1px solid rgba(255,255,255,.05); background:#08080d">
+		<WidgetZone widgets={posWidgets('sidebar')} {instance} {user} layout="grid-3" {installedWidgets} />
+	</div>
+{/if}
+
+<!-- ═══════════════════════════════════════════════════════════════════
      FORUM THREADS GRID
 ════════════════════════════════════════════════════════════════════════ -->
 {#if featuredThreads.length > 0}
@@ -758,6 +810,83 @@
 		</div>
 	</div>
 </section>
+{/if}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     WIDE-1 / WIDE-2 — positions (WidgetZone)
+════════════════════════════════════════════════════════════════════════ -->
+{#if hasPos('wide-1')}
+	<section style="border-bottom:1px solid rgba(255,255,255,.05)">
+		<WidgetZone widgets={posWidgets('wide-1')} {instance} {user} layout="full" {installedWidgets} />
+	</section>
+{/if}
+{#if hasPos('half-1') || hasPos('half-2')}
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-0" style="border-bottom:1px solid rgba(255,255,255,.05)">
+		{#if hasPos('half-1')}
+			<div style="border-right:1px solid rgba(255,255,255,.05)">
+				<WidgetZone widgets={posWidgets('half-1')} {instance} {user} layout="full" {installedWidgets} />
+			</div>
+		{/if}
+		{#if hasPos('half-2')}
+			<div>
+				<WidgetZone widgets={posWidgets('half-2')} {instance} {user} layout="full" {installedWidgets} />
+			</div>
+		{/if}
+	</div>
+{/if}
+
+{#if hasPos('wide-2')}
+	<section style="border-bottom:1px solid rgba(255,255,255,.05)">
+		<WidgetZone widgets={posWidgets('wide-2')} {instance} {user} layout="full" {installedWidgets} />
+	</section>
+{/if}
+
+{#if hasPos('trio-1') || hasPos('trio-2') || hasPos('trio-3')}
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-0" style="border-bottom:1px solid rgba(255,255,255,.05)">
+		{#if hasPos('trio-1')}
+			<div style="border-right:1px solid rgba(255,255,255,.05)">
+				<WidgetZone widgets={posWidgets('trio-1')} {instance} {user} layout="full" {installedWidgets} />
+			</div>
+		{/if}
+		{#if hasPos('trio-2')}
+			<div style="border-right:1px solid rgba(255,255,255,.05)">
+				<WidgetZone widgets={posWidgets('trio-2')} {instance} {user} layout="full" {installedWidgets} />
+			</div>
+		{/if}
+		{#if hasPos('trio-3')}
+			<div>
+				<WidgetZone widgets={posWidgets('trio-3')} {instance} {user} layout="full" {installedWidgets} />
+			</div>
+		{/if}
+	</div>
+{/if}
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     FOOTER POSITIONS — footer-1 / footer-2 / footer-3 / footer-bar
+════════════════════════════════════════════════════════════════════════ -->
+{#if hasPos('footer-1') || hasPos('footer-2') || hasPos('footer-3')}
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-0" style="border-top:1px solid rgba(255,255,255,.05)">
+		{#if hasPos('footer-1')}
+			<div style="border-right:1px solid rgba(255,255,255,.05)">
+				<WidgetZone widgets={posWidgets('footer-1')} {instance} {user} layout="full" {installedWidgets} />
+			</div>
+		{/if}
+		{#if hasPos('footer-2')}
+			<div style="border-right:1px solid rgba(255,255,255,.05)">
+				<WidgetZone widgets={posWidgets('footer-2')} {instance} {user} layout="full" {installedWidgets} />
+			</div>
+		{/if}
+		{#if hasPos('footer-3')}
+			<div>
+				<WidgetZone widgets={posWidgets('footer-3')} {instance} {user} layout="full" {installedWidgets} />
+			</div>
+		{/if}
+	</div>
+{/if}
+{#if hasPos('footer-bar')}
+	<div style="border-top:1px solid rgba(255,255,255,.05)">
+		<WidgetZone widgets={posWidgets('footer-bar')} {instance} {user} layout="full" {installedWidgets} />
+	</div>
 {/if}
 
 <div class="h-8 lg:hidden"></div>

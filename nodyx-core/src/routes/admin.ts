@@ -1109,4 +1109,135 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     return reply.send({ success: true })
   })
+
+  // ── Homepage Builder — positions ──────────────────────────────────────────
+  // GET  /api/v1/admin/homepage/positions
+  app.get('/homepage/positions', { preHandler: [rateLimit, adminOnly] }, async (_req, reply) => {
+    const { rows } = await db.query(
+      `SELECT id, label, description, layout, max_widgets, sort_order, enabled
+       FROM homepage_positions ORDER BY sort_order ASC`
+    )
+    return reply.send({ positions: rows })
+  })
+
+  // PATCH /api/v1/admin/homepage/positions/:id  (enable/disable, reorder)
+  app.patch('/homepage/positions/:id', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = request.body as { enabled?: boolean; sort_order?: number; label?: string }
+    const sets: string[] = []
+    const vals: unknown[] = []
+    let i = 1
+    if (body.enabled    !== undefined) { sets.push(`enabled = $${i++}`);    vals.push(body.enabled) }
+    if (body.sort_order !== undefined) { sets.push(`sort_order = $${i++}`); vals.push(body.sort_order) }
+    if (body.label      !== undefined) { sets.push(`label = $${i++}`);      vals.push(body.label) }
+    if (!sets.length) return reply.code(400).send({ error: 'Nothing to update' })
+    vals.push(id)
+    await db.query(`UPDATE homepage_positions SET ${sets.join(', ')} WHERE id = $${i}`, vals)
+    await redis.del('homepage:cache')
+    return reply.send({ success: true })
+  })
+
+  // ── Homepage Builder — widgets ────────────────────────────────────────────
+  // GET  /api/v1/admin/homepage/widgets
+  app.get('/homepage/widgets', { preHandler: [rateLimit, adminOnly] }, async (_req, reply) => {
+    const { rows } = await db.query(
+      `SELECT id, position_id, widget_type, title, config, sort_order, enabled,
+              visibility, width, mobile_height, hide_mobile, hide_tablet, page_path,
+              created_at, updated_at
+       FROM homepage_widgets
+       ORDER BY position_id, sort_order ASC`
+    )
+    return reply.send({ widgets: rows })
+  })
+
+  // POST /api/v1/admin/homepage/widgets
+  app.post('/homepage/widgets', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const body = request.body as {
+      position_id: string; widget_type: string; title?: string;
+      config?: Record<string, unknown>; sort_order?: number;
+      visibility?: Record<string, unknown>; width?: string;
+      mobile_height?: string; hide_mobile?: boolean; hide_tablet?: boolean
+    }
+    if (!body.position_id || !body.widget_type) {
+      return reply.code(400).send({ error: 'position_id and widget_type are required' })
+    }
+
+    // Verify position exists
+    const pos = await db.query('SELECT id FROM homepage_positions WHERE id = $1', [body.position_id])
+    if (!pos.rows.length) return reply.code(404).send({ error: 'Position not found' })
+
+    const { rows } = await db.query(
+      `INSERT INTO homepage_widgets
+         (position_id, widget_type, title, config, sort_order, visibility, width, mobile_height, hide_mobile, hide_tablet)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING id`,
+      [
+        body.position_id,
+        body.widget_type,
+        body.title ?? null,
+        JSON.stringify(body.config ?? {}),
+        body.sort_order ?? 0,
+        JSON.stringify(body.visibility ?? { audience: 'all' }),
+        body.width ?? 'full',
+        body.mobile_height ?? null,
+        body.hide_mobile ?? false,
+        body.hide_tablet ?? false,
+      ]
+    )
+    await redis.del('homepage:cache')
+    return reply.code(201).send({ id: rows[0].id })
+  })
+
+  // PATCH /api/v1/admin/homepage/widgets/:id
+  app.patch('/homepage/widgets/:id', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = request.body as Record<string, unknown>
+    const allowed = ['position_id','widget_type','title','config','sort_order','enabled',
+                     'visibility','width','mobile_height','hide_mobile','hide_tablet','page_path']
+    const sets: string[] = []
+    const vals: unknown[] = []
+    let i = 1
+    for (const key of allowed) {
+      if (key in body) {
+        const val = (key === 'config' || key === 'visibility') ? JSON.stringify(body[key]) : body[key]
+        sets.push(`${key} = $${i++}`)
+        vals.push(val)
+      }
+    }
+    if (!sets.length) return reply.code(400).send({ error: 'Nothing to update' })
+    sets.push(`updated_at = now()`)
+    vals.push(id)
+    const res = await db.query(
+      `UPDATE homepage_widgets SET ${sets.join(', ')} WHERE id = $${i} RETURNING id`,
+      vals
+    )
+    if (!res.rows.length) return reply.code(404).send({ error: 'Widget not found' })
+    await redis.del('homepage:cache')
+    return reply.send({ success: true })
+  })
+
+  // DELETE /api/v1/admin/homepage/widgets/:id
+  app.delete('/homepage/widgets/:id', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const res = await db.query('DELETE FROM homepage_widgets WHERE id = $1 RETURNING id', [id])
+    if (!res.rows.length) return reply.code(404).send({ error: 'Widget not found' })
+    await redis.del('homepage:cache')
+    return reply.send({ success: true })
+  })
+
+  // POST /api/v1/admin/homepage/widgets/reorder  — bulk sort_order update
+  app.post('/homepage/widgets/reorder', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const body = request.body as { items: { id: string; position_id: string; sort_order: number }[] }
+    if (!Array.isArray(body.items) || !body.items.length) {
+      return reply.code(400).send({ error: 'items array required' })
+    }
+    for (const item of body.items) {
+      await db.query(
+        `UPDATE homepage_widgets SET position_id = $1, sort_order = $2, updated_at = now() WHERE id = $3`,
+        [item.position_id, item.sort_order, item.id]
+      )
+    }
+    await redis.del('homepage:cache')
+    return reply.send({ success: true })
+  })
 }

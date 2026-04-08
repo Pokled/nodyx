@@ -28,6 +28,8 @@ import honeypotRoutes        from './routes/honeypot'
 import totpRoutes            from './routes/totp'
 import wikiRoutes            from './routes/wiki'
 import socialRoutes          from './routes/social'
+import { widgetStoreRoutes } from './routes/widgetStore'
+import { widgetDemoRoutes }  from './routes/widgetDemo'
 import { setIO }              from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
@@ -142,6 +144,8 @@ server.register(honeypotRoutes,       { prefix: '/api/v1' })
 server.register(totpRoutes,           { prefix: '/api/v1/auth/totp' })
 server.register(wikiRoutes,           { prefix: '/api/v1/wiki' })
 server.register(socialRoutes,         { prefix: '/api/v1/social' })
+server.register(widgetStoreRoutes,    { prefix: '/api/v1' })
+server.register(widgetDemoRoutes,     { prefix: '/api/v1' })
 
 const start = async () => {
   // Validate critical environment variables at startup.

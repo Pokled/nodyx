@@ -322,6 +322,59 @@ export default async function instanceRoutes(app: FastifyInstance) {
     return reply.send({ events: rows })
   })
 
+  // ── GET /api/v1/instance/homepage ─────────────────────────────────────────
+  // Retourne toutes les positions activées avec leurs widgets ordonnés.
+  // Cache Redis 60s. Invalide sur toute modification admin.
+  // Public — no auth required.
+  app.get('/homepage', { preHandler: [rateLimit] }, async (_request, reply) => {
+    const CACHE_KEY = 'homepage:cache'
+
+    const cached = await redis.get(CACHE_KEY)
+    if (cached) {
+      return reply.header('X-Cache', 'HIT').send(JSON.parse(cached))
+    }
+
+    const posRes = await db.query<{
+      id: string; label: string; layout: string;
+      max_widgets: number | null; sort_order: number; enabled: boolean
+    }>(
+      `SELECT id, label, layout, max_widgets, sort_order
+       FROM homepage_positions
+       WHERE enabled = true
+       ORDER BY sort_order ASC`
+    )
+
+    const widRes = await db.query<{
+      id: string; position_id: string; widget_type: string; title: string | null;
+      config: Record<string, unknown>; sort_order: number; enabled: boolean;
+      visibility: Record<string, unknown>; width: string;
+      mobile_height: string | null; hide_mobile: boolean; hide_tablet: boolean
+    }>(
+      `SELECT id, position_id, widget_type, title, config, sort_order, enabled,
+              visibility, width, mobile_height, hide_mobile, hide_tablet
+       FROM homepage_widgets
+       WHERE enabled = true
+       ORDER BY position_id, sort_order ASC`
+    )
+
+    // Group widgets by position
+    const widgetsByPosition: Record<string, typeof widRes.rows> = {}
+    for (const w of widRes.rows) {
+      if (!widgetsByPosition[w.position_id]) widgetsByPosition[w.position_id] = []
+      widgetsByPosition[w.position_id].push(w)
+    }
+
+    const data = {
+      positions: posRes.rows.map(p => ({
+        ...p,
+        widgets: widgetsByPosition[p.id] ?? []
+      }))
+    }
+
+    await redis.setex(CACHE_KEY, 60, JSON.stringify(data))
+    return reply.header('X-Cache', 'MISS').send(data)
+  })
+
   app.get('/esy-public', { preHandler: [rateLimit, requireAuth] }, async (_request, reply) => {
     const key = loadEsyKey()
     if (!key) {

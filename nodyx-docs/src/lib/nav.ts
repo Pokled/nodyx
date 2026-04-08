@@ -32,6 +32,13 @@ export const nav: NavSection[] = [
     ],
   },
   {
+    title: 'Widget SDK',
+    icon:  'puzzle',
+    items: [
+      { title: 'Create Your First Widget', slug: 'create-widget', badge: 'New' },
+    ],
+  },
+  {
     title: 'Community',
     icon:  'users',
     items: [
