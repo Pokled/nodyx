@@ -15,12 +15,11 @@
 
 	let { widgetId, entry, config, instance, user, title }: Props = $props()
 
-	type LoadState = 'loading' | 'ready' | 'error'
-	let state    = $state<LoadState>('loading')
-	let errorMsg = $state('')
+	let loadStatus: 'loading' | 'ready' | 'error' = $state('loading')
+	let errorMsg: string = $state('')
 
 	// Le tag HTML du custom element : nodyx-widget-my-countdown
-	const tagName = `nodyx-widget-${widgetId}`
+	const tagName = $derived(`nodyx-widget-${widgetId}`)
 
 	// Charge un <script> dynamiquement (idempotent)
 	function loadScript(src: string): Promise<void> {
@@ -52,9 +51,9 @@
 					),
 				])
 			}
-			state = 'ready'
+			loadStatus = 'ready'
 		} catch (e) {
-			state = 'error'
+			loadStatus = 'error'
 			errorMsg = e instanceof Error ? e.message : String(e)
 		}
 	})
@@ -65,7 +64,7 @@
 	const userAttr     = $derived(user ? JSON.stringify(user) : '')
 </script>
 
-{#if state === 'loading'}
+{#if loadStatus === 'loading'}
 	<!-- Skeleton pendant le chargement du JS -->
 	<div class="w-full flex items-center justify-center py-8 gap-2" style="color:#374151">
 		<div class="w-4 h-4 rounded-full border-2 animate-spin"
@@ -73,7 +72,7 @@
 		<span class="text-xs">Chargement du widget…</span>
 	</div>
 
-{:else if state === 'error'}
+{:else if loadStatus === 'error'}
 	<!-- Erreur visible uniquement en dev / pour l'admin -->
 	<div class="w-full px-4 py-3 text-xs" style="background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.2); color:#fca5a5">
 		<span class="font-bold">Widget {widgetId} — erreur de chargement :</span>
