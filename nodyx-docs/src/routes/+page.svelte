@@ -3,8 +3,9 @@
 
   const { data } = $props()
 
-  let copied = $state(false)
-  let canvasEl = $state<HTMLCanvasElement | null>(null)
+  let copied    = $state(false)
+  let canvasEl  = $state<HTMLCanvasElement | null>(null)
+  let activeRow = $state(1)
 
   const instanceCount = $derived(data.instanceCount as number | null)
 
@@ -240,6 +241,28 @@
       desc: 'Registration opens immediately. First user becomes admin. Start building — forum, channels, voice rooms are all ready.',
     },
   ]
+
+  // ── Homepage Builder section animations ───────────────────────────────────
+  onMount(() => {
+    // Entrance observer — fade + slide up on scroll into view
+    const obs = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          (e.target as HTMLElement).style.opacity = '1'
+          ;(e.target as HTMLElement).style.transform = 'translateY(0)'
+          obs.unobserve(e.target)
+        }
+      }
+    }, { threshold: 0.12 })
+    document.querySelectorAll('.hb-entrance').forEach(el => obs.observe(el))
+
+    // Active row cycling — drives highlights in builder mockup
+    const iv = setInterval(() => {
+      activeRow = activeRow >= 3 ? 1 : activeRow + 1
+    }, 2600)
+
+    return () => { obs.disconnect(); clearInterval(iv) }
+  })
 </script>
 
 <svelte:head>
@@ -981,36 +1004,36 @@
   <div class="section-inner hb-layout">
 
     <!-- LEFT: text -->
-    <div class="hb-text">
+    <div class="hb-text hb-entrance">
       <div class="section-label" style="color:#a78bfa; border-color:#a78bfa30; background:#a78bfa10">
-        HOMEPAGE BUILDER + WIDGET SDK
+        HOMEPAGE BUILDER · GRID BUILDER · WIDGET SDK
       </div>
       <h2 class="section-title" style="margin-bottom:1rem">
         Your homepage,<br>
-        <span class="hb-gradient">your rules.</span>
+        <span class="hb-gradient">your grid.</span>
       </h2>
       <p class="hb-intro">
-        Nodyx ships with a drag-and-drop Homepage Builder and a full Widget SDK.
-        Place banners, stats, video players and custom content in 11 layout zones —
-        or build your own widget from scratch and install it in one click.
+        Build your community's public face visually — free rows, resizable columns,
+        live preview. Configure themes, drop widgets, publish instantly.
+        Zero code, zero restart.
       </p>
 
       <ul class="lp-features" style="margin-bottom: 2rem">
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>11 layout zones</strong> — banner, hero, sidebar, footer columns, half/trio grids
+          <strong>Free Grid Builder</strong> — N columns per row, drag to resize, spans 1–12
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>4 native widgets</strong> included — Hero Banner, Stats Bar, Join Card, Announcement
+          <strong>Live WYSIWYG preview</strong> — real shell, real widgets, changes instantly
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Install any widget</strong> — upload a <code>.zip</code>, done. No rebuild, no deploy
+          <strong>Theme Editor</strong> — colors, font, border-radius, all in one panel
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Build your own</strong> — plain JS, Shadow DOM, no framework needed
+          <strong>Widget SDK</strong> — upload a <code>.zip</code>, runs in Shadow DOM, no rebuild
         </li>
       </ul>
 
@@ -1030,11 +1053,11 @@
         <div class="hb-sdk-files">
           <div class="hb-sdk-file">
             <span class="hb-sdk-file-name">manifest.json</span>
-            <span class="hb-sdk-file-desc">id, label, version, config fields</span>
+            <span class="hb-sdk-file-desc">id, label, version, config schema</span>
           </div>
           <div class="hb-sdk-file">
             <span class="hb-sdk-file-name">widget.iife.js</span>
-            <span class="hb-sdk-file-desc">Custom Element — Shadow DOM isolated</span>
+            <span class="hb-sdk-file-desc">Web Component — Shadow DOM isolated</span>
           </div>
         </div>
         <a href="/create-widget" class="hb-sdk-cta">
@@ -1044,8 +1067,8 @@
       </div>
     </div>
 
-    <!-- RIGHT: visual mockup -->
-    <div class="hb-mockup" aria-hidden="true">
+    <!-- RIGHT: WYSIWYG builder mockup -->
+    <div class="hb-mockup hb-entrance" style="--hb-delay:0.18s" aria-hidden="true">
 
       <!-- Browser chrome -->
       <div class="hb-browser">
@@ -1054,96 +1077,147 @@
             <span></span><span></span><span></span>
           </div>
           <div class="hb-browser-url">nodyx.org/admin/homepage</div>
+          <div class="hb-browser-actions">
+            <span class="hb-browser-btn">Save</span>
+            <span class="hb-browser-btn hb-browser-btn-pub">Publish</span>
+          </div>
         </div>
-        <div class="hb-browser-body">
 
-          <!-- Zones map -->
-          <div class="hb-zones">
+        <!-- Builder split view -->
+        <div class="hb-builder-split">
 
-            <!-- Banner -->
-            <div class="hb-zone hb-zone-full hb-zone-active">
-              <span class="hb-zone-label">banner</span>
-              <div class="hb-zone-widget">
-                <span class="hb-zone-widget-icon">📢</span>
-                <span>Announcement Banner</span>
+          <!-- Left panel -->
+          <div class="hb-panel">
+            <button class="hb-panel-add">+ Row</button>
+
+            <div class="hb-panel-section">Rows</div>
+            <div class="hb-panel-rows">
+              <div class="hb-panel-row" class:hb-panel-row-active={activeRow === 1}>
+                <span class="hb-panel-drag">⠿</span>
+                <span class="hb-panel-row-label">Row 1</span>
+                <span class="hb-panel-span-hint">span 12</span>
+              </div>
+              <div class="hb-panel-row" class:hb-panel-row-active={activeRow === 2}>
+                <span class="hb-panel-drag">⠿</span>
+                <span class="hb-panel-row-label">Row 2</span>
+                <span class="hb-panel-span-hint">8 + 4</span>
+              </div>
+              <div class="hb-panel-row" class:hb-panel-row-active={activeRow === 3}>
+                <span class="hb-panel-drag">⠿</span>
+                <span class="hb-panel-row-label">Row 3</span>
+                <span class="hb-panel-span-hint">3×4</span>
               </div>
             </div>
 
-            <!-- Hero -->
-            <div class="hb-zone hb-zone-full" style="height:52px">
-              <span class="hb-zone-label">hero</span>
-              <div class="hb-zone-widget">
-                <span class="hb-zone-widget-icon">🌟</span>
-                <span>Hero Banner</span>
+            <div class="hb-panel-divider"></div>
+
+            <div class="hb-panel-section">Theme</div>
+            <div class="hb-panel-theme">
+              <div class="hb-theme-row">
+                <span class="hb-theme-swatch" style="background:#a78bfa"></span>
+                <span class="hb-theme-label">Primary</span>
+                <span class="hb-theme-val">#a78bfa</span>
+              </div>
+              <div class="hb-theme-row">
+                <span class="hb-theme-swatch" style="background:#06b6d4"></span>
+                <span class="hb-theme-label">Accent</span>
+                <span class="hb-theme-val">#06b6d4</span>
+              </div>
+              <div class="hb-theme-row hb-theme-slider-row">
+                <span class="hb-theme-label">Radius</span>
+                <div class="hb-theme-slider"><div class="hb-theme-thumb"></div></div>
+                <span class="hb-theme-val">10px</span>
               </div>
             </div>
-
-            <!-- Stats bar -->
-            <div class="hb-zone hb-zone-full hb-zone-stats">
-              <span class="hb-zone-label">stats-bar</span>
-              <div class="hb-zone-stats-row">
-                <span>👥 1,240</span>
-                <span>🟢 38 online</span>
-                <span>💬 5,830 posts</span>
-              </div>
-            </div>
-
-            <!-- Half / Half -->
-            <div class="hb-zone-row">
-              <div class="hb-zone hb-zone-half hb-zone-custom">
-                <span class="hb-zone-label">half-1</span>
-                <div class="hb-zone-widget">
-                  <span class="hb-zone-widget-icon">🎬</span>
-                  <span>Video Player</span>
-                  <span class="hb-zone-ext-badge">ext</span>
-                </div>
-              </div>
-              <div class="hb-zone hb-zone-half">
-                <span class="hb-zone-label">half-2</span>
-                <span class="hb-zone-empty">+ Add widget</span>
-              </div>
-            </div>
-
-            <!-- Footer cols -->
-            <div class="hb-zone-row">
-              <div class="hb-zone hb-zone-third">
-                <span class="hb-zone-label">footer-1</span>
-                <div class="hb-zone-widget" style="font-size:9px">
-                  <span class="hb-zone-widget-icon">👋</span>
-                  <span>Join Card</span>
-                </div>
-              </div>
-              <div class="hb-zone hb-zone-third">
-                <span class="hb-zone-label">footer-2</span>
-                <span class="hb-zone-empty">+ Add widget</span>
-              </div>
-              <div class="hb-zone hb-zone-third">
-                <span class="hb-zone-label">footer-3</span>
-                <span class="hb-zone-empty">+ Add widget</span>
-              </div>
-            </div>
-
           </div>
 
+          <!-- Main canvas -->
+          <div class="hb-canvas">
+
+            <!-- Row 1: full width -->
+            <div class="hb-canvas-row" class:hb-canvas-row-active={activeRow === 1}>
+              <div class="hb-canvas-col hb-col-full">
+                <span class="hb-span-badge">12</span>
+                <span class="hb-col-icon">🌟</span>
+                <span class="hb-col-name">welcome-banner</span>
+                <span class="hb-col-gear" class:visible={activeRow === 1}>⚙</span>
+              </div>
+            </div>
+
+            <!-- Row 2: 8+4 animated resize -->
+            <div class="hb-canvas-row" class:hb-canvas-row-active={activeRow === 2}>
+              <div class="hb-canvas-col hb-col-resize-a">
+                <span class="hb-span-badge hb-span-a">8</span>
+                <span class="hb-col-icon">💬</span>
+                <span class="hb-col-name">forum-preview</span>
+                <span class="hb-col-gear" class:visible={activeRow === 2}>⚙</span>
+              </div>
+              <div class="hb-resize-handle" class:hb-handle-active={activeRow === 2}>
+                <svg width="6" height="14" viewBox="0 0 6 14" fill="none">
+                  <circle cx="3" cy="2" r="1.2" fill="currentColor"/>
+                  <circle cx="3" cy="7" r="1.2" fill="currentColor"/>
+                  <circle cx="3" cy="12" r="1.2" fill="currentColor"/>
+                </svg>
+              </div>
+              <div class="hb-canvas-col hb-col-resize-b">
+                <span class="hb-span-badge hb-span-b">4</span>
+                <span class="hb-col-icon">👥</span>
+                <span class="hb-col-name">members</span>
+              </div>
+            </div>
+
+            <!-- Row 3: 4 equal cols -->
+            <div class="hb-canvas-row" class:hb-canvas-row-active={activeRow === 3}>
+              {#each [['📅','events'],['🎤','voice'],['🏆','top'],['📊','stats']] as [icon, name], i}
+                <div class="hb-canvas-col hb-col-quarter">
+                  <span class="hb-span-badge">3</span>
+                  <span class="hb-col-icon">{icon}</span>
+                  <span class="hb-col-name">{name}</span>
+                </div>
+                {#if i < 3}
+                  <div class="hb-resize-handle hb-handle-sm" class:hb-handle-active={activeRow === 3}>
+                    <svg width="4" height="10" viewBox="0 0 4 10" fill="none">
+                      <circle cx="2" cy="2" r="1" fill="currentColor"/>
+                      <circle cx="2" cy="5" r="1" fill="currentColor"/>
+                      <circle cx="2" cy="8" r="1" fill="currentColor"/>
+                    </svg>
+                  </div>
+                {/if}
+              {/each}
+            </div>
+
+            <div class="hb-canvas-add-row">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add row
+            </div>
+
+          </div><!-- /canvas -->
+
+        </div><!-- /split -->
+      </div><!-- /browser -->
+
+      <!-- Floating config panel — appears when row 2 active -->
+      <div class="hb-config-panel" class:hb-config-visible={activeRow === 2}>
+        <div class="hb-config-header">
+          <span class="hb-config-icon">⚙</span>
+          <span>forum-preview</span>
+          <span class="hb-config-close">✕</span>
+        </div>
+        <div class="hb-config-field">
+          <span class="hb-config-label">Threads</span>
+          <span class="hb-config-val">5</span>
+        </div>
+        <div class="hb-config-field">
+          <span class="hb-config-label">Category</span>
+          <span class="hb-config-val">All</span>
+        </div>
+        <div class="hb-config-field">
+          <span class="hb-config-label">Show avatars</span>
+          <span class="hb-config-toggle hb-config-on">ON</span>
         </div>
       </div>
 
-      <!-- Floating widget card -->
-      <div class="hb-floating-card">
-        <div class="hb-floating-header">
-          <span class="hb-floating-icon">🎬</span>
-          <div>
-            <div class="hb-floating-name">Video Player</div>
-            <div class="hb-floating-id">video-player · v1.0.0 · Nodyx</div>
-          </div>
-          <span class="hb-floating-ext">installed</span>
-        </div>
-        <div class="hb-floating-code">
-          <span class="hb-code-kw">customElements</span><span class="hb-code-op">.</span><span class="hb-code-fn">define</span><span class="hb-code-op">(</span><span class="hb-code-str">'nodyx-widget-video-player'</span><span class="hb-code-op">, ...)</span>
-        </div>
-      </div>
-
-    </div>
+    </div><!-- /mockup -->
   </div>
 </section>
 
@@ -3152,6 +3226,13 @@
 
 /* ── Homepage Builder + Widget SDK ──────────────────────────────────────── */
 
+/* Entrance animation */
+.hb-entrance {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.65s ease calc(var(--hb-delay, 0s)), transform 0.65s ease calc(var(--hb-delay, 0s));
+}
+
 .hb-section { padding: 5rem 0; }
 
 .hb-layout {
@@ -3184,7 +3265,6 @@
   position: relative;
   overflow: hidden;
 }
-
 .hb-sdk-card::before {
   content: '';
   position: absolute;
@@ -3192,269 +3272,298 @@
   background: radial-gradient(circle at 0 0, rgba(167,139,250,.06), transparent 60%);
   pointer-events: none;
 }
-
-.hb-sdk-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
+.hb-sdk-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
 .hb-sdk-icon {
   width: 32px; height: 32px;
   background: rgba(167,139,250,.12);
   border: 1px solid rgba(167,139,250,.2);
   display: flex; align-items: center; justify-content: center;
-  color: #a78bfa;
-  flex-shrink: 0;
+  color: #a78bfa; flex-shrink: 0;
 }
-
 .hb-sdk-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
 .hb-sdk-sub   { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
-
-.hb-sdk-files {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 1rem;
-}
-
-.hb-sdk-file {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.hb-sdk-files { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+.hb-sdk-file  {
+  display: flex; align-items: center; gap: 0.75rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(255,255,255,.02);
-  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.05);
 }
-
 .hb-sdk-file-name {
   font-family: 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 0.78rem;
-  color: #a78bfa;
-  flex-shrink: 0;
+  font-size: 0.78rem; color: #a78bfa; flex-shrink: 0;
 }
-
 .hb-sdk-file-desc { font-size: 0.72rem; color: var(--text-muted); }
-
 .hb-sdk-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #a78bfa;
-  text-decoration: none;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-size: 0.8rem; font-weight: 700; color: #a78bfa; text-decoration: none;
   padding: 0.5rem 1rem;
   border: 1px solid rgba(167,139,250,.3);
   background: rgba(167,139,250,.08);
   transition: background 0.15s, border-color 0.15s;
 }
-.hb-sdk-cta:hover {
-  background: rgba(167,139,250,.15);
-  border-color: rgba(167,139,250,.5);
-}
+.hb-sdk-cta:hover { background: rgba(167,139,250,.15); border-color: rgba(167,139,250,.5); }
 
-/* Browser mockup */
-.hb-mockup {
-  position: relative;
-}
+/* Mockup wrapper */
+.hb-mockup { position: relative; }
 
+/* Browser chrome */
 .hb-browser {
   border: 1px solid rgba(255,255,255,.08);
-  background: #0a0a0f;
+  background: #08080e;
   overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  box-shadow: 0 28px 72px rgba(0,0,0,.55);
 }
 
 .hb-browser-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.9rem;
-  background: rgba(255,255,255,.03);
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.85rem;
+  background: rgba(255,255,255,.025);
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
-
-.hb-browser-dots {
-  display: flex; gap: 5px; flex-shrink: 0;
-}
-.hb-browser-dots span {
-  width: 9px; height: 9px; border-radius: 50%;
-  background: rgba(255,255,255,.12);
-}
-.hb-browser-dots span:first-child { background: rgba(239,68,68,.4); }
-.hb-browser-dots span:nth-child(2) { background: rgba(251,191,36,.4); }
-.hb-browser-dots span:last-child  { background: rgba(74,222,128,.4); }
-
+.hb-browser-dots { display: flex; gap: 5px; flex-shrink: 0; }
+.hb-browser-dots span { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.1); }
+.hb-browser-dots span:first-child  { background: rgba(239,68,68,.45); }
+.hb-browser-dots span:nth-child(2) { background: rgba(251,191,36,.45); }
+.hb-browser-dots span:last-child   { background: rgba(74,222,128,.45); }
 .hb-browser-url {
   flex: 1;
-  font-size: 0.68rem;
-  font-family: monospace;
-  color: rgba(255,255,255,.25);
-  background: rgba(255,255,255,.04);
-  padding: 0.25rem 0.75rem;
+  font-size: 0.64rem; font-family: monospace;
+  color: rgba(255,255,255,.2);
+  background: rgba(255,255,255,.035);
+  padding: 0.22rem 0.75rem; text-align: center;
+}
+.hb-browser-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+.hb-browser-btn {
+  font-size: 0.62rem; font-weight: 600; padding: 2px 8px;
+  border: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.35); cursor: default;
+}
+.hb-browser-btn-pub {
+  background: rgba(167,139,250,.12);
+  border-color: rgba(167,139,250,.3);
+  color: #a78bfa;
+}
+
+/* Builder split view */
+.hb-builder-split {
+  display: flex;
+  height: 260px;
+}
+
+/* Left panel */
+.hb-panel {
+  width: 100px;
+  border-right: 1px solid rgba(255,255,255,.05);
+  padding: 0.5rem 0;
+  display: flex; flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.hb-panel-add {
+  margin: 0 0.5rem 0.4rem;
+  padding: 0.3rem 0;
+  font-size: 0.62rem; font-weight: 700;
+  color: #a78bfa;
+  border: 1px dashed rgba(167,139,250,.35);
+  background: rgba(167,139,250,.06);
   text-align: center;
+  cursor: default;
+  transition: background 0.15s;
+}
+.hb-panel-section {
+  font-size: 0.58rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: rgba(255,255,255,.2);
+  padding: 0.3rem 0.6rem 0.2rem;
+}
+.hb-panel-rows { display: flex; flex-direction: column; gap: 1px; margin-bottom: 0.25rem; }
+.hb-panel-row {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.62rem; color: rgba(255,255,255,.3);
+  transition: background 0.25s, color 0.25s;
+  cursor: default;
+}
+.hb-panel-row-active {
+  background: rgba(167,139,250,.1);
+  color: #c4b5fd;
+}
+.hb-panel-drag { color: rgba(255,255,255,.15); font-size: 0.65rem; }
+.hb-panel-row-label { flex: 1; font-weight: 600; }
+.hb-panel-span-hint {
+  font-size: 0.55rem;
+  color: rgba(255,255,255,.18);
+  font-family: monospace;
+}
+.hb-panel-row-active .hb-panel-span-hint { color: rgba(167,139,250,.6); }
+.hb-panel-divider {
+  height: 1px; background: rgba(255,255,255,.05);
+  margin: 0.35rem 0.5rem;
+}
+.hb-panel-theme { padding: 0 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.hb-theme-row { display: flex; align-items: center; gap: 0.3rem; }
+.hb-theme-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.hb-theme-label { font-size: 0.58rem; color: rgba(255,255,255,.25); flex: 1; }
+.hb-theme-val { font-size: 0.55rem; font-family: monospace; color: rgba(255,255,255,.18); }
+.hb-theme-slider-row { gap: 0.3rem; }
+.hb-theme-slider {
+  flex: 1; height: 3px;
+  background: rgba(255,255,255,.08); position: relative;
+}
+.hb-theme-thumb {
+  position: absolute; top: 50%; left: 60%;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #a78bfa;
+  transform: translate(-50%, -50%);
 }
 
-.hb-browser-body { padding: 0.75rem; }
-
-/* Zones */
-.hb-zones {
-  display: flex;
-  flex-direction: column;
+/* Canvas */
+.hb-canvas {
+  flex: 1;
+  padding: 0.6rem;
+  display: flex; flex-direction: column;
   gap: 5px;
+  overflow: hidden;
+  min-width: 0;
 }
 
-.hb-zone-row {
+.hb-canvas-row {
   display: flex;
-  gap: 5px;
+  gap: 4px;
+  align-items: stretch;
+  transition: opacity 0.3s;
 }
 
-.hb-zone {
+.hb-canvas-row-active .hb-canvas-col {
+  border-color: rgba(167,139,250,.4);
+  background: rgba(167,139,250,.05);
+}
+
+.hb-canvas-col {
   position: relative;
   border: 1px dashed rgba(255,255,255,.1);
-  padding: 0.4rem 0.5rem;
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  transition: border-color 0.15s;
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
+  min-height: 40px;
+  min-width: 0;
+  transition: border-color 0.3s, background 0.3s;
 }
 
-.hb-zone-full  { width: 100%; }
-.hb-zone-half  { flex: 1; }
-.hb-zone-third { flex: 1; }
+.hb-col-full    { flex: 12; }
+.hb-col-quarter { flex: 3; }
 
-.hb-zone-active {
-  border-color: rgba(167,139,250,.4);
-  background: rgba(167,139,250,.04);
+/* Animated resize col */
+@keyframes hb-col-a-anim {
+  0%, 25%, 100% { flex: 8; }
+  60%, 75% { flex: 6; }
 }
-
-.hb-zone-stats {
-  border-color: rgba(6,182,212,.3);
-  background: rgba(6,182,212,.03);
-  height: 32px;
+@keyframes hb-col-b-anim {
+  0%, 25%, 100% { flex: 4; }
+  60%, 75% { flex: 6; }
 }
+.hb-col-resize-a { animation: hb-col-a-anim 5s ease-in-out infinite; }
+.hb-col-resize-b { animation: hb-col-b-anim 5s ease-in-out infinite; }
 
-.hb-zone-custom {
-  border-color: rgba(6,182,212,.4);
-  background: rgba(6,182,212,.04);
-}
-
-.hb-zone-label {
-  position: absolute;
-  top: 3px; left: 5px;
-  font-size: 8px;
-  font-family: monospace;
-  color: rgba(255,255,255,.18);
-  letter-spacing: .04em;
-  pointer-events: none;
-}
-
-.hb-zone-widget {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 10px;
-  color: rgba(255,255,255,.5);
-  font-weight: 600;
-}
-
-.hb-zone-widget-icon { font-size: 11px; }
-
-.hb-zone-ext-badge {
-  font-size: 8px;
-  font-weight: 700;
-  padding: 1px 4px;
-  background: rgba(6,182,212,.12);
-  border: 1px solid rgba(6,182,212,.25);
-  color: #06b6d4;
-  letter-spacing: .04em;
-}
-
-.hb-zone-empty {
-  font-size: 9px;
-  color: rgba(255,255,255,.12);
-  font-weight: 600;
-  letter-spacing: .03em;
-}
-
-.hb-zone-stats-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 9px;
-  color: rgba(6,182,212,.7);
-  font-weight: 600;
-}
-
-/* Floating card */
-.hb-floating-card {
-  position: absolute;
-  bottom: -1.25rem;
-  right: -1.5rem;
-  background: #0d0d16;
-  border: 1px solid rgba(167,139,250,.3);
-  padding: 0.75rem 1rem;
-  width: 240px;
-  box-shadow: 0 12px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(167,139,250,.08);
-}
-
-.hb-floating-header {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.6rem;
-}
-
-.hb-floating-icon { font-size: 18px; flex-shrink: 0; }
-
-.hb-floating-name {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: rgba(255,255,255,.9);
-}
-
-.hb-floating-id {
-  font-size: 0.65rem;
-  font-family: monospace;
-  color: rgba(255,255,255,.25);
-  margin-top: 1px;
-}
-
-.hb-floating-ext {
-  margin-left: auto;
-  font-size: 0.62rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  background: rgba(74,222,128,.1);
-  border: 1px solid rgba(74,222,128,.2);
-  color: #4ade80;
-  letter-spacing: .05em;
-  text-transform: uppercase;
+.hb-span-badge {
+  font-size: 0.52rem; font-family: monospace; font-weight: 700;
+  color: rgba(255,255,255,.2);
   flex-shrink: 0;
 }
+.hb-canvas-row-active .hb-span-badge { color: rgba(167,139,250,.7); }
 
-.hb-floating-code {
-  font-size: 0.67rem;
-  font-family: 'Fira Code', monospace;
-  padding: 0.4rem 0.6rem;
-  background: rgba(0,0,0,.3);
-  border: 1px solid rgba(255,255,255,.05);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.hb-col-icon  { font-size: 0.75rem; flex-shrink: 0; }
+.hb-col-name  {
+  font-size: 0.6rem; font-weight: 600;
+  color: rgba(255,255,255,.4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
+}
+.hb-canvas-row-active .hb-col-name { color: rgba(255,255,255,.65); }
+
+.hb-col-gear {
+  margin-left: auto;
+  font-size: 0.65rem;
+  color: rgba(167,139,250,.4);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.hb-col-gear.visible { opacity: 1; }
+
+/* Resize handle */
+.hb-resize-handle {
+  width: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.1);
+  cursor: col-resize;
+  transition: color 0.3s;
+}
+.hb-handle-active { color: rgba(167,139,250,.5); }
+.hb-handle-sm { width: 7px; }
+
+.hb-canvas-add-row {
+  display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  padding: 0.3rem;
+  border: 1px dashed rgba(255,255,255,.06);
+  font-size: 0.62rem; color: rgba(255,255,255,.15);
+  cursor: default;
+  margin-top: auto;
 }
 
-.hb-code-kw  { color: #818cf8; }
-.hb-code-op  { color: rgba(255,255,255,.3); }
-.hb-code-fn  { color: #06b6d4; }
-.hb-code-str { color: #4ade80; }
+/* Floating config panel */
+.hb-config-panel {
+  position: absolute;
+  bottom: -0.75rem;
+  right: -1.25rem;
+  width: 160px;
+  background: #0e0e1a;
+  border: 1px solid rgba(167,139,250,.25);
+  box-shadow: 0 12px 32px rgba(0,0,0,.6);
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  pointer-events: none;
+}
+.hb-config-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.hb-config-header {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,.75);
+}
+.hb-config-icon { color: #a78bfa; font-size: 0.7rem; }
+.hb-config-close {
+  margin-left: auto;
+  color: rgba(255,255,255,.2);
+  font-size: 0.6rem;
+}
+.hb-config-field {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.32rem 0.65rem;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.hb-config-label { font-size: 0.62rem; color: rgba(255,255,255,.35); }
+.hb-config-val   { font-size: 0.62rem; color: rgba(255,255,255,.65); font-weight: 600; }
+.hb-config-toggle {
+  font-size: 0.55rem; font-weight: 700; letter-spacing: .05em;
+  padding: 1px 5px; border-radius: 3px;
+}
+.hb-config-on {
+  background: rgba(74,222,128,.12);
+  border: 1px solid rgba(74,222,128,.25);
+  color: #4ade80;
+}
 
 @media (max-width: 1024px) {
   .hb-layout { grid-template-columns: 1fr; gap: 3rem; }
-  .hb-floating-card { display: none; }
+  .hb-config-panel { display: none; }
+}
+@media (max-width: 640px) {
+  .hb-panel { width: 80px; }
+  .hb-panel-span-hint { display: none; }
+  .hb-builder-split { height: 220px; }
 }
 </style>
