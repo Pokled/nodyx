@@ -486,6 +486,51 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREENSHOTS                                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section ss-section">
+  <div class="section-inner">
+    <div class="section-label">SCREENSHOTS</div>
+    <h2 class="section-title">The real product. No mockup.</h2>
+    <p class="section-sub">Every screenshot taken from <a href="https://nodyx.org" target="_blank" rel="noopener noreferrer" style="color:var(--accent,#818cf8);text-decoration:none">nodyx.org</a> — the live production instance.</p>
+
+    <!-- Row 1: Hero screenshot full-width -->
+    <div class="ss-hero-shot">
+      <img src="/img/nodyx_home_page.png" alt="Nodyx homepage built with Grid Builder" loading="lazy"/>
+      <div class="ss-hero-caption">Homepage — assembled in the Grid Builder, live on nodyx.org</div>
+    </div>
+
+    <!-- Row 2: 2-col grid — Forum + Chat -->
+    <div class="ss-grid">
+      <figure class="ss-fig">
+        <img src="/img/Nodyx_Forum.png" alt="Forum — categories and threads" loading="lazy"/>
+        <figcaption>Forum — categories, threads, rich editor, polls</figcaption>
+      </figure>
+      <figure class="ss-fig">
+        <img src="/img/Nodyx_chat.png" alt="Real-time chat channels" loading="lazy"/>
+        <figcaption>Real-time chat — Socket.IO, DMs, replies, mentions</figcaption>
+      </figure>
+      <figure class="ss-fig">
+        <img src="/img/Vocal_Nodyx_salon.png" alt="Voice channel — P2P WebRTC" loading="lazy"/>
+        <figcaption>Voice channels — P2P WebRTC mesh, noise cancellation</figcaption>
+      </figure>
+      <figure class="ss-fig">
+        <img src="/img/Nodyx_grid_builder_home_page_website.png" alt="Homepage Builder — drag and drop grid editor" loading="lazy"/>
+        <figcaption>Homepage Builder — free grid, drag & drop, live preview</figcaption>
+      </figure>
+      <figure class="ss-fig">
+        <img src="/img/widget_store_nodyx.png" alt="Widget Store — install .zip widgets" loading="lazy"/>
+        <figcaption>Widget Store — install community widgets in one click</figcaption>
+      </figure>
+      <figure class="ss-fig">
+        <img src="/img/Nodyx_Moteur_de_recherche_inter_reseau.png" alt="Cross-instance federated search" loading="lazy"/>
+        <figcaption>Cross-instance search — federated FTS across the network</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- LIVING PROFILE                                                            -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <section class="section section-alt">
@@ -1067,7 +1112,7 @@
       </div>
     </div>
 
-    <!-- RIGHT: WYSIWYG builder mockup -->
+    <!-- RIGHT: real Grid Builder screenshot -->
     <div class="hb-mockup hb-entrance" style="--hb-delay:0.18s" aria-hidden="true">
 
       <!-- Browser chrome -->
@@ -1076,146 +1121,22 @@
           <div class="hb-browser-dots">
             <span></span><span></span><span></span>
           </div>
-          <div class="hb-browser-url">nodyx.org/admin/homepage</div>
+          <div class="hb-browser-url">nodyx.org/admin/homepage/builder</div>
           <div class="hb-browser-actions">
             <span class="hb-browser-btn">Save</span>
             <span class="hb-browser-btn hb-browser-btn-pub">Publish</span>
           </div>
         </div>
 
-        <!-- Builder split view -->
-        <div class="hb-builder-split">
+        <!-- Real screenshot of the Grid Builder -->
+        <img
+          src="/img/Nodyx_grid_builder_home_page_website.png"
+          alt="Grid Builder — drag and drop homepage editor"
+          class="hb-real-shot"
+          loading="lazy"
+        />
 
-          <!-- Left panel -->
-          <div class="hb-panel">
-            <button class="hb-panel-add">+ Row</button>
-
-            <div class="hb-panel-section">Rows</div>
-            <div class="hb-panel-rows">
-              <div class="hb-panel-row" class:hb-panel-row-active={activeRow === 1}>
-                <span class="hb-panel-drag">⠿</span>
-                <span class="hb-panel-row-label">Row 1</span>
-                <span class="hb-panel-span-hint">span 12</span>
-              </div>
-              <div class="hb-panel-row" class:hb-panel-row-active={activeRow === 2}>
-                <span class="hb-panel-drag">⠿</span>
-                <span class="hb-panel-row-label">Row 2</span>
-                <span class="hb-panel-span-hint">8 + 4</span>
-              </div>
-              <div class="hb-panel-row" class:hb-panel-row-active={activeRow === 3}>
-                <span class="hb-panel-drag">⠿</span>
-                <span class="hb-panel-row-label">Row 3</span>
-                <span class="hb-panel-span-hint">3×4</span>
-              </div>
-            </div>
-
-            <div class="hb-panel-divider"></div>
-
-            <div class="hb-panel-section">Theme</div>
-            <div class="hb-panel-theme">
-              <div class="hb-theme-row">
-                <span class="hb-theme-swatch" style="background:#a78bfa"></span>
-                <span class="hb-theme-label">Primary</span>
-                <span class="hb-theme-val">#a78bfa</span>
-              </div>
-              <div class="hb-theme-row">
-                <span class="hb-theme-swatch" style="background:#06b6d4"></span>
-                <span class="hb-theme-label">Accent</span>
-                <span class="hb-theme-val">#06b6d4</span>
-              </div>
-              <div class="hb-theme-row hb-theme-slider-row">
-                <span class="hb-theme-label">Radius</span>
-                <div class="hb-theme-slider"><div class="hb-theme-thumb"></div></div>
-                <span class="hb-theme-val">10px</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Main canvas -->
-          <div class="hb-canvas">
-
-            <!-- Row 1: full width -->
-            <div class="hb-canvas-row" class:hb-canvas-row-active={activeRow === 1}>
-              <div class="hb-canvas-col hb-col-full">
-                <span class="hb-span-badge">12</span>
-                <span class="hb-col-icon">🌟</span>
-                <span class="hb-col-name">welcome-banner</span>
-                <span class="hb-col-gear" class:visible={activeRow === 1}>⚙</span>
-              </div>
-            </div>
-
-            <!-- Row 2: 8+4 animated resize -->
-            <div class="hb-canvas-row" class:hb-canvas-row-active={activeRow === 2}>
-              <div class="hb-canvas-col hb-col-resize-a">
-                <span class="hb-span-badge hb-span-a">8</span>
-                <span class="hb-col-icon">💬</span>
-                <span class="hb-col-name">forum-preview</span>
-                <span class="hb-col-gear" class:visible={activeRow === 2}>⚙</span>
-              </div>
-              <div class="hb-resize-handle" class:hb-handle-active={activeRow === 2}>
-                <svg width="6" height="14" viewBox="0 0 6 14" fill="none">
-                  <circle cx="3" cy="2" r="1.2" fill="currentColor"/>
-                  <circle cx="3" cy="7" r="1.2" fill="currentColor"/>
-                  <circle cx="3" cy="12" r="1.2" fill="currentColor"/>
-                </svg>
-              </div>
-              <div class="hb-canvas-col hb-col-resize-b">
-                <span class="hb-span-badge hb-span-b">4</span>
-                <span class="hb-col-icon">👥</span>
-                <span class="hb-col-name">members</span>
-              </div>
-            </div>
-
-            <!-- Row 3: 4 equal cols -->
-            <div class="hb-canvas-row" class:hb-canvas-row-active={activeRow === 3}>
-              {#each [['📅','events'],['🎤','voice'],['🏆','top'],['📊','stats']] as [icon, name], i}
-                <div class="hb-canvas-col hb-col-quarter">
-                  <span class="hb-span-badge">3</span>
-                  <span class="hb-col-icon">{icon}</span>
-                  <span class="hb-col-name">{name}</span>
-                </div>
-                {#if i < 3}
-                  <div class="hb-resize-handle hb-handle-sm" class:hb-handle-active={activeRow === 3}>
-                    <svg width="4" height="10" viewBox="0 0 4 10" fill="none">
-                      <circle cx="2" cy="2" r="1" fill="currentColor"/>
-                      <circle cx="2" cy="5" r="1" fill="currentColor"/>
-                      <circle cx="2" cy="8" r="1" fill="currentColor"/>
-                    </svg>
-                  </div>
-                {/if}
-              {/each}
-            </div>
-
-            <div class="hb-canvas-add-row">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add row
-            </div>
-
-          </div><!-- /canvas -->
-
-        </div><!-- /split -->
       </div><!-- /browser -->
-
-      <!-- Floating config panel — appears when row 2 active -->
-      <div class="hb-config-panel" class:hb-config-visible={activeRow === 2}>
-        <div class="hb-config-header">
-          <span class="hb-config-icon">⚙</span>
-          <span>forum-preview</span>
-          <span class="hb-config-close">✕</span>
-        </div>
-        <div class="hb-config-field">
-          <span class="hb-config-label">Threads</span>
-          <span class="hb-config-val">5</span>
-        </div>
-        <div class="hb-config-field">
-          <span class="hb-config-label">Category</span>
-          <span class="hb-config-val">All</span>
-        </div>
-        <div class="hb-config-field">
-          <span class="hb-config-label">Show avatars</span>
-          <span class="hb-config-toggle hb-config-on">ON</span>
-        </div>
-      </div>
 
     </div><!-- /mockup -->
   </div>
@@ -2517,12 +2438,71 @@
   max-width: 100%;
 }
 
+/* ── Screenshots section ─────────────────────────────────────────────────── */
+
+.ss-section { background: #0d0f17; }
+
+.ss-hero-shot {
+  margin: 2.5rem 0 2rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.ss-hero-shot img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.ss-hero-caption {
+  padding: 0.7rem 1.25rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  text-align: center;
+}
+
+.ss-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.ss-fig {
+  margin: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  background: rgba(255,255,255,0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ss-fig:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+.ss-fig img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.ss-fig figcaption {
+  padding: 0.55rem 0.85rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  line-height: 1.4;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 
 @media (max-width: 1024px) {
   .hero-inner         { grid-template-columns: 1fr; gap: 2rem; padding: 3.5rem 2rem 3rem; }
   .hero-canvas-wrap   { display: none; }
   .features-grid      { grid-template-columns: repeat(2, 1fr); }
+  .ss-grid            { grid-template-columns: repeat(2, 1fr); }
   .steps              { grid-template-columns: 1fr; gap: 2.5rem; }
   .decentralized      { grid-template-columns: 1fr; gap: 2.5rem; }
   .arch-grid          { flex-direction: column; }
@@ -2534,6 +2514,7 @@
 @media (max-width: 640px) {
   .section-inner, .manifesto, .final-cta, .stat-bar-inner { padding-left: 1.25rem; padding-right: 1.25rem; }
   .features-grid  { grid-template-columns: 1fr; }
+  .ss-grid        { grid-template-columns: 1fr; }
   .hero-inner     { padding: 2.5rem 1.25rem 2rem; }
   .stat-bar-inner { justify-content: center; gap: 0; }
   .stat-sep       { display: none; }
@@ -3305,6 +3286,13 @@
 
 /* Mockup wrapper */
 .hb-mockup { position: relative; }
+
+.hb-real-shot {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 0 0 8px 8px;
+}
 
 /* Browser chrome */
 .hb-browser {
