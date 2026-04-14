@@ -940,7 +940,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 # git first — needed to clone the repo, and most VPS images don't ship with it
 apt-get install -y -q git 2>/dev/null
-_SYS_PKGS="curl wget gnupg2 ca-certificates lsb-release openssl ufw build-essential postgresql postgresql-contrib redis-server"
+_SYS_PKGS="curl wget gnupg2 ca-certificates lsb-release openssl ufw build-essential postgresql postgresql-contrib redis-server fonts-dejavu-core"
 # shellcheck disable=SC2086
 apt-get install -y -q $_SYS_PKGS 2>/dev/null
 ok "Paquets système installés"
