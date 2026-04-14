@@ -74,7 +74,7 @@ banner() {
 EOF
   echo -e "${RESET}"
   echo -e "  ${CYAN}$(printf '═%.0s' {1..52})${RESET}"
-  echo -e "  ${CYAN}║${RESET}  ${BOLD}Node Installer v1.9${RESET}  ·  Forum · Chat · Voice  ${CYAN}  ║${RESET}"
+  echo -e "  ${CYAN}║${RESET}  ${BOLD}Installer v2.0${RESET}  ·  Forum · Chat · Voice · Builder  ${CYAN}║${RESET}"
   echo -e "  ${CYAN}║${RESET}  AGPL-3.0  ·  ${CYAN}github.com/Pokled/Nodyx${RESET}            ${CYAN}║${RESET}"
   echo -e "  ${CYAN}$(printf '═%.0s' {1..52})${RESET}"
   echo ""
@@ -243,8 +243,8 @@ _auto_backup_db() {
 }
 
 # ── Version ────────────────────────────────────────────────────────────────────
-NODYX_VERSION="1.9.4"
-INSTALLER_VERSION="1.9.4"
+NODYX_VERSION="2.0.0"
+INSTALLER_VERSION="2.0.0"
 
 # ── CLI flags ─────────────────────────────────────────────────────────────────
 _FORCE_MODE=""        # upgrade | repair | reinstall | wipe (bypass detection menu)
@@ -1111,7 +1111,7 @@ ok "Redis démarré"
 # ═══════════════════════════════════════════════════════════════════════════════
 #  NODYX-TURN (STUN/TURN Rust natif — remplace coturn) — ignoré en mode Relay
 # ═══════════════════════════════════════════════════════════════════════════════
-if ! $RELAY_MODE; then
+if ! $RELAY_MODE && ! $SKIP_TURN; then
   step "Installation de nodyx-turn (relay vocal WebRTC)"
 
   _ARCH=$(uname -m)
@@ -1194,11 +1194,13 @@ ufw allow ssh >/dev/null 2>&1
 if ! $RELAY_MODE; then
   ufw allow 80/tcp >/dev/null 2>&1
   ufw allow 443/tcp >/dev/null 2>&1
-  ufw allow 3478/tcp >/dev/null 2>&1
-  ufw allow 3478/udp >/dev/null 2>&1
-  ufw allow 5349/tcp >/dev/null 2>&1
-  ufw allow 5349/udp >/dev/null 2>&1
-  ufw allow 49152:65535/udp >/dev/null 2>&1
+  if ! $SKIP_TURN; then
+    ufw allow 3478/tcp >/dev/null 2>&1
+    ufw allow 3478/udp >/dev/null 2>&1
+    ufw allow 5349/tcp >/dev/null 2>&1
+    ufw allow 5349/udp >/dev/null 2>&1
+    ufw allow 49152:65535/udp >/dev/null 2>&1
+  fi
 fi
 ufw --force enable >/dev/null 2>&1
 ok "Pare-feu configuré${RELAY_MODE:+ (mode Relay — seul SSH ouvert, connexions sortantes libres)}"
@@ -1472,7 +1474,7 @@ module.exports = {
       cwd: '${NODYX_DIR}/nodyx-frontend',
       watch: false,
       max_memory_restart: '256M',
-      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3099' },
+      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1' },
     },
   ],
 }
@@ -1644,6 +1646,9 @@ elif $DOMAIN_IS_AUTO; then
   echo -e "  Tu n'as pas de domaine propre : ${BOLD}${COMMUNITY_SLUG}.nodyx.org${RESET} va être activé"
   echo -e "  automatiquement comme alias mémorable pour ton instance."
   want_subdomain="o"
+elif $SKIP_SUBDOMAIN; then
+  info "Sous-domaine nodyx.org ignoré (--no-subdomain)"
+  want_subdomain="n"
 else
   echo -e "  Alias optionnel : ${BOLD}${COMMUNITY_SLUG}.nodyx.org${RESET}"
   echo -e "  Redirige vers ton instance — utile comme raccourci mémorable."
@@ -1795,7 +1800,7 @@ CREDS_FILE="/root/nodyx-credentials.txt"
 
 # Prépare les blocs conditionnels pour le fichier credentials
 _CREDS_TURN=""
-if ! $RELAY_MODE; then
+if ! $RELAY_MODE && ! $SKIP_TURN; then
   _CREDS_TURN="TURN relay       : turn:${PUBLIC_IP}:3478 (nodyx-turn)
 TURN secret      : ${TURN_SECRET}"
 fi
@@ -2062,7 +2067,7 @@ _wait_https() {
 # ── Services système ──────────────────────────────────────────────────────────
 _hc_sect "Services système"
 _HC_SVCS="postgresql redis-server caddy"
-if ! $RELAY_MODE; then _HC_SVCS="$_HC_SVCS nodyx-turn"; fi
+if ! $RELAY_MODE && ! $SKIP_TURN; then _HC_SVCS="$_HC_SVCS nodyx-turn"; fi
 if $RELAY_MODE; then _HC_SVCS="$_HC_SVCS nodyx-relay-client"; fi
 for _svc in $_HC_SVCS; do
   if systemctl is-active --quiet "$_svc" 2>/dev/null; then
