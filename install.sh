@@ -1521,7 +1521,7 @@ Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=PM2_HOME=/home/nodyx/.pm2
 PIDFile=/home/nodyx/.pm2/pm2.pid
 Restart=on-failure
-ExecStart=$(which pm2) start ${NODYX_DIR}/ecosystem.config.js
+ExecStart=$(which pm2) resurrect
 ExecReload=$(which pm2) reload all
 ExecStop=$(which pm2) kill
 
