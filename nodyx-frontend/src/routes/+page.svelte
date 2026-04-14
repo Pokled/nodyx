@@ -308,8 +308,8 @@
 
 			<!-- CTA -->
 			<div class="flex items-center gap-2 ml-auto self-center pl-4">
-				{#if data.user}
-					<a href="/forum/{data.categories?.[0]?.slug ?? data.categories?.[0]?.id ?? ''}/new"
+				{#if data.user && (data.categories?.[0]?.slug ?? data.categories?.[0]?.id)}
+					<a href="/forum/{data.categories?.[0]?.slug ?? data.categories?.[0]?.id}/new"
 					   class="sg px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
 					   style="background: linear-gradient(135deg, #7c3aed 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
 						{tFn('common.new_topic')}

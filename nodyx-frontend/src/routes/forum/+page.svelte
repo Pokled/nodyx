@@ -38,7 +38,7 @@
 			<h1 class="text-2xl font-black text-white tracking-tight">{tFn('nav.forum')}</h1>
 			<p class="text-sm text-gray-500 mt-0.5">{tFn('forum.subtitle')}</p>
 		</div>
-		{#if user}
+		{#if user && (categories[0]?.slug ?? categories[0]?.id)}
 			<a href="/forum/{categories[0]?.slug ?? categories[0]?.id}/new"
 			   class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-widest transition-colors">
 				{tFn('forum.new_topic')}
