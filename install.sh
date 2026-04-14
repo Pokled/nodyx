@@ -1400,21 +1400,21 @@ if $RELAY_MODE; then
     @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
     handle @honeypot {
         rewrite * /api/v1/_hp?p={http.request.uri.path}
-        reverse_proxy localhost:3000 {
+        reverse_proxy 127.0.0.1:3000 {
             header_up -X-Forwarded-For
         }
     }
 
-    reverse_proxy /api/* localhost:3000 {
+    reverse_proxy /api/* 127.0.0.1:3000 {
         header_up -X-Forwarded-For
     }
-    reverse_proxy /uploads/* localhost:3000 {
+    reverse_proxy /uploads/* 127.0.0.1:3000 {
         header_up -X-Forwarded-For
     }
-    reverse_proxy /socket.io/* localhost:3000 {
+    reverse_proxy /socket.io/* 127.0.0.1:3000 {
         header_up -X-Forwarded-For
     }
-    reverse_proxy * localhost:4173
+    reverse_proxy * 127.0.0.1:4173
 }
 CADDY
 else
@@ -1435,21 +1435,21 @@ ${DOMAIN} {
     @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
     handle @honeypot {
         rewrite * /api/v1/_hp?p={http.request.uri.path}
-        reverse_proxy localhost:3000 {
+        reverse_proxy 127.0.0.1:3000 {
             header_up -X-Forwarded-For
         }
     }
 
-    reverse_proxy /api/* localhost:3000 {
+    reverse_proxy /api/* 127.0.0.1:3000 {
         header_up -X-Forwarded-For
     }
-    reverse_proxy /uploads/* localhost:3000 {
+    reverse_proxy /uploads/* 127.0.0.1:3000 {
         header_up -X-Forwarded-For
     }
-    reverse_proxy /socket.io/* localhost:3000 {
+    reverse_proxy /socket.io/* 127.0.0.1:3000 {
         header_up -X-Forwarded-For
     }
-    reverse_proxy * localhost:4173
+    reverse_proxy * 127.0.0.1:4173
 }
 CADDY
 fi
