@@ -31,7 +31,7 @@ Forum + Chat + Voice + P2P + Homepage Builder + Widget SDK — one server, one c
 ---
 
 <div align="center">
-  <img src="docs/img/hero.png" alt="Nodyx — community home" width="860"/>
+  <img src="docs/img/nodyx_home_page.png" alt="Nodyx — Homepage Builder" width="860"/>
 </div>
 
 ---
@@ -221,30 +221,76 @@ PNG export (browser-native) + text recap posted to chat channel
 
 ## Screenshots
 
+<div align="center"><sub>Community · Builder · Admin · Features — all running on a single install</sub></div>
+
+<br/>
+
+<div align="center"><b>— Community Experience —</b></div>
+
 <table>
   <tr>
-    <td align="center"><b>Community Home</b></td>
+    <td align="center"><b>Homepage — Grid Builder</b></td>
     <td align="center"><b>Forum</b></td>
   </tr>
   <tr>
-    <td><img src="docs/img/Index_Api-Nodyx.png" alt="Community home page" width="460"/></td>
-    <td><img src="docs/img/Forum_Api-Nodyx.png" alt="Forum category" width="460"/></td>
+    <td><img src="docs/img/nodyx_home_page.png" alt="Homepage with Grid Builder widgets" width="460"/></td>
+    <td><img src="docs/img/Nodyx_Forum.png" alt="Forum — categories, threads, rich editor" width="460"/></td>
   </tr>
   <tr>
     <td align="center"><b>Real-time Chat</b></td>
-    <td align="center"><b>Voice Channels — WebRTC P2P</b></td>
+    <td align="center"><b>Voice Channels — P2P WebRTC</b></td>
   </tr>
   <tr>
-    <td><img src="docs/img/Chat-Texte_Api-Nodyx.png" alt="Text chat" width="460"/></td>
-    <td><img src="docs/img/Salon-vocal_Api-Nodyx.png" alt="Voice channel with P2P mesh visualization" width="460"/></td>
+    <td><img src="docs/img/Nodyx_chat.png" alt="Real-time text chat" width="460"/></td>
+    <td><img src="docs/img/Vocal_Nodyx_salon.png" alt="Voice channel with P2P mesh" width="460"/></td>
+  </tr>
+</table>
+
+<br/>
+
+<div align="center">
+
+<b>— Homepage Builder —</b>
+
+<img src="docs/img/Nodyx_grid_builder_home_page_website.png" alt="Homepage Builder — drag & drop, 11 zones, live preview" width="940"/>
+
+<sub>Drag-and-drop grid editor — 11 layout zones, live preview, per-widget audience rules and scheduling</sub>
+
+</div>
+
+<br/>
+
+<table>
+  <tr>
+    <td align="center"><b>Widget Store — install via .zip</b></td>
+    <td align="center"><b>Module Management</b></td>
   </tr>
   <tr>
-    <td align="center"><b>Admin Panel</b></td>
-    <td align="center"><b>Instance Directory</b></td>
+    <td><img src="docs/img/widget_store_nodyx.png" alt="Widget Store — one-click .zip install" width="460"/></td>
+    <td><img src="docs/img/Nodyx_gestion_des_modules.png" alt="Module management — 26 activatable modules" width="460"/></td>
+  </tr>
+</table>
+
+<br/>
+
+<div align="center"><b>— Features —</b></div>
+
+<table>
+  <tr>
+    <td align="center"><b>Cross-Instance Search</b></td>
+    <td align="center"><b>Polls — Forum & Chat</b></td>
   </tr>
   <tr>
-    <td><img src="docs/img/AdminPanel_Instance_Api-Nodyx.png" alt="Admin dashboard" width="460"/></td>
-    <td><img src="docs/img/Annuaire_instances_Api-Nodyx.png" alt="Instance directory" width="460"/></td>
+    <td><img src="docs/img/Nodyx_Moteur_de_recherche_inter_reseau.png" alt="Cross-instance federated search engine" width="460"/></td>
+    <td><img src="docs/img/Nodyx_sondage.png" alt="Polls with real-time results" width="460"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Wiki</b></td>
+    <td align="center"><b>Asset Library</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/img/Nodyx_wiki.png" alt="Community wiki" width="460"/></td>
+    <td><img src="docs/img/Asset_nodyx.png" alt="Asset library — frames, badges, banners" width="460"/></td>
   </tr>
 </table>
 
