@@ -757,6 +757,7 @@ fi
 step "Vérification de la connectivité réseau"
 
 _NET_FAIL=false
+_CADDY_REPO_OK=true
 _net_check() {
   local label="$1" url="$2"
   if curl -sf --max-time 7 --head "$url" >/dev/null 2>&1 \
@@ -770,12 +771,21 @@ _net_check() {
 _net_check "GitHub"              "https://api.github.com"
 _net_check "npm registry"        "https://registry.npmjs.org"
 _net_check "nodesource.com"      "https://deb.nodesource.com"
-_net_check "Caddy packages"      "https://dl.cloudsmith.io/public/caddy/stable"
 _net_check "nodyx.org directory" "https://nodyx.org"
+
+# Caddy : check non bloquant — le CDN Cloudsmith est parfois lent/filtré,
+# mais Caddy s'installe via apt même si ce check échoue.
+if curl -sf --max-time 7 --head "https://dl.cloudsmith.io/public/caddy/stable" >/dev/null 2>&1 \
+|| curl -sf --max-time 7        "https://dl.cloudsmith.io/public/caddy/stable" >/dev/null 2>&1; then
+  ok "  Caddy packages"
+else
+  _CADDY_REPO_OK=false
+  info "  Caddy packages  ${YELLOW}← CDN non joignable${RESET} (non critique — Caddy s'installe quand même via apt)"
+fi
 
 if $_NET_FAIL; then
   echo ""
-  warn "Certaines dépendances réseau sont injoignables."
+  warn "Certaines dépendances réseau critiques sont injoignables."
   warn "L'installation risque d'échouer à l'étape npm install ou apt-get."
   _confirm "Continuer quand même ?" \
     || die "Corrige la connectivité réseau (pare-feu ? DNS ?) et relance."
