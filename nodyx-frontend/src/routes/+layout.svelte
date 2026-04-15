@@ -962,7 +962,7 @@
 				</div>
 				{/if}
 
-			</nav>
+				</nav>
 
 			<!-- Voice controls (micro, déconnexion, statut) -->
 			<VoicePanel mode="sidebar" />

@@ -14,6 +14,10 @@ export async function rateLimit(request: FastifyRequest, reply: FastifyReply): P
     (request.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
     request.ip
   )
+
+  // Internal SSR requests (127.0.0.1 / ::1) bypass rate limiting
+  if (ip === '127.0.0.1' || ip === '::1') return
+
   const key = `rate:${ip}`
 
   const count = await redis.incr(key)

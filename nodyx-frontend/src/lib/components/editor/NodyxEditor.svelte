@@ -45,6 +45,27 @@
 	let imageAlign  = $state<'left'|'center'|'right'|'full'>('center')
 	let videoUrl    = $state('')
 
+	// ── Media picker ──────────────────────────────────────────────────────────
+	let showMediaPicker = $state(false)
+	let mediaImages     = $state<any[]>([])
+	let mediaLoading    = $state(false)
+
+	async function openMediaPicker() {
+		showMediaPicker = true
+		if (mediaImages.length > 0) return
+		mediaLoading = true
+		try {
+			const res = await fetch('/api/v1/assets?type=image&limit=100')
+			if (res.ok) { const j = await res.json(); mediaImages = j.assets ?? [] }
+		} finally { mediaLoading = false }
+	}
+
+	function pickMedia(asset: { file_path: string; name: string }) {
+		imageUrl = `/uploads/${asset.file_path}`
+		imageAlt = asset.name
+		showMediaPicker = false
+	}
+
 	// ── Active state (updated on every editor transaction) ────────────────────
 	let a = $state({
 		bold: false, italic: false, underline: false, strike: false, code: false,
@@ -408,6 +429,19 @@
 			</button>
 			{#if showImage}
 			<div class="popup w-80 flex flex-col gap-2 p-3">
+				<!-- Bouton médiathèque -->
+				<button type="button" onclick={openMediaPicker}
+					class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-indigo-700/60 bg-indigo-950/30 text-indigo-300 text-xs font-medium hover:bg-indigo-900/40 transition-colors">
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+					</svg>
+					Choisir depuis la médiathèque
+				</button>
+				<div class="flex items-center gap-2 text-gray-600">
+					<span class="flex-1 h-px bg-gray-800"></span>
+					<span class="text-[10px]">ou</span>
+					<span class="flex-1 h-px bg-gray-800"></span>
+				</div>
 				<input type="url" bind:value={imageUrl} placeholder={tFn('editor.image_url_placeholder')} class="popup-input" />
 				<input type="text" bind:value={imageAlt} placeholder={tFn('editor.image_alt_placeholder')} class="popup-input" />
 				<div class="flex gap-1">
@@ -483,6 +517,63 @@
 			{/if}
 		</div>
 
+	</div>
+	{/if}
+
+	<!-- ── Media picker modal ───────────────────────────────────────────── -->
+	{#if showMediaPicker}
+	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+	     role="presentation"
+	     onclick={(e) => { if (e.target === e.currentTarget) showMediaPicker = false }}>
+		<div class="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col overflow-hidden max-h-[80vh]"
+		     onclick={(e) => e.stopPropagation()}>
+			<!-- Header -->
+			<div class="flex items-center justify-between px-5 py-4 border-b border-gray-800 shrink-0">
+				<h3 class="text-sm font-bold text-white">Médiathèque</h3>
+				<button type="button" onclick={() => showMediaPicker = false} class="text-gray-500 hover:text-white transition-colors">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+					</svg>
+				</button>
+			</div>
+			<!-- Grid -->
+			<div class="overflow-y-auto p-4 flex-1">
+				{#if mediaLoading}
+					<div class="flex items-center justify-center py-12 text-gray-500 text-sm">Chargement…</div>
+				{:else if mediaImages.length === 0}
+					<div class="flex flex-col items-center justify-center py-12 gap-2 text-gray-600">
+						<svg class="w-8 h-8 opacity-40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909"/>
+						</svg>
+						<p class="text-sm">Aucune image hébergée.</p>
+						<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 hover:underline">Ouvrir la médiathèque →</a>
+					</div>
+				{:else}
+					<div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+						{#each mediaImages as asset (asset.id)}
+						<button type="button" onclick={() => pickMedia(asset)}
+							class="group relative aspect-square rounded-xl overflow-hidden border-2 border-transparent hover:border-indigo-500 bg-gray-800 transition-all focus:outline-none focus:border-indigo-400">
+							<img src="/uploads/{asset.file_path}" alt={asset.name}
+							     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"/>
+							<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end">
+								<p class="w-full px-2 py-1.5 text-[10px] text-white font-medium truncate opacity-0 group-hover:opacity-100 transition-opacity"
+								   style="background: linear-gradient(transparent, rgba(0,0,0,0.7))">{asset.name}</p>
+							</div>
+						</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+			<!-- Footer -->
+			<div class="px-5 py-3 border-t border-gray-800 shrink-0 flex items-center justify-between">
+				<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 hover:underline">Gérer la médiathèque</a>
+				<button type="button" onclick={() => showMediaPicker = false}
+					class="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 text-xs hover:bg-gray-700 transition-colors">
+					Annuler
+				</button>
+			</div>
+		</div>
 	</div>
 	{/if}
 

@@ -15,7 +15,7 @@ import {
 import { scanBuffer } from '../services/fileScanner'
 import { db, redis } from '../config/database'
 
-const VALID_TYPES = ['frame', 'banner', 'font', 'badge', 'sticker', 'theme', 'emoji', 'sound'] as const
+const VALID_TYPES = ['frame', 'banner', 'font', 'badge', 'sticker', 'theme', 'emoji', 'sound', 'image'] as const
 
 // Per-user upload quota: 200 MB per 24h rolling window.
 const UPLOAD_QUOTA_BYTES   = 200 * 1024 * 1024 // 200 MB
@@ -41,6 +41,7 @@ const ALLOWED_MIME_BY_TYPE: Record<string, readonly string[]> = {
   ],
   sound:   ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/flac'],
   theme:   ['application/json', 'text/plain'],
+  image:   ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
 }
 
 const SearchQuery = z.object({

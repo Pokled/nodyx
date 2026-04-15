@@ -52,6 +52,7 @@ export const nav: NavSection[] = [
       { title: 'Manifesto',      slug: 'manifesto'    },
       { title: 'Contributing',   slug: 'contributing' },
       { title: 'Thanks',         slug: 'thanks'       },
+      { title: 'AI Usage',       slug: 'ai-usage'     },
     ],
   },
   {
