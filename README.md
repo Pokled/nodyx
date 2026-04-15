@@ -323,6 +323,16 @@ The installer handles everything automatically. Your system only needs **`curl`*
 apt-get install -y git curl
 ```
 
+**PM2 memory limits are automatically tuned to your machine:**
+
+| Total RAM | nodyx-core | nodyx-frontend | Auto-swap | Works on |
+|---|---|---|---|---|
+| < 1.5 GB | 256 MB | 192 MB | 2 GB created | Raspberry Pi 1 GB |
+| 1.5 – 3 GB | 384 MB | 256 MB | 1 GB if needed | RPi 4 / small VPS |
+| ≥ 3 GB | 512 MB | 512 MB | 1 GB if needed | Standard VPS ⭐ |
+
+> Raspberry Pi: use a **64-bit OS** (Raspberry Pi OS 64-bit or Ubuntu ARM64). 32-bit is not supported.
+
 ### One-click install
 
 ```bash

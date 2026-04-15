@@ -40,6 +40,18 @@
 
 > 💡 **Real-world sizing:** A community of 50 active users runs comfortably on a €4/month VPS (Hetzner CX22, 2 vCPU / 4 GB RAM). Voice channels are P2P — they don't consume server bandwidth.
 
+### PM2 Memory Limits — Automatically Adjusted by the Installer
+
+The installer detects the total RAM available and configures PM2 accordingly. No manual tuning needed.
+
+| Total RAM | nodyx-core limit | nodyx-frontend limit | Auto-swap | Node heap (build) |
+|---|---|---|---|---|
+| < 1.5 GB (RPi 1 GB) | 256 MB | 192 MB | 2 GB created | 512 MB |
+| 1.5 – 3 GB (RPi 4 / small VPS) | 384 MB | 256 MB | 1 GB if needed | 1024 MB |
+| ≥ 3 GB (standard VPS) | 512 MB | 512 MB | 1 GB if needed | 1024 MB |
+
+> **Raspberry Pi note:** Use a **64-bit OS** (Raspberry Pi OS 64-bit or Ubuntu 24.04 ARM64). 32-bit is not supported. On a 1 GB Pi, the SvelteKit build can take ~8 minutes — this is normal.
+
 ### Supported Operating Systems
 
 | OS | Support | Notes |
