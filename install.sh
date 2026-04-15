@@ -437,21 +437,43 @@ if [[ "$_ARCH" == "aarch64" ]]; then
   info "Architecture ARM64 détectée — le binaire Rollup sera vérifié après npm install."
 fi
 
-# RAM check — auto-swap si insuffisant (ne pas juste avertir, corriger)
+# RAM check — auto-swap si insuffisant + adaptation des limites PM2 selon la RAM totale
+_RAM_TOTAL_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $2}' || echo 9999)
 _RAM_FREE_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $7}' || echo 9999)
 _SWAP_TOTAL_MB=$(free -m 2>/dev/null | awk '/^Swap/{print $2}' || echo 0)
+
+# Limites PM2 adaptées selon la RAM totale disponible sur la machine
+# < 1.5 GB  → petit RPi (1 GB) : limites conservatrices + swap 2 GB
+# 1.5–3 GB  → RPi 4 2-4 GB / petit VPS : limites intermédiaires
+# ≥ 3 GB    → VPS standard : limites normales
+if [[ "$_RAM_TOTAL_MB" -lt 1500 ]]; then
+  _PM2_CORE_MEM="256M"
+  _PM2_FRONT_MEM="192M"
+  _SWAP_SIZE_GB=2
+  warn "RAM totale : ${_RAM_TOTAL_MB} MB — mode économique activé (limites PM2 réduites, swap ${_SWAP_SIZE_GB} GB)"
+elif [[ "$_RAM_TOTAL_MB" -lt 3000 ]]; then
+  _PM2_CORE_MEM="384M"
+  _PM2_FRONT_MEM="256M"
+  _SWAP_SIZE_GB=1
+  info "RAM totale : ${_RAM_TOTAL_MB} MB — limites PM2 intermédiaires"
+else
+  _PM2_CORE_MEM="512M"
+  _PM2_FRONT_MEM="512M"
+  _SWAP_SIZE_GB=1
+fi
+
 if [[ "$_RAM_FREE_MB" -lt 512 ]]; then
   warn "RAM disponible : ${_RAM_FREE_MB} MB (recommandé : 512 MB+)"
   if [[ $(( _RAM_FREE_MB + _SWAP_TOTAL_MB )) -lt 512 ]]; then
-    info "RAM + swap insuffisants — création automatique d'un swapfile 1 GB..."
+    info "RAM + swap insuffisants — création automatique d'un swapfile ${_SWAP_SIZE_GB} GB..."
     if [[ ! -f /swapfile ]]; then
-      fallocate -l 1G /swapfile 2>/dev/null \
-        || dd if=/dev/zero of=/swapfile bs=1M count=1024 status=none
+      fallocate -l "${_SWAP_SIZE_GB}G" /swapfile 2>/dev/null \
+        || dd if=/dev/zero of=/swapfile bs=1M count=$(( _SWAP_SIZE_GB * 1024 )) status=none
       chmod 600 /swapfile
       mkswap /swapfile >/dev/null
       swapon /swapfile
       grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-      ok "Swapfile 1 GB créé, activé et persistant (ajouté dans /etc/fstab)"
+      ok "Swapfile ${_SWAP_SIZE_GB} GB créé, activé et persistant (ajouté dans /etc/fstab)"
     else
       swapon /swapfile 2>/dev/null || true
       ok "Swapfile existant (/swapfile) activé"
@@ -1369,8 +1391,14 @@ if [[ "$(uname -m)" == "aarch64" ]]; then
   fi
 fi
 
-export NODE_OPTIONS="--max-old-space-size=1024"
-run_bg "Build SvelteKit (peut durer 2-5 min sur ARM)..." \
+# Sur RAM faible (RPi 1 GB), limiter l'heap Node pour éviter l'OOM pendant le build
+if [[ "$_RAM_TOTAL_MB" -lt 1500 ]]; then
+  export NODE_OPTIONS="--max-old-space-size=512"
+  info "RAM limitée (${_RAM_TOTAL_MB} MB) — heap Node plafonné à 512 MB pour le build"
+else
+  export NODE_OPTIONS="--max-old-space-size=1024"
+fi
+run_bg "Build SvelteKit (peut durer 2-5 min sur ARM${_RAM_TOTAL_MB:+, ~8 min sur RPi 1 GB})..." \
   npm run build \
   || die "Build frontend échoué. Vérifie les logs ci-dessus."
 unset NODE_OPTIONS
@@ -1475,7 +1503,7 @@ module.exports = {
       script: 'dist/index.js',
       cwd: '${NODYX_DIR}/nodyx-core',
       watch: false,
-      max_memory_restart: '512M',
+      max_memory_restart: '${_PM2_CORE_MEM}',
       env: { NODE_ENV: 'production' },
     },
     {
@@ -1483,7 +1511,7 @@ module.exports = {
       script: 'build/index.js',
       cwd: '${NODYX_DIR}/nodyx-frontend',
       watch: false,
-      max_memory_restart: '256M',
+      max_memory_restart: '${_PM2_FRONT_MEM}',
       env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1' },
     },
   ],
