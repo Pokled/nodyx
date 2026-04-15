@@ -7,16 +7,23 @@ const MAX_REQUESTS   = 100
 // ── Middleware ───────────────────────────────────────────────
 
 export async function rateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  // Prefer real client IP from Cloudflare or reverse proxy headers
+  // Bypass only on actual loopback TCP connections (SvelteKit SSR → core).
+  // We intentionally use request.ip (socket-level) and NOT any header here,
+  // so an attacker cannot spoof X-Real-IP: 127.0.0.1 to escape rate limiting.
+  const socketIp = request.ip ?? ''
+  if (
+    socketIp === '127.0.0.1' ||
+    socketIp === '::1'        ||
+    socketIp === '::ffff:127.0.0.1'
+  ) return
+
+  // For the rate-limit key, prefer the real client IP from trusted proxy headers
   const ip = (
     (request.headers['cf-connecting-ip'] as string) ||
     (request.headers['x-real-ip'] as string) ||
     (request.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
-    request.ip
+    socketIp
   )
-
-  // Internal SSR requests (127.0.0.1 / ::1) bypass rate limiting
-  if (ip === '127.0.0.1' || ip === '::1') return
 
   const key = `rate:${ip}`
 

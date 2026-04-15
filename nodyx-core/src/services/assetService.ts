@@ -8,7 +8,7 @@ const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'assets')
 const MAX_DIMENSION = 1024  // max width or height in px
 const THUMB_SIZE    = 256   // thumbnail square size
 
-export type AssetType = 'frame' | 'banner' | 'font' | 'badge' | 'sticker' | 'theme' | 'emoji' | 'sound'
+export type AssetType = 'frame' | 'banner' | 'font' | 'badge' | 'sticker' | 'theme' | 'emoji' | 'sound' | 'image'
 
 export interface AssetRow {
   id: string
