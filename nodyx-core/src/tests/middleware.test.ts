@@ -168,7 +168,7 @@ describe('rateLimit middleware', () => {
     app.get('/ping', { preHandler: [rateLimit] }, async () => ({ ok: true }))
     await app.ready()
 
-    const res = await app.inject({ method: 'GET', url: '/ping' })
+    const res = await app.inject({ method: 'GET', url: '/ping', headers: { 'x-real-ip': '1.2.3.4' } })
 
     expect(res.statusCode).toBe(200)
     expect(res.headers['x-ratelimit-limit']).toBe('100')
@@ -183,7 +183,7 @@ describe('rateLimit middleware', () => {
     app.get('/ping', { preHandler: [rateLimit] }, async () => ({ ok: true }))
     await app.ready()
 
-    const res = await app.inject({ method: 'GET', url: '/ping' })
+    const res = await app.inject({ method: 'GET', url: '/ping', headers: { 'x-real-ip': '1.2.3.4' } })
 
     expect(res.statusCode).toBe(429)
     expect(JSON.parse(res.body).code).toBe('RATE_LIMITED')
