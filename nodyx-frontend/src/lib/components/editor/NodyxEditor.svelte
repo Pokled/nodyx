@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte'
+	import { onMount, onDestroy, untrack } from 'svelte'
 	import { t } from '$lib/i18n'
 
 	let {
@@ -28,7 +28,7 @@
 	let editor: any = $state(null)
 
 	// ── Synced HTML (for the hidden form input) ───────────────────────────────
-	let html        = $state(initialContent)
+	let html        = $state(untrack(() => initialContent))
 	let charCount   = $state(0)
 
 	// ── Toolbar UI state ──────────────────────────────────────────────────────
@@ -288,6 +288,8 @@
 	<!-- ── Toolbar ─────────────────────────────────────────────────────── -->
 	{#if editor}
 	<div class="nodyx-toolbar flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-800 bg-gray-900/80 relative z-10 rounded-t-xl"
+		role="toolbar"
+		tabindex="0"
 		onmousedown={(e) => {
 			// Empêche l'éditeur de perdre le focus quand on clique sur la toolbar,
 			// SAUF si la cible est un input/textarea (qui ont besoin du focus natif)

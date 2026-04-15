@@ -487,6 +487,7 @@
 <div
     role="dialog"
     aria-label="Table collaborative"
+    tabindex="-1"
     class="fixed inset-0 z-[200] flex items-center justify-center"
     style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);"
     onmousedown={(e) => { if (e.target === e.currentTarget) requestClose() }}
@@ -568,7 +569,6 @@
                             rows="4"
                             placeholder="Note..."
                             bind:value={stickyText}
-                            autofocus
                             onblur={submitSticky}
                         ></textarea>
                         <div class="flex gap-1 p-1 border-t border-black/10">

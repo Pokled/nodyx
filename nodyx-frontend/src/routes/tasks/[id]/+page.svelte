@@ -2,12 +2,13 @@
 	import { page } from '$app/stores'
 	import { goto } from '$app/navigation'
 	import type { PageData } from './$types'
+	import { untrack } from 'svelte'
 
 	let { data }: { data: PageData } = $props()
 
 	// ── État local ────────────────────────────────────────────────────────────
-	let board   = $state(structuredClone(data.board))
-	let members = $state(data.members)
+	let board   = $state(untrack(() => structuredClone(data.board)))
+	let members = $state(untrack(() => data.members))
 
 	const token     = $derived($page.data.token as string)
 	const API       = '/api/v1/tasks'
@@ -199,6 +200,7 @@
 
 	{#if editingBoardName}
 		<form onsubmit={(e) => { e.preventDefault(); saveBoardName() }} class="flex items-center gap-2">
+			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				bind:value={boardNameDraft}
 				class="rounded-lg bg-gray-900 border border-indigo-700 px-3 py-1.5 text-sm text-white focus:outline-none"
@@ -315,6 +317,7 @@
 			<div class="p-2 border-t border-gray-800">
 				{#if addingCardColId === col.id}
 					<form onsubmit={(e) => { e.preventDefault(); addCard(col.id) }} class="space-y-2">
+						<!-- svelte-ignore a11y_autofocus -->
 						<input
 							bind:value={newCardTitle}
 							placeholder="Titre de la carte..."
@@ -352,6 +355,7 @@
 		<div class="flex-shrink-0 w-64">
 			{#if addingColumn}
 				<div class="rounded-xl border border-indigo-800/50 bg-indigo-950/20 p-3 space-y-3">
+					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						bind:value={newColName}
 						placeholder="Nom de la colonne"
@@ -394,10 +398,13 @@
 
 <!-- ── Modal édition carte ──────────────────────────────────────────────────── -->
 {#if editingCard}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
 		onclick={(e) => { if (e.target === e.currentTarget) editingCard = null }}
+		onkeydown={(e) => { if (e.key === 'Escape') editingCard = null }}
 		role="dialog"
+		tabindex="-1"
 	>
 		<div class="w-full max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6 space-y-4">
 			<div class="flex items-center justify-between">
@@ -407,8 +414,9 @@
 
 			<!-- Titre -->
 			<div>
-				<label class="block text-xs font-medium text-gray-500 mb-1.5">Titre</label>
+				<label for="task-edit-title" class="block text-xs font-medium text-gray-500 mb-1.5">Titre</label>
 				<input
+					id="task-edit-title"
 					bind:value={editingCard.title}
 					maxlength="200"
 					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
@@ -418,8 +426,9 @@
 
 			<!-- Description -->
 			<div>
-				<label class="block text-xs font-medium text-gray-500 mb-1.5">Description</label>
+				<label for="task-edit-desc" class="block text-xs font-medium text-gray-500 mb-1.5">Description</label>
 				<textarea
+					id="task-edit-desc"
 					bind:value={editingCard.description}
 					rows="3"
 					maxlength="10000"
@@ -432,8 +441,9 @@
 			<div class="grid grid-cols-2 gap-3">
 				<!-- Priorité -->
 				<div>
-					<label class="block text-xs font-medium text-gray-500 mb-1.5">Priorité</label>
+					<label for="task-edit-priority" class="block text-xs font-medium text-gray-500 mb-1.5">Priorité</label>
 					<select
+						id="task-edit-priority"
 						bind:value={editingCard.priority}
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
 						       focus:outline-none focus:border-indigo-600"
@@ -446,8 +456,9 @@
 
 				<!-- Échéance -->
 				<div>
-					<label class="block text-xs font-medium text-gray-500 mb-1.5">Échéance</label>
+					<label for="task-edit-due" class="block text-xs font-medium text-gray-500 mb-1.5">Échéance</label>
 					<input
+						id="task-edit-due"
 						type="date"
 						bind:value={editingCard.due_date}
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
@@ -458,8 +469,9 @@
 
 			<!-- Assigné à -->
 			<div>
-				<label class="block text-xs font-medium text-gray-500 mb-1.5">Assigné à</label>
+				<label for="task-edit-assignee" class="block text-xs font-medium text-gray-500 mb-1.5">Assigné à</label>
 				<select
+					id="task-edit-assignee"
 					bind:value={editingCard.assignee_id}
 					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
 					       focus:outline-none focus:border-indigo-600"

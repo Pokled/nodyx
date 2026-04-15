@@ -81,9 +81,9 @@
 
 		<!-- Content (NodyxEditor) -->
 		<div>
-			<label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+			<span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
 				Contenu
-			</label>
+			</span>
 			<NodyxEditor name="content" placeholder="Rédigez le contenu de la page…" />
 		</div>
 

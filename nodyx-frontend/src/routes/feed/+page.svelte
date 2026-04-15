@@ -3,7 +3,7 @@
 	import type { PageData } from './$types'
 	import { page } from '$app/stores'
 	import { apiFetch } from '$lib/api'
-	import { onMount } from 'svelte'
+	import { onMount, untrack } from 'svelte'
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
 
 	const tFn = $derived($t)
@@ -14,10 +14,10 @@
 	const token = $derived(($page.data as any).token as string)
 
 	// ── Posts state ───────────────────────────────────────────────────────────
-	let posts     = $state<any[]>(data.posts ?? [])
+	let posts     = $state<any[]>(untrack(() => data.posts ?? []))
 	let suggested = $state<any[]>([])
 	let loading   = $state(false)
-	let hasMore   = $state(data.posts?.length === 20)
+	let hasMore   = $state(untrack(() => data.posts?.length === 20))
 
 	// ── Composer ──────────────────────────────────────────────────────────────
 	let content     = $state('')
@@ -187,7 +187,7 @@
 	}
 
 	// ── Scroll-based load more ────────────────────────────────────────────────
-	let sentinel: HTMLElement
+	let sentinel = $state<HTMLElement | undefined>(undefined)
 	onMount(() => {
 		const obs = new IntersectionObserver(entries => {
 			if (entries[0].isIntersecting) loadMore()
@@ -244,7 +244,9 @@
 					</div>
 
 					<div class="composer-body">
-						<div class="composer-editor-wrap" onclick={() => composing = true}>
+						<div class="composer-editor-wrap" role="button" tabindex="0"
+						onclick={() => composing = true}
+						onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') composing = true }}>
 							{#key editorKey}
 								<NodyxEditor
 									compact={true}
@@ -658,7 +660,7 @@
 	padding-bottom: 0.75rem;
 	border-bottom: 1px solid rgba(255,255,255,0.06);
 }
-.composer-reply-banner strong { color: rgba(99,102,241,0.9); }
+:global(.composer-reply-banner strong) { color: rgba(99,102,241,0.9); }
 .composer-reply-close {
 	margin-left: auto;
 	color: rgba(255,255,255,0.3);
@@ -1010,8 +1012,8 @@
 	40%           { transform: scale(1);   opacity: 1; }
 }
 .feed-end { font-size: 0.75rem; color: rgba(255,255,255,0.2); }
-.feed-end a { color: rgba(99,102,241,0.6); transition: color 0.15s; }
-.feed-end a:hover { color: #818cf8; }
+:global(.feed-end a) { color: rgba(99,102,241,0.6); transition: color 0.15s; }
+:global(.feed-end a:hover) { color: #818cf8; }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
 .sidebar-card {

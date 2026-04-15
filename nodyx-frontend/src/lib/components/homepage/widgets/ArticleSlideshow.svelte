@@ -438,6 +438,7 @@
 		color: #fff;
 		line-height: 1.25;
 		-webkit-line-clamp: 3;
+		line-clamp: 3;
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
@@ -458,6 +459,7 @@
 		color: #6b7280;
 		line-height: 1.6;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		overflow: hidden;

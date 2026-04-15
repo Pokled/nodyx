@@ -1190,18 +1190,6 @@
     flex-shrink: 0;
 }
 
-.sb-chip {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #374151;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.06);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
 .sb-footer {
     padding: 12px 16px;
     border-top: 1px solid rgba(255,255,255,0.04);
@@ -1445,7 +1433,7 @@
 }
 
 .s-hint-text { font-size: 12px; color: #374151; line-height: 1.6; margin: 0; }
-.s-hint-text code { color: #6366f1; background: rgba(99,102,241,0.1); padding: 1px 5px; border-radius: 4px; }
+:global(.s-hint-text code) { color: #6366f1; background: rgba(99,102,241,0.1); padding: 1px 5px; border-radius: 4px; }
 
 .s-field-error { font-size: 11px; color: #f87171; margin-top: 6px; }
 

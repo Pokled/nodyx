@@ -61,8 +61,9 @@
 		<form method="POST" action="?/create" use:enhance class="space-y-4">
 			<!-- Message -->
 			<div>
-				<label class="block text-sm font-medium text-gray-300 mb-1.5">Message</label>
+				<label for="ann-create-message" class="block text-sm font-medium text-gray-300 mb-1.5">Message</label>
 				<textarea
+					id="ann-create-message"
 					name="message"
 					rows="2"
 					bind:value={previewMsg}
@@ -77,7 +78,7 @@
 			<div class="flex flex-wrap gap-4">
 				<!-- Color picker -->
 				<div>
-					<label class="block text-xs font-medium text-gray-400 mb-2">Couleur</label>
+					<span class="block text-xs font-medium text-gray-400 mb-2">Couleur</span>
 					<div class="flex gap-2">
 						{#each COLORS as c}
 							<button
@@ -94,8 +95,9 @@
 
 				<!-- Expiry -->
 				<div class="flex-1 min-w-[180px]">
-					<label class="block text-xs font-medium text-gray-400 mb-2">Expire le (optionnel)</label>
+					<label for="ann-create-expires" class="block text-xs font-medium text-gray-400 mb-2">Expire le (optionnel)</label>
 					<input
+						id="ann-create-expires"
 						type="datetime-local"
 						name="expires_at"
 						class="rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-sm text-white

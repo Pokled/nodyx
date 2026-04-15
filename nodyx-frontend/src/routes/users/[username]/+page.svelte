@@ -9,6 +9,7 @@
 	import { socket } from '$lib/socket'
 	import { apiFetch } from '$lib/api'
 	import { t } from '$lib/i18n'
+	import { untrack } from 'svelte'
 
 	const tFn = $derived($t)
 
@@ -23,7 +24,7 @@
 	const initials = $derived((profile.display_name || profile.username).trim().charAt(0).toUpperCase())
 
 	// Live points — synced from server data, updated in real time via socket
-	let livePoints = $state(profile.points)
+	let livePoints = $state(untrack(() => profile.points))
 	$effect(() => { livePoints = profile.points })
 
 	$effect(() => {
@@ -182,8 +183,8 @@
 	// ── Follow system ──────────────────────────────────────────────
 	const token = $derived(($page.data as any).token as string | null)
 
-	let following      = $state(data.isFollowing ?? false)
-	let followersCount = $state(Number(profile.followers_count ?? 0))
+	let following      = $state(untrack(() => data.isFollowing ?? false))
+	let followersCount = $state(untrack(() => Number(profile.followers_count ?? 0)))
 	let followLoading  = $state(false)
 	const followingCount = $derived(Number(profile.following_count ?? 0))
 
@@ -212,9 +213,9 @@
 
 	// ── Posts tab ──────────────────────────────────────────────────
 	let activeTab    = $state<'about' | 'posts'>('about')
-	let userPosts    = $state<any[]>(data.posts ?? [])
+	let userPosts    = $state<any[]>(untrack(() => data.posts ?? []))
 	let postsLoading = $state(false)
-	let postsHasMore = $state((data.posts?.length ?? 0) === 10)
+	let postsHasMore = $state(untrack(() => (data.posts?.length ?? 0) === 10))
 
 	function fmt(n: number): string {
 		return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)

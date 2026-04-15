@@ -3,6 +3,7 @@
 	import type { PageData } from './$types'
 	import { page } from '$app/stores'
 	import { PUBLIC_API_URL } from '$env/static/public'
+	import { untrack } from 'svelte'
 
 	let { data }: { data: PageData } = $props()
 
@@ -39,7 +40,7 @@
 	}
 
 	let search  = $state('')
-	let members = $state(data.members.map((m: any) => ({ ...m })))
+	let members = $state(untrack(() => data.members.map((m: any) => ({ ...m }))))
 
 	const filtered = $derived(
 		members.filter((m: any) =>
@@ -47,9 +48,9 @@
 		)
 	)
 
-	const bans: Array<{ user_id: string; username: string; email: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = data.bans ?? []
-	const ipBans: Array<{ ip: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = data.ipBans ?? []
-	const emailBans: Array<{ email: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = data.emailBans ?? []
+	const bans: Array<{ user_id: string; username: string; email: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = untrack(() => data.bans ?? [])
+	const ipBans: Array<{ ip: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = untrack(() => data.ipBans ?? [])
+	const emailBans: Array<{ email: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = untrack(() => data.emailBans ?? [])
 
 	// ── Ban modal ─────────────────────────────────────────────────────────────
 	let banTarget  = $state<{ userId: string; username: string } | null>(null)
@@ -369,15 +370,19 @@
 
 <!-- Ban confirmation modal -->
 {#if banTarget}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+		role="presentation"
 		onclick={() => banTarget = null}
+		onkeydown={(e) => { if (e.key === 'Escape') banTarget = null }}
 	>
-		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
 			class="bg-gray-900 border border-red-900/60 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-base font-semibold text-white">Bannir <span class="text-red-400">{banTarget.username}</span></h2>
@@ -396,8 +401,9 @@
 				<input type="hidden" name="ban_ip" value={banIp ? 'true' : 'false'} />
 				<input type="hidden" name="ban_email" value={banEmail ? 'true' : 'false'} />
 				<div class="mb-4">
-					<label class="block text-xs text-gray-500 mb-1.5">Raison <span class="text-gray-700">(optionnel)</span></label>
+					<label for="ban-reason" class="block text-xs text-gray-500 mb-1.5">Raison <span class="text-gray-700">(optionnel)</span></label>
 					<input
+						id="ban-reason"
 						type="text"
 						name="reason"
 						bind:value={banReason}
@@ -439,15 +445,19 @@
 
 <!-- Reset link result modal -->
 {#if resetLinkResult || resetLinkError}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+		role="presentation"
 		onclick={() => { resetLinkResult = null; resetLinkError = '' }}
+		onkeydown={(e) => { if (e.key === 'Escape') { resetLinkResult = null; resetLinkError = '' } }}
 	>
-		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
 			class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
 			{#if resetLinkResult}
 				<div class="flex items-center justify-between mb-4">

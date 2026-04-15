@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
+	import { untrack } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
-	let query    = $state(data.q ?? '');
-	let type     = $state(data.type ?? 'all');
-	let upcoming = $state(data.upcoming === 'true');
+	let query    = $state(untrack(() => data.q ?? ''));
+	let type     = $state(untrack(() => data.type ?? 'all'));
+	let upcoming = $state(untrack(() => data.upcoming === 'true'));
 	let searching = $state(false);
 
 	$effect(() => {
@@ -80,7 +81,6 @@
 				bind:value={query}
 				placeholder="Godot 4, audio Linux, Rust async…"
 				class="disc-search-input"
-				autofocus
 			/>
 			<button type="submit" disabled={searching} class="disc-search-btn">
 				{#if searching}

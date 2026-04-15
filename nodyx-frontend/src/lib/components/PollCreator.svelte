@@ -195,7 +195,10 @@
 </script>
 
 <!-- ── Backdrop ──────────────────────────────────────────────────────────────── -->
-<div class="creator-backdrop" onclick={() => onClose?.()} transition:fade={{ duration: 150 }}></div>
+<div class="creator-backdrop" role="presentation"
+	onclick={() => onClose?.()}
+	onkeydown={(e) => { if (e.key === 'Escape') onClose?.() }}
+	transition:fade={{ duration: 150 }}></div>
 
 <!-- ── Modal ──────────────────────────────────────────────────────────────────── -->
 <div class="creator-modal" transition:fly={{ y: 20, duration: 200 }}>
@@ -242,6 +245,7 @@
           <!-- Titre -->
           <div class="field">
             <label for="poll-title">{tFn('poll.question_label')}</label>
+            <!-- svelte-ignore a11y_autofocus -->
             <input
               id="poll-title"
               type="text"
@@ -265,12 +269,12 @@
               <h4>{tFn('poll.schedule.slot_generator_title')}</h4>
               <div class="bulk-row">
                 <div class="field">
-                  <label>{tFn('common.date')}</label>
-                  <input type="date" bind:value={bulkDate} />
+                  <label for="poll-bulk-date">{tFn('common.date')}</label>
+                  <input id="poll-bulk-date" type="date" bind:value={bulkDate} />
                 </div>
                 <div class="field">
-                  <label>{tFn('poll.schedule.times_label')}</label>
-                  <input type="text" bind:value={bulkTimeSlots} placeholder={tFn('poll.schedule.times_placeholder')} />
+                  <label for="poll-bulk-times">{tFn('poll.schedule.times_label')}</label>
+                  <input id="poll-bulk-times" type="text" bind:value={bulkTimeSlots} placeholder={tFn('poll.schedule.times_placeholder')} />
                 </div>
               </div>
               <button class="btn-generate" onclick={generateScheduleSlots} disabled={!bulkDate}>

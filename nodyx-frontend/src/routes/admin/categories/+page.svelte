@@ -38,13 +38,13 @@
 		<form method="POST" action="?/create" use:enhance class="px-5 pb-5 pt-3 space-y-4 border-t border-gray-800">
 			<div class="grid sm:grid-cols-2 gap-4">
 				<div>
-					<label class="block text-xs text-gray-400 mb-1">Nom *</label>
-					<input name="name" type="text" required maxlength="100"
+					<label for="cat-create-name" class="block text-xs text-gray-400 mb-1">Nom *</label>
+					<input id="cat-create-name" name="name" type="text" required maxlength="100"
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 				</div>
 				<div>
-					<label class="block text-xs text-gray-400 mb-1">Catégorie parente (optionnel)</label>
-					<select name="parent_id" class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+					<label for="cat-create-parent" class="block text-xs text-gray-400 mb-1">Catégorie parente (optionnel)</label>
+					<select id="cat-create-parent" name="parent_id" class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
 						<option value="">— Racine —</option>
 						{#each flatCats as c}
 							<option value={c.id}>{'·'.repeat(c.depth * 2)} {c.name}</option>
@@ -53,8 +53,8 @@
 				</div>
 			</div>
 			<div>
-				<label class="block text-xs text-gray-400 mb-1">Description</label>
-				<input name="description" type="text" maxlength="500" placeholder="Optionnel"
+				<label for="cat-create-desc" class="block text-xs text-gray-400 mb-1">Description</label>
+				<input id="cat-create-desc" name="description" type="text" maxlength="500" placeholder="Optionnel"
 					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 			</div>
 			<button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-semibold text-white">
@@ -84,13 +84,13 @@
 									<input type="hidden" name="id" value={cat.id} />
 									<div class="grid sm:grid-cols-2 gap-3">
 										<div>
-											<label class="block text-xs text-gray-400 mb-1">Nom</label>
-											<input name="name" type="text" required value={cat.name}
+											<label for="cat-edit-name-{cat.id}" class="block text-xs text-gray-400 mb-1">Nom</label>
+											<input id="cat-edit-name-{cat.id}" name="name" type="text" required value={cat.name}
 												class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 										</div>
 										<div>
-											<label class="block text-xs text-gray-400 mb-1">Catégorie parente</label>
-											<select name="parent_id" class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+											<label for="cat-edit-parent-{cat.id}" class="block text-xs text-gray-400 mb-1">Catégorie parente</label>
+											<select id="cat-edit-parent-{cat.id}" name="parent_id" class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
 												<option value="__unchanged__">— Inchangée —</option>
 												<option value="">— Racine —</option>
 												{#each flatCats.filter(c => c.id !== cat.id) as c}
@@ -102,8 +102,8 @@
 										</div>
 									</div>
 									<div>
-										<label class="block text-xs text-gray-400 mb-1">Description</label>
-										<input name="description" type="text" value={cat.description ?? ''}
+										<label for="cat-edit-desc-{cat.id}" class="block text-xs text-gray-400 mb-1">Description</label>
+										<input id="cat-edit-desc-{cat.id}" name="description" type="text" value={cat.description ?? ''}
 											class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 									</div>
 									<div class="flex gap-2">

@@ -371,8 +371,9 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 			</svg>
 			{#if searchQuery}
-				<button 
+				<button
 					onclick={() => searchQuery = ''}
+					aria-label="Effacer la recherche"
 					class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-400"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -729,6 +730,7 @@
 			<button
 				onclick={() => goToPage(currentPage - 1)}
 				disabled={currentPage === 1}
+				aria-label="Page précédente"
 				class="w-9 h-9 bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600
 					   disabled:opacity-30 disabled:cursor-not-allowed transition-all
 					   flex items-center justify-center"
@@ -760,6 +762,7 @@
 			<button
 				onclick={() => goToPage(currentPage + 1)}
 				disabled={currentPage === totalPages}
+				aria-label="Page suivante"
 				class="w-9 h-9 bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600
 					   disabled:opacity-30 disabled:cursor-not-allowed transition-all
 					   flex items-center justify-center"

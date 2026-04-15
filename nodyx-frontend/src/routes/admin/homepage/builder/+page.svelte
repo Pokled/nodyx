@@ -10,15 +10,15 @@
 	import {
 		DEFAULT_THEME, genId, makeRow, makeRowFromSpans
 	} from '$lib/types/homepage'
+	import { untrack } from 'svelte'
 
 	let { data }: { data: PageData } = $props()
 
 	// ── State principal ───────────────────────────────────────────────────────
-	let draft   = $state<GridLayout>(
-		(data.draft as GridLayout | null)
-		?? { rows: [] }
-	)
-	let theme   = $state<GridTheme>({ ...DEFAULT_THEME, ...(data.theme as Partial<GridTheme> ?? {}) })
+	let draft   = $state<GridLayout>(untrack(() =>
+		(data.draft as GridLayout | null) ?? { rows: [] }
+	))
+	let theme   = $state<GridTheme>(untrack(() => ({ ...DEFAULT_THEME, ...(data.theme as Partial<GridTheme> ?? {}) })))
 	let unsaved = $state(false)
 	let saving  = $state(false)
 	let publishing = $state(false)
@@ -1267,8 +1267,12 @@
      MODAL : Ajouter une ligne
 ═══════════════════════════════════════════════════════════════════════ -->
 {#if showAddRow}
-	<div class="modal-backdrop" onclick={() => showAddRow = false} role="dialog" aria-modal="true">
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
+	<div class="modal-backdrop" role="presentation"
+		onclick={() => showAddRow = false}
+		onkeydown={(e) => { if (e.key === 'Escape') showAddRow = false }}>
+		<div class="modal" role="dialog" aria-modal="true" tabindex="-1"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}>
 			<div class="modal-header">
 				<span>Nouvelle ligne — choisissez une structure</span>
 				<button class="modal-close" onclick={() => showAddRow = false}>✕</button>
@@ -1291,14 +1295,19 @@
      MODAL : Widget Picker
 ═══════════════════════════════════════════════════════════════════════ -->
 {#if showPicker}
-	<div class="modal-backdrop" onclick={() => showPicker = null} role="dialog" aria-modal="true">
-		<div class="modal modal--wide" onclick={(e) => e.stopPropagation()}>
+	<div class="modal-backdrop" role="presentation"
+		onclick={() => showPicker = null}
+		onkeydown={(e) => { if (e.key === 'Escape') showPicker = null }}>
+		<div class="modal modal--wide" role="dialog" aria-modal="true" tabindex="-1"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}>
 			<div class="modal-header">
 				<span>Choisir un widget</span>
 				<button class="modal-close" onclick={() => showPicker = null}>✕</button>
 			</div>
 			<div class="modal-body">
 				<!-- Barre recherche -->
+				<!-- svelte-ignore a11y_autofocus -->
 				<input class="picker-search" type="text" placeholder="Rechercher un widget…"
 					bind:value={searchWidget} autofocus
 				/>

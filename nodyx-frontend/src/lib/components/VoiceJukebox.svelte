@@ -105,6 +105,7 @@
 				<p class="text-xs mb-2.5" style="color:{textMuted};">Aucune piste en cours</p>
 				{#if showUrlInput}
 					<div class="flex gap-2 items-center">
+						<!-- svelte-ignore a11y_autofocus -->
 						<input
 							type="url"
 							bind:value={urlInput}
@@ -215,12 +216,13 @@
 			<div class="mt-2.5 flex items-center gap-2">
 				<span class="text-[10px] font-mono shrink-0 w-8 text-right" style="color:{textMuted};">{fmtTime(jb.position)}</span>
 
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div
 					class="flex-1 relative h-1 rounded-full cursor-pointer group"
 					style="background:rgba(200,145,74,0.15);"
 					onclick={handleProgressClick}
+					onkeydown={(e) => { if (e.key === 'ArrowRight') handleProgressClick(e as any) }}
 					role="slider"
+					tabindex="0"
 					aria-valuemin={0}
 					aria-valuemax={jb.duration}
 					aria-valuenow={jb.position}
@@ -359,6 +361,7 @@
 					<!-- URL input for queue -->
 					{#if showUrlInput && urlMode === 'queue'}
 						<div class="mt-1.5 flex gap-2 items-center">
+							<!-- svelte-ignore a11y_autofocus -->
 							<input
 								type="url"
 								bind:value={urlInput}

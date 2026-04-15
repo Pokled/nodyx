@@ -4,6 +4,7 @@
 	import type { PageData } from './$types';
 	import { unreadCountStore } from '$lib/socket';
 	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
 
 	const tFn = $derived($t)
 
@@ -17,7 +18,7 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let notifications = $state((data.notifications ?? []).map((n: any) => ({ ...n })));
+	let notifications = $state(untrack(() => (data.notifications ?? []).map((n: any) => ({ ...n }))));
 	const unread = $derived(notifications.filter((n: any) => !n.is_read).length);
 	const readCount = $derived(notifications.filter((n: any) => n.is_read).length);
 
@@ -27,11 +28,11 @@
 		mention:      '@',
 	};
 
-	const TYPE_LABEL: Record<string, string> = {
+	const TYPE_LABEL = $derived<Record<string, string>>({
 		thread_reply: tFn('notifications.thread_reply_label'),
 		post_thanks:  tFn('notifications.post_thanks_label'),
 		mention:      tFn('notifications.mention_label'),
-	};
+	});
 
 	function formatDate(iso: string) {
 		return new Date(iso).toLocaleDateString('fr-FR', {

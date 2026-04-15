@@ -7,13 +7,13 @@
 
   let { data } = $props()
 
-  let polls       = $state(data.polls ?? [])
-  let status      = $state(data.status ?? 'active')
+  let polls       = $state(untrack(() => data.polls ?? []))
+  let status      = $state(untrack(() => data.status ?? 'active'))
   let showCreator = $state(false)
   let socket      = $state<any>(null)
 
   // Connect socket for real-time updates
-  import { onMount } from 'svelte'
+  import { onMount, untrack } from 'svelte'
   import { tokenStore } from '$lib/socket'
 
   onMount(async () => {

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
+
 	interface ReactionSummary {
 		emoji: string;
 		count: number;
@@ -24,9 +26,9 @@
 	const EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
 
 	// Local optimistic state
-	let localReactions = $state<ReactionSummary[]>(reactions.map(r => ({ ...r })));
-	let localThanksCount = $state(thanksCount);
-	let localUserThanked = $state(userThanked);
+	let localReactions = $state<ReactionSummary[]>(untrack(() => reactions.map(r => ({ ...r }))));
+	let localThanksCount = $state(untrack(() => thanksCount));
+	let localUserThanked = $state(untrack(() => userThanked));
 
 	function reactionFor(emoji: string): ReactionSummary | undefined {
 		return localReactions.find(r => r.emoji === emoji);

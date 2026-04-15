@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n'
-	import { onMount, onDestroy, tick } from 'svelte'
+	import { onMount, onDestroy, tick, untrack } from 'svelte'
 	import { getSocket, dmUnreadStore } from '$lib/socket'
 	import { apiFetch } from '$lib/api'
 	import {
@@ -60,10 +60,10 @@
 		other_name_color: string | null
 	}
 
-	let messages: DmMessage[] = $state(data.messages ?? [])
-	let conversations: Conversation[] = $state(data.conversations ?? [])
-	let conversation: Conversation | null = $state(data.conversation ?? null)
-	let conversationId = $state(data.conversationId)
+	let messages: DmMessage[] = $state(untrack(() => data.messages ?? []))
+	let conversations: Conversation[] = $state(untrack(() => data.conversations ?? []))
+	let conversation: Conversation | null = $state(untrack(() => data.conversation ?? null))
+	let conversationId = $state(untrack(() => data.conversationId))
 
 	// ── E2E state ──────────────────────────────────────────────────────────────
 	let e2eStatus = $state<E2EStatus>('unknown')
@@ -144,7 +144,7 @@
 	let typingLabel = $state('')
 	let typingTimeout: ReturnType<typeof setTimeout> | null = null
 	let loadingMore = $state(false)
-	let hasMore = $state(messages.length >= 50)
+	let hasMore = $state(untrack(() => messages.length >= 50))
 	let currentUserId = $state('')
 	let sendingMsg = $state(false)
 	// Édition inline

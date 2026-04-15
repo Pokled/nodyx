@@ -4,19 +4,21 @@
 	import type { PageData, ActionData } from './$types'
 	import { PROFILE_PRESETS, resolveTheme, themeToStyle, type ProfileThemeVars } from '$lib/profileThemes'
 	import { FONT_PRESETS, ANIM_PRESETS, ensureFontLoaded, buildNameStyle, buildAnimClass } from '$lib/nameEffects'
+	import { untrack } from 'svelte'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 	const profile = $derived(data.profile)
+	const p = untrack(() => data.profile)
 
 	let submitting = $state(false)
-	let displayName = $state<string>(profile.display_name ?? '')
-	let nameColor = $state<string>(profile.name_color ?? '#ffffff')
-	let nameGlowEnabled   = $state<boolean>(!!profile.name_glow)
-	let nameGlow          = $state<string>(profile.name_glow ?? '#6366f1')
-	let nameGlowIntensity = $state<number>(profile.name_glow_intensity ?? 10)
-	let nameAnimation     = $state<string>(profile.name_animation ?? '')
-	let nameFontFamily    = $state<string>(profile.name_font_family ?? '')
-	let nameFontUrl       = $state<string | null>(profile.name_font_url ?? null)
+	let displayName = $state<string>(p.display_name ?? '')
+	let nameColor = $state<string>(p.name_color ?? '#ffffff')
+	let nameGlowEnabled   = $state<boolean>(!!p.name_glow)
+	let nameGlow          = $state<string>(p.name_glow ?? '#6366f1')
+	let nameGlowIntensity = $state<number>(p.name_glow_intensity ?? 10)
+	let nameAnimation     = $state<string>(p.name_animation ?? '')
+	let nameFontFamily    = $state<string>(p.name_font_family ?? '')
+	let nameFontUrl       = $state<string | null>(p.name_font_url ?? null)
 	let fontUploading     = $state(false)
 	let fontError         = $state('')
 
@@ -65,9 +67,9 @@
 	}
 
 	// ── Profile Theme ──────────────────────────────────────────────────────────
-	let theme = $state<ProfileThemeVars>(resolveTheme(profile.metadata?.theme))
+	let theme = $state<ProfileThemeVars>(resolveTheme(p.metadata?.theme))
 	let selectedPresetId = $state<string>(
-		PROFILE_PRESETS.find(p => p.vars.bg === theme.bg && p.vars.accent === theme.accent)?.id ?? 'default'
+		PROFILE_PRESETS.find(pr => pr.vars.bg === theme.bg && pr.vars.accent === theme.accent)?.id ?? 'default'
 	)
 
 	function applyPreset(preset: typeof PROFILE_PRESETS[0]) {
@@ -88,7 +90,7 @@
 
 	// Links — dynamic list of {label, url} rows
 	let links = $state<Array<{ label: string; url: string }>>(
-		(profile.links ?? []).map((l: { label: string; url: string }) => ({ ...l }))
+		(p.links ?? []).map((l: { label: string; url: string }) => ({ ...l }))
 	)
 
 	function addLink() { links.push({ label: '', url: '' }) }
@@ -99,13 +101,13 @@
 	let avatarMode  = $state<UploadMode>('url')
 	let bannerMode  = $state<UploadMode>('url')
 
-	let avatarUrl     = $state<string>(profile.avatar_url ?? '')
-	let bannerUrl     = $state<string>(profile.banner_url ?? '')
+	let avatarUrl     = $state<string>(p.avatar_url ?? '')
+	let bannerUrl     = $state<string>(p.banner_url ?? '')
 	// bannerPreview can also come from banner_asset_path (uploaded file via community_assets)
-	const initialBannerPreview = profile.banner_asset_path
-		? `/uploads/${profile.banner_asset_path}`
-		: (profile.banner_url ?? '')
-	let avatarPreview = $state<string>(profile.avatar_url ?? '')
+	const initialBannerPreview = p.banner_asset_path
+		? `/uploads/${p.banner_asset_path}`
+		: (p.banner_url ?? '')
+	let avatarPreview = $state<string>(p.avatar_url ?? '')
 	let bannerPreview = $state<string>(initialBannerPreview)
 
 	let clearAvatar = $state(false)

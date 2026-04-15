@@ -41,18 +41,18 @@
 		<form method="POST" action="?/create" use:enhance class="px-5 pb-5 pt-3 space-y-4 border-t border-gray-800">
 			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 				<div>
-					<label class="block text-xs text-gray-400 mb-1">Nom</label>
-					<input name="name" type="text" required maxlength="100"
+					<label for="grade-create-name" class="block text-xs text-gray-400 mb-1">Nom</label>
+					<input id="grade-create-name" name="name" type="text" required maxlength="100"
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 				</div>
 				<div>
-					<label class="block text-xs text-gray-400 mb-1">Couleur</label>
-					<input name="color" type="color" value="#99AAB5"
+					<label for="grade-create-color" class="block text-xs text-gray-400 mb-1">Couleur</label>
+					<input id="grade-create-color" name="color" type="color" value="#99AAB5"
 						class="h-10 w-full rounded-lg bg-gray-800 border border-gray-700 px-1 cursor-pointer" />
 				</div>
 				<div>
-					<label class="block text-xs text-gray-400 mb-1">Position</label>
-					<input name="position" type="number" value="0" min="0"
+					<label for="grade-create-position" class="block text-xs text-gray-400 mb-1">Position</label>
+					<input id="grade-create-position" name="position" type="number" value="0" min="0"
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 				</div>
 			</div>
@@ -97,13 +97,13 @@
 										<input type="hidden" name="grade_id" value={grade.id} />
 										<div class="grid sm:grid-cols-2 gap-3">
 											<div>
-												<label class="block text-xs text-gray-400 mb-1">Nom</label>
-												<input name="name" type="text" required value={grade.name}
+												<label for="grade-edit-name-{grade.id}" class="block text-xs text-gray-400 mb-1">Nom</label>
+												<input id="grade-edit-name-{grade.id}" name="name" type="text" required value={grade.name}
 													class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 											</div>
 											<div>
-												<label class="block text-xs text-gray-400 mb-1">Couleur</label>
-												<input name="color" type="color" value={grade.color}
+												<label for="grade-edit-color-{grade.id}" class="block text-xs text-gray-400 mb-1">Couleur</label>
+												<input id="grade-edit-color-{grade.id}" name="color" type="color" value={grade.color}
 													class="h-10 w-full rounded-lg bg-gray-800 border border-gray-700 px-1 cursor-pointer" />
 											</div>
 										</div>

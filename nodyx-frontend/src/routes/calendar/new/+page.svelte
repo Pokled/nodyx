@@ -249,15 +249,15 @@
 
 				<div class="grid grid-cols-2 gap-3">
 					<div>
-						<label class="block text-xs text-gray-500 mb-1">Latitude</label>
-						<input type="number" name="location_lat" bind:value={lat} step="any"
+						<label for="new-location-lat" class="block text-xs text-gray-500 mb-1">Latitude</label>
+						<input id="new-location-lat" type="number" name="location_lat" bind:value={lat} step="any"
 						       placeholder="48.8584"
 						       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
 						              focus:outline-none focus:border-emerald-500 transition-colors"/>
 					</div>
 					<div>
-						<label class="block text-xs text-gray-500 mb-1">Longitude</label>
-						<input type="number" name="location_lng" bind:value={lng} step="any"
+						<label for="new-location-lng" class="block text-xs text-gray-500 mb-1">Longitude</label>
+						<input id="new-location-lng" type="number" name="location_lng" bind:value={lng} step="any"
 						       placeholder="2.2945"
 						       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
 						              focus:outline-none focus:border-emerald-500 transition-colors"/>
@@ -341,8 +341,8 @@
 			</div>
 			{#if rsvpEnabled && !hasTicket}
 				<div>
-					<label class="block text-sm font-medium text-gray-300 mb-1.5">Places max <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
-					<input name="max_attendees" type="number" min="1" placeholder="Illimité"
+					<label for="new-max-att-rsvp" class="block text-sm font-medium text-gray-300 mb-1.5">Places max <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
+					<input id="new-max-att-rsvp" name="max_attendees" type="number" min="1" placeholder="Illimité"
 					       class="w-36 bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 				</div>

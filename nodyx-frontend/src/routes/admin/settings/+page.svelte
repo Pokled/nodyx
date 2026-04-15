@@ -2,10 +2,10 @@
 	import type { PageData, ActionData } from './$types'
 	import { enhance } from '$app/forms'
 	import { page } from '$app/stores'
-	import { onMount } from 'svelte'
+	import { onMount, untrack } from 'svelte'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
-	const i = data.instance
+	const i = untrack(() => data.instance)
 
 	// Branding state
 	let logoUrl   = $state<string>(i.logo_url   ?? '')
@@ -116,7 +116,7 @@
 		<form method="POST" action="?/saveBranding" use:enhance>
 			<!-- Logo -->
 			<div class="mb-6">
-				<label class="block text-sm font-medium text-gray-300 mb-2">Logo de l'instance</label>
+				<span class="block text-sm font-medium text-gray-300 mb-2">Logo de l'instance</span>
 				<div class="flex items-start gap-4">
 					<!-- Preview -->
 					<div class="w-16 h-16 rounded-2xl shrink-0 overflow-hidden border border-gray-700 bg-gray-800 flex items-center justify-center" style="border-radius: 30%">
@@ -158,7 +158,7 @@
 
 			<!-- Banner -->
 			<div class="mb-6">
-				<label class="block text-sm font-medium text-gray-300 mb-2">Bannière du forum</label>
+				<span class="block text-sm font-medium text-gray-300 mb-2">Bannière du forum</span>
 				<div class="space-y-2">
 					<!-- Preview -->
 					{#if bannerUrl}

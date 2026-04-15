@@ -149,11 +149,12 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 <div
 	class="relative w-full h-full flex flex-col overflow-hidden select-none"
 	style="background: #07070f;"
+	role="presentation"
 	onclick={closeMenu}
+	onkeydown={(e) => { if (e.key === 'Escape') closeMenu() }}
 >
 
 	<!-- ── Ambient background ──────────────────────────────────────────────── -->
@@ -410,19 +411,23 @@
 
 	<!-- ── Jukebox URL overlay ───────────────────────────────────────────────── -->
 	{#if showJukeboxInput}
-		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div
 			class="absolute inset-0 z-50 flex items-center justify-center"
 			style="background: rgba(7,7,15,0.8); backdrop-filter: blur(12px);"
+			role="presentation"
 			onclick={() => { showJukeboxInput = false; jukeboxError = '' }}
+			onkeydown={(e) => { if (e.key === 'Escape') { showJukeboxInput = false; jukeboxError = '' } }}
 		>
-			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 			<div
 				class="w-[440px] p-7"
 				style="background: rgba(13,13,20,0.98);
 				       border: 1px solid rgba(255,255,255,0.07);
 				       box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.03);"
+				role="dialog"
+				aria-modal="true"
+				tabindex="-1"
 				onclick={(e) => e.stopPropagation()}
+				onkeydown={(e) => e.stopPropagation()}
 			>
 				<div class="flex items-center gap-3 mb-6">
 					<div class="w-9 h-9 flex items-center justify-center shrink-0"
@@ -436,6 +441,7 @@
 						<p class="text-[11px] text-gray-600">Diffuse un lien YouTube pour tout le canal</p>
 					</div>
 					<button
+						aria-label="Fermer"
 						class="ml-auto w-7 h-7 flex items-center justify-center text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-colors focus:outline-none"
 						onclick={() => { showJukeboxInput = false; jukeboxError = '' }}
 					>
@@ -480,8 +486,10 @@
 		{@const mp      = menuPlayer}
 		{@const isMuted = !!mp.socketId && mutedPeers.has(mp.socketId)}
 
-		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div
+			role="menu"
+			tabindex="-1"
+			onkeydown={(e) => { if (e.key === 'Escape') closeMenu() }}
 			class="fixed z-[9999] py-1.5 min-w-[172px]"
 			style="left: {menuX}px; top: {menuY}px;
 			       background: rgba(13,13,20,0.98);

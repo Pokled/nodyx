@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte'
+	import { onMount, untrack } from 'svelte'
 	import { apiFetch } from '$lib/api'
 	import { dmUnreadStore } from '$lib/socket'
 	import { t } from '$lib/i18n'
@@ -38,7 +38,7 @@
 		return conv.other_username
 	}
 
-	let conversations: Conversation[] = $state(data.conversations ?? [])
+	let conversations: Conversation[] = $state(untrack(() => data.conversations ?? []))
 	let searchQuery = $state('')
 	let searching = $state(false)
 	let searchResults: { id: string; username: string; avatar: string | null }[] = $state([])

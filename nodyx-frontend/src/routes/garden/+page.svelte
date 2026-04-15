@@ -4,11 +4,12 @@
 	import { page } from '$app/stores'
 	import { enhance } from '$app/forms'
 	import { PUBLIC_API_URL } from '$env/static/public'
+	import { untrack } from 'svelte'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
 	// Local mutable copy of seeds for optimistic updates
-	let seeds = $state(data.seeds.map((s: any) => ({ ...s })))
+	let seeds = $state(untrack(() => data.seeds.map((s: any) => ({ ...s }))))
 
 	const CATEGORIES = [
 		{ value: '', label: 'Toutes' },

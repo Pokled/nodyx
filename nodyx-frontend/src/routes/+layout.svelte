@@ -1075,6 +1075,7 @@
 							{@const hasStatus   = !!(member.status?.text || member.status?.emoji)}
 							{@const isSharing   = screenSharingUserIds.has(member.userId)}
 							{@const isStreaming = streamingUserIds.has(member.userId)}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<svelte:element
 								this={isMe ? 'button' : 'a'}
 								href={isMe ? undefined : `/users/${member.username}`}
@@ -1158,6 +1159,7 @@
 							{@const hasStatus   = !!(member.status?.text || member.status?.emoji)}
 							{@const isSharing   = screenSharingUserIds.has(member.userId)}
 							{@const isStreaming = streamingUserIds.has(member.userId)}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<svelte:element
 								this={isMe ? 'button' : 'a'}
 								href={isMe ? undefined : `/users/${member.username}`}
@@ -1425,6 +1427,7 @@
 	<div class="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm"
 		role="presentation"
 		onclick={(e) => { if (e.target === e.currentTarget) showStatusModal = false }}>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-5"
 			onclick={(e) => e.stopPropagation()}>
 			<h2 class="text-sm font-bold text-white mb-4">Définir ton statut</h2>

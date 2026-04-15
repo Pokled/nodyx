@@ -796,6 +796,7 @@
                             <div class="sm:hidden flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/95 shrink-0">
                                 <span class="text-sm font-semibold text-white">{tFn('voice.audio_settings_title')}</span>
                                 <button onclick={() => showVoiceSettings = false}
+                                        aria-label="Fermer les paramètres audio"
                                         class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -1192,14 +1193,7 @@ input[type=range]::-moz-range-thumb:hover {
     box-shadow: 0 0 15px rgba(99, 102, 241, 0.8);
 }
 
-/* Classes de compatibilité */
-.speaking-active.normal,
-.speaking-active.test-visible {
-    /* Conservé pour d'éventuels usages */
-}
 
-/* Anciennes animations désactivées */
-@keyframes sound-wave-test {}
 @keyframes sound-wave {}
 @keyframes sound-wave-small {}
 </style>

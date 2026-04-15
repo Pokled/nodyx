@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types'
-	import { onMount, onDestroy, tick } from 'svelte'
+	import { onMount, onDestroy, tick, untrack } from 'svelte'
 	import { page } from '$app/stores'
 	import { goto } from '$app/navigation'
 	import { getSocket } from '$lib/socket'
@@ -23,8 +23,8 @@
 		created_at: string
 	}
 
-	let room     = $state(data.room)
-	let messages = $state<WMessage[]>(data.messages)
+	let room     = $state(untrack(() => data.room))
+	let messages = $state<WMessage[]>(untrack(() => data.messages))
 	let input    = $state('')
 	let sending  = $state(false)
 	let expired  = $state(false)

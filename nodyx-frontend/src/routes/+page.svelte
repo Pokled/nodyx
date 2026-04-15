@@ -92,27 +92,12 @@
 <style>
 	:global(.hp-root) { font-family: 'Inter', sans-serif; }
 	.sg  { font-family: 'Space Grotesk', sans-serif; }
-	.mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
-
-	/* ── Surfaces ── */
-	.s0  { background: #05050a; }
-	.s1  { background: #0d0d12; }
-	.s2  { background: #12121a; }
-	.s3  { background: #1b1b24; }
-	.b   { border-color: rgba(255,255,255,.05); }
-
 	/* ── Gradient text ── */
 	.gt {
 		background: linear-gradient(135deg, #a78bfa 0%, #06b6d4 100%);
 		-webkit-background-clip: text; background-clip: text;
 		-webkit-text-fill-color: transparent; color: transparent;
 	}
-	.gt-v {
-		background: linear-gradient(135deg, #a78bfa, #7c3aed);
-		-webkit-background-clip: text; background-clip: text;
-		-webkit-text-fill-color: transparent; color: transparent;
-	}
-
 	/* ── Decorative letter ── */
 	.deco-letter {
 		font-family: 'Space Grotesk', sans-serif;

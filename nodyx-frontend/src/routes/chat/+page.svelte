@@ -1080,6 +1080,7 @@
 					<div
 						class="group message-row relative flex items-start gap-3 px-4 transition-all {shouldGroup ? 'py-px' : 'pt-2.5 pb-px'}"
 						style="background: transparent"
+						role="listitem"
 						onmouseenter={(e) => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.018)'}
 						onmouseleave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
 						ontouchstart={() => handleTouchStart(msg.id)}

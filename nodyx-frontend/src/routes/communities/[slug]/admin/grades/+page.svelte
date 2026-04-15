@@ -137,8 +137,9 @@
 										<input type="hidden" name="grade_id" value={grade.id} />
 										<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 											<div>
-												<label class="block text-xs text-gray-400 mb-1">Nom</label>
+												<label for="comm-grade-edit-name-{grade.id}" class="block text-xs text-gray-400 mb-1">Nom</label>
 												<input
+													id="comm-grade-edit-name-{grade.id}"
 													name="name"
 													type="text"
 													required
@@ -147,8 +148,9 @@
 												/>
 											</div>
 											<div>
-												<label class="block text-xs text-gray-400 mb-1">Couleur</label>
+												<label for="comm-grade-edit-color-{grade.id}" class="block text-xs text-gray-400 mb-1">Couleur</label>
 												<input
+													id="comm-grade-edit-color-{grade.id}"
 													name="color"
 													type="color"
 													value={grade.color}

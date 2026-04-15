@@ -43,6 +43,7 @@
     style="background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);"
     role="dialog"
     aria-modal="true"
+    tabindex="-1"
     aria-label="Partager votre écran"
     onkeydown={onOverlayKeydown}
 >

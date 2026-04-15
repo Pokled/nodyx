@@ -3,10 +3,11 @@
 	import { PUBLIC_API_URL } from '$env/static/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import type { PageData, ActionData } from './$types';
+	import { untrack } from 'svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const ev = data.event;
+	const ev = untrack(() => data.event);
 
 	let submitting     = $state(false);
 	let coverPreview   = $state<string | null>(ev.cover_url ?? null);
@@ -259,15 +260,15 @@
 
 				<div class="grid grid-cols-2 gap-3">
 					<div>
-						<label class="block text-xs text-gray-500 mb-1">Latitude</label>
-						<input type="number" name="location_lat" bind:value={lat} step="any"
+						<label for="edit-location-lat" class="block text-xs text-gray-500 mb-1">Latitude</label>
+						<input id="edit-location-lat" type="number" name="location_lat" bind:value={lat} step="any"
 						       placeholder="48.8584"
 						       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
 						              focus:outline-none focus:border-emerald-500 transition-colors"/>
 					</div>
 					<div>
-						<label class="block text-xs text-gray-500 mb-1">Longitude</label>
-						<input type="number" name="location_lng" bind:value={lng} step="any"
+						<label for="edit-location-lng" class="block text-xs text-gray-500 mb-1">Longitude</label>
+						<input id="edit-location-lng" type="number" name="location_lng" bind:value={lng} step="any"
 						       placeholder="2.2945"
 						       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
 						              focus:outline-none focus:border-emerald-500 transition-colors"/>
@@ -349,8 +350,8 @@
 			</div>
 			{#if rsvpEnabled && !hasTicket}
 				<div>
-					<label class="block text-sm font-medium text-gray-300 mb-1.5">Places max <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
-					<input name="max_attendees" type="number" min="1"
+					<label for="edit-max-att-rsvp" class="block text-sm font-medium text-gray-300 mb-1.5">Places max <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
+					<input id="edit-max-att-rsvp" name="max_attendees" type="number" min="1"
 					       value={ev.max_attendees ?? ''}
 					       placeholder="Illimité"
 					       class="w-36 bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm

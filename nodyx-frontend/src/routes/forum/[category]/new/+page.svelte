@@ -5,6 +5,7 @@
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import { t } from '$lib/i18n';
+	import { untrack } from 'svelte';
 
 	const tFn = $derived($t)
 
@@ -30,8 +31,8 @@
 	const rootCategories = $derived((data.categories ?? []) as CatNode[]);
 	const initial        = $derived(findInitial(rootCategories, data.currentCategoryId ?? ''));
 
-	let selectedParentId = $state(initial.parentId);
-	let selectedSubId    = $state<string | null>(initial.subId);
+	let selectedParentId = $state(untrack(() => initial.parentId));
+	let selectedSubId    = $state<string | null>(untrack(() => initial.subId));
 
 	const selectedParent  = $derived(rootCategories.find(c => c.id === selectedParentId));
 	const subcategories   = $derived(selectedParent?.children ?? []);
@@ -83,7 +84,7 @@
 	>
 		<!-- Sélecteur catégorie + sous-catégorie -->
 		<div>
-			<label class="block text-sm text-gray-400 mb-2">{tFn('forum.category')}</label>
+			<span class="block text-sm text-gray-400 mb-2">{tFn('forum.category')}</span>
 			<div class="flex flex-wrap gap-2">
 				<select
 					onchange={onParentChange}
@@ -125,7 +126,7 @@
 		</div>
 
 		<div>
-			<label class="block text-sm text-gray-400 mb-2">{tFn('forum.message_label')}</label>
+			<span class="block text-sm text-gray-400 mb-2">{tFn('forum.message_label')}</span>
 			<NodyxEditor
 				name="content"
 				placeholder={tFn('forum.message_placeholder')}
@@ -135,9 +136,9 @@
 		<!-- Tags multi-select -->
 		{#if tags.length > 0}
 			<div>
-				<label class="block text-sm text-gray-400 mb-2">
+				<span class="block text-sm text-gray-400 mb-2">
 					Tags <span class="text-gray-600 text-xs">(optionnel, max 5)</span>
-				</label>
+				</span>
 				<div class="flex flex-wrap gap-2">
 					{#each tags as tag}
 						<button

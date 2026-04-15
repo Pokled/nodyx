@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import { t } from '$lib/i18n';
 	import { browser } from '$app/environment';
 	const tFn = $derived($t);
@@ -17,19 +17,22 @@
 	const animated     = $derived((config.animated_count as boolean) ?? true);
 	const liveUpdates  = $derived((config.live_updates as boolean) ?? true);
 
-	// Live counters (updated via socket)
-	let memberCount  = $state((instance.member_count as number) ?? 0);
-	let onlineCount  = $state((instance.online_count as number) ?? 0);
-	let threadCount  = $state((instance.thread_count as number) ?? 0);
-	let postCount    = $state((instance.post_count as number) ?? 0);
+	// Live counters (updated via socket) — untrack: init volontairement depuis les props serveur
+	let memberCount  = $state(untrack(() => (instance.member_count as number) ?? 0));
+	let onlineCount  = $state(untrack(() => (instance.online_count as number) ?? 0));
+	let threadCount  = $state(untrack(() => (instance.thread_count as number) ?? 0));
+	let postCount    = $state(untrack(() => (instance.post_count as number) ?? 0));
 
 	// Animated counting state
-	let displayed = $state({
-		members: animated ? 0 : memberCount,
-		online:  animated ? 0 : onlineCount,
-		threads: animated ? 0 : threadCount,
-		posts:   animated ? 0 : postCount,
-	});
+	let displayed = $state(untrack(() => {
+		const anim = (config.animated_count as boolean) ?? true;
+		return {
+			members: anim ? 0 : ((instance.member_count as number) ?? 0),
+			online:  anim ? 0 : ((instance.online_count as number) ?? 0),
+			threads: anim ? 0 : ((instance.thread_count as number) ?? 0),
+			posts:   anim ? 0 : ((instance.post_count as number) ?? 0),
+		};
+	}));
 
 	function animateTo(key: keyof typeof displayed, target: number) {
 		if (!animated) { displayed[key] = target; return; }

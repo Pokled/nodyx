@@ -392,14 +392,16 @@
 				<div class="p-4">
 					{#if step === 'idle'}
 						<!-- Drag & drop zone -->
-						<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 						<div
+							role="button"
+							tabindex="0"
 							class="relative flex flex-col items-center justify-center gap-3 py-8 px-4 transition-all cursor-pointer"
 							style="border:2px dashed {dragging ? 'rgba(124,58,237,.6)' : 'rgba(255,255,255,.08)'}; background:{dragging ? 'rgba(124,58,237,.05)' : 'transparent'}"
 							ondragover={(e) => { e.preventDefault(); dragging = true }}
 							ondragleave={() => dragging = false}
 							ondrop={onDrop}
 							onclick={() => document.getElementById('widget-file-input')?.click()}
+							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') document.getElementById('widget-file-input')?.click() }}
 						>
 							<div class="w-12 h-12 rounded-full flex items-center justify-center"
 							     style="background:rgba(124,58,237,.1); border:1px solid rgba(124,58,237,.2)">
@@ -843,13 +845,15 @@
 
 <!-- ── Modal démo : Aperçu / manifest.json / widget.iife.js ── -->
 {#if demoModal}
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center p-4"
 		style="background:rgba(0,0,0,.75); backdrop-filter:blur(4px)"
+		role="presentation"
 		onclick={(e) => { if (e.target === e.currentTarget) demoModal = null }}
+		onkeydown={(e) => { if (e.key === 'Escape') demoModal = null }}
 	>
 		<div class="w-full max-w-3xl flex flex-col max-h-[90vh]"
+			role="dialog" aria-modal="true" tabindex="-1"
 		     style="background:#0d0d12; border:1px solid rgba(255,255,255,.1); box-shadow:0 0 60px rgba(124,58,237,.15)">
 
 			<!-- Modal header -->
@@ -875,6 +879,7 @@
 				<!-- Close -->
 				<button
 					onclick={() => demoModal = null}
+					aria-label="Fermer"
 					class="w-8 h-8 flex items-center justify-center transition-colors"
 					style="border:1px solid rgba(255,255,255,.08); color:#6b7280"
 				>

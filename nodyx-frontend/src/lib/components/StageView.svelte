@@ -432,6 +432,7 @@
         "
         onmousedown={startPipDrag}
         role="toolbar"
+        tabindex="0"
         aria-label="Déplacer le Stage"
     >
         <div class="flex items-center gap-2 pointer-events-none">
@@ -446,7 +447,7 @@
             {/if}
         </div>
         <!-- Prevent drag when clicking buttons -->
-        <div class="flex items-center gap-1" onmousedown={(e) => e.stopPropagation()}>
+        <div class="flex items-center gap-1" role="presentation" onmousedown={(e) => e.stopPropagation()}>
             <button
                 onclick={() => isPiP = false}
                 class="w-6 h-6 flex items-center justify-center rounded transition-colors"

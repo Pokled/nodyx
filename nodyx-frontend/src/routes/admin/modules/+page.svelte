@@ -2,6 +2,7 @@
 	import type { PageData } from './$types'
 	import { MODULE_DISPLAY, FAMILY_META, FAMILY_ORDER, type ModuleFamily } from '$lib/modules'
 	import { page } from '$app/stores'
+	import { untrack } from 'svelte'
 
 	let { data }: { data: PageData } = $props()
 
@@ -9,7 +10,7 @@
 
 	// Keyed by module id — live state (optimistic updates)
 	let moduleState = $state<Record<string, boolean>>(
-		Object.fromEntries(data.modules.map(m => [m.id, m.enabled]))
+		untrack(() => Object.fromEntries(data.modules.map(m => [m.id, m.enabled])))
 	)
 
 	let saving   = $state<Record<string, boolean>>({})

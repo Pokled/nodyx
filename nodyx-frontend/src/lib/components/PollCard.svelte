@@ -2,7 +2,7 @@
 	import { t } from '$lib/i18n'
 
 	const tFn = $derived($t)
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy, untrack } from 'svelte'
   import { page } from '$app/stores'
   import { fly, fade } from 'svelte/transition'
   import { flip } from 'svelte/animate'
@@ -63,7 +63,7 @@
   let loading  = $state(true)
   let error    = $state<string | null>(null)
   let voting   = $state(false)
-  let expanded = $state(!inline)  // inline = collapsed by default
+  let expanded = $state(untrack(() => !inline))  // inline = collapsed by default
 
   // Sélections locales (avant envoi)
   let selectedIds     = $state<Set<string>>(new Set())
@@ -458,6 +458,9 @@
             <div
               class="ranking-item"
               class:dragging={draggingId === optId}
+              role="option"
+              aria-selected={draggingId === optId}
+              tabindex="0"
               draggable="true"
               ondragstart={e => onDragStart(e, optId)}
               ondragover={e => onDragOver(e, optId)}

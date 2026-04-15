@@ -31,14 +31,14 @@
 		<form method="POST" action="?/create" use:enhance class="px-5 pb-5 pt-3 space-y-4 border-t border-gray-800">
 			<div class="grid grid-cols-2 gap-4">
 				<div>
-					<label class="block text-xs text-gray-400 mb-1">Nom</label>
-					<input name="name" type="text" required maxlength="50"
+					<label for="tag-create-name" class="block text-xs text-gray-400 mb-1">Nom</label>
+					<input id="tag-create-name" name="name" type="text" required maxlength="50"
 						placeholder="ex: Tutoriel"
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 				</div>
 				<div>
-					<label class="block text-xs text-gray-400 mb-1">Couleur</label>
-					<input name="color" type="color" value="#6366f1"
+					<label for="tag-create-color" class="block text-xs text-gray-400 mb-1">Couleur</label>
+					<input id="tag-create-color" name="color" type="color" value="#6366f1"
 						class="h-10 w-full rounded-lg bg-gray-800 border border-gray-700 px-1 cursor-pointer" />
 				</div>
 			</div>

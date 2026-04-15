@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { PageData } from './$types';
@@ -30,7 +31,7 @@
 	let submitting    = $state(false);
 
 	// ── Sondage du thread ─────────────────────────────────────────────────
-	let threadPoll     = $state(data.poll ?? null);
+	let threadPoll     = $state(untrack(() => data.poll ?? null));
 	let showPollCreator = $state(false);
 
 	const canAddPoll = $derived(
@@ -182,7 +183,6 @@
 							bind:value={titleInput}
 							maxlength="300"
 							required
-							autofocus
 							class="flex-1bg-gray-800 border border-indigo-600 px-3 py-2 text-white text-xl font-bold focus:outline-none focus:border-indigo-400"
 						/>
 						<button type="submit"

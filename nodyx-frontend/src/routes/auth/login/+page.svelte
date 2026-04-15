@@ -2,6 +2,7 @@
 	import { t } from '$lib/i18n'
 	import type { ActionData, PageData } from './$types';
 	import { enhance } from '$app/forms';
+	import { untrack } from 'svelte';
 
 	const tFn = $derived($t)
 
@@ -22,9 +23,9 @@
 	// ── Nodyx Signet ──────────────────────────────────────────────────────────
 	type SignetState = 'idle' | 'waiting' | 'approved' | 'rejected' | 'expired' | 'error'
 
-	let signetState    = $state<SignetState>(data.signetError ? 'error' : 'idle')
+	let signetState    = $state<SignetState>(untrack(() => data.signetError ? 'error' : 'idle'))
 	let signetUsername = $state('')
-	let signetError    = $state(data.signetError ?? '')
+	let signetError    = $state(untrack(() => data.signetError ?? ''))
 	let signetToken   = $state('')
 	let signetChallengeId = $state('')
 	let signetPollInterval: ReturnType<typeof setInterval> | null = null
