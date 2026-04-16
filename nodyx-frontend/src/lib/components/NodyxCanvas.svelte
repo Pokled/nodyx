@@ -32,7 +32,7 @@
 	let cs = new CanvasState()
 
 	// ── Tool state ────────────────────────────────────────────────────────────
-	let tool:      CanvasTool = $state('pen')
+	let tool = $state<CanvasTool>('pen')
 	let color:     string     = $state('#e879f9')
 	let lineWidth: number     = $state(3)
 
@@ -732,19 +732,30 @@
 	role="dialog"
 	aria-label="Canvas collaboratif"
 	tabindex="-1"
-	class="fixed inset-0 z-[200] flex items-center justify-center"
-	style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);"
+	style="position:fixed; inset:0; z-index:9999; background:#0a0a10;"
 	onmousedown={(e) => { if (e.target === e.currentTarget) requestClose() }}
 >
-	<!-- ── Main layout ──────────────────────────────────────────────────────── -->
+	<!-- ── Canvas container (full screen) ─────────────────────────────────── -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
-		class="relative flex items-start gap-3 w-full h-full p-4 pointer-events-none"
-		onmousedown={(e) => e.stopPropagation()}
+		bind:this={containerEl}
+		style="position:absolute; inset:0;"
 		role="presentation"
+		onmousedown={(e) => e.stopPropagation()}
 	>
-		<!-- Toolbar -->
-		<div class="pointer-events-auto self-center">
+		<!-- HTML5 Canvas -->
+		<canvas
+			bind:this={canvasEl}
+			style="position:absolute; inset:0; width:100%; height:100%; touch-action:none;"
+			onpointerdown={onPointerDown}
+			onpointermove={onPointerMove}
+			onpointerup={onPointerUp}
+			onpointerleave={onPointerUp}
+			onwheel={onWheel}
+		></canvas>
+
+		<!-- Toolbar flottante à gauche, centrée verticalement -->
+		<div style="position:absolute; left:16px; top:50%; transform:translateY(-50%); z-index:20;">
 			<CanvasToolbar
 				bind:tool
 				bind:color
@@ -755,138 +766,121 @@
 			/>
 		</div>
 
-		<!-- Canvas container -->
-		<div
-			bind:this={containerEl}
-			class="pointer-events-auto flex-1 h-full relative rounded-xl overflow-hidden
-			       border border-indigo-500/30 shadow-2xl shadow-black/60 bg-gray-950"
-		>
-			<!-- HTML5 Canvas -->
-			<canvas
-				bind:this={canvasEl}
-				class="absolute inset-0 w-full h-full touch-none"
-				onpointerdown={onPointerDown}
-				onpointermove={onPointerMove}
-				onpointerup={onPointerUp}
-				onpointerleave={onPointerUp}
-				onwheel={onWheel}
-			></canvas>
-
-			<!-- Loading indicator -->
-			{#if !synced}
-				<div class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-					<div class="flex items-center gap-2 bg-gray-900/90 px-4 py-2 rounded-full border border-violet-500/30 text-violet-300 text-sm">
-						<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-						</svg>
-						Chargement du board…
-					</div>
+		<!-- Loading indicator -->
+		{#if !synced}
+			<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:30; pointer-events:none;">
+				<div class="flex items-center gap-2 bg-gray-900/90 px-4 py-2 rounded-full border border-violet-500/30 text-violet-300 text-sm">
+					<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+					</svg>
+					Chargement du board…
 				</div>
-			{/if}
+			</div>
+		{/if}
 
-			<!-- Remote cursors -->
-			{#each [...remoteCursors.values()] as cursor (cursor.userId)}
-				{@const [sx, sy] = cursorScreenPos(cursor)}
-				<div
-					class="absolute pointer-events-none select-none"
-					style="left:{sx}px; top:{sy}px; transform:translate(-4px,-4px); z-index:10;"
-				>
-					<div class="relative">
-						<div
-							class="w-3 h-3 rounded-full border-2 border-white shadow-lg"
-							class:canvas-cursor-speaking={cursor.speaking}
-							style="background: {cursor.speaking ? '#a855f7' : '#4ade80'};"
-						></div>
-						<span class="absolute left-4 -top-1 whitespace-nowrap text-xs font-semibold
-						             text-white bg-gray-900/80 px-1.5 py-0.5 rounded shadow">
-							{cursor.username}
-						</span>
-					</div>
-				</div>
-			{/each}
-
-			<!-- Sticky / text overlay input -->
-			{#if overlayEdit}
-				{@const sp = overlayScreenPos()}
-				{#if sp}
-					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<!-- Remote cursors -->
+		{#each [...remoteCursors.values()] as cursor (cursor.userId)}
+			{@const [sx, sy] = cursorScreenPos(cursor)}
+			<div
+				class="absolute pointer-events-none select-none"
+				style="left:{sx}px; top:{sy}px; transform:translate(-4px,-4px); z-index:10;"
+			>
+				<div class="relative">
 					<div
-						class="absolute z-20"
-						style="left:{sp[0]}px; top:{sp[1]}px;"
-						role="presentation"
-						onmousedown={(e) => e.stopPropagation()}
-					>
-						{#if overlayEdit.kind === 'sticky'}
-							<div class="rounded-xl shadow-2xl overflow-hidden border border-yellow-400/40"
-							     style="background:{color}; width:200px;">
-								<textarea
-									class="w-full p-3 text-sm font-medium resize-none outline-none bg-transparent
-									       text-gray-900 placeholder-gray-600"
-									rows="4" placeholder="Note…"
-									bind:value={overlayText}
-									onblur={submitOverlay}
-									autofocus
-								></textarea>
-								<div class="flex gap-1 p-1 border-t border-black/10">
-									<button class="flex-1 text-xs py-1 rounded bg-black/10 hover:bg-black/20 text-gray-900 font-medium"
-									        onmousedown={(e) => { e.preventDefault(); submitOverlay() }}>OK</button>
-									<button class="flex-1 text-xs py-1 rounded bg-black/10 hover:bg-black/20 text-gray-900"
-									        onmousedown={(e) => { e.preventDefault(); overlayEdit = null }}>✕</button>
-								</div>
-							</div>
-						{:else}
-							<div class="flex flex-col gap-1">
-								<div class="flex items-center gap-1 mb-1">
-									{#each [12, 18, 24, 36] as fs}
-										<button
-											class="px-2 py-0.5 text-xs rounded {overlayFontSize === fs ? 'bg-violet-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}"
-											onmousedown={(e) => { e.preventDefault(); overlayFontSize = fs }}
-										>{fs}</button>
-									{/each}
-								</div>
-								<input
-									type="text"
-									class="px-3 py-2 rounded-lg bg-gray-900/95 border border-violet-500/40
-									       text-white placeholder-gray-500 outline-none shadow-xl min-w-[200px]"
-									style="color:{color}; font-size:{overlayFontSize}px;"
-									placeholder="Texte…"
-									bind:value={overlayText}
-									onblur={submitOverlay}
-									autofocus
-								/>
-							</div>
-						{/if}
-					</div>
-				{/if}
-			{/if}
-
-			<!-- Header badge -->
-			<div class="absolute top-3 left-3 flex items-center gap-2 z-10 pointer-events-none">
-				<div class="flex items-center gap-1.5 bg-gray-900/80 backdrop-blur px-3 py-1.5 rounded-full
-				             border border-violet-500/30 text-xs font-semibold text-violet-300">
-					<span class="w-2 h-2 rounded-full bg-violet-400 animate-pulse"></span>
-					NodyxCanvas
+						class="w-3 h-3 rounded-full border-2 border-white shadow-lg"
+						class:canvas-cursor-speaking={cursor.speaking}
+						style="background: {cursor.speaking ? '#a855f7' : '#4ade80'};"
+					></div>
+					<span class="absolute left-4 -top-1 whitespace-nowrap text-xs font-semibold
+					             text-white bg-gray-900/80 px-1.5 py-0.5 rounded shadow">
+						{cursor.username}
+					</span>
 				</div>
 			</div>
+		{/each}
 
-			<!-- Zoom indicator + reset -->
-			<div class="absolute bottom-3 right-3 z-10 pointer-events-auto">
-				<button
-					onclick={() => { transform = { ...DEFAULT_TRANSFORM }; render() }}
-					class="flex items-center gap-1.5 bg-gray-900/80 backdrop-blur px-2.5 py-1.5 rounded-lg
-					       border border-gray-700/50 text-xs text-gray-400 hover:text-white hover:border-gray-500
-					       transition-all"
-					title="Réinitialiser la vue (100%)"
+		<!-- Sticky / text overlay input -->
+		{#if overlayEdit}
+			{@const sp = overlayScreenPos()}
+			{#if sp}
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+				<div
+					class="absolute z-20"
+					style="left:{sp[0]}px; top:{sp[1]}px;"
+					role="presentation"
+					onmousedown={(e) => e.stopPropagation()}
 				>
-					{Math.round(transform.scale * 100)}%
-				</button>
-			</div>
+					{#if overlayEdit.kind === 'sticky'}
+						<div class="rounded-xl shadow-2xl overflow-hidden border border-yellow-400/40"
+						     style="background:{color}; width:200px;">
+							<textarea
+								class="w-full p-3 text-sm font-medium resize-none outline-none bg-transparent
+								       text-gray-900 placeholder-gray-600"
+								rows="4" placeholder="Note…"
+								bind:value={overlayText}
+								onblur={submitOverlay}
+								autofocus
+							></textarea>
+							<div class="flex gap-1 p-1 border-t border-black/10">
+								<button class="flex-1 text-xs py-1 rounded bg-black/10 hover:bg-black/20 text-gray-900 font-medium"
+								        onmousedown={(e) => { e.preventDefault(); submitOverlay() }}>OK</button>
+								<button class="flex-1 text-xs py-1 rounded bg-black/10 hover:bg-black/20 text-gray-900"
+								        onmousedown={(e) => { e.preventDefault(); overlayEdit = null }}>✕</button>
+							</div>
+						</div>
+					{:else}
+						<div class="flex flex-col gap-1">
+							<div class="flex items-center gap-1 mb-1">
+								{#each [12, 18, 24, 36] as fs}
+									<button
+										class="px-2 py-0.5 text-xs rounded {overlayFontSize === fs ? 'bg-violet-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}"
+										onmousedown={(e) => { e.preventDefault(); overlayFontSize = fs }}
+									>{fs}</button>
+								{/each}
+							</div>
+							<input
+								type="text"
+								class="px-3 py-2 rounded-lg bg-gray-900/95 border border-violet-500/40
+								       text-white placeholder-gray-500 outline-none shadow-xl min-w-[200px]"
+								style="color:{color}; font-size:{overlayFontSize}px;"
+								placeholder="Texte…"
+								bind:value={overlayText}
+								onblur={submitOverlay}
+								autofocus
+							/>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		{/if}
 
-			<!-- Pan hint -->
-			<div class="absolute bottom-3 left-3 z-10 pointer-events-none text-[10px] text-gray-700">
-				Molette: zoom · Espace+drag ou clic molette: déplacer
+		<!-- Header badge -->
+		<div style="position:absolute; top:12px; left:80px; z-index:10; pointer-events:none;">
+			<div class="flex items-center gap-1.5 bg-gray-900/80 backdrop-blur px-3 py-1.5 rounded-full
+			             border border-violet-500/30 text-xs font-semibold text-violet-300">
+				<span class="w-2 h-2 rounded-full bg-violet-400 animate-pulse"></span>
+				NodyxCanvas
 			</div>
+		</div>
+
+		<!-- Zoom indicator + reset -->
+		<div style="position:absolute; bottom:12px; right:12px; z-index:10;">
+			<button
+				onclick={() => { transform = { ...DEFAULT_TRANSFORM }; render() }}
+				class="flex items-center gap-1.5 bg-gray-900/80 backdrop-blur px-2.5 py-1.5 rounded-lg
+				       border border-gray-700/50 text-xs text-gray-400 hover:text-white hover:border-gray-500
+				       transition-all"
+				title="Réinitialiser la vue (100%)"
+			>
+				{Math.round(transform.scale * 100)}%
+			</button>
+		</div>
+
+		<!-- Pan hint -->
+		<div style="position:absolute; bottom:12px; left:80px; z-index:10; pointer-events:none;"
+		     class="text-[10px] text-gray-600">
+			Molette: zoom · Espace+drag: déplacer
 		</div>
 	</div>
 
