@@ -223,6 +223,10 @@ Messages between peers that never touch the server.
 
 ### NodyxCanvas — Collaborative whiteboard (v2.2)
 
+<div align="center">
+  <img src="docs/img/Nodyx_canvas_alternative_Mural.png" alt="NodyxCanvas — collaborative whiteboard" width="860"/>
+</div>
+
 Draw, annotate, and build together in real time — directly inside voice channels.
 Synced via Socket.IO CRDT. Every op is persistent (PostgreSQL JSONB snapshot).
 

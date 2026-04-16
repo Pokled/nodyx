@@ -526,6 +526,10 @@
         <img src="/img/Nodyx_Moteur_de_recherche_inter_reseau.png" alt="Cross-instance federated search" loading="lazy"/>
         <figcaption>Cross-instance search — federated FTS across the network</figcaption>
       </figure>
+      <figure class="ss-fig ss-fig--wide">
+        <img src="/img/Nodyx_canvas_alternative_Mural.png" alt="NodyxCanvas — collaborative whiteboard" loading="lazy"/>
+        <figcaption>NodyxCanvas — collaborative whiteboard, 11 tools, CRDT sync, voice-aware cursors</figcaption>
+      </figure>
     </div>
   </div>
 </section>
@@ -2494,6 +2498,9 @@
   color: var(--text-muted);
   border-top: 1px solid rgba(255,255,255,0.05);
   line-height: 1.4;
+}
+.ss-fig--wide {
+  grid-column: 1 / -1;
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
