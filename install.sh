@@ -74,7 +74,7 @@ banner() {
 EOF
   echo -e "${RESET}"
   echo -e "  ${CYAN}$(printf '═%.0s' {1..52})${RESET}"
-  echo -e "  ${CYAN}║${RESET}  ${BOLD}Installer v2.1${RESET}  ·  Forum · Chat · Voice · Builder  ${CYAN}║${RESET}"
+  echo -e "  ${CYAN}║${RESET}  ${BOLD}Installer v2.2${RESET}  ·  Forum · Chat · Voice · Canvas    ${CYAN}║${RESET}"
   echo -e "  ${CYAN}║${RESET}  AGPL-3.0  ·  ${CYAN}github.com/Pokled/Nodyx${RESET}            ${CYAN}║${RESET}"
   echo -e "  ${CYAN}$(printf '═%.0s' {1..52})${RESET}"
   echo ""
@@ -117,11 +117,11 @@ _nodyx_upgrade() {
   mkdir -p /home/nodyx/.pm2/logs
   chown -R nodyx:nodyx /home/nodyx/.pm2 2>/dev/null || true
 
-  # pm2-logrotate si absent
-  if ! pm2 list 2>/dev/null | grep -q 'pm2-logrotate'; then
+  # pm2-logrotate si absent (vérifier sur le daemon nodyx)
+  if ! runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -q 'pm2-logrotate'; then
     npm install -g pm2-logrotate --silent 2>/dev/null || true
-    pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
-    pm2 set pm2-logrotate:retain 7 2>/dev/null || true
+    runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
+    runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:retain 7 2>/dev/null || true
   fi
 
   # Arrêter les anciens processus PM2 root (migration nexus-* → nodyx-*)
@@ -135,8 +135,9 @@ _nodyx_upgrade() {
 
   info "Récupération du code..."
   git config --global --add safe.directory "$dir" 2>/dev/null || true
-  # Réinitialiser les fichiers générés (package-lock.json…) pour débloquer le pull
-  git -C "$dir" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json 2>/dev/null || true
+  # Réinitialiser les fichiers générés (package-lock.json, ecosystem.config.js…) pour débloquer le pull
+  # ecosystem.config.js est dans le dépôt mais réécrit par l'installateur — on le reset pour éviter un conflit git
+  git -C "$dir" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json ecosystem.config.js 2>/dev/null || true
   git -C "$dir" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits manuellement."
   ok "Code à jour"
 
@@ -243,8 +244,8 @@ _auto_backup_db() {
 }
 
 # ── Version ────────────────────────────────────────────────────────────────────
-NODYX_VERSION="2.1.0"
-INSTALLER_VERSION="2.1.0"
+NODYX_VERSION="2.2.0"
+INSTALLER_VERSION="2.2.0"
 
 # ── CLI flags ─────────────────────────────────────────────────────────────────
 _FORCE_MODE=""        # upgrade | repair | reinstall | wipe (bypass detection menu)
@@ -962,7 +963,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 # git first — needed to clone the repo, and most VPS images don't ship with it
 apt-get install -y -q git 2>/dev/null
-_SYS_PKGS="curl wget gnupg2 ca-certificates lsb-release openssl ufw build-essential postgresql postgresql-contrib redis-server fonts-dejavu-core"
+_SYS_PKGS="curl wget gnupg2 ca-certificates lsb-release openssl ufw build-essential postgresql postgresql-contrib redis-server fonts-dejavu-core file"
 # shellcheck disable=SC2086
 apt-get install -y -q $_SYS_PKGS 2>/dev/null
 ok "Paquets système installés"
@@ -1000,11 +1001,11 @@ else
   ok "PM2 déjà présent"
 fi
 
-# PM2 log-rotate
-if ! pm2 list 2>/dev/null | grep -q 'pm2-logrotate'; then
+# PM2 log-rotate — vérifier sur le daemon nodyx (celui qui fait vraiment tourner les apps)
+if ! runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -q 'pm2-logrotate'; then
   npm install -g pm2-logrotate --silent 2>/dev/null || true
-  pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
-  pm2 set pm2-logrotate:retain 7 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:retain 7 2>/dev/null || true
   ok "pm2-logrotate configuré (50M, 7 jours)"
 fi
 
@@ -1697,7 +1698,8 @@ fi
 if [[ "${want_subdomain,,}" != "n" ]]; then
   info "Enregistrement auprès du directory nodyx.org..."
 
-  REGISTER_RESPONSE=$(curl -s -X POST "${NODYX_DIRECTORY_URL}/register" \
+  REGISTER_HTTP_CODE=""
+  REGISTER_RESPONSE=$(curl -s -w '\n__HTTP_CODE__:%{http_code}' -X POST "${NODYX_DIRECTORY_URL}/register" \
     -H "Content-Type: application/json" \
     -d "{
       \"name\":        \"${COMMUNITY_NAME}\",
@@ -1706,6 +1708,8 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
       \"language\":    \"${COMMUNITY_LANG}\",
       \"version\":     \"${NODYX_VERSION}\"
     }" 2>/dev/null || true)
+  REGISTER_HTTP_CODE=$(echo "$REGISTER_RESPONSE" | grep -o '__HTTP_CODE__:[0-9]*' | cut -d: -f2 || echo "000")
+  REGISTER_RESPONSE=$(echo "$REGISTER_RESPONSE" | grep -v '__HTTP_CODE__' || true)
 
   REGISTER_TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
   REGISTER_SLUG=$(echo "$REGISTER_RESPONSE" | grep -o '"subdomain":"[^"]*"' | cut -d'"' -f4 || true)
@@ -1730,7 +1734,8 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
     cd "${NODYX_DIR}" && runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core 2>/dev/null || true
   else
     # Check for slug conflict (409) — common on reinstall / machine change
-    if echo "$REGISTER_RESPONSE" | grep -q 'Slug already taken'; then
+    # Double check : code HTTP 409 ET/OU message "already taken" dans la réponse
+    if [[ "${REGISTER_HTTP_CODE}" == "409" ]] || echo "$REGISTER_RESPONSE" | grep -qi 'already taken\|slug.*conflict\|already registered'; then
       warn "Le slug '${COMMUNITY_SLUG}' est déjà enregistré dans le directory."
       if $RELAY_MODE; then
         echo ""
@@ -2037,7 +2042,7 @@ _ram_total=$(free -m 2>/dev/null | awk '/^Mem/{print $2}')
 _swap=$(free -m 2>/dev/null | awk '/^Swap/{print $2}')
 [[ "$_ram_free" -gt 300 ]] \
   && _pass "RAM disponible" "${_ram_free} MB / ${_ram_total} MB" \
-  || _warn "RAM disponible" "${_ram_free} MB / ${_ram_total} MB  (ajouterle swap !)"
+  || _warn "RAM disponible" "${_ram_free} MB / ${_ram_total} MB  (ajouter le swap !)"
 [[ "$_swap" -gt 0 ]] \
   && _pass "Swap" "${_swap} MB" \
   || _warn "Swap" "aucun swapfile — ajouter : fallocate -l 1G /swapfile && mkswap /swapfile && swapon /swapfile"
