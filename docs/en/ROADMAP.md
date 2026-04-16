@@ -25,6 +25,8 @@
 | **Phase 4.9** | Process isolation, test coverage & CI hardening (v1.9.4) | ✅ Complete |
 | **Phase 4.10** | Living Profile + Forum Redesign (v1.9.5) | ✅ Complete |
 | **Phase 4.11** | Private & Sovereign Communications — E2E DMs (v2.0) | ✅ Complete |
+| **Phase 4.12** | Homepage Builder + Widget SDK (v2.1) | ✅ Complete |
+| **Phase 4.13** | NodyxCanvas — Major upgrade (v2.2) | ✅ Complete |
 | Phase 5 | Mobile + Nodes + Reactions + Discord import | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
@@ -571,6 +573,64 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [x] **Real-time delete** — soft-delete propagated instantly to all participants via Socket.IO
 - [x] **DM full-width redesign** — split layout glassmorphism, iMessage-style grouped bubbles
 - [x] **AudioContext fix** — single shared context for all peer VAD (Chrome 6-context-per-origin limit)
+
+---
+
+## PHASE 4.12 — Homepage Builder + Widget SDK ✅ COMPLETE (v2.1)
+### Goal: Every community gets its own fully customizable homepage
+
+- [x] **Homepage Builder** — drag-and-drop admin editor, 11 layout zones (banner, hero, stats-bar, main, sidebar, half ×2, trio ×3, footer ×4)
+- [x] **Plugin registry** — each native widget is a self-contained file, zero core changes to add new ones
+- [x] **4 native widgets Phase 1** — Hero Banner (live/event/night variants), Stats Bar (animated counters), Join Card, Announcement Banner
+- [x] **Visibility rules** — per-widget audience (all / guests / members) + scheduled start/end dates
+- [x] **Widget Store** — install external widgets via `.zip` upload (XHR progress bar, 4-step validation, extraction whitelist)
+- [x] **Dynamic Widget Loader** — Web Components loaded at runtime, no rebuild, no deploy
+- [x] **Widget SDK** — plain JS Custom Elements (Shadow DOM), `manifest.json` schema → auto-generated config fields in builder
+- [x] **Demo widget: Video Player** — YouTube / Vimeo / MP4 with live preview, source viewer, one-click install
+
+---
+
+## PHASE 4.13 — NodyxCanvas Major Upgrade ✅ COMPLETE (v2.2)
+### Goal: Turn the collaborative whiteboard into a full creative workspace
+
+> *"From a basic drawing tool to a real async collaboration platform."*
+> The canvas was rewritten from scratch with 4 dedicated UI components, 11 drawing tools,
+> a persistent undo/redo stack, and a board-scoped chat — all synchronized via CRDT Socket.IO.
+
+### 4.13.1 — UI Architecture (Sprint A)
+
+- [x] **4 dedicated components** — CanvasLeftToolbar (tool selector), CanvasTopBar (contextual options), CanvasBottomBar (undo/zoom/grid), CanvasRightPanel (participants + chat)
+- [x] **CanvasLeftToolbar** — vertical tool selector with keyboard shortcut badges (V/P/T/N/R/C/S/A/X/I/F/E)
+- [x] **CanvasTopBar** — contextual controls per tool: pen (color + 6 widths), text (B/I/U/S + align + font + size + color), sticky (8-color palette), rect/circle (fill toggle + fill color + stroke color + stroke width), shape (5-type picker + fill + stroke), arrow (style + end cap + width), connector (type + style + start cap + end cap + color + width)
+- [x] **CanvasBottomBar** — Undo / Redo buttons (active/disabled state), Zoom− / % / Zoom+ / Reset, grid toggle (G), snap toggle
+- [x] **CanvasRightPanel** — collapsible right panel: participant list with real avatar, live tool indicator, color dot; board-scoped real-time chat with iMessage-style bubbles
+- [x] **Full keyboard shortcuts** — V P T N R C S A X I F E G + Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z + Delete + Escape
+- [x] **Portal rendering** — canvas mounted on `document.body` via `use:portal`, bypasses `position:fixed` broken by CSS `transform` ancestors
+- [x] **Real user avatars** — participant panel shows actual user avatars with fallback to initials
+- [x] **Undo / Redo** — 50-op `UndoOp { id, before, after }` stack per session. Fixed CRDT LWW timestamp bug (`ts: Date.now()` on restore)
+- [x] **Snap to grid** — `snapV(v) = snapEnabled ? Math.round(v / 28) * 28 : v`, applies on creation + move + resize
+- [x] **Rich text rendering** — bold/italic via `ctx.font`, underline + strikethrough drawn manually (line at baseline), word-wrap with `buildTextLines()`
+
+### 4.13.2 — New tools (Sprint B)
+
+- [x] **Advanced shapes** — triangle, diamond, star (5-point), hexagon, cloud — drawn via `Path2D`, fill + stroke + optional label inside
+- [x] **Connectors** — straight / bezier / elbow lines, independent `startCap` and `endCap` (arrow/dot/none), solid/dashed/dotted style, 2-click creation with first-point indicator
+- [x] **Frames / Sections** — named rectangular regions with dashed border + semi-transparent fill + label above; inline name input overlay on creation
+- [x] **Image insertion** — drag & drop from desktop or file picker → multipart upload to `/api/v1/assets` (fields ordered before file for `@fastify/multipart`), async cache (`Map<string, HTMLImageElement>`), proportional sizing (max 400px)
+- [x] **Toolbar wired** — CanvasLeftToolbar and CanvasTopBar updated for shape, connector, frame, image tools
+
+### 4.13.3 — Resize handles (Phase 1.1)
+
+- [x] **8 resize handles** — corners (nw/ne/sw/se) + midpoints (n/s/e/w) rendered in screen space after canvas transform, fixed 5px size at any zoom
+- [x] **Supported elements** — rect, circle, shape, frame, image, sticky
+- [x] **Live resize** — `applyResize()` updates x/y/w/h during drag, minimum size 12px, snap-aware
+- [x] **Undo/redo** — resize ops pushed to undo stack, restored via CRDT with fresh timestamp
+
+### 4.13.4 — Bug fixes
+
+- [x] **CRDT undo fix** — `undo()` now restores `{ ...entry.before, ts: Date.now() }` instead of `entry.before` directly — prevents silent rejection by LWW check
+- [x] **Image upload field order** — text fields (`name`, `asset_type`) appended before file in FormData so `@fastify/multipart` can read them from the stream before encountering the binary
+- [x] **HTML structure** — frame name overlay correctly placed inside center container div (was causing parse error at line 1518)
 
 ---
 

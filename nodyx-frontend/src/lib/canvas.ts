@@ -2,12 +2,18 @@
 // Collaborative canvas synced via Socket.IO.
 // CRDT strategy: Last-Write-Wins per element (UUID + timestamp).
 
-export type CanvasTool = 'select' | 'pen' | 'text' | 'sticky' | 'rect' | 'circle' | 'arrow' | 'eraser'
+export type CanvasTool =
+  | 'select' | 'pen' | 'text' | 'sticky'
+  | 'rect'   | 'circle' | 'arrow' | 'connector'
+  | 'image'  | 'frame'  | 'shape' | 'eraser'
+
+export type AdvancedShape = 'triangle' | 'diamond' | 'star' | 'hexagon' | 'cloud'
 
 export type PathData = {
   points: [number, number][]
   color:  string
   width:  number
+  opacity?: number
 }
 
 export type StickyData = {
@@ -20,40 +26,103 @@ export type StickyData = {
 }
 
 export type ShapeData = {
+  x:           number
+  y:           number
+  w:           number
+  h:           number
+  color:       string   // fill color
+  fill:        boolean
+  strokeColor?: string
+  strokeWidth?: number
+  opacity?:    number
+  shape?:      AdvancedShape   // undefined = rect/circle (legacy)
+  label?:      string          // text inside shape
+}
+
+export type TextData = {
+  x:              number
+  y:              number
+  text:           string
+  color:          string
+  fontSize:       number
+  bold?:          boolean
+  italic?:        boolean
+  underline?:     boolean
+  strikethrough?: boolean
+  align?:         'left' | 'center' | 'right'
+  fontFamily?:    'sans' | 'serif' | 'mono'
+  w?:             number   // max width (word-wrap)
+}
+
+export type ArrowData = {
+  x1:         number
+  y1:         number
+  x2:         number
+  y2:         number
+  color:      string
+  width:      number
+  lineStyle?: 'solid' | 'dashed' | 'dotted'
+  startCap?:  'none' | 'arrow' | 'dot'
+  endCap?:    'arrow' | 'none' | 'dot'
+}
+
+export type ImageData = {
+  x:        number
+  y:        number
+  w:        number
+  h:        number
+  url:      string
+  assetId?: string
+  opacity?: number
+}
+
+export type FrameData = {
   x:     number
   y:     number
   w:     number
   h:     number
+  name:  string
   color: string
-  fill:  boolean
 }
 
-export type TextData = {
-  x:        number
-  y:        number
-  text:     string
+export type ConnectorData = {
+  x1: number; y1: number
+  x2: number; y2: number
+  type:     'straight' | 'bezier' | 'elbow'
+  style:    'solid' | 'dashed' | 'dotted'
   color:    string
-  fontSize: number
-  bold:     boolean
-  italic:   boolean
-}
-
-export type ArrowData = {
-  x1:    number
-  y1:    number
-  x2:    number
-  y2:    number
-  color: string
-  width: number
+  width:    number
+  startCap: 'none' | 'arrow' | 'dot'
+  endCap:   'none' | 'arrow' | 'dot'
 }
 
 export type CanvasElement = {
-  id:      string
-  ts:      number
-  author:  string
-  kind:    CanvasTool
-  data:    PathData | StickyData | ShapeData | TextData | ArrowData
+  id:       string
+  ts:       number
+  author:   string
+  kind:     CanvasTool
+  data:     PathData | StickyData | ShapeData | TextData | ArrowData | ImageData | FrameData | ConnectorData
   deleted?: boolean
+  url?:     string   // optional link on any element
+}
+
+// ── Participants & Chat ───────────────────────────────────────────────────────
+
+export type CanvasPeer = {
+  userId:   string
+  username: string
+  avatar?:  string | null
+  tool?:    CanvasTool
+  color?:   string
+  active:   boolean   // was seen in last 30s
+}
+
+export type CanvasChatMsg = {
+  id:       string
+  userId:   string
+  username: string
+  text:     string
+  ts:       number
 }
 
 // Socket.IO message types
@@ -75,6 +144,8 @@ export type CanvasSocketCursor = {
   x:        number   // world coordinates
   y:        number
   speaking: boolean
+  tool?:    CanvasTool
+  color?:   string
 }
 
 // ── View transform (pan + zoom) ───────────────────────────────────────────────
@@ -86,8 +157,8 @@ export type ViewTransform = {
 }
 
 export const DEFAULT_TRANSFORM: ViewTransform = { x: 0, y: 0, scale: 1 }
-export const MIN_SCALE = 0.1
-export const MAX_SCALE = 8
+export const MIN_SCALE = 0.05
+export const MAX_SCALE = 10
 
 /** Convert screen coordinates → world coordinates */
 export function screenToWorld(sx: number, sy: number, t: ViewTransform): [number, number] {
@@ -116,10 +187,6 @@ export function zoomAt(t: ViewTransform, delta: number, pivotX: number, pivotY: 
 export class CanvasState {
   elements = new Map<string, CanvasElement>()
 
-  /**
-   * Apply a remote or local operation (LWW).
-   * Returns true if the state changed (caller should redraw).
-   */
   apply(op: CanvasElement): boolean {
     const existing = this.elements.get(op.id)
     if (existing && existing.ts >= op.ts) return false
@@ -127,7 +194,6 @@ export class CanvasState {
     return true
   }
 
-  /** Soft-delete all elements with ts ≤ clearTs */
   clear(clearTs: number): void {
     for (const [id, el] of this.elements) {
       if (el.ts <= clearTs) {
@@ -136,7 +202,6 @@ export class CanvasState {
     }
   }
 
-  /** Load a full snapshot from the server */
   loadSnapshot(elements: CanvasElement[]): void {
     this.elements.clear()
     for (const el of elements) {
@@ -144,7 +209,6 @@ export class CanvasState {
     }
   }
 
-  /** All non-deleted elements sorted by timestamp */
   snapshot(): CanvasElement[] {
     return [...this.elements.values()]
       .filter(el => !el.deleted)

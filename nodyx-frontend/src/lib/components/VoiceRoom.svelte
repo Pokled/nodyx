@@ -326,6 +326,7 @@
 		socket={socket}
 		{userId}
 		username={myUsername}
+		userAvatar={myAvatar}
 		onclose={() => showCanvas = false}
 	/>
 {/if}

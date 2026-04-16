@@ -7,9 +7,9 @@
 ### *"The network is the people."*
 
 **The self-hosted community platform you actually own.**  
-Forum + Chat + Voice + P2P + Homepage Builder + Widget SDK — one server, one community, forever.
+Forum + Chat + Voice + P2P + Canvas + Homepage Builder + Widget SDK — one server, one community, forever.
 
-[![Version](https://img.shields.io/badge/version-v2.1.0-7c3aed)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.2.0-7c3aed)](CHANGELOG.md)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
@@ -221,17 +221,42 @@ Messages between peers that never touch the server.
 - **P2P file transfer** — assets shared directly between peers
 - **Graceful fallback** — if DataChannel unavailable (strict NAT), Socket.IO takes over transparently
 
-### NodyxCanvas — Collaborative P2P whiteboard
+### NodyxCanvas — Collaborative whiteboard (v2.2)
 
-Draw together in real time. Synchronized via existing DataChannels.
-No server touches the data. Session-only by default.
+Draw, annotate, and build together in real time — directly inside voice channels.
+Synced via Socket.IO CRDT. Every op is persistent (PostgreSQL JSONB snapshot).
 
 ```
 CRDT Last-Write-Wins per element (UUID + timestamp)
-canvas:op / canvas:clear / canvas:cursor  →  P2P DataChannels
+canvas:op / canvas:clear / canvas:cursor / canvas:chat  →  Socket.IO
 Voice-aware cursors: peer cursor pulses when they're speaking
-PNG export (browser-native) + text recap posted to chat channel
+Real-time participants panel with live tool + avatar
+Board-scoped chat (independent from the voice channel chat)
 ```
+
+**Tools (v2.2):**
+
+| Tool | Key | Description |
+|---|---|---|
+| Select | V | Move + resize with 8 handles (corners + midpoints) |
+| Pen | P | Freehand drawing — color, width, opacity |
+| Text | T | Rich inline text — bold/italic/underline/strike, align, font, size |
+| Sticky | N | Post-it note — 8 colors, multiline |
+| Rect / Circle | R / C | Fill + stroke with independent colors and width |
+| Shape | S | Advanced shapes — triangle, diamond, star, hexagon, cloud |
+| Arrow | A | Styled arrows — solid/dashed/dotted, 3 cap types |
+| Connector | X | Smart connectors — straight/bezier/elbow, independent start+end caps |
+| Image | I | Drag & drop or file picker → uploaded to `/assets`, rendered on canvas |
+| Frame | F | Named section — label + dashed border, groups elements visually |
+| Eraser | E | Point eraser |
+
+**Canvas features:**
+- Undo / Redo — 50-op stack per session, Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z
+- Snap to grid — 28px world grid, toggleable (G)
+- Zoom — Ctrl+Scroll, pinch, or toolbar buttons (5% → 1000%)
+- Pan — Space+drag or middle-click drag
+- Minibar bottom — zoom %, grid toggle, snap toggle
+- Export PNG — downloads full canvas, posts recap to chat channel
 
 ---
 
@@ -431,7 +456,7 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 | Voice | WebRTC P2P mesh — no central audio relay |
 | TURN relay | **nodyx-turn** — Rust 2.9 MB, replaces coturn |
 | P2P relay | **nodyx-relay** — Rust TCP tunnel, runs on home servers |
-| Collaborative canvas | **NodyxCanvas** — CRDT LWW, P2P DataChannels |
+| Collaborative canvas | **NodyxCanvas** — CRDT LWW, Socket.IO sync, 11 tools, resize handles, undo/redo |
 | Homepage | **Homepage Builder** — 11 zones, drag & drop, visibility rules |
 | Widgets | **Widget Store** — .zip install + **Widget SDK** (Web Components) |
 | Passwordless auth | **Nodyx Signet** — ECDSA P-256 PWA — `nodyx-authenticator/` |
@@ -521,6 +546,27 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 </details>
 
 <details open>
+<summary><b>v2.2 — NodyxCanvas major upgrade 🎨</b></summary>
+
+| Feature | Version |
+|---|---|
+| **Canvas UI refactor** — 4 dedicated components: CanvasLeftToolbar, CanvasTopBar (contextual per tool), CanvasBottomBar, CanvasRightPanel | v2.2 |
+| **Undo / Redo** — 50-op stack, Ctrl+Z/Y/Shift+Z, buttons with active/disabled state. Fixed CRDT LWW timestamp so undo always applies | v2.2 |
+| **Snap to grid** — 28px world grid, toggle (G key), visual grid overlay | v2.2 |
+| **Rich text** — bold, italic, underline, strikethrough, alignment (left/center/right), 3 font families (sans/serif/mono), 12 font sizes | v2.2 |
+| **Advanced shapes** — triangle, diamond (losange), star, hexagon, cloud — rendered via Path2D, fill + stroke + label | v2.2 |
+| **Connectors** — straight / bezier / elbow lines, independent start & end caps (arrow/dot/none), solid/dashed/dotted style, 2-click creation | v2.2 |
+| **Frames / Sections** — named rectangular regions with dashed border, label rendered above, inline name input on creation | v2.2 |
+| **Image insertion** — drag & drop from desktop or file picker, uploaded to `/api/v1/assets`, cached and rendered on canvas, proportional sizing | v2.2 |
+| **Resize handles** — 8 handles (corners + midpoints) on selected rect/circle/shape/frame/image/sticky elements, live preview, snap-aware | v2.2 |
+| **Real user avatars** — participant panel shows real user avatars (with initials fallback) and their active tool | v2.2 |
+| **Board chat** — real-time chat scoped to the canvas board, independent from the voice channel chat | v2.2 |
+| **Full keyboard shortcuts** — V P T N R C S A X I F E (tools) + G (grid) + Ctrl+Z/Y/Shift+Z (undo/redo) + Delete + Escape | v2.2 |
+| **Portal rendering** — canvas mounted on `document.body` via portal action, bypasses CSS `transform` ancestors that break `position:fixed` | v2.2 |
+
+</details>
+
+<details>
 <summary><b>v2.1 — Homepage Builder + Widget SDK 🧩</b></summary>
 
 | Feature | Version |
@@ -541,6 +587,12 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 
 | Feature | Notes |
 |---|---|
+| **Canvas — Brainwave Sync** — host broadcasts pan+zoom to all participants in real time, followers stay synchronized | Sprint C |
+| **Canvas — Ghost Mode** — anonymous brainstorming: contributions appear under random pseudonyms, author revealed at end | Sprint C |
+| **Canvas — Minimap** — 160×120 thumbnail in bottom-right, click to navigate | Sprint C |
+| **Canvas — Multi-selection** — Shift+click or lasso to select + move + delete multiple elements | Sprint C |
+| **Canvas — Audio Stickies** — voice note recorded directly on the canvas, waveform rendered as post-it | Sprint D |
+| **Canvas — Contextual Chat** — threaded discussion anchored to a canvas zone, spatially indexed | Sprint D |
 | **More native widgets** — Countdown, Leaderboard, Latest Threads, Featured Events, Jukebox Player | Phase 2 |
 | **Widget marketplace** — community-published widgets, ratings, one-click install from directory | — |
 | **Nodes** — durable structured knowledge, community-validated via Garden | [SPEC 013](docs/en/specs/013-node/SPEC.md) |
