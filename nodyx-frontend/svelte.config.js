@@ -10,7 +10,7 @@ const config = {
 
         // Désactive le check d'origine CSRF (dev multi-host : 192.168.x.x, DDNS, etc.)
         csrf: {
-            checkOrigin: false,
+            trustedOrigins: ['*'],
         },
 
         serviceWorker: {
