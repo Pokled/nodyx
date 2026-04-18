@@ -669,13 +669,23 @@ The core (`nodyx-core/src/`) requires discussion first — open an Issue.
 
 ---
 
-## Contributors
+## 🌟 Nodyx Stars — Contributors
 
-Nodyx is built in the open, and we recognize every external contribution.
+Every external contribution earns a star. Every Star goes on [our Hall of Fame](CONTRIBUTORS.md) — with avatar, profile link, and rank.
 
-**First external contribution:** [@Pranto2003](https://github.com/Pranto2003) — added `Ctrl/Cmd + D` to duplicate selected canvas elements ([PR #11](https://github.com/Pokled/nodyx/pull/11)). Thank you 🙏
+**Recognition is not optional here.** Open source without recognition is just free labor, and that's not how we roll.
 
-See the full list in [CONTRIBUTORS.md](CONTRIBUTORS.md).
+### 🏆 First external contributor
+
+<a href="https://github.com/Pranto2003"><img src="https://github.com/Pranto2003.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="Pranto"/></a>
+
+**[Pranto Goswamee](https://github.com/Pranto2003)** — 🌟 × 1 — added `Ctrl/Cmd + D` canvas duplication ([PR #11](https://github.com/Pokled/nodyx/pull/11)).
+
+*First external contribution to Nodyx ever. Thank you 🙏*
+
+<br/>
+
+👉 **[See all contributors →](CONTRIBUTORS.md)**
 
 ---
 
