@@ -1726,13 +1726,36 @@
 	// ── Keyboard ──────────────────────────────────────────────────────────────
 
 	function onKeydown(e: KeyboardEvent) {
-		// Ne pas interférer quand l'utilisateur tape dans un input/textarea/chat
+		
 		const tag = (e.target as HTMLElement)?.tagName
 		if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
 
 		if (e.code === 'Space' && !overlayEdit) { spaceDown = true; e.preventDefault() }
 		if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey)  { e.preventDefault(); undo() }
 		if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo() }
+		if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedIds.size > 0) {
+			e.preventDefault()
+			const ts = Date.now()
+			const newIds = new Set<string>()
+			for (const id of selectedIds) {
+				const el = cs.elements.get(id)
+				if (el && !el.deleted && !el.locked) {
+					const clone = {
+						...el,
+						id: crypto.randomUUID(),
+						ts,
+						x: (el.x ?? 0) + 20,
+						y: (el.y ?? 0) + 20,
+					}
+					pushUndo({ id: clone.id, before: null, after: clone })
+					cs.apply(clone)
+					socket?.emit('canvas:op', { boardId, op: clone })
+					newIds.add(clone.id)
+				}
+			}
+			selectedIds = newIds
+			render()
+		}
 		if ((e.key === 'g' || e.key === 'G') && !overlayEdit) { showGrid = !showGrid; render() }
 		if (!e.ctrlKey && !e.metaKey && !overlayEdit && !frameNameOverlay) {
 			const k = e.key.toLowerCase()
