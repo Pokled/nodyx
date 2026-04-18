@@ -1741,19 +1741,15 @@
 				const newIds = new Set<string>()
 				for (const id of selectedIds) {
 					const el = cs.elements.get(id)
-					if (el && !el.deleted && !el.locked) {
-						const clone = {
-							...el,
-							id: crypto.randomUUID(),
-							ts,
-							x: (el.x ?? 0) + 20,
-							y: (el.y ?? 0) + 20,
-						}
-						cs.apply(clone)
-						pushUndo({ id: clone.id, before: null, after: clone })
-						socket?.emit('canvas:op', { boardId, op: clone })
-						newIds.add(clone.id)
-					}
+					if (!el || el.deleted || el.locked) continue
+					// Décalage +20/+20 via moveElement — gère pen/sticky/shape/arrow/connector
+					const moved = moveElement(el, el.data, 20, 20)
+					if (!moved) continue
+					const clone = { ...moved, id: crypto.randomUUID(), ts }
+					cs.apply(clone)
+					pushUndo({ id: clone.id, before: null, after: clone })
+					socket?.emit('canvas:op', { boardId, op: clone })
+					newIds.add(clone.id)
 				}
 				if (newIds.size > 0) { selectedIds = newIds; render() }
 			}

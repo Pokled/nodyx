@@ -55,7 +55,7 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
 
 | Contributor | Contribution | Type | PR | Polish applied | Date |
 |---|---|---|---|---|---|
-| [@Pranto2003](https://github.com/Pranto2003) | Ctrl/Cmd + D to duplicate selected canvas elements | `feat(canvas)` | [#11](https://github.com/Pokled/nodyx/pull/11) | [`d19682f`](https://github.com/Pokled/nodyx/commit/d19682f) · [`cbecb2f`](https://github.com/Pokled/nodyx/commit/cbecb2f) | 2026-04-18 |
+| [@Pranto2003](https://github.com/Pranto2003) | Ctrl/Cmd + D to duplicate selected canvas elements | `feat(canvas)` | [#11](https://github.com/Pokled/nodyx/pull/11) | [`d19682f`](https://github.com/Pokled/nodyx/commit/d19682f) · [`cbecb2f`](https://github.com/Pokled/nodyx/commit/cbecb2f) · [`POLISH_3`] | 2026-04-18 |
 
 ---
 
@@ -78,7 +78,15 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
 - Moved `preventDefault()` outside the `selectedIds.size > 0` guard
 - Fixes a UX bug: without a selection, Chrome/Firefox would open the "Add bookmark" dialog on the canvas page
 
-Caught during production testing after merge. Not visible in async review. **This is exactly why we merge-then-polish: some bugs only surface when real hands touch real pixels.**
+Caught during production testing after merge. Not visible in async review.
+
+**Polish commit 3:** [`POLISH_3`] — `fix(canvas): use moveElement() for proper type-safe clone offset`
+- Replaced top-level `el.x / el.y` access (which doesn't exist on `CanvasElement`) with the existing `moveElement(el, el.data, 20, 20)` helper
+- Fixes **2 TypeScript errors** that broke CI after merge
+- Also fixes a runtime bug: the `+20px` offset wasn't actually applied — clones were stacking exactly on top of the originals (caught thanks to the CI red flag)
+- Now supports every canvas element type correctly: pen paths, sticky notes, shapes, arrows, connectors, frames
+
+**This is exactly why we merge-then-polish: some bugs only surface when real hands touch real pixels, and some only when CI runs the type checker.** Three polish passes on one PR is not a failure — it's the system working. The contributor still gets the star, the feature ships, the codebase stays clean. Everyone wins.
 
 ---
 
