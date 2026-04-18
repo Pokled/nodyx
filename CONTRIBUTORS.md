@@ -135,6 +135,14 @@ This is the deal:
 
 ---
 
+### A note on how this page came to be
+
+The *Polish Trail* and *serious about quality* sections above didn't exist before PR #11. They exist **because of it** — that's what one contribution taught us on April 18, 2026.
+
+Nothing is ever perfect. People show up trying to help, sometimes they get it slightly wrong while trying to do good — but the gesture is there. That's the part that counts, and that's the part we protect here.
+
+---
+
 <div align="center">
 
 *"We built the internet to bring people together. Not to divide them."*
