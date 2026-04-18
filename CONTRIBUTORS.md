@@ -65,9 +65,9 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
   <tr>
     <td align="center" width="200">
       <a href="https://github.com/Pokled">
-        <img src="https://github.com/Pokled.png?size=120" width="120" height="120" style="border-radius:50%;" alt="Noah"/>
+        <img src="https://github.com/Pokled.png?size=120" width="120" height="120" style="border-radius:50%;" alt="Jonathan"/>
         <br/>
-        <sub><b>Noah (Pokled)</b></sub>
+        <sub><b>Jonathan (Pokled)</b></sub>
       </a>
       <br/>
       <sub><em>Creator & core maintainer</em></sub>
