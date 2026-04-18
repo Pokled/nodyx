@@ -1726,7 +1726,7 @@
 	// ── Keyboard ──────────────────────────────────────────────────────────────
 
 	function onKeydown(e: KeyboardEvent) {
-		
+		// Ne pas interférer quand l'utilisateur tape dans un input/textarea/chat
 		const tag = (e.target as HTMLElement)?.tagName
 		if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
 
@@ -1747,14 +1747,13 @@
 						x: (el.x ?? 0) + 20,
 						y: (el.y ?? 0) + 20,
 					}
-					pushUndo({ id: clone.id, before: null, after: clone })
 					cs.apply(clone)
+					pushUndo({ id: clone.id, before: null, after: clone })
 					socket?.emit('canvas:op', { boardId, op: clone })
 					newIds.add(clone.id)
 				}
 			}
-			selectedIds = newIds
-			render()
+			if (newIds.size > 0) { selectedIds = newIds; render() }
 		}
 		if ((e.key === 'g' || e.key === 'G') && !overlayEdit) { showGrid = !showGrid; render() }
 		if (!e.ctrlKey && !e.metaKey && !overlayEdit && !frameNameOverlay) {

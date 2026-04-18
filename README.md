@@ -669,6 +669,16 @@ The core (`nodyx-core/src/`) requires discussion first — open an Issue.
 
 ---
 
+## Contributors
+
+Nodyx is built in the open, and we recognize every external contribution.
+
+**First external contribution:** [@Pranto2003](https://github.com/Pranto2003) — added `Ctrl/Cmd + D` to duplicate selected canvas elements ([PR #11](https://github.com/Pokled/nodyx/pull/11)). Thank you 🙏
+
+See the full list in [CONTRIBUTORS.md](CONTRIBUTORS.md).
+
+---
+
 ## Support Nodyx
 
 Nodyx is built by one developer, with no VC money and no strings attached. If the project is useful to you, consider supporting it:
