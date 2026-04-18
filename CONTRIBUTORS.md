@@ -53,9 +53,32 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
 
 ## Contribution log
 
-| Contributor | Contribution | Type | PR | Date |
-|---|---|---|---|---|
-| [@Pranto2003](https://github.com/Pranto2003) | Ctrl/Cmd + D to duplicate selected canvas elements | `feat(canvas)` | [#11](https://github.com/Pokled/nodyx/pull/11) | 2026-04-18 |
+| Contributor | Contribution | Type | PR | Polish applied | Date |
+|---|---|---|---|---|---|
+| [@Pranto2003](https://github.com/Pranto2003) | Ctrl/Cmd + D to duplicate selected canvas elements | `feat(canvas)` | [#11](https://github.com/Pokled/nodyx/pull/11) | [`d19682f`](https://github.com/Pokled/nodyx/commit/d19682f) · [`cbecb2f`](https://github.com/Pokled/nodyx/commit/cbecb2f) | 2026-04-18 |
+
+---
+
+## The Polish Trail — what we fixed behind each contribution
+
+**Transparency matters.** Every external contribution is listed below with the polish commits that followed the merge. This is not a walk of shame — it's proof that we care about the final quality of the codebase, and that we do the cleanup ourselves rather than sending contributors through review hell.
+
+**The contributor keeps the feature credit, we keep the polish behind them.** Both are visible. Both are in the repo forever.
+
+### PR [#11](https://github.com/Pokled/nodyx/pull/11) — @Pranto2003 — `feat(canvas): Ctrl/Cmd + D`
+
+**Original commit:** [`90f3644`](https://github.com/Pokled/nodyx/commit/90f3644) — core logic was correct, pattern-matched the existing `cs.apply` / `pushUndo` / `socket.emit` pipeline, included `preventDefault`, handled multi-selection.
+
+**Polish commit 1:** [`d19682f`](https://github.com/Pokled/nodyx/commit/d19682f) — `chore(contrib): polish PR #11`
+- Restored an inline comment in `onKeydown` that had been removed
+- Reordered `cs.apply` → `pushUndo` → `socket.emit` to match the 23 other handlers in the file
+- Added a guard so `selectedIds` isn't wiped when every selected element was locked/deleted
+
+**Polish commit 2:** [`cbecb2f`](https://github.com/Pokled/nodyx/commit/cbecb2f) — `fix(canvas): always preventDefault on Ctrl+D`
+- Moved `preventDefault()` outside the `selectedIds.size > 0` guard
+- Fixes a UX bug: without a selection, Chrome/Firefox would open the "Add bookmark" dialog on the canvas page
+
+Caught during production testing after merge. Not visible in async review. **This is exactly why we merge-then-polish: some bugs only surface when real hands touch real pixels.**
 
 ---
 
@@ -92,6 +115,15 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
 If your code has rough edges, we add a follow-up commit and you still get your star. We'd rather merge 100 imperfect contributions than block 10 perfect ones behind review hell.
 
 Your name, your GitHub avatar, and your profile link go on this page. **Forever.** This file is part of the repo — it'll outlive any of us.
+
+### But we're serious about quality
+
+The [Polish Trail](#the-polish-trail--what-we-fixed-behind-each-contribution) above lists every follow-up commit we added after merging. Nothing is hidden. You can see exactly what we changed, why, and where.
+
+This is the deal:
+- **You** ship the feature, keep the credit, earn the star.
+- **We** do the cleanup, publicly, with commits you can read.
+- **Nothing gets swept under the rug** — not your contribution, not our edits.
 
 ---
 
