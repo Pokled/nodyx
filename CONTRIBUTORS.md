@@ -139,7 +139,73 @@ This is the deal:
 
 The *Polish Trail* and *serious about quality* sections above didn't exist before PR #11. They exist **because of it** — that's what one contribution taught us on April 18, 2026.
 
-Nothing is ever perfect. People show up trying to help, sometimes they get it slightly wrong while trying to do good — but the gesture is there. That's the part that counts, and that's the part we protect here.
+> *« Rien n'est parfait. On veut aider, parfois même en croyant bien faire, on se trompe un peu, mais le geste est là. »*
+>
+> — Jonathan, April 18, 2026
+
+**That's the part that counts. That's the part we protect here.**
+
+<details>
+<summary><strong>🌍 The same words, in the languages of everyone who might read this one day</strong></summary>
+
+<br/>
+
+**🇬🇧 English**
+> *"Nothing is ever perfect. We try to help, and sometimes even when we think we're doing it right, we get it a little wrong — but the gesture is there."*
+
+**🇧🇩 বাংলা (Bengali)** — *for @Pranto2003, who brought us here*
+> *"কিছুই নিখুঁত নয়। আমরা সাহায্য করতে চাই, কখনও ভালো করার চেষ্টা করেও সামান্য ভুল করে ফেলি — কিন্তু উদ্যোগটি সেখানে আছে।"*
+
+**🇪🇸 Español**
+> *"Nada es perfecto. Queremos ayudar, a veces incluso creyendo hacer lo correcto nos equivocamos un poco — pero el gesto está ahí."*
+
+**🇧🇷 Português (Brasil)**
+> *"Nada é perfeito. Queremos ajudar, às vezes mesmo achando que estamos fazendo certo, a gente erra um pouquinho — mas o gesto está lá."*
+
+**🇩🇪 Deutsch**
+> *"Nichts ist perfekt. Wir wollen helfen, und selbst wenn wir glauben, es richtig zu machen, irren wir uns manchmal ein wenig — aber die Geste zählt."*
+
+**🇮🇹 Italiano**
+> *"Niente è perfetto. Vogliamo aiutare, e a volte anche credendo di fare bene, sbagliamo un po' — ma il gesto c'è."*
+
+**🇳🇱 Nederlands**
+> *"Niets is perfect. We willen helpen, soms zelfs wanneer we denken dat we het goed doen, gaan we een beetje de mist in — maar het gebaar is er."*
+
+**🇵🇱 Polski**
+> *"Nic nie jest idealne. Chcemy pomóc, czasem nawet myśląc, że robimy dobrze, trochę się mylimy — ale gest tam jest."*
+
+**🇹🇷 Türkçe**
+> *"Hiçbir şey mükemmel değildir. Yardım etmek isteriz, bazen doğrusunu yaptığımızı düşünürken biraz hata yaparız — ama jest oradadır."*
+
+**🇷🇺 Русский**
+> *"Ничто не идеально. Мы хотим помочь, иногда даже думая, что делаем правильно, ошибаемся немного — но жест есть."*
+
+**🇺🇦 Українська**
+> *"Ніщо не ідеальне. Ми хочемо допомогти, іноді навіть думаючи, що робимо правильно, трохи помиляємось — але жест є."*
+
+**🇨🇳 中文 (简体)**
+> *"没有什么是完美的。我们想要帮忙，有时即使觉得自己做对了，也会犯些小错——但心意在那里。"*
+
+**🇯🇵 日本語**
+> *"完璧なものなんて何もない。私たちは助けたいと思っていて、時には正しいと思っても少し間違えてしまう——でも、その気持ちは確かにそこにある。"*
+
+**🇰🇷 한국어**
+> *"완벽한 것은 없습니다. 우리는 돕고 싶고, 때로는 옳게 하고 있다고 생각해도 조금 틀릴 수 있어요 — 하지만 그 마음은 거기 있습니다."*
+
+**🇻🇳 Tiếng Việt**
+> *"Không gì là hoàn hảo. Chúng ta muốn giúp đỡ, đôi khi dù nghĩ rằng mình đang làm đúng, vẫn sai sót một chút — nhưng tấm lòng vẫn ở đó."*
+
+**🇸🇦 العربية**
+> *"لا شيء مثالي. نحن نريد أن نساعد، وأحيانًا حتى عندما نظن أننا نفعل الصواب، نخطئ قليلاً — لكن النية موجودة."*
+
+**🇮🇳 हिन्दी**
+> *"कुछ भी परफेक्ट नहीं होता। हम मदद करना चाहते हैं, कभी-कभी सही करते हुए भी थोड़ा गलत कर बैठते हैं — लेकिन भावना वहीं है।"*
+
+<br/>
+
+*If you speak a language not listed above and want to add it, open a PR. Your name goes on this wall, your language goes in this note. Nodyx is built by people — that's the whole point.*
+
+</details>
 
 ---
 
