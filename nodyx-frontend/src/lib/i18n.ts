@@ -13,7 +13,7 @@ import { browser }                from '$app/environment'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type Locale = 'fr' | 'en'
+export type Locale = 'fr' | 'en' | 'es'
 
 export interface LocaleMeta {
   code:  Locale
@@ -24,6 +24,7 @@ export interface LocaleMeta {
 export const LOCALES: LocaleMeta[] = [
   { code: 'fr', label: 'Français', flag: '🇫🇷' },
   { code: 'en', label: 'English',  flag: '🇬🇧' },
+  { code: 'es', label: 'Español',  flag: '🇪🇸' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -31,9 +32,10 @@ export const LOCALES: LocaleMeta[] = [
 // Import statique — tree-shaken, résolu au build
 import fr from './locales/fr.json'
 import en from './locales/en.json'
+import es from './locales/es.json'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const messages: Record<Locale, Record<string, any>> = { fr, en }
+const messages: Record<Locale, Record<string, any>> = { fr, en, es }
 
 // ── Store locale ──────────────────────────────────────────────────────────────
 
@@ -42,12 +44,13 @@ const STORAGE_KEY = 'nodyx_locale'
 function getInitialLocale(): Locale {
   if (!browser) return 'fr'
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'fr' || stored === 'en') return stored
+  if (stored === 'fr' || stored === 'en' || stored === 'es') return stored
   // Détection navigateur
   const nav = navigator.language.slice(0, 2).toLowerCase()
-  return nav === 'fr' ? 'fr' : 'en'
+  if (nav === 'fr') return 'fr'
+  if (nav === 'es') return 'es'
+  return 'en'
 }
-
 function createLocaleStore() {
   const { subscribe, set } = writable<Locale>('fr')
 
