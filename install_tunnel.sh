@@ -1,31 +1,333 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════════════
-#  Nodyx — Cloudflare Tunnel installer
-#  Pour les serveurs SANS port ouvert : Raspberry Pi, NAS, box internet…
-#  Supports : Ubuntu 22.04 / 24.04, Debian 11 / 12
-#  Usage    : bash install_tunnel.sh
+#  Nodyx - Cloudflare Tunnel installer / Installeur Cloudflare Tunnel
+#  Ubuntu 22.04 / 24.04  ·  Debian 11 / 12 / 13  ·  ARM64 supported
 #
-#  Différences avec install.sh :
-#    • Cloudflare Tunnel gère le HTTPS — Caddy écoute en HTTP local (port 80)
-#    • Ports 80 et 443 non exposés — CF Tunnel se connecte en SORTIE
-#    • cloudflared installé et démarré comme service systemd
-#    • Sous-domaine nodyx.org ignoré (incompatible avec CF Tunnel)
+#  For home servers behind NAT - no port 80/443 needed, outbound tunnel only.
+#  Pour serveurs derrière NAT - pas de port 80/443 à ouvrir, tunnel sortant.
+#
+#  ── Install (recommended) ──────────────────────────────────────────────────
+#
+#    curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh | sudo bash
+#
+#  ── Upgrade ────────────────────────────────────────────────────────────────
+#
+#    curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh | sudo bash -s -- --upgrade
+#
+#  ── Help ───────────────────────────────────────────────────────────────────
+#
+#    sudo bash install_tunnel.sh --help
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-# ── Couleurs ──────────────────────────────────────────────────────────────────
+INSTALLER_VERSION="1.1.0"
+
+# ── Auto-relaunch if stdin is piped (curl|bash) ───────────────────────────────
+if [[ ! -t 0 ]]; then
+  _SELF=$(mktemp /tmp/nodyx_tunnel_XXXXXX.sh)
+  curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh -o "$_SELF" 2>/dev/null \
+    || wget -qO "$_SELF" https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh
+  exec bash "$_SELF" "$@" </dev/tty
+fi
+
+# ── Colours ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
 
+# ── i18n ──────────────────────────────────────────────────────────────────────
+# Priority: --lang=  >  NODYX_LANG env  >  LANG auto-detect (fr*→fr)  >  en
+# Lookup chain: T_FR[k] → T_EN[k] → key (so missing strings stay visible)
+NODYX_LANG="${NODYX_LANG:-}"
+for _arg in "$@"; do
+  case "$_arg" in
+    --lang=*) NODYX_LANG="${_arg#*=}" ;;
+    --lang)   echo "Error: use --lang=en or --lang=fr (with =)" >&2; exit 1 ;;
+  esac
+done
+if [[ -z "$NODYX_LANG" ]]; then
+  case "${LANG:-}" in
+    fr*|FR*) NODYX_LANG=fr ;;
+    *)       NODYX_LANG=en ;;
+  esac
+fi
+case "$NODYX_LANG" in en|fr) ;; *) NODYX_LANG=en ;; esac
+export NODYX_LANG
+
+declare -A T_EN T_FR
+
+# ── Translations ──────────────────────────────────────────────────────────────
+# §1 - Banner / help
+T_EN[banner_subtitle]='Tunnel Installer v%s · Forum · Chat · Voice · Canvas'
+T_FR[banner_subtitle]='Installeur Tunnel v%s · Forum · Chat · Voice · Canvas'
+T_EN[banner_mode]='Cloudflare Tunnel mode - zero open ports, AGPL-3.0'
+T_FR[banner_mode]='Mode Cloudflare Tunnel - zéro port ouvert, AGPL-3.0'
+
+T_EN[help_usage]='  Usage: bash install_tunnel.sh [OPTIONS]'
+T_FR[help_usage]='  Utilisation : bash install_tunnel.sh [OPTIONS]'
+T_EN[help_modes_header]='  Modes (skip detection menu):'
+T_FR[help_modes_header]='  Modes (bypass du menu de détection) :'
+T_EN[help_upgrade]='    --upgrade          Update existing instance (rebuild+restart)'
+T_FR[help_upgrade]="    --upgrade          Mettre à jour l'instance existante (rebuild+restart)"
+T_EN[help_repair]='    --repair           Repair without reconfiguring (rebuild+restart)'
+T_FR[help_repair]='    --repair           Réparer sans reconfigurer (rebuild+restart)'
+T_EN[help_reinstall]='    --reinstall        Reinstall while preserving the DB'
+T_FR[help_reinstall]='    --reinstall        Réinstaller en préservant la DB'
+T_EN[help_wipe]='    --wipe             Reinstall + erase the DB (DANGER)'
+T_FR[help_wipe]='    --wipe             Réinstaller + effacer la DB (DANGER)'
+T_EN[help_config_header]='  Configuration (skip prompts):'
+T_FR[help_config_header]='  Configuration (évite les prompts) :'
+T_EN[help_domain]='    --domain=DOMAIN         Public domain managed by Cloudflare'
+T_FR[help_domain]='    --domain=DOMAIN         Domaine public géré par Cloudflare'
+T_EN[help_token]='    --tunnel-token=TOKEN    Cloudflare Tunnel token (from Zero Trust dashboard)'
+T_FR[help_token]='    --tunnel-token=TOKEN    Token du tunnel Cloudflare (dashboard Zero Trust)'
+T_EN[help_slug]='    --slug=SLUG             Community identifier'
+T_FR[help_slug]='    --slug=SLUG             Identifiant de la communauté'
+T_EN[help_name]='    --name=NAME             Community name'
+T_FR[help_name]='    --name=NAME             Nom de la communauté'
+T_EN[help_admin_user]='    --admin-user=USER       Admin username'
+T_FR[help_admin_user]="    --admin-user=USER       Nom d'utilisateur admin"
+T_EN[help_admin_email]='    --admin-email=EMAIL     Admin email'
+T_FR[help_admin_email]='    --admin-email=EMAIL     Email admin'
+T_EN[help_admin_pass]='    --admin-password=PASS   Admin password'
+T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin'
+T_EN[help_options_header]='  Options:'
+T_FR[help_options_header]='  Options :'
+T_EN[help_yes]='    --yes, -y          Auto-confirm all prompts'
+T_FR[help_yes]='    --yes, -y          Répondre oui à toutes les confirmations'
+T_EN[help_lang]='    --lang=en|fr       UI language (default: auto from $LANG)'
+T_FR[help_lang]='    --lang=en|fr       Langue (défaut : auto via $LANG)'
+T_EN[help_help]='    --help             Show this help'
+T_FR[help_help]='    --help             Afficher cette aide'
+T_EN[unknown_flag]='Unknown flag: %s (ignored)'
+T_FR[unknown_flag]='Flag inconnu : %s (ignoré)'
+
+# §2 - Preflight
+T_EN[err_root]='Run this script as root: sudo bash install_tunnel.sh'
+T_FR[err_root]='Lance ce script en root : sudo bash install_tunnel.sh'
+T_EN[err_os]='Unsupported OS. Use Ubuntu 22.04/24.04 or Debian 11/12/13.'
+T_FR[err_os]='OS non supporté. Utilise Ubuntu 22.04/24.04 ou Debian 11/12/13.'
+T_EN[err_arch]='Unsupported architecture: %s (need amd64 or arm64)'
+T_FR[err_arch]='Architecture non supportée : %s (besoin de amd64 ou arm64)'
+T_EN[ram_low]='Free RAM low: %s MB (recommended: 512+ MB)'
+T_FR[ram_low]='RAM disponible faible : %s MB (recommandé : 512+ MB)'
+T_EN[ram_swap_hint]='Tip: sudo fallocate -l 1G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile'
+T_FR[ram_swap_hint]='Astuce : sudo fallocate -l 1G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile'
+T_EN[continue_anyway]='Continue anyway?'
+T_FR[continue_anyway]='Continuer quand même ?'
+T_EN[disk_low]='Free disk on /opt low: %s MB (recommended: 1+ GB)'
+T_FR[disk_low]="Espace disque faible sur /opt : %s MB (recommandé : 1+ GB)"
+T_EN[install_cancelled]='Installation cancelled.'
+T_FR[install_cancelled]='Installation annulée.'
+
+# §3 - Detection menu
+T_EN[detect_existing]='Existing Nodyx installation detected (%s)'
+T_FR[detect_existing]='Installation Nodyx existante détectée (%s)'
+T_EN[detect_choose]='What would you like to do?'
+T_FR[detect_choose]='Que souhaites-tu faire ?'
+T_EN[detect_1]='1. Update    - git pull + rebuild + restart (keep config)'
+T_FR[detect_1]='1. Mise à jour - git pull + rebuild + restart (garde la config)'
+T_EN[detect_2]='2. Repair    - rebuild + restart (no config change)'
+T_FR[detect_2]='2. Réparation  - rebuild + restart (sans toucher la config)'
+T_EN[detect_3]='3. Reinstall - clean install, keep the database'
+T_FR[detect_3]='3. Réinstaller - install propre, garde la base de données'
+T_EN[detect_4]='4. Wipe      - reinstall + ERASE the database (DANGER)'
+T_FR[detect_4]='4. Wipe        - réinstaller + EFFACER la base (DANGER)'
+T_EN[detect_5]='5. Cancel'
+T_FR[detect_5]='5. Annuler'
+T_EN[detect_prompt]='Choice [1-5]'
+T_FR[detect_prompt]='Choix [1-5]'
+
+# §4 - Steps
+T_EN[step_prereq]='Cloudflare Tunnel prerequisites'
+T_FR[step_prereq]='Prérequis Cloudflare Tunnel'
+T_EN[step_config]='Configure your instance'
+T_FR[step_config]='Configuration de ton instance'
+T_EN[step_packages]='Installing system packages'
+T_FR[step_packages]='Installation des paquets système'
+T_EN[step_pg]='Configuring PostgreSQL'
+T_FR[step_pg]='Configuration de PostgreSQL'
+T_EN[step_redis]='Configuring Redis'
+T_FR[step_redis]='Configuration de Redis'
+T_EN[step_user]='Creating system user'
+T_FR[step_user]='Création de l’utilisateur système'
+T_EN[step_clone]='Fetching Nodyx source'
+T_FR[step_clone]='Récupération du code Nodyx'
+T_EN[step_backend]='Building backend (nodyx-core)'
+T_FR[step_backend]='Build du backend (nodyx-core)'
+T_EN[step_frontend]='Building frontend (nodyx-frontend)'
+T_FR[step_frontend]='Build du frontend (nodyx-frontend)'
+T_EN[step_caddy]='Configuring Caddy (HTTP-only behind tunnel)'
+T_FR[step_caddy]='Configuration de Caddy (HTTP local derrière tunnel)'
+T_EN[step_pm2]='Configuring PM2'
+T_FR[step_pm2]='Configuration de PM2'
+T_EN[step_firewall]='Configuring firewall (UFW)'
+T_FR[step_firewall]='Configuration du pare-feu (UFW)'
+T_EN[step_cf_install]='Installing cloudflared'
+T_FR[step_cf_install]='Installation de cloudflared'
+T_EN[step_cf_register]='Registering Cloudflare Tunnel service'
+T_FR[step_cf_register]='Enregistrement du service Cloudflare Tunnel'
+T_EN[step_bootstrap]='Bootstrapping community + admin account'
+T_FR[step_bootstrap]='Création de la communauté + compte admin'
+T_EN[step_helpers]='Installing helper scripts'
+T_FR[step_helpers]='Installation des scripts utilitaires'
+T_EN[step_healthcheck]='Post-install health check'
+T_FR[step_healthcheck]='Vérification post-installation'
+
+# §5 - Config prompts
+T_EN[cfg_community_name]='Community name (e.g. Mamie’s Knitting Club)'
+T_FR[cfg_community_name]='Nom de la communauté (ex : Club Tricot de Mamie)'
+T_EN[cfg_slug]='Unique identifier (slug)'
+T_FR[cfg_slug]='Identifiant unique (slug)'
+T_EN[cfg_lang]='Main language (fr/en/de/es/it/pt)'
+T_FR[cfg_lang]='Langue principale (fr/en/de/es/it/pt)'
+T_EN[cfg_domain_header]='Public domain (managed by Cloudflare)'
+T_FR[cfg_domain_header]='Domaine public (géré par Cloudflare)'
+T_EN[cfg_domain_help]='This domain MUST be on Cloudflare nameservers. Examples: club.example.com'
+T_FR[cfg_domain_help]='Ce domaine DOIT être sur les nameservers Cloudflare. Ex : club.example.com'
+T_EN[cfg_domain_prompt]='Domain'
+T_FR[cfg_domain_prompt]='Domaine'
+T_EN[cfg_domain_invalid]='‘%s’ doesn’t look like a valid domain (no dot).'
+T_FR[cfg_domain_invalid]='‘%s’ ne ressemble pas à un domaine valide (pas de point).'
+T_EN[cfg_admin_header]='Admin account'
+T_FR[cfg_admin_header]='Compte administrateur'
+T_EN[cfg_admin_user]='Admin username'
+T_FR[cfg_admin_user]='Nom d’utilisateur admin'
+T_EN[cfg_admin_email]='Admin email'
+T_FR[cfg_admin_email]='Email admin'
+T_EN[cfg_admin_pass]='Admin password'
+T_FR[cfg_admin_pass]='Mot de passe admin'
+T_EN[cfg_token_header]='Cloudflare Tunnel token'
+T_FR[cfg_token_header]='Token Cloudflare Tunnel'
+T_EN[cfg_token_help1]='1. Open  https://one.dash.cloudflare.com'
+T_FR[cfg_token_help1]='1. Ouvre https://one.dash.cloudflare.com'
+T_EN[cfg_token_help2]='2. Networks → Tunnels → Create a tunnel → Cloudflared'
+T_FR[cfg_token_help2]='2. Networks → Tunnels → Create a tunnel → Cloudflared'
+T_EN[cfg_token_help3]='3. Name your tunnel, save, copy the install token'
+T_FR[cfg_token_help3]='3. Nomme le tunnel, sauvegarde, copie le token d’installation'
+T_EN[cfg_token_prompt]='Tunnel install token'
+T_FR[cfg_token_prompt]='Token d’installation du tunnel'
+T_EN[cfg_token_short]='Token looks too short (got %s chars). Make sure you copied the whole string.'
+T_FR[cfg_token_short]='Le token semble trop court (%s caractères). Vérifie que tu as bien copié la chaîne complète.'
+T_EN[cfg_recap]='Summary'
+T_FR[cfg_recap]='Récapitulatif'
+T_EN[cfg_recap_mode]='Mode'
+T_FR[cfg_recap_mode]='Mode'
+T_EN[cfg_recap_domain]='Domain'
+T_FR[cfg_recap_domain]='Domaine'
+T_EN[cfg_recap_community]='Community'
+T_FR[cfg_recap_community]='Communauté'
+T_EN[cfg_recap_lang]='Language'
+T_FR[cfg_recap_lang]='Langue'
+T_EN[cfg_recap_admin]='Admin'
+T_FR[cfg_recap_admin]='Admin'
+T_EN[cfg_recap_proceed]='All good? Start install?'
+T_FR[cfg_recap_proceed]='Tout est bon ? On lance ?'
+
+# §6 - Confirm helpers
+T_EN[confirm_yn]='[Y/n]'
+T_FR[confirm_yn]='[O/n]'
+T_EN[confirm_auto_yes]='%s → yes (--yes)'
+T_FR[confirm_auto_yes]='%s → oui (--yes)'
+
+# §7 - Helper scripts / paths
+T_EN[update_script_made]='Update script: %ssudo nodyx-update%s'
+T_FR[update_script_made]='Script de mise à jour : %ssudo nodyx-update%s'
+T_EN[doctor_script_made]='Doctor script: %ssudo nodyx-doctor%s'
+T_FR[doctor_script_made]='Script de diagnostic : %ssudo nodyx-doctor%s'
+T_EN[creds_saved]='Credentials saved in: %s'
+T_FR[creds_saved]='Credentials sauvegardés dans : %s'
+
+# §8 - Healthcheck + summary
+T_EN[hc_services]='System services'
+T_FR[hc_services]='Services système'
+T_EN[hc_pm2]='Nodyx (PM2)'
+T_FR[hc_pm2]='Nodyx (PM2)'
+T_EN[hc_tunnel]='Cloudflare Tunnel'
+T_FR[hc_tunnel]='Tunnel Cloudflare'
+T_EN[hc_dns_ok]='DNS %s → %s'
+T_FR[hc_dns_ok]='DNS %s → %s'
+T_EN[hc_dns_pending]='DNS %s not yet resolved (CF propagation, ~1 min)'
+T_FR[hc_dns_pending]='DNS %s pas encore résolu (propagation CF, ~1 min)'
+T_EN[hc_https_ok]='HTTPS %s → OK via Cloudflare Tunnel'
+T_FR[hc_https_ok]='HTTPS %s → OK via Cloudflare Tunnel'
+T_EN[hc_https_wait]='HTTPS %s not yet reachable (tunnel propagation)'
+T_FR[hc_https_wait]='HTTPS %s pas encore joignable (propagation du tunnel)'
+T_EN[hc_score_green]='✔  %s/%s checks, all green!'
+T_FR[hc_score_green]='✔  %s/%s vérifications, tout est au vert !'
+T_EN[hc_score_warn]='⚠  %s/%s OK, %s warning(s)'
+T_FR[hc_score_warn]='⚠  %s/%s OK, %s avertissement(s)'
+T_EN[hc_score_fail]='✘  %s/%s OK, %s error(s), %s warning(s)'
+T_FR[hc_score_fail]='✘  %s/%s OK, %s erreur(s), %s avertissement(s)'
+T_EN[summary_title]='✔  Nodyx installed via Cloudflare Tunnel!'
+T_FR[summary_title]='✔  Nodyx installé via Cloudflare Tunnel !'
+T_EN[summary_url]='Instance'
+T_FR[summary_url]='Instance'
+T_EN[summary_admin]='Admin'
+T_FR[summary_admin]='Admin'
+T_EN[summary_voice_warn]='Voice/webcam will use public STUN servers (no UDP exposed via Cloudflare Tunnel).'
+T_FR[summary_voice_warn]='Voix/webcam utilisent des serveurs STUN publics (pas d’UDP via Cloudflare Tunnel).'
+T_EN[summary_dashboard]='Configure the public hostname in your CF dashboard:'
+T_FR[summary_dashboard]='Configure le hostname public dans ton dashboard CF :'
+T_EN[summary_dashboard_step1]='1. https://one.dash.cloudflare.com → Networks → Tunnels'
+T_FR[summary_dashboard_step1]='1. https://one.dash.cloudflare.com → Networks → Tunnels'
+T_EN[summary_dashboard_step2]='2. Click your tunnel → Public Hostname → Add'
+T_FR[summary_dashboard_step2]='2. Clique sur ton tunnel → Public Hostname → Add'
+T_EN[summary_dashboard_step3]='3. Subdomain (empty), Domain %s, Service HTTP, URL localhost:80'
+T_FR[summary_dashboard_step3]='3. Subdomain (vide), Domain %s, Service HTTP, URL localhost:80'
+
+# §9 - Upgrade fast path
+T_EN[upgrade_title]='Updating Nodyx'
+T_FR[upgrade_title]='Mise à jour Nodyx'
+T_EN[repair_title]='Repairing Nodyx'
+T_FR[repair_title]='Réparation Nodyx'
+T_EN[code_fetch]='Fetching code...'
+T_FR[code_fetch]='Récupération du code...'
+T_EN[git_pull_fail]='git pull failed.'
+T_FR[git_pull_fail]='git pull échoué.'
+T_EN[code_uptodate]='Code up to date'
+T_FR[code_uptodate]='Code à jour'
+T_EN[backend_rebuild]='Rebuilding backend...'
+T_FR[backend_rebuild]='Rebuild backend...'
+T_EN[backend_built]='Backend compiled'
+T_FR[backend_built]='Backend compilé'
+T_EN[frontend_rebuild]='Rebuilding frontend...'
+T_FR[frontend_rebuild]='Rebuild frontend...'
+T_EN[frontend_built]='Frontend compiled'
+T_FR[frontend_built]='Frontend compilé'
+T_EN[services_restart]='Restarting services...'
+T_FR[services_restart]='Redémarrage des services...'
+T_EN[upgrade_done]='Nodyx operational'
+T_FR[upgrade_done]='Nodyx opérationnel'
+
+# §10 - Auto-backup DB
+T_EN[db_autobackup]='Automatic DB backup (%s)...'
+T_FR[db_autobackup]='Sauvegarde automatique de la DB (%s)...'
+T_EN[db_autobackup_done]='Backup: %s  (%s)'
+T_FR[db_autobackup_done]='Sauvegarde : %s  (%s)'
+T_EN[db_autobackup_fail]='DB backup failed (DB empty or inaccessible) : continuing.'
+T_FR[db_autobackup_fail]='Sauvegarde DB échouée (DB vide ou inaccessible) : on continue.'
+
+# ── t() lookup with FR → EN → key fallback ──────────────────────────────────
+t() {
+  local k="$1"
+  if [[ "$NODYX_LANG" == "fr" && -n "${T_FR[$k]:-}" ]]; then
+    printf '%s' "${T_FR[$k]}"
+  elif [[ -n "${T_EN[$k]:-}" ]]; then
+    printf '%s' "${T_EN[$k]}"
+  else
+    printf '%s' "$k"
+  fi
+}
+
+# ── Logging ───────────────────────────────────────────────────────────────────
 ok()   { echo -e "${GREEN}✔${RESET}  $*"; }
 info() { echo -e "${CYAN}→${RESET}  $*"; }
 warn() { echo -e "${YELLOW}⚠${RESET}  $*"; }
-die()  { echo -e "\n${RED}${BOLD}✘  ERREUR FATALE${RESET}\n${RED}   $*${RESET}\n" >&2; exit 1; }
+die()  { echo -e "\n${RED}${BOLD}✘${RESET}  ${RED}$*${RESET}\n" >&2; exit 1; }
 step() { echo ""; echo -e "${BOLD}━━━  $*  ━━━${RESET}"; }
 
 _HC_SPIN=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
 
-# run_bg "label" cmd [args...] — exécute une commande en arrière-plan avec spinner animé
 run_bg() {
   local label="$1"; shift
   local log; log=$(mktemp /tmp/nodyx_bg_XXXXXX.log)
@@ -40,10 +342,9 @@ run_bg() {
   wait "$pid" || rc=$?
   printf "\r\033[2K"
   if [[ $rc -ne 0 ]]; then
-    echo -e "  ${RED}✘${RESET}  Échec : $label"
-    echo -e "  ${YELLOW}── Dernières lignes ──────────────────────────────────────${RESET}"
+    echo -e "  ${RED}✘${RESET}  $label"
+    echo -e "  ${YELLOW}── last lines / dernières lignes ──${RESET}"
     tail -25 "$log" | sed 's/^/     /'
-    echo -e "  ${YELLOW}──────────────────────────────────────────────────────────${RESET}"
   fi
   rm -f "$log"
   return $rc
@@ -52,16 +353,16 @@ run_bg() {
 banner() {
   echo -e "${BOLD}${CYAN}"
   cat <<'EOF'
-  ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗
-  ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝
-  ██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗
-  ██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║
-  ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║
-  ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
+  ███╗   ██╗ ██████╗ ██████╗ ██╗   ██╗██╗  ██╗
+  ████╗  ██║██╔═══██╗██╔═══██╗██║   ██║╚██╗██╔╝
+  ██╔██╗ ██║██║   ██║██║   ██║██║ ██╗██║ ╚███╔╝
+  ██║╚██╗██║██║   ██║██║   ██║██║ ████╔╝ ██╔██╗
+  ██║ ╚████║╚██████╔╝╚██████╔╝╚███╔██╔╝ ██╔╝╚██╗
+  ╚═╝  ╚═══╝ ╚═════╝  ╚═════╝  ╚══╝╚═╝  ╚═╝  ╚═╝
 EOF
   echo -e "${RESET}"
-  echo -e "  ${BOLD}Nodyx Node Installer${RESET} — v1.0  ${CYAN}✦ Mode Cloudflare Tunnel${RESET}"
-  echo -e "  Hébergement à domicile • zéro port 80/443 requis • AGPL-3.0"
+  printf "  ${BOLD}NODYX${RESET}  $(t banner_subtitle)\n" "$INSTALLER_VERSION"
+  echo -e "  $(t banner_mode)"
   echo ""
 }
 
@@ -69,6 +370,77 @@ EOF
 gen_secret()  { openssl rand -hex 32; }
 gen_pass()    { openssl rand -base64 18 | tr -d '/+='; }
 slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'; }
+
+# ── CLI flags ─────────────────────────────────────────────────────────────────
+INSTALL_MODE=""        # "" | upgrade | repair | reinstall | wipe
+DOMAIN_FLAG=""
+TUNNEL_TOKEN_FLAG=""
+SLUG_FLAG=""
+NAME_FLAG=""
+ADMIN_USER_FLAG=""
+ADMIN_EMAIL_FLAG=""
+ADMIN_PASS_FLAG=""
+AUTO_YES=false
+
+show_help() {
+  banner
+  echo "$(t help_usage)"
+  echo ""
+  echo "$(t help_modes_header)"
+  echo "$(t help_upgrade)"
+  echo "$(t help_repair)"
+  echo "$(t help_reinstall)"
+  echo "$(t help_wipe)"
+  echo ""
+  echo "$(t help_config_header)"
+  echo "$(t help_domain)"
+  echo "$(t help_token)"
+  echo "$(t help_slug)"
+  echo "$(t help_name)"
+  echo "$(t help_admin_user)"
+  echo "$(t help_admin_email)"
+  echo "$(t help_admin_pass)"
+  echo ""
+  echo "$(t help_options_header)"
+  echo "$(t help_yes)"
+  echo "$(t help_lang)"
+  echo "$(t help_help)"
+  echo ""
+  exit 0
+}
+
+for _arg in "$@"; do
+  case "$_arg" in
+    --upgrade)              INSTALL_MODE="upgrade" ;;
+    --repair)               INSTALL_MODE="repair" ;;
+    --reinstall)            INSTALL_MODE="reinstall" ;;
+    --wipe)                 INSTALL_MODE="wipe" ;;
+    --yes|-y)               AUTO_YES=true ;;
+    --domain=*)             DOMAIN_FLAG="${_arg#*=}" ;;
+    --tunnel-token=*)       TUNNEL_TOKEN_FLAG="${_arg#*=}" ;;
+    --slug=*)               SLUG_FLAG="${_arg#*=}" ;;
+    --name=*)               NAME_FLAG="${_arg#*=}" ;;
+    --admin-user=*)         ADMIN_USER_FLAG="${_arg#*=}" ;;
+    --admin-email=*)        ADMIN_EMAIL_FLAG="${_arg#*=}" ;;
+    --admin-password=*)     ADMIN_PASS_FLAG="${_arg#*=}" ;;
+    --lang=*)               ;;  # already parsed
+    --help|-h)              show_help ;;
+    *)                      printf "$(t unknown_flag)\n" "$_arg" >&2 ;;
+  esac
+done
+
+_confirm() {
+  local msg="$1"
+  if $AUTO_YES; then
+    printf "  ${CYAN}?${RESET}  "; printf "$(t confirm_auto_yes)\n" "$msg"
+    return 0
+  fi
+  read -rp "$(echo -e "  ${BOLD}${msg}${RESET} $(t confirm_yn) ")" _ans
+  case "${_ans,,}" in
+    n|no|non) return 1 ;;
+    *)        return 0 ;;
+  esac
+}
 
 prompt() {
   local var="$1" msg="$2" default="${3:-}" val=''
@@ -91,228 +463,337 @@ prompt_secret() {
   printf -v "$var" '%s' "$val"
 }
 
+# ── Constants ─────────────────────────────────────────────────────────────────
+NODYX_DIR="/opt/nodyx"
+REPO_URL="https://github.com/Pokled/Nodyx.git"
+DB_NAME="nodyx"
+DB_USER="nodyx_user"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AUTO-BACKUP DB
+# ═══════════════════════════════════════════════════════════════════════════════
+_auto_backup_db() {
+  local mode="$1"
+  local backup_dir="/var/backups/nodyx"
+  mkdir -p "$backup_dir"
+  local stamp; stamp=$(date +%Y%m%d_%H%M%S)
+  local target="${backup_dir}/nodyx_${mode}_${stamp}.sql.gz"
+  printf "  ${CYAN}→${RESET}  $(t db_autobackup)\n" "$mode"
+  if sudo -u postgres pg_dump -d "$DB_NAME" 2>/dev/null | gzip > "$target" 2>/dev/null; then
+    if [[ -s "$target" ]]; then
+      local size; size=$(du -h "$target" | awk '{print $1}')
+      printf "  ${GREEN}✔${RESET}  $(t db_autobackup_done)\n" "$target" "$size"
+    else
+      rm -f "$target"
+      warn "$(t db_autobackup_fail)"
+    fi
+  else
+    rm -f "$target" 2>/dev/null || true
+    warn "$(t db_autobackup_fail)"
+  fi
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  UPGRADE / REPAIR FAST PATH
+# ═══════════════════════════════════════════════════════════════════════════════
+_nodyx_upgrade() {
+  local title; title=$(t upgrade_title)
+  [[ "${1:-}" == "repair" ]] && title=$(t repair_title)
+  step "$title"
+
+  if [[ "${1:-}" != "repair" ]]; then
+    info "$(t code_fetch)"
+    git -C "$NODYX_DIR" pull --ff-only || die "$(t git_pull_fail)"
+    ok "$(t code_uptodate)"
+  fi
+
+  info "$(t backend_rebuild)"
+  cd "${NODYX_DIR}/nodyx-core"
+  run_bg "npm install (backend)" npm install --no-fund --no-audit
+  run_bg "npm run build (backend)" npm run build
+  ok "$(t backend_built)"
+
+  info "$(t frontend_rebuild)"
+  cd "${NODYX_DIR}/nodyx-frontend"
+  run_bg "npm install (frontend)" npm install --no-fund --no-audit
+  run_bg "npm run build (frontend)" npm run build
+  ok "$(t frontend_built)"
+
+  info "$(t services_restart)"
+  chown -R nodyx:nodyx "$NODYX_DIR" 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env 2>/dev/null \
+    || pm2 restart all 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save 2>/dev/null || true
+  systemctl restart cloudflared 2>/dev/null || true
+
+  echo ""
+  ok "$(t upgrade_done)"
+  exit 0
+}
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PREFLIGHT
 # ═══════════════════════════════════════════════════════════════════════════════
 banner
 
-[[ $EUID -ne 0 ]] && die "Lance ce script en root : sudo bash install_tunnel.sh"
+[[ $EUID -ne 0 ]] && die "$(t err_root)"
 
 if ! grep -qiE 'ubuntu|debian' /etc/os-release 2>/dev/null; then
-  die "OS non supporté. Utilise Ubuntu 22.04/24.04 ou Debian 11/12."
+  die "$(t err_os)"
 fi
+
+_arch=$(uname -m)
+case "$_arch" in
+  x86_64|amd64) CF_ARCH="amd64" ;;
+  aarch64|arm64) CF_ARCH="arm64" ;;
+  *) die "$(printf "$(t err_arch)" "$_arch")" ;;
+esac
 
 # RAM check
 _RAM_FREE_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $7}' || echo 9999)
 if [[ "$_RAM_FREE_MB" -lt 400 ]]; then
-  warn "RAM disponible faible : ${_RAM_FREE_MB} MB (recommandé : 512 MB+)"
-  warn "Le build frontend peut échouer sur les machines avec peu de RAM."
-  warn "Astuce : sudo fallocate -l 1G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile"
-  read -rp "$(echo -e "  ${BOLD}Continuer quand même ? [o/N] ${RESET}")" _ram_confirm
-  [[ "${_ram_confirm,,}" != "o" ]] && die "Installation annulée — ajoute du swap et relance."
+  warn "$(printf "$(t ram_low)" "$_RAM_FREE_MB")"
+  warn "$(t ram_swap_hint)"
+  _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
 fi
 
 # Disk check
 _DISK_FREE_MB=$(df -m /opt 2>/dev/null | awk 'NR==2{print $4}' || echo 9999)
 if [[ "$_DISK_FREE_MB" -lt 1024 ]]; then
-  warn "Espace disque faible sur /opt : ${_DISK_FREE_MB} MB (recommandé : 1 GB+)"
-  read -rp "$(echo -e "  ${BOLD}Continuer quand même ? [o/N] ${RESET}")" _disk_confirm
-  [[ "${_disk_confirm,,}" != "o" ]] && die "Installation annulée — libère de l'espace et relance."
+  warn "$(printf "$(t disk_low)" "$_DISK_FREE_MB")"
+  _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
 fi
 
-step "Détection de l'IP"
-PUBLIC_IP=$(curl -s --max-time 5 https://api.ipify.org || curl -s --max-time 5 https://ifconfig.me || true)
-if [[ -z "$PUBLIC_IP" ]]; then
-  warn "IP publique non détectée automatiquement."
-  prompt PUBLIC_IP "IP locale ou publique de ce serveur (ex: 192.168.1.10)"
+# ═══════════════════════════════════════════════════════════════════════════════
+#  DETECTION MENU
+# ═══════════════════════════════════════════════════════════════════════════════
+if [[ -d "$NODYX_DIR/.git" && -z "$INSTALL_MODE" ]]; then
+  step "$(printf "$(t detect_existing)" "$NODYX_DIR")"
+  echo ""
+  echo "  $(t detect_choose)"
+  echo "  $(t detect_1)"
+  echo "  $(t detect_2)"
+  echo "  $(t detect_3)"
+  echo "  $(t detect_4)"
+  echo "  $(t detect_5)"
+  echo ""
+  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t detect_prompt): ")" _choice
+  case "$_choice" in
+    1) INSTALL_MODE="upgrade" ;;
+    2) INSTALL_MODE="repair" ;;
+    3) INSTALL_MODE="reinstall" ;;
+    4) INSTALL_MODE="wipe" ;;
+    *) die "$(t install_cancelled)" ;;
+  esac
+fi
+
+# Fast path: upgrade or repair
+if [[ "$INSTALL_MODE" == "upgrade" ]]; then
+  _nodyx_upgrade
+elif [[ "$INSTALL_MODE" == "repair" ]]; then
+  _nodyx_upgrade repair
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════════
+step "$(t step_prereq)"
+echo ""
+echo -e "  ${CYAN}→${RESET}  $(t cfg_token_help1)"
+echo -e "  ${CYAN}→${RESET}  $(t cfg_token_help2)"
+echo -e "  ${CYAN}→${RESET}  $(t cfg_token_help3)"
+echo ""
+
+step "$(t step_config)"
+echo ""
+
+# Community
+if [[ -n "$NAME_FLAG" ]]; then
+  COMMUNITY_NAME="$NAME_FLAG"
 else
-  ok "IP détectée : ${BOLD}${PUBLIC_IP}${RESET}"
-  info "Cette IP sera utilisée pour le relay vocal (TURN)."
+  prompt COMMUNITY_NAME "$(t cfg_community_name)"
 fi
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  PRÉREQUIS CLOUDFLARE TUNNEL — checklist interactive
-# ═══════════════════════════════════════════════════════════════════════════════
-step "Prérequis Cloudflare Tunnel"
-echo ""
-echo -e "  ${CYAN}Comment ça fonctionne :${RESET}"
-echo -e "  Cloudflare Tunnel crée une connexion ${BOLD}sortante${RESET} depuis ton serveur"
-echo -e "  vers Cloudflare. Les visiteurs passent par Cloudflare, qui relaie"
-echo -e "  le trafic vers ton serveur. ${GREEN}Aucun port 80 ou 443 à ouvrir.${RESET}"
-echo ""
-echo -e "  ${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "  ${BOLD}║  Checklist avant de continuer                               ║${RESET}"
-echo -e "  ${BOLD}╠══════════════════════════════════════════════════════════════╣${RESET}"
-echo -e "  ${BOLD}║${RESET}                                                              ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}  ${GREEN}◻  1.${RESET} Compte Cloudflare gratuit créé                      ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}        ${CYAN}→ https://dash.cloudflare.com${RESET}                        ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}                                                              ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}  ${GREEN}◻  2.${RESET} Ton domaine ajouté à ce compte Cloudflare           ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}        ${CYAN}→ \"Add a site\" dans le dashboard Cloudflare${RESET}          ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}        ${CYAN}→ Choix du plan Free (0€/mois)${RESET}                       ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}                                                              ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}  ${GREEN}◻  3.${RESET} Nameservers Cloudflare configurés chez ton registrar ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}        ${CYAN}→ Remplace les DNS par ceux donnés par Cloudflare${RESET}    ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}        ${CYAN}→ Exemple : aria.ns.cloudflare.com${RESET}                   ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}                                                              ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}  ${GREEN}◻  4.${RESET} Un navigateur web accessible sur ce réseau           ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}        ${CYAN}→ Pour l'étape de login cloudflared${RESET}                  ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}                                                              ${BOLD}║${RESET}"
-echo -e "  ${BOLD}╠══════════════════════════════════════════════════════════════╣${RESET}"
-echo -e "  ${BOLD}║${RESET}  ${YELLOW}⚠  VOIX / WEBCAM${RESET}                                         ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}     CF Tunnel est ${BOLD}TCP uniquement${RESET}. Pour les canaux vocaux,    ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}     ouvre ${BOLD}UDP 3478${RESET} dans ta box/routeur.                      ${BOLD}║${RESET}"
-echo -e "  ${BOLD}║${RESET}     Chat, forum, médias → fonctionnent sans ça.             ${BOLD}║${RESET}"
-echo -e "  ${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
-echo ""
-read -rp "$(echo -e "  ${BOLD}Tu as tout ça ? On peut continuer ? [O/n] ${RESET}")" _prereq
-[[ "${_prereq,,}" == "n" ]] && die "Configure Cloudflare d'abord, puis relance : bash install_tunnel.sh"
+if [[ -n "$SLUG_FLAG" ]]; then
+  COMMUNITY_SLUG="$SLUG_FLAG"
+else
+  COMMUNITY_SLUG_DEFAULT=$(slugify "$COMMUNITY_NAME")
+  prompt COMMUNITY_SLUG "$(t cfg_slug)" "$COMMUNITY_SLUG_DEFAULT"
+fi
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  CONFIGURATION — questions interactives
-# ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration de ton instance"
-echo ""
+COMMUNITY_LANG_DEFAULT="$NODYX_LANG"
+prompt COMMUNITY_LANG "$(t cfg_lang)" "$COMMUNITY_LANG_DEFAULT"
 
-# 1 — Communauté
-prompt   COMMUNITY_NAME  "Nom de la communauté (ex: Club Tricot de Mamie)"
-COMMUNITY_SLUG_DEFAULT=$(slugify "$COMMUNITY_NAME")
-prompt   COMMUNITY_SLUG  "Identifiant unique (slug)" "$COMMUNITY_SLUG_DEFAULT"
-prompt   COMMUNITY_LANG  "Langue principale (fr/en/de/es/it/pt)" "fr"
+# Domain
+echo ""
+echo -e "  ${BOLD}$(t cfg_domain_header)${RESET}"
+echo -e "  ${CYAN}$(t cfg_domain_help)${RESET}"
+echo ""
+if [[ -n "$DOMAIN_FLAG" ]]; then
+  DOMAIN="$DOMAIN_FLAG"
+else
+  _domain_ok=false
+  while ! $_domain_ok; do
+    read -rp "$(echo -e "  ${CYAN}?${RESET} $(t cfg_domain_prompt): ")" DOMAIN
+    DOMAIN="${DOMAIN#https://}"; DOMAIN="${DOMAIN#http://}"
+    DOMAIN="${DOMAIN%/}";        DOMAIN="${DOMAIN// /}"
+    if [[ -z "$DOMAIN" ]]; then
+      :
+    elif [[ "$DOMAIN" != *.* ]]; then
+      printf "  ${RED}✘  $(t cfg_domain_invalid)${RESET}\n" "$DOMAIN"
+    else
+      _domain_ok=true
+    fi
+  done
+fi
 
-# 2 — Domaine (obligatoire — doit être géré par Cloudflare)
+# Tunnel token
 echo ""
-echo -e "  ${BOLD}Domaine de ton instance${RESET}"
-echo -e "  ${CYAN}Ce domaine doit être géré par Cloudflare (nameservers CF activés).${RESET}"
-echo -e "  Exemples : ${BOLD}moncommunaute.fr${RESET}   ${BOLD}club.mamie-tricot.net${RESET}"
-echo ""
+echo -e "  ${BOLD}$(t cfg_token_header)${RESET}"
+if [[ -n "$TUNNEL_TOKEN_FLAG" ]]; then
+  CF_TUNNEL_TOKEN="$TUNNEL_TOKEN_FLAG"
+else
+  prompt_secret CF_TUNNEL_TOKEN "$(t cfg_token_prompt)"
+fi
+if [[ ${#CF_TUNNEL_TOKEN} -lt 80 ]]; then
+  warn "$(printf "$(t cfg_token_short)" "${#CF_TUNNEL_TOKEN}")"
+fi
 
-_domain_ok=false
-while ! $_domain_ok; do
-  read -rp "$(echo -e "  ${CYAN}?${RESET} Nom de domaine : ")" DOMAIN
-  # Strip accidental http(s):// prefix and trailing slashes/spaces
-  DOMAIN="${DOMAIN#https://}"; DOMAIN="${DOMAIN#http://}"
-  DOMAIN="${DOMAIN%/}";        DOMAIN="${DOMAIN// /}"
-  if [[ -z "$DOMAIN" ]]; then
-    echo ""
-    echo -e "  ${YELLOW}${BOLD}┌─ Pourquoi un domaine est-il obligatoire ici ? ──────────────┐${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}                                                              ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}  CF Tunnel crée un ${BOLD}CNAME dans ta zone DNS Cloudflare${RESET}.      ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}  Il a besoin d'accès à un domaine ${BOLD}que tu possèdes${RESET}.         ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}  ${CYAN}nodyx.org${RESET} est notre zone — tu n'y as pas accès.       ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}                                                              ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}  ${BOLD}Tes options :${RESET}                                                ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}  ${GREEN}1.${RESET} Achète un domaine (~1€/an) chez ${CYAN}porkbun.com${RESET}            ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}     ou ${CYAN}namecheap.com${RESET}, ajoute-le à Cloudflare, reviens ici.  ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}                                                              ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}  ${GREEN}2.${RESET} Si tu peux ouvrir les ports 80/443 sur ta box,        ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}     utilise ${BOLD}install.sh${RESET} — il donne un sous-domaine gratuit   ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}     ${CYAN}${PUBLIC_IP//./-}.sslip.io${RESET} automatiquement.                 ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}│${RESET}                                                              ${YELLOW}${BOLD}│${RESET}"
-    echo -e "  ${YELLOW}${BOLD}└──────────────────────────────────────────────────────────────┘${RESET}"
-    echo ""
-    read -rp "$(echo -e "  Quitter et utiliser ${BOLD}install.sh${RESET} à la place ? [O/n] ")" _switch
-    [[ "${_switch,,}" != "n" ]] && die "Lance ${BOLD}bash install.sh${RESET} si tu peux ouvrir les ports,\n   ou achète un domaine et reviens sur ${BOLD}bash install_tunnel.sh${RESET}."
-    echo ""
-  elif [[ "$DOMAIN" != *.* ]]; then
-    echo -e "  ${RED}✘  '${DOMAIN}' ne ressemble pas à un domaine valide (pas de point).${RESET}"
-  else
-    _domain_ok=true
-    ok "Domaine : ${BOLD}${DOMAIN}${RESET}"
-  fi
-done
-DOMAIN_IS_AUTO=false
+# Admin
+echo ""
+echo -e "  ${BOLD}$(t cfg_admin_header)${RESET}"
+if [[ -n "$ADMIN_USER_FLAG" ]]; then
+  ADMIN_USERNAME="$ADMIN_USER_FLAG"
+else
+  prompt ADMIN_USERNAME "$(t cfg_admin_user)"
+fi
+if [[ -n "$ADMIN_EMAIL_FLAG" ]]; then
+  ADMIN_EMAIL="$ADMIN_EMAIL_FLAG"
+else
+  prompt ADMIN_EMAIL "$(t cfg_admin_email)"
+fi
+if [[ -n "$ADMIN_PASS_FLAG" ]]; then
+  ADMIN_PASSWORD="$ADMIN_PASS_FLAG"
+else
+  prompt_secret ADMIN_PASSWORD "$(t cfg_admin_pass)"
+fi
 
-# 3 — Compte administrateur
+# Recap
 echo ""
-echo -e "  ${BOLD}Compte administrateur${RESET}"
-prompt        ADMIN_USERNAME "Nom d'utilisateur admin"
-prompt        ADMIN_EMAIL    "Email admin"
-prompt_secret ADMIN_PASSWORD "Mot de passe admin"
-
-# Récapitulatif
+echo -e "  ${BOLD}${CYAN}┌─ $(t cfg_recap) ──────────────────────${RESET}"
+echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_mode)       : ${GREEN}Cloudflare Tunnel${RESET}"
+echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_domain)     : ${BOLD}${DOMAIN}${RESET}"
+echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_community)  : ${BOLD}${COMMUNITY_NAME}${RESET} (${COMMUNITY_SLUG})"
+echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_lang)       : ${BOLD}${COMMUNITY_LANG}${RESET}"
+echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_admin)      : ${BOLD}${ADMIN_USERNAME}${RESET} <${ADMIN_EMAIL}>"
+echo -e "  ${BOLD}${CYAN}└───────────────────────────────${RESET}"
 echo ""
-echo -e "  ${BOLD}${CYAN}┌─ Récapitulatif ─────────────────────────────────────────────┐${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  Mode       : ${GREEN}Cloudflare Tunnel${RESET} (zéro port 80/443)           ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  Domaine    : ${BOLD}${DOMAIN}${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  Communauté : ${BOLD}${COMMUNITY_NAME}${RESET} (slug: ${COMMUNITY_SLUG})"
-echo -e "  ${BOLD}${CYAN}│${RESET}  Langue     : ${BOLD}${COMMUNITY_LANG}${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  Admin      : ${BOLD}${ADMIN_USERNAME}${RESET} <${ADMIN_EMAIL}>"
-echo -e "  ${BOLD}${CYAN}└─────────────────────────────────────────────────────────────┘${RESET}"
-echo ""
-read -rp "$(echo -e "  ${BOLD}Tout est bon ? On lance ! [O/n] ${RESET}")" confirm
-[[ "${confirm,,}" == "n" ]] && die "Installation annulée."
+_confirm "$(t cfg_recap_proceed)" || die "$(t install_cancelled)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  GENERATED SECRETS
 # ═══════════════════════════════════════════════════════════════════════════════
-DB_NAME="nodyx"
-DB_USER="nodyx_user"
 DB_PASSWORD=$(gen_pass)
 JWT_SECRET=$(gen_secret)
-TURN_USER="nodyx"
-TURN_CREDENTIAL=$(gen_pass)
-NODYX_DIR="/opt/nodyx"
-REPO_URL="https://github.com/Pokled/Nodyx.git"
-CF_TUNNEL_ID=""
-CF_TUNNEL_NAME="$COMMUNITY_SLUG"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  SYSTEM PACKAGES
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Installation des dépendances système"
+step "$(t step_packages)"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
-apt-get install -y -q git 2>/dev/null
 apt-get install -y -q \
-  curl wget gnupg2 ca-certificates lsb-release \
+  git curl wget gnupg2 ca-certificates lsb-release \
   openssl ufw build-essential \
   postgresql postgresql-contrib \
   redis-server \
-  coturn \
-  2>/dev/null
-ok "Paquets système installés"
+  >/dev/null 2>&1
+ok "System packages installed"
 
 # Node.js 20 LTS
 if ! command -v node &>/dev/null || [[ "$(node -e 'process.stdout.write(process.version.split(".")[0].slice(1))')" -lt 20 ]]; then
-  info "Installation de Node.js 20 LTS..."
+  info "Installing Node.js 20 LTS..."
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
   apt-get install -y -q nodejs >/dev/null 2>&1
-  ok "Node.js $(node -v) installé"
+  ok "Node.js $(node -v) installed"
 else
-  ok "Node.js $(node -v) déjà présent"
+  ok "Node.js $(node -v) already present"
 fi
 
-# Caddy (proxy HTTP local — TLS entièrement délégué à Cloudflare)
+# Caddy
 if ! command -v caddy &>/dev/null; then
-  info "Installation de Caddy..."
+  info "Installing Caddy..."
   apt-get install -y -q debian-keyring debian-archive-keyring apt-transport-https >/dev/null 2>&1
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
     | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
   apt-get update -q && apt-get install -y -q caddy >/dev/null 2>&1
-  ok "Caddy $(caddy version | head -1) installé"
+  ok "Caddy installed"
 else
-  ok "Caddy $(caddy version | head -1) déjà présent"
+  ok "Caddy already present"
 fi
 
 # PM2
 if ! command -v pm2 &>/dev/null; then
   npm install -g pm2 --silent
-  ok "PM2 installé"
+  ok "PM2 installed"
 else
-  ok "PM2 déjà présent"
+  ok "PM2 already present"
 fi
+
+# pm2-logrotate (limit log growth)
+if ! pm2 list 2>/dev/null | grep -q pm2-logrotate; then
+  pm2 install pm2-logrotate >/dev/null 2>&1 || true
+  pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
+  pm2 set pm2-logrotate:retain 7 2>/dev/null || true
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CREATE 'nodyx' SYSTEM USER
+# ═══════════════════════════════════════════════════════════════════════════════
+step "$(t step_user)"
+if ! id -u nodyx &>/dev/null; then
+  useradd -r -s /usr/sbin/nologin -m -d /home/nodyx nodyx
+  ok "User 'nodyx' created"
+else
+  ok "User 'nodyx' already exists"
+fi
+mkdir -p /home/nodyx/.pm2/logs
+chown -R nodyx:nodyx /home/nodyx/.pm2
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  POSTGRESQL
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration de PostgreSQL"
+step "$(t step_pg)"
 
-systemctl enable postgresql --quiet
-systemctl start postgresql
+_PG_VER=$(ls /usr/lib/postgresql/ 2>/dev/null | sort -Vr | head -1)
+[[ -z "$_PG_VER" ]] && die "PostgreSQL not found after install."
+
+systemctl enable  "postgresql@${_PG_VER}-main" --quiet 2>/dev/null || true
+systemctl start   "postgresql@${_PG_VER}-main" 2>/dev/null || true
+
+_PG_READY=false
+for _pg_i in {1..15}; do
+  sudo -u postgres pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
+  sleep 2
+done
+
+if ! $_PG_READY; then
+  if [[ ! -f "/var/lib/postgresql/${_PG_VER}/main/PG_VERSION" ]]; then
+    pg_dropcluster   "${_PG_VER}" main 2>/dev/null || true
+    pg_createcluster "${_PG_VER}" main 2>/dev/null || true
+  fi
+  pg_ctlcluster "${_PG_VER}" main start 2>/dev/null || true
+  systemctl restart "postgresql@${_PG_VER}-main" 2>/dev/null || true
+  for _pg_i in {1..15}; do
+    sudo -u postgres pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
+    sleep 2
+  done
+fi
+$_PG_READY || die "PostgreSQL ${_PG_VER} did not start."
+ok "PostgreSQL ${_PG_VER} ready"
 
 sudo -u postgres psql -c "
   DO \$\$ BEGIN
@@ -324,19 +805,30 @@ sudo -u postgres psql -c "
   END \$\$;
 " >/dev/null
 
+# Auto-backup before destructive operations
+if [[ "$INSTALL_MODE" == "wipe" || "$INSTALL_MODE" == "reinstall" ]]; then
+  _auto_backup_db "$INSTALL_MODE"
+fi
+
+if [[ "$INSTALL_MODE" == "wipe" ]]; then
+  sudo -u postgres psql -c \
+    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" \
+    >/dev/null 2>/dev/null || true
+  sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_NAME};" >/dev/null
+fi
+
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" \
   | grep -q 1 \
   || sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" >/dev/null
 
 sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" >/dev/null
 sudo -u postgres psql -d "$DB_NAME" -c "GRANT CREATE ON SCHEMA public TO ${DB_USER};" >/dev/null
-ok "Base de données '${DB_NAME}' prête"
+ok "Database '${DB_NAME}' ready"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  REDIS
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration de Redis"
-# Garantir que les répertoires Redis existent (peuvent manquer après purge partielle)
+step "$(t step_redis)"
 mkdir -p /var/lib/redis /var/log/redis
 chown redis:redis /var/lib/redis /var/log/redis 2>/dev/null || true
 chmod 750 /var/lib/redis /var/log/redis 2>/dev/null || true
@@ -351,94 +843,43 @@ for _ri in {1..10}; do
   fi
   sleep 2
 done
-
 if ! $_REDIS_OK; then
-  warn "systemctl redis-server échoué — tentative de démarrage direct..."
-  redis-server --daemonize yes --logfile /var/log/redis/redis-server.log \
-    --dir /var/lib/redis 2>/dev/null || true
+  redis-server --daemonize yes --logfile /var/log/redis/redis-server.log --dir /var/lib/redis 2>/dev/null || true
   sleep 3
   redis-cli ping 2>/dev/null | grep -q PONG && _REDIS_OK=true || true
 fi
-
-$_REDIS_OK || die "Redis n'a pas démarré.\nVérifie : sudo journalctl -xeu redis-server"
-ok "Redis démarré"
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  COTURN (TURN/STUN relay pour WebRTC vocal)
-# ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration de coturn (relay vocal)"
-
-cat > /etc/turnserver.conf <<TURN
-# Nodyx TURN relay — généré par install_tunnel.sh
-listening-port=3478
-tls-listening-port=5349
-
-listening-ip=0.0.0.0
-external-ip=${PUBLIC_IP}
-
-realm=${DOMAIN}
-
-user=${TURN_USER}:${TURN_CREDENTIAL}
-
-no-loopback-peers
-no-multicast-peers
-fingerprint
-
-min-port=49152
-max-port=65535
-
-log-file=/var/log/coturn.log
-simple-log
-no-cli
-TURN
-
-systemctl enable coturn --quiet
-systemctl restart coturn
-ok "coturn configuré (IP: ${PUBLIC_IP}, port: 3478)"
-warn "Canaux vocaux : ouvre UDP 3478 dans ta box/routeur (CF Tunnel est TCP uniquement)."
+$_REDIS_OK || die "Redis did not start."
+ok "Redis running"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PARE-FEU (UFW)
-#  CF Tunnel = connexion SORTANTE uniquement → on n'ouvre PAS 80/443
+#  FIREWALL (UFW) - Tunnel mode: outbound only, only SSH inbound
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration du pare-feu"
-
-ufw --force reset >/dev/null 2>&1
-ufw default deny incoming  >/dev/null 2>&1
-ufw default allow outgoing >/dev/null 2>&1
-ufw allow ssh              >/dev/null 2>&1
-# Ports 80 et 443 intentionnellement FERMÉS — CF Tunnel fait des connexions sortantes
-ufw allow 3478/tcp         >/dev/null 2>&1
-ufw allow 3478/udp         >/dev/null 2>&1
-ufw allow 5349/tcp         >/dev/null 2>&1
-ufw allow 5349/udp         >/dev/null 2>&1
-ufw allow 49152:65535/udp  >/dev/null 2>&1
-ufw --force enable         >/dev/null 2>&1
-ok "Pare-feu configuré : SSH + TURN autorisés"
-info "Ports 80/443 intentionnellement fermés — CF Tunnel gère le trafic web en sortie."
+step "$(t step_firewall)"
+ufw --force reset >/dev/null 2>&1 || true
+ufw default deny incoming  >/dev/null 2>&1 || true
+ufw default allow outgoing >/dev/null 2>&1 || true
+ufw allow ssh              >/dev/null 2>&1 || true
+ufw --force enable         >/dev/null 2>&1 || true
+ok "Firewall: SSH inbound only - tunnel handles web traffic outbound"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  NODYX — CLONE / UPDATE
+#  CLONE / UPDATE
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Téléchargement de Nodyx"
-
+step "$(t step_clone)"
 if [[ -d "$NODYX_DIR/.git" ]]; then
-  info "Mise à jour du dépôt existant..."
   git -C "$NODYX_DIR" pull --ff-only
 else
-  info "Clonage du dépôt dans $NODYX_DIR..."
   GIT_TERMINAL_PROMPT=0 git clone --depth 1 "$REPO_URL" "$NODYX_DIR"
 fi
-ok "Code Nodyx présent dans $NODYX_DIR"
+ok "Source present in $NODYX_DIR"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  NODYX-CORE — .env + build
+#  NODYX-CORE - .env + build
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration du backend (nodyx-core)"
+step "$(t step_backend)"
 
 cat > "${NODYX_DIR}/nodyx-core/.env" <<COREENV
-# Généré par install_tunnel.sh — ne pas modifier manuellement
-
+# Generated by install_tunnel.sh - do not edit manually
 NODYX_COMMUNITY_NAME=${COMMUNITY_NAME}
 NODYX_COMMUNITY_SLUG=${COMMUNITY_SLUG}
 NODYX_COMMUNITY_LANGUAGE=${COMMUNITY_LANG}
@@ -459,74 +900,95 @@ DB_PASSWORD=${DB_PASSWORD}
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# CF Tunnel gère le TLS — l'URL publique reste en https://
+# CF Tunnel terminates TLS at the edge - public URL still https://
 FRONTEND_URL=https://${DOMAIN}
 COREENV
 
 cd "${NODYX_DIR}/nodyx-core"
-run_bg "npm install (backend)..." npm install --no-fund --no-audit \
-  || die "npm install backend échoué. Vérifie ta connexion Internet."
-run_bg "Compilation TypeScript (backend)..." npm run build \
-  || die "Build backend échoué. Vérifie les logs ci-dessus."
+run_bg "npm install (backend)" npm install --no-fund --no-audit \
+  || die "Backend npm install failed."
+run_bg "TypeScript compile (backend)" npm run build \
+  || die "Backend build failed."
 [[ -f "${NODYX_DIR}/nodyx-core/dist/index.js" ]] \
-  || die "dist/index.js absent — le build TypeScript n'a pas produit de sortie."
-ok "Backend compilé"
+  || die "dist/index.js missing - backend build produced no output."
+ok "Backend compiled"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  NODYX-FRONTEND — .env + build
+#  NODYX-FRONTEND - .env + build
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration du frontend (nodyx-frontend)"
-
-TURN_PUBLIC_URL="turn:${PUBLIC_IP}:3478"
+step "$(t step_frontend)"
 
 cat > "${NODYX_DIR}/nodyx-frontend/.env" <<FEENV
-# Généré par install_tunnel.sh — ne pas modifier manuellement
-
+# Generated by install_tunnel.sh - do not edit manually
 PUBLIC_API_URL=https://${DOMAIN}
-# SSR bypass — nodyx-frontend contacte nodyx-core directement sans passer par Caddy
-PRIVATE_API_SSR_URL=http://127.0.0.1:${NODYX_CORE_PORT:-3000}/api/v1
-PUBLIC_TURN_URL=${TURN_PUBLIC_URL}
-PUBLIC_TURN_USERNAME=${TURN_USER}
-PUBLIC_TURN_CREDENTIAL=${TURN_CREDENTIAL}
+PRIVATE_API_SSR_URL=http://127.0.0.1:3000/api/v1
 FEENV
 
 cd "${NODYX_DIR}/nodyx-frontend"
-run_bg "npm install (frontend)..." npm install --no-fund --no-audit \
-  || die "npm install frontend échoué. Vérifie ta connexion Internet."
-run_bg "Build SvelteKit (peut durer 2-5 min sur ARM)..." npm run build \
-  || die "Build frontend échoué. Vérifie les logs ci-dessus."
+run_bg "npm install (frontend)" npm install --no-fund --no-audit \
+  || die "Frontend npm install failed."
+run_bg "SvelteKit build (2-5 min on ARM)" npm run build \
+  || die "Frontend build failed."
 [[ -f "${NODYX_DIR}/nodyx-frontend/build/index.js" ]] \
-  || die "build/index.js absent — le build SvelteKit n'a pas produit de sortie."
-ok "Frontend compilé"
+  || die "build/index.js missing - frontend build produced no output."
+ok "Frontend compiled"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  CADDY — proxy HTTP local
-#  CF Tunnel → http://localhost:80 → Caddy → nodyx-core / nodyx-frontend
+#  CADDY (HTTP-only, behind Cloudflare Tunnel)
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration de Caddy (proxy HTTP local)"
+step "$(t step_caddy)"
 
+# Cloudflare Tunnel sends traffic to localhost:80 - Caddy listens on local HTTP only.
+# TLS is handled by Cloudflare's edge; no HSTS here (it'd lock visitors out if CF is bypassed).
 cat > /etc/caddy/Caddyfile <<CADDY
-# Mode Cloudflare Tunnel
-# Caddy écoute en HTTP sur le port 80 (accès local uniquement)
-# Cloudflare gère le chiffrement HTTPS en amont, côté visiteurs
-http://${DOMAIN} {
-    reverse_proxy /api/*       localhost:3000
-    reverse_proxy /uploads/*   localhost:3000
-    reverse_proxy /socket.io/* localhost:3000
-    reverse_proxy *            localhost:4173
-
+http://127.0.0.1:80, http://localhost:80 {
     encode gzip
+
+    header {
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "camera=(self), microphone=(self), geolocation=(self)"
+        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+        -Server
+    }
+
+    @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
+    handle @honeypot {
+        rewrite * /api/v1/_hp?p={http.request.uri.path}
+        reverse_proxy 127.0.0.1:3000 {
+            header_up -X-Forwarded-For
+        }
+    }
+
+    reverse_proxy /api/* 127.0.0.1:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy /uploads/* 127.0.0.1:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy /socket.io/* 127.0.0.1:3000 {
+        header_up -X-Forwarded-For
+    }
+    reverse_proxy * 127.0.0.1:4173
 }
 CADDY
 
 systemctl enable caddy --quiet
 systemctl restart caddy
-ok "Caddy configuré en HTTP local (port 80 ← CF Tunnel)"
+ok "Caddy listening on localhost:80 (Cloudflare Tunnel terminates TLS)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PM2 ECOSYSTEM
+#  PM2 ECOSYSTEM (under nodyx system user)
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Configuration de PM2"
+step "$(t step_pm2)"
+
+# Adapt PM2 memory caps to host RAM
+_TOTAL_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $2}' || echo 2048)
+if   [[ "$_TOTAL_MB" -lt 1500 ]]; then _PM2_CORE_MEM="220M"; _PM2_FRONT_MEM="180M"
+elif [[ "$_TOTAL_MB" -lt 3000 ]]; then _PM2_CORE_MEM="450M"; _PM2_FRONT_MEM="350M"
+else                                    _PM2_CORE_MEM="800M"; _PM2_FRONT_MEM="600M"
+fi
 
 cat > "${NODYX_DIR}/ecosystem.config.js" <<PM2
 module.exports = {
@@ -536,6 +998,7 @@ module.exports = {
       script: 'dist/index.js',
       cwd: '${NODYX_DIR}/nodyx-core',
       watch: false,
+      max_memory_restart: '${_PM2_CORE_MEM}',
       env: { NODE_ENV: 'production' },
     },
     {
@@ -543,245 +1006,179 @@ module.exports = {
       script: 'build/index.js',
       cwd: '${NODYX_DIR}/nodyx-frontend',
       watch: false,
-      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3099' },
+      max_memory_restart: '${_PM2_FRONT_MEM}',
+      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1' },
     },
   ],
 }
 PM2
 
-cd "$NODYX_DIR"
+chown -R nodyx:nodyx "${NODYX_DIR}"
+
+# Stop legacy root-owned PM2 instances + nodyx-owned ones (idempotent)
 pm2 delete nodyx-core     2>/dev/null || true
 pm2 delete nodyx-frontend 2>/dev/null || true
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup systemd -u root --hp /root >/dev/null 2>&1 | tail -1 | bash 2>/dev/null || true
-ok "PM2 configuré et lancé"
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-core     2>/dev/null || true
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 delete nodyx-frontend 2>/dev/null || true
 
-info "Vérification du démarrage des processus (5s)..."
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
+
+# pm2-nodyx systemd unit
+cat > /etc/systemd/system/pm2-nodyx.service <<SVC
+[Unit]
+Description=PM2 process manager (nodyx)
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=forking
+User=nodyx
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PM2_HOME=/home/nodyx/.pm2
+PIDFile=/home/nodyx/.pm2/pm2.pid
+Restart=on-failure
+ExecStart=$(which pm2) resurrect
+ExecReload=$(which pm2) reload all
+ExecStop=$(which pm2) kill
+
+[Install]
+WantedBy=multi-user.target
+SVC
+
+systemctl daemon-reload
+systemctl enable pm2-nodyx --quiet
+ok "PM2 running under nodyx user"
+
 sleep 5
 for _app in nodyx-core nodyx-frontend; do
-  _st=$(pm2 list 2>/dev/null | grep " ${_app} " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
+  _st=$(runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null \
+    | grep " ${_app} " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
   if [[ "$_st" == "online" ]]; then
-    ok "  $_app — online"
+    ok "  $_app - online"
   else
-    warn "$_app — statut : ${_st}"
-    warn "Logs de démarrage :"
-    pm2 logs "$_app" --lines 20 --nostream 2>/dev/null || true
+    warn "$_app - status: ${_st}"
+    runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs "$_app" --lines 20 --nostream 2>/dev/null || true
   fi
 done
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  CLOUDFLARE TUNNEL — Installation, authentification, configuration
+#  CLOUDFLARED - Install
 # ═══════════════════════════════════════════════════════════════════════════════
+step "$(t step_cf_install)"
 
-# ── Étape A : Détection de l'architecture ────────────────────────────────────
-step "Cloudflare Tunnel — Détection de l'architecture"
-_arch=$(uname -m)
-case "$_arch" in
-  aarch64|arm64) CF_ARCH="arm64" ;;
-  armv7l)        CF_ARCH="arm"   ;;
-  *)             CF_ARCH="amd64" ;;
-esac
-ok "Architecture : ${_arch}  →  cloudflared-linux-${CF_ARCH}"
-
-# ── Étape B : Installation de cloudflared ────────────────────────────────────
-step "Cloudflare Tunnel — Installation de cloudflared"
 if command -v cloudflared &>/dev/null; then
-  ok "cloudflared déjà présent : $(cloudflared --version 2>&1 | head -1)"
+  ok "cloudflared already installed: $(cloudflared --version 2>&1 | head -1)"
 else
-  info "Téléchargement de cloudflared depuis GitHub releases…"
-  CF_DL_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CF_ARCH}"
-  if ! curl -sL --max-time 120 --progress-bar "$CF_DL_URL" -o /usr/local/bin/cloudflared; then
-    die "Téléchargement échoué. Vérifie ta connexion internet puis relance le script."
+  if [[ "$CF_ARCH" == "amd64" ]]; then
+    info "Installing cloudflared via apt (Cloudflare repo)..."
+    mkdir -p --mode=0755 /usr/share/keyrings
+    curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
+      -o /usr/share/keyrings/cloudflare-main.gpg 2>/dev/null
+    _DIST=$(. /etc/os-release && echo "$VERSION_CODENAME")
+    echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared ${_DIST} main" \
+      > /etc/apt/sources.list.d/cloudflared.list
+    apt-get update -q
+    apt-get install -y -q cloudflared >/dev/null 2>&1 \
+      || die "cloudflared apt install failed. Check /etc/apt/sources.list.d/cloudflared.list"
+  else
+    info "Installing cloudflared via .deb (arm64)..."
+    _DEB=$(mktemp /tmp/cloudflared_XXXXXX.deb)
+    curl -fsSL --max-time 120 \
+      "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb" \
+      -o "$_DEB" || die "cloudflared download failed."
+    dpkg -i "$_DEB" >/dev/null 2>&1 || apt-get install -f -y -q >/dev/null 2>&1
+    rm -f "$_DEB"
   fi
-  chmod +x /usr/local/bin/cloudflared
-  if ! cloudflared --version &>/dev/null 2>&1; then
-    die "cloudflared téléchargé mais ne s'exécute pas.\nArchitecture détectée : ${_arch}\nEssaie de télécharger manuellement depuis : https://github.com/cloudflare/cloudflared/releases"
-  fi
-  ok "cloudflared $(cloudflared --version 2>&1 | head -1) installé dans /usr/local/bin/"
-fi
-
-# ── Étape C : Authentification ────────────────────────────────────────────────
-step "Cloudflare Tunnel — Authentification"
-echo ""
-echo -e "  ${BOLD}${CYAN}┌──────────────────────────────────────────────────────────────┐${RESET}"
-echo -e "  ${BOLD}${CYAN}│  Connexion à ton compte Cloudflare                          │${RESET}"
-echo -e "  ${BOLD}${CYAN}├──────────────────────────────────────────────────────────────┤${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}                                                              ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  Dans quelques secondes, une URL va s'afficher.              ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}                                                              ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  ${BOLD}Étape 1${RESET}  Copie cette URL                                  ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  ${BOLD}Étape 2${RESET}  Ouvre-la dans ton navigateur (sur ton PC)         ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  ${BOLD}Étape 3${RESET}  Connecte-toi à ton compte Cloudflare              ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  ${BOLD}Étape 4${RESET}  Sélectionne le domaine ${BOLD}${DOMAIN}${RESET}                     ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  ${BOLD}Étape 5${RESET}  Clique sur ${BOLD}Authorize${RESET}                              ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}                                                              ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  Le script reprend ${BOLD}automatiquement${RESET} après l'autorisation.     ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}                                                              ${BOLD}${CYAN}│${RESET}"
-echo -e "  ${BOLD}${CYAN}└──────────────────────────────────────────────────────────────┘${RESET}"
-echo ""
-read -rp "$(echo -e "  ${BOLD}Prêt ? Appuie sur Entrée pour lancer l'authentification…${RESET}")" _
-
-cloudflared tunnel login
-
-# Validation : le certificat doit exister
-if [[ ! -f /root/.cloudflared/cert.pem ]]; then
-  die "Authentification incomplète — cert.pem non trouvé dans /root/.cloudflared/\n   Assure-toi d'avoir cliqué sur 'Authorize' dans le navigateur.\n   Relance le script pour réessayer."
-fi
-ok "Authentification réussie — certificat Cloudflare sauvegardé"
-
-# ── Étape D : Création du tunnel ──────────────────────────────────────────────
-step "Cloudflare Tunnel — Création du tunnel '${CF_TUNNEL_NAME}'"
-echo ""
-info "Création du tunnel sur ton compte Cloudflare…"
-
-CF_TUNNEL_OUTPUT=$(cloudflared tunnel create "$CF_TUNNEL_NAME" 2>&1 || true)
-CF_TUNNEL_ID=$(echo "$CF_TUNNEL_OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)
-
-if [[ -z "$CF_TUNNEL_ID" ]]; then
-  # Tunnel déjà existant (reinstallation) — récupération de l'ID
-  warn "Tunnel non créé — tentative de récupération d'un tunnel existant…"
-  CF_TUNNEL_ID=$(cloudflared tunnel list 2>/dev/null \
-    | grep "$CF_TUNNEL_NAME" \
-    | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)
-  if [[ -z "$CF_TUNNEL_ID" ]]; then
-    die "Impossible de créer ou récupérer le tunnel '${CF_TUNNEL_NAME}'.\n   Vérifie ton compte Cloudflare sur https://dash.cloudflare.com"
-  fi
-  warn "Tunnel existant retrouvé. ID : ${BOLD}${CF_TUNNEL_ID}${RESET}"
-else
-  ok "Tunnel '${CF_TUNNEL_NAME}' créé — ID : ${BOLD}${CF_TUNNEL_ID}${RESET}"
-fi
-
-# Validation : le fichier JSON de credentials doit exister
-CF_CREDS_FILE="/root/.cloudflared/${CF_TUNNEL_ID}.json"
-if [[ ! -f "$CF_CREDS_FILE" ]]; then
-  die "Fichier credentials du tunnel introuvable : ${CF_CREDS_FILE}\n   Supprime le tunnel depuis le dashboard CF et relance le script."
-fi
-ok "Fichier credentials validé : ${CF_CREDS_FILE}"
-
-# ── Étape E : Génération du fichier config.yml ────────────────────────────────
-step "Cloudflare Tunnel — Configuration (config.yml)"
-mkdir -p /root/.cloudflared
-
-cat > /root/.cloudflared/config.yml <<CFCFG
-# Nodyx — Cloudflare Tunnel config
-# Généré le $(date) par install_tunnel.sh
-tunnel: ${CF_TUNNEL_ID}
-credentials-file: /root/.cloudflared/${CF_TUNNEL_ID}.json
-
-ingress:
-  # Tout le trafic web passe par Caddy sur le port 80 local
-  - hostname: ${DOMAIN}
-    service: http://localhost:80
-  # Route par défaut obligatoire
-  - service: http_status:404
-CFCFG
-
-ok "config.yml généré → /root/.cloudflared/config.yml"
-info "Flux : visiteur → Cloudflare (HTTPS) → Tunnel → Caddy :80 → Nodyx"
-
-# ── Étape F : Route DNS automatique ──────────────────────────────────────────
-step "Cloudflare Tunnel — Enregistrement DNS"
-echo ""
-info "Création de l'entrée DNS dans ton compte Cloudflare…"
-info "${BOLD}${DOMAIN}${RESET}  →  CNAME vers le tunnel '${CF_TUNNEL_NAME}'"
-echo ""
-
-if cloudflared tunnel route dns "$CF_TUNNEL_NAME" "$DOMAIN" 2>&1; then
-  ok "DNS ${BOLD}${DOMAIN}${RESET} → tunnel '${CF_TUNNEL_NAME}' enregistré"
-else
-  warn "L'enregistrement DNS existe peut-être déjà (reinstallation) — ce n'est pas bloquant."
-  warn "Vérifie dans Cloudflare DNS : ${DOMAIN} doit pointer vers le tunnel."
-fi
-
-# ── Étape G : Service systemd ─────────────────────────────────────────────────
-step "Cloudflare Tunnel — Service systemd"
-
-cat > /etc/systemd/system/cloudflared.service <<CFSVC
-[Unit]
-Description=Nodyx — Cloudflare Tunnel
-Documentation=https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/cloudflared tunnel --config /root/.cloudflared/config.yml run
-Restart=on-failure
-RestartSec=5s
-KillMode=process
-User=root
-
-[Install]
-WantedBy=multi-user.target
-CFSVC
-
-systemctl daemon-reload
-systemctl enable cloudflared --quiet
-systemctl restart cloudflared
-
-sleep 3  # Laisser le tunnel s'établir
-
-if systemctl is-active --quiet cloudflared; then
-  ok "Service cloudflared actif et configuré pour démarrer automatiquement"
-else
-  warn "Service cloudflared non actif — diagnostic : systemctl status cloudflared"
+  command -v cloudflared &>/dev/null || die "cloudflared install completed but binary not on PATH."
+  ok "cloudflared $(cloudflared --version 2>&1 | head -1) installed"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  WAIT FOR BACKEND + BOOTSTRAP (community + admin)
+#  CLOUDFLARED - Register tunnel service (idempotent via token hash)
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Initialisation de la communauté et du compte administrateur"
+step "$(t step_cf_register)"
+
+_TOKEN_HASH=$(echo -n "$CF_TUNNEL_TOKEN" | sha256sum | awk '{print $1}')
+_TOKEN_HASH_FILE="/etc/cloudflared/.token_hash"
+mkdir -p /etc/cloudflared
+
+_NEED_REGISTER=true
+if [[ -f "$_TOKEN_HASH_FILE" ]] && [[ "$(cat "$_TOKEN_HASH_FILE" 2>/dev/null)" == "$_TOKEN_HASH" ]] \
+   && systemctl is-active --quiet cloudflared 2>/dev/null; then
+  _NEED_REGISTER=false
+  ok "cloudflared service already registered with this token"
+fi
+
+if $_NEED_REGISTER; then
+  # Cleanly uninstall any previous registration, then re-install with the new token
+  cloudflared service uninstall 2>/dev/null || true
+  systemctl stop cloudflared 2>/dev/null || true
+
+  info "Registering cloudflared service with the token..."
+  if ! cloudflared service install "$CF_TUNNEL_TOKEN" >/tmp/cf_install.log 2>&1; then
+    cat /tmp/cf_install.log >&2
+    die "cloudflared service install failed. Check the token in your CF dashboard."
+  fi
+  echo -n "$_TOKEN_HASH" > "$_TOKEN_HASH_FILE"
+  chmod 600 "$_TOKEN_HASH_FILE"
+
+  systemctl enable cloudflared --quiet 2>/dev/null || true
+  systemctl restart cloudflared 2>/dev/null || true
+  sleep 3
+  if systemctl is-active --quiet cloudflared; then
+    ok "Cloudflare Tunnel service active"
+  else
+    warn "cloudflared service not active - diagnostic: systemctl status cloudflared"
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  WAIT FOR BACKEND + BOOTSTRAP COMMUNITY + ADMIN
+# ═══════════════════════════════════════════════════════════════════════════════
+step "$(t step_bootstrap)"
 
 _BACKEND_READY=false
 _bw_si=0; _bw_elapsed=0
 for _bw_i in {1..90}; do
   if curl -sf http://localhost:3000/api/v1/instance/info >/dev/null 2>&1; then
     printf "\r\033[2K"
-    ok "Backend opérationnel (${_bw_elapsed}s)"
+    ok "Backend operational (${_bw_elapsed}s)"
     _BACKEND_READY=true
     break
   fi
-  printf "\r  ${CYAN}%s${RESET}  Backend en démarrage (migrations incluses)...  ${YELLOW}%ds${RESET}   " \
-    "${_HC_SPIN[$((${_bw_si} % 10))]}" "$_bw_elapsed"
+  printf "\r  ${CYAN}%s${RESET}  Waiting for backend (migrations included)...  ${YELLOW}%ds${RESET}   " \
+    "${_HC_SPIN[$((_bw_si % 10))]}" "$_bw_elapsed"
   _bw_si=$((_bw_si+1)); sleep 2; _bw_elapsed=$((_bw_elapsed+2))
 done
 printf "\r\033[2K"
 
 if ! $_BACKEND_READY; then
-  warn "Backend non opérationnel après 180s."
-  warn "Logs PM2 (nodyx-core) :"
-  pm2 logs nodyx-core --lines 35 --nostream 2>/dev/null || true
-  warn "Pour relancer : cd ${NODYX_DIR} && pm2 restart nodyx-core"
-  warn "Tentative de création du compte admin quand même..."
+  warn "Backend did not respond within 180s. Logs (nodyx-core):"
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core --lines 35 --nostream 2>/dev/null || true
 fi
 
-# Register admin account — retry jusqu'à 3 fois
+# Register admin (retry up to 3x)
 _REGISTER_OK=false
 for _reg_try in 1 2 3; do
   HTTP_CODE=$(curl -s -o /tmp/nodyx_register.json -w "%{http_code}" \
     -X POST http://localhost:3000/api/v1/auth/register \
     -H "Content-Type: application/json" \
-    -d "{
-      \"username\": \"${ADMIN_USERNAME}\",
-      \"email\": \"${ADMIN_EMAIL}\",
-      \"password\": \"${ADMIN_PASSWORD}\"
-    }" 2>/dev/null || echo "000")
+    -d "{\"username\":\"${ADMIN_USERNAME}\",\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
+    2>/dev/null || echo "000")
   if [[ "$HTTP_CODE" == "201" || "$HTTP_CODE" == "200" ]]; then
-    ok "Compte '${ADMIN_USERNAME}' créé"
+    ok "Account '${ADMIN_USERNAME}' created"
     _REGISTER_OK=true; break
   elif [[ "$HTTP_CODE" == "409" ]]; then
-    ok "Compte '${ADMIN_USERNAME}' déjà existant (réinstallation ?)"
+    ok "Account '${ADMIN_USERNAME}' already exists"
     _REGISTER_OK=true; break
   else
-    warn "Tentative ${_reg_try}/3 — HTTP ${HTTP_CODE} : $(cat /tmp/nodyx_register.json 2>/dev/null | head -c 200)"
-    [[ $_reg_try -lt 3 ]] && { info "Retry dans 8s..."; sleep 8; }
+    warn "Attempt ${_reg_try}/3 - HTTP ${HTTP_CODE}"
+    [[ $_reg_try -lt 3 ]] && sleep 8
   fi
 done
-
-if ! $_REGISTER_OK; then
-  warn "Inscription impossible après 3 tentatives."
-  warn "Tu pourras créer ton compte sur https://${DOMAIN}/auth/register"
-fi
 
 USER_ID=$(sudo -u postgres psql -d "$DB_NAME" -tc \
   "SELECT id FROM users WHERE lower(email)=lower('${ADMIN_EMAIL}');" 2>/dev/null | tr -d ' \n')
@@ -789,13 +1186,7 @@ USER_ID=$(sudo -u postgres psql -d "$DB_NAME" -tc \
 if [[ -n "$USER_ID" ]]; then
   sudo -u postgres psql -d "$DB_NAME" <<SQL >/dev/null
     INSERT INTO communities (name, slug, description, owner_id, is_public)
-    VALUES (
-      '${COMMUNITY_NAME}',
-      '${COMMUNITY_SLUG}',
-      '',
-      '${USER_ID}',
-      true
-    )
+    VALUES ('${COMMUNITY_NAME}', '${COMMUNITY_SLUG}', '', '${USER_ID}', true)
     ON CONFLICT (slug) DO NOTHING;
 
     INSERT INTO community_members (community_id, user_id, role)
@@ -803,9 +1194,9 @@ if [[ -n "$USER_ID" ]]; then
     FROM communities WHERE slug = '${COMMUNITY_SLUG}'
     ON CONFLICT (community_id, user_id) DO UPDATE SET role = 'owner';
 SQL
-  ok "Communauté '${COMMUNITY_NAME}' créée, ${ADMIN_USERNAME} → owner"
+  ok "Community '${COMMUNITY_NAME}' created - ${ADMIN_USERNAME} → owner"
 else
-  warn "Utilisateur introuvable en DB — crée ton compte sur https://${DOMAIN}/auth/register"
+  warn "Admin user not found in DB - register at https://${DOMAIN}/auth/register once DNS is live."
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -814,8 +1205,8 @@ fi
 CREDS_FILE="/root/nodyx-credentials.txt"
 cat > "$CREDS_FILE" <<CREDS
 ═══════════════════════════════════════════════════════
-  NODYX — Credentials de l'instance (Cloudflare Tunnel)
-  Générés le $(date)
+  NODYX - Instance credentials (Cloudflare Tunnel)
+  Generated: $(date)
 ═══════════════════════════════════════════════════════
 
 URL              : https://${DOMAIN}
@@ -829,89 +1220,136 @@ PostgreSQL DB    : ${DB_NAME}
 
 JWT secret       : ${JWT_SECRET}
 
-TURN URL         : turn:${PUBLIC_IP}:3478
-TURN user        : ${TURN_USER}
-TURN credential  : ${TURN_CREDENTIAL}
-
 Nodyx dir        : ${NODYX_DIR}
 
 ── Cloudflare Tunnel ───────────────────────────────────
-Tunnel name      : ${CF_TUNNEL_NAME}
-Tunnel ID        : ${CF_TUNNEL_ID}
-Config           : /root/.cloudflared/config.yml
-Credentials JSON : /root/.cloudflared/${CF_TUNNEL_ID}.json
+Service          : systemctl status cloudflared
+Logs             : journalctl -u cloudflared -f
+Public hostname  : configure in https://one.dash.cloudflare.com
+                   → Networks → Tunnels → (your tunnel) → Public Hostname
+                   → Domain: ${DOMAIN}, Service: HTTP, URL: localhost:80
 
-── Commandes utiles ────────────────────────────────────
-systemctl status cloudflared           → état du tunnel
-cloudflared tunnel info ${CF_TUNNEL_NAME}   → connexions actives
-systemctl restart cloudflared          → redémarrer le tunnel
-
-GARDE CE FICHIER EN LIEU SÛR — ne le partage jamais.
+KEEP THIS FILE SAFE - never share it.
 CREDS
 chmod 600 "$CREDS_FILE"
 
-# ── Génération du script de mise à jour ───────────────────────────────────────
-UPDATE_SCRIPT="/usr/local/bin/nodyx-update"
-cat > "$UPDATE_SCRIPT" <<'UPDATESCRIPT'
+# ═══════════════════════════════════════════════════════════════════════════════
+#  HELPER SCRIPTS - nodyx-update + nodyx-doctor
+# ═══════════════════════════════════════════════════════════════════════════════
+step "$(t step_helpers)"
+
+# nodyx-update
+cat > /usr/local/bin/nodyx-update <<'UPDATESH'
 #!/usr/bin/env bash
 set -euo pipefail
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+GREEN='\033[0;32m'; CYAN='\033[0;36m'; RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
 ok()   { echo -e "${GREEN}✔${RESET}  $*"; }
 info() { echo -e "${CYAN}→${RESET}  $*"; }
 die()  { echo -e "${RED}✘  $*${RESET}" >&2; exit 1; }
-UPDATESCRIPT
+[[ $EUID -ne 0 ]] && die "Run as root: sudo nodyx-update"
+UPDATESH
+echo "NODYX_DIR=\"${NODYX_DIR}\"" >> /usr/local/bin/nodyx-update
+cat >> /usr/local/bin/nodyx-update <<'UPDATESH2'
 
-cat >> "$UPDATE_SCRIPT" <<UPDATESCRIPT2
-NODYX_DIR="${NODYX_DIR}"
-UPDATESCRIPT2
-
-cat >> "$UPDATE_SCRIPT" <<'UPDATESCRIPT3'
-
-[[ $EUID -ne 0 ]] && die "Lance en root : sudo nodyx-update"
-echo -e "\n${BOLD}━━━  Mise à jour Nodyx  ━━━${RESET}\n"
-
-info "Récupération des dernières modifications..."
-git -C "$NODYX_DIR" pull --ff-only || die "git pull échoué."
+echo -e "\n${BOLD}━━━  Nodyx update  ━━━${RESET}\n"
+info "Pulling latest..."
+git -C "$NODYX_DIR" pull --ff-only || die "git pull failed."
 
 info "Rebuild backend..."
 cd "${NODYX_DIR}/nodyx-core"
 npm install --no-fund --no-audit --silent
-npm run build || die "Build backend échoué."
-ok "Backend compilé"
+npm run build || die "Backend build failed."
+ok "Backend compiled"
 
 info "Rebuild frontend..."
 cd "${NODYX_DIR}/nodyx-frontend"
 npm install --no-fund --no-audit --silent
-npm run build || die "Build frontend échoué."
-ok "Frontend compilé"
+npm run build || die "Frontend build failed."
+ok "Frontend compiled"
 
-info "Redémarrage des services..."
-cd "$NODYX_DIR"
-pm2 restart ecosystem.config.js --update-env
-pm2 save
+info "Restart services..."
+chown -R nodyx:nodyx "$NODYX_DIR"
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
+systemctl restart cloudflared 2>/dev/null || true
 
 echo ""
-ok "Nodyx mis à jour et redémarré."
-pm2 list
-UPDATESCRIPT3
+ok "Nodyx updated and restarted."
+runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list
+UPDATESH2
+chmod +x /usr/local/bin/nodyx-update
+printf "  ${GREEN}✔${RESET}  $(t update_script_made)\n" "${BOLD}" "${RESET}"
 
-chmod +x "$UPDATE_SCRIPT"
-ok "Script de mise à jour : ${BOLD}nodyx-update${RESET} (sudo nodyx-update)"
+# nodyx-doctor
+cat > /usr/local/bin/nodyx-doctor <<'DOCSH'
+#!/usr/bin/env bash
+set -uo pipefail
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+PASS=0; WARN=0; FAIL=0
+_pass(){ PASS=$((PASS+1)); echo -e "  ${GREEN}✔${RESET}  $*"; }
+_warn(){ WARN=$((WARN+1)); echo -e "  ${YELLOW}⚠${RESET}  $*"; }
+_fail(){ FAIL=$((FAIL+1)); echo -e "  ${RED}✘${RESET}  $*"; }
+_sect(){ echo ""; echo -e "  ${BOLD}${CYAN}▸ $1${RESET}"; }
+
+[[ $EUID -ne 0 ]] && { echo "Run as root: sudo nodyx-doctor"; exit 1; }
+
+echo -e "\n${BOLD}━━━  Nodyx doctor (Cloudflare Tunnel)  ━━━${RESET}"
+
+_sect "System services"
+for s in postgresql redis-server caddy cloudflared; do
+  if systemctl is-active --quiet "$s" 2>/dev/null; then _pass "$s"
+  else _fail "$s  (systemctl status $s)"; fi
+done
+
+_sect "PM2 (nodyx user)"
+for app in nodyx-core nodyx-frontend; do
+  st=$(runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null \
+    | grep " $app " | grep -oE 'online|stopped|errored|launching' | head -1 || echo absent)
+  case "$st" in
+    online) _pass "$app" ;;
+    *)      _fail "$app [$st]" ;;
+  esac
+done
+
+_sect "Network"
+api=$(curl -s --max-time 4 -o /dev/null -w '%{http_code}' http://localhost:3000/api/v1/instance/info 2>/dev/null || true)
+[[ "$api" =~ ^[23] ]] && _pass "Backend /api/v1/instance/info → HTTP $api" || _fail "Backend → HTTP ${api:-timeout}"
+
+caddy_code=$(curl -s --max-time 4 -o /dev/null -w '%{http_code}' http://localhost:80/ 2>/dev/null || true)
+[[ "$caddy_code" =~ ^[23] ]] && _pass "Caddy localhost:80 → HTTP $caddy_code" || _warn "Caddy localhost:80 → HTTP ${caddy_code:-timeout}"
+
+_sect "Cloudflare Tunnel"
+if systemctl is-active --quiet cloudflared 2>/dev/null; then
+  _pass "cloudflared service active"
+  recent_err=$(journalctl -u cloudflared --since '5 min ago' --no-pager 2>/dev/null | grep -ciE 'error|failed' || true)
+  [[ "$recent_err" -lt 3 ]] && _pass "No recent errors in journal" || _warn "$recent_err errors in last 5 min: journalctl -u cloudflared -n 50"
+else
+  _fail "cloudflared not active"
+fi
+
+TOT=$((PASS+WARN+FAIL))
+echo ""
+if   [[ $FAIL -eq 0 && $WARN -eq 0 ]]; then echo -e "  ${GREEN}${BOLD}✔  $PASS/$TOT - all green${RESET}"
+elif [[ $FAIL -eq 0 ]];                   then echo -e "  ${YELLOW}${BOLD}⚠  $PASS/$TOT OK - $WARN warning(s)${RESET}"
+else                                            echo -e "  ${RED}${BOLD}✘  $PASS/$TOT OK - $FAIL error(s) / $WARN warning(s)${RESET}"
+fi
+echo ""
+DOCSH
+chmod +x /usr/local/bin/nodyx-doctor
+printf "  ${GREEN}✔${RESET}  $(t doctor_script_made)\n" "${BOLD}" "${RESET}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  HEALTH CHECK
 # ═══════════════════════════════════════════════════════════════════════════════
-step "Vérification post-installation"
+step "$(t step_healthcheck)"
 
 HC_PASS=0; HC_WARN=0; HC_FAIL=0
-
 _hc_pass() { HC_PASS=$((HC_PASS+1)); echo -e "  ${GREEN}✔${RESET}  $*"; }
 _hc_warn() { HC_WARN=$((HC_WARN+1)); echo -e "  ${YELLOW}⚠${RESET}  $*"; }
 _hc_fail() { HC_FAIL=$((HC_FAIL+1)); echo -e "  ${RED}✘${RESET}  $*"; }
 _hc_sect() {
   echo ""
   echo -e "  ${BOLD}${CYAN}▸ $1${RESET}"
-  echo -e "  ${CYAN}──────────────────────────────────────────────────${RESET}"
 }
 
 _wait_https() {
@@ -927,115 +1365,80 @@ _wait_https() {
   return 1
 }
 
-# ── Services système (incluant cloudflared) ───────────────────────────────────
-_hc_sect "Services système"
-for _svc in postgresql redis-server coturn caddy; do
+_hc_sect "$(t hc_services)"
+for _svc in postgresql redis-server caddy; do
   if systemctl is-active --quiet "$_svc" 2>/dev/null; then
     _hc_pass "$_svc"
   else
-    _hc_fail "$_svc  ${YELLOW}→ sudo systemctl start $_svc${RESET}"
+    _hc_fail "$_svc"
   fi
 done
 
-if systemctl is-active --quiet cloudflared 2>/dev/null; then
-  _hc_pass "cloudflared  ${CYAN}(tunnel actif)${RESET}"
-else
-  _hc_fail "cloudflared  ${YELLOW}→ systemctl status cloudflared${RESET}"
-fi
-
-# ── Nodyx (PM2) ───────────────────────────────────────────────────────────────
-_hc_sect "Nodyx (PM2)"
+_hc_sect "$(t hc_pm2)"
 for _app in nodyx-core nodyx-frontend; do
-  _pm2=$(pm2 list 2>/dev/null | grep " $_app " | grep -oE 'online|stopped|errored|launching' | head -1 || echo "absent")
+  _pm2=$(runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep " $_app " | grep -oE 'online|stopped|errored|launching' | head -1 || echo absent)
   if [[ "$_pm2" == "online" ]]; then
     _hc_pass "$_app"
   else
-    _hc_fail "$_app  ${YELLOW}[${_pm2}] → pm2 restart $_app${RESET}"
+    _hc_fail "$_app  [${_pm2}]"
   fi
 done
 
-# ── Tunnel Cloudflare ─────────────────────────────────────────────────────────
-_hc_sect "Tunnel Cloudflare"
+_hc_sect "$(t hc_tunnel)"
+if systemctl is-active --quiet cloudflared 2>/dev/null; then
+  _hc_pass "cloudflared (tunnel active)"
+else
+  _hc_fail "cloudflared not active"
+fi
 
-# Vérification DNS
 _dns_ip=$(getent hosts "$DOMAIN" 2>/dev/null | awk '{print $1}' | head -1 || true)
 if [[ -n "$_dns_ip" ]]; then
-  _hc_pass "DNS ${DOMAIN}  →  ${_dns_ip}  ${CYAN}(CNAME CF)${RESET}"
+  printf "  ${GREEN}✔${RESET}  $(t hc_dns_ok)\n" "$DOMAIN" "$_dns_ip"
+  HC_PASS=$((HC_PASS+1))
 else
-  _hc_warn "DNS ${DOMAIN}  →  non résolu  ${YELLOW}(propagation CF en cours, ~1 min normal)${RESET}"
+  printf "  ${YELLOW}⚠${RESET}  $(t hc_dns_pending)\n" "$DOMAIN"
+  HC_WARN=$((HC_WARN+1))
 fi
 
-# Vérification HTTPS via le tunnel (timeout 60s — CF propage vite)
-if _wait_https "https://${DOMAIN}" "Attente réponse via CF Tunnel…" 60; then
-  _hc_pass "HTTPS https://${DOMAIN}  →  opérationnel via CF Tunnel"
+if _wait_https "https://${DOMAIN}" "Waiting for HTTPS via tunnel..." 60; then
+  printf "  ${GREEN}✔${RESET}  $(t hc_https_ok)\n" "https://${DOMAIN}"
+  HC_PASS=$((HC_PASS+1))
 else
-  _hc_warn "HTTPS https://${DOMAIN}  →  pas encore joignable  ${YELLOW}(tunnel en cours de propagation)${RESET}"
+  printf "  ${YELLOW}⚠${RESET}  $(t hc_https_wait)\n" "https://${DOMAIN}"
+  HC_WARN=$((HC_WARN+1))
 fi
 
-# Vérification API
-_api_code=$(curl -sk --max-time 5 -o /dev/null -w '%{http_code}' "https://${DOMAIN}/api/v1/instance/info" 2>/dev/null || true)
-if [[ "$_api_code" =~ ^[23] ]]; then
-  _hc_pass "API /api/v1/instance/info  →  HTTP ${_api_code}"
-else
-  _hc_warn "API /api/v1/instance/info  →  HTTP ${_api_code:-timeout}"
-fi
-
-# ── Score final ───────────────────────────────────────────────────────────────
 HC_TOTAL=$((HC_PASS + HC_WARN + HC_FAIL))
 echo ""
-echo -e "  ${CYAN}$(printf '═%.0s' {1..50})${RESET}"
-if [[ $HC_FAIL -eq 0 && $HC_WARN -eq 0 ]]; then
-  echo -e "  ${GREEN}${BOLD}  ✔  ${HC_PASS}/${HC_TOTAL} vérifications — TOUT EST AU VERT !${RESET}"
-elif [[ $HC_FAIL -eq 0 ]]; then
-  echo -e "  ${YELLOW}${BOLD}  ⚠  ${HC_PASS}/${HC_TOTAL} OK — ${HC_WARN} avertissement(s) à corriger${RESET}"
-else
-  echo -e "  ${RED}${BOLD}  ✘  ${HC_PASS}/${HC_TOTAL} OK — ${HC_FAIL} erreur(s) / ${HC_WARN} avertissement(s)${RESET}"
+if   [[ $HC_FAIL -eq 0 && $HC_WARN -eq 0 ]]; then printf "  ${GREEN}${BOLD}$(t hc_score_green)${RESET}\n" "$HC_PASS" "$HC_TOTAL"
+elif [[ $HC_FAIL -eq 0 ]];                    then printf "  ${YELLOW}${BOLD}$(t hc_score_warn)${RESET}\n"  "$HC_PASS" "$HC_TOTAL" "$HC_WARN"
+else                                                printf "  ${RED}${BOLD}$(t hc_score_fail)${RESET}\n"     "$HC_PASS" "$HC_TOTAL" "$HC_FAIL" "$HC_WARN"
 fi
-echo -e "  ${CYAN}$(printf '═%.0s' {1..50})${RESET}"
-echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  SUMMARY
 # ═══════════════════════════════════════════════════════════════════════════════
 echo ""
-echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════════╗${RESET}"
-echo -e "${GREEN}${BOLD}║  ✔  Nodyx installé via Cloudflare Tunnel !      ║${RESET}"
-echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════════════╝${RESET}"
+echo -e "${GREEN}${BOLD}╔═════════════════════════════════╗${RESET}"
+echo -e "${GREEN}${BOLD}║  $(t summary_title)  ║${RESET}"
+echo -e "${GREEN}${BOLD}╚═════════════════════════════════╝${RESET}"
 echo ""
-echo -e "  ${BOLD}Instance  :${RESET} https://${DOMAIN}"
-echo -e "  ${BOLD}Admin     :${RESET} ${ADMIN_USERNAME} / ${ADMIN_EMAIL}"
-echo -e "  ${BOLD}Tunnel    :${RESET} ${CF_TUNNEL_NAME}  ${CYAN}(ID: ${CF_TUNNEL_ID:0:8}…)${RESET}"
-echo -e "  ${BOLD}Vocal     :${RESET} TURN sur ${PUBLIC_IP}:3478  ${YELLOW}(UDP 3478 à ouvrir dans ta box)${RESET}"
+echo -e "  ${BOLD}$(t summary_url):${RESET}    https://${DOMAIN}"
+echo -e "  ${BOLD}$(t summary_admin):${RESET}  ${ADMIN_USERNAME} / ${ADMIN_EMAIL}"
 echo ""
-echo -e "  ${CYAN}Credentials sauvegardés dans :${RESET} ${BOLD}${CREDS_FILE}${RESET}"
+printf "  ${CYAN}$(t creds_saved)${RESET}\n" "${BOLD}${CREDS_FILE}${RESET}"
 echo ""
-echo -e "  ${BOLD}${CYAN}▸ Gestion des services${RESET}"
-echo -e "  pm2 list                              → état de nodyx-core + nodyx-frontend"
-echo -e "  pm2 logs nodyx-core                   → logs backend en temps réel"
-echo -e "  pm2 logs nodyx-frontend               → logs frontend en temps réel"
-echo -e "  pm2 restart all                       → redémarrer tout"
-echo -e "  pm2 stop all / pm2 start all          → arrêt / démarrage"
+echo -e "  ${BOLD}${CYAN}▸ $(t summary_dashboard)${RESET}"
+echo -e "  $(t summary_dashboard_step1)"
+echo -e "  $(t summary_dashboard_step2)"
+printf  "  $(t summary_dashboard_step3)\n" "${DOMAIN}"
 echo ""
-echo -e "  ${BOLD}${CYAN}▸ Tunnel Cloudflare${RESET}"
-echo -e "  systemctl status cloudflared          → état du tunnel"
-echo -e "  journalctl -u cloudflared -f          → logs du tunnel"
-echo -e "  cloudflared tunnel info ${CF_TUNNEL_NAME}  → connexions actives"
-echo -e "  systemctl restart cloudflared         → redémarrer le tunnel"
+echo -e "  ${BOLD}${CYAN}▸ Service management${RESET}"
+echo -e "  sudo nodyx-doctor                     # full diagnostic"
+echo -e "  sudo nodyx-update                     # git pull + rebuild + restart"
+echo -e "  systemctl status cloudflared          # tunnel state"
+echo -e "  journalctl -u cloudflared -f          # tunnel logs"
+echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
 echo ""
-echo -e "  ${BOLD}${CYAN}▸ Mise à jour${RESET}"
-echo -e "  sudo nodyx-update                     → git pull + rebuild + restart en une commande"
-echo ""
-echo -e "  ${BOLD}${CYAN}▸ Base de données${RESET}"
-echo -e "  sudo -u postgres psql ${DB_NAME}      → console PostgreSQL"
-echo -e "  sudo -u postgres pg_dump ${DB_NAME} > backup_nodyx_\$(date +%F).sql"
-echo -e "                                        → sauvegarde de la base"
-echo ""
-echo -e "  ${BOLD}${CYAN}▸ Diagnostic${RESET}"
-echo -e "  curl -s http://localhost:3000/api/v1/instance/info | python3 -m json.tool"
-echo -e "                                        → état du backend"
-echo -e "  systemctl status caddy                → état du proxy"
-echo -e "  sudo cat ${CREDS_FILE}                → revoir les credentials"
-echo ""
-echo -e "  ${YELLOW}⚠  Voix/webcam : ouvre ${BOLD}UDP 3478${RESET}${YELLOW} dans ta box/routeur.${RESET}"
-echo -e "  ${YELLOW}   Chat, forum, médias — tout fonctionne sans ça.${RESET}"
+warn "$(t summary_voice_warn)"
 echo ""
