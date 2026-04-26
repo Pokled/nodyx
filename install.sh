@@ -588,6 +588,8 @@ T_EN[clone_done]='Nodyx code present in %s'
 T_FR[clone_done]='Code Nodyx présent dans %s'
 T_EN[ver_from_repo]='Version detected from repo: %s'
 T_FR[ver_from_repo]='Version détectée depuis le dépôt : %s'
+T_EN[clone_dir_dirty]="Target directory %s already exists and is not a git clone of Nodyx.\nMove or delete it, then re-run the installer."
+T_FR[clone_dir_dirty]="Le dossier cible %s existe déjà et n'est pas un clone git de Nodyx.\nDéplace-le ou supprime-le, puis relance l'installeur."
 T_EN[step_backend]='Configuring the backend (nodyx-core)'
 T_FR[step_backend]='Configuration du backend (nodyx-core)'
 T_EN[backend_npm_install_label]='npm install (backend)...'
@@ -2081,11 +2083,21 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_clone)"
 
+# Make sure the parent directory exists — minimal LXC/container images
+# (Proxmox templates, scratch Debian) sometimes ship without /opt.
+mkdir -p "$(dirname "$NODYX_DIR")"
+
 if [[ -d "$NODYX_DIR/.git" ]]; then
   info "$(t clone_updating)"
   git -C "$NODYX_DIR" pull --ff-only
+elif [[ -d "$NODYX_DIR" ]] && [[ -n "$(ls -A "$NODYX_DIR" 2>/dev/null)" ]]; then
+  # Directory exists and isn't empty but isn't a Nodyx git clone — refuse to
+  # clobber. The detection menu would normally catch this earlier; this is the
+  # belt-and-braces fallback for fresh-mode installs.
+  die "$(printf "$(t clone_dir_dirty)" "$NODYX_DIR")"
 else
   info "$(printf "$(t clone_cloning)" "$NODYX_DIR")"
+  # Clone into the directory (creates it if missing, works fine if empty)
   GIT_TERMINAL_PROMPT=0 git clone --depth 1 "$REPO_URL" "$NODYX_DIR"
 fi
 ok "$(printf "$(t clone_done)" "$NODYX_DIR")"
