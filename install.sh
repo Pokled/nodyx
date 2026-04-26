@@ -548,8 +548,8 @@ T_EN[turn_unsupported_arch]='Unsupported architecture for nodyx-turn: %s'
 T_FR[turn_unsupported_arch]='Architecture non supportée pour nodyx-turn : %s'
 T_EN[turn_downloading]='Downloading nodyx-turn %s (%s)...'
 T_FR[turn_downloading]='Téléchargement nodyx-turn %s (%s)...'
-T_EN[turn_dl_fail]="Could not download nodyx-turn.\nURL: %s\nCheck your connection and that the %s release exists on GitHub."
-T_FR[turn_dl_fail]="Impossible de télécharger nodyx-turn.\nURL : %s\nVérifie ta connexion et que la release %s existe sur GitHub."
+T_EN[turn_dl_fail]="Could not download nodyx-turn.\nURL: %s\nCheck your connection and that the %s release exists on GitHub.\nWorkaround: re-run with --no-turn to skip nodyx-turn (voice will use public STUN only)."
+T_FR[turn_dl_fail]="Impossible de télécharger nodyx-turn.\nURL : %s\nVérifie ta connexion et que la release %s existe sur GitHub.\nContournement : relance avec --no-turn pour ignorer nodyx-turn (le vocal utilisera uniquement un STUN public)."
 T_EN[turn_not_binary]="The downloaded file is not a valid binary.\nURL: %s"
 T_FR[turn_not_binary]="Le fichier téléchargé n'est pas un binaire valide.\nURL : %s"
 T_EN[turn_started]='nodyx-turn started (IP: %s, UDP port 3478)'
@@ -1956,7 +1956,10 @@ if ! $RELAY_MODE && ! $SKIP_TURN; then
   esac
 
   _TURN_VERSION="v0.1.2-p2p"
-  _TURN_URL="https://github.com/Pokled/Nodyx/releases/download/${_TURN_VERSION}/nodyx-turn-linux-${_TURN_ARCH}"
+  # Note: assets on v0.1.2-p2p still ship under the legacy "nexus-turn" name —
+  # the Rust crate was renamed to nodyx-turn but the GitHub release predates that
+  # rename. The downloaded binary is identical; we just save it as nodyx-turn.
+  _TURN_URL="https://github.com/Pokled/Nodyx/releases/download/${_TURN_VERSION}/nexus-turn-linux-${_TURN_ARCH}"
   info "$(printf "$(t turn_downloading)" "${_TURN_VERSION}" "${_TURN_ARCH}")"
   _TURN_TMP="$(mktemp /tmp/nodyx-turn.XXXXXX)"
   if ! curl -fsSL --max-time 60 "$_TURN_URL" -o "$_TURN_TMP"; then
