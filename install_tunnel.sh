@@ -78,8 +78,10 @@ T_EN[help_config_header]='  Configuration (skip prompts):'
 T_FR[help_config_header]='  Configuration (évite les prompts) :'
 T_EN[help_domain]='    --domain=DOMAIN         Public domain managed by Cloudflare'
 T_FR[help_domain]='    --domain=DOMAIN         Domaine public géré par Cloudflare'
-T_EN[help_token]='    --tunnel-token=TOKEN    Cloudflare Tunnel token (from Zero Trust dashboard)'
-T_FR[help_token]='    --tunnel-token=TOKEN    Token du tunnel Cloudflare (dashboard Zero Trust)'
+T_EN[help_tunnel]='    --tunnel=cf|pangolin|none  Reverse-tunnel provider (default: ask)'
+T_FR[help_tunnel]='    --tunnel=cf|pangolin|none  Fournisseur du tunnel inverse (défaut : demande)'
+T_EN[help_token]='    --tunnel-token=TOKEN    Cloudflare Tunnel token (cf mode only)'
+T_FR[help_token]='    --tunnel-token=TOKEN    Token du tunnel Cloudflare (mode cf uniquement)'
 T_EN[help_slug]='    --slug=SLUG             Community identifier'
 T_FR[help_slug]='    --slug=SLUG             Identifiant de la communauté'
 T_EN[help_name]='    --name=NAME             Community name'
@@ -200,14 +202,34 @@ T_EN[cfg_token_header]='Cloudflare Tunnel token'
 T_FR[cfg_token_header]='Token Cloudflare Tunnel'
 T_EN[cfg_token_help1]='1. Open  https://one.dash.cloudflare.com'
 T_FR[cfg_token_help1]='1. Ouvre https://one.dash.cloudflare.com'
-T_EN[cfg_token_help2]='2. Networks → Tunnels → Create a tunnel → Cloudflared'
-T_FR[cfg_token_help2]='2. Networks → Tunnels → Create a tunnel → Cloudflared'
+T_EN[cfg_token_help2]='2. Networks > Tunnels > Create a tunnel > Cloudflared'
+T_FR[cfg_token_help2]='2. Networks > Tunnels > Create a tunnel > Cloudflared'
 T_EN[cfg_token_help3]='3. Name your tunnel, save, copy the install token'
 T_FR[cfg_token_help3]='3. Nomme le tunnel, sauvegarde, copie le token d’installation'
 T_EN[cfg_token_prompt]='Tunnel install token'
 T_FR[cfg_token_prompt]='Token d’installation du tunnel'
 T_EN[cfg_token_short]='Token looks too short (got %s chars). Make sure you copied the whole string.'
 T_FR[cfg_token_short]='Le token semble trop court (%s caractères). Vérifie que tu as bien copié la chaîne complète.'
+
+# §5b - Tunnel mode selection
+T_EN[cfg_tunnel_header]='Reverse tunnel provider'
+T_FR[cfg_tunnel_header]='Fournisseur du tunnel inverse'
+T_EN[cfg_tunnel_help]='Pick how the public traffic reaches this server.'
+T_FR[cfg_tunnel_help]='Choisis comment le trafic public arrive jusqu''à ce serveur.'
+T_EN[cfg_tunnel_cf]='1. Cloudflare Tunnel (cloudflared, token-based, easiest)'
+T_FR[cfg_tunnel_cf]='1. Cloudflare Tunnel (cloudflared, par token, le plus simple)'
+T_EN[cfg_tunnel_pangolin]='2. Pangolin (self-hosted, you run newt; no Cloudflare dependency)'
+T_FR[cfg_tunnel_pangolin]='2. Pangolin (auto-hébergé, tu fais tourner newt; pas de Cloudflare)'
+T_EN[cfg_tunnel_none]='3. None / custom (frp, rathole, headscale, your own VPS reverse proxy)'
+T_FR[cfg_tunnel_none]='3. Aucun / custom (frp, rathole, headscale, ton propre reverse proxy VPS)'
+T_EN[cfg_tunnel_prompt]='Choice [1-3]'
+T_FR[cfg_tunnel_prompt]='Choix [1-3]'
+T_EN[cfg_tunnel_invalid]='Invalid tunnel mode: %s (use cf, pangolin or none)'
+T_FR[cfg_tunnel_invalid]='Mode tunnel invalide : %s (utilise cf, pangolin ou none)'
+T_EN[cfg_tunnel_pangolin_note]='Pangolin: this script configures Caddy + real-IP forwarding. Install newt yourself afterwards (instructions in summary).'
+T_FR[cfg_tunnel_pangolin_note]='Pangolin : ce script configure Caddy + forwarding de la vraie IP. Installe newt toi-même ensuite (instructions dans le récap).'
+T_EN[cfg_tunnel_none_note]='Custom: this script configures Caddy on localhost:80 with trusted-proxy headers. Wire your own tunnel to it.'
+T_FR[cfg_tunnel_none_note]='Custom : ce script configure Caddy sur localhost:80 avec les headers trusted-proxy. Branche ton propre tunnel dessus.'
 T_EN[cfg_recap]='Summary'
 T_FR[cfg_recap]='Récapitulatif'
 T_EN[cfg_recap_mode]='Mode'
@@ -274,6 +296,42 @@ T_EN[summary_dashboard_step2]='2. Click your tunnel → Public Hostname → Add'
 T_FR[summary_dashboard_step2]='2. Clique sur ton tunnel → Public Hostname → Add'
 T_EN[summary_dashboard_step3]='3. Subdomain (empty), Domain %s, Service HTTP, URL localhost:80'
 T_FR[summary_dashboard_step3]='3. Subdomain (vide), Domain %s, Service HTTP, URL localhost:80'
+
+# Mode-aware summary titles
+T_EN[summary_title_cf]='✔  Nodyx installed via Cloudflare Tunnel!'
+T_FR[summary_title_cf]='✔  Nodyx installé via Cloudflare Tunnel !'
+T_EN[summary_title_pangolin]='✔  Nodyx ready for Pangolin!'
+T_FR[summary_title_pangolin]='✔  Nodyx prêt pour Pangolin !'
+T_EN[summary_title_none]='✔  Nodyx ready (custom tunnel mode)!'
+T_FR[summary_title_none]='✔  Nodyx prêt (mode tunnel custom) !'
+
+# Mode-aware voice/UDP warning
+T_EN[summary_voice_warn_cf]='Voice/webcam will use public STUN servers (no UDP exposed via Cloudflare Tunnel).'
+T_FR[summary_voice_warn_cf]='Voix/webcam utilisent des serveurs STUN publics (pas d’UDP via Cloudflare Tunnel).'
+T_EN[summary_voice_warn_pangolin]='Voice/webcam need a UDP route. Use Pangolin "raw resources" or a dedicated nodyx-relay for UDP/3478.'
+T_FR[summary_voice_warn_pangolin]='Voix/webcam nécessitent un chemin UDP. Utilise les "raw resources" Pangolin ou un nodyx-relay dédié pour UDP/3478.'
+T_EN[summary_voice_warn_none]='Voice/webcam need a UDP route. Make sure your reverse tunnel forwards UDP/3478 (TURN) and the WebRTC ports.'
+T_FR[summary_voice_warn_none]='Voix/webcam nécessitent un chemin UDP. Vérifie que ton tunnel transporte UDP/3478 (TURN) et les ports WebRTC.'
+
+# Pangolin next-steps
+T_EN[summary_pangolin_header]='Next steps - connect this server to Pangolin:'
+T_FR[summary_pangolin_header]='Prochaines étapes - connecter ce serveur à Pangolin :'
+T_EN[summary_pangolin_s1]='1. On your Pangolin dashboard, create a Site (newt) and copy: ENDPOINT, NEWT_ID, NEWT_SECRET'
+T_FR[summary_pangolin_s1]='1. Sur ton dashboard Pangolin, crée un Site (newt) et copie : ENDPOINT, NEWT_ID, NEWT_SECRET'
+T_EN[summary_pangolin_s2]='2. Run the newt client on this server (docker example below).'
+T_FR[summary_pangolin_s2]='2. Lance le client newt sur ce serveur (exemple docker ci-dessous).'
+T_EN[summary_pangolin_s3]='3. In Pangolin, create a HTTP resource: Domain %s → http://localhost:80'
+T_FR[summary_pangolin_s3]='3. Sur Pangolin, crée une ressource HTTP : Domain %s → http://localhost:80'
+T_EN[summary_pangolin_docker]='# docker run example (replace ENDPOINT/NEWT_ID/NEWT_SECRET):'
+T_FR[summary_pangolin_docker]='# exemple docker run (remplace ENDPOINT/NEWT_ID/NEWT_SECRET) :'
+
+# None / custom tunnel next-steps
+T_EN[summary_none_header]='Next steps - point your reverse tunnel to this server:'
+T_FR[summary_none_header]='Prochaines étapes - pointe ton reverse tunnel vers ce serveur :'
+T_EN[summary_none_s1]='1. Caddy listens on http://127.0.0.1:80 - forward HTTP traffic for %s there.'
+T_FR[summary_none_s1]='1. Caddy écoute sur http://127.0.0.1:80 - redirige le trafic HTTP de %s ici.'
+T_EN[summary_none_s2]='2. Real client IP is read from X-Forwarded-For (already trusted by Caddy).'
+T_FR[summary_none_s2]='2. L’IP client réelle est lue depuis X-Forwarded-For (déjà autorisé côté Caddy).'
 
 # §9 - Upgrade fast path
 T_EN[upgrade_title]='Updating Nodyx'
@@ -373,6 +431,7 @@ slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' |
 
 # ── CLI flags ─────────────────────────────────────────────────────────────────
 INSTALL_MODE=""        # "" | upgrade | repair | reinstall | wipe
+TUNNEL_MODE=""         # "" | cf | pangolin | none
 DOMAIN_FLAG=""
 TUNNEL_TOKEN_FLAG=""
 SLUG_FLAG=""
@@ -394,6 +453,7 @@ show_help() {
   echo ""
   echo "$(t help_config_header)"
   echo "$(t help_domain)"
+  echo "$(t help_tunnel)"
   echo "$(t help_token)"
   echo "$(t help_slug)"
   echo "$(t help_name)"
@@ -418,6 +478,7 @@ for _arg in "$@"; do
     --yes|-y)               AUTO_YES=true ;;
     --domain=*)             DOMAIN_FLAG="${_arg#*=}" ;;
     --tunnel-token=*)       TUNNEL_TOKEN_FLAG="${_arg#*=}" ;;
+    --tunnel=*)             TUNNEL_MODE="${_arg#*=}" ;;
     --slug=*)               SLUG_FLAG="${_arg#*=}" ;;
     --name=*)               NAME_FLAG="${_arg#*=}" ;;
     --admin-user=*)         ADMIN_USER_FLAG="${_arg#*=}" ;;
@@ -524,7 +585,11 @@ _nodyx_upgrade() {
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env 2>/dev/null \
     || pm2 restart all 2>/dev/null || true
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save 2>/dev/null || true
-  systemctl restart cloudflared 2>/dev/null || true
+  local _persisted_mode="cf"
+  [[ -f /etc/nodyx/tunnel-mode ]] && _persisted_mode=$(cat /etc/nodyx/tunnel-mode 2>/dev/null || echo cf)
+  if [[ "$_persisted_mode" == "cf" ]]; then
+    systemctl restart cloudflared 2>/dev/null || true
+  fi
 
   echo ""
   ok "$(t upgrade_done)"
@@ -647,16 +712,50 @@ else
   done
 fi
 
-# Tunnel token
+# Tunnel mode selection
 echo ""
-echo -e "  ${BOLD}$(t cfg_token_header)${RESET}"
-if [[ -n "$TUNNEL_TOKEN_FLAG" ]]; then
-  CF_TUNNEL_TOKEN="$TUNNEL_TOKEN_FLAG"
+echo -e "  ${BOLD}$(t cfg_tunnel_header)${RESET}"
+echo -e "  ${CYAN}$(t cfg_tunnel_help)${RESET}"
+echo ""
+echo "  $(t cfg_tunnel_cf)"
+echo "  $(t cfg_tunnel_pangolin)"
+echo "  $(t cfg_tunnel_none)"
+echo ""
+
+# Validate flag-provided value, else prompt
+case "$TUNNEL_MODE" in
+  cf|pangolin|none) ;;
+  "")
+    while true; do
+      read -rp "$(echo -e "  ${CYAN}?${RESET} $(t cfg_tunnel_prompt): ")" _tm
+      case "$_tm" in
+        1|cf)        TUNNEL_MODE="cf";       break ;;
+        2|pangolin)  TUNNEL_MODE="pangolin"; break ;;
+        3|none)      TUNNEL_MODE="none";     break ;;
+      esac
+    done
+    ;;
+  *) die "$(printf "$(t cfg_tunnel_invalid)" "$TUNNEL_MODE")" ;;
+esac
+
+CF_TUNNEL_TOKEN=""
+if [[ "$TUNNEL_MODE" == "cf" ]]; then
+  echo ""
+  echo -e "  ${BOLD}$(t cfg_token_header)${RESET}"
+  if [[ -n "$TUNNEL_TOKEN_FLAG" ]]; then
+    CF_TUNNEL_TOKEN="$TUNNEL_TOKEN_FLAG"
+  else
+    prompt_secret CF_TUNNEL_TOKEN "$(t cfg_token_prompt)"
+  fi
+  if [[ ${#CF_TUNNEL_TOKEN} -lt 80 ]]; then
+    warn "$(printf "$(t cfg_token_short)" "${#CF_TUNNEL_TOKEN}")"
+  fi
+elif [[ "$TUNNEL_MODE" == "pangolin" ]]; then
+  echo ""
+  info "$(t cfg_tunnel_pangolin_note)"
 else
-  prompt_secret CF_TUNNEL_TOKEN "$(t cfg_token_prompt)"
-fi
-if [[ ${#CF_TUNNEL_TOKEN} -lt 80 ]]; then
-  warn "$(printf "$(t cfg_token_short)" "${#CF_TUNNEL_TOKEN}")"
+  echo ""
+  info "$(t cfg_tunnel_none_note)"
 fi
 
 # Admin
@@ -681,7 +780,12 @@ fi
 # Recap
 echo ""
 echo -e "  ${BOLD}${CYAN}┌─ $(t cfg_recap) ──────────────────────${RESET}"
-echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_mode)       : ${GREEN}Cloudflare Tunnel${RESET}"
+case "$TUNNEL_MODE" in
+  cf)       _MODE_LABEL="Cloudflare Tunnel" ;;
+  pangolin) _MODE_LABEL="Pangolin (newt)" ;;
+  none)     _MODE_LABEL="Custom reverse tunnel" ;;
+esac
+echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_mode)       : ${GREEN}${_MODE_LABEL}${RESET}"
 echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_domain)     : ${BOLD}${DOMAIN}${RESET}"
 echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_community)  : ${BOLD}${COMMUNITY_NAME}${RESET} (${COMMUNITY_SLUG})"
 echo -e "  ${BOLD}${CYAN}│${RESET}  $(t cfg_recap_lang)       : ${BOLD}${COMMUNITY_LANG}${RESET}"
@@ -934,13 +1038,37 @@ run_bg "SvelteKit build (2-5 min on ARM)" npm run build \
 ok "Frontend compiled"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  CADDY (HTTP-only, behind Cloudflare Tunnel)
+#  CADDY (HTTP-only, behind a reverse tunnel)
+#
+#  Real-client-IP forwarding is mode-aware so rate-limiting, IP bans and
+#  honeypot logging see the actual visitor IP, not 127.0.0.1:
+#    cf       -> Cloudflare Tunnel sets CF-Connecting-IP
+#    pangolin -> newt + Traefik forward X-Forwarded-For (XFF)
+#    none     -> trust loopback XFF; user wires their own tunnel
+#
+#  TLS terminates upstream (CF edge, Pangolin VPS, or your own proxy), so no
+#  HSTS here - it would lock visitors out if the tunnel ever goes via plain HTTP.
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_caddy)"
 
-# Cloudflare Tunnel sends traffic to localhost:80 - Caddy listens on local HTTP only.
-# TLS is handled by Cloudflare's edge; no HSTS here (it'd lock visitors out if CF is bypassed).
+# Mode-specific Caddy globals: which header Caddy uses to discover the real IP.
+# CF Tunnel uses its own header; Pangolin/Traefik and most reverse proxies use XFF.
+case "$TUNNEL_MODE" in
+  cf)       _CADDY_CLIENT_IP_HEADERS='client_ip_headers CF-Connecting-IP X-Forwarded-For' ;;
+  pangolin) _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
+  none)     _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
+esac
+
 cat > /etc/caddy/Caddyfile <<CADDY
+{
+    servers {
+        # Trust the loopback tunnel client (cloudflared, newt, frpc, ...) so its
+        # forwarded headers are honored - otherwise every visitor looks like 127.0.0.1.
+        trusted_proxies static private_ranges
+        ${_CADDY_CLIENT_IP_HEADERS}
+    }
+}
+
 http://127.0.0.1:80, http://localhost:80 {
     encode gzip
 
@@ -957,26 +1085,44 @@ http://127.0.0.1:80, http://localhost:80 {
     handle @honeypot {
         rewrite * /api/v1/_hp?p={http.request.uri.path}
         reverse_proxy 127.0.0.1:3000 {
-            header_up -X-Forwarded-For
+            header_up X-Real-IP {client_ip}
+            header_up X-Forwarded-For {client_ip}
         }
     }
 
     reverse_proxy /api/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
     }
     reverse_proxy /uploads/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
     }
     reverse_proxy /socket.io/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
     }
-    reverse_proxy * 127.0.0.1:4173
+    reverse_proxy * 127.0.0.1:4173 {
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
+    }
 }
 CADDY
 
+# Validate config before reload (catches syntax errors before they break the tunnel)
+if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/caddy_validate.log 2>&1; then
+  cat /tmp/caddy_validate.log >&2
+  die "Caddyfile validation failed."
+fi
+
 systemctl enable caddy --quiet
 systemctl restart caddy
-ok "Caddy listening on localhost:80 (Cloudflare Tunnel terminates TLS)"
+
+case "$TUNNEL_MODE" in
+  cf)       ok "Caddy listening on localhost:80 (Cloudflare Tunnel terminates TLS, real IP via CF-Connecting-IP)" ;;
+  pangolin) ok "Caddy listening on localhost:80 (Pangolin / newt terminates TLS, real IP via X-Forwarded-For)" ;;
+  none)     ok "Caddy listening on localhost:80 (custom tunnel, real IP via X-Forwarded-For from loopback)" ;;
+esac
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PM2 ECOSYSTEM (under nodyx system user)
@@ -1064,74 +1210,83 @@ for _app in nodyx-core nodyx-frontend; do
   fi
 done
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  CLOUDFLARED - Install
-# ═══════════════════════════════════════════════════════════════════════════════
-step "$(t step_cf_install)"
+if [[ "$TUNNEL_MODE" == "cf" ]]; then
+  # ═══════════════════════════════════════════════════════════════════════════════
+  #  CLOUDFLARED - Install
+  # ═══════════════════════════════════════════════════════════════════════════════
+  step "$(t step_cf_install)"
 
-if command -v cloudflared &>/dev/null; then
-  ok "cloudflared already installed: $(cloudflared --version 2>&1 | head -1)"
+  if command -v cloudflared &>/dev/null; then
+    ok "cloudflared already installed: $(cloudflared --version 2>&1 | head -1)"
+  else
+    if [[ "$CF_ARCH" == "amd64" ]]; then
+      info "Installing cloudflared via apt (Cloudflare repo)..."
+      mkdir -p --mode=0755 /usr/share/keyrings
+      curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
+        -o /usr/share/keyrings/cloudflare-main.gpg 2>/dev/null
+      _DIST=$(. /etc/os-release && echo "$VERSION_CODENAME")
+      echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared ${_DIST} main" \
+        > /etc/apt/sources.list.d/cloudflared.list
+      apt-get update -q
+      apt-get install -y -q cloudflared >/dev/null 2>&1 \
+        || die "cloudflared apt install failed. Check /etc/apt/sources.list.d/cloudflared.list"
+    else
+      info "Installing cloudflared via .deb (arm64)..."
+      _DEB=$(mktemp /tmp/cloudflared_XXXXXX.deb)
+      curl -fsSL --max-time 120 \
+        "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb" \
+        -o "$_DEB" || die "cloudflared download failed."
+      dpkg -i "$_DEB" >/dev/null 2>&1 || apt-get install -f -y -q >/dev/null 2>&1
+      rm -f "$_DEB"
+    fi
+    command -v cloudflared &>/dev/null || die "cloudflared install completed but binary not on PATH."
+    ok "cloudflared $(cloudflared --version 2>&1 | head -1) installed"
+  fi
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  #  CLOUDFLARED - Register tunnel service (idempotent via token hash)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  step "$(t step_cf_register)"
+
+  _TOKEN_HASH=$(echo -n "$CF_TUNNEL_TOKEN" | sha256sum | awk '{print $1}')
+  _TOKEN_HASH_FILE="/etc/cloudflared/.token_hash"
+  mkdir -p /etc/cloudflared
+
+  _NEED_REGISTER=true
+  if [[ -f "$_TOKEN_HASH_FILE" ]] && [[ "$(cat "$_TOKEN_HASH_FILE" 2>/dev/null)" == "$_TOKEN_HASH" ]] \
+     && systemctl is-active --quiet cloudflared 2>/dev/null; then
+    _NEED_REGISTER=false
+    ok "cloudflared service already registered with this token"
+  fi
+
+  if $_NEED_REGISTER; then
+    # Cleanly uninstall any previous registration, then re-install with the new token
+    cloudflared service uninstall 2>/dev/null || true
+    systemctl stop cloudflared 2>/dev/null || true
+
+    info "Registering cloudflared service with the token..."
+    if ! cloudflared service install "$CF_TUNNEL_TOKEN" >/tmp/cf_install.log 2>&1; then
+      cat /tmp/cf_install.log >&2
+      die "cloudflared service install failed. Check the token in your CF dashboard."
+    fi
+    echo -n "$_TOKEN_HASH" > "$_TOKEN_HASH_FILE"
+    chmod 600 "$_TOKEN_HASH_FILE"
+
+    systemctl enable cloudflared --quiet 2>/dev/null || true
+    systemctl restart cloudflared 2>/dev/null || true
+    sleep 3
+    if systemctl is-active --quiet cloudflared; then
+      ok "Cloudflare Tunnel service active"
+    else
+      warn "cloudflared service not active - diagnostic: systemctl status cloudflared"
+    fi
+  fi
 else
-  if [[ "$CF_ARCH" == "amd64" ]]; then
-    info "Installing cloudflared via apt (Cloudflare repo)..."
-    mkdir -p --mode=0755 /usr/share/keyrings
-    curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-      -o /usr/share/keyrings/cloudflare-main.gpg 2>/dev/null
-    _DIST=$(. /etc/os-release && echo "$VERSION_CODENAME")
-    echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared ${_DIST} main" \
-      > /etc/apt/sources.list.d/cloudflared.list
-    apt-get update -q
-    apt-get install -y -q cloudflared >/dev/null 2>&1 \
-      || die "cloudflared apt install failed. Check /etc/apt/sources.list.d/cloudflared.list"
+  step "Tunnel client (skipped, mode=$TUNNEL_MODE)"
+  if [[ "$TUNNEL_MODE" == "pangolin" ]]; then
+    info "Caddy is wired up. Install newt on this host pointing at your Pangolin VPS - see summary at the end."
   else
-    info "Installing cloudflared via .deb (arm64)..."
-    _DEB=$(mktemp /tmp/cloudflared_XXXXXX.deb)
-    curl -fsSL --max-time 120 \
-      "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb" \
-      -o "$_DEB" || die "cloudflared download failed."
-    dpkg -i "$_DEB" >/dev/null 2>&1 || apt-get install -f -y -q >/dev/null 2>&1
-    rm -f "$_DEB"
-  fi
-  command -v cloudflared &>/dev/null || die "cloudflared install completed but binary not on PATH."
-  ok "cloudflared $(cloudflared --version 2>&1 | head -1) installed"
-fi
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  CLOUDFLARED - Register tunnel service (idempotent via token hash)
-# ═══════════════════════════════════════════════════════════════════════════════
-step "$(t step_cf_register)"
-
-_TOKEN_HASH=$(echo -n "$CF_TUNNEL_TOKEN" | sha256sum | awk '{print $1}')
-_TOKEN_HASH_FILE="/etc/cloudflared/.token_hash"
-mkdir -p /etc/cloudflared
-
-_NEED_REGISTER=true
-if [[ -f "$_TOKEN_HASH_FILE" ]] && [[ "$(cat "$_TOKEN_HASH_FILE" 2>/dev/null)" == "$_TOKEN_HASH" ]] \
-   && systemctl is-active --quiet cloudflared 2>/dev/null; then
-  _NEED_REGISTER=false
-  ok "cloudflared service already registered with this token"
-fi
-
-if $_NEED_REGISTER; then
-  # Cleanly uninstall any previous registration, then re-install with the new token
-  cloudflared service uninstall 2>/dev/null || true
-  systemctl stop cloudflared 2>/dev/null || true
-
-  info "Registering cloudflared service with the token..."
-  if ! cloudflared service install "$CF_TUNNEL_TOKEN" >/tmp/cf_install.log 2>&1; then
-    cat /tmp/cf_install.log >&2
-    die "cloudflared service install failed. Check the token in your CF dashboard."
-  fi
-  echo -n "$_TOKEN_HASH" > "$_TOKEN_HASH_FILE"
-  chmod 600 "$_TOKEN_HASH_FILE"
-
-  systemctl enable cloudflared --quiet 2>/dev/null || true
-  systemctl restart cloudflared 2>/dev/null || true
-  sleep 3
-  if systemctl is-active --quiet cloudflared; then
-    ok "Cloudflare Tunnel service active"
-  else
-    warn "cloudflared service not active - diagnostic: systemctl status cloudflared"
+    info "Caddy is wired up. Connect your reverse tunnel of choice to localhost:80 - see summary at the end."
   fi
 fi
 
@@ -1202,10 +1357,21 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 #  SAVE CREDENTIALS
 # ═══════════════════════════════════════════════════════════════════════════════
+# Persist tunnel mode for nodyx-doctor / nodyx-update / future --upgrade runs
+mkdir -p /etc/nodyx
+echo "$TUNNEL_MODE" > /etc/nodyx/tunnel-mode
+chmod 644 /etc/nodyx/tunnel-mode
+
+case "$TUNNEL_MODE" in
+  cf)       _CREDS_MODE_LABEL="Cloudflare Tunnel" ;;
+  pangolin) _CREDS_MODE_LABEL="Pangolin (newt)" ;;
+  none)     _CREDS_MODE_LABEL="Custom reverse tunnel" ;;
+esac
+
 CREDS_FILE="/root/nodyx-credentials.txt"
 cat > "$CREDS_FILE" <<CREDS
 ═══════════════════════════════════════════════════════
-  NODYX - Instance credentials (Cloudflare Tunnel)
+  NODYX - Instance credentials (${_CREDS_MODE_LABEL})
   Generated: $(date)
 ═══════════════════════════════════════════════════════
 
@@ -1221,16 +1387,49 @@ PostgreSQL DB    : ${DB_NAME}
 JWT secret       : ${JWT_SECRET}
 
 Nodyx dir        : ${NODYX_DIR}
+Tunnel mode      : ${TUNNEL_MODE} (cat /etc/nodyx/tunnel-mode)
 
+CREDS
+
+case "$TUNNEL_MODE" in
+  cf)
+    cat >> "$CREDS_FILE" <<CFCREDS
 ── Cloudflare Tunnel ───────────────────────────────────
 Service          : systemctl status cloudflared
 Logs             : journalctl -u cloudflared -f
 Public hostname  : configure in https://one.dash.cloudflare.com
                    → Networks → Tunnels → (your tunnel) → Public Hostname
                    → Domain: ${DOMAIN}, Service: HTTP, URL: localhost:80
+CFCREDS
+    ;;
+  pangolin)
+    cat >> "$CREDS_FILE" <<PGCREDS
+── Pangolin (newt client) ──────────────────────────────
+Caddy listens    : http://127.0.0.1:80 (waits for newt on this server)
+Setup            : create a Site (newt) on your Pangolin dashboard,
+                   then run the newt client here with ENDPOINT/NEWT_ID/NEWT_SECRET.
+Resource         : add a HTTP resource on Pangolin pointing
+                   ${DOMAIN} → http://localhost:80
+Real IP          : Caddy reads X-Forwarded-For from the trusted loopback proxy.
+PGCREDS
+    ;;
+  none)
+    cat >> "$CREDS_FILE" <<NCCREDS
+── Custom reverse tunnel ───────────────────────────────
+Caddy listens    : http://127.0.0.1:80
+Public domain    : ${DOMAIN}
+What to do       : forward HTTP traffic from your reverse tunnel
+                   to 127.0.0.1:80 on this server, then point your DNS to
+                   the public side of the tunnel.
+Real IP          : Caddy reads X-Forwarded-For from private/loopback ranges.
+NCCREDS
+    ;;
+esac
+
+cat >> "$CREDS_FILE" <<'CRENDS'
 
 KEEP THIS FILE SAFE - never share it.
-CREDS
+CRENDS
 chmod 600 "$CREDS_FILE"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1250,6 +1449,10 @@ die()  { echo -e "${RED}✘  $*${RESET}" >&2; exit 1; }
 UPDATESH
 echo "NODYX_DIR=\"${NODYX_DIR}\"" >> /usr/local/bin/nodyx-update
 cat >> /usr/local/bin/nodyx-update <<'UPDATESH2'
+
+TUNNEL_MODE_FILE="/etc/nodyx/tunnel-mode"
+TUNNEL_MODE_VAL="cf"
+[[ -f "$TUNNEL_MODE_FILE" ]] && TUNNEL_MODE_VAL=$(cat "$TUNNEL_MODE_FILE" 2>/dev/null || echo cf)
 
 echo -e "\n${BOLD}━━━  Nodyx update  ━━━${RESET}\n"
 info "Pulling latest..."
@@ -1271,10 +1474,21 @@ info "Restart services..."
 chown -R nodyx:nodyx "$NODYX_DIR"
 runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env
 runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
-systemctl restart cloudflared 2>/dev/null || true
+
+case "$TUNNEL_MODE_VAL" in
+  cf)
+    systemctl restart cloudflared 2>/dev/null || true
+    ;;
+  pangolin)
+    info "Pangolin mode: newt is managed externally (skipping cloudflared restart)."
+    ;;
+  none)
+    info "Custom tunnel mode: no managed tunnel client to restart."
+    ;;
+esac
 
 echo ""
-ok "Nodyx updated and restarted."
+ok "Nodyx updated and restarted (tunnel mode: $TUNNEL_MODE_VAL)."
 runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list
 UPDATESH2
 chmod +x /usr/local/bin/nodyx-update
@@ -1293,10 +1507,21 @@ _sect(){ echo ""; echo -e "  ${BOLD}${CYAN}▸ $1${RESET}"; }
 
 [[ $EUID -ne 0 ]] && { echo "Run as root: sudo nodyx-doctor"; exit 1; }
 
-echo -e "\n${BOLD}━━━  Nodyx doctor (Cloudflare Tunnel)  ━━━${RESET}"
+TUNNEL_MODE_VAL="cf"
+[[ -f /etc/nodyx/tunnel-mode ]] && TUNNEL_MODE_VAL=$(cat /etc/nodyx/tunnel-mode 2>/dev/null || echo cf)
+case "$TUNNEL_MODE_VAL" in
+  cf)       _MODE_LABEL="Cloudflare Tunnel" ;;
+  pangolin) _MODE_LABEL="Pangolin (newt)" ;;
+  none)     _MODE_LABEL="Custom reverse tunnel" ;;
+  *)        _MODE_LABEL="Unknown ($TUNNEL_MODE_VAL)" ;;
+esac
+
+echo -e "\n${BOLD}━━━  Nodyx doctor ($_MODE_LABEL)  ━━━${RESET}"
 
 _sect "System services"
-for s in postgresql redis-server caddy cloudflared; do
+_BASE_SVC=(postgresql redis-server caddy)
+[[ "$TUNNEL_MODE_VAL" == "cf" ]] && _BASE_SVC+=(cloudflared)
+for s in "${_BASE_SVC[@]}"; do
   if systemctl is-active --quiet "$s" 2>/dev/null; then _pass "$s"
   else _fail "$s  (systemctl status $s)"; fi
 done
@@ -1318,14 +1543,38 @@ api=$(curl -s --max-time 4 -o /dev/null -w '%{http_code}' http://localhost:3000/
 caddy_code=$(curl -s --max-time 4 -o /dev/null -w '%{http_code}' http://localhost:80/ 2>/dev/null || true)
 [[ "$caddy_code" =~ ^[23] ]] && _pass "Caddy localhost:80 → HTTP $caddy_code" || _warn "Caddy localhost:80 → HTTP ${caddy_code:-timeout}"
 
-_sect "Cloudflare Tunnel"
-if systemctl is-active --quiet cloudflared 2>/dev/null; then
-  _pass "cloudflared service active"
-  recent_err=$(journalctl -u cloudflared --since '5 min ago' --no-pager 2>/dev/null | grep -ciE 'error|failed' || true)
-  [[ "$recent_err" -lt 3 ]] && _pass "No recent errors in journal" || _warn "$recent_err errors in last 5 min: journalctl -u cloudflared -n 50"
-else
-  _fail "cloudflared not active"
-fi
+_sect "Tunnel ($_MODE_LABEL)"
+case "$TUNNEL_MODE_VAL" in
+  cf)
+    if systemctl is-active --quiet cloudflared 2>/dev/null; then
+      _pass "cloudflared service active"
+      recent_err=$(journalctl -u cloudflared --since '5 min ago' --no-pager 2>/dev/null | grep -ciE 'error|failed' || true)
+      [[ "$recent_err" -lt 3 ]] && _pass "No recent errors in journal" || _warn "$recent_err errors in last 5 min: journalctl -u cloudflared -n 50"
+    else
+      _fail "cloudflared not active"
+    fi
+    ;;
+  pangolin)
+    if pgrep -af 'newt' >/dev/null 2>&1 || docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | grep -qi 'newt'; then
+      _pass "newt client process detected"
+    else
+      _warn "No newt process detected (start the Pangolin newt client on this host)"
+    fi
+    if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(:|\\.)80$'; then
+      _pass "Caddy is listening on :80 (ready for newt → HTTP)"
+    else
+      _warn "Nothing listening on :80 - Pangolin won't be able to reach Caddy"
+    fi
+    ;;
+  none)
+    if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(:|\\.)80$'; then
+      _pass "Caddy is listening on :80 (ready for your reverse tunnel)"
+    else
+      _warn "Nothing listening on :80 - your tunnel client cannot reach Caddy"
+    fi
+    _warn "Custom tunnel mode: no managed client - this script can't check the remote side"
+    ;;
+esac
 
 TOT=$((PASS+WARN+FAIL))
 echo ""
@@ -1384,12 +1633,36 @@ for _app in nodyx-core nodyx-frontend; do
   fi
 done
 
-_hc_sect "$(t hc_tunnel)"
-if systemctl is-active --quiet cloudflared 2>/dev/null; then
-  _hc_pass "cloudflared (tunnel active)"
-else
-  _hc_fail "cloudflared not active"
-fi
+case "$TUNNEL_MODE" in
+  cf)       _HC_TUNNEL_LABEL="Cloudflare Tunnel" ;;
+  pangolin) _HC_TUNNEL_LABEL="Pangolin (newt)" ;;
+  none)     _HC_TUNNEL_LABEL="Custom reverse tunnel" ;;
+esac
+_hc_sect "$_HC_TUNNEL_LABEL"
+case "$TUNNEL_MODE" in
+  cf)
+    if systemctl is-active --quiet cloudflared 2>/dev/null; then
+      _hc_pass "cloudflared (tunnel active)"
+    else
+      _hc_fail "cloudflared not active"
+    fi
+    ;;
+  pangolin)
+    if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(:|\.)80$'; then
+      _hc_pass "Caddy listening on :80 (ready for newt)"
+    else
+      _hc_fail "Nothing listening on :80"
+    fi
+    _hc_warn "Run the Pangolin newt client on this host (see summary below)"
+    ;;
+  none)
+    if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(:|\.)80$'; then
+      _hc_pass "Caddy listening on :80 (ready for your reverse tunnel)"
+    else
+      _hc_fail "Nothing listening on :80"
+    fi
+    ;;
+esac
 
 _dns_ip=$(getent hosts "$DOMAIN" 2>/dev/null | awk '{print $1}' | head -1 || true)
 if [[ -n "$_dns_ip" ]]; then
@@ -1400,12 +1673,18 @@ else
   HC_WARN=$((HC_WARN+1))
 fi
 
-if _wait_https "https://${DOMAIN}" "Waiting for HTTPS via tunnel..." 60; then
-  printf "  ${GREEN}✔${RESET}  $(t hc_https_ok)\n" "https://${DOMAIN}"
-  HC_PASS=$((HC_PASS+1))
+# HTTPS reachability only meaningful for cf (cloudflared owns DNS+TLS).
+# For pangolin/none, DNS+TLS depend on user setup which may not yet be wired up.
+if [[ "$TUNNEL_MODE" == "cf" ]]; then
+  if _wait_https "https://${DOMAIN}" "Waiting for HTTPS via tunnel..." 60; then
+    printf "  ${GREEN}✔${RESET}  $(t hc_https_ok)\n" "https://${DOMAIN}"
+    HC_PASS=$((HC_PASS+1))
+  else
+    printf "  ${YELLOW}⚠${RESET}  $(t hc_https_wait)\n" "https://${DOMAIN}"
+    HC_WARN=$((HC_WARN+1))
+  fi
 else
-  printf "  ${YELLOW}⚠${RESET}  $(t hc_https_wait)\n" "https://${DOMAIN}"
-  HC_WARN=$((HC_WARN+1))
+  printf "  ${CYAN}→${RESET}  HTTPS check skipped (mode=%s, configure your tunnel/resource first)\n" "$TUNNEL_MODE"
 fi
 
 HC_TOTAL=$((HC_PASS + HC_WARN + HC_FAIL))
@@ -1419,26 +1698,70 @@ fi
 #  SUMMARY
 # ═══════════════════════════════════════════════════════════════════════════════
 echo ""
-echo -e "${GREEN}${BOLD}╔═════════════════════════════════╗${RESET}"
-echo -e "${GREEN}${BOLD}║  $(t summary_title)  ║${RESET}"
-echo -e "${GREEN}${BOLD}╚═════════════════════════════════╝${RESET}"
+case "$TUNNEL_MODE" in
+  cf)       _SUMMARY_TITLE=$(t summary_title_cf) ;;
+  pangolin) _SUMMARY_TITLE=$(t summary_title_pangolin) ;;
+  none)     _SUMMARY_TITLE=$(t summary_title_none) ;;
+esac
+echo -e "${GREEN}${BOLD}╔═════════════════════════════════════════════╗${RESET}"
+echo -e "${GREEN}${BOLD}║  ${_SUMMARY_TITLE}  ║${RESET}"
+echo -e "${GREEN}${BOLD}╚═════════════════════════════════════════════╝${RESET}"
 echo ""
 echo -e "  ${BOLD}$(t summary_url):${RESET}    https://${DOMAIN}"
 echo -e "  ${BOLD}$(t summary_admin):${RESET}  ${ADMIN_USERNAME} / ${ADMIN_EMAIL}"
 echo ""
 printf "  ${CYAN}$(t creds_saved)${RESET}\n" "${BOLD}${CREDS_FILE}${RESET}"
 echo ""
-echo -e "  ${BOLD}${CYAN}▸ $(t summary_dashboard)${RESET}"
-echo -e "  $(t summary_dashboard_step1)"
-echo -e "  $(t summary_dashboard_step2)"
-printf  "  $(t summary_dashboard_step3)\n" "${DOMAIN}"
-echo ""
-echo -e "  ${BOLD}${CYAN}▸ Service management${RESET}"
-echo -e "  sudo nodyx-doctor                     # full diagnostic"
-echo -e "  sudo nodyx-update                     # git pull + rebuild + restart"
-echo -e "  systemctl status cloudflared          # tunnel state"
-echo -e "  journalctl -u cloudflared -f          # tunnel logs"
-echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
-echo ""
-warn "$(t summary_voice_warn)"
+
+case "$TUNNEL_MODE" in
+  cf)
+    echo -e "  ${BOLD}${CYAN}▸ $(t summary_dashboard)${RESET}"
+    echo -e "  $(t summary_dashboard_step1)"
+    echo -e "  $(t summary_dashboard_step2)"
+    printf  "  $(t summary_dashboard_step3)\n" "${DOMAIN}"
+    echo ""
+    echo -e "  ${BOLD}${CYAN}▸ Service management${RESET}"
+    echo -e "  sudo nodyx-doctor                     # full diagnostic"
+    echo -e "  sudo nodyx-update                     # git pull + rebuild + restart"
+    echo -e "  systemctl status cloudflared          # tunnel state"
+    echo -e "  journalctl -u cloudflared -f          # tunnel logs"
+    echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
+    echo ""
+    warn "$(t summary_voice_warn_cf)"
+    ;;
+  pangolin)
+    echo -e "  ${BOLD}${CYAN}▸ $(t summary_pangolin_header)${RESET}"
+    echo -e "  $(t summary_pangolin_s1)"
+    echo -e "  $(t summary_pangolin_s2)"
+    printf  "  $(t summary_pangolin_s3)\n" "${DOMAIN}"
+    echo ""
+    echo -e "  ${CYAN}$(t summary_pangolin_docker)${RESET}"
+    echo -e "  ${BOLD}docker run -d --name newt --restart unless-stopped \\"
+    echo -e "    -e PANGOLIN_ENDPOINT=https://your-pangolin.example.com \\"
+    echo -e "    -e NEWT_ID=your_newt_id \\"
+    echo -e "    -e NEWT_SECRET=your_newt_secret \\"
+    echo -e "    fosrl/newt:latest${RESET}"
+    echo ""
+    echo -e "  ${BOLD}${CYAN}▸ Service management${RESET}"
+    echo -e "  sudo nodyx-doctor                     # full diagnostic"
+    echo -e "  sudo nodyx-update                     # git pull + rebuild + restart"
+    echo -e "  docker logs -f newt                   # newt client logs (if docker)"
+    echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
+    echo ""
+    warn "$(t summary_voice_warn_pangolin)"
+    ;;
+  none)
+    echo -e "  ${BOLD}${CYAN}▸ $(t summary_none_header)${RESET}"
+    printf  "  $(t summary_none_s1)\n" "${DOMAIN}"
+    echo -e "  $(t summary_none_s2)"
+    echo ""
+    echo -e "  ${BOLD}${CYAN}▸ Service management${RESET}"
+    echo -e "  sudo nodyx-doctor                     # full diagnostic"
+    echo -e "  sudo nodyx-update                     # git pull + rebuild + restart"
+    echo -e "  ss -ltn 'sport = :80'                 # confirm Caddy is listening"
+    echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
+    echo ""
+    warn "$(t summary_voice_warn_none)"
+    ;;
+esac
 echo ""
