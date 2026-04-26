@@ -507,6 +507,7 @@
 						userThanked={post.user_thanked ?? false}
 						isOwnPost={user?.id === post.author_id}
 						isLoggedIn={!!user}
+						token={data.token}
 					/>
 				{/if}
 			</div>

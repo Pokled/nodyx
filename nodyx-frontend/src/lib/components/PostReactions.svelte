@@ -14,6 +14,7 @@
 		userThanked   = false,
 		isOwnPost     = false,
 		isLoggedIn    = false,
+		token         = null,
 	}: {
 		postId:       string;
 		reactions?:   ReactionSummary[];
@@ -21,6 +22,7 @@
 		userThanked?: boolean;
 		isOwnPost?:   boolean;
 		isLoggedIn?:  boolean;
+		token?:       string | null;
 	} = $props();
 
 	const EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
@@ -50,9 +52,11 @@
 		} else {
 			localReactions = [...localReactions, { emoji, count: 1, user_reacted: true }];
 		}
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+		if (token) headers['Authorization'] = `Bearer ${token}`;
 		fetch(`/api/v1/forums/posts/${postId}/reactions`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers,
 			body: JSON.stringify({ emoji }),
 		}).catch(() => {});
 	}
@@ -65,7 +69,9 @@
 			localThanksCount += 1;
 			localUserThanked = true;
 		}
-		fetch(`/api/v1/forums/posts/${postId}/thanks`, { method: 'POST' }).catch(() => {});
+		const headers: Record<string, string> = {};
+		if (token) headers['Authorization'] = `Bearer ${token}`;
+		fetch(`/api/v1/forums/posts/${postId}/thanks`, { method: 'POST', headers }).catch(() => {});
 	}
 </script>
 

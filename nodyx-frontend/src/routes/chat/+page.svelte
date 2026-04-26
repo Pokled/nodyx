@@ -288,7 +288,7 @@
 		sock.on('chat:history', ({ channelId, messages: hist }: { channelId: string; messages: Message[] }) => {
 			if (channelId !== selectedChannel?.id) return;
 			messages = hist.map(normalizeMsg);
-			scrollToBottom();
+			scrollToBottom({ force: true });
 		});
 
 		sock.on('chat:message', (msg: Message) => {
@@ -603,11 +603,19 @@
 	}
 
 	// ── Scroll ────────────────────────────────────────────────────────────────
-	async function scrollToBottom() {
+	// `force` re-scrolls over ~1s to catch async-loaded content (avatars, unfurl
+	// previews, GIFs) that pushes the bottom down after the initial scroll.
+	async function scrollToBottom(opts: { force?: boolean } = {}) {
 		await tick();
-		if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+		const pin = () => { if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight; };
+		pin();
 		isAtBottom = true;
 		unreadWhileScrolled = 0;
+		if (opts.force) {
+			for (const ms of [50, 150, 350, 600, 1000]) {
+				setTimeout(() => { if (isAtBottom) pin(); }, ms);
+			}
+		}
 	}
 
 	async function handleScroll() {
