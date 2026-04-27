@@ -46,6 +46,21 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
       <br/>
       <sub><strong>First Regular 🎯</strong></sub>
     </td>
+    <td align="center" width="200">
+      <a href="https://github.com/naranco66">
+        <img src="https://github.com/naranco66.png?size=120" width="120" height="120" style="border-radius:50%;" alt="naranco66"/>
+        <br/>
+        <sub><b>naranco66</b></sub>
+      </a>
+      <br/>
+      <sub>🌟 × 2</sub>
+      <br/>
+      <sub><a href="https://github.com/Pokled/nodyx/pull/16">PR #16</a> · <a href="https://github.com/Pokled/nodyx/pull/19">PR #19</a></sub>
+      <br/>
+      <sub><em>Spanish (es) translation + native review</em></sub>
+      <br/>
+      <sub><strong>First Hispanic contributor 🇪🇸</strong></sub>
+    </td>
   </tr>
 </table>
 
@@ -68,21 +83,6 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
       <br/>
       <sub><strong>First external contributor 🏆</strong></sub>
     </td>
-    <td align="center" width="200">
-      <a href="https://github.com/naranco66">
-        <img src="https://github.com/naranco66.png?size=120" width="120" height="120" style="border-radius:50%;" alt="naranco66"/>
-        <br/>
-        <sub><b>naranco66</b></sub>
-      </a>
-      <br/>
-      <sub>🌟 × 1</sub>
-      <br/>
-      <sub><a href="https://github.com/Pokled/nodyx/pull/16">PR #16</a></sub>
-      <br/>
-      <sub><em>Spanish (es) translation, 719 strings</em></sub>
-      <br/>
-      <sub><strong>First Hispanic contributor 🇪🇸</strong></sub>
-    </td>
   </tr>
 </table>
 
@@ -94,6 +94,7 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
 |---|---|---|---|---|---|
 | [@waazaa-fr](https://github.com/waazaa-fr) | Reported broken `nodyx-turn` download URL in installer | `bug(installer)` | [#14](https://github.com/Pokled/nodyx/issues/14) | [`c24a851`](https://github.com/Pokled/nodyx/commit/c24a851) | 2026-04-26 |
 | [@waazaa-fr](https://github.com/waazaa-fr) | Reported `/opt/nodyx` parent dir not auto-created in installer | `bug(installer)` | [#15](https://github.com/Pokled/nodyx/issues/15) | [`4c0ab74`](https://github.com/Pokled/nodyx/commit/4c0ab74) | 2026-04-26 |
+| [@naranco66](https://github.com/naranco66) | Native Spanish review of community pulse strings (7 keys, dropped 2 duplicate keys) | `i18n(es)` | [#19](https://github.com/Pokled/nodyx/pull/19) | [`a9a90b3`](https://github.com/Pokled/nodyx/commit/a9a90b3) | 2026-04-27 |
 | [@naranco66](https://github.com/naranco66) | Spanish (es-ES) translation : 719 strings, full key + placeholder parity | `feat(i18n)` | [#16](https://github.com/Pokled/nodyx/pull/16) | _polish pending if needed_ | 2026-04-26 |
 | [@Pranto2003](https://github.com/Pranto2003) | Ctrl/Cmd + D to duplicate selected canvas elements | `feat(canvas)` | [#11](https://github.com/Pokled/nodyx/pull/11) | [`d19682f`](https://github.com/Pokled/nodyx/commit/d19682f) · [`cbecb2f`](https://github.com/Pokled/nodyx/commit/cbecb2f) · [`de84424`](https://github.com/Pokled/nodyx/commit/de84424) | 2026-04-18 |
 

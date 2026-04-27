@@ -699,7 +699,7 @@ Every external contribution earns a star. Every Star goes on [our Hall of Fame](
 
 <a href="https://github.com/naranco66"><img src="https://github.com/naranco66.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="naranco66"/></a>
 
-**[naranco66](https://github.com/naranco66)** : 🌟 × 1, brought Spanish (es-ES) to Nodyx via [PR #16](https://github.com/Pokled/nodyx/pull/16) : 719 strings, full key + placeholder parity, native review.
+**[naranco66](https://github.com/naranco66)** : 🌟 × 2, brought Spanish (es-ES) to Nodyx via [PR #16](https://github.com/Pokled/nodyx/pull/16) (719 strings, full key + placeholder parity), then came back with [PR #19](https://github.com/Pokled/nodyx/pull/19) for a native review of the community pulse strings.
 
 *Third locale, third bridge to the world. Gracias naranco 🙏*
 
