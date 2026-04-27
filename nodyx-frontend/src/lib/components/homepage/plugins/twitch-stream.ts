@@ -60,12 +60,22 @@ const plugin: WidgetPlugin = {
 		},
 		// ── Fallback catégorie (optionnel, nécessite credentials Twitch côté serveur) ──
 		{
-			key: 'fallback_category', type: 'text', label: 'Catégorie fallback (optionnel)',
-			placeholder: 'Software and Game Development  ou  URL /directory/category/...',
-			hint: 'Si la chaîne principale est offline, on affiche le stream le plus regardé de cette catégorie. Nécessite TWITCH_CLIENT_ID côté serveur.',
+			key: 'fallback_category', type: 'text', label: 'Stream de secours quand la chaîne est offline',
+			placeholder: 'Ex: Software and Game Development',
+			hint: 'Si ta chaîne n\'est pas en live, on diffuse à la place le stream le plus regardé d\'une catégorie Twitch (ex: un jeu, un thème).',
+			details:
+				'Comment ça marche\n\n' +
+				'Quand ta chaîne est offline, le widget affiche automatiquement à la place le stream le plus regardé de la catégorie indiquée ici. Pratique pour ne jamais avoir un cadre vide sur ta homepage.\n\n' +
+				'Que mettre dans le champ\n\n' +
+				'Soit le nom exact d\'une catégorie Twitch — par exemple "Software and Game Development", "Just Chatting", "League of Legends".\n\n' +
+				'Soit l\'URL complète de la catégorie copiée depuis Twitch — par exemple https://www.twitch.tv/directory/category/software-and-game-development. Le widget extrait le bon nom automatiquement.\n\n' +
+				'Pré-requis côté serveur (action admin)\n\n' +
+				'Cette fonctionnalité interroge l\'API Twitch pour trouver le stream le plus regardé de la catégorie. Il faut donc déclarer une application Twitch puis ajouter ses identifiants au fichier nodyx-core/.env :\n\n' +
+				'TWITCH_CLIENT_ID=xxxxxxxxxxxx\nTWITCH_CLIENT_SECRET=xxxxxxxxxxxx\n\n' +
+				'Inscription gratuite sur https://dev.twitch.tv/console/apps. Sans ces identifiants, ce champ reste sans effet et le player affichera "offline" quand ta chaîne ne stream pas.',
 		},
 		{
-			key: 'fallback_language', type: 'select', label: 'Langue du fallback',
+			key: 'fallback_language', type: 'select', label: 'Langue du stream de secours',
 			default: 'any',
 			options: [
 				{ value: 'any', label: 'Toutes langues'   },
@@ -80,7 +90,7 @@ const plugin: WidgetPlugin = {
 				{ value: 'ko',  label: '한국어'            },
 				{ value: 'zh',  label: '中文'              },
 			],
-			hint: 'Filtre les streams de la catégorie par langue.',
+			hint: 'Filtre les streams de secours par langue. Choisis "Français" pour ne proposer que des streams francophones.',
 		},
 	],
 }

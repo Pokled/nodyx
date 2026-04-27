@@ -19,6 +19,9 @@ export interface FieldSchema {
 	min?:         number
 	max?:         number
 	hint?:        string
+	/** Long explanation — shown in a collapsible info panel triggered by a (?) icon
+	 *  next to the field label. Use \n for paragraph breaks. */
+	details?:     string
 }
 
 export interface WidgetPlugin {

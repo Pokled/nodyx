@@ -77,6 +77,7 @@
 
 	// Formulaire config widget
 	let configFields = $state<Record<string, unknown>>({})
+	let openDetails  = $state<string | null>(null)
 
 	function openColConfig(rowId: string, colId: string) {
 		selectedCol = { rowId, colId }
@@ -1037,8 +1038,26 @@
 				{:else if selPlugin && selPlugin.schema.length > 0}
 					{#each selPlugin.schema as field}
 						<label class="pfield">
-							<span>{field.label}</span>
+							<span class="pfield-label-row">
+								<span>{field.label}</span>
+								{#if field.details}
+									<button type="button" class="pfield-info-btn"
+										onclick={(e) => {
+											e.preventDefault()
+											openDetails = openDetails === field.key ? null : field.key
+										}}
+										aria-label="Plus d'informations"
+										aria-expanded={openDetails === field.key}>?</button>
+								{/if}
+							</span>
 							{#if field.hint}<span class="pfield-hint">{field.hint}</span>{/if}
+							{#if field.details && openDetails === field.key}
+								<div class="pfield-details">
+									{#each field.details.split('\n\n') as para}
+										<p>{para}</p>
+									{/each}
+								</div>
+							{/if}
 
 							{#if field.type === 'boolean'}
 								<label class="ptoggle">
@@ -1541,6 +1560,52 @@
 	}
 	.pfield span:first-child { font-size: 11px; color: #9ca3af; }
 	.pfield-hint { font-size: 10px; color: #6b7280; line-height: 1.4; }
+
+	.pfield-label-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.pfield-info-btn {
+		flex-shrink: 0;
+		width: 16px; height: 16px;
+		border-radius: 50%;
+		border: 1px solid rgba(167, 139, 250, .35);
+		background: rgba(167, 139, 250, .08);
+		color: #a78bfa;
+		font-size: 10px;
+		font-weight: 700;
+		line-height: 1;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		transition: all .15s ease;
+	}
+	.pfield-info-btn:hover {
+		background: rgba(167, 139, 250, .18);
+		border-color: rgba(167, 139, 250, .6);
+		color: #c4b5fd;
+	}
+	.pfield-info-btn[aria-expanded="true"] {
+		background: rgba(167, 139, 250, .25);
+		border-color: rgba(167, 139, 250, .7);
+		color: #ddd6fe;
+	}
+	.pfield-details {
+		margin-top: 6px;
+		padding: 10px 12px;
+		border-radius: 6px;
+		background: rgba(167, 139, 250, .06);
+		border: 1px solid rgba(167, 139, 250, .18);
+		border-left: 3px solid rgba(167, 139, 250, .55);
+		font-size: 11px;
+		line-height: 1.55;
+		color: #cbd5e1;
+	}
+	.pfield-details p { margin: 0; }
+	.pfield-details p + p { margin-top: 8px; }
 
 	.pfield input[type="text"],
 	.pfield input[type="url"],
