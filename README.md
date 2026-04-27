@@ -705,6 +705,16 @@ Every external contribution earns a star. Every Star goes on [our Hall of Fame](
 
 <br/>
 
+### 🇩🇪 Sprichst du Deutsch? Now Nodyx does too
+
+<a href="https://github.com/forke24x7"><img src="https://github.com/forke24x7.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="forke24x7"/></a>
+
+**[forke24x7](https://github.com/forke24x7)** : 🌟 × 2, brought German (de) to Nodyx by attaching a hand-reviewed `de.json` (741 strings, native review) on [issue #5](https://github.com/Pokled/nodyx/issues/5), and triggered the Pangolin / alternative-tunnel support work via [issue #18](https://github.com/Pokled/nodyx/issues/18).
+
+*Fourth locale, and a feature request that made the installer better for the whole self-hosting community. Danke forke 🙏*
+
+<br/>
+
 👉 **[See all contributors →](CONTRIBUTORS.md)**
 
 ---
