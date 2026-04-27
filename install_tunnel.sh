@@ -1030,14 +1030,17 @@ cat > "${NODYX_DIR}/nodyx-frontend/.env" <<FEENV
 PUBLIC_API_URL=https://${DOMAIN}
 PRIVATE_API_SSR_URL=http://127.0.0.1:3000/api/v1
 
-# Required by SvelteKit \$env/static/public (imported by src/lib/voice.ts).
+# Required by SvelteKit \$env/static/public.
 # Even when empty, these MUST be present at build time or vite/rollup
-# fails with "PUBLIC_TURN_URL is not exported by virtual:env/static/public".
+# fails with "PUBLIC_X is not exported by virtual:env/static/public".
 # Voice/TURN credentials are normally served dynamically by nodyx-core
 # via the voice:init Socket.IO event.
 PUBLIC_TURN_URL=
 PUBLIC_TURN_USERNAME=
 PUBLIC_TURN_CREDENTIAL=
+
+# Nodyx Signet (optional 2FA authenticator) — leave empty if unused.
+PUBLIC_SIGNET_URL=
 
 # Optional integrations (left empty by default).
 PUBLIC_TENOR_KEY=
