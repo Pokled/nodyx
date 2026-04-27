@@ -53,11 +53,11 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
         <sub><b>naranco66</b></sub>
       </a>
       <br/>
-      <sub>🌟 × 2</sub>
+      <sub>🌟 × 3</sub>
       <br/>
-      <sub><a href="https://github.com/Pokled/nodyx/pull/16">PR #16</a> · <a href="https://github.com/Pokled/nodyx/pull/19">PR #19</a></sub>
+      <sub><a href="https://github.com/Pokled/nodyx/pull/16">PR #16</a> · <a href="https://github.com/Pokled/nodyx/pull/19">PR #19</a> · <a href="https://github.com/Pokled/nodyx/pull/22">PR #22</a></sub>
       <br/>
-      <sub><em>Spanish (es) translation + native review</em></sub>
+      <sub><em>Spanish (es) translation + Docker setup fixes</em></sub>
       <br/>
       <sub><strong>First Hispanic contributor 🇪🇸</strong></sub>
     </td>
@@ -107,6 +107,7 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| [@naranco66](https://github.com/naranco66) | Fixed orphaned `nexus-*` references in `docker-compose.yml` post-rebrand + Alpine font path mismatch breaking frontend build | `fix(docker)` | [#22](https://github.com/Pokled/nodyx/pull/22) | [`b629242`](https://github.com/Pokled/nodyx/commit/b629242) | 2026-04-27 |
 | [@waazaa-fr](https://github.com/waazaa-fr) | Reported broken `nodyx-turn` download URL in installer | `bug(installer)` | [#14](https://github.com/Pokled/nodyx/issues/14) | [`c24a851`](https://github.com/Pokled/nodyx/commit/c24a851) | 2026-04-26 |
 | [@waazaa-fr](https://github.com/waazaa-fr) | Reported `/opt/nodyx` parent dir not auto-created in installer | `bug(installer)` | [#15](https://github.com/Pokled/nodyx/issues/15) | [`4c0ab74`](https://github.com/Pokled/nodyx/commit/4c0ab74) | 2026-04-26 |
 | [@forke24x7](https://github.com/forke24x7) | Caught regression in `install_tunnel.sh` : missing `PUBLIC_TURN_*` vars broke the SvelteKit build | `bug(installer)` | [#21](https://github.com/Pokled/nodyx/issues/21) | [`cbc9e6b`](https://github.com/Pokled/nodyx/commit/cbc9e6b) | 2026-04-27 |

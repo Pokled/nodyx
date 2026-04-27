@@ -699,9 +699,9 @@ Every external contribution earns a star. Every Star goes on [our Hall of Fame](
 
 <a href="https://github.com/naranco66"><img src="https://github.com/naranco66.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="naranco66"/></a>
 
-**[naranco66](https://github.com/naranco66)** : 🌟 × 2, brought Spanish (es-ES) to Nodyx via [PR #16](https://github.com/Pokled/nodyx/pull/16) (719 strings, full key + placeholder parity), then came back with [PR #19](https://github.com/Pokled/nodyx/pull/19) for a native review of the community pulse strings.
+**[naranco66](https://github.com/naranco66)** : 🌟 × 3, brought Spanish (es-ES) to Nodyx via [PR #16](https://github.com/Pokled/nodyx/pull/16) (719 strings, full key + placeholder parity), came back with [PR #19](https://github.com/Pokled/nodyx/pull/19) for a native review of the community pulse strings, then jumped from i18n to ops with [PR #22](https://github.com/Pokled/nodyx/pull/22) : fixed orphaned `nexus-*` references in `docker-compose.yml` and an Alpine font path mismatch that broke the frontend Docker build.
 
-*Third locale, third bridge to the world. Gracias naranco 🙏*
+*Third locale, third bridge to the world, and a Docker setup that actually works out of the box. Gracias naranco 🙏*
 
 <br/>
 
