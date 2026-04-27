@@ -27,6 +27,9 @@ if [[ ! -t 0 ]]; then
   _SELF=$(mktemp /tmp/nodyx_tunnel_XXXXXX.sh)
   curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh -o "$_SELF" 2>/dev/null \
     || wget -qO "$_SELF" https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh
+  # Drain remaining stdin so the upstream curl finishes writing into its pipe
+  # before we exec — otherwise curl exits with code 23 (write to closed pipe).
+  cat >/dev/null 2>&1 || true
   exec bash "$_SELF" "$@" </dev/tty
 fi
 

@@ -34,6 +34,9 @@ if [[ ! -t 0 ]]; then
   _SELF=$(mktemp /tmp/nodyx_install_XXXXXX.sh)
   curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh -o "$_SELF" 2>/dev/null \
     || wget -qO "$_SELF" https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh
+  # Drain remaining stdin avant exec : sinon le curl en amont continue d'écrire
+  # dans un pipe fermé après le exec et sort en code 23 (write error).
+  cat >/dev/null 2>&1 || true
   exec bash "$_SELF" "$@" </dev/tty
 fi
 
