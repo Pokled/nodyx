@@ -962,6 +962,38 @@ _nodyx_upgrade() {
     || runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${dir}/ecosystem.config.js" --update-env
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
 
+  # ── Relay client : upgrade du binaire si version périmée ─────────────────────
+  # Sans ça, un client v0.1.3 pouvait rester 13 jours connecté à un pipe mort
+  # (pas de keepalive TCP, pas de read timeout). Corrigé en v0.1.4.
+  if [[ -f /usr/local/bin/nodyx-relay ]]; then
+    local _cur_relay; _cur_relay=$(/usr/local/bin/nodyx-relay --version 2>/dev/null | awk '{print $2}' || echo "")
+    local _want_relay="${NODYX_RELAY_VERSION#v}"; _want_relay="${_want_relay%-p2p}"
+    if [[ -n "$_cur_relay" && "$_cur_relay" != "$_want_relay" ]]; then
+      info "Updating nodyx-relay binary: $_cur_relay → $_want_relay"
+      local _ARCH; _ARCH=$(uname -m)
+      local _RELAY_ARCH=""
+      case "$_ARCH" in
+        x86_64)  _RELAY_ARCH="amd64" ;;
+        aarch64) _RELAY_ARCH="arm64" ;;
+      esac
+      if [[ -n "$_RELAY_ARCH" ]]; then
+        local _RELAY_URL="https://github.com/Pokled/Nodyx/releases/download/${NODYX_RELAY_VERSION}/nodyx-relay-linux-${_RELAY_ARCH}"
+        local _RELAY_TMP; _RELAY_TMP=$(mktemp /tmp/nodyx-relay.XXXXXX)
+        if curl -fsSL --max-time 60 "$_RELAY_URL" -o "$_RELAY_TMP" \
+             && file "$_RELAY_TMP" 2>/dev/null | grep -q ELF; then
+          chmod +x "$_RELAY_TMP"
+          mv -f "$_RELAY_TMP" /usr/local/bin/nodyx-relay
+          chmod +x /usr/local/bin/nodyx-relay
+          systemctl restart nodyx-relay-client 2>/dev/null || true
+          ok "nodyx-relay upgraded to $(/usr/local/bin/nodyx-relay --version 2>&1 || echo '?')"
+        else
+          rm -f "$_RELAY_TMP"
+          warn "Could not download nodyx-relay ${NODYX_RELAY_VERSION} — kept current version"
+        fi
+      fi
+    fi
+  fi
+
   # ── Relay client : recréer le service s'il est absent (upgrade depuis ancienne install) ──
   local _env_file="${dir}/nodyx-core/.env"
   local _dir_token; _dir_token=$(grep '^DIRECTORY_TOKEN=' "$_env_file" 2>/dev/null | cut -d= -f2- || true)
@@ -1047,6 +1079,8 @@ _auto_backup_db() {
 # ── Version ────────────────────────────────────────────────────────────────────
 NODYX_VERSION="2.2.0"
 INSTALLER_VERSION="2.2.0"
+# Relay client binary — single source of truth, used by install AND nodyx-update
+NODYX_RELAY_VERSION="v0.1.4-p2p"
 
 # ── CLI flags ─────────────────────────────────────────────────────────────────
 _FORCE_MODE=""        # upgrade | repair | reinstall | wipe (bypass detection menu)
@@ -2060,7 +2094,7 @@ if $RELAY_MODE; then
     *) die "$(printf "$(t relay_unsupported_arch)" "$_ARCH")" ;;
   esac
 
-  _RELAY_VERSION="v0.1.3-p2p"
+  _RELAY_VERSION="${NODYX_RELAY_VERSION}"
   _RELAY_URL="https://github.com/Pokled/Nodyx/releases/download/${_RELAY_VERSION}/nodyx-relay-linux-${_RELAY_ARCH}"
 
   info "$(printf "$(t relay_downloading)" "${_RELAY_VERSION}" "${_RELAY_ARCH}")"

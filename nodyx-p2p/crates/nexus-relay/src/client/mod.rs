@@ -5,6 +5,7 @@ use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
+use crate::keepalive::{self, READ_DEADLINE};
 use crate::protocol::{ClientMessage, ServerMessage, read_msg, write_msg};
 
 // ── Entry point with reconnect loop ──────────────────────────────────────────
@@ -27,6 +28,9 @@ pub async fn run(
         info!("Connecting to relay server {server_addr}...");
         match TcpStream::connect(server_addr).await {
             Ok(stream) => {
+                if let Err(e) = keepalive::enable(&stream) {
+                    warn!("Failed to enable TCP keepalive: {e}");
+                }
                 backoff = Duration::from_secs(1); // reset on successful connect
                 info!("Connected. Registering slug '{slug}'...");
                 if let Err(e) = handle_session(stream, slug, token, local_port).await {
@@ -97,10 +101,25 @@ async fn handle_session(
 
     // Read task — reads requests from the relay server and spawns a concurrent
     // handler per request so that long-polling GETs don't block other requests.
+    // Wrapped in a deadline so a silently-dead TCP connection (NAT timeout,
+    // peer crash before keepalive fires) doesn't keep the client hung forever.
     let read_task = tokio::spawn(async move {
         loop {
-            match read_msg::<_, ServerMessage>(&mut reader).await {
-                Ok(Some(ServerMessage::Request { id, method, path, headers, body_b64 })) => {
+            let next = tokio::time::timeout(
+                READ_DEADLINE,
+                read_msg::<_, ServerMessage>(&mut reader),
+            )
+            .await;
+
+            match next {
+                Err(_elapsed) => {
+                    warn!(
+                        "No traffic from relay server in {}s — assuming dead session",
+                        READ_DEADLINE.as_secs()
+                    );
+                    break;
+                }
+                Ok(Ok(Some(ServerMessage::Request { id, method, path, headers, body_b64 }))) => {
                     let tx = resp_tx.clone();
                     tokio::spawn(async move {
                         let msg = forwarder::handle_request(
@@ -110,17 +129,17 @@ async fn handle_session(
                         let _ = tx.send(msg).await;
                     });
                 }
-                Ok(Some(ServerMessage::Ping)) => {
+                Ok(Ok(Some(ServerMessage::Ping))) => {
                     let _ = resp_tx.send(ClientMessage::Heartbeat).await;
                 }
-                Ok(Some(ServerMessage::Registered { .. })) => {
+                Ok(Ok(Some(ServerMessage::Registered { .. }))) => {
                     warn!("Unexpected Registered message — ignoring");
                 }
-                Ok(None) => {
+                Ok(Ok(None)) => {
                     info!("Server closed the connection");
                     break;
                 }
-                Err(e) => {
+                Ok(Err(e)) => {
                     warn!("Read error: {e}");
                     break;
                 }

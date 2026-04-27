@@ -1,6 +1,6 @@
 [package]
 name = "nodyx-relay"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "Nodyx P2P relay — tunnel Nodyx instances without open ports or a domain"
 
@@ -43,6 +43,9 @@ tracing-subscriber  = { version = "0.3", features = ["env-filter", "fmt"] }
 # Utilities
 uuid    = { version = "1", features = ["v4"] }
 tokio-util = { version = "0.7", features = ["codec"] }
+
+# TCP keepalive (portable setsockopt wrapper)
+socket2 = { version = "0.5", features = ["all"] }
 
 [profile.release]
 opt-level = 3

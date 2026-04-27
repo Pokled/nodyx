@@ -8,6 +8,7 @@ use super::db::DbPool;
 use tracing::{error, info, warn};
 use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
 
+use crate::keepalive::{self, READ_DEADLINE};
 use crate::protocol::{ClientMessage, ServerMessage, read_msg, write_msg};
 use super::registry::{PendingRequest, Registry, RelayResponse, TunnelHandle};
 
@@ -110,6 +111,12 @@ async fn handle_client(
     pg: Arc<DbPool>,
     ban_map: BanMap,
 ) -> anyhow::Result<()> {
+    // Aggressive TCP keepalive so we detect dead peers in ~60s instead
+    // of the kernel default of ~2 hours.
+    if let Err(e) = keepalive::enable(&stream) {
+        warn!("Failed to enable TCP keepalive on {addr}: {e}");
+    }
+
     // 1. Expect Register as the very first message.
     let Some(ClientMessage::Register { slug, token }) =
         read_msg::<_, ClientMessage>(&mut stream).await?
@@ -188,13 +195,28 @@ async fn handle_client(
     });
 
     // Task B — receive responses from the client and route to pending requests.
+    // Wrapped in a deadline: clients reply Heartbeat to our 30s ping, so a
+    // 90s silence means the connection is dead and we should reap it.
     let pending_b = pending.clone();
     let slug_b = slug.clone();
     let registry_b = registry.clone();
     let read_task = tokio::spawn(async move {
         loop {
-            match read_msg::<_, ClientMessage>(&mut reader).await {
-                Ok(Some(ClientMessage::Response { id, status, headers, body_b64 })) => {
+            let next = tokio::time::timeout(
+                READ_DEADLINE,
+                read_msg::<_, ClientMessage>(&mut reader),
+            )
+            .await;
+
+            match next {
+                Err(_elapsed) => {
+                    warn!(
+                        "No traffic from '{slug_b}' in {}s — closing dead session",
+                        READ_DEADLINE.as_secs()
+                    );
+                    break;
+                }
+                Ok(Ok(Some(ClientMessage::Response { id, status, headers, body_b64 }))) => {
                     let body = B64.decode(&body_b64).unwrap_or_else(|e| {
                         warn!("Relay: base64 decode error on response id={id}: {e}");
                         vec![]
@@ -203,13 +225,13 @@ async fn handle_client(
                         let _ = tx.send(RelayResponse { status, headers, body });
                     }
                 }
-                Ok(Some(ClientMessage::Heartbeat)) => {
+                Ok(Ok(Some(ClientMessage::Heartbeat))) => {
                     // No-op — keep-alive acknowledged.
                 }
-                Ok(Some(ClientMessage::Register { .. })) => {
+                Ok(Ok(Some(ClientMessage::Register { .. }))) => {
                     warn!("Unexpected Register from '{slug_b}' — ignoring");
                 }
-                Ok(None) | Err(_) => break,
+                Ok(Ok(None)) | Ok(Err(_)) => break,
             }
         }
         registry_b.remove(&slug_b);
