@@ -1,6 +1,10 @@
 # ── Build stage ──────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
+RUN apk add --no-cache ttf-dejavu && \
+    mkdir -p /usr/share/fonts/truetype && \
+    ln -s /usr/share/fonts/dejavu /usr/share/fonts/truetype/dejavu
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -11,6 +15,10 @@ RUN npm run build
 
 # ── Production stage ─────────────────────────────────────────────────────────
 FROM node:22-alpine AS runner
+
+RUN apk add --no-cache ttf-dejavu && \
+    mkdir -p /usr/share/fonts/truetype && \
+    ln -s /usr/share/fonts/dejavu /usr/share/fonts/truetype/dejavu
 
 WORKDIR /app
 
