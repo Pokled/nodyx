@@ -204,6 +204,41 @@
 		}
 	}
 
+	// ── Auto-flip popups that would overflow their scroll container ──────────
+	function autoFlip(node: HTMLElement) {
+		function findScrollContainer(): HTMLElement {
+			let p = node.parentElement
+			while (p && p !== document.body) {
+				const o = getComputedStyle(p).overflow
+				if (o !== 'visible' && o !== '') return p
+				p = p.parentElement
+			}
+			return document.body
+		}
+		function adjust() {
+			node.style.left = '0px'
+			node.style.right = 'auto'
+			const rect = node.getBoundingClientRect()
+			const container = findScrollContainer()
+			const cRect = container.getBoundingClientRect()
+			const boundary = Math.min(window.innerWidth, cRect.right) - 8
+			if (rect.right > boundary) {
+				node.style.left = 'auto'
+				node.style.right = '0px'
+			}
+		}
+		adjust()
+		const ro = new ResizeObserver(adjust)
+		ro.observe(node)
+		window.addEventListener('resize', adjust)
+		return {
+			destroy() {
+				ro.disconnect()
+				window.removeEventListener('resize', adjust)
+			},
+		}
+	}
+
 	$effect(() => {
 		document.addEventListener('click', onDocClick)
 		return () => document.removeEventListener('click', onDocClick)
@@ -395,7 +430,7 @@
 				<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M7 20h10M12 4l5 12H7L12 4z"/></svg>
 			</button>
 			{#if showColor}
-			<div class="popup w-48 grid grid-cols-6 gap-1 p-2">
+			<div class="popup w-48 grid grid-cols-6 gap-1 p-2" use:autoFlip>
 				<button type="button" onclick={() => editor?.chain().focus().unsetColor().run()} class="col-span-6 text-xs text-gray-400 hover:text-white text-left mb-1">{tFn('editor.color_reset')}</button>
 				{#each COLORS as c}
 					<button type="button" onclick={() => setColor(c)} class="w-6 h-6 rounded border border-gray-700 hover:scale-110 transition-transform" style="background:{c}" title={c}></button>
@@ -412,7 +447,7 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
 			</button>
 			{#if showLink}
-			<div class="popup w-72 flex flex-col gap-2 p-3">
+			<div class="popup w-72 flex flex-col gap-2 p-3" use:autoFlip>
 				<input type="url" bind:value={linkUrl} placeholder="https://..." class="popup-input" onkeydown={e => e.key === 'Enter' && insertLink()} />
 				<div class="flex gap-2">
 					<button type="button" onclick={insertLink} class="flex-1 popup-btn-primary">{tFn('editor.insert')}</button>
@@ -428,7 +463,7 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15l-5-5L5 21"/></svg>
 			</button>
 			{#if showImage}
-			<div class="popup w-80 flex flex-col gap-2 p-3">
+			<div class="popup w-80 flex flex-col gap-2 p-3" use:autoFlip>
 				<!-- Bouton médiathèque -->
 				<button type="button" onclick={openMediaPicker}
 					class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-indigo-700/60 bg-indigo-950/30 text-indigo-300 text-xs font-medium hover:bg-indigo-900/40 transition-colors">
@@ -463,7 +498,7 @@
 				<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
 			</button>
 			{#if showVideo}
-			<div class="popup w-80 flex flex-col gap-2 p-3">
+			<div class="popup w-80 flex flex-col gap-2 p-3" use:autoFlip>
 				<p class="text-xs text-gray-500">{tFn('editor.video_hint')}</p>
 				<input type="url" bind:value={videoUrl} placeholder="https://youtu.be/…" class="popup-input" onkeydown={e => e.key === 'Enter' && insertVideo()} />
 				<button type="button" onclick={insertVideo} class="popup-btn-primary">{tFn('editor.embed_video')}</button>
@@ -475,7 +510,7 @@
 		<div class="relative">
 			<button type="button" onclick={() => { showEmoji = !showEmoji; showColor = showLink = showImage = showVideo = showTable = false }} class="tb-btn text-base" title={tFn('editor.insert_emoji')}>😊</button>
 			{#if showEmoji}
-			<div class="popup w-72 p-2 grid grid-cols-10 gap-0.5 max-h-48 overflow-y-auto">
+			<div class="popup w-72 p-2 grid grid-cols-10 gap-0.5 max-h-48 overflow-y-auto" use:autoFlip>
 				{#each EMOJIS as e}
 					<button type="button" onclick={() => insertEmoji(e)} class="text-base p-1 rounded hover:bg-gray-700 transition-colors leading-none">{e}</button>
 				{/each}
@@ -498,7 +533,7 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><path stroke-width="1.5" d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
 			</button>
 			{#if showTable}
-			<div class="popup w-52 p-2 flex flex-col gap-1">
+			<div class="popup w-52 p-2 flex flex-col gap-1" use:autoFlip>
 				{#if !a.table}
 					<button type="button" onclick={() => { toggleAny('insertTable'); showTable = false }} class="table-btn">{tFn('editor.insert_table')}</button>
 				{:else}
