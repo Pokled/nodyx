@@ -1,12 +1,10 @@
-version: '3.9'
-
-# ── Nexus — Full stack ────────────────────────────────────────────────────────
+# ── Nodyx — Full stack ────────────────────────────────────────────────────────
 #
 # Usage:
-#   1. cp .env.example .env                     ← set DB_PASSWORD
-#   2. cp nexus-core/.env.example nexus-core/.env    ← configure your community
-#   3. cp nexus-frontend/.env.example nexus-frontend/.env
-#   4. docker-compose up -d
+#   1. cp .env.example .env                          ← set DB_PASSWORD
+#   2. cp nodyx-core/.env.example nodyx-core/.env    ← configure your community
+#   3. cp nodyx-frontend/.env.example nodyx-frontend/.env
+#   4. docker compose up -d
 #
 # Reverse proxy (nginx / Caddy) must forward:
 #   /api/  and /uploads/ and /socket.io/  →  http://localhost:3000
@@ -21,13 +19,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB:       nexus
-      POSTGRES_USER:     nexus_user
+      POSTGRES_DB:       nodyx
+      POSTGRES_USER:     nodyx_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test:     ["CMD-SHELL", "pg_isready -U nexus_user -d nexus"]
+      test:     ["CMD-SHELL", "pg_isready -U nodyx_user -d nodyx"]
       interval: 5s
       timeout:  5s
       retries:  10
@@ -39,35 +37,35 @@ services:
     volumes:
       - redis_data:/data
 
-  # ── Nexus API (Fastify + TypeScript) ─────────────────────────────────────────
+  # ── Nodyx API (Fastify + TypeScript) ─────────────────────────────────────────
   api:
-    build: ./nexus-core
+    build: ./nodyx-core
     restart: unless-stopped
-    env_file: ./nexus-core/.env
+    env_file: ./nodyx-core/.env
     environment:
-      # These override values in nexus-core/.env to use Docker service names
+      # These override values in nodyx-core/.env to use Docker service names
       DB_HOST:     postgres
       DB_PORT:     "5432"
-      DB_NAME:     nexus
-      DB_USER:     nexus_user
+      DB_NAME:     nodyx
+      DB_USER:     nodyx_user
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
       REDIS_HOST:  redis
       REDIS_PORT:  "6379"
     ports:
       - "3000:3000"
     volumes:
-      - ./nexus-core/uploads:/app/uploads
+      - ./nodyx-core/uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
 
-  # ── Nexus Frontend (SvelteKit) ────────────────────────────────────────────────
+  # ── Nodyx Frontend (SvelteKit) ────────────────────────────────────────────────
   frontend:
-    build: ./nexus-frontend
+    build: ./nodyx-frontend
     restart: unless-stopped
-    env_file: ./nexus-frontend/.env
+    env_file: ./nodyx-frontend/.env
     ports:
       - "3001:3001"
     depends_on:
