@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://nodyx.org/uploads/logos/88f28104-2dea-43b6-a17a-7b7f691c2ac3.png" alt="Nodyx" width="80"/>
+<img src="https://nodyx.org/uploads/assets/36644490ed9ac75ec1fb64b027c8cade8c1d0673e695b29d2bc0492102173d8f.webp" alt="Nodyx" width="80"/>
 
 # Nodyx
 
