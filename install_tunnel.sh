@@ -660,6 +660,35 @@ if [[ "$_DISK_FREE_MB" -lt 1024 ]]; then
   _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
 fi
 
+# Container / init-system detection. The script registers a pm2-nodyx.service
+# unit, calls systemctl restart caddy / postgresql / cloudflared, and configures
+# UFW. All three need systemd as PID 1 and (for UFW) NET_ADMIN. In a Docker
+# container without systemd, or an unprivileged LXC missing capabilities, these
+# steps would fail mid-run and leave the operator with a half-installed host.
+#
+# systemd-detect-virt exits 1 AND prints "none" when not in a container, so
+# we capture-and-discard the exit code rather than chaining "|| echo none"
+# (which would duplicate the literal "none" into the variable).
+_VIRT="none"
+if command -v systemd-detect-virt >/dev/null 2>&1; then
+  _detected=$(systemd-detect-virt --container 2>/dev/null) || true
+  [[ -n "$_detected" && "$_detected" != "none" ]] && _VIRT="$_detected"
+fi
+_INIT=$(ps -p 1 -o comm= 2>/dev/null | tr -d ' \n' || echo "?")
+
+if [[ "$_VIRT" != "none" ]]; then
+  warn "Container environment detected (systemd-detect-virt → ${_VIRT})."
+  if [[ "$_INIT" != "systemd" ]]; then
+    warn "PID 1 is '${_INIT}', not systemd."
+    warn "The pm2-nodyx.service unit, systemctl, and UFW will not work in this"
+    warn "environment. Use a privileged LXC, an Ubuntu/Debian VM, or the"
+    warn "official Docker compose file (docker-compose.yml at the repo root)."
+    _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
+  else
+    info "systemd is PID 1 - install should work, but the container may need extra capabilities (NET_ADMIN for UFW, SYS_ADMIN for some systemd ops)."
+  fi
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DETECTION MENU
 # ═══════════════════════════════════════════════════════════════════════════════
