@@ -31,6 +31,12 @@ Forum + Chat + Voix + P2P + Canvas + Constructeur de page d'accueil + SDK Widget
 
 ---
 
+> **Avant de scroller.** Nodyx ne cherche pas à faire la guerre à Discord, et n'essaie pas d'être la seule alternative ouverte. Il y a des super projets là-dehors — Matrix, Stoat, Fluxer, Mattermost, Rocket.Chat, Discourse, et d'autres — et on veut sincèrement que tu les connaisses. On les liste, avec leurs repos GitHub, sur une page qu'on a écrite nous-mêmes : **[→ Pourquoi Nodyx (et les autres alternatives qu'on respecte)](https://nodyx.dev/why-nodyx)**.
+>
+> *Le combat n'est pas entre nous. Il est entre les silos fermés et les communautés qui se possèdent vraiment. Choisis l'outil qui te va. On t'applaudira dans tous les cas.*
+
+---
+
 <div align="center">
   <img src="docs/img/nodyx_home_page.png" alt="Nodyx — Constructeur de page d'accueil" width="860"/>
 </div>
