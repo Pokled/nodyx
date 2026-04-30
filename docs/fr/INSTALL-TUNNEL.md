@@ -12,9 +12,9 @@ curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh
 
 - [Quand utiliser cet installeur](#-quand-utiliser-cet-installeur)
 - [Choisir son mode](#-choisir-son-mode)
-- [Mode A — Cloudflare Tunnel](#-mode-a--cloudflare-tunnel)
-- [Mode B — Pangolin (newt)](#-mode-b--pangolin-newt)
-- [Mode C — Tunnel custom](#-mode-c--tunnel-custom)
+- [Mode A — Cloudflare Tunnel](#-mode-a-cloudflare-tunnel)
+- [Mode B — Pangolin (newt)](#-mode-b-pangolin-newt)
+- [Mode C — Tunnel custom](#-mode-c-tunnel-custom)
 - [Dépannage](#-dépannage)
 - [Ce que l'installeur durcit](#-ce-que-linstalleur-durcit)
 - [Re-run, upgrade, repair](#-re-run-upgrade-repair)

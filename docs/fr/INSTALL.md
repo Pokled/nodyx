@@ -150,8 +150,8 @@ Tu peux faire tourner Nodyx sur Windows 10/11 via WSL2 (Sous-système Windows po
 | VPS, ports 80/443 ouverts, pas de domaine | `install.sh` → sslip.io + nodyx.org gratuits |
 | VPS, ports 80/443 ouverts, domaine perso | `install.sh` → entre ton domaine |
 | Maison, pas de ports ouverts, domaine CF | `install_tunnel.sh` → [guide tunnel](INSTALL-TUNNEL.md) |
-| Maison, pas de ports ouverts, VPS Pangolin | `install_tunnel.sh` → [guide tunnel](INSTALL-TUNNEL.md#-mode-b--pangolin-newt) |
-| Maison, pas de ports ouverts, tunnel custom (frp, rathole, ...) | `install_tunnel.sh` → [guide tunnel](INSTALL-TUNNEL.md#-mode-c--tunnel-custom) |
+| Maison, pas de ports ouverts, VPS Pangolin | `install_tunnel.sh` → [guide tunnel](INSTALL-TUNNEL.md#-mode-b-pangolin-newt) |
+| Maison, pas de ports ouverts, tunnel custom (frp, rathole, ...) | `install_tunnel.sh` → [guide tunnel](INSTALL-TUNNEL.md#-mode-c-tunnel-custom) |
 | Maison, pas de ports ouverts, No-IP/DuckDNS | ❌ non compatible — [voir DOMAIN.md](DOMAIN.md) |
 | Maison, pas de ports ouverts, pas de domaine | Achète un domaine ~1€/an — [voir DOMAIN.md](DOMAIN.md) |
 
