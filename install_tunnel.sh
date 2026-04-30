@@ -337,17 +337,26 @@ T_FR[summary_voice_warn_pangolin]='Voix/webcam nécessitent un chemin UDP. Utili
 T_EN[summary_voice_warn_none]='Voice/webcam need a UDP route. Make sure your reverse tunnel forwards UDP/3478 (TURN) and the WebRTC ports.'
 T_FR[summary_voice_warn_none]='Voix/webcam nécessitent un chemin UDP. Vérifie que ton tunnel transporte UDP/3478 (TURN) et les ports WebRTC.'
 
-# Pangolin next-steps
+# Pangolin next-steps. Two newt deployment modes are explicitly supported:
+#   - --network host  → newt shares the host netns; resource target = localhost:80
+#   - default bridge  → newt runs in its own netns; resource target = host LAN IP:80
+# Both rely on Caddy now binding on loopback AND the LAN IP (see Caddyfile section).
 T_EN[summary_pangolin_header]='Next steps - connect this server to Pangolin:'
 T_FR[summary_pangolin_header]='Prochaines étapes - connecter ce serveur à Pangolin :'
 T_EN[summary_pangolin_s1]='1. On your Pangolin dashboard, create a Site (newt) and copy: ENDPOINT, NEWT_ID, NEWT_SECRET'
 T_FR[summary_pangolin_s1]='1. Sur ton dashboard Pangolin, crée un Site (newt) et copie : ENDPOINT, NEWT_ID, NEWT_SECRET'
-T_EN[summary_pangolin_s2]='2. Run the newt client on this server (docker example below).'
-T_FR[summary_pangolin_s2]='2. Lance le client newt sur ce serveur (exemple docker ci-dessous).'
-T_EN[summary_pangolin_s3]='3. In Pangolin, create a HTTP resource: Domain %s → http://localhost:80'
-T_FR[summary_pangolin_s3]='3. Sur Pangolin, crée une ressource HTTP : Domain %s → http://localhost:80'
-T_EN[summary_pangolin_docker]='# docker run example (replace ENDPOINT/NEWT_ID/NEWT_SECRET):'
-T_FR[summary_pangolin_docker]='# exemple docker run (remplace ENDPOINT/NEWT_ID/NEWT_SECRET) :'
+T_EN[summary_pangolin_s2]='2. Run newt on this server. Pick ONE of the two methods below:'
+T_FR[summary_pangolin_s2]='2. Lance newt sur ce serveur. Choisis UNE des deux méthodes ci-dessous :'
+T_EN[summary_pangolin_method_a]='A. Recommended - newt in --network host (target: http://localhost:80)'
+T_FR[summary_pangolin_method_a]='A. Recommandé - newt en --network host (cible : http://localhost:80)'
+T_EN[summary_pangolin_method_b]='B. Default Docker bridge (target: http://%s:80)'
+T_FR[summary_pangolin_method_b]='B. Bridge Docker par défaut (cible : http://%s:80)'
+T_EN[summary_pangolin_method_b_nohost]='B. Default Docker bridge (target: http://<host-LAN-IP>:80 - LAN IP not auto-detected)'
+T_FR[summary_pangolin_method_b_nohost]='B. Bridge Docker par défaut (cible : http://<IP-LAN>:80 - IP LAN non détectée)'
+T_EN[summary_pangolin_s3]='3. In Pangolin: HTTP resource for %s, target as printed above for the method you picked.'
+T_FR[summary_pangolin_s3]='3. Sur Pangolin : ressource HTTP pour %s, cible imprimée ci-dessus pour la méthode choisie.'
+T_EN[summary_pangolin_test]='Quick connectivity test (run on this server):'
+T_FR[summary_pangolin_test]='Test de connectivité rapide (à lancer sur ce serveur) :'
 
 # None / custom tunnel next-steps
 T_EN[summary_none_header]='Next steps - point your reverse tunnel to this server:'
@@ -1593,14 +1602,21 @@ Public hostname  : configure in https://one.dash.cloudflare.com
 CFCREDS
     ;;
   pangolin)
+    if [[ -n "${HOST_PRIMARY_IP:-}" ]]; then
+      _PG_BIND="http://127.0.0.1:80 + http://${HOST_PRIMARY_IP}:80 (loopback + LAN IP)"
+      _PG_TARGET_B="http://${HOST_PRIMARY_IP}:80"
+    else
+      _PG_BIND="http://127.0.0.1:80 (loopback only - LAN IP not detected)"
+      _PG_TARGET_B="http://<LAN-IP>:80"
+    fi
     cat >> "$CREDS_FILE" <<PGCREDS
 ── Pangolin (newt client) ──────────────────────────────
-Caddy listens    : http://127.0.0.1:80 (waits for newt on this server)
+Caddy listens    : ${_PG_BIND}
 Setup            : create a Site (newt) on your Pangolin dashboard,
                    then run the newt client here with ENDPOINT/NEWT_ID/NEWT_SECRET.
-Resource         : add a HTTP resource on Pangolin pointing
-                   ${DOMAIN} → http://localhost:80
-Real IP          : Caddy reads X-Forwarded-For from the trusted loopback proxy.
+Resource (A)     : newt --network host  →  ${DOMAIN} → http://localhost:80
+Resource (B)     : newt default bridge  →  ${DOMAIN} → ${_PG_TARGET_B}
+Real IP          : Caddy reads X-Forwarded-For from trusted private/loopback ranges.
 PGCREDS
     ;;
   none)
@@ -1946,19 +1962,45 @@ case "$TUNNEL_MODE" in
     echo -e "  ${BOLD}${CYAN}▸ $(t summary_pangolin_header)${RESET}"
     echo -e "  $(t summary_pangolin_s1)"
     echo -e "  $(t summary_pangolin_s2)"
-    printf  "  $(t summary_pangolin_s3)\n" "${DOMAIN}"
     echo ""
-    echo -e "  ${CYAN}$(t summary_pangolin_docker)${RESET}"
+
+    # Method A: --network host (works regardless of bridge subnet, simplest)
+    echo -e "  ${BOLD}${GREEN}$(t summary_pangolin_method_a)${RESET}"
+    echo -e "  ${BOLD}docker run -d --name newt --network host --restart unless-stopped \\"
+    echo -e "    -e PANGOLIN_ENDPOINT=https://your-pangolin.example.com \\"
+    echo -e "    -e NEWT_ID=your_newt_id \\"
+    echo -e "    -e NEWT_SECRET=your_newt_secret \\"
+    echo -e "    fosrl/newt:latest${RESET}"
+    echo ""
+
+    # Method B: default Docker bridge - target host LAN IP
+    if [[ -n "${HOST_PRIMARY_IP:-}" ]]; then
+      printf  "  ${BOLD}$(t summary_pangolin_method_b)${RESET}\n" "${HOST_PRIMARY_IP}"
+    else
+      echo -e "  ${BOLD}$(t summary_pangolin_method_b_nohost)${RESET}"
+    fi
     echo -e "  ${BOLD}docker run -d --name newt --restart unless-stopped \\"
     echo -e "    -e PANGOLIN_ENDPOINT=https://your-pangolin.example.com \\"
     echo -e "    -e NEWT_ID=your_newt_id \\"
     echo -e "    -e NEWT_SECRET=your_newt_secret \\"
     echo -e "    fosrl/newt:latest${RESET}"
     echo ""
+
+    printf  "  $(t summary_pangolin_s3)\n" "${DOMAIN}"
+    echo ""
+
+    # Connectivity smoke-test the operator can paste before going live.
+    echo -e "  ${CYAN}$(t summary_pangolin_test)${RESET}"
+    echo -e "  ${BOLD}docker exec newt wget -qO- http://localhost/api/v1/instance/info  # method A${RESET}"
+    if [[ -n "${HOST_PRIMARY_IP:-}" ]]; then
+      echo -e "  ${BOLD}docker exec newt wget -qO- http://${HOST_PRIMARY_IP}/api/v1/instance/info  # method B${RESET}"
+    fi
+    echo ""
+
     echo -e "  ${BOLD}${CYAN}▸ Service management${RESET}"
     echo -e "  sudo nodyx-doctor                     # full diagnostic"
     echo -e "  sudo nodyx-update                     # git pull + rebuild + restart"
-    echo -e "  docker logs -f newt                   # newt client logs (if docker)"
+    echo -e "  docker logs -f newt                   # newt client logs"
     echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
     echo ""
     warn "$(t summary_voice_warn_pangolin)"
