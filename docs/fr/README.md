@@ -45,11 +45,11 @@ Forum + Chat + Voix + P2P + Canvas + Constructeur de page d'accueil + SDK Widget
 
 ## Pourquoi Nodyx
 
-- **Discord** enferme les communautés dans une plateforme privée — vos 10 ans d'historique disparaissent si elle ferme ou vous bannit
-- **Les forums** sont lents et fragmentés — pas de voix, pas de temps réel, invisibles dans le quotidien de vos membres
-- **Les outils auto-hébergés** combinent rarement chat + voix + base de connaissances consultable en une seule installation — et aucun ne vous laisse construire votre propre page d'accueil
+- **La plupart des communautés ne possèdent pas l'endroit où elles vivent.** Des années d'historique, de savoir et de souvenirs reposent sur des plateformes qui peuvent changer les règles, bannir des comptes, ou disparaître. Ce n'est pas de la malveillance, c'est juste comme ça que les systèmes fermés fonctionnent par défaut.
+- **L'auto-hébergement aujourd'hui est fragmenté.** Forum, chat temps réel, voix, et page d'accueil publique veulent souvent dire coudre cinq outils séparés ensemble.
+- **Nodyx les réunit en une seule installation** pour qu'une communauté puisse pleinement posséder sa présence — texte, voix, et homepage — sur du matériel que ses admins contrôlent.
 
-Nodyx les réunit tous. Une commande. Votre serveur. Pour toujours.
+Une commande. Votre serveur. Pour toujours.
 
 ### Construit sur
 
@@ -71,10 +71,9 @@ Nodyx les réunit tous. Une commande. Votre serveur. Pour toujours.
 
 ## Internet a cassé quelque chose.
 
-Discord, Facebook, Slack — ils n'ont pas construit des communautés. Ils les ont capturées.
+Les plateformes fermées ont fini par accueillir plus de conversations que le web ouvert n'en a jamais hébergé. Pas par malveillance — par défaut. Elles étaient gratuites, faciles, et tout le monde y était déjà.
 
-Dix ans de discussions. Tutoriels. Savoir collectif. Souvenirs.
-Enfermés dans des silos. Invisibles aux moteurs de recherche. Disparus quand la plateforme le décide.
+Mais dix ans de discussions, tutoriels et savoirs collectifs sont aujourd'hui derrière des murs de connexion. Invisibles aux moteurs de recherche. Soumis à des conditions générales rédigées dans un tribunal du Delaware. Disparus quand la plateforme le décide.
 
 **Vous n'en avez jamais été propriétaire.**
 
@@ -92,35 +91,41 @@ Fonctionne sur un Raspberry Pi derrière un routeur domestique. Sans domaine. Sa
 
 ---
 
-## Ce qui distingue Nodyx
+## Là où chaque projet brille
 
-### La seule plateforme avec tout ça en une seule installation
+Le paysage des outils communautaires n'est pas un combat. Chaque projet optimise pour des choses différentes, et le bon choix dépend de ce que vous construisez. Voici comme on le conseillerait à un ami :
 
-| | **Nodyx** | Discord | Matrix | Discourse | Lemmy |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Auto-hébergé | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Open source | ✅ AGPL | ❌ | ✅ | ✅ | ✅ |
-| Forum indexé par Google | ✅ | ❌ | ❌ | ✅ | ✅ |
-| Chat en temps réel | ✅ | ✅ | ✅ | ⚠️ | ❌ |
-| Salons vocaux | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Partage d'écran | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Voix P2P — zéro relais Big Tech | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Canvas P2P collaboratif | ✅ | ❌ | ❌ | ❌ | ❌ |
-| DataChannels P2P (frappe instantanée, réactions) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Serveur domestique (sans redirection de ports) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Annuaire fédéré de communautés | ✅ | ❌ | ⚠️ | ❌ | ✅ |
-| Bibliothèque d'assets (cadres, badges, bannières) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Salles chuchotées éphémères | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Connexion sans mot de passe (ECDSA P-256 PWA) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Jukebox P2P collaboratif (file YouTube) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Calendrier d'événements (cartes OSM, RSVP, SEO) | ✅ | ❌ | ❌ | ⚠️ | ❌ |
-| Recherche globale inter-instances | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Thèmes de profil par utilisateur (à l'échelle de l'app) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Constructeur de page d'accueil — 11 zones, drag & drop** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Boutique de widgets — installer des widgets externes via .zip** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **SDK Widget — créez vos propres widgets, sans framework** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Projet | Ce qu'il fait le mieux | Quand le choisir |
+|---|---|---|
+| **Discord** | Voix + chat temps réel pour groupes fermés, mobile-first, 10+ ans d'écosystème de bots | Si votre communauté est privée et informelle |
+| **Matrix** ([Element](https://github.com/element-hq/element-web)) | Protocole fédéré avec des bridges vers presque tout (Discord, Slack, Telegram, IRC, ...) | Si l'interopérabilité est non négociable |
+| **[Discourse](https://github.com/discourse/discourse)** | Forums indexés, recherchables, bases de connaissances | Si la discussion async long-format est votre cœur |
+| **[Mattermost](https://github.com/mattermost/mattermost)** / **[Rocket.Chat](https://github.com/RocketChat/Rocket.Chat)** | Compliance entreprise, remplaçant Slack à grande échelle | Si vous avez une équipe achats |
+| **[Stoat](https://github.com/stoatchat/self-hosted)** (ex-Revolt) / **[Fluxer](https://github.com/fluxerapp/fluxer)** | UI proche de Discord, migration facile | Si vos membres connaissent déjà Discord |
+| **Lemmy** | Forums threadés style Reddit, fédéré | Si vous voulez une présence native dans le fédiverse |
+| **Nodyx** | Forum + chat + voix + canvas + constructeur de page d'accueil, en une seule installation auto-hébergée avec un relais P2P pour serveurs domestiques | Si vous voulez pleinement posséder une communauté multi-formats sur votre propre matériel |
 
-> Nodyx est la seule plateforme auto-hébergée combinant un **forum indexé**, un **chat en temps réel**, une **voix P2P**, un **canvas collaboratif**, un **annuaire fédéré** et une **page d'accueil entièrement extensible** en une seule installation.
+> Nodyx est **le seul projet** combinant tous ces formats en une seule installation — mais si vous n'avez besoin que d'un ou deux, un autre outil ci-dessus peut vous correspondre mieux.
+>
+> [Lire notre prise honnête, avec les alternatives qu'on respecte →](https://nodyx.dev/why-nodyx)
+
+### Ce qu'il y a dans l'installation Nodyx
+
+- Forum indexé (URLs canoniques, JSON-LD, sitemap, friendly Google)
+- Chat temps réel avec réponses, épingles, réactions, unfurls
+- Salons vocaux P2P — zéro relais Big Tech
+- Canvas P2P collaboratif (whiteboard)
+- DataChannels WebRTC pour la frappe / les réactions instantanées
+- Support serveur domestique — sans redirection de ports, sans domaine requis
+- Annuaire fédéré de communautés + recherche globale inter-instances
+- Bibliothèque d'assets (cadres, badges, bannières, thèmes de profil)
+- Salles chuchotées éphémères
+- Connexion sans mot de passe (PWA ECDSA P-256 — Nodyx Signet)
+- Jukebox collaboratif (file YouTube)
+- Calendrier d'événements (cartes OSM, RSVP, SEO)
+- **Constructeur de page d'accueil** avec 11 zones, drag & drop
+- **Boutique de widgets** — installer des widgets externes via .zip
+- **SDK Widget** — créer des widgets custom, sans framework
 
 ---
 

@@ -45,11 +45,11 @@ Forum + Chat + Voice + P2P + Canvas + Homepage Builder + Widget SDK — one serv
 
 ## Why Nodyx
 
-- **Discord** locks communities inside a private platform — your 10 years of history vanish if they close or ban you
-- **Forums** are slow and fragmented — no voice, no real-time, invisible to your members' daily workflow
-- **Self-hosted tools** rarely combine chat + voice + searchable knowledge in a single install — and none let you build your own homepage
+- **Most communities don't own where they live.** Years of history, knowledge, and memories sit on platforms that can change rules, ban accounts, or disappear. That's not malice, that's how closed systems work by default.
+- **Self-hosting today is fragmented.** Forum, real-time chat, voice, and a public homepage usually mean stitching five separate tools together.
+- **Nodyx ships them in one install** so a community can fully own its presence — text, voice, and homepage — on hardware its admins control.
 
-Nodyx brings them together. One command. Your server. Forever.
+One command. Your server. Forever.
 
 ### Built on
 
@@ -71,10 +71,9 @@ Nodyx brings them together. One command. Your server. Forever.
 
 ## The internet broke something.
 
-Discord, Facebook, Slack — they didn't build communities. They captured them.
+Closed platforms ended up holding more conversations than the open web ever did. Not by malice — by default. They were free, easy, and everyone was already there.
 
-Ten years of discussions. Tutorials. Collective knowledge. Memories.
-Locked in silos. Invisible to search engines. Gone when the platform decides.
+But ten years of discussions, tutorials, and collective knowledge now sit behind login walls. Invisible to search engines. Bound to terms of service written in a Delaware courtroom. Gone when the platform decides.
 
 **You never owned any of it.**
 
@@ -92,35 +91,41 @@ Works on a Raspberry Pi behind a home router. No domain. No open ports. No cloud
 
 ---
 
-## What makes Nodyx different
+## Where each project shines
 
-### The only platform with all of this in a single install
+The community-tools landscape isn't a battle. Each project optimizes for different things, and the right pick depends on what you're building. Here's how we'd recommend it to a friend:
 
-| | **Nodyx** | Discord | Matrix | Discourse | Lemmy |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Self-hosted | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Open source | ✅ AGPL | ❌ | ✅ | ✅ | ✅ |
-| Forum indexed by Google | ✅ | ❌ | ❌ | ✅ | ✅ |
-| Real-time chat | ✅ | ✅ | ✅ | ⚠️ | ❌ |
-| Voice channels | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Screen sharing | ✅ | ✅ | ✅ | ❌ | ❌ |
-| P2P voice — zero Big Tech relay | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Collaborative P2P canvas | ✅ | ❌ | ❌ | ❌ | ❌ |
-| P2P DataChannels (instant typing, reactions) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Home server (no port forwarding) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Federated community directory | ✅ | ❌ | ⚠️ | ❌ | ✅ |
-| Asset library (frames, badges, banners) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Ephemeral whisper rooms | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Passwordless login (ECDSA P-256 PWA) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| P2P collaborative Jukebox (YouTube queue) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Event calendar (OSM maps, RSVP, SEO) | ✅ | ❌ | ❌ | ⚠️ | ❌ |
-| Cross-instance global search | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Per-user profile themes (app-wide) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Homepage Builder — 11 layout zones, drag & drop** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Widget Store — install external widgets via .zip** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Widget SDK — build custom widgets, no framework needed** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Project | What it does best | Where it fits |
+|---|---|---|
+| **Discord** | Real-time voice + chat for closed groups, mobile-first, 10+ years of bot ecosystem | If your community is private and ad-hoc |
+| **Matrix** ([Element](https://github.com/element-hq/element-web)) | Federated protocol with bridges to almost everything (Discord, Slack, Telegram, IRC, ...) | If interoperability is non-negotiable |
+| **[Discourse](https://github.com/discourse/discourse)** | Indexed, searchable forums and knowledge bases | If long-form async discussion is your core |
+| **[Mattermost](https://github.com/mattermost/mattermost)** / **[Rocket.Chat](https://github.com/RocketChat/Rocket.Chat)** | Enterprise compliance, Slack-replacement at scale | If you have a procurement team |
+| **[Stoat](https://github.com/stoatchat/self-hosted)** (ex-Revolt) / **[Fluxer](https://github.com/fluxerapp/fluxer)** | Discord-shaped UI, easy migration | If your members already know Discord |
+| **Lemmy** | Federated, Reddit-style threaded forums | If you want a fediverse-native presence |
+| **Nodyx** | Forum + chat + voice + canvas + homepage builder, in one self-hosted install with a P2P relay for home servers | If you want to fully own a multi-format community on your own hardware |
 
-> Nodyx is the only self-hosted platform combining an **indexed forum**, **real-time chat**, **P2P voice**, **collaborative canvas**, a **federated directory**, and a **fully extensible homepage** in a single install.
+> Nodyx is **the only project** combining all of those formats in a single install — but if you only need one or two, another tool above may fit you better.
+>
+> [Read our honest take, including the alternatives we respect →](https://nodyx.dev/why-nodyx)
+
+### What's inside the Nodyx single install
+
+- Indexed forum (canonical URLs, JSON-LD, sitemap, Google-friendly)
+- Real-time chat with replies, pins, reactions, unfurls
+- P2P voice channels — zero Big Tech relay
+- Collaborative P2P canvas (whiteboard)
+- WebRTC DataChannels for instant typing/reactions
+- Home server support — no port forwarding, no domain required
+- Federated community directory + cross-instance global search
+- Asset library (frames, badges, banners, profile themes)
+- Ephemeral whisper rooms
+- Passwordless login (ECDSA P-256 PWA — Nodyx Signet)
+- Collaborative jukebox (YouTube queue)
+- Event calendar (OSM maps, RSVP, SEO)
+- **Homepage Builder** with 11 layout zones, drag & drop
+- **Widget Store** — install external widgets via .zip
+- **Widget SDK** — build custom widgets, no framework needed
 
 ---
 
