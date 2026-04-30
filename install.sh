@@ -2267,76 +2267,92 @@ ok "$(t frontend_built)"
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_caddy)"
 
+# Two Caddyfile shapes:
+#   $RELAY_MODE → :80 (loopback HTTP, TLS handled upstream by nodyx-relay)
+#   else        → ${DOMAIN} (Caddy terminates Let's Encrypt itself)
+# Both share the same security headers, honeypot, and proxy snippets to
+# prevent drift. HSTS only ships on the direct-domain shape because Caddy
+# controls TLS end-to-end there; in relay mode the upstream may be HTTP for
+# debug, and an HSTS cache could lock visitors out for months.
+_HSTS_HEADER=""
+if ! $RELAY_MODE; then
+  _HSTS_HEADER='Strict-Transport-Security "max-age=31536000; includeSubDomains"'
+fi
+
 if $RELAY_MODE; then
-  # En mode Relay : Caddy écoute sur HTTP port 80 (local seulement).
-  # TLS est géré en amont par le serveur nodyx-relay sur nodyx.org.
-  cat > /etc/caddy/Caddyfile <<CADDY
-:80 {
-    encode gzip
-
-    header {
-        X-Content-Type-Options  "nosniff"
-        X-Frame-Options         "SAMEORIGIN"
-        Referrer-Policy         "strict-origin-when-cross-origin"
-        -Server
-    }
-
-    @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
-    handle @honeypot {
-        rewrite * /api/v1/_hp?p={http.request.uri.path}
-        reverse_proxy 127.0.0.1:3000 {
-            header_up -X-Forwarded-For
-        }
-    }
-
-    reverse_proxy /api/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
-    }
-    reverse_proxy /uploads/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
-    }
-    reverse_proxy /socket.io/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
-    }
-    reverse_proxy * 127.0.0.1:4173
-}
-CADDY
+  _SITE_BLOCK=":80"
 else
-  cat > /etc/caddy/Caddyfile <<CADDY
-${DOMAIN} {
-    encode gzip
+  _SITE_BLOCK="${DOMAIN}"
+fi
 
+cat > /etc/caddy/Caddyfile <<CADDY
+{
+    servers {
+        # Cap header size so slow-header DoS can't keep workers busy. 16KB
+        # comfortably fits cookies + Authorization (JWT ~500B) + proxy chain.
+        max_header_size 16KB
+    }
+}
+
+(security_headers) {
     header {
         X-Content-Type-Options    "nosniff"
         X-Frame-Options           "SAMEORIGIN"
         Referrer-Policy           "strict-origin-when-cross-origin"
         Permissions-Policy        "camera=(self), microphone=(self), geolocation=(self)"
         Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self';"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        ${_HSTS_HEADER}
         -Server
     }
+}
+
+(proxy_backend) {
+    reverse_proxy 127.0.0.1:3000 {
+        header_up -X-Forwarded-For
+        # 5s dial is huge for loopback; 30s response_header covers Socket.IO
+        # long-poll without cutting WebSocket upgrades short.
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
+    }
+}
+
+(proxy_frontend) {
+    reverse_proxy 127.0.0.1:4173 {
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
+    }
+}
+
+${_SITE_BLOCK} {
+    encode gzip
+
+    import security_headers
 
     @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
     handle @honeypot {
         rewrite * /api/v1/_hp?p={http.request.uri.path}
-        reverse_proxy 127.0.0.1:3000 {
-            header_up -X-Forwarded-For
-        }
+        import proxy_backend
     }
 
-    reverse_proxy /api/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
+    handle /api/* {
+        import proxy_backend
     }
-    reverse_proxy /uploads/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
+    handle /uploads/* {
+        import proxy_backend
     }
-    reverse_proxy /socket.io/* 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
+    handle /socket.io/* {
+        import proxy_backend
     }
-    reverse_proxy * 127.0.0.1:4173
+
+    handle {
+        import proxy_frontend
+    }
 }
 CADDY
-fi
 
 systemctl enable caddy --quiet
 systemctl restart caddy

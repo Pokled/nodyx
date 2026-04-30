@@ -22,6 +22,27 @@ set -euo pipefail
 
 INSTALLER_VERSION="1.1.0"
 
+# ── Tempfile cleanup ──────────────────────────────────────────────────────────
+# Every mktemp we issue is registered here so the EXIT trap can wipe it on a
+# crash, Ctrl-C, or normal exit. Avoids /tmp filling up with .log files from
+# repeated --repair / --upgrade runs and from interrupted installs.
+declare -a _TEMP_FILES=()
+_register_temp() { _TEMP_FILES+=("$1"); }
+_cleanup_on_exit() {
+  local rc=$?
+  set +e
+  for f in "${_TEMP_FILES[@]:-}"; do
+    [[ -n "$f" ]] && rm -f "$f" 2>/dev/null
+  done
+  # If we were re-launched via curl|bash, the spawning shell wrote our own
+  # source to /tmp/nodyx_tunnel_XXXXXX.sh and exec'd into us. Clean that up.
+  if [[ "${BASH_SOURCE[0]:-}" == /tmp/nodyx_tunnel_*.sh ]]; then
+    rm -f "${BASH_SOURCE[0]}" 2>/dev/null
+  fi
+  exit "$rc"
+}
+trap _cleanup_on_exit EXIT
+
 # ── Auto-relaunch if stdin is piped (curl|bash) ───────────────────────────────
 if [[ ! -t 0 ]]; then
   _SELF=$(mktemp /tmp/nodyx_tunnel_XXXXXX.sh)
@@ -316,17 +337,26 @@ T_FR[summary_voice_warn_pangolin]='Voix/webcam nécessitent un chemin UDP. Utili
 T_EN[summary_voice_warn_none]='Voice/webcam need a UDP route. Make sure your reverse tunnel forwards UDP/3478 (TURN) and the WebRTC ports.'
 T_FR[summary_voice_warn_none]='Voix/webcam nécessitent un chemin UDP. Vérifie que ton tunnel transporte UDP/3478 (TURN) et les ports WebRTC.'
 
-# Pangolin next-steps
+# Pangolin next-steps. Two newt deployment modes are explicitly supported:
+#   - --network host  → newt shares the host netns; resource target = localhost:80
+#   - default bridge  → newt runs in its own netns; resource target = host LAN IP:80
+# Both rely on Caddy now binding on loopback AND the LAN IP (see Caddyfile section).
 T_EN[summary_pangolin_header]='Next steps - connect this server to Pangolin:'
 T_FR[summary_pangolin_header]='Prochaines étapes - connecter ce serveur à Pangolin :'
 T_EN[summary_pangolin_s1]='1. On your Pangolin dashboard, create a Site (newt) and copy: ENDPOINT, NEWT_ID, NEWT_SECRET'
 T_FR[summary_pangolin_s1]='1. Sur ton dashboard Pangolin, crée un Site (newt) et copie : ENDPOINT, NEWT_ID, NEWT_SECRET'
-T_EN[summary_pangolin_s2]='2. Run the newt client on this server (docker example below).'
-T_FR[summary_pangolin_s2]='2. Lance le client newt sur ce serveur (exemple docker ci-dessous).'
-T_EN[summary_pangolin_s3]='3. In Pangolin, create a HTTP resource: Domain %s → http://localhost:80'
-T_FR[summary_pangolin_s3]='3. Sur Pangolin, crée une ressource HTTP : Domain %s → http://localhost:80'
-T_EN[summary_pangolin_docker]='# docker run example (replace ENDPOINT/NEWT_ID/NEWT_SECRET):'
-T_FR[summary_pangolin_docker]='# exemple docker run (remplace ENDPOINT/NEWT_ID/NEWT_SECRET) :'
+T_EN[summary_pangolin_s2]='2. Run newt on this server. Pick ONE of the two methods below:'
+T_FR[summary_pangolin_s2]='2. Lance newt sur ce serveur. Choisis UNE des deux méthodes ci-dessous :'
+T_EN[summary_pangolin_method_a]='A. Recommended - newt in --network host (target: http://localhost:80)'
+T_FR[summary_pangolin_method_a]='A. Recommandé - newt en --network host (cible : http://localhost:80)'
+T_EN[summary_pangolin_method_b]='B. Default Docker bridge (target: http://%s:80)'
+T_FR[summary_pangolin_method_b]='B. Bridge Docker par défaut (cible : http://%s:80)'
+T_EN[summary_pangolin_method_b_nohost]='B. Default Docker bridge (target: http://<host-LAN-IP>:80 - LAN IP not auto-detected)'
+T_FR[summary_pangolin_method_b_nohost]='B. Bridge Docker par défaut (cible : http://<IP-LAN>:80 - IP LAN non détectée)'
+T_EN[summary_pangolin_s3]='3. In Pangolin: HTTP resource for %s, target as printed above for the method you picked.'
+T_FR[summary_pangolin_s3]='3. Sur Pangolin : ressource HTTP pour %s, cible imprimée ci-dessus pour la méthode choisie.'
+T_EN[summary_pangolin_test]='Quick connectivity test (run on this server):'
+T_FR[summary_pangolin_test]='Test de connectivité rapide (à lancer sur ce serveur) :'
 
 # None / custom tunnel next-steps
 T_EN[summary_none_header]='Next steps - point your reverse tunnel to this server:'
@@ -565,6 +595,13 @@ _nodyx_upgrade() {
   [[ "${1:-}" == "repair" ]] && title=$(t repair_title)
   step "$title"
 
+  # Snapshot the DB before any potentially destructive step. An "upgrade" pulls
+  # new migrations that may fail mid-run; a "repair" rebuilds in place but a
+  # botched build can still leave the schema in an inconsistent state. The
+  # helper is a no-op if the DB is empty/unreachable, so it costs nothing on
+  # a freshly-installed host where there's nothing to lose anyway.
+  _auto_backup_db "${1:-upgrade}"
+
   if [[ "${1:-}" != "repair" ]]; then
     info "$(t code_fetch)"
     git -C "$NODYX_DIR" pull --ff-only || die "$(t git_pull_fail)"
@@ -629,6 +666,48 @@ fi
 _DISK_FREE_MB=$(df -m /opt 2>/dev/null | awk 'NR==2{print $4}' || echo 9999)
 if [[ "$_DISK_FREE_MB" -lt 1024 ]]; then
   warn "$(printf "$(t disk_low)" "$_DISK_FREE_MB")"
+  _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
+fi
+
+# Container / init-system detection. The script registers a pm2-nodyx.service
+# unit, calls systemctl restart caddy / postgresql / cloudflared, and configures
+# UFW. All three need systemd as PID 1 and (for UFW) NET_ADMIN. In a Docker
+# container without systemd, or an unprivileged LXC missing capabilities, these
+# steps would fail mid-run and leave the operator with a half-installed host.
+#
+# systemd-detect-virt exits 1 AND prints "none" when not in a container, so
+# we capture-and-discard the exit code rather than chaining "|| echo none"
+# (which would duplicate the literal "none" into the variable).
+_VIRT="none"
+if command -v systemd-detect-virt >/dev/null 2>&1; then
+  _detected=$(systemd-detect-virt --container 2>/dev/null) || true
+  [[ -n "$_detected" && "$_detected" != "none" ]] && _VIRT="$_detected"
+fi
+_INIT=$(ps -p 1 -o comm= 2>/dev/null | tr -d ' \n' || echo "?")
+
+if [[ "$_VIRT" != "none" ]]; then
+  warn "Container environment detected (systemd-detect-virt → ${_VIRT})."
+  if [[ "$_INIT" != "systemd" ]]; then
+    warn "PID 1 is '${_INIT}', not systemd."
+    warn "The pm2-nodyx.service unit, systemctl, and UFW will not work in this"
+    warn "environment. Use a privileged LXC, an Ubuntu/Debian VM, or the"
+    warn "official Docker compose file (docker-compose.yml at the repo root)."
+    _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
+  else
+    info "systemd is PID 1 - install should work, but the container may need extra capabilities (NET_ADMIN for UFW, SYS_ADMIN for some systemd ops)."
+  fi
+fi
+
+# Internet connectivity preflight. apt-get update, git clone, npm install all
+# need outbound HTTPS. Failing here gives a clear message; failing 5 minutes
+# into npm install gives a cryptic ETIMEDOUT buried under 200 lines of output.
+if ! getent hosts github.com >/dev/null 2>&1; then
+  warn "DNS lookup for github.com failed - the install needs outbound DNS."
+  warn "Check /etc/resolv.conf, systemd-resolved, or your container DNS config."
+  _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
+elif ! curl -fsS --max-time 5 -o /dev/null https://github.com 2>/dev/null; then
+  warn "Outbound HTTPS to github.com is failing - the install needs port 443 open."
+  warn "Check firewall, corporate proxy, or VPN routing."
   _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
 fi
 
@@ -851,13 +930,6 @@ else
   ok "PM2 already present"
 fi
 
-# pm2-logrotate (limit log growth)
-if ! pm2 list 2>/dev/null | grep -q pm2-logrotate; then
-  pm2 install pm2-logrotate >/dev/null 2>&1 || true
-  pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
-  pm2 set pm2-logrotate:retain 7 2>/dev/null || true
-fi
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CREATE 'nodyx' SYSTEM USER
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -870,6 +942,17 @@ else
 fi
 mkdir -p /home/nodyx/.pm2/logs
 chown -R nodyx:nodyx /home/nodyx/.pm2
+
+# pm2-logrotate must be installed under the nodyx PM2_HOME, NOT root's. The
+# previous install ran "pm2 install pm2-logrotate" as root: it landed in
+# /root/.pm2/, the nodyx daemon never saw it, and PM2 logs were never rotated.
+# Symptom was silent — log files just kept growing under /home/nodyx/.pm2/logs/
+# until the disk filled up.
+if ! runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -q pm2-logrotate; then
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 install pm2-logrotate >/dev/null 2>&1 || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:retain 7 2>/dev/null || true
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  POSTGRESQL
@@ -961,14 +1044,23 @@ ok "Redis running"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  FIREWALL (UFW) - Tunnel mode: outbound only, only SSH inbound
+#
+#  Idempotent: if UFW is already active, we DO NOT touch the rules. An admin
+#  may have set up Pangolin newt allowances, custom SSH ports, VPN bypasses,
+#  etc. The previous "ufw --force reset" wiped all of that silently. Now we
+#  only apply our default profile when UFW is inactive (fresh install).
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_firewall)"
-ufw --force reset >/dev/null 2>&1 || true
-ufw default deny incoming  >/dev/null 2>&1 || true
-ufw default allow outgoing >/dev/null 2>&1 || true
-ufw allow ssh              >/dev/null 2>&1 || true
-ufw --force enable         >/dev/null 2>&1 || true
-ok "Firewall: SSH inbound only - tunnel handles web traffic outbound"
+if ufw status 2>/dev/null | head -1 | grep -q "Status: active"; then
+  warn "UFW already active - leaving existing rules untouched."
+  warn "Make sure SSH (22/tcp) and your tunnel client can reach this host: sudo ufw status verbose"
+else
+  ufw default deny incoming  >/dev/null 2>&1 || true
+  ufw default allow outgoing >/dev/null 2>&1 || true
+  ufw allow ssh              >/dev/null 2>&1 || true
+  ufw --force enable         >/dev/null 2>&1 || true
+  ok "Firewall enabled (SSH inbound only - tunnel handles web traffic outbound)"
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CLONE / UPDATE
@@ -986,7 +1078,9 @@ ok "Source present in $NODYX_DIR"
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_backend)"
 
-cat > "${NODYX_DIR}/nodyx-core/.env" <<COREENV
+# umask 077 in a subshell so the .env (containing JWT_SECRET + DB_PASSWORD)
+# is created mode 600 atomically, never world-readable in between cat and chmod.
+(umask 077; cat > "${NODYX_DIR}/nodyx-core/.env" <<COREENV
 # Generated by install_tunnel.sh - do not edit manually
 NODYX_COMMUNITY_NAME=${COMMUNITY_NAME}
 NODYX_COMMUNITY_SLUG=${COMMUNITY_SLUG}
@@ -1011,6 +1105,7 @@ REDIS_PORT=6379
 # CF Tunnel terminates TLS at the edge - public URL still https://
 FRONTEND_URL=https://${DOMAIN}
 COREENV
+)
 
 cd "${NODYX_DIR}/nodyx-core"
 run_bg "npm install (backend)" npm install --no-fund --no-audit \
@@ -1026,7 +1121,9 @@ ok "Backend compiled"
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_frontend)"
 
-cat > "${NODYX_DIR}/nodyx-frontend/.env" <<FEENV
+# Frontend .env doesn't carry server secrets today, but PUBLIC_TENOR_KEY /
+# PUBLIC_GIPHY_KEY may be filled in later. Same umask 077 dance for safety.
+(umask 077; cat > "${NODYX_DIR}/nodyx-frontend/.env" <<FEENV
 # Generated by install_tunnel.sh - do not edit manually
 PUBLIC_API_URL=https://${DOMAIN}
 PRIVATE_API_SSR_URL=http://127.0.0.1:3000/api/v1
@@ -1047,6 +1144,7 @@ PUBLIC_SIGNET_URL=
 PUBLIC_TENOR_KEY=
 PUBLIC_GIPHY_KEY=
 FEENV
+)
 
 cd "${NODYX_DIR}/nodyx-frontend"
 run_bg "npm install (frontend)" npm install --no-fund --no-audit \
@@ -1066,6 +1164,12 @@ ok "Frontend compiled"
 #    pangolin -> newt + Traefik forward X-Forwarded-For (XFF)
 #    none     -> trust loopback XFF; user wires their own tunnel
 #
+#  Bind addresses are mode-aware too. Cloudflared and most home-tunnel clients
+#  reach Caddy via loopback, but newt in a Docker bridge container cannot:
+#  inside the container, "localhost" is the container itself. For pangolin we
+#  therefore bind on the host's primary LAN IP as well, so newt can run in
+#  --network host (loopback works) OR in bridge mode (target the LAN IP).
+#
 #  TLS terminates upstream (CF edge, Pangolin VPS, or your own proxy), so no
 #  HSTS here - it would lock visitors out if the tunnel ever goes via plain HTTP.
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1079,19 +1183,36 @@ case "$TUNNEL_MODE" in
   none)     _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
 esac
 
+# Auto-detect the host's primary IPv4 (route used to reach the public internet).
+# Empty if the host is offline or IPv6-only - we fall back to loopback in that case.
+HOST_PRIMARY_IP=$(ip -4 route get 1.1.1.1 2>/dev/null \
+  | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}' || true)
+
+# Bind list. Loopback always; LAN IP added for pangolin so bridge-mode newt works.
+_CADDY_BIND="http://127.0.0.1:80, http://[::1]:80"
+if [[ "$TUNNEL_MODE" == "pangolin" && -n "$HOST_PRIMARY_IP" ]]; then
+  _CADDY_BIND="${_CADDY_BIND}, http://${HOST_PRIMARY_IP}:80"
+fi
+
 cat > /etc/caddy/Caddyfile <<CADDY
 {
     servers {
-        # Trust the loopback tunnel client (cloudflared, newt, frpc, ...) so its
-        # forwarded headers are honored - otherwise every visitor looks like 127.0.0.1.
+        # Trust loopback + RFC1918 sources so the tunnel client (cloudflared,
+        # newt, frpc, ...) can forward the real visitor IP. Without this every
+        # visitor would look like 127.0.0.1 and rate-limits/IP-bans break.
         trusted_proxies static private_ranges
         ${_CADDY_CLIENT_IP_HEADERS}
+
+        # Cap header size at 16KB. Default is 1MB, which leaves the door open
+        # to slow-header DoS. 16KB still fits CF Tunnel + Pangolin + cookies
+        # + Authorization comfortably (a JWT is ~500B).
+        max_header_size 16KB
     }
 }
 
-http://127.0.0.1:80, http://localhost:80 {
-    encode gzip
-
+# Reusable snippets keep mode-specific blocks short and prevent drift between
+# /api, /uploads, /socket.io, the honeypot rewrite, and the SPA fallback.
+(security_headers) {
     header {
         X-Content-Type-Options    "nosniff"
         X-Frame-Options           "SAMEORIGIN"
@@ -1100,38 +1221,67 @@ http://127.0.0.1:80, http://localhost:80 {
         Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self';"
         -Server
     }
+}
 
+(proxy_backend) {
+    reverse_proxy 127.0.0.1:3000 {
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
+        # dial_timeout: loopback should connect in <100ms; 5s = generous margin.
+        # response_header_timeout: 30s covers Socket.IO long-poll (pingTimeout
+        # defaults to 25s) without blocking forever on a hung backend.
+        # No read/write timeouts: WebSocket upgrades hold the connection long-term.
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
+    }
+}
+
+(proxy_frontend) {
+    reverse_proxy 127.0.0.1:4173 {
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
+    }
+}
+
+${_CADDY_BIND} {
+    encode gzip
+
+    import security_headers
+
+    # Honeypot: paths classic scanners hit. Rewritten to /api/v1/_hp so nodyx-core
+    # logs the source IP and can ban it. Must be matched BEFORE /api/* handle.
     @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
     handle @honeypot {
         rewrite * /api/v1/_hp?p={http.request.uri.path}
-        reverse_proxy 127.0.0.1:3000 {
-            header_up X-Real-IP {client_ip}
-            header_up X-Forwarded-For {client_ip}
-        }
+        import proxy_backend
     }
 
-    reverse_proxy /api/* 127.0.0.1:3000 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
+    handle /api/* {
+        import proxy_backend
     }
-    reverse_proxy /uploads/* 127.0.0.1:3000 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
+    handle /uploads/* {
+        import proxy_backend
     }
-    reverse_proxy /socket.io/* 127.0.0.1:3000 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
+    handle /socket.io/* {
+        import proxy_backend
     }
-    reverse_proxy * 127.0.0.1:4173 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
+
+    handle {
+        import proxy_frontend
     }
 }
 CADDY
 
 # Validate config before reload (catches syntax errors before they break the tunnel)
-if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/caddy_validate.log 2>&1; then
-  cat /tmp/caddy_validate.log >&2
+_CADDY_LOG=$(mktemp /tmp/nodyx_caddy_validate_XXXXXX.log); _register_temp "$_CADDY_LOG"
+if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >"$_CADDY_LOG" 2>&1; then
+  cat "$_CADDY_LOG" >&2
   die "Caddyfile validation failed."
 fi
 
@@ -1139,9 +1289,20 @@ systemctl enable caddy --quiet
 systemctl restart caddy
 
 case "$TUNNEL_MODE" in
-  cf)       ok "Caddy listening on localhost:80 (Cloudflare Tunnel terminates TLS, real IP via CF-Connecting-IP)" ;;
-  pangolin) ok "Caddy listening on localhost:80 (Pangolin / newt terminates TLS, real IP via X-Forwarded-For)" ;;
-  none)     ok "Caddy listening on localhost:80 (custom tunnel, real IP via X-Forwarded-For from loopback)" ;;
+  cf)
+    ok "Caddy listening on 127.0.0.1:80 (Cloudflare Tunnel terminates TLS, real IP via CF-Connecting-IP)"
+    ;;
+  pangolin)
+    if [[ -n "$HOST_PRIMARY_IP" ]]; then
+      ok "Caddy listening on 127.0.0.1:80 + ${HOST_PRIMARY_IP}:80 (Pangolin / newt, real IP via X-Forwarded-For)"
+    else
+      ok "Caddy listening on 127.0.0.1:80 (Pangolin / newt, real IP via X-Forwarded-For)"
+      warn "Could not detect a primary IPv4 - newt in bridge mode won't reach Caddy. Run newt with --network host."
+    fi
+    ;;
+  none)
+    ok "Caddy listening on 127.0.0.1:80 (custom tunnel, real IP via X-Forwarded-For from loopback)"
+    ;;
 esac
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1285,11 +1446,12 @@ if [[ "$TUNNEL_MODE" == "cf" ]]; then
     systemctl stop cloudflared 2>/dev/null || true
 
     info "Registering cloudflared service with the token..."
-    if ! cloudflared service install "$CF_TUNNEL_TOKEN" >/tmp/cf_install.log 2>&1; then
-      cat /tmp/cf_install.log >&2
+    _CF_LOG=$(mktemp /tmp/nodyx_cf_install_XXXXXX.log); _register_temp "$_CF_LOG"
+    if ! cloudflared service install "$CF_TUNNEL_TOKEN" >"$_CF_LOG" 2>&1; then
+      cat "$_CF_LOG" >&2
       die "cloudflared service install failed. Check the token in your CF dashboard."
     fi
-    echo -n "$_TOKEN_HASH" > "$_TOKEN_HASH_FILE"
+    (umask 077; echo -n "$_TOKEN_HASH" > "$_TOKEN_HASH_FILE")
     chmod 600 "$_TOKEN_HASH_FILE"
 
     systemctl enable cloudflared --quiet 2>/dev/null || true
@@ -1337,8 +1499,9 @@ fi
 
 # Register admin (retry up to 3x)
 _REGISTER_OK=false
+_REGISTER_BODY=$(mktemp /tmp/nodyx_register_XXXXXX.json); _register_temp "$_REGISTER_BODY"
 for _reg_try in 1 2 3; do
-  HTTP_CODE=$(curl -s -o /tmp/nodyx_register.json -w "%{http_code}" \
+  HTTP_CODE=$(curl -s -o "$_REGISTER_BODY" -w "%{http_code}" \
     -X POST http://localhost:3000/api/v1/auth/register \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"${ADMIN_USERNAME}\",\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
@@ -1355,18 +1518,31 @@ for _reg_try in 1 2 3; do
   fi
 done
 
-USER_ID=$(sudo -u postgres psql -d "$DB_NAME" -tc \
-  "SELECT id FROM users WHERE lower(email)=lower('${ADMIN_EMAIL}');" 2>/dev/null | tr -d ' \n')
+# Pass user input to psql via --set so values are quoted by libpq itself
+# (:'var' substitution). Bash interpolation of names containing apostrophes
+# would otherwise break the SQL ("L'Étoile") or open a SQL-injection hole.
+# Note: psql's -c does not perform variable substitution; we have to pipe the
+# SQL through stdin via a quoted heredoc.
+USER_ID=$(sudo -u postgres psql -d "$DB_NAME" --set=email="$ADMIN_EMAIL" -tA 2>/dev/null <<'SQL' | tr -d ' \n'
+SELECT id FROM users WHERE lower(email)=lower(:'email');
+SQL
+)
 
 if [[ -n "$USER_ID" ]]; then
-  sudo -u postgres psql -d "$DB_NAME" <<SQL >/dev/null
+  # Heredoc must be quoted (<<'SQL') so bash leaves the :'name' / :'slug' /
+  # :'user_id' tokens intact for psql to substitute.
+  sudo -u postgres psql -d "$DB_NAME" \
+    --set=name="$COMMUNITY_NAME" \
+    --set=slug="$COMMUNITY_SLUG" \
+    --set=user_id="$USER_ID" \
+    <<'SQL' >/dev/null
     INSERT INTO communities (name, slug, description, owner_id, is_public)
-    VALUES ('${COMMUNITY_NAME}', '${COMMUNITY_SLUG}', '', '${USER_ID}', true)
+    VALUES (:'name', :'slug', '', :'user_id', true)
     ON CONFLICT (slug) DO NOTHING;
 
     INSERT INTO community_members (community_id, user_id, role)
-    SELECT id, '${USER_ID}', 'owner'
-    FROM communities WHERE slug = '${COMMUNITY_SLUG}'
+    SELECT id, :'user_id', 'owner'
+    FROM communities WHERE slug = :'slug'
     ON CONFLICT (community_id, user_id) DO UPDATE SET role = 'owner';
 SQL
   ok "Community '${COMMUNITY_NAME}' created - ${ADMIN_USERNAME} → owner"
@@ -1389,7 +1565,9 @@ case "$TUNNEL_MODE" in
 esac
 
 CREDS_FILE="/root/nodyx-credentials.txt"
-cat > "$CREDS_FILE" <<CREDS
+# umask 077 so the first cat creates the file mode 600 atomically. Subsequent
+# >> appends keep the inode's permissions, so they don't need the dance again.
+(umask 077; cat > "$CREDS_FILE" <<CREDS
 ═══════════════════════════════════════════════════════
   NODYX - Instance credentials (${_CREDS_MODE_LABEL})
   Generated: $(date)
@@ -1410,6 +1588,7 @@ Nodyx dir        : ${NODYX_DIR}
 Tunnel mode      : ${TUNNEL_MODE} (cat /etc/nodyx/tunnel-mode)
 
 CREDS
+)
 
 case "$TUNNEL_MODE" in
   cf)
@@ -1423,14 +1602,21 @@ Public hostname  : configure in https://one.dash.cloudflare.com
 CFCREDS
     ;;
   pangolin)
+    if [[ -n "${HOST_PRIMARY_IP:-}" ]]; then
+      _PG_BIND="http://127.0.0.1:80 + http://${HOST_PRIMARY_IP}:80 (loopback + LAN IP)"
+      _PG_TARGET_B="http://${HOST_PRIMARY_IP}:80"
+    else
+      _PG_BIND="http://127.0.0.1:80 (loopback only - LAN IP not detected)"
+      _PG_TARGET_B="http://<LAN-IP>:80"
+    fi
     cat >> "$CREDS_FILE" <<PGCREDS
 ── Pangolin (newt client) ──────────────────────────────
-Caddy listens    : http://127.0.0.1:80 (waits for newt on this server)
+Caddy listens    : ${_PG_BIND}
 Setup            : create a Site (newt) on your Pangolin dashboard,
                    then run the newt client here with ENDPOINT/NEWT_ID/NEWT_SECRET.
-Resource         : add a HTTP resource on Pangolin pointing
-                   ${DOMAIN} → http://localhost:80
-Real IP          : Caddy reads X-Forwarded-For from the trusted loopback proxy.
+Resource (A)     : newt --network host  →  ${DOMAIN} → http://localhost:80
+Resource (B)     : newt default bridge  →  ${DOMAIN} → ${_PG_TARGET_B}
+Real IP          : Caddy reads X-Forwarded-For from trusted private/loopback ranges.
 PGCREDS
     ;;
   none)
@@ -1575,19 +1761,42 @@ case "$TUNNEL_MODE_VAL" in
     fi
     ;;
   pangolin)
-    if pgrep -af 'newt' >/dev/null 2>&1 || docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | grep -qi 'newt'; then
-      _pass "newt client process detected"
-    else
-      _warn "No newt process detected (start the Pangolin newt client on this host)"
+    # Newt detection: native binary or Docker container.
+    _newt_mode=""
+    if pgrep -af 'newt' >/dev/null 2>&1; then
+      _newt_mode="native"
+    elif docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | grep -qi 'newt'; then
+      _newt_mode="docker"
+      _newt_net=$(docker inspect newt --format '{{.HostConfig.NetworkMode}}' 2>/dev/null || echo "?")
     fi
-    if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(:|\\.)80$'; then
-      _pass "Caddy is listening on :80 (ready for newt → HTTP)"
+    case "$_newt_mode" in
+      native) _pass "newt client process detected (native)" ;;
+      docker) _pass "newt container detected (NetworkMode: ${_newt_net:-?})"
+              [[ "${_newt_net:-}" != "host" ]] \
+                && _warn "newt is in '${_newt_net}' mode, not --network host. It must reach Caddy via the host LAN IP."
+              ;;
+      *)      _warn "No newt process detected (start the Pangolin newt client on this host)" ;;
+    esac
+
+    # Collect every address Caddy is bound to on :80 (note: \. is a literal
+    # dot in the regex; the previous \\. matched any character because the
+    # heredoc preserved both backslashes).
+    _caddy_addrs=$(ss -ltn 2>/dev/null | awk '$4 ~ /:80$/ {print $4}' | sed 's/:80$//' | sort -u)
+    if [[ -z "$_caddy_addrs" ]]; then
+      _fail "Nothing listening on :80 - Pangolin won't be able to reach Caddy"
     else
-      _warn "Nothing listening on :80 - Pangolin won't be able to reach Caddy"
+      _pass "Caddy listening on :80 (addresses: $(echo "$_caddy_addrs" | tr '\n' ' '))"
+      # Verify the LAN IP is among them, otherwise newt-in-bridge cannot reach us.
+      _host_ip=$(ip -4 route get 1.1.1.1 2>/dev/null \
+        | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}')
+      if [[ -n "$_host_ip" ]] && ! echo "$_caddy_addrs" | grep -qF "$_host_ip"; then
+        _warn "Caddy is NOT bound on the LAN IP (${_host_ip})."
+        _warn "newt --network host will work; bridge mode will fail. Re-run sudo bash install_tunnel.sh --repair to rebind."
+      fi
     fi
     ;;
   none)
-    if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(:|\\.)80$'; then
+    if ss -ltn 2>/dev/null | awk '$4 ~ /:80$/ {print $4}' | grep -q .; then
       _pass "Caddy is listening on :80 (ready for your reverse tunnel)"
     else
       _warn "Nothing listening on :80 - your tunnel client cannot reach Caddy"
@@ -1753,19 +1962,45 @@ case "$TUNNEL_MODE" in
     echo -e "  ${BOLD}${CYAN}▸ $(t summary_pangolin_header)${RESET}"
     echo -e "  $(t summary_pangolin_s1)"
     echo -e "  $(t summary_pangolin_s2)"
-    printf  "  $(t summary_pangolin_s3)\n" "${DOMAIN}"
     echo ""
-    echo -e "  ${CYAN}$(t summary_pangolin_docker)${RESET}"
+
+    # Method A: --network host (works regardless of bridge subnet, simplest)
+    echo -e "  ${BOLD}${GREEN}$(t summary_pangolin_method_a)${RESET}"
+    echo -e "  ${BOLD}docker run -d --name newt --network host --restart unless-stopped \\"
+    echo -e "    -e PANGOLIN_ENDPOINT=https://your-pangolin.example.com \\"
+    echo -e "    -e NEWT_ID=your_newt_id \\"
+    echo -e "    -e NEWT_SECRET=your_newt_secret \\"
+    echo -e "    fosrl/newt:latest${RESET}"
+    echo ""
+
+    # Method B: default Docker bridge - target host LAN IP
+    if [[ -n "${HOST_PRIMARY_IP:-}" ]]; then
+      printf  "  ${BOLD}$(t summary_pangolin_method_b)${RESET}\n" "${HOST_PRIMARY_IP}"
+    else
+      echo -e "  ${BOLD}$(t summary_pangolin_method_b_nohost)${RESET}"
+    fi
     echo -e "  ${BOLD}docker run -d --name newt --restart unless-stopped \\"
     echo -e "    -e PANGOLIN_ENDPOINT=https://your-pangolin.example.com \\"
     echo -e "    -e NEWT_ID=your_newt_id \\"
     echo -e "    -e NEWT_SECRET=your_newt_secret \\"
     echo -e "    fosrl/newt:latest${RESET}"
     echo ""
+
+    printf  "  $(t summary_pangolin_s3)\n" "${DOMAIN}"
+    echo ""
+
+    # Connectivity smoke-test the operator can paste before going live.
+    echo -e "  ${CYAN}$(t summary_pangolin_test)${RESET}"
+    echo -e "  ${BOLD}docker exec newt wget -qO- http://localhost/api/v1/instance/info  # method A${RESET}"
+    if [[ -n "${HOST_PRIMARY_IP:-}" ]]; then
+      echo -e "  ${BOLD}docker exec newt wget -qO- http://${HOST_PRIMARY_IP}/api/v1/instance/info  # method B${RESET}"
+    fi
+    echo ""
+
     echo -e "  ${BOLD}${CYAN}▸ Service management${RESET}"
     echo -e "  sudo nodyx-doctor                     # full diagnostic"
     echo -e "  sudo nodyx-update                     # git pull + rebuild + restart"
-    echo -e "  docker logs -f newt                   # newt client logs (if docker)"
+    echo -e "  docker logs -f newt                   # newt client logs"
     echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
     echo ""
     warn "$(t summary_voice_warn_pangolin)"
