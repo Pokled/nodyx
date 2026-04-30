@@ -31,7 +31,7 @@ Forum + Chat + Voix + P2P + Canvas + Constructeur de page d'accueil + SDK Widget
 
 ---
 
-> **Avant de scroller.** Nodyx ne cherche pas à faire la guerre à Discord, et n'essaie pas d'être la seule alternative ouverte. Il y a des super projets là-dehors — Matrix, Stoat, Fluxer, Mattermost, Rocket.Chat, Discourse, et d'autres — et on veut sincèrement que tu les connaisses. On les liste, avec leurs repos GitHub, sur une page qu'on a écrite nous-mêmes : **[→ Pourquoi Nodyx (et les autres alternatives qu'on respecte)](https://nodyx.dev/why-nodyx)**.
+> **Avant de scroller.** Nodyx ne cherche pas à faire la guerre à Discord, et n'essaie pas d'être la seule alternative ouverte. Il y a des super projets là-dehors. Matrix, Stoat, Fluxer, Mattermost, Rocket.Chat, Discourse, Haven et d'autres. Et on veut sincèrement que tu les connaisses. On les liste, avec leurs repos GitHub, sur une page qu'on a écrite nous-mêmes : **[→ Pourquoi Nodyx (et les autres alternatives qu'on respecte)](https://nodyx.dev/why-nodyx)**.
 >
 > *Le combat n'est pas entre nous. Il est entre les silos fermés et les communautés qui se possèdent vraiment. Choisis l'outil qui te va. On t'applaudira dans tous les cas.*
 
@@ -101,6 +101,7 @@ Le paysage des outils communautaires n'est pas un combat. Chaque projet optimise
 | **Matrix** ([Element](https://github.com/element-hq/element-web)) | Protocole fédéré avec des bridges vers presque tout (Discord, Slack, Telegram, IRC, ...) | Si l'interopérabilité est non négociable |
 | **[Discourse](https://github.com/discourse/discourse)** | Forums indexés, recherchables, bases de connaissances | Si la discussion async long-format est votre cœur |
 | **[Mattermost](https://github.com/mattermost/mattermost)** / **[Rocket.Chat](https://github.com/RocketChat/Rocket.Chat)** | Compliance entreprise, remplaçant Slack à grande échelle | Si vous avez une équipe achats |
+| **[Haven](https://github.com/ancsemi/Haven)** | Chat privacy-first, zéro cloud, clients natifs Windows/Linux/Android, zéro télémétrie | Si garder chaque octet sur votre propre machine compte avant tout |
 | **[Stoat](https://github.com/stoatchat/self-hosted)** (ex-Revolt) / **[Fluxer](https://github.com/fluxerapp/fluxer)** | UI proche de Discord, migration facile | Si vos membres connaissent déjà Discord |
 | **Lemmy** | Forums threadés style Reddit, fédéré | Si vous voulez une présence native dans le fédiverse |
 | **Nodyx** | Forum + chat + voix + canvas + constructeur de page d'accueil, en une seule installation auto-hébergée avec un relais P2P pour serveurs domestiques | Si vous voulez pleinement posséder une communauté multi-formats sur votre propre matériel |

@@ -101,6 +101,7 @@ The community-tools landscape isn't a battle. Each project optimizes for differe
 | **Matrix** ([Element](https://github.com/element-hq/element-web)) | Federated protocol with bridges to almost everything (Discord, Slack, Telegram, IRC, ...) | If interoperability is non-negotiable |
 | **[Discourse](https://github.com/discourse/discourse)** | Indexed, searchable forums and knowledge bases | If long-form async discussion is your core |
 | **[Mattermost](https://github.com/mattermost/mattermost)** / **[Rocket.Chat](https://github.com/RocketChat/Rocket.Chat)** | Enterprise compliance, Slack-replacement at scale | If you have a procurement team |
+| **[Haven](https://github.com/ancsemi/Haven)** | Privacy-first chat, zero cloud, native Windows/Linux/Android clients, no telemetry | If keeping every byte on your own machine matters most |
 | **[Stoat](https://github.com/stoatchat/self-hosted)** (ex-Revolt) / **[Fluxer](https://github.com/fluxerapp/fluxer)** | Discord-shaped UI, easy migration | If your members already know Discord |
 | **Lemmy** | Federated, Reddit-style threaded forums | If you want a fediverse-native presence |
 | **Nodyx** | Forum + chat + voice + canvas + homepage builder, in one self-hosted install with a P2P relay for home servers | If you want to fully own a multi-format community on your own hardware |
