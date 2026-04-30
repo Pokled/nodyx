@@ -15,10 +15,11 @@ export const nav: NavSection[] = [
     title: 'Get Started',
     icon:  'rocket',
     items: [
-      { title: 'Introduction',   slug: 'readme'    },
-      { title: 'Installation',   slug: 'install'   },
-      { title: 'Domain & DNS',   slug: 'domain'    },
-      { title: 'Email (SMTP)',   slug: 'email'     },
+      { title: 'Introduction',   slug: 'readme'         },
+      { title: 'Installation',   slug: 'install'        },
+      { title: 'Tunnel Install', slug: 'install-tunnel', badge: 'New' },
+      { title: 'Domain & DNS',   slug: 'domain'         },
+      { title: 'Email (SMTP)',   slug: 'email'          },
     ],
   },
   {
