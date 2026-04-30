@@ -689,6 +689,19 @@ if [[ "$_VIRT" != "none" ]]; then
   fi
 fi
 
+# Internet connectivity preflight. apt-get update, git clone, npm install all
+# need outbound HTTPS. Failing here gives a clear message; failing 5 minutes
+# into npm install gives a cryptic ETIMEDOUT buried under 200 lines of output.
+if ! getent hosts github.com >/dev/null 2>&1; then
+  warn "DNS lookup for github.com failed - the install needs outbound DNS."
+  warn "Check /etc/resolv.conf, systemd-resolved, or your container DNS config."
+  _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
+elif ! curl -fsS --max-time 5 -o /dev/null https://github.com 2>/dev/null; then
+  warn "Outbound HTTPS to github.com is failing - the install needs port 443 open."
+  warn "Check firewall, corporate proxy, or VPN routing."
+  _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DETECTION MENU
 # ═══════════════════════════════════════════════════════════════════════════════
