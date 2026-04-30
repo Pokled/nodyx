@@ -872,13 +872,6 @@ else
   ok "PM2 already present"
 fi
 
-# pm2-logrotate (limit log growth)
-if ! pm2 list 2>/dev/null | grep -q pm2-logrotate; then
-  pm2 install pm2-logrotate >/dev/null 2>&1 || true
-  pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
-  pm2 set pm2-logrotate:retain 7 2>/dev/null || true
-fi
-
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CREATE 'nodyx' SYSTEM USER
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -891,6 +884,17 @@ else
 fi
 mkdir -p /home/nodyx/.pm2/logs
 chown -R nodyx:nodyx /home/nodyx/.pm2
+
+# pm2-logrotate must be installed under the nodyx PM2_HOME, NOT root's. The
+# previous install ran "pm2 install pm2-logrotate" as root: it landed in
+# /root/.pm2/, the nodyx daemon never saw it, and PM2 logs were never rotated.
+# Symptom was silent — log files just kept growing under /home/nodyx/.pm2/logs/
+# until the disk filled up.
+if ! runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -q pm2-logrotate; then
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 install pm2-logrotate >/dev/null 2>&1 || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:retain 7 2>/dev/null || true
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  POSTGRESQL
