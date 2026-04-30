@@ -16,8 +16,9 @@ export const nav: NavSection[] = [
     icon:  'rocket',
     items: [
       { title: 'Introduction',   slug: 'readme'         },
+      { title: 'Why Nodyx',      slug: 'why-nodyx',      badge: 'New' },
       { title: 'Installation',   slug: 'install'        },
-      { title: 'Tunnel Install', slug: 'install-tunnel', badge: 'New' },
+      { title: 'Tunnel Install', slug: 'install-tunnel'  },
       { title: 'Domain & DNS',   slug: 'domain'         },
       { title: 'Email (SMTP)',   slug: 'email'          },
     ],
