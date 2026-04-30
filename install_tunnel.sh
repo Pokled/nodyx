@@ -1104,6 +1104,11 @@ cat > /etc/caddy/Caddyfile <<CADDY
         # visitor would look like 127.0.0.1 and rate-limits/IP-bans break.
         trusted_proxies static private_ranges
         ${_CADDY_CLIENT_IP_HEADERS}
+
+        # Cap header size at 16KB. Default is 1MB, which leaves the door open
+        # to slow-header DoS. 16KB still fits CF Tunnel + Pangolin + cookies
+        # + Authorization comfortably (a JWT is ~500B).
+        max_header_size 16KB
     }
 }
 
@@ -1124,6 +1129,14 @@ cat > /etc/caddy/Caddyfile <<CADDY
     reverse_proxy 127.0.0.1:3000 {
         header_up X-Real-IP {client_ip}
         header_up X-Forwarded-For {client_ip}
+        # dial_timeout: loopback should connect in <100ms; 5s = generous margin.
+        # response_header_timeout: 30s covers Socket.IO long-poll (pingTimeout
+        # defaults to 25s) without blocking forever on a hung backend.
+        # No read/write timeouts: WebSocket upgrades hold the connection long-term.
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
     }
 }
 
@@ -1131,6 +1144,10 @@ cat > /etc/caddy/Caddyfile <<CADDY
     reverse_proxy 127.0.0.1:4173 {
         header_up X-Real-IP {client_ip}
         header_up X-Forwarded-For {client_ip}
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
     }
 }
 
