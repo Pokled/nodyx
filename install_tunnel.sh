@@ -586,6 +586,13 @@ _nodyx_upgrade() {
   [[ "${1:-}" == "repair" ]] && title=$(t repair_title)
   step "$title"
 
+  # Snapshot the DB before any potentially destructive step. An "upgrade" pulls
+  # new migrations that may fail mid-run; a "repair" rebuilds in place but a
+  # botched build can still leave the schema in an inconsistent state. The
+  # helper is a no-op if the DB is empty/unreachable, so it costs nothing on
+  # a freshly-installed host where there's nothing to lose anyway.
+  _auto_backup_db "${1:-upgrade}"
+
   if [[ "${1:-}" != "repair" ]]; then
     info "$(t code_fetch)"
     git -C "$NODYX_DIR" pull --ff-only || die "$(t git_pull_fail)"
