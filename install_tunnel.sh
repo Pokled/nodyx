@@ -961,14 +961,23 @@ ok "Redis running"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  FIREWALL (UFW) - Tunnel mode: outbound only, only SSH inbound
+#
+#  Idempotent: if UFW is already active, we DO NOT touch the rules. An admin
+#  may have set up Pangolin newt allowances, custom SSH ports, VPN bypasses,
+#  etc. The previous "ufw --force reset" wiped all of that silently. Now we
+#  only apply our default profile when UFW is inactive (fresh install).
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_firewall)"
-ufw --force reset >/dev/null 2>&1 || true
-ufw default deny incoming  >/dev/null 2>&1 || true
-ufw default allow outgoing >/dev/null 2>&1 || true
-ufw allow ssh              >/dev/null 2>&1 || true
-ufw --force enable         >/dev/null 2>&1 || true
-ok "Firewall: SSH inbound only - tunnel handles web traffic outbound"
+if ufw status 2>/dev/null | head -1 | grep -q "Status: active"; then
+  warn "UFW already active - leaving existing rules untouched."
+  warn "Make sure SSH (22/tcp) and your tunnel client can reach this host: sudo ufw status verbose"
+else
+  ufw default deny incoming  >/dev/null 2>&1 || true
+  ufw default allow outgoing >/dev/null 2>&1 || true
+  ufw allow ssh              >/dev/null 2>&1 || true
+  ufw --force enable         >/dev/null 2>&1 || true
+  ok "Firewall enabled (SSH inbound only - tunnel handles web traffic outbound)"
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CLONE / UPDATE
