@@ -159,7 +159,9 @@ You can run Nodyx on Windows 10/11 using WSL2 (Windows Subsystem for Linux). Thi
 |---|---|
 | VPS, ports 80/443 open, no domain | `install.sh` → sslip.io + nodyx.org free |
 | VPS, ports 80/443 open, custom domain | `install.sh` → enter your domain |
-| Home server, no open ports, CF domain | `install_tunnel.sh` |
+| Home server, no open ports, CF domain | `install_tunnel.sh` → [tunnel guide](INSTALL-TUNNEL.md) |
+| Home server, no open ports, Pangolin VPS | `install_tunnel.sh` → [tunnel guide](INSTALL-TUNNEL.md#-mode-b--pangolin-newt) |
+| Home server, no open ports, custom tunnel (frp, rathole, ...) | `install_tunnel.sh` → [tunnel guide](INSTALL-TUNNEL.md#-mode-c--custom-reverse-tunnel) |
 | Home server, no open ports, No-IP/DuckDNS | ❌ not compatible — [see DOMAIN.md](DOMAIN.md) |
 | Home server, no open ports, no domain | Buy a domain ~$1/year — [see DOMAIN.md](DOMAIN.md) |
 
