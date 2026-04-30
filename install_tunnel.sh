@@ -1066,6 +1066,12 @@ ok "Frontend compiled"
 #    pangolin -> newt + Traefik forward X-Forwarded-For (XFF)
 #    none     -> trust loopback XFF; user wires their own tunnel
 #
+#  Bind addresses are mode-aware too. Cloudflared and most home-tunnel clients
+#  reach Caddy via loopback, but newt in a Docker bridge container cannot:
+#  inside the container, "localhost" is the container itself. For pangolin we
+#  therefore bind on the host's primary LAN IP as well, so newt can run in
+#  --network host (loopback works) OR in bridge mode (target the LAN IP).
+#
 #  TLS terminates upstream (CF edge, Pangolin VPS, or your own proxy), so no
 #  HSTS here - it would lock visitors out if the tunnel ever goes via plain HTTP.
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1079,19 +1085,31 @@ case "$TUNNEL_MODE" in
   none)     _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
 esac
 
+# Auto-detect the host's primary IPv4 (route used to reach the public internet).
+# Empty if the host is offline or IPv6-only - we fall back to loopback in that case.
+HOST_PRIMARY_IP=$(ip -4 route get 1.1.1.1 2>/dev/null \
+  | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}' || true)
+
+# Bind list. Loopback always; LAN IP added for pangolin so bridge-mode newt works.
+_CADDY_BIND="http://127.0.0.1:80, http://[::1]:80"
+if [[ "$TUNNEL_MODE" == "pangolin" && -n "$HOST_PRIMARY_IP" ]]; then
+  _CADDY_BIND="${_CADDY_BIND}, http://${HOST_PRIMARY_IP}:80"
+fi
+
 cat > /etc/caddy/Caddyfile <<CADDY
 {
     servers {
-        # Trust the loopback tunnel client (cloudflared, newt, frpc, ...) so its
-        # forwarded headers are honored - otherwise every visitor looks like 127.0.0.1.
+        # Trust loopback + RFC1918 sources so the tunnel client (cloudflared,
+        # newt, frpc, ...) can forward the real visitor IP. Without this every
+        # visitor would look like 127.0.0.1 and rate-limits/IP-bans break.
         trusted_proxies static private_ranges
         ${_CADDY_CLIENT_IP_HEADERS}
     }
 }
 
-http://127.0.0.1:80, http://localhost:80 {
-    encode gzip
-
+# Reusable snippets keep mode-specific blocks short and prevent drift between
+# /api, /uploads, /socket.io, the honeypot rewrite, and the SPA fallback.
+(security_headers) {
     header {
         X-Content-Type-Options    "nosniff"
         X-Frame-Options           "SAMEORIGIN"
@@ -1100,31 +1118,47 @@ http://127.0.0.1:80, http://localhost:80 {
         Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self';"
         -Server
     }
+}
 
+(proxy_backend) {
+    reverse_proxy 127.0.0.1:3000 {
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
+    }
+}
+
+(proxy_frontend) {
+    reverse_proxy 127.0.0.1:4173 {
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
+    }
+}
+
+${_CADDY_BIND} {
+    encode gzip
+
+    import security_headers
+
+    # Honeypot: paths classic scanners hit. Rewritten to /api/v1/_hp so nodyx-core
+    # logs the source IP and can ban it. Must be matched BEFORE /api/* handle.
     @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
     handle @honeypot {
         rewrite * /api/v1/_hp?p={http.request.uri.path}
-        reverse_proxy 127.0.0.1:3000 {
-            header_up X-Real-IP {client_ip}
-            header_up X-Forwarded-For {client_ip}
-        }
+        import proxy_backend
     }
 
-    reverse_proxy /api/* 127.0.0.1:3000 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
+    handle /api/* {
+        import proxy_backend
     }
-    reverse_proxy /uploads/* 127.0.0.1:3000 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
+    handle /uploads/* {
+        import proxy_backend
     }
-    reverse_proxy /socket.io/* 127.0.0.1:3000 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
+    handle /socket.io/* {
+        import proxy_backend
     }
-    reverse_proxy * 127.0.0.1:4173 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
+
+    handle {
+        import proxy_frontend
     }
 }
 CADDY
@@ -1139,9 +1173,20 @@ systemctl enable caddy --quiet
 systemctl restart caddy
 
 case "$TUNNEL_MODE" in
-  cf)       ok "Caddy listening on localhost:80 (Cloudflare Tunnel terminates TLS, real IP via CF-Connecting-IP)" ;;
-  pangolin) ok "Caddy listening on localhost:80 (Pangolin / newt terminates TLS, real IP via X-Forwarded-For)" ;;
-  none)     ok "Caddy listening on localhost:80 (custom tunnel, real IP via X-Forwarded-For from loopback)" ;;
+  cf)
+    ok "Caddy listening on 127.0.0.1:80 (Cloudflare Tunnel terminates TLS, real IP via CF-Connecting-IP)"
+    ;;
+  pangolin)
+    if [[ -n "$HOST_PRIMARY_IP" ]]; then
+      ok "Caddy listening on 127.0.0.1:80 + ${HOST_PRIMARY_IP}:80 (Pangolin / newt, real IP via X-Forwarded-For)"
+    else
+      ok "Caddy listening on 127.0.0.1:80 (Pangolin / newt, real IP via X-Forwarded-For)"
+      warn "Could not detect a primary IPv4 - newt in bridge mode won't reach Caddy. Run newt with --network host."
+    fi
+    ;;
+  none)
+    ok "Caddy listening on 127.0.0.1:80 (custom tunnel, real IP via X-Forwarded-For from loopback)"
+    ;;
 esac
 
 # ═══════════════════════════════════════════════════════════════════════════════
