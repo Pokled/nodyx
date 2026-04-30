@@ -77,7 +77,14 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  /* Smooth scroll on anchor clicks. The actual offset under the fixed header
+     is handled per-heading via scroll-margin-top below — without it, the
+     target heading lands hidden behind the sticky page header. */
+  scroll-behavior: smooth;
+}
 
 body {
   margin: 0;
@@ -119,6 +126,9 @@ body {
   margin: 2.5rem 0 0.75rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+  /* Anchor clicks (in-page TOC + sidebar TOC) scroll the heading just below
+     the sticky page header instead of letting it disappear underneath. */
+  scroll-margin-top: calc(var(--header-height) + 1rem);
 }
 
 .prose h3 {
@@ -126,6 +136,7 @@ body {
   font-weight: 600;
   color: var(--text);
   margin: 1.75rem 0 0.5rem;
+  scroll-margin-top: calc(var(--header-height) + 1rem);
 }
 
 .prose h4 {

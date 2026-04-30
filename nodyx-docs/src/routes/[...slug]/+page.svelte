@@ -21,17 +21,42 @@
     }
   })
 
-  // Active TOC heading on scroll
+  // Scrollspy: highlight the TOC entry matching the section the operator is
+  // currently reading. Approach is deliberately simple — rather than juggling
+  // IntersectionObserver entries (which leaves "no active section" gaps when
+  // the cursor is mid-section between two headings), we walk the heading list
+  // on each scroll and pick the LAST one whose top is above the scroll line.
+  // That guarantees there is always exactly one active item.
   let activeId = $state('')
   onMount(() => {
-    const headings = document.querySelectorAll('.prose h2, .prose h3')
-    const obs = new IntersectionObserver(entries => {
-      for (const e of entries) {
-        if (e.isIntersecting) activeId = e.target.id
+    const headings = Array.from(
+      document.querySelectorAll<HTMLElement>('.prose h2, .prose h3')
+    )
+    if (!headings.length) return
+
+    // Account for the sticky page header: if scroll-margin-top puts headings
+    // ~72px below the viewport top after click-scroll, use the same offset as
+    // the "active" trigger line so the highlighted item flips at the right
+    // moment.
+    const ACTIVE_OFFSET = 80
+
+    function updateActive() {
+      const y = window.scrollY + ACTIVE_OFFSET
+      let current = headings[0]
+      for (const h of headings) {
+        if (h.offsetTop <= y) current = h
+        else break
       }
-    }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 })
-    headings.forEach(h => obs.observe(h))
-    return () => obs.disconnect()
+      if (current.id !== activeId) activeId = current.id
+    }
+
+    updateActive()
+    window.addEventListener('scroll', updateActive, { passive: true })
+    window.addEventListener('resize', updateActive)
+    return () => {
+      window.removeEventListener('scroll', updateActive)
+      window.removeEventListener('resize', updateActive)
+    }
   })
 </script>
 
@@ -96,27 +121,26 @@
     {@html data.html}
   </article>
 
-  <!-- TOC (right sidebar) -->
+  <!-- TOC (right sidebar) — sticky, with scrollspy active marker -->
   {#if data.headings.length > 2}
     <aside class="toc" aria-label="Table of contents">
-      <div class="toc-inner">
-        <div class="toc-title">On this page</div>
-        <nav>
-          <ul class="toc-list">
-            {#each data.headings.filter(h => h.level <= 3) as h}
-              <li class="toc-item" class:toc-h3={h.level === 3}>
-                <a
-                  href="#{h.id}"
-                  class="toc-link"
-                  class:active={activeId === h.id}
-                >
-                  {h.text}
-                </a>
-              </li>
-            {/each}
-          </ul>
-        </nav>
-      </div>
+      <div class="toc-title">On this page</div>
+      <nav>
+        <ul class="toc-list">
+          {#each data.headings.filter(h => h.level <= 3) as h}
+            <li class="toc-item" class:toc-h3={h.level === 3}>
+              <a
+                href="#{h.id}"
+                class="toc-link"
+                class:active={activeId === h.id}
+                aria-current={activeId === h.id ? 'location' : undefined}
+              >
+                {h.text}
+              </a>
+            </li>
+          {/each}
+        </ul>
+      </nav>
     </aside>
   {/if}
 </div>
@@ -175,15 +199,23 @@
   align-items: flex-start;
 }
 
-/* TOC */
+/* TOC sidebar.
+   Sticky lives directly on .toc (not on a child wrapper) and align-self:
+   flex-start lets it stay at its natural height while the flex container
+   .doc-layout grows with .prose. That gives sticky enough room to slide
+   inside as the operator scrolls. max-height + overflow-y means a very
+   long page TOC scrolls inside its own pane instead of getting clipped. */
 .toc {
   flex-shrink: 0;
-  width: 200px;
-}
-
-.toc-inner {
+  width: 220px;
+  align-self: flex-start;
   position: sticky;
-  top: calc(var(--header-height) + 2rem);
+  top: calc(var(--header-height) + 1.5rem);
+  max-height: calc(100vh - var(--header-height) - 3rem);
+  overflow-y: auto;
+  /* Soft scrollbar that doesn't intrude visually */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 .toc-title {
@@ -197,24 +229,57 @@
 
 .toc-list { list-style: none; margin: 0; padding: 0; }
 
-.toc-item { margin: 0; }
+.toc-item { margin: 0; position: relative; }
 
-.toc-h3 .toc-link { padding-left: 1rem; font-size: 0.78rem; }
+.toc-h3 .toc-link { padding-left: 1.5rem; font-size: 0.78rem; }
 
 .toc-link {
   display: block;
-  padding: 0.25rem 0.5rem 0.25rem 0;
-  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
   text-decoration: none;
   border-left: 2px solid var(--border);
-  padding-left: 0.75rem;
-  transition: color 0.12s, border-color 0.12s;
-  line-height: 1.4;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s, padding-left 0.15s;
+  line-height: 1.45;
+  position: relative;
 }
 
-.toc-link:hover { color: var(--text-secondary); }
-.toc-link.active { color: var(--accent); border-left-color: var(--accent); }
+.toc-link:hover {
+  color: var(--text-secondary);
+  border-left-color: var(--text-muted);
+}
+
+/* Active marker: thicker accent border + a small dot to the LEFT, plus a
+   subtle background tint. Eye lands on the dot first, the link reads next.
+   The dot uses an absolutely-positioned pseudo so the link's text doesn't
+   reflow when scrollspy moves between items. */
+.toc-link.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background-color: var(--accent-subtle, rgba(124, 58, 237, 0.08));
+  font-weight: 600;
+}
+
+.toc-link.active::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--bg, #0a0a12);
+}
+
+/* H3 active marker is smaller & flush to align with the indented padding */
+.toc-h3 .toc-link.active::before {
+  width: 6px;
+  height: 6px;
+  left: -6px;
+}
 
 /* Breadcrumb */
 .breadcrumb {
