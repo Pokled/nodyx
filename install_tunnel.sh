@@ -1423,18 +1423,31 @@ for _reg_try in 1 2 3; do
   fi
 done
 
-USER_ID=$(sudo -u postgres psql -d "$DB_NAME" -tc \
-  "SELECT id FROM users WHERE lower(email)=lower('${ADMIN_EMAIL}');" 2>/dev/null | tr -d ' \n')
+# Pass user input to psql via --set so values are quoted by libpq itself
+# (:'var' substitution). Bash interpolation of names containing apostrophes
+# would otherwise break the SQL ("L'Étoile") or open a SQL-injection hole.
+# Note: psql's -c does not perform variable substitution; we have to pipe the
+# SQL through stdin via a quoted heredoc.
+USER_ID=$(sudo -u postgres psql -d "$DB_NAME" --set=email="$ADMIN_EMAIL" -tA 2>/dev/null <<'SQL' | tr -d ' \n'
+SELECT id FROM users WHERE lower(email)=lower(:'email');
+SQL
+)
 
 if [[ -n "$USER_ID" ]]; then
-  sudo -u postgres psql -d "$DB_NAME" <<SQL >/dev/null
+  # Heredoc must be quoted (<<'SQL') so bash leaves the :'name' / :'slug' /
+  # :'user_id' tokens intact for psql to substitute.
+  sudo -u postgres psql -d "$DB_NAME" \
+    --set=name="$COMMUNITY_NAME" \
+    --set=slug="$COMMUNITY_SLUG" \
+    --set=user_id="$USER_ID" \
+    <<'SQL' >/dev/null
     INSERT INTO communities (name, slug, description, owner_id, is_public)
-    VALUES ('${COMMUNITY_NAME}', '${COMMUNITY_SLUG}', '', '${USER_ID}', true)
+    VALUES (:'name', :'slug', '', :'user_id', true)
     ON CONFLICT (slug) DO NOTHING;
 
     INSERT INTO community_members (community_id, user_id, role)
-    SELECT id, '${USER_ID}', 'owner'
-    FROM communities WHERE slug = '${COMMUNITY_SLUG}'
+    SELECT id, :'user_id', 'owner'
+    FROM communities WHERE slug = :'slug'
     ON CONFLICT (community_id, user_id) DO UPDATE SET role = 'owner';
 SQL
   ok "Community '${COMMUNITY_NAME}' created - ${ADMIN_USERNAME} → owner"
