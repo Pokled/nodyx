@@ -22,6 +22,27 @@ set -euo pipefail
 
 INSTALLER_VERSION="1.1.0"
 
+# ── Tempfile cleanup ──────────────────────────────────────────────────────────
+# Every mktemp we issue is registered here so the EXIT trap can wipe it on a
+# crash, Ctrl-C, or normal exit. Avoids /tmp filling up with .log files from
+# repeated --repair / --upgrade runs and from interrupted installs.
+declare -a _TEMP_FILES=()
+_register_temp() { _TEMP_FILES+=("$1"); }
+_cleanup_on_exit() {
+  local rc=$?
+  set +e
+  for f in "${_TEMP_FILES[@]:-}"; do
+    [[ -n "$f" ]] && rm -f "$f" 2>/dev/null
+  done
+  # If we were re-launched via curl|bash, the spawning shell wrote our own
+  # source to /tmp/nodyx_tunnel_XXXXXX.sh and exec'd into us. Clean that up.
+  if [[ "${BASH_SOURCE[0]:-}" == /tmp/nodyx_tunnel_*.sh ]]; then
+    rm -f "${BASH_SOURCE[0]}" 2>/dev/null
+  fi
+  exit "$rc"
+}
+trap _cleanup_on_exit EXIT
+
 # ── Auto-relaunch if stdin is piped (curl|bash) ───────────────────────────────
 if [[ ! -t 0 ]]; then
   _SELF=$(mktemp /tmp/nodyx_tunnel_XXXXXX.sh)
@@ -1196,8 +1217,9 @@ ${_CADDY_BIND} {
 CADDY
 
 # Validate config before reload (catches syntax errors before they break the tunnel)
-if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/caddy_validate.log 2>&1; then
-  cat /tmp/caddy_validate.log >&2
+_CADDY_LOG=$(mktemp /tmp/nodyx_caddy_validate_XXXXXX.log); _register_temp "$_CADDY_LOG"
+if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >"$_CADDY_LOG" 2>&1; then
+  cat "$_CADDY_LOG" >&2
   die "Caddyfile validation failed."
 fi
 
@@ -1362,8 +1384,9 @@ if [[ "$TUNNEL_MODE" == "cf" ]]; then
     systemctl stop cloudflared 2>/dev/null || true
 
     info "Registering cloudflared service with the token..."
-    if ! cloudflared service install "$CF_TUNNEL_TOKEN" >/tmp/cf_install.log 2>&1; then
-      cat /tmp/cf_install.log >&2
+    _CF_LOG=$(mktemp /tmp/nodyx_cf_install_XXXXXX.log); _register_temp "$_CF_LOG"
+    if ! cloudflared service install "$CF_TUNNEL_TOKEN" >"$_CF_LOG" 2>&1; then
+      cat "$_CF_LOG" >&2
       die "cloudflared service install failed. Check the token in your CF dashboard."
     fi
     (umask 077; echo -n "$_TOKEN_HASH" > "$_TOKEN_HASH_FILE")
@@ -1414,8 +1437,9 @@ fi
 
 # Register admin (retry up to 3x)
 _REGISTER_OK=false
+_REGISTER_BODY=$(mktemp /tmp/nodyx_register_XXXXXX.json); _register_temp "$_REGISTER_BODY"
 for _reg_try in 1 2 3; do
-  HTTP_CODE=$(curl -s -o /tmp/nodyx_register.json -w "%{http_code}" \
+  HTTP_CODE=$(curl -s -o "$_REGISTER_BODY" -w "%{http_code}" \
     -X POST http://localhost:3000/api/v1/auth/register \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"${ADMIN_USERNAME}\",\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\"}" \
