@@ -1745,19 +1745,42 @@ case "$TUNNEL_MODE_VAL" in
     fi
     ;;
   pangolin)
-    if pgrep -af 'newt' >/dev/null 2>&1 || docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | grep -qi 'newt'; then
-      _pass "newt client process detected"
-    else
-      _warn "No newt process detected (start the Pangolin newt client on this host)"
+    # Newt detection: native binary or Docker container.
+    _newt_mode=""
+    if pgrep -af 'newt' >/dev/null 2>&1; then
+      _newt_mode="native"
+    elif docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | grep -qi 'newt'; then
+      _newt_mode="docker"
+      _newt_net=$(docker inspect newt --format '{{.HostConfig.NetworkMode}}' 2>/dev/null || echo "?")
     fi
-    if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(:|\\.)80$'; then
-      _pass "Caddy is listening on :80 (ready for newt → HTTP)"
+    case "$_newt_mode" in
+      native) _pass "newt client process detected (native)" ;;
+      docker) _pass "newt container detected (NetworkMode: ${_newt_net:-?})"
+              [[ "${_newt_net:-}" != "host" ]] \
+                && _warn "newt is in '${_newt_net}' mode, not --network host. It must reach Caddy via the host LAN IP."
+              ;;
+      *)      _warn "No newt process detected (start the Pangolin newt client on this host)" ;;
+    esac
+
+    # Collect every address Caddy is bound to on :80 (note: \. is a literal
+    # dot in the regex; the previous \\. matched any character because the
+    # heredoc preserved both backslashes).
+    _caddy_addrs=$(ss -ltn 2>/dev/null | awk '$4 ~ /:80$/ {print $4}' | sed 's/:80$//' | sort -u)
+    if [[ -z "$_caddy_addrs" ]]; then
+      _fail "Nothing listening on :80 - Pangolin won't be able to reach Caddy"
     else
-      _warn "Nothing listening on :80 - Pangolin won't be able to reach Caddy"
+      _pass "Caddy listening on :80 (addresses: $(echo "$_caddy_addrs" | tr '\n' ' '))"
+      # Verify the LAN IP is among them, otherwise newt-in-bridge cannot reach us.
+      _host_ip=$(ip -4 route get 1.1.1.1 2>/dev/null \
+        | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}')
+      if [[ -n "$_host_ip" ]] && ! echo "$_caddy_addrs" | grep -qF "$_host_ip"; then
+        _warn "Caddy is NOT bound on the LAN IP (${_host_ip})."
+        _warn "newt --network host will work; bridge mode will fail. Re-run sudo bash install_tunnel.sh --repair to rebind."
+      fi
     fi
     ;;
   none)
-    if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(:|\\.)80$'; then
+    if ss -ltn 2>/dev/null | awk '$4 ~ /:80$/ {print $4}' | grep -q .; then
       _pass "Caddy is listening on :80 (ready for your reverse tunnel)"
     else
       _warn "Nothing listening on :80 - your tunnel client cannot reach Caddy"
