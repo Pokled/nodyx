@@ -588,6 +588,184 @@ _auto_backup_db() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  CADDYFILE RENDERING (shared between fresh install and --repair)
+#
+#  Extracted into a function so `--repair` can rebuild /etc/caddy/Caddyfile
+#  in place. Without this the doctor's "rerun --repair to rebind" hint was a
+#  lie - the repair fast path skipped the Caddy section entirely.
+#
+#  TUNNEL_MODE is read from the env (fresh install) or from
+#  /etc/nodyx/tunnel-mode (repair). HOST_PRIMARY_IP is autodetected.
+# ═══════════════════════════════════════════════════════════════════════════════
+_render_caddyfile() {
+  local _mode="${TUNNEL_MODE:-}"
+  if [[ -z "$_mode" && -f /etc/nodyx/tunnel-mode ]]; then
+    _mode=$(cat /etc/nodyx/tunnel-mode 2>/dev/null || echo cf)
+  fi
+  [[ -z "$_mode" ]] && _mode="cf"
+
+  local _CADDY_CLIENT_IP_HEADERS
+  case "$_mode" in
+    cf)       _CADDY_CLIENT_IP_HEADERS='client_ip_headers CF-Connecting-IP X-Forwarded-For' ;;
+    pangolin) _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
+    *)        _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
+  esac
+
+  local _HOST_PRIMARY_IP
+  _HOST_PRIMARY_IP=$(ip -4 route get 1.1.1.1 2>/dev/null \
+    | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}' || true)
+  HOST_PRIMARY_IP="$_HOST_PRIMARY_IP"
+
+  local _CADDY_BIND="http://127.0.0.1:80, http://[::1]:80"
+  if [[ "$_mode" == "pangolin" && -n "$_HOST_PRIMARY_IP" ]]; then
+    _CADDY_BIND="${_CADDY_BIND}, http://${_HOST_PRIMARY_IP}:80"
+  fi
+
+  # Atomic write: render to a tempfile, validate, then mv into place. Without
+  # this, a syntax error after editing the heredoc would leave a broken
+  # Caddyfile on disk - and on next reload Caddy would refuse to start.
+  local _new_caddyfile
+  _new_caddyfile=$(mktemp /etc/caddy/.Caddyfile.new.XXXXXX) || return 1
+
+  cat > "$_new_caddyfile" <<CADDY
+{
+    servers {
+        # Trust loopback + RFC1918 sources so the tunnel client (cloudflared,
+        # newt, frpc, ...) can forward the real visitor IP. Without this every
+        # visitor would look like 127.0.0.1 and rate-limits/IP-bans break.
+        trusted_proxies static private_ranges
+        ${_CADDY_CLIENT_IP_HEADERS}
+
+        # Cap header size at 16KB. Default is 1MB, which leaves the door open
+        # to slow-header DoS. 16KB still fits CF Tunnel + Pangolin + cookies
+        # + Authorization comfortably (a JWT is ~500B).
+        max_header_size 16KB
+    }
+}
+
+# Reusable snippets keep mode-specific blocks short and prevent drift between
+# /api, /uploads, /socket.io, the honeypot rewrite, and the SPA fallback.
+(security_headers) {
+    header {
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "camera=(self), microphone=(self), geolocation=(self)"
+        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+        -Server
+    }
+}
+
+(proxy_backend) {
+    reverse_proxy 127.0.0.1:3000 {
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
+        # dial_timeout: loopback should connect in <100ms; 5s = generous margin.
+        # response_header_timeout: 30s covers Socket.IO long-poll (pingTimeout
+        # defaults to 25s) without blocking forever on a hung backend.
+        # No read/write timeouts: WebSocket upgrades hold the connection long-term.
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
+    }
+}
+
+(proxy_frontend) {
+    reverse_proxy 127.0.0.1:4173 {
+        header_up X-Real-IP {client_ip}
+        header_up X-Forwarded-For {client_ip}
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
+    }
+}
+
+${_CADDY_BIND} {
+    encode gzip
+
+    import security_headers
+
+    # Honeypot: paths classic scanners hit. Rewritten to /api/v1/_hp so nodyx-core
+    # logs the source IP and can ban it. Must be matched BEFORE /api/* handle.
+    @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
+    handle @honeypot {
+        rewrite * /api/v1/_hp?p={http.request.uri.path}
+        import proxy_backend
+    }
+
+    handle /api/* {
+        import proxy_backend
+    }
+    handle /uploads/* {
+        import proxy_backend
+    }
+    handle /socket.io/* {
+        import proxy_backend
+    }
+
+    handle {
+        import proxy_frontend
+    }
+}
+CADDY
+
+  # Validate the tempfile, not the live config. Only mv into place once
+  # caddy validate is happy - that way a broken render leaves the previous
+  # /etc/caddy/Caddyfile (and the running Caddy) untouched.
+  local _vlog
+  _vlog=$(mktemp /tmp/nodyx_caddy_validate_XXXXXX.log)
+  if ! caddy validate --config "$_new_caddyfile" --adapter caddyfile >"$_vlog" 2>&1; then
+    cat "$_vlog" >&2
+    rm -f "$_vlog" "$_new_caddyfile"
+    return 1
+  fi
+  rm -f "$_vlog"
+
+  # Atomic replacement (mv on the same filesystem is atomic). chmod first so
+  # the file inherits the same perms it would have via cat (root:root, 0644).
+  chmod 0644 "$_new_caddyfile" 2>/dev/null || true
+  mv -f "$_new_caddyfile" /etc/caddy/Caddyfile
+  return 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PANGOLIN UFW RULES (shared between fresh install and --repair)
+#
+#  Pangolin Method B (newt in default Docker bridge) connects to the host's
+#  LAN IP on :80. With UFW's default-deny-incoming policy, that path is blocked
+#  unless we explicitly allow :80 from RFC1918 ranges. Method A (--network host)
+#  uses loopback and is unaffected.
+#
+#  Idempotent: each rule is tagged with a sentinel comment so re-running this
+#  on an existing install (or via --repair) doesn't duplicate rules. We allow
+#  RFC1918 ranges only - never 0.0.0.0/0 - so the public internet can't bypass
+#  the tunnel and hit Caddy directly.
+# ═══════════════════════════════════════════════════════════════════════════════
+_PANGOLIN_UFW_TAG='Nodyx: pangolin newt (RFC1918)'
+_ensure_pangolin_ufw() {
+  local _mode="${TUNNEL_MODE:-}"
+  if [[ -z "$_mode" && -f /etc/nodyx/tunnel-mode ]]; then
+    _mode=$(cat /etc/nodyx/tunnel-mode 2>/dev/null || echo cf)
+  fi
+  [[ "$_mode" != "pangolin" ]] && return 0
+  command -v ufw >/dev/null 2>&1 || return 0
+
+  # Rule check: ufw status verbose includes the comment text. If we already
+  # tagged a rule with our sentinel, skip - prevents duplicate entries on
+  # repeated --repair runs.
+  if ufw status verbose 2>/dev/null | grep -qF "$_PANGOLIN_UFW_TAG"; then
+    return 0
+  fi
+
+  ufw allow from 10.0.0.0/8     to any port 80 proto tcp comment "$_PANGOLIN_UFW_TAG" >/dev/null 2>&1 || true
+  ufw allow from 172.16.0.0/12  to any port 80 proto tcp comment "$_PANGOLIN_UFW_TAG" >/dev/null 2>&1 || true
+  ufw allow from 192.168.0.0/16 to any port 80 proto tcp comment "$_PANGOLIN_UFW_TAG" >/dev/null 2>&1 || true
+  return 0
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  UPGRADE / REPAIR FAST PATH
 # ═══════════════════════════════════════════════════════════════════════════════
 _nodyx_upgrade() {
@@ -627,6 +805,23 @@ _nodyx_upgrade() {
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save 2>/dev/null || true
   local _persisted_mode="cf"
   [[ -f /etc/nodyx/tunnel-mode ]] && _persisted_mode=$(cat /etc/nodyx/tunnel-mode 2>/dev/null || echo cf)
+
+  # Regenerate /etc/caddy/Caddyfile from the (possibly updated) template so
+  # config drift between the installed script and the running Caddyfile is
+  # erased. _render_caddyfile reads tunnel-mode itself, so we don't need to
+  # set TUNNEL_MODE here. Without this, the doctor's "rerun --repair to
+  # rebind" hint silently does nothing - which is what bit forke24x7 in #23.
+  if _render_caddyfile; then
+    systemctl reload caddy 2>/dev/null || systemctl restart caddy 2>/dev/null || true
+    ok "Caddyfile regenerated and reloaded"
+  else
+    warn "Caddyfile validation failed - leaving the previous /etc/caddy/Caddyfile untouched on disk"
+  fi
+
+  # Re-apply Pangolin UFW rule too. Idempotent via comment-tag - safe to
+  # re-run on every repair.
+  TUNNEL_MODE="$_persisted_mode" _ensure_pangolin_ufw || true
+
   if [[ "$_persisted_mode" == "cf" ]]; then
     systemctl restart cloudflared 2>/dev/null || true
   fi
@@ -1062,6 +1257,15 @@ else
   ok "Firewall enabled (SSH inbound only - tunnel handles web traffic outbound)"
 fi
 
+# Pangolin Method B: newt-in-bridge connects to host LAN IP on :80. Loopback
+# (Method A) is unfiltered by UFW, so it works either way. We open :80 from
+# RFC1918 only, never the public internet - the tunnel is the public path.
+if [[ "$TUNNEL_MODE" == "pangolin" ]]; then
+  if _ensure_pangolin_ufw; then
+    ok "UFW: :80/tcp allowed from RFC1918 ranges (Pangolin newt in bridge mode)"
+  fi
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CLONE / UPDATE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1175,115 +1379,7 @@ ok "Frontend compiled"
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_caddy)"
 
-# Mode-specific Caddy globals: which header Caddy uses to discover the real IP.
-# CF Tunnel uses its own header; Pangolin/Traefik and most reverse proxies use XFF.
-case "$TUNNEL_MODE" in
-  cf)       _CADDY_CLIENT_IP_HEADERS='client_ip_headers CF-Connecting-IP X-Forwarded-For' ;;
-  pangolin) _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
-  none)     _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
-esac
-
-# Auto-detect the host's primary IPv4 (route used to reach the public internet).
-# Empty if the host is offline or IPv6-only - we fall back to loopback in that case.
-HOST_PRIMARY_IP=$(ip -4 route get 1.1.1.1 2>/dev/null \
-  | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}' || true)
-
-# Bind list. Loopback always; LAN IP added for pangolin so bridge-mode newt works.
-_CADDY_BIND="http://127.0.0.1:80, http://[::1]:80"
-if [[ "$TUNNEL_MODE" == "pangolin" && -n "$HOST_PRIMARY_IP" ]]; then
-  _CADDY_BIND="${_CADDY_BIND}, http://${HOST_PRIMARY_IP}:80"
-fi
-
-cat > /etc/caddy/Caddyfile <<CADDY
-{
-    servers {
-        # Trust loopback + RFC1918 sources so the tunnel client (cloudflared,
-        # newt, frpc, ...) can forward the real visitor IP. Without this every
-        # visitor would look like 127.0.0.1 and rate-limits/IP-bans break.
-        trusted_proxies static private_ranges
-        ${_CADDY_CLIENT_IP_HEADERS}
-
-        # Cap header size at 16KB. Default is 1MB, which leaves the door open
-        # to slow-header DoS. 16KB still fits CF Tunnel + Pangolin + cookies
-        # + Authorization comfortably (a JWT is ~500B).
-        max_header_size 16KB
-    }
-}
-
-# Reusable snippets keep mode-specific blocks short and prevent drift between
-# /api, /uploads, /socket.io, the honeypot rewrite, and the SPA fallback.
-(security_headers) {
-    header {
-        X-Content-Type-Options    "nosniff"
-        X-Frame-Options           "SAMEORIGIN"
-        Referrer-Policy           "strict-origin-when-cross-origin"
-        Permissions-Policy        "camera=(self), microphone=(self), geolocation=(self)"
-        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self';"
-        -Server
-    }
-}
-
-(proxy_backend) {
-    reverse_proxy 127.0.0.1:3000 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
-        # dial_timeout: loopback should connect in <100ms; 5s = generous margin.
-        # response_header_timeout: 30s covers Socket.IO long-poll (pingTimeout
-        # defaults to 25s) without blocking forever on a hung backend.
-        # No read/write timeouts: WebSocket upgrades hold the connection long-term.
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 30s
-        }
-    }
-}
-
-(proxy_frontend) {
-    reverse_proxy 127.0.0.1:4173 {
-        header_up X-Real-IP {client_ip}
-        header_up X-Forwarded-For {client_ip}
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 30s
-        }
-    }
-}
-
-${_CADDY_BIND} {
-    encode gzip
-
-    import security_headers
-
-    # Honeypot: paths classic scanners hit. Rewritten to /api/v1/_hp so nodyx-core
-    # logs the source IP and can ban it. Must be matched BEFORE /api/* handle.
-    @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
-    handle @honeypot {
-        rewrite * /api/v1/_hp?p={http.request.uri.path}
-        import proxy_backend
-    }
-
-    handle /api/* {
-        import proxy_backend
-    }
-    handle /uploads/* {
-        import proxy_backend
-    }
-    handle /socket.io/* {
-        import proxy_backend
-    }
-
-    handle {
-        import proxy_frontend
-    }
-}
-CADDY
-
-# Validate config before reload (catches syntax errors before they break the tunnel)
-_CADDY_LOG=$(mktemp /tmp/nodyx_caddy_validate_XXXXXX.log); _register_temp "$_CADDY_LOG"
-if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >"$_CADDY_LOG" 2>&1; then
-  cat "$_CADDY_LOG" >&2
-  die "Caddyfile validation failed."
-fi
+_render_caddyfile || die "Caddyfile validation failed."
 
 systemctl enable caddy --quiet
 systemctl restart caddy
