@@ -68,11 +68,11 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
         <sub><b>forke24x7</b></sub>
       </a>
       <br/>
-      <sub>🌟 × 3</sub>
+      <sub>🌟 × 4</sub>
       <br/>
-      <sub><a href="https://github.com/Pokled/nodyx/issues/5">#5</a> · <a href="https://github.com/Pokled/nodyx/issues/18">#18</a> · <a href="https://github.com/Pokled/nodyx/issues/21">#21</a></sub>
+      <sub><a href="https://github.com/Pokled/nodyx/issues/5">#5</a> · <a href="https://github.com/Pokled/nodyx/issues/18">#18</a> · <a href="https://github.com/Pokled/nodyx/issues/21">#21</a> · <a href="https://github.com/Pokled/nodyx/discussions/23">#23</a></sub>
       <br/>
-      <sub><em>German translation + Pangolin support + frontend build regression hunter</em></sub>
+      <sub><em>German translation + Pangolin support + tunnel installer hardener</em></sub>
       <br/>
       <sub><strong>First German contributor 🇩🇪</strong></sub>
     </td>
