@@ -35,6 +35,26 @@ Forum + Chat + Voice + P2P + Canvas + Homepage Builder + Widget SDK — one serv
 >
 > *The fight isn't between us. It's between locked silos and communities that actually own themselves. Pick the tool that fits you. We'll cheer either way.*
 
+> **A tool that doesn't have to worry about the moods of a board of directors or the whims of an investor.**
+
+<details>
+<summary>🌍 Translations (click to expand)</summary>
+
+| Language | Translation |
+|----------|-------------|
+| Français | Un outil qui n'a pas à craindre les humeurs d'un conseil d'administration ni les caprices d'un investisseur. |
+| Deutsch | Ein Werkzeug, das sich nicht um die Launen eines Vorstands oder die Einfälle eines Investors kümmern muss. |
+| Español | Una herramienta que no tiene que preocuparse por los humores de un consejo de administración ni por los caprichos de un inversor. |
+| Italiano | Uno strumento che non deve preoccuparsi degli umori di un consiglio di amministrazione o dei capricci di un investitore. |
+| Nederlands | Een tool die zich geen zorgen hoeft te maken over de stemmingen van een raad van bestuur of de grillen van een investeerder. |
+| Português | Uma ferramenta que não precisa se preocupar com os humores de um conselho de administração ou com os caprichos de um investidor. |
+| Polski | Narzędzie, które nie musi się martwić nastrojami zarządu ani kaprysami inwestora. |
+| Русский | Инструмент, которому не нужно беспокоиться о настроениях совета директоров или капризах инвестора. |
+| 中文 | 一个不必担心董事会情绪或投资者心血来潮的工具。 |
+| 日本語 | 取締役会の気分や投資家の気まぐれを気にする必要のないツール。 |
+| Polski | (déjà plus haut) |
+
+</details>
 ---
 
 <div align="center">
