@@ -19,8 +19,6 @@ Forum + Chat + Voice + P2P + Canvas + Homepage Builder + Widget SDK — one serv
 
 </div>
 
----
-
 <div align="center">
 
 **[📖 Documentation → nodyx.dev](https://nodyx.dev)** &nbsp;·&nbsp;
