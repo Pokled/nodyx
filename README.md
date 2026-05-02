@@ -743,6 +743,16 @@ Every external contribution earns a star. Every Star goes on [our Hall of Fame](
 
 <br/>
 
+### 🇨🇿 The docs search hunter
+
+<a href="https://github.com/lukasMega"><img src="https://github.com/lukasMega.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="Lukáš Melega"/></a>
+
+**[Lukáš Melega](https://github.com/lukasMega)** : 🌟 × 2, reported that the docs search couldn't find `"minimum requirements"` ([discussion #12](https://github.com/Pokled/nodyx/discussions/12)) which triggered a heading-aware index rewrite ([`882099d`](https://github.com/Pokled/nodyx/commit/882099d)), then came back with a one-line precision report : "clicking the search input requires a second click", which surfaced a focus bug + 108 broken TOC links + 60 leading-dash heading ids that nobody else had noticed. The full audit pass landed in [`a429fa3`](https://github.com/Pokled/nodyx/commit/a429fa3).
+
+*The kind of careful observation that turns a vague annoyance into a five-minute fix, twice in a row. Děkuji Lukáš 🙏*
+
+<br/>
+
 👉 **[See all contributors →](CONTRIBUTORS.md)**
 
 ---

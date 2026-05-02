@@ -76,6 +76,21 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
       <br/>
       <sub><strong>First German contributor 🇩🇪</strong></sub>
     </td>
+    <td align="center" width="200">
+      <a href="https://github.com/lukasMega">
+        <img src="https://github.com/lukasMega.png?size=120" width="120" height="120" style="border-radius:50%;" alt="Lukáš Melega"/>
+        <br/>
+        <sub><b>Lukáš Melega</b></sub>
+      </a>
+      <br/>
+      <sub>🌟 × 2</sub>
+      <br/>
+      <sub><a href="https://github.com/Pokled/nodyx/discussions/12">#12</a> · <a href="https://github.com/Pokled/nodyx/discussions/12#discussioncomment-16720117">focus bug</a></sub>
+      <br/>
+      <sub><em>docs search UX hunter (heading-aware index + focus + slug pipeline)</em></sub>
+      <br/>
+      <sub><strong>First Czech contributor 🇨🇿</strong></sub>
+    </td>
   </tr>
 </table>
 
@@ -107,6 +122,8 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| [@lukasMega](https://github.com/lukasMega) | Reported docs search input losing focus on click (had to click twice), second-pass test of [`882099d`](https://github.com/Pokled/nodyx/commit/882099d) which triggered a full slug + UX audit : 108 broken TOC links, 60 leading-dash ids, 11 phantom entries from code-block comments | `bug(docs)` | [#12](https://github.com/Pokled/nodyx/discussions/12) | [`a429fa3`](https://github.com/Pokled/nodyx/commit/a429fa3) | 2026-05-02 |
+| [@lukasMega](https://github.com/lukasMega) | Reported docs search returned no results for `"minimum requirements"` (h3 sections invisible to the index) and asked about Raspberry Pi 4 / 5 + local-IP-no-HTTPS support | `bug(docs)` | [#12](https://github.com/Pokled/nodyx/discussions/12) | [`882099d`](https://github.com/Pokled/nodyx/commit/882099d) | 2026-04-26 |
 | [@naranco66](https://github.com/naranco66) | Fixed orphaned `nexus-*` references in `docker-compose.yml` post-rebrand + Alpine font path mismatch breaking frontend build | `fix(docker)` | [#22](https://github.com/Pokled/nodyx/pull/22) | [`b629242`](https://github.com/Pokled/nodyx/commit/b629242) | 2026-04-27 |
 | [@waazaa-fr](https://github.com/waazaa-fr) | Reported broken `nodyx-turn` download URL in installer | `bug(installer)` | [#14](https://github.com/Pokled/nodyx/issues/14) | [`c24a851`](https://github.com/Pokled/nodyx/commit/c24a851) | 2026-04-26 |
 | [@waazaa-fr](https://github.com/waazaa-fr) | Reported `/opt/nodyx` parent dir not auto-created in installer | `bug(installer)` | [#15](https://github.com/Pokled/nodyx/issues/15) | [`4c0ab74`](https://github.com/Pokled/nodyx/commit/4c0ab74) | 2026-04-26 |
