@@ -21,6 +21,69 @@
     }
   })
 
+  // Anchor fallback: when the URL hash points to an id that doesn't exist
+  // (typo in a hand-written link, or a heading whose id changed in the
+  // slugifier), find the best-matching heading by stripping leading dashes,
+  // then by substring containment, then by fuzzy text match. Without this
+  // every legacy `[Foo](#-foo)` link (from when emoji-prefixed slugs had a
+  // leading dash) would silently land on the top of the page.
+  function resolveLooseAnchor(hashRaw: string): HTMLElement | null {
+    if (!hashRaw) return null
+    const hash = decodeURIComponent(hashRaw.replace(/^#/, ''))
+    if (!hash) return null
+
+    // 1. Exact match: the browser already scrolled, nothing to do.
+    const exact = document.getElementById(hash)
+    if (exact) return null
+
+    // 2. Normalize: strip leading/trailing dashes AND collapse internal
+    //    runs (handles both old emoji-prefix slugs `#-foo` and old em-dash
+    //    artifacts `#foo--bar` from when "—" produced two dashes).
+    const normalized = hash.replace(/-+/g, '-').replace(/^-+|-+$/g, '')
+    if (normalized && normalized !== hash) {
+      const byNorm = document.getElementById(normalized)
+      if (byNorm) return byNorm
+    }
+
+    // 3. Substring containment in either direction (catches partial matches
+    //    like `#install` when the real id is `install-the-easy-way`).
+    const all = Array.from(document.querySelectorAll<HTMLElement>('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]'))
+    const sub = all.find(h => h.id.includes(normalized) || normalized.includes(h.id))
+    if (sub) return sub
+
+    // 4. Slug-of-text fallback: maybe the link wrote out the heading text
+    //    directly ("Quick Start" → "quick-start") and the slug differs.
+    const tokens = normalized.split('-').filter(Boolean)
+    if (tokens.length === 0) return null
+    const byText = all.find(h => {
+      const txt = (h.textContent ?? '').toLowerCase()
+      return tokens.every(t => txt.includes(t))
+    })
+    return byText ?? null
+  }
+
+  function applyLooseAnchor() {
+    const target = resolveLooseAnchor(window.location.hash)
+    if (target) {
+      // Replace the hash with the canonical id (no scroll yet so the
+      // smooth scroll feels intentional), then scroll. The replaceState
+      // keeps the browser back-button history clean.
+      history.replaceState(null, '', `#${target.id}`)
+      // Use scrollIntoView with the same scroll-margin behaviour as a
+      // native anchor click.
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  onMount(() => {
+    // Run once on mount (handles direct loads with a hash) and on every
+    // future hashchange (handles in-page link clicks that the browser
+    // would otherwise drop on a non-existent id).
+    applyLooseAnchor()
+    window.addEventListener('hashchange', applyLooseAnchor)
+    return () => window.removeEventListener('hashchange', applyLooseAnchor)
+  })
+
   // Scrollspy: highlight the TOC entry matching the section the operator is
   // currently reading. Approach is deliberately simple — rather than juggling
   // IntersectionObserver entries (which leaves "no active section" gaps when

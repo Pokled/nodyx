@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { tick } from 'svelte'
+
   interface SearchResult {
     slug:          string
     title:         string
@@ -8,10 +10,13 @@
     headingLevel?: number
   }
 
-  let searchOpen = $state(false)
-  let theme      = $state<'light' | 'dark'>('light')
-  let results    = $state<SearchResult[]>([])
-  let query      = $state('')
+  let searchOpen   = $state(false)
+  let theme        = $state<'light' | 'dark'>('light')
+  let results      = $state<SearchResult[]>([])
+  let query        = $state('')
+  let selectedIdx  = $state(0)
+  let inputEl: HTMLInputElement | undefined = $state()
+  let resultsEl: HTMLUListElement | undefined = $state()
 
   function resultHref(r: SearchResult): string {
     return r.headingId ? `/${r.slug}#${r.headingId}` : `/${r.slug}`
@@ -23,16 +28,138 @@
     localStorage.setItem('theme', theme)
   }
 
-  function openSearch() { searchOpen = true }
-  function closeSearch() { searchOpen = false }
+  async function openSearch() {
+    searchOpen = true
+    await tick()
+    inputEl?.focus()
+  }
 
-  // Keyboard shortcut Ctrl+K / Cmd+K
-  function onKeydown(e: KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault()
-      searchOpen = !searchOpen
+  function closeSearch() {
+    searchOpen = false
+    query       = ''
+    results     = []
+    selectedIdx = 0
+  }
+
+  // The HTML autofocus attribute is unreliable for elements added to the DOM
+  // after a user click (browsers gate it as a focus-trap mitigation). When
+  // searchOpen flips from false to true we explicitly call .focus() so the
+  // input is ready for typing immediately, regardless of how the modal was
+  // opened (button click vs ⌘K). Reported by @lukasMega in #12.
+  $effect(() => {
+    if (searchOpen && inputEl) {
+      inputEl.focus()
     }
-    if (e.key === 'Escape') closeSearch()
+  })
+
+  // Reset selection on every new query, but only if we have results to
+  // select. Avoids "phantom selection" pointing at index 0 when results=[].
+  $effect(() => {
+    selectedIdx = results.length > 0 ? 0 : -1
+  })
+
+  // Scroll the active result into the visible area as the user arrows
+  // through. Without this the highlight moves but the row stays clipped
+  // when the list overflows.
+  $effect(() => {
+    if (selectedIdx < 0 || !resultsEl) return
+    const el = resultsEl.querySelectorAll<HTMLElement>('.search-result-item')[selectedIdx]
+    el?.scrollIntoView({ block: 'nearest' })
+  })
+
+  function onInput(e: Event) {
+    const q = (e.target as HTMLInputElement).value.trim()
+    query = q
+    if (q.length < 2) { results = []; return }
+    void runSearch(q)
+  }
+
+  // Race-safe: ignore stale responses if the user kept typing while the
+  // previous fetch was in flight.
+  let _searchToken = 0
+  async function runSearch(q: string) {
+    const my = ++_searchToken
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      const data: SearchResult[] = await res.json()
+      if (my === _searchToken) results = data
+    } catch {
+      if (my === _searchToken) results = []
+    }
+  }
+
+  function onModalKeydown(e: KeyboardEvent) {
+    if (e.key === 'ArrowDown') {
+      if (results.length === 0) return
+      e.preventDefault()
+      selectedIdx = (selectedIdx + 1) % results.length
+    } else if (e.key === 'ArrowUp') {
+      if (results.length === 0) return
+      e.preventDefault()
+      selectedIdx = (selectedIdx - 1 + results.length) % results.length
+    } else if (e.key === 'Enter') {
+      if (selectedIdx >= 0 && selectedIdx < results.length) {
+        e.preventDefault()
+        const href = resultHref(results[selectedIdx])
+        closeSearch()
+        // Use a real navigation so the browser handles the hash properly
+        // (and our +page.svelte anchor-fallback runs).
+        window.location.href = href
+      }
+    }
+  }
+
+  // Global ⌘K / Ctrl+K toggle + Esc close
+  function onKeydown(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault()
+      if (searchOpen) closeSearch()
+      else void openSearch()
+    } else if (e.key === 'Escape' && searchOpen) {
+      closeSearch()
+    }
+  }
+
+  // ── Render snippet with matched terms wrapped in <mark> ────────────────────
+  // Input is plain-text from the server (already excerpt-trimmed). We escape
+  // HTML defensively then wrap each occurrence of each query term, longest
+  // first so "install tunnel" wraps the phrase before the individual words
+  // and we don't double-mark.
+  function escHtml(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  function highlight(snippet: string, q: string): string {
+    const safe = escHtml(snippet)
+    const trimmed = q.trim()
+    if (trimmed.length < 2) return safe
+
+    // Try the full phrase first, then individual terms (longest-first so
+    // a longer term that overlaps a shorter one wins the wrap).
+    const terms = [
+      trimmed,
+      ...trimmed.split(/\s+/).filter(t => t.length >= 2)
+    ]
+    const seen = new Set<string>()
+    const ordered = terms.filter(t => {
+      const k = t.toLowerCase()
+      if (seen.has(k)) return false
+      seen.add(k)
+      return true
+    }).sort((a, b) => b.length - a.length)
+
+    let out = safe
+    for (const t of ordered) {
+      const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      out = out.replace(new RegExp(`(${escaped})`, 'gi'), '<mark>$1</mark>')
+    }
+    // Avoid nested <mark><mark>...</mark></mark> from overlapping wraps
+    out = out.replace(/<mark>(<mark>)+/g, '<mark>').replace(/(<\/mark>)+<\/mark>/g, '</mark>')
+    return out
   }
 </script>
 
@@ -103,36 +230,45 @@
   </div>
 </header>
 
-<!-- Search modal -->
+<!-- Search modal. The overlay is a click-target only (close-on-outside);
+     the actual interactive surface is the input + button + listbox inside.
+     Esc-to-close is wired via the global keydown handler. -->
 {#if searchOpen}
-  <div class="search-overlay" onclick={closeSearch} role="dialog" aria-modal="true" aria-label="Search">
-    <div class="search-modal" onclick={e => e.stopPropagation()}>
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="search-overlay" onclick={closeSearch} role="dialog" aria-modal="true" aria-label="Search" tabindex="-1">
+    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+    <div class="search-modal" onclick={e => e.stopPropagation()} onkeydown={onModalKeydown} role="presentation">
       <div class="search-input-wrap">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
         <input
+          bind:this={inputEl}
           type="text"
           class="search-input"
           placeholder="Search documentation…"
           autocomplete="off"
           spellcheck="false"
-          autofocus
-          oninput={async (e) => {
-            const q = (e.target as HTMLInputElement).value.trim()
-            query = q
-            if (q.length < 2) { results = []; return }
-            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
-            results = await res.json()
-          }}
+          oninput={onInput}
+          aria-controls="search-results"
+          aria-activedescendant={selectedIdx >= 0 ? `search-result-${selectedIdx}` : undefined}
         />
         <button class="search-close" onclick={closeSearch} aria-label="Close search">ESC</button>
       </div>
       {#if results.length > 0}
-        <ul class="search-results" role="listbox">
-          {#each results as r}
-            <li role="option">
-              <a href={resultHref(r)} class="search-result-item" onclick={closeSearch}>
+        <ul class="search-results" role="listbox" id="search-results" bind:this={resultsEl}>
+          {#each results as r, i (r.slug + '#' + (r.headingId ?? ''))}
+            <li role="presentation">
+              <a
+                href={resultHref(r)}
+                class="search-result-item"
+                class:selected={i === selectedIdx}
+                id="search-result-{i}"
+                role="option"
+                aria-selected={i === selectedIdx}
+                onmouseenter={() => selectedIdx = i}
+                onclick={closeSearch}
+              >
                 <span class="search-result-title">
                   {r.title}
                   {#if r.headingText}
@@ -140,11 +276,16 @@
                     <span class="search-result-heading" data-level={r.headingLevel ?? 2}>{r.headingText}</span>
                   {/if}
                 </span>
-                <span class="search-result-excerpt">{r.excerpt}</span>
+                <span class="search-result-excerpt">{@html highlight(r.excerpt, query)}</span>
               </a>
             </li>
           {/each}
         </ul>
+        <div class="search-hint">
+          <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+          <span><kbd>↵</kbd> open</span>
+          <span><kbd>esc</kbd> close</span>
+        </div>
       {:else if query.length >= 2}
         <div class="search-empty">No results for "{query}"</div>
       {/if}
@@ -287,6 +428,8 @@ kbd {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 24px 80px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
 }
 
 .search-input-wrap {
@@ -317,7 +460,14 @@ kbd {
   cursor: pointer;
 }
 
-.search-results { list-style: none; margin: 0; padding: 0.5rem; max-height: 360px; overflow-y: auto; }
+.search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
+  max-height: 360px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
 
 .search-result-item {
   display: flex;
@@ -327,15 +477,53 @@ kbd {
   border-radius: 6px;
   text-decoration: none;
   transition: background 0.1s;
+  border: 1px solid transparent;
 }
 
-.search-result-item:hover { background: var(--bg-hover); }
+.search-result-item:hover,
+.search-result-item.selected {
+  background: var(--bg-hover);
+  border-color: var(--accent-subtle);
+}
+
+.search-result-item.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 
 .search-result-title  { font-size: 0.875rem; font-weight: 500; color: var(--text); }
-.search-result-excerpt { font-size: 0.78rem; color: var(--text-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.search-result-excerpt {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.search-result-excerpt :global(mark) {
+  background: var(--accent-subtle, rgba(124, 58, 237, 0.18));
+  color: var(--text);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
 .search-result-sep     { color: var(--text-muted); margin: 0 0.35rem; opacity: 0.7; }
 .search-result-heading { color: var(--accent); font-weight: 500; }
 .search-result-heading[data-level="3"] { font-weight: 400; opacity: 0.85; }
 
 .search-empty { padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.875rem; }
+
+.search-hint {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0.875rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.search-hint kbd {
+  font-size: 0.65rem;
+  margin-right: 0.25rem;
+  padding: 0 0.3em;
+}
 </style>

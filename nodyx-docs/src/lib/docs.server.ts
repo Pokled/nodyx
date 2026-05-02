@@ -40,16 +40,37 @@ renderer.code = function(code: string, lang?: string) {
 }
 
 // ── Shared heading slug function ──────────────────────────────────────────────
-// Works on both rendered HTML (from renderer.heading) and raw markdown (from extractHeadings)
+// Works on both rendered HTML (from renderer.heading) and raw markdown
+// (from extractHeadings). Both call sites MUST produce the same slug for a
+// given heading, otherwise the TOC link href won't match the rendered <h2 id>
+// and the click does nothing. This is exactly what bit us when marked
+// HTML-encodes apostrophes to &#39; before passing to renderer.heading,
+// while extractHeadings sees the raw ' character.
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&#(\d+);/g,    (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&amp;/g,  '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g,  "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g,   '<')
+    .replace(/&gt;/g,   '>')
+    .replace(/&nbsp;/g, ' ')
+}
+
 function slugifyHeading(text: string): string {
-  return text
-    .replace(/<[^>]*>/g, '')          // strip HTML tags  (<code>, <strong>, etc.)
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // strip markdown links  [text](url) → text
-    .replace(/[*_`]/g, '')            // strip markdown syntax  *, _, `
+  return decodeHtmlEntities(text)
+    .replace(/<[^>]*>/g, '')                  // strip HTML tags  (<code>, <strong>, etc.)
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')  // strip markdown links  [text](url) → text
+    .replace(/[*_`]/g, '')                    // strip markdown syntax  *, _, `
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')         // strip remaining non-word chars (emojis → space)
-    .replace(/\s+/g, '-')             // spaces → dashes (emoji at start → leading dash)
+    .replace(/[^\w\s-]/g, '')                 // strip non-word (emojis, em-dash, punct.)
+    .replace(/\s+/g, '-')                     // spaces → dashes
+    .replace(/-+/g, '-')                      // collapse runs of dashes  ("a---b" → "a-b")
+    .replace(/^-+|-+$/g, '')                  // trim leading + trailing dashes
     .slice(0, 80)
+    .replace(/-+$/g, '')                      // trim again in case slice cut mid-dash
 }
 
 // Headings: add anchor ids
@@ -89,10 +110,34 @@ function escHtml(s: string)    { return s.replace(/&/g,'&amp;').replace(/</g,'&l
 
 export interface Heading { level: number; text: string; id: string }
 
+// Replace fenced code blocks with blank-line placeholders so the heading regex
+// can't match shell/python comments like "# 1. Stop pm2" living inside ```bash
+// blocks. Without this, the right sidebar fills with phantom entries that
+// don't actually exist as <h*> in the rendered HTML, and every TOC click on
+// them goes nowhere. (Affects INSTALL, RELAY, NEURAL-ENGINE, etc.)
+//
+// We replace lines (preserving line count, with empty content) rather than
+// removing them so character offsets in `buildSearchIndex` stay valid for
+// downstream slicing operations.
+function stripFencedCode(md: string): string {
+  const lines = md.split('\n')
+  let inFence = false
+  for (let i = 0; i < lines.length; i++) {
+    if (/^```/.test(lines[i])) {
+      inFence = !inFence
+      lines[i] = ''                  // also blank the fence marker itself
+      continue
+    }
+    if (inFence) lines[i] = ''
+  }
+  return lines.join('\n')
+}
+
 function extractHeadings(md: string): Heading[] {
+  const cleaned = stripFencedCode(md)
   const headings: Heading[] = []
   const regex = /^#{1,3}\s+(.+)$/gm
-  for (const m of md.matchAll(regex)) {
+  for (const m of cleaned.matchAll(regex)) {
     const level = (m[0].match(/^#+/) ?? [''])[0].length
     const raw   = m[1]
     const text  = raw.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`]/g, '')
@@ -145,11 +190,15 @@ export async function buildSearchIndex(pages: Array<{ slug: string; title: strin
       const wholePlain = stripMarkdown(raw.replace(/^#{1,6}\s+/gm, ''))
       entries.push({ slug: page.slug, title: page.title, excerpt: wholePlain.slice(0, 500) })
 
-      // Section entries — split on H2/H3 boundaries and index each independently
+      // Section entries — split on H2/H3 boundaries. Run the regex on a
+      // code-block-stripped copy so shell comments like "# 1. Stop pm2" don't
+      // create phantom search results, but slice the ORIGINAL `raw` for
+      // section bodies so the indexed text matches what the user will read.
+      const cleaned = stripFencedCode(raw)
       const sectionRe = /^(#{2,3})\s+(.+?)\s*$/gm
       const matches: Array<{ level: number; text: string; start: number; end: number }> = []
       let m: RegExpExecArray | null
-      while ((m = sectionRe.exec(raw)) !== null) {
+      while ((m = sectionRe.exec(cleaned)) !== null) {
         matches.push({ level: m[1].length, text: m[2], start: m.index, end: m.index + m[0].length })
       }
 
