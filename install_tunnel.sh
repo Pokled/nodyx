@@ -206,10 +206,10 @@ T_EN[cfg_slug]='Unique identifier (slug)'
 T_FR[cfg_slug]='Identifiant unique (slug)'
 T_EN[cfg_lang]='Main language (fr/en/de/es/it/pt)'
 T_FR[cfg_lang]='Langue principale (fr/en/de/es/it/pt)'
-T_EN[cfg_domain_header]='Public domain (managed by Cloudflare)'
-T_FR[cfg_domain_header]='Domaine public (géré par Cloudflare)'
-T_EN[cfg_domain_help]='This domain MUST be on Cloudflare nameservers. Examples: club.example.com'
-T_FR[cfg_domain_help]='Ce domaine DOIT être sur les nameservers Cloudflare. Ex : club.example.com'
+T_EN[cfg_domain_header]='Public domain'
+T_FR[cfg_domain_header]='Domaine public'
+T_EN[cfg_domain_help]='Domain visitors will use to reach this server. DNS setup depends on the tunnel mode you pick next. Examples: club.example.com'
+T_FR[cfg_domain_help]='Domaine que les visiteurs utiliseront pour atteindre ce serveur. La config DNS dépend du tunnel choisi à l''étape suivante. Ex : club.example.com'
 T_EN[cfg_domain_prompt]='Domain'
 T_FR[cfg_domain_prompt]='Domaine'
 T_EN[cfg_domain_invalid]='‘%s’ doesn’t look like a valid domain (no dot).'
@@ -250,6 +250,8 @@ T_EN[cfg_tunnel_prompt]='Choice [1-3]'
 T_FR[cfg_tunnel_prompt]='Choix [1-3]'
 T_EN[cfg_tunnel_invalid]='Invalid tunnel mode: %s (use cf, pangolin or none)'
 T_FR[cfg_tunnel_invalid]='Mode tunnel invalide : %s (utilise cf, pangolin ou none)'
+T_EN[cfg_tunnel_cf_note]='Cloudflare Tunnel: your domain MUST be on Cloudflare nameservers (cloudflared sets up DNS for you).'
+T_FR[cfg_tunnel_cf_note]='Cloudflare Tunnel : ton domaine DOIT être sur les nameservers Cloudflare (cloudflared configure le DNS pour toi).'
 T_EN[cfg_tunnel_pangolin_note]='Pangolin: this script configures Caddy + real-IP forwarding. Install newt yourself afterwards (instructions in summary).'
 T_FR[cfg_tunnel_pangolin_note]='Pangolin : ce script configure Caddy + forwarding de la vraie IP. Installe newt toi-même ensuite (instructions dans le récap).'
 T_EN[cfg_tunnel_none_note]='Custom: this script configures Caddy on localhost:80 with trusted-proxy headers. Wire your own tunnel to it.'
@@ -1017,6 +1019,8 @@ esac
 
 CF_TUNNEL_TOKEN=""
 if [[ "$TUNNEL_MODE" == "cf" ]]; then
+  echo ""
+  info "$(t cfg_tunnel_cf_note)"
   echo ""
   echo -e "  ${BOLD}$(t cfg_token_header)${RESET}"
   if [[ -n "$TUNNEL_TOKEN_FLAG" ]]; then
