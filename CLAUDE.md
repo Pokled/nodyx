@@ -71,6 +71,7 @@ pm2 logs nodyx-frontend --lines 50
 ## Key Rules
 
 - **nodyx-core = SANCTUAIRE** — any modification requires explicit validation from the project owner
+- **DANGER, production Caddy state on the VPS (`46.225.20.193`)** : the running Caddy config is **NOT** loaded from `/etc/caddy/Caddyfile`. It is loaded from `/var/lib/caddy/.config/caddy/autosave.json`, which Caddy auto-restores at boot. The Caddyfile on disk is a minimal artifact of the tunnel installer (~80 lines, no HTTPS block for `nodyx.org`). Consequence: `systemctl reload caddy`, `caddy reload`, or `install_tunnel.sh --repair` on the prod VPS will switch Caddy to the disk Caddyfile and **drop nodyx.org HTTPS instantly**. Until the two are reconciled (export live config: `curl http://localhost:2019/config/ > /etc/caddy/caddy.json` and point the service at it), never reload Caddy on prod without a plan. Discovered 2026-05-03 while diagnosing discussion #23.
 - No proprietary/centralized services, no Electron, no React
 - New DB changes go through a new migration file in `src/migrations/` (increment number, e.g. `014_...sql`)
 - Socket.IO must be attached after `server.listen()`, not before (Fastify v5 constraint)
@@ -89,6 +90,6 @@ Key vars for nodyx-frontend: `PUBLIC_API_URL` (browser-facing API URL)
 - VPS: Hetzner CPX42, Ubuntu 24.04, IP `46.225.20.193`
 - Repo: `/var/www/nexus`
 - PM2 ecosystem: `/var/www/nexus/ecosystem.config.js`
-- Caddy config: `/etc/caddy/Caddyfile`
+- **Caddy live config**: `/var/lib/caddy/.config/caddy/autosave.json` (NOT `/etc/caddy/Caddyfile` on prod, see DANGER in Key Rules)
 - SSL: Cloudflare Origin Certificate (`/etc/caddy/nexusnode.pem` + `.key`)
 - PostgreSQL: DB `nexus`, user `nexus`, 13 migrations applied
