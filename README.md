@@ -737,9 +737,9 @@ Every external contribution earns a star. Every Star goes on [our Hall of Fame](
 
 <a href="https://github.com/forke24x7"><img src="https://github.com/forke24x7.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="forke24x7"/></a>
 
-**[forke24x7](https://github.com/forke24x7)** : 🌟 × 4, brought German (de) to Nodyx by attaching a hand-reviewed `de.json` (741 strings, native review) on [issue #5](https://github.com/Pokled/nodyx/issues/5), triggered the Pangolin / alternative-tunnel support work via [issue #18](https://github.com/Pokled/nodyx/issues/18), caught a frontend build regression in `install_tunnel.sh` on day-one Pangolin testing ([#21](https://github.com/Pokled/nodyx/issues/21)), and ran a meticulous second-pass test of PR #24 that surfaced two remaining tunnel-installer issues ([#23](https://github.com/Pokled/nodyx/discussions/23)).
+**[forke24x7](https://github.com/forke24x7)** : 🌟 × 5, brought German (de) to Nodyx by attaching a hand-reviewed `de.json` (741 strings, native review) on [issue #5](https://github.com/Pokled/nodyx/issues/5), triggered the Pangolin / alternative-tunnel support work via [issue #18](https://github.com/Pokled/nodyx/issues/18), caught a frontend build regression in `install_tunnel.sh` on day-one Pangolin testing ([#21](https://github.com/Pokled/nodyx/issues/21)), ran a meticulous second-pass test of PR #24 that surfaced two remaining tunnel-installer issues ([#23](https://github.com/Pokled/nodyx/discussions/23)), and ultimately pinned the blank-page root cause with a byte-count diagnostic that revealed the rendered Caddy site address was a Host filter, not a bind ([`5445e8b`](https://github.com/Pokled/nodyx/commit/5445e8b)).
 
-*Fourth locale, a feature request that made the installer better for the whole self-hosting community, and two consecutive regression hunts that hardened the tunnel installer end-to-end. Danke forke 🙏*
+*Fourth locale, a feature request that made the installer better for the whole self-hosting community, two consecutive regression hunts on the tunnel installer, and a clean root-cause diagnosis on a non-obvious Caddy bug. Danke forke 🙏*
 
 <br/>
 
