@@ -618,9 +618,17 @@ _render_caddyfile() {
     | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}' || true)
   HOST_PRIMARY_IP="$_HOST_PRIMARY_IP"
 
-  local _CADDY_BIND="http://127.0.0.1:80, http://[::1]:80"
+  # Site address `:80` matches every Host on port 80. Pairing it with an
+  # explicit `bind` directive lets us control which interfaces Caddy listens
+  # on without filtering by Host header. The previous form
+  # `http://127.0.0.1:80, http://[::1]:80 { }` was a Host filter masquerading
+  # as a bind: Caddy only matched requests whose Host header was literally
+  # `127.0.0.1` or `[::1]`, so when newt forwarded a request from Pangolin
+  # with the public Host, no site matched and Caddy returned 0 bytes
+  # (see https://github.com/Pokled/nodyx/discussions/23).
+  local _CADDY_BIND_IPS="127.0.0.1 ::1"
   if [[ "$_mode" == "pangolin" && -n "$_HOST_PRIMARY_IP" ]]; then
-    _CADDY_BIND="${_CADDY_BIND}, http://${_HOST_PRIMARY_IP}:80"
+    _CADDY_BIND_IPS="${_CADDY_BIND_IPS} ${_HOST_PRIMARY_IP}"
   fi
 
   # Atomic write: render to a tempfile, validate, then mv into place. Without
@@ -684,7 +692,9 @@ _render_caddyfile() {
     }
 }
 
-${_CADDY_BIND} {
+:80 {
+    bind ${_CADDY_BIND_IPS}
+
     encode gzip
 
     import security_headers
