@@ -1896,12 +1896,17 @@ case "$TUNNEL_MODE_VAL" in
       _fail "Nothing listening on :80 - Pangolin won't be able to reach Caddy"
     else
       _pass "Caddy listening on :80 (addresses: $(echo "$_caddy_addrs" | tr '\n' ' '))"
-      # Verify the LAN IP is among them, otherwise newt-in-bridge cannot reach us.
+      # The LAN IP bind only matters for Method B (newt in default Docker
+      # bridge). When newt is in --network host or runs natively, loopback
+      # is enough, so suppress the warning to avoid a false positive
+      # (reported by @forke24x7 in discussion #23).
       _host_ip=$(ip -4 route get 1.1.1.1 2>/dev/null \
         | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}')
-      if [[ -n "$_host_ip" ]] && ! echo "$_caddy_addrs" | grep -qF "$_host_ip"; then
+      if [[ -n "$_host_ip" ]] \
+         && ! echo "$_caddy_addrs" | grep -qF "$_host_ip" \
+         && [[ "$_newt_mode" == "docker" && "${_newt_net:-}" != "host" ]]; then
         _warn "Caddy is NOT bound on the LAN IP (${_host_ip})."
-        _warn "newt --network host will work; bridge mode will fail. Re-run sudo bash install_tunnel.sh --repair to rebind."
+        _warn "newt is in '${_newt_net}' mode and needs to reach Caddy via the LAN IP. Re-run sudo bash install_tunnel.sh --repair to rebind."
       fi
     fi
     ;;
