@@ -2300,7 +2300,7 @@ cat > /etc/caddy/Caddyfile <<CADDY
         X-Frame-Options           "SAMEORIGIN"
         Referrer-Policy           "strict-origin-when-cross-origin"
         Permissions-Policy        "camera=(self), microphone=(self), geolocation=(self)"
-        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://geo.dailymotion.com https://player.twitch.tv https://clips.twitch.tv https://w.soundcloud.com https://open.spotify.com; object-src 'none'; base-uri 'self'; form-action 'self';"
         ${_HSTS_HEADER}
         -Server
     }
