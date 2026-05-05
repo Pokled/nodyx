@@ -2,8 +2,11 @@
 	import type { PageData } from './$types'
 	import { page } from '$app/stores'
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte'
-	import { PLUGIN_REGISTRY, PLUGIN_LIST } from '$lib/components/homepage/plugins'
-	import type { WidgetPlugin, WidgetFamily } from '$lib/components/homepage/plugins'
+	import type { WidgetFamily } from '$lib/components/homepage/plugins'
+	import {
+		buildCatalog, buildCatalogIndex, toInstalledWidgetsMap,
+		type CatalogEntry, type InstalledWidgetManifest,
+	} from '$lib/components/homepage/catalog'
 	import type {
 		GridLayout, GridRow, GridColumn, GridTheme,
 	} from '$lib/types/homepage'
@@ -70,10 +73,17 @@
 		editRowId ? draft.rows.find(r => r.id === editRowId) ?? null : null
 	)
 
+	// Catalogue widgets (natifs phase 1 + widgets installés depuis l'admin store)
+	const catalog       = $derived(buildCatalog((data.installedWidgets ?? []) as InstalledWidgetManifest[]))
+	const catalogIndex  = $derived(buildCatalogIndex(catalog))
+	const installedMap  = $derived(toInstalledWidgetsMap((data.installedWidgets ?? []) as InstalledWidgetManifest[]))
+
 	// Colonne + plugin sélectionnés
 	const selRow = $derived(selectedCol ? draft.rows.find(r => r.id === selectedCol!.rowId) ?? null : null)
 	const selCol = $derived(selectedCol && selRow ? selRow.columns.find(c => c.id === selectedCol!.colId) ?? null : null)
-	const selPlugin = $derived(selCol?.widget ? (PLUGIN_REGISTRY[selCol.widget] ?? null) : null)
+	const selPlugin = $derived<CatalogEntry | null>(selCol?.widget ? (catalogIndex[selCol.widget] ?? null) : null)
+	// Vue native: panneau de config custom (`customPanel`, etc.) n'existe que pour les widgets natifs.
+	const selNativePlugin = $derived(selPlugin?.kind === 'native' ? selPlugin.plugin : null)
 
 	// Formulaire config widget
 	let configFields = $state<Record<string, unknown>>({})
@@ -85,9 +95,9 @@
 		const row = draft.rows.find(r => r.id === rowId)
 		const col = row?.columns.find(c => c.id === colId)
 		if (col) {
-			const plugin = col.widget ? PLUGIN_REGISTRY[col.widget] : null
+			const entry = col.widget ? catalogIndex[col.widget] : null
 			const fields: Record<string, unknown> = {}
-			for (const f of (plugin?.schema ?? [])) {
+			for (const f of (entry?.schema ?? [])) {
 				fields[f.key] = col.config[f.key] ?? f.default ?? (f.type === 'boolean' ? false : '')
 			}
 			configFields = { ...col.config, ...fields }
@@ -125,9 +135,10 @@
 
 	// ── Widget picker ─────────────────────────────────────────────────────────
 	const pickerPlugins = $derived(
-		PLUGIN_LIST.filter(p => {
-			const matchSearch = !searchWidget || p.label.toLowerCase().includes(searchWidget.toLowerCase()) || p.id.toLowerCase().includes(searchWidget.toLowerCase())
-			const matchFamily = !pickerFamily || p.family === pickerFamily
+		catalog.filter(e => {
+			const q = searchWidget.toLowerCase()
+			const matchSearch = !q || e.label.toLowerCase().includes(q) || e.id.toLowerCase().includes(q)
+			const matchFamily = !pickerFamily || e.family === pickerFamily
 			return matchSearch && matchFamily
 		})
 	)
@@ -145,12 +156,12 @@
 		esport: '#f97316', social: '#3b82f6', content: '#94a3b8',
 	}
 
-	function placeWidget(plugin: WidgetPlugin) {
+	function placeWidget(entry: CatalogEntry) {
 		if (!showPicker) return
 		const { rowId, colId } = showPicker
 		// Initialise config avec les defaults du schema
 		const config: Record<string, unknown> = {}
-		for (const f of plugin.schema) {
+		for (const f of entry.schema) {
 			if (f.default !== undefined) config[f.key] = f.default
 		}
 		draft = {
@@ -158,7 +169,7 @@
 			rows: draft.rows.map(r => r.id !== rowId ? r : {
 				...r,
 				columns: r.columns.map(c => c.id !== colId ? c : {
-					...c, widget: plugin.id, config
+					...c, widget: entry.id, config
 				})
 			})
 		}
@@ -644,7 +655,7 @@
 									{#each row.columns as col}
 										<div class="row-item-span" style="flex:{col.span}; background:{col.widget ? '#a78bfa22' : 'rgba(255,255,255,.06)'}; border-color:{col.widget ? '#a78bfa55' : 'rgba(255,255,255,.1)'}">
 											{col.span}
-											{#if col.widget}<span class="row-item-w">{PLUGIN_REGISTRY[col.widget]?.icon ?? '⬛'}</span>{/if}
+											{#if col.widget}<span class="row-item-w">{catalogIndex[col.widget]?.icon ?? '⬛'}</span>{/if}
 										</div>
 									{/each}
 								</div>
@@ -712,7 +723,7 @@
 				<div class="col-manager">
 					{#each editRow.columns as col, ci}
 						<div class="col-mgr-row">
-							<span class="col-mgr-widget">{col.widget ? (PLUGIN_REGISTRY[col.widget]?.icon ?? '⬛') + ' ' + col.widget : '(vide)'}</span>
+							<span class="col-mgr-widget">{col.widget ? (catalogIndex[col.widget]?.icon ?? '⬛') + ' ' + col.widget : '(vide)'}</span>
 							<span class="col-mgr-span">span {col.span}</span>
 							{#if editRow.columns.length > 1}
 								<button class="col-mgr-del" onclick={() => removeColumn(editRow!.id, col.id)}>✕</button>
@@ -733,7 +744,7 @@
 					{selPlugin ? `${selPlugin.icon} ${selPlugin.label}` : selCol.widget ?? 'Widget'}
 				</div>
 
-				{#if selPlugin?.customPanel && selPlugin.id === 'social-links-bar'}
+				{#if selNativePlugin?.customPanel && selNativePlugin.id === 'social-links-bar'}
 					<!-- ══ Panel custom : Liens sociaux ══ -->
 					<div class="panel-section-title">Liens</div>
 
@@ -817,7 +828,7 @@
 						<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>Retirer</button>
 					</div>
 
-				{:else if selPlugin?.customPanel}
+				{:else if selNativePlugin?.customPanel}
 					<!-- ══ Panel custom : Diaporama ══ -->
 
 					{#if ssShowJson}
@@ -1266,6 +1277,7 @@
 						{theme}
 						instance={{}}
 						user={null}
+						installedWidgets={installedMap}
 						editMode={true}
 						{selectedColKey}
 						dragOverRowId={dragOverIdx !== null && dragRowId !== null ? (draft.rows[dragOverIdx]?.id ?? null) : null}
