@@ -39,6 +39,7 @@ import {
   auditList,
   recordDownload,
   getBackupFilePath,
+  reindexBackups,
   type AuditActor,
 } from '../services/backupService'
 
@@ -119,6 +120,23 @@ export async function adminBackupRoutes(app: FastifyInstance) {
     async (_request, reply) => {
       const info = await getStorageInfo()
       return reply.send(info)
+    },
+  )
+
+  // ── POST /admin/backups/reindex ──────────────────────────────────────────
+  // Scans BACKUP_DIR for orphan .tar.gz files (present on disk but missing
+  // from the `backups` table) and inserts the missing rows by reading each
+  // archive's manifest.json. Idempotent.
+  app.post(
+    '/admin/backups/reindex',
+    { preHandler: [rateLimit, adminOnly] },
+    async (request, reply) => {
+      try {
+        const summary = await reindexBackups(actor(request))
+        return reply.send(summary)
+      } catch (err) {
+        return reply.code(500).send({ error: (err as Error).message })
+      }
     },
   )
 

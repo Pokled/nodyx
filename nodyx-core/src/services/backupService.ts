@@ -830,3 +830,100 @@ export function nodyxVersion(): string { return NODYX_VERSION }
 export async function recordDownload(id: string, actor: AuditActor): Promise<void> {
   await audit('download', { backup_id: id, actor, status: 'success' })
 }
+
+// ─── Public API : reindexBackups ───────────────────────────────────────────
+//
+// Scans BACKUP_DIR for .tar.gz files, parses each archive's manifest.json,
+// and INSERTs missing rows in the `backups` table. Idempotent (ON CONFLICT
+// DO NOTHING on filename uniqueness, plus a defensive ID check).
+//
+// Use case: rebuild the DB tracking after a stale state, or after a manual
+// .tar.gz drop into the directory by an operator. Files whose manifest is
+// unreadable or whose archive is corrupt are skipped (and reported in the
+// returned summary) rather than aborting the whole reindex.
+
+export interface ReindexSummary {
+  scanned:  number
+  added:    number
+  existing: number
+  skipped:  { filename: string; reason: string }[]
+}
+
+export async function reindexBackups(actor?: AuditActor): Promise<ReindexSummary> {
+  await ensureBackupDir()
+  const summary: ReindexSummary = { scanned: 0, added: 0, existing: 0, skipped: [] }
+
+  let entries: string[] = []
+  try {
+    entries = await fsp.readdir(BACKUP_DIR)
+  } catch {
+    return summary
+  }
+  const archives = entries.filter(n => n.endsWith('.tar.gz'))
+  summary.scanned = archives.length
+
+  // Pull existing filenames once to avoid one query per archive.
+  const { rows: existing } = await db.query<{ filename: string }>(
+    'SELECT filename FROM backups',
+  )
+  const existingSet = new Set(existing.map(r => r.filename))
+
+  for (const filename of archives) {
+    const filePath = path.join(BACKUP_DIR, filename)
+    if (existingSet.has(filename)) {
+      summary.existing++
+      continue
+    }
+
+    try {
+      // Read manifest.json out of the archive without extracting everything.
+      const manifestText = await new Promise<string>((resolve, reject) => {
+        const child = spawn('tar', ['-xzOf', filePath, 'manifest.json'], { stdio: ['ignore', 'pipe', 'pipe'] })
+        let out = ''
+        let err = ''
+        child.stdout.on('data', c => { out += c.toString() })
+        child.stderr.on('data', c => { err += c.toString() })
+        child.on('error', reject)
+        child.on('close', code => code === 0 ? resolve(out) : reject(new Error(err.trim() || `tar exit ${code}`)))
+      })
+
+      const manifest = JSON.parse(manifestText) as BackupManifest
+      const checksum = await sha256File(filePath)
+      const sizeBytes = statSync(filePath).size
+      const isPreRestore = (manifest.label || '').toLowerCase().includes('avant restore')
+
+      await db.query(
+        `INSERT INTO backups
+           (filename, size_bytes, nodyx_version, format_version, contents, stats,
+            label, encrypted, checksum, source, protected, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         ON CONFLICT DO NOTHING`,
+        [
+          filename,
+          sizeBytes,
+          manifest.nodyx_version || '0.0.0',
+          manifest.format_version || 1,
+          JSON.stringify(manifest.contents || { db: true, uploads: false, config: true }),
+          JSON.stringify(manifest.stats || {}),
+          manifest.label || null,
+          manifest.encryption === 'aes-256-gcm',
+          checksum,
+          isPreRestore ? 'pre-restore' : 'manual',
+          false,                              // expired snapshots are not protected anymore
+          null,
+        ],
+      )
+      summary.added++
+    } catch (e) {
+      summary.skipped.push({ filename, reason: (e as Error).message.slice(0, 200) })
+    }
+  }
+
+  await audit('settings_change', {
+    actor,
+    metadata:  { reindex: summary.added + ' added, ' + summary.existing + ' existing, ' + summary.skipped.length + ' skipped' },
+    status:    'success',
+  })
+
+  return summary
+}
