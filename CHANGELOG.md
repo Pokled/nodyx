@@ -7,6 +7,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
+### Backup System — Phase 1 MVP (spec 014)
+
+First slice of the backup & restore system, fully wired end-to-end and smoke-tested on prod before merge.
+
+**Backend**
+- New migration `077_backups.sql` with three tables: `backups`, `backup_settings` (singleton), `backup_audit_log`
+- `backupService.ts` shells out to `pg_dump --format=custom --compress=9` and `tar -czf`, computes SHA-256 of the archive, and writes the row + audit entry. Restores use `pg_restore --single-transaction --clean --if-exists` so a half-failed restore rolls back atomically
+- Pre-restore snapshot is automatic: before any restore, a `source='pre-restore'` backup is created, marked `protected=TRUE` and `expires_at = NOW() + 24h`, and cannot be deleted manually during that window
+- Redis lock `backup:lock` (NX EX 3600) prevents two backups (or a backup-during-restore) from running concurrently. Released via Lua so a process can never delete a lock owned by someone else
+- 10 admin endpoints under `/api/v1/admin/backups`: list, create, get, download, delete, restore, verify, diff, audit, storage, settings (read-only in Phase 1)
+- `path.basename()` on the download path to defuse traversal attempts
+- 13 vitest tests added, full suite stays at 194 passing, zero regression
+
+**Frontend admin**
+- New page `/admin/backups` with storage indicator, table of backups, per-row Download / Verify / Restore / Delete actions
+- Restore modal with diff preview (`+/- threads, posts, messages, users, uploads`), pre-restore snapshot reassurance, type-to-confirm slug input, 5-second client countdown that only starts once the slug matches (server enforces the slug check too)
+- `/admin/backups/audit` log viewer with action chips, success/failure pills, IP and user-agent shown — designed for post-compromise forensics (an attacker downloading a backup is an exfiltration event)
+
+**Docs**
+- Spec promoted from `.claude/ideas/BACKUP_SYSTEM.md` (informal brainstorming) to [`docs/specs/014-backup-system/SPEC.MD`](docs/specs/014-backup-system/SPEC.MD) (canonical, indexed by nodyx.dev like the other 8 specs)
+
+**Phase 1 deliberately omits** Socket.IO progress (sync POST is fine for small instances), auto-backup scheduler, rotation, drag-and-drop upload of an external `.tar.gz`, AES-256-GCM encryption, and Docker bind-mount detection. Those land in Phase 2 / 3.
+
+**Note for self-hosters**: the backup directory is `nodyx-core/backups/` and must be writable by the `nodyx` user. On existing instances, run `sudo install -d -o nodyx -g nodyx -m 0700 /var/www/nexus/nodyx-core/backups` once. Phase 2 adds this step to `install.sh` automatically.
+
 ---
 
 ## [2.3.0] — 2026-05-06
