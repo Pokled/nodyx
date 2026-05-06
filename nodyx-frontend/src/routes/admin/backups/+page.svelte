@@ -42,6 +42,8 @@
 	let restoreFor    = $state<BackupRow | null>(null);
 	let restoreSlug   = $state('');
 	let restoreDiff   = $state<DiffPreview | null>(null);
+	let dryRunRunning = $state(false);
+	let dryRunResult  = $state<{ ok: boolean; message: string } | null>(null);
 	let restoreCountdown = $state(5);
 	let restoring     = $state(false);
 	let restoreCountdownTimer: ReturnType<typeof setInterval> | null = null;
@@ -198,6 +200,7 @@
 		restoreSlug      = '';
 		restoreCountdown = 5;
 		restoreDiff      = null;
+		dryRunResult     = null;
 
 		const res = await fetch(`/api/v1/admin/backups/${b.id}/diff`, {
 			headers: { Authorization: `Bearer ${getToken()}` },
@@ -256,6 +259,42 @@
 		} catch (e) {
 			toast(`Erreur : ${(e as Error).message}`, false);
 			restoring = false;
+		}
+	}
+
+	// Dry-run: runs the same checks (checksum, format compat, archive
+	// integrity) WITHOUT touching the DB or filesystem. Server logs it as
+	// an audit entry with metadata.dry_run = true. Use it to prove a backup
+	// is restorable before doing it for real.
+	async function handleDryRun() {
+		if (!restoreFor) return;
+		dryRunRunning = true;
+		dryRunResult  = null;
+		try {
+			const res = await fetch(`/api/v1/admin/backups/${restoreFor.id}/restore`, {
+				method:  'POST',
+				headers: {
+					'Content-Type':  'application/json',
+					Authorization:   `Bearer ${getToken()}`,
+				},
+				body: JSON.stringify({ confirm_slug: data.instanceSlug, dry_run: true }),
+			});
+			if (res.ok) {
+				dryRunResult = {
+					ok:      true,
+					message: 'Cette sauvegarde est restorable. Aucune modification effectuée.',
+				};
+			} else {
+				const j = await res.json().catch(() => ({}));
+				dryRunResult = {
+					ok:      false,
+					message: j.error ?? `Erreur ${res.status}`,
+				};
+			}
+		} catch (e) {
+			dryRunResult = { ok: false, message: (e as Error).message };
+		} finally {
+			dryRunRunning = false;
 		}
 	}
 </script>
@@ -516,13 +555,48 @@
 					</div>
 				{/if}
 
+				<!-- Étapes du restore (transparence : ce qui va concrètement se passer) -->
+				<div class="px-3 py-2.5" style="background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06)">
+					<p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#9ca3af">Ce qui va se passer pendant le restore</p>
+					<ol class="flex flex-col gap-1.5 text-[11px]" style="color:#9ca3af">
+						<li class="flex gap-2"><span style="color:#6b7280">1.</span><span>Vérification de l'archive (checksum SHA-256, structure, version compatible)</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">2.</span><span>Création d'une <strong style="color:#86efac">sauvegarde de sécurité</strong> de l'état actuel (protégée 24h, supprimable manuellement après)</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">3.</span><span>Restauration de la base PostgreSQL en <strong style="color:#86efac">transaction unique</strong> (atomique : tout ou rien)</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">4.</span><span>Synchronisation des fichiers uploadés depuis l'archive</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">5.</span><span>Invalidation des sessions Redis (tout le monde sera déconnecté, toi inclus)</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">6.</span><span>Redirection automatique vers <code style="color:#e2e8f0">/auth/login</code></span></li>
+					</ol>
+				</div>
+
+				<!-- Filet de sécurité explicite -->
 				<div class="px-3 py-2 text-[11px] leading-relaxed" style="background:rgba(74,222,128,.05); border:1px solid rgba(74,222,128,.15); color:#86efac">
-					✓ Une sauvegarde de l'état actuel sera créée automatiquement avant le restore (protégée 24h).
+					✓ Si quelque chose tourne mal : la sauvegarde de sécurité (étape 2) reste protégée 24h. Tu peux l'utiliser pour revenir en arrière sans rien perdre.
+				</div>
+
+				<!-- Mode test (dry-run) — vérification sans toucher à rien -->
+				<div class="px-3 py-2.5" style="background:rgba(167,139,250,.05); border:1px solid rgba(167,139,250,.18)">
+					<div class="flex items-center justify-between gap-2">
+						<div class="flex flex-col gap-0.5">
+							<p class="text-[11px] font-bold" style="color:#a78bfa">Pas sûr ? Lance un test à blanc</p>
+							<p class="text-[10px]" style="color:#6b7280">Vérifie le checksum + la structure de l'archive sans rien modifier. Aucune ligne de DB ni de fichier touché.</p>
+						</div>
+						<button onclick={handleDryRun} disabled={dryRunRunning || restoring}
+						        class="px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-50 shrink-0"
+						        style="background:rgba(167,139,250,.1); border:1px solid rgba(167,139,250,.3); color:#a78bfa">
+							{dryRunRunning ? '…' : 'Tester (dry-run)'}
+						</button>
+					</div>
+					{#if dryRunResult}
+						<div class="mt-2 px-2.5 py-1.5 text-[11px] leading-relaxed"
+						     style="background:rgba({dryRunResult.ok ? '74,222,128' : '239,68,68'},.08); border:1px solid rgba({dryRunResult.ok ? '74,222,128' : '239,68,68'},.22); color:{dryRunResult.ok ? '#86efac' : '#fca5a5'}">
+							{dryRunResult.ok ? '✓' : '✗'} {dryRunResult.message}
+						</div>
+					{/if}
 				</div>
 
 				<label class="flex flex-col gap-1.5">
 					<span class="text-xs font-bold uppercase tracking-wider" style="color:#9ca3af">
-						Pour confirmer, tape le slug de ton instance :
+						Pour confirmer la restauration réelle, tape le slug de ton instance :
 						<code class="ml-1" style="color:#e2e8f0">{data.instanceSlug}</code>
 					</span>
 					<input type="text" bind:value={restoreSlug}
