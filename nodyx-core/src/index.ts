@@ -31,6 +31,7 @@ import socialRoutes          from './routes/social'
 import memberRoutes          from './routes/members'
 import { widgetStoreRoutes } from './routes/widgetStore'
 import { widgetDemoRoutes }  from './routes/widgetDemo'
+import { adminBackupRoutes } from './routes/admin_backups'
 import canvasRoutes          from './routes/canvas'
 import twitchRoutes           from './routes/twitch'
 import { setIO }              from './socket/io'
@@ -150,6 +151,7 @@ server.register(socialRoutes,         { prefix: '/api/v1/social' })
 server.register(memberRoutes,         { prefix: '/api/v1/members' })
 server.register(widgetStoreRoutes,    { prefix: '/api/v1' })
 server.register(widgetDemoRoutes,     { prefix: '/api/v1' })
+server.register(adminBackupRoutes,    { prefix: '/api/v1' })
 server.register(canvasRoutes,         { prefix: '/api/v1/canvas' })
 server.register(twitchRoutes,         { prefix: '/api/v1/twitch' })
 
