@@ -1,5 +1,5 @@
 # NODYX — Roadmap
-### Version 2.0 — Private & Sovereign Communications
+### Version 2.3 — Universal Media Player + Builder Catalog Fusion
 
 ---
 
@@ -9,7 +9,7 @@
 
 ---
 
-## CURRENT STATE — April 2026
+## CURRENT STATE — May 2026
 
 | Phase | Title | Status |
 |---|---|---|
@@ -27,6 +27,7 @@
 | **Phase 4.11** | Private & Sovereign Communications — E2E DMs (v2.0) | ✅ Complete |
 | **Phase 4.12** | Homepage Builder + Widget SDK (v2.1) | ✅ Complete |
 | **Phase 4.13** | NodyxCanvas — Major upgrade (v2.2) | ✅ Complete |
+| **Phase 4.14** | Universal Media Player + Builder Catalog Fusion + Tunnel Hardening (v2.3) | ✅ Complete |
 | Phase 5 | Mobile + Nodes + Reactions + Discord import | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |

@@ -9,7 +9,7 @@
 **The self-hosted community platform you actually own.**  
 Forum + Chat + Voice + P2P + Canvas + Homepage Builder + Widget SDK — one server, one community, forever.
 
-[![Version](https://img.shields.io/badge/version-v2.2.0-7c3aed)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.3.0-7c3aed)](CHANGELOG.md)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](docs/en/ARCHITECTURE.md)
@@ -579,6 +579,26 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 </details>
 
 <details open>
+<summary><b>v2.3 — Universal Media Player + Builder Catalog Fusion 🎬</b></summary>
+
+| Feature | Version |
+|---|---|
+| **Universal Media Player** — auto-detects YouTube, Vimeo, Dailymotion, Twitch (live / VOD / clip), SoundCloud, Spotify, plus direct `.mp4` / `.webm` / `.mp3` hosted files. Single URL field, platform inferred at render time | v2.3 |
+| **Builder catalog fusion** — installed widgets now appear in the Grid Builder picker next to native plugins. New `CatalogEntry` aggregation layer with `checkbox → boolean` field type canonicalization | v2.3 |
+| **Tunnel installer hardening (#23)** — 12 fixes for Pangolin mode: Caddy site-address `:80 { bind ... }` rewrite (Host filter root cause), atomic Caddyfile regen on `--repair`, UFW RFC1918 rules, doctor false-positive gate | v2.3 |
+| **nodyx-doctor** — Method A (`--network host`) no longer triggers a misleading "LAN IP not bound" warning | v2.3 |
+| **nodyx-relay v0.1.4** — TCP keepalive + read deadline to detect dead sessions | v2.3 |
+| **Doc search rewrite** — heading-aware index with deep-link anchors, scrollspy TOC sidebar, slug correctness pass (108 broken TOC links + 60 leading-dash ids cleaned) | v2.3 |
+| **Why-Nodyx posture** — new positioning page listing alternative platforms (Matrix, Stoat, Fluxer, Haven, ...), README aligned, "silos vs liberty, not Nodyx vs X" framing | v2.3 |
+| **i18n** — German (`de.json`) + Spanish (`es.json`) translations, native review for both | v2.3 |
+| **Homepage Builder polish** — Twitch stream + Articles showcase widgets, clickable `(?)` info panel on field labels | v2.3 |
+| **Voice kick** — owners, admins and moderators can remove a user from a voice channel | v2.3 |
+| **Community Pulse** — co-presence trail and wave visualization page | v2.3 |
+| **Nodyx Stars** — proper recognition system for external contributors with public CONTRIBUTORS.md, avatar block in README, polish-trail transparency | v2.3 |
+
+</details>
+
+<details>
 <summary><b>v2.2 — NodyxCanvas major upgrade 🎨</b></summary>
 
 | Feature | Version |
@@ -620,10 +640,7 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 
 | Feature | Notes |
 |---|---|
-| **Canvas — Brainwave Sync** — host broadcasts pan+zoom to all participants in real time, followers stay synchronized | Sprint C |
-| **Canvas — Ghost Mode** — anonymous brainstorming: contributions appear under random pseudonyms, author revealed at end | Sprint C |
-| **Canvas — Minimap** — 160×120 thumbnail in bottom-right, click to navigate | Sprint C |
-| **Canvas — Multi-selection** — Shift+click or lasso to select + move + delete multiple elements | Sprint C |
+| **Canvas — Ghost Mode** — anonymous brainstorming: contributions appear under random pseudonyms, author revealed at end | Sprint D |
 | **Canvas — Audio Stickies** — voice note recorded directly on the canvas, waveform rendered as post-it | Sprint D |
 | **Canvas — Contextual Chat** — threaded discussion anchored to a canvas zone, spatially indexed | Sprint D |
 | **More native widgets** — Countdown, Leaderboard, Latest Threads, Featured Events, Jukebox Player | Phase 2 |

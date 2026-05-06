@@ -9,6 +9,305 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [2.3.0] — 2026-05-06
+
+### Widget System — Universal Media Player + Builder Catalog Fusion
+
+**Builder picker now lists installed widgets** (closes the gap reported during a live debug session)
+- The Grid Builder previously read only the 9 hardcoded native plugins from `PLUGIN_LIST`. Widgets uploaded via the Widget Store admin or installed from the demo catalog were saved to `installed_widgets` in DB and rendered correctly by `WidgetZone` on public homepages, but were invisible in the picker — so they could never be placed in a layout.
+- New aggregation layer `lib/components/homepage/catalog.ts` fuses native plugins (phase 1 only) with installed widgets fetched from `/api/v1/widget-store-public` server-side
+- Builder consumes a unified `CatalogEntry[]` for picker, icon resolution, config form generation, and live preview
+- Custom-panel branch (`customPanel`) gated on native source via `selNativePlugin`, so it never fires for installed widgets
+
+**Field type canonicalization** at catalog-load time
+- External SDKs commonly emit `type:"checkbox"` while the builder renderer expects `type:"boolean"`
+- The mapping is permissive on input, strict on output, so existing widgets keep working
+
+**Universal Media Player** (`video-player` demo, v1.0 → v1.2.0)
+- Renamed from "Lecteur Vidéo" to **Lecteur Multimédia** to reflect actual scope
+- Auto-detection of 7 platforms via single URL field:
+  - **Video**: YouTube (watch / `youtu.be` / embed / shorts) → `youtube-nocookie.com`, Vimeo (basic + showcase + event), Dailymotion (`dailymotion.com/video` + `dai.ly`), Twitch live (channel), Twitch VOD (`videos/<id>`), Twitch clip (`clips.twitch.tv` + `twitch.tv/<u>/clip/<id>`)
+  - **Audio**: SoundCloud (track or playlist embed), Spotify (track / episode / playlist / album / show / artist)
+  - **Direct file**: `.mp4`, `.webm`, `.mov`, `.m3u8` (HLS) → native `<video>`, and `.mp3`, `.ogg`, `.wav`, `.flac`, `.m4a`, `.opus`, `.aac` → native `<audio>` with audio-shaped wrapper
+- Privacy-first: YouTube embeds via `youtube-nocookie.com`, Vimeo with `dnt=1`
+- Twitch sets the required `parent` parameter from `window.location.hostname` at render time
+- Audio sources (SoundCloud, Spotify track/episode) get fixed-height embeds instead of the 16:9 wrapper
+- Manifest schema exposes `hint` (one-liner under field label) + `details` (collapsible (?) panel with exact URL formats per platform plus CORS note)
+
+**CSP `frame-src` extended** to cover all new platforms in `install.sh` and `install_tunnel.sh`: added `geo.dailymotion.com`, `player.twitch.tv`, `clips.twitch.tv`, `w.soundcloud.com`, `open.spotify.com` (Vimeo was missing for new installs and is now included)
+
+**Demo source refactor** — `widgetDemo.ts` reads manifest + JS from `nodyx-core/widget-demos/<id>/` at module init. The previous escaped template-literal embed (190 lines of `\\${` noise) is gone; single source of truth.
+
+---
+
+### Installer — Pangolin Mode Hardening (closes #23)
+
+Twelve fixes to `install_tunnel.sh` after a multi-round community debug pass with @forke24x7. The blank-page bug that blocked Pangolin self-hosters was rooted in Caddy site-address Host filtering, not interface binding.
+
+**Caddy site address rewritten** ([5445e8b])
+- Previous form `http://127.0.0.1:80, http://[::1]:80 { }` was a Host filter masquerading as an interface bind
+- Caddy only matched requests whose `Host` header was literally `127.0.0.1` or `[::1]`, so when newt forwarded a request from Pangolin with the public Host, no site matched and Caddy returned 0 bytes (rendered as a blank page)
+- New form `:80 { bind 127.0.0.1 ::1 [LAN_IP] }` decouples interface listening from Host matching
+
+**`--repair` flow now regenerates Caddyfile** ([cfa52ee])
+- Previously skipped Caddy section entirely, so any drift between installed script and live config persisted
+- `_render_caddyfile()` is now called from both fresh install and `--repair`, with atomic tempfile + `caddy validate` before `mv`
+
+**UFW `:80` from RFC1918 in Pangolin mode** ([cfa52ee])
+- Method B (newt in default Docker bridge) connecting to LXC's LAN IP on `:80` was blocked at the host firewall under default-deny-incoming
+- New `_ensure_pangolin_ufw()` opens `:80/tcp` from `10/8`, `172.16/12`, `192.168/16` only — public internet still cannot bypass the tunnel
+
+**`nodyx-doctor` improvements**
+- New check lists Caddy's actual bind addresses and warns if the LAN IP is missing in bridge mode
+- "Caddy NOT bound on the LAN IP" warning now gated on `docker + non-host network mode`, so Method A (`--network host`) and native newt no longer trigger a false positive ([3b74e73])
+
+**Domain prompt mode-neutral** ([8722878])
+- Cloudflare nameserver requirement is now surfaced only after picking mode 1 (CF), not before mode selection
+
+**Other tunnel installer fixes**
+- Bilingual EN/FR rewrite + modern security parity ([8bd85be])
+- Real client IP via `X-Forwarded-For` from trusted private/loopback ranges, mode-aware ([dfa8eca])
+- Drain stdin before `exec` to avoid `curl exit 23` ([763c410])
+- Write `PUBLIC_TURN_*` and `PUBLIC_SIGNET_URL` placeholders in frontend `.env` ([cbc9e6b], [14794ce])
+- `fonts-dejavu-core` instead of `fonts-dejavu` ([9ab10b9])
+- New operator guide [`docs/en/INSTALL-TUNNEL.md`](docs/en/INSTALL-TUNNEL.md) with topology diagrams and a troubleshooting table
+
+---
+
+### Documentation site — nodyx.dev
+
+**Search overhaul** ([a429fa3], [882099d])
+- Heading-aware search with deep-link anchors — `h2` and `h3` sections are now indexed individually, search hits land directly on the right anchor instead of the page top
+- Slug correctness fixed: 108 broken TOC links, 60 leading-dash IDs, 11 phantom entries from code-block comments cleaned up
+- Anchor fallback for stale URLs
+
+**TOC sidebar** ([3c62275])
+- Sticky right-side table of contents on every doc page
+- Scrollspy with active marker dot
+- Auto-collapse on mobile
+
+**`Why Nodyx` positioning page** ([feb00b6], [93ad60d], [18ae4a0])
+- New canonical doc [`docs/en/WHY-NODYX.md`](docs/en/WHY-NODYX.md) listing alternative federated/self-hosted platforms (Matrix, Stoat, Fluxer, Haven, etc.) with their GitHub links — humble posture, no anti-Discord framing
+- README aligned with the same posture
+
+**Other doc improvements**
+- Tunnel install surfaced in nodyx.dev navigation ([fe84813])
+- Anchor refs corrected (single-dash, not GitHub double) ([a7f9eb4])
+- Haven added to the ecosystem map ([88039aa])
+
+---
+
+### nodyx-relay v0.1.4 — TCP keepalive
+
+- TCP keepalive + read deadline to detect dead sessions ([5893b57])
+- Sessions that disappear without a clean FIN are now reaped instead of accumulating
+
+---
+
+### Internationalization
+
+- **German (de)** translation: 741 strings, hand-reviewed by a native speaker, contributed by @forke24x7 ([cc79147])
+- **Spanish (es)** translation: 719 strings, full key + placeholder parity, contributed by @e806482 with native review by @naranco66 ([e806482], [a9a90b3])
+- `install.sh` itself now supports EN/FR with English as default ([ddf3acb])
+
+---
+
+### Homepage Builder polish
+
+- Clickable `(?)` info panel on field labels for long-form explanations ([c5ed290])
+- New native widgets: **Twitch stream** + **Articles showcase** ([d6a0975])
+
+---
+
+### Voice & UX
+
+- **Voice kick** action for owners, admins and moderators ([ef383a6])
+- Chat auto-scroll on join + forum reactions persistence ([a3b8824])
+- Chat `scrollToBottom` wrapped in arrow function for jump-to-bottom button ([18fc8d4])
+- Auto-flip toolbar popups when they would overflow the scroll container ([0efd537])
+- `/login` and `/register` now 301-redirect to `/auth/*` ([9e4a4f9])
+
+---
+
+### Community Pulse
+
+- New `community pulse` page with co-presence trail and wave visualization ([7bb0229])
+
+---
+
+### Process & Recognition
+
+- **Nodyx Stars** system: proper recognition for external contributors with star ratings, public CONTRIBUTORS.md and avatar block in README ([d68c081])
+- Maintainer checklist + PR template ([92a7b78])
+- Polish Trail section: public transparency on the maintainer's polish-after-merge pass ([c5fc859])
+- Origin-story note on CONTRIBUTORS.md ([d14f84d])
+- "Gesture-over-perfection" maintainer note translated into 17 languages ([88903d6])
+- Stars bumped: @forke24x7 → 5 (root cause + de translation + Pangolin work), @lukasMega → 2 (docs search hunt), @waazaa-fr → 2 (installer fixes), @naranco66 → Regular (es review)
+
+---
+
+### Stability & Infra
+
+- Directory assets HTTP 500 loop fixed; hub SQLite readonly fixed; docs memory limit raised ([d9fd459])
+- Docker Compose orphan `nexus-*` references purged post-rebrand; Alpine font path mismatch fixed (PR #22 by @naranco66) ([b629242])
+- Ko-fi badge added to README; FUNDING.yml updated ([197a450], [658e3a8], [fb67943])
+- Issue templates, SECURITY.md, FUNDING.yml ([1553e80])
+
+---
+
+### Bug fixes (canvas)
+
+- `Ctrl/Cmd + D` to duplicate selected canvas elements with offset positioning (PR #11) ([90f3644], [d19682f], [cbecb2f], [de84424])
+
+---
+
+### Notes for self-hosters
+
+The runtime `widget.iife.js` for the Lecteur Multimédia is served live from `nodyx-core/uploads/widgets/video-player/` so an upgrade applies immediately. To pick up the new manifest (label / hints / version), reinstall the demo from the Widget Store admin (`/admin/widgets`) or run a full `--repair`. The CSP `frame-src` is shipped in the templates of `install.sh` and `install_tunnel.sh`; existing instances need to either rerun `--repair` or update their Caddyfile manually.
+
+---
+
+## [2.2.0] — 2026-04-17
+
+### Canvas Sprint C — Collaborative Whiteboard Upgrade
+
+**Multi-selection**
+- `Shift+Click` to toggle elements in selection
+- Lasso tool: click-drag on empty space to draw a selection rectangle
+- Multi-drag: all selected elements move together
+- `Delete` / `Escape` operate on entire selection
+- Dashed purple bounding box around multi-selected elements
+
+**Minimap**
+- 160×100px thumbnail in bottom-right corner
+- All elements rendered as violet blobs at scale
+- White dashed viewport rectangle
+- Click to navigate — recenters view on that world-space point
+
+**Brainwave Sync**
+- 3-state toggle: Off → Leading (purple) → Following (cyan)
+- Leader broadcasts pan/zoom transform via Socket.IO (`canvas:sync:view`)
+- Followers receive and apply the transform in real-time
+- Throttled at 50ms for smooth performance
+
+**Background Color Chooser**
+- 21 color presets (dark, colored dark, light themes)
+- Native color picker for custom colors
+- Conic gradient rainbow button for the picker
+
+**Frames — Move with Children**
+- Dragging a frame now moves all contained elements
+- Child count shown in frame label (`"FrameName · 3 elements"`)
+- Colored dashed ring around frame children
+
+**Anchor Badge**
+- Purple anchor icon on frame children (visible in select mode)
+- Click to detach element from its parent frame
+
+**Lock System**
+- Lock/unlock any element via padlock badge
+- Locked elements: no drag, no resize, no erase, no delete
+- Amber glow on locked+selected elements
+- Orange lock badge always visible on locked elements
+
+### Other Fixes
+
+- Keyboard shortcuts no longer interfere with chat input
+- Chat messages persist across canvas sessions (localStorage per board)
+- Fixed rectangle tool icon (was showing grid icon)
+
+---
+
+## [2.1.0] — 2026-04-08
+
+### Homepage Builder + Widget SDK
+
+Nodyx gets a visual CMS layer. Instance owners can now build a fully custom homepage — drag and drop widgets, configure them live, and extend the system with their own Web Components.
+
+**Homepage Builder**
+- 11 layout zones: Banner, Hero, Half Left/Right, Stats Bar, Wide Strip, Sidebar, Three Columns, Footer columns
+- Drag and drop: reorder zones, resize widget slots
+- Live config panel: each widget exposes its own schema (text, checkbox, select, number fields)
+- Per-instance: each instance builds its own homepage independently
+- Redis cache: homepage layout cached, instant load for visitors
+
+**Native Widgets (12 included)**
+- `welcome-banner` — hero text with CTA button
+- `announcements` — latest pinned posts from a category
+- `forum-preview` — recent threads with author avatars
+- `member-count` — live member count (online / total)
+- `recent-activity` — feed of recent forum + chat activity
+- `events-preview` — upcoming events from the calendar
+- `top-members` — leaderboard by post count
+- `chat-preview` — last messages from a public channel
+- `custom-text` — free rich-text / HTML block
+- `image-banner` — full-width image with overlay text
+- `poll-embed` — embed a live poll
+- `countdown` — countdown to a date
+
+**Widget SDK**
+- Build your own widgets as standard Web Components and upload them to your instance
+- Two files per widget: `manifest.json` (schema + metadata) + `widget.iife.js` (Web Component)
+- Shadow DOM: full CSS isolation, zero conflicts
+- Upload via admin: `.zip` containing both files, validated server-side
+- Live preview in the Widget Store before installing
+- Full tutorial at [nodyx.dev/create-widget](https://nodyx.dev/create-widget)
+
+**Demo Widget — Video Player**
+- Auto-detects YouTube, Vimeo, or raw MP4 URLs
+- Configurable from the builder: URL, title, autoplay, show controls
+- Source `.zip` downloadable from the Widget Store admin to use as a template
+
+### Under the Hood
+
+- New DB tables: `homepage_positions`, `homepage_widgets`, `installed_widgets`
+- New routes: `/api/v1/admin/homepage/*`, `/api/v1/widget-store/*`, `/api/v1/widget-assets/*`, `/api/v1/admin/widget-store/demo/*`
+- `DynamicWidget.svelte` — Svelte 5 Web Component loader with 5s timeout + error state
+- `uploads/widgets/.gitkeep` — directory guaranteed on fresh clone
+- `adm-zip` — server-side ZIP assembly (demo download) and extraction (widget upload)
+- Migrations `065_homepage_builder.sql` through `071_widget_store.sql`
+
+---
+
+## [2.0.0] — 2026-04-06
+
+### Private and Sovereign Communications
+
+The biggest Nodyx release since launch. v2.0 brings end-to-end encrypted DMs with a per-instance obfuscation layer that's uniquely ours.
+
+**DM End-to-End Encryption**
+- ECDH P-256 key exchange — your private key is generated in the browser and never leaves it (stored as a non-extractable `CryptoKey` in IndexedDB)
+- AES-256-GCM authenticated encryption — the server stores and transmits only opaque ciphertext
+- ESY Barbare layer — a second, per-instance obfuscation layer on top of AES-GCM (byte-permutation + deterministic PRNG noise, N rounds). Even if AES were broken, an attacker would still need to reverse the ESY transform specific to your instance
+- E2E shield — live indicator in the DM header (green pulse when both sides have E2E active, orange when only one side has generated their keypair)
+- ESY fingerprint visible on hover — verify your instance's layer
+- Barbarize animation — when sending, you see your text scramble into glyphs during encryption; when the other side receives, they watch it decipher in real-time
+
+**DM Message Editing**
+- Inline edit on hover — pencil icon appears on your messages
+- Encrypted messages are re-encrypted when edited — the new content goes through the full ECDH + AES + ESY chain
+- The other side receives the updated plaintext in real-time
+- Timestamp shows `· edited` after modification
+
+**DM Message Delete — Real-time**
+- Previously, deleting a message only removed it for the sender. Now the deletion propagates instantly to all participants via socket.
+
+**DM Full-Width Redesign**
+- Split layout: sidebar (288px) + chat zone full-width
+- Glassmorphism sidebar with conversation list
+- iMessage-style bubbles with grouped messages and per-sender avatars
+- Typing indicator in header
+
+### Under the Hood
+
+- `e2e.ts` — new crypto module (IndexedDB keypair, ECDH, AES-GCM, ESY barbarize/debarbarize)
+- Caddy routing fixed for `/users/*/public-key` and `/forums/categories` (relay was intercepting)
+- AudioContext shared across all peer VAD — fixes Chrome's 6-context-per-origin limit
+- Socket poll fallback when `initSocket` async isn't done at `onMount`
+- Migration `064_dm_edit.sql`
+
+---
+
 ## [1.9.5] — 2026-03-30
 
 ### Living Profile — User profile enrichment

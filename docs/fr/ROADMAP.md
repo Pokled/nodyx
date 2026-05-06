@@ -1,5 +1,5 @@
 # NODYX — Roadmap
-### Version 1.9 — La plateforme souveraine
+### Version 2.3 — Lecteur multimédia universel + fusion du catalogue Builder
 
 ---
 
@@ -9,7 +9,7 @@
 
 ---
 
-## ÉTAT ACTUEL — Mars 2026
+## ÉTAT ACTUEL — Mai 2026
 
 | Phase | Titre | État |
 |---|---|---|
@@ -23,6 +23,11 @@
 | **Phase 4.7** | Double authentification — TOTP + Nodyx Signet 2FA (v1.9.1) | ✅ Complète |
 | **Phase 4.8** | Stabilité production & cohérence cross-runtime (v1.9.3) | ✅ Complète |
 | **Phase 4.9** | Isolation processus, couverture de tests & CI (v1.9.4) | ✅ Complète |
+| **Phase 4.10** | Profil vivant + Refonte Forum (v1.9.5) | ✅ Complète |
+| **Phase 4.11** | Communications privées et souveraines — DM chiffrés bout-en-bout (v2.0) | ✅ Complète |
+| **Phase 4.12** | Homepage Builder + Widget SDK (v2.1) | ✅ Complète |
+| **Phase 4.13** | NodyxCanvas — Mise à jour majeure (v2.2) | ✅ Complète |
+| **Phase 4.14** | Lecteur multimédia universel + fusion catalogue Builder + Hardening tunnel (v2.3) | ✅ Complète |
 | Phase 5 | Mobile + Nodes + Réputation | 🔨 En cours |
 | **Phase Horizon** | NODYX-ETHER — Souveraineté de la couche physique | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Tuner radio internet + régie publicitaire coopérative | 📻 Vision |
