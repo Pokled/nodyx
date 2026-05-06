@@ -91,10 +91,7 @@ export async function adminBackupRoutes(app: FastifyInstance) {
   // ── GET /admin/backups — list paginated ──────────────────────────────────
   app.get(
     '/admin/backups',
-    {
-      preHandler: [rateLimit, adminOnly],
-      schema:     { querystring: ListQuery },
-    },
+    { preHandler: [rateLimit, adminOnly, validate({ query: ListQuery })] },
     async (request, reply) => {
       const q = request.query as z.infer<typeof ListQuery>
       const { rows, total } = await listBackups({ limit: q.limit, offset: q.offset })
@@ -107,10 +104,7 @@ export async function adminBackupRoutes(app: FastifyInstance) {
   // is matched as a route, not as a UUID.
   app.get(
     '/admin/backups/audit',
-    {
-      preHandler: [rateLimit, adminOnly],
-      schema:     { querystring: AuditQuery },
-    },
+    { preHandler: [rateLimit, adminOnly, validate({ query: AuditQuery })] },
     async (request, reply) => {
       const q = request.query as z.infer<typeof AuditQuery>
       const { rows, total } = await auditList({ limit: q.limit, offset: q.offset, backup_id: q.backup_id })
@@ -146,10 +140,7 @@ export async function adminBackupRoutes(app: FastifyInstance) {
   // Phase 2 will move this behind a job queue + Socket.IO progress events.
   app.post(
     '/admin/backups',
-    {
-      preHandler: [rateLimit, adminOnly],
-      schema:     { body: CreateBody },
-    },
+    { preHandler: [rateLimit, adminOnly, validate({ body: CreateBody })] },
     async (request, reply) => {
       const body = request.body as z.infer<typeof CreateBody>
       try {
@@ -229,10 +220,7 @@ export async function adminBackupRoutes(app: FastifyInstance) {
   // that bypasses the modal still gets its slug check.
   app.post(
     '/admin/backups/:id/restore',
-    {
-      preHandler: [rateLimit, adminOnly],
-      schema:     { body: RestoreBody },
-    },
+    { preHandler: [rateLimit, adminOnly, validate({ body: RestoreBody })] },
     async (request, reply) => {
       const { id } = request.params as { id: string }
       const body = request.body as z.infer<typeof RestoreBody>
