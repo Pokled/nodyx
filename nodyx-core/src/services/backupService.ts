@@ -173,13 +173,34 @@ function spawnAndCollect(cmd: string, args: string[], env: NodeJS.ProcessEnv): P
   })
 }
 
+// Tables that are part of the backup system itself or migration tracking.
+// Excluding them from the dump means a restore can never wipe out:
+//   - the row of the backup being restored (and its FK in audit_log)
+//   - the pre-restore snapshot row created seconds before the restore
+//   - the auto-backup settings the admin spent time configuring
+//   - the schema_migrations ledger (would otherwise rewind to the state at
+//     dump time, breaking the migration runner's "is this applied?" check)
+//
+// Discovered the hard way during Phase 1 smoke test on prod: a real restore
+// on 2026-05-06 wiped the pre-restore snapshot's DB row at the very moment
+// it was supposed to act as the safety net. The .tar.gz file remained on
+// disk but the UI couldn't find it. See git log for details.
+const SYSTEM_TABLES_EXCLUDED_FROM_DUMP = [
+  'backups',
+  'backup_settings',
+  'backup_audit_log',
+  'schema_migrations',
+]
+
 async function dumpDatabase(outPath: string): Promise<void> {
   // --format=custom: pg_restore-friendly binary, parallelizable, smaller than plain SQL
   // --compress=9   : maximum gzip compression baked into the dump
   // --no-owner / --no-privileges : portable across users/roles (hosting on a different DB)
+  // --exclude-table: keep meta-system tables out of the dump (see comment above)
+  const excludeArgs = SYSTEM_TABLES_EXCLUDED_FROM_DUMP.flatMap(t => ['--exclude-table', t])
   const { code, stderr } = await spawnAndCollect(
     'pg_dump',
-    ['--format=custom', '--compress=9', '--no-owner', '--no-privileges', '-f', outPath],
+    ['--format=custom', '--compress=9', '--no-owner', '--no-privileges', ...excludeArgs, '-f', outPath],
     pgEnv(),
   )
   if (code !== 0) throw new Error(`pg_dump failed (code ${code}): ${stderr.trim().slice(-500)}`)
@@ -190,6 +211,11 @@ async function restoreDatabase(dumpPath: string): Promise<void> {
   // --if-exists: don't error if the object doesn't already exist (fresh DB)
   // --no-owner : don't try to set ownership (portable)
   // --single-transaction: atomic — either the whole restore applies or nothing does
+  //
+  // Note: the dump itself doesn't contain the system tables (see dumpDatabase),
+  // so pg_restore cannot drop or rewrite them. The live `backups`,
+  // `backup_audit_log`, `backup_settings` and `schema_migrations` tables
+  // survive any restore intact.
   const { code, stderr } = await spawnAndCollect(
     'pg_restore',
     ['--clean', '--if-exists', '--no-owner', '--no-privileges', '--single-transaction', '-d', process.env.DB_NAME || '', dumpPath],
