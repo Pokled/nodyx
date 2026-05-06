@@ -1,34 +1,38 @@
 {
   "id": "video-player",
-  "label": "Lecteur Vidéo",
-  "version": "1.1.0",
+  "label": "Lecteur Multimédia",
+  "version": "1.2.0",
   "author": "Nodyx",
   "icon": "🎬",
   "family": "media",
-  "description": "Lecteur universel : YouTube, Vimeo, Dailymotion, Twitch (live, VOD, clip), SoundCloud, Spotify, ou fichier vidéo direct (MP4, WebM). Colle simplement l'URL.",
+  "description": "Lecteur universel vidéo et audio. Colle simplement l'URL : YouTube, Vimeo, Dailymotion, Twitch, SoundCloud, Spotify, ou un fichier .mp4 / .webm / .mp3 hébergé.",
   "entry": "widget.iife.js",
   "schema": [
     {
       "key": "url",
       "type": "text",
       "label": "URL",
-      "placeholder": "https://youtube.com/watch?v=... ou https://vimeo.com/... ou https://twitch.tv/..."
+      "placeholder": "https://youtube.com/watch?v=... · vimeo.com/... · twitch.tv/... · soundcloud.com/... · spotify.com/...",
+      "hint": "Vidéo : YouTube, Vimeo, Dailymotion, Twitch (live, VOD, clip), .mp4, .webm. Audio : SoundCloud, Spotify, .mp3, .ogg, .wav, .m4a.",
+      "details": "Sources supportées (auto-détectées par l'URL) :\n\nVidéo :\n  • YouTube : https://youtube.com/watch?v=ID — https://youtu.be/ID — shorts/embed/v\n  • Vimeo : https://vimeo.com/ID — vimeo.com/showcase/.../video/ID\n  • Dailymotion : https://dailymotion.com/video/ID — https://dai.ly/ID\n  • Twitch live : https://twitch.tv/CHAINE\n  • Twitch VOD : https://twitch.tv/videos/ID\n  • Twitch clip : https://clips.twitch.tv/SLUG — twitch.tv/USER/clip/SLUG\n  • Fichier hébergé : .mp4, .webm, .mov, .m3u8 (HLS)\n\nAudio :\n  • SoundCloud : URL d'un track ou d'une playlist (lecteur officiel intégré)\n  • Spotify : track, episode, playlist, album, show, artist (open.spotify.com/...)\n  • Fichier hébergé : .mp3, .ogg, .wav, .flac, .m4a, .opus, .aac\n\nFichier hébergé : si le fichier est sur un autre domaine que ton instance, le serveur source doit autoriser CORS pour que le navigateur puisse le lire."
     },
     {
       "key": "title",
       "type": "text",
       "label": "Titre affiché",
-      "placeholder": "Ma vidéo"
+      "placeholder": "Mon clip · Mon morceau · Mon stream"
     },
     {
       "key": "autoplay",
       "type": "boolean",
-      "label": "Lecture automatique"
+      "label": "Lecture automatique",
+      "hint": "Note : la plupart des navigateurs bloquent l'autoplay avec son. La lecture se déclenchera muette ou attendra un clic."
     },
     {
       "key": "show_controls",
       "type": "boolean",
-      "label": "Afficher les contrôles"
+      "label": "Afficher les contrôles",
+      "default": true
     }
   ]
 }

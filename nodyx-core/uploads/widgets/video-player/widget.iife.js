@@ -1,10 +1,13 @@
 (function () {
-  /* ── nodyx-widget-video-player v1.1.0 ──
-     Lecteur universel : YouTube, Vimeo, Dailymotion, Twitch (live/VOD/clip),
-     SoundCloud, Spotify, et fichier vidéo direct (MP4 / WebM / MOV / HLS).
+  /* ── nodyx-widget-video-player v1.2.0 ──
+     Lecteur multimédia universel.
+     Vidéo : YouTube, Vimeo, Dailymotion, Twitch (live/VOD/clip), fichier
+             direct (MP4 / WebM / MOV / HLS).
+     Audio : SoundCloud, Spotify, fichier direct (MP3 / OGG / WAV / FLAC / M4A).
 
      L'URL est auto-détectée. Aucun script tiers chargé : tout est rendu via
-     un iframe dont le src pointe sur l'embed officiel de la plateforme. */
+     un iframe dont le src pointe sur l'embed officiel de la plateforme, ou
+     via une balise <video>/<audio> native pour les fichiers hébergés. */
 
   var STYLE = `
     :host { display: block; }
@@ -55,12 +58,27 @@
 
     .video-wrap {
       position: relative;
-      padding-bottom: 56.25%; /* 16:9 */
+      padding-bottom: 56.25%; /* 16:9 par défaut */
       background: #000;
     }
     .video-wrap--audio-152 { padding-bottom: 0; height: 152px; }
     .video-wrap--audio-352 { padding-bottom: 0; height: 352px; }
     .video-wrap--audio-166 { padding-bottom: 0; height: 166px; background: transparent; }
+
+    /* Audio hébergé direct : pas d'iframe, juste la balise native */
+    .video-wrap--audio-file {
+      padding-bottom: 0;
+      height: auto;
+      background: #0d0d12;
+      padding: 18px 14px;
+    }
+    .video-wrap--audio-file audio {
+      position: relative;
+      inset: auto;
+      width: 100%;
+      height: 40px;
+      display: block;
+    }
 
     .video-wrap iframe,
     .video-wrap video {
@@ -94,6 +112,7 @@
       font-size: 10px; color: #1f2937;
       max-width: 80%;
       text-align: center;
+      line-height: 1.5;
     }
 
     .footer {
@@ -117,8 +136,8 @@
     return String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;');
   }
 
-  // Plateforme: { kind, embed, allow, label, aspect?, direct? }
-  // aspect: undefined (default 16:9) | 'audio-152' | 'audio-352' | 'audio-166'
+  // Plateforme: { kind, embed?, direct?, allow?, label, aspect? }
+  // aspect: undefined (default 16:9) | 'audio-152' | 'audio-352' | 'audio-166' | 'audio-file'
   function detectPlatform(url, opts) {
     var u = String(url).trim();
     var ap = opts.autoplay ? 1 : 0;
@@ -230,9 +249,16 @@
       };
     }
 
-    // Fichier direct (mp4 / webm / mov / m3u8 / ogg)
+    // Fichier hébergé direct — on choisit <audio> ou <video> selon l'extension.
+    // (?: ?| #) couvre les query strings et fragments à la fin de l'URL.
     if (/^https?:\/\//.test(u)) {
-      return { kind: 'direct', direct: u, label: 'Vidéo' };
+      var isAudio = /\.(mp3|ogg|oga|wav|flac|m4a|opus|aac)(?:[?#]|$)/i.test(u);
+      return {
+        kind:   isAudio ? 'audio-direct' : 'video-direct',
+        direct: u,
+        label:  isAudio ? 'Audio'        : 'Vidéo',
+        aspect: isAudio ? 'audio-file'   : undefined,
+      };
     }
 
     return null;
@@ -247,13 +273,13 @@
       var cfg = {};
       try { cfg = JSON.parse(this.dataset.config || '{}'); } catch (e) {}
 
-      var title    = this.dataset.title || cfg.title || 'Lecteur Vidéo';
+      var title    = this.dataset.title || cfg.title || 'Lecteur Multimédia';
       var url      = (cfg.url || '').trim();
       var autoplay = !!cfg.autoplay;
       var controls = cfg.show_controls !== false;
 
       var media   = '';
-      var badge   = 'vidéo';
+      var badge   = 'média';
       var wrapCls = 'video-wrap';
 
       if (url) {
@@ -268,14 +294,20 @@
                 </svg>
               </div>
               <span class="placeholder-label">URL non reconnue</span>
-              <span class="placeholder-hint">Formats acceptés : YouTube, Vimeo, Dailymotion, Twitch, SoundCloud, Spotify, ou fichier .mp4 / .webm direct.</span>
+              <span class="placeholder-hint">Formats acceptés : YouTube, Vimeo, Dailymotion, Twitch, SoundCloud, Spotify, fichier .mp4 / .webm / .mp3 / .ogg.</span>
             </div>`;
-        } else if (p.kind === 'direct') {
+        } else if (p.kind === 'video-direct') {
           media = '<video src="' + escAttr(p.direct) + '"' +
                   (autoplay ? ' autoplay'  : '') +
                   (controls ? ' controls'  : '') +
                   ' playsinline></video>';
           badge = 'vidéo';
+        } else if (p.kind === 'audio-direct') {
+          media = '<audio src="' + escAttr(p.direct) + '"' +
+                  (autoplay ? ' autoplay' : '') +
+                  ' controls preload="metadata"></audio>';
+          badge = 'audio';
+          wrapCls += ' video-wrap--audio-file';
         } else {
           media = '<iframe src="' + escAttr(p.embed) + '"' +
                   ' allow="' + escAttr(p.allow) + '"' +
@@ -292,6 +324,7 @@
               </svg>
             </div>
             <span class="placeholder-label">Aucune URL configurée</span>
+            <span class="placeholder-hint">YouTube, Vimeo, Dailymotion, Twitch, SoundCloud, Spotify, ou fichier .mp4 / .webm / .mp3 hébergé.</span>
           </div>`;
       }
 
