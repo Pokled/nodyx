@@ -50,6 +50,7 @@
 				{ href: '/admin/announcements', label: 'Annonces',      icon: '📢' },
 				{ href: '/admin/settings',      label: 'Paramètres',    icon: '⚙️' },
 				{ href: '/admin/status',        label: 'Statut réseau', icon: '🌐' },
+				{ href: '/admin/backups',       label: 'Sauvegardes',   icon: '💾' },
 				{ href: '/admin/ai',            label: 'Neural Engine', icon: '🧠' },
 			],
 		},
