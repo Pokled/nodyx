@@ -26,6 +26,7 @@ import { createReadStream, existsSync, statSync,
 import path                                                  from 'path'
 import os                                                    from 'os'
 import crypto                                                from 'crypto'
+import { setMaintenance, clearMaintenance }                  from './maintenanceService'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -427,6 +428,12 @@ export async function createBackup(opts: CreateBackupOpts): Promise<BackupRow> {
     throw new Error('Un autre backup ou restore est déjà en cours. Réessaye dans quelques minutes.')
   }
 
+  // Block user-facing writes (registration, posts, uploads...) while the dump
+  // is running. The pg_dump itself is read-only, but rows inserted between
+  // dump moment and INSERT-of-this-row would be lost on restore (Yannick bug,
+  // 2026-05-06). 30 min ceiling acts as a safety belt if the operation crashes.
+  await setMaintenance('backup_create', 30 * 60, 'Sauvegarde en cours')
+
   let workDir: string | null = null
   let archivePath: string | null = null
 
@@ -545,6 +552,12 @@ export async function createBackup(opts: CreateBackupOpts): Promise<BackupRow> {
       try { await fsp.rm(workDir, { recursive: true, force: true }) } catch { /* best-effort */ }
     }
     await releaseLock(jobId)
+    // pre-restore snapshots are part of a larger restore window — leave the
+    // maintenance flag set so the parent restoreBackup keeps the gate closed
+    // until its own finally clears it.
+    if (opts.source !== 'pre-restore') {
+      await clearMaintenance().catch(() => { /* best-effort */ })
+    }
   }
 }
 
@@ -657,6 +670,11 @@ export async function restoreBackup(id: string, opts: RestoreBackupOpts = {}): P
     throw new Error('Un autre backup ou restore est déjà en cours.')
   }
 
+  // Restore is the most disruptive operation: DB gets dropped + recreated,
+  // sessions are flushed. Block writes for the whole window (including the
+  // pre-restore snapshot phase). 60 min safety belt.
+  await setMaintenance('backup_restore', 60 * 60, 'Restauration en cours')
+
   let extractDir: string | null = null
 
   try {
@@ -724,6 +742,7 @@ export async function restoreBackup(id: string, opts: RestoreBackupOpts = {}): P
       try { await fsp.rm(extractDir, { recursive: true, force: true }) } catch { /* best-effort */ }
     }
     await releaseLock(jobId)
+    await clearMaintenance().catch(() => { /* best-effort */ })
   }
 }
 

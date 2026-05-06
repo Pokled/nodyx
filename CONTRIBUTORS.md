@@ -116,12 +116,33 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
   </tr>
 </table>
 
+### 🎲 The accidental contributor
+
+Sometimes a contribution isn't a PR. Sometimes it's just being there at exactly the wrong second.
+
+<table>
+  <tr>
+    <td align="center" width="280">
+      <div style="font-size:56px; line-height:1">🎲</div>
+      <br/>
+      <sub><b>Yannick</b></sub>
+      <br/>
+      <sub><em>nodyx.org member · 2026-05-06 21:05</em></sub>
+      <br/>
+      <sub><em>Registered an account precisely between a `pg_dump` (21:00) and the corresponding restore test (21:17). His user row got wiped by the restore, which revealed the system was dumping its own meta-tables (`backups`, `backup_audit_log`, `backup_settings`, `schema_migrations`) and erasing them at restore time — including the freshly-created pre-restore safety snapshot. Account was recovered via CLI restore of the pre-restore snapshot. Bug then fixed in <a href="https://github.com/Pokled/nodyx/commit/87696f6">87696f6</a>: `--exclude-table` on the four meta-system tables, plus a forthcoming maintenance-mode UX so the next person who registers during a backup window sees a friendly notice instead of a vanishing act.</em></sub>
+      <br/>
+      <sub><strong>Surfaced the backup safety-net bug 🛡️</strong></sub>
+    </td>
+  </tr>
+</table>
+
 ---
 
 ## Contribution log
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| Yannick (nodyx.org member) | Created an account at the worst possible second of the very first prod backup test (between `pg_dump` at 21:00 and `pg_restore` at 21:17). The user row got wiped by the restore, which is what made it visible that `pg_dump` was capturing the system tables themselves (`backups`, `backup_audit_log`, `backup_settings`, `schema_migrations`) — meaning a restore was destroying the safety net created seconds earlier. Account recovered via CLI restore of the pre-restore snapshot. | `bug(backup)` | — | [`87696f6`](https://github.com/Pokled/nodyx/commit/87696f6) | 2026-05-06 |
 | [@lukasMega](https://github.com/lukasMega) | Reported docs search input losing focus on click (had to click twice), second-pass test of [`882099d`](https://github.com/Pokled/nodyx/commit/882099d) which triggered a full slug + UX audit : 108 broken TOC links, 60 leading-dash ids, 11 phantom entries from code-block comments | `bug(docs)` | [#12](https://github.com/Pokled/nodyx/discussions/12) | [`a429fa3`](https://github.com/Pokled/nodyx/commit/a429fa3) | 2026-05-02 |
 | [@lukasMega](https://github.com/lukasMega) | Reported docs search returned no results for `"minimum requirements"` (h3 sections invisible to the index) and asked about Raspberry Pi 4 / 5 + local-IP-no-HTTPS support | `bug(docs)` | [#12](https://github.com/Pokled/nodyx/discussions/12) | [`882099d`](https://github.com/Pokled/nodyx/commit/882099d) | 2026-04-26 |
 | [@naranco66](https://github.com/naranco66) | Fixed orphaned `nexus-*` references in `docker-compose.yml` post-rebrand + Alpine font path mismatch breaking frontend build | `fix(docker)` | [#22](https://github.com/Pokled/nodyx/pull/22) | [`b629242`](https://github.com/Pokled/nodyx/commit/b629242) | 2026-04-27 |

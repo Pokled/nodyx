@@ -124,6 +124,12 @@ server.addHook('onRequest', async (request, reply) => {
   }
 })
 
+// ── Maintenance guard ─────────────────────────────────────────────────────────
+// Returns 503 on user-facing writes while a backup/restore window is active.
+// Skips reads, admin endpoints, and the maintenance status endpoint itself.
+import { maintenanceGuard } from './middleware/maintenanceGuard'
+server.addHook('onRequest', maintenanceGuard)
+
 // ── Routes ───────────────────────────────────────────────────
 
 server.register(authRoutes,      { prefix: '/api/v1/auth' })

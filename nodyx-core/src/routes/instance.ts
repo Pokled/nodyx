@@ -79,6 +79,14 @@ async function getCommunityId(): Promise<string | null> {
 
 export default async function instanceRoutes(app: FastifyInstance) {
 
+  // GET /api/v1/instance/maintenance
+  // Public, lightweight, polled by the frontend banner.
+  // Returns { active, reason?, since?, label? }.
+  app.get('/maintenance', { preHandler: [rateLimit] }, async (_request, reply) => {
+    const { getMaintenance } = await import('../services/maintenanceService')
+    return reply.send(await getMaintenance())
+  })
+
   // GET /api/v1/instance/info
   // Returns this instance's identity + live stats
   app.get('/info', { preHandler: [rateLimit] }, async (_request, reply) => {

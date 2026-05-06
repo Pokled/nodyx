@@ -14,6 +14,7 @@
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import MemberScreenPreview from '$lib/components/MemberScreenPreview.svelte';
+	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
 	import { get } from 'svelte/store';
 	import { voiceStore, voiceChannelMembersStore, voiceEventsStore, screenShareStore, remoteScreenStore } from '$lib/voice';
 	import { locale, t } from '$lib/i18n';
@@ -415,6 +416,9 @@
 </svelte:head>
 
 <div class="min-h-screen flex flex-col" style="{appVars}; background: var(--p-bg); color: var(--p-text)">
+
+	<!-- ══ MAINTENANCE BANNER (sticky top, hidden when no op in progress) ════════ -->
+	<MaintenanceBanner />
 
 	<!-- ══ CONTEXT BAR ══════════════════════════════════════════════════════== -->
 	<nav class="sticky top-0 z-50 shrink-0 h-12 flex items-center px-4 gap-3"
