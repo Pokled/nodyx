@@ -329,13 +329,25 @@ async function gatherStats(): Promise<BackupStats> {
 }
 
 async function gatherInstanceMeta(): Promise<{ name: string | null; slug: string | null; language: string | null }> {
+  // Prefer the env-pinned slug (matches adminOnly.ts behaviour and survives
+  // multi-community fixtures where ORDER BY created_at would pick the wrong row).
+  // The communities table has no `language` column — that lives in the env.
+  const envSlug = process.env.NODYX_COMMUNITY_SLUG
+  const language = process.env.NODYX_COMMUNITY_LANGUAGE || null
   try {
+    if (envSlug) {
+      const { rows } = await db.query(
+        `SELECT name, slug FROM communities WHERE slug = $1 LIMIT 1`,
+        [envSlug],
+      )
+      if (rows[0]) return { name: rows[0].name, slug: rows[0].slug, language }
+    }
     const { rows } = await db.query(
-      `SELECT name, slug, language FROM communities ORDER BY created_at ASC LIMIT 1`
+      `SELECT name, slug FROM communities ORDER BY created_at ASC LIMIT 1`
     )
-    if (rows[0]) return { name: rows[0].name, slug: rows[0].slug, language: rows[0].language }
+    if (rows[0]) return { name: rows[0].name, slug: rows[0].slug, language }
   } catch { /* table absent in fresh installs */ }
-  return { name: null, slug: null, language: null }
+  return { name: null, slug: null, language }
 }
 
 // ─── Filename / slug helpers ───────────────────────────────────────────────
