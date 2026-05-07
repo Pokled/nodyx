@@ -140,8 +140,16 @@ export async function mountYTPlayer(containerId: string): Promise<void> {
     _ytPlayer = new YT.Player(containerId, {
       width: '200', height: '113',
       playerVars: {
+        // mute: 1 is the only autoplay-policy-safe default. Programmatic
+        // _ytPlayer.mute() called from _applyState was racing against
+        // playVideo() and sometimes losing, leaving the player stuck in
+        // a CUED state with no audio AND no progress. Starting muted at
+        // the iframe level guarantees autoplay works on every browser.
+        // The host's own jukeboxLoad() / jukeboxPlay() flow un-mutes
+        // immediately because the user has interacted; peers see the
+        // green "Activer le son" overlay and unmute on click.
         controls: 0, modestbranding: 1, rel: 0,
-        playsinline: 1, mute: 0, origin: window.location.origin,
+        playsinline: 1, mute: 1, origin: window.location.origin,
       },
       events: {
         onReady: () => {
@@ -222,12 +230,19 @@ export function jukeboxEnableAudio(): void {
     } catch { /* ignore */ }
   }
 
-  // Resync to current host position (the listener has been hearing silence
-  // while the video kept playing, so jumping to "now" is the correct UX).
+  // Resync to current host position AND force the player to actually play.
+  // The track may be sitting in a CUED state (state 5) if the initial
+  // muted-autoplay attempt didn't fully transition the player, especially
+  // when the audio policy is strict on the browser. seekTo + playVideo +
+  // a 500ms retry covers all the YouTube IFrame state machine quirks.
   const state = get(jukeboxStore)
   if (state.playing && state.track) {
     const target = _livePosition(state)
-    try { _ytPlayer.seekTo(target, true) } catch { /* ignore */ }
+    try {
+      _ytPlayer.seekTo(target, true)
+      _ytPlayer.playVideo()
+      setTimeout(() => _ytPlayer?.playVideo(), 500)
+    } catch { /* ignore */ }
   }
 }
 
@@ -261,15 +276,27 @@ function _applyState(state: JukeboxState): void {
     const sameVideo = prev.track?.videoId === state.track?.videoId
     const target    = _livePosition(state)
 
-    // Browser autoplay policies refuse unmuted playVideo() before any user
-    // gesture. To stay synchronized visually + audibly, we MUTE the player
-    // before any incoming "play" command if the user hasn't interacted yet,
-    // and surface a "Activer le son" overlay (jukeboxStartedMuted=true).
-    // The user clicks once → jukeboxEnableAudio() un-mutes and resyncs.
-    const needMutedStart = state.playing && !_userInteracted
-    if (needMutedStart) {
-      try { _ytPlayer.mute() } catch { /* ignore */ }
-      jukeboxStartedMuted.set(true)
+    // Audio policy: the player boots with playerVars.mute=1 so unmuted
+    // autoplay can never be denied. Two paths from here:
+    //   - User has interacted at least once on the page (host clicking
+    //     Play, anyone clicking anywhere on the document): un-mute now,
+    //     restore the volume slider, and play with sound.
+    //   - User has not interacted yet (peer joining a channel where
+    //     music is already playing): leave the player muted, show the
+    //     green "Activer le son" overlay, the user un-mutes on click
+    //     via jukeboxEnableAudio().
+    if (state.playing) {
+      const userPrefMuted = get(jukeboxMuted)
+      if (_userInteracted && !userPrefMuted) {
+        try {
+          _ytPlayer.unMute()
+          _ytPlayer.setVolume(get(jukeboxVolume))
+        } catch { /* ignore */ }
+        jukeboxStartedMuted.set(false)
+      } else if (!_userInteracted) {
+        try { _ytPlayer.mute() } catch { /* ignore */ }
+        jukeboxStartedMuted.set(true)
+      }
     }
 
     if (state.track) {
