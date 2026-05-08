@@ -45,8 +45,14 @@ export interface StreamerProvider {
   getCurrentUser(accessToken: string): Promise<ProviderUser>
 
   // ── EventSub / webhooks subscription management ────────────────────────────
+  // accessToken peut être un app access token OU un user access token, selon
+  // les exigences de l'event :
+  //   - app token : events qui ne demandent pas de scope user (follow, raid,
+  //     stream.online, poll.*, etc. quand user_id n'est pas dans la condition)
+  //   - user token : events qui exigent un scope user_id avec scope spécifique
+  //     (ex: channel.chat.message → user_id avec user:read:chat)
   createEventSubscription(args: {
-    appAccessToken: string
+    accessToken:    string
     eventType:      string
     condition:      Record<string, string>
     callbackUrl:    string
@@ -55,9 +61,22 @@ export interface StreamerProvider {
 
   deleteEventSubscription(appAccessToken: string, externalSubId: string): Promise<void>
 
+  // Liste les subscriptions actives côté provider. Utilisé pour dédupliquer
+  // un re-sync : si une sub matche déjà (type, version, condition), on skip.
+  listEventSubscriptions(appAccessToken: string): Promise<ListedSubscription[]>
+
   // App Access Token (client_credentials grant) — utilisé pour les opérations
-  // qui ne dépendent pas d'un user spécifique (ex: subscribe EventSub).
+  // qui ne dépendent pas d'un user spécifique.
   getAppAccessToken(): Promise<string>
+}
+
+export interface ListedSubscription {
+  id:        string
+  type:      string
+  version:   string
+  status:    string
+  condition: Record<string, string>
+  callback:  string  // transport.callback URL
 }
 
 // ── Erreur unifiée pour les providers ────────────────────────────────────────

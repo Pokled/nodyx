@@ -8,6 +8,8 @@ import { randomBytes } from 'node:crypto'
 import {
   saveStreamerTokens,
   findPrimaryStreamer,
+  getDecryptedTokens,
+  refreshAndPersist,
   type StreamerTokenRow,
 } from './tokenService'
 import { createSubscription, listSubscriptions, setExternalSubId } from './eventsubService'
@@ -164,10 +166,51 @@ const buildSubscribeSpecsForPhase1 = buildSubscribeSpecs
 
 export interface SubscribeResult {
   eventType:     string
-  status:        'created' | 'skipped' | 'failed'
+  status:        'created' | 'exists' | 'skipped' | 'failed'
   externalSubId?: string
   error?:        string
-  reason?:       string  // ex: 'missing_scope:user:read:chat'
+  reason?:       string  // ex: 'missing_scope:user:read:chat', 'already_subscribed'
+}
+
+// Utilitaire : récupère un user access token frais pour le primary streamer.
+// Auto-refresh si expirera dans < 5 min. Retourne null si pas de streamer
+// connecté (sub user-scoped impossible) ou si le refresh échoue.
+async function getValidUserAccessToken(provider: StreamerProvider): Promise<string | null> {
+  const primary = await findPrimaryStreamer(provider.id)
+  if (!primary) return null
+
+  const REFRESH_MARGIN_MS = 5 * 60 * 1000
+  const expiresInMs = primary.expiresAt.getTime() - Date.now()
+  if (expiresInMs < REFRESH_MARGIN_MS) {
+    try {
+      await refreshAndPersist({ provider, rowId: primary.id })
+    } catch (err) {
+      console.error('[streamerHub] proactive refresh failed', err)
+      return null
+    }
+  }
+
+  const decrypted = await getDecryptedTokens(primary.id)
+  return decrypted?.accessToken ?? null
+}
+
+// Match une subscription existante côté Twitch contre une spec voulue.
+// Compare type, version, et toutes les clés de condition (broadcaster_user_id,
+// user_id, moderator_user_id, etc.).
+function matchesSpec(existing: { type: string; version: string; condition: Record<string, string>; status: string }, spec: SubscribeSpec): boolean {
+  if (existing.type    !== spec.eventType) return false
+  if (existing.version !== spec.version)   return false
+  // Twitch garde des subs en "enabled", "webhook_callback_verification_pending",
+  // "webhook_callback_verification_failed", "notification_failures_exceeded",
+  // "authorization_revoked", etc. On considère "enabled" et "*_pending" comme
+  // match (ne pas re-créer). Les statuts d'erreur (failures_exceeded, revoked,
+  // user_removed, version_removed) → on doit re-créer.
+  const okStatuses = new Set(['enabled', 'webhook_callback_verification_pending'])
+  if (!okStatuses.has(existing.status)) return false
+  for (const [k, v] of Object.entries(spec.condition)) {
+    if (existing.condition[k] !== v) return false
+  }
+  return true
 }
 
 export async function subscribeAllStreamerEvents(args: {
@@ -181,9 +224,22 @@ export async function subscribeAllStreamerEvents(args: {
   const granted  = new Set(args.grantedScopes ?? [])
   const results: SubscribeResult[] = []
 
+  // Liste les subs existantes côté Twitch UNE FOIS pour pouvoir dédupliquer.
+  // Évite la dérive "27 subs sur Twitch alors qu'on en veut 10" qu'on avait
+  // au premier sync de Phase 2.
+  let existingSubs: Awaited<ReturnType<StreamerProvider['listEventSubscriptions']>> = []
+  try {
+    existingSubs = await args.provider.listEventSubscriptions(appToken)
+  } catch (err) {
+    console.error('[streamerHub] listEventSubscriptions failed (continuing without dedup)', err)
+  }
+
+  // Lazy-load le user access token : on ne le récupère que si une spec en a besoin.
+  let userToken: string | null = null
+  let userTokenLoaded = false
+
   for (const spec of specs) {
-    // Skip si scope requis non accordé. Permet d'ajouter de nouveaux events
-    // (Phase 2+) sans casser les streamers connectés en Phase 1 sans le scope.
+    // Skip si scope requis non accordé.
     if (spec.requiredScope && !granted.has(spec.requiredScope)) {
       results.push({
         eventType: spec.eventType,
@@ -193,8 +249,37 @@ export async function subscribeAllStreamerEvents(args: {
       continue
     }
 
+    // Skip si déjà subscribed côté Twitch.
+    if (existingSubs.some(s => matchesSpec(s, spec))) {
+      results.push({
+        eventType: spec.eventType,
+        status:    'exists',
+        reason:    'already_subscribed_on_twitch',
+      })
+      continue
+    }
+
+    // Choix du token : user access token si requiredScope (event user-scoped),
+    // sinon app access token (events broadcaster-scoped).
+    let accessToken = appToken
+    if (spec.requiredScope) {
+      if (!userTokenLoaded) {
+        userToken = await getValidUserAccessToken(args.provider)
+        userTokenLoaded = true
+      }
+      if (!userToken) {
+        results.push({
+          eventType: spec.eventType,
+          status:    'failed',
+          error:     'no_valid_user_access_token',
+        })
+        continue
+      }
+      accessToken = userToken
+    }
+
     try {
-      const hmacSecret = randomBytes(32).toString('base64url').slice(0, 64) // 64 ASCII chars (10..100 OK)
+      const hmacSecret = randomBytes(32).toString('base64url').slice(0, 64)
       const placeholder = await createSubscription({
         provider:      args.provider.id,
         externalSubId: 'pending',
@@ -204,18 +289,13 @@ export async function subscribeAllStreamerEvents(args: {
 
       const callbackUrl = `${args.publicBase.replace(/\/+$/, '')}/api/v1/integrations/twitch/eventsub/${placeholder.callbackNonce}`
       const created = await args.provider.createEventSubscription({
-        appAccessToken: appToken,
-        eventType:      spec.eventType,
-        condition:      { ...spec.condition, version: spec.version },
+        accessToken,
+        eventType:  spec.eventType,
+        condition:  { ...spec.condition, version: spec.version },
         callbackUrl,
         hmacSecret,
       })
 
-      // Set le vrai external_sub_id reçu de Twitch (le placeholder était 'pending').
-      // Note : Twitch peut avoir déjà appelé /eventsub/:nonce pour la verification
-      // entre l'INSERT et ici. Le webhook handler markEnabledById(sub.id) fait
-      // référence au rowId stable, donc l'enabled_at est déjà set même si le
-      // status était 'pending' au moment de la verification.
       await setExternalSubId(placeholder.id, created.externalSubId)
 
       results.push({
@@ -232,12 +312,11 @@ export async function subscribeAllStreamerEvents(args: {
     }
   }
 
-  // Si chat.message subscribe a réussi, auto-créer le channel #twitch-chat
-  // pour qu'il apparaisse dans la liste avant même le 1er message reçu.
-  // Best-effort : si l'auto-create échoue (pas de community resolvable),
-  // le channel sera créé lazy au 1er pushChatMessage (brique 2.3).
+  // Si chat.message subscribe a réussi (created OU déjà exists), auto-créer
+  // le channel #twitch-chat pour qu'il apparaisse dans la liste avant même
+  // le 1er message reçu.
   const chatSubOk = results.some(r =>
-    r.eventType === 'channel.chat.message' && r.status === 'created'
+    r.eventType === 'channel.chat.message' && (r.status === 'created' || r.status === 'exists')
   )
   if (chatSubOk) {
     try {
