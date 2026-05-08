@@ -2,12 +2,12 @@
 // Quand un event EventSub arrive, on persiste en DB (eventService.recordEvent)
 // puis on pousse aussi un message système dans le chat Nodyx pour visibilité.
 //
-// Phase 1 : l'author_id du message est le user Nodyx qui a OAuth-connecté Twitch
-// (le primary streamer côté Nodyx). En Phase futur on pourra créer un compte
-// "nodyx-system" dédié pour les messages bot, mais ça apporte de la complexité
-// (gérer les bans, les permissions, etc.) — pas Phase 1.
+// Author = user système "Nodyx" auto-créé à la première écriture. Mot de passe
+// impossible (hash bidon), email réservé @nodyx.invalid, donc impossible à
+// usurper via login. Membre de la community en role 'member'.
 //
-// Le channel #streamer-events est auto-créé à la première écriture, idempotent.
+// Channel #streamer-events auto-créé à la première écriture (idempotent),
+// marqué is_system_managed=TRUE → lecture seule pour les non-mods.
 
 import { db } from '../../config/database'
 import * as Channel from '../../models/channel'
@@ -16,6 +16,12 @@ import type { ProviderId } from './providers/_types'
 
 const STREAMER_EVENTS_SLUG = 'streamer-events'
 const STREAMER_EVENTS_NAME = 'streamer-events'
+
+const SYSTEM_USERNAME       = 'Nodyx'
+const SYSTEM_EMAIL          = 'system@nodyx.invalid'
+// bcrypt hash invalide intentionnellement, jamais matchable côté login.
+// Le check password fait par bcrypt.compare retournera toujours false.
+const SYSTEM_PASSWORD_HASH  = '!system-no-login-' + 'x'.repeat(40)
 
 // ── Channel auto-create / find ──────────────────────────────────────────────
 
@@ -49,6 +55,54 @@ export async function ensureStreamerEventsChannel(communityId: string): Promise<
   )
   _cachedChannelId = channel.id
   return _cachedChannelId
+}
+
+// ── System user "Nodyx" — author des messages auto-générés ──────────────────
+
+let _cachedSystemUserId: string | null = null
+
+export async function ensureSystemUser(communityId: string): Promise<string | null> {
+  if (_cachedSystemUserId) return _cachedSystemUserId
+
+  // 1. Find or create the user
+  const existing = await db.query<{ id: string }>(
+    `SELECT id FROM users WHERE username = $1 LIMIT 1`,
+    [SYSTEM_USERNAME],
+  )
+  let userId: string
+  if (existing.rows[0]) {
+    userId = existing.rows[0].id
+  } else {
+    const created = await db.query<{ id: string }>(
+      `INSERT INTO users (username, email, password)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (username) DO NOTHING
+       RETURNING id`,
+      [SYSTEM_USERNAME, SYSTEM_EMAIL, SYSTEM_PASSWORD_HASH],
+    )
+    if (created.rows[0]) {
+      userId = created.rows[0].id
+    } else {
+      // Race : un autre thread l'a créé entre nos 2 queries — re-find
+      const refind = await db.query<{ id: string }>(
+        `SELECT id FROM users WHERE username = $1 LIMIT 1`,
+        [SYSTEM_USERNAME],
+      )
+      if (!refind.rows[0]) return null
+      userId = refind.rows[0].id
+    }
+  }
+
+  // 2. Ensure community membership (idempotent, role member)
+  await db.query(
+    `INSERT INTO community_members (community_id, user_id, role)
+     VALUES ($1, $2, 'member')
+     ON CONFLICT (community_id, user_id) DO NOTHING`,
+    [communityId, userId],
+  )
+
+  _cachedSystemUserId = userId
+  return userId
 }
 
 // ── Resolve community id (NODYX_COMMUNITY_SLUG env or first community) ──────
@@ -154,7 +208,6 @@ export async function pushEventToChat(args: {
   provider:   ProviderId
   eventType:  string
   payload:    unknown
-  authorId:   string  // user Nodyx qui a OAuth-connecté (le primary streamer)
 }): Promise<void> {
   const text = formatEventMessage(args.eventType, args.payload)
   if (!text) return
@@ -162,12 +215,15 @@ export async function pushEventToChat(args: {
   const communityId = await getInstanceCommunityId()
   if (!communityId) return
 
-  const channelId = await ensureStreamerEventsChannel(communityId)
-  if (!channelId) return
+  const [channelId, systemUserId] = await Promise.all([
+    ensureStreamerEventsChannel(communityId),
+    ensureSystemUser(communityId),
+  ])
+  if (!channelId || !systemUserId) return
 
   const message = await Channel.addMessage({
     channel_id: channelId,
-    author_id:  args.authorId,
+    author_id:  systemUserId,
     content:    text,
   })
 

@@ -271,19 +271,15 @@ export async function ingestEvent(args: {
   })
 
   // Push aussi un message système dans le channel #streamer-events pour
-  // visibilité dans l'UI chat existante. Author = primary streamer (le user
-  // Nodyx qui a OAuth-connecté Twitch). Best-effort : si la résolution
-  // échoue, on a déjà persisté l'event en DB.
+  // visibilité dans l'UI chat existante. Author = user "Nodyx" système
+  // auto-créé (cf streamerChat.ensureSystemUser). Best-effort : si la
+  // résolution échoue, l'event reste persisté en DB.
   try {
-    const primary = await findPrimaryStreamer(args.provider)
-    if (primary?.userId) {
-      await pushEventToChat({
-        provider:  args.provider,
-        eventType: args.eventType,
-        payload:   args.payload,
-        authorId:  primary.userId,
-      })
-    }
+    await pushEventToChat({
+      provider:  args.provider,
+      eventType: args.eventType,
+      payload:   args.payload,
+    })
   } catch (err) {
     console.error('[streamerHub] pushEventToChat failed', err)
   }
