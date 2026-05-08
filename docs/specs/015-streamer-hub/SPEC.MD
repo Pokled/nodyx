@@ -1,8 +1,8 @@
 # Nodyx Streamer Hub
 
-**Statut** : validée v2.1 — Phase 0 (spike) à lancer, Phase 1 prête derrière
+**Statut** : v2.2 — Phase 0 (spike) ✅ close, Phase 1 prête à démarrer
 **Numéro de spec** : 015
-**Version** : 2.1 (2026-05-07)
+**Version** : 2.2 (2026-05-08)
 **Auteur** : Pokled + Claude
 **Phase cible** : v2.5 (Phase 1) → v2.7 (Phase 5 complète)
 
@@ -260,17 +260,23 @@ CREATE INDEX idx_streamer_audit_created ON streamer_audit_log(created_at DESC);
 
 ### 4.1 Scopes minimaux requis
 
-| Scope | Pourquoi |
-|---|---|
-| `user:read:email` | Identifier le streamer |
-| `chat:read` | Lire le chat Twitch (bridge → Nodyx) |
-| `chat:edit` | Envoyer messages dans le chat Twitch (bridge ← Nodyx) |
-| `channel:read:subscriptions` | Détecter les subs |
-| `bits:read` | Détecter les bits |
-| `moderator:read:followers` | Détecter les follows (oui, c'est `moderator` dans la nouvelle API EventSub) |
-| `clips:edit` | Top clips, raider preview |
-| `channel:read:polls` | Recap polls |
-| `channel:manage:polls` | Optionnel : créer un poll Twitch depuis Nodyx |
+Liste mise à jour après le spike Phase 0 (cf [PHASE_0_REPORT.md](PHASE_0_REPORT.md)).
+
+| Scope | Pourquoi | Phase |
+|---|---|---|
+| `user:read:email` | Identifier le streamer | 1 |
+| `user:read:chat` | EventSub Chat (lire le chat) | 2 |
+| `user:write:chat` | Helix Send Chat Message (écrire dans le chat) | 2 |
+| `channel:read:subscriptions` | Détecter les subs | 1 |
+| `bits:read` | Détecter les bits | 1 |
+| `moderator:read:followers` | Détecter les follows (préfixe `moderator` côté EventSub) | 1 |
+| `channel:read:polls` | Recap polls | 4 |
+| `channel:manage:polls` | Optionnel : créer un poll Twitch depuis Nodyx | 4 |
+| `clips:edit` | Création de clips depuis Nodyx (`!clip`, auto-clip) | 5 |
+
+Notes spike :
+- **Scope `clips:read` retiré** : il **n'existe pas** côté Twitch (`invalid scope requested`). Pour *lire* les top clips (Helix `GET /clips`), un App Access Token suffit, aucun scope user requis. `clips:edit` ne sert que pour *créer* un clip et arrive en Phase 5.
+- **`chat:read` / `chat:edit` retirés** : ce sont les anciens scopes IRC. La spec utilise EventSub Chat (`user:read:chat` / `user:write:chat`), aligné §6.1.
 
 ### 4.2 Flow
 
@@ -753,19 +759,19 @@ Rationale : les fondations (chiffrement double, isolation système, nonce URL, a
 
 ### 15.bis — Points à valider explicitement en Phase 0
 
-Ces 5 hypothèses de la spec ne sont **pas confirmées** par la doc Twitch publique, ou présentent un risque de mauvaise surprise. Le spike Phase 0 doit produire un GO / NO-GO sur chacun avant de lancer Phase 1. Si un point bloque, on adapte la spec, pas la Phase 1.
+Ces 5 hypothèses de la spec n'étaient **pas confirmées** par la doc Twitch publique, ou présentaient un risque de mauvaise surprise. Le spike Phase 0 (cf [PHASE_0_REPORT.md](PHASE_0_REPORT.md)) a produit un GO / NO-GO sur chacun.
 
-1. **EventSub Chat ne nécessite pas de validation "Chat Bot"** — l'event `channel.chat.message` (GA fin 2024) requiert le scope `user:read:chat` côté streamer. Vérifier qu'aucune validation supplémentaire de l'application n'est requise (genre review Twitch pour bots) qui rallongerait la mise en service de plusieurs semaines. Critère GO : on reçoit une notification `channel.chat.message` en sandbox dev.twitch.tv avec une app fraîchement créée, sans review.
+1. ✅ **EventSub Chat ne nécessite pas de validation "Chat Bot"** — Validé empiriquement le 2026-05-08. La consent screen Twitch a accepté `user:read:chat` sur une app fraîchement créée (< 24 h), sans review demandée. Pipeline EventSub Chat dispo sans frottement administratif.
 
-2. **`clips:read` suffit-il à la place de `clips:edit` ?** La spec demande `clips:edit` mais on ne fait que *lire* les top clips (Helix `GET /clips`). Le scope `clips:edit` autorise *créer* un clip — utile uniquement si on veut un `!clip` futur. Critère GO : confirmer que `GET /clips?broadcaster_id=...` marche avec `clips:read` seul. Si oui, on remplace `clips:edit` par `clips:read` dans §4.1 (principe du moindre privilège).
+2. ✅ **`clips:read` n'existe pas** — Twitch rejette ce scope avec `invalid scope requested`. Pour *lire* les top clips, un App Access Token suffit (Helix `GET /clips` est public côté lecture). `clips:edit` reste pour Phase 5 (création de clips depuis Nodyx). §4.1 mis à jour.
 
-3. **Scopes pour `!so @user` (shoutout)** — Pour fetcher le dernier stream d'un autre streamer (`!so @raidedUser`), on appelle Helix `GET /channels?broadcaster_id=...` qui retourne le dernier titre / catégorie. Vérifier que ce endpoint est public (App Access Token suffisant) ou s'il faut un scope spécifique du compte requérant. Critère GO : appel test depuis le spike avec un App Access Token, succès attendu.
+3. ⏸ **Scopes pour `!so @user` (shoutout)** — Différé. Hors scope spike (canary minimal). Hypothèse maintenue : Helix `GET /channels?broadcaster_id=...` accessible avec App Access Token. À valider en Phase 5. Pas bloquant pour Phase 1-4.
 
-4. **Twitch Extension Developer Rig & hosting** — La submission Twitch exige que les assets de l'extension soient servis via HTTPS public (le `manifest.json` pointe vers une URL publique de l'instance). Critère GO : valider qu'une instance Nodyx en self-hosted derrière Cloudflare Tunnel ou avec certificat Let's Encrypt valide est éligible. Bloquant si Twitch exige un domaine sur whitelist (peu probable mais à confirmer). Mitigation si bloquant : héberger les assets sur un CDN externe et ne renvoyer que les *données* depuis l'instance.
+4. ⏸ **Twitch Extension Developer Rig & hosting** — Différé. Validation manuelle au moment de la submission Phase 5. Mitigation prévue si Twitch refuse self-hosted : héberger les assets sur CDN externe, ne servir que les *données* depuis l'instance.
 
-5. **Queue chat outbound : timeout + purge** — La queue Redis `streamer:chat:send_queue` (§6.5) doit avoir un TTL par message (ex 5 min) au-delà duquel le message est abandonné, sinon un stream qui dure 8 h avec backpressure peut accumuler des messages obsolètes qui partiront tous d'un coup à la fin. Critère implémentation Phase 2 : chaque entrée queue = `{ msg, expires_at }`, le worker drop les entrées expirées sans tentative d'envoi, alerte admin si taux de drop > 10%.
+5. ⏸ **Queue chat outbound : timeout + purge** — Différé. Hors scope spike (la queue n'existe que côté Phase 2). Pattern à implémenter en Phase 2 selon §6.5 : chaque entrée queue = `{ msg, expires_at }`, le worker drop les entrées expirées sans tentative d'envoi, alerte admin si taux de drop > 10%.
 
-Le spike Phase 0 produit un mini-rapport `docs/specs/015-streamer-hub/PHASE_0_REPORT.md` avec un GO / NO-GO sur chacun de ces 5 points + recommandation d'ajustement de la spec si besoin.
+**Bonus validé au-delà des 5 critères initiaux** : le canary `stream.online` a été reçu live (POST → log `🎬 EventSub notification reçue` en 2 ms), validant le path `notification` en plus du path `verification`. Voir PHASE_0_REPORT.md pour le détail.
 
 ---
 
@@ -789,17 +795,21 @@ Le spike Phase 0 produit un mini-rapport `docs/specs/015-streamer-hub/PHASE_0_RE
 
 ## 17. Décision finale & ordre d'attaque
 
-Spec **v2.1** validée Pokled (2026-05-07). On attaque dans cet ordre :
+Spec **v2.2** validée Pokled (2026-05-08). Phase 0 spike terminée avec succès (6/6 GO sur ce qui était validable, cf [PHASE_0_REPORT.md](PHASE_0_REPORT.md)).
 
-1. **Phase 0 — Spike technique** sur `feat/streamer-hub-spike`. 1 à 2 jours.
-   Objectif : OAuth Twitch streamer + 1 webhook EventSub bout-en-bout, dans notre topologie Caddy + nodyx-core. Pas d'UI, pas de DB, pas de chat. Logs console.
-   Livrable : `docs/specs/015-streamer-hub/PHASE_0_REPORT.md` avec GO / NO-GO sur les 5 points §15.bis.
-   Si GO sur l'ensemble → merge `main`, on garde le code minimal comme socle Phase 1.
-   Si NO-GO sur ≥ 1 point → on adapte la spec, on relance le spike sur le delta.
+État actuel :
 
-2. **Phase 1 — Foundations Twitch** sur `feat/streamer-hub-phase-1`. Pattern backup system : branche dédiée, smoke test sur prod avant merge, mode maintenance auto-actif si on touche à des données critiques.
+1. ✅ **Phase 0 — Spike technique** sur `feat/streamer-hub-spike` (archive). OAuth + EventSub bout-en-bout validés en 3h, canary `stream.online` reçu live en 2 ms. Branche conservée comme archive, code helpers réutilisables pour Phase 1.
+
+2. ➡️ **Phase 1 — Foundations Twitch** sur `feat/streamer-hub-phase-1` (à démarrer depuis `main`). Pattern backup system : branche dédiée, smoke test sur prod avant merge, mode maintenance auto-actif si on touche à des données critiques. Estimé 2-3 j.
 
 ### Changelog de la spec
+
+**v2.2 — 2026-05-08** (post-spike Phase 0)
+- §4.1 Scopes : retrait `clips:read` (n'existe pas chez Twitch) + retrait `chat:read`/`chat:edit` (anciens scopes IRC, remplacés par `user:read:chat`/`user:write:chat`). Phase explicite par scope (1 / 2 / 4 / 5).
+- §15.bis : statuts GO/NO-GO mis à jour (#1 ✓, #2 ✓, #3 ⏸, #4 ⏸, #5 ⏸). Bonus canary `stream.online` reçu live ajouté.
+- §17 : mise à jour de la décision finale (Phase 0 close, Phase 1 prête à démarrer).
+- Nouveau fichier [PHASE_0_REPORT.md](PHASE_0_REPORT.md) : rapport définitif du spike.
 
 **v2.1 — 2026-05-07** (post-relecture Pokled)
 - §3 schéma DB : ajout colonnes `enc_salt`, `enc_iv`, `enc_tag`, `key_version`, `rotated_at` sur `streamer_oauth_tokens` ; nouvelle table `streamer_eventsub_subscriptions` (nonce URL + secret HMAC chiffré)
