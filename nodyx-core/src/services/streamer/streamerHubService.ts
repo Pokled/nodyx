@@ -12,6 +12,7 @@ import {
 } from './tokenService'
 import { createSubscription, listSubscriptions, setExternalSubId } from './eventsubService'
 import { recordEvent } from './eventService'
+import { pushEventToChat } from './streamerChat'
 import { audit } from './audit'
 import { twitchProvider } from './providers/twitchProvider'
 import type { StreamerProvider, ProviderId } from './providers/_types'
@@ -268,6 +269,24 @@ export async function ingestEvent(args: {
     payload:    args.payload,
     userId,
   })
+
+  // Push aussi un message système dans le channel #streamer-events pour
+  // visibilité dans l'UI chat existante. Author = primary streamer (le user
+  // Nodyx qui a OAuth-connecté Twitch). Best-effort : si la résolution
+  // échoue, on a déjà persisté l'event en DB.
+  try {
+    const primary = await findPrimaryStreamer(args.provider)
+    if (primary?.userId) {
+      await pushEventToChat({
+        provider:  args.provider,
+        eventType: args.eventType,
+        payload:   args.payload,
+        authorId:  primary.userId,
+      })
+    }
+  } catch (err) {
+    console.error('[streamerHub] pushEventToChat failed', err)
+  }
 }
 
 // Le user qui agit dans le payload dépend de l'event. Pour la plupart des
