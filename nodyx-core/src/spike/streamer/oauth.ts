@@ -30,16 +30,20 @@ import {
 import { randomBytes } from 'node:crypto'
 
 // Phase 0 utilise les scopes les plus larges qu'on aura besoin en Phase 1-2,
-// pour valider que la consent screen ne pose pas de problème (scopes refusés,
-// review Twitch demandée, etc.). Voir §15.bis points 1 et 2.
+// pour valider que la consent screen ne pose pas de problème.
+//
+// §15.bis #2 résolu (spike 2026-05-08) : Twitch rejette `clips:read` avec
+// "invalid scope requested" → ce scope n'existe pas. Pour lire les top clips
+// (Helix GET /clips), un App Access Token suffit (pas besoin de scope user).
+// On garde `clips:edit` pour Phase 5 quand on voudra créer des clips depuis
+// Nodyx, mais pas en Phase 0.
 const SCOPES_PHASE_0 = [
   'user:read:email',
-  'user:read:chat',                  // EventSub Chat (§15.bis #1)
+  'user:read:chat',                  // EventSub Chat (§15.bis #1, à valider)
   'user:write:chat',                 // Helix Send Chat Message
   'channel:read:subscriptions',
   'bits:read',
   'moderator:read:followers',
-  'clips:read',                      // §15.bis #2 — testons si suffisant avant clips:edit
   'channel:read:polls',
 ]
 
