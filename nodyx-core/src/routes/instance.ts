@@ -10,7 +10,7 @@ import { FastifyInstance } from 'fastify'
 import * as fs   from 'fs'
 import * as path from 'path'
 
-const NODYX_VERSION = process.env.NODYX_VERSION ?? '1.8.0'
+import { NODYX_VERSION } from '../utils/version'
 import { db, redis } from '../config/database'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'

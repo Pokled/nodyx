@@ -16,6 +16,7 @@ import { io } from '../socket/io'
 import { invalidateUserSessions } from './auth'
 import { isSmtpConfigured, sendPasswordResetEmail } from '../services/emailService'
 import { scanBuffer } from '../services/fileScanner'
+import { NODYX_VERSION } from '../utils/version'
 import { randomUUID, createHash, randomBytes } from 'crypto'
 import { createWriteStream, mkdirSync } from 'fs'
 import { pipeline } from 'stream/promises'
@@ -855,7 +856,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   app.get('/update-check', { preHandler: [rateLimit, adminOnly] }, async (_request, reply) => {
     const CACHE_KEY = 'update_check'
-    const CURRENT = process.env.NODYX_VERSION ?? '1.8.0'
+    const CURRENT = NODYX_VERSION
 
     const cached = await redis.get(CACHE_KEY).catch(() => null)
     if (cached) return reply.send(JSON.parse(cached))
