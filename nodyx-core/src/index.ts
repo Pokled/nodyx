@@ -35,6 +35,7 @@ import { adminBackupRoutes } from './routes/admin_backups'
 import canvasRoutes          from './routes/canvas'
 import twitchRoutes           from './routes/twitch'
 import { streamerAdminPlugin, streamerEventsubPlugin } from './routes/streamer'
+import { startChatOutboundWorker } from './services/streamer/twitchChatBridge'
 import { setIO }              from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
@@ -215,6 +216,8 @@ const start = async () => {
     registerSocketIO(io)
     console.log('⚡ Socket.IO prêt')
     startScheduler(io)
+    startChatOutboundWorker()
+    console.log('📨 Streamer chat outbound worker prêt')
   } catch (err) {
     server.log.error(err)
     process.exit(1)

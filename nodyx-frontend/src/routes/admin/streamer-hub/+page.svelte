@@ -29,6 +29,7 @@
 	let connecting    = $state(false)
 	let refreshing    = $state(false)
 	let disconnecting = $state(false)
+	let syncing       = $state(false)
 	let toast         = $state<{ text: string; ok: boolean } | null>(null)
 
 	const primary       = $derived<StreamerRow | null>(data.primaryStreamer)
@@ -85,6 +86,32 @@
 			pushToast('Erreur réseau', false)
 		} finally {
 			refreshing = false
+		}
+	}
+
+	async function syncSubscriptions() {
+		if (!primary || syncing) return
+		syncing = true
+		try {
+			const res = await fetch('/api/v1/streamer/twitch/sync-subscriptions', {
+				method:  'POST',
+				headers: authHeaders(),
+			})
+			if (res.ok) {
+				const j = await res.json()
+				pushToast(
+					`Sync : ${j.created} créées, ${j.skipped} skippées, ${j.failed} en échec`,
+					j.failed === 0,
+				)
+				await invalidateAll()
+			} else {
+				const err = await res.json().catch(() => ({}))
+				pushToast(err.message ?? 'Sync échoué', false)
+			}
+		} catch {
+			pushToast('Erreur réseau', false)
+		} finally {
+			syncing = false
 		}
 	}
 
@@ -247,6 +274,15 @@
 					</div>
 				</div>
 				<div class="flex flex-col gap-2 shrink-0">
+					<button
+						onclick={syncSubscriptions}
+						disabled={syncing}
+						class="text-xs bg-violet-900/30 hover:bg-violet-900/50 disabled:opacity-50
+						       text-violet-300 border border-violet-900/40 px-3 py-1.5 rounded-lg transition-colors"
+						title="Re-souscrit aux events EventSub. Utile pour ajouter les events Phase 2+ sans se reconnecter."
+					>
+						{syncing ? 'Sync…' : 'Synchroniser'}
+					</button>
 					<button
 						onclick={refreshTokens}
 						disabled={refreshing}

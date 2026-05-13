@@ -15,6 +15,10 @@ export type AuditAction =
   | 'hmac_invalid'
   | 'config_obs'
   | 'generate_extension'
+  | 'chat_relay_sent'
+  | 'chat_relay_queued'
+  | 'chat_relay_dropped'
+  | 'chat_relay_queue_overflow'
 
 export interface AuditEntry {
   action:    AuditAction

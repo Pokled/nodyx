@@ -1077,8 +1077,35 @@ _auto_backup_db() {
 }
 
 # ── Version ────────────────────────────────────────────────────────────────────
-NODYX_VERSION="2.2.0"
-INSTALLER_VERSION="2.2.0"
+# Source unique de vérité : fichier VERSION à la racine du repo. Résolution
+# en cascade pour couvrir les 3 modes d'invocation (local, curl|bash, wget).
+#   1. VERSION à côté du script (mode local : `git clone && bash install.sh`)
+#   2. raw.githubusercontent.com/.../main/VERSION (mode `curl|bash`)
+#   3. GitHub API releases/latest tag_name (fallback si raw down)
+#   4. "unknown" — l'installeur continue mais le badge sera dégradé
+_resolve_version() {
+  local script_dir local_ver raw_ver api_ver
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || script_dir=""
+
+  if [[ -n "$script_dir" && -f "$script_dir/VERSION" ]]; then
+    local_ver="$(tr -d '[:space:]' < "$script_dir/VERSION" 2>/dev/null || true)"
+    if [[ -n "$local_ver" ]]; then echo "$local_ver"; return; fi
+  fi
+
+  raw_ver="$(curl -sf --max-time 5 https://raw.githubusercontent.com/Pokled/Nodyx/main/VERSION 2>/dev/null | tr -d '[:space:]' || true)"
+  if [[ -n "$raw_ver" ]]; then echo "$raw_ver"; return; fi
+
+  api_ver="$(curl -sf --max-time 5 \
+    -H 'Accept: application/vnd.github+json' \
+    https://api.github.com/repos/Pokled/Nodyx/releases/latest 2>/dev/null \
+    | grep -oE '"tag_name":[[:space:]]*"[^"]+"' | head -1 \
+    | sed -E 's/.*"v?([^"]+)".*/\1/' || true)"
+  if [[ -n "$api_ver" ]]; then echo "$api_ver"; return; fi
+
+  echo "unknown"
+}
+NODYX_VERSION="$(_resolve_version)"
+INSTALLER_VERSION="$NODYX_VERSION"
 # Relay client binary — single source of truth, used by install AND nodyx-update
 NODYX_RELAY_VERSION="v0.1.4-p2p"
 
@@ -1341,11 +1368,16 @@ _DB_EXISTS=false
 _DB_TABLE_COUNT=0
 _EXISTING_MSGS=()
 
-# Lire la version depuis package.json (sans démarrer le serveur)
-if [[ -f "${_NODYX_CHECK_DIR}/nodyx-core/package.json" ]]; then
+# Priorité 1 : fichier VERSION à la racine du repo installé (source unique de
+# vérité depuis v2.5.0). Priorité 2 : package.json (legacy installs antérieurs).
+# Priorité 3 : API live /instance/info (mais peut renvoyer une valeur cachée
+# dans le .env d'une vieille install, donc dernier recours).
+if [[ -f "${_NODYX_CHECK_DIR}/VERSION" ]]; then
+  _INSTALLED_VERSION=$(tr -d '[:space:]' < "${_NODYX_CHECK_DIR}/VERSION" 2>/dev/null || true)
+fi
+if [[ -z "$_INSTALLED_VERSION" ]] && [[ -f "${_NODYX_CHECK_DIR}/nodyx-core/package.json" ]]; then
   _INSTALLED_VERSION=$(node -p "require('${_NODYX_CHECK_DIR}/nodyx-core/package.json').version" 2>/dev/null || true)
 fi
-# Fallback : interroger l'API si elle est en cours d'exécution
 if [[ -z "$_INSTALLED_VERSION" ]]; then
   _INSTALLED_VERSION=$(curl -sf --max-time 3 http://localhost:3000/api/v1/instance/info 2>/dev/null \
     | grep -o '"version":"[^"]*"' | cut -d'"' -f4 || true)
@@ -2139,11 +2171,15 @@ else
 fi
 ok "$(printf "$(t clone_done)" "$NODYX_DIR")"
 
-# Read the actual version from the repo (avoids drift with the hardcoded version)
-_PKG_VER=$(node -p "require('${NODYX_DIR}/nodyx-core/package.json').version" 2>/dev/null || true)
-if [[ -n "$_PKG_VER" ]]; then
-  NODYX_VERSION="$_PKG_VER"
-  info "$(printf "$(t ver_from_repo)" "${NODYX_VERSION}")"
+# Réconciliation : si le repo cloné contient un fichier VERSION, on s'y aligne
+# (priorité absolue car c'est ce que le code Nodyx lira au boot). Sinon on
+# garde la valeur résolue avant clone (via _resolve_version).
+if [[ -f "${NODYX_DIR}/VERSION" ]]; then
+  _REPO_VER="$(tr -d '[:space:]' < "${NODYX_DIR}/VERSION" 2>/dev/null || true)"
+  if [[ -n "$_REPO_VER" && "$_REPO_VER" != "$NODYX_VERSION" ]]; then
+    NODYX_VERSION="$_REPO_VER"
+    info "$(printf "$(t ver_from_repo)" "${NODYX_VERSION}")"
+  fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2160,6 +2196,10 @@ NODYX_COMMUNITY_SLUG=${COMMUNITY_SLUG}
 NODYX_COMMUNITY_DESCRIPTION=${COMMUNITY_DESC}
 NODYX_COMMUNITY_LANGUAGE=${COMMUNITY_LANG}
 NODYX_COMMUNITY_COUNTRY=${COMMUNITY_COUNTRY}
+# Note: NODYX_VERSION ci-dessous est purement informationnel depuis v2.5.0.
+# La version réelle est lue par nodyx-core depuis le fichier VERSION à la
+# racine du repo (cf src/utils/version.ts). Cette ligne reste pour les
+# outils externes (monitoring, scripts) qui parseraient le .env.
 NODYX_VERSION=${NODYX_VERSION}
 
 # Serveur

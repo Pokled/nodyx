@@ -406,3 +406,17 @@ select option {
   0%   { text-shadow: none; }
   100% { text-shadow: 0 0 6px currentColor, 0 0 12px currentColor; filter: brightness(1.3); }
 }
+
+/* ── Streamer Hub — emotes inline (Phase 2 §6.3) ─────────────────────────── */
+/* Emotes Twitch natives + BTTV/FFZ/7TV rendues en <img class="streamer-emote">
+   par le backend dans les messages du channel #twitch-chat. Taille alignée
+   avec la hauteur de ligne du chat. */
+.streamer-emote {
+  display: inline-block;
+  height: 1.75em;
+  vertical-align: middle;
+  margin: 0 1px;
+  user-select: none;
+  /* fallback pour les images qui mettent du temps à charger : pas de bordure */
+  border: none;
+}

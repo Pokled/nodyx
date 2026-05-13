@@ -20,7 +20,30 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-INSTALLER_VERSION="1.1.0"
+# Source unique de vérité : fichier VERSION à la racine du repo. Cf install.sh
+# pour le détail (mêmes priorités : local → raw.githubusercontent → API).
+_resolve_version() {
+  local script_dir local_ver raw_ver api_ver
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || script_dir=""
+
+  if [[ -n "$script_dir" && -f "$script_dir/VERSION" ]]; then
+    local_ver="$(tr -d '[:space:]' < "$script_dir/VERSION" 2>/dev/null || true)"
+    if [[ -n "$local_ver" ]]; then echo "$local_ver"; return; fi
+  fi
+
+  raw_ver="$(curl -sf --max-time 5 https://raw.githubusercontent.com/Pokled/Nodyx/main/VERSION 2>/dev/null | tr -d '[:space:]' || true)"
+  if [[ -n "$raw_ver" ]]; then echo "$raw_ver"; return; fi
+
+  api_ver="$(curl -sf --max-time 5 \
+    -H 'Accept: application/vnd.github+json' \
+    https://api.github.com/repos/Pokled/Nodyx/releases/latest 2>/dev/null \
+    | grep -oE '"tag_name":[[:space:]]*"[^"]+"' | head -1 \
+    | sed -E 's/.*"v?([^"]+)".*/\1/' || true)"
+  if [[ -n "$api_ver" ]]; then echo "$api_ver"; return; fi
+
+  echo "unknown"
+}
+INSTALLER_VERSION="$(_resolve_version)"
 
 # ── Tempfile cleanup ──────────────────────────────────────────────────────────
 # Every mktemp we issue is registered here so the EXIT trap can wipe it on a
@@ -1771,8 +1794,27 @@ TUNNEL_MODE_VAL="cf"
 [[ -f "$TUNNEL_MODE_FILE" ]] && TUNNEL_MODE_VAL=$(cat "$TUNNEL_MODE_FILE" 2>/dev/null || echo cf)
 
 echo -e "\n${BOLD}━━━  Nodyx update  ━━━${RESET}\n"
+
+_read_repo_version() {
+  if [[ -f "${NODYX_DIR}/VERSION" ]]; then
+    tr -d '[:space:]' < "${NODYX_DIR}/VERSION" 2>/dev/null
+  else
+    node -p "require('${NODYX_DIR}/nodyx-core/package.json').version" 2>/dev/null || echo "unknown"
+  fi
+}
+
+_VER_BEFORE="$(_read_repo_version)"
+info "Version actuelle: ${BOLD}${_VER_BEFORE}${RESET}"
+
 info "Pulling latest..."
 git -C "$NODYX_DIR" pull --ff-only || die "git pull failed."
+
+_VER_AFTER="$(_read_repo_version)"
+if [[ "$_VER_BEFORE" != "$_VER_AFTER" ]]; then
+  info "Version cible: ${BOLD}${_VER_AFTER}${RESET} (mise à jour)"
+else
+  info "Déjà à jour sur ${BOLD}${_VER_AFTER}${RESET} (rebuild forcé)"
+fi
 
 info "Rebuild backend..."
 cd "${NODYX_DIR}/nodyx-core"
@@ -1804,7 +1846,7 @@ case "$TUNNEL_MODE_VAL" in
 esac
 
 echo ""
-ok "Nodyx updated and restarted (tunnel mode: $TUNNEL_MODE_VAL)."
+ok "Nodyx ${BOLD}${_VER_AFTER}${RESET} updated and restarted (tunnel mode: $TUNNEL_MODE_VAL)."
 runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list
 UPDATESH2
 chmod +x /usr/local/bin/nodyx-update

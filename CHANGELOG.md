@@ -9,6 +9,53 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [2.5.0] — 2026-05-10
+
+### Streamer Hub — Phase 2 : chat unifié Twitch ↔ Nodyx (spec 015)
+
+Chat bidirectionnel temps réel entre une instance Nodyx et le chat Twitch du streamer principal. Pipeline 100% EventSub Chat + Helix Send Chat Message, zéro IRC. Vérifié en prod (277 messages reçus pendant la session test). Voir [PHASE_2_REPORT.md](docs/specs/015-streamer-hub/PHASE_2_REPORT.md) pour le détail complet.
+
+**Chat inbound (Twitch → Nodyx)**
+- Subscription EventSub `channel.chat.message` créée et persistée (`enabled`)
+- Channel `#twitch-chat` auto-créé à la première sync, read-write par défaut pour tous les membres
+- Chaque message Twitch est mappé à un author Nodyx (résolu via `twitch_id` si lié, sinon créé en placeholder) et publié dans `#twitch-chat`
+- Volume non persisté dans `streamer_events` (early-return), atterrit directement dans `channel_messages`
+
+**Chat outbound (Nodyx → Twitch)**
+- Quand un membre Nodyx écrit dans `#twitch-chat`, le message est relayé via Helix `POST /chat/messages` (best-effort, async, ne bloque pas le socket)
+- Préfixe `[username]` activé par défaut (transparence pour les viewers Twitch), désactivable via `STREAMER_CHAT_NO_PREFIX=1`
+- Garde-fou : on n'envoie QUE si une session `streamer_sessions.ended_at IS NULL` existe. Mode test bypass via `STREAMER_CHAT_TEST_MODE=1`
+- Sur 429 Twitch (rate-limit), le message est enqueué dans une sorted set Redis `streamer:chat:send_queue` (score = nextRetryAt). Worker `setInterval(2s)` qui dépile par batch de 10, retry avec backoff exponentiel `2^attempts * 1s` (cap 30s). Drop si attempts > 5 ou TTL 60s dépassé
+- Alerte audit `chat_relay_queue_overflow` si la queue dépasse 50 messages
+- Nouvelles actions audit : `chat_relay_sent`, `chat_relay_queued`, `chat_relay_dropped`, `chat_relay_queue_overflow`
+
+**Lifecycle des sessions de stream**
+- `stream.online` event → INSERT row dans `streamer_sessions` (external_id = stream_id Twitch, idempotent `ON CONFLICT DO NOTHING`)
+- `stream.offline` event → UPDATE `ended_at = NOW()` sur toutes les rows ouvertes du provider
+- Nécessaire pour le check live du chat bridge outbound (§6.4)
+
+**Emotes et badges**
+- Emotes natives Twitch rendues depuis les fragments du payload (CDN `static-cdn.jtvnw.net`)
+- Emotes BTTV / FFZ / 7TV fetched en parallèle par channel, cache Redis 24h (`streamer:emotes:ch:<id>`). Précédence 7TV > FFZ > BTTV pour les codes en collision
+- Badges Twitch globaux + channel via Helix `/chat/badges/global` + `/chat/badges/channel`. Caches Redis : global 7j, channel 24h, App Access Token 50j. Badge channel override global (custom subscriber, etc.)
+- Render `<img class="streamer-badge">` préfixé au message, `<img class="streamer-emote">` inline
+- Dégradation gracieuse : si Helix ou un provider tiers échoue, le message reste lisible sans emotes/badges
+
+**Tests**
+- 65 nouveaux tests Phase 2 (5 fichiers) : bridge (14), emotes (11), lifecycle (9), outbound queue (17), badges (14)
+- Suite complète : 269/269 verts (vs 204/204 avant Phase 2)
+
+**Scopes Twitch (Phase 1+2 accordés)**
+`bits:read`, `channel:bot`, `channel:read:polls`, `channel:read:subscriptions`, `moderator:read:followers`, `user:bot`, `user:read:chat`, `user:read:email`, `user:write:chat`. Phase 4 ajoutera `channel:manage:polls`. Phase 5 ajoutera `clips:edit`.
+
+**Hygiène & docs**
+- Audit complet Phase 2 réalisé le 2026-05-10 (détection : badges manquants, queue manquante, tests Phase 2 à zéro, commentaires obsolètes)
+- Cleanup : import `redis` inutilisé retiré, commentaires obsolètes corrigés (`twitchChatBridge.ts`)
+- `docs/specs/015-streamer-hub/PHASE_2_REPORT.md` créé (source froide, pattern aligné sur `PHASE_0_REPORT.md`)
+- Spec §13 + §17 rectifiées : Phase 1 = Flow A only (Flow B/C reportés en Phase 5 où ils s'intègrent avec la Twitch Extension)
+
+---
+
 ## [2.4.0] — 2026-05-07
 
 ### Backup System — Phase 1 MVP (spec 014)

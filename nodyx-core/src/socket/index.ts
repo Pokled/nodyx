@@ -454,6 +454,33 @@ export function registerSocketIO(server: Server): void {
           io.to(`channel:${channelId}`).emit('chat:message', message)
         }
 
+        // ── Streamer Hub bridge outbound (Phase 2 §6.4) ──────────────────
+        // Si le message a été posté dans le channel #twitch-chat, on le
+        // relaie vers le chat Twitch via Helix POST /chat/messages. Best-
+        // effort, ne bloque pas la response socket. Skip si stream offline
+        // (le bridge.relay check tout seul).
+        const { rows: chCheck } = await db.query<{ slug: string }>(
+          `SELECT slug FROM channels WHERE id = $1 LIMIT 1`,
+          [channelId],
+        ).catch(() => ({ rows: [] as { slug: string }[] }))
+        if (chCheck[0]?.slug === 'twitch-chat') {
+          import('../services/streamer/twitchChatBridge')
+            .then(({ relayMessageToTwitch }) =>
+              relayMessageToTwitch({
+                provider:       'twitch',
+                authorUsername: username,
+                authorUserId:   userId,
+                text:           content.replace(/<[^>]+>/g, '').trim(),
+                                // strip HTML pour Twitch chat (texte brut)
+              }))
+            .then(r => {
+              if (!r.ok && r.reason !== 'stream_offline') {
+                console.warn('[chat:send] twitch relay failed', { reason: r.reason })
+              }
+            })
+            .catch(err => console.error('[chat:send] twitch relay error', err))
+        }
+
         // Push notifications for @mentions
         const mentionedIds = await resolveMentions(sanitized).catch(() => [])
         for (const notifiedUserId of mentionedIds) {

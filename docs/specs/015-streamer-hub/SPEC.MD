@@ -697,11 +697,11 @@ Rationale : les fondations (chiffrement double, isolation système, nonce URL, a
 | Phase | Livrable | Effort | Valeur |
 |---|---|---|---|
 | **0 — Spike technique** | OAuth Twitch streamer + 1 webhook EventSub qui logge l'event dans la console + refresh token. Aucune UI, aucune persistence, aucun chat. **Lever les doutes du flow OAuth/HMAC/refresh avant tout engagement de Phase 1.** | 1-2 j | Validation de faisabilité |
-| **1 — Foundations Twitch** | OAuth Twitch streamer (+ stockage chiffré), EventSub complet (follow / sub / raid / bits / poll / stream), feed activité dans le chat Nodyx, `users.twitch_id`, OAuth viewer (3 flows) | 2-3 j | 🔥 Déjà utilisable comme alerte streamer |
-| **2 — Chat unifié Twitch ↔ Nodyx** | Bridge **EventSub Chat (in) + Helix Send Chat Message (out)**, badges Twitch + BTTV/FFZ/7TV emotes, channel `#twitch-chat` auto, check stream live avant send | 3-4 j | 🔥 Remplace Streamer.bot pour 90% des cas |
+| **1 — Foundations Twitch** | OAuth Twitch streamer (+ stockage chiffré), EventSub complet (follow / sub / raid / bits / poll / stream), feed activité dans le chat Nodyx, `users.twitch_id`, OAuth viewer **Flow A** (lier son Twitch perso à un compte Nodyx existant). Flow B/C reportés en Phase 5. | 2-3 j | 🔥 Déjà utilisable comme alerte streamer |
+| **2 — Chat unifié Twitch ↔ Nodyx** | Bridge **EventSub Chat (in) + Helix Send Chat Message (out)**, badges Twitch + BTTV/FFZ/7TV emotes, channel `#twitch-chat` auto, check stream live avant send, queue Redis recovery sur 429 | 3-4 j | 🔥 Remplace Streamer.bot pour 90% des cas |
 | **3 — OBS Stream Deck web** | Connexion OBS WebSocket v5 depuis le navigateur (LAN + tunnel), grille drag-and-drop, actions essentielles, doc tunnel pour multi-PC | 4-5 j | 🔥 Remplace Stream Deck Elgato (~150€) |
 | **4 — Stats live + récap polls** | Thread mensuel + post-par-stream auto-update, récap auto en fin de stream + récap mensuel le 1er de chaque mois, mirror polls Twitch | 3-4 j | 🔥 Remplace une partie de StreamElements |
-| **5 — Top clips, raider preview, commandes chat, Twitch Extension** | Commandes `!topclips` `!uptime` `!followage` `!so` `!commands` (avec rate-limit), raider preview overlay, générateur d'extension Twitch | 1-2 sem | 🔥 Effet viral |
+| **5 — Top clips, raider preview, commandes chat, Twitch Extension** | Commandes `!topclips` `!uptime` `!followage` `!so` `!commands` (avec rate-limit), raider preview overlay, générateur d'extension Twitch, **Flow B/C viewer** (signup auto / login auto depuis le panel Twitch) | 1-2 sem | 🔥 Effet viral |
 
 **Phase 0 (Spike)** est OBLIGATOIRE avant Phase 1. C'est un proof-of-concept jeté qui valide que le flow OAuth Twitch + signature HMAC EventSub + refresh tokens fonctionne bout en bout dans notre environnement Caddy + nodyx-core. Si la Phase 0 révèle un blocage technique majeur (cas tordu CORS, problème de redirect URI multi-instance, etc.), on l'apprend en 1 jour, pas en plein milieu de la Phase 1. Le code de Phase 0 est jeté ou intégré, peu importe — l'objectif est l'apprentissage.
 
@@ -795,7 +795,7 @@ Ces 5 hypothèses de la spec n'étaient **pas confirmées** par la doc Twitch pu
 
 ## 17. Décision finale & ordre d'attaque
 
-Spec **v2.3** validée Pokled (2026-05-08). Phase 0 ✅ + Phase 1 ✅ livrées en prod (`nodyx.org`). Phase 2 prête à démarrer.
+Spec **v2.4** validée Pokled (2026-05-10). Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ livrées en prod (`nodyx.org`). Phase 3 prête à démarrer.
 
 État actuel :
 
@@ -810,13 +810,29 @@ Spec **v2.3** validée Pokled (2026-05-08). Phase 0 ✅ + Phase 1 ✅ livrées e
    - Channel auto `#streamer-events` (`is_system_managed=TRUE`, lecture seule sauf mods)
    - User système Nodyx auto-créé (avatar logo, name_color #7c3aed, glow Twitch purple, bio)
    - Push automatique des events au chat avec 9 templates formatés
-   - OAuth viewer Flow A : `/settings` > "Comptes liés" pour lier son Twitch perso à son profil Nodyx
+   - OAuth viewer **Flow A** : `/settings` > "Comptes liés" pour lier son Twitch perso à son profil Nodyx (Flow B/C reportés en Phase 5)
    - Callback OAuth idempotent (gère les requests dupliqués Twitch sans page d'erreur)
    - 204/204 tests verts, build TS clean
 
-3. ➡️ **Phase 2 — Chat unifié Twitch ↔ Nodyx** (à démarrer depuis `main` sur `feat/streamer-hub-phase-2`). Bridge EventSub Chat (in) + Helix Send Chat Message (out) + badges/emotes BTTV/FFZ/7TV + channel `#twitch-chat` auto. Estimé 3-4 j.
+3. ✅ **Phase 2 — Chat unifié Twitch ↔ Nodyx** (`feat/streamer-hub-phase-2`, mergée dans `main` via `v2.5.0`). Livré 2026-05-10. Voir [PHASE_2_REPORT.md](PHASE_2_REPORT.md) pour le détail complet. Résumé :
+   - EventSub Chat `channel.chat.message` (subscription créée, dedup vs Twitch)
+   - Channel `#twitch-chat` auto, read-write par défaut (relai outbound depuis tout membre)
+   - Outbound via Helix `POST /chat/messages` avec garde-fou `streamer_sessions` (live only)
+   - Lifecycle de sessions : INSERT à `stream.online`, UPDATE `ended_at` à `stream.offline`
+   - Emotes natives Twitch (fragments + CDN) + BTTV / FFZ / 7TV (fetch parallèle, cache Redis 24h)
+   - Badges Twitch globaux + channel via Helix (App Access Token cache 50j, global 7j, channel 24h)
+   - Queue Redis `streamer:chat:send_queue` (sorted set) + backoff exponentiel + alerte audit > 50
+   - 65 nouveaux tests (5 fichiers), 269/269 verts
+
+4. ➡️ **Phase 3 — OBS Stream Deck web** (à démarrer depuis `main`). WebSocket v5 navigateur-direct (topologies A + B), grille drag-and-drop, doc tunnel pour le cas C. Estimé 4-5 j.
 
 ### Changelog de la spec
+
+**v2.4 — 2026-05-10** (post-livraison Phase 2)
+- §13 : Phase 1 rectifiée (Flow A only, Flow B/C reportés en Phase 5).
+- §13 : Phase 2 enrichie (mention de la queue Redis recovery sur 429, livrée).
+- §13 : Phase 5 enrichie (Flow B/C viewer ajoutés).
+- §17 : Phase 2 marquée livrée + PHASE_2_REPORT.md référencé. Phase 3 ordonnée.
 
 **v2.3 — 2026-05-08** (post-livraison Phase 1)
 - §17 : Phase 1 marquée livrée, recap de ce qui est en prod, Phase 2 ordonnée

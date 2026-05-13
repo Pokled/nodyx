@@ -20,6 +20,7 @@ import {
   getViewerLink,
   ingestEvent,
   listEventSubStatus,
+  syncStreamerSubscriptions,
   unlinkViewerTwitch,
   STREAMER_HUB_SCOPES,
   VIEWER_SCOPES,
@@ -274,6 +275,27 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
   // GET /twitch/eventsub-status  — admin only — état des subscriptions
   server.get('/twitch/eventsub-status', { preHandler: adminOnly }, async () => {
     return await listEventSubStatus('twitch')
+  })
+
+  // POST /twitch/sync-subscriptions  — admin only — re-souscrit tous les events
+  // pour le primary streamer connecté. Utile pour ajouter les events Phase 2+
+  // sans qu'il ait à se reconnecter, tant que les scopes ont déjà été accordés
+  // (Phase 1 demandait déjà user:read:chat dans STREAMER_HUB_SCOPES).
+  server.post('/twitch/sync-subscriptions', { preHandler: adminOnly }, async (request, reply) => {
+    const result = await syncStreamerSubscriptions({
+      provider:    getProvider('twitch'),
+      publicBase:  publicBase(),
+    })
+    if (!result.ok) {
+      return reply.code(404).send({ ok: false, error: result.reason })
+    }
+    return reply.send({
+      ok:        true,
+      created:   result.results.filter(r => r.status === 'created').length,
+      skipped:   result.results.filter(r => r.status === 'skipped').length,
+      failed:    result.results.filter(r => r.status === 'failed').length,
+      results:   result.results,
+    })
   })
 
   // POST /twitch/refresh/:rowId  — admin only — refresh proactif

@@ -10,6 +10,7 @@ import {
   type OAuthTokens,
   type ProviderUser,
   type CreatedSubscription,
+  type ListedSubscription,
   ProviderError,
 } from './_types'
 
@@ -137,7 +138,7 @@ export const twitchProvider: StreamerProvider = {
     }
   },
 
-  async createEventSubscription({ appAccessToken, eventType, condition, callbackUrl, hmacSecret }): Promise<CreatedSubscription> {
+  async createEventSubscription({ accessToken, eventType, condition, callbackUrl, hmacSecret }): Promise<CreatedSubscription> {
     // Twitch exige version "1" pour la plupart des events (sauf channel.follow
     // qui est "2"). On laisse le caller fixer la version via condition.version
     // pour rester souple, mais le défaut est "1".
@@ -145,7 +146,14 @@ export const twitchProvider: StreamerProvider = {
     const cleanCondition = { ...condition }
     delete (cleanCondition as Record<string, string>).version
 
-    const data = await helixPost<{ data: CreatedSubscription[] }>('/eventsub/subscriptions', appAccessToken, {
+    // Twitch wire format: { data: [{ id, status, type, version, condition, transport, ... }] }.
+    // On mappe id → externalSubId pour la convention interne.
+    const data = await helixPost<{ data: Array<{
+      id:        string
+      status:    string
+      type:      string
+      condition: Record<string, string>
+    }> }>('/eventsub/subscriptions', accessToken, {
       type:    eventType,
       version,
       condition: cleanCondition,
@@ -156,7 +164,13 @@ export const twitchProvider: StreamerProvider = {
       },
     })
     if (!data.data.length) throw new ProviderError('twitch', 500, data, 'createEventSubscription empty response')
-    return data.data[0]
+    const raw = data.data[0]
+    return {
+      externalSubId: raw.id,
+      status:        raw.status,
+      type:          raw.type,
+      condition:     raw.condition,
+    }
   },
 
   async deleteEventSubscription(appAccessToken: string, externalSubId: string): Promise<void> {
@@ -168,6 +182,27 @@ export const twitchProvider: StreamerProvider = {
       },
     })
     if (res.status !== 204) throw new ProviderError('twitch', res.status, await res.text(), 'deleteEventSubscription failed')
+  },
+
+  async listEventSubscriptions(appAccessToken: string): Promise<ListedSubscription[]> {
+    const data = await helixGet<{
+      data: Array<{
+        id:        string
+        type:      string
+        version:   string
+        status:    string
+        condition: Record<string, string>
+        transport: { method: string; callback?: string }
+      }>
+    }>('/eventsub/subscriptions', appAccessToken)
+    return data.data.map(s => ({
+      id:        s.id,
+      type:      s.type,
+      version:   s.version,
+      status:    s.status,
+      condition: s.condition,
+      callback:  s.transport.callback ?? '',
+    }))
   },
 
   async getAppAccessToken(): Promise<string> {
