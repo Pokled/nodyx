@@ -649,14 +649,28 @@
 
 	function onScroll() {
 		if (!messagesEl) return
-		// Met à jour stickBottom selon la position : on suit si dans les 120px
-		// du bas. Au-delà, l'auto-scroll est désactivé jusqu'à ce que l'user
-		// redescende. Le seuil 120px évite le yo-yo si on est à ~2-3 lignes
-		// du bas (typique après auto-scroll d'un message reçu).
+		// onScroll seulement pour RÉACTIVER le sticky quand on revient
+		// vraiment en bas (< 30px). La désactivation se fait via wheel/touch
+		// qui détectent une action user explicite — ça évite que le scroll
+		// programmatique (notre scrollTop = scrollHeight) ne s'auto-perturbe.
 		const dist = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight
-		stickBottom = dist < 120
+		if (dist < 30) stickBottom = true
 
 		if (messagesEl.scrollTop < 80) loadMore()
+	}
+
+	// Wheel (souris / trackpad) : un scroll vers le haut désactive sticky
+	// immédiatement, même de quelques pixels. C'est plus fiable que mesurer
+	// la position après coup (qui peut être en conflit avec un re-scroll
+	// programmatique provoqué par le ResizeObserver).
+	function onWheel(e: WheelEvent) {
+		if (e.deltaY < 0) stickBottom = false
+	}
+
+	// Touch (mobile) : tout touch-scroll désactive sticky. Le onScroll
+	// le réactivera si l'user redescend tout en bas (< 30px).
+	function onTouchMove() {
+		stickBottom = false
 	}
 
 	function emitTyping() {
@@ -1083,6 +1097,8 @@
 		<div
 			bind:this={messagesEl}
 			onscroll={onScroll}
+			onwheel={onWheel}
+			ontouchmove={onTouchMove}
 			data-dm-messages
 			class="flex-1 overflow-y-auto px-5 py-4 min-h-0"
 			style="scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.06) transparent"
