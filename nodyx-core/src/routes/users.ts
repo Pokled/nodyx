@@ -113,7 +113,9 @@ export default async function userRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth],
   }, async (request, reply) => {
     const { q } = request.query as { q?: string }
-    if (!q || q.trim().length < 3) return reply.send({ users: [] })
+    // Seuil 2 chars : compromis entre UX (résultats rapides) et coût/abus
+    // (un seul char retournerait potentiellement tous les usernames).
+    if (!q || q.trim().length < 2) return reply.send({ users: [] })
 
     // Rate limit per-user : max 20 recherches/min (clé Redis search_rate:{userId})
     const userId = request.user!.userId

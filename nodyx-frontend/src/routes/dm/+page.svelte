@@ -58,6 +58,8 @@
 
 	async function searchUsers(q: string) {
 		if (q.trim().length < 2) { searchResults = []; return }
+		// Seuil 2 chars : aligné avec le backend pour éviter un round-trip
+		// inutile au 1er caractère.
 		searching = true
 		try {
 			const res = await apiFetch(fetch, `/users/search?q=${encodeURIComponent(q)}`, {
@@ -297,7 +299,7 @@
 					{/if}
 				</div>
 
-				<!-- Résultats sous l'input central -->
+				<!-- Résultats sous l'input central + feedback intermédiaire -->
 				{#if searchResults.length > 0}
 					<div class="absolute top-full mt-2 left-0 right-0 bg-gray-900 border border-white/[0.08] rounded-xl shadow-2xl z-20 overflow-hidden">
 						{#each searchResults as u}
@@ -318,6 +320,17 @@
 								</svg>
 							</button>
 						{/each}
+					</div>
+				{:else if searchQuery.trim().length === 1}
+					<div class="absolute top-full mt-2 left-0 right-0 bg-gray-900/95 border border-white/[0.08] rounded-xl shadow-2xl z-20 px-3 py-3 flex items-center gap-2 text-xs text-gray-500">
+						<svg class="w-3.5 h-3.5 shrink-0 text-indigo-400/60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+						</svg>
+						Continue à taper… (encore 1 caractère)
+					</div>
+				{:else if searchQuery.trim().length >= 2 && !searching}
+					<div class="absolute top-full mt-2 left-0 right-0 bg-gray-900/95 border border-white/[0.08] rounded-xl shadow-2xl z-20 px-3 py-3 text-xs text-gray-500">
+						Aucun membre ne correspond à <span class="text-gray-300 font-mono">"{searchQuery.trim()}"</span>
 					</div>
 				{/if}
 			</div>
