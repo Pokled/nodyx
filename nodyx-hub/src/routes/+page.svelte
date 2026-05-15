@@ -80,7 +80,18 @@
         </div>
       `);
 
-      L.marker([inst.lat, inst.lng], { icon }).addTo(map).bindPopup(popup);
+      // Tooltip au hover : identifier le marker SANS avoir à cliquer.
+      // L'instance principale (nodyx.org) a un tooltip permanent comme
+      // repère visuel central de la carte.
+      const isMainInstance = inst.url === 'https://nodyx.org';
+      const marker = L.marker([inst.lat, inst.lng], { icon }).addTo(map).bindPopup(popup);
+      marker.bindTooltip(`${inst.name} <span style="color:#64748b;font-size:0.7rem;">· ${st}</span>`, {
+        direction: 'top',
+        offset:    [0, -8],
+        opacity:   isMainInstance ? 1 : 0.85,
+        permanent: isMainInstance,
+        className: isMainInstance ? 'hub-tooltip hub-tooltip--main' : 'hub-tooltip',
+      });
     }
 
     mapLoaded = true;
@@ -285,3 +296,31 @@
     {/each}
   </div>
 </div>
+
+<style>
+  /* Tooltip Leaflet : style cohérent avec le dark theme de la carte */
+  :global(.hub-tooltip) {
+    background: rgba(8, 12, 28, 0.92);
+    border: 1px solid rgba(56, 78, 180, 0.3);
+    border-radius: 6px;
+    color: #f1f5f9;
+    font-family: system-ui, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+  }
+  :global(.hub-tooltip::before) {
+    border-top-color: rgba(56, 78, 180, 0.3) !important;
+  }
+  /* Tooltip permanent de l'instance principale : un peu plus visible */
+  :global(.hub-tooltip--main) {
+    background: rgba(16, 24, 56, 0.96);
+    border-color: rgba(16, 185, 129, 0.5);
+    font-size: 0.75rem;
+  }
+  :global(.hub-tooltip--main::before) {
+    border-top-color: rgba(16, 185, 129, 0.5) !important;
+  }
+</style>
