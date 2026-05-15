@@ -68,6 +68,7 @@
 		other_username: string
 		other_avatar: string | null
 		other_name_color: string | null
+		created_at?: string
 	}
 
 	let messages: DmMessage[] = $state(untrack(() => data.messages ?? []))
@@ -159,6 +160,9 @@
 	let messagesEl: HTMLDivElement | null = $state(null)
 	let messagesInnerEl: HTMLDivElement | null = $state(null)
 	let dmRootEl: HTMLDivElement | null = $state(null)
+	// Hero d'ouverture : overlay éphémère au mount d'une conv pour donner une
+	// "ouverture émotionnelle" avant le dump des messages. ~1.2s total.
+	let showHero = $state(false)
 	// Suit-on le bas de la conv ? True par défaut → auto-scroll. Devient false
 	// quand l'user remonte de plus de 120px du bas. Repasse true s'il redescend.
 	let stickBottom = $state(true)
@@ -651,6 +655,28 @@
 		ro.observe(inner)
 		return () => ro.disconnect()
 	})
+
+	// Effet Hero : affiche un overlay d'accueil au mount d'une nouvelle conv.
+	// 200ms fade-in + scale, 700ms hold, 300ms fade-out = 1.2s total. Skip si
+	// pas de conversation (chargement, vue groupée, etc.) — uniquement DM 1:1.
+	let _heroShownForConvId = ''
+	$effect(() => {
+		const cid = conversationId
+		if (!cid || cid === _heroShownForConvId) return
+		if (!conversation || conversation.is_group) return
+		_heroShownForConvId = cid
+		showHero = true
+		const t = setTimeout(() => { showHero = false }, 1200)
+		return () => clearTimeout(t)
+	})
+
+	function formatHeroDate(iso: string | undefined): string {
+		if (!iso) return ''
+		try {
+			const d = new Date(iso)
+			return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+		} catch { return '' }
+	}
 
 	// Effet 2 : scroll initial UNIQUEMENT au changement de conversation.
 	// On le distingue du re-render réactif en stockant le dernier convId
@@ -1161,6 +1187,31 @@
 			{/if}
 		</header>
 
+		<!-- Hero d'ouverture : overlay éphémère au mount d'une nouvelle conv -->
+		{#if showHero && conversation && !conversation.is_group}
+			<div class="dm-hero-overlay" aria-hidden="true">
+				<div class="dm-hero-card">
+					{#if conversation.other_avatar}
+						<img src={conversation.other_avatar} alt="" class="dm-hero-avatar" />
+					{:else}
+						<div class="dm-hero-avatar dm-hero-avatar--initials"
+						     style={conversation.other_name_color ? `background: ${conversation.other_name_color}22; color: ${conversation.other_name_color}` : ''}>
+							{(conversation.other_username ?? '?')[0].toUpperCase()}
+						</div>
+					{/if}
+					<div class="dm-hero-name"
+					     style={conversation.other_name_color ? `color: ${conversation.other_name_color}` : ''}>
+						{conversation.other_username}
+					</div>
+					{#if conversation.created_at}
+						<div class="dm-hero-since">
+							Vous vous parlez depuis le {formatHeroDate(conversation.created_at)}
+						</div>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
 		<!-- Messages -->
 		<div
 			bind:this={messagesEl}
@@ -1451,6 +1502,80 @@
 </div>
 
 <style>
+/* ── Hero d'ouverture ─────────────────────────────────────────────────────── */
+.dm-hero-overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 40;
+	pointer-events: none;
+	background: radial-gradient(circle at center,
+		rgba(15, 15, 22, 0.65) 0%,
+		rgba(15, 15, 22, 0.0) 70%);
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
+	animation: dm-hero-overlay 1.2s cubic-bezier(.22,.8,.32,1) forwards;
+}
+@keyframes dm-hero-overlay {
+	0%   { opacity: 0; }
+	18%  { opacity: 1; }
+	75%  { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+.dm-hero-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 14px;
+	padding: 28px 40px;
+	animation: dm-hero-card 1.2s cubic-bezier(.22,.8,.32,1) forwards;
+}
+@keyframes dm-hero-card {
+	0%   { opacity: 0; transform: translateY(8px) scale(0.92); }
+	18%  { opacity: 1; transform: translateY(0)   scale(1.02); }
+	30%  { transform: translateY(0) scale(1); }
+	75%  { opacity: 1; transform: translateY(0) scale(1); }
+	100% { opacity: 0; transform: translateY(-6px) scale(1); }
+}
+
+.dm-hero-avatar {
+	width: 88px;
+	height: 88px;
+	border-radius: 50%;
+	object-fit: cover;
+	box-shadow:
+		0 0 0 3px rgba(255, 255, 255, 0.06),
+		0 0 32px rgba(124, 58, 237, 0.25),
+		0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.dm-hero-avatar--initials {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(124, 58, 237, 0.12);
+	color: #c4b5fd;
+	font-size: 38px;
+	font-weight: 800;
+	font-family: 'Space Grotesk', sans-serif;
+}
+.dm-hero-name {
+	font-size: 26px;
+	font-weight: 700;
+	color: #f1f5f9;
+	font-family: 'Space Grotesk', sans-serif;
+	letter-spacing: -0.01em;
+	text-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+}
+.dm-hero-since {
+	font-size: 12px;
+	color: rgba(226, 232, 240, 0.55);
+	font-style: italic;
+	letter-spacing: 0.02em;
+}
+
 /* ── Composer emoji popover (Layer 3) ─────────────────────────────────────── */
 .dm-composer-emoji-popover {
 	position: absolute;
