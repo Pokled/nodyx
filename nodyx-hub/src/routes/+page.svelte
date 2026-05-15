@@ -5,6 +5,19 @@
 
   let { data } = $props();
 
+  // Code pays ISO-3166 alpha-2 → emoji drapeau via Regional Indicator Symbols.
+  // 'F' (70) + 127397 = 127467 = 🇫, 'R' = 🇷, concaténés = 🇫🇷.
+  // Renvoie '' si code invalide pour ne rien afficher.
+  function flagEmoji(code: string | null | undefined): string {
+    if (!code || code.length !== 2) return '';
+    const up = code.toUpperCase();
+    if (!/^[A-Z]{2}$/.test(up)) return '';
+    return String.fromCodePoint(
+      127397 + up.charCodeAt(0),
+      127397 + up.charCodeAt(1),
+    );
+  }
+
   // Map
   let mapEl: HTMLDivElement;
   let mapLoaded = $state(false);
@@ -60,6 +73,7 @@
       });
 
       const lastSeen = inst.last_seen ? timeAgo(inst.last_seen) : 'jamais';
+      const flag     = flagEmoji(inst.country);
       const popup = L.popup({
         className: 'hub-popup',
         maxWidth: 240,
@@ -68,6 +82,7 @@
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
             <div style="width:8px;height:8px;border-radius:50%;background:${color};box-shadow:0 0 6px ${color};flex-shrink:0;"></div>
             <span style="font-weight:700;font-size:0.9rem;">${inst.name}</span>
+            ${flag ? `<span style="font-size:1.1rem;line-height:1;margin-left:auto;" title="${inst.country}">${flag}</span>` : ''}
           </div>
           <div style="font-size:0.75rem;color:#64748b;margin-bottom:6px;font-family:monospace;">${inst.url}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:0.75rem;">
@@ -75,7 +90,7 @@
             <span style="color:#64748b;">En ligne</span><span style="font-family:monospace;">${inst.online}</span>
             <span style="color:#64748b;">Version</span><span style="font-family:monospace;">${inst.version ?? '—'}</span>
             <span style="color:#64748b;">Vu</span><span style="font-family:monospace;">${lastSeen}</span>
-            ${inst.geo_city ? `<span style="color:#64748b;">Ville</span><span style="font-family:monospace;">${inst.geo_city}</span>` : ''}
+            ${inst.geo_city ? `<span style="color:#64748b;">Ville</span><span style="font-family:monospace;">${inst.geo_city}${(inst as any).isApproximate ? ' ~' : ''}</span>` : ''}
           </div>
         </div>
       `);
@@ -85,7 +100,7 @@
       // repère visuel central de la carte.
       const isMainInstance = inst.url === 'https://nodyx.org';
       const marker = L.marker([inst.lat, inst.lng], { icon }).addTo(map).bindPopup(popup);
-      marker.bindTooltip(`${inst.name} <span style="color:#64748b;font-size:0.7rem;">· ${st}</span>`, {
+      marker.bindTooltip(`${flag ? flag + ' ' : ''}${inst.name} <span style="color:#64748b;font-size:0.7rem;">· ${st}</span>`, {
         direction: 'top',
         offset:    [0, -8],
         opacity:   isMainInstance ? 1 : 0.85,
