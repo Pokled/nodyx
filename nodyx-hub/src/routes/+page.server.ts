@@ -6,7 +6,9 @@ import { getPool } from '$lib/server/pg.js';
 
 export const load: PageServerLoad = async () => {
   const [instances, stats, sysMetrics] = await Promise.all([
-    getAllInstances(),
+    // Vue carte = instances actives uniquement (les archivées sont gérées
+    // depuis /instances → section dépliable).
+    getAllInstances({ includeArchived: false }),
     getStats(),
     Promise.resolve(getSystemMetrics()),
   ]);

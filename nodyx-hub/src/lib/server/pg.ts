@@ -39,18 +39,47 @@ export interface DirectoryInstance {
   lat: number | null;
   lng: number | null;
   geo_city: string | null;
+  archived_at: string | null;
 }
 
-export async function getAllInstances(): Promise<DirectoryInstance[]> {
+// Par défaut on exclut les instances archivées (vue principale propre).
+// Utiliser includeArchived=true pour la section "archivées" séparée.
+export async function getAllInstances(opts: { includeArchived?: boolean } = {}): Promise<DirectoryInstance[]> {
   const pool = getPool();
+  const where = opts.includeArchived ? '' : 'WHERE archived_at IS NULL';
   const { rows } = await pool.query<DirectoryInstance>(`
     SELECT id, slug, name, description, url, ip, language, country,
            members, online, version, status, last_seen, registered_at,
-           admin_email, blocked_reason, blocked_at, lat, lng, geo_city
+           admin_email, blocked_reason, blocked_at, lat, lng, geo_city,
+           archived_at
     FROM directory_instances
+    ${where}
     ORDER BY registered_at DESC
   `);
   return rows;
+}
+
+// Archive les instances qui n'ont pas pingé depuis `days` jours.
+// Retourne le nombre d'instances archivées + la liste pour log.
+export async function archiveInactiveInstances(days: number): Promise<{ count: number; archived: { id: number; name: string; url: string; days_inactive: number }[] }> {
+  const pool = getPool();
+  const { rows } = await pool.query<{ id: number; name: string; url: string; days_inactive: number }>(`
+    UPDATE directory_instances
+    SET archived_at = NOW()
+    WHERE archived_at IS NULL
+      AND (last_seen IS NULL OR last_seen < NOW() - ($1 || ' days')::INTERVAL)
+    RETURNING id, name, url,
+              EXTRACT(EPOCH FROM (NOW() - COALESCE(last_seen, registered_at)))::int / 86400 AS days_inactive
+  `, [days]);
+  return { count: rows.length, archived: rows };
+}
+
+export async function unarchiveInstance(id: number): Promise<void> {
+  const pool = getPool();
+  await pool.query(
+    `UPDATE directory_instances SET archived_at = NULL WHERE id = $1`,
+    [id]
+  );
 }
 
 export async function blockInstance(id: number, reason: string): Promise<void> {
