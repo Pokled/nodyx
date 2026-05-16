@@ -2,6 +2,7 @@
 	import type { PageData, ActionData } from './$types'
 	import { enhance } from '$app/forms'
 	import ChannelStyleEditor from '$lib/components/admin/ChannelStyleEditor.svelte'
+	import ChannelIcon from '$lib/components/ChannelIcon.svelte'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -94,7 +95,9 @@
 									<button type="button" onclick={() => moveChannel(i, 1)} disabled={i === orderedChannels.length - 1}
 										class="text-gray-600 hover:text-gray-300 disabled:opacity-20 text-xs leading-none px-1" title="Descendre">▼</button>
 								</div>
-								<span class="text-xl shrink-0" style="color: {ch.name_color ?? '#9ca3af'}">{ch.icon_emoji ?? '🔊'}</span>
+								<span class="shrink-0 inline-flex items-center justify-center min-w-[24px]">
+								<ChannelIcon value={ch.icon_emoji} fallback="🔊" size={20} color={ch.name_color ?? '#9ca3af'} />
+							</span>
 								<div class="min-w-0 flex-1">
 									<p class="text-sm truncate"
 										style="
