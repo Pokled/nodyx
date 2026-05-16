@@ -3,7 +3,27 @@
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 
-	type Channel = { id: string; name: string; slug?: string; type?: string; description?: string };
+	type Channel = {
+		id:              string
+		name:            string
+		slug?:           string
+		type?:           string
+		description?:    string
+		name_color?:     string | null
+		name_bold?:      boolean
+		name_italic?:    boolean
+		name_underline?: boolean
+		icon_emoji?:     string | null
+	};
+
+	function nameStyle(ch: Channel): string {
+		const parts: string[] = []
+		if (ch.name_color)     parts.push(`color: ${ch.name_color}`)
+		if (ch.name_bold)      parts.push('font-weight: 700')
+		if (ch.name_italic)    parts.push('font-style: italic')
+		if (ch.name_underline) parts.push('text-decoration: underline')
+		return parts.join(';')
+	}
 
 	let {
 		textChannels = [],
@@ -111,7 +131,7 @@
 	"
 >
 	<div class="h-12 flex items-center px-4 border-b border-gray-800">
-		<span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Canaux</span>
+		<span class="text-xs font-bold text-gray-300 uppercase tracking-wider">Canaux</span>
 	</div>
 
 	<nav class="flex-1 overflow-y-auto py-2 px-2 custom-scrollbar">
@@ -140,8 +160,10 @@
 						       {isActive ? 'ch-active' : hasUnread ? 'ch-unread' : 'ch-idle'}
 						       {isFlashing ? 'ch-flash' : ''}"
 					>
-						<span class="ch-hash" class:ch-hash-unread={hasUnread}>#</span>
-						<span class="truncate flex-1" class:font-semibold={hasUnread}>{ch.slug ?? ch.name}</span>
+						<span class="ch-hash" class:ch-hash-unread={hasUnread} style={ch.name_color ? `color: ${ch.name_color}` : ''}>
+							{ch.icon_emoji ?? '#'}
+						</span>
+						<span class="truncate flex-1" class:font-semibold={hasUnread} style={nameStyle(ch)}>{ch.slug ?? ch.name}</span>
 						{#if hasUnread}
 							<span class="ch-badge">{unread > 99 ? '99+' : unread}</span>
 						{/if}
@@ -172,8 +194,13 @@
 						       {inThisChannel ? 'ch-voice-active' : 'ch-voice-idle'}"
 						title={inThisChannel ? 'Quitter le salon vocal' : 'Rejoindre le salon vocal'}
 					>
-						<!-- Icône dynamique : onde sonore idle / micro actif -->
-						{#if inThisChannel}
+						<!-- Icône : emoji custom prioritaire, sinon onde/micro animé -->
+						{#if ch.icon_emoji}
+							<span class="ch-voice-icon {inThisChannel ? 'ch-voice-icon--live' : ''}" aria-hidden="true"
+							      style={ch.name_color ? `color: ${ch.name_color}` : ''}>
+								{ch.icon_emoji}
+							</span>
+						{:else if inThisChannel}
 							<span class="ch-voice-icon ch-voice-icon--live" aria-hidden="true">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
@@ -186,7 +213,7 @@
 								</svg>
 							</span>
 						{/if}
-						<span class="truncate flex-1">{ch.name}</span>
+						<span class="truncate flex-1" style={nameStyle(ch)}>{ch.name}</span>
 						{#if inThisChannel}
 							<span class="ch-voice-live-pill" aria-label="Vous êtes dans ce salon">
 								<span class="ch-voice-live-dot"></span>
@@ -286,8 +313,8 @@
 		transition: color .15s, background .15s;
 	}
 
-	.ch-idle  { color: #6b7280; }
-	.ch-idle:hover { color: #e2e8f0; background: rgba(255,255,255,.04); }
+	.ch-idle  { color: #9ca3af; }
+	.ch-idle:hover { color: #f1f5f9; background: rgba(255,255,255,.06); }
 
 	.ch-active {
 		color: #e2e8f0;
@@ -339,20 +366,22 @@
 
 	/* ── Section headers ───────────────────────────────────────────────────── */
 	.ch-section-header {
-		display: flex; align-items: center; gap: 5px;
-		padding: 8px 10px 4px;
-		font-size: 10px; font-weight: 700;
-		text-transform: uppercase; letter-spacing: .14em;
-		color: #4b5563;
+		display: flex; align-items: center; gap: 6px;
+		padding: 14px 10px 6px;
+		font-size: 11px; font-weight: 700;
+		text-transform: uppercase; letter-spacing: .12em;
+		color: #94a3b8;
+		border-bottom: 1px solid rgba(255,255,255,.04);
+		margin-bottom: 4px;
 	}
-	.ch-section-header svg { width: 11px; height: 11px; flex-shrink: 0; }
-	.ch-section-header--voice { color: #374151; }
-	.ch-section-header--voice svg { stroke: #166534; }
+	.ch-section-header svg { width: 12px; height: 12px; flex-shrink: 0; }
+	.ch-section-header--voice { color: #6ee7b7; }
+	.ch-section-header--voice svg { stroke: #34d399; }
 
 	/* ── Hash symbol ───────────────────────────────────────────────────────── */
-	.ch-hash { color: #374151; transition: color .15s; }
-	.ch-hash-unread { color: #7c3aed; }
-	.ch-idle:hover .ch-hash { color: #4b5563; }
+	.ch-hash { color: #6b7280; transition: color .15s; min-width: 14px; display: inline-flex; justify-content: center; }
+	.ch-hash-unread { color: #a78bfa; }
+	.ch-idle:hover .ch-hash { color: #cbd5e1; }
 
 	/* ── Voice channel items ───────────────────────────────────────────────── */
 	.ch-voice-item {
@@ -360,11 +389,11 @@
 		transition: color .15s, background .15s;
 	}
 	.ch-voice-idle {
-		color: #4b5563;
+		color: #9ca3af;
 	}
 	.ch-voice-idle:hover {
 		color: #d1fae5;
-		background: rgba(16,185,129,.06);
+		background: rgba(16,185,129,.08);
 	}
 	.ch-voice-active {
 		color: #86efac;
@@ -376,7 +405,8 @@
 	.ch-voice-icon {
 		width: 14px; height: 14px; flex-shrink: 0;
 		display: flex; align-items: center; justify-content: center;
-		color: #374151; transition: color .15s;
+		color: #6b7280; transition: color .15s;
+		font-size: 14px; line-height: 1;
 	}
 	.ch-voice-icon svg { width: 14px; height: 14px; }
 	.ch-voice-idle:hover .ch-voice-icon { color: #4ade80; }

@@ -1,14 +1,29 @@
 import { db } from '../config/database'
 
 export interface Channel {
-  id:           string
-  community_id: string
-  name:         string
-  slug:         string
-  description:  string | null
-  type:         'text' | 'voice'
-  position:     number
-  created_at:   string
+  id:             string
+  community_id:   string
+  name:           string
+  slug:           string
+  description:    string | null
+  type:           'text' | 'voice'
+  position:       number
+  created_at:     string
+  name_color:     string | null
+  name_bold:      boolean
+  name_italic:    boolean
+  name_underline: boolean
+  icon_emoji:     string | null
+}
+
+export interface ChannelStyleUpdate {
+  name?:           string
+  description?:    string | null
+  name_color?:     string | null
+  name_bold?:      boolean
+  name_italic?:    boolean
+  name_underline?: boolean
+  icon_emoji?:     string | null
 }
 
 export interface ReactionSummary {
@@ -76,14 +91,18 @@ export async function findMessageById(messageId: string): Promise<{ channel_id: 
 }
 
 export async function create(data: {
-  community_id: string
-  name:         string
-  description?: string
-  type?:        'text' | 'voice'
+  community_id:    string
+  name:            string
+  description?:    string
+  type?:           'text' | 'voice'
+  name_color?:     string | null
+  name_bold?:      boolean
+  name_italic?:    boolean
+  name_underline?: boolean
+  icon_emoji?:     string | null
 }): Promise<Channel> {
   const slug = slugify(data.name)
 
-  // Determine next position
   const { rows: posRows } = await db.query<{ max: number }>(
     `SELECT COALESCE(MAX(position), -1) AS max FROM channels WHERE community_id = $1`,
     [data.community_id]
@@ -91,12 +110,50 @@ export async function create(data: {
   const position = (posRows[0]?.max ?? -1) + 1
 
   const { rows } = await db.query<Channel>(
-    `INSERT INTO channels (community_id, name, slug, description, position, type)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO channels
+       (community_id, name, slug, description, position, type,
+        name_color, name_bold, name_italic, name_underline, icon_emoji)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING *`,
-    [data.community_id, data.name, slug, data.description ?? null, position, data.type ?? 'text']
+    [
+      data.community_id,
+      data.name,
+      slug,
+      data.description ?? null,
+      position,
+      data.type ?? 'text',
+      data.name_color ?? null,
+      data.name_bold ?? false,
+      data.name_italic ?? false,
+      data.name_underline ?? false,
+      data.icon_emoji ?? null,
+    ]
   )
   return rows[0]
+}
+
+export async function update(id: string, patch: ChannelStyleUpdate): Promise<Channel | null> {
+  const fields: string[] = []
+  const values: unknown[] = []
+  let i = 1
+  if (patch.name !== undefined) {
+    fields.push(`name = $${i++}`); values.push(patch.name)
+    fields.push(`slug = $${i++}`); values.push(slugify(patch.name))
+  }
+  if (patch.description    !== undefined) { fields.push(`description    = $${i++}`); values.push(patch.description) }
+  if (patch.name_color     !== undefined) { fields.push(`name_color     = $${i++}`); values.push(patch.name_color) }
+  if (patch.name_bold      !== undefined) { fields.push(`name_bold      = $${i++}`); values.push(patch.name_bold) }
+  if (patch.name_italic    !== undefined) { fields.push(`name_italic    = $${i++}`); values.push(patch.name_italic) }
+  if (patch.name_underline !== undefined) { fields.push(`name_underline = $${i++}`); values.push(patch.name_underline) }
+  if (patch.icon_emoji     !== undefined) { fields.push(`icon_emoji     = $${i++}`); values.push(patch.icon_emoji) }
+  if (fields.length === 0) return findById(id)
+
+  values.push(id)
+  const { rows } = await db.query<Channel>(
+    `UPDATE channels SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  )
+  return rows[0] ?? null
 }
 
 export async function remove(id: string): Promise<void> {

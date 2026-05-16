@@ -65,10 +65,28 @@ const PatchCategoryBody = z.object({
   parent_id:   z.string().uuid().nullable().optional(),
 })
 
+const HexColor    = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
+const EmojiIcon   = z.string().min(1).max(8)
+
 const CreateChannelBody = z.object({
-  name:        z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  type:        z.enum(['text', 'voice']).optional(),
+  name:           z.string().min(1).max(100),
+  description:    z.string().max(500).optional(),
+  type:           z.enum(['text', 'voice']).optional(),
+  name_color:     HexColor.nullable().optional(),
+  name_bold:      z.boolean().optional(),
+  name_italic:    z.boolean().optional(),
+  name_underline: z.boolean().optional(),
+  icon_emoji:     EmojiIcon.nullable().optional(),
+})
+
+const UpdateChannelBody = z.object({
+  name:           z.string().min(1).max(100).optional(),
+  description:    z.string().max(500).nullable().optional(),
+  name_color:     HexColor.nullable().optional(),
+  name_bold:      z.boolean().optional(),
+  name_italic:    z.boolean().optional(),
+  name_underline: z.boolean().optional(),
+  icon_emoji:     EmojiIcon.nullable().optional(),
 })
 
 const ReorderChannelsBody = z.object({ ids: z.array(z.string().uuid()).min(1) })
@@ -807,7 +825,17 @@ export default async function adminRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: 'Un canal avec ce nom existe déjà', code: 'CONFLICT' })
     }
 
-    const channel = await ChannelModel.create({ community_id: communityId, name: body.name, description: body.description, type: body.type })
+    const channel = await ChannelModel.create({
+      community_id:   communityId,
+      name:           body.name,
+      description:    body.description,
+      type:           body.type,
+      name_color:     body.name_color ?? null,
+      name_bold:      body.name_bold ?? false,
+      name_italic:    body.name_italic ?? false,
+      name_underline: body.name_underline ?? false,
+      icon_emoji:     body.icon_emoji ?? null,
+    })
     return reply.code(201).send({ channel })
   })
 
@@ -817,6 +845,16 @@ export default async function adminRoutes(app: FastifyInstance) {
     const { ids } = request.body as z.infer<typeof ReorderChannelsBody>
     await ChannelModel.reorder(ids)
     return reply.send({ ok: true })
+  })
+
+  app.put('/channels/:id', {
+    preHandler: [rateLimit, adminOnly, validate({ body: UpdateChannelBody })],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const patch  = request.body as z.infer<typeof UpdateChannelBody>
+    const channel = await ChannelModel.update(id, patch)
+    if (!channel) return reply.code(404).send({ error: 'Channel not found' })
+    return reply.send({ channel })
   })
 
   app.delete('/channels/:id', {
