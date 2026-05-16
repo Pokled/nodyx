@@ -136,11 +136,9 @@ export async function update(id: string, patch: ChannelStyleUpdate): Promise<Cha
   const fields: string[] = []
   const values: unknown[] = []
   let i = 1
-  if (patch.name !== undefined) {
-    fields.push(`name = $${i++}`); values.push(patch.name)
-    fields.push(`slug = $${i++}`); values.push(slugify(patch.name))
-  }
-  if (patch.description    !== undefined) { fields.push(`description    = $${i++}`); values.push(patch.description) }
+  // Le slug reste stable (= identifiant URL). Seul le name change librement.
+  if (patch.name        !== undefined) { fields.push(`name        = $${i++}`); values.push(patch.name) }
+  if (patch.description !== undefined) { fields.push(`description = $${i++}`); values.push(patch.description) }
   if (patch.name_color     !== undefined) { fields.push(`name_color     = $${i++}`); values.push(patch.name_color) }
   if (patch.name_bold      !== undefined) { fields.push(`name_bold      = $${i++}`); values.push(patch.name_bold) }
   if (patch.name_italic    !== undefined) { fields.push(`name_italic    = $${i++}`); values.push(patch.name_italic) }
