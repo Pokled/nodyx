@@ -213,9 +213,29 @@
 	}
 
 	// ── Channel Sidebar ────────────────────────────────────────────────────────
-	let layoutChannels = $state<{id: string; name: string; type?: string}[]>([])
+	type LayoutChannel = {
+		id:              string
+		name:            string
+		type?:           string
+		name_color?:     string | null
+		name_bold?:      boolean
+		name_italic?:    boolean
+		name_underline?: boolean
+		icon_emoji?:     string | null
+	}
+	let layoutChannels = $state<LayoutChannel[]>([])
 	const layoutTextChannels = $derived(layoutChannels.filter(c => !c.type || c.type === 'text'))
 	const layoutVoiceChannels = $derived(layoutChannels.filter(c => c.type === 'voice'))
+
+	function chNameStyle(ch: LayoutChannel, override: string | null = null): string {
+		const parts: string[] = []
+		const color = ch.name_color ?? override
+		if (color)             parts.push(`color: ${color}`)
+		if (ch.name_bold)      parts.push('font-weight: 700')
+		if (ch.name_italic)    parts.push('font-style: italic')
+		if (ch.name_underline) parts.push('text-decoration: underline')
+		return parts.join(';')
+	}
 	const showChannelSidebar = $derived(
 		!isBanned &&
 		!$page.url.pathname.startsWith('/admin') &&
@@ -852,8 +872,9 @@
 								<span class="absolute left-0 top-1 bottom-1 w-0.5" style="background: linear-gradient(to bottom, #7c3aed, #06b6d4)"></span>
 							{/if}
 							<span class="text-base font-bold leading-none shrink-0"
-							      style="color: {chActive ? '#a78bfa' : hasUnread ? '#7c3aed' : '#374151'}">#</span>
-							<span class="text-xs truncate flex-1" class:font-semibold={hasUnread}>{ch.name}</span>
+							      style="color: {ch.name_color ?? (chActive ? '#a78bfa' : hasUnread ? '#7c3aed' : '#374151')}">{ch.icon_emoji ?? '#'}</span>
+							<span class="text-xs truncate flex-1" class:font-semibold={hasUnread}
+							      style={chNameStyle(ch)}>{ch.name}</span>
 							{#if hasUnread}
 								<span class="lch-badge">{chUnread > 99 ? '99+' : chUnread}</span>
 							{/if}
@@ -883,10 +904,15 @@
 							{#if chActive}
 								<span class="absolute left-0 top-1 bottom-1 w-0.5" style="background: linear-gradient(to bottom, #7c3aed, #06b6d4)"></span>
 							{/if}
-							<svg class="lch-voice-ico" fill="none" stroke="{inThis ? '#4ade80' : chActive ? '#a78bfa' : '#374151'}" stroke-width="2" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
-							</svg>
-							<span class="text-xs truncate flex-1">{ch.name}</span>
+							{#if ch.icon_emoji}
+								<span class="lch-voice-ico inline-flex items-center justify-center"
+								      style="color: {ch.name_color ?? (inThis ? '#4ade80' : chActive ? '#a78bfa' : '#374151')}; font-size: 14px; line-height: 1;">{ch.icon_emoji}</span>
+							{:else}
+								<svg class="lch-voice-ico" fill="none" stroke="{ch.name_color ?? (inThis ? '#4ade80' : chActive ? '#a78bfa' : '#374151')}" stroke-width="2" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+								</svg>
+							{/if}
+							<span class="text-xs truncate flex-1" style={chNameStyle(ch)}>{ch.name}</span>
 							{#if members.length > 0}
 								<span class="text-[10px] font-bold shrink-0" style="color: {inThis ? '#a78bfa' : '#374151'}">{members.length}</span>
 							{/if}
