@@ -18,6 +18,7 @@
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
 	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
 	import ExternalLinkWarning from '$lib/components/ExternalLinkWarning.svelte';
+	import ChannelIcon from '$lib/components/ChannelIcon.svelte';
 	import { get } from 'svelte/store';
 	import { voiceStore, voiceChannelMembersStore, voiceEventsStore, screenShareStore, remoteScreenStore } from '$lib/voice';
 	import { locale, t } from '$lib/i18n';
@@ -871,8 +872,14 @@
 							{#if chActive}
 								<span class="absolute left-0 top-1 bottom-1 w-0.5" style="background: linear-gradient(to bottom, #7c3aed, #06b6d4)"></span>
 							{/if}
-							<span class="text-base font-bold leading-none shrink-0"
-							      style="color: {ch.name_color ?? (chActive ? '#a78bfa' : hasUnread ? '#7c3aed' : '#374151')}">{ch.icon_emoji ?? '#'}</span>
+							<span class="text-base leading-none shrink-0 inline-flex items-center justify-center">
+								<ChannelIcon
+									value={ch.icon_emoji}
+									fallback="#"
+									size={16}
+									color={ch.name_color ?? (chActive ? '#a78bfa' : hasUnread ? '#7c3aed' : '#374151')}
+								/>
+							</span>
 							<span class="text-xs truncate flex-1" class:font-semibold={hasUnread}
 							      style={chNameStyle(ch)}>{ch.name}</span>
 							{#if hasUnread}
@@ -905,8 +912,13 @@
 								<span class="absolute left-0 top-1 bottom-1 w-0.5" style="background: linear-gradient(to bottom, #7c3aed, #06b6d4)"></span>
 							{/if}
 							{#if ch.icon_emoji}
-								<span class="lch-voice-ico inline-flex items-center justify-center"
-								      style="color: {ch.name_color ?? (inThis ? '#4ade80' : chActive ? '#a78bfa' : '#374151')}; font-size: 14px; line-height: 1;">{ch.icon_emoji}</span>
+								<span class="lch-voice-ico inline-flex items-center justify-center">
+									<ChannelIcon
+										value={ch.icon_emoji}
+										size={14}
+										color={ch.name_color ?? (inThis ? '#4ade80' : chActive ? '#a78bfa' : '#374151')}
+									/>
+								</span>
 							{:else}
 								<svg class="lch-voice-ico" fill="none" stroke="{ch.name_color ?? (inThis ? '#4ade80' : chActive ? '#a78bfa' : '#374151')}" stroke-width="2" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>

@@ -66,7 +66,9 @@ const PatchCategoryBody = z.object({
 })
 
 const HexColor    = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
-const EmojiIcon   = z.string().min(1).max(8)
+// icon_emoji accepte soit un emoji brut, soit un identifiant
+// d'icône bibliothèque ('lucide:hash', 'twemoji:flag-france', etc.)
+const EmojiIcon   = z.string().min(1).max(64)
 
 const CreateChannelBody = z.object({
   name:           z.string().min(1).max(100),

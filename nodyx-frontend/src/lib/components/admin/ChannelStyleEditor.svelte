@@ -4,6 +4,9 @@
   Affiche un live preview tel que rendu dans la sidebar.
 -->
 <script lang="ts">
+	import ChannelIcon from '$lib/components/ChannelIcon.svelte'
+	import { COLORE_CATEGORIES, SOBRE_CATEGORIES, isIconId } from '$lib/channelIcons'
+
 	type Props = {
 		type:           'text' | 'voice'
 		name:           string
@@ -81,8 +84,11 @@
 	})
 
 	const previewName  = $derived(name?.trim() || (type === 'voice' ? 'salon-vocal' : 'canal'))
-	const previewIcon  = $derived(icon_emoji ?? (type === 'voice' ? '🔊' : '#'))
+	const previewFallback = $derived(type === 'voice' ? '🔊' : '#')
 	const previewColor = $derived(name_color ?? '#9ca3af')
+
+	// Onglets du picker : 0 = Coloré, 1 = Sobre, 2 = Personnalisé
+	let pickerTab = $state(0)
 </script>
 
 <div class="cse-root">
@@ -93,7 +99,9 @@
 	<!-- Live preview -->
 	<div class="cse-preview" style="background: {sidebarBg}">
 		<span class="cse-preview-row">
-			<span class="cse-preview-icon" style="color: {previewColor}">{previewIcon}</span>
+			<span class="cse-preview-icon">
+				<ChannelIcon value={icon_emoji} fallback={previewFallback} size={16} color={previewColor} />
+			</span>
 			<span
 				class="cse-preview-name"
 				style="
@@ -181,24 +189,92 @@
 			</div>
 		</div>
 
-		<!-- Emoji -->
-		<div class="cse-field">
-			<label for="cse-emoji" class="cse-label">Icône personnalisée</label>
-			<div class="cse-emoji-row">
-				<input
-					id="cse-emoji"
-					type="text"
-					maxlength="8"
-					value={icon_emoji ?? ''}
-					placeholder={type === 'voice' ? '🔊' : '#'}
-					oninput={(e) => {
-						const v = (e.currentTarget as HTMLInputElement).value
-						icon_emoji = v.trim() === '' ? null : v
-					}}
-					class="cse-emoji-input"
-				/>
-				<span class="cse-emoji-hint">remplace le {type === 'voice' ? '🔊' : '#'} par défaut</span>
-			</div>
+	</div>
+
+	<!-- ─── Picker d'icônes (Coloré / Sobre / Personnalisé) ─────────────────── -->
+	<div class="cse-icon-picker">
+		<div class="cse-picker-header">
+			<span class="cse-label">Icône du canal</span>
+			{#if icon_emoji}
+				<button type="button" class="cse-icon-clear" onclick={() => icon_emoji = null} title="Retirer l'icône custom">
+					Retirer
+				</button>
+			{/if}
+		</div>
+
+		<div class="cse-tabs">
+			<button type="button" class="cse-tab" class:cse-tab--active={pickerTab === 0} onclick={() => pickerTab = 0}>
+				Coloré
+			</button>
+			<button type="button" class="cse-tab" class:cse-tab--active={pickerTab === 1} onclick={() => pickerTab = 1}>
+				Sobre
+			</button>
+			<button type="button" class="cse-tab" class:cse-tab--active={pickerTab === 2} onclick={() => pickerTab = 2}>
+				Personnalisé
+			</button>
+		</div>
+
+		<div class="cse-tab-panel">
+			{#if pickerTab === 0}
+				{#each COLORE_CATEGORIES as cat}
+					<div class="cse-cat">
+						<div class="cse-cat-name">{cat.name}</div>
+						<div class="cse-icon-grid">
+							{#each cat.icons as ico}
+								<button
+									type="button"
+									class="cse-icon-btn"
+									class:cse-icon-btn--active={icon_emoji === ico.id}
+									title={ico.label}
+									onclick={() => icon_emoji = ico.id}
+								>
+									<ChannelIcon value={ico.id} size={20} />
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/each}
+			{:else if pickerTab === 1}
+				{#each SOBRE_CATEGORIES as cat}
+					<div class="cse-cat">
+						<div class="cse-cat-name">{cat.name}</div>
+						<div class="cse-icon-grid">
+							{#each cat.icons as ico}
+								<button
+									type="button"
+									class="cse-icon-btn"
+									class:cse-icon-btn--active={icon_emoji === ico.id}
+									title={ico.label}
+									onclick={() => icon_emoji = ico.id}
+								>
+									<ChannelIcon value={ico.id} size={18} color={name_color ?? '#cbd5e1'} />
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/each}
+			{:else}
+				<div class="cse-custom">
+					<label for="cse-emoji" class="cse-label">Emoji ou caractère unicode</label>
+					<input
+						id="cse-emoji"
+						type="text"
+						maxlength="8"
+						value={icon_emoji && !isIconId(icon_emoji) ? icon_emoji : ''}
+						placeholder={type === 'voice' ? '🔊' : '#'}
+						oninput={(e) => {
+							const v = (e.currentTarget as HTMLInputElement).value
+							icon_emoji = v.trim() === '' ? null : v
+						}}
+						class="cse-emoji-input"
+					/>
+					<p class="cse-custom-hint">
+						Tape un emoji ou colle un caractère. Note : sur Windows, les drapeaux pays
+						(🇫🇷, 🇩🇪, etc.) ne s'affichent qu'en lettres faute de support natif. Préfère
+						l'onglet <b>Coloré</b> pour les drapeaux.
+					</p>
+				</div>
+			{/if}
 		</div>
 	</div>
 
@@ -355,11 +431,6 @@
 		border-color: #6366f1;
 		color: #c7d2fe;
 	}
-	.cse-emoji-row {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-	}
 	.cse-emoji-input {
 		width: 80px;
 		padding: 6px 8px;
@@ -371,11 +442,108 @@
 		color: #e2e8f0;
 	}
 	.cse-emoji-input:focus { outline: none; border-color: #6366f1; }
-	.cse-emoji-hint {
+
+	/* ─── Icon picker ──────────────────────────────────────────────────── */
+	.cse-icon-picker {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		border-top: 1px solid rgba(255,255,255,0.04);
+		padding-top: 12px;
+	}
+	.cse-picker-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.cse-icon-clear {
+		font-size: 10px;
+		color: #94a3b8;
+		background: transparent;
+		border: 1px solid #374151;
+		border-radius: 3px;
+		padding: 2px 8px;
+		cursor: pointer;
+	}
+	.cse-icon-clear:hover { color: #fca5a5; border-color: #7f1d1d; }
+	.cse-tabs {
+		display: flex;
+		gap: 2px;
+		border-bottom: 1px solid #374151;
+	}
+	.cse-tab {
+		padding: 6px 12px;
+		font-size: 12px;
+		font-weight: 500;
+		color: #94a3b8;
+		background: transparent;
+		border: none;
+		border-bottom: 2px solid transparent;
+		cursor: pointer;
+		transition: color .1s, border-color .1s;
+	}
+	.cse-tab:hover { color: #e2e8f0; }
+	.cse-tab--active {
+		color: #c7d2fe;
+		border-bottom-color: #6366f1;
+	}
+	.cse-tab-panel {
+		max-height: 280px;
+		overflow-y: auto;
+		padding: 6px 2px 4px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.cse-tab-panel::-webkit-scrollbar { width: 6px; }
+	.cse-tab-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+	.cse-cat-name {
+		font-size: 10px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #64748b;
+		margin-bottom: 4px;
+	}
+	.cse-icon-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+		gap: 4px;
+	}
+	.cse-icon-btn {
+		width: 100%;
+		aspect-ratio: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid transparent;
+		border-radius: 4px;
+		background: rgba(255,255,255,0.02);
+		color: #e2e8f0;
+		cursor: pointer;
+		transition: background .1s, border-color .1s, transform .1s;
+		padding: 0;
+	}
+	.cse-icon-btn:hover {
+		background: rgba(99,102,241,0.1);
+		transform: scale(1.08);
+	}
+	.cse-icon-btn--active {
+		background: rgba(99,102,241,0.2);
+		border-color: #6366f1;
+	}
+	.cse-custom {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.cse-custom-hint {
 		font-size: 10px;
 		color: #64748b;
-		font-family: ui-monospace, SFMono-Regular, monospace;
+		line-height: 1.4;
+		margin: 4px 0 0;
 	}
+	.cse-custom-hint b { color: #a5b4fc; font-weight: 600; }
 	.cse-actions {
 		display: flex;
 		justify-content: flex-end;

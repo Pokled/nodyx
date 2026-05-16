@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
+	import ChannelIcon from '$lib/components/ChannelIcon.svelte';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 
 	type Channel = {
@@ -160,8 +161,8 @@
 						       {isActive ? 'ch-active' : hasUnread ? 'ch-unread' : 'ch-idle'}
 						       {isFlashing ? 'ch-flash' : ''}"
 					>
-						<span class="ch-hash" class:ch-hash-unread={hasUnread} style={ch.name_color ? `color: ${ch.name_color}` : ''}>
-							{ch.icon_emoji ?? '#'}
+						<span class="ch-hash" class:ch-hash-unread={hasUnread}>
+							<ChannelIcon value={ch.icon_emoji} fallback="#" size={14} color={ch.name_color ?? null} />
 						</span>
 						<span class="truncate flex-1" class:font-semibold={hasUnread} style={nameStyle(ch)}>{ch.slug ?? ch.name}</span>
 						{#if hasUnread}
@@ -194,11 +195,10 @@
 						       {inThisChannel ? 'ch-voice-active' : 'ch-voice-idle'}"
 						title={inThisChannel ? 'Quitter le salon vocal' : 'Rejoindre le salon vocal'}
 					>
-						<!-- Icône : emoji custom prioritaire, sinon onde/micro animé -->
+						<!-- Icône : custom prioritaire, sinon onde/micro animé -->
 						{#if ch.icon_emoji}
-							<span class="ch-voice-icon {inThisChannel ? 'ch-voice-icon--live' : ''}" aria-hidden="true"
-							      style={ch.name_color ? `color: ${ch.name_color}` : ''}>
-								{ch.icon_emoji}
+							<span class="ch-voice-icon {inThisChannel ? 'ch-voice-icon--live' : ''}" aria-hidden="true">
+								<ChannelIcon value={ch.icon_emoji} size={14} color={ch.name_color ?? null} />
 							</span>
 						{:else if inThisChannel}
 							<span class="ch-voice-icon ch-voice-icon--live" aria-hidden="true">

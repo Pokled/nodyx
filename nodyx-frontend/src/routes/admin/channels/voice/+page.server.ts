@@ -21,7 +21,7 @@ function pickStyling(form: FormData) {
 		name_underline: form.get('name_underline') === '1',
 	}
 	out.name_color = /^#[0-9A-Fa-f]{6}$/.test(colorRaw) ? colorRaw : null
-	out.icon_emoji = iconRaw === '' ? null : iconRaw.slice(0, 8)
+	out.icon_emoji = iconRaw === '' ? null : iconRaw.slice(0, 64)
 	return out
 }
 
