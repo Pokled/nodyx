@@ -40,6 +40,7 @@ import { NODYX_VERSION } from './utils/version'
 import { setIO }              from './socket/io'
 import { registerSocketIO } from './socket/index'
 import { runMigrations }    from './scripts/migrate'
+import { initOctoGuard }    from './services/octoguard'
 import { startScheduler }  from './scheduler'
 
 const server = Fastify({ logger: true, trustProxy: true })
@@ -184,6 +185,11 @@ const start = async () => {
   }
 
   await runMigrations()
+
+  // OctoGuard : charge les règles auto-mod avant de servir le chat.
+  // Désactivé par défaut (OCTOGUARD_ENABLED!=true), donc no-op sauf
+  // si l'admin l'a explicitement activé via env.
+  await initOctoGuard()
 
   try {
     await server.listen({

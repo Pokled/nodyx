@@ -12,6 +12,7 @@ import { resolveMentions } from '../utils/mentions'
 import { io } from './io'
 import { sendPushToUser } from '../routes/notifications'
 import { checkHtmlContent } from '../services/contentFilter'
+import { runPipeline, isOctoGuardEnabled } from '../services/octoguard'
 
 interface JwtPayload {
   userId:   string
@@ -408,12 +409,12 @@ export function registerSocketIO(server: Server): void {
       // Contrôle d'accès : le socket doit avoir rejoint ce canal via chat:join (qui vérifie membership)
       // Double-check DB pour éviter les races après expulsion de la communauté
       if (!socket.rooms.has(`channel:${channelId}`)) return
-      const { rows: memberCheck } = await db.query<{ role: string; is_system_managed: boolean }>(
-        `SELECT cm.role, c.is_system_managed FROM channels c
+      const { rows: memberCheck } = await db.query<{ role: string; is_system_managed: boolean; grade_id: string | null }>(
+        `SELECT cm.role, c.is_system_managed, cm.grade_id FROM channels c
          JOIN community_members cm ON c.community_id = cm.community_id
          WHERE c.id = $1 AND cm.user_id = $2 LIMIT 1`,
         [channelId, userId]
-      ).catch(() => ({ rows: [] as { role: string; is_system_managed: boolean }[] }))
+      ).catch(() => ({ rows: [] as { role: string; is_system_managed: boolean; grade_id: string | null }[] }))
       if (!memberCheck.length) return
 
       // Channel system-managed (ex: #streamer-events auto-créé) : seuls
@@ -443,6 +444,30 @@ export function registerSocketIO(server: Server): void {
           [userId, channelId]
         )
         if (banCheck.length > 0) return
+
+        // ▼ OCTOGUARD HOOK (Session B, cf docs/specs/016-Octoguard/sessions/B-pipeline-cdc.md §4)
+        if (isOctoGuardEnabled()) {
+          const og = await runPipeline({
+            content:   sanitized,
+            userCtx:   {
+              userId,
+              role:     memberCheck[0].role,
+              gradeIds: memberCheck[0].grade_id ? [memberCheck[0].grade_id] : [],
+            },
+            channelId,
+          })
+          if (og.blocked) {
+            socket.emit('chat:blocked', {
+              reason:    og.reason ?? 'octoguard',
+              octoguard: {
+                i18n_key: og.i18n_key,
+                event_id: og.event_id,
+              },
+            })
+            return
+          }
+        }
+        // ▲ FIN OCTOGUARD HOOK
 
         const message = await ChannelModel.addMessage({
           channel_id:   channelId,
