@@ -1,14 +1,25 @@
 # OctoGuard, modérateur automatique pour Nodyx
 
-**Version** : 2.0 (audit-based, anti-doublon)
+**Version** : 2.1 (admin-freedom, architecture éthique à 2 niveaux)
 **Statut** : Spécification technique
 **Mascotte** : pieuvre Nodyx + bouclier
-**Objectif** : système natif de modération automatique, bienvenue, commandes personnalisées, mute temporaire et signalement, **construit en surcouche de l'infra modération existante de Nodyx**. Aucun doublon.
+**Objectif** : système natif de modération automatique, bienvenue, commandes personnalisées, mute temporaire et signalement, **construit en surcouche de l'infra modération existante de Nodyx**. Aucun doublon. **Aucune politique de contenu imposée à l'admin.**
 **Cible de livraison** : ≤ 2 semaines.
 
 ---
 
-## Avant-propos : pourquoi v2.0
+## Principe fondamental : admin-freedom
+
+Cette spec repose sur le principe d'architecture éthique à deux niveaux de Nodyx :
+
+- **Niveau 1, l'instance** : liberté totale de l'admin. Tout est désactivable, tout est configurable. Aucune politique de contenu n'est imposée par le code. L'admin assume la responsabilité légale de son instance (en France, hébergeur = responsable du contenu hébergé).
+- **Niveau 2, l'annuaire cross-instance** : la modération éthique du réseau se fait au niveau du directory, pas du code obligatoire. C'est lui qui refuse de référencer les instances qui hébergent ce qui n'est pas humain. Spec dédiée à venir (018-directory-moderation).
+
+OctoGuard est donc un **outil que l'admin choisit d'activer**, pas une politique. Par défaut, **désactivé**. Aucune règle préchargée. L'admin construit son cadre depuis zéro.
+
+---
+
+## Avant-propos : pourquoi v2.1
 
 La v1.1 créait plusieurs tables et systèmes qui dupliquaient l'existant Nodyx. Cette v2.0 part d'un **audit complet** (cf. discussion #25, fil OctoGuard) et redéfinit OctoGuard comme **une couche au-dessus** de ce qui marche déjà, pas un système parallèle. Bénéfices :
 
@@ -23,7 +34,7 @@ La v1.1 créait plusieurs tables et systèmes qui dupliquaient l'existant Nodyx.
 
 | Ce qui existe | Où | OctoGuard en fait quoi |
 |---|---|---|
-| Filtre haineux hard-codé (swastika, runes SS) | `services/contentFilter.ts` | **Reste intact, non désactivable**. Le bonus éthique Nodyx. |
+| Filtre haineux hard-codé (swastika, runes SS) | `services/contentFilter.ts` | **Activé par défaut, désactivable** via env `NODYX_HATE_FILTER_ENABLED=false` ou setting DB. Désactivation derrière une modale d'avertissement explicite (friction informée, pas blocage). L'admin assume sa responsabilité légale. |
 | Patterns regex via env var `BLOCKED_CONTENT_PATTERNS` | idem | **Étendu** : règles structurées en DB, modifiables à chaud depuis l'UI admin. Compatibilité env var conservée 2 versions. |
 | `community_bans` (ban permanent) | migration 034, `admin.ts:394-510` | **Réutilisé**. Migration 088 ajoute `expires_at` pour ban_temp. |
 | `ip_bans` / `email_bans` (+ protection mainstream domains) | migration 035, `admin.ts:515-637` | **Réutilisés** si l'admin choisit "auto-ban IP/email" comme action escalade. |
@@ -62,7 +73,9 @@ La v1.1 créait plusieurs tables et systèmes qui dupliquaient l'existant Nodyx.
 - **Mode dry-run** : action `report_only` ou flag `dry_run: true` qui log sans agir.
 - **Undo** : chaque ligne `admin_audit_log` d'OctoGuard porte un `metadata.undoable: true` + opération inverse encodée. UI admin `/admin/octoguard/logs` propose le bouton.
 - **Réutilisation** : `community_bans`, `ip_bans`, `email_bans`, `kick` existants sont appelés en interne. Aucune duplication.
-- **Kill switch** : env `OCTOGUARD_ENABLED=false` court-circuite tout le pipeline (latence ajoutée = 0).
+- **Kill switch** : env `OCTOGUARD_ENABLED` par défaut **`false`**. OctoGuard est inactif au premier boot, l'admin l'active s'il le veut. `OCTOGUARD_ENABLED=false` court-circuite tout le pipeline (latence ajoutée = 0).
+- **État initial** : aucune règle préchargée. La table `octoguard_automod_rules` part vide. L'admin construit son cadre depuis zéro, pas de "politique par défaut".
+- **Durées libres** : aucun enum strict sur les durées de sanctions. Format `{ value: number, unit: 'm'|'h'|'d'|'w'|'M' }` accepté côté API. L'admin choisit ses propres seuils.
 - **Redis keyPrefix** : client a déjà `keyPrefix: 'nodyx:'`. Clés OctoGuard sans préfixe dans le code (ex: `octoguard:rules`).
 
 ---
@@ -85,9 +98,10 @@ La v1.1 créait plusieurs tables et systèmes qui dupliquaient l'existant Nodyx.
 
 - **`delete`** : supprime le message et émet `chat:blocked` privé à l'auteur avec `i18n_key`. Réutilise le pattern existant `socket.emit('chat:blocked', { reason })`.
 - **`warn`** : enregistre un avertissement dans `octoguard_warns` (nouvelle table dédiée). À N warns sur fenêtre glissante, escalade configurable.
-- **`mute`** : INSERT dans **`chat_mutes`** (nouvelle table, cf. Module 6). Durées : `15m`, `1h`, `6h`, `1d`, `7d`, `perm`.
-- **`ban_temp`** : INSERT dans **`community_bans`** existante avec `expires_at`. Mêmes durées.
-- **`report_only`** : aucune action, log avec `metadata.would_be: true`. Dry-run.
+- **`mute`** : INSERT dans **`chat_mutes`** (nouvelle table, cf. Module 6). Durée libre (`{ value, unit }`) ou `perm`.
+- **`ban_temp`** : INSERT dans **`community_bans`** existante avec `expires_at`. Durée libre ou `perm`.
+- **`notify_only`** : aucune action sur l'utilisateur. Le match est seulement loggé dans `admin_audit_log` et envoyé au webhook si configuré. Permet à un admin d'observer une règle sans agir, ou de configurer une modération 100% manuelle assistée.
+- **`report_only`** : alias de `notify_only` orienté test (dry-run d'une règle pendant son réglage).
 
 ### Format JSON d'une règle (colonne `params` JSONB)
 
@@ -256,10 +270,14 @@ CREATE INDEX idx_reports_target         ON reports(target_type, target_id);
 - Sur un profil utilisateur, "Signaler ce membre".
 - Côté admin : page `/admin/octoguard/reports` avec inbox triée par date, actions inline (Marquer résolu / Banner / Mute / Supprimer le contenu / Rejeter).
 
-### Anti-abuse
+### Anti-abuse (paramétrable par l'admin)
 
-- Rate limit par reporter (5 reports / heure).
-- Un reporter ne peut pas signaler deux fois le même target dans 24h.
+Stocké dans une config singleton `reports_settings` :
+- `rate_limit_per_hour` (défaut 5, modifiable)
+- `cooldown_per_target_hours` (défaut 24, modifiable)
+- `enabled` (défaut true)
+
+L'admin peut totalement assouplir ou désactiver ces protections depuis l'UI. Valeurs par défaut raisonnables, pas imposées.
 
 ---
 
@@ -367,7 +385,7 @@ CREATE TABLE octoguard_automod_rules (
     CHECK (type IN ('regex','caps','link_domain','mention_spam','link_spam')),
   params                JSONB NOT NULL DEFAULT '{}'::jsonb,
   action                VARCHAR(32) NOT NULL
-    CHECK (action IN ('delete','warn','mute','ban_temp','report_only')),
+    CHECK (action IN ('delete','warn','mute','ban_temp','notify_only','report_only')),
   action_duration       VARCHAR(16),
   escalation            JSONB,
   immunized_role_types  TEXT[] DEFAULT ARRAY['owner','admin','moderator'],
@@ -454,6 +472,20 @@ CREATE TABLE octoguard_webhook (
   enabled    BOOLEAN DEFAULT false,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Settings reports (anti-abuse paramétrable, singleton)
+CREATE TABLE reports_settings (
+  id                        INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  rate_limit_per_hour       INT NOT NULL DEFAULT 5 CHECK (rate_limit_per_hour >= 0),
+  cooldown_per_target_hours INT NOT NULL DEFAULT 24 CHECK (cooldown_per_target_hours >= 0),
+  enabled                   BOOLEAN NOT NULL DEFAULT true,
+  updated_at                TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO reports_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
+
+-- Settings filtre haineux (admin-freedom : désactivable)
+-- Géré via env NODYX_HATE_FILTER_ENABLED ou via table community_settings
+-- (à créer si elle n'existe pas, voir audit avant d'ajouter)
 
 COMMIT;
 ```
@@ -583,7 +615,19 @@ Le système d'XP écrit à très haute fréquence. Isoler dans une SQLite OctoGu
 
 ---
 
-## Changements v1.1 → v2.0 (changelog spec)
+## Changements v2.0 → v2.1 (admin-freedom)
+
+- **AJOUTÉ** : section "Principe fondamental : admin-freedom" en tête de spec, qui pose l'architecture éthique à deux niveaux (instance libre, annuaire curé).
+- **CHANGÉ** : filtre haineux `contentFilter.ts` devient désactivable via env `NODYX_HATE_FILTER_ENABLED` ou setting DB, derrière une modale d'avertissement (friction informée, pas blocage). Admin assume sa responsabilité légale.
+- **CHANGÉ** : `OCTOGUARD_ENABLED` par défaut `false`. Table `octoguard_automod_rules` part vide. Aucune règle préchargée, aucune politique imposée.
+- **CHANGÉ** : durées de sanctions deviennent libres (format `{value, unit}`), plus d'enum strict 15m/1h/etc.
+- **AJOUTÉ** : action `notify_only` qui ne touche pas l'utilisateur, log + webhook admin seulement.
+- **AJOUTÉ** : anti-abuse reports paramétrable (`reports_settings` singleton, valeurs par défaut configurables et désactivables).
+- **NOTÉ** : la modération éthique du réseau Nodyx se fait via le directory (spec 018-directory-moderation à venir), pas dans OctoGuard.
+
+---
+
+## Changements v1.1 → v2.0 (audit-based)
 
 - **SUPPRIMÉ** : table `octoguard_logs`, logs unifiés dans `admin_audit_log` existante.
 - **SUPPRIMÉ** : règle de type `flood`, couvert par `socket/rateLimiter.ts` existant.
