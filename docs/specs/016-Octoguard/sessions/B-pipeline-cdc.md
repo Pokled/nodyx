@@ -289,7 +289,70 @@ Tag commit : `feat(octoguard): Session B, pipeline auto-mod opérationnel`.
 
 ---
 
-## 11. Validation Jonathan
+## 11. Décision finale : protection ReDoS via `re2` + `safe-regex`
+
+Cette section remplace la décision §6 sur le "soft timeout". Le soft timeout JavaScript est illusoire : `setTimeout` ne tue pas une regex en cours, le thread reste bloqué. Démontré sur le VPS Nodyx le 2026-05-17 : la regex `(a+)+$` contre `"a".repeat(30) + "!"` prend **84 secondes** en RegExp natif vs **0 ms** en `re2`. Pendant ces 84s, tout Nodyx est figé. Risque DoS inacceptable.
+
+### Solution adoptée : combo `re2` + `safe-regex`
+
+**Dépendances ajoutées au `nodyx-core/package.json`** :
+- `re2` en `optionalDependencies` (binaires précompilés npm pour Linux x64/arm64, macOS, Windows ; build node-gyp en fallback)
+- `safe-regex` en `dependencies` (pure JS, jamais d'échec install)
+- `@types/safe-regex` en `devDependencies`
+
+**Garanties** :
+- **Mode strict** (`re2` dispo, cas du VPS Nodyx prod et 99% des installs) : tous les patterns admin sont compilés en RE2. Algorithme à matching linéaire. **ReDoS impossible by design** (mathématiquement, pas heuristiquement).
+- **Mode dégradé** (`re2` absent, arch exotique) : `re2` non requis, install Nodyx continue. Patterns compilés en RegExp natif. Sécurité dégradée mais `safe-regex` à l'admission rejette les patterns évidemment catastrophiques.
+
+### Wrapper `compileSafeRegex(pattern, flags)` dans `matchers.ts`
+
+```ts
+let _re2: any = null
+try { _re2 = require('re2') } catch { /* mode dégradé */ }
+
+export function compileSafeRegex(pattern: string, flags: string = 'i'): { test: (s: string) => boolean } | null {
+  try {
+    if (_re2) return new _re2(pattern, flags)
+    return new RegExp(pattern, flags)
+  } catch {
+    return null  // pattern invalide
+  }
+}
+
+export function hasRE2(): boolean { return _re2 !== null }
+```
+
+Les deux retours (`RE2` instance et `RegExp`) ont la même méthode `.test(string): boolean`. Le matcher est agnostique.
+
+### Validation amont via `safe-regex` (Session D)
+
+Quand l'admin POST une règle de type `regex`, **avant** l'INSERT :
+1. Vérification `safeRegex(pattern)` ; si false → réponse 400 avec message clair : "Ce pattern peut causer un déni de service (regex catastrophique). Simplifie-le."
+2. Tentative de compile avec `_re2` ; si throw → réponse 400 : "Pattern incompatible avec le moteur sécurisé re2 : <reason>."
+3. Si tout passe, INSERT.
+
+### Log au boot
+
+Dans `initOctoGuard()` :
+```ts
+if (hasRE2()) {
+  console.log('[octoguard] regex DoS protection: re2 native engine active')
+} else {
+  console.warn('[octoguard] re2 not installed, falling back to native RegExp + safe-regex admission check. Regex DoS protection is reduced.')
+}
+```
+
+### Installeur Nodyx
+
+Le `install.sh` propose d'installer `re2` et affiche un message clair selon le résultat. Mais comme `re2` est en `optionalDependencies`, l'install Nodyx **ne casse pas** si `re2` échoue (cas Alpine sans build tools, FreeBSD, etc.). À implémenter en stabilisation post-Phase 1.
+
+### Verdict
+
+C'est la solution carrée. Pas de risque résiduel sur les installs mainstream. Pas de blocage d'install sur les exotiques. Sécurité garantie mathématiquement en mode strict.
+
+---
+
+## 12. Validation Jonathan, points clés
 
 Ce CDC est en attente de validation explicite avant le code. Points sur lesquels j'ai besoin d'un OK :
 
@@ -298,5 +361,18 @@ Ce CDC est en attente de validation explicite avant le code. Points sur lesquels
 - **Format `chat:blocked` étendu** : `reason: string` + `octoguard?: { i18n_key, event_id }`. OK ?
 - **Pas de Redis pub/sub en B** : invalidation directe in-process. OK ?
 - **Pas de cache utilisateur** : on fetch role/grades à chaque message. À optim plus tard si nécessaire. OK ?
+- **Protection ReDoS via re2 + safe-regex** : décrit §11. Test concret VPS validé (84s native vs 0ms re2). OK ?
 
 Quand validé, on attaque le code en suivant ce CDC ligne par ligne.
+
+---
+
+## 13. Note Phase 2/3 : migration vers Rust
+
+L'option Rust (lib `regex` Rust native, garanties linéaires comme RE2) a été évaluée et explicitement reportée à Phase 2/3 d'OctoGuard, dans le cadre de la migration progressive vers `nodyx-server` (crate Rust mentionné dans `phase3_rust.md`). Raisons :
+
+1. Pour Session B, exposer la regex Rust à Node demanderait un binding natif (napi-rs ou neon) — c'est une session dédiée, pas un patch.
+2. Build complexity x10 vs `re2` qui a déjà ses binaires précompilés sur npm.
+3. La lib `regex` Rust et `re2` offrent les mêmes garanties théoriques. Migrer juste pour le plaisir d'être en Rust n'apporte pas de gain technique sur cette fonction isolée.
+
+**Quand on attaquera `nodyx-server` (crate Rust)**, OctoGuard est un excellent candidat de priorité : surface bien délimitée, sécurité-sensible, perf-sensible. Le matcher regex pourra alors être natif Rust, ce qui sera l'évolution naturelle.
