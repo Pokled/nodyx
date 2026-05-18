@@ -1775,25 +1775,54 @@ else
 fi
 
 # ── DNS pre-check (Let's Encrypt will fail if DNS doesn't point here) ───────
+# Family-aware : on compare A↔IPv4 et AAAA↔IPv6 séparément. Avant ce fix,
+# `getent hosts` retournait du mixed-family (A ou AAAA selon nsswitch.conf),
+# ce qui causait des faux mismatchs sur les machines dual-stack avec un
+# domaine résolvant à la fois A et AAAA (cf. issue #29).
 if ! $RELAY_MODE && ! $DOMAIN_IS_AUTO && [[ -n "${DOMAIN:-}" ]]; then
   info "$(printf "$(t dns_checking)" "${BOLD}" "${DOMAIN}" "${RESET}")"
-  _dns_ip=$(getent hosts "$DOMAIN" 2>/dev/null | awk '{print $1}' | head -1 || true)
-  if [[ -z "$_dns_ip" ]]; then
+
+  # Résoudre A et AAAA séparément. `ahostsv4` / `ahostsv6` sont fournis
+  # par glibc (Debian/Ubuntu/Fedora) et par musl (Alpine récent).
+  _dns_v4=$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk '{print $1}' | sort -u || true)
+  _dns_v6=$(getent ahostsv6 "$DOMAIN" 2>/dev/null | awk '{print $1}' | grep -v '^::1$' | sort -u || true)
+
+  # Détecter optionnellement l'IPv6 publique du serveur. Si pas d'IPv6,
+  # le curl -6 échoue silencieusement et _public_v6 reste vide.
+  _public_v6=$(curl -s --max-time 5 -6 https://api64.ipify.org 2>/dev/null || true)
+
+  # Match family-aware : OK si IPv4 publique ∈ A OU IPv6 publique ∈ AAAA.
+  _match=false
+  if [[ -n "$PUBLIC_IP"  && -n "$_dns_v4" ]] && grep -qFx "$PUBLIC_IP"  <<<"$_dns_v4"; then _match=true; fi
+  if [[ -n "$_public_v6" && -n "$_dns_v6" ]] && grep -qFx "$_public_v6" <<<"$_dns_v6"; then _match=true; fi
+
+  if [[ -z "$_dns_v4" && -z "$_dns_v6" ]]; then
     echo ""
     warn "$(printf "$(t dns_unresolved)" "${BOLD}" "${DOMAIN}" "${RESET}")"
     warn "$(t dns_le_will_fail)"
     echo -e "  ${CYAN}$(printf "$(t dns_set_a)" "${BOLD}" "${DOMAIN}" "${RESET}" "${CYAN}" "${PUBLIC_IP}" "${RESET}")"
     _confirm "$(t continue_q)" \
       || die "$(printf "$(t dns_fix_first)" "${DOMAIN}" "${PUBLIC_IP}")"
-  elif [[ "$_dns_ip" != "$PUBLIC_IP" ]]; then
+  elif ! $_match; then
     echo ""
-    warn "$(printf "$(t dns_mismatch)" "${BOLD}" "${DOMAIN}" "${RESET}" "${RED}" "${_dns_ip}" "${RESET}" "${PUBLIC_IP}")"
+    # Affichage : on remonte la première IP de la même famille que le
+    # serveur si possible, sinon ce qu'on a trouvé.
+    _shown_ip="${_dns_v4%%$'\n'*}"
+    [[ -z "$_shown_ip" ]] && _shown_ip="${_dns_v6%%$'\n'*}"
+    warn "$(printf "$(t dns_mismatch)" "${BOLD}" "${DOMAIN}" "${RESET}" "${RED}" "${_shown_ip}" "${RESET}" "${PUBLIC_IP}")"
     warn "$(t dns_le_mismatch_fail)"
     echo -e "  ${CYAN}$(t dns_update_a)${RESET}"
     _confirm "$(t continue_q)" \
       || die "$(printf "$(t dns_fix_correct)" "${DOMAIN}" "${PUBLIC_IP}")"
   else
-    ok "$(printf "$(t dns_ok)" "${DOMAIN}" "${_dns_ip}")"
+    # On affiche l'IP qui a matché, en priorité IPv4 si elle correspond.
+    _shown_ip="$PUBLIC_IP"
+    if [[ -n "$_dns_v4" ]] && grep -qFx "$PUBLIC_IP" <<<"$_dns_v4"; then
+      _shown_ip="$PUBLIC_IP"
+    elif [[ -n "$_public_v6" ]] && grep -qFx "$_public_v6" <<<"$_dns_v6"; then
+      _shown_ip="$_public_v6"
+    fi
+    ok "$(printf "$(t dns_ok)" "${DOMAIN}" "${_shown_ip}")"
   fi
 fi
 

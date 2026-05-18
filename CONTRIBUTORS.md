@@ -113,6 +113,21 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
       <br/>
       <sub><strong>First external contributor 🏆</strong></sub>
     </td>
+    <td align="center" width="200">
+      <a href="https://github.com/schlaggi">
+        <img src="https://github.com/schlaggi.png?size=120" width="120" height="120" style="border-radius:50%;" alt="schlaggi"/>
+        <br/>
+        <sub><b>schlaggi</b></sub>
+      </a>
+      <br/>
+      <sub>🌟 × 1</sub>
+      <br/>
+      <sub><a href="https://github.com/Pokled/nodyx/issues/29">#29</a></sub>
+      <br/>
+      <sub><em>dual-stack DNS check IPv4/IPv6 family-aware</em></sub>
+      <br/>
+      <sub><strong>First dual-stack hunter 🌐</strong></sub>
+    </td>
   </tr>
 </table>
 
@@ -142,6 +157,7 @@ Sometimes a contribution isn't a PR. Sometimes it's just being there at exactly 
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| [@schlaggi](https://github.com/schlaggi) | Reported one-click installer false-positive DNS mismatch on dual-stack machines : `getent hosts` returns mixed-family (A or AAAA depending on `/etc/nsswitch.conf`), then the script compared the resolved IPv6 against the locally-detected IPv4 → bogus "mismatch", Let's Encrypt step refused to proceed. Fix : family-aware resolution via `getent ahostsv4` / `ahostsv6` + optional public IPv6 detection. | `bug(installer)` | [#29](https://github.com/Pokled/nodyx/issues/29) | _to fill on merge_ | 2026-05-18 |
 | [@naranco66](https://github.com/naranco66) | Full Spanish translation of the documentation : 9 documents, ~3000 lines, line-by-line native review (Spain). Includes thoughtful linguistic decisions (`"plataformas herméticas"` over literal `"silos privados"`, gender agreement on `"condenadas"`, sslip.io explanation for a Hispanic audience less familiar with the service). | `docs(es)` | [#28](https://github.com/Pokled/nodyx/pull/28) | [`0a6d74d`](https://github.com/Pokled/nodyx/commit/0a6d74d) | 2026-05-17 |
 | Yannick (nodyx.org member) | Created an account at the worst possible second of the very first prod backup test (between `pg_dump` at 21:00 and `pg_restore` at 21:17). The user row got wiped by the restore, which is what made it visible that `pg_dump` was capturing the system tables themselves (`backups`, `backup_audit_log`, `backup_settings`, `schema_migrations`) — meaning a restore was destroying the safety net created seconds earlier. Account recovered via CLI restore of the pre-restore snapshot. | `bug(backup)` | — | [`87696f6`](https://github.com/Pokled/nodyx/commit/87696f6) | 2026-05-06 |
 | [@lukasMega](https://github.com/lukasMega) | Reported docs search input losing focus on click (had to click twice), second-pass test of [`882099d`](https://github.com/Pokled/nodyx/commit/882099d) which triggered a full slug + UX audit : 108 broken TOC links, 60 leading-dash ids, 11 phantom entries from code-block comments | `bug(docs)` | [#12](https://github.com/Pokled/nodyx/discussions/12) | [`a429fa3`](https://github.com/Pokled/nodyx/commit/a429fa3) | 2026-05-02 |
