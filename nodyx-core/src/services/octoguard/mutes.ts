@@ -46,7 +46,8 @@ export function clearMuteCache(): void {
 
 // ─── Calcul d'expiration ─────────────────────────────────────────────────────
 
-function durationToExpiresAt(duration: Duration | null): Date | null {
+/** Convertit une Duration en Date d'expiration. Exposé pour les tests. */
+export function durationToExpiresAt(duration: Duration | null): Date | null {
   if (!duration) return null
   const ms =
     duration.unit === 'm' ? duration.value * 60_000 :
@@ -152,7 +153,7 @@ export async function applyMute(input: ApplyMuteInput): Promise<ChatMuteRow | nu
     invalidateMuteCache(input.userId)
 
     // Log dans admin_audit_log
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       'octoguard.mute_user',
       target_type:  'user',
       target_id:    input.userId,
@@ -188,7 +189,7 @@ export async function removeMute(muteId: string, removedBy?: string | null): Pro
 
     invalidateMuteCache(rows[0].user_id)
 
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       'octoguard.unmute_user',
       target_type:  'user',
       target_id:    rows[0].user_id,

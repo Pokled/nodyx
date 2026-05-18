@@ -9,6 +9,7 @@
  * Cf. SESSION-B-CDC §11.
  */
 
+import safeRegex from 'safe-regex'
 import type {
   AutomodRuleRow,
   AutomodRuleParams,
@@ -37,6 +38,13 @@ export interface SafeRegex {
 }
 
 export function compileSafeRegex(pattern: string, flags: string = 'i'): SafeRegex | null {
+  // Mode dégradé (re2 absent) : on bloque les patterns catastrophiques
+  // détectés par safe-regex pour défense en profondeur. Mode strict
+  // (re2 présent) : on saute safe-regex (re2 fait mieux, garantie
+  // mathématique de matching linéaire).
+  if (!_re2 && !safeRegex(pattern)) {
+    return null
+  }
   try {
     if (_re2) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
@@ -46,6 +54,83 @@ export function compileSafeRegex(pattern: string, flags: string = 'i'): SafeRege
   } catch {
     return null
   }
+}
+
+// ─── assessPatternSafety : feedback à l'admin (Session D) ────────────────────
+
+export interface PatternAssessment {
+  /** True si le pattern est utilisable (compile + non rejeté par safe-regex). */
+  valid:    boolean
+  /** True si safe-regex le considère comme non-catastrophique (heuristique). */
+  safe:     boolean
+  /** True si la compilation re2/native a réussi. */
+  compiles: boolean
+  /** Message d'erreur explicite pour l'admin, null si tout va bien. */
+  reason:   string | null
+}
+
+/**
+ * Évalue la sûreté d'un pattern regex pour l'admin (Session D POST/PUT).
+ * Renvoie un feedback structuré :
+ *   - valid=true  : utilisable, on peut INSERT
+ *   - valid=false : à corriger avant INSERT
+ *
+ * Heuristique safe-regex peut produire des faux positifs (rejette parfois
+ * des patterns légitimes type `(.{0,100})*`). À utiliser comme avertissement
+ * UI, pas comme blocage absolu si re2 est dispo. Cf. spec v2.1.1 §11.
+ */
+export function assessPatternSafety(pattern: string, flags: string = 'i'): PatternAssessment {
+  if (typeof pattern !== 'string' || pattern.length === 0) {
+    return { valid: false, safe: false, compiles: false, reason: 'Pattern vide ou type invalide' }
+  }
+
+  if (pattern.length > 500) {
+    return { valid: false, safe: false, compiles: false, reason: 'Pattern trop long (max 500 caractères)' }
+  }
+
+  const safe = safeRegex(pattern)
+
+  // Tentative de compilation (early-return en cas d'erreur)
+  try {
+    if (_re2) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      new _re2(pattern, flags)
+    } else {
+      new RegExp(pattern, flags)
+    }
+  } catch {
+    return {
+      valid:    false,
+      safe,
+      compiles: false,
+      reason:   _re2
+        ? 'Pattern non supporté par le moteur re2 (syntaxe incompatible).'
+        : 'Pattern invalide.',
+    }
+  }
+  // Si on arrive ici, le pattern compile (compiles = true implicite)
+
+  // Sans re2 : safe-regex devient bloquant
+  if (!_re2 && !safe) {
+    return {
+      valid:    false,
+      safe:     false,
+      compiles: true,
+      reason:   'Pattern potentiellement catastrophique (ReDoS). Cette instance ne dispose pas de re2 pour protéger contre les regex risquées. Simplifie le pattern (évite les quantifiers nested type (a+)+).',
+    }
+  }
+
+  // Avec re2 : on accepte tout ce que re2 compile, on prévient juste si safe-regex râle
+  if (!safe) {
+    return {
+      valid:    true,
+      safe:     false,
+      compiles: true,
+      reason:   'Pattern accepté grâce à re2 (matching linéaire garanti), mais safe-regex le signale comme potentiellement risqué. Sur une instance sans re2, ce pattern pourrait causer un DoS.',
+    }
+  }
+
+  return { valid: true, safe: true, compiles: true, reason: null }
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────

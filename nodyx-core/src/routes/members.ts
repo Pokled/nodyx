@@ -101,6 +101,7 @@ export default async function memberRoutes(app: FastifyInstance) {
          0 AS activity_score
        FROM users u
        LEFT JOIN user_profiles p ON p.user_id = u.id
+       WHERE u.is_system = false
        ORDER BY u.created_at DESC
        LIMIT 5`
     )

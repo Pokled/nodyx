@@ -16,26 +16,41 @@
 import { db } from '../../config/database'
 import type { ActionLogEntry } from './types'
 
-export async function logOctoGuardAction(entry: ActionLogEntry): Promise<void> {
+/**
+ * Fire-and-forget : la fonction retourne immédiatement, l'INSERT DB tourne
+ * en arrière-plan. Le pipeline ne paye pas la latence du log.
+ *
+ * Garantie : ne throw jamais (try/catch global enveloppe l'INSERT).
+ * Cf. bench v2.1.1 §C.2.4 : sans fire-and-forget, p95 explose à ~13ms
+ * sous charge à cause de la sérialisation des INSERT.
+ *
+ * Signature `void` (pas Promise<void>) : les callers n'ont pas besoin
+ * d'awaiter, et c'est explicite que le log est non-bloquant.
+ */
+export function logOctoGuardAction(entry: ActionLogEntry): void {
   if (!entry.action.startsWith('octoguard.')) {
     console.warn(`[octoguard:logger] action without 'octoguard.' prefix: ${entry.action}`)
   }
-  try {
-    await db.query(
-      `INSERT INTO admin_audit_log
-         (actor_id, actor_username, action, target_type, target_id, target_label, metadata)
-       VALUES (NULL, $1, $2, $3, $4, $5, $6)`,
-      [
-        'octoguard:auto',
-        entry.action,
-        entry.target_type,
-        entry.target_id,
-        entry.target_label,
-        JSON.stringify(entry.metadata ?? {}),
-      ]
-    )
-  } catch (err) {
-    console.warn('[octoguard:logger] INSERT admin_audit_log failed:', err)
-    // ne pas throw : le pipeline continue
-  }
+
+  // Exécution asynchrone non bloquante. Le caller continue immédiatement.
+  void (async () => {
+    try {
+      await db.query(
+        `INSERT INTO admin_audit_log
+           (actor_id, actor_username, action, target_type, target_id, target_label, metadata)
+         VALUES (NULL, $1, $2, $3, $4, $5, $6)`,
+        [
+          'octoguard:auto',
+          entry.action,
+          entry.target_type,
+          entry.target_id,
+          entry.target_label,
+          JSON.stringify(entry.metadata ?? {}),
+        ]
+      )
+    } catch (err) {
+      console.warn('[octoguard:logger] INSERT admin_audit_log failed:', err)
+      // ne pas throw : le pipeline continue
+    }
+  })()
 }

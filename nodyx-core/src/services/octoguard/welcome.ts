@@ -100,14 +100,15 @@ export function _resetBotUserCache(): void {
 
 // ─── Substitution variables ──────────────────────────────────────────────────
 
-interface SubstitutionCtx {
+export interface SubstitutionCtx {
   username:      string
   userId:        string
   communityName: string
   rulesUrl?:     string | null
 }
 
-function substituteVariables(template: string, ctx: SubstitutionCtx): string {
+/** Substitue les variables {user}, {userMention}, etc. dans un template. Exposé pour tests. */
+export function substituteVariables(template: string, ctx: SubstitutionCtx): string {
   return template
     .replace(/\{user\}/g,          ctx.username)
     .replace(/\{userMention\}/g,   `@${ctx.username}`)
@@ -174,7 +175,7 @@ export async function runWelcomeFor(newUserId: string, newUsername: string): Pro
     }
 
     // 3. Log audit
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       'octoguard.welcome_sent',
       target_type:  'user',
       target_id:    newUserId,

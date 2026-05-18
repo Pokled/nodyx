@@ -176,7 +176,7 @@ export async function tryHandleCommand(ctx: CommandContext): Promise<CommandOutc
     }
 
     // Log
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       'octoguard.command_invoked',
       target_type:  'user',
       target_id:    ctx.userId,

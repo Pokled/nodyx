@@ -132,6 +132,7 @@ export default async function userRoutes(app: FastifyInstance) {
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE  u.username ILIKE $1
       AND    u.id != $2
+      AND    u.is_system = false
       ORDER  BY u.username ASC
       LIMIT  10
     `, [`%${q.trim()}%`, userId])
@@ -346,6 +347,7 @@ export default async function userRoutes(app: FastifyInstance) {
        LEFT JOIN community_members cm ON cm.user_id = u.id
        LEFT JOIN community_grades g ON g.id = cm.grade_id
        WHERE u.username = $1
+         AND u.is_system = false
        LIMIT 1`,
       [username]
     )

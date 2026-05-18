@@ -73,3 +73,13 @@ export function clearRules(): void {
   _rules  = []
   _loaded = false
 }
+
+/**
+ * Setter dédié aux benchmarks et tests.
+ * Permet d'injecter directement un set de règles sans passer par la DB.
+ * NE PAS UTILISER en code applicatif.
+ */
+export function _setRulesForBench(rules: AutomodRuleRow[]): void {
+  _rules  = rules
+  _loaded = true
+}

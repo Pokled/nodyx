@@ -12,8 +12,10 @@ export async function resolveMentions(html: string): Promise<string[]> {
 
   if (usernames.size === 0) return []
 
+  // Exclut les utilisateurs système (bots OctoGuard et autres) :
+  // un user humain ne peut pas mentionner un bot pour le notifier.
   const { rows } = await db.query<{ id: string }>(
-    `SELECT id FROM users WHERE LOWER(username) = ANY($1)`,
+    `SELECT id FROM users WHERE LOWER(username) = ANY($1) AND is_system = false`,
     [Array.from(usernames)]
   )
   return rows.map(r => r.id)

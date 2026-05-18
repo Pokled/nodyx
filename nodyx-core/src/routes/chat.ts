@@ -219,6 +219,7 @@ export default async function chatRoutes(app: FastifyInstance) {
        FROM users u
        JOIN community_members cm ON cm.user_id = u.id
        WHERE cm.community_id = $1
+         AND u.is_system = false
          AND ($2 = '' OR u.username ILIKE $3)
        ORDER BY u.username ASC
        LIMIT 8`,

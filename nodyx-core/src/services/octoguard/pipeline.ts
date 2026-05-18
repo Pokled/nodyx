@@ -86,7 +86,7 @@ async function applyAction(
 
   // dry_run OU action report_only : on log et on laisse passer
   if (dryRun || action === 'report_only') {
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       `octoguard.would_${action}`,
       target_type:  'message',
       target_id:    null,
@@ -98,7 +98,7 @@ async function applyAction(
 
   // notify_only : log + webhook (webhook Session D), pas de blocage
   if (action === 'notify_only') {
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       'octoguard.notify',
       target_type:  'message',
       target_id:    null,
@@ -110,7 +110,7 @@ async function applyAction(
 
   // delete : on bloque le message
   if (action === 'delete') {
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       'octoguard.delete_message',
       target_type:  'message',
       target_id:    null,
@@ -131,7 +131,7 @@ async function applyAction(
       [user.userId, rule.id, excerpt]
     ).catch(err => console.warn('[octoguard] INSERT octoguard_warns failed:', err))
 
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       'octoguard.warn_user',
       target_type:  'user',
       target_id:    user.userId,
@@ -155,7 +155,7 @@ async function applyAction(
         const cnt = rows[0]?.cnt ?? 0
         if (cnt >= rule.escalation.warns_threshold) {
           console.warn(`[octoguard] escalation triggered (cnt=${cnt} >= ${rule.escalation.warns_threshold}, action=${rule.escalation.action}) → TODO Session C apply mute/ban_temp`)
-          await logOctoGuardAction({
+          logOctoGuardAction({
             action:       `octoguard.escalation_${rule.escalation.action}`,
             target_type:  'user',
             target_id:    user.userId,
@@ -197,7 +197,7 @@ async function applyAction(
   // ban_temp : STUB Session C, bloque comme delete + log "TODO"
   if (action === 'ban_temp') {
     console.warn(`[octoguard] action=ban_temp STUB Session C, blocking like delete for now`)
-    await logOctoGuardAction({
+    logOctoGuardAction({
       action:       'octoguard.ban_temp_user',
       target_type:  'user',
       target_id:    user.userId,

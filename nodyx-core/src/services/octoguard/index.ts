@@ -15,7 +15,8 @@ export * from './types'
 export { runPipeline, computeExpiresAt } from './pipeline'
 export type { PipelineInput } from './pipeline'
 export { reloadRules, getRules, clearRules, isLoaded } from './cache'
-export { hasRE2, compileSafeRegex } from './matchers'
+export { hasRE2, compileSafeRegex, assessPatternSafety } from './matchers'
+export type { PatternAssessment } from './matchers'
 export {
   isUserMuted, applyMute, removeMute, purgeExpiredMutes,
   invalidateMuteCache, clearMuteCache,
