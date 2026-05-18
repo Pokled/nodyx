@@ -260,6 +260,17 @@ export default async function authRoutes(app: FastifyInstance) {
       )
     }
 
+    // OctoGuard welcome (Module 2). Fire-and-forget : ne bloque jamais
+    // l'inscription, toute erreur est loggée silencieusement.
+    if (process.env.OCTOGUARD_ENABLED === 'true') {
+      // Import dynamique pour éviter de charger octoguard quand désactivé
+      import('../services/octoguard').then(({ runWelcomeFor }) =>
+        runWelcomeFor(user.id, username).catch(err =>
+          console.warn('[auth] OctoGuard welcome failed:', err)
+        )
+      ).catch(() => { /* ignore */ })
+    }
+
     // Email verification — only when SMTP is configured
     if (isSmtpConfigured()) {
       const verificationToken = crypto.randomBytes(32).toString('hex')
@@ -304,6 +315,12 @@ export default async function authRoutes(app: FastifyInstance) {
       UserModel.hashPassword(password)
         .then(newHash => db.query('UPDATE users SET password = $1 WHERE id = $2', [newHash, user.id]))
         .catch(() => {})
+    }
+
+    // Bots techniques (is_system=true) ne peuvent jamais se connecter,
+    // même avec le bon password. Défense en profondeur pour OctoGuard.
+    if (user && (user as { is_system?: boolean }).is_system === true) {
+      return reply.code(403).send({ error: 'Access denied', code: 'FORBIDDEN' })
     }
 
     if (!user || !valid) {

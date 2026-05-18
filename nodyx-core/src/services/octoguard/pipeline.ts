@@ -17,6 +17,7 @@ import { isOctoGuardEnabled } from './index'
 import { getRules } from './cache'
 import { matchRule } from './matchers'
 import { logOctoGuardAction } from './logger'
+import { applyMute } from './mutes'
 import type {
   AutomodRuleRow,
   PipelineUserCtx,
@@ -174,19 +175,21 @@ async function applyAction(
     }
   }
 
-  // mute : STUB Session C, bloque comme delete + log "TODO"
+  // mute : applique un mute global communauté via le service mutes
+  // (Session C : implémentation réelle remplace le stub Session B).
   if (action === 'mute') {
-    console.warn(`[octoguard] action=mute STUB Session C, blocking like delete for now`)
-    await logOctoGuardAction({
-      action:       'octoguard.mute_user',
-      target_type:  'user',
-      target_id:    user.userId,
-      target_label: excerpt,
-      metadata:     { ...meta, stub: 'Session C will implement chat_mutes INSERT', duration: rule.action_duration },
+    await applyMute({
+      userId:     user.userId,
+      channelId:  null,                       // mute global (toute la communauté)
+      duration:   rule.action_duration,
+      reason:     `règle "${rule.name}"`,
+      appliedBy:  null,                       // action automatique
+      ruleId:     rule.id,
+      eventId,                                // hérité du pipeline (cohérence)
     })
     return {
       blocked: true,
-      reason:  `Silence appliqué (stub) : règle "${rule.name}"`,
+      reason:  `Silence appliqué : règle "${rule.name}"`,
       i18nKey: 'octoguard.mute.applied',
     }
   }

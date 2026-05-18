@@ -12,7 +12,7 @@ import { resolveMentions } from '../utils/mentions'
 import { io } from './io'
 import { sendPushToUser } from '../routes/notifications'
 import { checkHtmlContent } from '../services/contentFilter'
-import { runPipeline, isOctoGuardEnabled } from '../services/octoguard'
+import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
 
 interface JwtPayload {
   userId:   string
@@ -445,8 +445,42 @@ export function registerSocketIO(server: Server): void {
         )
         if (banCheck.length > 0) return
 
-        // ▼ OCTOGUARD HOOK (Session B, cf docs/specs/016-Octoguard/sessions/B-pipeline-cdc.md §4)
+        // ▼ OCTOGUARD HOOK (Sessions B + C, cf docs/specs/016-Octoguard/)
         if (isOctoGuardEnabled()) {
+          // 1. Check mute (Module 6, Session C) AVANT le pipeline auto-mod.
+          //    Un user muté ne doit pas matcher de règles ni polluer les logs.
+          const muteState = await isUserMuted(userId, channelId)
+          if (muteState.muted) {
+            socket.emit('chat:blocked', {
+              reason:    'muted',
+              octoguard: {
+                i18n_key:    'octoguard.mute.active',
+                expires_at:  muteState.expires_at ?? null,
+                reason_text: muteState.reason ?? null,
+                channel_id:  muteState.channel_id ?? null,
+              },
+            })
+            return
+          }
+
+          // 2. Détection de commandes custom (Module 3, Session C).
+          //    Si "!cmd" en début de message → on poste la réponse bot et
+          //    on supprime le message original. Si commande inconnue ou
+          //    pas une commande, le pipeline continue normalement.
+          const cmdOutcome = await tryHandleCommand({
+            content:    sanitized,
+            userId,
+            username:   socket.data.username,
+            userRole:   memberCheck[0].role,
+            channelId,
+          })
+          if (cmdOutcome.handled && cmdOutcome.blocked) {
+            // Le message d'origine du user est supprimé silencieusement
+            // (la réponse bot a déjà été broadcastée par tryHandleCommand).
+            return
+          }
+
+          // 3. Pipeline auto-mod (Module 1, Session B).
           const og = await runPipeline({
             content:   sanitized,
             userCtx:   {

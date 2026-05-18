@@ -168,6 +168,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
        LEFT JOIN user_profiles  up ON up.user_id = u.id
        LEFT JOIN community_grades cg ON cg.id = cm.grade_id
        WHERE cm.community_id = $1
+         AND u.is_system = false
          AND NOT EXISTS (
            SELECT 1 FROM community_bans cb
            WHERE cb.community_id = $1 AND cb.user_id = cm.user_id

@@ -16,9 +16,23 @@ export { runPipeline, computeExpiresAt } from './pipeline'
 export type { PipelineInput } from './pipeline'
 export { reloadRules, getRules, clearRules, isLoaded } from './cache'
 export { hasRE2, compileSafeRegex } from './matchers'
+export {
+  isUserMuted, applyMute, removeMute, purgeExpiredMutes,
+  invalidateMuteCache, clearMuteCache,
+  startMutePurgeWorker, stopMutePurgeWorker,
+} from './mutes'
+export type { MuteCheckResult, ApplyMuteInput } from './mutes'
+export { ensureOctoGuardBotUser, runWelcomeFor } from './welcome'
+export { tryHandleCommand, extractCommand } from './commands'
+export type { CommandContext, CommandOutcome } from './commands'
+export { migrateEnvPatternsToDB } from './envMigration'
+export type { MigrationResult as EnvMigrationResult } from './envMigration'
 
 import { reloadRules, getRules } from './cache'
 import { hasRE2 } from './matchers'
+import { startMutePurgeWorker } from './mutes'
+import { ensureOctoGuardBotUser } from './welcome'
+import { migrateEnvPatternsToDB } from './envMigration'
 
 /** Vrai si OctoGuard est activé via env. Par défaut false. */
 export function isOctoGuardEnabled(): boolean {
@@ -52,4 +66,27 @@ export async function initOctoGuard(): Promise<void> {
   } catch (err) {
     console.warn('[octoguard] reloadRules failed at boot, starting with empty rules cache:', err)
   }
+
+  // Migration one-shot BLOCKED_CONTENT_PATTERNS env → DB si applicable
+  // (cf. spec v2.1.1 §Module 1 compatibilité).
+  try {
+    const migr = await migrateEnvPatternsToDB()
+    if (!migr.skipped && migr.imported > 0) {
+      // Recharger le cache après migration pour intégrer les nouvelles règles
+      await reloadRules()
+      console.log(`[octoguard] cache reloaded after env migration (${getRules().length} rules active)`)
+    }
+  } catch (err) {
+    console.warn('[octoguard] envMigration failed (non-fatal):', err)
+  }
+
+  // Démarrer le worker de purge des mutes expirés (Module 6).
+  // Le worker est non-blocking grâce à unref().
+  startMutePurgeWorker()
+
+  // Pré-créer le user fantôme OctoGuard pour qu'il soit prêt quand le
+  // premier welcome est déclenché (Module 2).
+  await ensureOctoGuardBotUser().catch(err =>
+    console.warn('[octoguard] ensureOctoGuardBotUser at boot failed (non-fatal):', err)
+  )
 }
