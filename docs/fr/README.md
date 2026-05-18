@@ -127,6 +127,7 @@ Le paysage des outils communautaires n'est pas un combat. Chaque projet optimise
 - **Constructeur de page d'accueil** avec 11 zones, drag & drop
 - **Boutique de widgets** — installer des widgets externes via .zip
 - **SDK Widget** — créer des widgets custom, sans framework
+- **OctoGuard** — auto-modération native (regex/word/link/emoji-flood, anti-ReDoS via `re2` Google), bot de bienvenue, commandes custom, mutes, webhook signé — entièrement paramétrable par l'admin, désactivé par défaut
 
 ---
 
@@ -563,6 +564,25 @@ Chaque instance Nodyx fait tourner un scheduler **Protocole Gossip** qui pinge p
 </details>
 
 <details open>
+<summary><b>v2.6 — OctoGuard Phase 1 : auto-modération native 🐙</b></summary>
+
+| Fonctionnalité | Version |
+|---|---|
+| **Pipeline auto-mod OctoGuard** — fail-open 50 ms, 5 types de matchers : substring, word-boundary, regex, link allow/blocklist, emoji-flood. Anti-ReDoS via moteur linéaire `re2` Google (84 s natif vs 0 ms `re2` mesuré en bench) + `safe-regex` heuristique à l'admission | v2.6 |
+| **6 actions** — `delete`, `warn`, `mute_timed`, `kick`, `ban` (avec `community_bans.expires_at` optionnel pour bans temporaires), `report_only` dry-run | v2.6 |
+| **Flux de bienvenue** — ghost bot `OctoGuard` (`users.is_system=true`, login refusé), message public avec variables `{user}` / `{userMention}` / `{communityName}`, auto-grade optionnel à l'inscription. Message DM système reporté à la spec 019 | v2.6 |
+| **Commandes personnalisées** — `!règles`, `!discord`, ... en markdown, cooldown Redis par canal (`SET NX EX`), canaux et rôles autorisés configurables par commande | v2.6 |
+| **Mutes chat** — nouvelle table `chat_mutes`, portée globale ou par canal, durée libre (`15m`, `2h`, `1w`, permanent), cache Redis 60 s, worker de purge en arrière-plan | v2.6 |
+| **File de signalements** — driven par les membres, anti-abus rate limit par signaleur + cooldown par cible via Redis, inbox admin avec actions mute/delete/dismiss | v2.6 |
+| **Webhook HMAC-SHA256** — POST sortant signé `X-Octoguard-Signature: sha256=hex`, queue Redis, worker async timeout 10 s. Le pipeline chat ne paye jamais la latence webhook | v2.6 |
+| **Journal d'audit** — chaque action persistée dans `admin_audit_log` avec `event_id`. Logger fire-and-forget IIFE (capté par le bench pré-emptif : p95 passé de 13 ms à 0,2 ms) | v2.6 |
+| **UI admin** — `/admin/octoguard` avec 8 onglets : vue d'ensemble, automod, bienvenue, commandes, mutes, signalements, journal, webhook. CRUD complet avec formulaires `enhance` optimistes | v2.6 |
+| **Kill-switch** — `OCTOGUARD_ENABLED=false` court-circuite tout le pipeline. Table de règles vide = impact zéro même activé. Pattern de rollout dégressif | v2.6 |
+| **69 tests Vitest** + script `bench.ts` dédié — prouve p95 < 1 ms en charge, a permis d'attraper le goulot du logger avant activation prod | v2.6 |
+
+</details>
+
+<details>
 <summary><b>v2.2 — Mise à jour majeure NodyxCanvas 🎨</b></summary>
 
 | Fonctionnalité | Version |

@@ -143,6 +143,7 @@ The community-tools landscape isn't a battle. Each project optimizes for differe
 - **Homepage Builder** with 11 layout zones, drag & drop
 - **Widget Store** — install external widgets via .zip
 - **Widget SDK** — build custom widgets, no framework needed
+- **OctoGuard** — native auto-mod (regex/word/link/emoji-flood, ReDoS-safe via Google `re2`), welcome bot, custom commands, mutes, signed webhook — all admin-tunable, off by default
 
 ---
 
@@ -579,6 +580,26 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 </details>
 
 <details open>
+<summary><b>v2.6 — OctoGuard Phase 1: native auto-moderation 🐙</b></summary>
+
+| Feature | Version |
+|---|---|
+| **OctoGuard auto-mod pipeline** — 50 ms fail-open, 5 matcher types: substring, word-boundary, regex, link allow/blocklist, emoji-flood. ReDoS-safe via Google `re2` linear-time engine (84 s native vs 0 ms `re2` confirmed in bench) plus `safe-regex` heuristic on pattern admission | v2.6 |
+| **6 actions** — `delete`, `warn`, `mute_timed`, `kick`, `ban` (with optional `community_bans.expires_at` for temporary bans), `report_only` dry-run | v2.6 |
+| **Welcome flow** — ghost `OctoGuard` bot user (`users.is_system=true`, login refused), public message with `{user}` / `{userMention}` / `{communityName}` variables, optional auto-grade on join. DM system message reserved for spec 019 | v2.6 |
+| **Custom commands** — `!règles`, `!discord`, ... in markdown, Redis-backed per-channel cooldown (SET NX EX), allowed channels and roles configurable per command | v2.6 |
+| **Chat mutes** — new `chat_mutes` table, global or per-channel scope, free-form duration (`15m`, `2h`, `1w`, permanent), Redis-cached 60 s, background purge worker | v2.6 |
+| **Reports queue** — member-driven, anti-abuse rate limit per reporter + cooldown per target via Redis, admin inbox with mute/delete/dismiss actions | v2.6 |
+| **HMAC-SHA256 webhook** — outbound POST signed with `X-Octoguard-Signature: sha256=hex`, queued in Redis, worker fires async with 10 s timeout. The chat pipeline never pays the webhook latency | v2.6 |
+| **Audit log** — every action persisted to `admin_audit_log` with `event_id`, action type, target, metadata. Logger is fire-and-forget IIFE (caught by pre-emptive bench: p95 dropped from 13 ms to 0.2 ms after switching from `await` to fire-and-forget) | v2.6 |
+| **Admin UI** — `/admin/octoguard` with 8 tabs: overview, automod, welcome, commands, mutes, reports, logs, webhook. All CRUD with optimistic `enhance` forms | v2.6 |
+| **Kill-switch** — `OCTOGUARD_ENABLED=false` bypasses the entire pipeline. Rules table empty equals zero impact even when enabled — progressive rollout pattern | v2.6 |
+| **69 vitest tests** — `octoguard-matchers`, `octoguard-commands`, `octoguard-session-c` covering matchers, `assessPatternSafety`, `durationToExpiresAt`, `substituteVariables`, mutes, env migration | v2.6 |
+| **`bench.ts`** — dedicated performance benchmark proves p95 < 1 ms under load, caught the logger bottleneck before activation | v2.6 |
+
+</details>
+
+<details>
 <summary><b>v2.4 — Backup System + Live Maintenance Mode 💾</b></summary>
 
 | Feature | Version |

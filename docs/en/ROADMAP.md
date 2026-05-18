@@ -29,6 +29,7 @@
 | **Phase 4.13** | NodyxCanvas — Major upgrade (v2.2) | ✅ Complete |
 | **Phase 4.14** | Universal Media Player + Builder Catalog Fusion + Tunnel Hardening (v2.3) | ✅ Complete |
 | **Phase 4.15** | Backup System Phase 1 + Live Maintenance Mode (v2.4) | ✅ Complete |
+| **Phase 4.16** | OctoGuard Phase 1 — Native auto-moderation (v2.6) | ✅ Complete (rollout) |
 | Phase 5 | Mobile + Nodes + Reactions + Discord import | 🔨 In Progress |
 | **Phase Horizon** | NODYX-ETHER — Physical layer sovereignty | 🌌 Vision |
 | **Phase Radio** | NODYX-RADIO — Internet radio + cooperative ad network | 📻 Vision |
@@ -633,6 +634,33 @@ nodyx-core    (Fastify/Node.js) ────────────────
 - [x] **CRDT undo fix** — `undo()` now restores `{ ...entry.before, ts: Date.now() }` instead of `entry.before` directly — prevents silent rejection by LWW check
 - [x] **Image upload field order** — text fields (`name`, `asset_type`) appended before file in FormData so `@fastify/multipart` can read them from the stream before encountering the binary
 - [x] **HTML structure** — frame name overlay correctly placed inside center container div (was causing parse error at line 1518)
+
+---
+
+## PHASE 4.16 — OctoGuard Phase 1: Native auto-moderation ✅ COMPLETE (progressive rollout, v2.6)
+### Goal: Ship a fully admin-tunable in-core moderation suite — no external bot required, no centralized AI, ReDoS-safe
+
+> *"Admin freedom is non-negotiable. OctoGuard ships disabled, every rule is opt-in."*
+> Phase 1 is the native moderation track. The external Bot API + Python SDK + voice presence metadata is tracked separately as Phase 4 of the OctoGuard roadmap.
+
+- [x] **8 idempotent migrations** (088 → 091 plus the 5 OctoGuard-prefixed ones) — `automod_rules`, `welcome_settings`, `chat_mutes`, `commands`, `reports`, `webhooks`, ban-cache index, `community_bans.expires_at`
+- [x] **Auto-mod pipeline** — 50 ms timeout, fail-open, 5 matcher types: substring, word-boundary, regex, link allow/blocklist, emoji-flood
+- [x] **ReDoS protection** — Google `re2` linear-time engine (84 s native vs 0 ms `re2` confirmed in bench) plus `safe-regex` heuristic on pattern admission
+- [x] **6 actions** — `delete`, `warn`, `mute_timed`, `kick`, `ban` (with optional `community_bans.expires_at` for temporary bans), `report_only` (dry-run)
+- [x] **Welcome flow** — ghost `OctoGuard` bot user (`users.is_system=true`, login refused at auth route), public message in an admin-chosen channel with `{user}` / `{userMention}` / `{communityName}` variables, optional auto-grade on join. DM system message reserved for spec 019
+- [x] **Custom commands** — `!règles`, `!discord`, ... in markdown, Redis-backed per-channel cooldown (`SET NX EX`), allowed channels and roles configurable per command
+- [x] **Chat mutes** — `chat_mutes` table, global or per-channel scope, free-form duration (`15m`, `2h`, `1w`, permanent), Redis-cached 60 s, background purge worker
+- [x] **Reports queue** — member-driven signalements, anti-abuse rate limit per reporter + cooldown per target via Redis, admin inbox with mute/delete/dismiss actions
+- [x] **Audit log** — every action persisted to `admin_audit_log` with `event_id`, action type, target, metadata. Logger is fire-and-forget IIFE — caught by the pre-emptive bench: p95 dropped from 13 ms to 0.2 ms after switching from `await` to fire-and-forget
+- [x] **HMAC-SHA256 webhook** — outbound POST signed with `X-Octoguard-Signature: sha256=hex`, queued in Redis, worker fires async with 10 s timeout. The chat pipeline never pays the webhook latency
+- [x] **Admin UI** — `/admin/octoguard` with 8 tabs: overview, automod, welcome, commands, mutes, reports, logs, webhook. All CRUD with optimistic `enhance` forms
+- [x] **Kill-switch** — `OCTOGUARD_ENABLED=false` bypasses the entire pipeline. Rules table empty equals zero impact even when on. Progressive rollout pattern: enable → observe with empty rules → add 1 `report_only` rule → graduate to live
+- [x] **69 vitest tests** — `octoguard-matchers.test.ts` (matchers), `octoguard-commands.test.ts` (extractCommand), `octoguard-session-c.test.ts` (`assessPatternSafety`, `durationToExpiresAt`, `substituteVariables`, mutes, env migration)
+- [x] **`bench.ts` script** — dedicated performance benchmark proves p95 < 1 ms under load, caught the logger bottleneck before prod activation
+
+**Validation:** 69/69 OctoGuard tests green · bench p95 = 0.202 ms · production boot logs confirm `[octoguard] regex DoS protection: re2 native engine active` · `/api/v1/admin/octoguard/settings` returns 401 unauthenticated (adminOnly verified) · `OCTOGUARD_ENABLED` hot-swappable via PM2 `--update-env`
+
+> Phase 2 (XP / leveling / leaderboard), Phase 3 (forum moderation, scheduled messages, NSFW filter with local CLIP / nsfw-detector, voice presence metadata) and Phase 4 (external Bot API + Python SDK + WebRTC voice peer for community-specific bots and mascots) are tracked in the OctoGuard spec at `docs/specs/016-Octoguard/`. Phase 1 is the foundation.
 
 ---
 
