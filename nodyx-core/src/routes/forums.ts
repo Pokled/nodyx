@@ -63,6 +63,7 @@ const ALLOWED_TAGS = [
   'iframe',
   'audio',
   'nodyx-audio-player',
+  'nodyx-track',
 ]
 
 const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
@@ -74,6 +75,7 @@ const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
   'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
   'audio':              ['src', 'controls', 'preload'],
   'nodyx-audio-player': ['src', 'track-title', 'artist', 'cover', 'download'],
+  'nodyx-track':        ['src', 'track-title', 'artist', 'cover'],
   'th':     ['rowspan', 'colspan'],
   'td':     ['rowspan', 'colspan'],
 }
@@ -120,7 +122,14 @@ function sanitize(raw: string): string {
     allowedIframeHostnames: ['www.youtube.com', 'youtube.com', 'www.youtube-nocookie.com', 'player.vimeo.com', 'vimeo.com'],
     transformTags: {
       'nodyx-audio-player': (tagName, attribs) => {
-        // Cover URL must pass the same allowlist as <img> src
+        if (attribs.cover && !isAllowedImgSrcForum(attribs.cover)) {
+          const cleaned: Record<string, string> = { ...attribs }
+          delete cleaned.cover
+          return { tagName, attribs: cleaned }
+        }
+        return { tagName, attribs }
+      },
+      'nodyx-track': (tagName, attribs) => {
         if (attribs.cover && !isAllowedImgSrcForum(attribs.cover)) {
           const cleaned: Record<string, string> = { ...attribs }
           delete cleaned.cover
@@ -132,7 +141,9 @@ function sanitize(raw: string): string {
     exclusiveFilter: (frame) => {
       if (frame.tag === 'img')                 return !isAllowedImgSrcForum(frame.attribs?.src ?? '')
       if (frame.tag === 'audio')               return !isAllowedAudioSrcForum(frame.attribs?.src ?? '')
-      if (frame.tag === 'nodyx-audio-player')  return !isAllowedAudioSrcForum(frame.attribs?.src ?? '')
+      // <nodyx-audio-player> may be empty (parent of <nodyx-track>) so src is optional
+      if (frame.tag === 'nodyx-audio-player')  return !!frame.attribs?.src && !isAllowedAudioSrcForum(frame.attribs.src)
+      if (frame.tag === 'nodyx-track')         return !isAllowedAudioSrcForum(frame.attribs?.src ?? '')
       if (frame.tag === 'a') {
         const href = frame.attribs?.href ?? ''
         try {

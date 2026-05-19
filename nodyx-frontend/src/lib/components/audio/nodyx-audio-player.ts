@@ -32,9 +32,25 @@ function fmtTime(sec: number): string {
 	return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+function escapeHtml(s: string): string {
+	return s
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+}
+
 const BAR_COUNT  = 96
 const EQ_BARS    = 28
 const SPEED_STEPS = [0.75, 1, 1.25, 1.5, 2]
+
+interface Track {
+	src:    string
+	title?: string
+	artist?:string
+	cover?: string
+}
 
 // Cache decoded peaks per src so multiple players for the same file share work
 const _peaksCache = new Map<string, Float32Array>()
@@ -102,6 +118,12 @@ class NodyxAudioPlayer extends HTMLElement {
 	private _speedIdx = 1
 	private _playerId = 'audio'
 
+	// Playlist
+	private _tracks: Track[] = []
+	private _currentIdx = 0
+	private _shuffle = false
+	private _history: number[] = []
+
 	// UI refs
 	private _wrap!: HTMLDivElement
 	private _playBtn!: HTMLButtonElement
@@ -118,6 +140,11 @@ class NodyxAudioPlayer extends HTMLElement {
 	private _shareBtn!: HTMLButtonElement
 	private _shareMenu!: HTMLDivElement
 	private _toast!: HTMLDivElement
+	private _prevBtn!: HTMLButtonElement
+	private _nextBtn!: HTMLButtonElement
+	private _shuffleBtn!: HTMLButtonElement
+	private _listBtn!: HTMLButtonElement
+	private _tracklistEl!: HTMLDivElement
 
 	static get observedAttributes() {
 		return ['src', 'track-title', 'artist', 'cover', 'download']
@@ -138,8 +165,158 @@ class NodyxAudioPlayer extends HTMLElement {
 		this._shadow = this.attachShadow({ mode: 'open' })
 		this._renderUI()
 		this._bindUI()
-		this._syncFromAttrs()
+		this._readTracks()
+		this._renderTracklist()
+		this._wrap.classList.toggle('has-playlist', this._tracks.length > 1)
+		if (this._tracks.length > 0) {
+			this._loadTrack(0, false)
+		} else {
+			this._syncFromAttrs()
+		}
 		this._maybeAutoSeek()
+	}
+
+	private _readTracks() {
+		// Build playlist from child <nodyx-track> elements
+		const children = this.querySelectorAll('nodyx-track')
+		if (children.length > 0) {
+			this._tracks = Array.from(children).map(el => ({
+				src:    el.getAttribute('src')         || '',
+				title:  el.getAttribute('track-title') || undefined,
+				artist: el.getAttribute('artist')      || undefined,
+				cover:  el.getAttribute('cover')       || undefined,
+			})).filter(t => t.src)
+			return
+		}
+		// Legacy single-track from top-level attrs
+		const src = this.getAttribute('src')
+		if (src) {
+			this._tracks = [{
+				src,
+				title:  this.getAttribute('track-title') || undefined,
+				artist: this.getAttribute('artist')      || undefined,
+				cover:  this.getAttribute('cover')       || undefined,
+			}]
+		}
+	}
+
+	private _loadTrack(idx: number, autoplay: boolean) {
+		if (idx < 0 || idx >= this._tracks.length) return
+		this._currentIdx = idx
+		const t = this._tracks[idx]
+
+		// Push current onto history before switching (so prev works)
+		if (this._history[this._history.length - 1] !== idx) this._history.push(idx)
+		if (this._history.length > 64) this._history.shift()
+
+		// Update player UI to match this track
+		this._titleEl.textContent  = t.title  || ''
+		this._artistEl.textContent = t.artist || ''
+		this._metaRow.style.display = (t.title || t.artist) ? 'flex' : 'none'
+
+		const playerCover = this.getAttribute('cover') || ''
+		const effectiveCover = t.cover || playerCover
+		if (effectiveCover) {
+			this._coverImg.src = effectiveCover
+			this._wrap.classList.add('has-cover')
+		} else {
+			this._coverImg.removeAttribute('src')
+			this._wrap.classList.remove('has-cover')
+		}
+
+		this._playerId = playerIdFromSrc(t.src)
+		const fullUrl = new URL(t.src, location.href).href
+		if (this._audio.src !== fullUrl) {
+			this._audio.src = t.src
+			this._loadPeaks(t.src)
+		}
+
+		const download = this.getAttribute('download') || ''
+		if (download) {
+			this._dlBtn.href = t.src
+			this._dlBtn.setAttribute('download', '')
+			this._dlBtn.style.display = ''
+		} else {
+			this._dlBtn.style.display = 'none'
+		}
+
+		this._refreshTracklistActive()
+		if (autoplay) this._audio.play().catch(() => {})
+	}
+
+	private _renderTracklist() {
+		if (this._tracks.length <= 1) {
+			this._tracklistEl.innerHTML = ''
+			return
+		}
+		const rows = this._tracks.map((t, i) => {
+			const title = t.title || t.src.split('/').pop() || `Piste ${i + 1}`
+			const artist = t.artist ? ` <span class="tl-artist">— ${escapeHtml(t.artist)}</span>` : ''
+			return `<button type="button" class="tl-row" data-idx="${i}">
+				<span class="tl-num">${i + 1}.</span>
+				<span class="tl-title">${escapeHtml(title)}${artist}</span>
+			</button>`
+		}).join('')
+		this._tracklistEl.innerHTML = `<div class="tl-head">${this._tracks.length} pistes</div>${rows}`
+		this._tracklistEl.querySelectorAll<HTMLButtonElement>('.tl-row').forEach(btn => {
+			btn.addEventListener('click', () => {
+				const idx = parseInt(btn.getAttribute('data-idx') || '0', 10)
+				this._loadTrack(idx, true)
+				this._closeTracklist()
+			})
+		})
+		this._refreshTracklistActive()
+	}
+
+	private _refreshTracklistActive() {
+		this._tracklistEl.querySelectorAll<HTMLButtonElement>('.tl-row').forEach(btn => {
+			const idx = parseInt(btn.getAttribute('data-idx') || '0', 10)
+			btn.classList.toggle('is-active', idx === this._currentIdx)
+		})
+	}
+
+	private _toggleTracklist() {
+		this._tracklistEl.classList.toggle('open')
+	}
+
+	private _closeTracklist() {
+		this._tracklistEl.classList.remove('open')
+	}
+
+	private _prev() {
+		if (this._tracks.length <= 1) return
+		// Use history if we have something other than the current track
+		const filtered = this._history.filter(i => i !== this._currentIdx)
+		if (filtered.length > 0) {
+			const back = filtered[filtered.length - 1]
+			this._history = this._history.slice(0, this._history.lastIndexOf(back))
+			this._loadTrack(back, true)
+		} else {
+			const idx = (this._currentIdx - 1 + this._tracks.length) % this._tracks.length
+			this._loadTrack(idx, true)
+		}
+	}
+
+	private _next() {
+		if (this._tracks.length <= 1) return
+		let idx: number
+		if (this._shuffle) {
+			if (this._tracks.length === 2) {
+				idx = (this._currentIdx + 1) % 2
+			} else {
+				do { idx = Math.floor(Math.random() * this._tracks.length) }
+				while (idx === this._currentIdx)
+			}
+		} else {
+			idx = (this._currentIdx + 1) % this._tracks.length
+		}
+		this._loadTrack(idx, true)
+	}
+
+	private _toggleShuffle() {
+		this._shuffle = !this._shuffle
+		this._shuffleBtn.classList.toggle('is-on', this._shuffle)
+		this._shuffleBtn.setAttribute('aria-pressed', String(this._shuffle))
 	}
 
 	disconnectedCallback() {
@@ -359,6 +536,47 @@ class NodyxAudioPlayer extends HTMLElement {
 				.share-menu button:hover { background: rgba(99,102,241,0.15); }
 				.share-menu .hint { font-size: 10px; color: #94a3b8; padding: 4px 10px 6px; }
 
+				/* Playlist controls — visible only when wrap.has-playlist */
+				.pl-ctl { display: none; align-items: center; gap: 2px; }
+				.wrap.has-playlist .pl-ctl { display: inline-flex; }
+				.shuffle.is-on { color: #f0abfc; background: rgba(236,72,153,0.12); }
+
+				/* Track list panel */
+				.tracklist {
+					position: absolute;
+					right: 0; top: calc(100% + 4px);
+					min-width: 260px;
+					max-width: 360px;
+					max-height: 280px;
+					overflow-y: auto;
+					background: #1e1b4b;
+					border: 1px solid rgba(99,102,241,0.4);
+					border-radius: 8px;
+					padding: 4px;
+					box-shadow: 0 12px 28px -8px rgba(0,0,0,0.5);
+					display: none;
+					z-index: 10;
+				}
+				.tracklist.open { display: block; }
+				.tl-head { font-size: 10px; color: #94a3b8; padding: 6px 10px 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+				.tl-row {
+					display: flex; align-items: center; gap: 8px;
+					width: 100%;
+					padding: 6px 10px;
+					background: none; border: 0;
+					color: #e0e7ff; text-align: left;
+					font-size: 12px; cursor: pointer; border-radius: 4px;
+				}
+				.tl-row:hover { background: rgba(99,102,241,0.15); }
+				.tl-row.is-active { color: #f0abfc; background: rgba(236,72,153,0.08); }
+				.tl-row.is-active::before {
+					content: '▶';
+					margin-right: 2px;
+				}
+				.tl-num { color: #94a3b8; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+				.tl-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+				.tl-artist { color: #94a3b8; font-size: 11px; }
+
 				/* Toast */
 				.toast {
 					position: absolute;
@@ -417,6 +635,20 @@ class NodyxAudioPlayer extends HTMLElement {
 
 				<div class="side">
 					<div class="side-top">
+						<span class="pl-ctl">
+							<button class="icon-btn prev" type="button" title="Piste précédente" aria-label="Piste précédente">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM9.5 12l8.5 6V6z"/></svg>
+							</button>
+							<button class="icon-btn next" type="button" title="Piste suivante" aria-label="Piste suivante">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6h2v12h-2z"/></svg>
+							</button>
+							<button class="icon-btn shuffle" type="button" title="Lecture aléatoire" aria-label="Lecture aléatoire" aria-pressed="false">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+							</button>
+							<button class="icon-btn list" type="button" title="Liste des pistes" aria-label="Liste des pistes">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+							</button>
+						</span>
 						<a class="icon-btn dl" href="#" download style="display: none;" title="Télécharger" aria-label="Télécharger">
 							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
 						</a>
@@ -438,6 +670,7 @@ class NodyxAudioPlayer extends HTMLElement {
 						<button type="button" data-action="copy-at">Copier le lien à <span class="ts">0:00</span></button>
 						<div class="hint">Le destinataire arrivera directement au bon endroit.</div>
 					</div>
+					<div class="tracklist" role="menu"></div>
 				</div>
 
 				<div class="toast" role="status" aria-live="polite">Lien copié</div>
@@ -462,6 +695,11 @@ class NodyxAudioPlayer extends HTMLElement {
 		this._shareBtn  = this._shadow.querySelector('.share')!
 		this._shareMenu = this._shadow.querySelector('.share-menu')!
 		this._toast     = this._shadow.querySelector('.toast')!
+		this._prevBtn   = this._shadow.querySelector('.prev')!
+		this._nextBtn   = this._shadow.querySelector('.next')!
+		this._shuffleBtn= this._shadow.querySelector('.shuffle')!
+		this._listBtn   = this._shadow.querySelector('.list')!
+		this._tracklistEl = this._shadow.querySelector('.tracklist')!
 		this._ctx2d     = this._canvas.getContext('2d')
 		this._setVolumeUI(this._lastVolume)
 	}
@@ -472,6 +710,10 @@ class NodyxAudioPlayer extends HTMLElement {
 		this._volBtn.addEventListener('click',  () => this._toggleMute())
 		this._speedBtn.addEventListener('click', () => this._cycleSpeed())
 		this._shareBtn.addEventListener('click', (e) => { e.stopPropagation(); this._toggleShareMenu() })
+		this._prevBtn.addEventListener('click',    () => this._prev())
+		this._nextBtn.addEventListener('click',    () => this._next())
+		this._shuffleBtn.addEventListener('click', () => this._toggleShuffle())
+		this._listBtn.addEventListener('click',    (e) => { e.stopPropagation(); this._toggleTracklist() })
 
 		this._shareMenu.addEventListener('click', (e) => {
 			const target = e.target as HTMLElement
@@ -480,8 +722,11 @@ class NodyxAudioPlayer extends HTMLElement {
 			if (action === 'copy-at') this._share(true)
 		})
 
-		// Close share menu on outside click
-		document.addEventListener('click', () => this._closeShareMenu())
+		// Close share menu + tracklist on outside click
+		document.addEventListener('click', () => {
+			this._closeShareMenu()
+			this._closeTracklist()
+		})
 
 		// Waveform click → seek
 		this._canvas.addEventListener('click', (e) => this._seekFromEvent(e))
@@ -504,7 +749,10 @@ class NodyxAudioPlayer extends HTMLElement {
 
 		this._audio.addEventListener('play',  () => this._onPlay())
 		this._audio.addEventListener('pause', () => this._onPause())
-		this._audio.addEventListener('ended', () => this._onPause())
+		this._audio.addEventListener('ended', () => {
+			this._onPause()
+			if (this._tracks.length > 1) this._next()
+		})
 		this._audio.addEventListener('timeupdate', () => this._onTimeUpdate())
 		this._audio.addEventListener('loadedmetadata', () => {
 			this._totalEl.textContent = fmtTime(this._audio.duration)

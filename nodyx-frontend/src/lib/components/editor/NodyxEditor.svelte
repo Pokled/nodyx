@@ -64,6 +64,7 @@
 	let audioCoverFile    = $state<File | null>(null)
 	let audioCoverPreview = $state<string | null>(null)  // blob: URL for popup preview
 	let audioCoverDetected= $state<{ mime: string; bytes: Uint8Array } | null>(null)
+	let audioStaged       = $state<Array<{ src: string; title: string; artist: string; cover: string }>>([])
 
 	// ── Media picker ──────────────────────────────────────────────────────────
 	let showMediaPicker = $state(false)
@@ -188,21 +189,42 @@
 			},
 		})
 
-		// ── Audio node (mp3 / ogg / wav / m4a / webm) ────────────────────────
-		// Renders as <nodyx-audio-player> (custom element with FFT visualizer).
-		// Legacy <audio[src]> tags in older posts still parse into the same node.
+		// ── Audio nodes ──────────────────────────────────────────────────────
+		// nodyxAudio (the player) contains zero-or-more nodyxTrack children.
+		// Legacy single-track posts have the src directly on <nodyx-audio-player>
+		// (no children). The Web Component handles both shapes.
+		const passthrough = (name: string) => ({
+			default: null as any,
+			parseHTML: (el: HTMLElement) => el.getAttribute(name),
+			renderHTML: (attrs: Record<string, any>) => attrs[name] ? { [name]: attrs[name] } : {},
+		})
+
+		const NodyxTrack = Node.create({
+			name: 'nodyxTrack',
+			group: 'block',
+			atom: true,
+			selectable: false,
+			addAttributes() {
+				return {
+					src:           passthrough('src'),
+					'track-title': passthrough('track-title'),
+					artist:        passthrough('artist'),
+					cover:         passthrough('cover'),
+				}
+			},
+			parseHTML() { return [{ tag: 'nodyx-track[src]' }] },
+			renderHTML({ HTMLAttributes }) {
+				return ['nodyx-track', mergeAttributes(HTMLAttributes)]
+			},
+		})
+
 		const NodyxAudio = Node.create({
 			name: 'nodyxAudio',
 			group: 'block',
-			atom: true,
+			content: 'nodyxTrack*',
 			selectable: true,
 			draggable: true,
 			addAttributes() {
-				const passthrough = (name: string) => ({
-					default: null as any,
-					parseHTML: (el: HTMLElement) => el.getAttribute(name),
-					renderHTML: (attrs: Record<string, any>) => attrs[name] ? { [name]: attrs[name] } : {},
-				})
 				return {
 					src:           passthrough('src'),
 					'track-title': passthrough('track-title'),
@@ -213,17 +235,49 @@
 			},
 			parseHTML() {
 				return [
-					{ tag: 'nodyx-audio-player[src]' },
-					{ tag: 'audio[src]' },
+					{ tag: 'nodyx-audio-player' },
+					{ tag: 'audio[src]' },  // legacy
 				]
 			},
 			renderHTML({ HTMLAttributes }) {
-				return ['nodyx-audio-player', mergeAttributes(HTMLAttributes)]
+				return ['nodyx-audio-player', mergeAttributes(HTMLAttributes), 0]
 			},
 			addCommands(): any {
 				return {
-					setNodyxAudio: (attrs: Record<string, string>) => ({ commands }: any) =>
-						commands.insertContent({ type: 'nodyxAudio', attrs }),
+					// Single-track convenience: { src, 'track-title', artist, cover, download }
+					setNodyxAudio: (attrs: Record<string, string>) => ({ commands }: any) => {
+						if (!attrs.src) return false
+						return commands.insertContent({
+							type: 'nodyxAudio',
+							attrs: { download: attrs.download || null },
+							content: [{
+								type: 'nodyxTrack',
+								attrs: {
+									src:           attrs.src,
+									'track-title': attrs['track-title'] || null,
+									artist:        attrs.artist        || null,
+									cover:         attrs.cover         || null,
+								},
+							}],
+						})
+					},
+					// Multi-track: { tracks: [{src, title, artist, cover}], download? }
+					setNodyxPlaylist: (opts: { tracks: Array<{src: string, title?: string, artist?: string, cover?: string}>, download?: boolean }) => ({ commands }: any) => {
+						if (!opts.tracks || opts.tracks.length === 0) return false
+						return commands.insertContent({
+							type: 'nodyxAudio',
+							attrs: { download: opts.download ? '1' : null },
+							content: opts.tracks.map(t => ({
+								type: 'nodyxTrack',
+								attrs: {
+									src:           t.src,
+									'track-title': t.title  || null,
+									artist:        t.artist || null,
+									cover:         t.cover  || null,
+								},
+							})),
+						})
+					},
 				}
 			},
 		})
@@ -244,7 +298,7 @@
 				CharacterCount,
 				CodeBlockLowlight.configure({ lowlight }),
 				NodyxTwoCols, NodyxColumn,
-				NodyxAudio,
+				NodyxAudio, NodyxTrack,
 			],
 			content: initialContent,
 			onTransaction() { syncActive() },
@@ -340,6 +394,7 @@
 		audioCoverPreview = null
 		audioError = ''
 		audioUrlExternal = ''
+		audioStaged = []
 		if (audioFileEl) audioFileEl.value = ''
 		if (audioCoverFileEl) audioCoverFileEl.value = ''
 	}
@@ -421,7 +476,7 @@
 		if (audioCoverFileEl) audioCoverFileEl.value = ''
 	}
 
-	async function submitAudio() {
+	async function stageAudio() {
 		audioError = ''
 		if (!audioPickedFile) {
 			audioError = 'Choisis un fichier audio.'
@@ -433,11 +488,9 @@
 		}
 		audioUploading = true
 		try {
-			// Upload audio
 			const audioUrl = await uploadBlobToPosts(audioPickedFile, audioPickedFile.name)
 			if (!audioUrl) return
 
-			// Upload cover if provided (manual file wins over detected bytes)
 			let coverUrl = ''
 			if (audioCoverFile) {
 				const u = await uploadBlobToPosts(audioCoverFile, audioCoverFile.name)
@@ -449,20 +502,53 @@
 				if (u) coverUrl = u
 			}
 
-			const attrs: Record<string, string> = { src: audioUrl }
-			if (audioTitle.trim())     attrs['track-title'] = audioTitle.trim()
-			if (audioArtist.trim())    attrs.artist         = audioArtist.trim()
-			if (coverUrl)              attrs.cover          = coverUrl
-			if (audioAllowDownload)    attrs.download       = '1'
+			audioStaged = [...audioStaged, {
+				src:    audioUrl,
+				title:  audioTitle.trim(),
+				artist: audioArtist.trim(),
+				cover:  coverUrl,
+			}]
 
-			;(editor?.chain().focus() as any).setNodyxAudio(attrs).run()
-			showAudio = false
-			resetAudioForm()
+			// Clear current track form but keep the staged queue and download flag
+			audioPickedFile = null
+			audioTitle = ''
+			audioArtist = ''
+			audioCoverFile = null
+			audioCoverDetected = null
+			if (audioCoverPreview) { try { URL.revokeObjectURL(audioCoverPreview) } catch {} }
+			audioCoverPreview = null
+			if (audioFileEl) audioFileEl.value = ''
+			if (audioCoverFileEl) audioCoverFileEl.value = ''
 		} catch (err) {
 			audioError = 'Erreur réseau pendant l’upload.'
 		} finally {
 			audioUploading = false
 		}
+	}
+
+	function removeStaged(idx: number) {
+		audioStaged = audioStaged.filter((_, i) => i !== idx)
+	}
+
+	function insertStaged() {
+		if (audioStaged.length === 0) return
+		if (audioStaged.length === 1) {
+			const t = audioStaged[0]
+			const attrs: Record<string, string> = { src: t.src }
+			if (t.title)  attrs['track-title'] = t.title
+			if (t.artist) attrs.artist        = t.artist
+			if (t.cover)  attrs.cover         = t.cover
+			if (audioAllowDownload) attrs.download = '1'
+			;(editor?.chain().focus() as any).setNodyxAudio(attrs).run()
+		} else {
+			;(editor?.chain().focus() as any).setNodyxPlaylist({
+				tracks: audioStaged.map(t => ({ src: t.src, title: t.title, artist: t.artist, cover: t.cover })),
+				download: audioAllowDownload,
+			}).run()
+		}
+		audioStaged = []
+		showAudio = false
+		resetAudioForm()
 	}
 
 	function insertAudioFromUrl() {
@@ -758,13 +844,38 @@
 						</div>
 					</div>
 
+					<button type="button" onclick={stageAudio} class="popup-btn-primary mt-1" disabled={audioUploading}>
+						{audioUploading ? 'Upload en cours…' : (audioStaged.length === 0 ? 'Ajouter cette piste' : '+ Ajouter cette piste à la file')}
+					</button>
+				{/if}
+
+				{#if audioStaged.length > 0}
+					<div class="mt-2 flex flex-col gap-1 max-h-40 overflow-y-auto border border-indigo-700/40 rounded p-1.5 bg-indigo-950/30">
+						<div class="text-[10px] text-indigo-300 uppercase tracking-wider px-1">File ({audioStaged.length} piste{audioStaged.length > 1 ? 's' : ''})</div>
+						{#each audioStaged as t, i}
+							<div class="flex items-center gap-2 text-xs px-1 py-0.5 hover:bg-indigo-900/30 rounded">
+								<span class="text-indigo-400 font-mono">{i + 1}.</span>
+								{#if t.cover}
+									<img src={t.cover} alt="" class="w-6 h-6 rounded object-cover shrink-0" />
+								{:else}
+									<div class="w-6 h-6 rounded bg-indigo-900/40 shrink-0"></div>
+								{/if}
+								<div class="flex-1 min-w-0">
+									<div class="text-gray-200 truncate">{t.title || t.src.split('/').pop()}</div>
+									{#if t.artist}<div class="text-gray-500 text-[10px] truncate">{t.artist}</div>{/if}
+								</div>
+								<button type="button" onclick={() => removeStaged(i)} class="text-red-400 hover:text-red-300 text-base leading-none px-1" title="Retirer">×</button>
+							</div>
+						{/each}
+					</div>
+
 					<label class="flex items-center gap-2 text-xs text-gray-400 mt-1 cursor-pointer select-none">
 						<input type="checkbox" bind:checked={audioAllowDownload} class="accent-indigo-500" />
-						<span>Autoriser le téléchargement (bouton ⬇ visible sur le lecteur)</span>
+						<span>Autoriser le téléchargement (bouton ⬇ visible)</span>
 					</label>
 
-					<button type="button" onclick={submitAudio} class="popup-btn-primary mt-1" disabled={audioUploading}>
-						{audioUploading ? 'Upload en cours…' : 'Insérer le morceau'}
+					<button type="button" onclick={insertStaged} class="popup-btn-primary" disabled={audioUploading}>
+						Insérer {audioStaged.length === 1 ? 'le morceau' : `la playlist (${audioStaged.length} pistes)`}
 					</button>
 				{/if}
 
