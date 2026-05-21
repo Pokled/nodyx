@@ -9,6 +9,7 @@ import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as UserModel from '../models/user'
+import { toSelfUser } from '../utils/publicUser'
 import { isSmtpConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService'
 import { getUserTotp, TOTP_PENDING_TTL } from './totp'
 
@@ -439,7 +440,9 @@ export default async function authRoutes(app: FastifyInstance) {
       }
     }
 
-    const { password: _, ...publicUser } = user
+    // Whitelist: even though the user just authenticated, we never echo email
+    // or other PII back. Email stays backend-only by default.
+    const publicUser = toSelfUser(user)
 
     // Alerte connexion admin/owner
     const realIpLogin = (request.headers['cf-connecting-ip'] as string) || request.ip

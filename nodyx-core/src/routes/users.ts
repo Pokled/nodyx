@@ -8,6 +8,7 @@ import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
 import * as UserModel from '../models/user'
+import { toPublicUser, toSelfUser } from '../utils/publicUser'
 import { db, redis } from '../config/database'
 import { io } from '../socket/io'
 import { scanBuffer } from '../services/fileScanner'
@@ -171,7 +172,8 @@ export default async function userRoutes(app: FastifyInstance) {
       grade     = memberRows.rows[0]?.grade_name ? { name: memberRows.rows[0].grade_name, color: memberRows.rows[0].grade_color! } : null
       is_banned = banRows.rows.length > 0
     }
-    return reply.send({ user: { ...user, role, grade, is_banned } })
+    // Whitelist before sending: email, email_verified and any PII stay backend-only.
+    return reply.send({ user: { ...toSelfUser(user), role, grade, is_banned } })
   })
 
   // PATCH /api/v1/users/me/linked-instances — ajouter ou retirer une instance liée
@@ -602,7 +604,8 @@ export default async function userRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'User not found', code: 'NOT_FOUND' })
     }
 
-    return reply.send({ user })
+    // Public route: strict whitelist, no email or PII leaks.
+    return reply.send({ user: toPublicUser(user) })
   })
 
   // PATCH /api/v1/users/me/public-key — store user's ECDH public key (E2E DM encryption)
