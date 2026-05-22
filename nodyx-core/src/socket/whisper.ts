@@ -93,6 +93,11 @@ export function registerWhisperHandlers(io: Server, socket: Socket): void {
     if (checkRateLimit(userId, 'whisper:message')) return
     if (!roomId || !content) return
 
+    // Must have joined the room (whisper:join enforces creator-or-participant access).
+    // Without this any auth socket could inject spoof messages into a whisper room
+    // just by guessing the room id.
+    if (!socket.rooms.has(`whisper:${roomId}`)) return
+
     const clean = sanitize(content)
     if (!clean || clean.length > MAX_CONTENT_LENGTH) return
 
@@ -132,6 +137,7 @@ export function registerWhisperHandlers(io: Server, socket: Socket): void {
   socket.on('whisper:typing', ({ roomId }: { roomId: string }) => {
     if (checkRateLimit(userId, 'whisper:typing')) return
     if (!roomId) return
+    if (!socket.rooms.has(`whisper:${roomId}`)) return
     socket.to(`whisper:${roomId}`).emit('whisper:typing', { roomId, userId, username })
   })
 

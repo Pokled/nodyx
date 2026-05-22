@@ -318,8 +318,13 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
 
   // ── P2P signaling — Browser-to-browser WebRTC DataChannels ──────────────
   // Discovery: join/leave the P2P pool for a text channel
-  socket.on('p2p:join', (channelId: string) => {
-    if (!channelId) return
+  socket.on('p2p:join', async (channelId: string) => {
+    if (!isUuid(channelId)) return
+    // Access control: only community members of the channel can join the P2P pool.
+    // Without this any auth socket could squat the pool, harvest peer IDs and
+    // attempt to open WebRTC DataChannels with users in a channel they don't belong to.
+    const role = await getCommunityRoleForChannel(channelId, userId)
+    if (!role) return
     if (!_p2pChannels.has(channelId)) _p2pChannels.set(channelId, new Set())
     const pool = _p2pChannels.get(channelId)!
     const existingPeers = [...pool].filter(id => id !== socket.id)
