@@ -4,6 +4,8 @@
 	import { onMount, onDestroy } from 'svelte'
 	import { fly } from 'svelte/transition'
 	import { getSocket } from '$lib/socket'
+	import Sparkline from '$lib/components/admin/Sparkline.svelte'
+	import StreamerHero from '$lib/components/admin/StreamerHero.svelte'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -59,6 +61,50 @@
 		warningCount: number
 	}
 
+	type StatsPayload = {
+		periodDays: number
+		dayLabels:  string[]            // ['2026-05-17', ...] (chronological)
+		totals:     Record<string, number>
+		daily:      Record<string, number[]>
+	}
+
+	type TwitchProfilePayload = {
+		user: {
+			id:                string
+			login:             string
+			displayName:       string
+			avatarUrl:         string
+			profileBannerUrl:  string | null
+			description:       string
+			broadcasterType:   'partner' | 'affiliate' | ''
+			accountCreatedAt:  string
+			totalViewCount:    number | null
+		}
+		stream: {
+			isLive:       boolean
+			gameName:     string | null
+			title:        string | null
+			viewerCount:  number | null
+			startedAt:    string | null
+			thumbnailUrl: string | null
+			language:     string | null
+		}
+		followers: { total: number | null }
+		fetchedAt: string
+	}
+
+	// Map tone (Tailwind name) → hex couleur pour la sparkline SVG inline.
+	const TONE_HEX: Record<string, string> = {
+		cyan:    '#06b6d4',
+		purple:  '#a855f7',
+		pink:    '#ec4899',
+		amber:   '#f59e0b',
+		red:     '#ef4444',
+		indigo:  '#6366f1',
+		slate:   '#64748b',
+		emerald: '#10b981',
+	}
+
 	let connecting     = $state(false)
 	let refreshing     = $state(false)
 	let disconnecting  = $state(false)
@@ -84,6 +130,24 @@
 	)
 	const health        = $derived<HealthPayload | null>(data.health ?? null)
 	const setup         = $derived<SetupPayload | null>((data as { setup?: SetupPayload | null }).setup ?? null)
+	const stats         = $derived<StatsPayload | null>((data as { stats?: StatsPayload | null }).stats ?? null)
+	const twitchProfile = $derived<TwitchProfilePayload | null>((data as { profile?: TwitchProfilePayload | null }).profile ?? null)
+
+	// Ordre + types affichés dans les cartes Stats. On garde follow / sub /
+	// cheer / raid (les "moments" de stream) et on exclut les messages (trop
+	// de bruit pour une sparkline lisible).
+	const STAT_TYPES = ['channel.follow', 'channel.subscribe', 'channel.cheer', 'channel.raid'] as const
+
+	// Variation jour J vs jour J-1 (dernière barre vs avant-dernière).
+	function trendOf(series: number[] | undefined): { dir: 'up' | 'down' | 'flat'; delta: number } {
+		if (!series || series.length < 2) return { dir: 'flat', delta: 0 }
+		const last = series[series.length - 1]
+		const prev = series[series.length - 2]
+		const delta = last - prev
+		if (delta > 0) return { dir: 'up',   delta }
+		if (delta < 0) return { dir: 'down', delta }
+		return { dir: 'flat', delta: 0 }
+	}
 
 	// Auto-expand the checklist when something needs attention
 	$effect(() => {
@@ -400,6 +464,11 @@
 		</div>
 	</header>
 
+	<!-- ── Hero Twitch (avatar, live state, follower count, ticking timer) ─── -->
+	{#if isConnected && twitchProfile}
+		<StreamerHero profile={twitchProfile} />
+	{/if}
+
 	<!-- ── Setup checklist (diagnostic visuel point par point) ─────────────── -->
 	{#if setup}
 		{@const tone =
@@ -477,8 +546,8 @@
 		</section>
 	{/if}
 
-	<!-- ── Live banner ─────────────────────────────────────────────────────── -->
-	{#if liveNow && health?.currentSession}
+	<!-- ── Live banner (fallback quand le Hero Twitch n'est pas dispo) ─────── -->
+	{#if liveNow && health?.currentSession && !twitchProfile}
 		<div class="rounded-xl border border-rose-500/40 bg-gradient-to-r from-rose-500/10 via-rose-500/5 to-transparent p-4 flex items-center gap-3">
 			<span class="relative flex h-3 w-3">
 				<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-60"></span>
@@ -543,6 +612,50 @@
 				<div class="text-[11px] text-slate-500 mt-0.5">
 					{lastEvent ? fmtRelative(lastEvent.occurredAt) : 'Lance un live ou demande un follow'}
 				</div>
+			</div>
+		</section>
+	{/if}
+
+	<!-- ── Stats 7 jours ───────────────────────────────────────────────────── -->
+	{#if isConnected && stats}
+		<section class="space-y-3">
+			<div class="flex items-center justify-between">
+				<h2 class="text-sm font-semibold text-white">Stats des {stats.periodDays} derniers jours</h2>
+				<span class="text-[11px] text-slate-500">Mise à jour à chaque rechargement</span>
+			</div>
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+				{#each STAT_TYPES as type}
+					{@const meta   = EVENT_META[type] ?? { label: type, tone: 'slate', desc: '' }}
+					{@const total  = stats.totals[type] ?? 0}
+					{@const series = stats.daily[type] ?? []}
+					{@const color  = TONE_HEX[meta.tone] ?? TONE_HEX.slate}
+					{@const trend  = trendOf(series)}
+					<div class="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4 flex flex-col gap-2">
+						<div class="flex items-center justify-between">
+							<span class="text-[10px] uppercase tracking-widest font-semibold text-slate-400">{meta.label}</span>
+							{#if trend.dir === 'up'}
+								<span class="text-[10px] font-mono text-emerald-400" title="J vs J-1">+{trend.delta}</span>
+							{:else if trend.dir === 'down'}
+								<span class="text-[10px] font-mono text-rose-400" title="J vs J-1">{trend.delta}</span>
+							{:else}
+								<span class="text-[10px] font-mono text-slate-500" title="J vs J-1">=</span>
+							{/if}
+						</div>
+						<div class="flex items-end justify-between gap-3">
+							<div class="text-2xl font-semibold text-white leading-none" style="color: {color};">
+								{total}
+							</div>
+							<Sparkline
+								series={series}
+								labels={stats.dayLabels}
+								color={color}
+								width={90}
+								height={32}
+							/>
+						</div>
+						<div class="text-[11px] text-slate-500">{meta.desc}</div>
+					</div>
+				{/each}
 			</div>
 		</section>
 	{/if}

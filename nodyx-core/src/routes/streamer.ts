@@ -44,6 +44,7 @@ import {
 
 import { listRecentEvents } from '../services/streamer/eventService'
 import { audit } from '../services/streamer/audit'
+import { getTwitchProfile } from '../services/streamer/twitchProfile'
 import { ProviderError } from '../services/streamer/providers/_types'
 
 // ── Helpers env ──────────────────────────────────────────────────────────────
@@ -338,6 +339,85 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       limit,
     })
     return { events: rows }
+  })
+
+  // GET /twitch/profile  — admin only — profil Twitch enrichi pour le hero
+  // dashboard (avatar, follower count, état live, jeu en cours…). Cache Redis
+  // 60s côté service pour ne pas hammer l'API Twitch. ?refresh=1 force le refetch.
+  server.get<{ Querystring: { refresh?: string } }>(
+    '/twitch/profile',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const force = request.query.refresh === '1'
+      const profile = await getTwitchProfile({ forceRefresh: force })
+      if (!profile) {
+        return reply.code(404).send({ ok: false, error: 'no_streamer_or_helix_unavailable' })
+      }
+      return profile
+    },
+  )
+
+  // GET /stats  — admin only — totaux + séries journalières des events EventSub
+  // sur les N derniers jours (default 7, max 30). Sert à alimenter les sparklines
+  // du dashboard. Renvoie un bucket par jour (0 si aucun event ce jour-là) pour
+  // que le frontend puisse render la série sans calcul ni gap.
+  server.get<{ Querystring: { days?: string } }>('/stats', { preHandler: adminOnly }, async (request) => {
+    const days = Math.min(Math.max(Number(request.query.days) || 7, 1), 30)
+    const TRACKED_TYPES = [
+      'channel.follow',
+      'channel.subscribe',
+      'channel.cheer',
+      'channel.raid',
+      'channel.chat.message',
+    ] as const
+
+    // Aggrégation : 1 row par (event_type, day) avec count.
+    // Exclut les injections via POST /test-event (external_id préfixé 'test-')
+    // pour que les stats reflètent l'activité Twitch réelle.
+    const rows = await db.query<{ event_type: string; day: string; count: string }>(
+      `SELECT event_type, DATE_TRUNC('day', occurred_at) AS day, COUNT(*)::text AS count
+       FROM streamer_events
+       WHERE provider = 'twitch'
+         AND occurred_at >= NOW() - ($1::int || ' days')::interval
+         AND event_type = ANY($2::text[])
+         AND (external_id IS NULL OR external_id NOT LIKE 'test-%')
+       GROUP BY event_type, day
+       ORDER BY day ASC`,
+      [days, TRACKED_TYPES as unknown as string[]],
+    ).then(r => r.rows).catch(() => [] as { event_type: string; day: string; count: string }[])
+
+    // Build : { event_type → { day_iso_yyyy_mm_dd → count } }
+    const grouped: Record<string, Map<string, number>> = {}
+    for (const t of TRACKED_TYPES) grouped[t] = new Map()
+    for (const row of rows) {
+      const dayKey = new Date(row.day).toISOString().slice(0, 10)
+      grouped[row.event_type]?.set(dayKey, parseInt(row.count, 10) || 0)
+    }
+
+    // Génère les `days` derniers jours (ordre chronologique, plus ancien → plus récent)
+    const dayKeys: string[] = []
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today)
+      d.setUTCDate(d.getUTCDate() - i)
+      dayKeys.push(d.toISOString().slice(0, 10))
+    }
+
+    const totals:  Record<string, number>   = {}
+    const daily:   Record<string, number[]> = {}
+    for (const t of TRACKED_TYPES) {
+      const series = dayKeys.map(d => grouped[t]?.get(d) ?? 0)
+      daily[t]  = series
+      totals[t] = series.reduce((a, b) => a + b, 0)
+    }
+
+    return {
+      periodDays: days,
+      dayLabels:  dayKeys,
+      totals,
+      daily,
+    }
   })
 
   // GET /health  — admin only — métriques live du Hub pour le dashboard
