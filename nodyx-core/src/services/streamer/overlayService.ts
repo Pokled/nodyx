@@ -164,6 +164,58 @@ export function withLeaderboardDefaults(raw: Record<string, unknown> | undefined
   }
 }
 
+// ── Stream Timer ───────────────────────────────────────────────────────────
+// Pillule chrono live. 6 thèmes pour cohérence avec les autres overlays,
+// 5 positions (4 coins + centre), 3 formats d'affichage.
+
+export type TimerTheme = 'cyber' | 'soft' | 'retro' | 'neon' | 'minimal' | 'custom'
+export const TIMER_THEMES: readonly TimerTheme[] = ['cyber', 'soft', 'retro', 'neon', 'minimal', 'custom']
+
+export type TimerPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'center'
+export const TIMER_POSITIONS: readonly TimerPosition[] = ['top-right', 'top-left', 'bottom-right', 'bottom-left', 'center']
+
+export type TimerFormat = 'auto' | 'mm_ss' | 'h_mm_ss'
+export const TIMER_FORMATS: readonly TimerFormat[] = ['auto', 'mm_ss', 'h_mm_ss']
+
+export interface TimerCustomTheme {
+  bgColor?:     string | null
+  textColor?:   string | null
+  accentColor?: string | null              // couleur du point pulsant
+}
+
+export interface TimerConfig {
+  theme:        TimerTheme
+  position:     TimerPosition
+  format:       TimerFormat                // auto = h:mm:ss au-delà d'1h, mm:ss en dessous
+  customTheme?: TimerCustomTheme
+}
+
+export const DEFAULT_TIMER_CONFIG: TimerConfig = {
+  theme:    'cyber',
+  position: 'top-left',
+  format:   'auto',
+}
+
+export function withTimerDefaults(raw: Record<string, unknown> | undefined): TimerConfig {
+  const cfg = raw ?? {}
+  const theme = TIMER_THEMES.includes(cfg.theme as TimerTheme)
+    ? cfg.theme as TimerTheme
+    : DEFAULT_TIMER_CONFIG.theme
+  const position = TIMER_POSITIONS.includes(cfg.position as TimerPosition)
+    ? cfg.position as TimerPosition
+    : DEFAULT_TIMER_CONFIG.position
+  const format = TIMER_FORMATS.includes(cfg.format as TimerFormat)
+    ? cfg.format as TimerFormat
+    : DEFAULT_TIMER_CONFIG.format
+  const ct = (cfg.customTheme ?? {}) as Partial<TimerCustomTheme>
+  const customTheme: TimerCustomTheme = {
+    bgColor:     typeof ct.bgColor     === 'string' ? ct.bgColor     : null,
+    textColor:   typeof ct.textColor   === 'string' ? ct.textColor   : null,
+    accentColor: typeof ct.accentColor === 'string' ? ct.accentColor : null,
+  }
+  return { theme, position, format, customTheme }
+}
+
 // ── Event Ticker ───────────────────────────────────────────────────────────
 // Bandeau défilant en bas d'écran qui montre les derniers events sous forme
 // de tokens colorés (couleurs par event type, cohérent avec alert box).

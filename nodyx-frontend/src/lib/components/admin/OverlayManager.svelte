@@ -6,6 +6,7 @@
 	import GoalBarConfigEditor     from './GoalBarConfigEditor.svelte'
 	import EventTickerConfigEditor from './EventTickerConfigEditor.svelte'
 	import LeaderboardConfigEditor from './LeaderboardConfigEditor.svelte'
+	import StreamTimerConfigEditor from './StreamTimerConfigEditor.svelte'
 
 	interface Props {
 		token: string
@@ -31,7 +32,7 @@
 	const TYPE_META: Record<OverlayType, { label: string; desc: string; routeSlug: string; ready: boolean }> = {
 		alert_box:    { label: 'Alert Box',    desc: 'Notifications follow/sub/raid/cheer qui slide à l\'écran.', routeSlug: 'alert',    ready: true  },
 		goal_bar:     { label: 'Goal Bar',     desc: 'Barre de progression vers un objectif (followers totaux, subs/bits de la session, ou custom).',  routeSlug: 'goal',     ready: true  },
-		stream_timer: { label: 'Stream Timer', desc: 'Temps écoulé depuis le début du stream, hidden quand offline.', routeSlug: 'timer',    ready: true  },
+		stream_timer: { label: 'Stream Timer', desc: 'Chrono du stream en cours, 6 thèmes, 5 positions, 3 formats d\'affichage.', routeSlug: 'timer',    ready: true  },
 		event_ticker: { label: 'Event Ticker', desc: 'Bandeau défilant des derniers events en bas d\'écran. Combo + event weight + 6 thèmes.', routeSlug: 'ticker',   ready: true  },
 		leaderboard:  { label: 'Leaderboard',  desc: 'Podium top 3 + liste rang 4-N. 4 catégories (subs/bits/raids/chatteurs) × 4 périodes. Mode récap fin de stream.', routeSlug: 'board', ready: true },
 	}
@@ -205,7 +206,7 @@
 							</div>
 						</div>
 						<div class="flex items-center gap-1.5">
-							{#if o.overlayType === 'alert_box' || o.overlayType === 'goal_bar' || o.overlayType === 'event_ticker' || o.overlayType === 'leaderboard'}
+							{#if o.overlayType === 'alert_box' || o.overlayType === 'goal_bar' || o.overlayType === 'event_ticker' || o.overlayType === 'leaderboard' || o.overlayType === 'stream_timer'}
 								<button type="button" onclick={() => toggleConfig(o.id)}
 									class="text-[11px] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 hover:border-cyan-500/50 px-2.5 py-1 rounded transition-colors inline-flex items-center gap-1">
 									<svg class="w-3 h-3 transition-transform {configOpen.has(o.id) ? 'rotate-180' : ''}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
@@ -234,6 +235,8 @@
 						<EventTickerConfigEditor token={token} overlayId={o.id} initial={o.config} onSaved={reload} />
 					{:else if o.overlayType === 'leaderboard' && configOpen.has(o.id)}
 						<LeaderboardConfigEditor token={token} overlayId={o.id} initial={o.config} onSaved={reload} />
+					{:else if o.overlayType === 'stream_timer' && configOpen.has(o.id)}
+						<StreamTimerConfigEditor token={token} overlayId={o.id} initial={o.config} onSaved={reload} />
 					{/if}
 				</div>
 			{/each}
