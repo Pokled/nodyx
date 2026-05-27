@@ -61,6 +61,13 @@ import {
   patchPrediction,
 } from '../services/streamer/twitchEngagement'
 import {
+  createReward,
+  deleteReward,
+  hasRedemptionsScope,
+  listRewards,
+  updateReward,
+} from '../services/streamer/twitchChannelPoints'
+import {
   createOverlay,
   findOverlayByToken,
   isOverlayType,
@@ -605,6 +612,112 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         metadata:  { predictionId: request.params.id, newStatus: status, winningOutcomeId: winningOutcomeId ?? null },
       })
       return reply.send({ ok: true, prediction: r.data })
+    },
+  )
+
+  // ── Channel Points Rewards (Phase 3, suite) ─────────────────────────────
+  // CRUD sur les custom rewards de la chaine. Affiliate/Partner requis côté
+  // Twitch (le frontend gate via broadcasterType, mais on retourne quand
+  // même proprement les 403 helix au cas où). Toutes les routes gated admin.
+
+  server.get('/twitch/rewards/scope-status', { preHandler: adminOnly }, async () => {
+    const hasScope = await hasRedemptionsScope()
+    return { hasScope, requiredScope: 'channel:manage:redemptions' }
+  })
+
+  server.get('/twitch/rewards', { preHandler: adminOnly }, async (_request, reply) => {
+    const r = await listRewards()
+    if (!r.ok) return reply.code(r.status >= 400 && r.status < 600 ? r.status : 502).send({ ok: false, error: r.reason })
+    return reply.send({ rewards: r.data })
+  })
+
+  server.post<{ Body: {
+    title?: string; cost?: number; prompt?: string
+    isEnabled?: boolean; backgroundColor?: string
+    isUserInputRequired?: boolean
+    cooldownSeconds?: number; maxPerStream?: number; maxPerUserPerStream?: number
+  } }>(
+    '/twitch/rewards',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const b = request.body ?? {}
+      if (!b.title || typeof b.cost !== 'number') {
+        return reply.code(400).send({ ok: false, error: 'title_and_cost_required' })
+      }
+      const r = await createReward({
+        title:               b.title,
+        cost:                b.cost,
+        prompt:              b.prompt,
+        isEnabled:           b.isEnabled,
+        backgroundColor:     b.backgroundColor,
+        isUserInputRequired: b.isUserInputRequired,
+        cooldownSeconds:     b.cooldownSeconds,
+        maxPerStream:        b.maxPerStream,
+        maxPerUserPerStream: b.maxPerUserPerStream,
+      })
+      if (!r.ok) {
+        await audit({
+          action:    'reward_create_failed',
+          status:    'failed',
+          userId:    request.user!.userId,
+          ipAddress: request.ip,
+          metadata:  { reason: r.reason, status: r.status, title: b.title },
+        })
+        return reply.code(r.status >= 400 && r.status < 600 ? r.status : 502).send({ ok: false, error: r.reason })
+      }
+      await audit({
+        action:    'reward_created',
+        status:    'success',
+        userId:    request.user!.userId,
+        ipAddress: request.ip,
+        metadata:  { rewardId: r.data.id, title: r.data.title, cost: r.data.cost },
+      })
+      return reply.send({ ok: true, reward: r.data })
+    },
+  )
+
+  server.patch<{
+    Params: { id: string }
+    Body:   {
+      title?: string; prompt?: string; cost?: number
+      isEnabled?: boolean; isPaused?: boolean
+      backgroundColor?: string
+      cooldownSeconds?: number | null
+      maxPerStream?: number | null
+      maxPerUserPerStream?: number | null
+    }
+  }>(
+    '/twitch/rewards/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const b = request.body ?? {}
+      const r = await updateReward({ rewardId: request.params.id, ...b })
+      if (!r.ok) return reply.code(r.status >= 400 && r.status < 600 ? r.status : 502).send({ ok: false, error: r.reason })
+      await audit({
+        action:    'reward_updated',
+        status:    'success',
+        userId:    request.user!.userId,
+        ipAddress: request.ip,
+        metadata:  { rewardId: r.data.id, patchedFields: Object.keys(b) },
+      })
+      return reply.send({ ok: true, reward: r.data })
+    },
+  )
+
+  server.delete<{ Params: { id: string } }>(
+    '/twitch/rewards/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const r = await deleteReward(request.params.id)
+      if (!r.ok) return reply.code(r.status >= 400 && r.status < 600 ? r.status : 502).send({ ok: false, error: r.reason })
+      await audit({
+        action:    'reward_deleted',
+        status:    'success',
+        userId:    request.user!.userId,
+        ipAddress: request.ip,
+        metadata:  { rewardId: request.params.id },
+      })
+      return reply.send({ ok: true })
     },
   )
 

@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ fetch, parent }) => {
 	const auth = { headers: { Authorization: `Bearer ${token}` } }
 
 	// Loads in parallel: connected streamers, EventSub subs, recent events, hub health, setup checklist, stats 7j, twitch profile, scope du Control Panel, scopes engagement (polls + predictions).
-	const [meRes, subsRes, eventsRes, healthRes, setupRes, statsRes, profileRes, controlRes, engagementRes] = await Promise.all([
+	const [meRes, subsRes, eventsRes, healthRes, setupRes, statsRes, profileRes, controlRes, engagementRes, rewardsScopeRes] = await Promise.all([
 		apiFetch(fetch, '/streamer/twitch/me',                auth),
 		apiFetch(fetch, '/streamer/twitch/eventsub-status',   auth),
 		apiFetch(fetch, '/streamer/events?limit=20',          auth),
@@ -16,6 +16,7 @@ export const load: PageServerLoad = async ({ fetch, parent }) => {
 		apiFetch(fetch, '/streamer/twitch/profile',           auth),
 		apiFetch(fetch, '/streamer/twitch/control-status',    auth),
 		apiFetch(fetch, '/streamer/twitch/engagement-status', auth),
+		apiFetch(fetch, '/streamer/twitch/rewards/scope-status', auth),
 	])
 
 	const me      = meRes.ok      ? await meRes.json()      : { streamers: [] }
@@ -26,7 +27,8 @@ export const load: PageServerLoad = async ({ fetch, parent }) => {
 	const stats   = statsRes.ok   ? await statsRes.json()   : null
 	const profile = profileRes.ok ? await profileRes.json() : null
 	const control    = controlRes.ok    ? await controlRes.json()    : { hasScope: false }
-	const engagement = engagementRes.ok ? await engagementRes.json() : { hasPolls: false, hasPredictions: false }
+	const engagement   = engagementRes.ok   ? await engagementRes.json()   : { hasPolls: false, hasPredictions: false }
+	const rewardsScope = rewardsScopeRes.ok ? await rewardsScopeRes.json() : { hasScope: false }
 
 	return {
 		streamers:           me.streamers ?? [],
@@ -40,5 +42,6 @@ export const load: PageServerLoad = async ({ fetch, parent }) => {
 		controlHasScope:     control.hasScope === true,
 		engagementHasPolls:       engagement.hasPolls === true,
 		engagementHasPredictions: engagement.hasPredictions === true,
+		rewardsHasScope:          rewardsScope.hasScope === true,
 	}
 }

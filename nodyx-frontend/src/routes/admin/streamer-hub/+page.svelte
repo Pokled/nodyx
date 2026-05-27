@@ -8,6 +8,7 @@
 	import StreamerHero from '$lib/components/admin/StreamerHero.svelte'
 	import StreamControlPanel from '$lib/components/admin/StreamControlPanel.svelte'
 	import StudioEngagement   from '$lib/components/admin/StudioEngagement.svelte'
+	import RewardsManager     from '$lib/components/admin/RewardsManager.svelte'
 	import OverlayManager     from '$lib/components/admin/OverlayManager.svelte'
 	import type { PageData } from './$types'
 
@@ -138,6 +139,7 @@
 	const controlHasScope = $derived<boolean>((data as { controlHasScope?: boolean }).controlHasScope === true)
 	const engagementHasPolls       = $derived<boolean>((data as { engagementHasPolls?: boolean }).engagementHasPolls === true)
 	const engagementHasPredictions = $derived<boolean>((data as { engagementHasPredictions?: boolean }).engagementHasPredictions === true)
+	const rewardsHasScope          = $derived<boolean>((data as { rewardsHasScope?: boolean }).rewardsHasScope === true)
 	const pageToken     = $derived(($page.data as { token?: string }).token ?? '')
 
 	// ── Onglets ─────────────────────────────────────────────────────────────
@@ -150,7 +152,7 @@
 	const TABS: Array<{ id: TabId; label: string; iconPath: string; soon?: boolean }> = [
 		{ id: 'overview', label: 'Vue d\'ensemble', iconPath: 'M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z M9 9h6v6H9z' },
 		{ id: 'studio',   label: 'Studio Live',     iconPath: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
-		{ id: 'rewards',  label: 'Récompenses',     iconPath: 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zM5 21h14a2 2 0 002-2v-9a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2z', soon: true },
+		{ id: 'rewards',  label: 'Récompenses',     iconPath: 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zM5 21h14a2 2 0 002-2v-9a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2z' },
 		{ id: 'overlays', label: 'Overlays OBS',    iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
 		{ id: 'audience', label: 'Audience',        iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
 		{ id: 'config',   label: 'Configuration',   iconPath: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
@@ -616,14 +618,13 @@
 		</section>
 	{/if}
 
-	<!-- ══ Tab: Récompenses (placeholder) ═════════════════════════════════ -->
+	<!-- ══ Tab: Récompenses (Channel Points Rewards) ════════════════════ -->
 	{#if isConnected && activeTab === 'rewards'}
-		<section class="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-10 text-center space-y-3">
-			<svg class="w-12 h-12 mx-auto text-purple-500/60" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zM5 21h14a2 2 0 002-2v-9a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2z"/></svg>
-			<div class="text-base font-semibold text-slate-200">Channel Points Rewards</div>
-			<div class="text-sm text-slate-500 max-w-lg mx-auto">Gérer tes récompenses Twitch depuis Nodyx, voir la queue des redemptions en temps réel, et mapper chaque reward à une action (son, scène OBS, animation overlay, ajout playlist, etc).</div>
-			<div class="text-[11px] uppercase tracking-widest font-bold text-purple-400/80 pt-2">Prochainement</div>
-		</section>
+		<RewardsManager
+			token={pageToken}
+			hasScope={rewardsHasScope}
+			broadcasterType={twitchProfile?.user.broadcasterType ?? ''}
+		/>
 	{/if}
 
 	<!-- ══ Tab: Overlays OBS ═══════════════════════════════════════════════ -->

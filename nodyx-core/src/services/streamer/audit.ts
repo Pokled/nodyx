@@ -28,6 +28,10 @@ export type AuditAction =
   | 'prediction_created'
   | 'prediction_create_failed'
   | 'prediction_patched'
+  | 'reward_created'
+  | 'reward_create_failed'
+  | 'reward_updated'
+  | 'reward_deleted'
 
 export interface AuditEntry {
   action:    AuditAction

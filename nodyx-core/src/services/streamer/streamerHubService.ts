@@ -135,6 +135,11 @@ export const STREAMER_HUB_SCOPES = [
   'channel:manage:polls',
   'channel:read:predictions',
   'channel:manage:predictions',
+  // Channel Points Rewards (Phase 3, suite) : CRUD sur les custom rewards
+  // de la chaine + lecture/écriture des redemptions. Réservé Affiliate/Partner
+  // côté Twitch, mais on demande le scope dès maintenant pour que les
+  // streamers qualifiés y aient accès sans re-OAuth après upgrade.
+  'channel:manage:redemptions',
 ] as const
 
 // Scopes minimaux pour le viewer flow : on a juste besoin d'identifier le user
