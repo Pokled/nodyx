@@ -92,10 +92,11 @@
 	}
 
 	type AlertItem = {
-		id:        string
-		eventType: AlertEventKey
-		message:   string
-		shownAt:   number
+		id:         string
+		eventType:  AlertEventKey
+		message:    string
+		shownAt:    number
+		avatarUrl?: string         // avatar Twitch du user qui a déclenché l'event
 	}
 
 	let alerts  = $state<AlertItem[]>([])
@@ -201,10 +202,11 @@
 		const msg  = substituteTemplate(cfg.template, vars)
 
 		const item: AlertItem = {
-			id:        `${key}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-			eventType: key,
-			message:   msg,
-			shownAt:   Date.now(),
+			id:         `${key}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+			eventType:  key,
+			message:    msg,
+			shownAt:    Date.now(),
+			avatarUrl:  (e.avatarUrl as string | undefined),     // injecté côté backend par enrichEventWithAvatar
 		}
 		alerts = [...alerts, item]
 		setTimeout(() => { alerts = alerts.filter(a => a.id !== item.id) }, config.durationMs)
@@ -309,7 +311,9 @@
 		<div class="alert-card" style="--accent: {accent}; {cstyles}"
 		     in:animateIn={{}} out:fade={{ duration: 280 }}>
 			<div class="alert-bar"></div>
-			{#if iconUrl}
+			{#if alert.avatarUrl}
+				<img src={alert.avatarUrl} alt="" class="alert-avatar" loading="lazy" />
+			{:else if iconUrl}
 				<img src={iconUrl} alt="" class="alert-icon" />
 			{/if}
 			<div class="alert-content">
@@ -591,6 +595,37 @@
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 	}
 	.theme-minimal .alert-icon, .theme-retro .alert-icon { display: none; }
+
+	/* ══ Avatar Twitch du user qui a déclenché l'event ══════════════════ */
+	.alert-avatar {
+		width: 56px;
+		height: 56px;
+		margin: 12px 0 12px 16px;
+		object-fit: cover;
+		border-radius: 50%;
+		flex-shrink: 0;
+		border: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+		box-shadow:
+			0 2px 12px color-mix(in oklab, var(--accent) 35%, transparent),
+			0 0 0 4px rgba(255, 255, 255, 0.04);
+	}
+	.theme-retro .alert-avatar {
+		border-radius: 0;
+		border-width: 3px;
+		box-shadow: 4px 4px 0 0 color-mix(in oklab, var(--accent) 50%, black);
+	}
+	.theme-minimal .alert-avatar {
+		margin-left: 0;
+		margin-right: 14px;
+		border: 2px solid #fff;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+	}
+	.theme-neon .alert-avatar {
+		border: 2px solid var(--accent);
+		box-shadow:
+			0 0 16px var(--accent),
+			0 0 32px color-mix(in oklab, var(--accent) 50%, transparent);
+	}
 
 	/* Status messages (loading/error) — communs à tous les thèmes */
 	.status-msg {

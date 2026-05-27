@@ -45,6 +45,7 @@
 		detail:     string         // info secondaire (tier, viewers, bits…)
 		weight:     number         // multiplicateur (1 par défaut, 1.5-2 pour gros events)
 		combo?:     number
+		avatarUrl?: string         // avatar Twitch du user (remplace l'icon-orb quand dispo)
 	}
 
 	let status = $state<'loading' | 'ready' | 'invalid' | 'error'>('loading')
@@ -108,12 +109,14 @@
 
 	function eventToToken(ev: TickerEvent, cfg: TickerConfig): DisplayToken {
 		const { name, detail } = buildDetail(ev)
+		const e = ev.payload?.event ?? {}
 		return {
 			uid:       `${ev.id}-${Math.random().toString(36).slice(2, 6)}`,
 			eventType: ev.eventType,
 			name,
 			detail,
 			weight:    weightFor(ev.eventType, cfg.weighted),
+			avatarUrl: (e.avatarUrl as string | undefined),     // enrichi côté backend
 		}
 	}
 
@@ -255,19 +258,23 @@
 				{#each displayTokens as t, i (`${t.uid}-${i}`)}
 					{@const accent = ACCENTS[t.eventType]}
 					<div class="token" style="--accent: {accent}; --weight: {t.weight};" class:is-combo={t.combo}>
-						<div class="icon-orb" aria-hidden="true">
-							{#if t.eventType === 'channel.follow'}
-								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-							{:else if t.eventType === 'channel.subscribe'}
-								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.39 7.36H22l-6.18 4.49 2.36 7.27L12 16.62l-6.18 4.5 2.36-7.27L2 9.36h7.61z"/></svg>
-							{:else if t.eventType === 'channel.subscription.gift'}
-								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM15 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>
-							{:else if t.eventType === 'channel.cheer'}
-								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 10l8 12 8-12L12 2zm0 4.84L17.06 12 12 18.16 6.94 12 12 6.84z"/></svg>
-							{:else if t.eventType === 'channel.raid'}
-								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
-							{/if}
-						</div>
+						{#if t.avatarUrl}
+							<img class="avatar-orb" src={t.avatarUrl} alt="" loading="lazy" />
+						{:else}
+							<div class="icon-orb" aria-hidden="true">
+								{#if t.eventType === 'channel.follow'}
+									<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+								{:else if t.eventType === 'channel.subscribe'}
+									<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.39 7.36H22l-6.18 4.49 2.36 7.27L12 16.62l-6.18 4.5 2.36-7.27L2 9.36h7.61z"/></svg>
+								{:else if t.eventType === 'channel.subscription.gift'}
+									<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM15 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>
+								{:else if t.eventType === 'channel.cheer'}
+									<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 10l8 12 8-12L12 2zm0 4.84L17.06 12 12 18.16 6.94 12 12 6.84z"/></svg>
+								{:else if t.eventType === 'channel.raid'}
+									<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+								{/if}
+							</div>
+						{/if}
 						<div class="text">
 							<div class="eyebrow">
 								{LABELS[t.eventType]}
@@ -282,6 +289,9 @@
 				{#each displayTokens as t, i (`${t.uid}-dup-${i}`)}
 					{@const accent = ACCENTS[t.eventType]}
 					<div class="token" style="--accent: {accent}; --weight: {t.weight};" class:is-combo={t.combo} aria-hidden="true">
+						{#if t.avatarUrl}
+							<img class="avatar-orb" src={t.avatarUrl} alt="" loading="lazy" />
+						{:else}
 						<div class="icon-orb">
 							{#if t.eventType === 'channel.follow'}
 								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -295,6 +305,7 @@
 								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
 							{/if}
 						</div>
+						{/if}
 						<div class="text">
 							<div class="eyebrow">
 								{LABELS[t.eventType]}
@@ -405,6 +416,21 @@
 		color: #fff;
 		filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
 	}
+
+	/* Avatar Twitch — même footprint que l'icon-orb pour ne pas casser la mise en page */
+	.avatar-orb {
+		width: 36px;
+		height: 36px;
+		flex-shrink: 0;
+		border-radius: 50%;
+		object-fit: cover;
+		border: 2px solid var(--accent);
+		box-shadow:
+			0 2px 8px color-mix(in oklab, var(--accent) 50%, transparent),
+			0 0 0 1px rgba(255, 255, 255, 0.08);
+	}
+	.theme-retro .avatar-orb { border-radius: 0; border-width: 3px; }
+	.theme-neon  .avatar-orb { box-shadow: 0 0 14px var(--accent), 0 0 0 1px rgba(255, 255, 255, 0.06); }
 
 	.text {
 		display: flex;

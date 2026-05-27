@@ -4,6 +4,7 @@
 // events via push socket (overlay:event sur la room overlay-type:event_ticker).
 
 import { db } from '../../config/database'
+import { extractAvatarUserId, resolveAvatars } from './twitchAvatars'
 import type { TickerConfig, TickerEventKey } from './overlayService'
 
 export interface TickerEvent {
@@ -60,10 +61,32 @@ export async function fetchTickerEvents(cfg: TickerConfig, limit = 30): Promise<
 
   const r = await db.query<EventRow>(sql, params).catch(() => null)
   if (!r) return []
-  return r.rows.map(row => ({
-    id:          row.id,
-    eventType:   row.event_type as TickerEventKey,
-    payload:     row.payload,
-    occurredAt:  row.occurred_at,
-  }))
+
+  // Enrichit en batch tous les events avec les avatars Twitch des users
+  // concernés. 1 seul appel helix (au pire) pour TOUS les events grâce
+  // au resolveAvatars qui déduplique et batch jusqu'à 100 ids.
+  const userIds: string[] = []
+  for (const row of r.rows) {
+    const event = (row.payload?.event ?? {}) as Record<string, unknown>
+    const uid = extractAvatarUserId(row.event_type, event)
+    if (uid) userIds.push(uid)
+  }
+  const avatars = userIds.length > 0
+    ? await resolveAvatars(userIds).catch(() => new Map<string, string>())
+    : new Map<string, string>()
+
+  return r.rows.map(row => {
+    const event   = (row.payload?.event ?? {}) as Record<string, unknown>
+    const uid     = extractAvatarUserId(row.event_type, event)
+    const avatar  = uid ? avatars.get(uid) : undefined
+    const payload = avatar
+      ? { ...row.payload, event: { ...event, avatarUrl: avatar } }
+      : row.payload
+    return {
+      id:          row.id,
+      eventType:   row.event_type as TickerEventKey,
+      payload,
+      occurredAt:  row.occurred_at,
+    }
+  })
 }

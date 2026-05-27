@@ -711,6 +711,15 @@ export async function ingestEvent(args: {
     console.error('[streamerHub] live broadcast failed', err)
   }
 
+  // Avant dispatch socket : enrichit le payload avec avatarUrl du user
+  // concerné (via cache Redis 24h + fallback helix). Les overlays reçoivent
+  // l'avatar directement, zéro round-trip côté client.
+  let enrichedPayload: Record<string, unknown> = args.payload
+  try {
+    const { enrichEventWithAvatar } = await import('./twitchAvatars')
+    enrichedPayload = await enrichEventWithAvatar(args.eventType, args.payload)
+  } catch { /* best-effort, on garde le payload original */ }
+
   // Dispatch vers les overlays OBS. Chaque overlay a son propre filtre :
   //   - alert_box     : reçoit follow / sub / gift / cheer / raid
   //   - stream_timer  : reçoit stream.online (reset chrono) + stream.offline (hide)
@@ -721,16 +730,16 @@ export async function ingestEvent(args: {
       const { dispatchOverlayEvent } = await import('../../socket/overlay')
       const now = new Date().toISOString()
       if (ALERT_BOX_EVENT_TYPES.has(args.eventType)) {
-        dispatchOverlayEvent(io, { kind: 'alert_box',    eventType: args.eventType, payload: args.payload, occurredAt: now })
+        dispatchOverlayEvent(io, { kind: 'alert_box',    eventType: args.eventType, payload: enrichedPayload, occurredAt: now })
       }
       if (STREAM_TIMER_EVENT_TYPES.has(args.eventType)) {
-        dispatchOverlayEvent(io, { kind: 'stream_timer', eventType: args.eventType, payload: args.payload, occurredAt: now })
+        dispatchOverlayEvent(io, { kind: 'stream_timer', eventType: args.eventType, payload: enrichedPayload, occurredAt: now })
       }
       // Event ticker reçoit les 5 événements à afficher dans le bandeau
       // défilant (même set que l'alert box). Le client filtre côté page
       // selon sa config enabledEvents.
       if (ALERT_BOX_EVENT_TYPES.has(args.eventType)) {
-        dispatchOverlayEvent(io, { kind: 'event_ticker', eventType: args.eventType, payload: args.payload, occurredAt: now })
+        dispatchOverlayEvent(io, { kind: 'event_ticker', eventType: args.eventType, payload: enrichedPayload, occurredAt: now })
       }
     }
   } catch (err) {
