@@ -38,6 +38,49 @@
 	type TabId = 'own' | 'raiders'
 	let tab = $state<TabId>('own')
 
+	// ── Clips_player overlays disponibles pour le trigger admin ─────────────
+	type OverlayRow = { id: string; overlayType: string; label: string | null }
+	let clipsOverlays = $state<OverlayRow[]>([])
+	let selectedOverlayId = $state<string>('')
+	let triggering        = $state(false)
+
+	async function loadClipsOverlays(): Promise<void> {
+		const res = await apiFetch(fetch, '/streamer/overlays', { headers: { Authorization: `Bearer ${token}` } })
+		if (res.ok) {
+			const data = await res.json() as { overlays: OverlayRow[] }
+			clipsOverlays = (data.overlays ?? []).filter(o => o.overlayType === 'clips_player')
+			if (clipsOverlays.length > 0 && !selectedOverlayId) selectedOverlayId = clipsOverlays[0].id
+		}
+	}
+
+	async function triggerClips(args: { period?: 'top_own_7d' | 'top_own_30d' | 'top_own_all'; broadcasterId?: string; count: number }): Promise<void> {
+		if (!selectedOverlayId) { flash('Crée d\'abord une overlay Clips Player dans l\'onglet Overlays OBS.', false); return }
+		if (triggering) return
+		triggering = true
+		try {
+			const body: Record<string, unknown> = { count: args.count }
+			if (args.broadcasterId) { body.period = 'raider'; body.broadcasterId = args.broadcasterId }
+			else                     body.period = args.period
+			const res = await apiFetch(fetch, `/streamer/overlays/${selectedOverlayId}/play-clips`, {
+				method:  'POST',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+				body:    JSON.stringify(body),
+			})
+			if (res.ok) {
+				const data = await res.json() as { count: number }
+				flash(`Session lancée : ${data.count} clip${data.count > 1 ? 's' : ''} envoyés vers l'overlay.`, true)
+			} else if (res.status === 404) {
+				flash('Aucun clip trouvé sur ce filtre. Choisis une autre période ou un autre raider.', false)
+			} else {
+				flash('Échec du déclenchement.', false)
+			}
+		} catch {
+			flash('Erreur réseau.', false)
+		} finally {
+			triggering = false
+		}
+	}
+
 	// ── State : own clips ───────────────────────────────────────────────────
 	let ownPeriod = $state<'7d' | '30d' | 'all'>('7d')
 	let ownClips  = $state<Clip[]>([])
@@ -105,7 +148,7 @@
 		}
 	}
 
-	onMount(() => { loadOwnClips() })
+	onMount(() => { loadOwnClips(); loadClipsOverlays() })
 
 	// Quand on change de période ou de tab, on recharge ce qu'il faut
 	let lastPeriod = $state<'7d' | '30d' | 'all'>('7d')
@@ -174,6 +217,46 @@
 			{toast.text}
 		</div>
 	{/if}
+
+	<!-- Trigger overlay : choisir l'overlay cible + boutons play -->
+	<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-3 space-y-2">
+		<div class="flex items-center justify-between gap-3 flex-wrap">
+			<div>
+				<div class="text-[11px] uppercase tracking-widest font-semibold text-cyan-400">Lancer dans une Clips Player overlay</div>
+				<div class="text-[10px] text-slate-500 mt-0.5">La session jouera plein écran dans OBS, auto-advance entre clips.</div>
+			</div>
+			{#if clipsOverlays.length > 0}
+				<select bind:value={selectedOverlayId}
+					class="rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-3 py-1.5 text-xs text-white outline-none transition-colors min-w-48">
+					{#each clipsOverlays as o (o.id)}
+						<option value={o.id}>{o.label || `Clips Player #${o.id.slice(0, 6)}`}</option>
+					{/each}
+				</select>
+			{:else}
+				<a href="#tab=overlays" class="text-[11px] text-cyan-400 hover:text-cyan-300 underline">→ Crée une overlay Clips Player</a>
+			{/if}
+		</div>
+		{#if clipsOverlays.length > 0}
+			<div class="flex flex-wrap gap-2 pt-1">
+				<button type="button" onclick={() => triggerClips({ period: 'top_own_7d',  count: 5 })} disabled={triggering}
+					class="text-[11px] bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-3 py-1.5 rounded transition-colors">
+					Top 5 (7j)
+				</button>
+				<button type="button" onclick={() => triggerClips({ period: 'top_own_30d', count: 5 })} disabled={triggering}
+					class="text-[11px] bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-3 py-1.5 rounded transition-colors">
+					Top 5 (30j)
+				</button>
+				<button type="button" onclick={() => triggerClips({ period: 'top_own_all', count: 5 })} disabled={triggering}
+					class="text-[11px] bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-3 py-1.5 rounded transition-colors">
+					Top 5 (Total)
+				</button>
+				<button type="button" onclick={() => triggerClips({ period: 'top_own_7d', count: 10 })} disabled={triggering}
+					class="text-[11px] bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-3 py-1.5 rounded transition-colors">
+					Top 10 (7j)
+				</button>
+			</div>
+		{/if}
+	</div>
 
 	<!-- ══ Tab : Mes top clips ════════════════════════════════════════════ -->
 	{#if tab === 'own'}
@@ -247,14 +330,22 @@
 									<div class="text-[10px] text-slate-500">{raid.viewers} viewers · {fmtRelative(raid.occurredAt)}</div>
 								</div>
 							</div>
-							{#if !clips && !loading}
-								<button type="button" onclick={() => loadRaiderClips(raid.fromBroadcasterUserId)}
-									class="text-[11px] bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-200 px-3 py-1.5 rounded transition-colors">
-									Voir ses clips
-								</button>
-							{:else if loading}
-								<span class="text-[11px] text-slate-500">Chargement…</span>
-							{/if}
+							<div class="flex items-center gap-2">
+								{#if !clips && !loading}
+									<button type="button" onclick={() => loadRaiderClips(raid.fromBroadcasterUserId)}
+										class="text-[11px] bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-200 px-3 py-1.5 rounded transition-colors">
+										Voir ses clips
+									</button>
+								{:else if loading}
+									<span class="text-[11px] text-slate-500">Chargement…</span>
+								{/if}
+								{#if clips && clips.length > 0 && clipsOverlays.length > 0}
+									<button type="button" onclick={() => triggerClips({ broadcasterId: raid.fromBroadcasterUserId, count: 5 })} disabled={triggering}
+										class="text-[11px] bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-30 border border-cyan-500/40 text-cyan-200 px-3 py-1.5 rounded transition-colors">
+										▶ Lancer dans overlay
+									</button>
+								{/if}
+							</div>
 						</div>
 						{#if clips && clips.length > 0}
 							<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mt-1">

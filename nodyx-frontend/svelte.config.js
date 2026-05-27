@@ -24,7 +24,7 @@ const config = {
             mode: 'nonce',
             directives: {
                 'default-src':  ['self'],
-                'script-src':   ['self'],   // 'nonce-xyz' ajouté automatiquement — plus d'unsafe-inline
+                'script-src':   ['self', 'https://player.twitch.tv'],   // 'nonce-xyz' ajouté automatiquement — plus d'unsafe-inline. Twitch.Player SDK pour clips overlay.
                 'style-src':    ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
                 'style-src-attr': ['unsafe-inline'], // attributs style="" dynamiques (185 occurrences)
                 'img-src':      ['self', 'data:', 'blob:', 'https:'],

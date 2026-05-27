@@ -77,6 +77,7 @@ import {
   listRecentRaids,
   type ClipsPeriod,
 } from '../services/streamer/twitchClips'
+import { getClipMp4Url } from '../services/streamer/twitchClipExtraction'
 import {
   createOverlay,
   findOverlayByToken,
@@ -622,6 +623,58 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         metadata:  { predictionId: request.params.id, newStatus: status, winningOutcomeId: winningOutcomeId ?? null },
       })
       return reply.send({ ok: true, prediction: r.data })
+    },
+  )
+
+  // POST /overlays/:id/play-clips — admin only — déclenche la lecture
+  // d'une session de clips dans une overlay de type clips_player. Le body
+  // contient soit { period, count } pour piocher dans les top clips de la
+  // chaine, soit { broadcasterId, count } pour piocher dans les clips d'un
+  // raider précis. Émet le payload via socket dans la room overlay:<id>.
+  server.post<{
+    Params: { id: string }
+    Body:   { period?: 'top_own_7d' | 'top_own_30d' | 'top_own_all' | 'raider'; broadcasterId?: string; count?: number }
+  }>(
+    '/overlays/:id/play-clips',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const body = request.body ?? {}
+      const count = Math.min(20, Math.max(1, body.count ?? 5))
+
+      let clips
+      if (body.period === 'raider' && body.broadcasterId) {
+        clips = await listClipsForBroadcaster(body.broadcasterId, count)
+      } else {
+        const period: ClipsPeriod = body.period === 'top_own_30d' ? '30d' : body.period === 'top_own_all' ? 'all' : '7d'
+        clips = await listOwnTopClips(period, count)
+      }
+
+      if (clips.length === 0) return reply.code(404).send({ ok: false, error: 'no_clips_found' })
+
+      const { io } = await import('../socket/io')
+      if (!io) return reply.code(503).send({ ok: false, error: 'socket_unavailable' })
+
+      // Enrichit chaque clip avec son URL mp4 directe via GraphQL Twitch.
+      // Permet au <video> natif côté overlay d'autoplay sans passer par
+      // l'iframe Twitch (qui bloque l'autoplay cross-origin). Best-effort
+      // par clip : si l'extraction échoue, mp4Url = null et le frontend
+      // tombe en fallback iframe.
+      const clipsEnriched = await Promise.all(clips.map(async c => ({
+        id:           c.id,
+        embedUrl:     c.embedUrl,
+        title:        c.title,
+        creatorName:  c.creatorName,
+        duration:     c.duration,
+        thumbnailUrl: c.thumbnailUrl,
+        viewCount:    c.viewCount,
+        mp4Url:       await getClipMp4Url(c.id),
+      })))
+
+      io.of('/overlay').to(`overlay:${request.params.id}`).emit('clips:play', {
+        clips: clipsEnriched,
+      })
+
+      return reply.send({ ok: true, count: clips.length, mp4Resolved: clipsEnriched.filter(c => c.mp4Url).length })
     },
   )
 

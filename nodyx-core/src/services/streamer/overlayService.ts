@@ -15,9 +15,10 @@ export type OverlayType =
   | 'stream_timer'
   | 'event_ticker'
   | 'leaderboard'
+  | 'clips_player'
 
 const VALID_TYPES: ReadonlySet<OverlayType> = new Set([
-  'alert_box', 'goal_bar', 'stream_timer', 'event_ticker', 'leaderboard',
+  'alert_box', 'goal_bar', 'stream_timer', 'event_ticker', 'leaderboard', 'clips_player',
 ])
 
 export function isOverlayType(s: string): s is OverlayType {
