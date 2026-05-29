@@ -1149,6 +1149,10 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     const deck = await findDeckByToken(request.params.token)
     if (!deck) return reply.code(404).send({ ok: false, error: 'not_found_or_revoked' })
     void touchDeckSeen(deck.id)  // best-effort, ne bloque pas
+    // Canal Twitch du streamer principal : permet au Deck d'afficher le chat
+    // Twitch embed (mode chat / mixte). Null si aucun streamer connecté.
+    const streamers = await listStreamers('twitch').catch(() => [])
+    const twitchChannel = streamers[0]?.externalLogin ?? null
     return reply.send({
       ok:     true,
       deck: {
@@ -1156,6 +1160,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         label:  deck.label,
         layout: deck.layout,
       },
+      twitchChannel,
     })
   })
 

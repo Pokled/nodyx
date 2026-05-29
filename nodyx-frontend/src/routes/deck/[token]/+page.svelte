@@ -59,16 +59,35 @@
 	let wakeLockActive    = $state(false)
 	let wakeLockUserOff   = $state(false)   // user a explicitement désactivé
 
+	// ── Affichage : modes (boutons / chat / mixte) + chat Twitch embed ─────────
+	// Mono-écran : le streamer peut garder son chat sous les yeux sur le Deck.
+	type DeckMode = 'buttons' | 'chat' | 'mixed'
+	let mode          = $state<DeckMode>('buttons')
+	let splitRatio    = $state(0.55)        // part de l'espace donnée aux BOUTONS (0.2 à 0.8)
+	let twitchChannel = $state<string | null>(null)
+	let isLandscape   = $state(false)
+	let dragging      = $state(false)
+	let splitBox  = $state<HTMLElement | null>(null) // conteneur du mode mixte (pour le drag)
+
 	const token = $derived(page.params.token ?? '')
+
+	// URL du chat Twitch embed. parent = domaine courant (marche pour nodyx.org
+	// comme pour n'importe quelle instance auto-hébergée). darkpopout = thème sombre.
+	const chatEmbedUrl = $derived(
+		browser && twitchChannel
+			? `https://www.twitch.tv/embed/${encodeURIComponent(twitchChannel)}/chat?parent=${location.hostname}&darkpopout`
+			: null
+	)
 
 	async function bootstrap(): Promise<void> {
 		if (!token) { status = 'invalid'; return }
 		try {
 			const res = await fetch(`${PUBLIC_API_URL}/api/v1/streamer/deck/lookup/${token}`)
 			if (!res.ok) { status = 'invalid'; return }
-			const data = await res.json() as { ok: boolean; deck: Deck }
-			deck   = data.deck
-			status = 'ready'
+			const data = await res.json() as { ok: boolean; deck: Deck; twitchChannel?: string | null }
+			deck          = data.deck
+			twitchChannel = data.twitchChannel ?? null
+			status        = 'ready'
 		} catch {
 			status = 'error'
 		}
@@ -173,16 +192,60 @@
 		}
 	}
 
+	// ── Modes + persistance (par deck) ────────────────────────────────────────
+	function lsKey(suffix: string): string { return `deck:${token}:${suffix}` }
+
+	function setMode(m: DeckMode): void {
+		mode = m
+		if (browser) { try { localStorage.setItem(lsKey('mode'), m) } catch { /* quota / private mode */ } }
+	}
+
+	function persistRatio(): void {
+		if (browser) { try { localStorage.setItem(lsKey('ratio'), String(splitRatio)) } catch { /* ignore */ } }
+	}
+
+	// ── Drag du séparateur en mode mixte ──────────────────────────────────────
+	// Split vertical en portrait (boutons haut / chat bas), horizontal en paysage
+	// (boutons gauche / chat droite). Le ratio est borné 20%-80% et mémorisé.
+	function startDrag(e: PointerEvent): void {
+		dragging = true
+		e.preventDefault()
+		;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
+	}
+	function onDrag(e: PointerEvent): void {
+		if (!dragging || !splitBox) return
+		const r = splitBox.getBoundingClientRect()
+		const frac = isLandscape ? (e.clientX - r.left) / r.width : (e.clientY - r.top) / r.height
+		splitRatio = Math.min(0.8, Math.max(0.2, frac))
+	}
+	function endDrag(): void {
+		if (!dragging) return
+		dragging = false
+		persistRatio()
+	}
+
 	onMount(() => {
 		bootstrap()
-		if (browser) {
-			const nav = navigator as Navigator & { wakeLock?: WakeLockApi }
-			wakeLockSupported = !!nav.wakeLock
-			if (wakeLockSupported) {
-				requestWakeLock()
-				document.addEventListener('visibilitychange', handleVisibilityChange)
-			}
+		if (!browser) return
+		const nav = navigator as Navigator & { wakeLock?: WakeLockApi }
+		wakeLockSupported = !!nav.wakeLock
+		if (wakeLockSupported) {
+			requestWakeLock()
+			document.addEventListener('visibilitychange', handleVisibilityChange)
 		}
+		// Restaure le mode + le ratio choisis sur cet appareil.
+		try {
+			const m = localStorage.getItem(lsKey('mode'))
+			if (m === 'buttons' || m === 'chat' || m === 'mixed') mode = m
+			const r = parseFloat(localStorage.getItem(lsKey('ratio')) ?? '')
+			if (!Number.isNaN(r)) splitRatio = Math.min(0.8, Math.max(0.2, r))
+		} catch { /* ignore */ }
+		// Suit l'orientation pour basculer l'axe du split.
+		const mq = window.matchMedia('(orientation: landscape)')
+		isLandscape = mq.matches
+		const onOrient = () => { isLandscape = mq.matches }
+		mq.addEventListener('change', onOrient)
+		return () => mq.removeEventListener('change', onOrient)
 	})
 
 	onDestroy(() => {
@@ -227,9 +290,18 @@
 		</div>
 	{:else if deck}
 		<!-- Header discret -->
-		<header class="absolute top-0 inset-x-0 px-4 py-2 flex items-center justify-between text-[10px] z-10">
-			<span class="font-mono text-slate-500 uppercase tracking-widest pointer-events-none">{deck.label}</span>
-			<div class="flex items-center gap-3">
+		<header class="absolute top-0 inset-x-0 px-3 py-1.5 flex items-center justify-between gap-2 text-[10px] z-20">
+			<span class="font-mono text-slate-500 uppercase tracking-widest pointer-events-none truncate shrink min-w-0 hidden sm:inline">{deck.label}</span>
+			<!-- Sélecteur de mode : Boutons / Mixte / Chat -->
+			<div class="flex items-center gap-0.5 bg-slate-800/70 rounded-lg p-0.5 shrink-0">
+				<button type="button" onclick={() => setMode('buttons')}
+					class="px-2 py-0.5 rounded transition-colors {mode === 'buttons' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}">Boutons</button>
+				<button type="button" onclick={() => setMode('mixed')}
+					class="px-2 py-0.5 rounded transition-colors {mode === 'mixed' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}">Mixte</button>
+				<button type="button" onclick={() => setMode('chat')}
+					class="px-2 py-0.5 rounded transition-colors {mode === 'chat' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}">Chat</button>
+			</div>
+			<div class="flex items-center gap-3 shrink-0">
 				{#if wakeLockSupported}
 					<button type="button" onclick={toggleWakeLock}
 						class="inline-flex items-center gap-1 transition-colors {wakeLockActive ? 'text-cyan-300 hover:text-cyan-200' : 'text-slate-500 hover:text-slate-300'}"
@@ -260,40 +332,83 @@
 			</div>
 		{/if}
 
-		<!-- Grille de boutons -->
-		{#if deck.layout.buttons.length === 0}
-			<div class="h-full grid place-items-center px-6">
-				<div class="text-center space-y-2 text-slate-400">
-					<div class="text-4xl">🎛️</div>
-					<div class="text-sm">Deck vide</div>
-					<div class="text-[11px] text-slate-500">Configure tes boutons depuis l'admin Nodyx.</div>
+		<!-- Zone boutons (réutilisée en mode boutons et mixte) -->
+		{#snippet buttonsZone(d: Deck)}
+			{#if d.layout.buttons.length === 0}
+				<div class="h-full grid place-items-center px-6">
+					<div class="text-center space-y-2 text-slate-400">
+						<div class="text-4xl">🎛️</div>
+						<div class="text-sm">Deck vide</div>
+						<div class="text-[11px] text-slate-500">Configure tes boutons depuis l'admin Nodyx.</div>
+					</div>
 				</div>
-			</div>
-		{:else}
-			<div class="h-full p-3 pt-8 pb-3 grid gap-2"
-				style="grid-template-columns: repeat({deck.layout.cols}, minmax(0, 1fr)); grid-template-rows: repeat({deck.layout.rows}, minmax(0, 1fr));">
-				{#each deck.layout.buttons as b (b.id)}
-					{@const g = gradientStyle(b.gradient)}
-					<button type="button" onclick={() => press(b)} disabled={pressing !== null}
-						class="relative rounded-2xl shadow-xl border border-white/10 overflow-hidden transition-transform duration-100 active:scale-95
-							{g.class}
-							{pressing === b.id ? 'ring-2 ring-white/60 scale-95' : ''}
-							{pressing !== null && pressing !== b.id ? 'opacity-40' : ''}"
-						style="grid-column: {b.x + 1} / span {b.w}; grid-row: {b.y + 1} / span {b.h}; {g.style}">
-						<!-- Halo subtil en hover/active -->
-						<span class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/0 to-white/20 pointer-events-none"></span>
-						<!-- Loader pendant action -->
-						{#if pressing === b.id}
-							<span class="absolute top-1.5 right-1.5 w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-						{/if}
-						<div class="relative h-full flex flex-col items-center justify-center gap-1 p-2 text-center">
-							<div class="text-3xl leading-none drop-shadow-md" style="font-family: 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;">{b.icon}</div>
-							<div class="text-[11px] font-semibold leading-tight text-white drop-shadow-md line-clamp-2">{b.label}</div>
-						</div>
-					</button>
-				{/each}
-			</div>
-		{/if}
+			{:else}
+				<div class="h-full p-3 grid gap-2"
+					style="grid-template-columns: repeat({d.layout.cols}, minmax(0, 1fr)); grid-template-rows: repeat({d.layout.rows}, minmax(0, 1fr));">
+					{#each d.layout.buttons as b (b.id)}
+						{@const g = gradientStyle(b.gradient)}
+						<button type="button" onclick={() => press(b)} disabled={pressing !== null}
+							class="relative rounded-2xl shadow-xl border border-white/10 overflow-hidden transition-transform duration-100 active:scale-95
+								{g.class}
+								{pressing === b.id ? 'ring-2 ring-white/60 scale-95' : ''}
+								{pressing !== null && pressing !== b.id ? 'opacity-40' : ''}"
+							style="grid-column: {b.x + 1} / span {b.w}; grid-row: {b.y + 1} / span {b.h}; {g.style}">
+							<!-- Halo subtil en hover/active -->
+							<span class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/0 to-white/20 pointer-events-none"></span>
+							<!-- Loader pendant action -->
+							{#if pressing === b.id}
+								<span class="absolute top-1.5 right-1.5 w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+							{/if}
+							<div class="relative h-full flex flex-col items-center justify-center gap-1 p-2 text-center">
+								<div class="text-3xl leading-none drop-shadow-md" style="font-family: 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;">{b.icon}</div>
+								<div class="text-[11px] font-semibold leading-tight text-white drop-shadow-md line-clamp-2">{b.label}</div>
+							</div>
+						</button>
+					{/each}
+				</div>
+			{/if}
+		{/snippet}
+
+		<!-- Zone chat : iframe officielle Twitch (parent = domaine courant) -->
+		{#snippet chatZone()}
+			{#if chatEmbedUrl}
+				<iframe src={chatEmbedUrl} title="Chat Twitch" class="w-full h-full block border-0 bg-slate-950"></iframe>
+			{:else}
+				<div class="h-full grid place-items-center px-6 text-center">
+					<div class="space-y-2 text-slate-400">
+						<div class="text-3xl">💬</div>
+						<div class="text-sm">Chat indisponible</div>
+						<div class="text-[11px] text-slate-500">Aucune chaîne Twitch connectée au Hub.</div>
+					</div>
+				</div>
+			{/if}
+		{/snippet}
+
+		<!-- Contenu selon le mode, sous le header -->
+		<div class="absolute inset-x-0 bottom-0 top-7">
+			{#if mode === 'chat'}
+				{@render chatZone()}
+			{:else if mode === 'buttons'}
+				{@render buttonsZone(deck)}
+			{:else}
+				<!-- Mixte : split responsive (vertical en portrait, horizontal en paysage) -->
+				<div bind:this={splitBox} class="h-full flex {isLandscape ? 'flex-row' : 'flex-col'}">
+					<div class="min-h-0 min-w-0 overflow-hidden" style="flex: {splitRatio} 1 0%;">
+						{@render buttonsZone(deck)}
+					</div>
+					<div role="separator" aria-orientation={isLandscape ? 'vertical' : 'horizontal'}
+						onpointerdown={startDrag} onpointermove={onDrag} onpointerup={endDrag} onpointercancel={endDrag}
+						class="shrink-0 touch-none flex items-center justify-center transition-colors
+							{isLandscape ? 'w-2.5 cursor-col-resize' : 'h-2.5 cursor-row-resize'}
+							{dragging ? 'bg-cyan-400' : 'bg-slate-700 hover:bg-cyan-500'}">
+						<span class="rounded-full bg-white/60 {isLandscape ? 'h-10 w-0.5' : 'w-10 h-0.5'}"></span>
+					</div>
+					<div class="min-h-0 min-w-0 overflow-hidden" style="flex: {1 - splitRatio} 1 0%;">
+						{@render chatZone()}
+					</div>
+				</div>
+			{/if}
+		</div>
 	{/if}
 </div>
 
