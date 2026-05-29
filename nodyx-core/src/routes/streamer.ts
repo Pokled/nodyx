@@ -1589,27 +1589,27 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
 
     // ── Group 1: env vars ──
     const env = process.env
-    const clientId     = (env.TWITCH_CLIENT_ID         ?? '').trim()
-    const clientSecret = (env.TWITCH_CLIENT_SECRET     ?? '').trim()
+    const clientId     = (env.STREAMER_TWITCH_CLIENT_ID     ?? '').trim()
+    const clientSecret = (env.STREAMER_TWITCH_CLIENT_SECRET ?? '').trim()
     const oauthKey     = (env.STREAMER_OAUTH_KEY       ?? '').trim()
     const publicBase   = (env.STREAMER_PUBLIC_BASE     ?? '').trim()
     const redirectUri  = (env.STREAMER_OAUTH_REDIRECT_URI ?? '').trim()
 
     checks.push({
       id:        'env-client-id',
-      label:     'TWITCH_CLIENT_ID configuré',
+      label:     'STREAMER_TWITCH_CLIENT_ID configuré',
       status:    clientId ? 'ok' : 'down',
-      summary:   clientId ? 'Client ID Twitch détecté dans .env' : 'Variable absente du fichier nodyx-core/.env',
-      fix:       clientId ? null : 'Crée une application sur dev.twitch.tv/console/apps puis copie le "Client ID" dans nodyx-core/.env sous TWITCH_CLIENT_ID',
+      summary:   clientId ? 'Client ID Twitch du Hub détecté' : 'Client ID du Hub absent',
+      fix:       clientId ? null : 'Crée une application sur dev.twitch.tv/console/apps puis saisis le "Client ID" dans Admin > Paramètres > Streamer Hub (ou STREAMER_TWITCH_CLIENT_ID dans .env)',
       docAnchor: 'prerequisites',
     })
 
     checks.push({
       id:        'env-client-secret',
-      label:     'TWITCH_CLIENT_SECRET configuré',
+      label:     'STREAMER_TWITCH_CLIENT_SECRET configuré',
       status:    clientSecret ? 'ok' : 'down',
-      summary:   clientSecret ? 'Client Secret Twitch détecté' : 'Variable absente du fichier nodyx-core/.env',
-      fix:       clientSecret ? null : 'Dans la même app Twitch (dev.twitch.tv/console/apps), clique "New Secret" et copie la valeur dans TWITCH_CLIENT_SECRET',
+      summary:   clientSecret ? 'Client Secret Twitch du Hub détecté' : 'Client Secret du Hub absent',
+      fix:       clientSecret ? null : 'Dans la même app Twitch, clique "New Secret" et saisis la valeur dans Admin > Paramètres > Streamer Hub (ou STREAMER_TWITCH_CLIENT_SECRET dans .env)',
       docAnchor: 'prerequisites',
     })
 
@@ -1621,7 +1621,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       summary:   !oauthKey     ? 'Clé de chiffrement AES-256-GCM absente' :
                   oauthKeyOk    ? 'Clé maître présente, 32 octets hex' :
                                   `Format invalide (${oauthKey.length} caractères, attendu 64)`,
-      fix:       oauthKeyOk ? null : 'Génère une clé : node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))" puis colle-la dans STREAMER_OAUTH_KEY',
+      fix:       oauthKeyOk ? null : 'Dans Admin > Paramètres > Streamer Hub, clique "Générer" sur la clé de chiffrement (ou définis STREAMER_OAUTH_KEY, 64 hex, dans .env)',
       docAnchor: 'prerequisites',
     })
 
@@ -1639,7 +1639,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       summary:   !publicBase   ? 'Variable absente' :
                   publicBaseOk  ? `URL publique HTTPS détectée : ${publicBase}` :
                                   `Protocole "${publicBaseProto || 'inconnu'}" non supporté (Twitch livre uniquement sur HTTPS)`,
-      fix:       publicBaseOk ? null : 'Définis STREAMER_PUBLIC_BASE=https://ton-instance.nodyx.org dans .env (HTTPS obligatoire, Twitch refuse HTTP pour EventSub)',
+      fix:       publicBaseOk ? null : 'Définis la base publique HTTPS dans Admin > Paramètres > Streamer Hub (ou STREAMER_PUBLIC_BASE dans .env). HTTPS obligatoire, Twitch refuse HTTP pour EventSub.',
       docAnchor: 'prerequisites',
     })
 
@@ -1652,7 +1652,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       summary:   !redirectUri    ? 'Variable absente' :
                   redirectMatches ? 'Match exact avec STREAMER_PUBLIC_BASE + path callback' :
                                     `Mismatch détecté : attendu "${redirectExpected || '?'}", obtenu "${redirectUri}"`,
-      fix:       redirectMatches ? null : `Définis STREAMER_OAUTH_REDIRECT_URI=${redirectExpected || 'https://ton-instance.nodyx.org/api/v1/streamer/twitch/callback'} et reporte-la EXACTEMENT dans dev.twitch.tv/console/apps → "OAuth Redirect URLs"`,
+      fix:       redirectMatches ? null : `Définis la Redirect URI dans Admin > Paramètres > Streamer Hub (valeur attendue : ${redirectExpected || 'https://ton-instance.nodyx.org/api/v1/streamer/twitch/callback'}) et reporte-la EXACTEMENT dans dev.twitch.tv/console/apps → "OAuth Redirect URLs"`,
       docAnchor: 'prerequisites',
     })
 

@@ -11,8 +11,8 @@
 // Phase 1 ne déclare que des réglages tier 3 non-secrets : identité de
 // l'instance + indexing. Zéro secret, zéro redémarrage, zéro risque de brick.
 
-export type SettingGroup = 'identity' | 'federation' | 'email' | 'integrations' | 'security' | 'advanced'
-export type SettingType  = 'string' | 'multiline' | 'number' | 'boolean' | 'enum' | 'secret'
+export type SettingGroup = 'identity' | 'federation' | 'email' | 'integrations' | 'streamer' | 'security' | 'advanced'
+export type SettingType  = 'string' | 'multiline' | 'number' | 'boolean' | 'enum' | 'secret' | 'url'
 export type SettingTier  = 1 | 2 | 3
 
 export interface SettingDescriptor {
@@ -155,6 +155,47 @@ export const SETTINGS_REGISTRY: SettingDescriptor[] = [
     labelFr: 'Twitch Client Secret', labelEn: 'Twitch Client Secret',
     helpFr: 'Stocké chiffré. Généré à côté du Client ID sur la console Twitch.',
     helpEn: 'Stored encrypted. Generated next to the Client ID on the Twitch console.',
+  },
+
+  // ── Streamer Hub (app Twitch dédiée, distincte du widget homepage) ────────────
+  {
+    key: 'STREAMER_TWITCH_CLIENT_ID', group: 'streamer', type: 'string', tier: 3, secret: false,
+    optional: true,
+    labelFr: 'Streamer Hub : Twitch Client ID', labelEn: 'Streamer Hub: Twitch Client ID',
+    helpFr: 'App Twitch DÉDIÉE au Hub (différente du widget homepage). Créée sur dev.twitch.tv/console/apps.',
+    helpEn: 'DEDICATED Twitch app for the Hub (different from the homepage widget).',
+    validate: maxLen(128),
+  },
+  {
+    key: 'STREAMER_TWITCH_CLIENT_SECRET', group: 'streamer', type: 'secret', tier: 3, secret: true,
+    optional: true,
+    labelFr: 'Streamer Hub : Twitch Client Secret', labelEn: 'Streamer Hub: Twitch Client Secret',
+    helpFr: 'Stocké chiffré. "New Secret" dans la même app Twitch que le Client ID ci-dessus.',
+    helpEn: 'Stored encrypted. "New Secret" in the same Twitch app as the Client ID above.',
+  },
+  {
+    key: 'STREAMER_OAUTH_KEY', group: 'streamer', type: 'secret', tier: 3, secret: true,
+    optional: true,
+    labelFr: 'Streamer Hub : clé de chiffrement des tokens', labelEn: 'Streamer Hub: token encryption key',
+    helpFr: 'Chiffre les tokens Twitch en base (AES-256-GCM). 64 caractères hexadécimaux. Utilisez "Générer". À définir AVANT de connecter Twitch : la changer ensuite invalide les tokens stockés.',
+    helpEn: 'Encrypts Twitch tokens at rest (AES-256-GCM). 64 hex chars. Use "Generate". Set it BEFORE connecting Twitch.',
+    validate: (v) => /^[0-9a-fA-F]{64}$/.test(v) ? null : 'Doit faire 64 caractères hexadécimaux (utilisez Générer)',
+  },
+  {
+    key: 'STREAMER_PUBLIC_BASE', group: 'streamer', type: 'url', tier: 3, secret: false,
+    optional: true, placeholder: 'https://votre-instance.nodyx.org',
+    labelFr: 'Streamer Hub : base publique (HTTPS)', labelEn: 'Streamer Hub: public base (HTTPS)',
+    helpFr: 'URL publique HTTPS de l’instance, pour les webhooks EventSub de Twitch.',
+    helpEn: 'Public HTTPS URL of the instance, for Twitch EventSub webhooks.',
+    validate: (v) => { try { return new URL(v).protocol === 'https:' ? null : 'Doit être en HTTPS' } catch { return 'URL invalide' } },
+  },
+  {
+    key: 'STREAMER_OAUTH_REDIRECT_URI', group: 'streamer', type: 'url', tier: 3, secret: false,
+    optional: true, placeholder: 'https://votre-instance.nodyx.org/api/v1/streamer/twitch/callback',
+    labelFr: 'Streamer Hub : Redirect URI OAuth', labelEn: 'Streamer Hub: OAuth Redirect URI',
+    helpFr: 'À reporter EXACTEMENT dans l’app Twitch (OAuth Redirect URLs). En général : base publique + /api/v1/streamer/twitch/callback',
+    helpEn: 'Must match EXACTLY the Twitch app OAuth Redirect URL.',
+    validate: (v) => { try { new URL(v); return null } catch { return 'URL invalide' } },
   },
 ]
 

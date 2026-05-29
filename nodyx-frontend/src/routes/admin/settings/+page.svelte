@@ -46,8 +46,18 @@
 		federation:   'Fédération',
 		email:        'Email (SMTP)',
 		integrations: 'Intégrations',
+		streamer:     'Streamer Hub (Twitch)',
 	}
-	const GROUP_ORDER = ['identity', 'federation', 'email', 'integrations']
+	const GROUP_ORDER = ['identity', 'federation', 'email', 'integrations', 'streamer']
+
+	// Génère une clé 64 hex côté navigateur pour STREAMER_OAUTH_KEY.
+	function generateHexKey(key: string) {
+		const bytes = new Uint8Array(32)
+		crypto.getRandomValues(bytes)
+		cfgValues[key] = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+		secretTouched[key] = true
+		secretShown[key] = true   // on l'affiche une fois pour que l'admin voie que c'est rempli
+	}
 	const orderedGroups = $derived(
 		GROUP_ORDER.filter(g => cfgByGroup[g]?.length).map(g => [g, cfgByGroup[g]] as const)
 	)
@@ -378,6 +388,12 @@
 												<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
 											{/if}
 										</button>
+										{#if f.key === 'STREAMER_OAUTH_KEY'}
+											<button type="button" onclick={() => generateHexKey(f.key)} title="Générer une clé aléatoire"
+												class="px-3 py-2 rounded-lg text-xs bg-indigo-700/40 border border-indigo-600/50 text-indigo-200 hover:bg-indigo-700/60 transition-colors shrink-0">
+												Générer
+											</button>
+										{/if}
 										{#if f.isSet}
 											<span class="text-[11px] px-2 py-1 rounded bg-green-900/30 border border-green-800/50 text-green-400 shrink-0">défini</span>
 											<button type="button" onclick={() => clearSecret(f.key)} title="Retirer ce secret"

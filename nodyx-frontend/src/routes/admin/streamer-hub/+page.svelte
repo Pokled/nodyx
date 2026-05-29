@@ -877,6 +877,25 @@
 				</div>
 			</div>
 
+			<!-- Où saisir les identifiants : pont vers Admin > Paramètres > Streamer Hub -->
+			<a href="/admin/settings"
+				class="block rounded-lg border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 p-4 transition-colors">
+				<div class="flex items-start gap-3">
+					<svg class="w-5 h-5 text-indigo-300 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+					<div class="flex-1 min-w-0">
+						<div class="text-sm font-semibold text-indigo-200">Première connexion ? Configure tes identifiants Twitch d'abord</div>
+						<p class="text-[12px] text-slate-400 mt-1 leading-relaxed">
+							Le <span class="text-indigo-300 font-medium">Client ID</span>, le <span class="text-indigo-300 font-medium">Client Secret</span> et la <span class="text-indigo-300 font-medium">clé de chiffrement</span> se saisissent dans
+							<span class="text-indigo-300 font-medium">Paramètres → Streamer Hub</span>, sans toucher au fichier .env. Le diagnostic ci-dessus indique ce qui manque.
+						</p>
+						<span class="inline-flex items-center gap-1 text-[12px] text-indigo-300 hover:text-indigo-200 mt-2">
+							Ouvrir les Paramètres
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+						</span>
+					</div>
+				</div>
+			</a>
+
 			<div class="flex flex-col sm:flex-row sm:justify-end gap-3">
 				<button type="button" onclick={() => helpOpen = !helpOpen}
 					class="text-sm text-slate-300 hover:text-white px-4 py-2.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors inline-flex items-center gap-2">

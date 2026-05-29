@@ -11,7 +11,7 @@ vi.mock('../config/database', () => ({ db: { query: dbQueryMock }, redis: {} }))
 import { encryptSecret, decryptSecret } from '../config/settingsCrypto'
 import { setSettings, loadSettingsIntoEnv, getEffectiveSettings } from '../config/settings'
 
-const TOUCHED = ['SMTP_PASS', 'TWITCH_CLIENT_SECRET', 'SMTP_HOST']
+const TOUCHED = ['SMTP_PASS', 'TWITCH_CLIENT_SECRET', 'SMTP_HOST', 'STREAMER_OAUTH_KEY']
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -53,6 +53,16 @@ describe('setSettings — secrets', () => {
     // L'INSERT secret passe bien par les colonnes chiffrées.
     const sqls = dbQueryMock.mock.calls.map(c => String(c[0]))
     expect(sqls.some(s => s.includes('value_enc') && s.includes('is_secret'))).toBe(true)
+  })
+
+  it('valide le format de STREAMER_OAUTH_KEY (64 hex)', async () => {
+    const bad = await setSettings({ STREAMER_OAUTH_KEY: 'trop-court' }, 'actor-1')
+    expect(bad.ok).toBe(false)
+    expect(bad.errors.STREAMER_OAUTH_KEY).toBeDefined()
+
+    const good = await setSettings({ STREAMER_OAUTH_KEY: 'a'.repeat(64) }, 'actor-1')
+    expect(good.ok).toBe(true)
+    expect(process.env.STREAMER_OAUTH_KEY).toBe('a'.repeat(64))
   })
 
   it('retire le secret quand on envoie une valeur vide', async () => {
