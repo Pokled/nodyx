@@ -8,14 +8,26 @@ on:
       - 'nodyx-docs/**'
       - '.github/workflows/docs-deploy.yml'
 
+# Ce workflow lit les secrets VPS_HOST / VPS_USER / VPS_SSH_KEY pour pousser
+# le déploiement par SSH. Aucun besoin d'écrire au repo : permission
+# minimale pour réduire la surface en cas de compromission de l'action SSH
+# tierce (scénario tj-actions/changed-files mars 2025).
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Build & deploy to nodyx.dev
     runs-on: ubuntu-latest
 
     steps:
+      # appleboy/ssh-action est une action communautaire (pas official GitHub).
+      # Elle a accès direct aux secrets VPS_*. Pin par SHA strict : si appleboy
+      # se fait pwn et retaggue v1.2.0 vers un commit malveillant qui exfiltre
+      # les secrets, nos secrets restent protégés tant qu'on ne bumpe pas le
+      # SHA manuellement.
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
         with:
           host:     ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -41,4 +53,3 @@ jobs:
 
             echo "── done ──"
             sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 show nodyx-docs | grep -E "status|restart"
-

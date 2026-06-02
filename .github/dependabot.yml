@@ -1,0 +1,89 @@
+# ─── Dependabot — alertes sécurité + PRs de mise à jour ─────────────────────
+# On configure 4 écosystèmes : npm pour nodyx-core et nodyx-frontend, cargo
+# pour nodyx-p2p, et github-actions pour les workflows.
+#
+# Stratégie pour rester gérable en solo :
+#   - schedule weekly (pas daily) → moins de bruit
+#   - open-pull-requests-limit faible (3) → on évite l'inondation
+#   - groupage des minor + patch en une seule PR par dossier → moins de PRs
+#     à reviewer pour des bumps cosmétiques
+#   - major séparées car elles peuvent casser
+#
+# Dependabot ouvre AUSSI automatiquement des PRs prioritaires hors planning
+# quand une vulnérabilité de sécurité est détectée sur une dep installée
+# (alerts security indépendantes de ce schedule).
+
+version: 2
+
+updates:
+  # ── 1. nodyx-core (npm) ─────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/nodyx-core"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "nodyx-core"]
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      core-minor-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+
+  # ── 2. nodyx-frontend (npm) ─────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/nodyx-frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "nodyx-frontend"]
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      frontend-minor-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+
+  # ── 3. nodyx-p2p (cargo) ────────────────────────────────────────────────
+  - package-ecosystem: "cargo"
+    directory: "/nodyx-p2p"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "nodyx-p2p", "rust"]
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      p2p-minor-patch:
+        applies-to: version-updates
+        update-types: ["minor", "patch"]
+
+  # ── 4. GitHub Actions (workflows) ────────────────────────────────────────
+  # Important : on a pin par SHA dans les workflows. Dependabot saura quand
+  # même proposer un bump du SHA quand une nouvelle version d'une action
+  # arrive. Le commentaire « # v4 » à côté du SHA est utilisé pour tracer
+  # la version humainement lisible.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 2
+    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
