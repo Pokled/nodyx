@@ -45,8 +45,14 @@ jobs:
 
       - name: Vitest — 181 tests attendus
         working-directory: nodyx-core
+        # Valeur factice, requise par le bootstrap backend qui refuse de
+        # démarrer sans JWT_SECRET >= 32 chars. La prod utilise son propre
+        # secret dans son .env, jamais dans le repo. Cette chaîne n'a
+        # aucun privilège : container CI éphémère, aucune DB derrière,
+        # aucun JWT forgé avec ça ne sera valide ailleurs que dans le
+        # runner GitHub jetable.
         env:
-          JWT_SECRET: ci-nodyx-test-secret-32chars-longok
+          JWT_SECRET: CI_PLACEHOLDER_NOT_A_REAL_SECRET_safe_to_be_public
           NODE_ENV: test
         run: npm test
 
