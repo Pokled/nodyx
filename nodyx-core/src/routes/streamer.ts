@@ -124,8 +124,29 @@ import {
   touchDeckSeen,
   executeAction as executeDeckAction,
   sanitizeLayout as sanitizeDeckLayout,
+  findButtonInLayout,
   type DeckActionPayload,
 } from '../services/streamer/deckService'
+import {
+  listTracksForOwner,
+  listPublicTracks,
+  getTrack,
+  addTrackFromAsset,
+  updateTrack,
+  deleteTrack,
+  type AudioVisibility,
+  type UpdateTrackInput,
+} from '../services/streamer/audioLibraryService'
+
+import {
+  addToQueue          as addToSoundboardQueue,
+  listQueue           as listSoundboardQueue,
+  removeFromQueue     as removeFromSoundboardQueue,
+  clearQueue          as clearSoundboardQueue,
+  isViewerQueueEnabled,
+  setViewerQueueEnabled,
+  QUEUE_LIMITS,
+} from '../services/streamer/soundboardQueueService'
 
 // ── Helpers env ──────────────────────────────────────────────────────────────
 
@@ -1174,8 +1195,9 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       if (!deck) return reply.code(404).send({ ok: false, error: 'not_found' })
 
       const buttonId = (request.body?.buttonId ?? '').toString()
-      const button = deck.layout.buttons.find(b => b.id === buttonId)
-      if (!button) return reply.code(404).send({ ok: false, error: 'button_not_found' })
+      const hit = findButtonInLayout(deck.layout, buttonId)
+      if (!hit) return reply.code(404).send({ ok: false, error: 'button_not_found' })
+      const button = hit.button
 
       const result = await executeDeckAction(button.action as DeckActionPayload, `deck:${deck.label}`)
       void touchDeckSeen(deck.id)
@@ -1189,6 +1211,208 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       return reply.send(result)
     },
   )
+
+  // ── Soundboard / bibliothèque audio (Phase A) ───────────────────────────
+  // CRUD sur les pistes audio du streamer (private uniquement en V1, public
+  // en V2). L'upload d'un mp3 passe par /api/v1/assets (asset_type='sound'),
+  // puis on appelle POST /streamer/audio-library avec l'asset_id pour
+  // l'enregistrer dans la bibliothèque soundboard + extraction ID3.
+
+  server.get<{ Querystring: { visibility?: string; query?: string; limit?: string } }>(
+    '/audio-library',
+    { preHandler: adminOnly },
+    async (request) => {
+      const visibility = (request.query.visibility === 'private' || request.query.visibility === 'public')
+        ? request.query.visibility as AudioVisibility
+        : undefined
+      const limit = request.query.limit ? Math.min(500, Math.max(1, parseInt(request.query.limit, 10) || 100)) : 100
+      const tracks = await listTracksForOwner(request.user!.userId, {
+        visibility,
+        query: request.query.query,
+        limit,
+      })
+      return { tracks }
+    },
+  )
+
+  server.get<{ Params: { id: string } }>(
+    '/audio-library/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const t = await getTrack(request.params.id)
+      if (!t) return reply.code(404).send({ ok: false, error: 'not_found' })
+      // Visibilité : owner OR public
+      if (t.ownerUserId !== request.user!.userId && t.visibility !== 'public') {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      return { track: t }
+    },
+  )
+
+  server.post<{ Body: { assetId?: string; visibility?: string; title?: string } }>(
+    '/audio-library',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const b = request.body
+      if (!b?.assetId) return reply.code(400).send({ ok: false, error: 'asset_id_required' })
+      const visibility: AudioVisibility = b.visibility === 'public' ? 'public' : 'private'
+
+      try {
+        const track = await addTrackFromAsset({
+          ownerUserId:   request.user!.userId,
+          assetId:       b.assetId,
+          visibility,
+          titleOverride: b.title,
+        })
+        if (!track) return reply.code(404).send({ ok: false, error: 'asset_not_found_or_wrong_type' })
+        await audit({
+          action:    'audio_track_added',
+          status:    'success',
+          userId:    request.user!.userId,
+          ipAddress: request.ip,
+          metadata:  { trackId: track.id, assetId: b.assetId, title: track.title },
+        })
+        return reply.send({ ok: true, track })
+      } catch (err) {
+        const msg = (err as { message?: string }).message ?? 'unknown'
+        return reply.code(500).send({ ok: false, error: msg })
+      }
+    },
+  )
+
+  server.patch<{ Params: { id: string }; Body: UpdateTrackInput }>(
+    '/audio-library/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const existing = await getTrack(request.params.id)
+      if (!existing) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (existing.ownerUserId !== request.user!.userId) {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      const track = await updateTrack(request.params.id, request.body ?? {})
+      await audit({
+        action:    'audio_track_updated',
+        status:    'success',
+        userId:    request.user!.userId,
+        ipAddress: request.ip,
+        metadata:  { trackId: request.params.id, fields: Object.keys(request.body ?? {}) },
+      })
+      return { ok: true, track }
+    },
+  )
+
+  server.delete<{ Params: { id: string } }>(
+    '/audio-library/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const existed = await getTrack(request.params.id)
+      const ok = await deleteTrack(request.params.id, request.user!.userId)
+      if (!ok) return reply.code(404).send({ ok: false, error: 'not_found_or_forbidden' })
+      await audit({
+        action:    'audio_track_deleted',
+        status:    'success',
+        userId:    request.user!.userId,
+        ipAddress: request.ip,
+        metadata:  { trackId: request.params.id, title: existed?.title },
+      })
+      return { ok: true }
+    },
+  )
+
+  // ── Soundboard public (page viewers) ────────────────────────────────────
+  // Route PUBLIQUE (pas d'auth). Renvoie la biblio publique du streamer
+  // principal + le now-playing depuis Redis. Pollée toutes les 2s par la
+  // page Svelte /soundboard. Pas de Socket.IO côté viewers en V1 : le polling
+  // suffit pour de l'ambiance et réduit la surface d'attaque.
+
+  server.get('/soundboard/public', async (_request, reply) => {
+    const streamers = await listStreamers('twitch').catch(() => [])
+    const owner = streamers[0]
+    if (!owner?.userId) {
+      return reply.send({ ok: true, streamer: null, tracks: [], nowPlaying: null, queue: [], queueEnabled: false })
+    }
+
+    const [tracks, queue, queueEnabled] = await Promise.all([
+      listPublicTracks(owner.userId).catch(() => []),
+      listSoundboardQueue(owner.userId).catch(() => []),
+      isViewerQueueEnabled(owner.userId).catch(() => true),
+    ])
+
+    let nowPlaying: unknown = null
+    try {
+      const raw = await redis.get(`soundboard:nowplaying:${owner.userId}`)
+      if (raw) nowPlaying = JSON.parse(raw)
+    } catch { /* tolérant : si Redis tombe, on renvoie quand même la biblio */ }
+
+    return reply.send({
+      ok: true,
+      streamer: {
+        login:        owner.externalLogin ?? null,
+        displayName:  owner.externalLogin ?? null,
+      },
+      tracks,
+      nowPlaying,
+      queue,
+      queueEnabled,
+    })
+  })
+
+  // POST /soundboard/queue (PUBLIC) — ajout d'un son par un viewer.
+  // Rate-limit par IP (30s), cap simultanés par IP (3), dédup global, max queue 50.
+  server.post<{ Body: { trackId?: string } }>('/soundboard/queue', async (request, reply) => {
+    const streamers = await listStreamers('twitch').catch(() => [])
+    const owner = streamers[0]
+    if (!owner?.userId) return reply.code(503).send({ ok: false, reason: 'no_streamer' })
+
+    const trackId = (request.body?.trackId ?? '').toString().slice(0, 64)
+    if (!trackId) return reply.code(400).send({ ok: false, reason: 'invalid_track_id' })
+
+    const ip = request.ip
+    const result = await addToSoundboardQueue({
+      ownerUserId: owner.userId,
+      trackId,
+      ip,
+      addedBy:     'anonyme',
+      source:      'web',
+    })
+    if (!result.ok) {
+      // 429 pour rate-limit / cap / disabled (le client peut afficher un toast clair).
+      return reply.code(429).send({ ok: false, reason: result.reason })
+    }
+    return reply.send({ ok: true, entry: result.entry })
+  })
+
+  // ── Soundboard queue admin (toggle, list, skip, clear) ──────────────────
+
+  server.get('/soundboard/queue', { preHandler: adminOnly }, async (request) => {
+    const queue = await listSoundboardQueue(request.user!.userId).catch(() => [])
+    const enabled = await isViewerQueueEnabled(request.user!.userId).catch(() => true)
+    return { ok: true, queue, queueEnabled: enabled, limits: QUEUE_LIMITS }
+  })
+
+  server.post<{ Body: { enabled?: boolean } }>(
+    '/soundboard/queue/enabled',
+    { preHandler: adminOnly },
+    async (request) => {
+      const enabled = !!request.body?.enabled
+      await setViewerQueueEnabled(request.user!.userId, enabled)
+      return { ok: true, queueEnabled: enabled }
+    },
+  )
+
+  server.delete<{ Params: { trackId: string } }>(
+    '/soundboard/queue/:trackId',
+    { preHandler: adminOnly },
+    async (request) => {
+      const removed = await removeFromSoundboardQueue(request.user!.userId, request.params.trackId)
+      return { ok: removed }
+    },
+  )
+
+  server.delete('/soundboard/queue', { preHandler: adminOnly }, async (request) => {
+    const cleared = await clearSoundboardQueue(request.user!.userId)
+    return { ok: true, cleared }
+  })
 
   // ── Channel Points Rewards (Phase 3, suite) ─────────────────────────────
   // CRUD sur les custom rewards de la chaine. Affiliate/Partner requis côté

@@ -8,18 +8,28 @@ import { db } from '../../config/database'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type DeckActionType = 'top_clips' | 'vod_marker' | 'chat_message' | 'trigger_command' | 'noop'
+export type DeckActionType =
+  | 'top_clips'
+  | 'vod_marker'
+  | 'chat_message'
+  | 'trigger_command'
+  | 'play_audio'
+  | 'stop_audio'
+  | 'pause_audio'
+  | 'navigate_page'
+  | 'noop'
 
 export interface DeckButton {
-  id:       string
-  x:        number
-  y:        number
-  w:        number
-  h:        number
-  label:    string
-  icon:     string             // emoji ou nom d'icône
-  gradient: string             // preset name ou format 'hex/hex'
-  action:   DeckActionPayload
+  id:        string
+  x:         number
+  y:         number
+  w:         number
+  h:         number
+  label:     string
+  icon:      string             // emoji ou nom d'icône
+  iconScale: number             // 1.0 = normal, 2.0 = double taille, etc. Clamped [1, 3] côté sanitize.
+  gradient:  string             // preset name ou format 'hex/hex'
+  action:    DeckActionPayload
 }
 
 export type DeckActionPayload =
@@ -28,11 +38,22 @@ export type DeckActionPayload =
   | { type: 'vod_marker';       description?: string }
   | { type: 'chat_message';     text: string }
   | { type: 'trigger_command';  commandName: string }                    // ex "!discord"
+  | { type: 'play_audio';       trackId: string; trackTitle?: string }
+  | { type: 'stop_audio' }
+  | { type: 'pause_audio' }
+  | { type: 'navigate_page';    targetPageId?: string; pageJump?: 'next' | 'prev' | 'home' }
+
+export interface DeckPage {
+  id:      string
+  name:    string
+  color?:  string
+  buttons: DeckButton[]
+}
 
 export interface DeckLayout {
   rows:    number
   cols:    number
-  buttons: DeckButton[]
+  pages:   DeckPage[]
 }
 
 export interface Deck {
@@ -85,7 +106,15 @@ function isValidGradient(g: unknown): g is string {
 }
 
 function isValidActionType(t: unknown): t is DeckActionType {
-  return t === 'top_clips' || t === 'vod_marker' || t === 'chat_message' || t === 'trigger_command' || t === 'noop'
+  return (
+    t === 'top_clips' || t === 'vod_marker' || t === 'chat_message' ||
+    t === 'trigger_command' || t === 'play_audio' || t === 'stop_audio' ||
+    t === 'pause_audio' || t === 'navigate_page' || t === 'noop'
+  )
+}
+
+function isValidPageJump(j: unknown): j is 'next' | 'prev' | 'home' {
+  return j === 'next' || j === 'prev' || j === 'home'
 }
 
 function sanitizeButton(raw: unknown): DeckButton | null {
@@ -100,6 +129,10 @@ function sanitizeButton(raw: unknown): DeckButton | null {
   const icon     = typeof r.icon === 'string'     ? r.icon.slice(0, 40)     : '⬜'
   const gradient = isValidGradient(r.gradient)    ? r.gradient              : 'cyber'
   const id       = typeof r.id === 'string'       ? r.id.slice(0, 64)       : randomBytes(8).toString('hex')
+  // iconScale : multiplicateur appliqué à la taille par défaut côté frontend.
+  // Clamp [1, 3] : en-dessous c'est microscopique, au-dessus ça déborde le bouton.
+  const rawScale = Number(r.iconScale)
+  const iconScale = Number.isFinite(rawScale) ? Math.max(1, Math.min(3, rawScale)) : 1
 
   const rawAction = (r.action ?? {}) as Record<string, unknown>
   const actType = isValidActionType(rawAction.type) ? rawAction.type : 'noop'
@@ -131,20 +164,73 @@ function sanitizeButton(raw: unknown): DeckButton | null {
         commandName: typeof rawAction.commandName === 'string' ? rawAction.commandName.slice(0, 40) : '',
       }
       break
+    case 'play_audio':
+      action = {
+        type:       'play_audio',
+        trackId:    typeof rawAction.trackId    === 'string' ? rawAction.trackId.slice(0, 64)     : '',
+        trackTitle: typeof rawAction.trackTitle === 'string' ? rawAction.trackTitle.slice(0, 200) : undefined,
+      }
+      break
+    case 'stop_audio':
+      action = { type: 'stop_audio' }
+      break
+    case 'pause_audio':
+      action = { type: 'pause_audio' }
+      break
+    case 'navigate_page': {
+      const targetPageId = typeof rawAction.targetPageId === 'string' ? rawAction.targetPageId.slice(0, 64) : undefined
+      const pageJump     = isValidPageJump(rawAction.pageJump) ? rawAction.pageJump : undefined
+      action = { type: 'navigate_page', targetPageId, pageJump }
+      break
+    }
     default:
       action = { type: 'noop' }
   }
 
-  return { id, x: Math.floor(x), y: Math.floor(y), w, h, label, icon, gradient, action }
+  return { id, x: Math.floor(x), y: Math.floor(y), w, h, label, icon, iconScale, gradient, action }
+}
+
+function defaultPageId(): string { return 'p_' + randomBytes(6).toString('hex') }
+
+function sanitizePage(raw: unknown): DeckPage | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  const id    = typeof r.id    === 'string' && r.id.length > 0 ? r.id.slice(0, 64) : defaultPageId()
+  const name  = typeof r.name  === 'string' ? r.name.slice(0, 40) : 'Page'
+  const color = typeof r.color === 'string' && /^#?[a-f0-9]{6}$/i.test(r.color) ? r.color : undefined
+  const rawButtons = Array.isArray(r.buttons) ? r.buttons : []
+  const buttons = rawButtons.map(sanitizeButton).filter((b): b is DeckButton => b !== null)
+  return { id, name, color, buttons }
 }
 
 export function sanitizeLayout(raw: unknown): DeckLayout {
   const r = (raw ?? {}) as Record<string, unknown>
   const rows = Math.max(1, Math.min(8, Math.floor(Number(r.rows) || 3)))
   const cols = Math.max(1, Math.min(8, Math.floor(Number(r.cols) || 4)))
-  const rawButtons = Array.isArray(r.buttons) ? r.buttons : []
-  const buttons = rawButtons.map(sanitizeButton).filter((b): b is DeckButton => b !== null)
-  return { rows, cols, buttons }
+
+  // Forme V2 : pages[]. Forme V1 (legacy) : buttons[] à plat → on wrap.
+  let pages: DeckPage[]
+  if (Array.isArray(r.pages) && r.pages.length > 0) {
+    pages = r.pages.map(sanitizePage).filter((p): p is DeckPage => p !== null).slice(0, 8)
+  } else if (Array.isArray(r.buttons)) {
+    const buttons = r.buttons.map(sanitizeButton).filter((b): b is DeckButton => b !== null)
+    pages = [{ id: defaultPageId(), name: 'Principal', buttons }]
+  } else {
+    pages = []
+  }
+  if (pages.length === 0) {
+    pages = [{ id: defaultPageId(), name: 'Principal', buttons: [] }]
+  }
+  return { rows, cols, pages }
+}
+
+// Helper : flatten cross-pages pour le dispatch (find a button by id).
+export function findButtonInLayout(layout: DeckLayout, buttonId: string): { page: DeckPage; button: DeckButton } | null {
+  for (const page of layout.pages) {
+    const button = page.buttons.find(b => b.id === buttonId)
+    if (button) return { page, button }
+  }
+  return null
 }
 
 // ── CRUD ───────────────────────────────────────────────────────────────────
@@ -317,6 +403,90 @@ export async function executeAction(action: DeckActionPayload, triggeredBy: stri
       })
       if (!r.ok) return { ok: false, message: `Échec relay (${r.reason ?? 'inconnu'})` }
       return { ok: true, message: `Commande ${name} déclenchée` }
+    }
+
+    case 'play_audio': {
+      if (!action.trackId) return { ok: false, message: 'Aucun son sélectionné' }
+      const [{ resolveTrackForPlay }, { io }] = await Promise.all([
+        import('./audioLibraryService'),
+        import('../../socket/io'),
+      ])
+      const track = await resolveTrackForPlay(action.trackId)
+      if (!track) return { ok: false, message: 'Son introuvable (supprimé ?)' }
+      if (!io) return { ok: false, message: 'Service socket indisponible' }
+      // L'overlay soundboard du streamer écoute la room `soundboard:<ownerUserId>`.
+      // En l'absence d'écouteur (overlay pas encore ouvert), l'émission est un
+      // no-op silencieux : ack OK quand même côté Deck pour ne pas frustrer.
+      io.of('/overlay').to(`soundboard:${track.ownerUserId}`).emit('audio:play', {
+        trackId:      track.id,
+        fileUrl:      track.fileUrl,
+        mimeType:     track.mimeType,
+        title:        track.title,
+        artist:       track.artist,
+        thumbnailUrl: track.thumbnailUrl,
+        durationMs:   track.durationMs,
+        volume:       track.volumeDefault,
+        fadeInMs:     track.fadeInMs,
+        fadeOutMs:    track.fadeOutMs,
+        loop:         track.loop,
+      })
+      // Persiste le "now playing" en Redis pour la page publique /soundboard.
+      // Polling toutes les 2s côté viewers, TTL généreux pour qu'un son qui dépasse
+      // sa durée annoncée (live mix, mauvais ID3) reste affiché.
+      try {
+        const { redis } = await import('../../config/database')
+        const ttlSec = Math.max(60, Math.min(3600, Math.ceil(((track.durationMs ?? 0) / 1000) + 30)))
+        await redis.setex(
+          `soundboard:nowplaying:${track.ownerUserId}`,
+          ttlSec,
+          JSON.stringify({
+            trackId:      track.id,
+            title:        track.title,
+            artist:       track.artist,
+            thumbnailUrl: track.thumbnailUrl,
+            durationMs:   track.durationMs,
+            loop:         track.loop,
+            startedAt:    Date.now(),
+          }),
+        )
+      } catch (err) { console.warn('[deck] redis nowplaying set failed', err) }
+      console.log(`[deck] play_audio → ${track.title} (by ${triggeredBy})`)
+      return { ok: true, message: `▶ ${track.title}` }
+    }
+
+    case 'stop_audio': {
+      const [{ listStreamers }, { io }, { redis }] = await Promise.all([
+        import('./tokenService'),
+        import('../../socket/io'),
+        import('../../config/database'),
+      ])
+      const streamers = await listStreamers('twitch').catch(() => [])
+      const ownerUserId = streamers[0]?.userId
+      if (!ownerUserId || !io) return { ok: true, message: 'Stop envoyé' }
+      io.of('/overlay').to(`soundboard:${ownerUserId}`).emit('audio:stop')
+      await redis.del(`soundboard:nowplaying:${ownerUserId}`).catch(() => 0)
+      return { ok: true, message: 'Son coupé' }
+    }
+
+    case 'pause_audio': {
+      const [{ listStreamers }, { io }] = await Promise.all([
+        import('./tokenService'),
+        import('../../socket/io'),
+      ])
+      const streamers = await listStreamers('twitch').catch(() => [])
+      const ownerUserId = streamers[0]?.userId
+      if (!ownerUserId || !io) return { ok: true, message: 'Pause envoyée' }
+      io.of('/overlay').to(`soundboard:${ownerUserId}`).emit('audio:pause')
+      // Pause : on garde la clé Redis intacte (la page publique continue à afficher
+      // le son comme "en cours"). Si Preston veut un état "pause" différencié plus
+      // tard, on rajoutera un flag dans la payload Redis.
+      return { ok: true, message: 'Son en pause' }
+    }
+
+    case 'navigate_page': {
+      // Navigation pilotée par le mobile (le client intercepte avant d'appeler
+      // le backend). Si on arrive ici, c'est un fallback : ack vide.
+      return { ok: true, message: '' }
     }
   }
 }

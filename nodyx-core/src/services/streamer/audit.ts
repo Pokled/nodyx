@@ -44,6 +44,9 @@ export type AuditAction =
   | 'deck_updated'
   | 'deck_revoked'
   | 'deck_action_executed'
+  | 'audio_track_added'
+  | 'audio_track_updated'
+  | 'audio_track_deleted'
 
 export interface AuditEntry {
   action:    AuditAction

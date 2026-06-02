@@ -339,234 +339,292 @@
 	onMount(loadTimers)
 </script>
 
-<section class="rounded-xl border border-indigo-500/25 bg-gradient-to-br from-indigo-950/30 via-slate-900/60 to-cyan-950/20 p-5 space-y-4">
-	<header class="flex items-center justify-between gap-3 flex-wrap">
-		<div class="flex items-center gap-2.5">
-			<svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-			<h2 class="text-sm font-semibold text-white">Bot Chat — messages récurrents</h2>
-			<Tooltip text="Le bot Nodyx poste automatiquement des messages dans ton chat Twitch à intervalles définis. Idéal pour rappeler !nodyx, ton schedule, tes réseaux. Configure une fois, ça tourne pendant le live." variant="tip" position="bottom"/>
+<!-- Tokens locaux :
+   page bg      = zinc-950 (hérité du layout admin)
+   card         = zinc-900 (vraie surface, plus claire que la page)
+   input        = zinc-950 (plus sombre que la card, "creusé")
+   border       = zinc-800 (subtile mais nette)
+   accent       = purple-500
+   text-1       = zinc-100 (label principal)
+   text-2       = zinc-400 (texte body)
+   text-3       = zinc-500 (meta)
+   radius       = pas sur cards/listes/badges, juste 2px sur inputs/boutons
+-->
+<section class="space-y-6">
+
+	<!-- Header section : titre clair + meta variables disponibles. -->
+	<header class="flex items-start justify-between gap-4 flex-wrap">
+		<div>
+			<div class="flex items-center gap-2">
+				<h2 class="text-lg font-semibold text-zinc-100">Timers récurrents</h2>
+				<Tooltip text="Messages bot postés automatiquement dans le chat Twitch. Configure une fois, ça tourne pendant le live." position="bottom"/>
+			</div>
+			<p class="text-sm text-zinc-500 mt-0.5">Récurrent, une fois par live, ou envoi unique.</p>
 		</div>
-		<div class="text-[10px] text-slate-500">Variables : <code class="bg-slate-800/60 px-1 rounded">{`{nodyx_url}`}</code> <code class="bg-slate-800/60 px-1 rounded">{`{streamer}`}</code> <code class="bg-slate-800/60 px-1 rounded">{`{uptime}`}</code></div>
+		<div class="text-xs text-zinc-500 flex items-center gap-1.5 flex-wrap">
+			<span class="text-zinc-600">Variables</span>
+			<code class="text-zinc-300 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-sm font-mono">{`{nodyx_url}`}</code>
+			<code class="text-zinc-300 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-sm font-mono">{`{streamer}`}</code>
+			<code class="text-zinc-300 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-sm font-mono">{`{uptime}`}</code>
+		</div>
 	</header>
 
-	<!-- ── Presets : recettes pré-faites pour les débutants ─────────────────── -->
-	<div class="rounded-lg border border-indigo-500/30 bg-indigo-950/20 p-3">
-		<div class="flex items-center gap-2 mb-2">
-			<svg class="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
-			<span class="text-[11px] uppercase tracking-widest font-semibold text-indigo-300">Recettes prêtes à l'emploi</span>
-			<Tooltip text="Charge un timer pré-configuré dans le formulaire ci-dessous. Tu peux ensuite personnaliser avant d'enregistrer." variant="tip"/>
-		</div>
-		<div class="flex flex-wrap gap-1.5">
-			{#each PRESETS as p (p.key)}
-				<button type="button" onclick={() => applyPreset(p)} title={p.hint}
-					class="group inline-flex items-center gap-1.5 text-[11px] bg-indigo-500/10 hover:bg-indigo-500/25 border border-indigo-500/40 text-indigo-100 px-2.5 py-1 rounded transition-colors">
-					<span>{p.emoji}</span>
-					<span class="font-medium">{p.label}</span>
-				</button>
-			{/each}
-		</div>
-	</div>
-
 	{#if toast}
-		<div class="rounded p-2 text-xs flex items-center gap-2 {toast.ok ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : 'border border-rose-500/40 bg-rose-500/10 text-rose-200'}">
-			<span class="w-1.5 h-1.5 rounded-full {toast.ok ? 'bg-emerald-400' : 'bg-rose-400'}"></span>
+		<div class="border-l-2 px-3 py-2 text-sm flex items-center gap-2 {toast.ok ? 'border-emerald-500 bg-emerald-500/5 text-emerald-200' : 'border-rose-500 bg-rose-500/5 text-rose-200'}">
 			{toast.text}
 		</div>
 	{/if}
 
-	<!-- ── Liste des timers ────────────────────────────────────────────────── -->
-	{#if loading}
-		<div class="text-xs text-slate-500 text-center py-6">Chargement…</div>
-	{:else if timers.length === 0}
-		<div class="rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 p-6 text-center text-xs text-slate-500">
-			Aucun timer pour l'instant. Crée ton premier ci-dessous (par exemple, une pub Nodyx toutes les 15 minutes).
-		</div>
-	{:else}
-		<div class="space-y-2">
-			{#each timers as t (t.id)}
-				<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-3 space-y-2 {editingId === t.id ? 'ring-1 ring-indigo-500/60' : ''}">
-					<div class="flex items-start justify-between gap-3 flex-wrap">
-						<div class="flex-1 min-w-0">
-							<div class="flex items-center gap-2 flex-wrap">
-								<span class="text-sm font-semibold text-white">{t.label}</span>
-								<span class="text-[10px] px-1.5 py-0.5 rounded {t.enabled ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-700/50 text-slate-400'}">{t.enabled ? 'actif' : 'inactif'}</span>
-								<span class="text-[10px] px-1.5 py-0.5 rounded {t.triggerMode === 'recurring' ? 'bg-indigo-500/15 text-indigo-300' : t.triggerMode === 'once_per_live' ? 'bg-amber-500/15 text-amber-300' : 'bg-purple-500/15 text-purple-300'}">{MODE_LABELS[t.triggerMode]}</span>
-								{#if t.liveOnly}<span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300">live only</span>{/if}
-							</div>
-							<div class="text-[11px] text-slate-400 mt-1 line-clamp-2" title={t.messageTemplate}>{t.messageTemplate}</div>
-							<div class="text-[10px] text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
-								{#if t.triggerMode === 'recurring'}
-									<span>toutes les {t.intervalMinutes}min</span>
-									<span>min. {t.minChatMessages} msg chat</span>
-								{:else if t.triggerMode === 'once_per_live'}
-									<span>{t.intervalMinutes}min après go-live</span>
-								{:else}
-									<span>envoi unique</span>
-								{/if}
-								<span>dernier envoi : {fmtRelative(t.lastSentAt)}</span>
-							</div>
-						</div>
-						<div class="flex items-center gap-1 flex-wrap">
-							<button type="button" onclick={() => sendNow(t)} disabled={sendingNowId === t.id}
-								class="text-[10px] bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-30 border border-cyan-500/40 text-cyan-200 px-2 py-1 rounded transition-colors">
-								▶ Envoyer
-							</button>
-							<button type="button" onclick={() => toggleEnabled(t)}
-								class="text-[10px] bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/60 text-slate-200 px-2 py-1 rounded transition-colors">
-								{t.enabled ? 'Désactiver' : 'Activer'}
-							</button>
-							<button type="button" onclick={() => loadTemplate(t)}
-								class="text-[10px] bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/40 text-indigo-200 px-2 py-1 rounded transition-colors">
-								Éditer
-							</button>
-							<button type="button" onclick={() => deleteTimer(t)}
-								class="text-[10px] bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-200 px-2 py-1 rounded transition-colors">
-								Suppr
-							</button>
-						</div>
-					</div>
-				</div>
-			{/each}
-		</div>
-	{/if}
+	<!-- Modèles : rangée de boutons secondaires francs (vraie surface). -->
+	<div class="flex items-center gap-2 flex-wrap">
+		<span class="text-[11px] uppercase tracking-wide font-medium text-zinc-500 mr-1">Modèles</span>
+		{#each PRESETS as p (p.key)}
+			<button type="button" onclick={() => applyPreset(p)} title={p.hint}
+				class="text-xs font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 text-zinc-200 px-2.5 py-1.5 rounded-sm transition-colors">
+				{p.label}
+			</button>
+		{/each}
+	</div>
 
-	<!-- ── Formulaire create / edit ────────────────────────────────────────── -->
-	<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-4 space-y-3">
-		<div class="flex items-center justify-between gap-3">
-			<h3 class="text-[11px] uppercase tracking-widest font-semibold text-cyan-400">
+	<!-- Liste des timers : grande card pleine, pas de radius. -->
+	<div>
+		<div class="flex items-baseline justify-between mb-2">
+			<h3 class="text-xs uppercase tracking-wide font-medium text-zinc-500">Timers configurés</h3>
+			{#if timers.length > 0}<span class="text-xs text-zinc-600">{timers.length}</span>{/if}
+		</div>
+
+		{#if loading}
+			<div class="border border-zinc-800 bg-zinc-900 px-4 py-6 text-sm text-zinc-500">Chargement…</div>
+		{:else if timers.length === 0}
+			<div class="border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-8 text-center text-sm text-zinc-500">
+				Aucun timer. Choisis un modèle ci-dessus ou crée-en un dans le formulaire en bas.
+			</div>
+		{:else}
+			<!-- Vraie grille tabulaire : 4 colonnes alignées, header sticky, statuts à gauche. -->
+			<div class="border border-zinc-800 bg-zinc-900">
+				<!-- Header colonnes -->
+				<div class="grid grid-cols-[160px_1fr_180px_auto] gap-4 px-4 py-2 border-b border-zinc-800 bg-zinc-950 text-[11px] uppercase tracking-wide font-medium text-zinc-500">
+					<span>Statut</span>
+					<span>Timer</span>
+					<span>Planning</span>
+					<span class="text-right pr-1">Actions</span>
+				</div>
+				<!-- Rows -->
+				<ul class="divide-y divide-zinc-800">
+					{#each timers as t (t.id)}
+						<li class="grid grid-cols-[160px_1fr_180px_auto] gap-4 px-4 py-3 items-start {editingId === t.id ? 'bg-purple-500/[0.04] border-l-2 border-l-purple-500' : ''}">
+							<!-- Col 1 : Statuts empilés -->
+							<div class="flex flex-col gap-1 text-xs">
+								<span class="inline-flex items-center gap-1.5">
+									<span class="w-1.5 h-1.5 rounded-full {t.enabled ? 'bg-emerald-400' : 'bg-zinc-600'}"></span>
+									<span class="{t.enabled ? 'text-emerald-300' : 'text-zinc-500'} font-medium">{t.enabled ? 'Actif' : 'Inactif'}</span>
+								</span>
+								<span class="text-zinc-400">{MODE_LABELS[t.triggerMode]}</span>
+								{#if t.liveOnly}
+									<span class="inline-flex items-center gap-1.5 text-rose-400">
+										<span class="w-1 h-1 rounded-full bg-rose-400"></span>
+										Live only
+									</span>
+								{:else}
+									<span class="text-zinc-600">Tous contextes</span>
+								{/if}
+							</div>
+
+							<!-- Col 2 : Label + template -->
+							<div class="min-w-0">
+								<div class="text-sm font-medium text-zinc-100 truncate" title={t.label}>{t.label}</div>
+								<p class="text-sm text-zinc-400 mt-0.5 line-clamp-2" title={t.messageTemplate}>{t.messageTemplate}</p>
+							</div>
+
+							<!-- Col 3 : Planning -->
+							<div class="flex flex-col gap-0.5 text-xs text-zinc-500">
+								{#if t.triggerMode === 'recurring'}
+									<span>toutes les <span class="text-zinc-200 font-medium">{t.intervalMinutes}</span> min</span>
+									<span>min. <span class="text-zinc-200 font-medium">{t.minChatMessages}</span> msg chat</span>
+								{:else if t.triggerMode === 'once_per_live'}
+									<span><span class="text-zinc-200 font-medium">{t.intervalMinutes}</span> min après go-live</span>
+								{:else}
+									<span class="text-zinc-400">Envoi unique</span>
+								{/if}
+								<span class="text-zinc-600">Dernier : {fmtRelative(t.lastSentAt)}</span>
+							</div>
+
+							<!-- Col 4 : Actions -->
+							<div class="flex items-center gap-1.5 justify-end">
+								<button type="button" onclick={() => sendNow(t)} disabled={sendingNowId === t.id}
+									class="text-xs inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 disabled:opacity-30 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors"
+									title="Envoyer maintenant">
+									<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84a1 1 0 011.04.06l9 6a1 1 0 010 1.66l-9 6A1 1 0 016 16V4a1 1 0 01.3-.84z"/></svg>
+									Envoyer
+								</button>
+								<button type="button" onclick={() => toggleEnabled(t)}
+									class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors">
+									{t.enabled ? 'Désactiver' : 'Activer'}
+								</button>
+								<button type="button" onclick={() => loadTemplate(t)}
+									class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors">
+									Éditer
+								</button>
+								<button type="button" onclick={() => deleteTimer(t)}
+									class="text-xs inline-flex items-center border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/60 px-2 py-1 rounded-sm transition-colors"
+									title="Supprimer">
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+										<polyline points="3 6 5 6 21 6"/>
+										<path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+										<path d="M10 11v6M14 11v6"/>
+										<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+									</svg>
+								</button>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Formulaire create / edit : grande card pleine sans radius. -->
+	<div class="border border-zinc-800 bg-zinc-900">
+		<header class="px-4 py-3 border-b border-zinc-800 flex items-center justify-between gap-3">
+			<h3 class="text-sm font-semibold text-zinc-100">
 				{editingId ? 'Modifier le timer' : 'Nouveau timer'}
 			</h3>
 			{#if editingId}
-				<button type="button" onclick={resetForm} class="text-[10px] text-slate-400 hover:text-white">↻ Réinitialiser</button>
+				<button type="button" onclick={resetForm} class="text-xs text-zinc-500 hover:text-zinc-200 transition-colors">Réinitialiser</button>
 			{/if}
-		</div>
+		</header>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-			<div>
-				<div class="flex items-center gap-1.5">
-					<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Label (interne)</span>
-					<Tooltip text="Nom pour t'y retrouver dans la liste. N'apparaît PAS dans le chat. Ex : 'Pub Nodyx', 'Rappel schedule'."/>
-				</div>
-				<input type="text" bind:value={formLabel} maxlength="100" placeholder="Pub Nodyx"
-					class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-3 py-1.5 text-sm text-white outline-none transition-colors"/>
-			</div>
-			{#if formMode !== 'once'}
+		<div class="p-4 space-y-5">
+
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
 					<div class="flex items-center gap-1.5">
-						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">
-							{formMode === 'recurring' ? 'Intervalle (minutes, min. 5)' : 'Délai après go-live (minutes)'}
-						</span>
-						<Tooltip text={formMode === 'recurring' ? "Temps entre 2 envois. 15 min est un bon défaut. Trop court = spam. Trop long = peu de viewers le verront." : "Délai à attendre après le démarrage du stream avant d'envoyer le message. Laisse le temps aux viewers d'arriver (2-5 min recommandé)."}/>
+						<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Label interne</label>
+						<Tooltip text="Nom pour t'y retrouver dans la liste. N'apparaît pas dans le chat."/>
 					</div>
-					<input type="number" min={formMode === 'recurring' ? 5 : 1} max="1440" bind:value={formInterval}
-						class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-3 py-1.5 text-sm text-white outline-none transition-colors"/>
+					<input type="text" bind:value={formLabel} maxlength="100" placeholder="Pub Nodyx"
+						class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition-colors rounded-sm"/>
 				</div>
-			{:else}
-				<div class="text-[10px] text-purple-300 bg-purple-500/10 border border-purple-500/30 rounded px-3 py-2 mt-5 self-center">
-					Mode "Une seule fois" : aucun intervalle. Envoyé dès que les conditions sont OK, puis désactivation auto.
-				</div>
-			{/if}
-		</div>
-
-		<!-- ── Mode de déclenchement ────────────────────────────────────────── -->
-		<div>
-			<div class="flex items-center gap-1.5 mb-1.5">
-				<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Mode de déclenchement</span>
-				<Tooltip text="Récurrent = tourne en boucle. Une fois par live = uniquement au début de chaque stream (idéal phrase d'accueil). Une seule fois = envoi unique puis désactivation auto (annonce ponctuelle)." variant="tip"/>
-			</div>
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-				{#each (['recurring', 'once_per_live', 'once'] as TriggerMode[]) as mode (mode)}
-					<label class="cursor-pointer rounded-lg border p-2.5 transition-colors {formMode === mode ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-slate-700/60 bg-slate-950/40 hover:border-slate-600'}">
-						<div class="flex items-center gap-2">
-							<input type="radio" name="trigger-mode" value={mode} bind:group={formMode}
-								class="w-3 h-3 accent-cyan-500"/>
-							<span class="text-xs font-semibold text-white">{MODE_LABELS[mode]}</span>
+				{#if formMode !== 'once'}
+					<div>
+						<div class="flex items-center gap-1.5">
+							<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">
+								{formMode === 'recurring' ? 'Intervalle (min, 5 minimum)' : 'Délai après go-live (min)'}
+							</label>
+							<Tooltip text={formMode === 'recurring' ? 'Temps entre 2 envois. 15 min est un bon défaut.' : 'Délai à attendre après le démarrage du stream. 2 à 5 min recommandé.'}/>
 						</div>
-						<div class="text-[10px] text-slate-400 mt-1 leading-snug">{MODE_DESCS[mode]}</div>
-					</label>
-				{/each}
+						<input type="number" min={formMode === 'recurring' ? 5 : 1} max="1440" bind:value={formInterval}
+							class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors rounded-sm"/>
+					</div>
+				{:else}
+					<div class="text-xs text-zinc-500 self-end pb-2">
+						Mode unique : envoi dès que les conditions sont réunies, puis désactivation automatique.
+					</div>
+				{/if}
 			</div>
-		</div>
 
-		<div>
-			<div class="flex items-center justify-between gap-2 flex-wrap">
-				<div class="flex items-center gap-1.5">
-					<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Template du message</span>
-					<Tooltip text="Ce que le bot va dire dans le chat Twitch. Tu peux insérer des variables avec les boutons à droite : elles seront remplacées par les vraies valeurs au moment de l'envoi. 500 chars max."/>
+			<!-- Mode de déclenchement -->
+			<div>
+				<div class="flex items-center gap-1.5 mb-2">
+					<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Mode de déclenchement</label>
+					<Tooltip text="Récurrent tourne en boucle. Une fois par live se déclenche au début de chaque stream. Une seule fois s'arrête après le premier envoi."/>
 				</div>
-				<div class="flex items-center gap-1 flex-wrap">
-					{#each INSERTABLE_VARS as v (v.token)}
-						<button type="button" onclick={() => insertVar(v.token)} title={v.desc}
-							class="text-[10px] bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/40 text-indigo-200 px-2 py-0.5 rounded transition-colors">
-							+ {v.label} <code class="text-[9px] opacity-60 ml-0.5">{v.token}</code>
-						</button>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+					{#each (['recurring', 'once_per_live', 'once'] as TriggerMode[]) as mode (mode)}
+						<label class="cursor-pointer border p-3 transition-colors {formMode === mode ? 'border-purple-500/60 bg-purple-500/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950'}">
+							<div class="flex items-center gap-2">
+								<input type="radio" name="trigger-mode" value={mode} bind:group={formMode}
+									class="w-3 h-3 accent-purple-500"/>
+								<span class="text-sm font-medium text-zinc-100">{MODE_LABELS[mode]}</span>
+							</div>
+							<div class="text-xs text-zinc-500 mt-1 leading-snug">{MODE_DESCS[mode]}</div>
+						</label>
 					{/each}
 				</div>
 			</div>
-			<textarea bind:this={templateInputEl} bind:value={formTemplate} maxlength="500" rows="3" placeholder="Rejoins la communauté Nodyx : {`{nodyx_url}`} — tape !nodyx pour le lien"
-				class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-3 py-2 text-sm text-white outline-none transition-colors resize-none"></textarea>
-		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-			{#if formMode === 'recurring'}
-				<div>
+			<!-- Template -->
+			<div>
+				<div class="flex items-center justify-between gap-2 flex-wrap mb-1.5">
 					<div class="flex items-center gap-1.5">
-						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Min. messages chat depuis dernier envoi</span>
-						<Tooltip text="Évite que le bot parle dans le vide. Le timer skip son envoi si moins de X messages humains depuis la dernière fois. 5 est un bon défaut. 0 = pas de check."/>
+						<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Message</label>
+						<Tooltip text="Ce que le bot va dire dans le chat Twitch. 500 caractères max."/>
 					</div>
-					<input type="number" min="0" max="1000" bind:value={formMinMsgs}
-						class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-3 py-1.5 text-sm text-white outline-none transition-colors"/>
-					<span class="text-[10px] text-slate-500 mt-0.5 block">Anti-spam chat vide. 0 = pas de check.</span>
+					<div class="flex items-center gap-1 flex-wrap">
+						{#each INSERTABLE_VARS as v (v.token)}
+							<button type="button" onclick={() => insertVar(v.token)} title={v.desc}
+								class="text-xs font-mono text-zinc-300 hover:text-purple-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 px-1.5 py-0.5 rounded-sm transition-colors">
+								{v.token}
+							</button>
+						{/each}
+					</div>
 				</div>
-			{:else}
-				<div class="text-[10px] text-slate-500 self-center md:col-span-1">
-					{#if formMode === 'once_per_live'}
-						L'anti-spam chat vide est désactivé en mode "Une fois par live" pour garantir l'envoi du message d'accueil.
-					{:else}
-						L'anti-spam chat vide est désactivé en mode "Une seule fois".
-					{/if}
-				</div>
-			{/if}
-			<div class="flex items-center gap-2 mt-5">
-				<label class="flex items-center gap-2 cursor-pointer">
-					<input type="checkbox" bind:checked={formLiveOnly} class="w-4 h-4 accent-cyan-500"/>
-					<span class="text-xs text-slate-300">Live only (skip si offline)</span>
-				</label>
-				<Tooltip text="Si activé, le timer ne fonctionne QUE quand tu es en stream. Recommandé : ça évite les messages bot envoyés à un chat vide quand tu es offline."/>
+				<textarea bind:this={templateInputEl} bind:value={formTemplate} maxlength="500" rows="3"
+					placeholder="Rejoins la communauté Nodyx : {`{nodyx_url}`}, tape !nodyx pour le lien"
+					class="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition-colors resize-none rounded-sm"></textarea>
 			</div>
-			<div class="flex items-center gap-2 mt-5">
-				<label class="flex items-center gap-2 cursor-pointer">
-					<input type="checkbox" bind:checked={formEnabled} class="w-4 h-4 accent-emerald-500"/>
-					<span class="text-xs text-slate-300">Activé dès création</span>
+
+			<!-- Options -->
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				{#if formMode === 'recurring'}
+					<div>
+						<div class="flex items-center gap-1.5">
+							<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Min. messages chat</label>
+							<Tooltip text="Le timer skip son envoi si moins de X messages humains depuis la dernière fois. 5 est un bon défaut. 0 désactive le check."/>
+						</div>
+						<input type="number" min="0" max="1000" bind:value={formMinMsgs}
+							class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors rounded-sm"/>
+					</div>
+				{:else}
+					<p class="text-xs text-zinc-500 self-end pb-1.5">
+						{#if formMode === 'once_per_live'}
+							L'anti-spam chat vide est désactivé pour ne pas rater l'accueil.
+						{:else}
+							L'anti-spam chat vide est désactivé en mode unique.
+						{/if}
+					</p>
+				{/if}
+				<label class="flex items-center gap-2 cursor-pointer self-end pb-1.5">
+					<input type="checkbox" bind:checked={formLiveOnly} class="w-4 h-4 accent-purple-500"/>
+					<span class="text-sm text-zinc-300">Live only</span>
+					<Tooltip text="Le timer ne se déclenche que pendant un stream actif."/>
 				</label>
-				<Tooltip text="Décoche pour créer un timer sans le démarrer (utile pour préparer un brouillon)."/>
+				<label class="flex items-center gap-2 cursor-pointer self-end pb-1.5">
+					<input type="checkbox" bind:checked={formEnabled} class="w-4 h-4 accent-purple-500"/>
+					<span class="text-sm text-zinc-300">Activé à la création</span>
+				</label>
+			</div>
+
+			<!-- Aperçu -->
+			<div class="flex items-center gap-2 flex-wrap">
+				<button type="button" onclick={doPreview} disabled={formBusy || !formTemplate.trim()}
+					class="text-sm inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 border border-zinc-700 text-zinc-100 px-3 py-1.5 rounded-sm transition-colors">
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+						<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+						<circle cx="12" cy="12" r="3"/>
+					</svg>
+					Aperçu rendu
+				</button>
+				{#if formPreview}
+					<div class="flex-1 min-w-0 text-sm text-zinc-300 bg-zinc-950 border border-zinc-800 px-3 py-1.5 truncate rounded-sm" title={formPreview}>
+						{formPreview}
+					</div>
+				{/if}
 			</div>
 		</div>
 
-		<!-- Preview -->
-		<div class="flex items-center gap-2 flex-wrap">
-			<button type="button" onclick={doPreview} disabled={formBusy || !formTemplate.trim()}
-				class="text-[11px] bg-slate-700/40 hover:bg-slate-700/60 disabled:opacity-30 border border-slate-600/60 text-slate-200 px-3 py-1.5 rounded transition-colors">
-				👁 Aperçu rendu
-			</button>
-			{#if formPreview}
-				<div class="flex-1 min-w-0 text-[11px] text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded px-3 py-1.5 truncate" title={formPreview}>
-					{formPreview}
-				</div>
-			{/if}
-		</div>
-
-		<div class="flex items-center gap-2 pt-1">
+		<!-- Actions du formulaire dans une barre dédiée -->
+		<footer class="px-4 py-3 border-t border-zinc-800 bg-zinc-900/60 flex items-center gap-2">
 			<button type="button" onclick={submitForm} disabled={formBusy || !formLabel.trim() || !formTemplate.trim()}
-				class="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 disabled:opacity-30 border border-indigo-500/50 text-indigo-100 px-4 py-1.5 rounded font-semibold transition-colors">
-				{editingId ? 'Enregistrer' : 'Créer le timer'}
+				class="text-sm font-medium bg-purple-500 hover:bg-purple-400 disabled:bg-zinc-800 disabled:text-zinc-500 shadow-sm shadow-purple-500/30 disabled:shadow-none text-white px-4 py-1.5 rounded-sm transition-colors">
+				{editingId ? 'Enregistrer les modifications' : 'Créer le timer'}
 			</button>
 			{#if editingId}
 				<button type="button" onclick={resetForm}
-					class="text-xs bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/60 text-slate-200 px-3 py-1.5 rounded transition-colors">
+					class="text-sm bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded-sm transition-colors">
 					Annuler
 				</button>
 			{/if}
-		</div>
+		</footer>
 	</div>
 </section>

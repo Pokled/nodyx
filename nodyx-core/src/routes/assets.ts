@@ -18,6 +18,9 @@ import { db, redis } from '../config/database'
 const VALID_TYPES = ['frame', 'banner', 'font', 'badge', 'sticker', 'theme', 'emoji', 'sound', 'image', 'video'] as const
 
 // Per-user upload quota: 200 MB per 24h rolling window.
+// Cible : empêcher les regular users de flood l'instance (avatars, stickers,
+// post images). Les owner/admin de l'instance sont bypass : ils gèrent les
+// médias (soundboard, overlays, branding), c'est leur disque.
 const UPLOAD_QUOTA_BYTES   = 200 * 1024 * 1024 // 200 MB
 const UPLOAD_QUOTA_WINDOW  = 86400              // 24h in seconds
 
@@ -26,6 +29,30 @@ async function checkUploadQuota(userId: string, fileSize: number): Promise<boole
   const total = await redis.incrby(key, fileSize)
   if (total === fileSize) await redis.expire(key, UPLOAD_QUOTA_WINDOW) // first upload in window
   return total <= UPLOAD_QUOTA_BYTES
+}
+
+// Helper inline (évite un round-trip au middleware adminOnly qui valide aussi
+// le JWT — déjà fait par requireAuth en amont). Hit DB uniquement, et on cache
+// le communityId via le pattern utilisé dans middleware/adminOnly.
+let _bypassCommunityId: string | null = null
+async function isInstanceAdmin(userId: string): Promise<boolean> {
+  if (!_bypassCommunityId) {
+    const slug = process.env.NODYX_COMMUNITY_SLUG
+    if (slug) {
+      const r = await db.query<{ id: string }>(`SELECT id FROM communities WHERE slug = $1`, [slug])
+      if (r.rows[0]) _bypassCommunityId = r.rows[0].id
+    }
+    if (!_bypassCommunityId) {
+      const r = await db.query<{ id: string }>(`SELECT id FROM communities ORDER BY created_at ASC LIMIT 1`)
+      if (r.rows[0]) _bypassCommunityId = r.rows[0].id
+    }
+  }
+  if (!_bypassCommunityId) return false
+  const r = await db.query<{ role: string }>(
+    `SELECT role FROM community_members WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
+    [_bypassCommunityId, userId],
+  )
+  return !!r.rows[0] && (r.rows[0].role === 'owner' || r.rows[0].role === 'admin')
 }
 
 const ALLOWED_MIME_BY_TYPE: Record<string, readonly string[]> = {
@@ -84,9 +111,13 @@ export default async function assetRoutes(app: FastifyInstance) {
 
     const buffer = await data.toBuffer()
 
-    const withinQuota = await checkUploadQuota(userId, buffer.length)
-    if (!withinQuota) {
-      return reply.code(429).send({ error: 'Quota d\'upload dépassé (200 Mo / 24h).' })
+    // Quota community : skip pour les admin/owner (ils gèrent l'instance).
+    const bypassQuota = await isInstanceAdmin(userId)
+    if (!bypassQuota) {
+      const withinQuota = await checkUploadQuota(userId, buffer.length)
+      if (!withinQuota) {
+        return reply.code(429).send({ error: 'Quota d\'upload dépassé (200 Mo / 24h).' })
+      }
     }
 
     const scan = scanBuffer(buffer, data.mimetype)

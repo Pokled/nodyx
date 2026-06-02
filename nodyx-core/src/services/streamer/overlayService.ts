@@ -16,10 +16,45 @@ export type OverlayType =
   | 'event_ticker'
   | 'leaderboard'
   | 'clips_player'
+  | 'soundboard'
 
 const VALID_TYPES: ReadonlySet<OverlayType> = new Set([
-  'alert_box', 'goal_bar', 'stream_timer', 'event_ticker', 'leaderboard', 'clips_player',
+  'alert_box', 'goal_bar', 'stream_timer', 'event_ticker', 'leaderboard', 'clips_player', 'soundboard',
 ])
+
+// ── Soundboard ──────────────────────────────────────────────────────────────
+// L'overlay reçoit les events audio:play/stop/pause via la room
+// soundboard:<ownerUserId> (cf socket/overlay.ts + deckService dispatch).
+// Config minimale en V1 : position de l'OSD vignette/titre, master volume.
+
+export type SoundboardOsdPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'hidden'
+export const SOUNDBOARD_OSD_POSITIONS: readonly SoundboardOsdPosition[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'hidden']
+
+export interface SoundboardOverlayConfig {
+  osdPosition:   SoundboardOsdPosition   // emplacement de la carte OSD ("hidden" = pas d'OSD)
+  osdDurationMs: number                  // 0 = persistant tant que le son joue, sinon durée d'affichage min
+  masterVolume:  number                  // multiplicateur global appliqué au volume par-piste, 0-1.5
+}
+
+const DEFAULT_SOUNDBOARD_CONFIG: SoundboardOverlayConfig = {
+  osdPosition:   'bottom-right',
+  osdDurationMs: 0,
+  masterVolume:  1.0,
+}
+
+export function sanitizeSoundboardConfig(raw: unknown): SoundboardOverlayConfig {
+  const r = (raw ?? {}) as Record<string, unknown>
+  const pos = SOUNDBOARD_OSD_POSITIONS.includes(r.osdPosition as SoundboardOsdPosition)
+    ? r.osdPosition as SoundboardOsdPosition
+    : DEFAULT_SOUNDBOARD_CONFIG.osdPosition
+  const dur = Number.isFinite(Number(r.osdDurationMs))
+    ? Math.max(0, Math.min(30_000, Math.floor(Number(r.osdDurationMs))))
+    : DEFAULT_SOUNDBOARD_CONFIG.osdDurationMs
+  const vol = Number.isFinite(Number(r.masterVolume))
+    ? Math.max(0, Math.min(1.5, Number(r.masterVolume)))
+    : DEFAULT_SOUNDBOARD_CONFIG.masterVolume
+  return { osdPosition: pos, osdDurationMs: dur, masterVolume: vol }
+}
 
 export function isOverlayType(s: string): s is OverlayType {
   return VALID_TYPES.has(s as OverlayType)

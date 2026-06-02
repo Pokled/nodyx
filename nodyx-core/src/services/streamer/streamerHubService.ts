@@ -886,8 +886,10 @@ const CHAT_CMD_COOLDOWN_SEC = 30
 function cooldownKey(cmd: string): string { return `streamer:chatcmd:cooldown:${cmd}` }
 
 interface ChatCmdContext {
-  triggeredBy: string
-  args:        string[]   // tokens après le nom de la commande
+  triggeredBy:   string
+  args:          string[]   // tokens après le nom de la commande
+  chatterUserId?: string    // Twitch user id de l'auteur (utilisé pour rate-limit par chatter)
+  rawText?:      string     // message complet (utile pour les cmds qui veulent la query brute)
 }
 
 interface ChatCommandDef {
@@ -910,6 +912,8 @@ const CHAT_COMMANDS: ChatCommandDef[] = [
   { name: '!topclips',  modOnly: true,  description: "Lance le top des clips dans l'overlay OBS",  handler: ctx => execTopClipsCommand(ctx.triggeredBy) },
   { name: '!so',        modOnly: true,  description: "Shoutout : !so @streamer pour highlighter une chaine",  handler: execShoutoutCommand },
   { name: '!highlight', modOnly: true,  description: "Place un marker dans la VOD au moment courant",          handler: execHighlightCommand },
+  { name: '!nextsound', modOnly: false, description: "!nextsound <nom> : ajoute un son à la queue Soundboard",  handler: execNextSoundCommand },
+  { name: '!ns',        modOnly: false, description: "Alias court de !nextsound",                                 handler: execNextSoundCommand },
 ]
 
 async function handleChatCommand(payload: Record<string, unknown>): Promise<void> {
@@ -942,8 +946,12 @@ async function handleChatCommand(payload: Record<string, unknown>): Promise<void
       console.log(`[chat-cmd] denied (not streamer or mod): ${chatterName} on ${cmd.name}`)
       return
     }
-    await cmd.handler({ triggeredBy: chatterName, args }).catch(err =>
-      console.error(`[chat-cmd] handler for ${cmd.name} failed`, err))
+    await cmd.handler({
+      triggeredBy:   chatterName,
+      args,
+      chatterUserId: evt.chatter_user_id ?? undefined,
+      rawText:       raw,
+    }).catch(err => console.error(`[chat-cmd] handler for ${cmd.name} failed`, err))
     return
   }
 
@@ -1184,5 +1192,98 @@ async function execTopClipsCommand(triggeredBy: string): Promise<void> {
   }
 
   await redis.set(cooldownKey("topclips"), "1", "EX", CHAT_CMD_COOLDOWN_SEC).catch(() => {})
+}
+
+// !nextsound / !ns : ajoute un son à la queue Soundboard. Fuzzy match du titre
+// pour qu'un viewer puisse taper juste "ixion" et matcher le titre complet.
+// Anti-spam : rate-limit par chatter Twitch (via la couche queue service,
+// même règle 30s / cap 3 / dédup que la page publique).
+async function execNextSoundCommand(ctx: ChatCmdContext): Promise<void> {
+  const chatterName = ctx.triggeredBy
+  const chatterId   = ctx.chatterUserId
+
+  // Query : tout ce qui suit la commande. On reconstitue depuis args parce que
+  // le tokenizer de handleChatCommand split sur les espaces.
+  const query = ctx.args.join(' ').trim()
+
+  if (!query) {
+    await sendBotMessage(`@${chatterName} usage : !nextsound <nom du son>  (ou !ns)`)
+    return
+  }
+  if (!chatterId) {
+    // Sans identité Twitch, on ne peut pas rate-limit proprement → on refuse
+    // pour pas créer de back-door anti-spam.
+    return
+  }
+
+  try {
+    const [{ listStreamers }, { listPublicTracks }, { findTrackByQuery }, { addToQueue }] = await Promise.all([
+      import('./tokenService'),
+      import('./audioLibraryService'),
+      import('./audioTrackMatcher'),
+      import('./soundboardQueueService'),
+    ])
+
+    const streamers = await listStreamers('twitch').catch(() => [])
+    const ownerUserId = streamers[0]?.userId
+    if (!ownerUserId) return
+
+    const tracks = await listPublicTracks(ownerUserId).catch(() => [])
+    if (tracks.length === 0) {
+      await sendBotMessage(`@${chatterName} aucun son public pour le moment.`)
+      return
+    }
+
+    const match = findTrackByQuery(query, tracks)
+    if (!match.best && match.ambiguous.length === 0) {
+      await sendBotMessage(`@${chatterName} aucun son ne correspond à "${query.slice(0, 40)}". Liste : nodyx.org/soundboard`)
+      return
+    }
+    if (!match.best && match.ambiguous.length > 0) {
+      // Ambiguïté : on liste les top 3 pour que le user précise. On tronque
+      // les titres pour pas exploser la limite Twitch (~500 chars).
+      const picks = match.ambiguous.slice(0, 3).map(t => `"${t.title.slice(0, 40)}"`).join(', ')
+      await sendBotMessage(`@${chatterName} précise — candidats : ${picks}`)
+      return
+    }
+
+    // Match unique → push queue. On utilise une "actor key" préfixée tw: pour
+    // le rate-limit dans le service queue (qui s'attend à une string IP en V1).
+    const result = await addToQueue({
+      ownerUserId,
+      trackId:    match.best!.id,
+      ip:         `tw:${chatterId}`,
+      addedBy:    `@${chatterName}`,
+      source:     'chat',
+    })
+
+    if (result.ok) {
+      await sendBotMessage(`@${chatterName} "${match.best!.title.slice(0, 40)}" ajouté à la queue ✓`)
+      return
+    }
+    switch (result.reason) {
+      case 'disabled':
+        await sendBotMessage(`@${chatterName} les ajouts viewers sont désactivés.`)
+        return
+      case 'rate_limit':
+        await sendBotMessage(`@${chatterName} attends 30s avant ton prochain ajout.`)
+        return
+      case 'cap_per_ip':
+        await sendBotMessage(`@${chatterName} tu as déjà 3 sons en queue, patiente.`)
+        return
+      case 'queue_full':
+        await sendBotMessage(`@${chatterName} queue pleine, retente plus tard.`)
+        return
+      case 'duplicate':
+        await sendBotMessage(`@${chatterName} "${match.best!.title.slice(0, 40)}" est déjà en queue.`)
+        return
+      case 'track_not_public':
+      case 'track_not_found':
+        await sendBotMessage(`@${chatterName} ce son n'est pas disponible.`)
+        return
+    }
+  } catch (err) {
+    console.error('[chat-cmd] !nextsound failed', err)
+  }
 }
 

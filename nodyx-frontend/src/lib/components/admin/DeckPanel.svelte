@@ -155,8 +155,8 @@
 						<div class="flex items-start justify-between gap-2">
 							<div class="flex-1 min-w-0">
 								<div class="text-sm font-semibold text-white truncate">{d.label}</div>
-								<div class="text-[10px] text-slate-500 mt-0.5">
-									{d.layout.cols} × {d.layout.rows} · {d.layout.buttons.length} bouton{d.layout.buttons.length > 1 ? 's' : ''}
+									<div class="text-[10px] text-slate-500 mt-0.5">
+									{d.layout.cols} × {d.layout.rows} · {d.layout.pages.reduce((n, p) => n + p.buttons.length, 0)} boutons{d.layout.pages.length > 1 ? ` · ${d.layout.pages.length} pages` : ''}
 								</div>
 								<div class="text-[10px] text-slate-500">
 									Dernier ping : {fmtRelative(d.lastSeenAt)}
@@ -171,9 +171,9 @@
 								{#each Array(d.layout.rows * d.layout.cols) as _, idx (idx)}
 									<div class="rounded bg-slate-800/40"></div>
 								{/each}
-								{#each d.layout.buttons as b (b.id)}
+								{#each d.layout.pages[0]?.buttons ?? [] as b (b.id)}
 									<div class="rounded bg-gradient-to-br from-cyan-500/60 to-indigo-700/60 border border-white/10"
-										style="grid-column: 1 / span 1; grid-row: 1 / span 1;"></div>
+										style="grid-column: {b.x + 1} / span {b.w}; grid-row: {b.y + 1} / span {b.h};"></div>
 								{/each}
 							</div>
 						</div>

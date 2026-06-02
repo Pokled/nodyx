@@ -29,21 +29,89 @@ export function registerOverlayNamespace(server: Server): void {
 
     socket.data.overlayId   = overlay.id
     socket.data.overlayType = overlay.overlayType
+    socket.data.createdBy   = overlay.createdBy
     next()
   })
 
   ns.on('connection', (socket: Socket) => {
     const overlayId   = socket.data.overlayId as string
     const overlayType = socket.data.overlayType as OverlayType
+    const createdBy   = socket.data.createdBy as string | null
 
     socket.join(`overlay:${overlayId}`)
     socket.join(`overlay-type:${overlayType}`)
+
+    // Soundboard : on join une room par owner, c'est elle qui reçoit les
+    // events audio:play/stop/pause émis par le dispatch deck. Si plusieurs
+    // overlays soundboard existent pour le même owner (ex: une browser
+    // source par scène OBS), ils reçoivent tous le même flux → comportement
+    // recherché.
+    if (overlayType === 'soundboard' && createdBy) {
+      socket.join(`soundboard:${createdBy}`)
+    }
 
     // Trace last connection pour le debug admin ("dernière connexion OBS").
     touchOverlayLastSeen(overlayId).catch(() => {})
 
     // Ack côté client pour qu'il sache qu'il est bien sub.
     socket.emit('overlay:ready', { overlayId, overlayType })
+
+    // Soundboard : l'overlay nous signale la fin d'un son → on pop le suivant
+    // de la queue et on le rebalance. Émetteur authentifié (auth middleware),
+    // donc on fait confiance au signal. Pas de fallback timer côté backend :
+    // si l'overlay crash en plein son, l'admin peut skip via l'UI admin.
+    if (overlayType === 'soundboard' && createdBy) {
+      socket.on('audio:ended', async () => {
+        try {
+          const [{ popNext }, { redis }, { resolveTrackForPlay }] = await Promise.all([
+            import('../services/streamer/soundboardQueueService'),
+            import('../config/database'),
+            import('../services/streamer/audioLibraryService'),
+          ])
+          // Clear le now-playing avant de potentiellement le replacer avec le suivant.
+          await redis.del(`soundboard:nowplaying:${createdBy}`).catch(() => 0)
+
+          const next = await popNext(createdBy)
+          if (!next) return            // queue vide, rien à jouer
+
+          const track = await resolveTrackForPlay(next.trackId)
+          if (!track) return           // track supprimé entre l'add et le pop
+
+          // Émet vers tous les overlays soundboard du même owner (room shared).
+          const ns = server.of(OVERLAY_NS)
+          ns.to(`soundboard:${createdBy}`).emit('audio:play', {
+            trackId:      track.id,
+            fileUrl:      track.fileUrl,
+            mimeType:     track.mimeType,
+            title:        track.title,
+            artist:       track.artist,
+            thumbnailUrl: track.thumbnailUrl,
+            durationMs:   track.durationMs,
+            volume:       track.volumeDefault,
+            fadeInMs:     track.fadeInMs,
+            fadeOutMs:    track.fadeOutMs,
+            loop:         track.loop,
+          })
+          // Persiste le now-playing pour la page publique (polling REST).
+          const ttlSec = Math.max(60, Math.min(3600, Math.ceil(((track.durationMs ?? 0) / 1000) + 30)))
+          await redis.setex(
+            `soundboard:nowplaying:${createdBy}`,
+            ttlSec,
+            JSON.stringify({
+              trackId:      track.id,
+              title:        track.title,
+              artist:       track.artist,
+              thumbnailUrl: track.thumbnailUrl,
+              durationMs:   track.durationMs,
+              loop:         track.loop,
+              startedAt:    Date.now(),
+            }),
+          )
+        } catch (err) {
+          console.warn('[overlay] audio:ended → queue consume failed', err)
+        }
+      })
+    }
   })
 }
 

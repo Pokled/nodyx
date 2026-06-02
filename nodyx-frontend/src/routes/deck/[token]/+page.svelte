@@ -21,24 +21,41 @@
 	// Nodyx Deck — page mobile-first qui s'ouvre via une URL token-auth.
 	// Plein écran sans scroll, boutons tactiles avec gradient + haptic.
 
-	type ActionType = 'noop' | 'top_clips' | 'vod_marker' | 'chat_message' | 'trigger_command'
+	type ActionType =
+		| 'noop' | 'top_clips' | 'vod_marker' | 'chat_message' | 'trigger_command'
+		| 'play_audio' | 'stop_audio' | 'pause_audio' | 'navigate_page'
+
+	interface DeckAction {
+		type:          ActionType
+		trackTitle?:   string
+		targetPageId?: string
+		pageJump?:     'next' | 'prev' | 'home'
+	}
 
 	interface DeckButton {
-		id:       string
-		x:        number
-		y:        number
-		w:        number
-		h:        number
-		label:    string
-		icon:     string
-		gradient: string
-		action:   { type: ActionType }
+		id:         string
+		x:          number
+		y:          number
+		w:          number
+		h:          number
+		label:      string
+		icon:       string
+		iconScale?: number   // 1.0 = défaut
+		gradient:   string
+		action:     DeckAction
+	}
+
+	interface DeckPage {
+		id:      string
+		name:    string
+		color?:  string
+		buttons: DeckButton[]
 	}
 
 	interface DeckLayout {
 		rows:    number
 		cols:    number
-		buttons: DeckButton[]
+		pages:   DeckPage[]
 	}
 
 	interface Deck {
@@ -52,6 +69,11 @@
 	let pressing = $state<string | null>(null)
 	let toast    = $state<{ text: string; ok: boolean } | null>(null)
 	let toastT: ReturnType<typeof setTimeout> | null = null
+	let currentPageId = $state<string>('')
+
+	const currentPage = $derived<DeckPage | null>(
+		deck ? (deck.layout.pages.find(p => p.id === currentPageId) ?? deck.layout.pages[0] ?? null) : null
+	)
 
 	// Wake Lock state
 	let wakeLockSentinel: WakeLockSentinelLike | null = null
@@ -92,6 +114,13 @@
 			const data = await res.json() as { ok: boolean; deck: Deck; twitchChannel?: string | null }
 			deck          = data.deck
 			twitchChannel = data.twitchChannel ?? null
+			// Backwards-compat : si le backend renvoie encore l'ancien format flat,
+			// on wrap dans une page unique pour ne pas planter.
+			if (!Array.isArray(deck.layout.pages) || deck.layout.pages.length === 0) {
+				const legacy = (deck.layout as unknown as { buttons?: DeckButton[] }).buttons ?? []
+				deck.layout.pages = [{ id: 'p1', name: 'Principal', buttons: legacy }]
+			}
+			currentPageId = deck.layout.pages[0].id
 			status        = 'ready'
 		} catch {
 			status = 'error'
@@ -110,8 +139,28 @@
 		if (typeof n.vibrate === 'function') n.vibrate(ms)
 	}
 
+	function navigateRelative(jump: 'next' | 'prev' | 'home'): void {
+		if (!deck) return
+		const pages = deck.layout.pages
+		if (pages.length <= 1) return
+		const i = pages.findIndex(p => p.id === currentPageId)
+		if (jump === 'home')      currentPageId = pages[0].id
+		else if (jump === 'prev') currentPageId = pages[(i - 1 + pages.length) % pages.length].id
+		else                       currentPageId = pages[(i + 1) % pages.length].id
+	}
+
 	async function press(b: DeckButton): Promise<void> {
 		if (pressing) return
+		// navigate_page : pur client, pas de round-trip.
+		if (b.action.type === 'navigate_page') {
+			vibrate(15)
+			if (b.action.targetPageId && deck?.layout.pages.some(p => p.id === b.action.targetPageId)) {
+				currentPageId = b.action.targetPageId
+			} else if (b.action.pageJump) {
+				navigateRelative(b.action.pageJump)
+			}
+			return
+		}
 		pressing = b.id
 		vibrate(20)
 		try {
@@ -377,21 +426,20 @@
 
 		<!-- Zone boutons (réutilisée en mode boutons et mixte) -->
 		{#snippet buttonsZone(d: Deck)}
-			{#if d.layout.buttons.length === 0}
+			{@const page = d.layout.pages.find(p => p.id === currentPageId) ?? d.layout.pages[0]}
+			{#if !page || page.buttons.length === 0}
 				<div class="h-full grid place-items-center px-6">
 					<div class="text-center space-y-2 text-slate-400">
 						<div class="text-4xl">🎛️</div>
-						<div class="text-sm">Deck vide</div>
+						<div class="text-sm">{page ? 'Page vide' : 'Deck vide'}</div>
 						<div class="text-[11px] text-slate-500">Configure tes boutons depuis l'admin Nodyx.</div>
 					</div>
 				</div>
 			{:else}
-				<!-- On ne dessine que les rangées réellement occupées : évite un grand
-				     vide sous les boutons quand le deck a des rangées vides (surtout en mode mixte). -->
-				{@const usedRows = Math.max(1, ...d.layout.buttons.map(b => b.y + b.h))}
+				{@const usedRows = Math.max(1, ...page.buttons.map(b => b.y + b.h))}
 				<div class="h-full p-3 grid gap-2 content-start"
 					style="grid-template-columns: repeat({d.layout.cols}, minmax(0, 1fr)); grid-template-rows: repeat({usedRows}, minmax(0, 1fr));">
-					{#each d.layout.buttons as b (b.id)}
+					{#each page.buttons as b (b.id)}
 						{@const g = gradientStyle(b.gradient)}
 						<button type="button" onclick={() => press(b)} disabled={pressing !== null}
 							class="relative rounded-2xl shadow-xl border border-white/10 overflow-hidden transition-transform duration-100 active:scale-95
@@ -406,7 +454,7 @@
 								<span class="absolute top-1.5 right-1.5 w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
 							{/if}
 							<div class="relative h-full flex flex-col items-center justify-center gap-1 p-2 text-center">
-								<div class="text-3xl leading-none drop-shadow-md" style="font-family: 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;">{b.icon}</div>
+								<div class="leading-none drop-shadow-md" style="font-family: 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; font-size: {1.875 * (b.iconScale ?? 1)}rem">{b.icon}</div>
 								<div class="text-[11px] font-semibold leading-tight text-white drop-shadow-md line-clamp-2">{b.label}</div>
 							</div>
 						</button>
@@ -456,6 +504,29 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- Page dock : barre flottante chips en bas, visible quand >1 page et mode ≠ chat -->
+		{#if deck.layout.pages.length > 1 && mode !== 'chat'}
+			<nav class="absolute inset-x-0 bottom-0 z-20 pointer-events-none flex justify-center"
+				style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
+				<div class="pointer-events-auto inline-flex items-center gap-1 px-1.5 py-1.5 bg-slate-950/85 backdrop-blur-md border border-slate-700/70 rounded-full shadow-2xl ring-1 ring-white/5">
+					{#each deck.layout.pages as p (p.id)}
+						{@const active = p.id === currentPageId}
+						{@const accent = p.color ?? '#22d3ee'}
+						<button type="button" onclick={() => { currentPageId = p.id; vibrate(12) }}
+							class="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all
+								{active ? 'text-white shadow-lg' : 'text-slate-400 hover:text-white'}"
+							style={active ? `background: linear-gradient(135deg, ${accent}55, ${accent}22); box-shadow: 0 4px 16px ${accent}33;` : ''}>
+							<span class="w-1.5 h-1.5 rounded-full" style="background: {accent};"></span>
+							<span class="max-w-[90px] truncate">{p.name}</span>
+							{#if active}
+								<span class="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style="background: {accent};"></span>
+							{/if}
+						</button>
+					{/each}
+				</div>
+			</nav>
+		{/if}
 	{/if}
 </div>
 

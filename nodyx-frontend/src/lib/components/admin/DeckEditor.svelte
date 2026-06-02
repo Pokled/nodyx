@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte'
 	import Tooltip from '$lib/components/ui/Tooltip.svelte'
 	import QRCode from 'qrcode'
-	import type { Deck, DeckAction, DeckActionType as ActionType, DeckButton, DeckLayout } from '$lib/types/deck'
+	import type { Deck, DeckAction, DeckActionType as ActionType, DeckButton, DeckLayout, DeckPage } from '$lib/types/deck'
 
 	// Nodyx Deck — éditeur WYSIWYG pour un deck unique. Grille à gauche, panel
 	// d'édition de bouton à droite. Save = PATCH du layout entier (JSONB).
@@ -20,13 +20,26 @@
 	let { deck: initialDeck, token, onClose, onSaved, publicBaseUrl }: Props = $props()
 
 	let label  = $state(initialDeck.label)
-	let layout = $state<DeckLayout>(JSON.parse(JSON.stringify(initialDeck.layout)))
+	let layout = $state<DeckLayout>(normalizeLayout(initialDeck.layout))
+	let currentPageId = $state<string>(layout.pages[0]?.id ?? '')
 	let selectedId = $state<string | null>(null)
 	let busy = $state(false)
 	let dirty = $state(false)
 	let toast = $state<{ text: string; ok: boolean } | null>(null)
+	let editingPageName = $state<string | null>(null)
 
-	const selected = $derived(layout.buttons.find(b => b.id === selectedId) ?? null)
+	// Backwards-compat : un deck V1 peut arriver avec `buttons` à plat.
+	function normalizeLayout(raw: DeckLayout | { rows: number; cols: number; buttons?: DeckButton[]; pages?: DeckPage[] }): DeckLayout {
+		const r = JSON.parse(JSON.stringify(raw)) as { rows: number; cols: number; buttons?: DeckButton[]; pages?: DeckPage[] }
+		if (Array.isArray(r.pages) && r.pages.length > 0) {
+			return { rows: r.rows, cols: r.cols, pages: r.pages }
+		}
+		const legacyButtons = Array.isArray(r.buttons) ? r.buttons : []
+		return { rows: r.rows, cols: r.cols, pages: [{ id: newPageId(), name: 'Principal', buttons: legacyButtons }] }
+	}
+
+	const currentPage = $derived(layout.pages.find(p => p.id === currentPageId) ?? layout.pages[0])
+	const selected = $derived(currentPage?.buttons.find(b => b.id === selectedId) ?? null)
 	const deckUrl  = $derived(`${publicBaseUrl}/deck/${initialDeck.token}`)
 
 	const GRADIENT_PRESETS = [
@@ -57,33 +70,42 @@
 		return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
 	}
 
+	function newPageId(): string {
+		return 'p_' + Math.random().toString(36).slice(2, 10)
+	}
+
 	function findButtonAt(x: number, y: number): DeckButton | null {
-		return layout.buttons.find(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) ?? null
+		if (!currentPage) return null
+		return currentPage.buttons.find(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) ?? null
 	}
 
 	function onCellClick(x: number, y: number): void {
+		if (!currentPage) return
 		const existing = findButtonAt(x, y)
 		if (existing) {
 			selectedId = existing.id
 			return
 		}
-		// Crée un nouveau bouton 1x1 sur ce slot
+		// Crée un nouveau bouton 1x1 sur ce slot, dans la page courante.
 		const id = newButtonId()
-		layout.buttons.push({
+		currentPage.buttons.push({
 			id, x, y, w: 1, h: 1,
-			label:    'Nouveau',
-			icon:     '⬜',
-			gradient: 'cyber',
-			action:   { type: 'noop' },
+			label:     'Nouveau',
+			icon:      '⬜',
+			iconScale: 1,
+			gradient:  'cyber',
+			action:    { type: 'noop' },
 		})
-		layout = layout  // reactivity
+		layout = layout
 		selectedId = id
 		dirty = true
 	}
 
 	function removeButton(b: DeckButton): void {
-		layout.buttons = layout.buttons.filter(x => x.id !== b.id)
+		if (!currentPage) return
+		currentPage.buttons = currentPage.buttons.filter(x => x.id !== b.id)
 		if (selectedId === b.id) selectedId = null
+		layout = layout
 		dirty = true
 	}
 
@@ -102,52 +124,123 @@
 	}
 
 	function setGridSize(rows: number, cols: number): void {
-		// Filtre les boutons qui sortiraient de la nouvelle grille
+		// On filtre les boutons hors grille dans TOUTES les pages.
 		layout = {
 			rows,
 			cols,
-			buttons: layout.buttons.filter(b => b.x + b.w <= cols && b.y + b.h <= rows),
+			pages: layout.pages.map(p => ({
+				...p,
+				buttons: p.buttons.filter(b => b.x + b.w <= cols && b.y + b.h <= rows),
+			})),
 		}
 		dirty = true
 	}
 
+	// ── Multi-pages : add / rename / delete / reorder / pick ──────────────────
+
+	function addPage(): void {
+		if (layout.pages.length >= 8) { flash('Limite de 8 pages atteinte.', false); return }
+		const id = newPageId()
+		const name = `Page ${layout.pages.length + 1}`
+		layout.pages.push({ id, name, buttons: [] })
+		layout = layout
+		currentPageId = id
+		selectedId = null
+		dirty = true
+	}
+
+	function selectPage(id: string): void {
+		currentPageId = id
+		selectedId = null
+		editingPageName = null
+	}
+
+	function renamePage(id: string, name: string): void {
+		const p = layout.pages.find(x => x.id === id)
+		if (!p) return
+		p.name = name.slice(0, 40) || 'Page'
+		layout = layout
+		dirty = true
+	}
+
+	function setPageColor(id: string, color: string | undefined): void {
+		const p = layout.pages.find(x => x.id === id)
+		if (!p) return
+		p.color = color
+		layout = layout
+		dirty = true
+	}
+
+	function deletePage(id: string): void {
+		if (layout.pages.length <= 1) { flash('Il faut au moins une page.', false); return }
+		const p = layout.pages.find(x => x.id === id)
+		if (!p) return
+		if (p.buttons.length > 0 && !confirm(`Supprimer la page "${p.name}" et ses ${p.buttons.length} bouton(s) ?`)) return
+		layout.pages = layout.pages.filter(x => x.id !== id)
+		if (currentPageId === id) currentPageId = layout.pages[0].id
+		// Nettoie les navigate_page qui pointaient vers cette page disparue.
+		for (const pg of layout.pages) {
+			for (const b of pg.buttons) {
+				if (b.action.type === 'navigate_page' && b.action.targetPageId === id) {
+					b.action = { type: 'navigate_page', pageJump: 'home' }
+				}
+			}
+		}
+		layout = layout
+		dirty = true
+	}
+
+	function movePage(id: string, dir: -1 | 1): void {
+		const i = layout.pages.findIndex(p => p.id === id)
+		if (i < 0) return
+		const j = i + dir
+		if (j < 0 || j >= layout.pages.length) return
+		const arr = layout.pages.slice()
+		;[arr[i], arr[j]] = [arr[j], arr[i]]
+		layout.pages = arr
+		dirty = true
+	}
+
 	function applyPreset(preset: 'starter' | 'mod' | 'engage'): void {
-		// Charge un set de boutons pré-configurés. L'admin peut ensuite ajuster.
+		// Charge un set de boutons pré-configurés dans une page principale. L'admin
+		// peut ensuite ajouter d'autres pages et ajuster.
+		const pageId = newPageId()
 		if (preset === 'starter') {
 			layout = {
 				rows: 3, cols: 4,
-				buttons: [
-					{ id: newButtonId(), x: 0, y: 0, w: 1, h: 1, label: 'Top Clips 7j', icon: '🎬', gradient: 'cyber',  action: { type: 'top_clips', overlayId: '', period: '7d', count: 5 } },
-					{ id: newButtonId(), x: 1, y: 0, w: 1, h: 1, label: 'Marker',        icon: '📍', gradient: 'sunset', action: { type: 'vod_marker', description: 'Highlight' } },
-					{ id: newButtonId(), x: 2, y: 0, w: 1, h: 1, label: '!discord',      icon: '💬', gradient: 'neon',   action: { type: 'trigger_command', commandName: '!discord' } },
-					{ id: newButtonId(), x: 3, y: 0, w: 1, h: 1, label: 'Schedule',      icon: '📅', gradient: 'forest', action: { type: 'trigger_command', commandName: '!schedule' } },
-					{ id: newButtonId(), x: 0, y: 1, w: 2, h: 1, label: 'Hello chat',    icon: '👋', gradient: 'ocean',  action: { type: 'chat_message', text: 'Salut à tous, content de vous voir !' } },
-					{ id: newButtonId(), x: 2, y: 1, w: 2, h: 1, label: 'Pub Nodyx',     icon: '🚀', gradient: 'amber',  action: { type: 'trigger_command', commandName: '!nodyx' } },
-				],
+				pages: [{ id: pageId, name: 'Principal', buttons: [
+					{ id: newButtonId(), x: 0, y: 0, w: 1, h: 1, label: 'Top Clips 7j', icon: '🎬', iconScale: 1, gradient: 'cyber',  action: { type: 'top_clips', overlayId: '', period: '7d', count: 5 } },
+					{ id: newButtonId(), x: 1, y: 0, w: 1, h: 1, label: 'Marker',        icon: '📍', iconScale: 1, gradient: 'sunset', action: { type: 'vod_marker', description: 'Highlight' } },
+					{ id: newButtonId(), x: 2, y: 0, w: 1, h: 1, label: '!discord',      icon: '💬', iconScale: 1, gradient: 'neon',   action: { type: 'trigger_command', commandName: '!discord' } },
+					{ id: newButtonId(), x: 3, y: 0, w: 1, h: 1, label: 'Schedule',      icon: '📅', iconScale: 1, gradient: 'forest', action: { type: 'trigger_command', commandName: '!schedule' } },
+					{ id: newButtonId(), x: 0, y: 1, w: 2, h: 1, label: 'Hello chat',    icon: '👋', iconScale: 1, gradient: 'ocean',  action: { type: 'chat_message', text: 'Salut à tous, content de vous voir !' } },
+					{ id: newButtonId(), x: 2, y: 1, w: 2, h: 1, label: 'Pub Nodyx',     icon: '🚀', iconScale: 1, gradient: 'amber',  action: { type: 'trigger_command', commandName: '!nodyx' } },
+				] }],
 			}
 		} else if (preset === 'mod') {
 			layout = {
 				rows: 3, cols: 4,
-				buttons: [
-					{ id: newButtonId(), x: 0, y: 0, w: 1, h: 1, label: 'Marker',  icon: '📍', gradient: 'sunset',  action: { type: 'vod_marker', description: 'Moment important' } },
-					{ id: newButtonId(), x: 1, y: 0, w: 1, h: 1, label: 'Calme',   icon: '🤫', gradient: 'minimal', action: { type: 'chat_message', text: 'On respire, on respecte, merci !' } },
-					{ id: newButtonId(), x: 2, y: 0, w: 1, h: 1, label: 'Règles',  icon: '📋', gradient: 'ocean',   action: { type: 'chat_message', text: 'Petit rappel des règles du chat : respect, bienveillance, on s\'amuse.' } },
-					{ id: newButtonId(), x: 3, y: 0, w: 1, h: 1, label: 'Lurkers', icon: '👀', gradient: 'forest',  action: { type: 'chat_message', text: 'Merci aux lurkers, votre présence compte aussi !' } },
-				],
+				pages: [{ id: pageId, name: 'Modération', buttons: [
+					{ id: newButtonId(), x: 0, y: 0, w: 1, h: 1, label: 'Marker',  icon: '📍', iconScale: 1, gradient: 'sunset',  action: { type: 'vod_marker', description: 'Moment important' } },
+					{ id: newButtonId(), x: 1, y: 0, w: 1, h: 1, label: 'Calme',   icon: '🤫', iconScale: 1, gradient: 'minimal', action: { type: 'chat_message', text: 'On respire, on respecte, merci !' } },
+					{ id: newButtonId(), x: 2, y: 0, w: 1, h: 1, label: 'Règles',  icon: '📋', iconScale: 1, gradient: 'ocean',   action: { type: 'chat_message', text: 'Petit rappel des règles du chat : respect, bienveillance, on s\'amuse.' } },
+					{ id: newButtonId(), x: 3, y: 0, w: 1, h: 1, label: 'Lurkers', icon: '👀', iconScale: 1, gradient: 'forest',  action: { type: 'chat_message', text: 'Merci aux lurkers, votre présence compte aussi !' } },
+				] }],
 			}
 		} else {
 			layout = {
 				rows: 3, cols: 4,
-				buttons: [
-					{ id: newButtonId(), x: 0, y: 0, w: 2, h: 1, label: 'Top Clips total', icon: '🏆', gradient: 'amber',   action: { type: 'top_clips', overlayId: '', period: 'all', count: 5 } },
-					{ id: newButtonId(), x: 2, y: 0, w: 2, h: 1, label: 'Pub Nodyx',       icon: '🚀', gradient: 'cyber',   action: { type: 'trigger_command', commandName: '!nodyx' } },
-					{ id: newButtonId(), x: 0, y: 1, w: 1, h: 1, label: 'Discord',         icon: '💬', gradient: 'neon',    action: { type: 'trigger_command', commandName: '!discord' } },
-					{ id: newButtonId(), x: 1, y: 1, w: 1, h: 1, label: 'Schedule',        icon: '📅', gradient: 'forest',  action: { type: 'trigger_command', commandName: '!schedule' } },
-					{ id: newButtonId(), x: 2, y: 1, w: 1, h: 1, label: 'Social',          icon: '🔗', gradient: 'ocean',   action: { type: 'trigger_command', commandName: '!social' } },
-					{ id: newButtonId(), x: 3, y: 1, w: 1, h: 1, label: 'Hype',            icon: '🔥', gradient: 'inferno', action: { type: 'chat_message', text: 'C\'est parti pour la suite, on monte d\'un cran !' } },
-				],
+				pages: [{ id: pageId, name: 'Engagement', buttons: [
+					{ id: newButtonId(), x: 0, y: 0, w: 2, h: 1, label: 'Top Clips total', icon: '🏆', iconScale: 1, gradient: 'amber',   action: { type: 'top_clips', overlayId: '', period: 'all', count: 5 } },
+					{ id: newButtonId(), x: 2, y: 0, w: 2, h: 1, label: 'Pub Nodyx',       icon: '🚀', iconScale: 1, gradient: 'cyber',   action: { type: 'trigger_command', commandName: '!nodyx' } },
+					{ id: newButtonId(), x: 0, y: 1, w: 1, h: 1, label: 'Discord',         icon: '💬', iconScale: 1, gradient: 'neon',    action: { type: 'trigger_command', commandName: '!discord' } },
+					{ id: newButtonId(), x: 1, y: 1, w: 1, h: 1, label: 'Schedule',        icon: '📅', iconScale: 1, gradient: 'forest',  action: { type: 'trigger_command', commandName: '!schedule' } },
+					{ id: newButtonId(), x: 2, y: 1, w: 1, h: 1, label: 'Social',          icon: '🔗', iconScale: 1, gradient: 'ocean',   action: { type: 'trigger_command', commandName: '!social' } },
+					{ id: newButtonId(), x: 3, y: 1, w: 1, h: 1, label: 'Hype',            icon: '🔥', iconScale: 1, gradient: 'inferno', action: { type: 'chat_message', text: 'C\'est parti pour la suite, on monte d\'un cran !' } },
+				] }],
 			}
 		}
+		currentPageId = pageId
 		selectedId = null
 		dirty = true
 		flash(`Preset "${preset}" chargé. N'oublie pas de configurer les overlayId si tu utilises Top Clips.`, true)
@@ -255,43 +348,166 @@
 		}
 	}
 
-	onMount(() => { loadClipsOverlays(); loadCustomCommands() })
+	// Bibliothèque audio (Soundboard) pour les actions play_audio.
+	interface AudioTrackLite {
+		id:           string
+		title:        string
+		artist:       string | null
+		durationMs:   number | null
+		thumbnailUrl: string | null
+	}
+	let audioTracks = $state<AudioTrackLite[]>([])
+	let audioTracksLoading = $state(true)
+	let audioPickerQuery = $state('')
+
+	async function loadAudioTracks(): Promise<void> {
+		audioTracksLoading = true
+		try {
+			const res = await apiFetch(fetch, '/streamer/audio-library', { headers: { Authorization: `Bearer ${token}` } })
+			if (res.ok) {
+				const d = await res.json() as { tracks: AudioTrackLite[] }
+				audioTracks = d.tracks ?? []
+				console.log(`[deck-editor] ${audioTracks.length} son(s) chargé(s) depuis le soundboard`)
+			} else {
+				console.warn(`[deck-editor] échec chargement soundboard : HTTP ${res.status}`)
+			}
+		} catch (err) {
+			console.error('[deck-editor] erreur réseau soundboard', err)
+		} finally {
+			audioTracksLoading = false
+		}
+	}
+
+	const audioTracksFiltered = $derived(audioPickerQuery.trim()
+		? audioTracks.filter(t => {
+			const q = audioPickerQuery.trim().toLowerCase()
+			return t.title.toLowerCase().includes(q) || (t.artist ?? '').toLowerCase().includes(q)
+		})
+		: audioTracks)
+
+	function audioPickerThumb(t: AudioTrackLite): string {
+		// Les thumbnails sont des URL relatives /uploads/... renvoyées par le backend.
+		// PUBLIC_API_URL pointe vers /api/v1, on remonte d'un cran.
+		if (!t.thumbnailUrl) return ''
+		const base = (import.meta.env.PUBLIC_API_URL as string | undefined) ?? ''
+		return `${base.replace(/\/api\/v1\/?$/, '')}${t.thumbnailUrl}`
+	}
+
+	function fmtDuration(ms: number | null): string {
+		if (!ms || ms <= 0) return ''
+		const total = Math.round(ms / 1000)
+		const m = Math.floor(total / 60)
+		const s = total % 60
+		return `${m}:${s.toString().padStart(2, '0')}`
+	}
+
+	function pickAudioTrack(t: AudioTrackLite): void {
+		if (!selected) return
+		updateAction({ trackId: t.id, trackTitle: t.title })
+		// Auto-fill du label si encore "Nouveau" pour aller plus vite.
+		if (selected.label === 'Nouveau' || !selected.label) updateSelected({ label: t.title.slice(0, 40) })
+	}
+
+	// Quick-add : pose le son dans la première case libre de la page courante
+	// avec un gradient déterministe (même son = même couleur, mémoire visuelle).
+	const QUICK_GRADIENTS = ['neon', 'cyber', 'sunset', 'ocean', 'forest', 'amber', 'inferno', 'minimal']
+	function gradientForTrack(id: string): string {
+		let h = 0
+		for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+		return QUICK_GRADIENTS[h % QUICK_GRADIENTS.length]
+	}
+
+	function findFirstFreeCell(): { x: number; y: number } | null {
+		if (!currentPage) return null
+		for (let y = 0; y < layout.rows; y++) {
+			for (let x = 0; x < layout.cols; x++) {
+				if (!isCellOccupied(x, y, null)) return { x, y }
+			}
+		}
+		return null
+	}
+
+	function findFirstFreeCellInPage(pageId: string): { x: number; y: number } | null {
+		const page = layout.pages.find(p => p.id === pageId)
+		if (!page) return null
+		for (let y = 0; y < layout.rows; y++) {
+			for (let x = 0; x < layout.cols; x++) {
+				const occupied = page.buttons.some(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)
+				if (!occupied) return { x, y }
+			}
+		}
+		return null
+	}
+
+	// Déplace le bouton sélectionné vers une autre page (premier slot libre).
+	// Sert au sélecteur "Page" dans l'éditeur du bouton.
+	function moveSelectedToPage(targetPageId: string): void {
+		if (!selected || !currentPage) return
+		if (targetPageId === currentPageId) return
+		const target = layout.pages.find(p => p.id === targetPageId)
+		if (!target) return
+		const free = findFirstFreeCellInPage(targetPageId)
+		if (!free) { flash(`Page "${target.name}" pleine. Libère une case d'abord.`, false); return }
+		const btn = selected
+		// Retire de la page courante, place dans la cible avec sa première case libre.
+		currentPage.buttons = currentPage.buttons.filter(b => b.id !== btn.id)
+		target.buttons.push({ ...btn, x: free.x, y: free.y, w: 1, h: 1 })
+		layout = layout
+		currentPageId = targetPageId
+		// Le bouton reste sélectionné après le move.
+		selectedId = btn.id
+		dirty = true
+		flash(`Bouton déplacé sur "${target.name}".`, true)
+	}
+
+	onMount(() => { loadClipsOverlays(); loadCustomCommands(); loadAudioTracks() })
 
 	function isCellOccupied(x: number, y: number, exceptId: string | null): boolean {
-		return layout.buttons.some(b => b.id !== exceptId && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)
+		if (!currentPage) return false
+		return currentPage.buttons.some(b => b.id !== exceptId && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)
+	}
+
+	// Pure : peut-on déplacer le bouton sélectionné de (dx, dy) sans clash ?
+	// Utilisé par les fonctions d'action ET par l'UI pour disabled visuel.
+	function canMove(dx: number, dy: number): boolean {
+		if (!selected) return false
+		const nx = selected.x + dx
+		const ny = selected.y + dy
+		if (nx < 0 || ny < 0 || nx + selected.w > layout.cols || ny + selected.h > layout.rows) return false
+		for (let cx = nx; cx < nx + selected.w; cx++) {
+			for (let cy = ny; cy < ny + selected.h; cy++) {
+				if (isCellOccupied(cx, cy, selected.id)) return false
+			}
+		}
+		return true
+	}
+
+	function canResize(dw: number, dh: number): boolean {
+		if (!selected) return false
+		const nw = selected.w + dw
+		const nh = selected.h + dh
+		if (nw < 1 || nh < 1) return false
+		if (selected.x + nw > layout.cols || selected.y + nh > layout.rows) return false
+		for (let cx = selected.x; cx < selected.x + nw; cx++) {
+			for (let cy = selected.y; cy < selected.y + nh; cy++) {
+				if (isCellOccupied(cx, cy, selected.id)) return false
+			}
+		}
+		return true
 	}
 
 	function moveSelected(dx: number, dy: number): void {
-		if (!selected) return
-		const nx = selected.x + dx
-		const ny = selected.y + dy
-		if (nx < 0 || ny < 0 || nx + selected.w > layout.cols || ny + selected.h > layout.rows) return
-		// Empêche overlap
-		for (let cx = nx; cx < nx + selected.w; cx++) {
-			for (let cy = ny; cy < ny + selected.h; cy++) {
-				if (isCellOccupied(cx, cy, selected.id)) return
-			}
-		}
-		selected.x = nx
-		selected.y = ny
+		if (!selected || !canMove(dx, dy)) return
+		selected.x = selected.x + dx
+		selected.y = selected.y + dy
 		layout = layout
 		dirty = true
 	}
 
 	function resizeSelected(dw: number, dh: number): void {
-		if (!selected) return
-		const nw = selected.w + dw
-		const nh = selected.h + dh
-		if (nw < 1 || nh < 1) return
-		if (selected.x + nw > layout.cols || selected.y + nh > layout.rows) return
-		// Check overlap sur la zone étendue
-		for (let cx = selected.x; cx < selected.x + nw; cx++) {
-			for (let cy = selected.y; cy < selected.y + nh; cy++) {
-				if (isCellOccupied(cx, cy, selected.id)) return
-			}
-		}
-		selected.w = nw
-		selected.h = nh
+		if (!selected || !canResize(dw, dh)) return
+		selected.w = selected.w + dw
+		selected.h = selected.h + dh
 		layout = layout
 		dirty = true
 	}
@@ -447,6 +663,79 @@
 		</div>
 	</div>
 
+	<!-- Pages : pill bar avec drag-to-reorder, rename inline, point couleur, suppr -->
+	<div class="rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/30 via-slate-900/50 to-purple-950/30 p-2.5">
+		<div class="flex items-center gap-2 mb-2">
+			<svg class="w-3.5 h-3.5 text-indigo-300" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+				<rect x="3" y="3" width="7" height="7"/>
+				<rect x="14" y="3" width="7" height="7"/>
+				<rect x="3" y="14" width="7" height="7"/>
+				<rect x="14" y="14" width="7" height="7"/>
+			</svg>
+			<span class="text-[11px] uppercase tracking-widest font-semibold text-indigo-200">Pages</span>
+			<Tooltip text="Organise tes boutons en plusieurs écrans. Sur le téléphone, le streamer navigue via les pastilles en bas. Tu peux aussi créer un bouton d'action 'Naviguer' pour sauter entre pages." variant="tip"/>
+			<div class="ml-auto flex items-center gap-1.5">
+				<span class="text-[10px] text-slate-500 font-mono">{layout.pages.length}/8</span>
+				<button type="button" onclick={addPage} disabled={layout.pages.length >= 8}
+					class="text-[11px] bg-indigo-500/20 hover:bg-indigo-500/35 disabled:opacity-30 border border-indigo-500/50 text-indigo-100 px-2 py-0.5 rounded inline-flex items-center gap-1 transition-colors font-semibold">
+					<span>+</span> Nouvelle page
+				</button>
+			</div>
+		</div>
+		<div class="flex items-center gap-1.5 flex-wrap">
+			{#each layout.pages as p, i (p.id)}
+				{@const active = p.id === currentPageId}
+				{@const accent = p.color ? `--page-accent: ${p.color};` : '--page-accent: #818cf8;'}
+				<div class="group relative inline-flex items-center gap-1 transition-all
+						{active ? 'bg-gradient-to-br from-indigo-500/30 to-purple-500/20 border-indigo-400/70 shadow-lg shadow-indigo-500/20' : 'bg-slate-900/60 border-slate-700/60 hover:border-slate-600'}
+						border rounded-lg pl-1.5 pr-1 py-0.5"
+					style={accent}>
+					<!-- Dot couleur de la page (cliquable = picker) -->
+					<label class="relative cursor-pointer shrink-0" title="Choisir une couleur d'accent">
+						<span class="block w-2.5 h-2.5 rounded-full ring-1 ring-white/20"
+							style="background: var(--page-accent);"></span>
+						<input type="color" value={p.color ?? '#818cf8'}
+							oninput={(e) => setPageColor(p.id, e.currentTarget.value)}
+							class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"/>
+					</label>
+					{#if editingPageName === p.id}
+						<input type="text" value={p.name} maxlength="40" autofocus
+							oninput={(e) => renamePage(p.id, e.currentTarget.value)}
+							onblur={() => editingPageName = null}
+							onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') editingPageName = null }}
+							class="bg-slate-950/80 border border-indigo-500/40 rounded px-1.5 py-0.5 text-xs text-white outline-none w-24"/>
+					{:else}
+						<button type="button" onclick={() => selectPage(p.id)} ondblclick={() => editingPageName = p.id}
+							class="text-xs font-semibold pl-0.5 pr-1 py-0.5 transition-colors {active ? 'text-white' : 'text-slate-300 hover:text-white'}"
+							title="Cliquer pour ouvrir, double-cliquer pour renommer">
+							{p.name}
+						</button>
+						<span class="text-[9px] font-mono text-slate-500 px-0.5">{p.buttons.length}</span>
+					{/if}
+					<!-- Actions de la page (rename / reorder / delete) — apparaissent au hover -->
+					<div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 pl-0.5">
+						<button type="button" onclick={() => editingPageName = p.id}
+							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60" title="Renommer">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+						</button>
+						<button type="button" onclick={() => movePage(p.id, -1)} disabled={i === 0}
+							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60 disabled:opacity-20" title="Déplacer à gauche">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+						</button>
+						<button type="button" onclick={() => movePage(p.id, 1)} disabled={i === layout.pages.length - 1}
+							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60 disabled:opacity-20" title="Déplacer à droite">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+						</button>
+						<button type="button" onclick={() => deletePage(p.id)} disabled={layout.pages.length <= 1}
+							class="p-0.5 rounded text-slate-400 hover:text-rose-300 hover:bg-rose-900/40 disabled:opacity-20" title="Supprimer la page">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
+	</div>
+
 	<!-- Grille + Panel -->
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
 
@@ -456,6 +745,7 @@
 				<div class="flex items-center gap-1.5">
 					<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Layout</span>
 					<Tooltip text="Clique sur une case vide pour créer un bouton, ou sur un bouton existant pour l'éditer à droite." variant="tip"/>
+					{#if currentPage}<span class="text-[10px] text-slate-500">— page <span class="text-indigo-300 font-semibold">{currentPage.name}</span></span>{/if}
 				</div>
 				<div class="flex items-center gap-2">
 					<label class="flex items-center gap-1.5 text-[11px] text-slate-400">
@@ -497,15 +787,15 @@
 								{/if}
 							{/each}
 
-							<!-- Boutons configurés -->
-							{#each layout.buttons as b (b.id)}
+							<!-- Boutons configurés de la page courante -->
+							{#each currentPage?.buttons ?? [] as b (b.id)}
 								<button type="button" onclick={() => onCellClick(b.x, b.y)}
 									style="grid-column: {b.x + 1} / span {b.w}; grid-row: {b.y + 1} / span {b.h};"
 									class="relative rounded-lg shadow-lg border overflow-hidden transition-all active:scale-95
 										{gradientBgClass(b.gradient)}
 										{selectedId === b.id ? 'border-white ring-2 ring-cyan-400/80' : 'border-white/10'}">
 									<div class="h-full flex flex-col items-center justify-center gap-0.5 p-1">
-										<div class="text-2xl leading-none drop-shadow-md">{b.icon}</div>
+										<div class="leading-none drop-shadow-md" style="font-size: {1.5 * (b.iconScale ?? 1)}rem">{b.icon}</div>
 										<div class="text-[9px] font-semibold text-white drop-shadow line-clamp-2">{b.label}</div>
 									</div>
 								</button>
@@ -574,24 +864,52 @@
 					</div>
 				</div>
 
-				<!-- Position + taille -->
+				<!-- Page : permet de déplacer le bouton vers une autre page sans le
+					 recréer. Le bouton arrive dans la 1ère case libre de la page cible. -->
+				{#if layout.pages.length > 1}
+					<div>
+						<div class="flex items-center gap-1.5">
+							<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Page</span>
+							<Tooltip text="Déplace ce bouton vers une autre page. Il se place automatiquement dans la première case libre."/>
+						</div>
+						<select value={currentPageId}
+							onchange={(e) => moveSelectedToPage(e.currentTarget.value)}
+							class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-2 py-1 text-xs text-white outline-none">
+							{#each layout.pages as p (p.id)}
+								{@const free = layout.rows * layout.cols - p.buttons.reduce((n, b) => n + b.w * b.h, 0)}
+								<option value={p.id}>{p.name}{p.id === currentPageId ? ' (actuelle)' : ` — ${free} libre${free > 1 ? 's' : ''}`}</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
+
+				<!-- Position + taille : boutons disabled visuellement quand l'action est impossible
+					 (bord de grille atteint, ou cellule voisine occupée). -->
 				<div>
 					<div class="flex items-center gap-1.5">
 						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Position et taille</span>
-						<Tooltip text="Utilise les flèches pour déplacer le bouton dans la grille, et les boutons +/- pour le redimensionner."/>
+						<Tooltip text="Flèches pour déplacer, +/- pour redimensionner. Un bouton grisé signifie que l'action est bloquée (bord de grille ou cellule voisine occupée)."/>
 					</div>
 					<div class="mt-1.5 grid grid-cols-2 gap-2">
 						<div class="rounded-md border border-slate-700/60 p-1.5">
 							<div class="text-[9px] text-slate-500 mb-1 text-center">Déplacer</div>
 							<div class="grid grid-cols-3 gap-0.5 text-center">
 								<span></span>
-								<button type="button" onclick={() => moveSelected(0, -1)} class="rounded bg-slate-800/60 hover:bg-slate-700 text-slate-300 px-1 py-0.5 text-xs">↑</button>
+								<button type="button" disabled={!canMove(0, -1)} onclick={() => moveSelected(0, -1)}
+									title={canMove(0, -1) ? 'Vers le haut' : 'Bord supérieur ou case occupée'}
+									class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-xs">↑</button>
 								<span></span>
-								<button type="button" onclick={() => moveSelected(-1, 0)} class="rounded bg-slate-800/60 hover:bg-slate-700 text-slate-300 px-1 py-0.5 text-xs">←</button>
+								<button type="button" disabled={!canMove(-1, 0)} onclick={() => moveSelected(-1, 0)}
+									title={canMove(-1, 0) ? 'Vers la gauche' : 'Bord gauche ou case occupée'}
+									class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-xs">←</button>
 								<span class="text-[9px] text-slate-500 self-center">{selected.x},{selected.y}</span>
-								<button type="button" onclick={() => moveSelected(1, 0)}  class="rounded bg-slate-800/60 hover:bg-slate-700 text-slate-300 px-1 py-0.5 text-xs">→</button>
+								<button type="button" disabled={!canMove(1, 0)} onclick={() => moveSelected(1, 0)}
+									title={canMove(1, 0) ? 'Vers la droite' : 'Bord droit ou case occupée'}
+									class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-xs">→</button>
 								<span></span>
-								<button type="button" onclick={() => moveSelected(0, 1)}  class="rounded bg-slate-800/60 hover:bg-slate-700 text-slate-300 px-1 py-0.5 text-xs">↓</button>
+								<button type="button" disabled={!canMove(0, 1)} onclick={() => moveSelected(0, 1)}
+									title={canMove(0, 1) ? 'Vers le bas' : 'Bord inférieur ou case occupée'}
+									class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-xs">↓</button>
 								<span></span>
 							</div>
 						</div>
@@ -600,14 +918,36 @@
 							<div class="grid grid-cols-2 gap-0.5">
 								<div class="text-[9px] text-slate-500 text-center self-center">{selected.w} × {selected.h}</div>
 								<div class="grid grid-cols-2 gap-0.5">
-									<button type="button" onclick={() => resizeSelected(1, 0)} class="rounded bg-slate-800/60 hover:bg-slate-700 text-slate-300 px-1 py-0.5 text-[10px]">+L</button>
-									<button type="button" onclick={() => resizeSelected(-1, 0)} class="rounded bg-slate-800/60 hover:bg-slate-700 text-slate-300 px-1 py-0.5 text-[10px]">-L</button>
-									<button type="button" onclick={() => resizeSelected(0, 1)} class="rounded bg-slate-800/60 hover:bg-slate-700 text-slate-300 px-1 py-0.5 text-[10px]">+H</button>
-									<button type="button" onclick={() => resizeSelected(0, -1)} class="rounded bg-slate-800/60 hover:bg-slate-700 text-slate-300 px-1 py-0.5 text-[10px]">-H</button>
+									<button type="button" disabled={!canResize(1, 0)} onclick={() => resizeSelected(1, 0)}
+										title={canResize(1, 0) ? 'Agrandir en largeur' : 'Limite atteinte ou case voisine occupée'}
+										class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-[10px]">+L</button>
+									<button type="button" disabled={!canResize(-1, 0)} onclick={() => resizeSelected(-1, 0)}
+										title={canResize(-1, 0) ? 'Réduire en largeur' : 'Largeur minimale atteinte'}
+										class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-[10px]">-L</button>
+									<button type="button" disabled={!canResize(0, 1)} onclick={() => resizeSelected(0, 1)}
+										title={canResize(0, 1) ? 'Agrandir en hauteur' : 'Limite atteinte ou case voisine occupée'}
+										class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-[10px]">+H</button>
+									<button type="button" disabled={!canResize(0, -1)} onclick={() => resizeSelected(0, -1)}
+										title={canResize(0, -1) ? 'Réduire en hauteur' : 'Hauteur minimale atteinte'}
+										class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-[10px]">-H</button>
 								</div>
 							</div>
 						</div>
 					</div>
+				</div>
+
+				<!-- Taille de l'icône : slider 1× à 3× -->
+				<div>
+					<div class="flex items-center justify-between gap-1.5">
+						<div class="flex items-center gap-1.5">
+							<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Taille de l'icône</span>
+							<Tooltip text="Multiplicateur appliqué à la taille par défaut de l'icône dans ce bouton. 1× = normal, 3× = très gros (idéal pour les emojis qu'on veut bien voir de loin)."/>
+						</div>
+						<span class="text-[10px] text-slate-400 font-mono">{(selected.iconScale ?? 1).toFixed(1)}×</span>
+					</div>
+					<input type="range" min="1" max="3" step="0.1" value={selected.iconScale ?? 1}
+						oninput={(e) => updateSelected({ iconScale: parseFloat((e.target as HTMLInputElement).value) })}
+						class="mt-1.5 w-full accent-cyan-500"/>
 				</div>
 
 				<!-- Action -->
@@ -619,11 +959,23 @@
 					<select value={selected.action.type}
 						onchange={(e) => updateAction({ type: e.currentTarget.value as ActionType })}
 						class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-2.5 py-1 text-xs text-white outline-none">
-						<option value="noop">Aucune (placeholder)</option>
-						<option value="top_clips">🎬 Lancer Top Clips</option>
-						<option value="vod_marker">📍 Placer un marker VOD</option>
-						<option value="chat_message">💬 Message chat libre</option>
-						<option value="trigger_command">🤖 Déclencher commande chat</option>
+						<optgroup label="Stream">
+							<option value="top_clips">🎬 Lancer Top Clips</option>
+							<option value="vod_marker">📍 Placer un marker VOD</option>
+						</optgroup>
+						<optgroup label="Chat">
+							<option value="chat_message">💬 Message chat libre</option>
+							<option value="trigger_command">🤖 Déclencher commande chat</option>
+						</optgroup>
+						<optgroup label="Soundboard">
+							<option value="play_audio">🎵 Jouer un son</option>
+							<option value="stop_audio">⏹ Couper tous les sons</option>
+							<option value="pause_audio">⏸ Mettre en pause</option>
+						</optgroup>
+						<optgroup label="Navigation">
+							<option value="navigate_page">📑 Aller à une page</option>
+						</optgroup>
+						<option value="noop">— Aucune (placeholder)</option>
 					</select>
 
 					{#if selected.action.type === 'top_clips'}
@@ -692,6 +1044,100 @@
 								</div>
 							{/if}
 						</label>
+					{:else if selected.action.type === 'play_audio'}
+						<!-- Soundboard picker : recherche + grille de vignettes -->
+						<div class="mt-2 space-y-2">
+							<div class="flex items-center gap-1.5">
+								<span class="text-[9px] uppercase font-semibold text-slate-500">Son sélectionné</span>
+								<Tooltip text="La piste sera jouée dans l'overlay Soundboard (browser source OBS). La lecture se fait côté stream, pas sur ton téléphone."/>
+							</div>
+							{#if selected.action.trackId && selected.action.trackTitle}
+								<div class="flex items-center gap-2 bg-gradient-to-r from-purple-500/15 to-indigo-500/10 border border-purple-500/40 rounded px-2 py-1.5">
+									<span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></span>
+									<div class="text-xs font-medium text-purple-100 truncate flex-1 min-w-0">{selected.action.trackTitle}</div>
+									<button type="button" onclick={() => updateAction({ trackId: undefined, trackTitle: undefined })}
+										class="text-[10px] text-slate-400 hover:text-rose-300" title="Désélectionner">✕</button>
+								</div>
+							{/if}
+							<div class="relative">
+								<svg class="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+									<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+								</svg>
+								<input type="search" bind:value={audioPickerQuery} placeholder="Chercher dans le soundboard"
+									class="w-full bg-slate-950 border border-slate-700/60 focus:border-purple-500/60 pl-7 pr-2 py-1 text-xs text-white placeholder-slate-600 outline-none rounded"/>
+							</div>
+							{#if audioTracksLoading}
+								<div class="text-[10px] text-slate-500 text-center py-2">Chargement de la bibliothèque…</div>
+							{:else if audioTracks.length === 0}
+								<div class="text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1.5">
+									Bibliothèque vide. Upload des sons dans le tab Soundboard.
+								</div>
+							{:else}
+								<div class="max-h-56 overflow-y-auto space-y-1 pr-0.5">
+									{#each audioTracksFiltered as t (t.id)}
+										{@const isSel = selected.action.trackId === t.id}
+										<button type="button" onclick={() => pickAudioTrack(t)}
+											class="w-full flex items-center gap-2 text-left p-1.5 rounded border transition-colors
+												{isSel ? 'bg-purple-500/20 border-purple-500/60' : 'bg-slate-900/60 border-slate-800 hover:border-purple-500/40 hover:bg-purple-500/10'}">
+											<div class="w-8 h-8 bg-slate-950 border border-slate-700/60 rounded overflow-hidden grid place-items-center shrink-0">
+												{#if t.thumbnailUrl}
+													<img src={audioPickerThumb(t)} alt="" class="w-full h-full object-cover" loading="lazy"/>
+												{:else}
+													<svg class="w-3 h-3 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+														<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+													</svg>
+												{/if}
+											</div>
+											<div class="flex-1 min-w-0">
+												<div class="text-xs font-medium text-white truncate">{t.title}</div>
+												<div class="text-[10px] text-slate-500 truncate">{t.artist ?? '—'}</div>
+											</div>
+											{#if t.durationMs}
+												<div class="text-[10px] font-mono text-slate-500 shrink-0">{fmtDuration(t.durationMs)}</div>
+											{/if}
+										</button>
+									{/each}
+									{#if audioTracksFiltered.length === 0}
+										<div class="text-[10px] text-slate-500 text-center py-2">Aucun résultat</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
+					{:else if selected.action.type === 'stop_audio'}
+						<div class="mt-2 text-[10px] text-slate-400 bg-slate-900/40 border border-slate-700/60 rounded px-2 py-1.5 leading-snug">
+							Coupe immédiatement la lecture en cours dans l'overlay Soundboard (avec fade-out si configuré sur la piste).
+						</div>
+					{:else if selected.action.type === 'pause_audio'}
+						<div class="mt-2 text-[10px] text-slate-400 bg-slate-900/40 border border-slate-700/60 rounded px-2 py-1.5 leading-snug">
+							Met en pause la piste en cours. Ré-appuyer sur le bouton Jouer la reprend.
+						</div>
+					{:else if selected.action.type === 'navigate_page'}
+						<div class="mt-2 space-y-2">
+							<div class="flex items-center gap-1.5">
+								<span class="text-[9px] uppercase font-semibold text-slate-500">Cible</span>
+								<Tooltip text="Saute vers une page précise, ou utilise un mouvement relatif (suivante / précédente / accueil)."/>
+							</div>
+							<div class="grid grid-cols-3 gap-1 bg-slate-900/60 border border-slate-800 p-0.5 rounded">
+								{#each (['home', 'prev', 'next'] as const) as j (j)}
+									{@const isSel = selected.action.pageJump === j && !selected.action.targetPageId}
+									<button type="button" onclick={() => updateAction({ pageJump: j, targetPageId: undefined })}
+										class="text-[10px] px-2 py-1 rounded transition-colors {isSel ? 'bg-indigo-500/30 text-indigo-100' : 'text-slate-400 hover:text-white'}">
+										{j === 'home' ? '⌂ Accueil' : j === 'prev' ? '← Préc.' : 'Suiv. →'}
+									</button>
+								{/each}
+							</div>
+							<div>
+								<span class="text-[9px] uppercase font-semibold text-slate-500">ou page précise</span>
+								<select value={selected.action.targetPageId ?? ''}
+									onchange={(e) => updateAction({ targetPageId: e.currentTarget.value || undefined, pageJump: e.currentTarget.value ? undefined : selected.action.pageJump })}
+									class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-indigo-500/60">
+									<option value="">— Choisir une page —</option>
+									{#each layout.pages.filter(p => p.id !== currentPageId) as p (p.id)}
+										<option value={p.id}>{p.name}</option>
+									{/each}
+								</select>
+							</div>
+						</div>
 					{/if}
 				</div>
 			{/if}

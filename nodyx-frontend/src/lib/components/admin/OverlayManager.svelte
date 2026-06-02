@@ -14,7 +14,7 @@
 
 	let { token }: Props = $props()
 
-	type OverlayType = 'alert_box' | 'goal_bar' | 'stream_timer' | 'event_ticker' | 'leaderboard' | 'clips_player'
+	type OverlayType = 'alert_box' | 'goal_bar' | 'stream_timer' | 'event_ticker' | 'leaderboard' | 'clips_player' | 'soundboard'
 
 	type OverlayRow = {
 		id:           string
@@ -36,6 +36,7 @@
 		event_ticker: { label: 'Event Ticker', desc: 'Bandeau défilant des derniers events en bas d\'écran. Combo + event weight + 6 thèmes.', routeSlug: 'ticker',   ready: true  },
 		leaderboard:  { label: 'Leaderboard',  desc: 'Podium top 3 + liste rang 4-N. 4 catégories (subs/bits/raids/chatteurs) × 4 périodes. Mode récap fin de stream.', routeSlug: 'board', ready: true },
 		clips_player: { label: 'Clips Player', desc: 'Player full screen qui joue une session de clips (top chaine ou raider) déclenchée depuis Studio Live.', routeSlug: 'clips', ready: true },
+		soundboard:   { label: 'Soundboard',   desc: 'Joue les sons déclenchés depuis ton Stream Deck. OSD discrète (vignette + titre + progress) en coin d\'écran. Crée plusieurs overlays si tu veux le son sur plusieurs scènes OBS.', routeSlug: 'soundboard', ready: true },
 	}
 
 	let overlays    = $state<OverlayRow[]>([])

@@ -11,9 +11,9 @@
 	import RewardsManager     from '$lib/components/admin/RewardsManager.svelte'
 	import LinkedViewersPanel from '$lib/components/admin/LinkedViewersPanel.svelte'
 	import ClipsPanel         from '$lib/components/admin/ClipsPanel.svelte'
-	import ChatTimersPanel    from '$lib/components/admin/ChatTimersPanel.svelte'
-	import ChatCommandsPanel  from '$lib/components/admin/ChatCommandsPanel.svelte'
+	import BotChatTab         from '$lib/components/admin/BotChatTab.svelte'
 	import DeckPanel          from '$lib/components/admin/DeckPanel.svelte'
+	import SoundLibraryPanel  from '$lib/components/admin/SoundLibraryPanel.svelte'
 	import OverlayManager     from '$lib/components/admin/OverlayManager.svelte'
 	import type { PageData } from './$types'
 
@@ -152,7 +152,7 @@
 	// récompenses / overlays / audience / config. Synchronisation #hash dans
 	// l'URL pour deep-link (ex: /admin/streamer-hub#tab=studio). Si pas
 	// connecté, on force "config" pour que l'utilisateur voie le bouton Connect.
-	type TabId = 'overview' | 'studio' | 'rewards' | 'overlays' | 'bot' | 'deck' | 'audience' | 'config'
+	type TabId = 'overview' | 'studio' | 'rewards' | 'overlays' | 'bot' | 'deck' | 'sounds' | 'audience' | 'config'
 
 	const TABS: Array<{ id: TabId; label: string; iconPath: string; soon?: boolean }> = [
 		{ id: 'overview', label: 'Vue d\'ensemble', iconPath: 'M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z M9 9h6v6H9z' },
@@ -161,6 +161,7 @@
 		{ id: 'overlays', label: 'Overlays OBS',    iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
 		{ id: 'bot',      label: 'Bot Chat',         iconPath: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
 		{ id: 'deck',     label: 'Stream Deck',      iconPath: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+		{ id: 'sounds',   label: 'Soundboard',       iconPath: 'M9 18V5l12-2v13 M9 18a3 3 0 11-6 0 3 3 0 016 0zM21 16a3 3 0 11-6 0 3 3 0 016 0z' },
 		{ id: 'audience', label: 'Audience',        iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
 		{ id: 'config',   label: 'Configuration',   iconPath: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 	]
@@ -544,20 +545,17 @@
 
 <div class="max-w-6xl mx-auto space-y-6">
 
-	<!-- ── Header ──────────────────────────────────────────────────────────── -->
+	<!-- Header sobre, sans icône colorée, sans badge tracking-widest. -->
 	<header class="flex items-start justify-between gap-4">
 		<div>
-			<h1 class="text-2xl font-bold text-white flex items-center gap-3">
-				<svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-				Streamer Hub
-			</h1>
-			<p class="text-sm text-slate-400 mt-1.5 max-w-2xl">
-				Bridge Twitch natif. OAuth chiffré AES-256-GCM, EventSub avec HMAC, chat unifié bidirectionnel. Sans dépendre de Streamlabs ni StreamElements.
+			<h1 class="text-2xl font-semibold text-zinc-100">Streamer Hub</h1>
+			<p class="text-sm text-zinc-500 mt-1 max-w-2xl">
+				Bridge Twitch auto-hébergé. OAuth chiffré AES-256-GCM, EventSub HMAC, chat unifié bidirectionnel.
 			</p>
 		</div>
-		<div class="flex items-center gap-2 px-3 py-1.5 rounded-full border {isConnected ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-slate-600/40 bg-slate-700/20'}">
-			<span class="w-2 h-2 rounded-full {isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}"></span>
-			<span class="text-xs font-medium uppercase tracking-wider {isConnected ? 'text-emerald-300' : 'text-slate-400'}">
+		<div class="flex items-center gap-2 px-2.5 py-1 rounded-md border {isConnected ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900'}">
+			<span class="w-1.5 h-1.5 rounded-full {isConnected ? 'bg-emerald-400' : 'bg-zinc-600'}"></span>
+			<span class="text-xs font-medium {isConnected ? 'text-emerald-300' : 'text-zinc-500'}">
 				{isConnected ? 'Connecté' : 'Déconnecté'}
 			</span>
 		</div>
@@ -568,30 +566,30 @@
 		<StreamerHero profile={twitchProfile} />
 	{/if}
 
-	<!-- ── Tab bar sticky (apparait dès que connecté) ─────────────────────── -->
+	<!-- Tab bar : vrai rail surélevé, fond plein zinc-950 (plus sombre que la page),
+	     bordure double pour suggérer le plan supérieur, ombre douce dessous. -->
 	{#if isConnected}
-		<nav class="sticky top-0 z-20 -mx-2 px-2 py-2 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/60 rounded-b-lg">
-			<ul class="flex gap-1 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700">
+		<nav class="sticky top-0 z-20 -mx-2 px-2 bg-zinc-950 border-y border-zinc-800 shadow-lg shadow-black/40">
+			<ul class="flex gap-0.5 flex-wrap">
 				{#each TABS as tab (tab.id)}
 					{@const isActive = activeTab === tab.id}
-					<li class="shrink-0">
+					<li>
 						<button
 							type="button"
 							onclick={() => selectTab(tab.id)}
 							disabled={tab.soon}
-							class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative
+							class="flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative border-b-2 -mb-px
 								{isActive
-									? 'bg-cyan-500/15 text-cyan-200 border border-cyan-500/40'
+									? 'border-purple-500 text-zinc-100 bg-zinc-900/50'
 									: tab.soon
-										? 'text-slate-600 cursor-not-allowed border border-transparent'
-										: 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'}"
-						>
+										? 'border-transparent text-zinc-700 cursor-not-allowed'
+										: 'border-transparent text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/50'}">
 							<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" d={tab.iconPath}/>
 							</svg>
 							<span class="hidden sm:inline">{tab.label}</span>
 							{#if tab.soon}
-								<span class="text-[9px] uppercase tracking-wider font-bold text-slate-600 bg-slate-800/60 px-1.5 py-0.5 rounded">Soon</span>
+								<span class="text-[10px] uppercase tracking-wide font-medium text-zinc-500 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5">Soon</span>
 							{/if}
 						</button>
 					</li>
@@ -641,17 +639,19 @@
 		<OverlayManager token={pageToken} />
 	{/if}
 
-	<!-- ══ Tab: Bot Chat (chat timers + commandes custom) ════════════════ -->
+	<!-- ══ Tab: Bot Chat (sous-nav Timers / Commandes) ═══════════════════ -->
 	{#if isConnected && activeTab === 'bot'}
-		<div class="space-y-6">
-			<ChatTimersPanel   token={pageToken} />
-			<ChatCommandsPanel token={pageToken} />
-		</div>
+		<BotChatTab token={pageToken} />
 	{/if}
 
 	<!-- ══ Tab: Stream Deck ═══════════════════════════════════════════════ -->
 	{#if isConnected && activeTab === 'deck'}
 		<DeckPanel token={pageToken} />
+	{/if}
+
+	<!-- ══ Tab: Soundboard (bibliothèque audio) ══════════════════════════ -->
+	{#if isConnected && activeTab === 'sounds'}
+		<SoundLibraryPanel token={pageToken} />
 	{/if}
 
 	<!-- ══ Tab: Audience (Linked Viewers) ════════════════════════════════ -->

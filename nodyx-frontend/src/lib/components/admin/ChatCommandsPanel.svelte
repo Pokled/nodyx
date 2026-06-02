@@ -248,174 +248,215 @@
 	onMount(loadAll)
 </script>
 
-<section class="rounded-xl border border-violet-500/25 bg-gradient-to-br from-violet-950/30 via-slate-900/60 to-fuchsia-950/20 p-5 space-y-4">
-	<header class="flex items-center justify-between gap-3 flex-wrap">
-		<div class="flex items-center gap-2.5">
-			<svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-			<h2 class="text-sm font-semibold text-white">Commandes custom</h2>
-			<Tooltip text="Crée tes propres commandes !xxx que les viewers taperont dans le chat. Le bot Nodyx leur répondra avec ton template. Idéal pour !discord, !schedule, !social, !merch, etc." variant="tip" position="bottom"/>
+<section class="space-y-6">
+	<!-- Header section -->
+	<header class="flex items-start justify-between gap-4 flex-wrap">
+		<div>
+			<div class="flex items-center gap-2">
+				<h2 class="text-lg font-semibold text-zinc-100">Commandes custom</h2>
+				<Tooltip text="Crée tes commandes !xxx avec une réponse personnalisée. Le bot répond automatiquement quand un viewer la tape." position="bottom"/>
+			</div>
+			<p class="text-sm text-zinc-500 mt-0.5">!discord, !schedule, !social, !merch, etc.</p>
 		</div>
-		<div class="text-[10px] text-slate-500">Variables : <code class="bg-slate-800/60 px-1 rounded">{`{nodyx_url}`}</code> <code class="bg-slate-800/60 px-1 rounded">{`{streamer}`}</code> <code class="bg-slate-800/60 px-1 rounded">{`{uptime}`}</code></div>
+		<div class="text-xs text-zinc-500 flex items-center gap-1.5 flex-wrap">
+			<span class="text-zinc-600">Variables</span>
+			<code class="text-zinc-300 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-sm font-mono">{`{nodyx_url}`}</code>
+			<code class="text-zinc-300 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-sm font-mono">{`{streamer}`}</code>
+			<code class="text-zinc-300 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-sm font-mono">{`{uptime}`}</code>
+		</div>
 	</header>
 
-	<!-- ── Presets : commandes prêtes à l'emploi ──────────────────────────── -->
-	<div class="rounded-lg border border-violet-500/30 bg-violet-950/20 p-3">
-		<div class="flex items-center gap-2 mb-2">
-			<svg class="w-3.5 h-3.5 text-violet-400" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
-			<span class="text-[11px] uppercase tracking-widest font-semibold text-violet-300">Commandes prêtes à l'emploi</span>
-			<Tooltip text="Charge une commande pré-configurée dans le formulaire ci-dessous. Personnalise puis enregistre." variant="tip"/>
-		</div>
-		<div class="flex flex-wrap gap-1.5">
-			{#each PRESETS as p (p.key)}
-				<button type="button" onclick={() => applyPreset(p)} title={p.hint}
-					class="group inline-flex items-center gap-1.5 text-[11px] bg-violet-500/10 hover:bg-violet-500/25 border border-violet-500/40 text-violet-100 px-2.5 py-1 rounded transition-colors">
-					<span>{p.emoji}</span>
-					<code class="font-mono font-medium">{p.name}</code>
-				</button>
-			{/each}
-		</div>
-	</div>
-
 	{#if toast}
-		<div class="rounded p-2 text-xs flex items-center gap-2 {toast.ok ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : 'border border-rose-500/40 bg-rose-500/10 text-rose-200'}">
-			<span class="w-1.5 h-1.5 rounded-full {toast.ok ? 'bg-emerald-400' : 'bg-rose-400'}"></span>
+		<div class="border-l-2 px-3 py-2 text-sm flex items-center gap-2 {toast.ok ? 'border-emerald-500 bg-emerald-500/5 text-emerald-200' : 'border-rose-500 bg-rose-500/5 text-rose-200'}">
 			{toast.text}
 		</div>
 	{/if}
 
-	<!-- Commandes natives en lecture seule -->
+	<!-- Modèles : boutons secondaires francs (vraie surface) -->
+	<div class="flex items-center gap-2 flex-wrap">
+		<span class="text-[11px] uppercase tracking-wide font-medium text-zinc-500 mr-1">Modèles</span>
+		{#each PRESETS as p (p.key)}
+			<button type="button" onclick={() => applyPreset(p)} title={p.hint}
+				class="text-xs font-mono bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 text-zinc-200 px-2.5 py-1.5 rounded-sm transition-colors">
+				{p.name}
+			</button>
+		{/each}
+	</div>
+
+	<!-- Commandes natives -->
 	{#if hardcoded.length > 0}
-		<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-3">
-			<div class="flex items-center gap-1.5 mb-1.5">
-				<span class="text-[10px] uppercase tracking-widest font-semibold text-slate-400">Commandes natives (non modifiables)</span>
-				<Tooltip text="Ces commandes sont intégrées au cœur de Nodyx et ont leur propre logique (lookup Twitch, query DB, etc.). Tu ne peux pas créer une commande custom avec un de ces noms." size="sm"/>
+		<div>
+			<div class="flex items-baseline justify-between mb-2">
+				<div class="flex items-center gap-1.5">
+					<h3 class="text-xs uppercase tracking-wide font-medium text-zinc-500">Commandes natives</h3>
+					<Tooltip text="Intégrées au cœur de Nodyx (lookup Twitch, query DB, etc.). Leurs noms sont réservés."/>
+				</div>
+				<span class="text-xs text-zinc-600">{hardcoded.length}</span>
 			</div>
-			<div class="flex flex-wrap gap-1.5">
+			<div class="border border-zinc-800 bg-zinc-900 px-4 py-3 flex flex-wrap gap-2">
 				{#each hardcoded as n (n)}
-					<code class="text-[11px] bg-indigo-500/15 border border-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded">{n}</code>
+					<code class="text-xs font-mono text-zinc-200 bg-zinc-950 border border-zinc-800 px-2 py-0.5 rounded-sm">{n}</code>
 				{/each}
 			</div>
 		</div>
 	{/if}
 
-	<!-- Liste des commandes custom -->
-	{#if loading}
-		<div class="text-xs text-slate-500 text-center py-6">Chargement…</div>
-	{:else if commands.length === 0}
-		<div class="rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 p-6 text-center text-xs text-slate-500">
-			Aucune commande custom. Crée-en une ci-dessous (par exemple !discord, !schedule, !merch).
+	<!-- Liste commandes custom -->
+	<div>
+		<div class="flex items-baseline justify-between mb-2">
+			<h3 class="text-xs uppercase tracking-wide font-medium text-zinc-500">Commandes configurées</h3>
+			{#if commands.length > 0}<span class="text-xs text-zinc-600">{commands.length}</span>{/if}
 		</div>
-	{:else}
-		<div class="space-y-2">
-			{#each commands as c (c.id)}
-				<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-3 space-y-1 {editingId === c.id ? 'ring-1 ring-violet-500/60' : ''}">
-					<div class="flex items-start justify-between gap-3 flex-wrap">
-						<div class="flex-1 min-w-0">
-							<div class="flex items-center gap-2 flex-wrap">
-								<code class="text-sm font-mono font-semibold text-white">{c.name}</code>
-								<span class="text-[10px] px-1.5 py-0.5 rounded {c.enabled ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-700/50 text-slate-400'}">{c.enabled ? 'actif' : 'inactif'}</span>
-								{#if c.modOnly}<span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300">mod only</span>{/if}
-								<span class="text-[10px] text-slate-500">cooldown {c.cooldownSeconds}s</span>
-							</div>
-							<div class="text-[11px] text-slate-400 mt-1 line-clamp-2" title={c.responseTemplate}>{c.responseTemplate}</div>
-						</div>
-						<div class="flex items-center gap-1 flex-wrap">
-							<button type="button" onclick={() => toggleEnabled(c)}
-								class="text-[10px] bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/60 text-slate-200 px-2 py-1 rounded transition-colors">
-								{c.enabled ? 'Désactiver' : 'Activer'}
-							</button>
-							<button type="button" onclick={() => loadCmd(c)}
-								class="text-[10px] bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/40 text-violet-200 px-2 py-1 rounded transition-colors">
-								Éditer
-							</button>
-							<button type="button" onclick={() => removeCmd(c)}
-								class="text-[10px] bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-200 px-2 py-1 rounded transition-colors">
-								Suppr
-							</button>
-						</div>
-					</div>
+
+		{#if loading}
+			<div class="border border-zinc-800 bg-zinc-900 px-4 py-6 text-sm text-zinc-500">Chargement…</div>
+		{:else if commands.length === 0}
+			<div class="border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-8 text-center text-sm text-zinc-500">
+				Aucune commande custom. Choisis un modèle ci-dessus ou crée-en une dans le formulaire en bas.
+			</div>
+		{:else}
+			<!-- Vraie grille tabulaire : statuts à gauche, alignement strict. -->
+			<div class="border border-zinc-800 bg-zinc-900">
+				<div class="grid grid-cols-[160px_180px_1fr_auto] gap-4 px-4 py-2 border-b border-zinc-800 bg-zinc-950 text-[11px] uppercase tracking-wide font-medium text-zinc-500">
+					<span>Statut</span>
+					<span>Commande</span>
+					<span>Réponse</span>
+					<span class="text-right pr-1">Actions</span>
 				</div>
-			{/each}
-		</div>
-	{/if}
+				<ul class="divide-y divide-zinc-800">
+					{#each commands as c (c.id)}
+						<li class="grid grid-cols-[160px_180px_1fr_auto] gap-4 px-4 py-3 items-start {editingId === c.id ? 'bg-purple-500/[0.04] border-l-2 border-l-purple-500' : ''}">
+							<!-- Col 1 : Statuts empilés -->
+							<div class="flex flex-col gap-1 text-xs">
+								<span class="inline-flex items-center gap-1.5">
+									<span class="w-1.5 h-1.5 rounded-full {c.enabled ? 'bg-emerald-400' : 'bg-zinc-600'}"></span>
+									<span class="{c.enabled ? 'text-emerald-300' : 'text-zinc-500'} font-medium">{c.enabled ? 'Actif' : 'Inactif'}</span>
+								</span>
+								{#if c.modOnly}
+									<span class="inline-flex items-center gap-1.5 text-rose-400">
+										<span class="w-1 h-1 rounded-full bg-rose-400"></span>
+										Mod only
+									</span>
+								{:else}
+									<span class="text-zinc-500">Public</span>
+								{/if}
+								<span class="text-zinc-500">cooldown <span class="text-zinc-200 font-medium">{c.cooldownSeconds}</span>s</span>
+							</div>
+
+							<!-- Col 2 : Nom de la commande -->
+							<div class="min-w-0">
+								<code class="text-sm font-mono font-medium text-zinc-100">{c.name}</code>
+							</div>
+
+							<!-- Col 3 : Réponse -->
+							<div class="min-w-0">
+								<p class="text-sm text-zinc-300 line-clamp-2" title={c.responseTemplate}>{c.responseTemplate}</p>
+							</div>
+
+							<!-- Col 4 : Actions -->
+							<div class="flex items-center gap-1.5 justify-end">
+								<button type="button" onclick={() => toggleEnabled(c)}
+									class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors">
+									{c.enabled ? 'Désactiver' : 'Activer'}
+								</button>
+								<button type="button" onclick={() => loadCmd(c)}
+									class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors">
+									Éditer
+								</button>
+								<button type="button" onclick={() => removeCmd(c)}
+									class="text-xs inline-flex items-center border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/60 px-2 py-1 rounded-sm transition-colors"
+									title="Supprimer">
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+										<polyline points="3 6 5 6 21 6"/>
+										<path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+										<path d="M10 11v6M14 11v6"/>
+										<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+									</svg>
+								</button>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+	</div>
 
 	<!-- Formulaire create / edit -->
-	<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-4 space-y-3">
-		<div class="flex items-center justify-between gap-3">
-			<h3 class="text-[11px] uppercase tracking-widest font-semibold text-violet-400">
+	<div class="border border-zinc-800 bg-zinc-900">
+		<header class="px-4 py-3 border-b border-zinc-800 flex items-center justify-between gap-3">
+			<h3 class="text-sm font-semibold text-zinc-100">
 				{editingId ? 'Modifier la commande' : 'Nouvelle commande'}
 			</h3>
 			{#if editingId}
-				<button type="button" onclick={resetForm} class="text-[10px] text-slate-400 hover:text-white">↻ Réinitialiser</button>
+				<button type="button" onclick={resetForm} class="text-xs text-zinc-500 hover:text-zinc-200 transition-colors">Réinitialiser</button>
 			{/if}
-		</div>
+		</header>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+		<div class="p-4 space-y-5">
+
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<div class="flex items-center gap-1.5">
+						<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Nom</label>
+						<Tooltip text="Doit commencer par !, suivi de lettres ASCII, chiffres, _ ou -. Pas d'espace."/>
+					</div>
+					<input type="text" bind:value={formName} maxlength="31" placeholder="!discord"
+						class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-600 outline-none transition-colors rounded-sm"/>
+				</div>
+				<div>
+					<div class="flex items-center gap-1.5">
+						<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Cooldown (secondes)</label>
+						<Tooltip text="Délai minimum entre 2 réponses du bot pour cette commande. 30s est un bon défaut."/>
+					</div>
+					<input type="number" min="5" max="3600" bind:value={formCooldown}
+						class="mt-1.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors rounded-sm"/>
+				</div>
+			</div>
+
 			<div>
-				<div class="flex items-center gap-1.5">
-					<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Nom (commencer par !)</span>
-					<Tooltip text="Le texte que les viewers tapent dans le chat. Doit commencer par !, suivi de lettres, chiffres, _ ou -. Pas d'espace. Ex : !discord, !schedule, !merch."/>
+				<div class="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+					<div class="flex items-center gap-1.5">
+						<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Réponse du bot</label>
+						<Tooltip text="500 caractères max. Les variables seront remplacées au moment de l'envoi."/>
+					</div>
+					<div class="flex items-center gap-1 flex-wrap">
+						{#each INSERTABLE_VARS as v (v.token)}
+							<button type="button" onclick={() => insertVar(v.token)}
+								class="text-xs font-mono text-zinc-300 hover:text-purple-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 px-1.5 py-0.5 rounded-sm transition-colors">
+								{v.token}
+							</button>
+						{/each}
+					</div>
 				</div>
-				<input type="text" bind:value={formName} maxlength="31" placeholder="!discord"
-					class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-violet-500/60 px-3 py-1.5 text-sm font-mono text-white outline-none transition-colors"/>
+				<textarea bind:this={templateInputEl} bind:value={formTemplate} maxlength="500" rows="3"
+					placeholder="Rejoins notre Discord : https://..."
+					class="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition-colors resize-none rounded-sm"></textarea>
 			</div>
-			<div>
-				<div class="flex items-center gap-1.5">
-					<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Cooldown (secondes, 5-3600)</span>
-					<Tooltip text="Délai minimum entre 2 réponses du bot pour cette commande. Évite qu'un viewer spamme !discord 10x d'affilée. 30s est un bon défaut."/>
-				</div>
-				<input type="number" min="5" max="3600" bind:value={formCooldown}
-					class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-violet-500/60 px-3 py-1.5 text-sm text-white outline-none transition-colors"/>
-			</div>
-		</div>
 
-		<div>
-			<div class="flex items-center justify-between gap-2 flex-wrap">
-				<div class="flex items-center gap-1.5">
-					<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Réponse du bot</span>
-					<Tooltip text="Ce que le bot répond quand un viewer tape la commande. Tu peux insérer des variables qui seront remplacées par les vraies valeurs au moment de l'envoi. 500 chars max."/>
-				</div>
-				<div class="flex items-center gap-1 flex-wrap">
-					{#each INSERTABLE_VARS as v (v.token)}
-						<button type="button" onclick={() => insertVar(v.token)}
-							class="text-[10px] bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/40 text-violet-200 px-2 py-0.5 rounded transition-colors">
-							+ {v.label}
-						</button>
-					{/each}
-				</div>
-			</div>
-			<textarea bind:this={templateInputEl} bind:value={formTemplate} maxlength="500" rows="3" placeholder="Rejoins notre Discord : https://..."
-				class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-violet-500/60 px-3 py-2 text-sm text-white outline-none transition-colors resize-none"></textarea>
-		</div>
-
-		<div class="flex items-center gap-4 flex-wrap">
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-6 flex-wrap">
 				<label class="flex items-center gap-2 cursor-pointer">
-					<input type="checkbox" bind:checked={formModOnly} class="w-4 h-4 accent-rose-500"/>
-					<span class="text-xs text-slate-300">Mod / Streamer only</span>
+					<input type="checkbox" bind:checked={formModOnly} class="w-4 h-4 accent-purple-500"/>
+					<span class="text-sm text-zinc-300">Mod / Streamer only</span>
+					<Tooltip text="Seuls toi et tes modérateurs peuvent déclencher cette commande."/>
 				</label>
-				<Tooltip text="Si activé, seuls toi et tes modérateurs peuvent déclencher cette commande. Pratique pour des commandes admin (genre nettoyer le chat) que tu ne veux pas exposer aux viewers."/>
-			</div>
-			<div class="flex items-center gap-2">
 				<label class="flex items-center gap-2 cursor-pointer">
-					<input type="checkbox" bind:checked={formEnabled} class="w-4 h-4 accent-emerald-500"/>
-					<span class="text-xs text-slate-300">Activée dès création</span>
+					<input type="checkbox" bind:checked={formEnabled} class="w-4 h-4 accent-purple-500"/>
+					<span class="text-sm text-zinc-300">Activée à la création</span>
 				</label>
-				<Tooltip text="Décoche pour créer une commande sans qu'elle soit utilisable (utile pour préparer un brouillon)."/>
 			</div>
 		</div>
 
-		<div class="flex items-center gap-2 pt-1">
+		<footer class="px-4 py-3 border-t border-zinc-800 bg-zinc-900/60 flex items-center gap-2">
 			<button type="button" onclick={submitForm} disabled={formBusy || !formName.trim() || !formTemplate.trim()}
-				class="text-xs bg-violet-500/20 hover:bg-violet-500/30 disabled:opacity-30 border border-violet-500/50 text-violet-100 px-4 py-1.5 rounded font-semibold transition-colors">
-				{editingId ? 'Enregistrer' : 'Créer la commande'}
+				class="text-sm font-medium bg-purple-500 hover:bg-purple-400 disabled:bg-zinc-800 disabled:text-zinc-500 shadow-sm shadow-purple-500/30 disabled:shadow-none text-white px-4 py-1.5 rounded-sm transition-colors">
+				{editingId ? 'Enregistrer les modifications' : 'Créer la commande'}
 			</button>
 			{#if editingId}
 				<button type="button" onclick={resetForm}
-					class="text-xs bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/60 text-slate-200 px-3 py-1.5 rounded transition-colors">
+					class="text-sm bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded-sm transition-colors">
 					Annuler
 				</button>
 			{/if}
-		</div>
+		</footer>
 	</div>
 </section>

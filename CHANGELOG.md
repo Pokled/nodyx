@@ -9,6 +9,89 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [2.7.0] — 2026-06-02
+
+### Streamer Hub : Nodyx Soundboard (bibliothèque, overlay OBS, queue viewers)
+
+Un soundboard complet : le streamer upload ses sons, les déclenche depuis son Stream Deck mobile ou son chat Twitch, ils sortent sur OBS via une browser source, et les viewers peuvent piocher dans la liste publique pour remplir la queue. Tout est intégré, rien à câbler entre 3 SaaS.
+
+**Bibliothèque audio**
+- Nouvelle migration 098 : table `streamer_audio_library` jointe à `community_assets`
+- Upload drag and drop ou click multi-fichiers, formats mp3, ogg, wav, flac
+- Extraction automatique des tags ID3 via `music-metadata` : titre, artiste, durée, cover art embedded (APIC) sauvée dans `uploads/audio_thumbs/`
+- Compteur de progression live durant les uploads en batch (le streamer voit où il en est sur 50 fichiers)
+- Édition inline par piste : titre, artiste, visibilité (privé / public), volume défaut 0 à 2x, fade in / out 0 à 10s, loop, indicateur royalty-free, tags
+- Migration 099 : bump du cap `valid_file_size` de 12 à 50 MB pour accueillir les WAV courts, aligné avec la limite Fastify multipart
+- Bypass de la quota community 200 MB / 24h pour les owner / admin (le streamer gère son propre disque, pas de friction)
+
+**Overlay OBS Soundboard**
+- Nouveau type d'overlay `soundboard` qui s'ajoute aux 6 existants (alert, goal, timer, ticker, leaderboard, clips)
+- Page browser source `/overlay/soundboard/[token]` : fond transparent, player Web Audio API
+- Fade in / out par piste, cross-fade automatique quand un nouveau son démarre pendant qu'un autre joue
+- OSD discret en coin (vignette, titre, artiste, barre de progression), position configurable (4 coins ou caché)
+- Plusieurs overlays soundboard par owner supportés : une browser source par scène OBS, toutes reçoivent le même flux
+- Badge "Soundboard prêt" affiché 6 secondes au connect pour confirmer la liaison en preview navigateur, disparaît tout seul en prod
+
+**Page publique viewers `/soundboard`**
+- Accessible sans login, lien direct depuis le tab admin Soundboard
+- Section "En cours" temps réel : carte avec vignette, titre, artiste, barre de progression recalculée client-side depuis le timestamp serveur
+- Section "À suivre" : queue des sons demandés, source visible (ajout web ou ajout chat) et username
+- Bibliothèque publique en liste verticale full-width : titre complet visible (plus de troncature sur les titres longs), preview audio au hover, recherche live par titre ou artiste
+- Polling REST toutes les 2 secondes, pas de socket public exposé (surface d'attaque minimisée)
+
+**Queue viewers**
+- Service Redis dédié (`soundboardQueueService.ts`) : queue FIFO max 50, rate limit 30s par IP, cap 3 sons simultanés par IP, déduplication globale par trackId
+- Bouton "+ Queue" violet sur chaque track de la page publique, feedback toast clair pour chaque cas de refus (rate-limit, dédup, queue désactivée, cap atteint)
+- Toggle admin "Viewers autorisés / Viewers bloqués", ON par défaut, persiste en Redis (filet anti-spam en cas de raid)
+- Auto-consume : quand un son finit côté overlay (event `audio:ended`), le backend pop le suivant et émet automatiquement le prochain `audio:play`
+- Affichage admin temps réel dans le tab Soundboard : liste FIFO, skip d'un son spécifique, "Tout vider"
+
+**Commande chat `!nextsound` et alias `!ns`**
+- Le viewer tape `!ns ixion` dans le chat Twitch, le bot Nodyx ajoute le son qui matche le mieux dans la queue
+- Fuzzy matcher dédié (`audioTrackMatcher.ts`) : normalisation casse + accents, scoring en cascade (exact > substring début > substring milieu > tokens + Levenshtein sur premier mot avec tolérance 2 fautes)
+- Détection d'ambiguïté : si les 2 meilleurs résultats sont à moins de 100 points d'écart, le bot répond les 3 candidats pour que le viewer précise au lieu de deviner mal
+- Bot replies dédiées pour chaque cas (succès, ambigu, introuvable, rate-limit, cap 3 atteint, dédup, queue désactivée)
+- Rate-limit par chatter Twitch (via `chatter_user_id`), pas par IP
+
+### Streamer Hub : Nodyx Deck multi-pages + actions audio
+
+Évolution majeure du Stream Deck pour intégrer le soundboard et permettre d'organiser les boutons sur plusieurs écrans logiques (une page sons, une page commandes, une page modération).
+
+**Layout multi-pages**
+- Le layout passe de `{ rows, cols, buttons[] }` à `{ rows, cols, pages: [{ id, name, color, buttons[] }] }`, jusqu'à 8 pages par deck
+- Sanitizer backwards-compat côté serveur : les decks V1 (`buttons` à plat) sont automatiquement wrappés dans une page "Principal" sans migration SQL ni casser l'existant
+- Pill bar admin avec rename inline (double-clic), choix de couleur d'accent via color picker, drag-to-reorder, suppression avec confirmation si la page contient des boutons
+- Sélecteur "Page" dans l'éditeur de bouton : déplace le bouton vers une autre page (placement automatique dans la 1ère case libre)
+- Compteur de cases libres par page dans le dropdown pour éviter "page pleine"
+
+**Quatre nouvelles actions Deck**
+- `play_audio` : déclenche un son du soundboard (picker intégré avec recherche live + vignettes dans l'éditeur d'action)
+- `stop_audio` : coupe la lecture en cours avec fade out
+- `pause_audio` : met en pause la piste courante
+- `navigate_page` : saute vers une autre page du deck (cible précise ou jump relatif `home` / `prev` / `next`), intercepté client-side sur le mobile pour zéro latence
+
+**Mobile deck**
+- Dock flottant en bas de l'écran : chips par page avec couleur d'accent custom, pastille de sélection animée, blur backdrop, safe-area iOS pour pas être mangé par la home bar
+- N'apparaît que si le deck a plus d'une page et qu'on n'est pas en mode chat plein écran
+- Vibration haptique au switch de page
+
+**Send to Deck modal**
+- Bouton "+ Deck" sur chaque ligne du tab Soundboard : rattache un son à un bouton sans naviguer dans 3 onglets
+- Modal avec sélection du deck cible, sélection de la page, mini-grille interactive pour cliquer sur une case libre (les cases occupées montrent l'icône du bouton existant)
+- Bouton "Auto-placement" qui pose dans la 1ère case libre
+- Reste ouvert après chaque placement pour enchaîner facilement (idéal pour bâtir une page complète d'un coup)
+- Gradient déterministe par trackId : un même son aura toujours la même couleur dans le deck, mémoire visuelle renforcée
+
+### Infrastructure et divers
+
+- Limite Fastify multipart globale passée de 12 à 50 MB
+- Trois nouvelles `AuditAction` : `audio_track_added`, `audio_track_updated`, `audio_track_deleted`
+- Refonte de plusieurs panels admin (Chat Timers, Chat Commands) en grille tabulaire alignée (header + colonnes) avec sub-nav unifiée dans le tab Bot Chat
+- Refonte de `Tooltip.svelte` avec icône Lucide sobre
+- Refonte du tab admin Streamer Hub : design "Linear / Vercel sober", palette zinc / accent purple, 3 niveaux d'élévation, suppression du look "trop IA / carnaval"
+
+---
+
 ## [2.6.0] — 2026-05-28
 
 ### Streamer Hub : Bot Chat (timers, commands natives et custom)

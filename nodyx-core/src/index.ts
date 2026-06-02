@@ -81,7 +81,7 @@ server.register(fastifyStatic, {
 
 // ── Multipart (file uploads) ─────────────────────────────────
 server.register(fastifyMultipart, {
-  limits: { fileSize: 12 * 1024 * 1024 }, // 12 MB max
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB max (WAV courts OK, conseiller mp3/ogg pour les longs)
 })
 
 // ── Root & health ────────────────────────────────────────────
