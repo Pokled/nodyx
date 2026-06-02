@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import sanitizeHtml from 'sanitize-html'
+import { rehostExternalImages } from '../services/inlineImageRehost'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth, optionalAuth } from '../middleware/auth'
@@ -318,8 +319,12 @@ app.get('/threads', {
       title,
     })
 
+    // Rehost les <img> externes (Imgur, CDN tiers...) AVANT sanitize, sinon
+    // le sanitizer les strip silencieusement et l'auteur perd ses images.
+    const rehost = await rehostExternalImages(content)
+
     // Create the opening post (sanitize HTML from WYSIWYG editor)
-    const sanitizedContent = sanitize(content)
+    const sanitizedContent = sanitize(rehost.html)
     const threadContentCheck = checkHtmlContent(sanitizedContent)
     if (!threadContentCheck.ok) {
       return reply.code(422).send({ error: threadContentCheck.reason, code: 'CONTENT_BLOCKED' })
@@ -342,7 +347,11 @@ app.get('/threads', {
     }
 
     const tags = await TagModel.getTagsForThread(thread.id)
-    return reply.code(201).send({ thread: { ...thread, tags }, post })
+    return reply.code(201).send({
+      thread: { ...thread, tags },
+      post,
+      meta:   { images_rehosted: rehost.rehosted, images_failed: rehost.failed.length },
+    })
   })
 
   // GET /api/v1/forums/threads/:id
@@ -404,7 +413,9 @@ app.get('/threads', {
       return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
     }
 
-    const sanitized = sanitize(content)
+    // Rehost les <img> externes avant sanitize (cf POST /threads).
+    const rehostReply = await rehostExternalImages(content)
+    const sanitized = sanitize(rehostReply.html)
     const replyContentCheck = checkHtmlContent(sanitized)
     if (!replyContentCheck.ok) {
       return reply.code(422).send({ error: replyContentCheck.reason, code: 'CONTENT_BLOCKED' })
@@ -455,7 +466,10 @@ app.get('/threads', {
       }
     })()
 
-    return reply.code(201).send({ post })
+    return reply.code(201).send({
+      post,
+      meta: { images_rehosted: rehostReply.rehosted, images_failed: rehostReply.failed.length },
+    })
   })
 
   // PUT /api/v1/forums/posts/:id — edit a post (author or mod)
@@ -481,14 +495,19 @@ app.get('/threads', {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
     }
 
-    const editSanitized = sanitize(content)
+    // Rehost les <img> externes avant sanitize (cf POST /threads).
+    const rehostEdit = await rehostExternalImages(content)
+    const editSanitized = sanitize(rehostEdit.html)
     const editCheck = checkHtmlContent(editSanitized)
     if (!editCheck.ok) {
       return reply.code(422).send({ error: editCheck.reason, code: 'CONTENT_BLOCKED' })
     }
 
     const post = await PostModel.updateContent(id, editSanitized)
-    return reply.send({ post })
+    return reply.send({
+      post,
+      meta: { images_rehosted: rehostEdit.rehosted, images_failed: rehostEdit.failed.length },
+    })
   })
 
   // DELETE /api/v1/forums/posts/:id — delete a post (author or mod)
