@@ -13,7 +13,7 @@
     "@types/leaflet": "^1.9.21",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^9.6.0",
-    "geoip-lite": "^1.4.10",
+    "geoip-lite": "^2.0.2",
     "leaflet": "^1.9.4",
     "nodemailer": "^8.0.10",
     "pg": "^8.11.5"
