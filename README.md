@@ -74,7 +74,7 @@ One command. Your server. Forever.
 |---|---|
 | Backend API | **TypeScript** + **Fastify v5** + Socket.IO, `nodyx-core/` |
 | Frontend | **SvelteKit 5** + Tailwind v4 + TipTap editor, `nodyx-frontend/` |
-| Database | **PostgreSQL 16** (FTS, migrations) + **Redis 7** (sessions, presence) |
+| Database | **PostgreSQL 16** (FTS, migrations) + **Redis 7** (sessions, presence) <sup>[¹](docs/en/ARCHITECTURE.md#why-postgresql-16-and-not-17-or-18)</sup> |
 | Voice relay | **nodyx-turn**, Rust STUN/TURN (replaces coturn, 2.9 MB binary) |
 | P2P tunneling | **nodyx-relay**, Rust TCP tunnel (home server, no open ports) |
 | Real-time | WebRTC P2P mesh + Socket.IO fallback |

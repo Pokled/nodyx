@@ -62,6 +62,23 @@ All routes start with `/api/v1/`
 
 ## 3. POSTGRESQL DATA MODEL
 
+### Why PostgreSQL 16 (and not 17 or 18)
+
+Nodyx ships with **PostgreSQL 16**. This is a deliberate choice, not a lag.
+
+**Why 16 is the right baseline for Nodyx today:**
+
+- **It's what Ubuntu 24.04 LTS ships by default.** `apt install postgresql` on a fresh Ubuntu 24.04 server installs PG 16. Picking the distro default keeps `install.sh` short, predictable, and free of third-party PPAs that admins might not trust. Less moving parts at install time means fewer breakages on real-world VPSes.
+- **Upstream support runs until November 2028.** PostgreSQL has a 5-year support window per major version. PG 16 is supported with security and bug fixes for 2+ more years. We are not on a deprecated version.
+- **Nodyx uses zero features specific to PG 17 or 18.** Our migrations rely on standard SQL plus widely-available extras: `JSONB`, `UUID`, `tsvector` full-text search, `CREATE INDEX CONCURRENTLY`, partial indexes, `IF NOT EXISTS` everywhere. These have been stable since PG 12+. We would gain literally nothing functional by upgrading.
+- **The performance and feature gains from 17/18 don't apply at our scale.** Improvements like streaming I/O, logical replication slot sync, or vectorized JSON path are aimed at multi-terabyte deployments or replication-heavy architectures. A Nodyx instance is "one community on one VPS" — these gains don't move the needle.
+
+**When we will migrate:**
+
+The plan is to skip PG 17 and move directly to **PG 18** once Ubuntu 26.04 LTS ships it as the default (expected mid-2026). At that point the installer will update transparently for new installs, and we will provide a documented `pg_upgradecluster` path for existing instances. Until then, **staying on PG 16 is the boring, reliable, recommended choice**.
+
+If you need PG 18 today for a specific reason (e.g. you are integrating Nodyx with another stack that requires it), you can add the official PostgreSQL APT repository and migrate manually with `pg_upgradecluster`. Open a thread on the forum if you want a walkthrough.
+
 ### Main tables
 
 ```sql

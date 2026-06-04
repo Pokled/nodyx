@@ -1930,6 +1930,24 @@ chown -R nodyx:nodyx /home/nodyx/.pm2
 # ═══════════════════════════════════════════════════════════════════════════════
 #  POSTGRESQL
 # ═══════════════════════════════════════════════════════════════════════════════
+#
+# Why PostgreSQL 16 and not the latest (17 or 18) ?
+#   On Ubuntu 24.04 LTS, `apt install postgresql` installs PG 16 by default
+#   from the official Ubuntu repos. We DELIBERATELY stick to the distro default
+#   instead of pinning a newer version via the apt.postgresql.org PPA :
+#     - Less moving parts at install time = fewer surprises on real VPSes
+#     - PG 16 is supported by upstream until November 2028 (5-year window)
+#     - Nodyx uses zero features specific to PG 17/18 ; our migrations only
+#       rely on standard SQL + JSONB, UUID, tsvector, partial indexes,
+#       CREATE INDEX CONCURRENTLY — all stable since PG 12+
+#     - The perf gains in PG 17/18 (streaming I/O, JSON path vectorization)
+#       target multi-TB workloads, not a per-instance community platform
+#   The plan is to skip PG 17 and adopt PG 18 once Ubuntu 26.04 LTS ships it
+#   as the default. Details in docs/en/ARCHITECTURE.md § 3.
+#
+# Detect installed PostgreSQL version below — we accept whatever the distro
+# offers, including newer if the admin installed a PPA on their own.
+# ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_pg)"
 
 # Detect installed PostgreSQL version (needed for the versioned service name)
