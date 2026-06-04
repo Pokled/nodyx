@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { onMount, onDestroy, tick, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
@@ -68,27 +68,32 @@
 	// ── State ─────────────────────────────────────────────────────────────────
 	let selectedChannel = $state<Channel | null>(null);
 
-	// Select channel from URL ?channel=id param, or default to first text channel
+	// Select channel from URL ?channel=id param, or default to first text channel.
+	// IMPORTANT : on utilise untrack() pour lire selectedChannel sans créer une
+	// dépendance réactive. Sinon, quand joinChannel() fait `selectedChannel = X`
+	// AVANT que goto() ait propagé la nouvelle URL, ce $effect re-fire avec
+	// selectedChannel.id à jour MAIS urlChannelId périmé, et déclenche un 2e
+	// joinChannel(ancien) qui annule le changement. Bug reproductible sur mobile
+	// où le timing de goto est plus lent que le state Svelte. Avec untrack le
+	// $effect ne fire QUE quand l'URL change réellement.
 	$effect(() => {
-		if (localChannels.length === 0) return;
 		const urlChannelId = $page.url.searchParams.get('channel');
-		if (urlChannelId) {
-			const found = localChannels.find((c: any) => c.id === urlChannelId);
-			if (found && found.id !== selectedChannel?.id) {
-				if (s) {
-					// Socket ready: use joinChannel so socket rooms + state are properly reset
-					joinChannel(found);
-				} else {
-					// Socket not yet ready: set selectedChannel so the connect handler
-					// can emit chat:join once the socket connects
-					selectedChannel = found;
+		untrack(() => {
+			if (localChannels.length === 0) return;
+			if (urlChannelId) {
+				const found = localChannels.find((c: any) => c.id === urlChannelId);
+				if (found && found.id !== selectedChannel?.id) {
+					if (s) {
+						joinChannel(found);
+					} else {
+						selectedChannel = found;
+					}
 				}
+			} else if (!selectedChannel) {
+				const def = localChannels.find((c: any) => c.type === 'text') ?? localChannels[0];
+				if (def) goto(`/chat?channel=${def.id}`, { replaceState: true });
 			}
-		} else if (!selectedChannel) {
-			const def = localChannels.find((c: any) => c.type === 'text') ?? localChannels[0];
-			// Navigate to default channel so URL stays in sync
-			if (def) goto(`/chat?channel=${def.id}`, { replaceState: true });
-		}
+		});
 	});
 	let messages        = $state<Message[]>([]);
 	// Ensure custom fonts are loaded whenever messages change
