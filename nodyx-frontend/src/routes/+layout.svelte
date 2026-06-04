@@ -871,8 +871,13 @@
 				</div>
 
 				<!-- COMMUNICATIONS -->
+				<!-- Mobile : masqué pour éviter la duplication avec ChannelSidebar (le drawer
+				     dédié au chat sur /chat). En mobile, la galaxy-sidebar = nav site + modules
+				     uniquement, ChannelSidebar = canaux. Évite les 2 hamburgers concurrents qui
+				     ouvrent 2 drawers avec les mêmes canaux + le bug de navigation des <a href>
+				     en mode déjà-sur-/chat. En desktop (≥ lg), comportement strictement inchangé. -->
 				{#if (layoutTextChannels.length > 0 && mods.chat !== false) || (layoutVoiceChannels.length > 0 && mods.voice !== false)}
-				<div>
+				<div class="hidden lg:block">
 					<p class="px-2 mb-1.5 text-[9px] uppercase tracking-[.2em] font-black"
 					   style="color: #374151">{tFn('nav.section.communications')}</p>
 					<div class="space-y-px">
