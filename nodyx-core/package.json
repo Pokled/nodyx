@@ -56,7 +56,7 @@
     "@types/web-push": "3.6.4",
     "@vitest/coverage-v8": "^4.1.8",
     "ts-node": "10.9.2",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "vitest": "^4.1.8"
   },
   "optionalDependencies": {
