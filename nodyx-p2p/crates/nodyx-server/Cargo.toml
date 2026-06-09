@@ -47,7 +47,7 @@ ammonia = "4"
 
 # Auth — bcrypt + JWT + email
 bcrypt          = "0.15"
-jsonwebtoken    = "10"
+jsonwebtoken    = { version = "10", features = ["rust_crypto"] }
 sha2            = "0.10"
 lettre          = { version = "0.11", features = ["tokio1-native-tls", "smtp-transport", "builder"] }
 async-trait     = "0.1"
