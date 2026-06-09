@@ -13,5 +13,9 @@
   "dependencies": {
     "dotenv": "^16.0.0",
     "node-turn": "^0.0.6"
+  },
+  "overrides": {
+    "flatted": "^3.4.2",
+    "log4js": "^6.9.1"
   }
 }
