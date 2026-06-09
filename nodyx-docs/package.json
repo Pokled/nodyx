@@ -22,5 +22,8 @@
     "typescript": "^5.0.0",
     "vite": "^7.3.5"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "cookie": "^0.7.2"
+  }
 }
