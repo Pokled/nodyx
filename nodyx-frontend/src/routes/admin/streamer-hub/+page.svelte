@@ -15,6 +15,7 @@
 	import DeckPanel          from '$lib/components/admin/DeckPanel.svelte'
 	import SoundLibraryPanel  from '$lib/components/admin/SoundLibraryPanel.svelte'
 	import OverlayManager     from '$lib/components/admin/OverlayManager.svelte'
+	import ObsScenesPanel     from '$lib/components/admin/obs/ObsScenesPanel.svelte'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -152,13 +153,14 @@
 	// récompenses / overlays / audience / config. Synchronisation #hash dans
 	// l'URL pour deep-link (ex: /admin/streamer-hub#tab=studio). Si pas
 	// connecté, on force "config" pour que l'utilisateur voie le bouton Connect.
-	type TabId = 'overview' | 'studio' | 'rewards' | 'overlays' | 'bot' | 'deck' | 'sounds' | 'audience' | 'config'
+	type TabId = 'overview' | 'studio' | 'rewards' | 'overlays' | 'scenes' | 'bot' | 'deck' | 'sounds' | 'audience' | 'config'
 
 	const TABS: Array<{ id: TabId; label: string; iconPath: string; soon?: boolean }> = [
 		{ id: 'overview', label: 'Vue d\'ensemble', iconPath: 'M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z M9 9h6v6H9z' },
 		{ id: 'studio',   label: 'Studio Live',     iconPath: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
 		{ id: 'rewards',  label: 'Récompenses',     iconPath: 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zM5 21h14a2 2 0 002-2v-9a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2z' },
 		{ id: 'overlays', label: 'Overlays OBS',    iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+		{ id: 'scenes',   label: 'Scènes',           iconPath: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM9 5v14M3 11h6M3 15h6' },
 		{ id: 'bot',      label: 'Bot Chat',         iconPath: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
 		{ id: 'deck',     label: 'Stream Deck',      iconPath: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
 		{ id: 'sounds',   label: 'Soundboard',       iconPath: 'M9 18V5l12-2v13 M9 18a3 3 0 11-6 0 3 3 0 016 0zM21 16a3 3 0 11-6 0 3 3 0 016 0z' },
@@ -637,6 +639,11 @@
 	<!-- ══ Tab: Overlays OBS ═══════════════════════════════════════════════ -->
 	{#if isConnected && activeTab === 'overlays'}
 		<OverlayManager token={pageToken} />
+	{/if}
+
+	<!-- ══ Tab: Scènes (compositeur OBS-like) ════════════════════════════ -->
+	{#if isConnected && activeTab === 'scenes'}
+		<ObsScenesPanel token={pageToken} />
 	{/if}
 
 	<!-- ══ Tab: Bot Chat (sous-nav Timers / Commandes) ═══════════════════ -->

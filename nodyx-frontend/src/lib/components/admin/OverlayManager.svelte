@@ -7,6 +7,24 @@
 	import EventTickerConfigEditor from './EventTickerConfigEditor.svelte'
 	import LeaderboardConfigEditor from './LeaderboardConfigEditor.svelte'
 	import StreamTimerConfigEditor from './StreamTimerConfigEditor.svelte'
+	import PlaceInSceneModal       from './obs/PlaceInSceneModal.svelte'
+	import { focusSceneAfterNav, consumeFocusedOverlayToken } from './obs/sceneNav'
+	import { onDestroy }            from 'svelte'
+	import type { ObsSceneSourceType } from '$lib/types/obsScenes'
+
+	// Quels types d'overlay backend peuvent être placés dans une scène Nodyx.
+	// playlist nécessite une playlistId qu'on ne peut pas demander ici sans le
+	// contexte Soundboard, donc on le route via le tab Soundboard où le streamer
+	// aura le bon picker.
+	const SCENE_PLACEABLE: Partial<Record<string, ObsSceneSourceType>> = {
+		alert_box:    'alert_box',
+		event_ticker: 'ticker',
+		soundboard:   'soundboard_osd',
+		goal_bar:     'goal_bar',
+		leaderboard:  'leaderboard',
+		clips_player: 'clips_player',
+		stream_timer: 'stream_timer',
+	}
 
 	interface Props {
 		token: string
@@ -14,7 +32,7 @@
 
 	let { token }: Props = $props()
 
-	type OverlayType = 'alert_box' | 'goal_bar' | 'stream_timer' | 'event_ticker' | 'leaderboard' | 'clips_player' | 'soundboard'
+	type OverlayType = 'alert_box' | 'goal_bar' | 'stream_timer' | 'event_ticker' | 'leaderboard' | 'clips_player' | 'soundboard' | 'playlist'
 
 	type OverlayRow = {
 		id:           string
@@ -37,12 +55,20 @@
 		leaderboard:  { label: 'Leaderboard',  desc: 'Podium top 3 + liste rang 4-N. 4 catégories (subs/bits/raids/chatteurs) × 4 périodes. Mode récap fin de stream.', routeSlug: 'board', ready: true },
 		clips_player: { label: 'Clips Player', desc: 'Player full screen qui joue une session de clips (top chaine ou raider) déclenchée depuis Studio Live.', routeSlug: 'clips', ready: true },
 		soundboard:   { label: 'Soundboard',   desc: 'Joue les sons déclenchés depuis ton Stream Deck. OSD discrète (vignette + titre + progress) en coin d\'écran. Crée plusieurs overlays si tu veux le son sur plusieurs scènes OBS.', routeSlug: 'soundboard', ready: true },
+		playlist:     { label: 'Playlist',     desc: 'Lit une de tes playlists Soundboard en autoplay loop pour servir de musique d\'ambiance. URL par playlist via le tab Soundboard (icône 📺). Token partagé, paramètre ?id=… pour cibler la playlist.', routeSlug: 'playlist', ready: true },
 	}
 
 	let overlays    = $state<OverlayRow[]>([])
 	let loading     = $state(true)
 	let toast       = $state<{ text: string; ok: boolean } | null>(null)
 	let configOpen  = $state<Set<string>>(new Set())   // ids overlays dont le panneau config est déplié
+
+	// Modal "Placer dans une scène" : id overlay actif, null = fermé. On
+	// expose token+label+type pour que la modal puisse créer la source.
+	let placeOverlay = $state<OverlayRow | null>(null)
+	const placeSceneType = $derived<ObsSceneSourceType | null>(
+		placeOverlay ? SCENE_PLACEABLE[placeOverlay.overlayType] ?? null : null,
+	)
 
 	function toggleConfig(id: string): void {
 		const next = new Set(configOpen)
@@ -61,15 +87,57 @@
 	}
 
 	async function reload(): Promise<void> {
-		const res = await apiFetch(fetch, '/streamer/overlays', { headers: { Authorization: `Bearer ${token}` } })
-		if (res.ok) {
-			const data = await res.json() as { overlays: OverlayRow[] }
-			overlays = data.overlays
+		// Loading est garanti à false en sortie, peu importe ce qui foire :
+		// réseau coupé, token expiré, JSON invalide. Sans ce try/finally, un
+		// throw silencieux laissait l'UI en "Chargement…" éternellement.
+		try {
+			const res = await apiFetch(fetch, '/streamer/overlays', { headers: { Authorization: `Bearer ${token}` } })
+			if (res.ok) {
+				const data = await res.json() as { overlays: OverlayRow[] }
+				overlays = data.overlays
+			} else if (res.status === 401) {
+				flash('Session expirée. Recharge la page.', false)
+			} else {
+				flash(`Chargement des overlays impossible (HTTP ${res.status}).`, false)
+			}
+		} catch (err) {
+			console.warn('[overlay-manager] reload failed', err)
+			flash('Erreur réseau au chargement des overlays.', false)
+		} finally {
+			loading = false
 		}
-		loading = false
 	}
 
-	onMount(() => { reload() })
+	// Si l'utilisateur arrive ici via "Modifier les couleurs / sons" depuis
+	// le tab Scènes, on déplie le panneau config de l'overlay ciblé et on
+	// scroll dessus. Token plutôt qu'id car c'est ce que la scène stocke.
+	function focusOverlay(targetToken: string): void {
+		const target = overlays.find(o => o.token === targetToken)
+		if (!target) return
+		const next = new Set(configOpen)
+		next.add(target.id)
+		configOpen = next
+		setTimeout(() => {
+			const el = document.getElementById(`overlay-row-${target.id}`)
+			if (el && 'scrollIntoView' in el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+		}, 80)
+	}
+
+	function onFocusEvent(e: Event): void {
+		const detail = (e as CustomEvent<{ token: string }>).detail
+		if (detail?.token) focusOverlay(detail.token)
+	}
+
+	onMount(() => {
+		void reload().then(() => {
+			const t = consumeFocusedOverlayToken()
+			if (t) focusOverlay(t)
+		})
+		window.addEventListener('nodyx:focus-overlay', onFocusEvent)
+	})
+	onDestroy(() => {
+		window.removeEventListener('nodyx:focus-overlay', onFocusEvent)
+	})
 
 	async function create(): Promise<void> {
 		if (creating) return
@@ -106,8 +174,16 @@
 		} else flash('Révocation échouée.', false)
 	}
 
+	// Fallback safe pour un type d'overlay inconnu (ex : nouveau type ajouté
+	// backend mais pas encore listé dans TYPE_META). Évite le crash render
+	// global qui bloquait toute la liste à "Chargement…" jusqu'au refresh.
+	const UNKNOWN_META = { label: 'Overlay', desc: 'Type inconnu côté admin.', routeSlug: 'unknown', ready: false }
+	function metaFor(t: OverlayType | string): { label: string; desc: string; routeSlug: string; ready: boolean } {
+		return (TYPE_META as Record<string, typeof UNKNOWN_META>)[t] ?? UNKNOWN_META
+	}
+
 	function urlFor(o: OverlayRow): string {
-		const meta = TYPE_META[o.overlayType]
+		const meta = metaFor(o.overlayType)
 		// L'overlay tourne sur le frontend (route SvelteKit /overlay/...), donc
 		// on prend l'origin du navigateur. En SSR (jamais ce composant), fallback
 		// chaine vide pour ne pas crasher.
@@ -192,9 +268,9 @@
 			</div>
 		{:else}
 			{#each overlays as o (o.id)}
-				{@const meta = TYPE_META[o.overlayType]}
+				{@const meta = metaFor(o.overlayType)}
 				{@const url  = urlFor(o)}
-				<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-4 space-y-3">
+				<div id="overlay-row-{o.id}" class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-4 space-y-3 scroll-mt-4 transition-colors {configOpen.has(o.id) ? 'border-purple-500/50' : ''}">
 					<div class="flex items-start justify-between gap-3 flex-wrap">
 						<div class="flex items-center gap-2.5">
 							<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
@@ -207,7 +283,17 @@
 								</div>
 							</div>
 						</div>
-						<div class="flex items-center gap-1.5">
+						<div class="flex items-center gap-1.5 flex-wrap">
+							{#if SCENE_PLACEABLE[o.overlayType]}
+								<button type="button" onclick={() => placeOverlay = o}
+									class="text-[11px] text-purple-200 hover:text-white border border-purple-500/40 hover:border-purple-500/70 bg-purple-500/15 hover:bg-purple-500/25 px-2.5 py-1 rounded transition-colors inline-flex items-center gap-1.5 font-medium">
+									<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+										<rect x="3" y="3" width="18" height="18" rx="2"/>
+										<path d="M9 9h6v6H9z"/>
+									</svg>
+									Placer dans une scène
+								</button>
+							{/if}
 							{#if o.overlayType === 'alert_box' || o.overlayType === 'goal_bar' || o.overlayType === 'event_ticker' || o.overlayType === 'leaderboard' || o.overlayType === 'stream_timer'}
 								<button type="button" onclick={() => toggleConfig(o.id)}
 									class="text-[11px] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 hover:border-cyan-500/50 px-2.5 py-1 rounded transition-colors inline-flex items-center gap-1">
@@ -257,3 +343,21 @@
 		</div>
 	</details>
 </section>
+
+{#if placeOverlay && placeSceneType}
+	<PlaceInSceneModal
+		{token}
+		sourceType={placeSceneType}
+		sourceLabel={placeOverlay.label?.trim() || metaFor(placeOverlay.overlayType).label}
+		sourceConfig={{ overlayToken: placeOverlay.token }}
+		onPlaced={(sceneId, _sceneName, _isNew) => {
+			// On redirige systématiquement vers la scène ciblée. L'utilisateur
+			// vient de faire un placement : la suite logique est de voir le
+			// résultat et positionner. Le toast aurait été ignoré au profit
+			// de la transition de tab.
+			placeOverlay = null
+			focusSceneAfterNav(sceneId)
+		}}
+		onClose={() => placeOverlay = null}
+	/>
+{/if}

@@ -385,6 +385,20 @@
 		})
 		: audioTracks)
 
+	// Playlists du streamer : utilisées par le picker du bouton
+	// playlist_control quand cmd='play' (sélection de la playlist à démarrer).
+	interface PlaylistLite { id: string; name: string; color: string | null; trackCount: number }
+	let playlistsList = $state<PlaylistLite[]>([])
+	async function loadPlaylistsList(): Promise<void> {
+		try {
+			const res = await apiFetch(fetch, '/streamer/audio-library/playlists', { headers: { Authorization: `Bearer ${token}` } })
+			if (res.ok) {
+				const d = await res.json() as { playlists: PlaylistLite[] }
+				playlistsList = d.playlists ?? []
+			}
+		} catch { /* silencieux : la liste reste vide, l'éditeur reste utilisable */ }
+	}
+
 	function audioPickerThumb(t: AudioTrackLite): string {
 		// Les thumbnails sont des URL relatives /uploads/... renvoyées par le backend.
 		// PUBLIC_API_URL pointe vers /api/v1, on remonte d'un cran.
@@ -460,7 +474,7 @@
 		flash(`Bouton déplacé sur "${target.name}".`, true)
 	}
 
-	onMount(() => { loadClipsOverlays(); loadCustomCommands(); loadAudioTracks() })
+	onMount(() => { loadClipsOverlays(); loadCustomCommands(); loadAudioTracks(); loadPlaylistsList() })
 
 	function isCellOccupied(x: number, y: number, exceptId: string | null): boolean {
 		if (!currentPage) return false
@@ -972,6 +986,9 @@
 							<option value="stop_audio">⏹ Couper tous les sons</option>
 							<option value="pause_audio">⏸ Mettre en pause</option>
 						</optgroup>
+						<optgroup label="Playlist (overlay OBS)">
+							<option value="playlist_control">🎛 Contrôle playlist</option>
+						</optgroup>
 						<optgroup label="Navigation">
 							<option value="navigate_page">📑 Aller à une page</option>
 						</optgroup>
@@ -1110,6 +1127,73 @@
 					{:else if selected.action.type === 'pause_audio'}
 						<div class="mt-2 text-[10px] text-slate-400 bg-slate-900/40 border border-slate-700/60 rounded px-2 py-1.5 leading-snug">
 							Met en pause la piste en cours. Ré-appuyer sur le bouton Jouer la reprend.
+						</div>
+					{:else if selected.action.type === 'playlist_control'}
+						<!-- Picker commande playlist : pilote l'overlay OBS via socket.
+						     Seul 'play' nécessite une playlist cible (switch). Le reste
+						     agit sur la playlist en cours. -->
+						<div class="mt-2 space-y-2">
+							<div class="flex items-center gap-1.5">
+								<span class="text-[9px] uppercase font-semibold text-slate-500">Commande</span>
+								<Tooltip text="play = démarre / switche sur une playlist précise. toggle = bascule lecture / pause. skip/prev = changer de piste. stop = arrête et remet à zéro. volume = ajuste le volume de l'overlay."/>
+							</div>
+							<select value={selected.action.cmd ?? 'toggle'}
+								onchange={(e) => updateAction({ cmd: e.currentTarget.value as 'play' | 'pause' | 'toggle' | 'skip' | 'prev' | 'stop' | 'volume' })}
+								class="w-full rounded bg-slate-950 border border-slate-700/60 focus:border-purple-500/60 px-2 py-1 text-xs text-white outline-none">
+								<option value="play">▶ Démarrer une playlist (switch)</option>
+								<option value="toggle">⏯ Play / Pause (toggle)</option>
+								<option value="pause">⏸ Pause</option>
+								<option value="skip">⏭ Suivant</option>
+								<option value="prev">⏮ Précédent</option>
+								<option value="stop">⏹ Stop + reset</option>
+								<option value="volume">🔊 Ajuster le volume</option>
+							</select>
+
+							{#if selected.action.cmd === 'play'}
+								<label class="block">
+									<span class="text-[9px] uppercase font-semibold text-slate-500">Playlist à démarrer</span>
+									{#if playlistsList.length > 0}
+										<select value={selected.action.playlistId ?? ''}
+											onchange={(e) => updateAction({ playlistId: e.currentTarget.value || undefined })}
+											class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-purple-500/60">
+											<option value="">— Choisir une playlist —</option>
+											{#each playlistsList as p (p.id)}
+												<option value={p.id}>{p.name} ({p.trackCount})</option>
+											{/each}
+										</select>
+									{:else}
+										<div class="mt-0.5 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1.5">
+											Aucune playlist. Crée-en dans le tab Soundboard.
+										</div>
+									{/if}
+								</label>
+							{:else if selected.action.cmd === 'volume'}
+								<div class="grid grid-cols-2 gap-2">
+									<label class="block">
+										<span class="text-[9px] uppercase font-semibold text-slate-500">Mode</span>
+										<select value={selected.action.volumeMode ?? 'delta'}
+											onchange={(e) => updateAction({ volumeMode: e.currentTarget.value as 'delta' | 'absolute' })}
+											class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-purple-500/60">
+											<option value="delta">Relatif (+/-)</option>
+											<option value="absolute">Absolu (0-100%)</option>
+										</select>
+									</label>
+									<label class="block">
+										<span class="text-[9px] uppercase font-semibold text-slate-500">Valeur</span>
+										<input type="number" step="0.05" min={selected.action.volumeMode === 'absolute' ? 0 : -1} max="1"
+											value={selected.action.volumeValue ?? (selected.action.volumeMode === 'absolute' ? 0.6 : 0.05)}
+											oninput={(e) => updateAction({ volumeValue: Math.max(-1, Math.min(1, parseFloat(e.currentTarget.value) || 0)) })}
+											class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-purple-500/60"/>
+									</label>
+								</div>
+								<div class="text-[10px] text-slate-500 leading-snug">
+									Ex : <span class="text-slate-300 font-mono">delta +0.05</span> = bouton « Volume +5% », <span class="text-slate-300 font-mono">absolu 0.0</span> = mute.
+								</div>
+							{:else}
+								<div class="text-[10px] text-slate-400 bg-slate-900/40 border border-slate-700/60 rounded px-2 py-1.5 leading-snug">
+									Cette commande agit sur l'overlay playlist actuellement actif dans OBS.
+								</div>
+							{/if}
 						</div>
 					{:else if selected.action.type === 'navigate_page'}
 						<div class="mt-2 space-y-2">

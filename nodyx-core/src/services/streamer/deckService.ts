@@ -17,7 +17,20 @@ export type DeckActionType =
   | 'stop_audio'
   | 'pause_audio'
   | 'navigate_page'
+  | 'playlist_control'
   | 'noop'
+
+// Sous-commandes d'un bouton 'playlist_control'. 'play' optionnellement avec
+// playlistId pour switcher l'overlay sur cette playlist en un clic ; sans id,
+// reprend simplement la lecture en cours.
+export type PlaylistControlCmd =
+  | 'play'         // démarre / reprend (si playlistId fourni, switche dessus)
+  | 'pause'
+  | 'toggle'       // bascule play/pause (le plus utile au quotidien)
+  | 'skip'         // suivant
+  | 'prev'         // précédent
+  | 'stop'         // arrêt + reset cursor
+  | 'volume'       // ajuste le volume (delta négatif/positif ou absolu via mode)
 
 export interface DeckButton {
   id:        string
@@ -42,6 +55,13 @@ export type DeckActionPayload =
   | { type: 'stop_audio' }
   | { type: 'pause_audio' }
   | { type: 'navigate_page';    targetPageId?: string; pageJump?: 'next' | 'prev' | 'home' }
+  | {
+      type:        'playlist_control'
+      cmd:         PlaylistControlCmd
+      playlistId?: string          // requis pour 'play' switch, optionnel pour le reste
+      volumeMode?: 'delta' | 'absolute'  // pour 'volume' uniquement
+      volumeValue?: number               // delta [-1,1] ou absolu [0,1]
+    }
 
 export interface DeckPage {
   id:      string
@@ -109,8 +129,14 @@ function isValidActionType(t: unknown): t is DeckActionType {
   return (
     t === 'top_clips' || t === 'vod_marker' || t === 'chat_message' ||
     t === 'trigger_command' || t === 'play_audio' || t === 'stop_audio' ||
-    t === 'pause_audio' || t === 'navigate_page' || t === 'noop'
+    t === 'pause_audio' || t === 'navigate_page' ||
+    t === 'playlist_control' || t === 'noop'
   )
+}
+
+function isValidPlaylistCmd(c: unknown): c is PlaylistControlCmd {
+  return c === 'play' || c === 'pause' || c === 'toggle' ||
+         c === 'skip' || c === 'prev'  || c === 'stop' || c === 'volume'
 }
 
 function isValidPageJump(j: unknown): j is 'next' | 'prev' | 'home' {
@@ -181,6 +207,19 @@ function sanitizeButton(raw: unknown): DeckButton | null {
       const targetPageId = typeof rawAction.targetPageId === 'string' ? rawAction.targetPageId.slice(0, 64) : undefined
       const pageJump     = isValidPageJump(rawAction.pageJump) ? rawAction.pageJump : undefined
       action = { type: 'navigate_page', targetPageId, pageJump }
+      break
+    }
+    case 'playlist_control': {
+      const cmd = isValidPlaylistCmd(rawAction.cmd) ? rawAction.cmd : 'toggle'
+      const playlistId = typeof rawAction.playlistId === 'string' && rawAction.playlistId.length > 0
+        ? rawAction.playlistId.slice(0, 64)
+        : undefined
+      const volumeMode = rawAction.volumeMode === 'absolute' ? 'absolute' as const
+                       : rawAction.volumeMode === 'delta'    ? 'delta'    as const
+                       : undefined
+      const rawVol = Number(rawAction.volumeValue)
+      const volumeValue = Number.isFinite(rawVol) ? Math.max(-1, Math.min(1, rawVol)) : undefined
+      action = { type: 'playlist_control', cmd, playlistId, volumeMode, volumeValue }
       break
     }
     default:
@@ -487,6 +526,37 @@ export async function executeAction(action: DeckActionPayload, triggeredBy: stri
       // Navigation pilotée par le mobile (le client intercepte avant d'appeler
       // le backend). Si on arrive ici, c'est un fallback : ack vide.
       return { ok: true, message: '' }
+    }
+
+    case 'playlist_control': {
+      // Tous les overlays playlist du streamer écoutent la room
+      // `playlist:<ownerUserId>`. On émet la commande dessus, l'overlay
+      // l'applique localement (play/pause/skip/volume/switch). En l'absence
+      // d'overlay connecté, no-op silencieux comme pour audio:play.
+      const [{ listStreamers }, { io }] = await Promise.all([
+        import('./tokenService'),
+        import('../../socket/io'),
+      ])
+      const streamers = await listStreamers('twitch').catch(() => [])
+      const ownerUserId = streamers[0]?.userId
+      if (!ownerUserId || !io) return { ok: false, message: 'Stream non lié' }
+
+      io.of('/overlay').to(`playlist:${ownerUserId}`).emit('playlist:control', {
+        cmd:         action.cmd,
+        playlistId:  action.playlistId,
+        volumeMode:  action.volumeMode,
+        volumeValue: action.volumeValue,
+      })
+
+      const label = action.cmd === 'play'   ? '▶ Playlist'
+                  : action.cmd === 'pause'  ? '⏸ Pause'
+                  : action.cmd === 'toggle' ? '⏯ Toggle'
+                  : action.cmd === 'skip'   ? '⏭ Suivant'
+                  : action.cmd === 'prev'   ? '⏮ Précédent'
+                  : action.cmd === 'stop'   ? '⏹ Stop'
+                  : '🔊 Volume'
+      console.log(`[deck] playlist_control ${action.cmd} (by ${triggeredBy})`)
+      return { ok: true, message: label }
     }
   }
 }

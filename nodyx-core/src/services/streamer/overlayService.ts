@@ -17,9 +17,10 @@ export type OverlayType =
   | 'leaderboard'
   | 'clips_player'
   | 'soundboard'
+  | 'playlist'
 
 const VALID_TYPES: ReadonlySet<OverlayType> = new Set([
-  'alert_box', 'goal_bar', 'stream_timer', 'event_ticker', 'leaderboard', 'clips_player', 'soundboard',
+  'alert_box', 'goal_bar', 'stream_timer', 'event_ticker', 'leaderboard', 'clips_player', 'soundboard', 'playlist',
 ])
 
 // ── Soundboard ──────────────────────────────────────────────────────────────
@@ -506,6 +507,23 @@ export async function findOverlayByToken(token: string): Promise<OverlayRow | nu
   const r = await db.query<OverlayRowDb>(
     `SELECT * FROM streamer_overlays WHERE token = $1 AND revoked_at IS NULL LIMIT 1`,
     [token],
+  )
+  return r.rows[0] ? rowToPublic(r.rows[0]) : null
+}
+
+// Le premier overlay actif d'un type donné créé par un owner. Sert au pattern
+// "ensure" : l'overlay playlist est unique par streamer (un seul token, qui
+// permet d'embarquer N'IMPORTE laquelle de ses playlists via ?id=). On évite
+// ainsi de polluer la liste des overlays avec une entrée par playlist.
+export async function findOverlayByOwnerAndType(
+  ownerUserId: string,
+  overlayType: OverlayType,
+): Promise<OverlayRow | null> {
+  const r = await db.query<OverlayRowDb>(
+    `SELECT * FROM streamer_overlays
+     WHERE created_by = $1 AND overlay_type = $2 AND revoked_at IS NULL
+     ORDER BY created_at ASC LIMIT 1`,
+    [ownerUserId, overlayType],
   )
   return r.rows[0] ? rowToPublic(r.rows[0]) : null
 }

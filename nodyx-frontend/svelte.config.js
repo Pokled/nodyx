@@ -32,6 +32,7 @@ const config = {
                 'font-src':     ['self', 'data:', 'https://fonts.gstatic.com'],
                 'connect-src':  ['self', 'wss:', 'https:'],
                 'frame-src':    [
+                    'self',   // requis pour le canvas Scènes admin qui embarque les /overlay/<type>/<token> en iframe preview
                     'https://www.youtube.com',
                     'https://youtube.com',
                     'https://www.youtube-nocookie.com',

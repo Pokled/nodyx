@@ -52,11 +52,25 @@
 		source:       'web' | 'chat'
 	}
 
+	// Une playlist publique = méta + liste ordonnée des ids des tracks qu'elle
+	// contient. Les détails de chaque track sont dans `tracks` (on évite de
+	// dupliquer la payload côté API).
+	interface PublicPlaylist {
+		id:          string
+		name:        string
+		description: string | null
+		color:       string | null
+		trackCount:  number
+		trackIds:    string[]
+	}
+
 	let streamer     = $state<Streamer | null>(null)
 	let tracks       = $state<Track[]>([])
 	let nowPlaying   = $state<NowPlaying | null>(null)
 	let queue        = $state<QueueEntry[]>([])
 	let queueEnabled = $state(true)
+	let playlists    = $state<PublicPlaylist[]>([])
+	let selectedPlaylistId = $state<string | null>(null)
 	let loading      = $state(true)
 	let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -117,12 +131,19 @@
 				nowPlaying: NowPlaying | null
 				queue?: QueueEntry[]
 				queueEnabled?: boolean
+				playlists?: PublicPlaylist[]
 			}
 			streamer     = data.streamer
 			tracks       = data.tracks ?? []
 			nowPlaying   = data.nowPlaying ?? null
 			queue        = data.queue ?? []
 			queueEnabled = data.queueEnabled !== false
+			playlists    = data.playlists ?? []
+			// Si la playlist active vient d'être dépubliée/supprimée côté streamer,
+			// on retombe gracieusement sur "Toutes".
+			if (selectedPlaylistId && !playlists.some(p => p.id === selectedPlaylistId)) {
+				selectedPlaylistId = null
+			}
 		} finally {
 			loading = false
 		}
@@ -180,12 +201,23 @@
 		previewingId = null
 	}
 
+	// Sélection playlist (null = toutes les pistes). Si une playlist est active,
+	// on borne la base aux trackIds de cette playlist en respectant leur ordre,
+	// puis on applique la recherche par-dessus.
+	const baseTracks = $derived.by(() => {
+		if (!selectedPlaylistId) return tracks
+		const pl = playlists.find(p => p.id === selectedPlaylistId)
+		if (!pl) return tracks
+		const map = new Map(tracks.map(t => [t.id, t]))
+		return pl.trackIds.map(id => map.get(id)).filter((t): t is Track => !!t)
+	})
+
 	const filtered = $derived(query.trim()
-		? tracks.filter(t => {
+		? baseTracks.filter(t => {
 			const q = query.trim().toLowerCase()
 			return t.title.toLowerCase().includes(q) || (t.artist ?? '').toLowerCase().includes(q)
 		})
-		: tracks)
+		: baseTracks)
 
 	const nowProgressPct = $derived(
 		nowPlaying?.durationMs && nowPlaying.durationMs > 0
@@ -333,7 +365,7 @@
 		<section>
 			<div class="flex items-baseline justify-between gap-3 flex-wrap mb-3">
 				<h2 class="text-xs uppercase tracking-widest font-medium text-zinc-400">Bibliothèque</h2>
-				<span class="text-[10px] text-zinc-600">{filtered.length} / {tracks.length} son{tracks.length > 1 ? 's' : ''}</span>
+				<span class="text-[10px] text-zinc-600">{filtered.length} / {baseTracks.length} son{baseTracks.length > 1 ? 's' : ''}</span>
 			</div>
 
 			{#if loading}
@@ -345,6 +377,33 @@
 					<div class="text-[11px] text-zinc-600">Si tu es l'admin, passe quelques pistes en <span class="font-mono text-zinc-400">visibility: public</span> depuis le tab Soundboard.</div>
 				</div>
 			{:else}
+				<!-- Pills playlists : visible uniquement quand le streamer a au moins
+				     une playlist publique. Sinon on garde l'UI plate d'avant. -->
+				{#if playlists.length > 0}
+					<div class="flex items-center gap-1.5 flex-wrap mb-3">
+						<button type="button" onclick={() => selectedPlaylistId = null}
+							class="text-xs px-2.5 py-1 rounded-full border transition-colors {selectedPlaylistId === null
+								? 'bg-purple-500/20 border-purple-500/60 text-purple-100 font-medium'
+								: 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700'}">
+							Tout
+							<span class="ml-1 text-[10px] {selectedPlaylistId === null ? 'text-purple-300' : 'text-zinc-600'}">{tracks.length}</span>
+						</button>
+						{#each playlists as p (p.id)}
+							{@const isOn = selectedPlaylistId === p.id}
+							{@const accent = p.color ?? '#a78bfa'}
+							<button type="button" onclick={() => selectedPlaylistId = p.id}
+								class="text-xs inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-colors {isOn
+									? 'border-purple-500/60 text-zinc-100 font-medium'
+									: 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700'}"
+								style={isOn ? `background: color-mix(in srgb, ${accent} 22%, transparent);` : ''}>
+								<span class="w-2 h-2 rounded-full" style="background: {accent};"></span>
+								<span class="truncate max-w-[120px]" title={p.name}>{p.name}</span>
+								<span class="text-[10px] {isOn ? 'text-zinc-300' : 'text-zinc-600'}">{p.trackCount}</span>
+							</button>
+						{/each}
+					</div>
+				{/if}
+
 				<div class="relative mb-4">
 					<svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 						<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>

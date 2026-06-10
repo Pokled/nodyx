@@ -29,15 +29,15 @@ Caddyfile.dev
 ecosystem.config.js
 nodyx-core/turn-server.js
 
-# Uploads utilisateurs (données personnelles)
-nodyx-core/uploads/avatars/*
-nodyx-core/uploads/banners/*
-nodyx-core/uploads/logos/*
-nodyx-core/uploads/assets/*
-nodyx-core/uploads/fonts/*
-!nodyx-core/uploads/avatars/.gitkeep
-!nodyx-core/uploads/banners/.gitkeep
-!nodyx-core/uploads/logos/.gitkeep
+# Uploads utilisateurs (données personnelles) : tout le contenu, quel que soit
+# le sous-dossier (posts, audio_thumbs, inline_images et tout futur type),
+# sauf les .gitkeep qui préservent l'arborescence.
+nodyx-core/uploads/**
+!nodyx-core/uploads/*/
+!nodyx-core/uploads/*/.gitkeep
+
+# Backups locaux (archives tar.gz du Backup System)
+nodyx-core/backups/
 
 # Hub runtime files
 nodyx-hub/.env

@@ -81,6 +81,7 @@ import { getClipMp4Url } from '../services/streamer/twitchClipExtraction'
 import {
   createOverlay,
   findOverlayByToken,
+  findOverlayByOwnerAndType,
   isOverlayType,
   listOverlays,
   revokeOverlay,
@@ -147,6 +148,32 @@ import {
   setViewerQueueEnabled,
   QUEUE_LIMITS,
 } from '../services/streamer/soundboardQueueService'
+
+import {
+  listPlaylistsForOwner,
+  listPublicPlaylists,
+  getPlaylist,
+  createPlaylist,
+  updatePlaylist,
+  deletePlaylist,
+  reorderPlaylists,
+  addTrackToPlaylist,
+  removeTrackFromPlaylist,
+  reorderTracksInPlaylist,
+  listTracksInPlaylist,
+  listPlaylistIdsForTrack,
+  type PlaylistVisibility,
+  type UpdatePlaylistInput,
+} from '../services/streamer/audioPlaylistService'
+import {
+  listScenesForOwner,
+  getScene,
+  createScene,
+  updateScene,
+  deleteScene,
+  duplicateScene,
+  reorderScenes,
+} from '../services/streamer/obsScenesService'
 
 // ── Helpers env ──────────────────────────────────────────────────────────────
 
@@ -1319,6 +1346,183 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     },
   )
 
+  // Liste des playlists auxquelles appartient un track donné. Sert au popover
+  // "ajouter à playlist" depuis la ligne d'un track : on coche/décoche pour
+  // savoir d'un coup d'œil dans quelles playlists ce son est déjà.
+  server.get<{ Params: { id: string } }>(
+    '/audio-library/:id/playlists',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const t = await getTrack(request.params.id)
+      if (!t) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (t.ownerUserId !== request.user!.userId) {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      const playlistIds = await listPlaylistIdsForTrack(request.params.id)
+      return { ok: true, playlistIds }
+    },
+  )
+
+  // ── Soundboard playlists (admin CRUD + tracks management) ──────────────
+  // Permet au streamer de grouper ses sons par contexte (intro, dev, hype...).
+  // Voir migrations 100 + 101 et audioPlaylistService.
+
+  server.get('/audio-library/playlists', { preHandler: adminOnly }, async (request) => {
+    const playlists = await listPlaylistsForOwner(request.user!.userId)
+    return { playlists }
+  })
+
+  server.post<{ Body: { name?: string; description?: string; color?: string; visibility?: string } }>(
+    '/audio-library/playlists',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const b = request.body
+      const name = (b?.name ?? '').trim()
+      if (!name) return reply.code(400).send({ ok: false, error: 'name_required' })
+      const visibility: PlaylistVisibility = b?.visibility === 'public' ? 'public' : 'private'
+      try {
+        const playlist = await createPlaylist({
+          ownerUserId: request.user!.userId,
+          name,
+          description: b?.description,
+          color:       b?.color,
+          visibility,
+        })
+        return reply.send({ ok: true, playlist })
+      } catch (err) {
+        const msg = (err as { message?: string }).message ?? 'unknown'
+        if (msg === 'playlist_name_taken') return reply.code(409).send({ ok: false, error: msg })
+        return reply.code(500).send({ ok: false, error: msg })
+      }
+    },
+  )
+
+  server.get<{ Params: { id: string } }>(
+    '/audio-library/playlists/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const p = await getPlaylist(request.params.id)
+      if (!p) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (p.ownerUserId !== request.user!.userId && p.visibility !== 'public') {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      const tracks = await listTracksInPlaylist(p.id)
+      return { ok: true, playlist: p, tracks }
+    },
+  )
+
+  server.patch<{ Params: { id: string }; Body: UpdatePlaylistInput }>(
+    '/audio-library/playlists/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const existing = await getPlaylist(request.params.id)
+      if (!existing) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (existing.ownerUserId !== request.user!.userId) {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      try {
+        const playlist = await updatePlaylist(request.params.id, request.body ?? {})
+        return { ok: true, playlist }
+      } catch (err) {
+        const msg = (err as { message?: string }).message ?? 'unknown'
+        if (msg === 'playlist_name_taken') return reply.code(409).send({ ok: false, error: msg })
+        return reply.code(500).send({ ok: false, error: msg })
+      }
+    },
+  )
+
+  server.delete<{ Params: { id: string } }>(
+    '/audio-library/playlists/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const ok = await deletePlaylist(request.params.id, request.user!.userId)
+      if (!ok) return reply.code(404).send({ ok: false, error: 'not_found_or_forbidden' })
+      return { ok: true }
+    },
+  )
+
+  // Réordonner la sidebar des playlists.
+  server.post<{ Body: { ids?: string[] } }>(
+    '/audio-library/playlists/reorder',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const ids = Array.isArray(request.body?.ids) ? request.body!.ids : []
+      if (ids.length === 0) return reply.code(400).send({ ok: false, error: 'ids_required' })
+      await reorderPlaylists(request.user!.userId, ids)
+      return { ok: true }
+    },
+  )
+
+  // Ajouter un track à une playlist (idempotent côté service).
+  server.post<{ Params: { id: string }; Body: { trackId?: string } }>(
+    '/audio-library/playlists/:id/tracks',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const existing = await getPlaylist(request.params.id)
+      if (!existing) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (existing.ownerUserId !== request.user!.userId) {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      const trackId = (request.body?.trackId ?? '').toString()
+      if (!trackId) return reply.code(400).send({ ok: false, error: 'track_id_required' })
+      const added = await addTrackToPlaylist(request.params.id, trackId)
+      return { ok: true, added }
+    },
+  )
+
+  // Retirer un track d'une playlist.
+  server.delete<{ Params: { id: string; trackId: string } }>(
+    '/audio-library/playlists/:id/tracks/:trackId',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const existing = await getPlaylist(request.params.id)
+      if (!existing) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (existing.ownerUserId !== request.user!.userId) {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      const removed = await removeTrackFromPlaylist(request.params.id, request.params.trackId)
+      return { ok: removed }
+    },
+  )
+
+  // Réordonner les tracks dans une playlist.
+  server.post<{ Params: { id: string }; Body: { trackIds?: string[] } }>(
+    '/audio-library/playlists/:id/reorder-tracks',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const existing = await getPlaylist(request.params.id)
+      if (!existing) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (existing.ownerUserId !== request.user!.userId) {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      const ids = Array.isArray(request.body?.trackIds) ? request.body!.trackIds : []
+      if (ids.length === 0) return reply.code(400).send({ ok: false, error: 'track_ids_required' })
+      await reorderTracksInPlaylist(request.params.id, ids)
+      return { ok: true }
+    },
+  )
+
+  // POST /audio-library/playlists/overlay-token — admin — récupère (ou crée
+  // si absent) le token d'overlay "playlist" du streamer. Un seul token par
+  // owner, partagé entre toutes ses playlists. L'URL finale OBS prend la
+  // playlist_id en query : /overlay/playlist/<token>?id=<playlistId>.
+  server.post(
+    '/audio-library/playlists/overlay-token',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      let overlay = await findOverlayByOwnerAndType(request.user!.userId, 'playlist')
+      if (!overlay) {
+        overlay = await createOverlay({
+          overlayType: 'playlist',
+          label:       'Playlist (OBS)',
+          config:      {},
+          createdBy:   request.user!.userId,
+        })
+      }
+      return reply.send({ ok: true, token: overlay.token })
+    },
+  )
+
   // ── Soundboard public (page viewers) ────────────────────────────────────
   // Route PUBLIQUE (pas d'auth). Renvoie la biblio publique du streamer
   // principal + le now-playing depuis Redis. Pollée toutes les 2s par la
@@ -1329,14 +1533,28 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     const streamers = await listStreamers('twitch').catch(() => [])
     const owner = streamers[0]
     if (!owner?.userId) {
-      return reply.send({ ok: true, streamer: null, tracks: [], nowPlaying: null, queue: [], queueEnabled: false })
+      return reply.send({
+        ok: true, streamer: null, tracks: [], nowPlaying: null,
+        queue: [], queueEnabled: false, playlists: [],
+      })
     }
 
-    const [tracks, queue, queueEnabled] = await Promise.all([
+    const [tracks, queue, queueEnabled, playlists] = await Promise.all([
       listPublicTracks(owner.userId).catch(() => []),
       listSoundboardQueue(owner.userId).catch(() => []),
       isViewerQueueEnabled(owner.userId).catch(() => true),
+      listPublicPlaylists(owner.userId).catch(() => []),
     ])
+
+    // Pour chaque playlist publique, on récupère la liste ordonnée de ses
+    // tracks (juste les ids ici, le viewer aura les détails depuis `tracks`
+    // côté frontend via un map id → track). Évite de dupliquer la payload.
+    const playlistsWithTracks = await Promise.all(
+      playlists.map(async (p) => {
+        const items = await listTracksInPlaylist(p.id).catch(() => [])
+        return { ...p, trackIds: items.map(t => t.id) }
+      }),
+    )
 
     let nowPlaying: unknown = null
     try {
@@ -1354,6 +1572,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       nowPlaying,
       queue,
       queueEnabled,
+      playlists: playlistsWithTracks,
     })
   })
 
@@ -1516,6 +1735,108 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         ipAddress: request.ip,
         metadata:  { rewardId: request.params.id },
       })
+      return reply.send({ ok: true })
+    },
+  )
+
+  // ── Scènes OBS (compositeur visuel Nodyx) ──────────────────────────────
+  // CRUD pour les scènes du canvas WYSIWYG. Une scène = un layout 1920x1080
+  // contenant N sources positionnées. Phase A : maquette + génération d'URLs
+  // d'overlay. Phase B+ : sync avec OBS via WebSocket.
+
+  server.get('/obs/scenes', { preHandler: adminOnly }, async (request) => {
+    const scenes = await listScenesForOwner(request.user!.userId)
+    return { ok: true, scenes }
+  })
+
+  server.post<{ Body: { name?: string; color?: string | null; layout?: unknown } }>(
+    '/obs/scenes',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const name = (request.body?.name ?? '').trim()
+      if (!name) return reply.code(400).send({ ok: false, error: 'name_required' })
+      try {
+        const scene = await createScene({
+          ownerUserId: request.user!.userId,
+          name,
+          color:       request.body?.color ?? null,
+          layout:      request.body?.layout,
+        })
+        return reply.send({ ok: true, scene })
+      } catch (err) {
+        if ((err as Error).message === 'scene_name_taken') {
+          return reply.code(409).send({ ok: false, error: 'scene_name_taken' })
+        }
+        throw err
+      }
+    },
+  )
+
+  server.get<{ Params: { id: string } }>(
+    '/obs/scenes/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const scene = await getScene(request.params.id)
+      if (!scene) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (scene.ownerUserId !== request.user!.userId) {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      return reply.send({ ok: true, scene })
+    },
+  )
+
+  server.patch<{ Params: { id: string }; Body: { name?: string; color?: string | null; layout?: unknown } }>(
+    '/obs/scenes/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const existing = await getScene(request.params.id)
+      if (!existing) return reply.code(404).send({ ok: false, error: 'not_found' })
+      if (existing.ownerUserId !== request.user!.userId) {
+        return reply.code(403).send({ ok: false, error: 'forbidden' })
+      }
+      try {
+        const scene = await updateScene(request.params.id, {
+          name:   request.body?.name,
+          color:  request.body?.color,
+          layout: request.body?.layout,
+        })
+        return reply.send({ ok: true, scene })
+      } catch (err) {
+        if ((err as Error).message === 'scene_name_taken') {
+          return reply.code(409).send({ ok: false, error: 'scene_name_taken' })
+        }
+        throw err
+      }
+    },
+  )
+
+  server.delete<{ Params: { id: string } }>(
+    '/obs/scenes/:id',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const ok = await deleteScene(request.params.id, request.user!.userId)
+      if (!ok) return reply.code(404).send({ ok: false, error: 'not_found_or_forbidden' })
+      return reply.send({ ok: true })
+    },
+  )
+
+  server.post<{ Params: { id: string } }>(
+    '/obs/scenes/:id/duplicate',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const scene = await duplicateScene(request.params.id, request.user!.userId)
+      if (!scene) return reply.code(404).send({ ok: false, error: 'not_found_or_forbidden' })
+      return reply.send({ ok: true, scene })
+    },
+  )
+
+  server.post<{ Body: { sceneIds?: string[] } }>(
+    '/obs/scenes/reorder',
+    { preHandler: adminOnly },
+    async (request, reply) => {
+      const ids = Array.isArray(request.body?.sceneIds) ? request.body!.sceneIds : []
+      if (ids.length === 0) return reply.code(400).send({ ok: false, error: 'scene_ids_required' })
+      await reorderScenes(request.user!.userId, ids)
       return reply.send({ ok: true })
     },
   )
@@ -1698,6 +2019,37 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       },
     })
   })
+
+  // GET /overlay/playlist/:token/:playlistId — token-gated — payload pour la
+  // page d'overlay OBS qui lit une playlist en autoplay loop. Le token EST
+  // l'auth (créé pour le streamer, type 'playlist'). On vérifie que la
+  // playlist appartient bien au même owner pour empêcher un token qui se
+  // baladerait de jouer les playlists d'un autre streamer.
+  server.get<{ Params: { token: string; playlistId: string } }>(
+    '/overlay/playlist/:token/:playlistId',
+    async (request, reply) => {
+      const overlay = await findOverlayByToken(request.params.token)
+      if (!overlay || overlay.overlayType !== 'playlist' || !overlay.createdBy) {
+        return reply.code(404).send({ ok: false, error: 'not_found' })
+      }
+      const pl = await getPlaylist(request.params.playlistId)
+      if (!pl) return reply.code(404).send({ ok: false, error: 'playlist_not_found' })
+      if (pl.ownerUserId !== overlay.createdBy) {
+        return reply.code(403).send({ ok: false, error: 'cross_owner_forbidden' })
+      }
+      const tracks = await listTracksInPlaylist(pl.id)
+      return reply.send({
+        ok: true,
+        playlist: {
+          id:          pl.id,
+          name:        pl.name,
+          description: pl.description,
+          color:       pl.color,
+        },
+        tracks,
+      })
+    },
+  )
 
   // GET /stats  — admin only — totaux + séries journalières des events EventSub
   // sur les N derniers jours (default 7, max 30). Sert à alimenter les sparklines

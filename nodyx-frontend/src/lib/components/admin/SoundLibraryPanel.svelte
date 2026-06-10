@@ -5,6 +5,7 @@
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import Tooltip from '$lib/components/ui/Tooltip.svelte'
 	import SendToDeckModal from './SendToDeckModal.svelte'
+	import PlaylistSidebar, { type Playlist } from './PlaylistSidebar.svelte'
 
 	// Soundboard / bibliothèque audio : upload mp3/ogg/wav, extraction ID3 (titre,
 	// artiste, durée, cover art), preview, édition (volume défaut, fade in/out,
@@ -43,6 +44,20 @@
 	let tracks    = $state<AudioTrack[]>([])
 	let loading   = $state(true)
 	let uploading = $state(false)
+
+	// Playlists : sidebar gauche. selectedPlaylistId = null => "Toutes les pistes"
+	// (comportement par défaut, on affiche `tracks`). Sinon on charge les tracks
+	// de la playlist via /streamer/audio-library/playlists/:id et on les filtre.
+	let playlists          = $state<Playlist[]>([])
+	let selectedPlaylistId = $state<string | null>(null)
+	let playlistTracks     = $state<AudioTrack[]>([])
+	let playlistTracksLoading = $state(false)
+
+	// Popover "ajouter à une playlist" pour un track donné. trackId qu'on a
+	// ouvert + Set des playlist ids dans lesquelles ce track est déjà.
+	let playlistMenuTrackId = $state<string | null>(null)
+	let playlistMenuMembership = $state<Set<string>>(new Set())
+	let playlistMenuBusy = $state(false)
 	let uploadProgress = $state<{ done: number; total: number; current: string; failed: number }>({ done: 0, total: 0, current: '', failed: 0 })
 	let toast     = $state<{ text: string; ok: boolean } | null>(null)
 
@@ -147,7 +162,12 @@
 		return SOUND_GRADIENTS[h % SOUND_GRADIENTS.length]
 	}
 
-	const filtered = $derived(tracks.filter(t => {
+	// Source des pistes selon la sélection sidebar :
+	//   - null  => toutes les pistes de l'owner (full library)
+	//   - <id>  => uniquement les pistes de cette playlist (chargées séparément)
+	const baseTracks = $derived(selectedPlaylistId === null ? tracks : playlistTracks)
+
+	const filtered = $derived(baseTracks.filter(t => {
 		if (visibilityFilter !== 'all' && t.visibility !== visibilityFilter) return false
 		if (query.trim()) {
 			const q = query.trim().toLowerCase()
@@ -188,6 +208,102 @@
 			}
 		} finally {
 			loading = false
+		}
+	}
+
+	async function loadPlaylists(): Promise<void> {
+		const res = await apiFetch(fetch, '/streamer/audio-library/playlists', {
+			headers: { Authorization: `Bearer ${token}` },
+		})
+		if (res.ok) {
+			const d = await res.json() as { playlists: Playlist[] }
+			playlists = d.playlists ?? []
+		}
+	}
+
+	// Recharge les tracks de la playlist sélectionnée (si une l'est).
+	async function loadPlaylistTracks(playlistId: string): Promise<void> {
+		playlistTracksLoading = true
+		try {
+			const res = await apiFetch(fetch, `/streamer/audio-library/playlists/${playlistId}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			})
+			if (res.ok) {
+				const d = await res.json() as { tracks: AudioTrack[] }
+				playlistTracks = d.tracks ?? []
+			} else {
+				playlistTracks = []
+			}
+		} finally {
+			playlistTracksLoading = false
+		}
+	}
+
+	function onSelectPlaylist(id: string | null): void {
+		selectedPlaylistId = id
+		stopPreview()
+		closePlaylistMenu()
+		if (id) loadPlaylistTracks(id)
+		else playlistTracks = []
+	}
+
+	async function onPlaylistsChanged(): Promise<void> {
+		await loadPlaylists()
+		// Si la playlist active a disparu (delete), on revient sur "Toutes".
+		if (selectedPlaylistId && !playlists.some(p => p.id === selectedPlaylistId)) {
+			selectedPlaylistId = null
+			playlistTracks = []
+		}
+	}
+
+	// Popover "ajouter à playlists" pour un track : charge ses playlists ids et
+	// ouvre le menu. Re-cliquer sur le même track ferme le menu.
+	async function openPlaylistMenu(trackId: string): Promise<void> {
+		if (playlistMenuTrackId === trackId) {
+			closePlaylistMenu()
+			return
+		}
+		playlistMenuTrackId = trackId
+		playlistMenuMembership = new Set()
+		const res = await apiFetch(fetch, `/streamer/audio-library/${trackId}/playlists`, {
+			headers: { Authorization: `Bearer ${token}` },
+		})
+		if (res.ok) {
+			const d = await res.json() as { playlistIds: string[] }
+			playlistMenuMembership = new Set(d.playlistIds ?? [])
+		}
+	}
+
+	function closePlaylistMenu(): void {
+		playlistMenuTrackId = null
+		playlistMenuMembership = new Set()
+	}
+
+	async function toggleTrackInPlaylist(trackId: string, playlistId: string): Promise<void> {
+		if (playlistMenuBusy) return
+		playlistMenuBusy = true
+		const isIn = playlistMenuMembership.has(playlistId)
+		try {
+			const url = `/streamer/audio-library/playlists/${playlistId}/tracks${isIn ? `/${trackId}` : ''}`
+			const res = await apiFetch(fetch, url, {
+				method:  isIn ? 'DELETE' : 'POST',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+				body:    isIn ? undefined : JSON.stringify({ trackId }),
+			})
+			if (res.ok) {
+				// Update optimiste du membership
+				const next = new Set(playlistMenuMembership)
+				if (isIn) next.delete(playlistId)
+				else      next.add(playlistId)
+				playlistMenuMembership = next
+				// Refresh des compteurs sidebar + tracks playlist active si concernée
+				loadPlaylists()
+				if (selectedPlaylistId === playlistId) loadPlaylistTracks(playlistId)
+			} else {
+				flash('Échec mise à jour playlist.', false)
+			}
+		} finally {
+			playlistMenuBusy = false
 		}
 	}
 
@@ -352,6 +468,7 @@
 
 	onMount(() => {
 		loadTracks()
+		loadPlaylists()
 		loadQueue()
 		// Poll la queue toutes les 4s pour voir les ajouts viewers arriver en
 		// quasi temps réel sans surcharger (l'admin reste connecté à ce panel
@@ -518,6 +635,20 @@
 			onchange={(e) => handleFiles((e.currentTarget as HTMLInputElement).files)} disabled={uploading}/>
 	</label>
 
+	<!-- Layout 2 colonnes : sidebar playlists | bibliothèque filtrée -->
+	<div class="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-4 items-start">
+		<!-- Sidebar : navigation par playlist -->
+		<PlaylistSidebar
+			{token}
+			{playlists}
+			{selectedPlaylistId}
+			{onSelectPlaylist}
+			{onPlaylistsChanged}
+		/>
+
+		<!-- Colonne droite : filtres + biblio -->
+		<div class="space-y-3">
+
 	<!-- Filtres + recherche -->
 	<div class="flex items-center gap-2 flex-wrap">
 		<div class="flex items-center gap-1 bg-zinc-900 border border-zinc-800 p-0.5 rounded-sm">
@@ -540,16 +671,28 @@
 
 	<!-- Liste : grille tabulaire. -->
 	<div>
-		<div class="flex items-baseline justify-between mb-2">
-			<h3 class="text-xs uppercase tracking-wide font-medium text-zinc-500">Pistes</h3>
-			{#if filtered.length > 0}<span class="text-xs text-zinc-600">{filtered.length} / {tracks.length}</span>{/if}
+		<div class="flex items-baseline justify-between mb-2 gap-2">
+			<h3 class="text-xs uppercase tracking-wide font-medium text-zinc-500 truncate">
+				{#if selectedPlaylistId}
+					{@const p = playlists.find(x => x.id === selectedPlaylistId)}
+					{p?.name ?? 'Playlist'}
+				{:else}
+					Toutes les pistes
+				{/if}
+			</h3>
+			{#if filtered.length > 0}<span class="text-xs text-zinc-600 shrink-0">{filtered.length} / {baseTracks.length}</span>{/if}
 		</div>
 
-		{#if loading}
+		{#if loading || playlistTracksLoading}
 			<div class="border border-zinc-800 bg-zinc-900 px-4 py-6 text-sm text-zinc-500">Chargement…</div>
 		{:else if tracks.length === 0}
 			<div class="border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-8 text-center text-sm text-zinc-500">
 				Aucune piste. Dépose tes premiers fichiers audio ci-dessus pour démarrer.
+			</div>
+		{:else if selectedPlaylistId && baseTracks.length === 0}
+			<div class="border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center text-sm text-zinc-500 leading-relaxed">
+				Playlist vide. Reviens sur <button type="button" onclick={() => onSelectPlaylist(null)} class="text-purple-300 hover:underline">Toutes les pistes</button>
+				et utilise l'icône <span class="text-zinc-300">≡</span> à côté de chaque son pour le ranger ici.
 			</div>
 		{:else if filtered.length === 0}
 			<div class="border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center text-sm text-zinc-500">
@@ -558,7 +701,7 @@
 		{:else}
 			<div class="border border-zinc-800 bg-zinc-900">
 				<!-- Header colonnes : vignette | titre/artiste | durée | visibilité | actions -->
-				<div class="grid grid-cols-[56px_minmax(0,1fr)_80px_140px_260px] gap-4 px-4 py-2 border-b border-zinc-800 bg-zinc-950 text-[11px] uppercase tracking-wide font-medium text-zinc-500">
+				<div class="grid grid-cols-[56px_1fr_80px_140px_auto] gap-4 px-4 py-2 border-b border-zinc-800 bg-zinc-950 text-[11px] uppercase tracking-wide font-medium text-zinc-500">
 					<span></span>
 					<span>Titre</span>
 					<span>Durée</span>
@@ -567,7 +710,7 @@
 				</div>
 				<ul class="divide-y divide-zinc-800">
 					{#each filtered as t (t.id)}
-						<li class="grid grid-cols-[56px_minmax(0,1fr)_80px_140px_260px] gap-4 px-4 py-3 items-center {editingId === t.id ? 'bg-purple-500/[0.04] border-l-2 border-l-purple-500' : ''}">
+						<li class="grid grid-cols-[56px_1fr_80px_140px_auto] gap-4 px-4 py-3 items-center {editingId === t.id ? 'bg-purple-500/[0.04] border-l-2 border-l-purple-500' : ''}">
 							<!-- Col 1 : vignette / fallback -->
 							<div class="w-12 h-12 bg-zinc-950 border border-zinc-800 flex items-center justify-center overflow-hidden">
 								{#if t.thumbnailUrl}
@@ -605,7 +748,7 @@
 							</div>
 
 							<!-- Col 5 : actions -->
-							<div class="flex items-center gap-1.5 justify-end">
+							<div class="flex items-center gap-1.5 justify-end relative">
 								<button type="button" onclick={() => togglePreview(t)}
 									class="text-xs inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors"
 									title={previewingId === t.id ? 'Arrêter' : 'Écouter'}>
@@ -623,6 +766,15 @@
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
 									Deck
 								</button>
+								<!-- Bouton ouverture popover playlists pour ce track. -->
+								<button type="button" onclick={() => openPlaylistMenu(t.id)}
+									class="text-xs inline-flex items-center bg-zinc-800 hover:bg-zinc-700 border {playlistMenuTrackId === t.id ? 'border-purple-500/60 text-purple-200' : 'border-zinc-700 hover:border-purple-500/60 hover:text-purple-200'} text-zinc-100 px-2 py-1 rounded-sm transition-colors"
+									title="Ranger dans une playlist">
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+										<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="13" y2="18"/>
+										<polyline points="3 6 4 7 5 6"/><polyline points="3 12 4 13 5 12"/><polyline points="3 18 4 19 5 18"/>
+									</svg>
+								</button>
 								<button type="button" onclick={() => editingId === t.id ? cancelEdit() : startEdit(t)}
 									class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors">
 									{editingId === t.id ? 'Fermer' : 'Éditer'}
@@ -637,6 +789,40 @@
 										<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
 									</svg>
 								</button>
+
+								<!-- Popover playlists : ancré sous les actions, fermé par clic sur le même bouton. -->
+								{#if playlistMenuTrackId === t.id}
+									<div class="absolute top-full right-0 mt-1.5 z-20 w-64 bg-zinc-950 border border-zinc-800 shadow-xl rounded-sm overflow-hidden">
+										<div class="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
+											<span class="text-[11px] uppercase tracking-wide font-medium text-zinc-400">Playlists</span>
+											<button type="button" onclick={closePlaylistMenu} class="text-xs text-zinc-500 hover:text-zinc-300" title="Fermer">✕</button>
+										</div>
+										{#if playlists.length === 0}
+											<div class="px-3 py-3 text-[11px] text-zinc-500 text-center">
+												Aucune playlist. Crée-en une dans la sidebar à gauche.
+											</div>
+										{:else}
+											<ul class="max-h-56 overflow-y-auto py-1">
+												{#each playlists as p (p.id)}
+													{@const inIt = playlistMenuMembership.has(p.id)}
+													<li>
+														<button type="button" onclick={() => toggleTrackInPlaylist(t.id, p.id)} disabled={playlistMenuBusy}
+															class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors {inIt ? 'text-zinc-100 bg-purple-500/10' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60'}">
+															<span class="w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 {inIt ? 'bg-purple-500 border-purple-400' : 'border-zinc-600'}">
+																{#if inIt}
+																	<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+																{/if}
+															</span>
+															<span class="w-2 h-2 rounded-full shrink-0" style="background: {p.color ?? '#a78bfa'};"></span>
+															<span class="flex-1 truncate" title={p.name}>{p.name}</span>
+															<span class="text-[10px] text-zinc-600 font-mono">{p.trackCount}</span>
+														</button>
+													</li>
+												{/each}
+											</ul>
+										{/if}
+									</div>
+								{/if}
 							</div>
 						</li>
 
@@ -752,6 +938,9 @@
 			</div>
 		{/if}
 	</div>
+
+		</div><!-- /colonne droite -->
+	</div><!-- /grid 2 colonnes -->
 </section>
 
 {#if sendToDeckTrack}

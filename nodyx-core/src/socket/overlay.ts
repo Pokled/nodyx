@@ -50,6 +50,14 @@ export function registerOverlayNamespace(server: Server): void {
       socket.join(`soundboard:${createdBy}`)
     }
 
+    // Playlist : un overlay par scène OBS peut tourner en parallèle, tous
+    // dans la même room. Quand le streamer presse un bouton "playlist_control"
+    // sur son Deck, le service envoie un event `playlist:control` à cette
+    // room et chaque overlay applique localement (play/pause/skip/volume).
+    if (overlayType === 'playlist' && createdBy) {
+      socket.join(`playlist:${createdBy}`)
+    }
+
     // Trace last connection pour le debug admin ("dernière connexion OBS").
     touchOverlayLastSeen(overlayId).catch(() => {})
 

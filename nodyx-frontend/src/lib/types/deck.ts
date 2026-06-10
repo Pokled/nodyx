@@ -13,6 +13,10 @@ export type DeckActionType =
 	| 'stop_audio'
 	| 'pause_audio'
 	| 'navigate_page'
+	| 'playlist_control'
+
+export type PlaylistControlCmd =
+	| 'play' | 'pause' | 'toggle' | 'skip' | 'prev' | 'stop' | 'volume'
 
 export interface DeckAction {
 	type:          DeckActionType
@@ -34,6 +38,13 @@ export interface DeckAction {
 	// navigate_page : soit cible directe, soit jump relatif. Géré client-side.
 	targetPageId?: string
 	pageJump?:     'next' | 'prev' | 'home'
+	// playlist_control : pilote l'overlay playlist OBS via socket. `cmd`
+	// requis ; `playlistId` seulement pour 'play' (switch). `volumeMode` +
+	// `volumeValue` pour 'volume'.
+	cmd?:          PlaylistControlCmd
+	playlistId?:   string
+	volumeMode?:   'delta' | 'absolute'
+	volumeValue?:  number
 }
 
 export interface DeckButton {
