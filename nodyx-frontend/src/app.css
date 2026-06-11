@@ -108,7 +108,8 @@ select option {
 }
 .nodyx-prose .toc a:hover { color: white; text-decoration: underline; }
 @media (max-width: 640px) {
-    .nodyx-prose .toc {
+    .nodyx-prose .toc,
+    .nodyx-content .tiptap .toc {
         float: none;
         width: 100%;
         max-width: 100%;

@@ -123,7 +123,7 @@
 
 	// ── Initialise Tiptap (browser-only) ──────────────────────────────────────
 	onMount(async () => {
-		const { Editor, Node, mergeAttributes } = await import('@tiptap/core')
+		const { Editor, Node, Extension, mergeAttributes } = await import('@tiptap/core')
 		const { default: StarterKit }            = await import('@tiptap/starter-kit')
 		const { default: Underline }             = await import('@tiptap/extension-underline')
 		const { default: TextAlign }             = await import('@tiptap/extension-text-align')
@@ -151,6 +151,44 @@
 					align: { default: 'center', parseHTML: el => el.getAttribute('data-align'), renderHTML: attrs => ({ 'data-align': attrs.align }) },
 					width: { default: null, parseHTML: el => el.getAttribute('width'), renderHTML: attrs => attrs.width ? { width: attrs.width } : {} },
 				}
+			},
+		})
+
+		// ── Heading anchors ──────────────────────────────────────────────────
+		// Attribut id sur les titres : posé automatiquement par le bouton
+		// Sommaire, préservé au round-trip HTML. Le sanitizer backend ne
+		// l'accepte que sur h2/h3/h4 (cf forums.ts), le bouton ne cible que
+		// les niveaux 2-3.
+		const HeadingIds = Extension.create({
+			name: 'headingIds',
+			addGlobalAttributes() {
+				return [{
+					types: ['heading'],
+					attributes: {
+						id: {
+							default: null,
+							parseHTML: (el: HTMLElement) => el.getAttribute('id'),
+							renderHTML: (attrs: Record<string, any>) => attrs.id ? { id: attrs.id } : {},
+						},
+					},
+				}]
+			},
+		})
+
+		// ── Boîte sommaire façon wiki ────────────────────────────────────────
+		// <div class="toc"> flottant à droite (style .toc dans app.css).
+		// Contenu libre : le bouton Sommaire la pré-remplit avec les liens
+		// d'ancres, mais l'auteur peut l'éditer comme n'importe quel bloc.
+		const TocBox = Node.create({
+			name: 'tocBox',
+			group: 'block',
+			content: 'block+',
+			isolating: true,
+			selectable: true,
+			draggable: true,
+			parseHTML()  { return [{ tag: 'div.toc' }] },
+			renderHTML({ HTMLAttributes }) {
+				return ['div', mergeAttributes(HTMLAttributes, { class: 'toc' }), 0]
 			},
 		})
 
@@ -297,6 +335,7 @@
 				Placeholder.configure({ placeholder: resolvedPlaceholder }),
 				CharacterCount,
 				CodeBlockLowlight.configure({ lowlight }),
+				HeadingIds, TocBox,
 				NodyxTwoCols, NodyxColumn,
 				NodyxAudio, NodyxTrack,
 			],
@@ -599,6 +638,7 @@
 			justify:   () => chain.setTextAlign('justify').run(),
 			hr:        () => chain.setHorizontalRule().run(),
 			twoCols:   () => (chain as any).insertTwoCols().run(),
+			toc:       () => insertToc(),
 			// Table
 			insertTable:  () => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
 			addRowAfter:  () => chain.addRowAfter().run(),
@@ -610,6 +650,71 @@
 			delTable:     () => chain.deleteTable().run(),
 		}
 		actions[key]?.()
+	}
+
+	// ── Sommaire automatique ──────────────────────────────────────────────────
+	// Scanne les titres h2/h3 du document, pose une ancre (id slugifié) sur
+	// ceux qui n'en ont pas, puis insère au curseur une boîte .toc (façon
+	// wiki, flottante à droite côté rendu) avec les liens vers chaque titre.
+	function slugifyHeading(s: string): string {
+		const slug = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+			.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+		return slug || 'section'
+	}
+
+	function insertToc(): void {
+		if (!editor) return
+		const seen: Record<string, number> = {}
+		const entries: Array<{ id: string; text: string; level: number }> = []
+		const updates: Array<{ pos: number; id: string }> = []
+
+		editor.state.doc.descendants((node: any, pos: number) => {
+			if (node.type.name !== 'heading') return
+			const level = node.attrs.level
+			if (level !== 2 && level !== 3) return   // le sanitizer n'accepte id que sur h2-h4
+			const text = node.textContent.trim()
+			if (!text) return
+			let id = node.attrs.id as string | null
+			if (!id) {
+				const base = slugifyHeading(text)
+				seen[base] = (seen[base] ?? 0) + 1
+				id = seen[base] > 1 ? `${base}-${seen[base]}` : base
+				updates.push({ pos, id })
+			}
+			entries.push({ id, text, level })
+		})
+
+		if (entries.length === 0) return   // pas de titres : rien à sommairer
+
+		// Pose les ancres manquantes (setNodeMarkup ne change pas les positions).
+		if (updates.length > 0) {
+			editor.chain().command(({ tr, state }: any) => {
+				for (const u of updates) {
+					const node = state.doc.nodeAt(u.pos)
+					if (node) tr.setNodeMarkup(u.pos, undefined, { ...node.attrs, id: u.id })
+				}
+				return true
+			}).run()
+		}
+
+		// Construit la liste de liens : un par ligne (hardBreak), h3 indentés.
+		const links: any[] = []
+		entries.forEach((e, i) => {
+			if (i > 0) links.push({ type: 'hardBreak' })
+			links.push({ type: 'text', text: e.level === 3 ? '   ▸ ' : '▸ ' })
+			links.push({
+				type: 'text', text: e.text,
+				marks: [{ type: 'link', attrs: { href: `#${e.id}`, target: null } }],
+			})
+		})
+
+		editor.chain().focus().insertContent({
+			type: 'tocBox',
+			content: [
+				{ type: 'paragraph', content: [{ type: 'text', text: 'Sommaire', marks: [{ type: 'bold' }] }] },
+				{ type: 'paragraph', content: links },
+			],
+		}).run()
 	}
 
 	// ── Preset colours & emoji ────────────────────────────────────────────────
@@ -911,6 +1016,11 @@
 		<!-- Deux colonnes -->
 		<button type="button" onclick={() => toggleAny('twoCols')} class="tb-btn" title={tFn('editor.two_cols')}>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="9" height="18" rx="1.5" stroke-width="2"/><rect x="13" y="3" width="9" height="18" rx="1.5" stroke-width="2"/></svg>
+		</button>
+
+		<!-- Sommaire (ancres auto) -->
+		<button type="button" onclick={() => toggleAny('toc')} class="tb-btn" title={tFn('editor.toc')}>
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>
 		</button>
 
 		<div class="tb-sep"></div>
