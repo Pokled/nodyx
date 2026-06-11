@@ -85,6 +85,37 @@ select option {
 .nodyx-prose h4[id] {
     scroll-margin-top: 5rem;
 }
+
+/* ── Boîte sommaire façon wiki ────────────────────────────────────────────── */
+/* <div class="toc"> : encadré flottant à droite avec la liste des ancres,
+   comme la table des matières d'un wiki. Pleine largeur sur mobile. */
+.nodyx-prose .toc {
+    float: right;
+    width: 300px;
+    max-width: 45%;
+    margin: 0 0 1rem 1.25rem;
+    padding: 0.875rem 1rem;
+    background: rgb(17 24 39 / 0.7);
+    border: 1px solid rgb(55 65 81);
+    border-radius: 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.9;
+}
+.nodyx-prose .toc p { margin-bottom: 0.25rem; }
+.nodyx-prose .toc a {
+    color: rgb(165 180 252);
+    text-decoration: none;
+}
+.nodyx-prose .toc a:hover { color: white; text-decoration: underline; }
+@media (max-width: 640px) {
+    .nodyx-prose .toc {
+        float: none;
+        width: 100%;
+        max-width: 100%;
+        margin: 0 0 1rem 0;
+    }
+}
+
 .nodyx-prose h1,
 .nodyx-content .tiptap h1 {
     font-size: 1.5rem; font-weight: 700; color: white;
@@ -177,6 +208,7 @@ select option {
     border: none;
     border-top: 1px solid rgb(55 65 81);
     margin: 1.25rem 0;
+    clear: both;   /* coupe les flottants (images alignées, boîte .toc) */
 }
 
 /* ── Liens ────────────────────────────────────────────────────────────────── */
