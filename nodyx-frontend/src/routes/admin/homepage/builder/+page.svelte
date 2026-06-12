@@ -13,7 +13,7 @@
 	import {
 		DEFAULT_THEME, genId, makeRow, makeRowFromSpans
 	} from '$lib/types/homepage'
-	import { untrack } from 'svelte'
+	import { untrack, tick } from 'svelte'
 
 	let { data }: { data: PageData } = $props()
 
@@ -186,6 +186,17 @@
 		draft = { ...draft, rows: [...draft.rows, newRow] }
 		showAddRow = false
 		markUnsaved()
+		// La nouvelle ligne naît en bas du layout : sur une page longue elle
+		// serait hors écran et l'admin devait scroller à la main pour la
+		// trouver. On amène le canvas dessus (centrée) avec un flash bref
+		// pour que l'œil atterrisse direct sur la zone éditable.
+		tick().then(() => {
+			const el = document.querySelector(`.canvas-preview [data-row-id="${newRow.id}"]`)
+			if (!el) return
+			el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			el.classList.add('gr-row--born')
+			setTimeout(() => el.classList.remove('gr-row--born'), 1600)
+		})
 	}
 
 	function deleteRow(rowId: string) {
@@ -1791,6 +1802,17 @@
 		box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 8px 40px rgba(0,0,0,.5);
 		transition: max-width 0.3s ease;
 		position: relative;
+	}
+
+	/* Flash de naissance d'une ligne : la classe est posée par addRow() sur
+	   l'élément du GridRenderer (DOM externe au scope Svelte → :global). */
+	:global(.canvas-preview .gr-row--born) {
+		animation: row-born 1.6s ease-out;
+	}
+	@keyframes row-born {
+		0%   { box-shadow: inset 0 0 0 2px rgba(167, 139, 250, .9);  background: rgba(167, 139, 250, .10); }
+		60%  { box-shadow: inset 0 0 0 2px rgba(167, 139, 250, .45); background: rgba(167, 139, 250, .04); }
+		100% { box-shadow: inset 0 0 0 2px rgba(167, 139, 250, 0);   background: transparent; }
 	}
 
 	.canvas-empty {
