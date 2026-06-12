@@ -1,4 +1,13 @@
 <script lang="ts">
+	// Les scrapers OG (Discord, Twitter, Facebook) exigent des URLs absolues
+	// et lisent le HTML SSR : l'origin vient de $page.url, jamais de window.
+	// Les bannières/logos sont stockés en chemins relatifs (/uploads/...).
+	function absolutize(url: string | null | undefined, origin: string): string | null {
+		if (!url) return null
+		if (/^https?:\/\//.test(url)) return url
+		return origin + url
+	}
+
 	import { enhance } from '$app/forms';
 	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -66,7 +75,7 @@
 	<meta property="og:description" content="Discussion par {thread.author_username} · {thread.post_count} {tFn('forum.replies_label')} · {thread.views} {tFn('forum.views')}" />
 	<meta property="og:type"        content="article" />
 	<meta property="og:url"         content={$page.url.href} />
-	<meta property="og:image"       content={$page.data.communityBannerUrl ?? $page.data.communityLogoUrl ?? `${$page.url.origin}/default-og-image.png`} />
+	<meta property="og:image"       content={absolutize($page.data.communityBannerUrl ?? $page.data.communityLogoUrl, $page.url.origin) ?? `${$page.url.origin}/og-image.jpg`} />
 	<meta property="og:site_name"   content={$page.data.communityName ?? 'Nodyx'} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		"@context": "https://schema.org",
