@@ -33,13 +33,13 @@ export const GET: RequestHandler = async ({ fetch, url }) => {
 
 			// Page de chaque catégorie
 			for (const cat of flat) {
-				entries.push(urlEntry(`${origin}/forum/${cat.id}`, undefined, '0.8', 'daily'));
+				entries.push(urlEntry(`${origin}/forum/${cat.slug ?? cat.id}`, undefined, '0.8', 'daily'));
 			}
 
 			// Threads — fetch toutes les catégories en parallèle
 			const threadBatches = await Promise.all(
 				flat.map((cat: any) =>
-					apiFetch(fetch, `/forums/threads?category_id=${cat.id}&limit=500`)
+					apiFetch(fetch, `/forums/threads?category_id=${cat.id}&limit=100`)
 						.then(r => r.ok ? r.json() : { threads: [] })
 						.then(j => (j.threads ?? []) as any[])
 						.catch(() => [] as any[])

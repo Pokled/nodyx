@@ -450,6 +450,14 @@
 	     (community identity) prevents an uploaded square logo from being
 	     stretched into a 16×16 tab icon. -->
 	<meta property="og:site_name" content={communityName} />
+	<!-- og:image en URL ABSOLUE : Discord/Twitter/Facebook ne résolvent pas
+	     les chemins relatifs (l'ancien /og-image.jpg de app.html ne
+	     s'affichait jamais dans les partages). Les pages qui définissent
+	     leur propre og:image (threads) ajoutent la leur en plus. -->
+	<meta property="og:image" content="{$page.url.origin}/og-image.jpg" />
+	<meta property="og:image:width"  content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="theme-color" content="#6366f1" />
 	<!-- Preload all Google Font presets (avatar/username effects) -->
 	<link rel="preconnect" href="https://fonts.googleapis.com" />

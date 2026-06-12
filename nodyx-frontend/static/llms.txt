@@ -1,42 +1,55 @@
-# Nexus
+# Nodyx
 
-> Nexus est une plateforme de forum communautaire libre, open source et décentralisée.
+> Nodyx est une plateforme communautaire libre, open source (AGPL-3.0),
+> auto-hébergée et décentralisée : forum, chat temps réel et salons vocaux.
 > Le contenu de ce forum est public, indexable et appartient à ses auteurs.
 > "Le réseau, ce sont les gens."
 
 ## À propos
 
-Nexus est un forum communautaire conçu pour que le savoir reste accessible et indexable.
-Contrairement à Discord ou Slack, chaque discussion est une page web permanente, lisible sans compte, indexée par les moteurs de recherche et les IA.
+Nodyx est conçu pour que le savoir des communautés reste accessible et
+indexable. Contrairement aux plateformes fermées (où les discussions
+disparaissent dans un flux), chaque discussion Nodyx est une page web
+permanente, lisible sans compte, indexée par les moteurs de recherche et
+les assistants IA. Une instance = une communauté ; le réseau est fédéré
+via un annuaire d'instances.
+
+Site officiel du projet : https://nodyx.org
+Documentation : https://nodyx.dev
+Code source : https://github.com/Pokled/nodyx
 
 ## Structure du contenu
 
-- [Accueil](/): Liste des communautés et catégories de discussion
-- [Forum](/forum/): Catégories de discussion avec leurs threads
-- [Sitemap](/sitemap.xml): Index complet de tout le contenu public
-- [RSS](/rss.xml): Flux des derniers sujets publiés
+- [Accueil](/): page d'accueil de la communauté (widgets, articles mis en avant)
+- [Forum](/forum): catégories de discussion avec leurs fils
+- [Sitemap](/sitemap.xml): index complet du contenu public (catégories + fils)
+- [RSS](/rss.xml): flux des derniers sujets publiés
 
 ## Contenu disponible
 
-Les discussions du forum couvrent des sujets communautaires librement choisis par les membres.
-Chaque thread est une page HTML complète avec : titre, auteur, date, contenu, réponses.
-Tout le contenu est rendu côté serveur (SSR) — aucun JavaScript requis pour lire le contenu.
+Les discussions du forum couvrent des sujets librement choisis par les membres.
+Chaque fil est une page HTML complète : titre, auteur, date, contenu, réponses,
+avec données structurées schema.org (DiscussionForumPosting) et URL canonique.
+Tout est rendu côté serveur (SSR) : aucun JavaScript requis pour lire le contenu.
+URLs canoniques : /forum/{slug-de-categorie}/{slug-du-fil}
 
 ## Ce qui n'est PAS indexable
 
-- /auth/ — pages d'authentification (login, inscription)
-- Contenus privés des communautés non-publiques
+- /auth/ — pages d'authentification (connexion, inscription)
+- /admin/ — administration de l'instance
+- /api/ — API (JSON, pas du contenu de page)
+- Messages privés et salons de chat (réservés aux membres)
 
 ## API publique
 
-Une API JSON est disponible pour accéder au contenu de façon structurée :
-- GET /api/v1/communities — liste des communautés publiques
-- GET /api/v1/forums/:slug — catégories d'une communauté
-- GET /api/v1/forums/threads?category_id=X — threads d'une catégorie
-- GET /api/v1/forums/threads/:id — thread complet avec posts
+Une API JSON est disponible pour accéder au contenu public de façon structurée :
+- GET /api/v1/instance/info — identité de l'instance
+- GET /api/v1/instance/categories — catégories du forum
+- GET /api/v1/forums/threads?category_id={slug} — fils d'une catégorie
+- GET /api/v1/forums/threads/{slug} — fil complet avec réponses
 - GET /api/v1/search?q=... — recherche full-text
 
 ## Licence
 
-Le code source de Nexus est sous licence AGPL-3.0.
+Le code source de Nodyx est sous licence AGPL-3.0.
 Le contenu des discussions appartient à leurs auteurs respectifs.
