@@ -117,6 +117,80 @@ select option {
     }
 }
 
+/* ── Console SSH simulée ──────────────────────────────────────────────────── */
+/* <div class="nodyx-term"> : reproduit une fenêtre de terminal pour les tutos
+   d'installation. Barre de titre + corps monospace. Les couleurs passent par
+   des classes (le sanitizer n'autorise style que sur p/span, pas sur div) :
+     .t-prompt  invite shell        .t-cmd   commande tapée par l'utilisateur
+     .t-q       question du script  .t-a     réponse à donner (surlignée)
+     .t-ok      ligne ✔ verte       .t-info  ligne → cyan
+     .t-warn    ligne ⚠ jaune       .t-muted commentaire discret             */
+.nodyx-prose .nodyx-term,
+.nodyx-content .tiptap .nodyx-term {
+    margin: 1rem 0;
+    border: 1px solid rgb(31 41 55);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: #0a0e16;
+    box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.65);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.7;
+}
+.nodyx-prose .nodyx-term .term-bar,
+.nodyx-content .tiptap .nodyx-term .term-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.85rem;
+    background: rgb(17 24 39);
+    border-bottom: 1px solid rgb(31 41 55);
+}
+.nodyx-prose .nodyx-term .term-dot,
+.nodyx-content .tiptap .nodyx-term .term-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    display: inline-block; flex: none;
+}
+.nodyx-term .term-dot--r { background: #ff5f56; }
+.nodyx-term .term-dot--y { background: #ffbd2e; }
+.nodyx-term .term-dot--g { background: #27c93f; }
+.nodyx-prose .nodyx-term .term-title,
+.nodyx-content .tiptap .nodyx-term .term-title {
+    margin-left: 0.5rem;
+    color: rgb(148 163 184);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+}
+.nodyx-prose .nodyx-term .term-body,
+.nodyx-content .tiptap .nodyx-term .term-body {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    color: rgb(203 213 225);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+/* couleurs sémantiques */
+.nodyx-term .t-prompt { color: rgb(129 140 248); font-weight: 600; }
+.nodyx-term .t-cmd    { color: #ffffff; font-weight: 600; }
+.nodyx-term .t-q      { color: rgb(125 211 252); }
+.nodyx-term .t-a      {
+    color: #fde68a;
+    background: rgb(180 130 20 / 0.18);
+    border: 1px solid rgb(217 169 60 / 0.45);
+    border-radius: 0.3rem;
+    padding: 0.02rem 0.4rem;
+    font-weight: 600;
+}
+.nodyx-term .t-ok     { color: #34d399; }
+.nodyx-term .t-info   { color: rgb(125 211 252); }
+.nodyx-term .t-warn   { color: #fbbf24; }
+.nodyx-term .t-muted  { color: rgb(100 116 139); }
+@media (max-width: 640px) {
+    .nodyx-prose .nodyx-term,
+    .nodyx-content .tiptap .nodyx-term { font-size: 0.72rem; }
+}
+
 .nodyx-prose h1,
 .nodyx-content .tiptap h1 {
     font-size: 1.5rem; font-weight: 700; color: white;
