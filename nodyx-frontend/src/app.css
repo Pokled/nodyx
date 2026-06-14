@@ -191,6 +191,42 @@ select option {
     .nodyx-content .tiptap .nodyx-term { font-size: 0.72rem; }
 }
 
+/* ── Scaffolding visuel — MODE ÉDITION uniquement ────────────────────────────
+   Contour pointillé + étiquette sur les blocs structurels (sommaire, colonnes,
+   vidéo, audio) pour que l'auteur voie où commence/finit chaque conteneur et
+   qu'aucun contenu ne se perde dans une boîte invisible. Ciblé sur
+   .nodyx-content .tiptap (l'éditeur) : JAMAIS sur .nodyx-prose (rendu public). */
+.nodyx-content .tiptap .toc,
+.nodyx-content .tiptap .nodyx-two-cols,
+.nodyx-content .tiptap [data-youtube-video],
+.nodyx-content .tiptap nodyx-audio-player {
+    position: relative;
+    outline: 1px dashed rgb(99 102 241 / 0.45);
+    outline-offset: 3px;
+    border-radius: 0.4rem;
+    margin-top: 1.1rem;
+}
+.nodyx-content .tiptap .toc::before,
+.nodyx-content .tiptap .nodyx-two-cols::before,
+.nodyx-content .tiptap [data-youtube-video]::before,
+.nodyx-content .tiptap nodyx-audio-player::before {
+    position: absolute;
+    top: -0.72rem; left: 0.5rem;
+    padding: 0.04rem 0.45rem;
+    font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(199 210 254);
+    background: rgb(49 46 129);
+    border: 1px solid rgb(99 102 241 / 0.5);
+    border-radius: 0.3rem;
+    pointer-events: none;
+    z-index: 2;
+}
+.nodyx-content .tiptap .toc::before                 { content: "Sommaire"; }
+.nodyx-content .tiptap .nodyx-two-cols::before      { content: "Colonnes"; }
+.nodyx-content .tiptap [data-youtube-video]::before { content: "Vidéo"; }
+.nodyx-content .tiptap nodyx-audio-player::before   { content: "Audio"; }
+
 .nodyx-prose h1,
 .nodyx-content .tiptap h1 {
     font-size: 1.5rem; font-weight: 700; color: white;
