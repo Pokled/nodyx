@@ -923,7 +923,7 @@
 
 	<!-- ── Toolbar ─────────────────────────────────────────────────────── -->
 	{#if editor}
-	<div class="nodyx-toolbar flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-800 bg-gray-900/95 backdrop-blur sticky top-0 z-20 rounded-t-xl"
+	<div class="nodyx-toolbar flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-800 bg-gray-900/95 backdrop-blur relative z-10 rounded-t-xl shrink-0"
 		role="toolbar"
 		tabindex="0"
 		onmousedown={(e) => {
@@ -1290,7 +1290,7 @@
 	<!-- ── Tiptap content area ──────────────────────────────────────────── -->
 	<div
 		bind:this={editorEl}
-		class="nodyx-content px-4 {compact ? 'min-h-[120px]' : 'min-h-[320px]'} py-4"
+		class="nodyx-content px-4 {compact ? 'min-h-[120px] max-h-[55vh]' : 'min-h-[320px] max-h-[65vh]'} overflow-y-auto py-4"
 	></div>
 
 	<!-- ── Barre flottante (quickbar) sur la sélection ──────────────────── -->
