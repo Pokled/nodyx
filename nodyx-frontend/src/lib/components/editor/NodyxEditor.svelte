@@ -222,12 +222,17 @@
 		})
 
 		// ── Two-Column layout extension ───────────────────────────────────────
+		// PRINCIPE round-trip : on parse sur la CLASSE (que le sanitizer conserve
+		// toujours), pas sur data-col/data-two-cols (que le sanitizer supprime des
+		// <div>). Sans ça, les colonnes étaient méconnues à la réédition et leur
+		// contenu était aplati. On garde aussi la règle data-* pour le contenu
+		// jamais passé par le sanitizer (insertion fraîche, copier/coller interne).
 		const NodyxColumn = Node.create({
 			name: 'nodyxColumn',
 			group: 'nodyxColumn',
 			content: 'block+',
 			isolating: true,
-			parseHTML()  { return [{ tag: 'div[data-col]' }] },
+			parseHTML()  { return [{ tag: 'div.nodyx-col' }, { tag: 'div[data-col]' }] },
 			renderHTML({ HTMLAttributes }) {
 				return ['div', mergeAttributes(HTMLAttributes, { 'data-col': '', class: 'nodyx-col' }), 0]
 			},
@@ -238,7 +243,7 @@
 			group: 'block',
 			content: 'nodyxColumn nodyxColumn',
 			isolating: true,
-			parseHTML()  { return [{ tag: 'div[data-two-cols]' }] },
+			parseHTML()  { return [{ tag: 'div.nodyx-two-cols' }, { tag: 'div[data-two-cols]' }] },
 			renderHTML({ HTMLAttributes }) {
 				return ['div', mergeAttributes(HTMLAttributes, { 'data-two-cols': '', class: 'nodyx-two-cols' }), 0]
 			},
