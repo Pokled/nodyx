@@ -229,6 +229,56 @@ select option {
     .nodyx-prose .nodyx-term,
     .nodyx-content .tiptap .nodyx-term { font-size: 0.72rem; }
 }
+/* En édition : la console est un bloc protégé. Le NodeView l'enveloppe d'une
+   barre d'outils (label + toggle Rendu/Code), façon CMS : on visualise le rendu,
+   et on modifie la source via le bouton Code, jamais au clavier directement. */
+.nodyx-content .tiptap .nodyx-term-wrap {
+    position: relative;
+    margin: 1.4rem 0;
+    border: 1px solid rgb(99 102 241 / 0.4);
+    border-radius: 0.6rem;
+    overflow: hidden;
+}
+.nodyx-content .tiptap .nodyx-term-wrap.ProseMirror-selectednode {
+    outline: 2px solid rgb(139 92 246 / 0.7);
+    outline-offset: 2px;
+}
+.nodyx-content .tiptap .nodyx-term-tools {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.3rem 0.55rem;
+    background: rgb(30 27 75 / 0.6);
+    border-bottom: 1px solid rgb(99 102 241 / 0.3);
+}
+.nodyx-content .tiptap .ntt-label {
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: rgb(196 181 253);
+}
+.nodyx-content .tiptap .ntt-btn {
+    font-family: ui-monospace, monospace;
+    font-size: 0.68rem; font-weight: 600;
+    color: rgb(199 210 254);
+    background: rgb(49 46 129 / 0.7);
+    border: 1px solid rgb(99 102 241 / 0.5);
+    border-radius: 0.3rem;
+    padding: 0.12rem 0.5rem;
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
+}
+.nodyx-content .tiptap .ntt-btn:hover  { background: rgb(76 29 149 / 0.7); color: white; }
+.nodyx-content .tiptap .ntt-btn.active { background: rgb(124 58 237 / 0.7); color: white; }
+.nodyx-content .tiptap .nodyx-term-wrap .nodyx-term { margin: 0; border: none; border-radius: 0; }
+.nodyx-content .tiptap .nodyx-term-code {
+    display: block; width: 100%;
+    min-height: 180px;
+    padding: 0.8rem 1rem;
+    background: #0a0e16;
+    color: rgb(203 213 225);
+    border: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72rem; line-height: 1.6;
+    resize: vertical;
+}
+.nodyx-content .tiptap .nodyx-term-code:focus { outline: none; }
 
 .nodyx-prose h1,
 .nodyx-content .tiptap h1 {

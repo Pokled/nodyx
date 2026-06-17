@@ -232,6 +232,114 @@
 			},
 		})
 
+		// ── Console SSH (.nodyx-term) : bloc HTML protégé ────────────────────
+		// Les tutos d'installation contiennent des consoles stylées (div.nodyx-term
+		// avec barre/corps/spans colorés). Ce n'est PAS éditable inline : on en
+		// fait un nœud ATOMIQUE qui capture son HTML interne au chargement et le
+		// ré-émet tel quel à la sauvegarde. Sans ça, l'éditeur déstructurait la
+		// console à la réédition (perte de données).
+		const NodyxTerm = Node.create({
+			name: 'nodyxTerm',
+			group: 'block',
+			atom: true,
+			selectable: true,
+			draggable: true,
+			addAttributes() {
+				return {
+					html: { default: '', parseHTML: (el: HTMLElement) => el.innerHTML, renderHTML: () => ({}) },
+				}
+			},
+			parseHTML() { return [{ tag: 'div.nodyx-term' }] },
+			renderHTML({ node }: any) {
+				const dom = document.createElement('div')
+				dom.className = 'nodyx-term'
+				dom.innerHTML = node.attrs.html
+				return dom
+			},
+			addNodeView() {
+				return ({ node, editor, getPos }: any) => {
+					// Wrapper non éditable : barre d'outils (label + toggle Rendu/Code)
+					// + zone d'affichage. Le code source du bloc se modifie via le
+					// bouton « Code » (façon CMS), jamais au clavier directement.
+					const dom = document.createElement('div')
+					dom.className = 'nodyx-term-wrap'
+					dom.setAttribute('contenteditable', 'false')
+
+					const bar = document.createElement('div')
+					bar.className = 'nodyx-term-tools'
+					const label = document.createElement('span')
+					label.className = 'ntt-label'
+					label.textContent = 'Console SSH'
+					const btn = document.createElement('button')
+					btn.type = 'button'
+					btn.className = 'ntt-btn'
+					btn.textContent = '</> Code'
+					bar.appendChild(label)
+					bar.appendChild(btn)
+
+					const render = document.createElement('div')
+					render.className = 'nodyx-term'
+					render.innerHTML = node.attrs.html
+
+					dom.appendChild(bar)
+					dom.appendChild(render)
+
+					let editing = false
+					let textarea: HTMLTextAreaElement | null = null
+
+					// Commit immédiat de la source vers l'attribut du nœud : la
+					// modification est prise en compte EN CONTINU pendant la frappe,
+					// sans dépendre du bouton « Rendu » (qui ne fait que rebasculer
+					// la vue). À l'enregistrement, getHTML a toujours la dernière
+					// version. addToHistory:false pour ne pas saturer le ctrl-z.
+					const commit = (val: string) => {
+						if (typeof getPos !== 'function') return
+						const pos = getPos()
+						if (pos == null) return
+						editor.view.dispatch(
+							editor.state.tr.setNodeMarkup(pos, undefined, { html: val }).setMeta('addToHistory', false),
+						)
+					}
+
+					btn.addEventListener('mousedown', (e) => e.preventDefault())
+					btn.addEventListener('click', () => {
+						if (!editing) {
+							editing = true
+							btn.textContent = '✓ Rendu'
+							btn.classList.add('active')
+							textarea = document.createElement('textarea')
+							textarea.className = 'nodyx-term-code'
+							textarea.value = render.innerHTML
+							textarea.addEventListener('input', () => { if (textarea) commit(textarea.value) })
+							render.style.display = 'none'
+							dom.appendChild(textarea)
+							textarea.focus()
+						} else {
+							editing = false
+							btn.textContent = '</> Code'
+							btn.classList.remove('active')
+							const newHtml = textarea ? textarea.value : render.innerHTML
+							render.innerHTML = newHtml
+							render.style.display = ''
+							if (textarea) { textarea.remove(); textarea = null }
+							commit(newHtml)
+						}
+					})
+
+					return {
+						dom,
+						update(updated: any) {
+							if (updated.type.name !== 'nodyxTerm') return false
+							if (!editing) render.innerHTML = updated.attrs.html
+							return true
+						},
+						stopEvent: () => true,
+						ignoreMutation: () => true,
+					}
+				}
+			},
+		})
+
 		// ── Two-Column layout extension ───────────────────────────────────────
 		// PRINCIPE round-trip : on parse sur la CLASSE (que le sanitizer conserve
 		// toujours), pas sur data-col/data-two-cols (que le sanitizer supprime des
@@ -383,6 +491,7 @@
 				HeadingIds, TocBox,
 				NodyxTwoCols, NodyxColumn,
 				NodyxAudio, NodyxTrack,
+				NodyxTerm,
 			],
 			content: initialContent,
 			onTransaction() { syncActive(); syncBubble() },
