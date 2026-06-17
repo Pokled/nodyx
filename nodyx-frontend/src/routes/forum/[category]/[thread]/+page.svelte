@@ -8,9 +8,9 @@
 		return origin + url
 	}
 
-	import { enhance } from '$app/forms';
+	import { enhance, applyAction } from '$app/forms';
 	import { untrack } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { PageData } from './$types';
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
@@ -27,6 +27,14 @@
 	// ── Réactivité ────────────────────────────────────────────────────────
 	const thread = $derived(data.thread);
 	const posts  = $derived(data.posts);
+	// Image de partage : bannière de l'article (1re image du post) → bannière de
+	// communauté → logo → og-image par défaut. Toujours une seule og:image.
+	const shareImage = $derived(
+		absolutize(
+			data.ogImagePath ?? $page.data.communityBannerUrl ?? $page.data.communityLogoUrl,
+			$page.url.origin,
+		) ?? `${$page.url.origin}/og-image.jpg`,
+	);
 	const user   = $derived(data.user);
 	const isMod  = $derived(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'moderator');
 
@@ -75,7 +83,12 @@
 	<meta property="og:description" content="Discussion par {thread.author_username} · {thread.post_count} {tFn('forum.replies_label')} · {thread.views} {tFn('forum.views')}" />
 	<meta property="og:type"        content="article" />
 	<meta property="og:url"         content={$page.url.href} />
-	<meta property="og:image"       content={absolutize($page.data.communityBannerUrl ?? $page.data.communityLogoUrl, $page.url.origin) ?? `${$page.url.origin}/og-image.jpg`} />
+	<!-- Pas de og:image:width/height ici : l'image de tête d'un article a des
+	     dimensions variables (le pipeline d'upload re-encode/redimensionne).
+	     Déclarer une taille fixe fausserait l'aperçu. Les scrapers lisent la
+	     vraie taille de l'image. -->
+	<meta property="og:image"        content={shareImage} />
+	<meta name="twitter:image"       content={shareImage} />
 	<meta property="og:site_name"   content={$page.data.communityName ?? 'Nodyx'} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		"@context": "https://schema.org",
@@ -333,7 +346,13 @@
 					{:else}
 						<div class="flex flex-col gap-1">
 							<span class="text-xs text-red-400 text-center">{tFn('forum.confirm')}</span>
-							<form method="POST" action="?/deleteThread" use:enhance>
+							<form method="POST" action="?/deleteThread"
+								use:enhance={() => async ({ result }) => {
+									// Invalide TOUS les caches de chargement (home, catégorie...)
+									// pour que le thread supprimé disparaisse sans refresh manuel.
+									if (result.type === 'redirect') await goto(result.location, { invalidateAll: true });
+									else { await applyAction(result); await invalidateAll(); }
+								}}>
 								<button type="submit" class="w-full px-2 py-1bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
 									Oui, supprimer
 								</button>

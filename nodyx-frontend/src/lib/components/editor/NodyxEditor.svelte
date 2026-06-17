@@ -3,6 +3,7 @@
 	import { page } from '$app/stores'
 	import { apiFetch } from '$lib/api'
 	import { t } from '$lib/i18n'
+	import { TextSelection } from '@tiptap/pm/state'
 
 	let {
 		name       = 'content',
@@ -49,7 +50,21 @@
 	let imageUrl    = $state('')
 	let imageAlt    = $state('')
 	let imageAlign  = $state<'left'|'center'|'right'|'full'>('center')
+	// Position du noeud image sélectionné quand on ouvre le menu image : permet
+	// de REMPLACER l'image au lieu d'en insérer une nouvelle (la sélection se
+	// perd dès qu'on tape dans le champ URL, on la capture donc à l'ouverture).
+	let replaceImagePos = $state<number | null>(null)
 	let videoUrl    = $state('')
+
+	// ── Barre flottante (quickbar) sur la sélection ───────────────────────────
+	// Apparaît au-dessus du texte surligné, avec le bouton Ancre (pilote le
+	// sommaire) + formatage rapide. Positionnée à la main (zéro dépendance).
+	let bubbleEl       = $state<HTMLElement | undefined>(undefined)
+	let bubbleVisible  = $state(false)
+	let bubbleTop      = $state(0)
+	let bubbleLeft     = $state(0)
+	let bubbleBelow    = $state(false)    // affichée SOUS la sélection (anti-débord haut)
+	let blockIsAnchored = $state(false)   // état du bloc courant (titre ancré ?)
 
 	// Audio upload state
 	let audioFileEl       = $state<HTMLInputElement | undefined>(undefined)
@@ -148,9 +163,113 @@
 			addAttributes() {
 				return {
 					...this.parent?.(),
-					align: { default: 'center', parseHTML: el => el.getAttribute('data-align'), renderHTML: attrs => ({ 'data-align': attrs.align }) },
-					width: { default: null, parseHTML: el => el.getAttribute('width'), renderHTML: attrs => attrs.width ? { width: attrs.width } : {} },
+					align: { default: 'center', parseHTML: (el: HTMLElement) => el.getAttribute('data-align'), renderHTML: (attrs: any) => ({ 'data-align': attrs.align }) },
+					width: { default: null, parseHTML: (el: HTMLElement) => el.getAttribute('width'), renderHTML: (attrs: any) => attrs.width ? { width: attrs.width } : {} },
 				}
+			},
+			// NodeView avec poignées de coin : on attrape un coin, on tire, et au
+			// relâchement la largeur s'aimante à 25/50/75/100 %. La largeur est
+			// stockée en attribut width (% — survit au sanitizer) ; le rendu public
+			// reste un simple <img data-align width>, sans wrapper.
+			addNodeView() {
+				return ({ node, editor, getPos }: any) => {
+					const applyWidth = (align: string, width: string | null) => {
+						wrap.style.width = align === 'full' ? (width || '100%') : (width || '')
+					}
+					const wrap = document.createElement('div')
+					wrap.className = 'nodyx-img-wrap'
+					wrap.setAttribute('data-align', node.attrs.align || 'center')
+					applyWidth(node.attrs.align || 'center', node.attrs.width)
+
+					const img = document.createElement('img')
+					img.src = node.attrs.src
+					if (node.attrs.alt) img.alt = node.attrs.alt
+					img.draggable = false
+					wrap.appendChild(img)
+
+					const badge = document.createElement('span')
+					badge.className = 'nodyx-img-badge'
+					badge.textContent = node.attrs.width || (node.attrs.align === 'full' ? '100%' : 'auto')
+					wrap.appendChild(badge)
+
+					const SNAPS = [25, 50, 75, 100]
+					let curPct = 100
+
+					const startResize = (e: MouseEvent, corner: string) => {
+						e.preventDefault(); e.stopPropagation()
+						const startX = e.clientX
+						const startW = img.getBoundingClientRect().width
+						const parent = wrap.parentElement
+						const containerW = parent ? parent.getBoundingClientRect().width : startW
+						const dir = (corner === 'ne' || corner === 'se') ? 1 : -1
+						wrap.classList.add('resizing')
+						const onMove = (ev: MouseEvent) => {
+							const dx = (ev.clientX - startX) * dir
+							const newW = Math.max(40, Math.min(containerW, startW + dx))
+							curPct = Math.round((newW / containerW) * 100)
+							wrap.style.width = curPct + '%'
+							badge.textContent = curPct + '%'
+						}
+						const onUp = () => {
+							document.removeEventListener('mousemove', onMove)
+							document.removeEventListener('mouseup', onUp)
+							wrap.classList.remove('resizing')
+							const snapped = SNAPS.reduce((a, b) => Math.abs(b - curPct) < Math.abs(a - curPct) ? b : a, SNAPS[0])
+							const widthVal = snapped + '%'
+							wrap.style.width = widthVal
+							badge.textContent = widthVal
+							if (typeof getPos === 'function') {
+								const pos = getPos()
+								const cur = editor.state.doc.nodeAt(pos)
+								if (cur) editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, width: widthVal }))
+							}
+						}
+						document.addEventListener('mousemove', onMove)
+						document.addEventListener('mouseup', onUp)
+					}
+
+					for (const c of ['nw', 'ne', 'sw', 'se']) {
+						const h = document.createElement('span')
+						h.className = 'nodyx-img-handle h-' + c
+						h.addEventListener('mousedown', (e) => startResize(e, c))
+						wrap.appendChild(h)
+					}
+
+					return {
+						dom: wrap,
+						update(updated: any) {
+							if (updated.type.name !== 'image') return false
+							if (updated.attrs.src !== img.getAttribute('src')) img.src = updated.attrs.src
+							img.alt = updated.attrs.alt || ''
+							wrap.setAttribute('data-align', updated.attrs.align || 'center')
+							applyWidth(updated.attrs.align || 'center', updated.attrs.width)
+							badge.textContent = updated.attrs.width || (updated.attrs.align === 'full' ? '100%' : 'auto')
+							return true
+						},
+						ignoreMutation: () => true,
+					}
+				}
+			},
+		})
+
+		// ── Youtube robuste au round-trip ───────────────────────────────────
+		// TipTap sérialise une vidéo en <div data-youtube-video><iframe…/></div>.
+		// Le sanitizer backend ne garde pas `data-youtube-video` sur le <div>,
+		// donc au rechargement l'extension ne reconnaissait plus son wrapper et
+		// JETAIT l'iframe (vidéos qui disparaissent à la réédition). On ajoute
+		// une règle parseHTML qui reparse aussi un <iframe> nu d'origine YouTube.
+		const RobustYoutube = Youtube.extend({
+			parseHTML() {
+				return [
+					...(this.parent?.() ?? []),
+					{
+						tag: 'iframe[src]',
+						getAttrs: (el: any) => {
+							const src = el?.getAttribute?.('src') ?? ''
+							return /(?:youtube(?:-nocookie)?\.com|youtu\.be)/.test(src) ? {} : false
+						},
+					},
+				]
 			},
 		})
 
@@ -182,7 +301,11 @@
 		const TocBox = Node.create({
 			name: 'tocBox',
 			group: 'block',
-			content: 'block+',
+			// paragraph+ uniquement : le sommaire ne contient que du texte (titre +
+			// liens d'ancres). Interdit aux images/vidéos/blocs de s'y faire aspirer
+			// au backspace (ProseMirror joignait un bloc image dans cette boîte
+			// isolante, l'image disparaissait alors dans un conteneur invisible).
+			content: 'paragraph+',
 			isolating: true,
 			selectable: true,
 			draggable: true,
@@ -192,13 +315,126 @@
 			},
 		})
 
+		// ── Console SSH (.nodyx-term) : bloc HTML protégé ────────────────────
+		// Les tutos d'installation contiennent des consoles stylées (div.nodyx-term
+		// avec barre/corps/spans colorés). Ce n'est PAS éditable inline : on en
+		// fait un nœud ATOMIQUE qui capture son HTML interne au chargement et le
+		// ré-émet tel quel à la sauvegarde. Sans ça, l'éditeur déstructurait la
+		// console à la réédition (perte de données).
+		const NodyxTerm = Node.create({
+			name: 'nodyxTerm',
+			group: 'block',
+			atom: true,
+			selectable: true,
+			draggable: true,
+			addAttributes() {
+				return {
+					html: { default: '', parseHTML: (el: HTMLElement) => el.innerHTML, renderHTML: () => ({}) },
+				}
+			},
+			parseHTML() { return [{ tag: 'div.nodyx-term' }] },
+			renderHTML({ node }: any) {
+				const dom = document.createElement('div')
+				dom.className = 'nodyx-term'
+				dom.innerHTML = node.attrs.html
+				return dom
+			},
+			addNodeView() {
+				return ({ node, editor, getPos }: any) => {
+					// Wrapper non éditable : barre d'outils (label + toggle Rendu/Code)
+					// + zone d'affichage. Le code source du bloc se modifie via le
+					// bouton « Code » (façon CMS), jamais au clavier directement.
+					const dom = document.createElement('div')
+					dom.className = 'nodyx-term-wrap'
+					dom.setAttribute('contenteditable', 'false')
+
+					const bar = document.createElement('div')
+					bar.className = 'nodyx-term-tools'
+					const label = document.createElement('span')
+					label.className = 'ntt-label'
+					label.textContent = 'Console SSH'
+					const btn = document.createElement('button')
+					btn.type = 'button'
+					btn.className = 'ntt-btn'
+					btn.textContent = '</> Code'
+					bar.appendChild(label)
+					bar.appendChild(btn)
+
+					const render = document.createElement('div')
+					render.className = 'nodyx-term'
+					render.innerHTML = node.attrs.html
+
+					dom.appendChild(bar)
+					dom.appendChild(render)
+
+					let editing = false
+					let textarea: HTMLTextAreaElement | null = null
+
+					// Commit immédiat de la source vers l'attribut du nœud : la
+					// modification est prise en compte EN CONTINU pendant la frappe,
+					// sans dépendre du bouton « Rendu » (qui ne fait que rebasculer
+					// la vue). À l'enregistrement, getHTML a toujours la dernière
+					// version. addToHistory:false pour ne pas saturer le ctrl-z.
+					const commit = (val: string) => {
+						if (typeof getPos !== 'function') return
+						const pos = getPos()
+						if (pos == null) return
+						editor.view.dispatch(
+							editor.state.tr.setNodeMarkup(pos, undefined, { html: val }).setMeta('addToHistory', false),
+						)
+					}
+
+					btn.addEventListener('mousedown', (e) => e.preventDefault())
+					btn.addEventListener('click', () => {
+						if (!editing) {
+							editing = true
+							btn.textContent = '✓ Rendu'
+							btn.classList.add('active')
+							textarea = document.createElement('textarea')
+							textarea.className = 'nodyx-term-code'
+							textarea.value = render.innerHTML
+							textarea.addEventListener('input', () => { if (textarea) commit(textarea.value) })
+							render.style.display = 'none'
+							dom.appendChild(textarea)
+							textarea.focus()
+						} else {
+							editing = false
+							btn.textContent = '</> Code'
+							btn.classList.remove('active')
+							const newHtml = textarea ? textarea.value : render.innerHTML
+							render.innerHTML = newHtml
+							render.style.display = ''
+							if (textarea) { textarea.remove(); textarea = null }
+							commit(newHtml)
+						}
+					})
+
+					return {
+						dom,
+						update(updated: any) {
+							if (updated.type.name !== 'nodyxTerm') return false
+							if (!editing) render.innerHTML = updated.attrs.html
+							return true
+						},
+						stopEvent: () => true,
+						ignoreMutation: () => true,
+					}
+				}
+			},
+		})
+
 		// ── Two-Column layout extension ───────────────────────────────────────
+		// PRINCIPE round-trip : on parse sur la CLASSE (que le sanitizer conserve
+		// toujours), pas sur data-col/data-two-cols (que le sanitizer supprime des
+		// <div>). Sans ça, les colonnes étaient méconnues à la réédition et leur
+		// contenu était aplati. On garde aussi la règle data-* pour le contenu
+		// jamais passé par le sanitizer (insertion fraîche, copier/coller interne).
 		const NodyxColumn = Node.create({
 			name: 'nodyxColumn',
 			group: 'nodyxColumn',
 			content: 'block+',
 			isolating: true,
-			parseHTML()  { return [{ tag: 'div[data-col]' }] },
+			parseHTML()  { return [{ tag: 'div.nodyx-col' }, { tag: 'div[data-col]' }] },
 			renderHTML({ HTMLAttributes }) {
 				return ['div', mergeAttributes(HTMLAttributes, { 'data-col': '', class: 'nodyx-col' }), 0]
 			},
@@ -209,7 +445,7 @@
 			group: 'block',
 			content: 'nodyxColumn nodyxColumn',
 			isolating: true,
-			parseHTML()  { return [{ tag: 'div[data-two-cols]' }] },
+			parseHTML()  { return [{ tag: 'div.nodyx-two-cols' }, { tag: 'div[data-two-cols]' }] },
 			renderHTML({ HTMLAttributes }) {
 				return ['div', mergeAttributes(HTMLAttributes, { 'data-two-cols': '', class: 'nodyx-two-cols' }), 0]
 			},
@@ -328,7 +564,7 @@
 				TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
 				Link.configure({ openOnClick: false, autolink: true }),
 				AlignableImage,
-				Youtube.configure({ nocookie: true }),
+				RobustYoutube.configure({ nocookie: true }),
 				Table.configure({ resizable: false }),
 				TableRow, TableCell, TableHeader,
 				Color, TextStyle,
@@ -338,9 +574,10 @@
 				HeadingIds, TocBox,
 				NodyxTwoCols, NodyxColumn,
 				NodyxAudio, NodyxTrack,
+				NodyxTerm,
 			],
 			content: initialContent,
-			onTransaction() { syncActive() },
+			onTransaction() { syncActive(); syncBubble() },
 			onUpdate({ editor: e }) {
 				html = e.getHTML()
 				charCount = e.storage.characterCount.characters()
@@ -355,6 +592,7 @@
 	function onDocClick(e: MouseEvent) {
 		if (wrapperEl && !wrapperEl.contains(e.target as Node)) {
 			showColor = showEmoji = showLink = showImage = showVideo = showAudio = showTable = false
+			bubbleVisible = false
 		}
 	}
 
@@ -395,7 +633,16 @@
 
 	$effect(() => {
 		document.addEventListener('click', onDocClick)
-		return () => document.removeEventListener('click', onDocClick)
+		// Repositionne la barre flottante au scroll/resize tant qu'elle est
+		// visible (sinon, position: fixed, elle « décrochait » de la sélection).
+		const reposition = () => { if (bubbleVisible) syncBubble() }
+		window.addEventListener('scroll', reposition, true)
+		window.addEventListener('resize', reposition)
+		return () => {
+			document.removeEventListener('click', onDocClick)
+			window.removeEventListener('scroll', reposition, true)
+			window.removeEventListener('resize', reposition)
+		}
 	})
 
 	onDestroy(() => editor?.destroy())
@@ -409,11 +656,44 @@
 		linkUrl = ''; showLink = false
 	}
 
+	// Ouvre/ferme le menu image. À l'ouverture, si une image est sélectionnée
+	// (NodeSelection), on capture sa position et on pré-remplit le formulaire :
+	// valider remplacera cette image au lieu d'en insérer une nouvelle.
+	function toggleImagePopup() {
+		const opening = !showImage
+		showColor = showEmoji = showLink = showVideo = showAudio = showTable = false
+		showImage = opening
+		replaceImagePos = null
+		if (opening && editor) {
+			const sel = editor.state.selection as any
+			const node = sel?.node
+			if (node && node.type.name === 'image') {
+				replaceImagePos = sel.from
+				imageUrl   = node.attrs.src ?? ''
+				imageAlt   = node.attrs.alt ?? ''
+				imageAlign = (node.attrs['data-align'] ?? node.attrs.align ?? 'center') as any
+			}
+		}
+	}
+
 	function insertImage() {
 		if (!imageUrl.trim()) return
 		const alignClass = { left: 'float-left mr-4', right: 'float-right ml-4', center: 'mx-auto block', full: 'w-full block' }[imageAlign]
-		editor?.chain().focus().setImage({ src: imageUrl, alt: imageAlt || '', class: alignClass, 'data-align': imageAlign }).run()
-		imageUrl = ''; imageAlt = ''; showImage = false
+		const attrs = { src: imageUrl, alt: imageAlt || '', class: alignClass, 'data-align': imageAlign, align: imageAlign }
+		if (replaceImagePos !== null) {
+			// Remplace l'image existante à sa position (conserve le noeud, change
+			// src/alt/alignement) plutôt que d'en insérer une à côté.
+			const pos = replaceImagePos
+			editor?.chain().focus().command(({ tr, state }: any) => {
+				const node = state.doc.nodeAt(pos)
+				if (!node || node.type.name !== 'image') return false
+				tr.setNodeMarkup(pos, undefined, attrs)
+				return true
+			}).run()
+		} else {
+			editor?.chain().focus().setImage(attrs).run()
+		}
+		imageUrl = ''; imageAlt = ''; showImage = false; replaceImagePos = null
 	}
 
 	function insertVideo() {
@@ -638,7 +918,6 @@
 			justify:   () => chain.setTextAlign('justify').run(),
 			hr:        () => chain.setHorizontalRule().run(),
 			twoCols:   () => (chain as any).insertTwoCols().run(),
-			toc:       () => insertToc(),
 			// Table
 			insertTable:  () => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
 			addRowAfter:  () => chain.addRowAfter().run(),
@@ -662,59 +941,148 @@
 		return slug || 'section'
 	}
 
-	function insertToc(): void {
-		if (!editor) return
-		const seen: Record<string, number> = {}
-		const entries: Array<{ id: string; text: string; level: number }> = []
-		const updates: Array<{ pos: number; id: string }> = []
+	// id unique dans le document (évite les collisions d'ancres).
+	function uniqueHeadingId(text: string): string {
+		const base = slugifyHeading(text)
+		const used = new Set<string>()
+		editor.state.doc.descendants((node: any) => {
+			if (node.type.name === 'heading' && node.attrs.id) used.add(node.attrs.id)
+		})
+		if (!used.has(base)) return base
+		let i = 2
+		while (used.has(`${base}-${i}`)) i++
+		return `${base}-${i}`
+	}
 
-		editor.state.doc.descendants((node: any, pos: number) => {
+	// Bloc (titre ou paragraphe) qui contient la sélection.
+	function currentBlock(): { node: any; isAnchored: boolean } | null {
+		if (!editor) return null
+		const selFrom = editor.state.selection.$from
+		for (let d = selFrom.depth; d > 0; d--) {
+			const node = selFrom.node(d)
+			if (node.type.name === 'heading' || node.type.name === 'paragraph') {
+				return { node, isAnchored: node.type.name === 'heading' && !!node.attrs.id }
+			}
+		}
+		return null
+	}
+
+	// Action du bouton « Ancre » : la ligne devient un titre de section ancré
+	// (paragraphe -> h2 ; niveau h2/h3 conservé), et le menu est reconstruit.
+	function toggleAnchor(): void {
+		if (!editor) return
+		const info = currentBlock()
+		if (!info) return
+		const { node, isAnchored } = info
+		if (isAnchored) {
+			editor.chain().focus().updateAttributes('heading', { id: null }).run()
+		} else {
+			const text = node.textContent.trim() || 'section'
+			const id = uniqueHeadingId(text)
+			if (node.type.name === 'paragraph') {
+				editor.chain().focus().setNode('heading', { level: 2, id }).run()
+			} else {
+				editor.chain().focus().updateAttributes('heading', { id }).run()
+			}
+		}
+		rebuildToc()
+		syncBubble()
+	}
+
+	// Reconstruit la boîte .toc à partir des titres ancrés (id présent), dans
+	// l'ordre du document. Crée la boîte si besoin, la supprime s'il n'y a plus
+	// d'ancre. La boîte est dérivée : on ne la saisit pas à la main.
+	function rebuildToc(): void {
+		if (!editor) return
+		const entries: Array<{ id: string; text: string; level: number }> = []
+		editor.state.doc.descendants((node: any) => {
 			if (node.type.name !== 'heading') return
 			const level = node.attrs.level
-			if (level !== 2 && level !== 3) return   // le sanitizer n'accepte id que sur h2-h4
+			if ((level !== 2 && level !== 3) || !node.attrs.id) return
 			const text = node.textContent.trim()
-			if (!text) return
-			let id = node.attrs.id as string | null
-			if (!id) {
-				const base = slugifyHeading(text)
-				seen[base] = (seen[base] ?? 0) + 1
-				id = seen[base] > 1 ? `${base}-${seen[base]}` : base
-				updates.push({ pos, id })
-			}
-			entries.push({ id, text, level })
+			if (text) entries.push({ id: node.attrs.id, text, level })
 		})
-
-		if (entries.length === 0) return   // pas de titres : rien à sommairer
-
-		// Pose les ancres manquantes (setNodeMarkup ne change pas les positions).
-		if (updates.length > 0) {
-			editor.chain().command(({ tr, state }: any) => {
-				for (const u of updates) {
-					const node = state.doc.nodeAt(u.pos)
-					if (node) tr.setNodeMarkup(u.pos, undefined, { ...node.attrs, id: u.id })
-				}
-				return true
-			}).run()
+		let tocPos: number | null = null
+		let tocSize = 0
+		editor.state.doc.descendants((node: any, pos: number) => {
+			if (node.type.name === 'tocBox') { tocPos = pos; tocSize = node.nodeSize; return false }
+			return true
+		})
+		if (entries.length === 0) {
+			if (tocPos !== null) {
+				editor.chain().command(({ tr }: any) => { tr.delete(tocPos!, tocPos! + tocSize); return true }).run()
+			}
+			return
 		}
-
-		// Construit la liste de liens : un par ligne (hardBreak), h3 indentés.
 		const links: any[] = []
 		entries.forEach((e, i) => {
 			if (i > 0) links.push({ type: 'hardBreak' })
-			links.push({ type: 'text', text: e.level === 3 ? '   ▸ ' : '▸ ' })
-			links.push({
-				type: 'text', text: e.text,
-				marks: [{ type: 'link', attrs: { href: `#${e.id}`, target: null } }],
-			})
+			links.push({ type: 'text', text: e.level === 3 ? '   ▸ ' : '▸ ' })
+			links.push({ type: 'text', text: e.text, marks: [{ type: 'link', attrs: { href: `#${e.id}`, target: null } }] })
 		})
-
-		editor.chain().focus().insertContent({
+		const tocContent = {
 			type: 'tocBox',
 			content: [
 				{ type: 'paragraph', content: [{ type: 'text', text: 'Sommaire', marks: [{ type: 'bold' }] }] },
 				{ type: 'paragraph', content: links },
 			],
-		}).run()
+		}
+
+		// API haut-niveau (robuste) : on retire l'ancienne boîte, puis on insère
+		// la nouvelle en tête (après le hero si présent).
+		try {
+			if (tocPos !== null) {
+				editor.chain().deleteRange({ from: tocPos, to: tocPos + tocSize }).run()
+			}
+			let insertPos = 0
+			const first = editor.state.doc.firstChild
+			if (first && first.type.name === 'image') insertPos = first.nodeSize
+			editor.chain().insertContentAt(insertPos, tocContent).run()
+		} catch (err) {
+			console.warn('[nodyx-editor] rebuildToc', err)
+			return
+		}
+		flashToc()
+	}
+
+	// Petit flash visuel sur la boîte sommaire après une mise à jour : montre
+	// clairement à l'auteur que son ancre a été prise en compte.
+	function flashToc(): void {
+		requestAnimationFrame(() => {
+			const el = editorEl?.querySelector('.toc') as HTMLElement | null
+			if (!el) return
+			el.classList.remove('toc-flash')
+			void el.offsetWidth   // reflow pour rejouer l'animation
+			el.classList.add('toc-flash')
+			setTimeout(() => el.classList.remove('toc-flash'), 1000)
+		})
+	}
+
+	// Position/visibilité de la barre flottante selon la sélection.
+	// Repositionnée aussi au scroll/resize (cf. effet plus bas) pour rester
+	// collée à la sélection, et basculée sous le texte si elle déborderait en
+	// haut (sinon elle passait sous la barre d'outils — effet « buggé »).
+	function syncBubble(): void {
+		if (!editor) { bubbleVisible = false; return }
+		const sel = editor.state.selection
+		const isTextSel = sel instanceof TextSelection
+		const parentIsTextblock = sel.$from.parent?.isTextblock
+		if (sel.empty || !isTextSel || !parentIsTextblock) { bubbleVisible = false; return }
+		const info = currentBlock()
+		blockIsAnchored = !!info?.isAnchored
+		try {
+			const a = editor.view.coordsAtPos(sel.from)
+			const b = editor.view.coordsAtPos(sel.to)
+			const topY = Math.min(a.top, b.top)
+			const botY = Math.max(a.bottom, b.bottom)
+			// Si trop près du haut de la fenêtre, on passe la barre sous la sélection.
+			bubbleBelow = topY < 64
+			bubbleTop  = bubbleBelow ? botY : topY
+			bubbleLeft = (a.left + b.left) / 2
+			bubbleVisible = true
+		} catch {
+			bubbleVisible = false
+		}
 	}
 
 	// ── Preset colours & emoji ────────────────────────────────────────────────
@@ -747,7 +1115,7 @@
 
 	<!-- ── Toolbar ─────────────────────────────────────────────────────── -->
 	{#if editor}
-	<div class="nodyx-toolbar flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-800 bg-gray-900/80 relative z-10 rounded-t-xl"
+	<div class="nodyx-toolbar flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-800 bg-gray-900/95 backdrop-blur relative z-10 rounded-t-xl shrink-0"
 		role="toolbar"
 		tabindex="0"
 		onmousedown={(e) => {
@@ -863,11 +1231,17 @@
 
 		<!-- Image -->
 		<div class="relative">
-			<button type="button" onclick={() => { showImage = !showImage; showColor = showEmoji = showLink = showVideo = showAudio = showTable = false }} class="tb-btn" title={tFn('editor.insert_image')}>
+			<button type="button" onclick={toggleImagePopup} class="tb-btn" title={tFn('editor.insert_image')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15l-5-5L5 21"/></svg>
 			</button>
 			{#if showImage}
 			<div class="popup w-80 flex flex-col gap-2 p-3" use:autoFlip>
+				{#if replaceImagePos !== null}
+					<div class="flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1">
+						<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/></svg>
+						Remplacement de l'image sélectionnée
+					</div>
+				{/if}
 				<!-- Bouton médiathèque -->
 				<button type="button" onclick={openMediaPicker}
 					class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-indigo-700/60 bg-indigo-950/30 text-indigo-300 text-xs font-medium hover:bg-indigo-900/40 transition-colors">
@@ -891,7 +1265,7 @@
 						</button>
 					{/each}
 				</div>
-				<button type="button" onclick={insertImage} class="popup-btn-primary">{tFn('editor.insert')}</button>
+				<button type="button" onclick={insertImage} class="popup-btn-primary">{replaceImagePos !== null ? 'Remplacer' : tFn('editor.insert')}</button>
 			</div>
 			{/if}
 		</div>
@@ -1018,11 +1392,6 @@
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="9" height="18" rx="1.5" stroke-width="2"/><rect x="13" y="3" width="9" height="18" rx="1.5" stroke-width="2"/></svg>
 		</button>
 
-		<!-- Sommaire (ancres auto) -->
-		<button type="button" onclick={() => toggleAny('toc')} class="tb-btn" title={tFn('editor.toc')}>
-			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>
-		</button>
-
 		<div class="tb-sep"></div>
 
 		<!-- Table -->
@@ -1113,8 +1482,25 @@
 	<!-- ── Tiptap content area ──────────────────────────────────────────── -->
 	<div
 		bind:this={editorEl}
-		class="nodyx-content px-4 {compact ? 'min-h-[120px]' : 'min-h-[320px]'} py-4"
+		class="nodyx-content px-4 {compact ? 'min-h-[120px] max-h-[55vh]' : 'min-h-[320px] max-h-[65vh]'} overflow-y-auto py-4"
 	></div>
+
+	<!-- ── Barre flottante (quickbar) sur la sélection ──────────────────── -->
+	{#if bubbleVisible}
+	<div bind:this={bubbleEl} class="nodyx-bubble {bubbleBelow ? 'below' : ''}" style="top:{bubbleTop}px; left:{bubbleLeft}px;" role="toolbar" aria-label="Mise en forme rapide">
+		<button type="button" class="nb-btn {a.bold ? 'active' : ''}" title={tFn('editor.bold')}
+			onmousedown={(e) => e.preventDefault()} onclick={() => editor?.chain().focus().toggleBold().run()}><b>B</b></button>
+		<button type="button" class="nb-btn {a.italic ? 'active' : ''}" title={tFn('editor.italic')}
+			onmousedown={(e) => e.preventDefault()} onclick={() => editor?.chain().focus().toggleItalic().run()}><i>I</i></button>
+		<span class="nb-sep"></span>
+		<button type="button" class="nb-btn nb-anchor {blockIsAnchored ? 'active' : ''}"
+			title={blockIsAnchored ? 'Retirer du sommaire' : 'Ajouter cette ligne au sommaire'}
+			onmousedown={(e) => e.preventDefault()} onclick={toggleAnchor}>
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.4"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12a7 7 0 0014 0"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>
+			<span>{blockIsAnchored ? 'Ancré' : 'Ancre'}</span>
+		</button>
+	</div>
+	{/if}
 
 	<!-- ── Footer: character count ─────────────────────────────────────── -->
 	{#if editor && !compact}
@@ -1125,6 +1511,46 @@
 </div>
 
 <style>
+	/* ── Barre flottante (quickbar) ────────────────────────────────────── */
+	:global(.nodyx-bubble) {
+		position: fixed;
+		z-index: 60;
+		transform: translate(-50%, calc(-100% - 8px));
+		display: flex;
+		align-items: center;
+		gap: 0.15rem;
+		padding: 0.2rem;
+		background: rgb(17 24 39);
+		border: 1px solid rgb(55 65 81);
+		border-radius: 0.5rem;
+		box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.7);
+		animation: nb-pop 120ms ease-out;
+	}
+	:global(.nodyx-bubble.below) {
+		transform: translate(-50%, 8px);
+	}
+	@keyframes nb-pop {
+		from { opacity: 0; }
+		to   { opacity: 1; }
+	}
+	:global(.nb-btn) {
+		display: flex; align-items: center; gap: 0.3rem;
+		height: 1.6rem; padding: 0 0.45rem;
+		border-radius: 0.3rem;
+		color: rgb(209 213 219);
+		font-size: 0.8rem; cursor: pointer; user-select: none;
+		transition: color 120ms, background-color 120ms;
+	}
+	:global(.nb-btn:hover)  { background: rgb(55 65 81); color: white; }
+	:global(.nb-btn.active) { background: rgb(49 46 129 / 0.8); color: rgb(165 180 252); }
+	:global(.nb-anchor) {
+		font-weight: 600; font-size: 0.72rem; letter-spacing: 0.02em;
+		color: rgb(196 181 253);
+	}
+	:global(.nb-anchor:hover) { background: rgb(76 29 149 / 0.5); color: white; }
+	:global(.nb-anchor.active) { background: rgb(124 58 237 / 0.55); color: white; }
+	:global(.nb-sep) { width: 1px; height: 1.1rem; background: rgb(55 65 81); margin: 0 0.15rem; }
+
 	/* ── Toolbar button ────────────────────────────────────────────────── */
 	:global(.tb-btn) {
 		display: flex;

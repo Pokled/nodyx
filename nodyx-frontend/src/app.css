@@ -117,6 +117,169 @@ select option {
     }
 }
 
+/* ── Boîte sommaire DANS l'éditeur ────────────────────────────────────────────
+   Dans le rendu public elle flotte à droite. Dans l'éditeur on la veut bien
+   visible et clairement identifiée comme LE menu que l'auteur construit en
+   ancrant ses sections : non flottante, encadrée indigo, avec une étiquette. */
+.nodyx-content .tiptap .toc {
+    position: relative;
+    float: none;
+    width: auto;
+    max-width: 420px;
+    margin: 1.5rem 0;
+    padding: 1.3rem 1rem 0.85rem;
+    background: rgb(30 27 75 / 0.35);
+    border: 1px solid rgb(99 102 241 / 0.5);
+    border-radius: 0.6rem;
+    font-size: 0.8125rem;
+    line-height: 1.9;
+}
+.nodyx-content .tiptap .toc::before {
+    content: "\2693  Sommaire — sections ancrées";
+    position: absolute;
+    top: -0.7rem; left: 0.7rem;
+    padding: 0.12rem 0.5rem;
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgb(199 210 254);
+    background: rgb(49 46 129);
+    border: 1px solid rgb(99 102 241 / 0.6);
+    border-radius: 0.3rem;
+    pointer-events: none;
+}
+.nodyx-content .tiptap .toc a { color: rgb(165 180 252); text-decoration: none; }
+.nodyx-content .tiptap .toc a:hover { color: white; text-decoration: underline; }
+/* Flash à chaque (re)construction du menu : feedback « c'est pris en compte ». */
+.nodyx-content .tiptap .toc.toc-flash { animation: toc-flash 0.9s ease-out; }
+@keyframes toc-flash {
+    0%   { box-shadow: 0 0 0 0 rgb(139 92 246 / 0.55); border-color: rgb(167 139 250); }
+    100% { box-shadow: 0 0 0 16px rgb(139 92 246 / 0); }
+}
+
+/* ── Console SSH simulée ──────────────────────────────────────────────────── */
+/* <div class="nodyx-term"> : reproduit une fenêtre de terminal pour les tutos
+   d'installation. Barre de titre + corps monospace. Les couleurs passent par
+   des classes (le sanitizer n'autorise style que sur p/span, pas sur div) :
+     .t-prompt  invite shell        .t-cmd   commande tapée par l'utilisateur
+     .t-q       question du script  .t-a     réponse à donner (surlignée)
+     .t-ok      ligne ✔ verte       .t-info  ligne → cyan
+     .t-warn    ligne ⚠ jaune       .t-muted commentaire discret             */
+.nodyx-prose .nodyx-term,
+.nodyx-content .tiptap .nodyx-term {
+    margin: 1rem 0;
+    border: 1px solid rgb(31 41 55);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: #0a0e16;
+    box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.65);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.7;
+}
+.nodyx-prose .nodyx-term .term-bar,
+.nodyx-content .tiptap .nodyx-term .term-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.85rem;
+    background: rgb(17 24 39);
+    border-bottom: 1px solid rgb(31 41 55);
+}
+.nodyx-prose .nodyx-term .term-dot,
+.nodyx-content .tiptap .nodyx-term .term-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    display: inline-block; flex: none;
+}
+.nodyx-term .term-dot--r { background: #ff5f56; }
+.nodyx-term .term-dot--y { background: #ffbd2e; }
+.nodyx-term .term-dot--g { background: #27c93f; }
+.nodyx-prose .nodyx-term .term-title,
+.nodyx-content .tiptap .nodyx-term .term-title {
+    margin-left: 0.5rem;
+    color: rgb(148 163 184);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+}
+.nodyx-prose .nodyx-term .term-body,
+.nodyx-content .tiptap .nodyx-term .term-body {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    color: rgb(203 213 225);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+/* couleurs sémantiques */
+.nodyx-term .t-prompt { color: rgb(129 140 248); font-weight: 600; }
+.nodyx-term .t-cmd    { color: #ffffff; font-weight: 600; }
+.nodyx-term .t-q      { color: rgb(125 211 252); }
+.nodyx-term .t-a      {
+    color: #fde68a;
+    background: rgb(180 130 20 / 0.18);
+    border: 1px solid rgb(217 169 60 / 0.45);
+    border-radius: 0.3rem;
+    padding: 0.02rem 0.4rem;
+    font-weight: 600;
+}
+.nodyx-term .t-ok     { color: #34d399; }
+.nodyx-term .t-info   { color: rgb(125 211 252); }
+.nodyx-term .t-warn   { color: #fbbf24; }
+.nodyx-term .t-muted  { color: rgb(100 116 139); }
+@media (max-width: 640px) {
+    .nodyx-prose .nodyx-term,
+    .nodyx-content .tiptap .nodyx-term { font-size: 0.72rem; }
+}
+/* En édition : la console est un bloc protégé. Le NodeView l'enveloppe d'une
+   barre d'outils (label + toggle Rendu/Code), façon CMS : on visualise le rendu,
+   et on modifie la source via le bouton Code, jamais au clavier directement. */
+.nodyx-content .tiptap .nodyx-term-wrap {
+    position: relative;
+    margin: 1.4rem 0;
+    border: 1px solid rgb(99 102 241 / 0.4);
+    border-radius: 0.6rem;
+    overflow: hidden;
+}
+.nodyx-content .tiptap .nodyx-term-wrap.ProseMirror-selectednode {
+    outline: 2px solid rgb(139 92 246 / 0.7);
+    outline-offset: 2px;
+}
+.nodyx-content .tiptap .nodyx-term-tools {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.3rem 0.55rem;
+    background: rgb(30 27 75 / 0.6);
+    border-bottom: 1px solid rgb(99 102 241 / 0.3);
+}
+.nodyx-content .tiptap .ntt-label {
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: rgb(196 181 253);
+}
+.nodyx-content .tiptap .ntt-btn {
+    font-family: ui-monospace, monospace;
+    font-size: 0.68rem; font-weight: 600;
+    color: rgb(199 210 254);
+    background: rgb(49 46 129 / 0.7);
+    border: 1px solid rgb(99 102 241 / 0.5);
+    border-radius: 0.3rem;
+    padding: 0.12rem 0.5rem;
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
+}
+.nodyx-content .tiptap .ntt-btn:hover  { background: rgb(76 29 149 / 0.7); color: white; }
+.nodyx-content .tiptap .ntt-btn.active { background: rgb(124 58 237 / 0.7); color: white; }
+.nodyx-content .tiptap .nodyx-term-wrap .nodyx-term { margin: 0; border: none; border-radius: 0; }
+.nodyx-content .tiptap .nodyx-term-code {
+    display: block; width: 100%;
+    min-height: 180px;
+    padding: 0.8rem 1rem;
+    background: #0a0e16;
+    color: rgb(203 213 225);
+    border: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72rem; line-height: 1.6;
+    resize: vertical;
+}
+.nodyx-content .tiptap .nodyx-term-code:focus { outline: none; }
+
 .nodyx-prose h1,
 .nodyx-content .tiptap h1 {
     font-size: 1.5rem; font-weight: 700; color: white;
@@ -233,14 +396,68 @@ select option {
     margin-top: 0.75rem;
     margin-bottom: 0.75rem;
 }
-.nodyx-prose img[data-align="left"],
-.nodyx-content .tiptap img[data-align="left"]   { float: left;  margin-right: 1rem; max-width: 45%; }
-.nodyx-prose img[data-align="right"],
-.nodyx-content .tiptap img[data-align="right"]  { float: right; margin-left: 1rem;  max-width: 45%; }
-.nodyx-prose img[data-align="center"],
-.nodyx-content .tiptap img[data-align="center"] { margin-left: auto; margin-right: auto; display: block; }
-.nodyx-prose img[data-align="full"],
-.nodyx-content .tiptap img[data-align="full"]   { width: 100%; display: block; float: none; }
+/* ── Rendu public (img nu) ─────────────────────────────────────────────────
+   La largeur vient de l'attribut width (posé par le resize). Les caps par défaut
+   (45% floté, 100% full) ne s'appliquent QUE sans largeur explicite, pour ne pas
+   écraser un redimensionnement et préserver le comportement des images legacy. */
+.nodyx-prose img[data-align="left"]   { float: left;  margin-right: 1rem; }
+.nodyx-prose img[data-align="right"]  { float: right; margin-left: 1rem;  }
+.nodyx-prose img[data-align="left"]:not([width]),
+.nodyx-prose img[data-align="right"]:not([width])  { max-width: 45%; }
+.nodyx-prose img[data-align="center"] { margin-left: auto; margin-right: auto; display: block; }
+.nodyx-prose img[data-align="full"]   { display: block; float: none; }
+.nodyx-prose img[data-align="full"]:not([width]) { width: 100%; }
+
+/* ── Éditeur : NodeView avec poignées de redimensionnement ─────────────────── */
+.nodyx-content .tiptap .nodyx-img-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    line-height: 0;
+    vertical-align: top;
+}
+.nodyx-content .tiptap .nodyx-img-wrap img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+}
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="left"]   { float: left;  margin: 0.75rem 1rem 0.75rem 0; }
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="right"]  { float: right; margin: 0.75rem 0 0.75rem 1rem; }
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="center"] { display: block; margin: 0.75rem auto; }
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="full"]   { display: block; margin: 0.75rem 0; }
+/* Contour + poignées seulement quand l'image est sélectionnée */
+.nodyx-content .tiptap .nodyx-img-wrap.ProseMirror-selectednode { outline: 2px solid rgb(139 92 246 / 0.8); outline-offset: 1px; }
+.nodyx-content .tiptap .nodyx-img-handle {
+    position: absolute;
+    width: 13px; height: 13px;
+    background: white;
+    border: 2px solid rgb(124 58 237);
+    border-radius: 3px;
+    display: none;
+    z-index: 4;
+}
+.nodyx-content .tiptap .nodyx-img-wrap.ProseMirror-selectednode .nodyx-img-handle,
+.nodyx-content .tiptap .nodyx-img-wrap.resizing .nodyx-img-handle { display: block; }
+.nodyx-content .tiptap .nodyx-img-handle.h-nw { top: -7px;  left: -7px;  cursor: nwse-resize; }
+.nodyx-content .tiptap .nodyx-img-handle.h-ne { top: -7px;  right: -7px; cursor: nesw-resize; }
+.nodyx-content .tiptap .nodyx-img-handle.h-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.nodyx-content .tiptap .nodyx-img-handle.h-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+.nodyx-content .tiptap .nodyx-img-badge {
+    position: absolute;
+    top: 6px; left: 6px;
+    padding: 0.05rem 0.4rem;
+    font-family: ui-monospace, monospace;
+    font-size: 0.62rem; font-weight: 700;
+    color: white;
+    background: rgb(76 29 149 / 0.85);
+    border-radius: 0.25rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms;
+}
+.nodyx-content .tiptap .nodyx-img-wrap.resizing .nodyx-img-badge,
+.nodyx-content .tiptap .nodyx-img-wrap.ProseMirror-selectednode .nodyx-img-badge { opacity: 1; }
 
 /* ── Vidéo / iframe ───────────────────────────────────────────────────────── */
 .nodyx-prose iframe,

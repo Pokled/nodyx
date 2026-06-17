@@ -21,9 +21,9 @@
 		<link rel="icon"          type="image/png"   sizes="512x512" href="/icons/icon-512.png" />
 		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
-		<!-- Open Graph default image (overridable per page) -->
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:image" content="/og-image.jpg" />
+		<!-- og:image / twitter:image / twitter:card sont gérés dynamiquement par
+		     +layout.svelte (défaut absolu) et surchargés par page (article, profil,
+		     événement...). Rien de statique ici pour éviter les doublons. -->
 
 		%sveltekit.head%
 	</head>
