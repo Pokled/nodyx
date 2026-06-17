@@ -8,9 +8,9 @@
 		return origin + url
 	}
 
-	import { enhance } from '$app/forms';
+	import { enhance, applyAction } from '$app/forms';
 	import { untrack } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { PageData } from './$types';
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
@@ -346,7 +346,13 @@
 					{:else}
 						<div class="flex flex-col gap-1">
 							<span class="text-xs text-red-400 text-center">{tFn('forum.confirm')}</span>
-							<form method="POST" action="?/deleteThread" use:enhance>
+							<form method="POST" action="?/deleteThread"
+								use:enhance={() => async ({ result }) => {
+									// Invalide TOUS les caches de chargement (home, catégorie...)
+									// pour que le thread supprimé disparaisse sans refresh manuel.
+									if (result.type === 'redirect') await goto(result.location, { invalidateAll: true });
+									else { await applyAction(result); await invalidateAll(); }
+								}}>
 								<button type="submit" class="w-full px-2 py-1bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
 									Oui, supprimer
 								</button>

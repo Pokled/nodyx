@@ -50,3 +50,10 @@ nodyx-hub/hub.db
 nodyx-hub/build/
 instance.esy
 nodyx-docs/static/demo-honeypot.html
+
+# Assets lourds / locaux — pas dans le repo public (trailer 113 Mo, icônes dupliquées de static/)
+docs/img/Type_Or_Die/
+docs/img/icon-set/
+docs/img/Logo_icon_Nodyx_a.PNG
+# Stratégie SEO — locale (dossiers de soumission awesome-selfhosted / AlternativeTo)
+docs/seo/

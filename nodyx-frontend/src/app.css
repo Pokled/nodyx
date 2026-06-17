@@ -229,6 +229,56 @@ select option {
     .nodyx-prose .nodyx-term,
     .nodyx-content .tiptap .nodyx-term { font-size: 0.72rem; }
 }
+/* En édition : la console est un bloc protégé. Le NodeView l'enveloppe d'une
+   barre d'outils (label + toggle Rendu/Code), façon CMS : on visualise le rendu,
+   et on modifie la source via le bouton Code, jamais au clavier directement. */
+.nodyx-content .tiptap .nodyx-term-wrap {
+    position: relative;
+    margin: 1.4rem 0;
+    border: 1px solid rgb(99 102 241 / 0.4);
+    border-radius: 0.6rem;
+    overflow: hidden;
+}
+.nodyx-content .tiptap .nodyx-term-wrap.ProseMirror-selectednode {
+    outline: 2px solid rgb(139 92 246 / 0.7);
+    outline-offset: 2px;
+}
+.nodyx-content .tiptap .nodyx-term-tools {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.3rem 0.55rem;
+    background: rgb(30 27 75 / 0.6);
+    border-bottom: 1px solid rgb(99 102 241 / 0.3);
+}
+.nodyx-content .tiptap .ntt-label {
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: rgb(196 181 253);
+}
+.nodyx-content .tiptap .ntt-btn {
+    font-family: ui-monospace, monospace;
+    font-size: 0.68rem; font-weight: 600;
+    color: rgb(199 210 254);
+    background: rgb(49 46 129 / 0.7);
+    border: 1px solid rgb(99 102 241 / 0.5);
+    border-radius: 0.3rem;
+    padding: 0.12rem 0.5rem;
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
+}
+.nodyx-content .tiptap .ntt-btn:hover  { background: rgb(76 29 149 / 0.7); color: white; }
+.nodyx-content .tiptap .ntt-btn.active { background: rgb(124 58 237 / 0.7); color: white; }
+.nodyx-content .tiptap .nodyx-term-wrap .nodyx-term { margin: 0; border: none; border-radius: 0; }
+.nodyx-content .tiptap .nodyx-term-code {
+    display: block; width: 100%;
+    min-height: 180px;
+    padding: 0.8rem 1rem;
+    background: #0a0e16;
+    color: rgb(203 213 225);
+    border: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72rem; line-height: 1.6;
+    resize: vertical;
+}
+.nodyx-content .tiptap .nodyx-term-code:focus { outline: none; }
 
 .nodyx-prose h1,
 .nodyx-content .tiptap h1 {
@@ -346,14 +396,68 @@ select option {
     margin-top: 0.75rem;
     margin-bottom: 0.75rem;
 }
-.nodyx-prose img[data-align="left"],
-.nodyx-content .tiptap img[data-align="left"]   { float: left;  margin-right: 1rem; max-width: 45%; }
-.nodyx-prose img[data-align="right"],
-.nodyx-content .tiptap img[data-align="right"]  { float: right; margin-left: 1rem;  max-width: 45%; }
-.nodyx-prose img[data-align="center"],
-.nodyx-content .tiptap img[data-align="center"] { margin-left: auto; margin-right: auto; display: block; }
-.nodyx-prose img[data-align="full"],
-.nodyx-content .tiptap img[data-align="full"]   { width: 100%; display: block; float: none; }
+/* ── Rendu public (img nu) ─────────────────────────────────────────────────
+   La largeur vient de l'attribut width (posé par le resize). Les caps par défaut
+   (45% floté, 100% full) ne s'appliquent QUE sans largeur explicite, pour ne pas
+   écraser un redimensionnement et préserver le comportement des images legacy. */
+.nodyx-prose img[data-align="left"]   { float: left;  margin-right: 1rem; }
+.nodyx-prose img[data-align="right"]  { float: right; margin-left: 1rem;  }
+.nodyx-prose img[data-align="left"]:not([width]),
+.nodyx-prose img[data-align="right"]:not([width])  { max-width: 45%; }
+.nodyx-prose img[data-align="center"] { margin-left: auto; margin-right: auto; display: block; }
+.nodyx-prose img[data-align="full"]   { display: block; float: none; }
+.nodyx-prose img[data-align="full"]:not([width]) { width: 100%; }
+
+/* ── Éditeur : NodeView avec poignées de redimensionnement ─────────────────── */
+.nodyx-content .tiptap .nodyx-img-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    line-height: 0;
+    vertical-align: top;
+}
+.nodyx-content .tiptap .nodyx-img-wrap img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+}
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="left"]   { float: left;  margin: 0.75rem 1rem 0.75rem 0; }
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="right"]  { float: right; margin: 0.75rem 0 0.75rem 1rem; }
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="center"] { display: block; margin: 0.75rem auto; }
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="full"]   { display: block; margin: 0.75rem 0; }
+/* Contour + poignées seulement quand l'image est sélectionnée */
+.nodyx-content .tiptap .nodyx-img-wrap.ProseMirror-selectednode { outline: 2px solid rgb(139 92 246 / 0.8); outline-offset: 1px; }
+.nodyx-content .tiptap .nodyx-img-handle {
+    position: absolute;
+    width: 13px; height: 13px;
+    background: white;
+    border: 2px solid rgb(124 58 237);
+    border-radius: 3px;
+    display: none;
+    z-index: 4;
+}
+.nodyx-content .tiptap .nodyx-img-wrap.ProseMirror-selectednode .nodyx-img-handle,
+.nodyx-content .tiptap .nodyx-img-wrap.resizing .nodyx-img-handle { display: block; }
+.nodyx-content .tiptap .nodyx-img-handle.h-nw { top: -7px;  left: -7px;  cursor: nwse-resize; }
+.nodyx-content .tiptap .nodyx-img-handle.h-ne { top: -7px;  right: -7px; cursor: nesw-resize; }
+.nodyx-content .tiptap .nodyx-img-handle.h-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.nodyx-content .tiptap .nodyx-img-handle.h-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+.nodyx-content .tiptap .nodyx-img-badge {
+    position: absolute;
+    top: 6px; left: 6px;
+    padding: 0.05rem 0.4rem;
+    font-family: ui-monospace, monospace;
+    font-size: 0.62rem; font-weight: 700;
+    color: white;
+    background: rgb(76 29 149 / 0.85);
+    border-radius: 0.25rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms;
+}
+.nodyx-content .tiptap .nodyx-img-wrap.resizing .nodyx-img-badge,
+.nodyx-content .tiptap .nodyx-img-wrap.ProseMirror-selectednode .nodyx-img-badge { opacity: 1; }
 
 /* ── Vidéo / iframe ───────────────────────────────────────────────────────── */
 .nodyx-prose iframe,
