@@ -4,7 +4,7 @@ A native Twitch bridge built into Nodyx. No dependency on Streamlabs, StreamElem
 
 If you stream and you also run a community, this module lets the same Nodyx instance double as your alerts panel, your unified chat (Twitch + Nodyx in one place), and the source of truth for your community activity.
 
-**Status:** v2.5. Phases 1 and 2 of [spec 015](https://github.com/Pokled/nodyx/tree/main/docs/specs/015-streamer-hub) are shipped and running in production. Phases 3 to 5 (OBS Stream Deck, stats, top clips, Twitch Extension) are on the roadmap.
+**Status:** v2.8. Phases 1, 2 and 3 of [spec 015](https://github.com/Pokled/nodyx/tree/main/docs/specs/015-streamer-hub) are shipped and running in production: alerts, unified Twitch chat, the **Soundboard** with a viewer queue, the multi-page **Stream Deck**, **OBS browser-source overlays** and **audio playlists** with OBS scenes. Phases 4 to 5 (stats mirrors, top clips, Twitch Extension) are on the roadmap.
 
 ---
 
@@ -15,6 +15,8 @@ If you stream and you also run a community, this module lets the same Nodyx inst
 **Unified chat.** Twitch chat messages are streamed into a `#twitch-chat` channel on your Nodyx instance. When a Nodyx member writes in that channel, the message is relayed back to your Twitch chat with their Nodyx username as the visible author. Both directions use EventSub (chat in) and Helix Send Chat Message (chat out), so this works without ever touching the legacy IRC interface.
 
 **Viewer linking.** Any Nodyx member can link their personal Twitch account to their Nodyx profile from `/settings`. Once linked, their Twitch chatter id is mapped to their Nodyx user id, so when they speak in your Twitch chat you see them as themselves in the bridge.
+
+**Soundboard, Stream Deck and OBS overlays.** A native soundboard your viewers can fill from a public page or with a chat command, a multi-page mobile control deck, and OBS browser-source overlays (alerts, goals, timers, tickers, leaderboards, clips, soundboard). Each documented in its own section below.
 
 ---
 
@@ -56,6 +58,59 @@ After setting these and restarting `nodyx-core`, the admin panel at `/admin/stre
 If the dashboard shows the green "Connecté" pill, you're done. The Health Overview cards will populate within a few minutes as Twitch confirms each subscription.
 
 **Required scopes.** `user:read:email` (so we can identify the streamer), `channel:read:subscriptions`, `bits:read`, `moderator:read:followers`, `user:read:chat`, `user:write:chat`, `channel:read:polls`. None of these grant access to your stream key, your Twitch settings, your payment history, or any other account you don't explicitly select on the consent screen.
+
+---
+
+## Soundboard
+
+Upload your sounds once, then trigger them from your phone, your Twitch chat, or let viewers fill the queue. Everything is integrated, nothing wired between three SaaS.
+
+**Library.** Drag-and-drop or multi-file upload (mp3, ogg, wav, flac) in the `Soundboard` tab of `/admin/streamer-hub`. ID3 tags are extracted automatically (title, artist, duration, embedded cover art). Per-track inline editing: title, artist, visibility (private or public), default volume (0 to 2x), fade in/out, loop, royalty-free flag. The per-community storage quota is bypassed for owners and admins, so you manage your own disk without friction.
+
+**Public viewer page.** `/soundboard` is reachable without a login. Viewers browse the full library (live search by title or artist, preview on hover), see a real-time "now playing" card and an "up next" queue, and can push a sound with a single button. The page polls over REST every two seconds; no public socket is exposed.
+
+**Viewer queue.** A dedicated Redis FIFO queue (max 50) with a rate limit (30s per IP), a per-IP cap (3 simultaneous sounds) and global deduplication by track. An admin toggle ("Viewers allowed / blocked", on by default, persisted in Redis) is your anti-raid net. When a sound finishes on the overlay, the backend pops the next one automatically. From the admin tab you see the queue live and can skip a specific sound or clear everything.
+
+**Chat command `!ns`** (alias `!nextsound`). A viewer types `!ns ixion` in your Twitch chat and the bot adds the best-matching sound to the queue. The fuzzy matcher normalizes case and accents, then scores in cascade (exact, then prefix, then mid-substring, then token + Levenshtein with a 2-typo tolerance). If the top two candidates are too close, the bot replies with the three best matches so the viewer can disambiguate instead of getting the wrong sound. Each chatter is rate-limited individually.
+
+---
+
+## Stream Deck
+
+A mobile control surface (the **Nodyx Deck**) you open on your phone while you stream, organized into logical pages.
+
+**Multi-page layout.** Up to 8 pages per deck (one for sounds, one for commands, one for moderation, however you like), each with an accent color, inline rename (double-click) and drag-to-reorder. V1 single-page decks keep working: they are auto-wrapped into a "Main" page server-side, no migration. The mobile view shows a floating page dock at the bottom (accent colors, haptic feedback on switch, iOS safe-area aware) when the deck has more than one page.
+
+**Button actions.** Alongside the existing alert, scene and chat actions, four audio and navigation actions:
+
+```
+play_audio      → trigger a soundboard track (picker with live search + thumbnails)
+stop_audio      → stop the current playback with a fade out
+pause_audio      → pause the current track
+navigate_page    → jump to another deck page (target page, or home / prev / next)
+```
+
+`navigate_page` is intercepted client-side on mobile for zero latency.
+
+**Send to Deck.** Each row of the Soundboard tab has a "+ Deck" button: attach a sound to a deck button without navigating three tabs. The modal lets you pick the target deck, the target page, and a free cell on a mini interactive grid (occupied cells show the existing button's icon), or auto-place in the first free slot. It stays open after each placement so you can build a full page in one go. Each track gets a deterministic color gradient so the same sound always looks the same on the deck.
+
+---
+
+## OBS overlays
+
+Drop transparent browser sources into OBS, then barely touch OBS again.
+
+**Seven overlay types**, each a browser-source URL gated by a single-use token:
+
+```
+alert · goal · timer · ticker · leaderboard · clips · soundboard
+```
+
+The soundboard overlay is a transparent Web Audio player: per-track fade in/out, automatic cross-fade when a new sound starts over a playing one, and a discreet on-screen display in a corner (thumbnail, title, artist, progress bar), positionable in any of the four corners or hidden. Several soundboard overlays per owner are supported, so each OBS scene gets its own browser source and they all receive the same stream.
+
+**Audio playlists.** Group your sounds into named playlists (Dev, Discussion, ...), each with its own dedicated OBS overlay URL, controllable from the Stream Deck. A playlist maps cleanly onto a stream scene: one playlist per scene, one overlay URL per scene.
+
+**OBS Scenes composer.** An OBS-style visual editor inside the Streamer Hub to place overlays and playlists per scene, with inline creation. Everything converges on the overlays and playlists you already have: pick an existing one, or create a new one on the spot, and place it in the scene.
 
 ---
 
@@ -143,8 +198,8 @@ Yes. `/settings` on the viewer's side has an "Unlink Twitch" button. As an admin
 **Where do the encrypted tokens live?**
 In `streamer_tokens`. Each row has the ciphertext, a per-row salt, the GCM IV and auth tag, and a `key_version` column for rotation. The master key is read from `STREAMER_OAUTH_KEY` at runtime; it never touches the database.
 
-**Why "Phase 1+2" only?**
-Because we ship what's tested. Phases 3 (OBS Stream Deck web), 4 (stats and poll mirrors) and 5 (top clips, raider preview, Twitch Extension generator) are on the roadmap in the spec. They will land when they're solid enough to replace what Streamlabs/StreamElements do today.
+**What's shipped and what's still coming?**
+Phases 1 to 3 are live: alerts, unified chat, the Soundboard with its viewer queue and `!ns` command, the multi-page Stream Deck, the OBS overlays and audio playlists with scenes. Phases 4 (stats and poll mirrors) and 5 (top clips, raider preview, Twitch Extension generator) are on the roadmap in the spec. We ship what's tested: each phase lands when it's solid enough to replace what Streamlabs/StreamElements do today.
 
 ---
 
