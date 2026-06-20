@@ -212,6 +212,42 @@ customElements.define('nodyx-widget-my-widget', MyWidget)
 
 ---
 
+## Streamer Hub, your whole live stream from Nodyx
+
+Nodyx ships a complete **Streamer Hub** (v2.5 to v2.7): a native Soundboard, a mobile Stream Deck, OBS browser-source overlays and Twitch integration. Start OBS, then barely touch it again. No wiring three SaaS together, no monthly bots, your community owns the whole setup.
+
+### Soundboard
+
+The streamer uploads their sounds, viewers help fill the queue, OBS plays them.
+
+- Drag-and-drop upload (mp3, ogg, wav, flac), automatic **ID3 tags** (title, artist, duration, embedded cover art)
+- Per-track controls: visibility (private / public), default volume (0 to 2x), fade in/out, loop, royalty-free flag
+- Triggered from the **mobile Stream Deck**, **Twitch chat**, or the OBS overlay itself
+- **Public viewer page** (`/soundboard`, no login): browse the library, preview on hover, queue a sound
+- Redis FIFO **viewer queue** (max 50, per-IP rate limit and cap, global dedup), admin toggle + skip + clear, anti-raid by design
+- Twitch chat command **`!ns <name>`** (alias `!nextsound`) with a fuzzy matcher and ambiguity detection: if two sounds are too close, the bot asks the viewer to pick instead of guessing wrong
+
+### Stream Deck, mobile and multi-page
+
+- Up to **8 logical pages** (sounds, commands, moderation...) with accent colors, inline rename, drag-to-reorder
+- Actions: `play_audio`, `stop_audio`, `pause_audio`, `navigate_page`, plus alerts, scene switches and chat commands
+- Floating page dock on mobile (haptics, iOS safe-area), backwards-compatible with single-page V1 decks (no migration)
+- "Send to Deck" modal: attach a sound to a button from the Soundboard tab, mini-grid to pick a free cell, auto-placement
+
+### OBS overlays, browser sources
+
+Seven overlay types, each a transparent browser-source URL you drop into OBS:
+
+```
+alert · goal · timer · ticker · leaderboard · clips · soundboard
+```
+
+- Web Audio fade and cross-fade, configurable on-screen display (4 corners or hidden)
+- **Audio playlists**: named lists (Dev, Discussion...), each with its own dedicated OBS overlay URL, controllable from the Deck
+- **OBS Scenes composer**: an OBS-style visual editor to place overlays and playlists per scene, with inline creation
+
+---
+
 ## The P2P Stack, 100% handwritten Rust
 
 This is where Nodyx goes further than anyone else.

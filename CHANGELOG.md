@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
+---
+
+## [2.8.0] — 2026-06-20
+
 ### Éditeur d'articles : refonte de robustesse et d'UX (sprint juin)
 
 Gros chantier sur l'éditeur riche (TipTap) après un audit complet. Cause racine identifiée et corrigée : certains blocs personnalisés se reconnaissaient via des attributs `data-*` que le sanitizer backend supprime, donc l'éditeur les déstructurait à la réédition (perte silencieuse de contenu). Principe établi : **un bloc se reconnaît sur sa classe CSS** (préservée), jamais sur un `data-*` volatil.
