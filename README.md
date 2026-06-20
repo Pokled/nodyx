@@ -618,23 +618,61 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 
 </details>
 
-<details open>
-<summary><b>v2.6, OctoGuard Phase 1: native auto-moderation 🐙</b></summary>
+<details>
+<summary><b>v2.1, Homepage Builder + Widget SDK 🧩</b></summary>
 
 | Feature | Version |
 |---|---|
-| **OctoGuard auto-mod pipeline**, 50 ms fail-open, 5 matcher types: substring, word-boundary, regex, link allow/blocklist, emoji-flood. ReDoS-safe via Google `re2` linear-time engine (84 s native vs 0 ms `re2` confirmed in bench) plus `safe-regex` heuristic on pattern admission | v2.6 |
-| **6 actions**, `delete`, `warn`, `mute_timed`, `kick`, `ban` (with optional `community_bans.expires_at` for temporary bans), `report_only` dry-run | v2.6 |
-| **Welcome flow**, ghost `OctoGuard` bot user (`users.is_system=true`, login refused), public message with `{user}` / `{userMention}` / `{communityName}` variables, optional auto-grade on join. DM system message reserved for spec 019 | v2.6 |
-| **Custom commands**, `!règles`, `!discord`, ... in markdown, Redis-backed per-channel cooldown (SET NX EX), allowed channels and roles configurable per command | v2.6 |
-| **Chat mutes**, new `chat_mutes` table, global or per-channel scope, free-form duration (`15m`, `2h`, `1w`, permanent), Redis-cached 60 s, background purge worker | v2.6 |
-| **Reports queue**, member-driven, anti-abuse rate limit per reporter + cooldown per target via Redis, admin inbox with mute/delete/dismiss actions | v2.6 |
-| **HMAC-SHA256 webhook**, outbound POST signed with `X-Octoguard-Signature: sha256=hex`, queued in Redis, worker fires async with 10 s timeout. The chat pipeline never pays the webhook latency | v2.6 |
-| **Audit log**, every action persisted to `admin_audit_log` with `event_id`, action type, target, metadata. Logger is fire-and-forget IIFE (caught by pre-emptive bench: p95 dropped from 13 ms to 0.2 ms after switching from `await` to fire-and-forget) | v2.6 |
-| **Admin UI**, `/admin/octoguard` with 8 tabs: overview, automod, welcome, commands, mutes, reports, logs, webhook. All CRUD with optimistic `enhance` forms | v2.6 |
-| **Kill-switch**, `OCTOGUARD_ENABLED=false` bypasses the entire pipeline. Rules table empty equals zero impact even when enabled, progressive rollout pattern | v2.6 |
-| **69 vitest tests**, `octoguard-matchers`, `octoguard-commands`, `octoguard-session-c` covering matchers, `assessPatternSafety`, `durationToExpiresAt`, `substituteVariables`, mutes, env migration | v2.6 |
-| **`bench.ts`**, dedicated performance benchmark proves p95 < 1 ms under load, caught the logger bottleneck before activation | v2.6 |
+| **Homepage Builder**, drag-and-drop admin, 11 layout zones (banner, hero, stats-bar, main, sidebar, half ×2, trio ×3, footer ×4) | v2.1 |
+| **Plugin registry**, each native widget is a self-contained file, zero core changes to add new ones | v2.1 |
+| **4 native widgets Phase 1**, Hero Banner (live/event/night variants), Stats Bar (animated counters), Join Card, Announcement Banner | v2.1 |
+| **Visibility rules**, per-widget audience (all / guests / members) + scheduled start/end dates | v2.1 |
+| **Widget Store**, install external widgets via `.zip` upload (XHR progress bar, 4-step validation, extraction whitelist) | v2.1 |
+| **Dynamic Widget Loader**, Web Components loaded at runtime, no rebuild, no deploy | v2.1 |
+| **Widget SDK**, plain JS Custom Elements (Shadow DOM), `manifest.json` schema → auto-generated config fields in builder | v2.1 |
+| **Demo widget: Video Player**, YouTube / Vimeo / MP4 with live preview, source viewer, one-click install | v2.1 |
+| **nodyx.dev/create-widget**, step-by-step guide for non-developers (7 steps, EN) | v2.1 |
+
+</details>
+
+<details>
+<summary><b>v2.2, NodyxCanvas major upgrade 🎨</b></summary>
+
+| Feature | Version |
+|---|---|
+| **Canvas UI refactor**, 4 dedicated components: CanvasLeftToolbar, CanvasTopBar (contextual per tool), CanvasBottomBar, CanvasRightPanel | v2.2 |
+| **Undo / Redo**, 50-op stack, Ctrl+Z/Y/Shift+Z, buttons with active/disabled state. Fixed CRDT LWW timestamp so undo always applies | v2.2 |
+| **Snap to grid**, 28px world grid, toggle (G key), visual grid overlay | v2.2 |
+| **Rich text**, bold, italic, underline, strikethrough, alignment (left/center/right), 3 font families (sans/serif/mono), 12 font sizes | v2.2 |
+| **Advanced shapes**, triangle, diamond (losange), star, hexagon, cloud, rendered via Path2D, fill + stroke + label | v2.2 |
+| **Connectors**, straight / bezier / elbow lines, independent start & end caps (arrow/dot/none), solid/dashed/dotted style, 2-click creation | v2.2 |
+| **Frames / Sections**, named rectangular regions with dashed border, label rendered above, inline name input on creation | v2.2 |
+| **Image insertion**, drag & drop from desktop or file picker, uploaded to `/api/v1/assets`, cached and rendered on canvas, proportional sizing | v2.2 |
+| **Resize handles**, 8 handles (corners + midpoints) on selected rect/circle/shape/frame/image/sticky elements, live preview, snap-aware | v2.2 |
+| **Real user avatars**, participant panel shows real user avatars (with initials fallback) and their active tool | v2.2 |
+| **Board chat**, real-time chat scoped to the canvas board, independent from the voice channel chat | v2.2 |
+| **Full keyboard shortcuts**, V P T N R C S A X I F E (tools) + G (grid) + Ctrl+Z/Y/Shift+Z (undo/redo) + Delete + Escape | v2.2 |
+| **Portal rendering**, canvas mounted on `document.body` via portal action, bypasses CSS `transform` ancestors that break `position:fixed` | v2.2 |
+
+</details>
+
+<details>
+<summary><b>v2.3, Universal Media Player + Builder Catalog Fusion 🎬</b></summary>
+
+| Feature | Version |
+|---|---|
+| **Universal Media Player**, auto-detects YouTube, Vimeo, Dailymotion, Twitch (live / VOD / clip), SoundCloud, Spotify, plus direct `.mp4` / `.webm` / `.mp3` hosted files. Single URL field, platform inferred at render time | v2.3 |
+| **Builder catalog fusion**, installed widgets now appear in the Grid Builder picker next to native plugins. New `CatalogEntry` aggregation layer with `checkbox → boolean` field type canonicalization | v2.3 |
+| **Tunnel installer hardening (#23)**, 12 fixes for Pangolin mode: Caddy site-address `:80 { bind ... }` rewrite (Host filter root cause), atomic Caddyfile regen on `--repair`, UFW RFC1918 rules, doctor false-positive gate | v2.3 |
+| **nodyx-doctor**, Method A (`--network host`) no longer triggers a misleading "LAN IP not bound" warning | v2.3 |
+| **nodyx-relay v0.1.4**, TCP keepalive + read deadline to detect dead sessions | v2.3 |
+| **Doc search rewrite**, heading-aware index with deep-link anchors, scrollspy TOC sidebar, slug correctness pass (108 broken TOC links + 60 leading-dash ids cleaned) | v2.3 |
+| **Why-Nodyx posture**, new positioning page listing alternative platforms (Matrix, Stoat, Fluxer, Haven, ...), README aligned, "silos vs liberty, not Nodyx vs X" framing | v2.3 |
+| **i18n**, German (`de.json`) + Spanish (`es.json`) translations, native review for both | v2.3 |
+| **Homepage Builder polish**, Twitch stream + Articles showcase widgets, clickable `(?)` info panel on field labels | v2.3 |
+| **Voice kick**, owners, admins and moderators can remove a user from a voice channel | v2.3 |
+| **Community Pulse**, co-presence trail and wave visualization page | v2.3 |
+| **Nodyx Stars**, proper recognition system for external contributors with public CONTRIBUTORS.md, avatar block in README, polish-trail transparency | v2.3 |
 
 </details>
 
@@ -661,80 +699,73 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 </details>
 
 <details>
-<summary><b>v2.3, Universal Media Player + Builder Catalog Fusion 🎬</b></summary>
+<summary><b>v2.5, Streamer Hub Phase 2: unified Twitch ↔ Nodyx chat 💬</b></summary>
 
 | Feature | Version |
 |---|---|
-| **Universal Media Player**, auto-detects YouTube, Vimeo, Dailymotion, Twitch (live / VOD / clip), SoundCloud, Spotify, plus direct `.mp4` / `.webm` / `.mp3` hosted files. Single URL field, platform inferred at render time | v2.3 |
-| **Builder catalog fusion**, installed widgets now appear in the Grid Builder picker next to native plugins. New `CatalogEntry` aggregation layer with `checkbox → boolean` field type canonicalization | v2.3 |
-| **Tunnel installer hardening (#23)**, 12 fixes for Pangolin mode: Caddy site-address `:80 { bind ... }` rewrite (Host filter root cause), atomic Caddyfile regen on `--repair`, UFW RFC1918 rules, doctor false-positive gate | v2.3 |
-| **nodyx-doctor**, Method A (`--network host`) no longer triggers a misleading "LAN IP not bound" warning | v2.3 |
-| **nodyx-relay v0.1.4**, TCP keepalive + read deadline to detect dead sessions | v2.3 |
-| **Doc search rewrite**, heading-aware index with deep-link anchors, scrollspy TOC sidebar, slug correctness pass (108 broken TOC links + 60 leading-dash ids cleaned) | v2.3 |
-| **Why-Nodyx posture**, new positioning page listing alternative platforms (Matrix, Stoat, Fluxer, Haven, ...), README aligned, "silos vs liberty, not Nodyx vs X" framing | v2.3 |
-| **i18n**, German (`de.json`) + Spanish (`es.json`) translations, native review for both | v2.3 |
-| **Homepage Builder polish**, Twitch stream + Articles showcase widgets, clickable `(?)` info panel on field labels | v2.3 |
-| **Voice kick**, owners, admins and moderators can remove a user from a voice channel | v2.3 |
-| **Community Pulse**, co-presence trail and wave visualization page | v2.3 |
-| **Nodyx Stars**, proper recognition system for external contributors with public CONTRIBUTORS.md, avatar block in README, polish-trail transparency | v2.3 |
+| **Two-way live chat**, real-time bridge between a Nodyx instance and the streamer's Twitch chat, 100% EventSub + Helix, zero IRC. Verified in prod (277 messages during the test session) | v2.5 |
+| **Inbound (Twitch → Nodyx)**, `channel.chat.message` EventSub, auto-created `#twitch-chat` channel, each Twitch message mapped to a Nodyx author (resolved via `twitch_id` or placeholder) | v2.5 |
+| **Outbound (Nodyx → Twitch)**, members writing in `#twitch-chat` are relayed via Helix `POST /chat/messages`, `[username]` prefix for viewer transparency, only while a live session is open | v2.5 |
+| **Rate-limit queue**, on Twitch 429 the message is enqueued in a Redis sorted set, a worker dequeues by batch with exponential backoff, audit alert on overflow | v2.5 |
+| **Session lifecycle**, `stream.online` / `stream.offline` tracked in `streamer_sessions` (idempotent), gating the outbound bridge | v2.5 |
+| **Emotes & badges**, native Twitch emotes from payload fragments, BTTV / FFZ / 7TV fetched and cached (24h), global + channel badges via Helix, graceful degradation if a provider fails | v2.5 |
+| **65 new tests**, bridge, emotes, lifecycle, outbound queue, badges. Full suite 269/269 green | v2.5 |
 
 </details>
 
 <details>
-<summary><b>v2.2, NodyxCanvas major upgrade 🎨</b></summary>
+<summary><b>v2.6, OctoGuard Phase 1: native auto-moderation 🐙</b></summary>
 
 | Feature | Version |
 |---|---|
-| **Canvas UI refactor**, 4 dedicated components: CanvasLeftToolbar, CanvasTopBar (contextual per tool), CanvasBottomBar, CanvasRightPanel | v2.2 |
-| **Undo / Redo**, 50-op stack, Ctrl+Z/Y/Shift+Z, buttons with active/disabled state. Fixed CRDT LWW timestamp so undo always applies | v2.2 |
-| **Snap to grid**, 28px world grid, toggle (G key), visual grid overlay | v2.2 |
-| **Rich text**, bold, italic, underline, strikethrough, alignment (left/center/right), 3 font families (sans/serif/mono), 12 font sizes | v2.2 |
-| **Advanced shapes**, triangle, diamond (losange), star, hexagon, cloud, rendered via Path2D, fill + stroke + label | v2.2 |
-| **Connectors**, straight / bezier / elbow lines, independent start & end caps (arrow/dot/none), solid/dashed/dotted style, 2-click creation | v2.2 |
-| **Frames / Sections**, named rectangular regions with dashed border, label rendered above, inline name input on creation | v2.2 |
-| **Image insertion**, drag & drop from desktop or file picker, uploaded to `/api/v1/assets`, cached and rendered on canvas, proportional sizing | v2.2 |
-| **Resize handles**, 8 handles (corners + midpoints) on selected rect/circle/shape/frame/image/sticky elements, live preview, snap-aware | v2.2 |
-| **Real user avatars**, participant panel shows real user avatars (with initials fallback) and their active tool | v2.2 |
-| **Board chat**, real-time chat scoped to the canvas board, independent from the voice channel chat | v2.2 |
-| **Full keyboard shortcuts**, V P T N R C S A X I F E (tools) + G (grid) + Ctrl+Z/Y/Shift+Z (undo/redo) + Delete + Escape | v2.2 |
-| **Portal rendering**, canvas mounted on `document.body` via portal action, bypasses CSS `transform` ancestors that break `position:fixed` | v2.2 |
+| **OctoGuard auto-mod pipeline**, 50 ms fail-open, 5 matcher types: substring, word-boundary, regex, link allow/blocklist, emoji-flood. ReDoS-safe via Google `re2` linear-time engine (84 s native vs 0 ms `re2` confirmed in bench) plus `safe-regex` heuristic on pattern admission | v2.6 |
+| **6 actions**, `delete`, `warn`, `mute_timed`, `kick`, `ban` (with optional `community_bans.expires_at` for temporary bans), `report_only` dry-run | v2.6 |
+| **Welcome flow**, ghost `OctoGuard` bot user (`users.is_system=true`, login refused), public message with `{user}` / `{userMention}` / `{communityName}` variables, optional auto-grade on join. DM system message reserved for spec 019 | v2.6 |
+| **Custom commands**, `!règles`, `!discord`, ... in markdown, Redis-backed per-channel cooldown (SET NX EX), allowed channels and roles configurable per command | v2.6 |
+| **Chat mutes**, new `chat_mutes` table, global or per-channel scope, free-form duration (`15m`, `2h`, `1w`, permanent), Redis-cached 60 s, background purge worker | v2.6 |
+| **Reports queue**, member-driven, anti-abuse rate limit per reporter + cooldown per target via Redis, admin inbox with mute/delete/dismiss actions | v2.6 |
+| **HMAC-SHA256 webhook**, outbound POST signed with `X-Octoguard-Signature: sha256=hex`, queued in Redis, worker fires async with 10 s timeout. The chat pipeline never pays the webhook latency | v2.6 |
+| **Audit log**, every action persisted to `admin_audit_log` with `event_id`, action type, target, metadata. Logger is fire-and-forget IIFE (caught by pre-emptive bench: p95 dropped from 13 ms to 0.2 ms after switching from `await` to fire-and-forget) | v2.6 |
+| **Admin UI**, `/admin/octoguard` with 8 tabs: overview, automod, welcome, commands, mutes, reports, logs, webhook. All CRUD with optimistic `enhance` forms | v2.6 |
+| **Kill-switch**, `OCTOGUARD_ENABLED=false` bypasses the entire pipeline. Rules table empty equals zero impact even when enabled, progressive rollout pattern | v2.6 |
+| **69 vitest tests**, `octoguard-matchers`, `octoguard-commands`, `octoguard-session-c` covering matchers, `assessPatternSafety`, `durationToExpiresAt`, `substituteVariables`, mutes, env migration | v2.6 |
+| **`bench.ts`**, dedicated performance benchmark proves p95 < 1 ms under load, caught the logger bottleneck before activation | v2.6 |
 
 </details>
 
 <details>
-<summary><b>v2.1, Homepage Builder + Widget SDK 🧩</b></summary>
+<summary><b>v2.7, Streamer Hub: Soundboard + multi-page Stream Deck 🔊</b></summary>
 
 | Feature | Version |
 |---|---|
-| **Homepage Builder**, drag-and-drop admin, 11 layout zones (banner, hero, stats-bar, main, sidebar, half ×2, trio ×3, footer ×4) | v2.1 |
-| **Plugin registry**, each native widget is a self-contained file, zero core changes to add new ones | v2.1 |
-| **4 native widgets Phase 1**, Hero Banner (live/event/night variants), Stats Bar (animated counters), Join Card, Announcement Banner | v2.1 |
-| **Visibility rules**, per-widget audience (all / guests / members) + scheduled start/end dates | v2.1 |
-| **Widget Store**, install external widgets via `.zip` upload (XHR progress bar, 4-step validation, extraction whitelist) | v2.1 |
-| **Dynamic Widget Loader**, Web Components loaded at runtime, no rebuild, no deploy | v2.1 |
-| **Widget SDK**, plain JS Custom Elements (Shadow DOM), `manifest.json` schema → auto-generated config fields in builder | v2.1 |
-| **Demo widget: Video Player**, YouTube / Vimeo / MP4 with live preview, source viewer, one-click install | v2.1 |
-| **nodyx.dev/create-widget**, step-by-step guide for non-developers (7 steps, EN) | v2.1 |
+| **Soundboard**, upload sounds (mp3/ogg/wav/flac), automatic ID3 tags (title, artist, cover), per-track volume / fade / loop / visibility, batch upload with live progress | v2.7 |
+| **OBS Soundboard overlay**, transparent browser source, Web Audio fade and cross-fade, discreet OSD (4 corners or hidden), multiple overlays per owner | v2.7 |
+| **Public viewer page** (`/soundboard`, no login), browse the library, hover preview, live "now playing" and "up next" queue | v2.7 |
+| **Viewer queue**, Redis FIFO (max 50, per-IP rate limit and cap, global dedup), admin toggle + skip + clear, auto-consume on `audio:ended`, anti-raid by design | v2.7 |
+| **`!ns` chat command** (alias `!nextsound`), fuzzy matcher with normalization, cascade scoring and Levenshtein, ambiguity detection that asks the viewer instead of guessing wrong | v2.7 |
+| **Multi-page Stream Deck**, up to 8 logical pages with accent colors, inline rename, drag-to-reorder, backwards-compatible V1 decks (no migration) | v2.7 |
+| **New Deck actions**, `play_audio`, `stop_audio`, `pause_audio`, `navigate_page` (intercepted client-side for zero latency) | v2.7 |
+| **Mobile deck**, floating page dock with haptics and iOS safe-area, "Send to Deck" modal with mini-grid and auto-placement | v2.7 |
 
 </details>
 
-### Coming
+<details open>
+<summary><b>v2.8, Article Editor Overhaul · Playlists & OBS Scenes · Security ✍️</b></summary>
 
-| Feature | Notes |
+| Feature | Version |
 |---|---|
-| **Canvas, Ghost Mode**, anonymous brainstorming: contributions appear under random pseudonyms, author revealed at end | Sprint D |
-| **Canvas, Audio Stickies**, voice note recorded directly on the canvas, waveform rendered as post-it | Sprint D |
-| **Canvas, Contextual Chat**, threaded discussion anchored to a canvas zone, spatially indexed | Sprint D |
-| **More native widgets**, Countdown, Leaderboard, Latest Threads, Featured Events, Jukebox Player | Phase 2 |
-| **Widget marketplace**, community-published widgets, ratings, one-click install from directory |, |
-| **Nodes**, durable structured knowledge, community-validated via Garden | [SPEC 013](docs/en/specs/013-node/SPEC.md) |
-| **Module system**, 26 activatable modules from admin panel (Joomla-style CMS) | [Spec](.claude/ideas/MODULE_SYSTEM.md) |
-| **DM reactions**, emoji reactions on private messages |, |
-| **Discord import**, bulk import channels, threads, reactions, avatars |, |
-| Mobile (Capacitor) / Desktop (Tauri) |, |
-| Rust migration, nodyx-server (Axum) replacing nodyx-core progressively |, |
+| **Editor round-trip robustness**, columns and YouTube videos no longer vanish on re-edit (parse on class, not on stripped `data-*`). Full audit in `docs/audits/2026-06-15-editeur-rich.md` | v2.8 |
+| **Protected SSH console block**, atomic node that preserves its HTML, with a CMS-style Render / Code toggle, source editable but never corrupted by the keyboard | v2.8 |
+| **Anchor-on-selection table of contents**, floating bar with an "Anchor" button that turns the line into a section and adds it to a derived menu (with feedback flash) | v2.8 |
+| **Image resize**, corner handles with snap to key widths (25 / 50 / 75 / 100 %), width stored as a `width` attribute, round-trip safe | v2.8 |
+| **Bounded editable area + sticky toolbar**, always reachable on long articles | v2.8 |
+| **Streamer Hub playlists + OBS Scenes**, named audio playlists with per-playlist OBS overlay URLs, plus an OBS-style visual Scenes composer | v2.8 |
+| **SEO / GEO foundations**, sitemap fix (14 → 60+ URLs), single correct `og:image` per page (Discord / Twitter shares), rewritten `llms.txt`, honest comparison + beginner install guides (FR + EN) | v2.8 |
+| **Admin redesign**, sober Linear / Vercel / Stripe style for the sidebar and dashboard | v2.8 |
+| **Performance**, non-blocking SSR directory fetch + version-keyed showcase cache, home refresh after thread deletion | v2.8 |
+| **Security sweep**, ws (high) and tar (medium) patched, esbuild >= 0.28.1 via override across the 4 SvelteKit projects, nodemailer 8 → 9 validated in prod | v2.8 |
 
----
+</details>
 
 ## The Vision
 

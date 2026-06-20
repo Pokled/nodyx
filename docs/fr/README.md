@@ -7,7 +7,7 @@
 ### *"Le réseau, c'est les gens."*
 
 **La plateforme communautaire auto-hébergée qui vous appartient vraiment.**  
-Forum + Chat + Voix + P2P + Canvas + Constructeur de page d'accueil + SDK Widget, un seul serveur, une communauté, pour toujours.
+Forum + Chat + Voix + P2P + Canvas + Constructeur de page d'accueil + Streamer Hub, un seul serveur, une communauté, pour toujours.
 
 [![Version](https://img.shields.io/github/v/release/Pokled/nodyx?label=version&color=7c3aed)](https://github.com/Pokled/nodyx/releases/latest)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
@@ -129,6 +129,8 @@ Le paysage des outils communautaires n'est pas un combat. Chaque projet optimise
 - **Boutique de widgets**, installer des widgets externes via .zip
 - **SDK Widget**, créer des widgets custom, sans framework
 - **OctoGuard**, auto-modération native (regex/word/link/emoji-flood, anti-ReDoS via `re2` Google), bot de bienvenue, commandes custom, mutes, webhook signé, entièrement paramétrable par l'admin, désactivé par défaut
+- **Streamer Hub**, intégration Twitch avec un Soundboard natif (tags ID3, queue viewers, commande chat `!ns`), un Stream Deck mobile multi-pages, des overlays OBS en browser source (alertes, objectifs, timers, tickers, classements, clips, soundboard) et des playlists audio avec scènes OBS dédiées
+- **Éditeur d'articles riche**, sommaire par ancre à la sélection, redimensionnement d'image aux poignées, blocs code/rendu protégés, colonnes, médias embarqués, le tout robuste au round-trip via le sanitizer
 
 ---
 
@@ -191,6 +193,42 @@ customElements.define('nodyx-widget-my-widget', MyWidget)
 ```
 
 → **[Guide complet pas à pas pour non-développeurs → nodyx.dev/create-widget](https://nodyx.dev/create-widget)**
+
+---
+
+## Streamer Hub, tout ton live depuis Nodyx
+
+Nodyx embarque un **Streamer Hub** complet (v2.5 à v2.7) : un Soundboard natif, un Stream Deck mobile, des overlays OBS en browser source et l'intégration Twitch. Tu démarres OBS, puis tu n'y touches presque plus. Pas trois SaaS à câbler ensemble, pas de bots mensuels, ta communauté possède tout le setup.
+
+### Soundboard
+
+Le streamer upload ses sons, les viewers aident à remplir la queue, OBS les joue.
+
+- Upload drag-and-drop (mp3, ogg, wav, flac), **tags ID3** automatiques (titre, artiste, durée, cover embarquée)
+- Réglages par piste : visibilité (privé / public), volume par défaut (0 à 2x), fade in/out, loop, indicateur royalty-free
+- Déclenché depuis le **Stream Deck mobile**, le **chat Twitch**, ou l'overlay OBS lui-même
+- **Page viewers publique** (`/soundboard`, sans login) : parcourir la bibliothèque, preview au survol, ajouter un son à la queue
+- **Queue viewers** Redis FIFO (max 50, rate-limit et cap par IP, déduplication globale), toggle admin + skip + tout vider, anti-raid par conception
+- Commande chat **`!ns <nom>`** (alias `!nextsound`) avec fuzzy matcher et détection d'ambiguïté : si deux sons sont trop proches, le bot demande au viewer de préciser au lieu de deviner mal
+
+### Stream Deck, mobile et multi-pages
+
+- Jusqu'à **8 pages logiques** (sons, commandes, modération...) avec couleurs d'accent, rename inline, drag-to-reorder
+- Actions : `play_audio`, `stop_audio`, `pause_audio`, `navigate_page`, plus alertes, changements de scène et commandes chat
+- Dock de pages flottant sur mobile (haptique, safe-area iOS), rétrocompatible avec les decks V1 mono-page (sans migration)
+- Modal « Envoyer au Deck » : rattacher un son à un bouton depuis le tab Soundboard, mini-grille pour choisir une case libre, auto-placement
+
+### Overlays OBS, browser sources
+
+Sept types d'overlay, chacun une URL browser source transparente à déposer dans OBS :
+
+```
+alert · goal · timer · ticker · leaderboard · clips · soundboard
+```
+
+- Fade et cross-fade Web Audio, OSD configurable (4 coins ou caché)
+- **Playlists audio** : listes nommées (Dev, Discussion...), chacune avec son URL d'overlay OBS dédiée, pilotable depuis le Deck
+- **Compositeur de scènes OBS** : un éditeur visuel façon OBS pour placer overlays et playlists par scène, avec création inline
 
 ---
 
@@ -564,22 +602,20 @@ Chaque instance Nodyx fait tourner un scheduler **Protocole Gossip** qui pinge p
 
 </details>
 
-<details open>
-<summary><b>v2.6, OctoGuard Phase 1 : auto-modération native 🐙</b></summary>
+<details>
+<summary><b>v2.1, Constructeur de page d'accueil + SDK Widget 🧩</b></summary>
 
 | Fonctionnalité | Version |
 |---|---|
-| **Pipeline auto-mod OctoGuard**, fail-open 50 ms, 5 types de matchers : substring, word-boundary, regex, link allow/blocklist, emoji-flood. Anti-ReDoS via moteur linéaire `re2` Google (84 s natif vs 0 ms `re2` mesuré en bench) + `safe-regex` heuristique à l'admission | v2.6 |
-| **6 actions**, `delete`, `warn`, `mute_timed`, `kick`, `ban` (avec `community_bans.expires_at` optionnel pour bans temporaires), `report_only` dry-run | v2.6 |
-| **Flux de bienvenue**, ghost bot `OctoGuard` (`users.is_system=true`, login refusé), message public avec variables `{user}` / `{userMention}` / `{communityName}`, auto-grade optionnel à l'inscription. Message DM système reporté à la spec 019 | v2.6 |
-| **Commandes personnalisées**, `!règles`, `!discord`, ... en markdown, cooldown Redis par canal (`SET NX EX`), canaux et rôles autorisés configurables par commande | v2.6 |
-| **Mutes chat**, nouvelle table `chat_mutes`, portée globale ou par canal, durée libre (`15m`, `2h`, `1w`, permanent), cache Redis 60 s, worker de purge en arrière-plan | v2.6 |
-| **File de signalements**, driven par les membres, anti-abus rate limit par signaleur + cooldown par cible via Redis, inbox admin avec actions mute/delete/dismiss | v2.6 |
-| **Webhook HMAC-SHA256**, POST sortant signé `X-Octoguard-Signature: sha256=hex`, queue Redis, worker async timeout 10 s. Le pipeline chat ne paye jamais la latence webhook | v2.6 |
-| **Journal d'audit**, chaque action persistée dans `admin_audit_log` avec `event_id`. Logger fire-and-forget IIFE (capté par le bench pré-emptif : p95 passé de 13 ms à 0,2 ms) | v2.6 |
-| **UI admin**, `/admin/octoguard` avec 8 onglets : vue d'ensemble, automod, bienvenue, commandes, mutes, signalements, journal, webhook. CRUD complet avec formulaires `enhance` optimistes | v2.6 |
-| **Kill-switch**, `OCTOGUARD_ENABLED=false` court-circuite tout le pipeline. Table de règles vide = impact zéro même activé. Pattern de rollout dégressif | v2.6 |
-| **69 tests Vitest** + script `bench.ts` dédié, prouve p95 < 1 ms en charge, a permis d'attraper le goulot du logger avant activation prod | v2.6 |
+| **Constructeur de page d'accueil**, admin drag-and-drop, 11 zones de mise en page (banner, hero, stats-bar, main, sidebar, half ×2, trio ×3, footer ×4) | v2.1 |
+| **Registre de plugins**, chaque widget natif est un fichier autonome, zéro changement core pour en ajouter de nouveaux | v2.1 |
+| **4 widgets natifs Phase 1**, Bannière Héro (variantes live/événement/nuit), Barre de stats (compteurs animés), Carte d'adhésion, Bannière d'annonce | v2.1 |
+| **Règles de visibilité**, audience par widget (tous / visiteurs / membres) + dates de début/fin planifiées | v2.1 |
+| **Boutique de widgets**, installation de widgets externes via upload `.zip` (barre de progression XHR, validation en 4 étapes, liste blanche d'extraction) | v2.1 |
+| **Chargeur de widgets dynamique**, Web Components chargés à l'exécution, sans recompilation, sans déploiement | v2.1 |
+| **SDK Widget**, Custom Elements JS pur (Shadow DOM), schéma `manifest.json` → champs de config auto-générés dans le constructeur | v2.1 |
+| **Widget démo : Lecteur Vidéo**, YouTube / Vimeo / MP4 avec aperçu en direct, visualiseur de source, installation en un clic | v2.1 |
+| **nodyx.dev/create-widget**, guide pas à pas pour non-développeurs (7 étapes, EN) | v2.1 |
 
 </details>
 
@@ -605,42 +641,103 @@ Chaque instance Nodyx fait tourner un scheduler **Protocole Gossip** qui pinge p
 </details>
 
 <details>
-<summary><b>v2.1, Constructeur de page d'accueil + SDK Widget 🧩</b></summary>
+<summary><b>v2.3, Lecteur Média Universel + Fusion du Catalogue Builder 🎬</b></summary>
 
 | Fonctionnalité | Version |
 |---|---|
-| **Constructeur de page d'accueil**, admin drag-and-drop, 11 zones de mise en page (banner, hero, stats-bar, main, sidebar, half ×2, trio ×3, footer ×4) | v2.1 |
-| **Registre de plugins**, chaque widget natif est un fichier autonome, zéro changement core pour en ajouter de nouveaux | v2.1 |
-| **4 widgets natifs Phase 1**, Bannière Héro (variantes live/événement/nuit), Barre de stats (compteurs animés), Carte d'adhésion, Bannière d'annonce | v2.1 |
-| **Règles de visibilité**, audience par widget (tous / visiteurs / membres) + dates de début/fin planifiées | v2.1 |
-| **Boutique de widgets**, installation de widgets externes via upload `.zip` (barre de progression XHR, validation en 4 étapes, liste blanche d'extraction) | v2.1 |
-| **Chargeur de widgets dynamique**, Web Components chargés à l'exécution, sans recompilation, sans déploiement | v2.1 |
-| **SDK Widget**, Custom Elements JS pur (Shadow DOM), schéma `manifest.json` → champs de config auto-générés dans le constructeur | v2.1 |
-| **Widget démo : Lecteur Vidéo**, YouTube / Vimeo / MP4 avec aperçu en direct, visualiseur de source, installation en un clic | v2.1 |
-| **nodyx.dev/create-widget**, guide pas à pas pour non-développeurs (7 étapes, EN) | v2.1 |
+| **Lecteur Média Universel**, auto-détection YouTube, Vimeo, Dailymotion, Twitch (live / VOD / clip), SoundCloud, Spotify, plus les fichiers `.mp4` / `.webm` / `.mp3` hébergés. Un seul champ URL, plateforme inférée au rendu | v2.3 |
+| **Fusion du catalogue Builder**, les widgets installés apparaissent dans le picker du Grid Builder à côté des plugins natifs | v2.3 |
+| **Durcissement de l'installeur tunnel (#23)**, 12 correctifs mode Pangolin : réécriture de l'adresse Caddy, regen atomique du Caddyfile au `--repair`, règles UFW RFC1918, garde-fou faux-positif du doctor | v2.3 |
+| **Réécriture de la recherche docs**, index par titres avec ancres deep-link, sommaire scrollspy, passe de correction des slugs | v2.3 |
+| **Posture Why-Nodyx**, page de positionnement listant les alternatives (Matrix, Stoat, Fluxer, Haven...), cadre « silos vs liberté, pas Nodyx vs X » | v2.3 |
+| **i18n**, traductions allemand (`de.json`) + espagnol (`es.json`), relecture native | v2.3 |
+| **Nodyx Stars**, système de reconnaissance des contributeurs externes (CONTRIBUTORS.md public, bloc avatars dans le README) | v2.3 |
 
 </details>
 
-### À venir
+<details>
+<summary><b>v2.4, Système de Sauvegarde + Mode Maintenance Live 💾</b></summary>
 
-| Fonctionnalité | Notes |
+| Fonctionnalité | Version |
 |---|---|
-| **Canvas, Synchronisation Brainwave**, l'hôte diffuse le pan+zoom à tous les participants en temps réel, les abonnés restent synchronisés | Sprint C |
-| **Canvas, Mode Fantôme**, brainstorming anonyme : les contributions apparaissent sous des pseudonymes aléatoires, l'auteur révélé à la fin | Sprint C |
-| **Canvas, Minimap**, vignette 160×120 en bas à droite, cliquer pour naviguer | Sprint C |
-| **Canvas, Sélection multiple**, Shift+clic ou lasso pour sélectionner + déplacer + supprimer plusieurs éléments | Sprint C |
-| **Canvas, Post-its audio**, note vocale enregistrée directement sur le canvas, forme d'onde rendue en post-it | Sprint D |
-| **Canvas, Chat contextuel**, discussion en fil ancrée à une zone du canvas, indexée spatialement | Sprint D |
-| **Plus de widgets natifs**, Compte à rebours, Classement, Derniers fils, Événements mis en avant, Lecteur Jukebox | Phase 2 |
-| **Marketplace de widgets**, widgets publiés par la communauté, notes, installation en un clic depuis l'annuaire |, |
-| **Nœuds**, connaissance structurée durable, validée par la communauté via Garden | [SPEC 013](docs/en/specs/013-node/SPEC.md) |
-| **Système de modules**, 26 modules activables depuis le panneau admin (CMS style Joomla) | [Spec](.claude/ideas/MODULE_SYSTEM.md) |
-| **Réactions DM**, réactions emoji sur les messages privés |, |
-| **Import Discord**, import en masse de canaux, fils, réactions, avatars |, |
-| Mobile (Capacitor) / Bureau (Tauri) |, |
-| Migration Rust, nodyx-server (Axum) remplaçant nodyx-core progressivement |, |
+| **UI de sauvegarde admin**, page `/admin/backups` avec indicateur de stockage, table d'archives, actions par ligne Télécharger / Vérifier / Restaurer / Supprimer | v2.4 |
+| **Créer une sauvegarde**, `pg_dump --format=custom --compress=9` + `tar`, checksum SHA-256, manifest. Inclusion optionnelle des fichiers uploadés | v2.4 |
+| **Restaurer avec filet**, `pg_restore --single-transaction` atomique, snapshot pré-restauration protégé 24h (rollback en un clic), confirmation par slug + compte à rebours | v2.4 |
+| **Dry-run**, vérifier checksum + compat de version + structure tar sans toucher à la DB ni au filesystem | v2.4 |
+| **Journal d'audit**, chaque action sensible loggée avec utilisateur + IP + user-agent, page dédiée `/admin/backups/audit` | v2.4 |
+| **Mode Maintenance Live**, flag Redis pendant create/restore, hook global qui renvoie 503 sur les écritures (les lectures et l'admin restent ouverts), bannière sticky, auto-clear avec ceinture de sécurité | v2.4 |
+| **Tables système exclues du dump**, une restauration ne peut pas effacer son propre filet (découvert en prod, voir « The Yannick Story » dans le CHANGELOG) | v2.4 |
+| **13 tests vitest**, invariants du service (path traversal, refus de version, bypass protégé), 194 au total, 0 régression | v2.4 |
 
----
+</details>
+
+<details>
+<summary><b>v2.5, Streamer Hub Phase 2 : chat Twitch ↔ Nodyx unifié 💬</b></summary>
+
+| Fonctionnalité | Version |
+|---|---|
+| **Chat bidirectionnel temps réel**, pont entre une instance Nodyx et le chat Twitch du streamer, 100% EventSub + Helix, zéro IRC. Vérifié en prod (277 messages pendant la session test) | v2.5 |
+| **Entrant (Twitch → Nodyx)**, EventSub `channel.chat.message`, channel `#twitch-chat` auto-créé, chaque message mappé à un author Nodyx (résolu via `twitch_id` ou placeholder) | v2.5 |
+| **Sortant (Nodyx → Twitch)**, les membres qui écrivent dans `#twitch-chat` sont relayés via Helix, préfixe `[username]` pour la transparence, uniquement pendant une session live | v2.5 |
+| **Queue anti rate-limit**, sur 429 Twitch le message est enqueué dans un sorted set Redis, worker qui dépile par batch avec backoff exponentiel, alerte audit en cas d'overflow | v2.5 |
+| **Cycle de vie des sessions**, `stream.online` / `stream.offline` suivis dans `streamer_sessions` (idempotent), gating du pont sortant | v2.5 |
+| **Emotes & badges**, emotes Twitch natives, BTTV / FFZ / 7TV fetchées et cachées (24h), badges globaux + channel via Helix, dégradation gracieuse | v2.5 |
+| **65 nouveaux tests**, pont, emotes, lifecycle, queue sortante, badges. Suite complète 269/269 verts | v2.5 |
+
+</details>
+
+<details>
+<summary><b>v2.6, OctoGuard Phase 1 : auto-modération native 🐙</b></summary>
+
+| Fonctionnalité | Version |
+|---|---|
+| **Pipeline auto-mod OctoGuard**, fail-open 50 ms, 5 types de matchers : substring, word-boundary, regex, link allow/blocklist, emoji-flood. Anti-ReDoS via moteur linéaire `re2` Google (84 s natif vs 0 ms `re2` mesuré en bench) + `safe-regex` heuristique à l'admission | v2.6 |
+| **6 actions**, `delete`, `warn`, `mute_timed`, `kick`, `ban` (avec `community_bans.expires_at` optionnel pour bans temporaires), `report_only` dry-run | v2.6 |
+| **Flux de bienvenue**, ghost bot `OctoGuard` (`users.is_system=true`, login refusé), message public avec variables `{user}` / `{userMention}` / `{communityName}`, auto-grade optionnel à l'inscription. Message DM système reporté à la spec 019 | v2.6 |
+| **Commandes personnalisées**, `!règles`, `!discord`, ... en markdown, cooldown Redis par canal (`SET NX EX`), canaux et rôles autorisés configurables par commande | v2.6 |
+| **Mutes chat**, nouvelle table `chat_mutes`, portée globale ou par canal, durée libre (`15m`, `2h`, `1w`, permanent), cache Redis 60 s, worker de purge en arrière-plan | v2.6 |
+| **File de signalements**, driven par les membres, anti-abus rate limit par signaleur + cooldown par cible via Redis, inbox admin avec actions mute/delete/dismiss | v2.6 |
+| **Webhook HMAC-SHA256**, POST sortant signé `X-Octoguard-Signature: sha256=hex`, queue Redis, worker async timeout 10 s. Le pipeline chat ne paye jamais la latence webhook | v2.6 |
+| **Journal d'audit**, chaque action persistée dans `admin_audit_log` avec `event_id`. Logger fire-and-forget IIFE (capté par le bench pré-emptif : p95 passé de 13 ms à 0,2 ms) | v2.6 |
+| **UI admin**, `/admin/octoguard` avec 8 onglets : vue d'ensemble, automod, bienvenue, commandes, mutes, signalements, journal, webhook. CRUD complet avec formulaires `enhance` optimistes | v2.6 |
+| **Kill-switch**, `OCTOGUARD_ENABLED=false` court-circuite tout le pipeline. Table de règles vide = impact zéro même activé. Pattern de rollout dégressif | v2.6 |
+| **69 tests Vitest** + script `bench.ts` dédié, prouve p95 < 1 ms en charge, a permis d'attraper le goulot du logger avant activation prod | v2.6 |
+
+</details>
+
+<details>
+<summary><b>v2.7, Streamer Hub : Soundboard + Stream Deck multi-pages 🔊</b></summary>
+
+| Fonctionnalité | Version |
+|---|---|
+| **Soundboard**, upload de sons (mp3/ogg/wav/flac), tags ID3 automatiques (titre, artiste, cover), volume / fade / loop / visibilité par piste, upload batch avec progression live | v2.7 |
+| **Overlay OBS Soundboard**, browser source transparente, fade et cross-fade Web Audio, OSD discret (4 coins ou caché), plusieurs overlays par owner | v2.7 |
+| **Page viewers publique** (`/soundboard`, sans login), parcours de la bibliothèque, preview au survol, « en cours » et « à suivre » en temps réel | v2.7 |
+| **Queue viewers**, FIFO Redis (max 50, rate-limit et cap par IP, dédup globale), toggle admin + skip + tout vider, auto-consume sur `audio:ended`, anti-raid | v2.7 |
+| **Commande chat `!ns`** (alias `!nextsound`), fuzzy matcher avec normalisation, scoring en cascade et Levenshtein, détection d'ambiguïté qui demande au viewer au lieu de deviner mal | v2.7 |
+| **Stream Deck multi-pages**, jusqu'à 8 pages logiques avec couleurs d'accent, rename inline, drag-to-reorder, rétrocompatible decks V1 (sans migration) | v2.7 |
+| **Nouvelles actions Deck**, `play_audio`, `stop_audio`, `pause_audio`, `navigate_page` (intercepté client-side pour zéro latence) | v2.7 |
+| **Deck mobile**, dock de pages flottant avec haptique et safe-area iOS, modal « Envoyer au Deck » avec mini-grille et auto-placement | v2.7 |
+
+</details>
+
+<details open>
+<summary><b>v2.8, Refonte de l'Éditeur d'Articles · Playlists & Scènes OBS · Sécurité ✍️</b></summary>
+
+| Fonctionnalité | Version |
+|---|---|
+| **Robustesse round-trip de l'éditeur**, les colonnes et vidéos YouTube ne disparaissent plus à la réédition (parse sur la classe, pas sur les `data-*` retirés). Audit complet dans `docs/audits/2026-06-15-editeur-rich.md` | v2.8 |
+| **Bloc console SSH protégé**, nœud atomique qui préserve son HTML, avec un toggle Rendu / Code façon CMS, source éditable mais jamais corrompue au clavier | v2.8 |
+| **Sommaire par ancre à la sélection**, barre flottante avec un bouton « Ancre » qui transforme la ligne en section et l'ajoute à un menu dérivé (avec flash de feedback) | v2.8 |
+| **Redimensionnement d'image**, poignées de coin avec aimant aux largeurs clés (25 / 50 / 75 / 100 %), largeur stockée en attribut `width`, robuste au round-trip | v2.8 |
+| **Zone éditable bornée + barre d'outils collante**, toujours accessible sur les longs articles | v2.8 |
+| **Playlists Streamer Hub + Scènes OBS**, playlists audio nommées avec URL d'overlay OBS dédiée, plus un compositeur de scènes visuel façon OBS | v2.8 |
+| **Fondations SEO / GEO**, correction du sitemap (14 → 60+ URLs), `og:image` unique et correct par page (partages Discord / Twitter), `llms.txt` réécrit, guides comparatif + installation débutant (FR + EN) | v2.8 |
+| **Refonte admin**, design sobre Linear / Vercel / Stripe pour la sidebar et le dashboard | v2.8 |
+| **Performance**, fetch directory SSR non bloquant + cache showcase par clé de version, rafraîchissement de la home après suppression de thread | v2.8 |
+| **Balayage sécurité**, ws (high) et tar (medium) patchés, esbuild >= 0.28.1 via override sur les 4 projets SvelteKit, nodemailer 8 → 9 validé en prod | v2.8 |
+
+</details>
 
 ## La Vision
 
