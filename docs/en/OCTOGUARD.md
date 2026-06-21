@@ -16,19 +16,17 @@ A community that quietly handles spam, insults, link-dumps and mention-storms by
 
 ## Step 1: Turn OctoGuard on
 
-OctoGuard ships disabled. To switch it on, add one line to `nodyx-core/.env` and restart:
+OctoGuard ships disabled. To switch it on, just flip a toggle in your admin panel, no file editing, no restart:
 
-```bash
-OCTOGUARD_ENABLED=true
-```
+1. Open **`/admin/settings`**.
+2. Scroll to the **Sécurité & modération** (Security & moderation) section.
+3. Switch on **Activer OctoGuard (auto-modération)**. Done. It takes effect instantly.
 
-```bash
-cd /var/www/nexus/nodyx-core && npm run build && sudo -u nodyx pm2 restart nodyx-core
-```
-
-Now open **`/admin/octoguard`** on your instance. You'll see the **Vue d'ensemble** (Overview) with a green "OctoGuard active" state and three counters: active auto-mod rules, active mutes, open reports.
+Now open **`/admin/octoguard`**. You'll see the **Vue d'ensemble** (Overview) with a green "OctoGuard active" state and three counters: active auto-mod rules, active mutes, open reports.
 
 **Important and reassuring:** turning OctoGuard on does **nothing** on its own. With an empty rules list, it just sits there. It only ever acts on rules you create. So flipping the switch is completely safe.
+
+> **Emergency kill-switch.** There is also an environment variable, `OCTOGUARD_ENABLED`, in `nodyx-core/.env`. The admin toggle is the normal control, but if you ever need to force the whole system off at the lowest level (an incident, a runaway rule), set `OCTOGUARD_ENABLED=false`, restart `nodyx-core`, and nothing OctoGuard-related runs, no matter what the admin panel says.
 
 ---
 
@@ -124,17 +122,166 @@ A healthy escalation: start a rule in **Test**, graduate it to **Supprimer**, an
 
 ---
 
-## The other tabs, briefly
+## Common recipes (copy, paste, tweak)
 
-**Bienvenue.** Write the message new members see when they join. It supports variables: `{user}`, `{userMention}`, `{communityName}`. Example: `Welcome {userMention} to {communityName}! Read the rules and say hi.`
+These are the rules real communities run, day in, day out. Each one: the type to pick, the JSON to paste into **Paramètres**, and a sensible action. Remember the golden rule, drop each into **Test mode** for a day before it acts.
 
-**Commandes.** Create custom chat commands your members can call, like `!rules` or `!discord`, with markdown answers. Each command has a cooldown (so it can't be spammed) and you can restrict which channels and roles may use it.
+**1. Block insults and slurs.** The bread and butter. Type **Regex (texte)**, action **Supprimer le message**.
 
-**Sourdines.** See who is currently muted, with the reason and the time left. Lift a mute early, or add one by hand. Scope can be global or one channel.
+```json
+{ "pattern": "\\b(idiot|moron|slur1|slur2)\\b", "flags": "i" }
+```
 
-**Signalements.** When members report a message, it lands here. Review the queue and act (mute, delete, or dismiss). There is built-in anti-abuse, so a single user can't spam reports.
+Keep your word list private (don't post it where trolls can read it), and use `\\b` so "moron" doesn't also flag "oxymoron".
 
-**Webhook.** Advanced. OctoGuard can POST every action to a URL you own, signed with `X-Octoguard-Signature: sha256=...` so you can verify it's really from your instance. Build a dashboard, an alerts channel, anything. The chat is never slowed down by this: the webhook fires asynchronously.
+**2. Stop people poaching your members to Discord.** The classic. Type **Filtre de domaines** (blacklist), action **Supprimer le message**.
+
+```json
+{ "mode": "blacklist", "domains": ["discord.gg", "discord.com/invite", "t.me"] }
+```
+
+**3. Kill scam and phishing links.** Type **Filtre de domaines** (blacklist), action **Mute (silence)** or **Bannissement temporaire** (scammers rarely deserve a second message).
+
+```json
+{ "mode": "blacklist", "domains": ["bit.ly", "tinyurl.com", "steamcommunlty.com", "free-nitro.gg"] }
+```
+
+Note `steamcommunlty` (missing the "i"): typo-squatted domains are the #1 trick of crypto and game scammers.
+
+**4. Calm the SHOUTING.** Type **Majuscules abusives**, action **Avertir (warn)** (a gentle nudge, not a punishment).
+
+```json
+{ "min_length": 15, "threshold_percent": 70 }
+```
+
+Only messages of 15+ characters that are over 70 percent uppercase are flagged, so a quick "OK!" or "LOL" is left alone.
+
+**5. Survive a mention raid.** When a troll spams `@everyone` or tags twenty people. Type **Spam de mentions**, action **Mute (silence)**.
+
+```json
+{ "max_mentions": 5 }
+```
+
+**6. Stop drive-by advertising.** Someone dumping ten links in one message. Type **Spam de liens**, action **Supprimer le message**.
+
+```json
+{ "max_links": 3 }
+```
+
+**7. Lockdown mode (strict communities).** Allow links to a handful of trusted sites and delete everything else. Type **Filtre de domaines** (whitelist), action **Supprimer le message**.
+
+```json
+{ "mode": "whitelist", "domains": ["youtube.com", "github.com", "your-community.org"] }
+```
+
+With `whitelist`, only the listed domains survive. Powerful, but test it first or you'll delete legitimate links.
+
+**8. The usual spam phrases.** "free nitro", "check my bio", crypto-pump invites. Type **Regex (texte)**, action **Supprimer le message** (or a temp ban for repeat offenders).
+
+```json
+{ "pattern": "(free\\s*nitro|check my (bio|profile)|onlyfans|pump\\s*signal)", "flags": "i" }
+```
+
+A good starter set for a brand-new community: recipe **2** (no Discord poaching), recipe **3** (no scams), and recipe **5** (no mention raids), all in test mode for the first day. That covers 90 percent of what hits a young server.
+
+---
+
+## A guided tour of the seven other tabs
+
+Auto-mod is the engine, but OctoGuard is a whole toolbox. Here is every other tab, in plain steps.
+
+> A quick word about **UUIDs.** A few tabs (Bienvenue, Sourdines) ask for a "UUID": that's the long unique ID of a channel, a member or a role. You find it in that item's admin page or its URL. Copy-paste it, that's all.
+
+### Vue d'ensemble: your cockpit
+
+You met this one in Step 1. It is your at-a-glance dashboard:
+
+- the **global state** (OctoGuard active or off),
+- three live counters: **active auto-mod rules**, **active mutes**, **open reports**,
+- a **ReDoS protection** indicator (proof the regex engine is the safe one),
+- a **Comment démarrer** checklist that links straight to each tab.
+
+Your daily habit: glance here. Are the counters where you'd expect? A sudden spike in "open reports" means something is happening in your chat.
+
+### Bienvenue: greet every new member
+
+When someone joins, OctoGuard can post a public welcome in a channel you choose, signed by its **ghost bot** (the "[OctoGuard]" sender, with no real user behind it).
+
+1. Open the **Bienvenue** tab.
+2. Switch on **Activer le message de bienvenue**.
+3. **Message public**: write your greeting. Three variables you can drop in:
+   - `{userMention}` — pings the new member (a clickable @name),
+   - `{user}` — their name as plain text,
+   - `{communityName}` — your instance's name.
+   Example: `Welcome {userMention} to {communityName}! Read the rules and say hi in general.`
+4. **Channel cible (UUID)**: paste the ID of the channel where the message should appear.
+5. *(Optional)* **Auto-grade à l'inscription (UUID)**: paste a role ID, and every new member is automatically given that role the moment they sign up. Perfect for a "Newcomer" or "Member" role.
+6. **Enregistrer**.
+
+### Commandes: your own !commands
+
+Create chat commands your members can call, like `!rules`, `!faq` or `!discord`. The ghost bot answers instantly. No bot to host, it's built in.
+
+1. Open the **Commandes** tab and click **Créer**.
+2. **Nom (sans le !)**: the trigger word, for example `rules` (members will type `!rules`).
+3. **Réponse du bot**: what the bot replies. It supports markdown, so links and bold text work.
+4. **Cooldown (s)**: the minimum number of seconds between two uses, so nobody can spam it. 30 is a sane default.
+5. Save. You can remove any command later with **Supprimer**.
+
+A member types `!rules` in chat, the bot instantly posts your answer. Classic starters: `!rules`, `!faq`, `!discord`, `!ip`.
+
+### Sourdines: mute someone by hand
+
+Auto-mod can mute automatically, but sometimes you just need to silence one person yourself. This tab lists every active mute (who, which channel, the reason, when it expires) and lets you add or lift one.
+
+To mute someone:
+
+1. Open the **Sourdines** tab.
+2. **UUID utilisateur**: the member's ID.
+3. **UUID channel**: leave it **empty to mute them everywhere**, or paste a channel ID to mute them in that one channel only.
+4. **Durée** + **Unité**: a number plus a unit, **minutes, heures, jours or semaines** (hours is the default).
+5. **Raison**: a short note for your audit trail (and your future self).
+6. **Appliquer mute**.
+
+To lift a mute early, click **Unmute** next to it in the list. Otherwise it expires on its own.
+
+### Signalements: when members flag a message
+
+Your community can report messages they find abusive. Each report lands here as a queue you work through. Built-in anti-abuse stops one person from spam-reporting.
+
+A report moves through four states, and you can filter the queue by any of them:
+
+- **open** — fresh, waiting for you,
+- **reviewed** — you've looked at it (button **Marquer revu**),
+- **actioned** — you acted on it (muted, deleted, banned),
+- **dismissed** — not a real problem (button **Rejeter**).
+
+For each report you see the flagged message, who reported it and why. You record a **Résolution** so there's a permanent trace of what you decided, which protects you as much as the community.
+
+### Journal: the black box
+
+Every action OctoGuard takes, and every relevant admin action, is written here, permanently. The columns:
+
+| Column | Meaning |
+|---|---|
+| **Date** | When it happened |
+| **Acteur** | Who did it (the bot, or which admin) |
+| **Action** | What was done (deleted, muted, warned…) |
+| **Cible** | The affected member or message |
+| **Détails** | The rule that fired, the reason, the specifics |
+
+It's paginated (**Suivant →**). This is where your **test-mode** rules record their would-be catches, so the Journal is the first place you look when tuning a new rule, and the place you go to answer "wait, why was this message removed?".
+
+### Webhook: pipe events to your own tools (advanced)
+
+For people who want OctoGuard events in their own dashboard, an alerts channel, or a log aggregator. OctoGuard can POST every action to a URL you own.
+
+1. Open the **Webhook** tab and switch on **Activer le webhook**.
+2. **URL POST**: where the events should be sent.
+3. **Secret HMAC**: a shared secret. OctoGuard signs every POST with it in a header, `X-Octoguard-Signature: sha256=<hex>`, so your receiver can verify the request genuinely came from your instance and wasn't forged. Leave the field empty to keep the current secret.
+4. **Enregistrer**.
+
+Your chat is **never slowed down** by this: webhooks fire asynchronously, after the action, so a slow or offline receiver can never lag your community.
 
 ---
 
