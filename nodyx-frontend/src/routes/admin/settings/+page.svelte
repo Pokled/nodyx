@@ -47,8 +47,9 @@
 		email:        'Email (SMTP)',
 		integrations: 'Intégrations',
 		streamer:     'Streamer Hub (Twitch)',
+		security:     'Sécurité & modération',
 	}
-	const GROUP_ORDER = ['identity', 'federation', 'email', 'integrations', 'streamer']
+	const GROUP_ORDER = ['identity', 'federation', 'email', 'integrations', 'streamer', 'security']
 
 	// Génère une clé 64 hex côté navigateur pour STREAMER_OAUTH_KEY.
 	function generateHexKey(key: string) {

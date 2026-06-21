@@ -197,6 +197,18 @@ export const SETTINGS_REGISTRY: SettingDescriptor[] = [
     helpEn: 'Must match EXACTLY the Twitch app OAuth Redirect URL.',
     validate: (v) => { try { new URL(v); return null } catch { return 'URL invalide' } },
   },
+
+  // ── Sécurité & modération ──────────────────────────────────────────────────
+  // tier 3 : relu via process.env à chaque appel (isOctoGuardEnabled lit déjà
+  // process.env.OCTOGUARD_ENABLED) → toggle admin à effet immédiat, zéro modif
+  // du code OctoGuard, zéro redémarrage.
+  {
+    key: 'OCTOGUARD_ENABLED', group: 'security', type: 'boolean', tier: 3, secret: false,
+    labelFr: 'Activer OctoGuard (auto-modération)', labelEn: 'Enable OctoGuard (auto-moderation)',
+    helpFr: "Active le moteur d'auto-modération du chat. Sans aucune règle configurée, il n'a aucun effet. Effet immédiat, pas de redémarrage. Règles dans /admin/octoguard.",
+    helpEn: 'Turns on the chat auto-moderation engine. With no rule configured it does nothing. Applies instantly, no restart. Configure rules in /admin/octoguard.',
+    optional: true,
+  },
 ]
 
 const BY_KEY = new Map(SETTINGS_REGISTRY.map(d => [d.key, d]))
