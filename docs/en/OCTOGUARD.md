@@ -16,19 +16,17 @@ A community that quietly handles spam, insults, link-dumps and mention-storms by
 
 ## Step 1: Turn OctoGuard on
 
-OctoGuard ships disabled. To switch it on, add one line to `nodyx-core/.env` and restart:
+OctoGuard ships disabled. To switch it on, just flip a toggle in your admin panel, no file editing, no restart:
 
-```bash
-OCTOGUARD_ENABLED=true
-```
+1. Open **`/admin/settings`**.
+2. Scroll to the **Sécurité & modération** (Security & moderation) section.
+3. Switch on **Activer OctoGuard (auto-modération)**. Done. It takes effect instantly.
 
-```bash
-cd /var/www/nexus/nodyx-core && npm run build && sudo -u nodyx pm2 restart nodyx-core
-```
-
-Now open **`/admin/octoguard`** on your instance. You'll see the **Vue d'ensemble** (Overview) with a green "OctoGuard active" state and three counters: active auto-mod rules, active mutes, open reports.
+Now open **`/admin/octoguard`**. You'll see the **Vue d'ensemble** (Overview) with a green "OctoGuard active" state and three counters: active auto-mod rules, active mutes, open reports.
 
 **Important and reassuring:** turning OctoGuard on does **nothing** on its own. With an empty rules list, it just sits there. It only ever acts on rules you create. So flipping the switch is completely safe.
+
+> **Emergency kill-switch.** There is also an environment variable, `OCTOGUARD_ENABLED`, in `nodyx-core/.env`. The admin toggle is the normal control, but if you ever need to force the whole system off at the lowest level (an incident, a runaway rule), set `OCTOGUARD_ENABLED=false`, restart `nodyx-core`, and nothing OctoGuard-related runs, no matter what the admin panel says.
 
 ---
 
@@ -121,6 +119,70 @@ The **Action** dropdown decides what happens when a rule matches:
 | **Bannissement temporaire** | Temp-ban with an expiry. The big hammer. |
 
 A healthy escalation: start a rule in **Test**, graduate it to **Supprimer**, and reserve **Mute** / **Ban** for rules that catch genuinely abusive behavior. For mutes and temp-bans, the form shows a **Durée** field where you set how long (for example `{ "minutes": 15 }`).
+
+---
+
+## Common recipes (copy, paste, tweak)
+
+These are the rules real communities run, day in, day out. Each one: the type to pick, the JSON to paste into **Paramètres**, and a sensible action. Remember the golden rule, drop each into **Test mode** for a day before it acts.
+
+**1. Block insults and slurs.** The bread and butter. Type **Regex (texte)**, action **Supprimer le message**.
+
+```json
+{ "pattern": "\\b(idiot|moron|slur1|slur2)\\b", "flags": "i" }
+```
+
+Keep your word list private (don't post it where trolls can read it), and use `\\b` so "moron" doesn't also flag "oxymoron".
+
+**2. Stop people poaching your members to Discord.** The classic. Type **Filtre de domaines** (blacklist), action **Supprimer le message**.
+
+```json
+{ "mode": "blacklist", "domains": ["discord.gg", "discord.com/invite", "t.me"] }
+```
+
+**3. Kill scam and phishing links.** Type **Filtre de domaines** (blacklist), action **Mute (silence)** or **Bannissement temporaire** (scammers rarely deserve a second message).
+
+```json
+{ "mode": "blacklist", "domains": ["bit.ly", "tinyurl.com", "steamcommunlty.com", "free-nitro.gg"] }
+```
+
+Note `steamcommunlty` (missing the "i"): typo-squatted domains are the #1 trick of crypto and game scammers.
+
+**4. Calm the SHOUTING.** Type **Majuscules abusives**, action **Avertir (warn)** (a gentle nudge, not a punishment).
+
+```json
+{ "min_length": 15, "threshold_percent": 70 }
+```
+
+Only messages of 15+ characters that are over 70 percent uppercase are flagged, so a quick "OK!" or "LOL" is left alone.
+
+**5. Survive a mention raid.** When a troll spams `@everyone` or tags twenty people. Type **Spam de mentions**, action **Mute (silence)**.
+
+```json
+{ "max_mentions": 5 }
+```
+
+**6. Stop drive-by advertising.** Someone dumping ten links in one message. Type **Spam de liens**, action **Supprimer le message**.
+
+```json
+{ "max_links": 3 }
+```
+
+**7. Lockdown mode (strict communities).** Allow links to a handful of trusted sites and delete everything else. Type **Filtre de domaines** (whitelist), action **Supprimer le message**.
+
+```json
+{ "mode": "whitelist", "domains": ["youtube.com", "github.com", "your-community.org"] }
+```
+
+With `whitelist`, only the listed domains survive. Powerful, but test it first or you'll delete legitimate links.
+
+**8. The usual spam phrases.** "free nitro", "check my bio", crypto-pump invites. Type **Regex (texte)**, action **Supprimer le message** (or a temp ban for repeat offenders).
+
+```json
+{ "pattern": "(free\\s*nitro|check my (bio|profile)|onlyfans|pump\\s*signal)", "flags": "i" }
+```
+
+A good starter set for a brand-new community: recipe **2** (no Discord poaching), recipe **3** (no scams), and recipe **5** (no mention raids), all in test mode for the first day. That covers 90 percent of what hits a young server.
 
 ---
 
