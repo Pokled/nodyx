@@ -33,7 +33,7 @@
     "ioredis": "5.11.1",
     "jsonwebtoken": "9.0.3",
     "music-metadata": "^11.13.0",
-    "nodemailer": "^9.0.0",
+    "nodemailer": "^9.0.1",
     "otplib": "13.4.1",
     "pg": "8.21.0",
     "qrcode": "1.5.4",
