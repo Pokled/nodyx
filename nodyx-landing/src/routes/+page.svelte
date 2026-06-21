@@ -132,7 +132,7 @@
 		</div>
 		<div class="inline-flex items-center gap-2 chip mb-8">
 			<span class="chip-dot pulse"></span>
-			<span>v2.5 LIVE · OCTOGUARD ACTIVE · AGPL-3.0</span>
+			<span>v2.8 LIVE · STREAMER HUB · OCTOGUARD · AGPL-3.0</span>
 		</div>
 
 		<h1 class="t-display-m md:t-display text-on-surface max-w-4xl mx-auto">
@@ -285,6 +285,42 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Streamer Hub, full width strip -->
+		<div class="mt-6 card overflow-hidden group">
+			<div class="grid md:grid-cols-2 items-stretch">
+				<div class="p-7 md:p-10 flex flex-col justify-center">
+					<div class="t-label-sm uppercase text-secondary/80 mb-2">Streamer Hub · Twitch</div>
+					<div class="t-headline text-on-surface mb-3">Run your whole live stream from your own server.</div>
+					<div class="t-body text-on-surface-variant">A native Twitch bridge, a Soundboard your viewers fill from chat with <code class="text-secondary">!ns</code>, a multi-page mobile Stream Deck, and OBS browser-source overlays. No Streamlabs, no StreamElements, no monthly bots. Your OAuth tokens never leave your hardware.</div>
+					<div class="mt-5 flex flex-wrap gap-2">
+						<span class="chip">Soundboard</span>
+						<span class="chip">Stream Deck</span>
+						<span class="chip">OBS overlays</span>
+						<span class="chip">Unified chat</span>
+						<span class="chip">Viewer queue</span>
+					</div>
+				</div>
+				<div class="relative overflow-hidden border-l border-white/8 bg-surface-lowest min-h-[240px] flex items-center justify-center p-8">
+					<div class="absolute inset-0 bg-gradient-to-br from-secondary/20 via-tertiary/10 to-transparent"></div>
+					<div class="relative w-full max-w-sm rounded-xl border border-white/10 bg-[#0a0e16] overflow-hidden font-mono text-xs shadow-2xl">
+						<div class="flex items-center gap-1.5 px-3 py-2 border-b border-white/10">
+							<span class="w-2 h-2 rounded-full bg-error/70"></span>
+							<span class="w-2 h-2 rounded-full bg-secondary/70"></span>
+							<span class="w-2 h-2 rounded-full bg-tertiary/70"></span>
+							<span class="ml-2 text-on-surface-variant/50">twitch chat → nodyx</span>
+						</div>
+						<div class="p-4 leading-relaxed">
+							<div class="text-on-surface-variant/70">viewer: <span class="text-on-surface">!ns ixion</span></div>
+							<div class="text-secondary mt-1">nodyx: ✔ "Ixion theme" added to the queue</div>
+							<div class="text-on-surface-variant/50 mt-3">obs overlays: alert · goal · timer · ticker</div>
+							<div class="text-on-surface-variant/50">· leaderboard · clips · soundboard</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
 	</section>
 
 	<!-- ── WHY ──────────────────────────────────────────────────────────── -->
