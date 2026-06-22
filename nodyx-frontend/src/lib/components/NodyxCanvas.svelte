@@ -82,16 +82,24 @@
 		ctx.restore()
 	}
 
-	// Cliquer le badge : centrer la vue sur les nouveautés (cycle s'il y en a plusieurs)
-	let newCycleIdx = 0
+	// Cliquer le badge : cadrer TOUTES les nouveautés d'un coup dans la vue.
 	function focusNewElements() {
-		const news = cs.snapshot().filter(isNewSinceLastVisit)
-		if (!news.length) return
-		const el = news[newCycleIdx % news.length]; newCycleIdx++
-		const b = getResizableBounds(el); if (!b) return
-		const wx = b.x + b.w / 2, wy = b.y + b.h / 2
-		const s = transform.scale < 1 ? 1 : transform.scale
-		transform = { ...transform, scale: s, x: canvasEl.width / 2 - wx * s, y: canvasEl.height / 2 - wy * s }
+		const boxes = cs.snapshot().filter(isNewSinceLastVisit)
+			.map(getResizableBounds)
+			.filter((b): b is { x: number; y: number; w: number; h: number } => !!b)
+		if (!boxes.length || !canvasEl) return
+
+		let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+		for (const b of boxes) {
+			minX = Math.min(minX, b.x);        minY = Math.min(minY, b.y)
+			maxX = Math.max(maxX, b.x + b.w);  maxY = Math.max(maxY, b.y + b.h)
+		}
+		const pad = 100
+		const cw = Math.max(maxX - minX, 1), ch = Math.max(maxY - minY, 1)
+		const s  = Math.min(canvasEl.width / (cw + pad * 2), canvasEl.height / (ch + pad * 2), 1.8)
+		const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
+		transform = { ...transform, scale: s, x: canvasEl.width / 2 - cx * s, y: canvasEl.height / 2 - cy * s }
+		render()
 		startPulse()
 	}
 
@@ -2098,7 +2106,7 @@
 		<!-- ── Nouveautés depuis la dernière visite (cliquer = aller dessus) ── -->
 		{#if newCount > 0}
 			<button onclick={focusNewElements} title="Centrer la vue sur les nouveautés"
-			        style="position:absolute; top:52px; left:12px; z-index:10; pointer-events:auto; cursor:pointer; border:none;
+			        style="position:absolute; top:52px; left:12px; z-index:30; pointer-events:auto; cursor:pointer; border:none;
 			               display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px;
 			               background:rgba(251,191,36,.2); border:1px solid rgba(251,191,36,.65); backdrop-filter:blur(8px);
 			               color:#fde68a; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 0 14px rgba(251,191,36,.35);">
