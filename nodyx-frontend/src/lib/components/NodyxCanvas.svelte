@@ -43,11 +43,57 @@
 		onclose:     () => void
 	} = $props()
 
-	// Surbrillance des nouveautés depuis la dernière visite (ts > lastSeen, pas mes ajouts)
+	// ── Surbrillance des nouveautés depuis la dernière visite ──────────────────
 	function isNewSinceLastVisit(el: { ts: number; author: string }): boolean {
 		return lastSeen != null && el.ts > lastSeen && el.author !== userId
 	}
 	let newCount = $state(0)
+
+	// Pulse d'attention (RAF borné à ~7 s, puis contour fixe bien visible)
+	let pulsePhase = $state(1)
+	let pulseRAF = 0
+	function startPulse() {
+		if (pulseRAF) cancelAnimationFrame(pulseRAF)
+		const start = performance.now()
+		const tick = (t: number) => {
+			pulsePhase = (Math.sin((t - start) / 280) + 1) / 2
+			render()
+			if (t - start < 7000) { pulseRAF = requestAnimationFrame(tick) }
+			else { pulseRAF = 0; pulsePhase = 1; render() }
+		}
+		pulseRAF = requestAnimationFrame(tick)
+	}
+
+	// Contour ambre vif autour de chaque nouveauté (coords monde, au-dessus des éléments)
+	function drawFreshHighlights(ctx: CanvasRenderingContext2D, els: CanvasElement[]) {
+		const pad = 10 / transform.scale
+		ctx.save()
+		ctx.strokeStyle = '#fbbf24'
+		ctx.shadowColor = '#fbbf24'
+		for (const el of els) {
+			const b = getResizableBounds(el)
+			if (!b) continue
+			ctx.lineWidth  = (2.5 + 2 * pulsePhase) / transform.scale
+			ctx.shadowBlur = 12 + 18 * pulsePhase
+			ctx.beginPath()
+			ctx.roundRect(b.x - pad, b.y - pad, b.w + pad * 2, b.h + pad * 2, 8 / transform.scale)
+			ctx.stroke()
+		}
+		ctx.restore()
+	}
+
+	// Cliquer le badge : centrer la vue sur les nouveautés (cycle s'il y en a plusieurs)
+	let newCycleIdx = 0
+	function focusNewElements() {
+		const news = cs.snapshot().filter(isNewSinceLastVisit)
+		if (!news.length) return
+		const el = news[newCycleIdx % news.length]; newCycleIdx++
+		const b = getResizableBounds(el); if (!b) return
+		const wx = b.x + b.w / 2, wy = b.y + b.h / 2
+		const s = transform.scale < 1 ? 1 : transform.scale
+		transform = { ...transform, scale: s, x: canvasEl.width / 2 - wx * s, y: canvasEl.height / 2 - wy * s }
+		startPulse()
+	}
 
 	// Lecture seule : état du bouton "Demander l'accès en édition"
 	let accessAsked = $state(false)
@@ -374,12 +420,12 @@
 
 		if (showGrid) drawGrid(ctx, W, H)
 
+		const freshEls: CanvasElement[] = []
 		for (const el of cs.snapshot()) {
-			const fresh = isNewSinceLastVisit(el)
-			if (fresh) { ctx.save(); ctx.shadowColor = 'rgba(99,102,241,.95)'; ctx.shadowBlur = 22 }
 			drawElement(ctx, el, selectedIds.has(el.id))
-			if (fresh) ctx.restore()
+			if (isNewSinceLastVisit(el)) freshEls.push(el)
 		}
+		if (freshEls.length) drawFreshHighlights(ctx, freshEls)
 
 		// Frame membership rings — ring coloré autour des enfants de chaque frame
 		for (const frameEl of cs.snapshot()) {
@@ -1680,6 +1726,7 @@
 	function handleSnapshot({ elements }: { boardId: string; elements: CanvasElement[] }) {
 		cs.loadSnapshot(elements); synced = true
 		newCount = elements.filter(isNewSinceLastVisit).length
+		if (newCount > 0) startPulse()
 		render()
 	}
 	function handleRemoteOp({ op }: { boardId: string; op: CanvasElement }) {
@@ -1887,6 +1934,7 @@
 		window.removeEventListener('keydown', onKeydown)
 		window.removeEventListener('keyup',   onKeyup)
 		clearInterval(cursorCleanup)
+		if (pulseRAF) cancelAnimationFrame(pulseRAF)
 	})
 
 	// ── Effects ───────────────────────────────────────────────────────────────
@@ -2047,14 +2095,15 @@
 			</div>
 		</div>
 
-		<!-- ── Nouveautés depuis la dernière visite ── -->
+		<!-- ── Nouveautés depuis la dernière visite (cliquer = aller dessus) ── -->
 		{#if newCount > 0}
-			<div style="position:absolute; top:52px; left:12px; z-index:10; pointer-events:none;
-			            display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px;
-			            background:rgba(99,102,241,.18); border:1px solid rgba(99,102,241,.55); backdrop-filter:blur(8px);
-			            color:#c7d2fe; font-size:12px; font-weight:700; white-space:nowrap;">
-				✨ {newCount} nouveauté{newCount > 1 ? 's' : ''} depuis ta dernière visite
-			</div>
+			<button onclick={focusNewElements} title="Centrer la vue sur les nouveautés"
+			        style="position:absolute; top:52px; left:12px; z-index:10; pointer-events:auto; cursor:pointer; border:none;
+			               display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px;
+			               background:rgba(251,191,36,.2); border:1px solid rgba(251,191,36,.65); backdrop-filter:blur(8px);
+			               color:#fde68a; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 0 14px rgba(251,191,36,.35);">
+				✨ {newCount} nouveauté{newCount > 1 ? 's' : ''} · clique pour voir
+			</button>
 		{/if}
 
 		<!-- ── Bottom bar ── -->
