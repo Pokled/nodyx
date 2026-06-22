@@ -13,6 +13,7 @@
 	}
 
 	let boards = $derived((data.boards ?? []) as Board[])
+	let publicBoards = $derived((data.publicBoards ?? []) as (Board & { creator_username: string | null })[])
 
 	let showCreate = $state(false)
 	let newName    = $state('')
@@ -132,6 +133,30 @@
 					</div>
 				</div>
 			{/each}
+		</div>
+	{/if}
+
+	{#if publicBoards.length > 0}
+		<div class="mt-10">
+			<h2 class="text-lg font-bold text-white mb-1">Projets publics de la communauté</h2>
+			<p class="text-sm text-gray-500 mb-4">Ouvre-les en lecture seule. La demande d'accès en édition arrive bientôt.</p>
+			<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+				{#each publicBoards as b (b.id)}
+					<button onclick={() => goto(`/canvas/${b.id}`)}
+						class="group text-left rounded-xl border border-white/10 bg-white/[0.02] hover:border-cyan-500/40 transition-all overflow-hidden">
+						<div class="h-28 bg-gradient-to-br from-emerald-500/10 via-cyan-500/10 to-transparent flex items-center justify-center">
+							<span class="text-3xl opacity-40">🎨</span>
+						</div>
+						<div class="p-4">
+							<div class="flex items-center gap-2">
+								<h3 class="flex-1 font-semibold text-white truncate">{b.name}</h3>
+								<span class="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">Public</span>
+							</div>
+							<p class="text-xs text-gray-500 mt-1">par {b.creator_username ?? '?'} · {b.element_count} élément{b.element_count > 1 ? 's' : ''} · lecture seule</p>
+						</div>
+					</button>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </div>

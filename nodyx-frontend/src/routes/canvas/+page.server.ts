@@ -9,9 +9,12 @@ export const load: PageServerLoad = async ({ fetch, cookies, parent }) => {
 	const token = cookies.get('token')
 	if (!token) redirect(303, '/auth/login')
 
-	const res = await apiFetch(fetch, '/canvas/boards', {
-		headers: { Authorization: `Bearer ${token}` }
-	})
-	const { boards } = res.ok ? await res.json() : { boards: [] }
-	return { boards, token }
+	const headers = { Authorization: `Bearer ${token}` }
+	const [mineRes, pubRes] = await Promise.all([
+		apiFetch(fetch, '/canvas/boards', { headers }),
+		apiFetch(fetch, '/canvas/public', { headers }),
+	])
+	const { boards }              = mineRes.ok ? await mineRes.json() : { boards: [] }
+	const { boards: publicBoards } = pubRes.ok ? await pubRes.json() : { boards: [] }
+	return { boards, publicBoards, token }
 }

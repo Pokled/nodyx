@@ -25,6 +25,7 @@
 		username,
 		userAvatar = null,
 		boardName  = 'Canvas',
+		readOnly   = false,
 		onclose    = () => {},
 	}: {
 		boardId:     string
@@ -34,6 +35,7 @@
 		username:    string
 		userAvatar?: string | null
 		boardName?:  string
+		readOnly?:   boolean
 		onclose:     () => void
 	} = $props()
 
@@ -844,6 +846,7 @@
 		if (e.button === 1)              { startPan(e); return }
 		if (e.button === 0 && spaceDown) { startPan(e); return }
 		if (e.button !== 0) return
+		if (readOnly)                    { startPan(e); return }  // lecture seule : drag = pan, aucun outil
 
 		canvasEl.setPointerCapture(e.pointerId)
 		const [wx0, wy0] = pointerWorld(e)
@@ -1729,6 +1732,8 @@
 		// Ne pas interférer quand l'utilisateur tape dans un input/textarea/chat
 		const tag = (e.target as HTMLElement)?.tagName
 		if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+		// Lecture seule : aucun raccourci d'écriture (undo/redo/suppr/coller…). Escape ferme.
+		if (readOnly) { if (e.key === 'Escape') requestClose(); return }
 
 		if (e.code === 'Space' && !overlayEdit) { spaceDown = true; e.preventDefault() }
 		if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey)  { e.preventDefault(); undo() }
@@ -1908,8 +1913,25 @@
 		role="presentation"
 		onmousedown={(e) => e.stopPropagation()}
 	>
-		<CanvasLeftToolbar bind:tool onClose={requestClose} />
+		{#if readOnly}
+			<button onclick={requestClose} title="Fermer"
+				style="display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,.06); color:#cbd5e1; border:1px solid rgba(255,255,255,.12); font-size:13px; cursor:pointer;">
+				✕ Fermer
+			</button>
+		{:else}
+			<CanvasLeftToolbar bind:tool onClose={requestClose} />
+		{/if}
 	</div>
+
+	{#if readOnly}
+		<div style="position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:30;
+		            display:flex; align-items:center; gap:7px; padding:6px 14px; border-radius:999px;
+		            background:rgba(16,16,26,.85); border:1px solid rgba(255,255,255,.1); backdrop-filter:blur(8px);
+		            color:#a5b4fc; font-size:12px; font-weight:600; pointer-events:none;">
+			<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+			Lecture seule
+		</div>
+	{/if}
 
 	<!-- ── Center: canvas + overlays ────────────────────────────────────────── -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->

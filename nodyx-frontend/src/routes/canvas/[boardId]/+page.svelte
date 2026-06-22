@@ -19,6 +19,7 @@
 		username={u.username ?? ''}
 		userAvatar={u.avatar ?? null}
 		boardName={data.board.name}
+		readOnly={!data.board.can_edit}
 		onclose={() => goto('/canvas')}
 	/>
 {:else}
