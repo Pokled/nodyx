@@ -10,6 +10,12 @@ import { requireAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
 import { sanitize } from '../utils/sanitize'
 import { awardPoints, REPUTATION } from '../models/reputation'
+import { fetchLinkPreview } from '../services/linkPreview'
+
+// Premier lien http(s) dans le contenu HTML (pour l'aperçu de lien).
+function firstLink(html: string): string | null {
+  return html.match(/<a[^>]+href=["'](https?:\/\/[^"']+)["']/i)?.[1] ?? null
+}
 import { db } from '../config/database'
 import { io } from '../socket/io'
 
@@ -26,7 +32,7 @@ const AUDIO_MIME_PREFIX = 'audio/'
 
 function postSelect(viewerParam: string | null) {
   return `
-    sp.id, sp.content, sp.media_url, sp.reply_to_id,
+    sp.id, sp.content, sp.media_url, sp.link_preview, sp.reply_to_id,
     sp.likes_count, sp.replies_count, sp.created_at,
     u.id AS author_id, u.username, p.display_name, p.avatar_url,
     ${viewerParam
@@ -150,11 +156,19 @@ export default async function socialRoutes(app: FastifyInstance) {
       if (!parent.rows[0]) return reply.code(404).send({ error: 'Post parent introuvable' })
     }
 
+    // Aperçu de lien : si le statut contient un lien et pas d'image attachée,
+    // on récupère ses métadonnées Open Graph (fetch SSRF-safe, borné).
+    let linkPreview = null
+    if (!media_url) {
+      const link = firstLink(safeContent)
+      if (link) linkPreview = await fetchLinkPreview(link).catch(() => null)
+    }
+
     const ins = await db.query(`
-      INSERT INTO status_posts (author_id, content, reply_to_id, media_url)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO status_posts (author_id, content, reply_to_id, media_url, link_preview)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING id
-    `, [userId, safeContent, reply_to_id ?? null, media_url ?? null])
+    `, [userId, safeContent, reply_to_id ?? null, media_url ?? null, linkPreview ? JSON.stringify(linkPreview) : null])
 
     if (reply_to_id) {
       await db.query(

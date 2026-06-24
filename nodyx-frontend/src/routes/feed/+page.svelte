@@ -231,6 +231,19 @@
 	<title>{tFn('feed.title')} — Nodyx</title>
 </svelte:head>
 
+{#snippet linkCard(lp: any)}
+	<a href={lp.url} target="_blank" rel="noopener noreferrer nofollow" class="link-card">
+		{#if lp.image}
+			<div class="link-card-img"><img src={lp.image} alt="" loading="lazy" /></div>
+		{/if}
+		<div class="link-card-body">
+			{#if lp.site_name}<span class="link-card-site">{lp.site_name}</span>{/if}
+			{#if lp.title}<span class="link-card-title">{lp.title}</span>{/if}
+			{#if lp.description}<span class="link-card-desc">{lp.description}</span>{/if}
+		</div>
+	</a>
+{/snippet}
+
 <div class="feed-root">
 	<!-- ── Page header ──────────────────────────────────────────────────────── -->
 	<div class="feed-header">
@@ -412,6 +425,8 @@
 										</div>
 									{/if}
 
+									{#if post.link_preview}{@render linkCard(post.link_preview)}{/if}
+
 									<!-- Actions -->
 									<div class="post-actions">
 										<!-- Reply -->
@@ -515,6 +530,7 @@
 													<img src={reply.media_url} alt="" class="post-media-img" loading="lazy" />
 												</div>
 											{/if}
+											{#if reply.link_preview}{@render linkCard(reply.link_preview)}{/if}
 											<div class="post-actions" style="margin-top: 0.5rem;">
 												<button
 													onclick={() => { replyTo = reply; composing = true; window.scrollTo({ top: 0, behavior: 'smooth' }) }}
@@ -1019,6 +1035,28 @@
 .prose-feed :global(pre code) { background: none; padding: 0; }
 
 /* Post media */
+/* Carte d'aperçu de lien (Open Graph) */
+.link-card {
+	display: flex;
+	flex-direction: column;
+	margin-top: 0.625rem;
+	border: 1px solid rgba(255,255,255,0.1);
+	border-radius: 14px;
+	overflow: hidden;
+	text-decoration: none;
+	background: rgba(255,255,255,0.02);
+	transition: border-color 0.15s, background 0.15s;
+}
+.link-card:hover { border-color: rgba(124,58,237,0.5); background: rgba(255,255,255,0.04); }
+.link-card-img { width: 100%; max-height: 240px; overflow: hidden; background: rgba(0,0,0,0.2); }
+.link-card-img img { width: 100%; height: 100%; max-height: 240px; object-fit: cover; display: block; }
+.link-card-body { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.7rem 0.85rem; }
+.link-card-site { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: #818cf8; font-weight: 700; }
+.link-card-title { font-size: 0.9rem; font-weight: 700; color: rgba(255,255,255,0.92); line-height: 1.3;
+	display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.link-card-desc { font-size: 0.8rem; color: rgba(255,255,255,0.55); line-height: 1.4;
+	display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
 .post-media { margin-top: 0.625rem; }
 .post-media-img {
 	width: 100%;
