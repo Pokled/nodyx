@@ -9,6 +9,7 @@ import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
 import { sanitize } from '../utils/sanitize'
+import { awardPoints, REPUTATION } from '../models/reputation'
 import { db } from '../config/database'
 import { io } from '../socket/io'
 
@@ -162,6 +163,9 @@ export default async function socialRoutes(app: FastifyInstance) {
       )
     }
 
+    // Réputation : poster un statut = +2 (participation au fil d'actu)
+    await awardPoints(userId, REPUTATION.SOCIAL_POST)
+
     const post = await db.query(`
       SELECT ${postSelect('$2')}
       FROM status_posts sp
@@ -193,6 +197,9 @@ export default async function socialRoutes(app: FastifyInstance) {
         [del.rows[0].reply_to_id]
       )
     }
+
+    // Réputation : suppression d'un statut = -2 (anti-farming)
+    await awardPoints(userId, -REPUTATION.SOCIAL_POST)
 
     return reply.send({ ok: true })
   })

@@ -5,9 +5,10 @@ import { db } from '../config/database'
 //   +10 créer un thread/article · +2 répondre · +5 recevoir un Merci
 // On déduit à la suppression (anti-farming create/delete). points >= 0 garanti.
 export const REPUTATION = {
-  THREAD: 10,
-  REPLY:  2,
-  THANKS: 5,
+  THREAD:      10,
+  REPLY:       2,
+  THANKS:      5,
+  SOCIAL_POST: 2,   // un statut sur le fil d'actu (participation courte)
 } as const
 
 export async function awardPoints(userId: string, delta: number): Promise<void> {

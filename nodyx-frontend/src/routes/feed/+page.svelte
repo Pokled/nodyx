@@ -48,6 +48,15 @@
 	let mediaUrl    = $state<string | null>(null)
 	let mediaUploading = $state(false)
 
+	// "+2 ✨" qui s'envole quand on poste (récompense réputation visible)
+	let burstOn  = $state(false)
+	let burstKey = $state(0)
+	function triggerPointsBurst() {
+		burstKey++
+		burstOn = true
+		setTimeout(() => (burstOn = false), 1300)
+	}
+
 	// Text length for wave bar (strip HTML tags)
 	const textLen   = $derived(content.replace(/<[^>]*>/g, '').length)
 	const waveWidth = $derived(Math.min(100, (textLen / 500) * 100))
@@ -92,6 +101,7 @@
 			})
 			if (res.ok) {
 				const post = await res.json()
+				triggerPointsBurst()   // +2 réputation, petit feedback qui s'envole
 				if (!replyTo) {
 					posts = [post, ...posts]
 				} else {
@@ -331,6 +341,11 @@
 								>
 									{sending ? '…' : replyTo ? tFn('feed.reply') : tFn('feed.publish')}
 								</button>
+								{#if burstOn}
+									{#key burstKey}
+										<span class="points-burst">+2&nbsp;✨</span>
+									{/key}
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -842,7 +857,27 @@
 	min-width: 2.5rem;
 	text-align: right;
 }
-.composer-actions { display: flex; gap: 0.5rem; }
+.composer-actions { display: flex; gap: 0.5rem; position: relative; }
+
+/* "+2 ✨" qui s'envole quand on poste */
+.points-burst {
+	position: absolute;
+	right: 0.5rem;
+	top: -0.25rem;
+	pointer-events: none;
+	font-size: 0.95rem;
+	font-weight: 800;
+	color: #fde68a;
+	text-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+	white-space: nowrap;
+	animation: points-burst-rise 1.2s ease-out forwards;
+}
+@keyframes points-burst-rise {
+	0%   { opacity: 0; transform: translateY(6px) scale(0.8); }
+	20%  { opacity: 1; transform: translateY(-2px) scale(1.1); }
+	60%  { opacity: 1; transform: translateY(-22px) scale(1); }
+	100% { opacity: 0; transform: translateY(-48px) scale(0.95); }
+}
 .composer-cancel {
 	font-size: 0.75rem;
 	font-weight: 600;
