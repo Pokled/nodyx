@@ -264,6 +264,11 @@
 
 			<!-- Composer ─────────────────────────────────────────────────── -->
 			<div class="composer" class:composer--active={composing || content.length > 0}>
+				{#if burstOn}
+					{#key burstKey}
+						<span class="points-burst">+2&nbsp;✨</span>
+					{/key}
+				{/if}
 				{#if replyTo}
 					<div class="composer-reply-banner">
 						<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -341,11 +346,6 @@
 								>
 									{sending ? '…' : replyTo ? tFn('feed.reply') : tFn('feed.publish')}
 								</button>
-								{#if burstOn}
-									{#key burstKey}
-										<span class="points-burst">+2&nbsp;✨</span>
-									{/key}
-								{/if}
 							</div>
 						</div>
 					</div>
@@ -709,6 +709,7 @@
 
 /* ── Composer ─────────────────────────────────────────────────────────────── */
 .composer {
+	position: relative;
 	border: 1px solid rgba(255,255,255,0.07);
 	background: rgba(255,255,255,0.02);
 	padding: 1rem;
@@ -857,13 +858,14 @@
 	min-width: 2.5rem;
 	text-align: right;
 }
-.composer-actions { display: flex; gap: 0.5rem; position: relative; }
+.composer-actions { display: flex; gap: 0.5rem; }
 
-/* "+2 ✨" qui s'envole quand on poste */
+/* "+2 ✨" qui s'envole quand on poste (ancré au composer, qui reste monté) */
 .points-burst {
 	position: absolute;
-	right: 0.5rem;
-	top: -0.25rem;
+	right: 1rem;
+	top: 0.85rem;
+	z-index: 6;
 	pointer-events: none;
 	font-size: 0.95rem;
 	font-weight: 800;
