@@ -8,6 +8,7 @@ import sharp from 'sharp'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
+import { sanitize } from '../utils/sanitize'
 import { db } from '../config/database'
 import { io } from '../socket/io'
 
@@ -134,6 +135,14 @@ export default async function socialRoutes(app: FastifyInstance) {
     const { userId } = request.user!
     const { content, reply_to_id, media_url } = request.body as z.infer<typeof statusSchema>
 
+    // SÉCURITÉ : le contenu est rendu en {@html} (feed + profil). On le passe par
+    // le sanitizer partagé (même allowlist que le forum) pour bloquer tout XSS
+    // stocké (script, on*, src externes…).
+    const safeContent = sanitize(content)
+    if (!safeContent.trim()) {
+      return reply.code(400).send({ error: 'Contenu vide après nettoyage.' })
+    }
+
     // Verify parent exists if replying
     if (reply_to_id) {
       const parent = await db.query('SELECT id FROM status_posts WHERE id = $1', [reply_to_id])
@@ -144,7 +153,7 @@ export default async function socialRoutes(app: FastifyInstance) {
       INSERT INTO status_posts (author_id, content, reply_to_id, media_url)
       VALUES ($1, $2, $3, $4)
       RETURNING id
-    `, [userId, content, reply_to_id ?? null, media_url ?? null])
+    `, [userId, safeContent, reply_to_id ?? null, media_url ?? null])
 
     if (reply_to_id) {
       await db.query(

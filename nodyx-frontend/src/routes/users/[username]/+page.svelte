@@ -818,7 +818,7 @@
 				{:else}
 					{#each userPosts as post (post.id)}
 						<article class="profile-post-card">
-							<p class="profile-post-text">{post.content}</p>
+							<div class="profile-post-text nodyx-prose">{@html post.content}</div>
 							<div class="profile-post-meta">
 								<time>{timeAgo(post.created_at)}</time>
 								<button
