@@ -12,6 +12,7 @@ import * as ReactionModel from '../models/reaction'
 import * as ThanksModel from '../models/thanks'
 import * as TagModel from '../models/tag'
 import * as NotificationModel from '../models/notification'
+import { awardPoints, REPUTATION } from '../models/reputation'
 import { resolveMentions } from '../utils/mentions'
 import { db, redis } from '../config/database'
 import { checkHtmlContent } from '../services/contentFilter'
@@ -355,6 +356,8 @@ app.get('/threads', {
       content: sanitizedContent,
     })
     bumpThreadsCache()
+    // Réputation : créer un thread/article = +10 (le premier post ne donne pas le +2 réponse)
+    await awardPoints(request.user!.userId, REPUTATION.THREAD)
 
     // Attach tags if provided
     if (tag_ids && tag_ids.length > 0) {
@@ -442,6 +445,8 @@ app.get('/threads', {
       content:   sanitized,
     })
     bumpThreadsCache()
+    // Réputation : répondre = +2
+    await awardPoints(userId, REPUTATION.REPLY)
 
     // Notifications (fire-and-forget)
     ;(async () => {
@@ -547,6 +552,8 @@ app.get('/threads', {
     }
 
     await PostModel.removeById(id)
+    // Réputation : suppression d'une réponse = -2 pour son auteur (anti-farming)
+    await awardPoints(existing.author_id, -REPUTATION.REPLY)
     return reply.code(204).send()
   })
 
@@ -602,6 +609,8 @@ app.get('/threads', {
     if (body.delete) {
       await ThreadModel.remove(threadId)
       bumpThreadsCache()
+      // Réputation : suppression d'un thread = -10 pour son créateur (anti-farming)
+      await awardPoints(thread.author_id, -REPUTATION.THREAD)
       return reply.code(204).send()
     }
 
