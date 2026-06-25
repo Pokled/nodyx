@@ -1,6 +1,5 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import sanitizeHtml from 'sanitize-html'
 import { rehostExternalImages } from '../services/inlineImageRehost'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
@@ -12,6 +11,8 @@ import * as ReactionModel from '../models/reaction'
 import * as ThanksModel from '../models/thanks'
 import * as TagModel from '../models/tag'
 import * as NotificationModel from '../models/notification'
+import { awardPoints, REPUTATION } from '../models/reputation'
+import { sanitize } from '../utils/sanitize'
 import { resolveMentions } from '../utils/mentions'
 import { db, redis } from '../config/database'
 import { checkHtmlContent } from '../services/contentFilter'
@@ -51,116 +52,6 @@ async function isAdmin(userId: string, threadId: string): Promise<boolean> {
 // Get author_id of a post (used for thanks)
 async function getPostAuthor(postId: string): Promise<{ author_id: string; thread_id: string } | null> {
   return PostModel.getAuthorAndThread(postId)
-}
-
-const ALLOWED_TAGS = [
-  'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-  'h1', 'h2', 'h3', 'h4',
-  'ul', 'ol', 'li',
-  'blockquote', 'hr',
-  'a', 'img',
-  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-  'div', 'span',
-  'iframe',
-  'audio',
-  'nodyx-audio-player',
-  'nodyx-track',
-]
-
-const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
-  '*':      ['class', 'data-align', 'data-type'],
-  'span':   ['class', 'style', 'data-align', 'data-type'],
-  'p':      ['class', 'style', 'data-align', 'data-type'],
-  // id sur les titres : permet les sommaires à ancres (#section) dans les
-  // posts longs façon documentation. Pas d'id ailleurs pour limiter le
-  // risque de collision avec les éléments de l'app (DOM clobbering).
-  'h2':     ['class', 'id', 'style', 'data-align', 'data-type'],
-  'h3':     ['class', 'id', 'data-align', 'data-type'],
-  'h4':     ['class', 'id', 'data-align', 'data-type'],
-  'a':      ['href', 'target', 'rel'],
-  'img':    ['src', 'alt', 'width', 'height'],
-  'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
-  'audio':              ['src', 'controls', 'preload'],
-  'nodyx-audio-player': ['src', 'track-title', 'artist', 'cover', 'download'],
-  'nodyx-track':        ['src', 'track-title', 'artist', 'cover'],
-  'th':     ['rowspan', 'colspan'],
-  'td':     ['rowspan', 'colspan'],
-}
-
-// Images autorisées : serveur propre + CDN GIF uniquement
-const ALLOWED_IMG_HOSTS_FORUM = new Set([
-  'media.tenor.com', 'c.tenor.com', 'media1.tenor.com', 'tenor.com',
-  'media.giphy.com', 'media0.giphy.com', 'media1.giphy.com',
-  'media2.giphy.com', 'media3.giphy.com', 'i.giphy.com',
-])
-
-function isAllowedImgSrcForum(src: string): boolean {
-  if (!src) return false
-  if (src.startsWith('/uploads/')) return true
-  if (src.startsWith('data:image/')) return true
-  try {
-    return ALLOWED_IMG_HOSTS_FORUM.has(new URL(src).hostname)
-  } catch {
-    return false
-  }
-}
-
-// Audio: only files served by our own /uploads/ (mp3, m4a, ogg, wav, webm).
-// No external host, no data: URLs.
-function isAllowedAudioSrcForum(src: string): boolean {
-  if (!src) return false
-  return src.startsWith('/uploads/')
-}
-
-const _envBlockedForum = (process.env.BLOCKED_LINK_DOMAINS ?? '')
-  .split(',').map(d => d.trim().toLowerCase()).filter(Boolean)
-
-const BLOCKED_LINK_DOMAINS_FORUM = new Set([
-  'pornhub.com', 'xvideos.com', 'xhamster.com', 'xnxx.com',
-  'redtube.com', 'youporn.com', 'tube8.com', 'spankbang.com',
-  'tnaflix.com', 'drtuber.com', 'beeg.com', 'txxx.com',
-  ..._envBlockedForum,
-])
-
-function sanitize(raw: string): string {
-  return sanitizeHtml(raw, {
-    allowedTags: ALLOWED_TAGS,
-    allowedAttributes: ALLOWED_ATTRS,
-    allowedIframeHostnames: ['www.youtube.com', 'youtube.com', 'www.youtube-nocookie.com', 'player.vimeo.com', 'vimeo.com'],
-    transformTags: {
-      'nodyx-audio-player': (tagName, attribs) => {
-        if (attribs.cover && !isAllowedImgSrcForum(attribs.cover)) {
-          const cleaned: Record<string, string> = { ...attribs }
-          delete cleaned.cover
-          return { tagName, attribs: cleaned }
-        }
-        return { tagName, attribs }
-      },
-      'nodyx-track': (tagName, attribs) => {
-        if (attribs.cover && !isAllowedImgSrcForum(attribs.cover)) {
-          const cleaned: Record<string, string> = { ...attribs }
-          delete cleaned.cover
-          return { tagName, attribs: cleaned }
-        }
-        return { tagName, attribs }
-      },
-    },
-    exclusiveFilter: (frame) => {
-      if (frame.tag === 'img')                 return !isAllowedImgSrcForum(frame.attribs?.src ?? '')
-      if (frame.tag === 'audio')               return !isAllowedAudioSrcForum(frame.attribs?.src ?? '')
-      // <nodyx-audio-player> may be empty (parent of <nodyx-track>) so src is optional
-      if (frame.tag === 'nodyx-audio-player')  return !!frame.attribs?.src && !isAllowedAudioSrcForum(frame.attribs.src)
-      if (frame.tag === 'nodyx-track')         return !isAllowedAudioSrcForum(frame.attribs?.src ?? '')
-      if (frame.tag === 'a') {
-        const href = frame.attribs?.href ?? ''
-        try {
-          const hostname = new URL(href).hostname.toLowerCase().replace(/^www\./, '')
-          return BLOCKED_LINK_DOMAINS_FORUM.has(hostname)
-        } catch { return false }
-      }
-      return false
-    },
-  })
 }
 
 // Invalide les caches de listes de threads (showcase homepage, etc.) en
@@ -355,6 +246,8 @@ app.get('/threads', {
       content: sanitizedContent,
     })
     bumpThreadsCache()
+    // Réputation : créer un thread/article = +10 (le premier post ne donne pas le +2 réponse)
+    await awardPoints(request.user!.userId, REPUTATION.THREAD)
 
     // Attach tags if provided
     if (tag_ids && tag_ids.length > 0) {
@@ -442,6 +335,8 @@ app.get('/threads', {
       content:   sanitized,
     })
     bumpThreadsCache()
+    // Réputation : répondre = +2
+    await awardPoints(userId, REPUTATION.REPLY)
 
     // Notifications (fire-and-forget)
     ;(async () => {
@@ -547,6 +442,8 @@ app.get('/threads', {
     }
 
     await PostModel.removeById(id)
+    // Réputation : suppression d'une réponse = -2 pour son auteur (anti-farming)
+    await awardPoints(existing.author_id, -REPUTATION.REPLY)
     return reply.code(204).send()
   })
 
@@ -602,6 +499,8 @@ app.get('/threads', {
     if (body.delete) {
       await ThreadModel.remove(threadId)
       bumpThreadsCache()
+      // Réputation : suppression d'un thread = -10 pour son créateur (anti-farming)
+      await awardPoints(thread.author_id, -REPUTATION.THREAD)
       return reply.code(204).send()
     }
 
