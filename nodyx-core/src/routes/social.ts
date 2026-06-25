@@ -46,7 +46,23 @@ function postSelect(viewerParam: string | null) {
               json_build_object('count', COUNT(*), 'users', json_agg(u2.username ORDER BY u2.username)) AS jc
        FROM status_likes sl2 JOIN users u2 ON u2.id = sl2.user_id
        WHERE sl2.post_id = sp.id GROUP BY sl2.emoji
-     ) t) AS reactions
+     ) t) AS reactions,
+    sp.reshare_of,
+    (SELECT COUNT(*) FROM status_posts r WHERE r.reshare_of = COALESCE(sp.reshare_of, sp.id))::int AS reshares_count,
+    ${viewerParam
+      ? `EXISTS(SELECT 1 FROM status_posts r WHERE r.reshare_of = COALESCE(sp.reshare_of, sp.id) AND r.author_id = ${viewerParam})`
+      : 'false'} AS reshared_by_me,
+    CASE WHEN sp.reshare_of IS NOT NULL THEN (
+      SELECT json_build_object(
+        'id', o.id, 'content', o.content, 'media_url', o.media_url,
+        'link_preview', o.link_preview, 'created_at', o.created_at,
+        'author_id', o.author_id, 'username', ou.username,
+        'display_name', op.display_name, 'avatar_url', op.avatar_url
+      )
+      FROM status_posts o JOIN users ou ON ou.id = o.author_id
+      LEFT JOIN user_profiles op ON op.user_id = o.author_id
+      WHERE o.id = sp.reshare_of
+    ) ELSE NULL END AS reshared
   `
 }
 
@@ -295,6 +311,34 @@ export default async function socialRoutes(app: FastifyInstance) {
       likes_count = r.rows[0]?.likes_count
     }
     return reply.send({ ok: true, likes_count })
+  })
+
+  // ── Repartage ───────────────────────────────────────────────────────────────
+  app.post('/status/:id/reshare', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const { userId } = request.user!
+    const { id } = request.params as { id: string }
+
+    const orig = await db.query<{ id: string; reshare_of: string | null }>(
+      'SELECT id, reshare_of FROM status_posts WHERE id = $1', [id]
+    )
+    if (!orig.rows[0]) return reply.code(404).send({ error: 'Post introuvable' })
+    // Repartager un repartage cible l'original.
+    const targetId = orig.rows[0].reshare_of ?? id
+
+    // Toggle : si je l'ai déjà repartagé, on retire.
+    const existing = await db.query(
+      'SELECT id FROM status_posts WHERE author_id = $1 AND reshare_of = $2',
+      [userId, targetId]
+    )
+    if (existing.rows[0]) {
+      await db.query('DELETE FROM status_posts WHERE id = $1', [existing.rows[0].id])
+      return reply.send({ ok: true, reshared: false })
+    }
+    await db.query(
+      "INSERT INTO status_posts (author_id, content, reshare_of) VALUES ($1, '', $2)",
+      [userId, targetId]
+    )
+    return reply.send({ ok: true, reshared: true })
   })
 
   // ── Feed & user posts ─────────────────────────────────────────────────────
