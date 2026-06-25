@@ -183,6 +183,22 @@
 		}).catch(() => {})
 	}
 
+	// ── Repartage ───────────────────────────────────────────────────────────────
+	async function toggleReshare(post: any) {
+		const now = !post.reshared_by_me
+		const delta = now ? 1 : -1
+		// MAJ optimiste sur l'original effectif (toutes les lignes qui le ciblent)
+		const target = post.reshare_of || post.id
+		posts = posts.map(p =>
+			(p.id === target || p.reshare_of === target)
+				? { ...p, reshared_by_me: now, reshares_count: Math.max(0, (p.reshares_count ?? 0) + delta) }
+				: p
+		)
+		await apiFetch(fetch, `/social/status/${post.id}/reshare`, {
+			method: 'POST', headers: { Authorization: `Bearer ${token}` },
+		}).catch(() => {})
+	}
+
 	async function deletePost(id: string) {
 		const res = await apiFetch(fetch, `/social/status/${id}`, {
 			method: 'DELETE',
@@ -285,6 +301,18 @@
 			{#if lp.title}<span class="link-card-title">{lp.title}</span>{/if}
 			{#if lp.description}<span class="link-card-desc">{lp.description}</span>{/if}
 		</div>
+	</a>
+{/snippet}
+
+{#snippet quotedPost(o: any)}
+	<a href="/users/{o.username}" class="quoted-post">
+		<div class="quoted-head">
+			{#if o.avatar_url}<img src={o.avatar_url} alt="" class="quoted-avatar" />{:else}<span class="quoted-avatar quoted-avatar--i">{(o.display_name || o.username || '?').charAt(0).toUpperCase()}</span>{/if}
+			<span class="quoted-name">{o.display_name || o.username}</span>
+			<span class="quoted-handle">@{o.username}</span>
+		</div>
+		<div class="quoted-body prose-feed">{@html o.content}</div>
+		{#if o.media_url}<img src={o.media_url} alt="" class="quoted-media" loading="lazy" />{/if}
 	</a>
 {/snippet}
 
@@ -434,6 +462,13 @@
 								<div class="post-resonance-glow" style="opacity: {Math.min(0.6, (post.likes_count - 4) * 0.05)}"></div>
 							{/if}
 
+							{#if post.reshare_of}
+								<div class="reshare-label">
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+									<a href="/users/{post.username}">{post.display_name || post.username}</a> a repartagé
+								</div>
+							{/if}
+
 							<div class="post-inner">
 								<!-- Avatar -->
 								<a href="/users/{post.username}" class="post-avatar-link">
@@ -465,7 +500,9 @@
 										{/if}
 									</div>
 
-									<div class="post-text prose-feed">{@html post.content}</div>
+									{#if post.content}
+										<div class="post-text prose-feed">{@html post.content}</div>
+									{/if}
 
 									{#if post.media_url}
 										<div class="post-media">
@@ -474,6 +511,8 @@
 									{/if}
 
 									{#if post.link_preview}{@render linkCard(post.link_preview)}{/if}
+
+									{#if post.reshared}{@render quotedPost(post.reshared)}{/if}
 
 									<!-- Actions -->
 									<div class="post-actions">
@@ -490,6 +529,16 @@
 											<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
 											</svg>
+										</button>
+										<!-- Repartage -->
+										<button
+											onclick={() => toggleReshare(post)}
+											class="post-action-btn post-reshare-btn"
+											class:post-reshare-btn--active={post.reshared_by_me}
+											title="Repartager"
+										>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+											{#if post.reshares_count > 0}<span class="resonance-count">{fmt(post.reshares_count)}</span>{/if}
 										</button>
 										{#if post.replies_count > 0}
 											<button
@@ -1159,6 +1208,29 @@
 .reaction-chip--mine { background: rgba(124,58,237,0.22); border-color: rgba(124,58,237,0.6); }
 .reaction-chip-e { font-size: 0.9rem; }
 .reaction-chip-n { font-weight: 700; color: rgba(255,255,255,0.7); }
+
+/* Repartage */
+.reshare-label {
+	display: flex; align-items: center; gap: 0.4rem;
+	padding: 0 0 0.4rem 0.25rem; font-size: 0.78rem; color: rgba(255,255,255,0.45); font-weight: 600;
+}
+.reshare-label a { color: rgba(255,255,255,0.6); text-decoration: none; }
+.reshare-label a:hover { text-decoration: underline; }
+.post-reshare-btn--active { color: #34d399; }
+.post-reshare-btn--active .resonance-count { color: #34d399; }
+.quoted-post {
+	display: block; margin-top: 0.625rem; padding: 0.7rem 0.85rem; text-decoration: none;
+	border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; background: rgba(255,255,255,0.02);
+	transition: background 0.15s, border-color 0.15s;
+}
+.quoted-post:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.18); }
+.quoted-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem; }
+.quoted-avatar { width: 20px; height: 20px; border-radius: 999px; object-fit: cover; }
+.quoted-avatar--i { display: inline-flex; align-items: center; justify-content: center; background: rgba(124,58,237,0.3); color: #fff; font-size: 0.65rem; font-weight: 700; }
+.quoted-name { font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.85rem; }
+.quoted-handle { color: rgba(255,255,255,0.4); font-size: 0.8rem; }
+.quoted-body { font-size: 0.875rem; color: rgba(255,255,255,0.8); }
+.quoted-media { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; margin-top: 0.4rem; display: block; }
 .reaction-backdrop { position: fixed; inset: 0; z-index: 40; }
 .reaction-picker {
 	position: absolute;
