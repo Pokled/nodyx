@@ -144,9 +144,19 @@
 	let pickerFor = $state<string | null>(null)
 
 	function applyReaction(p: any, prev: string | null, next: string | null) {
-		const reactions: Record<string, number> = { ...(p.reactions || {}) }
-		if (prev) { reactions[prev] = (reactions[prev] || 1) - 1; if (reactions[prev] <= 0) delete reactions[prev] }
-		if (next) { reactions[next] = (reactions[next] || 0) + 1 }
+		const myname = me?.username
+		const reactions: Record<string, { count: number; users: string[] }> =
+			JSON.parse(JSON.stringify(p.reactions || {}))
+		if (prev && reactions[prev]) {
+			reactions[prev].count = Math.max(0, reactions[prev].count - 1)
+			reactions[prev].users = (reactions[prev].users || []).filter((u) => u !== myname)
+			if (reactions[prev].count <= 0) delete reactions[prev]
+		}
+		if (next) {
+			if (!reactions[next]) reactions[next] = { count: 0, users: [] }
+			reactions[next].count += 1
+			if (!reactions[next].users.includes(myname)) reactions[next].users.push(myname)
+		}
 		const delta = (!prev && next) ? 1 : (prev && !next) ? -1 : 0
 		return { ...p, my_reaction: next, liked_by_me: !!next, likes_count: Math.max(0, (p.likes_count || 0) + delta), reactions }
 	}
@@ -519,23 +529,17 @@
 												class:post-resonance-btn--active={post.my_reaction}
 												aria-label="Réagir"
 											>
-												<span class="resonance-icon">
-													{#if post.my_reaction}
-														<span class="reaction-mine">{post.my_reaction}</span>
-													{:else}
-														<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-															<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
-														</svg>
-													{/if}
-												</span>
-												{#if post.likes_count > 0}
-													<span class="resonance-count">{fmt(post.likes_count)}</span>
-												{/if}
+												<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+												</svg>
 											</button>
-											{#if post.reactions && Object.keys(post.reactions).length > 0}
-												<span class="reaction-summary">
-													{#each Object.keys(post.reactions).slice(0, 4) as e}<span>{e}</span>{/each}
-												</span>
+											{#if post.reactions}
+												{#each Object.entries(post.reactions) as [e, info]}
+													<button class="reaction-chip" class:reaction-chip--mine={post.my_reaction === e}
+														title={((info as any).users || []).join(', ')} onclick={() => react(post, e)}>
+														<span class="reaction-chip-e">{e}</span><span class="reaction-chip-n">{(info as any).count}</span>
+													</button>
+												{/each}
 											{/if}
 										</div>
 									</div>
@@ -1145,9 +1149,16 @@
 
 /* Réactions emoji */
 .reaction-wrap { position: relative; display: flex; align-items: center; gap: 0.4rem; }
-.reaction-mine { font-size: 1.05rem; line-height: 1; }
-.reaction-summary { display: inline-flex; align-items: center; }
-.reaction-summary span { font-size: 0.85rem; margin-left: -2px; filter: saturate(1.1); }
+.reaction-chip {
+	display: inline-flex; align-items: center; gap: 0.2rem;
+	padding: 0.1rem 0.5rem; border-radius: 999px; cursor: pointer;
+	border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+	font-size: 0.8rem; line-height: 1.4; transition: background 0.12s, border-color 0.12s;
+}
+.reaction-chip:hover { background: rgba(255,255,255,0.08); }
+.reaction-chip--mine { background: rgba(124,58,237,0.22); border-color: rgba(124,58,237,0.6); }
+.reaction-chip-e { font-size: 0.9rem; }
+.reaction-chip-n { font-weight: 700; color: rgba(255,255,255,0.7); }
 .reaction-backdrop { position: fixed; inset: 0; z-index: 40; }
 .reaction-picker {
 	position: absolute;

@@ -41,8 +41,11 @@ function postSelect(viewerParam: string | null) {
     ${viewerParam
       ? `(SELECT emoji FROM status_likes WHERE user_id = ${viewerParam} AND post_id = sp.id)`
       : 'NULL'} AS my_reaction,
-    (SELECT json_object_agg(emoji, c) FROM (
-       SELECT emoji, COUNT(*) AS c FROM status_likes WHERE post_id = sp.id GROUP BY emoji
+    (SELECT json_object_agg(emoji, jc) FROM (
+       SELECT sl2.emoji,
+              json_build_object('count', COUNT(*), 'users', json_agg(u2.username ORDER BY u2.username)) AS jc
+       FROM status_likes sl2 JOIN users u2 ON u2.id = sl2.user_id
+       WHERE sl2.post_id = sp.id GROUP BY sl2.emoji
      ) t) AS reactions
   `
 }
