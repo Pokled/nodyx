@@ -13,7 +13,7 @@ path = "src/main.rs"
 tokio = { version = "1", features = ["full"] }
 
 # Crypto — HMAC-SHA1 for TURN credentials, MD5 for message-integrity key
-hmac    = "0.12"
+hmac    = "0.13"
 sha1    = "0.11"
 md-5    = "0.10"
 base64  = "0.22"
