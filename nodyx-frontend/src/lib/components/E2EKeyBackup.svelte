@@ -23,6 +23,34 @@
 	let canBackup    = $state(true)
 	let ready        = $state(false)
 	let confirmRegen = $state(false)
+	let showPhrase   = $state(false)
+	let copied       = $state(false)
+
+	// Générateur : mots simples et concrets, faciles à mémoriser une fois assemblés.
+	const WORDS = [
+		'soleil','montagne','rivière','tigre','guitare','orange','nuage','forêt','renard','piano',
+		'comète','volcan','dauphin','lanterne','cerise','tornade','bambou','hibou','cascade','prairie',
+		'saphir','vélo','château','colibri','menthe','galaxie','sirène','tonnerre','érable','panda',
+		'horizon','boussole','flamme','noisette','baleine','origami','caramel','aurore','sentier','koala',
+		'brume','cactus','écureuil','melon','phare','quartz','ruban','tulipe','vague','zèbre',
+		'abricot','biscuit','citron','domino','éclair','figue','girafe','igloo','jongleur','kiwi',
+	]
+
+	function genPhrase(): string {
+		const n = 5
+		const r = new Uint32Array(n)
+		crypto.getRandomValues(r)
+		return Array.from(r, (v) => WORDS[v % WORDS.length]).join('-')
+	}
+
+	function suggestPhrase() {
+		const p = genPhrase()
+		phrase = p; phrase2 = p; showPhrase = true; error = ''; copied = false
+	}
+
+	async function copyPhrase() {
+		try { await navigator.clipboard.writeText(phrase); copied = true; setTimeout(() => copied = false, 2000) } catch { /* ignore */ }
+	}
 
 	onMount(async () => {
 		if (mode === 'manage') {
@@ -35,7 +63,7 @@
 	async function setupBackup() {
 		error = ''; success = ''
 		if (phrase.length < 8) { error = 'La phrase doit faire au moins 8 caractères.'; return }
-		if (phrase !== phrase2) { error = 'Les deux phrases ne correspondent pas.'; return }
+		if (!showPhrase && phrase !== phrase2) { error = 'Les deux phrases ne correspondent pas.'; return }
 		busy = true
 		try {
 			const ok = await uploadKeyBackup(token, phrase)
@@ -107,7 +135,7 @@
 			<span class="kb-icon">🔐</span>
 			<div>
 				<div class="kb-title">Sauvegarde des messages chiffrés</div>
-				<div class="kb-sub">Sauvegarde ta clé E2E, chiffrée par une phrase secrète, pour retrouver tes DMs sur un autre navigateur ou appareil. Le serveur ne voit jamais ta clé.</div>
+				<div class="kb-sub">Tes DMs sont chiffrés de bout en bout : seul ton appareil détient la clé. Sauvegarde-la pour pouvoir relire tes conversations depuis un autre navigateur ou ton téléphone.</div>
 			</div>
 			{#if ready}
 				<span class="kb-pill {backupExists ? 'on' : 'off'}">
@@ -116,46 +144,75 @@
 			{/if}
 		</div>
 
+		{#if ready && !confirmRegen}
+		<div class="kb-info">
+			<div class="kb-info-row"><span>🔒</span><span>Ta clé est chiffrée <strong>sur ton appareil</strong> par ta phrase. Le serveur n'en reçoit qu'une version verrouillée : même Nodyx ne peut pas la lire.</span></div>
+			<div class="kb-info-row"><span>🗝️</span><span>Ta phrase est la <strong>seule</strong> qui ouvre cette sauvegarde, comme la clé de chez toi. Note-la dans un endroit sûr (gestionnaire de mots de passe, carnet).</span></div>
+		</div>
+		{/if}
+
 		{#if ready && !canBackup}
-			<div class="kb-warn">
-				Ta clé actuelle a été générée avant cette fonctionnalité et ne peut pas être sauvegardée.
-				Tu peux générer une nouvelle clé sauvegardable maintenant.
+			<div class="kb-note">
+				Ta clé a été créée avant cette fonctionnalité : elle n'est pas encore sauvegardable.
+				Prépare une clé compatible en un clic, c'est sans risque pour tes futurs messages.
 			</div>
 			{#if error}<div class="kb-error">{error}</div>{/if}
 			{#if !confirmRegen}
 				<div class="kb-actions">
-					<button class="kb-btn-primary" onclick={() => confirmRegen = true} disabled={busy}>
-						Générer une clé sauvegardable
+					<button class="kb-btn-primary" type="button" onclick={() => confirmRegen = true} disabled={busy}>
+						Préparer la sauvegarde
 					</button>
 				</div>
 			{:else}
 				<div class="kb-warn">
-					La nouvelle clé remplacera l'actuelle : les messages chiffrés <strong>sur cet appareil</strong>
-					avec l'ancienne clé deviendront illisibles. Tes futurs messages, eux, seront sauvegardables.
+					Une nouvelle clé va remplacer l'ancienne. Les anciens messages chiffrés
+					<strong>déjà affichés sur cet appareil</strong> ne seront plus déchiffrables ici.
+					Tes nouveaux messages, eux, seront protégés et sauvegardés.
 				</div>
 				<div class="kb-actions">
-					<button class="kb-btn-danger" onclick={doRegenerate} disabled={busy}>
-						{busy ? '…' : 'Confirmer, générer la nouvelle clé'}
+					<button class="kb-btn-primary" type="button" onclick={doRegenerate} disabled={busy}>
+						{busy ? '…' : 'Continuer'}
 					</button>
-					<button class="kb-btn-ghost" onclick={() => confirmRegen = false} disabled={busy}>Annuler</button>
+					<button class="kb-btn-ghost" type="button" onclick={() => confirmRegen = false} disabled={busy}>Annuler</button>
 				</div>
 			{/if}
 		{:else if ready}
-			<input class="kb-input" type="password" placeholder="Phrase de récupération (8 caractères min.)"
-				bind:value={phrase} autocomplete="new-password" />
-			<input class="kb-input" type="password" placeholder="Confirme la phrase"
-				bind:value={phrase2} autocomplete="new-password" />
+			<div class="kb-gen">
+				<button class="kb-btn-soft" type="button" onclick={suggestPhrase}>✨ Proposer une phrase pour moi</button>
+				{#if phrase && showPhrase}
+					<button class="kb-copy" type="button" onclick={copyPhrase}>{copied ? '✓ Copiée' : 'Copier'}</button>
+				{/if}
+			</div>
+			<div class="kb-examples">
+				Exemples qui marchent bien : <code>soleil-tigre-piano-melon-phare</code> ·
+				<code>mon vieux chat dort sur le piano</code>
+			</div>
+
+			<div class="kb-field">
+				<input class="kb-input" type={showPhrase ? 'text' : 'password'} placeholder="Ta phrase de récupération"
+					bind:value={phrase} autocomplete="new-password" />
+				<button class="kb-eye" type="button" onclick={() => showPhrase = !showPhrase}>{showPhrase ? 'Masquer' : 'Voir'}</button>
+			</div>
+			{#if !showPhrase}
+				<input class="kb-input" type="password" placeholder="Confirme ta phrase"
+					bind:value={phrase2} autocomplete="new-password" />
+			{/if}
+
 			{#if error}<div class="kb-error">{error}</div>{/if}
 			{#if success}<div class="kb-success">{success}</div>{/if}
 			<div class="kb-actions">
-				<button class="kb-btn-primary" onclick={setupBackup} disabled={busy}>
-					{busy ? '…' : backupExists ? 'Mettre à jour la phrase' : 'Activer la sauvegarde'}
+				<button class="kb-btn-primary" type="button" onclick={setupBackup} disabled={busy}>
+					{busy ? '…' : backupExists ? 'Mettre à jour ma phrase' : 'Activer la sauvegarde'}
 				</button>
 				{#if backupExists}
-					<button class="kb-btn-danger" onclick={removeBackup} disabled={busy}>Supprimer</button>
+					<button class="kb-btn-danger" type="button" onclick={removeBackup} disabled={busy}>Supprimer</button>
 				{/if}
 			</div>
-			<div class="kb-hint">Choisis une phrase longue et mémorable. Perdue, elle est irrécupérable (zéro-knowledge).</div>
+			<div class="kb-hint">
+				Astuce : 4-5 mots au hasard, ou une petite phrase qui n'a de sens que pour toi.
+				Plus elle est longue, plus elle est solide. Si tu la perds, la sauvegarde reste
+				inviolable mais ne pourra plus être ouverte, alors note-la bien.
+			</div>
 		{/if}
 	{/if}
 </div>
@@ -190,4 +247,27 @@
 	.kb-warn { font-size: 13px; color: #fbbf24; background: rgba(251,191,36,.08);
 		border: 1px solid rgba(251,191,36,.2); border-radius: 10px; padding: 10px 12px; line-height: 1.45; }
 	.kb-hint { font-size: 12px; color: #64748b; line-height: 1.4; }
+
+	.kb-info { display: flex; flex-direction: column; gap: 8px;
+		background: rgba(99,102,241,.06); border: 1px solid rgba(99,102,241,.16);
+		border-radius: 12px; padding: 12px 14px; }
+	.kb-info-row { display: flex; gap: 10px; font-size: 13px; color: #c7d2fe; line-height: 1.45; }
+	.kb-info-row span:first-child { flex-shrink: 0; }
+	.kb-info-row strong { color: #e0e7ff; }
+	.kb-note { font-size: 13px; color: #cbd5e1; line-height: 1.45; }
+	.kb-gen { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+	.kb-btn-soft { padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
+		color: #c7d2fe; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.25);
+		transition: background .15s; }
+	.kb-btn-soft:hover { background: rgba(99,102,241,.2); }
+	.kb-copy { padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
+		color: #cbd5e1; background: transparent; border: 1px solid rgba(148,163,184,.3); }
+	.kb-examples { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+	.kb-examples code { background: rgba(15,23,42,.7); border: 1px solid rgba(148,163,184,.18);
+		border-radius: 6px; padding: 1px 6px; color: #c7d2fe; font-size: 12px; }
+	.kb-field { display: flex; gap: 8px; align-items: stretch; }
+	.kb-field .kb-input { flex: 1; }
+	.kb-eye { flex-shrink: 0; padding: 0 12px; border-radius: 10px; cursor: pointer;
+		font-size: 13px; font-weight: 600; color: #94a3b8;
+		background: transparent; border: 1px solid rgba(148,163,184,.2); }
 </style>
