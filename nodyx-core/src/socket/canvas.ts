@@ -26,25 +26,57 @@ interface CanvasElement {
 }
 
 // ── Access control ────────────────────────────────────────────────────────────
-// A user may operate on a board if they own it, or if they are a member of the
-// community that owns the channel the board is attached to. Without this check
-// any authenticated socket could join any board and receive its snapshot + live
-// ops simply by guessing the UUID.
-async function canAccessCanvasBoard(boardId: string, userId: string): Promise<boolean> {
-	const { rows: [board] } = await db.query<{ created_by: string; channel_id: string | null }>(
-		`SELECT created_by, channel_id FROM canvas_boards WHERE id = $1`,
-		[boardId]
-	).catch(() => ({ rows: [] as any[] }))
-	if (!board) return false
-	if (board.created_by === userId) return true
-	if (!board.channel_id) return false
+// On distingue VOIR (rejoindre la room, recevoir le snapshot + les ops live) et
+// ÉCRIRE (émettre des ops). Sans ce contrôle n'importe quel socket authentifié
+// pourrait lire/écrire un board en devinant son UUID.
+//
+//   • board d'un canal  : membre de la communauté → view + write (collab vocal).
+//   • board standalone, créateur               : view + write.
+//   • board standalone PUBLIC, autre membre     : view seul (lecture seule).
+//   • board standalone PRIVÉ, autre membre      : aucun accès.
+//
+// (Lot 2b : invitations/éditeurs → write accordé à des membres choisis.)
+
+async function isCommunityMember(userId: string): Promise<boolean> {
 	const { rowCount } = await db.query(
-		`SELECT 1 FROM channels c
-		 JOIN community_members cm ON cm.community_id = c.community_id
-		 WHERE c.id = $1 AND cm.user_id = $2 LIMIT 1`,
-		[board.channel_id, userId]
+		`SELECT 1 FROM community_members WHERE user_id = $1 LIMIT 1`,
+		[userId]
 	).catch(() => ({ rowCount: 0 }))
 	return (rowCount ?? 0) > 0
+}
+
+async function resolveBoardAccess(boardId: string, userId: string): Promise<{ view: boolean; write: boolean }> {
+	const { rows: [board] } = await db.query<{ created_by: string; channel_id: string | null; visibility: string }>(
+		`SELECT created_by, channel_id, visibility FROM canvas_boards WHERE id = $1`,
+		[boardId]
+	).catch(() => ({ rows: [] as any[] }))
+	if (!board) return { view: false, write: false }
+	if (board.created_by === userId) return { view: true, write: true }
+
+	if (board.channel_id) {
+		const { rowCount } = await db.query(
+			`SELECT 1 FROM channels c
+			 JOIN community_members cm ON cm.community_id = c.community_id
+			 WHERE c.id = $1 AND cm.user_id = $2 LIMIT 1`,
+			[board.channel_id, userId]
+		).catch(() => ({ rowCount: 0 }))
+		const m = (rowCount ?? 0) > 0
+		return { view: m, write: m }
+	}
+
+	// Standalone, pas le créateur : collaborateur accepté ?
+	const { rows: [collab] } = await db.query<{ role: string; status: string }>(
+		`SELECT role, status FROM canvas_board_collaborators WHERE board_id = $1 AND user_id = $2`,
+		[boardId, userId]
+	).catch(() => ({ rows: [] as any[] }))
+	const activeEditor = collab?.status === 'active' && collab?.role === 'editor'
+
+	if (board.visibility === 'public') {
+		const m = await isCommunityMember(userId)
+		return { view: m, write: !!activeEditor }   // tout membre voit ; éditeur accepté écrit
+	}
+	// Privé : seuls les collaborateurs actifs voient.
+	return { view: collab?.status === 'active', write: !!activeEditor }
 }
 
 // ── In-memory state ───────────────────────────────────────────────────────────
@@ -150,6 +182,11 @@ export function registerCanvasHandlers(io: Server, socket: Socket): void {
   const userId   = socket.data.userId
   const username = socket.data.username
 
+  // Droit d'écriture résolu au join, par board, pour CE socket. Les ops
+  // (op/clear/save) le consultent → un viewer (board public non possédé) ne
+  // peut pas écrire même s'il a rejoint la room en lecture.
+  const writePerms = new Map<string, boolean>()
+
   // ── canvas:join ────────────────────────────────────────────────────────────
   socket.on('canvas:join', async (payload: unknown) => {
     if (!payload || typeof payload !== 'object') return
@@ -157,10 +194,12 @@ export function registerCanvasHandlers(io: Server, socket: Socket): void {
     if (!isUuid(boardId)) return
 
     // Access control before sharing any board content with the socket
-    if (!await canAccessCanvasBoard(boardId as string, userId)) {
+    const access = await resolveBoardAccess(boardId as string, userId)
+    if (!access.view) {
       socket.emit('canvas:error', { boardId, error: 'Accès refusé.' })
       return
     }
+    writePerms.set(boardId as string, access.write)
 
     // Load or reuse snapshot
     let map = snapshots.get(boardId)
@@ -174,10 +213,11 @@ export function registerCanvasHandlers(io: Server, socket: Socket): void {
 
     await socket.join(roomName(boardId))
 
-    // Send full snapshot to the joining client only
+    // Send full snapshot to the joining client only (readOnly = pas de write)
     socket.emit('canvas:snapshot', {
       boardId,
       elements: toSnapshot(map),
+      readOnly: !access.write,
     })
 
     // Notify others in the room
@@ -195,6 +235,7 @@ export function registerCanvasHandlers(io: Server, socket: Socket): void {
     if (!isUuid(boardId)) return
 
     await socket.leave(roomName(boardId))
+    writePerms.delete(boardId as string)
     socket.to(roomName(boardId)).emit('canvas:peer:left', { boardId, userId })
 
     // If room is now empty → flush immediately
@@ -214,6 +255,8 @@ export function registerCanvasHandlers(io: Server, socket: Socket): void {
 
     // Must have joined the board first (canvas:join enforces access control)
     if (!socket.rooms.has(roomName(boardId as string))) return
+    // Lecture seule : un viewer (board public non possédé) ne peut pas écrire.
+    if (!writePerms.get(boardId as string)) return
 
     // Security: force author to the authenticated user
     const safeOp: CanvasElement = { ...(op as CanvasElement), author: userId }
@@ -243,6 +286,7 @@ export function registerCanvasHandlers(io: Server, socket: Socket): void {
     const { boardId, ts } = payload as Record<string, unknown>
     if (!isUuid(boardId) || typeof ts !== 'number') return
     if (!socket.rooms.has(roomName(boardId as string))) return
+    if (!writePerms.get(boardId as string)) return   // lecture seule
 
     let map = snapshots.get(boardId)
     if (!map) {
@@ -284,6 +328,7 @@ export function registerCanvasHandlers(io: Server, socket: Socket): void {
     const { boardId } = payload as Record<string, unknown>
     if (!isUuid(boardId)) return
     if (!socket.rooms.has(roomName(boardId as string))) return
+    if (!writePerms.get(boardId as string)) return   // lecture seule : rien à sauver
     await flushNow(boardId)
     socket.emit('canvas:saved', { boardId })
   })

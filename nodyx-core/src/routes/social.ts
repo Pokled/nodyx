@@ -6,8 +6,16 @@ import { writeFile } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
 import { rateLimit } from '../middleware/rateLimit'
-import { requireAuth } from '../middleware/auth'
+import { requireAuth, optionalAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
+import { sanitize } from '../utils/sanitize'
+import { awardPoints, REPUTATION } from '../models/reputation'
+import { fetchLinkPreview } from '../services/linkPreview'
+
+// Premier lien http(s) dans le contenu HTML (pour l'aperçu de lien).
+function firstLink(html: string): string | null {
+  return html.match(/<a[^>]+href=["'](https?:\/\/[^"']+)["']/i)?.[1] ?? null
+}
 import { db } from '../config/database'
 import { io } from '../socket/io'
 
@@ -24,12 +32,40 @@ const AUDIO_MIME_PREFIX = 'audio/'
 
 function postSelect(viewerParam: string | null) {
   return `
-    sp.id, sp.content, sp.media_url, sp.reply_to_id,
-    sp.likes_count, sp.replies_count, sp.created_at,
+    sp.id, sp.content, sp.media_url, sp.link_preview, sp.reply_to_id, sp.created_at,
+    -- Interactions calculées sur l'ORIGINAL effectif : un repartage partage les
+    -- réactions/réponses de l'original (façon retweet), pas les siennes propres.
+    (SELECT likes_count   FROM status_posts WHERE id = COALESCE(sp.reshare_of, sp.id)) AS likes_count,
+    (SELECT replies_count FROM status_posts WHERE id = COALESCE(sp.reshare_of, sp.id)) AS replies_count,
     u.id AS author_id, u.username, p.display_name, p.avatar_url,
     ${viewerParam
-      ? `EXISTS(SELECT 1 FROM status_likes sl WHERE sl.user_id = ${viewerParam} AND sl.post_id = sp.id)`
-      : 'false'} AS liked_by_me
+      ? `EXISTS(SELECT 1 FROM status_likes sl WHERE sl.user_id = ${viewerParam} AND sl.post_id = COALESCE(sp.reshare_of, sp.id))`
+      : 'false'} AS liked_by_me,
+    ${viewerParam
+      ? `(SELECT emoji FROM status_likes WHERE user_id = ${viewerParam} AND post_id = COALESCE(sp.reshare_of, sp.id))`
+      : 'NULL'} AS my_reaction,
+    (SELECT json_object_agg(emoji, jc) FROM (
+       SELECT sl2.emoji,
+              json_build_object('count', COUNT(*), 'users', json_agg(u2.username ORDER BY u2.username)) AS jc
+       FROM status_likes sl2 JOIN users u2 ON u2.id = sl2.user_id
+       WHERE sl2.post_id = COALESCE(sp.reshare_of, sp.id) GROUP BY sl2.emoji
+     ) t) AS reactions,
+    sp.reshare_of,
+    (SELECT COUNT(*) FROM status_posts r WHERE r.reshare_of = COALESCE(sp.reshare_of, sp.id))::int AS reshares_count,
+    ${viewerParam
+      ? `EXISTS(SELECT 1 FROM status_posts r WHERE r.reshare_of = COALESCE(sp.reshare_of, sp.id) AND r.author_id = ${viewerParam})`
+      : 'false'} AS reshared_by_me,
+    CASE WHEN sp.reshare_of IS NOT NULL THEN (
+      SELECT json_build_object(
+        'id', o.id, 'content', o.content, 'media_url', o.media_url,
+        'link_preview', o.link_preview, 'created_at', o.created_at,
+        'author_id', o.author_id, 'username', ou.username,
+        'display_name', op.display_name, 'avatar_url', op.avatar_url
+      )
+      FROM status_posts o JOIN users ou ON ou.id = o.author_id
+      LEFT JOIN user_profiles op ON op.user_id = o.author_id
+      WHERE o.id = sp.reshare_of
+    ) ELSE NULL END AS reshared
   `
 }
 
@@ -134,17 +170,33 @@ export default async function socialRoutes(app: FastifyInstance) {
     const { userId } = request.user!
     const { content, reply_to_id, media_url } = request.body as z.infer<typeof statusSchema>
 
+    // SÉCURITÉ : le contenu est rendu en {@html} (feed + profil). On le passe par
+    // le sanitizer partagé (même allowlist que le forum) pour bloquer tout XSS
+    // stocké (script, on*, src externes…).
+    const safeContent = sanitize(content)
+    if (!safeContent.trim()) {
+      return reply.code(400).send({ error: 'Contenu vide après nettoyage.' })
+    }
+
     // Verify parent exists if replying
     if (reply_to_id) {
       const parent = await db.query('SELECT id FROM status_posts WHERE id = $1', [reply_to_id])
       if (!parent.rows[0]) return reply.code(404).send({ error: 'Post parent introuvable' })
     }
 
+    // Aperçu de lien : si le statut contient un lien et pas d'image attachée,
+    // on récupère ses métadonnées Open Graph (fetch SSRF-safe, borné).
+    let linkPreview = null
+    if (!media_url) {
+      const link = firstLink(safeContent)
+      if (link) linkPreview = await fetchLinkPreview(link).catch(() => null)
+    }
+
     const ins = await db.query(`
-      INSERT INTO status_posts (author_id, content, reply_to_id, media_url)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO status_posts (author_id, content, reply_to_id, media_url, link_preview)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING id
-    `, [userId, content, reply_to_id ?? null, media_url ?? null])
+    `, [userId, safeContent, reply_to_id ?? null, media_url ?? null, linkPreview ? JSON.stringify(linkPreview) : null])
 
     if (reply_to_id) {
       await db.query(
@@ -152,6 +204,9 @@ export default async function socialRoutes(app: FastifyInstance) {
         [reply_to_id]
       )
     }
+
+    // Réputation : poster un statut = +2 (participation au fil d'actu)
+    await awardPoints(userId, REPUTATION.SOCIAL_POST)
 
     const post = await db.query(`
       SELECT ${postSelect('$2')}
@@ -184,6 +239,9 @@ export default async function socialRoutes(app: FastifyInstance) {
         [del.rows[0].reply_to_id]
       )
     }
+
+    // Réputation : suppression d'un statut = -2 (anti-farming)
+    await awardPoints(userId, -REPUTATION.SOCIAL_POST)
 
     return reply.send({ ok: true })
   })
@@ -228,12 +286,70 @@ export default async function socialRoutes(app: FastifyInstance) {
     return reply.send({ ok: true })
   })
 
+  // ── Réactions emoji ─────────────────────────────────────────────────────────
+  // Une réaction par membre/post (modifiable). Set restreint (pas de contenu
+  // arbitraire). likes_count = total toutes emojis.
+  const ALLOWED_REACTIONS = new Set(['❤️', '👍', '😂', '🔥', '😮', '🎉'])
+
+  app.post('/status/:id/react', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const { userId } = request.user!
+    const { id } = request.params as { id: string }
+    const { emoji } = (request.body ?? {}) as { emoji?: string }
+    if (!emoji || !ALLOWED_REACTIONS.has(emoji)) {
+      return reply.code(400).send({ error: 'Réaction non autorisée' })
+    }
+    // xmax = 0 dans le RETURNING => ligne fraîchement INSÉRÉE (sinon UPDATE de l'emoji).
+    const up = await db.query<{ inserted: boolean }>(`
+      INSERT INTO status_likes (user_id, post_id, emoji) VALUES ($1, $2, $3)
+      ON CONFLICT (user_id, post_id) DO UPDATE SET emoji = EXCLUDED.emoji
+      RETURNING (xmax = 0) AS inserted
+    `, [userId, id, emoji])
+
+    let likes_count: number | undefined
+    if (up.rows[0]?.inserted) {
+      const r = await db.query<{ likes_count: number }>(
+        'UPDATE status_posts SET likes_count = likes_count + 1 WHERE id = $1 RETURNING likes_count',
+        [id]
+      )
+      likes_count = r.rows[0]?.likes_count
+    }
+    return reply.send({ ok: true, likes_count })
+  })
+
+  // ── Repartage ───────────────────────────────────────────────────────────────
+  app.post('/status/:id/reshare', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const { userId } = request.user!
+    const { id } = request.params as { id: string }
+
+    const orig = await db.query<{ id: string; reshare_of: string | null }>(
+      'SELECT id, reshare_of FROM status_posts WHERE id = $1', [id]
+    )
+    if (!orig.rows[0]) return reply.code(404).send({ error: 'Post introuvable' })
+    // Repartager un repartage cible l'original.
+    const targetId = orig.rows[0].reshare_of ?? id
+
+    // Toggle : si je l'ai déjà repartagé, on retire.
+    const existing = await db.query(
+      'SELECT id FROM status_posts WHERE author_id = $1 AND reshare_of = $2',
+      [userId, targetId]
+    )
+    if (existing.rows[0]) {
+      await db.query('DELETE FROM status_posts WHERE id = $1', [existing.rows[0].id])
+      return reply.send({ ok: true, reshared: false })
+    }
+    await db.query(
+      "INSERT INTO status_posts (author_id, content, reshare_of) VALUES ($1, '', $2)",
+      [userId, targetId]
+    )
+    return reply.send({ ok: true, reshared: true })
+  })
+
   // ── Feed & user posts ─────────────────────────────────────────────────────
 
   // GET /feed — personalized timeline (posts from followed users + self)
   app.get('/feed', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
     const { userId } = request.user!
-    const { before, limit = '20' } = request.query as { before?: string; limit?: string }
+    const { before, limit = '20', scope = 'discover' } = request.query as { before?: string; limit?: string; scope?: string }
 
     const lim    = Math.min(50, parseInt(limit))
     const params: unknown[] = [userId, lim]
@@ -244,16 +360,20 @@ export default async function socialRoutes(app: FastifyInstance) {
       cursor = `AND sp.created_at < $${params.length}`
     }
 
+    // scope=following : moi + mes abonnements. scope=discover (défaut) : tous les
+    // posts récents de la communauté (les status sont publics). $1 reste le viewer
+    // (utilisé par postSelect pour le statut "j'aime").
+    const authorFilter = scope === 'following'
+      ? `AND (sp.author_id = $1 OR sp.author_id IN (SELECT following_id FROM follows WHERE follower_id = $1))`
+      : ''
+
     const result = await db.query(`
       SELECT ${postSelect('$1')}
       FROM status_posts sp
       JOIN users u ON u.id = sp.author_id
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE sp.reply_to_id IS NULL
-        AND (
-          sp.author_id = $1
-          OR sp.author_id IN (SELECT following_id FROM follows WHERE follower_id = $1)
-        )
+        ${authorFilter}
         ${cursor}
       ORDER BY sp.created_at DESC
       LIMIT $2
@@ -302,41 +422,37 @@ export default async function socialRoutes(app: FastifyInstance) {
   })
 
   // GET /status/:id — single post with replies
-  app.get('/status/:id', { preHandler: [rateLimit] }, async (request, reply) => {
+  app.get('/status/:id', { preHandler: [rateLimit, optionalAuth] }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const viewerId = (request as any).user?.userId ?? null
+    const viewerId = request.user?.userId ?? null
 
-    const likedExpr = viewerId
-      ? `EXISTS(SELECT 1 FROM status_likes sl WHERE sl.user_id = '${viewerId}' AND sl.post_id = sp.id)`
-      : 'false'
+    const postParams: unknown[] = [id]
+    let viewerRef = 'NULL'
+    if (viewerId) { postParams.push(viewerId); viewerRef = `$${postParams.length}` }
 
     const postRes = await db.query(`
-      SELECT
-        sp.id, sp.content, sp.media_url, sp.reply_to_id,
-        sp.likes_count, sp.replies_count, sp.created_at,
-        u.id AS author_id, u.username, p.display_name, p.avatar_url,
-        ${likedExpr} AS liked_by_me
+      SELECT ${postSelect(viewerRef)}
       FROM status_posts sp
       JOIN users u ON u.id = sp.author_id
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE sp.id = $1
-    `, [id])
+    `, postParams)
 
     if (!postRes.rows[0]) return reply.code(404).send({ error: 'Post introuvable' })
 
+    const replyParams: unknown[] = [id]
+    let viewerRef2 = 'NULL'
+    if (viewerId) { replyParams.push(viewerId); viewerRef2 = `$${replyParams.length}` }
+
     const repliesRes = await db.query(`
-      SELECT
-        sp.id, sp.content, sp.media_url, sp.reply_to_id,
-        sp.likes_count, sp.replies_count, sp.created_at,
-        u.id AS author_id, u.username, p.display_name, p.avatar_url,
-        ${likedExpr} AS liked_by_me
+      SELECT ${postSelect(viewerRef2)}
       FROM status_posts sp
       JOIN users u ON u.id = sp.author_id
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE sp.reply_to_id = $1
       ORDER BY sp.created_at ASC
       LIMIT 50
-    `, [id])
+    `, replyParams)
 
     return reply.send({ post: postRes.rows[0], replies: repliesRes.rows })
   })

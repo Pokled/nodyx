@@ -26,12 +26,16 @@
 		thread_reply: '💬',
 		post_thanks:  '🙏',
 		mention:      '@',
+		canvas_access_request: '🎨',
+		canvas_access_granted: '🎨',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
 		thread_reply: tFn('notifications.thread_reply_label'),
 		post_thanks:  tFn('notifications.post_thanks_label'),
 		mention:      tFn('notifications.mention_label'),
+		canvas_access_request: "demande l'accès en édition à un Canvas",
+		canvas_access_granted: "t'a accordé l'accès en édition à un Canvas",
 	});
 
 	function formatDate(iso: string) {
