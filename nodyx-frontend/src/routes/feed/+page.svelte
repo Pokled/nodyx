@@ -305,7 +305,7 @@
 {/snippet}
 
 {#snippet quotedPost(o: any)}
-	<a href="/users/{o.username}" class="quoted-post">
+	<a href="/status/{o.id}" class="quoted-post">
 		<div class="quoted-head">
 			{#if o.avatar_url}<img src={o.avatar_url} alt="" class="quoted-avatar" />{:else}<span class="quoted-avatar quoted-avatar--i">{(o.display_name || o.username || '?').charAt(0).toUpperCase()}</span>{/if}
 			<span class="quoted-name">{o.display_name || o.username}</span>

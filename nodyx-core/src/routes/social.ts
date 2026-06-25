@@ -6,7 +6,7 @@ import { writeFile } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
 import { rateLimit } from '../middleware/rateLimit'
-import { requireAuth } from '../middleware/auth'
+import { requireAuth, optionalAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
 import { sanitize } from '../utils/sanitize'
 import { awardPoints, REPUTATION } from '../models/reputation'
@@ -419,41 +419,37 @@ export default async function socialRoutes(app: FastifyInstance) {
   })
 
   // GET /status/:id — single post with replies
-  app.get('/status/:id', { preHandler: [rateLimit] }, async (request, reply) => {
+  app.get('/status/:id', { preHandler: [rateLimit, optionalAuth] }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const viewerId = (request as any).user?.userId ?? null
+    const viewerId = request.user?.userId ?? null
 
-    const likedExpr = viewerId
-      ? `EXISTS(SELECT 1 FROM status_likes sl WHERE sl.user_id = '${viewerId}' AND sl.post_id = sp.id)`
-      : 'false'
+    const postParams: unknown[] = [id]
+    let viewerRef = 'NULL'
+    if (viewerId) { postParams.push(viewerId); viewerRef = `$${postParams.length}` }
 
     const postRes = await db.query(`
-      SELECT
-        sp.id, sp.content, sp.media_url, sp.reply_to_id,
-        sp.likes_count, sp.replies_count, sp.created_at,
-        u.id AS author_id, u.username, p.display_name, p.avatar_url,
-        ${likedExpr} AS liked_by_me
+      SELECT ${postSelect(viewerRef)}
       FROM status_posts sp
       JOIN users u ON u.id = sp.author_id
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE sp.id = $1
-    `, [id])
+    `, postParams)
 
     if (!postRes.rows[0]) return reply.code(404).send({ error: 'Post introuvable' })
 
+    const replyParams: unknown[] = [id]
+    let viewerRef2 = 'NULL'
+    if (viewerId) { replyParams.push(viewerId); viewerRef2 = `$${replyParams.length}` }
+
     const repliesRes = await db.query(`
-      SELECT
-        sp.id, sp.content, sp.media_url, sp.reply_to_id,
-        sp.likes_count, sp.replies_count, sp.created_at,
-        u.id AS author_id, u.username, p.display_name, p.avatar_url,
-        ${likedExpr} AS liked_by_me
+      SELECT ${postSelect(viewerRef2)}
       FROM status_posts sp
       JOIN users u ON u.id = sp.author_id
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE sp.reply_to_id = $1
       ORDER BY sp.created_at ASC
       LIMIT 50
-    `, [id])
+    `, replyParams)
 
     return reply.send({ post: postRes.rows[0], replies: repliesRes.rows })
   })
