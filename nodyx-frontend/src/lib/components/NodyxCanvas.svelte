@@ -25,6 +25,9 @@
 		username,
 		userAvatar = null,
 		boardName  = 'Canvas',
+		readOnly   = false,
+		lastSeen   = null,
+		onRequestAccess = () => {},
 		onclose    = () => {},
 	}: {
 		boardId:     string
@@ -34,8 +37,79 @@
 		username:    string
 		userAvatar?: string | null
 		boardName?:  string
+		readOnly?:   boolean
+		lastSeen?:   number | null
+		onRequestAccess?: () => void
 		onclose:     () => void
 	} = $props()
+
+	// ── Surbrillance des nouveautés depuis la dernière visite ──────────────────
+	function isNewSinceLastVisit(el: { ts: number; author: string }): boolean {
+		return lastSeen != null && el.ts > lastSeen && el.author !== userId
+	}
+	let newCount = $state(0)
+
+	// Pulse d'attention (RAF borné à ~7 s, puis contour fixe bien visible)
+	let pulsePhase = $state(1)
+	let pulseRAF = 0
+	function startPulse() {
+		if (pulseRAF) cancelAnimationFrame(pulseRAF)
+		const start = performance.now()
+		const tick = (t: number) => {
+			pulsePhase = (Math.sin((t - start) / 280) + 1) / 2
+			render()
+			if (t - start < 7000) { pulseRAF = requestAnimationFrame(tick) }
+			else { pulseRAF = 0; pulsePhase = 1; render() }
+		}
+		pulseRAF = requestAnimationFrame(tick)
+	}
+
+	// Contour ambre vif autour de chaque nouveauté (coords monde, au-dessus des éléments)
+	function drawFreshHighlights(ctx: CanvasRenderingContext2D, els: CanvasElement[]) {
+		const pad = 10 / transform.scale
+		ctx.save()
+		ctx.strokeStyle = '#fbbf24'
+		ctx.shadowColor = '#fbbf24'
+		for (const el of els) {
+			const b = getResizableBounds(el)
+			if (!b) continue
+			ctx.lineWidth  = (2.5 + 2 * pulsePhase) / transform.scale
+			ctx.shadowBlur = 12 + 18 * pulsePhase
+			ctx.beginPath()
+			ctx.roundRect(b.x - pad, b.y - pad, b.w + pad * 2, b.h + pad * 2, 8 / transform.scale)
+			ctx.stroke()
+		}
+		ctx.restore()
+	}
+
+	// Cliquer le badge : cadrer TOUTES les nouveautés d'un coup dans la vue.
+	function focusNewElements() {
+		const boxes = cs.snapshot().filter(isNewSinceLastVisit)
+			.map(getResizableBounds)
+			.filter((b): b is { x: number; y: number; w: number; h: number } => !!b)
+		if (!boxes.length || !canvasEl) return
+
+		let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+		for (const b of boxes) {
+			minX = Math.min(minX, b.x);        minY = Math.min(minY, b.y)
+			maxX = Math.max(maxX, b.x + b.w);  maxY = Math.max(maxY, b.y + b.h)
+		}
+		const pad = 100
+		const cw = Math.max(maxX - minX, 1), ch = Math.max(maxY - minY, 1)
+		const s  = Math.min(canvasEl.width / (cw + pad * 2), canvasEl.height / (ch + pad * 2), 1.8)
+		const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
+		transform = { ...transform, scale: s, x: canvasEl.width / 2 - cx * s, y: canvasEl.height / 2 - cy * s }
+		render()
+		startPulse()
+	}
+
+	// Lecture seule : état du bouton "Demander l'accès en édition"
+	let accessAsked = $state(false)
+	function handleRequestAccess() {
+		if (accessAsked) return
+		accessAsked = true
+		onRequestAccess()
+	}
 
 	// ── Canvas refs ───────────────────────────────────────────────────────────
 	let canvasEl:    HTMLCanvasElement
@@ -354,7 +428,12 @@
 
 		if (showGrid) drawGrid(ctx, W, H)
 
-		for (const el of cs.snapshot()) drawElement(ctx, el, selectedIds.has(el.id))
+		const freshEls: CanvasElement[] = []
+		for (const el of cs.snapshot()) {
+			drawElement(ctx, el, selectedIds.has(el.id))
+			if (isNewSinceLastVisit(el)) freshEls.push(el)
+		}
+		if (freshEls.length) drawFreshHighlights(ctx, freshEls)
 
 		// Frame membership rings — ring coloré autour des enfants de chaque frame
 		for (const frameEl of cs.snapshot()) {
@@ -844,6 +923,7 @@
 		if (e.button === 1)              { startPan(e); return }
 		if (e.button === 0 && spaceDown) { startPan(e); return }
 		if (e.button !== 0) return
+		if (readOnly)                    { startPan(e); return }  // lecture seule : drag = pan, aucun outil
 
 		canvasEl.setPointerCapture(e.pointerId)
 		const [wx0, wy0] = pointerWorld(e)
@@ -1652,7 +1732,10 @@
 	// ── Socket.IO receive ─────────────────────────────────────────────────────
 
 	function handleSnapshot({ elements }: { boardId: string; elements: CanvasElement[] }) {
-		cs.loadSnapshot(elements); synced = true; render()
+		cs.loadSnapshot(elements); synced = true
+		newCount = elements.filter(isNewSinceLastVisit).length
+		if (newCount > 0) startPulse()
+		render()
 	}
 	function handleRemoteOp({ op }: { boardId: string; op: CanvasElement }) {
 		if (cs.apply(op)) render()
@@ -1729,6 +1812,8 @@
 		// Ne pas interférer quand l'utilisateur tape dans un input/textarea/chat
 		const tag = (e.target as HTMLElement)?.tagName
 		if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+		// Lecture seule : aucun raccourci d'écriture (undo/redo/suppr/coller…). Escape ferme.
+		if (readOnly) { if (e.key === 'Escape') requestClose(); return }
 
 		if (e.code === 'Space' && !overlayEdit) { spaceDown = true; e.preventDefault() }
 		if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey)  { e.preventDefault(); undo() }
@@ -1857,6 +1942,7 @@
 		window.removeEventListener('keydown', onKeydown)
 		window.removeEventListener('keyup',   onKeyup)
 		clearInterval(cursorCleanup)
+		if (pulseRAF) cancelAnimationFrame(pulseRAF)
 	})
 
 	// ── Effects ───────────────────────────────────────────────────────────────
@@ -1908,8 +1994,16 @@
 		role="presentation"
 		onmousedown={(e) => e.stopPropagation()}
 	>
-		<CanvasLeftToolbar bind:tool onClose={requestClose} />
+		{#if readOnly}
+			<button onclick={requestClose} title="Fermer"
+				style="display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,.06); color:#cbd5e1; border:1px solid rgba(255,255,255,.12); font-size:13px; cursor:pointer;">
+				✕ Fermer
+			</button>
+		{:else}
+			<CanvasLeftToolbar bind:tool onClose={requestClose} />
+		{/if}
 	</div>
+
 
 	<!-- ── Center: canvas + overlays ────────────────────────────────────────── -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -1954,7 +2048,8 @@
 			</div>
 		{/if}
 
-		<!-- ── Top bar (contextual tool options) ── -->
+		<!-- ── Top bar (contextual tool options) — masquée en lecture seule ── -->
+		{#if !readOnly}
 		<div role="presentation" style="position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:20; pointer-events:auto;"
 		     onmousedown={(e) => e.stopPropagation()}>
 			<CanvasTopBar
@@ -1980,6 +2075,24 @@
 				bind:connectorEndCap
 			/>
 		</div>
+		{:else}
+		<!-- ── Lecture seule : badge + demander l'accès en édition ── -->
+		<div role="presentation"
+		     style="position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:20; pointer-events:auto;
+		            display:flex; align-items:center; gap:10px; padding:6px 8px 6px 14px; border-radius:999px;
+		            background:rgba(16,16,26,.92); border:1px solid rgba(255,255,255,.1); backdrop-filter:blur(8px);"
+		     onmousedown={(e) => e.stopPropagation()}>
+			<span style="display:flex; align-items:center; gap:6px; color:#a5b4fc; font-size:12px; font-weight:600; white-space:nowrap;">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+				Lecture seule
+			</span>
+			<button onclick={handleRequestAccess} disabled={accessAsked}
+				style="padding:5px 13px; border-radius:999px; font-size:12px; font-weight:600; cursor:{accessAsked ? 'default' : 'pointer'}; border:none; color:#fff; white-space:nowrap;
+				       background:{accessAsked ? 'rgba(16,185,129,.3)' : 'linear-gradient(to right,#4f46e5,#06b6d4)'};">
+				{accessAsked ? '✓ Demande envoyée' : "Demander l'accès en édition"}
+			</button>
+		</div>
+		{/if}
 
 		<!-- ── Header badge ── -->
 		<div style="position:absolute; top:12px; left:12px; z-index:10; pointer-events:none;">
@@ -1989,6 +2102,17 @@
 				NodyxCanvas
 			</div>
 		</div>
+
+		<!-- ── Nouveautés depuis la dernière visite (cliquer = aller dessus) ── -->
+		{#if newCount > 0}
+			<button onclick={focusNewElements} title="Centrer la vue sur les nouveautés"
+			        style="position:absolute; top:52px; left:12px; z-index:30; pointer-events:auto; cursor:pointer; border:none;
+			               display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px;
+			               background:rgba(251,191,36,.2); border:1px solid rgba(251,191,36,.65); backdrop-filter:blur(8px);
+			               color:#fde68a; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 0 14px rgba(251,191,36,.35);">
+				✨ {newCount} nouveauté{newCount > 1 ? 's' : ''} · clique pour voir
+			</button>
+		{/if}
 
 		<!-- ── Bottom bar ── -->
 		<div role="presentation" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); z-index:20;"

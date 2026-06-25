@@ -818,7 +818,10 @@
 				{:else}
 					{#each userPosts as post (post.id)}
 						<article class="profile-post-card">
-							<p class="profile-post-text">{post.content}</p>
+							<div class="profile-post-text nodyx-prose">{@html post.content}</div>
+							{#if post.media_url}
+								<img src={post.media_url} alt="" class="profile-post-media" loading="lazy" />
+							{/if}
 							<div class="profile-post-meta">
 								<time>{timeAgo(post.created_at)}</time>
 								<button
@@ -1097,9 +1100,16 @@
 		font-size: 0.9rem;
 		color: var(--p-text);
 		line-height: 1.65;
-		white-space: pre-wrap;
 		word-break: break-word;
 		margin-bottom: 0.625rem;
+	}
+	.profile-post-media {
+		display: block;
+		max-width: 100%;
+		max-height: 420px;
+		border-radius: 12px;
+		margin: 0.25rem 0 0.625rem;
+		border: 1px solid rgba(255, 255, 255, 0.08);
 	}
 	.profile-post-meta {
 		display: flex;
