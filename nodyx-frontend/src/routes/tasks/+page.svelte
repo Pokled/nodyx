@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
 	import type { PageData, ActionData } from './$types'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -9,33 +12,33 @@
 	let deleting   = $state<string | null>(null)
 
 	function fDate(iso: string) {
-		return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+		return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
 	}
 </script>
 
-<svelte:head><title>Tableaux — Nodyx</title></svelte:head>
+<svelte:head><title>{tFn('tasks.page_title')}</title></svelte:head>
 
 <div class="space-y-6">
 
 	<!-- Header -->
 	<div class="flex items-center justify-between gap-4 flex-wrap">
 		<div>
-			<h1 class="text-2xl font-bold text-white">Tableaux de tâches</h1>
-			<p class="text-sm text-gray-500 mt-0.5">{data.boards.length} tableau{data.boards.length > 1 ? 'x' : ''}</p>
+			<h1 class="text-2xl font-bold text-white">{tFn('tasks.title')}</h1>
+			<p class="text-sm text-gray-500 mt-0.5">{data.boards.length} {tFn(data.boards.length > 1 ? 'tasks.boards_plural' : 'tasks.boards_one')}</p>
 		</div>
 		<button
 			onclick={() => showCreate = !showCreate}
 			class="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
 		>
 			<span class="text-base leading-none">+</span>
-			Nouveau tableau
+			{tFn('tasks.new_board')}
 		</button>
 	</div>
 
 	<!-- Formulaire de création -->
 	{#if showCreate}
 		<div class="rounded-xl border border-indigo-800/50 bg-indigo-950/30 p-5">
-			<h2 class="text-sm font-semibold text-indigo-300 mb-4">Nouveau tableau</h2>
+			<h2 class="text-sm font-semibold text-indigo-300 mb-4">{tFn('tasks.new_board')}</h2>
 			<form
 				method="POST"
 				action="?/create"
@@ -52,7 +55,7 @@
 					<input
 						name="name"
 						type="text"
-						placeholder="Nom du tableau"
+						placeholder={tFn('tasks.name_placeholder')}
 						required
 						maxlength="100"
 						class="flex-1 min-w-48 rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-sm text-gray-200
@@ -61,7 +64,7 @@
 					<input
 						name="description"
 						type="text"
-						placeholder="Description (optionnel)"
+						placeholder={tFn('tasks.desc_placeholder')}
 						maxlength="1000"
 						class="flex-1 min-w-64 rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-sm text-gray-200
 						       placeholder-gray-600 focus:outline-none focus:border-indigo-600"
@@ -73,14 +76,14 @@
 						disabled={creating}
 						class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
 					>
-						{creating ? 'Création...' : 'Créer'}
+						{creating ? tFn('tasks.creating') : tFn('common.create')}
 					</button>
 					<button
 						type="button"
 						onclick={() => showCreate = false}
 						class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-400 transition-colors"
 					>
-						Annuler
+						{tFn('common.cancel')}
 					</button>
 				</div>
 			</form>
@@ -91,8 +94,8 @@
 	{#if data.boards.length === 0}
 		<div class="rounded-xl border border-gray-800 bg-gray-900/30 px-6 py-16 text-center">
 			<div class="text-4xl mb-3">📋</div>
-			<p class="text-gray-400 font-medium">Aucun tableau pour l'instant</p>
-			<p class="text-sm text-gray-600 mt-1">Créez votre premier tableau pour organiser les tâches de votre communauté.</p>
+			<p class="text-gray-400 font-medium">{tFn('tasks.empty')}</p>
+			<p class="text-sm text-gray-600 mt-1">{tFn('tasks.empty_sub')}</p>
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -109,9 +112,9 @@
 							</div>
 						</div>
 						<div class="flex items-center gap-4 mt-4 text-xs text-gray-600">
-							<span>{board.column_count} colonne{board.column_count > 1 ? 's' : ''}</span>
+							<span>{board.column_count} {tFn(board.column_count > 1 ? 'tasks.columns_plural' : 'tasks.columns_one')}</span>
 							<span>·</span>
-							<span>{board.card_count} carte{board.card_count > 1 ? 's' : ''}</span>
+							<span>{board.card_count} {tFn(board.card_count > 1 ? 'tasks.cards_plural' : 'tasks.cards_one')}</span>
 							<span>·</span>
 							<span>{board.created_by_username}</span>
 						</div>
@@ -130,10 +133,10 @@
 							<button
 								type="submit"
 								disabled={deleting === board.id}
-								onclick={(e) => { if (!confirm('Supprimer ce tableau ?')) e.preventDefault() }}
+								onclick={(e) => { if (!confirm(tFn('tasks.confirm_delete'))) e.preventDefault() }}
 								class="text-xs text-gray-600 hover:text-red-400 transition-colors disabled:opacity-50"
 							>
-								Supprimer
+								{tFn('common.delete')}
 							</button>
 						</form>
 					</div>

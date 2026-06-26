@@ -2,6 +2,9 @@
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { untrack } from 'svelte';
+	import { t } from '$lib/i18n';
+
+	const tFn = $derived($t);
 
 	let { data }: { data: PageData } = $props();
 
@@ -56,30 +59,30 @@
 	}
 
 	const TABS = [
-		{ id: 'all',    label: 'Tout' },
-		{ id: 'thread', label: 'Discussions' },
-		{ id: 'event',  label: 'Événements' },
+		{ id: 'all',    key: 'discover.tab_all' },
+		{ id: 'thread', key: 'discover.tab_threads' },
+		{ id: 'event',  key: 'discover.tab_events' },
 	] as const;
 </script>
 
 <svelte:head>
-	<title>Découvrir le réseau Nodyx</title>
-	<meta name="description" content="Recherchez du contenu sur toutes les instances du réseau Nodyx." />
+	<title>{tFn('discover.page_title')}</title>
+	<meta name="description" content={tFn('discover.meta_desc')} />
 </svelte:head>
 
 <!-- ── En-tête ─────────────────────────────────────────────────────────────── -->
 <div class="disc-header">
 	<div class="disc-header-top">
 		<div class="disc-title-block">
-			<h1 class="disc-title">Découvrir le réseau</h1>
-			<p class="disc-subtitle">Recherchez du contenu sur toutes les instances Nodyx connectées.</p>
+			<h1 class="disc-title">{tFn('discover.title')}</h1>
+			<p class="disc-subtitle">{tFn('discover.subtitle')}</p>
 		</div>
 
 		<form onsubmit={search} class="disc-search-form">
 			<input
 				type="text"
 				bind:value={query}
-				placeholder="Godot 4, audio Linux, Rust async…"
+				placeholder={tFn('discover.search_placeholder')}
 				class="disc-search-input"
 			/>
 			<button type="submit" disabled={searching} class="disc-search-btn">
@@ -93,7 +96,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
 					</svg>
 				{/if}
-				Rechercher
+				{tFn('discover.search_btn')}
 			</button>
 		</form>
 	</div>
@@ -105,7 +108,7 @@
 				href="/discover?{new URLSearchParams({ ...(query ? { q: query } : {}), type: tab.id, ...(upcoming && tab.id === 'event' ? { upcoming: 'true' } : {}) })}"
 				class="disc-tab {data.type === tab.id || (tab.id === 'all' && !data.type) ? 'disc-tab--active' : ''}"
 			>
-				{tab.label}
+				{tFn(tab.key)}
 			</a>
 		{/each}
 
@@ -114,7 +117,7 @@
 				href="/discover?{new URLSearchParams({ ...(query ? { q: query } : {}), type: 'event', ...(!upcoming ? { upcoming: 'true' } : {}) })}"
 				class="disc-tab disc-tab--upcoming {upcoming ? 'disc-tab--upcoming-active' : ''}"
 			>
-				À venir uniquement
+				{tFn('discover.upcoming_only')}
 			</a>
 		{/if}
 	</div>
@@ -130,11 +133,11 @@
 	{#if data.results.length > 0}
 		<p class="disc-count">
 			{#if data.q}
-				<span class="disc-count-num">{data.results.length}</span> résultat{data.results.length > 1 ? 's' : ''} pour <span class="disc-count-query">« {data.q} »</span>
+				<span class="disc-count-num">{data.results.length}</span> {tFn(data.results.length > 1 ? 'discover.results_plural' : 'discover.results_one')} <span class="disc-count-query">« {data.q} »</span>
 			{:else if data.type === 'event'}
-				Événements du réseau
+				{tFn('discover.network_events')}
 			{:else}
-				Derniers threads publiés sur le réseau
+				{tFn('discover.latest_threads')}
 			{/if}
 		</p>
 
@@ -153,16 +156,16 @@
 						</span>
 
 						{#if result.content_type === 'event'}
-							<span class="disc-badge disc-badge--event">Événement</span>
+							<span class="disc-badge disc-badge--event">{tFn('discover.event')}</span>
 						{/if}
 
 						{#if result.reply_count > 0 && result.content_type !== 'event'}
-							<span class="disc-replies">{result.reply_count} réponse{result.reply_count > 1 ? 's' : ''}</span>
+							<span class="disc-replies">{result.reply_count} {tFn(result.reply_count > 1 ? 'discover.replies' : 'discover.reply')}</span>
 						{/if}
 
 						<span class="disc-date">
 							{#if result.content_type === 'event' && result.starts_at}
-								{formatDate(result.starts_at)}{#if !result.is_all_day} à {formatTime(result.starts_at)}{/if}
+								{formatDate(result.starts_at)}{#if !result.is_all_day} {tFn('discover.at_time')} {formatTime(result.starts_at)}{/if}
 							{:else}
 								{formatDate(result.updated_at)}
 							{/if}
@@ -212,7 +215,7 @@
 					})}"
 					class="disc-next-btn"
 				>
-					Page suivante →
+					{tFn('discover.next_page')} →
 				</a>
 			</div>
 		{/if}
@@ -223,11 +226,11 @@
 				{data.type === 'event' ? '📅' : '🔭'}
 			</div>
 			{#if data.q}
-				<p class="disc-empty-main">Aucun résultat pour <span class="disc-empty-query">« {data.q} »</span></p>
-				<p class="disc-empty-sub">Essayez d'autres mots-clés ou attendez que plus d'instances rejoignent le réseau.</p>
+				<p class="disc-empty-main">{tFn('discover.empty_q')} <span class="disc-empty-query">« {data.q} »</span></p>
+				<p class="disc-empty-sub">{tFn('discover.empty_q_sub')}</p>
 			{:else}
-				<p class="disc-empty-main">Aucun contenu indexé pour l'instant.</p>
-				<p class="disc-empty-sub">Les instances avec <code class="disc-code">NODYX_GLOBAL_INDEXING=true</code> apparaîtront ici.</p>
+				<p class="disc-empty-main">{tFn('discover.empty_none')}</p>
+				<p class="disc-empty-sub">{tFn('discover.empty_none_sub_pre')} <code class="disc-code">NODYX_GLOBAL_INDEXING=true</code> {tFn('discover.empty_none_sub_post')}</p>
 			{/if}
 		</div>
 	{/if}

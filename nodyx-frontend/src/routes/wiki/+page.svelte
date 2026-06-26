@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { PageData } from './$types'
+	import { t } from '$lib/i18n'
 
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props()
 
@@ -22,7 +24,7 @@
 	<div class="wiki-header-row">
 		<div class="wiki-title-block">
 			<h1 class="wiki-title">Wiki</h1>
-			<p class="wiki-subtitle">Base de connaissances de la communauté.</p>
+			<p class="wiki-subtitle">{tFn('wiki.subtitle')}</p>
 		</div>
 
 		<div class="wiki-header-actions">
@@ -30,13 +32,13 @@
 				<input
 					name="search"
 					value={data.search}
-					placeholder="Rechercher une page…"
+					placeholder={tFn('wiki.search_placeholder')}
 					class="wiki-search-input"
 				/>
 				{#if data.activeCategory}
 					<input type="hidden" name="category" value={data.activeCategory} />
 				{/if}
-				<button type="submit" class="wiki-search-btn" aria-label="Rechercher">
+				<button type="submit" class="wiki-search-btn" aria-label={tFn('wiki.search_aria')}>
 					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
 					</svg>
@@ -47,7 +49,7 @@
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
 					</svg>
-					Nouvelle page
+					{tFn('wiki.new_page')}
 				</a>
 			{/if}
 		</div>
@@ -60,7 +62,7 @@
 				href="/wiki"
 				class="wiki-cat {!data.activeCategory ? 'wiki-cat--active' : ''}"
 			>
-				Toutes
+				{tFn('wiki.all_categories')}
 			</a>
 			{#each data.categories as cat}
 				<a
@@ -81,11 +83,11 @@
 			<div class="wiki-empty-icon">📖</div>
 			<p class="wiki-empty-main">
 				{data.search
-					? `Aucune page ne correspond à « ${data.search} »`
-					: 'Le wiki est encore vide.'}
+					? `${tFn('wiki.no_match')} « ${data.search} »`
+					: tFn('wiki.empty')}
 			</p>
 			{#if isAdminOrMod}
-				<a href="/wiki/new" class="wiki-empty-link">Créer la première page →</a>
+				<a href="/wiki/new" class="wiki-empty-link">{tFn('wiki.create_first')} →</a>
 			{/if}
 		</div>
 	{:else}
@@ -111,7 +113,7 @@
 									{(pg.author_username ?? '?')[0].toUpperCase()}
 								</div>
 							{/if}
-							<span>{pg.author_username ?? 'Inconnu'}</span>
+							<span>{pg.author_username ?? tFn('common.unknown')}</span>
 						</div>
 						<div class="wiki-card-right">
 							<span>{formatDate(pg.updated_at)}</span>
