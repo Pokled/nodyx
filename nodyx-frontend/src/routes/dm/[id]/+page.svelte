@@ -8,7 +8,7 @@
 		encryptDM, decryptDM, loadEsyKey, barbarizeVisual,
 		type E2EStatus, type EsyKey
 	} from '$lib/e2e'
-	import { shouldOfferRestore } from '$lib/e2eBackupClient'
+	import { shouldOfferRestore, hasServerBackup } from '$lib/e2eBackupClient'
 	import E2EKeyBackup from '$lib/components/E2EKeyBackup.svelte'
 	import ReactionTooltip from '$lib/components/ReactionTooltip.svelte'
 	import EmojiPicker from '$lib/components/EmojiPicker.svelte'
@@ -98,6 +98,13 @@
 	// Restauration de clé sur nouvel appareil (backup serveur présent, pas de clé locale)
 	let showRestore = $state(false)
 	let restoreDismissed = $state(false)
+	// Bandeau pédagogique E2E (chiffré, pense à sauvegarder ta clé)
+	let showE2eBanner = $state(false)
+
+	function dismissE2eBanner() {
+		showE2eBanner = false
+		try { localStorage.setItem('nodyx_e2e_banner_dismissed', '1') } catch { /* ignore */ }
+	}
 
 	async function initE2E() {
 		if (!conversation) return
@@ -135,6 +142,15 @@
 
 			// 5. Déchiffrer les messages chiffrés déjà chargés
 			await decryptPendingMessages()
+
+			// 6. Bandeau pédagogique : E2E actif mais pas encore de sauvegarde de clé
+			//    → on explique et on propose, une seule fois (sauf si déjà ignoré).
+			try {
+				const dismissed = localStorage.getItem('nodyx_e2e_banner_dismissed') === '1'
+				if (!dismissed && (e2eStatus === 'active' || e2eStatus === 'partial')) {
+					showE2eBanner = !(await hasServerBackup(data.token))
+				}
+			} catch { /* ignore */ }
 		} catch {
 			e2eStatus = 'inactive'
 		}
@@ -1361,6 +1377,24 @@
 			</div>
 		{/if}
 
+		{#if showE2eBanner}
+		<div class="e2e-banner">
+			<div class="e2e-banner-icon">🛡️</div>
+			<div class="e2e-banner-body">
+				<div class="e2e-banner-title">Tes messages sont chiffrés de bout en bout</div>
+				<div class="e2e-banner-text">
+					Personne d'autre que vous deux ne peut les lire, pas même Nodyx. La clé reste sur cet appareil :
+					pense à <strong>activer la sauvegarde</strong> pour retrouver tes conversations si tu changes de
+					navigateur ou de téléphone. Ta sécurité est notre priorité.
+				</div>
+			</div>
+			<div class="e2e-banner-actions">
+				<a href="/settings?section=encryption" class="e2e-banner-cta">Activer la sauvegarde</a>
+				<button class="e2e-banner-dismiss" type="button" onclick={dismissE2eBanner}>J'ai compris</button>
+			</div>
+		</div>
+		{/if}
+
 		<!-- Messages -->
 		<div
 			bind:this={messagesEl}
@@ -1717,6 +1751,35 @@
 	border-radius: 16px;
 	padding: 22px;
 	box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+}
+
+/* ── Bandeau pédagogique E2E ──────────────────────────────────────────────── */
+.e2e-banner {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	margin: 10px 20px 0;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(168,85,247,.1));
+	border: 1px solid rgba(129,140,248,.28);
+}
+.e2e-banner-icon { font-size: 20px; line-height: 1.2; flex-shrink: 0; }
+.e2e-banner-body { flex: 1; min-width: 0; }
+.e2e-banner-title { font-size: 13.5px; font-weight: 700; color: #e0e7ff; }
+.e2e-banner-text { font-size: 12.5px; color: #c7d2fe; line-height: 1.5; margin-top: 2px; }
+.e2e-banner-text strong { color: #fff; }
+.e2e-banner-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-self: center; }
+.e2e-banner-cta {
+	white-space: nowrap; text-align: center; padding: 7px 14px; border-radius: 9px;
+	font-size: 12.5px; font-weight: 700; color: #fff; text-decoration: none;
+	background: linear-gradient(135deg, #6366f1, #a855f7);
+}
+.e2e-banner-cta:hover { filter: brightness(1.08); }
+.e2e-banner-dismiss {
+	white-space: nowrap; padding: 5px 14px; border-radius: 9px; cursor: pointer;
+	font-size: 12px; font-weight: 600; color: #c7d2fe;
+	background: transparent; border: 1px solid rgba(148,163,184,.25);
 }
 
 /* ── Drag & drop image overlay ────────────────────────────────────────────── */
