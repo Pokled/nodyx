@@ -25,6 +25,25 @@
 	let confirmRegen = $state(false)
 	let showPhrase   = $state(false)
 	let copied       = $state(false)
+	// Restauration depuis les réglages (device qui a déjà une clé différente)
+	let restoreMode  = $state(false)
+	let rPhrase      = $state('')
+	let rMsg         = $state('')
+
+	async function restoreHere() {
+		rMsg = ''
+		if (!rPhrase) { rMsg = 'Entre ta phrase de récupération.'; return }
+		busy = true
+		try {
+			const ok = await restoreKeyBackup(token, rPhrase)
+			if (ok) {
+				rMsg = '✓ Clé restaurée. Recharge ta conversation : tes messages chiffrés avec cette clé vont réapparaître.'
+				restoreMode = false; rPhrase = ''
+			} else {
+				rMsg = 'Phrase incorrecte, ou sauvegarde introuvable.'
+			}
+		} finally { busy = false }
+	}
 
 	// Générateur : mots simples et concrets, faciles à mémoriser une fois assemblés.
 	const WORDS = [
@@ -152,6 +171,28 @@
 		</div>
 		{/if}
 
+		{#if ready && backupExists}
+			<div class="kb-restore-box">
+				<div class="kb-restore-head">
+					<span>♻️</span>
+					<span>Tu as une sauvegarde. Sur un autre appareil, ou si tes messages chiffrés ne s'affichent pas ici, restaure ta clé.</span>
+				</div>
+				{#if !restoreMode}
+					<div class="kb-actions">
+						<button class="kb-btn-soft" type="button" onclick={() => { restoreMode = true; rMsg = '' }}>Restaurer ma clé sur cet appareil</button>
+					</div>
+				{:else}
+					<input class="kb-input" type="password" placeholder="Ta phrase de récupération"
+						bind:value={rPhrase} onkeydown={(e) => e.key === 'Enter' && restoreHere()} autocomplete="off" />
+					<div class="kb-actions">
+						<button class="kb-btn-primary" type="button" onclick={restoreHere} disabled={busy}>{busy ? '…' : 'Restaurer'}</button>
+						<button class="kb-btn-ghost" type="button" onclick={() => { restoreMode = false; rPhrase = '' }} disabled={busy}>Annuler</button>
+					</div>
+				{/if}
+				{#if rMsg}<div class={rMsg.startsWith('✓') ? 'kb-success' : 'kb-error'}>{rMsg}</div>{/if}
+			</div>
+		{/if}
+
 		{#if ready && !canBackup}
 			<div class="kb-note">
 				Ta clé a été créée avant cette fonctionnalité : elle n'est pas encore sauvegardable.
@@ -271,4 +312,9 @@
 	.kb-eye { flex-shrink: 0; padding: 0 12px; border-radius: 10px; cursor: pointer;
 		font-size: 13px; font-weight: 600; color: #94a3b8;
 		background: transparent; border: 1px solid rgba(148,163,184,.2); }
+	.kb-restore-box { display: flex; flex-direction: column; gap: 10px;
+		background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.2);
+		border-radius: 12px; padding: 12px 14px; }
+	.kb-restore-head { display: flex; gap: 10px; font-size: 13px; color: #bbf7d0; line-height: 1.45; }
+	.kb-restore-head span:first-child { flex-shrink: 0; }
 </style>

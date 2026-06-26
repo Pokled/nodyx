@@ -104,6 +104,8 @@
 	// Garde-fou avant envoi : alerte si pas de sauvegarde de clé
 	let showSendGuard = $state(false)
 	let sendGuardAck  = $state(false)
+	// Des messages n'ont pas pu être déchiffrés (clé locale ne correspond pas)
+	let decryptFailed = $derived(messages.some((m) => m._decryptFailed))
 
 	function dismissE2eBanner() {
 		showE2eBanner = false
@@ -1420,7 +1422,21 @@
 			</div>
 		{/if}
 
-		{#if showE2eBanner}
+		{#if hasBackup && decryptFailed}
+		<div class="e2e-banner">
+			<div class="e2e-banner-icon">🔑</div>
+			<div class="e2e-banner-body">
+				<div class="e2e-banner-title">Certains messages ne s'affichent pas ici</div>
+				<div class="e2e-banner-text">
+					Cet appareil n'a pas la bonne clé. Tu as une sauvegarde : restaure-la avec ta phrase
+					de récupération pour déchiffrer tes conversations.
+				</div>
+			</div>
+			<div class="e2e-banner-actions">
+				<button class="e2e-banner-cta" type="button" onclick={() => showRestore = true}>Restaurer ma clé</button>
+			</div>
+		</div>
+		{:else if showE2eBanner}
 		<div class="e2e-banner">
 			<div class="e2e-banner-icon">🛡️</div>
 			<div class="e2e-banner-body">
