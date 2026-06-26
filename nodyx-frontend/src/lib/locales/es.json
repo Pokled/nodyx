@@ -796,5 +796,15 @@
   "feed.tab_following": "Siguiendo",
   "feed.reshared_by": "compartió",
   "feed.reshare": "Compartir",
-  "feed.react": "Reaccionar"
+  "feed.react": "Reaccionar",
+  "chat.pinned": "Fijado",
+  "chat.hide": "Ocultar",
+  "chat.edited": "(editado)",
+  "chat.floating_reaction": "Reacción flotante",
+  "chat.gif_add_key_pre": "Añade una clave gratuita en",
+  "chat.gif_add_key_post": "luego reconstruye:",
+  "chat.your_key": "tu_clave",
+  "chat.gif_both_free": "Ambos son gratuitos con una cuota generosa.",
+  "chat.no_channel": "No hay ningún canal disponible todavía.",
+  "chat.no_channel_hint": "Un administrador puede crear uno desde el panel Administración → Canales de texto."
 }

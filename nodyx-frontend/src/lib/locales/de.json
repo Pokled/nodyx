@@ -796,5 +796,15 @@
   "feed.tab_following": "Abonniert",
   "feed.reshared_by": "hat geteilt",
   "feed.reshare": "Teilen",
-  "feed.react": "Reagieren"
+  "feed.react": "Reagieren",
+  "chat.pinned": "Angeheftet",
+  "chat.hide": "Ausblenden",
+  "chat.edited": "(bearbeitet)",
+  "chat.floating_reaction": "Schwebende Reaktion",
+  "chat.gif_add_key_pre": "Füge einen kostenlosen Key in",
+  "chat.gif_add_key_post": "dann neu bauen:",
+  "chat.your_key": "dein_key",
+  "chat.gif_both_free": "Beide sind kostenlos mit großzügigem Kontingent.",
+  "chat.no_channel": "Noch kein Kanal verfügbar.",
+  "chat.no_channel_hint": "Ein Admin kann einen über das Panel Administration → Textkanäle erstellen."
 }

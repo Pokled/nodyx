@@ -797,5 +797,15 @@
   "feed.tab_following": "Following",
   "feed.reshared_by": "reshared",
   "feed.reshare": "Reshare",
-  "feed.react": "React"
+  "feed.react": "React",
+  "chat.pinned": "Pinned",
+  "chat.hide": "Hide",
+  "chat.edited": "(edited)",
+  "chat.floating_reaction": "Floating reaction",
+  "chat.gif_add_key_pre": "Add a free key in",
+  "chat.gif_add_key_post": "then rebuild:",
+  "chat.your_key": "your_key",
+  "chat.gif_both_free": "Both are free with a generous quota.",
+  "chat.no_channel": "No channel available yet.",
+  "chat.no_channel_hint": "An admin can create one from the Administration → Text channels panel."
 }

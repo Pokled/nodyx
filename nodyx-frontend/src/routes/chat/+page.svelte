@@ -1047,16 +1047,16 @@
 			{#if pinnedMessage && showPinned}
 				<div class="shrink-0 flex items-center gap-2.5 px-4 py-1.5 text-xs" style="background: rgba(124,58,237,.06); border-bottom: 1px solid rgba(124,58,237,.15)">
 					<svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="#a78bfa"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
-					<span class="font-black uppercase tracking-wider shrink-0 text-[10px]" style="color: #a78bfa; font-family: 'Space Grotesk', sans-serif">Épinglé</span>
+					<span class="font-black uppercase tracking-wider shrink-0 text-[10px]" style="color: #a78bfa; font-family: 'Space Grotesk', sans-serif">{tFn('chat.pinned')}</span>
 					<span class="truncate flex-1" style="color: #6b7280">
 						<span class="font-semibold" style="color: #4b5563">{pinnedMessage.author_username} · </span>{pinnedMessage.content?.replace(/<[^>]*>/g, '').slice(0, 120) ?? ''}
 					</span>
 					{#if isAdmin}
 						<button onclick={() => s?.emit('chat:pin', { channelId: selectedChannel?.id, messageId: null })}
-						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #374151" title="Désépingler">×</button>
+						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #374151" title={tFn('chat.unpin')}>×</button>
 					{:else}
 						<button onclick={() => showPinned = false}
-						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #374151" title="Masquer">×</button>
+						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #374151" title={tFn('chat.hide')}>×</button>
 					{/if}
 				</div>
 			{/if}
@@ -1137,7 +1137,7 @@
 										{formatTime(msg.created_at)}
 									</span>
 									{#if msg.edited_at && !msg.is_deleted}
-										<span class="text-[10px] italic" style="color: #374151">(modifié)</span>
+										<span class="text-[10px] italic" style="color: #374151">{tFn('chat.edited')}</span>
 									{/if}
 								</div>
 							{/if}
@@ -1172,7 +1172,7 @@
 								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: #d1d5db">
 									{@html linkifyHtml(msg.content ?? '')}
 									{#if shouldGroup && msg.edited_at}
-										<span class="text-[9px] text-gray-700 italic ml-2">(modifié)</span>
+										<span class="text-[9px] text-gray-700 italic ml-2">{tFn('chat.edited')}</span>
 									{/if}
 								</div>
 								<!-- Link preview card -->
@@ -1257,7 +1257,7 @@
 								</div>
 								<span class="w-px h-4 mx-0.5" style="background: rgba(255,255,255,.07)"></span>
 								<!-- Répondre -->
-								<button onclick={() => startReply(msg)} title="Répondre"
+								<button onclick={() => startReply(msg)} title={tFn('chat.reply')}
 								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
 								        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
 								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
@@ -1362,7 +1362,7 @@
 						onclick={() => floatReact(emoji)}
 						disabled={floatCooldown || !selectedChannel}
 						class="fr-bar-btn"
-						title="Réaction flottante"
+						title={tFn('chat.floating_reaction')}
 					>{emoji}</button>
 				{/each}
 			</div>
@@ -1398,21 +1398,21 @@
 								<div class="p-4 space-y-3">
 									<p class="text-xs font-semibold text-white">{tFn('chat.gif_not_configured')}</p>
 									<p class="text-xs text-gray-400 leading-relaxed">
-										Ajoutez une clé gratuite dans <code class="bg-gray-800 px-1 rounded text-indigo-300">/var/www/nexus/nodyx-frontend/.env</code> puis rebuild :
+										{tFn('chat.gif_add_key_pre')} <code class="bg-gray-800 px-1 rounded text-indigo-300">/var/www/nexus/nodyx-frontend/.env</code> {tFn('chat.gif_add_key_post')}
 									</p>
 									<div class="space-y-1.5 text-xs text-gray-500">
 										<div class="bg-gray-800 rounded p-2 font-mono">
 											<span class="text-green-400"># Tenor (Google)</span><br>
-											<span class="text-amber-300">PUBLIC_TENOR_KEY</span>=votre_clé<br>
+											<span class="text-amber-300">PUBLIC_TENOR_KEY</span>={tFn('chat.your_key')}<br>
 											<span class="text-gray-600 text-[10px]">console.cloud.google.com → Tenor API v2</span>
 										</div>
 										<div class="bg-gray-800 rounded p-2 font-mono">
 											<span class="text-green-400"># Giphy (Meta)</span><br>
-											<span class="text-amber-300">PUBLIC_GIPHY_KEY</span>=votre_clé<br>
+											<span class="text-amber-300">PUBLIC_GIPHY_KEY</span>={tFn('chat.your_key')}<br>
 											<span class="text-gray-600 text-[10px]">developers.giphy.com → Create App</span>
 										</div>
 									</div>
-									<p class="text-[10px] text-gray-600">Les deux sont gratuits avec un quota généreux.</p>
+									<p class="text-[10px] text-gray-600">{tFn('chat.gif_both_free')}</p>
 								</div>
 							{:else}
 								<div class="p-2 border-b border-gray-800">
@@ -1537,8 +1537,8 @@
 			<!-- No channel -->
 			<div class="flex-1 flex items-center justify-center flex-col gap-3 text-gray-600">
 				<span class="text-5xl">💬</span>
-				<p class="text-sm">Aucun canal disponible pour le moment.</p>
-				<p class="text-xs">Un admin peut en créer depuis le panneau Administration → Canaux texte.</p>
+				<p class="text-sm">{tFn('chat.no_channel')}</p>
+				<p class="text-xs">{tFn('chat.no_channel_hint')}</p>
 			</div>
 			
 		{/if}

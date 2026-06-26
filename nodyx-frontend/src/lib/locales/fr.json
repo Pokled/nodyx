@@ -797,5 +797,15 @@
   "feed.tab_following": "Abonnements",
   "feed.reshared_by": "a repartagé",
   "feed.reshare": "Repartager",
-  "feed.react": "Réagir"
+  "feed.react": "Réagir",
+  "chat.pinned": "Épinglé",
+  "chat.hide": "Masquer",
+  "chat.edited": "(modifié)",
+  "chat.floating_reaction": "Réaction flottante",
+  "chat.gif_add_key_pre": "Ajoutez une clé gratuite dans",
+  "chat.gif_add_key_post": "puis rebuild :",
+  "chat.your_key": "votre_clé",
+  "chat.gif_both_free": "Les deux sont gratuits avec un quota généreux.",
+  "chat.no_channel": "Aucun canal disponible pour le moment.",
+  "chat.no_channel_hint": "Un admin peut en créer depuis le panneau Administration → Canaux texte."
 }
