@@ -9,5 +9,8 @@ name = "nodyx-gossip"
 path = "src/main.rs"
 
 [dependencies]
-# Zero dependance. std uniquement. C'est l'ADN Nodyx : pas de boite noire, pas de silo.
-# (Le profil release optimise est defini au niveau du workspace.)
+# Une seule entorse au zero-dependance, justifiee : la crypto a courbe elliptique
+# ne se code PAS a la main (constant-time, side-channels). ed25519-dalek est l'une
+# des implementations Rust les plus auditees. Tout le reste reste fait maison.
+ed25519-dalek = "2"
+getrandom = "0.2"   # seed CSPRNG (32 octets) pour la cle d'identite
