@@ -478,6 +478,11 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 	<link rel="stylesheet" href={GOOGLE_FONTS_URL} />
+	<!-- Thème d'instance : surcharge des variables CSS, posé par l'owner (instance_settings.theme_css).
+	     On retire tout '<' pour empêcher un breakout </style>. -->
+	{#if data.themeCss}
+		{@html `<style id="instance-theme">${data.themeCss.replace(/</g, '')}</style>`}
+	{/if}
 </svelte:head>
 
 {#if isOverlayRoute}

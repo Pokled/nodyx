@@ -92,7 +92,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
   app.get('/info', { preHandler: [rateLimit] }, async (_request, reply) => {
     const communityId = await getCommunityId()
 
-    const [memberRes, threadRes, postRes, presenceSockets, brandingRes] = await Promise.all([
+    const [memberRes, threadRes, postRes, presenceSockets, brandingRes, themeRes] = await Promise.all([
       db.query(`SELECT COUNT(*)::int AS count FROM users`),
       db.query(`SELECT COUNT(*)::int AS count FROM threads`),
       db.query(`SELECT COUNT(*)::int AS count FROM posts`),
@@ -102,6 +102,10 @@ export default async function instanceRoutes(app: FastifyInstance) {
             `SELECT logo_url, banner_url FROM communities WHERE id = $1`, [communityId]
           )
         : Promise.resolve({ rows: [{ logo_url: null, banner_url: null }] }),
+      // Thème d'instance (CSS de surcharge de variables Tailwind) — optionnel, posé par l'owner
+      db.query<{ value: string | null }>(
+        `SELECT value FROM instance_settings WHERE key = 'theme_css' LIMIT 1`
+      ).catch(() => ({ rows: [] as { value: string | null }[] })),
     ])
 
     const seen = new Set<string>()
@@ -123,6 +127,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       post_count:   postRes.rows[0].count,
       logo_url:     branding.logo_url,
       banner_url:   branding.banner_url,
+      theme_css:    themeRes.rows[0]?.value ?? null,
       demo_mode:    process.env.NODYX_DEMO_MODE === 'true',
     })
   })
