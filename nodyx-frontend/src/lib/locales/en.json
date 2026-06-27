@@ -899,5 +899,17 @@
   "members.offline": "Offline",
   "members.none_online": "No members online",
   "members.see_all": "See all",
-  "settings.sounds.nav": "Sounds"
+  "settings.sounds.nav": "Sounds",
+  "settings.connected.desc": "Link your external accounts to your Nodyx profile so they are recognized automatically in the matching features.",
+  "settings.connected.linked": "linked",
+  "settings.connected.twitch_connected_pre": "Connected to",
+  "settings.connected.twitch_connected_post": ". When you follow, sub or raid on this instance's main Twitch channel, the event will be linked to your Nodyx profile.",
+  "settings.connected.twitch_unlinked_desc": "Link your Twitch account so your follows / subs / cheers / raids are automatically recognized as yours in Nodyx. No token is stored: we only save your Twitch ID and login.",
+  "settings.connected.unlinking": "Unlinking…",
+  "settings.connected.unlink_twitch": "Unlink my Twitch account",
+  "settings.connected.redirecting": "Redirecting…",
+  "settings.connected.link_twitch": "Link my Twitch account",
+  "settings.connected.confirm_unlink": "Unlink {{login}} from your Nodyx profile?",
+  "settings.connected.unlinked_toast": "Twitch account unlinked",
+  "settings.connected.unlink_failed": "Unlink failed"
 }

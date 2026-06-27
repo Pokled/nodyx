@@ -898,5 +898,17 @@
   "members.offline": "Offline",
   "members.none_online": "Keine Mitglieder online",
   "members.see_all": "Alle anzeigen",
-  "settings.sounds.nav": "Töne"
+  "settings.sounds.nav": "Töne",
+  "settings.connected.desc": "Verknüpfe deine externen Konten mit deinem Nodyx-Profil, damit sie in den entsprechenden Funktionen automatisch erkannt werden.",
+  "settings.connected.linked": "verknüpft",
+  "settings.connected.twitch_connected_pre": "Verbunden mit",
+  "settings.connected.twitch_connected_post": ". Wenn du dem Haupt-Twitch-Kanal dieser Instanz folgst, abonnierst oder ihn raidest, wird das Ereignis mit deinem Nodyx-Profil verknüpft.",
+  "settings.connected.twitch_unlinked_desc": "Verknüpfe dein Twitch-Konto, damit deine Follows / Subs / Cheers / Raids in Nodyx automatisch als deine erkannt werden. Es wird kein Token gespeichert: wir speichern nur deine Twitch-ID und deinen Login.",
+  "settings.connected.unlinking": "Wird getrennt…",
+  "settings.connected.unlink_twitch": "Mein Twitch-Konto trennen",
+  "settings.connected.redirecting": "Weiterleitung…",
+  "settings.connected.link_twitch": "Mein Twitch-Konto verknüpfen",
+  "settings.connected.confirm_unlink": "{{login}} von deinem Nodyx-Profil trennen?",
+  "settings.connected.unlinked_toast": "Twitch-Konto getrennt",
+  "settings.connected.unlink_failed": "Trennen fehlgeschlagen"
 }

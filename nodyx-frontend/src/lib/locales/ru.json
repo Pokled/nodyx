@@ -899,5 +899,17 @@
   "members.offline": "Не в сети",
   "members.none_online": "Нет участников в сети",
   "members.see_all": "Показать всех",
-  "settings.sounds.nav": "Звуки"
+  "settings.sounds.nav": "Звуки",
+  "settings.connected.desc": "Привяжи свои внешние аккаунты к профилю Nodyx, чтобы они автоматически распознавались в соответствующих функциях.",
+  "settings.connected.linked": "привязан",
+  "settings.connected.twitch_connected_pre": "Подключено к",
+  "settings.connected.twitch_connected_post": ". Когда ты подписываешься, оформляешь sub или делаешь raid на основном Twitch-канале этого сервера, событие будет привязано к твоему профилю Nodyx.",
+  "settings.connected.twitch_unlinked_desc": "Привяжи свой аккаунт Twitch, чтобы твои фолловы / сабы / cheers / рейды автоматически распознавались как твои в Nodyx. Токен не сохраняется: мы храним только твой Twitch-ID и логин.",
+  "settings.connected.unlinking": "Отвязка…",
+  "settings.connected.unlink_twitch": "Отвязать мой аккаунт Twitch",
+  "settings.connected.redirecting": "Перенаправление…",
+  "settings.connected.link_twitch": "Привязать мой аккаунт Twitch",
+  "settings.connected.confirm_unlink": "Отвязать {{login}} от вашего профиля Nodyx?",
+  "settings.connected.unlinked_toast": "Аккаунт Twitch отвязан",
+  "settings.connected.unlink_failed": "Не удалось отвязать"
 }

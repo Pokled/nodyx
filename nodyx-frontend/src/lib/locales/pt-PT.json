@@ -899,5 +899,17 @@
   "members.offline": "Offline",
   "members.none_online": "Nenhum membro online",
   "members.see_all": "Ver todos",
-  "settings.sounds.nav": "Sons"
+  "settings.sounds.nav": "Sons",
+  "settings.connected.desc": "Liga as tuas contas externas ao teu perfil Nodyx para que sejam reconhecidas automaticamente nas funcionalidades correspondentes.",
+  "settings.connected.linked": "ligado",
+  "settings.connected.twitch_connected_pre": "Ligado a",
+  "settings.connected.twitch_connected_post": ". Quando segues, fazes sub ou raid no canal Twitch principal desta instância, o evento será associado ao teu perfil Nodyx.",
+  "settings.connected.twitch_unlinked_desc": "Liga a tua conta Twitch para que os teus follows / subs / cheers / raids sejam automaticamente reconhecidos como teus no Nodyx. Nenhum token é guardado: apenas guardamos o teu ID Twitch e o teu login.",
+  "settings.connected.unlinking": "A desligar…",
+  "settings.connected.unlink_twitch": "Desligar a minha conta Twitch",
+  "settings.connected.redirecting": "A redirecionar…",
+  "settings.connected.link_twitch": "Ligar a minha conta Twitch",
+  "settings.connected.confirm_unlink": "Desligar {{login}} do teu perfil Nodyx?",
+  "settings.connected.unlinked_toast": "Conta Twitch desligada",
+  "settings.connected.unlink_failed": "Falha ao desligar"
 }

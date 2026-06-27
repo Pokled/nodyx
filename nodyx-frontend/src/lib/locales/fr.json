@@ -899,5 +899,17 @@
   "members.offline": "Hors ligne",
   "members.none_online": "Aucun membre en ligne",
   "members.see_all": "Voir tous",
-  "settings.sounds.nav": "Sons"
+  "settings.sounds.nav": "Sons",
+  "settings.connected.desc": "Lie tes comptes externes à ton profil Nodyx pour qu'ils soient reconnus automatiquement dans les fonctionnalités correspondantes.",
+  "settings.connected.linked": "lié",
+  "settings.connected.twitch_connected_pre": "Connecté à",
+  "settings.connected.twitch_connected_post": ". Quand tu follow, sub ou raid sur la chaîne Twitch principale de cette instance, l'événement sera relié à ton profil Nodyx.",
+  "settings.connected.twitch_unlinked_desc": "Lie ton compte Twitch pour que tes follows / subs / cheers / raids soient automatiquement reconnus comme étant les tiens dans Nodyx. Aucun token n'est conservé : on enregistre juste l'identifiant Twitch et ton login.",
+  "settings.connected.unlinking": "Délier…",
+  "settings.connected.unlink_twitch": "Délier mon compte Twitch",
+  "settings.connected.redirecting": "Redirection…",
+  "settings.connected.link_twitch": "Lier mon compte Twitch",
+  "settings.connected.confirm_unlink": "Délier {{login}} de votre profil Nodyx ?",
+  "settings.connected.unlinked_toast": "Compte Twitch délié",
+  "settings.connected.unlink_failed": "Délier a échoué"
 }

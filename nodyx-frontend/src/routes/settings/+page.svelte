@@ -100,7 +100,7 @@
 
     async function unlinkTwitch() {
         if (twitchUnlinking || !twitchLink) return
-        if (!confirm(`Délier ${twitchLink.twitchLogin} de votre profil Nodyx ?`)) return
+        if (!confirm(tFn('settings.connected.confirm_unlink', { login: twitchLink.twitchLogin }))) return
         twitchUnlinking = true
         twitchError = null
         try {
@@ -111,10 +111,10 @@
             })
             if (res.ok) {
                 twitchLink = null
-                twitchToast = 'Compte Twitch délié'
+                twitchToast = tFn('settings.connected.unlinked_toast')
                 setTimeout(() => twitchToast = null, 3500)
             } else {
-                twitchError = 'Délier a échoué'
+                twitchError = tFn('settings.connected.unlink_failed')
             }
         } catch {
             twitchError = 'Erreur réseau'
@@ -1055,10 +1055,7 @@
                 </div>
                 <div>
                     <h2 class="s-pane-title">{tFn('settings.connected.label')}</h2>
-                    <p class="s-pane-desc">
-                        Lie tes comptes externes à ton profil Nodyx pour qu'ils soient reconnus
-                        automatiquement dans les fonctionnalités correspondantes.
-                    </p>
+                    <p class="s-pane-desc">{tFn('settings.connected.desc')}</p>
                 </div>
             </div>
 
@@ -1072,20 +1069,15 @@
                             <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #fff;">Twitch</h3>
                             {#if twitchLink}
                                 <span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(16,185,129,0.15); color:#34d399; border: 1px solid rgba(16,185,129,0.3);">
-                                    lié
+                                    {tFn('settings.connected.linked')}
                                 </span>
                             {/if}
                         </div>
                         <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8; line-height: 1.5;">
                             {#if twitchLink}
-                                Connecté à <strong style="color:#a78bfa;">@{twitchLink.twitchLogin}</strong>.
-                                Quand tu follow, sub ou raid sur la chaîne Twitch principale de cette
-                                instance, l'événement sera relié à ton profil Nodyx.
+                                {tFn('settings.connected.twitch_connected_pre')} <strong style="color:#a78bfa;">@{twitchLink.twitchLogin}</strong>{tFn('settings.connected.twitch_connected_post')}
                             {:else}
-                                Lie ton compte Twitch pour que tes follows / subs / cheers / raids
-                                soient automatiquement reconnus comme étant les tiens dans Nodyx.
-                                Aucun token n'est conservé : on enregistre juste l'identifiant
-                                Twitch et ton login.
+                                {tFn('settings.connected.twitch_unlinked_desc')}
                             {/if}
                         </p>
 
@@ -1097,7 +1089,7 @@
 
                         <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
                             {#if !twitchLoaded}
-                                <span style="font-size: 12px; color: #64748b;">Chargement…</span>
+                                <span style="font-size: 12px; color: #64748b;">{tFn('common.loading')}</span>
                             {:else if twitchLink}
                                 <button
                                     onclick={unlinkTwitch}
@@ -1106,7 +1098,7 @@
                                     onmouseenter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.2)' }}
                                     onmouseleave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.12)' }}
                                 >
-                                    {twitchUnlinking ? 'Délier…' : 'Délier mon compte Twitch'}
+                                    {twitchUnlinking ? tFn('settings.connected.unlinking') : tFn('settings.connected.unlink_twitch')}
                                 </button>
                             {:else}
                                 <button
@@ -1117,9 +1109,9 @@
                                     onmouseleave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#7c3aed' }}
                                 >
                                     {#if twitchConnecting}
-                                        <span style="display: inline-block; animation: spin 1s linear infinite;">◌</span> Redirection…
+                                        <span style="display: inline-block; animation: spin 1s linear infinite;">◌</span> {tFn('settings.connected.redirecting')}
                                     {:else}
-                                        Lier mon compte Twitch
+                                        {tFn('settings.connected.link_twitch')}
                                     {/if}
                                 </button>
                             {/if}
