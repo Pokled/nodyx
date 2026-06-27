@@ -150,9 +150,12 @@
 					class="max-h-64 max-w-full rounded-lg shadow-xl" />
 			</div>
 		{:else if asset.mime_type?.startsWith('audio/')}
-			<div class="bg-gray-950 flex flex-col items-center justify-center gap-3 p-8">
-				<span class="text-5xl">🔊</span>
-				<audio controls src={fileUrl(asset.file_path)} class="w-full max-w-xs"></audio>
+			<div class="bg-gray-950 p-6">
+				<nodyx-audio-player
+					src={fileUrl(asset.file_path)}
+					track-title={asset.name}
+					download="1"
+				></nodyx-audio-player>
 			</div>
 		{:else}
 			<div class="bg-gray-950 flex items-center justify-center min-h-40 text-5xl">
