@@ -13,7 +13,7 @@ import { browser }                from '$app/environment'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type Locale = 'fr' | 'en' | 'es' | 'de'
+export type Locale = 'fr' | 'en' | 'es' | 'de' | 'ru' | 'pt-PT'
 
 export interface LocaleMeta {
   code:  Locale
@@ -22,10 +22,12 @@ export interface LocaleMeta {
 }
 
 export const LOCALES: LocaleMeta[] = [
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'en', label: 'English',  flag: '🇬🇧' },
-  { code: 'es', label: 'Español',  flag: '🇪🇸' },
-  { code: 'de', label: 'Deutsch',  flag: '🇩🇪' },
+  { code: 'fr',    label: 'Français',   flag: '🇫🇷' },
+  { code: 'en',    label: 'English',    flag: '🇬🇧' },
+  { code: 'es',    label: 'Español',    flag: '🇪🇸' },
+  { code: 'de',    label: 'Deutsch',    flag: '🇩🇪' },
+  { code: 'ru',    label: 'Русский',    flag: '🇷🇺' },
+  { code: 'pt-PT', label: 'Português',  flag: '🇵🇹' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -35,9 +37,11 @@ import fr from './locales/fr.json'
 import en from './locales/en.json'
 import es from './locales/es.json'
 import de from './locales/de.json'
+import ru from './locales/ru.json'
+import ptPT from './locales/pt-PT.json'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const messages: Record<Locale, Record<string, any>> = { fr, en, es, de }
+const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-PT': ptPT }
 
 // ── Store locale ──────────────────────────────────────────────────────────────
 
@@ -46,12 +50,15 @@ const STORAGE_KEY = 'nodyx_locale'
 function getInitialLocale(): Locale {
   if (!browser) return 'fr'
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'fr' || stored === 'en' || stored === 'es' || stored === 'de') return stored
+  if (stored && LOCALES.some((l) => l.code === stored)) return stored as Locale
   // Détection navigateur
-  const nav = navigator.language.slice(0, 2).toLowerCase()
+  const full = navigator.language.toLowerCase()
+  const nav = full.slice(0, 2)
+  if (full === 'pt-pt' || (nav === 'pt' && !full.startsWith('pt-br'))) return 'pt-PT'
   if (nav === 'fr') return 'fr'
   if (nav === 'es') return 'es'
   if (nav === 'de') return 'de'
+  if (nav === 'ru') return 'ru'
   return 'en'
 }
 
