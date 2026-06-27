@@ -105,8 +105,12 @@ export const PROFILE_PRESETS: ProfilePreset[] = [
 ]
 
 /** Merge saved partial theme with defaults */
-export function resolveTheme(saved: Partial<ProfileThemeVars> | null | undefined): ProfileThemeVars {
-	return { ...DEFAULT_THEME, ...(saved ?? {}) }
+// Cascade : défaut → thème d'INSTANCE (owner, son univers) → thème du MEMBRE (override perso).
+export function resolveTheme(
+	saved: Partial<ProfileThemeVars> | null | undefined,
+	instanceBase?: Partial<ProfileThemeVars> | null | undefined,
+): ProfileThemeVars {
+	return { ...DEFAULT_THEME, ...(instanceBase ?? {}), ...(saved ?? {}) }
 }
 
 /** CSS variable declarations only — use on parent containers for app-wide theming */

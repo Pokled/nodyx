@@ -79,6 +79,8 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const demoMode: boolean          = infoJson?.demo_mode   ?? false;
 	const nodyxVersion: string       = infoJson?.version     ?? 'unknown';
 	const themeCss: string | null    = infoJson?.theme_css   ?? null;
+	// Thème imposé par l'owner de l'instance (base de la cascade ; un membre peut le surcharger via son profil)
+	const instanceTheme: Record<string, unknown> | null = infoJson?.theme_vars ?? null;
 
 	// Toutes les instances du réseau (directory), filtre l'instance courante
 	const allInstances: Array<{
@@ -87,7 +89,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (((directoryJson as any)?.instances) ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss, instanceTheme };
 	}
 
 	const { user } = await userRes.json();
@@ -117,5 +119,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss, instanceTheme };
 };

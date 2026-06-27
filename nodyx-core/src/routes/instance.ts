@@ -102,10 +102,12 @@ export default async function instanceRoutes(app: FastifyInstance) {
             `SELECT logo_url, banner_url FROM communities WHERE id = $1`, [communityId]
           )
         : Promise.resolve({ rows: [{ logo_url: null, banner_url: null }] }),
-      // Thème d'instance (CSS de surcharge de variables Tailwind) — optionnel, posé par l'owner
-      db.query<{ value: string | null }>(
-        `SELECT value FROM instance_settings WHERE key = 'theme_css' LIMIT 1`
-      ).catch(() => ({ rows: [] as { value: string | null }[] })),
+      // Thème d'instance posé par l'owner (son univers, base pour tous) :
+      //  - theme_vars : thème structuré (--p-bg/--p-accent…), base de la cascade
+      //  - theme_css  : surcharge CSS libre (variables Tailwind) en complément
+      db.query<{ key: string; value: string | null }>(
+        `SELECT key, value FROM instance_settings WHERE key IN ('theme_css','theme_vars')`
+      ).catch(() => ({ rows: [] as { key: string; value: string | null }[] })),
     ])
 
     const seen = new Set<string>()
@@ -127,7 +129,12 @@ export default async function instanceRoutes(app: FastifyInstance) {
       post_count:   postRes.rows[0].count,
       logo_url:     branding.logo_url,
       banner_url:   branding.banner_url,
-      theme_css:    themeRes.rows[0]?.value ?? null,
+      theme_css:    themeRes.rows.find(r => r.key === 'theme_css')?.value ?? null,
+      theme_vars:   (() => {
+        const raw = themeRes.rows.find(r => r.key === 'theme_vars')?.value
+        if (!raw) return null
+        try { return JSON.parse(raw) } catch { return null }
+      })(),
       demo_mode:    process.env.NODYX_DEMO_MODE === 'true',
     })
   })

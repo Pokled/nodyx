@@ -117,8 +117,8 @@
 			? $page.url.pathname === '/'
 			: $page.url.pathname.startsWith(href)
 
-	// App-wide theme — uses the logged-in user's theme, falls back to default
-	const appVars = $derived(themeToVars(resolveTheme((data as any).appTheme)))
+	// App-wide theme — cascade : défaut → thème d'INSTANCE (owner, son univers) → thème du MEMBRE (override perso)
+	const appVars = $derived(themeToVars(resolveTheme((data as any).appTheme, (data as any).instanceTheme)))
 
 	// All community members (for offline section in presence sidebar)
 	let allMembers = $state<{ user_id: string; username: string; avatar: string | null }[]>([])
