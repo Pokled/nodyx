@@ -14,6 +14,7 @@
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded, GOOGLE_FONTS_URL } from '$lib/nameEffects';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
+	import MatrixRain from '$lib/components/MatrixRain.svelte';
 	import MemberScreenPreview from '$lib/components/MemberScreenPreview.svelte';
 	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
@@ -119,6 +120,8 @@
 
 	// App-wide theme — cascade : défaut → thème d'INSTANCE (owner, son univers) → thème du MEMBRE (override perso)
 	const appVars = $derived(themeToVars(resolveTheme((data as any).appTheme, (data as any).instanceTheme)))
+	// Effet de fond posé par l'owner (ex 'matrix' = pluie de caractères derrière le contenu)
+	const hasMatrix = $derived((data as any).instanceEffect === 'matrix')
 
 	// All community members (for offline section in presence sidebar)
 	let allMembers = $state<{ user_id: string; username: string; avatar: string | null }[]>([])
@@ -489,7 +492,8 @@
 	<!-- Overlay OBS : aucun chrome Nodyx, juste la page transparente. -->
 	{@render children()}
 {:else}
-<div class="min-h-screen flex flex-col" style="{appVars}; background: var(--p-bg); color: var(--p-text)">
+{#if hasMatrix}<MatrixRain />{/if}
+<div class="min-h-screen flex flex-col" style="{appVars}; background: {hasMatrix ? 'transparent' : 'var(--p-bg)'}; color: var(--p-text)">
 
 	<!-- Listener Streamer Hub : joue les sons de notif pour les admins/owners. -->
 	{#if data.user?.role}

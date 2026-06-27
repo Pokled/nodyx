@@ -106,7 +106,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       //  - theme_vars : thème structuré (--p-bg/--p-accent…), base de la cascade
       //  - theme_css  : surcharge CSS libre (variables Tailwind) en complément
       db.query<{ key: string; value: string | null }>(
-        `SELECT key, value FROM instance_settings WHERE key IN ('theme_css','theme_vars')`
+        `SELECT key, value FROM instance_settings WHERE key IN ('theme_css','theme_vars','theme_effect')`
       ).catch(() => ({ rows: [] as { key: string; value: string | null }[] })),
     ])
 
@@ -135,6 +135,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
         if (!raw) return null
         try { return JSON.parse(raw) } catch { return null }
       })(),
+      theme_effect: themeRes.rows.find(r => r.key === 'theme_effect')?.value ?? null,
       demo_mode:    process.env.NODYX_DEMO_MODE === 'true',
     })
   })
