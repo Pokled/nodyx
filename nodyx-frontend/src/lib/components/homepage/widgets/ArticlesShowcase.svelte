@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/environment'
+	import { t, locale } from '$lib/i18n'
+
+	const tFn = $derived($t)
+	const loc = $derived($locale)
 
 	interface Article {
 		id:              string
@@ -43,7 +47,7 @@
 	const showDate      = $derived((config.show_date     as boolean) ?? true)
 	const showCategory  = $derived((config.show_category as boolean) ?? true)
 	const showViews     = $derived((config.show_views    as boolean) ?? false)
-	const ctaText       = $derived((config.cta_text      as string)  ?? 'Lire la suite')
+	const ctaText       = $derived((config.cta_text      as string)  ?? tFn('widgets.read_more'))
 	const accent        = $derived((config.accent_color  as string)  ?? '#a78bfa')
 	const aspectRatio   = $derived((config.aspect_ratio  as string)  ?? '16:9')
 	const sliderAuto    = $derived((config.slider_autoplay as boolean) ?? true)
@@ -74,16 +78,16 @@
 
 	// ── Helpers ──
 	function timeAgo(dateStr: string): string {
-		const diff = Date.now() - new Date(dateStr).getTime()
-		const m = Math.floor(diff / 60000)
-		if (m < 60)  return `il y a ${m} min`
-		const h = Math.floor(m / 60)
-		if (h < 24)  return `il y a ${h}h`
-		const d = Math.floor(h / 24)
-		if (d < 30)  return `il y a ${d}j`
-		const mo = Math.floor(d / 30)
-		if (mo < 12) return `il y a ${mo} mois`
-		return `il y a ${Math.floor(mo / 12)} an`
+		const min = (new Date(dateStr).getTime() - Date.now()) / 60000 // négatif = passé
+		const rtf = new Intl.RelativeTimeFormat(loc, { numeric: 'auto' })
+		if (Math.abs(min) < 60)      return rtf.format(Math.round(min), 'minute')
+		const h = min / 60
+		if (Math.abs(h) < 24)        return rtf.format(Math.round(h), 'hour')
+		const d = h / 24
+		if (Math.abs(d) < 30)        return rtf.format(Math.round(d), 'day')
+		const mo = d / 30
+		if (Math.abs(mo) < 12)       return rtf.format(Math.round(mo), 'month')
+		return rtf.format(Math.round(mo / 12), 'year')
 	}
 
 	function articleUrl(a: Article): string {
@@ -151,7 +155,7 @@
 		</div>
 
 	{:else if articles.length === 0}
-		<div class="as-empty">Aucun article à afficher pour le moment.</div>
+		<div class="as-empty">{tFn('widgets.no_articles')}</div>
 
 	{:else if layout === 'magazine'}
 		<!-- ─────────── MAGAZINE : 1 hero + 2x2 grid ─────────── -->
@@ -176,10 +180,10 @@
 						{/if}
 						<div class="as-meta">
 							{#if showAuthor}
-								<span class="as-meta-author">par <strong>{magazineHero.author_username}</strong></span>
+								<span class="as-meta-author">{tFn('widgets.by')} <strong>{magazineHero.author_username}</strong></span>
 							{/if}
 							{#if showDate}<span class="as-meta-dot">·</span><span>{timeAgo(magazineHero.created_at)}</span>{/if}
-							{#if showViews}<span class="as-meta-dot">·</span><span>{magazineHero.views} vues</span>{/if}
+							{#if showViews}<span class="as-meta-dot">·</span><span>{magazineHero.views} {tFn('widgets.views')}</span>{/if}
 						</div>
 						<span class="as-cta">{ctaText}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></span>
 					</div>
@@ -245,7 +249,7 @@
 							{#if showAuthor}<span><strong>{a.author_username}</strong></span>{/if}
 							{#if showAuthor && showDate}<span class="as-meta-dot">·</span>{/if}
 							{#if showDate}<span>{timeAgo(a.created_at)}</span>{/if}
-							{#if showViews}<span class="as-meta-dot">·</span><span>{a.views} vues</span>{/if}
+							{#if showViews}<span class="as-meta-dot">·</span><span>{a.views} {tFn('widgets.views')}</span>{/if}
 						</div>
 					</div>
 					<span class="as-horiz-arrow" aria-hidden="true">→</span>
@@ -272,7 +276,7 @@
 							<h3 class="as-hero-title">{a.title}</h3>
 							{#if showExcerpt && a.excerpt}<p class="as-hero-excerpt">{a.excerpt}</p>{/if}
 							<div class="as-meta">
-								{#if showAuthor}<span>par <strong>{a.author_username}</strong></span>{/if}
+								{#if showAuthor}<span>{tFn('widgets.by')} <strong>{a.author_username}</strong></span>{/if}
 								{#if showDate}<span class="as-meta-dot">·</span><span>{timeAgo(a.created_at)}</span>{/if}
 							</div>
 							<span class="as-cta">{ctaText}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></span>
@@ -282,10 +286,10 @@
 			{/each}
 
 			{#if articles.length > 1}
-				<button class="as-slide-btn as-slide-btn--prev" onclick={sliderPrev} aria-label="Précédent">
+				<button class="as-slide-btn as-slide-btn--prev" onclick={sliderPrev} aria-label={tFn('common.previous')}>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
 				</button>
-				<button class="as-slide-btn as-slide-btn--next" onclick={sliderNext} aria-label="Suivant">
+				<button class="as-slide-btn as-slide-btn--next" onclick={sliderNext} aria-label={tFn('common.next')}>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
 				</button>
 
@@ -331,7 +335,7 @@
 							<div class="as-meta as-meta--sm">
 								{#if showAuthor}<span>{a.author_username}</span>{/if}
 								{#if showDate}<span class="as-meta-dot">·</span><span>{timeAgo(a.created_at)}</span>{/if}
-								{#if showViews}<span class="as-meta-dot">·</span><span>{a.views} vues</span>{/if}
+								{#if showViews}<span class="as-meta-dot">·</span><span>{a.views} {tFn('widgets.views')}</span>{/if}
 							</div>
 						</div>
 					</a>

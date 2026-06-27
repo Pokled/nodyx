@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
+	import { t, locale } from '$lib/i18n'
+
+	const tFn = $derived($t)
+	const loc = $derived($locale)
 
 	// ── Types ────────────────────────────────────────────────────────────────
 	type SourceArticles = {
@@ -107,7 +111,7 @@
 					title:         src.title,
 					imageUrl:      src.thumbnail || (videoId ? youtubeThumbnail(videoId) : undefined),
 					excerpt:       src.excerpt,
-					categoryLabel: src.label ?? 'Vidéo',
+					categoryLabel: src.label ?? tFn('widgets.video'),
 					isVideo:       true,
 					videoId:       videoId ?? undefined,
 					href:          src.cta_url || src.url,
@@ -159,12 +163,12 @@
 
 	// ── Time helper ──────────────────────────────────────────────────────────
 	function timeAgo(dateStr: string): string {
-		const diff = Date.now() - new Date(dateStr).getTime()
-		const m = Math.floor(diff / 60000)
-		if (m < 60)  return `${m}min`
-		const h = Math.floor(m / 60)
-		if (h < 24)  return `${h}h`
-		return `${Math.floor(h / 24)}j`
+		const min = (new Date(dateStr).getTime() - Date.now()) / 60000 // négatif = passé
+		const rtf = new Intl.RelativeTimeFormat(loc, { numeric: 'auto', style: 'narrow' })
+		if (Math.abs(min) < 60) return rtf.format(Math.round(min), 'minute')
+		const h = min / 60
+		if (Math.abs(h) < 24)   return rtf.format(Math.round(h), 'hour')
+		return rtf.format(Math.round(h / 24), 'day')
 	}
 </script>
 
@@ -175,7 +179,7 @@
 		</div>
 
 	{:else if slides.length === 0}
-		<div class="as-empty">Aucun contenu à afficher</div>
+		<div class="as-empty">{tFn('widgets.no_content')}</div>
 
 	{:else}
 		{@const slide = slides[slideIndex]}
@@ -201,7 +205,7 @@
 				target="_blank"
 				rel="noopener noreferrer"
 				class="as-play"
-				aria-label="Regarder la vidéo"
+				aria-label={tFn('widgets.watch_video')}
 			>
 				<svg viewBox="0 0 24 24" fill="currentColor">
 					<path d="M8 5v14l11-7z"/>
@@ -216,7 +220,7 @@
 					<span class="as-cat-line"></span>
 					<span class="as-cat-text">{slide.categoryLabel}</span>
 					{#if slide.isVideo}
-						<span class="as-cat-badge">▶ Vidéo</span>
+						<span class="as-cat-badge">▶ {tFn('widgets.video')}</span>
 					{/if}
 				</div>
 			{/if}
@@ -258,7 +262,7 @@
 						rel={slide.isVideo ? 'noopener noreferrer' : undefined}
 						class="as-cta"
 					>
-						{slide.isVideo ? '▶ Regarder' : 'Lire'}
+						{slide.isVideo ? '▶ ' + tFn('widgets.watch') : tFn('widgets.read')}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
 						</svg>
@@ -284,12 +288,12 @@
 						{/each}
 					</div>
 					<div class="as-arrows">
-						<button class="as-arrow" onclick={() => { slidePrev(); startTimers() }} aria-label="Précédent">
+						<button class="as-arrow" onclick={() => { slidePrev(); startTimers() }} aria-label={tFn('common.previous')}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 							</svg>
 						</button>
-						<button class="as-arrow" onclick={() => { slideNext(); startTimers() }} aria-label="Suivant">
+						<button class="as-arrow" onclick={() => { slideNext(); startTimers() }} aria-label={tFn('common.next')}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
 							</svg>
