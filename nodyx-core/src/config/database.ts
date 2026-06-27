@@ -21,5 +21,7 @@ export const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
   port: Number(process.env.REDIS_PORT) || 6379,
   password: process.env.REDIS_PASSWORD || undefined,
-  keyPrefix: 'nodyx:',
+  // Isolation multi-instance : chaque instance a son préfixe (ex 'sleemstudio:').
+  // Sans ça, plusieurs instances sur le même Redis partagent sessions + cache.
+  keyPrefix: process.env.REDIS_KEY_PREFIX || 'nodyx:',
 })
