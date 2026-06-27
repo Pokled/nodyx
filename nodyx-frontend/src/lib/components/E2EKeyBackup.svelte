@@ -273,11 +273,11 @@
 	.kb-input { width: 100%; padding: 10px 12px; border-radius: 10px;
 		background: rgba(15,23,42,.6); border: 1px solid rgba(148,163,184,.2);
 		color: #f1f5f9; font-size: 14px; outline: none; transition: border-color .15s; }
-	.kb-input:focus { border-color: #6366f1; }
+	.kb-input:focus { border-color: var(--nx-accent); }
 	.kb-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 	.kb-btn-primary { padding: 9px 16px; border-radius: 10px; border: none; cursor: pointer;
 		font-weight: 600; font-size: 14px; color: #fff;
-		background: linear-gradient(135deg, #6366f1, #a855f7); transition: transform .12s, opacity .12s; }
+		background: linear-gradient(135deg, var(--nx-accent), var(--nx-accent-2)); transition: transform .12s, opacity .12s; }
 	.kb-btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
 	.kb-btn-ghost, .kb-btn-danger { padding: 9px 16px; border-radius: 10px; cursor: pointer;
 		font-weight: 600; font-size: 14px; background: transparent; }

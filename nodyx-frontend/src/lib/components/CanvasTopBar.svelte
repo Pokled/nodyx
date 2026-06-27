@@ -497,7 +497,7 @@
 		transition: all 0.1s;
 	}
 	.fmt-btn:hover { background: rgba(255,255,255,0.06); color: white; }
-	.fmt-btn.on { background: rgba(124,58,237,0.25); color: #a78bfa; }
+	.fmt-btn.on { background: rgba(124,58,237,0.25); color: var(--nx-accent-2-soft); }
 	.italic-btn { font-style: italic; }
 	.underline-btn { text-decoration: underline; }
 	.strike-btn { text-decoration: line-through; }
@@ -516,7 +516,7 @@
 		transition: all 0.1s;
 	}
 	.icon-btn:hover { background: rgba(255,255,255,0.06); color: white; }
-	.icon-btn.on { background: rgba(124,58,237,0.25); color: #a78bfa; }
+	.icon-btn.on { background: rgba(124,58,237,0.25); color: var(--nx-accent-2-soft); }
 
 	.size-val {
 		font-size: 12px;
@@ -539,7 +539,7 @@
 		transition: all 0.1s;
 	}
 	.font-btn:hover { background: rgba(255,255,255,0.06); color: #d1d5db; }
-	.font-btn.on { background: rgba(124,58,237,0.2); color: #a78bfa; }
+	.font-btn.on { background: rgba(124,58,237,0.2); color: var(--nx-accent-2-soft); }
 
 	.fill-toggle {
 		width: 28px;
@@ -555,7 +555,7 @@
 		transition: all 0.1s;
 	}
 	.fill-toggle:hover { background: rgba(255,255,255,0.08); color: #d1d5db; }
-	.fill-toggle.on { background: rgba(124,58,237,0.2); color: #a78bfa; }
+	.fill-toggle.on { background: rgba(124,58,237,0.2); color: var(--nx-accent-2-soft); }
 
 	.width-btn {
 		width: 28px;
@@ -579,7 +579,7 @@
 		display: block;
 		flex-shrink: 0;
 	}
-	.width-btn.selected .width-dot { background: #a78bfa; }
+	.width-btn.selected .width-dot { background: var(--nx-accent-2-soft); }
 
 	.dash-btn {
 		padding: 2px 7px;
@@ -594,5 +594,5 @@
 		transition: all 0.1s;
 	}
 	.dash-btn:hover { background: rgba(255,255,255,0.06); color: #d1d5db; }
-	.dash-btn.on { background: rgba(124,58,237,0.2); color: #a78bfa; }
+	.dash-btn.on { background: rgba(124,58,237,0.2); color: var(--nx-accent-2-soft); }
 </style>

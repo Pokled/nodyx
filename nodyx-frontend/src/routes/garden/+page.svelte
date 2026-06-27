@@ -645,7 +645,7 @@
 	border-color: rgba(255,255,255,0.1);
 }
 .seed-badge--done {
-	color: #a78bfa;
+	color: var(--nx-accent-2-soft);
 	border-color: rgba(167,139,250,0.3);
 }
 

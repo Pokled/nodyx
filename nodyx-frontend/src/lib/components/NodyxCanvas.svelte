@@ -2088,7 +2088,7 @@
 			</span>
 			<button onclick={handleRequestAccess} disabled={accessAsked}
 				style="padding:5px 13px; border-radius:999px; font-size:12px; font-weight:600; cursor:{accessAsked ? 'default' : 'pointer'}; border:none; color:#fff; white-space:nowrap;
-				       background:{accessAsked ? 'rgba(16,185,129,.3)' : 'linear-gradient(to right,#4f46e5,#06b6d4)'};">
+				       background:{accessAsked ? 'rgba(16,185,129,.3)' : 'linear-gradient(to right,var(--nx-accent-strong),#06b6d4)'};">
 				{accessAsked ? '✓ Demande envoyée' : "Demander l'accès en édition"}
 			</button>
 		</div>
@@ -2205,7 +2205,7 @@
 					<div
 						class="w-3 h-3 rounded-full border-2 border-white shadow-lg"
 						class:canvas-cursor-speaking={cursor.speaking}
-						style="background:{cursor.speaking ? '#a855f7' : '#4ade80'};"
+						style="background:{cursor.speaking ? 'var(--nx-accent-2)' : '#4ade80'};"
 					></div>
 					<span class="absolute left-4 -top-1 whitespace-nowrap text-xs font-semibold
 					             text-white bg-gray-900/80 px-1.5 py-0.5 rounded shadow">
@@ -2376,7 +2376,7 @@
 		transition: all 0.12s;
 	}
 	.sync-btn:hover { background: rgba(255,255,255,0.05); color: #9ca3af; }
-	.sync-btn.sync-leading  { color: #a855f7; background: rgba(168,85,247,0.08); }
+	.sync-btn.sync-leading  { color: var(--nx-accent-2); background: rgba(168,85,247,0.08); }
 	.sync-btn.sync-leading:hover  { background: rgba(168,85,247,0.14); }
 	.sync-btn.sync-following { color: #22d3ee; background: rgba(34,211,238,0.08); }
 	.sync-btn.sync-following:hover { background: rgba(34,211,238,0.14); }

@@ -459,8 +459,8 @@
 							class="profile-action-btn profile-follow-btn"
 							class:profile-follow-btn--following={following}
 							style={following
-								? 'background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.5); color: #818cf8'
-								: 'background: #6366f1; border-color: #6366f1; color: white'}
+								? 'background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.5); color: var(--nx-accent-soft)'
+								: 'background: var(--nx-accent); border-color: var(--nx-accent); color: white'}
 						>
 							{#if followLoading}
 								<span class="profile-follow-dot"></span>
@@ -526,7 +526,7 @@
 		<div class="relative h-3 rounded-full overflow-hidden" style="background: color-mix(in srgb, var(--p-accent) 12%, rgba(0,0,0,0.3))">
 			<div
 				class="profile-xp-bar h-full rounded-full"
-				style="width: {levelProgress}%; background: linear-gradient(90deg, color-mix(in srgb, var(--p-accent) 70%, #8b5cf6), var(--p-accent))"
+				style="width: {levelProgress}%; background: linear-gradient(90deg, color-mix(in srgb, var(--p-accent) 70%, var(--nx-accent-2-mid)), var(--p-accent))"
 			></div>
 		</div>
 

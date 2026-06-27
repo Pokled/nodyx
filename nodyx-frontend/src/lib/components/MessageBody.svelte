@@ -101,7 +101,7 @@
 		text-decoration-color: rgba(191, 219, 254, 0.85);
 	}
 	.message-body__mention {
-		color: #c4b5fd;
+		color: var(--nx-accent-2-soft2);
 		font-weight: 600;
 		text-decoration: none;
 		padding: 0 2px;

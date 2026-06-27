@@ -207,7 +207,7 @@
 		font-weight: 800;
 		text-transform: uppercase;
 		letter-spacing: .2em;
-		color: var(--np, #a78bfa);
+		color: var(--np, var(--nx-accent-2-soft));
 		white-space: nowrap;
 	}
 
@@ -241,7 +241,7 @@
 	}
 	.rt-avatar--sm { width: 20px; height: 20px; border-radius: 2px; }
 	.rt-avatar img  { width: 100%; height: 100%; object-fit: cover; }
-	.rt-avatar span { font-size: 13px; font-weight: 700; color: #a78bfa; }
+	.rt-avatar span { font-size: 13px; font-weight: 700; color: var(--nx-accent-2-soft); }
 	.rt-avatar--sm span { font-size: 9px; }
 
 	/* ── LIST style ─────────────────────────────────────────────────────────── */
@@ -277,7 +277,7 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-	.rt-item:hover .rt-item-title { color: #c4b5fd; }
+	.rt-item:hover .rt-item-title { color: var(--nx-accent-2-soft2); }
 	.rt-item-title--locked { color: #6b7280 !important; }
 
 	.rt-lock { width: 11px; height: 11px; flex-shrink: 0; color: #4b5563; }
@@ -292,7 +292,7 @@
 	.rt-cat-badge {
 		font-size: 10px;
 		font-weight: 600;
-		color: var(--np, #a78bfa);
+		color: var(--np, var(--nx-accent-2-soft));
 		background: rgba(167,139,250,.1);
 		border: 1px solid rgba(167,139,250,.18);
 		padding: 0 5px;
@@ -342,7 +342,7 @@
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: .12em;
-		color: var(--np, #a78bfa);
+		color: var(--np, var(--nx-accent-2-soft));
 	}
 
 	.rt-card-title {
@@ -358,7 +358,7 @@
 		margin: 0;
 		flex: 1;
 	}
-	.rt-card:hover .rt-card-title { color: #c4b5fd; }
+	.rt-card:hover .rt-card-title { color: var(--nx-accent-2-soft2); }
 
 	.rt-card-meta {
 		display: flex;

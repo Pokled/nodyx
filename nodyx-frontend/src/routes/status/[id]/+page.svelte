@@ -138,7 +138,7 @@
 
 <style>
 	.s-wrap { max-width: 600px; margin: 0 auto; padding: 1rem 1rem 4rem; }
-	.s-back { display: inline-block; margin-bottom: 1rem; color: #818cf8; text-decoration: none; font-size: 0.875rem; }
+	.s-back { display: inline-block; margin-bottom: 1rem; color: var(--nx-accent-soft); text-decoration: none; font-size: 0.875rem; }
 	.s-back:hover { text-decoration: underline; }
 	.s-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(255,255,255,0.02); padding: 1.1rem; margin-bottom: 0.75rem; }
 	.s-card--reply { margin-left: 1rem; background: rgba(255,255,255,0.01); }
@@ -152,7 +152,7 @@
 	.s-link { display: block; margin-top: 0.6rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; text-decoration: none; }
 	.s-link-img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
 	.s-link-body { padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.2rem; }
-	.s-link-site { font-size: 0.7rem; text-transform: uppercase; color: #818cf8; font-weight: 700; }
+	.s-link-site { font-size: 0.7rem; text-transform: uppercase; color: var(--nx-accent-soft); font-weight: 700; }
 	.s-link-title { font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.9rem; }
 	.s-quoted { display: block; margin-top: 0.6rem; padding: 0.7rem 0.85rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; }
 	.s-quoted:hover { background: rgba(255,255,255,0.03); }

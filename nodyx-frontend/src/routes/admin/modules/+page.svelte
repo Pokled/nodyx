@@ -164,12 +164,12 @@
 							         : enabled
 							           ? 'bg-gray-900/80 border-gray-700/80 shadow-lg'
 							           : 'bg-gray-900/30 border-gray-800/40'}"
-							style={enabled && !isCore && !isSoon ? `box-shadow: 0 0 0 1px ${display?.color ?? '#7c3aed'}22, 0 4px 20px ${display?.color ?? '#7c3aed'}11` : ''}
+							style={enabled && !isCore && !isSoon ? `box-shadow: 0 0 0 1px ${display?.color ?? 'var(--nx-accent-2-strong)'}22, 0 4px 20px ${display?.color ?? 'var(--nx-accent-2-strong)'}11` : ''}
 						>
 							<!-- Enabled glow bar -->
 							{#if enabled && !isCore && !isSoon}
 								<div class="absolute top-0 left-0 right-0 h-px"
-								     style="background: linear-gradient(90deg, transparent, {display?.color ?? '#7c3aed'}88, transparent)"></div>
+								     style="background: linear-gradient(90deg, transparent, {display?.color ?? 'var(--nx-accent-2-strong)'}88, transparent)"></div>
 							{/if}
 
 							<div class="p-4">
@@ -213,7 +213,7 @@
 											class="relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900
 											       {enabled ? 'focus:ring-violet-500' : 'focus:ring-gray-600'}
 											       {isSaving ? 'opacity-50 cursor-wait' : 'cursor-pointer'}"
-											style="background: {enabled ? (display?.color ?? '#7c3aed') : '#374151'}"
+											style="background: {enabled ? (display?.color ?? 'var(--nx-accent-2-strong)') : '#374151'}"
 											aria-label="{enabled ? 'Désactiver' : 'Activer'} {display?.name}"
 										>
 											<span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200

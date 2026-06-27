@@ -8,6 +8,23 @@ html, body {
   overscroll-behavior: none;
 }
 
+/* ── Palette de marque (design tokens) ───────────────────────────────────────
+   Source unique des accents indigo/violet de l'app. Les défauts ci-dessous =
+   les hex historiques -> nodyx.org rend à l'identique. Une instance surcharge
+   ces variables (via theme_css posé par l'owner) pour imposer son univers.
+   Les couleurs en dur des composants ont été remplacées par var(--nx-*).      */
+:root {
+  --nx-accent:          #6366f1;  /* indigo-500 : accent principal */
+  --nx-accent-strong:   #4f46e5;  /* indigo-600 */
+  --nx-accent-soft:     #818cf8;  /* indigo-400 */
+  --nx-accent-deep:     #6d28d9;  /* violet-700 */
+  --nx-accent-2:        #a855f7;  /* purple-500 : 2e couleur des dégradés */
+  --nx-accent-2-strong: #7c3aed;  /* violet-600 */
+  --nx-accent-2-mid:    #8b5cf6;  /* violet-500 */
+  --nx-accent-2-soft:   #a78bfa;  /* violet-400 */
+  --nx-accent-2-soft2:  #c4b5fd;  /* violet-300 */
+}
+
 /* ── Theme CSS vars (définis dynamiquement par +layout.svelte via appVars) ──
    Portée actuelle :
      · Layout chrome (nav, galaxy bar, members bar, bottom nav) ✓

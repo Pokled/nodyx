@@ -1014,7 +1014,7 @@
 					</button>
 					<!-- Channel name -->
 					<div class="flex items-center gap-2 min-w-0">
-						<span class="text-sm font-black shrink-0" style="color: #a78bfa; font-family: 'Space Grotesk', sans-serif">#</span>
+						<span class="text-sm font-black shrink-0" style="color: var(--nx-accent-2-soft); font-family: 'Space Grotesk', sans-serif">#</span>
 						<span class="text-sm font-bold truncate" style="color: #e2e8f0; font-family: 'Space Grotesk', sans-serif">{selectedChannel.name}</span>
 						{#if selectedChannel.description}
 							<span class="hidden sm:inline text-[11px] truncate" style="color: #374151; border-left: 1px solid rgba(255,255,255,.08); padding-left: 0.75rem; margin-left: 0.25rem">{selectedChannel.description}</span>
@@ -1047,7 +1047,7 @@
 			{#if pinnedMessage && showPinned}
 				<div class="shrink-0 flex items-center gap-2.5 px-4 py-1.5 text-xs" style="background: rgba(124,58,237,.06); border-bottom: 1px solid rgba(124,58,237,.15)">
 					<svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="#a78bfa"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
-					<span class="font-black uppercase tracking-wider shrink-0 text-[10px]" style="color: #a78bfa; font-family: 'Space Grotesk', sans-serif">{tFn('chat.pinned')}</span>
+					<span class="font-black uppercase tracking-wider shrink-0 text-[10px]" style="color: var(--nx-accent-2-soft); font-family: 'Space Grotesk', sans-serif">{tFn('chat.pinned')}</span>
 					<span class="truncate flex-1" style="color: #6b7280">
 						<span class="font-semibold" style="color: #4b5563">{pinnedMessage.author_username} · </span>{pinnedMessage.content?.replace(/<[^>]*>/g, '').slice(0, 120) ?? ''}
 					</span>
@@ -1144,8 +1144,8 @@
 
 							<!-- Reply quote -->
 							{#if msg.reply_to_id && !msg.is_deleted}
-								<div class="flex items-center gap-2 mb-1.5 pl-2 py-0.5 opacity-70" style="border-left: 2px solid #7c3aed">
-									<span class="text-[10px] font-bold shrink-0" style="color: #a78bfa">{msg.reply_to_username}</span>
+								<div class="flex items-center gap-2 mb-1.5 pl-2 py-0.5 opacity-70" style="border-left: 2px solid var(--nx-accent-2-strong)">
+									<span class="text-[10px] font-bold shrink-0" style="color: var(--nx-accent-2-soft)">{msg.reply_to_username}</span>
 									<span class="text-[10px] truncate" style="color: #4b5563">{msg.reply_to_content?.replace(/<[^>]*>/g, '').slice(0, 100) ?? tFn('chat.deleted')}</span>
 								</div>
 							{/if}
@@ -1245,7 +1245,7 @@
 								<div data-picker class="relative">
 									<button onclick={() => toggleEmojiPicker(msg.id)} title="Plus…"
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
-									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
 									</button>
@@ -1259,7 +1259,7 @@
 								<!-- Répondre -->
 								<button onclick={() => startReply(msg)} title={tFn('chat.reply')}
 								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
-								        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+								        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
 									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
 								</button>
@@ -1267,7 +1267,7 @@
 									<!-- Modifier -->
 									<button onclick={() => startEdit(msg)} title="Modifier"
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
-									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
 									</button>
@@ -1275,9 +1275,9 @@
 								{#if isAdmin}
 									<!-- Épingler -->
 									<button onclick={() => pinMessage(msg)} title={pinnedMessage?.id === msg.id ? 'Désépingler' : 'Épingler'}
-									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: {pinnedMessage?.id === msg.id ? '#a78bfa' : '#4b5563'}"
-									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
-									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = pinnedMessage?.id === msg.id ? '#a78bfa' : '#4b5563'}>
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: {pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : '#4b5563'}"
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : '#4b5563'}>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
 									</button>
 								{/if}
@@ -1322,7 +1322,7 @@
 					style="background: rgba(13,13,20,0.95); border: 1px solid rgba(124,58,237,0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);"
 					transition:fade={{ duration: 120 }}
 				>
-					<span class="text-xs font-semibold" style="color: #a78bfa;">
+					<span class="text-xs font-semibold" style="color: var(--nx-accent-2-soft);">
 						{#if unreadWhileScrolled > 0}{unreadWhileScrolled} nouveau{unreadWhileScrolled > 1 ? 'x' : ''}{:else}Retour en bas{/if}
 					</span>
 					<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2.5" viewBox="0 0 24 24">
@@ -1344,9 +1344,9 @@
 						</div>
 						<span class="text-[10px] font-semibold italic" style="color: #4b5563">
 							{#if typingUsers.length === 1}
-								<span style="color: #a78bfa">{typingUsers[0]}</span> {tFn('chat.typing_suffix_one')}
+								<span style="color: var(--nx-accent-2-soft)">{typingUsers[0]}</span> {tFn('chat.typing_suffix_one')}
 							{:else if typingUsers.length === 2}
-								<span style="color: #a78bfa">{typingUsers[0]}</span> {tFn('chat.typing_and')} <span style="color: #a78bfa">{typingUsers[1]}</span> {tFn('chat.typing_suffix_plural')}
+								<span style="color: var(--nx-accent-2-soft)">{typingUsers[0]}</span> {tFn('chat.typing_and')} <span style="color: var(--nx-accent-2-soft)">{typingUsers[1]}</span> {tFn('chat.typing_suffix_plural')}
 							{:else}
 								{tFn('chat.typing_many')}
 							{/if}
@@ -1452,9 +1452,9 @@
 
 				<!-- Reply preview bar -->
 				{#if replyTo}
-					<div class="flex items-center gap-2.5 px-3 py-1.5 mb-2 text-xs" style="background: rgba(124,58,237,.08); border-left: 2px solid #7c3aed">
+					<div class="flex items-center gap-2.5 px-3 py-1.5 mb-2 text-xs" style="background: rgba(124,58,237,.08); border-left: 2px solid var(--nx-accent-2-strong)">
 						<svg class="w-3 h-3 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-						<span class="font-bold shrink-0" style="color: #a78bfa">{replyTo.author_username}</span>
+						<span class="font-bold shrink-0" style="color: var(--nx-accent-2-soft)">{replyTo.author_username}</span>
 						<span class="truncate flex-1" style="color: #4b5563">{replyTo.content?.replace(/<[^>]*>/g, '').slice(0, 80) ?? ''}</span>
 						<button onclick={() => replyTo = null} title="Annuler"
 						        class="shrink-0 w-4 h-4 flex items-center justify-center text-sm leading-none transition-colors" style="color: #374151">×</button>
@@ -1495,18 +1495,18 @@
 						<button data-gif-picker onclick={() => { showGifPicker = !showGifPicker; if (showGifPicker && gifProvider) gifQuery = ''; }}
 						        title="GIF"
 						        class="w-7 h-7 flex items-center justify-center text-[10px] font-black uppercase tracking-wide transition-colors"
-						        style="color: {showGifPicker ? '#a78bfa' : '#4b5563'}; background: {showGifPicker ? 'rgba(124,58,237,.12)' : 'transparent'}">GIF</button>
+						        style="color: {showGifPicker ? 'var(--nx-accent-2-soft)' : '#4b5563'}; background: {showGifPicker ? 'rgba(124,58,237,.12)' : 'transparent'}">GIF</button>
 						<!-- Poll -->
 						<button onclick={() => showPollCreator = true} title={tFn('chat.new_poll')}
 						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
-						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
 						</button>
 						<!-- Rich editor -->
 						<button onclick={() => showRichModal = true} title={tFn('chat.rich_editor')}
 						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
-						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#a78bfa'}
+						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
 						</button>
@@ -1515,7 +1515,7 @@
 						<!-- Send -->
 						<button onclick={sendMessage} disabled={!inputText.trim() || isRateLimited}
 						        class="w-7 h-7 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, #7c3aed, #0e7490)' : 'rgba(255,255,255,.06)'}; color: {inputText.trim() ? '#fff' : '#4b5563'}"
+						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, var(--nx-accent-2-strong), #0e7490)' : 'rgba(255,255,255,.06)'}; color: {inputText.trim() ? '#fff' : '#4b5563'}"
 						        title={isRateLimited ? tFn('chat.antispam_loading') : tFn('chat.send')}>
 							{#if isRateLimited}
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1678,7 +1678,7 @@
 		width: 5px;
 		height: 5px;
 		border-radius: 50%;
-		background: #818cf8; /* indigo-400 */
+		background: var(--nx-accent-soft); /* indigo-400 */
 		animation: typing-bounce 1.1s infinite ease-in-out;
 	}
 	@keyframes typing-bounce {
@@ -1707,7 +1707,7 @@
 	.chat-reaction-mine {
 		background: rgba(124,58,237,.18);
 		border: 1px solid rgba(124,58,237,.45);
-		color: #c4b5fd;
+		color: var(--nx-accent-2-soft2);
 		box-shadow: 0 0 8px rgba(124,58,237,.15);
 	}
 	.chat-reaction-mine:hover {
@@ -1769,7 +1769,7 @@
 	}
 	
 	.message-row:hover {
-    border-left-color: #6366f1; /* Indigo */
+    border-left-color: var(--nx-accent); /* Indigo */
     background: linear-gradient(to right, rgba(99, 102, 241, 0.05), transparent);
 	}	
 

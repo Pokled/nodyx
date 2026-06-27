@@ -86,6 +86,6 @@
 	.og-actions { display: flex; justify-content: flex-end; }
 	.og-btn-primary {
 		padding: 6px 12px; font-size: 12px; color: #fff;
-		background: #6366f1; border: none; border-radius: 3px; cursor: pointer;
+		background: var(--nx-accent); border: none; border-radius: 3px; cursor: pointer;
 	}
 </style>

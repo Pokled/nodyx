@@ -68,7 +68,7 @@
 	<!-- Skeleton pendant le chargement du JS -->
 	<div class="w-full flex items-center justify-center py-8 gap-2" style="color:#374151">
 		<div class="w-4 h-4 rounded-full border-2 animate-spin"
-		     style="border-color:rgba(167,139,250,.2); border-top-color:#a78bfa"></div>
+		     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
 		<span class="text-xs">Chargement du widget…</span>
 	</div>
 

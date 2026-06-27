@@ -502,7 +502,7 @@
     transition: border-color .15s, background .15s;
   }
   .type-card:hover    { border-color: #7c3aed88; background: var(--bg-3, #252535); }
-  .type-card.selected { border-color: #7c3aed; background: #7c3aed18; }
+  .type-card.selected { border-color: var(--nx-accent-2-strong); background: #7c3aed18; }
 
   .type-icon    { font-size: 1.8rem; }
   .type-label   { font-weight: 700; font-size: 1rem; }
@@ -543,7 +543,7 @@
     outline: none;
     transition: border-color .15s;
   }
-  .field input:focus, .field textarea:focus { border-color: #7c3aed; }
+  .field input:focus, .field textarea:focus { border-color: var(--nx-accent-2-strong); }
   .field textarea { resize: vertical; min-height: 56px; }
 
   .sub-field { padding-left: 16px; }
@@ -558,14 +558,14 @@
     flex-direction: column;
     gap: 10px;
   }
-  .bulk-generator h4 { margin: 0; font-size: 0.82rem; color: #a78bfa; }
+  .bulk-generator h4 { margin: 0; font-size: 0.82rem; color: var(--nx-accent-2-soft); }
   .bulk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .btn-generate {
     padding: 7px 14px;
     background: #7c3aed22;
     border: 1px solid #7c3aed44;
     border-radius: 7px;
-    color: #a78bfa;
+    color: var(--nx-accent-2-soft);
     font-weight: 600;
     cursor: pointer;
     font-size: 0.82rem;
@@ -583,7 +583,7 @@
     background: #7c3aed22;
     border: 1px solid #7c3aed44;
     border-radius: 6px;
-    color: #a78bfa;
+    color: var(--nx-accent-2-soft);
     font-size: 0.78rem;
     cursor: pointer;
     transition: background .15s;
@@ -622,7 +622,7 @@
     width: 100%;
     box-sizing: border-box;
   }
-  .opt-fields input:focus { border-color: #7c3aed; }
+  .opt-fields input:focus { border-color: var(--nx-accent-2-strong); }
   .input-opt-desc { font-size: 0.8rem !important; color: var(--text-muted, #888) !important; }
 
   .sched-row-fields {
@@ -678,7 +678,7 @@
     font-size: 0.88rem;
     padding: 8px 0;
   }
-  .toggle-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #7c3aed; cursor: pointer; }
+  .toggle-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--nx-accent-2-strong); cursor: pointer; }
 
   .settings-recap {
     margin-top: 6px;
@@ -713,7 +713,7 @@
     font-size: 0.85rem;
     transition: border-color .15s;
   }
-  .btn-back:hover { border-color: #7c3aed; color: var(--text, #e0e0e0); }
+  .btn-back:hover { border-color: var(--nx-accent-2-strong); color: var(--text, #e0e0e0); }
 
   .footer-error {
     flex: 1;
@@ -724,7 +724,7 @@
   .btn-submit {
     margin-left: auto;
     padding: 8px 22px;
-    background: #7c3aed;
+    background: var(--nx-accent-2-strong);
     border: none;
     border-radius: 8px;
     color: #fff;

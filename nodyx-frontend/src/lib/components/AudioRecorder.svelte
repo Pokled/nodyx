@@ -361,7 +361,7 @@
 	.ar-spin {
 		width: 10px;
 		height: 10px;
-		border: 2px solid #818cf8;
+		border: 2px solid var(--nx-accent-soft);
 		border-top-color: transparent;
 		border-radius: 50%;
 		animation: ar-spin 0.7s linear infinite;

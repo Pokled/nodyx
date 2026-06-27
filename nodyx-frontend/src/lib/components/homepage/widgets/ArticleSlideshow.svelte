@@ -364,7 +364,7 @@
 	.as-spinner {
 		width: 24px; height: 24px;
 		border: 2px solid rgba(167,139,250,.2);
-		border-top-color: #a78bfa;
+		border-top-color: var(--nx-accent-2-soft);
 		border-radius: 50%;
 		animation: spin .7s linear infinite;
 	}
@@ -415,7 +415,7 @@
 	.as-cat-line {
 		height: 1px;
 		width: 2.5rem;
-		background: linear-gradient(to right, #7c3aed, #06b6d4);
+		background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4);
 		flex-shrink: 0;
 	}
 	.as-cat-text {
@@ -423,7 +423,7 @@
 		font-weight: 800;
 		text-transform: uppercase;
 		letter-spacing: .22em;
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 	}
 	.as-cat-badge {
 		font-size: 10px;
@@ -455,7 +455,7 @@
 		text-decoration: none;
 		transition: color .15s;
 	}
-	.as-title a:hover { color: #c4b5fd; }
+	.as-title a:hover { color: var(--nx-accent-2-soft2); }
 
 	/* ── Excerpt ────────────────────────────────────────────────────────────── */
 	.as-excerpt {
@@ -556,7 +556,7 @@
 		top: -1px;
 		left: 0;
 		height: 4px;
-		background: linear-gradient(to right, #7c3aed, #06b6d4);
+		background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4);
 		transition: none;
 	}
 	.as-arrows {
@@ -578,7 +578,7 @@
 	}
 	.as-arrow:hover {
 		border-color: rgba(124,58,237,.5);
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 	}
 	.as-arrow svg { width: 14px; height: 14px; }
 

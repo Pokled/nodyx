@@ -264,8 +264,8 @@
 }
 
 .wiki-cat--active {
-	color: #a78bfa;
-	border-bottom-color: #a78bfa;
+	color: var(--nx-accent-2-soft);
+	border-bottom-color: var(--nx-accent-2-soft);
 }
 
 /* ── Body ───────────────────────────────────────────────────────────────────── */
@@ -296,7 +296,7 @@
 }
 
 .wiki-card:hover .wiki-card-title {
-	color: #c4b5fd;
+	color: var(--nx-accent-2-soft2);
 }
 
 .wiki-card-cat {
@@ -400,12 +400,12 @@
 
 .wiki-empty-link {
 	font-size: 0.8125rem;
-	color: #a78bfa;
+	color: var(--nx-accent-2-soft);
 	text-decoration: none;
 	transition: color 0.15s;
 }
 
 .wiki-empty-link:hover {
-	color: #c4b5fd;
+	color: var(--nx-accent-2-soft2);
 }
 </style>

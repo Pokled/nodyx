@@ -272,7 +272,7 @@
 
 		{#each playlists as p (p.id)}
 			{@const isSelected = selectedPlaylistId === p.id}
-			{@const accent = p.color ?? '#a78bfa'}
+			{@const accent = p.color ?? 'var(--nx-accent-2-soft)'}
 			<li class="group relative">
 				{#if editingId === p.id}
 					<div class="px-2 py-2 bg-zinc-950/60 flex flex-col gap-1.5">
@@ -281,8 +281,8 @@
 						<div class="flex items-center gap-1.5">
 							<label class="cursor-pointer relative shrink-0" title="Couleur d'accent">
 								<span class="block w-5 h-5 rounded-full ring-1 ring-white/20"
-									style="background: {editColor || '#a78bfa'};"></span>
-								<input type="color" value={editColor || '#a78bfa'}
+									style="background: {editColor || 'var(--nx-accent-2-soft)'};"></span>
+								<input type="color" value={editColor || 'var(--nx-accent-2-soft)'}
 									oninput={(e) => editColor = e.currentTarget.value}
 									class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"/>
 							</label>

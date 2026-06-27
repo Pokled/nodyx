@@ -184,7 +184,7 @@
 
   .btn-new {
     padding: 8px 18px;
-    background: #7c3aed;
+    background: var(--nx-accent-2-strong);
     border: none;
     border-radius: 8px;
     color: #fff;
@@ -209,7 +209,7 @@
     transition: border-color .15s, color .15s, background .15s;
   }
   .filter-tab:hover { border-color: #7c3aed88; color: var(--text, #e0e0e0); }
-  .filter-tab.active { border-color: #7c3aed; color: #a78bfa; background: #7c3aed18; }
+  .filter-tab.active { border-color: var(--nx-accent-2-strong); color: var(--nx-accent-2-soft); background: #7c3aed18; }
 
   /* ── Empty ── */
   .empty-state {
@@ -227,7 +227,7 @@
     background: #7c3aed22;
     border: 1px solid #7c3aed44;
     border-radius: 8px;
-    color: #a78bfa;
+    color: var(--nx-accent-2-soft);
     cursor: pointer;
     font-weight: 600;
     transition: background .15s;
@@ -263,7 +263,7 @@
     padding: 2px 8px;
     border-radius: 99px;
     background: #7c3aed22;
-    color: #a78bfa;
+    color: var(--nx-accent-2-soft);
     border: 1px solid #7c3aed44;
     font-weight: 600;
     text-transform: capitalize;

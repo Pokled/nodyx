@@ -187,7 +187,7 @@
                                     {model.name}
                                     {#if status.currentModel === model.name}
                                         <span
-                                            class="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_5px_#a855f7] animate-pulse"
+                                            class="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_5px_var(--nx-accent-2)] animate-pulse"
                                         ></span>
                                     {/if}
                                 </span>

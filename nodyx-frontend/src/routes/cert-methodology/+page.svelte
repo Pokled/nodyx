@@ -196,9 +196,9 @@
       border-radius: 6px; padding: 0.875rem 1rem;
       font-size: 0.75rem; color: #64748b; line-height: 1.8;
     ">
-      <div><span style="color:#6366f1;"># Désactiver tous les rapports CERT</span></div>
+      <div><span style="color:var(--nx-accent);"># Désactiver tous les rapports CERT</span></div>
       <div><span style="color:#475569;">CERT_EMAIL_TO=</span><span style="color:#94a3b8;">          # vide = aucun envoi</span></div>
-      <div style="margin-top:0.5rem;"><span style="color:#6366f1;"># Configurer vers ses propres équipes</span></div>
+      <div style="margin-top:0.5rem;"><span style="color:var(--nx-accent);"># Configurer vers ses propres équipes</span></div>
       <div><span style="color:#475569;">CERT_EMAIL_TO=</span><span style="color:#10b981;">security@mon-organisation.fr</span></div>
       <div><span style="color:#475569;">CERT_EMAIL_MAX_PER_DAY=</span><span style="color:#f59e0b;">3</span></div>
     </div>

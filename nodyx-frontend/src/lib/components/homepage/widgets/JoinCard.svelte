@@ -75,7 +75,7 @@
 		{/if}
 
 		<div class="text-xs leading-tight" style="color:#6b7280">
-			<span style="color:#a78bfa; font-weight:700">{memberCount.toLocaleString()}</span>
+			<span style="color:var(--nx-accent-2-soft); font-weight:700">{memberCount.toLocaleString()}</span>
 			{tFn('common.members')}
 			{#if showOnlineCount}
 				<span class="mx-1" style="color:#374151">·</span>
@@ -88,7 +88,7 @@
 	<!-- CTA -->
 	<a href="/auth/register"
 	   class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
-	   style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,#7c3aed,#0e7490); border:1px solid rgba(124,58,237,.4)">
+	   style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-strong),#0e7490); border:1px solid rgba(124,58,237,.4)">
 		{ctaText || tFn('common.join') || 'Rejoindre'}
 		<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>

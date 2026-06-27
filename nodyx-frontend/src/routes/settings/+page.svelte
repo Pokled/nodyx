@@ -485,7 +485,7 @@
 
             <button class="sb-item {activeSection === 'network' ? 'active' : ''}"
                     onclick={() => activeSection = 'network'}>
-                <span class="sb-icon" style="background: rgba(99,102,241,0.15); color: #818cf8">
+                <span class="sb-icon" style="background: rgba(99,102,241,0.15); color: var(--nx-accent-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                     </svg>
@@ -495,7 +495,7 @@
 
             <button class="sb-item {activeSection === 'notifications' ? 'active' : ''}"
                     onclick={() => activeSection = 'notifications'}>
-                <span class="sb-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa">
+                <span class="sb-icon" style="background: rgba(139,92,246,0.15); color: var(--nx-accent-2-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                     </svg>
@@ -538,7 +538,7 @@
 
             <button class="sb-item {activeSection === 'encryption' ? 'active' : ''}"
                     onclick={() => activeSection = 'encryption'}>
-                <span class="sb-icon" style="background: rgba(99,102,241,0.12); color: #818cf8">
+                <span class="sb-icon" style="background: rgba(99,102,241,0.12); color: var(--nx-accent-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
@@ -561,7 +561,7 @@
 
             <button class="sb-item {activeSection === 'connected-accounts' ? 'active' : ''}"
                     onclick={() => activeSection = 'connected-accounts'}>
-                <span class="sb-icon" style="background: rgba(124,58,237,0.12); color: #a78bfa">
+                <span class="sb-icon" style="background: rgba(124,58,237,0.12); color: var(--nx-accent-2-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
                     </svg>
@@ -612,7 +612,7 @@
 
         <!-- ═══ RÉSEAU ══════════════════════════════════════════════════════ -->
         {#if activeSection === 'network'}
-        <div class="s-pane" style="--accent: #818cf8; --accent-bg: rgba(99,102,241,0.08); --accent-border: rgba(99,102,241,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-accent-soft); --accent-bg: rgba(99,102,241,0.08); --accent-border: rgba(99,102,241,0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -632,7 +632,7 @@
 
         <!-- ═══ NOTIFICATIONS ════════════════════════════════════════════════ -->
         {#if activeSection === 'notifications'}
-        <div class="s-pane" style="--accent: #a78bfa; --accent-bg: rgba(139,92,246,0.08); --accent-border: rgba(139,92,246,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-accent-2-soft); --accent-bg: rgba(139,92,246,0.08); --accent-border: rgba(139,92,246,0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -928,7 +928,7 @@
 
         <!-- ═══ MESSAGES CHIFFRÉS (sauvegarde de clé E2E) ════════════════════ -->
         {#if activeSection === 'encryption' && $page.data.user}
-        <div class="s-pane" style="--accent: #818cf8; --accent-bg: rgba(99,102,241,0.08); --accent-border: rgba(99,102,241,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-accent-soft); --accent-bg: rgba(99,102,241,0.08); --accent-border: rgba(99,102,241,0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -1046,7 +1046,7 @@
 
         <!-- ═══ COMPTES LIÉS ══════════════════════════════════════════════════ -->
         {#if activeSection === 'connected-accounts'}
-        <div class="s-pane" style="--accent: #a78bfa; --accent-bg: rgba(124,58,237,0.08); --accent-border: rgba(124,58,237,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-accent-2-soft); --accent-bg: rgba(124,58,237,0.08); --accent-border: rgba(124,58,237,0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -1061,7 +1061,7 @@
 
             <div class="s-card" style="padding: 20px">
                 <div style="display: flex; gap: 16px; align-items: flex-start;">
-                    <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg,#9146ff,#7c3aed); display:flex; align-items:center; justify-content:center; font-size: 22px; flex-shrink: 0;">
+                    <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg,#9146ff,var(--nx-accent-2-strong)); display:flex; align-items:center; justify-content:center; font-size: 22px; flex-shrink: 0;">
                         🎬
                     </div>
                     <div style="flex: 1; min-width: 0;">
@@ -1075,7 +1075,7 @@
                         </div>
                         <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8; line-height: 1.5;">
                             {#if twitchLink}
-                                {tFn('settings.connected.twitch_connected_pre')} <strong style="color:#a78bfa;">@{twitchLink.twitchLogin}</strong>{tFn('settings.connected.twitch_connected_post')}
+                                {tFn('settings.connected.twitch_connected_pre')} <strong style="color:var(--nx-accent-2-soft);">@{twitchLink.twitchLogin}</strong>{tFn('settings.connected.twitch_connected_post')}
                             {:else}
                                 {tFn('settings.connected.twitch_unlinked_desc')}
                             {/if}
@@ -1104,9 +1104,9 @@
                                 <button
                                     onclick={connectTwitch}
                                     disabled={twitchConnecting}
-                                    style="font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 8px; background: #7c3aed; border: 1px solid #7c3aed; color: #fff; cursor: pointer; transition: background 0.15s; display: inline-flex; align-items: center; gap: 8px;"
-                                    onmouseenter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#6d28d9' }}
-                                    onmouseleave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#7c3aed' }}
+                                    style="font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 8px; background: var(--nx-accent-2-strong); border: 1px solid var(--nx-accent-2-strong); color: #fff; cursor: pointer; transition: background 0.15s; display: inline-flex; align-items: center; gap: 8px;"
+                                    onmouseenter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--nx-accent-deep)' }}
+                                    onmouseleave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--nx-accent-2-strong)' }}
                                 >
                                     {#if twitchConnecting}
                                         <span style="display: inline-block; animation: spin 1s linear infinite;">◌</span> {tFn('settings.connected.redirecting')}
@@ -1262,7 +1262,7 @@
             <!-- ── Sous-section : Notifications Streamer (Twitch) ── -->
             {#if isStreamerNotifVisible()}
             {@const cur = $streamerNotifSettings}
-            <div class="s-pane-header" style="margin-top: 28px; --accent:#a855f7; --accent-bg:rgba(168,85,247,0.10); --accent-border:rgba(168,85,247,0.25)">
+            <div class="s-pane-header" style="margin-top: 28px; --accent:var(--nx-accent-2); --accent-bg:rgba(168,85,247,0.10); --accent-border:rgba(168,85,247,0.25)">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
                         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
@@ -1303,7 +1303,7 @@
                             oninput={(e) => streamerNotifSettings.update(s => ({ ...s, volume: parseFloat((e.target as HTMLInputElement).value) }))}
                             class="sound-slider"
                         />
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#a855f7;flex-shrink:0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--nx-accent-2);flex-shrink:0">
                             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>
                         </svg>
                         <span class="sound-vol-label">{Math.round(cur.volume * 100)}%</span>
@@ -1547,7 +1547,7 @@
 }
 .sb-version { font-size: 11px; color: #1f2937; font-family: monospace; }
 .sb-docs-link { font-size: 11px; color: #374151; text-decoration: none; transition: color 150ms; }
-.sb-docs-link:hover { color: #6366f1; }
+.sb-docs-link:hover { color: var(--nx-accent); }
 
 /* ── Main content ────────────────────────────────────────────────────────── */
 .settings-main {
@@ -1629,7 +1629,7 @@
     transition: background 200ms;
     flex-shrink: 0;
 }
-.s-toggle.on  { background: #6366f1; }
+.s-toggle.on  { background: var(--nx-accent); }
 .s-toggle.off { background: rgba(255,255,255,0.1); }
 .s-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -1781,7 +1781,7 @@
 }
 
 .s-hint-text { font-size: 12px; color: #374151; line-height: 1.6; margin: 0; }
-:global(.s-hint-text code) { color: #6366f1; background: rgba(99,102,241,0.1); padding: 1px 5px; border-radius: 4px; }
+:global(.s-hint-text code) { color: var(--nx-accent); background: rgba(99,102,241,0.1); padding: 1px 5px; border-radius: 4px; }
 
 .s-field-error { font-size: 11px; color: #f87171; margin-top: 6px; }
 
@@ -1820,7 +1820,7 @@
     flex-shrink: 0;
     font-size: 13px;
     font-weight: 800;
-    color: #818cf8;
+    color: var(--nx-accent-soft);
 }
 .s-instance-logo img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -1843,7 +1843,7 @@
     border-radius: 50%;
     background: rgba(99,102,241,0.15);
     border: 1px solid rgba(99,102,241,0.3);
-    color: #818cf8;
+    color: var(--nx-accent-soft);
     font-size: 12px;
     font-weight: 800;
     display: flex;
@@ -1866,7 +1866,7 @@
     margin-top: 10px;
     font-size: 11px;
     font-family: monospace;
-    color: #818cf8;
+    color: var(--nx-accent-soft);
     background: rgba(99,102,241,0.08);
     padding: 10px 14px;
     border-radius: 8px;
@@ -2042,7 +2042,7 @@
     width: 16px;
     height: 16px;
     border: 2px solid rgba(255,255,255,0.1);
-    border-top-color: #818cf8;
+    border-top-color: var(--nx-accent-soft);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
     display: block;

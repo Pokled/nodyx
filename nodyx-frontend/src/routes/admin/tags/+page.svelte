@@ -38,7 +38,7 @@
 				</div>
 				<div>
 					<label for="tag-create-color" class="block text-xs text-gray-400 mb-1">Couleur</label>
-					<input id="tag-create-color" name="color" type="color" value="#6366f1"
+					<input id="tag-create-color" name="color" type="color" value="var(--nx-accent)"
 						class="h-10 w-full rounded-lg bg-gray-800 border border-gray-700 px-1 cursor-pointer" />
 				</div>
 			</div>

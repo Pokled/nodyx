@@ -205,7 +205,7 @@
 		outline-color: rgba(167,139,250,.5);
 	}
 	.gr-row--dragover {
-		outline: 2px solid #a78bfa !important;
+		outline: 2px solid var(--nx-accent-2-soft) !important;
 		background: rgba(167,139,250,.05) !important;
 	}
 
@@ -243,7 +243,7 @@
 		padding: 2px 8px;
 		font-size: 11px;
 		font-weight: 600;
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		background: rgba(167,139,250,.12);
 		border: 1px solid rgba(167,139,250,.3);
 		border-radius: 3px;
@@ -263,7 +263,7 @@
 		font-size: 11px;
 		background: rgba(13,13,18,.9);
 		border: 1px solid rgba(167,139,250,.3);
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		cursor: pointer;
 		border-radius: 3px;
 		height: 20px;
@@ -291,7 +291,7 @@
 		outline-offset: -1px;
 	}
 	.gr-col--selected {
-		outline: 2px solid #a78bfa !important;
+		outline: 2px solid var(--nx-accent-2-soft) !important;
 		outline-offset: -1px;
 	}
 	.gr-col--empty {
@@ -357,7 +357,7 @@
 		background: rgba(167,139,250,.1);
 		border-color: rgba(167,139,250,.5);
 	}
-	.gr-col-empty-icon { font-size: 20px; color: #a78bfa; }
+	.gr-col-empty-icon { font-size: 20px; color: var(--nx-accent-2-soft); }
 	.gr-col-empty-label { font-size: 12px; color: #e2e8f0; }
 	.gr-col-empty-hint { font-size: 10px; color: #6b7280; }
 
@@ -374,7 +374,7 @@
 		align-items: center;
 		justify-content: center;
 		font-size: 9px;
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		background: rgba(167,139,250,.15);
 		border: 1px solid rgba(167,139,250,.3);
 		cursor: col-resize;
@@ -387,7 +387,7 @@
 	.gr-col--edit:hover .gr-resize-handle { opacity: 1; }
 	.gr-resize-handle:hover {
 		background: rgba(167,139,250,.35);
-		border-color: #a78bfa;
+		border-color: var(--nx-accent-2-soft);
 		opacity: 1;
 	}
 

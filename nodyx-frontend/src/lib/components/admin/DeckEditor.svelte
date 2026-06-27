@@ -699,7 +699,7 @@
 		<div class="flex items-center gap-1.5 flex-wrap">
 			{#each layout.pages as p, i (p.id)}
 				{@const active = p.id === currentPageId}
-				{@const accent = p.color ? `--page-accent: ${p.color};` : '--page-accent: #818cf8;'}
+				{@const accent = p.color ? `--page-accent: ${p.color};` : '--page-accent: var(--nx-accent-soft);'}
 				<div class="group relative inline-flex items-center gap-1 transition-all
 						{active ? 'bg-gradient-to-br from-indigo-500/30 to-purple-500/20 border-indigo-400/70 shadow-lg shadow-indigo-500/20' : 'bg-slate-900/60 border-slate-700/60 hover:border-slate-600'}
 						border rounded-lg pl-1.5 pr-1 py-0.5"
@@ -708,7 +708,7 @@
 					<label class="relative cursor-pointer shrink-0" title="Choisir une couleur d'accent">
 						<span class="block w-2.5 h-2.5 rounded-full ring-1 ring-white/20"
 							style="background: var(--page-accent);"></span>
-						<input type="color" value={p.color ?? '#818cf8'}
+						<input type="color" value={p.color ?? 'var(--nx-accent-soft)'}
 							oninput={(e) => setPageColor(p.id, e.currentTarget.value)}
 							class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"/>
 					</label>

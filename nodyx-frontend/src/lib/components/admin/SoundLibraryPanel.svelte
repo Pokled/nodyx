@@ -813,7 +813,7 @@
 																	<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
 																{/if}
 															</span>
-															<span class="w-2 h-2 rounded-full shrink-0" style="background: {p.color ?? '#a78bfa'};"></span>
+															<span class="w-2 h-2 rounded-full shrink-0" style="background: {p.color ?? 'var(--nx-accent-2-soft)'};"></span>
 															<span class="flex-1 truncate" title={p.name}>{p.name}</span>
 															<span class="text-[10px] text-zinc-600 font-mono">{p.trackCount}</span>
 														</button>

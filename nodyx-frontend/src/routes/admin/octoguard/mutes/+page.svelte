@@ -71,7 +71,7 @@
 	label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #94a3b8; }
 	input, select { padding: 6px 8px; font-size: 12px; background: #1f2937; border: 1px solid #374151; border-radius: 3px; color: #e2e8f0; font-family: ui-monospace, monospace; }
 	.og-actions { display: flex; justify-content: flex-end; }
-	.og-btn-primary { padding: 6px 12px; font-size: 12px; color: #fff; background: #6366f1; border: none; border-radius: 3px; cursor: pointer; }
+	.og-btn-primary { padding: 6px 12px; font-size: 12px; color: #fff; background: var(--nx-accent); border: none; border-radius: 3px; cursor: pointer; }
 	.og-btn-link { background: transparent; border: none; color: #94a3b8; font-size: 11px; cursor: pointer; padding: 0; }
 	.og-btn-link:hover { color: #e2e8f0; }
 	.og-table { width: 100%; border-collapse: collapse; font-size: 12px; }

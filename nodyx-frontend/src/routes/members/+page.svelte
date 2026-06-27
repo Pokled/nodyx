@@ -270,7 +270,7 @@
 		cursor: pointer;
 		user-select: none;
 	}
-	.mb-toggle input { accent-color: #6366f1; }
+	.mb-toggle input { accent-color: var(--nx-accent); }
 	.mb-toggle:hover { color: #cbd5e1; }
 
 	.mb-section-label {

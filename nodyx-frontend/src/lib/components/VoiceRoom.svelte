@@ -110,7 +110,7 @@
 
 	<!-- Waveform icon -->
 	<div class="shrink-0 flex items-end gap-[2px] h-4"
-	     style="color: {connected ? '#7c3aed' : '#4b5563'};">
+	     style="color: {connected ? 'var(--nx-accent-2-strong)' : '#4b5563'};">
 		<div class="w-[3px] rounded-sm" style="height: 45%; background: currentColor;"></div>
 		<div class="w-[3px] rounded-sm" style="height: 100%; background: currentColor;"></div>
 		<div class="w-[3px] rounded-sm" style="height: 65%; background: currentColor;"></div>
@@ -365,8 +365,8 @@
 	.active-amber:hover, .idle-amber:hover { color: #e0a86a !important; }
 
 	/* Violet (canvas) */
-	.active-violet { color: #a78bfa !important; background: rgba(124,58,237,0.14) !important; border-color: rgba(124,58,237,0.35) !important; }
-	.active-violet:hover { color: #c4b5fd !important; }
+	.active-violet { color: var(--nx-accent-2-soft) !important; background: rgba(124,58,237,0.14) !important; border-color: rgba(124,58,237,0.35) !important; }
+	.active-violet:hover { color: var(--nx-accent-2-soft2) !important; }
 
 	/* Blue (screen share) */
 	.active-blue   { color: #60a5fa !important; background: rgba(59,130,246,0.12) !important; border-color: rgba(59,130,246,0.3) !important; }

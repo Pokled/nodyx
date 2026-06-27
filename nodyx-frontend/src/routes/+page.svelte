@@ -94,7 +94,7 @@
 	.sg  { font-family: 'Space Grotesk', sans-serif; }
 	/* ── Gradient text ── */
 	.gt {
-		background: linear-gradient(135deg, #a78bfa 0%, #06b6d4 100%);
+		background: linear-gradient(135deg, var(--nx-accent-2-soft) 0%, #06b6d4 100%);
 		-webkit-background-clip: text; background-clip: text;
 		-webkit-text-fill-color: transparent; color: transparent;
 	}
@@ -123,7 +123,7 @@
 	.tile::after {
 		content: '';
 		position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-		background: linear-gradient(90deg, #7c3aed, #06b6d4);
+		background: linear-gradient(90deg, var(--nx-accent-2-strong), #06b6d4);
 		transform: scaleX(0); transform-origin: left;
 		transition: transform .3s ease;
 	}
@@ -140,7 +140,7 @@
 	.trow { position: relative; }
 	.trow::before {
 		content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
-		background: linear-gradient(to bottom, #7c3aed, #06b6d4);
+		background: linear-gradient(to bottom, var(--nx-accent-2-strong), #06b6d4);
 		transform: scaleY(0); transform-origin: center;
 		transition: transform .2s ease;
 	}
@@ -270,7 +270,7 @@
 		<!-- Stats row -->
 		<div class="flex flex-wrap items-stretch gap-0.5">
 			{#each [
-				{ value: instance.member_count.toLocaleString(), label: tFn('common.members'),  color: '#a78bfa', glow: true },
+				{ value: instance.member_count.toLocaleString(), label: tFn('common.members'),  color: 'var(--nx-accent-2-soft)', glow: true },
 				{ value: String(instance.online_count),                  label: tFn('common.online'), color: '#4ade80', online: true },
 				{ value: instance.thread_count.toLocaleString(), label: tFn('common.topics'),   color: '#67e8f9', glow: false },
 				{ value: instance.post_count.toLocaleString(),   label: tFn('nav.dm'), color: '#94a3b8', glow: false },
@@ -296,7 +296,7 @@
 				{#if data.user && (data.categories?.[0]?.slug ?? data.categories?.[0]?.id)}
 					<a href="/forum/{data.categories?.[0]?.slug ?? data.categories?.[0]?.id}/new"
 					   class="sg px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
-					   style="background: linear-gradient(135deg, #7c3aed 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
+					   style="background: linear-gradient(135deg, var(--nx-accent-2-strong) 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
 						{tFn('common.new_topic')}
 					</a>
 				{:else}
@@ -307,7 +307,7 @@
 					</a>
 					<a href="/auth/register"
 					   class="sg px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
-					   style="background: linear-gradient(135deg, #7c3aed 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
+					   style="background: linear-gradient(135deg, var(--nx-accent-2-strong) 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
 						{tFn('common.join')}
 					</a>
 				{/if}
@@ -346,14 +346,14 @@
 			<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/>
 			</svg>
-			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #a78bfa">{tFn('home.news')}</span>
+			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: var(--nx-accent-2-soft)">{tFn('home.news')}</span>
 		</div>
 		<p class="sg text-sm font-bold leading-snug line-clamp-2 group-hover:text-violet-200 transition-colors" style="color: #e2e8f0">{heroArticle.title}</p>
 		<span class="text-[10px] mt-auto" style="color: #4b5563">{heroArticle.categoryName}</span>
 	</a>
 	{:else}
 	<div class="tile glass flex flex-col gap-2.5 p-5">
-		<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #a78bfa">{tFn('home.news')}</span>
+		<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: var(--nx-accent-2-soft)">{tFn('home.news')}</span>
 		{tFn('common.no_article')}
 	</div>
 	{/if}
@@ -431,8 +431,8 @@
 				<!-- Category -->
 				{#if slide.categoryName}
 					<div class="flex items-center gap-3 mb-3">
-						<span class="h-px w-10" style="background: linear-gradient(to right, #7c3aed, #06b6d4)"></span>
-						<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: #a78bfa">{slide.categoryName}</span>
+						<span class="h-px w-10" style="background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4)"></span>
+						<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: var(--nx-accent-2-soft)">{slide.categoryName}</span>
 					</div>
 				{/if}
 
@@ -482,7 +482,7 @@
 							        aria-label="Slide {i+1}">
 								{#if i === slideIndex}
 									<span class="absolute top-[-1px] left-0 h-[3px] transition-none"
-									      style="width:{progressPct}%; background: linear-gradient(to right, #7c3aed, #06b6d4)"></span>
+									      style="width:{progressPct}%; background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4)"></span>
 								{/if}
 							</button>
 						{/each}
@@ -517,7 +517,7 @@
 		<div class="flex items-center justify-between px-5 py-3.5 shrink-0"
 		     style="border-bottom: 1px solid rgba(255,255,255,.05)">
 			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #6b7280">{tFn('home.forum_activity')}</span>
-			<a href="/forum" class="sg text-[10px] font-bold uppercase tracking-wide transition-colors" style="color: #4b5563" onmouseenter={e => (e.target as HTMLElement).style.color='#a78bfa'} onmouseleave={e => (e.target as HTMLElement).style.color='#4b5563'}>
+			<a href="/forum" class="sg text-[10px] font-bold uppercase tracking-wide transition-colors" style="color: #4b5563" onmouseenter={e => (e.target as HTMLElement).style.color='var(--nx-accent-2-soft)'} onmouseleave={e => (e.target as HTMLElement).style.color='#4b5563'}>
 				{tFn('common.view_all')}
 			</a>
 		</div>
@@ -530,7 +530,7 @@
 			   onmouseenter={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,.025)'}
 			   onmouseleave={e => (e.currentTarget as HTMLElement).style.background='transparent'}>
 				<span class="sg text-[11px] font-black tabular-nums shrink-0 mt-0.5 w-5 text-right"
-				      style="color: {i===0 ? '#a78bfa' : i===1 ? '#67e8f9' : '#374151'}">
+				      style="color: {i===0 ? 'var(--nx-accent-2-soft)' : i===1 ? '#67e8f9' : '#374151'}">
 					{String(i+1).padStart(2,'0')}
 				</span>
 				<div class="flex-1 min-w-0">
@@ -562,7 +562,7 @@
 			<a href="/forum"
 			   class="sg flex items-center justify-center gap-2 w-full py-2.5 text-[10px] font-black uppercase tracking-widest transition-all"
 			   style="color: #6b7280; border: 1px solid rgba(255,255,255,.06)"
-			   onmouseenter={e => { (e.currentTarget as HTMLElement).style.color='#a78bfa'; (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.25)'; }}
+			   onmouseenter={e => { (e.currentTarget as HTMLElement).style.color='var(--nx-accent-2-soft)'; (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.25)'; }}
 			   onmouseleave={e => { (e.currentTarget as HTMLElement).style.color='#6b7280'; (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.06)'; }}>
 				{tFn('home.view_forum')}
 				<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -607,7 +607,7 @@
 			<div class="flex items-start justify-between gap-2 mb-4">
 				{#if thread.category_name}
 					<span class="sg text-[9px] font-black uppercase tracking-widest px-2 py-0.5"
-					      style="color: #a78bfa; background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.2)">
+					      style="color: var(--nx-accent-2-soft); background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.2)">
 						{thread.category_name}
 					</span>
 				{/if}
@@ -647,7 +647,7 @@
 <section class="px-6 py-8" style="background: #0a0a0f">
 
 	<div class="flex items-center gap-4 mb-6">
-		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: #a78bfa">{tFn('home.articles')}</span>
+		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: var(--nx-accent-2-soft)">{tFn('home.articles')}</span>
 		<div class="flex-1 h-px" style="background: linear-gradient(to right, rgba(124,58,237,.2), transparent)"></div>
 	</div>
 
@@ -673,8 +673,8 @@
 			<div>
 				{#if heroArticle.categoryName}
 					<div class="flex items-center gap-2 mb-2">
-						<span class="h-px w-6" style="background: #7c3aed"></span>
-						<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #a78bfa">{heroArticle.categoryName}</span>
+						<span class="h-px w-6" style="background: var(--nx-accent-2-strong)"></span>
+						<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: var(--nx-accent-2-soft)">{heroArticle.categoryName}</span>
 					</div>
 				{/if}
 				<h3 class="sg text-xl font-extrabold leading-tight mb-2 group-hover:text-violet-200 transition-colors" style="color: #f1f5f9">{heroArticle.title}</h3>
@@ -683,10 +683,10 @@
 				{/if}
 			</div>
 			<div class="flex items-center gap-3 mt-4 pt-4" style="border-top: 1px solid rgba(255,255,255,.05)">
-				<span class="text-xs font-semibold" style="color: #a78bfa">{heroArticle.authorUsername}</span>
+				<span class="text-xs font-semibold" style="color: var(--nx-accent-2-soft)">{heroArticle.authorUsername}</span>
 				<span style="color: #374151">·</span>
 				<span class="text-xs" style="color: #4b5563">{timeAgo(heroArticle.createdAt)}</span>
-				<span class="ml-auto sg text-xs font-bold flex items-center gap-1 group-hover:text-violet-300 transition-colors" style="color: #a78bfa">
+				<span class="ml-auto sg text-xs font-bold flex items-center gap-1 group-hover:text-violet-300 transition-colors" style="color: var(--nx-accent-2-soft)">
 					Lire
 					<svg class="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
 				</span>
@@ -714,7 +714,7 @@
 			<div class="flex-1 min-w-0 flex flex-col justify-between">
 				<p class="text-xs font-bold line-clamp-2 leading-snug group-hover:text-white transition-colors" style="color: #d1d5db">{article.title}</p>
 				<div class="flex items-center gap-1.5 mt-2">
-					<span class="text-[10px] font-semibold" style="color: #a78bfa">{article.authorUsername}</span>
+					<span class="text-[10px] font-semibold" style="color: var(--nx-accent-2-soft)">{article.authorUsername}</span>
 					<span style="color: #374151">·</span>
 					<span class="text-[10px]" style="color: #4b5563">{timeAgo(article.createdAt)}</span>
 				</div>

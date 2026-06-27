@@ -358,7 +358,7 @@
 							<li>
 								<button type="button" onclick={() => pickPlaylist(p)} disabled={!playlistOverlayToken}
 									class="w-full text-left flex items-center gap-3 p-2.5 rounded-md bg-zinc-900/60 border border-zinc-800 hover:border-purple-500/60 hover:bg-purple-500/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-									<span class="w-2 h-2 rounded-full shrink-0" style="background: {p.color ?? '#a78bfa'};"></span>
+									<span class="w-2 h-2 rounded-full shrink-0" style="background: {p.color ?? 'var(--nx-accent-2-soft)'};"></span>
 									<div class="min-w-0 flex-1">
 										<div class="text-sm text-zinc-100 truncate">{p.name}</div>
 										<div class="text-[10px] text-zinc-600 font-mono">{p.trackCount} piste{p.trackCount > 1 ? 's' : ''}</div>

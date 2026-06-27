@@ -563,7 +563,7 @@
     border-radius: 99px;
     font-weight: 600;
   }
-  .poll-type-badge { background: #7c3aed22; color: #a78bfa; border: 1px solid #7c3aed44; }
+  .poll-type-badge { background: #7c3aed22; color: var(--nx-accent-2-soft); border: 1px solid #7c3aed44; }
   .poll-status-badge.open   { background: #16a34a22; color: #4ade80; border: 1px solid #16a34a44; }
   .poll-status-badge.closed { background: #64748b22; color: #94a3b8; border: 1px solid #64748b44; }
   .poll-status-badge.anon   { background: #0f172a;   color: #60a5fa; border: 1px solid #1e3a5f44; }
@@ -592,7 +592,7 @@
     overflow: hidden;
   }
   .poll-option:not(:disabled):hover { border-color: #7c3aed88; background: var(--bg-4, #2a2a3f); }
-  .poll-option.selected             { border-color: #7c3aed; background: #7c3aed18; }
+  .poll-option.selected             { border-color: var(--nx-accent-2-strong); background: #7c3aed18; }
   .poll-option:disabled             { cursor: default; }
 
   .opt-img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
@@ -615,10 +615,10 @@
     transition: width .5s cubic-bezier(.4,0,.2,1);
     border-radius: 8px;
   }
-  .opt-pct    { font-weight: 700; font-size: 0.82rem; color: #a78bfa; position: relative; z-index: 1; }
+  .opt-pct    { font-weight: 700; font-size: 0.82rem; color: var(--nx-accent-2-soft); position: relative; z-index: 1; }
   .opt-count  { font-size: 0.75rem; color: var(--text-muted, #888); position: relative; z-index: 1; }
   .opt-radio  { font-size: 1.1rem; color: var(--text-muted, #888); }
-  .opt-radio.selected { color: #a78bfa; }
+  .opt-radio.selected { color: var(--nx-accent-2-soft); }
 
   /* ── Schedule ── */
   .schedule-best-slot {
@@ -703,9 +703,9 @@
     transition: border-color .15s, box-shadow .15s;
   }
   .ranking-item:active { cursor: grabbing; }
-  .ranking-item.dragging { opacity: 0.5; border-color: #7c3aed; }
+  .ranking-item.dragging { opacity: 0.5; border-color: var(--nx-accent-2-strong); }
 
-  .rank-pos  { font-weight: 700; color: #a78bfa; min-width: 20px; text-align: center; }
+  .rank-pos  { font-weight: 700; color: var(--nx-accent-2-soft); min-width: 20px; text-align: center; }
   .rank-drag { color: var(--text-muted, #888); font-size: 1.1rem; cursor: grab; }
   .rank-label { flex: 1; font-weight: 500; }
 
@@ -730,11 +730,11 @@
   }
   .rank-score-bar {
     height: 100%;
-    background: linear-gradient(90deg, #7c3aed, #a78bfa);
+    background: linear-gradient(90deg, var(--nx-accent-2-strong), var(--nx-accent-2-soft));
     border-radius: 99px;
     transition: width .6s cubic-bezier(.4,0,.2,1);
   }
-  .rank-score { font-weight: 700; color: #a78bfa; font-size: 0.82rem; }
+  .rank-score { font-weight: 700; color: var(--nx-accent-2-soft); font-size: 0.82rem; }
   .rank-avg   { font-size: 0.72rem; color: var(--text-muted, #888); }
 
   /* ── Actions ── */
@@ -757,7 +757,7 @@
   .btn-vote:hover, .btn-revote:hover, .btn-close-poll:hover { opacity: 0.85; }
   .btn-vote:active { transform: scale(.97); }
 
-  .btn-vote        { background: #7c3aed; color: #fff; }
+  .btn-vote        { background: var(--nx-accent-2-strong); color: #fff; }
   .btn-vote:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-revote      { background: transparent; color: var(--text-muted, #888); border: 1px solid var(--border, #333) !important; }
   .btn-close-poll  { background: transparent; color: #f87171; border: 1px solid #f8717144 !important; font-size: 0.78rem; }

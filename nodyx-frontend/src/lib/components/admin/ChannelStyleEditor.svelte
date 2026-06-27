@@ -373,7 +373,7 @@
 		border: 1px solid #374151;
 		border-radius: 4px;
 	}
-	.cse-color-hex:focus { outline: none; border-color: #6366f1; }
+	.cse-color-hex:focus { outline: none; border-color: var(--nx-accent); }
 	.cse-clear {
 		width: 30px;
 		height: 30px;
@@ -428,7 +428,7 @@
 	.cse-style-btn:hover { background: #283142; color: #e2e8f0; }
 	.cse-style-btn--active {
 		background: rgba(99, 102, 241, 0.18);
-		border-color: #6366f1;
+		border-color: var(--nx-accent);
 		color: #c7d2fe;
 	}
 	.cse-emoji-input {
@@ -441,7 +441,7 @@
 		border-radius: 4px;
 		color: #e2e8f0;
 	}
-	.cse-emoji-input:focus { outline: none; border-color: #6366f1; }
+	.cse-emoji-input:focus { outline: none; border-color: var(--nx-accent); }
 
 	/* ─── Icon picker ──────────────────────────────────────────────────── */
 	.cse-icon-picker {
@@ -485,7 +485,7 @@
 	.cse-tab:hover { color: #e2e8f0; }
 	.cse-tab--active {
 		color: #c7d2fe;
-		border-bottom-color: #6366f1;
+		border-bottom-color: var(--nx-accent);
 	}
 	.cse-tab-panel {
 		max-height: 280px;
@@ -530,7 +530,7 @@
 	}
 	.cse-icon-btn--active {
 		background: rgba(99,102,241,0.2);
-		border-color: #6366f1;
+		border-color: var(--nx-accent);
 	}
 	.cse-custom {
 		display: flex;

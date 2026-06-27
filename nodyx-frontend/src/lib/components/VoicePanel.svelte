@@ -1212,7 +1212,7 @@ input[type=range]::-webkit-slider-thumb {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: linear-gradient(to right, #6366f1, #8b5cf6);
+    background: linear-gradient(to right, var(--nx-accent), var(--nx-accent-2-mid));
     cursor: pointer;
     box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
     border: 2px solid rgba(255, 255, 255, 0.2);
@@ -1228,7 +1228,7 @@ input[type=range]::-moz-range-thumb {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: linear-gradient(to right, #6366f1, #8b5cf6);
+    background: linear-gradient(to right, var(--nx-accent), var(--nx-accent-2-mid));
     cursor: pointer;
     border: 2px solid rgba(255, 255, 255, 0.2);
     transition: all 0.2s;

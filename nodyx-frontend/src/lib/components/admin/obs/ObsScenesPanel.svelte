@@ -506,7 +506,7 @@
 										class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors
 											{isAct ? 'bg-purple-500/15 text-zinc-100 border-l-2 border-l-purple-500'
 											       : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border-l-2 border-transparent'}">
-										<span class="w-2 h-2 rounded-full shrink-0" style="background: {s.color ?? '#a78bfa'};"></span>
+										<span class="w-2 h-2 rounded-full shrink-0" style="background: {s.color ?? 'var(--nx-accent-2-soft)'};"></span>
 										<span class="flex-1 truncate" title={s.name}>{s.name}</span>
 										<span class="text-[10px] text-zinc-600 font-mono">{s.layout.sources.length}</span>
 									</button>

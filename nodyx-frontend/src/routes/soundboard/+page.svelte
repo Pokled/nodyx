@@ -390,7 +390,7 @@
 						</button>
 						{#each playlists as p (p.id)}
 							{@const isOn = selectedPlaylistId === p.id}
-							{@const accent = p.color ?? '#a78bfa'}
+							{@const accent = p.color ?? 'var(--nx-accent-2-soft)'}
 							<button type="button" onclick={() => selectedPlaylistId = p.id}
 								class="text-xs inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-colors {isOn
 									? 'border-purple-500/60 text-zinc-100 font-medium'

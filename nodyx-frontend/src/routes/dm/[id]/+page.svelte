@@ -1143,7 +1143,7 @@
 											style={i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}/>
 									{:else}
 										<div class="w-5 h-5 rounded-full bg-indigo-600/30 border border-gray-950 flex items-center justify-center text-[9px] font-bold absolute"
-											style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? '#818cf8'}`}>
+											style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? 'var(--nx-accent-soft)'}`}>
 											{p.username[0].toUpperCase()}
 										</div>
 									{/if}
@@ -1153,7 +1153,7 @@
 							<img src={conv.other_avatar} alt={conv.other_username} class="w-8 h-8 rounded-full object-cover"/>
 						{:else}
 							<div class="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/15 flex items-center justify-center text-xs font-bold"
-								style={conv.other_name_color ? `color: ${conv.other_name_color}` : 'color: #818cf8'}>
+								style={conv.other_name_color ? `color: ${conv.other_name_color}` : 'color: var(--nx-accent-soft)'}>
 								{(conv.other_username ?? '?')[0].toUpperCase()}
 							</div>
 						{/if}
@@ -1196,7 +1196,7 @@
 									style={i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}/>
 							{:else}
 								<div class="w-6 h-6 rounded-full bg-indigo-600/30 border-2 border-gray-950 flex items-center justify-center text-[10px] font-bold absolute"
-									style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? '#818cf8'}`}>
+									style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? 'var(--nx-accent-soft)'}`}>
 									{p.username[0].toUpperCase()}
 								</div>
 							{/if}
@@ -1276,7 +1276,7 @@
 						<img src={conversation.other_avatar} alt={conversation.other_username} class="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-white/[0.06]"/>
 					{:else}
 						<div class="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center shrink-0 text-sm font-bold"
-							style={conversation.other_name_color ? `color: ${conversation.other_name_color}` : 'color: #818cf8'}>
+							style={conversation.other_name_color ? `color: ${conversation.other_name_color}` : 'color: var(--nx-accent-soft)'}>
 							{(conversation.other_username ?? '?')[0].toUpperCase()}
 						</div>
 					{/if}
@@ -1498,7 +1498,7 @@
 										<img src={msg.sender_avatar} alt={msg.sender_username} class="w-7 h-7 rounded-full object-cover"/>
 									{:else}
 										<div class="w-7 h-7 rounded-full bg-indigo-600/20 border border-indigo-500/15 flex items-center justify-center text-xs font-bold"
-											style={msg.sender_name_color ? `color: ${msg.sender_name_color}` : 'color: #818cf8'}>
+											style={msg.sender_name_color ? `color: ${msg.sender_name_color}` : 'color: var(--nx-accent-soft)'}>
 											{msg.sender_username[0].toUpperCase()}
 										</div>
 									{/if}
@@ -1675,13 +1675,13 @@
 							<img src={conversation.participants[0].avatar} alt="" class="w-5 h-5 rounded-full object-cover shrink-0 mb-0.5 opacity-70" />
 						{:else}
 							<div class="w-5 h-5 rounded-full shrink-0 mb-0.5 opacity-70 flex items-center justify-center text-[8px] font-bold text-white"
-							     style="background: #4f46e5">{conversation.participants[0]?.username?.[0]?.toUpperCase() ?? '?'}</div>
+							     style="background: var(--nx-accent-strong)">{conversation.participants[0]?.username?.[0]?.toUpperCase() ?? '?'}</div>
 						{/if}
 					{:else if conversation?.other_avatar}
 						<img src={conversation.other_avatar} alt="" class="w-5 h-5 rounded-full object-cover shrink-0 mb-0.5 opacity-70" />
 					{:else}
 						<div class="w-5 h-5 rounded-full shrink-0 mb-0.5 opacity-70 flex items-center justify-center text-[8px] font-bold text-white"
-						     style="background: #4f46e5">{conversation?.other_username?.[0]?.toUpperCase() ?? '?'}</div>
+						     style="background: var(--nx-accent-strong)">{conversation?.other_username?.[0]?.toUpperCase() ?? '?'}</div>
 					{/if}
 					<!-- Bulle dots -->
 					<div class="dm-typing-bubble flex items-center gap-[3px] px-3 py-2 rounded-2xl rounded-bl-sm">
@@ -1827,7 +1827,7 @@
 .e2e-banner-cta {
 	white-space: nowrap; text-align: center; padding: 7px 14px; border-radius: 9px;
 	font-size: 12.5px; font-weight: 700; color: #fff; text-decoration: none;
-	background: linear-gradient(135deg, #6366f1, #a855f7);
+	background: linear-gradient(135deg, var(--nx-accent), var(--nx-accent-2));
 }
 .e2e-banner-cta:hover { filter: brightness(1.08); }
 .e2e-banner-dismiss {
@@ -1881,7 +1881,7 @@
 .dm-drop-icon {
 	width: 56px;
 	height: 56px;
-	color: #c4b5fd;
+	color: var(--nx-accent-2-soft2);
 }
 .dm-drop-title {
 	font-size: 18px;
@@ -1907,7 +1907,7 @@
 .dm-quote-bar {
 	width: 3px;
 	border-radius: 2px;
-	background: linear-gradient(to bottom, #818cf8, #6366f1);
+	background: linear-gradient(to bottom, var(--nx-accent-soft), var(--nx-accent));
 	flex-shrink: 0;
 }
 .dm-quote-content {
@@ -1951,7 +1951,7 @@
 	width: 3px;
 	height: 28px;
 	border-radius: 2px;
-	background: linear-gradient(to bottom, #818cf8, #6366f1);
+	background: linear-gradient(to bottom, var(--nx-accent-soft), var(--nx-accent));
 	flex-shrink: 0;
 }
 .dm-reply-banner-content {
@@ -2037,7 +2037,7 @@
 	align-items: center;
 	justify-content: center;
 	background: rgba(124, 58, 237, 0.12);
-	color: #c4b5fd;
+	color: var(--nx-accent-2-soft2);
 	font-size: 38px;
 	font-weight: 800;
 	font-family: 'Space Grotesk', sans-serif;
@@ -2124,7 +2124,7 @@
 }
 @keyframes dot-bounce {
 	0%, 80%, 100% { transform: translateY(0);    background: #4b5563; }
-	40%           { transform: translateY(-5px); background: #a78bfa; }
+	40%           { transform: translateY(-5px); background: var(--nx-accent-2-soft); }
 }
 
 /* ── Emoji picker ─────────────────────────────────────────────────────────── */

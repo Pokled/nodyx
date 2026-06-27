@@ -355,8 +355,8 @@
 }
 
 .disc-tab--active {
-	color: #a78bfa;
-	border-bottom-color: #a78bfa;
+	color: var(--nx-accent-2-soft);
+	border-bottom-color: var(--nx-accent-2-soft);
 }
 
 .disc-tab--upcoming {
@@ -395,7 +395,7 @@
 }
 
 .disc-count-query {
-	color: #a78bfa;
+	color: var(--nx-accent-2-soft);
 }
 
 /* ── Result rows ───────────────────────────────────────────────────────────── */
@@ -420,7 +420,7 @@
 }
 
 .disc-row:hover .disc-row-title {
-	color: #c4b5fd;
+	color: var(--nx-accent-2-soft2);
 }
 
 .disc-row-meta {
@@ -443,7 +443,7 @@
 .disc-badge--instance {
 	background: rgba(139, 92, 246, 0.1);
 	border-color: rgba(139, 92, 246, 0.25);
-	color: #c4b5fd;
+	color: var(--nx-accent-2-soft2);
 }
 
 .disc-badge--event {

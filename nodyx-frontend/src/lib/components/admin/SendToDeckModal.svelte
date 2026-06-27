@@ -169,7 +169,7 @@
 						<div class="flex items-center gap-1.5 flex-wrap">
 							{#each selectedDeck.layout.pages as p (p.id)}
 								{@const active = p.id === selectedPageId}
-								{@const accent = p.color ?? '#a78bfa'}
+								{@const accent = p.color ?? 'var(--nx-accent-2-soft)'}
 								<button type="button" onclick={() => selectedPageId = p.id}
 									class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-sm border transition-colors
 										{active ? 'bg-purple-500/15 border-purple-500/60 text-purple-100' : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'}">

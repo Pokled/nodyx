@@ -344,12 +344,12 @@
 	.hb-event-eyebrow {
 		display: flex; align-items: center; gap: .6rem;
 		font-size: 10px; font-weight: 800; text-transform: uppercase;
-		letter-spacing: .22em; color: #a78bfa;
+		letter-spacing: .22em; color: var(--nx-accent-2-soft);
 		font-family: 'Space Grotesk', sans-serif;
 	}
 	.hb-eyebrow-line {
 		height: 1px; width: 40px;
-		background: linear-gradient(to right, #7c3aed, #06b6d4);
+		background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4);
 	}
 
 	.hb-identity {
@@ -375,7 +375,7 @@
 		font-family: 'Space Grotesk', sans-serif; font-weight: 800;
 		font-size: clamp(1.25rem, 2.4vw, 1.85rem);
 		line-height: 1.05; margin: 0 0 .2rem;
-		background: linear-gradient(135deg, #a78bfa 0%, #06b6d4 100%);
+		background: linear-gradient(135deg, var(--nx-accent-2-soft) 0%, #06b6d4 100%);
 		-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 	}
 	.hb-title--event {
@@ -400,14 +400,14 @@
 	}
 	.hb-btn:active { transform: scale(.97); }
 	.hb-btn--primary {
-		background: linear-gradient(135deg, #7c3aed, #0e7490);
+		background: linear-gradient(135deg, var(--nx-accent-2-strong), #0e7490);
 		border: 1px solid rgba(124,58,237,.45); color: #fff;
 	}
 	.hb-btn--primary:hover { filter: brightness(1.12); }
 	.hb-btn--ghost {
 		border: 1px solid rgba(255,255,255,.12); color: #9ca3af;
 	}
-	.hb-btn--ghost:hover { border-color: rgba(167,139,250,.4); color: #c4b5fd; }
+	.hb-btn--ghost:hover { border-color: rgba(167,139,250,.4); color: var(--nx-accent-2-soft2); }
 
 	/* ── Stats dock ────────────────────────────────────────────────────────── */
 	.hb-stats-dock {
@@ -428,7 +428,7 @@
 		display: flex; align-items: center; gap: 5px;
 		font-variant-numeric: tabular-nums;
 	}
-	.hb-stat--purple { color: #a78bfa; animation: numglow 4s ease-in-out infinite; }
+	.hb-stat--purple { color: var(--nx-accent-2-soft); animation: numglow 4s ease-in-out infinite; }
 	.hb-stat--green  { color: #4ade80; }
 	.hb-stat--cyan   { color: #67e8f9; }
 	.hb-stat-label {
@@ -484,12 +484,12 @@
 	}
 	.hb-live-empty svg { width: 13px; height: 13px; }
 	.hb-live-cta {
-		font-size: 11px; font-weight: 600; color: #a78bfa;
+		font-size: 11px; font-weight: 600; color: var(--nx-accent-2-soft);
 		text-decoration: none;
 		display: flex; align-items: center; gap: 4px;
 		transition: color .15s;
 	}
-	.hb-live-cta:hover { color: #c4b5fd; }
+	.hb-live-cta:hover { color: var(--nx-accent-2-soft2); }
 	.hb-live-cta svg { width: 11px; height: 11px; }
 
 	/* ── Avatars ───────────────────────────────────────────────────────────── */
@@ -519,7 +519,7 @@
 		overflow: hidden;
 	}
 	.hb-avatar-letter {
-		font-size: 11px; font-weight: 800; color: #a78bfa;
+		font-size: 11px; font-weight: 800; color: var(--nx-accent-2-soft);
 		display: flex !important; align-items: center; justify-content: center;
 	}
 	.hb-avatar:hover {

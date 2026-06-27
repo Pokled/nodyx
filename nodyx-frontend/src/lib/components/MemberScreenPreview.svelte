@@ -74,7 +74,7 @@
             <img src={avatar} alt={username} class="w-4 h-4 rounded-full object-cover shrink-0"/>
         {:else}
             <div class="w-4 h-4 rounded-full shrink-0 flex items-center justify-center text-[7px] font-bold text-white"
-                 style="background: linear-gradient(135deg, #4f46e5, #0e7490)">
+                 style="background: linear-gradient(135deg, var(--nx-accent-strong), #0e7490)">
                 {username[0]?.toUpperCase()}
             </div>
         {/if}

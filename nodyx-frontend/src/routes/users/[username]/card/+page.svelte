@@ -536,7 +536,7 @@
 
 .xp-fill {
 	height: 100%;
-	background: linear-gradient(90deg, #6366f1, #a855f7);
+	background: linear-gradient(90deg, var(--nx-accent), var(--nx-accent-2));
 	position: relative;
 	transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -548,7 +548,7 @@
 	width: 6px;
 	height: 6px;
 	border-radius: 50%;
-	background: #a855f7;
+	background: var(--nx-accent-2);
 	box-shadow: 0 0 8px 3px rgba(168, 85, 247, 0.6);
 	animation: glow-pulse 1.8s ease-in-out infinite;
 }

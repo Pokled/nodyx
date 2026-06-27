@@ -1109,7 +1109,7 @@
 								/>
 							{:else if field.type === 'color'}
 								<div class="pfield-color">
-									<input type="color" value={configFields[field.key] as string ?? '#a78bfa'}
+									<input type="color" value={configFields[field.key] as string ?? 'var(--nx-accent-2-soft)'}
 										oninput={(e) => { configFields = { ...configFields, [field.key]: (e.target as HTMLInputElement).value } }}
 									/>
 									<input type="text" value={configFields[field.key] as string ?? ''}
@@ -1431,8 +1431,8 @@
 	}
 	.ptab:hover { color: #e2e8f0; }
 	.ptab--active {
-		color: #a78bfa;
-		box-shadow: inset 0 -2px 0 #a78bfa;
+		color: var(--nx-accent-2-soft);
+		box-shadow: inset 0 -2px 0 var(--nx-accent-2-soft);
 	}
 
 	.panel-body {
@@ -1456,7 +1456,7 @@
 	.panel-back {
 		background: none;
 		border: none;
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		cursor: pointer;
 		font-size: 12px;
 		text-align: left;
@@ -1486,7 +1486,7 @@
 	}
 	.row-item:hover { border-color: rgba(167,139,250,.3); background: rgba(167,139,250,.05); }
 	.row-item--drag { opacity: 0.4; }
-	.row-item--dragover { border-color: #a78bfa !important; background: rgba(167,139,250,.12) !important; }
+	.row-item--dragover { border-color: var(--nx-accent-2-soft) !important; background: rgba(167,139,250,.12) !important; }
 
 	.row-item-handle {
 		font-size: 14px;
@@ -1498,7 +1498,7 @@
 		line-height: 1;
 		user-select: none;
 	}
-	.row-item-handle:hover { color: #a78bfa; }
+	.row-item-handle:hover { color: var(--nx-accent-2-soft); }
 
 	.row-item-spans {
 		flex: 1;
@@ -1534,7 +1534,7 @@
 		font-size: 10px;
 		display: flex; align-items: center; justify-content: center;
 	}
-	.riba:hover { border-color: #a78bfa; color: #a78bfa; }
+	.riba:hover { border-color: var(--nx-accent-2-soft); color: var(--nx-accent-2-soft); }
 	.riba--del:hover { border-color: #f87171; color: #f87171; }
 
 	.btn-add-row {
@@ -1542,7 +1542,7 @@
 		padding: 8px;
 		background: rgba(167,139,250,.1);
 		border: 1px dashed rgba(167,139,250,.3);
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		cursor: pointer;
 		border-radius: 4px;
 		font-size: 12px;
@@ -1595,7 +1595,7 @@
 		border-radius: 50%;
 		border: 1px solid rgba(167, 139, 250, .35);
 		background: rgba(167, 139, 250, .08);
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		font-size: 10px;
 		font-weight: 700;
 		line-height: 1;
@@ -1609,7 +1609,7 @@
 	.pfield-info-btn:hover {
 		background: rgba(167, 139, 250, .18);
 		border-color: rgba(167, 139, 250, .6);
-		color: #c4b5fd;
+		color: var(--nx-accent-2-soft2);
 	}
 	.pfield-info-btn[aria-expanded="true"] {
 		background: rgba(167, 139, 250, .25);
@@ -1651,7 +1651,7 @@
 
 	.pfield input[type="range"] {
 		width: 100%;
-		accent-color: #a78bfa;
+		accent-color: var(--nx-accent-2-soft);
 	}
 
 	.pfield-color {
@@ -1681,7 +1681,7 @@
 		position: relative;
 		transition: background 0.2s;
 	}
-	.ptoggle input:checked + .ptoggle-track { background: #a78bfa; }
+	.ptoggle input:checked + .ptoggle-track { background: var(--nx-accent-2-soft); }
 	.ptoggle-thumb {
 		position: absolute;
 		left: 2px; top: 2px;
@@ -1698,7 +1698,7 @@
 	/* ── Buttons ─────────────────────────────────────────────────────────────── */
 	.btn-primary {
 		padding: 7px 16px;
-		background: linear-gradient(135deg, #7c3aed, #a78bfa);
+		background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-accent-2-soft));
 		border: none;
 		color: white;
 		font-size: 12px;
@@ -1751,7 +1751,7 @@
 		border-radius: 4px;
 	}
 	.preview-btn:hover { border-color: rgba(167,139,250,.4); color: #e2e8f0; }
-	.preview-btn--active { background: rgba(167,139,250,.15); border-color: #a78bfa; color: #a78bfa; }
+	.preview-btn--active { background: rgba(167,139,250,.15); border-color: var(--nx-accent-2-soft); color: var(--nx-accent-2-soft); }
 
 	.toolbar-status { flex: 1; display: flex; align-items: center; gap: 6px; }
 	.unsaved-dot { width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; animation: pulse 2s infinite; }
@@ -1772,11 +1772,11 @@
 	.btn-tool:hover:not(:disabled) { color: #e2e8f0; border-color: rgba(255,255,255,.2); }
 	.btn-tool:disabled { opacity: 0.5; cursor: not-allowed; }
 	.btn-tool--save { color: #e2e8f0; border-color: rgba(167,139,250,.3); }
-	.btn-tool--save:hover:not(:disabled) { background: rgba(167,139,250,.15); border-color: #a78bfa; color: #a78bfa; }
+	.btn-tool--save:hover:not(:disabled) { background: rgba(167,139,250,.15); border-color: var(--nx-accent-2-soft); color: var(--nx-accent-2-soft); }
 	.btn-tool--publish {
 		background: linear-gradient(135deg, rgba(124,58,237,.3), rgba(167,139,250,.2));
 		border-color: rgba(167,139,250,.4);
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 	}
 	.btn-tool--publish:hover:not(:disabled) { background: linear-gradient(135deg, rgba(124,58,237,.5), rgba(167,139,250,.35)); }
 
@@ -1880,8 +1880,8 @@
 		border-radius: 4px;
 		transition: all 0.15s;
 	}
-	.preset-btn:hover { background: rgba(167,139,250,.12); border-color: #a78bfa; }
-	.preset-preview { font-size: 10px; color: #a78bfa; letter-spacing: 1px; font-family: monospace; }
+	.preset-btn:hover { background: rgba(167,139,250,.12); border-color: var(--nx-accent-2-soft); }
+	.preset-preview { font-size: 10px; color: var(--nx-accent-2-soft); letter-spacing: 1px; font-family: monospace; }
 	.preset-label { font-size: 11px; color: #9ca3af; }
 
 	/* Widget picker */
@@ -1910,7 +1910,7 @@
 		transition: all 0.1s;
 	}
 	.fam-btn:hover { border-color: rgba(167,139,250,.4); color: #e2e8f0; }
-	.fam-btn--active { background: rgba(167,139,250,.15); border-color: #a78bfa; color: #a78bfa; }
+	.fam-btn--active { background: rgba(167,139,250,.15); border-color: var(--nx-accent-2-soft); color: var(--nx-accent-2-soft); }
 
 	.picker-grid {
 		display: grid;
@@ -1975,7 +1975,7 @@
 	.ss-src-label {
 		font-size: 11px;
 		font-weight: 700;
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		white-space: nowrap;
 		flex-shrink: 0;
 	}
@@ -2005,7 +2005,7 @@
 		padding: 0;
 		transition: border-color .1s, color .1s;
 	}
-	.ss-src-btn:hover:not(:disabled) { border-color: #a78bfa; color: #a78bfa; }
+	.ss-src-btn:hover:not(:disabled) { border-color: var(--nx-accent-2-soft); color: var(--nx-accent-2-soft); }
 	.ss-src-btn:disabled { opacity: .3; cursor: default; }
 	.ss-src-btn--del:hover { border-color: #f87171 !important; color: #f87171 !important; }
 
@@ -2019,7 +2019,7 @@
 		font-size: 11px;
 		background: rgba(167,139,250,.08);
 		border: 1px solid rgba(167,139,250,.25);
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		cursor: pointer;
 		border-radius: 3px;
 		transition: background .1s;

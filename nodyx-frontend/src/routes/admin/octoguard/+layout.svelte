@@ -92,7 +92,7 @@
 	.og-tab:hover { color: #e2e8f0; }
 	.og-tab--active {
 		color: #f1f5f9;
-		border-bottom-color: #6366f1;
+		border-bottom-color: var(--nx-accent);
 		font-weight: 600;
 	}
 	.og-tab-icon { font-size: 14px; }

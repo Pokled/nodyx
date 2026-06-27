@@ -316,7 +316,7 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between mb-6">
 		<div>
-			<h1 class="text-2xl font-black" style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,#a78bfa,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text">
+			<h1 class="text-2xl font-black" style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-soft),#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text">
 				Sauvegardes & Restauration
 			</h1>
 			<p class="text-sm mt-1" style="color:#6b7280">
@@ -355,7 +355,7 @@
 		<button
 			onclick={() => createOpen = true}
 			class="flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all"
-			style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:#a78bfa">
+			style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:var(--nx-accent-2-soft)">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"/>
 			</svg>
@@ -388,7 +388,7 @@
 							<div class="flex items-center gap-2 flex-wrap">
 								<span class="text-sm font-mono truncate" style="color:#e2e8f0">{b.filename}</span>
 								<span class="text-[9px] font-bold uppercase px-1.5 py-0.5"
-								      style="background:rgba({sourceColor(b.source) === '#a78bfa' ? '167,139,250' : sourceColor(b.source) === '#06b6d4' ? '6,182,212' : '251,146,60'},.1); border:1px solid rgba({sourceColor(b.source) === '#a78bfa' ? '167,139,250' : sourceColor(b.source) === '#06b6d4' ? '6,182,212' : '251,146,60'},.25); color:{sourceColor(b.source)}">
+								      style="background:rgba({sourceColor(b.source) === 'var(--nx-accent-2-soft)' ? '167,139,250' : sourceColor(b.source) === '#06b6d4' ? '6,182,212' : '251,146,60'},.1); border:1px solid rgba({sourceColor(b.source) === 'var(--nx-accent-2-soft)' ? '167,139,250' : sourceColor(b.source) === '#06b6d4' ? '6,182,212' : '251,146,60'},.25); color:{sourceColor(b.source)}">
 									{sourceLabel(b.source)}
 								</span>
 								{#if verify}
@@ -477,7 +477,7 @@
 				<label class="flex items-start gap-2.5 cursor-pointer">
 					<input type="checkbox" bind:checked={createIncludeUploads}
 					       class="mt-0.5"
-					       style="accent-color:#a78bfa" />
+					       style="accent-color:var(--nx-accent-2-soft)" />
 					<div class="flex flex-col">
 						<span class="text-sm font-bold">Inclure les fichiers uploadés</span>
 						<span class="text-[10px]" style="color:#6b7280">Avatars, images, documents. Décocher = sauvegarde DB-only (plus rapide, beaucoup moins lourde).</span>
@@ -496,7 +496,7 @@
 				</button>
 				<button onclick={handleCreate} disabled={creating}
 				        class="px-4 py-1.5 text-xs font-bold disabled:opacity-50"
-				        style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:#a78bfa">
+				        style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:var(--nx-accent-2-soft)">
 					{creating ? 'Création...' : 'Créer'}
 				</button>
 			</div>
@@ -577,12 +577,12 @@
 				<div class="px-3 py-2.5" style="background:rgba(167,139,250,.05); border:1px solid rgba(167,139,250,.18)">
 					<div class="flex items-center justify-between gap-2">
 						<div class="flex flex-col gap-0.5">
-							<p class="text-[11px] font-bold" style="color:#a78bfa">Pas sûr ? Lance un test à blanc</p>
+							<p class="text-[11px] font-bold" style="color:var(--nx-accent-2-soft)">Pas sûr ? Lance un test à blanc</p>
 							<p class="text-[10px]" style="color:#6b7280">Vérifie le checksum + la structure de l'archive sans rien modifier. Aucune ligne de DB ni de fichier touché.</p>
 						</div>
 						<button onclick={handleDryRun} disabled={dryRunRunning || restoring}
 						        class="px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-50 shrink-0"
-						        style="background:rgba(167,139,250,.1); border:1px solid rgba(167,139,250,.3); color:#a78bfa">
+						        style="background:rgba(167,139,250,.1); border:1px solid rgba(167,139,250,.3); color:var(--nx-accent-2-soft)">
 							{dryRunRunning ? '…' : 'Tester (dry-run)'}
 						</button>
 					</div>

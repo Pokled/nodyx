@@ -315,10 +315,10 @@
 				<rect x="21" y="69" width="38" height="18" rx="4" fill="#020617"/>
 				<!-- LEDs -->
 				<circle cx="30" cy="78" r="3.5"
-					fill={isError ? '#ef4444' : mood === 'happy' ? '#10b981' : '#6366f1'}
+					fill={isError ? '#ef4444' : mood === 'happy' ? '#10b981' : 'var(--nx-accent)'}
 					opacity={mood === 'idle' ? '0.4' : '0.9'}/>
 				<circle cx="40" cy="78" r="3.5"
-					fill={mood === 'loading' ? '#f59e0b' : mood === 'happy' ? '#10b981' : '#6366f1'}
+					fill={mood === 'loading' ? '#f59e0b' : mood === 'happy' ? '#10b981' : 'var(--nx-accent)'}
 					opacity={mood === 'idle' ? '0.25' : '0.7'}/>
 				<circle cx="50" cy="78" r="3.5"
 					fill={mood === 'happy' ? '#10b981' : '#334155'}

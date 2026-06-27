@@ -276,7 +276,7 @@
 		transition: color .15s, background .15s, transform .15s;
 	}
 	.sl-link:hover {
-		color: var(--ic, #a78bfa);
+		color: var(--ic, var(--nx-accent-2-soft));
 		background: rgba(255,255,255,.06);
 		transform: translateY(-2px);
 	}

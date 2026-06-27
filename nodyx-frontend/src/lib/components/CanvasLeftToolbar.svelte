@@ -175,7 +175,7 @@
 	}
 
 	.tool-btn.active {
-		background: linear-gradient(135deg, #6d28d9, #7c3aed);
+		background: linear-gradient(135deg, var(--nx-accent-deep), var(--nx-accent-2-strong));
 		color: white;
 		box-shadow: 0 0 0 1px rgba(124,58,237,0.4), 0 4px 12px rgba(124,58,237,0.35);
 	}

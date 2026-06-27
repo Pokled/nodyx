@@ -358,8 +358,8 @@
 							<div class="flex items-end gap-[2.5px] transition-opacity duration-300"
 							     style="height:16px; opacity:{isSpeaking || myActive ? 1 : 0};">
 								{#each [
-									{c:'#6d28d9',d:'0.00s'},{c:'#7c3aed',d:'0.14s'},{c:'#8b5cf6',d:'0.05s'},
-									{c:'#a78bfa',d:'0.22s'},{c:'#67e8f9',d:'0.09s'},{c:'#22d3ee',d:'0.17s'},
+									{c:'var(--nx-accent-deep)',d:'0.00s'},{c:'var(--nx-accent-2-strong)',d:'0.14s'},{c:'var(--nx-accent-2-mid)',d:'0.05s'},
+									{c:'var(--nx-accent-2-soft)',d:'0.22s'},{c:'#67e8f9',d:'0.09s'},{c:'#22d3ee',d:'0.17s'},
 									{c:'#67e8f9',d:'0.03s'}
 								] as bar}
 									<div class="w-[2.5px] rounded-sm eq-bar" style="background:{bar.c}; animation-delay:{bar.d}"></div>
@@ -471,7 +471,7 @@
 					class="w-full px-4 py-3 text-sm text-gray-200 focus:outline-none mb-3"
 					style="background: rgba(255,255,255,0.04);
 					       border: 1px solid rgba(255,255,255,0.08);
-					       caret-color: #7c3aed;"
+					       caret-color: var(--nx-accent-2-strong);"
 					onkeydown={(e) => { if (e.key === 'Enter') handleJukeboxLoad() }}
 				/>
 
@@ -533,7 +533,7 @@
 			<div class="mt-0.5 pt-0.5" style="border-top: 1px solid rgba(255,255,255,0.05);">
 				<button onclick={() => toggleMutePeer(mp)}
 					class="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-white/[.04] transition-colors"
-					style="color: {isMuted ? '#a78bfa' : '#6b7280'};">
+					style="color: {isMuted ? 'var(--nx-accent-2-soft)' : '#6b7280'};">
 					{#if isMuted}
 						<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/>

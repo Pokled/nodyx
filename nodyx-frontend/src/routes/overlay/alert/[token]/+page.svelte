@@ -489,7 +489,7 @@
 		position: absolute; inset: 0;
 		border-radius: 14px;
 		padding: 1.5px;
-		background: linear-gradient(135deg, #ec4899, #6366f1, #06b6d4, #a855f7, #ec4899);
+		background: linear-gradient(135deg, #ec4899, var(--nx-accent), #06b6d4, var(--nx-accent-2), #ec4899);
 		background-size: 300% 300%;
 		-webkit-mask:
 			linear-gradient(#fff 0 0) content-box,

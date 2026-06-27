@@ -65,7 +65,7 @@
 	.og-h code { background: rgba(255,255,255,0.05); padding: 1px 4px; border-radius: 2px; font-size: 11px; font-family: ui-monospace, monospace; }
 	.og-btn { padding: 6px 12px; font-size: 12px; background: transparent; color: #94a3b8; border: 1px solid #374151; border-radius: 3px; cursor: pointer; }
 	.og-btn:hover { color: #e2e8f0; }
-	.og-btn-primary { padding: 6px 12px; font-size: 12px; color: #fff; background: #6366f1; border: none; border-radius: 3px; cursor: pointer; }
+	.og-btn-primary { padding: 6px 12px; font-size: 12px; color: #fff; background: var(--nx-accent); border: none; border-radius: 3px; cursor: pointer; }
 	.og-err { padding: 10px 14px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
 	.og-form { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; background: rgba(255,255,255,0.01); margin-bottom: 12px; }
 	.og-row { display: grid; grid-template-columns: 1fr 120px; gap: 10px; }

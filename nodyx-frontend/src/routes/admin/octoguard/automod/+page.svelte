@@ -220,9 +220,9 @@
 	.og-page-sub { font-size: 11px; color: #64748b; margin: 2px 0 0; font-family: ui-monospace, monospace; }
 	.og-btn-primary {
 		padding: 6px 12px; font-size: 12px; color: #fff;
-		background: #6366f1; border: none; border-radius: 3px; cursor: pointer;
+		background: var(--nx-accent); border: none; border-radius: 3px; cursor: pointer;
 	}
-	.og-btn-primary:hover { background: #4f46e5; }
+	.og-btn-primary:hover { background: var(--nx-accent-strong); }
 	.og-btn-secondary {
 		padding: 6px 12px; font-size: 12px; color: #94a3b8;
 		background: transparent; border: 1px solid #374151; border-radius: 3px; cursor: pointer;

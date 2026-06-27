@@ -235,7 +235,7 @@
 		<!-- Bannière fallback : main offline, on montre un autre stream -->
 		{#if isFallbackLive && widgetData?.main === null && configuredChannel !== activeChannel}
 			<div class="relative flex items-center gap-2 px-4 py-1.5 text-[10px]"
-			     style="background:rgba(145,70,255,.08); border-bottom:1px solid rgba(145,70,255,.2); color:#c4b5fd">
+			     style="background:rgba(145,70,255,.08); border-bottom:1px solid rgba(145,70,255,.2); color:var(--nx-accent-2-soft2)">
 				<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
 				</svg>

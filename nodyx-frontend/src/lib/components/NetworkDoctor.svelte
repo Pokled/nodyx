@@ -168,7 +168,7 @@
     .star {
         position: absolute; top: var(--top); left: var(--left);
         width: 1px; height: 80px;
-        background: linear-gradient(to bottom, transparent, #fff, #4f46e5);
+        background: linear-gradient(to bottom, transparent, #fff, var(--nx-accent-strong));
         opacity: 0; animation: hyper-warp var(--speed) linear infinite;
         animation-delay: var(--delay);
         transform-origin: top;

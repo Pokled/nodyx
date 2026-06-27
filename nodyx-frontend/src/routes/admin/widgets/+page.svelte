@@ -360,7 +360,7 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between mb-8">
 		<div>
-			<h1 class="text-2xl font-black" style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,#a78bfa,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text">
+			<h1 class="text-2xl font-black" style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-soft),#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text">
 				Widget Store
 			</h1>
 			<p class="text-sm mt-1" style="color:#6b7280">
@@ -369,7 +369,7 @@
 		</div>
 		<a href="/admin/homepage"
 		   class="flex items-center gap-2 px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all"
-		   style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:#a78bfa">
+		   style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:var(--nx-accent-2-soft)">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
 			</svg>
@@ -505,7 +505,7 @@
 													<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
 												</svg>
 											{:else if isActive}
-												<div class="w-2 h-2 rounded-full animate-pulse" style="background:#a78bfa"></div>
+												<div class="w-2 h-2 rounded-full animate-pulse" style="background:var(--nx-accent-2-soft)"></div>
 											{:else}
 												<div class="w-1.5 h-1.5 rounded-full" style="background:rgba(255,255,255,.1)"></div>
 											{/if}
@@ -525,18 +525,18 @@
 								<div>
 									<div class="flex items-center justify-between mb-1.5">
 										<span class="text-xs" style="color:#4b5563">Transfert en cours</span>
-										<span class="text-xs font-bold tabular-nums" style="color:#a78bfa">{uploadPct}%</span>
+										<span class="text-xs font-bold tabular-nums" style="color:var(--nx-accent-2-soft)">{uploadPct}%</span>
 									</div>
 									<div class="w-full h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,.06)">
 										<div class="h-full rounded-full transition-all duration-300"
-										     style="width:{uploadPct}%; background:linear-gradient(90deg,#7c3aed,#06b6d4)">
+										     style="width:{uploadPct}%; background:linear-gradient(90deg,var(--nx-accent-2-strong),#06b6d4)">
 										</div>
 									</div>
 								</div>
 							{:else}
 								<!-- Barre indéterminée pour les étapes serveur -->
 								<div class="w-full h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,.06)">
-									<div class="h-full rounded-full" style="background:linear-gradient(90deg,#7c3aed,#06b6d4); animation:indeterminate 1.4s ease infinite">
+									<div class="h-full rounded-full" style="background:linear-gradient(90deg,var(--nx-accent-2-strong),#06b6d4); animation:indeterminate 1.4s ease infinite">
 									</div>
 								</div>
 							{/if}
@@ -582,7 +582,7 @@
 
 				{#if loadingList}
 					<div class="px-4 py-8 flex items-center justify-center gap-2" style="color:#374151">
-						<div class="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style="border-color:rgba(167,139,250,.3); border-top-color:#a78bfa"></div>
+						<div class="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style="border-color:rgba(167,139,250,.3); border-top-color:var(--nx-accent-2-soft)"></div>
 						<span class="text-xs">Chargement...</span>
 					</div>
 				{:else if installed.length === 0}
@@ -766,11 +766,11 @@
 										onclick={() => installDemo(demo.id)}
 										disabled={demoInstalling}
 										class="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-50"
-										style="background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.3); color:#a78bfa"
+										style="background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.3); color:var(--nx-accent-2-soft)"
 									>
 										{#if demoInstalling}
 											<div class="w-3 h-3 rounded-full border-2 animate-spin"
-											     style="border-color:rgba(167,139,250,.2); border-top-color:#a78bfa"></div>
+											     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
 										{:else}
 											<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"/>
@@ -899,7 +899,7 @@
 					<button
 						onclick={() => demoTab = tab.key as typeof demoTab}
 						class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all"
-						style="border:1px solid {demoTab === tab.key ? 'rgba(124,58,237,.4)' : 'transparent'}; background:{demoTab === tab.key ? 'rgba(124,58,237,.1)' : 'transparent'}; color:{demoTab === tab.key ? '#a78bfa' : '#374151'}"
+						style="border:1px solid {demoTab === tab.key ? 'rgba(124,58,237,.4)' : 'transparent'}; background:{demoTab === tab.key ? 'rgba(124,58,237,.1)' : 'transparent'}; color:{demoTab === tab.key ? 'var(--nx-accent-2-soft)' : '#374151'}"
 					>
 						<span>{tab.icon}</span>
 						<span class="font-mono">{tab.label}</span>
@@ -920,11 +920,11 @@
 							onclick={() => demoModal && installDemo(demoModal.id)}
 							disabled={demoInstalling}
 							class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold transition-all disabled:opacity-50"
-							style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:#a78bfa"
+							style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:var(--nx-accent-2-soft)"
 						>
 							{#if demoInstalling}
 								<div class="w-3 h-3 rounded-full border-2 animate-spin"
-								     style="border-color:rgba(167,139,250,.2); border-top-color:#a78bfa"></div>
+								     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
 								Installation...
 							{:else}
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -945,7 +945,7 @@
 						{#if demoSourceLoad}
 							<div class="flex items-center justify-center py-16 gap-3" style="color:#374151">
 								<div class="w-5 h-5 rounded-full border-2 animate-spin"
-								     style="border-color:rgba(167,139,250,.2); border-top-color:#a78bfa"></div>
+								     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
 								<span class="text-sm">Chargement du widget...</span>
 							</div>
 						{:else}
@@ -996,7 +996,7 @@
 						{#if demoSourceLoad}
 							<div class="flex items-center justify-center py-16 gap-3" style="color:#374151">
 								<div class="w-5 h-5 rounded-full border-2 animate-spin"
-								     style="border-color:rgba(167,139,250,.2); border-top-color:#a78bfa"></div>
+								     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
 							</div>
 						{:else if demoSource}
 							<div class="relative">
@@ -1019,7 +1019,7 @@
 						{#if demoSourceLoad}
 							<div class="flex items-center justify-center py-16 gap-3" style="color:#374151">
 								<div class="w-5 h-5 rounded-full border-2 animate-spin"
-								     style="border-color:rgba(167,139,250,.2); border-top-color:#a78bfa"></div>
+								     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
 							</div>
 						{:else if demoSource}
 							<div class="relative">

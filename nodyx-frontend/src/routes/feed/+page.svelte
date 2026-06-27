@@ -427,7 +427,7 @@
 
 							<!-- Wave progress bar -->
 							<div class="composer-wave-track">
-								<div class="composer-wave-fill" style="width: {waveWidth}%; background: {charLeft < 0 ? '#ef4444' : charLeft < 100 ? '#f59e0b' : '#6366f1'}"></div>
+								<div class="composer-wave-fill" style="width: {waveWidth}%; background: {charLeft < 0 ? '#ef4444' : charLeft < 100 ? '#f59e0b' : 'var(--nx-accent)'}"></div>
 							</div>
 							<span class="composer-char-count" style="color: {charColor}">{charLeft}</span>
 							<div class="composer-actions">
@@ -879,7 +879,7 @@
 	justify-content: center;
 }
 .composer-avatar-img   { width: 100%; height: 100%; object-fit: cover; }
-.composer-avatar-initial { font-size: 0.875rem; font-weight: 700; color: #6366f1; }
+.composer-avatar-initial { font-size: 0.875rem; font-weight: 700; color: var(--nx-accent); }
 
 .composer-body { flex: 1; min-width: 0; }
 
@@ -1018,11 +1018,11 @@
 	font-weight: 700;
 	color: white;
 	padding: 0.375rem 1rem;
-	background: #6366f1;
+	background: var(--nx-accent);
 	letter-spacing: 0.2px;
 	transition: all 0.15s;
 }
-.composer-submit:hover:not(:disabled) { background: #4f46e5; }
+.composer-submit:hover:not(:disabled) { background: var(--nx-accent-strong); }
 .composer-submit:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Posts ────────────────────────────────────────────────────────────────── */
@@ -1061,7 +1061,7 @@
 	align-items: center;
 	justify-content: center;
 	background: rgba(99,102,241,0.15);
-	color: #818cf8;
+	color: var(--nx-accent-soft);
 	font-weight: 700;
 	font-size: 0.875rem;
 }
@@ -1080,7 +1080,7 @@
 	color: rgba(255,255,255,0.85);
 	transition: color 0.1s;
 }
-.post-author:hover { color: #818cf8; }
+.post-author:hover { color: var(--nx-accent-soft); }
 .post-username { font-size: 0.8rem; color: rgba(255,255,255,0.3); }
 .post-dot      { font-size: 0.8rem; color: rgba(255,255,255,0.2); }
 .post-time     { font-size: 0.75rem; color: rgba(255,255,255,0.25); }
@@ -1105,7 +1105,7 @@
 .prose-feed :global(p:last-child)   { margin-bottom: 0; }
 .prose-feed :global(strong)         { font-weight: 700; color: rgba(255,255,255,0.92); }
 .prose-feed :global(em)             { font-style: italic; }
-.prose-feed :global(a)              { color: #818cf8; text-decoration: underline; text-decoration-color: rgba(129,140,248,0.4); }
+.prose-feed :global(a)              { color: var(--nx-accent-soft); text-decoration: underline; text-decoration-color: rgba(129,140,248,0.4); }
 .prose-feed :global(a:hover)        { color: #a5b4fc; }
 .prose-feed :global(ul), .prose-feed :global(ol) { padding-left: 1.25rem; margin: 0.35em 0; }
 .prose-feed :global(li)             { margin: 0.15em 0; }
@@ -1159,7 +1159,7 @@
 .link-card-img { width: 100%; max-height: 240px; overflow: hidden; background: rgba(0,0,0,0.2); }
 .link-card-img img { width: 100%; height: 100%; max-height: 240px; object-fit: cover; display: block; }
 .link-card-body { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.7rem 0.85rem; }
-.link-card-site { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: #818cf8; font-weight: 700; }
+.link-card-site { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--nx-accent-soft); font-weight: 700; }
 .link-card-title { font-size: 0.9rem; font-weight: 700; color: rgba(255,255,255,0.92); line-height: 1.3;
 	display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .link-card-desc { font-size: 0.8rem; color: rgba(255,255,255,0.55); line-height: 1.4;
@@ -1291,8 +1291,8 @@
 .feed-empty-icon svg { width: 28px; height: 28px; }
 .feed-empty-title  { font-size: 1rem; font-weight: 700; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem; }
 .feed-empty-sub    { font-size: 0.8rem; color: rgba(255,255,255,0.25); max-width: 300px; }
-.feed-empty-cta    { margin-top: 1.25rem; font-size: 0.8rem; font-weight: 600; color: #6366f1; transition: color 0.15s; }
-.feed-empty-cta:hover { color: #818cf8; }
+.feed-empty-cta    { margin-top: 1.25rem; font-size: 0.8rem; font-weight: 600; color: var(--nx-accent); transition: color 0.15s; }
+.feed-empty-cta:hover { color: var(--nx-accent-soft); }
 
 .feed-sentinel { padding: 2rem; display: flex; justify-content: center; }
 .feed-loader   { display: flex; gap: 0.375rem; }
@@ -1310,7 +1310,7 @@
 }
 .feed-end { font-size: 0.75rem; color: rgba(255,255,255,0.2); }
 :global(.feed-end a) { color: rgba(99,102,241,0.6); transition: color 0.15s; }
-:global(.feed-end a:hover) { color: #818cf8; }
+:global(.feed-end a:hover) { color: var(--nx-accent-soft); }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
 .sidebar-card {
@@ -1338,7 +1338,7 @@
 	width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
 	background: rgba(99,102,241,0.15);
 	display: flex; align-items: center; justify-content: center;
-	font-weight: 700; font-size: 0.875rem; color: #6366f1;
+	font-weight: 700; font-size: 0.875rem; color: var(--nx-accent);
 	flex-shrink: 0;
 }
 .sidebar-me-name   { font-size: 0.875rem; font-weight: 700; color: rgba(255,255,255,0.8); }
@@ -1348,7 +1348,7 @@
 	width: 36px; height: 36px; border-radius: 50%; overflow: hidden;
 	background: rgba(99,102,241,0.1);
 	display: flex; align-items: center; justify-content: center;
-	font-size: 0.8rem; font-weight: 700; color: #6366f1;
+	font-size: 0.8rem; font-weight: 700; color: var(--nx-accent);
 	flex-shrink: 0;
 }
 .sidebar-suggest-name   { display: block; font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7); }
@@ -1356,7 +1356,7 @@
 .sidebar-follow-btn {
 	font-size: 0.7rem;
 	font-weight: 600;
-	color: #6366f1;
+	color: var(--nx-accent);
 	padding: 0.25rem 0.625rem;
 	border: 1px solid rgba(99,102,241,0.3);
 	transition: all 0.15s;
@@ -1387,7 +1387,7 @@
 	transition: color 0.15s;
 }
 .post-replies-btn:hover        { color: rgba(99,102,241,0.9); }
-.post-replies-btn--open        { color: #818cf8; }
+.post-replies-btn--open        { color: var(--nx-accent-soft); }
 
 .replies-thread {
 	border-left: 2px solid rgba(99,102,241,0.2);
@@ -1428,7 +1428,7 @@
 	align-items: center;
 	justify-content: center;
 	background: rgba(99,102,241,0.12);
-	color: #818cf8;
+	color: var(--nx-accent-soft);
 	font-weight: 700;
 	font-size: 0.75rem;
 }

@@ -227,7 +227,7 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-		background: #a855f7;
+		background: var(--nx-accent-2);
 		animation: pulse-dot 2s ease-in-out infinite;
 		flex-shrink: 0;
 	}
@@ -254,7 +254,7 @@
 		font-size: 9px;
 		font-weight: 700;
 		background: rgba(124,58,237,0.25);
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 		padding: 1px 5px;
 		border-radius: 20px;
 		letter-spacing: 0;
@@ -465,7 +465,7 @@
 		height: 32px;
 		border: none;
 		border-radius: 10px;
-		background: linear-gradient(135deg, #6d28d9, #7c3aed);
+		background: linear-gradient(135deg, var(--nx-accent-deep), var(--nx-accent-2-strong));
 		color: white;
 		cursor: pointer;
 		display: flex;

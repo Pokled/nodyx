@@ -319,7 +319,7 @@
 	.ch-active {
 		color: #e2e8f0;
 		background: rgba(124,58,237,.14);
-		box-shadow: inset 2px 0 0 #7c3aed;
+		box-shadow: inset 2px 0 0 var(--nx-accent-2-strong);
 	}
 
 	/* ── Unread state: bioluminescent breathing glow ───────────────────────── */
@@ -380,7 +380,7 @@
 
 	/* ── Hash symbol ───────────────────────────────────────────────────────── */
 	.ch-hash { color: #6b7280; transition: color .15s; min-width: 14px; display: inline-flex; justify-content: center; }
-	.ch-hash-unread { color: #a78bfa; }
+	.ch-hash-unread { color: var(--nx-accent-2-soft); }
 	.ch-idle:hover .ch-hash { color: #cbd5e1; }
 
 	/* ── Voice channel items ───────────────────────────────────────────────── */
@@ -445,7 +445,7 @@
 		height: 16px;
 		padding: 0 4px;
 		border-radius: 99px;
-		background: #7c3aed;
+		background: var(--nx-accent-2-strong);
 		color: white;
 		font-size: 9px;
 		font-weight: 800;

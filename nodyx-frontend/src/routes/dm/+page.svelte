@@ -219,7 +219,7 @@
 													style={i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}/>
 											{:else}
 												<div class="w-6 h-6 rounded-full bg-indigo-600/30 border-2 border-gray-950 flex items-center justify-center text-[10px] font-bold absolute"
-													style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? '#818cf8'}`}>
+													style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? 'var(--nx-accent-soft)'}`}>
 													{p.username[0].toUpperCase()}
 												</div>
 											{/if}
@@ -229,7 +229,7 @@
 									<img src={conv.other_avatar} alt={conv.other_username} class="w-9 h-9 rounded-full object-cover"/>
 								{:else}
 									<div class="w-9 h-9 rounded-full bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center text-sm font-bold"
-										style={conv.other_name_color ? `color: ${conv.other_name_color}` : 'color: #818cf8'}>
+										style={conv.other_name_color ? `color: ${conv.other_name_color}` : 'color: var(--nx-accent-soft)'}>
 										{(conv.other_username ?? '?')[0].toUpperCase()}
 									</div>
 								{/if}

@@ -232,7 +232,7 @@
 	}
 	.bar-btn.toggle.on {
 		background: rgba(124,58,237,0.18);
-		color: #a78bfa;
+		color: var(--nx-accent-2-soft);
 	}
 	.bar-btn.toggle.on:hover { background: rgba(124,58,237,0.25); }
 
@@ -305,7 +305,7 @@
 		z-index: 1;
 	}
 	.bg-swatch.active {
-		border-color: #818cf8;
+		border-color: var(--nx-accent-soft);
 		box-shadow: 0 0 0 2px rgba(129,140,248,0.45);
 		transform: scale(1.2);
 		z-index: 1;
@@ -314,11 +314,11 @@
 	.bg-picker {
 		background: conic-gradient(
 			#f87171, #fb923c, #fbbf24, #4ade80,
-			#22d3ee, #818cf8, #e879f9, #f87171
+			#22d3ee, var(--nx-accent-soft), #e879f9, #f87171
 		);
 		border-color: rgba(255,255,255,0.2);
 		color: transparent;
 	}
 	.bg-picker:hover { border-color: rgba(255,255,255,0.5); }
-	.bg-picker.active { border-color: #818cf8; }
+	.bg-picker.active { border-color: var(--nx-accent-soft); }
 </style>
