@@ -892,5 +892,12 @@
   "settings.sounds.enabled_desc": "Включите или отключите все звуки уведомлений.",
   "settings.sounds.hint": "Звуки генерируются через Web Audio API — без загружаемых файлов и сетевой задержки.\nНастройки сохраняются локально в вашем браузере.",
   "settings.streamer.desc": "Получайте звук в Nodyx для follow, sub, raid и cheer. Полезно, когда вы отключаете аудиомониторинг трансляции.",
-  "settings.streamer.enabled": "Уведомления стримера включены"
+  "settings.streamer.enabled": "Уведомления стримера включены",
+  "channels.text": "Текст",
+  "channels.voice": "Голос",
+  "members.online": "В сети",
+  "members.offline": "Не в сети",
+  "members.none_online": "Нет участников в сети",
+  "members.see_all": "Показать всех",
+  "settings.sounds.nav": "Звуки"
 }

@@ -891,5 +891,12 @@
   "settings.sounds.enabled_desc": "Alle Benachrichtigungstöne aktivieren oder deaktivieren.",
   "settings.sounds.hint": "Töne über die Web Audio API erzeugt — keine heruntergeladenen Dateien, keine Netzwerklatenz. Einstellungen werden lokal im Browser gespeichert.",
   "settings.streamer.desc": "Erhalte auf Nodyx einen Ton für Follows, Subs, Raids, Cheers. Praktisch, wenn du den Audio-Rückkanal deines Streams stummschaltest.",
-  "settings.streamer.enabled": "Streamer-Benachrichtigungen aktiviert"
+  "settings.streamer.enabled": "Streamer-Benachrichtigungen aktiviert",
+  "channels.text": "Text",
+  "channels.voice": "Sprache",
+  "members.online": "Online",
+  "members.offline": "Offline",
+  "members.none_online": "Keine Mitglieder online",
+  "members.see_all": "Alle anzeigen",
+  "settings.sounds.nav": "Töne"
 }

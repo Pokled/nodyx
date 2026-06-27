@@ -601,7 +601,7 @@
 				{#if user.role === 'owner' || user.role === 'admin'}
 					<a href="/admin"
 					   class="hidden sm:flex items-center px-2.5 h-7 text-[10px] font-black uppercase tracking-wider transition-colors"
-					   style="color: {isActive('/admin') ? '#a78bfa' : '#4b5563'}; border: 1px solid {isActive('/admin') ? 'rgba(124,58,237,.4)' : 'rgba(255,255,255,.06)'}">Admin</a>
+					   style="color: {isActive('/admin') ? '#a78bfa' : '#4b5563'}; border: 1px solid {isActive('/admin') ? 'rgba(124,58,237,.4)' : 'rgba(255,255,255,.06)'}">{tFn('nav.admin')}</a>
 				{/if}
 				<!-- User dropdown -->
 				<div class="relative">
@@ -911,7 +911,7 @@
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M7.875 14.25l1.214 1.942a2.25 2.25 0 001.908 1.058h2.006c.776 0 1.497-.4 1.908-1.058l1.214-1.942M2.41 9h4.636a2.25 2.25 0 011.872 1.002l.164.246a2.25 2.25 0 001.872 1.002h2.092a2.25 2.25 0 001.872-1.002l.164-.246A2.25 2.25 0 0116.954 9h4.636M2.41 9a2.25 2.25 0 00-.16.832V12a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25V9.832c0-.287-.055-.57-.16-.832M2.41 9a2.25 2.25 0 01.382-.632l3.285-3.832a2.25 2.25 0 011.708-.786h8.43c.657 0 1.281.287 1.709.786l3.284 3.832c.163.19.291.404.382.632"/>
 							</svg>
-							<span>Texte</span>
+							<span>{tFn('channels.text')}</span>
 						</div>
 					{#each layoutTextChannels as ch}
 						{@const chActive = activeChatChannelId === ch.id}
@@ -947,7 +947,7 @@
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
 							</svg>
-							<span>Vocal</span>
+							<span>{tFn('channels.voice')}</span>
 						</div>
 						{#each layoutVoiceChannels as ch}
 						{@const chActive = activeChatChannelId === ch.id}
@@ -1252,7 +1252,7 @@
 					{#if memberGroups.ungrouped.length > 0}
 						<div class="flex items-center gap-2 px-2 pt-3 pb-1.5">
 							<span class="w-1.5 h-1.5 shrink-0 rounded-full" style="background: #4ade80"></span>
-							<span class="text-[9px] font-black uppercase tracking-[.18em] flex-1" style="color: #374151; font-family: 'Space Grotesk', sans-serif">En ligne</span>
+							<span class="text-[9px] font-black uppercase tracking-[.18em] flex-1" style="color: #374151; font-family: 'Space Grotesk', sans-serif">{tFn('members.online')}</span>
 							<span class="text-[9px] font-bold tabular-nums" style="color: #374151">{memberGroups.ungrouped.length}</span>
 						</div>
 						{#each memberGroups.ungrouped as member (member.userId)}
@@ -1330,7 +1330,7 @@
 							<div class="w-8 h-8 flex items-center justify-center" style="background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06)">
 								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color: #374151"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
 							</div>
-							<p class="text-[10px] text-center" style="color: #374151">Aucun membre en ligne</p>
+							<p class="text-[10px] text-center" style="color: #374151">{tFn('members.none_online')}</p>
 						</div>
 					{/if}
 
@@ -1338,7 +1338,7 @@
 					{#if offlineMembers.length > 0}
 						<div class="flex items-center gap-2 px-2 pt-4 pb-1.5" style="border-top: 1px solid rgba(255,255,255,.04); margin-top: 8px">
 							<span class="w-1.5 h-1.5 shrink-0" style="background: #374151"></span>
-							<span class="text-[9px] font-black uppercase tracking-[.18em] flex-1" style="color: #2d3748; font-family: 'Space Grotesk', sans-serif">Hors ligne</span>
+							<span class="text-[9px] font-black uppercase tracking-[.18em] flex-1" style="color: #2d3748; font-family: 'Space Grotesk', sans-serif">{tFn('members.offline')}</span>
 							<span class="text-[9px] font-bold tabular-nums" style="color: #2d3748">{offlineMembers.length}</span>
 						</div>
 						{#each offlineMembers.slice(0, 10) as member (member.user_id)}
@@ -1359,7 +1359,7 @@
 							<a href="/members"
 							   class="flex items-center justify-center gap-1 mx-2 my-1 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors"
 							   style="color: #374151; border: 1px solid rgba(255,255,255,.05)">
-								Voir tous
+								{tFn('members.see_all')}
 								<span class="text-[9px]" style="color: #4b5563">({offlineMembers.length})</span>
 							</a>
 						{/if}

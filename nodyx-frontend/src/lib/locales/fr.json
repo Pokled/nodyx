@@ -892,5 +892,12 @@
   "settings.sounds.enabled_desc": "Active ou désactive tous les sons de notification.",
   "settings.sounds.hint": "Sons générés via Web Audio API — aucun fichier téléchargé, aucune latence réseau. Les réglages sont sauvegardés localement dans votre navigateur.",
   "settings.streamer.desc": "Reçois un son côté Nodyx pour follow, sub, raid, cheer. Utile quand tu coupes le retour audio de ton live.",
-  "settings.streamer.enabled": "Notifs Streamer activées"
+  "settings.streamer.enabled": "Notifs Streamer activées",
+  "channels.text": "Texte",
+  "channels.voice": "Vocal",
+  "members.online": "En ligne",
+  "members.offline": "Hors ligne",
+  "members.none_online": "Aucun membre en ligne",
+  "members.see_all": "Voir tous",
+  "settings.sounds.nav": "Sons"
 }
