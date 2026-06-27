@@ -253,7 +253,7 @@
 	.badge {
 		font-size: 9px;
 		font-weight: 700;
-		background: rgba(124,58,237,0.25);
+		background: rgb(var(--nx-accent-2-rgb) / 0.25);
 		color: var(--nx-accent-2-soft);
 		padding: 1px 5px;
 		border-radius: 20px;
@@ -279,7 +279,7 @@
 		transition: background 0.1s;
 	}
 	.peer:hover { background: rgba(255,255,255,0.03); }
-	.peer.me { background: rgba(124,58,237,0.06); }
+	.peer.me { background: rgb(var(--nx-accent-2-rgb) / 0.06); }
 
 	.avatar {
 		position: relative;
@@ -419,8 +419,8 @@
 		border: 1px solid rgba(255,255,255,0.05);
 	}
 	.msg-bubble.mine {
-		background: linear-gradient(135deg, rgba(109,40,217,0.5), rgba(124,58,237,0.4));
-		border-color: rgba(124,58,237,0.3);
+		background: linear-gradient(135deg, rgba(109,40,217,0.5), rgb(var(--nx-accent-2-rgb) / 0.4));
+		border-color: rgb(var(--nx-accent-2-rgb) / 0.3);
 		border-radius: 12px 12px 4px 12px;
 		color: #ede9fe;
 	}
@@ -457,7 +457,7 @@
 		line-height: 1.4;
 		transition: border-color 0.15s;
 	}
-	.chat-input:focus { border-color: rgba(124,58,237,0.4); }
+	.chat-input:focus { border-color: rgb(var(--nx-accent-2-rgb) / 0.4); }
 	.chat-input::placeholder { color: #374151; }
 
 	.send-btn {
@@ -473,9 +473,9 @@
 		justify-content: center;
 		flex-shrink: 0;
 		transition: all 0.15s;
-		box-shadow: 0 2px 8px rgba(124,58,237,0.3);
+		box-shadow: 0 2px 8px rgb(var(--nx-accent-2-rgb) / 0.3);
 	}
-	.send-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 4px 12px rgba(124,58,237,0.4); }
+	.send-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 4px 12px rgb(var(--nx-accent-2-rgb) / 0.4); }
 	.send-btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
 	.send-btn svg { width: 15px; height: 15px; }
 </style>

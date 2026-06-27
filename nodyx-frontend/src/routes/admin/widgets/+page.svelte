@@ -360,7 +360,7 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between mb-8">
 		<div>
-			<h1 class="text-2xl font-black" style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-soft),#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text">
+			<h1 class="text-2xl font-black" style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-soft),var(--nx-cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text">
 				Widget Store
 			</h1>
 			<p class="text-sm mt-1" style="color:#6b7280">
@@ -369,7 +369,7 @@
 		</div>
 		<a href="/admin/homepage"
 		   class="flex items-center gap-2 px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all"
-		   style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:var(--nx-accent-2-soft)">
+		   style="background:linear-gradient(135deg,rgb(var(--nx-accent-2-rgb) / .25),rgb(var(--nx-cyan-rgb) / .15)); border:1px solid rgb(var(--nx-accent-2-rgb) / .4); color:var(--nx-accent-2-soft)">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
 			</svg>
@@ -396,7 +396,7 @@
 							role="button"
 							tabindex="0"
 							class="relative flex flex-col items-center justify-center gap-3 py-8 px-4 transition-all cursor-pointer"
-							style="border:2px dashed {dragging ? 'rgba(124,58,237,.6)' : 'rgba(255,255,255,.08)'}; background:{dragging ? 'rgba(124,58,237,.05)' : 'transparent'}"
+							style="border:2px dashed {dragging ? 'rgb(var(--nx-accent-2-rgb) / .6)' : 'rgba(255,255,255,.08)'}; background:{dragging ? 'rgb(var(--nx-accent-2-rgb) / .05)' : 'transparent'}"
 							ondragover={(e) => { e.preventDefault(); dragging = true }}
 							ondragleave={() => dragging = false}
 							ondrop={onDrop}
@@ -404,7 +404,7 @@
 							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') document.getElementById('widget-file-input')?.click() }}
 						>
 							<div class="w-12 h-12 rounded-full flex items-center justify-center"
-							     style="background:rgba(124,58,237,.1); border:1px solid rgba(124,58,237,.2)">
+							     style="background:rgb(var(--nx-accent-2-rgb) / .1); border:1px solid rgb(var(--nx-accent-2-rgb) / .2)">
 								<svg class="w-6 h-6" fill="none" stroke="#a78bfa" stroke-width="1.5" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
 								</svg>
@@ -496,10 +496,10 @@
 									{@const isDone    = i < current}
 									{@const isActive  = s.key === step}
 									<div class="flex items-center gap-3 px-3 py-2 transition-all"
-									     style="background:{isActive ? 'rgba(124,58,237,.08)' : 'transparent'}; border:1px solid {isActive ? 'rgba(124,58,237,.2)' : 'transparent'}">
+									     style="background:{isActive ? 'rgb(var(--nx-accent-2-rgb) / .08)' : 'transparent'}; border:1px solid {isActive ? 'rgb(var(--nx-accent-2-rgb) / .2)' : 'transparent'}">
 										<!-- Icône étape -->
 										<div class="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-										     style="background:{isDone ? 'rgba(74,222,128,.15)' : isActive ? 'rgba(124,58,237,.2)' : 'rgba(255,255,255,.04)'}; border:1px solid {isDone ? 'rgba(74,222,128,.3)' : isActive ? 'rgba(124,58,237,.4)' : 'rgba(255,255,255,.06)'}">
+										     style="background:{isDone ? 'rgba(74,222,128,.15)' : isActive ? 'rgb(var(--nx-accent-2-rgb) / .2)' : 'rgba(255,255,255,.04)'}; border:1px solid {isDone ? 'rgba(74,222,128,.3)' : isActive ? 'rgb(var(--nx-accent-2-rgb) / .4)' : 'rgba(255,255,255,.06)'}">
 											{#if isDone}
 												<svg class="w-2.5 h-2.5" fill="none" stroke="#4ade80" stroke-width="3" viewBox="0 0 24 24">
 													<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
@@ -529,14 +529,14 @@
 									</div>
 									<div class="w-full h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,.06)">
 										<div class="h-full rounded-full transition-all duration-300"
-										     style="width:{uploadPct}%; background:linear-gradient(90deg,var(--nx-accent-2-strong),#06b6d4)">
+										     style="width:{uploadPct}%; background:linear-gradient(90deg,var(--nx-accent-2-strong),var(--nx-cyan))">
 										</div>
 									</div>
 								</div>
 							{:else}
 								<!-- Barre indéterminée pour les étapes serveur -->
 								<div class="w-full h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,.06)">
-									<div class="h-full rounded-full" style="background:linear-gradient(90deg,var(--nx-accent-2-strong),#06b6d4); animation:indeterminate 1.4s ease infinite">
+									<div class="h-full rounded-full" style="background:linear-gradient(90deg,var(--nx-accent-2-strong),var(--nx-cyan)); animation:indeterminate 1.4s ease infinite">
 									</div>
 								</div>
 							{/if}
@@ -651,7 +651,7 @@
 					<span class="text-base">🎁</span>
 					<span class="font-bold text-sm text-white">Widgets de démonstration</span>
 					<span class="ml-1 text-xs px-1.5 py-0.5 font-bold"
-					      style="background:rgba(6,182,212,.08); border:1px solid rgba(6,182,212,.18); color:#06b6d4">
+					      style="background:rgb(var(--nx-cyan-rgb) / .08); border:1px solid rgb(var(--nx-cyan-rgb) / .18); color:var(--nx-cyan)">
 						Prêts à installer
 					</span>
 					<span class="ml-auto text-xs" style="color:#374151">{demos.length} disponible{demos.length > 1 ? 's' : ''}</span>
@@ -662,7 +662,7 @@
 						{@const alreadyInstalled = installedIds.has(demo.id)}
 						{@const color = FAMILY_COLORS[demo.manifest.family ?? ''] ?? '#6b7280'}
 						<div class="flex flex-col gap-3 p-4 transition-all"
-						     style="background:rgba(6,182,212,.025); border:1px solid rgba(6,182,212,.1)">
+						     style="background:rgb(var(--nx-cyan-rgb) / .025); border:1px solid rgb(var(--nx-cyan-rgb) / .1)">
 
 							<!-- Header -->
 							<div class="flex items-start justify-between gap-2">
@@ -732,7 +732,7 @@
 								<button
 									onclick={() => openDemoModal(demo)}
 									class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all"
-									style="background:rgba(6,182,212,.08); border:1px solid rgba(6,182,212,.2); color:#06b6d4"
+									style="background:rgb(var(--nx-cyan-rgb) / .08); border:1px solid rgb(var(--nx-cyan-rgb) / .2); color:var(--nx-cyan)"
 								>
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
@@ -766,7 +766,7 @@
 										onclick={() => installDemo(demo.id)}
 										disabled={demoInstalling}
 										class="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-50"
-										style="background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.3); color:var(--nx-accent-2-soft)"
+										style="background:linear-gradient(135deg,rgb(var(--nx-accent-2-rgb) / .2),rgb(var(--nx-cyan-rgb) / .15)); border:1px solid rgb(var(--nx-accent-2-rgb) / .3); color:var(--nx-accent-2-soft)"
 									>
 										{#if demoInstalling}
 											<div class="w-3 h-3 rounded-full border-2 animate-spin"
@@ -854,7 +854,7 @@
 	>
 		<div class="w-full max-w-3xl flex flex-col max-h-[90vh]"
 			role="dialog" aria-modal="true" tabindex="-1"
-		     style="background:#0d0d12; border:1px solid rgba(255,255,255,.1); box-shadow:0 0 60px rgba(124,58,237,.15)">
+		     style="background:#0d0d12; border:1px solid rgba(255,255,255,.1); box-shadow:0 0 60px rgb(var(--nx-accent-2-rgb) / .15)">
 
 			<!-- Modal header -->
 			<div class="flex items-center gap-3 px-5 py-4 shrink-0" style="border-bottom:1px solid rgba(255,255,255,.06)">
@@ -899,7 +899,7 @@
 					<button
 						onclick={() => demoTab = tab.key as typeof demoTab}
 						class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all"
-						style="border:1px solid {demoTab === tab.key ? 'rgba(124,58,237,.4)' : 'transparent'}; background:{demoTab === tab.key ? 'rgba(124,58,237,.1)' : 'transparent'}; color:{demoTab === tab.key ? 'var(--nx-accent-2-soft)' : '#374151'}"
+						style="border:1px solid {demoTab === tab.key ? 'rgb(var(--nx-accent-2-rgb) / .4)' : 'transparent'}; background:{demoTab === tab.key ? 'rgb(var(--nx-accent-2-rgb) / .1)' : 'transparent'}; color:{demoTab === tab.key ? 'var(--nx-accent-2-soft)' : '#374151'}"
 					>
 						<span>{tab.icon}</span>
 						<span class="font-mono">{tab.label}</span>
@@ -920,7 +920,7 @@
 							onclick={() => demoModal && installDemo(demoModal.id)}
 							disabled={demoInstalling}
 							class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold transition-all disabled:opacity-50"
-							style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.15)); border:1px solid rgba(124,58,237,.4); color:var(--nx-accent-2-soft)"
+							style="background:linear-gradient(135deg,rgb(var(--nx-accent-2-rgb) / .25),rgb(var(--nx-cyan-rgb) / .15)); border:1px solid rgb(var(--nx-accent-2-rgb) / .4); color:var(--nx-accent-2-soft)"
 						>
 							{#if demoInstalling}
 								<div class="w-3 h-3 rounded-full border-2 animate-spin"

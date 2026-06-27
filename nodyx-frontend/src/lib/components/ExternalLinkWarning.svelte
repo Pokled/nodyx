@@ -361,7 +361,7 @@
 		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 	}
 	.elg-section--education {
-		background: rgba(99, 102, 241, 0.03);
+		background: rgb(var(--nx-accent-rgb) / 0.03);
 	}
 	.elg-section-title {
 		font-size: 11px;
@@ -385,7 +385,7 @@
 	}
 	.elg-flag--high   { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.22); color: #fecaca; }
 	.elg-flag--medium { background: rgba(234, 179, 8, 0.06); border-color: rgba(234, 179, 8, 0.20); color: #fde68a; }
-	.elg-flag--low    { background: rgba(99, 102, 241, 0.06); border-color: rgba(99, 102, 241, 0.20); color: #c7d2fe; }
+	.elg-flag--low    { background: rgb(var(--nx-accent-rgb) / 0.06); border-color: rgb(var(--nx-accent-rgb) / 0.20); color: #c7d2fe; }
 	.elg-flag-icon { flex-shrink: 0; font-size: 16px; line-height: 1.2; }
 	.elg-flag-message { font-weight: 600; margin-bottom: 2px; }
 	.elg-flag-detail  { font-size: 12px; opacity: 0.8; line-height: 1.5; }
@@ -443,7 +443,7 @@
 		width: 18px;
 		height: 18px;
 		border-radius: 50%;
-		background: rgba(99, 102, 241, 0.18);
+		background: rgb(var(--nx-accent-rgb) / 0.18);
 		color: #a5b4fc;
 		font-size: 10px;
 		font-weight: 700;

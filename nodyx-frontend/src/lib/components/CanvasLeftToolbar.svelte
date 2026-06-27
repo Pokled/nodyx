@@ -134,7 +134,7 @@
 		border: 1px solid rgba(255,255,255,0.07);
 		border-radius: 16px;
 		box-shadow:
-			0 0 0 1px rgba(124, 58, 237, 0.08),
+			0 0 0 1px rgb(var(--nx-accent-2-rgb) / 0.08),
 			0 8px 32px rgba(0,0,0,0.5),
 			0 2px 8px rgba(0,0,0,0.4);
 		user-select: none;
@@ -177,7 +177,7 @@
 	.tool-btn.active {
 		background: linear-gradient(135deg, var(--nx-accent-deep), var(--nx-accent-2-strong));
 		color: white;
-		box-shadow: 0 0 0 1px rgba(124,58,237,0.4), 0 4px 12px rgba(124,58,237,0.35);
+		box-shadow: 0 0 0 1px rgb(var(--nx-accent-2-rgb) / 0.4), 0 4px 12px rgb(var(--nx-accent-2-rgb) / 0.35);
 	}
 
 	.tool-btn svg {

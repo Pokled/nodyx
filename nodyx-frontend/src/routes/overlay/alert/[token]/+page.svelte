@@ -476,8 +476,8 @@
 		position: absolute; inset: 0;
 		background: linear-gradient(115deg,
 			rgba(236, 72, 153, 0.18) 0%,
-			rgba(99, 102, 241, 0.18) 25%,
-			rgba(6, 182, 212, 0.18) 50%,
+			rgb(var(--nx-accent-rgb) / 0.18) 25%,
+			rgb(var(--nx-cyan-rgb) / 0.18) 50%,
 			rgba(168, 85, 247, 0.18) 75%,
 			rgba(236, 72, 153, 0.18) 100%);
 		background-size: 300% 100%;
@@ -489,7 +489,7 @@
 		position: absolute; inset: 0;
 		border-radius: 14px;
 		padding: 1.5px;
-		background: linear-gradient(135deg, #ec4899, var(--nx-accent), #06b6d4, var(--nx-accent-2), #ec4899);
+		background: linear-gradient(135deg, #ec4899, var(--nx-accent), var(--nx-cyan), var(--nx-accent-2), #ec4899);
 		background-size: 300% 300%;
 		-webkit-mask:
 			linear-gradient(#fff 0 0) content-box,
@@ -508,7 +508,7 @@
 	.theme-holographic .alert-eyebrow {
 		font-size: 10px; font-weight: 700; text-transform: uppercase;
 		letter-spacing: 0.14em; margin-bottom: 4px;
-		background: linear-gradient(90deg, #ec4899, #06b6d4);
+		background: linear-gradient(90deg, #ec4899, var(--nx-cyan));
 		background-clip: text;
 		-webkit-background-clip: text;
 		color: transparent;

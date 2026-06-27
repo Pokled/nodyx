@@ -347,7 +347,7 @@
 	content: '';
 	position: absolute;
 	inset: 0;
-	background-image: radial-gradient(rgba(99,102,241,0.08) 1px, transparent 1px);
+	background-image: radial-gradient(rgb(var(--nx-accent-rgb) / 0.08) 1px, transparent 1px);
 	background-size: 28px 28px;
 	pointer-events: none;
 }
@@ -358,7 +358,7 @@
 	background: #0c0c14;
 	border: 1px solid rgba(255, 255, 255, 0.07);
 	box-shadow:
-		0 0 0 1px rgba(99, 102, 241, 0.06),
+		0 0 0 1px rgb(var(--nx-accent-rgb) / 0.06),
 		0 32px 80px rgba(0, 0, 0, 0.8),
 		0 8px 24px rgba(0, 0, 0, 0.5);
 	overflow: hidden;
@@ -429,13 +429,13 @@
 
 .ring-outer {
 	inset: -5px;
-	border: 1.5px solid rgba(99, 102, 241, 0.2);
+	border: 1.5px solid rgb(var(--nx-accent-rgb) / 0.2);
 	animation: ring-breathe 4s ease-in-out infinite;
 }
 
 .ring-mid {
 	inset: -1px;
-	border: 1.5px solid rgba(99, 102, 241, 0.55);
+	border: 1.5px solid rgb(var(--nx-accent-rgb) / 0.55);
 }
 
 @keyframes ring-breathe {
@@ -721,16 +721,16 @@
 	font-size: 0.72rem;
 	font-weight: 600;
 	color: rgba(255, 255, 255, 0.7);
-	background: rgba(99, 102, 241, 0.12);
-	border: 1px solid rgba(99, 102, 241, 0.3);
+	background: rgb(var(--nx-accent-rgb) / 0.12);
+	border: 1px solid rgb(var(--nx-accent-rgb) / 0.3);
 	cursor: pointer;
 	font-family: inherit;
 	transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
 .btn-copy:hover {
-	background: rgba(99, 102, 241, 0.2);
-	border-color: rgba(99, 102, 241, 0.5);
+	background: rgb(var(--nx-accent-rgb) / 0.2);
+	border-color: rgb(var(--nx-accent-rgb) / 0.5);
 	color: rgba(255, 255, 255, 0.9);
 }
 

@@ -94,7 +94,7 @@
 	.sg  { font-family: 'Space Grotesk', sans-serif; }
 	/* ── Gradient text ── */
 	.gt {
-		background: linear-gradient(135deg, var(--nx-accent-2-soft) 0%, #06b6d4 100%);
+		background: linear-gradient(135deg, var(--nx-accent-2-soft) 0%, var(--nx-cyan) 100%);
 		-webkit-background-clip: text; background-clip: text;
 		-webkit-text-fill-color: transparent; color: transparent;
 	}
@@ -104,7 +104,7 @@
 		font-weight: 800;
 		font-size: clamp(140px, 20vw, 280px);
 		line-height: 1;
-		background: linear-gradient(135deg, rgba(124,58,237,.5) 0%, rgba(6,182,212,.2) 50%, transparent 80%);
+		background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .5) 0%, rgb(var(--nx-cyan-rgb) / .2) 50%, transparent 80%);
 		-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 		pointer-events: none; user-select: none;
 	}
@@ -116,14 +116,14 @@
 		backdrop-filter: blur(8px);
 		transition: background .2s, border-color .2s;
 	}
-	.glass:hover { background: rgba(255,255,255,.06); border-color: rgba(124,58,237,.3); }
+	.glass:hover { background: rgba(255,255,255,.06); border-color: rgb(var(--nx-accent-2-rgb) / .3); }
 
 	/* ── Module tile ── */
 	.tile { position: relative; overflow: hidden; }
 	.tile::after {
 		content: '';
 		position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-		background: linear-gradient(90deg, var(--nx-accent-2-strong), #06b6d4);
+		background: linear-gradient(90deg, var(--nx-accent-2-strong), var(--nx-cyan));
 		transform: scaleX(0); transform-origin: left;
 		transition: transform .3s ease;
 	}
@@ -140,7 +140,7 @@
 	.trow { position: relative; }
 	.trow::before {
 		content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
-		background: linear-gradient(to bottom, var(--nx-accent-2-strong), #06b6d4);
+		background: linear-gradient(to bottom, var(--nx-accent-2-strong), var(--nx-cyan));
 		transform: scaleY(0); transform-origin: center;
 		transition: transform .2s ease;
 	}
@@ -148,8 +148,8 @@
 
 	/* ── Stat glow ── */
 	@keyframes sglow {
-		0%,100% { text-shadow: 0 0 0 rgba(124,58,237,0); }
-		50%      { text-shadow: 0 0 20px rgba(124,58,237,.5); }
+		0%,100% { text-shadow: 0 0 0 rgb(var(--nx-accent-2-rgb) / 0); }
+		50%      { text-shadow: 0 0 20px rgb(var(--nx-accent-2-rgb) / .5); }
 	}
 	.sglow { animation: sglow 4s ease-in-out infinite; }
 
@@ -177,8 +177,8 @@
 	.dotbg {
 		background-color: #05050a;
 		background-image:
-			radial-gradient(circle at 15% 40%, rgba(124,58,237,.1) 0%, transparent 45%),
-			radial-gradient(circle at 85% 15%, rgba(6,182,212,.07) 0%, transparent 35%),
+			radial-gradient(circle at 15% 40%, rgb(var(--nx-accent-2-rgb) / .1) 0%, transparent 45%),
+			radial-gradient(circle at 85% 15%, rgb(var(--nx-cyan-rgb) / .07) 0%, transparent 35%),
 			radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
 		background-size: 100%, 100%, 28px 28px;
 	}
@@ -190,7 +190,7 @@
 	}
 	.card-hover::after {
 		content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-		background: linear-gradient(90deg, transparent, rgba(124,58,237,.5), transparent);
+		background: linear-gradient(90deg, transparent, rgb(var(--nx-accent-2-rgb) / .5), transparent);
 		opacity: 0; transition: opacity .3s;
 	}
 	.card-hover:hover::after { opacity: 1; }
@@ -237,9 +237,9 @@
 
 	<!-- Orbs -->
 	<div class="absolute -top-40 -left-20 w-[500px] h-[500px] rounded-full pointer-events-none"
-	     style="background: radial-gradient(circle, rgba(124,58,237,.14) 0%, transparent 65%)"></div>
+	     style="background: radial-gradient(circle, rgb(var(--nx-accent-2-rgb) / .14) 0%, transparent 65%)"></div>
 	<div class="absolute -bottom-20 right-0 w-96 h-96 rounded-full pointer-events-none"
-	     style="background: radial-gradient(circle, rgba(6,182,212,.08) 0%, transparent 65%)"></div>
+	     style="background: radial-gradient(circle, rgb(var(--nx-cyan-rgb) / .08) 0%, transparent 65%)"></div>
 
 	<!-- Decorative letter -->
 	<div class="deco-letter absolute right-6 top-1/2 -translate-y-1/2 opacity-70 select-none pointer-events-none" aria-hidden="true">{heroLetter}</div>
@@ -250,10 +250,10 @@
 		<div class="flex items-center gap-5">
 			{#if instance.logo_url}
 				<img src={instance.logo_url} alt={instance.name}
-				     class="w-12 h-12 object-cover shrink-0" style="outline: 2px solid rgba(124,58,237,.5); outline-offset: 2px" />
+				     class="w-12 h-12 object-cover shrink-0" style="outline: 2px solid rgb(var(--nx-accent-2-rgb) / .5); outline-offset: 2px" />
 			{:else}
 				<div class="w-12 h-12 flex items-center justify-center shrink-0 sg text-xl font-black text-white"
-				     style="background: linear-gradient(135deg, rgba(124,58,237,.4), rgba(6,182,212,.15)); border: 1px solid rgba(124,58,237,.3)">
+				     style="background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .4), rgb(var(--nx-cyan-rgb) / .15)); border: 1px solid rgb(var(--nx-accent-2-rgb) / .3)">
 					{heroLetter}
 				</div>
 			{/if}
@@ -272,7 +272,7 @@
 			{#each [
 				{ value: instance.member_count.toLocaleString(), label: tFn('common.members'),  color: 'var(--nx-accent-2-soft)', glow: true },
 				{ value: String(instance.online_count),                  label: tFn('common.online'), color: '#4ade80', online: true },
-				{ value: instance.thread_count.toLocaleString(), label: tFn('common.topics'),   color: '#67e8f9', glow: false },
+				{ value: instance.thread_count.toLocaleString(), label: tFn('common.topics'),   color: 'var(--nx-cyan-soft)', glow: false },
 				{ value: instance.post_count.toLocaleString(),   label: tFn('nav.dm'), color: '#94a3b8', glow: false },
 			] as stat}
 				<div class="flex flex-col items-center justify-center px-6 py-2 gap-0.5"
@@ -296,7 +296,7 @@
 				{#if data.user && (data.categories?.[0]?.slug ?? data.categories?.[0]?.id)}
 					<a href="/forum/{data.categories?.[0]?.slug ?? data.categories?.[0]?.id}/new"
 					   class="sg px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
-					   style="background: linear-gradient(135deg, var(--nx-accent-2-strong) 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
+					   style="background: linear-gradient(135deg, var(--nx-accent-2-strong) 0%, var(--nx-cyan-deep) 100%); border: 1px solid rgb(var(--nx-accent-2-rgb) / .4)">
 						{tFn('common.new_topic')}
 					</a>
 				{:else}
@@ -307,7 +307,7 @@
 					</a>
 					<a href="/auth/register"
 					   class="sg px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
-					   style="background: linear-gradient(135deg, var(--nx-accent-2-strong) 0%, #0e7490 100%); border: 1px solid rgba(124,58,237,.4)">
+					   style="background: linear-gradient(135deg, var(--nx-accent-2-strong) 0%, var(--nx-cyan-deep) 100%); border: 1px solid rgb(var(--nx-accent-2-rgb) / .4)">
 						{tFn('common.join')}
 					</a>
 				{/if}
@@ -366,14 +366,14 @@
 			<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#67e8f9" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-6a2 2 0 012-2h8z"/>
 			</svg>
-			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #67e8f9">{tFn('home.forum')}</span>
+			<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: var(--nx-cyan-soft)">{tFn('home.forum')}</span>
 		</div>
 		<p class="sg text-sm font-bold leading-snug line-clamp-2 group-hover:text-cyan-200 transition-colors" style="color: #e2e8f0">{recentThreads[0].title}</p>
 		<span class="text-[10px] mt-auto" style="color: #4b5563">{recentThreads[0].category_name}</span>
 	</a>
 	{:else}
 	<a href="/forum" class="tile glass flex flex-col gap-2.5 p-5">
-		<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: #67e8f9">{tFn('home.forum')}</span>
+		<span class="sg text-[10px] font-black uppercase tracking-[.18em]" style="color: var(--nx-cyan-soft)">{tFn('home.forum')}</span>
 		{tFn('home.view_discussions')}
 	</a>
 	{/if}
@@ -425,13 +425,13 @@
 
 			<!-- Violet glow bottom-left -->
 			<div class="absolute bottom-0 left-0 w-72 h-48 pointer-events-none"
-			     style="background: radial-gradient(ellipse at bottom left, rgba(124,58,237,.2), transparent 70%)"></div>
+			     style="background: radial-gradient(ellipse at bottom left, rgb(var(--nx-accent-2-rgb) / .2), transparent 70%)"></div>
 
 			<div class="relative z-10 h-full flex flex-col justify-end p-8 pb-10">
 				<!-- Category -->
 				{#if slide.categoryName}
 					<div class="flex items-center gap-3 mb-3">
-						<span class="h-px w-10" style="background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4)"></span>
+						<span class="h-px w-10" style="background: linear-gradient(to right, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
 						<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: var(--nx-accent-2-soft)">{slide.categoryName}</span>
 					</div>
 				{/if}
@@ -449,7 +449,7 @@
 				<!-- Meta + CTA -->
 				<div class="flex items-center gap-5">
 					<div class="flex items-center gap-2.5">
-						<div class="w-7 h-7 overflow-hidden shrink-0" style="background: rgba(124,58,237,.3); outline: 1.5px solid rgba(124,58,237,.4); outline-offset: 1px">
+						<div class="w-7 h-7 overflow-hidden shrink-0" style="background: rgb(var(--nx-accent-2-rgb) / .3); outline: 1.5px solid rgb(var(--nx-accent-2-rgb) / .4); outline-offset: 1px">
 							{#if slide.authorAvatar}
 								<img src={slide.authorAvatar} alt="" class="w-full h-full object-cover" />
 							{:else}
@@ -464,7 +464,7 @@
 					</div>
 					<a href="/forum/{slide.categoryId}/{slide.id}"
 					   class="sg ml-auto group flex items-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
-					   style="background: linear-gradient(135deg, rgba(124,58,237,.55), rgba(6,182,212,.25)); border: 1px solid rgba(124,58,237,.45)">
+					   style="background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .55), rgb(var(--nx-cyan-rgb) / .25)); border: 1px solid rgb(var(--nx-accent-2-rgb) / .45)">
 						{tFn('common.read_article')}
 						<svg class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -482,7 +482,7 @@
 							        aria-label="Slide {i+1}">
 								{#if i === slideIndex}
 									<span class="absolute top-[-1px] left-0 h-[3px] transition-none"
-									      style="width:{progressPct}%; background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4)"></span>
+									      style="width:{progressPct}%; background: linear-gradient(to right, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
 								{/if}
 							</button>
 						{/each}
@@ -491,7 +491,7 @@
 							        class="w-8 h-8 flex items-center justify-center transition-all"
 							        style="border: 1px solid rgba(255,255,255,.08); color: #6b7280"
 							        aria-label={tFn('common.back')}
-							        onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.5)'}
+							        onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgb(var(--nx-accent-2-rgb) / .5)'}
 							        onmouseleave={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.08)'}>
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
 							</button>
@@ -499,7 +499,7 @@
 							        class="w-8 h-8 flex items-center justify-center transition-all"
 							        style="border: 1px solid rgba(255,255,255,.08); color: #6b7280"
 							        aria-label="Suivant"
-							        onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.5)'}
+							        onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgb(var(--nx-accent-2-rgb) / .5)'}
 							        onmouseleave={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.08)'}>
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
 							</button>
@@ -530,7 +530,7 @@
 			   onmouseenter={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,.025)'}
 			   onmouseleave={e => (e.currentTarget as HTMLElement).style.background='transparent'}>
 				<span class="sg text-[11px] font-black tabular-nums shrink-0 mt-0.5 w-5 text-right"
-				      style="color: {i===0 ? 'var(--nx-accent-2-soft)' : i===1 ? '#67e8f9' : '#374151'}">
+				      style="color: {i===0 ? 'var(--nx-accent-2-soft)' : i===1 ? 'var(--nx-cyan-soft)' : '#374151'}">
 					{String(i+1).padStart(2,'0')}
 				</span>
 				<div class="flex-1 min-w-0">
@@ -538,7 +538,7 @@
 						{thread.title}
 					</p>
 					<div class="flex items-center gap-2 mt-1.5">
-						<div class="w-4 h-4 overflow-hidden shrink-0" style="background: rgba(124,58,237,.35)">
+						<div class="w-4 h-4 overflow-hidden shrink-0" style="background: rgb(var(--nx-accent-2-rgb) / .35)">
 							{#if thread.author_avatar}
 								<img src={thread.author_avatar} alt="" class="w-full h-full object-cover" />
 							{:else}
@@ -562,7 +562,7 @@
 			<a href="/forum"
 			   class="sg flex items-center justify-center gap-2 w-full py-2.5 text-[10px] font-black uppercase tracking-widest transition-all"
 			   style="color: #6b7280; border: 1px solid rgba(255,255,255,.06)"
-			   onmouseenter={e => { (e.currentTarget as HTMLElement).style.color='var(--nx-accent-2-soft)'; (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.25)'; }}
+			   onmouseenter={e => { (e.currentTarget as HTMLElement).style.color='var(--nx-accent-2-soft)'; (e.currentTarget as HTMLElement).style.borderColor='rgb(var(--nx-accent-2-rgb) / .25)'; }}
 			   onmouseleave={e => { (e.currentTarget as HTMLElement).style.color='#6b7280'; (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.06)'; }}>
 				{tFn('home.view_forum')}
 				<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -588,10 +588,10 @@
 <section class="px-6 py-8" style="border-bottom: 1px solid rgba(255,255,255,.05); background: #08080d">
 
 	<div class="flex items-center gap-4 mb-6">
-		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: #67e8f9">{tFn('home.latest_topics')}</span>
-		<div class="flex-1 h-px" style="background: linear-gradient(to right, rgba(6,182,212,.2), transparent)"></div>
+		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: var(--nx-cyan-soft)">{tFn('home.latest_topics')}</span>
+		<div class="flex-1 h-px" style="background: linear-gradient(to right, rgb(var(--nx-cyan-rgb) / .2), transparent)"></div>
 		<a href="/forum" class="sg text-[10px] font-bold uppercase tracking-widest transition-colors" style="color: #4b5563"
-		   onmouseenter={e => (e.target as HTMLElement).style.color='#67e8f9'} onmouseleave={e => (e.target as HTMLElement).style.color='#4b5563'}>
+		   onmouseenter={e => (e.target as HTMLElement).style.color='var(--nx-cyan-soft)'} onmouseleave={e => (e.target as HTMLElement).style.color='#4b5563'}>
 			{tFn('common.see_all')}
 		</a>
 	</div>
@@ -601,13 +601,13 @@
 		<a href="/forum/{thread.category_id}/{thread.id}"
 		   class="card-hover group flex flex-col p-5 transition-all duration-250"
 		   style="background: #12121a; border: 1px solid rgba(255,255,255,.06)"
-		   onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.25)'}
+		   onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgb(var(--nx-accent-2-rgb) / .25)'}
 		   onmouseleave={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.06)'}>
 
 			<div class="flex items-start justify-between gap-2 mb-4">
 				{#if thread.category_name}
 					<span class="sg text-[9px] font-black uppercase tracking-widest px-2 py-0.5"
-					      style="color: var(--nx-accent-2-soft); background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.2)">
+					      style="color: var(--nx-accent-2-soft); background: rgb(var(--nx-accent-2-rgb) / .1); border: 1px solid rgb(var(--nx-accent-2-rgb) / .2)">
 						{thread.category_name}
 					</span>
 				{/if}
@@ -624,7 +624,7 @@
 			</h4>
 
 			<div class="flex items-center gap-2 pt-4" style="border-top: 1px solid rgba(255,255,255,.05)">
-				<div class="w-6 h-6 overflow-hidden shrink-0" style="background: rgba(124,58,237,.3); outline: 1px solid rgba(255,255,255,.07)">
+				<div class="w-6 h-6 overflow-hidden shrink-0" style="background: rgb(var(--nx-accent-2-rgb) / .3); outline: 1px solid rgba(255,255,255,.07)">
 					{#if thread.author_avatar}
 						<img src={thread.author_avatar} alt="" class="w-full h-full object-cover" />
 					{:else}
@@ -648,7 +648,7 @@
 
 	<div class="flex items-center gap-4 mb-6">
 		<span class="sg text-[10px] font-black uppercase tracking-[.22em]" style="color: var(--nx-accent-2-soft)">{tFn('home.articles')}</span>
-		<div class="flex-1 h-px" style="background: linear-gradient(to right, rgba(124,58,237,.2), transparent)"></div>
+		<div class="flex-1 h-px" style="background: linear-gradient(to right, rgb(var(--nx-accent-2-rgb) / .2), transparent)"></div>
 	</div>
 
 	<!-- Hero article -->
@@ -656,7 +656,7 @@
 	<a href="/forum/{heroArticle.categoryId}/{heroArticle.id}"
 	   class="card-hover group flex flex-col sm:flex-row overflow-hidden mb-3 transition-all duration-250"
 	   style="background: #12121a; border: 1px solid rgba(255,255,255,.06)"
-	   onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.25)'}
+	   onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgb(var(--nx-accent-2-rgb) / .25)'}
 	   onmouseleave={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.06)'}>
 		<div class="sm:w-64 h-44 sm:h-auto shrink-0 overflow-hidden relative">
 			{#if heroArticle.imageUrl}
@@ -702,13 +702,13 @@
 		<a href="/forum/{article.categoryId}/{article.id}"
 		   class="card-hover group flex gap-4 p-4 transition-all duration-250"
 		   style="background: #12121a; border: 1px solid rgba(255,255,255,.06)"
-		   onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(124,58,237,.2)'}
+		   onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgb(var(--nx-accent-2-rgb) / .2)'}
 		   onmouseleave={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.06)'}>
 			{#if article.imageUrl}
 				<img src={article.imageUrl} alt="" class="w-20 h-14 object-cover shrink-0 group-hover:opacity-90 transition-opacity" style="opacity:.7" />
 			{:else}
-				<div class="w-20 h-14 shrink-0 flex items-center justify-center" style="background: rgba(124,58,237,.08); border: 1px solid rgba(255,255,255,.05)">
-					<span class="sg text-xl font-black" style="color: rgba(124,58,237,.35)">{heroLetter}</span>
+				<div class="w-20 h-14 shrink-0 flex items-center justify-center" style="background: rgb(var(--nx-accent-2-rgb) / .08); border: 1px solid rgba(255,255,255,.05)">
+					<span class="sg text-xl font-black" style="color: rgb(var(--nx-accent-2-rgb) / .35)">{heroLetter}</span>
 				</div>
 			{/if}
 			<div class="flex-1 min-w-0 flex flex-col justify-between">
@@ -736,14 +736,14 @@
 		<div class="flex items-end justify-between mb-6">
 			<div>
 				<div class="flex items-center gap-2 mb-1">
-					<span class="text-[10px] font-bold tracking-widest uppercase" style="color: #06b6d4">Agenda</span>
+					<span class="text-[10px] font-bold tracking-widest uppercase" style="color: var(--nx-cyan)">Agenda</span>
 				</div>
 				<h2 class="text-xl font-bold text-white">Prochains événements</h2>
 			</div>
 			<a href="/calendar" class="flex items-center gap-1.5 text-xs font-medium transition-colors"
-				style="color: #06b6d4"
-				onmouseenter={e => (e.currentTarget as HTMLElement).style.color='#67e8f9'}
-				onmouseleave={e => (e.currentTarget as HTMLElement).style.color='#06b6d4'}>
+				style="color: var(--nx-cyan)"
+				onmouseenter={e => (e.currentTarget as HTMLElement).style.color='var(--nx-cyan-soft)'}
+				onmouseleave={e => (e.currentTarget as HTMLElement).style.color='var(--nx-cyan)'}>
 				Voir tout
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -760,7 +760,7 @@
 				{@const time = ev.is_all_day ? (instance.language === 'fr' ? 'Journée entière' : 'All day') : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 				<a href="/calendar" class="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200"
 					style="background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);"
-					onmouseenter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(6,182,212,.35)'; (e.currentTarget as HTMLElement).style.background = 'rgba(6,182,212,.06)' }}
+					onmouseenter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgb(var(--nx-cyan-rgb) / .35)'; (e.currentTarget as HTMLElement).style.background = 'rgb(var(--nx-cyan-rgb) / .06)' }}
 					onmouseleave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.07)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)' }}>
 
 					<!-- Cover or date block -->
@@ -770,7 +770,7 @@
 							<div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,.6) 0%, transparent 60%)"></div>
 							<!-- Date badge -->
 							<div class="absolute top-2.5 left-2.5 flex flex-col items-center justify-center w-11 h-11 rounded-xl text-white font-bold"
-								style="background: rgba(6,182,212,.85); backdrop-filter: blur(4px)">
+								style="background: rgb(var(--nx-cyan-rgb) / .85); backdrop-filter: blur(4px)">
 								<span class="text-base leading-none">{day}</span>
 								<span class="text-[9px] uppercase tracking-wider opacity-90">{mon}</span>
 							</div>
@@ -779,11 +779,11 @@
 						<!-- Date block (no cover) -->
 						<div class="flex items-center gap-3 px-4 pt-4 pb-2">
 							<div class="flex flex-col items-center justify-center w-11 h-11 rounded-xl shrink-0 font-bold text-white"
-								style="background: linear-gradient(135deg, #0891b2, #06b6d4)">
+								style="background: linear-gradient(135deg, #0891b2, var(--nx-cyan))">
 								<span class="text-base leading-none">{day}</span>
 								<span class="text-[9px] uppercase tracking-wider opacity-90">{mon}</span>
 							</div>
-							<div class="h-px flex-1" style="background: rgba(6,182,212,.2)"></div>
+							<div class="h-px flex-1" style="background: rgb(var(--nx-cyan-rgb) / .2)"></div>
 						</div>
 					{/if}
 
@@ -800,10 +800,10 @@
 							</div>
 						{/if}
 						<div class="flex items-center justify-between mt-auto pt-1.5">
-							<span class="text-[10px] font-medium" style="color: #06b6d4">{time}</span>
+							<span class="text-[10px] font-medium" style="color: var(--nx-cyan)">{time}</span>
 							{#if ev.rsvp_enabled}
 								<span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-									style="background: rgba(6,182,212,.15); color: #67e8f9; border: 1px solid rgba(6,182,212,.25)">
+									style="background: rgb(var(--nx-cyan-rgb) / .15); color: var(--nx-cyan-soft); border: 1px solid rgb(var(--nx-cyan-rgb) / .25)">
 									RSVP
 								</span>
 							{/if}

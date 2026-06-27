@@ -57,7 +57,7 @@
 	.og-filters { display: flex; gap: 4px; margin-bottom: 16px; }
 	.og-filter { padding: 4px 10px; font-size: 11px; color: #94a3b8; text-decoration: none; border-radius: 2px; background: rgba(255,255,255,0.02); font-family: ui-monospace, monospace; }
 	.og-filter:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
-	.og-filter.active { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+	.og-filter.active { background: rgb(var(--nx-accent-rgb) / 0.15); color: #a5b4fc; }
 	.og-err { padding: 10px 14px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
 	.og-reports { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 	.og-report { padding: 12px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; background: rgba(255,255,255,0.01); }
@@ -72,7 +72,7 @@
 	.og-report-actions input { flex: 1; min-width: 200px; padding: 6px 8px; font-size: 12px; background: #1f2937; border: 1px solid #374151; border-radius: 3px; color: #e2e8f0; }
 	.og-btn-link { padding: 4px 10px; font-size: 11px; background: transparent; border: 1px solid #374151; color: #94a3b8; border-radius: 3px; cursor: pointer; }
 	.og-btn-link:hover { color: #e2e8f0; }
-	.og-btn-link--accent { border-color: rgba(99,102,241,0.3); color: #a5b4fc; }
+	.og-btn-link--accent { border-color: rgb(var(--nx-accent-rgb) / 0.3); color: #a5b4fc; }
 	.og-btn-link--danger:hover { color: #fca5a5; border-color: rgba(239,68,68,0.3); }
 	.og-report-status { font-size: 11px; color: #64748b; font-family: ui-monospace, monospace; }
 	.og-empty { padding: 24px; text-align: center; color: #64748b; font-size: 13px; border: 1px dashed rgba(255,255,255,0.08); border-radius: 4px; }

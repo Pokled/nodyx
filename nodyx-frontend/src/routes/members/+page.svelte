@@ -230,8 +230,8 @@
 		border-radius: 4px;
 	}
 	.mb-search:focus-within {
-		border-color: rgba(99, 102, 241, 0.35);
-		background: rgba(99, 102, 241, 0.04);
+		border-color: rgb(var(--nx-accent-rgb) / 0.35);
+		background: rgb(var(--nx-accent-rgb) / 0.04);
 	}
 	.mb-search-icon { width: 14px; height: 14px; color: #475569; flex-shrink: 0; }
 	.mb-search-input {
@@ -255,7 +255,7 @@
 		font-family: inherit;
 		cursor: pointer;
 	}
-	.mb-sort:focus { outline: 1px solid rgba(99, 102, 241, 0.4); outline-offset: -1px; }
+	.mb-sort:focus { outline: 1px solid rgb(var(--nx-accent-rgb) / 0.4); outline-offset: -1px; }
 
 	.mb-toggle {
 		display: inline-flex;
@@ -313,7 +313,7 @@
 		height: 36px;
 		border-radius: 4px;
 		object-fit: cover;
-		background: rgba(99, 102, 241, 0.08);
+		background: rgb(var(--nx-accent-rgb) / 0.08);
 		display: block;
 	}
 	.mb-avatar--init {
@@ -362,7 +362,7 @@
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		padding: 2px 6px;
-		border: 1px solid rgba(99, 102, 241, 0.3);
+		border: 1px solid rgb(var(--nx-accent-rgb) / 0.3);
 		color: #a5b4fc;
 		border-radius: 3px;
 		font-family: ui-monospace, SFMono-Regular, monospace;

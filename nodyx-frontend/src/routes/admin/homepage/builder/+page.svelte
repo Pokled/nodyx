@@ -1567,9 +1567,9 @@
 	.col-mgr-del:hover { color: #f87171; }
 	.btn-add-col {
 		padding: 4px 8px;
-		background: rgba(6,182,212,.1);
-		border: 1px dashed rgba(6,182,212,.3);
-		color: #06b6d4;
+		background: rgb(var(--nx-cyan-rgb) / .1);
+		border: 1px dashed rgb(var(--nx-cyan-rgb) / .3);
+		color: var(--nx-cyan);
 		cursor: pointer;
 		border-radius: 3px;
 		font-size: 11px;
@@ -1774,11 +1774,11 @@
 	.btn-tool--save { color: #e2e8f0; border-color: rgba(167,139,250,.3); }
 	.btn-tool--save:hover:not(:disabled) { background: rgba(167,139,250,.15); border-color: var(--nx-accent-2-soft); color: var(--nx-accent-2-soft); }
 	.btn-tool--publish {
-		background: linear-gradient(135deg, rgba(124,58,237,.3), rgba(167,139,250,.2));
+		background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .3), rgba(167,139,250,.2));
 		border-color: rgba(167,139,250,.4);
 		color: var(--nx-accent-2-soft);
 	}
-	.btn-tool--publish:hover:not(:disabled) { background: linear-gradient(135deg, rgba(124,58,237,.5), rgba(167,139,250,.35)); }
+	.btn-tool--publish:hover:not(:disabled) { background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .5), rgba(167,139,250,.35)); }
 
 	.draft-banner {
 		padding: 8px 16px;

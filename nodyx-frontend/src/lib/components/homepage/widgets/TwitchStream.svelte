@@ -257,7 +257,7 @@
 				{#if !iframeLoaded}
 					<!-- Skeleton loader pulse -->
 					<div class="absolute inset-0 flex items-center justify-center"
-					     style="background:linear-gradient(135deg, rgba(124,58,237,.08), rgba(14,116,144,.08))">
+					     style="background:linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .08), rgba(14,116,144,.08))">
 						<div class="flex flex-col items-center gap-3">
 							<div class="w-8 h-8 rounded-full border-2 animate-spin"
 							     style="border-color:rgba(145,70,255,.2); border-top-color:{accent}"></div>
@@ -322,7 +322,7 @@
 			transparent 0deg,
 			var(--accent) 80deg,
 			transparent 160deg,
-			#0e7490 240deg,
+			var(--nx-cyan-deep) 240deg,
 			transparent 320deg,
 			transparent 360deg
 		);

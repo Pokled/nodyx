@@ -485,7 +485,7 @@
 
             <button class="sb-item {activeSection === 'network' ? 'active' : ''}"
                     onclick={() => activeSection = 'network'}>
-                <span class="sb-icon" style="background: rgba(99,102,241,0.15); color: var(--nx-accent-soft)">
+                <span class="sb-icon" style="background: rgb(var(--nx-accent-rgb) / 0.15); color: var(--nx-accent-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                     </svg>
@@ -508,7 +508,7 @@
 
             <button class="sb-item {activeSection === 'instances' ? 'active' : ''}"
                     onclick={() => activeSection = 'instances'}>
-                <span class="sb-icon" style="background: rgba(6,182,212,0.12); color: #67e8f9">
+                <span class="sb-icon" style="background: rgb(var(--nx-cyan-rgb) / 0.12); color: var(--nx-cyan-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
                     </svg>
@@ -538,7 +538,7 @@
 
             <button class="sb-item {activeSection === 'encryption' ? 'active' : ''}"
                     onclick={() => activeSection = 'encryption'}>
-                <span class="sb-icon" style="background: rgba(99,102,241,0.12); color: var(--nx-accent-soft)">
+                <span class="sb-icon" style="background: rgb(var(--nx-accent-rgb) / 0.12); color: var(--nx-accent-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
@@ -561,7 +561,7 @@
 
             <button class="sb-item {activeSection === 'connected-accounts' ? 'active' : ''}"
                     onclick={() => activeSection = 'connected-accounts'}>
-                <span class="sb-icon" style="background: rgba(124,58,237,0.12); color: var(--nx-accent-2-soft)">
+                <span class="sb-icon" style="background: rgb(var(--nx-accent-2-rgb) / 0.12); color: var(--nx-accent-2-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
                     </svg>
@@ -612,7 +612,7 @@
 
         <!-- ═══ RÉSEAU ══════════════════════════════════════════════════════ -->
         {#if activeSection === 'network'}
-        <div class="s-pane" style="--accent: var(--nx-accent-soft); --accent-bg: rgba(99,102,241,0.08); --accent-border: rgba(99,102,241,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-accent-soft); --accent-bg: rgb(var(--nx-accent-rgb) / 0.08); --accent-border: rgb(var(--nx-accent-rgb) / 0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -696,7 +696,7 @@
 
         <!-- ═══ INSTANCES ════════════════════════════════════════════════════ -->
         {#if activeSection === 'instances'}
-        <div class="s-pane" style="--accent: #67e8f9; --accent-bg: rgba(6,182,212,0.08); --accent-border: rgba(6,182,212,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-cyan-soft); --accent-bg: rgb(var(--nx-cyan-rgb) / 0.08); --accent-border: rgb(var(--nx-cyan-rgb) / 0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -928,7 +928,7 @@
 
         <!-- ═══ MESSAGES CHIFFRÉS (sauvegarde de clé E2E) ════════════════════ -->
         {#if activeSection === 'encryption' && $page.data.user}
-        <div class="s-pane" style="--accent: var(--nx-accent-soft); --accent-bg: rgba(99,102,241,0.08); --accent-border: rgba(99,102,241,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-accent-soft); --accent-bg: rgb(var(--nx-accent-rgb) / 0.08); --accent-border: rgb(var(--nx-accent-rgb) / 0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -1046,7 +1046,7 @@
 
         <!-- ═══ COMPTES LIÉS ══════════════════════════════════════════════════ -->
         {#if activeSection === 'connected-accounts'}
-        <div class="s-pane" style="--accent: var(--nx-accent-2-soft); --accent-bg: rgba(124,58,237,0.08); --accent-border: rgba(124,58,237,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-accent-2-soft); --accent-bg: rgb(var(--nx-accent-2-rgb) / 0.08); --accent-border: rgb(var(--nx-accent-2-rgb) / 0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -1495,7 +1495,7 @@
 }
 .sb-item:hover { background: rgba(255,255,255,0.04); color: #9ca3af; }
 .sb-item.active {
-    background: rgba(99,102,241,0.12);
+    background: rgb(var(--nx-accent-rgb) / 0.12);
     color: #e0e7ff;
 }
 .sb-item.active .sb-icon { opacity: 1; }
@@ -1523,7 +1523,7 @@
 .sb-badge {
     font-size: 10px;
     font-weight: 700;
-    background: rgba(99,102,241,0.2);
+    background: rgb(var(--nx-accent-rgb) / 0.2);
     color: #a5b4fc;
     padding: 1px 6px;
     border-radius: 5px;
@@ -1680,16 +1680,16 @@
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
-    background: rgba(99,102,241,0.15);
+    background: rgb(var(--nx-accent-rgb) / 0.15);
     color: #a5b4fc;
-    border: 1px solid rgba(99,102,241,0.3);
+    border: 1px solid rgb(var(--nx-accent-rgb) / 0.3);
     cursor: pointer;
     transition: all 150ms;
     flex-shrink: 0;
 }
 .s-primary-btn:hover:not(:disabled) {
-    background: rgba(99,102,241,0.25);
-    border-color: rgba(99,102,241,0.5);
+    background: rgb(var(--nx-accent-rgb) / 0.25);
+    border-color: rgb(var(--nx-accent-rgb) / 0.5);
     color: #c7d2fe;
 }
 .s-primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -1747,7 +1747,7 @@
     transition: border-color 150ms;
 }
 .s-input::placeholder { color: #374151; }
-.s-input:focus { border-color: rgba(99,102,241,0.5); background: rgba(255,255,255,0.06); }
+.s-input:focus { border-color: rgb(var(--nx-accent-rgb) / 0.5); background: rgba(255,255,255,0.06); }
 
 /* ── Banners ─────────────────────────────────────────────────────────────── */
 .s-info-banner {
@@ -1781,7 +1781,7 @@
 }
 
 .s-hint-text { font-size: 12px; color: #374151; line-height: 1.6; margin: 0; }
-:global(.s-hint-text code) { color: var(--nx-accent); background: rgba(99,102,241,0.1); padding: 1px 5px; border-radius: 4px; }
+:global(.s-hint-text code) { color: var(--nx-accent); background: rgb(var(--nx-accent-rgb) / 0.1); padding: 1px 5px; border-radius: 4px; }
 
 .s-field-error { font-size: 11px; color: #f87171; margin-top: 6px; }
 
@@ -1811,8 +1811,8 @@
     width: 36px;
     height: 36px;
     border-radius: 6px;
-    background: rgba(99,102,241,0.12);
-    border: 1px solid rgba(99,102,241,0.2);
+    background: rgb(var(--nx-accent-rgb) / 0.12);
+    border: 1px solid rgb(var(--nx-accent-rgb) / 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1841,8 +1841,8 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: rgba(99,102,241,0.15);
-    border: 1px solid rgba(99,102,241,0.3);
+    background: rgb(var(--nx-accent-rgb) / 0.15);
+    border: 1px solid rgb(var(--nx-accent-rgb) / 0.3);
     color: var(--nx-accent-soft);
     font-size: 12px;
     font-weight: 800;
@@ -1867,10 +1867,10 @@
     font-size: 11px;
     font-family: monospace;
     color: var(--nx-accent-soft);
-    background: rgba(99,102,241,0.08);
+    background: rgb(var(--nx-accent-rgb) / 0.08);
     padding: 10px 14px;
     border-radius: 8px;
-    border: 1px solid rgba(99,102,241,0.15);
+    border: 1px solid rgb(var(--nx-accent-rgb) / 0.15);
     word-break: break-all;
     line-height: 1.6;
 }

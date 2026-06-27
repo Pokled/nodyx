@@ -129,7 +129,7 @@
 	{#if connected}
 		<div class="ml-auto flex items-center gap-1.5 shrink-0">
 			<span class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.15em]"
-			      style="color: rgba(124,58,237,0.7);">
+			      style="color: rgb(var(--nx-accent-2-rgb) / 0.7);">
 				<span class="w-1.5 h-1.5 rounded-full bg-violet-500/80 animate-pulse shrink-0"></span>
 				{peerCount} connecté{peerCount > 1 ? 's' : ''}
 			</span>
@@ -365,7 +365,7 @@
 	.active-amber:hover, .idle-amber:hover { color: #e0a86a !important; }
 
 	/* Violet (canvas) */
-	.active-violet { color: var(--nx-accent-2-soft) !important; background: rgba(124,58,237,0.14) !important; border-color: rgba(124,58,237,0.35) !important; }
+	.active-violet { color: var(--nx-accent-2-soft) !important; background: rgb(var(--nx-accent-2-rgb) / 0.14) !important; border-color: rgb(var(--nx-accent-2-rgb) / 0.35) !important; }
 	.active-violet:hover { color: var(--nx-accent-2-soft2) !important; }
 
 	/* Blue (screen share) */

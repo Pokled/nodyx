@@ -77,8 +77,8 @@
 	.og-checkbox { flex-direction: row; align-items: center; color: #cbd5e1; font-size: 12px; }
 	.og-info {
 		padding: 10px 12px;
-		background: rgba(99,102,241,0.05);
-		border: 1px solid rgba(99,102,241,0.2);
+		background: rgb(var(--nx-accent-rgb) / 0.05);
+		border: 1px solid rgb(var(--nx-accent-rgb) / 0.2);
 		border-radius: 3px;
 		font-size: 11px;
 		color: #c7d2fe;

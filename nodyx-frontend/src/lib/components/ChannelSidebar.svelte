@@ -303,7 +303,7 @@
 		border-radius: 20px !important;
 	}
 	.custom-scrollbar:hover::-webkit-scrollbar-thumb {
-		background-color: rgba(99, 102, 241, 0.4) !important;
+		background-color: rgb(var(--nx-accent-rgb) / 0.4) !important;
 	}
 
 	/* ── Channel item base ─────────────────────────────────────────────────── */
@@ -318,27 +318,27 @@
 
 	.ch-active {
 		color: #e2e8f0;
-		background: rgba(124,58,237,.14);
+		background: rgb(var(--nx-accent-2-rgb) / .14);
 		box-shadow: inset 2px 0 0 var(--nx-accent-2-strong);
 	}
 
 	/* ── Unread state: bioluminescent breathing glow ───────────────────────── */
 	.ch-unread {
 		color: #e2e8f0;
-		background: rgba(99,102,241,.07);
-		box-shadow: inset 2px 0 0 rgba(124,58,237,.7);
+		background: rgb(var(--nx-accent-rgb) / .07);
+		box-shadow: inset 2px 0 0 rgb(var(--nx-accent-2-rgb) / .7);
 		animation: ch-breathe 2.8s ease-in-out infinite;
 	}
-	.ch-unread:hover { background: rgba(99,102,241,.14); }
+	.ch-unread:hover { background: rgb(var(--nx-accent-rgb) / .14); }
 
 	@keyframes ch-breathe {
 		0%,100% {
-			box-shadow: inset 2px 0 0 rgba(124,58,237,.55), 0 0 0 rgba(99,102,241,0);
-			background: rgba(99,102,241,.06);
+			box-shadow: inset 2px 0 0 rgb(var(--nx-accent-2-rgb) / .55), 0 0 0 rgb(var(--nx-accent-rgb) / 0);
+			background: rgb(var(--nx-accent-rgb) / .06);
 		}
 		50% {
-			box-shadow: inset 2px 0 0 rgba(167,139,250,.95), 0 0 14px rgba(99,102,241,.14);
-			background: rgba(99,102,241,.11);
+			box-shadow: inset 2px 0 0 rgba(167,139,250,.95), 0 0 14px rgb(var(--nx-accent-rgb) / .14);
+			background: rgb(var(--nx-accent-rgb) / .11);
 		}
 	}
 
@@ -350,9 +350,9 @@
 		background: linear-gradient(
 			90deg,
 			transparent 0%,
-			rgba(99,102,241,.22) 35%,
+			rgb(var(--nx-accent-rgb) / .22) 35%,
 			rgba(167,139,250,.30) 50%,
-			rgba(99,102,241,.22) 65%,
+			rgb(var(--nx-accent-rgb) / .22) 65%,
 			transparent 100%
 		);
 		transform: translateX(-110%);

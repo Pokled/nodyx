@@ -437,7 +437,7 @@
 				{#if isOwnProfile}
 					<div class="flex items-center gap-2">
 						<a href="/users/{profile.username}/card" target="_blank" class="profile-action-btn"
-						   style="background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.3)"
+						   style="background: rgb(var(--nx-accent-rgb) / 0.12); border-color: rgb(var(--nx-accent-rgb) / 0.3)"
 						   title={tFn('user.share_card')}>
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
@@ -459,7 +459,7 @@
 							class="profile-action-btn profile-follow-btn"
 							class:profile-follow-btn--following={following}
 							style={following
-								? 'background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.5); color: var(--nx-accent-soft)'
+								? 'background: rgb(var(--nx-accent-rgb) / 0.15); border-color: rgb(var(--nx-accent-rgb) / 0.5); color: var(--nx-accent-soft)'
 								: 'background: var(--nx-accent); border-color: var(--nx-accent); color: white'}
 						>
 							{#if followLoading}

@@ -2088,7 +2088,7 @@
 			</span>
 			<button onclick={handleRequestAccess} disabled={accessAsked}
 				style="padding:5px 13px; border-radius:999px; font-size:12px; font-weight:600; cursor:{accessAsked ? 'default' : 'pointer'}; border:none; color:#fff; white-space:nowrap;
-				       background:{accessAsked ? 'rgba(16,185,129,.3)' : 'linear-gradient(to right,var(--nx-accent-strong),#06b6d4)'};">
+				       background:{accessAsked ? 'rgba(16,185,129,.3)' : 'linear-gradient(to right,var(--nx-accent-strong),var(--nx-cyan))'};">
 				{accessAsked ? '✓ Demande envoyée' : "Demander l'accès en édition"}
 			</button>
 		</div>
@@ -2357,7 +2357,7 @@
 		border: 1px solid rgba(255,255,255,0.07);
 		border-radius: 10px;
 		overflow: hidden;
-		box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.06);
+		box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgb(var(--nx-accent-2-rgb) / 0.06);
 	}
 	.minimap-wrap canvas {
 		border-bottom: 1px solid rgba(255,255,255,0.05);

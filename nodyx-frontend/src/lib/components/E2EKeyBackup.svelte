@@ -291,7 +291,7 @@
 	.kb-hint { font-size: 12px; color: #64748b; line-height: 1.4; }
 
 	.kb-info { display: flex; flex-direction: column; gap: 8px;
-		background: rgba(99,102,241,.06); border: 1px solid rgba(99,102,241,.16);
+		background: rgb(var(--nx-accent-rgb) / .06); border: 1px solid rgb(var(--nx-accent-rgb) / .16);
 		border-radius: 12px; padding: 12px 14px; }
 	.kb-info-row { display: flex; gap: 10px; font-size: 13px; color: #c7d2fe; line-height: 1.45; }
 	.kb-info-row span:first-child { flex-shrink: 0; }
@@ -299,9 +299,9 @@
 	.kb-note { font-size: 13px; color: #cbd5e1; line-height: 1.45; }
 	.kb-gen { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 	.kb-btn-soft { padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
-		color: #c7d2fe; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.25);
+		color: #c7d2fe; background: rgb(var(--nx-accent-rgb) / .12); border: 1px solid rgb(var(--nx-accent-rgb) / .25);
 		transition: background .15s; }
-	.kb-btn-soft:hover { background: rgba(99,102,241,.2); }
+	.kb-btn-soft:hover { background: rgb(var(--nx-accent-rgb) / .2); }
 	.kb-copy { padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
 		color: #cbd5e1; background: transparent; border: 1px solid rgba(148,163,184,.3); }
 	.kb-examples { font-size: 12px; color: #94a3b8; line-height: 1.5; }

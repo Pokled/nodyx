@@ -1045,7 +1045,7 @@
 
 			<!-- Pinned message banner -->
 			{#if pinnedMessage && showPinned}
-				<div class="shrink-0 flex items-center gap-2.5 px-4 py-1.5 text-xs" style="background: rgba(124,58,237,.06); border-bottom: 1px solid rgba(124,58,237,.15)">
+				<div class="shrink-0 flex items-center gap-2.5 px-4 py-1.5 text-xs" style="background: rgb(var(--nx-accent-2-rgb) / .06); border-bottom: 1px solid rgb(var(--nx-accent-2-rgb) / .15)">
 					<svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="#a78bfa"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
 					<span class="font-black uppercase tracking-wider shrink-0 text-[10px]" style="color: var(--nx-accent-2-soft); font-family: 'Space Grotesk', sans-serif">{tFn('chat.pinned')}</span>
 					<span class="truncate flex-1" style="color: #6b7280">
@@ -1110,7 +1110,7 @@
 										class="w-9 h-9 object-cover" style="outline: 1px solid rgba(255,255,255,.07)" />
 								{:else}
 									<div class="w-9 h-9 flex items-center justify-center font-black text-[11px] text-white select-none"
-									     style="background: linear-gradient(135deg, #7c3aed80, #0e7490)">
+									     style="background: linear-gradient(135deg, #7c3aed80, var(--nx-cyan-deep))">
 										{msg.author_username.charAt(0).toUpperCase()}
 									</div>
 								{/if}
@@ -1305,7 +1305,7 @@
 
 				{#if messages.length === 0}
 					<div class="flex flex-col items-center justify-center gap-3 mt-16 px-8">
-						<div class="w-12 h-12 flex items-center justify-center" style="background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.15)">
+						<div class="w-12 h-12 flex items-center justify-center" style="background: rgb(var(--nx-accent-2-rgb) / .08); border: 1px solid rgb(var(--nx-accent-2-rgb) / .15)">
 							<svg class="w-6 h-6" fill="none" stroke="#7c3aed" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
 						</div>
 						<p class="text-sm font-semibold text-center" style="color: #4b5563; font-family: 'Space Grotesk', sans-serif">{tFn('chat.no_messages')}</p>
@@ -1319,7 +1319,7 @@
 				<button
 					onclick={() => scrollToBottom()}
 					class="absolute bottom-3 right-4 z-10 flex items-center gap-2 pl-3 pr-2.5 py-1.5 transition-all duration-200 scroll-bottom-btn"
-					style="background: rgba(13,13,20,0.95); border: 1px solid rgba(124,58,237,0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);"
+					style="background: rgba(13,13,20,0.95); border: 1px solid rgb(var(--nx-accent-2-rgb) / 0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);"
 					transition:fade={{ duration: 120 }}
 				>
 					<span class="text-xs font-semibold" style="color: var(--nx-accent-2-soft);">
@@ -1452,7 +1452,7 @@
 
 				<!-- Reply preview bar -->
 				{#if replyTo}
-					<div class="flex items-center gap-2.5 px-3 py-1.5 mb-2 text-xs" style="background: rgba(124,58,237,.08); border-left: 2px solid var(--nx-accent-2-strong)">
+					<div class="flex items-center gap-2.5 px-3 py-1.5 mb-2 text-xs" style="background: rgb(var(--nx-accent-2-rgb) / .08); border-left: 2px solid var(--nx-accent-2-strong)">
 						<svg class="w-3 h-3 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
 						<span class="font-bold shrink-0" style="color: var(--nx-accent-2-soft)">{replyTo.author_username}</span>
 						<span class="truncate flex-1" style="color: #4b5563">{replyTo.content?.replace(/<[^>]*>/g, '').slice(0, 80) ?? ''}</span>
@@ -1495,7 +1495,7 @@
 						<button data-gif-picker onclick={() => { showGifPicker = !showGifPicker; if (showGifPicker && gifProvider) gifQuery = ''; }}
 						        title="GIF"
 						        class="w-7 h-7 flex items-center justify-center text-[10px] font-black uppercase tracking-wide transition-colors"
-						        style="color: {showGifPicker ? 'var(--nx-accent-2-soft)' : '#4b5563'}; background: {showGifPicker ? 'rgba(124,58,237,.12)' : 'transparent'}">GIF</button>
+						        style="color: {showGifPicker ? 'var(--nx-accent-2-soft)' : '#4b5563'}; background: {showGifPicker ? 'rgb(var(--nx-accent-2-rgb) / .12)' : 'transparent'}">GIF</button>
 						<!-- Poll -->
 						<button onclick={() => showPollCreator = true} title={tFn('chat.new_poll')}
 						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
@@ -1515,7 +1515,7 @@
 						<!-- Send -->
 						<button onclick={sendMessage} disabled={!inputText.trim() || isRateLimited}
 						        class="w-7 h-7 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, var(--nx-accent-2-strong), #0e7490)' : 'rgba(255,255,255,.06)'}; color: {inputText.trim() ? '#fff' : '#4b5563'}"
+						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))' : 'rgba(255,255,255,.06)'}; color: {inputText.trim() ? '#fff' : '#4b5563'}"
 						        title={isRateLimited ? tFn('chat.antispam_loading') : tFn('chat.send')}>
 							{#if isRateLimited}
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1666,8 +1666,8 @@
 		to   { opacity: 1; transform: translateY(0); }
 	}
 	.scroll-bottom-btn:hover {
-		border-color: rgba(124, 58, 237, 0.7) !important;
-		box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 12px rgba(124,58,237,0.15) !important;
+		border-color: rgb(var(--nx-accent-2-rgb) / 0.7) !important;
+		box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 12px rgb(var(--nx-accent-2-rgb) / 0.15) !important;
 	}
 
 	/* ── P2P animations ───────────────────────────────────────────────────── */
@@ -1705,14 +1705,14 @@
 		color: #e2e8f0;
 	}
 	.chat-reaction-mine {
-		background: rgba(124,58,237,.18);
-		border: 1px solid rgba(124,58,237,.45);
+		background: rgb(var(--nx-accent-2-rgb) / .18);
+		border: 1px solid rgb(var(--nx-accent-2-rgb) / .45);
 		color: var(--nx-accent-2-soft2);
-		box-shadow: 0 0 8px rgba(124,58,237,.15);
+		box-shadow: 0 0 8px rgb(var(--nx-accent-2-rgb) / .15);
 	}
 	.chat-reaction-mine:hover {
-		background: rgba(124,58,237,.08);
-		border-color: rgba(124,58,237,.2);
+		background: rgb(var(--nx-accent-2-rgb) / .08);
+		border-color: rgb(var(--nx-accent-2-rgb) / .2);
 	}
 	@keyframes chat-pill-in {
 		from { transform: scale(0); opacity: 0; }
@@ -1770,7 +1770,7 @@
 	
 	.message-row:hover {
     border-left-color: var(--nx-accent); /* Indigo */
-    background: linear-gradient(to right, rgba(99, 102, 241, 0.05), transparent);
+    background: linear-gradient(to right, rgb(var(--nx-accent-rgb) / 0.05), transparent);
 	}	
 
     /* Style pour le contenu des messages (Rich Text) */
@@ -1810,12 +1810,12 @@
     }
 
     .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-        background-color: rgba(99, 102, 241, 0.4) !important;
+        background-color: rgb(var(--nx-accent-rgb) / 0.4) !important;
     }
 
     /* 3. On l'illumine un peu au survol pour le côté Nodyx */
     .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-        background-color: rgba(99, 102, 241, 0.4); /* Indigo translucide */
+        background-color: rgb(var(--nx-accent-rgb) / 0.4); /* Indigo translucide */
     }
     /* Animation de pulsation pour le vocal */
     @keyframes pulse-subtle {

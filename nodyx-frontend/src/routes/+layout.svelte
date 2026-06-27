@@ -524,7 +524,7 @@
 
 		<!-- Mobile: community name logo -->
 		<a href="/" class="lg:hidden shrink-0 font-black text-sm truncate max-w-[140px]"
-		   style="font-family: 'Space Grotesk', sans-serif; background: linear-gradient(135deg, var(--nx-accent-2-soft), #67e8f9); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent">
+		   style="font-family: 'Space Grotesk', sans-serif; background: linear-gradient(135deg, var(--nx-accent-2-soft), var(--nx-cyan-soft)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent">
 			{communityName}
 		</a>
 
@@ -532,7 +532,7 @@
 		<div class="hidden lg:flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
 			<!-- Logo toujours visible -->
 			<a href="/" class="shrink-0 font-black text-sm"
-			   style="font-family: 'Space Grotesk', sans-serif; background: linear-gradient(135deg, var(--nx-accent-2-soft), #67e8f9); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent">
+			   style="font-family: 'Space Grotesk', sans-serif; background: linear-gradient(135deg, var(--nx-accent-2-soft), var(--nx-cyan-soft)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent">
 				{communityName}
 			</a>
 			<!-- Breadcrumb dynamique (masqué sur la homepage) -->
@@ -606,19 +606,19 @@
 				{#if user.role === 'owner' || user.role === 'admin'}
 					<a href="/admin"
 					   class="hidden sm:flex items-center px-2.5 h-7 text-[10px] font-black uppercase tracking-wider transition-colors"
-					   style="color: {isActive('/admin') ? 'var(--nx-accent-2-soft)' : '#4b5563'}; border: 1px solid {isActive('/admin') ? 'rgba(124,58,237,.4)' : 'rgba(255,255,255,.06)'}">{tFn('nav.admin')}</a>
+					   style="color: {isActive('/admin') ? 'var(--nx-accent-2-soft)' : '#4b5563'}; border: 1px solid {isActive('/admin') ? 'rgb(var(--nx-accent-2-rgb) / .4)' : 'rgba(255,255,255,.06)'}">{tFn('nav.admin')}</a>
 				{/if}
 				<!-- User dropdown -->
 				<div class="relative">
 					<button onclick={() => dropdownOpen = !dropdownOpen}
 					        class="flex items-center gap-2 px-2 h-8 transition-colors group ml-1"
-					        style="border: 1px solid {dropdownOpen ? 'rgba(124,58,237,.4)' : 'rgba(255,255,255,.07)'}; background: {dropdownOpen ? 'rgba(124,58,237,.08)' : 'rgba(255,255,255,.04)'}"
+					        style="border: 1px solid {dropdownOpen ? 'rgb(var(--nx-accent-2-rgb) / .4)' : 'rgba(255,255,255,.07)'}; background: {dropdownOpen ? 'rgb(var(--nx-accent-2-rgb) / .08)' : 'rgba(255,255,255,.04)'}"
 					        aria-haspopup="true" aria-expanded={dropdownOpen}>
 						<div class="relative shrink-0">
 							{#if user.avatar}
 								<img src={user.avatar} alt="Avatar" class="w-6 h-6 object-cover" style="outline: 1px solid rgba(255,255,255,.15)" />
 							{:else}
-								<div class="w-6 h-6 flex items-center justify-center text-xs font-bold text-white select-none" style="background: linear-gradient(135deg, var(--nx-accent-2-strong), #0e7490)">{user.username.charAt(0).toUpperCase()}</div>
+								<div class="w-6 h-6 flex items-center justify-center text-xs font-bold text-white select-none" style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">{user.username.charAt(0).toUpperCase()}</div>
 							{/if}
 							<span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full" style="background: #4ade80; border: 1.5px solid #0d0d12"></span>
 						</div>
@@ -854,10 +854,10 @@
 						].filter(i => i.show) as item}
 						<a href={item.href}
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"
-						   style="color: {isActive(item.href) ? '#e2e8f0' : '#6b7280'}; background: {isActive(item.href) ? 'rgba(124,58,237,.12)' : 'transparent'}">
+						   style="color: {isActive(item.href) ? '#e2e8f0' : '#6b7280'}; background: {isActive(item.href) ? 'rgb(var(--nx-accent-2-rgb) / .12)' : 'transparent'}">
 							{#if isActive(item.href)}
 								<span class="absolute left-0 top-1 bottom-1 w-0.5"
-								      style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), #06b6d4)"></span>
+								      style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
 							{/if}
 							<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" d={item.icon}/>
@@ -885,10 +885,10 @@
 						].filter(i => i.show) as item}
 						<a href={item.href}
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"
-						   style="color: {isActive(item.href) ? '#e2e8f0' : '#6b7280'}; background: {isActive(item.href) ? 'rgba(124,58,237,.12)' : 'transparent'}">
+						   style="color: {isActive(item.href) ? '#e2e8f0' : '#6b7280'}; background: {isActive(item.href) ? 'rgb(var(--nx-accent-2-rgb) / .12)' : 'transparent'}">
 							{#if isActive(item.href)}
 								<span class="absolute left-0 top-1 bottom-1 w-0.5"
-								      style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), #06b6d4)"></span>
+								      style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
 							{/if}
 							<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" d={item.icon}/>
@@ -928,7 +928,7 @@
 						          {chActive ? 'lch-active' : hasUnread ? 'lch-unread' : 'lch-idle'}
 						          {chFlash ? 'lch-flash' : ''}">
 							{#if chActive}
-								<span class="absolute left-0 top-1 bottom-1 w-0.5" style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), #06b6d4)"></span>
+								<span class="absolute left-0 top-1 bottom-1 w-0.5" style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
 							{/if}
 							<span class="text-base leading-none shrink-0 inline-flex items-center justify-center">
 								<ChannelIcon
@@ -965,9 +965,9 @@
 							: (vcMembers[ch.id] ?? []).map((m: any) => ({ ...m, speaking: false, muted: false, deafened: false, isMe: false, userId: m.userId ?? null, socketId: null }))}
 						<a href="/chat?channel={ch.id}"
 						   class="relative flex items-center gap-2.5 px-2.5 py-2 text-sm transition-all"
-						   style="color: {chActive ? '#e2e8f0' : '#4b5563'}; background: {chActive ? 'rgba(124,58,237,.12)' : 'transparent'}">
+						   style="color: {chActive ? '#e2e8f0' : '#4b5563'}; background: {chActive ? 'rgb(var(--nx-accent-2-rgb) / .12)' : 'transparent'}">
 							{#if chActive}
-								<span class="absolute left-0 top-1 bottom-1 w-0.5" style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), #06b6d4)"></span>
+								<span class="absolute left-0 top-1 bottom-1 w-0.5" style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
 							{/if}
 							{#if ch.icon_emoji}
 								<span class="lch-voice-ico inline-flex items-center justify-center">
@@ -1009,7 +1009,7 @@
 													<img src={m.avatar} alt={m.username} class="w-full h-full object-cover"/>
 												{:else}
 													<div class="w-full h-full flex items-center justify-center text-[9px] font-black text-white select-none"
-													     style="background:linear-gradient(135deg,var(--nx-accent-2-strong),#0e7490)">
+													     style="background:linear-gradient(135deg,var(--nx-accent-2-strong),var(--nx-cyan-deep))">
 														{m.username.charAt(0).toUpperCase()}
 													</div>
 												{/if}
@@ -1082,7 +1082,7 @@
 						<img src={user.avatar} alt="" class="w-8 h-8 object-cover" style="outline: 1px solid rgba(255,255,255,.1)" />
 					{:else}
 						<div class="w-8 h-8 flex items-center justify-center text-xs font-bold text-white select-none"
-						     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), #0e7490)">
+						     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">
 							{user.username.charAt(0).toUpperCase()}
 						</div>
 					{/if}
@@ -1189,16 +1189,16 @@
 								onmouseenter={isSharing && !isMe ? (e: MouseEvent) => showScreenPreview(e, member.userId, member.username, member.avatar, 'left') : undefined}
 								onmouseleave={() => { screenPreview = null }}
 								class="relative w-full flex items-center gap-2.5 px-2 py-2 transition-all group"
-								style="background: {isMe ? 'rgba(124,58,237,.06)' : 'transparent'}; text-align: left">
+								style="background: {isMe ? 'rgb(var(--nx-accent-2-rgb) / .06)' : 'transparent'}; text-align: left">
 								<!-- Hover bar -->
-								<span class="absolute left-0 top-0.5 bottom-0.5 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), #06b6d4)"></span>
+								<span class="absolute left-0 top-0.5 bottom-0.5 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
 								<!-- Avatar -->
 								<div class="relative shrink-0">
 									{#if member.avatar}
 										<img src={member.avatar} alt="" class="w-7 h-7 object-cover" style="outline: 1px solid rgba(255,255,255,.08)" />
 									{:else}
 										<div class="w-7 h-7 flex items-center justify-center text-[11px] font-black text-white select-none"
-										     style="background: linear-gradient(135deg, {members[0]?.grade?.color ?? 'var(--nx-accent-2-strong)'}80, #0e7490)">{member.username.charAt(0).toUpperCase()}</div>
+										     style="background: linear-gradient(135deg, {members[0]?.grade?.color ?? 'var(--nx-accent-2-strong)'}80, var(--nx-cyan-deep))">{member.username.charAt(0).toUpperCase()}</div>
 									{/if}
 									<!-- Online dot — remplacé par icône activité si besoin -->
 									<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 flex items-center justify-center"
@@ -1220,7 +1220,7 @@
 										<span class="text-[11px] font-semibold leading-tight truncate transition-colors group-hover:brightness-125 {buildAnimClass(member)}"
 										      style={buildNameStyle(member, isMe ? 'var(--nx-accent-2-soft2)' : '#9ca3af')}>{member.username}</span>
 										{#if isMe}
-											<span class="shrink-0 text-[8px] font-black uppercase px-1 py-px leading-none" style="background: rgba(124,58,237,.25); color: var(--nx-accent-2-soft)">vous</span>
+											<span class="shrink-0 text-[8px] font-black uppercase px-1 py-px leading-none" style="background: rgb(var(--nx-accent-2-rgb) / .25); color: var(--nx-accent-2-soft)">vous</span>
 										{/if}
 									</div>
 									<!-- Activité temps réel -->
@@ -1273,14 +1273,14 @@
 								onmouseenter={isSharing && !isMe ? (e: MouseEvent) => showScreenPreview(e, member.userId, member.username, member.avatar, 'left') : undefined}
 								onmouseleave={() => { screenPreview = null }}
 								class="relative w-full flex items-center gap-2.5 px-2 py-2 transition-all group"
-								style="background: {isMe ? 'rgba(124,58,237,.06)' : 'transparent'}; text-align: left">
-								<span class="absolute left-0 top-0.5 bottom-0.5 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), #06b6d4)"></span>
+								style="background: {isMe ? 'rgb(var(--nx-accent-2-rgb) / .06)' : 'transparent'}; text-align: left">
+								<span class="absolute left-0 top-0.5 bottom-0.5 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style="background: linear-gradient(to bottom, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
 								<div class="relative shrink-0">
 									{#if member.avatar}
 										<img src={member.avatar} alt="" class="w-7 h-7 object-cover" style="outline: 1px solid rgba(255,255,255,.08)" />
 									{:else}
 										<div class="w-7 h-7 flex items-center justify-center text-[11px] font-black text-white select-none"
-										     style="background: linear-gradient(135deg, #7c3aed80, #0e7490)">{member.username.charAt(0).toUpperCase()}</div>
+										     style="background: linear-gradient(135deg, #7c3aed80, var(--nx-cyan-deep))">{member.username.charAt(0).toUpperCase()}</div>
 									{/if}
 									<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 flex items-center justify-center" style="background: #0d0d12">
 										{#if isSharing}
@@ -1299,7 +1299,7 @@
 										<span class="text-[11px] font-semibold leading-tight truncate transition-colors group-hover:brightness-125 {buildAnimClass(member)}"
 										      style={buildNameStyle(member, isMe ? 'var(--nx-accent-2-soft2)' : '#9ca3af')}>{member.username}</span>
 										{#if isMe}
-											<span class="shrink-0 text-[8px] font-black uppercase px-1 py-px leading-none" style="background: rgba(124,58,237,.25); color: var(--nx-accent-2-soft)">vous</span>
+											<span class="shrink-0 text-[8px] font-black uppercase px-1 py-px leading-none" style="background: rgb(var(--nx-accent-2-rgb) / .25); color: var(--nx-accent-2-soft)">vous</span>
 										{/if}
 									</div>
 									{#if isSharing || isStreaming}
@@ -1395,7 +1395,7 @@
 					<!-- Avatars fantômes -->
 					<div class="guest-ghosts">
 						{#each ['M','J','A','K','S','T','R','L'] as letter, i}
-						<div class="guest-ghost" style="--gi:{i}; --gc:{['var(--nx-accent-soft)','var(--nx-accent-2-soft)','#34d399','#fb923c','#f472b6','#67e8f9','#facc15','#f87171'][i]}">
+						<div class="guest-ghost" style="--gi:{i}; --gc:{['var(--nx-accent-soft)','var(--nx-accent-2-soft)','#34d399','#fb923c','#f472b6','var(--nx-cyan-soft)','#facc15','#f87171'][i]}">
 							{letter}
 						</div>
 						{/each}
@@ -1612,7 +1612,7 @@
 					<img src={evt.avatar} alt={evt.username} class="w-6 h-6 rounded-full object-cover shrink-0" />
 				{:else}
 					<div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-					     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), #0e7490)">
+					     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">
 						{evt.username.charAt(0).toUpperCase()}
 					</div>
 				{/if}
@@ -1881,25 +1881,25 @@
 
 .lch-active {
 	color: #e2e8f0;
-	background: rgba(124,58,237,.12);
+	background: rgb(var(--nx-accent-2-rgb) / .12);
 }
 
 .lch-unread {
 	color: #e2e8f0;
-	background: rgba(99,102,241,.07);
-	box-shadow: inset 2px 0 0 rgba(124,58,237,.65);
+	background: rgb(var(--nx-accent-rgb) / .07);
+	box-shadow: inset 2px 0 0 rgb(var(--nx-accent-2-rgb) / .65);
 	animation: lch-breathe 2.8s ease-in-out infinite;
 }
-.lch-unread:hover { background: rgba(99,102,241,.13); }
+.lch-unread:hover { background: rgb(var(--nx-accent-rgb) / .13); }
 
 @keyframes lch-breathe {
 	0%,100% {
-		box-shadow: inset 2px 0 0 rgba(124,58,237,.5);
-		background: rgba(99,102,241,.06);
+		box-shadow: inset 2px 0 0 rgb(var(--nx-accent-2-rgb) / .5);
+		background: rgb(var(--nx-accent-rgb) / .06);
 	}
 	50% {
-		box-shadow: inset 2px 0 0 rgba(167,139,250,.95), 0 0 12px rgba(99,102,241,.12);
-		background: rgba(99,102,241,.11);
+		box-shadow: inset 2px 0 0 rgba(167,139,250,.95), 0 0 12px rgb(var(--nx-accent-rgb) / .12);
+		background: rgb(var(--nx-accent-rgb) / .11);
 	}
 }
 
@@ -1910,9 +1910,9 @@
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(99,102,241,.2) 35%,
+		rgb(var(--nx-accent-rgb) / .2) 35%,
 		rgba(167,139,250,.28) 50%,
-		rgba(99,102,241,.2) 65%,
+		rgb(var(--nx-accent-rgb) / .2) 65%,
 		transparent 100%
 	);
 	transform: translateX(-110%);

@@ -398,7 +398,7 @@
 		-webkit-backdrop-filter: blur(24px);
 		border: 1px solid rgba(255,255,255,0.07);
 		border-radius: 14px;
-		box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.06);
+		box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgb(var(--nx-accent-2-rgb) / 0.06);
 		user-select: none;
 		white-space: nowrap;
 		max-width: calc(100vw - 140px);
@@ -497,7 +497,7 @@
 		transition: all 0.1s;
 	}
 	.fmt-btn:hover { background: rgba(255,255,255,0.06); color: white; }
-	.fmt-btn.on { background: rgba(124,58,237,0.25); color: var(--nx-accent-2-soft); }
+	.fmt-btn.on { background: rgb(var(--nx-accent-2-rgb) / 0.25); color: var(--nx-accent-2-soft); }
 	.italic-btn { font-style: italic; }
 	.underline-btn { text-decoration: underline; }
 	.strike-btn { text-decoration: line-through; }
@@ -516,7 +516,7 @@
 		transition: all 0.1s;
 	}
 	.icon-btn:hover { background: rgba(255,255,255,0.06); color: white; }
-	.icon-btn.on { background: rgba(124,58,237,0.25); color: var(--nx-accent-2-soft); }
+	.icon-btn.on { background: rgb(var(--nx-accent-2-rgb) / 0.25); color: var(--nx-accent-2-soft); }
 
 	.size-val {
 		font-size: 12px;
@@ -539,7 +539,7 @@
 		transition: all 0.1s;
 	}
 	.font-btn:hover { background: rgba(255,255,255,0.06); color: #d1d5db; }
-	.font-btn.on { background: rgba(124,58,237,0.2); color: var(--nx-accent-2-soft); }
+	.font-btn.on { background: rgb(var(--nx-accent-2-rgb) / 0.2); color: var(--nx-accent-2-soft); }
 
 	.fill-toggle {
 		width: 28px;
@@ -555,7 +555,7 @@
 		transition: all 0.1s;
 	}
 	.fill-toggle:hover { background: rgba(255,255,255,0.08); color: #d1d5db; }
-	.fill-toggle.on { background: rgba(124,58,237,0.2); color: var(--nx-accent-2-soft); }
+	.fill-toggle.on { background: rgb(var(--nx-accent-2-rgb) / 0.2); color: var(--nx-accent-2-soft); }
 
 	.width-btn {
 		width: 28px;
@@ -570,7 +570,7 @@
 		transition: all 0.1s;
 	}
 	.width-btn:hover { background: rgba(255,255,255,0.06); }
-	.width-btn.selected { background: rgba(124,58,237,0.25); }
+	.width-btn.selected { background: rgb(var(--nx-accent-2-rgb) / 0.25); }
 	.width-btn.sm { width: 24px; height: 24px; }
 
 	.width-dot {
@@ -594,5 +594,5 @@
 		transition: all 0.1s;
 	}
 	.dash-btn:hover { background: rgba(255,255,255,0.06); color: #d1d5db; }
-	.dash-btn.on { background: rgba(124,58,237,0.2); color: var(--nx-accent-2-soft); }
+	.dash-btn.on { background: rgb(var(--nx-accent-2-rgb) / 0.2); color: var(--nx-accent-2-soft); }
 </style>

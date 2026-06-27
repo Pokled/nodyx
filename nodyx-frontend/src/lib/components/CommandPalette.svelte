@@ -318,7 +318,7 @@
   background: #0b0b0f;
   border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow:
-    0 0 0 1px rgba(99, 102, 241, 0.05),
+    0 0 0 1px rgb(var(--nx-accent-rgb) / 0.05),
     0 24px 60px rgba(0, 0, 0, 0.85),
     0 4px 16px rgba(0, 0, 0, 0.5);
   animation: kp-in 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -418,7 +418,7 @@
 }
 
 .kp-item--active {
-  background: rgba(99, 102, 241, 0.07);
+  background: rgb(var(--nx-accent-rgb) / 0.07);
   border-left-color: rgb(99, 102, 241);
   color: rgba(255, 255, 255, 0.92);
 }
@@ -430,7 +430,7 @@
 }
 
 .kp-item--active .kp-icon {
-  color: rgba(99, 102, 241, 0.9);
+  color: rgb(var(--nx-accent-rgb) / 0.9);
 }
 
 .kp-label {
@@ -453,7 +453,7 @@
 }
 
 .kp-item--active .kp-sub {
-  color: rgba(99, 102, 241, 0.5);
+  color: rgb(var(--nx-accent-rgb) / 0.5);
 }
 
 /* ── Empty ───────────────────────────────────────────────────────────────── */

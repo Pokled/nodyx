@@ -392,7 +392,7 @@
 	/* ─── Common cover placeholder + badges ────────────────────────────────── */
 	.as-cover-placeholder {
 		width: 100%; height: 100%;
-		background: linear-gradient(135deg, rgba(124,58,237,.15), rgba(14,116,144,.12));
+		background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .15), rgba(14,116,144,.12));
 		position: relative;
 	}
 	.as-cover-placeholder::after {

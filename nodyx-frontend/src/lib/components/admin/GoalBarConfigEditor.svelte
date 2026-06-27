@@ -213,7 +213,7 @@
 			<div class="flex gap-1.5">
 				<input id="goal-accent" type="color" bind:value={config.accentColor}
 					class="w-10 h-10 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-				<input type="text" bind:value={config.accentColor} placeholder="#06b6d4" maxlength="7"
+				<input type="text" bind:value={config.accentColor} placeholder="var(--nx-cyan)" maxlength="7"
 					class="flex-1 rounded-lg bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white outline-none transition-colors font-mono"/>
 			</div>
 		</div>

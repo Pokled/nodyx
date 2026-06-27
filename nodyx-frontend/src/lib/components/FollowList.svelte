@@ -155,7 +155,7 @@
 		width: 36px; height: 36px;
 		border-radius: 4px;
 		object-fit: cover;
-		background: rgba(99, 102, 241, 0.08);
+		background: rgb(var(--nx-accent-rgb) / 0.08);
 		flex-shrink: 0;
 	}
 	.fl-avatar--init {

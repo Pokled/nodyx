@@ -242,7 +242,7 @@
 		padding: 32px;
 	}
 	.activation-gate:hover { background: linear-gradient(135deg, rgba(15, 23, 42, 0.86), rgba(8, 12, 26, 0.86)); }
-	.play-icon { width: 48px; height: 48px; color: #06b6d4; opacity: 0.95; }
+	.play-icon { width: 48px; height: 48px; color: var(--nx-cyan); opacity: 0.95; }
 	.gate-text { text-align: center; max-width: 480px; }
 	.gate-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; color: #fff; }
 	.gate-sub { font-size: 13px; color: #94a3b8; line-height: 1.5; }
@@ -293,7 +293,7 @@
 		right: 24px;
 		padding: 12px 16px;
 		background: linear-gradient(90deg, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.45));
-		border-left: 3px solid #06b6d4;
+		border-left: 3px solid var(--nx-cyan);
 		border-radius: 6px;
 		backdrop-filter: blur(8px);
 		color: #f1f5f9;
@@ -306,7 +306,7 @@
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.14em;
-		color: #06b6d4;
+		color: var(--nx-cyan);
 		margin-bottom: 4px;
 	}
 

@@ -174,14 +174,14 @@
 	<div class="absolute inset-0 pointer-events-none overflow-hidden">
 		<!-- Static orbs -->
 		<div class="absolute -top-64 -left-64 w-[700px] h-[700px]"
-		     style="background: radial-gradient(circle, rgba(124,58,237,0.05) 0%, transparent 65%); filter: blur(80px);"></div>
+		     style="background: radial-gradient(circle, rgb(var(--nx-accent-2-rgb) / 0.05) 0%, transparent 65%); filter: blur(80px);"></div>
 		<div class="absolute -bottom-64 -right-64 w-[700px] h-[700px]"
-		     style="background: radial-gradient(circle, rgba(6,182,212,0.04) 0%, transparent 65%); filter: blur(80px);"></div>
+		     style="background: radial-gradient(circle, rgb(var(--nx-cyan-rgb) / 0.04) 0%, transparent 65%); filter: blur(80px);"></div>
 		<!-- Audio-reactive center glow -->
 		<div class="absolute inset-0 flex items-center justify-center"
 		     style="opacity: {(0.3 + _myLevel * 0.7).toFixed(2)}; transition: opacity 80ms linear;">
 			<div class="w-[600px] h-[600px]"
-			     style="background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 55%); filter: blur(100px);"></div>
+			     style="background: radial-gradient(circle, rgb(var(--nx-accent-2-rgb) / 0.08) 0%, transparent 55%); filter: blur(100px);"></div>
 		</div>
 	</div>
 
@@ -204,14 +204,14 @@
 				<!-- Halo rings -->
 				<div class="absolute inset-0 rounded-full join-ring"></div>
 				<div class="absolute inset-0 rounded-full join-ring" style="animation-delay: 0.8s;"></div>
-				<div class="absolute inset-[10px] rounded-full join-ring" style="animation-delay: 0.4s; border-color: rgba(6,182,212,0.3);"></div>
+				<div class="absolute inset-[10px] rounded-full join-ring" style="animation-delay: 0.4s; border-color: rgb(var(--nx-cyan-rgb) / 0.3);"></div>
 
 				<!-- Button disk -->
 				<div class="relative w-36 h-36 rounded-full flex flex-col items-center justify-center gap-2.5
 				            group-hover:scale-105 transition-all duration-300"
-				     style="background: linear-gradient(145deg, rgba(124,58,237,0.25) 0%, rgba(6,182,212,0.12) 100%);
-				            border: 1px solid rgba(124,58,237,0.45);
-				            box-shadow: 0 0 60px rgba(124,58,237,0.18), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.06);">
+				     style="background: linear-gradient(145deg, rgb(var(--nx-accent-2-rgb) / 0.25) 0%, rgb(var(--nx-cyan-rgb) / 0.12) 100%);
+				            border: 1px solid rgb(var(--nx-accent-2-rgb) / 0.45);
+				            box-shadow: 0 0 60px rgb(var(--nx-accent-2-rgb) / 0.18), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.06);">
 					<svg class="w-10 h-10" fill="none" stroke="white" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:0.9;">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
 					</svg>
@@ -251,7 +251,7 @@
 						class="player-card relative flex flex-col items-center gap-5 py-8 px-5 transition-all duration-200 overflow-hidden"
 						style="
 							background: {isSpeaking || myActive
-								? 'linear-gradient(160deg, rgba(124,58,237,0.13) 0%, rgba(6,182,212,0.06) 100%)'
+								? 'linear-gradient(160deg, rgb(var(--nx-accent-2-rgb) / 0.13) 0%, rgb(var(--nx-cyan-rgb) / 0.06) 100%)'
 								: 'linear-gradient(160deg, rgba(13,13,22,0.95) 0%, rgba(9,9,18,0.98) 100%)'};
 							border: 1px solid rgba(124,58,237,{borderOpacity});
 							box-shadow: 0 0 {shadowSize}px rgba(124,58,237,{shadowAlpha}),
@@ -269,15 +269,15 @@
 						{/if}
 
 						<!-- Corner decorations — cyberpunk style -->
-						<div class="absolute top-0 left-0 w-4 h-4 pointer-events-none" style="border-top:1px solid rgba(124,58,237,0.4);border-left:1px solid rgba(124,58,237,0.4)"></div>
-						<div class="absolute top-0 right-0 w-4 h-4 pointer-events-none" style="border-top:1px solid rgba(6,182,212,0.3);border-right:1px solid rgba(6,182,212,0.3)"></div>
-						<div class="absolute bottom-0 left-0 w-4 h-4 pointer-events-none" style="border-bottom:1px solid rgba(6,182,212,0.3);border-left:1px solid rgba(6,182,212,0.3)"></div>
-						<div class="absolute bottom-0 right-0 w-4 h-4 pointer-events-none" style="border-bottom:1px solid rgba(124,58,237,0.4);border-right:1px solid rgba(124,58,237,0.4)"></div>
+						<div class="absolute top-0 left-0 w-4 h-4 pointer-events-none" style="border-top:1px solid rgb(var(--nx-accent-2-rgb) / 0.4);border-left:1px solid rgb(var(--nx-accent-2-rgb) / 0.4)"></div>
+						<div class="absolute top-0 right-0 w-4 h-4 pointer-events-none" style="border-top:1px solid rgb(var(--nx-cyan-rgb) / 0.3);border-right:1px solid rgb(var(--nx-cyan-rgb) / 0.3)"></div>
+						<div class="absolute bottom-0 left-0 w-4 h-4 pointer-events-none" style="border-bottom:1px solid rgb(var(--nx-cyan-rgb) / 0.3);border-left:1px solid rgb(var(--nx-cyan-rgb) / 0.3)"></div>
+						<div class="absolute bottom-0 right-0 w-4 h-4 pointer-events-none" style="border-bottom:1px solid rgb(var(--nx-accent-2-rgb) / 0.4);border-right:1px solid rgb(var(--nx-accent-2-rgb) / 0.4)"></div>
 
 						<!-- "Vous" chip — top-left -->
 						{#if p.isMe}
 							<div class="absolute top-2.5 left-3 px-1.5 py-px pointer-events-none"
-							     style="background:rgba(124,58,237,0.14);border:1px solid rgba(124,58,237,0.35)">
+							     style="background:rgb(var(--nx-accent-2-rgb) / 0.14);border:1px solid rgb(var(--nx-accent-2-rgb) / 0.35)">
 								<span class="text-[8px] font-black uppercase tracking-[0.15em]" style="color:rgba(167,139,250,0.85)">Vous</span>
 							</div>
 						{/if}
@@ -308,8 +308,8 @@
 
 							<!-- Outer speak rings (peers) -->
 							{#if isSpeaking && !p.isMe}
-								<div class="absolute rounded-full speak-ring" style="inset:-10px; border:1.5px solid rgba(124,58,237,0.3)"></div>
-								<div class="absolute rounded-full speak-ring" style="inset:-18px; border:1px solid rgba(6,182,212,0.15); animation-delay:0.6s"></div>
+								<div class="absolute rounded-full speak-ring" style="inset:-10px; border:1.5px solid rgb(var(--nx-accent-2-rgb) / 0.3)"></div>
+								<div class="absolute rounded-full speak-ring" style="inset:-18px; border:1px solid rgb(var(--nx-cyan-rgb) / 0.15); animation-delay:0.6s"></div>
 							{/if}
 
 							{#if p.avatar}
@@ -326,8 +326,8 @@
 							{:else}
 								<div class="w-[88px] h-[88px] rounded-full flex items-center justify-center text-3xl font-black text-white relative z-10"
 								     style="
-								         background: linear-gradient(145deg, rgba(124,58,237,0.4) 0%, rgba(6,182,212,0.2) 100%);
-								         border: 1px solid rgba(124,58,237,0.35);
+								         background: linear-gradient(145deg, rgb(var(--nx-accent-2-rgb) / 0.4) 0%, rgb(var(--nx-cyan-rgb) / 0.2) 100%);
+								         border: 1px solid rgb(var(--nx-accent-2-rgb) / 0.35);
 								         box-shadow: 0 0 0 {ringSize}px rgba(124,58,237,{ringAlpha}),
 								                     0 6px 28px rgba(0,0,0,0.85);
 								         transition: box-shadow 60ms linear;
@@ -359,8 +359,8 @@
 							     style="height:16px; opacity:{isSpeaking || myActive ? 1 : 0};">
 								{#each [
 									{c:'var(--nx-accent-deep)',d:'0.00s'},{c:'var(--nx-accent-2-strong)',d:'0.14s'},{c:'var(--nx-accent-2-mid)',d:'0.05s'},
-									{c:'var(--nx-accent-2-soft)',d:'0.22s'},{c:'#67e8f9',d:'0.09s'},{c:'#22d3ee',d:'0.17s'},
-									{c:'#67e8f9',d:'0.03s'}
+									{c:'var(--nx-accent-2-soft)',d:'0.22s'},{c:'var(--nx-cyan-soft)',d:'0.09s'},{c:'#22d3ee',d:'0.17s'},
+									{c:'var(--nx-cyan-soft)',d:'0.03s'}
 								] as bar}
 									<div class="w-[2.5px] rounded-sm eq-bar" style="background:{bar.c}; animation-delay:{bar.d}"></div>
 								{/each}
@@ -568,7 +568,7 @@
 <style>
 	/* ── Player card ────────────────────────────────────────────────────── */
 	.player-card[role="button"]:hover {
-		background: linear-gradient(160deg, rgba(124,58,237,0.09) 0%, rgba(6,182,212,0.04) 100%) !important;
+		background: linear-gradient(160deg, rgb(var(--nx-accent-2-rgb) / 0.09) 0%, rgb(var(--nx-cyan-rgb) / 0.04) 100%) !important;
 	}
 
 	/* Animated scan line at card top */
@@ -588,7 +588,7 @@
 		100% { transform: scale(1.7); opacity: 0;   }
 	}
 	.join-ring {
-		border: 1px solid rgba(124, 58, 237, 0.35);
+		border: 1px solid rgb(var(--nx-accent-2-rgb) / 0.35);
 		animation: join-ring-pulse 2.2s ease-out infinite;
 	}
 

@@ -55,7 +55,7 @@
 	label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #94a3b8; }
 	input { padding: 6px 8px; font-size: 12px; background: #1f2937; border: 1px solid #374151; border-radius: 3px; color: #e2e8f0; font-family: ui-monospace, monospace; }
 	.og-checkbox { flex-direction: row; align-items: center; color: #cbd5e1; font-size: 12px; }
-	.og-info { font-size: 11px; color: #c7d2fe; background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.2); padding: 10px 12px; border-radius: 3px; line-height: 1.6; }
+	.og-info { font-size: 11px; color: #c7d2fe; background: rgb(var(--nx-accent-rgb) / 0.05); border: 1px solid rgb(var(--nx-accent-rgb) / 0.2); padding: 10px 12px; border-radius: 3px; line-height: 1.6; }
 	.og-info code { background: rgba(255,255,255,0.05); padding: 1px 4px; border-radius: 2px; font-size: 10px; font-family: ui-monospace, monospace; }
 	.og-actions { display: flex; justify-content: flex-end; }
 	.og-btn-primary { padding: 6px 12px; font-size: 12px; color: #fff; background: var(--nx-accent); border: none; border-radius: 3px; cursor: pointer; }

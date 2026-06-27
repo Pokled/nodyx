@@ -188,7 +188,7 @@
 		position: absolute; inset: 0;
 		border-radius: 14px;
 		padding: 1.5px;
-		background: linear-gradient(135deg, #ec4899, var(--nx-accent), #06b6d4, var(--nx-accent-2));
+		background: linear-gradient(135deg, #ec4899, var(--nx-accent), var(--nx-cyan), var(--nx-accent-2));
 		-webkit-mask:
 			linear-gradient(#fff 0 0) content-box,
 			linear-gradient(#fff 0 0);
@@ -201,7 +201,7 @@
 	.theme-holographic .alert-eyebrow {
 		font-size: 10px; font-weight: 700; text-transform: uppercase;
 		letter-spacing: 0.14em; margin-bottom: 4px;
-		background: linear-gradient(90deg, #ec4899, #06b6d4);
+		background: linear-gradient(90deg, #ec4899, var(--nx-cyan));
 		background-clip: text;
 		-webkit-background-clip: text;
 		color: transparent;

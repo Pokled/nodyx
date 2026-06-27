@@ -262,7 +262,7 @@
 	.card {
 		--card-bg:   rgba(15, 23, 42, 0.94);
 		--text-color: #f1f5f9;
-		--accent:     #06b6d4;
+		--accent:     var(--nx-cyan);
 		background: var(--card-bg);
 		backdrop-filter: blur(12px);
 		border-radius: 20px;

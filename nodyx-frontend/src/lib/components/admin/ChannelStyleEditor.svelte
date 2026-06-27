@@ -427,7 +427,7 @@
 	}
 	.cse-style-btn:hover { background: #283142; color: #e2e8f0; }
 	.cse-style-btn--active {
-		background: rgba(99, 102, 241, 0.18);
+		background: rgb(var(--nx-accent-rgb) / 0.18);
 		border-color: var(--nx-accent);
 		color: #c7d2fe;
 	}
@@ -525,11 +525,11 @@
 		padding: 0;
 	}
 	.cse-icon-btn:hover {
-		background: rgba(99,102,241,0.1);
+		background: rgb(var(--nx-accent-rgb) / 0.1);
 		transform: scale(1.08);
 	}
 	.cse-icon-btn--active {
-		background: rgba(99,102,241,0.2);
+		background: rgb(var(--nx-accent-rgb) / 0.2);
 		border-color: var(--nx-accent);
 	}
 	.cse-custom {

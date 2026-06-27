@@ -186,7 +186,7 @@
 		-webkit-backdrop-filter: blur(24px);
 		border: 1px solid rgba(255,255,255,0.07);
 		border-radius: 12px;
-		box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(124,58,237,0.05);
+		box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px rgb(var(--nx-accent-2-rgb) / 0.05);
 		user-select: none;
 	}
 
@@ -231,10 +231,10 @@
 		color: #4b5563;
 	}
 	.bar-btn.toggle.on {
-		background: rgba(124,58,237,0.18);
+		background: rgb(var(--nx-accent-2-rgb) / 0.18);
 		color: var(--nx-accent-2-soft);
 	}
-	.bar-btn.toggle.on:hover { background: rgba(124,58,237,0.25); }
+	.bar-btn.toggle.on:hover { background: rgb(var(--nx-accent-2-rgb) / 0.25); }
 
 	.toggle-label { font-size: 11px; font-weight: 500; }
 

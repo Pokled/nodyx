@@ -144,7 +144,7 @@
 	.s-card--reply { margin-left: 1rem; background: rgba(255,255,255,0.01); }
 	.s-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
 	.s-avatar { width: 42px; height: 42px; border-radius: 999px; object-fit: cover; display: block; }
-	.s-avatar--i { display: inline-flex; align-items: center; justify-content: center; background: rgba(124,58,237,0.3); color: #fff; font-weight: 700; }
+	.s-avatar--i { display: inline-flex; align-items: center; justify-content: center; background: rgb(var(--nx-accent-2-rgb) / 0.3); color: #fff; font-weight: 700; }
 	.s-name { font-weight: 700; color: #fff; text-decoration: none; }
 	.s-handle { display: block; color: rgba(255,255,255,0.45); font-size: 0.8rem; }
 	.s-text { color: rgba(255,255,255,0.9); font-size: 0.95rem; line-height: 1.55; }
@@ -173,6 +173,6 @@
 	.s-backdrop { position: fixed; inset: 0; z-index: 40; }
 	.s-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.6rem; }
 	.s-chip { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); }
-	.s-chip--mine { background: rgba(124,58,237,0.22); border-color: rgba(124,58,237,0.6); }
+	.s-chip--mine { background: rgb(var(--nx-accent-2-rgb) / 0.22); border-color: rgb(var(--nx-accent-2-rgb) / 0.6); }
 	.s-replies-title { font-size: 0.95rem; font-weight: 700; color: rgba(255,255,255,0.8); margin: 1.2rem 0 0.6rem; }
 </style>

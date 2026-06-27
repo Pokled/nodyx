@@ -140,8 +140,8 @@
 		gap: 8px;
 		padding: 6px 10px;
 		margin: 4px 0;
-		background: rgba(99, 102, 241, 0.06);
-		border: 1px solid rgba(99, 102, 241, 0.18);
+		background: rgb(var(--nx-accent-rgb) / 0.06);
+		border: 1px solid rgb(var(--nx-accent-rgb) / 0.18);
 		border-radius: 999px;
 		max-width: 100%;
 	}

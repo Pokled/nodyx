@@ -172,7 +172,7 @@
 	<h1 class="text-2xl font-bold text-white mb-6">{tFn('auth.login.title')}</h1>
 
 	{#if data.demoMode}
-	<div class="mb-6 rounded-xl border p-4" style="border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.06)">
+	<div class="mb-6 rounded-xl border p-4" style="border-color: rgb(var(--nx-accent-rgb) / 0.4); background: rgb(var(--nx-accent-rgb) / 0.06)">
 		<p class="text-sm font-semibold text-white mb-2">{tFn('auth.demo.title')}</p>
 		<p class="text-xs mb-3" style="color: rgb(156,163,175)">
 			{tFn('auth.demo.description')}
@@ -180,7 +180,7 @@
 		<div class="space-y-1.5 text-xs mb-2">
 			{#each ['alice', 'bob', 'charlie', 'admin'] as u}
 			<div class="rounded-lg px-3 py-2 flex items-center justify-between gap-2"
-				style="background: rgba(0,0,0,0.25); border: 1px solid rgba(99,102,241,0.2)">
+				style="background: rgba(0,0,0,0.25); border: 1px solid rgb(var(--nx-accent-rgb) / 0.2)">
 				<span class="font-mono text-white shrink-0">{u}@demo.nodyx.org</span>
 				<span class="shrink-0" style="color: rgb(156,163,175)">demo1234</span>
 			</div>

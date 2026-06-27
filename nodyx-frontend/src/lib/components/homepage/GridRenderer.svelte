@@ -333,8 +333,8 @@
 		white-space: nowrap;
 	}
 	.gr-col-overlay-btn--add {
-		background: rgba(6,182,212,.15);
-		border-color: rgba(6,182,212,.3);
+		background: rgb(var(--nx-cyan-rgb) / .15);
+		border-color: rgb(var(--nx-cyan-rgb) / .3);
 	}
 
 	/* ── Empty column slot ─────────────────────────────────────────────────── */

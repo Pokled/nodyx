@@ -126,8 +126,8 @@
 
 <style>
 	@keyframes sglow {
-		0%,100% { text-shadow: 0 0 0 rgba(124,58,237,0); }
-		50%      { text-shadow: 0 0 20px rgba(124,58,237,.5); }
+		0%,100% { text-shadow: 0 0 0 rgb(var(--nx-accent-2-rgb) / 0); }
+		50%      { text-shadow: 0 0 20px rgb(var(--nx-accent-2-rgb) / .5); }
 	}
 	.sglow { animation: sglow 4s ease-in-out infinite; }
 

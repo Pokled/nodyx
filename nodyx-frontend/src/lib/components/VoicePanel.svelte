@@ -638,7 +638,7 @@
                                 style="left: {rect.left + rect.width/2}px; 
                                        top: {rect.top - 30}px;
                                        transform: translateX(-50%);
-                                       box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);"
+                                       box-shadow: 0 0 15px rgb(var(--nx-accent-rgb) / 0.3);"
                             >
                                 <span class="flex items-center gap-1.5">
                                     <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
@@ -1214,14 +1214,14 @@ input[type=range]::-webkit-slider-thumb {
     border-radius: 50%;
     background: linear-gradient(to right, var(--nx-accent), var(--nx-accent-2-mid));
     cursor: pointer;
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 10px rgb(var(--nx-accent-rgb) / 0.5);
     border: 2px solid rgba(255, 255, 255, 0.2);
     transition: all 0.2s;
 }
 
 input[type=range]::-webkit-slider-thumb:hover {
     transform: scale(1.2);
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.8);
+    box-shadow: 0 0 15px rgb(var(--nx-accent-rgb) / 0.8);
 }
 
 input[type=range]::-moz-range-thumb {
@@ -1236,7 +1236,7 @@ input[type=range]::-moz-range-thumb {
 
 input[type=range]::-moz-range-thumb:hover {
     transform: scale(1.2);
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.8);
+    box-shadow: 0 0 15px rgb(var(--nx-accent-rgb) / 0.8);
 }
 
 

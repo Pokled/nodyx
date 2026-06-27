@@ -401,7 +401,7 @@
 }
 
 .lib-search-input:focus {
-	border-color: rgba(99, 102, 241, 0.5);
+	border-color: rgb(var(--nx-accent-rgb) / 0.5);
 }
 
 .lib-search-btn {
@@ -423,7 +423,7 @@
 
 .lib-upload-btn {
 	padding: 7px 14px;
-	background: rgba(99, 102, 241, 0.85);
+	background: rgb(var(--nx-accent-rgb) / 0.85);
 	border: none;
 	color: #fff;
 	font-size: 0.8125rem;
@@ -492,8 +492,8 @@
 }
 
 .lib-filter-btn--active {
-	background: rgba(99, 102, 241, 0.15);
-	border-color: rgba(99, 102, 241, 0.35);
+	background: rgb(var(--nx-accent-rgb) / 0.15);
+	border-color: rgb(var(--nx-accent-rgb) / 0.35);
 	color: #a5b4fc;
 }
 
@@ -589,7 +589,7 @@
 .lib-input:focus,
 .lib-select:focus,
 .lib-textarea:focus {
-	border-color: rgba(99, 102, 241, 0.5);
+	border-color: rgb(var(--nx-accent-rgb) / 0.5);
 }
 
 .lib-select {
@@ -613,8 +613,8 @@
 	display: flex;
 	gap: 10px;
 	padding: 10px 14px;
-	background: rgba(99, 102, 241, 0.06);
-	border: 1px solid rgba(99, 102, 241, 0.15);
+	background: rgb(var(--nx-accent-rgb) / 0.06);
+	border: 1px solid rgb(var(--nx-accent-rgb) / 0.15);
 	font-size: 0.75rem;
 	color: #a5b4fc;
 }
@@ -647,7 +647,7 @@
 
 .lib-submit-btn {
 	padding: 8px 18px;
-	background: rgba(99, 102, 241, 0.85);
+	background: rgb(var(--nx-accent-rgb) / 0.85);
 	border: none;
 	color: #fff;
 	font-size: 0.8125rem;

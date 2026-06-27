@@ -200,8 +200,8 @@
                             onclick={() => focusedId = entry.id}
                             class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium shrink-0 transition-all"
                             style="
-                                border: 1px solid {focusedId === entry.id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.06)'};
-                                background: {focusedId === entry.id ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)'};
+                                border: 1px solid {focusedId === entry.id ? 'rgb(var(--nx-accent-rgb) / 0.5)' : 'rgba(255,255,255,0.06)'};
+                                background: {focusedId === entry.id ? 'rgb(var(--nx-accent-rgb) / 0.12)' : 'rgba(255,255,255,0.03)'};
                                 color: {focusedId === entry.id ? 'rgb(165,180,252)' : 'rgb(107,114,128)'};
                             "
                         >

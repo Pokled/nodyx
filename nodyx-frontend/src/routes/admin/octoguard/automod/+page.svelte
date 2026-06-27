@@ -308,7 +308,7 @@
 		color: #94a3b8;
 		font-family: ui-monospace, monospace;
 	}
-	.og-rule-badge--action { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; }
+	.og-rule-badge--action { background: rgb(var(--nx-accent-rgb) / 0.15); color: #a5b4fc; }
 	.og-rule-badge--dry { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
 	.og-rule-actions {
 		margin-left: auto;

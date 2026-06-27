@@ -52,11 +52,11 @@
 
     <!-- Card -->
     <div class="relative w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 rounded-2xl"
-         style="background: #0a0a12; border: 1px solid rgba(99,102,241,0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.6);">
+         style="background: #0a0a12; border: 1px solid rgb(var(--nx-accent-rgb) / 0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.6);">
 
         <!-- Top accent line -->
         <div class="absolute top-0 left-0 right-0 h-px"
-             style="background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent)"></div>
+             style="background: linear-gradient(90deg, transparent, rgb(var(--nx-accent-rgb) / 0.6), transparent)"></div>
 
         <!-- Header -->
         <div class="flex items-center justify-between px-6 pt-6 pb-4"
@@ -86,8 +86,8 @@
                         onclick={() => selectedSurface = src.surface}
                         class="flex flex-col items-center gap-2.5 p-4 rounded-xl transition-all duration-150"
                         style="
-                            border: 2px solid {selectedSurface === src.surface ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.05)'};
-                            background: {selectedSurface === src.surface ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};
+                            border: 2px solid {selectedSurface === src.surface ? 'rgb(var(--nx-accent-rgb) / 0.6)' : 'rgba(255,255,255,0.05)'};
+                            background: {selectedSurface === src.surface ? 'rgb(var(--nx-accent-rgb) / 0.08)' : 'rgba(255,255,255,0.02)'};
                         "
                     >
                         <span class="text-2xl leading-none">{src.icon}</span>
@@ -113,8 +113,8 @@
                             onclick={() => selectedQuality = q.id}
                             class="flex flex-col items-center py-2.5 rounded-lg transition-all"
                             style="
-                                border: 1px solid {selectedQuality === q.id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.05)'};
-                                background: {selectedQuality === q.id ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};
+                                border: 1px solid {selectedQuality === q.id ? 'rgb(var(--nx-accent-rgb) / 0.5)' : 'rgba(255,255,255,0.05)'};
+                                background: {selectedQuality === q.id ? 'rgb(var(--nx-accent-rgb) / 0.08)' : 'rgba(255,255,255,0.02)'};
                             "
                         >
                             <span class="text-xs font-bold {q.color}">{q.label}</span>
@@ -133,8 +133,8 @@
                             onclick={() => selectedFps = fps}
                             class="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all"
                             style="
-                                border: 1px solid {selectedFps === fps ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.05)'};
-                                background: {selectedFps === fps ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};
+                                border: 1px solid {selectedFps === fps ? 'rgb(var(--nx-accent-rgb) / 0.5)' : 'rgba(255,255,255,0.05)'};
+                                background: {selectedFps === fps ? 'rgb(var(--nx-accent-rgb) / 0.08)' : 'rgba(255,255,255,0.02)'};
                                 color: {selectedFps === fps ? 'rgb(165,180,252)' : 'rgb(107,114,128)'};
                             "
                         >

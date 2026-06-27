@@ -158,7 +158,7 @@
 		color: inherit;
 		transition: background .1s linear, border-color .1s linear;
 	}
-	.og-stat-card:hover { background: rgba(255, 255, 255, 0.03); border-color: rgba(99, 102, 241, 0.3); }
+	.og-stat-card:hover { background: rgba(255, 255, 255, 0.03); border-color: rgb(var(--nx-accent-rgb) / 0.3); }
 	.og-stat-card--warn { border-left: 3px solid #fb923c; }
 	.og-stat-num {
 		font-size: 28px;

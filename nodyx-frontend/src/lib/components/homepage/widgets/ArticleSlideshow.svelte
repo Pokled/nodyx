@@ -346,7 +346,7 @@
 		position: absolute;
 		bottom: 0; left: 0;
 		width: 320px; height: 200px;
-		background: radial-gradient(ellipse at bottom left, rgba(124,58,237,.18), transparent 70%);
+		background: radial-gradient(ellipse at bottom left, rgb(var(--nx-accent-2-rgb) / .18), transparent 70%);
 		pointer-events: none;
 	}
 
@@ -382,16 +382,16 @@
 	.as-play svg {
 		width: 64px; height: 64px;
 		color: rgba(255,255,255,.85);
-		background: rgba(124,58,237,.35);
+		background: rgb(var(--nx-accent-2-rgb) / .35);
 		border-radius: 50%;
 		padding: 14px;
-		border: 2px solid rgba(124,58,237,.5);
+		border: 2px solid rgb(var(--nx-accent-2-rgb) / .5);
 		transition: transform .15s, background .15s;
-		filter: drop-shadow(0 4px 24px rgba(124,58,237,.4));
+		filter: drop-shadow(0 4px 24px rgb(var(--nx-accent-2-rgb) / .4));
 	}
 	.as-play:hover svg {
 		transform: scale(1.08);
-		background: rgba(124,58,237,.55);
+		background: rgb(var(--nx-accent-2-rgb) / .55);
 	}
 
 	/* ── Content ────────────────────────────────────────────────────────────── */
@@ -415,7 +415,7 @@
 	.as-cat-line {
 		height: 1px;
 		width: 2.5rem;
-		background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4);
+		background: linear-gradient(to right, var(--nx-accent-2-strong), var(--nx-cyan));
 		flex-shrink: 0;
 	}
 	.as-cat-text {
@@ -428,9 +428,9 @@
 	.as-cat-badge {
 		font-size: 10px;
 		font-weight: 700;
-		color: #06b6d4;
-		background: rgba(6,182,212,.12);
-		border: 1px solid rgba(6,182,212,.25);
+		color: var(--nx-cyan);
+		background: rgb(var(--nx-cyan-rgb) / .12);
+		border: 1px solid rgb(var(--nx-cyan-rgb) / .25);
 		padding: 1px 7px;
 		border-radius: 3px;
 	}
@@ -485,8 +485,8 @@
 	.as-avatar {
 		width: 28px; height: 28px;
 		overflow: hidden;
-		background: rgba(124,58,237,.3);
-		outline: 1.5px solid rgba(124,58,237,.4);
+		background: rgb(var(--nx-accent-2-rgb) / .3);
+		outline: 1.5px solid rgb(var(--nx-accent-2-rgb) / .4);
 		outline-offset: 1px;
 		border-radius: 2px;
 		display: flex;
@@ -512,14 +512,14 @@
 		letter-spacing: .1em;
 		color: #fff;
 		text-decoration: none;
-		background: linear-gradient(135deg, rgba(124,58,237,.55), rgba(6,182,212,.25));
-		border: 1px solid rgba(124,58,237,.45);
+		background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .55), rgb(var(--nx-cyan-rgb) / .25));
+		border: 1px solid rgb(var(--nx-accent-2-rgb) / .45);
 		transition: background .15s, border-color .15s;
 		white-space: nowrap;
 	}
 	.as-cta:hover {
-		background: linear-gradient(135deg, rgba(124,58,237,.75), rgba(6,182,212,.4));
-		border-color: rgba(124,58,237,.7);
+		background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .75), rgb(var(--nx-cyan-rgb) / .4));
+		border-color: rgb(var(--nx-accent-2-rgb) / .7);
 	}
 	.as-cta svg { width: 14px; height: 14px; transition: transform .15s; }
 	.as-cta:hover svg { transform: translateX(3px); }
@@ -556,7 +556,7 @@
 		top: -1px;
 		left: 0;
 		height: 4px;
-		background: linear-gradient(to right, var(--nx-accent-2-strong), #06b6d4);
+		background: linear-gradient(to right, var(--nx-accent-2-strong), var(--nx-cyan));
 		transition: none;
 	}
 	.as-arrows {
@@ -577,7 +577,7 @@
 		border-radius: 2px;
 	}
 	.as-arrow:hover {
-		border-color: rgba(124,58,237,.5);
+		border-color: rgb(var(--nx-accent-2-rgb) / .5);
 		color: var(--nx-accent-2-soft);
 	}
 	.as-arrow svg { width: 14px; height: 14px; }

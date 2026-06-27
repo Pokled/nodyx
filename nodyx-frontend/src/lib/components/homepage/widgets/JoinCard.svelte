@@ -61,7 +61,7 @@
 			<div class="flex -space-x-2">
 				{#each recentAvatars.slice(0, 5) as u}
 					<div class="w-7 h-7 rounded-full overflow-hidden shrink-0"
-					     style="background:rgba(124,58,237,.3); border:2px solid #0d0d12; outline:1px solid rgba(124,58,237,.25)">
+					     style="background:rgb(var(--nx-accent-2-rgb) / .3); border:2px solid #0d0d12; outline:1px solid rgb(var(--nx-accent-2-rgb) / .25)">
 						{#if u.avatar_url}
 							<img src={u.avatar_url} alt={u.username} class="w-full h-full object-cover" />
 						{:else}
@@ -88,7 +88,7 @@
 	<!-- CTA -->
 	<a href="/auth/register"
 	   class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
-	   style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-strong),#0e7490); border:1px solid rgba(124,58,237,.4)">
+	   style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-strong),var(--nx-cyan-deep)); border:1px solid rgb(var(--nx-accent-2-rgb) / .4)">
 		{ctaText || tFn('common.join') || 'Rejoindre'}
 		<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>

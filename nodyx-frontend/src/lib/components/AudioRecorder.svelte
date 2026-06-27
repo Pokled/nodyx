@@ -329,18 +329,18 @@
 	}
 	.ar-btn-cancel:hover { background: rgba(255,255,255,.06); color: #e5e7eb; }
 	.ar-btn-send {
-		background: rgba(99, 102, 241, 0.18);
+		background: rgb(var(--nx-accent-rgb) / 0.18);
 		color: #a5b4fc;
 	}
-	.ar-btn-send:hover { background: rgba(99, 102, 241, 0.32); color: #c7d2fe; }
+	.ar-btn-send:hover { background: rgb(var(--nx-accent-rgb) / 0.32); color: #c7d2fe; }
 
 	.ar-preview {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
 		padding: 5px 8px;
-		background: rgba(99, 102, 241, 0.06);
-		border: 1px solid rgba(99, 102, 241, 0.18);
+		background: rgb(var(--nx-accent-rgb) / 0.06);
+		border: 1px solid rgb(var(--nx-accent-rgb) / 0.18);
 		border-radius: 12px;
 		max-width: 100%;
 	}
@@ -352,8 +352,8 @@
 		align-items: center;
 		gap: 8px;
 		padding: 6px 12px;
-		background: rgba(99, 102, 241, 0.08);
-		border: 1px solid rgba(99, 102, 241, 0.22);
+		background: rgb(var(--nx-accent-rgb) / 0.08);
+		border: 1px solid rgb(var(--nx-accent-rgb) / 0.22);
 		border-radius: 999px;
 		color: #c7d2fe;
 		font-size: 12px;

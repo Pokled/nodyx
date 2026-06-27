@@ -281,7 +281,7 @@
 					<div class="flex gap-1.5">
 						<input type="color" bind:value={config.customTheme.accentColor}
 							class="w-9 h-8 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-						<input type="text" bind:value={config.customTheme.accentColor} placeholder="#06b6d4"
+						<input type="text" bind:value={config.customTheme.accentColor} placeholder="var(--nx-cyan)"
 							class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-xs text-white placeholder-slate-700 outline-none font-mono transition-colors"/>
 					</div>
 				</label>
