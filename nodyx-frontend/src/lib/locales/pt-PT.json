@@ -926,5 +926,22 @@
   "members.pts": "pts",
   "members.role_owner": "Fundador",
   "members.role_admin": "Admin",
-  "members.role_moderator": "Mod"
+  "members.role_moderator": "Mod",
+  "common.previous": "Anterior",
+  "common.next": "Seguinte",
+  "widgets.read_more": "Ler mais",
+  "widgets.no_articles": "Nenhum artigo para mostrar de momento.",
+  "widgets.by": "por",
+  "widgets.views": "visualizações",
+  "widgets.video": "Vídeo",
+  "widgets.no_content": "Nenhum conteúdo para mostrar",
+  "widgets.watch_video": "Ver o vídeo",
+  "widgets.watch": "Ver",
+  "widgets.read": "Ler",
+  "widgets.no_recent_threads": "Nenhum tópico recente.",
+  "widgets.twitch_configure": "Configura um canal Twitch a partir do builder para mostrar a stream aqui.",
+  "widgets.twitch_open_channel": "Abrir o canal {{channel}} no Twitch",
+  "widgets.open": "Abrir",
+  "widgets.twitch_offline_mid": "está offline — vê",
+  "widgets.twitch_offline_end": "entretanto"
 }

@@ -926,5 +926,22 @@
   "members.pts": "очк.",
   "members.role_owner": "Основатель",
   "members.role_admin": "Админ",
-  "members.role_moderator": "Модер"
+  "members.role_moderator": "Модер",
+  "common.previous": "Назад",
+  "common.next": "Далее",
+  "widgets.read_more": "Читать далее",
+  "widgets.no_articles": "Пока нет статей для показа.",
+  "widgets.by": "от",
+  "widgets.views": "просм.",
+  "widgets.video": "Видео",
+  "widgets.no_content": "Нет контента для показа",
+  "widgets.watch_video": "Смотреть видео",
+  "widgets.watch": "Смотреть",
+  "widgets.read": "Читать",
+  "widgets.no_recent_threads": "Нет недавних тем.",
+  "widgets.twitch_configure": "Настройте Twitch-канал в билдере, чтобы показать стрим здесь.",
+  "widgets.twitch_open_channel": "Открыть канал {{channel}} на Twitch",
+  "widgets.open": "Открыть",
+  "widgets.twitch_offline_mid": "офлайн — посмотри",
+  "widgets.twitch_offline_end": "пока что"
 }

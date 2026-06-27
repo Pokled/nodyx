@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
+	import { t, locale } from '$lib/i18n'
+
+	const tFn = $derived($t)
+	const loc = $derived($locale)
 
 	interface Thread {
 		id:                   string
@@ -57,14 +61,14 @@
 	})
 
 	function timeAgo(dateStr: string): string {
-		const diff = Date.now() - new Date(dateStr).getTime()
-		const m = Math.floor(diff / 60000)
-		if (m < 60)  return `${m}min`
-		const h = Math.floor(m / 60)
-		if (h < 24)  return `${h}h`
-		const d = Math.floor(h / 24)
-		if (d < 30)  return `${d}j`
-		return `${Math.floor(d / 30)}mois`
+		const min = (new Date(dateStr).getTime() - Date.now()) / 60000 // négatif = passé
+		const rtf = new Intl.RelativeTimeFormat(loc, { numeric: 'auto', style: 'narrow' })
+		if (Math.abs(min) < 60) return rtf.format(Math.round(min), 'minute')
+		const h = min / 60
+		if (Math.abs(h) < 24)   return rtf.format(Math.round(h), 'hour')
+		const d = h / 24
+		if (Math.abs(d) < 30)   return rtf.format(Math.round(d), 'day')
+		return rtf.format(Math.round(d / 30), 'month')
 	}
 </script>
 
@@ -85,7 +89,7 @@
 		</div>
 
 	{:else if threads.length === 0}
-		<div class="rt-empty">Aucun sujet récent.</div>
+		<div class="rt-empty">{tFn('widgets.no_recent_threads')}</div>
 
 	{:else if style === 'cards'}
 		<div class="rt-cards">

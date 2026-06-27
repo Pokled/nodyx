@@ -2,6 +2,9 @@
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/environment'
 	import { apiFetch } from '$lib/api'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	interface Props {
 		config:   Record<string, unknown>
@@ -157,7 +160,7 @@
 			Twitch Stream
 		</p>
 		<p class="text-xs max-w-xs" style="color:#6b7280">
-			Configure une chaîne Twitch depuis le builder pour afficher le stream ici.
+			{tFn('widgets.twitch_configure')}
 		</p>
 	</div>
 
@@ -220,8 +223,8 @@
 				   rel="noopener noreferrer"
 				   class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] transition-all twitch-cta"
 				   style="font-family:'Space Grotesk',sans-serif; color:#e2e8f0; background:{accent}1a; border:1px solid {accent}55"
-				   aria-label="Ouvrir la chaîne {activeChannel} sur Twitch">
-					<span class="hidden sm:inline">Ouvrir</span>
+				   aria-label={tFn('widgets.twitch_open_channel', { channel: activeChannel })}>
+					<span class="hidden sm:inline">{tFn('widgets.open')}</span>
 					<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
 					</svg>
@@ -237,7 +240,7 @@
 					<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
 				</svg>
 				<span class="truncate">
-					<span style="color:#6b7280">{configuredChannel}</span> est offline — découvre <span class="font-bold">{activeChannel}</span> en attendant
+					<span style="color:#6b7280">{configuredChannel}</span> {tFn('widgets.twitch_offline_mid')} <span class="font-bold">{activeChannel}</span> {tFn('widgets.twitch_offline_end')}
 				</span>
 			</div>
 		{/if}
