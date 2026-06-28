@@ -5,6 +5,8 @@
 	import { apiFetch } from '$lib/api'
 	import { onMount, untrack } from 'svelte'
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
+	import { socket as socketStore } from '$lib/socket'
+	import type { Socket } from 'socket.io-client'
 
 	const tFn = $derived($t)
 
@@ -290,6 +292,37 @@
 		}, { rootMargin: '200px' })
 		if (sentinel) obs.observe(sentinel)
 		return () => obs.disconnect()
+	})
+
+	// ── Temps réel : on reflète live ce que font les autres membres ──────────────
+	// Le backend diffuse vers la room 'presence' (tous les membres en ligne).
+	// Les MAJ de compteurs sont idempotentes (on POSE la valeur, pas +1) pour ne
+	// pas double-compter avec l'optimistic UI de l'auteur de l'action.
+	onMount(() => {
+		const onNew = (post: any) => {
+			// Nouveau post : on l'ajoute en tête (sauf onglet Abonnements, et si déjà présent)
+			if (scope === 'discover' && post?.id && !posts.some(p => p.id === post.id)) {
+				posts = [post, ...posts]
+			}
+		}
+		const onDelete = ({ id }: { id: string }) => { posts = posts.filter(p => p.id !== id) }
+		const onCount = (d: { id: string; likes_count?: number; replies_count?: number; reshares_count?: number }) => {
+			posts = posts.map(p => (p.id === d.id || p.reshare_of === d.id)
+				? { ...p,
+					...(d.likes_count    !== undefined ? { likes_count:    d.likes_count }    : {}),
+					...(d.replies_count  !== undefined ? { replies_count:  d.replies_count }  : {}),
+					...(d.reshares_count !== undefined ? { reshares_count: d.reshares_count } : {}) }
+				: p)
+		}
+		let bound: Socket | null = null
+		const detach = (s: Socket) => { s.off('feed:new', onNew); s.off('feed:delete', onDelete); s.off('feed:count', onCount) }
+		const unsub = socketStore.subscribe((s) => {
+			if (s === bound) return
+			if (bound) detach(bound)
+			if (s) { s.on('feed:new', onNew); s.on('feed:delete', onDelete); s.on('feed:count', onCount) }
+			bound = s
+		})
+		return () => { unsub(); if (bound) detach(bound) }
 	})
 </script>
 

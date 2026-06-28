@@ -216,8 +216,15 @@ export default async function socialRoutes(app: FastifyInstance) {
       WHERE sp.id = $1
     `, [ins.rows[0].id, userId])
 
-    // Notify followers in real-time
-    io?.to(`user:${userId}`).emit('feed:new', post.rows[0])
+    // Temps réel : diffusion à TOUS les membres en ligne (room 'presence'),
+    // pas seulement à l'auteur. Un post racine apparaît dans le fil ; une
+    // réponse met à jour le compteur de réponses du parent.
+    if (reply_to_id) {
+      const rc = await db.query('SELECT replies_count FROM status_posts WHERE id = $1', [reply_to_id])
+      io?.to('presence').emit('feed:count', { id: reply_to_id, replies_count: rc.rows[0]?.replies_count })
+    } else {
+      io?.to('presence').emit('feed:new', post.rows[0])
+    }
 
     return reply.code(201).send(post.rows[0])
   })
@@ -243,6 +250,13 @@ export default async function socialRoutes(app: FastifyInstance) {
     // Réputation : suppression d'un statut = -2 (anti-farming)
     await awardPoints(userId, -REPUTATION.SOCIAL_POST)
 
+    // Temps réel : retrait du post chez tous + MAJ compteur de réponses du parent
+    io?.to('presence').emit('feed:delete', { id: del.rows[0].id })
+    if (del.rows[0].reply_to_id) {
+      const rc = await db.query('SELECT replies_count FROM status_posts WHERE id = $1', [del.rows[0].reply_to_id])
+      io?.to('presence').emit('feed:count', { id: del.rows[0].reply_to_id, replies_count: rc.rows[0]?.replies_count })
+    }
+
     return reply.send({ ok: true })
   })
 
@@ -264,6 +278,7 @@ export default async function socialRoutes(app: FastifyInstance) {
       [id]
     )
 
+    io?.to('presence').emit('feed:count', { id, likes_count: result.rows[0]?.likes_count })
     return reply.send({ ok: true, likes_count: result.rows[0]?.likes_count })
   })
 
@@ -277,10 +292,11 @@ export default async function socialRoutes(app: FastifyInstance) {
     )
 
     if (del.rows[0]) {
-      await db.query(
-        'UPDATE status_posts SET likes_count = GREATEST(0, likes_count - 1) WHERE id = $1',
+      const r = await db.query<{ likes_count: number }>(
+        'UPDATE status_posts SET likes_count = GREATEST(0, likes_count - 1) WHERE id = $1 RETURNING likes_count',
         [id]
       )
+      io?.to('presence').emit('feed:count', { id, likes_count: r.rows[0]?.likes_count })
     }
 
     return reply.send({ ok: true })
@@ -312,6 +328,7 @@ export default async function socialRoutes(app: FastifyInstance) {
         [id]
       )
       likes_count = r.rows[0]?.likes_count
+      io?.to('presence').emit('feed:count', { id, likes_count })
     }
     return reply.send({ ok: true, likes_count })
   })
@@ -333,14 +350,23 @@ export default async function socialRoutes(app: FastifyInstance) {
       'SELECT id FROM status_posts WHERE author_id = $1 AND reshare_of = $2',
       [userId, targetId]
     )
+    const emitReshareCount = async () => {
+      const c = await db.query<{ n: number }>(
+        'SELECT COUNT(*)::int AS n FROM status_posts WHERE reshare_of = $1', [targetId]
+      )
+      io?.to('presence').emit('feed:count', { id: targetId, reshares_count: c.rows[0]?.n })
+    }
+
     if (existing.rows[0]) {
       await db.query('DELETE FROM status_posts WHERE id = $1', [existing.rows[0].id])
+      await emitReshareCount()
       return reply.send({ ok: true, reshared: false })
     }
     await db.query(
       "INSERT INTO status_posts (author_id, content, reshare_of) VALUES ($1, '', $2)",
       [userId, targetId]
     )
+    await emitReshareCount()
     return reply.send({ ok: true, reshared: true })
   })
 
