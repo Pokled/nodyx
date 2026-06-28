@@ -24,6 +24,7 @@ declare module 'socket.io' {
   interface SocketData {
     userId:            string
     username:          string
+    activeChannel?:    string | null   // channel texte que cet onglet regarde activement (chat:join)
     avatar?:           string | null
     nameColor?:        string | null
     nameGlow?:         string | null
@@ -377,6 +378,7 @@ export function registerSocketIO(server: Server): void {
       if (!channel) return
 
       socket.join(`channel:${channelId}`)
+      socket.data.activeChannel = channelId   // cet onglet regarde ce channel -> pas de notif de mention dessus
 
       const [history, pinned] = await Promise.all([
         ChannelModel.getHistory(channelId, 50).catch(() => []),
@@ -389,6 +391,7 @@ export function registerSocketIO(server: Server): void {
     // ── chat:leave ────────────────────────────────────────────────────────────
     socket.on('chat:leave', (channelId: string) => {
       if (isUuid(channelId)) socket.leave(`channel:${channelId}`)
+      if (socket.data.activeChannel === channelId) socket.data.activeChannel = null
     })
 
     // ── chat:watch ────────────────────────────────────────────────────────────
@@ -570,6 +573,12 @@ export function registerSocketIO(server: Server): void {
         const mentionedIds = await resolveMentions(sanitized).catch(() => [])
         for (const notifiedUserId of mentionedIds) {
           if (notifiedUserId === userId) continue
+          // Déjà en train de regarder ce channel (onglet actif) ? Il lit le message
+          // en direct -> aucune notif (cloche/badge/push) nécessaire.
+          if (io) {
+            const userSockets = await io.in(`user:${notifiedUserId}`).fetchSockets().catch(() => [])
+            if (userSockets.some(s => s.data.activeChannel === channelId)) continue
+          }
           await NotificationModel.create({
             user_id:   notifiedUserId,
             type:      'mention',
