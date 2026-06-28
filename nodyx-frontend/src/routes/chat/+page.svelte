@@ -167,10 +167,43 @@
 	type LinkPreview = { url: string; title: string | null; description: string | null; image: string | null; siteName: string | null };
 	let linkPreviews = $state(new Map<string, LinkPreview | false>());
 
-	// Rich editor modal
+	// Rich editor modal — sert à la fois à composer ET à rééditer un message riche
 	let showRichModal = $state(false);
 	let richContent   = $state('');
+	let richInitial   = $state('');                       // contenu HTML chargé dans l'éditeur
+	let editingRichId = $state<string | null>(null);      // id du message en cours d'édition riche (null = composition)
 	let editorKey     = $state(0);
+
+	// Un message a-t-il une structure que le textarea brut ne peut PAS représenter
+	// (tableaux, colonnes, listes, titres, citations, médias) ? -> édition riche obligatoire.
+	function isRichContent(html: string): boolean {
+		// Toute mise en forme que le textarea brut ne peut pas restituer : blocs
+		// (tables, colonnes, listes, titres…), médias, sauts de ligne <br> et
+		// marques inline (gras, lien, code…). Sinon -> édition inline rapide.
+		return /<(table|td|tr|th|thead|tbody|ul|ol|li|h[1-6]|blockquote|pre|img|audio|iframe|br|strong|em|u|s|a|code|mark|del)\b|nodyx-col|data-nodyx/i.test(html ?? '');
+	}
+
+	function openRichCompose() {
+		editingRichId = null;
+		richInitial   = '';
+		richContent   = '';
+		editorKey++;
+		showRichModal = true;
+	}
+
+	function openRichEdit(msg: Message) {
+		editingRichId = msg.id;
+		richInitial   = msg.content ?? '';
+		richContent   = msg.content ?? '';   // pré-rempli : pas de perte si on enregistre sans rien changer
+		editorKey++;
+		showRichModal = true;
+	}
+
+	function closeRichModal() {
+		showRichModal = false;
+		editingRichId = null;
+		richInitial   = '';
+	}
 
 	// Poll creator
 	let showPollCreator = $state(false);
@@ -715,12 +748,18 @@
 	}
 
 	function sendRich() {
-		if (!s || !selectedChannel || !richContent.trim()) return;
-		s.emit('chat:send', { channelId: selectedChannel.id, content: richContent, replyToId: replyTo?.id ?? null });
+		if (!s || !richContent.trim()) return;
+		if (editingRichId) {
+			// Réédition : on renvoie le HTML complet (table/colonnes/br préservés)
+			s.emit('chat:edit', { messageId: editingRichId, content: richContent });
+		} else {
+			if (!selectedChannel) return;
+			s.emit('chat:send', { channelId: selectedChannel.id, content: richContent, replyToId: replyTo?.id ?? null });
+			replyTo = null;
+		}
 		richContent = '';
 		editorKey++;
-		showRichModal = false;
-		replyTo = null;
+		closeRichModal();
 	}
 
 	function htmlToText(html: string): string {
@@ -753,7 +792,7 @@
 		}
 		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 		// Ctrl+Shift+E → open rich modal
-		if (e.key === 'E' && e.ctrlKey && e.shiftKey) { e.preventDefault(); showRichModal = true; }
+		if (e.key === 'E' && e.ctrlKey && e.shiftKey) { e.preventDefault(); openRichCompose(); }
 	}
 
 	async function handleInput() {
@@ -895,7 +934,9 @@
 
 	// ── Inline edit ───────────────────────────────────────────────────────────
 	function startEdit(msg: Message) {
-		// Strip HTML to plain text for editing
+		// Message structuré (table/colonnes/listes…) -> éditeur riche TipTap, sinon on perd la structure
+		if (isRichContent(msg.content ?? '')) { openRichEdit(msg); return; }
+		// Message simple -> édition inline rapide en texte
 		editingMsg = { id: msg.id, content: htmlToText(msg.content ?? '') };
 	}
 
@@ -1504,7 +1545,7 @@
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
 						</button>
 						<!-- Rich editor -->
-						<button onclick={() => showRichModal = true} title={tFn('chat.rich_editor')}
+						<button onclick={openRichCompose} title={tFn('chat.rich_editor')}
 						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
 						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
@@ -1572,8 +1613,8 @@
 	<div
     class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
     role="presentation"
-    onclick={(e) => { if (e.target === e.currentTarget) showRichModal = false; }}
-    onkeydown={(e) => { if (e.key === 'Escape') showRichModal = false; }}
+    onclick={(e) => { if (e.target === e.currentTarget) closeRichModal(); }}
+    onkeydown={(e) => { if (e.key === 'Escape') closeRichModal(); }}
 >
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]"
@@ -1581,8 +1622,8 @@
 			<div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
 			 
 			
-				<h2 class="text-lg font-semibold text-white">Composer un message riche</h2>
-				<button onclick={() => { showRichModal = false; }} class="text-gray-400 hover:text-white text-xl leading-none">×</button>
+				<h2 class="text-lg font-semibold text-white">{editingRichId ? 'Modifier le message' : 'Composer un message riche'}</h2>
+				<button onclick={closeRichModal} class="text-gray-400 hover:text-white text-xl leading-none">×</button>
 			</div>
 			
 			
@@ -1590,12 +1631,13 @@
 				{#key editorKey}
 					<NodyxEditor
 						compact={false}
+						initialContent={richInitial}
 						onchange={(v) => { richContent = v; }}
 					/>
 				{/key}
 			</div>
 			<div class="px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
-				<button onclick={() => { showRichModal = false; }} class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-sm text-gray-200 transition-colors">
+				<button onclick={closeRichModal} class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-sm text-gray-200 transition-colors">
 					Annuler
 				</button>
 				<button
@@ -1603,7 +1645,7 @@
 					disabled={!richContent.trim()}
 					class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-sm text-white font-medium transition-colors"
 				>
-					{tFn('chat.send')}
+					{editingRichId ? 'Enregistrer' : tFn('chat.send')}
 				</button>
 			</div>
 		</div>
