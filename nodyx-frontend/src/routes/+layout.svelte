@@ -5,7 +5,7 @@
 	import type { LayoutData } from './$types';
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { initSocket, unreadCountStore, chatMentionStore, dmUnreadStore, onlineMembersStore, getSocket } from '$lib/socket';
 	import StreamerNotifListener from '$lib/components/streamer/StreamerNotifListener.svelte';
 	import { tryAutoConnect } from '$lib/socket';
@@ -122,6 +122,32 @@
 	const appVars = $derived(themeToVars(resolveTheme((data as any).appTheme, (data as any).instanceTheme)))
 	// Effet de fond posé par l'owner (ex 'matrix' = pluie de caractères derrière le contenu)
 	const hasMatrix = $derived((data as any).instanceEffect === 'matrix')
+
+	// ── Mise à jour transparente après un déploiement ───────────────────────────
+	// Le service worker signale une nouvelle version (sw:updated / controllerchange).
+	// On ne recharge pas brutalement : on attend la PROCHAINE navigation de l'user
+	// pour faire un full reload vers sa destination -> il récupère la version fraîche
+	// sans jamais avoir à hard-refresh. Plus de "5-6 refresh après une mise à jour".
+	let swUpdateReady = false;
+	onMount(() => {
+		if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+		const markReady = () => { swUpdateReady = true; };
+		const onMessage = (e: MessageEvent) => { if ((e.data as any)?.type === 'sw:updated') markReady(); };
+		navigator.serviceWorker.addEventListener('message', onMessage);
+		navigator.serviceWorker.addEventListener('controllerchange', markReady);
+		return () => {
+			navigator.serviceWorker.removeEventListener('message', onMessage);
+			navigator.serviceWorker.removeEventListener('controllerchange', markReady);
+		};
+	});
+	beforeNavigate((nav) => {
+		// Navigation interne vers une URL connue : on force un rechargement complet
+		// pour basculer sur la nouvelle version (assets + SSR frais).
+		if (swUpdateReady && nav.to?.url && nav.type !== 'leave') {
+			nav.cancel();
+			window.location.href = nav.to.url.href;
+		}
+	});
 
 	// All community members (for offline section in presence sidebar)
 	let allMembers = $state<{ user_id: string; username: string; avatar: string | null }[]>([])
