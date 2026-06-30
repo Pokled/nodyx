@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores'
 	import { apiFetch } from '$lib/api'
+	import { t } from '$lib/i18n'
+	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
+	const tFn   = $derived($t)
 	const me    = $derived(($page.data as any).user)
 	const token = $derived(data.token as string)
 
@@ -11,7 +14,13 @@
 	let replies = $state<any[]>(data.replies ?? [])
 
 	const REACTIONS = ['❤️', '👍', '😂', '🔥', '😮', '🎉']
-	let pickerOpen = $state(false)
+	let pickerFor = $state<string | null>(null)   // id de la cible dont le picker est ouvert
+
+	// Composer de réponse
+	let replyContent = $state('')
+	let replyTarget  = $state<any | null>(null)   // null = répondre au post racine
+	let editorKey    = $state(0)
+	let sending      = $state(false)
 
 	function timeAgo(iso: string): string {
 		const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -35,21 +44,25 @@
 			if (!reactions[next].users.includes(myname)) reactions[next].users.push(myname)
 		}
 		const delta = (!prev && next) ? 1 : (prev && !next) ? -1 : 0
-		return { ...p, my_reaction: next, likes_count: Math.max(0, (p.likes_count || 0) + delta), reactions }
+		return { ...p, my_reaction: next, liked_by_me: !!next, likes_count: Math.max(0, (p.likes_count || 0) + delta), reactions }
 	}
 
-	async function react(emoji: string) {
-		pickerOpen = false
-		const prev = post.my_reaction || null
-		if (prev === emoji) {
-			post = applyReaction(post, prev, null)
-			await apiFetch(fetch, `/social/status/${post.id}/like`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }).catch(() => {})
-			return
+	// React sur le post racine OU une réponse (cible identifiée par id)
+	async function react(target: any, emoji: string) {
+		pickerFor = null
+		const prev = target.my_reaction || null
+		const next = prev === emoji ? null : emoji
+		const updated = applyReaction(target, prev, next)
+		if (target.id === post.id) post = updated
+		else replies = replies.map(r => r.id === target.id ? updated : r)
+		const id = target.id
+		if (!next) {
+			await apiFetch(fetch, `/social/status/${id}/like`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }).catch(() => {})
+		} else {
+			await apiFetch(fetch, `/social/status/${id}/react`, {
+				method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ emoji: next }),
+			}).catch(() => {})
 		}
-		post = applyReaction(post, prev, emoji)
-		await apiFetch(fetch, `/social/status/${post.id}/react`, {
-			method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ emoji }),
-		}).catch(() => {})
 	}
 
 	async function toggleReshare() {
@@ -57,9 +70,72 @@
 		post = { ...post, reshared_by_me: now, reshares_count: Math.max(0, (post.reshares_count ?? 0) + (now ? 1 : -1)) }
 		await apiFetch(fetch, `/social/status/${post.id}/reshare`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {})
 	}
+
+	function startReply(target: any | null) {
+		replyTarget = target
+		// focus le composer
+		setTimeout(() => document.querySelector('.s-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+	}
+
+	const replyEmpty = $derived(replyContent === '' || replyContent === '<p></p>' || replyContent === '<p><br></p>')
+
+	async function sendReply() {
+		if (replyEmpty || sending) return
+		sending = true
+		try {
+			const res = await apiFetch(fetch, '/social/status', {
+				method: 'POST',
+				headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ content: replyContent, reply_to_id: (replyTarget?.id ?? post.id) }),
+			})
+			if (res.ok) {
+				// Recharge le fil aplati pour refléter la nouvelle réponse + compteurs
+				const fresh = await apiFetch(fetch, `/social/status/${post.id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+				if (fresh.ok) {
+					const j = await fresh.json()
+					post = j.post
+					replies = j.replies ?? []
+				}
+				replyContent = ''
+				replyTarget = null
+				editorKey++
+			}
+		} finally {
+			sending = false
+		}
+	}
 </script>
 
 <svelte:head><title>Publication de {post.display_name || post.username} — Nodyx</title></svelte:head>
+
+{#snippet actions(p: any)}
+	<div class="s-actions">
+		<div class="s-react-wrap">
+			{#if pickerFor === p.id}
+				<div class="s-picker">
+					{#each REACTIONS as e}
+						<button class="s-pick" onclick={() => react(p, e)} aria-label={e}>{e}</button>
+					{/each}
+				</div>
+			{/if}
+			<button class="s-action" class:s-action--on={p.my_reaction} onclick={() => (pickerFor = pickerFor === p.id ? null : p.id)}>
+				♡ {p.likes_count > 0 ? p.likes_count : tFn('feed.react')}
+			</button>
+		</div>
+		<button class="s-action" onclick={() => startReply(p.id === post.id ? null : p)}>↩ {tFn('feed.reply')}</button>
+		{#if p.id === post.id}
+			<button class="s-action" class:s-action--reshare={post.reshared_by_me} onclick={toggleReshare}>🔁 {post.reshares_count || 0}</button>
+			<span class="s-action s-action--static">💬 {post.replies_count || 0}</span>
+		{/if}
+	</div>
+	{#if p.reactions && Object.keys(p.reactions).length > 0}
+		<div class="s-chips">
+			{#each Object.entries(p.reactions) as [e, info]}
+				<span class="s-chip" class:s-chip--mine={p.my_reaction === e} title={((info as any).users || []).join(', ')}>{e} {(info as any).count}</span>
+			{/each}
+		</div>
+	{/if}
+{/snippet}
 
 {#snippet body(p: any)}
 	<div class="s-head">
@@ -68,7 +144,7 @@
 		</a>
 		<div class="s-meta">
 			<a href="/users/{p.username}" class="s-name">{p.display_name || p.username}</a>
-			<span class="s-handle">@{p.username} · {timeAgo(p.created_at)}</span>
+			<span class="s-handle">@{p.username} · {timeAgo(p.created_at)}{#if p.reply_to_username && p.reply_to_id !== post.id} · <span class="s-replyto">↳ @{p.reply_to_username}</span>{/if}</span>
 		</div>
 	</div>
 	{#if p.content}<div class="s-text prose-feed">{@html p.content}</div>{/if}
@@ -82,15 +158,6 @@
 			</div>
 		</a>
 	{/if}
-	{#if p.reshared}
-		<a href="/status/{p.reshared.id}" class="s-quoted">
-			<div class="s-quoted-head">
-				<span class="s-quoted-name">{p.reshared.display_name || p.reshared.username}</span>
-				<span class="s-quoted-handle">@{p.reshared.username}</span>
-			</div>
-			<div class="s-quoted-body prose-feed">{@html p.reshared.content}</div>
-		</a>
-	{/if}
 {/snippet}
 
 <div class="s-wrap">
@@ -101,52 +168,50 @@
 			<div class="s-reshare-label">🔁 <a href="/users/{post.username}">{post.display_name || post.username}</a> a repartagé</div>
 		{/if}
 		{@render body(post)}
-
-		<!-- Actions -->
-		<div class="s-actions">
-			<div class="s-react-wrap">
-				{#if pickerOpen}
-					<div class="s-picker">
-						{#each REACTIONS as e}
-							<button class="s-pick" onclick={() => react(e)} aria-label={e}>{e}</button>
-						{/each}
-					</div>
-				{/if}
-				<button class="s-action" class:s-action--on={post.my_reaction} onclick={() => (pickerOpen = !pickerOpen)}>♡ Réagir</button>
-			</div>
-			<button class="s-action" class:s-action--reshare={post.reshared_by_me} onclick={toggleReshare}>🔁 {post.reshares_count || 0}</button>
-			<span class="s-action s-action--static">💬 {post.replies_count || 0}</span>
-		</div>
-		{#if post.reactions && Object.keys(post.reactions).length > 0}
-			<div class="s-chips">
-				{#each Object.entries(post.reactions) as [e, info]}
-					<span class="s-chip" class:s-chip--mine={post.my_reaction === e} title={((info as any).users || []).join(', ')}>{e} {(info as any).count}</span>
-				{/each}
-			</div>
-		{/if}
+		{@render actions(post)}
 	</article>
 
+	<!-- Composer de réponse -->
+	<div class="s-composer">
+		{#if replyTarget}
+			<div class="s-composer-target">
+				En réponse à <strong>@{replyTarget.username}</strong>
+				<button class="s-composer-cancel" onclick={() => (replyTarget = null)} aria-label="annuler">×</button>
+			</div>
+		{/if}
+		{#key editorKey}
+			<NodyxEditor compact={true} placeholder={tFn('feed.reply_placeholder', { username: replyTarget?.username ?? post.username })} onchange={(v) => (replyContent = v)} />
+		{/key}
+		<div class="s-composer-foot">
+			<button class="s-send" onclick={sendReply} disabled={replyEmpty || sending}>{sending ? '…' : tFn('feed.reply')}</button>
+		</div>
+	</div>
+
 	{#if replies.length > 0}
-		<h2 class="s-replies-title">{replies.length} réponse{replies.length > 1 ? 's' : ''}</h2>
+		<h2 class="s-replies-title">{replies.length > 1 ? tFn('feed.replies_count_plural', { n: replies.length }) : tFn('feed.replies_count', { n: replies.length })}</h2>
 		{#each replies as r (r.id)}
-			<article class="s-card s-card--reply">{@render body(r)}</article>
+			<article class="s-card s-card--reply">
+				{@render body(r)}
+				{@render actions(r)}
+			</article>
 		{/each}
 	{/if}
 
-	{#if pickerOpen}<div class="s-backdrop" onclick={() => (pickerOpen = false)} role="presentation"></div>{/if}
+	{#if pickerFor}<div class="s-backdrop" onclick={() => (pickerFor = null)} role="presentation"></div>{/if}
 </div>
 
 <style>
-	.s-wrap { max-width: 600px; margin: 0 auto; padding: 1rem 1rem 4rem; }
+	.s-wrap { max-width: 680px; margin: 0 auto; padding: 1.25rem 1rem 5rem; }
 	.s-back { display: inline-block; margin-bottom: 1rem; color: var(--nx-accent-soft); text-decoration: none; font-size: 0.875rem; }
 	.s-back:hover { text-decoration: underline; }
 	.s-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(255,255,255,0.02); padding: 1.1rem; margin-bottom: 0.75rem; }
-	.s-card--reply { margin-left: 1rem; background: rgba(255,255,255,0.01); }
+	.s-card--reply { background: rgba(255,255,255,0.01); }
 	.s-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
 	.s-avatar { width: 42px; height: 42px; border-radius: 999px; object-fit: cover; display: block; }
 	.s-avatar--i { display: inline-flex; align-items: center; justify-content: center; background: rgb(var(--nx-accent-2-rgb) / 0.3); color: #fff; font-weight: 700; }
 	.s-name { font-weight: 700; color: #fff; text-decoration: none; }
 	.s-handle { display: block; color: rgba(255,255,255,0.45); font-size: 0.8rem; }
+	.s-replyto { color: var(--nx-accent-soft); }
 	.s-text { color: rgba(255,255,255,0.9); font-size: 0.95rem; line-height: 1.55; }
 	.s-media { width: 100%; max-height: 420px; object-fit: cover; border-radius: 12px; margin-top: 0.6rem; display: block; }
 	.s-link { display: block; margin-top: 0.6rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; text-decoration: none; }
@@ -154,16 +219,12 @@
 	.s-link-body { padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.2rem; }
 	.s-link-site { font-size: 0.7rem; text-transform: uppercase; color: var(--nx-accent-soft); font-weight: 700; }
 	.s-link-title { font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.9rem; }
-	.s-quoted { display: block; margin-top: 0.6rem; padding: 0.7rem 0.85rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; text-decoration: none; }
-	.s-quoted:hover { background: rgba(255,255,255,0.03); }
-	.s-quoted-name { font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.85rem; }
-	.s-quoted-handle { color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-left: 0.3rem; }
-	.s-quoted-body { font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-top: 0.25rem; }
 	.s-reshare-label { font-size: 0.78rem; color: rgba(255,255,255,0.45); font-weight: 600; margin-bottom: 0.5rem; }
 	.s-reshare-label a { color: rgba(255,255,255,0.6); text-decoration: none; }
-	.s-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.9rem; }
+	.s-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.9rem; flex-wrap: wrap; }
 	.s-react-wrap { position: relative; }
 	.s-action { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.7); border-radius: 999px; padding: 0.35rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+	.s-action:hover { border-color: var(--nx-accent-soft); color: #fff; }
 	.s-action--static { cursor: default; }
 	.s-action--on { color: #f43f5e; border-color: rgba(244,63,94,0.4); }
 	.s-action--reshare { color: #34d399; border-color: rgba(52,211,153,0.4); }
@@ -174,5 +235,12 @@
 	.s-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.6rem; }
 	.s-chip { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); }
 	.s-chip--mine { background: rgb(var(--nx-accent-2-rgb) / 0.22); border-color: rgb(var(--nx-accent-2-rgb) / 0.6); }
-	.s-replies-title { font-size: 0.95rem; font-weight: 700; color: rgba(255,255,255,0.8); margin: 1.2rem 0 0.6rem; }
+	.s-replies-title { font-size: 0.95rem; font-weight: 700; color: rgba(255,255,255,0.8); margin: 1.4rem 0 0.6rem; }
+	.s-composer { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(255,255,255,0.02); padding: 0.9rem; margin-bottom: 1rem; }
+	.s-composer-target { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem; }
+	.s-composer-target strong { color: var(--nx-accent-soft); }
+	.s-composer-cancel { border: none; background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 1rem; margin-left: 0.3rem; }
+	.s-composer-foot { display: flex; justify-content: flex-end; margin-top: 0.6rem; }
+	.s-send { border: none; border-radius: 999px; padding: 0.45rem 1.2rem; font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer; background: linear-gradient(135deg, var(--nx-accent), var(--nx-accent-2)); }
+	.s-send:disabled { opacity: 0.4; cursor: default; }
 </style>
