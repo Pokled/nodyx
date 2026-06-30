@@ -20,6 +20,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.set('cache-control', 'no-cache, no-store, must-revalidate');
 		response.headers.set('pragma',         'no-cache');
 		response.headers.set('expires',        '0');
+	} else if (
+		!response.headers.has('cache-control') &&
+		(response.headers.get('content-type') ?? '').includes('text/html')
+	) {
+		// Pages SSR (HTML) : jamais servies périmées par le navigateur / SW / CDN.
+		// Sans en-tête, certains navigateurs cachent l'HTML de façon heuristique
+		// -> page d'accueil figée ("grid builder inactif") en arrivant d'une autre
+		// instance (navigation same-site). no-cache force une revalidation à chaque
+		// navigation : le serveur renvoie toujours l'HTML SSR frais.
+		response.headers.set('cache-control', 'no-cache, must-revalidate');
 	}
 	return response;
 };
