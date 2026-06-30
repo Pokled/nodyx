@@ -21,7 +21,7 @@ async function pingDirectory(io: Server) {
   if (!token) return
 
   try {
-    const membersResult = await db.query('SELECT COUNT(*) AS count FROM users WHERE id NOT IN (SELECT user_id FROM community_bans)')
+    const membersResult = await db.query('SELECT COUNT(*) AS count FROM users WHERE is_system = false AND id NOT IN (SELECT user_id FROM community_bans)')
     const members = parseInt(membersResult.rows[0]?.count ?? '0', 10)
     // Deduplicate by userId — same approach as instance.ts online_count
     const presenceSockets = await io.in('presence').fetchSockets()

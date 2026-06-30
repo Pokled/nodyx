@@ -93,7 +93,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
     const communityId = await getCommunityId()
 
     const [memberRes, threadRes, postRes, presenceSockets, brandingRes, themeRes] = await Promise.all([
-      db.query(`SELECT COUNT(*)::int AS count FROM users`),
+      db.query(`SELECT COUNT(*)::int AS count FROM users WHERE is_system = false`),
       db.query(`SELECT COUNT(*)::int AS count FROM threads`),
       db.query(`SELECT COUNT(*)::int AS count FROM posts`),
       io ? io.in('presence').fetchSockets() : Promise.resolve([]),
