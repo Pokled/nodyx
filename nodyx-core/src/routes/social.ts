@@ -36,7 +36,14 @@ function postSelect(viewerParam: string | null) {
     -- Interactions calculées sur l'ORIGINAL effectif : un repartage partage les
     -- réactions/réponses de l'original (façon retweet), pas les siennes propres.
     (SELECT likes_count   FROM status_posts WHERE id = COALESCE(sp.reshare_of, sp.id)) AS likes_count,
-    (SELECT replies_count FROM status_posts WHERE id = COALESCE(sp.reshare_of, sp.id)) AS replies_count,
+    -- Fil aplati : replies_count = TOTAL des réponses descendantes (réponses aux
+    -- réponses incluses), pas seulement les enfants directs -> compteur juste
+    -- sans avoir à dérouler le fil.
+    (WITH RECURSIVE d(id) AS (
+       SELECT id FROM status_posts WHERE reply_to_id = COALESCE(sp.reshare_of, sp.id)
+       UNION ALL
+       SELECT s.id FROM status_posts s JOIN d ON s.reply_to_id = d.id
+     ) SELECT COUNT(*)::int FROM d) AS replies_count,
     u.id AS author_id, u.username, p.display_name, p.avatar_url,
     ${viewerParam
       ? `EXISTS(SELECT 1 FROM status_likes sl WHERE sl.user_id = ${viewerParam} AND sl.post_id = COALESCE(sp.reshare_of, sp.id))`
@@ -231,6 +238,15 @@ export default async function socialRoutes(app: FastifyInstance) {
         SELECT id FROM up WHERE reply_to_id IS NULL LIMIT 1
       `, [reply_to_id])
       const rootId = rootRes.rows[0]?.id ?? reply_to_id
+      // Compteur (total descendants) pour les viewers qui ont le fil FERMÉ
+      const cnt = await db.query<{ n: number }>(`
+        WITH RECURSIVE d(id) AS (
+          SELECT id FROM status_posts WHERE reply_to_id = $1
+          UNION ALL
+          SELECT s.id FROM status_posts s JOIN d ON s.reply_to_id = d.id
+        ) SELECT COUNT(*)::int AS n FROM d
+      `, [rootId])
+      io?.to('presence').emit('feed:count', { id: rootId, replies_count: cnt.rows[0]?.n })
       io?.to('presence').emit('feed:reply', { rootId, reply: post.rows[0] })
     } else {
       io?.to('presence').emit('feed:new', post.rows[0])
@@ -260,11 +276,26 @@ export default async function socialRoutes(app: FastifyInstance) {
     // Réputation : suppression d'un statut = -2 (anti-farming)
     await awardPoints(userId, -REPUTATION.SOCIAL_POST)
 
-    // Temps réel : retrait du post chez tous + MAJ compteur de réponses du parent
+    // Temps réel : retrait du post chez tous + MAJ compteur (total descendants) de la racine
     io?.to('presence').emit('feed:delete', { id: del.rows[0].id })
     if (del.rows[0].reply_to_id) {
-      const rc = await db.query('SELECT replies_count FROM status_posts WHERE id = $1', [del.rows[0].reply_to_id])
-      io?.to('presence').emit('feed:count', { id: del.rows[0].reply_to_id, replies_count: rc.rows[0]?.replies_count })
+      const rootRes = await db.query<{ id: string }>(`
+        WITH RECURSIVE up(id, reply_to_id) AS (
+          SELECT id, reply_to_id FROM status_posts WHERE id = $1
+          UNION ALL
+          SELECT sp.id, sp.reply_to_id FROM status_posts sp JOIN up ON sp.id = up.reply_to_id
+        )
+        SELECT id FROM up WHERE reply_to_id IS NULL LIMIT 1
+      `, [del.rows[0].reply_to_id])
+      const rootId = rootRes.rows[0]?.id ?? del.rows[0].reply_to_id
+      const cnt = await db.query<{ n: number }>(`
+        WITH RECURSIVE d(id) AS (
+          SELECT id FROM status_posts WHERE reply_to_id = $1
+          UNION ALL
+          SELECT s.id FROM status_posts s JOIN d ON s.reply_to_id = d.id
+        ) SELECT COUNT(*)::int AS n FROM d
+      `, [rootId])
+      io?.to('presence').emit('feed:count', { id: rootId, replies_count: cnt.rows[0]?.n })
     }
 
     return reply.send({ ok: true })

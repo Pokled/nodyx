@@ -210,7 +210,12 @@
 			method: 'DELETE',
 			headers: { Authorization: `Bearer ${token}` },
 		})
-		if (res.ok) posts = posts.filter(p => p.id !== id)
+		if (res.ok) {
+			posts = posts.filter(p => p.id !== id)
+			const nm: Record<string, any[]> = {}
+			for (const k in repliesMap) nm[k] = repliesMap[k].filter(r => r.id !== id)
+			repliesMap = nm
+		}
 	}
 
 	// ── Replies toggle ────────────────────────────────────────────────────────
@@ -303,7 +308,13 @@
 				posts = [post, ...posts]
 			}
 		}
-		const onDelete = ({ id }: { id: string }) => { posts = posts.filter(p => p.id !== id) }
+		const onDelete = ({ id }: { id: string }) => {
+			posts = posts.filter(p => p.id !== id)
+			// Retire aussi la réponse des fils chargés (suppression d'une réponse)
+			const nm: Record<string, any[]> = {}
+			for (const k in repliesMap) nm[k] = repliesMap[k].filter(r => r.id !== id)
+			repliesMap = nm
+		}
 		const onCount = (d: { id: string; likes_count?: number; replies_count?: number; reshares_count?: number }) => {
 			posts = posts.map(p => (p.id === d.id || p.reshare_of === d.id)
 				? { ...p,
