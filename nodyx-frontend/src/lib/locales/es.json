@@ -1,4 +1,7 @@
 {
+  "emoji.frequent": "Frecuentes",
+  "emoji.search_placeholder": "Buscar emoji…",
+  "emoji.no_result": "Sin emoji",
   "library.emoji_shortcode": "Atajo de texto",
   "library.emoji_shortcode_ph": "rat — opcional, si no del nombre",
   "chat.emoji": "Emoji",

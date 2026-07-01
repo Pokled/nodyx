@@ -10,6 +10,7 @@
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import EmojiPicker from '$lib/components/EmojiPicker.svelte';
 	import { loadCustomEmojis, renderCustomEmojis, customEmojisStore } from '$lib/customEmojis';
+	import { bumpEmoji, emojiUsageStore, topEmojis } from '$lib/emojiUsage';
 	import ChannelSidebar from '$lib/components/ChannelSidebar.svelte';
 	import PollCard    from '$lib/components/PollCard.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
@@ -26,6 +27,16 @@
 	import { playMessage, playMention } from '$lib/sounds';
 	const tFn = $derived($t)
 	const customEmojis = $derived($customEmojisStore)   // réactif : re-rend au chargement des emojis
+	// Barre au survol : les emojis custom que CE membre utilise le plus (sinon les premiers)
+	const hoverBarEmojis = $derived.by(() => {
+		const bySc = new Map(customEmojis.map(e => [e.shortcode, e]))
+		const top = topEmojis($emojiUsageStore, 20)
+			.filter(k => k.startsWith(':') && k.endsWith(':'))
+			.map(k => bySc.get(k.slice(1, -1)))
+			.filter((e): e is (typeof customEmojis)[number] => !!e)
+		const seen = new Set(top.map(e => e.shortcode))
+		return [...top, ...customEmojis.filter(e => !seen.has(e.shortcode))].slice(0, 6)
+	})
 
 	let { data }: { data: PageData } = $props();
 
@@ -142,6 +153,7 @@
 
 	// Insère un emoji (unicode ou :shortcode:) dans la zone de saisie au curseur
 	function insertIntoInput(text: string) {
+		bumpEmoji(text);   // usage perso (Fréquents + barre rapide)
 		const ta = document.getElementById('chat-input') as HTMLTextAreaElement | null;
 		if (!ta) { inputText += text; return; }
 		const start = ta.selectionStart ?? inputText.length;
@@ -903,6 +915,7 @@
 
 	function reactTo(messageId: string, emoji: string) {
 		if (!s) return;
+		bumpEmoji(emoji);   // usage perso (Fréquents + barre rapide)
 		messages = applyReactionOptimistic(messages, messageId, emoji, userId);
 		flashReaction(messageId, emoji);
 		p2pManager.send({ type: 'p2p:reaction', messageId, emoji, userId, username: currentUsername });
@@ -1288,7 +1301,7 @@
 								style="background: #0d0d12; border: 1px solid rgba(255,255,255,.08)"
 							>
 								<!-- Emojis Perso (instance) en tête, direct au survol -->
-									{#each customEmojis.slice(0, 6) as ce (ce.shortcode)}
+									{#each hoverBarEmojis as ce (ce.shortcode)}
 										<button
 											onclick={() => reactTo(msg.id, `:${ce.shortcode}:`)}
 											title={`:${ce.shortcode}:`}

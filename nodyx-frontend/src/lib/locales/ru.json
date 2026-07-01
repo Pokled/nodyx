@@ -1,4 +1,7 @@
 {
+  "emoji.frequent": "Частые",
+  "emoji.search_placeholder": "Поиск эмодзи…",
+  "emoji.no_result": "Нет эмодзи",
   "library.emoji_shortcode": "Текстовый код",
   "library.emoji_shortcode_ph": "rat — иначе из имени",
   "chat.emoji": "Эмодзи",

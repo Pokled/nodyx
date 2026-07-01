@@ -1,4 +1,7 @@
 {
+  "emoji.frequent": "Frequent",
+  "emoji.search_placeholder": "Search emoji…",
+  "emoji.no_result": "No emoji",
   "library.emoji_shortcode": "Text shortcut",
   "library.emoji_shortcode_ph": "rat — optional, otherwise from the name",
   "chat.emoji": "Emoji",
