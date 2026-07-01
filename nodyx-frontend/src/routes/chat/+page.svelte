@@ -9,6 +9,7 @@
 	import { linkifyHtml } from '$lib/linkify';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import EmojiPicker from '$lib/components/EmojiPicker.svelte';
+	import { loadCustomEmojis, renderCustomEmojis, customEmojisStore } from '$lib/customEmojis';
 	import ChannelSidebar from '$lib/components/ChannelSidebar.svelte';
 	import PollCard    from '$lib/components/PollCard.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
@@ -24,6 +25,7 @@
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 	import { playMessage, playMention } from '$lib/sounds';
 	const tFn = $derived($t)
+	const customEmojis = $derived($customEmojisStore)   // réactif : re-rend au chargement des emojis
 
 	let { data }: { data: PageData } = $props();
 
@@ -535,6 +537,7 @@
 
 	onMount(async () => {
 		if (!browser) return;
+		loadCustomEmojis();   // emojis custom de l'instance (:shortcode:)
 		// Detect configured GIF provider
 		const { PUBLIC_TENOR_KEY, PUBLIC_GIPHY_KEY } = await import('$env/static/public');
 		if (PUBLIC_TENOR_KEY) gifProvider = 'tenor';
@@ -1211,7 +1214,7 @@
 							<PollCard pollId={msg.poll_id} inline={true} {token} socket={s} />
 						{:else}
 								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: #d1d5db">
-									{@html linkifyHtml(msg.content ?? '')}
+									{@html renderCustomEmojis(linkifyHtml(msg.content ?? ''), customEmojis)}
 									{#if shouldGroup && msg.edited_at}
 										<span class="text-[9px] text-gray-700 italic ml-2">{tFn('chat.edited')}</span>
 									{/if}
@@ -1257,7 +1260,7 @@
 											       {reactionFlash.get(msg.id)?.has(r.emoji) ? 'p2p-pop' : ''}
 											       {r.userReactedIds.includes(userId) ? 'chat-reaction-mine' : 'chat-reaction-other'}"
 										>
-											<span>{r.emoji}</span>
+											<span>{@html renderCustomEmojis(r.emoji, customEmojis)}</span>
 											<span class="tabular-nums">{r.count}</span>
 										</button>
 									{/each}

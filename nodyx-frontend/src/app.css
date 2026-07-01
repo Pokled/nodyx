@@ -47,6 +47,9 @@ html, body {
 .t-muted    { color: var(--p-text-muted); }
 .t-accent   { color: var(--p-accent); }
 
+/* Emoji custom (bibliothèque) inséré via :shortcode: — taille d'un emoji inline */
+.nx-emoji { height: 1.4em; width: auto; vertical-align: -0.28em; display: inline-block; }
+
 /* ── Scrollbars fins et élégants ─────────────────────────────────────────── */
 /* Chrome / Safari / Edge */
 ::-webkit-scrollbar               { width: 5px; height: 5px; }
