@@ -63,3 +63,25 @@ voiceSettingsStore.subscribe(v => {
     localStorage.setItem('nodyx:voiceSettings', JSON.stringify(v))
   }
 })
+
+// ── Volume par utilisateur (mémorisé entre sessions) ──────────────────────────
+// Indexé par userId (STABLE) et non par socketId (qui change à chaque connexion) :
+// le volume qu'on attribue à quelqu'un survit ainsi au refresh et aux reconnexions.
+const PEER_VOL_KEY = 'nodyx:peerVolumes'
+
+export function loadPeerVolumes(): Record<string, number> {
+  if (typeof localStorage === 'undefined') return {}
+  try { return JSON.parse(localStorage.getItem(PEER_VOL_KEY) || '{}') } catch { return {} }
+}
+
+export function getPeerVolume(userId: string): number {
+  const v = loadPeerVolumes()[userId]
+  return typeof v === 'number' ? v : 100
+}
+
+export function savePeerVolume(userId: string, volume: number): void {
+  if (typeof localStorage === 'undefined' || !userId) return
+  const all = loadPeerVolumes()
+  all[userId] = volume
+  try { localStorage.setItem(PEER_VOL_KEY, JSON.stringify(all)) } catch { /* quota */ }
+}

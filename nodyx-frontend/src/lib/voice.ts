@@ -6,7 +6,7 @@
  */
 import { writable, derived, get } from 'svelte/store'
 import type { Socket } from 'socket.io-client'
-import { voiceSettingsStore, type VoiceSettings } from './voiceSettings'
+import { voiceSettingsStore, getPeerVolume, type VoiceSettings } from './voiceSettings'
 import { p2pManager } from './p2p'
 export { voiceSettingsStore } from './voiceSettings'
 export type { VoiceSettings } from './voiceSettings'
@@ -528,7 +528,9 @@ function createPeerAudio(socketId: string, stream: MediaStream): void {
   const audioEl     = new Audio()
   audioEl.srcObject = stream
   audioEl.autoplay  = true
-  audioEl.volume    = 1.0
+  // Volume mémorisé pour CET utilisateur (par userId → survit refresh/reconnexion)
+  const peer = get(voiceStore).peers.find(p => p.socketId === socketId)
+  audioEl.volume    = peer?.userId ? getPeerVolume(peer.userId) / 100 : 1.0
   audioEl.play().catch(() => {
     // Chrome desktop bloque l'autoplay si le contexte geste-utilisateur a expiré.
     // On réessaie au prochain clic ou frappe clavier (une seule fois suffit).

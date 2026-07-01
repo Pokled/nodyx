@@ -6,6 +6,7 @@
         startScreenShare, stopScreenShare, screenShareStore, remoteScreenStore,
         type VoicePeer, type PeerStats, type NetQuality,
     } from '$lib/voice'
+    import { getPeerVolume, savePeerVolume } from '$lib/voiceSettings'
 
     import VoiceSettings    from './VoiceSettings.svelte'
     import ScreenShareModal from './ScreenShareModal.svelte'
@@ -79,7 +80,7 @@
             const peer = peers.find(p => p.socketId === target.socketId)
             if (peer) {
                 selectedPeer = peer
-                if (!(peer.socketId in peerVolumes)) peerVolumes[peer.socketId] = 100
+                if (!(peer.socketId in peerVolumes)) peerVolumes[peer.socketId] = getPeerVolume(peer.userId)
                 selfInfo = null
             }
         }
@@ -87,7 +88,7 @@
 
     function openPeerPanel(peer: VoicePeer) {
         selectedPeer = selectedPeer?.socketId === peer.socketId ? null : peer
-        if (!(peer.socketId in peerVolumes)) peerVolumes[peer.socketId] = 100
+        if (!(peer.socketId in peerVolumes)) peerVolumes[peer.socketId] = getPeerVolume(peer.userId)
     }
 
     function closePanel() { selectedPeer = null }
@@ -95,6 +96,9 @@
     function onVolumeChange(socketId: string, v: number) {
         peerVolumes[socketId] = v
         setPeerVolume(socketId, v / 100)
+        // Mémorise par userId (survit refresh/reconnexion)
+        const peer = peers.find(p => p.socketId === socketId)
+        if (peer?.userId) savePeerVolume(peer.userId, v)
     }
 
     // ── Qualité réseau ────────────────────────────────────────────
