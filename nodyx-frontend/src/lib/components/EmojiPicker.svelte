@@ -45,13 +45,25 @@
 	<!-- Category tabs -->
 	<div class="flex border-b border-gray-800 bg-gray-950/80">
 		{#each tabs as cat, i}
-			<button
-				onclick={() => (activeCategory = i)}
-				title={cat.name}
-				class="flex-1 py-2 text-base transition-colors {activeCategory === i
-					? 'bg-gray-800/80 text-white'
-					: 'text-gray-500 hover:text-gray-300 hover:bg-gray-900'}"
-			>{cat.label}</button>
+			{#if cat.type === 'custom'}
+				<!-- Onglet des emojis de l'instance : mis en avant (accent + label) -->
+				<button
+					onclick={() => (activeCategory = i)}
+					title={cat.name}
+					class="flex items-center gap-1 px-2.5 py-2 text-xs font-bold uppercase tracking-wide border-r border-gray-800 transition-colors {activeCategory === i
+						? 'text-white'
+						: 'text-gray-300 hover:text-white'}"
+					style="background: rgb(var(--nx-accent-2-rgb) / {activeCategory === i ? '0.28' : '0.16'}); box-shadow: inset 0 -2px 0 var(--nx-accent-2-soft)"
+				><span class="text-sm">{cat.label}</span> {cat.name}</button>
+			{:else}
+				<button
+					onclick={() => (activeCategory = i)}
+					title={cat.name}
+					class="flex-1 py-2 text-base transition-colors {activeCategory === i
+						? 'bg-gray-800/80 text-white'
+						: 'text-gray-500 hover:text-gray-300 hover:bg-gray-900'}"
+				>{cat.label}</button>
+			{/if}
 		{/each}
 	</div>
 

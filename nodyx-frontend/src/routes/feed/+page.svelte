@@ -126,20 +126,6 @@
 		}
 	}
 
-	async function toggleLike(post: any) {
-		const wasLiked  = post.liked_by_me
-		const delta     = wasLiked ? -1 : 1
-		// Optimistic update
-		posts = posts.map(p => p.id === post.id
-			? { ...p, liked_by_me: !wasLiked, likes_count: (p.likes_count ?? 0) + delta }
-			: p
-		)
-		await apiFetch(fetch, `/social/status/${post.id}/like`, {
-			method: wasLiked ? 'DELETE' : 'POST',
-			headers: { Authorization: `Bearer ${token}` },
-		})
-	}
-
 	// ── Réactions emoji ─────────────────────────────────────────────────────────
 	const REACTIONS = ['❤️', '👍', '😂', '🔥', '😮', '🎉']
 	let pickerFor = $state<string | null>(null)
@@ -165,12 +151,21 @@
 	// Cible effective : sur un repartage, on agit sur l'ORIGINAL (façon retweet).
 	const effId = (p: any) => p.reshare_of || p.id
 
+	// Applique une transformation à un post OU une réponse (dans repliesMap), par id.
+	function updateTarget(targetId: string, fn: (p: any) => any) {
+		posts = posts.map(p => effId(p) === targetId ? fn(p) : p)
+		let changed = false
+		const nm: Record<string, any[]> = {}
+		for (const k in repliesMap) nm[k] = repliesMap[k].map(r => r.id === targetId ? (changed = true, fn(r)) : r)
+		if (changed) repliesMap = nm
+	}
+
 	async function react(post: any, emoji: string) {
 		pickerFor = null
 		const prev = post.my_reaction || null
 		if (prev === emoji) return removeReaction(post)   // re-cliquer son emoji = retirer
 		const target = effId(post)
-		posts = posts.map(p => effId(p) === target ? applyReaction(p, prev, emoji) : p)
+		updateTarget(target, p => applyReaction(p, prev, emoji))
 		await apiFetch(fetch, `/social/status/${target}/react`, {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -183,7 +178,7 @@
 		const prev = post.my_reaction || null
 		if (!prev) return
 		const target = effId(post)
-		posts = posts.map(p => effId(p) === target ? applyReaction(p, prev, null) : p)
+		updateTarget(target, p => applyReaction(p, prev, null))
 		await apiFetch(fetch, `/social/status/${target}/like`, {
 			method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
 		}).catch(() => {})
@@ -705,24 +700,35 @@
 														<path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
 													</svg>
 												</button>
-												<button
-													onclick={() => toggleLike(reply)}
-													class="post-action-btn post-resonance-btn"
-													class:post-resonance-btn--active={reply.liked_by_me}
-												>
-													<span class="resonance-icon">
-														{#if reply.liked_by_me}
-															<svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-																<path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/>
-															</svg>
-														{:else}
-															<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-																<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
-															</svg>
-														{/if}
-													</span>
-													{#if reply.likes_count > 0}<span class="resonance-count">{fmt(reply.likes_count)}</span>{/if}
-												</button>
+												<!-- Réaction emoji — comme sur un post (les réponses réagissent aussi) -->
+												<div class="reaction-wrap">
+													{#if pickerFor === reply.id}
+														<div class="reaction-picker">
+															{#each REACTIONS as e}
+																<button class="reaction-pick" class:reaction-pick--mine={reply.my_reaction === e}
+																	onclick={() => react(reply, e)} aria-label={e}>{e}</button>
+															{/each}
+														</div>
+													{/if}
+													<button
+														onclick={() => pickerFor = pickerFor === reply.id ? null : reply.id}
+														class="post-action-btn post-resonance-btn"
+														class:post-resonance-btn--active={reply.my_reaction}
+														aria-label={tFn('feed.react')}
+													>
+														<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+														</svg>
+													</button>
+													{#if reply.reactions}
+														{#each Object.entries(reply.reactions) as [e, info]}
+															<button class="reaction-chip" class:reaction-chip--mine={reply.my_reaction === e}
+																title={((info as any).users || []).join(', ')} onclick={() => react(reply, e)}>
+																<span class="reaction-chip-e">{e}</span><span class="reaction-chip-n">{(info as any).count}</span>
+															</button>
+														{/each}
+													{/if}
+												</div>
 											</div>
 										</div>
 									</div>
