@@ -238,7 +238,13 @@
 							placeholder={tFn('library.emoji_shortcode_ph')} class="lib-input" />
 					</div>
 				{/if}
-				{#if currentTypeTip}
+				{#if uploadType === 'emoji'}
+					<div class="lib-tip lib-field--full">
+						<span class="lib-tip-icon">😀</span>
+						<div class="lib-tip-body">{tFn('library.emoji_help')}</div>
+					</div>
+				{/if}
+				{#if currentTypeTip && uploadType !== 'emoji'}
 				<div class="lib-tip lib-field--full">
 					<span class="lib-tip-icon">💡</span>
 					<div class="lib-tip-body">

@@ -1,4 +1,5 @@
 {
+  "library.emoji_help": "PNG, GIF or WebP · transparent background recommended · square, ~128 px is enough (auto-shrunk above 1024 px). Animated GIF and WebP supported. Auto-optimized to WebP, 12 MB max.",
   "emoji.frequent": "Frequent",
   "emoji.search_placeholder": "Search emoji…",
   "emoji.no_result": "No emoji",
