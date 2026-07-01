@@ -1287,7 +1287,17 @@
 								class="{actionsVisible ? 'flex' : 'hidden group-hover:flex'} items-center gap-0.5 absolute right-4 -top-4 px-1 py-1 shadow-2xl z-20"
 								style="background: #0d0d12; border: 1px solid rgba(255,255,255,.08)"
 							>
-								<!-- Quick reactions (8 emojis directs) -->
+								<!-- Emojis Perso (instance) en tête, direct au survol -->
+									{#each customEmojis.slice(0, 6) as ce (ce.shortcode)}
+										<button
+											onclick={() => reactTo(msg.id, `:${ce.shortcode}:`)}
+											title={`:${ce.shortcode}:`}
+											class="w-7 h-7 flex items-center justify-center rounded transition-all hover:scale-125 hover:bg-white/[0.07]">
+											<img src={ce.url} alt={`:${ce.shortcode}:`} class="w-5 h-5 object-contain" draggable="false" />
+										</button>
+									{/each}
+									{#if customEmojis.length > 0}<span class="w-px h-4 mx-0.5" style="background: rgb(var(--nx-accent-2-rgb) / .4)"></span>{/if}
+									<!-- Quick reactions (8 emojis directs) -->
 								{#each QUICK_EMOJIS as qe}
 									<button
 										onclick={() => reactTo(msg.id, qe)}
