@@ -201,7 +201,7 @@
 </div>
 
 <style>
-	.s-wrap { max-width: 680px; margin: 0 auto; padding: 1.25rem 1rem 5rem; }
+	.s-wrap { max-width: 780px; margin: 0 auto; padding: 1.25rem 1rem 5rem; }
 	.s-back { display: inline-block; margin-bottom: 1rem; color: var(--nx-accent-soft); text-decoration: none; font-size: 0.875rem; }
 	.s-back:hover { text-decoration: underline; }
 	.s-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(255,255,255,0.02); padding: 1.1rem; margin-bottom: 0.75rem; }
