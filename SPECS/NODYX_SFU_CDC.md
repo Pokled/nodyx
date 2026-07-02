@@ -278,6 +278,29 @@ Règle d'or : **overlap avant fermeture** à chaque transition (mesh↔SFU, resu
 
 **But** : livrer avec mediasoup **sans jamais s'y coupler**, pour pouvoir basculer vers un moteur **Rust natif** (webrtc-rs/rsfu) le jour où il est mûr, **sans réécrire le produit**. C'est ce qui rend l'objectif full-Rust atteignable **sans prendre le produit en otage**.
 
+### Trois étages (séparation hexagonale — ports & adapters)
+
+L'abstraction ne s'arrête pas au trait moteur. On distingue **trois responsabilités**, empilées, pour que les **règles métier de Nodyx ne se retrouvent jamais noyées dans du code mediasoup** :
+
+```text
+VoiceService     ← MÉTIER Nodyx : salons, sièges (VOICE_MAX_SEATS), permissions,
+      │            kick, join/leave, bascule hybride mesh↔SFU, orchestration
+      │            fédération. Ne connaît du média QUE le trait ci-dessous.
+      ▼
+MediaEngine      ← LE PORT : transport pur (create_room / transport / produce /
+      │            consume / set_preferred_layer / pipe_to_remote / stats / close).
+      ▼
+MediasoupEngine  ← L'ADAPTATEUR : l'impl technique, isolée. (Demain : NativeRustEngine.)
+```
+
+- **`VoiceService`** porte la logique fonctionnelle. Il est **générique sur le moteur** (`VoiceService<E: MediaEngine>`) : testé contre `NullEngine` (orchestration prouvée **sans** mediasoup), branché sur `MediasoupEngine` en prod.
+- **`MediaEngine`** ne s'occupe **que** du transport audio/vidéo. Aucune règle Nodyx dedans.
+- **`MediasoupEngine`** n'est **qu'une** implémentation technique du port.
+
+Bénéfice concret du découplage : le jour du swap full-Rust, **`VoiceService` ne bouge pas d'une ligne** — on ne réécrit que l'adaptateur. Et si Nodyx évolue au-delà d'un simple moteur vocal (métier plus riche : modération, présence, seats dynamiques…), ça vit dans `VoiceService`, hors du code média.
+
+> **État** : `VoiceService` + le trait `MediaEngine` + `NullEngine` sont **livrés** (crate `nodyx-p2p/crates/nodyx-sfu`, zéro-dep, zéro-`unsafe`, 16 tests verts). Reste à écrire : `MediasoupEngine` (le spike, §15), puis le câblage signaling (§17).
+
 ### Le trait (contrat unique entre le contrôle et le moteur)
 
 ```rust
