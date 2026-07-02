@@ -598,24 +598,31 @@ export function setPeerVolume(socketId: string, value: number): void {
 
 // ── Opus SDP tuning ───────────────────────────────────────────────
 
-function applyOpusTuning(sdp: string, bitrateKbps = 64): string {
+function applyOpusTuning(sdp: string, bitrateKbps = 64, peerCount = 0): string {
   const rtpMatch = sdp.match(/a=rtpmap:(\d+) opus\/48000\/2/)
   if (!rtpMatch) return sdp
   const pt     = rtpMatch[1]
   const bpsStr = String(bitrateKbps * 1000)
 
+  // ── DTX adaptatif au nombre de participants (P0 mesh, cf SPECS/NODYX_SFU_CDC.md §5) ──
+  // À faible effectif (≤4 autres) on garde le réglage d'origine, optimisé jitter :
+  //   cbr=1 (bitrate constant → paquets identiques, jitter buffer stable) + usedtx=0.
+  //   C'est parfait à 2-4, on n'y touche pas.
+  // Au-delà du seuil mesh (>4 participants), chacun uploade son flux ×(N-1) : l'upload
+  //   devient le facteur limitant. On active alors la DTX (silence = quasi zéro trafic)
+  //   et on passe en VBR (cbr et usedtx sont incompatibles). Gain majeur en watch-party
+  //   où la plupart des gens écoutent sans parler. Le SFU lèvera ensuite cette contrainte.
+  const largeCall = peerCount >= 4   // 4 autres + moi = 5 participants (seuil SFU §4)
+
   // ── fmtp Opus ───────────────────────────────────────────────────────────────
-  // cbr=1 : bitrate constant — paquets de taille identique → jitter buffer stable.
-  //         Avec cbr=0 (VBR), le jitter buffer adaptatif grossit sur les longues sessions.
-  // usedtx=0 : pas de Discontinuous Transmission — silence = même flux = pas de burst.
   // useinbandfec=1 : récupération de paquets perdus sans retransmission (latence stable).
   // stereo=0 : mono — divise la bande passante, suffisant pour la voix.
   const opusParams = {
     maxaveragebitrate: bpsStr,
     maxplaybackrate:   '48000',
     useinbandfec:      '1',
-    usedtx:            '0',
-    cbr:               '1',   // ← CRITIQUE : constant bitrate = jitter prévisible
+    usedtx:            largeCall ? '1' : '0',
+    cbr:               largeCall ? '0' : '1',
     stereo:            '0',
     'sprop-stereo':    '0',
   }
@@ -752,7 +759,7 @@ function createPeerConn(
         const offer = await pc.createOffer()
         if (pc.signalingState !== 'stable') return
         const bitrate  = get(voiceSettingsStore).bitrate
-        const tunedSdp = applyOpusTuning(offer.sdp ?? '', bitrate)
+        const tunedSdp = applyOpusTuning(offer.sdp ?? '', bitrate, _peerConns.size)
         await pc.setLocalDescription({ type: 'offer', sdp: tunedSdp })
         _socket?.emit('voice:offer', {
           to:  remoteSocketId,
@@ -1085,6 +1092,34 @@ export type DisplaySurface = 'monitor' | 'window' | 'browser'
 export type ShareQuality  = '720p' | '1080p' | '4k'
 export type ShareFps      = 15 | 30 | 60
 
+// ── Plafond de bitrate du partage d'écran (P0 mesh, cf SPECS/NODYX_SFU_CDC.md §6) ──
+// Sans plafond, l'encodeur peut monter à plusieurs Mbps par pair ; en mesh l'uploader
+// paie ×(N-1) → le mur. On borne l'envoi selon la qualité et le fps choisis. Le SFU
+// (à venir) remplacera ce plafond fixe par du simulcast adaptatif par spectateur.
+function screenShareMaxBitrate(quality: ShareQuality, fps: ShareFps): number {
+  const base     = quality === '4k' ? 8_000_000 : quality === '1080p' ? 3_000_000 : 1_500_000
+  const fpsScale = fps >= 60 ? 1.5 : fps <= 15 ? 0.6 : 1
+  return Math.round(base * fpsScale)
+}
+
+async function capScreenShareBitrate(
+  sender: RTCRtpSender,
+  quality: ShareQuality,
+  fps: ShareFps,
+): Promise<void> {
+  try {
+    const params = sender.getParameters()
+    // Certains navigateurs renvoient des encodings vides avant la 1re négociation.
+    if (!params.encodings || params.encodings.length === 0) {
+      params.encodings = [{}]
+    }
+    params.encodings[0].maxBitrate = screenShareMaxBitrate(quality, fps)
+    await sender.setParameters(params)
+  } catch (e) {
+    console.warn('[voice] cap screen-share bitrate failed', e)
+  }
+}
+
 export async function startScreenShare(
   displaySurface: DisplaySurface = 'monitor',
   quality: ShareQuality = '1080p',
@@ -1114,13 +1149,17 @@ export async function startScreenShare(
 
     const videoTrack = displayStream.getVideoTracks()[0]
     videoTrack.onended = () => stopScreenShare()
+    // Aide l'encodeur : 60 fps ⇒ probablement du mouvement (jeu) → priorité fluidité ;
+    // sinon (slides, code, bureau) → priorité netteté du texte.
+    try { videoTrack.contentHint = fps >= 60 ? 'motion' : 'detail' } catch { /* non supporté */ }
 
     for (const [socketId, pc] of _peerConns) {
       try {
-        pc.addTrack(videoTrack, displayStream)
+        const sender = pc.addTrack(videoTrack, displayStream)
+        await capScreenShareBitrate(sender, quality, fps)
         if (pc.signalingState === 'stable') {
           const offer    = await pc.createOffer()
-          const tunedSdp = applyOpusTuning(offer.sdp ?? '', get(voiceSettingsStore).bitrate)
+          const tunedSdp = applyOpusTuning(offer.sdp ?? '', get(voiceSettingsStore).bitrate, _peerConns.size)
           await pc.setLocalDescription({ type: 'offer', sdp: tunedSdp })
           _socket?.emit('voice:offer', { to: socketId, sdp: pc.localDescription, channelId })
         }
@@ -1157,7 +1196,7 @@ export function stopScreenShare(): void {
     }
     if (pc.signalingState === 'stable') {
       pc.createOffer()
-        .then(offer => pc.setLocalDescription({ type: 'offer', sdp: applyOpusTuning(offer.sdp ?? '', get(voiceSettingsStore).bitrate) }))
+        .then(offer => pc.setLocalDescription({ type: 'offer', sdp: applyOpusTuning(offer.sdp ?? '', get(voiceSettingsStore).bitrate, _peerConns.size) }))
         .then(() => { _socket?.emit('voice:offer', { to: socketId, sdp: pc.localDescription, channelId }) })
         .catch(() => { /* peer may have disconnected */ })
     }
@@ -1257,7 +1296,7 @@ async function onOffer({ from, sdp, channelId }: { from: string; sdp: RTCSession
     if (pc.signalingState !== 'have-remote-offer') return
 
     const answer   = await pc.createAnswer()
-    const tunedSdp = applyOpusTuning(answer.sdp ?? '', get(voiceSettingsStore).bitrate)
+    const tunedSdp = applyOpusTuning(answer.sdp ?? '', get(voiceSettingsStore).bitrate, _peerConns.size)
 
     // Final state guard before writing local description
     if (pc.signalingState !== 'have-remote-offer') return
