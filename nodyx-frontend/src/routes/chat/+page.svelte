@@ -343,10 +343,18 @@
 		// P2P — attach to the existing Socket.IO instance
 		p2pManager.init(sock);
 
-		// Re-join on reconnect
-		sock.on('connect', () => {
-			if (selectedChannel) sock.emit('chat:join', selectedChannel.id);
-		});
+		// Anti-doublon : le socket est GLOBAL et persiste entre les montages de /chat.
+		// onDestroy ne retirait pas ces handlers -> à chaque remontage ils s'accumulaient
+		// -> events (messages, notifs vocales join/leave…) déclenchés en double.
+		// On retire d'abord les handlers chat-exclusifs avant de rebrancher.
+		for (const ev of ['chat:history','chat:message','chat:typing','chat:message_edited','chat:message_deleted','chat:pinned','chat:reaction_update','chat:blocked','chat:rate_limited','voice:channel_update']) sock.off(ev);
+
+		// 'connect' est PARTAGÉ (voice, store socket) -> on ne retire QUE notre handler, par référence.
+		const sk = sock as unknown as { __chatOnConnect?: () => void };
+		if (sk.__chatOnConnect) sock.off('connect', sk.__chatOnConnect);
+		const onConnect = () => { if (selectedChannel) sock.emit('chat:join', selectedChannel.id); };
+		sk.__chatOnConnect = onConnect;
+		sock.on('connect', onConnect);
 
 		sock.on('chat:history', ({ channelId, messages: hist }: { channelId: string; messages: Message[] }) => {
 			if (channelId !== selectedChannel?.id) return;
