@@ -16,7 +16,10 @@ use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 mod voice;
-pub use voice::{desired_mode, JoinOutcome, Mode, VoiceConfig, VoiceError, VoiceService};
+pub use voice::{
+    desired_mode, JoinOutcome, Mode, PublicationInfo, SfuMigration, VoiceConfig, VoiceError,
+    VoiceService,
+};
 
 // ── Identifiants du domaine ─────────────────────────────────────────────────
 // Newtypes opaques : le contrôle ne suppose RIEN de la forme des ids du moteur.
