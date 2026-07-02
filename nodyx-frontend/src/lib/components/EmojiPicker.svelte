@@ -62,7 +62,7 @@
 	const gridItems = $derived(searching ? searchItems : (activeTab?.items ?? []));
 </script>
 
-<div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden" style="width: 288px;">
+<div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden" style="width: 320px;">
 	<!-- Recherche -->
 	<div class="p-1.5 border-b border-gray-800">
 		<input
