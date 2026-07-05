@@ -18,6 +18,7 @@ import * as CommunityModel from '../models/community'
 import * as ThreadModel from '../models/thread'
 import * as TagModel from '../models/tag'
 import { io } from '../socket/io'
+import { buildIceServers } from '../socket/voice'
 
 // ── ESY Key (lazy-loaded once from disk) ─────────────────────────────────────
 
@@ -483,6 +484,15 @@ export default async function instanceRoutes(app: FastifyInstance) {
     } catch {
       return reply.send({ emojis: [] })
     }
+  })
+
+  // GET /api/v1/instance/ice-servers — serveurs ICE avec credentials TURN FRAIS
+  // Même générateur que voice:init (credentials éphémères HMAC, TTL 24h).
+  // Consommé par le diagnostic réseau admin : des credentials statiques figés au
+  // build expirent en <24h et rendent tout test TURN menteur. Authentifié : les
+  // credentials sont liés au userId (comme en vocal), pas de secret exposé.
+  app.get('/ice-servers', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    return reply.send({ iceServers: buildIceServers(request.user!.userId) })
   })
 
   // GET /api/v1/instance/announcement — active announcement (public)

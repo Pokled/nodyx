@@ -1,5 +1,6 @@
 <script lang="ts">
     import { runNetworkDiagnostic } from '$lib/utils/networkTester';
+    import { page } from '$app/stores';
     import { fade, fly } from 'svelte/transition';
 
     type CheckKeys = 'P2P' | 'RELAY' | 'UDP' | 'SIGNAL';
@@ -40,7 +41,10 @@
         visualChecks = { P2P: 'SCANNING', RELAY: 'WAIT', UDP: 'WAIT', SIGNAL: 'SCANNING' };
         
         addLog("Initialisation du diagnostic réseau...");
-        runNetworkDiagnostic((res) => { diag = res; });
+        // Token : le test récupère des credentials TURN FRAIS via l'API
+        // (les statiques de build expirent en <24h → RELAY OFFLINE menteur).
+        const token = $page.data.token as string | null;
+        runNetworkDiagnostic((res) => { diag = res; }, token);
 
         // Séquence synchronisée avec ton UI
         await new Promise(r => setTimeout(r, 800));

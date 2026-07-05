@@ -29,7 +29,9 @@ const JUKEBOX_STATE_MAX = 10_240
 // Dynamic time-limited credentials (nodyx-turn / coturn use-auth-secret style).
 // TURN_SECRET + TURN_PUBLIC_IP env vars — set by install.sh.
 
-function buildIceServers(userId: string): object[] {
+// Exporté : réutilisé par GET /api/v1/instance/ice-servers (diagnostic admin),
+// pour que tout consommateur reçoive des credentials FRAIS (jamais de statique).
+export function buildIceServers(userId: string): object[] {
   const secret   = process.env.TURN_SECRET
   const ip       = process.env.TURN_PUBLIC_IP
   const port     = process.env.TURN_PORT || '3478'
