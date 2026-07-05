@@ -6,4 +6,8 @@ members = [
     "crates/nodyx-gossip",
     "crates/nodyx-sfu",
 ]
+# Le moteur mediasoup (spike §15 du CDC SFU) est HORS workspace : sa compilation
+# inclut le worker C++ (plusieurs minutes) et n'a rien à faire dans chaque run
+# de CI tant que le spike n'est pas promu P1. Build : cd crates/nodyx-sfu-mediasoup.
+exclude = ["crates/nodyx-sfu-mediasoup"]
 resolver = "2"

@@ -1,1 +1,3 @@
-/target/
+# target/ à toute profondeur : couvre le target du workspace ET ceux des
+# crates hors workspace (ex: nodyx-sfu-mediasoup, exclu pour épargner la CI).
+target/

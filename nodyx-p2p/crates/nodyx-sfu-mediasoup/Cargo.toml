@@ -1,0 +1,12 @@
+[package]
+name = "nodyx-sfu-mediasoup"
+version = "0.1.0"
+edition = "2021"
+description = "Spike §15 du CDC SFU : MediasoupEngine impl MediaEngine, DERRIERE le trait. Le cerveau (VoiceService) pilote le vrai moteur sans changer d'une ligne. Hors workspace (worker C++ long a compiler)."
+
+# Dépendances ASSUMÉES ici (et seulement ici) : c'est l'adaptateur moteur.
+# L'abstraction nodyx-sfu reste zéro-dep. Cf CDC §18 (trois étages).
+[dependencies]
+nodyx-sfu = { path = "../nodyx-sfu" }
+mediasoup = "0.18"
+tokio     = { version = "1", features = ["rt-multi-thread", "macros"] }
