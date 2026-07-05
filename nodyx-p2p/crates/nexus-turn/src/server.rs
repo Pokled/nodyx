@@ -13,6 +13,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
+use rand::Rng;
 
 use crate::allocation::{spawn_eviction_task, Allocation, Registry};
 use crate::auth::{compute_message_integrity, extract_mi_input, mi_key, validate_credentials, verify_message_integrity};
@@ -100,6 +101,12 @@ pub struct TurnConfig {
     pub public_ip:   IpAddr,
     pub ttl:         u64,
     pub nonce:       String,
+    /// Relay UDP port range [min, max]. Un serveur TURN POSSÈDE sa plage relais
+    /// pour que le firewall ouvre exactement celle-ci (ufw 49152:65535/udp), au
+    /// lieu d'un bind éphémère dont le succès dépend par chance de la plage
+    /// `net.ipv4.ip_local_port_range` de l'OS. Cf handle_allocate / bind_relay_socket.
+    pub relay_min_port: u16,
+    pub relay_max_port: u16,
 }
 
 // ── UDP server ────────────────────────────────────────────────────────────────
@@ -261,6 +268,28 @@ async fn handle_binding(sink: &ResponseSink, msg: StunMessage, src: SocketAddr) 
 
 // ── TURN Allocate ─────────────────────────────────────────────────────────────
 
+/// Lie un socket UDP relais DANS la plage configurée [min, max], au lieu du port
+/// éphémère de l'OS. C'est la conception correcte d'un serveur TURN : il détient
+/// sa plage relais → le firewall ouvre exactement cette plage, sans dépendre par
+/// chance de `net.ipv4.ip_local_port_range`. Départ aléatoire + balayage circulaire
+/// pour répartir les allocations ; sonde toute la plage avant d'abandonner.
+async fn bind_relay_socket(cfg: &TurnConfig) -> std::io::Result<UdpSocket> {
+    let (min, max) = (cfg.relay_min_port, cfg.relay_max_port);
+    let span: u32 = (max as u32) - (min as u32) + 1;
+    let start: u32 = rand::thread_rng().gen_range(0..span);
+    let mut last_err: Option<std::io::Error> = None;
+    for i in 0..span {
+        let port = (min as u32 + (start + i) % span) as u16;
+        match UdpSocket::bind((cfg.public_ip, port)).await {
+            Ok(sock) => return Ok(sock),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(last_err.unwrap_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::AddrInUse, "no free relay port in range")
+    }))
+}
+
 async fn handle_allocate(
     sink:     &ResponseSink,
     registry: &Registry,
@@ -331,12 +360,17 @@ async fn handle_allocate(
         .unwrap_or(DEFAULT_LIFETIME)
         .min(MAX_LIFETIME);
 
-    // Bind a relay UDP socket (OS assigns port from system ephemeral range)
-    let relay_socket = match UdpSocket::bind((cfg.public_ip, 0u16)).await {
+    // Bind a relay UDP socket within the configured relay range (matches the
+    // firewall's open UDP range — see bind_relay_socket).
+    let relay_socket = match bind_relay_socket(cfg).await {
         Ok(s) => Arc::new(s),
         Err(e) => {
-            warn!("TURN: failed to bind relay socket: {e}");
-            send_error(sink, &msg, src, 500, "Server Error", None).await;
+            warn!(
+                "TURN: no free relay port in {}-{}: {e}",
+                cfg.relay_min_port, cfg.relay_max_port
+            );
+            // RFC 5766 §6.2 : 508 Insufficient Capacity when no relay port is free.
+            send_error(sink, &msg, src, 508, "Insufficient Capacity", None).await;
             return;
         }
     };
@@ -671,7 +705,7 @@ async fn send_error(
 
 fn derive_password(username: &str, secret: &[u8]) -> String {
     use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};   // hmac 0.13 : new_from_slice sur KeyInit
     use sha1::Sha1;
     type HmacSha1 = Hmac<Sha1>;
     let mut mac = HmacSha1::new_from_slice(secret).expect("HMAC accepts any key");
@@ -694,4 +728,48 @@ fn random_txid() -> [u8; 12] {
     let mut txid = [0u8; 12];
     rand::thread_rng().fill_bytes(&mut txid);
     txid
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cfg_with_range(ip: IpAddr, min: u16, max: u16) -> TurnConfig {
+        TurnConfig {
+            realm:          "test".into(),
+            secret:         b"secret".to_vec(),
+            public_ip:      ip,
+            ttl:            3600,
+            nonce:          "nonce".into(),
+            relay_min_port: min,
+            relay_max_port: max,
+        }
+    }
+
+    /// Le port relais est TOUJOURS lié dans la plage configurée (le point du fix :
+    /// ne plus dépendre de la plage éphémère de l'OS).
+    #[tokio::test]
+    async fn relay_port_is_within_configured_range() {
+        let ip: IpAddr = "127.0.0.1".parse().unwrap();
+        let (min, max) = (49152u16, 65535u16);
+        let cfg = cfg_with_range(ip, min, max);
+        let sock = bind_relay_socket(&cfg).await.expect("un port libre existe dans 49152-65535");
+        let port = sock.local_addr().unwrap().port();
+        assert!(port >= min && port <= max, "port {port} hors de [{min},{max}]");
+    }
+
+    /// Plage entièrement occupée → erreur (508 côté protocole), pas de panique ni
+    /// de repli hors plage.
+    #[tokio::test]
+    async fn exhausted_range_returns_error() {
+        let ip: IpAddr = "127.0.0.1".parse().unwrap();
+        // On squatte un port libre connu, puis on restreint la plage à CE seul port.
+        let squatter = UdpSocket::bind((ip, 0u16)).await.unwrap();
+        let taken = squatter.local_addr().unwrap().port();
+        let cfg = cfg_with_range(ip, taken, taken);
+        assert!(
+            bind_relay_socket(&cfg).await.is_err(),
+            "plage d'un seul port déjà pris → doit échouer"
+        );
+    }
 }

@@ -9,7 +9,9 @@
 // RFC 5389 §15.4 / RFC 5766 §10.2
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
-use hmac::{Hmac, Mac};
+// hmac 0.13 : `new_from_slice` est fourni par `KeyInit` (déplacé depuis `Mac`) ;
+// `update`/`finalize` restent sur `Mac`. Les deux sont nécessaires.
+use hmac::{Hmac, KeyInit, Mac};
 use md5::Md5;
 use md5::Digest as Md5Digest;
 use sha1::Sha1;

@@ -121,10 +121,13 @@ jobs:
         with:
           workspaces: nodyx-p2p
 
-      - name: cargo build -p nodyx-server
+      # Build + test TOUT le workspace (pas seulement nodyx-server) : un build
+      # limité à un crate laissait passer en silence des crates cassés — c'est
+      # exactement comme ça qu'un bump hmac 0.13 a cassé nexus-turn sans alerte.
+      - name: cargo build --workspace
         working-directory: nodyx-p2p
-        run: cargo build -p nodyx-server
+        run: cargo build --workspace
 
-      - name: cargo test -p nodyx-server — 18 tests attendus
+      - name: cargo test --workspace
         working-directory: nodyx-p2p
-        run: cargo test -p nodyx-server
+        run: cargo test --workspace

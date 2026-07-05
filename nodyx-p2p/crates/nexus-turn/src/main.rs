@@ -61,6 +61,16 @@ enum Commands {
         /// Credential TTL in seconds (default 24h)
         #[arg(long, env = "TURN_TTL", default_value = "86400")]
         ttl: u64,
+
+        /// Lowest relay UDP port. MUST match the firewall's open range
+        /// (installer: `ufw allow 49152:65535/udp`). The TURN server owns its
+        /// relay range instead of relying on the OS ephemeral range.
+        #[arg(long, env = "TURN_MIN_PORT", default_value = "49152")]
+        min_port: u16,
+
+        /// Highest relay UDP port. MUST match the firewall's open range.
+        #[arg(long, env = "TURN_MAX_PORT", default_value = "65535")]
+        max_port: u16,
     },
 }
 
@@ -79,7 +89,10 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Server { udp_port, public_ip, realm, secret, ttl } => {
+        Commands::Server { udp_port, public_ip, realm, secret, ttl, min_port, max_port } => {
+            if min_port > max_port {
+                anyhow::bail!("TURN relay range invalide : min_port ({min_port}) > max_port ({max_port})");
+            }
             let bind_addr: SocketAddr = (std::net::Ipv4Addr::UNSPECIFIED, udp_port).into();
             let socket = Arc::new(
                 UdpSocket::bind(bind_addr)
@@ -103,12 +116,16 @@ async fn main() -> Result<()> {
                 public_ip,
                 ttl,
                 nonce,
+                relay_min_port: min_port,
+                relay_max_port: max_port,
             });
 
             info!(
-                "nodyx-turn v{} — STUN/TURN on udp:{udp_port} + tcp:{udp_port} | public_ip={}",
+                "nodyx-turn v{} — STUN/TURN on udp:{udp_port} + tcp:{udp_port} | public_ip={} | relay {}-{}",
                 env!("CARGO_PKG_VERSION"),
-                cfg.public_ip
+                cfg.public_ip,
+                cfg.relay_min_port,
+                cfg.relay_max_port,
             );
 
             // Run UDP and TCP listeners concurrently on the shared registry.
