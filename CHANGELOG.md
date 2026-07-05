@@ -7,6 +7,66 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
+### Vocal : le cap SFU est posé, et le mesh actuel respire mieux
+
+Le constat est mathématique : en mesh P2P, celui qui partage son écran uploade son flux vers chaque spectateur (15 spectateurs à 3 Mbps = 42 Mbps montants, impossible sur une connexion résidentielle). Le cap est donc acté et outillé :
+
+- **CDC complet du SFU** : `SPECS/NODYX_SFU_CDC.md`, architecture hybride (mesh en petit comité, SFU au-delà ou dès qu'un partage d'écran démarre), moteur mediasoup derrière une abstraction swap-ready, fédération inter-instances par cascade (PipeTransport sur WireGuard), phasage P0 à P5
+- **Crate Rust `nodyx-sfu`** (le cerveau, déjà testé) : séparation hexagonale en trois étages, `VoiceService` (règles métier : salons, sièges, kick, bascule hybride, publish/subscribe) qui ne parle qu'au trait `MediaEngine` (transport pur), implémenté aujourd'hui par un `NullEngine` de test, demain par mediasoup, plus tard par un moteur Rust natif, sans réécrire le produit. Zéro dépendance, zéro `unsafe`, 23 tests
+- **Quick wins immédiats sur le mesh actuel** : DTX Opus adaptatif (au-delà de 4 participants, le silence ne coûte quasi plus rien en upload ; en dessous, le réglage anti-jitter d'origine est conservé) et plafond de bitrate du partage d'écran selon qualité et fps (l'encodeur n'était pas borné : c'était le mur des watch-parties)
+- Volume par participant enfin **persistant** (indexé par utilisateur + localStorage, il ne survivait pas au refresh)
+
+### TURN : le serveur possède sa plage de ports relais (fix de fond)
+
+`nexus-turn` allouait ses ports relais dans la plage éphémère de l'OS, alors que le pare-feu n'ouvre que 49152-65535. Sur un OS au défaut kernel (32768-60999), plus de la moitié des allocations tombaient hors pare-feu : relais bloqué, vocal intermittent pour les auto-hébergés (NAT strict, mobile).
+
+- `nexus-turn` accepte `--min-port`/`--max-port` (défauts alignés sur le pare-feu de l'installeur) et sonde sa plage lui-même : plus aucune dépendance à `ip_local_port_range`
+- Réparation du build (hmac 0.13) et **CI élargie à tout le workspace Rust** : un crate cassé ne peut plus passer inaperçu
+- Diagnostic réseau admin (`/admin/status`) : le test TURN utilise désormais des **credentials frais** via `GET /api/v1/instance/ice-servers` (les credentials figés au build expiraient en moins de 24h et la tuile RELAY mentait), et le STUN Google est retiré du testeur (nexus-turn répond au STUN, zéro service tiers)
+
+### Thème d'instance : l'owner impose son identité, le membre reste libre
+
+- Nouveau système de thème d'instance : l'owner définit la base (`theme_vars` structuré, `theme_css` libre, effet d'ambiance type **Matrix** avec pluie de caractères respectueuse de `prefers-reduced-motion`), chaque membre peut surcharger pour lui-même
+- Tokenisation de ~800 couleurs codées en dur vers des variables `--nx-*` (indigo/violet/cyan et leurs glows) : les instances peuvent enfin re-teinter toute l'interface sans fork, nodyx.org reste identique par défaut
+- Fix critique multi-instances : le préfixe Redis lit désormais `REDIS_KEY_PREFIX` (deux instances co-hébergées partageaient sessions et caches)
+
+### Emojis personnalisés (les émotes de la communauté)
+
+- Upload d'emojis avec **shortcode** (`:mon_emote:`), rendus dans les messages et les réactions du chat, protection des blocs de code
+- Picker enrichi : recherche, onglet Fréquents (usage local), onglet PERSO accentué, barre de réactions rapide au survol des messages alimentée par vos emojis les plus utilisés
+- Aide au format à l'upload (taille idéale, formats) et déduplication des listeners socket du chat (réactions qui clignotaient)
+
+### Feed social : vrai temps réel
+
+- Le fil d'actualité se met à jour en direct (posts, réponses imbriquées, réactions) sans rafraîchir
+- Compteur de réponses = total des descendants (fil complet), compteur de posts du profil corrigé, posts du profil cliquables vers une page `/status/:id` **interactive** (composer, réactions)
+- Plus de notification de mention si vous êtes déjà sur le canal ; le compte de membres exclut les comptes système
+- Mise à jour applicative **transparente** après déploiement (service worker + rechargement au premier clic) et `Cache-Control: no-cache` sur le HTML SSR (fin des pages figées au retour d'une autre instance)
+- Édition d'un message du chat : tableaux et structure riches préservés
+
+### i18n : couverture massive et deux nouvelles langues
+
+- **Russe et portugais** ajoutés (6 langues au total)
+- Traduction du cœur membre qui restait codé en dur en français : découverte, wiki, tâches, fil d'actu et navigation, chat, édition de profil, DM (bandeaux E2E inclus), réglages, comptes connectés, sidebars, page membres, widgets de homepage
+
+### DM chiffrés : backup de clé (modèle Signal PIN)
+
+- Sauvegarde de la clé E2E chiffrée par passphrase (PBKDF2 600k itérations puis AES-GCM), le serveur ne stocke qu'un blob opaque
+- Restauration sur un nouvel appareil ou navigateur, générateur de phrase, bandeau pédagogique dans les DM, garde-fou avant envoi si la clé n'est pas sauvegardée
+
+### P2P Rust : découverte de pairs par gossip
+
+- Nouveau crate `nodyx-gossip` : découverte de pairs par anti-entropie épidémique, **bibliothèque standard uniquement** (zéro crate externe), auto-guérison par TTL, le réseau survit à la chute du nœud bootstrap
+- Records **signés Ed25519** : node_id = clé publique, vérification stricte à la fusion (anti-spoofing, anti-rejeu), identité persistante par fichier de clé
+
+### Bibliothèque
+
+- Lecteur audio intégré et bouton d'insertion de fichier
+
+### Dépendances
+
+- Vagues Dependabot traitées (actions, groupes minor/patch npm et cargo)
+
 ---
 
 ## [2.8.0] — 2026-06-20
