@@ -299,7 +299,7 @@ MediasoupEngine  ← L'ADAPTATEUR : l'impl technique, isolée. (Demain : NativeR
 
 Bénéfice concret du découplage : le jour du swap full-Rust, **`VoiceService` ne bouge pas d'une ligne** — on ne réécrit que l'adaptateur. Et si Nodyx évolue au-delà d'un simple moteur vocal (métier plus riche : modération, présence, seats dynamiques…), ça vit dans `VoiceService`, hors du code média.
 
-> **État** : `VoiceService` + le trait `MediaEngine` + `NullEngine` sont **livrés** (crate `nodyx-p2p/crates/nodyx-sfu`, zéro-dep, zéro-`unsafe`, 16 tests verts). Reste à écrire : `MediasoupEngine` (le spike, §15), puis le câblage signaling (§17).
+> **État (2026-07-05)** : `VoiceService` + le trait `MediaEngine` + `NullEngine` sont **livrés** (crate `nodyx-p2p/crates/nodyx-sfu`, zéro-dep, zéro-`unsafe`, 23 tests verts). **SPIKE MEDIASOUP : VERT** (crate `nodyx-sfu-mediasoup`, hors workspace pour épargner la CI) : le MÊME `VoiceService`, inchangé d'une ligne, a piloté le vrai worker mediasoup derrière le trait (join ×5, bascule mesh→SFU au seuil, Producer/Consumer audio Opus réels), ET la primitive de fédération fonctionne (pipe du producer vers un worker dédié "nœud distant" + consume côté distant). Enseignements gravés dans l'adaptateur : le pipe relie des workers DIFFÉRENTS ; le producer pipé garde l'UUID de l'original (clé de registre distincte sinon fermeture en cascade au Drop) ; conversion `RtpCapabilitiesFinalized`→`RtpCapabilities` = le germe du `CodecAdapter`. **Gate P1 : OUVERT.** Reste : câblage signaling (§17), `WebRtcTransport` (le spike utilise des transports Direct), bench, et pipe vers un host réellement distant (gate P4).
 
 ### Le trait (contrat unique entre le contrôle et le moteur)
 
