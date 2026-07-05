@@ -28,20 +28,34 @@
   let query       = $state('')
   let activeIndex = $state(0)
   let inputEl: HTMLInputElement | null = $state(null)
-  let categories  = $state<{ slug: string; name: string }[]>([])
+  let categories  = $state<{ slug: string; name: string; path: string }[]>([])
   let listEl: HTMLElement | null = $state(null)
 
-  // Fetch categories once on mount
+  // Fetch categories once on mount.
+  // /instance/categories renvoie l'ARBRE complet (children imbriqués) : on
+  // l'aplatit pour que les sous-sous-catégories soient atteignables ici.
+  // (L'ancien appel /forums/categories n'existe pas en GET : le groupe FORUM
+  // restait vide en silence.)
   onMount(async () => {
     if (!browser) return
     try {
-      const r = await fetch('/api/v1/forums/categories')
+      const r = await fetch('/api/v1/instance/categories')
       if (r.ok) {
         const d = await r.json()
-        categories = (d.categories ?? []).map((c: any) => ({
-          slug: c.slug ?? c.id,
-          name: c.name,
-        }))
+        const flat: { slug: string; name: string; path: string }[] = []
+        const walk = (nodes: any[], trail: string[]) => {
+          for (const c of nodes ?? []) {
+            const clean = String(c.name ?? '').replace(/^\p{Emoji}\s*/u, '')
+            flat.push({
+              slug: c.slug ?? c.id,
+              name: c.name,
+              path: [...trail, clean].join(' / '),
+            })
+            if (c.children?.length) walk(c.children, [...trail, clean])
+          }
+        }
+        walk(d.categories ?? [], [])
+        categories = flat
       }
     } catch { /* ignore */ }
   })
@@ -119,15 +133,68 @@
     categories.map(c => ({
       id:       `cat-${c.slug}`,
       group:    'FORUM',
-      label:    c.name.replace(/^\p{Emoji}\s*/u, ''),
+      label:    c.path,
       sub:      `/forum/${c.slug}`,
       paths:    ICONS.book,
       action:   () => navigate(`/forum/${c.slug}`),
-      keywords: [c.name.toLowerCase(), c.slug],
+      keywords: [c.name.toLowerCase(), c.path.toLowerCase(), c.slug],
     } as Command))
   )
 
   const allCommands = $derived([...staticCommands, ...categoryCommands])
+
+  // ── Recherche de contenu (le vrai moteur) ─────────────────────────────────
+  // La palette ne se limite plus à la navigation : dès 2 caractères, elle
+  // interroge /search (full-text Postgres, titres ET contenu des posts) et
+  // affiche discussions + messages avec extrait. Debounce 220 ms + garde
+  // anti-réponses croisées (seq).
+  let remoteThreads = $state<any[]>([])
+  let remotePosts   = $state<any[]>([])
+  let searchSeq = 0
+
+  $effect(() => {
+    const q = query.trim()
+    if (!open || q.length < 2) {
+      remoteThreads = []
+      remotePosts = []
+      return
+    }
+    const seq = ++searchSeq
+    const timer = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}&type=all&limit=5`)
+        if (!r.ok) return
+        const d = await r.json()
+        if (seq !== searchSeq) return
+        remoteThreads = d.threads ?? []
+        remotePosts   = d.posts ?? []
+      } catch { /* réseau : la palette locale reste utilisable */ }
+    }, 220)
+    return () => clearTimeout(timer)
+  })
+
+  const stripTags = (s: string) => s.replace(/<[^>]+>/g, '')
+
+  // Les routes forum acceptent les ids et redirigent vers l'URL canonique (slug).
+  const threadResults = $derived(remoteThreads.map((t: any) => ({
+    id:       `sr-thread-${t.id}`,
+    group:    'RESULTS_THREADS',
+    label:    t.title,
+    sub:      t.category_name ?? '',
+    paths:    ICONS.forum,
+    action:   () => navigate(`/forum/${t.category_id}/${t.id}`),
+    keywords: [],
+  } as Command)))
+
+  const postResults = $derived(remotePosts.map((p: any) => ({
+    id:       `sr-post-${p.id}`,
+    group:    'RESULTS_POSTS',
+    label:    p.thread_title,
+    sub:      stripTags(p.headline ?? ''),
+    paths:    ICONS.chat,
+    action:   () => navigate(`/forum/${p.category_id}/${p.thread_id}#${p.id}`),
+    keywords: [],
+  } as Command)))
 
   // ── Fuzzy scoring ─────────────────────────────────────────────────────────
   function score(cmd: Command, q: string): number {
@@ -179,6 +246,17 @@
       const items = buckets.get(g) ?? []
       if (items.length === 0) continue
       result.push({ type: 'group', label: g })
+      for (const cmd of items) result.push({ type: 'item', cmd, index: idx++ })
+    }
+
+    // Résultats de contenu (déjà pertinents côté serveur : pas de re-filtre local)
+    const remoteGroups: [string, Command[]][] = [
+      [tFn('search.threads_tab', { n: String(threadResults.length) }), threadResults],
+      [tFn('search.posts_tab',   { n: String(postResults.length) }),   postResults],
+    ]
+    for (const [label, items] of remoteGroups) {
+      if (items.length === 0) continue
+      result.push({ type: 'group', label })
       for (const cmd of items) result.push({ type: 'item', cmd, index: idx++ })
     }
 
