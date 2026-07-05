@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
+---
+
+## [2.9.0] — 2026-07-05
+
 ### Vocal : le cap SFU est posé, et le mesh actuel respire mieux
 
 Le constat est mathématique : en mesh P2P, celui qui partage son écran uploade son flux vers chaque spectateur (15 spectateurs à 3 Mbps = 42 Mbps montants, impossible sur une connexion résidentielle). Le cap est donc acté et outillé :
