@@ -333,55 +333,113 @@ impl<E: MediaEngine> VoiceService<E> {
     /// CHAQUE participant incomplet. Idempotent. Primitive unique de migration
     /// (utilisée par `join`, `set_screenshare`, `publish` d'un écran).
     pub async fn ensure_sfu(&self, room: RoomId) -> Result<SfuMigration, VoiceError> {
-        // ── plan : router manquant ? qui n'a pas sa paire complète ? ──
-        let (need_router, existing_router, missing): (bool, Option<RouterHandle>, Vec<ParticipantId>) = {
-            let rooms = self.rooms();
-            let Some(state) = rooms.get(&room) else {
-                return Err(VoiceError::NotInRoom);
+        // Boucle de convergence (relecture 2026-07-06) : deux ensure_sfu
+        // concurrents sur un salon vierge créaient DEUX routers ; le perdant
+        // n'était jamais fermé et ses transports pouvaient être commités →
+        // participants à cheval sur deux routers, consume inter-routers en
+        // échec. Ici : si on perd la course au commit, on FERME notre router
+        // (l'adaptateur libère ses transports avec lui) et on recommence sur
+        // celui du gagnant. Converge en ≤2 tours réels ; borne dure à 4 par
+        // paranoïa. NB : sur un router PARTAGÉ, une double-provision du même
+        // participant laisse des transports orphelins côté moteur (inutilisés,
+        // libérés au close_room) : bénin, la vraie sérialisation par salon
+        // arrive avec le durcissement P1.
+        let mut switched = false;
+        let mut migrated_all: Vec<ParticipantId> = Vec::new();
+        for _tour in 0..4 {
+            // ── plan : router manquant ? qui n'a pas sa paire complète ? ──
+            let (need_router, existing_router, missing): (bool, Option<RouterHandle>, Vec<ParticipantId>) = {
+                let rooms = self.rooms();
+                let Some(state) = rooms.get(&room) else {
+                    return Err(VoiceError::NotInRoom);
+                };
+                let missing = state
+                    .participants
+                    .iter()
+                    .filter(|(_, p)| !p.in_sfu())
+                    .map(|(id, _)| id.clone())
+                    .collect();
+                (state.router.is_none(), state.router.clone(), missing)
             };
-            let missing = state
-                .participants
-                .iter()
-                .filter(|(_, p)| !p.in_sfu())
-                .map(|(id, _)| id.clone())
-                .collect();
-            (state.router.is_none(), state.router.clone(), missing)
-        };
+            if !need_router && missing.is_empty() {
+                break; // rien à faire : idempotence
+            }
 
-        // ── apply (hors verrou) : router puis paires de transports ──
-        let router = if need_router {
-            self.engine.create_room(room.clone()).await?
-        } else {
-            existing_router.expect("router SFU présent quand need_router=false")
-        };
-        let mut provisioned: Vec<(ParticipantId, TransportHandle, TransportHandle)> =
-            Vec::with_capacity(missing.len());
-        for pid in missing {
-            let send = self.engine.create_transport(&router, pid.clone()).await?;
-            let recv = self.engine.create_transport(&router, pid.clone()).await?;
-            provisioned.push((pid, send, recv));
-        }
+            // ── apply (hors verrou) : router puis paires de transports ──
+            let router = if need_router {
+                self.engine.create_room(room.clone()).await?
+            } else {
+                existing_router.expect("router SFU présent quand need_router=false")
+            };
+            let mut provisioned: Vec<(ParticipantId, TransportHandle, TransportHandle)> =
+                Vec::with_capacity(missing.len());
+            for pid in missing {
+                let send = self.engine.create_transport(&router, pid.clone()).await?;
+                let recv = self.engine.create_transport(&router, pid.clone()).await?;
+                provisioned.push((pid, send, recv));
+            }
 
-        // ── commit : figer router + paires ──
-        {
-            let mut rooms = self.rooms();
-            if let Some(state) = rooms.get_mut(&room) {
-                if state.router.is_none() {
-                    state.router = Some(router);
-                }
-                for (pid, send, recv) in &provisioned {
-                    if let Some(p) = state.participants.get_mut(pid) {
-                        if p.send_transport.is_none() { p.send_transport = Some(send.clone()); }
-                        if p.recv_transport.is_none() { p.recv_transport = Some(recv.clone()); }
+            // ── commit : figer router + paires, OU détecter la course perdue ──
+            enum Outcome { Won(Vec<ParticipantId>), LostRace, RoomGone }
+            let outcome = {
+                let mut rooms = self.rooms();
+                match rooms.get_mut(&room) {
+                    None => Outcome::RoomGone,
+                    Some(state) => {
+                        let lost = need_router
+                            && state.router.as_ref().is_some_and(|r| r != &router);
+                        if lost {
+                            Outcome::LostRace
+                        } else {
+                            if state.router.is_none() {
+                                state.router = Some(router.clone());
+                            }
+                            let mut committed = Vec::new();
+                            for (pid, send, recv) in &provisioned {
+                                if let Some(p) = state.participants.get_mut(pid) {
+                                    let mut used = false;
+                                    if p.send_transport.is_none() {
+                                        p.send_transport = Some(send.clone());
+                                        used = true;
+                                    }
+                                    if p.recv_transport.is_none() {
+                                        p.recv_transport = Some(recv.clone());
+                                        used = true;
+                                    }
+                                    if used {
+                                        committed.push(pid.clone());
+                                    }
+                                }
+                            }
+                            Outcome::Won(committed)
+                        }
                     }
+                }
+            };
+
+            match outcome {
+                Outcome::Won(committed) => {
+                    switched |= need_router;
+                    migrated_all.extend(committed);
+                    break;
+                }
+                Outcome::LostRace => {
+                    // Nos transports vivent sur NOTRE router : sa fermeture les
+                    // libère côté adaptateur. Puis on retente sur le gagnant.
+                    let _ = self.engine.close_room(router).await;
+                }
+                Outcome::RoomGone => {
+                    // Salon fermé pendant le travail moteur (dernier leave) :
+                    // on libère ce qu'on venait de créer et on le signale.
+                    if need_router {
+                        let _ = self.engine.close_room(router).await;
+                    }
+                    return Err(VoiceError::NotInRoom);
                 }
             }
         }
 
-        Ok(SfuMigration {
-            switched_to_sfu: need_router,
-            migrated: provisioned.into_iter().map(|(pid, _, _)| pid).collect(),
-        })
+        Ok(SfuMigration { switched_to_sfu: switched, migrated: migrated_all })
     }
 
     /// Un partage d'écran démarre/s'arrête. Le démarrage force le mode SFU (quel

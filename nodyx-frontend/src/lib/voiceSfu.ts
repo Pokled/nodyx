@@ -63,6 +63,10 @@ interface Session {
 
 let _session: Session | null = null
 
+/** Salon inscrit côté daemon (survit à l'échec de session : le leave doit
+ *  TOUJOURS pouvoir partir, sinon fantôme jusqu'au disconnect du socket). */
+let _joinedChannel: string | null = null
+
 // ── Ack avec timeout : l'UI ne reste JAMAIS suspendue ─────────────────────────
 
 const ACK_TIMEOUT_MS = 8_000
@@ -110,6 +114,7 @@ export async function sfuJoin(channelId: string): Promise<void> {
 
   const join = await emitAck(sock, 'voice:sfu_join', channelId)
   if (!join.ok) { fail(`join refusé : ${join.error}`); return }
+  _joinedChannel = channelId
 
   if (join.mode !== 'sfu') {
     sfuPhaseStore.set('mesh')
@@ -202,10 +207,15 @@ export async function sfuJoin(channelId: string): Promise<void> {
   }
 }
 
+const _consuming = new Set<string>()
+
 async function consumeOne(sock: Socket, producerId: string, userId: string, kind: string): Promise<void> {
   const s = _session
   if (!s) return
-  if (s.consumers.has(producerId)) return // déjà consommé (annonce + liste peuvent se croiser)
+  // Relecture 2026-07-06 : la liste publications et l'annonce new_producer
+  // peuvent se croiser → sans garde EN VOL, double consume = double audio.
+  if (s.consumers.has(producerId) || _consuming.has(producerId)) return
+  _consuming.add(producerId)
   try {
     const r = await emitAck(sock, 'voice:sfu_consume', {
       channelId: s.channelId, producerId, rtpCapabilities: s.device.rtpCapabilities,
@@ -228,6 +238,8 @@ async function consumeOne(sock: Socket, producerId: string, userId: string, kind
     log(`✓ flux de ${userId} en lecture`)
   } catch (e) {
     log(`✘ consume : ${(e as Error).message}`)
+  } finally {
+    _consuming.delete(producerId)
   }
 }
 
@@ -240,12 +252,12 @@ export function sfuSetMuted(muted: boolean): void {
 }
 
 export async function sfuLeave(): Promise<void> {
-  const s = _session
-  if (!s) { sfuPhaseStore.set('idle'); return }
+  const channel = _session?.channelId ?? _joinedChannel
   log('→ leave + nettoyage complet')
   const sock = get(socketStore)
   cleanup()
-  if (sock) await emitAck(sock, 'voice:sfu_leave', s.channelId)
+  _joinedChannel = null
+  if (sock && channel) await emitAck(sock, 'voice:sfu_leave', channel)
   sfuPhaseStore.set('idle')
   log('✓ session fermée')
 }
@@ -254,6 +266,13 @@ function fail(reason: string): void {
   log(`✘ ${reason}`)
   sfuErrorStore.set(reason)
   cleanup()
+  // Relecture 2026-07-06 : sans ce leave, un échec en cours de session
+  // laissait le participant inscrit côté daemon tant que l'onglet vivait.
+  const sock = get(socketStore)
+  if (sock && _joinedChannel) {
+    void emitAck(sock, 'voice:sfu_leave', _joinedChannel)
+    _joinedChannel = null
+  }
   sfuPhaseStore.set('error')
 }
 
