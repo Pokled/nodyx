@@ -50,6 +50,7 @@
     "@tiptap/starter-kit": "3.27.1",
     "lowlight": "3.3.0",
     "lucide-svelte": "1.0.1",
+    "mediasoup-client": "3.21.0",
     "qrcode": "1.5.4",
     "satori": "0.26.0",
     "socket.io-client": "4.8.3"
