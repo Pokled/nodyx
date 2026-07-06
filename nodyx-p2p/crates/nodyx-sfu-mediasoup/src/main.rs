@@ -17,8 +17,12 @@ mod engine;
 
 use engine::MediasoupEngine;
 use nodyx_sfu::{
-    MediaEngine, Mode, NodeId, ParticipantId, RoomId, TrackKind, VoiceService,
+    MediaEngine, Mode, NodeId, ParticipantId, RoomId, SignalingBlob, TrackKind, VoiceService,
 };
+
+fn blob() -> SignalingBlob {
+    SignalingBlob("{}".into())
+}
 
 fn p(n: u32) -> ParticipantId {
     ParticipantId(format!("user-{n}"))
@@ -66,15 +70,26 @@ async fn main() {
     assert_eq!(out.migrated.len(), 4, "les 4 présents ont été migrés");
     println!("     → mode={:?}, transports provisionnés: 5", svc.mode(&room).unwrap());
 
+    let caps = step!(
+        "room_capabilities (blob pour device.load côté client)",
+        svc.room_capabilities(&room).await
+    );
+    println!("     → caps: {} octets de JSON (opaque pour le métier)", caps.0.len());
+    let tparams = step!(
+        "transport_params de user-1 (mode Direct : blob minimal)",
+        svc.transport_params(&room, &p(1)).await
+    );
+    println!("     → params: {tparams}");
     let producer = step!(
         "publish audio Opus de user-1 (Producer mediasoup réel)",
-        svc.publish(room.clone(), p(1), TrackKind::Audio).await
+        svc.publish(room.clone(), p(1), TrackKind::Audio, &blob()).await
     );
-    let consumer = step!(
+    let (consumer, cparams) = step!(
         "subscribe de user-2 au flux de user-1 (Consumer mediasoup réel)",
-        svc.subscribe(room.clone(), p(2), producer.clone()).await
+        svc.subscribe(room.clone(), p(2), producer.clone(), &blob()).await
     );
     println!("     → producer={producer} consumer={consumer}");
+    println!("     → params consumer pour le client: {} octets", cparams.0.len());
     step!(
         "set_preferred_layer (no-op audio, contrat du port respecté)",
         svc.set_preferred_layer(room.clone(), p(2), producer.clone(), nodyx_sfu::Layer::LOWEST)
@@ -111,11 +126,42 @@ async fn main() {
     let piped_producer = nodyx_sfu::ProducerId(
         pipe.0.strip_prefix("pipe-").unwrap_or(&pipe.0).to_string(),
     );
-    let remote_consumer = step!(
+    let (remote_consumer, _) = step!(
         "consume du flux pipé côté nœud distant (LA brique de la cascade P4)",
-        engine.consume(&remote_transport, &piped_producer).await
+        engine.consume(&remote_transport, &piped_producer, &blob()).await
     );
     println!("     → remote_consumer={remote_consumer}");
+
+    // ── Scénario W : vrais WebRtcTransport (P1) ──────────────────────────────
+    println!("\n[W] WebRtcTransport réels (ICE/DTLS, prêts pour un navigateur)");
+    let web = step!(
+        "moteur en mode WebRTC (écoute 127.0.0.1)",
+        engine::MediasoupEngine::new_webrtc("127.0.0.1".parse().unwrap(), None).await
+    );
+    let wroom = step!("salon WebRTC", web.create_room(RoomId("webrtc-room".into())).await);
+    let wtrans = step!(
+        "WebRtcTransport (socket UDP réellement lié)",
+        web.create_transport(&wroom, ParticipantId("browser-user".into())).await
+    );
+    let wparams = step!("transport_params (ICE/DTLS)", web.transport_params(&wtrans).await);
+    assert!(
+        wparams.0.contains("iceParameters") && wparams.0.contains("dtlsParameters"),
+        "le blob doit contenir ICE + DTLS"
+    );
+    println!(
+        "     → blob de {} octets, candidats ICE + fingerprints DTLS présents",
+        wparams.0.len()
+    );
+    // connect avec un payload invalide → erreur PROPRE (pas de panique) :
+    // le vrai connect exige les dtlsParameters d'un navigateur.
+    match web.connect_transport(&wtrans, &blob()).await {
+        Err(e) => println!("  ✔ connect(payload invalide) rejeté proprement : {e}"),
+        Ok(()) => {
+            println!("  ✘ connect aurait dû rejeter un payload sans dtlsParameters");
+            std::process::exit(1);
+        }
+    }
+    step!("close du salon WebRTC", web.close_room(wroom).await);
 
     // ── Fin propre ───────────────────────────────────────────────────────────
     println!("\n[C] fermeture propre");
@@ -125,9 +171,8 @@ async fn main() {
     step!("close du salon distant", engine.close_room(remote_room).await);
 
     println!("\n══════════════════════════════════════════════════════");
-    println!("SPIKE VERT : le cerveau (VoiceService, inchangé) a piloté");
-    println!("le vrai moteur mediasoup derrière le trait, ET la primitive");
-    println!("de cascade fédérée (pipe) fonctionne. Gate P1 : OUVERT.");
-    println!("Reste au gate P4 : pipe vers un HOST distant réel.");
+    println!("P1 LOT 1 VERT : le port sait signaler (blobs opaques), le cerveau");
+    println!("pilote toujours le vrai moteur, les WebRtcTransport se créent");
+    println!("avec ICE/DTLS réels. Reste P1 : signaling nodyx-core + client.");
     println!("══════════════════════════════════════════════════════");
 }

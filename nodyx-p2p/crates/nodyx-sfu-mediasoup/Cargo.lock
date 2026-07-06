@@ -799,6 +799,8 @@ version = "0.1.0"
 dependencies = [
  "mediasoup",
  "nodyx-sfu",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 

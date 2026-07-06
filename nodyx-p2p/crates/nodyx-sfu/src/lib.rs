@@ -74,6 +74,20 @@ impl Layer {
     pub const LOWEST: Layer = Layer { spatial: 0, temporal: 0 };
 }
 
+/// Charge utile de signaling, OPAQUE pour le métier. Contenu propre au moteur
+/// (mediasoup : JSON ICE/DTLS/RtpParameters ; un autre moteur : SDP…). Le
+/// cerveau (`VoiceService`) la TRANSPORTE entre client et moteur sans jamais
+/// la lire : c'est ce qui garde le métier 100 % agnostique du moteur (CDC §18,
+/// la « fuite » codecs confinée dans l'adaptateur/CodecAdapter).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SignalingBlob(pub String);
+
+impl fmt::Display for SignalingBlob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 /// Portée d'une requête de stats.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StatsScope {
@@ -135,12 +149,23 @@ pub type Result<T> = std::result::Result<T, MediaError>;
 pub trait MediaEngine: Send + Sync {
     /// Crée le Router d'un salon (idempotent côté appelant recommandé).
     async fn create_room(&self, room: RoomId) -> Result<RouterHandle>;
+    /// Capabilities du salon à remettre au client au join (mediasoup :
+    /// `router.rtpCapabilities` pour `device.load()`). Blob opaque.
+    async fn room_capabilities(&self, router: &RouterHandle) -> Result<SignalingBlob>;
     /// Crée le Transport WebRTC d'un participant dans un salon.
     async fn create_transport(&self, router: &RouterHandle, participant: ParticipantId) -> Result<TransportHandle>;
-    /// Le participant publie un flux (audio / écran / cam).
-    async fn produce(&self, transport: &TransportHandle, kind: TrackKind) -> Result<ProducerId>;
-    /// Le participant souscrit à un flux publié.
-    async fn consume(&self, transport: &TransportHandle, producer: &ProducerId) -> Result<ConsumerId>;
+    /// Paramètres de connexion du transport à remettre au client
+    /// (mediasoup : id + iceParameters + iceCandidates + dtlsParameters).
+    async fn transport_params(&self, transport: &TransportHandle) -> Result<SignalingBlob>;
+    /// Finalise la connexion du transport avec la réponse du client
+    /// (mediasoup : dtlsParameters du `connect`).
+    async fn connect_transport(&self, transport: &TransportHandle, client: &SignalingBlob) -> Result<()>;
+    /// Le participant publie un flux (audio / écran / cam). `client` porte ses
+    /// paramètres RTP (opaque ; un moteur de test peut l'ignorer).
+    async fn produce(&self, transport: &TransportHandle, kind: TrackKind, client: &SignalingBlob) -> Result<ProducerId>;
+    /// Le participant souscrit à un flux publié. `client_caps` porte ses
+    /// capabilities ; retourne les paramètres que le client doit appliquer.
+    async fn consume(&self, transport: &TransportHandle, producer: &ProducerId, client_caps: &SignalingBlob) -> Result<(ConsumerId, SignalingBlob)>;
     /// Force la couche servie à un abonné (adaptation bande passante).
     async fn set_preferred_layer(&self, consumer: &ConsumerId, layer: Layer) -> Result<()>;
     /// Relaie un flux vers un nœud SFU distant (cascade fédérée, PipeTransport).
@@ -174,14 +199,24 @@ impl MediaEngine for NullEngine {
     async fn create_room(&self, _room: RoomId) -> Result<RouterHandle> {
         Ok(RouterHandle(self.next("router")))
     }
+    async fn room_capabilities(&self, router: &RouterHandle) -> Result<SignalingBlob> {
+        Ok(SignalingBlob(format!("{{\"engine\":\"null\",\"router\":\"{router}\"}}")))
+    }
     async fn create_transport(&self, _router: &RouterHandle, _participant: ParticipantId) -> Result<TransportHandle> {
         Ok(TransportHandle(self.next("transport")))
     }
-    async fn produce(&self, _transport: &TransportHandle, _kind: TrackKind) -> Result<ProducerId> {
+    async fn transport_params(&self, transport: &TransportHandle) -> Result<SignalingBlob> {
+        Ok(SignalingBlob(format!("{{\"engine\":\"null\",\"transport\":\"{transport}\"}}")))
+    }
+    async fn connect_transport(&self, _transport: &TransportHandle, _client: &SignalingBlob) -> Result<()> {
+        Ok(())
+    }
+    async fn produce(&self, _transport: &TransportHandle, _kind: TrackKind, _client: &SignalingBlob) -> Result<ProducerId> {
         Ok(ProducerId(self.next("producer")))
     }
-    async fn consume(&self, _transport: &TransportHandle, _producer: &ProducerId) -> Result<ConsumerId> {
-        Ok(ConsumerId(self.next("consumer")))
+    async fn consume(&self, _transport: &TransportHandle, _producer: &ProducerId, client_caps: &SignalingBlob) -> Result<(ConsumerId, SignalingBlob)> {
+        // Écho des caps client : déterministe, suffisant pour l'orchestration.
+        Ok((ConsumerId(self.next("consumer")), client_caps.clone()))
     }
     async fn set_preferred_layer(&self, _consumer: &ConsumerId, _layer: Layer) -> Result<()> {
         Ok(())

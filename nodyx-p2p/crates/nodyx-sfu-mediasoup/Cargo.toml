@@ -7,6 +7,10 @@ description = "Spike §15 du CDC SFU : MediasoupEngine impl MediaEngine, DERRIER
 # Dépendances ASSUMÉES ici (et seulement ici) : c'est l'adaptateur moteur.
 # L'abstraction nodyx-sfu reste zéro-dep. Cf CDC §18 (trois étages).
 [dependencies]
-nodyx-sfu = { path = "../nodyx-sfu" }
-mediasoup = "0.18"
-tokio     = { version = "1", features = ["rt-multi-thread", "macros"] }
+nodyx-sfu  = { path = "../nodyx-sfu" }
+mediasoup  = "0.18"
+tokio      = { version = "1", features = ["rt-multi-thread", "macros"] }
+# Sérialisation des blobs de signaling (types mediasoup → JSON opaque pour le
+# métier). Le CodecAdapter vit ici, jamais dans l'abstraction.
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"

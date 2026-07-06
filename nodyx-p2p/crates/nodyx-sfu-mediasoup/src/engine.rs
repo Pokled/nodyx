@@ -5,15 +5,25 @@
 //! Nodyx ici : uniquement la traduction du port vers l'API mediasoup
 //! (Worker / Router / Transport / Producer / Consumer).
 //!
-//! Portée SPIKE (§15) : transports **Direct** (pas de navigateur), audio Opus
-//! avec `RtpParameters` fabriqués en interne. La vraie négociation
-//! codecs/capabilities client viendra avec le `CodecAdapter` (P1) : c'est LA
-//! fuite d'abstraction identifiée au CDC, on la garde isolée ici.
+//! Deux modes de transport :
+//! - **Direct** (défaut) : pas de navigateur, `RtpParameters` fabriqués en
+//!   interne. Sert aux scénarios automatisés (spike, futurs tests d'intégration).
+//! - **WebRTC** (`new_webrtc`) : vrais `WebRtcTransport` (ICE/DTLS/SRTP), les
+//!   paramètres transitent en blobs de signaling opaques (P1).
 //!
-//! Les objets mediasoup se ferment au `Drop` : les registres ci-dessous les
-//! gardent vivants tant que le port n'a pas demandé leur fermeture.
+//! La négociation codecs/capabilities vit ICI (sérialisation serde des types
+//! mediasoup) : c'est LA fuite d'abstraction identifiée au CDC (CodecAdapter),
+//! confinée dans l'adaptateur.
+//!
+//! Enseignements du spike (payés en heures de debug, ne pas re-perdre) :
+//! - les objets mediasoup se ferment au `Drop` → registres de rétention ;
+//! - le pipe relie des routers de workers DIFFÉRENTS (intra-worker : collision
+//!   d'ID de handler) ;
+//! - le producer pipé conserve l'UUID de l'original → clé de registre
+//!   distincte obligatoire, sinon l'insert droppe l'original (cascade).
 
 use std::collections::HashMap;
+use std::net::IpAddr;
 use std::num::{NonZeroU32, NonZeroU8};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -23,7 +33,8 @@ use mediasoup::rtp_parameters::RtpCodecCapabilityFinalized;
 
 use nodyx_sfu::{
     ConsumerId, EngineStats, Layer, MediaEngine, MediaError, NodeId, ParticipantId, PipeHandle,
-    ProducerId, Result, RoomId, RouterHandle, StatsScope, TrackKind, TransportHandle,
+    ProducerId, Result, RoomId, RouterHandle, SignalingBlob, StatsScope, TrackKind,
+    TransportHandle,
 };
 
 // ── Codec du spike : Opus, aligné sur le vocal actuel (48 kHz, FEC) ─────────
@@ -60,10 +71,8 @@ fn opus_rtp_parameters(ssrc: u32) -> RtpParameters {
 }
 
 /// Les capabilities "finalized" du router (payload types assignés) → les
-/// capabilities d'un consommateur. Dans la vraie vie (P1), ces caps viennent
-/// du CLIENT (navigateur) via le CodecAdapter ; pour le spike (transports
-/// Direct, pas de navigateur), consommer avec les caps du router est le
-/// comportement de référence des exemples mediasoup.
+/// capabilities d'un consommateur. Utilisé quand le client n'a pas fourni les
+/// siennes (mode Direct) ; en WebRTC le client envoie les siennes via le blob.
 fn consumer_caps(finalized: &RtpCapabilitiesFinalized) -> RtpCapabilities {
     let codecs = finalized
         .codecs
@@ -107,11 +116,21 @@ fn consumer_caps(finalized: &RtpCapabilitiesFinalized) -> RtpCapabilities {
     }
 }
 
+// ── Transports : Direct (scénarios auto) ou WebRTC (vrais clients) ──────────
+
+enum AnyTransport {
+    Direct(DirectTransport),
+    WebRtc(WebRtcTransport),
+}
+
 // ── L'adaptateur ─────────────────────────────────────────────────────────────
 
 struct Inner {
     manager: WorkerManager,
     worker: Worker,
+    /// Mode WebRTC : IP d'écoute (+ adresse annoncée aux clients, ex: IP
+    /// publique du VPS). `None` = transports Direct.
+    webrtc_listen: Option<(IpAddr, Option<String>)>,
     /// Workers supplémentaires (spike : le "nœud distant" a SON worker, car le
     /// pipe mediasoup relie des routers de workers DIFFÉRENTS ; en prod P1 :
     /// un worker par cœur CPU, même mécanique).
@@ -119,9 +138,9 @@ struct Inner {
     /// RouterHandle.0 → Router (un par salon).
     routers: Mutex<HashMap<String, Router>>,
     /// TransportHandle.0 → (transport, clé du router parent).
-    transports: Mutex<HashMap<String, (DirectTransport, String)>>,
+    transports: Mutex<HashMap<String, (Arc<AnyTransport>, String)>>,
     /// ProducerId.0 → (Producer, clé du router qui l'héberge). Inclut les
-    /// producers "pipés" (consommables côté nœud distant).
+    /// producers "pipés" (consommables côté nœud distant, clé `piped-<uuid>`).
     producers: Mutex<HashMap<String, (Producer, String)>>,
     /// ConsumerId.0 → Consumer.
     consumers: Mutex<HashMap<String, Consumer>>,
@@ -139,7 +158,18 @@ pub struct MediasoupEngine {
 }
 
 impl MediasoupEngine {
+    /// Mode Direct (scénarios automatisés, pas de navigateur).
     pub async fn new() -> Result<Self> {
+        Self::build(None).await
+    }
+
+    /// Mode WebRTC : vrais transports ICE/DTLS. `listen_ip` = IP d'écoute
+    /// locale, `announced` = adresse annoncée aux clients (IP publique).
+    pub async fn new_webrtc(listen_ip: IpAddr, announced: Option<String>) -> Result<Self> {
+        Self::build(Some((listen_ip, announced))).await
+    }
+
+    async fn build(webrtc_listen: Option<(IpAddr, Option<String>)>) -> Result<Self> {
         let manager = WorkerManager::new();
         let worker = manager
             .create_worker(WorkerSettings::default())
@@ -149,6 +179,7 @@ impl MediasoupEngine {
             inner: Arc::new(Inner {
                 manager,
                 worker,
+                webrtc_listen,
                 extra_workers: Mutex::new(Vec::new()),
                 routers: Mutex::new(HashMap::new()),
                 transports: Mutex::new(HashMap::new()),
@@ -175,8 +206,18 @@ impl MediasoupEngine {
             .ok_or_else(|| MediaError::NotFound(format!("router {key}")))
     }
 
-    /// Enregistre un nœud SFU "distant" (spike : un Router d'un autre salon /
-    /// worker local qui joue le rôle de l'SFU d'une autre instance).
+    fn transport_of(&self, key: &str) -> Result<(Arc<AnyTransport>, String)> {
+        self.inner
+            .transports
+            .lock()
+            .unwrap()
+            .get(key)
+            .map(|(t, rk)| (Arc::clone(t), rk.clone()))
+            .ok_or_else(|| MediaError::NotFound(format!("transport {key}")))
+    }
+
+    /// Enregistre un nœud SFU "distant" (spike : un Router d'un autre worker
+    /// local qui joue le rôle de l'SFU d'une autre instance).
     pub fn register_remote_node(&self, node: &NodeId, router: Router) {
         self.inner
             .remote_nodes
@@ -223,44 +264,120 @@ impl MediaEngine for MediasoupEngine {
         Ok(RouterHandle(key))
     }
 
+    async fn room_capabilities(&self, router: &RouterHandle) -> Result<SignalingBlob> {
+        let r = self.router_of(&router.0)?;
+        let json = serde_json::to_string(r.rtp_capabilities())
+            .map_err(|e| MediaError::Engine(format!("caps serde: {e}")))?;
+        Ok(SignalingBlob(json))
+    }
+
     async fn create_transport(
         &self,
         router: &RouterHandle,
         _participant: ParticipantId,
     ) -> Result<TransportHandle> {
         let r = self.router_of(&router.0)?;
-        let transport = r
-            .create_direct_transport(DirectTransportOptions::default())
-            .await
-            .map_err(|e| MediaError::Engine(format!("create_transport: {e}")))?;
+        let transport = match &self.inner.webrtc_listen {
+            None => AnyTransport::Direct(
+                r.create_direct_transport(DirectTransportOptions::default())
+                    .await
+                    .map_err(|e| MediaError::Engine(format!("create_transport(direct): {e}")))?,
+            ),
+            Some((ip, announced)) => {
+                let listen = ListenInfo {
+                    protocol: Protocol::Udp,
+                    ip: *ip,
+                    announced_address: announced.clone(),
+                    port: None,
+                    port_range: None,
+                    flags: None,
+                    send_buffer_size: None,
+                    recv_buffer_size: None,
+                };
+                AnyTransport::WebRtc(
+                    r.create_webrtc_transport(WebRtcTransportOptions::new(
+                        WebRtcTransportListenInfos::new(listen),
+                    ))
+                    .await
+                    .map_err(|e| MediaError::Engine(format!("create_transport(webrtc): {e}")))?,
+                )
+            }
+        };
         let key = self.next("transport");
         self.inner
             .transports
             .lock()
             .unwrap()
-            .insert(key.clone(), (transport, router.0.clone()));
+            .insert(key.clone(), (Arc::new(transport), router.0.clone()));
         Ok(TransportHandle(key))
     }
 
-    async fn produce(&self, transport: &TransportHandle, kind: TrackKind) -> Result<ProducerId> {
-        if kind != TrackKind::Audio {
-            // Spike audio-only (P1) : la vidéo/simulcast arrive en P2/P3.
-            return Err(MediaError::Unsupported("produce non-audio (spike P1)"));
+    async fn transport_params(&self, transport: &TransportHandle) -> Result<SignalingBlob> {
+        let (t, _) = self.transport_of(&transport.0)?;
+        match t.as_ref() {
+            AnyTransport::Direct(_) => Ok(SignalingBlob("{\"kind\":\"direct\"}".into())),
+            AnyTransport::WebRtc(w) => {
+                let json = serde_json::json!({
+                    "id": transport.0,
+                    "iceParameters": w.ice_parameters(),
+                    "iceCandidates": w.ice_candidates(),
+                    "dtlsParameters": w.dtls_parameters(),
+                });
+                Ok(SignalingBlob(json.to_string()))
+            }
         }
-        let (t, router_key) = {
-            let map = self.inner.transports.lock().unwrap();
-            map.get(&transport.0)
-                .map(|(t, rk)| (t.clone(), rk.clone()))
-                .ok_or_else(|| MediaError::NotFound(format!("transport {}", transport.0)))?
+    }
+
+    async fn connect_transport(
+        &self,
+        transport: &TransportHandle,
+        client: &SignalingBlob,
+    ) -> Result<()> {
+        let (t, _) = self.transport_of(&transport.0)?;
+        match t.as_ref() {
+            AnyTransport::Direct(_) => Ok(()), // rien à connecter en Direct
+            AnyTransport::WebRtc(w) => {
+                #[derive(serde::Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct ConnectPayload {
+                    dtls_parameters: DtlsParameters,
+                }
+                let payload: ConnectPayload = serde_json::from_str(&client.0)
+                    .map_err(|e| MediaError::Engine(format!("connect payload: {e}")))?;
+                w.connect(WebRtcTransportRemoteParameters {
+                    dtls_parameters: payload.dtls_parameters,
+                })
+                .await
+                .map_err(|e| MediaError::Engine(format!("connect: {e}")))
+            }
+        }
+    }
+
+    async fn produce(
+        &self,
+        transport: &TransportHandle,
+        kind: TrackKind,
+        client: &SignalingBlob,
+    ) -> Result<ProducerId> {
+        if kind != TrackKind::Audio {
+            // P1 = audio. La vidéo/simulcast arrive en P2/P3.
+            return Err(MediaError::Unsupported("produce non-audio (P1 audio)"));
+        }
+        let (t, router_key) = self.transport_of(&transport.0)?;
+        // Paramètres RTP du client si fournis (WebRTC), sinon fabriqués (Direct).
+        let rtp: RtpParameters = match serde_json::from_str(&client.0) {
+            Ok(p) => p,
+            Err(_) => {
+                let ssrc = 1000 + self.inner.seq.fetch_add(1, Ordering::Relaxed) as u32;
+                opus_rtp_parameters(ssrc)
+            }
         };
-        let ssrc = 1000 + self.inner.seq.fetch_add(1, Ordering::Relaxed) as u32;
-        let producer = t
-            .produce(ProducerOptions::new(
-                MediaKind::Audio,
-                opus_rtp_parameters(ssrc),
-            ))
-            .await
-            .map_err(|e| MediaError::Engine(format!("produce: {e}")))?;
+        let options = ProducerOptions::new(MediaKind::Audio, rtp);
+        let producer = match t.as_ref() {
+            AnyTransport::Direct(d) => d.produce(options).await,
+            AnyTransport::WebRtc(w) => w.produce(options).await,
+        }
+        .map_err(|e| MediaError::Engine(format!("produce: {e}")))?;
         let key = producer.id().to_string();
         self.inner
             .producers
@@ -274,29 +391,37 @@ impl MediaEngine for MediasoupEngine {
         &self,
         transport: &TransportHandle,
         producer: &ProducerId,
-    ) -> Result<ConsumerId> {
-        let (t, router_key) = {
-            let map = self.inner.transports.lock().unwrap();
-            map.get(&transport.0)
-                .map(|(t, rk)| (t.clone(), rk.clone()))
-                .ok_or_else(|| MediaError::NotFound(format!("transport {}", transport.0)))?
-        };
+        client_caps: &SignalingBlob,
+    ) -> Result<(ConsumerId, SignalingBlob)> {
+        let (t, router_key) = self.transport_of(&transport.0)?;
         let ms_producer_id = {
             let map = self.inner.producers.lock().unwrap();
             map.get(&producer.0)
                 .map(|(p, _)| p.id())
                 .ok_or_else(|| MediaError::NotFound(format!("producer {}", producer.0)))?
         };
-        // Spike : on consomme avec les capabilities du router (transports Direct).
-        // La vraie négociation avec les capabilities du CLIENT = CodecAdapter (P1).
-        let caps = consumer_caps(self.router_of(&router_key)?.rtp_capabilities());
-        let consumer = t
-            .consume(ConsumerOptions::new(ms_producer_id, caps))
-            .await
-            .map_err(|e| MediaError::Engine(format!("consume: {e}")))?;
+        // Capabilities du client si fournies (WebRTC), sinon celles du router
+        // (Direct). C'est le cœur du futur CodecAdapter.
+        let caps: RtpCapabilities = match serde_json::from_str(&client_caps.0) {
+            Ok(c) => c,
+            Err(_) => consumer_caps(self.router_of(&router_key)?.rtp_capabilities()),
+        };
+        let options = ConsumerOptions::new(ms_producer_id, caps);
+        let consumer = match t.as_ref() {
+            AnyTransport::Direct(d) => d.consume(options).await,
+            AnyTransport::WebRtc(w) => w.consume(options).await,
+        }
+        .map_err(|e| MediaError::Engine(format!("consume: {e}")))?;
+        // Ce que le client doit appliquer pour recevoir le flux.
+        let params = serde_json::json!({
+            "id": consumer.id(),
+            "producerId": ms_producer_id,
+            "kind": consumer.kind(),
+            "rtpParameters": consumer.rtp_parameters(),
+        });
         let key = consumer.id().to_string();
         self.inner.consumers.lock().unwrap().insert(key.clone(), consumer);
-        Ok(ConsumerId(key))
+        Ok((ConsumerId(key), SignalingBlob(params.to_string())))
     }
 
     async fn set_preferred_layer(&self, _consumer: &ConsumerId, _layer: Layer) -> Result<()> {
@@ -325,12 +450,10 @@ impl MediaEngine for MediasoupEngine {
             .map_err(|e| MediaError::Engine(format!("pipe_to_remote: {e}")))?;
 
         // Le producer "pipé" vit sur le router DISTANT : on l'enregistre pour
-        // que consume() le trouve côté nœud distant. Le consumer de pipe (côté
-        // source) est gardé en vie, sinon Drop = pipe fermé.
+        // que consume() le trouve côté nœud distant. Sémantique mediasoup : il
+        // garde le MÊME uuid que l'original → clé distincte obligatoire, sinon
+        // insert() écrase (et droppe = ferme) l'original, cascade fatale.
         let piped = pair.pipe_producer.into_inner();
-        // Sémantique mediasoup : le producer pipé garde le MÊME uuid que
-        // l'original. Clé distincte obligatoire, sinon insert() écrase (et
-        // droppe = ferme) l'original, et tout le pipe s'effondre en cascade.
         let piped_key = format!("piped-{}", piped.id());
         self.inner
             .producers

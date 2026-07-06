@@ -305,16 +305,22 @@ Bénéfice concret du découplage : le jour du swap full-Rust, **`VoiceService` 
 
 ```rust
 /// Tout le contrôle Rust (signaling, salons, hybride, fédération) parle À ÇA,
-/// jamais à mediasoup directement.
+/// jamais à mediasoup directement. Les données de signaling (ICE/DTLS/RTP chez
+/// mediasoup, SDP chez un autre moteur) transitent en `SignalingBlob` OPAQUES :
+/// le métier les transporte entre client et moteur sans jamais les lire.
 trait MediaEngine {
-    async fn create_room(&self, room: RoomId) -> RouterHandle;
-    async fn create_transport(&self, r: &RouterHandle, p: ParticipantId) -> TransportHandle;
-    async fn produce(&self, t: &TransportHandle, track: TrackKind) -> ProducerId;
-    async fn consume(&self, t: &TransportHandle, prod: ProducerId) -> ConsumerId;
-    async fn set_preferred_layer(&self, c: &ConsumerId, layer: Layer);
-    async fn pipe_to_remote(&self, prod: ProducerId, node: NodeId) -> PipeHandle; // fédération
-    async fn stats(&self, scope: StatsScope) -> EngineStats;
-    // close = géré par Drop (RAII Rust)
+    async fn create_room(&self, room: RoomId) -> Result<RouterHandle>;
+    async fn room_capabilities(&self, r: &RouterHandle) -> Result<SignalingBlob>;   // device.load client
+    async fn create_transport(&self, r: &RouterHandle, p: ParticipantId) -> Result<TransportHandle>;
+    async fn transport_params(&self, t: &TransportHandle) -> Result<SignalingBlob>; // ICE/DTLS → client
+    async fn connect_transport(&self, t: &TransportHandle, client: &SignalingBlob) -> Result<()>;
+    async fn produce(&self, t: &TransportHandle, kind: TrackKind, client: &SignalingBlob) -> Result<ProducerId>;
+    async fn consume(&self, t: &TransportHandle, prod: &ProducerId, client_caps: &SignalingBlob)
+        -> Result<(ConsumerId, SignalingBlob)>;                                     // params → client
+    async fn set_preferred_layer(&self, c: &ConsumerId, layer: Layer) -> Result<()>;
+    async fn pipe_to_remote(&self, prod: &ProducerId, node: &NodeId) -> Result<PipeHandle>; // fédération
+    async fn stats(&self, scope: StatsScope) -> Result<EngineStats>;
+    async fn close_room(&self, r: RouterHandle) -> Result<()>;
 }
 ```
 

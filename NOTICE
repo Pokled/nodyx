@@ -1,0 +1,21 @@
+NOTICE — Composants tiers embarqués ou distribués avec Nodyx
+=============================================================
+
+Nodyx est publié sous licence AGPL-3.0 (voir LICENSE). Les composants tiers
+suivants conservent leur licence et leur notice de copyright d'origine :
+
+mediasoup (moteur média du SFU : worker C++ + crate Rust de contrôle)
+---------------------------------------------------------------------
+  https://mediasoup.org
+  Licence : ISC
+  Copyright (c) Iñaki Baz Castillo <ibc@aliax.net>
+
+  Le worker mediasoup embarque des portions de libwebrtc :
+  Copyright (c) 2011, The WebRTC project authors. All rights reserved.
+  Licence : BSD-3-Clause
+
+ed25519-dalek (signatures Ed25519 : nodyx-gossip, identité des nœuds)
+---------------------------------------------------------------------
+  https://github.com/dalek-cryptography/curve25519-dalek
+  Licence : BSD-3-Clause
+  Copyright (c) isis agora lovecruft, Henry de Valence

@@ -24,7 +24,7 @@
 
 use crate::{
     ConsumerId, Layer, MediaEngine, MediaError, ParticipantId, ProducerId, RoomId,
-    RouterHandle, TrackKind, TransportHandle,
+    RouterHandle, SignalingBlob, TrackKind, TransportHandle,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -390,11 +390,13 @@ impl<E: MediaEngine> VoiceService<E> {
     /// Le participant publie un flux. Un partage d'écran (`Screen`) force d'abord
     /// la bascule SFU de tout le salon. En mesh (pas de transport), publier renvoie
     /// [`VoiceError::NotInSfu`] (rien n'est produit côté serveur en mesh).
+    /// `client` = paramètres RTP du client (blob opaque, transmis au moteur).
     pub async fn publish(
         &self,
         room: RoomId,
         participant: ParticipantId,
         kind: TrackKind,
+        client: &SignalingBlob,
     ) -> Result<ProducerId, VoiceError> {
         if kind == TrackKind::Screen {
             self.ensure_sfu(room.clone()).await?;
@@ -407,7 +409,7 @@ impl<E: MediaEngine> VoiceService<E> {
             p.transport.clone().ok_or(VoiceError::NotInSfu)?
         };
 
-        let producer = self.engine.produce(&transport, kind).await?;
+        let producer = self.engine.produce(&transport, kind, client).await?;
 
         {
             let mut rooms = self.rooms();
@@ -422,12 +424,15 @@ impl<E: MediaEngine> VoiceService<E> {
     }
 
     /// Le participant souscrit à une publication. Requiert le mode SFU (transport).
+    /// `client_caps` = capabilities du client (blob opaque) ; retourne aussi les
+    /// paramètres que le client doit appliquer (blob du moteur).
     pub async fn subscribe(
         &self,
         room: RoomId,
         subscriber: ParticipantId,
         producer: ProducerId,
-    ) -> Result<ConsumerId, VoiceError> {
+        client_caps: &SignalingBlob,
+    ) -> Result<(ConsumerId, SignalingBlob), VoiceError> {
         let transport = {
             let rooms = self.rooms();
             let state = rooms.get(&room).ok_or(VoiceError::NotInRoom)?;
@@ -438,7 +443,7 @@ impl<E: MediaEngine> VoiceService<E> {
             p.transport.clone().ok_or(VoiceError::NotInSfu)?
         };
 
-        let consumer = self.engine.consume(&transport, &producer).await?;
+        let (consumer, params) = self.engine.consume(&transport, &producer, client_caps).await?;
 
         {
             let mut rooms = self.rooms();
@@ -449,7 +454,52 @@ impl<E: MediaEngine> VoiceService<E> {
                 p.subscriptions.insert(producer, consumer.clone());
             }
         }
-        Ok(consumer)
+        Ok((consumer, params))
+    }
+
+    // ── Signaling pass-through (blobs opaques, jamais lus par le métier) ─────
+
+    /// Capabilities du salon, à remettre au client au join SFU (§17-A).
+    pub async fn room_capabilities(&self, room: &RoomId) -> Result<SignalingBlob, VoiceError> {
+        let router = {
+            let rooms = self.rooms();
+            let state = rooms.get(room).ok_or(VoiceError::NotInRoom)?;
+            state.router.clone().ok_or(VoiceError::NotInSfu)?
+        };
+        Ok(self.engine.room_capabilities(&router).await?)
+    }
+
+    /// Paramètres de connexion du transport d'un participant (ICE/DTLS…),
+    /// à remettre au client pour qu'il établisse sa PC vers le SFU.
+    pub async fn transport_params(
+        &self,
+        room: &RoomId,
+        participant: &ParticipantId,
+    ) -> Result<SignalingBlob, VoiceError> {
+        let transport = self.transport_of(room, participant)?;
+        Ok(self.engine.transport_params(&transport).await?)
+    }
+
+    /// Finalise la connexion du transport avec la réponse du client (§17-A).
+    pub async fn connect_transport(
+        &self,
+        room: &RoomId,
+        participant: &ParticipantId,
+        client: &SignalingBlob,
+    ) -> Result<(), VoiceError> {
+        let transport = self.transport_of(room, participant)?;
+        Ok(self.engine.connect_transport(&transport, client).await?)
+    }
+
+    fn transport_of(
+        &self,
+        room: &RoomId,
+        participant: &ParticipantId,
+    ) -> Result<TransportHandle, VoiceError> {
+        let rooms = self.rooms();
+        let state = rooms.get(room).ok_or(VoiceError::NotInRoom)?;
+        let p = state.participants.get(participant).ok_or(VoiceError::NotInRoom)?;
+        p.transport.clone().ok_or(VoiceError::NotInSfu)
     }
 
     /// Force la couche servie à un abonné (adaptation bande passante, §17-C).
@@ -502,6 +552,10 @@ mod tests {
 
     fn p(n: u32) -> ParticipantId {
         ParticipantId(format!("user-{n}"))
+    }
+
+    fn blob() -> SignalingBlob {
+        SignalingBlob("{}".into())
     }
 
     // ── règle pure ──────────────────────────────────────────────────────────
@@ -630,7 +684,7 @@ mod tests {
         block_on(s.join(room(), p(1))).unwrap();
         block_on(s.join(room(), p(2))).unwrap();
         // p1 partage son écran depuis un salon mesh → bascule + producer
-        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen)).unwrap();
+        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
         assert_eq!(s.mode(&room()), Some(Mode::Sfu));
         let pubs = s.publications(&room());
         assert_eq!(pubs.len(), 1);
@@ -646,7 +700,7 @@ mod tests {
         block_on(s.join(room(), p(2))).unwrap();
         // audio ne bascule pas en SFU ; en mesh il n'y a pas de producer serveur
         assert_eq!(
-            block_on(s.publish(room(), p(1), TrackKind::Audio)),
+            block_on(s.publish(room(), p(1), TrackKind::Audio, &blob())),
             Err(VoiceError::NotInSfu)
         );
     }
@@ -656,9 +710,12 @@ mod tests {
         let s = svc();
         block_on(s.join(room(), p(1))).unwrap();
         block_on(s.join(room(), p(2))).unwrap();
-        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen)).unwrap();
+        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
         // p2 (migré par la bascule) s'abonne au flux de p1
-        let consumer = block_on(s.subscribe(room(), p(2), prod.clone())).unwrap();
+        let caps = SignalingBlob("{\"caps\":\"p2\"}".into());
+        let (consumer, params) = block_on(s.subscribe(room(), p(2), prod.clone(), &caps)).unwrap();
+        // NullEngine échoie les caps : le blob transite intact par le métier
+        assert_eq!(params, caps);
         // régler la couche servie à p2 → OK
         block_on(s.set_preferred_layer(room(), p(2), prod, Layer::LOWEST)).unwrap();
         assert_eq!(consumer, consumer.clone());
@@ -672,7 +729,7 @@ mod tests {
         }
         let ghost = ProducerId("does-not-exist".into());
         assert_eq!(
-            block_on(s.subscribe(room(), p(2), ghost)),
+            block_on(s.subscribe(room(), p(2), ghost, &blob())),
             Err(VoiceError::NoSuchPublication)
         );
     }
@@ -682,7 +739,7 @@ mod tests {
         let s = svc();
         block_on(s.join(room(), p(1))).unwrap();
         block_on(s.join(room(), p(2))).unwrap();
-        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen)).unwrap();
+        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
         // p2 n'a pas souscrit → NotSubscribed
         assert_eq!(
             block_on(s.set_preferred_layer(room(), p(2), prod, Layer::LOWEST)),
@@ -691,11 +748,45 @@ mod tests {
     }
 
     #[test]
+    fn signaling_passthrough_in_sfu_mode() {
+        let s = svc();
+        block_on(s.join(room(), p(1))).unwrap();
+        block_on(s.join(room(), p(2))).unwrap();
+        block_on(s.set_screenshare(room(), true)).unwrap(); // force SFU
+        // capabilities du salon dispo
+        let caps = block_on(s.room_capabilities(&room())).unwrap();
+        assert!(caps.0.contains("router"), "blob moteur transmis tel quel");
+        // paramètres de transport du participant + connect
+        let params = block_on(s.transport_params(&room(), &p(1))).unwrap();
+        assert!(params.0.contains("transport"));
+        block_on(s.connect_transport(&room(), &p(1), &blob())).unwrap();
+    }
+
+    #[test]
+    fn signaling_in_mesh_is_rejected() {
+        let s = svc();
+        block_on(s.join(room(), p(1))).unwrap();
+        // en mesh : pas de router, pas de transport
+        assert_eq!(
+            block_on(s.room_capabilities(&room())),
+            Err(VoiceError::NotInSfu)
+        );
+        assert_eq!(
+            block_on(s.transport_params(&room(), &p(1))),
+            Err(VoiceError::NotInSfu)
+        );
+        assert_eq!(
+            block_on(s.room_capabilities(&RoomId("nope".into()))),
+            Err(VoiceError::NotInRoom)
+        );
+    }
+
+    #[test]
     fn leaving_owner_drops_its_publications() {
         let s = svc();
         block_on(s.join(room(), p(1))).unwrap();
         block_on(s.join(room(), p(2))).unwrap();
-        block_on(s.publish(room(), p(1), TrackKind::Screen)).unwrap();
+        block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
         assert_eq!(s.publications(&room()).len(), 1);
         block_on(s.leave(room(), p(1))).unwrap();
         assert!(s.publications(&room()).is_empty(), "publications du partant retirées");
