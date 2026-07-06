@@ -29,7 +29,7 @@
     "argon2": "0.44.0",
     "bcrypt": "6.0.0",
     "dotenv": "17.4.2",
-    "fastify": "^5.9.0",
+    "fastify": "^5.10.0",
     "ioredis": "5.11.1",
     "jsonwebtoken": "9.0.3",
     "music-metadata": "^11.13.0",
@@ -54,7 +54,7 @@
     "@types/safe-regex": "^1.1.6",
     "@types/sanitize-html": "2.16.1",
     "@types/web-push": "3.6.4",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.10",
     "ts-node": "10.9.2",
     "typescript": "6.0.3",
     "vitest": "^4.1.8"
