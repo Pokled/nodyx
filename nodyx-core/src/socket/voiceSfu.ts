@@ -157,9 +157,18 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
       sfuFetch('/v1/transport_params', { room: channelId, participant: userId, direction: 'send' }),
       sfuFetch('/v1/transport_params', { room: channelId, participant: userId, direction: 'recv' }),
     ])
-    if (!caps.ok) { cb({ ok: false, error: caps.error }); return }
-    if (!sendParams.ok) { cb({ ok: false, error: sendParams.error }); return }
-    if (!recvParams.ok) { cb({ ok: false, error: recvParams.error }); return }
+    // Relecture 2026-07-06 : sans rollback, un échec ICI laissait le
+    // participant inscrit côté daemon → tout retry répondait "déjà présent
+    // dans le salon" jusqu'au disconnect du socket.
+    const rollbackJoin = async (error: string) => {
+      joined.delete(channelId as string)
+      await socket.leave(sfuRoom(channelId as string))
+      void sfuFetch('/v1/leave', { room: channelId, participant: userId })
+      cb({ ok: false, error })
+    }
+    if (!caps.ok) { await rollbackJoin(caps.error); return }
+    if (!sendParams.ok) { await rollbackJoin(sendParams.error); return }
+    if (!recvParams.ok) { await rollbackJoin(recvParams.error); return }
 
     // Si cette arrivée a fait basculer le salon (des participants ont été
     // migrés), on prévient le salon : chacun fera son propre sfu_join pour

@@ -224,6 +224,26 @@ describe('flow SFU', () => {
     expect(h.roomEmit).toHaveBeenCalledWith('voice:sfu_mode', { channelId: CHANNEL, mode: 'sfu' })
   })
 
+  it('rollback : si caps/params échouent après le join, le daemon reçoit un leave', async () => {
+    const h = makeHarness()
+    const calls: string[] = []
+    fetchMock.mockImplementation(async (url: string, init: { body: string }) => {
+      const path = new URL(url).pathname
+      calls.push(path)
+      if (path === '/v1/join') return daemonJson({ ok: true, mode: 'sfu', migrated: [] })
+      if (path === '/v1/caps') return daemonJson({ ok: false, error: 'caps_kaput' }, 500)
+      if (path === '/v1/transport_params') return daemonJson({ ok: true, params: '{"id":"t"}' })
+      if (path === '/v1/leave') return daemonJson({ ok: true })
+      return daemonJson({ ok: false, error: 'unexpected' }, 404)
+    })
+    const a = ack()
+    await h.fire('voice:sfu_join', CHANNEL, a.cb)
+    expect(a.last).toEqual({ ok: false, error: 'caps_kaput' })
+    // Le rollback a bien envoyé le leave (sinon : "déjà présent" à tout retry).
+    expect(calls).toContain('/v1/leave')
+    expect(h.socket.leave).toHaveBeenCalledWith(`voicesfu:${CHANNEL}`)
+  })
+
   it('connect : direction obligatoire et transmise au daemon', async () => {
     const h = makeHarness()
     const bad = ack()
