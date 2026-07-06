@@ -20,6 +20,10 @@
 //!   SFU_LISTEN_IP      IP d'écoute média WebRTC   (défaut 127.0.0.1)
 //!   SFU_ANNOUNCED_IP   adresse annoncée aux clients (IP publique du VPS)
 //!   SFU_MESH_THRESHOLD seuil mesh→SFU (défaut 4) · SFU_MAX_SEATS (défaut 25)
+//!   SFU_RTC_MIN_PORT / SFU_RTC_MAX_PORT
+//!                      plage UDP RTC des workers (défaut 40000-40999).
+//!                      DOIT correspondre au firewall (ufw allow <min>:<max>/udp),
+//!                      leçon nexus-turn : jamais de ports éphémères OS.
 
 use std::net::IpAddr;
 use std::sync::Arc;
@@ -364,8 +368,14 @@ async fn main() {
     let announced = std::env::var("SFU_ANNOUNCED_IP").ok();
     let threshold: usize = std::env::var("SFU_MESH_THRESHOLD").ok().and_then(|v| v.parse().ok()).unwrap_or(4);
     let seats: usize = std::env::var("SFU_MAX_SEATS").ok().and_then(|v| v.parse().ok()).unwrap_or(25);
+    let rtc_min: u16 = std::env::var("SFU_RTC_MIN_PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(40000);
+    let rtc_max: u16 = std::env::var("SFU_RTC_MAX_PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(40999);
+    if rtc_min > rtc_max {
+        eprintln!("Plage RTC invalide : SFU_RTC_MIN_PORT ({rtc_min}) > SFU_RTC_MAX_PORT ({rtc_max}). Refus de démarrer.");
+        std::process::exit(1);
+    }
 
-    let engine = MediasoupEngine::new_webrtc(listen_ip, announced.clone())
+    let engine = MediasoupEngine::new_webrtc(listen_ip, announced.clone(), rtc_min..=rtc_max)
         .await
         .expect("boot moteur mediasoup");
     let svc = VoiceService::new(engine, VoiceConfig { max_seats: seats, mesh_threshold: threshold });
@@ -373,7 +383,7 @@ async fn main() {
 
     let listener = TcpListener::bind(&http_addr).await.expect("bind API interne");
     println!(
-        "nodyx-sfud — API interne http://{http_addr} | média listen={listen_ip} announced={} | seuil mesh→SFU={threshold} sièges={seats}",
+        "nodyx-sfud — API interne http://{http_addr} | média listen={listen_ip} announced={} | RTC udp {rtc_min}-{rtc_max} | seuil mesh→SFU={threshold} sièges={seats}",
         announced.as_deref().unwrap_or("(aucune)")
     );
 

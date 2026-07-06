@@ -1,0 +1,29 @@
+## nodyx-sfud — daemon SFU de l'instance (CDC SFU, P1)
+##
+## Modèle d'exploitation identique à nexus-turn : un binaire Rust, un service,
+## une instance = son SFU. Modèle de ce fichier : à copier vers
+## /etc/systemd/system/nodyx-sfud.service, avec /etc/nodyx-sfud.env à côté
+## (SFU_TOKEN obligatoire, cf variables documentées dans le binaire).
+##
+## ⚠ Firewall : ouvrir UNIQUEMENT la plage RTC configurée, ex :
+##    ufw allow 40000:40999/udp comment 'SFU media (nodyx-sfud)'
+## L'API interne (SFU_HTTP_ADDR, défaut 127.0.0.1:3901) ne s'ouvre JAMAIS.
+
+[Unit]
+Description=Nodyx SFU daemon (mediasoup) — vocal & partage d'écran scalable
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/nodyx-sfud.env
+ExecStart=/usr/local/bin/nodyx-sfud
+Restart=on-failure
+RestartSec=5s
+User=nodyx
+# Durcissement (le daemon n'écrit rien sur le disque)
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

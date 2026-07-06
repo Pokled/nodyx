@@ -133,8 +133,8 @@ async fn main() {
     // ── Scénario W : vrais WebRtcTransport (P1) ──────────────────────────────
     println!("\n[W] WebRtcTransport réels (ICE/DTLS, prêts pour un navigateur)");
     let web = step!(
-        "moteur en mode WebRTC (écoute 127.0.0.1)",
-        MediasoupEngine::new_webrtc("127.0.0.1".parse().unwrap(), None).await
+        "moteur en mode WebRTC (écoute 127.0.0.1, plage RTC bornée 40100-40199)",
+        MediasoupEngine::new_webrtc("127.0.0.1".parse().unwrap(), None, 40100..=40199).await
     );
     let wroom = step!("salon WebRTC", web.create_room(RoomId("webrtc-room".into())).await);
     let wtrans = step!(
@@ -146,6 +146,19 @@ async fn main() {
         wparams.0.contains("iceParameters") && wparams.0.contains("dtlsParameters"),
         "le blob doit contenir ICE + DTLS"
     );
+    // Le port du candidat ICE doit tomber DANS la plage bornée (leçon
+    // nexus-turn : un port hors plage firewall = média silencieusement mort).
+    let port: u16 = wparams.0
+        .split("\"port\":")
+        .nth(1)
+        .and_then(|s| s.split(&[',', '}'][..]).next())
+        .and_then(|s| s.trim().parse().ok())
+        .expect("port du candidat ICE introuvable dans le blob");
+    assert!(
+        (40100..=40199).contains(&port),
+        "port ICE {port} HORS de la plage bornée 40100-40199"
+    );
+    println!("  ✔ port ICE {port} dans la plage bornée 40100-40199");
     println!(
         "     → blob de {} octets, candidats ICE + fingerprints DTLS présents",
         wparams.0.len()

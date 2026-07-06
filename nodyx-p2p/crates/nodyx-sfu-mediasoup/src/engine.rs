@@ -25,6 +25,7 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::num::{NonZeroU32, NonZeroU8};
+use std::ops::RangeInclusive;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -128,6 +129,10 @@ enum AnyTransport {
 struct Inner {
     manager: WorkerManager,
     worker: Worker,
+    /// Plage de ports UDP RTC des workers. Le défaut mediasoup (10000..=59999)
+    /// est un piège firewall (leçon nexus-turn) : on borne TOUJOURS, et la
+    /// même plage vaut pour tous les workers (mediasoup saute les ports pris).
+    rtc_ports: RangeInclusive<u16>,
     /// Mode WebRTC : IP d'écoute (+ adresse annoncée aux clients, ex: IP
     /// publique du VPS). `None` = transports Direct.
     webrtc_listen: Option<(IpAddr, Option<String>)>,
@@ -157,28 +162,50 @@ pub struct MediasoupEngine {
     inner: Arc<Inner>,
 }
 
+/// Plage RTC par défaut : 1000 ports = ~500 participants (paire send+recv),
+/// large pour une instance, étroite pour un firewall.
+pub const DEFAULT_RTC_PORTS: RangeInclusive<u16> = 40000..=40999;
+
+fn worker_settings(rtc_ports: &RangeInclusive<u16>) -> WorkerSettings {
+    let mut s = WorkerSettings::default();
+    s.rtc_port_range = rtc_ports.clone();
+    s
+}
+
 impl MediasoupEngine {
     /// Mode Direct (scénarios automatisés, pas de navigateur).
     pub async fn new() -> Result<Self> {
-        Self::build(None).await
+        Self::build(None, DEFAULT_RTC_PORTS).await
     }
 
     /// Mode WebRTC : vrais transports ICE/DTLS. `listen_ip` = IP d'écoute
-    /// locale, `announced` = adresse annoncée aux clients (IP publique).
-    pub async fn new_webrtc(listen_ip: IpAddr, announced: Option<String>) -> Result<Self> {
-        Self::build(Some((listen_ip, announced))).await
+    /// locale, `announced` = adresse annoncée aux clients (IP publique),
+    /// `rtc_ports` = plage UDP à ouvrir au firewall (et RIEN d'autre).
+    pub async fn new_webrtc(
+        listen_ip: IpAddr,
+        announced: Option<String>,
+        rtc_ports: RangeInclusive<u16>,
+    ) -> Result<Self> {
+        Self::build(Some((listen_ip, announced)), rtc_ports).await
     }
 
-    async fn build(webrtc_listen: Option<(IpAddr, Option<String>)>) -> Result<Self> {
+    async fn build(
+        webrtc_listen: Option<(IpAddr, Option<String>)>,
+        rtc_ports: RangeInclusive<u16>,
+    ) -> Result<Self> {
+        if rtc_ports.is_empty() {
+            return Err(MediaError::Engine("plage RTC vide (min > max)".into()));
+        }
         let manager = WorkerManager::new();
         let worker = manager
-            .create_worker(WorkerSettings::default())
+            .create_worker(worker_settings(&rtc_ports))
             .await
             .map_err(|e| MediaError::Engine(format!("create_worker: {e}")))?;
         Ok(Self {
             inner: Arc::new(Inner {
                 manager,
                 worker,
+                rtc_ports,
                 webrtc_listen,
                 extra_workers: Mutex::new(Vec::new()),
                 routers: Mutex::new(HashMap::new()),
@@ -237,7 +264,7 @@ impl MediasoupEngine {
         let worker = self
             .inner
             .manager
-            .create_worker(WorkerSettings::default())
+            .create_worker(worker_settings(&self.inner.rtc_ports))
             .await
             .map_err(|e| MediaError::Engine(format!("create_worker(remote): {e}")))?;
         let router = worker
