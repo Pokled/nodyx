@@ -1,4 +1,5 @@
 import { registerVoiceHandlers, sendVoiceSnapshot } from './voice'
+import { registerVoiceSfuHandlers } from './voiceSfu'
 import { registerWhisperHandlers } from './whisper'
 import { registerCanvasHandlers }  from './canvas'
 import { checkRateLimit } from './rateLimiter'
@@ -753,6 +754,8 @@ export function registerSocketIO(server: Server): void {
 
     // ── Voice (WebRTC signaling) ───────────────────────────────────────────────
     registerVoiceHandlers(socket, server)
+    // SFU (relais vers nodyx-sfud, DORMANT sans VOICE_SFU_URL — CDC SFU §17)
+    registerVoiceSfuHandlers(socket, server)
 
     // ── DM events ─────────────────────────────────────────────────────────────
 

@@ -40,6 +40,12 @@ export const RATE_RULES: Record<string, RuleConfig[]> = {
   'jukebox:request_sync': [{ limit: 3,  windowMs: 1_000  }],
   'voice:ping':           [{ limit: 3,  windowMs: 1_000  }],
   'voice:stats':          [{ limit: 10, windowMs: 1_000  }],
+  // Signaling SFU (voiceSfu.ts) : requête/réponse, cadence humaine attendue
+  'voice:sfu_join':         [{ limit: 5,  windowMs: 10_000 }],
+  'voice:sfu_connect':      [{ limit: 10, windowMs: 10_000 }],
+  'voice:sfu_produce':      [{ limit: 10, windowMs: 10_000 }],
+  'voice:sfu_consume':      [{ limit: 40, windowMs: 10_000 }],
+  'voice:sfu_publications': [{ limit: 10, windowMs: 10_000 }],
 }
 
 // Clé composite : `${userId}::${eventKey}`

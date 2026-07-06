@@ -6,7 +6,7 @@ import { db } from '../config/database'
 type CommunityRole = 'owner' | 'admin' | 'moderator' | 'member'
 const MOD_ROLES: ReadonlyArray<CommunityRole> = ['owner', 'admin', 'moderator']
 
-async function getCommunityRoleForChannel(
+export async function getCommunityRoleForChannel(
   channelId: string, userId: string,
 ): Promise<CommunityRole | null> {
   const { rows } = await db.query<{ role: CommunityRole }>(
@@ -20,7 +20,7 @@ async function getCommunityRoleForChannel(
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-function isUuid(v: unknown): v is string { return typeof v === 'string' && UUID_RE.test(v) }
+export function isUuid(v: unknown): v is string { return typeof v === 'string' && UUID_RE.test(v) }
 
 // Max size for jukebox state payload (10 KB)
 const JUKEBOX_STATE_MAX = 10_240
@@ -99,7 +99,7 @@ function getChannelSeats(channelId: string): Map<string, number> {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function voiceRoom(channelId: string): string {
+export function voiceRoom(channelId: string): string {
   return `voice:${channelId}`
 }
 
