@@ -37,11 +37,13 @@ function makeHarness(userId = `user-${Date.now()}-${_seq++}`) {
   const roomEmit = vi.fn()
   const socketToEmit = vi.fn()
   const socket = {
-    id:   'socket-1',
-    data: { userId, username: 'jo' },
-    on:   (ev: string, fn: Handler) => { handlers.set(ev, fn) },
-    to:   vi.fn(() => ({ emit: socketToEmit })),
-    emit: vi.fn(),
+    id:    'socket-1',
+    data:  { userId, username: 'jo' },
+    on:    (ev: string, fn: Handler) => { handlers.set(ev, fn) },
+    to:    vi.fn(() => ({ emit: socketToEmit })),
+    emit:  vi.fn(),
+    join:  vi.fn(async () => {}),
+    leave: vi.fn(async () => {}),
   }
   const server = {
     to: vi.fn(() => ({ emit: roomEmit })),
@@ -235,16 +237,33 @@ describe('flow SFU', () => {
     expect(body.direction).toBe('recv')
   })
 
-  it('produce : annonce voice:sfu_new_producer aux autres', async () => {
+  it('produce : annonce voice:sfu_new_producer dans la room SFU DÉDIÉE (pas celle du mesh)', async () => {
     const h = makeHarness('user-jonathan')
     fetchMock.mockResolvedValueOnce(daemonJson({ ok: true, producer: 'prod-1' }))
     const a = ack()
     await h.fire('voice:sfu_produce', { channelId: CHANNEL, kind: 'audio', rtpParameters: { codecs: [] } }, a.cb)
     expect(a.last).toEqual({ ok: true, producerId: 'prod-1' })
-    expect(h.socket.to).toHaveBeenCalledWith(`voice:${CHANNEL}`)
+    // Room dédiée voicesfu: — JAMAIS la room mesh (fantômes dans la sidebar).
+    expect(h.socket.to).toHaveBeenCalledWith(`voicesfu:${CHANNEL}`)
+    expect(h.socket.to).not.toHaveBeenCalledWith(`voice:${CHANNEL}`)
     expect(h.socketToEmit).toHaveBeenCalledWith('voice:sfu_new_producer', {
       channelId: CHANNEL, producerId: 'prod-1', kind: 'audio', userId: 'user-jonathan',
     })
+  })
+
+  it('join : rejoint la room d\'annonces SFU (le 1er arrivé doit entendre les suivants)', async () => {
+    const h = makeHarness()
+    fetchMock.mockResolvedValueOnce(daemonJson({ ok: true, mode: 'mesh', migrated: [] }))
+    await h.fire('voice:sfu_join', CHANNEL, ack().cb)
+    expect(h.socket.join).toHaveBeenCalledWith(`voicesfu:${CHANNEL}`)
+  })
+
+  it('leave : quitte la room d\'annonces SFU', async () => {
+    const h = makeHarness()
+    fetchMock.mockResolvedValue(daemonJson({ ok: true, mode: 'mesh', migrated: [] }))
+    await h.fire('voice:sfu_join', CHANNEL, ack().cb)
+    await h.fire('voice:sfu_leave', CHANNEL, ack().cb)
+    expect(h.socket.leave).toHaveBeenCalledWith(`voicesfu:${CHANNEL}`)
   })
 
   it('consume : renvoie consumerId + params parsés', async () => {

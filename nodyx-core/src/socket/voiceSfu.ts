@@ -28,6 +28,18 @@ import { Server, Socket } from 'socket.io'
 import { checkRateLimit } from './rateLimiter'
 import { getCommunityRoleForChannel, isUuid, voiceRoom } from './voice'
 
+/**
+ * Room socket.io DÉDIÉE aux clients SFU d'un salon. SURTOUT PAS voiceRoom()
+ * du mesh : la liste des membres vocaux de la sidebar est reconstruite depuis
+ * cette room-là (broadcastVoiceChannelUpdate fetchSockets) — y mettre les
+ * clients SFU les ferait apparaître en fantômes. Les annonces SFU
+ * (new_producer…) circulent ici ; voice:sfu_mode reste émis vers la room mesh
+ * (ce sont les clients MESH qu'une bascule doit prévenir, §17-B).
+ */
+function sfuRoom(channelId: string): string {
+  return `voicesfu:${channelId}`
+}
+
 // ── Configuration (lue à CHAQUE appel : cohérent avec le système de settings
 //    tier-3 qui ré-applique les valeurs DB sur process.env à chaud) ───────────
 
@@ -131,6 +143,9 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     if (!join.ok) { cb({ ok: false, error: join.error }); return }
 
     joined.add(channelId as string)
+    // Rejoint la room d'annonces SFU : sans elle, le premier arrivé n'apprend
+    // JAMAIS les flux publiés après lui (bug du labo : PC silencieux).
+    await socket.join(sfuRoom(channelId as string))
     const mode = join.data.mode
 
     if (mode !== 'sfu') { cb({ ok: true, mode }); return }
@@ -194,8 +209,8 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     const res = await sfuFetch('/v1/produce', { room: channelId, participant: userId, kind, client })
     if (!res.ok) { cb({ ok: false, error: res.error }); return }
 
-    // Annonce aux autres : un nouveau flux est disponible à la souscription.
-    socket.to(voiceRoom(channelId as string)).emit('voice:sfu_new_producer', {
+    // Annonce aux autres clients SFU : un nouveau flux est à souscrire.
+    socket.to(sfuRoom(channelId as string)).emit('voice:sfu_new_producer', {
       channelId,
       producerId: res.data.producer,
       kind,
@@ -239,6 +254,7 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     if (!isUuid(channelId)) { ack({ ok: false, error: 'bad_channel' }); return }
     // Pas de check de rôle au leave : on doit toujours pouvoir sortir.
     joined.delete(channelId)
+    await socket.leave(sfuRoom(channelId))
     const res = await sfuFetch('/v1/leave', { room: channelId, participant: userId })
     ack(res.ok ? { ok: true } : { ok: false, error: res.error })
   })
