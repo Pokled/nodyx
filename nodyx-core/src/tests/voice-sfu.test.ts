@@ -197,24 +197,42 @@ describe('flow SFU', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('join en mode SFU : renvoie caps + transportParams parsés, annonce la bascule', async () => {
+  it('join en mode SFU : caps + les DEUX transports (send/recv), bascule annoncée', async () => {
     const h = makeHarness()
-    fetchMock
-      .mockResolvedValueOnce(daemonJson({
-        ok: true, mode: 'sfu', transport: 't-9',
-        migrated: [{ participant: 'u2', transport: 't-2' }],
-      }))
-      .mockResolvedValueOnce(daemonJson({ ok: true, caps: '{"codecs":[{"mimeType":"audio/opus"}]}' }))
-      .mockResolvedValueOnce(daemonJson({ ok: true, params: '{"id":"t-9","iceParameters":{"a":1}}' }))
+    fetchMock.mockImplementation(async (url: string, init: { body: string }) => {
+      const path = new URL(url).pathname
+      if (path === '/v1/join') return daemonJson({ ok: true, mode: 'sfu', migrated: ['u2'] })
+      if (path === '/v1/caps') return daemonJson({ ok: true, caps: '{"codecs":[{"mimeType":"audio/opus"}]}' })
+      if (path === '/v1/transport_params') {
+        const dir = JSON.parse(init.body).direction
+        return daemonJson({ ok: true, params: `{"id":"t-${dir}"}` })
+      }
+      return daemonJson({ ok: false, error: 'unexpected' }, 404)
+    })
     const a = ack()
     await h.fire('voice:sfu_join', CHANNEL, a.cb)
     expect(a.last.ok).toBe(true)
     expect(a.last.mode).toBe('sfu')
     expect((a.last.caps as { codecs: unknown[] }).codecs).toHaveLength(1)
-    expect((a.last.transportParams as { id: string }).id).toBe('t-9')
+    // Deux transports DISTINCTS, un par direction (contrainte mediasoup-client).
+    expect((a.last.sendTransportParams as { id: string }).id).toBe('t-send')
+    expect((a.last.recvTransportParams as { id: string }).id).toBe('t-recv')
     // La bascule (migrated non vide) est annoncée au salon vocal.
     expect(h.server.to).toHaveBeenCalledWith(`voice:${CHANNEL}`)
     expect(h.roomEmit).toHaveBeenCalledWith('voice:sfu_mode', { channelId: CHANNEL, mode: 'sfu' })
+  })
+
+  it('connect : direction obligatoire et transmise au daemon', async () => {
+    const h = makeHarness()
+    const bad = ack()
+    await h.fire('voice:sfu_connect', { channelId: CHANNEL, dtlsParameters: {} }, bad.cb)
+    expect(bad.last.error).toBe('bad_direction')
+    fetchMock.mockResolvedValueOnce(daemonJson({ ok: true }))
+    const good = ack()
+    await h.fire('voice:sfu_connect', { channelId: CHANNEL, direction: 'recv', dtlsParameters: { role: 'client' } }, good.cb)
+    expect(good.last).toEqual({ ok: true })
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string)
+    expect(body.direction).toBe('recv')
   })
 
   it('produce : annonce voice:sfu_new_producer aux autres', async () => {

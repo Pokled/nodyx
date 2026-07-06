@@ -17,8 +17,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 mod voice;
 pub use voice::{
-    desired_mode, JoinOutcome, Mode, PublicationInfo, SfuMigration, VoiceConfig, VoiceError,
-    VoiceService,
+    desired_mode, Direction, JoinOutcome, Mode, PublicationInfo, SfuMigration, VoiceConfig,
+    VoiceError, VoiceService,
 };
 
 // ── Identifiants du domaine ─────────────────────────────────────────────────

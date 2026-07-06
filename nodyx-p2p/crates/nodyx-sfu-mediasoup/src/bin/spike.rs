@@ -15,7 +15,8 @@
 
 use nodyx_sfu_mediasoup::engine::MediasoupEngine;
 use nodyx_sfu::{
-    MediaEngine, Mode, NodeId, ParticipantId, RoomId, SignalingBlob, TrackKind, VoiceService,
+    Direction, MediaEngine, Mode, NodeId, ParticipantId, RoomId, SignalingBlob, TrackKind,
+    VoiceService,
 };
 
 fn blob() -> SignalingBlob {
@@ -64,9 +65,8 @@ async fn main() {
         svc.join(room.clone(), p(5)).await
     );
     assert_eq!(out.mode, Mode::Sfu);
-    assert!(out.transport.is_some(), "le joiner a un transport mediasoup");
     assert_eq!(out.migrated.len(), 4, "les 4 présents ont été migrés");
-    println!("     → mode={:?}, transports provisionnés: 5", svc.mode(&room).unwrap());
+    println!("     → mode={:?}, paires send+recv provisionnées: 5", svc.mode(&room).unwrap());
 
     let caps = step!(
         "room_capabilities (blob pour device.load côté client)",
@@ -74,8 +74,8 @@ async fn main() {
     );
     println!("     → caps: {} octets de JSON (opaque pour le métier)", caps.0.len());
     let tparams = step!(
-        "transport_params de user-1 (mode Direct : blob minimal)",
-        svc.transport_params(&room, &p(1)).await
+        "transport_params SEND de user-1 (mode Direct : blob minimal)",
+        svc.transport_params(&room, &p(1), Direction::Send).await
     );
     println!("     → params: {tparams}");
     let producer = step!(

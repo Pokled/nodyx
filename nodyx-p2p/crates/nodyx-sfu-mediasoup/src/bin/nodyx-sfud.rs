@@ -29,7 +29,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use nodyx_sfu::{
-    Mode, ParticipantId, ProducerId, RoomId, SignalingBlob, TrackKind, VoiceConfig, VoiceService,
+    Direction, Mode, ParticipantId, ProducerId, RoomId, SignalingBlob, TrackKind, VoiceConfig,
+    VoiceService,
 };
 use nodyx_sfu_mediasoup::engine::MediasoupEngine;
 
@@ -57,6 +58,14 @@ fn mode_str(m: Mode) -> &'static str {
     match m {
         Mode::Mesh => "mesh",
         Mode::Sfu => "sfu",
+    }
+}
+
+fn direction_of(s: Option<&str>) -> Option<Direction> {
+    match s {
+        Some("send") => Some(Direction::Send),
+        Some("recv") => Some(Direction::Recv),
+        _ => None,
     }
 }
 
@@ -99,10 +108,7 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
             match app.svc.join(r, p).await {
                 Ok(out) => ok_json(serde_json::json!({
                     "mode": mode_str(out.mode),
-                    "transport": out.transport.map(|t| t.0),
-                    "migrated": out.migrated.iter()
-                        .map(|(pid, t)| serde_json::json!({ "participant": pid.0, "transport": t.0 }))
-                        .collect::<Vec<_>>(),
+                    "migrated": out.migrated.iter().map(|p| p.0.clone()).collect::<Vec<_>>(),
                 })),
                 Err(e) => err_json(409, e.to_string()),
             }
@@ -130,7 +136,10 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
             let (Some(r), Some(p)) = (room(), participant()) else {
                 return err_json(400, "room et participant requis");
             };
-            match app.svc.transport_params(&r, &p).await {
+            let Some(d) = direction_of(field(body, "direction")) else {
+                return err_json(400, "direction requise (send|recv)");
+            };
+            match app.svc.transport_params(&r, &p, d).await {
                 Ok(params) => ok_json(serde_json::json!({ "params": params.0 })),
                 Err(e) => err_json(409, e.to_string()),
             }
@@ -140,7 +149,10 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
             let (Some(r), Some(p), Some(c)) = (room(), participant(), field(body, "client")) else {
                 return err_json(400, "room, participant et client requis");
             };
-            match app.svc.connect_transport(&r, &p, &SignalingBlob(c.to_string())).await {
+            let Some(d) = direction_of(field(body, "direction")) else {
+                return err_json(400, "direction requise (send|recv)");
+            };
+            match app.svc.connect_transport(&r, &p, d, &SignalingBlob(c.to_string())).await {
                 Ok(()) => ok_json(serde_json::json!({})),
                 Err(e) => err_json(409, e.to_string()),
             }
@@ -206,9 +218,7 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
             match app.svc.set_screenshare(r, on).await {
                 Ok(mig) => ok_json(serde_json::json!({
                     "switched": mig.switched_to_sfu,
-                    "transports": mig.transports.iter()
-                        .map(|(pid, t)| serde_json::json!({ "participant": pid.0, "transport": t.0 }))
-                        .collect::<Vec<_>>(),
+                    "migrated": mig.migrated.iter().map(|p| p.0.clone()).collect::<Vec<_>>(),
                 })),
                 Err(e) => err_json(409, e.to_string()),
             }

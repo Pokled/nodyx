@@ -32,6 +32,17 @@ use std::sync::{Mutex, MutexGuard};
 
 // ── Mode & configuration ────────────────────────────────────────────────────
 
+/// Direction d'un transport WebRTC côté client. mediasoup-client fixe la
+/// direction à la création (send XOR recv) et un transport client = un
+/// transport serveur : chaque participant SFU a donc DEUX transports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    /// Le participant émet (publish) sur ce transport.
+    Send,
+    /// Le participant reçoit (subscribe) sur ce transport.
+    Recv,
+}
+
 /// Mode de distribution d'un salon : maillage P2P direct, ou SFU centralisé.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -119,11 +130,10 @@ impl From<MediaError> for VoiceError {
 pub struct JoinOutcome {
     /// Mode effectif du salon (le client sait s'il monte une PC mesh ou SFU).
     pub mode: Mode,
-    /// Transport SFU du joiner (présent seulement en mode SFU).
-    pub transport: Option<TransportHandle>,
-    /// AUTRES participants qui viennent d'être basculés en SFU par cette arrivée
-    /// (franchissement du seuil) → à notifier `voice:mode=sfu` (§17-B).
-    pub migrated: Vec<(ParticipantId, TransportHandle)>,
+    /// AUTRES participants qui viennent d'être basculés en SFU par cette
+    /// arrivée (franchissement du seuil) → à notifier `voice:mode=sfu`
+    /// (§17-B). Chacun récupère ensuite SES params par direction.
+    pub migrated: Vec<ParticipantId>,
 }
 
 /// Résultat d'une bascule/migration vers SFU.
@@ -131,8 +141,8 @@ pub struct JoinOutcome {
 pub struct SfuMigration {
     /// `true` si on vient de créer le router (première bascule du salon).
     pub switched_to_sfu: bool,
-    /// Transports provisionnés lors de cette migration (à annoncer aux clients).
-    pub transports: Vec<(ParticipantId, TransportHandle)>,
+    /// Participants provisionnés (send+recv) lors de cette migration.
+    pub migrated: Vec<ParticipantId>,
 }
 
 /// Vue d'une publication (pour l'event `voice:publications`, §17-A).
@@ -147,10 +157,24 @@ pub struct PublicationInfo {
 
 #[derive(Default)]
 struct Participant {
-    /// Transport SFU du participant (absent tant qu'on est en mesh).
-    transport: Option<TransportHandle>,
+    /// Transport d'ÉMISSION (publish) — absent tant qu'on est en mesh.
+    send_transport: Option<TransportHandle>,
+    /// Transport de RÉCEPTION (subscribe) — absent tant qu'on est en mesh.
+    recv_transport: Option<TransportHandle>,
     /// Ce que ce participant consomme : publication → consumer.
     subscriptions: HashMap<ProducerId, ConsumerId>,
+}
+
+impl Participant {
+    fn transport(&self, d: Direction) -> Option<&TransportHandle> {
+        match d {
+            Direction::Send => self.send_transport.as_ref(),
+            Direction::Recv => self.recv_transport.as_ref(),
+        }
+    }
+    fn in_sfu(&self) -> bool {
+        self.send_transport.is_some() && self.recv_transport.is_some()
+    }
 }
 
 struct Publication {
@@ -249,31 +273,18 @@ impl<E: MediaEngine> VoiceService<E> {
         };
 
         if !sfu {
-            return Ok(JoinOutcome { mode: Mode::Mesh, transport: None, migrated: Vec::new() });
+            return Ok(JoinOutcome { mode: Mode::Mesh, migrated: Vec::new() });
         }
 
-        // ── SFU : migrer tout le salon (crée router + transports manquants) ──
+        // ── SFU : migrer tout le salon (router + paires de transports manquantes) ──
         let mig = self.ensure_sfu(room.clone()).await?;
+        let migrated = mig
+            .migrated
+            .into_iter()
+            .filter(|pid| pid != &participant)
+            .collect();
 
-        // Séparer le transport du joiner de ceux des autres (à notifier).
-        let mut my_transport = None;
-        let mut migrated = Vec::new();
-        for (pid, t) in mig.transports {
-            if pid == participant {
-                my_transport = Some(t);
-            } else {
-                migrated.push((pid, t));
-            }
-        }
-        // Joiner déjà pourvu (salon déjà SFU) : relire son transport.
-        if my_transport.is_none() {
-            let rooms = self.rooms();
-            if let Some(p) = rooms.get(&room).and_then(|s| s.participants.get(&participant)) {
-                my_transport = p.transport.clone();
-            }
-        }
-
-        Ok(JoinOutcome { mode: Mode::Sfu, transport: my_transport, migrated })
+        Ok(JoinOutcome { mode: Mode::Sfu, migrated })
     }
 
     /// Le participant quitte de lui-même.
@@ -318,11 +329,11 @@ impl<E: MediaEngine> VoiceService<E> {
     // ── bascule SFU ──────────────────────────────────────────────────────────
 
     /// Garantit que le salon est en SFU : crée le router si besoin, et provisionne
-    /// un transport pour CHAQUE participant qui n'en a pas encore. Idempotent.
-    /// Primitive unique de migration (utilisée par `join`, `set_screenshare`,
-    /// `publish` d'un écran).
+    /// la PAIRE de transports (send + recv, contrainte mediasoup-client) pour
+    /// CHAQUE participant incomplet. Idempotent. Primitive unique de migration
+    /// (utilisée par `join`, `set_screenshare`, `publish` d'un écran).
     pub async fn ensure_sfu(&self, room: RoomId) -> Result<SfuMigration, VoiceError> {
-        // ── plan : router manquant ? qui n'a pas de transport ? ──
+        // ── plan : router manquant ? qui n'a pas sa paire complète ? ──
         let (need_router, existing_router, missing): (bool, Option<RouterHandle>, Vec<ParticipantId>) = {
             let rooms = self.rooms();
             let Some(state) = rooms.get(&room) else {
@@ -331,40 +342,46 @@ impl<E: MediaEngine> VoiceService<E> {
             let missing = state
                 .participants
                 .iter()
-                .filter(|(_, p)| p.transport.is_none())
+                .filter(|(_, p)| !p.in_sfu())
                 .map(|(id, _)| id.clone())
                 .collect();
             (state.router.is_none(), state.router.clone(), missing)
         };
 
-        // ── apply (hors verrou) : router puis transports ──
+        // ── apply (hors verrou) : router puis paires de transports ──
         let router = if need_router {
             self.engine.create_room(room.clone()).await?
         } else {
             existing_router.expect("router SFU présent quand need_router=false")
         };
-        let mut provisioned = Vec::with_capacity(missing.len());
+        let mut provisioned: Vec<(ParticipantId, TransportHandle, TransportHandle)> =
+            Vec::with_capacity(missing.len());
         for pid in missing {
-            let t = self.engine.create_transport(&router, pid.clone()).await?;
-            provisioned.push((pid, t));
+            let send = self.engine.create_transport(&router, pid.clone()).await?;
+            let recv = self.engine.create_transport(&router, pid.clone()).await?;
+            provisioned.push((pid, send, recv));
         }
 
-        // ── commit : figer router + transports ──
+        // ── commit : figer router + paires ──
         {
             let mut rooms = self.rooms();
             if let Some(state) = rooms.get_mut(&room) {
                 if state.router.is_none() {
                     state.router = Some(router);
                 }
-                for (pid, t) in &provisioned {
+                for (pid, send, recv) in &provisioned {
                     if let Some(p) = state.participants.get_mut(pid) {
-                        p.transport = Some(t.clone());
+                        if p.send_transport.is_none() { p.send_transport = Some(send.clone()); }
+                        if p.recv_transport.is_none() { p.recv_transport = Some(recv.clone()); }
                     }
                 }
             }
         }
 
-        Ok(SfuMigration { switched_to_sfu: need_router, transports: provisioned })
+        Ok(SfuMigration {
+            switched_to_sfu: need_router,
+            migrated: provisioned.into_iter().map(|(pid, _, _)| pid).collect(),
+        })
     }
 
     /// Un partage d'écran démarre/s'arrête. Le démarrage force le mode SFU (quel
@@ -381,7 +398,7 @@ impl<E: MediaEngine> VoiceService<E> {
         if on {
             self.ensure_sfu(room).await
         } else {
-            Ok(SfuMigration { switched_to_sfu: false, transports: Vec::new() })
+            Ok(SfuMigration { switched_to_sfu: false, migrated: Vec::new() })
         }
     }
 
@@ -406,7 +423,7 @@ impl<E: MediaEngine> VoiceService<E> {
             let rooms = self.rooms();
             let state = rooms.get(&room).ok_or(VoiceError::NotInRoom)?;
             let p = state.participants.get(&participant).ok_or(VoiceError::NotInRoom)?;
-            p.transport.clone().ok_or(VoiceError::NotInSfu)?
+            p.transport(Direction::Send).cloned().ok_or(VoiceError::NotInSfu)?
         };
 
         let producer = self.engine.produce(&transport, kind, client).await?;
@@ -440,7 +457,7 @@ impl<E: MediaEngine> VoiceService<E> {
                 return Err(VoiceError::NoSuchPublication);
             }
             let p = state.participants.get(&subscriber).ok_or(VoiceError::NotInRoom)?;
-            p.transport.clone().ok_or(VoiceError::NotInSfu)?
+            p.transport(Direction::Recv).cloned().ok_or(VoiceError::NotInSfu)?
         };
 
         let (consumer, params) = self.engine.consume(&transport, &producer, client_caps).await?;
@@ -469,25 +486,27 @@ impl<E: MediaEngine> VoiceService<E> {
         Ok(self.engine.room_capabilities(&router).await?)
     }
 
-    /// Paramètres de connexion du transport d'un participant (ICE/DTLS…),
-    /// à remettre au client pour qu'il établisse sa PC vers le SFU.
+    /// Paramètres de connexion d'un transport du participant (ICE/DTLS…), par
+    /// direction (mediasoup-client : un transport client = une direction).
     pub async fn transport_params(
         &self,
         room: &RoomId,
         participant: &ParticipantId,
+        direction: Direction,
     ) -> Result<SignalingBlob, VoiceError> {
-        let transport = self.transport_of(room, participant)?;
+        let transport = self.transport_of(room, participant, direction)?;
         Ok(self.engine.transport_params(&transport).await?)
     }
 
-    /// Finalise la connexion du transport avec la réponse du client (§17-A).
+    /// Finalise la connexion d'un transport avec la réponse du client (§17-A).
     pub async fn connect_transport(
         &self,
         room: &RoomId,
         participant: &ParticipantId,
+        direction: Direction,
         client: &SignalingBlob,
     ) -> Result<(), VoiceError> {
-        let transport = self.transport_of(room, participant)?;
+        let transport = self.transport_of(room, participant, direction)?;
         Ok(self.engine.connect_transport(&transport, client).await?)
     }
 
@@ -495,11 +514,12 @@ impl<E: MediaEngine> VoiceService<E> {
         &self,
         room: &RoomId,
         participant: &ParticipantId,
+        direction: Direction,
     ) -> Result<TransportHandle, VoiceError> {
         let rooms = self.rooms();
         let state = rooms.get(room).ok_or(VoiceError::NotInRoom)?;
         let p = state.participants.get(participant).ok_or(VoiceError::NotInRoom)?;
-        p.transport.clone().ok_or(VoiceError::NotInSfu)
+        p.transport(direction).cloned().ok_or(VoiceError::NotInSfu)
     }
 
     /// Force la couche servie à un abonné (adaptation bande passante, §17-C).
@@ -576,7 +596,6 @@ mod tests {
         let s = svc();
         let out = block_on(s.join(room(), p(1))).unwrap();
         assert_eq!(out.mode, Mode::Mesh);
-        assert!(out.transport.is_none());
         assert!(out.migrated.is_empty());
         assert_eq!(s.mode(&room()), Some(Mode::Mesh));
         assert_eq!(s.participant_count(&room()), 1);
@@ -592,8 +611,10 @@ mod tests {
         // le 5e franchit le seuil → bascule tout le monde
         let out = block_on(s.join(room(), p(5))).unwrap();
         assert_eq!(out.mode, Mode::Sfu);
-        assert!(out.transport.is_some(), "le joiner a son transport");
         assert_eq!(out.migrated.len(), 4, "les 4 déjà présents sont migrés");
+        // le joiner a sa PAIRE de transports (send + recv, contrainte mediasoup-client)
+        assert!(block_on(s.transport_params(&room(), &p(5), Direction::Send)).is_ok());
+        assert!(block_on(s.transport_params(&room(), &p(5), Direction::Recv)).is_ok());
         assert_eq!(s.mode(&room()), Some(Mode::Sfu));
     }
 
@@ -605,8 +626,8 @@ mod tests {
         }
         let out = block_on(s.join(room(), p(6))).unwrap();
         assert_eq!(out.mode, Mode::Sfu);
-        assert!(out.transport.is_some());
-        assert!(out.migrated.is_empty(), "les autres avaient déjà leur transport");
+        assert!(out.migrated.is_empty(), "les autres avaient déjà leur paire");
+        assert!(block_on(s.transport_params(&room(), &p(6), Direction::Send)).is_ok());
     }
 
     #[test]
@@ -661,7 +682,11 @@ mod tests {
 
         let mig = block_on(s.set_screenshare(room(), true)).unwrap();
         assert!(mig.switched_to_sfu);
-        assert_eq!(mig.transports.len(), 2, "les 2 présents obtiennent un transport");
+        assert_eq!(mig.migrated.len(), 2, "les 2 présents obtiennent leur paire");
+        // et chacun a bien send ET recv distincts
+        let send = block_on(s.transport_params(&room(), &p(1), Direction::Send)).unwrap();
+        let recv = block_on(s.transport_params(&room(), &p(1), Direction::Recv)).unwrap();
+        assert_ne!(send, recv, "send et recv sont deux transports distincts");
         assert_eq!(s.mode(&room()), Some(Mode::Sfu));
     }
 
@@ -757,9 +782,9 @@ mod tests {
         let caps = block_on(s.room_capabilities(&room())).unwrap();
         assert!(caps.0.contains("router"), "blob moteur transmis tel quel");
         // paramètres de transport du participant + connect
-        let params = block_on(s.transport_params(&room(), &p(1))).unwrap();
+        let params = block_on(s.transport_params(&room(), &p(1), Direction::Send)).unwrap();
         assert!(params.0.contains("transport"));
-        block_on(s.connect_transport(&room(), &p(1), &blob())).unwrap();
+        block_on(s.connect_transport(&room(), &p(1), Direction::Send, &blob())).unwrap();
     }
 
     #[test]
@@ -772,7 +797,7 @@ mod tests {
             Err(VoiceError::NotInSfu)
         );
         assert_eq!(
-            block_on(s.transport_params(&room(), &p(1))),
+            block_on(s.transport_params(&room(), &p(1), Direction::Send)),
             Err(VoiceError::NotInSfu)
         );
         assert_eq!(

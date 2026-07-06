@@ -135,13 +135,16 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
 
     if (mode !== 'sfu') { cb({ ok: true, mode }); return }
 
-    // Mode SFU : le client a besoin des capabilities + de ses transport params.
-    const [caps, params] = await Promise.all([
+    // Mode SFU : capabilities + les DEUX transports (mediasoup-client fixe la
+    // direction d'un transport à sa création : send XOR recv).
+    const [caps, sendParams, recvParams] = await Promise.all([
       sfuFetch('/v1/caps', { room: channelId }),
-      sfuFetch('/v1/transport_params', { room: channelId, participant: userId }),
+      sfuFetch('/v1/transport_params', { room: channelId, participant: userId, direction: 'send' }),
+      sfuFetch('/v1/transport_params', { room: channelId, participant: userId, direction: 'recv' }),
     ])
     if (!caps.ok) { cb({ ok: false, error: caps.error }); return }
-    if (!params.ok) { cb({ ok: false, error: params.error }); return }
+    if (!sendParams.ok) { cb({ ok: false, error: sendParams.error }); return }
+    if (!recvParams.ok) { cb({ ok: false, error: recvParams.error }); return }
 
     // Si cette arrivée a fait basculer le salon (des participants ont été
     // migrés), on prévient le salon : chacun fera son propre sfu_join pour
@@ -154,21 +157,26 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     cb({
       ok: true,
       mode,
-      caps:            parseBlob(caps.data.caps),
-      transportParams: parseBlob(params.data.params),
+      caps:                parseBlob(caps.data.caps),
+      sendTransportParams: parseBlob(sendParams.data.params),
+      recvTransportParams: parseBlob(recvParams.data.params),
     })
   })
 
   // ── voice:sfu_connect — finalise la PC (dtlsParameters du client) ──────────
   socket.on('voice:sfu_connect', async (payload: unknown, cb: unknown) => {
     if (!isAck(cb)) return
-    const { channelId, dtlsParameters } = (payload ?? {}) as Record<string, unknown>
+    const { channelId, direction, dtlsParameters } = (payload ?? {}) as Record<string, unknown>
     if (!(await guard('voice:sfu_connect', channelId, cb))) return
-
+    if (direction !== 'send' && direction !== 'recv') {
+      cb({ ok: false, error: 'bad_direction' }); return
+    }
     const client = boundedJson({ dtlsParameters })
     if (!client) { cb({ ok: false, error: 'payload_too_large' }); return }
 
-    const res = await sfuFetch('/v1/connect', { room: channelId, participant: userId, client })
+    const res = await sfuFetch('/v1/connect', {
+      room: channelId, participant: userId, direction, client,
+    })
     cb(res.ok ? { ok: true } : { ok: false, error: res.error })
   })
 
