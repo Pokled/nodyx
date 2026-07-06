@@ -13,9 +13,7 @@
 //! distant le consomme. C'est la brique de la cascade inter-SFU (P4). La
 //! validation vers un VRAI host distant reste à faire au gate P4 (noté au CDC).
 
-mod engine;
-
-use engine::MediasoupEngine;
+use nodyx_sfu_mediasoup::engine::MediasoupEngine;
 use nodyx_sfu::{
     MediaEngine, Mode, NodeId, ParticipantId, RoomId, SignalingBlob, TrackKind, VoiceService,
 };
@@ -136,7 +134,7 @@ async fn main() {
     println!("\n[W] WebRtcTransport réels (ICE/DTLS, prêts pour un navigateur)");
     let web = step!(
         "moteur en mode WebRTC (écoute 127.0.0.1)",
-        engine::MediasoupEngine::new_webrtc("127.0.0.1".parse().unwrap(), None).await
+        MediasoupEngine::new_webrtc("127.0.0.1".parse().unwrap(), None).await
     );
     let wroom = step!("salon WebRTC", web.create_room(RoomId("webrtc-room".into())).await);
     let wtrans = step!(

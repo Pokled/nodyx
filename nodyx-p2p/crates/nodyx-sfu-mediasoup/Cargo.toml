@@ -9,7 +9,7 @@ description = "Spike §15 du CDC SFU : MediasoupEngine impl MediaEngine, DERRIER
 [dependencies]
 nodyx-sfu  = { path = "../nodyx-sfu" }
 mediasoup  = "0.18"
-tokio      = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio      = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "time"] }
 # Sérialisation des blobs de signaling (types mediasoup → JSON opaque pour le
 # métier). Le CodecAdapter vit ici, jamais dans l'abstraction.
 serde      = { version = "1", features = ["derive"] }
