@@ -336,13 +336,23 @@ impl<E: MediaEngine> VoiceService<E> {
         room: RoomId,
         participant: ParticipantId,
     ) -> Result<JoinOutcome, VoiceError> {
+        // Replace-on-rejoin : un rejoin (refresh, reconnexion réseau) ne doit
+        // JAMAIS être rejeté. Si le participant est déjà là, on évince l'ancienne
+        // présence (ferme ses transports/producers) avant de recréer. Sémantique
+        // mesh : un user = une session, la plus récente gagne. (Le pair verra
+        // l'ancien flux se fermer via la réconciliation.)
+        let already = self
+            .rooms()
+            .get(&room)
+            .is_some_and(|s| s.participants.contains_key(&participant));
+        if already {
+            self.remove(room.clone(), participant.clone()).await?;
+        }
+
         // ── plan (sous verrou) : valider, réserver le siège, décider ──
         let sfu = {
             let mut rooms = self.rooms();
             let state = rooms.entry(room.clone()).or_default();
-            if state.participants.contains_key(&participant) {
-                return Err(VoiceError::AlreadyJoined);
-            }
             if state.participants.len() >= self.cfg.max_seats {
                 return Err(VoiceError::RoomFull);
             }
@@ -777,10 +787,21 @@ mod tests {
     }
 
     #[test]
-    fn double_join_is_rejected() {
+    fn rejoin_replaces_instead_of_rejecting() {
         let s = svc();
         block_on(s.join(room(), p(1))).unwrap();
-        assert_eq!(block_on(s.join(room(), p(1))), Err(VoiceError::AlreadyJoined));
+        // rejoin du MÊME participant : ACCEPTÉ (remplace), jamais AlreadyJoined.
+        let out = block_on(s.join(room(), p(1))).unwrap();
+        assert_eq!(out.mode, Mode::Mesh);
+        assert_eq!(s.participant_count(&room()), 1, "pas de doublon");
+        // rejoin en mode SFU : remplace aussi, la paire de transports est refaite
+        for i in 2..=5 { block_on(s.join(room(), p(i))).unwrap(); } // → SFU
+        assert_eq!(s.mode(&room()), Some(Mode::Sfu));
+        let before = s.participant_count(&room());
+        let out2 = block_on(s.join(room(), p(1))).unwrap();
+        assert_eq!(out2.mode, Mode::Sfu);
+        assert_eq!(s.participant_count(&room()), before, "rejoin SFU ne dédouble pas");
+        assert!(block_on(s.transport_params(&room(), &p(1), Direction::Send)).is_ok());
     }
 
     #[test]
