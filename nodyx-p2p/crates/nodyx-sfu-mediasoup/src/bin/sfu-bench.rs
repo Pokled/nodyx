@@ -167,12 +167,12 @@ async fn run_stage(manager: &WorkerManager, n: usize, window: Duration) -> R<Sta
     }
     // chaque participant consomme TOUS les autres (N×(N-1) chemins).
     let mut consumers = Vec::with_capacity(n * (n - 1).max(1));
-    for i in 0..n {
+    for (i, recv_t) in recv_transports.iter().enumerate() {
         for (j, (prod, _)) in producers.iter().enumerate() {
             if i == j {
                 continue;
             }
-            let c = recv_transports[i]
+            let c = recv_t
                 .consume(ConsumerOptions::new(prod.id(), caps.clone()))
                 .await?;
             let recv = Arc::clone(&received);
@@ -258,7 +258,7 @@ async fn main() -> R<()> {
 
     eprintln!("── sfu-bench : {} cœurs, paliers {stages:?}, fenêtre {}s/palier ──", cores, window.as_secs());
     eprintln!("   (DirectTransport in-process, aucun port UDP ; Opus 1 pqt/20ms ; forwarding N×(N-1))\n");
-    println!("{:>4} | {:>7} | {:>6} | {:>7} | {:>9} | {}", "N", "setup", "RSS", "CPU", "santé", "verdict");
+    println!("{:>4} | {:>7} | {:>6} | {:>7} | {:>9} | verdict", "N", "setup", "RSS", "CPU", "santé");
     println!("{:->4}-+-{:->7}-+-{:->6}-+-{:->7}-+-{:->9}-+--------", "", "", "", "", "");
 
     let manager = WorkerManager::new();
