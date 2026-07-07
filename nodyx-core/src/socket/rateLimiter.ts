@@ -47,6 +47,7 @@ export const RATE_RULES: Record<string, RuleConfig[]> = {
   'voice:sfu_consume':      [{ limit: 40, windowMs: 10_000 }],
   'voice:sfu_publications': [{ limit: 10, windowMs: 10_000 }],
   'voice:sfu_audit':        [{ limit: 20, windowMs: 10_000 }],
+  'voice:sfu_heartbeat':    [{ limit: 6,  windowMs: 10_000 }],
 }
 
 // Clé composite : `${userId}::${eventKey}`

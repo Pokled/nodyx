@@ -73,6 +73,7 @@ interface Session {
   consumers:     Map<string, import('mediasoup-client').types.Consumer>
   audioEls:      Map<string, HTMLAudioElement>
   offNewProducer: (() => void) | null
+  maintain:      ReturnType<typeof setInterval> | null
 }
 
 let _session: Session | null = null
@@ -184,6 +185,7 @@ export async function sfuJoin(channelId: string): Promise<void> {
       channelId, device, sendTransport, recvTransport,
       micTrack: null, producer: null,
       consumers: new Map(), audioEls: new Map(), offNewProducer: null,
+      maintain: null,
     }
 
     // Micro (le clic "Rejoindre" du labo = geste utilisateur → autoplay OK).
@@ -213,6 +215,16 @@ export async function sfuJoin(channelId: string): Promise<void> {
     }
     sock.on('voice:sfu_new_producer', onNewProducer)
     _session.offNewProducer = () => { sock.off('voice:sfu_new_producer', onNewProducer) }
+
+    // Maintenance périodique (5 s) : heartbeat (anti-éviction) + réconciliation
+    // des flux (ferme les consumers dont le producer a disparu = fantômes ;
+    // rattrape aussi une annonce new_producer manquée). Auto-guérison.
+    _session.maintain = setInterval(() => {
+      const sk = get(socketStore)
+      if (!sk || !_session) return
+      void emitAck(sk, 'voice:sfu_heartbeat', _session.channelId)
+      void reconcile(sk)
+    }, 5000)
 
     sfuPhaseStore.set('active')
     log('══ SESSION SFU ACTIVE ══')
@@ -286,6 +298,35 @@ export async function sfuAudit(channelId: string): Promise<void> {
   log(`audit : ${rows.length} transport(s)`)
 }
 
+/** Réconcilie les consumers locaux avec les publications réelles du salon :
+ *  ferme ceux dont le producer a disparu (fantôme), consomme les nouveaux. */
+async function reconcile(sock: Socket): Promise<void> {
+  const s = _session
+  if (!s) return
+  const pubs = await emitAck(sock, 'voice:sfu_publications', s.channelId)
+  if (!pubs.ok || !Array.isArray(pubs.publications)) return
+  const list = pubs.publications as { producer: string; owner: string; kind: string }[]
+  const live = new Set(list.map(p => p.producer))
+  // fermer les fantômes (producer disparu des publications)
+  for (const [producerId, consumer] of [...s.consumers]) {
+    if (!live.has(producerId)) {
+      try { consumer.close() } catch { /* déjà fermé */ }
+      s.consumers.delete(producerId)
+      const el = s.audioEls.get(producerId)
+      if (el) { try { el.pause(); el.srcObject = null } catch { /* mort */ } s.audioEls.delete(producerId) }
+      sfuConsumersStore.update(l => l.filter(c => c.producerId !== producerId))
+      log(`flux ${producerId.slice(0, 8)}… disparu → consumer fermé`)
+    }
+  }
+  // consommer les nouveaux (rattrapage d'une annonce manquée)
+  for (const pub of list) {
+    if (s.producer && pub.producer === s.producer.id) continue
+    if (!s.consumers.has(pub.producer) && !_consuming.has(pub.producer)) {
+      await consumeOne(sock, pub.producer, pub.owner, pub.kind)
+    }
+  }
+}
+
 export function sfuSetMuted(muted: boolean): void {
   if (_session?.micTrack) {
     _session.micTrack.enabled = !muted
@@ -324,6 +365,7 @@ function cleanup(): void {
   const s = _session
   _session = null
   if (!s) return
+  if (s.maintain) { clearInterval(s.maintain); s.maintain = null }
   try { s.offNewProducer?.() } catch { /* déjà off */ }
   for (const el of s.audioEls.values()) {
     try { el.pause(); el.srcObject = null } catch { /* déjà mort */ }

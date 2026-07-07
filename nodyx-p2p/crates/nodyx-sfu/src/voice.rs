@@ -164,7 +164,6 @@ pub struct PublicationInfo {
 
 // ── État interne ────────────────────────────────────────────────────────────
 
-#[derive(Default)]
 struct Participant {
     /// Transport d'ÉMISSION (publish) — absent tant qu'on est en mesh.
     send_transport: Option<TransportHandle>,
@@ -172,6 +171,20 @@ struct Participant {
     recv_transport: Option<TransportHandle>,
     /// Ce que ce participant consomme : publication → consumer.
     subscriptions: HashMap<ProducerId, ConsumerId>,
+    /// Dernier heartbeat (secs). u64::MAX = frais (jamais vu) → jamais évincé
+    /// tant que l'appelant n'a pas `touch()`é au moins une fois.
+    last_seen: u64,
+}
+
+impl Default for Participant {
+    fn default() -> Self {
+        Self {
+            send_transport: None,
+            recv_transport: None,
+            subscriptions: HashMap::new(),
+            last_seen: u64::MAX,
+        }
+    }
 }
 
 impl Participant {
@@ -236,6 +249,33 @@ impl<E: MediaEngine> VoiceService<E> {
     /// Nombre de participants d'un salon.
     pub fn participant_count(&self, room: &RoomId) -> usize {
         self.rooms().get(room).map_or(0, |s| s.participants.len())
+    }
+
+    /// Rafraîchit le heartbeat d'un participant (secs). Retourne false s'il est
+    /// absent. Le clock est INJECTÉ (le métier reste sans horloge) : c'est le
+    /// daemon qui fournit `now`, appelé au join et à chaque heartbeat client.
+    pub fn touch(&self, room: &RoomId, participant: &ParticipantId, now_secs: u64) -> bool {
+        let mut rooms = self.rooms();
+        match rooms.get_mut(room).and_then(|s| s.participants.get_mut(participant)) {
+            Some(p) => { p.last_seen = now_secs; true }
+            None => false,
+        }
+    }
+
+    /// Participants dont le dernier heartbeat est antérieur à `cutoff_secs`
+    /// (= à évincer). Les frais (jamais `touch`és, last_seen = MAX) ne sont
+    /// jamais renvoyés. Pur/sync : le daemon appelle ensuite `leave` sur chacun.
+    pub fn stale(&self, cutoff_secs: u64) -> Vec<(RoomId, ParticipantId)> {
+        let rooms = self.rooms();
+        let mut out = Vec::new();
+        for (room, state) in rooms.iter() {
+            for (pid, p) in &state.participants {
+                if p.last_seen < cutoff_secs {
+                    out.push((room.clone(), pid.clone()));
+                }
+            }
+        }
+        out
     }
 
     /// Publications en cours dans un salon (pour `voice:publications`).
@@ -917,6 +957,28 @@ mod tests {
         assert_eq!(recvs, 5);
         // le blob du moteur transite tel quel (NullEngine renvoie un stub identifiable)
         assert!(audit[0].stats.0.contains("transport"));
+    }
+
+    #[test]
+    fn heartbeat_and_stale_eviction() {
+        let s = svc();
+        block_on(s.join(room(), p(1))).unwrap();
+        block_on(s.join(room(), p(2))).unwrap();
+        // frais (jamais touché) → jamais stale, même avec un grand cutoff
+        assert!(s.stale(1_000_000).is_empty());
+        // touch : p1 à t=100, p2 à t=500
+        assert!(s.touch(&room(), &p(1), 100));
+        assert!(s.touch(&room(), &p(2), 500));
+        // cutoff 300 : p1 (100<300) évincible, p2 (500) non
+        let stale = s.stale(300);
+        assert_eq!(stale.len(), 1);
+        assert_eq!(stale[0].0, room());
+        assert_eq!(stale[0].1, p(1));
+        // touch d'un inconnu → false
+        assert!(!s.touch(&room(), &p(9), 100));
+        // évincer p1 via leave : il disparaît du stale
+        block_on(s.leave(room(), p(1))).unwrap();
+        assert!(s.stale(300).is_empty());
     }
 
     #[test]

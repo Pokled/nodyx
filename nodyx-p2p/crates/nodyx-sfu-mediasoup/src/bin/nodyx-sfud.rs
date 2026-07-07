@@ -20,6 +20,8 @@
 //!   SFU_LISTEN_IP      IP d'écoute média WebRTC   (défaut 127.0.0.1)
 //!   SFU_ANNOUNCED_IP   adresse annoncée aux clients (IP publique du VPS)
 //!   SFU_MESH_THRESHOLD seuil mesh→SFU (défaut 4) · SFU_MAX_SEATS (défaut 25)
+//!   SFU_PARTICIPANT_TTL secs avant éviction d'un participant sans heartbeat
+//!                      (défaut 30 ; le client bat toutes les ~10 s)
 //!   (route /v1/audit : audit réseau d'un salon — IP:port réelles, état ICE,
 //!    bitrate/perte par transport ; outil de diagnostic dev)
 //!   SFU_RTC_MIN_PORT / SFU_RTC_MAX_PORT
@@ -58,6 +60,13 @@ fn token_eq(a: &[u8], b: &[u8]) -> bool {
         diff |= x ^ y;
     }
     diff == 0
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 fn mode_str(m: Mode) -> &'static str {
@@ -111,12 +120,31 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
             let (Some(r), Some(p)) = (room(), participant()) else {
                 return err_json(400, "room et participant requis");
             };
-            match app.svc.join(r, p).await {
+            let r2 = r.clone();
+            let p2 = p.clone();
+            let res = app.svc.join(r, p).await;
+            if res.is_ok() {
+                // Marque vivant dès l'arrivée (sinon la tâche d'éviction pourrait
+                // le cueillir avant le premier heartbeat client).
+                app.svc.touch(&r2, &p2, now_secs());
+            }
+            match res {
                 Ok(out) => ok_json(serde_json::json!({
                     "mode": mode_str(out.mode),
                     "migrated": out.migrated.iter().map(|p| p.0.clone()).collect::<Vec<_>>(),
                 })),
                 Err(e) => err_json(409, e.to_string()),
+            }
+        }
+
+        "/v1/heartbeat" => {
+            let (Some(r), Some(p)) = (room(), participant()) else {
+                return err_json(400, "room et participant requis");
+            };
+            if app.svc.touch(&r, &p, now_secs()) {
+                ok_json(serde_json::json!({}))
+            } else {
+                err_json(409, "absent du salon")
             }
         }
 
@@ -393,6 +421,7 @@ async fn main() {
     let announced = std::env::var("SFU_ANNOUNCED_IP").ok();
     let threshold: usize = std::env::var("SFU_MESH_THRESHOLD").ok().and_then(|v| v.parse().ok()).unwrap_or(4);
     let seats: usize = std::env::var("SFU_MAX_SEATS").ok().and_then(|v| v.parse().ok()).unwrap_or(25);
+    let ttl: u64 = std::env::var("SFU_PARTICIPANT_TTL").ok().and_then(|v| v.parse().ok()).unwrap_or(30);
     let rtc_min: u16 = std::env::var("SFU_RTC_MIN_PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(40000);
     let rtc_max: u16 = std::env::var("SFU_RTC_MAX_PORT").ok().and_then(|v| v.parse().ok()).unwrap_or(40999);
     if rtc_min > rtc_max {
@@ -406,9 +435,28 @@ async fn main() {
     let svc = VoiceService::new(engine, VoiceConfig { max_seats: seats, mesh_threshold: threshold });
     let app = Arc::new(App { svc, token });
 
+    // Tâche d'éviction : purge les participants sans heartbeat depuis > TTL
+    // (déconnexion sale : VPN qui saute, onglet fermé, core redémarré).
+    // C'est l'exorciste des fantômes (leur producer disparaît des publications,
+    // le client réconcilie et ferme son consumer mort).
+    {
+        let app = Arc::clone(&app);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(Duration::from_secs(5));
+            loop {
+                tick.tick().await;
+                let cutoff = now_secs().saturating_sub(ttl);
+                for (room, participant) in app.svc.stale(cutoff) {
+                    let _ = app.svc.leave(room.clone(), participant.clone()).await;
+                    eprintln!("nodyx-sfud: évincé {} de {} (heartbeat expiré)", participant.0, room.0);
+                }
+            }
+        });
+    }
+
     let listener = TcpListener::bind(&http_addr).await.expect("bind API interne");
     println!(
-        "nodyx-sfud — API interne http://{http_addr} | média listen={listen_ip} announced={} | RTC udp {rtc_min}-{rtc_max} | seuil mesh→SFU={threshold} sièges={seats}",
+        "nodyx-sfud — API interne http://{http_addr} | média listen={listen_ip} announced={} | RTC udp {rtc_min}-{rtc_max} | seuil mesh→SFU={threshold} sièges={seats} | TTL {ttl}s",
         announced.as_deref().unwrap_or("(aucune)")
     );
 

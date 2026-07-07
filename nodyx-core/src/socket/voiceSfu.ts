@@ -256,6 +256,19 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     cb({ ok: true, publications: res.data.publications ?? [] })
   })
 
+  // ── voice:sfu_heartbeat — garde le participant vivant (anti-fantôme) ────────
+  // Léger et fréquent : pas de requête DB de rôle (le join l'a déjà validé ; le
+  // daemon ne rafraîchit QUE les participants déjà présents). Un heartbeat pour
+  // un salon non rejoint est un no-op côté daemon.
+  socket.on('voice:sfu_heartbeat', async (channelId: unknown, cb: unknown) => {
+    const ack: Ack = isAck(cb) ? cb : () => {}
+    if (!sfuUrl()) { ack({ ok: false, error: 'sfu_disabled' }); return }
+    if (checkRateLimit(userId, 'voice:sfu_heartbeat')) { ack({ ok: false, error: 'rate_limited' }); return }
+    if (!isUuid(channelId)) { ack({ ok: false, error: 'bad_channel' }); return }
+    const res = await sfuFetch('/v1/heartbeat', { room: channelId, participant: userId })
+    ack(res.ok ? { ok: true } : { ok: false, error: res.error })
+  })
+
   // ── voice:sfu_audit — diagnostic réseau du salon (OWNER/ADMIN only) ─────────
   // Expose les IP/ICE/perte des participants : réservé aux admins même si le
   // labo est déjà page-gated. Outil de dev, pas de surveillance persistante.

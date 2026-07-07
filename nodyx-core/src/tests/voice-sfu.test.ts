@@ -244,6 +244,18 @@ describe('flow SFU', () => {
     expect(h.socket.leave).toHaveBeenCalledWith(`voicesfu:${CHANNEL}`)
   })
 
+  it('heartbeat : relaie /v1/heartbeat sans requête DB de rôle', async () => {
+    const h = makeHarness()
+    dbQueryMock.mockClear()
+    fetchMock.mockResolvedValueOnce(daemonJson({ ok: true }))
+    const a = ack()
+    await h.fire('voice:sfu_heartbeat', CHANNEL, a.cb)
+    expect(a.last).toEqual({ ok: true })
+    expect(fetchMock.mock.calls[0][0]).toContain('/v1/heartbeat')
+    // léger : pas de check rôle en base à chaque battement
+    expect(dbQueryMock).not.toHaveBeenCalled()
+  })
+
   it('audit : owner/admin OK, membre refusé', async () => {
     // membre → forbidden, aucun appel daemon
     const member = makeHarness()
