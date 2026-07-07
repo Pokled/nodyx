@@ -259,12 +259,7 @@ export async function sfuJoin(channelId: string): Promise<void> {
     // Maintenance périodique (5 s) : heartbeat (anti-éviction) + réconciliation
     // des flux (ferme les consumers dont le producer a disparu = fantômes ;
     // rattrape aussi une annonce new_producer manquée). Auto-guérison.
-    _session.maintain = setInterval(() => {
-      const sk = get(socketStore)
-      if (!sk || !_session) return
-      void emitAck(sk, 'voice:sfu_heartbeat', _session.channelId)
-      void reconcile(sk)
-    }, 5000)
+    _session.maintain = setInterval(() => { void maintainTick() }, 5000)
 
     // Garder la session vivante quand l'écran se verrouille / l'onglet passe en
     // arrière-plan (grand classique mobile : l'onglet est suspendu → coupure).
@@ -273,11 +268,7 @@ export async function sfuJoin(channelId: string): Promise<void> {
     const onVisibility = () => {
       if (typeof document === 'undefined' || document.visibilityState !== 'visible') return
       void acquireWakeLock() // le wake lock est relâché quand l'onglet est masqué
-      const sk = get(socketStore)
-      if (sk && _session) {
-        void emitAck(sk, 'voice:sfu_heartbeat', _session.channelId)
-        void reconcile(sk) // reprise instantanée au retour au premier plan
-      }
+      void maintainTick() // reprise instantanée + détection d'éviction au retour
     }
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility)
     _session.onVisibility = onVisibility
@@ -353,6 +344,38 @@ export async function sfuAudit(channelId: string): Promise<void> {
   }
   sfuAuditStore.set(rows)
   log(`audit : ${rows.length} transport(s)`)
+}
+
+/** Battement de maintenance : heartbeat (garde vivant) PUIS réconciliation.
+ *  Si le heartbeat revient "évincé" (une autre session — autre onglet/appareil
+ *  — a pris le relais, ou TTL), on s'arrête net SANS rejoindre : rejoindre
+ *  volerait la session à l'autre onglet → ping-pong infini. */
+async function maintainTick(): Promise<void> {
+  const sk = get(socketStore)
+  if (!sk || !_session) return
+  const hb = await emitAck(sk, 'voice:sfu_heartbeat', _session.channelId)
+  if (!_session) return // session fermée entre-temps
+  if (!hb.ok) {
+    // Erreurs transitoires (réseau/daemon) → on ne coupe pas, ça se rétablira.
+    const transient = ['sfu_unreachable', 'sfu_disabled', 'rate_limited']
+    const err = String(hb.error ?? '')
+    if (!transient.includes(err) && !err.includes('timeout')) {
+      supersede('session reprise ailleurs (autre onglet ou appareil)')
+      return
+    }
+  }
+  await reconcile(sk)
+}
+
+/** Une AUTRE session a pris notre place : on s'arrête proprement, sans rejoindre
+ *  (contrairement à maybeRecover). Libère tout (wake lock, timers, transports). */
+function supersede(reason: string): void {
+  log(`⚑ ${reason}`)
+  cleanup()
+  _joinedChannel = null
+  _recoverAttempts = 0
+  sfuErrorStore.set(reason)
+  sfuPhaseStore.set('error')
 }
 
 /** Réconcilie les consumers locaux avec les publications réelles du salon :
