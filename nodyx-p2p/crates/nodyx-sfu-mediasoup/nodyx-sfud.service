@@ -24,6 +24,13 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
+# Limite DURE de CPU (optionnelle, RECOMMANDÉE sur un serveur PARTAGÉ : garantit
+# qu'au moins un cœur reste hors de portée du média pour le reste des services).
+# Le pool de workers (limite douce) s'adapte tout seul à la machine ; cette limite
+# dure, elle, est machine-dépendante — à régler par hôte. Valeur conseillée :
+#   (cœurs - cœurs_réservés) x 100%      cf. SFU_RESERVED_CORES
+# Exemple sur 8 cœurs avec 2 réservés :
+# CPUQuota=600%
 
 [Install]
 WantedBy=multi-user.target

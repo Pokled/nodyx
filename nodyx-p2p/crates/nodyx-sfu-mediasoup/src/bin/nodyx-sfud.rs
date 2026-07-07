@@ -28,6 +28,12 @@
 //!                      plage UDP RTC des workers (défaut 40000-40999).
 //!                      DOIT correspondre au firewall (ufw allow <min>:<max>/udp),
 //!                      leçon nexus-turn : jamais de ports éphémères OS.
+//!   SFU_RESERVED_CORES cœurs gardés pour le reste des services Nodyx (défaut 1).
+//!                      Pool média = max(1, cœurs_réels - réservés). Un serveur
+//!                      partagé (ex : 2 instances) peut mettre 2. Limite DOUCE.
+//!   SFU_WORKER_COUNT   force le nombre de workers média (borné 1..=64), outrepasse
+//!                      le calcul auto ci-dessus. Ne jamais supposer 8 cœurs : le
+//!                      défaut lit la vraie machine (available_parallelism, Pi=1).
 
 use std::net::IpAddr;
 use std::sync::Arc;
@@ -432,6 +438,7 @@ async fn main() {
     let engine = MediasoupEngine::new_webrtc(listen_ip, announced.clone(), rtc_min..=rtc_max)
         .await
         .expect("boot moteur mediasoup");
+    let media_workers = engine.worker_count();
     let svc = VoiceService::new(engine, VoiceConfig { max_seats: seats, mesh_threshold: threshold });
     let app = Arc::new(App { svc, token });
 
@@ -456,7 +463,7 @@ async fn main() {
 
     let listener = TcpListener::bind(&http_addr).await.expect("bind API interne");
     println!(
-        "nodyx-sfud — API interne http://{http_addr} | média listen={listen_ip} announced={} | RTC udp {rtc_min}-{rtc_max} | seuil mesh→SFU={threshold} sièges={seats} | TTL {ttl}s",
+        "nodyx-sfud — API interne http://{http_addr} | média listen={listen_ip} announced={} | RTC udp {rtc_min}-{rtc_max} | pool média={media_workers} worker(s) | seuil mesh→SFU={threshold} sièges={seats} | TTL {ttl}s",
         announced.as_deref().unwrap_or("(aucune)")
     );
 

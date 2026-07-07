@@ -128,7 +128,16 @@ enum AnyTransport {
 
 struct Inner {
     manager: WorkerManager,
-    worker: Worker,
+    /// Pool de workers média : un par cœur disponible MOINS les cœurs réservés
+    /// au reste des services Nodyx (core/front/DB/redis), plancher 1. Un worker
+    /// = un thread mediasoup ≈ un cœur ; répartir les salons dessus = exploiter
+    /// la machine sans qu'un canal surchargé prenne tout le serveur.
+    workers: Vec<Worker>,
+    /// Charge de chaque worker (nombre de routers hébergés), même index que
+    /// `workers`. `create_room` place le salon sur le worker le moins chargé.
+    worker_load: Mutex<Vec<usize>>,
+    /// RouterHandle.0 → index du worker hôte, pour décrémenter la charge au close.
+    router_worker: Mutex<HashMap<String, usize>>,
     /// Plage de ports UDP RTC des workers. Le défaut mediasoup (10000..=59999)
     /// est un piège firewall (leçon nexus-turn) : on borne TOUJOURS, et la
     /// même plage vaut pour tous les workers (mediasoup saute les ports pris).
@@ -172,6 +181,36 @@ fn worker_settings(rtc_ports: &RangeInclusive<u16>) -> WorkerSettings {
     s
 }
 
+/// Règle de dimensionnement du pool, isolée pour être testable sans toucher à
+/// l'environnement ni au matériel. `override_n` = `SFU_WORKER_COUNT` (l'admin
+/// prend la main), `reserved` = cœurs gardés pour le reste des services.
+/// Plancher 1 : on ne peut jamais réserver ce qu'on n'a pas (Raspberry mono-cœur
+/// → 1 worker, comportement identique à avant).
+fn compute_worker_count(cores: usize, override_n: Option<usize>, reserved: usize) -> usize {
+    let cores = cores.max(1);
+    if let Some(n) = override_n {
+        return n.clamp(1, 64);
+    }
+    cores.saturating_sub(reserved).max(1)
+}
+
+/// Nombre de workers média voulu, lu sur la VRAIE machine (jamais supposé) :
+/// `available_parallelism()` moins `SFU_RESERVED_CORES` (défaut 1). Override
+/// total via `SFU_WORKER_COUNT`.
+fn desired_worker_count() -> usize {
+    let cores = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
+    let override_n = std::env::var("SFU_WORKER_COUNT")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok());
+    let reserved = std::env::var("SFU_RESERVED_CORES")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(1);
+    compute_worker_count(cores, override_n, reserved)
+}
+
 impl MediasoupEngine {
     /// Mode Direct (scénarios automatisés, pas de navigateur).
     pub async fn new() -> Result<Self> {
@@ -193,18 +232,37 @@ impl MediasoupEngine {
         webrtc_listen: Option<(IpAddr, Option<String>)>,
         rtc_ports: RangeInclusive<u16>,
     ) -> Result<Self> {
+        Self::build_with(webrtc_listen, rtc_ports, desired_worker_count()).await
+    }
+
+    /// Construction avec un nombre de workers explicite. Les ctors publics
+    /// passent par `desired_worker_count()` (machine réelle) ; les tests fixent
+    /// le compte pour être déterministes.
+    async fn build_with(
+        webrtc_listen: Option<(IpAddr, Option<String>)>,
+        rtc_ports: RangeInclusive<u16>,
+        worker_count: usize,
+    ) -> Result<Self> {
         if rtc_ports.is_empty() {
             return Err(MediaError::Engine("plage RTC vide (min > max)".into()));
         }
+        let count = worker_count.max(1);
         let manager = WorkerManager::new();
-        let worker = manager
-            .create_worker(worker_settings(&rtc_ports))
-            .await
-            .map_err(|e| MediaError::Engine(format!("create_worker: {e}")))?;
+        let mut workers = Vec::with_capacity(count);
+        for _ in 0..count {
+            let w = manager
+                .create_worker(worker_settings(&rtc_ports))
+                .await
+                .map_err(|e| MediaError::Engine(format!("create_worker: {e}")))?;
+            workers.push(w);
+        }
+        let worker_load = vec![0usize; workers.len()];
         Ok(Self {
             inner: Arc::new(Inner {
                 manager,
-                worker,
+                workers,
+                worker_load: Mutex::new(worker_load),
+                router_worker: Mutex::new(HashMap::new()),
                 rtc_ports,
                 webrtc_listen,
                 extra_workers: Mutex::new(Vec::new()),
@@ -217,6 +275,16 @@ impl MediasoupEngine {
                 seq: AtomicU64::new(1),
             }),
         })
+    }
+
+    /// Taille du pool média (log de démarrage du daemon).
+    pub fn worker_count(&self) -> usize {
+        self.inner.workers.len()
+    }
+
+    /// Charge (nombre de salons) par worker, même index que le pool. Observabilité + tests.
+    pub fn worker_loads(&self) -> Vec<usize> {
+        self.inner.worker_load.lock().unwrap().clone()
     }
 
     fn next(&self, prefix: &str) -> String {
@@ -280,14 +348,39 @@ impl MediasoupEngine {
 
 impl MediaEngine for MediasoupEngine {
     async fn create_room(&self, room: RoomId) -> Result<RouterHandle> {
-        let router = self
-            .inner
-            .worker
+        // Worker le moins chargé. Réservation optimiste (incrément AVANT l'await)
+        // pour que deux create_room concurrents ne visent pas le même worker ;
+        // rollback si la création échoue.
+        let idx = {
+            let mut load = self.inner.worker_load.lock().unwrap();
+            let idx = load
+                .iter()
+                .enumerate()
+                .min_by_key(|(_, n)| **n)
+                .map(|(i, _)| i)
+                .unwrap_or(0);
+            load[idx] += 1;
+            idx
+        };
+        let router = match self.inner.workers[idx]
             .create_router(RouterOptions::new(vec![opus_capability()]))
             .await
-            .map_err(|e| MediaError::Engine(format!("create_router({room}): {e}")))?;
+        {
+            Ok(r) => r,
+            Err(e) => {
+                if let Some(n) = self.inner.worker_load.lock().unwrap().get_mut(idx) {
+                    *n = n.saturating_sub(1);
+                }
+                return Err(MediaError::Engine(format!("create_router({room}): {e}")));
+            }
+        };
         let key = self.next("router");
         self.inner.routers.lock().unwrap().insert(key.clone(), router);
+        self.inner
+            .router_worker
+            .lock()
+            .unwrap()
+            .insert(key.clone(), idx);
         Ok(RouterHandle(key))
     }
 
@@ -522,11 +615,91 @@ impl MediaEngine for MediasoupEngine {
         if removed.is_none() {
             return Err(MediaError::NotFound(format!("router {}", router.0)));
         }
+        if let Some(idx) = self.inner.router_worker.lock().unwrap().remove(&router.0) {
+            if let Some(n) = self.inner.worker_load.lock().unwrap().get_mut(idx) {
+                *n = n.saturating_sub(1);
+            }
+        }
         self.inner
             .transports
             .lock()
             .unwrap()
             .retain(|_, (_, rk)| rk != &router.0);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── La règle de dimensionnement, sans matériel ni environnement ──────────
+    #[test]
+    fn worker_count_reserves_a_core() {
+        // 8 cœurs, 1 réservé → 7 workers (le cas CPX42 voulu par Jonathan).
+        assert_eq!(compute_worker_count(8, None, 1), 7);
+        // 2 cœurs → 1 worker + 1 gardé.
+        assert_eq!(compute_worker_count(2, None, 1), 1);
+        // Raspberry mono-cœur : plancher 1, on ne réserve pas ce qu'on n'a pas.
+        assert_eq!(compute_worker_count(1, None, 1), 1);
+        // Réserve custom.
+        assert_eq!(compute_worker_count(8, None, 2), 6);
+        // Sur-réservation absurde → jamais 0 worker.
+        assert_eq!(compute_worker_count(8, None, 100), 1);
+        // Override explicite de l'admin, borné (jamais 0, jamais délirant).
+        assert_eq!(compute_worker_count(8, Some(3), 1), 3);
+        assert_eq!(compute_worker_count(8, Some(0), 1), 1);
+        assert_eq!(compute_worker_count(2, Some(64), 1), 64);
+        assert_eq!(compute_worker_count(2, Some(999), 1), 64);
+        // cores=0 (improbable) traité comme 1.
+        assert_eq!(compute_worker_count(0, None, 1), 1);
+    }
+
+    // ── Répartition réelle des salons sur le pool (vrais workers mediasoup) ───
+    #[tokio::test]
+    async fn pool_spreads_rooms_across_workers() {
+        let engine = MediasoupEngine::build_with(None, DEFAULT_RTC_PORTS, 4)
+            .await
+            .expect("build pool 4");
+        assert_eq!(engine.worker_count(), 4);
+        assert_eq!(engine.worker_loads(), vec![0, 0, 0, 0]);
+
+        for i in 0..8 {
+            engine
+                .create_room(RoomId(format!("room-{i}")))
+                .await
+                .expect("create_room");
+        }
+        // 8 salons, worker le moins chargé à chaque fois → parfaitement équilibré.
+        assert_eq!(engine.worker_loads(), vec![2, 2, 2, 2]);
+    }
+
+    #[tokio::test]
+    async fn close_room_frees_worker_load() {
+        let engine = MediasoupEngine::build_with(None, DEFAULT_RTC_PORTS, 2)
+            .await
+            .expect("build pool 2");
+        let mut handles = Vec::new();
+        for i in 0..4 {
+            handles.push(
+                engine
+                    .create_room(RoomId(format!("room-{i}")))
+                    .await
+                    .expect("create_room"),
+            );
+        }
+        // room-0→w0, room-1→w1, room-2→w0, room-3→w1.
+        assert_eq!(engine.worker_loads(), vec![2, 2]);
+
+        engine.close_room(handles.remove(0)).await.expect("close w0");
+        engine.close_room(handles.remove(0)).await.expect("close w1");
+        assert_eq!(engine.worker_loads(), vec![1, 1]);
+
+        // Fermer un salon inconnu ne casse rien et ne touche pas la charge.
+        assert!(engine
+            .close_room(RouterHandle("router-inexistant".into()))
+            .await
+            .is_err());
+        assert_eq!(engine.worker_loads(), vec![1, 1]);
     }
 }

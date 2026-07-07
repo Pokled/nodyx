@@ -97,6 +97,21 @@ Un **SFU** (Selective Forwarding Unit) : chaque participant envoie **UN** flux a
 - **Limite d'un SFU** : CPU (forwarding + réécriture RTP) et égress réseau. Au-delà → **plusieurs SFU** (sharding par salon) puis **cascade** (§8).
 - **Bench obligatoire** avant prod (cf. discipline OctoGuard : tests + bench + soak avant activation).
 
+### 7.1 Pool de workers (découverte du bench, 2026-07-07)
+
+Le bench synthétique (`sfu-bench`, full-mesh audio, pire cas) a révélé la vraie borne : **un router mediasoup = un thread ≈ un cœur**. Le CPU plafonne autour de **1 cœur même à 300 participants** : ce n'est pas le serveur qui sature, c'est *un seul* thread. Un daemon mono-worker plafonne donc à ~100 participants full-mesh audio, quel que soit le nombre de cœurs.
+
+**Phase A (livrée) — répartir les salons sur un pool de workers** :
+- Un pool de workers, **un par cœur**, créé au démarrage. Chaque nouveau salon (`create_room`) est placé sur le **worker le moins chargé** (réservation optimiste anti-race + rollback ; charge décrémentée au `close_room`).
+- **Dimensionné sur la MACHINE, jamais supposé** : `available_parallelism()` (Pi mono-cœur = 1 worker, comportement identique à avant). Formule : `workers = max(1, cœurs - SFU_RESERVED_CORES)`, réserve défaut 1. Override total : `SFU_WORKER_COUNT` (borné 1..=64).
+- **Réserve de cœurs (limite DOUCE)** : on garde des cœurs pour le reste des services Nodyx (core/front/DB/redis), pour qu'un canal surchargé ne prenne pas tout le serveur. Sur un hôte partagé (2 instances) : `SFU_RESERVED_CORES=2`.
+- **Limite DURE (systemd)** : `CPUQuota` sur `nodyx-sfud.service` = `(cœurs - réservés) x 100%`, garantit *matériellement* qu'un cœur reste hors du média. Machine-dépendante (le template la documente commentée, chaque hôte la règle ; nodyx.org : `CPUQuota=600%`).
+- Portée : le pool répartit **N salons** sur les cœurs. Un **seul** salon reste sur un cœur (~100). Pour Nodyx (beaucoup de canaux) c'est le vrai gain : ce sont plusieurs salons qui tournent, pas un géant.
+
+**Phase B (reportée) — un seul salon au-delà d'un cœur** : nécessite de **piper des routers entre workers** (un salon éclaté sur plusieurs cœurs, façon mediasoup pipe / Jitsi Octo). Nettement plus lourd, seulement utile si un unique salon doit dépasser ~100. Même primitive que la fédération (§8).
+
+- **Limite d'un SFU** (au-delà du pool) : égress réseau + le plafond box-wide. Au-delà → **plusieurs SFU** (sharding par salon) puis **cascade** (§8).
+
 ---
 
 ## 8. Node-addressing & fédération WireGuard (le futur qui justifie tout)
