@@ -244,6 +244,26 @@ describe('flow SFU', () => {
     expect(h.socket.leave).toHaveBeenCalledWith(`voicesfu:${CHANNEL}`)
   })
 
+  it('audit : owner/admin OK, membre refusé', async () => {
+    // membre → forbidden, aucun appel daemon
+    const member = makeHarness()
+    fetchMock.mockClear()
+    await member.fire('voice:sfu_audit', CHANNEL, (() => { const a = ack(); return a.cb })())
+    // (le rôle par défaut du mock est 'member')
+    const a = ack()
+    await member.fire('voice:sfu_audit', CHANNEL, a.cb)
+    expect(a.last).toEqual({ ok: false, error: 'forbidden' })
+    // admin → relaie /v1/audit
+    dbQueryMock.mockResolvedValue({ rows: [{ role: 'admin' }] })
+    const admin = makeHarness('user-admin-audit')
+    fetchMock.mockResolvedValueOnce(daemonJson({ ok: true, transports: [{ participant: 'x', direction: 'send' }] }))
+    const b = ack()
+    await admin.fire('voice:sfu_audit', CHANNEL, b.cb)
+    expect(b.last.ok).toBe(true)
+    expect((b.last.transports as unknown[]).length).toBe(1)
+    expect(fetchMock.mock.calls.some(c => new URL(c[0]).pathname === '/v1/audit')).toBe(true)
+  })
+
   it('connect : direction obligatoire et transmise au daemon', async () => {
     const h = makeHarness()
     const bad = ack()
