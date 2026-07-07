@@ -75,6 +75,7 @@ interface Session {
   audioEls:      Map<string, HTMLAudioElement>
   offNewProducer: (() => void) | null
   maintain:      ReturnType<typeof setInterval> | null
+  onVisibility:  (() => void) | null
 }
 
 let _session: Session | null = null
@@ -121,6 +122,37 @@ export function looksLikeTransportParams(p: unknown): boolean {
 }
 
 // ── Cycle de vie ──────────────────────────────────────────────────────────────
+
+// ── Survie en veille mobile (le verrouillage écran suspend l'onglet) ─────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _wakeLock: any = null
+
+async function acquireWakeLock(): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nav = navigator as any
+    if (nav.wakeLock && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      _wakeLock = await nav.wakeLock.request('screen')
+    }
+  } catch { /* non supporté / refusé : tant pis, pas bloquant */ }
+}
+function releaseWakeLock(): void {
+  try { _wakeLock?.release?.() } catch { /* déjà libéré */ }
+  _wakeLock = null
+}
+function setMediaSession(active: boolean): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ms = (navigator as any).mediaSession
+    if (!ms) return
+    if (active) {
+      ms.metadata = new MediaMetadata({ title: 'Session vocale', artist: 'Nodyx SFU' })
+      ms.playbackState = 'playing'
+    } else {
+      ms.playbackState = 'none'
+    }
+  } catch { /* pas supporté */ }
+}
 
 export async function sfuJoin(channelId: string): Promise<void> {
   if (_session) { log('⚠ session déjà active, join ignoré (leave d\'abord)'); return }
@@ -193,7 +225,7 @@ export async function sfuJoin(channelId: string): Promise<void> {
       channelId, device, sendTransport, recvTransport,
       micTrack: null, producer: null,
       consumers: new Map(), audioEls: new Map(), offNewProducer: null,
-      maintain: null,
+      maintain: null, onVisibility: null,
     }
 
     // Micro (le clic "Rejoindre" du labo = geste utilisateur → autoplay OK).
@@ -233,6 +265,22 @@ export async function sfuJoin(channelId: string): Promise<void> {
       void emitAck(sk, 'voice:sfu_heartbeat', _session.channelId)
       void reconcile(sk)
     }, 5000)
+
+    // Garder la session vivante quand l'écran se verrouille / l'onglet passe en
+    // arrière-plan (grand classique mobile : l'onglet est suspendu → coupure).
+    void acquireWakeLock()
+    setMediaSession(true)
+    const onVisibility = () => {
+      if (typeof document === 'undefined' || document.visibilityState !== 'visible') return
+      void acquireWakeLock() // le wake lock est relâché quand l'onglet est masqué
+      const sk = get(socketStore)
+      if (sk && _session) {
+        void emitAck(sk, 'voice:sfu_heartbeat', _session.channelId)
+        void reconcile(sk) // reprise instantanée au retour au premier plan
+      }
+    }
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility)
+    _session.onVisibility = onVisibility
 
     _recoverAttempts = 0
     sfuPhaseStore.set('active')
@@ -410,6 +458,11 @@ function cleanup(): void {
   _session = null
   if (!s) return
   if (s.maintain) { clearInterval(s.maintain); s.maintain = null }
+  if (s.onVisibility && typeof document !== 'undefined') {
+    try { document.removeEventListener('visibilitychange', s.onVisibility) } catch { /* ok */ }
+  }
+  releaseWakeLock()
+  setMediaSession(false)
   try { s.offNewProducer?.() } catch { /* déjà off */ }
   for (const el of s.audioEls.values()) {
     try { el.pause(); el.srcObject = null } catch { /* déjà mort */ }
