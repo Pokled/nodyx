@@ -355,6 +355,25 @@ impl MediaEngine for MediasoupEngine {
         }
     }
 
+    async fn transport_stats(&self, transport: &TransportHandle) -> Result<SignalingBlob> {
+        let (t, _) = self.transport_of(&transport.0)?;
+        match t.as_ref() {
+            AnyTransport::Direct(_) => Ok(SignalingBlob("{\"kind\":\"direct\"}".into())),
+            AnyTransport::WebRtc(w) => {
+                // get_stats() → WebRtcTransportStat : contient la paire ICE
+                // sélectionnée (IP:port locale ↔ distante), ice_state, bitrate,
+                // perte. C'EST l'audit réseau réel. Sérialisé tel quel (le champ
+                // ice_selected_tuple.remoteIp est l'IP du pair).
+                let stats = w
+                    .get_stats()
+                    .await
+                    .map_err(|e| MediaError::Engine(format!("get_stats: {e}")))?;
+                let json = serde_json::json!({ "id": transport.0, "stats": stats });
+                Ok(SignalingBlob(json.to_string()))
+            }
+        }
+    }
+
     async fn connect_transport(
         &self,
         transport: &TransportHandle,

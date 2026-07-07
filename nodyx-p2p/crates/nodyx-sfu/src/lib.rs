@@ -17,8 +17,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 mod voice;
 pub use voice::{
-    desired_mode, Direction, JoinOutcome, Mode, PublicationInfo, SfuMigration, VoiceConfig,
-    VoiceError, VoiceService,
+    desired_mode, Direction, JoinOutcome, Mode, PublicationInfo, SfuMigration, TransportAudit,
+    VoiceConfig, VoiceError, VoiceService,
 };
 
 // ── Identifiants du domaine ─────────────────────────────────────────────────
@@ -160,6 +160,11 @@ pub trait MediaEngine: Send + Sync {
     /// Finalise la connexion du transport avec la réponse du client
     /// (mediasoup : dtlsParameters du `connect`).
     async fn connect_transport(&self, transport: &TransportHandle, client: &SignalingBlob) -> Result<()>;
+    /// Audit réseau d'un transport : blob opaque contenant la réalité du lien
+    /// (mediasoup : paire ICE sélectionnée = IP:port locale ↔ distante, ice_state,
+    /// bitrate/perte live). Outil de DIAGNOSTIC : le métier le transporte sans
+    /// jamais le lire. Un moteur de test renvoie un stub.
+    async fn transport_stats(&self, transport: &TransportHandle) -> Result<SignalingBlob>;
     /// Le participant publie un flux (audio / écran / cam). `client` porte ses
     /// paramètres RTP (opaque ; un moteur de test peut l'ignorer).
     async fn produce(&self, transport: &TransportHandle, kind: TrackKind, client: &SignalingBlob) -> Result<ProducerId>;
@@ -210,6 +215,9 @@ impl MediaEngine for NullEngine {
     }
     async fn connect_transport(&self, _transport: &TransportHandle, _client: &SignalingBlob) -> Result<()> {
         Ok(())
+    }
+    async fn transport_stats(&self, transport: &TransportHandle) -> Result<SignalingBlob> {
+        Ok(SignalingBlob(format!("{{\"engine\":\"null\",\"transport\":\"{transport}\"}}")))
     }
     async fn produce(&self, _transport: &TransportHandle, _kind: TrackKind, _client: &SignalingBlob) -> Result<ProducerId> {
         Ok(ProducerId(self.next("producer")))

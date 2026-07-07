@@ -145,6 +145,15 @@ pub struct SfuMigration {
     pub migrated: Vec<ParticipantId>,
 }
 
+/// Ligne d'audit réseau d'un transport (diagnostic dev : IP/ICE/perte).
+/// `stats` est un blob opaque du moteur (le métier ne le lit pas).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransportAudit {
+    pub participant: ParticipantId,
+    pub direction: Direction,
+    pub stats: SignalingBlob,
+}
+
 /// Vue d'une publication (pour l'event `voice:publications`, §17-A).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PublicationInfo {
@@ -244,6 +253,37 @@ impl<E: MediaEngine> VoiceService<E> {
                 owner: pubb.owner.clone(),
             })
             .collect()
+    }
+
+    /// Audit réseau du salon : pour chaque transport de chaque participant,
+    /// le blob de stats du moteur (mediasoup : IP:port réelles, état ICE,
+    /// bitrate, perte). Outil de diagnostic dev. Salon absent → vecteur vide.
+    pub async fn audit(&self, room: &RoomId) -> Vec<TransportAudit> {
+        // Snapshot des handles sous verrou (pas d'await pendant qu'on tient le lock).
+        let handles: Vec<(ParticipantId, Direction, TransportHandle)> = {
+            let rooms = self.rooms();
+            let Some(state) = rooms.get(room) else { return Vec::new() };
+            let mut v = Vec::new();
+            for (pid, p) in &state.participants {
+                if let Some(t) = p.send_transport.clone() {
+                    v.push((pid.clone(), Direction::Send, t));
+                }
+                if let Some(t) = p.recv_transport.clone() {
+                    v.push((pid.clone(), Direction::Recv, t));
+                }
+            }
+            v
+        };
+        // Appels moteur hors verrou.
+        let mut out = Vec::with_capacity(handles.len());
+        for (participant, direction, handle) in handles {
+            let stats = match self.engine.transport_stats(&handle).await {
+                Ok(b) => b,
+                Err(e) => SignalingBlob(format!("{{\"error\":\"{e}\"}}")),
+            };
+            out.push(TransportAudit { participant, direction, stats });
+        }
+        out
     }
 
     // ── cycle de vie participant ─────────────────────────────────────────────
@@ -862,6 +902,29 @@ mod tests {
             block_on(s.room_capabilities(&RoomId("nope".into()))),
             Err(VoiceError::NotInRoom)
         );
+    }
+
+    #[test]
+    fn audit_lists_both_transports_per_participant() {
+        let s = svc();
+        for i in 1..=5 { block_on(s.join(room(), p(i))).unwrap(); } // franchit le seuil → SFU
+        let audit = block_on(s.audit(&room()));
+        // 5 participants × 2 transports (send + recv) = 10 lignes
+        assert_eq!(audit.len(), 10);
+        let sends = audit.iter().filter(|a| a.direction == Direction::Send).count();
+        let recvs = audit.iter().filter(|a| a.direction == Direction::Recv).count();
+        assert_eq!(sends, 5);
+        assert_eq!(recvs, 5);
+        // le blob du moteur transite tel quel (NullEngine renvoie un stub identifiable)
+        assert!(audit[0].stats.0.contains("transport"));
+    }
+
+    #[test]
+    fn audit_empty_room_is_empty() {
+        let s = svc();
+        assert!(block_on(s.audit(&RoomId("nope".into()))).is_empty());
+        block_on(s.join(room(), p(1))).unwrap(); // mesh : pas de transport
+        assert!(block_on(s.audit(&room())).is_empty());
     }
 
     #[test]

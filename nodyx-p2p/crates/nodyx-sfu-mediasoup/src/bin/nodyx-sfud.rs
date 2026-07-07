@@ -20,6 +20,8 @@
 //!   SFU_LISTEN_IP      IP d'écoute média WebRTC   (défaut 127.0.0.1)
 //!   SFU_ANNOUNCED_IP   adresse annoncée aux clients (IP publique du VPS)
 //!   SFU_MESH_THRESHOLD seuil mesh→SFU (défaut 4) · SFU_MAX_SEATS (défaut 25)
+//!   (route /v1/audit : audit réseau d'un salon — IP:port réelles, état ICE,
+//!    bitrate/perte par transport ; outil de diagnostic dev)
 //!   SFU_RTC_MIN_PORT / SFU_RTC_MAX_PORT
 //!                      plage UDP RTC des workers (défaut 40000-40999).
 //!                      DOIT correspondre au firewall (ufw allow <min>:<max>/udp),
@@ -193,6 +195,29 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
                 })),
                 Err(e) => err_json(409, e.to_string()),
             }
+        }
+
+        "/v1/audit" => {
+            let Some(r) = room() else { return err_json(400, "room requis") };
+            let audit = app.svc.audit(&r).await;
+            let lines = audit
+                .iter()
+                .map(|a| {
+                    // Le blob stats du moteur est du JSON : on le ré-injecte
+                    // comme objet (pas comme string) pour un audit lisible.
+                    let stats: serde_json::Value =
+                        serde_json::from_str(&a.stats.0).unwrap_or(serde_json::Value::Null);
+                    serde_json::json!({
+                        "participant": a.participant.0,
+                        "direction": match a.direction {
+                            Direction::Send => "send",
+                            Direction::Recv => "recv",
+                        },
+                        "stats": stats,
+                    })
+                })
+                .collect::<Vec<_>>();
+            ok_json(serde_json::json!({ "room": r.0, "transports": lines }))
         }
 
         "/v1/publications" => {
