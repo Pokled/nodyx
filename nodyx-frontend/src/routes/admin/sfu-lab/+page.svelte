@@ -1,9 +1,35 @@
 <script lang="ts">
   import { browser } from '$app/environment'
+  import { onDestroy } from 'svelte'
   import {
-    sfuJoin, sfuLeave, sfuSetMuted,
+    sfuJoin, sfuLeave, sfuSetMuted, sfuAudit,
     sfuPhaseStore, sfuErrorStore, sfuLogStore, sfuConsumersStore, sfuMutedStore,
+    sfuAuditStore,
   } from '$lib/voiceSfu'
+
+  // Audit réseau : rafraîchi manuellement ou en auto (2 s) pendant une session.
+  let autoAudit = $state(false)
+  let auditTimer: ReturnType<typeof setInterval> | null = null
+  function refreshAudit() { if (channelId.trim()) void sfuAudit(channelId.trim()) }
+  $effect(() => {
+    if (auditTimer) { clearInterval(auditTimer); auditTimer = null }
+    if (autoAudit && phase === 'active') {
+      refreshAudit()
+      auditTimer = setInterval(refreshAudit, 2000)
+    }
+  })
+  onDestroy(() => { if (auditTimer) clearInterval(auditTimer) })
+
+  function lossClass(l: number): string {
+    if (l > 0.05) return 'text-red-400'
+    if (l > 0.01) return 'text-amber-400'
+    return 'text-zinc-400'
+  }
+  function iceClass(s: string): string {
+    if (s === 'connected' || s === 'completed') return 'text-emerald-400'
+    if (s === 'disconnected' || s === 'failed' || s === 'closed') return 'text-red-400'
+    return 'text-amber-400'
+  }
 
   // Laboratoire SFU (P1) : prouve le chemin complet device → transports →
   // produce(micro) → consume, en isolation TOTALE du vocal mesh existant.
@@ -124,6 +150,60 @@
           </li>
         {/each}
       </ul>
+    {/if}
+  </div>
+
+  <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Audit réseau (IP · ICE · débit · perte)</h2>
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-1.5 text-xs text-zinc-400">
+          <input type="checkbox" bind:checked={autoAudit} class="accent-indigo-500" /> auto 2s
+        </label>
+        <button
+          onclick={refreshAudit}
+          disabled={channelId.trim().length < 36}
+          class="rounded-lg bg-zinc-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-600 disabled:opacity-40"
+        >
+          Rafraîchir
+        </button>
+      </div>
+    </div>
+    {#if $sfuAuditStore.length === 0}
+      <p class="text-sm text-zinc-600">Aucun transport. Rejoins un salon en mode SFU, puis rafraîchis (les IP apparaissent une fois ICE connecté).</p>
+    {:else}
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs font-mono">
+          <thead class="text-zinc-500">
+            <tr class="text-left">
+              <th class="py-1 pr-3 font-semibold">Participant</th>
+              <th class="py-1 pr-3 font-semibold">Dir</th>
+              <th class="py-1 pr-3 font-semibold">ICE</th>
+              <th class="py-1 pr-3 font-semibold">Local</th>
+              <th class="py-1 pr-3 font-semibold">Distant (pair)</th>
+              <th class="py-1 pr-3 font-semibold">Proto</th>
+              <th class="py-1 pr-3 font-semibold text-right">↓ kbps</th>
+              <th class="py-1 pr-3 font-semibold text-right">↑ kbps</th>
+              <th class="py-1 pr-3 font-semibold text-right">Perte</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each $sfuAuditStore as r (r.participant + r.direction)}
+              <tr class="border-t border-zinc-800/60">
+                <td class="py-1 pr-3 text-zinc-300">{r.participant.slice(0, 8)}</td>
+                <td class="py-1 pr-3 text-zinc-500">{r.direction}</td>
+                <td class="py-1 pr-3 {iceClass(r.iceState)}">{r.iceState}</td>
+                <td class="py-1 pr-3 text-zinc-400">{r.local}</td>
+                <td class="py-1 pr-3 text-indigo-300">{r.remote}</td>
+                <td class="py-1 pr-3 text-zinc-500">{r.proto}</td>
+                <td class="py-1 pr-3 text-right text-zinc-300">{r.recvKbps}</td>
+                <td class="py-1 pr-3 text-right text-zinc-300">{r.sendKbps}</td>
+                <td class="py-1 pr-3 text-right {lossClass(Math.max(r.lossRecv, r.lossSent))}">{(Math.max(r.lossRecv, r.lossSent) * 100).toFixed(1)}%</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
     {/if}
   </div>
 

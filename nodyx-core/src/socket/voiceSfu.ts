@@ -256,6 +256,18 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     cb({ ok: true, publications: res.data.publications ?? [] })
   })
 
+  // ── voice:sfu_audit — diagnostic réseau du salon (OWNER/ADMIN only) ─────────
+  // Expose les IP/ICE/perte des participants : réservé aux admins même si le
+  // labo est déjà page-gated. Outil de dev, pas de surveillance persistante.
+  socket.on('voice:sfu_audit', async (channelId: unknown, cb: unknown) => {
+    if (!isAck(cb)) return
+    const role = await guard('voice:sfu_audit', channelId, cb)
+    if (!role) return
+    if (role !== 'owner' && role !== 'admin') { cb({ ok: false, error: 'forbidden' }); return }
+    const res = await sfuFetch('/v1/audit', { room: channelId })
+    cb(res.ok ? { ok: true, transports: res.data.transports ?? [] } : { ok: false, error: res.error })
+  })
+
   // ── voice:sfu_leave ─────────────────────────────────────────────────────────
   socket.on('voice:sfu_leave', async (channelId: unknown, cb: unknown) => {
     const ack: Ack = isAck(cb) ? cb : () => {}

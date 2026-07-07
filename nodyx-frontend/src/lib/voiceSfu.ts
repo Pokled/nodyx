@@ -42,6 +42,20 @@ export const sfuLogStore:       Writable<string[]>          = writable([])
 export const sfuConsumersStore: Writable<SfuConsumerInfo[]> = writable([])
 export const sfuMutedStore:     Writable<boolean>           = writable(false)
 
+export interface SfuAuditRow {
+  participant: string
+  direction:   string
+  iceState:    string
+  local:       string   // ip:port local
+  remote:      string   // ip:port distant (l'IP du pair)
+  proto:       string
+  recvKbps:    number
+  sendKbps:    number
+  lossRecv:    number   // 0..1
+  lossSent:    number
+}
+export const sfuAuditStore: Writable<SfuAuditRow[]> = writable([])
+
 function log(msg: string): void {
   const line = `[${new Date().toLocaleTimeString()}] ${msg}`
   sfuLogStore.update(l => [...l.slice(-199), line])
@@ -243,6 +257,35 @@ async function consumeOne(sock: Socket, producerId: string, userId: string, kind
   }
 }
 
+/** Audit réseau du salon (owner/admin) : aplatit les WebRtcTransportStat en
+ *  lignes lisibles (IP:port réelles du pair, état ICE, débit, perte). */
+export async function sfuAudit(channelId: string): Promise<void> {
+  const sock = get(socketStore)
+  if (!sock) return
+  const res = await emitAck(sock, 'voice:sfu_audit', channelId)
+  if (!res.ok) { log(`✘ audit : ${res.error}`); sfuAuditStore.set([]); return }
+  const rows: SfuAuditRow[] = []
+  for (const t of (res.transports as Record<string, unknown>[] ?? [])) {
+    const stat = (((t.stats as Record<string, unknown>)?.stats) as Record<string, unknown>[] ?? [])[0] ?? {}
+    const tuple = (stat.iceSelectedTuple ?? null) as Record<string, unknown> | null
+    const fmt = (ip: unknown, port: unknown) => (ip != null ? `${ip}:${port}` : '—')
+    rows.push({
+      participant: String(t.participant ?? '?'),
+      direction:   String(t.direction ?? '?'),
+      iceState:    String(stat.iceState ?? 'new'),
+      local:       tuple ? fmt(tuple.localAddress, tuple.localPort) : '—',
+      remote:      tuple ? fmt(tuple.remoteIp, tuple.remotePort) : '—',
+      proto:       tuple ? String(tuple.protocol ?? '') : '',
+      recvKbps:    Math.round(Number(stat.recvBitrate ?? 0) / 1000),
+      sendKbps:    Math.round(Number(stat.sendBitrate ?? 0) / 1000),
+      lossRecv:    Number(stat.rtpPacketLossReceived ?? 0),
+      lossSent:    Number(stat.rtpPacketLossSent ?? 0),
+    })
+  }
+  sfuAuditStore.set(rows)
+  log(`audit : ${rows.length} transport(s)`)
+}
+
 export function sfuSetMuted(muted: boolean): void {
   if (_session?.micTrack) {
     _session.micTrack.enabled = !muted
@@ -294,4 +337,5 @@ function cleanup(): void {
   try { s.recvTransport.close() } catch { /* déjà fermé */ }
   sfuConsumersStore.set([])
   sfuMutedStore.set(false)
+  sfuAuditStore.set([])
 }
