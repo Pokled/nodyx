@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le pire cas — Nodyx · Banc d'essai vocal</title>
+<meta name="description" content="Le scénario le plus dur : tout le monde parle en même temps. Un serveur Nodyx tient ~600 personnes en vocal. Mesures réelles, auto-hébergé.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Le pire cas : ~600 personnes en vocal, tous parlent en même temps">
+<meta property="og:description" content="Le scénario extrême du vocal Nodyx, mesuré sans filtre. Auto-hébergé, AGPL-3.0.">
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body data-page="pire-cas">
+<div id="nav-mount"></div>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="tapehead">
+      <span class="live">Banc d'essai vocal</span>
+      <span><b>Scénario 01 / 03</b> — le cas extrême</span>
+      <span>Machine · <b>1 serveur, 8 cœurs</b></span>
+      <span>Méthode · <b>full-mesh</b> (tous parlent)</span>
+    </div>
+    <h1>Tout le monde parle en même temps.</h1>
+    <p class="lede">On a pris le scénario le plus dur imaginable pour un serveur vocal, et on a mesuré combien
+      de monde il tient sans perdre un mot. C'est le plancher : la vraie vie est bien plus légère.</p>
+
+    <div class="readout">
+      <div class="ro"><span class="ro-v sig">~<span data-count="600">0</span></span><span class="ro-k">personnes en vocal · tout le serveur</span></div>
+      <div class="ro"><span class="ro-v"><span data-count="100">0</span></span><span class="ro-k">par pièce · sans perdre un mot</span></div>
+      <div class="ro"><span class="ro-v"><span data-count="6">0</span><span class="u">/ 8</span></span><span class="ro-k">cœurs utilisés · 2 gardés pour le reste</span></div>
+    </div>
+
+    <nav class="scene-nav" aria-label="Scénarios">
+      <a href="pire-cas.html" aria-current="page">01 · Le pire cas</a>
+      <a href="diffusion-audio.html">02 · Diffusion audio</a>
+      <a href="partage-ecran.html">03 · Partage d'écran</a>
+    </nav>
+  </header>
+
+  <div class="callout warn">
+    <span class="cl-badge">Le pire cas imaginable</span>
+    <p>Ici, les 600 personnes <b>parlent ET écoutent tout le monde en même temps</b>, en continu : comme si
+      chacune diffusait sa voix à toutes les autres sans jamais s'arrêter. Dans la vraie vie, ça
+      <b>n'arrive jamais</b> (dans une conversation, une ou deux personnes parlent à la fois). On a choisi
+      exprès le scénario <b>le plus dur qui soit</b> : les cas réels (scénarios suivants) tiennent
+      <b>bien, bien plus</b> de monde.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Mesure 01 · une pièce</span>
+      <h2>Jusqu'où tient une seule pièce</h2>
+      <p>Dans une pièce, tout est parfait jusqu'à ~100 personnes. Au-delà, une pièce seule sature : c'est
+        là qu'on en ouvre d'autres.</p>
+    </div>
+    <figure>
+      <div class="fig-title"><span class="swatch"></span> Qualité du son selon le monde dans une pièce</div>
+      <svg class="chart" id="c-cliff" viewBox="0 0 900 320" role="img" aria-label="Qualité du son : parfaite à 100 % jusqu'à 100 personnes dans une pièce, puis chute (68 % à 125, 46 % à 150, 24 % à 200, 9 % à 300)."></svg>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Mesure 02 · le serveur</span>
+      <h2>Et sur tout le serveur : ~600</h2>
+      <p>On ouvre plusieurs pièces ; le serveur les répartit sur ses cœurs, une par cœur. La charge monte
+        droit : chaque centaine de personnes prend un cœur.</p>
+    </div>
+    <figure>
+      <div class="fig-title"><span class="swatch"></span> Charge du serveur selon le nombre de pièces (100 personnes chacune)</div>
+      <svg class="chart" id="c-pool" viewBox="0 0 900 320" role="img" aria-label="Charge du serveur : 1 cœur pour 100 personnes, 2 pour 200, 4 pour 400, 6 cœurs pour 600 personnes. Montée parfaitement linéaire."></svg>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">03 · en clair</span>
+      <h2>Concrètement</h2>
+      <p>Sans le jargon, ce que ça change pour ta communauté.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Une pièce = une communauté active</h3>
+        <p>Jusqu'à ~100 personnes qui se parlent dans la même pièce vocale, en même temps, sans qu'un mot
+          se perde. C'est déjà plus qu'un gros vocal bien rempli.</p>
+      </div>
+      <div class="card">
+        <h3>Le serveur en fait tourner plein</h3>
+        <p>Le serveur répartit les pièces sur ses cœurs : ~600 personnes au total dans ce test extrême,
+          tout en gardant 2 cœurs pour le forum, le chat et le reste de la plateforme.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>La suite</h2></div>
+    <div class="next">
+      <a href="diffusion-audio.html">
+        <div class="nx-k">Scénario 02 / 03</div>
+        <div class="nx-t">Diffusion audio : une personne parle, des milliers écoutent <span class="arr">→</span></div>
+      </a>
+      <a href="technique.html">
+        <div class="nx-k">Pour les techniciens</div>
+        <div class="nx-t">Chiffres bruts, méthode, par machine <span class="arr">→</span></div>
+      </a>
+    </div>
+  </section>
+
+</div>
+<footer class="site"><div class="wrap">Mesures réelles issues de <a href="https://github.com/Pokled/nodyx">sfu-bench</a> · <a href="https://nodyx.org">Nodyx</a>, vocal souverain auto-hébergé · AGPL-3.0 · <a href="technique.html">reproduire →</a></div></footer>
+
+<script src="bench.js?v=2"></script>
+<script>
+  const CLIFF = [
+    { n: 2,   health: 100,  paths: 2 },
+    { n: 5,   health: 100,  paths: 20 },
+    { n: 10,  health: 100,  paths: 90 },
+    { n: 20,  health: 100,  paths: 380 },
+    { n: 50,  health: 100,  paths: 2450 },
+    { n: 75,  health: 100,  paths: 5550 },
+    { n: 100, health: 100,  paths: 9900 },
+    { n: 125, health: 67.9, paths: 15500 },
+    { n: 150, health: 45.9, paths: 22350 },
+    { n: 200, health: 24.0, paths: 39800 },
+    { n: 300, health: 9.2,  paths: 89700 },
+  ];
+  const POOL = [
+    { rooms: 1, cpu: 0.99, total: 100 },
+    { rooms: 2, cpu: 2.03, total: 200 },
+    { rooms: 4, cpu: 4.08, total: 400 },
+    { rooms: 6, cpu: 6.03, total: 600 },
+  ];
+
+  Bench.chart(document.getElementById("c-cliff"), {
+    rows: CLIFF, xkey: d => d.n, val: d => d.health,
+    max: 108, ruptureFrom: 6, yticks: [0, 25, 50, 75, 100], yfmt: t => t + " %",
+    xevery: [2, 20, 50, 100, 125, 150, 200, 300],
+    stroke: Bench.css("--signal"), areaFill: Bench.css("--signal-soft"),
+    labels: [
+      { at: 100, text: "parfait jusqu'à 100", dx: -10, dy: -14, color: Bench.css("--signal") },
+      { at: 150, text: "ça décroche", dx: 6, dy: 24, color: Bench.css("--danger") },
+    ],
+    tipTitle: d => d.n + " personnes",
+    tipVal: d => (d.health % 1 ? d.health.toFixed(1).replace(".", ",") : d.health) + " % du son",
+    tipSub: d => "une seule pièce",
+  });
+
+  Bench.chart(document.getElementById("c-pool"), {
+    rows: POOL, xkey: d => d.rooms, val: d => d.cpu,
+    max: 7, yticks: [0, 2, 4, 6], yfmt: t => t,
+    xevery: [1, 2, 4, 6],
+    stroke: Bench.css("--signal"), areaFill: Bench.css("--signal-soft"),
+    labels: [{ at: 6, text: "600 personnes · 6 cœurs", dx: -40, dy: -14, color: Bench.css("--signal") }],
+    tipTitle: d => d.total + " personnes",
+    tipVal: d => d.cpu.toFixed(2).replace(".", ",") + " cœurs",
+    tipSub: d => d.rooms + " pièces de 100",
+  });
+
+  Bench.boot("pire-cas");
+</script>
+</body>
+</html>

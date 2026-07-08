@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Détail technique — Nodyx · Banc d'essai vocal</title>
+<meta name="description" content="Tous les chiffres bruts du banc d'essai vocal Nodyx : full-mesh, diffusion audio, partage d'écran, limites réseau, méthode et machines testées. Sans filtre.">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body data-page="technique">
+<div id="nav-mount"></div>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="tapehead">
+      <span class="live">Banc d'essai vocal</span>
+      <span><b>Détail technique</b> — chiffres bruts</span>
+      <span>Outil · <b>sfu-bench</b> (open source)</span>
+    </div>
+    <h1>Le détail technique, sans filtre.</h1>
+    <p class="lede">Toutes les mesures brutes, la méthode, et ce qu'on ne cache pas. C'est la partie pour
+      les techniciens : rien n'est arrangé, tout est reproductible.</p>
+    <nav class="scene-nav" aria-label="Scénarios">
+      <a href="pire-cas.html">01 · Le pire cas</a>
+      <a href="diffusion-audio.html">02 · Diffusion audio</a>
+      <a href="partage-ecran.html">03 · Partage d'écran</a>
+    </nav>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Synthèse</span>
+      <h2>Les trois scénarios d'un coup</h2>
+      <p>La même histoire, résumée : combien de monde selon la forme d'usage, sur un seul serveur 8 cœurs.</p>
+    </div>
+    <div class="table-scroll">
+      <table class="data">
+        <thead><tr><th>Scénario</th><th>Forme</th><th>Capacité (1 serveur, 8 cœurs)</th><th>Limité par</th></tr></thead>
+        <tbody>
+          <tr><td>Pire cas</td><td>tous parlent</td><td>~600 personnes</td><td>processeur</td></tr>
+          <tr><td>Diffusion audio</td><td>1 parle, N écoutent</td><td>~8 000 / cœur</td><td>processeur, puis réseau à grande échelle</td></tr>
+          <tr><td>Partage d'écran</td><td>1 partage, N regardent</td><td>~450 (1 Gbit/s) → ~4 500 (10 Gbit/s)</td><td>réseau</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Test 01</span>
+      <h2>Pire cas — full-mesh (tous parlent)</h2>
+      <p>Une pièce, N participants, chacun consomme tous les autres (N×(N-1) chemins). Le son est parfait
+        jusqu'à ~100, puis décroche.</p>
+    </div>
+    <div class="table-scroll">
+      <table class="data" id="t-mesh">
+        <thead><tr><th>Participants</th><th>Chemins</th><th>CPU (cœurs)</th><th>% machine</th><th>RSS (Mo)</th><th>Son</th><th>État</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Test 02</span>
+      <h2>Plusieurs pièces réparties sur les cœurs</h2>
+      <p>Des pièces de 100 personnes (full-mesh) réparties une par cœur : la charge monte linéairement,
+        ~600 personnes sur 6 cœurs.</p>
+    </div>
+    <div class="table-scroll">
+      <table class="data" id="t-pool">
+        <thead><tr><th>Pièces</th><th>Total personnes</th><th>CPU (cœurs)</th><th>Son</th><th>État</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Test 03</span>
+      <h2>Diffusion audio (1 parle, N écoutent)</h2>
+      <p>Une seule voix relayée à N auditeurs, sur un cœur. En étoile : N chemins, pas N×(N-1).</p>
+    </div>
+    <div class="table-scroll">
+      <table class="data" id="t-audio">
+        <thead><tr><th>Auditeurs</th><th>CPU (cœurs)</th><th>Son</th><th>État</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="table-scroll" style="margin-top:16px">
+      <table class="data">
+        <thead><tr><th>Qualité audio</th><th>Débit / auditeur</th><th>Auditeurs / cœur</th><th>Bande passante à 8000</th></tr></thead>
+        <tbody>
+          <tr><td>Économe</td><td>32 kbps</td><td>~8 000</td><td>256 Mbit/s</td></tr>
+          <tr><td>Standard (≈ Discord)</td><td>64 kbps</td><td>~8 000</td><td>512 Mbit/s</td></tr>
+          <tr><td>Haute</td><td>96 kbps</td><td>~8 000</td><td>768 Mbit/s</td></tr>
+          <tr><td>Studio</td><td>128 kbps</td><td>~8 000</td><td>~1 Gbit/s</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Test 04</span>
+      <h2>Partage d'écran — vidéo</h2>
+      <p>Une diffusion vidéo relayée à N spectateurs. Côté CPU, très léger (mesuré 720p et 1080p) ; c'est le
+        <b>réseau</b> qui borne, selon la résolution.</p>
+    </div>
+    <div class="table-scroll">
+      <table class="data" id="t-video">
+        <thead><tr><th>Spectateurs (720p)</th><th>CPU (cœurs)</th><th>Son</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="table-scroll" style="margin-top:16px">
+      <table class="data">
+        <thead><tr><th>Résolution</th><th>Débit typique</th><th>1 Gbit/s</th><th>2,5 Gbit/s</th><th>10 Gbit/s</th></tr></thead>
+        <tbody>
+          <tr><td>480p</td><td>~1 Mbit/s</td><td>~1 000</td><td>~2 500</td><td>~10 000</td></tr>
+          <tr><td>720p (≈ Discord)</td><td>~2,5 Mbit/s</td><td>~400</td><td>~1 000</td><td>~4 000</td></tr>
+          <tr><td>1080p</td><td>~4,5 Mbit/s</td><td>~220</td><td>~555</td><td>~2 200</td></tr>
+          <tr><td>4K</td><td>~16 Mbit/s</td><td>~62</td><td>~156</td><td>~625</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Machines</span>
+      <h2>Testé sur du vrai matériel</h2>
+      <p>On ne publie que des machines réellement mesurées. Le tableau s'étoffera au fil des tests sur
+        d'autres configurations.</p>
+    </div>
+    <div class="table-scroll">
+      <table class="data">
+        <thead><tr><th>Machine</th><th>Cœurs</th><th>Pire cas (serveur)</th><th>Audio / cœur</th><th>Vidéo (réseau)</th></tr></thead>
+        <tbody>
+          <tr><td>VPS Hetzner CPX42</td><td>8</td><td>~600</td><td>~8 000</td><td>débit-dépendant</td></tr>
+          <tr><td colspan="5" style="color:var(--ink-3)">Raspberry, mini-PC, autres VPS — à venir (mesurés, jamais inventés)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Méthode & honnêteté</span>
+      <h2>Comment c'est mesuré, et ce qu'on ne cache pas</h2>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>La méthode</h3>
+        <p><b>Outil :</b> <code>sfu-bench</code>, dans le dépôt Nodyx. Participants synthétiques injectant du
+          vrai RTP au rythme réel (audio Opus, ou profil vidéo).</p>
+        <p><b>In-process :</b> le média est injecté directement dans le moteur (sans passer par le réseau)
+          pour isoler le coût de <b>relais</b>. La limite réseau est donc <b>calculée</b> à part (débit ×
+          spectateurs), pas mesurée au banc.</p>
+        <p><b>Son :</b> paquets reçus / attendus sur une fenêtre de 2 s par palier. <b>Machine :</b> VPS
+          Hetzner CPX42, 8 cœurs (6 dédiés au média, 2 gardés pour le reste). Lancé en basse priorité.</p>
+      </div>
+      <div class="card">
+        <h3>Ce qu'on ne cache pas</h3>
+        <p><b>Le partage d'écran sur ce moteur n'est pas encore en production</b> (il arrive). Les chiffres
+          vidéo mesurent ce que le moteur <b>encaisse en relais</b>, pas « le partage d'écran est parfait ».
+          La fluidité à l'écran (côté navigateur) se teste en vrai, pas au banc.</p>
+        <p><b>Le vocal en production aujourd'hui, c'est l'audio.</b></p>
+        <p><b>Pire cas assumé :</b> le full-mesh (tous parlent en même temps) n'arrive jamais en vrai. Les
+          cas réels tiennent bien plus de monde. Rien n'est arrangé : les mesures brutes sont ci-dessus.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-n">Reproductible</span>
+      <h2>Vérifiez vous-même</h2>
+      <p>Rien n'est une boîte noire. L'outil de mesure est <b>open source</b> (AGPL-3.0). Compilez-le,
+        lancez-le, comparez : ce sont exactement ces commandes qui alimentent ces pages.</p>
+    </div>
+    <div class="card">
+      <p><b>Le code</b> — <a href="https://github.com/Pokled/nodyx" style="color:var(--signal)">github.com/Pokled/nodyx</a>,
+        binaire <code>sfu-bench</code> dans <code>nodyx-p2p/crates/nodyx-sfu-mediasoup</code>.</p>
+      <pre style="font-family:var(--mono);font-size:.82rem;line-height:1.7;background:var(--paper);border:1px solid var(--line);padding:16px 18px;overflow-x:auto;color:var(--ink);margin:6px 0 0;"># compiler
+cd nodyx-p2p/crates/nodyx-sfu-mediasoup
+cargo build --release --bin sfu-bench
+
+# pire cas — full-mesh (tous parlent)
+./target/release/sfu-bench 2,5,10,20,50,100,150,300
+
+# plusieurs pièces réparties sur les cœurs
+SFU_BENCH_WORKERS=6 ./target/release/sfu-bench rooms 100 1,2,4,6
+
+# diffusion audio — 1 parle, N écoutent
+./target/release/sfu-bench watch 1 250,1000,5000,8000
+
+# partage d'écran 720p (~2,5 Mbit/s) — 1 partage, N regardent
+SFU_BENCH_PAYLOAD=1250 SFU_BENCH_PACKET_MS=4 ./target/release/sfu-bench watch 1 800,1600</pre>
+      <p style="margin-top:14px">Chaque test imprime un tableau lisible <b>et</b> un JSON pour l'archivage.
+        Les chiffres de ce site sortent tels quels de cet outil.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Les scénarios</h2></div>
+    <div class="next">
+      <a href="pire-cas.html"><div class="nx-k">Scénario 01</div><div class="nx-t">Le pire cas <span class="arr">→</span></div></a>
+      <a href="diffusion-audio.html"><div class="nx-k">Scénario 02</div><div class="nx-t">Diffusion audio <span class="arr">→</span></div></a>
+      <a href="partage-ecran.html"><div class="nx-k">Scénario 03</div><div class="nx-t">Partage d'écran <span class="arr">→</span></div></a>
+    </div>
+  </section>
+
+</div>
+<footer class="site"><div class="wrap">Mesures réelles issues de <a href="https://github.com/Pokled/nodyx">sfu-bench</a> · <a href="https://nodyx.org">Nodyx</a>, vocal souverain auto-hébergé · AGPL-3.0</div></footer>
+
+<script src="bench.js?v=2"></script>
+<script>
+  const MESH = [
+    { n: 2,   paths: 2,     cpu: 0.010, box: 0.1,  rss: 24,  health: 100 },
+    { n: 5,   paths: 20,    cpu: 0.015, box: 0.2,  rss: 25,  health: 100 },
+    { n: 10,  paths: 90,    cpu: 0.027, box: 0.3,  rss: 26,  health: 100 },
+    { n: 20,  paths: 380,   cpu: 0.057, box: 0.7,  rss: 28,  health: 100 },
+    { n: 50,  paths: 2450,  cpu: 0.312, box: 3.9,  rss: 46,  health: 100 },
+    { n: 75,  paths: 5550,  cpu: 0.580, box: 7.2,  rss: 73,  health: 100 },
+    { n: 100, paths: 9900,  cpu: 0.970, box: 12.1, rss: 110, health: 100 },
+    { n: 125, paths: 15500, cpu: 1.045, box: 13.1, rss: 162, health: 67.9 },
+    { n: 150, paths: 22350, cpu: 1.050, box: 13.1, rss: 305, health: 45.9 },
+    { n: 200, paths: 39800, cpu: 1.072, box: 13.4, rss: 484, health: 24.0 },
+    { n: 300, paths: 89700, cpu: 1.097, box: 13.7, rss: 985, health: 9.2 },
+  ];
+  const POOL = [
+    { rooms: 1, total: 100, cpu: 0.99, health: 99.6 },
+    { rooms: 2, total: 200, cpu: 2.03, health: 98.7 },
+    { rooms: 4, total: 400, cpu: 4.08, health: 98.9 },
+    { rooms: 6, total: 600, cpu: 6.03, health: 96.4 },
+  ];
+  const AUDIO = [
+    { spec: 250, cpu: 0.03, health: 100 }, { spec: 500, cpu: 0.07, health: 100 },
+    { spec: 1000, cpu: 0.16, health: 100 }, { spec: 2000, cpu: 0.30, health: 100 },
+    { spec: 5000, cpu: 0.57, health: 100 }, { spec: 8000, cpu: 0.92, health: 100 },
+    { spec: 10000, cpu: 1.01, health: 85.8 },
+  ];
+  const VIDEO = [
+    { spec: 200, cpu: 0.11 }, { spec: 400, cpu: 0.22 }, { spec: 800, cpu: 0.47 },
+    { spec: 1600, cpu: 0.55 }, { spec: 2400, cpu: 0.74 },
+  ];
+  const fr = n => n.toLocaleString("fr");
+  const c2 = v => v.toFixed(2).replace(".", ",");
+  const hp = h => (h % 1 ? h.toFixed(1).replace(".", ",") : h) + " %";
+  const state = h => h >= 99 ? '<span class="tag ok">OK</span>' : h >= 90 ? '<span class="tag warn">tendu</span>' : '<span class="tag crit">rupture</span>';
+  const fill = (id, rows, cells) => {
+    const tb = document.querySelector("#" + id + " tbody");
+    tb.innerHTML = rows.map(d => "<tr" + (d.health != null && d.health < 99 ? ' class="break"' : "") + ">" + cells(d).map(c => "<td>" + c + "</td>").join("") + "</tr>").join("");
+  };
+  fill("t-mesh", MESH, d => [d.n, fr(d.paths), c2(d.cpu), c2(d.box) + " %", fr(d.rss), hp(d.health), state(d.health)]);
+  fill("t-pool", POOL, d => [d.rooms, fr(d.total), c2(d.cpu), hp(d.health), state(d.health)]);
+  fill("t-audio", AUDIO, d => [fr(d.spec), c2(d.cpu), hp(d.health), state(d.health)]);
+  fill("t-video", VIDEO, d => [fr(d.spec), c2(d.cpu), '<span class="tag ok">OK</span>']);
+
+  Bench.boot("technique");
+</script>
+</body>
+</html>
