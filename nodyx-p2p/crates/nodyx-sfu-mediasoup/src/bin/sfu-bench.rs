@@ -22,10 +22,12 @@
 //!   sfu-bench watch <diffuseurs> <N,…> 1 pièce : D qui parlent + N spectateurs (cas réel)
 //!   SFU_BENCH_WINDOW_S=4              durée de mesure par palier (défaut 4 s)
 //!   SFU_BENCH_WORKERS=<n>            taille du pool en mode "rooms" (défaut = cœurs)
+//!   SFU_BENCH_PAYLOAD / SFU_BENCH_PACKET_MS  profil du flux (défaut audio 80o/20ms) ;
+//!     partage d'écran ~2,2 Mbit/s : SFU_BENCH_PAYLOAD=1100 SFU_BENCH_PACKET_MS=4
 
 use std::num::{NonZeroU32, NonZeroU8};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
 use mediasoup::prelude::*;
@@ -34,8 +36,24 @@ use mediasoup::rtp_parameters::RtpCodecCapabilityFinalized;
 type R<T> = Result<T, Box<dyn std::error::Error>>;
 
 const CLK_TCK: f64 = 100.0; // _SC_CLK_TCK standard Linux
-const PACKET_MS: u64 = 20; // Opus : 1 paquet / 20 ms
-const PAYLOAD: usize = 80; // ~ trame Opus (~32 kbps)
+
+// Profil du flux, configurable pour simuler la CHARGE (débit) d'un flux vidéo.
+//   audio Opus (défaut)  : 80 o / 20 ms (~32 kbit/s)
+//   partage d'écran ~2,2 Mbit/s : SFU_BENCH_PAYLOAD=1100 SFU_BENCH_PACKET_MS=4
+// On mesure le coût de FORWARDING, qui dépend du débit et du nombre de paquets,
+// pas du codec (mediasoup relaie les paquets sans les décoder).
+fn packet_ms() -> u64 {
+    static V: OnceLock<u64> = OnceLock::new();
+    *V.get_or_init(|| {
+        std::env::var("SFU_BENCH_PACKET_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(20).max(1)
+    })
+}
+fn payload() -> usize {
+    static V: OnceLock<usize> = OnceLock::new();
+    *V.get_or_init(|| {
+        std::env::var("SFU_BENCH_PAYLOAD").ok().and_then(|v| v.parse().ok()).unwrap_or(80)
+    })
+}
 
 // ── Mesure ressources (in-process, /proc/self) ──────────────────────────────
 
@@ -125,13 +143,14 @@ fn consumer_caps(finalized: &RtpCapabilitiesFinalized) -> RtpCapabilities {
 }
 
 fn rtp_packet(ssrc: u32, seq: u16, ts: u32) -> Vec<u8> {
-    let mut p = Vec::with_capacity(12 + PAYLOAD);
+    let pl = payload();
+    let mut p = Vec::with_capacity(12 + pl);
     p.push(0x80); // V=2, pas de padding/ext/CSRC
-    p.push(100); // PT=100 (Opus), pas de marker
+    p.push(100); // PT=100, pas de marker
     p.extend_from_slice(&seq.to_be_bytes());
     p.extend_from_slice(&ts.to_be_bytes());
     p.extend_from_slice(&ssrc.to_be_bytes());
-    p.extend_from_slice(&[0u8; PAYLOAD]);
+    p.resize(12 + pl, 0); // charge utile (taille = profil du flux)
     p
 }
 
@@ -228,7 +247,7 @@ async fn run_stage(manager: &WorkerManager, n: usize, window: Duration) -> R<Sta
         injectors.push(tokio::spawn(async move {
             let mut seq = 0u16;
             let mut ts = 0u32;
-            let mut ticker = tokio::time::interval(Duration::from_millis(PACKET_MS));
+            let mut ticker = tokio::time::interval(Duration::from_millis(packet_ms()));
             while Instant::now() < deadline {
                 ticker.tick().await;
                 if let Producer::Direct(dp) = &prod {
@@ -247,7 +266,7 @@ async fn run_stage(manager: &WorkerManager, n: usize, window: Duration) -> R<Sta
     let received_delta = received.load(Ordering::Relaxed).saturating_sub(recv0);
 
     let cores_used = (cpu_delta as f64 / CLK_TCK) / wall;
-    let pkts_per_prod = (wall / (PACKET_MS as f64 / 1000.0)) as u64;
+    let pkts_per_prod = (wall / (packet_ms() as f64 / 1000.0)) as u64;
     let expected = pkts_per_prod * n as u64 * (n as u64).saturating_sub(1);
     let health_pct = if expected > 0 {
         (received_delta as f64 / expected as f64) * 100.0
@@ -328,7 +347,7 @@ async fn run_multi_stage(pool: usize, rooms: usize, per_room: usize, window: Dur
             injectors.push(tokio::spawn(async move {
                 let mut seq = 0u16;
                 let mut ts = 0u32;
-                let mut ticker = tokio::time::interval(Duration::from_millis(PACKET_MS));
+                let mut ticker = tokio::time::interval(Duration::from_millis(packet_ms()));
                 while Instant::now() < deadline {
                     ticker.tick().await;
                     if let Producer::Direct(dp) = &prod {
@@ -348,7 +367,7 @@ async fn run_multi_stage(pool: usize, rooms: usize, per_room: usize, window: Dur
     let received_delta = received.load(Ordering::Relaxed).saturating_sub(recv0);
 
     let cores_used = (cpu_delta as f64 / CLK_TCK) / wall;
-    let pkts_per_prod = (wall / (PACKET_MS as f64 / 1000.0)) as u64;
+    let pkts_per_prod = (wall / (packet_ms() as f64 / 1000.0)) as u64;
     // full-mesh PAR salon (per_room×(per_room-1)) × nombre de salons.
     let expected =
         pkts_per_prod * per_room as u64 * (per_room as u64).saturating_sub(1) * rooms as u64;
@@ -510,7 +529,7 @@ async fn run_watch_stage(publishers: usize, spectators: usize, window: Duration)
         injectors.push(tokio::spawn(async move {
             let mut seq = 0u16;
             let mut ts = 0u32;
-            let mut ticker = tokio::time::interval(Duration::from_millis(PACKET_MS));
+            let mut ticker = tokio::time::interval(Duration::from_millis(packet_ms()));
             while Instant::now() < deadline {
                 ticker.tick().await;
                 if let Producer::Direct(dp) = &prod {
@@ -529,7 +548,7 @@ async fn run_watch_stage(publishers: usize, spectators: usize, window: Duration)
     let received_delta = received.load(Ordering::Relaxed).saturating_sub(recv0);
 
     let cores_used = (cpu_delta as f64 / CLK_TCK) / wall;
-    let pkts_per_prod = (wall / (PACKET_MS as f64 / 1000.0)) as u64;
+    let pkts_per_prod = (wall / (packet_ms() as f64 / 1000.0)) as u64;
     // chaque paquet de chaque diffuseur va à chaque spectateur.
     let expected = pkts_per_prod * publishers as u64 * spectators as u64;
     let health_pct = if expected > 0 {
@@ -663,8 +682,8 @@ async fn main() -> R<()> {
     let json = serde_json::json!({
         "cores": cores,
         "window_s": window.as_secs(),
-        "packet_ms": PACKET_MS,
-        "payload_bytes": PAYLOAD,
+        "packet_ms": packet_ms(),
+        "payload_bytes": payload(),
         "stages": results.iter().map(|r| serde_json::json!({
             "participants": r.n,
             "setup_ms": r.setup_ms,
