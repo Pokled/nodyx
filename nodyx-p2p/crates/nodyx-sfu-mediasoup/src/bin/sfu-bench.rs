@@ -16,8 +16,12 @@
 //! DirectTransport = in-process, aucun port UDP → aucun impact firewall, aucune
 //! interférence avec le daemon de prod (worker séparé). À lancer niceé.
 //!
-//! Usage : sfu-bench [stages]   ex: sfu-bench 2,5,10,20,30   (défaut idem)
-//!         SFU_BENCH_WINDOW_S=4  durée de mesure par palier (défaut 4 s)
+//! Usage :
+//!   sfu-bench [stages]                un salon full-mesh (pire cas). ex: 2,5,10,20,30
+//!   sfu-bench rooms <P/salon> <nb,…>  K salons de P participants sur un pool de workers
+//!   sfu-bench watch <diffuseurs> <N,…> 1 pièce : D qui parlent + N spectateurs (cas réel)
+//!   SFU_BENCH_WINDOW_S=4              durée de mesure par palier (défaut 4 s)
+//!   SFU_BENCH_WORKERS=<n>            taille du pool en mode "rooms" (défaut = cœurs)
 
 use std::num::{NonZeroU32, NonZeroU8};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -437,6 +441,175 @@ async fn run_multi(cores: usize, window: Duration, args: &[String]) -> R<()> {
     Ok(())
 }
 
+// ── Watch-party : le cas réel (peu parlent, beaucoup écoutent), en étoile ─────
+
+struct WatchResult {
+    publishers: usize,
+    spectators: usize,
+    setup_ms: u128,
+    cores_used: f64,
+    rss_mb: u64,
+    expected: u64,
+    received: u64,
+    health_pct: f64,
+    paths: usize,
+}
+
+/// Une pièce, `publishers` qui diffusent (parlent) + `spectators` qui écoutent
+/// tout le monde. Coût de forwarding = publishers×spectators chemins (linéaire),
+/// pas N×(N-1) : c'est pour ça que la capacité réelle explose. Tout sur UN cœur.
+async fn run_watch_stage(publishers: usize, spectators: usize, window: Duration) -> R<WatchResult> {
+    let manager = WorkerManager::new();
+    let worker = manager.create_worker(WorkerSettings::default()).await?;
+    let router = worker.create_router(RouterOptions::new(vec![opus_capability()])).await?;
+    let caps = consumer_caps(router.rtp_capabilities());
+    let received = Arc::new(AtomicU64::new(0));
+
+    let setup = Instant::now();
+    // Les diffuseurs (ceux qui parlent).
+    let mut producers = Vec::with_capacity(publishers);
+    let mut send_transports = Vec::with_capacity(publishers);
+    for i in 0..publishers {
+        let send_t = router.create_direct_transport(DirectTransportOptions::default()).await?;
+        let ssrc = 5000 + i as u32;
+        let prod = send_t
+            .produce(ProducerOptions::new(MediaKind::Audio, opus_rtp_parameters(ssrc)))
+            .await?;
+        producers.push((prod, ssrc));
+        send_transports.push(send_t);
+    }
+    // Les spectateurs : chacun consomme TOUS les diffuseurs.
+    let mut recv_transports = Vec::with_capacity(spectators);
+    let mut consumers = Vec::with_capacity(spectators * publishers.max(1));
+    for _ in 0..spectators {
+        let recv_t = router.create_direct_transport(DirectTransportOptions::default()).await?;
+        for (prod, _) in producers.iter() {
+            let c = recv_t
+                .consume(ConsumerOptions::new(prod.id(), caps.clone()))
+                .await?;
+            let recv = Arc::clone(&received);
+            c.on_rtp(move |_pkt| {
+                recv.fetch_add(1, Ordering::Relaxed);
+            })
+            .detach();
+            consumers.push(c);
+        }
+        recv_transports.push(recv_t);
+    }
+    let setup_ms = setup.elapsed().as_millis();
+
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let cpu0 = cpu_ticks();
+    let recv0 = received.load(Ordering::Relaxed);
+    let t0 = Instant::now();
+    let deadline = t0 + window;
+    let mut injectors = Vec::with_capacity(publishers);
+    for (prod, ssrc) in producers.iter() {
+        let prod = prod.clone();
+        let ssrc = *ssrc;
+        injectors.push(tokio::spawn(async move {
+            let mut seq = 0u16;
+            let mut ts = 0u32;
+            let mut ticker = tokio::time::interval(Duration::from_millis(PACKET_MS));
+            while Instant::now() < deadline {
+                ticker.tick().await;
+                if let Producer::Direct(dp) = &prod {
+                    let _ = dp.send(rtp_packet(ssrc, seq, ts));
+                }
+                seq = seq.wrapping_add(1);
+                ts = ts.wrapping_add(960);
+            }
+        }));
+    }
+    for h in injectors {
+        let _ = h.await;
+    }
+    let wall = t0.elapsed().as_secs_f64();
+    let cpu_delta = cpu_ticks().saturating_sub(cpu0);
+    let received_delta = received.load(Ordering::Relaxed).saturating_sub(recv0);
+
+    let cores_used = (cpu_delta as f64 / CLK_TCK) / wall;
+    let pkts_per_prod = (wall / (PACKET_MS as f64 / 1000.0)) as u64;
+    // chaque paquet de chaque diffuseur va à chaque spectateur.
+    let expected = pkts_per_prod * publishers as u64 * spectators as u64;
+    let health_pct = if expected > 0 {
+        (received_delta as f64 / expected as f64) * 100.0
+    } else {
+        100.0
+    };
+
+    Ok(WatchResult {
+        publishers,
+        spectators,
+        setup_ms,
+        cores_used,
+        rss_mb: rss_mb(),
+        expected,
+        received: received_delta,
+        health_pct,
+        paths: publishers * spectators,
+    })
+}
+
+/// Mode watch-party : `sfu-bench watch <diffuseurs> <nb_spectateurs,...>`
+async fn run_watch(cores: usize, window: Duration, args: &[String]) -> R<()> {
+    let publishers: usize = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(1).max(1);
+    let spectator_stages: Vec<usize> = args
+        .get(3)
+        .map(|s| s.split(',').filter_map(|x| x.trim().parse().ok()).filter(|&n| n >= 1).collect())
+        .unwrap_or_else(|| vec![100, 250, 500, 1000]);
+
+    eprintln!(
+        "── sfu-bench WATCH-PARTY : {publishers} diffuseur(s) + N spectateurs, 1 pièce sur 1 cœur, fenêtre {}s ──",
+        window.as_secs()
+    );
+    eprintln!("   (cas réel : peu parlent, beaucoup écoutent ; coût = diffuseurs×spectateurs chemins, pas N×(N-1))\n");
+    println!(
+        "{:>11} | {:>8} | {:>6} | {:>7} | {:>9} | verdict",
+        "spectateurs", "chemins", "RSS", "CPU", "santé"
+    );
+    println!("{:->11}-+-{:->8}-+-{:->6}-+-{:->7}-+-{:->9}-+--------", "", "", "", "", "");
+
+    let mut results = Vec::new();
+    for &spec in &spectator_stages {
+        let r = run_watch_stage(publishers, spec, window).await?;
+        let verdict = if r.health_pct >= 99.0 {
+            "OK"
+        } else if r.health_pct >= 90.0 {
+            "tendu"
+        } else {
+            "RUPTURE"
+        };
+        println!(
+            "{:>11} | {:>8} | {:>4}Mo | {:>5.2}c | {:>7.1}% | {}",
+            r.spectators, r.paths, r.rss_mb, r.cores_used, r.health_pct, verdict
+        );
+        results.push(r);
+        tokio::time::sleep(Duration::from_millis(400)).await;
+    }
+
+    let json = serde_json::json!({
+        "mode": "watch-party",
+        "cores": cores,
+        "publishers": publishers,
+        "window_s": window.as_secs(),
+        "stages": results.iter().map(|r| serde_json::json!({
+            "publishers": r.publishers,
+            "spectators": r.spectators,
+            "forward_paths": r.paths,
+            "setup_ms": r.setup_ms,
+            "cpu_cores_used": (r.cores_used * 1000.0).round() / 1000.0,
+            "rss_mb": r.rss_mb,
+            "expected_pkts": r.expected,
+            "received_pkts": r.received,
+            "forward_health_pct": (r.health_pct * 10.0).round() / 10.0,
+        })).collect::<Vec<_>>(),
+    });
+    eprintln!("\n── JSON ──");
+    println!("{}", serde_json::to_string_pretty(&json)?);
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> R<()> {
     let args: Vec<String> = std::env::args().collect();
@@ -448,6 +621,9 @@ async fn main() -> R<()> {
     // Mode multi-salons : sfu-bench rooms <participants/salon> <nb_salons,...>
     if args.get(1).map(String::as_str) == Some("rooms") {
         return run_multi(cores, window, &args).await;
+    }
+    if args.get(1).map(String::as_str) == Some("watch") {
+        return run_watch(cores, window, &args).await;
     }
 
     let stages: Vec<usize> = args
