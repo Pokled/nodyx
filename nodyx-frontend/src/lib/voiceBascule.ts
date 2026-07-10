@@ -4,44 +4,52 @@
 // sont émis que si le flag backend VOICE_SFU_AUTO est actif. Sans bascule, ces
 // fonctions ne sont jamais appelées ⇒ le mesh (voice.ts) est strictement inchangé.
 //
-// Zéro import de voice.ts : le commit reçoit les opérations mesh en paramètres
-// (pas d'import circulaire). N'importe que voiceSfu (la couche SFU).
+// Zéro-coupure SANS son différé (qui se faisait bloquer par la politique autoplay,
+// surtout mobile) : on JOUE le flux SFU immédiatement (comme le labo, prouvé), et
+// on coupe le mesh de chaque personne au moment EXACT où son flux SFU se met à
+// jouer (crossfade par personne). Donc pour chacun : mesh OU SFU, jamais les deux,
+// jamais le vide. voice.ts fournit les opérations mesh (pas d'import circulaire).
 
-import { sfuJoin, sfuLeave, sfuActivatePlayback, sfuIsActive } from './voiceSfu'
+import { sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback } from './voiceSfu'
 
-// Type minimal : on n'a besoin que d'emit pour confirmer au serveur.
 type Emitter = { emit: (event: string, payload: unknown) => void }
 
-// Cas A/C : le canal bascule (ou j'arrive pendant switching) → établir l'SFU EN
-// PARALLÈLE du mesh, SANS jouer (holdPlayback), puis confirmer au serveur. Le mesh
-// n'est PAS touché : on entend toujours via lui jusqu'au commit.
-export async function basculeBeginSwitch(socket: Emitter, channelId: string): Promise<void> {
-  await sfuJoin(channelId, { holdPlayback: true })
+// Cas A/C : le canal bascule (ou j'arrive pendant switching). On établit l'SFU en
+// PARALLÈLE du mesh, en JOUANT tout de suite ; `onSfuPeerPlaying(userId)` coupe le
+// mesh de cette personne à l'instant où son flux SFU démarre. Puis on confirme.
+export async function basculeBeginSwitch(
+  socket: Emitter,
+  channelId: string,
+  onSfuPeerPlaying: (userId: string) => void,
+): Promise<void> {
+  sfuSetConsumerPlayingCallback(onSfuPeerPlaying)
+  await sfuJoin(channelId)
   if (sfuIsActive()) {
     socket.emit('voice:sfu_ready', { channelId })
   }
   // sinon : établissement échoué → le serveur abandonnera au timeout (voice:mode mesh)
 }
 
-// Cas B : j'arrive sur un canal DÉJÀ en SFU → rejoindre l'SFU directement, en
-// jouant (pas de mesh, donc pas d'overlap à gérer).
+// Cas B : j'arrive sur un canal DÉJÀ en SFU → rejoindre l'SFU directement (pas de
+// mesh, donc pas de crossfade à gérer).
 export async function basculeJoinDirectSfu(channelId: string): Promise<void> {
-  await sfuJoin(channelId) // holdPlayback false ⇒ lecture immédiate
+  await sfuJoin(channelId)
 }
 
-// Abandon / départ : on lâche l'SFU. Le mesh (jamais lâché) reste seul. Idempotent
-// (sfuLeave gère l'absence de session).
+// Abandon / départ : on lâche l'SFU et on oublie le callback. Le mesh (jamais
+// lâché) reste seul. Idempotent.
 export async function basculeLeaveSfu(): Promise<void> {
+  sfuSetConsumerPlayingCallback(null)
   await sfuLeave()
 }
 
-// Commit : l'instant zéro-coupure. On joue l'SFU (bref overlap : les deux jouent),
-// puis on coupe et démonte le mesh. Les opérations mesh sont fournies par voice.ts.
+// Commit : tout le monde est sur l'SFU (chaque flux joue déjà, le mesh de chacun a
+// été coupé au passage). On coupe un éventuel résidu mesh et on démonte les PC.
 export function basculeCommit(
   meshMutePlayback: (muted: boolean) => void,
   meshTeardownConnections: () => void,
 ): void {
-  sfuActivatePlayback()        // l'SFU prend le relais
-  meshMutePlayback(true)       // le mesh se tait
-  meshTeardownConnections()    // puis on démonte les PC mesh (roster/session conservés)
+  sfuSetConsumerPlayingCallback(null)
+  meshMutePlayback(true)      // filet de sécurité (résidu éventuel)
+  meshTeardownConnections()   // démonte les PC mesh (roster/session conservés)
 }

@@ -154,9 +154,8 @@ function setMediaSession(active: boolean): void {
   } catch { /* pas supporté */ }
 }
 
-export async function sfuJoin(channelId: string, opts: { holdPlayback?: boolean } = {}): Promise<void> {
+export async function sfuJoin(channelId: string): Promise<void> {
   if (_session) { log('⚠ session déjà active, join ignoré (leave d\'abord)'); return }
-  _holdPlayback = !!opts.holdPlayback // overlap bascule : établir sans jouer
   const sock = get(socketStore)
   if (!sock) { fail('socket non connecté'); return }
 
@@ -284,10 +283,14 @@ export async function sfuJoin(channelId: string, opts: { holdPlayback?: boolean 
 
 const _consuming = new Set<string>()
 
-// Overlap bascule (§17-B) : quand vrai, les consumers sont créés MUETS (établis
-// mais non joués) jusqu'à sfuActivatePlayback() — évite le double son pendant que
-// le mesh joue encore. Défaut false = comportement normal (labo : lecture immédiate).
-let _holdPlayback = false
+// Overlap bascule (§17-B) : callback appelé quand un flux SFU COMMENCE À JOUER
+// (par userId). La bascule s'en sert pour couper le mesh de cette personne au
+// même instant (crossfade par personne = zéro coupure, sans son différé qui se
+// ferait bloquer par la politique autoplay des navigateurs, surtout mobile).
+let _onConsumerPlaying: ((userId: string) => void) | null = null
+export function sfuSetConsumerPlayingCallback(cb: ((userId: string) => void) | null): void {
+  _onConsumerPlaying = cb
+}
 
 async function consumeOne(sock: Socket, producerId: string, userId: string, kind: string): Promise<void> {
   const s = _session
@@ -311,12 +314,14 @@ async function consumeOne(sock: Socket, producerId: string, userId: string, kind
     const el = new Audio()
     el.srcObject = new MediaStream([consumer.track])
     el.autoplay = true
-    el.muted = _holdPlayback // overlap : établi mais silencieux jusqu'au commit
     s.audioEls.set(producerId, el)
     void el.play().catch(err => log(`⚠ autoplay : ${err.message}`))
 
     sfuConsumersStore.update(list => [...list, { consumerId: consumer.id, producerId, userId, kind }])
     log(`✓ flux de ${userId} en lecture`)
+    // Overlap bascule : ce flux SFU joue maintenant → la bascule coupe le mesh de
+    // cette personne au même instant (crossfade par personne, zéro coupure).
+    _onConsumerPlaying?.(userId)
   } catch (e) {
     log(`✘ consume : ${(e as Error).message}`)
   } finally {
@@ -420,19 +425,6 @@ export function sfuSetMuted(muted: boolean): void {
     sfuMutedStore.set(muted)
     log(muted ? 'micro coupé' : 'micro ouvert')
   }
-}
-
-/** Bascule (commit) : on lève l'overlap → on joue enfin les flux SFU (dé-mute les
- *  <audio> établis en hold, et les futurs consumers joueront normalement). Idempotent. */
-export function sfuActivatePlayback(): void {
-  _holdPlayback = false
-  const s = _session
-  if (!s) return
-  for (const el of s.audioEls.values()) {
-    el.muted = false
-    void el.play().catch(() => { /* autoplay pointilleux : ignoré */ })
-  }
-  log('▶ lecture SFU activée (commit)')
 }
 
 /** État établi (produce + consume faits) : le bascule attend ça pour voice:sfu_ready. */
