@@ -171,6 +171,10 @@ pub trait MediaEngine: Send + Sync {
     /// Le participant souscrit à un flux publié. `client_caps` porte ses
     /// capabilities ; retourne les paramètres que le client doit appliquer.
     async fn consume(&self, transport: &TransportHandle, producer: &ProducerId, client_caps: &SignalingBlob) -> Result<(ConsumerId, SignalingBlob)>;
+    /// Ferme un producer (le participant arrête un flux, ex. stop partage
+    /// d'écran). Idempotent : un producer déjà fermé/inconnu n'est PAS une erreur
+    /// (un nettoyage doit toujours pouvoir aboutir).
+    async fn close_producer(&self, producer: &ProducerId) -> Result<()>;
     /// Force la couche servie à un abonné (adaptation bande passante).
     async fn set_preferred_layer(&self, consumer: &ConsumerId, layer: Layer) -> Result<()>;
     /// Relaie un flux vers un nœud SFU distant (cascade fédérée, PipeTransport).
@@ -225,6 +229,9 @@ impl MediaEngine for NullEngine {
     async fn consume(&self, _transport: &TransportHandle, _producer: &ProducerId, client_caps: &SignalingBlob) -> Result<(ConsumerId, SignalingBlob)> {
         // Écho des caps client : déterministe, suffisant pour l'orchestration.
         Ok((ConsumerId(self.next("consumer")), client_caps.clone()))
+    }
+    async fn close_producer(&self, _producer: &ProducerId) -> Result<()> {
+        Ok(())
     }
     async fn set_preferred_layer(&self, _consumer: &ConsumerId, _layer: Layer) -> Result<()> {
         Ok(())

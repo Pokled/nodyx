@@ -43,6 +43,14 @@ export const sfuLogStore:       Writable<string[]>          = writable([])
 export const sfuConsumersStore: Writable<SfuConsumerInfo[]> = writable([])
 export const sfuMutedStore:     Writable<boolean>           = writable(false)
 
+/** Un écran/cam distant reçu via le SFU (rendu par un <video> côté UI). */
+export interface SfuScreen { producerId: string; userId: string; stream: MediaStream }
+/** Écrans distants reçus (screenshare P2). Le mapping userId → socketId (roster)
+ *  pour l'UI mesh se fait côté voice.ts, comme pour les stats de la bascule. */
+export const sfuScreensStore:     Writable<SfuScreen[]>        = writable([])
+/** MON écran en cours de partage (aperçu local), null si je ne partage pas. */
+export const sfuLocalScreenStore: Writable<MediaStream | null> = writable(null)
+
 export interface SfuAuditRow {
   participant: string
   direction:   string
@@ -71,6 +79,8 @@ interface Session {
   recvTransport: import('mediasoup-client').types.Transport
   micTrack:      MediaStreamTrack | null
   producer:      import('mediasoup-client').types.Producer | null
+  screenProducer: import('mediasoup-client').types.Producer | null
+  screenStream:  MediaStream | null
   consumers:     Map<string, import('mediasoup-client').types.Consumer>
   audioEls:      Map<string, HTMLAudioElement>
   offNewProducer: (() => void) | null
@@ -209,10 +219,13 @@ export async function sfuJoin(channelId: string): Promise<void> {
 
     const sendTransport = device.createSendTransport(join.sendTransportParams as never)
     wireTransport(sendTransport, 'send')
-    sendTransport.on('produce', ({ kind, rtpParameters }, callback, errback) => {
-      if (kind !== 'audio') { errback(new Error('labo : audio uniquement')); return }
-      log('→ produce audio (rtpParameters au SFU)')
-      emitAck(sock, 'voice:sfu_produce', { channelId, kind: 'audio', rtpParameters })
+    sendTransport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
+      // `kind` = nature média ('audio'|'video'). Le "kind SFU" distingue en plus
+      // l'écran de la cam via appData (transmis tel quel par mediasoup-client).
+      const source = (appData as { source?: string } | undefined)?.source
+      const sfuKind = kind === 'audio' ? 'audio' : source === 'cam' ? 'cam' : 'screen'
+      log(`→ produce ${sfuKind} (rtpParameters au SFU)`)
+      emitAck(sock, 'voice:sfu_produce', { channelId, kind: sfuKind, rtpParameters })
         .then(r => r.ok
           ? (log(`✓ producer ${String(r.producerId).slice(0, 8)}…`), callback({ id: String(r.producerId) }))
           : errback(new Error(String(r.error))))
@@ -224,6 +237,7 @@ export async function sfuJoin(channelId: string): Promise<void> {
     _session = {
       channelId, device, sendTransport, recvTransport,
       micTrack: null, producer: null,
+      screenProducer: null, screenStream: null,
       consumers: new Map(), audioEls: new Map(), offNewProducer: null,
       maintain: null, onVisibility: null,
     }
@@ -244,7 +258,7 @@ export async function sfuJoin(channelId: string): Promise<void> {
     if (pubs.ok && Array.isArray(pubs.publications)) {
       log(`${pubs.publications.length} publication(s) existante(s)`)
       for (const pub of pubs.publications as { producer: string; owner: string; kind: string }[]) {
-        if (_session.producer && pub.producer === _session.producer.id) continue // pas soi-même
+        if (isOwnProducer(_session, pub.producer)) continue // ni mon micro, ni mon écran
         await consumeOne(sock, pub.producer, pub.owner, pub.kind)
       }
     }
@@ -254,7 +268,18 @@ export async function sfuJoin(channelId: string): Promise<void> {
       void consumeOne(sock, data.producerId, data.userId, data.kind)
     }
     sock.on('voice:sfu_new_producer', onNewProducer)
-    _session.offNewProducer = () => { sock.off('voice:sfu_new_producer', onNewProducer) }
+    // Arrêt net d'un flux (ex. le partageur stoppe son écran) : on ferme le
+    // consumer et on retire l'écran tout de suite, sans attendre la réconciliation.
+    const onProducerClosed = (data: { channelId: string; producerId: string; userId: string }) => {
+      if (!_session || data.channelId !== _session.channelId) return
+      log(`flux de ${data.userId} fermé → retrait`)
+      closeConsumerFor(_session, data.producerId)
+    }
+    sock.on('voice:sfu_producer_closed', onProducerClosed)
+    _session.offNewProducer = () => {
+      sock.off('voice:sfu_new_producer', onNewProducer)
+      sock.off('voice:sfu_producer_closed', onProducerClosed)
+    }
 
     // Maintenance périodique (5 s) : heartbeat (anti-éviction) + réconciliation
     // des flux (ferme les consumers dont le producer a disparu = fantômes ;
@@ -296,6 +321,24 @@ export function sfuSetConsumerPlayingCallback(cb: ((userId: string) => void) | n
 // la perte en delta entre deux relevés (même méthode que le mesh).
 const _sfuPrevPackets = new Map<string, { received: number; lost: number }>()
 
+/** Un de MES producers (micro ou écran) ? Sert à ne jamais consommer ses propres
+ *  flux (les publications listent TOUT le salon, moi compris). Le broadcast
+ *  new_producer exclut déjà l'émetteur, mais pas la liste des publications. */
+function isOwnProducer(s: Session, producerId: string): boolean {
+  return producerId === s.producer?.id || producerId === s.screenProducer?.id
+}
+
+/** Ferme et oublie le consumer d'un flux (audio OU écran) : par réconciliation
+ *  (producer disparu) ou par arrêt net (voice:sfu_producer_closed). Idempotent. */
+function closeConsumerFor(s: Session, producerId: string): void {
+  const consumer = s.consumers.get(producerId)
+  if (consumer) { try { consumer.close() } catch { /* déjà fermé */ } s.consumers.delete(producerId) }
+  const el = s.audioEls.get(producerId)
+  if (el) { try { el.pause(); el.srcObject = null } catch { /* mort */ } s.audioEls.delete(producerId) }
+  sfuConsumersStore.update(l => l.filter(c => c.producerId !== producerId))
+  sfuScreensStore.update(l => l.filter(x => x.producerId !== producerId))
+}
+
 async function consumeOne(sock: Socket, producerId: string, userId: string, kind: string): Promise<void> {
   const s = _session
   if (!s) return
@@ -314,18 +357,25 @@ async function consumeOne(sock: Socket, producerId: string, userId: string, kind
     })
     s.consumers.set(producerId, consumer)
 
-    // Lecture : un <audio> par flux, détaché du DOM (labo audio-only).
-    const el = new Audio()
-    el.srcObject = new MediaStream([consumer.track])
-    el.autoplay = true
-    s.audioEls.set(producerId, el)
-    void el.play().catch(err => log(`⚠ autoplay : ${err.message}`))
-
     sfuConsumersStore.update(list => [...list, { consumerId: consumer.id, producerId, userId, kind }])
-    log(`✓ flux de ${userId} en lecture`)
-    // Overlap bascule : ce flux SFU joue maintenant → la bascule coupe le mesh de
-    // cette personne au même instant (crossfade par personne, zéro coupure).
-    _onConsumerPlaying?.(userId)
+
+    if (params.kind === 'video') {
+      // Écran/cam : pas de <audio>. On expose le flux (rendu par un <video> UI).
+      const stream = new MediaStream([consumer.track])
+      sfuScreensStore.update(l => [...l.filter(x => x.producerId !== producerId), { producerId, userId, stream }])
+      log(`✓ écran de ${userId} reçu`)
+    } else {
+      // Audio : un <audio> par flux, détaché du DOM.
+      const el = new Audio()
+      el.srcObject = new MediaStream([consumer.track])
+      el.autoplay = true
+      s.audioEls.set(producerId, el)
+      void el.play().catch(err => log(`⚠ autoplay : ${err.message}`))
+      log(`✓ flux de ${userId} en lecture`)
+      // Overlap bascule : ce flux AUDIO joue → couper le mesh audio de la personne
+      // au même instant (crossfade par personne, zéro coupure). Vidéo = hors-sujet.
+      _onConsumerPlaying?.(userId)
+    }
   } catch (e) {
     log(`✘ consume : ${(e as Error).message}`)
   } finally {
@@ -404,19 +454,15 @@ async function reconcile(sock: Socket): Promise<void> {
   const list = pubs.publications as { producer: string; owner: string; kind: string }[]
   const live = new Set(list.map(p => p.producer))
   // fermer les fantômes (producer disparu des publications)
-  for (const [producerId, consumer] of [...s.consumers]) {
+  for (const [producerId] of [...s.consumers]) {
     if (!live.has(producerId)) {
-      try { consumer.close() } catch { /* déjà fermé */ }
-      s.consumers.delete(producerId)
-      const el = s.audioEls.get(producerId)
-      if (el) { try { el.pause(); el.srcObject = null } catch { /* mort */ } s.audioEls.delete(producerId) }
-      sfuConsumersStore.update(l => l.filter(c => c.producerId !== producerId))
+      closeConsumerFor(s, producerId)
       log(`flux ${producerId.slice(0, 8)}… disparu → consumer fermé`)
     }
   }
   // consommer les nouveaux (rattrapage d'une annonce manquée)
   for (const pub of list) {
-    if (s.producer && pub.producer === s.producer.id) continue
+    if (isOwnProducer(s, pub.producer)) continue
     if (!s.consumers.has(pub.producer) && !_consuming.has(pub.producer)) {
       await consumeOne(sock, pub.producer, pub.owner, pub.kind)
     }
@@ -429,6 +475,75 @@ export function sfuSetMuted(muted: boolean): void {
     sfuMutedStore.set(muted)
     log(muted ? 'micro coupé' : 'micro ouvert')
   }
+}
+
+/** Partager son écran via le SFU (P2). getDisplayMedia → produce vidéo (VP8) sur
+ *  le sendTransport existant (à côté du micro). Une seule couche en v1 (le
+ *  simulcast arrive après). Retourne le flux local (aperçu) ou null si annulé.
+ *  Le partage passe par le SFU : un seul upload, le serveur recopie à chacun. */
+export async function sfuStartScreenShare(opts?: { maxBitrate?: number }): Promise<MediaStream | null> {
+  const s = _session
+  if (!s) { log('⚠ pas de session SFU active'); return null }
+  if (s.screenProducer) { log('⚠ partage déjà en cours'); return get(sfuLocalScreenStore) }
+
+  let display: MediaStream
+  try {
+    display = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: { ideal: 30, max: 60 } },
+      audio: false, // le son d'onglet arrivera en P3 ; v1 = vidéo seule
+    })
+  } catch (e) {
+    log(`partage annulé : ${(e as Error).message}`) // l'utilisateur a fermé le sélecteur
+    return null
+  }
+
+  const track = display.getVideoTracks()[0]
+  if (!track) { display.getTracks().forEach(t => t.stop()); log('✘ aucune piste vidéo'); return null }
+
+  try {
+    s.screenStream = display
+    s.screenProducer = await s.sendTransport.produce({
+      track,
+      appData: { source: 'screen' },
+      encodings: [{ maxBitrate: opts?.maxBitrate ?? 2_500_000 }], // v1 : 1 couche
+    })
+    // Le bouton « Arrêter le partage » natif du navigateur termine la piste.
+    track.onended = () => { void sfuStopScreenShare() }
+    sfuLocalScreenStore.set(display)
+    log('✓ écran publié au SFU')
+    return display
+  } catch (e) {
+    display.getTracks().forEach(t => t.stop())
+    s.screenStream = null
+    s.screenProducer = null
+    log(`✘ publication écran : ${(e as Error).message}`)
+    return null
+  }
+}
+
+/** Arrêter mon partage d'écran : ferme le producer LOCAL puis prévient le serveur
+ *  (voice:sfu_unpublish) pour qu'il ferme le producer SERVEUR → les spectateurs
+ *  voient l'écran disparaître immédiatement. Idempotent. */
+export async function sfuStopScreenShare(): Promise<void> {
+  const s = _session
+  if (!s) return
+  const producerId = s.screenProducer?.id ?? null
+  try { s.screenProducer?.close() } catch { /* déjà fermé */ }
+  s.screenProducer = null
+  try { s.screenStream?.getTracks().forEach(t => t.stop()) } catch { /* déjà stoppé */ }
+  s.screenStream = null
+  sfuLocalScreenStore.set(null)
+
+  const sock = get(socketStore)
+  if (sock && producerId) {
+    await emitAck(sock, 'voice:sfu_unpublish', { channelId: s.channelId, producerId })
+  }
+  log('partage d\'écran arrêté')
+}
+
+/** Suis-je en train de partager mon écran via le SFU ? */
+export function sfuIsScreenSharing(): boolean {
+  return _session?.screenProducer != null
 }
 
 /** État établi (produce + consume faits) : le bascule attend ça pour voice:sfu_ready. */
@@ -568,10 +683,14 @@ function cleanup(): void {
     try { c.close() } catch { /* déjà fermé */ }
   }
   try { s.producer?.close() } catch { /* déjà fermé */ }
+  try { s.screenProducer?.close() } catch { /* déjà fermé */ }
   try { s.micTrack?.stop() } catch { /* déjà stoppé */ }
+  try { s.screenStream?.getTracks().forEach(t => t.stop()) } catch { /* déjà stoppé */ }
   try { s.sendTransport.close() } catch { /* déjà fermé */ }
   try { s.recvTransport.close() } catch { /* déjà fermé */ }
   sfuConsumersStore.set([])
+  sfuScreensStore.set([])
+  sfuLocalScreenStore.set(null)
   sfuMutedStore.set(false)
   sfuAuditStore.set([])
 }

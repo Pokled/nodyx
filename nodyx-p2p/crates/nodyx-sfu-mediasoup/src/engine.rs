@@ -30,7 +30,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use mediasoup::prelude::*;
-use mediasoup::rtp_parameters::RtpCodecCapabilityFinalized;
+use mediasoup::rtp_parameters::{RtcpFeedback, RtpCodecCapabilityFinalized};
 
 use nodyx_sfu::{
     ConsumerId, EngineStats, Layer, MediaEngine, MediaError, NodeId, ParticipantId, PipeHandle,
@@ -69,6 +69,35 @@ fn opus_rtp_parameters(ssrc: u32) -> RtpParameters {
         }],
         rtcp: RtcpParameters::default(),
     }
+}
+
+// ── Codec vidéo P2 : VP8, universel navigateur, libre de droits (screenshare) ─
+// S'AJOUTE à Opus dans le router (ne le remplace pas) → l'audio ne régresse pas.
+// Le rtcp_feedback est CE qui fait tenir la vidéo : NACK (retransmission), PLI/FIR
+// (demande de keyframe), REMB/transport-cc (contrôle de congestion). Sans lui, le
+// flux vidéo se fige/casse. clock_rate vidéo = 90 kHz (invariant WebRTC).
+
+fn vp8_capability() -> RtpCodecCapability {
+    RtpCodecCapability::Video {
+        mime_type: MimeTypeVideo::Vp8,
+        preferred_payload_type: None,
+        clock_rate: NonZeroU32::new(90000).unwrap(),
+        parameters: RtpCodecParametersParameters::default(),
+        rtcp_feedback: vec![
+            RtcpFeedback::Nack,
+            RtcpFeedback::NackPli,
+            RtcpFeedback::CcmFir,
+            RtcpFeedback::GoogRemb,
+            RtcpFeedback::TransportCc,
+        ],
+    }
+}
+
+/// Codecs du router : Opus (audio, P1) + VP8 (vidéo/screenshare, P2). Les DEUX
+/// routers (local et « remote worker » du pipe de fédération) DOIVENT partager
+/// exactement cette liste, sinon le pipe mismatch. Source unique = cette fonction.
+fn router_codecs() -> Vec<RtpCodecCapability> {
+    vec![opus_capability(), vp8_capability()]
 }
 
 /// Les capabilities "finalized" du router (payload types assignés) → les
@@ -336,7 +365,7 @@ impl MediasoupEngine {
             .await
             .map_err(|e| MediaError::Engine(format!("create_worker(remote): {e}")))?;
         let router = worker
-            .create_router(RouterOptions::new(vec![opus_capability()]))
+            .create_router(RouterOptions::new(router_codecs()))
             .await
             .map_err(|e| MediaError::Engine(format!("create_router({room}): {e}")))?;
         self.inner.extra_workers.lock().unwrap().push(worker);
@@ -363,7 +392,7 @@ impl MediaEngine for MediasoupEngine {
             idx
         };
         let router = match self.inner.workers[idx]
-            .create_router(RouterOptions::new(vec![opus_capability()]))
+            .create_router(RouterOptions::new(router_codecs()))
             .await
         {
             Ok(r) => r,
@@ -498,20 +527,28 @@ impl MediaEngine for MediasoupEngine {
         kind: TrackKind,
         client: &SignalingBlob,
     ) -> Result<ProducerId> {
-        if kind != TrackKind::Audio {
-            // P1 = audio. La vidéo/simulcast arrive en P2/P3.
-            return Err(MediaError::Unsupported("produce non-audio (P1 audio)"));
-        }
+        // P1 = audio (Opus). P2 = vidéo (Screen/Cam → VP8). La vidéo passe
+        // TOUJOURS par WebRTC : le navigateur fournit ses rtpParameters. Le mode
+        // Direct (sans navigateur) ne sait fabriquer que de l'audio Opus.
+        let media_kind = match kind {
+            TrackKind::Audio => MediaKind::Audio,
+            TrackKind::Screen | TrackKind::Cam => MediaKind::Video,
+        };
         let (t, router_key) = self.transport_of(&transport.0)?;
-        // Paramètres RTP du client si fournis (WebRTC), sinon fabriqués (Direct).
+        // Paramètres RTP du client si fournis (WebRTC), sinon fabriqués (Direct audio).
         let rtp: RtpParameters = match serde_json::from_str(&client.0) {
             Ok(p) => p,
             Err(_) => {
+                if media_kind == MediaKind::Video {
+                    return Err(MediaError::Unsupported(
+                        "produce vidéo sans rtpParameters : la vidéo exige WebRTC (v1)",
+                    ));
+                }
                 let ssrc = 1000 + self.inner.seq.fetch_add(1, Ordering::Relaxed) as u32;
                 opus_rtp_parameters(ssrc)
             }
         };
-        let options = ProducerOptions::new(MediaKind::Audio, rtp);
+        let options = ProducerOptions::new(media_kind, rtp);
         let producer = match t.as_ref() {
             AnyTransport::Direct(d) => d.produce(options).await,
             AnyTransport::WebRtc(w) => w.produce(options).await,
@@ -561,6 +598,15 @@ impl MediaEngine for MediasoupEngine {
         let key = consumer.id().to_string();
         self.inner.consumers.lock().unwrap().insert(key.clone(), consumer);
         Ok((ConsumerId(key), SignalingBlob(params.to_string())))
+    }
+
+    async fn close_producer(&self, producer: &ProducerId) -> Result<()> {
+        // Retirer du registre = Drop du Producer mediasoup = fermeture réelle du
+        // flux serveur (les abonnés le verront disparaître des publications, cf.
+        // réconciliation client). Idempotent : absent = déjà fermé, on ne se
+        // plaint pas (un stop de partage doit toujours pouvoir aboutir).
+        self.inner.producers.lock().unwrap().remove(&producer.0);
+        Ok(())
     }
 
     async fn set_preferred_layer(&self, _consumer: &ConsumerId, _layer: Layer) -> Result<()> {
@@ -701,5 +747,55 @@ mod tests {
             .await
             .is_err());
         assert_eq!(engine.worker_loads(), vec![1, 1]);
+    }
+
+    // ── P2 vidéo : le router expose VP8 en plus d'Opus (screenshare), sans faire
+    //    régresser l'audio. C'est LE contrat de P2-A.
+    #[tokio::test]
+    async fn router_exposes_opus_and_vp8() {
+        let engine = MediasoupEngine::build_with(None, DEFAULT_RTC_PORTS, 1)
+            .await
+            .expect("build pool 1");
+        let room = engine
+            .create_room(RoomId("room-caps".into()))
+            .await
+            .expect("create_room");
+        let caps = engine.room_capabilities(&room).await.expect("caps");
+        let lc = caps.0.to_lowercase();
+        assert!(lc.contains("opus"), "Opus doit rester (audio P1) : {}", caps.0);
+        assert!(lc.contains("vp8"), "VP8 doit être exposé (vidéo P2) : {}", caps.0);
+    }
+
+    // ── P2 vidéo : en mode Direct (sans navigateur) on ne fabrique que de l'audio.
+    //    Une demande de produce vidéo est refusée PROPREMENT (pas de panic), tandis
+    //    que l'audio continue de passer (non-régression P1).
+    #[tokio::test]
+    async fn direct_produce_audio_ok_video_rejected() {
+        let engine = MediasoupEngine::build_with(None, DEFAULT_RTC_PORTS, 1)
+            .await
+            .expect("build pool 1");
+        let room = engine
+            .create_room(RoomId("room-prod".into()))
+            .await
+            .expect("create_room");
+        let transport = engine
+            .create_transport(&room, ParticipantId("tester".into()))
+            .await
+            .expect("create_transport");
+
+        // Audio : blob vide → Opus fabriqué → producer créé (P1 intact).
+        engine
+            .produce(&transport, TrackKind::Audio, &SignalingBlob(String::new()))
+            .await
+            .expect("produce audio Direct");
+
+        // Vidéo : blob vide → pas de rtpParameters → refus explicite (WebRTC only).
+        let err = engine
+            .produce(&transport, TrackKind::Screen, &SignalingBlob(String::new()))
+            .await;
+        assert!(
+            matches!(err, Err(MediaError::Unsupported(_))),
+            "produce vidéo Direct doit être refusé, obtenu : {err:?}"
+        );
     }
 }

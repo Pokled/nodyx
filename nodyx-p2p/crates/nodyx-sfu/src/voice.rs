@@ -95,6 +95,9 @@ pub enum VoiceError {
     NotInSfu,
     /// Souscription à une publication inexistante.
     NoSuchPublication,
+    /// Tentative de fermer une publication qu'on ne possède pas (arrêt d'un flux
+    /// appartenant à autrui : refusé).
+    NotOwner,
     /// Réglage de couche sur une publication à laquelle on n'est pas abonné.
     NotSubscribed,
     /// Le moteur média a échoué (remonté tel quel pour diagnostic).
@@ -109,6 +112,7 @@ impl fmt::Display for VoiceError {
             VoiceError::NotInRoom => f.write_str("absent du salon"),
             VoiceError::NotInSfu => f.write_str("participant pas en mode SFU"),
             VoiceError::NoSuchPublication => f.write_str("publication inexistante"),
+            VoiceError::NotOwner => f.write_str("publication appartenant à un autre participant"),
             VoiceError::NotSubscribed => f.write_str("pas abonné à cette publication"),
             VoiceError::Engine(e) => write!(f, "moteur média : {e}"),
         }
@@ -588,6 +592,33 @@ impl<E: MediaEngine> VoiceService<E> {
         Ok(producer)
     }
 
+    /// Le participant arrête un flux qu'il a publié (ex. stop partage d'écran).
+    /// Retire la publication ET ferme le producer côté serveur → les abonnés le
+    /// voient disparaître (réconciliation). Borné au propriétaire : fermer le flux
+    /// d'autrui est refusé ([`VoiceError::NotOwner`]). Le verrou d'état n'est
+    /// jamais tenu à travers l'`await` moteur (comme publish/subscribe).
+    pub async fn unpublish(
+        &self,
+        room: RoomId,
+        participant: ParticipantId,
+        producer: ProducerId,
+    ) -> Result<(), VoiceError> {
+        {
+            let mut rooms = self.rooms();
+            let state = rooms.get_mut(&room).ok_or(VoiceError::NotInRoom)?;
+            match state.publications.get(&producer) {
+                Some(pubb) if pubb.owner == participant => {
+                    state.publications.remove(&producer);
+                }
+                Some(_) => return Err(VoiceError::NotOwner),
+                None => return Err(VoiceError::NoSuchPublication),
+            }
+        }
+        // Hors verrou : fermeture réelle du flux moteur (idempotente).
+        self.engine.close_producer(&producer).await?;
+        Ok(())
+    }
+
     /// Le participant souscrit à une publication. Requiert le mode SFU (transport).
     /// `client_caps` = capabilities du client (blob opaque) ; retourne aussi les
     /// paramètres que le client doit appliquer (blob du moteur).
@@ -886,6 +917,32 @@ mod tests {
         assert_eq!(
             block_on(s.publish(room(), p(1), TrackKind::Audio, &blob())),
             Err(VoiceError::NotInSfu)
+        );
+    }
+
+    #[test]
+    fn unpublish_removes_own_screen_and_rejects_others() {
+        let s = svc();
+        block_on(s.join(room(), p(1))).unwrap();
+        block_on(s.join(room(), p(2))).unwrap();
+        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
+        assert_eq!(s.publications(&room()).len(), 1);
+
+        // Un AUTRE participant ne peut pas fermer le flux de p1.
+        assert_eq!(
+            block_on(s.unpublish(room(), p(2), prod.clone())),
+            Err(VoiceError::NotOwner)
+        );
+        assert_eq!(s.publications(&room()).len(), 1, "refus = publication intacte");
+
+        // Le PROPRIÉTAIRE arrête son partage → la publication disparaît.
+        block_on(s.unpublish(room(), p(1), prod.clone())).unwrap();
+        assert!(s.publications(&room()).is_empty());
+
+        // Re-fermer un flux déjà disparu → NoSuchPublication (rien à fermer).
+        assert_eq!(
+            block_on(s.unpublish(room(), p(1), prod)),
+            Err(VoiceError::NoSuchPublication)
         );
     }
 

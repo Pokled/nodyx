@@ -228,6 +228,32 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     cb({ ok: true, producerId: res.data.producer })
   })
 
+  // ── voice:sfu_unpublish : arrête un flux qu'on a publié (stop partage écran) ─
+  // Le daemon vérifie la PROPRIÉTÉ (on ne ferme que SON flux) : le broadcast qui
+  // suit ne part donc que pour un flux qu'on possédait réellement.
+  socket.on('voice:sfu_unpublish', async (payload: unknown, cb: unknown) => {
+    if (!isAck(cb)) return
+    const { channelId, producerId } = (payload ?? {}) as Record<string, unknown>
+    if (!(await guard('voice:sfu_unpublish', channelId, cb))) return
+    if (typeof producerId !== 'string' || producerId.length === 0 || producerId.length > 200) {
+      cb({ ok: false, error: 'bad_producer' }); return
+    }
+
+    const res = await sfuFetch('/v1/close_producer', {
+      room: channelId, participant: userId, producer: producerId,
+    })
+    if (!res.ok) { cb({ ok: false, error: res.error }); return }
+
+    // Prévenir les autres clients SFU : ce flux disparaît → fermer le consumer et
+    // retirer l'écran (sans attendre la réconciliation périodique = arrêt net).
+    socket.to(sfuRoom(channelId as string)).emit('voice:sfu_producer_closed', {
+      channelId,
+      producerId,
+      userId,
+    })
+    cb({ ok: true })
+  })
+
   // ── voice:sfu_consume — souscrit à un flux publié ──────────────────────────
   socket.on('voice:sfu_consume', async (payload: unknown, cb: unknown) => {
     if (!isAck(cb)) return

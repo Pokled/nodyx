@@ -212,6 +212,17 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
             }
         }
 
+        "/v1/close_producer" => {
+            let (Some(r), Some(p), Some(prod)) = (room(), participant(), field(body, "producer"))
+            else {
+                return err_json(400, "room, participant et producer requis");
+            };
+            match app.svc.unpublish(r, p, ProducerId(prod.to_string())).await {
+                Ok(()) => ok_json(serde_json::json!({ "closed": true })),
+                Err(e) => err_json(409, e.to_string()),
+            }
+        }
+
         "/v1/consume" => {
             let (Some(r), Some(p), Some(prod)) = (room(), participant(), field(body, "producer"))
             else {

@@ -3,8 +3,9 @@
   import { onDestroy } from 'svelte'
   import {
     sfuJoin, sfuLeave, sfuSetMuted, sfuAudit,
+    sfuStartScreenShare, sfuStopScreenShare,
     sfuPhaseStore, sfuErrorStore, sfuLogStore, sfuConsumersStore, sfuMutedStore,
-    sfuAuditStore,
+    sfuAuditStore, sfuScreensStore, sfuLocalScreenStore,
   } from '$lib/voiceSfu'
 
   // Audit réseau : rafraîchi manuellement ou en auto (2 s) pendant une session.
@@ -41,6 +42,19 @@
 
   const phase = $derived($sfuPhaseStore)
   const busy  = $derived(phase === 'joining' || phase === 'connecting' || phase === 'recovering')
+
+  // Partage d'écran SFU (P2) : mon aperçu local + les écrans distants reçus.
+  const localScreen   = $derived($sfuLocalScreenStore)
+  const remoteScreens = $derived($sfuScreensStore)
+
+  // Action Svelte : branche un MediaStream sur le srcObject d'un <video>.
+  function bindStream(node: HTMLVideoElement, stream: MediaStream) {
+    node.srcObject = stream
+    return {
+      update(s: MediaStream) { node.srcObject = s },
+      destroy()             { node.srcObject = null },
+    }
+  }
 
   function join() {
     if (browser) localStorage.setItem('nodyx:sfu-lab:channel', channelId.trim())
@@ -111,6 +125,12 @@
           {$sfuMutedStore ? 'Micro coupé' : 'Couper le micro'}
         </button>
         <button
+          onclick={() => (localScreen ? void sfuStopScreenShare() : void sfuStartScreenShare())}
+          class="rounded-lg px-4 py-2 text-sm font-semibold {localScreen ? 'bg-fuchsia-600 hover:bg-fuchsia-500' : 'bg-zinc-700 hover:bg-zinc-600'} text-white"
+        >
+          {localScreen ? 'Arrêter le partage' : "Partager l'écran"}
+        </button>
+        <button
           onclick={() => void sfuLeave()}
           class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
         >
@@ -154,6 +174,30 @@
       </ul>
     {/if}
   </div>
+
+  {#if localScreen || remoteScreens.length > 0}
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+      <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">
+        Écrans partagés ({remoteScreens.length + (localScreen ? 1 : 0)})
+      </h2>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {#if localScreen}
+          <div class="relative aspect-video overflow-hidden rounded-lg border border-fuchsia-500/40 bg-black">
+            <!-- svelte-ignore a11y_media_has_caption -->
+            <video use:bindStream={localScreen} autoplay playsinline muted class="h-full w-full object-contain"></video>
+            <span class="absolute left-2 top-2 rounded-full bg-fuchsia-600/80 px-2 py-0.5 text-[10px] font-bold text-white">MON ÉCRAN</span>
+          </div>
+        {/if}
+        {#each remoteScreens as sc (sc.producerId)}
+          <div class="relative aspect-video overflow-hidden rounded-lg border border-zinc-700 bg-black">
+            <!-- svelte-ignore a11y_media_has_caption -->
+            <video use:bindStream={sc.stream} autoplay playsinline muted class="h-full w-full object-contain"></video>
+            <span class="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white">{sc.userId}</span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 
   <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
     <div class="flex items-center justify-between mb-3">
