@@ -6,13 +6,14 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback } = vi.hoisted(() => ({
+const { sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats } = vi.hoisted(() => ({
   sfuJoin:                       vi.fn(async () => {}),
   sfuLeave:                      vi.fn(async () => {}),
   sfuIsActive:                   vi.fn(() => true),
   sfuSetConsumerPlayingCallback: vi.fn(),
+  sfuCollectStats:               vi.fn(async () => ({ rtt: null, connType: 'unknown', perUser: new Map() })),
 }))
-vi.mock('./voiceSfu', () => ({ sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback }))
+vi.mock('./voiceSfu', () => ({ sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats }))
 
 import { basculeBeginSwitch, basculeJoinDirectSfu, basculeLeaveSfu, basculeCommit } from './voiceBascule'
 

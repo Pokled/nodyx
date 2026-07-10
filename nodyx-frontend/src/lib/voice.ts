@@ -990,6 +990,7 @@ export function leaveVoice(): void {
   // Si on était passé sur l'SFU (bascule), quitter aussi la session SFU. Idempotent
   // en mesh pur (aucune session SFU ⇒ no-op). Puis on repart de mesh.
   void bascule.basculeLeaveSfu()
+  _stopSfuStatsPolling()
   _channelMode = 'mesh'
 
   if (_socket) {
@@ -1249,7 +1250,7 @@ function onVoiceInit({ channelId, peers, mySeatIndex, iceServers, mode }: {
   if (_channelMode === 'sfu') {
     // Arrivant tardif sur un canal DÉJÀ en SFU (§5) : aucun PC mesh, on rejoint
     // l'SFU directement (lecture immédiate). Le roster ci-dessus reste affiché.
-    void bascule.basculeJoinDirectSfu(channelId)
+    void bascule.basculeJoinDirectSfu(channelId).then(() => _startSfuStatsPolling())
   } else {
     for (const peer of peers) {
       createPeerConn(peer.socketId, channelId, true)
@@ -1329,6 +1330,36 @@ function _meshTeardownConnections(): void {
   _offerLocks.clear()
 }
 
+// Stats SFU : un seul poller (pas de PC mesh à interroger). Il relève les stats de
+// la session SFU et les mappe sur le roster (userId → socketId) pour alimenter le
+// MÊME panneau réseau que le mesh (ping vers le SFU, perte/gigue par personne, type).
+let _sfuStatsInterval: ReturnType<typeof setInterval> | null = null
+function _startSfuStatsPolling(): void {
+  if (_sfuStatsInterval) return
+  void _pollSfuStats() // premier relevé immédiat
+  _sfuStatsInterval = setInterval(() => void _pollSfuStats(), 2000)
+}
+function _stopSfuStatsPolling(): void {
+  if (_sfuStatsInterval) { clearInterval(_sfuStatsInterval); _sfuStatsInterval = null }
+}
+async function _pollSfuStats(): Promise<void> {
+  const st = await bascule.basculeCollectStats()
+  const peers = get(voiceStore).peers
+  peerStatsStore.update(map => {
+    for (const p of peers) {
+      const u = st.perUser.get(p.userId)
+      map.set(p.socketId, {
+        rtt:            st.rtt,          // mon ping vers le SFU
+        theirRtt:       null,            // leur leg vers le SFU : non exposé en v1
+        packetLoss:     u?.packetLoss ?? null,
+        jitter:         u?.jitter ?? null,
+        connectionType: st.connType,
+      })
+    }
+    return new Map(map)
+  })
+}
+
 function onVoiceModeEvent({ channelId, mode }: { channelId: string; mode: 'sfu' | 'mesh' }): void {
   if (mode === 'sfu') {
     if (_channelMode !== 'mesh') return            // déjà en switching/sfu
@@ -1340,6 +1371,7 @@ function onVoiceModeEvent({ channelId, mode }: { channelId: string; mode: 'sfu' 
     if (_channelMode === 'switching') {
       _channelMode = 'mesh'
       void bascule.basculeLeaveSfu()               // on lâche l'SFU, le mesh (jamais lâché) reste
+      _stopSfuStatsPolling()
     }
   }
 }
@@ -1348,6 +1380,7 @@ function onSfuCommitEvent(_payload: { channelId: string }): void {
   _channelMode = 'sfu'
   // Instant zéro-coupure : joue l'SFU, coupe puis démonte le mesh.
   bascule.basculeCommit(_meshMutePlayback, _meshTeardownConnections)
+  _startSfuStatsPolling() // le panneau réseau se remplit depuis l'SFU
 }
 
 async function onOffer({ from, sdp, channelId }: { from: string; sdp: RTCSessionDescriptionInit; channelId: string }): Promise<void> {

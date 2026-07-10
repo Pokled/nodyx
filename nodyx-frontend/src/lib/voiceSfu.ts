@@ -292,6 +292,10 @@ export function sfuSetConsumerPlayingCallback(cb: ((userId: string) => void) | n
   _onConsumerPlaying = cb
 }
 
+// Stats SFU : compteurs de paquets précédents par flux (producerId), pour calculer
+// la perte en delta entre deux relevés (même méthode que le mesh).
+const _sfuPrevPackets = new Map<string, { received: number; lost: number }>()
+
 async function consumeOne(sock: Socket, producerId: string, userId: string, kind: string): Promise<void> {
   const s = _session
   if (!s) return
@@ -430,6 +434,61 @@ export function sfuSetMuted(muted: boolean): void {
 /** État établi (produce + consume faits) : le bascule attend ça pour voice:sfu_ready. */
 export function sfuIsActive(): boolean {
   return _session !== null && get(sfuPhaseStore) === 'active'
+}
+
+/** Stats de MA session SFU, pour alimenter le même panneau réseau que le mesh :
+ *  - lien vers le SFU (RTT + relais/direct) depuis mon recvTransport ;
+ *  - perte + gigue PAR flux (donc par userId) depuis chaque consumer.
+ *  Le mapping userId → socketId (roster) se fait côté voice.ts. */
+export async function sfuCollectStats(): Promise<{
+  rtt: number | null
+  connType: 'relay' | 'direct' | 'unknown'
+  perUser: Map<string, { packetLoss: number | null; jitter: number | null }>
+}> {
+  const out = { rtt: null as number | null, connType: 'unknown' as 'relay' | 'direct' | 'unknown', perUser: new Map<string, { packetLoss: number | null; jitter: number | null }>() }
+  const s = _session
+  if (!s) return out
+  // Lien vers le SFU (RTT + type de connexion) depuis la paire ICE active.
+  try {
+    const rs = await s.recvTransport.getStats()
+    for (const r of rs.values()) {
+      if (r.type === 'candidate-pair' && r.nominated) {
+        if (r.currentRoundTripTime != null) out.rtt = Math.round(r.currentRoundTripTime * 1000)
+        const local = rs.get(r.localCandidateId)
+        if (local?.candidateType === 'relay') out.connType = 'relay'
+        else if (local?.candidateType)        out.connType = 'direct'
+      }
+    }
+  } catch { /* transport en cours de fermeture : on renvoie ce qu'on a */ }
+  // Perte + gigue par flux (par userId) depuis chaque consumer.
+  const userOf = new Map<string, string>() // producerId → userId
+  for (const c of get(sfuConsumersStore)) userOf.set(c.producerId, c.userId)
+  for (const [producerId, consumer] of s.consumers) {
+    const userId = userOf.get(producerId)
+    if (!userId) continue
+    try {
+      const cs = await consumer.getStats()
+      let packetLoss: number | null = null
+      let jitter: number | null = null
+      for (const r of cs.values()) {
+        if (r.type === 'inbound-rtp' && r.kind === 'audio') {
+          if (r.jitter != null) jitter = Math.round(r.jitter * 1000)
+          const prev = _sfuPrevPackets.get(producerId)
+          const received = r.packetsReceived ?? 0
+          const lost = r.packetsLost ?? 0
+          if (prev) {
+            const dRec = received - prev.received
+            const dLost = Math.max(0, lost - prev.lost)
+            const total = dRec + dLost
+            if (total > 0) packetLoss = Math.round((dLost / total) * 1000) / 10
+          }
+          _sfuPrevPackets.set(producerId, { received, lost })
+        }
+      }
+      out.perUser.set(userId, { packetLoss, jitter })
+    } catch { /* consumer fermé entre-temps : on l'ignore */ }
+  }
+  return out
 }
 
 export async function sfuLeave(): Promise<void> {

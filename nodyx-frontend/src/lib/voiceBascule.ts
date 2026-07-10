@@ -10,9 +10,13 @@
 // jouer (crossfade par personne). Donc pour chacun : mesh OU SFU, jamais les deux,
 // jamais le vide. voice.ts fournit les opérations mesh (pas d'import circulaire).
 
-import { sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback } from './voiceSfu'
+import { sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats } from './voiceSfu'
 
 type Emitter = { emit: (event: string, payload: unknown) => void }
+
+// Stats de la session SFU (RTT/type + perte/gigue par userId), pour alimenter le
+// même panneau réseau que le mesh. voice.ts fait le mapping userId → socketId.
+export const basculeCollectStats = sfuCollectStats
 
 // Cas A/C : le canal bascule (ou j'arrive pendant switching). On établit l'SFU en
 // PARALLÈLE du mesh, en JOUANT tout de suite ; `onSfuPeerPlaying(userId)` coupe le
