@@ -1256,8 +1256,8 @@ function onVoiceInit({ channelId, peers, mySeatIndex, iceServers, mode }: {
     }
     if (_channelMode === 'switching' && _socket) {
       // J'arrive pendant une bascule : mesh (ci-dessus) + établir l'SFU en
-      // parallèle sans jouer, puis confirmer. Le commit viendra du serveur.
-      void bascule.basculeBeginSwitch(_socket, channelId)
+      // parallèle ; chaque flux SFU qui démarre coupe le mesh de la personne.
+      void bascule.basculeBeginSwitch(_socket, channelId, _meshMutePeerByUserId)
     }
   }
 }
@@ -1304,6 +1304,16 @@ function _meshMutePlayback(muted: boolean): void {
   for (const node of _peerAudio.values()) node.audioEl.muted = muted
 }
 
+// Crossfade par personne : coupe le mesh de l'utilisateur dont le flux SFU vient
+// de commencer à jouer (appelé par voiceSfu via le callback). Le roster fait le
+// lien userId → socketId mesh.
+function _meshMutePeerByUserId(userId: string): void {
+  const peer = get(voiceStore).peers.find(p => p.userId === userId)
+  if (!peer) return
+  const node = _peerAudio.get(peer.socketId)
+  if (node) node.audioEl.muted = true
+}
+
 function _meshTeardownConnections(): void {
   // Ferme le MÉDIA mesh (PC + audio), garde la SESSION (roster, micro local,
   // socket, seat). Le média passe désormais par l'SFU. Même geste que le teardown
@@ -1323,8 +1333,9 @@ function onVoiceModeEvent({ channelId, mode }: { channelId: string; mode: 'sfu' 
   if (mode === 'sfu') {
     if (_channelMode !== 'mesh') return            // déjà en switching/sfu
     _channelMode = 'switching'
-    // Garder le mesh + établir l'SFU en parallèle (hold), puis confirmer.
-    if (_socket) void bascule.basculeBeginSwitch(_socket, channelId)
+    // Garder le mesh + établir l'SFU (lecture immédiate) ; chaque flux SFU coupe
+    // le mesh de la personne concernée. Puis confirmer au serveur.
+    if (_socket) void bascule.basculeBeginSwitch(_socket, channelId, _meshMutePeerByUserId)
   } else if (mode === 'mesh') {                    // abandon décidé par le serveur
     if (_channelMode === 'switching') {
       _channelMode = 'mesh'
