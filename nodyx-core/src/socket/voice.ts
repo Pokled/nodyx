@@ -184,21 +184,20 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
     const chMode = bascule.channelMode(channelId)
     socket.emit('voice:init', { channelId, peers, mySeatIndex: mySeat, iceServers: buildIceServers(userId), mode: chMode })
 
-    // Notify existing peers about the newcomer — SAUF si le canal est déjà en SFU
-    // (topologie étoile : le nouveau producer est relayé via voice:sfu_new_producer,
-    // pas de PC mesh à créer). En 'mesh' et 'switching' (overlap), on prévient bien.
-    if (chMode !== 'sfu') {
-      socket.to(room).emit('voice:peer_joined', {
-        channelId,
-        peer: {
-          socketId:  socket.id,
-          userId,
-          username,
-          avatar:    socket.data.avatar ?? null,
-          seatIndex: mySeat,
-        },
-      })
-    }
+    // Roster : on prévient TOUJOURS les pairs. voice:peer_joined peuple la liste des
+    // participants (voiceStore.peers), indépendamment du média. C'est le CLIENT qui
+    // décide de créer un PC mesh ou non selon le mode (en SFU : roster seul, le média
+    // passe par l'SFU via voice:sfu_new_producer). Cf SPECS/NODYX_SFU_BASCULE.md.
+    socket.to(room).emit('voice:peer_joined', {
+      channelId,
+      peer: {
+        socketId:  socket.id,
+        userId,
+        username,
+        avatar:    socket.data.avatar ?? null,
+        seatIndex: mySeat,
+      },
+    })
 
     // Le seuil est-il franchi ? (no-op si le flag est off)
     bascule.onSeatCount(server, channelId, getChannelSeats(channelId).size)

@@ -8,8 +8,16 @@ import { writable, derived, get } from 'svelte/store'
 import type { Socket } from 'socket.io-client'
 import { voiceSettingsStore, getPeerVolume, type VoiceSettings } from './voiceSettings'
 import { p2pManager } from './p2p'
+import * as bascule from './voiceBascule'
 export { voiceSettingsStore } from './voiceSettings'
 export type { VoiceSettings } from './voiceSettings'
+
+// ── Bascule mesh↔SFU (§17-B) : mode du canal côté client ──────────────────────
+// 'mesh' par défaut. Passe à 'switching'/'sfu' UNIQUEMENT sur événement serveur
+// (qui n'arrive que si VOICE_SFU_AUTO est actif). Tant que c'est 'mesh', tous les
+// chemins mesh ci-dessous sont strictement ceux d'avant.
+type ChannelMode = 'mesh' | 'switching' | 'sfu'
+let _channelMode: ChannelMode = 'mesh'
 
 // ── ICE Configuration ─────────────────────────────────────────────
 // Priority: dynamic servers from voice:init (nodyx-turn) > static env vars (legacy coturn).
@@ -953,6 +961,9 @@ export async function joinVoice(channelId: string, socket: Socket): Promise<void
   socket.on('voice:stats',       onPeerStats)
   socket.on('voice:full',        onVoiceFull)
   socket.on('voice:kicked',      onKicked)
+  socket.on('voice:mode',        onVoiceModeEvent)   // bascule §17-B (dormant si flag off)
+  socket.on('voice:sfu_commit',  onSfuCommitEvent)
+  _channelMode = 'mesh'                               // repart toujours de mesh
 
   _onSocketReconnect = () => {
     console.debug('[voice] Socket reconnected — rejoining voice room')
@@ -976,6 +987,10 @@ export function leaveVoice(): void {
   if (channelId && _socket) {
     _socket.emit('voice:leave', channelId)
   }
+  // Si on était passé sur l'SFU (bascule), quitter aussi la session SFU. Idempotent
+  // en mesh pur (aucune session SFU ⇒ no-op). Puis on repart de mesh.
+  void bascule.basculeLeaveSfu()
+  _channelMode = 'mesh'
 
   if (_socket) {
     _socket.off('voice:init',        onVoiceInit)
@@ -988,6 +1003,8 @@ export function leaveVoice(): void {
     _socket.off('voice:stats',       onPeerStats)
     _socket.off('voice:full',        onVoiceFull)
     _socket.off('voice:kicked',      onKicked)
+    _socket.off('voice:mode',        onVoiceModeEvent)
+    _socket.off('voice:sfu_commit',  onSfuCommitEvent)
     if (_onSocketReconnect) {
       _socket.off('connect', _onSocketReconnect)
       _onSocketReconnect = null
@@ -1205,11 +1222,12 @@ export function stopScreenShare(): void {
 
 // ── Socket event handlers ─────────────────────────────────────────
 
-function onVoiceInit({ channelId, peers, mySeatIndex, iceServers }: {
+function onVoiceInit({ channelId, peers, mySeatIndex, iceServers, mode }: {
   channelId:   string
   peers:       { socketId: string; userId: string; username: string; avatar: string | null; seatIndex: number }[]
   mySeatIndex: number
   iceServers?: RTCIceServer[]
+  mode?:       ChannelMode
 }): void {
   if (iceServers && iceServers.length > 0) {
     _dynamicIceServers = iceServers
@@ -1227,8 +1245,20 @@ function onVoiceInit({ channelId, peers, mySeatIndex, iceServers }: {
   const peerList: VoicePeer[] = peers.map(p => ({ ...p, stream: null, speaking: false, iceState: null }))
   voiceStore.update(s => ({ ...s, peers: peerList, mySeatIndex }))
 
-  for (const peer of peers) {
-    createPeerConn(peer.socketId, channelId, true)
+  _channelMode = mode ?? 'mesh'
+  if (_channelMode === 'sfu') {
+    // Arrivant tardif sur un canal DÉJÀ en SFU (§5) : aucun PC mesh, on rejoint
+    // l'SFU directement (lecture immédiate). Le roster ci-dessus reste affiché.
+    void bascule.basculeJoinDirectSfu(channelId)
+  } else {
+    for (const peer of peers) {
+      createPeerConn(peer.socketId, channelId, true)
+    }
+    if (_channelMode === 'switching' && _socket) {
+      // J'arrive pendant une bascule : mesh (ci-dessus) + établir l'SFU en
+      // parallèle sans jouer, puis confirmer. Le commit viendra du serveur.
+      void bascule.basculeBeginSwitch(_socket, channelId)
+    }
   }
 }
 
@@ -1247,7 +1277,9 @@ function onPeerJoined({ channelId, peer }: {
     if (s.peers.some(p => p.socketId === peer.socketId)) return s
     return { ...s, peers: [...s.peers, { ...peer, stream: null, speaking: false, iceState: null }] }
   })
-  if (!_peerConns.has(peer.socketId)) {
+  // Roster mis à jour ci-dessus dans TOUS les modes. On ne crée un PC mesh que
+  // hors SFU : en SFU, le nouveau flux est relayé via l'SFU (voice:sfu_new_producer).
+  if (_channelMode !== 'sfu' && !_peerConns.has(peer.socketId)) {
     createPeerConn(peer.socketId, channelId, false)
   }
 }
@@ -1262,6 +1294,49 @@ function onPeerLeft({ socketId }: { channelId: string; socketId: string }): void
   _offerLocks.delete(socketId)
   remoteScreenStore.update(map => { map.delete(socketId); return new Map(map) })
   voiceStore.update(s => ({ ...s, peers: s.peers.filter(p => p.socketId !== socketId) }))
+}
+
+// ── Bascule mesh↔SFU (§17-B) : handlers serveur + opérations mesh ──
+// Invoqués UNIQUEMENT si le serveur émet voice:mode / voice:sfu_commit (⇒
+// VOICE_SFU_AUTO actif). En mesh pur, ces fonctions ne tournent jamais.
+
+function _meshMutePlayback(muted: boolean): void {
+  for (const node of _peerAudio.values()) node.audioEl.muted = muted
+}
+
+function _meshTeardownConnections(): void {
+  // Ferme le MÉDIA mesh (PC + audio), garde la SESSION (roster, micro local,
+  // socket, seat). Le média passe désormais par l'SFU. Même geste que le teardown
+  // de leaveVoice, mais sans toucher au reste. Le micro mesh, désormais inutilisé,
+  // reste ouvert : inoffensif, et on évite de risquer l'état de session.
+  for (const [sid, pc] of _peerConns) {
+    destroyPeerAudio(sid)
+    pc.close()
+  }
+  _peerConns.clear()
+  _iceQueues.clear()
+  _initiatorMap.clear()
+  _offerLocks.clear()
+}
+
+function onVoiceModeEvent({ channelId, mode }: { channelId: string; mode: 'sfu' | 'mesh' }): void {
+  if (mode === 'sfu') {
+    if (_channelMode !== 'mesh') return            // déjà en switching/sfu
+    _channelMode = 'switching'
+    // Garder le mesh + établir l'SFU en parallèle (hold), puis confirmer.
+    if (_socket) void bascule.basculeBeginSwitch(_socket, channelId)
+  } else if (mode === 'mesh') {                    // abandon décidé par le serveur
+    if (_channelMode === 'switching') {
+      _channelMode = 'mesh'
+      void bascule.basculeLeaveSfu()               // on lâche l'SFU, le mesh (jamais lâché) reste
+    }
+  }
+}
+
+function onSfuCommitEvent(_payload: { channelId: string }): void {
+  _channelMode = 'sfu'
+  // Instant zéro-coupure : joue l'SFU, coupe puis démonte le mesh.
+  bascule.basculeCommit(_meshMutePlayback, _meshTeardownConnections)
 }
 
 async function onOffer({ from, sdp, channelId }: { from: string; sdp: RTCSessionDescriptionInit; channelId: string }): Promise<void> {
