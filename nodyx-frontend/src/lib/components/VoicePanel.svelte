@@ -10,7 +10,6 @@
 
     import VoiceSettings    from './VoiceSettings.svelte'
     import ScreenShareModal from './ScreenShareModal.svelte'
-    import StageView        from './StageView.svelte'
     import { stageOpenStore } from '$lib/stageStore'
     import { onMount } from 'svelte'
     import { t } from '$lib/i18n'
@@ -1049,9 +1048,12 @@
     {#if showShareModal}
         <ScreenShareModal onclose={() => showShareModal = false}/>
     {/if}
-    {#if $stageOpenStore}
-        <StageView onclose={() => $stageOpenStore = false}/>
-    {/if}
+    <!-- La Scène N'EST PLUS montée ici : ce composant vit dans <aside id="galaxy-sidebar">,
+         qui est `fixed` + `z-30` et crée donc un CONTEXTE D'EMPILEMENT. Un enfant en
+         z-[500] y reste prisonnier : la sidebar des membres (z-30, plus loin dans le
+         DOM) et l'en-tête peignaient par-dessus la Scène (écran rogné à droite,
+         en-tête de la Scène invisible). Elle est désormais montée à la RACINE de
+         +layout.svelte, pilotée par stageOpenStore. -->
 {/if}
 
 <style>

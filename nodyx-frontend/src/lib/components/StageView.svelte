@@ -262,13 +262,13 @@
                 onclick={() => isPiP = true}
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
                 style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: rgb(156,163,175);"
-                title="Mode PiP (P)"
+                title="Fenêtre flottante (P) : la Scène vous suit quand vous naviguez ailleurs"
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <rect x="2" y="3" width="20" height="14" rx="2"/>
                     <rect x="12" y="10" width="8" height="5" rx="1"/>
                 </svg>
-                <span class="hidden sm:inline">PiP</span>
+                <span class="hidden sm:inline">Fenêtre flottante</span>
             </button>
             <button
                 onclick={onclose}
@@ -313,9 +313,13 @@
                     {/if}
                 </div>
 
-                <!-- Keyboard hint -->
-                <div class="absolute top-4 right-4 z-10 text-[10px] select-none" style="color: rgba(255,255,255,0.12)">
-                    F — plein écran · P — PiP · Esc — fermer
+                <!-- Raccourcis : ils étaient en opacité 0.12, donc invisibles (on ne
+                     pouvait pas deviner « P »). Lisibles, et nommés en clair. -->
+                <div class="absolute top-4 right-4 z-10 flex items-center gap-2.5 rounded-full px-3 py-1.5 text-[10px] select-none"
+                     style="background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); backdrop-filter: blur(4px)">
+                    <span><kbd class="stage-kbd">F</kbd> plein écran</span>
+                    <span><kbd class="stage-kbd">P</kbd> fenêtre flottante</span>
+                    <span><kbd class="stage-kbd">Échap</kbd> fermer</span>
                 </div>
 
                 <!-- Main video — double-clic = plein écran -->
@@ -599,5 +603,20 @@
     .stage-ctrl-danger:hover {
         background: rgba(239,68,68,0.22);
         color: white;
+    }
+
+    .stage-kbd {
+        display: inline-block;
+        min-width: 1.1rem;
+        padding: 0 0.25rem;
+        margin-right: 0.15rem;
+        border-radius: 0.2rem;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.18);
+        color: rgba(255,255,255,0.9);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 9px;
+        line-height: 1.35;
+        text-align: center;
     }
 </style>

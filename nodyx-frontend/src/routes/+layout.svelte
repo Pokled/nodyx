@@ -13,6 +13,8 @@
 	import { resolveTheme, themeToVars } from '$lib/profileThemes';
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded, GOOGLE_FONTS_URL } from '$lib/nameEffects';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
+	import StageView from '$lib/components/StageView.svelte';
+	import { stageOpenStore } from '$lib/stageStore';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import MatrixRain from '$lib/components/MatrixRain.svelte';
 	import MemberScreenPreview from '$lib/components/MemberScreenPreview.svelte';
@@ -1678,6 +1680,17 @@
      Modal éducatif anti-phishing. Activé via le store externalLinkGuard
      quand un composant (MessageBody, etc.) demande à ouvrir un lien externe. -->
 <ExternalLinkWarning />
+
+<!-- ── La Scène (partage d'écran) ────────────────────────────────────────────
+     Montée ICI, à la RACINE, et surtout PAS dans VoicePanel : celui-ci vit dans
+     <aside id="galaxy-sidebar">, qui est `fixed` + `z-30` et crée donc un contexte
+     d'empilement. Un enfant en z-[500] y restait prisonnier, et la sidebar des
+     membres (z-30, plus loin dans le DOM) peignait par-dessus la Scène : écran
+     rogné à droite, en-tête de la Scène (boutons Chat / PiP) invisible.
+     À la racine, le plein écran est vraiment plein écran. -->
+{#if $stageOpenStore}
+	<StageView onclose={() => stageOpenStore.set(false)} />
+{/if}
 
 <!-- ── Command Palette ────────────────────────────────────────────────────── -->
 <CommandPalette
