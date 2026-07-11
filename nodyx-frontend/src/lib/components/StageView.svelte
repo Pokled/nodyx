@@ -6,12 +6,26 @@
         stopScreenShare,
         voiceStore,
     } from '$lib/voice'
+    import StageChat from './StageChat.svelte'
 
     let { onclose }: { onclose: () => void } = $props()
 
     const localStream   = $derived($localScreenStore)
     const remoteScreens = $derived($remoteScreenStore)
     const peers         = $derived($voiceStore.peers)
+    const channelId     = $derived($voiceStore.channelId)
+
+    // ── Chat du salon dans la scène ───────────────────────────────────────────
+    // Fermé par défaut : l'écran doit être le plus grand possible (c'était LA
+    // plainte). Le choix est mémorisé d'une session à l'autre.
+    let showChat = $state(
+        typeof localStorage !== 'undefined' && localStorage.getItem('nodyx:stage:chat') === '1',
+    )
+    $effect(() => {
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('nodyx:stage:chat', showChat ? '1' : '0')
+        }
+    })
 
     // ── Unified stream list ────────────────────────────────────────
     type StreamEntry = {
@@ -155,6 +169,9 @@
 
     function onKeydown(e: KeyboardEvent) {
         if (isPiP) return
+        // On tape un message ? Les raccourcis (F/P) ne doivent PAS se déclencher.
+        const t = e.target as HTMLElement | null
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
         if (e.key === 'Escape') { e.stopPropagation(); onclose() }
         if (e.key === 'f' || e.key === 'F') requestFullscreen()
         if (e.key === 'p' || e.key === 'P') isPiP = true
@@ -226,6 +243,21 @@
 
         <!-- Right — controls -->
         <div class="flex items-center gap-2 shrink-0">
+            <button
+                onclick={() => showChat = !showChat}
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
+                style="
+                    background: {showChat ? 'rgb(var(--nx-accent-rgb) / 0.14)' : 'rgba(255,255,255,0.04)'};
+                    border: 1px solid {showChat ? 'rgb(var(--nx-accent-rgb) / 0.45)' : 'rgba(255,255,255,0.07)'};
+                    color: {showChat ? 'rgb(165,180,252)' : 'rgb(156,163,175)'};
+                "
+                title="Chat du salon"
+            >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 1 1-4.2-7.6L21 3v9z"/>
+                </svg>
+                <span class="hidden sm:inline">Chat</span>
+            </button>
             <button
                 onclick={() => isPiP = true}
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
@@ -399,6 +431,13 @@
                         </div>
                     </button>
                 {/each}
+            </div>
+        {/if}
+
+        <!-- Chat du salon : suivre la conversation sans quitter la scène -->
+        {#if showChat && channelId}
+            <div class="w-80 xl:w-96 shrink-0">
+                <StageChat channelId={channelId}/>
             </div>
         {/if}
 

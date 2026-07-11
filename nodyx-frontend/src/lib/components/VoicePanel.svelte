@@ -11,6 +11,7 @@
     import VoiceSettings    from './VoiceSettings.svelte'
     import ScreenShareModal from './ScreenShareModal.svelte'
     import StageView        from './StageView.svelte'
+    import { stageOpenStore } from '$lib/stageStore'
     import { onMount } from 'svelte'
     import { t } from '$lib/i18n'
     import { voicePanelTarget } from '$lib/voicePanel'
@@ -32,8 +33,9 @@
     let { mode = 'float', extraClass = '' }: { mode?: 'float' | 'sidebar'; extraClass?: string } = $props()
 
     let showShareModal  = $state(false)
-    let showStage       = $state(false)
     let showVoiceSettings = $state(false)
+    // L'ouverture de la scène est PARTAGÉE (stageStore) : le salon doit pouvoir
+    // dire « ouvre ça en grand » sans passer par ce composant.
 
     const vs            = $derived($voiceStore)
     const peers         = $derived(vs.peers)
@@ -47,10 +49,13 @@
     const anySharing    = $derived(isSharing || remoteScreens.size > 0)
     const shareCount    = $derived(remoteScreens.size + (isSharing ? 1 : 0))
 
-    // Auto-ouvrir le Stage dès qu'un partage distant devient actif
+    // Auto-ouvrir la scène dès qu'un partage distant devient actif (on regarde
+    // tout de suite, comme Discord). Son PROPRE partage n'ouvre pas la scène en
+    // grand (on ne se met pas son propre écran en plein écran) : le salon en
+    // montre un aperçu cliquable.
     $effect(() => {
-        if (remoteScreens.size > 0 && !showStage) {
-            showStage = true
+        if (remoteScreens.size > 0 && !$stageOpenStore) {
+            $stageOpenStore = true
         }
     })
 
@@ -671,12 +676,12 @@
                         <!-- Stage button — visible when any share is active -->
                         {#if anySharing}
                             <button
-                                onclick={() => { showStage = !showStage; showShareModal = false }}
+                                onclick={() => { $stageOpenStore = !$stageOpenStore; showShareModal = false }}
                                 class='hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all duration-200 transform hover:scale-110 active:scale-95 relative
-                                       {showStage
+                                       {$stageOpenStore
                                            ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/50 ring-2 ring-red-400/50"
                                            : "text-red-400 border border-red-500/30 hover:border-red-400/50"}'
-                                style="pointer-events: auto; position: relative; z-index: 102; {!showStage ? 'background: rgba(239,68,68,0.08)' : ''}"
+                                style="pointer-events: auto; position: relative; z-index: 102; {!$stageOpenStore ? 'background: rgba(239,68,68,0.08)' : ''}"
                                 title="Ouvrir le Stage"
                             >
                                 <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
@@ -690,7 +695,7 @@
 
                         <!-- Partager l'écran / Arrêter -->
                         <button
-                            onclick={() => { isSharing ? stopScreenShare() : (showShareModal = !showShareModal); showStage = false }}
+                            onclick={() => { isSharing ? stopScreenShare() : (showShareModal = !showShareModal); $stageOpenStore = false }}
                             class='hidden sm:flex p-2 rounded-lg transition-all duration-200 transform hover:scale-110 active:scale-95 relative
                                    {isSharing
                                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/50 ring-2 ring-emerald-400/50"
@@ -972,7 +977,7 @@
 
                 <!-- Stage (sidebar) -->
                 {#if anySharing}
-                    <button onclick={() => { showStage = !showStage }}
+                    <button onclick={() => { $stageOpenStore = !$stageOpenStore }}
                         title="Stage"
                         class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors text-red-400 bg-red-900/20">
                         <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
@@ -1044,8 +1049,8 @@
     {#if showShareModal}
         <ScreenShareModal onclose={() => showShareModal = false}/>
     {/if}
-    {#if showStage}
-        <StageView onclose={() => showStage = false}/>
+    {#if $stageOpenStore}
+        <StageView onclose={() => $stageOpenStore = false}/>
     {/if}
 {/if}
 

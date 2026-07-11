@@ -3,6 +3,7 @@
 	import NodyxCanvas  from '$lib/components/NodyxCanvas.svelte';
 	import VoiceJukebox from '$lib/components/VoiceJukebox.svelte';
 	import { localScreenStore, remoteScreenStore, screenShareStore } from '$lib/voice';
+	import { openStage } from '$lib/stageStore';
 	import { jukeboxStore } from '$lib/jukebox';
 	import type { Socket } from 'socket.io-client';
 
@@ -239,6 +240,8 @@
 
 <!-- ── Screen share panel ──────────────────────────────────────────────────── -->
 {#if showScreenShare && (localScreen || remoteScreens.size > 0)}
+	<!-- Aperçu dans le salon. La VRAIE lecture se fait sur la Scène (plein écran,
+	     non tronquée par les sidebars) : un clic sur un écran l'ouvre en grand. -->
 	<div class="shrink-0 grid gap-2 p-3 overflow-y-auto"
 	     style="grid-template-columns: repeat({gridCols}, 1fr); max-height: 55vh; background: #07070f; border-bottom: 1px solid rgba(255,255,255,0.05);">
 		{#if localScreen}
@@ -248,11 +251,22 @@
 					class="w-full h-full object-contain cursor-pointer"
 					autoplay muted playsinline
 					use:srcStream={localScreen}
+					onclick={() => openStage()}
 					ondblclick={(e) => (e.currentTarget as HTMLVideoElement).requestFullscreen?.()}
-					title="Double-clic pour plein écran"
+					title="Cliquer pour ouvrir en grand"
 				></video>
+				<!-- Ouvrir en grand (la scène n'est pas rognée par les sidebars) -->
+				<button
+					onclick={() => openStage()}
+					class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/sc:opacity-100 transition-opacity duration-150"
+					style="background: rgba(0,0,0,0.35);"
+					title="Ouvrir en grand"
+				>
+					<span class="px-3 py-1.5 rounded-full text-[11px] font-semibold text-white"
+					      style="background: rgba(79,70,229,0.85); backdrop-filter: blur(4px);">Ouvrir en grand</span>
+				</button>
 				<!-- Badge -->
-				<span class="absolute bottom-2 left-2 text-[10px] text-white font-semibold px-2 py-0.5 rounded"
+				<span class="absolute bottom-2 left-2 text-[10px] text-white font-semibold px-2 py-0.5 rounded pointer-events-none"
 				      style="background: rgba(0,0,0,0.7);">Vous</span>
 				<!-- Fullscreen btn -->
 				<button
@@ -276,11 +290,22 @@
 					class="w-full h-full object-contain cursor-pointer"
 					autoplay playsinline
 					use:srcStream={stream}
+					onclick={() => openStage()}
 					ondblclick={(e) => (e.currentTarget as HTMLVideoElement).requestFullscreen?.()}
-					title="Double-clic pour plein écran"
+					title="Cliquer pour ouvrir en grand"
 				></video>
+				<!-- Ouvrir en grand -->
+				<button
+					onclick={() => openStage()}
+					class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/sc:opacity-100 transition-opacity duration-150"
+					style="background: rgba(0,0,0,0.35);"
+					title="Ouvrir en grand"
+				>
+					<span class="px-3 py-1.5 rounded-full text-[11px] font-semibold text-white"
+					      style="background: rgba(79,70,229,0.85); backdrop-filter: blur(4px);">Ouvrir en grand</span>
+				</button>
 				<!-- Badge -->
-				<span class="absolute bottom-2 left-2 text-[10px] text-white font-semibold px-2 py-0.5 rounded"
+				<span class="absolute bottom-2 left-2 text-[10px] text-white font-semibold px-2 py-0.5 rounded pointer-events-none"
 				      style="background: rgba(0,0,0,0.7);">{peer?.username ?? 'Peer'}</span>
 				<!-- Live dot -->
 				<span class="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded"
