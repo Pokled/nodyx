@@ -4,6 +4,7 @@
 	import VoiceJukebox from '$lib/components/VoiceJukebox.svelte';
 	import { localScreenStore, remoteScreenStore, screenShareStore } from '$lib/voice';
 	import { openStage } from '$lib/stageStore';
+	import StageChat from './StageChat.svelte';
 	import { jukeboxStore } from '$lib/jukebox';
 	import type { Socket } from 'socket.io-client';
 
@@ -36,6 +37,19 @@
 	const anyScreenSharing = $derived($screenShareStore || $remoteScreenStore.size > 0);
 	const totalScreens     = $derived((localScreen ? 1 : 0) + remoteScreens.size);
 	// 1 stream → full width ; 2-4 → 2 col ; 5+ → 3 col
+	// ── Chat du salon vocal ───────────────────────────────────────────────────
+	// Un canal VOCAL n'avait tout simplement pas de chat : la page n'affiche le
+	// fil de discussion que pour les canaux TEXTE (`{:else}` côté +page.svelte).
+	// On l'ajoute ici, à droite, OUVERT par défaut et repliable d'une flèche.
+	let showChatPanel = $state(
+		typeof localStorage === 'undefined' || localStorage.getItem('nodyx:voice:chat') !== '0',
+	);
+	$effect(() => {
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('nodyx:voice:chat', showChatPanel ? '1' : '0');
+		}
+	});
+
 	// Grille qui TIENT dans la hauteur allouée, quel que soit le nombre d'écrans.
 	// Avant : colonnes fixes + tuiles forcées en `aspect-ratio: 16/9` dans un
 	// conteneur `overflow-y-auto` → sur une colonne large, la tuile devenait plus
@@ -238,6 +252,11 @@
 	</button>
 </div>
 
+<!-- ── Corps : contenu vocal à GAUCHE, chat du salon à DROITE ───────────────
+     L'en-tête et les onglets restent pleine largeur ; seul le corps se scinde. -->
+<div class="flex-1 flex min-h-0 min-w-0">
+<div class="flex-1 flex flex-col min-w-0 min-h-0">
+
 <!-- ── Jukebox panel ───────────────────────────────────────────────────────── -->
 {#if showJukebox}
 	<VoiceJukebox
@@ -352,6 +371,33 @@
 		socket={socket}
 	/>
 </div>
+
+</div><!-- /colonne contenu vocal -->
+
+<!-- ── Chat du salon vocal : ouvert par défaut, repliable d'une flèche ─────── -->
+{#if showChatPanel}
+	<div class="w-72 shrink-0 min-h-0 xl:w-80">
+		<StageChat
+			channelId={selectedChannel.id}
+			channelName={selectedChannel.name}
+			oncollapse={() => (showChatPanel = false)}
+		/>
+	</div>
+{:else}
+	<button
+		onclick={() => (showChatPanel = true)}
+		class="flex w-8 shrink-0 items-center justify-center transition-colors hover:bg-white/5"
+		style="background: rgba(6,6,12,0.75); border-left: 1px solid rgba(255,255,255,0.05); color: rgb(148,163,184)"
+		title="Afficher le chat du salon"
+		aria-label="Afficher le chat du salon"
+	>
+		<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+		</svg>
+	</button>
+{/if}
+
+</div><!-- /corps deux colonnes -->
 
 <!-- ── NodyxCanvas overlay ─────────────────────────────────────────────────── -->
 {#if showCanvas && canvasBoardId}
