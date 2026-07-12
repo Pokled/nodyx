@@ -166,6 +166,18 @@ pub struct PublicationInfo {
     pub owner: ParticipantId,
 }
 
+/// Vue d'un ABONNEMENT (diagnostic) : qui consomme quoi, et dans quel état.
+/// Un consumer en pause n'envoie rien : côté débit, c'est indiscernable d'un
+/// consumer qui n'existe pas. Sans cette vue, ces deux pannes se confondent.
+#[derive(Debug, Clone)]
+pub struct SubscriptionInfo {
+    pub subscriber: ParticipantId,
+    pub producer: ProducerId,
+    pub consumer: ConsumerId,
+    /// Blob opaque du moteur : kind, paused, producerPaused…
+    pub state: SignalingBlob,
+}
+
 // ── État interne ────────────────────────────────────────────────────────────
 
 struct Participant {
@@ -617,6 +629,41 @@ impl<E: MediaEngine> VoiceService<E> {
         // Hors verrou : fermeture réelle du flux moteur (idempotente).
         self.engine.close_producer(&producer).await?;
         Ok(())
+    }
+
+    /// Tous les abonnements du salon, avec l'ÉTAT RÉEL de chaque consumer (moteur).
+    /// Outil de DIAGNOSTIC : répond à « le spectateur a-t-il seulement souscrit au
+    /// flux vidéo, et si oui son consumer est-il resté en pause ? ». Deux pannes qui
+    /// donnent le même symptôme (aucune vidéo servie) et deux correctifs opposés.
+    pub async fn subscriptions(&self, room: &RoomId) -> Vec<SubscriptionInfo> {
+        // On relève d'abord la liste (verrou court), puis on interroge le moteur
+        // hors verrou, comme partout ailleurs.
+        let flat: Vec<(ParticipantId, ProducerId, ConsumerId)> = {
+            let rooms = self.rooms();
+            let Some(state) = rooms.get(room) else {
+                return Vec::new();
+            };
+            state
+                .participants
+                .iter()
+                .flat_map(|(pid, p)| {
+                    p.subscriptions
+                        .iter()
+                        .map(|(prod, cons)| (pid.clone(), prod.clone(), cons.clone()))
+                })
+                .collect()
+        };
+
+        let mut out = Vec::with_capacity(flat.len());
+        for (subscriber, producer, consumer) in flat {
+            let state = self
+                .engine
+                .consumer_state(&consumer)
+                .await
+                .unwrap_or_else(|e| SignalingBlob(format!("{{\"error\":\"{e}\"}}")));
+            out.push(SubscriptionInfo { subscriber, producer, consumer, state });
+        }
+        out
     }
 
     /// L'abonné a créé son consumer côté client : on reprend le flux serveur.

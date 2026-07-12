@@ -180,6 +180,11 @@ pub trait MediaEngine: Send + Sync {
     /// la suivante (clignotement). Le client appelle ceci une fois son consumer
     /// créé ; la reprise redemande une keyframe à un décodeur prêt.
     async fn resume_consumer(&self, consumer: &ConsumerId) -> Result<()>;
+    /// État réel d'un consumer (blob de DIAGNOSTIC : kind, en pause ou non…).
+    /// Sans ça on ne peut pas distinguer « le spectateur n'a jamais souscrit » de
+    /// « il a souscrit mais son flux est resté en pause » : deux pannes qui se
+    /// ressemblent (aucune vidéo ne part) et qui appellent des correctifs opposés.
+    async fn consumer_state(&self, consumer: &ConsumerId) -> Result<SignalingBlob>;
     /// Force la couche servie à un abonné (adaptation bande passante).
     async fn set_preferred_layer(&self, consumer: &ConsumerId, layer: Layer) -> Result<()>;
     /// Relaie un flux vers un nœud SFU distant (cascade fédérée, PipeTransport).
@@ -240,6 +245,11 @@ impl MediaEngine for NullEngine {
     }
     async fn resume_consumer(&self, _consumer: &ConsumerId) -> Result<()> {
         Ok(())
+    }
+    async fn consumer_state(&self, consumer: &ConsumerId) -> Result<SignalingBlob> {
+        Ok(SignalingBlob(format!(
+            "{{\"engine\":\"null\",\"consumer\":\"{consumer}\"}}"
+        )))
     }
     async fn set_preferred_layer(&self, _consumer: &ConsumerId, _layer: Layer) -> Result<()> {
         Ok(())

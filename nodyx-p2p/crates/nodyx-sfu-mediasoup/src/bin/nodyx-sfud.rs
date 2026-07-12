@@ -301,6 +301,27 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
             ok_json(serde_json::json!({ "publications": pubs }))
         }
 
+        "/v1/subscriptions" => {
+            let Some(r) = room() else { return err_json(400, "room requis") };
+            let subs = app
+                .svc
+                .subscriptions(&r)
+                .await
+                .iter()
+                .map(|s| {
+                    let state: serde_json::Value =
+                        serde_json::from_str(&s.state.0).unwrap_or(serde_json::Value::Null);
+                    serde_json::json!({
+                        "subscriber": s.subscriber.0,
+                        "producer": s.producer.0,
+                        "consumer": s.consumer.0,
+                        "state": state,
+                    })
+                })
+                .collect::<Vec<_>>();
+            ok_json(serde_json::json!({ "room": r.0, "subscriptions": subs }))
+        }
+
         "/v1/screenshare" => {
             let Some(r) = room() else { return err_json(400, "room requis") };
             let on = body.get("on").and_then(|v| v.as_bool()).unwrap_or(false);

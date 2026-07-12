@@ -646,6 +646,28 @@ impl MediaEngine for MediasoupEngine {
         Ok(())
     }
 
+    async fn consumer_state(&self, consumer: &ConsumerId) -> Result<SignalingBlob> {
+        let c = {
+            let map = self.inner.consumers.lock().unwrap();
+            map.get(&consumer.0)
+                .cloned()
+                .ok_or_else(|| MediaError::NotFound(format!("consumer {}", consumer.0)))?
+        };
+        // `paused` = pause demandée par NOUS (la vidéo démarre en pause et doit être
+        // reprise) ; `producer_paused` = la source elle-même s'est tue. Un consumer
+        // en pause n'envoie RIEN : c'est indiscernable, côté débit, d'un consumer
+        // qui n'existe pas. D'où ce diagnostic.
+        Ok(SignalingBlob(
+            serde_json::json!({
+                "kind": c.kind(),
+                "paused": c.paused(),
+                "producerPaused": c.producer_paused(),
+                "producerId": c.producer_id(),
+            })
+            .to_string(),
+        ))
+    }
+
     async fn set_preferred_layer(&self, consumer: &ConsumerId, layer: Layer) -> Result<()> {
         // Simulcast : le partageur émet plusieurs couches, le SFU en sert UNE par
         // spectateur. mediasoup choisit tout seul selon la bande passante estimée du
