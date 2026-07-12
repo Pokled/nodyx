@@ -548,27 +548,39 @@ export async function sfuStartScreenShare(opts: SfuScreenShareOptions = {}): Pro
   // imposer aux autres.
   //
   // Les couches vont de la PLUS BASSE à la PLUS HAUTE (exigé par mediasoup-client).
-  // `S1T3` ajoute 3 couches TEMPORELLES : le SFU peut alors baisser le nombre
-  // d'images par seconde AVANT de sacrifier la résolution, ce qui est exactement ce
-  // qu'on veut pour du texte et du code (on préfère du net qui saccade un peu à du
-  // flou fluide).
+  //
+  // ⚠ On s'en tient STRICTEMENT à la forme recommandée par mediasoup :
+  // `scaleResolutionDownBy` + `maxBitrate`, rien d'autre. Pas de `rid` (mediasoup-client
+  // les attribue lui-même) et surtout PAS de `scalabilityMode` : `S1T3` est la notation
+  // INTERNE de mediasoup, alors que le NAVIGATEUR attend la notation standard WebRTC
+  // (`L1T3`). Passer une valeur invalide à l'encodeur casse la publication des couches,
+  // et le spectateur ne reçoit plus rien, pendant que l'aperçu local (qui vient de la
+  // capture brute, pas du flux publié) continue de s'afficher : dissymétrie trompeuse.
   const high = opts.maxBitrate ?? 2_500_000
   const encodings = [
-    { rid: 'q', scaleResolutionDownBy: 4, maxBitrate: Math.round(high / 8), scalabilityMode: 'S1T3' },
-    { rid: 'h', scaleResolutionDownBy: 2, maxBitrate: Math.round(high / 3), scalabilityMode: 'S1T3' },
-    { rid: 'f', scaleResolutionDownBy: 1, maxBitrate: high,                 scalabilityMode: 'S1T3' },
+    { scaleResolutionDownBy: 4, maxBitrate: Math.round(high / 8) },
+    { scaleResolutionDownBy: 2, maxBitrate: Math.round(high / 3) },
+    { scaleResolutionDownBy: 1, maxBitrate: high },
   ]
 
   try {
     s.screenStream = display
-    s.screenProducer = await s.sendTransport.produce({
-      track,
-      appData: { source: 'screen' },
-      encodings,
-      // Démarrer l'encodeur assez haut : sinon il rampe depuis un débit minuscule
-      // et l'image reste molle plusieurs secondes.
-      codecOptions: { videoGoogleStartBitrate: 1000 },
-    })
+    // Démarrer l'encodeur assez haut : sinon il rampe depuis un débit minuscule et
+    // l'image reste molle plusieurs secondes.
+    const codecOptions = { videoGoogleStartBitrate: 1000 }
+    try {
+      s.screenProducer = await s.sendTransport.produce({
+        track, appData: { source: 'screen' }, encodings, codecOptions,
+      })
+    } catch (e) {
+      // FILET : si le navigateur refuse les couches, on partage quand même en UNE
+      // couche plutôt que de ne rien partager du tout. Un simulcast mal accepté ne
+      // doit jamais coûter le partage entier (c'est exactement ce qui est arrivé).
+      log(`⚠ simulcast refusé (${(e as Error).message}) : repli sur une seule couche`)
+      s.screenProducer = await s.sendTransport.produce({
+        track, appData: { source: 'screen' }, encodings: [{ maxBitrate: high }], codecOptions,
+      })
+    }
     // Le bouton « Arrêter le partage » natif du navigateur termine la piste.
     track.onended = () => { void sfuStopScreenShare() }
     sfuLocalScreenStore.set(display)
