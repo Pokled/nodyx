@@ -570,10 +570,10 @@ impl MediaEngine for MediasoupEngine {
         client_caps: &SignalingBlob,
     ) -> Result<(ConsumerId, SignalingBlob)> {
         let (t, router_key) = self.transport_of(&transport.0)?;
-        let ms_producer_id = {
+        let (ms_producer_id, producer_kind) = {
             let map = self.inner.producers.lock().unwrap();
             map.get(&producer.0)
-                .map(|(p, _)| p.id())
+                .map(|(p, _)| (p.id(), p.kind()))
                 .ok_or_else(|| MediaError::NotFound(format!("producer {}", producer.0)))?
         };
         // Capabilities du client si fournies (WebRTC), sinon celles du router
@@ -582,7 +582,16 @@ impl MediaEngine for MediasoupEngine {
             Ok(c) => c,
             Err(_) => consumer_caps(self.router_of(&router_key)?.rtp_capabilities()),
         };
-        let options = ConsumerOptions::new(ms_producer_id, caps);
+        let mut options = ConsumerOptions::new(ms_producer_id, caps);
+        // VIDÉO : le consumer DOIT démarrer en PAUSE, puis être repris quand le
+        // client l'a créé (cf. resume_consumer). Sinon mediasoup pousse la keyframe
+        // AVANT que le décodeur du navigateur n'existe → écran noir jusqu'à la
+        // keyframe suivante, d'où le clignotement. La reprise redemande une keyframe
+        // à un décodeur, lui, prêt. L'AUDIO n'a pas de keyframe : on le laisse
+        // non-pausé (chemin prouvé en prod, on n'y touche pas).
+        if producer_kind == MediaKind::Video {
+            options.paused = true;
+        }
         let consumer = match t.as_ref() {
             AnyTransport::Direct(d) => d.consume(options).await,
             AnyTransport::WebRtc(w) => w.consume(options).await,
@@ -606,6 +615,21 @@ impl MediaEngine for MediasoupEngine {
         // réconciliation client). Idempotent : absent = déjà fermé, on ne se
         // plaint pas (un stop de partage doit toujours pouvoir aboutir).
         self.inner.producers.lock().unwrap().remove(&producer.0);
+        Ok(())
+    }
+
+    async fn resume_consumer(&self, consumer: &ConsumerId) -> Result<()> {
+        // Le client a créé son consumer : on peut laisser couler. mediasoup demande
+        // alors une keyframe au producer, qui arrivera à un décodeur EXISTANT.
+        let c = {
+            let map = self.inner.consumers.lock().unwrap();
+            map.get(&consumer.0)
+                .cloned()
+                .ok_or_else(|| MediaError::NotFound(format!("consumer {}", consumer.0)))?
+        };
+        c.resume()
+            .await
+            .map_err(|e| MediaError::Engine(format!("resume_consumer: {e}")))?;
         Ok(())
     }
 

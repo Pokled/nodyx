@@ -619,6 +619,29 @@ impl<E: MediaEngine> VoiceService<E> {
         Ok(())
     }
 
+    /// L'abonné a créé son consumer côté client : on reprend le flux serveur.
+    /// La VIDÉO est servie en pause (sinon la keyframe part avant que le décodeur
+    /// du client n'existe → écran noir clignotant) ; c'est ici qu'elle repart, et
+    /// mediasoup redemande une keyframe à un décodeur cette fois prêt.
+    /// Borné à SES propres abonnements : on ne reprend pas le flux d'autrui.
+    pub async fn resume_consumer(
+        &self,
+        room: RoomId,
+        subscriber: ParticipantId,
+        consumer: ConsumerId,
+    ) -> Result<(), VoiceError> {
+        {
+            let rooms = self.rooms();
+            let state = rooms.get(&room).ok_or(VoiceError::NotInRoom)?;
+            let p = state.participants.get(&subscriber).ok_or(VoiceError::NotInRoom)?;
+            if !p.subscriptions.values().any(|c| c == &consumer) {
+                return Err(VoiceError::NotSubscribed);
+            }
+        }
+        self.engine.resume_consumer(&consumer).await?;
+        Ok(())
+    }
+
     /// Le participant souscrit à une publication. Requiert le mode SFU (transport).
     /// `client_caps` = capabilities du client (blob opaque) ; retourne aussi les
     /// paramètres que le client doit appliquer (blob du moteur).
@@ -960,6 +983,32 @@ mod tests {
         // régler la couche servie à p2 → OK
         block_on(s.set_preferred_layer(room(), p(2), prod, Layer::LOWEST)).unwrap();
         assert_eq!(consumer, consumer.clone());
+    }
+
+    #[test]
+    fn resume_consumer_only_for_own_subscription() {
+        let s = svc();
+        block_on(s.join(room(), p(1))).unwrap();
+        block_on(s.join(room(), p(2))).unwrap();
+        block_on(s.join(room(), p(3))).unwrap();
+        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
+        let (consumer, _) = block_on(s.subscribe(room(), p(2), prod, &blob())).unwrap();
+
+        // L'abonné reprend SON flux (la vidéo est servie en pause : c'est ici
+        // qu'elle repart, avec une keyframe pour un décodeur enfin prêt).
+        block_on(s.resume_consumer(room(), p(2), consumer.clone())).unwrap();
+
+        // Un TIERS ne peut pas reprendre le consumer de p2.
+        assert_eq!(
+            block_on(s.resume_consumer(room(), p(3), consumer)),
+            Err(VoiceError::NotSubscribed)
+        );
+
+        // Un consumer inconnu non plus.
+        assert_eq!(
+            block_on(s.resume_consumer(room(), p(2), ConsumerId("nope".into()))),
+            Err(VoiceError::NotSubscribed)
+        );
     }
 
     #[test]

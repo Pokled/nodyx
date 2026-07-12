@@ -363,6 +363,12 @@ async function consumeOne(sock: Socket, producerId: string, userId: string, kind
       // Écran/cam : pas de <audio>. On expose le flux (rendu par un <video> UI).
       const stream = new MediaStream([consumer.track])
       sfuScreensStore.update(l => [...l.filter(x => x.producerId !== producerId), { producerId, userId, stream }])
+      // Le consumer vidéo est servi EN PAUSE par le serveur : on ne le reprend
+      // qu'ICI, une fois créé et branché. Sinon la keyframe partirait avant que le
+      // décodeur n'existe → écran noir jusqu'à la suivante (le clignotement). La
+      // reprise redemande une keyframe, cette fois à un décodeur prêt.
+      const rs = await emitAck(sock, 'voice:sfu_resume', { channelId: s.channelId, consumerId: consumer.id })
+      if (!rs.ok) log(`⚠ reprise du flux vidéo : ${rs.error}`)
       log(`✓ écran de ${userId} reçu`)
     } else {
       // Audio : un <audio> par flux, détaché du DOM.

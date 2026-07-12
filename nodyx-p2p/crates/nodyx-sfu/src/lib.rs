@@ -175,6 +175,11 @@ pub trait MediaEngine: Send + Sync {
     /// d'écran). Idempotent : un producer déjà fermé/inconnu n'est PAS une erreur
     /// (un nettoyage doit toujours pouvoir aboutir).
     async fn close_producer(&self, producer: &ProducerId) -> Result<()>;
+    /// Reprend un consumer créé en pause. La VIDÉO démarre en pause : sans ça, la
+    /// keyframe part avant que le décodeur du client n'existe → écran noir jusqu'à
+    /// la suivante (clignotement). Le client appelle ceci une fois son consumer
+    /// créé ; la reprise redemande une keyframe à un décodeur prêt.
+    async fn resume_consumer(&self, consumer: &ConsumerId) -> Result<()>;
     /// Force la couche servie à un abonné (adaptation bande passante).
     async fn set_preferred_layer(&self, consumer: &ConsumerId, layer: Layer) -> Result<()>;
     /// Relaie un flux vers un nœud SFU distant (cascade fédérée, PipeTransport).
@@ -231,6 +236,9 @@ impl MediaEngine for NullEngine {
         Ok((ConsumerId(self.next("consumer")), client_caps.clone()))
     }
     async fn close_producer(&self, _producer: &ProducerId) -> Result<()> {
+        Ok(())
+    }
+    async fn resume_consumer(&self, _consumer: &ConsumerId) -> Result<()> {
         Ok(())
     }
     async fn set_preferred_layer(&self, _consumer: &ConsumerId, _layer: Layer) -> Result<()> {

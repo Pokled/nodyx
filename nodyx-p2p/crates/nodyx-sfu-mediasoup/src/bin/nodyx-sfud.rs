@@ -43,8 +43,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use nodyx_sfu::{
-    Direction, Mode, ParticipantId, ProducerId, RoomId, SignalingBlob, TrackKind, VoiceConfig,
-    VoiceService,
+    ConsumerId, Direction, Mode, ParticipantId, ProducerId, RoomId, SignalingBlob, TrackKind,
+    VoiceConfig, VoiceService,
 };
 use nodyx_sfu_mediasoup::engine::MediasoupEngine;
 
@@ -208,6 +208,21 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
             let client = SignalingBlob(field(body, "client").unwrap_or("{}").to_string());
             match app.svc.publish(r, p, kind, &client).await {
                 Ok(prod) => ok_json(serde_json::json!({ "producer": prod.0 })),
+                Err(e) => err_json(409, e.to_string()),
+            }
+        }
+
+        "/v1/resume_consumer" => {
+            let (Some(r), Some(p), Some(cons)) = (room(), participant(), field(body, "consumer"))
+            else {
+                return err_json(400, "room, participant et consumer requis");
+            };
+            match app
+                .svc
+                .resume_consumer(r, p, ConsumerId(cons.to_string()))
+                .await
+            {
+                Ok(()) => ok_json(serde_json::json!({ "resumed": true })),
                 Err(e) => err_json(409, e.to_string()),
             }
         }

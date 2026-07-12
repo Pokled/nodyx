@@ -272,6 +272,25 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     cb({ ok: true, consumerId: res.data.consumer, params: parseBlob(res.data.params) })
   })
 
+  // ── voice:sfu_resume — reprend un consumer créé en pause ───────────────────
+  // La VIDÉO est servie en pause : sinon la keyframe part avant que le décodeur du
+  // navigateur n'existe, et l'écran reste noir jusqu'à la keyframe suivante (le
+  // clignotement). Le client appelle ceci une fois SON consumer créé ; le daemon
+  // vérifie qu'il s'agit bien de SON abonnement.
+  socket.on('voice:sfu_resume', async (payload: unknown, cb: unknown) => {
+    if (!isAck(cb)) return
+    const { channelId, consumerId } = (payload ?? {}) as Record<string, unknown>
+    if (!(await guard('voice:sfu_resume', channelId, cb))) return
+    if (typeof consumerId !== 'string' || consumerId.length === 0 || consumerId.length > 200) {
+      cb({ ok: false, error: 'bad_consumer' }); return
+    }
+
+    const res = await sfuFetch('/v1/resume_consumer', {
+      room: channelId, participant: userId, consumer: consumerId,
+    })
+    cb(res.ok ? { ok: true } : { ok: false, error: res.error })
+  })
+
   // ── voice:sfu_publications — liste des flux du salon (§17-A) ───────────────
   socket.on('voice:sfu_publications', async (channelId: unknown, cb: unknown) => {
     if (!isAck(cb)) return
