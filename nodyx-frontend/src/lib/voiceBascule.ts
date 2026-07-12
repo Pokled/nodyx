@@ -10,13 +10,28 @@
 // jouer (crossfade par personne). Donc pour chacun : mesh OU SFU, jamais les deux,
 // jamais le vide. voice.ts fournit les opérations mesh (pas d'import circulaire).
 
-import { sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats } from './voiceSfu'
+import {
+  sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats,
+  sfuStartScreenShare, sfuStopScreenShare, sfuScreensStore, sfuLocalScreenStore,
+} from './voiceSfu'
 
 type Emitter = { emit: (event: string, payload: unknown) => void }
 
 // Stats de la session SFU (RTT/type + perte/gigue par userId), pour alimenter le
 // même panneau réseau que le mesh. voice.ts fait le mapping userId → socketId.
 export const basculeCollectStats = sfuCollectStats
+
+// ── Partage d'écran sur SFU (P2) ─────────────────────────────────────────────
+// En SFU, le partageur envoie UNE seule fois vers le serveur, qui recopie à chaque
+// spectateur. En mesh il envoyait une copie PAR spectateur : c'est le mur des ~4
+// personnes. voice.ts branche ces opérations quand le canal est en mode SFU, et
+// reflète les écrans reçus dans SES stores (mapping userId → socketId par le roster).
+export const basculeStartScreenShare = sfuStartScreenShare
+export const basculeStopScreenShare  = sfuStopScreenShare
+/** Écrans distants reçus via le SFU (producerId + userId + flux). */
+export const basculeScreensStore     = sfuScreensStore
+/** Mon écran partagé via le SFU (aperçu local), null si je ne partage pas. */
+export const basculeLocalScreenStore = sfuLocalScreenStore
 
 // Cas A/C : le canal bascule (ou j'arrive pendant switching). On établit l'SFU en
 // PARALLÈLE du mesh, en JOUANT tout de suite ; `onSfuPeerPlaying(userId)` coupe le

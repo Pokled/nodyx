@@ -991,6 +991,7 @@ export function leaveVoice(): void {
   // en mesh pur (aucune session SFU ⇒ no-op). Puis on repart de mesh.
   void bascule.basculeLeaveSfu()
   _stopSfuStatsPolling()
+  _stopSfuScreenMirror()
   _channelMode = 'mesh'
 
   if (_socket) {
@@ -1149,6 +1150,21 @@ export async function startScreenShare(
   const w = quality === '4k' ? 3840 : quality === '1080p' ? 1920 : 1280
   const h = quality === '4k' ? 2160 : quality === '1080p' ? 1080 : 720
 
+  // Canal basculé en SFU : le partage passe par le serveur. UN seul upload, qui
+  // est recopié à chaque spectateur, au lieu d'une copie PAR spectateur (le mur
+  // du mesh vers ~4 personnes). Les stores de l'UI sont alimentés par le miroir
+  // SFU, donc la Scène et le salon affichent ça sans rien savoir du changement.
+  if (_channelMode === 'sfu') {
+    await bascule.basculeStartScreenShare({
+      displaySurface,
+      width:      w,
+      height:     h,
+      frameRate:  fps,
+      maxBitrate: screenShareMaxBitrate(quality, fps),
+    })
+    return
+  }
+
   try {
     const displayStream = await navigator.mediaDevices.getDisplayMedia({
       video: {
@@ -1196,6 +1212,14 @@ export async function startScreenShare(
 
 export function stopScreenShare(): void {
   const { channelId } = get(voiceStore)
+
+  // En SFU, c'est le producer SERVEUR qu'il faut fermer (le mesh ne porte aucune
+  // piste vidéo dans ce mode). Le miroir remet localScreenStore/screenShareStore
+  // à zéro, et les spectateurs voient l'écran disparaître net (voice:sfu_unpublish).
+  if (_channelMode === 'sfu') {
+    void bascule.basculeStopScreenShare()
+    return
+  }
 
   if (_screenStream) {
     _screenStream.getTracks().forEach(t => t.stop())
@@ -1360,6 +1384,45 @@ async function _pollSfuStats(): Promise<void> {
   })
 }
 
+// ── Miroir des écrans SFU vers les stores de l'UI (P2) ───────────────────────
+// En SFU, les écrans arrivent par voiceSfu, clés par userId. L'UI, elle, lit
+// remoteScreenStore, clé par socketId. On REFLÈTE donc les uns dans les autres via
+// le roster, exactement comme le poller de stats. Résultat : aucun composant d'UI
+// à toucher, la Scène et le salon affichent l'SFU comme ils affichaient le mesh.
+let _unsubSfuScreens:       (() => void) | null = null
+let _unsubSfuLocalScreen:   (() => void) | null = null
+let _unsubRosterForScreens: (() => void) | null = null
+
+function _syncSfuScreens(): void {
+  const peers = get(voiceStore).peers
+  const map   = new Map<string, MediaStream>()
+  for (const sc of get(bascule.basculeScreensStore)) {
+    const peer = peers.find(p => p.userId === sc.userId)
+    if (peer) map.set(peer.socketId, sc.stream)
+  }
+  remoteScreenStore.set(map)
+}
+
+function _startSfuScreenMirror(): void {
+  _stopSfuScreenMirror()
+  _unsubSfuScreens = bascule.basculeScreensStore.subscribe(() => _syncSfuScreens())
+  // Le roster peut se peupler APRÈS l'arrivée d'un flux : sans ça, le mapping
+  // userId → socketId échouerait une fois et l'écran ne s'afficherait jamais.
+  _unsubRosterForScreens = voiceStore.subscribe(() => {
+    if (_channelMode === 'sfu') _syncSfuScreens()
+  })
+  _unsubSfuLocalScreen = bascule.basculeLocalScreenStore.subscribe(stream => {
+    localScreenStore.set(stream)
+    screenShareStore.set(stream !== null)
+  })
+}
+
+function _stopSfuScreenMirror(): void {
+  _unsubSfuScreens?.();       _unsubSfuScreens = null
+  _unsubRosterForScreens?.(); _unsubRosterForScreens = null
+  _unsubSfuLocalScreen?.();   _unsubSfuLocalScreen = null
+}
+
 function onVoiceModeEvent({ channelId, mode }: { channelId: string; mode: 'sfu' | 'mesh' }): void {
   if (mode === 'sfu') {
     if (_channelMode !== 'mesh') return            // déjà en switching/sfu
@@ -1372,15 +1435,27 @@ function onVoiceModeEvent({ channelId, mode }: { channelId: string; mode: 'sfu' 
       _channelMode = 'mesh'
       void bascule.basculeLeaveSfu()               // on lâche l'SFU, le mesh (jamais lâché) reste
       _stopSfuStatsPolling()
+      _stopSfuScreenMirror()
     }
   }
 }
 
 function onSfuCommitEvent(_payload: { channelId: string }): void {
   _channelMode = 'sfu'
+  // Un partage d'écran mesh EN COURS doit suivre la bascule. On capture sa piste
+  // AVANT le teardown : le démontage ferme les PC mais ne stoppe pas le flux local,
+  // donc on peut le republier tel quel vers l'SFU. Sans ça il faudrait rouvrir le
+  // sélecteur d'écran, ce que le navigateur refuse hors geste utilisateur : le
+  // partage mourrait à la bascule.
+  const meshScreen = _screenStream
   // Instant zéro-coupure : joue l'SFU, coupe puis démonte le mesh.
   bascule.basculeCommit(_meshMutePlayback, _meshTeardownConnections)
-  _startSfuStatsPolling() // le panneau réseau se remplit depuis l'SFU
+  _startSfuStatsPolling()  // le panneau réseau se remplit depuis l'SFU
+  _startSfuScreenMirror()  // les écrans SFU alimentent les stores de l'UI
+  if (meshScreen) {
+    _screenStream = null   // le mesh ne le porte plus, l'SFU prend le relais
+    void bascule.basculeStartScreenShare({ existingStream: meshScreen })
+  }
 }
 
 async function onOffer({ from, sdp, channelId }: { from: string; sdp: RTCSessionDescriptionInit; channelId: string }): Promise<void> {
