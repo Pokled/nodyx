@@ -477,35 +477,69 @@ export function sfuSetMuted(muted: boolean): void {
   }
 }
 
+/** Contraintes de capture, alignées sur celles du mesh (l'utilisateur choisit sa
+ *  surface, sa qualité et son fps : le chemin SFU doit les honorer pareil). */
+export interface SfuScreenShareOptions {
+  displaySurface?: string
+  width?:          number
+  height?:         number
+  frameRate?:      number
+  maxBitrate?:     number
+  contentHint?:    'motion' | 'detail'
+  /** Flux DÉJÀ capturé à republier tel quel (migration d'un partage mesh en cours
+   *  vers l'SFU au moment de la bascule). Sans ça il faudrait rouvrir le sélecteur
+   *  d'écran, ce que le navigateur refuse hors geste utilisateur : le partage
+   *  mourrait à la bascule. */
+  existingStream?: MediaStream
+}
+
 /** Partager son écran via le SFU (P2). getDisplayMedia → produce vidéo (VP8) sur
  *  le sendTransport existant (à côté du micro). Une seule couche en v1 (le
  *  simulcast arrive après). Retourne le flux local (aperçu) ou null si annulé.
  *  Le partage passe par le SFU : un seul upload, le serveur recopie à chacun. */
-export async function sfuStartScreenShare(opts?: { maxBitrate?: number }): Promise<MediaStream | null> {
+export async function sfuStartScreenShare(opts: SfuScreenShareOptions = {}): Promise<MediaStream | null> {
   const s = _session
   if (!s) { log('⚠ pas de session SFU active'); return null }
   if (s.screenProducer) { log('⚠ partage déjà en cours'); return get(sfuLocalScreenStore) }
 
+  const fps = opts.frameRate ?? 30
   let display: MediaStream
-  try {
-    display = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: 30, max: 60 } },
-      audio: false, // le son d'onglet arrivera en P3 ; v1 = vidéo seule
-    })
-  } catch (e) {
-    log(`partage annulé : ${(e as Error).message}`) // l'utilisateur a fermé le sélecteur
-    return null
+  if (opts.existingStream) {
+    // Migration d'un partage mesh en cours : on republie la piste déjà capturée.
+    display = opts.existingStream
+    log('→ republication de l\'écran déjà partagé (migration mesh → SFU)')
+  } else {
+    try {
+      display = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: opts.displaySurface,
+          width:     opts.width  ? { ideal: opts.width }  : undefined,
+          height:    opts.height ? { ideal: opts.height } : undefined,
+          frameRate: { ideal: fps, max: fps },
+          cursor:    'always',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+        audio: false, // le son d'onglet arrivera en P3 ; v1 = vidéo seule
+      })
+    } catch (e) {
+      log(`partage annulé : ${(e as Error).message}`) // l'utilisateur a fermé le sélecteur
+      return null
+    }
   }
 
   const track = display.getVideoTracks()[0]
   if (!track) { display.getTracks().forEach(t => t.stop()); log('✘ aucune piste vidéo'); return null }
+
+  // Aide l'encodeur : 60 fps ⇒ du mouvement (jeu) → fluidité ; sinon (slides,
+  // code, bureau) → netteté du texte. Même heuristique que le mesh.
+  try { track.contentHint = opts.contentHint ?? (fps >= 60 ? 'motion' : 'detail') } catch { /* non supporté */ }
 
   try {
     s.screenStream = display
     s.screenProducer = await s.sendTransport.produce({
       track,
       appData: { source: 'screen' },
-      encodings: [{ maxBitrate: opts?.maxBitrate ?? 2_500_000 }], // v1 : 1 couche
+      encodings: [{ maxBitrate: opts.maxBitrate ?? 2_500_000 }], // v1 : 1 couche
     })
     // Le bouton « Arrêter le partage » natif du navigateur termine la piste.
     track.onended = () => { void sfuStopScreenShare() }

@@ -6,14 +6,25 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats } = vi.hoisted(() => ({
+const {
+  sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats,
+  sfuStartScreenShare, sfuStopScreenShare, sfuScreensStore, sfuLocalScreenStore,
+} = vi.hoisted(() => ({
   sfuJoin:                       vi.fn(async () => {}),
   sfuLeave:                      vi.fn(async () => {}),
   sfuIsActive:                   vi.fn(() => true),
   sfuSetConsumerPlayingCallback: vi.fn(),
   sfuCollectStats:               vi.fn(async () => ({ rtt: null, connType: 'unknown', perUser: new Map() })),
+  // Partage d'écran SFU (P2) : voiceBascule les ré-exporte pour voice.ts.
+  sfuStartScreenShare:           vi.fn(async () => null),
+  sfuStopScreenShare:            vi.fn(async () => {}),
+  sfuScreensStore:               { subscribe: vi.fn(() => () => {}) },
+  sfuLocalScreenStore:           { subscribe: vi.fn(() => () => {}) },
 }))
-vi.mock('./voiceSfu', () => ({ sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats }))
+vi.mock('./voiceSfu', () => ({
+  sfuJoin, sfuLeave, sfuIsActive, sfuSetConsumerPlayingCallback, sfuCollectStats,
+  sfuStartScreenShare, sfuStopScreenShare, sfuScreensStore, sfuLocalScreenStore,
+}))
 
 import { basculeBeginSwitch, basculeJoinDirectSfu, basculeLeaveSfu, basculeCommit } from './voiceBascule'
 
