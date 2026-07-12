@@ -93,6 +93,12 @@ fn vp8_capability() -> RtpCodecCapability {
     }
 }
 
+/// Débit sortant disponible au DÉMARRAGE de l'estimation de bande passante.
+/// Le défaut mediasoup (600 kbps) est calibré pour de l'audio : avec de la vidéo,
+/// l'estimateur part de si bas qu'il sert durablement la couche la plus basse. On
+/// part à 1,5 Mbps ; l'estimateur ajuste ensuite à la réalité du lien.
+const INITIAL_OUTGOING_BITRATE: u32 = 1_500_000;
+
 /// Codecs du router : Opus (audio, P1) + VP8 (vidéo/screenshare, P2). Les DEUX
 /// routers (local et « remote worker » du pipe de fédération) DOIVENT partager
 /// exactement cette liste, sinon le pipe mismatch. Source unique = cette fonction.
@@ -443,12 +449,19 @@ impl MediaEngine for MediasoupEngine {
                     send_buffer_size: None,
                     recv_buffer_size: None,
                 };
+                let mut opts =
+                    WebRtcTransportOptions::new(WebRtcTransportListenInfos::new(listen));
+                // Estimation de bande passante : mediasoup démarre par défaut à
+                // 600 kbps de débit sortant disponible. C'est calibré pour de
+                // l'audio ; avec de la VIDÉO, l'estimateur part si bas qu'il sert
+                // durablement la couche la plus basse (image molle) alors que le
+                // lien tient bien plus. On part plus haut : l'estimateur ajuste
+                // ensuite à la réalité du lien, à la hausse comme à la baisse.
+                opts.initial_available_outgoing_bitrate = INITIAL_OUTGOING_BITRATE;
                 AnyTransport::WebRtc(
-                    r.create_webrtc_transport(WebRtcTransportOptions::new(
-                        WebRtcTransportListenInfos::new(listen),
-                    ))
-                    .await
-                    .map_err(|e| MediaError::Engine(format!("create_transport(webrtc): {e}")))?,
+                    r.create_webrtc_transport(opts)
+                        .await
+                        .map_err(|e| MediaError::Engine(format!("create_transport(webrtc): {e}")))?,
                 )
             }
         };
@@ -633,8 +646,24 @@ impl MediaEngine for MediasoupEngine {
         Ok(())
     }
 
-    async fn set_preferred_layer(&self, _consumer: &ConsumerId, _layer: Layer) -> Result<()> {
-        // Audio : pas de couches. Deviendra réel avec le simulcast vidéo (P3).
+    async fn set_preferred_layer(&self, consumer: &ConsumerId, layer: Layer) -> Result<()> {
+        // Simulcast : le partageur émet plusieurs couches, le SFU en sert UNE par
+        // spectateur. mediasoup choisit tout seul selon la bande passante estimée du
+        // spectateur ; ceci PLAFONNE ce choix (ex. « ne me sers jamais au-dessus de
+        // la couche 1 »). Sur un flux mono-couche (audio, ou vidéo sans simulcast),
+        // c'est sans effet : on ne se plaint pas.
+        let c = {
+            let map = self.inner.consumers.lock().unwrap();
+            map.get(&consumer.0)
+                .cloned()
+                .ok_or_else(|| MediaError::NotFound(format!("consumer {}", consumer.0)))?
+        };
+        c.set_preferred_layers(ConsumerLayers {
+            spatial_layer: layer.spatial,
+            temporal_layer: Some(layer.temporal),
+        })
+        .await
+        .map_err(|e| MediaError::Engine(format!("set_preferred_layer: {e}")))?;
         Ok(())
     }
 

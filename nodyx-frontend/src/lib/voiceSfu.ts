@@ -540,12 +540,34 @@ export async function sfuStartScreenShare(opts: SfuScreenShareOptions = {}): Pro
   // code, bureau) → netteté du texte. Même heuristique que le mesh.
   try { track.contentHint = opts.contentHint ?? (fps >= 60 ? 'motion' : 'detail') } catch { /* non supporté */ }
 
+  // ── Simulcast (CDC §6) ──────────────────────────────────────────────────────
+  // Le partageur émet PLUSIEURS qualités en parallèle ; le SFU sert à CHAQUE
+  // spectateur celle que SA bande passante supporte. Avec une seule couche (ce
+  // qu'on faisait), le plus faible impose sa limite : il décroche, ou tout le monde
+  // descend avec lui. Là, celui qui est en 4G reçoit la petite couche sans rien
+  // imposer aux autres.
+  //
+  // Les couches vont de la PLUS BASSE à la PLUS HAUTE (exigé par mediasoup-client).
+  // `S1T3` ajoute 3 couches TEMPORELLES : le SFU peut alors baisser le nombre
+  // d'images par seconde AVANT de sacrifier la résolution, ce qui est exactement ce
+  // qu'on veut pour du texte et du code (on préfère du net qui saccade un peu à du
+  // flou fluide).
+  const high = opts.maxBitrate ?? 2_500_000
+  const encodings = [
+    { rid: 'q', scaleResolutionDownBy: 4, maxBitrate: Math.round(high / 8), scalabilityMode: 'S1T3' },
+    { rid: 'h', scaleResolutionDownBy: 2, maxBitrate: Math.round(high / 3), scalabilityMode: 'S1T3' },
+    { rid: 'f', scaleResolutionDownBy: 1, maxBitrate: high,                 scalabilityMode: 'S1T3' },
+  ]
+
   try {
     s.screenStream = display
     s.screenProducer = await s.sendTransport.produce({
       track,
       appData: { source: 'screen' },
-      encodings: [{ maxBitrate: opts.maxBitrate ?? 2_500_000 }], // v1 : 1 couche
+      encodings,
+      // Démarrer l'encodeur assez haut : sinon il rampe depuis un débit minuscule
+      // et l'image reste molle plusieurs secondes.
+      codecOptions: { videoGoogleStartBitrate: 1000 },
     })
     // Le bouton « Arrêter le partage » natif du navigateur termine la piste.
     track.onended = () => { void sfuStopScreenShare() }
