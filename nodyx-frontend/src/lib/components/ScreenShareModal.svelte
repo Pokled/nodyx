@@ -1,7 +1,12 @@
 <script lang="ts">
-    import { startScreenShare, type DisplaySurface, type ShareQuality, type ShareFps } from '$lib/voice'
+    import { startScreenShare, screenShareSupported, type DisplaySurface, type ShareQuality, type ShareFps } from '$lib/voice'
 
     let { onclose }: { onclose: () => void } = $props()
+
+    // Les navigateurs mobiles ne savent PAS capturer un écran. Plutôt qu'un bouton
+    // qui échoue en silence, on l'explique franchement (et on rappelle que REGARDER
+    // un partage, lui, fonctionne très bien sur mobile).
+    const supported = screenShareSupported()
 
     let selectedSurface = $state<DisplaySurface>('monitor')
     let selectedQuality = $state<ShareQuality>('1080p')
@@ -63,7 +68,9 @@
              style="border-bottom: 1px solid rgba(255,255,255,0.05)">
             <div>
                 <h2 class="text-sm font-bold text-white">Partager votre écran</h2>
-                <p class="text-xs text-gray-500 mt-0.5">Choisissez ce que vous souhaitez montrer</p>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    {supported ? 'Choisissez ce que vous souhaitez montrer' : 'Indisponible sur cet appareil'}
+                </p>
             </div>
             <button
                 onclick={onclose}
@@ -78,6 +85,43 @@
         </div>
 
         <div class="px-6 py-5 space-y-5">
+
+        {#if !supported}
+            <!-- Impossible sur mobile, et ce n'est PAS un manque de Nodyx : les
+                 navigateurs Android et iOS n'implémentent pas la capture d'écran.
+                 On l'explique au lieu de laisser un bouton qui échoue en silence. -->
+            <div class="space-y-3 py-2">
+                <div class="flex items-start gap-3 rounded-lg px-4 py-3"
+                     style="background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.2)">
+                    <svg class="mt-0.5 h-4 w-4 shrink-0" style="color: rgb(251,191,36)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                    </svg>
+                    <div class="space-y-1.5">
+                        <p class="text-sm font-semibold text-white">
+                            Le partage d'écran n'est pas possible depuis un téléphone
+                        </p>
+                        <p class="text-xs leading-relaxed" style="color: rgb(156,163,175)">
+                            Ce n'est pas une limite de Nodyx : <strong style="color: rgb(209,213,219)">aucun navigateur
+                            mobile ne sait capturer un écran</strong>. Sur Android comme sur iOS, la capture passe par
+                            une fonction du système réservée aux applications installées, que les pages web n'ont pas le
+                            droit d'utiliser. Aucun site ne peut le faire, quel qu'il soit.
+                        </p>
+                        <p class="text-xs leading-relaxed" style="color: rgb(156,163,175)">
+                            Pour partager, utilisez un <strong style="color: rgb(209,213,219)">ordinateur</strong>.
+                            En revanche, <strong style="color: rgb(209,213,219)">regarder</strong> le partage de
+                            quelqu'un fonctionne parfaitement ici, son compris.
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onclick={onclose}
+                    class="w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-colors"
+                    style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08)"
+                >
+                    J'ai compris
+                </button>
+            </div>
+        {:else}
 
             <!-- Source picker -->
             <div class="grid grid-cols-3 gap-2">
@@ -148,10 +192,12 @@
                     </p>
                 {/if}
             </div>
+        {/if}
 
         </div>
 
         <!-- Footer -->
+        {#if supported}
         <div class="px-6 pb-6">
             <button
                 onclick={share}
@@ -167,5 +213,6 @@
                 {starting ? 'Lancement...' : 'Partager maintenant →'}
             </button>
         </div>
+        {/if}
     </div>
 </div>

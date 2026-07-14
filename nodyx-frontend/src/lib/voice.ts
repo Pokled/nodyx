@@ -1139,6 +1139,22 @@ async function capScreenShareBitrate(
   }
 }
 
+/** Ce navigateur peut-il capturer un écran ?
+ *
+ *  Sur ANDROID et iOS, la réponse est NON, et ce n'est pas un manque de Nodyx :
+ *  les navigateurs mobiles n'implémentent pas `getDisplayMedia`. La capture d'écran
+ *  y passe par une API système (MediaProjection sur Android) réservée aux
+ *  applications natives, jamais exposée aux pages web. AUCUN site ne peut partager
+ *  un écran mobile depuis un navigateur.
+ *
+ *  Sans ce contrôle, l'appel échouait en silence : l'utilisateur cliquait, rien ne
+ *  se passait, et rien ne lui disait pourquoi. On préfère l'expliquer.
+ *  (Regarder un partage, en revanche, marche parfaitement sur mobile.) */
+export function screenShareSupported(): boolean {
+  return typeof navigator !== 'undefined'
+    && typeof navigator.mediaDevices?.getDisplayMedia === 'function'
+}
+
 export async function startScreenShare(
   displaySurface: DisplaySurface = 'monitor',
   quality: ShareQuality = '1080p',
@@ -1146,6 +1162,10 @@ export async function startScreenShare(
 ): Promise<void> {
   const { channelId } = get(voiceStore)
   if (!channelId || !_socket) return
+  if (!screenShareSupported()) {
+    console.info('[voice] Partage d\'écran indisponible : ce navigateur ne sait pas capturer un écran (mobile).')
+    return
+  }
 
   const w = quality === '4k' ? 3840 : quality === '1080p' ? 1920 : 1280
   const h = quality === '4k' ? 2160 : quality === '1080p' ? 1080 : 720
