@@ -94,6 +94,7 @@ fn kind_of(s: &str) -> Option<TrackKind> {
     match s {
         "audio" => Some(TrackKind::Audio),
         "screen" => Some(TrackKind::Screen),
+        "screenaudio" => Some(TrackKind::ScreenAudio),
         "cam" => Some(TrackKind::Cam),
         _ => None,
     }
@@ -292,6 +293,7 @@ async fn route(app: &App, path: &str, body: &serde_json::Value) -> (u16, serde_j
                         "kind": match p.kind {
                             TrackKind::Audio => "audio",
                             TrackKind::Screen => "screen",
+                            TrackKind::ScreenAudio => "screenaudio",
                             TrackKind::Cam => "cam",
                         },
                         "owner": p.owner.0,

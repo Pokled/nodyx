@@ -81,6 +81,12 @@ interface Session {
   producer:      import('mediasoup-client').types.Producer | null
   screenProducer: import('mediasoup-client').types.Producer | null
   screenStream:  MediaStream | null
+  /** Le SON de mon écran partagé (onglet, jeu, vidéo), s'il a été capturé. */
+  screenAudioProducer: import('mediasoup-client').types.Producer | null
+  /** Son d'écran reçu AVANT l'image du même partageur (l'ordre d'arrivée des deux
+   *  flux n'est pas garanti) : on le garde ici et on l'attache dès que l'image
+   *  arrive, sinon il serait perdu. */
+  pendingScreenAudio: Map<string, MediaStreamTrack>
   consumers:     Map<string, import('mediasoup-client').types.Consumer>
   audioEls:      Map<string, HTMLAudioElement>
   offNewProducer: (() => void) | null
@@ -220,10 +226,14 @@ export async function sfuJoin(channelId: string): Promise<void> {
     const sendTransport = device.createSendTransport(join.sendTransportParams as never)
     wireTransport(sendTransport, 'send')
     sendTransport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
-      // `kind` = nature média ('audio'|'video'). Le "kind SFU" distingue en plus
-      // l'écran de la cam via appData (transmis tel quel par mediasoup-client).
+      // `kind` = nature média ('audio'|'video'). Le "kind SFU" distingue en plus la
+      // SOURCE via appData (transmis tel quel par mediasoup-client) : le son de
+      // l'écran est de l'audio, mais ce n'est pas le micro, et le spectateur doit
+      // pouvoir le rattacher à l'image plutôt que le prendre pour une voix.
       const source = (appData as { source?: string } | undefined)?.source
-      const sfuKind = kind === 'audio' ? 'audio' : source === 'cam' ? 'cam' : 'screen'
+      const sfuKind = kind === 'audio'
+        ? (source === 'screenaudio' ? 'screenaudio' : 'audio')
+        : (source === 'cam' ? 'cam' : 'screen')
       log(`→ produce ${sfuKind} (rtpParameters au SFU)`)
       emitAck(sock, 'voice:sfu_produce', { channelId, kind: sfuKind, rtpParameters })
         .then(r => r.ok
@@ -238,6 +248,7 @@ export async function sfuJoin(channelId: string): Promise<void> {
       channelId, device, sendTransport, recvTransport,
       micTrack: null, producer: null,
       screenProducer: null, screenStream: null,
+      screenAudioProducer: null, pendingScreenAudio: new Map(),
       consumers: new Map(), audioEls: new Map(), offNewProducer: null,
       maintain: null, onVisibility: null,
     }
@@ -325,14 +336,30 @@ const _sfuPrevPackets = new Map<string, { received: number; lost: number }>()
  *  flux (les publications listent TOUT le salon, moi compris). Le broadcast
  *  new_producer exclut déjà l'émetteur, mais pas la liste des publications. */
 function isOwnProducer(s: Session, producerId: string): boolean {
-  return producerId === s.producer?.id || producerId === s.screenProducer?.id
+  return producerId === s.producer?.id
+    || producerId === s.screenProducer?.id
+    || producerId === s.screenAudioProducer?.id
 }
 
 /** Ferme et oublie le consumer d'un flux (audio OU écran) : par réconciliation
  *  (producer disparu) ou par arrêt net (voice:sfu_producer_closed). Idempotent. */
 function closeConsumerFor(s: Session, producerId: string): void {
   const consumer = s.consumers.get(producerId)
-  if (consumer) { try { consumer.close() } catch { /* déjà fermé */ } s.consumers.delete(producerId) }
+  if (consumer) {
+    // Si c'était le SON d'un écran, il vit dans le MediaStream de cette image : on
+    // l'en retire, sinon la balise <video> resterait avec une piste morte.
+    const track = consumer.track
+    for (const sc of get(sfuScreensStore)) {
+      if (sc.stream.getTracks().includes(track)) {
+        try { sc.stream.removeTrack(track) } catch { /* flux déjà démonté */ }
+      }
+    }
+    for (const [uid, t] of s.pendingScreenAudio) {
+      if (t === track) s.pendingScreenAudio.delete(uid)
+    }
+    try { consumer.close() } catch { /* déjà fermé */ }
+    s.consumers.delete(producerId)
+  }
   const el = s.audioEls.get(producerId)
   if (el) { try { el.pause(); el.srcObject = null } catch { /* mort */ } s.audioEls.delete(producerId) }
   sfuConsumersStore.update(l => l.filter(c => c.producerId !== producerId))
@@ -359,9 +386,30 @@ async function consumeOne(sock: Socket, producerId: string, userId: string, kind
 
     sfuConsumersStore.update(list => [...list, { consumerId: consumer.id, producerId, userId, kind }])
 
-    if (params.kind === 'video') {
+    if (kind === 'screenaudio') {
+      // Le SON de l'écran d'un partageur. On le met dans le MÊME MediaStream que son
+      // IMAGE : il sort alors de la balise <video> avec elle, donc volume, coupure et
+      // cycle de vie suivent l'image sans plomberie séparée.
+      const screen = get(sfuScreensStore).find(x => x.userId === userId)
+      if (screen) {
+        screen.stream.addTrack(consumer.track)
+        log(`✓ son de l'écran de ${userId} rattaché à son image`)
+      } else {
+        // L'ordre d'arrivée des deux flux n'est pas garanti : si le son précède
+        // l'image, on le garde et on l'attachera quand l'image arrivera.
+        s.pendingScreenAudio.set(userId, consumer.track)
+        log(`son de l'écran de ${userId} reçu avant l'image : mis de côté`)
+      }
+    } else if (params.kind === 'video') {
       // Écran/cam : pas de <audio>. On expose le flux (rendu par un <video> UI).
       const stream = new MediaStream([consumer.track])
+      // Son de l'écran arrivé en premier ? On le rattache maintenant.
+      const waiting = s.pendingScreenAudio.get(userId)
+      if (waiting) {
+        stream.addTrack(waiting)
+        s.pendingScreenAudio.delete(userId)
+        log(`✓ son de l'écran de ${userId} rattaché (il attendait l'image)`)
+      }
       sfuScreensStore.update(l => [...l.filter(x => x.producerId !== producerId), { producerId, userId, stream }])
       // Le consumer vidéo est servi EN PAUSE par le serveur : on ne le reprend
       // qu'ICI, une fois créé et branché. Sinon la keyframe partirait avant que le
@@ -525,7 +573,12 @@ export async function sfuStartScreenShare(opts: SfuScreenShareOptions = {}): Pro
           cursor:    'always',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
-        audio: false, // le son d'onglet arrivera en P3 ; v1 = vidéo seule
+        // On DEMANDE le son de l'écran (onglet, jeu, vidéo). Le navigateur propose
+        // alors une case « partager le son » dans son sélecteur. L'utilisateur peut
+        // la refuser, et certaines surfaces (une fenêtre isolée) n'en ont pas :
+        // dans ce cas il n'y a simplement pas de piste audio, et le partage se fait
+        // en silence comme avant. Rien ne doit dépendre de sa présence.
+        audio: true,
       })
     } catch (e) {
       log(`partage annulé : ${(e as Error).message}`) // l'utilisateur a fermé le sélecteur
@@ -575,6 +628,25 @@ export async function sfuStartScreenShare(opts: SfuScreenShareOptions = {}): Pro
     track.onended = () => { void sfuStopScreenShare() }
     sfuLocalScreenStore.set(display)
     log('✓ écran publié au SFU')
+
+    // Le SON de l'écran, s'il y en a un (l'utilisateur a coché « partager le son »,
+    // et la surface choisie en a). C'est un BONUS : s'il échoue, on garde l'image.
+    // Un supplément ne doit JAMAIS coûter la fonction principale.
+    const soundTrack = display.getAudioTracks()[0]
+    if (soundTrack) {
+      try {
+        s.screenAudioProducer = await s.sendTransport.produce({
+          track: soundTrack,
+          appData: { source: 'screenaudio' },
+        })
+        log('✓ son de l\'écran publié')
+      } catch (e) {
+        log(`⚠ son de l'écran non publié (${(e as Error).message}) : l'image reste partagée`)
+        s.screenAudioProducer = null
+      }
+    } else {
+      log('partage sans son (non coché, ou surface sans audio)')
+    }
     return display
   } catch (e) {
     display.getTracks().forEach(t => t.stop())
@@ -591,16 +663,25 @@ export async function sfuStartScreenShare(opts: SfuScreenShareOptions = {}): Pro
 export async function sfuStopScreenShare(): Promise<void> {
   const s = _session
   if (!s) return
-  const producerId = s.screenProducer?.id ?? null
+  // L'image ET le son : deux producers, deux fermetures. En oublier un laisserait le
+  // son de l'écran continuer chez les spectateurs après l'arrêt du partage.
+  const videoId = s.screenProducer?.id ?? null
+  const soundId = s.screenAudioProducer?.id ?? null
   try { s.screenProducer?.close() } catch { /* déjà fermé */ }
+  try { s.screenAudioProducer?.close() } catch { /* déjà fermé */ }
   s.screenProducer = null
+  s.screenAudioProducer = null
   try { s.screenStream?.getTracks().forEach(t => t.stop()) } catch { /* déjà stoppé */ }
   s.screenStream = null
   sfuLocalScreenStore.set(null)
 
   const sock = get(socketStore)
-  if (sock && producerId) {
-    await emitAck(sock, 'voice:sfu_unpublish', { channelId: s.channelId, producerId })
+  if (sock) {
+    for (const producerId of [videoId, soundId]) {
+      if (producerId) {
+        await emitAck(sock, 'voice:sfu_unpublish', { channelId: s.channelId, producerId })
+      }
+    }
   }
   log('partage d\'écran arrêté')
 }
@@ -748,6 +829,8 @@ function cleanup(): void {
   }
   try { s.producer?.close() } catch { /* déjà fermé */ }
   try { s.screenProducer?.close() } catch { /* déjà fermé */ }
+  try { s.screenAudioProducer?.close() } catch { /* déjà fermé */ }
+  s.pendingScreenAudio.clear()
   try { s.micTrack?.stop() } catch { /* déjà stoppé */ }
   try { s.screenStream?.getTracks().forEach(t => t.stop()) } catch { /* déjà stoppé */ }
   try { s.sendTransport.close() } catch { /* déjà fermé */ }

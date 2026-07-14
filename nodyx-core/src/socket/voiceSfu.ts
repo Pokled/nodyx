@@ -209,7 +209,10 @@ export function registerVoiceSfuHandlers(socket: Socket, server: Server): void {
     if (!isAck(cb)) return
     const { channelId, kind, rtpParameters } = (payload ?? {}) as Record<string, unknown>
     if (!(await guard('voice:sfu_produce', channelId, cb))) return
-    if (kind !== 'audio' && kind !== 'screen' && kind !== 'cam') {
+    // 'screenaudio' = le SON de l'écran partagé (onglet, jeu, vidéo). C'est de
+    // l'audio au sens média, mais une SOURCE distincte du micro : le spectateur le
+    // rattache au flux vidéo du partageur au lieu de le prendre pour une voix.
+    if (kind !== 'audio' && kind !== 'screen' && kind !== 'screenaudio' && kind !== 'cam') {
       cb({ ok: false, error: 'bad_kind' }); return
     }
     const client = boundedJson(rtpParameters)

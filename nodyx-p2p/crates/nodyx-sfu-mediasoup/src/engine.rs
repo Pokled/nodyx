@@ -544,7 +544,9 @@ impl MediaEngine for MediasoupEngine {
         // TOUJOURS par WebRTC : le navigateur fournit ses rtpParameters. Le mode
         // Direct (sans navigateur) ne sait fabriquer que de l'audio Opus.
         let media_kind = match kind {
-            TrackKind::Audio => MediaKind::Audio,
+            // Le son de l'écran est de l'AUDIO au sens média : pas de keyframe, donc
+            // pas de pause/reprise, et rien à mettre en couches.
+            TrackKind::Audio | TrackKind::ScreenAudio => MediaKind::Audio,
             TrackKind::Screen | TrackKind::Cam => MediaKind::Video,
         };
         let (t, router_key) = self.transport_of(&transport.0)?;

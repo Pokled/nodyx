@@ -55,10 +55,17 @@ PipeHandle);
 // ── Types média ─────────────────────────────────────────────────────────────
 
 /// Nature d'un flux publié.
+///
+/// `ScreenAudio` est bien de l'AUDIO au sens média (pas de keyframe, pas de
+/// couches), mais c'est une SOURCE distincte du micro : c'est le son de l'écran
+/// partagé (onglet, jeu, vidéo). Le distinguer permet au spectateur de le rattacher
+/// au flux vidéo du partageur, et donc de le faire sortir de la balise `<video>`
+/// avec son image, au lieu de le confondre avec la voix de quelqu'un.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrackKind {
     Audio,
     Screen,
+    ScreenAudio,
     Cam,
 }
 

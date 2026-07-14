@@ -579,7 +579,9 @@ impl<E: MediaEngine> VoiceService<E> {
         kind: TrackKind,
         client: &SignalingBlob,
     ) -> Result<ProducerId, VoiceError> {
-        if kind == TrackKind::Screen {
+        // Un partage d'écran force la bascule SFU. Son SON aussi : il n'arrive jamais
+        // seul, mais on ne veut pas dépendre de l'ordre d'arrivée des deux flux.
+        if matches!(kind, TrackKind::Screen | TrackKind::ScreenAudio) {
             self.ensure_sfu(room.clone()).await?;
         }
 
@@ -976,6 +978,31 @@ mod tests {
         assert_eq!(pubs[0].producer, prod);
         assert_eq!(pubs[0].kind, TrackKind::Screen);
         assert_eq!(pubs[0].owner, p(1));
+    }
+
+    #[test]
+    fn screen_audio_is_a_distinct_source_and_forces_sfu() {
+        let s = svc();
+        block_on(s.join(room(), p(1))).unwrap();
+        block_on(s.join(room(), p(2))).unwrap();
+        assert_eq!(s.mode(&room()), Some(Mode::Mesh));
+
+        // Le son de l'écran force la bascule comme l'écran lui-même : on ne dépend
+        // pas de l'ordre d'arrivée des deux flux.
+        let sound = block_on(s.publish(room(), p(1), TrackKind::ScreenAudio, &blob())).unwrap();
+        assert_eq!(s.mode(&room()), Some(Mode::Sfu));
+
+        let video = block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
+        let mic = block_on(s.publish(room(), p(1), TrackKind::Audio, &blob())).unwrap();
+
+        // Trois publications DISTINCTES : le son de l'écran n'est pas le micro.
+        let pubs = s.publications(&room());
+        assert_eq!(pubs.len(), 3);
+        let kind_of = |id: &ProducerId| pubs.iter().find(|p| &p.producer == id).unwrap().kind;
+        assert_eq!(kind_of(&sound), TrackKind::ScreenAudio);
+        assert_eq!(kind_of(&video), TrackKind::Screen);
+        assert_eq!(kind_of(&mic), TrackKind::Audio);
+        assert_ne!(TrackKind::ScreenAudio, TrackKind::Audio);
     }
 
     #[test]

@@ -320,11 +320,15 @@
                     <span><kbd class="stage-kbd">Échap</kbd> fermer</span>
                 </div>
 
-                <!-- Main video — double-clic = plein écran -->
+                <!-- Vidéo principale : double-clic = plein écran.
+                     Le son de l'écran partagé vit DANS ce flux : c'est donc ici qu'il
+                     sort. On coupe le son de SON PROPRE partage (on l'entend déjà en
+                     vrai : le rejouer ferait un écho, voire un larsen). -->
                 <video
                     bind:this={focusVideoElem}
                     use:streamSrc={focusedEntry.stream}
-                    autoplay playsinline muted
+                    autoplay playsinline
+                    muted={focusedEntry.isLocal}
                     ondblclick={requestFullscreen}
                     class="w-full h-full object-contain cursor-pointer"
                     title="Double-clic pour plein écran"
@@ -522,9 +526,12 @@
     <!-- Main video -->
     <div class="relative bg-black" style="aspect-ratio: 16 / 9">
         {#if focusedEntry}
+            <!-- En fenêtre flottante aussi, on entend l'écran qu'on regarde (et jamais
+                 le sien : ce serait un écho). -->
             <video
                 use:streamSrc={focusedEntry.stream}
-                autoplay playsinline muted
+                autoplay playsinline
+                muted={focusedEntry.isLocal}
                 class="w-full h-full object-contain"
             ></video>
             {#if !focusedEntry.isLocal}

@@ -196,7 +196,9 @@
         {#each remoteScreens as sc (sc.producerId)}
           <div class="relative aspect-video overflow-hidden rounded-lg border border-zinc-700 bg-black">
             <!-- svelte-ignore a11y_media_has_caption -->
-            <video use:bindStream={sc.stream} autoplay playsinline muted class="h-full w-full object-contain"></video>
+            <!-- Pas muet : le son de l'écran partagé vit dans ce flux, c'est ici qu'on
+                 l'entend (l'aperçu local, lui, reste muet pour éviter l'écho). -->
+            <video use:bindStream={sc.stream} autoplay playsinline class="h-full w-full object-contain"></video>
             <span class="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white">{sc.userId}</span>
           </div>
         {/each}

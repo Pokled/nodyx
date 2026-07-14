@@ -3,7 +3,7 @@
 	import NodyxCanvas  from '$lib/components/NodyxCanvas.svelte';
 	import VoiceJukebox from '$lib/components/VoiceJukebox.svelte';
 	import { localScreenStore, remoteScreenStore, screenShareStore } from '$lib/voice';
-	import { openStage } from '$lib/stageStore';
+	import { openStage, stageOpenStore } from '$lib/stageStore';
 	import StageChat from './StageChat.svelte';
 	import { jukeboxStore } from '$lib/jukebox';
 	import type { Socket } from 'socket.io-client';
@@ -325,9 +325,13 @@
 			{@const peer = voiceState.peers.find((p: any) => p.socketId === socketId)}
 			<div class="relative group/sc overflow-hidden bg-black min-w-0 min-h-0"
 			     style="border: 1px solid rgba(59,130,246,0.25);">
+				<!-- Le son de l'écran partagé vit DANS ce flux. On le laisse sortir ici,
+				     SAUF quand la Scène est ouverte : elle joue déjà le même flux, et on
+				     entendrait tout en double. Un seul endroit parle à la fois. -->
 				<video
 					class="w-full h-full object-contain cursor-pointer"
 					autoplay playsinline
+					muted={$stageOpenStore}
 					use:srcStream={stream}
 					onclick={() => openStage()}
 					ondblclick={(e) => (e.currentTarget as HTMLVideoElement).requestFullscreen?.()}
