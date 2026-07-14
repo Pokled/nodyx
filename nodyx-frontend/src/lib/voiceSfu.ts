@@ -593,41 +593,57 @@ export async function sfuStartScreenShare(opts: SfuScreenShareOptions = {}): Pro
   // code, bureau) → netteté du texte. Même heuristique que le mesh.
   try { track.contentHint = opts.contentHint ?? (fps >= 60 ? 'motion' : 'detail') } catch { /* non supporté */ }
 
-  // ── UNE seule couche (le simulcast est REMIS AU LABO) ───────────────────────
+  // ── SIMULCAST (CDC §6) ──────────────────────────────────────────────────────
   //
-  // Le simulcast a été tenté (PRs #259/#260) et RETIRÉ après mesure sur la prod.
-  // Ce que l'audit du daemon a montré, sans ambiguïté :
-  //   - le partageur publiait bien ses 3 couches (le SFU recevait 2,7 à 3,8 Mbps) ;
-  //   - le spectateur était bien dans la session SFU, ICE `completed` ;
-  //   - et pourtant le SFU ne lui envoyait que ~50 kbps, c'est-à-dire l'AUDIO SEUL.
-  //     Aucune couche vidéo ne lui était servie, jamais.
+  // Le partageur émet PLUSIEURS qualités en parallèle ; le SFU sert à CHAQUE
+  // spectateur celle que SON lien supporte. Avec une couche unique, c'est le plus
+  // faible qui impose sa limite : il décroche, ou tout le monde descend avec lui.
   //
-  // C'est le comportement de mediasoup en simulcast : il choisit la couche selon la
-  // bande passante qu'il ESTIME pour ce spectateur, et s'il juge ne pas pouvoir servir
-  // même la plus basse, il n'envoie RIEN. Avec une seule couche, il transmet sans se
-  // poser la question : d'où le partage qui fonctionnait avant, et plus après.
+  // ⚠ HISTOIRE, pour ne pas re-payer : le simulcast a été retiré (PR #261) après
+  // avoir mesuré qu'un spectateur ne recevait aucune vidéo. C'ÉTAIT UNE FAUSSE
+  // ACCUSATION. Le vrai coupable était un client PÉRIMÉ (cache mobile) : le serveur
+  // sert la vidéo EN PAUSE et attend une demande de reprise, qu'un vieux client
+  // n'envoie jamais. Le flux serait resté fermé AVEC OU SANS simulcast. Le retrait
+  // n'avait d'ailleurs rien réparé : seul le client frais l'a fait.
   //
-  // Le simulcast reste l'objectif (CDC §6 : servir à chacun la couche adaptée, tenir
-  // 15+ spectateurs). Mais il se règle avec la console du labo sous les yeux, pas en
-  // prod : il faut voir si le consumer vidéo est bien créé, bien repris, et quelle
-  // couche le SFU décide de servir. Tant que ce n'est pas instrumenté, une couche.
+  // Deux garde-fous tirés de cet épisode :
+  //  1. on s'en tient STRICTEMENT à la forme recommandée par mediasoup
+  //     (`scaleResolutionDownBy` + `maxBitrate`). Pas de `rid` (mediasoup-client les
+  //     attribue), pas de `scalabilityMode` : `S1T3` est la notation INTERNE de
+  //     mediasoup alors que le NAVIGATEUR attend la notation WebRTC (`L1T3`), et une
+  //     valeur invalide casse la publication des couches ;
+  //  2. si le navigateur refuse les couches, on publie en UNE couche plutôt que
+  //     RIEN. Un supplément ne doit jamais coûter la fonction principale.
+  //
+  // Vérifiable : le daemon expose `currentLayers` par spectateur (/v1/subscriptions).
   const high = opts.maxBitrate ?? 2_500_000
-  const encodings = [{ maxBitrate: high }]
+  const encodings = [
+    { scaleResolutionDownBy: 4, maxBitrate: Math.round(high / 8) },
+    { scaleResolutionDownBy: 2, maxBitrate: Math.round(high / 3) },
+    { scaleResolutionDownBy: 1, maxBitrate: high },
+  ]
 
   try {
     s.screenStream = display
-    s.screenProducer = await s.sendTransport.produce({
-      track,
-      appData: { source: 'screen' },
-      encodings,
-      // Démarrer l'encodeur assez haut : sinon il rampe depuis un débit minuscule et
-      // l'image reste molle plusieurs secondes.
-      codecOptions: { videoGoogleStartBitrate: 1000 },
-    })
+    // Démarrer l'encodeur assez haut : sinon il rampe depuis un débit minuscule et
+    // l'image reste molle plusieurs secondes.
+    const codecOptions = { videoGoogleStartBitrate: 1000 }
+    const appData = { source: 'screen' }
+    try {
+      s.screenProducer = await s.sendTransport.produce({ track, appData, encodings, codecOptions })
+      log(`✓ écran publié au SFU (${encodings.length} couches)`)
+    } catch (e) {
+      // REPLI : le navigateur refuse les couches ? On partage quand même, en une
+      // seule. Perdre le simulcast est regrettable ; perdre le partage entier, non.
+      log(`⚠ simulcast refusé (${(e as Error).message}) : repli sur une seule couche`)
+      s.screenProducer = await s.sendTransport.produce({
+        track, appData, encodings: [{ maxBitrate: high }], codecOptions,
+      })
+      log('✓ écran publié au SFU (1 couche, sans simulcast)')
+    }
     // Le bouton « Arrêter le partage » natif du navigateur termine la piste.
     track.onended = () => { void sfuStopScreenShare() }
     sfuLocalScreenStore.set(display)
-    log('✓ écran publié au SFU')
 
     // Le SON de l'écran, s'il y en a un (l'utilisateur a coché « partager le son »,
     // et la surface choisie en a). C'est un BONUS : s'il échoue, on garde l'image.

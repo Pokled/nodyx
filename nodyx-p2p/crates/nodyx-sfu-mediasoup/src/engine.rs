@@ -659,12 +659,23 @@ impl MediaEngine for MediasoupEngine {
         // reprise) ; `producer_paused` = la source elle-même s'est tue. Un consumer
         // en pause n'envoie RIEN : c'est indiscernable, côté débit, d'un consumer
         // qui n'existe pas. D'où ce diagnostic.
+        // `currentLayers` = la couche que le SFU sert RÉELLEMENT à ce spectateur, ici
+        // et maintenant. C'est LA question du simulcast : sans elle, on ne peut pas
+        // distinguer « il reçoit la couche basse parce que son lien est faible »
+        // (le comportement voulu) de « il ne reçoit AUCUNE couche » (la panne). Les
+        // deux se ressemblent quand on ne regarde que le débit.
+        // `null` sur un flux mono-couche (ou audio) : il n'y a rien à choisir.
+        let current = c.current_layers();
         Ok(SignalingBlob(
             serde_json::json!({
                 "kind": c.kind(),
                 "paused": c.paused(),
                 "producerPaused": c.producer_paused(),
                 "producerId": c.producer_id(),
+                "currentLayers": current.map(|l| serde_json::json!({
+                    "spatial": l.spatial_layer,
+                    "temporal": l.temporal_layer,
+                })),
             })
             .to_string(),
         ))
