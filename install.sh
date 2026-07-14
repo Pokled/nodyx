@@ -187,6 +187,8 @@ T_EN[help_yes]='    --yes, -y          Auto-confirm all prompts'
 T_FR[help_yes]='    --yes, -y          Répondre oui à toutes les confirmations'
 T_EN[help_no_turn]='    --no-turn          Skip nodyx-turn installation'
 T_FR[help_no_turn]='    --no-turn          Ne pas installer nodyx-turn'
+T_EN[help_no_sfu]='    --no-sfu           Skip nodyx-sfud (voice stays in mesh mode)'
+T_FR[help_no_sfu]='    --no-sfu           Ne pas installer nodyx-sfud (le vocal reste en mesh)'
 T_EN[help_no_subdomain]='    --no-subdomain     Skip nodyx.org subdomain registration'
 T_FR[help_no_subdomain]='    --no-subdomain     Ne pas enregistrer le sous-domaine nodyx.org'
 T_EN[help_lang]='    --lang=en|fr       UI language (default: auto from $LANG, fallback en)'
@@ -557,6 +559,32 @@ T_EN[turn_not_binary]="The downloaded file is not a valid binary.\nURL: %s"
 T_FR[turn_not_binary]="Le fichier téléchargé n'est pas un binaire valide.\nURL : %s"
 T_EN[turn_started]='nodyx-turn started (IP: %s, UDP port 3478)'
 T_FR[turn_started]='nodyx-turn démarré (IP: %s, port UDP 3478)'
+
+# §18b — SFU (nodyx-sfud) : vocal et partage d'écran scalables
+T_EN[step_sfu]='Installing nodyx-sfud (scalable voice & screen sharing)'
+T_FR[step_sfu]="Installation de nodyx-sfud (vocal et partage d'écran scalables)"
+T_EN[sfu_downloading]='Downloading nodyx-sfud %s (%s)...'
+T_FR[sfu_downloading]='Téléchargement de nodyx-sfud %s (%s)...'
+# Le SFU est un SUPPLÉMENT : s'il échoue, le vocal marche quand même (en mesh).
+# On ne fait donc JAMAIS échouer l'installation à cause de lui — on avertit.
+T_EN[sfu_skipped]="nodyx-sfud not installed — voice still works, in mesh mode.\nLimits: ~4 people in screen sharing, and screen sharing has no sound.\nReason: %s"
+T_FR[sfu_skipped]="nodyx-sfud non installé — le vocal fonctionne quand même, en mode mesh.\nLimites : ~4 personnes en partage d'écran, et le partage se fait sans son.\nRaison : %s"
+T_EN[sfu_reason_arch]='unsupported architecture (%s)'
+T_FR[sfu_reason_arch]='architecture non supportée (%s)'
+T_EN[sfu_reason_dl]='download failed (%s)'
+T_FR[sfu_reason_dl]='téléchargement impossible (%s)'
+T_EN[sfu_reason_notbin]='the downloaded file is not a valid binary'
+T_FR[sfu_reason_notbin]="le fichier téléchargé n'est pas un binaire valide"
+T_EN[sfu_reason_start]='the service did not start (see: journalctl -u nodyx-sfud)'
+T_FR[sfu_reason_start]='le service ne démarre pas (voir : journalctl -u nodyx-sfud)'
+# Serveur derrière NAT (mode Relay) : le SFU a besoin de ports média joignables de
+# l'extérieur, ce qu'un tunnel ne fournit pas. On ne demandera JAMAIS d'ouvrir un
+# port sur la box de l'utilisateur : c'est un engagement du projet.
+T_EN[sfu_relay_skipped]="Relay mode: nodyx-sfud is not installed (media ports are not reachable through a tunnel).\nVoice works in mesh mode: ~4 people in screen sharing, and no sound while sharing.\nLifting this limit will NOT require opening any port on your router — it is being worked on."
+T_FR[sfu_relay_skipped]="Mode Relay : nodyx-sfud n'est pas installé (les ports média ne sont pas joignables à travers un tunnel).\nLe vocal fonctionne en mode mesh : ~4 personnes en partage d'écran, et le partage se fait sans son.\nLever cette limite n'exigera AUCUNE ouverture de port sur ta box — c'est en cours."
+T_EN[sfu_started]='nodyx-sfud started (media ports %s, announced IP: %s)'
+T_FR[sfu_started]='nodyx-sfud démarré (ports média %s, IP annoncée : %s)'
+
 T_EN[step_firewall]='Configuring the firewall'
 T_FR[step_firewall]='Configuration du pare-feu'
 T_EN[ufw_existing_saved]='Existing UFW rules saved to %s'
@@ -1119,6 +1147,8 @@ NODYX_RELAY_VERSION="v0.1.4-p2p"
 _FORCE_MODE=""        # upgrade | repair | reinstall | wipe (bypass detection menu)
 _AUTO_YES=false       # --yes : passer toutes les confirmations
 SKIP_TURN=false       # --no-turn
+SKIP_SFU=false        # --no-sfu
+_SFU_INSTALLED=false  # vrai seulement si le daemon SFU tourne réellement
 SKIP_SUBDOMAIN=false  # --no-subdomain
 _ARG_DOMAIN=""  _ARG_SLUG=""  _ARG_NAME=""
 _ARG_ADMIN_USER=""  _ARG_ADMIN_EMAIL=""  _ARG_ADMIN_PASS=""
@@ -1131,6 +1161,7 @@ for _arg in "$@"; do
     --wipe)               _FORCE_MODE="wipe"      ;;
     --yes|-y)             _AUTO_YES=true           ;;
     --no-turn)            SKIP_TURN=true           ;;
+    --no-sfu)             SKIP_SFU=true            ;;
     --no-subdomain)       SKIP_SUBDOMAIN=true      ;;
     --domain=*)           _ARG_DOMAIN="${_arg#*=}" ;;
     --slug=*)             _ARG_SLUG="${_arg#*=}"   ;;
@@ -1159,6 +1190,7 @@ for _arg in "$@"; do
       echo "$(t help_options_header)"
       echo "$(t help_yes)"
       echo "$(t help_no_turn)"
+      echo "$(t help_no_sfu)"
       echo "$(t help_no_subdomain)"
       echo "$(t help_lang)"
       echo "$(t help_help)"
@@ -2136,6 +2168,122 @@ SVC
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  NODYX-SFUD (SFU mediasoup) — vocal et partage d'écran scalables
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Sans lui : le vocal fonctionne en MESH. Chacun envoie son flux à chacun, donc le
+#  partage d'écran plafonne vers 4 personnes (le partageur uploade UNE COPIE PAR
+#  SPECTATEUR) et se fait sans son.
+#  Avec lui : le partageur envoie UNE SEULE FOIS, le serveur recopie. Plus de mur,
+#  et le partage emporte son son.
+#
+#  ⚠ MODE RELAY : le SFU a besoin de ports média joignables depuis l'extérieur, ce
+#  qu'un tunnel ne fournit pas. On ne l'installe donc pas, et on ne demandera JAMAIS
+#  à l'utilisateur d'ouvrir un port sur sa box : c'est un engagement du projet. La
+#  levée passera par une pile ICE complète (perçage de NAT), pas par sa box.
+#
+#  Le SFU est un SUPPLÉMENT : s'il échoue, on AVERTIT et on continue. Le vocal marche
+#  sans lui. Faire échouer toute l'installation pour un bonus serait absurde.
+# ═══════════════════════════════════════════════════════════════════════════════
+_sfu_skip() { warn "$(printf "$(t sfu_skipped)" "$1")"; }
+
+if $RELAY_MODE; then
+  warn "$(t sfu_relay_skipped)"
+elif ! $SKIP_SFU; then
+  step "$(t step_sfu)"
+
+  _SFU_ARCH=""
+  case "$(uname -m)" in
+    x86_64)  _SFU_ARCH="amd64" ;;
+    aarch64) _SFU_ARCH="arm64" ;;
+  esac
+
+  if [[ -z "$_SFU_ARCH" ]]; then
+    _sfu_skip "$(printf "$(t sfu_reason_arch)" "$(uname -m)")"
+  else
+    _SFU_VERSION="sfu-v0.1.0"
+    _SFU_URL="https://github.com/Pokled/nodyx/releases/download/${_SFU_VERSION}/nodyx-sfud-linux-${_SFU_ARCH}"
+    info "$(printf "$(t sfu_downloading)" "${_SFU_VERSION}" "${_SFU_ARCH}")"
+    _SFU_TMP="$(mktemp /tmp/nodyx-sfud.XXXXXX)"
+
+    if ! curl -fsSL --max-time 180 "$_SFU_URL" -o "$_SFU_TMP"; then
+      rm -f "$_SFU_TMP"
+      _sfu_skip "$(printf "$(t sfu_reason_dl)" "${_SFU_URL}")"
+    elif ! file "$_SFU_TMP" 2>/dev/null | grep -q ELF; then
+      rm -f "$_SFU_TMP"
+      _sfu_skip "$(t sfu_reason_notbin)"
+    else
+      chmod +x "$_SFU_TMP"
+      mv -f "$_SFU_TMP" /usr/local/bin/nodyx-sfud
+
+      SFU_TOKEN="$(openssl rand -hex 32)"
+
+      # Le média écoute sur toutes les interfaces et ANNONCE l'IP publique : certains
+      # hébergeurs (AWS, GCP…) ne montrent jamais l'IP publique à la machine, un bind
+      # direct dessus échouerait.
+      cat > /etc/nodyx-sfud.env <<SFUENV
+# Généré par install.sh — le secret est partagé avec nodyx-core (VOICE_SFU_TOKEN)
+SFU_TOKEN=${SFU_TOKEN}
+
+# API interne : JAMAIS exposée, seul nodyx-core la contacte, en local.
+SFU_HTTP_ADDR=127.0.0.1:3901
+
+# Média : on écoute partout, on annonce l'IP publique aux navigateurs.
+SFU_LISTEN_IP=0.0.0.0
+SFU_ANNOUNCED_IP=${PUBLIC_IP}
+
+# Plage de ports média (ouverte dans le pare-feu, en UDP ET en TCP : le TCP est le
+# repli des réseaux qui bloquent l'UDP — entreprises, hôtels, certains opérateurs).
+SFU_RTC_MIN_PORT=40000
+SFU_RTC_MAX_PORT=40999
+
+# Le nombre de workers s'adapte tout seul à la machine (cœurs - réservés). Un cœur
+# reste hors de portée du média pour le reste des services.
+SFU_RESERVED_CORES=1
+
+# 0 = toute session passe par le SFU dès que nodyx-core le décide. C'est nodyx-core
+# qui arbitre mesh/SFU (VOICE_SFU_MESH_THRESHOLD), pas le daemon.
+SFU_MESH_THRESHOLD=0
+SFUENV
+      chown root:nodyx /etc/nodyx-sfud.env
+      chmod 640 /etc/nodyx-sfud.env
+
+      cat > /etc/systemd/system/nodyx-sfud.service <<SFUSVC
+[Unit]
+Description=Nodyx SFU daemon (mediasoup) — scalable voice & screen sharing
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/nodyx-sfud.env
+ExecStart=/usr/local/bin/nodyx-sfud
+Restart=on-failure
+RestartSec=5s
+User=nodyx
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+SFUSVC
+
+      systemctl daemon-reload
+      systemctl enable nodyx-sfud --quiet
+      systemctl restart nodyx-sfud
+      sleep 2
+
+      if systemctl is-active --quiet nodyx-sfud; then
+        _SFU_INSTALLED=true
+        ok "$(printf "$(t sfu_started)" "40000-40999" "${PUBLIC_IP}")"
+      else
+        _sfu_skip "$(t sfu_reason_start)"
+      fi
+    fi
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  FIREWALL (UFW)
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_firewall)"
@@ -2161,6 +2309,14 @@ if ! $RELAY_MODE; then
     ufw allow 5349/tcp >/dev/null 2>&1
     ufw allow 5349/udp >/dev/null 2>&1
     ufw allow 49152:65535/udp >/dev/null 2>&1
+  fi
+  # Ports média du SFU. Le TCP n'est PAS un luxe : c'est le repli des réseaux qui
+  # bloquent l'UDP (entreprises, hôtels, certains opérateurs). Sans lui, ces
+  # utilisateurs ne se connectent PAS DU TOUT au vocal — pas « moins bien » : rien,
+  # avec un écran noir et aucun message.
+  if $_SFU_INSTALLED; then
+    ufw allow 40000:40999/udp >/dev/null 2>&1
+    ufw allow 40000:40999/tcp >/dev/null 2>&1
   fi
 fi
 ufw --force enable >/dev/null 2>&1
@@ -2294,6 +2450,30 @@ COREENV
 if $RELAY_MODE; then
   printf "\n# Fallback STUN (relay mode — nodyx-turn non installé)\nSTUN_FALLBACK_URLS=stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302\n" \
     >> "${NODYX_DIR}/nodyx-core/.env"
+fi
+
+# Brancher nodyx-core sur le SFU. Sans ces variables, le daemon tournerait pour rien :
+# le core ne lui parlerait jamais et tout le vocal resterait en mesh.
+if $_SFU_INSTALLED; then
+  cat >> "${NODYX_DIR}/nodyx-core/.env" <<SFUCORE
+
+# ── SFU (nodyx-sfud) : vocal et partage d'écran scalables ──────────────────────
+# Le secret est le même que dans /etc/nodyx-sfud.env.
+VOICE_SFU_URL=http://127.0.0.1:3901
+VOICE_SFU_TOKEN=${SFU_TOKEN}
+
+# Bascule automatique mesh → SFU.
+VOICE_SFU_AUTO=true
+
+# Vide = TOUS les canaux vocaux. (Renseigner des UUID pour limiter à certains.)
+VOICE_SFU_AUTO_CHANNELS=
+
+# À partir de combien de personnes un canal bascule tout seul. En dessous, le mesh
+# suffit et évite un aller-retour par le serveur.
+# ⚠ Un PARTAGE D'ÉCRAN bascule TOUJOURS, quel que soit ce seuil : c'est précisément
+# le moment où le mesh s'écroule (une copie envoyée PAR SPECTATEUR).
+VOICE_SFU_MESH_THRESHOLD=6
+SFUCORE
 fi
 
 cd "${NODYX_DIR}/nodyx-core"
