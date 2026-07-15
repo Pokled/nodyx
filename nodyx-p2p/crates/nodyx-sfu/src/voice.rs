@@ -229,6 +229,20 @@ struct RoomState {
     router: Option<RouterHandle>,
 }
 
+/// Un flux (`producer`) disparaît : retire de TOUS les participants leur abonnement
+/// à ce flux (il est devenu un fantôme : un consumer qui lit un producer fermé) et
+/// renvoie les [`ConsumerId`] correspondants, à fermer côté moteur. Sans ça, ces
+/// abonnements et leurs consumers s'accumulent tant que le salon vit = fuite.
+fn drop_subscribers_of(state: &mut RoomState, producer: &ProducerId) -> Vec<ConsumerId> {
+    let mut orphaned = Vec::new();
+    for p in state.participants.values_mut() {
+        if let Some(c) = p.subscriptions.remove(producer) {
+            orphaned.push(c);
+        }
+    }
+    orphaned
+}
+
 // ── Le service ──────────────────────────────────────────────────────────────
 
 /// Orchestrateur métier du vocal. Générique sur le moteur : `VoiceService<NullEngine>`
@@ -406,26 +420,58 @@ impl<E: MediaEngine> VoiceService<E> {
     }
 
     async fn remove(&self, room: RoomId, participant: ParticipantId) -> Result<(), VoiceError> {
-        let router_to_close = {
+        let (producers, consumers, transports, router_to_close) = {
             let mut rooms = self.rooms();
             let Some(state) = rooms.get_mut(&room) else {
                 return Err(VoiceError::NotInRoom);
             };
-            if state.participants.remove(&participant).is_none() {
+            let Some(gone) = state.participants.remove(&participant) else {
                 return Err(VoiceError::NotInRoom);
-            }
-            // Ses publications disparaissent (les abonnés seront notifiés par le signaling).
+            };
+
+            // Objets moteur DU PARTANT : ses consumers (ses abonnements) et ses
+            // transports (send/recv). Sans les fermer, ils survivent dans les
+            // registres du moteur jusqu'à la fermeture du salon = fuite.
+            let mut consumers: Vec<ConsumerId> = gone.subscriptions.into_values().collect();
+            let transports: Vec<TransportHandle> =
+                [gone.send_transport, gone.recv_transport].into_iter().flatten().collect();
+
+            // Ses publications disparaissent, et chacune rend fantômes les
+            // abonnements des AUTRES : on les purge et on récupère leurs consumers.
+            let producers: Vec<ProducerId> = state
+                .publications
+                .iter()
+                .filter(|(_, pubb)| pubb.owner == participant)
+                .map(|(id, _)| id.clone())
+                .collect();
             state.publications.retain(|_, pubb| pubb.owner != participant);
+            for prod in &producers {
+                consumers.extend(drop_subscribers_of(state, prod));
+            }
+
             // Dernier parti : on ferme le salon et on libère le routeur moteur.
-            if state.participants.is_empty() {
-                let router = state.router.take();
+            let router = if state.participants.is_empty() {
+                let r = state.router.take();
                 rooms.remove(&room);
-                router
+                r
             } else {
                 None
-            }
+            };
+            (producers, consumers, transports, router)
         };
 
+        // Hors verrou : nettoyage moteur, tout idempotent. Fermer les transports
+        // casse en cascade les producers/consumers restants côté serveur ; on retire
+        // aussi explicitement du registre pour ne rien y laisser traîner.
+        for p in producers {
+            let _ = self.engine.close_producer(&p).await;
+        }
+        for c in consumers {
+            let _ = self.engine.close_consumer(&c).await;
+        }
+        for t in transports {
+            let _ = self.engine.close_transport(&t).await;
+        }
         if let Some(router) = router_to_close {
             self.engine.close_room(router).await?;
         }
@@ -617,7 +663,7 @@ impl<E: MediaEngine> VoiceService<E> {
         participant: ParticipantId,
         producer: ProducerId,
     ) -> Result<(), VoiceError> {
-        {
+        let orphaned = {
             let mut rooms = self.rooms();
             let state = rooms.get_mut(&room).ok_or(VoiceError::NotInRoom)?;
             match state.publications.get(&producer) {
@@ -627,9 +673,15 @@ impl<E: MediaEngine> VoiceService<E> {
                 Some(_) => return Err(VoiceError::NotOwner),
                 None => return Err(VoiceError::NoSuchPublication),
             }
-        }
-        // Hors verrou : fermeture réelle du flux moteur (idempotente).
+            // Le flux disparaît : les consumers qui le lisaient deviennent fantômes.
+            drop_subscribers_of(state, &producer)
+        };
+        // Hors verrou : fermeture réelle du flux moteur + de ses consumers orphelins
+        // (tout est idempotent : un objet déjà parti n'est pas une erreur).
         self.engine.close_producer(&producer).await?;
+        for c in orphaned {
+            let _ = self.engine.close_consumer(&c).await;
+        }
         Ok(())
     }
 
@@ -1041,6 +1093,51 @@ mod tests {
             block_on(s.unpublish(room(), p(1), prod)),
             Err(VoiceError::NoSuchPublication)
         );
+    }
+
+    #[test]
+    fn unpublish_purges_subscribers_no_ghost() {
+        let s = svc();
+        for i in 1..=3 {
+            block_on(s.join(room(), p(i))).unwrap();
+        }
+        let prod = block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
+        block_on(s.subscribe(room(), p(2), prod.clone(), &blob())).unwrap();
+        block_on(s.subscribe(room(), p(3), prod.clone(), &blob())).unwrap();
+        assert_eq!(block_on(s.subscriptions(&room())).len(), 2);
+
+        // p1 arrête son partage → les DEUX abonnements doivent disparaître : sans le
+        // nettoyage, ils restaient en fantômes (un consumer qui lit un flux fermé).
+        block_on(s.unpublish(room(), p(1), prod)).unwrap();
+        assert!(
+            block_on(s.subscriptions(&room())).is_empty(),
+            "les abonnements au flux fermé doivent être purgés"
+        );
+        assert!(s.publications(&room()).is_empty());
+    }
+
+    #[test]
+    fn leaving_purges_own_and_others_subscriptions() {
+        let s = svc();
+        for i in 1..=3 {
+            block_on(s.join(room(), p(i))).unwrap();
+        }
+        let prod1 = block_on(s.publish(room(), p(1), TrackKind::Screen, &blob())).unwrap();
+        let prod2 = block_on(s.publish(room(), p(2), TrackKind::Screen, &blob())).unwrap();
+        // p3 consomme les deux écrans ; p1 consomme l'écran de p2.
+        block_on(s.subscribe(room(), p(3), prod1.clone(), &blob())).unwrap();
+        block_on(s.subscribe(room(), p(3), prod2.clone(), &blob())).unwrap();
+        block_on(s.subscribe(room(), p(1), prod2.clone(), &blob())).unwrap();
+        assert_eq!(block_on(s.subscriptions(&room())).len(), 3);
+
+        // p1 part. Son flux (prod1) disparaît → l'abonnement de p3 à prod1 est purgé.
+        // Et son PROPRE abonnement (p1 → prod2) part avec lui. Reste : p3 → prod2.
+        block_on(s.leave(room(), p(1))).unwrap();
+        let subs = block_on(s.subscriptions(&room()));
+        assert_eq!(subs.len(), 1, "reste seulement l'abonnement de p3 au flux de p2");
+        assert_eq!(subs[0].subscriber, p(3));
+        assert_eq!(subs[0].producer, prod2);
+        assert_eq!(s.publications(&room()).len(), 1); // seul le flux de p2 subsiste
     }
 
     #[test]

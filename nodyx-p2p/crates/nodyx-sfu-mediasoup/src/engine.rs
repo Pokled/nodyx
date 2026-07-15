@@ -644,6 +644,22 @@ impl MediaEngine for MediasoupEngine {
         Ok(())
     }
 
+    async fn close_consumer(&self, consumer: &ConsumerId) -> Result<()> {
+        // Même logique : retrait du registre = Drop = fermeture. Sans ce nettoyage,
+        // les consumers dont le producer a disparu (ou dont l'abonné est parti)
+        // restent dans la Map et s'y accumulent = fuite.
+        self.inner.consumers.lock().unwrap().remove(&consumer.0);
+        Ok(())
+    }
+
+    async fn close_transport(&self, transport: &TransportHandle) -> Result<()> {
+        // Retirer l'Arc du registre : quand c'est la dernière référence, le
+        // transport se ferme, et mediasoup casse en cascade ses producers/consumers
+        // côté serveur. Idempotent.
+        self.inner.transports.lock().unwrap().remove(&transport.0);
+        Ok(())
+    }
+
     async fn resume_consumer(&self, consumer: &ConsumerId) -> Result<()> {
         // Le client a créé son consumer : on peut laisser couler. mediasoup demande
         // alors une keyframe au producer, qui arrivera à un décodeur EXISTANT.
