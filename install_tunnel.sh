@@ -362,6 +362,12 @@ T_FR[summary_voice_warn_pangolin]='Voix/webcam nécessitent un chemin UDP. Utili
 T_EN[summary_voice_warn_none]='Voice/webcam need a UDP route. Make sure your reverse tunnel forwards UDP/3478 (TURN) and the WebRTC ports.'
 T_FR[summary_voice_warn_none]='Voix/webcam nécessitent un chemin UDP. Vérifie que ton tunnel transporte UDP/3478 (TURN) et les ports WebRTC.'
 
+# Note SFU : un tunnel n'expose pas de ports média joignables, donc le SFU n'est pas
+# installé et le vocal reste en mesh. On l'explique, et surtout on tient la promesse :
+# lever cette limite n'exigera JAMAIS d'ouvrir un port sur la box de l'utilisateur.
+T_EN[summary_sfu_note]='Voice runs in mesh (peer-to-peer): screen sharing is capped around 4 people and has no sound.\n   Lifting this needs reachable media ports, which a tunnel cannot provide — and it will NOT\n   require opening any port on your router. It is being worked on.'
+T_FR[summary_sfu_note]='Le vocal fonctionne en mesh (pair-à-pair) : le partage d’écran plafonne vers 4 personnes et\n   se fait sans son. Lever cette limite demande des ports média joignables, qu’un tunnel ne\n   fournit pas — et cela n’exigera AUCUNE ouverture de port sur ta box. C’est en cours.'
+
 # Pangolin next-steps. Two newt deployment modes are explicitly supported:
 #   - --network host  → newt shares the host netns; resource target = localhost:80
 #   - default bridge  → newt runs in its own netns; resource target = host LAN IP:80
@@ -2114,6 +2120,7 @@ case "$TUNNEL_MODE" in
     echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
     echo ""
     warn "$(t summary_voice_warn_cf)"
+    info "$(t summary_sfu_note)"
     ;;
   pangolin)
     echo -e "  ${BOLD}${CYAN}▸ $(t summary_pangolin_header)${RESET}"
@@ -2161,6 +2168,7 @@ case "$TUNNEL_MODE" in
     echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
     echo ""
     warn "$(t summary_voice_warn_pangolin)"
+    info "$(t summary_sfu_note)"
     ;;
   none)
     echo -e "  ${BOLD}${CYAN}▸ $(t summary_none_header)${RESET}"
@@ -2174,6 +2182,7 @@ case "$TUNNEL_MODE" in
     echo -e "  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
     echo ""
     warn "$(t summary_voice_warn_none)"
+    info "$(t summary_sfu_note)"
     ;;
 esac
 echo ""
