@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation'
 	import type { PageData } from './$types'
 	import { untrack } from 'svelte'
+	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
 
 	let { data }: { data: PageData } = $props()
 
@@ -288,6 +289,14 @@
 							</div>
 						</div>
 
+						<!-- Description riche : HTML assaini côté serveur (écriture ET
+						     lecture), donc sûr à rendre. Bornée en hauteur sur la tuile. -->
+						{#if card.description}
+							<div class="task-card-desc mt-1.5 max-h-28 overflow-hidden text-xs leading-snug text-gray-400">
+								{@html card.description}
+							</div>
+						{/if}
+
 						<!-- Badges -->
 						<div class="flex flex-wrap gap-1.5 mt-2">
 							{#if card.priority !== 'normal'}
@@ -426,16 +435,17 @@
 
 			<!-- Description -->
 			<div>
-				<label for="task-edit-desc" class="block text-xs font-medium text-gray-500 mb-1.5">Description</label>
-				<textarea
-					id="task-edit-desc"
-					bind:value={editingCard.description}
-					rows="3"
-					maxlength="10000"
-					placeholder="Détails, liens, notes..."
-					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
-					       placeholder-gray-600 focus:outline-none focus:border-indigo-600 resize-none"
-				></textarea>
+				<span class="block text-xs font-medium text-gray-500 mb-1.5">Description</span>
+				<!-- Éditeur riche (liens, images, mise en forme). Le HTML est assaini
+				     CÔTÉ SERVEUR, à l'écriture et à la lecture. -->
+				<div class="max-h-72 overflow-y-auto rounded-lg">
+					<NodyxEditor
+						compact
+						initialContent={editingCard.description}
+						placeholder="Détails, liens, images, notes..."
+						onchange={(html) => { if (editingCard) editingCard.description = html }}
+					/>
+				</div>
 			</div>
 
 			<div class="grid grid-cols-2 gap-3">
@@ -496,3 +506,22 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* Contenu riche des cartes : venu de l'éditeur, assaini côté serveur. On borne
+	   ce qui pourrait casser une tuile étroite, sans imposer tout un thème. */
+	.task-card-desc :global(p)          { margin: 0 0 0.25rem 0; }
+	.task-card-desc :global(a)          { color: rgb(129, 140, 248); text-decoration: underline; }
+	.task-card-desc :global(a:hover)    { color: rgb(165, 180, 252); }
+	.task-card-desc :global(img)        { max-width: 100%; max-height: 6rem; border-radius: 0.375rem; margin: 0.25rem 0; }
+	.task-card-desc :global(pre)        { overflow-x: auto; background: rgb(17, 24, 39); border-radius: 0.375rem; padding: 0.375rem 0.5rem; margin: 0.25rem 0; }
+	.task-card-desc :global(code)       { font-size: 0.7rem; }
+	.task-card-desc :global(ul),
+	.task-card-desc :global(ol)         { margin: 0.25rem 0; padding-left: 1.1rem; }
+	.task-card-desc :global(h1),
+	.task-card-desc :global(h2),
+	.task-card-desc :global(h3),
+	.task-card-desc :global(h4)         { font-size: 0.8rem; font-weight: 600; color: rgb(209, 213, 219); margin: 0.25rem 0; }
+	.task-card-desc :global(blockquote) { border-left: 2px solid rgb(75, 85, 99); padding-left: 0.5rem; margin: 0.25rem 0; }
+	.task-card-desc :global(iframe)     { max-width: 100%; max-height: 8rem; }
+</style>

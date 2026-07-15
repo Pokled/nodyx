@@ -10,6 +10,20 @@ import { validate }    from '../middleware/validate'
 import { rateLimit }   from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import { db }          from '../config/database'
+import { sanitize }    from '../utils/sanitize'
+import { rehostExternalImages } from '../services/inlineImageRehost'
+
+// La description d'une carte vient de l'éditeur riche (HTML). Deux règles :
+// - à l'ÉCRITURE : rehost des <img> externes PUIS sanitize (patron du forum) ;
+// - à la LECTURE : sanitize AUSSI, car les descriptions écrites avant l'éditeur
+//   riche n'ont jamais été assainies (texte libre), et ça vaut pour TOUTES les
+//   instances auto-hébergées, pas seulement la nôtre. Rendre du contenu
+//   utilisateur en {@html} sans ce filet serait une XSS.
+async function cleanDescription(raw: string): Promise<string> {
+  if (!raw) return ''
+  const rehost = await rehostExternalImages(raw)
+  return sanitize(rehost.html)
+}
 
 // ── getCommunityId (cached) ────────────────────────────────────────────────────
 
@@ -69,7 +83,7 @@ const UpdateColumnSchema = z.object({
 
 const CreateCardSchema = z.object({
   title:       z.string().min(1).max(200),
-  description: z.string().max(10000).optional().default(''),
+  description: z.string().max(100_000).optional().default(''),
   assignee_id: z.string().uuid().nullable().optional(),
   due_date:    z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   priority:    z.enum(PRIORITIES).optional().default('normal'),
@@ -77,7 +91,7 @@ const CreateCardSchema = z.object({
 
 const UpdateCardSchema = z.object({
   title:       z.string().min(1).max(200).optional(),
-  description: z.string().max(10000).optional(),
+  description: z.string().max(100_000).optional(),
   assignee_id: z.string().uuid().nullable().optional(),
   due_date:    z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   priority:    z.enum(PRIORITIES).optional(),
@@ -185,6 +199,14 @@ export default async function taskRoutes(app: FastifyInstance) {
          ORDER BY k.column_id, k.position ASC`,
         [id]
       )
+
+      // Filet pour l'existant : les descriptions écrites avant l'éditeur riche
+      // n'ont jamais été assainies (et ça vaut pour toutes les instances). On
+      // assainit donc aussi à la lecture. Pas de rehost ici : aucun appel réseau
+      // sur un GET.
+      for (const card of cards) {
+        card.description = card.description ? sanitize(card.description) : ''
+      }
 
       const cardsByColumn: Record<string, typeof cards> = {}
       for (const card of cards) {
@@ -395,11 +417,12 @@ export default async function taskRoutes(app: FastifyInstance) {
         [id]
       )
 
+      const description = await cleanDescription(body.description)
       const { rows: [card] } = await db.query(
         `INSERT INTO task_cards (column_id, title, description, assignee_id, due_date, priority, position, created_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id, column_id, title, description, due_date, priority, position, created_by, created_at`,
-        [id, body.title, body.description, body.assignee_id ?? null, body.due_date ?? null, body.priority, max_pos + 1, userId]
+        [id, body.title, description, body.assignee_id ?? null, body.due_date ?? null, body.priority, max_pos + 1, userId]
       )
 
       const { rows: [enriched] } = await db.query(
@@ -457,7 +480,7 @@ export default async function taskRoutes(app: FastifyInstance) {
     const updates: string[] = ['updated_at = NOW()']
     const params: unknown[] = []
     if (body.title       !== undefined) { params.push(body.title);        updates.push(`title = $${params.length}`) }
-    if (body.description !== undefined) { params.push(body.description);  updates.push(`description = $${params.length}`) }
+    if (body.description !== undefined) { params.push(await cleanDescription(body.description)); updates.push(`description = $${params.length}`) }
     if (body.assignee_id !== undefined) {
       // null = désassigner ; sinon vérifier que l'assignee appartient à cette communauté
       if (body.assignee_id !== null) {
