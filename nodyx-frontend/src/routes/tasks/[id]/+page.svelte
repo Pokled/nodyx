@@ -238,7 +238,7 @@
 	{#each board.columns as col (col.id)}
 		<!-- Colonne -->
 		<div
-			class="flex-shrink-0 w-72 flex flex-col rounded-xl border transition-colors
+			class="flex-1 min-w-[15rem] flex flex-col rounded-xl border transition-colors
 			       {dragOverColId === col.id ? 'border-indigo-600 bg-indigo-950/20' : 'border-gray-800 bg-gray-900/40'}"
 			ondragover={(e) => onDragOver(e, col.id)}
 			ondragleave={onDragLeave}
