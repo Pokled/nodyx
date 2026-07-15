@@ -277,7 +277,7 @@
 							<p class="flex-1 text-sm text-gray-200 leading-snug">{card.title}</p>
 							<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
 								<button
-									onclick={() => editingCard = structuredClone(card)}
+									onclick={() => editingCard = $state.snapshot(card)}
 									class="text-gray-600 hover:text-indigo-400 text-xs leading-none"
 									title="Modifier"
 								>✎</button>
