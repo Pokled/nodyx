@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { voiceStore, setPeerVolume, inputLevel, peerStatsStore, getQuality, kickPeer } from '$lib/voice'
+	import { voiceStore, setPeerVolume, inputLevel, peerStatsStore, getQuality, kickPeer, voiceChannelMembersStore } from '$lib/voice'
 	import { jukeboxStore, initJukebox, cleanupJukebox, mountYTPlayer, jukeboxLoad } from '$lib/jukebox'
 	import { goto } from '$app/navigation'
 	import { PUBLIC_API_URL } from '$env/static/public'
@@ -21,6 +21,13 @@
 	const vs       = $derived($voiceStore)
 	const jb       = $derived($jukeboxStore)
 	const statsMap = $derived($peerStatsStore)
+
+	// ── Qui est déjà dans le canal, AVANT de le rejoindre ────────────────────
+	// Le roster du canal arrive en temps réel (socket voice:channel_update) et ne
+	// dépend PAS de notre connexion : la sidebar l'affichait déjà. L'écran du canal,
+	// lui, restait aveugle (0 participant tant qu'on n'avait pas rejoint), ce qui
+	// n'avait aucun sens : on décide de rejoindre justement en voyant qui est là.
+	const present = $derived($voiceChannelMembersStore[channelId] ?? [])
 
 	type NetQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown'
 	const QUALITY_COLOR: Record<NetQuality, string> = {
@@ -219,7 +226,45 @@
 				</div>
 			</button>
 
-			<p class="text-xs text-gray-700">Microphone requis pour participer</p>
+			<!-- ── Qui est déjà là (aperçu avant de rejoindre) ─────────────────
+			     On voit la salle AVANT d'y entrer : c'est ce qui donne envie
+			     d'entrer, et ça évite le « je rejoins pour voir » micro ouvert. -->
+			{#if present.length > 0}
+				<div class="flex flex-col items-center gap-4">
+					<p class="text-[10px] font-black uppercase tracking-[0.25em]"
+					   style="color: rgb(var(--nx-accent-2-soft))">
+						{present.length} {present.length > 1 ? 'personnes sont là' : 'personne est là'}
+					</p>
+					<div class="flex flex-wrap items-start justify-center gap-4 max-w-lg">
+						{#each present.slice(0, 8) as m (m.userId)}
+							<div class="flex w-16 flex-col items-center gap-1.5" title={m.username}>
+								<div class="h-12 w-12 overflow-hidden rounded-full transition-transform duration-300 hover:scale-110"
+								     style="box-shadow: 0 0 0 2px rgb(var(--nx-accent-2-rgb) / 0.5), 0 0 20px rgb(var(--nx-accent-2-rgb) / 0.25)">
+									{#if m.avatar}
+										<img src={m.avatar} alt={m.username} class="h-full w-full object-cover"/>
+									{:else}
+										<div class="flex h-full w-full items-center justify-center text-sm font-black text-white select-none"
+										     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">
+											{m.username.charAt(0).toUpperCase()}
+										</div>
+									{/if}
+								</div>
+								<span class="w-full truncate text-center text-[10px] text-gray-500">{m.username}</span>
+							</div>
+						{/each}
+						{#if present.length > 8}
+							<div class="flex h-12 w-12 items-center justify-center rounded-full text-[11px] font-bold text-gray-400"
+							     style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08)">
+								+{present.length - 8}
+							</div>
+						{/if}
+					</div>
+				</div>
+			{:else}
+				<p class="text-xs text-gray-700">Personne pour l'instant. Sois le premier.</p>
+			{/if}
+
+			<p class="text-xs text-gray-800">Microphone requis pour participer</p>
 		</div>
 
 	{:else}
