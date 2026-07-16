@@ -5,6 +5,7 @@
         remoteScreenStore,
         stopScreenShare,
         voiceStore,
+        registerSinkElement,
     } from '$lib/voice'
     import StageChat from './StageChat.svelte'
 
@@ -194,6 +195,13 @@
         if (!el) return
         el.volume = screenVolume / 100
         el.muted  = screenMuted
+    })
+
+    // Le son d'écran suit la sortie choisie (écouteur/haut-parleur), comme les voix.
+    $effect(() => {
+        const el = screenAudioElem
+        if (!el) return
+        return registerSinkElement(el)
     })
 
     // Filet de sécurité mobile : un clic sur une commande relance la lecture si le

@@ -539,6 +539,7 @@ function createPeerAudio(socketId: string, stream: MediaStream): void {
   // Volume mémorisé pour CET utilisateur (par userId → survit refresh/reconnexion)
   const peer = get(voiceStore).peers.find(p => p.socketId === socketId)
   audioEl.volume    = peer?.userId ? getPeerVolume(peer.userId) / 100 : 1.0
+  if (_currentSinkId) void _applySink(audioEl)   // adopte la sortie choisie (haut-parleur)
   audioEl.play().catch(() => {
     // Chrome desktop bloque l'autoplay si le contexte geste-utilisateur a expiré.
     // On réessaie au prochain clic ou frappe clavier (une seule fois suffit).
@@ -579,6 +580,66 @@ function createPeerAudio(socketId: string, stream: MediaStream): void {
   }, 100)
 
   _peerAudio.set(socketId, { audioEl, source, analyser, vadInterval })
+}
+
+// ── Sortie audio (Android : écouteur <-> haut-parleur via setSinkId) ─────────
+// Sur mobile, dès qu'un micro tourne, le système route le son vers l'ÉCOUTEUR
+// (mode « appel »), d'où l'obligation de coller le téléphone à l'oreille.
+// setSinkId permet de rediriger vers le haut-parleur. On applique le choix à TOUS
+// les <audio> de lecture (voix + son d'écran) et on le mémorise pour que les
+// éléments créés ensuite l'adoptent. iOS n'expose pas ça : le bouton n'apparaît
+// que si setSinkId existe (Android/desktop).
+export const audioOutputStore = writable<{ supported: boolean; onSpeaker: boolean }>({
+  supported: false, onSpeaker: false,
+})
+let _currentSinkId = ''                                   // '' = sortie système par défaut
+const _extraSinkEls = new Set<HTMLMediaElement>()         // éléments hors roster (son d'écran)
+
+function _sinkSupported(): boolean {
+  return typeof HTMLMediaElement !== 'undefined'
+    && typeof (HTMLMediaElement.prototype as unknown as { setSinkId?: unknown }).setSinkId === 'function'
+}
+
+async function _applySink(el: HTMLMediaElement): Promise<void> {
+  try { await (el as unknown as { setSinkId(id: string): Promise<void> }).setSinkId(_currentSinkId) }
+  catch { /* device parti / non supporté : on ignore */ }
+}
+
+/** Enregistre un <audio> hors roster (ex. son d'écran) pour qu'il suive la sortie. */
+export function registerSinkElement(el: HTMLMediaElement): () => void {
+  _extraSinkEls.add(el)
+  if (_currentSinkId) void _applySink(el)
+  return () => { _extraSinkEls.delete(el) }
+}
+
+/** Disponibilité du bouton : setSinkId présent (Android/desktop, pas iOS). */
+export async function refreshAudioOutputs(): Promise<void> {
+  audioOutputStore.update(s => ({ ...s, supported: _sinkSupported() }))
+}
+
+/** Cherche l'id d'une sortie dont le libellé matche, sinon ''. */
+async function _findOutput(re: RegExp): Promise<string> {
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices()
+    const outs = devs.filter(d => d.kind === 'audiooutput')
+    const match = outs.find(d => re.test(d.label))
+    if (match) return match.deviceId
+    // Repli : une sortie qui n'est ni « default » ni « communications » est
+    // souvent le haut-parleur sur Android.
+    const other = outs.find(d => d.deviceId !== 'default' && d.deviceId !== 'communications')
+    return other?.deviceId ?? ''
+  } catch { return '' }
+}
+
+/** Bascule écouteur <-> haut-parleur, appliqué à toutes les sorties de lecture. */
+export async function toggleSpeaker(): Promise<boolean> {
+  const cur = get(audioOutputStore)
+  const toSpeaker = !cur.onSpeaker
+  _currentSinkId = toSpeaker ? await _findOutput(/speaker|haut.?parleur/i) : ''
+  for (const node of _peerAudio.values()) await _applySink(node.audioEl)
+  for (const el of _extraSinkEls) await _applySink(el)
+  audioOutputStore.set({ supported: cur.supported, onSpeaker: toSpeaker })
+  return toSpeaker
 }
 
 function destroyPeerAudio(socketId: string): void {

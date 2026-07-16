@@ -4,6 +4,7 @@
         startPTT, stopPTT, inputLevel, setPeerVolume, kickPeer,
         peerStatsStore, getQuality, voiceFullStore, voiceKickedStore,
         startScreenShare, stopScreenShare, screenShareStore, remoteScreenStore,
+        audioOutputStore, toggleSpeaker, refreshAudioOutputs,
         type VoicePeer, type PeerStats, type NetQuality,
     } from '$lib/voice'
     import { getPeerVolume, savePeerVolume } from '$lib/voiceSettings'
@@ -44,7 +45,11 @@
     const level         = $derived($inputLevel)
     const statsMap      = $derived($peerStatsStore)
     const isSharing     = $derived($screenShareStore)
+    const speaker       = $derived($audioOutputStore)
     const remoteScreens = $derived($remoteScreenStore)
+
+    // Disponibilité du bouton haut-parleur (setSinkId : Android/desktop, pas iOS).
+    onMount(() => { void refreshAudioOutputs() })
     const anySharing    = $derived(isSharing || remoteScreens.size > 0)
     const shareCount    = $derived(remoteScreens.size + (isSharing ? 1 : 0))
 
@@ -735,6 +740,33 @@
                                 </svg>
                             {/if}
                         </button>
+
+                        <!-- Haut-parleur (Android/desktop) : bascule écouteur <-> haut-parleur.
+                             Sur mobile, le son part dans l'écouteur dès qu'un micro tourne ;
+                             ce bouton le renvoie au haut-parleur. Absent sur iOS (pas de setSinkId). -->
+                        {#if speaker.supported}
+                            <button
+                                onclick={() => { void toggleSpeaker() }}
+                                class='p-2 rounded-lg transition-all duration-200 transform hover:scale-110 active:scale-95 relative min-w-[44px] min-h-[44px] flex items-center justify-center
+                                       {speaker.onSpeaker
+                                           ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-900/50 ring-1 ring-indigo-700/50'
+                                           : 'bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-700'}'
+                                title={speaker.onSpeaker ? "Repasser dans l'écouteur" : 'Basculer sur le haut-parleur'}
+                                aria-label={speaker.onSpeaker ? "Repasser dans l'écouteur" : 'Basculer sur le haut-parleur'}
+                                style="pointer-events: auto; position: relative; z-index: 101;"
+                            >
+                                {#if speaker.onSpeaker}
+                                    <svg class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                                        <path stroke-linecap='round' stroke-linejoin='round' d='M11 5 6 9H2v6h4l5 4V5z'/>
+                                        <path stroke-linecap='round' stroke-linejoin='round' d='M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14'/>
+                                    </svg>
+                                {:else}
+                                    <svg class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
+                                        <path stroke-linecap='round' stroke-linejoin='round' d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/>
+                                    </svg>
+                                {/if}
+                            </button>
+                        {/if}
 
                         <!-- Deafen -->
                         <button
