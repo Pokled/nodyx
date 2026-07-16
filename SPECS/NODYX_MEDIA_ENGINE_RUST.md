@@ -206,6 +206,22 @@ par TURN, ce n'est PAS un perçage.
 et que les échecs restants correspondent aux limites connues du §6. Sinon, même protocole
 avec `webrtc-rs`, et comparaison factuelle.
 
+**Critères d'ARRÊT (« kill criteria »).** Un bon protocole définit ses conditions d'échec
+autant que ses conditions de réussite, sinon on s'accroche indéfiniment à « ça va finir par
+marcher ». Le spike str0m est déclaré en échec si l'un de ces cas est observé :
+
+1. **impossibilité reproductible** d'établir une session sur plusieurs NAT résidentiels
+   alors que le même protocole réussit avec `webrtc-rs` (l'architecture Sans-IO ne
+   compense pas un défaut de perçage) ;
+2. **limitation architecturale** empêchant d'implémenter le trait `MediaEngine` sans
+   contournements majeurs (fuite d'abstraction rédhibitoire) ;
+3. **instabilité ou bug bloquant** dans str0m ou une de ses dépendances, non corrigeable
+   dans un délai raisonnable et hors de notre capacité de patch/fork.
+
+Dans ces cas : exécuter le plan B (`webrtc-rs`) avec le MÊME protocole, puis rouvrir D1 avec
+les mesures des deux côtés. L'échec du spike n'est pas l'échec du chantier : c'est le
+protocole qui fait son travail.
+
 ### 9.2 Critères de sortie de migration (« équivalent » a une définition)
 
 Sans grille, « mediasoup ne disparaît que le jour où le natif est équivalent » n'a pas de
