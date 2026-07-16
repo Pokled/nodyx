@@ -1249,7 +1249,7 @@
 								<!-- Info -->
 								<div class="min-w-0 flex-1">
 									<div class="flex items-center gap-1 min-w-0">
-										<span class="text-[11px] font-semibold leading-tight truncate transition-colors group-hover:brightness-125 {buildAnimClass(member)}"
+										<span class="text-xs font-semibold leading-tight truncate transition-colors group-hover:brightness-125 {buildAnimClass(member)}"
 										      style={buildNameStyle(member, isMe ? 'var(--nx-accent-2-soft2)' : '#9ca3af')}>{member.username}</span>
 										{#if isMe}
 											<span class="shrink-0 text-[8px] font-black uppercase px-1 py-px leading-none" style="background: rgb(var(--nx-accent-2-rgb) / .25); color: var(--nx-accent-2-soft)">vous</span>
@@ -1328,7 +1328,7 @@
 								</div>
 								<div class="min-w-0 flex-1">
 									<div class="flex items-center gap-1 min-w-0">
-										<span class="text-[11px] font-semibold leading-tight truncate transition-colors group-hover:brightness-125 {buildAnimClass(member)}"
+										<span class="text-xs font-semibold leading-tight truncate transition-colors group-hover:brightness-125 {buildAnimClass(member)}"
 										      style={buildNameStyle(member, isMe ? 'var(--nx-accent-2-soft2)' : '#9ca3af')}>{member.username}</span>
 										{#if isMe}
 											<span class="shrink-0 text-[8px] font-black uppercase px-1 py-px leading-none" style="background: rgb(var(--nx-accent-2-rgb) / .25); color: var(--nx-accent-2-soft)">vous</span>
@@ -1389,7 +1389,7 @@
 										<div class="w-6 h-6 flex items-center justify-center text-[10px] font-bold select-none" style="background: rgba(255,255,255,.04); color: #4b5563">{member.username.charAt(0).toUpperCase()}</div>
 									{/if}
 								</div>
-								<span class="text-[11px] truncate group-hover:opacity-100 transition-opacity" style="color: #6b7280; font-family: 'Space Grotesk', sans-serif">{member.username}</span>
+								<span class="text-xs truncate group-hover:opacity-100 transition-opacity" style="color: #6b7280; font-family: 'Space Grotesk', sans-serif">{member.username}</span>
 							</a>
 						{/each}
 						{#if offlineMembers.length > 10}
