@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* ── Échelle typographique (bump doux, réf. Discord) ─────────────────────────
+   Nodyx était bâti sur du 12/14px (text-xs 1005 usages, text-sm 860), là où le
+   corps de Discord est à 16px. On remonte les deux tailles de travail d'un cran
+   depuis CE SEUL endroit : les ~1865 usages suivent, sans toucher un composant.
+   Les ratios de line-height reprennent les défauts Tailwind v4 : seul le corps
+   grandit, le rythme vertical reste identique. Réversible en supprimant ce bloc. */
+@theme {
+  --text-xs: 0.8125rem;          /* 13px (défaut 12) */
+  --text-xs--line-height: 1.3333;
+  --text-sm: 0.9375rem;          /* 15px (défaut 14) */
+  --text-sm--line-height: 1.4286;
+}
+
 /* ── Overscroll élastique macOS/iOS — évite la barre blanche ────────────────
    Le navigateur révèle html/body quand on tire au-delà du bord.
    On force la couleur sombre pour que ça soit invisible.                    */
@@ -99,7 +112,7 @@ select option {
 .nodyx-prose,
 .nodyx-content .tiptap {
     color: rgb(229 231 235);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;   /* 15px (bump doux, réf. Discord) */
     line-height: 1.625;
     word-break: break-word;
 }
