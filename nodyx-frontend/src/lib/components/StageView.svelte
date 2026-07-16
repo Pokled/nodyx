@@ -147,16 +147,58 @@
     let focusVideoElem: HTMLVideoElement | undefined = $state(undefined)
 
     // ── Son du partage (réglage spectateur) ───────────────────────────────────
-    // Le son de l'écran vit DANS le <video> : voiceSfu rattache sa piste audio au
-    // MÊME MediaStream que l'image. Régler .volume / .muted de ce <video>, c'est
-    // donc régler le son du partage, sans jamais toucher aux voix (qui sont des
-    // <audio> séparés, avec leur propre volume par personne). Purement spectateur.
+    // Le son de l'écran arrive dans le MÊME MediaStream que l'image, mais le lire
+    // via la <video autoplay> échoue sur mobile : le navigateur bloque le son d'une
+    // vidéo autoplay non-mutée. On le sort donc par un <audio> DÉDIÉ, exactement
+    // comme les voix : ce chemin est débloqué dès qu'on a rejoint le vocal (geste
+    // utilisateur), donc il joue. La <video> reste muette (image seule) ; volume et
+    // coupure visent le <audio>. Ça ne touche jamais aux voix (leurs propres <audio>).
+    let screenAudioElem = $state<HTMLAudioElement | undefined>(undefined)
     let screenVolume = $state(100)   // 0..100, volume « maître » du son de l'écran
     let screenMuted  = $state(false)
+
+    // Rattache le son de l'écran focalisé au <audio> dédié. Le son peut arriver
+    // APRÈS l'image (l'ordre n'est pas garanti), addTrack() programmatique ne
+    // déclenche pas l'event 'addtrack', et le miroir SFU dédpublie par référence de
+    // stream : rien ne nous réveillerait. On sonde donc brièvement jusqu'à ce que la
+    // piste apparaisse, puis on s'arrête (aucun son = on abandonne au bout de ~30 s).
     $effect(() => {
-        void focusedEntry            // ré-applique aussi après un changement de focus
-        if (focusVideoElem) focusVideoElem.volume = screenVolume / 100
+        const el = screenAudioElem
+        const entry = focusedEntry
+        if (!el) return
+        if (!entry || entry.isLocal) { try { el.srcObject = null } catch { /* rien */ } return }
+        const stream = entry.stream
+        const attach = (): boolean => {
+            const tracks = stream.getAudioTracks()
+            if (tracks.length === 0) return false
+            const cur = el.srcObject as MediaStream | null
+            const same = !!cur && cur.getAudioTracks().length === tracks.length
+                && tracks.every(t => !!cur.getTrackById(t.id))
+            if (!same) {
+                el.srcObject = new MediaStream(tracks)
+                void el.play().catch(() => {})
+            }
+            return true
+        }
+        if (attach()) return
+        let tries = 0
+        const timer = setInterval(() => {
+            if (attach() || ++tries > 60) clearInterval(timer)
+        }, 500)
+        return () => clearInterval(timer)
     })
+
+    // Volume / coupure → le <audio> du partage.
+    $effect(() => {
+        const el = screenAudioElem
+        if (!el) return
+        el.volume = screenVolume / 100
+        el.muted  = screenMuted
+    })
+
+    // Filet de sécurité mobile : un clic sur une commande relance la lecture si le
+    // navigateur l'avait bloquée (le clic EST le geste utilisateur qui débloque).
+    function nudgeScreenAudio() { void screenAudioElem?.play().catch(() => {}) }
 
     function saveClip() {
         if (!clipsBuffer.length) return
@@ -339,12 +381,14 @@
                 <video
                     bind:this={focusVideoElem}
                     use:streamSrc={focusedEntry.stream}
-                    autoplay playsinline
-                    muted={focusedEntry.isLocal || screenMuted}
+                    autoplay playsinline muted
                     ondblclick={requestFullscreen}
                     class="w-full h-full object-contain cursor-pointer"
                     title="Double-clic pour plein écran"
                 ></video>
+                <!-- Son du partage : sorti par un <audio> dédié (fiable sur mobile,
+                     contrairement au son porté par la <video autoplay>). -->
+                <audio bind:this={screenAudioElem} autoplay class="hidden"></audio>
 
                 <!-- Bouton fullscreen permanent (coin bas-droit) -->
                 <button
@@ -367,7 +411,7 @@
                                 opacity-40 hover:opacity-100 transition-opacity duration-150"
                          style="background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.12); color: white; backdrop-filter: blur(4px);">
                         <button
-                            onclick={() => screenMuted = !screenMuted}
+                            onclick={() => { screenMuted = !screenMuted; if (!screenMuted) nudgeScreenAudio() }}
                             class="shrink-0 hover:text-indigo-300 transition-colors"
                             title={screenMuted ? 'Réactiver le son du partage' : 'Couper le son du partage'}
                             aria-label={screenMuted ? 'Réactiver le son du partage' : 'Couper le son du partage'}
@@ -387,7 +431,7 @@
                         <input
                             type="range" min="0" max="100" step="1"
                             bind:value={screenVolume}
-                            oninput={() => { if (screenVolume > 0) screenMuted = false }}
+                            oninput={() => { if (screenVolume > 0) { screenMuted = false; nudgeScreenAudio() } }}
                             class="stage-vol"
                             title="Volume du partage ({screenVolume}%)"
                             aria-label="Volume du partage"
