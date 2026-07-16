@@ -18,6 +18,7 @@
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import MatrixRain from '$lib/components/MatrixRain.svelte';
 	import MemberScreenPreview from '$lib/components/MemberScreenPreview.svelte';
+	import VoiceEqualizer from '$lib/components/VoiceEqualizer.svelte';
 	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
 	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
@@ -1065,11 +1066,10 @@
 
 										<!-- Right: wave bars if speaking, else status icons -->
 										{#if m.speaking && !m.muted && !m.deafened}
-											<div class="vc-wave-bars shrink-0" aria-label="Parle">
-												<span class="vc-bar" style="animation-delay:0s"></span>
-												<span class="vc-bar" style="animation-delay:0.18s"></span>
-												<span class="vc-bar" style="animation-delay:0.09s"></span>
-											</div>
+											<!-- Équaliseur RÉEL : lit le vrai spectre de la personne
+											     (avant : une animation CSS en boucle, identique quoi
+											     qu'on dise). -->
+											<VoiceEqualizer socketId={m.socketId} isMe={m.isMe} />
 										{:else}
 											<div class="flex items-center gap-0.5 shrink-0">
 												{#if m.deafened}
@@ -1877,26 +1877,7 @@
 }
 
 /* Animated equalizer bars — shown when a member is speaking */
-.vc-wave-bars {
-	display: flex;
-	align-items: flex-end;
-	gap: 2px;
-	height: 12px;
-	width: 14px;
-}
-.vc-bar {
-	display: block;
-	width: 2.5px;
-	background: #4ade80;
-	border-radius: 1px;
-	transform-origin: bottom center;
-	animation: vc-wave 0.65s ease-in-out infinite;
-	height: 100%;
-}
-@keyframes vc-wave {
-	0%, 100% { transform: scaleY(0.25); opacity: 0.55 }
-	50%       { transform: scaleY(1);    opacity: 1    }
-}
+
 
 /* ── Layout channel sub-labels (Texte / Vocal) ───────────────────────────── */
 .lch-sublabel {

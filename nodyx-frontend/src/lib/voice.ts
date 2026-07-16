@@ -642,6 +642,23 @@ export async function toggleSpeaker(): Promise<boolean> {
   return toSpeaker
 }
 
+// ── Accès au signal (pour un équaliseur RÉEL) ────────────────────────────────
+// Le VAD calcule déjà un niveau par personne… mais n'en garde qu'un booléen
+// `speaking`. Du coup toute barre de niveau ne pouvait être que FACTICE (une
+// animation CSS en boucle). On expose donc l'analyser lui-même : un composant
+// peut y lire le vrai spectre en `requestAnimationFrame`, sans passer par le
+// store (pas de re-render du roster à 60 fps).
+
+/** Analyser d'un pair (tap passif sur son flux entrant). */
+export function getPeerAnalyser(socketId: string): AnalyserNode | null {
+  return _peerAudio.get(socketId)?.analyser ?? null
+}
+
+/** Analyser de MON micro (en sortie de la chaîne de traitement). */
+export function getLocalAnalyser(): AnalyserNode | null {
+  return _localChain?.analyser ?? null
+}
+
 function destroyPeerAudio(socketId: string): void {
   const node = _peerAudio.get(socketId)
   if (node) {

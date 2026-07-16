@@ -1290,6 +1290,4 @@ input[type=range]::-moz-range-thumb:hover {
 }
 
 
-@keyframes sound-wave {}
-@keyframes sound-wave-small {}
 </style>
