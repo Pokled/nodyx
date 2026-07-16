@@ -1414,6 +1414,15 @@ function onVoiceInit({ channelId, peers, mySeatIndex, iceServers, mode }: {
   const peerList: VoicePeer[] = peers.map(p => ({ ...p, stream: null, speaking: false, iceState: null }))
   voiceStore.update(s => ({ ...s, peers: peerList, mySeatIndex }))
 
+  // Publier notre état (muet/sourd/partage) MAINTENANT, et pas avant : voice:init
+  // est justement la preuve que le serveur nous a mis dans la room. Le faire juste
+  // après emit('voice:join') serait une course perdue d'avance (le serveur n'a pas
+  // encore la room, il jetterait l'état).
+  // Indispensable après une RECONNEXION : le serveur remet voiceState à zéro à
+  // chaque join, alors que _doRejoin garde le « muet » côté client. Sans ça, on
+  // s'affiche muet chez soi mais pas dans le roster du canal.
+  publishVoiceState()
+
   _channelMode = mode ?? 'mesh'
   if (_channelMode === 'sfu') {
     // Arrivant tardif sur un canal DÉJÀ en SFU (§5) : aucun PC mesh, on rejoint
