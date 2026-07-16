@@ -145,6 +145,28 @@
                 {/each}
             </div>
 
+            <!-- Rappel audio, contextuel selon la source. Le son d'un partage n'est
+                 diffusé que si l'émetteur le capture : Chrome ne propose la case son
+                 que pour un ONGLET (une fenêtre n'en a pas ; l'écran entier seulement
+                 sous Windows). Sans ce rappel, on partage en silence sans le savoir. -->
+            <div class="flex items-start gap-2 rounded-lg px-3 py-2"
+                 style="background: rgb(var(--nx-accent-rgb) / 0.06); border: 1px solid rgb(var(--nx-accent-rgb) / 0.15)">
+                <svg class="mt-0.5 h-4 w-4 shrink-0" style="color: rgb(var(--nx-accent-soft))" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5 6 9H2v6h4l5 4V5z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                </svg>
+                <p class="text-[11px] leading-relaxed" style="color: rgb(156,163,175)">
+                    {#if selectedSurface === 'browser'}
+                        Pour partager aussi le son, cochez
+                        <strong style="color: rgb(199,210,254)">« Partager aussi l'audio de l'onglet »</strong>
+                        dans la fenêtre du navigateur qui suit.
+                    {:else}
+                        Cette source ne partage pas le son. Pour l'inclure, choisissez plutôt
+                        <strong style="color: rgb(209,213,219)">Onglet</strong>.
+                    {/if}
+                </p>
+            </div>
+
             <!-- Separator -->
             <div style="height: 1px; background: rgba(255,255,255,0.05)"></div>
 
