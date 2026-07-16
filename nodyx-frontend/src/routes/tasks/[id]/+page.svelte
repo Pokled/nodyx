@@ -437,15 +437,17 @@
 			<div>
 				<span class="block text-xs font-medium text-gray-500 mb-1.5">Description</span>
 				<!-- Éditeur riche (liens, images, mise en forme). Le HTML est assaini
-				     CÔTÉ SERVEUR, à l'écriture et à la lecture. -->
-				<div class="max-h-72 overflow-y-auto rounded-lg">
-					<NodyxEditor
-						compact
-						initialContent={editingCard.description}
-						placeholder="Détails, liens, images, notes..."
-						onchange={(html) => { if (editingCard) editingCard.description = html }}
-					/>
-				</div>
+				     CÔTÉ SERVEUR, à l'écriture et à la lecture.
+				     ⚠ Ne PAS l'envelopper dans un conteneur à overflow : l'éditeur borne
+				     déjà sa hauteur lui-même (son contenu scrolle en interne) et sa racine
+				     est en overflow-visible EXPRÈS pour que les popups (lien, image...)
+				     puissent dépasser. Un wrapper overflow-y-auto les rognait. -->
+				<NodyxEditor
+					compact
+					initialContent={editingCard.description}
+					placeholder="Détails, liens, images, notes..."
+					onchange={(html) => { if (editingCard) editingCard.description = html }}
+				/>
 			</div>
 
 			<div class="grid grid-cols-2 gap-3">
