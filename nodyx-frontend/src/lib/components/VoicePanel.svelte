@@ -53,14 +53,23 @@
     const anySharing    = $derived(isSharing || remoteScreens.size > 0)
     const shareCount    = $derived(remoteScreens.size + (isSharing ? 1 : 0))
 
-    // Auto-ouvrir la scène dès qu'un partage distant devient actif (on regarde
-    // tout de suite, comme Discord). Son PROPRE partage n'ouvre pas la scène en
-    // grand (on ne se met pas son propre écran en plein écran) : le salon en
-    // montre un aperçu cliquable.
+    // Auto-ouvrir la scène quand un partage distant APPARAÎT (front montant,
+    // comme Discord). Son PROPRE partage n'ouvre pas la scène en grand : le salon
+    // en montre un aperçu cliquable.
+    //
+    // ⚠ On n'agit QU'À la transition 0 -> >0, et on NE lit PAS stageOpenStore ici.
+    // L'ancienne version « tant qu'un partage existe et que la scène est fermée,
+    // rouvre-la » créait une BOUCLE : cliquer la croix remettait le store à false,
+    // l'effet se redéclenchait (il lisait stageOpenStore), voyait un partage actif,
+    // et rouvrait aussitôt. Impossible de fermer tant que quelqu'un partageait.
+    // Ici, fermer reste fermé jusqu'à ce qu'un NOUVEAU partage arrive.
+    let _prevRemoteCount = 0
     $effect(() => {
-        if (remoteScreens.size > 0 && !$stageOpenStore) {
-            $stageOpenStore = true
+        const count = remoteScreens.size
+        if (count > 0 && _prevRemoteCount === 0) {
+            stageOpenStore.set(true)
         }
+        _prevRemoteCount = count
     })
 
     const tFn = $derived($t)
