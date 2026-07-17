@@ -26,6 +26,18 @@ export interface CommunityMember {
   grade_color:  string | null
 }
 
+// Dernier message d'une catégorie : de quoi montrer qu'elle est vivante sur
+// l'index du forum. On n'expose QUE le pseudo et l'avatar de l'auteur, jamais
+// l'utilisateur brut (pas de fuite de données personnelles).
+export interface CategoryLastPost {
+  thread_id:    string
+  thread_slug:  string | null
+  thread_title: string
+  username:     string
+  avatar:       string | null
+  created_at:   Date
+}
+
 export interface Category {
   id:           string
   community_id: string
@@ -35,8 +47,22 @@ export interface Category {
   position:     number
   parent_id:    string | null
   thread_count: number
+  post_count:   number
+  last_post:    CategoryLastPost | null
   created_at:   Date
   updated_at:   Date
+}
+
+// Ligne SQL brute : le dernier message revient à plat (une colonne par champ),
+// il est replié en objet `last_post` dans getCategoryTree.
+interface CategoryRow extends Omit<Category, 'last_post'> {
+  depth:             number
+  last_thread_id:    string | null
+  last_thread_slug:  string | null
+  last_thread_title: string | null
+  last_username:     string | null
+  last_avatar:       string | null
+  last_created_at:   Date | null
 }
 
 export function generateCategorySlug(name: string): string {
@@ -202,24 +228,53 @@ export async function getCategories(communityId: string): Promise<Category[]> {
 
 // Returns categories as a recursive tree (root categories with nested children).
 // Uses a PostgreSQL recursive CTE — depth is unbounded.
+//
+// Porte aussi de quoi rendre un index de forum VIVANT : le nombre de messages et
+// surtout le DERNIER message de chaque catégorie. Sans ce dernier, un index n'est
+// qu'un annuaire de portes ; avec lui, on voit ce qui se passe derrière chacune.
+//
+// Perf : la récursion ne sert QU'À découvrir l'arbre (id/parent/profondeur). Les
+// données coûteuses sont jointes UNE SEULE FOIS à la fin, pas à chaque niveau de
+// récursion. Le dernier message passe par un LEFT JOIN LATERAL (un LIMIT 1 par
+// catégorie), ce qui reste linéaire même quand le forum grossit.
 export async function getCategoryTree(communityId: string): Promise<CategoryNode[]> {
-  const { rows } = await db.query<Category>(
+  const { rows } = await db.query<CategoryRow>(
     `WITH RECURSIVE cat_tree AS (
-       SELECT c.*,
-              (SELECT COUNT(*)::int FROM threads t WHERE t.category_id = c.id) AS thread_count,
-              0 AS depth
+       SELECT c.id, c.parent_id, 0 AS depth
        FROM categories c
        WHERE c.community_id = $1 AND c.parent_id IS NULL
 
        UNION ALL
 
-       SELECT c.*,
-              (SELECT COUNT(*)::int FROM threads t WHERE t.category_id = c.id) AS thread_count,
-              ct.depth + 1
+       SELECT c.id, c.parent_id, ct.depth + 1
        FROM categories c
        JOIN cat_tree ct ON c.parent_id = ct.id
      )
-     SELECT * FROM cat_tree ORDER BY depth, position, name`,
+     SELECT c.*,
+            ct.depth,
+            (SELECT COUNT(*)::int FROM threads t WHERE t.category_id = c.id) AS thread_count,
+            (SELECT COUNT(*)::int
+               FROM posts p JOIN threads t ON t.id = p.thread_id
+              WHERE t.category_id = c.id) AS post_count,
+            lp.thread_id    AS last_thread_id,
+            lp.thread_slug  AS last_thread_slug,
+            lp.thread_title AS last_thread_title,
+            lp.username     AS last_username,
+            lp.avatar       AS last_avatar,
+            lp.created_at   AS last_created_at
+       FROM cat_tree ct
+       JOIN categories c ON c.id = ct.id
+       LEFT JOIN LATERAL (
+         SELECT t.id AS thread_id, t.slug AS thread_slug, t.title AS thread_title,
+                u.username, u.avatar, p.created_at
+           FROM posts p
+           JOIN threads t ON t.id = p.thread_id
+           JOIN users   u ON u.id = p.author_id
+          WHERE t.category_id = c.id
+          ORDER BY p.created_at DESC
+          LIMIT 1
+       ) lp ON true
+      ORDER BY ct.depth, c.position, c.name`,
     [communityId]
   )
 
@@ -228,7 +283,22 @@ export async function getCategoryTree(communityId: string): Promise<CategoryNode
   const roots: CategoryNode[] = []
 
   for (const row of rows) {
-    map.set(row.id, { ...row, children: [] })
+    // Le dernier message est remonté à plat par SQL : on le replie en objet, et
+    // on n'expose QUE username + avatar de son auteur (jamais l'utilisateur brut).
+    const { last_thread_id, last_thread_slug, last_thread_title,
+            last_username, last_avatar, last_created_at, ...cat } = row
+    map.set(row.id, {
+      ...cat,
+      last_post: last_thread_id ? {
+        thread_id:    last_thread_id,
+        thread_slug:  last_thread_slug,
+        thread_title: last_thread_title!,
+        username:     last_username!,
+        avatar:       last_avatar,
+        created_at:   last_created_at!,
+      } : null,
+      children: [],
+    })
   }
   for (const row of rows) {
     const node = map.get(row.id)!

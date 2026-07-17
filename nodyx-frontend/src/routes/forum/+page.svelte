@@ -24,6 +24,24 @@
 
 	// Toutes les catégories racines + leurs enfants à plat
 	const topLevel = $derived(categories.filter((c: any) => !c.parent_id));
+
+	// ── Statistiques du forum ────────────────────────────────────────────────
+	// Les totaux se déduisent des catégories DÉJÀ chargées (racines + enfants) :
+	// aucun appel réseau supplémentaire. Le nombre de membres vient du layout,
+	// qui interroge déjà /instance/info pour toute l'application.
+	const allCats  = $derived([...topLevel, ...topLevel.flatMap((c: any) => c.children ?? [])]);
+	const totThreads = $derived(allCats.reduce((n: number, c: any) => n + (c.thread_count ?? 0), 0));
+	const totPosts   = $derived(allCats.reduce((n: number, c: any) => n + (c.post_count ?? 0), 0));
+	const totMembers = $derived(($page.data as any).memberCount ?? 0);
+
+	// Le membre le plus récemment actif sur le forum : c'est l'auteur du dernier
+	// message toutes catégories confondues.
+	const lastPoster = $derived(
+		allCats
+			.map((c: any) => c.last_post)
+			.filter(Boolean)
+			.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] ?? null
+	);
 </script>
 
 <svelte:head>
@@ -74,17 +92,49 @@
 						{/if}
 					</div>
 
-					<!-- Stats -->
-					<div class="flex items-center gap-6 shrink-0 text-right">
-						<div class="hidden sm:flex flex-col items-end">
+					<!-- Compteurs : sujets ET messages, comme sur un vrai index de forum -->
+					<div class="hidden sm:flex shrink-0 items-center gap-5 text-right">
+						<div class="flex flex-col items-end w-12">
 							<span class="text-sm font-bold text-gray-300 tabular-nums">{cat.thread_count ?? 0}</span>
 							<span class="text-[10px] text-gray-600 uppercase tracking-wide">{tFn('common.topics')}</span>
 						</div>
-						<svg class="w-4 h-4 text-gray-700 group-hover:text-indigo-400 transition-colors"
-						     fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-						</svg>
+						<div class="flex flex-col items-end w-12">
+							<span class="text-sm font-bold text-gray-400 tabular-nums">{cat.post_count ?? 0}</span>
+							<span class="text-[10px] text-gray-600 uppercase tracking-wide">messages</span>
+						</div>
 					</div>
+
+					<!-- Dernier message : c'est LUI qui montre que le forum est vivant.
+					     Sans, on ne voit que des portes ; avec, on voit ce qu'il y a derrière. -->
+					<div class="hidden lg:flex shrink-0 w-56 items-center gap-2.5 pl-5
+					            border-l border-white/[.06]">
+						{#if cat.last_post}
+							{#if cat.last_post.avatar}
+								<img src={cat.last_post.avatar} alt=""
+								     class="w-8 h-8 rounded-full object-cover shrink-0"/>
+							{:else}
+								<div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[10px] font-black text-white"
+								     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">
+									{cat.last_post.username?.[0]?.toUpperCase() ?? '?'}
+								</div>
+							{/if}
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-[11px] font-semibold text-gray-300 group-hover:text-white transition-colors">
+									{cat.last_post.thread_title}
+								</p>
+								<p class="truncate text-[10px] text-gray-600">
+									{cat.last_post.username} · {timeAgo(cat.last_post.created_at)}
+								</p>
+							</div>
+						{:else}
+							<span class="text-[11px] text-gray-700">Aucun message</span>
+						{/if}
+					</div>
+
+					<svg class="w-4 h-4 shrink-0 text-gray-700 group-hover:text-indigo-400 transition-colors"
+					     fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+					</svg>
 				</a>
 
 				<!-- Sous-catégories -->
@@ -111,8 +161,27 @@
 									<p class="text-[11px] text-gray-700 mt-0.5 line-clamp-1">{sub.description}</p>
 								{/if}
 							</div>
-							<div class="shrink-0 text-right hidden sm:block">
-								<span class="text-xs font-bold text-gray-500 tabular-nums">{sub.thread_count ?? 0}</span>
+							<!-- Compteurs compacts : le sous-forum reste secondaire -->
+							<div class="hidden sm:flex shrink-0 items-center gap-5 text-right">
+								<span class="w-12 text-xs font-bold text-gray-500 tabular-nums">{sub.thread_count ?? 0}</span>
+								<span class="w-12 text-xs font-bold text-gray-600 tabular-nums">{sub.post_count ?? 0}</span>
+							</div>
+							<!-- Dernier message, en plus discret que le forum parent -->
+							<div class="hidden lg:flex shrink-0 w-56 items-center gap-2 pl-5 border-l border-white/[.04]">
+								{#if sub.last_post}
+									{#if sub.last_post.avatar}
+										<img src={sub.last_post.avatar} alt="" class="w-6 h-6 rounded-full object-cover shrink-0"/>
+									{:else}
+										<div class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[9px] font-black text-white"
+										     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">
+											{sub.last_post.username?.[0]?.toUpperCase() ?? '?'}
+										</div>
+									{/if}
+									<div class="min-w-0 flex-1">
+										<p class="truncate text-[10px] font-medium text-gray-500">{sub.last_post.thread_title}</p>
+										<p class="truncate text-[9px] text-gray-700">{timeAgo(sub.last_post.created_at)}</p>
+									</div>
+								{/if}
 							</div>
 						</a>
 						{/each}
@@ -124,6 +193,37 @@
 
 		<!-- ── Sidebar : activité récente ────────────────────────────── -->
 		<aside class="space-y-4">
+
+			<!-- Statistiques : la carte d'identité du forum en un coup d'oeil.
+			     Calculées depuis les données déjà chargées, aucun appel en plus. -->
+			<div class="border border-white/[.06]" style="background: rgba(255,255,255,.025)">
+				<div class="px-4 py-3 border-b border-white/5">
+					<span class="text-[10px] font-black uppercase tracking-[.15em] text-gray-500">Statistiques</span>
+				</div>
+				<div class="px-4 py-3 space-y-2">
+					<div class="flex items-baseline justify-between">
+						<span class="text-[11px] text-gray-600">{tFn('common.topics')}</span>
+						<span class="text-xs font-bold text-gray-300 tabular-nums">{totThreads.toLocaleString('fr-FR')}</span>
+					</div>
+					<div class="flex items-baseline justify-between">
+						<span class="text-[11px] text-gray-600">Messages</span>
+						<span class="text-xs font-bold text-gray-300 tabular-nums">{totPosts.toLocaleString('fr-FR')}</span>
+					</div>
+					<div class="flex items-baseline justify-between">
+						<span class="text-[11px] text-gray-600">Membres</span>
+						<span class="text-xs font-bold text-gray-300 tabular-nums">{totMembers.toLocaleString('fr-FR')}</span>
+					</div>
+					{#if lastPoster}
+						<div class="flex items-center justify-between gap-2 pt-2 border-t border-white/[.05]">
+							<span class="shrink-0 text-[11px] text-gray-600">Dernier message</span>
+							<span class="truncate text-[11px] font-semibold" style="color: var(--nx-accent-2-soft)">
+								{lastPoster.username}
+							</span>
+						</div>
+					{/if}
+				</div>
+			</div>
+
 			<div class="border border-white/[.06]" style="background: rgba(255,255,255,.025)">
 				<div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
 					<span class="text-[10px] font-black uppercase tracking-[.15em] text-gray-500">{tFn('forum.recent_activity')}</span>
