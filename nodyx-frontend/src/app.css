@@ -511,21 +511,31 @@ select option {
     margin: 0.75rem 0;
 }
 
-/* ── Embed Twitch AVEC chat : <iframe data-type="twitch-chat"> ───────────────
-   Un lecteur seul se contente du 16/9 ci-dessus. Avec le chat, Twitch colle une
-   colonne d'environ 340px à droite : un 16/9 sur une large colonne d'article
-   donnerait un bloc démesurément haut, et la vidéo resterait letterboxée. On lui
-   donne donc une hauteur fixe confortable et on borne la largeur pour que la
-   vidéo garde une taille lisible à côté du chat. */
-.nodyx-prose iframe[data-type="twitch-chat"] {
-    aspect-ratio: auto;
-    height: 480px;
+/* ── Live Twitch : <div class="twitch-live"> = lecteur + chat ────────────────
+   Twitch sert le LECTEUR sur player.twitch.tv et le CHAT sur www.twitch.tv :
+   deux iframes distinctes. (Le layout tout-en-un d'embed.twitch.tv serait plus
+   simple, mais notre CSP ne l'autorise pas en frame-src.)
+   On les pose donc côte à côte, largeur bornée pour que la vidéo reste lisible,
+   et on EMPILE sur écran étroit où deux colonnes ne tiennent pas. */
+.nodyx-prose .twitch-live {
+    display: flex;
+    gap: 0.5rem;
     max-width: 1000px;
+    margin: 0.75rem 0;
 }
-@media (max-width: 640px) {
-    /* Sous ~660px, Twitch empile le chat SOUS la vidéo : il faut de la hauteur,
-       sinon les deux sont écrasés. */
-    .nodyx-prose iframe[data-type="twitch-chat"] { height: 560px; }
+.nodyx-prose .twitch-live iframe {
+    margin: 0;
+    aspect-ratio: auto;       /* le 16/9 générique ne vaut pas pour ce duo */
+    height: 460px;
+}
+.nodyx-prose .twitch-live iframe[data-type="twitch-player"] { flex: 1 1 auto; min-width: 0; }
+.nodyx-prose .twitch-live iframe[data-type="twitch-chat"]   { flex: 0 0 320px; }
+
+@media (max-width: 900px) {
+    .nodyx-prose .twitch-live { flex-direction: column; }
+    /* Le lecteur retrouve son 16/9 naturel, le chat passe dessous. */
+    .nodyx-prose .twitch-live iframe[data-type="twitch-player"] { aspect-ratio: 16 / 9; height: auto; }
+    .nodyx-prose .twitch-live iframe[data-type="twitch-chat"]   { flex: 0 0 auto; width: 100%; height: 320px; }
 }
 /* Wrapper YouTube injecté par l'extension */
 .nodyx-prose .youtube-wrapper,

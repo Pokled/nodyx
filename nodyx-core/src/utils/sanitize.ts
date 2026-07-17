@@ -80,12 +80,18 @@ export function sanitize(raw: string): string {
     allowedAttributes: ALLOWED_ATTRS,
     // Embeds vidéo : uniquement les domaines de lecteur OFFICIELS de chaque
     // plateforme (pas une page quelconque du site). Twitch permet d'intégrer un
-    // live dans un post ; son lecteur EXIGE un paramètre `parent=<domaine>`
-    // correspondant au site qui l'affiche, sinon il refuse de démarrer.
+    // live dans un post : le LECTEUR vit sur player.twitch.tv, le CHAT sur
+    // www.twitch.tv/embed/<chaine>/chat. Les deux EXIGENT un paramètre
+    // `parent=<domaine>` correspondant au site qui les affiche.
+    //
+    // ⚠ `embed.twitch.tv` (le layout tout-en-un lecteur+chat) est VOLONTAIREMENT
+    // absent : la CSP de prod ne l'autorise pas en frame-src. L'ajouter ici
+    // poserait un piège, le sanitizer le laisserait passer et le navigateur le
+    // bloquerait, sans que l'auteur comprenne pourquoi son embed est mort.
     allowedIframeHostnames: [
       'www.youtube.com', 'youtube.com', 'www.youtube-nocookie.com',
       'player.vimeo.com', 'vimeo.com',
-      'player.twitch.tv', 'embed.twitch.tv',
+      'player.twitch.tv', 'www.twitch.tv',
     ],
     transformTags: {
       'nodyx-audio-player': (tagName, attribs) => {
