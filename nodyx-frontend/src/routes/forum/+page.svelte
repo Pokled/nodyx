@@ -183,6 +183,10 @@
 									</div>
 								{/if}
 							</div>
+							<!-- Cale : le forum parent se termine par un chevron. Tout étant aligné
+							     depuis le bord droit, sans cette cale de même largeur les colonnes
+							     du sous-forum se décalent de 32px et ne tombent plus en face. -->
+							<div class="w-4 shrink-0" aria-hidden="true"></div>
 						</a>
 						{/each}
 					</div>
