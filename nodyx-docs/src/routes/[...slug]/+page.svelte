@@ -85,7 +85,7 @@
   })
 
   // Scrollspy: highlight the TOC entry matching the section the operator is
-  // currently reading. Approach is deliberately simple — rather than juggling
+  // currently reading. Approach is deliberately simple, rather than juggling
   // IntersectionObserver entries (which leaves "no active section" gaps when
   // the cursor is mid-section between two headings), we walk the heading list
   // on each scroll and pick the LAST one whose top is above the scroll line.
@@ -124,13 +124,13 @@
 </script>
 
 <svelte:head>
-  <title>{data.docTitle} — Nodyx Docs</title>
+  <title>{data.docTitle} · Nodyx Docs</title>
   <meta name="description"        content={data.description} />
   <link rel="canonical"           href="https://nodyx.dev/{data.slug}" />
 
   <!-- Open Graph -->
   <meta property="og:type"        content="article" />
-  <meta property="og:title"       content="{data.docTitle} — Nodyx Docs" />
+  <meta property="og:title"       content="{data.docTitle} · Nodyx Docs" />
   <meta property="og:description" content={data.description} />
   <meta property="og:url"         content="https://nodyx.dev/{data.slug}" />
   <meta property="og:site_name"   content="Nodyx Docs" />
@@ -140,7 +140,7 @@
 
   <!-- Twitter/X card -->
   <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:title"       content="{data.docTitle} — Nodyx Docs" />
+  <meta name="twitter:title"       content="{data.docTitle} · Nodyx Docs" />
   <meta name="twitter:description" content={data.description} />
   <meta name="twitter:image"       content="https://nodyx.dev/og-default.svg" />
 
@@ -184,7 +184,7 @@
     {@html data.html}
   </article>
 
-  <!-- TOC (right sidebar) — sticky, with scrollspy active marker -->
+  <!-- TOC (right sidebar), sticky, with scrollspy active marker -->
   {#if data.headings.length > 2}
     <aside class="toc" aria-label="Table of contents">
       <div class="toc-title">On this page</div>

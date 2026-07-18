@@ -210,9 +210,9 @@ When someone joins, OctoGuard can post a public welcome in a channel you choose,
 1. Open the **Bienvenue** tab.
 2. Switch on **Activer le message de bienvenue**.
 3. **Message public**: write your greeting. Three variables you can drop in:
-   - `{userMention}` — pings the new member (a clickable @name),
-   - `{user}` — their name as plain text,
-   - `{communityName}` — your instance's name.
+   - `{userMention}`, pings the new member (a clickable @name),
+   - `{user}`, their name as plain text,
+   - `{communityName}`, your instance's name.
    Example: `Welcome {userMention} to {communityName}! Read the rules and say hi in general.`
 4. **Channel cible (UUID)**: paste the ID of the channel where the message should appear.
 5. *(Optional)* **Auto-grade à l'inscription (UUID)**: paste a role ID, and every new member is automatically given that role the moment they sign up. Perfect for a "Newcomer" or "Member" role.
@@ -251,10 +251,10 @@ Your community can report messages they find abusive. Each report lands here as 
 
 A report moves through four states, and you can filter the queue by any of them:
 
-- **open** — fresh, waiting for you,
-- **reviewed** — you've looked at it (button **Marquer revu**),
-- **actioned** — you acted on it (muted, deleted, banned),
-- **dismissed** — not a real problem (button **Rejeter**).
+- **open**: fresh, waiting for you,
+- **reviewed**: you've looked at it (button **Marquer revu**),
+- **actioned**: you acted on it (muted, deleted, banned),
+- **dismissed**: not a real problem (button **Rejeter**).
 
 For each report you see the flagged message, who reported it and why. You record a **Résolution** so there's a permanent trace of what you decided, which protects you as much as the community.
 

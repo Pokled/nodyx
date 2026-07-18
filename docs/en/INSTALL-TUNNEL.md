@@ -1,4 +1,4 @@
-# 🌐 Nodyx — Tunnel Installation Guide
+# 🌐 Nodyx, Tunnel Installation Guide
 
 > **TL;DR** Got a server behind NAT (homelab, RPi, LXC) and no public IP? `install_tunnel.sh` configures Caddy + the rest of the stack so a reverse tunnel can point at it. Three modes: **Cloudflare Tunnel**, **Pangolin/newt**, or **custom** (frp, rathole, headscale, your own VPS proxy). No port 80/443 forwarding required. ☕
 
@@ -12,9 +12,9 @@ curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh
 
 - [When to use this installer](#-when-to-use-this-installer)
 - [Pick your mode](#-pick-your-mode)
-- [Mode A — Cloudflare Tunnel](#-mode-a-cloudflare-tunnel)
-- [Mode B — Pangolin (newt)](#-mode-b-pangolin-newt)
-- [Mode C — Custom reverse tunnel](#-mode-c-custom-reverse-tunnel)
+- [Mode A, Cloudflare Tunnel](#-mode-a-cloudflare-tunnel)
+- [Mode B, Pangolin (newt)](#-mode-b-pangolin-newt)
+- [Mode C, Custom reverse tunnel](#-mode-c-custom-reverse-tunnel)
 - [Troubleshooting](#-troubleshooting)
 - [What the installer hardens](#-what-the-installer-hardens)
 - [Re-running, upgrading, repairing](#-re-running-upgrading-repairing)
@@ -40,13 +40,13 @@ If your server has a public IP and you can open ports 80/443, use [`install.sh`]
 |---|---|---|
 | You already use Cloudflare DNS | **CF** | Easiest. cloudflared runs on your server, dials out to Cloudflare's edge, TLS terminates there |
 | You self-host a Pangolin VPS | **Pangolin** | Keeps everything in your hands. Uses `newt` Docker container as the tunnel client |
-| You have your own reverse tunnel (frp, rathole, headscale, ...) | **None** | Caddy listens on `127.0.0.1:80` — wire your tunnel client to it manually |
+| You have your own reverse tunnel (frp, rathole, headscale, ...) | **None** | Caddy listens on `127.0.0.1:80`, wire your tunnel client to it manually |
 
-You don't have to decide before running the script — it asks you and explains the tradeoffs.
+You don't have to decide before running the script, it asks you and explains the tradeoffs.
 
 ---
 
-## 🌩 Mode A — Cloudflare Tunnel
+## 🌩 Mode A, Cloudflare Tunnel
 
 **What you need**
 
@@ -61,17 +61,17 @@ curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh
 # Paste your install token when prompted.
 ```
 
-**After install** — in your Cloudflare dashboard:
+**After install**: in your Cloudflare dashboard:
 
 1. Open your tunnel → **Public Hostname** → **Add**
 2. Subdomain: empty | Domain: `your-domain.com` | Service: `HTTP` | URL: `localhost:80`
 3. Save. Visit `https://your-domain.com`. ✅
 
-**Voice/UDP** Voice and webcam will use public STUN servers — Cloudflare Tunnel doesn't carry UDP. If you need self-hosted TURN, see the [RELAY](RELAY.md) doc.
+**Voice/UDP** Voice and webcam will use public STUN servers, Cloudflare Tunnel doesn't carry UDP. If you need self-hosted TURN, see the [RELAY](RELAY.md) doc.
 
 ---
 
-## 🦔 Mode B — Pangolin (newt)
+## 🦔 Mode B, Pangolin (newt)
 
 This is the mode that surprised the most operators (see [discussion #23](https://github.com/Pokled/nodyx/discussions/23)). The script now handles it cleanly, but the topology is worth understanding.
 
@@ -79,7 +79,7 @@ This is the mode that surprised the most operators (see [discussion #23](https:/
 
 ```
                  ╔══════════════════════════════════════════════════╗
-                 ║  Method A — newt with --network host (RECOMMENDED) ║
+                 ║  Method A, newt with --network host (RECOMMENDED) ║
                  ╚══════════════════════════════════════════════════╝
 
    ┌─────────────────────────────────────┐         ┌──────────────┐
@@ -100,7 +100,7 @@ This is the mode that surprised the most operators (see [discussion #23](https:/
 
 ```
                  ╔════════════════════════════════════════════╗
-                 ║  Method B — newt in default Docker bridge   ║
+                 ║  Method B, newt in default Docker bridge   ║
                  ╚════════════════════════════════════════════╝
 
    ┌─────────────────────────────────────┐         ┌──────────────┐
@@ -127,7 +127,7 @@ The installer binds Caddy on **both** `127.0.0.1:80` and the host's primary LAN 
 
 > 💡 **Method A is preferred** because it doesn't depend on the host's LAN address being stable. If your DHCP lease changes, Method B would need re-pointing in Pangolin.
 
-### Method A — `--network host`
+### Method A, `--network host`
 
 ```bash
 docker run -d --name newt --network host --restart unless-stopped \
@@ -139,7 +139,7 @@ docker run -d --name newt --network host --restart unless-stopped \
 
 Pangolin → HTTP resource → `your-domain.com → http://localhost:80`
 
-### Method B — default bridge
+### Method B, default bridge
 
 ```bash
 docker run -d --name newt --restart unless-stopped \
@@ -165,11 +165,11 @@ docker exec newt wget -qO- http://192.168.1.42/api/v1/instance/info
 
 A response body with a JSON instance description means newt can reach Caddy. Anything else, see [Troubleshooting](#-troubleshooting).
 
-**Voice/UDP** Pangolin can carry UDP via "raw resources" — see Pangolin's docs. Without it, voice falls back to public STUN.
+**Voice/UDP** Pangolin can carry UDP via "raw resources", see Pangolin's docs. Without it, voice falls back to public STUN.
 
 ---
 
-## 🔧 Mode C — Custom reverse tunnel
+## 🔧 Mode C, Custom reverse tunnel
 
 Caddy listens on `127.0.0.1:80` and trusts `X-Forwarded-For` from the loopback / RFC1918 ranges. Wire any of these to it:
 
@@ -191,7 +191,7 @@ Caddy listens on `127.0.0.1:80` and trusts `X-Forwarded-For` from the loopback /
 | Symptom | Cause | Fix |
 |---|---|---|
 | newt is in default Docker bridge (`docker inspect newt -f '{{.HostConfig.NetworkMode}}'` returns `bridge`) and you targeted `localhost:80` in Pangolin | `localhost` inside newt is the newt container, not your host | Either switch to `--network host` (Method A) **or** change the Pangolin target to `http://<host-LAN-IP>:80` (Method B) |
-| Caddy isn't listening at all (`ss -ltn | grep :80` empty) | Service didn't start | `sudo nodyx-doctor` — it tells you exactly what's wrong |
+| Caddy isn't listening at all (`ss -ltn | grep :80` empty) | Service didn't start | `sudo nodyx-doctor`, it tells you exactly what's wrong |
 
 ### Page loads forever (spinning loader)
 
@@ -226,7 +226,7 @@ The script now does a connectivity preflight (DNS + outbound HTTPS to github.com
 
 ### `ufw` complains about not running
 
-You're inside an unprivileged LXC or Docker container without `NET_ADMIN`. The script now warns about this in preflight and asks for explicit confirmation. UFW won't work, but Nodyx itself will — your hypervisor must enforce the firewall instead.
+You're inside an unprivileged LXC or Docker container without `NET_ADMIN`. The script now warns about this in preflight and asks for explicit confirmation. UFW won't work, but Nodyx itself will, your hypervisor must enforce the firewall instead.
 
 ---
 
@@ -238,10 +238,10 @@ A short tour for operators who want to know what they're getting (or maintainers
 
 - **Bind addresses are mode-aware.** Loopback always; the LAN IP is added in Pangolin mode so newt-in-bridge can reach Caddy.
 - **`max_header_size 16KB`.** Default is 1MB and lets slow-header DoS chew workers. 16KB still fits CF Tunnel headers + cookies + JWT comfortably.
-- **`reverse_proxy` timeouts.** `dial_timeout 5s` (loopback should connect in <100ms), `response_header_timeout 30s` (covers Socket.IO long-poll without cutting WebSocket upgrades). No `read_timeout` — that would silently break WebSockets.
+- **`reverse_proxy` timeouts.** `dial_timeout 5s` (loopback should connect in <100ms), `response_header_timeout 30s` (covers Socket.IO long-poll without cutting WebSocket upgrades). No `read_timeout`, that would silently break WebSockets.
 - **Real-IP forwarding is mode-aware.** CF Tunnel uses `CF-Connecting-IP`; Pangolin and custom modes use `X-Forwarded-For`. Trusted only from loopback + RFC1918.
 - **Honeypot.** Common scanner paths (`/.env`, `/wp-admin`, `/.git/`, etc.) get rewritten to `/api/v1/_hp` so the backend can ban the source IP.
-- **Snippets** factor out `(security_headers)`, `(proxy_backend)`, `(proxy_frontend)` so `/api`, `/uploads`, `/socket.io`, the honeypot, and the SPA fallback all share the same hardening — drift between them is impossible.
+- **Snippets** factor out `(security_headers)`, `(proxy_backend)`, `(proxy_frontend)` so `/api`, `/uploads`, `/socket.io`, the honeypot, and the SPA fallback all share the same hardening, drift between them is impossible.
 
 ### No HSTS in tunnel modes
 
@@ -298,10 +298,10 @@ It checks every layer (system services, PM2, backend HTTP, Caddy bind addresses,
 
 ## 📚 See also
 
-- [INSTALL.md](INSTALL.md) — VPS-direct install (Caddy does Let's Encrypt itself)
-- [DOMAIN.md](DOMAIN.md) — domain setup walkthrough
-- [RELAY.md](RELAY.md) — Nodyx Relay (no domain needed, `your-slug.nodyx.org`)
-- [GitHub discussion #23](https://github.com/Pokled/nodyx/discussions/23) — original Pangolin Bad Gateway report
+- [INSTALL.md](INSTALL.md), VPS-direct install (Caddy does Let's Encrypt itself)
+- [DOMAIN.md](DOMAIN.md), domain setup walkthrough
+- [RELAY.md](RELAY.md), Nodyx Relay (no domain needed, `your-slug.nodyx.org`)
+- [GitHub discussion #23](https://github.com/Pokled/nodyx/discussions/23), original Pangolin Bad Gateway report
 
 ---
 

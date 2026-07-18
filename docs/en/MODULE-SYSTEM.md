@@ -1,12 +1,12 @@
 # Module System
 
-> Available in Nodyx v2.2+. The Module System transforms every instance into a fully configurable community platform — no CLI, no code, no restarts.
+> Available in Nodyx v2.2+. The Module System transforms every instance into a fully configurable community platform, no CLI, no code, no restarts.
 
 :::info Related documentation
-**Module System** and **Homepage Builder** are two distinct but connected systems — read both to understand the full picture.
+**Module System** and **Homepage Builder** are two distinct but connected systems, read both to understand the full picture.
 - The **Module System** controls *what features exist* on your instance (forum, chat, voice, wiki…)
 - The **Homepage Builder** controls *what visitors see* on your public homepage (layout, widgets, theme)
-- A `website` module exposes widgets that appear in the Homepage Builder — but only when the module is active
+- A `website` module exposes widgets that appear in the Homepage Builder, but only when the module is active
 ::::
 
 ---
@@ -30,7 +30,7 @@ Every Nodyx instance is **two things at once**:
 └──────────────────────────────────────────────────┘
 ```
 
-A gaming clan, a sports club, an agricultural cooperative, a company — each activates only what it needs, with its own identity. One platform, infinite configurations.
+A gaming clan, a sports club, an agricultural cooperative, a company, each activates only what it needs, with its own identity. One platform, infinite configurations.
 
 ---
 
@@ -56,17 +56,17 @@ A widget can depend on a module (the `forum-preview` widget needs the `forum` mo
 
 ## The 4 Module Families
 
-### `core` — Always active, cannot be disabled
+### `core`, Always active, cannot be disabled
 
 | Module | Description |
 |---|---|
 | `auth` | Registration, login, sessions |
 | `members` | Profiles, roles, permissions |
-| `forum` | The main forum — the backbone |
+| `forum` | The main forum, the backbone |
 | `admin` | Administration panel |
 | `settings` | Instance configuration |
 
-### `community` — Internal tools (toggle on/off)
+### `community`, Internal tools (toggle on/off)
 
 These modules add functionality available to logged-in members.
 
@@ -85,9 +85,9 @@ These modules add functionality available to logged-in members.
 | `leaderboard` | Community rankings | Gaming, sports |
 | `tasks` | Lightweight task management | Companies, cooperatives |
 
-### `website` — Public face (homepage modules)
+### `website`, Public face (homepage modules)
 
-These modules build the public-facing side of your instance — no account required to see them.
+These modules build the public-facing side of your instance, no account required to see them.
 
 | Module | Description | Best for |
 |---|---|---|
@@ -105,7 +105,7 @@ These modules build the public-facing side of your instance — no account requi
 | `sponsors` | Sponsor / partner banner | Sports, events |
 | `stats` | Public counters (members, posts…) | All communities |
 
-### `integration` — External connections
+### `integration`, External connections
 
 | Module | Description |
 |---|---|
@@ -122,20 +122,20 @@ These modules build the public-facing side of your instance — no account requi
 | Module | Gaming | Sports club | Cooperative | Company |
 |---|:---:|:---:|:---:|:---:|
 | Forum | ✅ | ✅ | ✅ | ✅ |
-| Chat | ✅ | ✅ | — | ✅ |
-| Voice | ✅ | ✅ | — | ✅ |
+| Chat | ✅ | ✅ |, | ✅ |
+| Voice | ✅ | ✅ |, | ✅ |
 | Calendar | ✅ | ✅ | ✅ | ✅ |
-| Wiki | ✅ | — | ✅ | ✅ |
-| Files | — | ✅ | ✅ | ✅ |
+| Wiki | ✅ |, | ✅ | ✅ |
+| Files |, | ✅ | ✅ | ✅ |
 | DMs | ✅ | ✅ | ✅ | ✅ |
 | Polls | ✅ | ✅ | ✅ | ✅ |
-| Gallery | — | ✅ | ✅ | — |
-| Leaderboard | ✅ | ✅ | — | — |
-| Tasks | — | — | ✅ | ✅ |
-| Canvas | ✅ | — | — | — |
-| Map (public) | — | ✅ | ✅ | — |
-| Shop (public) | — | ✅ | ✅ | — |
-| Newsletter | — | ✅ | ✅ | ✅ |
+| Gallery |, | ✅ | ✅ |, |
+| Leaderboard | ✅ | ✅ |, |, |
+| Tasks |, |, | ✅ | ✅ |
+| Canvas | ✅ |, |, |, |
+| Map (public) |, | ✅ | ✅ |, |
+| Shop (public) |, | ✅ | ✅ |, |
+| Newsletter |, | ✅ | ✅ | ✅ |
 
 ---
 
@@ -153,7 +153,7 @@ Admin clicks "Enable" on a module
   → Zero downtime
 ```
 
-Disabling a module is equally clean — routes are unregistered, the UI element disappears, data is preserved.
+Disabling a module is equally clean, routes are unregistered, the UI element disappears, data is preserved.
 
 ---
 
@@ -223,7 +223,7 @@ modules/
 
 ---
 
-## Module Manager — Admin UI
+## Module Manager, Admin UI
 
 The admin sees three panels:
 
@@ -235,22 +235,22 @@ MODULE MANAGER                              [+ Add from marketplace]
 Filters: [All ▾]  [Community ▾]  [Active only]
 
 ● CORE (always active)
-  ✅ Forum          v2.1  — [Configure]
-  ✅ Members        v2.0  — [Configure]
+  ✅ Forum          v2.1 , [Configure]
+  ✅ Members        v2.0 , [Configure]
   ✅ Auth           v2.0
 
 ● COMMUNITY
-  ✅ Chat           v1.8  — [Configure]  [Disable]
-  ✅ Voice          v1.5  — [Configure]  [Disable]
-  ◻  Canvas         v1.2  — [Enable]
-  ◻  Wiki           v1.0  — [Enable]
-  ◻  Tasks          v0.9  — [Enable]  [Beta]
+  ✅ Chat           v1.8 , [Configure]  [Disable]
+  ✅ Voice          v1.5 , [Configure]  [Disable]
+  ◻  Canvas         v1.2 , [Enable]
+  ◻  Wiki           v1.0 , [Enable]
+  ◻  Tasks          v0.9 , [Enable]  [Beta]
 
 ● WEBSITE
-  ✅ Hero           v1.0  — [Configure]  [Disable]
-  ✅ Gallery        v1.1  — [Configure]  [Disable]
-  ◻  Shop           v0.8  — [Enable]  [Beta]
-  ◻  Newsletter     v1.0  — [Enable]
+  ✅ Hero           v1.0 , [Configure]  [Disable]
+  ✅ Gallery        v1.1 , [Configure]  [Disable]
+  ◻  Shop           v0.8 , [Enable]  [Beta]
+  ◻  Newsletter     v1.0 , [Enable]
 ```
 
 **2. Homepage Builder**
@@ -296,7 +296,7 @@ The Module System is currently in development. The first batch of modules ships 
 - **Core modules** already live: `forum`, `chat`, `voice`, `calendar`, `polls`, `dm`, `wiki`
 - **v2.2 targets**: formal activation/deactivation UI, `module.json` manifest loader, hot-reload routes, dynamic navigation
 - **v2.3 targets**: `gallery`, `files`, `newsletter`, `contact`, `shop` (beta)
-- **v3.0 target**: community marketplace — share and install modules from other instances
+- **v3.0 target**: community marketplace, share and install modules from other instances
 :::
 
 ---

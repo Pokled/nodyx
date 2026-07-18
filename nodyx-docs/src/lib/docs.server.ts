@@ -212,7 +212,7 @@ export async function buildSearchIndex(pages: Array<{ slug: string; title: strin
           .trim()
         const bodyPlain = stripMarkdown(body)
         // Prepend the heading text into the excerpt so heading-only queries match
-        const excerpt = (headingClean + ' — ' + bodyPlain).slice(0, 600)
+        const excerpt = (headingClean + ' : ' + bodyPlain).slice(0, 600)
         entries.push({
           slug:         page.slug,
           title:        page.title,

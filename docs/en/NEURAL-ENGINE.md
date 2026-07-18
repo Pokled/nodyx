@@ -1,4 +1,4 @@
-# Neural Engine — Nodyx Guard Protocol
+# Neural Engine, Nodyx Guard Protocol
 
 Nodyx includes a Neural Engine powered by a local [Ollama](https://ollama.com) instance. Your AI runs on your own hardware. No data leaves your server.
 
@@ -19,7 +19,7 @@ The Guard Protocol is the chat moderation system driven by the Neural Engine. Wh
 |---|---|
 | Profanity / insults | ✅ Functional |
 | Spam (repeated text / flooding) | ✅ Functional |
-| URL blocking | ⚠️ Partial — not yet reliable |
+| URL blocking | ⚠️ Partial, not yet reliable |
 | Hate speech | ✅ Functional (model-dependent) |
 | Threats | ✅ Functional (model-dependent) |
 
@@ -31,7 +31,7 @@ The LLM receives the message and returns a toxicity score between 0 and 10:
 |---|---|---|
 | 0–4 | Clean / benign | Message delivered normally |
 | 5–7 | Borderline | Message delivered, logged |
-| 8–10 | Toxic / harmful | Message auto-deleted — Guard Protocol triggered |
+| 8–10 | Toxic / harmful | Message auto-deleted, Guard Protocol triggered |
 
 The threshold is configurable. A lower threshold = more aggressive moderation.
 
@@ -47,7 +47,7 @@ The current active model is configured in `nodyx-core/neural-config.json`:
 }
 ```
 
-`qwen2.5:3b` is the recommended model for moderation tasks — small enough to run on modest hardware (4 GB VRAM), fast enough for real-time chat analysis.
+`qwen2.5:3b` is the recommended model for moderation tasks, small enough to run on modest hardware (4 GB VRAM), fast enough for real-time chat analysis.
 
 ---
 
@@ -77,14 +77,14 @@ brew install ollama
 ### 2. Pull the recommended model
 
 ```bash
-ollama pull qwen2.5:3b     # recommended — fast, accurate, low VRAM
+ollama pull qwen2.5:3b     # recommended, fast, accurate, low VRAM
 ```
 
 Alternative models:
 
 | Model | Size | VRAM | Notes |
 |---|---|---|---|
-| `qwen2.5:3b` | 2.0 GB | 4 GB | **Recommended** — fast, good accuracy |
+| `qwen2.5:3b` | 2.0 GB | 4 GB | **Recommended**: fast, good accuracy |
 | `llama3.2:3b` | 2.0 GB | 4 GB | Good alternative |
 | `mistral` | 4.1 GB | 6 GB | Better quality, heavier |
 | `llama3.1:8b` | 4.9 GB | 8 GB | Best accuracy |
@@ -114,7 +114,7 @@ The Neural Engine panel is at `/admin/ai` (Admin sidebar → **Instance → Neur
 
 | Element | Description |
 |---|---|
-| Availability gauge | 12-segment bar — purple = Ollama ready, red = unreachable |
+| Availability gauge | 12-segment bar, purple = Ollama ready, red = unreachable |
 | Model list | All models detected on your Ollama instance, with size in GB |
 | Active indicator | Purple dot next to the currently selected model |
 | Scanner button | Re-scans Ollama for new or removed models |
@@ -125,7 +125,7 @@ The Neural Engine panel is at `/admin/ai` (Admin sidebar → **Instance → Neur
 
 The Neural Engine is built on a core principle: **your AI, your data, your rules**.
 
-- All inference runs locally — no calls to OpenAI, Anthropic, or any external API
+- All inference runs locally, no calls to OpenAI, Anthropic, or any external API
 - Message content analyzed by the LLM never leaves your server
 - Caddy proxy ensures Ollama is not exposed to the public internet
 - You choose the model, and you can stop it at any time
@@ -141,7 +141,7 @@ The Neural Engine is built on a core principle: **your AI, your data, your rules
 | Chat toxicity scoring (0–10) | ✅ Done |
 | Auto-delete above threshold | ✅ Done |
 | Guard Protocol UI | ✅ Done |
-| URL blocking | ⚠️ Partial — in progress |
-| Thread summarization | ⏳ Planned — Phase 4 |
-| Moderation suggestions for admins | ⏳ Planned — Phase 4 |
-| Configurable threshold via admin UI | ⏳ Planned — Phase 4 |
+| URL blocking | ⚠️ Partial, in progress |
+| Thread summarization | ⏳ Planned, Phase 4 |
+| Moderation suggestions for admins | ⏳ Planned, Phase 4 |
+| Configurable threshold via admin UI | ⏳ Planned, Phase 4 |

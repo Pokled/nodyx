@@ -1,6 +1,6 @@
 # Nodyx Audio Engine
 
-Nodyx includes a client-side audio processing chain designed to deliver broadcast-quality voice in any voice channel — without dedicated hardware, without external services, and without sending your audio anywhere but directly to your peers.
+Nodyx includes a client-side audio processing chain designed to deliver broadcast-quality voice in any voice channel, without dedicated hardware, without external services, and without sending your audio anywhere but directly to your peers.
 
 ---
 
@@ -21,7 +21,7 @@ Microphone
 [RNNoise WASM]       ← AI noise suppression (optional)
     │
     ▼
-[BiquadFilterNode ×3] ← Broadcast EQ — 3-band (optional)
+[BiquadFilterNode ×3] ← Broadcast EQ, 3-band (optional)
     │
     ▼
 WebRTC PeerConnection → peers
@@ -44,8 +44,8 @@ All settings are accessible via the ⚙ button in the voice bar (VoicePanel), pe
 Adjusts the input volume of your microphone before any processing.
 
 - `1.0` = no change (nominal level)
-- `2.0` = doubles the signal (+6 dB) — useful for quiet microphones
-- `0.5` = cuts the signal in half (−6 dB) — useful for loud/saturating mics
+- `2.0` = doubles the signal (+6 dB), useful for quiet microphones
+- `0.5` = cuts the signal in half (−6 dB), useful for loud/saturating mics
 
 ---
 
@@ -63,7 +63,7 @@ Virtually no impact on voice intelligibility. Recommended to leave on.
 
 ---
 
-### RNNoise — AI noise suppression
+### RNNoise, AI noise suppression
 
 **Default: disabled** *(requires `@jitsi/rnnoise-wasm`)*
 
@@ -79,9 +79,9 @@ It is effective against:
 
 ---
 
-### Broadcast Mode — 3-band EQ
+### Broadcast Mode, 3-band EQ
 
-**Default: disabled — Intensity: 60%**
+**Default: disabled, Intensity: 60%**
 
 This is the audio feature that sets Nodyx apart. Broadcast Mode applies a three-band equalizer tuned for the human voice, replicating the processing chain used in professional podcasting and radio broadcasting.
 
@@ -117,13 +117,13 @@ Controls the Opus codec bitrate applied to the next peer connection.
 
 | Bitrate | Use case |
 |---|---|
-| **32 kbps** | **Default — voice-optimized, works on VPNs and congested links** |
+| **32 kbps** | **Default, voice-optimized, works on VPNs and congested links** |
 | 64 kbps | Higher quality, good bandwidth |
 | 128 kbps | High-quality audio, music, or recording streams |
 
 Changes take effect on the **next connection** (reconnect to the voice channel to apply).
 
-> **Additional codec settings (v1.3):** DTX (Discontinuous Transmission) is disabled by default — it causes audio bursts when speech resumes on lossy links. Mono is forced to halve the bitrate without impacting voice intelligibility. FEC (Forward Error Correction) remains enabled for packet-loss resilience.
+> **Additional codec settings (v1.3):** DTX (Discontinuous Transmission) is disabled by default, it causes audio bursts when speech resumes on lossy links. Mono is forced to halve the bitrate without impacting voice intelligibility. FEC (Forward Error Correction) remains enabled for packet-loss resilience.
 
 ---
 

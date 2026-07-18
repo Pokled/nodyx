@@ -12,9 +12,9 @@
 ## Before you start
 
 Read these files in this order:
-1. `ARCHITECTURE.md` — How Nodyx is built
-2. `MANIFESTO.md` — The soul of the project
-3. `ROADMAP.md` — Where we're going
+1. `ARCHITECTURE.md`, How Nodyx is built
+2. `MANIFESTO.md`, The soul of the project
+3. `ROADMAP.md`, Where we're going
 
 If you disagree with the Manifesto, Nodyx may not be the right project for you.
 And that's okay.
@@ -25,16 +25,16 @@ And that's okay.
 
 ### You can contribute freely in
 ```
-nodyx-plugins/    — Create plugins
-nodyx-themes/     — Create visual themes
-nodyx-docs/       — Improve documentation
-i18n/             — Translate into your language
-community/        — Community content
+nodyx-plugins/   , Create plugins
+nodyx-themes/    , Create visual themes
+nodyx-docs/      , Improve documentation
+i18n/            , Translate into your language
+community/       , Community content
 ```
 
 ### You cannot modify without validation
 ```
-nodyx-core/src/           — Main server code
+nodyx-core/src/          , Main server code
 nodyx-core/ARCHITECTURE.md
 nodyx-core/NODYX_CONTEXT.md
 docs/en/MANIFESTO.md
@@ -49,10 +49,10 @@ If you think something in the core should change, open an Issue and explain why.
 ### Minimal structure
 ```
 nodyx-plugins/my-plugin/
-├── plugin.json     — Required manifest
-├── index.ts        — Entry point
-├── README.md       — Documentation
-└── LICENSE         — License (MIT recommended)
+├── plugin.json    , Required manifest
+├── index.ts       , Entry point
+├── README.md      , Documentation
+└── LICENSE        , License (MIT recommended)
 ```
 
 ### Minimal plugin.json
@@ -122,12 +122,12 @@ Translation is the most accessible contribution. No coding required.
 
 ### Files to translate
 ```
-MANIFESTO.md    — The founding text
-THANKS.md       — Acknowledgements
-README.md       — Project overview
-CONTRIBUTING.md — This guide
-ARCHITECTURE.md — Technical reference
-ROADMAP.md      — Development roadmap
+MANIFESTO.md   , The founding text
+THANKS.md      , Acknowledgements
+README.md      , Project overview
+CONTRIBUTING.md, This guide
+ARCHITECTURE.md, Technical reference
+ROADMAP.md     , Development roadmap
 ```
 
 ### Translation rules
@@ -201,4 +201,4 @@ Your name will be there.
 ---
 
 *"The network is the people."*
-*AGPL-3.0 — The code belongs to its community.*
+*AGPL-3.0, The code belongs to its community.*

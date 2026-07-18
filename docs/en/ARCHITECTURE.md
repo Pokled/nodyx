@@ -1,5 +1,5 @@
-# NODYX — Architecture
-### Version 1.0 — Technical reference document
+# NODYX, Architecture
+### Version 1.0, Technical reference document
 
 ---
 
@@ -34,28 +34,28 @@ All routes start with `/api/v1/`
 
 ```
 /api/v1/
-├── health                  GET  — Infrastructure status
+├── health                  GET , Infrastructure status
 ├── auth/
-│   ├── register            POST — Account creation
-│   ├── login               POST — Login
-│   └── logout              POST — Logout
+│   ├── register            POST, Account creation
+│   ├── login               POST, Login
+│   └── logout              POST, Logout
 ├── communities/
-│   ├── /                   GET  — List communities
-│   ├── /                   POST — Create a community
-│   ├── /:slug              GET  — One community
-│   └── /:slug/members      GET  — Members
+│   ├── /                   GET , List communities
+│   ├── /                   POST, Create a community
+│   ├── /:slug              GET , One community
+│   └── /:slug/members      GET , Members
 ├── forums/
-│   ├── /:community         GET  — Forum categories
-│   ├── /categories         POST — Create a category
-│   ├── /threads            GET  — Thread list
-│   ├── /threads            POST — Create a thread
-│   ├── /threads/:id        GET  — One thread + posts
-│   └── /posts              POST — Create a post
+│   ├── /:community         GET , Forum categories
+│   ├── /categories         POST, Create a category
+│   ├── /threads            GET , Thread list
+│   ├── /threads            POST, Create a thread
+│   ├── /threads/:id        GET , One thread + posts
+│   └── /posts              POST, Create a post
 ├── users/
-│   ├── /:id                GET  — Public profile
-│   └── /me                 GET  — My profile
+│   ├── /:id                GET , Public profile
+│   └── /me                 GET , My profile
 └── search/
-    └── /                   GET  — Global search
+    └── /                   GET , Global search
 ```
 
 ---
@@ -71,7 +71,7 @@ Nodyx ships with **PostgreSQL 16**. This is a deliberate choice, not a lag.
 - **It's what Ubuntu 24.04 LTS ships by default.** `apt install postgresql` on a fresh Ubuntu 24.04 server installs PG 16. Picking the distro default keeps `install.sh` short, predictable, and free of third-party PPAs that admins might not trust. Less moving parts at install time means fewer breakages on real-world VPSes.
 - **Upstream support runs until November 2028.** PostgreSQL has a 5-year support window per major version. PG 16 is supported with security and bug fixes for 2+ more years. We are not on a deprecated version.
 - **Nodyx uses zero features specific to PG 17 or 18.** Our migrations rely on standard SQL plus widely-available extras: `JSONB`, `UUID`, `tsvector` full-text search, `CREATE INDEX CONCURRENTLY`, partial indexes, `IF NOT EXISTS` everywhere. These have been stable since PG 12+. We would gain literally nothing functional by upgrading.
-- **The performance and feature gains from 17/18 don't apply at our scale.** Improvements like streaming I/O, logical replication slot sync, or vectorized JSON path are aimed at multi-terabyte deployments or replication-heavy architectures. A Nodyx instance is "one community on one VPS" — these gains don't move the needle.
+- **The performance and feature gains from 17/18 don't apply at our scale.** Improvements like streaming I/O, logical replication slot sync, or vectorized JSON path are aimed at multi-terabyte deployments or replication-heavy architectures. A Nodyx instance is "one community on one VPS", these gains don't move the needle.
 
 **When we will migrate:**
 
@@ -164,7 +164,7 @@ users ----------< threads
 
 ---
 
-## 4. REDIS — USAGE
+## 4. REDIS, USAGE
 
 ```
 User sessions           nodyx:session:{token}       TTL 7 days
@@ -184,11 +184,11 @@ Plugins extend Nodyx without modifying the core.
 ```
 nodyx-plugins/
 └── my-plugin/
-    ├── plugin.json      — Plugin manifest
-    ├── index.ts         — Entry point
-    ├── routes/          — Additional API routes
-    ├── migrations/      — Additional PostgreSQL tables
-    └── ui/              — Additional SvelteKit components
+    ├── plugin.json     , Plugin manifest
+    ├── index.ts        , Entry point
+    ├── routes/         , Additional API routes
+    ├── migrations/     , Additional PostgreSQL tables
+    └── ui/             , Additional SvelteKit components
 ```
 
 ### plugin.json
@@ -205,11 +205,11 @@ nodyx-plugins/
 
 ### Available hooks
 ```
-onUserRegister      — After account creation
-onUserJoin          — After joining a community
-onThreadCreate      — After thread creation
-onPostCreate        — After post creation
-onCommunityCreate   — After community creation
+onUserRegister     , After account creation
+onUserJoin         , After joining a community
+onThreadCreate     , After thread creation
+onPostCreate       , After post creation
+onCommunityCreate  , After community creation
 ```
 
 ---
@@ -219,7 +219,7 @@ onCommunityCreate   — After community creation
 ```
 Authentication    Signed JWT + refresh token in Redis
 Passwords         bcrypt (cost factor 12)
-Rate limiting     Redis — 100 req/min per IP
+Rate limiting     Redis, 100 req/min per IP
 Validation        Zod on all inputs
 CORS              Configurable per instance
 Headers           Helmet.js (XSS, CSP, HSTS)
@@ -231,29 +231,29 @@ Headers           Helmet.js (XSS, CSP, HSTS)
 
 ```
 nodyx-core/src/
-├── index.ts                — Server entry point
-├── fortunes.ts             — Random quotes
+├── index.ts               , Server entry point
+├── fortunes.ts            , Random quotes
 ├── config/
-│   └── database.ts         — PostgreSQL + Redis connections
+│   └── database.ts        , PostgreSQL + Redis connections
 ├── routes/
-│   ├── auth.ts             — Authentication
-│   ├── communities.ts      — Communities
-│   ├── forums.ts           — Forum + threads + posts
-│   ├── users.ts            — Profiles
-│   └── search.ts           — Search
+│   ├── auth.ts            , Authentication
+│   ├── communities.ts     , Communities
+│   ├── forums.ts          , Forum + threads + posts
+│   ├── users.ts           , Profiles
+│   └── search.ts          , Search
 ├── models/
-│   ├── user.ts             — User model
-│   ├── community.ts        — Community model
-│   ├── thread.ts           — Thread model
-│   └── post.ts             — Post model
+│   ├── user.ts            , User model
+│   ├── community.ts       , Community model
+│   ├── thread.ts          , Thread model
+│   └── post.ts            , Post model
 ├── middleware/
-│   ├── auth.ts             — JWT verification
-│   ├── rateLimit.ts        — Redis rate limiting
-│   └── validate.ts         — Zod validation
+│   ├── auth.ts            , JWT verification
+│   ├── rateLimit.ts       , Redis rate limiting
+│   └── validate.ts        , Zod validation
 ├── migrations/
-│   └── 001_initial.sql     — Initial schema
+│   └── 001_initial.sql    , Initial schema
 └── plugins/
-    └── loader.ts           — Plugin loader
+    └── loader.ts          , Plugin loader
 ```
 
 ---
@@ -271,5 +271,5 @@ nodyx-core/src/
 
 ---
 
-*Version 1.0 — February 2026*
+*Version 1.0, February 2026*
 *"The network is the people."*

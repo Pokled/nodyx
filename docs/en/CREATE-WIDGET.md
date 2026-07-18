@@ -2,7 +2,7 @@
 
 > **You don't need to be a developer.** If you can copy-paste code and edit a text file, you can build a widget and install it on your Nodyx community in under 10 minutes.
 
-Nodyx widgets are small pieces of code that appear on your homepage. Think of them like apps you install on a phone — except *you* can build them, and they're completely yours.
+Nodyx widgets are small pieces of code that appear on your homepage. Think of them like apps you install on a phone, except *you* can build them, and they're completely yours.
 
 ---
 
@@ -17,13 +17,13 @@ Then you'll package it as a `.zip` file and install it on your Nodyx instance in
 ## Table of Contents
 
 - [What is a Widget?](#what-is-a-widget)
-- [Step 1 — Set Up Your Files](#step-1-set-up-your-files)
-- [Step 2 — Write the manifest.json](#step-2-write-the-manifestjson)
-- [Step 3 — Write the Widget Code](#step-3-write-the-widget-code)
-- [Step 4 — Understand the Code](#step-4-understand-the-code)
-- [Step 5 — Package Your Widget](#step-5-package-your-widget)
-- [Step 6 — Install on Your Instance](#step-6-install-on-your-instance)
-- [Step 7 — Use it in the Homepage Builder](#step-7-use-it-in-the-homepage-builder)
+- [Step 1, Set Up Your Files](#step-1-set-up-your-files)
+- [Step 2, Write the manifest.json](#step-2-write-the-manifestjson)
+- [Step 3, Write the Widget Code](#step-3-write-the-widget-code)
+- [Step 4, Understand the Code](#step-4-understand-the-code)
+- [Step 5, Package Your Widget](#step-5-package-your-widget)
+- [Step 6, Install on Your Instance](#step-6-install-on-your-instance)
+- [Step 7, Use it in the Homepage Builder](#step-7-use-it-in-the-homepage-builder)
 - [Going Further](#going-further)
 
 ---
@@ -46,7 +46,7 @@ You write plain JavaScript. No React, no Vue, no npm, no Webpack. A text editor 
 
 ---
 
-## Step 1 — Set Up Your Files
+## Step 1, Set Up Your Files
 
 Create a folder on your computer called `welcome-banner`. Inside it, create two empty files:
 
@@ -63,7 +63,7 @@ You can use any text editor:
 
 ---
 
-## Step 2 — Write the manifest.json
+## Step 2, Write the manifest.json
 
 Open `manifest.json` and paste this:
 
@@ -109,7 +109,7 @@ Open `manifest.json` and paste this:
 
 | Field | What it does |
 |---|---|
-| `id` | Unique identifier — only lowercase letters, numbers, and hyphens |
+| `id` | Unique identifier, only lowercase letters, numbers, and hyphens |
 | `label` | The name shown in the Homepage Builder |
 | `version` | Follows `major.minor.patch` format |
 | `icon` | An emoji shown next to the widget name |
@@ -125,17 +125,17 @@ Open `manifest.json` and paste this:
 | `color` | A color picker |
 | `checkbox` | A toggle switch |
 | `number` | A numeric input |
-| `select` | A dropdown — add `options: [{value, label}]` |
+| `select` | A dropdown, add `options: [{value, label}]` |
 
 ---
 
-## Step 3 — Write the Widget Code
+## Step 3, Write the Widget Code
 
 Open `widget.iife.js` and paste this complete code:
 
 ```javascript:widget.iife.js
 (function () {
-  // ── Welcome Banner — Nodyx Widget ──────────────────────────────
+  // ── Welcome Banner, Nodyx Widget ──────────────────────────────
 
   var STYLE = `
     :host { display: block; }
@@ -264,15 +264,15 @@ Open `widget.iife.js` and paste this complete code:
 
 ---
 
-## Step 4 — Understand the Code
+## Step 4, Understand the Code
 
-Don't worry if you're not a developer — here's what each part does:
+Don't worry if you're not a developer, here's what each part does:
 
 ### The outer wrapper `(function () { ... })()`
 This is called an IIFE (Immediately Invoked Function Expression). It keeps your widget's code isolated so it doesn't interfere with the rest of the page. **Always wrap your widget in this.**
 
 ### The `STYLE` variable
-This is CSS — the visual design of your widget. It uses **Shadow DOM**, which means your styles are completely isolated. They won't affect the rest of the page, and the page's styles won't affect your widget.
+This is CSS, the visual design of your widget. It uses **Shadow DOM**, which means your styles are completely isolated. They won't affect the rest of the page, and the page's styles won't affect your widget.
 
 ### The `WelcomeBanner` class
 This is your widget. It extends `HTMLElement`, which means it becomes a real HTML element that the browser understands.
@@ -282,7 +282,7 @@ This is your widget. It extends `HTMLElement`, which means it becomes a real HTM
 | `connectedCallback()` | When the widget is first placed on the page |
 | `observedAttributes` | Which attribute changes should trigger a re-render |
 | `attributeChangedCallback()` | When a config value changes (live preview in builder) |
-| `_render()` | Your main render function — reads config, builds HTML |
+| `_render()` | Your main render function, reads config, builds HTML |
 
 ### Reading the config
 ```javascript
@@ -300,7 +300,7 @@ If your widget `id` is `my-countdown`, the tag name must be `nodyx-widget-my-cou
 
 ---
 
-## Step 5 — Package Your Widget
+## Step 5, Package Your Widget
 
 You need to create a `.zip` file containing both files **at the root** (not inside a subfolder).
 
@@ -326,11 +326,11 @@ Open the zip and verify the files are at the **root**, not inside a subfolder na
 
 ---
 
-## Step 6 — Install on Your Instance
+## Step 6, Install on Your Instance
 
 1. Go to your Nodyx admin panel: **Admin → Widgets**
 2. In the **"Install a widget"** section, drag and drop your `.zip` file (or click to browse)
-3. Watch the progress bar — Nodyx will validate the manifest, extract the files, and register the widget
+3. Watch the progress bar, Nodyx will validate the manifest, extract the files, and register the widget
 4. You'll see **"Installation successful!"** with your widget's name
 
 If you see an error, the most common causes are:
@@ -340,14 +340,14 @@ If you see an error, the most common causes are:
 
 ---
 
-## Step 7 — Use it in the Homepage Builder
+## Step 7, Use it in the Homepage Builder
 
 1. Go to **Admin → Homepage**
 2. Click **+ Add widget** on any position
-3. Scroll to the **"Installed"** section in the widget picker — your widget is there
+3. Scroll to the **"Installed"** section in the widget picker, your widget is there
 4. Fill in the config fields (Title, Message, Color, Show join button)
 5. Click **Save**
-6. Open your homepage — your widget is live!
+6. Open your homepage, your widget is live!
 
 ---
 
@@ -425,7 +425,7 @@ var style = cfg.style || 'dark';
 ---
 
 :::tip Study the example widget
-The **Video Player** demo widget available in **Admin → Widgets** is fully commented and open source. It handles YouTube, Vimeo, and direct MP4 URLs. Download it as a `.zip` and read the source — it's a great starting point.
+The **Video Player** demo widget available in **Admin → Widgets** is fully commented and open source. It handles YouTube, Vimeo, and direct MP4 URLs. Download it as a `.zip` and read the source, it's a great starting point.
 :::
 
 ---

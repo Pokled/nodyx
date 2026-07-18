@@ -11,7 +11,7 @@ It is the internet of the 2000s rebuilt with the tools of 2026.
 ## Why Nodyx exists
 
 Discord, Facebook, and Big Tech have locked millions of communities inside private silos.
-Discussions, tutorials, collective knowledge — invisible to Google, inaccessible without an account, condemned to disappear the day the platform shuts down.
+Discussions, tutorials, collective knowledge, invisible to Google, inaccessible without an account, condemned to disappear the day the platform shuts down.
 
 **Nodyx fixes that.**
 
@@ -20,8 +20,8 @@ Discussions, tutorials, collective knowledge — invisible to Google, inaccessib
 - Real-time community **chat** (Socket.IO)
 - **Voice** + screen sharing (WebRTC P2P)
 - **Self-hostable** on any server
-- **P2P network** — users are the network
-- **Open source** — AGPL-3.0
+- **P2P network**: users are the network
+- **Open source**: AGPL-3.0
 
 ---
 
@@ -38,30 +38,30 @@ NODYX_COMMUNITY_COUNTRY=US
 NODYX_COMMUNITY_SLUG=linux
 ```
 
-Instances discover each other through the **nodyx-directory** — the global registry *(Phase 2)*.
+Instances discover each other through the **nodyx-directory**: the global registry *(Phase 2)*.
 
 ---
 
 ## Project status
 
-**v2.0.0 — Private & Sovereign Communications**
+**v2.0.0, Private & Sovereign Communications**
 
 ```
 Forum                       ✓  Categories, threads, posts, reactions, thanks, tags, slugs
 Full-text search            ✓  PostgreSQL tsvector/GIN, highlighted excerpts
 Admin panel                 ✓  Dashboard, members, grades, bans, moderation
 SEO                         ✓  Sitemap, RSS, robots.txt, JSON-LD, canonical URLs
-Real-time chat              ✓  Socket.IO — channels, replies, pins, link previews, @mentions
-Voice channels              ✓  WebRTC P2P mesh — mute, deafen, PTT, noise filter
+Real-time chat              ✓  Socket.IO, channels, replies, pins, link previews, @mentions
+Voice channels              ✓  WebRTC P2P mesh, mute, deafen, PTT, noise filter
 Screen sharing              ✓  WebRTC screen share + clip recording
 P2P DataChannels            ✓  Instant typing, optimistic reactions, file transfer
 NodyxCanvas                 ✓  Collaborative P2P whiteboard in voice channels
-Notifications               ✓  reply, thanks, @mention — badge, center, auto-purge 30d
-Direct messages             ✓  1:1 DMs — E2E encrypted (ECDH P-256 + AES-256-GCM + ESY layer)
+Notifications               ✓  reply, thanks, @mention, badge, center, auto-purge 30d
+Direct messages             ✓  1:1 DMs, E2E encrypted (ECDH P-256 + AES-256-GCM + ESY layer)
   ↳ E2E shield              ✓  Live indicator (green/orange), ESY fingerprint tooltip
-  ↳ Barbarize animation     ✓  Encryption visualized — glyphs scramble then reveal in real-time
+  ↳ Barbarize animation     ✓  Encryption visualized, glyphs scramble then reveal in real-time
   ↳ Edit & delete           ✓  Inline edit with re-encryption, real-time delete for all participants
-Polls                       ✓  Choice / schedule / ranking — in chat and forum
+Polls                       ✓  Choice / schedule / ranking, in chat and forum
 Ban system                  ✓  User ban, IP ban, email ban
 Asset library               ✓  Frames, banners, badges, stickers, sounds, themes, fonts
 Profile themes              ✓  6 presets, per-user app-wide CSS, live editor
@@ -72,17 +72,17 @@ Federation                  ✓  Instance directory, Galaxy Bar (multi-instance 
 Gossip Protocol             ✓  Cross-instance event/thread indexing
 Nodyx Signet                ✓  Passwordless ECDSA P-256 auth PWA
 2FA (TOTP + Signet)         ✓  RFC 6238 TOTP + Signet as 2nd factor, priority chain
-nodyx-relay                 ✓  Rust TCP tunnel — home server, no open ports
-nodyx-turn                  ✓  Rust STUN/TURN — replaces coturn, voice through VPNs
+nodyx-relay                 ✓  Rust TCP tunnel, home server, no open ports
+nodyx-turn                  ✓  Rust STUN/TURN, replaces coturn, voice through VPNs
 Honeypot suite              ✓  Tarpit, canary files, fake logins, pixel, fingerprint, honeytokens, slowloris
-Olympus Hub                 ✓  Security command center — live dashboard, credential harvest, distributed blocklist
+Olympus Hub                 ✓  Security command center, live dashboard, credential harvest, distributed blocklist
 ```
 
 ---
 
 ## Installation
 
-### Option A — Docker (recommended)
+### Option A, Docker (recommended)
 
 The simplest method. Requires Docker Desktop or Docker Engine.
 
@@ -98,7 +98,7 @@ The API starts on `http://localhost:3000`
 
 ---
 
-### Option B — Windows Server without Docker (PowerShell Easy-Install)
+### Option B, Windows Server without Docker (PowerShell Easy-Install)
 
 A PowerShell script automates the full installation in under 15 minutes:
 Node.js, PostgreSQL, Redis, database configuration, migrations, and registration as a Windows service.
@@ -119,7 +119,7 @@ The script automatically installs and configures:
 
 ---
 
-### Option C — Manual installation (Linux/Mac/Windows)
+### Option C, Manual installation (Linux/Mac/Windows)
 
 **Prerequisites:** Node.js 20+, PostgreSQL 16+, Redis 7+
 
@@ -144,12 +144,12 @@ Apply migrations:
 ```bash
 # Linux/Mac (peer auth or password)
 PGPASSWORD=your_password psql -U nodyx_user -d nodyx -f src/migrations/001_initial.sql
-# Migrations are applied automatically at startup — no manual SQL needed
+# Migrations are applied automatically at startup, no manual SQL needed
 
 # Windows
 $env:PGPASSWORD="your_password"
 & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U nodyx_user -d nodyx -f src\migrations\001_initial.sql
-# Migrations are applied automatically at startup — no manual SQL needed
+# Migrations are applied automatically at startup, no manual SQL needed
 ```
 
 Start:
@@ -162,7 +162,7 @@ npm start         # production (node dist/)
 
 ---
 
-## HTTPS reverse proxy — Caddy (recommended)
+## HTTPS reverse proxy, Caddy (recommended)
 
 [Caddy](https://caddyserver.com) is a reverse proxy that automatically manages SSL certificates via Let's Encrypt. No manual SSL configuration.
 
@@ -189,7 +189,7 @@ See [`nodyx-core/.env.example`](../../nodyx-core/.env.example) for the full anno
 | `NODYX_COMMUNITY_NAME` | Yes | Community display name |
 | `NODYX_COMMUNITY_SLUG` | Yes | URL slug (lowercase letters, hyphens) |
 | `NODYX_COMMUNITY_LANGUAGE` | No | Language (default: `en`) |
-| `JWT_SECRET` | Yes | JWT secret — **32+ random characters in production** |
+| `JWT_SECRET` | Yes | JWT secret, **32+ random characters in production** |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` | Yes | PostgreSQL connection |
 | `DB_USER` / `DB_PASSWORD` | Yes | PostgreSQL credentials |
 | `REDIS_HOST` / `REDIS_PORT` | No | Redis (default: `localhost:6379`) |
@@ -228,10 +228,10 @@ After `npm run seed`:
 
 ## Documentation
 
-- [ROADMAP.md](./ROADMAP.md) — The path to the complete vision
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — How Nodyx is built
-- [CONTRIBUTING.md](./CONTRIBUTING.md) — How to contribute
-- [MANIFESTO.md](./MANIFESTO.md) — The founding principles
+- [ROADMAP.md](./ROADMAP.md), The path to the complete vision
+- [ARCHITECTURE.md](./ARCHITECTURE.md), How Nodyx is built
+- [CONTRIBUTING.md](./CONTRIBUTING.md), How to contribute
+- [MANIFESTO.md](./MANIFESTO.md), The founding principles
 
 ---
 
@@ -252,7 +252,7 @@ nodyx-docs/       →  Improve documentation
 
 ## License
 
-AGPL-3.0 — The code belongs to its community.
+AGPL-3.0, The code belongs to its community.
 
 If Nodyx betrays its principles, the Manifesto explicitly authorizes
 anyone to fork the project and continue.
@@ -261,7 +261,7 @@ anyone to fork the project and continue.
 
 ## Official supervisor
 
-**Iris** — Approves every commit since February 18, 2026. 🐱
+**Iris**: Approves every commit since February 18, 2026. 🐱
 
 ---
 

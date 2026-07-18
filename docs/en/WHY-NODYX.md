@@ -86,7 +86,7 @@ We owe sincere acknowledgment to every project working on this problem. Below is
 
 ### Heavy decentralized hitters
 
-**[Matrix](https://matrix.org)** — `github.com/matrix-org` / Element client: [github.com/element-hq/element-web](https://github.com/element-hq/element-web)
+**[Matrix](https://matrix.org)**: `github.com/matrix-org` / Element client: [github.com/element-hq/element-web](https://github.com/element-hq/element-web)
 The most mature open protocol in this space. Federated like email, end-to-end encrypted, with bridges to almost everything. If you want maximum interoperability and a long-term bet on a real protocol, start here.
 
 ### Discord-shaped clones
@@ -97,7 +97,7 @@ The closest visual feel to Discord. Built in Rust, fully open source, self-hosta
 **[Spacebar](https://github.com/spacebarchat/server)**
 A complete reimplementation of the Discord API. Existing Discord client mods often work against it. Excellent for technical communities that want compatibility.
 
-**[Fluxer](https://fluxer.app/)** — [github.com/fluxerapp/fluxer](https://github.com/fluxerapp/fluxer)
+**[Fluxer](https://fluxer.app/)**: [github.com/fluxerapp/fluxer](https://github.com/fluxerapp/fluxer)
 Newer entrant, gaining traction quickly. Strong customization, human support, and an active community of users testing daily. Worth watching.
 
 **[Haven](https://github.com/ancsemi/Haven)**
@@ -132,16 +132,16 @@ Every person who leaves a closed silo for an open alternative is a win, regardle
 
 > "I don't believe in turf wars. Each one brings their stone. If you also want to take part in an alternative, even modestly, come take a look. And if you prefer another solution, that's fine too. The important thing is that we stop letting ourselves be locked in. Let's support each other."
 >
-> *— from a [Reddit thread on Discord alternatives](https://www.reddit.com/r/BannedFromDiscord/comments/1swnq9b/), where this page started.*
+> *- from a [Reddit thread on Discord alternatives](https://www.reddit.com/r/BannedFromDiscord/comments/1swnq9b/), where this page started.*
 
 ---
 
 ## See also
 
-- [The Nodyx manifesto](MANIFESTO.md) — the full philosophical framing
-- [Installation guide](INSTALL.md) — if you decided to give it a shot
-- [Architecture overview](ARCHITECTURE.md) — what's under the hood
-- [Roadmap](ROADMAP.md) — where we're heading
+- [The Nodyx manifesto](MANIFESTO.md), the full philosophical framing
+- [Installation guide](INSTALL.md), if you decided to give it a shot
+- [Architecture overview](ARCHITECTURE.md), what's under the hood
+- [Roadmap](ROADMAP.md), where we're heading
 
 ---
 

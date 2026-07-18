@@ -1,8 +1,8 @@
-# ⚡ Nodyx Relay — Install without a domain or open ports
+# ⚡ Nodyx Relay, Install without a domain or open ports
 
-> **The problem:** You want to host Nodyx at home — on a Raspberry Pi, an old PC, your home router setup — but you don't have a domain, and your ISP blocks incoming ports.
+> **The problem:** You want to host Nodyx at home, on a Raspberry Pi, an old PC, your home router setup, but you don't have a domain, and your ISP blocks incoming ports.
 >
-> **The solution:** Nodyx Relay. A 9 MB Rust binary that establishes an **outbound** connection to our infrastructure, making your instance accessible at `your-slug.nodyx.org` — with zero configuration.
+> **The solution:** Nodyx Relay. A 9 MB Rust binary that establishes an **outbound** connection to our infrastructure, making your instance accessible at `your-slug.nodyx.org`, with zero configuration.
 
 ---
 
@@ -15,7 +15,7 @@
 - [Checking that the tunnel is active](#-checking-that-the-tunnel-is-active)
 - [Troubleshooting](#-troubleshooting)
 - [FAQ](#-faq)
-- [For the curious — Technical architecture](#-for-the-curious--technical-architecture)
+- [For the curious, Technical architecture](#-for-the-curious--technical-architecture)
 
 ---
 
@@ -41,7 +41,7 @@
 
 1. **You run `bash install.sh`** and choose option `[2] Nodyx Relay`
 2. **`nodyx-relay-client`** starts as a systemd service on your machine
-3. It establishes an **outbound TCP connection** (port 7443) to `relay.nodyx.org` — just like opening a website, not like opening a port
+3. It establishes an **outbound TCP connection** (port 7443) to `relay.nodyx.org`, just like opening a website, not like opening a port
 4. When someone visits `your-slug.nodyx.org`, the HTTPS request arrives at our VPS, the relay server routes it through the tunnel, and your machine responds
 5. **Your machine has no open ports.** Your router has nothing to forward. Your ISP only sees outbound traffic.
 
@@ -58,13 +58,13 @@
 | 64-bit Linux OS | ✅ Yes | Ubuntu 22.04/24.04, Debian 11/12, Raspberry Pi OS 64-bit |
 | Architecture | ✅ `x86_64` or `aarch64` | PC/VPS or Raspberry Pi 3/4/5 |
 
-> 💡 **Raspberry Pi 4, 8 GB RAM, Ubuntu Server 24.04 (arm64):** tested and validated in real-world conditions — March 1, 2026.
+> 💡 **Raspberry Pi 4, 8 GB RAM, Ubuntu Server 24.04 (arm64):** tested and validated in real-world conditions, March 1, 2026.
 
 ---
 
 ## 🚀 Installation
 
-### Method 1 — Interactive installer (recommended)
+### Method 1, Interactive installer (recommended)
 
 ```bash
 git clone https://github.com/Pokled/Nodyx.git && cd Nodyx && sudo bash install.sh
@@ -74,11 +74,11 @@ When the installer asks for the network mode, choose **`2`**:
 
 ```
   Network connection mode
-  ┌─ [1] Personal domain  — ports 80/443 open required
-  ├─ [2] Nodyx Relay       — recommended — no ports, no domain (RPi, home box, ...)
-  └─ [3] sslip.io auto     — free automatic domain, open ports required
+  ┌─ [1] Personal domain , ports 80/443 open required
+  ├─ [2] Nodyx Relay      , recommended, no ports, no domain (RPi, home box, ...)
+  └─ [3] sslip.io auto    , free automatic domain, open ports required
 
-  ? Choice [1/2/3] (default: 2 — Nodyx Relay):
+  ? Choice [1/2/3] (default: 2, Nodyx Relay):
 ```
 
 **The installer handles everything:**
@@ -91,7 +91,7 @@ When the installer asks for the network mode, choose **`2`**:
 
 ---
 
-### Method 2 — Binary only (existing installation)
+### Method 2, Binary only (existing installation)
 
 If you already have a Nodyx instance and just want to add the relay:
 
@@ -159,7 +159,7 @@ sudo journalctl -u nodyx-relay-client -f
 
 # What you should see in the logs:
 # → Connected to relay.nodyx.org:7443
-# → Registered as slug "your-slug" — OK
+# → Registered as slug "your-slug", OK
 # → Forwarding GET / → HTTP 200
 ```
 
@@ -218,11 +218,11 @@ Your local instance continues to work normally. Only access from the Internet vi
 
 **Q: Do voice channels work in Relay mode?**
 
-Voice channels use WebRTC, which requires a TURN server to traverse NAT. In Relay mode, coturn is not installed (the required UDP ports are not open). Voice calls between members on the same local network will work. For cross-network calls, an external TURN server is needed — this is what **Phase 3.0-B (nodyx-turn)** will solve in an integrated way.
+Voice channels use WebRTC, which requires a TURN server to traverse NAT. In Relay mode, coturn is not installed (the required UDP ports are not open). Voice calls between members on the same local network will work. For cross-network calls, an external TURN server is needed, this is what **Phase 3.0-B (nodyx-turn)** will solve in an integrated way.
 
 **Q: Is the relay free?**
 
-Yes, without limits during the beta period. We reserve the right to introduce reasonable limits if usage becomes excessive (bandwidth > several TB/month per instance, for example). The relay is open source — you can host your own.
+Yes, without limits during the beta period. We reserve the right to introduce reasonable limits if usage becomes excessive (bandwidth > several TB/month per instance, for example). The relay is open source, you can host your own.
 
 **Q: How do I change my slug?**
 
@@ -230,11 +230,11 @@ The slug is registered at installation time. To change it, contact nodyx.org sup
 
 **Q: Does the relay work with Docker?**
 
-Yes. The `nodyx-relay client` binary can run outside the Docker container — just point `--local-port` to the port exposed by your container (default 80).
+Yes. The `nodyx-relay client` binary can run outside the Docker container, just point `--local-port` to the port exposed by your container (default 80).
 
 ---
 
-## 🏗️ For the curious — Technical architecture
+## 🏗️ For the curious, Technical architecture
 
 ### The relay server (nodyx.org)
 
@@ -244,7 +244,7 @@ Port 7443 (public TCP)
     └── Authenticates via token (directory_instances table in PostgreSQL)
     └── Registers slug → TunnelHandle (DashMap in memory)
 
-Port 7001 (HTTP, local only — receives requests from Caddy)
+Port 7001 (HTTP, local only, receives requests from Caddy)
 └── Extracts slug from Host header
     ├── Slug with active tunnel → forward through TCP tunnel
     ├── Slug in DB with URL → 302 redirect
@@ -282,13 +282,13 @@ nodyx-p2p/
 └── crates/
     └── nodyx-relay/
         └── src/
-            ├── main.rs          — CLI (clap)
-            ├── protocol.rs      — types + framing
-            ├── server/          — relay server (VPS)
-            └── client/          — relay client (your machine)
+            ├── main.rs         , CLI (clap)
+            ├── protocol.rs     , types + framing
+            ├── server/         , relay server (VPS)
+            └── client/         , relay client (your machine)
 ```
 
 ---
 
-*Version 1.0 — March 1, 2026*
+*Version 1.0, March 1, 2026*
 *Validated on Raspberry Pi 4 (arm64), Ubuntu Server 24.04, no open ports.*

@@ -1,5 +1,5 @@
-# NODYX — Manifesto
-### Version 1.0 — The immutable foundation
+# NODYX, Manifesto
+### Version 1.0, The immutable foundation
 
 ---
 
@@ -18,7 +18,7 @@ Then came the centralized platforms. Discord, Facebook, Slack. They said: *"It's
 
 The price? Invisible at first. Then heavier and heavier.
 
-Today millions of communities are locked inside private silos. Their discussions, their tutorials, their collective knowledge — invisible to Google, inaccessible without an account, condemned to vanish the day the platform changes its terms or shuts its doors. Discord accidentally killed a part of the internet. Not out of malice. Out of centralization.
+Today millions of communities are locked inside private silos. Their discussions, their tutorials, their collective knowledge, invisible to Google, inaccessible without an account, condemned to vanish the day the platform changes its terms or shuts its doors. Discord accidentally killed a part of the internet. Not out of malice. Out of centralization.
 
 **Nodyx was born to fix that.**
 
@@ -28,7 +28,7 @@ Today millions of communities are locked inside private silos. Their discussions
 
 Nodyx is a decentralized, open source, free community communication platform.
 
-It is the forum of the 2000s that hasn't aged, but has matured. It is Ventrilo with encryption. It is phpBB with a 2026 interface. It is TeamSpeak without a proprietary server. It is a place where a community can live, create, share, and grow — on its own terms, on its own machines.
+It is the forum of the 2000s that hasn't aged, but has matured. It is Ventrilo with encryption. It is phpBB with a 2026 interface. It is TeamSpeak without a proprietary server. It is a place where a community can live, create, share, and grow, on its own terms, on its own machines.
 
 Nodyx is made of modular building blocks. Anyone can add, modify, and share them. Nodyx does for digital communities what CMS platforms did for websites.
 
@@ -70,9 +70,9 @@ The code is public. Auditable. Forkable. If tomorrow an authority, a company, or
 
 ### 5. Modularity as respect for contributors
 
-Nodyx is a core surrounded by plugins. The core is stable, documented, protected. Plugins are the community's playground. A solo developer, a student, an enthusiast — all can contribute without having to understand the entire project. That is real open source.
+Nodyx is a core surrounded by plugins. The core is stable, documented, protected. Plugins are the community's playground. A solo developer, a student, an enthusiast, all can contribute without having to understand the entire project. That is real open source.
 
-### ⚠️ Absolute rule — Core untouchability
+### ⚠️ Absolute rule, Core untouchability
 
 **The Nodyx core can be modified by no one, for any reason, without explicit validation from the project's founding circle.**
 
@@ -110,7 +110,7 @@ We want to give the internet back its soul.
 
 ## Survival clause
 
-If one day Nodyx, under any pressure — legal, commercial, political — betrays one of these founding principles, this manifesto explicitly authorizes any community member to:
+If one day Nodyx, under any pressure, legal, commercial, political, betrays one of these founding principles, this manifesto explicitly authorizes any community member to:
 
 - Fork the project under a different name
 - Take the entirety of the code under the AGPL-3.0 license

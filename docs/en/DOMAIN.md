@@ -1,4 +1,4 @@
-# 🌐 Nodyx — Complete Domain Name Guide
+# 🌐 Nodyx, Complete Domain Name Guide
 
 > This guide answers the question everyone asks when installing Nodyx:
 > **"Do I need a domain? Which one? Why doesn't my No-IP work?"**
@@ -20,11 +20,11 @@
 
 There are three very different realities behind the word "domain", and confusing them is the source of most problems.
 
-### Type 1 — Real Domain (TLD)
+### Type 1, Real Domain (TLD)
 
 > `mycommunity.com`, `knittingclub.net`, `association.org`
 
-You **buy** this domain from a registrar (Namecheap, OVH, Porkbun…). You own it. You can change its **nameservers** freely — meaning you control who manages its DNS.
+You **buy** this domain from a registrar (Namecheap, OVH, Porkbun…). You own it. You can change its **nameservers** freely, meaning you control who manages its DNS.
 
 - ✅ Compatible with `install.sh`
 - ✅ Compatible with `install_tunnel.sh` (Cloudflare Tunnel)
@@ -34,20 +34,20 @@ You **buy** this domain from a registrar (Namecheap, OVH, Porkbun…). You own i
 
 ---
 
-### Type 2 — Free Dynamic DNS Subdomain (DDNS)
+### Type 2, Free Dynamic DNS Subdomain (DDNS)
 
 > `myserver.ddns.net` (No-IP), `mycommunity.duckdns.org` (DuckDNS), `mysite.mooo.com` (Afraid.org)
 
 You get a **subdomain** of a domain that belongs to No-IP, DuckDNS, etc. You do **not** own the root domain (`ddns.net`, `duckdns.org`). These services are designed to point a hostname to an IP that often changes (residential dynamic IP).
 
-- ✅ Compatible with `install.sh` *(only with manual Caddy config — not automated)*
-- ❌ **Incompatible with `install_tunnel.sh`** — [see why below](#-why-no-ip-duckdns-etc-dont-work-with-cloudflare-tunnel)
+- ✅ Compatible with `install.sh` *(only with manual Caddy config, not automated)*
+- ❌ **Incompatible with `install_tunnel.sh`**: [see why below](#-why-no-ip-duckdns-etc-dont-work-with-cloudflare-tunnel)
 - ⚠️ Unstable if your IP changes (residential without a static IP)
 - 🆓 Free
 
 ---
 
-### Type 3 — Subdomain Offered by Nodyx
+### Type 3, Subdomain Offered by Nodyx
 
 > `mycommunity.nodyx.org` (via the Nodyx directory)
 > `46-225-20-193.sslip.io` (via the server's public IP)
@@ -55,7 +55,7 @@ You get a **subdomain** of a domain that belongs to No-IP, DuckDNS, etc. You do 
 These subdomains are provided **automatically** by `install.sh`. No setup required.
 
 - ✅ Compatible with `install.sh` (ports 80/443 open)
-- ❌ **Incompatible with `install_tunnel.sh`** — `nodyx.org` is our DNS zone, not yours
+- ❌ **Incompatible with `install_tunnel.sh`**: `nodyx.org` is our DNS zone, not yours
 - ✅ Automatic HTTPS certificate via Let's Encrypt (Caddy)
 - 🆓 100% free, zero configuration
 
@@ -70,7 +70,7 @@ These subdomains are provided **automatically** by `install.sh`. No setup requir
 | **sslip.io** (auto from IP) | ✅ | ❌ | ✅ | ✅ (static IP) |
 | **No-IP / DuckDNS / Afraid** | ⚠️ manual | ❌ | ⚠️ manual | ⚠️ dynamic IP |
 | **Freenom (.tk, .ml, .ga…)** | ❌ service dead | ❌ | ❌ | ❌ |
-| **CF Quick Tunnel** (`trycloudflare.com`) | — | ⚠️ testing only | ✅ | ❌ URL changes |
+| **CF Quick Tunnel** (`trycloudflare.com`) |, | ⚠️ testing only | ✅ | ❌ URL changes |
 
 > **Legend:**
 > ✅ Compatible and automated
@@ -79,7 +79,7 @@ These subdomains are provided **automatically** by `install.sh`. No setup requir
 
 ---
 
-## 🗺️ Decision Tree — Which Script Should I Use?
+## 🗺️ Decision Tree, Which Script Should I Use?
 
 ```
 I want to install Nodyx on my server
@@ -143,7 +143,7 @@ It's that simple: **you must own the root domain** for Cloudflare to write DNS r
 
 ### Why sslip.io Doesn't Work with CF Tunnel Either
 
-`sslip.io` works through a magic DNS mechanism: `46-225-20-193.sslip.io` automatically resolves to `46.225.20.193`. It's a public domain managed by its creators — you don't own it. Same reasoning.
+`sslip.io` works through a magic DNS mechanism: `46-225-20-193.sslip.io` automatically resolves to `46.225.20.193`. It's a public domain managed by its creators, you don't own it. Same reasoning.
 
 ### The Only Real Solution
 
@@ -163,7 +163,7 @@ The good news: domains have become very affordable.
 | [OVH](https://ovh.com) | `.com`, `.net`, `.eu`… | ~$7–$12/year | French provider, FR support |
 | [Gandi](https://gandi.net) | `.com`, `.org`, `.net`… | ~$15/year | Ethical, privacy-focused |
 
-> 💡 **Tip:** If you're buying a domain for CF Tunnel, get it directly from **Cloudflare Registrar** — it skips the "change nameservers" step since it's managed natively.
+> 💡 **Tip:** If you're buying a domain for CF Tunnel, get it directly from **Cloudflare Registrar**: it skips the "change nameservers" step since it's managed natively.
 
 ### Cheapest Extensions to Get Started
 
@@ -176,7 +176,7 @@ The good news: domains have become very affordable.
 
 ## 🛠️ DNS Setup
 
-### With `install.sh` — Classic A Record
+### With `install.sh`, Classic A Record
 
 Once you have a domain, add these records in your registrar's DNS panel:
 
@@ -188,9 +188,9 @@ A      www    SERVER_IP      300
 
 Replace `SERVER_IP` with your server's public IP (displayed at the start of `install.sh`).
 
-> ⚠️ If your domain is proxied through Cloudflare (orange cloud), TURN port 3478 won't be accessible by domain name. `install.sh` uses the direct IP for the TURN URL — this is intentional and correct.
+> ⚠️ If your domain is proxied through Cloudflare (orange cloud), TURN port 3478 won't be accessible by domain name. `install.sh` uses the direct IP for the TURN URL, this is intentional and correct.
 
-### With `install_tunnel.sh` — Automatic CNAME
+### With `install_tunnel.sh`, Automatic CNAME
 
 You have **nothing to configure manually**. The script creates the CNAME automatically via `cloudflared tunnel route dns`. The only thing you need to do is add your domain to Cloudflare with its nameservers (Step 1 of the CF Tunnel guide).
 
@@ -201,5 +201,5 @@ You have **nothing to configure manually**. The script creates the CNAME automat
 - [Full Installation Guide](INSTALL.md)
 - [Cloudflare Tunnel Section in INSTALL.md](INSTALL.md#-hosting-at-home-without-opening-ports)
 - [Cloudflare Registrar](https://cloudflare.com/products/registrar/)
-- [Porkbun — affordable domains](https://porkbun.com)
+- [Porkbun, affordable domains](https://porkbun.com)
 - [What is sslip.io?](https://sslip.io)

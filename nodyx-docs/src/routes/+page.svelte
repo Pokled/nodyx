@@ -44,7 +44,7 @@
       [0.50, 0.10, 3.5, '#818cf8', 0.45],
       [0.82, 0.22, 4,   '#06b6d4', 0.55],
       [0.25, 0.50, 5,   '#3b82f6', 0.35], // main-ish left
-      [0.55, 0.45, 7,   '#ffffff', 0.25], // CENTER — biggest
+      [0.55, 0.45, 7,   '#ffffff', 0.25], // CENTER, biggest
       [0.78, 0.55, 4,   '#818cf8', 0.5],
       [0.12, 0.75, 3.5, '#06b6d4', 0.65],
       [0.42, 0.80, 4,   '#3b82f6', 0.4],
@@ -180,13 +180,13 @@
     {
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
       title: 'Forum & threads',
-      desc: 'Categories, subcategories, threaded replies, rich editor, polls, pinned threads — flat, wide, professional by design.',
+      desc: 'Categories, subcategories, threaded replies, rich editor, polls, pinned threads, flat, wide, professional by design.',
       color: '#3b82f6',
     },
     {
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
       title: 'Real-time chat',
-      desc: 'Socket.IO powered channels, DMs, replies, pins, link unfurling, online presence — zero latency.',
+      desc: 'Socket.IO powered channels, DMs, replies, pins, link unfurling, online presence, zero latency.',
       color: '#8b5cf6',
     },
     {
@@ -198,7 +198,7 @@
     {
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
       title: 'P2P Relay',
-      desc: 'nodyx-relay lets you expose any instance behind a NAT. No port forwarding, no cloud lock-in — pure Rust TCP tunneling.',
+      desc: 'nodyx-relay lets you expose any instance behind a NAT. No port forwarding, no cloud lock-in, pure Rust TCP tunneling.',
       color: '#f59e0b',
     },
     {
@@ -210,12 +210,12 @@
     {
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
       title: 'Social Feed',
-      desc: 'A chronological follow feed — posts, replies, resonances. No algorithm, no engagement trap. Just the people you chose to follow.',
+      desc: 'A chronological follow feed, posts, replies, resonances. No algorithm, no engagement trap. Just the people you chose to follow.',
       color: '#10b981',
     },
     {
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-      title: 'AGPL-3.0 — Free forever',
+      title: 'AGPL-3.0, Free forever',
       desc: 'Open source, copyleft, community-owned. Fork it, contribute, run it. No enterprise tier, no feature gating.',
       color: '#ef4444',
     },
@@ -232,19 +232,19 @@
       n: '02',
       title: 'Name your community',
       code: 'NODYX_COMMUNITY_NAME="The Hive"\nNODYX_COMMUNITY_SLUG="the-hive"',
-      desc: 'Set a handful of environment variables. Your instance, your name, your identity — no approval required.',
+      desc: 'Set a handful of environment variables. Your instance, your name, your identity, no approval required.',
     },
     {
       n: '03',
       title: 'Invite your people',
       code: 'https://your-domain.com/auth/register',
-      desc: 'Registration opens immediately. First user becomes admin. Start building — forum, channels, voice rooms are all ready.',
+      desc: 'Registration opens immediately. First user becomes admin. Start building, forum, channels, voice rooms are all ready.',
     },
   ]
 
   // ── Homepage Builder section animations ───────────────────────────────────
   onMount(() => {
-    // Entrance observer — fade + slide up on scroll into view
+    // Entrance observer, fade + slide up on scroll into view
     const obs = new IntersectionObserver((entries) => {
       for (const e of entries) {
         if (e.isIntersecting) {
@@ -256,7 +256,7 @@
     }, { threshold: 0.12 })
     document.querySelectorAll('.hb-entrance').forEach(el => obs.observe(el))
 
-    // Active row cycling — drives highlights in builder mockup
+    // Active row cycling, drives highlights in builder mockup
     const iv = setInterval(() => {
       activeRow = activeRow >= 3 ? 1 : activeRow + 1
     }, 2600)
@@ -266,14 +266,14 @@
 </script>
 
 <svelte:head>
-  <title>Nodyx Docs — Self-hosted community platform</title>
-  <meta name="description"        content="Official documentation for Nodyx — the open-source, self-hosted community platform. Forum + real-time chat + P2P voice. One command install." />
+  <title>Nodyx Docs, Self-hosted community platform</title>
+  <meta name="description"        content="Official documentation for Nodyx, the open-source, self-hosted community platform. Forum + real-time chat + P2P voice. One command install." />
   <link rel="canonical"           href="https://nodyx.dev" />
 
   <!-- Open Graph -->
   <meta property="og:type"        content="website" />
-  <meta property="og:title"       content="Nodyx Docs — Self-hosted community platform" />
-  <meta property="og:description" content="Official documentation for Nodyx — the open-source, self-hosted community platform. Forum + real-time chat + P2P voice. One command install." />
+  <meta property="og:title"       content="Nodyx Docs, Self-hosted community platform" />
+  <meta property="og:description" content="Official documentation for Nodyx, the open-source, self-hosted community platform. Forum + real-time chat + P2P voice. One command install." />
   <meta property="og:url"         content="https://nodyx.dev" />
   <meta property="og:image"       content="https://nodyx.dev/og-default.svg" />
   <meta property="og:image:width" content="1200" />
@@ -281,8 +281,8 @@
 
   <!-- Twitter/X card -->
   <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:title"       content="Nodyx Docs — Self-hosted community platform" />
-  <meta name="twitter:description" content="Official documentation for Nodyx — open-source, self-hosted, P2P. Forum + Chat + Voice. One command install." />
+  <meta name="twitter:title"       content="Nodyx Docs, Self-hosted community platform" />
+  <meta name="twitter:description" content="Official documentation for Nodyx, open-source, self-hosted, P2P. Forum + Chat + Voice. One command install." />
   <meta name="twitter:image"       content="https://nodyx.dev/og-default.svg" />
 
   <!-- JSON-LD: WebSite + SearchAction -->
@@ -291,7 +291,7 @@
     "@type": "WebSite",
     "name": "Nodyx Docs",
     "url": "https://nodyx.dev",
-    "description": "Official documentation for Nodyx — the open-source, self-hosted community platform",
+    "description": "Official documentation for Nodyx, the open-source, self-hosted community platform",
     "inLanguage": "en",
     "publisher": { "@type": "Organization", "name": "Nodyx", "url": "https://nodyx.org" },
     "potentialAction": {
@@ -325,7 +325,7 @@
 
       <p class="hero-sub">
         Nodyx is a self-hosted, open-source community platform.<br>
-        Forum + real-time chat + voice channels — one server, one community, zero lock-in.
+        Forum + real-time chat + voice channels, one server, one community, zero lock-in.
       </p>
 
       <div class="install-box">
@@ -387,7 +387,7 @@
     </div>
     <div class="stat-sep"></div>
     <div class="stat">
-      <span class="stat-val">{instanceCount !== null ? instanceCount : '—'}</span>
+      <span class="stat-val">{instanceCount !== null ? instanceCount : '-'}</span>
       <span class="stat-label">
         {#if instanceCount !== null}
           <span class="stat-live-dot" aria-hidden="true"></span>
@@ -492,43 +492,43 @@
   <div class="section-inner">
     <div class="section-label">SCREENSHOTS</div>
     <h2 class="section-title">The real product. No mockup.</h2>
-    <p class="section-sub">Every screenshot taken from <a href="https://nodyx.org" target="_blank" rel="noopener noreferrer" style="color:var(--accent,#818cf8);text-decoration:none">nodyx.org</a> — the live production instance.</p>
+    <p class="section-sub">Every screenshot taken from <a href="https://nodyx.org" target="_blank" rel="noopener noreferrer" style="color:var(--accent,#818cf8);text-decoration:none">nodyx.org</a>, the live production instance.</p>
 
     <!-- Row 1: Hero screenshot full-width -->
     <div class="ss-hero-shot">
       <img src="/img/nodyx_home_page.png" alt="Nodyx homepage built with Grid Builder" loading="lazy"/>
-      <div class="ss-hero-caption">Homepage — assembled in the Grid Builder, live on nodyx.org</div>
+      <div class="ss-hero-caption">Homepage, assembled in the Grid Builder, live on nodyx.org</div>
     </div>
 
-    <!-- Row 2: 2-col grid — Forum + Chat -->
+    <!-- Row 2: 2-col grid, Forum + Chat -->
     <div class="ss-grid">
       <figure class="ss-fig">
-        <img src="/img/Nodyx_Forum.png" alt="Forum — categories and threads" loading="lazy"/>
-        <figcaption>Forum — categories, threads, rich editor, polls</figcaption>
+        <img src="/img/Nodyx_Forum.png" alt="Forum, categories and threads" loading="lazy"/>
+        <figcaption>Forum, categories, threads, rich editor, polls</figcaption>
       </figure>
       <figure class="ss-fig">
         <img src="/img/Nodyx_chat.png" alt="Real-time chat channels" loading="lazy"/>
-        <figcaption>Real-time chat — Socket.IO, DMs, replies, mentions</figcaption>
+        <figcaption>Real-time chat, Socket.IO, DMs, replies, mentions</figcaption>
       </figure>
       <figure class="ss-fig">
-        <img src="/img/Vocal_Nodyx_salon.png" alt="Voice channel — P2P WebRTC" loading="lazy"/>
-        <figcaption>Voice channels — P2P WebRTC mesh, noise cancellation</figcaption>
+        <img src="/img/Vocal_Nodyx_salon.png" alt="Voice channel, P2P WebRTC" loading="lazy"/>
+        <figcaption>Voice channels, P2P WebRTC mesh, noise cancellation</figcaption>
       </figure>
       <figure class="ss-fig">
-        <img src="/img/Nodyx_grid_builder_home_page_website.png" alt="Homepage Builder — drag and drop grid editor" loading="lazy"/>
-        <figcaption>Homepage Builder — free grid, drag & drop, live preview</figcaption>
+        <img src="/img/Nodyx_grid_builder_home_page_website.png" alt="Homepage Builder, drag and drop grid editor" loading="lazy"/>
+        <figcaption>Homepage Builder, free grid, drag & drop, live preview</figcaption>
       </figure>
       <figure class="ss-fig">
-        <img src="/img/widget_store_nodyx.png" alt="Widget Store — install .zip widgets" loading="lazy"/>
-        <figcaption>Widget Store — install community widgets in one click</figcaption>
+        <img src="/img/widget_store_nodyx.png" alt="Widget Store, install .zip widgets" loading="lazy"/>
+        <figcaption>Widget Store, install community widgets in one click</figcaption>
       </figure>
       <figure class="ss-fig">
         <img src="/img/Nodyx_Moteur_de_recherche_inter_reseau.png" alt="Cross-instance federated search" loading="lazy"/>
-        <figcaption>Cross-instance search — federated FTS across the network</figcaption>
+        <figcaption>Cross-instance search, federated FTS across the network</figcaption>
       </figure>
       <figure class="ss-fig ss-fig--wide">
-        <img src="/img/Nodyx_canvas_alternative_Mural.png" alt="NodyxCanvas — collaborative whiteboard" loading="lazy"/>
-        <figcaption>NodyxCanvas — collaborative whiteboard, 11 tools, CRDT sync, voice-aware cursors</figcaption>
+        <img src="/img/Nodyx_canvas_alternative_Mural.png" alt="NodyxCanvas, collaborative whiteboard" loading="lazy"/>
+        <figcaption>NodyxCanvas, collaborative whiteboard, 11 tools, CRDT sync, voice-aware cursors</figcaption>
       </figure>
     </div>
   </div>
@@ -552,27 +552,27 @@
       <ul class="lp-features">
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Generative banner</strong> — procedural animation seeded from username, unique per user
+          <strong>Generative banner</strong>, procedural animation seeded from username, unique per user
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Reputation rings</strong> — concentric SVG arcs tracking posts, replies, reactions, updated live
+          <strong>Reputation rings</strong>, concentric SVG arcs tracking posts, replies, reactions, updated live
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Activity heatmap</strong> — 12-week GitHub-style contribution grid
+          <strong>Activity heatmap</strong>, 12-week GitHub-style contribution grid
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>XP levels &amp; grades</strong> — sqrt-based progression, custom colors, animated name effects
+          <strong>XP levels &amp; grades</strong>, sqrt-based progression, custom colors, animated name effects
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Shareable invite card</strong> — <code style="font-size:0.8em;background:rgba(255,255,255,0.07);padding:0.1em 0.3em">/users/:username/card</code> generates a rich OG image for Discord &amp; social shares
+          <strong>Shareable invite card</strong>, <code style="font-size:0.8em;background:rgba(255,255,255,0.07);padding:0.1em 0.3em">/users/:username/card</code> generates a rich OG image for Discord &amp; social shares
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Follow system</strong> — follow members, build your feed, see who resonates with your posts
+          <strong>Follow system</strong>, follow members, build your feed, see who resonates with your posts
         </li>
       </ul>
     </div>
@@ -635,7 +635,7 @@
             <div class="lp-cell" style="opacity: {0.07 + intensity * 0.85}; background: {intensity > 0.7 ? '#818cf8' : intensity > 0.4 ? '#6366f1' : '#3b3f6e'}"></div>
           {/each}
         </div>
-        <div class="lp-heatmap-label">Activity — last 12 weeks</div>
+        <div class="lp-heatmap-label">Activity, last 12 weeks</div>
       </div>
     </div>
 
@@ -652,26 +652,26 @@
       <div class="section-label">REPUTATION SYSTEM</div>
       <h2 class="section-title" style="margin-bottom: 1rem;">A score that actually means something.</h2>
       <p class="rep-intro">
-        Nodyx tracks every meaningful action — forum posts, replies, reactions, chat participation —
+        Nodyx tracks every meaningful action, forum posts, replies, reactions, chat participation,
         and translates them into a transparent, community-owned reputation score.
         No black box, no pay-to-win. Just real contribution.
       </p>
       <ul class="lp-features">
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Public leaderboard</strong> — top contributors ranked by reputation score, visible to all
+          <strong>Public leaderboard</strong>, top contributors ranked by reputation score, visible to all
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Detailed breakdown</strong> — posts, replies, reactions, chat, events — each category tracked separately
+          <strong>Detailed breakdown</strong>, posts, replies, reactions, chat, events, each category tracked separately
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Animated progress curves</strong> — SVG reputation rings that grow and pulse with your activity
+          <strong>Animated progress curves</strong>, SVG reputation rings that grow and pulse with your activity
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Open formula</strong> — the scoring algorithm is in the codebase, auditable, forkable
+          <strong>Open formula</strong>, the scoring algorithm is in the codebase, auditable, forkable
         </li>
       </ul>
       <div class="rep-cta-row">
@@ -684,21 +684,21 @@
     <!-- Reputation rings mockup -->
     <div class="rep-rings-wrap" aria-hidden="true">
       <div class="rep-rings">
-        <!-- Outer ring — Posts -->
+        <!-- Outer ring, Posts -->
         <svg class="rep-ring-svg rep-ring-svg--1" viewBox="0 0 160 160">
           <circle cx="80" cy="80" r="72" fill="none" stroke="rgba(99,102,241,0.1)" stroke-width="6"/>
           <circle cx="80" cy="80" r="72" fill="none" stroke="#6366f1" stroke-width="6"
             stroke-dasharray="452" stroke-dashoffset="113"
             stroke-linecap="round" transform="rotate(-90 80 80)"/>
         </svg>
-        <!-- Mid ring — Replies -->
+        <!-- Mid ring, Replies -->
         <svg class="rep-ring-svg rep-ring-svg--2" viewBox="0 0 160 160">
           <circle cx="80" cy="80" r="58" fill="none" stroke="rgba(139,92,246,0.1)" stroke-width="5"/>
           <circle cx="80" cy="80" r="58" fill="none" stroke="#8b5cf6" stroke-width="5"
             stroke-dasharray="364" stroke-dashoffset="91"
             stroke-linecap="round" transform="rotate(-90 80 80)"/>
         </svg>
-        <!-- Inner ring — Reactions -->
+        <!-- Inner ring, Reactions -->
         <svg class="rep-ring-svg rep-ring-svg--3" viewBox="0 0 160 160">
           <circle cx="80" cy="80" r="44" fill="none" stroke="rgba(6,182,212,0.1)" stroke-width="4"/>
           <circle cx="80" cy="80" r="44" fill="none" stroke="#06b6d4" stroke-width="4"
@@ -774,25 +774,25 @@
       <h2 class="section-title" style="margin-bottom: 1rem;">Your community, in real time.</h2>
       <p class="rep-intro">
         Follow the people you care about. See their posts as they happen.
-        Reply, resonate — that's it. No algorithm deciding what you see, no engagement
+        Reply, resonate, that's it. No algorithm deciding what you see, no engagement
         engineering, no ads.
       </p>
       <ul class="lp-features">
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Chronological, always</strong> — newest first, no ranking, no surprises
+          <strong>Chronological, always</strong>, newest first, no ranking, no surprises
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Rich posts</strong> — TipTap editor with formatting, images, links, code blocks
+          <strong>Rich posts</strong>, TipTap editor with formatting, images, links, code blocks
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Résonances</strong> — our take on likes, with a pulse animation for popular posts
+          <strong>Résonances</strong>, our take on likes, with a pulse animation for popular posts
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Inline thread replies</strong> — expand replies directly in the feed, no page jump
+          <strong>Inline thread replies</strong>, expand replies directly in the feed, no page jump
         </li>
       </ul>
     </div>
@@ -818,7 +818,7 @@
         <span class="e2e-gradient">Only yours.</span>
       </h2>
       <p class="e2e-intro">
-        Every DM is encrypted <strong>in your browser</strong> before it leaves your device —
+        Every DM is encrypted <strong>in your browser</strong> before it leaves your device,
         three independent layers. The server stores only opaque ciphertext it can never read.
       </p>
 
@@ -832,7 +832,7 @@
               <span class="e2e-layer-tag">Key exchange</span>
             </div>
             <p class="e2e-layer-desc">
-              Your private key is generated in the browser and <strong>never leaves it</strong> — stored as a non-extractable CryptoKey. The server only holds your public key.
+              Your private key is generated in the browser and <strong>never leaves it</strong>, stored as a non-extractable CryptoKey. The server only holds your public key.
             </p>
           </div>
         </div>
@@ -856,7 +856,7 @@
               <span class="e2e-layer-tag e2e-layer-tag-green">Unique to each instance</span>
             </div>
             <p class="e2e-layer-desc">
-              A per-instance obfuscation layer on top of AES-GCM — byte-permutation + deterministic PRNG noise. Even if AES were broken, an attacker still needs <strong>this instance's secret</strong>.
+              A per-instance obfuscation layer on top of AES-GCM, byte-permutation + deterministic PRNG noise. Even if AES were broken, an attacker still needs <strong>this instance's secret</strong>.
             </p>
           </div>
         </div>
@@ -1005,7 +1005,7 @@
       <p class="decent-p">
         Every Nodyx instance is independent. No central server, no corporate hub.
         Instances can discover each other via the <strong>global directory</strong>, relay through
-        <strong>nodyx-relay</strong> even behind NAT, and the network keeps running if any single node goes dark —
+        <strong>nodyx-relay</strong> even behind NAT, and the network keeps running if any single node goes dark,
         including ours.
       </p>
       <p class="decent-p">
@@ -1062,7 +1062,7 @@
         <span class="hb-gradient">your grid.</span>
       </h2>
       <p class="hb-intro">
-        Build your community's public face visually — free rows, resizable columns,
+        Build your community's public face visually, free rows, resizable columns,
         live preview. Configure themes, drop widgets, publish instantly.
         Zero code, zero restart.
       </p>
@@ -1070,19 +1070,19 @@
       <ul class="lp-features" style="margin-bottom: 2rem">
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Free Grid Builder</strong> — N columns per row, drag to resize, spans 1–12
+          <strong>Free Grid Builder</strong>, N columns per row, drag to resize, spans 1–12
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Live WYSIWYG preview</strong> — real shell, real widgets, changes instantly
+          <strong>Live WYSIWYG preview</strong>, real shell, real widgets, changes instantly
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Theme Editor</strong> — colors, font, border-radius, all in one panel
+          <strong>Theme Editor</strong>, colors, font, border-radius, all in one panel
         </li>
         <li>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Widget SDK</strong> — upload a <code>.zip</code>, runs in Shadow DOM, no rebuild
+          <strong>Widget SDK</strong>, upload a <code>.zip</code>, runs in Shadow DOM, no rebuild
         </li>
       </ul>
 
@@ -1106,7 +1106,7 @@
           </div>
           <div class="hb-sdk-file">
             <span class="hb-sdk-file-name">widget.iife.js</span>
-            <span class="hb-sdk-file-desc">Web Component — Shadow DOM isolated</span>
+            <span class="hb-sdk-file-desc">Web Component, Shadow DOM isolated</span>
           </div>
         </div>
         <a href="/create-widget" class="hb-sdk-cta">
@@ -1135,7 +1135,7 @@
         <!-- Real screenshot of the Grid Builder -->
         <img
           src="/img/Nodyx_grid_builder_home_page_website.png"
-          alt="Grid Builder — drag and drop homepage editor"
+          alt="Grid Builder, drag and drop homepage editor"
           class="hb-real-shot"
           loading="lazy"
         />
@@ -1165,7 +1165,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         </div>
         <div class="mod-face-label">Public Face</div>
-        <div class="mod-face-desc">Your community's website — visible without an account. Hero, news, events, gallery, contact form, sponsors.</div>
+        <div class="mod-face-desc">Your community's website, visible without an account. Hero, news, events, gallery, contact form, sponsors.</div>
         <div class="mod-face-tag">No login required</div>
       </div>
       <div class="mod-face-sep">
@@ -1176,7 +1176,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
         <div class="mod-face-label">Internal Face</div>
-        <div class="mod-face-desc">The platform your members actually use — forum, chat, voice, wiki, calendar, DMs, tasks.</div>
+        <div class="mod-face-desc">The platform your members actually use, forum, chat, voice, wiki, calendar, DMs, tasks.</div>
         <div class="mod-face-tag">Members only</div>
       </div>
     </div>
@@ -1366,7 +1366,7 @@
   </div>
 
   <div class="footer-bottom">
-    <span>AGPL-3.0 — built in the open, for the people.</span>
+    <span>AGPL-3.0, built in the open, for the people.</span>
     <span>One instance = one community.</span>
   </div>
 </footer>
