@@ -5,7 +5,7 @@
 
     import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$env/static/public';
     import { tick } from 'svelte';
-    import { t, locale, LOCALES, type Locale } from '$lib/i18n';
+    import { t, locale } from '$lib/i18n';
     import { get } from 'svelte/store';
     import { soundSettings } from '$lib/soundSettings';
     import { streamerNotifSettings, testStreamerNotif, type StreamerEventKey } from '$lib/sounds/streamerNotifSettings';
@@ -45,11 +45,9 @@
     // $t and $locale are legacy store subscriptions; wrapping in $derived ensures
     // Svelte 5's rune dependency tracker re-renders the component on locale change.
     const tFn          = $derived($t)
-    const currentLocale = $derived($locale)
 
     // ── Navigation ────────────────────────────────────────────────────────────
     let activeSection = $state('network')
-    let langSaved     = $state(false)
 
     // ── Twitch link (viewer flow) ─────────────────────────────────────────────
     type TwitchLink = { twitchId: string; twitchLogin: string } | null
@@ -154,12 +152,6 @@
             loadTwitchLink()
         }
     })
-
-    function setLocale(code: Locale) {
-        locale.setLocale(code)
-        langSaved = true
-        setTimeout(() => langSaved = false, 2000)
-    }
 
     // ── Nodyx Signet ──────────────────────────────────────────────────────────
     type SignetDevice = { id: string; label: string; created_at: string; last_used_at: string | null }
@@ -585,16 +577,6 @@
                 {#if !sounds.enabled}
                     <span class="sb-badge-dot" style="background:#6b7280"></span>
                 {/if}
-            </button>
-
-            <button class="sb-item {activeSection === 'language' ? 'active' : ''}"
-                    onclick={() => activeSection = 'language'}>
-                <span class="sb-icon" style="background: rgba(16,185,129,0.12); color: #34d399">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>
-                    </svg>
-                </span>
-                <span class="sb-label">{tFn('settings.language.label')}</span>
             </button>
         </nav>
 
@@ -1360,42 +1342,6 @@
         {/if}
 
         <!-- ═══ LANGUE ════════════════════════════════════════════════════════ -->
-        {#if activeSection === 'language'}
-        <div class="s-pane" style="--accent: #34d399; --accent-bg: rgba(16,185,129,0.08); --accent-border: rgba(16,185,129,0.2)">
-            <div class="s-pane-header">
-                <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                        <path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>
-                    </svg>
-                </div>
-                <div>
-                    <h2 class="s-pane-title">{tFn('settings.language.title')}</h2>
-                    <p class="s-pane-desc">{tFn('settings.language.desc')}</p>
-                </div>
-            </div>
-
-            <div class="s-card">
-                {#if langSaved}
-                <div class="s-success-banner" style="margin-bottom:16px">{tFn('settings.language.saved')}</div>
-                {/if}
-                <div class="lang-flags">
-                    {#each LOCALES as loc}
-                    <button
-                        onclick={() => setLocale(loc.code)}
-                        class="lang-flag-item {currentLocale === loc.code ? 'active' : ''}"
-                    >
-                        <span class="lang-flag">{loc.flag}</span>
-                        <span class="lang-flag-label">{loc.label}</span>
-                        {#if currentLocale === loc.code}
-                        <span class="lang-flag-active">{tFn('common.current')}</span>
-                        {/if}
-                    </button>
-                    {/each}
-                </div>
-            </div>
-        </div>
-        {/if}
-
     </main>
 </div>
 
@@ -1951,32 +1897,7 @@
 }
 .signet-copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.3); }
 
-/* ── Langue ──────────────────────────────────────────────────────────────── */
-.lang-flags {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    padding: 8px 0;
-}
-.lang-flag-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 16px 28px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.06);
-    background: rgba(255,255,255,0.02);
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-    color: inherit;
-    font-family: inherit;
-}
-.lang-flag-item:hover { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); }
-.lang-flag-item.active { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.05); }
-.lang-flag { font-size: 28px; }
-.lang-flag-label { font-size: 13px; font-weight: 600; color: #6b7280; }
-.lang-flag-active { font-size: 10px; font-weight: 700; color: #34d399; text-transform: uppercase; letter-spacing: 0.08em; }
+
 
 /* ── Sons ────────────────────────────────────────────────────────────────── */
 .sound-volume-wrap {

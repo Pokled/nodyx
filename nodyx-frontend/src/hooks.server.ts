@@ -1,4 +1,5 @@
 import type { Handle, HandleFetch } from '@sveltejs/kit';
+import { getLocaleFromAcceptLanguage } from '$lib/i18n';
 
 // Make sure /service-worker.js (and any other SW-like files) are never cached
 // by intermediate CDNs. Default behaviour: Cloudflare cached service-worker.js
@@ -15,7 +16,13 @@ const NO_CACHE_PATHS = new Set([
 ]);
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const response = await resolve(event);
+	const cookieLocale = event.cookies.get('nodyx_locale');
+	const acceptLang = event.request.headers.get('accept-language');
+	const locale = cookieLocale || getLocaleFromAcceptLanguage(acceptLang) || 'fr';
+
+	const response = await resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%lang%', locale)
+	});
 	if (NO_CACHE_PATHS.has(event.url.pathname)) {
 		response.headers.set('cache-control', 'no-cache, no-store, must-revalidate');
 		response.headers.set('pragma',         'no-cache');

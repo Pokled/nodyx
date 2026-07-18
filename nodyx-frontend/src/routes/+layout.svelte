@@ -1,7 +1,8 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { fade } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import type { LayoutData } from './$types';
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
@@ -26,7 +27,7 @@
 	import ChannelIcon from '$lib/components/ChannelIcon.svelte';
 	import { get } from 'svelte/store';
 	import { voiceStore, voiceChannelMembersStore, voiceEventsStore, screenShareStore, remoteScreenStore } from '$lib/voice';
-	import { locale, t } from '$lib/i18n';
+	import { locale, t, LOCALES, type Locale } from '$lib/i18n';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 	import { playMention, playDm } from '$lib/sounds';
 	const tFn = $derived($t)
@@ -165,7 +166,11 @@
 	)
 	let showOffline = $state(false)
 
+	// SSR: set locale from cookie/accept-language BEFORE first render — avoids flash of default 'fr'
+	if (data.ssrLocale) locale.setSSR(data.ssrLocale as Locale)
+
 	onMount(async () => {
+		// Sync/initialize locale on the client side (e.g. read user choice from localStorage)
 		locale.init()
 
 		// Register <nodyx-audio-player> custom element (idempotent)
@@ -243,6 +248,45 @@
 
 	// ── User dropdown ──────────────────────────────────────────────────────────
 	let dropdownOpen = $state(false)
+	let langView = $state(false)
+	let langSaved = $state(false)
+	let langSavedTimeout: ReturnType<typeof setTimeout> | undefined
+	// Close the language pane when the route changes — otherwise it stays
+	// mounted over the new page until the user clicks "back".
+	let skipLangReset = false
+	$effect(() => {
+		$page.url.pathname
+		if (skipLangReset) { skipLangReset = false; return }
+		langView = false
+	})
+	function openLang() {
+		skipLangReset = true
+		langView = true
+		goto('/', { noScroll: true })
+	}
+	const currentLocale = $derived($locale)
+	function pickLocale(code: Locale) {
+		locale.setLocale(code)
+		langSaved = true
+		clearTimeout(langSavedTimeout)
+		langSavedTimeout = setTimeout(() => langSaved = false, 2000)
+	}
+
+	// Swipe-to-dismiss for mobile
+	let touchStartY = 0
+	let touchCurrentY = 0
+	function onLangTouchStart(e: TouchEvent) { touchStartY = e.touches[0].clientY }
+	function onLangTouchMove(e: TouchEvent) {
+		touchCurrentY = e.touches[0].clientY
+		const diff = touchCurrentY - touchStartY
+		if (diff > 0) (e.currentTarget as HTMLElement).style.transform = `translateY(${diff}px)`
+	}
+	function onLangTouchEnd() {
+		const diff = touchCurrentY - touchStartY
+		if (diff > 100) langView = false
+		const el = document.querySelector('.lang-view') as HTMLElement
+		if (el) el.style.transform = ''
+	}
 
 	// XP info — formule sqrt identique à ProfileCard / MiniProfileCard / page profil
 	const xpInfo = $derived((() => {
@@ -480,7 +524,11 @@
 			paletteOpen = true
 			return
 		}
-		// Close on Escape only if palette is open (palette handles its own Esc)
+		// Escape closes language pane
+		if (e.key === 'Escape' && langView) {
+			e.preventDefault()
+			langView = false
+		}
 	}
 </script>
 
@@ -611,6 +659,15 @@
 
 		<!-- Right: actions (notifs + DMs + account) -->
 		<div class="flex items-center gap-1 shrink-0 ml-auto lg:ml-0">
+			<!-- Language button (guest + logged-in) -->
+			<button
+				onclick={openLang}
+				class="lang-nav-btn p-2 transition-colors flex items-center gap-1.5 text-gray-500"
+				title={tFn('settings.language.label')}
+				aria-label={tFn('settings.language.label')}>
+				<span class="text-base leading-none">{LOCALES.find(l => l.code === currentLocale)?.flag ?? '🌐'}</span>
+				<svg class="hidden sm:block w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>
+			</button>
 			{#if user}
 				<!-- Notifications -->
 				<a href="/notifications"
@@ -1141,7 +1198,7 @@
 
 		<!-- ── Contenu principal ───────────────────────────────────────────────── -->
 		<div class="flex-1 overflow-hidden">
-		<main class="h-full overflow-y-auto min-w-0 {isBanned ? '' : showChannelSidebar ? 'lg:pl-[292px] xl:mr-[220px]' : 'lg:pl-[72px] xl:mr-[220px]'}" style="padding-bottom: var(--bottom-nav-h)">
+		<main class="{langView ? 'h-[calc(100vh-48px)] overflow-hidden' : 'h-full overflow-y-auto'} min-w-0 {isBanned ? '' : showChannelSidebar ? 'lg:pl-[292px] xl:mr-[220px]' : 'lg:pl-[72px] xl:mr-[220px]'}" style="padding-bottom: var(--bottom-nav-h)">
 
             <!-- ── System announcement banner ─────────────────────────────────── -->
             {#if showAnnouncement && announcement}
@@ -1171,8 +1228,67 @@
             {/if}
 
 
-            <div class="w-full flex-1 flex flex-col {$page.url.pathname === '/' || $page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/users/') || $page.url.pathname.startsWith('/feed') || $page.url.pathname.startsWith('/settings') || $page.url.pathname.startsWith('/garden') || $page.url.pathname.startsWith('/calendar') || $page.url.pathname.startsWith('/discover') || $page.url.pathname.startsWith('/wiki') || $page.url.pathname.startsWith('/library') || $page.url.pathname.startsWith('/dm') ? '' : ($page.url.pathname.startsWith('/forum') || $page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8'}">
-                {@render children()}
+            <div class="w-full flex-1 flex flex-col {langView ? 'lang-view-wrap h-full' : ($page.url.pathname === '/' || $page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/users/') || $page.url.pathname.startsWith('/feed') || $page.url.pathname.startsWith('/settings') || $page.url.pathname.startsWith('/garden') || $page.url.pathname.startsWith('/calendar') || $page.url.pathname.startsWith('/discover') || $page.url.pathname.startsWith('/wiki') || $page.url.pathname.startsWith('/library') || $page.url.pathname.startsWith('/dm') ? '' : ($page.url.pathname.startsWith('/forum') || $page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8')}">
+                {#if langView}
+                    <!-- svelte-ignore a11y_no_static_element_interactions -->
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onclick={() => langView = false} transition:fade={{ duration: 200 }}></div>
+                    <div
+                        class="lang-view flex flex-col gap-4 w-full h-full min-h-0 p-6 sm:p-8 relative z-41"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="lang-title"
+                        aria-describedby="lang-desc"
+                        transition:fly={{ y: 20, duration: 300, easing: cubicOut }}
+                        ontouchstart={onLangTouchStart}
+                        ontouchmove={onLangTouchMove}
+                        ontouchend={onLangTouchEnd}
+                    >
+                        <button onclick={() => langView = false} class="lang-back inline-flex items-center gap-1.5 text-[11px] text-gray-600 shrink-0 bg-transparent border-none cursor-pointer" aria-label={tFn('common.back')}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 5l-7 7 7 7"/>
+                            </svg>
+                            {tFn('common.back')}
+                        </button>
+                        <div class="flex flex-col gap-4 min-h-0 flex-1">
+                            <div class="flex items-start gap-4 mb-1 shrink-0">
+                                <div class="lang-icon w-12 h-12 rounded-lg flex items-center justify-center shrink-0 border">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                                        <path d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 id="lang-title" class="lang-title text-xl font-bold text-slate-100 m-0 mb-1 leading-tight">{tFn('settings.language.title')}</h2>
+                                    <p id="lang-desc" class="text-[13px] text-gray-500 leading-relaxed m-0">{tFn('settings.language.desc')}</p>
+                                </div>
+                            </div>
+                            <div class="lang-card rounded-lg p-5 min-h-0 flex flex-col flex-1">
+                                <div class="lang-segments flex flex-col gap-2 overflow-y-auto overflow-x-hidden flex-1 min-h-0 px-2">
+                                    {#each LOCALES as loc}
+                                    <button
+                                        onclick={() => pickLocale(loc.code)}
+                                        class="lang-seg flex items-center gap-4 p-4 rounded-lg border border-white/[0.06] bg-white/[0.02] cursor-pointer w-full relative overflow-hidden shrink-0 text-left {currentLocale === loc.code ? 'active' : ''}"
+                                    >
+                                        <span class="text-[26px] leading-none shrink-0">{loc.flag}</span>
+                                        <span class="flex-1 min-w-0">
+                                            <span class="lang-label text-sm font-semibold text-slate-200 block leading-relaxed">{loc.label}</span>
+                                        </span>
+                                        {#if currentLocale === loc.code}
+                                        <svg class="lang-seg-check w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        {/if}
+                                    </button>
+                                    {/each}
+                                </div>
+                            </div>
+                            {#if langSaved}
+                            <div class="lang-success mt-3 py-2 px-3 rounded-md text-[13px] font-medium shrink-0 bg-green-400/10 border border-green-400/20 text-green-400">{tFn('settings.language.saved')}</div>
+                            {/if}
+                        </div>
+                    </div>
+                {:else}
+                    {@render children()}
+                {/if}
             </div>
         </main>
 		</div>
@@ -1966,4 +2082,131 @@
 	from { transform: scale(0); opacity: 0; }
 	to   { transform: scale(1); opacity: 1; }
 }
+
+/* ── Language view (state-swapped, no route) ────────────────────────────── */
+.lang-view-wrap {
+    background: rgba(6, 6, 10, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: #e2e8f0;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+.lang-nav-btn {
+    border-radius: 6px;
+    transition: color 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
+                background 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
+                transform 100ms ease-out;
+}
+.lang-nav-btn:hover {
+    color: #9ca3af !important;
+    background: rgba(255,255,255,0.05);
+}
+.lang-nav-btn:active { transform: scale(0.95); }
+.lang-nav-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(var(--nx-accent-rgb), 0.4);
+}
+.lang-back {
+    transition: color 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
+                transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.lang-back:hover { color: #9ca3af; transform: translateX(-2px); }
+.lang-back:active { transform: translateX(0) scale(0.98); }
+.lang-back:focus-visible { outline: none; color: var(--nx-accent-soft); }
+.lang-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+.lang-icon {
+    border-color: rgba(var(--nx-accent-rgb), 0.2);
+    background: rgba(var(--nx-accent-rgb), 0.1);
+    color: var(--nx-accent-soft);
+}
+.lang-title {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.03em;
+}
+.lang-label {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.005em;
+}
+.lang-segments {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,.06) transparent;
+}
+.lang-segments::-webkit-scrollbar { width: 5px; position: absolute; }
+.lang-segments::-webkit-scrollbar-track { background: transparent; }
+.lang-segments::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); border-radius: 99px; }
+.lang-segments::-webkit-scrollbar-thumb:hover { background: rgba(var(--nx-accent-rgb), 0.4); }
+.lang-seg {
+    transition: all 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.lang-seg::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, var(--nx-accent), var(--nx-accent-2));
+    opacity: 0;
+    transform: translateX(-100%);
+    transition: all 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    box-shadow: 0 0 8px var(--nx-accent);
+}
+.lang-seg:hover {
+    border-color: rgba(var(--nx-accent-rgb), 0.2);
+    background: rgba(255,255,255,0.04);
+    padding-left: 24px;
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.lang-seg:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.05);
+    transition: transform 100ms ease-out, background 100ms ease-out;
+}
+.lang-seg:focus-visible {
+    outline: none;
+    border-color: var(--nx-accent);
+    box-shadow: 0 0 0 3px rgba(var(--nx-accent-rgb), 0.3);
+}
+.lang-seg.active {
+    border-color: rgba(var(--nx-accent-rgb), 0.3);
+    background: rgba(var(--nx-accent-rgb), 0.04);
+    padding-left: 24px;
+}
+.lang-seg.active::before { opacity: 1; transform: translateX(0); }
+.lang-seg.active .text-slate-200 { color: var(--nx-accent-soft); }
+.lang-seg-check {
+    color: var(--nx-accent);
+    transform: scale(0);
+    transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.lang-seg.active .lang-seg-check { transform: scale(1); }
+.lang-success {
+    animation: lang-success-in 200ms ease-out;
+}
+@keyframes lang-success-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .lang-back,
+    .lang-seg,
+    .lang-seg::before,
+    .lang-seg-check,
+    .lang-success {
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
+    }
+}
+
+
 </style>

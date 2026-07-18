@@ -28,7 +28,7 @@ export const LOCALES: LocaleMeta[] = [
   { code: 'de',    label: 'Deutsch',    flag: '🇩🇪' },
   { code: 'ru',    label: 'Русский',    flag: '🇷🇺' },
   { code: 'pt-PT', label: 'Português',  flag: '🇵🇹' },
-  { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'vi',    label: 'Vietnamese', flag: '🇻🇳' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -48,6 +48,38 @@ const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-
 // ── Store locale ──────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'nodyx_locale'
+const COOKIE_KEY = 'nodyx_locale'
+
+export function getLocaleFromAcceptLanguage(header: string | null): Locale | undefined {
+  if (!header) return undefined
+  try {
+    const parsed = header
+      .split(',')
+      .map(lang => {
+        const [name, q] = lang.split(';q=')
+        return {
+          code: name.trim().toLowerCase(),
+          weight: q ? parseFloat(q) : 1.0
+        }
+      })
+      .sort((a, b) => b.weight - a.weight)
+
+    for (const lang of parsed) {
+      const code = lang.code
+      const nav = code.slice(0, 2)
+      if (code === 'pt-pt' || (nav === 'pt' && !code.startsWith('pt-br'))) return 'pt-PT'
+      if (nav === 'fr') return 'fr'
+      if (nav === 'es') return 'es'
+      if (nav === 'de') return 'de'
+      if (nav === 'ru') return 'ru'
+      if (nav === 'vi') return 'vi'
+      if (nav === 'en') return 'en'
+    }
+  } catch {
+    // ignore
+  }
+  return undefined
+}
 
 function getInitialLocale(): Locale {
   if (!browser) return 'fr'
@@ -75,8 +107,16 @@ function createLocaleStore() {
       set(getInitialLocale())
     },
     setLocale(locale: Locale) {
-      if (browser) localStorage.setItem(STORAGE_KEY, locale)
+      if (browser) {
+        localStorage.setItem(STORAGE_KEY, locale)
+        // Sync cookie for SSR — avoids flash of default locale
+        document.cookie = `${COOKIE_KEY}=${locale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+      }
       set(locale)
+    },
+    /** Set initial locale from SSR data (cookie) — avoids flash on hydration */
+    setSSR(locale: Locale) {
+      if (LOCALES.some((l) => l.code === locale)) set(locale)
     },
     get current(): Locale {
       return get({ subscribe })
