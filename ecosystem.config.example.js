@@ -27,12 +27,5 @@ module.exports = {
       watch: false,
       interpreter: 'none',
     },
-    {
-      name: 'nodyx-turn',
-      script: 'server.js',
-      cwd: './turn-server',
-      watch: false,
-      env: { NODE_ENV: 'production' },
-    },
   ],
 }
