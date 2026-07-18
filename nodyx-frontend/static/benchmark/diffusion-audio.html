@@ -3,122 +3,122 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Diffusion audio — Nodyx · Banc d'essai vocal</title>
+<title>Diffusion audio · Nodyx · Banc d'essai vocal</title>
 <meta name="description" content="Une personne parle, tout le monde écoute : un seul cœur diffuse à ~8000 personnes, son parfait. Le cas réel. Mesures réelles, auto-hébergé.">
 <meta name="color-scheme" content="light dark">
 <meta property="og:title" content="Diffusion audio : ~8000 personnes écoutent, sur un seul cœur">
 <meta property="og:description" content="Le cas réel du vocal Nodyx : une personne parle, des milliers écoutent. Mesuré sans filtre.">
 <link rel="stylesheet" href="style.css?v=2">
 </head>
-<body data-page="diffusion-audio">
+<body data-page="diffusion-audio" data-en-title="Audio broadcast · Nodyx · Voice benchmark">
 <div id="nav-mount"></div>
 <div class="wrap">
 
   <header class="hero">
     <div class="tapehead">
-      <span class="live">Banc d'essai vocal</span>
-      <span><b>Scénario 02 / 03</b> — le cas réel</span>
-      <span>Forme · <b>1 parle, N écoutent</b></span>
-      <span>Flux · <b>audio</b> (~32 kbit/s)</span>
+      <span class="live" data-en="Voice benchmark">Banc d'essai vocal</span>
+      <span data-en="<b>Scenario 02 / 03</b>: the real case"><b>Scénario 02 / 03</b> : le cas réel</span>
+      <span data-en="Shape · <b>1 talks, N listen</b>">Forme · <b>1 parle, N écoutent</b></span>
+      <span data-en="Stream · <b>audio</b> (~32 kbps)">Flux · <b>audio</b> (~32 kbit/s)</span>
     </div>
-    <h1>Une personne parle, des milliers écoutent.</h1>
-    <p class="lede">Le cas le plus courant : une conférence, une annonce, un town-hall. Une voix, beaucoup
+    <h1 data-en="One person talks, thousands listen.">Une personne parle, des milliers écoutent.</h1>
+    <p class="lede" data-en="The most common case: a conference, an announcement, a town-hall. One voice, many ears. Here the server only has to relay a single stream: capacity changes scale entirely.">Le cas le plus courant : une conférence, une annonce, un town-hall. Une voix, beaucoup
       d'oreilles. Là, le serveur n'a qu'à relayer un flux : la capacité change complètement d'échelle.</p>
 
     <div class="readout">
-      <div class="ro"><span class="ro-v sig">~<span data-count="8000">0</span></span><span class="ro-k">personnes écoutent · par cœur</span></div>
-      <div class="ro"><span class="ro-v"><span data-count="100">0</span><span class="u">%</span></span><span class="ro-k">son parfait · jusqu'à 8000</span></div>
-      <div class="ro"><span class="ro-v">&lt; <span data-count="1">0</span></span><span class="ro-k">cœur utilisé · pour 8000 personnes</span></div>
+      <div class="ro"><span class="ro-v sig">~<span data-count="8000">0</span></span><span class="ro-k" data-en="people listening · per core">personnes écoutent · par cœur</span></div>
+      <div class="ro"><span class="ro-v"><span data-count="100">0</span><span class="u">%</span></span><span class="ro-k" data-en="perfect audio · up to 8000">son parfait · jusqu'à 8000</span></div>
+      <div class="ro"><span class="ro-v">&lt; <span data-count="1">0</span></span><span class="ro-k" data-en="core used · for 8000 people">cœur utilisé · pour 8000 personnes</span></div>
     </div>
 
-    <nav class="scene-nav" aria-label="Scénarios">
-      <a href="pire-cas.html">01 · Le pire cas</a>
-      <a href="diffusion-audio.html" aria-current="page">02 · Diffusion audio</a>
-      <a href="partage-ecran.html">03 · Partage d'écran</a>
+    <nav class="scene-nav" aria-label="Scénarios" data-en-aria="Scenarios">
+      <a href="pire-cas.html" data-en="01 · Worst case">01 · Le pire cas</a>
+      <a href="diffusion-audio.html" aria-current="page" data-en="02 · Audio broadcast">02 · Diffusion audio</a>
+      <a href="partage-ecran.html" data-en="03 · Screen share">03 · Partage d'écran</a>
     </nav>
   </header>
 
   <div class="callout">
-    <span class="cl-badge">80× le pire cas</span>
-    <p>Quand tout le monde parle en même temps (scénario 01), un cœur tient ~100 personnes. Quand
+    <span class="cl-badge" data-en="80× the worst case">80× le pire cas</span>
+    <p data-en="When everyone talks at once (scenario 01), one core holds ~100 people. When <b>only one talks</b> and the others listen, that same core holds <b>~8000</b>: the server relays a single stream instead of crossing them all. That is the real life of a listening room.">Quand tout le monde parle en même temps (scénario 01), un cœur tient ~100 personnes. Quand
       <b>une seule parle</b> et que les autres écoutent, ce même cœur en tient <b>~8000</b> : le serveur ne
       relaie plus qu'un flux au lieu de tous les croiser. C'est ça, la vraie vie d'un salon d'écoute.</p>
   </div>
 
   <section>
     <div class="sec-head">
-      <span class="sec-n">Mesure 01 · un cœur</span>
-      <h2>Un cœur, jusqu'à ~8000 auditeurs</h2>
-      <p>On empile les auditeurs sur une seule diffusion. Le cœur reste tranquille très longtemps : il ne
+      <span class="sec-n" data-en="Measurement 01 · one core">Mesure 01 · un cœur</span>
+      <h2 data-en="One core, up to ~8000 listeners">Un cœur, jusqu'à ~8000 auditeurs</h2>
+      <p data-en="We stack listeners onto a single broadcast. The core stays calm for a very long time: it only saturates around 9000. Below that, not a word lost.">On empile les auditeurs sur une seule diffusion. Le cœur reste tranquille très longtemps : il ne
         sature que vers 9000. En dessous, aucun mot perdu.</p>
     </div>
     <figure>
-      <div class="fig-title"><span class="swatch"></span> Charge d'un cœur selon le nombre d'auditeurs</div>
-      <svg class="chart" id="c-audio" viewBox="0 0 900 320" role="img" aria-label="Charge d'un cœur : 0,03 pour 250 auditeurs, 0,16 pour 1000, 0,57 pour 5000, 0,92 pour 8000 (son parfait), puis saturation vers 10000 (son à 86 %)."></svg>
+      <div class="fig-title" data-en="<span class='swatch'></span> One core's load by number of listeners"><span class="swatch"></span> Charge d'un cœur selon le nombre d'auditeurs</div>
+      <svg class="chart" id="c-audio" viewBox="0 0 900 320" role="img" aria-label="Charge d'un cœur : 0,03 pour 250 auditeurs, 0,16 pour 1000, 0,57 pour 5000, 0,92 pour 8000 (son parfait), puis saturation vers 10000 (son à 86 %)." data-en-aria="One core's load: 0.03 for 250 listeners, 0.16 for 1000, 0.57 for 5000, 0.92 for 8000 (perfect audio), then saturation around 10000 (audio at 86%)."></svg>
     </figure>
   </section>
 
   <section>
     <div class="sec-head">
-      <span class="sec-n">Mesure 02 · la qualité</span>
-      <h2>La qualité ne change pas la capacité</h2>
-      <p>Surprise : que le son soit économe ou studio, un cœur tient toujours ~8000 auditeurs. La cadence
+      <span class="sec-n" data-en="Measurement 02 · quality">Mesure 02 · la qualité</span>
+      <h2 data-en="Quality does not change capacity">La qualité ne change pas la capacité</h2>
+      <p data-en="Surprise: whether the audio is thrifty or studio-grade, one core still holds ~8000 listeners. The packet rate is the same; only the bandwidth per listener rises. Discord runs at ~64 kbps.">Surprise : que le son soit économe ou studio, un cœur tient toujours ~8000 auditeurs. La cadence
         des paquets est la même ; seule la bande passante par auditeur monte. Discord tourne à ~64 kbps.</p>
     </div>
     <div class="table-scroll">
       <table class="data">
-        <thead><tr><th>Qualité</th><th>Débit / auditeur</th><th>Auditeurs / cœur</th><th>Bande passante à 8000</th></tr></thead>
+        <thead><tr><th data-en="Quality">Qualité</th><th data-en="Bitrate / listener">Débit / auditeur</th><th data-en="Listeners / core">Auditeurs / cœur</th><th data-en="Bandwidth at 8000">Bande passante à 8000</th></tr></thead>
         <tbody>
-          <tr><td>Économe</td><td>32 kbps</td><td>~8 000</td><td>256 Mbit/s</td></tr>
-          <tr><td>Standard <span class="tag ok">≈ Discord</span></td><td>64 kbps</td><td>~8 000</td><td>512 Mbit/s</td></tr>
-          <tr><td>Haute</td><td>96 kbps</td><td>~8 000</td><td>768 Mbit/s</td></tr>
+          <tr><td data-en="Thrifty">Économe</td><td>32 kbps</td><td>~8 000</td><td>256 Mbit/s</td></tr>
+          <tr><td data-en="Standard <span class='tag ok'>≈ Discord</span>">Standard <span class="tag ok">≈ Discord</span></td><td>64 kbps</td><td>~8 000</td><td>512 Mbit/s</td></tr>
+          <tr><td data-en="High">Haute</td><td>96 kbps</td><td>~8 000</td><td>768 Mbit/s</td></tr>
           <tr><td>Studio</td><td>128 kbps</td><td>~8 000</td><td>~1 Gbit/s</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="sec-head" style="margin-top:16px;color:var(--ink-3);font-family:var(--mono);font-size:.8rem;">
+    <p class="sec-head" style="margin-top:16px;color:var(--ink-3);font-family:var(--mono);font-size:.8rem;" data-en="Measured: at 8000 listeners, the audio stays perfect from 32 to 128 kbps. At studio quality (128 kbps), 8000 listeners add up to ~1 Gbit/s: that is where the server's connection starts to matter.">
       Mesuré : à 8000 auditeurs, le son reste parfait de 32 à 128 kbps. En studio (128 kbps), 8000 auditeurs
       représentent ~1 Gbit/s : c'est là que la connexion du serveur commence à compter.</p>
   </section>
 
   <section>
     <div class="sec-head">
-      <span class="sec-n">03 · en clair</span>
-      <h2>Concrètement</h2>
-      <p>Ce que ça veut dire pour une annonce ou une conférence.</p>
+      <span class="sec-n" data-en="03 · in plain words">03 · en clair</span>
+      <h2 data-en="In practice">Concrètement</h2>
+      <p data-en="What it means for an announcement or a conference.">Ce que ça veut dire pour une annonce ou une conférence.</p>
     </div>
     <div class="grid2">
       <div class="card">
-        <h3>Une voix, beaucoup d'oreilles</h3>
-        <p>Conférence, town-hall, annonce à la communauté : une personne parle, des milliers suivent en
+        <h3 data-en="One voice, many ears">Une voix, beaucoup d'oreilles</h3>
+        <p data-en="Conference, town-hall, community announcement: one person talks, thousands follow live, on your own server. A single core is more than enough.">Conférence, town-hall, annonce à la communauté : une personne parle, des milliers suivent en
           direct, sur ton propre serveur. Un seul cœur suffit largement.</p>
       </div>
       <div class="card">
-        <h3>Et le réseau, à très grande échelle ?</h3>
-        <p>L'audio est léger (~32 kbit/s par auditeur). À l'échelle de dizaines de milliers, c'est alors
+        <h3 data-en="And the network, at very large scale?">Et le réseau, à très grande échelle ?</h3>
+        <p data-en="Audio is light (~32 kbps per listener). At the scale of tens of thousands, it is your internet connection that caps the total, not the processor. The details are on the technical page.">L'audio est léger (~32 kbit/s par auditeur). À l'échelle de dizaines de milliers, c'est alors
           ta connexion internet qui borne le total, pas le processeur. Le détail est sur la page technique.</p>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="sec-head"><h2>La suite</h2></div>
+    <div class="sec-head"><h2 data-en="What's next">La suite</h2></div>
     <div class="next">
       <a href="partage-ecran.html">
-        <div class="nx-k">Scénario 03 / 03</div>
-        <div class="nx-t">Partage d'écran : là, c'est le réseau qui décide <span class="arr">→</span></div>
+        <div class="nx-k" data-en="Scenario 03 / 03">Scénario 03 / 03</div>
+        <div class="nx-t" data-en="Screen share: here, the network decides <span class='arr'>→</span>">Partage d'écran : là, c'est le réseau qui décide <span class="arr">→</span></div>
       </a>
       <a href="technique.html">
-        <div class="nx-k">Pour les techniciens</div>
-        <div class="nx-t">Chiffres bruts, méthode, par machine <span class="arr">→</span></div>
+        <div class="nx-k" data-en="For the technical crowd">Pour les techniciens</div>
+        <div class="nx-t" data-en="Raw numbers, method, by machine <span class='arr'>→</span>">Chiffres bruts, méthode, par machine <span class="arr">→</span></div>
       </a>
     </div>
   </section>
 
 </div>
-<footer class="site"><div class="wrap">Mesures réelles issues de <a href="https://github.com/Pokled/nodyx">sfu-bench</a> · <a href="https://nodyx.org">Nodyx</a>, vocal souverain auto-hébergé · AGPL-3.0 · <a href="technique.html">reproduire →</a></div></footer>
+<footer class="site"><div class="wrap" data-en="Real measurements from <a href='https://github.com/Pokled/nodyx'>sfu-bench</a> · <a href='https://nodyx.org'>Nodyx</a>, sovereign self-hosted voice · AGPL-3.0 · <a href='technique.html'>reproduce →</a>">Mesures réelles issues de <a href="https://github.com/Pokled/nodyx">sfu-bench</a> · <a href="https://nodyx.org">Nodyx</a>, vocal souverain auto-hébergé · AGPL-3.0 · <a href="technique.html">reproduire →</a></div></footer>
 
-<script src="bench.js?v=2"></script>
+<script src="bench.js?v=3"></script>
 <script>
   const AUDIO = [
     { spec: 250,   cpu: 0.03, health: 100 },
@@ -131,17 +131,17 @@
   ];
   Bench.chart(document.getElementById("c-audio"), {
     rows: AUDIO, xkey: d => d.spec, val: d => d.cpu,
-    max: 1.15, ref: 1.0, refLabel: "limite d'un cœur", ruptureFrom: 6,
+    max: 1.15, ref: 1.0, refLabel: { fr: "limite d'un cœur", en: "one core's limit" }, ruptureFrom: 6,
     yticks: [0, 0.5, 1.0], yfmt: t => t.toFixed(1),
     xevery: [250, 1000, 2000, 5000, 8000, 10000],
     stroke: Bench.css("--signal"), areaFill: Bench.css("--signal-soft"),
     labels: [
-      { at: 8000, text: "8000 · son parfait", dx: -30, dy: 22, color: Bench.css("--signal") },
-      { at: 10000, text: "ça sature", dx: -20, dy: -12, color: Bench.css("--danger") },
+      { at: 8000, text: { fr: "8000 · son parfait", en: "8000 · perfect audio" }, dx: -30, dy: 22, color: Bench.css("--signal") },
+      { at: 10000, text: { fr: "ça sature", en: "it saturates" }, dx: -20, dy: -12, color: Bench.css("--danger") },
     ],
-    tipTitle: d => d.spec.toLocaleString("fr") + " auditeurs",
-    tipVal: d => d.cpu.toFixed(2).replace(".", ",") + " cœur",
-    tipSub: d => (d.health % 1 ? d.health.toFixed(1).replace(".", ",") : d.health) + " % du son",
+    tipTitle: d => Bench.num(d.spec) + Bench.t(" auditeurs", " listeners"),
+    tipVal: d => Bench.dec(d.cpu, 2) + Bench.t(" cœur", " core"),
+    tipSub: d => Bench.dec(d.health, d.health % 1 ? 1 : 0) + Bench.t(" % du son", "% of audio"),
   });
   Bench.boot("diffusion-audio");
 </script>
