@@ -13,7 +13,7 @@ import { browser }                from '$app/environment'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type Locale = 'fr' | 'en' | 'es' | 'de' | 'ru' | 'pt-PT'
+export type Locale = 'fr' | 'en' | 'es' | 'de' | 'ru' | 'pt-PT' | 'vi'
 
 export interface LocaleMeta {
   code:  Locale
@@ -28,6 +28,7 @@ export const LOCALES: LocaleMeta[] = [
   { code: 'de',    label: 'Deutsch',    flag: '🇩🇪' },
   { code: 'ru',    label: 'Русский',    flag: '🇷🇺' },
   { code: 'pt-PT', label: 'Português',  flag: '🇵🇹' },
+  { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -39,9 +40,10 @@ import es from './locales/es.json'
 import de from './locales/de.json'
 import ru from './locales/ru.json'
 import ptPT from './locales/pt-PT.json'
+import vi from './locales/vi.json'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-PT': ptPT }
+const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-PT': ptPT, vi }
 
 // ── Store locale ──────────────────────────────────────────────────────────────
 
@@ -59,6 +61,7 @@ function getInitialLocale(): Locale {
   if (nav === 'es') return 'es'
   if (nav === 'de') return 'de'
   if (nav === 'ru') return 'ru'
+  if (nav === 'vi') return 'vi'
   return 'en'
 }
 
