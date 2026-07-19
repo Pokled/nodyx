@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { apiFetch } from '$lib/api';
 import { env } from '$env/dynamic/public';
-import { getLocaleFromAcceptLanguage } from '$lib/i18n';
+import { getLocaleFromAcceptLanguage, isKnownLocale } from '$lib/i18n';
 
 const DIRECTORY_URL = (env.PUBLIC_DIRECTORY_URL ?? 'https://nodyx.org') + '/api/directory';
 
@@ -51,11 +51,8 @@ function normalizeUrl(url: string | null): string | null {
 
 export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) => {
 	const token = cookies.get('token');
-	let ssrLocale = cookies.get('nodyx_locale');
-	if (!ssrLocale) {
-		const acceptLang = request.headers.get('accept-language');
-		ssrLocale = getLocaleFromAcceptLanguage(acceptLang) || 'fr';
-	}
+	const cookieLocale = cookies.get('nodyx_locale');
+	const ssrLocale = (isKnownLocale(cookieLocale) ? cookieLocale : getLocaleFromAcceptLanguage(request.headers.get('accept-language'))) || 'fr';
 
 	const [infoRes, userRes, directoryJson, announcementRes, modulesRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),

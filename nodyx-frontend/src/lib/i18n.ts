@@ -28,7 +28,7 @@ export const LOCALES: LocaleMeta[] = [
   { code: 'de',    label: 'Deutsch',    flag: '🇩🇪' },
   { code: 'ru',    label: 'Русский',    flag: '🇷🇺' },
   { code: 'pt-PT', label: 'Português',  flag: '🇵🇹' },
-  { code: 'vi',    label: 'Vietnamese', flag: '🇻🇳' },
+  { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -79,6 +79,14 @@ export function getLocaleFromAcceptLanguage(header: string | null): Locale | und
     // ignore
   }
   return undefined
+}
+
+/**
+ * True only if `code` is a locale we actually ship. Server-safe guard: the SSR
+ * cookie is attacker-settable, so never trust it before it clears this check.
+ */
+export function isKnownLocale(code: string | null | undefined): code is Locale {
+  return !!code && LOCALES.some((l) => l.code === code)
 }
 
 function getInitialLocale(): Locale {
