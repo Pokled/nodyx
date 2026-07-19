@@ -956,5 +956,15 @@
   "members.guest_count": "{{count}} Mitglieder",
   "members.guest_active": "Aktive Community",
   "members.guest_tagline": "Melde dich an, um zu sehen, wer online ist",
-  "members.guest_aria": "Anmelden, um die Mitglieder zu sehen"
+  "members.guest_aria": "Anmelden, um die Mitglieder zu sehen",
+  "voice.muted_aria": "Mikrofon stummgeschaltet",
+  "voice.deafened_aria": "Kopfhörer aus",
+  "announcement.dismiss": "Ankündigung schließen",
+  "voice.screen_badge": "BILDSCHIRM",
+  "status.modal_title": "Status festlegen",
+  "status.none": "Kein Status",
+  "status.placeholder": "Was du gerade machst…",
+  "common.clear": "Löschen",
+  "presence.joined": "ist beigetreten",
+  "presence.left": "hat verlassen"
 }

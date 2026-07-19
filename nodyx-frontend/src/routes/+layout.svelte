@@ -1130,14 +1130,14 @@
 										{:else}
 											<div class="flex items-center gap-0.5 shrink-0">
 												{#if m.deafened}
-													<svg class="w-[11px] h-[11px]" aria-label="Écouteurs coupés" style="color:#fb923c" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+													<svg class="w-[11px] h-[11px]" aria-label={tFn('voice.deafened_aria')} style="color:#fb923c" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
 														<path stroke-linecap="round" d="M3 18v-6a9 9 0 0118 0v6"/>
 														<path stroke-linecap="round" d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/>
 														<path stroke-linecap="round" d="M2 2l20 20"/>
 													</svg>
 												{/if}
 												{#if m.muted}
-													<svg class="w-[11px] h-[11px]" aria-label="Micro coupé" style="color:#f87171" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+													<svg class="w-[11px] h-[11px]" aria-label={tFn('voice.muted_aria')} style="color:#f87171" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
 														<path stroke-linecap="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
 														<path stroke-linecap="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
 													</svg>
@@ -1218,7 +1218,7 @@
                     <button
                         onclick={() => announcementDismissed = announcement!.id}
                         class="shrink-0 opacity-60 hover:opacity-100 transition-opacity ml-2"
-                        aria-label="Fermer l'annonce"
+                        aria-label={tFn('announcement.dismiss')}
                     >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -1377,7 +1377,7 @@
 											{#if isSharing}
 												<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:1px 5px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.22);color:rgb(96,165,250)">
 													<svg style="width:7px;height:7px;shrink:0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-													ÉCRAN
+													{tFn('voice.screen_badge')}
 												</span>
 											{/if}
 											{#if isStreaming}
@@ -1455,7 +1455,7 @@
 											{#if isSharing}
 												<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:1px 5px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.22);color:rgb(96,165,250)">
 													<svg style="width:7px;height:7px" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-													ÉCRAN
+													{tFn('voice.screen_badge')}
 												</span>
 											{/if}
 											{#if isStreaming}
@@ -1691,12 +1691,12 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-5"
 			onclick={(e) => e.stopPropagation()}>
-			<h2 class="text-sm font-bold text-white mb-4">Définir ton statut</h2>
+			<h2 class="text-sm font-bold text-white mb-4">{tFn('status.modal_title')}</h2>
 
 			<!-- Current status preview -->
 			<div class="flex items-center gap-2.5 mb-4 px-3 py-2 bg-gray-800 rounded-xl border border-gray-700">
 				<span class="text-xl w-8 text-center">{statusEmoji || '😶'}</span>
-				<span class="text-sm text-gray-300 flex-1 truncate">{statusText || 'Aucun statut'}</span>
+				<span class="text-sm text-gray-300 flex-1 truncate">{statusText || tFn('status.none')}</span>
 			</div>
 
 			<!-- Emoji + text inputs -->
@@ -1710,7 +1710,7 @@
 				/>
 				<input
 					type="text"
-					placeholder="Ce que tu fais…"
+					placeholder={tFn('status.placeholder')}
 					bind:value={statusText}
 					maxlength={60}
 					class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-600 transition-colors"
@@ -1733,14 +1733,14 @@
 			<div class="flex gap-2">
 				{#if myStatus}
 					<button onclick={clearStatus} class="px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-400 hover:text-white transition-colors">
-						Effacer
+						{tFn('common.clear')}
 					</button>
 				{/if}
 				<button onclick={() => showStatusModal = false} class="px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-400 hover:text-white transition-colors ml-auto">
-					Annuler
+					{tFn('common.cancel')}
 				</button>
 				<button onclick={saveStatus} class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs text-white font-medium transition-colors">
-					Enregistrer
+					{tFn('common.save')}
 				</button>
 			</div>
 		</div>
@@ -1766,7 +1766,7 @@
 				{/if}
 				<span class="text-xs whitespace-nowrap">
 					<span class="font-bold" style="color: #e2e8f0">{evt.username}</span>
-					<span style="color: #4b5563"> {evt.action === 'join' ? 'a rejoint' : 'a quitté'} </span>
+					<span style="color: #4b5563"> {evt.action === 'join' ? tFn('presence.joined') : tFn('presence.left')} </span>
 					<span style="color: var(--nx-accent-2-soft)"># {evt.channelName}</span>
 				</span>
 				<div class="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
