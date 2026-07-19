@@ -3,44 +3,44 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Le pire cas — Nodyx · Banc d'essai vocal</title>
+<title>Le pire cas · Nodyx · Banc d'essai vocal</title>
 <meta name="description" content="Le scénario le plus dur : tout le monde parle en même temps. Un serveur Nodyx tient ~600 personnes en vocal. Mesures réelles, auto-hébergé.">
 <meta name="color-scheme" content="light dark">
 <meta property="og:title" content="Le pire cas : ~600 personnes en vocal, tous parlent en même temps">
 <meta property="og:description" content="Le scénario extrême du vocal Nodyx, mesuré sans filtre. Auto-hébergé, AGPL-3.0.">
 <link rel="stylesheet" href="style.css?v=2">
 </head>
-<body data-page="pire-cas">
+<body data-page="pire-cas" data-en-title="Worst case · Nodyx · Voice benchmark">
 <div id="nav-mount"></div>
 <div class="wrap">
 
   <header class="hero">
     <div class="tapehead">
-      <span class="live">Banc d'essai vocal</span>
-      <span><b>Scénario 01 / 03</b> — le cas extrême</span>
-      <span>Machine · <b>1 serveur, 8 cœurs</b></span>
-      <span>Méthode · <b>full-mesh</b> (tous parlent)</span>
+      <span class="live" data-en="Voice benchmark">Banc d'essai vocal</span>
+      <span data-en="<b>Scenario 01 / 03</b>: the extreme case"><b>Scénario 01 / 03</b> : le cas extrême</span>
+      <span data-en="Machine · <b>1 server, 8 cores</b>">Machine · <b>1 serveur, 8 cœurs</b></span>
+      <span data-en="Method · <b>full-mesh</b> (everyone talks)">Méthode · <b>full-mesh</b> (tous parlent)</span>
     </div>
-    <h1>Tout le monde parle en même temps.</h1>
-    <p class="lede">On a pris le scénario le plus dur imaginable pour un serveur vocal, et on a mesuré combien
+    <h1 data-en="Everyone talks at once.">Tout le monde parle en même temps.</h1>
+    <p class="lede" data-en="We took the hardest scenario imaginable for a voice server, and measured how many people it holds without dropping a word. This is the floor: real life is far lighter.">On a pris le scénario le plus dur imaginable pour un serveur vocal, et on a mesuré combien
       de monde il tient sans perdre un mot. C'est le plancher : la vraie vie est bien plus légère.</p>
 
     <div class="readout">
-      <div class="ro"><span class="ro-v sig">~<span data-count="600">0</span></span><span class="ro-k">personnes en vocal · tout le serveur</span></div>
-      <div class="ro"><span class="ro-v"><span data-count="100">0</span></span><span class="ro-k">par pièce · sans perdre un mot</span></div>
-      <div class="ro"><span class="ro-v"><span data-count="6">0</span><span class="u">/ 8</span></span><span class="ro-k">cœurs utilisés · 2 gardés pour le reste</span></div>
+      <div class="ro"><span class="ro-v sig">~<span data-count="600">0</span></span><span class="ro-k" data-en="people in voice · whole server">personnes en vocal · tout le serveur</span></div>
+      <div class="ro"><span class="ro-v"><span data-count="100">0</span></span><span class="ro-k" data-en="per room · without dropping a word">par pièce · sans perdre un mot</span></div>
+      <div class="ro"><span class="ro-v"><span data-count="6">0</span><span class="u">/ 8</span></span><span class="ro-k" data-en="cores used · 2 kept for the rest">cœurs utilisés · 2 gardés pour le reste</span></div>
     </div>
 
-    <nav class="scene-nav" aria-label="Scénarios">
-      <a href="pire-cas.html" aria-current="page">01 · Le pire cas</a>
-      <a href="diffusion-audio.html">02 · Diffusion audio</a>
-      <a href="partage-ecran.html">03 · Partage d'écran</a>
+    <nav class="scene-nav" aria-label="Scénarios" data-en-aria="Scenarios">
+      <a href="pire-cas.html" aria-current="page" data-en="01 · Worst case">01 · Le pire cas</a>
+      <a href="diffusion-audio.html" data-en="02 · Audio broadcast">02 · Diffusion audio</a>
+      <a href="partage-ecran.html" data-en="03 · Screen share">03 · Partage d'écran</a>
     </nav>
   </header>
 
   <div class="callout warn">
-    <span class="cl-badge">Le pire cas imaginable</span>
-    <p>Ici, les 600 personnes <b>parlent ET écoutent tout le monde en même temps</b>, en continu : comme si
+    <span class="cl-badge" data-en="The worst case imaginable">Le pire cas imaginable</span>
+    <p data-en="Here, all 600 people <b>talk AND listen to everyone at the same time</b>, non-stop: as if each one streamed their voice to all the others without ever pausing. In real life, this <b>never happens</b> (in a conversation, one or two people speak at a time). We deliberately picked the <b>hardest scenario there is</b>: the real cases (next scenarios) hold <b>far, far more</b> people.">Ici, les 600 personnes <b>parlent ET écoutent tout le monde en même temps</b>, en continu : comme si
       chacune diffusait sa voix à toutes les autres sans jamais s'arrêter. Dans la vraie vie, ça
       <b>n'arrive jamais</b> (dans une conversation, une ou deux personnes parlent à la fois). On a choisi
       exprès le scénario <b>le plus dur qui soit</b> : les cas réels (scénarios suivants) tiennent
@@ -49,68 +49,68 @@
 
   <section>
     <div class="sec-head">
-      <span class="sec-n">Mesure 01 · une pièce</span>
-      <h2>Jusqu'où tient une seule pièce</h2>
-      <p>Dans une pièce, tout est parfait jusqu'à ~100 personnes. Au-delà, une pièce seule sature : c'est
+      <span class="sec-n" data-en="Measurement 01 · one room">Mesure 01 · une pièce</span>
+      <h2 data-en="How far a single room holds">Jusqu'où tient une seule pièce</h2>
+      <p data-en="In one room, everything is perfect up to ~100 people. Beyond that, a single room saturates: that is when you open more.">Dans une pièce, tout est parfait jusqu'à ~100 personnes. Au-delà, une pièce seule sature : c'est
         là qu'on en ouvre d'autres.</p>
     </div>
     <figure>
-      <div class="fig-title"><span class="swatch"></span> Qualité du son selon le monde dans une pièce</div>
-      <svg class="chart" id="c-cliff" viewBox="0 0 900 320" role="img" aria-label="Qualité du son : parfaite à 100 % jusqu'à 100 personnes dans une pièce, puis chute (68 % à 125, 46 % à 150, 24 % à 200, 9 % à 300)."></svg>
+      <div class="fig-title" data-en="<span class='swatch'></span> Audio quality by number of people in a room"><span class="swatch"></span> Qualité du son selon le monde dans une pièce</div>
+      <svg class="chart" id="c-cliff" viewBox="0 0 900 320" role="img" aria-label="Qualité du son : parfaite à 100 % jusqu'à 100 personnes dans une pièce, puis chute (68 % à 125, 46 % à 150, 24 % à 200, 9 % à 300)." data-en-aria="Audio quality: perfect at 100% up to 100 people in a room, then a drop (68% at 125, 46% at 150, 24% at 200, 9% at 300)."></svg>
     </figure>
   </section>
 
   <section>
     <div class="sec-head">
-      <span class="sec-n">Mesure 02 · le serveur</span>
-      <h2>Et sur tout le serveur : ~600</h2>
-      <p>On ouvre plusieurs pièces ; le serveur les répartit sur ses cœurs, une par cœur. La charge monte
+      <span class="sec-n" data-en="Measurement 02 · the server">Mesure 02 · le serveur</span>
+      <h2 data-en="And across the whole server: ~600">Et sur tout le serveur : ~600</h2>
+      <p data-en="You open several rooms; the server spreads them across its cores, one per core. The load rises straight: every hundred people takes one core.">On ouvre plusieurs pièces ; le serveur les répartit sur ses cœurs, une par cœur. La charge monte
         droit : chaque centaine de personnes prend un cœur.</p>
     </div>
     <figure>
-      <div class="fig-title"><span class="swatch"></span> Charge du serveur selon le nombre de pièces (100 personnes chacune)</div>
-      <svg class="chart" id="c-pool" viewBox="0 0 900 320" role="img" aria-label="Charge du serveur : 1 cœur pour 100 personnes, 2 pour 200, 4 pour 400, 6 cœurs pour 600 personnes. Montée parfaitement linéaire."></svg>
+      <div class="fig-title" data-en="<span class='swatch'></span> Server load by number of rooms (100 people each)"><span class="swatch"></span> Charge du serveur selon le nombre de pièces (100 personnes chacune)</div>
+      <svg class="chart" id="c-pool" viewBox="0 0 900 320" role="img" aria-label="Charge du serveur : 1 cœur pour 100 personnes, 2 pour 200, 4 pour 400, 6 cœurs pour 600 personnes. Montée parfaitement linéaire." data-en-aria="Server load: 1 core for 100 people, 2 for 200, 4 for 400, 6 cores for 600 people. Perfectly linear rise."></svg>
     </figure>
   </section>
 
   <section>
     <div class="sec-head">
-      <span class="sec-n">03 · en clair</span>
-      <h2>Concrètement</h2>
-      <p>Sans le jargon, ce que ça change pour ta communauté.</p>
+      <span class="sec-n" data-en="03 · in plain words">03 · en clair</span>
+      <h2 data-en="In practice">Concrètement</h2>
+      <p data-en="No jargon: what it changes for your community.">Sans le jargon, ce que ça change pour ta communauté.</p>
     </div>
     <div class="grid2">
       <div class="card">
-        <h3>Une pièce = une communauté active</h3>
-        <p>Jusqu'à ~100 personnes qui se parlent dans la même pièce vocale, en même temps, sans qu'un mot
+        <h3 data-en="One room = an active community">Une pièce = une communauté active</h3>
+        <p data-en="Up to ~100 people talking in the same voice room, at the same time, without a word getting lost. That is already more than a busy voice channel.">Jusqu'à ~100 personnes qui se parlent dans la même pièce vocale, en même temps, sans qu'un mot
           se perde. C'est déjà plus qu'un gros vocal bien rempli.</p>
       </div>
       <div class="card">
-        <h3>Le serveur en fait tourner plein</h3>
-        <p>Le serveur répartit les pièces sur ses cœurs : ~600 personnes au total dans ce test extrême,
+        <h3 data-en="The server runs plenty of them">Le serveur en fait tourner plein</h3>
+        <p data-en="The server spreads rooms across its cores: ~600 people total in this extreme test, while keeping 2 cores for the forum, the chat and the rest of the platform.">Le serveur répartit les pièces sur ses cœurs : ~600 personnes au total dans ce test extrême,
           tout en gardant 2 cœurs pour le forum, le chat et le reste de la plateforme.</p>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="sec-head"><h2>La suite</h2></div>
+    <div class="sec-head"><h2 data-en="What's next">La suite</h2></div>
     <div class="next">
       <a href="diffusion-audio.html">
-        <div class="nx-k">Scénario 02 / 03</div>
-        <div class="nx-t">Diffusion audio : une personne parle, des milliers écoutent <span class="arr">→</span></div>
+        <div class="nx-k" data-en="Scenario 02 / 03">Scénario 02 / 03</div>
+        <div class="nx-t" data-en="Audio broadcast: one person talks, thousands listen <span class='arr'>→</span>">Diffusion audio : une personne parle, des milliers écoutent <span class="arr">→</span></div>
       </a>
       <a href="technique.html">
-        <div class="nx-k">Pour les techniciens</div>
-        <div class="nx-t">Chiffres bruts, méthode, par machine <span class="arr">→</span></div>
+        <div class="nx-k" data-en="For the technical crowd">Pour les techniciens</div>
+        <div class="nx-t" data-en="Raw numbers, method, by machine <span class='arr'>→</span>">Chiffres bruts, méthode, par machine <span class="arr">→</span></div>
       </a>
     </div>
   </section>
 
 </div>
-<footer class="site"><div class="wrap">Mesures réelles issues de <a href="https://github.com/Pokled/nodyx">sfu-bench</a> · <a href="https://nodyx.org">Nodyx</a>, vocal souverain auto-hébergé · AGPL-3.0 · <a href="technique.html">reproduire →</a></div></footer>
+<footer class="site"><div class="wrap" data-en="Real measurements from <a href='https://github.com/Pokled/nodyx'>sfu-bench</a> · <a href='https://nodyx.org'>Nodyx</a>, sovereign self-hosted voice · AGPL-3.0 · <a href='technique.html'>reproduce →</a>">Mesures réelles issues de <a href="https://github.com/Pokled/nodyx">sfu-bench</a> · <a href="https://nodyx.org">Nodyx</a>, vocal souverain auto-hébergé · AGPL-3.0 · <a href="technique.html">reproduire →</a></div></footer>
 
-<script src="bench.js?v=2"></script>
+<script src="bench.js?v=3"></script>
 <script>
   const CLIFF = [
     { n: 2,   health: 100,  paths: 2 },
@@ -134,16 +134,16 @@
 
   Bench.chart(document.getElementById("c-cliff"), {
     rows: CLIFF, xkey: d => d.n, val: d => d.health,
-    max: 108, ruptureFrom: 6, yticks: [0, 25, 50, 75, 100], yfmt: t => t + " %",
+    max: 108, ruptureFrom: 6, yticks: [0, 25, 50, 75, 100], yfmt: t => t + Bench.t(" %", "%"),
     xevery: [2, 20, 50, 100, 125, 150, 200, 300],
     stroke: Bench.css("--signal"), areaFill: Bench.css("--signal-soft"),
     labels: [
-      { at: 100, text: "parfait jusqu'à 100", dx: -10, dy: -14, color: Bench.css("--signal") },
-      { at: 150, text: "ça décroche", dx: 6, dy: 24, color: Bench.css("--danger") },
+      { at: 100, text: { fr: "parfait jusqu'à 100", en: "perfect up to 100" }, dx: -10, dy: -14, color: Bench.css("--signal") },
+      { at: 150, text: { fr: "ça décroche", en: "it drops off" }, dx: 6, dy: 24, color: Bench.css("--danger") },
     ],
-    tipTitle: d => d.n + " personnes",
-    tipVal: d => (d.health % 1 ? d.health.toFixed(1).replace(".", ",") : d.health) + " % du son",
-    tipSub: d => "une seule pièce",
+    tipTitle: d => Bench.num(d.n) + Bench.t(" personnes", " people"),
+    tipVal: d => Bench.dec(d.health, d.health % 1 ? 1 : 0) + Bench.t(" % du son", "% of audio"),
+    tipSub: d => Bench.t("une seule pièce", "a single room"),
   });
 
   Bench.chart(document.getElementById("c-pool"), {
@@ -151,10 +151,10 @@
     max: 7, yticks: [0, 2, 4, 6], yfmt: t => t,
     xevery: [1, 2, 4, 6],
     stroke: Bench.css("--signal"), areaFill: Bench.css("--signal-soft"),
-    labels: [{ at: 6, text: "600 personnes · 6 cœurs", dx: -40, dy: -14, color: Bench.css("--signal") }],
-    tipTitle: d => d.total + " personnes",
-    tipVal: d => d.cpu.toFixed(2).replace(".", ",") + " cœurs",
-    tipSub: d => d.rooms + " pièces de 100",
+    labels: [{ at: 6, text: { fr: "600 personnes · 6 cœurs", en: "600 people · 6 cores" }, dx: -40, dy: -14, color: Bench.css("--signal") }],
+    tipTitle: d => Bench.num(d.total) + Bench.t(" personnes", " people"),
+    tipVal: d => Bench.dec(d.cpu, 2) + Bench.t(" cœurs", " cores"),
+    tipSub: d => Bench.t(d.rooms + " pièces de 100", d.rooms + " rooms of 100"),
   });
 
   Bench.boot("pire-cas");

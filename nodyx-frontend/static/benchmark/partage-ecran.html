@@ -3,45 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Partage d'écran — Nodyx · Banc d'essai vocal</title>
+<title>Partage d'écran · Nodyx · Banc d'essai vocal</title>
 <meta name="description" content="Une personne partage son écran, les autres regardent. Le processeur tient des milliers ; c'est la connexion du serveur qui décide. Capacité par résolution (480p à 4K). Mesures réelles.">
 <meta name="color-scheme" content="light dark">
 <meta property="og:title" content="Partage d'écran : c'est le réseau qui décide, par résolution">
 <meta property="og:description" content="Capacité vidéo du moteur Nodyx, mesurée, du 480p au 4K. Le CPU tient des milliers ; la limite, c'est le débit.">
 <link rel="stylesheet" href="style.css?v=2">
 </head>
-<body data-page="partage-ecran">
+<body data-page="partage-ecran" data-en-title="Screen share · Nodyx · Voice benchmark">
 <div id="nav-mount"></div>
 <div class="wrap">
 
   <header class="hero">
     <div class="tapehead">
-      <span class="live">Banc d'essai vocal</span>
-      <span><b>Scénario 03 / 03</b> — la vidéo</span>
-      <span>Forme · <b>1 partage, N regardent</b></span>
-      <span>Flux · <b>vidéo</b> (480p → 4K)</span>
+      <span class="live" data-en="Voice benchmark">Banc d'essai vocal</span>
+      <span data-en="<b>Scenario 03 / 03</b>: the video"><b>Scénario 03 / 03</b> : la vidéo</span>
+      <span data-en="Shape · <b>1 shares, N watch</b>">Forme · <b>1 partage, N regardent</b></span>
+      <span data-en="Stream · <b>video</b> (480p → 4K)">Flux · <b>vidéo</b> (480p → 4K)</span>
     </div>
-    <h1>Une personne partage, les autres regardent.</h1>
-    <p class="lede">Le partage d'écran, c'est de la vidéo : bien plus lourd que la voix. Et là, une surprise
+    <h1 data-en="One person shares, the others watch.">Une personne partage, les autres regardent.</h1>
+    <p class="lede" data-en="Screen sharing is video: far heavier than voice. And here, a useful surprise: it is not the processor that limits, it is the server's <b>internet connection</b>. So everything depends on the <b>resolution</b>.">Le partage d'écran, c'est de la vidéo : bien plus lourd que la voix. Et là, une surprise
       utile : ce n'est pas le processeur qui limite, c'est la <b>connexion internet</b> du serveur. Donc
       tout dépend de la <b>résolution</b>.</p>
 
     <div class="readout">
-      <div class="ro"><span class="ro-v sig">~<span data-count="400">0</span></span><span class="ro-k">spectateurs en 720p · serveur 1 Gbit/s</span></div>
-      <div class="ro"><span class="ro-v">~<span data-count="220">0</span></span><span class="ro-k">spectateurs en 1080p · serveur 1 Gbit/s</span></div>
-      <div class="ro"><span class="ro-v">× <span data-count="10">0</span></span><span class="ro-k">sur un serveur à 10 Gbit/s</span></div>
+      <div class="ro"><span class="ro-v sig">~<span data-count="400">0</span></span><span class="ro-k" data-en="viewers at 720p · 1 Gbit/s server">spectateurs en 720p · serveur 1 Gbit/s</span></div>
+      <div class="ro"><span class="ro-v">~<span data-count="220">0</span></span><span class="ro-k" data-en="viewers at 1080p · 1 Gbit/s server">spectateurs en 1080p · serveur 1 Gbit/s</span></div>
+      <div class="ro"><span class="ro-v">× <span data-count="10">0</span></span><span class="ro-k" data-en="on a 10 Gbit/s server">sur un serveur à 10 Gbit/s</span></div>
     </div>
 
-    <nav class="scene-nav" aria-label="Scénarios">
-      <a href="pire-cas.html">01 · Le pire cas</a>
-      <a href="diffusion-audio.html">02 · Diffusion audio</a>
-      <a href="partage-ecran.html" aria-current="page">03 · Partage d'écran</a>
+    <nav class="scene-nav" aria-label="Scénarios" data-en-aria="Scenarios">
+      <a href="pire-cas.html" data-en="01 · Worst case">01 · Le pire cas</a>
+      <a href="diffusion-audio.html" data-en="02 · Audio broadcast">02 · Diffusion audio</a>
+      <a href="partage-ecran.html" aria-current="page" data-en="03 · Screen share">03 · Partage d'écran</a>
     </nav>
   </header>
 
   <div class="callout warn">
-    <span class="cl-badge">Le réseau décide</span>
-    <p>En vidéo, le processeur forwarde à des milliers de spectateurs sans transpirer. Le vrai frein, c'est
+    <span class="cl-badge" data-en="The network decides">Le réseau décide</span>
+    <p data-en="In video, the processor forwards to thousands of viewers without breaking a sweat. The real brake is <b>bandwidth</b>: every viewer receives the full stream. The higher the resolution, the bigger the stream, the less room there is. At <b>720p</b> quality (Discord's default), a 1 Gbit/s connection carries ~400 viewers; at 10 Gbit/s, ~4000. <b>Big watch-party? The pipe matters more than the cores.</b>">En vidéo, le processeur forwarde à des milliers de spectateurs sans transpirer. Le vrai frein, c'est
       le <b>débit</b> : chaque spectateur reçoit le flux en entier. Plus la résolution est haute, plus le
       flux est gros, moins il y a de place. À qualité <b>720p</b> (celle de Discord par défaut), une
       connexion à 1 Gbit/s porte ~400 spectateurs ; à 10 Gbit/s, ~4000. <b>Gros watch-party ? Le tuyau
@@ -50,27 +50,27 @@
 
   <section>
     <div class="sec-head">
-      <span class="sec-n">Mesure 01 · le processeur</span>
-      <h2>Le CPU tient, largement</h2>
-      <p>Côté calcul, un seul cœur relaie la vidéo à des milliers de personnes sans forcer (mesuré jusqu'en
+      <span class="sec-n" data-en="Measurement 01 · the processor">Mesure 01 · le processeur</span>
+      <h2 data-en="The CPU holds, easily">Le CPU tient, largement</h2>
+      <p data-en="On the compute side, a single core relays video to thousands of people without straining (measured up to 1080p). The processor is not the wall.">Côté calcul, un seul cœur relaie la vidéo à des milliers de personnes sans forcer (mesuré jusqu'en
         1080p). Le processeur n'est pas le mur.</p>
     </div>
     <figure>
-      <div class="fig-title"><span class="swatch"></span> Charge d'un cœur en 720p (~2,5 Mbit/s), selon le nombre de spectateurs</div>
-      <svg class="chart" id="c-video" viewBox="0 0 900 300" role="img" aria-label="Charge d'un cœur en vidéo 720p : 0,11 pour 200 spectateurs, 0,22 pour 400, 0,47 pour 800, 0,74 pour 2400. Le cœur reste loin de sa limite."></svg>
+      <div class="fig-title" data-en="<span class='swatch'></span> One core's load at 720p (~2.5 Mbit/s), by number of viewers"><span class="swatch"></span> Charge d'un cœur en 720p (~2,5 Mbit/s), selon le nombre de spectateurs</div>
+      <svg class="chart" id="c-video" viewBox="0 0 900 300" role="img" aria-label="Charge d'un cœur en vidéo 720p : 0,11 pour 200 spectateurs, 0,22 pour 400, 0,47 pour 800, 0,74 pour 2400. Le cœur reste loin de sa limite." data-en-aria="One core's load in 720p video: 0.11 for 200 viewers, 0.22 for 400, 0.47 for 800, 0.74 for 2400. The core stays far from its limit."></svg>
     </figure>
   </section>
 
   <section>
     <div class="sec-head">
-      <span class="sec-n">Mesure 02 · le réseau</span>
-      <h2>Ce qui décide vraiment : la résolution</h2>
-      <p>Le nombre de spectateurs dépend directement du débit de chaque flux (donc de la résolution) et de
+      <span class="sec-n" data-en="Measurement 02 · the network">Mesure 02 · le réseau</span>
+      <h2 data-en="What really decides: the resolution">Ce qui décide vraiment : la résolution</h2>
+      <p data-en="The number of viewers depends directly on the bitrate of each stream (so on the resolution) and on the server's connection. Here is the math, for a typical bitrate per resolution.">Le nombre de spectateurs dépend directement du débit de chaque flux (donc de la résolution) et de
         la connexion du serveur. Voici le calcul, pour un débit typique par résolution.</p>
     </div>
     <div class="table-scroll">
       <table class="data">
-        <thead><tr><th>Résolution</th><th>Débit typique</th><th>Serveur 1 Gbit/s</th><th>Serveur 2,5 Gbit/s</th><th>Serveur 10 Gbit/s</th></tr></thead>
+        <thead><tr><th data-en="Resolution">Résolution</th><th data-en="Typical bitrate">Débit typique</th><th data-en="1 Gbit/s server">Serveur 1 Gbit/s</th><th data-en="2.5 Gbit/s server">Serveur 2,5 Gbit/s</th><th data-en="10 Gbit/s server">Serveur 10 Gbit/s</th></tr></thead>
         <tbody>
           <tr><td>480p</td><td>~1 Mbit/s</td><td>~1 000</td><td>~2 500</td><td>~10 000</td></tr>
           <tr><td>720p <span class="tag ok">≈ Discord</span></td><td>~2,5 Mbit/s</td><td>~400</td><td>~1 000</td><td>~4 000</td></tr>
@@ -79,37 +79,37 @@
         </tbody>
       </table>
     </div>
-    <p class="sec-head" style="margin-top:16px;color:var(--ink-3);font-family:var(--mono);font-size:.8rem;">
+    <p class="sec-head" style="margin-top:16px;color:var(--ink-3);font-family:var(--mono);font-size:.8rem;" data-en="Viewers = server bandwidth / stream bitrate. Typical bitrates for a screen share; the real figure varies with content (a still image uses far less than moving video).">
       Spectateurs = débit du serveur / débit du flux. Débits typiques d'un partage d'écran ; le réel varie
       selon le contenu (une image fixe consomme bien moins qu'une vidéo qui bouge).</p>
   </section>
 
   <div class="callout">
-    <span class="cl-badge">Transparence</span>
-    <p>Soyons clairs : le partage d'écran <b>sur ce moteur n'est pas encore en production</b> (il arrive).
+    <span class="cl-badge" data-en="Transparency">Transparence</span>
+    <p data-en="Let's be clear: screen sharing <b>on this engine is not in production yet</b> (it is coming). These numbers measure what the <b>video engine takes as a relay</b>: it is a real capacity, not a promise that 'screen sharing is perfect' today. On-screen smoothness (browser side) is another job, one we test for real, not on the bench.">Soyons clairs : le partage d'écran <b>sur ce moteur n'est pas encore en production</b> (il arrive).
       Ces chiffres mesurent ce que le <b>moteur vidéo encaisse en relais</b> : c'est une capacité réelle,
       pas une promesse que « le partage d'écran est parfait » aujourd'hui. La fluidité à l'écran (côté
       navigateur) est un autre chantier, qu'on teste en vrai, pas au banc d'essai.</p>
   </div>
 
   <section>
-    <div class="sec-head"><h2>La suite</h2></div>
+    <div class="sec-head"><h2 data-en="What's next">La suite</h2></div>
     <div class="next">
       <a href="technique.html">
-        <div class="nx-k">Pour les techniciens</div>
-        <div class="nx-t">Tous les chiffres bruts, la méthode, par machine <span class="arr">→</span></div>
+        <div class="nx-k" data-en="For the technical crowd">Pour les techniciens</div>
+        <div class="nx-t" data-en="All the raw numbers, the method, by machine <span class='arr'>→</span>">Tous les chiffres bruts, la méthode, par machine <span class="arr">→</span></div>
       </a>
       <a href="pire-cas.html">
-        <div class="nx-k">Revenir au début</div>
-        <div class="nx-t">Scénario 01 · le pire cas <span class="arr">→</span></div>
+        <div class="nx-k" data-en="Back to the start">Revenir au début</div>
+        <div class="nx-t" data-en="Scenario 01 · the worst case <span class='arr'>→</span>">Scénario 01 · le pire cas <span class="arr">→</span></div>
       </a>
     </div>
   </section>
 
 </div>
-<footer class="site"><div class="wrap">Mesures réelles issues de <a href="https://github.com/Pokled/nodyx">sfu-bench</a> · <a href="https://nodyx.org">Nodyx</a>, vocal souverain auto-hébergé · AGPL-3.0 · <a href="technique.html">reproduire →</a></div></footer>
+<footer class="site"><div class="wrap" data-en="Real measurements from <a href='https://github.com/Pokled/nodyx'>sfu-bench</a> · <a href='https://nodyx.org'>Nodyx</a>, sovereign self-hosted voice · AGPL-3.0 · <a href='technique.html'>reproduce →</a>">Mesures réelles issues de <a href="https://github.com/Pokled/nodyx">sfu-bench</a> · <a href="https://nodyx.org">Nodyx</a>, vocal souverain auto-hébergé · AGPL-3.0 · <a href="technique.html">reproduire →</a></div></footer>
 
-<script src="bench.js?v=2"></script>
+<script src="bench.js?v=3"></script>
 <script>
   const VIDEO = [
     { spec: 200,  cpu: 0.11 },
@@ -120,14 +120,14 @@
   ];
   Bench.chart(document.getElementById("c-video"), {
     rows: VIDEO, xkey: d => d.spec, val: d => d.cpu,
-    max: 1.05, ref: 1.0, refLabel: "limite d'un cœur",
+    max: 1.05, ref: 1.0, refLabel: { fr: "limite d'un cœur", en: "one core's limit" },
     yticks: [0, 0.5, 1.0], yfmt: t => t.toFixed(1),
     xevery: [200, 400, 800, 1600, 2400],
     stroke: Bench.css("--signal"), areaFill: Bench.css("--signal-soft"),
-    labels: [{ at: 2400, text: "2400 · à peine 0,74 cœur", dx: -50, dy: -14, color: Bench.css("--signal") }],
-    tipTitle: d => d.spec.toLocaleString("fr") + " spectateurs",
-    tipVal: d => d.cpu.toFixed(2).replace(".", ",") + " cœur",
-    tipSub: d => "720p ~2,5 Mbit/s",
+    labels: [{ at: 2400, text: { fr: "2400 · à peine 0,74 cœur", en: "2400 · barely 0.74 core" }, dx: -50, dy: -14, color: Bench.css("--signal") }],
+    tipTitle: d => Bench.num(d.spec) + Bench.t(" spectateurs", " viewers"),
+    tipVal: d => Bench.dec(d.cpu, 2) + Bench.t(" cœur", " core"),
+    tipSub: d => Bench.t("720p ~2,5 Mbit/s", "720p ~2.5 Mbit/s"),
   });
   Bench.boot("partage-ecran");
 </script>

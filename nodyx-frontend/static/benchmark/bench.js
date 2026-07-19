@@ -1,4 +1,4 @@
-/* Nodyx · Benchmark — moteur partagé (graphes, reveal au scroll, thème, nav) */
+/* Nodyx · Benchmark · moteur partagé (graphes, reveal au scroll, thème, nav, langue) */
 (() => {
   "use strict";
   const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -6,29 +6,104 @@
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   const el = (t, a = {}) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
 
+  // ── Langue (fr / en) ───────────────────────────────────────
+  let _lang = "fr";
+  let _page = "";
+  const langCbs = [];
+  function t(fr, en) { return _lang === "en" ? en : fr; }
+  function num(n) { return (+n).toLocaleString(_lang === "en" ? "en-US" : "fr-FR"); }
+  function dec(v, d) { const s = (+v).toFixed(d); return _lang === "en" ? s : s.replace(".", ","); }
+  // Résout un libellé qui peut être une chaîne ou un objet {fr, en}.
+  function tr(v) { return (v && typeof v === "object" && !Array.isArray(v) && "fr" in v) ? (v[_lang] ?? v.fr) : v; }
+
+  function initLang() {
+    let l;
+    try { l = localStorage.getItem("nodyx-bench-lang"); } catch (e) {}
+    if (l !== "fr" && l !== "en") l = (navigator.language || "fr").toLowerCase().startsWith("fr") ? "fr" : "en";
+    _lang = l;
+    const root = document.documentElement;
+    root.setAttribute("data-lang", l);
+    root.setAttribute("lang", l);
+  }
+
+  function ensureLangStyle() {
+    if (document.getElementById("bench-lang-style")) return;
+    const s = document.createElement("style");
+    s.id = "bench-lang-style";
+    s.textContent =
+      ".lang-switch{display:inline-flex;gap:1px;margin-left:6px}" +
+      ".lang-btn{background:none;border:0;cursor:pointer;font-size:1.02rem;line-height:1;padding:4px 5px;border-radius:7px;opacity:.4;filter:grayscale(.55);transition:opacity .15s,filter .15s,background .15s}" +
+      ".lang-btn:hover{opacity:.85;filter:grayscale(0)}" +
+      ".lang-btn[aria-pressed=\"true\"]{opacity:1;filter:grayscale(0);background:rgba(127,127,127,.16)}";
+    document.head.appendChild(s);
+  }
+
+  // Applique la langue au texte du DOM (attributs data-en, data-en-aria, titre).
+  function applyLangText(lang) {
+    document.querySelectorAll("[data-en]").forEach(node => {
+      if (node.dataset.fr == null) node.dataset.fr = node.innerHTML;
+      node.innerHTML = lang === "en" ? node.getAttribute("data-en") : node.dataset.fr;
+    });
+    document.querySelectorAll("[data-en-aria]").forEach(node => {
+      if (node.dataset.frAria == null) node.dataset.frAria = node.getAttribute("aria-label") || "";
+      node.setAttribute("aria-label", lang === "en" ? node.getAttribute("data-en-aria") : node.dataset.frAria);
+    });
+    const b = document.body;
+    if (b && b.dataset.enTitle) {
+      if (b.dataset.frTitle == null) b.dataset.frTitle = document.title;
+      document.title = lang === "en" ? b.dataset.enTitle : b.dataset.frTitle;
+    }
+  }
+
+  // Bascule complète (clic sur un drapeau) : texte + nav + graphes + hooks de page.
+  function applyLang(lang) {
+    if (lang !== "fr" && lang !== "en") return;
+    _lang = lang;
+    const root = document.documentElement;
+    root.setAttribute("data-lang", lang);
+    root.setAttribute("lang", lang);
+    try { localStorage.setItem("nodyx-bench-lang", lang); } catch (e) {}
+    buildNav(_page);
+    applyLangText(lang);
+    langCbs.forEach(fn => { try { fn(lang); } catch (e) {} });
+    redrawAll();
+  }
+
   // ── Navigation (source unique) ─────────────────────────────
   const PAGES = [
-    { id: "pire-cas",        href: "pire-cas.html",        label: "Le pire cas" },
-    { id: "diffusion-audio", href: "diffusion-audio.html", label: "Diffusion audio" },
-    { id: "partage-ecran",   href: "partage-ecran.html",   label: "Partage d'écran" },
-    { id: "technique",       href: "technique.html",       label: "Technique", tech: true },
+    { id: "pire-cas",        href: "pire-cas.html",        label: { fr: "Le pire cas",     en: "Worst case" } },
+    { id: "diffusion-audio", href: "diffusion-audio.html", label: { fr: "Diffusion audio", en: "Audio broadcast" } },
+    { id: "partage-ecran",   href: "partage-ecran.html",   label: { fr: "Partage d'écran", en: "Screen share" } },
+    { id: "technique",       href: "technique.html",       label: { fr: "Technique",       en: "Technical" }, tech: true },
   ];
   function buildNav(current) {
     const mount = document.getElementById("nav-mount");
     if (!mount) return;
+    ensureLangStyle();
     const links = PAGES.map(p => {
       const cur = p.id === current ? ' aria-current="page"' : "";
       const cls = p.tech ? ' class="tech-link"' : "";
-      return `<li${p.tech ? ' class="tech"' : ""}><a href="${p.href}"${cur}${cls}>${p.label}</a></li>`;
+      return `<li${p.tech ? ' class="tech"' : ""}><a href="${p.href}"${cur}${cls}>${tr(p.label)}</a></li>`;
     }).join("");
     mount.className = "nav";
     mount.innerHTML =
       `<div class="nav-in">
         <a class="brand" href="pire-cas.html"><span class="dot"></span> Nodyx · Benchmark</a>
         <ul>${links}</ul>
-        <button class="theme-btn" id="theme" type="button" aria-label="Thème clair/sombre"><span id="theme-ico">◐</span></button>
+        <button class="theme-btn" id="theme" type="button" aria-label="${t("Thème clair/sombre", "Light/dark theme")}"><span id="theme-ico">◐</span></button>
+        <div class="lang-switch" role="group" aria-label="Langue / Language">
+          <button class="lang-btn" data-set-lang="fr" type="button" title="Français" aria-label="Français" aria-pressed="${_lang === "fr"}">🇫🇷</button>
+          <button class="lang-btn" data-set-lang="en" type="button" title="English" aria-label="English" aria-pressed="${_lang === "en"}">🇬🇧</button>
+        </div>
       </div>`;
     initTheme();
+    initLangSwitch();
+  }
+
+  function initLangSwitch() {
+    document.querySelectorAll(".lang-btn").forEach(btn => {
+      btn.addEventListener("click", () => applyLang(btn.dataset.setLang));
+    });
   }
 
   // ── Thème ──────────────────────────────────────────────────
@@ -60,8 +135,8 @@
   // ── Compteurs (chiffres qui montent, au scroll) ────────────
   function animateCount(s) {
     if (s.dataset.done) return; s.dataset.done = "1";
-    const to = parseFloat(s.dataset.count), dec = +(s.dataset.dec || 0);
-    const fmt = v => v.toFixed(dec).replace(".", ",");
+    const to = parseFloat(s.dataset.count), d = +(s.dataset.dec || 0);
+    const fmt = v => dec(v, d);
     if (REDUCED) { s.textContent = fmt(to); return; }
     const t0 = performance.now(), dur = 1300;
     const step = t => { const p = Math.min((t - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3); s.textContent = fmt(to * e); if (p < 1) requestAnimationFrame(step); };
@@ -121,7 +196,7 @@
     if (opts.ref != null) {
       const yy = y(opts.ref);
       svg.appendChild(el("line", { x1: m.l, y1: yy, x2: m.l + pw, y2: yy, class: "refline" }));
-      const rt = el("text", { x: m.l + pw, y: yy - 7, class: "axis-txt", "text-anchor": "end", fill: css("--ink-2") }); rt.textContent = opts.refLabel || ""; svg.appendChild(rt);
+      const rt = el("text", { x: m.l + pw, y: yy - 7, class: "axis-txt", "text-anchor": "end", fill: css("--ink-2") }); rt.textContent = tr(opts.refLabel) || ""; svg.appendChild(rt);
     }
     rows.forEach((d, i) => { if (opts.xevery && !opts.xevery.includes(xkey(d))) return; const t = el("text", { x: x(i), y: H - 12, class: "axis-txt", "text-anchor": "middle" }); t.textContent = xkey(d); svg.appendChild(t); });
     const pts = rows.map((d, i) => [x(i), y(opts.val(d))]);
@@ -134,10 +209,11 @@
     const labelObjs = [];
     (opts.labels || []).forEach(L => {
       const i = rows.findIndex(d => xkey(d) === L.at); if (i < 0) return;
+      const txt = tr(L.text);
       const px = x(i), py = y(opts.val(rows[i])), g = el("g", { style: "transition:opacity .35s" });
-      const tw = L.text.length * 7.6 + 12, lx = Math.min(Math.max(px + L.dx, m.l + tw / 2), m.l + pw - tw / 2 - 2);
+      const tw = txt.length * 7.6 + 12, lx = Math.min(Math.max(px + L.dx, m.l + tw / 2), m.l + pw - tw / 2 - 2);
       g.appendChild(el("rect", { x: lx - tw / 2, y: py + L.dy - 12, width: tw, height: 18, rx: 5, class: "dlabel-bg" }));
-      const tx = el("text", { x: lx, y: py + L.dy + 1, class: "dlabel", "text-anchor": "middle", fill: L.color || opts.stroke }); tx.textContent = L.text; g.appendChild(tx); svg.appendChild(g);
+      const tx = el("text", { x: lx, y: py + L.dy + 1, class: "dlabel", "text-anchor": "middle", fill: L.color || opts.stroke }); tx.textContent = txt; g.appendChild(tx); svg.appendChild(g);
       labelObjs.push({ g, px });
     });
     spec.reveal = e => {
@@ -167,8 +243,13 @@
 
   function redrawAll() { registry.forEach(spec => { build(spec); spec.reveal(1); }); }
 
+  initLang();
+
   window.Bench = {
-    boot(page) { buildNav(page); autoCounters(); autoBars(); },
+    boot(page) { _page = page; buildNav(page); applyLangText(_lang); autoCounters(); autoBars(); },
     chart, counters, onView, css,
+    // Helpers de langue pour les scripts de page (tooltips, tableaux) :
+    t, num, dec, get lang() { return _lang; },
+    onLang(fn) { langCbs.push(fn); },
   };
 })();
