@@ -953,5 +953,9 @@
   "widgets.twitch_open_channel": "Открыть канал {{channel}} на Twitch",
   "widgets.open": "Открыть",
   "widgets.twitch_offline_mid": "офлайн — посмотри",
-  "widgets.twitch_offline_end": "пока что"
+  "widgets.twitch_offline_end": "пока что",
+  "members.guest_count": "{{count}} участников",
+  "members.guest_active": "Активное сообщество",
+  "members.guest_tagline": "Войдите, чтобы увидеть, кто онлайн",
+  "members.guest_aria": "Войдите, чтобы увидеть участников"
 }

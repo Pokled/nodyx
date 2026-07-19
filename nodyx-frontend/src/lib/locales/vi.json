@@ -953,5 +953,9 @@
   "widgets.twitch_open_channel": "Mở {{channel}} trên Twitch",
   "widgets.open": "Mở",
   "widgets.twitch_offline_mid": "ngoại tuyến",
-  "widgets.twitch_offline_end": "— xem trong lúc chờ"
+  "widgets.twitch_offline_end": "— xem trong lúc chờ",
+  "members.guest_count": "{{count}} thành viên",
+  "members.guest_active": "Cộng đồng đang hoạt động",
+  "members.guest_tagline": "Đăng nhập để xem ai đang trực tuyến",
+  "members.guest_aria": "Đăng nhập để xem thành viên"
 }

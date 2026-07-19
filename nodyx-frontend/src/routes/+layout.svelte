@@ -1522,7 +1522,7 @@
 			</div>
 			{:else}
 				<!-- Not logged in — invite card -->
-				<a href="/auth/login" class="guest-members-card" aria-label="Se connecter pour voir les membres">
+				<a href="/auth/login" class="guest-members-card" aria-label={tFn('members.guest_aria')}>
 
 					<!-- Radar animé -->
 					<div class="guest-radar">
@@ -1553,12 +1553,12 @@
 					<div class="guest-live-row">
 						<span class="guest-live-dot"></span>
 						<span class="guest-live-label">
-							{memberCount > 0 ? `${memberCount} membre${memberCount > 1 ? 's' : ''}` : 'Communauté active'}
+							{memberCount > 0 ? tFn('members.guest_count', { count: memberCount }) : tFn('members.guest_active')}
 						</span>
 					</div>
 
 					<!-- Texte -->
-					<p class="guest-tagline">Connecte-toi pour voir<br>qui est en ligne</p>
+					<p class="guest-tagline">{tFn('members.guest_tagline')}</p>
 
 					<!-- CTA -->
 					<div class="guest-cta">
@@ -1567,7 +1567,7 @@
 							<polyline points="10 17 15 12 10 7"/>
 							<line x1="15" y1="12" x2="3" y2="12"/>
 						</svg>
-						Se connecter
+						{tFn('common.login')}
 					</div>
 				</a>
 			{/if}

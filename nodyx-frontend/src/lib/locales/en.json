@@ -953,5 +953,9 @@
   "widgets.twitch_open_channel": "Open the {{channel}} channel on Twitch",
   "widgets.open": "Open",
   "widgets.twitch_offline_mid": "is offline — check out",
-  "widgets.twitch_offline_end": "in the meantime"
+  "widgets.twitch_offline_end": "in the meantime",
+  "members.guest_count": "{{count}} members",
+  "members.guest_active": "Active community",
+  "members.guest_tagline": "Sign in to see who is online",
+  "members.guest_aria": "Sign in to see the members"
 }

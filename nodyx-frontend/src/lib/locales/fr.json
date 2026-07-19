@@ -953,5 +953,9 @@
   "widgets.twitch_open_channel": "Ouvrir la chaîne {{channel}} sur Twitch",
   "widgets.open": "Ouvrir",
   "widgets.twitch_offline_mid": "est offline — découvre",
-  "widgets.twitch_offline_end": "en attendant"
+  "widgets.twitch_offline_end": "en attendant",
+  "members.guest_count": "{{count}} membres",
+  "members.guest_active": "Communauté active",
+  "members.guest_tagline": "Connecte-toi pour voir qui est en ligne",
+  "members.guest_aria": "Se connecter pour voir les membres"
 }
