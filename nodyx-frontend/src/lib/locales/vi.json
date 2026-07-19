@@ -957,5 +957,15 @@
   "members.guest_count": "{{count}} thành viên",
   "members.guest_active": "Cộng đồng đang hoạt động",
   "members.guest_tagline": "Đăng nhập để xem ai đang trực tuyến",
-  "members.guest_aria": "Đăng nhập để xem thành viên"
+  "members.guest_aria": "Đăng nhập để xem thành viên",
+  "voice.muted_aria": "Micrô đã tắt",
+  "voice.deafened_aria": "Đã tắt tai nghe",
+  "announcement.dismiss": "Đóng thông báo",
+  "voice.screen_badge": "MÀN HÌNH",
+  "status.modal_title": "Đặt trạng thái",
+  "status.none": "Không có trạng thái",
+  "status.placeholder": "Bạn đang làm gì…",
+  "common.clear": "Xóa",
+  "presence.joined": "đã tham gia",
+  "presence.left": "đã rời"
 }

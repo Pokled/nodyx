@@ -957,5 +957,15 @@
   "members.guest_count": "{{count}} membres",
   "members.guest_active": "Communauté active",
   "members.guest_tagline": "Connecte-toi pour voir qui est en ligne",
-  "members.guest_aria": "Se connecter pour voir les membres"
+  "members.guest_aria": "Se connecter pour voir les membres",
+  "voice.muted_aria": "Micro coupé",
+  "voice.deafened_aria": "Écouteurs coupés",
+  "announcement.dismiss": "Fermer l'annonce",
+  "voice.screen_badge": "ÉCRAN",
+  "status.modal_title": "Définir ton statut",
+  "status.none": "Aucun statut",
+  "status.placeholder": "Ce que tu fais…",
+  "common.clear": "Effacer",
+  "presence.joined": "a rejoint",
+  "presence.left": "a quitté"
 }

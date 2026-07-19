@@ -957,5 +957,15 @@
   "members.guest_count": "{{count}} участников",
   "members.guest_active": "Активное сообщество",
   "members.guest_tagline": "Войдите, чтобы увидеть, кто онлайн",
-  "members.guest_aria": "Войдите, чтобы увидеть участников"
+  "members.guest_aria": "Войдите, чтобы увидеть участников",
+  "voice.muted_aria": "Микрофон выключен",
+  "voice.deafened_aria": "Наушники выключены",
+  "announcement.dismiss": "Закрыть объявление",
+  "voice.screen_badge": "ЭКРАН",
+  "status.modal_title": "Установить статус",
+  "status.none": "Нет статуса",
+  "status.placeholder": "Чем вы заняты…",
+  "common.clear": "Очистить",
+  "presence.joined": "присоединился к",
+  "presence.left": "покинул"
 }

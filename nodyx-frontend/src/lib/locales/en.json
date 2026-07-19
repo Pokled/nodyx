@@ -957,5 +957,15 @@
   "members.guest_count": "{{count}} members",
   "members.guest_active": "Active community",
   "members.guest_tagline": "Sign in to see who is online",
-  "members.guest_aria": "Sign in to see the members"
+  "members.guest_aria": "Sign in to see the members",
+  "voice.muted_aria": "Microphone muted",
+  "voice.deafened_aria": "Deafened",
+  "announcement.dismiss": "Close announcement",
+  "voice.screen_badge": "SCREEN",
+  "status.modal_title": "Set your status",
+  "status.none": "No status",
+  "status.placeholder": "What you're up to…",
+  "common.clear": "Clear",
+  "presence.joined": "joined",
+  "presence.left": "left"
 }
