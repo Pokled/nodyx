@@ -21,7 +21,7 @@
 	const categoryName = $derived(
 	data.category?.name || 
 	// Si pas de catégorie, on utilise un nom générique
-	`Catégorie`
+	tFn('forum.category_fallback')
 ); // À remplacer quand l'API fournira la catégorie
 
 	// ── Types ──────────────────────────────────────────────────────────
@@ -373,7 +373,7 @@
 			{#if searchQuery}
 				<button
 					onclick={() => searchQuery = ''}
-					aria-label="Effacer la recherche"
+					aria-label={tFn('forum.clear_search_aria')}
 					class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-400"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -391,7 +391,7 @@
 			</div>
 			<div class="flex items-center gap-1.5">
 				<span class="w-2 h-2 rounded-full bg-yellow-500"></span>
-				<span class="text-gray-500">Épinglé</span>
+				<span class="text-gray-500">{tFn('common.pinned')}</span>
 			</div>
 			<div class="flex items-center gap-1.5">
 				<span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -448,11 +448,11 @@
 									{/if}
 								</div>
 								<span class="block text-[10px] text-gray-600 mt-0.5">
-									{value === 'all' ? 'Aucun filtre' :
-									 value === 'pinned' ? 'Sujets épinglés uniquement' :
-									 value === 'unanswered' ? 'Sujets sans réponse' :
-									 value === 'popular' ? 'Plus de 10 réponses' :
-									 'Créés aujourd\'hui'}
+									{value === 'all' ? tFn('forum.filter_all') :
+									 value === 'pinned' ? tFn('forum.filter_pinned') :
+									 value === 'unanswered' ? tFn('forum.filter_unanswered') :
+									 value === 'popular' ? tFn('forum.filter_popular') :
+									 tFn('forum.filter_today')}
 								</span>
 							</button>
 						{/each}
@@ -504,10 +504,10 @@
 									{/if}
 								</div>
 								<span class="block text-[10px] text-gray-600 mt-0.5">
-									{value === 'recent' ? 'Date de création' :
-									 value === 'popular' ? 'Nombre de réponses' :
-									 value === 'views' ? 'Nombre de vues' :
-									 'Dernière activité'}
+									{value === 'recent' ? tFn('forum.sort_created') :
+									 value === 'popular' ? tFn('forum.sort_replies') :
+									 value === 'views' ? tFn('forum.sort_views') :
+									 tFn('forum.sort_activity')}
 								</span>
 							</button>
 						{/each}
@@ -536,14 +536,14 @@
 {#if searchQuery}
 	<div class="mb-4 flex items-center justify-between">
 		<p class="text-sm text-gray-400">
-			🔍 Recherche pour "<span class="text-white font-medium">{searchQuery}</span>" · 
-			{filteredThreads.length} résultat{filteredThreads.length > 1 ? 's' : ''}
+			🔍 {tFn('forum.search_for')} "<span class="text-white font-medium">{searchQuery}</span>" ·
+			{tFn('forum.results_count', { n: filteredThreads.length })}
 		</p>
 		<button 
 			onclick={() => searchQuery = ''}
 			class="text-xs text-gray-600 hover:text-gray-400 transition-colors"
 		>
-			Effacer
+			{tFn('common.clear')}
 		</button>
 	</div>
 {/if}
@@ -569,12 +569,12 @@
 			{#if searchQuery}
 				{tFn('forum.try_keywords')}
 			{:else}
-				Soyez le premier à lancer une discussion !
+				{tFn('forum.empty_cta')}
 			{/if}
 		</p>
 		{#if user && !searchQuery}
 			<a href="/forum/{categoryId}/new" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors">
-				Créer le premier sujet
+				{tFn('forum.create_first')}
 			</a>
 		{/if}
 	</div>
@@ -730,7 +730,7 @@
 			<button
 				onclick={() => goToPage(currentPage - 1)}
 				disabled={currentPage === 1}
-				aria-label="Page précédente"
+				aria-label={tFn('common.prev_page')}
 				class="w-9 h-9 bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600
 					   disabled:opacity-30 disabled:cursor-not-allowed transition-all
 					   flex items-center justify-center"
@@ -762,7 +762,7 @@
 			<button
 				onclick={() => goToPage(currentPage + 1)}
 				disabled={currentPage === totalPages}
-				aria-label="Page suivante"
+				aria-label={tFn('common.next_page')}
 				class="w-9 h-9 bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600
 					   disabled:opacity-30 disabled:cursor-not-allowed transition-all
 					   flex items-center justify-center"

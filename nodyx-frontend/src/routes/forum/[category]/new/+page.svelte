@@ -185,7 +185,7 @@
 							</div>
 						{:else}
 							<button type="button" onclick={() => showPollSection = false}
-								class="text-xs text-gray-500 hover:text-gray-300 transition-colors">Annuler</button>
+								class="text-xs text-gray-500 hover:text-gray-300 transition-colors">{tFn('common.cancel')}</button>
 						{/if}
 					</div>
 					{#if !pollConfig}
@@ -201,7 +201,7 @@
 							<span class="ml-2 text-gray-600">·</span>
 							<span class="ml-2">{tFn('forum.poll_n_options', { n: String(pollConfig.options.length) })}</span>
 							<button type="button" onclick={() => pollConfig = null}
-								class="ml-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Modifier</button>
+								class="ml-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">{tFn('common.edit')}</button>
 						</div>
 					{/if}
 				</div>
@@ -219,7 +219,7 @@
 			>
 				{submitting ? tFn('common.publishing') : tFn('forum.publish_topic')}
 			</button>
-			<a href="/forum/{finalCategoryId}" class="bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">Annuler</a>
+			<a href="/forum/{finalCategoryId}" class="bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">{tFn('common.cancel')}</a>
 		</div>
 	</form>
 </div>

@@ -127,7 +127,7 @@
 								</p>
 							</div>
 						{:else}
-							<span class="text-[11px] text-gray-700">Aucun message</span>
+							<span class="text-[11px] text-gray-700">{tFn('forum.no_message')}</span>
 						{/if}
 					</div>
 
@@ -214,7 +214,7 @@
 						<span class="text-xs font-bold text-gray-300 tabular-nums">{totPosts.toLocaleString('fr-FR')}</span>
 					</div>
 					<div class="flex items-baseline justify-between">
-						<span class="text-[11px] text-gray-600">Membres</span>
+						<span class="text-[11px] text-gray-600">{tFn('common.members')}</span>
 						<span class="text-xs font-bold text-gray-300 tabular-nums">{totMembers.toLocaleString('fr-FR')}</span>
 					</div>
 					{#if lastPoster}

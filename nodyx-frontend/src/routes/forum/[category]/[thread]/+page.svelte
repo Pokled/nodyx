@@ -167,17 +167,17 @@
 				<div class="flex flex-wrap items-center gap-2 mb-2">
 					{#if thread.is_pinned}
 						<span class="inline-flex items-center gap-1 text-xs font-medium text-indigo-400 bg-indigo-900/30 border border-indigo-800/50 px-2 py-0.5">
-							📌 Épinglé
+							📌 {tFn('common.pinned')}
 						</span>
 					{/if}
 					{#if thread.is_locked}
 						<span class="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5">
-							🔒 Verrouillé
+							🔒 {tFn('common.locked')}
 						</span>
 					{/if}
 					{#if thread.is_featured}
 						<span class="inline-flex items-center gap-1 text-xs font-medium text-yellow-400 bg-yellow-900/30 border border-yellow-800/50 px-2 py-0.5">
-							⭐ À la une
+							⭐ {tFn('common.featured')}
 						</span>
 					{/if}
 					{#each (thread.tags ?? []) as tag}
@@ -209,11 +209,11 @@
 						/>
 						<button type="submit"
 							class="px-4 py-2bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
-							Enregistrer
+							{tFn('common.save')}
 						</button>
 						<button type="button" onclick={() => editingTitle = false}
 							class="px-4 py-2bg-gray-700 hover:bg-gray-600 text-sm text-gray-300 transition-colors">
-							Annuler
+							{tFn('common.cancel')}
 						</button>
 					</form>
 				{:else}
@@ -341,7 +341,7 @@
 						<button type="button"
 							onclick={() => confirmDeleteThread = true}
 							class="w-full px-3 py-1.5border border-red-800 text-xs font-medium text-red-400 hover:bg-red-900/20 transition-colors">
-							🗑 Supprimer
+							🗑 {tFn('common.delete')}
 						</button>
 					{:else}
 						<div class="flex flex-col gap-1">
@@ -359,7 +359,7 @@
 							</form>
 							<button type="button" onclick={() => confirmDeleteThread = false}
 								class="w-full px-2 py-1bg-gray-700 text-xs text-gray-300 hover:bg-gray-600">
-								Annuler
+								{tFn('common.cancel')}
 							</button>
 						</div>
 					{/if}
@@ -456,8 +456,8 @@
 								<button type="button"
 									onclick={() => { editingPostId = post.id; deletingPostId = null }}
 									class="px-2 py-1text-xs text-gray-500 hover:text-indigo-400 hover:bg-indigo-900/20 transition-colors"
-									title="Modifier ce message">
-									✏️ Éditer
+									title={tFn('forum.edit_message_title')}>
+									✏️ {tFn('common.edit')}
 								</button>
 							{/if}
 							{#if canDelete(post)}
@@ -465,8 +465,8 @@
 									<button type="button"
 										onclick={() => { deletingPostId = post.id; editingPostId = null }}
 										class="px-2 py-1text-xs text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
-										title="Supprimer ce message">
-										🗑 Supprimer
+										title={tFn('forum.delete_message_title')}>
+										🗑 {tFn('common.delete')}
 									</button>
 								{:else}
 									<!-- Confirmation suppression -->
@@ -513,12 +513,12 @@
 						<div class="flex gap-2">
 							<button type="submit"
 								class="px-3 py-1.5bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-colors">
-								Enregistrer
+								{tFn('common.save')}
 							</button>
 							<button type="button"
 								onclick={() => editingPostId = null}
 								class="px-3 py-1.5bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 transition-colors">
-								Annuler
+								{tFn('common.cancel')}
 							</button>
 						</div>
 					</form>
