@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { apiFetch } from '$lib/api';
 import { env } from '$env/dynamic/public';
+import { getLocaleFromAcceptLanguage } from '$lib/i18n';
 
 const DIRECTORY_URL = (env.PUBLIC_DIRECTORY_URL ?? 'https://nodyx.org') + '/api/directory';
 
@@ -50,6 +51,11 @@ function normalizeUrl(url: string | null): string | null {
 
 export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) => {
 	const token = cookies.get('token');
+	let ssrLocale = cookies.get('nodyx_locale');
+	if (!ssrLocale) {
+		const acceptLang = request.headers.get('accept-language');
+		ssrLocale = getLocaleFromAcceptLanguage(acceptLang) || 'fr';
+	}
 
 	const [infoRes, userRes, directoryJson, announcementRes, modulesRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),
@@ -91,7 +97,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (((directoryJson as any)?.instances) ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale };
 	}
 
 	const { user } = await userRes.json();
@@ -121,5 +127,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale };
 };
