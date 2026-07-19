@@ -10,7 +10,9 @@
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "test": "vitest run"
+    "test": "vitest run",
+    "i18n:scan": "node scripts/i18n/scan.mjs",
+    "i18n:coverage": "node scripts/i18n/coverage.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "7.0.1",

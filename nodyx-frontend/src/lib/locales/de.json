@@ -966,5 +966,6 @@
   "status.placeholder": "Was du gerade machst…",
   "common.clear": "Löschen",
   "presence.joined": "ist beigetreten",
-  "presence.left": "hat verlassen"
+  "presence.left": "hat verlassen",
+  "editor.toc": "Automatisches Inhaltsverzeichnis (Anker an den Überschriften)"
 }

@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+/**
+ * i18n hardcoded-string scanner (the guardrail).
+ *
+ * Flags French text living in Svelte markup OUTSIDE an i18n call (`tFn(` / `$t(`).
+ * Rationale: translation keys are written in English, so any French left in a
+ * template is, by construction, a string that was never extracted. Getting this
+ * to 0 (and keeping it there via CI) is how we guarantee "nothing hardcoded".
+ *
+ *   node scripts/i18n/scan.mjs            summary per file + total
+ *   node scripts/i18n/scan.mjs --list     also print every offending line
+ *   node scripts/i18n/scan.mjs --public   ignore admin / studio (owner-only) pages
+ *   node scripts/i18n/scan.mjs --check    exit 1 if anything is found (CI gate)
+ */
+import { readFileSync, readdirSync } from 'node:fs'
+import { join, dirname, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+const SRC = join(HERE, '..', '..', 'src')
+
+const args = new Set(process.argv.slice(2))
+const LIST = args.has('--list')
+const CHECK = args.has('--check')
+const PUBLIC_ONLY = args.has('--public')
+
+// French signal: accented letters, or a common French UI word.
+const ACC = /[àâäéèêëïîôùûüÿçœÀÂÄÉÈÊËÏÎÔÙÛÜŸÇŒ]/
+const FR = /\b(Supprimer|Annuler|Enregistrer|Modifier|Ajouter|Envoyer|Fermer|Retour|Suivant|Rechercher|Aucune?|Nouvelle?|Nouveau|Charger|Membres?|Voir|Connexion|Inscription|Brouillon|Publier|Choisir|Copier|Partager|Effacer|Enlever|Ouvrir|Bienvenue|Attention|Erreur|Chargement)\b/
+
+const isAdmin = (p) =>
+  p.includes('/routes/admin/') || p.includes('/components/admin/') ||
+  /(streamer-hub|\/obs\/|StreamControl|StudioEngagement|RewardsManager|PlaylistSidebar|SoundLibrary|ChatTimers|ChatCommands|DeckEditor|OverlayManager|AlertBox)/.test(p)
+
+function walk(dir, out = []) {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name)
+    if (e.isDirectory()) walk(p, out)
+    else if (e.name.endsWith('.svelte')) out.push(p)
+  }
+  return out
+}
+
+// Blank out comments/styles but KEEP newlines, so line numbers stay accurate.
+const blank = (m) => m.replace(/[^\n]/g, ' ')
+const clean = (txt) => txt
+  .replace(/<style[\s\S]*?<\/style>/g, blank)
+  .replace(/<!--[\s\S]*?-->/g, blank)
+  .replace(/\/\*[\s\S]*?\*\//g, blank)
+
+const files = walk(SRC).sort()
+let total = 0
+const perFile = []
+for (const f of files) {
+  if (PUBLIC_ONLY && isAdmin(f)) continue
+  const hits = []
+  clean(readFileSync(f, 'utf8')).split('\n').forEach((l, i) => {
+    if (l.includes('tFn(') || l.includes('$t(')) return
+    const s = l.trim()
+    if (!s || s.startsWith('//') || s.startsWith('*') || s.startsWith('import ') || s.startsWith('console.')) return
+    if (ACC.test(l) || FR.test(l)) hits.push({ n: i + 1, s: s.slice(0, 100) })
+  })
+  if (hits.length) { perFile.push({ f: relative(SRC, f), hits }); total += hits.length }
+}
+
+perFile.sort((a, b) => b.hits.length - a.hits.length)
+for (const { f, hits } of perFile) {
+  console.log(`${String(hits.length).padStart(4)}  ${f}`)
+  if (LIST) for (const h of hits) console.log(`        ${h.n}: ${h.s}`)
+}
+console.log(`\n${total} hardcoded French string(s) in ${perFile.length} file(s)${PUBLIC_ONLY ? ' (public only)' : ''}.`)
+if (CHECK && total > 0) process.exit(1)
