@@ -966,5 +966,6 @@
   "status.placeholder": "Lo que estás haciendo…",
   "common.clear": "Borrar",
   "presence.joined": "se unió a",
-  "presence.left": "salió de"
+  "presence.left": "salió de",
+  "editor.toc": "Índice automático (anclas en los títulos)"
 }
