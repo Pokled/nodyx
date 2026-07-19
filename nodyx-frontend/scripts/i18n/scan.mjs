@@ -42,11 +42,16 @@ function walk(dir, out = []) {
 }
 
 // Blank out comments/styles but KEEP newlines, so line numbers stay accurate.
+// Comments are code, never UI: we don't translate them, so they must not be flagged.
 const blank = (m) => m.replace(/[^\n]/g, ' ')
 const clean = (txt) => txt
   .replace(/<style[\s\S]*?<\/style>/g, blank)
   .replace(/<!--[\s\S]*?-->/g, blank)
   .replace(/\/\*[\s\S]*?\*\//g, blank)
+  // inline `// ...` comments, but not the `//` inside a URL (`https://`)
+  .split('\n')
+  .map((l) => l.replace(/(?<!:)\/\/.*$/, (m) => ' '.repeat(m.length)))
+  .join('\n')
 
 const files = walk(SRC).sort()
 let total = 0

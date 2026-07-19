@@ -724,13 +724,7 @@
 	}
 
 	// ── Slash commands ────────────────────────────────────────────────────────
-	const EIGHT_BALL = [
-		'Oui, absolument.', 'C\'est certain.', 'Sans aucun doute.', 'Oui.', 'Tu peux compter dessus.',
-		'Très probablement.', 'Les perspectives sont bonnes.', 'Les signes pointent vers oui.',
-		'Réponse floue, réessaie.', 'Demande plus tard.', 'Difficile à dire maintenant.',
-		'Impossible de prédire pour l\'instant.', 'Ne compte pas dessus.', 'Ma réponse est non.',
-		'Mes sources disent non.', 'Les perspectives ne sont pas bonnes.', 'Très douteux.',
-	];
+	const EIGHT_BALL = $derived(Array.from({ length: 17 }, (_, i) => tFn(`chat.cmd.8ball_${i + 1}`)));
 
 	function parseSlashCommand(text: string): string | null {
 		if (!text.startsWith('/')) return null;
@@ -747,24 +741,24 @@
 				const rolls = Array.from({ length: n }, () => Math.floor(Math.random() * sides) + 1);
 				const total = rolls.reduce((a, b) => a + b, 0);
 				const detail = n > 1 ? ` <em>(${rolls.join(' + ')})</em>` : '';
-				return `🎲 ${u} lance un <strong>${n}d${sides}</strong>${detail} → <strong>${total}</strong>`;
+				return tFn('chat.cmd.roll', { user: u, dice: `${n}d${sides}`, detail, total });
 			}
 			case 'flip': {
-				const r = Math.random() < 0.5 ? 'Pile 🪙' : 'Face ✨';
-				return `🪙 ${u} lance une pièce → <strong>${r}</strong>`;
+				const r = Math.random() < 0.5 ? tFn('chat.cmd.flip_heads') : tFn('chat.cmd.flip_tails');
+				return tFn('chat.cmd.flip', { user: u, result: r });
 			}
 			case '8ball': {
 				const q = args.length ? ` « ${args.join(' ')} »` : '';
 				const a = EIGHT_BALL[Math.floor(Math.random() * EIGHT_BALL.length)];
-				return `🎱 ${u}${q} → <em>${a}</em>`;
+				return tFn('chat.cmd.8ball', { user: u, q, answer: a });
 			}
 			case 'rps': {
 				const opts   = ['🪨', '📄', '✂️'];
 				const wins   = { '🪨': '✂️', '📄': '🪨', '✂️': '📄' };
 				const me     = opts.includes(args[0]) ? args[0] : opts[Math.floor(Math.random() * 3)];
 				const bot    = opts[Math.floor(Math.random() * 3)];
-				const result = me === bot ? 'Égalité !' : wins[me as keyof typeof wins] === bot ? `${u} gagne 🏆` : 'Le bot gagne 🤖';
-				return `✊ ${u} joue ${me} contre le bot ${bot} → <strong>${result}</strong>`;
+				const result = me === bot ? tFn('chat.cmd.rps_tie') : wins[me as keyof typeof wins] === bot ? tFn('chat.cmd.rps_win', { user: u }) : tFn('chat.cmd.rps_lose');
+				return tFn('chat.cmd.rps', { user: u, me, bot, result });
 			}
 			default:
 				return null; // Commande inconnue → message normal
@@ -989,7 +983,7 @@
 
 	// ── Delete ────────────────────────────────────────────────────────────────
 	function confirmDelete(messageId: string) {
-		if (!s || !confirm('Supprimer ce message ?')) return;
+		if (!s || !confirm(tFn('chat.confirm_delete'))) return;
 		s.emit('chat:delete', { messageId });
 	}
 
@@ -1084,7 +1078,7 @@
 				<div class="h-11 shrink-0 flex items-center gap-3 px-4" style="background: #0d0d12; border-bottom: 1px solid rgba(255,255,255,.06)">
 					<!-- Mobile hamburger -->
 					<button class="lg:hidden shrink-0 p-1.5 transition-colors" style="color: #6b7280"
-					        onclick={() => drawerOpen = true} aria-label="Ouvrir les canaux" aria-expanded={drawerOpen} aria-controls="channels-drawer">
+					        onclick={() => drawerOpen = true} aria-label={tFn('chat.open_channels_aria')} aria-expanded={drawerOpen} aria-controls="channels-drawer">
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
 						</svg>
@@ -1147,7 +1141,7 @@
                 style="scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.06) transparent"
             >
 				{#if isLoadingOld}
-					<p class="text-center text-xs text-gray-600 py-2">Chargement…</p>
+					<p class="text-center text-xs text-gray-600 py-2">{tFn('common.loading')}</p>
 				{/if}
 				{#if noMoreHistory && messages.length > 0}
 					<p class="text-center text-xs text-gray-700 py-2">{tFn('chat.history_start')}</p>
@@ -1238,8 +1232,8 @@
 										onkeydown={handleEditKeydown}
 									></textarea>
 									<div class="flex justify-end gap-2 mt-2">
-										<button onclick={() => { editingMsg = null }} class="text-[10px] font-black text-gray-500 hover:text-white uppercase tracking-widest">Annuler</button>
-										<button onclick={confirmEdit} class="text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest underline">Valider</button>
+										<button onclick={() => { editingMsg = null }} class="text-[10px] font-black text-gray-500 hover:text-white uppercase tracking-widest">{tFn('common.cancel')}</button>
+										<button onclick={confirmEdit} class="text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest underline">{tFn('common.validate')}</button>
 									</div>
 								</div>
 							{:else if msg.poll_id}
@@ -1352,7 +1346,7 @@
 								</button>
 								{#if msg.author_id === userId}
 									<!-- Modifier -->
-									<button onclick={() => startEdit(msg)} title="Modifier"
+									<button onclick={() => startEdit(msg)} title={tFn('common.edit')}
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
@@ -1361,7 +1355,7 @@
 								{/if}
 								{#if isAdmin}
 									<!-- Épingler -->
-									<button onclick={() => pinMessage(msg)} title={pinnedMessage?.id === msg.id ? 'Désépingler' : 'Épingler'}
+									<button onclick={() => pinMessage(msg)} title={pinnedMessage?.id === msg.id ? tFn('common.unpin') : tFn('common.pin')}
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: {pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : '#4b5563'}"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : '#4b5563'}>
@@ -1370,7 +1364,7 @@
 								{/if}
 								{#if msg.author_id === userId || isAdmin}
 									<!-- Supprimer -->
-									<button onclick={() => confirmDelete(msg.id)} title="Supprimer"
+									<button onclick={() => confirmDelete(msg.id)} title={tFn('common.delete')}
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#ef4444'}
 									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
@@ -1378,7 +1372,7 @@
 									</button>
 								{/if}
 								<!-- Copier -->
-								<button onclick={() => { navigator.clipboard.writeText(msg.content?.replace(/<[^>]*>/g, '') ?? '') }} title="Copier"
+								<button onclick={() => { navigator.clipboard.writeText(msg.content?.replace(/<[^>]*>/g, '') ?? '') }} title={tFn('common.copy')}
 								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
 								        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#9ca3af'}
 								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
@@ -1410,7 +1404,7 @@
 					transition:fade={{ duration: 120 }}
 				>
 					<span class="text-xs font-semibold" style="color: var(--nx-accent-2-soft);">
-						{#if unreadWhileScrolled > 0}{unreadWhileScrolled} nouveau{unreadWhileScrolled > 1 ? 'x' : ''}{:else}Retour en bas{/if}
+						{#if unreadWhileScrolled > 0}{tFn('chat.new_count', { n: unreadWhileScrolled })}{:else}{tFn('chat.back_to_bottom')}{/if}
 					</span>
 					<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2.5" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
@@ -1543,7 +1537,7 @@
 						<svg class="w-3 h-3 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
 						<span class="font-bold shrink-0" style="color: var(--nx-accent-2-soft)">{replyTo.author_username}</span>
 						<span class="truncate flex-1" style="color: #4b5563">{replyTo.content?.replace(/<[^>]*>/g, '').slice(0, 80) ?? ''}</span>
-						<button onclick={() => replyTo = null} title="Annuler"
+						<button onclick={() => replyTo = null} title={tFn('common.cancel')}
 						        class="shrink-0 w-4 h-4 flex items-center justify-center text-sm leading-none transition-colors" style="color: #374151">×</button>
 					</div>
 				{/if}
@@ -1625,7 +1619,7 @@
 						</button>
 					</div>
 				</div>
-				<p class="text-[10px] mt-1" style="color: #1f2937">↵ Envoyer · ⇧↵ Saut de ligne · ⌃⇧E Éditeur riche</p>
+				<p class="text-[10px] mt-1" style="color: #1f2937">{tFn('chat.composer_hint')}</p>
 			</div>
 
 			{/if}<!-- end voice/text branch -->
@@ -1662,7 +1656,7 @@
 		transition:fade={{ duration: 280 }}
 	>
 		<div class="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></div>
-		<span class="text-xs text-gray-400 font-medium whitespace-nowrap">Relais serveur actif — connexion directe indisponible</span>
+		<span class="text-xs text-gray-400 font-medium whitespace-nowrap">{tFn('chat.p2p_fallback')}</span>
 	</div>
 {/if}
 
@@ -1681,7 +1675,7 @@
 			<div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
 			 
 			
-				<h2 class="text-lg font-semibold text-white">{editingRichId ? 'Modifier le message' : 'Composer un message riche'}</h2>
+				<h2 class="text-lg font-semibold text-white">{editingRichId ? tFn('chat.edit_message') : tFn('chat.compose_rich')}</h2>
 				<button onclick={closeRichModal} class="text-gray-400 hover:text-white text-xl leading-none">×</button>
 			</div>
 			
@@ -1697,7 +1691,7 @@
 			</div>
 			<div class="px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
 				<button onclick={closeRichModal} class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-sm text-gray-200 transition-colors">
-					Annuler
+					{tFn('common.cancel')}
 				</button>
 				<button
 					onclick={sendRich}
