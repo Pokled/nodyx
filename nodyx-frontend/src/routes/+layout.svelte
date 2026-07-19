@@ -665,7 +665,7 @@
 				class="lang-nav-btn p-2 transition-colors flex items-center gap-1.5 text-gray-500"
 				title={tFn('settings.language.label')}
 				aria-label={tFn('settings.language.label')}>
-				<span class="text-base leading-none">{LOCALES.find(l => l.code === currentLocale)?.flag ?? '🌐'}</span>
+				<span class="flex items-center leading-none"><ChannelIcon value={LOCALES.find(l => l.code === currentLocale)?.flagIcon} fallback="🌐" size={18} /></span>
 				<svg class="hidden sm:block w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>
 			</button>
 			{#if user}
@@ -1268,7 +1268,7 @@
                                         onclick={() => pickLocale(loc.code)}
                                         class="lang-seg flex items-center gap-4 p-4 rounded-lg border border-white/[0.06] bg-white/[0.02] cursor-pointer w-full relative overflow-hidden shrink-0 text-left {currentLocale === loc.code ? 'active' : ''}"
                                     >
-                                        <span class="text-[26px] leading-none shrink-0">{loc.flag}</span>
+                                        <span class="shrink-0 flex items-center leading-none"><ChannelIcon value={loc.flagIcon} size={26} /></span>
                                         <span class="flex-1 min-w-0">
                                             <span class="lang-label text-sm font-semibold text-slate-200 block leading-relaxed">{loc.label}</span>
                                         </span>

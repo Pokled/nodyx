@@ -18,17 +18,18 @@ export type Locale = 'fr' | 'en' | 'es' | 'de' | 'ru' | 'pt-PT' | 'vi'
 export interface LocaleMeta {
   code:  Locale
   label: string
-  flag:  string
+  flag:  string   // emoji (fallback ; Chrome/Windows ne rend pas les drapeaux)
+  flagIcon: string // id Twemoji SVG bundlé (rendu fiable partout via ChannelIcon)
 }
 
 export const LOCALES: LocaleMeta[] = [
-  { code: 'fr',    label: 'Français',   flag: '🇫🇷' },
-  { code: 'en',    label: 'English',    flag: '🇬🇧' },
-  { code: 'es',    label: 'Español',    flag: '🇪🇸' },
-  { code: 'de',    label: 'Deutsch',    flag: '🇩🇪' },
-  { code: 'ru',    label: 'Русский',    flag: '🇷🇺' },
-  { code: 'pt-PT', label: 'Português',  flag: '🇵🇹' },
-  { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'fr',    label: 'Français',   flag: '🇫🇷', flagIcon: 'twemoji:flag-france' },
+  { code: 'en',    label: 'English',    flag: '🇬🇧', flagIcon: 'twemoji:flag-united-kingdom' },
+  { code: 'es',    label: 'Español',    flag: '🇪🇸', flagIcon: 'twemoji:flag-spain' },
+  { code: 'de',    label: 'Deutsch',    flag: '🇩🇪', flagIcon: 'twemoji:flag-germany' },
+  { code: 'ru',    label: 'Русский',    flag: '🇷🇺', flagIcon: 'twemoji:flag-russia' },
+  { code: 'pt-PT', label: 'Português',  flag: '🇵🇹', flagIcon: 'twemoji:flag-portugal' },
+  { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳', flagIcon: 'twemoji:flag-vietnam' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────
