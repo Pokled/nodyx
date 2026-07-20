@@ -54,7 +54,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const cookieLocale = cookies.get('nodyx_locale');
 	const ssrLocale = (isKnownLocale(cookieLocale) ? cookieLocale : getLocaleFromAcceptLanguage(request.headers.get('accept-language'))) || 'fr';
 
-	const [infoRes, userRes, directoryJson, announcementRes, modulesRes] = await Promise.all([
+	const [infoRes, userRes, directoryJson, announcementRes, modulesRes, channelsRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),
 		token
 			? apiFetch(fetch, '/users/me', { headers: { Authorization: `Bearer ${token}` } })
@@ -62,7 +62,13 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 		fetchDirectoryCached(),
 		apiFetch(fetch, '/instance/announcement').catch(() => null),
 		apiFetch(fetch, '/admin/modules/public').catch(() => null),
+		token
+			? apiFetch(fetch, '/chat/channels', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
+			: Promise.resolve(null),
 	]);
+
+	const channelsJson = channelsRes?.ok ? await channelsRes.json().catch(() => null) : null;
+	const channels: Array<{ id: string; name: string; type: string; icon_emoji?: string | null }> = channelsJson?.channels ?? [];
 
 	const infoJson = infoRes.ok ? await infoRes.json() : null;
 
@@ -94,7 +100,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (((directoryJson as any)?.instances) ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, channels: [], demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale };
 	}
 
 	const { user } = await userRes.json();
@@ -124,5 +130,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, channels, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale };
 };

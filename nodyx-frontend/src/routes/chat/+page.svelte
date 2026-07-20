@@ -24,6 +24,7 @@
 	// FloatingReactions : retiré, géré globalement dans +layout.svelte
 	import { t } from '$lib/i18n';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
+	import { panelCollapsedStore, membersCollapsedStore } from '$lib/communityStore';
 	import { playMessage, playMention } from '$lib/sounds';
 	const tFn = $derived($t)
 	const customEmojis = $derived($customEmojisStore)   // réactif : re-rend au chargement des emojis
@@ -41,6 +42,7 @@
 	let { data }: { data: PageData } = $props();
 
 	let localChannels = $state<any[]>([]);
+
 	$effect(() => { localChannels = (data.channels ?? []).slice(); });
 
 	// data.user comes from layout — cast through unknown to extract id safely
@@ -1026,8 +1028,8 @@
 
 <svelte:head><title>Chat — Nodyx</title></svelte:head>
 
-<!-- Full-height layout — left offset accounts for icon bar (72px) + channel sidebar (220px) = 292px -->
-<div class="fixed top-12 bottom-0 lg:left-[292px] xl:right-[220px] left-0 right-0 flex overflow-hidden z-10" style="background: #080810">
+<!-- Full-height layout — left and right offsets dynamically adjusted on collapse/expand -->
+<div class="fixed top-12 bottom-0 {$panelCollapsedStore ? 'lg:left-14' : 'lg:left-[276px]'} {$membersCollapsedStore ? 'xl:right-0' : 'xl:right-[220px]'} left-0 right-0 flex overflow-hidden z-10 bg-[#080810] [transition:left_.25s_cubic-bezier(.4,0,.2,1),right_.25s_cubic-bezier(.4,0,.2,1)]">
 
 	<!-- ── Channel sidebar — mobile drawer only (layout sidebar handles desktop) ── -->
 	<div class="lg:hidden">
@@ -1226,7 +1228,7 @@
 							{:else if editingMsg?.id === msg.id}
 								<div class="bg-gray-800 p-2 rounded-xl border border-indigo-500/50 mt-1 shadow-2xl">
 									<textarea
-										class="w-full bg-transparent text-sm text-white outline-none resize-none custom-scrollbar"
+										class="w-full bg-transparent text-sm text-white outline-hidden resize-none custom-scrollbar"
 										rows={2}
 										bind:value={editingMsg.content}
 										onkeydown={handleEditKeydown}
@@ -1502,7 +1504,7 @@
 										placeholder={tFn('chat.gif_search')}
 										bind:value={gifQuery}
 										oninput={onGifInput}
-										class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 outline-none focus:border-indigo-600"
+										class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 outline-hidden focus:border-indigo-600"
 									/>
 								</div>
 								<div class="p-2 grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto" style="scrollbar-width:thin;">
@@ -1560,7 +1562,7 @@
 					<!-- Textarea -->
 					<textarea
 						id="chat-input"
-						class="flex-1 bg-transparent py-1.5 text-sm resize-none outline-none max-h-32 disabled:opacity-50"
+						class="flex-1 bg-transparent py-1.5 text-sm resize-none outline-hidden max-h-32 disabled:opacity-50"
 						style="color: #e2e8f0; font-family: inherit; scrollbar-width: thin"
 						placeholder={isRateLimited ? tFn('chat.antispam_loading') : tFn('chat.input_placeholder', { channel: selectedChannel.name })}
 						rows={1}
@@ -1652,7 +1654,7 @@
 <!-- ── P2P fallback toast ──────────────────────────────────────────────────── -->
 {#if $p2pFallback}
 	<div
-		class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-4 py-2.5 bg-gray-900/95 border border-gray-700/60 rounded-xl shadow-2xl backdrop-blur-sm z-50"
+		class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-4 py-2.5 bg-gray-900/95 border border-gray-700/60 rounded-xl shadow-2xl backdrop-blur-xs z-50"
 		transition:fade={{ duration: 280 }}
 	>
 		<div class="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0"></div>
