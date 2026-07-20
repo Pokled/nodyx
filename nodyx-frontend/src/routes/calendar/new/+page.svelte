@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
+	const tFn = $derived($t);
 	import { enhance } from '$app/forms';
 	import { PUBLIC_API_URL } from '$env/static/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
@@ -93,7 +95,7 @@
 </script>
 
 <svelte:head>
-	<title>Créer un événement</title>
+	<title>{tFn('event.new_page_title')}</title>
 </svelte:head>
 
 <div class="max-w-3xl mx-auto">
@@ -101,11 +103,11 @@
 		<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 		</svg>
-		Retour au calendrier
+		{tFn('event.back_to_calendar')}
 	</a>
 
-	<h1 class="text-2xl font-bold text-white mb-1">Créer un événement</h1>
-	<p class="text-gray-500 text-sm mb-7">Planifiez et partagez un événement avec la communauté.</p>
+	<h1 class="text-2xl font-bold text-white mb-1">{tFn('event.new_page_title')}</h1>
+	<p class="text-gray-500 text-sm mb-7">{tFn('event.new_sub')}</p>
 
 	{#if form?.error}
 		<div class="mb-6 rounded-xl border border-red-800/50 bg-red-950/30 px-4 py-3 text-red-300 text-sm">{form.error}</div>
@@ -123,7 +125,7 @@
 				<!-- Zone de drop / preview -->
 				<label class="block relative cursor-pointer group">
 					{#if coverPreview}
-						<img src={coverPreview} alt="Aperçu" class="w-full h-52 object-cover rounded-xl border border-gray-700"/>
+						<img src={coverPreview} alt={tFn('event.cover_alt')} class="w-full h-52 object-cover rounded-xl border border-gray-700"/>
 						<div class="absolute inset-0 bg-black/50 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
 							<span class="text-white text-sm">Changer l'image</span>
 						</div>
@@ -159,7 +161,7 @@
 			<div>
 				<label for="title" class="block text-sm font-medium text-gray-300 mb-1.5">Titre <span class="text-red-400">*</span></label>
 				<input id="title" name="title" type="text" required
-				       placeholder="Concert, game jam, réunion mensuelle..."
+				       placeholder={tFn('event.title_placeholder')}
 				       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
@@ -167,7 +169,7 @@
 			<!-- Dates -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div>
-					<label for="starts_at" class="block text-sm font-medium text-gray-300 mb-1.5">Début <span class="text-red-400">*</span></label>
+					<label for="starts_at" class="block text-sm font-medium text-gray-300 mb-1.5">{tFn('event.field_start')} <span class="text-red-400">*</span></label>
 					<input id="starts_at" name="starts_at" type="{isAllDay ? 'date' : 'datetime-local'}" required
 					       value={isAllDay ? defaultStart.slice(0,10) : defaultStart}
 					       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm
@@ -187,18 +189,18 @@
 				<label class="flex items-center gap-2 cursor-pointer select-none">
 					<input type="checkbox" bind:checked={isAllDay} class="w-4 h-4 rounded border-gray-600 accent-emerald-500"/>
 					<input type="hidden" name="is_all_day" value={isAllDay ? 'true' : 'false'}/>
-					<span class="text-sm text-gray-300">Toute la journée</span>
+					<span class="text-sm text-gray-300">{tFn('event.all_day')}</span>
 				</label>
 				<label class="flex items-center gap-2 cursor-pointer select-none">
 					<input type="checkbox" bind:checked={isPublic} class="w-4 h-4 rounded border-gray-600 accent-emerald-500"/>
 					<input type="hidden" name="is_public" value={isPublic ? 'true' : 'false'}/>
-					<span class="text-sm text-gray-300">Événement public</span>
+					<span class="text-sm text-gray-300">{tFn('event.public')}</span>
 				</label>
 			</div>
 
 			<!-- Tags -->
 			<div>
-				<label for="tags" class="block text-sm font-medium text-gray-300 mb-1.5">Tags <span class="text-gray-600 text-xs font-normal">(virgule-séparés)</span></label>
+				<label for="tags" class="block text-sm font-medium text-gray-300 mb-1.5">{tFn('event.field_tags')} <span class="text-gray-600 text-xs font-normal">{tFn('event.tags_hint')}</span></label>
 				<input id="tags" name="tags" type="text" placeholder="musique, jeux, irl, dev..."
 				       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
@@ -210,7 +212,7 @@
 			<h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Description</h2>
 			<NodyxEditor
 				name="description"
-				placeholder="Décrivez l'événement — programme, accès, ce qu'il faut apporter..."
+				placeholder={tFn('event.desc_placeholder')}
 			/>
 		</section>
 
@@ -229,7 +231,7 @@
 			<!-- Coordonnées OSM -->
 			<div class="rounded-xl border border-gray-800 bg-gray-900/40 p-4 space-y-3">
 				<div class="flex items-center justify-between">
-					<p class="text-xs font-medium text-gray-400">Coordonnées GPS <span class="text-gray-600">(pour afficher la carte)</span></p>
+					<p class="text-xs font-medium text-gray-400">{tFn('event.gps_coords')} <span class="text-gray-600">{tFn('event.gps_display_hint')}</span></p>
 					<div class="flex gap-2">
 						<button type="button" onclick={geolocate}
 						        class="text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors flex items-center gap-1">
@@ -270,12 +272,12 @@
 						<iframe
 							src={osmPreviewUrl()}
 							class="w-full h-full border-0"
-							title="Aperçu carte"
+							title={tFn('event.map_preview_title')}
 							loading="lazy"
 						></iframe>
 					</div>
 				{:else}
-					<p class="text-xs text-gray-600">Entrez les coordonnées pour voir un aperçu de la carte OpenStreetMap.</p>
+					<p class="text-xs text-gray-600">{tFn('event.gps_hint')}</p>
 				{/if}
 			</div>
 		</section>
@@ -286,7 +288,7 @@
 				<h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Billetterie</h2>
 				<label class="flex items-center gap-2 cursor-pointer select-none">
 					<input type="checkbox" bind:checked={hasTicket} class="w-4 h-4 rounded border-gray-600 accent-emerald-500"/>
-					<span class="text-sm text-gray-400">Événement payant</span>
+					<span class="text-sm text-gray-400">{tFn('event.paid')}</span>
 				</label>
 			</div>
 
@@ -310,7 +312,7 @@
 						</div>
 						<div>
 							<label for="max_att" class="block text-sm font-medium text-gray-300 mb-1.5">Places disponibles <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
-							<input id="max_att" name="max_attendees" type="number" min="1" placeholder="Illimité"
+							<input id="max_att" name="max_attendees" type="number" min="1" placeholder={tFn('event.unlimited')}
 							       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm
 							              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 						</div>
@@ -325,7 +327,7 @@
 				</div>
 			{:else}
 				<input type="hidden" name="ticket_price" value=""/>
-				<p class="text-xs text-gray-600">L'événement est gratuit. Activez l'option ci-dessus pour ajouter un prix.</p>
+				<p class="text-xs text-gray-600">{tFn('event.free_hint')}</p>
 			{/if}
 		</section>
 
@@ -342,7 +344,7 @@
 			{#if rsvpEnabled && !hasTicket}
 				<div>
 					<label for="new-max-att-rsvp" class="block text-sm font-medium text-gray-300 mb-1.5">Places max <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
-					<input id="new-max-att-rsvp" name="max_attendees" type="number" min="1" placeholder="Illimité"
+					<input id="new-max-att-rsvp" name="max_attendees" type="number" min="1" placeholder={tFn('event.unlimited')}
 					       class="w-36 bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 				</div>
@@ -354,11 +356,11 @@
 			<button type="submit" disabled={submitting || uploadingCover}
 			        class="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50
 			               text-white font-semibold text-sm transition-colors">
-				{submitting ? 'Création...' : "Créer l'événement"}
+				{submitting ? tFn('event.creating') : tFn('event.create_event')}
 			</button>
 			<a href="/calendar"
 			   class="px-5 py-3.5 rounded-xl border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors">
-				Annuler
+				{tFn('common.cancel')}
 			</a>
 		</div>
 	</form>

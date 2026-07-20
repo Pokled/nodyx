@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
+	const tFn = $derived($t);
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 
@@ -14,7 +16,7 @@
 	}
 	function formatDateRange(ev: any): string {
 		if (ev.is_all_day) return formatDate(ev.starts_at);
-		const start = `${formatDate(ev.starts_at)} à ${formatTime(ev.starts_at)}`;
+		const start = tFn('event.at', { date: formatDate(ev.starts_at), time: formatTime(ev.starts_at) });
 		if (!ev.ends_at) return start;
 		const sameDay = new Date(ev.starts_at).toDateString() === new Date(ev.ends_at).toDateString();
 		return sameDay ? `${start} – ${formatTime(ev.ends_at)}` : `${start} → ${formatDate(ev.ends_at)}`;
@@ -51,19 +53,19 @@
 			<div class="cal-header-left">
 				<span class="cal-icon">📅</span>
 				<div>
-					<h1 class="cal-title">Calendrier</h1>
-					<p class="cal-sub">Événements de la communauté</p>
+					<h1 class="cal-title">{tFn('calendar.title')}</h1>
+					<p class="cal-sub">{tFn('calendar.subtitle')}</p>
 				</div>
 			</div>
 			<div class="cal-header-right">
 				<div class="cal-toggle">
 					<a href="/calendar"
 					   class="cal-toggle-btn {!data.past ? 'cal-toggle-btn--active' : ''}">
-						À venir
+						{tFn('event.badge_upcoming')}
 					</a>
 					<a href="/calendar?past=true"
 					   class="cal-toggle-btn {data.past ? 'cal-toggle-btn--past' : ''}">
-						Passés
+						{tFn('calendar.past')}
 					</a>
 				</div>
 				{#if data.token}
@@ -71,7 +73,7 @@
 						<svg class="cal-new-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
 						</svg>
-						Créer
+						{tFn('calendar.create')}
 					</a>
 				{/if}
 			</div>
@@ -83,9 +85,9 @@
 		{#if data.events.length === 0}
 			<div class="cal-empty">
 				<p class="cal-empty-icon">📅</p>
-				<p class="cal-empty-title">Aucun événement {data.past ? 'passé' : 'à venir'}</p>
+				<p class="cal-empty-title">{data.past ? tFn('calendar.no_events_past') : tFn('calendar.no_events_upcoming')}</p>
 				{#if data.token && !data.past}
-					<a href="/calendar/new" class="cal-empty-link">Créer le premier événement →</a>
+					<a href="/calendar/new" class="cal-empty-link">{tFn('calendar.create_first')}</a>
 				{/if}
 			</div>
 		{:else}
@@ -113,7 +115,7 @@
 									<h3 class="cal-row-title {ev.is_cancelled ? 'cal-row-title--cancelled' : ''}">{ev.title}</h3>
 									<div class="cal-row-badges">
 										{#if ev.is_cancelled}
-											<span class="cal-badge cal-badge--red">Annulé</span>
+											<span class="cal-badge cal-badge--red">{tFn('event.badge_cancelled')}</span>
 										{/if}
 										{#if isToday(ev)}
 											<span class="cal-badge cal-badge--green">Aujourd'hui</span>

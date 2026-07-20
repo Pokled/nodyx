@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
+	const tFn = $derived($t);
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import type { PageData, ActionData } from './$types';
@@ -86,12 +88,12 @@
 		<div class="absolute bottom-0 left-0 right-0 p-6">
 			<div class="flex items-center gap-2 mb-2 flex-wrap">
 				{#if ev.is_cancelled}
-					<span class="text-xs px-2.5 py-1 rounded-full bg-red-900/80 text-red-300 border border-red-700/50 font-medium backdrop-blur-sm">Annulé</span>
+					<span class="text-xs px-2.5 py-1 rounded-full bg-red-900/80 text-red-300 border border-red-700/50 font-medium backdrop-blur-sm">{tFn('event.badge_cancelled')}</span>
 				{:else if !isPast(ev.starts_at)}
-					<span class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700/50 font-medium backdrop-blur-sm">À venir</span>
+					<span class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700/50 font-medium backdrop-blur-sm">{tFn('event.badge_upcoming')}</span>
 				{/if}
 				{#if !ev.is_public}
-					<span class="text-xs px-2.5 py-1 rounded-full bg-gray-800/80 text-gray-300 border border-gray-700/50 font-medium backdrop-blur-sm">Privé</span>
+					<span class="text-xs px-2.5 py-1 rounded-full bg-gray-800/80 text-gray-300 border border-gray-700/50 font-medium backdrop-blur-sm">{tFn('event.badge_private')}</span>
 				{/if}
 			</div>
 			<h1 class="text-3xl font-bold text-white drop-shadow-lg {ev.is_cancelled ? 'line-through opacity-70' : ''}">{ev.title}</h1>
@@ -102,12 +104,12 @@
 			<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 			</svg>
-			Calendrier
+			{tFn('event.back_calendar_short')}
 		</a>
 	</div>
 {:else}
 	<div class="flex items-start gap-3 mb-6">
-		<a href="/calendar" aria-label="Retour au calendrier" class="text-gray-500 hover:text-gray-300 text-sm flex items-center gap-1.5 mt-0.5">
+		<a href="/calendar" aria-label={tFn('event.back_to_calendar')} class="text-gray-500 hover:text-gray-300 text-sm flex items-center gap-1.5 mt-0.5">
 			<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 			</svg>
@@ -115,9 +117,9 @@
 		<div>
 			<div class="flex items-center gap-2 mb-1 flex-wrap">
 				{#if ev.is_cancelled}
-					<span class="text-xs px-2 py-0.5 rounded-full bg-red-900/40 text-red-400 border border-red-800/40 font-medium">Annulé</span>
+					<span class="text-xs px-2 py-0.5 rounded-full bg-red-900/40 text-red-400 border border-red-800/40 font-medium">{tFn('event.badge_cancelled')}</span>
 				{:else if !isPast(ev.starts_at)}
-					<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400 border border-emerald-800/40 font-medium">À venir</span>
+					<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400 border border-emerald-800/40 font-medium">{tFn('event.badge_upcoming')}</span>
 				{/if}
 			</div>
 			<h1 class="text-2xl font-bold text-white {ev.is_cancelled ? 'line-through opacity-60' : ''}">{ev.title}</h1>
@@ -158,11 +160,11 @@
 		{#if osmEmbedUrl()}
 			<div class="rounded-2xl border border-gray-800 bg-gray-900/50 overflow-hidden">
 				<div class="flex items-center justify-between px-5 py-3 border-b border-gray-800">
-					<h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Lieu</h2>
+					<h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">{tFn('event.location_heading')}</h2>
 					{#if osmLinkUrl()}
 						<a href={osmLinkUrl()} target="_blank" rel="noopener"
 						   class="text-xs text-emerald-400 hover:underline flex items-center gap-1">
-							Ouvrir dans OSM
+							{tFn('event.open_osm')}
 							<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
 							</svg>
@@ -201,7 +203,7 @@
 					<a href={osmLinkUrl()} target="_blank" rel="noopener"
 					   class="mt-3 inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-emerald-400 transition-colors">
 						<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-						Voir sur OpenStreetMap
+						{tFn('event.view_osm')}
 					</a>
 				{/if}
 			</div>
@@ -211,14 +213,14 @@
 		{#if ev.rsvp_enabled && data.attendees?.length > 0}
 			<div class="rounded-2xl border border-gray-800 bg-gray-900/50 px-5 py-5">
 				<h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
-					Participants
+					{tFn('event.participants')}
 					<span class="ml-2 px-2 py-0.5 rounded-full bg-gray-800 text-gray-300 text-xs font-normal">{data.attendees.length}</span>
 				</h2>
 				<div class="flex flex-wrap gap-2">
 					{#each data.attendees as a}
 						<a href="/users/{a.username}"
 						   class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-800 border border-gray-700/50 hover:border-gray-600 transition-colors"
-						   title="{a.username} — {a.status === 'going' ? 'participe' : a.status === 'maybe' ? 'peut-être' : 'absent'}">
+						   title="{a.username}: {a.status === 'going' ? tFn('event.rsvp_going_short') : a.status === 'maybe' ? tFn('event.rsvp_maybe_short') : tFn('event.rsvp_absent_short')}">
 							{#if a.avatar_url}
 								<img src={a.avatar_url} alt="" class="w-5 h-5 rounded-full object-cover"/>
 							{:else}
@@ -253,7 +255,7 @@
 					{#if !ev.is_all_day}
 						<p class="text-emerald-300 text-sm mt-0.5">{fTime(ev.starts_at)}{ev.ends_at ? ` – ${fTime(ev.ends_at)}` : ''}</p>
 					{:else}
-						<p class="text-emerald-300 text-xs mt-0.5">Toute la journée</p>
+						<p class="text-emerald-300 text-xs mt-0.5">{tFn('event.all_day')}</p>
 					{/if}
 					{#if ev.ends_at && new Date(ev.starts_at).toDateString() !== new Date(ev.ends_at).toDateString()}
 						<p class="text-gray-400 text-xs mt-1">→ {fDateShort(ev.ends_at)}</p>
@@ -268,7 +270,7 @@
 						<svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
 						</svg>
-						<span class="text-gray-400">Organisé par</span>
+						<span class="text-gray-400">{tFn('event.organized_by')}</span>
 						<a href="/users/{ev.author_name}" class="text-gray-200 hover:text-emerald-300 transition-colors font-medium">{ev.author_name}</a>
 					</div>
 				{/if}
@@ -311,10 +313,10 @@
 					<a href={ev.ticket_url} target="_blank" rel="noopener"
 					   class="block w-full py-3 text-center rounded-xl bg-emerald-600 hover:bg-emerald-500
 					          text-white font-semibold text-sm transition-colors">
-						Acheter un billet →
+						{tFn('event.buy_ticket')} →
 					</a>
 				{:else if ev.ticket_price === 0}
-					<p class="text-xs text-gray-500">Entrée libre</p>
+					<p class="text-xs text-gray-500">{tFn('event.free_entry')}</p>
 				{/if}
 			</div>
 		{/if}
@@ -322,20 +324,20 @@
 		<!-- RSVP -->
 		{#if ev.rsvp_enabled && !isPast(ev.starts_at) && !ev.is_cancelled && data.token}
 			<div class="rounded-2xl border border-gray-800 bg-gray-900/60 px-5 py-4">
-				<h3 class="text-sm font-semibold text-gray-300 mb-3">Ma participation</h3>
+				<h3 class="text-sm font-semibold text-gray-300 mb-3">{tFn('event.my_rsvp')}</h3>
 
 				{#if me}
 					<div class="mb-3 px-3 py-2 rounded-xl border text-xs font-medium text-center
 					           {me === 'going' ? 'bg-emerald-900/30 border-emerald-700/40 text-emerald-300'
 					           : me === 'maybe' ? 'bg-amber-900/30 border-amber-700/40 text-amber-300'
 					           : 'bg-gray-800 border-gray-700 text-gray-400'}">
-						{me === 'going' ? '✓ Je participe' : me === 'maybe' ? '? Peut-être' : '✗ Je ne peux pas'}
+						{me === 'going' ? '✓ ' + tFn('event.rsvp_going') : me === 'maybe' ? '? ' + tFn('event.rsvp_maybe') : '✗ ' + tFn('event.rsvp_cant')}
 					</div>
 				{/if}
 
 				{#if !isFull() || me === 'going'}
 					<div class="space-y-2">
-						{#each [['going','Je participe','bg-emerald-600 hover:bg-emerald-500'], ['maybe',"Peut-être",'bg-amber-600/80 hover:bg-amber-500'], ['not_going','Je ne peux pas','bg-gray-700 hover:bg-gray-600']] as [status, label, cls]}
+						{#each [['going',tFn('event.rsvp_going'),'bg-emerald-600 hover:bg-emerald-500'], ['maybe',tFn('event.rsvp_maybe'),'bg-amber-600/80 hover:bg-amber-500'], ['not_going',tFn('event.rsvp_cant'),'bg-gray-700 hover:bg-gray-600']] as [status, label, cls]}
 							<form method="POST" action="?/rsvp" use:enhance>
 								<input type="hidden" name="status" value={status}/>
 								<button type="submit"
@@ -347,13 +349,13 @@
 						{/each}
 					</div>
 				{:else}
-					<p class="text-xs text-red-400 text-center py-2">Événement complet</p>
+					<p class="text-xs text-red-400 text-center py-2">{tFn('event.full')}</p>
 				{/if}
 
 				{#if me}
 					<form method="POST" action="?/cancelRsvp" use:enhance class="mt-2">
 						<button type="submit" class="w-full py-1.5 text-xs text-gray-600 hover:text-gray-400 transition-colors">
-							Annuler ma participation
+							{tFn('event.cancel_rsvp')}
 						</button>
 					</form>
 				{/if}
@@ -363,28 +365,28 @@
 		<!-- Actions admin (auteur + admin/modo) -->
 		{#if ev.can_manage}
 			<div class="rounded-2xl border border-gray-800 bg-gray-900/50 px-5 py-4 space-y-2">
-				<h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Modération</h3>
+				<h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{tFn('event.moderation')}</h3>
 
 				<a href="/calendar/{ev.id}/edit"
 				   class="flex items-center justify-center gap-2 w-full py-2 rounded-xl border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 text-xs transition-colors">
 					<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
 					</svg>
-					Modifier l'événement
+					{tFn('event.edit_event')}
 				</a>
 
 				{#if !ev.is_cancelled}
 					<form method="POST" action="?/cancelEvent" use:enhance class="w-full">
 						<button type="submit"
 						        class="w-full py-2 rounded-xl border border-amber-800/40 text-amber-400 hover:bg-amber-950/30 text-xs transition-colors">
-							Annuler l'événement
+							{tFn('event.cancel_event')}
 						</button>
 					</form>
 				{:else}
 					<form method="POST" action="?/uncancelEvent" use:enhance class="w-full">
 						<button type="submit"
 						        class="w-full py-2 rounded-xl border border-emerald-800/40 text-emerald-400 hover:bg-emerald-950/30 text-xs transition-colors">
-							Rétablir l'événement
+							{tFn('event.restore_event')}
 						</button>
 					</form>
 				{/if}
@@ -395,7 +397,7 @@
 				}} class="w-full">
 					<button type="submit" disabled={deleting}
 					        class="w-full py-2 rounded-xl border border-red-800/40 text-red-400 hover:bg-red-950/30 text-xs transition-colors disabled:opacity-50">
-						{deleting ? 'Suppression...' : 'Supprimer définitivement'}
+						{deleting ? tFn('event.deleting') : tFn('event.delete_forever')}
 					</button>
 				</form>
 			</div>
