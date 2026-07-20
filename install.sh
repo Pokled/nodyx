@@ -972,7 +972,7 @@ _nodyx_upgrade() {
 
   info "$(t backend_rebuild)"
   cd "${dir}/nodyx-core"
-  npm install --no-fund --no-audit --silent || die "$(t npm_install_backend_fail)"
+  npm ci --no-fund --no-audit --silent || die "$(t npm_install_backend_fail)"
   npm run build || die "$(t backend_build_fail)"
   ok "$(t backend_built)"
 
@@ -985,7 +985,7 @@ _nodyx_upgrade() {
   elif [[ "$_RB_RAM_MB" -lt 8000 ]]; then export NODE_OPTIONS="--max-old-space-size=2048"
   else                                    export NODE_OPTIONS="--max-old-space-size=4096"
   fi
-  npm install --no-fund --no-audit --silent || die "$(t npm_install_frontend_fail)"
+  npm ci --no-fund --no-audit --silent || die "$(t npm_install_frontend_fail)"
   npm run build || die "$(t frontend_build_fail)"
   unset NODE_OPTIONS
   ok "$(t frontend_built)"
@@ -2477,7 +2477,7 @@ SFUCORE
 fi
 
 cd "${NODYX_DIR}/nodyx-core"
-run_bg "$(t backend_npm_install_label)" npm install --no-fund --no-audit \
+run_bg "$(t backend_npm_install_label)" npm ci --no-fund --no-audit \
   || die "$(t backend_npm_install_fail2)"
 run_bg "$(t backend_compile_label)" npm run build \
   || die "$(t backend_build_fail2)"
@@ -2506,7 +2506,7 @@ PUBLIC_TURN_CREDENTIAL=
 FEENV
 
 cd "${NODYX_DIR}/nodyx-frontend"
-run_bg "$(t front_npm_install_label)" npm install --no-fund --no-audit \
+run_bg "$(t front_npm_install_label)" npm ci --no-fund --no-audit \
   || die "$(t front_npm_install_fail2)"
 
 # On ARM64: ensure native Rollup binary is present
@@ -3067,13 +3067,13 @@ git -C "$NODYX_DIR" pull --ff-only || die "git pull échoué. Vérifie ta connex
 
 info "Rebuild backend..."
 cd "${NODYX_DIR}/nodyx-core"
-npm install --no-fund --no-audit --silent
+npm ci --no-fund --no-audit --silent
 npm run build || die "Build backend échoué."
 ok "Backend compilé"
 
 info "Rebuild frontend..."
 cd "${NODYX_DIR}/nodyx-frontend"
-npm install --no-fund --no-audit --silent
+npm ci --no-fund --no-audit --silent
 npm run build || die "Build frontend échoué."
 ok "Frontend compilé"
 

@@ -829,13 +829,13 @@ _nodyx_upgrade() {
 
   info "$(t backend_rebuild)"
   cd "${NODYX_DIR}/nodyx-core"
-  run_bg "npm install (backend)" npm install --no-fund --no-audit
+  run_bg "npm install (backend)" npm ci --no-fund --no-audit
   run_bg "npm run build (backend)" npm run build
   ok "$(t backend_built)"
 
   info "$(t frontend_rebuild)"
   cd "${NODYX_DIR}/nodyx-frontend"
-  run_bg "npm install (frontend)" npm install --no-fund --no-audit
+  run_bg "npm install (frontend)" npm ci --no-fund --no-audit
   run_bg "npm run build (frontend)" npm run build
   ok "$(t frontend_built)"
 
@@ -1355,7 +1355,7 @@ COREENV
 )
 
 cd "${NODYX_DIR}/nodyx-core"
-run_bg "npm install (backend)" npm install --no-fund --no-audit \
+run_bg "npm install (backend)" npm ci --no-fund --no-audit \
   || die "Backend npm install failed."
 run_bg "TypeScript compile (backend)" npm run build \
   || die "Backend build failed."
@@ -1394,7 +1394,7 @@ FEENV
 )
 
 cd "${NODYX_DIR}/nodyx-frontend"
-run_bg "npm install (frontend)" npm install --no-fund --no-audit \
+run_bg "npm install (frontend)" npm ci --no-fund --no-audit \
   || die "Frontend npm install failed."
 run_bg "SvelteKit build (2-5 min on ARM)" npm run build \
   || die "Frontend build failed."
@@ -1824,13 +1824,13 @@ fi
 
 info "Rebuild backend..."
 cd "${NODYX_DIR}/nodyx-core"
-npm install --no-fund --no-audit --silent
+npm ci --no-fund --no-audit --silent
 npm run build || die "Backend build failed."
 ok "Backend compiled"
 
 info "Rebuild frontend..."
 cd "${NODYX_DIR}/nodyx-frontend"
-npm install --no-fund --no-audit --silent
+npm ci --no-fund --no-audit --silent
 npm run build || die "Frontend build failed."
 ok "Frontend compiled"
 
