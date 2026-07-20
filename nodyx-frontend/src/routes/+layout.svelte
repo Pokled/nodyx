@@ -874,12 +874,9 @@
 
 				<!-- Network instances -->
 				{#each networkInstances as inst}
-					{@const isInstActive = activeCommunityName === inst.name}
-					<a href={inst.url} target="_blank" rel="noopener noreferrer" class="icon net {isInstActive ? 'active' : ''}" data-tip={inst.name} title={inst.name} onclick={(e) => {
-						e.preventDefault();
-						panelCollapsedStore.set(false);
-						activeCommunityNameStore.set(inst.name);
-					}}>
+					<!-- Decentralized: each instance is its own deployment (own design + data). -->
+					<!-- Clicking simply opens that instance's site; we never render a remote instance in place. -->
+					<a href={inst.url} target="_blank" rel="noopener noreferrer" class="icon net" data-tip={inst.name} title={inst.name}>
 						{#if inst.logo_url}
 							<img src={inst.logo_url.startsWith('http') ? inst.logo_url : inst.url.replace(/\/$/, '') + inst.logo_url}
 							     alt={inst.name} class="w-full h-full object-cover" />
