@@ -976,8 +976,8 @@
 					{@const chUnread = ($unreadCountsStore[ch.id] ?? 0)}
 					{@const hasUnread = chUnread > 0 && !chActive}
 					<a href={activeCommunityUrl ? activeCommunityUrl + "/chat?channel=" + ch.id : "/chat?channel=" + ch.id} class="channel {chActive ? 'active' : ''}">
-						<span class="text-neutral-700">{ch.icon_emoji ?? '#'}</span>
-						{ch.name}
+						<span class="text-neutral-700"><ChannelIcon value={ch.icon_emoji} fallback="#" size={14} color={ch.name_color ?? null} /></span>
+						<span style={chNameStyle(ch)}>{ch.name}</span>
 						{#if hasUnread}<span class="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400"></span>{/if}
 					</a>
 				{/each}
@@ -996,8 +996,8 @@
 						]
 						: (vcMembers[ch.id] ?? []).map((m: any) => ({ ...m, speaking: false, muted: false, deafened: false, isMe: false, userId: m.userId ?? null, socketId: null }))}
 					<a href={activeCommunityUrl ? activeCommunityUrl + "/chat?channel=" + ch.id : "/chat?channel=" + ch.id} class="channel {chActive ? 'active' : ''}">
-						<span class="text-neutral-700">{ch.icon_emoji ?? '🔊'}</span>
-						{ch.name}
+						<span class="text-neutral-700"><ChannelIcon value={ch.icon_emoji} fallback="🔊" size={14} color={ch.name_color ?? null} /></span>
+						<span style={chNameStyle(ch)}>{ch.name}</span>
 						{#if members.length > 0}
 							<span style="margin-left:auto;font-size:10px;color:{inThis ? '#818cf8' : '#333'}">{members.length}</span>
 						{/if}
