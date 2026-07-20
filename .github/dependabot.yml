@@ -33,6 +33,17 @@ updates:
       core-minor-patch:
         applies-to: version-updates
         update-types: ["minor", "patch"]
+    # ── argon2 : JAMAIS de bump automatique ─────────────────────────────────
+    # argon2 hache les mots de passe. Après l'incident de sécurité de mars 2026,
+    # on ne laisse aucun bot toucher cette brique à l'aveugle : on la met à jour
+    # À LA MAIN, avec revue, et uniquement pour une raison de sécurité réelle.
+    # Déclencheur concret : argon2 0.45.0 a RETIRÉ le type `Options` (rupture
+    # silencieuse, même pas dans les release notes) qui a cassé le build du core,
+    # pour zéro bénéfice (juste README/Solaris/abandon Node 18-20). cf PR #329.
+    # La version reste épinglée exacte dans package.json ; cet `ignore` empêche
+    # Dependabot de re-proposer le bump dans le groupe.
+    ignore:
+      - dependency-name: "argon2"
 
   # ── 2. nodyx-frontend (npm) ─────────────────────────────────────────────
   - package-ecosystem: "npm"
