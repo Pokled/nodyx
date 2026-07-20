@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onDestroy } from 'svelte'
+    import { browser } from '$app/environment'
     import {
         localScreenStore,
         remoteScreenStore,
@@ -21,10 +22,10 @@
     // chercher un bouton. Une flèche le replie (et le rouvre). Le choix est
     // mémorisé : on ne le rouvre pas de force à celui qui l'a replié.
     let showChat = $state(
-        typeof localStorage === 'undefined' || localStorage.getItem('nodyx:stage:chat') !== '0',
+        !browser || localStorage.getItem('nodyx:stage:chat') !== '0',
     )
     $effect(() => {
-        if (typeof localStorage !== 'undefined') {
+        if (browser) {
             localStorage.setItem('nodyx:stage:chat', showChat ? '1' : '0')
         }
     })

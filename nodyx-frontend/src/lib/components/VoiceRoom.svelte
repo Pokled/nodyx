@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import Table        from '$lib/components/Table.svelte';
 	import NodyxCanvas  from '$lib/components/NodyxCanvas.svelte';
 	import VoiceJukebox from '$lib/components/VoiceJukebox.svelte';
@@ -42,10 +43,10 @@
 	// fil de discussion que pour les canaux TEXTE (`{:else}` côté +page.svelte).
 	// On l'ajoute ici, à droite, OUVERT par défaut et repliable d'une flèche.
 	let showChatPanel = $state(
-		typeof localStorage === 'undefined' || localStorage.getItem('nodyx:voice:chat') !== '0',
+		!browser || localStorage.getItem('nodyx:voice:chat') !== '0',
 	);
 	$effect(() => {
-		if (typeof localStorage !== 'undefined') {
+		if (browser) {
 			localStorage.setItem('nodyx:voice:chat', showChatPanel ? '1' : '0');
 		}
 	});

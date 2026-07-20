@@ -6,6 +6,7 @@
  *              peers apply position + elapsed time drift on receive
  */
 import { writable, get } from 'svelte/store'
+import { browser } from '$app/environment'
 import type { Socket } from 'socket.io-client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -47,12 +48,12 @@ export const jukeboxStore = writable<JukeboxState>({ ..._INIT })
 
 // Per-user volume + mute — localStorage-backed, never broadcast
 function _lsNum(key: string, def: number) {
-  if (typeof localStorage === 'undefined') return def
+  if (!browser) return def
   const v = localStorage.getItem(key)
   return v !== null ? +v : def
 }
 function _lsBool(key: string, def: boolean) {
-  if (typeof localStorage === 'undefined') return def
+  if (!browser) return def
   const v = localStorage.getItem(key)
   return v !== null ? v === '1' : def
 }
@@ -178,7 +179,7 @@ export async function mountYTPlayer(containerId: string): Promise<void> {
 export function jukeboxSetVolume(v: number): void {
   const vol = Math.max(0, Math.min(100, Math.round(v)))
   jukeboxVolume.set(vol)
-  if (typeof localStorage !== 'undefined') localStorage.setItem('jb_vol', String(vol))
+  if (browser) localStorage.setItem('jb_vol', String(vol))
   if (!_ytPlayer || !_ytReady) return
   _ytPlayer.setVolume(vol)
   if (vol === 0) _ytPlayer.mute()
@@ -188,7 +189,7 @@ export function jukeboxSetVolume(v: number): void {
 export function jukeboxToggleMute(): void {
   const muted = !get(jukeboxMuted)
   jukeboxMuted.set(muted)
-  if (typeof localStorage !== 'undefined') localStorage.setItem('jb_muted', muted ? '1' : '0')
+  if (browser) localStorage.setItem('jb_muted', muted ? '1' : '0')
   if (!_ytPlayer || !_ytReady) return
   if (muted) _ytPlayer.mute()
   else { _ytPlayer.unMute(); _ytPlayer.setVolume(get(jukeboxVolume)) }

@@ -2,6 +2,7 @@
  * Nodyx Voice Settings — store persisté dans localStorage
  */
 import { writable } from 'svelte/store'
+import { browser } from '$app/environment'
 
 export interface VoiceSettings {
   /** Gain micro 0.1–2.0 (1.0 = nominal, 2.0 = boost ×2)  */
@@ -45,7 +46,7 @@ const DEFAULTS: VoiceSettings = {
 }
 
 function _load(): VoiceSettings {
-  if (typeof localStorage === 'undefined') return { ...DEFAULTS }
+  if (!browser) return { ...DEFAULTS }
   try {
     const raw = localStorage.getItem('nodyx:voiceSettings')
     if (!raw) return { ...DEFAULTS }
@@ -59,7 +60,7 @@ export const voiceSettingsStore = writable<VoiceSettings>(_load())
 
 // Persist every change
 voiceSettingsStore.subscribe(v => {
-  if (typeof localStorage !== 'undefined') {
+  if (browser) {
     localStorage.setItem('nodyx:voiceSettings', JSON.stringify(v))
   }
 })
@@ -70,7 +71,7 @@ voiceSettingsStore.subscribe(v => {
 const PEER_VOL_KEY = 'nodyx:peerVolumes'
 
 export function loadPeerVolumes(): Record<string, number> {
-  if (typeof localStorage === 'undefined') return {}
+  if (!browser) return {}
   try { return JSON.parse(localStorage.getItem(PEER_VOL_KEY) || '{}') } catch { return {} }
 }
 
@@ -80,7 +81,7 @@ export function getPeerVolume(userId: string): number {
 }
 
 export function savePeerVolume(userId: string, volume: number): void {
-  if (typeof localStorage === 'undefined' || !userId) return
+  if (!browser || !userId) return
   const all = loadPeerVolumes()
   all[userId] = volume
   try { localStorage.setItem(PEER_VOL_KEY, JSON.stringify(all)) } catch { /* quota */ }

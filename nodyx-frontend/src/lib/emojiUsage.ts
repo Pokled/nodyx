@@ -6,18 +6,19 @@
  * Clé = un emoji unicode ('🔥') OU un shortcode custom (':rat:').
  */
 import { writable } from 'svelte/store'
+import { browser } from '$app/environment'
 
 const KEY = 'nodyx:emojiUsage'
 
 function load(): Record<string, number> {
-	if (typeof localStorage === 'undefined') return {}
+	if (!browser) return {}
 	try { return JSON.parse(localStorage.getItem(KEY) || '{}') } catch { return {} }
 }
 
 export const emojiUsageStore = writable<Record<string, number>>(load())
 
 export function bumpEmoji(emoji: string): void {
-	if (typeof localStorage === 'undefined' || !emoji) return
+	if (!browser || !emoji) return
 	emojiUsageStore.update(u => {
 		const next = { ...u, [emoji]: (u[emoji] || 0) + 1 }
 		try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* quota */ }

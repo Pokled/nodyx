@@ -98,11 +98,11 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
         <sub><b>JoeJoeflyn</b></sub>
       </a>
       <br/>
-      <sub>🌟 × 2</sub>
+      <sub>🌟 × 3</sub>
       <br/>
-      <sub><a href="https://github.com/Pokled/nodyx/pull/306">PR #306</a> · <a href="https://github.com/Pokled/nodyx/pull/314">PR #314</a></sub>
+      <sub><a href="https://github.com/Pokled/nodyx/pull/306">PR #306</a> · <a href="https://github.com/Pokled/nodyx/pull/314">PR #314</a> · <a href="https://github.com/Pokled/nodyx/issues/327">#327</a></sub>
       <br/>
-      <sub><em>Vietnamese (vi) translation + guest-accessible language picker</em></sub>
+      <sub><em>Vietnamese translation, guest language picker, SSR crash report</em></sub>
       <br/>
       <sub><strong>First Vietnamese contributor 🇻🇳</strong></sub>
     </td>
@@ -172,6 +172,7 @@ Sometimes a contribution isn't a PR. Sometimes it's just being there at exactly 
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Reported the SSR 500 on Node 22.4+ / 25+: the new global `localStorage` proxy makes `typeof localStorage === 'undefined'` return false while its methods still throw, breaking the guard in `voiceSettings.ts` and 4 other files. Pinpointed the exact lines and the upstream Node issue. | `bug(ssr)` | [#327](https://github.com/Pokled/nodyx/issues/327) | browser-guard fix (this PR) | 2026-07-20 |
 | [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Moved the language picker out of `/settings` into a guest-accessible layout pane, and read the locale from a cookie in `hooks.server.ts` so SSR paints the right language on first load (no flash from `fr`), auto-detecting the browser's `Accept-Language`. | `feat(lang)` | [#314](https://github.com/Pokled/nodyx/pull/314) | [`c5c3822`](https://github.com/Pokled/nodyx/commit/c5c3822), polish below | 2026-07-19 |
 | [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Vietnamese (vi) translation: 955 strings, full key + placeholder parity with `en.json`, wired into the locale switch (label, flag, navigator detection). Restored 5 dropped interpolation variables and reverted a placeholder URL on review. | `feat(i18n)` | [#306](https://github.com/Pokled/nodyx/pull/306) | [`bc31f37`](https://github.com/Pokled/nodyx/commit/bc31f37) | 2026-07-18 |
 | [@schlaggi](https://github.com/schlaggi) | Reported one-click installer false-positive DNS mismatch on dual-stack machines: `getent hosts` returns mixed-family (A or AAAA depending on `/etc/nsswitch.conf`), then the script compared the resolved IPv6 against the locally-detected IPv4 → bogus "mismatch", Let's Encrypt step refused to proceed. Fix: family-aware resolution via `getent ahostsv4` / `ahostsv6` + optional public IPv6 detection. | `bug(installer)` | [#29](https://github.com/Pokled/nodyx/issues/29) | _to fill on merge_ | 2026-05-18 |
