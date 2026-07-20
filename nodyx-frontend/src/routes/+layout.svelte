@@ -1094,13 +1094,12 @@
 			</div>
 			{:else}
 			<div class="panel-bottom">
-				<div class="user-group cursor-pointer" onclick={() => alert('Opens edit/status modal')}>
-					<div class="user-avatar">A<span class="status"></span></div>
+				<a href="/auth/login" class="user-group">
+					<div class="user-avatar">?<span class="status"></span></div>
 					<div class="flex-1 min-w-0">
-						<div class="user-name">alice</div>
-						<div class="user-role">Owner</div>
+						<div class="user-name">{tFn('common.login')}</div>
 					</div>
-				</div>
+				</a>
 				<a class="quick-icon" title={tFn('nav.settings')} href="/settings">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<circle cx="12" cy="12" r="3"/>
@@ -1422,6 +1421,7 @@
 					</div>
 				</a>
 			{/if}
+			<NodyxVersionBadge version={data.nodyxVersion ?? 'unknown'} variant="footer" />
 		</aside>
 
 	</div>
