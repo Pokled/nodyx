@@ -1083,5 +1083,9 @@
   "event.title_placeholder": "Concert, game jam, réunion mensuelle...",
   "event.creating": "Création...",
   "event.create_event": "Créer l'événement",
-  "event.gps_display_hint": "(pour afficher la carte)"
+  "event.gps_display_hint": "(pour afficher la carte)",
+  "nav.docs": "Docs",
+  "members.toggle_aria": "Afficher ou masquer les membres",
+  "common.avatar_alt": "Avatar",
+  "common.logo_alt": "Logo"
 }

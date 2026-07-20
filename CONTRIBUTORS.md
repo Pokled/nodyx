@@ -98,11 +98,11 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
         <sub><b>JoeJoeflyn</b></sub>
       </a>
       <br/>
-      <sub>🌟 × 3</sub>
+      <sub>🌟 × 4</sub>
       <br/>
-      <sub><a href="https://github.com/Pokled/nodyx/pull/306">PR #306</a> · <a href="https://github.com/Pokled/nodyx/pull/314">PR #314</a> · <a href="https://github.com/Pokled/nodyx/issues/327">#327</a></sub>
+      <sub><a href="https://github.com/Pokled/nodyx/pull/306">PR #306</a> · <a href="https://github.com/Pokled/nodyx/pull/314">PR #314</a> · <a href="https://github.com/Pokled/nodyx/issues/327">#327</a> · <a href="https://github.com/Pokled/nodyx/pull/324">PR #324</a></sub>
       <br/>
-      <sub><em>Vietnamese translation, guest language picker, SSR crash report</em></sub>
+      <sub><em>Vietnamese, guest language picker, SSR crash report, collapsible members sidebar</em></sub>
       <br/>
       <sub><strong>First Vietnamese contributor 🇻🇳</strong></sub>
     </td>
@@ -172,6 +172,7 @@ Sometimes a contribution isn't a PR. Sometimes it's just being there at exactly 
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Collapsible members sidebar with a spring/swipe toggle and a shared collapse store, plus an SSR fetch of the channel list so channels show on first paint. Tidied inline styles into Tailwind along the way. | `feat(ui)` | [#324](https://github.com/Pokled/nodyx/pull/324) | [`1142b2e`](https://github.com/Pokled/nodyx/commit/1142b2e) + i18n polish below | 2026-07-20 |
 | [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Reported the SSR 500 on Node 22.4+ / 25+: the new global `localStorage` proxy makes `typeof localStorage === 'undefined'` return false while its methods still throw, breaking the guard in `voiceSettings.ts` and 4 other files. Pinpointed the exact lines and the upstream Node issue. | `bug(ssr)` | [#327](https://github.com/Pokled/nodyx/issues/327) | browser-guard fix (this PR) | 2026-07-20 |
 | [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Moved the language picker out of `/settings` into a guest-accessible layout pane, and read the locale from a cookie in `hooks.server.ts` so SSR paints the right language on first load (no flash from `fr`), auto-detecting the browser's `Accept-Language`. | `feat(lang)` | [#314](https://github.com/Pokled/nodyx/pull/314) | [`c5c3822`](https://github.com/Pokled/nodyx/commit/c5c3822), polish below | 2026-07-19 |
 | [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Vietnamese (vi) translation: 955 strings, full key + placeholder parity with `en.json`, wired into the locale switch (label, flag, navigator detection). Restored 5 dropped interpolation variables and reverted a placeholder URL on review. | `feat(i18n)` | [#306](https://github.com/Pokled/nodyx/pull/306) | [`bc31f37`](https://github.com/Pokled/nodyx/commit/bc31f37) | 2026-07-18 |
@@ -232,6 +233,16 @@ Caught during production testing after merge. Not visible in async review.
 - Restored the native `Tiếng Việt` label (the PR had switched it to the English `Vietnamese`, while every other locale carries its own name).
 
 Landed after the merge but before the feature was deployed, so production never served the unvalidated attribute. The idea and the feature are entirely his; we just tightened the one line that touched untrusted input.
+
+### PR [#324](https://github.com/Pokled/nodyx/pull/324) · @JoeJoeflyn · `feat: collapsible members sidebar`
+
+**Original PR:** merged as-is. Genuinely nice work: the members sidebar collapses with a spring/swipe toggle (the handler cleanly tells a numeric swipe velocity from a click), a shared collapse store, and an SSR fetch of the channel list so channels appear on first paint instead of after hydration. Inline styles tidied into Tailwind.
+
+**Polish (same cleanup PR):** `i18n(layout): re-key the strings the refactor hardcoded`
+- The CSS cleanup re-hardcoded a handful of strings that were already keyed: the `SCREEN` sharing badge (back to `voice.screen_badge`), and the new controls shipped with hardcoded English attributes (`aria-label="Close"`, `title="Settings"`, `"Toggle members sidebar"`, `alt="Avatar"`/`"Logo"`, ...). Routed back through i18n (reusing `common.close`, `nav.settings` / `nav.admin` / `nav.documentation`, plus new `nav.docs`, `members.toggle_aria`, `common.avatar_alt`, `common.logo_alt`), French source filled, new keys handed to the translation surface.
+- His PR also revealed a gap: our scanner only caught French, so it missed a contributor's English strings. Extended `i18n:scan` to flag hardcoded **translatable attributes** (`aria-label`, `title`, `placeholder`, `alt`, `data-tip`) in any language. It immediately surfaced ~130 more previously invisible strings across the app.
+
+The feature and the idea are entirely his. Everything we build must be translatable, contributor PRs included, so this is exactly the merge-then-polish loop doing its job.
 
 ---
 

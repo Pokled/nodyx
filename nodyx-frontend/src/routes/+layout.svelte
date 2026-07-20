@@ -739,7 +739,7 @@
 					        aria-haspopup="true" aria-expanded={dropdownOpen}>
 						<div class="relative shrink-0">
 							{#if user.avatar}
-								<img src={user.avatar} alt="Avatar" class="w-6 h-6 object-cover" style="outline: 1px solid rgba(255,255,255,.15)" />
+								<img src={user.avatar} alt={tFn('common.avatar_alt')} class="w-6 h-6 object-cover" style="outline: 1px solid rgba(255,255,255,.15)" />
 							{:else}
 								<div class="w-6 h-6 flex items-center justify-center text-xs font-bold text-white select-none" style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">{user.username.charAt(0).toUpperCase()}</div>
 							{/if}
@@ -755,7 +755,7 @@
 								<div class="px-4 pt-4 pb-3 bg-gray-800/50">
 									<div class="flex items-center gap-3">
 										{#if user.avatar}
-											<img src={user.avatar} alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-gray-600 shrink-0" />
+											<img src={user.avatar} alt={tFn('common.avatar_alt')} class="w-12 h-12 rounded-full object-cover border-2 border-gray-600 shrink-0" />
 										{:else}
 											<div class="w-12 h-12 rounded-full bg-indigo-700 flex items-center justify-center text-white text-xl font-bold border-2 border-gray-600 shrink-0 select-none">{user.username.charAt(0).toUpperCase()}</div>
 										{/if}
@@ -862,7 +862,7 @@
 					}
 				}}>
 					{#if communityLogo}
-						<img src={communityLogo} alt="Logo" class="w-full h-full object-cover" />
+						<img src={communityLogo} alt={tFn('common.logo_alt')} class="w-full h-full object-cover" />
 					{:else}
 						{communityName.charAt(0).toUpperCase()}
 					{/if}
@@ -895,7 +895,7 @@
 			</div>
 
 			<!-- Docs: pinned at bottom -->
-			<a href="https://nodyx.dev" target="_blank" rel="noopener" class="icon docs" data-tip="Docs" title="Documentation">
+			<a href="https://nodyx.dev" target="_blank" rel="noopener" class="icon docs" data-tip={tFn('nav.docs')} title={tFn('nav.documentation')}>
 				<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
 				</svg>
@@ -917,14 +917,14 @@
 			<div class="panel-head">
 				<span class="community-name" id="variant-a-community">{displayCommunityName}</span>
 				{#if user?.role === 'owner' || user?.role === 'admin'}
-				<a href="/admin" title="Administration" class="head-icon text-gray-600">
+				<a href="/admin" title={tFn('nav.admin')} class="head-icon text-gray-600">
 					<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<circle cx="12" cy="12" r="3"/>
 						<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
 					</svg>
 				</a>
 				{/if}
-				<button type="button" class="close" onclick={() => { gallerySidebarOpen = false; panelCollapsedStore.set(true); }} aria-label="Close">×</button>
+				<button type="button" class="close" onclick={() => { gallerySidebarOpen = false; panelCollapsedStore.set(true); }} aria-label={tFn('common.close')}>×</button>
 			</div>
 
 			<!-- Panel scroll: nav + channels together as one block (sketch) -->
@@ -1104,7 +1104,7 @@
 						<div class="user-role">Owner</div>
 					</div>
 				</div>
-				<a class="quick-icon" title="Settings" href="/settings">
+				<a class="quick-icon" title={tFn('nav.settings')} href="/settings">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<circle cx="12" cy="12" r="3"/>
 						<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -1217,7 +1217,7 @@
 
 		<!-- ── Members Bar (droite) ────────────────────────────────────────── -->
 		<aside class="hidden xl:flex members members-c" class:collapsed={membersCollapsed} id="members-c">
-			<button class="edge-handle" onclick={toggleC} aria-label="Toggle members sidebar" title="Show members"></button>
+			<button class="edge-handle" onclick={toggleC} aria-label={tFn('members.toggle_aria')} title={tFn('members.toggle_aria')}></button>
 			<div class="members-header">
 				<span class="label">{tFn('common.members')}</span>
 				<div class="online-count">
@@ -1276,7 +1276,7 @@
 									{#if isSharing || isStreaming}
 										<div class="status-text flex items-center gap-1">
 											{#if isSharing}
-												<span class="text-[9px] font-bold px-1 py-px bg-blue-500/10 border border-blue-500/20 text-blue-400">SCREEN</span>
+												<span class="text-[9px] font-bold px-1 py-px bg-blue-500/10 border border-blue-500/20 text-blue-400">{tFn('voice.screen_badge')}</span>
 											{/if}
 											{#if isStreaming}
 												<span class="text-[9px] font-bold px-1 py-px bg-red-500/10 border border-red-500/20 text-red-400">LIVE</span>
@@ -1337,7 +1337,7 @@
 									{#if isSharing || isStreaming}
 										<div class="status-text flex items-center gap-1">
 											{#if isSharing}
-												<span class="text-[9px] font-bold px-1 py-px bg-blue-500/10 border border-blue-500/20 text-blue-400">SCREEN</span>
+												<span class="text-[9px] font-bold px-1 py-px bg-blue-500/10 border border-blue-500/20 text-blue-400">{tFn('voice.screen_badge')}</span>
 											{/if}
 											{#if isStreaming}
 												<span class="text-[9px] font-bold px-1 py-px bg-red-500/10 border border-red-500/20 text-red-400">LIVE</span>

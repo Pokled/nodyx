@@ -53,6 +53,12 @@ const clean = (txt) => txt
   .map((l) => l.replace(/(?<!:)\/\/.*$/, (m) => ' '.repeat(m.length)))
   .join('\n')
 
+// Hardcoded translatable attributes, in ANY language (catches English too, which
+// the French heuristic misses). A literal value holding a letter is user-facing.
+// `attr={tFn(...)}` uses braces, not quotes, so it is never matched here.
+const ATTR = /(?:aria-label|title|placeholder|alt|data-tip)="([^"]*)"/g
+const LETTER = /[A-Za-zÀ-ÖØ-öø-ÿ]/
+
 const files = walk(SRC).sort()
 let total = 0
 const perFile = []
@@ -60,10 +66,15 @@ for (const f of files) {
   if (PUBLIC_ONLY && isAdmin(f)) continue
   const hits = []
   clean(readFileSync(f, 'utf8')).split('\n').forEach((l, i) => {
-    if (l.includes('tFn(') || l.includes('$t(')) return
     const s = l.trim()
     if (!s || s.startsWith('//') || s.startsWith('*') || s.startsWith('import ') || s.startsWith('console.')) return
-    if (ACC.test(l) || FR.test(l)) hits.push({ n: i + 1, s: s.slice(0, 100) })
+    // (a) a translatable attribute holding hardcoded literal text (any language)
+    let attrHit = false
+    ATTR.lastIndex = 0
+    for (let m; (m = ATTR.exec(l)); ) { if (LETTER.test(m[1])) { attrHit = true; break } }
+    // (b) French text sitting outside an i18n call
+    const frHit = !l.includes('tFn(') && !l.includes('$t(') && (ACC.test(l) || FR.test(l))
+    if (attrHit || frHit) hits.push({ n: i + 1, s: s.slice(0, 100) })
   })
   if (hits.length) { perFile.push({ f: relative(SRC, f), hits }); total += hits.length }
 }

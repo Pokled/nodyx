@@ -15,6 +15,11 @@ Finds French text still living in Svelte markup **outside** an i18n call
 (`tFn(...)` / `$t(...)`). Since keys are English, any French left in a template
 is a string that was never extracted.
 
+It also flags hardcoded **translatable attributes** (`aria-label`, `title`,
+`placeholder`, `alt`, `data-tip`) with a literal value, in **any** language, so
+English strings from contributors are caught too (the French heuristic misses
+those). An `attr={tFn(...)}` uses braces, not quotes, so it is never flagged.
+
 ```bash
 npm run i18n:scan              # count per file + total
 npm run i18n:scan -- --list    # show every offending line
