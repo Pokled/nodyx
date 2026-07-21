@@ -19,6 +19,9 @@
 html, body {
   background-color: #06060a;
   overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* ── Palette de marque (design tokens) ───────────────────────────────────────

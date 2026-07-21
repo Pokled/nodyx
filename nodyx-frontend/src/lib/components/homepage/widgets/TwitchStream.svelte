@@ -277,7 +277,7 @@
 							allow="autoplay; fullscreen; picture-in-picture"
 							onload={onIframeLoad}
 							class="w-full h-full absolute inset-0"
-							style="border:0; opacity:{iframeLoaded ? 1 : 0}; transition:opacity .3s ease"
+							style="border:0; opacity:{iframeLoaded ? 1 : 0}; transition:opacity .3s cubic-bezier(0.23, 1, 0.32, 1)"
 						></iframe>
 					{/key}
 				{/if}
@@ -363,8 +363,11 @@
 		border-color: var(--accent) !important;
 		transform: translateY(-1px);
 	}
+	.twitch-cta:active {
+		transform: translateY(0) scale(0.97);
+	}
 
 	.twitch-cta {
-		transition: all .2s ease;
+		transition: background .2s cubic-bezier(0.16, 1, 0.3, 1), border-color .2s cubic-bezier(0.16, 1, 0.3, 1), transform .2s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 </style>

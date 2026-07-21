@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
+	import { fade } from 'svelte/transition'
+	import { cubicOut } from 'svelte/easing'
 	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
@@ -187,9 +189,9 @@
 		<!-- Background image -->
 		{#key slideIndex}
 			{#if slide.imageUrl}
-				<img src={slide.imageUrl} alt="" class="as-bg sfade" />
+				<img src={slide.imageUrl} alt="" class="as-bg" transition:fade={{ duration: 450, easing: cubicOut }} />
 			{:else}
-				<div class="as-bg-fallback sfade"></div>
+				<div class="as-bg-fallback" transition:fade={{ duration: 450, easing: cubicOut }}></div>
 			{/if}
 		{/key}
 
@@ -386,12 +388,15 @@
 		border-radius: 50%;
 		padding: 14px;
 		border: 2px solid rgb(var(--nx-accent-2-rgb) / .5);
-		transition: transform .15s, background .15s;
+		transition: transform .15s cubic-bezier(0.23, 1, 0.32, 1), background .15s;
 		filter: drop-shadow(0 4px 24px rgb(var(--nx-accent-2-rgb) / .4));
 	}
 	.as-play:hover svg {
 		transform: scale(1.08);
 		background: rgb(var(--nx-accent-2-rgb) / .55);
+	}
+	.as-play:active svg {
+		transform: scale(0.95);
 	}
 
 	/* ── Content ────────────────────────────────────────────────────────────── */
@@ -416,7 +421,7 @@
 		height: 1px;
 		width: 2.5rem;
 		background: linear-gradient(to right, var(--nx-accent-2-strong), var(--nx-cyan));
-		flex-shrink: 0;
+		shrink: 0;
 	}
 	.as-cat-text {
 		font-size: 10px;
@@ -492,7 +497,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		flex-shrink: 0;
+		shrink: 0;
 	}
 	.as-avatar img { width: 100%; height: 100%; object-fit: cover; }
 	.as-avatar span { font-size: 11px; font-weight: 700; color: #fff; }
@@ -543,10 +548,11 @@
 		border: none;
 		padding: 0;
 		cursor: pointer;
-		transition: width .3s, opacity .3s;
+		transition: width .3s cubic-bezier(0.23, 1, 0.32, 1), opacity .3s cubic-bezier(0.23, 1, 0.32, 1);
 		width: 16px;
 		opacity: .3;
 	}
+	.as-dot-btn:active { transform: scale(0.97); }
 	.as-dot-btn--active {
 		width: 56px;
 		opacity: 1;
@@ -580,16 +586,8 @@
 		border-color: rgb(var(--nx-accent-2-rgb) / .5);
 		color: var(--nx-accent-2-soft);
 	}
+	.as-arrow:active { transform: scale(0.97); }
 	.as-arrow svg { width: 14px; height: 14px; }
-
-	/* ── Fade animation ─────────────────────────────────────────────────────── */
-	:global(.sfade) {
-		animation: sfade .45s ease;
-	}
-	@keyframes sfade {
-		from { opacity: 0; }
-		to   { opacity: 1; }
-	}
 
 	/* ── Responsive ─────────────────────────────────────────────────────────── */
 	@media (max-width: 639px) {

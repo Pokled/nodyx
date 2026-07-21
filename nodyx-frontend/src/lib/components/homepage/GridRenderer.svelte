@@ -415,4 +415,13 @@
 		padding-left:  max(0px, env(safe-area-inset-left));
 		padding-right: max(0px, env(safe-area-inset-right));
 	}
+
+	/* ── F18: Reduced motion — disable edit-mode transitions ── */
+	@media (prefers-reduced-motion: reduce) {
+		.gr-col,
+		.gr-resize-handle,
+		.gr-root :global(*) {
+			transition: none !important;
+		}
+	}
 </style>
