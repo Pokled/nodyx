@@ -21,6 +21,7 @@
     "@sveltejs/vite-plugin-svelte": "6.2.4",
     "@tailwindcss/vite": "4.3.1",
     "@types/qrcode": "^1.5.6",
+    "@types/three": "^0.185.1",
     "@vitejs/plugin-basic-ssl": "2.3.0",
     "svelte": "^5.56.4",
     "svelte-check": "4.7.1",
@@ -55,7 +56,8 @@
     "mediasoup-client": "3.21.0",
     "qrcode": "1.5.4",
     "satori": "0.26.0",
-    "socket.io-client": "4.8.3"
+    "socket.io-client": "4.8.3",
+    "three": "^0.185.1"
   },
   "overrides": {
     "cookie": "^0.7.2",

@@ -238,17 +238,142 @@
 
 	// ── Galaxy Bar mobile drawer ───────────────────────────────────────────────
 	let gallerySidebarOpen = $state(false)
-	const panelCollapsed = $derived($panelCollapsedStore)
-	const membersCollapsed = $derived($membersCollapsedStore)
+	let panelCollapsed = $state((data as any).panelCollapsed ?? false)
+	let membersCollapsed = $state((data as any).membersCollapsed ?? false)
 
 	function toggleC(velocity: number | MouseEvent = 0) {
 		if (typeof velocity === 'number') {
-			if (velocity > 500) membersCollapsedStore.set(false);
-			else if (velocity < -500) membersCollapsedStore.set(true);
-			else membersCollapsedStore.update(v => !v);
+			if (velocity > 500) membersCollapsed = false;
+			else if (velocity < -500) membersCollapsed = true;
+			else membersCollapsed = !membersCollapsed;
 		} else {
-			membersCollapsedStore.update(v => !v);
+			membersCollapsed = !membersCollapsed;
 		}
+	}
+
+	function toggleL() {
+		panelCollapsed = !panelCollapsed;
+	}
+
+	$effect(() => {
+		panelCollapsedStore.set(panelCollapsed);
+		if (browser) {
+			document.cookie = `nodyx_panel_collapsed=${panelCollapsed}; path=/; max-age=31536000; SameSite=Lax`;
+		}
+	});
+
+	$effect(() => {
+		membersCollapsedStore.set(membersCollapsed);
+		if (browser) {
+			document.cookie = `nodyx_members_collapsed=${membersCollapsed}; path=/; max-age=31536000; SameSite=Lax`;
+		}
+	});
+
+	// ── Panel resizing logic ──────────────────────────────────────────────────
+	let leftPanelWidth = $state((data as any).leftPanelWidth ?? 220);
+	let rightPanelWidth = $state((data as any).rightPanelWidth ?? 220);
+	let isDraggingLeft = $state(false);
+	let isDraggingRight = $state(false);
+	let draggingPastBoundaryLeft = $state(false);
+	let draggingPastBoundaryRight = $state(false);
+
+	let dragStartWidthLeft = 0;
+	let dragStartWidthRight = 0;
+	let leftDragMoved = false;
+	let rightDragMoved = false;
+
+	$effect(() => {
+		if (browser) {
+			document.cookie = `nodyx_left_panel_width=${leftPanelWidth}; path=/; max-age=31536000; SameSite=Lax`;
+		}
+	});
+
+	$effect(() => {
+		if (browser) {
+			document.cookie = `nodyx_right_panel_width=${rightPanelWidth}; path=/; max-age=31536000; SameSite=Lax`;
+		}
+	});
+
+	function startLeftDrag(e: PointerEvent) {
+		if (window.innerWidth < 1024) return;
+		if (e.button !== 0) return;
+		isDraggingLeft = true;
+		leftDragMoved = false;
+		dragStartWidthLeft = leftPanelWidth;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		e.preventDefault();
+	}
+
+	function handleLeftDragMove(e: PointerEvent) {
+		if (!isDraggingLeft) return;
+		leftDragMoved = true;
+		const width = e.clientX - 56;
+		if (width < 130) {
+			draggingPastBoundaryLeft = true;
+			leftPanelWidth = Math.max(0, width);
+		} else {
+			draggingPastBoundaryLeft = false;
+			leftPanelWidth = Math.max(160, Math.min(500, width));
+		}
+	}
+
+	function stopLeftDrag(e: PointerEvent) {
+		if (!isDraggingLeft) return;
+		isDraggingLeft = false;
+		try {
+			(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+		} catch { /* ignore */ }
+
+		if (!leftDragMoved) {
+			toggleL();
+		} else if (leftPanelWidth < 130) {
+			panelCollapsed = true;
+			leftPanelWidth = 220;
+		} else if (leftPanelWidth < 160) {
+			leftPanelWidth = 160;
+		}
+		draggingPastBoundaryLeft = false;
+	}
+
+	function startRightDrag(e: PointerEvent) {
+		if (window.innerWidth < 1280) return;
+		if (e.button !== 0) return;
+		isDraggingRight = true;
+		rightDragMoved = false;
+		dragStartWidthRight = rightPanelWidth;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		e.preventDefault();
+	}
+
+	function handleRightDragMove(e: PointerEvent) {
+		if (!isDraggingRight) return;
+		rightDragMoved = true;
+		const width = window.innerWidth - e.clientX;
+		if (width < 130) {
+			draggingPastBoundaryRight = true;
+			rightPanelWidth = Math.max(0, width);
+		} else {
+			draggingPastBoundaryRight = false;
+			rightPanelWidth = Math.max(160, Math.min(500, width));
+		}
+	}
+
+	function stopRightDrag(e: PointerEvent) {
+		if (!isDraggingRight) return;
+		isDraggingRight = false;
+		try {
+			(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+		} catch { /* ignore */ }
+
+		if (!rightDragMoved) {
+			toggleC();
+		} else if (rightPanelWidth < 130) {
+			membersCollapsed = true;
+			rightPanelWidth = 220;
+		} else if (rightPanelWidth < 160) {
+			rightPanelWidth = 160;
+		}
+		draggingPastBoundaryRight = false;
 	}
 
 	// Ferme le drawer sur changement de page (navigation SvelteKit)
@@ -294,20 +419,22 @@
 		langSavedTimeout = setTimeout(() => langSaved = false, 2000)
 	}
 
-	// Swipe-to-dismiss for mobile
+	// Swipe-to-dismiss for mobile — F12: spring-feel transition via CSS
 	let touchStartY = 0
 	let touchCurrentY = 0
+	let langDragY = $state(0)
 	function onLangTouchStart(e: TouchEvent) { touchStartY = e.touches[0].clientY }
 	function onLangTouchMove(e: TouchEvent) {
 		touchCurrentY = e.touches[0].clientY
 		const diff = touchCurrentY - touchStartY
-		if (diff > 0) (e.currentTarget as HTMLElement).style.transform = `translateY(${diff}px)`
+		if (diff > 0) langDragY = diff
 	}
 	function onLangTouchEnd() {
 		const diff = touchCurrentY - touchStartY
-		if (diff > 100) langView = false
-		const el = document.querySelector('.lang-view') as HTMLElement
-		if (el) el.style.transform = ''
+		if (diff > 100) {
+			langView = false
+		}
+		langDragY = 0
 	}
 
 	// XP info — formule sqrt identique à ProfileCard / MiniProfileCard / page profil
@@ -670,11 +797,11 @@
 			style="background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); cursor: text; text-align: left;"
 			aria-label={tFn('common.command_palette_hint')}
 		>
-			<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: #3b3f52; flex-shrink:0">
+			<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color: #3b3f52; shrink:0">
 				<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
 			</svg>
 			<span class="flex-1 text-xs truncate" style="color: #3b3f52; font-family: 'Space Grotesk', sans-serif">{tFn('common.search_navigate')}</span>
-			<div style="display:flex;gap:2px;flex-shrink:0">
+			<div style="display:flex;gap:2px;shrink:0">
 				<kbd style="font-size:0.6rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:0.05rem 0.28rem;color:rgba(255,255,255,.18);font-family:ui-monospace,monospace">Ctrl</kbd>
 				<kbd style="font-size:0.6rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:0.05rem 0.28rem;color:rgba(255,255,255,.18);font-family:ui-monospace,monospace">K</kbd>
 			</div>
@@ -691,45 +818,48 @@
 				<span class="flex items-center leading-none"><ChannelIcon value={LOCALES.find(l => l.code === currentLocale)?.flagIcon} fallback="🌐" size={18} /></span>
 				<svg class="hidden sm:block w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>
 			</button>
+			<!-- Toggle members sidebar (guest + logged-in, XL only to match sidebar) -->
+			<button type="button"
+			        onclick={toggleC}
+			        class="nx-icon-btn hidden xl:flex items-center justify-center w-8 h-8 rounded-lg transition-all relative"
+			        class:active={!membersCollapsed}
+			        title={tFn('common.members')}
+			        aria-label={tFn('members.toggle_aria')}
+			        aria-expanded={!membersCollapsed}>
+				<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM7 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/>
+				</svg>
+			</button>
 			{#if user}
 				<!-- Notifications -->
 				<a href="/notifications"
-				   class="relative p-2 transition-colors"
-				   style="color: {isActive('/notifications') ? 'var(--nx-accent-2-soft)' : '#6b7280'}"
+				   class="nx-icon-btn relative flex items-center justify-center w-8 h-8 rounded-lg transition-all"
+				   class:active={isActive('/notifications')}
 				   title={tFn('nav.notifications')}>
 					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
 					</svg>
 					{#if unreadCount > 0}
-						<span class="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 flex items-center justify-center text-[9px] font-black text-white rounded-full bg-red-500 leading-none">{unreadCount > 9 ? '9+' : unreadCount}</span>
+						<span class="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 flex items-center justify-center text-[9px] font-black text-white rounded-full bg-red-500 leading-none ring-1 ring-[#0a0a0a]">{unreadCount > 9 ? '9+' : unreadCount}</span>
 					{/if}
 				</a>
 				<!-- DMs -->
 				<a href="/dm"
-				   class="relative p-2 transition-colors"
-				   style="color: {isActive('/dm') ? 'var(--nx-accent-2-soft)' : '#6b7280'}"
+				   class="nx-icon-btn relative flex items-center justify-center w-8 h-8 rounded-lg transition-all"
+				   class:active={isActive('/dm')}
 				   title={tFn('nav.dm')}>
 					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-4 4v-4z"/>
 					</svg>
 					{#if dmUnread > 0}
-						<span class="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 flex items-center justify-center text-[9px] font-black text-white rounded-full bg-[var(--nx-accent-2-strong)] leading-none">{dmUnread > 9 ? '9+' : dmUnread}</span>
+						<span class="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 flex items-center justify-center text-[9px] font-black text-white rounded-full bg-[var(--nx-accent-2-strong)] leading-none ring-1 ring-[#0a0a0a]">{dmUnread > 9 ? '9+' : dmUnread}</span>
 					{/if}
 				</a>
-				<!-- Toggle members sidebar -->
-				<button type="button"
-				        onclick={toggleC}
-				        class="p-2 transition-colors relative"
-				        style="color: {!membersCollapsed ? 'var(--nx-accent-2-soft)' : '#6b7280'}; cursor: pointer;"
-				        title={tFn('common.members')}>
-					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM7 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/>
-					</svg>
-				</button>
 				{#if user.role === 'owner' || user.role === 'admin'}
 					<a href="/admin"
-					   class="hidden sm:flex items-center px-2.5 h-7 text-[10px] font-black uppercase tracking-wider transition-colors"
-					   style="color: {isActive('/admin') ? 'var(--nx-accent-2-soft)' : '#4b5563'}; border: 1px solid {isActive('/admin') ? 'rgb(var(--nx-accent-2-rgb) / .4)' : 'rgba(255,255,255,.06)'}">{tFn('nav.admin')}</a>
+					   class="nx-admin-pill hidden sm:flex items-center px-2.5 h-7 text-[10px] font-black uppercase tracking-wider rounded-md transition-all"
+					   class:active={isActive('/admin')}
+					   >{tFn('nav.admin')}</a>
 				{/if}
 				<!-- User dropdown -->
 				<div class="relative">
@@ -825,17 +955,17 @@
 					</div>
 			{:else}
 				<a href="/auth/login"
-				   class="px-2.5 h-6 flex items-center text-xs transition-colors"
-				   style="color: #9ca3af; border: 1px solid rgba(255,255,255,.06)">{tFn('common.login')}</a>
+				   class="nx-auth-btn flex items-center justify-center h-8 min-w-[5.5rem] px-3 text-xs font-medium rounded-lg transition-all">{tFn('common.login')}</a>
 				<a href="/auth/register"
-				   class="px-2.5 h-6 flex items-center text-xs font-bold transition-colors"
-				   style="background: var(--nx-accent-2-strong); color: #fff">{tFn('common.register')}</a>
+				   class="nx-auth-btn nx-auth-btn--primary flex items-center justify-center h-8 min-w-[5.5rem] px-3 text-xs font-bold rounded-lg transition-all">{tFn('common.register')}</a>
 			{/if}
 		</div>
 	</nav>
 
 	<!-- ══ BODY ═══════════════════════════════════════════════════════════════ -->
-	<div class="flex flex-1">
+	<div class="flex flex-1"
+	     style="--left-panel-width: {leftPanelWidth}px; --right-panel-width: {rightPanelWidth}px;"
+	     class:layout-dragging={isDraggingLeft || isDraggingRight}>
 
 		<!-- ── Backdrop Channel Sidebar — mobile ──────────────────────────────── -->
 		{#if !isBanned && gallerySidebarOpen}
@@ -856,9 +986,9 @@
 				<button type="button" class="icon logo {!activeCommunityName ? 'active' : ''}" data-tip={communityName} title={communityName} onclick={() => {
 					if (activeCommunityName) {
 						activeCommunityNameStore.set(null);
-						panelCollapsedStore.set(false);
+						panelCollapsed = false;
 					} else {
-						panelCollapsedStore.update(v => !v);
+						panelCollapsed = !panelCollapsed;
 					}
 				}}>
 					{#if communityLogo}
@@ -908,7 +1038,25 @@
 		       id="variant-a-panel"
 		       role={gallerySidebarOpen ? 'dialog' : undefined}
 		       aria-modal={gallerySidebarOpen ? 'true' : undefined}
-		       aria-label={tFn('nav.community_menu')}>
+		       aria-label={tFn('nav.community_menu')}
+		       style="width: var(--left-panel-width, 220px);"
+		       class:dragging={isDraggingLeft}>
+
+			<button class="edge-handle"
+			        onpointerdown={startLeftDrag}
+			        onpointermove={handleLeftDragMove}
+			        onpointerup={stopLeftDrag}
+			        onclick={(e) => {
+			            if (leftDragMoved) {
+			                e.preventDefault();
+			                e.stopPropagation();
+			            } else {
+			                toggleL();
+			            }
+			        }}
+			        class:dragging-past-boundary={draggingPastBoundaryLeft}
+			        aria-label="Resize community menu"
+			        title="Drag to resize / click to toggle"></button>
 
 			<!-- Panel head -->
 			<div class="panel-head">
@@ -921,7 +1069,7 @@
 					</svg>
 				</a>
 				{/if}
-				<button type="button" class="close" onclick={() => { gallerySidebarOpen = false; panelCollapsedStore.set(true); }} aria-label={tFn('common.close')}>×</button>
+				<button type="button" class="close" onclick={() => { gallerySidebarOpen = false; panelCollapsed = true; }} aria-label={tFn('common.close')}>×</button>
 			</div>
 
 			<!-- Panel scroll: nav + channels together as one block (sketch) -->
@@ -1116,7 +1264,9 @@
 
 		<!-- ── Contenu principal ───────────────────────────────────────────────── -->
 		<div class="flex-1 overflow-hidden">
-		<main class="{langView ? 'h-[calc(100vh-48px)] overflow-hidden' : 'h-full overflow-y-auto'} min-w-0 {isBanned ? '' : showChannelSidebar && !panelCollapsed ? 'lg:pl-[276px]' : 'lg:pl-[56px]'} {membersCollapsed ? 'xl:mr-0' : 'xl:mr-[220px]'} pb-[var(--bottom-nav-h)]">
+		<main class="{langView ? 'h-[calc(100vh-48px)] overflow-hidden' : 'h-full overflow-y-auto'} min-w-0 pb-[var(--bottom-nav-h)]"
+		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
+		      class:members-collapsed={membersCollapsed}>
 
             <!-- ── System announcement banner ─────────────────────────────────── -->
             {#if showAnnouncement && announcement}
@@ -1146,7 +1296,7 @@
             {/if}
 
 
-            <div class="w-full flex-1 flex flex-col {langView ? 'lang-view-wrap h-full' : ($page.url.pathname === '/' || $page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/users/') || $page.url.pathname.startsWith('/feed') || $page.url.pathname.startsWith('/settings') || $page.url.pathname.startsWith('/garden') || $page.url.pathname.startsWith('/calendar') || $page.url.pathname.startsWith('/discover') || $page.url.pathname.startsWith('/wiki') || $page.url.pathname.startsWith('/library') || $page.url.pathname.startsWith('/dm') ? '' : ($page.url.pathname.startsWith('/forum') || $page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8')}">
+            <div class="w-full flex-1 flex flex-col {langView ? 'lang-view-wrap h-full' : ($page.url.pathname === '/' || $page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/users/') || $page.url.pathname.startsWith('/feed') || $page.url.pathname.startsWith('/settings') || $page.url.pathname.startsWith('/garden') || $page.url.pathname.startsWith('/calendar') || $page.url.pathname.startsWith('/discover') || $page.url.pathname.startsWith('/wiki') || $page.url.pathname.startsWith('/library') || $page.url.pathname.startsWith('/dm') || $page.url.pathname.startsWith('/auth/') ? 'h-full' : ($page.url.pathname.startsWith('/forum') || $page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8')}">
                 {#if langView}
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <div class="fixed inset-0 bg-black/40 backdrop-blur-xs z-40" onclick={() => langView = false} transition:fade={{ duration: 200 }}></div>
@@ -1156,12 +1306,13 @@
                         aria-modal="true"
                         aria-labelledby="lang-title"
                         aria-describedby="lang-desc"
+                        style="transform: translateY({langDragY}px); transition: transform {langDragY > 0 ? 'none' : '0.3s cubic-bezier(0.16, 1, 0.3, 1)'};"
                         transition:fly={{ y: 20, duration: 300, easing: cubicOut }}
                         ontouchstart={onLangTouchStart}
                         ontouchmove={onLangTouchMove}
                         ontouchend={onLangTouchEnd}
                     >
-                        <button onclick={() => langView = false} class="lang-back inline-flex items-center gap-1.5 text-[11px] text-gray-600 shrink-0 bg-transparent border-none cursor-pointer" aria-label={tFn('common.back')}>
+                        <button onclick={() => langView = false} class="lang-back inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0 bg-transparent border border-white/[0.12] rounded-md px-3 py-2 cursor-pointer" aria-label={tFn('common.back')}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 5l-7 7 7 7"/>
                             </svg>
@@ -1211,9 +1362,26 @@
         </main>
 		</div>
 
-		<!-- ── Members Bar (droite) ────────────────────────────────────────── -->
-		<aside class="hidden xl:flex members members-c" class:collapsed={membersCollapsed} id="members-c">
-			<button class="edge-handle" onclick={toggleC} aria-label={tFn('members.toggle_aria')} title={tFn('members.toggle_aria')}></button>
+		<aside class="hidden xl:flex members members-c"
+		       class:collapsed={membersCollapsed}
+		       id="members-c"
+		       style="width: {membersCollapsed ? '0px' : 'var(--right-panel-width, 220px)'};"
+		       class:dragging={isDraggingRight}>
+			<button class="edge-handle"
+			        onpointerdown={startRightDrag}
+			        onpointermove={handleRightDragMove}
+			        onpointerup={stopRightDrag}
+			        onclick={(e) => {
+			            if (rightDragMoved) {
+			                e.preventDefault();
+			                e.stopPropagation();
+			            } else {
+			                toggleC();
+			            }
+			        }}
+			        class:dragging-past-boundary={draggingPastBoundaryRight}
+			        aria-label={tFn('members.toggle_aria')}
+			        title={tFn('members.toggle_aria')}></button>
 			<div class="members-header">
 				<span class="label">{tFn('common.members')}</span>
 				<div class="online-count">
@@ -1677,6 +1845,28 @@
   transition: padding-left .25s cubic-bezier(.4,0,.2,1), margin-right .25s cubic-bezier(.4,0,.2,1);
 }
 
+.layout-dragging :global(main) {
+  transition: none !important;
+}
+
+@media (min-width: 1024px) {
+  :global(main) {
+    padding-left: calc(56px + var(--left-panel-width, 220px)) !important;
+  }
+  :global(main.panel-collapsed) {
+    padding-left: 56px !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  :global(main) {
+    margin-right: var(--right-panel-width, 220px) !important;
+  }
+  :global(main.members-collapsed) {
+    margin-right: 0px !important;
+  }
+}
+
 /* ── Sketch 001: Discord two-tier sidebar — exact sketch CSS, scoped ────── */
 .nodyx-sb .rail {
   position: fixed; top: 48px; bottom: 0; left: 0; width: 56px;
@@ -1689,7 +1879,7 @@
 }
 .nodyx-sb .rail .scroll::-webkit-scrollbar { display: none; }
 .nodyx-sb .rail .icon {
-  width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 6px; shrink: 0; cursor: pointer;
   display: flex; align-items: center; justify-content: center; position: relative;
   transition: all .12s; font-weight: 700; font-size: 12px; font-family: 'JetBrains Mono', monospace;
   text-decoration: none;
@@ -1705,12 +1895,16 @@
 .nodyx-sb .rail .icon.docs:hover { background: #111; color: #818cf8; border-radius: 8px; }
 
 .nodyx-sb .panel {
-  position: fixed; top: 48px; bottom: 0; left: 56px; width: 220px;
+  position: fixed; top: 48px; bottom: 0; left: 56px;
+  width: var(--left-panel-width, 220px);
   background: #0a0a0a; border-right: 1px solid #111;
   z-index: 39; display: flex; flex-direction: column;
-  transform: translateX(0); transition: transform .25s cubic-bezier(.4,0,.2,1);
+  transform: translateX(0); transition: transform .25s cubic-bezier(.4,0,.2,1), width .25s cubic-bezier(.4,0,.2,1);
 }
 .nodyx-sb .panel.collapsed { transform: translateX(-100%); }
+.nodyx-sb .panel.dragging {
+  transition: none !important;
+}
 .nodyx-sb .panel .panel-head {
   padding: 12px 14px; border-bottom: 1px solid #111; display: flex; align-items: center; gap: 8px;
   font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #e2e8f0;
@@ -1722,7 +1916,7 @@
 }
 .nodyx-sb .panel .panel-head .close:hover { background: #111; color: #e2e8f0; }
 .nodyx-sb .panel .panel-head .head-icon {
-  flex-shrink: 0; color: #4b5563; cursor: pointer; padding: 4px; border-radius: 4px;
+  shrink: 0; color: #4b5563; cursor: pointer; padding: 4px; border-radius: 4px;
   transition: all .12s; display: flex; align-items: center; justify-content: center;
   text-decoration: none;
 }
@@ -1770,7 +1964,7 @@
 }
 .nodyx-sb .panel .panel-bottom .user-group:hover { background: #111; }
 .nodyx-sb .panel .panel-bottom .user-avatar {
-  width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 6px; shrink: 0;
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 12px; color: #fff; font-family: 'JetBrains Mono', monospace;
   background: linear-gradient(135deg, #6366f1, #3730a3);
@@ -1789,7 +1983,7 @@
   color: #818cf8; text-transform: uppercase; letter-spacing: .1em;
 }
 .nodyx-sb .panel .panel-bottom .quick-icon {
-  flex-shrink: 0; color: #333; cursor: pointer; padding: 6px; border-radius: 4px;
+  shrink: 0; color: #333; cursor: pointer; padding: 6px; border-radius: 4px;
   transition: all .12s; display: flex; align-items: center; justify-content: center;
 }
 .nodyx-sb .panel .panel-bottom .quick-icon:hover { background: #111; color: #818cf8; }
@@ -1836,7 +2030,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	flex-shrink: 0;
+	shrink: 0;
 }
 .guest-radar-ring {
 	position: absolute;
@@ -1919,7 +2113,7 @@
 	background: #4ade80;
 	box-shadow: 0 0 6px rgba(74,222,128,0.6);
 	animation: guest-live-pulse 1.8s ease-in-out infinite;
-	flex-shrink: 0;
+	shrink: 0;
 }
 @keyframes guest-live-pulse {
 	0%, 100% { box-shadow: 0 0 6px rgba(74,222,128,0.6); }
@@ -1982,11 +2176,11 @@
 	text-transform: uppercase; letter-spacing: .16em;
 	color: #374151;
 }
-.lch-sublabel svg { width: 10px; height: 10px; flex-shrink: 0; }
+.lch-sublabel svg { width: 10px; height: 10px; shrink: 0; }
 .lch-sublabel--voice { color: #14532d; margin-top: 4px; }
 .lch-sublabel--voice svg { stroke: #166834; }
 
-.lch-voice-ico { width: 14px; height: 14px; flex-shrink: 0; transition: stroke .15s; }
+.lch-voice-ico { width: 14px; height: 14px; shrink: 0; transition: stroke .15s; }
 
 /* ── Layout channel items — unread glow ──────────────────────────────────── */
 .lch-item {
@@ -2044,7 +2238,7 @@
 }
 
 .lch-badge {
-	flex-shrink: 0;
+	shrink: 0;
 	min-width: 15px;
 	height: 15px;
 	padding: 0 4px;
@@ -2072,6 +2266,74 @@
     min-height: 0;
     overflow: hidden;
 }
+/* ── Top bar icon buttons + auth buttons ─────────────────────────────────── */
+.nx-icon-btn {
+    color: #6b7280;
+    background: transparent;
+    border: 1px solid transparent;
+}
+.nx-icon-btn:hover {
+    color: #d1d5db;
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.06);
+}
+.nx-icon-btn:active { transform: scale(0.94); }
+.nx-icon-btn.active {
+    color: var(--nx-accent-2-soft, #818cf8);
+    background: rgba(var(--nx-accent-2-rgb, 99, 102, 241), 0.08);
+    border-color: rgba(var(--nx-accent-2-rgb, 99, 102, 241), 0.2);
+}
+.nx-icon-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(var(--nx-accent-rgb, 99, 102, 241), 0.4);
+}
+/* Admin pill — uses .nx-icon-btn.active styles */
+a.nx-icon-btn[class*="active"],
+.nx-icon-btn.active {
+    color: var(--nx-accent-2-soft, #818cf8);
+}
+/* Admin pill in top bar */
+.nx-admin-pill {
+    color: #4b5563;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.nx-admin-pill:hover {
+    color: #d1d5db;
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.12);
+}
+.nx-admin-pill.active {
+    color: var(--nx-accent-2-soft, #818cf8);
+    background: rgba(var(--nx-accent-2-rgb, 99, 102, 241), 0.08);
+    border-color: rgba(var(--nx-accent-2-rgb, 99, 102, 241), 0.3);
+}
+/* Auth buttons (Sign in / Register) */
+.nx-auth-btn {
+    color: #9ca3af;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.nx-auth-btn:hover {
+    color: #f3f4f6;
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.14);
+}
+.nx-auth-btn:active { transform: scale(0.97); }
+.nx-auth-btn--primary {
+    color: #fff;
+    background: var(--nx-accent-2-strong, #6366f1);
+    border-color: transparent;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2), 0 0 12px rgba(var(--nx-accent-2-rgb, 99, 102, 241), 0.25);
+}
+.nx-auth-btn--primary:hover {
+    background: var(--nx-accent-2-strong, #6366f1);
+    filter: brightness(1.1);
+    border-color: transparent;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25), 0 0 18px rgba(var(--nx-accent-2-rgb, 99, 102, 241), 0.4);
+}
+.nx-auth-btn--primary:active { transform: scale(0.97); }
+
 .lang-nav-btn {
     border-radius: 6px;
     transition: color 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
@@ -2088,12 +2350,11 @@
     box-shadow: 0 0 0 2px rgba(var(--nx-accent-rgb), 0.4);
 }
 .lang-back {
-    transition: color 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
-                transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: all 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
-.lang-back:hover { color: #9ca3af; transform: translateX(-2px); }
-.lang-back:active { transform: translateX(0) scale(0.98); }
-.lang-back:focus-visible { outline: none; color: var(--nx-accent-soft); }
+.lang-back:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+.lang-back:active { transform: scale(0.98); }
+.lang-back:focus-visible { outline: none; border-color: var(--nx-accent); }
 .lang-card {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(10px);
@@ -2137,11 +2398,8 @@
     box-shadow: 0 0 8px var(--nx-accent);
 }
 .lang-seg:hover {
-    border-color: rgba(var(--nx-accent-rgb), 0.2);
+    border-color: rgba(255,255,255,0.12);
     background: rgba(255,255,255,0.04);
-    padding-left: 24px;
-    transform: scale(1.01);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 .lang-seg:active {
     transform: scale(0.98);
@@ -2154,12 +2412,12 @@
     box-shadow: 0 0 0 3px rgba(var(--nx-accent-rgb), 0.3);
 }
 .lang-seg.active {
-    border-color: rgba(var(--nx-accent-rgb), 0.3);
-    background: rgba(var(--nx-accent-rgb), 0.04);
-    padding-left: 24px;
+    border-color: #4f46e5;
+    background: #4f46e5;
 }
 .lang-seg.active::before { opacity: 1; transform: translateX(0); }
-.lang-seg.active .text-slate-200 { color: var(--nx-accent-soft); }
+.lang-seg.active .text-slate-200 { color: #fff; }
+.lang-seg.active .lang-seg-check { color: #fff; }
 .lang-seg-check {
     color: var(--nx-accent);
     transform: scale(0);
@@ -2193,7 +2451,7 @@
   right: 0;
   top: 48px;
   bottom: 0;
-  width: 220px;
+  width: var(--right-panel-width, 220px);
   background: #0d0d12;
   border-left: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
@@ -2204,15 +2462,19 @@
   overflow: hidden;
 }
 
+.members-c.dragging {
+  transition: none !important;
+}
+
 .members-c.collapsed {
   width: 0;
   border-left-color: transparent;
   pointer-events: none;
 }
 
+.panel .edge-handle,
 .members-c .edge-handle {
   position: absolute;
-  left: 0;
   top: 0;
   bottom: 0;
   width: 6px;
@@ -2220,16 +2482,33 @@
   z-index: 10;
   background: transparent;
   transition: background-color 120ms ease-out, transform 80ms ease-out;
+  border: none;
+  padding: 0;
 }
+
+.panel .edge-handle {
+  right: 0;
+}
+
+.members-c .edge-handle {
+  left: 0;
+}
+
+.panel .edge-handle:hover,
 .members-c .edge-handle:hover {
   background: rgba(255, 255, 255, 0.05);
 }
+
+.panel .edge-handle:active,
 .members-c .edge-handle:active {
   transform: scaleX(1.1);
 }
+
+.panel .edge-handle.dragging-past-boundary,
 .members-c .edge-handle.dragging-past-boundary {
   transform: scaleX(1.1);
   opacity: 0.7;
+  background: rgba(239, 68, 68, 0.15) !important;
 }
 
 .members-c .members-header {
@@ -2240,7 +2519,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-shrink: 0;
+  shrink: 0;
   overflow: hidden;
 }
 
@@ -2431,7 +2710,7 @@
 
 .members-c .member .avatar-wrap {
   position: relative;
-  flex-shrink: 0;
+  shrink: 0;
 }
 
 .members-c .member .avatar {
@@ -2519,7 +2798,7 @@
   background: rgba(99, 102, 241, 0.25);
   color: var(--nx-accent-2-soft);
   line-height: 1;
-  flex-shrink: 0;
+  shrink: 0;
 }
 
 .members-c .member .status-text {

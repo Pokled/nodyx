@@ -53,6 +53,10 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const token = cookies.get('token');
 	const cookieLocale = cookies.get('nodyx_locale');
 	const ssrLocale = (isKnownLocale(cookieLocale) ? cookieLocale : getLocaleFromAcceptLanguage(request.headers.get('accept-language'))) || 'fr';
+	const panelCollapsed = cookies.get('nodyx_panel_collapsed') === 'true';
+	const membersCollapsed = cookies.get('nodyx_members_collapsed') === 'true';
+	const leftPanelWidth = parseInt(cookies.get('nodyx_left_panel_width') ?? '220', 10) || 220;
+	const rightPanelWidth = parseInt(cookies.get('nodyx_right_panel_width') ?? '220', 10) || 220;
 
 	const [infoRes, userRes, directoryJson, announcementRes, modulesRes, channelsRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),
@@ -100,7 +104,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (((directoryJson as any)?.instances) ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, channels: [], demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, channels: [], demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth };
 	}
 
 	const { user } = await userRes.json();
@@ -130,5 +134,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, channels, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, channels, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth };
 };
