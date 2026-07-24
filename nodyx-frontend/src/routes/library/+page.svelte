@@ -13,19 +13,20 @@
 
 	const MAX_FILE_SIZE = 12 * 1024 * 1024 // 12 MB
 
+	// label/tip résolus via tFn dans le template (clés i18n, réactif à la locale).
 	const ASSET_TYPES = [
-		{ value: '', label: 'Tous', tip: null },
-		{ value: 'frame',   label: 'Cadres',     tip: 'PNG carré avec fond transparent. Cercle transparent au centre touchant les bords (l\'avatar remplira ce cercle). Anneau décoratif à l\'extérieur. 500×500 px min.' },
-		{ value: 'banner',  label: 'Bannières',  tip: 'PNG ou JPG, format paysage. Affiché en haut du profil. 1500×500 px recommandé.' },
-		{ value: 'badge',   label: 'Badges',     tip: 'PNG carré avec fond transparent. S\'affiche à côté du pseudo. 256×256 px recommandé.' },
-		{ value: 'sticker', label: 'Stickers',   tip: 'PNG ou GIF animé avec fond transparent. Utilisé dans le chat. 512×512 px recommandé.' },
-		{ value: 'font',    label: 'Polices',    tip: 'Fichier de police (TTF, OTF, WOFF2). Sera proposée pour personnaliser l\'interface.' },
-		{ value: 'theme',   label: 'Thèmes',     tip: 'Fichier JSON de thème couleurs. Format défini par la communauté.' },
-		{ value: 'emoji',   label: 'Emojis',     tip: 'PNG ou GIF carré avec fond transparent. 128×128 px recommandé.' },
-		{ value: 'sound',   label: 'Sons',       tip: 'MP3 ou OGG. Court extrait audio (notification, ambiance, etc.). 30s max recommandé.' },
+		{ value: '',        labelKey: 'library.type.all',     tipKey: null },
+		{ value: 'frame',   labelKey: 'library.type.frame',   tipKey: 'library.type.frame_tip' },
+		{ value: 'banner',  labelKey: 'library.type.banner',  tipKey: 'library.type.banner_tip' },
+		{ value: 'badge',   labelKey: 'library.type.badge',   tipKey: 'library.type.badge_tip' },
+		{ value: 'sticker', labelKey: 'library.type.sticker', tipKey: 'library.type.sticker_tip' },
+		{ value: 'font',    labelKey: 'library.type.font',    tipKey: 'library.type.font_tip' },
+		{ value: 'theme',   labelKey: 'library.type.theme',   tipKey: 'library.type.theme_tip' },
+		{ value: 'emoji',   labelKey: 'library.type.emoji',   tipKey: 'library.type.emoji_tip' },
+		{ value: 'sound',   labelKey: 'library.type.sound',   tipKey: 'library.type.sound_tip' },
 	]
 
-	const currentTypeTip = $derived(ASSET_TYPES.find(t => t.value === uploadType)?.tip ?? null)
+	const currentTypeTip = $derived(ASSET_TYPES.find(t => t.value === uploadType)?.tipKey ?? null)
 
 	const TYPE_ICONS: Record<string, string> = {
 		frame: '🖼️', banner: '🎨', badge: '🏅', sticker: '⭐',
@@ -86,7 +87,7 @@
 		const file  = input.files?.[0] ?? null
 		uploadError = ''
 		if (file && file.size > MAX_FILE_SIZE) {
-			uploadError = `Fichier trop lourd : ${(file.size / 1024 / 1024).toFixed(1)} Mo (max 12 Mo).`
+			uploadError = tFn('library.err.too_large', { size: (file.size / 1024 / 1024).toFixed(1) })
 			uploadFile  = null
 			uploadPreview = null
 			input.value = ''
@@ -104,8 +105,8 @@
 
 	async function submitUpload(e: Event) {
 		e.preventDefault()
-		if (!uploadFile) { uploadError = 'Sélectionne un fichier.'; return }
-		if (uploadFile.size > MAX_FILE_SIZE) { uploadError = 'Fichier trop lourd (max 12 Mo).'; return }
+		if (!uploadFile) { uploadError = tFn('library.err.select_file'); return }
+		if (uploadFile.size > MAX_FILE_SIZE) { uploadError = tFn('library.err.too_large_simple'); return }
 		uploading   = true
 		uploadError = ''
 
@@ -133,31 +134,31 @@
 			goto(page.url.pathname, { invalidateAll: true })
 		} else {
 			const json  = await res.json()
-			uploadError = json.error ?? 'Erreur lors de l\'upload.'
+			uploadError = json.error ?? tFn('library.err.upload')
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>Bibliothèque — Nodyx</title>
+	<title>{tFn('library.meta.title')}</title>
 </svelte:head>
 
 <!-- ── Header ──────────────────────────────────────────────────────────────── -->
 <div class="lib-header">
 	<div class="lib-header-row">
 		<div class="lib-title-block">
-			<h1 class="lib-title">Bibliothèque</h1>
-			<p class="lib-subtitle">Assets créés par la communauté — cadres, badges, stickers et plus</p>
+			<h1 class="lib-title">{tFn('library.title')}</h1>
+			<p class="lib-subtitle">{tFn('library.subtitle')}</p>
 		</div>
 
 		<div class="lib-header-actions">
 			<form onsubmit={submitSearch} class="lib-search-form">
 				<input
 					bind:value={searchInput}
-					placeholder={isCommunityTab ? 'Rechercher dans toutes les instances…' : 'Rechercher un asset…'}
+					placeholder={isCommunityTab ? tFn('library.search.federated_ph') : tFn('library.search.local_ph')}
 					class="lib-search-input"
 				/>
-				<button type="submit" class="lib-search-btn" aria-label="Rechercher">
+				<button type="submit" class="lib-search-btn" aria-label={tFn('library.search.aria')}>
 					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
 					</svg>
@@ -165,7 +166,7 @@
 			</form>
 			{#if !isCommunityTab && token}
 				<button onclick={() => showUpload = !showUpload} class="lib-upload-btn">
-					+ Partager
+					{tFn('library.share')}
 				</button>
 			{/if}
 		</div>
@@ -177,13 +178,13 @@
 			onclick={() => switchTab('local')}
 			class="lib-tab {!isCommunityTab ? 'lib-tab--active' : ''}"
 		>
-			Ma communauté
+			{tFn('library.my_community')}
 		</button>
 		<button
 			onclick={() => switchTab('community')}
 			class="lib-tab {isCommunityTab ? 'lib-tab--active' : ''}"
 		>
-			Toutes les instances
+			{tFn('library.all_instances')}
 		</button>
 	</div>
 </div>
@@ -191,14 +192,14 @@
 <!-- ── Upload panel ─────────────────────────────────────────────────────────── -->
 {#if showUpload && !isCommunityTab}
 	<div class="lib-upload-panel">
-		<h2 class="lib-upload-title">Partager un asset</h2>
+		<h2 class="lib-upload-title">{tFn('library.upload.title')}</h2>
 		{#if uploadError}
 			<p class="lib-upload-error">{uploadError}</p>
 		{/if}
 		<form onsubmit={submitUpload} class="lib-upload-form">
 			<div class="lib-upload-file-row">
 				<div class="lib-field lib-field--grow">
-					<span class="lib-label">Fichier *</span>
+					<span class="lib-label">{tFn('library.upload.file_label')}</span>
 					<label class="lib-file-btn">
 						<input type="file" onchange={onFileChange} accept="image/*,audio/*" class="lib-file-native" />
 						<span class="lib-file-cta">📁 {tFn('library.choose_file')}</span>
@@ -206,32 +207,32 @@
 					</label>
 				</div>
 				{#if uploadPreview}
-					<img src={uploadPreview} alt="preview" class="lib-preview-thumb" />
+					<img src={uploadPreview} alt={tFn('library.upload.preview_alt')} class="lib-preview-thumb" />
 				{/if}
 			</div>
 			<div class="lib-upload-row2">
 				<div class="lib-field">
 					<label for="lib-name" class="lib-label">Nom *</label>
-					<input id="lib-name" bind:value={uploadName} required maxlength="100" placeholder="Ex: Cadre doré"
+					<input id="lib-name" bind:value={uploadName} required maxlength="100" placeholder={tFn('library.upload.name_ph')}
 						class="lib-input" />
 				</div>
 				<div class="lib-field">
 					<label for="lib-type" class="lib-label">Type *</label>
 					<select id="lib-type" bind:value={uploadType} class="lib-select">
 						{#each ASSET_TYPES.slice(1) as t}
-							<option value={t.value}>{t.label}</option>
+							<option value={t.value}>{tFn(t.labelKey)}</option>
 						{/each}
 					</select>
 				</div>
 			</div>
 			<div class="lib-field lib-field--full">
 				<label for="lib-desc" class="lib-label">Description</label>
-				<textarea id="lib-desc" bind:value={uploadDescription} rows="2" placeholder="Décris ton asset…"
+				<textarea id="lib-desc" bind:value={uploadDescription} rows="2" placeholder={tFn('library.upload.desc_ph')}
 					class="lib-textarea"></textarea>
 			</div>
 			<div class="lib-field lib-field--full">
-				<label for="lib-tags" class="lib-label">Tags (séparés par des virgules)</label>
-				<input id="lib-tags" bind:value={uploadTags} placeholder="pixel-art, doré, frame"
+				<label for="lib-tags" class="lib-label">{tFn('library.upload.tags_label')}</label>
+				<input id="lib-tags" bind:value={uploadTags} placeholder={tFn('library.upload.tags_ph')}
 					class="lib-input" />
 			</div>
 			{#if uploadType === 'emoji'}
@@ -251,17 +252,17 @@
 				<div class="lib-tip lib-field--full">
 					<span class="lib-tip-icon">💡</span>
 					<div class="lib-tip-body">
-						<span class="lib-tip-title">Conseils · </span>{currentTypeTip}
+						<span class="lib-tip-title">{tFn('library.tips_prefix')}</span>{tFn(currentTypeTip)}
 						<span class="lib-tip-size">Taille max : <strong>12 Mo</strong></span>
 					</div>
 				</div>
 			{/if}
 			<div class="lib-upload-actions lib-field--full">
 				<button type="submit" disabled={uploading} class="lib-submit-btn">
-					{uploading ? 'Upload en cours…' : 'Partager'}
+					{uploading ? tFn('library.upload.uploading') : tFn('library.upload.submit')}
 				</button>
 				<button type="button" onclick={() => showUpload = false} class="lib-cancel-btn">
-					Annuler
+					{tFn('library.cancel')}
 				</button>
 			</div>
 		</form>
@@ -275,7 +276,7 @@
 			onclick={() => applyFilter(t.value)}
 			class="lib-filter-btn {data.type === t.value ? 'lib-filter-btn--active' : ''}"
 		>
-			{t.value ? TYPE_ICONS[t.value] + ' ' : ''}{t.label}
+			{t.value ? TYPE_ICONS[t.value] + ' ' : ''}{tFn(t.labelKey)}
 		</button>
 	{/each}
 </div>
@@ -285,12 +286,12 @@
 	{#if data.assets.length === 0}
 		<div class="lib-empty">
 			<p class="lib-empty-icon">{isCommunityTab ? '🌐' : '📭'}</p>
-			<p class="lib-empty-main">{isCommunityTab ? 'Aucun asset fédéré pour le moment' : 'Aucun asset trouvé'}</p>
+			<p class="lib-empty-main">{isCommunityTab ? tFn('library.empty.federated') : tFn('library.empty.local')}</p>
 			<p class="lib-empty-sub">
 				{#if isCommunityTab}
 					Les assets apparaissent ici quand d'autres instances les partagent.
 				{:else}
-					Sois le premier à partager quelque chose !
+					{tFn('library.empty.cta')}
 				{/if}
 			</p>
 		</div>
