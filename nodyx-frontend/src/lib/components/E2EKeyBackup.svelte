@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { t } from '$lib/i18n'
-	import { E2E_PHRASE_WORDS } from '$lib/e2ePhraseWords'
+	import { generateRecoveryPhrase } from '$lib/e2ePhraseWords'
 	import {
 		hasServerBackup, canBackupLocalKey, uploadKeyBackup,
 		restoreKeyBackup, deleteKeyBackup, regenerateKey,
@@ -49,15 +49,8 @@
 		} finally { busy = false }
 	}
 
-	function genPhrase(): string {
-		const n = 5
-		const r = new Uint32Array(n)
-		crypto.getRandomValues(r)
-		return Array.from(r, (v) => E2E_PHRASE_WORDS[v % E2E_PHRASE_WORDS.length]).join('-')
-	}
-
 	function suggestPhrase() {
-		const p = genPhrase()
+		const p = generateRecoveryPhrase()
 		phrase = p; phrase2 = p; showPhrase = true; error = ''; copied = false
 	}
 
