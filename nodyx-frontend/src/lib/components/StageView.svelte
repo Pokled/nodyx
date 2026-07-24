@@ -9,6 +9,9 @@
         registerSinkElement,
     } from '$lib/voice'
     import StageChat from './StageChat.svelte'
+    import { t } from '$lib/i18n'
+
+    const tFn = $derived($t)
 
     let { onclose }: { onclose: () => void } = $props()
 
@@ -44,7 +47,7 @@
             const peer = peers.find(p => p.socketId === socketId)
             return {
                 id:      socketId,
-                username: peer?.username ?? 'Participant',
+                username: peer?.username ?? tFn('stage.participant'),
                 avatar:   peer?.avatar ?? null,
                 stream,
                 isLocal:  false,
@@ -52,7 +55,7 @@
         }),
         ...(localStream ? [{
             id:       'local',
-            username: 'Vous',
+            username: tFn('stage.you'),
             avatar:   null,
             stream:   localStream,
             isLocal:  true,
@@ -319,17 +322,17 @@
                 onclick={() => isPiP = true}
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all"
                 style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: rgb(156,163,175);"
-                title="Fenêtre flottante (P) : la Scène vous suit quand vous naviguez ailleurs"
+                title={tFn('stage.pip_title')}
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <rect x="2" y="3" width="20" height="14" rx="2"/>
                     <rect x="12" y="10" width="8" height="5" rx="1"/>
                 </svg>
-                <span class="hidden sm:inline">Fenêtre flottante</span>
+                <span class="hidden sm:inline">{tFn('stage.pip_label')}</span>
             </button>
             <button
                 onclick={onclose}
-                aria-label="Fermer le stage"
+                aria-label={tFn('stage.close_aria')}
                 class="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
                 style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: rgb(107,114,128);"
             >
@@ -380,9 +383,9 @@
                      pouvait pas deviner « P »). Lisibles, et nommés en clair. -->
                 <div class="absolute top-4 right-4 z-10 flex items-center gap-2.5 rounded-full px-3 py-1.5 text-[10px] select-none"
                      style="background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); backdrop-filter: blur(4px)">
-                    <span><kbd class="stage-kbd">F</kbd> plein écran</span>
-                    <span><kbd class="stage-kbd">P</kbd> fenêtre flottante</span>
-                    <span><kbd class="stage-kbd">Échap</kbd> fermer</span>
+                    <span><kbd class="stage-kbd">F</kbd> {tFn('stage.kbd.fullscreen')}</span>
+                    <span><kbd class="stage-kbd">P</kbd> {tFn('stage.kbd.pip')}</span>
+                    <span><kbd class="stage-kbd">{tFn('stage.kbd.esc')}</kbd> {tFn('stage.kbd.close')}</span>
                 </div>
 
                 <!-- Vidéo principale : double-clic = plein écran.
@@ -395,7 +398,7 @@
                     autoplay playsinline muted
                     ondblclick={requestFullscreen}
                     class="w-full h-full object-contain cursor-pointer"
-                    title="Double-clic pour plein écran"
+                    title={tFn('stage.dblclick_title')}
                 ></video>
                 <!-- Son du partage : sorti par un <audio> dédié (fiable sur mobile,
                      contrairement au son porté par la <video autoplay>). -->
@@ -407,12 +410,12 @@
                     class="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
                            opacity-40 hover:opacity-100 transition-opacity duration-150"
                     style="background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.12); color: white; backdrop-filter: blur(4px);"
-                    title="Plein écran (F)"
+                    title={tFn('stage.fullscreen_title_f')}
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
                     </svg>
-                    <span class="text-xs font-medium">Plein écran</span>
+                    <span class="text-xs font-medium">{tFn('stage.fullscreen')}</span>
                 </button>
 
                 <!-- Son du partage (coin bas-gauche) : mute + volume, côté spectateur.
@@ -425,8 +428,8 @@
                             <button
                                 onclick={() => { screenMuted = !screenMuted; if (!screenMuted) nudgeScreenAudio() }}
                                 class="shrink-0 hover:text-indigo-300 transition-colors"
-                                title={screenMuted ? 'Réactiver le son du partage' : 'Couper le son du partage'}
-                                aria-label={screenMuted ? 'Réactiver le son du partage' : 'Couper le son du partage'}
+                                title={screenMuted ? tFn('stage.unmute_share') : tFn('stage.mute_share')}
+                                aria-label={screenMuted ? tFn('stage.unmute_share') : tFn('stage.mute_share')}
                             >
                                 {#if screenMuted || screenVolume === 0}
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -445,8 +448,8 @@
                                 bind:value={screenVolume}
                                 oninput={() => { if (screenVolume > 0) { screenMuted = false; nudgeScreenAudio() } }}
                                 class="stage-vol"
-                                title="Volume du partage ({screenVolume}%)"
-                                aria-label="Volume du partage"
+                                title={tFn('stage.share_volume_title', { vol: screenVolume })}
+                                aria-label={tFn('stage.share_volume_aria')}
                             />
                         {:else}
                             <svg class="w-4 h-4 shrink-0" style="color: rgba(255,255,255,0.5)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -463,33 +466,33 @@
                             opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                      style="background: linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.2), transparent)">
 
-                    <button onclick={requestFullscreen} class="stage-ctrl" title="Plein écran (F)">
+                    <button onclick={requestFullscreen} class="stage-ctrl" title={tFn('stage.fullscreen_title_f')}>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
                         </svg>
-                        <span>Plein écran</span>
+                        <span>{tFn('stage.fullscreen')}</span>
                     </button>
 
                     {#if focusedEntry.isLocal}
-                        <button onclick={takeSnapshot} class="stage-ctrl" title="Capture d'écran">
+                        <button onclick={takeSnapshot} class="stage-ctrl" title={tFn('stage.snapshot_title')}>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 10.07 4h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 18.07 7H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/>
                                 <circle cx="12" cy="13" r="3"/>
                             </svg>
                             <span>Capture</span>
                         </button>
-                        <button onclick={saveClip} class="stage-ctrl" title="Sauvegarder le dernier clip (60s)">
+                        <button onclick={saveClip} class="stage-ctrl" title={tFn('stage.saveclip_title')}>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25z"/>
                             </svg>
                             <span>Clip 60s</span>
                         </button>
-                        <button onclick={stopScreenShare} class="stage-ctrl-danger" title="Arrêter mon partage">
+                        <button onclick={stopScreenShare} class="stage-ctrl-danger" title={tFn('stage.stop_share')}>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <rect x="2" y="3" width="20" height="14" rx="2"/>
                                 <path d="M8 21h8M12 17v4"/>
                             </svg>
-                            <span>Arrêter mon partage</span>
+                            <span>{tFn('stage.stop_share')}</span>
                         </button>
                     {/if}
                 </div>
@@ -500,7 +503,7 @@
                         <rect x="2" y="3" width="20" height="14" rx="2"/>
                         <path d="M8 21h8M12 17v4"/>
                     </svg>
-                    <p class="text-sm">Aucun partage actif</p>
+                    <p class="text-sm">{tFn('stage.no_active_share')}</p>
                 </div>
             {/if}
         </div>
@@ -516,7 +519,7 @@
                         onclick={() => focusedId = entry.id}
                         class="relative group shrink-0 overflow-hidden rounded-md transition-all"
                         style="height: 5.5rem; aspect-ratio: 16/9; background: black; border: 1px solid rgba(255,255,255,0.08)"
-                        title="{entry.username} : mettre en avant"
+                        title={tFn('stage.feature_user', { username: entry.username })}
                     >
                         <video
                             use:streamSrc={entry.stream}
@@ -554,8 +557,8 @@
                     onclick={() => showChat = true}
                     class="flex w-8 shrink-0 items-center justify-center transition-colors hover:bg-white/5"
                     style="background: rgba(6,6,12,0.75); border-left: 1px solid rgba(255,255,255,0.05); color: rgb(148,163,184)"
-                    title="Afficher le chat du salon"
-                    aria-label="Afficher le chat du salon"
+                    title={tFn('stage.show_chat')}
+                    aria-label={tFn('stage.show_chat')}
                 >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -583,7 +586,7 @@
         backdrop-filter: blur(16px);
     "
     role="dialog"
-    aria-label="Nodyx Stage — mode PiP"
+    aria-label={tFn('stage.pip_mode_aria')}
 >
     <!-- Drag handle / header -->
     <div
@@ -595,7 +598,7 @@
         onmousedown={startPipDrag}
         role="toolbar"
         tabindex="0"
-        aria-label="Déplacer le Stage"
+        aria-label={tFn('stage.move_aria')}
     >
         <div class="flex items-center gap-2 pointer-events-none">
             <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
@@ -614,7 +617,7 @@
                 onclick={() => isPiP = false}
                 class="w-6 h-6 flex items-center justify-center rounded transition-colors"
                 style="color: rgb(107,114,128);"
-                title="Agrandir"
+                title={tFn('stage.expand_title')}
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
@@ -624,7 +627,7 @@
                 onclick={onclose}
                 class="w-6 h-6 flex items-center justify-center rounded transition-colors"
                 style="color: rgb(107,114,128);"
-                aria-label="Fermer"
+                aria-label={tFn('stage.close')}
             >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -653,7 +656,7 @@
             {/if}
         {:else}
             <div class="w-full h-full flex items-center justify-center">
-                <p class="text-[11px]" style="color: rgba(255,255,255,0.2)">Aucun partage</p>
+                <p class="text-[11px]" style="color: rgba(255,255,255,0.2)">{tFn('stage.no_share')}</p>
             </div>
         {/if}
     </div>
