@@ -1427,5 +1427,11 @@
   "canvas.close": "Fermer",
   "canvas.meta_title": "Canvas : mes projets",
   "canvas.heading": "Mes projets Canvas",
-  "canvas.rename_prompt": "Renommer le projet :"
+  "canvas.rename_prompt": "Renommer le projet :",
+  "home.join_community": "Rejoindre la communauté",
+  "dm.reply": "Répondre",
+  "common.add_emoji": "Insérer un emoji",
+  "search.no_results": "Aucun résultat",
+  "page_title.search_results": "Résultats pour « {{q}} »",
+  "pedit.section_social": "Réseaux sociaux"
 }
