@@ -784,7 +784,7 @@
 		})
 		if (!res.ok) {
 			const j = await res.json().catch(() => ({}))
-			audioError = j.error ?? `Erreur upload (${res.status})`
+			audioError = j.error ?? tFn('editor.audio.err_upload', { status: res.status })
 			return null
 		}
 		return (await res.json()).url as string
@@ -795,7 +795,7 @@
 		if (!file) return
 		audioError = ''
 		if (!file.type.startsWith('audio/')) {
-			audioError = 'Format non supporté (mp3, ogg, wav, m4a, webm).'
+			audioError = tFn('editor.audio.err_format')
 			audioPickedFile = null
 			return
 		}
@@ -830,7 +830,7 @@
 		const file = (e.target as HTMLInputElement).files?.[0]
 		if (!file) return
 		if (!file.type.startsWith('image/')) {
-			audioError = 'Cover : formats acceptés jpg, png, webp, gif.'
+			audioError = tFn('editor.audio.err_cover_format')
 			return
 		}
 		if (file.size > 8 * 1024 * 1024) {
@@ -858,7 +858,7 @@
 			return
 		}
 		if (!token) {
-			audioError = 'Session expirée, recharge la page.'
+			audioError = tFn('editor.audio.err_session')
 			return
 		}
 		audioUploading = true
@@ -895,7 +895,7 @@
 			if (audioFileEl) audioFileEl.value = ''
 			if (audioCoverFileEl) audioCoverFileEl.value = ''
 		} catch (err) {
-			audioError = 'Erreur réseau pendant l’upload.'
+			audioError = tFn('editor.audio.err_network')
 		} finally {
 			audioUploading = false
 		}
@@ -930,7 +930,7 @@
 		const src = audioUrlExternal.trim()
 		if (!src) return
 		if (!src.startsWith('/uploads/')) {
-			audioError = 'Seuls les fichiers hébergés sur cette instance sont acceptés (uploade-le via le bouton ci-dessus).'
+			audioError = tFn('editor.audio.err_local_only')
 			return
 		}
 		const attrs: Record<string, string> = { src }
@@ -1276,7 +1276,7 @@
 			</button>
 			{#if showLink}
 			<div class="popup w-72 flex flex-col gap-2 p-3" use:autoFlip>
-				<input type="url" bind:value={linkUrl} placeholder="https://..." class="popup-input" onkeydown={e => e.key === 'Enter' && insertLink()} />
+				<input type="url" bind:value={linkUrl} placeholder={tFn('editor.link.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertLink()} />
 				<div class="flex gap-2">
 					<button type="button" onclick={insertLink} class="flex-1 popup-btn-primary">{tFn('editor.insert')}</button>
 					{#if a.link}<button type="button" onclick={() => { editor?.chain().focus().unsetLink().run(); showLink = false }} class="popup-btn-danger">{tFn('editor.delete_link')}</button>{/if}
@@ -1295,7 +1295,7 @@
 				{#if replaceImagePos !== null}
 					<div class="flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1">
 						<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/></svg>
-						Remplacement de l'image sélectionnée
+						{tFn('editor.img.replacing')}
 					</div>
 				{/if}
 				<!-- Bouton médiathèque -->
@@ -1304,7 +1304,7 @@
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
 					</svg>
-					Choisir depuis la médiathèque
+					{tFn('editor.img.choose_library')}
 				</button>
 				<div class="flex items-center gap-2 text-gray-600">
 					<span class="flex-1 h-px bg-gray-800"></span>
@@ -1334,7 +1334,7 @@
 			{#if showVideo}
 			<div class="popup w-80 flex flex-col gap-2 p-3" use:autoFlip>
 				<p class="text-xs text-gray-500">{tFn('editor.video_hint')}</p>
-				<input type="url" bind:value={videoUrl} placeholder="https://youtu.be/…" class="popup-input" onkeydown={e => e.key === 'Enter' && insertVideo()} />
+				<input type="url" bind:value={videoUrl} placeholder={tFn('editor.video.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertVideo()} />
 				<button type="button" onclick={insertVideo} class="popup-btn-primary">{tFn('editor.embed_video')}</button>
 			</div>
 			{/if}
@@ -1342,12 +1342,12 @@
 
 		<!-- Audio (mp3 / ogg / wav / m4a / webm) -->
 		<div class="relative">
-			<button type="button" onclick={() => { showAudio = !showAudio; showColor = showEmoji = showLink = showImage = showVideo = showTable = false }} class="tb-btn" title="Insérer un fichier audio">
+			<button type="button" onclick={() => { showAudio = !showAudio; showColor = showEmoji = showLink = showImage = showVideo = showTable = false }} class="tb-btn" title={tFn('editor.audio.btn_title')}>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
 			</button>
 			{#if showAudio}
 			<div class="popup w-96 flex flex-col gap-2 p-3" use:autoFlip>
-				<p class="text-xs text-gray-500">Fichier audio (mp3, ogg, wav, m4a, webm) — max 8 Mo. Les métadonnées (titre, artiste, pochette) sont lues automatiquement pour les mp3.</p>
+				<p class="text-xs text-gray-500">{tFn('editor.audio.hint')}</p>
 				<input
 					bind:this={audioFileEl}
 					type="file"
@@ -1361,32 +1361,32 @@
 					<div class="flex gap-3 items-start mt-1">
 						<div class="shrink-0">
 							{#if audioCoverPreview}
-								<img src={audioCoverPreview} alt="Pochette" class="w-16 h-16 rounded object-cover border border-indigo-700/40" />
+								<img src={audioCoverPreview} alt={tFn('editor.audio.cover_alt')} class="w-16 h-16 rounded object-cover border border-indigo-700/40" />
 							{:else}
 								<div class="w-16 h-16 rounded border border-dashed border-gray-700 flex items-center justify-center text-gray-600 text-xs">aucune</div>
 							{/if}
 							<div class="flex gap-1 mt-1">
 								<button type="button" onclick={() => audioCoverFileEl?.click()} class="flex-1 text-[10px] px-1.5 py-0.5 rounded border border-gray-700 text-gray-400 hover:border-indigo-500 hover:text-indigo-300 transition-colors">choisir</button>
 								{#if audioCoverPreview}
-									<button type="button" onclick={clearCover} class="text-[10px] px-1.5 py-0.5 rounded border border-gray-700 text-red-400 hover:border-red-500 transition-colors" title="Retirer la pochette">×</button>
+									<button type="button" onclick={clearCover} class="text-[10px] px-1.5 py-0.5 rounded border border-gray-700 text-red-400 hover:border-red-500 transition-colors" title={tFn('editor.audio.clear_cover')}>×</button>
 								{/if}
 							</div>
 							<input bind:this={audioCoverFileEl} type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" onchange={onCoverFileChange} />
 						</div>
 						<div class="flex-1 flex flex-col gap-1.5 min-w-0">
-							<input type="text" bind:value={audioTitle}  placeholder="Titre" class="popup-input" />
-							<input type="text" bind:value={audioArtist} placeholder="Artiste / auteur" class="popup-input" />
+							<input type="text" bind:value={audioTitle}  placeholder={tFn('editor.audio.title_ph')} class="popup-input" />
+							<input type="text" bind:value={audioArtist} placeholder={tFn('editor.audio.artist_ph')} class="popup-input" />
 						</div>
 					</div>
 
 					<button type="button" onclick={stageAudio} class="popup-btn-primary mt-1" disabled={audioUploading}>
-						{audioUploading ? 'Upload en cours…' : (audioStaged.length === 0 ? 'Ajouter cette piste' : '+ Ajouter cette piste à la file')}
+						{audioUploading ? tFn('editor.audio.uploading') : (audioStaged.length === 0 ? tFn('editor.audio.add_track') : tFn('editor.audio.add_more'))}
 					</button>
 				{/if}
 
 				{#if audioStaged.length > 0}
 					<div class="mt-2 flex flex-col gap-1 max-h-40 overflow-y-auto border border-indigo-700/40 rounded p-1.5 bg-indigo-950/30">
-						<div class="text-[10px] text-indigo-300 uppercase tracking-wider px-1">File ({audioStaged.length} piste{audioStaged.length > 1 ? 's' : ''})</div>
+						<div class="text-[10px] text-indigo-300 uppercase tracking-wider px-1">{audioStaged.length === 1 ? tFn('editor.audio.queue_one', { count: audioStaged.length }) : tFn('editor.audio.queue_many', { count: audioStaged.length })}</div>
 						{#each audioStaged as t, i}
 							<div class="flex items-center gap-2 text-xs px-1 py-0.5 hover:bg-indigo-900/30 rounded">
 								<span class="text-indigo-400 font-mono">{i + 1}.</span>
@@ -1399,18 +1399,18 @@
 									<div class="text-gray-200 truncate">{t.title || t.src.split('/').pop()}</div>
 									{#if t.artist}<div class="text-gray-500 text-[10px] truncate">{t.artist}</div>{/if}
 								</div>
-								<button type="button" onclick={() => removeStaged(i)} class="text-red-400 hover:text-red-300 text-base leading-none px-1" title="Retirer">×</button>
+								<button type="button" onclick={() => removeStaged(i)} class="text-red-400 hover:text-red-300 text-base leading-none px-1" title={tFn('editor.remove')}>×</button>
 							</div>
 						{/each}
 					</div>
 
 					<label class="flex items-center gap-2 text-xs text-gray-400 mt-1 cursor-pointer select-none">
 						<input type="checkbox" bind:checked={audioAllowDownload} class="accent-indigo-500" />
-						<span>Autoriser le téléchargement (bouton ⬇ visible)</span>
+						<span>{tFn('editor.audio.allow_download')}</span>
 					</label>
 
 					<button type="button" onclick={insertStaged} class="popup-btn-primary" disabled={audioUploading}>
-						Insérer {audioStaged.length === 1 ? 'le morceau' : `la playlist (${audioStaged.length} pistes)`}
+						{audioStaged.length === 1 ? tFn('editor.audio.insert_one') : tFn('editor.audio.insert_playlist', { count: audioStaged.length })}
 					</button>
 				{/if}
 
@@ -1423,8 +1423,8 @@
 					<span class="text-[10px]">ou URL /uploads/…</span>
 					<span class="flex-1 h-px bg-gray-800"></span>
 				</div>
-				<input type="text" bind:value={audioUrlExternal} placeholder="/uploads/posts/xxx.mp3" class="popup-input" onkeydown={e => e.key === 'Enter' && insertAudioFromUrl()} />
-				<button type="button" onclick={insertAudioFromUrl} class="popup-btn-primary" disabled={audioUploading || !audioUrlExternal.trim()}>Insérer depuis l'URL</button>
+				<input type="text" bind:value={audioUrlExternal} placeholder={tFn('editor.audio.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertAudioFromUrl()} />
+				<button type="button" onclick={insertAudioFromUrl} class="popup-btn-primary" disabled={audioUploading || !audioUrlExternal.trim()}>{tFn('editor.audio.insert_from_url')}</button>
 			</div>
 			{/if}
 		</div>
@@ -1488,7 +1488,7 @@
 		     onclick={(e) => e.stopPropagation()}>
 			<!-- Header -->
 			<div class="flex items-center justify-between px-5 py-4 border-b border-gray-800 shrink-0">
-				<h3 class="text-sm font-bold text-white">Médiathèque</h3>
+				<h3 class="text-sm font-bold text-white">{tFn('editor.library.title')}</h3>
 				<button type="button" onclick={() => showMediaPicker = false} class="text-gray-500 hover:text-white transition-colors">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -1498,14 +1498,14 @@
 			<!-- Grid -->
 			<div class="overflow-y-auto p-4 flex-1">
 				{#if mediaLoading}
-					<div class="flex items-center justify-center py-12 text-gray-500 text-sm">Chargement…</div>
+					<div class="flex items-center justify-center py-12 text-gray-500 text-sm">{tFn('editor.loading')}</div>
 				{:else if mediaImages.length === 0}
 					<div class="flex flex-col items-center justify-center py-12 gap-2 text-gray-600">
 						<svg class="w-8 h-8 opacity-40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909"/>
 						</svg>
-						<p class="text-sm">Aucune image hébergée.</p>
-						<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 hover:underline">Ouvrir la médiathèque →</a>
+						<p class="text-sm">{tFn('editor.library.empty')}</p>
+						<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 hover:underline">{tFn('editor.library.open')}</a>
 					</div>
 				{:else}
 					<div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
@@ -1525,11 +1525,9 @@
 			</div>
 			<!-- Footer -->
 			<div class="px-5 py-3 border-t border-gray-800 shrink-0 flex items-center justify-between">
-				<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 hover:underline">Gérer la médiathèque</a>
+				<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 hover:underline">{tFn('editor.library.manage')}</a>
 				<button type="button" onclick={() => showMediaPicker = false}
-					class="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 text-xs hover:bg-gray-700 transition-colors">
-					Annuler
-				</button>
+					class="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 text-xs hover:bg-gray-700 transition-colors">{tFn('editor.cancel')}</button>
 			</div>
 		</div>
 	</div>
@@ -1543,17 +1541,17 @@
 
 	<!-- ── Barre flottante (quickbar) sur la sélection ──────────────────── -->
 	{#if bubbleVisible}
-	<div bind:this={bubbleEl} class="nodyx-bubble {bubbleBelow ? 'below' : ''}" style="top:{bubbleTop}px; left:{bubbleLeft}px;" role="toolbar" aria-label="Mise en forme rapide">
+	<div bind:this={bubbleEl} class="nodyx-bubble {bubbleBelow ? 'below' : ''}" style="top:{bubbleTop}px; left:{bubbleLeft}px;" role="toolbar" aria-label={tFn('editor.bubble.aria')}>
 		<button type="button" class="nb-btn {a.bold ? 'active' : ''}" title={tFn('editor.bold')}
 			onmousedown={(e) => e.preventDefault()} onclick={() => editor?.chain().focus().toggleBold().run()}><b>B</b></button>
 		<button type="button" class="nb-btn {a.italic ? 'active' : ''}" title={tFn('editor.italic')}
 			onmousedown={(e) => e.preventDefault()} onclick={() => editor?.chain().focus().toggleItalic().run()}><i>I</i></button>
 		<span class="nb-sep"></span>
 		<button type="button" class="nb-btn nb-anchor {blockIsAnchored ? 'active' : ''}"
-			title={blockIsAnchored ? 'Retirer du sommaire' : 'Ajouter cette ligne au sommaire'}
+			title={blockIsAnchored ? tFn('editor.anchor.remove_title') : tFn('editor.anchor.add_title')}
 			onmousedown={(e) => e.preventDefault()} onclick={toggleAnchor}>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.4"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12a7 7 0 0014 0"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>
-			<span>{blockIsAnchored ? 'Ancré' : 'Ancre'}</span>
+			<span>{blockIsAnchored ? tFn('editor.anchor.anchored') : tFn('editor.anchor.anchor')}</span>
 		</button>
 	</div>
 	{/if}
