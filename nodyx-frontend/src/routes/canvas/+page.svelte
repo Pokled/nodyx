@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation'
 	import type { PageData } from './$types'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props()
 
@@ -37,7 +40,7 @@
 			const res = await fetch('/api/v1/canvas', {
 				method: 'POST',
 				headers: auth,
-				body: JSON.stringify({ name: newName.trim() || 'Sans titre', visibility: newVis })
+				body: JSON.stringify({ name: newName.trim() || tFn('canvas.name_ph'), visibility: newVis })
 			})
 			if (res.ok) {
 				const { board } = await res.json()
@@ -49,14 +52,14 @@
 	}
 
 	async function renameProject(b: Board) {
-		const name = prompt('Renommer le projet :', b.name)
+		const name = prompt(tFn('canvas.rename_prompt'), b.name)
 		if (name === null || name.trim() === b.name) return
 		busyId = b.id
 		try {
 			const res = await fetch(`/api/v1/canvas/${b.id}`, {
 				method: 'PATCH',
 				headers: auth,
-				body: JSON.stringify({ name: name.trim() || 'Sans titre' })
+				body: JSON.stringify({ name: name.trim() || tFn('canvas.name_ph') })
 			})
 			if (res.ok) await invalidateAll()
 		} finally {
@@ -65,7 +68,7 @@
 	}
 
 	async function deleteProject(b: Board) {
-		if (!confirm(`Supprimer définitivement "${b.name}" ?`)) return
+		if (!confirm(tFn('canvas.confirm_delete', { name: b.name }))) return
 		busyId = b.id
 		try {
 			// Pas de Content-Type sur un DELETE sans body (sinon Fastify renvoie 400 EMPTY_JSON_BODY)
@@ -107,30 +110,30 @@
 	}
 </script>
 
-<svelte:head><title>Canvas : mes projets</title></svelte:head>
+<svelte:head><title>{tFn('canvas.meta_title')}</title></svelte:head>
 
 <div class="max-w-5xl mx-auto px-4 py-8">
 	<div class="flex items-center justify-between mb-6">
 		<div>
 			<h1 class="text-2xl font-bold text-white flex items-center gap-2">
-				<span class="text-cyan-400">🎨</span> Mes projets Canvas
+				<span class="text-cyan-400">🎨</span> {tFn('canvas.heading')}
 			</h1>
-			<p class="text-sm text-gray-500 mt-1">Tableaux blancs collaboratifs. Enregistrés automatiquement.</p>
+			<p class="text-sm text-gray-500 mt-1">{tFn('canvas.subtitle')}</p>
 		</div>
 		<button
 			onclick={() => { newName = ''; newVis = 'private'; showCreate = true }}
 			class="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white
 			       bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 transition-all">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-			Nouveau projet
+			{tFn('canvas.new_project')}
 		</button>
 	</div>
 
 	{#if boards.length === 0}
 		<div class="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center">
 			<div class="text-5xl mb-3">🎨</div>
-			<p class="text-gray-300 font-medium">Aucun projet pour l'instant.</p>
-			<p class="text-gray-500 text-sm mt-1">Crée ton premier tableau blanc, il sera sauvegardé automatiquement.</p>
+			<p class="text-gray-300 font-medium">{tFn('canvas.empty_title')}</p>
+			<p class="text-gray-500 text-sm mt-1">{tFn('canvas.empty_sub')}</p>
 		</div>
 	{:else}
 		<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -147,25 +150,25 @@
 								<h3 class="flex-1 font-semibold text-white truncate">{b.name}</h3>
 								<span class="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded
 								             {b.visibility === 'public' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-gray-500/15 text-gray-400'}">
-									{b.visibility === 'public' ? 'Public' : 'Privé'}
+									{b.visibility === 'public' ? tFn('canvas.public') : tFn('canvas.private')}
 								</span>
 							</div>
-							<p class="text-xs text-gray-500 mt-1">{b.element_count} élément{b.element_count > 1 ? 's' : ''} · {fmtDate(b.updated_at)}</p>
+							<p class="text-xs text-gray-500 mt-1">{b.element_count > 1 ? tFn('canvas.elements_many', { count: b.element_count }) : tFn('canvas.elements_one', { count: b.element_count })} · {fmtDate(b.updated_at)}</p>
 						</div>
 					</button>
 					{#if (b.pending_requests ?? 0) > 0}
-						<button onclick={() => openRequests(b)} title="Demandes d'accès en édition"
+						<button onclick={() => openRequests(b)} title={tFn('canvas.access_requests')}
 							class="absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold text-amber-950 bg-amber-400 hover:bg-amber-300 shadow-lg animate-pulse">
 							<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22a2.5 2.5 0 002.45-2h-4.9A2.5 2.5 0 0012 22zm6.36-6V11c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 00-3 0v.68C7.99 5.36 6.36 7.92 6.36 11v5l-1.86 1.86V19h15v-1.14L18.36 16z"/></svg>
 							{b.pending_requests}
 						</button>
 					{/if}
 					<div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-						<button onclick={() => renameProject(b)} disabled={busyId === b.id} title="Renommer"
+						<button onclick={() => renameProject(b)} disabled={busyId === b.id} title={tFn('canvas.rename')}
 							class="p-1.5 rounded-md bg-black/40 text-gray-300 hover:text-white hover:bg-black/60">
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
 						</button>
-						<button onclick={() => deleteProject(b)} disabled={busyId === b.id} title="Supprimer"
+						<button onclick={() => deleteProject(b)} disabled={busyId === b.id} title={tFn('canvas.delete')}
 							class="p-1.5 rounded-md bg-black/40 text-gray-300 hover:text-red-400 hover:bg-black/60">
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
 						</button>
@@ -177,8 +180,8 @@
 
 	{#if publicBoards.length > 0}
 		<div class="mt-10">
-			<h2 class="text-lg font-bold text-white mb-1">Projets publics de la communauté</h2>
-			<p class="text-sm text-gray-500 mb-4">Ouvre-les en lecture seule. La demande d'accès en édition arrive bientôt.</p>
+			<h2 class="text-lg font-bold text-white mb-1">{tFn('canvas.public_projects_title')}</h2>
+			<p class="text-sm text-gray-500 mb-4">{tFn('canvas.public_projects_sub')}</p>
 			<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				{#each publicBoards as b (b.id)}
 					<button onclick={() => goto(`/canvas/${b.id}`)}
@@ -191,7 +194,7 @@
 								<h3 class="flex-1 font-semibold text-white truncate">{b.name}</h3>
 								<span class="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">Public</span>
 							</div>
-							<p class="text-xs text-gray-500 mt-1">par {b.creator_username ?? '?'} · {b.element_count} élément{b.element_count > 1 ? 's' : ''} · lecture seule</p>
+							<p class="text-xs text-gray-500 mt-1">{tFn('canvas.by', { user: b.creator_username ?? '?' })} · {b.element_count > 1 ? tFn('canvas.elements_many', { count: b.element_count }) : tFn('canvas.elements_one', { count: b.element_count })} · {tFn('canvas.read_only')}</p>
 						</div>
 					</button>
 				{/each}
@@ -205,30 +208,30 @@
 	     onclick={(e) => { if (e.target === e.currentTarget) showCreate = false }}
 	     role="presentation">
 		<div class="w-full max-w-md rounded-2xl border border-white/10 bg-[#12121a] p-6">
-			<h2 class="text-lg font-bold text-white mb-4">Nouveau projet Canvas</h2>
+			<h2 class="text-lg font-bold text-white mb-4">{tFn('canvas.create_title')}</h2>
 			<label class="block text-xs font-semibold text-gray-400 mb-1" for="cv-name">Nom du projet</label>
-			<input id="cv-name" bind:value={newName} placeholder="Sans titre" maxlength="100"
+			<input id="cv-name" bind:value={newName} placeholder={tFn('canvas.name_ph')} maxlength="100"
 				class="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm mb-4 focus:border-cyan-500/50 outline-none" />
 
-			<p class="text-xs font-semibold text-gray-400 mb-2">Visibilité</p>
+			<p class="text-xs font-semibold text-gray-400 mb-2">{tFn('canvas.visibility')}</p>
 			<div class="grid grid-cols-2 gap-2 mb-6">
 				<button type="button" onclick={() => newVis = 'private'}
 					class="rounded-lg border px-3 py-2.5 text-left transition-all {newVis === 'private' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-white/10 bg-white/[0.02]'}">
-					<div class="text-sm font-semibold text-white">🔒 Privé</div>
-					<div class="text-[11px] text-gray-500 mt-0.5">Toi seul, pour l'instant</div>
+					<div class="text-sm font-semibold text-white">🔒 {tFn('canvas.private')}</div>
+					<div class="text-[11px] text-gray-500 mt-0.5">{tFn('canvas.private_desc')}</div>
 				</button>
 				<button type="button" onclick={() => newVis = 'public'}
 					class="rounded-lg border px-3 py-2.5 text-left transition-all {newVis === 'public' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-white/10 bg-white/[0.02]'}">
-					<div class="text-sm font-semibold text-white">🌐 Public</div>
-					<div class="text-[11px] text-gray-500 mt-0.5">Visible par la communauté</div>
+					<div class="text-sm font-semibold text-white">🌐 {tFn('canvas.public')}</div>
+					<div class="text-[11px] text-gray-500 mt-0.5">{tFn('canvas.public_desc')}</div>
 				</button>
 			</div>
 
 			<div class="flex justify-end gap-2">
-				<button onclick={() => showCreate = false} class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white">Annuler</button>
+				<button onclick={() => showCreate = false} class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white">{tFn('canvas.cancel')}</button>
 				<button onclick={createProject} disabled={creating}
 					class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 disabled:opacity-50">
-					{creating ? 'Création…' : 'Créer et ouvrir'}
+					{creating ? tFn('canvas.creating') : tFn('canvas.create_open')}
 				</button>
 			</div>
 		</div>
@@ -240,12 +243,12 @@
 	     onclick={(e) => { if (e.target === e.currentTarget) requestsFor = null }}
 	     role="presentation">
 		<div class="w-full max-w-md rounded-2xl border border-white/10 bg-[#12121a] p-6">
-			<h2 class="text-lg font-bold text-white mb-1">Demandes d'accès en édition</h2>
-			<p class="text-sm text-gray-500 mb-4">Accorde l'édition aux membres en qui tu as confiance.</p>
+			<h2 class="text-lg font-bold text-white mb-1">{tFn('canvas.access_requests')}</h2>
+			<p class="text-sm text-gray-500 mb-4">{tFn('canvas.access_sub')}</p>
 			{#if reqLoading}
-				<p class="text-sm text-gray-500 py-6 text-center">Chargement…</p>
+				<p class="text-sm text-gray-500 py-6 text-center">{tFn('canvas.loading')}</p>
 			{:else if requests.length === 0}
-				<p class="text-sm text-gray-500 py-6 text-center">Aucune demande en attente.</p>
+				<p class="text-sm text-gray-500 py-6 text-center">{tFn('canvas.no_requests')}</p>
 			{:else}
 				<div class="space-y-2">
 					{#each requests as r (r.user_id)}
@@ -263,7 +266,7 @@
 				</div>
 			{/if}
 			<div class="flex justify-end mt-5">
-				<button onclick={() => requestsFor = null} class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white">Fermer</button>
+				<button onclick={() => requestsFor = null} class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white">{tFn('canvas.close')}</button>
 			</div>
 		</div>
 	</div>
