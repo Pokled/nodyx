@@ -21,6 +21,9 @@
     import { linkifyHtml } from '$lib/linkify'
     import { renderCustomEmojis, customEmojisStore } from '$lib/customEmojis'
     import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
+    import { t } from '$lib/i18n'
+
+    const tFn = $derived($t)
 
     let {
         channelId,
@@ -154,7 +157,7 @@
         openMenuId = null
         const sock = $socket
         if (!sock) return
-        if (typeof window !== 'undefined' && !window.confirm('Supprimer ce message ?')) return
+        if (typeof window !== 'undefined' && !window.confirm(tFn('stage_chat.confirm_delete'))) return
         sock.emit('chat:delete', { messageId: id })
     }
 
@@ -173,7 +176,7 @@
         <svg class="h-3.5 w-3.5 shrink-0" style="color: rgb(107,114,128)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 1 1-4.2-7.6L21 3v9z"/>
         </svg>
-        <span class="text-[11px] font-bold uppercase tracking-widest text-white">Chat du salon</span>
+        <span class="text-[11px] font-bold uppercase tracking-widest text-white">{tFn('stage_chat.header')}</span>
         {#if channelName}
             <span class="truncate text-[11px]" style="color: rgb(107,114,128)">{channelName}</span>
         {/if}
@@ -182,8 +185,8 @@
                 onclick={oncollapse}
                 class="ml-auto shrink-0 rounded p-1 transition-colors hover:bg-white/10"
                 style="color: rgb(107,114,128)"
-                title="Replier le chat"
-                aria-label="Replier le chat"
+                title={tFn('stage_chat.collapse')}
+                aria-label={tFn('stage_chat.collapse')}
             >
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -196,12 +199,12 @@
     <div bind:this={listEl} class="flex-1 space-y-3 overflow-y-auto px-4 py-3" style="scrollbar-width: thin">
         {#if messages.length === 0}
             <p class="pt-6 text-center text-xs" style="color: rgba(255,255,255,0.25)">
-                Aucun message pour l'instant.
+                {tFn('stage_chat.empty')}
             </p>
         {/if}
         {#each messages as msg (msg.id)}
             {#if msg.is_deleted}
-                <p class="pl-8 text-[11px] italic" style="color: rgba(255,255,255,0.25)">Message supprimé</p>
+                <p class="pl-8 text-[11px] italic" style="color: rgba(255,255,255,0.25)">{tFn('stage_chat.deleted')}</p>
             {:else if msg.content}
                 <div class="flex gap-2.5">
                     {#if msg.author_avatar}
@@ -217,28 +220,28 @@
                             <span class="truncate text-xs font-semibold text-white">{msg.author_username}</span>
                             <span class="shrink-0 text-[10px]" style="color: rgb(75,85,99)">{hhmm(msg.created_at)}</span>
                             {#if msg.is_edited}
-                                <span class="shrink-0 text-[9px]" style="color: rgb(75,85,99)">(modifié)</span>
+                                <span class="shrink-0 text-[9px]" style="color: rgb(75,85,99)">{tFn('stage_chat.edited')}</span>
                             {/if}
                             <!-- Actions : au TAP (mobile-first), pas au survol -->
                             {#if canActOn(msg)}
                                 <div class="ml-auto flex shrink-0 items-center gap-0.5">
                                     {#if openMenuId === msg.id}
                                         {#if msg.author_id === userId}
-                                            <button onclick={() => startEdit(msg)} title="Modifier" aria-label="Modifier"
+                                            <button onclick={() => startEdit(msg)} title={tFn('stage_chat.edit')} aria-label={tFn('stage_chat.edit')}
                                                     class="rounded p-1 transition-colors hover:bg-white/10" style="color: rgb(129,140,248)">
                                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                                             </button>
                                         {/if}
-                                        <button onclick={() => confirmDelete(msg.id)} title="Supprimer" aria-label="Supprimer"
+                                        <button onclick={() => confirmDelete(msg.id)} title={tFn('stage_chat.delete')} aria-label={tFn('stage_chat.delete')}
                                                 class="rounded p-1 transition-colors hover:bg-white/10" style="color: rgb(248,113,113)">
                                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                         </button>
-                                        <button onclick={() => openMenuId = null} title="Fermer" aria-label="Fermer"
+                                        <button onclick={() => openMenuId = null} title={tFn('stage_chat.close')} aria-label={tFn('stage_chat.close')}
                                                 class="rounded p-1 transition-colors hover:bg-white/10" style="color: rgb(107,114,128)">
                                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                                         </button>
                                     {:else}
-                                        <button onclick={() => openMenuId = msg.id} title="Actions" aria-label="Actions du message"
+                                        <button onclick={() => openMenuId = msg.id} title={tFn('stage_chat.actions')} aria-label={tFn('stage_chat.actions_aria')}
                                                 class="rounded p-1 transition-colors hover:bg-white/10" style="color: rgb(107,114,128)">
                                             <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
                                         </button>
@@ -261,8 +264,8 @@
              style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07)">
             <button
                 onclick={openRich}
-                aria-label="Éditeur enrichi"
-                title="Éditeur enrichi (mise en forme, liens, images…)"
+                aria-label={tFn('stage_chat.rich_aria')}
+                title={tFn('stage_chat.rich_title')}
                 class="shrink-0 rounded-md p-1 transition-colors hover:bg-white/10"
                 style="color: rgb(107,114,128)"
             >
@@ -273,13 +276,13 @@
             <input
                 bind:value={draft}
                 onkeydown={onKeydown}
-                placeholder="Écrire un message…"
+                placeholder={tFn('stage_chat.compose_ph')}
                 class="flex-1 bg-transparent text-[13px] text-gray-200 outline-none placeholder:text-gray-600"
             />
             <button
                 onclick={send}
                 disabled={!draft.trim()}
-                aria-label="Envoyer"
+                aria-label={tFn('stage_chat.send')}
                 class="shrink-0 rounded-md p-1 transition-colors disabled:opacity-30"
                 style="color: rgb(165,180,252)"
             >
@@ -295,13 +298,13 @@
 {#if richOpen}
     <div class="fixed inset-0 z-[400] flex sm:items-center sm:justify-center sm:p-4"
          style="background: rgba(0,0,0,0.7); backdrop-filter: blur(4px)">
-        <button class="absolute inset-0 cursor-default" aria-label="Fermer" onclick={closeRich}></button>
+        <button class="absolute inset-0 cursor-default" aria-label={tFn('stage_chat.close')} onclick={closeRich}></button>
         <div class="relative flex h-full w-full flex-col overflow-hidden sm:h-auto sm:max-h-[80vh] sm:max-w-lg sm:rounded-2xl"
              style="background: #0a0a12; border: 1px solid rgb(var(--nx-accent-rgb) / 0.2)">
             <div class="flex shrink-0 items-center justify-between px-5 py-4"
                  style="border-bottom: 1px solid rgba(255,255,255,0.06)">
-                <h3 class="text-sm font-bold text-white">{editingId ? 'Modifier le message' : 'Nouveau message'}</h3>
-                <button onclick={closeRich} aria-label="Fermer"
+                <h3 class="text-sm font-bold text-white">{editingId ? tFn('stage_chat.edit_msg') : tFn('stage_chat.new_msg')}</h3>
+                <button onclick={closeRich} aria-label={tFn('stage_chat.close')}
                         class="rounded-lg p-1.5 text-gray-500 transition-colors hover:text-white">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -322,12 +325,12 @@
                 <button onclick={closeRich}
                         class="rounded-lg px-4 py-2 text-sm font-medium text-gray-200 transition-colors"
                         style="background: rgba(255,255,255,0.06)">
-                    Annuler
+                    {tFn('stage_chat.cancel')}
                 </button>
                 <button onclick={sendRich} disabled={!richContent.trim()}
                         class="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all disabled:opacity-40"
                         style="background: rgb(79,70,229)">
-                    {editingId ? 'Enregistrer' : 'Envoyer'}
+                    {editingId ? tFn('stage_chat.save') : tFn('stage_chat.send')}
                 </button>
             </div>
         </div>
