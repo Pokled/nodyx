@@ -15,6 +15,9 @@
 	} from '$lib/canvas'
 	import { voiceStore } from '$lib/voice'
 	import { PUBLIC_API_URL } from '$env/static/public'
+	import { t as i18n } from '$lib/i18n'   // `t` est déjà une variable locale (transform / paramétrage)
+
+	const tFn = $derived($i18n)
 
 	// ── Props ─────────────────────────────────────────────────────────────────
 	let {
@@ -734,7 +737,7 @@
 				ctx.font        = `700 ${fs}px Inter,system-ui,sans-serif`
 				ctx.fillStyle   = d.color || '#818cf8'
 				ctx.globalAlpha = 0.9
-				const label = (d.name || 'Frame') + (count > 0 ? `  ·  ${count} élément${count > 1 ? 's' : ''}` : '')
+				const label = (d.name || tFn('canvas_r.frame')) + (count > 0 ? '  ·  ' + (count > 1 ? tFn('canvas.elements_many', { count }) : tFn('canvas.elements_one', { count })) : '')
 				ctx.fillText(label, d.x + 6, d.y - 4)
 			}
 
@@ -1801,7 +1804,7 @@
 		}
 		if (channelId && socket) {
 			const count = cs.snapshot().length, authors = cs.authorSet()
-			socket.emit('chat:send', { channelId, content: `🎨 **Canvas** — ${count} élément${count > 1 ? 's' : ''} par ${authors.join(', ')}.` })
+			socket.emit('chat:send', { channelId, content: (count > 1 ? tFn('canvas_r.chat_recap_many', { count, authors: authors.join(', ') }) : tFn('canvas_r.chat_recap_one', { count, authors: authors.join(', ') })) })
 		}
 		doClose()
 	}
@@ -1983,7 +1986,7 @@
 <div
 	use:portal
 	role="dialog"
-	aria-label="Canvas collaboratif"
+	aria-label={tFn('canvas_r.aria')}
 	tabindex="-1"
 	style="position:fixed; inset:0; z-index:9999; background:#0a0a10; display:flex; overflow:hidden;"
 	onmousedown={(e) => { if (e.target === e.currentTarget) requestClose() }}
@@ -1995,9 +1998,9 @@
 		onmousedown={(e) => e.stopPropagation()}
 	>
 		{#if readOnly}
-			<button onclick={requestClose} title="Fermer"
+			<button onclick={requestClose} title={tFn('canvas_r.close')}
 				style="display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,.06); color:#cbd5e1; border:1px solid rgba(255,255,255,.12); font-size:13px; cursor:pointer;">
-				✕ Fermer
+				{tFn('canvas_r.close_btn')}
 			</button>
 		{:else}
 			<CanvasLeftToolbar bind:tool onClose={requestClose} />
@@ -2089,7 +2092,7 @@
 			<button onclick={handleRequestAccess} disabled={accessAsked}
 				style="padding:5px 13px; border-radius:999px; font-size:12px; font-weight:600; cursor:{accessAsked ? 'default' : 'pointer'}; border:none; color:#fff; white-space:nowrap;
 				       background:{accessAsked ? 'rgba(16,185,129,.3)' : 'linear-gradient(to right,var(--nx-accent-strong),var(--nx-cyan))'};">
-				{accessAsked ? '✓ Demande envoyée' : "Demander l'accès en édition"}
+				{accessAsked ? tFn('canvas_r.access_sent') : tFn('canvas_r.access_ask')}
 			</button>
 		</div>
 		{/if}
@@ -2105,12 +2108,12 @@
 
 		<!-- ── Nouveautés depuis la dernière visite (cliquer = aller dessus) ── -->
 		{#if newCount > 0}
-			<button onclick={focusNewElements} title="Centrer la vue sur les nouveautés"
+			<button onclick={focusNewElements} title={tFn('canvas_r.center_new')}
 			        style="position:absolute; top:52px; left:12px; z-index:30; pointer-events:auto; cursor:pointer; border:none;
 			               display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px;
 			               background:rgba(251,191,36,.2); border:1px solid rgba(251,191,36,.65); backdrop-filter:blur(8px);
 			               color:#fde68a; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 0 14px rgba(251,191,36,.35);">
-				✨ {newCount} nouveauté{newCount > 1 ? 's' : ''} · clique pour voir
+				{newCount > 1 ? tFn('canvas_r.new_many', { count: newCount }) : tFn('canvas_r.new_one', { count: newCount })}
 			</button>
 		{/if}
 
@@ -2147,7 +2150,7 @@
 					height={MINIMAP_H}
 					style="display:block; cursor:pointer; border-radius:8px 8px 0 0;"
 					onclick={onMinimapClick}
-					title="Minimap — cliquer pour naviguer"
+					title={tFn('canvas_r.minimap')}
 				></canvas>
 				<button
 					class="sync-btn"
@@ -2155,10 +2158,10 @@
 					class:sync-following={syncMode === 'following'}
 					onclick={toggleBrainwaveSync}
 					title={syncMode === 'off'
-						? 'Brainwave Sync — off (cliquer pour conduire)'
+						? tFn('canvas_r.brainwave_off')
 						: syncMode === 'leading'
-						? 'Brainwave Sync — Conducteur (cliquer pour suivre)'
-						: 'Brainwave Sync — Suiveur (cliquer pour désactiver)'}
+						? tFn('canvas_r.brainwave_leading')
+						: tFn('canvas_r.brainwave_following')}
 				>
 					{#if syncMode === 'off'}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="12" height="12">
@@ -2189,7 +2192,7 @@
 						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
 						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
 					</svg>
-					Chargement du board…
+					{tFn('canvas_r.loading')}
 				</div>
 			</div>
 		{/if}
@@ -2233,7 +2236,7 @@
 					<textarea
 								class="w-full p-3 text-sm font-medium resize-none outline-none bg-transparent
 								       text-gray-900 placeholder-gray-600"
-								rows="4" placeholder="Note…"
+								rows="4" placeholder={tFn('canvas_r.note_ph')}
 								bind:value={overlayText}
 								onblur={submitOverlay}
 								autofocus
@@ -2253,7 +2256,7 @@
 								class="px-3 py-2 rounded-lg bg-gray-900/95 border border-violet-500/40
 								       placeholder-gray-500 outline-none shadow-xl min-w-[240px]"
 								style={overlayFontStyle()}
-								placeholder="Texte…"
+								placeholder={tFn('canvas_r.text_ph')}
 								bind:value={overlayText}
 								onblur={submitOverlay}
 								autofocus
@@ -2280,7 +2283,7 @@
 					class="px-3 py-1.5 rounded-lg bg-gray-900/95 border border-violet-500/50
 					       text-white placeholder-gray-500 outline-none shadow-xl text-sm font-semibold"
 					style="min-width:160px; color:{shapeStroke};"
-					placeholder="Nom du frame…"
+					placeholder={tFn('canvas_r.frame_name_ph')}
 					bind:value={frameNameText}
 					onblur={submitFrameName}
 					onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitFrameName() } }}
@@ -2319,8 +2322,8 @@
 			            flex flex-col items-center gap-5 max-w-sm w-full mx-4 ring-1 ring-white/5">
 				<div class="text-4xl">🎨</div>
 				<div class="text-center">
-					<p class="text-white font-bold text-lg mb-1">Fermer le canvas ?</p>
-					<p class="text-gray-400 text-sm">Le board est sauvegardé automatiquement. Tu peux aussi exporter en PNG.</p>
+					<p class="text-white font-bold text-lg mb-1">{tFn('canvas_r.close_confirm_title')}</p>
+					<p class="text-gray-400 text-sm">{tFn('canvas_r.close_confirm_desc')}</p>
 				</div>
 				<div class="flex flex-col gap-2 w-full">
 					<button
@@ -2341,7 +2344,7 @@
 						       transition-all hover:scale-[1.01]
 						       flex items-center justify-center gap-2"
 					>
-						Fermer (board sauvegardé)
+						{tFn('canvas_r.close_saved')}
 					</button>
 				</div>
 			</div>
