@@ -1532,5 +1532,19 @@
   "soundboard.powered_by": "Propulsé par <a href=\"https://nodyx.org\" class=\"text-zinc-500 hover:text-purple-300 transition-colors\">Nodyx</a> · Soundboard ouvert et public.",
   "soundboard.eyebrow": "Soundboard public",
   "soundboard.now_playing": "En cours",
-  "soundboard.title_named": "Les sons de {{name}}"
+  "soundboard.title_named": "Les sons de {{name}}",
+  "voice_room.open_channels": "Ouvrir les canaux",
+  "voice_room.connected_one": "{{count}} connecté",
+  "voice_room.connected_many": "{{count}} connectés",
+  "voice_room.jukebox": "Jukebox",
+  "voice_room.canvas_title": "Tableau collaboratif",
+  "voice_room.screen_active": "Partage d'écran actif",
+  "voice_room.screen_inactive": "Partage d'écran (inactif)",
+  "voice_room.screen": "Écran",
+  "voice_room.files_soon": "Partage de fichiers — bientôt",
+  "voice_room.games_soon": "Jeux — bientôt",
+  "voice_room.click_expand": "Cliquer pour ouvrir en grand",
+  "voice_room.expand": "Ouvrir en grand",
+  "voice_room.fullscreen": "Plein écran",
+  "voice_room.show_chat": "Afficher le chat du salon"
 }

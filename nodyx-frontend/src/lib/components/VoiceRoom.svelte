@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { t } from '$lib/i18n';
 	import Table        from '$lib/components/Table.svelte';
 	import NodyxCanvas  from '$lib/components/NodyxCanvas.svelte';
 	import VoiceJukebox from '$lib/components/VoiceJukebox.svelte';
@@ -8,6 +9,8 @@
 	import StageChat from './StageChat.svelte';
 	import { jukeboxStore } from '$lib/jukebox';
 	import type { Socket } from 'socket.io-client';
+
+	const tFn = $derived($t);
 
 	let {
 		selectedChannel,
@@ -136,7 +139,7 @@
 
 	<!-- Mobile: drawer toggle -->
 	<button class="lg:hidden -ml-1 p-2 text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-colors focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center"
-	        onclick={() => drawerOpen = true} aria-label="Ouvrir les canaux">
+	        onclick={() => drawerOpen = true} aria-label={tFn('voice_room.open_channels')}>
 		<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
 		</svg>
@@ -165,7 +168,7 @@
 			<span class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.15em]"
 			      style="color: rgb(var(--nx-accent-2-rgb) / 0.7);">
 				<span class="w-1.5 h-1.5 rounded-full bg-violet-500/80 animate-pulse shrink-0"></span>
-				{peerCount} connecté{peerCount > 1 ? 's' : ''}
+				{peerCount > 1 ? tFn('voice_room.connected_many', { count: peerCount }) : tFn('voice_room.connected_one', { count: peerCount })}
 			</span>
 		</div>
 	{/if}
@@ -179,7 +182,7 @@
 	<button
 		onclick={() => showJukebox = !showJukebox}
 		class="toolbar-btn {showJukebox ? 'active-amber' : jbState.track ? 'idle-amber' : ''}"
-		title="Jukebox"
+		title={tFn('voice_room.jukebox')}
 	>
 		{#if jbState.track && jbState.playing}
 			<span class="relative flex w-1.5 h-1.5 shrink-0">
@@ -201,7 +204,7 @@
 		onclick={() => showCanvas ? showCanvas = false : openCanvas()}
 		disabled={canvasLoading}
 		class="toolbar-btn {showCanvas ? 'active-violet' : ''}"
-		title="Tableau collaboratif"
+		title={tFn('voice_room.canvas_title')}
 	>
 		{#if showCanvas}
 			<span class="relative flex w-1.5 h-1.5 shrink-0">
@@ -226,7 +229,7 @@
 	<button
 		onclick={() => showScreenShare = !showScreenShare}
 		class="toolbar-btn {showScreenShare && anyScreenSharing ? 'active-blue' : anyScreenSharing ? 'idle-blue' : ''} {!anyScreenSharing ? 'opacity-35' : ''}"
-		title={anyScreenSharing ? "Partage d'écran actif" : "Partage d'écran (inactif)"}
+		title={anyScreenSharing ? tFn('voice_room.screen_active') : tFn('voice_room.screen_inactive')}
 		disabled={!anyScreenSharing}
 	>
 		{#if anyScreenSharing}
@@ -239,13 +242,13 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3"/>
 			</svg>
 		{/if}
-		<span>Écran</span>
+		<span>{tFn('voice_room.screen')}</span>
 	</button>
 
 	<div class="toolbar-sep"></div>
 
 	<!-- Fichiers (stub) -->
-	<button disabled title="Partage de fichiers — bientôt"
+	<button disabled title={tFn('voice_room.files_soon')}
 		class="toolbar-btn opacity-25 cursor-not-allowed">
 		<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/>
@@ -254,7 +257,7 @@
 	</button>
 
 	<!-- Jeux (stub) -->
-	<button disabled title="Jeux — bientôt"
+	<button disabled title={tFn('voice_room.games_soon')}
 		class="toolbar-btn opacity-25 cursor-not-allowed">
 		<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"/>
@@ -293,17 +296,17 @@
 					use:srcStream={localScreen}
 					onclick={() => openStage()}
 					ondblclick={(e) => (e.currentTarget as HTMLVideoElement).requestFullscreen?.()}
-					title="Cliquer pour ouvrir en grand"
+					title={tFn('voice_room.click_expand')}
 				></video>
 				<!-- Ouvrir en grand (la scène n'est pas rognée par les sidebars) -->
 				<button
 					onclick={() => openStage()}
 					class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/sc:opacity-100 transition-opacity duration-150"
 					style="background: rgba(0,0,0,0.35);"
-					title="Ouvrir en grand"
+					title={tFn('voice_room.expand')}
 				>
 					<span class="px-3 py-1.5 rounded-full text-[11px] font-semibold text-white"
-					      style="background: rgba(79,70,229,0.85); backdrop-filter: blur(4px);">Ouvrir en grand</span>
+					      style="background: rgba(79,70,229,0.85); backdrop-filter: blur(4px);">{tFn('voice_room.expand')}</span>
 				</button>
 				<!-- Badge -->
 				<span class="absolute bottom-2 left-2 text-[10px] text-white font-semibold px-2 py-0.5 rounded pointer-events-none"
@@ -314,7 +317,7 @@
 					class="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded
 					       opacity-0 group-hover/sc:opacity-100 transition-opacity duration-150"
 					style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); color: white;"
-					title="Plein écran"
+					title={tFn('voice_room.fullscreen')}
 				>
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
@@ -336,17 +339,17 @@
 					use:srcStream={stream}
 					onclick={() => openStage()}
 					ondblclick={(e) => (e.currentTarget as HTMLVideoElement).requestFullscreen?.()}
-					title="Cliquer pour ouvrir en grand"
+					title={tFn('voice_room.click_expand')}
 				></video>
 				<!-- Ouvrir en grand -->
 				<button
 					onclick={() => openStage()}
 					class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/sc:opacity-100 transition-opacity duration-150"
 					style="background: rgba(0,0,0,0.35);"
-					title="Ouvrir en grand"
+					title={tFn('voice_room.expand')}
 				>
 					<span class="px-3 py-1.5 rounded-full text-[11px] font-semibold text-white"
-					      style="background: rgba(79,70,229,0.85); backdrop-filter: blur(4px);">Ouvrir en grand</span>
+					      style="background: rgba(79,70,229,0.85); backdrop-filter: blur(4px);">{tFn('voice_room.expand')}</span>
 				</button>
 				<!-- Badge -->
 				<span class="absolute bottom-2 left-2 text-[10px] text-white font-semibold px-2 py-0.5 rounded pointer-events-none"
@@ -363,7 +366,7 @@
 					class="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded
 					       opacity-0 group-hover/sc:opacity-100 transition-opacity duration-150"
 					style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); color: white;"
-					title="Plein écran"
+					title={tFn('voice_room.fullscreen')}
 				>
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
@@ -403,8 +406,8 @@
 		onclick={() => (showChatPanel = true)}
 		class="flex w-8 shrink-0 items-center justify-center transition-colors hover:bg-white/5"
 		style="background: rgba(6,6,12,0.75); border-left: 1px solid rgba(255,255,255,0.05); color: rgb(148,163,184)"
-		title="Afficher le chat du salon"
-		aria-label="Afficher le chat du salon"
+		title={tFn('voice_room.show_chat')}
+		aria-label={tFn('voice_room.show_chat')}
 	>
 		<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
