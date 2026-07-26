@@ -10,6 +10,9 @@
 		jukeboxReplayFromHistory,
 		parseYouTubeUrl, fmtTime,
 	} from '$lib/jukebox'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	interface Props {
 		joined:  boolean
@@ -64,7 +67,7 @@
 		urlError = ''
 		const url = urlInput.trim()
 		if (!url) return
-		if (!parseYouTubeUrl(url)) { urlError = 'Lien YouTube invalide'; return }
+		if (!parseYouTubeUrl(url)) { urlError = tFn('jukebox.invalid_url'); return }
 		const ok = urlMode === 'play' ? jukeboxLoad(url) : jukeboxAddToQueue(url)
 		if (ok) { urlInput = ''; urlError = ''; showUrlInput = false }
 	}
@@ -96,7 +99,7 @@
 		<!-- Not in voice — read-only notice -->
 		<div class="px-4 py-3 flex items-center gap-2.5">
 			<span class="text-xl opacity-20" style="color:{accent};">♫</span>
-			<p class="text-xs" style="color:{textMuted};">Rejoignez le canal vocal pour contrôler le Jukebox</p>
+			<p class="text-xs" style="color:{textMuted};">{tFn('jukebox.join_prompt')}</p>
 		</div>
 
 	{:else if !jb.track}
@@ -104,14 +107,14 @@
 		<div class="px-4 py-3 flex items-center gap-3">
 			<span class="text-2xl opacity-20 shrink-0" style="color:{accent};">♫</span>
 			<div class="flex-1 min-w-0">
-				<p class="text-xs mb-2.5" style="color:{textMuted};">Aucune piste en cours</p>
+				<p class="text-xs mb-2.5" style="color:{textMuted};">{tFn('jukebox.no_track')}</p>
 				{#if showUrlInput}
 					<div class="flex gap-2 items-center">
 						<!-- svelte-ignore a11y_autofocus -->
 						<input
 							type="url"
 							bind:value={urlInput}
-							placeholder="URL YouTube…"
+							placeholder={tFn('jukebox.url_ph')}
 							autofocus
 							class="flex-1 min-w-0 px-3 py-1.5 rounded-lg text-xs focus:outline-none"
 							style="background:rgba(255,255,255,0.05); border:1px solid rgba(200,145,74,0.22); color:{textPrimary}; caret-color:{accent};"
@@ -121,7 +124,7 @@
 							onclick={submitUrl}
 							class="px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 focus:outline-none hover:brightness-110 transition-all"
 							style="background:{accent}; color:#0d0b08;"
-						>▶ Lancer</button>
+						>{tFn('jukebox.launch')}</button>
 						<button
 							onclick={() => { showUrlInput = false; urlInput = ''; urlError = '' }}
 							class="text-xs shrink-0 hover:opacity-80 transition-opacity focus:outline-none"
@@ -137,12 +140,12 @@
 							onclick={() => openUrlInput('play')}
 							class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors focus:outline-none hover:opacity-80"
 							style="border-color:rgba(200,145,74,0.25); color:{accent};"
-						>▶ Lancer une piste</button>
+						>{tFn('jukebox.launch_track')}</button>
 						<button
 							onclick={() => openUrlInput('queue')}
 							class="px-3 py-1.5 rounded-lg text-xs border transition-colors focus:outline-none hover:opacity-80"
 							style="border-color:rgba(200,145,74,0.15); color:{textMuted};"
-						>+ File d'attente</button>
+						>{tFn('jukebox.queue_add')}</button>
 					</div>
 				{/if}
 			</div>
@@ -155,10 +158,10 @@
 				onclick={jukeboxEnableAudio}
 				class="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold focus:outline-none transition-opacity hover:opacity-90"
 				style="background:rgba(74,222,128,0.16); color:#86efac; border-bottom:1px solid rgba(74,222,128,0.25); animation:nodyx-pulse 2.4s ease-in-out infinite;"
-				title="Le navigateur a démarré la lecture en muet (autoplay policy). Clique pour activer le son et te resynchroniser."
+				title={tFn('jukebox.autoplay_muted')}
 			>
 				<span>🔊</span>
-				<span>Activer le son</span>
+				<span>{tFn('jukebox.enable_sound')}</span>
 			</button>
 		{/if}
 
@@ -170,7 +173,7 @@
 				style="background:rgba(200,145,74,0.18); color:{accent}; border-bottom:1px solid rgba(200,145,74,0.2); animation:nodyx-pulse 2s ease-in-out infinite;"
 			>
 				<span>▶</span>
-				<span>Cliquer pour synchroniser la lecture</span>
+				<span>{tFn('jukebox.click_sync')}</span>
 			</button>
 		{/if}
 
@@ -190,14 +193,14 @@
 				<!-- Track info -->
 				<div class="flex-1 min-w-0">
 					<p class="text-xs font-semibold leading-tight truncate" style="color:{textPrimary};">{shortTitle}</p>
-					<p class="text-[10px] mt-0.5" style="color:{textMuted};">par {jb.track.addedBy}</p>
+					<p class="text-[10px] mt-0.5" style="color:{textMuted};">{tFn('jukebox.by', { name: jb.track.addedBy })}</p>
 				</div>
 
 				<!-- Controls -->
 				<div class="flex items-center gap-0.5 shrink-0">
 					<button
 						onclick={jukeboxSkipPrev}
-						title="Précédent"
+						title={tFn('jukebox.previous')}
 						disabled={jb.history.length === 0}
 						class="w-7 h-7 flex items-center justify-center rounded-lg text-xs transition-colors hover:bg-white/10 focus:outline-none disabled:opacity-25"
 						style="color:{textMuted};"
@@ -212,7 +215,7 @@
 
 					<button
 						onclick={jukeboxSkipNext}
-						title="Suivant"
+						title={tFn('jukebox.next')}
 						disabled={jb.queue.length === 0}
 						class="w-7 h-7 flex items-center justify-center rounded-lg text-xs transition-colors hover:bg-white/10 focus:outline-none disabled:opacity-25"
 						style="color:{textMuted};"
@@ -220,7 +223,7 @@
 
 					<button
 						onclick={jukeboxClear}
-						title="Arrêter"
+						title={tFn('jukebox.stop')}
 						class="w-7 h-7 flex items-center justify-center rounded-lg text-xs transition-colors hover:bg-white/10 focus:outline-none"
 						style="color:{textMuted};"
 					>■</button>
@@ -259,7 +262,7 @@
 				<!-- Repeat -->
 				<button
 					onclick={jukeboxToggleRepeat}
-					title={jb.repeat === 'none' ? 'Répétition désactivée' : 'Répétition piste activée'}
+					title={jb.repeat === 'none' ? tFn('jukebox.repeat_off') : tFn('jukebox.repeat_on')}
 					class="w-6 h-6 flex items-center justify-center rounded text-xs transition-colors focus:outline-none"
 					style="color:{jb.repeat !== 'none' ? accent : textMuted}; background:{jb.repeat !== 'none' ? 'rgba(200,145,74,0.12)' : 'transparent'};"
 				>{jb.repeat === 'track' ? '🔂' : '🔁'}</button>
@@ -267,7 +270,7 @@
 				<!-- Shuffle -->
 				<button
 					onclick={jukeboxToggleShuffle}
-					title="Aléatoire {jb.shuffle ? 'activé' : 'désactivé'}"
+					title={jb.shuffle ? tFn('jukebox.shuffle_on') : tFn('jukebox.shuffle_off')}
 					class="w-6 h-6 flex items-center justify-center rounded text-xs transition-colors focus:outline-none"
 					style="color:{jb.shuffle ? accent : textMuted}; background:{jb.shuffle ? 'rgba(200,145,74,0.12)' : 'transparent'};"
 				>🔀</button>
@@ -294,10 +297,10 @@
 				<!-- Add to queue shortcut -->
 				<button
 					onclick={() => openUrlInput('queue')}
-					title="Ajouter à la file"
+					title={tFn('jukebox.add_queue')}
 					class="text-[10px] px-2 py-1 rounded-lg border transition-colors focus:outline-none hover:opacity-80 shrink-0"
 					style="border-color:rgba(200,145,74,0.2); color:{accent};"
-				>+ File</button>
+				>{tFn('jukebox.queue_short')}</button>
 			</div>
 		</div>
 	{/if}
@@ -310,7 +313,7 @@
 				class="w-full flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-wider font-semibold focus:outline-none hover:opacity-80"
 				style="color:{textMuted};"
 			>
-				<span class="flex-1 text-left">File d'attente ({jb.queue.length})</span>
+				<span class="flex-1 text-left">{tFn('jukebox.queue_title', { count: jb.queue.length })}</span>
 				<span>{showQueue ? '▲' : '▼'}</span>
 			</button>
 
@@ -318,7 +321,7 @@
 				<div class="px-3 pb-2">
 
 					{#if jb.queue.length === 0}
-						<p class="text-[10px] py-1 px-1 opacity-50" style="color:{textMuted};">File vide</p>
+						<p class="text-[10px] py-1 px-1 opacity-50" style="color:{textMuted};">{tFn('jukebox.queue_empty')}</p>
 					{/if}
 
 					{#each sortedQueue as item, i (item.videoId + item.addedBy)}
@@ -340,7 +343,7 @@
 							<!-- Title + addedBy -->
 							<div class="flex-1 min-w-0">
 								<p class="text-xs truncate leading-tight" style="color:{textPrimary};">{item.title}</p>
-								<p class="text-[9px]" style="color:{textMuted};">par {item.addedBy}</p>
+								<p class="text-[9px]" style="color:{textMuted};">{tFn('jukebox.by', { name: item.addedBy })}</p>
 							</div>
 
 							<!-- Vote -->
@@ -354,7 +357,7 @@
 							<!-- Play now (hover) -->
 							<button
 								onclick={() => jukeboxLoad(`https://youtu.be/${item.videoId}`)}
-								title="Jouer maintenant"
+								title={tFn('jukebox.play_now')}
 								class="w-5 h-5 flex items-center justify-center rounded text-[10px] opacity-0 group-hover:opacity-100 transition-all focus:outline-none hover:bg-white/10 shrink-0"
 								style="color:{accent};"
 							>▶</button>
@@ -363,7 +366,7 @@
 							{#if item.addedBy === me.username}
 								<button
 									onclick={() => jukeboxRemoveFromQueue(item.videoId, item.addedBy)}
-									title="Retirer de la file"
+									title={tFn('jukebox.remove_queue')}
 									class="w-5 h-5 flex items-center justify-center rounded text-[10px] opacity-0 group-hover:opacity-100 transition-all focus:outline-none hover:bg-white/10 shrink-0"
 									style="color:{textMuted};"
 								>✕</button>
@@ -380,7 +383,7 @@
 							<input
 								type="url"
 								bind:value={urlInput}
-								placeholder="URL YouTube…"
+								placeholder={tFn('jukebox.url_ph')}
 								autofocus
 								class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none"
 								style="background:rgba(255,255,255,0.05); border:1px solid rgba(200,145,74,0.22); color:{textPrimary}; caret-color:{accent};"
@@ -390,7 +393,7 @@
 								onclick={submitUrl}
 								class="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold shrink-0 focus:outline-none hover:brightness-110 transition-all"
 								style="background:{accent}; color:#0d0b08;"
-							>+ Ajouter</button>
+							>{tFn('jukebox.add_btn')}</button>
 							<button
 								onclick={() => { showUrlInput = false; urlInput = ''; urlError = '' }}
 								class="text-xs shrink-0 hover:opacity-80 focus:outline-none"
@@ -405,7 +408,7 @@
 							onclick={() => openUrlInput('queue')}
 							class="mt-1.5 text-[10px] px-2.5 py-1.5 rounded-lg transition-colors focus:outline-none hover:bg-white/5"
 							style="color:{accent}; border:1px dashed rgba(200,145,74,0.22);"
-						>+ Ajouter à la file</button>
+						>{tFn('jukebox.add_queue_btn')}</button>
 					{/if}
 				</div>
 			{/if}
@@ -419,7 +422,7 @@
 					class="w-full flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-wider font-semibold focus:outline-none hover:opacity-80"
 					style="color:{textMuted};"
 				>
-					<span class="flex-1 text-left">Historique ({jb.history.length})</span>
+					<span class="flex-1 text-left">{tFn('jukebox.history_title', { count: jb.history.length })}</span>
 					<span>{showHistory ? '▲' : '▼'}</span>
 				</button>
 
@@ -428,7 +431,7 @@
 						{#each jb.history as track (track.videoId + track.addedBy)}
 							<button
 								onclick={() => jukeboxReplayFromHistory(track)}
-								title="Rejouer : {track.title}"
+								title={tFn('jukebox.replay', { title: track.title })}
 								class="shrink-0 flex flex-col items-center gap-1 p-1.5 rounded-lg transition-colors hover:bg-white/8 focus:outline-none"
 								style="max-width:76px;"
 							>
