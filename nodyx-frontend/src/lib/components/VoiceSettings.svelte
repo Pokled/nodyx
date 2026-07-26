@@ -1,6 +1,9 @@
 <script lang="ts">
     import { voiceSettingsStore, updateLocalAudio } from '$lib/voice'
     import type { VoiceSettings } from '$lib/voice'
+    import { t } from '$lib/i18n'
+
+    const tFn = $derived($t)
 
     const s = $derived($voiceSettingsStore)
 
@@ -30,13 +33,13 @@
     <!-- ── Header ────────────────────────────────────────────────── -->
     <div class="flex items-center gap-2">
         <span class="text-base">⚙️</span>
-        <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider">Son & Micro</h3>
+        <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider">{tFn('voice_settings.header')}</h3>
     </div>
 
     <!-- ── Gain micro ─────────────────────────────────────────────── -->
     <section class="space-y-2">
         <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold text-gray-300">🎙️ Volume d'entrée</span>
+            <span class="text-xs font-semibold text-gray-300">{tFn('voice_settings.input_volume')}</span>
             <span class="text-[11px] font-mono text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-md">
                 {gainPct}% {gainDb >= 0 ? '+' : ''}{gainDb} dB
             </span>
@@ -54,7 +57,7 @@
         </div>
         {#if s.micGain > 1.3}
             <p class="text-[10px] text-amber-400 flex items-center gap-1">
-                ⚠️ Gain élevé — risque de saturation
+                {tFn('voice_settings.gain_high')}
             </p>
         {/if}
     </section>
@@ -64,20 +67,20 @@
     <!-- ── Traitement ─────────────────────────────────────────────── -->
     <section class="space-y-3">
         <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">
-            Traitement (ce que les autres entendent)
+            {tFn('voice_settings.processing_title')}
         </p>
 
         <!-- Filtre passe-haut -->
         <label class="flex items-center justify-between cursor-pointer group">
             <div>
                 <p class="text-xs font-medium text-gray-200 group-hover:text-white transition-colors">
-                    Filtre passe-haut
+                    {tFn('voice_settings.highpass')}
                 </p>
-                <p class="text-[10px] text-gray-500">Supprime grondements et ronronnements (&lt; 80 Hz)</p>
+                <p class="text-[10px] text-gray-500">{tFn('voice_settings.highpass_desc')}</p>
             </div>
             <button
                 role="switch"
-                aria-label="Filtre passe-haut"
+                aria-label={tFn('voice_settings.highpass')}
                 aria-checked={s.highPassEnabled}
                 onclick={() => updateLocalAudio({ highPassEnabled: !s.highPassEnabled })}
                 class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 transition-colors duration-200
@@ -96,16 +99,16 @@
         <label class="flex items-center justify-between cursor-pointer group">
             <div>
                 <p class="text-xs font-medium text-gray-200 group-hover:text-white transition-colors flex items-center gap-1.5">
-                    Suppression IA
+                    {tFn('voice_settings.rnnoise_label')}
                     <span class="text-[9px] bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded-full border border-violet-500/30 font-bold">
                         RNNoise
                     </span>
                 </p>
-                <p class="text-[10px] text-gray-500">Modèle neuronal léger (WASM) — coupe tout bruit</p>
+                <p class="text-[10px] text-gray-500">{tFn('voice_settings.rnnoise_desc')}</p>
             </div>
             <button
                 role="switch"
-                aria-label="Suppression IA RNNoise"
+                aria-label={tFn('voice_settings.rnnoise_aria')}
                 aria-checked={s.rnnoiseEnabled}
                 onclick={() => updateLocalAudio({ rnnoiseEnabled: !s.rnnoiseEnabled })}
                 class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 transition-colors duration-200
@@ -124,13 +127,13 @@
         <label class="flex items-center justify-between cursor-pointer group">
             <div>
                 <p class="text-xs font-medium text-gray-200 group-hover:text-white transition-colors">
-                    Porte de bruit
+                    {tFn('voice_settings.noise_gate')}
                 </p>
-                <p class="text-[10px] text-gray-500">Coupe le fond sonore entre les prises de parole</p>
+                <p class="text-[10px] text-gray-500">{tFn('voice_settings.noise_gate_desc')}</p>
             </div>
             <button
                 role="switch"
-                aria-label="Porte de bruit"
+                aria-label={tFn('voice_settings.noise_gate')}
                 aria-checked={s.noiseGateEnabled}
                 onclick={() => updateLocalAudio({ noiseGateEnabled: !s.noiseGateEnabled })}
                 class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 transition-colors duration-200
@@ -148,7 +151,7 @@
         {#if s.noiseGateEnabled}
             <div class="space-y-1.5 bg-teal-500/5 border border-teal-500/20 rounded-xl p-3">
                 <div class="flex justify-between items-center">
-                    <span class="text-[11px] text-teal-300/80 font-medium">Seuil de déclenchement</span>
+                    <span class="text-[11px] text-teal-300/80 font-medium">{tFn('voice_settings.threshold')}</span>
                     <span class="text-[11px] font-mono text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-md">
                         {s.noiseGateThreshold} dBFS
                     </span>
@@ -162,10 +165,10 @@
                 />
                 <p class="text-[10px] text-gray-500">
                     {s.noiseGateThreshold <= -60
-                        ? 'Très sensible — coupe quasi tout'
+                        ? tFn('voice_settings.thr_sensitive')
                         : s.noiseGateThreshold <= -40
-                        ? 'Équilibré — recommandé'
-                        : 'Agressif — peut couper la voix douce'}
+                        ? tFn('voice_settings.thr_balanced')
+                        : tFn('voice_settings.thr_aggressive')}
                 </p>
             </div>
         {/if}
@@ -180,18 +183,18 @@
         <div class="flex items-start justify-between">
             <div>
                 <p class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                    ✨ Mode Broadcast
+                    {tFn('voice_settings.broadcast_label')}
                     <span class="text-[9px] bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full border border-amber-500/30 font-bold">
-                        EXCLUSIF NODYX
+                        {tFn('voice_settings.exclusive_nodyx')}
                     </span>
                 </p>
                 <p class="text-[10px] text-gray-500 mt-0.5">
-                    EQ 3-bandes calé pour la voix humaine — son radio/podcast
+                    {tFn('voice_settings.broadcast_desc')}
                 </p>
             </div>
             <button
                 role="switch"
-                aria-label="Mode Broadcast"
+                aria-label={tFn('voice_settings.broadcast_aria')}
                 aria-checked={s.broadcastModeEnabled}
                 onclick={() => updateLocalAudio({ broadcastModeEnabled: !s.broadcastModeEnabled })}
                 class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 transition-colors duration-200 mt-0.5
@@ -210,7 +213,7 @@
             <!-- Intensité -->
             <div class="space-y-1.5 bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
                 <div class="flex justify-between items-center">
-                    <span class="text-[11px] text-amber-300/80 font-medium">Intensité</span>
+                    <span class="text-[11px] text-amber-300/80 font-medium">{tFn('voice_settings.intensity')}</span>
                     <span class="text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md">
                         {broadcastPct}%
                     </span>
@@ -225,15 +228,15 @@
                 <!-- Détails EQ -->
                 <div class="space-y-1 mt-2 text-[10px] text-gray-500">
                     <div class="flex justify-between">
-                        <span>Coupe la boue</span>
+                        <span>{tFn('voice_settings.eq_mud')}</span>
                         <span class="font-mono text-red-400/70">200 Hz  −{(3*s.broadcastIntensity).toFixed(1)} dB</span>
                     </div>
                     <div class="flex justify-between">
-                        <span>Présence / Clarté</span>
+                        <span>{tFn('voice_settings.presence')}</span>
                         <span class="font-mono text-green-400/70">3 kHz  +{(4*s.broadcastIntensity).toFixed(1)} dB</span>
                     </div>
                     <div class="flex justify-between">
-                        <span>Air haute fréquence</span>
+                        <span>{tFn('voice_settings.air')}</span>
                         <span class="font-mono text-sky-400/70">8 kHz  +{(3*s.broadcastIntensity).toFixed(1)} dB</span>
                     </div>
                 </div>
@@ -253,7 +256,7 @@
 
     <!-- ── Qualité réseau ─────────────────────────────────────────── -->
     <section class="space-y-2">
-        <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Qualité réseau</p>
+        <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{tFn('voice_settings.network_quality')}</p>
         <div class="grid grid-cols-4 gap-1.5">
             {#each ([32, 64, 96, 128] as const) as br}
                 <button
@@ -268,18 +271,18 @@
                     </span>
                     {br}k
                     <span class="font-normal text-[9px] opacity-70 mt-0.5">
-                        {br === 32 ? 'Économie' : br === 64 ? 'Standard' : br === 96 ? 'Qualité' : 'Studio'}
+                        {br === 32 ? tFn('voice_settings.br_economy') : br === 64 ? tFn('voice_settings.br_standard') : br === 96 ? tFn('voice_settings.br_quality') : tFn('voice_settings.br_studio')}
                     </span>
                 </button>
             {/each}
         </div>
         {#if s.bitrate === 32}
             <p class="text-[10px] text-amber-400/80 flex items-center gap-1">
-                ⚠️ Qualité limitée — recommandé en faible débit uniquement
+                {tFn('voice_settings.br_warning')}
             </p>
         {:else if s.bitrate !== 64}
             <p class="text-[10px] text-gray-500 flex items-center gap-1">
-                Effectif à la prochaine connexion vocale
+                {tFn('voice_settings.effective_next')}
             </p>
         {/if}
     </section>
