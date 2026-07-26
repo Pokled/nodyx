@@ -2,6 +2,9 @@
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/environment'
 	import { PUBLIC_API_URL } from '$env/static/public'
+	import { t as i18n } from '$lib/i18n'   // `t` est déjà une variable locale (piste)
+
+	const tFn = $derived($i18n)
 
 	// ─── Page publique Soundboard ────────────────────────────────────────────
 	// Accessible sans auth. Affiche en temps réel ce que le streamer joue
@@ -84,15 +87,16 @@
 		toastTimer = setTimeout(() => { toast = null }, 3500)
 	}
 
+	// code d'erreur → clé i18n (résolue via tFn au moment de l'affichage).
 	const REASON_LABELS: Record<string, string> = {
-		disabled:         'Les ajouts viewers sont désactivés par le streamer.',
-		rate_limit:       'Attends 30 secondes avant ton prochain ajout.',
-		cap_per_ip:       'Tu as déjà 3 sons en queue. Patiente qu\'ils passent.',
-		queue_full:       'La queue est pleine, retente plus tard.',
-		duplicate:        'Ce son est déjà dans la queue.',
-		track_not_found:  'Ce son n\'existe plus.',
-		track_not_public: 'Ce son n\'est pas (ou plus) public.',
-		no_streamer:      'Aucun streamer connecté pour le moment.',
+		disabled:         'soundboard.reason.disabled',
+		rate_limit:       'soundboard.reason.rate_limit',
+		cap_per_ip:       'soundboard.reason.cap_per_ip',
+		queue_full:       'soundboard.reason.queue_full',
+		duplicate:        'soundboard.reason.duplicate',
+		track_not_found:  'soundboard.reason.track_not_found',
+		track_not_public: 'soundboard.reason.track_not_public',
+		no_streamer:      'soundboard.reason.no_streamer',
 	}
 
 	// Preview audio (un seul à la fois pour pas saturer l'oreille du viewer).
@@ -162,13 +166,13 @@
 			})
 			const data = await res.json().catch(() => ({})) as { ok?: boolean; reason?: string }
 			if (data.ok) {
-				flash(`"${t.title}" ajouté à la queue.`, true)
+				flash(tFn('soundboard.added_toast', { title: t.title }), true)
 				void refresh()
 			} else {
-				flash(REASON_LABELS[data.reason ?? ''] ?? 'Ajout impossible.', false)
+				flash(tFn(REASON_LABELS[data.reason ?? ''] ?? 'soundboard.err.add_failed'), false)
 			}
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('soundboard.err.network'), false)
 		} finally {
 			addingId = null
 		}
@@ -239,7 +243,7 @@
 
 <svelte:head>
 	<title>Soundboard{streamer?.displayName ? ` — ${streamer.displayName}` : ''}</title>
-	<meta name="description" content="La bibliothèque audio en live, alimentée par le Stream Deck du créateur."/>
+	<meta name="description" content={tFn('soundboard.meta_desc')}/>
 </svelte:head>
 
 <div class="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100">
@@ -256,22 +260,22 @@
 		<!-- Header -->
 		<header class="flex items-start justify-between gap-4 flex-wrap">
 			<div>
-				<div class="text-[11px] uppercase tracking-widest font-medium text-purple-300/80">Soundboard public</div>
+				<div class="text-[11px] uppercase tracking-widest font-medium text-purple-300/80">{tFn('soundboard.eyebrow')}</div>
 				<h1 class="text-2xl font-bold text-white mt-1">
-					{streamer?.displayName ? `Les sons de ${streamer.displayName}` : 'Soundboard'}
+					{streamer?.displayName ? tFn('soundboard.title_named', { name: streamer.displayName }) : 'Soundboard'}
 				</h1>
-				<p class="text-sm text-zinc-500 mt-1">Bibliothèque audio que le streamer met à dispo. Bientôt : demande des sons via <code class="text-purple-200 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded-sm text-xs font-mono">!next sound &lt;nom&gt;</code> dans le chat Twitch.</p>
+				<p class="text-sm text-zinc-500 mt-1">{@html tFn('soundboard.subtitle')}</p>
 			</div>
 			<a href="/" class="text-xs text-zinc-500 hover:text-zinc-300 inline-flex items-center gap-1.5 mt-1">
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-				Retour
+				{tFn('soundboard.back')}
 			</a>
 		</header>
 
 		<!-- Now playing -->
 		<section>
 			<div class="flex items-baseline gap-2 mb-2">
-				<h2 class="text-xs uppercase tracking-widest font-medium text-zinc-400">En cours</h2>
+				<h2 class="text-xs uppercase tracking-widest font-medium text-zinc-400">{tFn('soundboard.now_playing')}</h2>
 				{#if nowPlaying}<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>{/if}
 			</div>
 
@@ -307,7 +311,7 @@
 				</div>
 			{:else}
 				<div class="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 px-4 py-6 text-center text-sm text-zinc-500">
-					Aucun son en cours. {streamer?.displayName ?? 'Le streamer'} reprend bientôt.
+					{tFn('soundboard.nothing_playing', { name: streamer?.displayName ?? tFn('soundboard.the_streamer') })}
 				</div>
 			{/if}
 		</section>
@@ -315,7 +319,7 @@
 		<!-- Queue à venir -->
 		<section>
 			<div class="flex items-baseline gap-2 mb-2">
-				<h2 class="text-xs uppercase tracking-widest font-medium text-zinc-400">À suivre</h2>
+				<h2 class="text-xs uppercase tracking-widest font-medium text-zinc-400">{tFn('soundboard.up_next')}</h2>
 				{#if queue.length > 0}
 					<span class="text-[10px] text-zinc-600">{queue.length} son{queue.length > 1 ? 's' : ''} en attente</span>
 				{/if}
@@ -324,9 +328,9 @@
 			{#if queue.length === 0}
 				<div class="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/30 px-4 py-4 text-center text-xs text-zinc-500">
 					{#if queueEnabled}
-						Aucun son en queue. Clique <span class="text-purple-300">+ Queue</span> sur un son de la bibliothèque, ou tape <code class="text-purple-200 bg-zinc-950 border border-zinc-800 px-1.5 py-0.5 rounded-sm font-mono">!next sound &lt;nom&gt;</code> dans le chat Twitch.
+						{@html tFn('soundboard.queue_empty')}
 					{:else}
-						Les ajouts viewers sont désactivés par le streamer pour le moment.
+						{tFn('soundboard.adds_disabled')}
 					{/if}
 				</div>
 			{:else}
@@ -364,12 +368,12 @@
 		<!-- Bibliothèque -->
 		<section>
 			<div class="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-				<h2 class="text-xs uppercase tracking-widest font-medium text-zinc-400">Bibliothèque</h2>
+				<h2 class="text-xs uppercase tracking-widest font-medium text-zinc-400">{tFn('soundboard.library')}</h2>
 				<span class="text-[10px] text-zinc-600">{filtered.length} / {baseTracks.length} son{baseTracks.length > 1 ? 's' : ''}</span>
 			</div>
 
 			{#if loading}
-				<div class="text-center text-sm text-zinc-500 py-8">Chargement…</div>
+				<div class="text-center text-sm text-zinc-500 py-8">{tFn('soundboard.loading')}</div>
 			{:else if tracks.length === 0}
 				<div class="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 px-4 py-10 text-center text-sm text-zinc-500 space-y-1">
 					<div class="text-2xl mb-2">🎵</div>
@@ -408,7 +412,7 @@
 					<svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 						<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
 					</svg>
-					<input type="search" bind:value={query} placeholder="Chercher par titre ou artiste"
+					<input type="search" bind:value={query} placeholder={tFn('soundboard.search_ph')}
 						class="w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 pl-10 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none rounded-sm transition-colors"/>
 				</div>
 
@@ -458,7 +462,7 @@
 										{isQueued
 											? 'bg-zinc-800/40 border-zinc-800 text-zinc-500 cursor-not-allowed'
 											: 'bg-purple-500/15 hover:bg-purple-500/30 border-purple-500/40 hover:border-purple-500/70 text-purple-100'}"
-									title={isQueued ? 'Déjà dans la queue' : 'Ajouter à la queue'}>
+									title={isQueued ? tFn('soundboard.already_queued') : tFn('soundboard.add_to_queue')}>
 									{#if isQueued}
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
 										<span class="hidden sm:inline">En queue</span>
@@ -473,14 +477,14 @@
 						</li>
 					{/each}
 					{#if filtered.length === 0}
-						<li class="text-center text-sm text-zinc-500 py-6">Aucun résultat.</li>
+						<li class="text-center text-sm text-zinc-500 py-6">{tFn('soundboard.no_results')}</li>
 					{/if}
 				</ul>
 			{/if}
 		</section>
 
 		<footer class="pt-6 border-t border-zinc-800/60 text-center text-[10px] text-zinc-600">
-			Propulsé par <a href="https://nodyx.org" class="text-zinc-500 hover:text-purple-300 transition-colors">Nodyx</a> · Soundboard ouvert et public.
+			{@html tFn('soundboard.powered_by')}
 		</footer>
 	</div>
 </div>
