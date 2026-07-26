@@ -1,5 +1,8 @@
 <script lang="ts">
 	import type { ViewTransform } from '$lib/canvas'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let {
 		transform,
@@ -31,29 +34,29 @@
 
 	const BG_PRESETS = [
 		// Sombres
-		{ color: '#0a0a12', label: 'Nuit'        },
-		{ color: '#0f172a', label: 'Minuit'      },
-		{ color: '#111827', label: 'Ardoise'     },
-		{ color: '#1c1917', label: 'Charbon'     },
-		{ color: '#030712', label: 'Encre'       },
-		{ color: '#0e1117', label: 'Obsidienne'  },
-		{ color: '#18181b', label: 'Zinc'        },
+		{ color: '#0a0a12', labelKey: 'canvas_bar.bg.night'        },
+		{ color: '#0f172a', labelKey: 'canvas_bar.bg.midnight'      },
+		{ color: '#111827', labelKey: 'canvas_bar.bg.slate'     },
+		{ color: '#1c1917', labelKey: 'canvas_bar.bg.charcoal'     },
+		{ color: '#030712', labelKey: 'canvas_bar.bg.ink'       },
+		{ color: '#0e1117', labelKey: 'canvas_bar.bg.obsidian'  },
+		{ color: '#18181b', labelKey: 'canvas_bar.bg.zinc'        },
 		// Colorés sombres
-		{ color: '#0a1628', label: 'Océan'       },
-		{ color: '#0d1f0d', label: 'Forêt'       },
-		{ color: '#1a0a1a', label: 'Prune'       },
-		{ color: '#1a1430', label: 'Lavande'     },
-		{ color: '#1a0f0a', label: 'Braise'      },
-		{ color: '#0d1a14', label: 'Émeraude'    },
-		{ color: '#0f1a1a', label: 'Pétrole'     },
+		{ color: '#0a1628', labelKey: 'canvas_bar.bg.ocean'       },
+		{ color: '#0d1f0d', labelKey: 'canvas_bar.bg.forest'       },
+		{ color: '#1a0a1a', labelKey: 'canvas_bar.bg.plum'       },
+		{ color: '#1a1430', labelKey: 'canvas_bar.bg.lavender'     },
+		{ color: '#1a0f0a', labelKey: 'canvas_bar.bg.ember'      },
+		{ color: '#0d1a14', labelKey: 'canvas_bar.bg.emerald'    },
+		{ color: '#0f1a1a', labelKey: 'canvas_bar.bg.petrol'     },
 		// Clairs
-		{ color: '#f8fafc', label: 'Blanc'       },
-		{ color: '#faf7f2', label: 'Papier'      },
-		{ color: '#e8f4f8', label: 'Ciel pâle'   },
-		{ color: '#fef3c7', label: 'Soleil doux' },
-		{ color: '#f0fdf4', label: 'Menthe'      },
-		{ color: '#fdf2f8', label: 'Rose pâle'   },
-		{ color: '#fffbeb', label: 'Ivoire'      },
+		{ color: '#f8fafc', labelKey: 'canvas_bar.bg.white'       },
+		{ color: '#faf7f2', labelKey: 'canvas_bar.bg.paper'      },
+		{ color: '#e8f4f8', labelKey: 'canvas_bar.bg.sky'   },
+		{ color: '#fef3c7', labelKey: 'canvas_bar.bg.sun' },
+		{ color: '#f0fdf4', labelKey: 'canvas_bar.bg.mint'      },
+		{ color: '#fdf2f8', labelKey: 'canvas_bar.bg.rose'   },
+		{ color: '#fffbeb', labelKey: 'canvas_bar.bg.ivory'      },
 	]
 
 	const isCustomColor = $derived(!BG_PRESETS.some(p => p.color === bgColor))
@@ -64,12 +67,12 @@
 <div class="bottom-bar">
 	<!-- Undo / Redo -->
 	<div class="group">
-		<button class="bar-btn" class:disabled={!canUndo} onclick={onUndo} title="Annuler (Ctrl+Z)" disabled={!canUndo}>
+		<button class="bar-btn" class:disabled={!canUndo} onclick={onUndo} title={tFn('canvas_bar.undo')} disabled={!canUndo}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
 			</svg>
 		</button>
-		<button class="bar-btn" class:disabled={!canRedo} onclick={onRedo} title="Rétablir (Ctrl+Y)" disabled={!canRedo}>
+		<button class="bar-btn" class:disabled={!canRedo} onclick={onRedo} title={tFn('canvas_bar.redo')} disabled={!canRedo}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3"/>
 			</svg>
@@ -80,15 +83,15 @@
 
 	<!-- Zoom -->
 	<div class="group">
-		<button class="bar-btn" onclick={onZoomOut} title="Dézoomer">
+		<button class="bar-btn" onclick={onZoomOut} title={tFn('canvas_bar.zoom_out')}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"/>
 			</svg>
 		</button>
-		<button class="zoom-val" onclick={onResetView} title="Réinitialiser la vue (100%)">
+		<button class="zoom-val" onclick={onResetView} title={tFn('canvas_bar.reset_view')}>
 			{pct}%
 		</button>
-		<button class="bar-btn" onclick={onZoomIn} title="Zoomer">
+		<button class="bar-btn" onclick={onZoomIn} title={tFn('canvas_bar.zoom_in')}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"/>
 			</svg>
@@ -103,26 +106,26 @@
 			class="bar-btn toggle"
 			class:on={showGrid}
 			onclick={() => showGrid = !showGrid}
-			title="Grille (G)"
+			title={tFn('canvas_bar.grid')}
 		>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round"
 					d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
 			</svg>
-			<span class="toggle-label">Grille</span>
+			<span class="toggle-label">{tFn('canvas_bar.grid_label')}</span>
 		</button>
 
 		<button
 			class="bar-btn toggle"
 			class:on={snapEnabled}
 			onclick={() => snapEnabled = !snapEnabled}
-			title="Snap à la grille"
+			title={tFn('canvas_bar.snap')}
 		>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round"
 					d="M7.5 3.75H6A2.25 2.25 0 003.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0120.25 6v1.5m0 9V18A2.25 2.25 0 0118 20.25h-1.5m-9 0H6A2.25 2.25 0 013.75 18v-1.5M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
 			</svg>
-			<span class="toggle-label">Snap</span>
+			<span class="toggle-label">{tFn('canvas_bar.snap_label')}</span>
 		</button>
 	</div>
 
@@ -130,7 +133,7 @@
 
 	<!-- Background -->
 	<div class="bg-section">
-		<span class="bg-label">Fond</span>
+		<span class="bg-label">{tFn('canvas_bar.bg_label')}</span>
 		<div class="bg-grid">
 			{#each BG_PRESETS as preset}
 				<button
@@ -138,8 +141,8 @@
 					class:active={bgColor === preset.color}
 					style="background:{preset.color};"
 					onclick={() => bgColor = preset.color}
-					title={preset.label}
-					aria-label="Fond {preset.label}"
+					title={tFn(preset.labelKey)}
+					aria-label={tFn('canvas_bar.bg_of', { name: tFn(preset.labelKey) })}
 				></button>
 			{/each}
 
@@ -149,8 +152,8 @@
 				class:active={isCustomColor}
 				style={isCustomColor ? `background:${bgColor};` : ''}
 				onclick={() => colorPickerEl.click()}
-				title="Couleur personnalisée"
-				aria-label="Couleur personnalisée"
+				title={tFn('canvas_bar.color_custom')}
+				aria-label={tFn('canvas_bar.color_custom')}
 			>
 				{#if !isCustomColor}
 					<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2">
@@ -172,7 +175,7 @@
 	</div>
 
 	<div class="sep-v"></div>
-	<span class="hint">Molette: zoom · Espace+drag: pan</span>
+	<span class="hint">{tFn('canvas_bar.hint')}</span>
 </div>
 
 <style>
