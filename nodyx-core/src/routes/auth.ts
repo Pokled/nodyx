@@ -122,13 +122,6 @@ const RegisterBody = z.object({
   form_t:   z.coerce.number().int().positive().optional(),
 })
 
-// Username manifestement bot : 10 caractères strictement [a-z] sans aucun
-// tiret/underscore/chiffre. Aucun humain ne nomme son compte 'dfjqexemtj'.
-// On match strict pour éviter de bloquer 'alicebob42' (chiffres) ou
-// 'jean_doe' (underscore). Si un humain veut vraiment ce pattern, qu'il
-// ajoute juste une lettre majuscule ou un chiffre.
-const BOT_USERNAME_RE = /^[a-z]{10}$/
-
 const ANTI_BOT_REJECT = {
   code: 'AUTOMATED_SIGNUP_DETECTED',
   // On reste générique côté message pour ne pas donner d'info à l'attaquant
@@ -185,11 +178,10 @@ export default async function authRoutes(app: FastifyInstance) {
         return reply.code(403).send(ANTI_BOT_REJECT)
       }
     }
-    // Couche 5 : pattern username random — 10 chars strict [a-z]
-    if (BOT_USERNAME_RE.test(username)) {
-      recordBotAttempt('bot_username_pattern', {})
-      return reply.code(403).send(ANTI_BOT_REJECT)
-    }
+    // Note : pas de rejet sur la FORME du username. Une heuristique de type
+    // /^[a-z]{10}$/ recalait des pseudos parfaitement humains (alexandria,
+    // strawberry, lapersonne...) pour ~0 bot que le honeypot ne prend pas déjà.
+    // Le honeypot (couche 1) + le timing (couche 2) portent la défense.
 
     const clientIp = clientIpEarly
 

@@ -152,6 +152,46 @@ describe('POST /api/v1/auth/register', () => {
 
     expect(res.statusCode).toBe(400)
   })
+
+  // ── Anti-bot : le honeypot (couche 1) + le timing (couche 2) portent la
+  // défense. On NE rejette PLUS sur la FORME du username : /^[a-z]{10}$/
+  // recalait des humains (alexandria, strawberry, lapersonne...). Régression. ──
+  it('accepts a legit 10-letter lowercase username (no longer a bot signal)', async () => {
+    vi.mocked(UserModel.findByEmail).mockResolvedValueOnce(null)
+    vi.mocked(UserModel.findByUsername).mockResolvedValueOnce(null)
+    vi.mocked(UserModel.create).mockResolvedValueOnce(FAKE_PUBLIC_USER)
+
+    const res = await app.inject({
+      method: 'POST',
+      url:    '/api/v1/auth/register',
+      // Avant le fix : 403 AUTOMATED_SIGNUP_DETECTED (10 lettres [a-z]).
+      payload: { username: 'alexandria', email: 'alex@nodyx.dev', password: 'password123' },
+    })
+
+    expect(res.statusCode).toBe(201)
+  })
+
+  it('still rejects a bot that fills the hidden honeypot field', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url:    '/api/v1/auth/register',
+      payload: { username: 'realhuman', email: 'h@nodyx.dev', password: 'password123', website: 'http://spam.example' },
+    })
+
+    expect(res.statusCode).toBe(403)
+    expect(JSON.parse(res.body).code).toBe('AUTOMATED_SIGNUP_DETECTED')
+  })
+
+  it('still rejects a submit that arrives too fast (< 2s after form mount)', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url:    '/api/v1/auth/register',
+      payload: { username: 'speedy', email: 's@nodyx.dev', password: 'password123', form_t: Date.now() },
+    })
+
+    expect(res.statusCode).toBe(403)
+    expect(JSON.parse(res.body).code).toBe('AUTOMATED_SIGNUP_DETECTED')
+  })
 })
 
 describe('POST /api/v1/auth/login', () => {
