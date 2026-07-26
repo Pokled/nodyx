@@ -1,5 +1,8 @@
 <script lang="ts">
 	import type { CanvasTool, AdvancedShape } from '$lib/canvas'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let {
 		tool              = $bindable<CanvasTool>('pen'),
@@ -65,7 +68,7 @@
 	<!-- ── PEN ───────────────────────────────────── -->
 	{#if tool === 'pen'}
 		<div class="section">
-			<label class="label">Couleur</label>
+			<label class="label">{tFn('canvas_bar.color')}</label>
 			<div class="color-strip">
 				{#each PRESET_COLORS as c}
 					<button
@@ -76,8 +79,8 @@
 						aria-label={c}
 					></button>
 				{/each}
-				<div class="color-pick" title="Couleur personnalisée">
-					<input type="color" bind:value={color} aria-label="Couleur personnalisée"/>
+				<div class="color-pick" title={tFn('canvas_bar.color_custom')}>
+					<input type="color" bind:value={color} aria-label={tFn('canvas_bar.color_custom')}/>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;pointer-events:none">
 						<path d="M12 3v1m0 16v1M5.05 5.05l.707.707m12.728 12.728.707.707M3 12h1m16 0h1M5.05 18.95l.707-.707M18.243 5.757l.707-.707"/>
 					</svg>
@@ -86,14 +89,14 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Épaisseur</label>
+			<label class="label">{tFn('canvas_bar.thickness')}</label>
 			<div class="row gap4">
 				{#each LINE_WIDTHS as w}
 					<button
 						class="width-btn"
 						class:selected={lineWidth === w}
 						onclick={() => lineWidth = w}
-						title="{w}px"
+						title={`${w}px`}
 					>
 						<span class="width-dot" style="width:{Math.min(w*2,14)}px;height:{Math.min(w*2,14)}px"></span>
 					</button>
@@ -106,17 +109,17 @@
 	{#if tool === 'text'}
 		<div class="section">
 			<div class="row gap2">
-				<button class="fmt-btn" class:on={textBold}      onclick={() => textBold      = !textBold}      title="Gras (Ctrl+B)"><b>B</b></button>
-				<button class="fmt-btn italic-btn" class:on={textItalic}    onclick={() => textItalic    = !textItalic}    title="Italique (Ctrl+I)"><i>I</i></button>
-				<button class="fmt-btn underline-btn" class:on={textUnderline} onclick={() => textUnderline = !textUnderline} title="Souligné (Ctrl+U)"><u>U</u></button>
-				<button class="fmt-btn strike-btn" class:on={textStrike}    onclick={() => textStrike    = !textStrike}    title="Barré"><s>S</s></button>
+				<button class="fmt-btn" class:on={textBold}      onclick={() => textBold      = !textBold}      title={tFn('canvas_bar.bold')}><b>B</b></button>
+				<button class="fmt-btn italic-btn" class:on={textItalic}    onclick={() => textItalic    = !textItalic}    title={tFn('canvas_bar.italic')}><i>I</i></button>
+				<button class="fmt-btn underline-btn" class:on={textUnderline} onclick={() => textUnderline = !textUnderline} title={tFn('canvas_bar.underline')}><u>U</u></button>
+				<button class="fmt-btn strike-btn" class:on={textStrike}    onclick={() => textStrike    = !textStrike}    title={tFn('canvas_bar.strike')}><s>S</s></button>
 			</div>
 		</div>
 		<div class="divider"></div>
 		<div class="section">
 			<div class="row gap2">
 				{#each (['left','center','right'] as const) as a}
-					<button class="icon-btn" class:on={textAlign === a} onclick={() => textAlign = a} title="Aligner {a}">
+					<button class="icon-btn" class:on={textAlign === a} onclick={() => textAlign = a} title={tFn('canvas_bar.align', { dir: a })}>
 						{#if a === 'left'}
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:15px;height:15px"><path d="M3 6h12M3 12h18M3 18h12"/></svg>
 						{:else if a === 'center'}
@@ -130,7 +133,7 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Taille</label>
+			<label class="label">{tFn('canvas_bar.size')}</label>
 			<div class="row gap2">
 				<button class="icon-btn" onclick={() => textFontSize = Math.max(8, textFontSize - 2)}>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M5 12h14"/></svg>
@@ -143,7 +146,7 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Police</label>
+			<label class="label">{tFn('canvas_bar.font')}</label>
 			<div class="row gap2">
 				{#each ([['sans','Sans'],['serif','Serif'],['mono','Mono']] as const) as [f, label]}
 					<button class="font-btn" class:on={textFontFamily === f} onclick={() => textFontFamily = f}
@@ -153,13 +156,13 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Couleur</label>
+			<label class="label">{tFn('canvas_bar.color')}</label>
 			<div class="color-strip compact">
 				{#each PRESET_COLORS.slice(0,6) as c}
 					<button class="swatch sm" class:selected={color === c} style="background:{c}" onclick={() => color = c} aria-label={c}></button>
 				{/each}
 				<div class="color-pick sm">
-					<input type="color" bind:value={color} aria-label="Couleur personnalisée"/>
+					<input type="color" bind:value={color} aria-label={tFn('canvas_bar.color_custom')}/>
 				</div>
 			</div>
 		</div>
@@ -168,7 +171,7 @@
 	<!-- ── STICKY ─────────────────────────────────── -->
 	{#if tool === 'sticky'}
 		<div class="section">
-			<label class="label">Couleur du post-it</label>
+			<label class="label">{tFn('canvas_bar.sticky_color')}</label>
 			<div class="color-strip">
 				{#each STICKY_COLORS as c}
 					<button
@@ -186,27 +189,27 @@
 	<!-- ── RECT / CIRCLE ──────────────────────────── -->
 	{#if tool === 'rect' || tool === 'circle'}
 		<div class="section">
-			<label class="label">Remplissage</label>
+			<label class="label">{tFn('canvas_bar.fill')}</label>
 			<div class="row gap4">
-				<button class="fill-toggle" class:on={shapeFill} onclick={() => shapeFill = !shapeFill} title="Remplissage">
+				<button class="fill-toggle" class:on={shapeFill} onclick={() => shapeFill = !shapeFill} title={tFn('canvas_bar.fill')}>
 					{#if shapeFill}
 						<svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
 					{:else}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
 					{/if}
 				</button>
-				<div class="color-pick inline" title="Couleur remplissage">
-					<input type="color" bind:value={color} aria-label="Couleur remplissage"/>
+				<div class="color-pick inline" title={tFn('canvas_bar.color_fill')}>
+					<input type="color" bind:value={color} aria-label={tFn('canvas_bar.color_fill')}/>
 					<span class="swatch sm noclick" style="background:{color}"></span>
 				</div>
 			</div>
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Contour</label>
+			<label class="label">{tFn('canvas_bar.stroke')}</label>
 			<div class="row gap4">
 				<div class="color-pick inline">
-					<input type="color" bind:value={shapeStroke} aria-label="Couleur contour"/>
+					<input type="color" bind:value={shapeStroke} aria-label={tFn('canvas_bar.color_stroke')}/>
 					<span class="swatch sm noclick" style="background:{shapeStroke}"></span>
 				</div>
 				<div class="row gap2">
@@ -220,7 +223,7 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Couleur de trait</label>
+			<label class="label">{tFn('canvas_bar.stroke_color')}</label>
 			<div class="color-strip compact">
 				{#each PRESET_COLORS.slice(0,7) as c}
 					<button class="swatch sm" class:selected={shapeStroke === c} style="background:{c}" onclick={() => shapeStroke = c} aria-label={c}></button>
@@ -232,7 +235,7 @@
 	<!-- ── SHAPE ─────────────────────────────────── -->
 	{#if tool === 'shape'}
 		<div class="section">
-			<label class="label">Forme</label>
+			<label class="label">{tFn('canvas_bar.shape')}</label>
 			<div class="row gap2">
 				{#each ([
 					['triangle','△'],['diamond','◇'],['star','★'],
@@ -245,27 +248,27 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Remplissage</label>
+			<label class="label">{tFn('canvas_bar.fill')}</label>
 			<div class="row gap4">
-				<button class="fill-toggle" class:on={shapeFill} onclick={() => shapeFill = !shapeFill} title="Remplissage">
+				<button class="fill-toggle" class:on={shapeFill} onclick={() => shapeFill = !shapeFill} title={tFn('canvas_bar.fill')}>
 					{#if shapeFill}
 						<svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><polygon points="12,3 22,20 2,20"/></svg>
 					{:else}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px"><polygon points="12,3 22,20 2,20"/></svg>
 					{/if}
 				</button>
-				<div class="color-pick inline" title="Couleur remplissage">
-					<input type="color" bind:value={color} aria-label="Couleur remplissage"/>
+				<div class="color-pick inline" title={tFn('canvas_bar.color_fill')}>
+					<input type="color" bind:value={color} aria-label={tFn('canvas_bar.color_fill')}/>
 					<span class="swatch sm noclick" style="background:{color}"></span>
 				</div>
 			</div>
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Contour</label>
+			<label class="label">{tFn('canvas_bar.stroke')}</label>
 			<div class="row gap4">
 				<div class="color-pick inline">
-					<input type="color" bind:value={shapeStroke} aria-label="Couleur contour"/>
+					<input type="color" bind:value={shapeStroke} aria-label={tFn('canvas_bar.color_stroke')}/>
 					<span class="swatch sm noclick" style="background:{shapeStroke}"></span>
 				</div>
 				<div class="row gap2">
@@ -282,7 +285,7 @@
 	<!-- ── CONNECTOR ──────────────────────────────── -->
 	{#if tool === 'connector'}
 		<div class="section">
-			<label class="label">Type</label>
+			<label class="label">{tFn('canvas_bar.type')}</label>
 			<div class="row gap2">
 				{#each ([['straight','──'],['bezier','⌒'],['elbow','⌐']] as const) as [t, icon]}
 					<button class="dash-btn" class:on={connectorType === t}
@@ -292,7 +295,7 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Style</label>
+			<label class="label">{tFn('canvas_bar.style')}</label>
 			<div class="row gap2">
 				{#each ([['solid','─────'],['dashed','- - -'],['dotted','·····']] as const) as [s, label]}
 					<button class="dash-btn" class:on={connectorStyle === s} onclick={() => connectorStyle = s}>{label}</button>
@@ -301,7 +304,7 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Début</label>
+			<label class="label">{tFn('canvas_bar.start')}</label>
 			<div class="row gap2">
 				{#each ([['none','─'],['arrow','←'],['dot','●']] as const) as [cap, icon]}
 					<button class="dash-btn" class:on={connectorStartCap === cap}
@@ -311,7 +314,7 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Fin</label>
+			<label class="label">{tFn('canvas_bar.end')}</label>
 			<div class="row gap2">
 				{#each ([['none','─'],['arrow','→'],['dot','●']] as const) as [cap, icon]}
 					<button class="dash-btn" class:on={connectorEndCap === cap}
@@ -321,17 +324,17 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Couleur</label>
+			<label class="label">{tFn('canvas_bar.color')}</label>
 			<div class="color-strip compact">
 				{#each PRESET_COLORS.slice(0,7) as c}
 					<button class="swatch sm" class:selected={color === c} style="background:{c}" onclick={() => color = c} aria-label={c}></button>
 				{/each}
-				<div class="color-pick sm"><input type="color" bind:value={color} aria-label="Couleur"/></div>
+				<div class="color-pick sm"><input type="color" bind:value={color} aria-label={tFn('canvas_bar.color')}/></div>
 			</div>
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Épaisseur</label>
+			<label class="label">{tFn('canvas_bar.thickness')}</label>
 			<div class="row gap2">
 				{#each [1,2,3,5] as w}
 					<button class="width-btn sm" class:selected={lineWidth === w} onclick={() => lineWidth = w}>
@@ -345,17 +348,17 @@
 	<!-- ── ARROW ──────────────────────────────────── -->
 	{#if tool === 'arrow'}
 		<div class="section">
-			<label class="label">Couleur</label>
+			<label class="label">{tFn('canvas_bar.color')}</label>
 			<div class="color-strip compact">
 				{#each PRESET_COLORS.slice(0,7) as c}
 					<button class="swatch sm" class:selected={color === c} style="background:{c}" onclick={() => color = c} aria-label={c}></button>
 				{/each}
-				<div class="color-pick sm"><input type="color" bind:value={color} aria-label="Couleur"/></div>
+				<div class="color-pick sm"><input type="color" bind:value={color} aria-label={tFn('canvas_bar.color')}/></div>
 			</div>
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Style</label>
+			<label class="label">{tFn('canvas_bar.style')}</label>
 			<div class="row gap2">
 				{#each ([['solid','─────'],['dashed','- - -'],['dotted','·····']] as const) as [s, label]}
 					<button class="dash-btn" class:on={arrowStyle === s} onclick={() => arrowStyle = s}>{label}</button>
@@ -364,7 +367,7 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Pointe</label>
+			<label class="label">{tFn('canvas_bar.tip')}</label>
 			<div class="row gap2">
 				{#each ([['arrow','→'],['dot','●'],['none','─']] as const) as [cap, icon]}
 					<button class="dash-btn" class:on={arrowEndCap === cap} onclick={() => arrowEndCap = cap}>{icon}</button>
@@ -373,7 +376,7 @@
 		</div>
 		<div class="divider"></div>
 		<div class="section">
-			<label class="label">Épaisseur</label>
+			<label class="label">{tFn('canvas_bar.thickness')}</label>
 			<div class="row gap2">
 				{#each [1,2,3,5] as w}
 					<button class="width-btn sm" class:selected={lineWidth === w} onclick={() => lineWidth = w}>
