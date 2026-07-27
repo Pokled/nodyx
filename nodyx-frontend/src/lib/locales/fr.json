@@ -1890,5 +1890,16 @@
   "wiki_edit.meta_title": "Modifier « {{title}} » — Wiki",
   "wiki_edit.breadcrumb": "Modifier",
   "wiki_edit.h1": "Modifier la page",
-  "wiki_edit.save": "Enregistrer"
+  "wiki_edit.save": "Enregistrer",
+  "canvas_toolbar.select": "Sélection",
+  "canvas_toolbar.pen": "Stylo",
+  "canvas_toolbar.text": "Texte",
+  "canvas_toolbar.sticky": "Post-it",
+  "canvas_toolbar.rect": "Rectangle",
+  "canvas_toolbar.circle": "Cercle",
+  "canvas_toolbar.arrow": "Flèche",
+  "canvas_toolbar.eraser": "Effaceur",
+  "canvas_toolbar.pick_color": "Choisir une couleur",
+  "canvas_toolbar.clear_all": "Effacer tout",
+  "canvas_toolbar.close_table": "Fermer la table"
 }

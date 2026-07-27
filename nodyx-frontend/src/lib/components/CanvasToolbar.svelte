@@ -1,5 +1,8 @@
 <script lang="ts">
     import type { CanvasTool } from '$lib/canvas'
+    import { t as i18n } from '$lib/i18n'   // `t` sert de variable de boucle ({#each TOOLS as t})
+
+    const tFn = $derived($i18n)
 
     let {
         tool     = $bindable<CanvasTool>('pen'),
@@ -17,15 +20,16 @@
         onClose:   () => void
     } = $props()
 
-    const TOOLS: { id: CanvasTool; label: string; icon: string }[] = [
-        { id: 'select', label: 'Sélection',  icon: '↖' },
-        { id: 'pen',    label: 'Stylo',      icon: '✏️' },
-        { id: 'text',   label: 'Texte',      icon: 'T' },
-        { id: 'sticky', label: 'Post-it',    icon: '📝' },
-        { id: 'rect',   label: 'Rectangle',  icon: '⬜' },
-        { id: 'circle', label: 'Cercle',     icon: '⭕' },
-        { id: 'arrow',  label: 'Flèche',     icon: '→' },
-        { id: 'eraser', label: 'Effaceur',   icon: '◻' },
+    // labelKey résolu via tFn dans le template (clés i18n).
+    const TOOLS: { id: CanvasTool; labelKey: string; icon: string }[] = [
+        { id: 'select', labelKey: 'canvas_toolbar.select', icon: '↖' },
+        { id: 'pen',    labelKey: 'canvas_toolbar.pen',    icon: '✏️' },
+        { id: 'text',   labelKey: 'canvas_toolbar.text',   icon: 'T' },
+        { id: 'sticky', labelKey: 'canvas_toolbar.sticky', icon: '📝' },
+        { id: 'rect',   labelKey: 'canvas_toolbar.rect',   icon: '⬜' },
+        { id: 'circle', labelKey: 'canvas_toolbar.circle', icon: '⭕' },
+        { id: 'arrow',  labelKey: 'canvas_toolbar.arrow',  icon: '→' },
+        { id: 'eraser', labelKey: 'canvas_toolbar.eraser', icon: '◻' },
     ]
 
     const PRESET_COLORS = [
@@ -48,7 +52,7 @@
     {#each TOOLS as t}
         <button
             onclick={() => tool = t.id}
-            title={t.label}
+            title={tFn(t.labelKey)}
             class="w-10 h-10 rounded-lg text-lg flex items-center justify-center
                    transition-all duration-150 hover:scale-110 active:scale-95
                    {tool === t.id
@@ -68,7 +72,7 @@
             {#each [2, 4, 8] as w}
                 <button
                     onclick={() => lineWidth = w}
-                    title="{w}px"
+                    title={`${w}px`}
                     class="flex items-center justify-center w-10 h-8 rounded-lg transition-all
                            {lineWidth === w
                                ? 'bg-violet-700/60 ring-1 ring-violet-400/50'
@@ -86,7 +90,7 @@
 
     <!-- Couleur courante -->
     <div class="w-10 h-10 rounded-lg border-2 border-white/30 shadow-lg overflow-hidden relative cursor-pointer"
-         title="Choisir une couleur">
+         title={tFn('canvas_toolbar.pick_color')}>
         <input
             type="color"
             bind:value={color}
@@ -115,7 +119,7 @@
     <!-- Undo -->
     <button
         onclick={onUndo}
-        title="Annuler (Ctrl+Z)"
+        title={tFn('canvas_bar.undo')}
         class="w-10 h-10 rounded-lg text-lg flex items-center justify-center
                bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white
                border border-gray-700 hover:border-gray-500
@@ -127,7 +131,7 @@
     <!-- Clear all -->
     <button
         onclick={onClear}
-        title="Effacer tout"
+        title={tFn('canvas_toolbar.clear_all')}
         class="w-10 h-10 rounded-lg text-lg flex items-center justify-center
                bg-gray-800 hover:bg-red-900/60 text-gray-400 hover:text-red-300
                border border-gray-700 hover:border-red-500/40
@@ -142,7 +146,7 @@
     <!-- Fermer -->
     <button
         onclick={onClose}
-        title="Fermer la table"
+        title={tFn('canvas_toolbar.close_table')}
         class="w-10 h-10 rounded-lg text-lg flex items-center justify-center
                bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white
                border border-gray-700 hover:border-gray-500
