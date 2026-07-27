@@ -1886,5 +1886,9 @@
   "reprings.tt_engagement": "Ratio de discussions initiées vs réponses.\nUn engagement de 100 % = vous créez autant que vous participez.",
   "reprings.title": "Réputation",
   "reprings.how_title": "Comment ce score est calculé",
-  "reprings.how_link": "Comment ça marche ?"
+  "reprings.how_link": "Comment ça marche ?",
+  "wiki_edit.meta_title": "Modifier « {{title}} » — Wiki",
+  "wiki_edit.breadcrumb": "Modifier",
+  "wiki_edit.h1": "Modifier la page",
+  "wiki_edit.save": "Enregistrer"
 }
