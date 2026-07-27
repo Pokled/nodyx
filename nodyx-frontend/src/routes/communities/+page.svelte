@@ -2,6 +2,9 @@
 	import type { PageData } from './$types';
 	import { page } from '$app/stores';
 	import { PUBLIC_API_URL } from '$env/static/public';
+	import { t } from '$lib/i18n';
+
+	const tFn = $derived($t);
 
 	interface NodyxInstance {
 		id:           number
@@ -65,11 +68,13 @@
 		}
 	}
 
+	// labelKey résolu via tFn (les noms de langue sont des endonymes : leur valeur
+	// reste identique quelle que soit la langue de l'UI).
 	const LANGUAGES = [
-		{ key: 'all', label: 'Toutes' },
-		{ key: 'fr',  label: '🇫🇷 Français' },
-		{ key: 'en',  label: '🇬🇧 English' },
-		{ key: 'de',  label: '🇩🇪 Deutsch' },
+		{ key: 'all', labelKey: 'communities.lang.all' },
+		{ key: 'fr',  labelKey: 'communities.lang.fr' },
+		{ key: 'en',  labelKey: 'communities.lang.en' },
+		{ key: 'de',  labelKey: 'communities.lang.de' },
 	]
 
 	let langFilter  = $state('all')
@@ -102,8 +107,8 @@
 </script>
 
 <svelte:head>
-	<title>Annuaire des instances — Réseau Nodyx</title>
-	<meta name="description" content="Découvrez toutes les communautés du réseau Nodyx. Chaque instance est une communauté indépendante et auto-hébergée." />
+	<title>{tFn('communities.meta_title')}</title>
+	<meta name="description" content={tFn('communities.meta_desc')} />
 </svelte:head>
 
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
@@ -114,13 +119,13 @@
 				<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
 				             bg-indigo-900/60 text-indigo-300 border border-indigo-800/60">
 					<span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-					Réseau Nodyx — Phase 1
+					{tFn('communities.badge')}
 				</span>
 			</div>
-			<h1 class="text-3xl font-bold text-white">Annuaire des instances</h1>
+			<h1 class="text-3xl font-bold text-white">{tFn('communities.h1')}</h1>
 			<p class="text-gray-400 mt-1 max-w-xl">
-				Chaque instance est une communauté indépendante. Hébergée par ses membres.
-				Accessible à tous. Plus il y en a, plus le réseau est fort.
+				{tFn('communities.tagline1')}
+				{tFn('communities.tagline2')}
 			</p>
 		</div>
 
@@ -128,11 +133,11 @@
 		<div class="flex gap-4 text-center shrink-0">
 			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
 				<div class="text-xl font-bold text-white">{instances.length}</div>
-				<div class="text-xs text-gray-500">instances</div>
+				<div class="text-xs text-gray-500">{tFn('communities.stat_instances')}</div>
 			</div>
 			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
 				<div class="text-xl font-bold text-white">{instances.reduce((s,i)=>s+(i.members??0),0).toLocaleString('fr-FR')}</div>
-				<div class="text-xs text-gray-500">membres</div>
+				<div class="text-xs text-gray-500">{tFn('communities.stat_members')}</div>
 			</div>
 		</div>
 	</div>
@@ -148,7 +153,7 @@
 		</svg>
 		<input
 			type="text"
-			placeholder="Rechercher une instance..."
+			placeholder={tFn('communities.search_ph')}
 			bind:value={searchQuery}
 			class="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-900 border border-gray-800
 			       text-sm text-gray-200 placeholder-gray-600
@@ -165,7 +170,7 @@
 				         ? 'bg-gray-700 text-white'
 				         : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800'}"
 			>
-				{l.label}
+				{tFn(l.labelKey)}
 			</button>
 		{/each}
 	</div>
@@ -173,21 +178,21 @@
 
 <!-- ── Results count ──────────────────────────────────────────────────────── -->
 <div class="flex items-center justify-between mb-4 text-xs text-gray-600">
-	<span>{filtered.length} instance{filtered.length > 1 ? 's' : ''} trouvée{filtered.length > 1 ? 's' : ''}</span>
+	<span>{filtered.length > 1 ? tFn('communities.found_many', { count: filtered.length }) : tFn('communities.found_one', { count: filtered.length })}</span>
 	{#if langFilter !== 'all' || searchQuery}
-		<span class="text-gray-500">{totalMembers.toLocaleString('fr-FR')} membres</span>
+		<span class="text-gray-500">{totalMembers.toLocaleString('fr-FR')} {tFn('communities.stat_members')}</span>
 	{/if}
 </div>
 
 <!-- ── Grid ───────────────────────────────────────────────────────────────── -->
 {#if instances.length === 0}
 	<div class="text-center py-16 border border-dashed border-gray-800 rounded-xl">
-		<p class="text-gray-500 mb-2">Aucune instance enregistrée pour l'instant.</p>
-		<p class="text-xs text-gray-600">Soyez la première communauté du réseau Nodyx !</p>
+		<p class="text-gray-500 mb-2">{tFn('communities.empty_none')}</p>
+		<p class="text-xs text-gray-600">{tFn('communities.empty_cta')}</p>
 	</div>
 {:else if filtered.length === 0}
 	<div class="text-center py-16 border border-dashed border-gray-800 rounded-xl">
-		<p class="text-gray-500">Aucune instance ne correspond à ces filtres.</p>
+		<p class="text-gray-500">{tFn('communities.empty_filtered')}</p>
 	</div>
 {:else}
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -230,7 +235,7 @@
 					</div>
 
 					<p class="text-xs text-gray-400 leading-relaxed line-clamp-2 flex-1 mb-4">
-						{instance.description ?? 'Aucune description.'}
+						{instance.description ?? tFn('communities.no_desc')}
 					</p>
 
 					<div class="flex flex-wrap items-center gap-1.5 mb-4">
@@ -269,7 +274,7 @@
 										<svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
 									{:else if linked}
 										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-										Lié
+										{tFn('communities.linked')}
 									{:else}
 										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
 										J'ai un compte
@@ -309,7 +314,7 @@
 	<p class="text-sm text-gray-400 max-w-md mx-auto mb-5">
 		Enregistrez-la dans l'annuaire et recevez un sous-domaine gratuit
 		<code class="text-indigo-400">votre-nom.nodyx.org</code>.
-		Votre communauté devient visible dans le réseau.
+		{tFn('communities.register_desc')}
 	</p>
 	<div class="flex flex-wrap gap-3 justify-center">
 		<a
@@ -318,7 +323,7 @@
 			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-700 hover:bg-indigo-600
 			       text-sm font-semibold text-white transition-colors"
 		>
-			Enregistrer mon instance
+			{tFn('communities.register_btn')}
 		</a>
 		<a
 			href="https://github.com/Pokled/Nodyx"
