@@ -1924,5 +1924,11 @@
   "polls.closed_label": "Terminé",
   "polls.voted": "✓ Voté",
   "polls.meta_title": "Sondages — Nodyx",
-  "polls.h1": "📊 Sondages"
+  "polls.h1": "📊 Sondages",
+  "audio_rec.record_title": "Enregistrer un mémo audio (60s max)",
+  "audio_rec.record_aria": "Enregistrer un mémo audio",
+  "audio_rec.stop": "Arrêter et écouter",
+  "audio_rec.cancel": "Annuler",
+  "audio_rec.send": "Envoyer ce mémo",
+  "audio_rec.discard": "Jeter"
 }

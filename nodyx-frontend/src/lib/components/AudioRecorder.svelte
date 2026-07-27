@@ -16,6 +16,9 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
 	import { onDestroy } from 'svelte'
+	import { t as i18n } from '$lib/i18n'   // `t` sert de variable de callback
+
+	const tFn = $derived($i18n)
 
 	interface Props {
 		token:  string | null
@@ -196,8 +199,8 @@
 		type="button"
 		onclick={start}
 		class="ar-btn-mic"
-		title="Enregistrer un mémo audio (60s max)"
-		aria-label="Enregistrer un mémo audio"
+		title={tFn('audio_rec.record_title')}
+		aria-label={tFn('audio_rec.record_aria')}
 	>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
 			<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -215,10 +218,10 @@
 				<span class="ar-bar" style="--h: {Math.max(0.15, l)}"></span>
 			{/each}
 		</div>
-		<button type="button" onclick={stop} class="ar-btn-stop" title="Arrêter et écouter">
+		<button type="button" onclick={stop} class="ar-btn-stop" title={tFn('audio_rec.stop')}>
 			<svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
 		</button>
-		<button type="button" onclick={cancel} class="ar-btn-cancel" title="Annuler">
+		<button type="button" onclick={cancel} class="ar-btn-cancel" title={tFn('audio_rec.cancel')}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3.5 h-3.5">
 				<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
 			</svg>
@@ -227,13 +230,13 @@
 {:else if phase === 'preview' && previewUrl}
 	<div class="ar-preview">
 		<audio src={previewUrl} controls class="ar-audio"></audio>
-		<button type="button" onclick={send} class="ar-btn-send" title="Envoyer ce mémo">
+		<button type="button" onclick={send} class="ar-btn-send" title={tFn('audio_rec.send')}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3.5 h-3.5">
 				<line x1="22" y1="2" x2="11" y2="13"/>
 				<polygon points="22 2 15 22 11 13 2 9 22 2"/>
 			</svg>
 		</button>
-		<button type="button" onclick={cancel} class="ar-btn-cancel" title="Jeter">
+		<button type="button" onclick={cancel} class="ar-btn-cancel" title={tFn('audio_rec.discard')}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3.5 h-3.5">
 				<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
 			</svg>
