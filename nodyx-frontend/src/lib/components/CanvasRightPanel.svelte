@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { CanvasPeer, CanvasChatMsg, CanvasTool } from '$lib/canvas'
 	import { tick } from 'svelte'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let {
 		peers    = [],
@@ -72,7 +75,7 @@
 <div class="panel" class:collapsed={!open}>
 
 	<!-- Toggle button -->
-	<button class="toggle-btn" onclick={() => open = !open} title={open ? 'Réduire' : 'Ouvrir le panneau'}>
+	<button class="toggle-btn" onclick={() => open = !open} title={open ? tFn('canvas_panel.collapse') : tFn('canvas_panel.expand')}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
 		     style="width:14px;height:14px;transition:transform .2s;{open ? 'transform:rotate(0)' : 'transform:rotate(180deg)'}">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -107,8 +110,8 @@
 
 				<!-- Info -->
 				<div class="peer-info">
-					<span class="peer-name">{peer.username}{peer.userId === userId ? ' (vous)' : ''}</span>
-					<span class="peer-tool">{toolIcon(peer.tool)} {peer.tool ?? 'inactif'}</span>
+					<span class="peer-name">{peer.username}{peer.userId === userId ? tFn('canvas_panel.you') : ''}</span>
+					<span class="peer-tool">{toolIcon(peer.tool)} {peer.tool ?? tFn('canvas_panel.inactive')}</span>
 				</div>
 
 				<!-- Tool color strip -->
@@ -117,13 +120,13 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="empty-peers">Vous êtes seul·e pour l'instant</div>
+			<div class="empty-peers">{tFn('canvas_panel.alone')}</div>
 		{/each}
 	</div>
 
 	<!-- ── Chat ──────────────────────────────────────── -->
 	<div class="section-header" style="margin-top:4px">
-		<span>Chat du board</span>
+		<span>{tFn('canvas_panel.chat_title')}</span>
 		{#if messages.length > 0}
 			<span class="badge">{messages.length}</span>
 		{/if}
@@ -148,7 +151,7 @@
 				</div>
 			</div>
 		{:else}
-			<div class="empty-chat">Aucun message — commencez la discussion !</div>
+			<div class="empty-chat">{tFn('canvas_panel.no_message')}</div>
 		{/each}
 	</div>
 
@@ -158,10 +161,10 @@
 			class="chat-input"
 			bind:value={draft}
 			onkeydown={onKeydown}
-			placeholder="Message…"
+			placeholder={tFn('canvas_panel.compose_ph')}
 			rows="1"
 		></textarea>
-		<button class="send-btn" onclick={sendMsg} disabled={!draft.trim()} title="Envoyer (Entrée)">
+		<button class="send-btn" onclick={sendMsg} disabled={!draft.trim()} title={tFn('canvas_panel.send')}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
 			</svg>

@@ -1968,5 +1968,14 @@
   "wiki_view.back": "Retour au wiki",
   "wiki_view.unknown_author": "Inconnu",
   "wiki_view.views_one": "{{count}} vue",
-  "wiki_view.views_many": "{{count}} vues"
+  "wiki_view.views_many": "{{count}} vues",
+  "canvas_panel.collapse": "Réduire",
+  "canvas_panel.expand": "Ouvrir le panneau",
+  "canvas_panel.alone": "Vous êtes seul·e pour l'instant",
+  "canvas_panel.no_message": "Aucun message — commencez la discussion !",
+  "canvas_panel.compose_ph": "Message…",
+  "canvas_panel.send": "Envoyer (Entrée)",
+  "canvas_panel.you": " (vous)",
+  "canvas_panel.inactive": "inactif",
+  "canvas_panel.chat_title": "Chat du board"
 }
