@@ -5,29 +5,33 @@
 	import { enhance } from '$app/forms'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { untrack } from 'svelte'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
 	// Local mutable copy of seeds for optimistic updates
 	let seeds = $state(untrack(() => data.seeds.map((s: any) => ({ ...s }))))
 
+	// labelKey résolu via tFn dans le template (réactif à la locale).
 	const CATEGORIES = [
-		{ value: '', label: 'Toutes' },
-		{ value: 'feature', label: 'Fonctionnalité' },
-		{ value: 'design',  label: 'Design' },
-		{ value: 'plugin',  label: 'Plugin' },
-		{ value: 'event',   label: 'Événement' },
+		{ value: '', labelKey: 'garden.cat.all' },
+		{ value: 'feature', labelKey: 'garden.cat.feature' },
+		{ value: 'design',  labelKey: 'garden.cat.design' },
+		{ value: 'plugin',  labelKey: 'garden.cat.plugin' },
+		{ value: 'event',   labelKey: 'garden.cat.event' },
 	]
 
 	const CATEGORY_ICONS: Record<string, string> = {
 		'': '◈', feature: '✦', design: '◉', plugin: '◈', event: '◆'
 	}
 
-	const STAGE_META: Record<string, { icon: string; label: string; dot: string }> = {
-		germe:  { icon: '🌱', label: 'Germe',  dot: '#4ade80' },
-		pousse: { icon: '🌿', label: 'Pousse', dot: '#34d399' },
-		fleur:  { icon: '🌸', label: 'Fleur',  dot: '#f472b6' },
-		fruit:  { icon: '🍎', label: 'Fruit',  dot: '#f87171' },
+	const STAGE_META: Record<string, { icon: string; labelKey: string; dot: string }> = {
+		germe:  { icon: '🌱', labelKey: 'garden.stage.germe',  dot: '#4ade80' },
+		pousse: { icon: '🌿', labelKey: 'garden.stage.pousse', dot: '#34d399' },
+		fleur:  { icon: '🌸', labelKey: 'garden.stage.fleur',  dot: '#f472b6' },
+		fruit:  { icon: '🍎', labelKey: 'garden.stage.fruit',  dot: '#f87171' },
 	}
 
 	let showForm   = $state(false)
@@ -36,11 +40,12 @@
 	let toast      = $state<{ msg: string; emoji: string } | null>(null)
 	let toastTimer = $state<ReturnType<typeof setTimeout> | null>(null)
 
+	// msgKey résolu via tFn au moment de l'affichage (voir showToast).
 	const PATIENCE_QUOTES = [
-		{ msg: 'Tu as déjà arrosé cette graine 💧\n« La patience est une vertu »', emoji: '🌿' },
-		{ msg: 'Doucement ! Cette plante a déjà eu sa dose d\'eau 😄\n« Trop d\'eau noie le poisson »', emoji: '🐟' },
-		{ msg: 'Tu as voté ici ! Reviens quand une nouvelle graine sera plantée 🌱\n« Chaque chose en son temps »', emoji: '⏳' },
-		{ msg: 'Ton arrosoir est vide pour cette graine 🪣\n« La patience est mère de toutes les vertus »', emoji: '❤️' },
+		{ msgKey: 'garden.water.watered', emoji: '🌿' },
+		{ msgKey: 'garden.water.gentle',  emoji: '🐟' },
+		{ msgKey: 'garden.water.voted',   emoji: '⏳' },
+		{ msgKey: 'garden.water.empty',   emoji: '❤️' },
 	]
 
 	function showToast(msg: string, emoji: string) {
@@ -67,7 +72,7 @@
 		wateringId = null
 		if (res.status === 409) {
 			const q = PATIENCE_QUOTES[Math.floor(Math.random() * PATIENCE_QUOTES.length)]
-			showToast(q.msg, q.emoji)
+			showToast(tFn(q.msgKey), q.emoji)
 			return
 		}
 		const seed = seeds.find((s: any) => s.id === seedId)
@@ -86,7 +91,7 @@
 </script>
 
 <svelte:head>
-	<title>Le Jardin — Nodyx</title>
+	<title>{tFn('garden.meta_title')}</title>
 </svelte:head>
 
 <!-- Toast -->
@@ -106,8 +111,8 @@
 			<div class="garden-header-left">
 				<div class="garden-header-icon">🌱</div>
 				<div>
-					<h1 class="garden-title">Le Jardin</h1>
-					<p class="garden-sub">Plante des idées · la communauté les arrose · les meilleures grandissent</p>
+					<h1 class="garden-title">{tFn('garden.title_h1')}</h1>
+					<p class="garden-sub">{tFn('garden.subtitle')}</p>
 				</div>
 			</div>
 			<button
@@ -116,7 +121,7 @@
 				class:garden-plant-btn--active={showForm}
 			>
 				<span class="btn-icon">+</span>
-				<span>Planter</span>
+				<span>{tFn('garden.plant')}</span>
 			</button>
 		</div>
 
@@ -129,7 +134,7 @@
 					class:garden-tab--active={data.category === cat.value}
 				>
 					<span class="tab-icon">{CATEGORY_ICONS[cat.value]}</span>
-					{cat.label}
+					{tFn(cat.labelKey)}
 				</button>
 			{/each}
 		</div>
@@ -141,7 +146,7 @@
 			<div class="garden-form-card">
 				<div class="form-card-header">
 					<span class="form-card-dot"></span>
-					<h2 class="form-card-title">Nouvelle graine</h2>
+					<h2 class="form-card-title">{tFn('garden.new_seed')}</h2>
 					<button onclick={() => showForm = false} class="form-card-close">✕</button>
 				</div>
 
@@ -159,28 +164,28 @@
 					}
 				}} class="form-grid">
 					<div class="form-field form-field--full">
-						<label for="garden-title" class="form-label">Titre <span class="form-required">*</span></label>
+						<label for="garden-title" class="form-label">{tFn('garden.title_label')} <span class="form-required">*</span></label>
 						<input id="garden-title" name="title" required maxlength="200"
-							placeholder="Ex : Mode sombre personnalisable"
+							placeholder={tFn('garden.title_ph')}
 							class="form-input" />
 					</div>
 					<div class="form-field form-field--full">
-						<label for="garden-desc" class="form-label">Description</label>
+						<label for="garden-desc" class="form-label">{tFn('garden.description')}</label>
 						<textarea id="garden-desc" name="description" rows="3"
-							placeholder="Décris ton idée en détail…"
+							placeholder={tFn('garden.desc_ph')}
 							class="form-input form-textarea"></textarea>
 					</div>
 					<div class="form-field">
-						<label for="garden-cat" class="form-label">Catégorie</label>
+						<label for="garden-cat" class="form-label">{tFn('garden.category')}</label>
 						<select id="garden-cat" name="category" class="form-input form-select">
 							{#each CATEGORIES.slice(1) as cat}
-								<option value={cat.value}>{cat.label}</option>
+								<option value={cat.value}>{tFn(cat.labelKey)}</option>
 							{/each}
 						</select>
 					</div>
 					<div class="form-actions">
-						<button type="submit" class="form-submit">Planter 🌱</button>
-						<button type="button" onclick={() => showForm = false} class="form-cancel">Annuler</button>
+						<button type="submit" class="form-submit">{tFn('garden.plant_submit')}</button>
+						<button type="button" onclick={() => showForm = false} class="form-cancel">{tFn('garden.cancel')}</button>
 					</div>
 				</form>
 			</div>
@@ -192,8 +197,8 @@
 		{#if seeds.length === 0}
 			<div class="garden-empty">
 				<p class="empty-icon">🏜️</p>
-				<p class="empty-title">Le jardin est vide</p>
-				<p class="empty-sub">Plante la première graine !</p>
+				<p class="empty-title">{tFn('garden.empty_title')}</p>
+				<p class="empty-sub">{tFn('garden.empty')}</p>
 			</div>
 		{:else}
 			<div class="seeds-list">
@@ -210,11 +215,11 @@
 								<h3 class="seed-title">{seed.title}</h3>
 								<div class="seed-badges">
 									{#if seed.harvest_date}
-										<span class="seed-badge seed-badge--done">Implémenté</span>
+										<span class="seed-badge seed-badge--done">{tFn('garden.done_badge')}</span>
 									{/if}
 									<span class="seed-badge" style="color:{stage.dot}; border-color:{stage.dot}33">
 										<span class="badge-dot" style="background:{stage.dot}"></span>
-										{stage.label}
+										{tFn(stage.labelKey)}
 									</span>
 								</div>
 							</div>
@@ -245,7 +250,7 @@
 								class="water-btn"
 								class:water-btn--done={seed.watered_by_me}
 								class:water-btn--loading={wateringId === seed.id}
-								title={seed.watered_by_me ? 'Déjà arrosé' : 'Arroser'}
+								title={seed.watered_by_me ? tFn('garden.watered') : tFn('garden.water')}
 							>
 								{#if wateringId === seed.id}
 									<span class="water-spinner"></span>
@@ -271,7 +276,7 @@
 						href="?{new URLSearchParams({ category: data.category, offset: String(data.offset + 30) })}"
 						class="pagination-btn"
 					>
-						Voir plus
+						{tFn('garden.see_more')}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pag-icon">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
 						</svg>
