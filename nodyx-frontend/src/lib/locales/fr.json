@@ -1930,5 +1930,15 @@
   "audio_rec.stop": "Arrêter et écouter",
   "audio_rec.cancel": "Annuler",
   "audio_rec.send": "Envoyer ce mémo",
-  "audio_rec.discard": "Jeter"
+  "audio_rec.discard": "Jeter",
+  "chsidebar.close": "Fermer les canaux",
+  "chsidebar.channels": "Canaux",
+  "chsidebar.you_here": "Vous êtes dans ce salon",
+  "chsidebar.my_stats": "Voir mes stats audio",
+  "chsidebar.user_stats": "Voir les stats de {{name}}",
+  "chsidebar.no_channel": "Aucun canal",
+  "chsidebar.dismiss": "Fermer",
+  "chsidebar.text_section": "Texte",
+  "chsidebar.voice_section": "Vocal",
+  "chsidebar.mic_error": "Micro inaccessible"
 }

@@ -3,6 +3,9 @@
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import ChannelIcon from '$lib/components/ChannelIcon.svelte';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
+	import { t } from '$lib/i18n';
+
+	const tFn = $derived($t);
 
 	type Channel = {
 		id:              string
@@ -112,7 +115,7 @@
 {#if drawerOpen}
 	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 	<div class="lg:hidden fixed inset-0 bg-black/60 z-[55] backdrop-blur-sm"
-	     role="button" tabindex="-1" aria-label="Fermer les canaux"
+	     role="button" tabindex="-1" aria-label={tFn('chsidebar.close')}
 	     onclick={() => drawerOpen = false}
 	     onkeydown={(e) => e.key === 'Escape' && (drawerOpen = false)}
 	     transition:fade={{ duration: 200 }}></div>
@@ -123,7 +126,7 @@
 	id="channels-drawer"
 	role={drawerOpen ? 'dialog' : undefined}
 	aria-modal={drawerOpen ? 'true' : undefined}
-	aria-label="Canaux"
+	aria-label={tFn('chsidebar.channels')}
 	class="
 		flex flex-col border-r border-gray-800 bg-gray-900 transition-transform duration-300 ease-in-out
 		max-lg:fixed max-lg:top-12 max-lg:bottom-0 max-lg:left-0 max-lg:z-[60] max-lg:w-[280px]
@@ -132,7 +135,7 @@
 	"
 >
 	<div class="h-12 flex items-center px-4 border-b border-gray-800">
-		<span class="text-xs font-bold text-gray-300 uppercase tracking-wider">Canaux</span>
+		<span class="text-xs font-bold text-gray-300 uppercase tracking-wider">{tFn('chsidebar.channels')}</span>
 	</div>
 
 	<nav class="flex-1 overflow-y-auto py-2 px-2 custom-scrollbar">
@@ -142,7 +145,7 @@
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M7.875 14.25l1.214 1.942a2.25 2.25 0 001.908 1.058h2.006c.776 0 1.497-.4 1.908-1.058l1.214-1.942M2.41 9h4.636a2.25 2.25 0 011.872 1.002l.164.246a2.25 2.25 0 001.872 1.002h2.092a2.25 2.25 0 001.872-1.002l.164-.246A2.25 2.25 0 0116.954 9h4.636M2.41 9a2.25 2.25 0 00-.16.832V12a2.25 2.25 0 002.25 2.25h15a2.25 2.25 0 002.25-2.25V9.832c0-.287-.055-.57-.16-.832M2.41 9a2.25 2.25 0 01.382-.632l3.285-3.832a2.25 2.25 0 011.708-.786h8.43c.657 0 1.281.287 1.709.786l3.284 3.832c.163.19.291.404.382.632"/>
 				</svg>
-				<span>Texte</span>
+				<span>{tFn('chsidebar.text_section')}</span>
 			</div>
 			<div class="space-y-0.5 mb-3">
 				{#each textChannels as ch (ch.id)}
@@ -179,7 +182,7 @@
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
 				</svg>
-				<span>Vocal</span>
+				<span>{tFn('chsidebar.voice_section')}</span>
 			</div>
 			<div class="space-y-0.5">
 				{#each voiceChannels as ch (ch.id)}
@@ -215,7 +218,7 @@
 						{/if}
 						<span class="truncate flex-1" style={nameStyle(ch)}>{ch.name}</span>
 						{#if inThisChannel}
-							<span class="ch-voice-live-pill" aria-label="Vous êtes dans ce salon">
+							<span class="ch-voice-live-pill" aria-label={tFn('chsidebar.you_here')}>
 								<span class="ch-voice-live-dot"></span>
 								Live
 							</span>
@@ -237,7 +240,7 @@
 									onclick={() => isInVoice ? onopenVoiceMemberPanel(m) : undefined}
 									class="flex items-center gap-1.5 w-full text-left rounded px-1 py-0.5 -mx-1 transition-colors
 									       {isInVoice ? 'hover:bg-gray-800/60 cursor-pointer' : 'cursor-default'}"
-									title={isInVoice ? (isMe ? 'Voir mes stats audio' : `Voir les stats de ${m.username}`) : m.username}
+									title={isInVoice ? (isMe ? tFn('chsidebar.my_stats') : tFn('chsidebar.user_stats', { name: m.username })) : m.username}
 								>
 									{#if m.avatar}
 										<img src={m.avatar} alt={m.username} class="w-4 h-4 rounded-full object-cover shrink-0 {m.speaking ? 'ring-1 ring-green-400' : ''}" />
@@ -266,7 +269,7 @@
 		{/if}
 
 		{#if textChannels.length === 0 && voiceChannels.length === 0}
-			<p class="px-3 py-2 text-xs text-gray-600 italic">Aucun canal</p>
+			<p class="px-3 py-2 text-xs text-gray-600 italic">{tFn('chsidebar.no_channel')}</p>
 		{/if}
 	</nav>
 
@@ -276,11 +279,11 @@
 			<div class="flex items-start gap-1.5">
 				<span class="shrink-0 mt-0.5">🎙️</span>
 				<div>
-					<p class="font-medium mb-1">Micro inaccessible</p>
+					<p class="font-medium mb-1">{tFn('chsidebar.mic_error')}</p>
 					<p>{voiceError}</p>
 				</div>
 			</div>
-			<button onclick={() => ondismissVoiceError?.()} class="mt-2 text-[10px] text-red-500 hover:text-red-300 underline">Fermer</button>
+			<button onclick={() => ondismissVoiceError?.()} class="mt-2 text-[10px] text-red-500 hover:text-red-300 underline">{tFn('chsidebar.dismiss')}</button>
 		</div>
 	{/if}
 
