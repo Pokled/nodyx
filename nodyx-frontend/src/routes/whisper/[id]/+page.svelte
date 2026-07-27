@@ -6,6 +6,9 @@
 	import { getSocket } from '$lib/socket'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { linkifyText } from '$lib/linkify'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props()
 
@@ -157,7 +160,7 @@
 	function updateExpiry() {
 		if (!room?.expires_at) return
 		const diff = new Date(room.expires_at).getTime() - Date.now()
-		if (diff <= 0) { expiresIn = 'Expiré'; return }
+		if (diff <= 0) { expiresIn = tFn('whisper.expired'); return }
 		const m = Math.floor(diff / 60000)
 		const s = Math.floor((diff % 60000) / 1000)
 		expiresIn = m > 0 ? `${m}m ${s}s` : `${s}s`
@@ -168,7 +171,7 @@
 </script>
 
 <svelte:head>
-	<title>Chuchotement — Nodyx</title>
+	<title>{tFn('whisper.meta_title')}</title>
 </svelte:head>
 
 <div class="flex flex-col h-[calc(100vh-64px)] max-w-2xl mx-auto px-2 py-4">
@@ -179,12 +182,12 @@
 			<div class="flex items-center gap-2">
 				<span class="text-xl">🤫</span>
 				<h1 class="text-base font-bold text-white truncate">
-					{room?.name ?? 'Chuchotement'}
+					{room?.name ?? tFn('whisper.default_name')}
 				</h1>
 			</div>
 			{#if room?.context_label}
 				<p class="text-xs text-gray-500 mt-0.5 truncate">
-					Démarré depuis · {room.context_label}
+					{tFn('whisper.started_from', { label: room.context_label })}
 				</p>
 			{/if}
 		</div>
@@ -198,10 +201,10 @@
 			{/if}
 			<button
 				onclick={copyLink}
-				title="Copier le lien du salon"
+				title={tFn('whisper.copy_link')}
 				class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors text-xs font-medium"
 			>
-				{copyDone ? '✅ Copié !' : '🔗 Partager'}
+				{copyDone ? tFn('whisper.copied') : tFn('whisper.share')}
 			</button>
 			<a href="/library" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors text-sm">
 				✕
@@ -212,8 +215,8 @@
 	<!-- Expired banner -->
 	{#if expired}
 		<div class="mb-4 px-4 py-3 rounded-xl bg-red-900/30 border border-red-700/50 text-red-300 text-sm text-center">
-			Ce salon a expiré. Les messages ne sont plus disponibles.
-			<a href="/library" class="underline ml-2 text-red-400 hover:text-red-300">Retourner à la bibliothèque</a>
+			{tFn('whisper.expired_notice')}
+			<a href="/library" class="underline ml-2 text-red-400 hover:text-red-300">{tFn('whisper.back_library')}</a>
 		</div>
 	{/if}
 
@@ -225,8 +228,8 @@
 		{#if messages.length === 0}
 			<div class="flex flex-col items-center justify-center h-full text-gray-600 gap-2">
 				<span class="text-4xl">🤫</span>
-				<p class="text-sm">Personne n'a encore chuchoté.</p>
-				<p class="text-xs">Les messages disparaissent après 1h d'inactivité.</p>
+				<p class="text-sm">{tFn('whisper.empty')}</p>
+				<p class="text-xs">{tFn('whisper.empty_hint')}</p>
 			</div>
 		{/if}
 
@@ -272,7 +275,7 @@
 					<span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style="animation-delay:150ms"></span>
 					<span class="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style="animation-delay:300ms"></span>
 				</span>
-				{typingUsers.join(', ')} écrit…
+				{tFn('whisper.typing', { users: typingUsers.join(', ') })}
 			</div>
 		{/if}
 	</div>
@@ -283,7 +286,7 @@
 			<input
 				bind:value={input}
 				onkeydown={onInputKeydown}
-				placeholder="Chuchote quelque chose… (Entrée pour envoyer)"
+				placeholder={tFn('whisper.compose_ph')}
 				maxlength="2000"
 				disabled={!me}
 				class="flex-1 px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-sm text-white

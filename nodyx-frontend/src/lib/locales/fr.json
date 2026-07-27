@@ -1845,5 +1845,18 @@
   "about.all_versions": "Toutes les versions →",
   "about.source_code": "Code source",
   "about.license_label": "Licence",
-  "about.license": "Nodyx est un logiciel libre publié sous licence AGPL-3.0. Toute modification déployée publiquement doit être partagée sous la même licence. Aucune télémétrie n'est envoyée à un service tiers. Les données de cette instance restent sur le serveur qui l'héberge."
+  "about.license": "Nodyx est un logiciel libre publié sous licence AGPL-3.0. Toute modification déployée publiquement doit être partagée sous la même licence. Aucune télémétrie n'est envoyée à un service tiers. Les données de cette instance restent sur le serveur qui l'héberge.",
+  "whisper.expired": "Expiré",
+  "whisper.started_from": "Démarré depuis · {{label}}",
+  "whisper.copy_link": "Copier le lien du salon",
+  "whisper.copied": "✅ Copié !",
+  "whisper.share": "🔗 Partager",
+  "whisper.expired_notice": "Ce salon a expiré. Les messages ne sont plus disponibles.",
+  "whisper.back_library": "Retourner à la bibliothèque",
+  "whisper.empty": "Personne n'a encore chuchoté.",
+  "whisper.empty_hint": "Les messages disparaissent après 1h d'inactivité.",
+  "whisper.typing": "{{users}} écrit…",
+  "whisper.compose_ph": "Chuchote quelque chose… (Entrée pour envoyer)",
+  "whisper.meta_title": "Chuchotement — Nodyx",
+  "whisper.default_name": "Chuchotement"
 }
