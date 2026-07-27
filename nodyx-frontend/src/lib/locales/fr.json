@@ -1977,5 +1977,10 @@
   "canvas_panel.send": "Envoyer (Entrée)",
   "canvas_panel.you": " (vous)",
   "canvas_panel.inactive": "inactif",
-  "canvas_panel.chat_title": "Chat du board"
+  "canvas_panel.chat_title": "Chat du board",
+  "home.slide_aria": "Slide {{n}}",
+  "home.next": "Suivant",
+  "home.upcoming_events": "Prochains événements",
+  "home.see_all": "Voir tout",
+  "home.all_day": "Journée entière"
 }

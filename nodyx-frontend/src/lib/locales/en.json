@@ -1021,5 +1021,6 @@
   "forum.no_message": "No message",
   "forum.edit_message_title": "Edit this message",
   "forum.delete_message_title": "Delete this message",
-  "forum.search_for": "Search for"
+  "forum.search_for": "Search for",
+  "home.all_day": "All day"
 }

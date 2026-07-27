@@ -479,7 +479,7 @@
 							<button onclick={() => { slideTo(i); startTimers(); }}
 							        class="relative h-px transition-all duration-300 {i === slideIndex ? 'w-14' : 'w-4 opacity-25 hover:opacity-50'}"
 							        style="background: rgba(255,255,255,.15)"
-							        aria-label="Slide {i+1}">
+							        aria-label={tFn('home.slide_aria', { n: i+1 })}>
 								{#if i === slideIndex}
 									<span class="absolute top-[-1px] left-0 h-[3px] transition-none"
 									      style="width:{progressPct}%; background: linear-gradient(to right, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
@@ -498,7 +498,7 @@
 							<button onclick={() => { slideNext(); startTimers(); }}
 							        class="w-8 h-8 flex items-center justify-center transition-all"
 							        style="border: 1px solid rgba(255,255,255,.08); color: #6b7280"
-							        aria-label="Suivant"
+							        aria-label={tFn('home.next')}
 							        onmouseenter={e => (e.currentTarget as HTMLElement).style.borderColor='rgb(var(--nx-accent-2-rgb) / .5)'}
 							        onmouseleave={e => (e.currentTarget as HTMLElement).style.borderColor='rgba(255,255,255,.08)'}>
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -738,13 +738,13 @@
 				<div class="flex items-center gap-2 mb-1">
 					<span class="text-[10px] font-bold tracking-widest uppercase" style="color: var(--nx-cyan)">Agenda</span>
 				</div>
-				<h2 class="text-xl font-bold text-white">Prochains événements</h2>
+				<h2 class="text-xl font-bold text-white">{tFn('home.upcoming_events')}</h2>
 			</div>
 			<a href="/calendar" class="flex items-center gap-1.5 text-xs font-medium transition-colors"
 				style="color: var(--nx-cyan)"
 				onmouseenter={e => (e.currentTarget as HTMLElement).style.color='var(--nx-cyan-soft)'}
 				onmouseleave={e => (e.currentTarget as HTMLElement).style.color='var(--nx-cyan)'}>
-				Voir tout
+				{tFn('home.see_all')}
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
 				</svg>
@@ -757,7 +757,7 @@
 				{@const d  = new Date(ev.starts_at)}
 				{@const day = d.toLocaleDateString(instance.language === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric' })}
 				{@const mon = d.toLocaleDateString(instance.language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short' })}
-				{@const time = ev.is_all_day ? (instance.language === 'fr' ? 'Journée entière' : 'All day') : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+				{@const time = ev.is_all_day ? tFn('home.all_day') : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 				<a href="/calendar" class="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200"
 					style="background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);"
 					onmouseenter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgb(var(--nx-cyan-rgb) / .35)'; (e.currentTarget as HTMLElement).style.background = 'rgb(var(--nx-cyan-rgb) / .06)' }}
