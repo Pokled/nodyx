@@ -1944,5 +1944,12 @@
   "media_center.stop": "⏹ Arrêter",
   "media_center.snapshot": "Capture instantanée",
   "media_center.sharing": "{{name}} partage son écran",
-  "media_center.what_share": "Que souhaitez-vous partager ?"
+  "media_center.what_share": "Que souhaitez-vous partager ?",
+  "grid_renderer.move_row": "Déplacer la ligne",
+  "grid_renderer.drag": "⠿ déplacer",
+  "grid_renderer.settings": "Paramètres",
+  "grid_renderer.delete": "Supprimer",
+  "grid_renderer.add_widget": "Ajouter un widget",
+  "grid_renderer.resize_cols": "Redimensionner les colonnes",
+  "grid_renderer.change": "↩ Changer"
 }

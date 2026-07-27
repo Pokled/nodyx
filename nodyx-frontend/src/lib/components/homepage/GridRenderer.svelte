@@ -3,6 +3,9 @@
 	import { DEFAULT_THEME, autoSpanMd, autoSpanSm } from '$lib/types/homepage'
 	import { PLUGIN_REGISTRY } from './plugins'
 	import DynamicWidget from './DynamicWidget.svelte'
+	import { t as i18n } from '$lib/i18n'   // `t` est déjà utilisé pour le thème
+
+	const tFn = $derived($i18n)
 
 	interface Props {
 		layout:           GridLayout
@@ -101,12 +104,12 @@
 				<div class="gr-row-bar">
 					<button
 						class="gr-row-bar-handle"
-						title="Déplacer la ligne"
+						title={tFn('grid_renderer.move_row')}
 						onpointerdown={(e) => onRowDragStart?.(e, row.id)}
-					>⠿ déplacer</button>
+					>{tFn('grid_renderer.drag')}</button>
 					<div class="gr-row-bar-actions">
-						<button class="gr-row-btn" title="Paramètres" onclick={() => onRowSettings?.(row.id)}>⚙</button>
-						<button class="gr-row-btn gr-row-btn--del" title="Supprimer" onclick={() => onRowDelete?.(row.id)}>✕</button>
+						<button class="gr-row-btn" title={tFn('grid_renderer.settings')} onclick={() => onRowSettings?.(row.id)}>⚙</button>
+						<button class="gr-row-btn gr-row-btn--del" title={tFn('grid_renderer.delete')} onclick={() => onRowDelete?.(row.id)}>✕</button>
 					</div>
 				</div>
 			{/if}
@@ -152,7 +155,7 @@
 						<!-- Colonne vide en mode éditeur -->
 						<button class="gr-col-empty-btn" onclick={() => onAddWidget?.(row.id, col.id)}>
 							<span class="gr-col-empty-icon">＋</span>
-							<span class="gr-col-empty-label">Ajouter un widget</span>
+							<span class="gr-col-empty-label">{tFn('grid_renderer.add_widget')}</span>
 							<span class="gr-col-empty-hint">span {col.span}/12</span>
 						</button>
 					{/if}
@@ -161,7 +164,7 @@
 						<!-- Badge edit/supprimer sur le widget -->
 						<div class="gr-col-overlay">
 							<button class="gr-col-overlay-btn" onclick={(e) => { e.stopPropagation(); onColClick?.(row.id, col.id) }}>⚙ Config</button>
-							<button class="gr-col-overlay-btn gr-col-overlay-btn--add" onclick={(e) => { e.stopPropagation(); onAddWidget?.(row.id, col.id) }}>↩ Changer</button>
+							<button class="gr-col-overlay-btn gr-col-overlay-btn--add" onclick={(e) => { e.stopPropagation(); onAddWidget?.(row.id, col.id) }}>{tFn('grid_renderer.change')}</button>
 						</div>
 					{/if}
 
@@ -170,7 +173,7 @@
 						     → hors du flux CSS Grid, n'occupe pas de cellule -->
 						<button
 							class="gr-resize-handle"
-							title="Redimensionner les colonnes"
+							title={tFn('grid_renderer.resize_cols')}
 							onpointerdown={(e) => { e.stopPropagation(); onResizeStart?.(e, row.id, colIdx) }}
 						>◀▶</button>
 					{/if}
