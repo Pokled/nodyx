@@ -15,6 +15,9 @@
   // Connect socket for real-time updates
   import { onMount, untrack } from 'svelte'
   import { tokenStore } from '$lib/socket'
+  import { t } from '$lib/i18n'
+
+  const tFn = $derived($t)
 
   onMount(async () => {
     const { getSocket } = await import('$lib/socket')
@@ -51,7 +54,7 @@
   function timeLeft(iso: string | null): string | null {
     if (!iso) return null
     const diff = new Date(iso).getTime() - Date.now()
-    if (diff <= 0) return 'Expiré'
+    if (diff <= 0) return tFn('polls.expired')
     const h = Math.floor(diff / 3600000)
     const m = Math.floor((diff % 3600000) / 60000)
     if (h > 48) return `${Math.floor(h / 24)}j`
@@ -61,7 +64,7 @@
 </script>
 
 <svelte:head>
-  <title>Sondages — Nodyx</title>
+  <title>{tFn('polls.meta_title')}</title>
 </svelte:head>
 
 <div class="polls-page">
@@ -69,17 +72,17 @@
   <!-- ── Header ──────────────────────────────────────────────────────────────── -->
   <div class="page-header">
     <div class="page-title-row">
-      <h1>📊 Sondages</h1>
+      <h1>{tFn('polls.h1')}</h1>
       {#if data.token}
         <button class="btn-new" onclick={() => showCreator = true}>
-          + Nouveau sondage
+          {tFn('polls.new')}
         </button>
       {/if}
     </div>
 
     <!-- Filtres -->
     <div class="filter-tabs">
-      {#each [['active', 'En cours'], ['closed', 'Terminés'], ['', 'Tous']] as [val, label]}
+      {#each [['active', tFn('polls.filter_active')], ['closed', tFn('polls.filter_closed')], ['', tFn('polls.filter_all')]] as [val, label]}
         <button
           class="filter-tab"
           class:active={status === val}
@@ -95,10 +98,10 @@
   {#if polls.length === 0}
     <div class="empty-state" in:fade>
       <span class="empty-icon">📭</span>
-      <p>Aucun sondage {status === 'active' ? 'en cours' : status === 'closed' ? 'terminé' : ''}.</p>
+      <p>{status === 'active' ? tFn('polls.empty_active') : status === 'closed' ? tFn('polls.empty_closed') : tFn('polls.empty_all')}</p>
       {#if data.token && status !== 'closed'}
         <button class="btn-new-empty" onclick={() => showCreator = true}>
-          Créer le premier sondage
+          {tFn('polls.create_first')}
         </button>
       {/if}
     </div>
@@ -118,10 +121,10 @@
                 {/if}
               {:else}
                 <span class="status-dot closed"></span>
-                <span class="closed-label">Terminé</span>
+                <span class="closed-label">{tFn('polls.closed_label')}</span>
               {/if}
               {#if poll.has_voted}
-                <span class="voted-badge">✓ Voté</span>
+                <span class="voted-badge">{tFn('polls.voted')}</span>
               {/if}
             </div>
 

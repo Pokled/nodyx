@@ -1911,5 +1911,18 @@
   "poll_creator.creating": "Création…",
   "poll_creator.create_btn": "📊 Créer le sondage",
   "poll_creator.poll_of": "Sondage — {{type}}",
-  "poll_creator.type_prefix": "Type :"
+  "poll_creator.type_prefix": "Type :",
+  "polls.expired": "Expiré",
+  "polls.new": "+ Nouveau sondage",
+  "polls.filter_active": "En cours",
+  "polls.filter_closed": "Terminés",
+  "polls.filter_all": "Tous",
+  "polls.empty_active": "Aucun sondage en cours.",
+  "polls.empty_closed": "Aucun sondage terminé.",
+  "polls.empty_all": "Aucun sondage.",
+  "polls.create_first": "Créer le premier sondage",
+  "polls.closed_label": "Terminé",
+  "polls.voted": "✓ Voté",
+  "polls.meta_title": "Sondages — Nodyx",
+  "polls.h1": "📊 Sondages"
 }
