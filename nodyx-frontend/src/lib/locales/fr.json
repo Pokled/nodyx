@@ -1982,5 +1982,22 @@
   "home.next": "Suivant",
   "home.upcoming_events": "Prochains événements",
   "home.see_all": "Voir tout",
-  "home.all_day": "Journée entière"
+  "home.all_day": "Journée entière",
+  "follow.just_now": "à l'instant",
+  "follow.min_ago": "il y a {{n}} min",
+  "follow.hour_ago": "il y a {{n}} h",
+  "follow.day_ago": "il y a {{n}} j",
+  "follow.week_ago": "il y a {{n}} sem",
+  "follow.month_ago": "il y a {{n}} mois",
+  "follow.year_ago_one": "il y a {{n}} an",
+  "follow.year_ago_many": "il y a {{n}} ans",
+  "follow.followers_title": "Abonnés de {{name}}",
+  "follow.following_title": "Abonnements de {{name}}",
+  "follow.empty_followers": "{{name}} n'a pas encore d'abonnés.",
+  "follow.empty_following": "{{name}} ne suit personne pour l'instant.",
+  "follow.back": "Retour au profil",
+  "follow.follower_one": "abonné",
+  "follow.follower_many": "abonnés",
+  "follow.following_one": "abonnement",
+  "follow.following_many": "abonnements"
 }

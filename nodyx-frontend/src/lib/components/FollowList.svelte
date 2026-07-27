@@ -13,39 +13,46 @@
 		mode:     'followers' | 'following'
 	}
 
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
+
 	let { username, users, mode }: Props = $props()
 
 	function timeAgo(iso: string): string {
 		const diff = Math.max(0, Date.now() - new Date(iso).getTime())
 		const s = Math.floor(diff / 1000)
-		if (s < 60)    return 'à l\'instant'
-		if (s < 3600)  return `il y a ${Math.floor(s/60)} min`
-		if (s < 86400) return `il y a ${Math.floor(s/3600)} h`
+		if (s < 60)    return tFn('follow.just_now')
+		if (s < 3600)  return tFn('follow.min_ago',  { n: Math.floor(s/60) })
+		if (s < 86400) return tFn('follow.hour_ago', { n: Math.floor(s/3600) })
 		const d = Math.floor(s/86400)
-		if (d < 7)    return `il y a ${d} j`
-		if (d < 30)   return `il y a ${Math.floor(d/7)} sem`
-		if (d < 365)  return `il y a ${Math.floor(d/30)} mois`
-		return `il y a ${Math.floor(d/365)} an${d >= 730 ? 's' : ''}`
+		if (d < 7)    return tFn('follow.day_ago',   { n: d })
+		if (d < 30)   return tFn('follow.week_ago',  { n: Math.floor(d/7) })
+		if (d < 365)  return tFn('follow.month_ago', { n: Math.floor(d/30) })
+		const y = Math.floor(d/365)
+		return d >= 730 ? tFn('follow.year_ago_many', { n: y }) : tFn('follow.year_ago_one', { n: y })
 	}
 
-	const title = $derived(mode === 'followers' ? `Abonnés de ${username}` : `Abonnements de ${username}`)
+	const title = $derived(mode === 'followers'
+		? tFn('follow.followers_title', { name: username })
+		: tFn('follow.following_title', { name: username }))
 	const emptyMsg = $derived(mode === 'followers'
-		? `${username} n'a pas encore d'abonnés.`
-		: `${username} ne suit personne pour l'instant.`)
+		? tFn('follow.empty_followers', { name: username })
+		: tFn('follow.empty_following', { name: username }))
 </script>
 
 <svelte:head><title>{title} · Nodyx</title></svelte:head>
 
 <div class="fl-page">
 	<header class="fl-header">
-		<a href={`/users/${username}`} class="fl-back" aria-label="Retour au profil">
+		<a href={`/users/${username}`} class="fl-back" aria-label={tFn('follow.back')}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 			</svg>
 		</a>
 		<div class="fl-title-wrap">
 			<h1 class="fl-title">{title}</h1>
-			<p class="fl-count"><span class="fl-count-num">{users.length}</span> {mode === 'followers' ? 'abonné' : 'abonnement'}{users.length !== 1 ? 's' : ''}</p>
+			<p class="fl-count"><span class="fl-count-num">{users.length}</span> {mode === 'followers' ? (users.length !== 1 ? tFn('follow.follower_many') : tFn('follow.follower_one')) : (users.length !== 1 ? tFn('follow.following_many') : tFn('follow.following_one'))}</p>
 		</div>
 	</header>
 
