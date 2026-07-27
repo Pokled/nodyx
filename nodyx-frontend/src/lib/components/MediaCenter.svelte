@@ -9,6 +9,9 @@
         voiceStore,
         type DisplaySurface,
     } from '$lib/voice'
+    import { t } from '$lib/i18n'
+
+    const tFn = $derived($t)
 
     // ── Derived state ──────────────────────────────────────────────
     const isSharing     = $derived($screenShareStore)
@@ -103,10 +106,10 @@
     }
 
     // ── Source picker ─────────────────────────────────────────────
-    const SOURCES: { surface: DisplaySurface; icon: string; label: string; desc: string }[] = [
-        { surface: 'monitor', icon: '🖥️', label: 'Écran entier',     desc: 'Tout votre bureau' },
-        { surface: 'window',  icon: '🪟',  label: 'Application',      desc: 'Une fenêtre ouverte' },
-        { surface: 'browser', icon: '🌐',  label: 'Onglet',           desc: 'Un onglet navigateur' },
+    const SOURCES: { surface: DisplaySurface; icon: string; labelKey: string; descKey: string }[] = [
+        { surface: 'monitor', icon: '🖥️', labelKey: 'screenshare.src.monitor.label', descKey: 'screenshare.src.monitor.desc' },
+        { surface: 'window',  icon: '🪟',  labelKey: 'screenshare.src.window.label', descKey: 'screenshare.src.window.desc' },
+        { surface: 'browser', icon: '🌐',  labelKey: 'screenshare.src.browser.label', descKey: 'screenshare.src.browser.desc' },
     ]
 </script>
 
@@ -124,7 +127,7 @@
                 onclick={stopScreenShare}
                 class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 animate-pulse"
             >
-                ⏹ Arrêter
+                {tFn('media_center.stop')}
             </button>
         {/if}
     </div>
@@ -134,7 +137,7 @@
         <!-- ── Picker source ─────────────────────────────────── -->
         <div>
             <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">
-                Que souhaitez-vous partager ?
+                {tFn('media_center.what_share')}
             </p>
             <div class="grid grid-cols-3 gap-2">
                 {#each SOURCES as src}
@@ -147,8 +150,8 @@
                         <span class="text-2xl group-hover/src:scale-110 transition-transform duration-200 leading-none">
                             {src.icon}
                         </span>
-                        <span class="text-xs font-semibold text-gray-200 leading-tight">{src.label}</span>
-                        <span class="text-[10px] text-gray-500 leading-tight">{src.desc}</span>
+                        <span class="text-xs font-semibold text-gray-200 leading-tight">{tFn(src.labelKey)}</span>
+                        <span class="text-[10px] text-gray-500 leading-tight">{tFn(src.descKey)}</span>
                     </button>
                 {/each}
             </div>
@@ -169,12 +172,12 @@
                 <button
                     onclick={takeSnapshot}
                     class="bg-white/10 backdrop-blur-md p-2.5 rounded-full hover:bg-white/20 border border-white/10 transition-transform hover:scale-110"
-                    title="Capture instantanée"
+                    title={tFn('media_center.snapshot')}
                 >📸</button>
                 <button
                     onclick={saveClip}
                     class="bg-red-500/20 backdrop-blur-md p-2.5 rounded-full hover:bg-red-500/40 border border-red-500/20 transition-transform hover:scale-110"
-                    title="Sauvegarder le dernier clip (60s)"
+                    title={tFn('stage.saveclip_title')}
                 >🎞️</button>
             </div>
 
@@ -199,7 +202,7 @@
                     <div class="space-y-1">
                         <p class="text-xs text-gray-400 flex items-center gap-1.5">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                            {peer?.username ?? 'Participant'} partage son écran
+                            {tFn('media_center.sharing', { name: peer?.username ?? tFn('stage.participant') })}
                         </p>
                         <div class="relative bg-black rounded-lg overflow-hidden border border-gray-700 aspect-video">
                             <video

@@ -1940,5 +1940,9 @@
   "chsidebar.dismiss": "Fermer",
   "chsidebar.text_section": "Texte",
   "chsidebar.voice_section": "Vocal",
-  "chsidebar.mic_error": "Micro inaccessible"
+  "chsidebar.mic_error": "Micro inaccessible",
+  "media_center.stop": "⏹ Arrêter",
+  "media_center.snapshot": "Capture instantanée",
+  "media_center.sharing": "{{name}} partage son écran",
+  "media_center.what_share": "Que souhaitez-vous partager ?"
 }
