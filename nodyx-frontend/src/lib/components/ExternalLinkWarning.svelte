@@ -18,6 +18,9 @@
 <script lang="ts">
 	import { pendingExternalLink, dismissExternalLink } from '$lib/stores/externalLinkGuard'
 	import { analyzeUrl, splitForDisplay, type RedFlag } from '$lib/urlAnalysis'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	const link = $derived($pendingExternalLink)
 	const analysis = $derived(link ? analyzeUrl(link.url) : null)
@@ -88,12 +91,12 @@
 					</svg>
 				</div>
 				<div>
-					<h2 id="elg-title" class="elg-title">Tu sors de Nodyx</h2>
+					<h2 id="elg-title" class="elg-title">{tFn('elg.title')}</h2>
 					<p class="elg-subtitle">
-						Nodyx <strong>ne peut pas garantir</strong> la sécurité de ce site. Vérifie le domaine avant de cliquer.
+						{@html tFn('elg.subtitle')}
 					</p>
 				</div>
-				<button onclick={onCancel} class="elg-close" aria-label="Annuler">
+				<button onclick={onCancel} class="elg-close" aria-label={tFn('elg.cancel')}>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
 					</svg>
@@ -102,7 +105,7 @@
 
 			<!-- ── URL display ──────────────────────────────────────────────── -->
 			<div class="elg-url-box">
-				<div class="elg-url-label">Destination du lien</div>
+				<div class="elg-url-label">{tFn('elg.url_label')}</div>
 				<div id="elg-url-display" class="elg-url-display">
 					{#if parts.scheme}<span class="elg-url-scheme">{parts.scheme}://</span>{/if}<span
 						class="elg-url-hostname"
@@ -110,15 +113,14 @@
 					>{parts.hostname}</span><span class="elg-url-path">{parts.pathRest}</span>
 				</div>
 				<div class="elg-url-hint">
-					Le vrai site est <strong>{parts.hostname}</strong> (en gras).
-					Lis le domaine de la droite vers la gauche en t'arrêtant au premier point.
+					{@html tFn('elg.url_hint', { hostname: parts.hostname })}
 				</div>
 			</div>
 
 			<!-- ── Flags détectés ───────────────────────────────────────────── -->
 			{#if analysis.flags.length > 0}
 				<div class="elg-section">
-					<div class="elg-section-title">🚩 Signaux détectés automatiquement</div>
+					<div class="elg-section-title">{tFn('elg.signals_title')}</div>
 					<ul class="elg-flag-list">
 						{#each analysis.flags as f}
 							<li class="elg-flag {flagColor(f.severity)}">
@@ -137,10 +139,9 @@
 
 			<!-- ── Pièges visuels à vérifier soi-même ──────────────────────── -->
 			<div class="elg-section elg-section--education">
-				<div class="elg-section-title">🧠 Vérifie aussi par toi-même</div>
+				<div class="elg-section-title">{tFn('elg.self_check_title')}</div>
 				<p class="elg-edu-intro">
-					Notre détection ne voit pas tout. Les attaquants exploitent des caractères qui se
-					ressemblent visuellement. À l'œil nu, vérifie&nbsp;:
+					{@html tFn('elg.edu_intro')}
 				</p>
 				<div class="elg-confusables">
 					<div class="elg-confusable">
@@ -183,15 +184,15 @@
 				<div class="elg-edu-tips">
 					<div class="elg-edu-tip">
 						<span class="elg-edu-tip-num">1</span>
-						<span>Lis le domaine <strong>de la fin vers le début</strong>. Le vrai site est juste avant le premier <code>/</code>.</span>
+						<span>{@html tFn('elg.tip1')}</span>
 					</div>
 					<div class="elg-edu-tip">
 						<span class="elg-edu-tip-num">2</span>
-						<span>Si tu ne connais pas l'expéditeur, ou si le lien arrive sans contexte, <strong>ne clique pas</strong>. Demande confirmation par un autre canal.</span>
+						<span>{@html tFn('elg.tip2')}</span>
 					</div>
 					<div class="elg-edu-tip">
 						<span class="elg-edu-tip-num">3</span>
-						<span>En cas de doute, <strong>copie l'URL</strong> ci-dessus et colle-la dans la barre d'adresse de ton navigateur. Tu verras exactement où tu vas.</span>
+						<span>{@html tFn('elg.tip3')}</span>
 					</div>
 				</div>
 			</div>
@@ -199,20 +200,20 @@
 			<!-- ── Actions ──────────────────────────────────────────────────── -->
 			<footer class="elg-actions">
 				<button onclick={onCancel} class="elg-btn elg-btn--cancel">
-					Annuler
+					{tFn('elg.cancel')}
 				</button>
 				<button onclick={onCopy} class="elg-btn elg-btn--copy">
 					{#if copyState === 'copied'}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="elg-btn-icon">
 							<polyline points="20 6 9 17 4 12"/>
 						</svg>
-						URL copiée
+						{tFn('elg.url_copied')}
 					{:else}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="elg-btn-icon">
 							<rect x="9" y="9" width="13" height="13" rx="2"/>
 							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
 						</svg>
-						Copier l'URL
+						{tFn('elg.copy_url')}
 					{/if}
 				</button>
 				<button onclick={onProceed} class="elg-btn elg-btn--leave" class:elg-btn--leave-danger={analysis.highestSeverity === 'high'}>
@@ -297,7 +298,7 @@
 		margin: 0;
 		color: #94a3b8;
 	}
-	.elg-subtitle strong { color: #fca5a5; }
+	.elg-subtitle :global(strong) { color: #fca5a5; }
 	.elg-close {
 		position: absolute;
 		top: 14px;
@@ -353,7 +354,7 @@
 		color: #64748b;
 		line-height: 1.5;
 	}
-	.elg-url-hint strong { color: #cbd5e1; }
+	.elg-url-hint :global(strong) { color: #cbd5e1; }
 
 	/* Sections */
 	.elg-section {
@@ -431,8 +432,8 @@
 		color: #cbd5e1;
 		line-height: 1.5;
 	}
-	.elg-edu-tip strong { color: #f1f5f9; }
-	.elg-edu-tip code {
+	.elg-edu-tip :global(strong) { color: #f1f5f9; }
+	.elg-edu-tip :global(code) {
 		background: rgba(255, 255, 255, 0.06);
 		padding: 1px 5px;
 		border-radius: 3px;

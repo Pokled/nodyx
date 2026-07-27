@@ -1751,5 +1751,18 @@
   "screenshare.choose": "Choisissez ce que vous souhaitez montrer",
   "screenshare.unavailable": "Indisponible sur cet appareil",
   "screenshare.mobile_desc2": "Pour partager, utilisez un <strong style=\"color: rgb(209,213,219)\">ordinateur</strong>. En revanche, <strong style=\"color: rgb(209,213,219)\">regarder</strong> le partage de quelqu'un fonctionne parfaitement ici, son compris.",
-  "screenshare.understood": "J'ai compris"
+  "screenshare.understood": "J'ai compris",
+  "elg.title": "Tu sors de Nodyx",
+  "elg.subtitle": "Nodyx <strong>ne peut pas garantir</strong> la sécurité de ce site. Vérifie le domaine avant de cliquer.",
+  "elg.cancel": "Annuler",
+  "elg.url_hint": "Le vrai site est <strong>{{hostname}}</strong> (en gras). Lis le domaine de la droite vers la gauche en t'arrêtant au premier point.",
+  "elg.signals_title": "🚩 Signaux détectés automatiquement",
+  "elg.self_check_title": "🧠 Vérifie aussi par toi-même",
+  "elg.edu_intro": "Notre détection ne voit pas tout. Les attaquants exploitent des caractères qui se ressemblent visuellement. À l'œil nu, vérifie&nbsp;:",
+  "elg.tip1": "Lis le domaine <strong>de la fin vers le début</strong>. Le vrai site est juste avant le premier <code>/</code>.",
+  "elg.tip2": "Si tu ne connais pas l'expéditeur, ou si le lien arrive sans contexte, <strong>ne clique pas</strong>. Demande confirmation par un autre canal.",
+  "elg.tip3": "En cas de doute, <strong>copie l'URL</strong> ci-dessus et colle-la dans la barre d'adresse de ton navigateur. Tu verras exactement où tu vas.",
+  "elg.url_copied": "URL copiée",
+  "elg.copy_url": "Copier l'URL",
+  "elg.url_label": "Destination du lien"
 }
