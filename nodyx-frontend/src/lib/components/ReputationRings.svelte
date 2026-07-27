@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
+
 	let {
 		longevity   = 0,   // 0–1 — days active / 365
 		quality     = 0,   // 0–1 — XP points / 500
@@ -12,27 +16,30 @@
 	} = $props()
 
 	// Ring geometry + tooltip descriptions
+	const longevityDays = $derived(Math.round(longevity * 365))
 	const rings = $derived([
 		{
 			r: 52,
-			label: 'Longévité',
+			label: tFn('reprings.longevity'),
 			color: accent,
 			value: longevity,
-			tooltip: `Ancienneté dans la communauté.\n1 an = 100 % — actuellement ${Math.round(longevity * 365)} jour${Math.round(longevity * 365) > 1 ? 's' : ''} sur 365.`,
+			tooltip: longevityDays > 1
+				? tFn('reprings.tt_longevity_many', { days: longevityDays })
+				: tFn('reprings.tt_longevity_one', { days: longevityDays }),
 		},
 		{
 			r: 38,
-			label: 'Qualité',
+			label: tFn('reprings.quality'),
 			color: '#8b5cf6',
 			value: quality,
-			tooltip: `Points XP accumulés via vos contributions.\n500 XP = 100 % — mesure la régularité et l'impact de vos posts.`,
+			tooltip: tFn('reprings.tt_quality'),
 		},
 		{
 			r: 24,
-			label: 'Engagement',
+			label: tFn('reprings.engagement'),
 			color: '#14b8a6',
 			value: engagement,
-			tooltip: `Ratio de discussions initiées vs réponses.\nUn engagement de 100 % = vous créez autant que vous participez.`,
+			tooltip: tFn('reprings.tt_engagement'),
 		},
 	])
 
@@ -84,17 +91,17 @@
 
 		<!-- Header row -->
 		<div class="flex items-center justify-between mb-1">
-			<p class="text-xs uppercase tracking-widest font-medium" style="color: var(--p-text-muted)">Réputation</p>
+			<p class="text-xs uppercase tracking-widest font-medium" style="color: var(--p-text-muted)">{tFn('reprings.title')}</p>
 			<a
 				href="/reputation"
 				class="text-[10px] flex items-center gap-1 transition-opacity opacity-50 hover:opacity-100"
 				style="color: var(--p-text-muted)"
-				title="Comment ce score est calculé"
+				title={tFn('reprings.how_title')}
 			>
 				<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
 				</svg>
-				Comment ça marche ?
+				{tFn('reprings.how_link')}
 			</a>
 		</div>
 
