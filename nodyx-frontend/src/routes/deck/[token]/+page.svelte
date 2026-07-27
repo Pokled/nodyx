@@ -3,6 +3,9 @@
 	import { browser } from '$app/environment'
 	import { page } from '$app/state'
 	import { PUBLIC_API_URL } from '$env/static/public'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	// Screen Wake Lock API : empêche l'écran de s'éteindre pendant que le deck
 	// est ouvert. Standard W3C, supportée par Chrome Android, Safari iOS 16.4+,
@@ -170,10 +173,10 @@
 				body:    JSON.stringify({ buttonId: b.id }),
 			})
 			const data = await res.json().catch(() => ({})) as { ok?: boolean; message?: string }
-			flash(data.message ?? (data.ok ? 'OK' : 'Échec'), !!data.ok)
+			flash(data.message ?? (data.ok ? 'OK' : tFn('deck.failure')), !!data.ok)
 			if (data.ok) vibrate([30, 40, 30])
 		} catch {
-			flash('Erreur réseau', false)
+			flash(tFn('deck.network_error'), false)
 		} finally {
 			pressing = null
 		}
@@ -229,11 +232,11 @@
 		if (wakeLockActive) {
 			wakeLockUserOff = true
 			await releaseWakeLock()
-			flash('Écran libre (peut s\'éteindre)', true)
+			flash(tFn('deck.screen_free'), true)
 		} else {
 			wakeLockUserOff = false
 			await requestWakeLock()
-			flash(wakeLockActive ? 'Écran maintenu allumé' : 'Wake Lock indisponible', wakeLockActive)
+			flash(wakeLockActive ? tFn('deck.screen_kept') : tFn('deck.wakelock_unavailable'), wakeLockActive)
 		}
 	}
 
@@ -344,14 +347,14 @@
 		<div class="h-full grid place-items-center">
 			<div class="flex flex-col items-center gap-3">
 				<div class="w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin"></div>
-				<div class="text-xs text-slate-400">Chargement du deck…</div>
+				<div class="text-xs text-slate-400">{tFn('deck.loading')}</div>
 			</div>
 		</div>
 	{:else if status === 'invalid'}
 		<div class="h-full grid place-items-center px-6">
 			<div class="text-center space-y-2">
 				<div class="text-rose-400 text-4xl">🔒</div>
-				<div class="text-sm text-rose-200">Token invalide ou révoqué.</div>
+				<div class="text-sm text-rose-200">{tFn('deck.invalid_token')}</div>
 				<div class="text-[11px] text-slate-500">Demande un nouveau lien au streamer.</div>
 			</div>
 		</div>
@@ -362,7 +365,7 @@
 				<div class="text-sm text-amber-200">Impossible de se connecter au serveur.</div>
 				<button onclick={bootstrap} type="button"
 					class="mt-2 text-xs bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-100 px-4 py-1.5 rounded">
-					Réessayer
+					{tFn('deck.retry')}
 				</button>
 			</div>
 		</div>
@@ -383,8 +386,8 @@
 				{#if fullscreenSupported}
 					<button type="button" onclick={toggleFullscreen}
 						class="text-slate-500 hover:text-cyan-300 transition-colors"
-						aria-label={isFullscreen ? 'Quitter le plein écran' : 'Passer en plein écran'}
-						title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran (masque la barre du navigateur)'}>
+						aria-label={isFullscreen ? tFn('deck.exit_fullscreen') : tFn('deck.enter_fullscreen')}
+						title={isFullscreen ? tFn('deck.exit_fullscreen') : tFn('deck.fullscreen_hint')}>
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							{#if isFullscreen}
 								<path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/>
@@ -397,8 +400,8 @@
 				{#if wakeLockSupported}
 					<button type="button" onclick={toggleWakeLock}
 						class="inline-flex items-center gap-1 transition-colors {wakeLockActive ? 'text-cyan-300 hover:text-cyan-200' : 'text-slate-500 hover:text-slate-300'}"
-						aria-label={wakeLockActive ? 'Écran maintenu allumé, cliquer pour libérer' : 'Écran libre, cliquer pour le garder allumé'}
-						title={wakeLockActive ? 'Écran maintenu allumé' : 'Cliquer pour garder l\'écran allumé'}>
+						aria-label={wakeLockActive ? tFn('deck.wakelock_on_aria') : tFn('deck.wakelock_off_aria')}
+						title={wakeLockActive ? tFn('deck.screen_kept') : tFn('deck.keep_screen_hint')}>
 						<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
 							{#if wakeLockActive}
 								<path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
@@ -406,12 +409,12 @@
 								<path fill-rule="evenodd" d="M3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm.293 6.707a1 1 0 010-1.414L9 7.586l5.707 5.707a1 1 0 01-1.414 1.414L9 10.414l-4.293 4.293a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
 							{/if}
 						</svg>
-						<span>{wakeLockActive ? 'écran on' : 'écran off'}</span>
+						<span>{wakeLockActive ? tFn('deck.screen_on') : tFn('deck.screen_off')}</span>
 					</button>
 				{/if}
 				<span class="text-emerald-400 inline-flex items-center gap-1 pointer-events-none">
 					<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-					connecté
+					{tFn('deck.connected')}
 				</span>
 			</div>
 		</header>
@@ -466,13 +469,13 @@
 		<!-- Zone chat : iframe officielle Twitch (parent = domaine courant) -->
 		{#snippet chatZone()}
 			{#if chatEmbedUrl}
-				<iframe src={chatEmbedUrl} title="Chat Twitch" class="w-full h-full block border-0 bg-slate-950"></iframe>
+				<iframe src={chatEmbedUrl} title={tFn('deck.chat_title')} class="w-full h-full block border-0 bg-slate-950"></iframe>
 			{:else}
 				<div class="h-full grid place-items-center px-6 text-center">
 					<div class="space-y-2 text-slate-400">
 						<div class="text-3xl">💬</div>
-						<div class="text-sm">Chat indisponible</div>
-						<div class="text-[11px] text-slate-500">Aucune chaîne Twitch connectée au Hub.</div>
+						<div class="text-sm">{tFn('deck.chat_unavailable')}</div>
+						<div class="text-[11px] text-slate-500">{tFn('deck.no_channel')}</div>
 					</div>
 				</div>
 			{/if}
