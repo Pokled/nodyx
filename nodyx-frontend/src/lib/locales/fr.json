@@ -1901,5 +1901,15 @@
   "canvas_toolbar.eraser": "Effaceur",
   "canvas_toolbar.pick_color": "Choisir une couleur",
   "canvas_toolbar.clear_all": "Effacer tout",
-  "canvas_toolbar.close_table": "Fermer la table"
+  "canvas_toolbar.close_table": "Fermer la table",
+  "poll_creator.slot_label": "{{date}} à {{time}}",
+  "poll_creator.create_error": "Erreur lors de la création",
+  "poll_creator.title": "Créer un sondage",
+  "poll_creator.gen_slots": "+ Générer les créneaux",
+  "poll_creator.start_ph": "Début",
+  "poll_creator.unlimited_ph": "Illimité",
+  "poll_creator.creating": "Création…",
+  "poll_creator.create_btn": "📊 Créer le sondage",
+  "poll_creator.poll_of": "Sondage — {{type}}",
+  "poll_creator.type_prefix": "Type :"
 }

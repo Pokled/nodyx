@@ -112,7 +112,7 @@
       const end    = new Date(start.getTime() + 60 * 60 * 1000) // +1h
       return {
         id:          crypto.randomUUID(),
-        label:       `${new Intl.DateTimeFormat([], { weekday: 'long', day: 'numeric', month: 'long' }).format(start)} à ${time}`,
+        label:       tFn('poll_creator.slot_label', { date: new Intl.DateTimeFormat([], { weekday: 'long', day: 'numeric', month: 'long' }).format(start), time }),
         description: '',
         image_url:   '',
         date_start:  start.toISOString().slice(0, 16),
@@ -186,7 +186,7 @@
         onCreated?.(data.poll)
         onClose?.()
       } else {
-        error = data.error ?? 'Erreur lors de la création'
+        error = data.error ?? tFn('poll_creator.create_error')
       }
     } finally {
       submitting = false
@@ -207,10 +207,10 @@
   <div class="creator-header">
     <h2>
       {#if step === 'type'}
-        Créer un sondage
+        {tFn('poll_creator.title')}
       {:else}
         {TYPE_INFO.find(t => t.type === pollType)?.icon}
-        Sondage — {TYPE_INFO.find(t => t.type === pollType)?.label}
+        {tFn('poll_creator.poll_of', { type: TYPE_INFO.find(t => t.type === pollType)?.label ?? '' })}
       {/if}
     </h2>
     <button class="btn-close" onclick={() => onClose?.()}>✕</button>
@@ -278,7 +278,7 @@
                 </div>
               </div>
               <button class="btn-generate" onclick={generateScheduleSlots} disabled={!bulkDate}>
-                + Générer les créneaux
+                {tFn('poll_creator.gen_slots')}
               </button>
             </div>
           {/if}
@@ -304,7 +304,7 @@
                         <input
                           type="datetime-local"
                           bind:value={opt.date_start}
-                          placeholder="Début"
+                          placeholder={tFn('poll_creator.start_ph')}
                           class="input-datetime"
                         />
                         <input
@@ -362,7 +362,7 @@
               <div class="field sub-field" in:fly={{ y: -6, duration: 150 }}>
                 <label for="max-choices">{tFn('poll.max_choices_label')}</label>
                 <input id="max-choices" type="number" bind:value={maxChoices}
-                  min="2" max="20" placeholder="Illimité" />
+                  min="2" max="20" placeholder={tFn('poll_creator.unlimited_ph')} />
               </div>
             {/if}
           {/if}
@@ -386,7 +386,7 @@
           <div class="settings-recap">
             <div class="recap-row">
               <span class="recap-icon">{TYPE_INFO.find(t => t.type === pollType)?.icon}</span>
-              <span>Type : <strong>{TYPE_INFO.find(t => t.type === pollType)?.label}</strong></span>
+              <span>{tFn('poll_creator.type_prefix')} <strong>{TYPE_INFO.find(t => t.type === pollType)?.label}</strong></span>
             </div>
             {#if pollType === 'choice' && multiple}
               <div class="recap-row">
@@ -427,7 +427,7 @@
         onclick={submit}
         disabled={!isValid() || submitting}
       >
-        {submitting ? 'Création…' : '📊 Créer le sondage'}
+        {submitting ? tFn('poll_creator.creating') : tFn('poll_creator.create_btn')}
       </button>
     </div>
   {/if}
