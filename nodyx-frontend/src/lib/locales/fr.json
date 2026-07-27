@@ -1835,5 +1835,15 @@
   "table.kick_confirm": "Exclure {{name}} du salon vocal ?",
   "table.invalid_youtube": "Lien YouTube invalide. Exemples : youtube.com/watch?v=... ou youtu.be/...",
   "table.join": "Rejoindre",
-  "table.you": "Vous"
+  "table.you": "Vous",
+  "about.meta_title": "À propos de Nodyx",
+  "about.logo_alt": "Nodyx",
+  "about.tagline": "Plateforme communautaire libre, auto-hébergée et décentralisée. Forum + chat temps réel + vocal, sans GAFAM, sans analytics, sans silos. Une instance = une communauté.",
+  "about.this_release": "Cette release",
+  "about.release_notes": "Voir les notes sur GitHub →",
+  "about.history": "Historique",
+  "about.all_versions": "Toutes les versions →",
+  "about.source_code": "Code source",
+  "about.license_label": "Licence",
+  "about.license": "Nodyx est un logiciel libre publié sous licence AGPL-3.0. Toute modification déployée publiquement doit être partagée sous la même licence. Aucune télémétrie n'est envoyée à un service tiers. Les données de cette instance restent sur le serveur qui l'héberge."
 }
