@@ -1801,5 +1801,20 @@
   "pedit.url_ph": "https://…",
   "pedit.label_ph": "Label",
   "pedit.avatar_section": "Avatar",
-  "pedit.customize": "Personnaliser"
+  "pedit.customize": "Personnaliser",
+  "wiki_new.meta_title": "Nouvelle page — Wiki",
+  "wiki_new.breadcrumb": "Nouvelle page",
+  "wiki_new.h1": "Créer une page wiki",
+  "wiki_new.title_ph": "Titre de la page",
+  "wiki_new.category": "Catégorie",
+  "wiki_new.category_ph": "ex: Règles, Tutoriels, FAQ…",
+  "wiki_new.summary": "Résumé",
+  "wiki_new.summary_hint": "(affiché dans la liste)",
+  "wiki_new.summary_ph": "Une phrase décrivant le contenu de la page…",
+  "wiki_new.content_ph": "Rédigez le contenu de la page…",
+  "wiki_new.cancel": "Annuler",
+  "wiki_new.publish": "Publier la page",
+  "wiki_new.title_label": "Titre",
+  "wiki_new.public": "Page publique",
+  "wiki_new.content_label": "Contenu"
 }
