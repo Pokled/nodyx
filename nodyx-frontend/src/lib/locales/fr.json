@@ -1776,5 +1776,22 @@
   "voice_panel.undeafen": "Réactiver le son",
   "voice_panel.deafen": "Se rendre sourd",
   "voice_panel.close_settings": "Fermer les paramètres audio",
-  "voice_panel.active": "Vocal actif"
+  "voice_panel.active": "Vocal actif",
+  "library.equip_frame": "Équiper comme cadre",
+  "library.equip_banner": "Équiper comme bannière",
+  "library.equip_badge": "Équiper comme badge",
+  "library.detail_title": "{{name}} — Bibliothèque Nodyx",
+  "library.back_to": "← Retour à la bibliothèque",
+  "library.equipped_toast": "Asset équipé sur ton profil !",
+  "library.view_profile": "Voir mon profil →",
+  "library.downloads_one": "{{count}} téléchargement",
+  "library.downloads_many": "{{count}} téléchargements",
+  "library.copied": "Copié !",
+  "library.copy_shortcode": "Copier le raccourci",
+  "library.equipped": "✓ Équipé",
+  "library.p2p_available": "Un pair P2P a cet asset — téléchargement direct ⚡",
+  "library.download_server": "Télécharger depuis le serveur",
+  "library.download": "Télécharger",
+  "library.shared_on": "Partagé le {{date}}",
+  "library.error_generic": "Une erreur est survenue."
 }

@@ -4,7 +4,10 @@
 	import { goto } from '$app/navigation'
 	import { page } from '$app/stores'
 	import { p2pManager, p2pAssetPeers } from '$lib/p2p'
+	import { t } from '$lib/i18n'
 	import { browser } from '$app/environment'
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props()
 	const asset = $derived(data.asset)
@@ -39,9 +42,9 @@
 		}).catch(() => {})
 	}
 	const equipLabel  = $derived(
-		asset.asset_type === 'frame'  ? 'Équiper comme cadre'   :
-		asset.asset_type === 'banner' ? 'Équiper comme bannière' :
-		asset.asset_type === 'badge'  ? 'Équiper comme badge'    : ''
+		asset.asset_type === 'frame'  ? tFn('library.equip_frame')  :
+		asset.asset_type === 'banner' ? tFn('library.equip_banner') :
+		asset.asset_type === 'badge'  ? tFn('library.equip_badge')  : ''
 	)
 
 	// Token from layout data (HttpOnly cookie — not accessible via document.cookie)
@@ -131,12 +134,12 @@
 </script>
 
 <svelte:head>
-	<title>{asset.name} — Bibliothèque Nodyx</title>
+	<title>{tFn('library.detail_title', { name: asset.name })}</title>
 </svelte:head>
 
 <div class="max-w-3xl mx-auto px-4 py-8">
 	<a href="/library" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-300 mb-6 transition-colors">
-		← Retour à la bibliothèque
+		{tFn('library.back_to')}
 	</a>
 
 	<!-- Equip toast -->
@@ -148,10 +151,10 @@
 			<span>{equipToast === 'ok' ? '✅' : '❌'}</span>
 			<span class="text-sm">
 				{#if equipToast === 'ok'}
-					Asset équipé sur ton profil !
-					<a href="/users/{me?.username}" class="underline text-indigo-400 hover:text-indigo-300 ml-1">Voir mon profil →</a>
+					{tFn('library.equipped_toast')}
+					<a href="/users/{me?.username}" class="underline text-indigo-400 hover:text-indigo-300 ml-1">{tFn('library.view_profile')}</a>
 				{:else}
-					Une erreur est survenue.
+					{tFn('library.error_generic')}
 				{/if}
 			</span>
 		</div>
@@ -186,10 +189,10 @@
 					<p class="text-sm text-gray-500 mt-0.5">
 						{TYPE_ICONS[asset.asset_type]} {asset.asset_type}
 						&nbsp;·&nbsp; {(asset.file_size / 1024).toFixed(1)} Ko
-						&nbsp;·&nbsp; {asset.downloads} téléchargement{asset.downloads !== 1 ? 's' : ''}
+						&nbsp;·&nbsp; {asset.downloads !== 1 ? tFn('library.downloads_many', { count: asset.downloads }) : tFn('library.downloads_one', { count: asset.downloads })}
 					</p>
 					{#if emojiShortcode}
-						<button onclick={copyShortcode} title={copiedCode ? 'Copié !' : 'Copier le raccourci'}
+						<button onclick={copyShortcode} title={copiedCode ? tFn('library.copied') : tFn('library.copy_shortcode')}
 							class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-white/[0.06] border border-white/10 hover:border-white/25 transition-colors">
 							<span class="font-mono" style="color: var(--nx-accent-soft)">:{emojiShortcode}:</span>
 							<span style="color: {copiedCode ? '#4ade80' : '#6b7280'}">{copiedCode ? '✓' : '⧉'}</span>
@@ -204,16 +207,16 @@
 							class="px-4 py-2 rounded-lg disabled:opacity-50 text-sm font-semibold text-white transition-colors
 							       {equipped ? 'bg-gray-700 cursor-default' : 'bg-emerald-700 hover:bg-emerald-600'}"
 						>
-							{equipping ? '…' : equipped ? '✓ Équipé' : equipLabel}
+							{equipping ? '…' : equipped ? tFn('library.equipped') : equipLabel}
 						</button>
 					{/if}
 					<button
 						onclick={downloadAsset}
 						class="relative px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors
 						       {p2pAvailable ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-indigo-600 hover:bg-indigo-500'}"
-						title={p2pAvailable ? 'Un pair P2P a cet asset — téléchargement direct ⚡' : 'Télécharger depuis le serveur'}
+						title={p2pAvailable ? tFn('library.p2p_available') : tFn('library.download_server')}
 					>
-						{#if p2pAvailable}⚡{/if} Télécharger
+						{#if p2pAvailable}⚡{/if} {tFn('library.download')}
 						{#if downloadSource === 'p2p'}
 							<span class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-yellow-400 text-yellow-900 text-[9px] font-black leading-none">P2P</span>
 						{:else if downloadSource === 'server'}
@@ -235,7 +238,7 @@
 				</div>
 			{/if}
 
-			<p class="mt-4 text-xs text-gray-600">Partagé le {formatDate(asset.created_at)}</p>
+			<p class="mt-4 text-xs text-gray-600">{tFn('library.shared_on', { date: formatDate(asset.created_at) })}</p>
 		</div>
 	</div>
 </div>
