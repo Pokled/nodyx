@@ -1951,5 +1951,13 @@
   "grid_renderer.delete": "Supprimer",
   "grid_renderer.add_widget": "Ajouter un widget",
   "grid_renderer.resize_cols": "Redimensionner les colonnes",
-  "grid_renderer.change": "↩ Changer"
+  "grid_renderer.change": "↩ Changer",
+  "user_card.activity": "Activité — 12 dernières semaines",
+  "user_card.cell_one": "{{date}} · {{count}} contribution",
+  "user_card.cell_many": "{{date}} · {{count}} contributions",
+  "user_card.brand_aria": "Nodyx",
+  "user_card.copy_link": "Copier le lien",
+  "user_card.copied": "Copié !",
+  "user_card.share": "Partager",
+  "user_card.meta_title": "{{name}} — Carte Nodyx"
 }

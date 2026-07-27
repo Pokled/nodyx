@@ -2,6 +2,9 @@
 	import { onMount } from 'svelte'
 	import { browser } from '$app/environment'
 	import GenerativeBanner from '$lib/components/GenerativeBanner.svelte'
+	import { t as i18n } from '$lib/i18n'   // `t` sert de variable locale
+
+	const tFn = $derived($i18n)
 
 	const { data } = $props()
 	const profile  = $derived(data.profile)
@@ -128,7 +131,7 @@
 </script>
 
 <svelte:head>
-	<title>{displayName} — Carte Nodyx</title>
+	<title>{tFn('user_card.meta_title', { name: displayName })}</title>
 	<meta name="description" content="Profil de {displayName} sur Nodyx — Niveau {level}, {Number(profile.post_count??0).toLocaleString('fr-FR')} posts, {Number(pts).toLocaleString('fr-FR')} XP" />
 
 	<!-- Prevent indexing (cards are supplements, not canonical) -->
@@ -248,7 +251,7 @@
 	<!-- ── Activity heatmap ───────────────────────────────────────────────── -->
 	<div class="heatmap-section">
 		<div class="heatmap-header">
-			<span class="heatmap-title">Activité — 12 dernières semaines</span>
+			<span class="heatmap-title">{tFn('user_card.activity')}</span>
 			<span class="heatmap-total">
 				{heatCells.reduce((a, c) => a + c.count, 0)} contributions
 			</span>
@@ -258,7 +261,7 @@
 				<div
 					class="heatmap-cell"
 					style="background: {cellColor(cell.count)}"
-					title="{cell.date} · {cell.count} contribution{cell.count !== 1 ? 's' : ''}"
+					title={cell.count !== 1 ? tFn('user_card.cell_many', { date: cell.date, count: cell.count }) : tFn('user_card.cell_one', { date: cell.date, count: cell.count })}
 				></div>
 			{/each}
 		</div>
@@ -267,7 +270,7 @@
 	<!-- ── Footer actions ─────────────────────────────────────────────────── -->
 	<div class="card-footer">
 		<!-- Nodyx branding -->
-		<a href="/" target="_blank" rel="noopener noreferrer" class="nodyx-brand" aria-label="Nodyx">
+		<a href="/" target="_blank" rel="noopener noreferrer" class="nodyx-brand" aria-label={tFn('user_card.brand_aria')}>
 			<svg width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true">
 				<rect width="32" height="32" rx="4" fill="#6366f1" opacity="0.9"/>
 				<circle cx="16" cy="16" r="5" fill="white" opacity="0.9"/>
@@ -294,18 +297,18 @@
 			</a>
 
 			<!-- Copy link -->
-			<button class="btn-copy" class:btn-copy--done={copied} onclick={copyLink} aria-label="Copier le lien">
+			<button class="btn-copy" class:btn-copy--done={copied} onclick={copyLink} aria-label={tFn('user_card.copy_link')}>
 				{#if copied}
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
 						<polyline points="20 6 9 17 4 12"/>
 					</svg>
-					Copié !
+					{tFn('user_card.copied')}
 				{:else}
 					<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 						<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
 						<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
 					</svg>
-					Partager
+					{tFn('user_card.share')}
 				{/if}
 			</button>
 		</div>
