@@ -55,7 +55,7 @@
 			})
 			if (!res.ok) {
 				const j = await res.json().catch(() => ({}))
-				throw new Error(j.error ?? 'Erreur upload')
+				throw new Error(j.error ?? tFn('pedit.upload_error'))
 			}
 			const { url, family } = await res.json()
 			nameFontFamily = family
@@ -63,7 +63,7 @@
 			nameFontUrl = url.startsWith('http') ? url : base + url
 			if (nameFontUrl) ensureFontLoaded(nameFontFamily, nameFontUrl!)
 		} catch (err: unknown) {
-			fontError = err instanceof Error ? err.message : 'Erreur upload'
+			fontError = err instanceof Error ? err.message : tFn('pedit.upload_error')
 		} finally {
 			fontUploading = false
 		}
@@ -146,7 +146,7 @@
 		})
 		if (!res.ok) {
 			const j = await res.json().catch(() => ({}))
-			throw new Error(j.error ?? 'Erreur upload')
+			throw new Error(j.error ?? tFn('pedit.upload_error'))
 		}
 		const { url } = await res.json()
 		const base = PUBLIC_API_URL.replace('/api/v1', '')
@@ -163,7 +163,7 @@
 			avatarUrl  = await uploadFile('avatar', file)
 			avatarMode = 'url'
 		}
-		catch (err: unknown) { avatarError = err instanceof Error ? err.message : 'Erreur upload' }
+		catch (err: unknown) { avatarError = err instanceof Error ? err.message : tFn('pedit.upload_error') }
 		finally { avatarUploading = false }
 	}
 
@@ -177,13 +177,13 @@
 			bannerUrl  = await uploadFile('banner', file)
 			bannerMode = 'url'
 		}
-		catch (err: unknown) { bannerError = err instanceof Error ? err.message : 'Erreur upload' }
+		catch (err: unknown) { bannerError = err instanceof Error ? err.message : tFn('pedit.upload_error') }
 		finally { bannerUploading = false }
 	}
 </script>
 
 <svelte:head>
-	<title>Modifier mon profil — Nodyx</title>
+	<title>{tFn('pedit.meta_title')}</title>
 </svelte:head>
 
 <!-- ═══════════════════════════════════════════════════════════════
@@ -209,13 +209,13 @@
 			<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"/>
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
 		</svg>
-		Voir mon profil
+		{tFn('pedit.view_profile')}
 	</a>
 
 	<!-- Avatar — overlapping the banner bottom edge, fully visible -->
 	<div class="absolute bottom-0 left-6 translate-y-1/2 w-20 h-20 rounded-full border-4 border-gray-950 overflow-hidden bg-indigo-800 shadow-xl z-10">
 		{#if avatarPreview}
-			<img src={avatarPreview} alt="Avatar" class="w-full h-full object-cover" />
+			<img src={avatarPreview} alt={tFn('pedit.avatar_alt')} class="w-full h-full object-cover" />
 		{:else}
 			<div class="w-full h-full flex items-center justify-center text-white text-2xl font-bold select-none">{initials}</div>
 		{/if}
@@ -346,7 +346,7 @@
 			<!-- Avatar -->
 			<div>
 				<div class="flex items-center justify-between mb-2">
-					<p class="text-xs text-gray-400 font-medium">Avatar</p>
+					<p class="text-xs text-gray-400 font-medium">{tFn('pedit.avatar_section')}</p>
 					{#if avatarPreview}
 						<button type="button" onclick={deleteAvatar}
 							class="text-[11px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
@@ -360,7 +360,7 @@
 				<div class="flex items-center gap-3 mb-3">
 					<div class="w-14 h-14 rounded-full overflow-hidden bg-indigo-800 border-2 border-gray-700 shrink-0">
 						{#if avatarPreview}
-							<img src={avatarPreview} alt="Avatar" class="w-full h-full object-cover" />
+							<img src={avatarPreview} alt={tFn('pedit.avatar_alt')} class="w-full h-full object-cover" />
 						{:else}
 							<div class="w-full h-full flex items-center justify-center text-white text-xl font-bold select-none">{initials}</div>
 						{/if}
@@ -377,7 +377,7 @@
 					</div>
 				</div>
 				{#if avatarMode === 'url'}
-					<input type="url" maxlength="500" placeholder="https://…"
+					<input type="url" maxlength="500" placeholder={tFn('pedit.url_ph')}
 						bind:value={avatarUrl} oninput={() => { avatarPreview = avatarUrl }}
 						class="w-full rounded-lg bg-gray-800/70 border border-gray-700 px-3 py-2 text-white text-sm
 						       placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors" />
@@ -426,7 +426,7 @@
 					</button>
 				</div>
 				{#if bannerMode === 'url'}
-					<input type="url" maxlength="500" placeholder="https://…"
+					<input type="url" maxlength="500" placeholder={tFn('pedit.url_ph')}
 						bind:value={bannerUrl} oninput={() => { bannerPreview = bannerUrl }}
 						class="w-full rounded-lg bg-gray-800/70 border border-gray-700 px-3 py-2 text-white text-sm
 						       placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors" />
@@ -483,7 +483,7 @@
 
 			<!-- Color fine-tuning -->
 			<div class="space-y-3">
-				<p class="text-xs text-gray-400 font-medium">Personnaliser</p>
+				<p class="text-xs text-gray-400 font-medium">{tFn('pedit.customize')}</p>
 				<div class="space-y-2">
 					{#each colorPickers as picker}
 						<div class="flex items-center gap-2.5">
@@ -729,12 +729,12 @@
 				{#each links as link, i}
 					<div class="flex gap-2 items-center">
 						<input name="link_label_{i}" type="text" maxlength="50"
-							placeholder="Label"
+							placeholder={tFn('pedit.label_ph')}
 							bind:value={link.label}
 							class="w-28 shrink-0 rounded-lg bg-gray-800/70 border border-gray-700 px-2.5 py-2 text-white text-xs
 							       placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors" />
 						<input name="link_url_{i}" type="url" maxlength="500"
-							placeholder="https://…"
+							placeholder={tFn('pedit.url_ph')}
 							bind:value={link.url}
 							class="flex-1 rounded-lg bg-gray-800/70 border border-gray-700 px-2.5 py-2 text-white text-xs
 							       placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors" />

@@ -1793,5 +1793,13 @@
   "library.download_server": "Télécharger depuis le serveur",
   "library.download": "Télécharger",
   "library.shared_on": "Partagé le {{date}}",
-  "library.error_generic": "Une erreur est survenue."
+  "library.error_generic": "Une erreur est survenue.",
+  "pedit.upload_error": "Erreur upload",
+  "pedit.meta_title": "Modifier mon profil — Nodyx",
+  "pedit.view_profile": "Voir mon profil",
+  "pedit.avatar_alt": "Avatar",
+  "pedit.url_ph": "https://…",
+  "pedit.label_ph": "Label",
+  "pedit.avatar_section": "Avatar",
+  "pedit.customize": "Personnaliser"
 }
