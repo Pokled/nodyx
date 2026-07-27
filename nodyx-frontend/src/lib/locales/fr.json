@@ -1764,5 +1764,17 @@
   "elg.tip3": "En cas de doute, <strong>copie l'URL</strong> ci-dessus et colle-la dans la barre d'adresse de ton navigateur. Tu verras exactement où tu vas.",
   "elg.url_copied": "URL copiée",
   "elg.copy_url": "Copier l'URL",
-  "elg.url_label": "Destination du lien"
+  "elg.url_label": "Destination du lien",
+  "voice_panel.open_stage": "Ouvrir le Stage",
+  "voice_panel.stage": "Stage",
+  "voice_panel.stop_share": "Arrêter le partage",
+  "voice_panel.share_screen": "Partager l'écran",
+  "voice_panel.unmute": "Réactiver le micro",
+  "voice_panel.mute": "Couper le micro",
+  "voice_panel.to_earpiece": "Repasser dans l'écouteur",
+  "voice_panel.to_speaker": "Basculer sur le haut-parleur",
+  "voice_panel.undeafen": "Réactiver le son",
+  "voice_panel.deafen": "Se rendre sourd",
+  "voice_panel.close_settings": "Fermer les paramètres audio",
+  "voice_panel.active": "Vocal actif"
 }

@@ -695,7 +695,7 @@
                                            ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/50 ring-2 ring-red-400/50"
                                            : "text-red-400 border border-red-500/30 hover:border-red-400/50"}'
                                 style="pointer-events: auto; position: relative; z-index: 102; {!$stageOpenStore ? 'background: rgba(239,68,68,0.08)' : ''}"
-                                title="Ouvrir le Stage"
+                                title={tFn('voice_panel.open_stage')}
                             >
                                 <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
                                 <span class="text-[11px] font-bold uppercase tracking-wider">Stage</span>
@@ -715,7 +715,7 @@
                                        : showShareModal
                                            ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/50 ring-2 ring-indigo-400/50"
                                            : "bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 hover:shadow-lg hover:shadow-emerald-500/20 border border-gray-700 hover:border-emerald-500/30"}'
-                            title={isSharing ? 'Arrêter le partage' : "Partager l'écran"}
+                            title={isSharing ? tFn('voice_panel.stop_share') : tFn('voice_panel.share_screen')}
                             style="pointer-events: auto; position: relative; z-index: 102;"
                         >
                             <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4 {isSharing ? "animate-pulse" : ""}' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
@@ -731,7 +731,7 @@
                                    {muted
                                        ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-900/50 ring-1 ring-red-700/50 animate-pulse'
                                        : 'bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 hover:shadow-lg hover:shadow-indigo-500/20 border border-gray-700 hover:border-indigo-500/30'}'
-                            title={muted ? 'Réactiver le micro' : 'Couper le micro'}
+                            title={muted ? tFn('voice_panel.unmute') : tFn('voice_panel.mute')}
                             style="pointer-events: auto; position: relative; z-index: 101;"
                         >
                             {#if muted}
@@ -760,8 +760,8 @@
                                        {speaker.onSpeaker
                                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-900/50 ring-1 ring-indigo-700/50'
                                            : 'bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-700'}'
-                                title={speaker.onSpeaker ? "Repasser dans l'écouteur" : 'Basculer sur le haut-parleur'}
-                                aria-label={speaker.onSpeaker ? "Repasser dans l'écouteur" : 'Basculer sur le haut-parleur'}
+                                title={speaker.onSpeaker ? tFn('voice_panel.to_earpiece') : tFn('voice_panel.to_speaker')}
+                                aria-label={speaker.onSpeaker ? tFn('voice_panel.to_earpiece') : tFn('voice_panel.to_speaker')}
                                 style="pointer-events: auto; position: relative; z-index: 101;"
                             >
                                 {#if speaker.onSpeaker}
@@ -784,7 +784,7 @@
                                    {deafened
                                        ? 'bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg shadow-red-900/50 ring-1 ring-red-700/50 animate-pulse'
                                        : 'bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 hover:shadow-lg hover:shadow-indigo-500/20 border border-gray-700 hover:border-indigo-500/30'}'
-                            title={deafened ? 'Réactiver le son' : 'Se rendre sourd'}
+                            title={deafened ? tFn('voice_panel.undeafen') : tFn('voice_panel.deafen')}
                             style="pointer-events: auto; position: relative; z-index: 101;"
                         >
                             <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
@@ -898,7 +898,7 @@
                             <div class="sm:hidden flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/95 shrink-0">
                                 <span class="text-sm font-semibold text-white">{tFn('voice.audio_settings_title')}</span>
                                 <button onclick={() => showVoiceSettings = false}
-                                        aria-label="Fermer les paramètres audio"
+                                        aria-label={tFn('voice_panel.close_settings')}
                                         class="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -937,7 +937,7 @@
                     <span class="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-60"></span>
                 {/if}
             </div>
-            <span class="text-xs text-green-400 font-medium flex-1 truncate">Vocal actif</span>
+            <span class="text-xs text-green-400 font-medium flex-1 truncate">{tFn('voice_panel.active')}</span>
             <span class="text-xs text-gray-600 tabular-nums">{peers.length + 1}</span>
         </div>
 
@@ -957,7 +957,7 @@
                     {@const pQuality = getQuality(pStats)}
                     <button
                         onclick={() => openPeerPanel(peer)}
-                        title="{peer.username}"
+                        title={peer.username}
                         class="relative focus:outline-none shrink-0"
                     >
                         {#if peer.avatar}
@@ -986,7 +986,7 @@
             <div class="flex items-center px-1.5 pb-2 gap-0.5">
 
                 <!-- Mute -->
-                <button onclick={toggleMute} title={muted ? 'Réactiver le micro' : 'Couper le micro'}
+                <button onclick={toggleMute} title={muted ? tFn('voice_panel.unmute') : tFn('voice_panel.mute')}
                     class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
                            {muted ? 'text-red-400 bg-red-900/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
                     {#if muted}
@@ -1006,7 +1006,7 @@
                 </button>
 
                 <!-- Deafen -->
-                <button onclick={toggleDeafen} title={deafened ? 'Réactiver le son' : 'Se rendre sourd'}
+                <button onclick={toggleDeafen} title={deafened ? tFn('voice_panel.undeafen') : tFn('voice_panel.deafen')}
                     class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
                            {deafened ? 'text-red-400 bg-red-900/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
@@ -1018,7 +1018,7 @@
                 <!-- Stage (sidebar) -->
                 {#if anySharing}
                     <button onclick={() => { $stageOpenStore = !$stageOpenStore }}
-                        title="Stage"
+                        title={tFn('voice_panel.stage')}
                         class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors text-red-400 bg-red-900/20">
                         <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
                     </button>
@@ -1026,7 +1026,7 @@
 
                 <!-- Partage d'écran (sidebar) -->
                 <button onclick={() => { isSharing ? stopScreenShare() : (showShareModal = !showShareModal) }}
-                    title={isSharing ? 'Arrêter le partage' : "Partager l'écran"}
+                    title={isSharing ? tFn('voice_panel.stop_share') : tFn('voice_panel.share_screen')}
                     class="flex-1 flex items-center justify-center p-1.5 rounded-lg transition-colors
                            {isSharing ? 'text-emerald-400 bg-emerald-900/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
                     <svg xmlns='http://www.w3.org/2000/svg' class='w-4 h-4 {isSharing ? "animate-pulse" : ""}' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
@@ -1062,7 +1062,7 @@
                      role="button" tabindex="-1"
                      onclick={() => showVoiceSettings = false}
                      onkeydown={e => e.key === 'Escape' && (showVoiceSettings = false)}
-                     aria-label="Fermer les paramètres audio">
+                     aria-label={tFn('voice_panel.close_settings')}>
                 </div>
                 <div class="fixed bottom-24 left-1/2 -translate-x-1/2 w-[360px] z-[200]
                             animate-in fade-in slide-in-from-bottom-4 duration-300">
