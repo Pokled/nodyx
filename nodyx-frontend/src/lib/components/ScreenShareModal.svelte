@@ -1,5 +1,8 @@
 <script lang="ts">
     import { startScreenShare, screenShareSupported, type DisplaySurface, type ShareQuality, type ShareFps } from '$lib/voice'
+    import { t } from '$lib/i18n'
+
+    const tFn = $derived($t)
 
     let { onclose }: { onclose: () => void } = $props()
 
@@ -13,10 +16,11 @@
     let selectedFps     = $state<ShareFps>(30)
     let starting        = $state(false)
 
-    const SOURCES: { surface: DisplaySurface; icon: string; label: string; desc: string }[] = [
-        { surface: 'monitor', icon: '🖥️', label: 'Écran entier',  desc: 'Tout votre bureau'     },
-        { surface: 'window',  icon: '🪟',  label: 'Application',   desc: 'Une fenêtre ouverte'   },
-        { surface: 'browser', icon: '🌐',  label: 'Onglet',         desc: 'Un onglet navigateur' },
+    // label/desc résolus via tFn dans le template (labelKey/descKey = clés i18n).
+    const SOURCES: { surface: DisplaySurface; icon: string; labelKey: string; descKey: string }[] = [
+        { surface: 'monitor', icon: '🖥️', labelKey: 'screenshare.src.monitor.label', descKey: 'screenshare.src.monitor.desc' },
+        { surface: 'window',  icon: '🪟',  labelKey: 'screenshare.src.window.label',  descKey: 'screenshare.src.window.desc'  },
+        { surface: 'browser', icon: '🌐',  labelKey: 'screenshare.src.browser.label', descKey: 'screenshare.src.browser.desc' },
     ]
 
     const QUALITIES: { id: ShareQuality; label: string; sub: string; color: string }[] = [
@@ -49,7 +53,7 @@
     role="dialog"
     aria-modal="true"
     tabindex="-1"
-    aria-label="Partager votre écran"
+    aria-label={tFn('screenshare.aria')}
     onkeydown={onOverlayKeydown}
 >
     <!-- Dismiss click outside -->
@@ -67,16 +71,16 @@
         <div class="flex items-center justify-between px-6 pt-6 pb-4"
              style="border-bottom: 1px solid rgba(255,255,255,0.05)">
             <div>
-                <h2 class="text-sm font-bold text-white">Partager votre écran</h2>
+                <h2 class="text-sm font-bold text-white">{tFn('screenshare.aria')}</h2>
                 <p class="text-xs text-gray-500 mt-0.5">
-                    {supported ? 'Choisissez ce que vous souhaitez montrer' : 'Indisponible sur cet appareil'}
+                    {supported ? tFn('screenshare.choose') : tFn('screenshare.unavailable')}
                 </p>
             </div>
             <button
                 onclick={onclose}
                 class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-white transition-colors"
                 style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);"
-                aria-label="Fermer"
+                aria-label={tFn('screenshare.close')}
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -98,18 +102,13 @@
                     </svg>
                     <div class="space-y-1.5">
                         <p class="text-sm font-semibold text-white">
-                            Le partage d'écran n'est pas possible depuis un téléphone
+                            {tFn('screenshare.mobile_title')}
                         </p>
                         <p class="text-xs leading-relaxed" style="color: rgb(156,163,175)">
-                            Ce n'est pas une limite de Nodyx : <strong style="color: rgb(209,213,219)">aucun navigateur
-                            mobile ne sait capturer un écran</strong>. Sur Android comme sur iOS, la capture passe par
-                            une fonction du système réservée aux applications installées, que les pages web n'ont pas le
-                            droit d'utiliser. Aucun site ne peut le faire, quel qu'il soit.
+                            {@html tFn('screenshare.mobile_desc')}
                         </p>
                         <p class="text-xs leading-relaxed" style="color: rgb(156,163,175)">
-                            Pour partager, utilisez un <strong style="color: rgb(209,213,219)">ordinateur</strong>.
-                            En revanche, <strong style="color: rgb(209,213,219)">regarder</strong> le partage de
-                            quelqu'un fonctionne parfaitement ici, son compris.
+                            {@html tFn('screenshare.mobile_desc2')}
                         </p>
                     </div>
                 </div>
@@ -118,7 +117,7 @@
                     class="w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-colors"
                     style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08)"
                 >
-                    J'ai compris
+                    {tFn('screenshare.understood')}
                 </button>
             </div>
         {:else}
@@ -136,8 +135,8 @@
                     >
                         <span class="text-2xl leading-none">{src.icon}</span>
                         <div class="text-center">
-                            <p class="text-xs font-semibold text-gray-200 leading-tight">{src.label}</p>
-                            <p class="text-[10px] text-gray-500 mt-0.5 leading-tight">{src.desc}</p>
+                            <p class="text-xs font-semibold text-gray-200 leading-tight">{tFn(src.labelKey)}</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5 leading-tight">{tFn(src.descKey)}</p>
                         </div>
                         <div class="w-1.5 h-1.5 rounded-full transition-colors"
                              style="background: {selectedSurface === src.surface ? 'rgb(99,102,241)' : 'transparent'}"></div>
@@ -157,12 +156,9 @@
                 </svg>
                 <p class="text-[11px] leading-relaxed" style="color: rgb(156,163,175)">
                     {#if selectedSurface === 'browser'}
-                        Pour partager aussi le son, cochez
-                        <strong style="color: rgb(199,210,254)">« Partager aussi l'audio de l'onglet »</strong>
-                        dans la fenêtre du navigateur qui suit.
+                        {@html tFn('screenshare.audio_browser')}
                     {:else}
-                        Cette source ne partage pas le son. Pour l'inclure, choisissez plutôt
-                        <strong style="color: rgb(209,213,219)">Onglet</strong>.
+                        {@html tFn('screenshare.audio_other')}
                     {/if}
                 </p>
             </div>
@@ -172,7 +168,7 @@
 
             <!-- Quality -->
             <div class="space-y-2.5">
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Résolution</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">{tFn('screenshare.resolution')}</p>
                 <div class="grid grid-cols-3 gap-2">
                     {#each QUALITIES as q}
                         <button
@@ -232,7 +228,7 @@
                     cursor: {starting ? 'not-allowed' : 'pointer'};
                 "
             >
-                {starting ? 'Lancement...' : 'Partager maintenant →'}
+                {starting ? tFn('screenshare.starting') : tFn('screenshare.share_now')}
             </button>
         </div>
         {/if}
