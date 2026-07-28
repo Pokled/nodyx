@@ -1,33 +1,36 @@
 <script lang="ts">
 	import type { CanvasTool } from '$lib/canvas'
+	import { t as i18n } from '$lib/i18n'   // `t` = variable de boucle
+
+	const tFn = $derived($i18n)
 
 	let {
 		tool    = $bindable<CanvasTool>('pen'),
 		onClose = () => {},
 	}: { tool: CanvasTool; onClose: () => void } = $props()
 
-	type ToolDef = { id: CanvasTool; label: string; key: string }
+	type ToolDef = { id: CanvasTool; labelKey: string; key: string }
 
 	const groups: ToolDef[][] = [
-		[{ id: 'select', label: 'Sélection', key: 'V' }],
+		[{ id: 'select', labelKey: 'canvas_ltool.select', key: 'V' }],
 		[
-			{ id: 'pen',    label: 'Stylo',      key: 'P' },
-			{ id: 'text',   label: 'Texte',      key: 'T' },
-			{ id: 'sticky', label: 'Post-it',    key: 'N' },
+			{ id: 'pen',    labelKey: 'canvas_ltool.pen',      key: 'P' },
+			{ id: 'text',   labelKey: 'canvas_ltool.text',      key: 'T' },
+			{ id: 'sticky', labelKey: 'canvas_ltool.sticky',    key: 'N' },
 		],
 		[
-			{ id: 'rect',      label: 'Rectangle',  key: 'R' },
-			{ id: 'circle',    label: 'Cercle',     key: 'C' },
-			{ id: 'shape',     label: 'Forme',      key: 'S' },
+			{ id: 'rect',      labelKey: 'canvas_ltool.rect',  key: 'R' },
+			{ id: 'circle',    labelKey: 'canvas_ltool.circle',     key: 'C' },
+			{ id: 'shape',     labelKey: 'canvas_ltool.shape',      key: 'S' },
 		],
 		[
-			{ id: 'arrow',     label: 'Flèche',     key: 'A' },
-			{ id: 'connector', label: 'Connecteur', key: 'X' },
+			{ id: 'arrow',     labelKey: 'canvas_ltool.arrow',     key: 'A' },
+			{ id: 'connector', labelKey: 'canvas_ltool.connector', key: 'X' },
 		],
 		[
-			{ id: 'image',  label: 'Image',      key: 'I' },
-			{ id: 'frame',  label: 'Frame',      key: 'F' },
-			{ id: 'eraser', label: 'Gomme',      key: 'E' },
+			{ id: 'image',  labelKey: 'canvas_ltool.image',      key: 'I' },
+			{ id: 'frame',  labelKey: 'canvas_ltool.frame',      key: 'F' },
+			{ id: 'eraser', labelKey: 'canvas_ltool.eraser',      key: 'E' },
 		],
 	]
 </script>
@@ -43,8 +46,8 @@
 				onclick={() => tool = t.id}
 				class="tool-btn"
 				class:active={tool === t.id}
-				title="{t.label} ({t.key})"
-				aria-label={t.label}
+				title={tFn(t.labelKey) + ' (' + t.key + ')'}
+				aria-label={tFn(t.labelKey)}
 			>
 				{#if t.id === 'select'}
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -114,7 +117,7 @@
 	<div class="sep"></div>
 
 	<!-- Close -->
-	<button class="tool-btn close-btn" onclick={onClose} title="Fermer (Échap)" aria-label="Fermer">
+	<button class="tool-btn close-btn" onclick={onClose} title={tFn('canvas_ltool.close_title')} aria-label={tFn('canvas_ltool.close')}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 		</svg>

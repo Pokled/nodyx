@@ -2029,5 +2029,19 @@
   "overlay_playlist.prev": "⏮ Précédent",
   "overlay_playlist.click_start": "▶ Cliquer pour démarrer",
   "overlay_playlist.invalid": "Lien d'overlay invalide ou playlist supprimée.",
-  "overlay_playlist.load_error": "Erreur de chargement."
+  "overlay_playlist.load_error": "Erreur de chargement.",
+  "canvas_ltool.select": "Sélection",
+  "canvas_ltool.pen": "Stylo",
+  "canvas_ltool.text": "Texte",
+  "canvas_ltool.sticky": "Post-it",
+  "canvas_ltool.rect": "Rectangle",
+  "canvas_ltool.circle": "Cercle",
+  "canvas_ltool.shape": "Forme",
+  "canvas_ltool.arrow": "Flèche",
+  "canvas_ltool.connector": "Connecteur",
+  "canvas_ltool.image": "Image",
+  "canvas_ltool.frame": "Frame",
+  "canvas_ltool.eraser": "Gomme",
+  "canvas_ltool.close_title": "Fermer (Échap)",
+  "canvas_ltool.close": "Fermer"
 }
