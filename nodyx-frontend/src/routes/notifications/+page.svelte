@@ -34,8 +34,8 @@
 		thread_reply: tFn('notifications.thread_reply_label'),
 		post_thanks:  tFn('notifications.post_thanks_label'),
 		mention:      tFn('notifications.mention_label'),
-		canvas_access_request: "demande l'accès en édition à un Canvas",
-		canvas_access_granted: "t'a accordé l'accès en édition à un Canvas",
+		canvas_access_request: tFn('notifications.canvas_access_request_label'),
+		canvas_access_granted: tFn('notifications.canvas_access_granted_label'),
 	});
 
 	function formatDate(iso: string) {
@@ -91,7 +91,7 @@
 				}}>
 					<button type="submit"
 						class="px-3 py-1.5 rounded-lg border border-red-900/50 text-xs text-red-500/70 hover:text-red-400 hover:border-red-700 transition-colors">
-						Effacer les lues
+						{tFn('notifications.clear_read')}
 					</button>
 				</form>
 			{/if}
@@ -139,7 +139,7 @@
 							<button
 								onclick={() => markReadAndNavigate(notif)}
 								class="text-xs text-indigo-400 hover:text-indigo-300">
-								Voir →
+								{tFn('notifications.view')}
 							</button>
 						{/if}
 						{#if !notif.is_read}
@@ -152,7 +152,7 @@
 								}
 							}}>
 								<input type="hidden" name="id" value={notif.id} />
-								<button type="submit" title="Marquer comme lu"
+								<button type="submit" title={tFn('notifications.mark_read')}
 									class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-colors bg-gray-800 text-gray-500 hover:bg-indigo-900/40 hover:text-indigo-300">
 									✓
 								</button>

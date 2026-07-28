@@ -2008,5 +2008,9 @@
   "chat.more": "Plus…",
   "dm.keep_typing": "Continue à taper… (encore 1 caractère)",
   "dm.no_match": "Aucun membre ne correspond à <span class=\"text-gray-300 font-mono\">\"{{query}}\"</span>",
-  "dm.encrypted": "🔒 Message chiffré"
+  "dm.encrypted": "🔒 Message chiffré",
+  "notifications.canvas_access_request_label": "demande l'accès en édition à un Canvas",
+  "notifications.canvas_access_granted_label": "t'a accordé l'accès en édition à un Canvas",
+  "notifications.view": "Voir →",
+  "notifications.mark_read": "Marquer comme lu"
 }
