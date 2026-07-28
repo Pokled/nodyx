@@ -2003,5 +2003,7 @@
   "banned.this_community": "cette communauté",
   "banned.title": "Accès refusé",
   "banned.message": "Votre compte a été banni de <span class=\"text-white font-medium\">{{name}}</span>.",
-  "banned.logout": "Se déconnecter"
+  "banned.logout": "Se déconnecter",
+  "chat.gif": "GIF",
+  "chat.more": "Plus…"
 }

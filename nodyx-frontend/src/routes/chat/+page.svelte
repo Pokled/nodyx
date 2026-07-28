@@ -662,7 +662,7 @@
 		// Only allow https GIF URLs — prevents data:/javascript: injection in img src
 		if (!/^https:\/\//i.test(url)) return;
 		const safeUrl = url.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-		const content = `<img src="${safeUrl}" alt="GIF" style="max-width:360px;border-radius:8px;">`;
+		const content = `<img src="${safeUrl}" alt="" style="max-width:360px;border-radius:8px;">`;
 		s.emit('chat:send', { channelId: selectedChannel.id, content });
 		showGifPicker = false;
 		gifQuery = '';
@@ -1098,7 +1098,7 @@
 						{#if $p2pStatus === 'p2p'}
 							<div class="flex items-center gap-1.5 px-2 h-6 cursor-default"
 							     style="background: rgba(234,179,8,.06); border: 1px solid rgba(234,179,8,.2)"
-							     title="{tFn('chat.p2p_peers', { n: String($p2pPeerCount) })}">
+							     title={tFn('chat.p2p_peers', { n: String($p2pPeerCount) })}>
 								<span class="relative flex h-1.5 w-1.5 shrink-0">
 									<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background: #eab308"></span>
 									<span class="relative inline-flex h-1.5 w-1.5 rounded-full" style="background: #eab308"></span>
@@ -1326,7 +1326,7 @@
 								<span class="w-px h-4 mx-0.5" style="background: rgba(255,255,255,.07)"></span>
 								<!-- Réagir (full picker) -->
 								<div data-picker class="relative">
-									<button onclick={() => toggleEmojiPicker(msg.id)} title="Plus…"
+									<button onclick={() => toggleEmojiPicker(msg.id)} title={tFn('chat.more')}
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
 									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
@@ -1520,7 +1520,7 @@
 												onclick={() => sendGif(gif.url)}
 												class="rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-500 transition-all aspect-square"
 											>
-												<img src={gif.preview} alt="GIF" class="w-full h-full object-cover" loading="lazy" />
+												<img src={gif.preview} alt={tFn('chat.gif')} class="w-full h-full object-cover" loading="lazy" />
 											</button>
 										{/each}
 									{/if}
@@ -1589,7 +1589,7 @@
 						</div>
 						<!-- GIF -->
 						<button data-gif-picker onclick={() => { showGifPicker = !showGifPicker; if (showGifPicker && gifProvider) gifQuery = ''; }}
-						        title="GIF"
+						        title={tFn('chat.gif')}
 						        class="w-7 h-7 flex items-center justify-center text-[10px] font-black uppercase tracking-wide transition-colors"
 						        style="color: {showGifPicker ? 'var(--nx-accent-2-soft)' : '#4b5563'}; background: {showGifPicker ? 'rgb(var(--nx-accent-2-rgb) / .12)' : 'transparent'}">GIF</button>
 						<!-- Poll -->
