@@ -2024,5 +2024,10 @@
   "overlay_board.invalid": "Overlay invalide ou révoquée.",
   "overlay_board.loading": "Chargement…",
   "overlay_board.empty": "Pas encore de classement sur cette période.",
-  "overlay_board.recap": "RÉCAP DE STREAM"
+  "overlay_board.recap": "RÉCAP DE STREAM",
+  "overlay_playlist.next": "⏭ Suivant",
+  "overlay_playlist.prev": "⏮ Précédent",
+  "overlay_playlist.click_start": "▶ Cliquer pour démarrer",
+  "overlay_playlist.invalid": "Lien d'overlay invalide ou playlist supprimée.",
+  "overlay_playlist.load_error": "Erreur de chargement."
 }
