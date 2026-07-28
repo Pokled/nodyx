@@ -2005,5 +2005,8 @@
   "banned.message": "Votre compte a été banni de <span class=\"text-white font-medium\">{{name}}</span>.",
   "banned.logout": "Se déconnecter",
   "chat.gif": "GIF",
-  "chat.more": "Plus…"
+  "chat.more": "Plus…",
+  "dm.keep_typing": "Continue à taper… (encore 1 caractère)",
+  "dm.no_match": "Aucun membre ne correspond à <span class=\"text-gray-300 font-mono\">\"{{query}}\"</span>",
+  "dm.encrypted": "🔒 Message chiffré"
 }
