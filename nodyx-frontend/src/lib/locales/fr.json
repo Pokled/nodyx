@@ -1999,5 +1999,9 @@
   "follow.follower_one": "abonné",
   "follow.follower_many": "abonnés",
   "follow.following_one": "abonnement",
-  "follow.following_many": "abonnements"
+  "follow.following_many": "abonnements",
+  "banned.this_community": "cette communauté",
+  "banned.title": "Accès refusé",
+  "banned.message": "Votre compte a été banni de <span class=\"text-white font-medium\">{{name}}</span>.",
+  "banned.logout": "Se déconnecter"
 }

@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { enhance } from '$app/forms';
+	import { t } from '$lib/i18n';
 
-	const communityName = $derived($page.data.communityName ?? 'cette communauté');
+	const tFn = $derived($t);
+
+	const communityName = $derived($page.data.communityName ?? tFn('banned.this_community'));
 </script>
 
 <svelte:head>
-	<title>Accès refusé</title>
+	<title>{tFn('banned.title')}</title>
 </svelte:head>
 
 <div class="min-h-screen bg-gray-950 flex items-center justify-center px-4">
@@ -17,9 +20,9 @@
 			</svg>
 		</div>
 
-		<h1 class="text-2xl font-bold text-white mb-3">Accès refusé</h1>
+		<h1 class="text-2xl font-bold text-white mb-3">{tFn('banned.title')}</h1>
 		<p class="text-gray-400 text-sm leading-relaxed mb-8">
-			Votre compte a été banni de <span class="text-white font-medium">{communityName}</span>.
+			{@html tFn('banned.message', { name: communityName })}
 			Si vous pensez qu'il s'agit d'une erreur, contactez un administrateur.
 		</p>
 
@@ -28,7 +31,7 @@
 				type="submit"
 				class="px-6 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium transition-colors border border-gray-700"
 			>
-				Se déconnecter
+				{tFn('banned.logout')}
 			</button>
 		</form>
 	</div>
