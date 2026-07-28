@@ -6,6 +6,9 @@
 	import { fly, fade, scale } from 'svelte/transition'
 	import { backOut, cubicOut } from 'svelte/easing'
 	import { playAlertSound } from '$lib/sounds/presetSounds'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	// Page transparente conçue pour être collée comme Browser Source dans OBS.
 	// Le token dans l'URL EST l'auth : il bootstrappe la config via REST et
@@ -245,11 +248,11 @@
 	}
 
 	const LABELS: Record<AlertEventKey, string> = {
-		'channel.follow':            'Nouveau follower',
-		'channel.subscribe':         'Nouvel abonné',
-		'channel.subscription.gift': 'Sub offert',
-		'channel.cheer':             'Bits',
-		'channel.raid':              'Raid',
+		'channel.follow':            'overlay_alert.follow',
+		'channel.subscribe':         'overlay_alert.subscribe',
+		'channel.subscription.gift': 'overlay_alert.gift',
+		'channel.cheer':             'overlay_alert.cheer',
+		'channel.raid':              'overlay_alert.raid',
 	}
 
 	// Echappe une string pour la mettre dans une CSS url() ou color : on
@@ -285,21 +288,21 @@
 <div class="overlay-root theme-{config.theme} pos-{config.position}">
 	{#if status === 'invalid'}
 		<div class="status-msg status-error" transition:fade>
-			Overlay invalide ou révoquée. Génère une nouvelle URL dans Nodyx.
+			{tFn('overlay_alert.invalid')}
 		</div>
 	{:else if status === 'error'}
 		<div class="status-msg status-error" transition:fade>
-			Connexion Nodyx impossible.
+			{tFn('overlay_alert.conn_failed')}
 		</div>
 	{:else if status === 'loading'}
 		<div class="status-msg status-info" transition:fade>
-			Connexion à Nodyx…
+			{tFn('overlay_alert.connecting')}
 		</div>
 	{/if}
 
 	{#each alerts as alert (alert.id)}
 		{@const accent  = config.theme === 'custom' && config.customTheme?.accentColor ? config.customTheme.accentColor : ACCENTS[alert.eventType]}
-		{@const label   = LABELS[alert.eventType]}
+		{@const label   = tFn(LABELS[alert.eventType])}
 		{@const iconUrl = config.events[alert.eventType]?.iconUrl ?? null}
 		{@const cstyles = config.theme === 'custom' ? buildCustomStyle(config.customTheme) : ''}
 		<div class="alert-card" style="--accent: {accent}; {cstyles}"

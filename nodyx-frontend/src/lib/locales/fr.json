@@ -2012,5 +2012,13 @@
   "notifications.canvas_access_request_label": "demande l'accès en édition à un Canvas",
   "notifications.canvas_access_granted_label": "t'a accordé l'accès en édition à un Canvas",
   "notifications.view": "Voir →",
-  "notifications.mark_read": "Marquer comme lu"
+  "notifications.mark_read": "Marquer comme lu",
+  "overlay_alert.follow": "Nouveau follower",
+  "overlay_alert.subscribe": "Nouvel abonné",
+  "overlay_alert.gift": "Sub offert",
+  "overlay_alert.cheer": "Bits",
+  "overlay_alert.raid": "Raid",
+  "overlay_alert.invalid": "Overlay invalide ou révoquée. Génère une nouvelle URL dans Nodyx.",
+  "overlay_alert.conn_failed": "Connexion Nodyx impossible.",
+  "overlay_alert.connecting": "Connexion à Nodyx…"
 }
