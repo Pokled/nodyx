@@ -5,6 +5,9 @@
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { fade, fly, scale } from 'svelte/transition'
 	import { backOut, cubicOut } from 'svelte/easing'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	// Podium top 3 (gold/silver/bronze) + liste rang 4-N en dessous. Avatars
 	// Twitch sur les têtes des podiums. Refresh state toutes les 60s + push
@@ -173,25 +176,25 @@
 
 <div class="overlay-root" class:recap={recapMode}>
 	{#if status === 'invalid'}
-		<div class="status-msg" transition:fade>Overlay invalide ou révoquée.</div>
+		<div class="status-msg" transition:fade>{tFn('overlay_board.invalid')}</div>
 	{:else if status === 'error'}
-		<div class="status-msg" transition:fade>Connexion Nodyx impossible.</div>
+		<div class="status-msg" transition:fade>{tFn('overlay_alert.conn_failed')}</div>
 	{:else if status === 'loading'}
-		<div class="status-msg status-loading" transition:fade>Chargement…</div>
+		<div class="status-msg status-loading" transition:fade>{tFn('overlay_board.loading')}</div>
 	{:else if config && entries.length === 0}
 		<div class="card theme-{config.theme}" style={customStyle()} transition:fade>
 			<header class="title">
 				<h1>{CATEGORY_LABELS[config.category].plural}</h1>
 				<span class="period">{PERIOD_LABELS[config.period]}</span>
 			</header>
-			<div class="empty-msg">Pas encore de classement sur cette période.</div>
+			<div class="empty-msg">{tFn('overlay_board.empty')}</div>
 		</div>
 	{:else if config}
 		<div class="card theme-{config.theme}" style={customStyle()} transition:fade>
 			<header class="title">
 				<h1>{CATEGORY_LABELS[config.category].plural}</h1>
 				<span class="period">{PERIOD_LABELS[config.period]}</span>
-				{#if recapMode}<span class="recap-badge">RÉCAP DE STREAM</span>{/if}
+				{#if recapMode}<span class="recap-badge">{tFn('overlay_board.recap')}</span>{/if}
 			</header>
 
 			<!-- Podium top 3 -->
