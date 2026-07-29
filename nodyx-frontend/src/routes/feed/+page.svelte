@@ -479,7 +479,7 @@
 							<span class="composer-char-count" style="color: {charColor}">{charLeft}</span>
 							<div class="composer-actions">
 								<button onclick={() => { composing = false; content = ''; mediaUrl = null; replyTo = null; editorKey++ }} class="composer-cancel">
-									Annuler
+									{tFn('feed.cancel')}
 								</button>
 								<button
 									onclick={submitPost}
@@ -545,7 +545,7 @@
 										<time class="post-time" datetime={post.created_at}>{timeAgo(post.created_at)}</time>
 
 										{#if me?.id === post.author_id || me?.username === post.username}
-											<button onclick={() => deletePost(post.id)} class="post-delete-btn" title="Supprimer">
+											<button onclick={() => deletePost(post.id)} class="post-delete-btn" title={tFn('feed.delete')}>
 												<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 													<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 												</svg>
@@ -677,7 +677,7 @@
 													<span class="reply-to-tag">↳ @{reply.reply_to_username}</span>
 												{/if}
 												{#if me?.id === reply.author_id || me?.username === reply.username}
-													<button onclick={() => deletePost(reply.id)} class="post-delete-btn" title="Supprimer">
+													<button onclick={() => deletePost(reply.id)} class="post-delete-btn" title={tFn('feed.delete')}>
 														<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 															<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 														</svg>

@@ -212,7 +212,7 @@
 			<div>
 				<label for="tags" class="block text-sm font-medium text-gray-300 mb-1.5">{tFn('event.field_tags')} <span class="text-gray-600 text-xs font-normal">{tFn('event.tags_hint')}</span></label>
 				<input id="tags" name="tags" type="text" value={ev.tags?.join(', ') ?? ''}
-				       placeholder="musique, jeux, irl, dev..."
+				       placeholder={tFn('cal_form.tags_ph')}
 				       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
@@ -235,7 +235,7 @@
 			<div>
 				<label for="location" class="block text-sm font-medium text-gray-300 mb-1.5">Adresse / nom du lieu <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
 				<input id="location" name="location" type="text" bind:value={locationText}
-				       placeholder="Parc de la Villette, Paris — ou https://meet.jit.si/monEvent"
+				       placeholder={tFn('cal_form.location_ph')}
 				       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
@@ -329,7 +329,7 @@
 						<label for="ticket_url" class="block text-sm font-medium text-gray-300 mb-1.5">Lien d'achat <span class="text-gray-600 text-xs font-normal">(Eventbrite, HelloAsso, etc.)</span></label>
 						<input id="ticket_url" name="ticket_url" type="url"
 						       value={ev.ticket_url ?? ''}
-						       placeholder="https://..."
+						       placeholder={tFn('cal_form.url_ph')}
 						       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
 						              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 					</div>

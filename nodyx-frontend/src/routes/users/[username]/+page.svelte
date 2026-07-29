@@ -361,7 +361,7 @@
 					<div class="w-full h-full rounded-full overflow-hidden"
 					     style="background: var(--p-accent)">
 						{#if profile.avatar_url}
-							<img src={profile.avatar_url} alt="Avatar de {profile.display_name || profile.username}" class="w-full h-full object-cover" />
+							<img src={profile.avatar_url} alt={tFn('user_profile.avatar_alt', { name: profile.display_name || profile.username })} class="w-full h-full object-cover" />
 						{:else}
 							<div class="w-full h-full flex items-center justify-center text-white text-5xl font-black select-none"
 							     aria-hidden="true">{initials}</div>
@@ -653,12 +653,12 @@
 					</div>
 					<div class="w-10 h-10 flex items-center justify-center text-lg"
 					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
-					     title="Bientôt disponible">
+					     title={tFn('user_profile.soon')}>
 						🔒
 					</div>
 					<div class="w-10 h-10 flex items-center justify-center text-lg"
 					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
-					     title="Bientôt disponible">
+					     title={tFn('user_profile.soon')}>
 						🔒
 					</div>
 				</div>

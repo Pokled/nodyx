@@ -262,7 +262,7 @@
 							<div class="w-8 h-8 rounded-full border-2 animate-spin"
 							     style="border-color:rgba(145,70,255,.2); border-top-color:{accent}"></div>
 							<span class="text-[10px] uppercase tracking-[.18em] font-bold" style="color:#6b7280; font-family:'Space Grotesk',sans-serif">
-								Chargement du stream
+								{tFn('widgets.twitch_loading')}
 							</span>
 						</div>
 					</div>
@@ -272,7 +272,7 @@
 					{#key activeChannel + parentDomain}
 						<iframe
 							src={playerUrl}
-							title="Twitch player — {activeChannel}"
+							title={tFn('widgets.twitch_player_title', { channel: activeChannel })}
 							allowfullscreen
 							allow="autoplay; fullscreen; picture-in-picture"
 							onload={onIframeLoad}
@@ -294,7 +294,7 @@
 						{#key activeChannel + parentDomain}
 							<iframe
 								src={chatUrl}
-								title="Twitch chat — {activeChannel}"
+								title={tFn('widgets.twitch_chat_title', { channel: activeChannel })}
 								class="w-full h-full"
 								style="border:0"
 							></iframe>

@@ -2063,5 +2063,18 @@
   "overlay_goal.loading": "Chargement de l'état…",
   "overlay_sb.invalid": "Overlay Soundboard : token invalide ou révoqué.",
   "overlay_sb.conn_failed": "Connexion impossible. Vérifie le réseau OBS.",
-  "overlay_sb.ready": "Soundboard prêt"
+  "overlay_sb.ready": "Soundboard prêt",
+  "widgets.twitch_loading": "Chargement du stream",
+  "widgets.twitch_player_title": "Twitch player — {{channel}}",
+  "widgets.twitch_chat_title": "Twitch chat — {{channel}}",
+  "cal_form.tags_ph": "musique, jeux, irl, dev...",
+  "cal_form.location_ph": "Parc de la Villette, Paris — ou https://meet.jit.si/monEvent",
+  "cal_form.url_ph": "https://...",
+  "community_page.meta_desc": "Communauté {{name}} sur Nodyx.",
+  "community_page.no_category": "Aucune catégorie pour l'instant.",
+  "community_page.configure": "Configurer la communauté →",
+  "feed.cancel": "Annuler",
+  "feed.delete": "Supprimer",
+  "user_profile.avatar_alt": "Avatar de {{name}}",
+  "user_profile.soon": "Bientôt disponible"
 }
