@@ -80,6 +80,10 @@ jobs:
         working-directory: nodyx-frontend
         run: npm run i18n:keys:check
 
+      - name: i18n — aucune chaîne FR en dur sur les pages publiques
+        working-directory: nodyx-frontend
+        run: npm run i18n:public:check
+
       - name: Svelte — typecheck (svelte-check)
         working-directory: nodyx-frontend
         env:
