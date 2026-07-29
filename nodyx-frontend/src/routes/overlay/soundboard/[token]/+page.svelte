@@ -3,6 +3,9 @@
 	import { browser } from '$app/environment'
 	import { page } from '$app/state'
 	import { PUBLIC_API_URL } from '$env/static/public'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	// ─── Overlay Soundboard (OBS browser source) ────────────────────────────
 	// Reçoit les events audio:play/stop/pause depuis le socket /overlay (room
@@ -338,18 +341,18 @@
 <div class="fixed inset-0 pointer-events-none">
 	{#if status === 'invalid'}
 		<div class="absolute top-4 left-4 px-3 py-2 bg-rose-950/90 text-rose-100 text-xs rounded border border-rose-500/60 pointer-events-auto">
-			Overlay Soundboard : token invalide ou révoqué.
+			{tFn('overlay_sb.invalid')}
 		</div>
 	{:else if status === 'error'}
 		<div class="absolute top-4 left-4 px-3 py-2 bg-amber-950/90 text-amber-100 text-xs rounded border border-amber-500/60 pointer-events-auto">
-			Connexion impossible. Vérifie le réseau OBS.
+			{tFn('overlay_sb.conn_failed')}
 		</div>
 	{:else if status === 'ready' && showReadyBadge && !nowPlaying}
 		<!-- Badge éphémère au boot pour confirmer la connexion en preview navigateur.
 		     Disparaît après 6s pour ne pas polluer le stream en prod OBS. -->
 		<div class="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-zinc-950/85 backdrop-blur-md border border-emerald-500/50 rounded-full shadow-2xl flex items-center gap-2 text-xs pointer-events-none animate-fade-out">
 			<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-			<span class="text-zinc-100 font-medium">Soundboard prêt</span>
+			<span class="text-zinc-100 font-medium">{tFn('overlay_sb.ready')}</span>
 			<span class="text-zinc-500">— appuie sur un bouton 🎵 de ton Stream Deck</span>
 		</div>
 	{/if}

@@ -2059,5 +2059,9 @@
   "status.back": "← Retour au fil",
   "status.reshared": "🔁 <a href=\"/users/{{username}}\">{{name}}</a> a repartagé",
   "status.reply_to": "En réponse à <strong>@{{name}}</strong>",
-  "status.cancel": "annuler"
+  "status.cancel": "annuler",
+  "overlay_goal.loading": "Chargement de l'état…",
+  "overlay_sb.invalid": "Overlay Soundboard : token invalide ou révoqué.",
+  "overlay_sb.conn_failed": "Connexion impossible. Vérifie le réseau OBS.",
+  "overlay_sb.ready": "Soundboard prêt"
 }
