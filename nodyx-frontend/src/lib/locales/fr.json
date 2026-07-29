@@ -2049,5 +2049,8 @@
   "hero.live_aria": "Stream en direct",
   "hero.upcoming_event": "Événement à venir",
   "hero.overflow_aria": "{{n}} autres membres en ligne",
-  "hero.join_to_see": "Rejoindre pour voir qui est là"
+  "hero.join_to_see": "Rejoindre pour voir qui est là",
+  "dm_conv.added": "{{by}} a ajouté {{user}} à la conversation",
+  "dm_conv.encrypted": "🔒 message chiffré",
+  "dm_conv.esc": "Échap"
 }

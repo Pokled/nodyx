@@ -373,7 +373,7 @@
 			sender_username: '',
 			sender_avatar: null,
 			sender_name_color: null,
-			content: `${invited_by} a ajouté ${user.username} à la conversation`,
+			content: tFn('dm_conv.added', { by: invited_by, user: user.username }),
 			created_at: new Date().toISOString(),
 			deleted_at: null,
 			_systemMessage: true,
@@ -897,7 +897,7 @@
 	function replyPreview(msg: DmMessage): string {
 		if (msg.is_encrypted) {
 			if (msg._decrypted) return msg._decrypted.slice(0, 120)
-			return '🔒 message chiffré'
+			return tFn('dm_conv.encrypted')
 		}
 		return (msg.content || '').slice(0, 120)
 	}
@@ -1590,7 +1590,7 @@
 									></textarea>
 									<div class="flex gap-1.5 mt-1.5">
 										<button onclick={saveEdit} class="text-[10px] px-2 py-0.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">{tFn('dm.enter')}</button>
-										<button onclick={cancelEdit} class="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] text-gray-400 transition-colors">Échap</button>
+										<button onclick={cancelEdit} class="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] text-gray-400 transition-colors">{tFn('dm_conv.esc')}</button>
 									</div>
 								{:else}
 									<!-- Quote inline si ce message est une réponse à un autre -->
@@ -1600,7 +1600,7 @@
 											<div class="dm-quote-content">
 												<div class="dm-quote-author">{msg.reply_snapshot.sender_username}</div>
 												<div class="dm-quote-preview">
-													{msg.reply_snapshot.is_encrypted ? '🔒 message chiffré' : msg.reply_snapshot.content}
+													{msg.reply_snapshot.is_encrypted ? tFn('dm_conv.encrypted') : msg.reply_snapshot.content}
 												</div>
 											</div>
 										</div>
