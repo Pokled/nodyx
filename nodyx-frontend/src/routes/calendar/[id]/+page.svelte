@@ -181,7 +181,7 @@
 					</div>
 				{/if}
 				<div class="h-64">
-					<iframe src={osmEmbedUrl()} class="w-full h-full border-0" title="Carte du lieu" loading="lazy"></iframe>
+					<iframe src={osmEmbedUrl()} class="w-full h-full border-0" title={tFn('event.map_title')} loading="lazy"></iframe>
 				</div>
 			</div>
 		{:else if ev.location}
@@ -220,7 +220,7 @@
 					{#each data.attendees as a}
 						<a href="/users/{a.username}"
 						   class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-800 border border-gray-700/50 hover:border-gray-600 transition-colors"
-						   title="{a.username}: {a.status === 'going' ? tFn('event.rsvp_going_short') : a.status === 'maybe' ? tFn('event.rsvp_maybe_short') : tFn('event.rsvp_absent_short')}">
+						   title={a.username + ': ' + (a.status === 'going' ? tFn('event.rsvp_going_short') : a.status === 'maybe' ? tFn('event.rsvp_maybe_short') : tFn('event.rsvp_absent_short'))}>
 							{#if a.avatar_url}
 								<img src={a.avatar_url} alt="" class="w-5 h-5 rounded-full object-cover"/>
 							{:else}

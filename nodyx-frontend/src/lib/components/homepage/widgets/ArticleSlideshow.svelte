@@ -279,7 +279,7 @@
 								class="as-dot-btn"
 								class:as-dot-btn--active={i === slideIndex}
 								onclick={() => { slideTo(i); startTimers() }}
-								aria-label="Slide {i+1}"
+								aria-label={tFn('home.slide_aria', { n: i+1 })}
 							>
 								{#if i === slideIndex}
 									<span class="as-progress" style="width:{progressPct}%"></span>

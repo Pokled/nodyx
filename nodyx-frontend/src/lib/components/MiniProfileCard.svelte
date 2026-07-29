@@ -142,7 +142,7 @@
 			<!-- Avatar — overflows banner bottom -->
 			<div class="absolute bottom-0 left-4 translate-y-1/2 w-14 h-14 rounded-full border-[3px] border-gray-900 overflow-hidden bg-indigo-700 shadow-xl">
 				{#if profile.avatar_url}
-					<img src={profile.avatar_url} alt="Avatar" class="w-full h-full object-cover" />
+					<img src={profile.avatar_url} alt={tFn('common.avatar_alt')} class="w-full h-full object-cover" />
 				{:else}
 					<div class="w-full h-full flex items-center justify-center text-white text-xl font-bold select-none">
 						{(profile.display_name || profile.username).charAt(0).toUpperCase()}

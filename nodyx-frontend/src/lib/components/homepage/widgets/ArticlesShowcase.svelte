@@ -262,7 +262,7 @@
 		<div class="as-slider"
 		     onmouseenter={stopSlider}
 		     onmouseleave={() => { if (sliderAuto) startSlider() }}
-		     role="region" aria-label="Slider articles"
+		     role="region" aria-label={tFn('widgets.articles_slider')}
 		>
 			{#each articles as a, i}
 				{#if i === sliderIdx}
@@ -297,7 +297,7 @@
 					{#each articles as _, i}
 						<button class="as-slide-dot" class:is-active={i === sliderIdx}
 						        onclick={() => { sliderIdx = i; startSlider() }}
-						        aria-label="Slide {i + 1}"></button>
+						        aria-label={tFn('home.slide_aria', { n: i + 1 })}></button>
 					{/each}
 				</div>
 			{/if}

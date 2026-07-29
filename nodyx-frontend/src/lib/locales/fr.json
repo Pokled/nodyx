@@ -2076,5 +2076,19 @@
   "feed.cancel": "Annuler",
   "feed.delete": "Supprimer",
   "user_profile.avatar_alt": "Avatar de {{name}}",
-  "user_profile.soon": "Bientôt disponible"
+  "user_profile.soon": "Bientôt disponible",
+  "members.role_member": "Membre",
+  "widgets.articles_slider": "Slider articles",
+  "auth.cancel": "Annuler",
+  "auth.resend_error": "Erreur lors du renvoi.",
+  "search.button": "Rechercher",
+  "event.map_title": "Carte du lieu",
+  "emoji_picker.cat_smileys": "Smileys",
+  "emoji_picker.cat_gestes": "Gestes",
+  "emoji_picker.cat_coeurs": "Cœurs & Fêtes",
+  "emoji_picker.cat_animaux": "Animaux",
+  "emoji_picker.cat_nourriture": "Nourriture",
+  "emoji_picker.cat_voyage": "Voyage",
+  "emoji_picker.cat_objets": "Objets",
+  "emoji_picker.cat_symboles": "Symboles"
 }

@@ -12,10 +12,10 @@
 	let onlyOnline = $state(false)
 
 	const roleLabels: Record<string, string> = {
-		owner:     'Fondateur',
-		admin:     'Admin',
-		moderator: 'Modo',
-		member:    'Membre',
+		owner:     'members.role_owner',
+		admin:     'members.role_admin',
+		moderator: 'members.role_moderator',
+		member:    'members.role_member',
 	}
 	const roleOrder = ['owner', 'admin', 'moderator', 'member']
 	function rolePriority(role: string): number {

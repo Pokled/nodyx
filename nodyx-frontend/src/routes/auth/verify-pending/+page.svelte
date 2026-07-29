@@ -24,7 +24,7 @@
 				resendDone = true;
 			} else {
 				const j = await res.json();
-				resendError = j.error ?? 'Erreur lors du renvoi.';
+				resendError = j.error ?? tFn('auth.resend_error');
 			}
 		} catch {
 			resendError = 'Impossible de contacter le serveur.';

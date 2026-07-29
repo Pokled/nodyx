@@ -506,7 +506,7 @@
 							<p class="text-xs mt-1" style="color: rgb(156,163,175)">{tFn('auth.signet.open_phone_approve_message')}</p>
 						</div>
 						<button onclick={signetReset} class="text-xs" style="color: rgb(107,114,128)">
-							Annuler
+							{tFn('auth.cancel')}
 						</button>
 					</div>
 				{/if}
