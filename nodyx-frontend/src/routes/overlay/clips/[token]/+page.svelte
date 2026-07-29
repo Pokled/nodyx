@@ -4,6 +4,9 @@
 	import { browser } from '$app/environment'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { fade } from 'svelte/transition'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	// Clips Player overlay : invisible jusqu'au trigger admin POST /play-clips.
 	//
@@ -165,15 +168,15 @@
 
 <div class="overlay-root">
 	{#if status === 'invalid'}
-		<div class="status-msg status-error" transition:fade>Overlay invalide ou révoquée.</div>
+		<div class="status-msg status-error" transition:fade>{tFn('overlay_board.invalid')}</div>
 	{:else if status === 'error'}
-		<div class="status-msg status-error" transition:fade>Connexion Nodyx impossible.</div>
+		<div class="status-msg status-error" transition:fade>{tFn('overlay_alert.conn_failed')}</div>
 	{:else if !userActivated && (status === 'idle' || status === 'playing')}
 		<button type="button" onclick={() => userActivated = true} class="activation-gate">
 			<svg class="play-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84a1 1 0 011.04.06l9 6a1 1 0 010 1.66l-9 6A1 1 0 016 16V4a1 1 0 01.3-.84z"/></svg>
 			<div class="gate-text">
 				<div class="gate-title">Activer l'overlay clips</div>
-				<div class="gate-sub">Clique une fois pour autoriser l'autoplay des clips Twitch. Dans OBS, coche "Control audio via OBS" dans les propriétés du Browser Source — l'autoplay marchera direct sans ce gate.</div>
+				<div class="gate-sub">{tFn('overlay_clips.gate_sub')}</div>
 			</div>
 		</button>
 	{:else if status === 'playing' && current && userActivated}
@@ -208,7 +211,7 @@
 			</div>
 			{#if !pageVisible}
 				<div class="visibility-warning">
-					Onglet en arrière-plan : Twitch bloque l'autoplay. Reviens sur cet onglet pour démarrer, OU teste depuis OBS Browser Source (autoplay y marche).
+					{tFn('overlay_clips.bg_tab')}
 				</div>
 			{/if}
 		</div>
