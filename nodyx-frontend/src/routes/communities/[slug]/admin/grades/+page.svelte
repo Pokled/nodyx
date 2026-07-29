@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
 	import type { PageData, ActionData } from './$types'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -8,18 +11,18 @@
 	let editingId = $state<string | null>(null)
 
 	const PERMISSION_LABELS: Record<string, string> = {
-		can_post:            'Poster',
-		can_create_thread:   'Créer un thread',
-		can_create_category: 'Créer une catégorie',
-		can_moderate:        'Modérer',
-		can_manage_members:  'Gérer les membres',
-		can_manage_grades:   'Gérer les grades',
+		can_post:            'grades.perm_can_post',
+		can_create_thread:   'grades.perm_can_create_thread',
+		can_create_category: 'grades.perm_can_create_category',
+		can_moderate:        'grades.perm_can_moderate',
+		can_manage_members:  'grades.perm_can_manage_members',
+		can_manage_grades:   'grades.perm_can_manage_grades',
 	}
 
 	function permSummary(permissions: Record<string, boolean>): string {
 		return Object.entries(permissions)
 			.filter(([, v]) => v)
-			.map(([k]) => PERMISSION_LABELS[k] ?? k)
+			.map(([k]) => tFn(PERMISSION_LABELS[k] ?? k))
 			.join(', ') || '—'
 	}
 
@@ -42,7 +45,7 @@
 		<span class="text-gray-300">Grades</span>
 	</nav>
 
-	<h1 class="text-2xl font-bold text-white mb-6">Grades de la communauté</h1>
+	<h1 class="text-2xl font-bold text-white mb-6">{tFn('grades.title')}</h1>
 
 	{#if form?.error}
 		<p class="mb-4 rounded bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
@@ -53,7 +56,7 @@
 	<!-- Create form -->
 	<details class="mb-6 rounded-lg border border-gray-700 bg-gray-900">
 		<summary class="cursor-pointer px-4 py-3 text-sm font-semibold text-indigo-300 hover:text-indigo-200 select-none">
-			+ Créer un grade
+			{tFn('grades.create')}
 		</summary>
 
 		<form method="POST" action="?/create" use:enhance class="px-4 pb-4 pt-2 space-y-4">
@@ -108,14 +111,14 @@
 				type="submit"
 				class="rounded bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white transition-colors"
 			>
-				Créer
+				{tFn('grades.create_btn')}
 			</button>
 		</form>
 	</details>
 
 	<!-- Grades table -->
 	{#if data.grades.length === 0}
-		<p class="text-sm text-gray-500">Aucun grade pour l'instant.</p>
+		<p class="text-sm text-gray-500">{tFn('grades.empty')}</p>
 	{:else}
 		<div class="overflow-x-auto rounded-lg border border-gray-700">
 			<table class="w-full text-sm text-left">
@@ -179,14 +182,14 @@
 												type="submit"
 												class="rounded bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
 											>
-												Enregistrer
+												{tFn('grades.save')}
 											</button>
 											<button
 												type="button"
 												onclick={() => { editingId = null }}
 												class="rounded bg-gray-700 hover:bg-gray-600 px-3 py-1.5 text-xs text-gray-300 transition-colors"
 											>
-												Annuler
+												{tFn('grades.cancel')}
 											</button>
 										</div>
 									</form>
@@ -213,19 +216,19 @@
 										type="button"
 										onclick={() => { editingId = grade.id }}
 										class="text-indigo-400 hover:text-indigo-300 mr-3 text-xs"
-										aria-label="Modifier {grade.name}"
+										aria-label={tFn('grades.edit_aria', { name: grade.name })}
 									>
-										Modifier
+										{tFn('grades.edit')}
 									</button>
 									<form method="POST" action="?/delete" use:enhance class="inline">
 										<input type="hidden" name="grade_id" value={grade.id} />
 										<button
 											type="submit"
 											class="text-red-400 hover:text-red-300 text-xs"
-											aria-label="Supprimer {grade.name}"
-											onclick={(e) => { if (!confirm(`Supprimer le grade "${grade.name}" ?`)) e.preventDefault() }}
+											aria-label={tFn('grades.delete_aria', { name: grade.name })}
+											onclick={(e) => { if (!confirm(tFn('grades.confirm_delete', { name: grade.name }))) e.preventDefault() }}
 										>
-											Supprimer
+											{tFn('grades.delete')}
 										</button>
 									</form>
 								</td>
@@ -242,14 +245,14 @@
 		<h2 class="text-lg font-bold text-white mb-4">Attribution des grades aux membres</h2>
 
 		{#if data.members.length === 0}
-			<p class="text-sm text-gray-500">Aucun membre dans cette communauté.</p>
+			<p class="text-sm text-gray-500">{tFn('grades.no_members')}</p>
 		{:else}
 			<div class="overflow-x-auto rounded-lg border border-gray-700">
 				<table class="w-full text-sm text-left">
 					<thead class="bg-gray-800 text-gray-400 text-xs uppercase tracking-wider">
 						<tr>
-							<th class="px-4 py-3">Membre</th>
-							<th class="px-4 py-3">Rôle</th>
+							<th class="px-4 py-3">{tFn('members.role_member')}</th>
+							<th class="px-4 py-3">{tFn('grades.role')}</th>
 							<th class="px-4 py-3">Grade actuel</th>
 							<th class="px-4 py-3">Attribuer</th>
 						</tr>
@@ -278,7 +281,7 @@
 											name="grade_id"
 											class="rounded bg-gray-800 border border-gray-700 px-2 py-1 text-white text-xs focus:outline-none focus:border-indigo-500"
 										>
-											<option value="">— Aucun grade —</option>
+											<option value="">{tFn('grades.none')}</option>
 											{#each data.grades as grade}
 												<option
 													value={grade.id}
