@@ -2045,5 +2045,9 @@
   "canvas_ltool.close_title": "Fermer (Échap)",
   "canvas_ltool.close": "Fermer",
   "profile_card.avatar_alt": "Avatar de {{name}}",
-  "profile_card.tags_aria": "Tags"
+  "profile_card.tags_aria": "Tags",
+  "hero.live_aria": "Stream en direct",
+  "hero.upcoming_event": "Événement à venir",
+  "hero.overflow_aria": "{{n}} autres membres en ligne",
+  "hero.join_to_see": "Rejoindre pour voir qui est là"
 }

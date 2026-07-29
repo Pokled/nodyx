@@ -122,7 +122,7 @@
 
 	<!-- Live badge -->
 	{#if isLive}
-		<div class="hb-live-badge" aria-label="Stream en direct">
+		<div class="hb-live-badge" aria-label={tFn('hero.live_aria')}>
 			<span class="hb-live-dot"></span>
 			<span>Live</span>
 		</div>
@@ -134,7 +134,7 @@
 		{#if isEvent && eventTitle}
 			<div class="hb-event-eyebrow">
 				<span class="hb-eyebrow-line"></span>
-				<span>Événement à venir</span>
+				<span>{tFn('hero.upcoming_event')}</span>
 			</div>
 			<h1 class="hb-title hb-title--event">{eventTitle}</h1>
 
@@ -221,7 +221,7 @@
 						</div>
 					{/each}
 					{#if overflow > 0}
-						<div class="hb-avatar hb-avatar--overflow" aria-label="{overflow} autres membres en ligne">
+						<div class="hb-avatar hb-avatar--overflow" aria-label={tFn('hero.overflow_aria', { n: overflow })}>
 							+{overflow}
 						</div>
 					{/if}
@@ -239,7 +239,7 @@
 					{/each}
 				</div>
 				<a href="/auth/register" class="hb-live-cta">
-					Rejoindre pour voir qui est là
+					{tFn('hero.join_to_see')}
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
 					</svg>
