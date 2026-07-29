@@ -2054,5 +2054,6 @@
   "dm_conv.encrypted": "🔒 message chiffré",
   "dm_conv.esc": "Échap",
   "overlay_clips.gate_sub": "Clique une fois pour autoriser l'autoplay des clips Twitch. Dans OBS, coche \"Control audio via OBS\" dans les propriétés du Browser Source — l'autoplay marchera direct sans ce gate.",
-  "overlay_clips.bg_tab": "Onglet en arrière-plan : Twitch bloque l'autoplay. Reviens sur cet onglet pour démarrer, OU teste depuis OBS Browser Source (autoplay y marche)."
+  "overlay_clips.bg_tab": "Onglet en arrière-plan : Twitch bloque l'autoplay. Reviens sur cet onglet pour démarrer, OU teste depuis OBS Browser Source (autoplay y marche).",
+  "overlay_ticker.empty": "Aucun event encore. Le ticker se remplira au fil des follows / subs / raids."
 }
