@@ -161,11 +161,11 @@
 {/snippet}
 
 <div class="s-wrap">
-	<a href="/feed" class="s-back">← Retour au fil</a>
+	<a href="/feed" class="s-back">{tFn('status.back')}</a>
 
 	<article class="s-card">
 		{#if post.reshare_of}
-			<div class="s-reshare-label">🔁 <a href="/users/{post.username}">{post.display_name || post.username}</a> a repartagé</div>
+			<div class="s-reshare-label">{@html tFn('status.reshared', { username: post.username, name: post.display_name || post.username })}</div>
 		{/if}
 		{@render body(post)}
 		{@render actions(post)}
@@ -175,8 +175,8 @@
 	<div class="s-composer">
 		{#if replyTarget}
 			<div class="s-composer-target">
-				En réponse à <strong>@{replyTarget.username}</strong>
-				<button class="s-composer-cancel" onclick={() => (replyTarget = null)} aria-label="annuler">×</button>
+				{@html tFn('status.reply_to', { name: replyTarget.username })}
+				<button class="s-composer-cancel" onclick={() => (replyTarget = null)} aria-label={tFn('status.cancel')}>×</button>
 			</div>
 		{/if}
 		{#key editorKey}
@@ -220,7 +220,7 @@
 	.s-link-site { font-size: 0.7rem; text-transform: uppercase; color: var(--nx-accent-soft); font-weight: 700; }
 	.s-link-title { font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.9rem; }
 	.s-reshare-label { font-size: 0.78rem; color: rgba(255,255,255,0.45); font-weight: 600; margin-bottom: 0.5rem; }
-	.s-reshare-label a { color: rgba(255,255,255,0.6); text-decoration: none; }
+	.s-reshare-label :global(a) { color: rgba(255,255,255,0.6); text-decoration: none; }
 	.s-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.9rem; flex-wrap: wrap; }
 	.s-react-wrap { position: relative; }
 	.s-action { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.7); border-radius: 999px; padding: 0.35rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
@@ -238,7 +238,7 @@
 	.s-replies-title { font-size: 0.95rem; font-weight: 700; color: rgba(255,255,255,0.8); margin: 1.4rem 0 0.6rem; }
 	.s-composer { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(255,255,255,0.02); padding: 0.9rem; margin-bottom: 1rem; }
 	.s-composer-target { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem; }
-	.s-composer-target strong { color: var(--nx-accent-soft); }
+	.s-composer-target :global(strong) { color: var(--nx-accent-soft); }
 	.s-composer-cancel { border: none; background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 1rem; margin-left: 0.3rem; }
 	.s-composer-foot { display: flex; justify-content: flex-end; margin-top: 0.6rem; }
 	.s-send { border: none; border-radius: 999px; padding: 0.45rem 1.2rem; font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer; background: linear-gradient(135deg, var(--nx-accent), var(--nx-accent-2)); }
