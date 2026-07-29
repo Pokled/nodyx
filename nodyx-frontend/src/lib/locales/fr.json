@@ -2043,5 +2043,7 @@
   "canvas_ltool.frame": "Frame",
   "canvas_ltool.eraser": "Gomme",
   "canvas_ltool.close_title": "Fermer (Échap)",
-  "canvas_ltool.close": "Fermer"
+  "canvas_ltool.close": "Fermer",
+  "profile_card.avatar_alt": "Avatar de {{name}}",
+  "profile_card.tags_aria": "Tags"
 }

@@ -94,7 +94,7 @@
 			{#if avatarUrl}
 				<img
 					src={avatarUrl}
-					alt="Avatar de {displayName || username}"
+					alt={tFn('profile_card.avatar_alt', { name: displayName || username })}
 					class="w-16 h-16 rounded-full object-cover border border-gray-700"
 				/>
 			{:else}
@@ -143,7 +143,7 @@
 
 		<!-- Tags (max 3) -->
 		{#if visibleTags.length > 0}
-			<ul class="flex flex-wrap justify-center gap-1" aria-label="Tags">
+			<ul class="flex flex-wrap justify-center gap-1" aria-label={tFn('profile_card.tags_aria')}>
 				{#each visibleTags as tag}
 					<li class="text-xs bg-gray-800 text-gray-400 rounded px-1.5 py-0.5">#{tag}</li>
 				{/each}
@@ -169,7 +169,7 @@
 		{#if avatarUrl}
 			<img
 				src={avatarUrl}
-				alt="Avatar de {displayName || username}"
+				alt={tFn('profile_card.avatar_alt', { name: displayName || username })}
 				class="w-20 h-20 rounded-full object-cover border-2 border-gray-600"
 			/>
 		{:else}
@@ -204,7 +204,7 @@
 			</div>
 
 			{#if visibleTags.length > 0}
-				<ul class="flex flex-wrap gap-1.5 mt-1" aria-label="Tags">
+				<ul class="flex flex-wrap gap-1.5 mt-1" aria-label={tFn('profile_card.tags_aria')}>
 					{#each visibleTags as tag}
 						<li class="text-xs bg-gray-800 text-gray-400 rounded px-2 py-0.5">#{tag}</li>
 					{/each}
