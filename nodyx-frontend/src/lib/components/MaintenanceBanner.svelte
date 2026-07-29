@@ -1,4 +1,7 @@
 <script lang="ts">
+
+	import { t } from '$lib/i18n'
+	const tFn = $derived($t)
 	// Polls /api/v1/instance/maintenance every 15s. When maintenance is active
 	// (set by backup create / restore on the server side), shows a sticky amber
 	// banner so users understand why their writes are temporarily refused.
@@ -54,7 +57,7 @@
 		<span class="maint-banner-text">
 			<strong>{reasonText}</strong>
 			<span class="maint-banner-detail">
-				· les nouvelles inscriptions et publications sont temporairement désactivées. Réessaye dans quelques instants.
+				{tFn('maint.notice')}
 			</span>
 		</span>
 	</div>

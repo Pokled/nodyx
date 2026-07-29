@@ -1,4 +1,7 @@
 <script lang="ts">
+
+	import { t } from '$lib/i18n'
+	const tFn = $derived($t)
 	import type { PageData } from './$types';
 	let { data }: { data: PageData } = $props();
 </script>
@@ -17,7 +20,7 @@
 		<h1 class="text-2xl font-bold text-white mb-3">Lien invalide</h1>
 		<p class="text-gray-400 text-sm mb-6">{data.error}</p>
 		<p class="text-sm text-gray-600">
-			<a href="/auth/login" class="text-indigo-400 hover:text-indigo-300">Retour à la connexion</a>
+			<a href="/auth/login" class="text-indigo-400 hover:text-indigo-300">{tFn('auth.back_login')}</a>
 		</p>
 	{/if}
 </div>

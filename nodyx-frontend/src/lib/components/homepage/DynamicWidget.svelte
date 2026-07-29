@@ -1,4 +1,7 @@
 <script lang="ts">
+
+	import { t } from '$lib/i18n'
+	const tFn = $derived($t)
 	// Charge un widget externe (Web Component) à la volée
 	// Le widget doit s'auto-enregistrer via customElements.define('nodyx-widget-{id}', ...)
 	import { onMount } from 'svelte'
@@ -47,7 +50,7 @@
 				await Promise.race([
 					customElements.whenDefined(tagName),
 					new Promise((_, reject) =>
-						setTimeout(() => reject(new Error(`${tagName} non enregistré après 5s`)), 5000)
+						setTimeout(() => reject(new Error(tFn('dw.not_registered', { tag: tagName }))), 5000)
 					),
 				])
 			}
@@ -69,7 +72,7 @@
 	<div class="w-full flex items-center justify-center py-8 gap-2" style="color:#374151">
 		<div class="w-4 h-4 rounded-full border-2 animate-spin"
 		     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
-		<span class="text-xs">Chargement du widget…</span>
+		<span class="text-xs">{tFn('dw.loading')}</span>
 	</div>
 
 {:else if loadStatus === 'error'}

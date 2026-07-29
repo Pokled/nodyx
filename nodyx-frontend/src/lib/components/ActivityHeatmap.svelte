@@ -1,4 +1,7 @@
 <script lang="ts">
+
+	import { t } from '$lib/i18n'
+	const tFn = $derived($t)
 	import { API_URL } from '$lib/api'
 
 	let { username, accent = '#6366f1' }: { username: string; accent?: string } = $props()
@@ -90,8 +93,8 @@
 	function showTip(e: MouseEvent, cell: Cell) {
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
 		const label = cell.count === 0
-			? `Aucune activité — ${fmtDate(cell.date)}`
-			: `${cell.count} contribution${cell.count > 1 ? 's' : ''} — ${fmtDate(cell.date)}`
+			? tFn('heatmap.no_activity', { date: fmtDate(cell.date) })
+			: (cell.count > 1 ? tFn('heatmap.contrib_many', { count: cell.count, date: fmtDate(cell.date) }) : tFn('heatmap.contrib_one', { count: cell.count, date: fmtDate(cell.date) }))
 		tooltip = {
 			text: label,
 			x: rect.left + rect.width / 2,
@@ -127,7 +130,7 @@
 		<!-- Header stats -->
 		<div class="flex items-center justify-between mb-4">
 			<p class="text-xs uppercase tracking-widest font-medium" style="color: var(--p-text-muted)">
-				Activité — 12 derniers mois
+				{tFn('heatmap.title')}
 			</p>
 			<div class="flex items-center gap-4 text-[11px]" style="color: var(--p-text-muted)">
 				<span><strong class="text-white">{data.total}</strong> contributions</span>

@@ -8,6 +8,9 @@
     - showLogo : boolean (défaut true)
 -->
 <script lang="ts">
+
+	import { t } from '$lib/i18n'
+	const tFn = $derived($t)
 	interface Props {
 		version:   string
 		variant?: 'footer' | 'inline' | 'admin'
@@ -31,7 +34,7 @@
 <a
 	href="/about"
 	class="inline-flex items-center {sizeClass} opacity-60 hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-200"
-	title="À propos de Nodyx"
+	title={tFn('about.meta_title')}
 >
 	{#if showLogo}
 		<img

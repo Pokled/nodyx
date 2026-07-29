@@ -1,4 +1,7 @@
 <script lang="ts">
+
+	import { t } from '$lib/i18n'
+	const tFn = $derived($t)
 	interface Props {
 		config: Record<string, unknown>;
 		instance: Record<string, unknown>;
@@ -38,7 +41,7 @@
 				onclick={() => dismissed = true}
 				class="absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-opacity hover:opacity-80"
 				style="color:#6b7280"
-				aria-label="Fermer"
+				aria-label={tFn('common.close')}
 			>
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>

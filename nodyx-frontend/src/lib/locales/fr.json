@@ -2090,5 +2090,19 @@
   "emoji_picker.cat_nourriture": "Nourriture",
   "emoji_picker.cat_voyage": "Voyage",
   "emoji_picker.cat_objets": "Objets",
-  "emoji_picker.cat_symboles": "Symboles"
+  "emoji_picker.cat_symboles": "Symboles",
+  "heatmap.no_activity": "Aucune activité — {{date}}",
+  "heatmap.contrib_one": "{{count}} contribution — {{date}}",
+  "heatmap.contrib_many": "{{count}} contributions — {{date}}",
+  "heatmap.title": "Activité — 12 derniers mois",
+  "msp.screen": "ÉCRAN",
+  "msp.dblclick": "Double-clic → plein écran",
+  "dw.not_registered": "{{tag}} non enregistré après 5s",
+  "dw.loading": "Chargement du widget…",
+  "gh.avatar_alt": "Avatar GitHub de {{login}}",
+  "gh.recent_repos": "Repos récents",
+  "maint.notice": "· les nouvelles inscriptions et publications sont temporairement désactivées. Réessaye dans quelques instants.",
+  "msg.click_open": "Cliquer pour ouvrir",
+  "canvas_board.connecting": "Connexion au canvas…",
+  "auth.back_login": "Retour à la connexion"
 }

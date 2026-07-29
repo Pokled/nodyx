@@ -1,4 +1,7 @@
 <script lang="ts">
+
+	import { t } from '$lib/i18n'
+	const tFn = $derived($t)
 	import { goto } from '$app/navigation'
 	import { socket } from '$lib/socket'
 	import NodyxCanvas from '$lib/components/NodyxCanvas.svelte'
@@ -34,6 +37,6 @@
 	/>
 {:else}
 	<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0a0a10] text-gray-400 text-sm">
-		Connexion au canvas…
+		{tFn('canvas_board.connecting')}
 	</div>
 {/if}
