@@ -3,9 +3,12 @@
 	import { browser } from '$app/environment'
 	import { onMount, onDestroy } from 'svelte'
 	import { PUBLIC_API_URL } from '$env/static/public'
+	import { t as i18n } from '$lib/i18n'
 	import Tooltip from '$lib/components/ui/Tooltip.svelte'
 	import SendToDeckModal from './SendToDeckModal.svelte'
 	import PlaylistSidebar, { type Playlist } from './PlaylistSidebar.svelte'
+
+	const tFn = $derived($i18n)
 
 	// Soundboard / bibliothèque audio : upload mp3/ogg/wav, extraction ID3 (titre,
 	// artiste, durée, cover art), preview, édition (volume défaut, fade in/out,
@@ -100,8 +103,8 @@
 			})
 			if (res.ok) {
 				queueEnabled = next
-				flash(next ? 'Ajouts viewers activés.' : 'Ajouts viewers désactivés.', true)
-			} else flash('Échec toggle.', false)
+				flash(next ? tFn('soundlib.viewers_on') : tFn('soundlib.viewers_off'), true)
+			} else flash(tFn('soundlib.err_toggle'), false)
 		} finally {
 			queueBusy = false
 		}
@@ -114,20 +117,20 @@
 		})
 		if (res.ok) {
 			queue = queue.filter(q => q.trackId !== trackId)
-			flash('Son retiré de la queue.', true)
+			flash(tFn('soundlib.sound_removed'), true)
 		}
 	}
 
 	async function clearQueueAll(): Promise<void> {
 		if (queue.length === 0) return
-		if (!confirm(`Vider la queue (${queue.length} son${queue.length > 1 ? 's' : ''}) ?`)) return
+		if (!confirm(queue.length > 1 ? tFn('soundlib.clear_confirm_many', { n: queue.length }) : tFn('soundlib.clear_confirm_one', { n: queue.length }))) return
 		const res = await apiFetch(fetch, '/streamer/soundboard/queue', {
 			method:  'DELETE',
 			headers: { Authorization: `Bearer ${token}` },
 		})
 		if (res.ok) {
 			queue = []
-			flash('Queue vidée.', true)
+			flash(tFn('soundlib.queue_cleared'), true)
 		}
 	}
 	let query     = $state('')
@@ -300,7 +303,7 @@
 				loadPlaylists()
 				if (selectedPlaylistId === playlistId) loadPlaylistTracks(playlistId)
 			} else {
-				flash('Échec mise à jour playlist.', false)
+				flash(tFn('soundlib.err_playlist_update'), false)
 			}
 		} finally {
 			playlistMenuBusy = false
@@ -327,9 +330,9 @@
 			}
 			await loadTracks()
 			const failed = uploadProgress.failed
-			if (failed === 0)      flash(`${added} piste${added > 1 ? 's' : ''} ajoutée${added > 1 ? 's' : ''}.`, true)
-			else if (added === 0)  flash(`Échec upload des ${failed} fichier${failed > 1 ? 's' : ''}.`, false)
-			else                   flash(`${added} ajoutée${added > 1 ? 's' : ''}, ${failed} échec${failed > 1 ? 's' : ''}.`, true)
+			if (failed === 0)      flash(added > 1 ? tFn('soundlib.tracks_added_many', { n: added }) : tFn('soundlib.tracks_added_one', { n: added }), true)
+			else if (added === 0)  flash(failed > 1 ? tFn('soundlib.upload_failed_many', { n: failed }) : tFn('soundlib.upload_failed_one', { n: failed }), false)
+			else                   flash(tFn('soundlib.upload_partial', { added, failed }), true)
 		} finally {
 			uploading = false
 			uploadProgress = { done: 0, total: 0, current: '', failed: 0 }
@@ -417,9 +420,9 @@
 				const data = await res.json() as { track: AudioTrack }
 				tracks = tracks.map(x => x.id === t.id ? data.track : x)
 				editingId = null
-				flash('Piste mise à jour.', true)
+				flash(tFn('soundlib.track_updated'), true)
 			} else {
-				flash('Échec mise à jour.', false)
+				flash(tFn('soundlib.err_update'), false)
 			}
 		} finally {
 			editBusy = false
@@ -427,7 +430,7 @@
 	}
 
 	async function deleteTrack(t: AudioTrack): Promise<void> {
-		if (!confirm(`Supprimer "${t.title}" de la bibliothèque ?\n(le fichier audio reste dans tes assets)`)) return
+		if (!confirm(tFn('soundlib.delete_confirm', { title: t.title }))) return
 		const res = await apiFetch(fetch, `/streamer/audio-library/${t.id}`, {
 			method:  'DELETE',
 			headers: { Authorization: `Bearer ${token}` },
@@ -436,9 +439,9 @@
 			tracks = tracks.filter(x => x.id !== t.id)
 			if (editingId === t.id) editingId = null
 			if (previewingId === t.id) stopPreview()
-			flash(`"${t.title}" supprimée.`, true)
+			flash(tFn('soundlib.track_deleted', { title: t.title }), true)
 		} else {
-			flash('Échec suppression.', false)
+			flash(tFn('soundlib.err_delete'), false)
 		}
 	}
 
@@ -488,22 +491,22 @@
 		<div>
 			<div class="flex items-center gap-2">
 				<h2 class="text-lg font-semibold text-zinc-100">Soundboard</h2>
-				<Tooltip text="Ta bibliothèque audio personnelle. Upload tes mp3/ogg/wav, on extrait les tags ID3, et tu pourras les déclencher depuis le Stream Deck." position="bottom"/>
+				<Tooltip text={tFn('soundlib.title_tooltip')} position="bottom"/>
 			</div>
-			<p class="text-sm text-zinc-500 mt-0.5">Audio à déclencher en live. Extraction auto des tags ID3 et de la cover.</p>
+			<p class="text-sm text-zinc-500 mt-0.5">{tFn('soundlib.subtitle')}</p>
 		</div>
 		<div class="flex items-center gap-2 flex-wrap">
 			<!-- Lien direct vers la page publique viewers. Visible seulement quand on
 			     a au moins une piste publique (sinon la page serait vide pour le viewer). -->
 			<a href="/soundboard" target="_blank" rel="noopener noreferrer"
 				class="text-xs inline-flex items-center gap-1.5 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 hover:border-purple-500/70 text-purple-100 px-2.5 py-1.5 rounded-sm transition-colors font-medium"
-				title="Ouvrir la page publique du Soundboard (visible par tes viewers)">
+				title={tFn('soundlib.public_page_title')}>
 				<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 					<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
 					<polyline points="15 3 21 3 21 9"/>
 					<line x1="10" y1="14" x2="21" y2="3"/>
 				</svg>
-				Page publique
+				{tFn('soundlib.public_page')}
 			</a>
 			<div class="text-xs text-zinc-500 flex items-center gap-1.5 flex-wrap">
 				<span class="text-zinc-600">Formats</span>
@@ -525,17 +528,17 @@
 	<div class="border border-zinc-800 bg-zinc-900">
 		<header class="px-4 py-3 border-b border-zinc-800 flex items-center justify-between gap-3 flex-wrap">
 			<div class="flex items-center gap-2">
-				<h3 class="text-sm font-semibold text-zinc-100">Queue viewers</h3>
-				<Tooltip text="Les viewers peuvent ajouter des sons à une queue depuis la page publique /soundboard ou via la commande chat (à venir). Auto-play du suivant quand un son finit. Toggle off = blocage temporaire."/>
+				<h3 class="text-sm font-semibold text-zinc-100">{tFn('soundlib.queue_title')}</h3>
+				<Tooltip text={tFn('soundlib.queue_tooltip')}/>
 				{#if queue.length > 0}
-					<span class="text-xs text-zinc-500">{queue.length} en attente</span>
+					<span class="text-xs text-zinc-500">{tFn('soundlib.n_pending', { n: queue.length })}</span>
 				{/if}
 			</div>
 			<div class="flex items-center gap-2">
 				{#if queue.length > 0}
 					<button type="button" onclick={clearQueueAll}
 						class="text-xs inline-flex items-center border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/60 px-2.5 py-1 rounded-sm transition-colors">
-						Tout vider
+						{tFn('soundlib.clear_all')}
 					</button>
 				{/if}
 				<!-- Toggle visuel -->
@@ -545,15 +548,15 @@
 							? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/25'
 							: 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'}">
 					<span class="w-1.5 h-1.5 rounded-full {queueEnabled ? 'bg-emerald-400' : 'bg-zinc-500'}"></span>
-					{queueEnabled ? 'Viewers autorisés' : 'Viewers bloqués'}
+					{queueEnabled ? tFn('soundlib.viewers_allowed') : tFn('soundlib.viewers_blocked')}
 				</button>
 			</div>
 		</header>
 		{#if queue.length === 0}
 			<div class="px-4 py-4 text-xs text-zinc-500 text-center">
 				{queueEnabled
-					? 'Aucun son en queue. Les viewers peuvent ajouter via /soundboard.'
-					: 'Les ajouts viewers sont désactivés. Active-les pour rouvrir la queue.'}
+					? tFn('soundlib.queue_empty_on')
+					: tFn('soundlib.queue_empty_off')}
 			</div>
 		{:else}
 			<ol class="divide-y divide-zinc-800">
@@ -583,7 +586,7 @@
 						</div>
 						<button type="button" onclick={() => skipQueueItem(e.trackId)}
 							class="text-xs inline-flex items-center border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/60 px-2 py-1 rounded-sm transition-colors"
-							title="Retirer ce son de la queue">
+							title={tFn('soundlib.remove_from_queue')}>
 							Skip
 						</button>
 					</li>
@@ -611,7 +614,7 @@
 					<div class="flex items-center justify-between text-xs text-zinc-300">
 						<span class="font-medium">Upload <span class="text-purple-300">{uploadProgress.done} / {uploadProgress.total}</span></span>
 						{#if uploadProgress.failed > 0}
-							<span class="text-rose-300">{uploadProgress.failed} échec{uploadProgress.failed > 1 ? 's' : ''}</span>
+							<span class="text-rose-300">{uploadProgress.failed > 1 ? tFn('soundlib.n_failed_many', { n: uploadProgress.failed }) : tFn('soundlib.n_failed_one', { n: uploadProgress.failed })}</span>
 						{/if}
 					</div>
 					<div class="w-full h-1.5 bg-zinc-950 rounded-sm overflow-hidden border border-zinc-800">
@@ -623,12 +626,12 @@
 			{:else}
 				<div class="text-sm text-zinc-300">
 					{#if dragHover}
-						Lâche ici, on s'occupe du reste.
+						{tFn('soundlib.drop_here')}
 					{:else}
-						<span class="text-zinc-100 font-medium">Dépose tes fichiers audio</span> ou clique pour parcourir
+						<span class="text-zinc-100 font-medium">{tFn('soundlib.drop_files')}</span> {tFn('soundlib.or_browse')}
 					{/if}
 				</div>
-				<div class="text-xs text-zinc-500">Upload multiple supporté. Tags ID3 (titre, artiste, cover) extraits automatiquement. <span class="text-zinc-600">Max 50 MB par fichier — pour les WAV longs, préférer mp3/ogg.</span></div>
+				<div class="text-xs text-zinc-500">{tFn('soundlib.upload_note')} <span class="text-zinc-600">{tFn('soundlib.upload_note_max')}</span></div>
 			{/if}
 		</div>
 		<input type="file" multiple accept="audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/mp4,audio/flac" class="sr-only"
@@ -655,7 +658,7 @@
 			{#each (['all', 'private', 'public'] as const) as v (v)}
 				<button type="button" onclick={() => visibilityFilter = v}
 					class="text-xs px-2.5 py-1 rounded-sm transition-colors {visibilityFilter === v ? 'bg-purple-500/15 text-purple-200' : 'text-zinc-400 hover:text-zinc-200'}">
-					{v === 'all' ? 'Toutes' : v === 'private' ? 'Privé' : 'Public'}
+					{v === 'all' ? tFn('soundlib.filter_all') : v === 'private' ? tFn('soundlib.private') : tFn('soundlib.public')}
 				</button>
 			{/each}
 		</div>
@@ -664,7 +667,7 @@
 				<circle cx="11" cy="11" r="8"/>
 				<line x1="21" y1="21" x2="16.65" y2="16.65"/>
 			</svg>
-			<input type="search" bind:value={query} placeholder="Rechercher par titre ou artiste"
+			<input type="search" bind:value={query} placeholder={tFn('soundlib.search_ph')}
 				class="w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 pl-8 pr-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition-colors rounded-sm"/>
 		</div>
 	</div>
@@ -677,35 +680,35 @@
 					{@const p = playlists.find(x => x.id === selectedPlaylistId)}
 					{p?.name ?? 'Playlist'}
 				{:else}
-					Toutes les pistes
+					{tFn('soundlib.all_tracks')}
 				{/if}
 			</h3>
 			{#if filtered.length > 0}<span class="text-xs text-zinc-600 shrink-0">{filtered.length} / {baseTracks.length}</span>{/if}
 		</div>
 
 		{#if loading || playlistTracksLoading}
-			<div class="border border-zinc-800 bg-zinc-900 px-4 py-6 text-sm text-zinc-500">Chargement…</div>
+			<div class="border border-zinc-800 bg-zinc-900 px-4 py-6 text-sm text-zinc-500">{tFn('soundlib.loading')}</div>
 		{:else if tracks.length === 0}
 			<div class="border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-8 text-center text-sm text-zinc-500">
-				Aucune piste. Dépose tes premiers fichiers audio ci-dessus pour démarrer.
+				{tFn('soundlib.empty')}
 			</div>
 		{:else if selectedPlaylistId && baseTracks.length === 0}
 			<div class="border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center text-sm text-zinc-500 leading-relaxed">
-				Playlist vide. Reviens sur <button type="button" onclick={() => onSelectPlaylist(null)} class="text-purple-300 hover:underline">Toutes les pistes</button>
-				et utilise l'icône <span class="text-zinc-300">≡</span> à côté de chaque son pour le ranger ici.
+				{tFn('soundlib.playlist_empty_1')} <button type="button" onclick={() => onSelectPlaylist(null)} class="text-purple-300 hover:underline">{tFn('soundlib.all_tracks')}</button>
+				{tFn('soundlib.playlist_empty_2')} <span class="text-zinc-300">≡</span> {tFn('soundlib.playlist_empty_3')}
 			</div>
 		{:else if filtered.length === 0}
 			<div class="border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center text-sm text-zinc-500">
-				Aucun résultat pour ces filtres.
+				{tFn('soundlib.no_results')}
 			</div>
 		{:else}
 			<div class="border border-zinc-800 bg-zinc-900">
 				<!-- Header colonnes : vignette | titre/artiste | durée | visibilité | actions -->
 				<div class="grid grid-cols-[56px_1fr_80px_140px_auto] gap-4 px-4 py-2 border-b border-zinc-800 bg-zinc-950 text-[11px] uppercase tracking-wide font-medium text-zinc-500">
 					<span></span>
-					<span>Titre</span>
-					<span>Durée</span>
-					<span>Visibilité</span>
+					<span>{tFn('soundlib.col_title')}</span>
+					<span>{tFn('soundlib.col_duration')}</span>
+					<span>{tFn('soundlib.col_visibility')}</span>
 					<span class="text-right pr-1">Actions</span>
 				</div>
 				<ul class="divide-y divide-zinc-800">
@@ -728,9 +731,9 @@
 							<div class="min-w-0">
 								<div class="text-sm font-medium text-zinc-100 truncate" title={t.title}>{t.title}</div>
 								<div class="text-xs text-zinc-500 truncate" title={t.artist ?? ''}>
-									{t.artist ?? 'Artiste inconnu'}
+									{t.artist ?? tFn('soundlib.unknown_artist')}
 									{#if t.loop} · <span class="text-zinc-400">loop</span>{/if}
-									{#if t.royaltyFree === true} · <span class="text-emerald-400">libre de droits</span>{:else if t.royaltyFree === false} · <span class="text-rose-400">à risque DMCA</span>{/if}
+									{#if t.royaltyFree === true} · <span class="text-emerald-400">{tFn('soundlib.royalty_free')}</span>{:else if t.royaltyFree === false} · <span class="text-rose-400">{tFn('soundlib.dmca_risk')}</span>{/if}
 								</div>
 							</div>
 
@@ -742,7 +745,7 @@
 								<span class="inline-flex items-center gap-1.5">
 									<span class="w-1.5 h-1.5 rounded-full {t.visibility === 'public' ? 'bg-purple-400' : 'bg-zinc-600'}"></span>
 									<span class="{t.visibility === 'public' ? 'text-purple-300' : 'text-zinc-400'} font-medium">
-										{t.visibility === 'public' ? 'Public' : 'Privé'}
+										{t.visibility === 'public' ? tFn('soundlib.public') : tFn('soundlib.private')}
 									</span>
 								</span>
 							</div>
@@ -751,25 +754,25 @@
 							<div class="flex items-center gap-1.5 justify-end relative">
 								<button type="button" onclick={() => togglePreview(t)}
 									class="text-xs inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors"
-									title={previewingId === t.id ? 'Arrêter' : 'Écouter'}>
+									title={previewingId === t.id ? tFn('soundlib.stop_title') : tFn('soundlib.listen')}>
 									{#if previewingId === t.id}
 										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><rect x="5" y="4" width="3" height="12"/><rect x="12" y="4" width="3" height="12"/></svg>
 										Stop
 									{:else}
 										<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84a1 1 0 011.04.06l9 6a1 1 0 010 1.66l-9 6A1 1 0 016 16V4a1 1 0 01.3-.84z"/></svg>
-										Écouter
+										{tFn('soundlib.listen')}
 									{/if}
 								</button>
 								<button type="button" onclick={() => sendToDeckTrack = t}
 									class="text-xs inline-flex items-center gap-1 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 hover:border-purple-500/70 text-purple-100 px-2.5 py-1 rounded-sm transition-colors font-medium"
-									title="Ajouter ce son à un bouton du Stream Deck">
+									title={tFn('soundlib.add_to_deck_title')}>
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
 									Deck
 								</button>
 								<!-- Bouton ouverture popover playlists pour ce track. -->
 								<button type="button" onclick={() => openPlaylistMenu(t.id)}
 									class="text-xs inline-flex items-center bg-zinc-800 hover:bg-zinc-700 border {playlistMenuTrackId === t.id ? 'border-purple-500/60 text-purple-200' : 'border-zinc-700 hover:border-purple-500/60 hover:text-purple-200'} text-zinc-100 px-2 py-1 rounded-sm transition-colors"
-									title="Ranger dans une playlist">
+									title={tFn('soundlib.add_to_playlist_title')}>
 									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 										<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="13" y2="18"/>
 										<polyline points="3 6 4 7 5 6"/><polyline points="3 12 4 13 5 12"/><polyline points="3 18 4 19 5 18"/>
@@ -777,11 +780,11 @@
 								</button>
 								<button type="button" onclick={() => editingId === t.id ? cancelEdit() : startEdit(t)}
 									class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-purple-500/60 hover:text-purple-200 text-zinc-100 px-2.5 py-1 rounded-sm transition-colors">
-									{editingId === t.id ? 'Fermer' : 'Éditer'}
+									{editingId === t.id ? tFn('soundlib.close') : tFn('soundlib.edit')}
 								</button>
 								<button type="button" onclick={() => deleteTrack(t)}
 									class="text-xs inline-flex items-center border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/60 px-2 py-1 rounded-sm transition-colors"
-									title="Supprimer">
+									title={tFn('soundlib.delete')}>
 									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 										<polyline points="3 6 5 6 21 6"/>
 										<path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
@@ -795,11 +798,11 @@
 									<div class="absolute top-full right-0 mt-1.5 z-20 w-64 bg-zinc-950 border border-zinc-800 shadow-xl rounded-sm overflow-hidden">
 										<div class="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
 											<span class="text-[11px] uppercase tracking-wide font-medium text-zinc-400">Playlists</span>
-											<button type="button" onclick={closePlaylistMenu} class="text-xs text-zinc-500 hover:text-zinc-300" title="Fermer">✕</button>
+											<button type="button" onclick={closePlaylistMenu} class="text-xs text-zinc-500 hover:text-zinc-300" title={tFn('soundlib.close')}>✕</button>
 										</div>
 										{#if playlists.length === 0}
 											<div class="px-3 py-3 text-[11px] text-zinc-500 text-center">
-												Aucune playlist. Crée-en une dans la sidebar à gauche.
+												{tFn('soundlib.no_playlists')}
 											</div>
 										{:else}
 											<ul class="max-h-56 overflow-y-auto py-1">
@@ -831,16 +834,16 @@
 								<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div>
 										<div class="flex items-center gap-1.5">
-											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Titre</label>
-											<Tooltip text="Le titre affiché dans le Stream Deck et l'overlay. Remplace celui des tags ID3."/>
+											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">{tFn('soundlib.col_title')}</label>
+											<Tooltip text={tFn('soundlib.edit_title_tooltip')}/>
 										</div>
 										<input type="text" bind:value={editTitle} maxlength="200"
 											class="mt-1.5 w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors rounded-sm"/>
 									</div>
 									<div>
 										<div class="flex items-center gap-1.5">
-											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Artiste</label>
-											<Tooltip text="Optionnel. Affiché dans l'overlay sous le titre."/>
+											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">{tFn('soundlib.artist_label')}</label>
+											<Tooltip text={tFn('soundlib.artist_tooltip')}/>
 										</div>
 										<input type="text" bind:value={editArtist} maxlength="200"
 											class="mt-1.5 w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors rounded-sm"/>
@@ -850,8 +853,8 @@
 								<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
 									<div>
 										<div class="flex items-center gap-1.5">
-											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Volume défaut</label>
-											<Tooltip text="Multiplicateur appliqué au déclenchement. 1.0 = volume original, 2.0 = +6 dB."/>
+											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">{tFn('soundlib.volume_label')}</label>
+											<Tooltip text={tFn('soundlib.volume_tooltip')}/>
 										</div>
 										<div class="mt-1.5 flex items-center gap-2">
 											<input type="range" min="0" max="2" step="0.05" bind:value={editVolume} class="flex-1 accent-purple-500"/>
@@ -861,7 +864,7 @@
 									<div>
 										<div class="flex items-center gap-1.5">
 											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Fade in (ms)</label>
-											<Tooltip text="Montée en volume au déclenchement. 0 = pas de fade."/>
+											<Tooltip text={tFn('soundlib.fadein_tooltip')}/>
 										</div>
 										<input type="number" min="0" max="10000" step="50" bind:value={editFadeIn}
 											class="mt-1.5 w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors rounded-sm"/>
@@ -869,7 +872,7 @@
 									<div>
 										<div class="flex items-center gap-1.5">
 											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Fade out (ms)</label>
-											<Tooltip text="Descente en volume à la fin ou au stop. 0 = coupe sec."/>
+											<Tooltip text={tFn('soundlib.fadeout_tooltip')}/>
 										</div>
 										<input type="number" min="0" max="10000" step="50" bind:value={editFadeOut}
 											class="mt-1.5 w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors rounded-sm"/>
@@ -879,28 +882,28 @@
 								<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
 									<div>
 										<div class="flex items-center gap-1.5 mb-1.5">
-											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Visibilité</label>
-											<Tooltip text="Privé : visible que par toi. Public (V2) : partagé avec tes modérateurs et utilisable via channel points."/>
+											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">{tFn('soundlib.col_visibility')}</label>
+											<Tooltip text={tFn('soundlib.visibility_tooltip')}/>
 										</div>
 										<div class="grid grid-cols-2 gap-1 bg-zinc-900 border border-zinc-800 p-0.5 rounded-sm">
 											{#each (['private', 'public'] as Visibility[]) as v (v)}
 												<button type="button" onclick={() => editVisibility = v}
 													class="text-xs px-2.5 py-1.5 rounded-sm transition-colors {editVisibility === v ? 'bg-purple-500/15 text-purple-200' : 'text-zinc-400 hover:text-zinc-200'}">
-													{v === 'private' ? 'Privé' : 'Public'}
+													{v === 'private' ? tFn('soundlib.private') : tFn('soundlib.public')}
 												</button>
 											{/each}
 										</div>
 									</div>
 									<div>
 										<div class="flex items-center gap-1.5 mb-1.5">
-											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Droits</label>
-											<Tooltip text="Indication anti-DMCA. Libre = OK pour Twitch. À risque = strike possible. Inconnu = pas vérifié."/>
+											<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">{tFn('soundlib.rights_label')}</label>
+											<Tooltip text={tFn('soundlib.rights_tooltip')}/>
 										</div>
 										<div class="grid grid-cols-3 gap-1 bg-zinc-900 border border-zinc-800 p-0.5 rounded-sm">
-											{#each [{ v: 'unknown', l: 'Inconnu' }, { v: 'yes', l: 'Libre' }, { v: 'no', l: 'Risqué' }] as opt (opt.v)}
+											{#each [{ v: 'unknown', lk: 'soundlib.rights_unknown' }, { v: 'yes', lk: 'soundlib.rights_free' }, { v: 'no', lk: 'soundlib.rights_risky' }] as opt (opt.v)}
 												<button type="button" onclick={() => editRoyaltyFree = opt.v as 'unknown' | 'yes' | 'no'}
 													class="text-xs px-2 py-1.5 rounded-sm transition-colors {editRoyaltyFree === opt.v ? (opt.v === 'yes' ? 'bg-emerald-500/15 text-emerald-200' : opt.v === 'no' ? 'bg-rose-500/15 text-rose-200' : 'bg-zinc-700/40 text-zinc-200') : 'text-zinc-400 hover:text-zinc-200'}">
-													{opt.l}
+													{tFn(opt.lk)}
 												</button>
 											{/each}
 										</div>
@@ -908,27 +911,27 @@
 									<label class="flex items-center gap-2 cursor-pointer self-end pb-2">
 										<input type="checkbox" bind:checked={editLoop} class="w-4 h-4 accent-purple-500"/>
 										<span class="text-sm text-zinc-300">Loop</span>
-										<Tooltip text="Lecture en boucle jusqu'au stop. Utile pour les ambiances de fond."/>
+										<Tooltip text={tFn('soundlib.loop_tooltip')}/>
 									</label>
 								</div>
 
 								<div class="mt-4">
 									<div class="flex items-center gap-1.5">
 										<label class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Tags</label>
-										<Tooltip text="Séparés par des virgules. Sert à filtrer la bibliothèque. Ex: chill, electro, ambiance."/>
+										<Tooltip text={tFn('soundlib.tags_tooltip')}/>
 									</div>
-									<input type="text" bind:value={editTags} maxlength="500" placeholder="chill, electro, ambiance"
+									<input type="text" bind:value={editTags} maxlength="500" placeholder={tFn('soundlib.tags_ph')}
 										class="mt-1.5 w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition-colors rounded-sm"/>
 								</div>
 
 								<div class="mt-5 flex items-center gap-2">
 									<button type="button" onclick={() => saveEdit(t)} disabled={editBusy}
 										class="text-sm font-medium bg-purple-500 hover:bg-purple-400 disabled:bg-zinc-800 disabled:text-zinc-500 shadow-sm shadow-purple-500/30 disabled:shadow-none text-white px-4 py-1.5 rounded-sm transition-colors">
-										Enregistrer
+										{tFn('soundlib.save')}
 									</button>
 									<button type="button" onclick={cancelEdit}
 										class="text-sm bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded-sm transition-colors">
-										Annuler
+										{tFn('soundlib.cancel')}
 									</button>
 								</div>
 							</li>
@@ -947,7 +950,7 @@
 	{@const t = sendToDeckTrack}
 	<SendToDeckModal
 		{token}
-		title="Ajouter au Stream Deck"
+		title={tFn('soundlib.add_to_deck_modal')}
 		subtitle={t.title}
 		buttonTemplate={{
 			label:     t.title.slice(0, 40),
@@ -957,6 +960,6 @@
 			action:    { type: 'play_audio', trackId: t.id, trackTitle: t.title },
 		}}
 		onClose={() => sendToDeckTrack = null}
-		onPlaced={() => flash(`"${t.title}" ajouté au deck.`, true)}
+		onPlaced={() => flash(tFn('soundlib.added_to_deck', { title: t.title }), true)}
 	/>
 {/if}

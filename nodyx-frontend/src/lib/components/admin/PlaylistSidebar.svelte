@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
+	import { t as i18n } from '$lib/i18n'
 	import SendToDeckModal from './SendToDeckModal.svelte'
 	import PlaceInSceneModal from './obs/PlaceInSceneModal.svelte'
 	import { focusSceneAfterNav } from './obs/sceneNav'
 	import type { DeckButton } from '$lib/types/deck'
+
+	const tFn = $derived($i18n)
 
 	// Sidebar de gauche du tab Soundboard : liste les playlists du streamer,
 	// permet d'en créer/renommer/supprimer/réordonner et émet la sélection
@@ -70,7 +73,7 @@
 
 	async function openPlaceInScene(p: Playlist): Promise<void> {
 		const t = await ensureOverlayToken()
-		if (!t) { flash('Impossible de récupérer le token overlay.', false); return }
+		if (!t) { flash(tFn('plsb.err_token'), false); return }
 		placeOverlayToken = t
 		placePlaylist = p
 	}
@@ -107,8 +110,8 @@
 			gradient:  `${accent}/8b5cf6`,
 			action:    { type: 'playlist_control', cmd: 'play', playlistId: p.id },
 		}
-		deckModalTitle    = 'Ajouter au Stream Deck'
-		deckModalSubtitle = `▶ Démarrer "${p.name}"`
+		deckModalTitle    = tFn('soundlib.add_to_deck_modal')
+		deckModalSubtitle = tFn('plsb.start_subtitle', { name: p.name })
 	}
 
 	function openDeckModalGlobal(cmd: 'toggle' | 'skip' | 'prev' | 'stop', label: string, icon: string): void {
@@ -119,21 +122,21 @@
 			gradient:  'minimal',
 			action:    { type: 'playlist_control', cmd },
 		}
-		deckModalTitle    = 'Ajouter au Stream Deck'
+		deckModalTitle    = tFn('soundlib.add_to_deck_modal')
 		deckModalSubtitle = label
 	}
 
 	async function copyOverlayUrl(p: Playlist): Promise<void> {
 		if (!browser) return
 		const t = await ensureOverlayToken()
-		if (!t) { flash('Impossible de générer le lien.', false); return }
+		if (!t) { flash(tFn('plsb.err_link'), false); return }
 		const url = `${window.location.origin}/overlay/playlist/${t}?id=${p.id}`
 		try {
 			await navigator.clipboard.writeText(url)
-			flash(`Lien overlay "${p.name}" copié.`, true)
+			flash(tFn('plsb.link_copied', { name: p.name }), true)
 		} catch {
 			// Fallback : on affiche le lien dans une prompt pour permettre la copie manuelle.
-			window.prompt('Copie ce lien dans OBS Browser Source :', url)
+			window.prompt(tFn('plsb.copy_prompt'), url)
 		}
 	}
 
@@ -152,9 +155,9 @@
 				creating = false
 				onPlaylistsChanged()
 			} else if (res.status === 409) {
-				flash('Une playlist avec ce nom existe déjà.', false)
+				flash(tFn('plsb.err_name_exists'), false)
 			} else {
-				flash('Création échouée.', false)
+				flash(tFn('plsb.err_create'), false)
 			}
 		} finally {
 			busy = false
@@ -188,9 +191,9 @@
 				editingId = null
 				onPlaylistsChanged()
 			} else if (res.status === 409) {
-				flash('Ce nom est déjà pris par une autre playlist.', false)
+				flash(tFn('plsb.err_name_taken'), false)
 			} else {
-				flash('Mise à jour échouée.', false)
+				flash(tFn('plsb.err_update'), false)
 			}
 		} finally {
 			busy = false
@@ -199,8 +202,8 @@
 
 	async function deleteOne(p: Playlist): Promise<void> {
 		const msg = p.trackCount > 0
-			? `Supprimer la playlist "${p.name}" ? Les ${p.trackCount} sons restent dans ta bibliothèque, ils sont juste retirés de cette playlist.`
-			: `Supprimer la playlist "${p.name}" ?`
+			? tFn('plsb.delete_confirm_tracks', { name: p.name, n: p.trackCount })
+			: tFn('plsb.delete_confirm', { name: p.name })
 		if (!confirm(msg)) return
 		busy = true
 		try {
@@ -212,7 +215,7 @@
 				if (selectedPlaylistId === p.id) onSelectPlaylist(null)
 				onPlaylistsChanged()
 			} else {
-				flash('Suppression échouée.', false)
+				flash(tFn('plsb.err_delete'), false)
 			}
 		} finally {
 			busy = false
@@ -226,9 +229,9 @@
 		{#if !creating}
 			<button type="button" onclick={() => { creating = true; newName = '' }}
 				class="text-xs inline-flex items-center gap-1 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 hover:border-purple-500/70 text-purple-100 px-2 py-1 rounded-sm transition-colors font-medium"
-				title="Créer une playlist">
+				title={tFn('plsb.create_title')}>
 				<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-				Nouvelle
+				{tFn('plsb.new')}
 			</button>
 		{/if}
 	</header>
@@ -241,16 +244,16 @@
 
 	{#if creating}
 		<div class="px-2 py-2 border-b border-zinc-800 bg-zinc-950/50 flex items-center gap-1.5">
-			<input type="text" bind:value={newName} maxlength="100" placeholder="Nom (ex: Intro, Dev, Chill...)"
+			<input type="text" bind:value={newName} maxlength="100" placeholder={tFn('plsb.name_ph')}
 				onkeydown={(e) => { if (e.key === 'Enter') createOne(); if (e.key === 'Escape') creating = false }}
 				class="flex-1 bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-2 py-1 text-xs text-zinc-100 placeholder-zinc-600 outline-none rounded-sm transition-colors"
 				autofocus/>
 			<button type="button" onclick={createOne} disabled={busy || !newName.trim()}
 				class="text-xs bg-purple-500 hover:bg-purple-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-white px-2 py-1 rounded-sm transition-colors font-medium">
-				Créer
+				{tFn('plsb.create')}
 			</button>
 			<button type="button" onclick={() => creating = false}
-				class="text-xs text-zinc-500 hover:text-zinc-300 px-1 transition-colors" title="Annuler">✕</button>
+				class="text-xs text-zinc-500 hover:text-zinc-300 px-1 transition-colors" title={tFn('plsb.cancel')}>✕</button>
 		</div>
 	{/if}
 
@@ -266,7 +269,7 @@
 				<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 					<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
 				</svg>
-				<span class="flex-1 truncate">Toutes les pistes</span>
+				<span class="flex-1 truncate">{tFn('soundlib.all_tracks')}</span>
 			</button>
 		</li>
 
@@ -279,7 +282,7 @@
 						<input type="text" bind:value={editName} maxlength="100"
 							class="bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 px-2 py-1 text-xs text-zinc-100 outline-none rounded-sm"/>
 						<div class="flex items-center gap-1.5">
-							<label class="cursor-pointer relative shrink-0" title="Couleur d'accent">
+							<label class="cursor-pointer relative shrink-0" title={tFn('plsb.accent_color')}>
 								<span class="block w-5 h-5 rounded-full ring-1 ring-white/20"
 									style="background: {editColor || 'var(--nx-accent-2-soft)'};"></span>
 								<input type="color" value={editColor || 'var(--nx-accent-2-soft)'}
@@ -288,8 +291,8 @@
 							</label>
 							<select bind:value={editVisibility}
 								class="flex-1 bg-zinc-900 border border-zinc-800 px-1.5 py-1 text-[11px] text-zinc-100 outline-none rounded-sm">
-								<option value="private">Privée</option>
-								<option value="public">Publique</option>
+								<option value="private">{tFn('plsb.private')}</option>
+								<option value="public">{tFn('plsb.public')}</option>
 							</select>
 						</div>
 						<div class="flex items-center gap-1.5">
@@ -299,7 +302,7 @@
 							</button>
 							<button type="button" onclick={cancelEdit}
 								class="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2 py-1 rounded-sm transition-colors">
-								Annuler
+								{tFn('plsb.cancel')}
 							</button>
 						</div>
 					</div>
@@ -314,7 +317,7 @@
 						<span class="flex-1 truncate" title={p.name}>{p.name}</span>
 						<span class="text-[10px] text-zinc-600 font-mono">{p.trackCount}</span>
 						{#if p.visibility === 'public'}
-							<span class="text-[9px] uppercase tracking-wider font-bold text-purple-300 bg-purple-500/15 px-1 rounded-sm" title="Visible sur la page publique">pub</span>
+							<span class="text-[9px] uppercase tracking-wider font-bold text-purple-300 bg-purple-500/15 px-1 rounded-sm" title={tFn('plsb.public_title')}>pub</span>
 						{/if}
 					</button>
 					<!-- Boutons d'action en hover. Le bouton OBS est mis en avant
@@ -323,7 +326,7 @@
 					<div class="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900/95 backdrop-blur-sm pl-1.5">
 						<button type="button" onclick={() => copyOverlayUrl(p)}
 							class="p-1 rounded text-purple-300 hover:text-purple-100 hover:bg-purple-500/20"
-							title="Copier le lien overlay OBS de cette playlist">
+							title={tFn('plsb.copy_overlay_title')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 								<rect x="2" y="6" width="20" height="12" rx="2"/>
 								<polyline points="10 10 14 12 10 14 10 10" fill="currentColor"/>
@@ -331,7 +334,7 @@
 						</button>
 						<button type="button" onclick={() => openPlaceInScene(p)}
 							class="p-1 rounded text-sky-300 hover:text-sky-100 hover:bg-sky-500/20"
-							title="Placer cette playlist dans une scène">
+							title={tFn('plsb.place_scene_title')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 								<rect x="3" y="3" width="18" height="18" rx="2"/>
 								<path d="M9 9h6v6H9z"/>
@@ -339,18 +342,18 @@
 						</button>
 						<button type="button" onclick={() => openDeckModalStartPlaylist(p)}
 							class="p-1 rounded text-emerald-300 hover:text-emerald-100 hover:bg-emerald-500/20"
-							title="Créer un bouton Stream Deck qui démarre cette playlist">
+							title={tFn('plsb.deck_button_title')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 								<rect x="3" y="4" width="18" height="14" rx="2"/>
 								<polygon points="10 9 16 12 10 15 10 9" fill="currentColor"/>
 							</svg>
 						</button>
 						<button type="button" onclick={() => startEdit(p)}
-							class="p-1 rounded text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800/60" title="Éditer">
+							class="p-1 rounded text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800/60" title={tFn('plsb.edit')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 						</button>
 						<button type="button" onclick={() => deleteOne(p)}
-							class="p-1 rounded text-zinc-500 hover:text-rose-300 hover:bg-rose-900/40" title="Supprimer">
+							class="p-1 rounded text-zinc-500 hover:text-rose-300 hover:bg-rose-900/40" title={tFn('plsb.delete')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
 						</button>
 					</div>
@@ -360,7 +363,7 @@
 
 		{#if playlists.length === 0 && !creating}
 			<li class="px-3 py-4 text-[11px] text-zinc-500 text-center leading-snug">
-				Aucune playlist. Crée-en pour organiser tes sons par contexte (Intro, Dev, Chill...).
+				{tFn('plsb.empty')}
 			</li>
 		{/if}
 	</ul>
@@ -373,32 +376,32 @@
 					<rect x="2" y="6" width="20" height="12" rx="2"/>
 					<polyline points="10 10 14 12 10 14 10 10" fill="currentColor"/>
 				</svg>
-				<span>Survole une playlist : <span class="text-purple-300">📺</span> URL OBS, <span class="text-sky-300">🎬</span> Placer en scène, <span class="text-emerald-300">▶</span> Bouton Deck.</span>
+				<span>{tFn('plsb.hint_1')} <span class="text-purple-300">📺</span> {tFn('plsb.hint_obs')} <span class="text-sky-300">🎬</span> {tFn('plsb.hint_scene')} <span class="text-emerald-300">▶</span> {tFn('plsb.hint_deck')}</span>
 			</div>
 
 			<!-- Boutons "globaux" : pilotent l'overlay courant peu importe la
 			     playlist active. À ajouter au Deck une fois pour toutes. -->
 			<div class="px-1 pt-1 border-t border-zinc-800/50">
-				<div class="text-[9px] uppercase tracking-wider font-medium text-zinc-500 mb-1">Contrôles Deck généraux</div>
+				<div class="text-[9px] uppercase tracking-wider font-medium text-zinc-500 mb-1">{tFn('plsb.deck_controls')}</div>
 				<div class="grid grid-cols-2 gap-1">
 					<button type="button" onclick={() => openDeckModalGlobal('toggle', 'Play / Pause', '⏯')}
 						class="text-[11px] inline-flex items-center justify-center gap-1 bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-800 hover:border-purple-500/40 text-zinc-300 hover:text-zinc-100 px-1.5 py-1 rounded-sm transition-colors"
-						title="Ajouter un bouton Play/Pause au Stream Deck">
+						title={tFn('plsb.add_playpause_title')}>
 						<span>⏯</span> Play/Pause
 					</button>
-					<button type="button" onclick={() => openDeckModalGlobal('skip', 'Suivant', '⏭')}
+					<button type="button" onclick={() => openDeckModalGlobal('skip', tFn('plsb.next'), '⏭')}
 						class="text-[11px] inline-flex items-center justify-center gap-1 bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-800 hover:border-purple-500/40 text-zinc-300 hover:text-zinc-100 px-1.5 py-1 rounded-sm transition-colors"
-						title="Ajouter un bouton Suivant au Stream Deck">
+						title={tFn('plsb.add_next_title')}>
 						<span>⏭</span> Skip
 					</button>
-					<button type="button" onclick={() => openDeckModalGlobal('prev', 'Précédent', '⏮')}
+					<button type="button" onclick={() => openDeckModalGlobal('prev', tFn('plsb.prev'), '⏮')}
 						class="text-[11px] inline-flex items-center justify-center gap-1 bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-800 hover:border-purple-500/40 text-zinc-300 hover:text-zinc-100 px-1.5 py-1 rounded-sm transition-colors"
-						title="Ajouter un bouton Précédent au Stream Deck">
+						title={tFn('plsb.add_prev_title')}>
 						<span>⏮</span> Prev
 					</button>
 					<button type="button" onclick={() => openDeckModalGlobal('stop', 'Stop', '⏹')}
 						class="text-[11px] inline-flex items-center justify-center gap-1 bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-800 hover:border-purple-500/40 text-zinc-300 hover:text-zinc-100 px-1.5 py-1 rounded-sm transition-colors"
-						title="Ajouter un bouton Stop au Stream Deck">
+						title={tFn('plsb.add_stop_title')}>
 						<span>⏹</span> Stop
 					</button>
 				</div>
@@ -414,7 +417,7 @@
 		subtitle={deckModalSubtitle}
 		buttonTemplate={deckModalTemplate}
 		onClose={() => deckModalTemplate = null}
-		onPlaced={() => flash('Bouton ajouté au Stream Deck.', true)}
+		onPlaced={() => flash(tFn('plsb.button_added'), true)}
 	/>
 {/if}
 
