@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
+	import { t } from '$lib/i18n'
 	import AlertThemePreview from './AlertThemePreview.svelte'
 	import MediaSoundPicker  from './MediaSoundPicker.svelte'
 	import Tooltip           from '$lib/components/ui/Tooltip.svelte'
@@ -37,6 +38,8 @@
 	}
 
 	let { token, overlayId, initial, onSaved }: Props = $props()
+
+	const tFn = $derived($t)
 
 	const VALID_THEMES     = ['cyber', 'soft', 'retro', 'neon', 'holographic', 'minimal', 'custom'] as const
 	const VALID_POSITIONS  = ['top-right', 'top-left', 'bottom-right', 'bottom-left', 'center'] as const
@@ -125,11 +128,11 @@
 				body:    JSON.stringify({ config }),
 			})
 			if (res.ok) {
-				flash('Config sauvegardée. L\'overlay applique automatiquement.', true)
+				flash(tFn('alertcfg.saved'), true)
 				onSaved?.()
-			} else flash('Échec de la sauvegarde.', false)
+			} else flash(tFn('ovcfg.err_save'), false)
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('ovcfg.err_network'), false)
 		} finally {
 			saving = false
 		}
@@ -150,7 +153,7 @@
 		if (typeof window !== 'undefined'
 			&& window.location.protocol === 'https:'
 			&& url.startsWith('http://')) {
-			flash('URL en HTTP bloquée car Nodyx est en HTTPS. Utilise une URL https://...', false)
+			flash(tFn('alertcfg.err_mixed_content'), false)
 			return
 		}
 
@@ -168,25 +171,25 @@
 				const me = audio.error
 				const code = me?.code
 				const reason =
-					code === MediaError.MEDIA_ERR_NETWORK   ? 'erreur réseau (URL inaccessible ?)'
-					: code === MediaError.MEDIA_ERR_DECODE  ? 'fichier corrompu ou codec non supporté'
-					: code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED ? 'format non supporté (essaye un mp3 ou wav standard)'
-					: code === MediaError.MEDIA_ERR_ABORTED ? 'lecture annulée'
-					: 'origine bloquée ou URL invalide'
-				flash(`Son injouable : ${reason}.`, false)
+					code === MediaError.MEDIA_ERR_NETWORK   ? tFn('alertcfg.snd_err_network')
+					: code === MediaError.MEDIA_ERR_DECODE  ? tFn('alertcfg.snd_err_decode')
+					: code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED ? tFn('alertcfg.snd_err_src')
+					: code === MediaError.MEDIA_ERR_ABORTED ? tFn('alertcfg.snd_err_aborted')
+					: tFn('alertcfg.snd_err_origin')
+				flash(tFn('alertcfg.snd_unplayable', { reason }), false)
 			}, { once: true })
 
 			audio.play().catch((err: DOMException) => {
 				const name = err?.name ?? ''
 				const reason =
-					name === 'NotAllowedError'    ? 'autoplay bloqué (clique d\'abord sur la page)'
-					: name === 'NotSupportedError' ? 'format non supporté par le navigateur'
-					: name === 'AbortError'        ? 'lecture annulée'
-					: err?.message?.slice(0, 80) || 'raison inconnue'
-				flash(`Son injouable : ${reason}.`, false)
+					name === 'NotAllowedError'    ? tFn('alertcfg.snd_err_autoplay')
+					: name === 'NotSupportedError' ? tFn('alertcfg.snd_err_notsupported')
+					: name === 'AbortError'        ? tFn('alertcfg.snd_err_aborted')
+					: err?.message?.slice(0, 80) || tFn('alertcfg.snd_err_unknown')
+				flash(tFn('alertcfg.snd_unplayable', { reason }), false)
 			})
 		} catch (err) {
-			flash(`URL son invalide : ${(err as Error).message?.slice(0, 80) ?? 'parsing échoué'}.`, false)
+			flash(tFn('alertcfg.snd_url_invalid', { reason: (err as Error).message?.slice(0, 80) ?? tFn('alertcfg.snd_parse_failed') }), false)
 		}
 	}
 
@@ -199,10 +202,10 @@
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 				body:    JSON.stringify({ eventType: evtType }),
 			})
-			if (res.ok) flash('Event factice envoyé. Vérifie l\'overlay.', true)
-			else flash('Test-fire échoué.', false)
+			if (res.ok) flash(tFn('alertcfg.testfire_ok'), true)
+			else flash(tFn('alertcfg.testfire_err'), false)
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('ovcfg.err_network'), false)
 		} finally {
 			firing = null
 		}
@@ -216,14 +219,14 @@
 		'channel.raid':              { label: 'Raid',       accent: '#ef4444', vars: ['from_broadcaster_user_name', 'viewers'] },
 	}
 
-	const THEME_META: Record<AlertTheme, { label: string; tagline: string }> = {
-		cyber:        { label: 'Cyber',        tagline: 'Sombre · accent gradient · style Nodyx' },
-		soft:         { label: 'Soft',         tagline: 'Blanc rond · doux · glassmorphism' },
-		retro:        { label: 'Retro',        tagline: 'Pixel · gras · contour épais' },
-		neon:         { label: 'Neon',         tagline: 'Glow pulsant · couleur saturée' },
-		holographic:  { label: 'Holographic',  tagline: 'Gradient iridescent animé' },
-		minimal:      { label: 'Minimal',      tagline: 'Texte seul · gros gras · ombre' },
-		custom:       { label: 'Custom',       tagline: 'Tes propres images et couleurs' },
+	const THEME_META: Record<AlertTheme, { label: string; tagKey: string }> = {
+		cyber:        { label: 'Cyber',        tagKey: 'alertcfg.tag_cyber' },
+		soft:         { label: 'Soft',         tagKey: 'alertcfg.tag_soft' },
+		retro:        { label: 'Retro',        tagKey: 'alertcfg.tag_retro' },
+		neon:         { label: 'Neon',         tagKey: 'alertcfg.tag_neon' },
+		holographic:  { label: 'Holographic',  tagKey: 'alertcfg.tag_holographic' },
+		minimal:      { label: 'Minimal',      tagKey: 'alertcfg.tag_minimal' },
+		custom:       { label: 'Custom',       tagKey: 'alertcfg.tag_custom' },
 	}
 </script>
 
@@ -237,7 +240,7 @@
 
 	<!-- Theme picker avec preview live de chaque thème -->
 	<div>
-		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">Thème</div>
+		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">{tFn('ovcfg.theme')}</div>
 		<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
 			{#each Object.entries(THEME_META) as [k, m] (k)}
 				{@const isActive = config.theme === k}
@@ -249,7 +252,7 @@
 					/>
 					<div class="mt-2">
 						<div class="text-xs font-semibold {isActive ? 'text-cyan-200' : 'text-slate-200'}">{m.label}</div>
-						<div class="text-[10px] text-slate-500 mt-0.5 leading-snug">{m.tagline}</div>
+						<div class="text-[10px] text-slate-500 mt-0.5 leading-snug">{tFn(m.tagKey)}</div>
 					</div>
 				</button>
 			{/each}
@@ -259,44 +262,44 @@
 	<!-- Custom theme panel (apparait uniquement si theme = custom) -->
 	{#if config.theme === 'custom'}
 		<div class="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3 space-y-3">
-			<div class="text-[11px] uppercase tracking-widest font-semibold text-cyan-400">Paramètres custom</div>
+			<div class="text-[11px] uppercase tracking-widest font-semibold text-cyan-400">{tFn('ovcfg.custom_params')}</div>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 				<label class="block">
-					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">URL image de fond</span>
+					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{tFn('alertcfg.custom_bg_image')}</span>
 					<input type="url" bind:value={config.customTheme.bgImageUrl}
-						placeholder="https://exemple.com/bg.png"
+						placeholder={tFn('alertcfg.custom_bg_image_ph')}
 						class="w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-xs text-white placeholder-slate-700 outline-none font-mono transition-colors"/>
 				</label>
 				<label class="block">
-					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Couleur de fond (fallback)</span>
+					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{tFn('alertcfg.custom_bg_color')}</span>
 					<div class="flex gap-1.5">
 						<input type="color" bind:value={config.customTheme.bgColor}
 							class="w-9 h-8 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-						<input type="text" bind:value={config.customTheme.bgColor} placeholder="#0f172a"
+						<input type="text" bind:value={config.customTheme.bgColor} placeholder={tFn('ovcfg.ph_bg')}
 							class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-xs text-white placeholder-slate-700 outline-none font-mono transition-colors"/>
 					</div>
 				</label>
 				<label class="block">
-					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Couleur d'accent</span>
+					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{tFn('alertcfg.custom_accent_color')}</span>
 					<div class="flex gap-1.5">
 						<input type="color" bind:value={config.customTheme.accentColor}
 							class="w-9 h-8 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-						<input type="text" bind:value={config.customTheme.accentColor} placeholder="var(--nx-cyan)"
+						<input type="text" bind:value={config.customTheme.accentColor} placeholder={tFn('goal.accent_ph')}
 							class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-xs text-white placeholder-slate-700 outline-none font-mono transition-colors"/>
 					</div>
 				</label>
 				<label class="block">
-					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Couleur du texte</span>
+					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{tFn('alertcfg.custom_text_color')}</span>
 					<div class="flex gap-1.5">
 						<input type="color" bind:value={config.customTheme.textColor}
 							class="w-9 h-8 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-						<input type="text" bind:value={config.customTheme.textColor} placeholder="#f1f5f9"
+						<input type="text" bind:value={config.customTheme.textColor} placeholder={tFn('ovcfg.ph_text')}
 							class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-xs text-white placeholder-slate-700 outline-none font-mono transition-colors"/>
 					</div>
 				</label>
 			</div>
 			<div class="text-[10px] text-slate-500 leading-relaxed">
-				Conseil : héberge tes images sur Nodyx (galerie, post) ou n'importe quel CDN en HTTPS (Imgur, Cloudinary, etc). Le PNG/WebP transparent est idéal pour superposer sur ton stream.
+				{tFn('alertcfg.custom_tip')}
 			</div>
 		</div>
 	{/if}
@@ -304,7 +307,7 @@
 	<!-- Position + Animation + Duration grouped -->
 	<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 		<div>
-			<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">Position à l'écran</div>
+			<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">{tFn('ovcfg.position_screen')}</div>
 			<div class="grid grid-cols-3 grid-rows-3 gap-1 p-1.5 rounded-lg bg-slate-950/60 border border-slate-700/40 aspect-[3/2]">
 				{#each [
 					['top-left',     'start', 'start'],
@@ -333,16 +336,16 @@
 			</div>
 		</div>
 		<div>
-			<label for="alert-animation" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">Animation d'entrée</label>
+			<label for="alert-animation" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">{tFn('alertcfg.animation_label')}</label>
 			<select id="alert-animation" bind:value={config.animation}
 				class="w-full rounded-lg bg-slate-950/60 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white outline-none transition-colors">
-				<option value="slide-right">Slide depuis la droite</option>
-				<option value="slide-left">Slide depuis la gauche</option>
-				<option value="slide-top">Slide depuis le haut</option>
-				<option value="slide-bottom">Slide depuis le bas</option>
-				<option value="scale">Scale (zoom doux)</option>
-				<option value="bounce">Bounce (rebond)</option>
-				<option value="fade">Fade (apparition simple)</option>
+				<option value="slide-right">{tFn('alertcfg.anim_slide_right')}</option>
+				<option value="slide-left">{tFn('alertcfg.anim_slide_left')}</option>
+				<option value="slide-top">{tFn('alertcfg.anim_slide_top')}</option>
+				<option value="slide-bottom">{tFn('alertcfg.anim_slide_bottom')}</option>
+				<option value="scale">{tFn('alertcfg.anim_scale')}</option>
+				<option value="bounce">{tFn('alertcfg.anim_bounce')}</option>
+				<option value="fade">{tFn('alertcfg.anim_fade')}</option>
 			</select>
 		</div>
 	</div>
@@ -351,7 +354,7 @@
 	<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 		<div>
 			<label for="alert-duration" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">
-				Durée : <span class="text-cyan-300 font-mono">{(config.durationMs / 1000).toFixed(1)}s</span>
+				{tFn('alertcfg.duration_label')} <span class="text-cyan-300 font-mono">{(config.durationMs / 1000).toFixed(1)}s</span>
 			</label>
 			<input id="alert-duration" type="range" min="1000" max="15000" step="500" bind:value={config.durationMs}
 				class="w-full accent-cyan-500"/>
@@ -359,7 +362,7 @@
 		</div>
 		<div>
 			<label for="alert-volume" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">
-				Volume sons : <span class="text-cyan-300 font-mono">{Math.round(config.soundVolume * 100)}%</span>
+				{tFn('alertcfg.volume_label')} <span class="text-cyan-300 font-mono">{Math.round(config.soundVolume * 100)}%</span>
 			</label>
 			<input id="alert-volume" type="range" min="0" max="1" step="0.05" bind:value={config.soundVolume}
 				class="w-full accent-cyan-500"/>
@@ -369,7 +372,7 @@
 
 	<!-- Events -->
 	<div>
-		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">Templates par type d'event</div>
+		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">{tFn('alertcfg.templates_title')}</div>
 		<div class="space-y-2">
 			{#each Object.entries(EVENT_META) as [k, m] (k)}
 				{@const key = k as AlertEventKey}
@@ -383,18 +386,18 @@
 						</div>
 						<label class="flex items-center gap-1.5 cursor-pointer shrink-0">
 							<input type="checkbox" bind:checked={config.events[key].enabled} class="accent-cyan-500"/>
-							<span class="text-[11px] text-slate-400">{cfg.enabled ? 'Activé' : 'Désactivé'}</span>
+							<span class="text-[11px] text-slate-400">{cfg.enabled ? tFn('alertcfg.enabled') : tFn('alertcfg.disabled')}</span>
 						</label>
 					</div>
 					<input type="text" bind:value={config.events[key].template} maxlength="160"
 						disabled={!cfg.enabled}
-						placeholder="Template avec variables {'{user_name}'} etc"
+						placeholder={tFn('alertcfg.template_ph')}
 						class="w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-sm text-white placeholder-slate-600 outline-none transition-colors disabled:opacity-40 font-mono"/>
 					{#if config.theme === 'custom'}
 						<div class="flex items-center gap-2">
 							<input type="url" bind:value={config.events[key].iconUrl}
 								disabled={!cfg.enabled}
-								placeholder="URL icône custom pour cet event (optionnel)"
+								placeholder={tFn('alertcfg.icon_url_ph')}
 								class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-[11px] text-white placeholder-slate-600 outline-none transition-colors disabled:opacity-40 font-mono"/>
 							{#if cfg.iconUrl}
 								<img src={cfg.iconUrl} alt="" class="w-8 h-8 rounded object-cover border border-slate-700/60" />
@@ -404,8 +407,8 @@
 					<!-- Bibliothèque de sons Nodyx (synthétisés WebAudio, zéro réseau) -->
 					<div>
 						<div class="flex items-center gap-1.5 mb-1">
-							<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Son Nodyx</span>
-							<Tooltip text="Bibliothèque de sons générés en pur WebAudio (aucun fichier téléchargé, fonctionne offline). Choisis un preset, ou laisse 'Aucun' pour utiliser uniquement ton URL custom ci-dessous."/>
+							<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">{tFn('alertcfg.sound_nodyx')}</span>
+							<Tooltip text={tFn('alertcfg.sound_tooltip')}/>
 						</div>
 						<div class="flex flex-wrap gap-1">
 							{#each PRESET_LIBRARY as p (p.key)}
@@ -433,27 +436,27 @@
 						<input type="url" value={isPresetUrl(config.events[key].soundUrl) ? '' : (config.events[key].soundUrl ?? '')}
 							oninput={(e) => { config.events[key].soundUrl = e.currentTarget.value || null }}
 							disabled={!cfg.enabled}
-							placeholder="…ou URL son personnalisé (mp3 / wav) / médiathèque →"
+							placeholder={tFn('alertcfg.sound_url_ph')}
 							class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-[11px] text-white placeholder-slate-600 outline-none transition-colors disabled:opacity-40 font-mono"/>
 						<button type="button" onclick={() => openPickerFor(key)}
 							disabled={!cfg.enabled}
 							class="shrink-0 rounded bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-2 py-1.5 text-[10px] font-medium transition-colors inline-flex items-center gap-1"
-							title="Choisir depuis la médiathèque Nodyx">
+							title={tFn('alertcfg.pick_media_title')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-							Médiathèque
+							{tFn('alertcfg.media_library')}
 						</button>
 						{#if cfg.soundUrl}
 							<button type="button" onclick={() => previewSound(cfg.soundUrl)}
 								class="shrink-0 rounded bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-slate-300 px-2 py-1.5 text-[10px] font-medium transition-colors inline-flex items-center gap-1"
-								aria-label="Preview son">
+								aria-label={tFn('alertcfg.preview_sound_aria')}>
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-								Preview
+								{tFn('alertcfg.preview')}
 							</button>
 						{/if}
 					</div>
 					<div class="flex items-center justify-between gap-2 text-[10px]">
 						<div class="text-slate-500">
-							Variables :
+							{tFn('alertcfg.variables_label')}
 							{#each m.vars as v, i}
 								<code class="font-mono text-cyan-400/80">{`{${v}}`}</code>{#if i < m.vars.length - 1}<span class="text-slate-700"> · </span>{/if}
 							{/each}
@@ -462,10 +465,10 @@
 							class="rounded bg-amber-500/15 hover:bg-amber-500/25 disabled:opacity-30 border border-amber-500/40 text-amber-200 px-2 py-1 text-[10px] font-medium transition-colors inline-flex items-center gap-1">
 							{#if firing === key}
 								<svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
-								Test…
+								{tFn('alertcfg.testing')}
 							{:else}
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
-								Tester
+								{tFn('alertcfg.test_btn')}
 							{/if}
 						</button>
 					</div>
@@ -476,7 +479,7 @@
 
 	<button type="button" onclick={save} disabled={saving}
 		class="w-full rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-30 border border-cyan-500/40 text-cyan-200 font-medium px-4 py-2 text-sm transition-colors">
-		{saving ? 'Sauvegarde…' : 'Sauvegarder la config'}
+		{saving ? tFn('ovcfg.saving') : tFn('ovcfg.save_config')}
 	</button>
 </div>
 

@@ -6,6 +6,9 @@
 <script lang="ts">
 	import ChannelIcon from '$lib/components/ChannelIcon.svelte'
 	import { COLORE_CATEGORIES, SOBRE_CATEGORIES, isIconId } from '$lib/channelIcons'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	type Props = {
 		type:           'text' | 'voice'
@@ -93,7 +96,7 @@
 
 <div class="cse-root">
 	{#if showLabel}
-		<div class="cse-section-label">Personnalisation visuelle</div>
+		<div class="cse-section-label">{tFn('chstyle.section_label')}</div>
 	{/if}
 
 	<!-- Live preview -->
@@ -112,13 +115,13 @@
 				"
 			>{previewName}</span>
 		</span>
-		<span class="cse-preview-label">aperçu sidebar</span>
+		<span class="cse-preview-label">{tFn('chstyle.preview_label')}</span>
 	</div>
 
 	<div class="cse-grid">
 		<!-- Couleur -->
 		<div class="cse-field">
-			<label for="cse-color" class="cse-label">Couleur du nom</label>
+			<label for="cse-color" class="cse-label">{tFn('chstyle.color_name')}</label>
 			<div class="cse-color-row">
 				<input
 					id="cse-color"
@@ -126,17 +129,17 @@
 					value={name_color ?? '#9ca3af'}
 					oninput={(e) => commitHex((e.currentTarget as HTMLInputElement).value)}
 					class="cse-color-picker"
-					title="Choisir une couleur"
+					title={tFn('chstyle.pick_color')}
 				/>
 				<input
 					type="text"
 					value={colorHex}
-					placeholder="#RRGGBB"
+					placeholder={tFn('chstyle.hex_ph')}
 					maxlength="7"
 					oninput={(e) => { colorHex = (e.currentTarget as HTMLInputElement).value; commitHex(colorHex) }}
 					class="cse-color-hex"
 				/>
-				<button type="button" class="cse-clear" onclick={() => { name_color = null; colorHex = '' }} title="Couleur par défaut">×</button>
+				<button type="button" class="cse-clear" onclick={() => { name_color = null; colorHex = '' }} title={tFn('chstyle.default_color')}>×</button>
 			</div>
 			<div class="cse-palette">
 				{#each PRESETS as p}
@@ -145,7 +148,7 @@
 						class="cse-swatch"
 						style="background: {p}"
 						title={p}
-						aria-label="Couleur {p}"
+						aria-label={tFn('chstyle.color_aria', { p })}
 						onclick={() => { name_color = p; colorHex = p }}
 					></button>
 				{/each}
@@ -153,38 +156,38 @@
 			{#if name_color && contrastRatio() !== null}
 				{@const r = contrastRatio() as number}
 				<p class="cse-contrast" class:cse-contrast--low={r < 3} class:cse-contrast--ok={r >= 4.5}>
-					Contraste : {r}:1
-					{#if r >= 4.5}<span>· lisible</span>
-					{:else if r >= 3}<span>· acceptable</span>
-					{:else}<span>· faible (mais c'est ton choix)</span>{/if}
+					{tFn('chstyle.contrast', { r })}
+					{#if r >= 4.5}<span>{tFn('chstyle.contrast_readable')}</span>
+					{:else if r >= 3}<span>{tFn('chstyle.contrast_ok')}</span>
+					{:else}<span>{tFn('chstyle.contrast_low')}</span>{/if}
 				</p>
 			{/if}
 		</div>
 
 		<!-- Style -->
 		<div class="cse-field">
-			<span class="cse-label">Style du texte</span>
+			<span class="cse-label">{tFn('chstyle.text_style')}</span>
 			<div class="cse-style-row">
 				<button
 					type="button"
 					class="cse-style-btn"
 					class:cse-style-btn--active={name_bold}
 					onclick={() => name_bold = !name_bold}
-					title="Gras"
+					title={tFn('chstyle.bold')}
 				><b>B</b></button>
 				<button
 					type="button"
 					class="cse-style-btn"
 					class:cse-style-btn--active={name_italic}
 					onclick={() => name_italic = !name_italic}
-					title="Italique"
+					title={tFn('chstyle.italic')}
 				><i>I</i></button>
 				<button
 					type="button"
 					class="cse-style-btn"
 					class:cse-style-btn--active={name_underline}
 					onclick={() => name_underline = !name_underline}
-					title="Souligné"
+					title={tFn('chstyle.underline')}
 				><u>U</u></button>
 			</div>
 		</div>
@@ -194,23 +197,23 @@
 	<!-- ─── Picker d'icônes (Coloré / Sobre / Personnalisé) ─────────────────── -->
 	<div class="cse-icon-picker">
 		<div class="cse-picker-header">
-			<span class="cse-label">Icône du canal</span>
+			<span class="cse-label">{tFn('chstyle.channel_icon')}</span>
 			{#if icon_emoji}
-				<button type="button" class="cse-icon-clear" onclick={() => icon_emoji = null} title="Retirer l'icône custom">
-					Retirer
+				<button type="button" class="cse-icon-clear" onclick={() => icon_emoji = null} title={tFn('chstyle.remove_icon_title')}>
+					{tFn('chstyle.remove')}
 				</button>
 			{/if}
 		</div>
 
 		<div class="cse-tabs">
 			<button type="button" class="cse-tab" class:cse-tab--active={pickerTab === 0} onclick={() => pickerTab = 0}>
-				Coloré
+				{tFn('chstyle.tab_colored')}
 			</button>
 			<button type="button" class="cse-tab" class:cse-tab--active={pickerTab === 1} onclick={() => pickerTab = 1}>
-				Sobre
+				{tFn('chstyle.tab_sober')}
 			</button>
 			<button type="button" class="cse-tab" class:cse-tab--active={pickerTab === 2} onclick={() => pickerTab = 2}>
-				Personnalisé
+				{tFn('chstyle.tab_custom')}
 			</button>
 		</div>
 
@@ -255,7 +258,7 @@
 				{/each}
 			{:else}
 				<div class="cse-custom">
-					<label for="cse-emoji" class="cse-label">Emoji ou caractère unicode</label>
+					<label for="cse-emoji" class="cse-label">{tFn('chstyle.emoji_label')}</label>
 					<input
 						id="cse-emoji"
 						type="text"
@@ -269,9 +272,7 @@
 						class="cse-emoji-input"
 					/>
 					<p class="cse-custom-hint">
-						Tape un emoji ou colle un caractère. Note : sur Windows, les drapeaux pays
-						(🇫🇷, 🇩🇪, etc.) ne s'affichent qu'en lettres faute de support natif. Préfère
-						l'onglet <b>Coloré</b> pour les drapeaux.
+						{tFn('chstyle.hint_1')} <b>{tFn('chstyle.tab_colored')}</b> {tFn('chstyle.hint_2')}
 					</p>
 				</div>
 			{/if}
@@ -279,7 +280,7 @@
 	</div>
 
 	<div class="cse-actions">
-		<button type="button" class="cse-reset" onclick={reset}>Réinitialiser le style</button>
+		<button type="button" class="cse-reset" onclick={reset}>{tFn('chstyle.reset')}</button>
 	</div>
 </div>
 

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte'
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
+	import { t as i18n } from '$lib/i18n'
 	import AlertBoxConfigEditor    from './AlertBoxConfigEditor.svelte'
 	import GoalBarConfigEditor     from './GoalBarConfigEditor.svelte'
 	import EventTickerConfigEditor from './EventTickerConfigEditor.svelte'
@@ -32,6 +33,8 @@
 
 	let { token }: Props = $props()
 
+	const tFn = $derived($i18n)
+
 	type OverlayType = 'alert_box' | 'goal_bar' | 'stream_timer' | 'event_ticker' | 'leaderboard' | 'clips_player' | 'soundboard' | 'playlist'
 
 	type OverlayRow = {
@@ -48,14 +51,14 @@
 	// Pour le slice 1, seul alert_box est implémenté. Les autres types
 	// sont créables mais leur page route n'existe pas encore (placeholder).
 	const TYPE_META: Record<OverlayType, { label: string; desc: string; routeSlug: string; ready: boolean }> = {
-		alert_box:    { label: 'Alert Box',    desc: 'Notifications follow/sub/raid/cheer qui slide à l\'écran.', routeSlug: 'alert',    ready: true  },
-		goal_bar:     { label: 'Goal Bar',     desc: 'Barre de progression vers un objectif (followers totaux, subs/bits de la session, ou custom).',  routeSlug: 'goal',     ready: true  },
-		stream_timer: { label: 'Stream Timer', desc: 'Chrono du stream en cours, 6 thèmes, 5 positions, 3 formats d\'affichage.', routeSlug: 'timer',    ready: true  },
-		event_ticker: { label: 'Event Ticker', desc: 'Bandeau défilant des derniers events en bas d\'écran. Combo + event weight + 6 thèmes.', routeSlug: 'ticker',   ready: true  },
-		leaderboard:  { label: 'Leaderboard',  desc: 'Podium top 3 + liste rang 4-N. 4 catégories (subs/bits/raids/chatteurs) × 4 périodes. Mode récap fin de stream.', routeSlug: 'board', ready: true },
-		clips_player: { label: 'Clips Player', desc: 'Player full screen qui joue une session de clips (top chaine ou raider) déclenchée depuis Studio Live.', routeSlug: 'clips', ready: true },
-		soundboard:   { label: 'Soundboard',   desc: 'Joue les sons déclenchés depuis ton Stream Deck. OSD discrète (vignette + titre + progress) en coin d\'écran. Crée plusieurs overlays si tu veux le son sur plusieurs scènes OBS.', routeSlug: 'soundboard', ready: true },
-		playlist:     { label: 'Playlist',     desc: 'Lit une de tes playlists Soundboard en autoplay loop pour servir de musique d\'ambiance. URL par playlist via le tab Soundboard (icône 📺). Token partagé, paramètre ?id=… pour cibler la playlist.', routeSlug: 'playlist', ready: true },
+		alert_box:    { label: 'Alert Box',    desc: 'ovmgr.desc_alert_box',    routeSlug: 'alert',    ready: true  },
+		goal_bar:     { label: 'Goal Bar',     desc: 'ovmgr.desc_goal_bar',     routeSlug: 'goal',     ready: true  },
+		stream_timer: { label: 'Stream Timer', desc: 'ovmgr.desc_stream_timer', routeSlug: 'timer',    ready: true  },
+		event_ticker: { label: 'Event Ticker', desc: 'ovmgr.desc_event_ticker', routeSlug: 'ticker',   ready: true  },
+		leaderboard:  { label: 'Leaderboard',  desc: 'ovmgr.desc_leaderboard',  routeSlug: 'board', ready: true },
+		clips_player: { label: 'Clips Player', desc: 'ovmgr.desc_clips_player', routeSlug: 'clips', ready: true },
+		soundboard:   { label: 'Soundboard',   desc: 'ovmgr.desc_soundboard',   routeSlug: 'soundboard', ready: true },
+		playlist:     { label: 'Playlist',     desc: 'ovmgr.desc_playlist',     routeSlug: 'playlist', ready: true },
 	}
 
 	let overlays    = $state<OverlayRow[]>([])
@@ -96,13 +99,13 @@
 				const data = await res.json() as { overlays: OverlayRow[] }
 				overlays = data.overlays
 			} else if (res.status === 401) {
-				flash('Session expirée. Recharge la page.', false)
+				flash(tFn('ovmgr.err_session'), false)
 			} else {
-				flash(`Chargement des overlays impossible (HTTP ${res.status}).`, false)
+				flash(tFn('ovmgr.err_load', { status: res.status }), false)
 			}
 		} catch (err) {
 			console.warn('[overlay-manager] reload failed', err)
-			flash('Erreur réseau au chargement des overlays.', false)
+			flash(tFn('ovmgr.err_load_network'), false)
 		} finally {
 			loading = false
 		}
@@ -149,35 +152,35 @@
 				body:    JSON.stringify({ overlayType: formType, label: formLabel.trim() || null }),
 			})
 			if (res.ok) {
-				flash('Overlay créée. URL prête à coller dans OBS.', true)
+				flash(tFn('ovmgr.created_ok'), true)
 				formLabel = ''
 				await reload()
 			} else {
-				flash('Création échouée.', false)
+				flash(tFn('ovmgr.err_create'), false)
 			}
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('ovmgr.err_network'), false)
 		} finally {
 			creating = false
 		}
 	}
 
 	async function revoke(id: string): Promise<void> {
-		if (!confirm('Révoquer cette overlay ? L\'URL ne fonctionnera plus dans OBS. Tu pourras en créer une nouvelle.')) return
+		if (!confirm(tFn('ovmgr.revoke_confirm'))) return
 		const res = await apiFetch(fetch, `/streamer/overlays/${id}`, {
 			method:  'DELETE',
 			headers: { Authorization: `Bearer ${token}` },
 		})
 		if (res.ok) {
-			flash('Overlay révoquée.', true)
+			flash(tFn('ovmgr.revoked_ok'), true)
 			await reload()
-		} else flash('Révocation échouée.', false)
+		} else flash(tFn('ovmgr.err_revoke'), false)
 	}
 
 	// Fallback safe pour un type d'overlay inconnu (ex : nouveau type ajouté
 	// backend mais pas encore listé dans TYPE_META). Évite le crash render
 	// global qui bloquait toute la liste à "Chargement…" jusqu'au refresh.
-	const UNKNOWN_META = { label: 'Overlay', desc: 'Type inconnu côté admin.', routeSlug: 'unknown', ready: false }
+	const UNKNOWN_META = { label: 'Overlay', desc: 'ovmgr.desc_unknown', routeSlug: 'unknown', ready: false }
 	function metaFor(t: OverlayType | string): { label: string; desc: string; routeSlug: string; ready: boolean } {
 		return (TYPE_META as Record<string, typeof UNKNOWN_META>)[t] ?? UNKNOWN_META
 	}
@@ -194,22 +197,22 @@
 	async function copyUrl(o: OverlayRow): Promise<void> {
 		try {
 			await navigator.clipboard.writeText(urlFor(o))
-			flash('URL copiée. Colle-la dans OBS → Browser Source.', true)
+			flash(tFn('ovmgr.copied_ok'), true)
 		} catch {
-			flash('Copie échouée, sélectionne manuellement l\'URL.', false)
+			flash(tFn('ovmgr.err_copy'), false)
 		}
 	}
 
 	function fmtRelative(iso: string | null): string {
-		if (!iso) return 'jamais connectée'
+		if (!iso) return tFn('ovmgr.never_connected')
 		const diff = Date.now() - new Date(iso).getTime()
 		const m = Math.floor(diff / 60_000)
-		if (m < 1)  return 'à l\'instant'
-		if (m < 60) return `il y a ${m} min`
+		if (m < 1)  return tFn('ovmgr.just_now')
+		if (m < 60) return tFn('ovmgr.mins_ago', { n: m })
 		const h = Math.floor(m / 60)
-		if (h < 24) return `il y a ${h}h`
+		if (h < 24) return tFn('ovmgr.hours_ago', { n: h })
 		const d = Math.floor(h / 24)
-		return `il y a ${d}j`
+		return tFn('ovmgr.days_ago', { n: d })
 	}
 </script>
 
@@ -221,7 +224,7 @@
 		</div>
 		<a href="https://obsproject.com/kb/browser-source" target="_blank" rel="noopener noreferrer"
 			class="text-[11px] text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1">
-			Comment ajouter un Browser Source dans OBS
+			{tFn('ovmgr.how_add_link')}
 			<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
 		</a>
 	</header>
@@ -235,7 +238,7 @@
 
 	<!-- Form: créer une nouvelle overlay -->
 	<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-4 space-y-3">
-		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400">Nouvelle overlay</div>
+		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400">{tFn('ovmgr.new_overlay')}</div>
 		<div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
 			<select bind:value={formType}
 				class="rounded-lg bg-slate-900 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white outline-none transition-colors">
@@ -246,25 +249,25 @@
 				{/each}
 			</select>
 			<input type="text" bind:value={formLabel} maxlength="60"
-				placeholder="Label optionnel (ex: Alert principale)"
+				placeholder={tFn('ovmgr.label_ph')}
 				class="rounded-lg bg-slate-900 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white placeholder-slate-600 outline-none transition-colors"/>
 			<button type="button" onclick={create} disabled={creating || !TYPE_META[formType].ready}
 				class="rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-30 disabled:cursor-not-allowed border border-cyan-500/40 text-cyan-200 font-medium px-4 py-2 text-sm transition-colors">
-				{creating ? 'Création…' : 'Créer'}
+				{creating ? tFn('ovmgr.creating') : tFn('ovmgr.create')}
 			</button>
 		</div>
-		<div class="text-[11px] text-slate-500">{TYPE_META[formType].desc}</div>
+		<div class="text-[11px] text-slate-500">{tFn(TYPE_META[formType].desc)}</div>
 	</div>
 
 	<!-- Liste des overlays -->
 	<div class="space-y-2">
-		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400">Overlays actives ({overlays.length})</div>
+		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400">{tFn('ovmgr.active_overlays', { n: overlays.length })}</div>
 
 		{#if loading}
-			<div class="text-xs text-slate-500 text-center py-6">Chargement…</div>
+			<div class="text-xs text-slate-500 text-center py-6">{tFn('ovmgr.loading')}</div>
 		{:else if overlays.length === 0}
 			<div class="rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 p-6 text-center text-xs text-slate-500">
-				Aucune overlay créée. Lance ta première Alert Box ci-dessus, copie l'URL, colle-la dans OBS comme Browser Source en 1920×1080 transparent.
+				{tFn('ovmgr.empty')}
 			</div>
 		{:else}
 			{#each overlays as o (o.id)}
@@ -277,9 +280,9 @@
 								{meta?.label ?? o.overlayType}
 							</span>
 							<div>
-								<div class="text-sm font-semibold text-white">{o.label || 'Sans label'}</div>
+								<div class="text-sm font-semibold text-white">{o.label || tFn('ovmgr.no_label')}</div>
 								<div class="text-[10px] text-slate-500">
-									Créée {fmtRelative(o.createdAt)} · Dernière connexion OBS : <span class={o.lastSeenAt ? 'text-emerald-400' : 'text-slate-600'}>{fmtRelative(o.lastSeenAt)}</span>
+									{tFn('ovmgr.created')} {fmtRelative(o.createdAt)} · {tFn('ovmgr.last_obs')} <span class={o.lastSeenAt ? 'text-emerald-400' : 'text-slate-600'}>{fmtRelative(o.lastSeenAt)}</span>
 								</div>
 							</div>
 						</div>
@@ -291,19 +294,19 @@
 										<rect x="3" y="3" width="18" height="18" rx="2"/>
 										<path d="M9 9h6v6H9z"/>
 									</svg>
-									Placer dans une scène
+									{tFn('obs.place_title')}
 								</button>
 							{/if}
 							{#if o.overlayType === 'alert_box' || o.overlayType === 'goal_bar' || o.overlayType === 'event_ticker' || o.overlayType === 'leaderboard' || o.overlayType === 'stream_timer'}
 								<button type="button" onclick={() => toggleConfig(o.id)}
 									class="text-[11px] text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 hover:border-cyan-500/50 px-2.5 py-1 rounded transition-colors inline-flex items-center gap-1">
 									<svg class="w-3 h-3 transition-transform {configOpen.has(o.id) ? 'rotate-180' : ''}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-									{configOpen.has(o.id) ? 'Fermer' : 'Configurer'}
+									{configOpen.has(o.id) ? tFn('ovmgr.close') : tFn('ovmgr.configure')}
 								</button>
 							{/if}
 							<button type="button" onclick={() => revoke(o.id)}
 								class="text-[11px] text-rose-300 hover:text-rose-200 border border-rose-500/30 hover:border-rose-500/50 px-2.5 py-1 rounded transition-colors">
-								Révoquer
+								{tFn('ovmgr.revoke')}
 							</button>
 						</div>
 					</div>
@@ -312,7 +315,7 @@
 						<button type="button" onclick={() => copyUrl(o)}
 							class="rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 px-3 py-2 text-xs font-medium transition-colors shrink-0 inline-flex items-center gap-1.5">
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-							Copier
+							{tFn('ovmgr.copy')}
 						</button>
 					</div>
 					{#if o.overlayType === 'alert_box' && configOpen.has(o.id)}
@@ -334,12 +337,12 @@
 	<!-- Quick-start OBS -->
 	<details class="rounded-lg border border-slate-700/60 bg-slate-900/30 group">
 		<summary class="px-4 py-2.5 text-xs font-medium text-slate-300 cursor-pointer hover:text-white">
-			Comment intégrer dans OBS (3 étapes)
+			{tFn('ovmgr.how_integrate')}
 		</summary>
 		<div class="px-4 pb-4 pt-1 text-xs text-slate-400 space-y-2 leading-relaxed">
-			<p><strong class="text-slate-200">1.</strong> Dans OBS, dans Sources, clic droit → "Ajouter" → "Browser Source".</p>
-			<p><strong class="text-slate-200">2.</strong> Colle l'URL de l'overlay. Largeur 1920, Hauteur 1080. Coche "Shutdown source when not visible" pour économiser la RAM.</p>
-			<p><strong class="text-slate-200">3.</strong> Place la source au-dessus de ta scène. Le fond est transparent, seul le contenu des alertes apparait.</p>
+			<p><strong class="text-slate-200">1.</strong> {tFn('ovmgr.step1')}</p>
+			<p><strong class="text-slate-200">2.</strong> {tFn('ovmgr.step2')}</p>
+			<p><strong class="text-slate-200">3.</strong> {tFn('ovmgr.step3')}</p>
 		</div>
 	</details>
 </section>
