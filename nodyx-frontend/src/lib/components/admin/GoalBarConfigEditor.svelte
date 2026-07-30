@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
+	import { t } from '$lib/i18n'
 	import GoalBarThemePreview from './GoalBarThemePreview.svelte'
+
+	const tFn = $derived($t)
 
 	type GoalType = 'followers_total' | 'subs_session' | 'bits_session' | 'custom'
 	type GoalTheme = 'cyber' | 'soft' | 'retro' | 'neon' | 'minimal' | 'custom'
@@ -85,30 +88,30 @@
 				body:    JSON.stringify({ config }),
 			})
 			if (res.ok) {
-				flash('Config sauvegardée. L\'overlay rafraichit dans 30s ou moins.', true)
+				flash(tFn('goal.saved'), true)
 				onSaved?.()
-			} else flash('Échec de la sauvegarde.', false)
+			} else flash(tFn('ovcfg.err_save'), false)
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('ovcfg.err_network'), false)
 		} finally {
 			saving = false
 		}
 	}
 
-	const THEME_META: Record<GoalTheme, { label: string; tagline: string }> = {
-		cyber:   { label: 'Cyber',   tagline: 'Sombre · pulse au reached · default Nodyx' },
-		soft:    { label: 'Soft',    tagline: 'Blanc rond · glassmorphism' },
-		retro:   { label: 'Retro',   tagline: 'Pixel · ombre dure · barre carrée' },
-		neon:    { label: 'Neon',    tagline: 'Glow saturé pulsant' },
-		minimal: { label: 'Minimal', tagline: 'Pas de card · gros gras avec ombre' },
-		custom:  { label: 'Custom',  tagline: 'Tes couleurs à toi' },
+	const THEME_META: Record<GoalTheme, { label: string; tagKey: string }> = {
+		cyber:   { label: 'Cyber',   tagKey: 'goal.tag_cyber' },
+		soft:    { label: 'Soft',    tagKey: 'goal.tag_soft' },
+		retro:   { label: 'Retro',   tagKey: 'goal.tag_retro' },
+		neon:    { label: 'Neon',    tagKey: 'goal.tag_neon' },
+		minimal: { label: 'Minimal', tagKey: 'goal.tag_minimal' },
+		custom:  { label: 'Custom',  tagKey: 'goal.tag_custom' },
 	}
 
-	const GOAL_META: Record<GoalType, { label: string; desc: string }> = {
-		followers_total: { label: 'Followers totaux',     desc: 'Le compteur global de ta chaine Twitch. Polled depuis Helix toutes les 30s.' },
-		subs_session:    { label: 'Subs cette session',   desc: 'Compte les channel.subscribe + subscription.gift depuis le début de ton live en cours. 0 si offline.' },
-		bits_session:    { label: 'Bits cette session',   desc: 'Somme des bits reçus via channel.cheer depuis le début du live. 0 si offline.' },
-		custom:          { label: 'Custom (manuel)',      desc: 'Tu mets la valeur courante toi-même. Utile pour subathon, dons hors Twitch, etc.' },
+	const GOAL_META: Record<GoalType, { labelKey: string; descKey: string }> = {
+		followers_total: { labelKey: 'goal.gt_followers_label', descKey: 'goal.gt_followers_desc' },
+		subs_session:    { labelKey: 'goal.gt_subs_label',      descKey: 'goal.gt_subs_desc' },
+		bits_session:    { labelKey: 'goal.gt_bits_label',      descKey: 'goal.gt_bits_desc' },
+		custom:          { labelKey: 'goal.gt_custom_label',    descKey: 'goal.gt_custom_desc' },
 	}
 </script>
 
@@ -122,7 +125,7 @@
 
 	<!-- Theme picker avec preview live -->
 	<div>
-		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">Thème</div>
+		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">{tFn('ovcfg.theme')}</div>
 		<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
 			{#each Object.entries(THEME_META) as [k, m] (k)}
 				{@const isActive = config.theme === k}
@@ -136,7 +139,7 @@
 					/>
 					<div class="mt-2">
 						<div class="text-xs font-semibold {isActive ? 'text-cyan-200' : 'text-slate-200'}">{m.label}</div>
-						<div class="text-[10px] text-slate-500 mt-0.5 leading-snug">{m.tagline}</div>
+						<div class="text-[10px] text-slate-500 mt-0.5 leading-snug">{tFn(m.tagKey)}</div>
 					</div>
 				</button>
 			{/each}
@@ -146,32 +149,32 @@
 	<!-- Custom theme panel -->
 	{#if config.theme === 'custom'}
 		<div class="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3 space-y-3">
-			<div class="text-[11px] uppercase tracking-widest font-semibold text-cyan-400">Paramètres custom</div>
+			<div class="text-[11px] uppercase tracking-widest font-semibold text-cyan-400">{tFn('ovcfg.custom_params')}</div>
 			<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
 				<label class="block">
-					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Fond de la card</span>
+					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{tFn('goal.custom_card_bg')}</span>
 					<div class="flex gap-1.5">
 						<input type="color" bind:value={config.customTheme.bgColor}
 							class="w-9 h-8 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-						<input type="text" bind:value={config.customTheme.bgColor} placeholder="#0f172a"
+						<input type="text" bind:value={config.customTheme.bgColor} placeholder={tFn('ovcfg.ph_bg')}
 							class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-xs text-white placeholder-slate-700 outline-none font-mono transition-colors"/>
 					</div>
 				</label>
 				<label class="block">
-					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Couleur texte</span>
+					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{tFn('goal.custom_text_color')}</span>
 					<div class="flex gap-1.5">
 						<input type="color" bind:value={config.customTheme.textColor}
 							class="w-9 h-8 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-						<input type="text" bind:value={config.customTheme.textColor} placeholder="#f1f5f9"
+						<input type="text" bind:value={config.customTheme.textColor} placeholder={tFn('ovcfg.ph_text')}
 							class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-xs text-white placeholder-slate-700 outline-none font-mono transition-colors"/>
 					</div>
 				</label>
 				<label class="block">
-					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Fond de la barre</span>
+					<span class="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{tFn('goal.custom_bar_bg')}</span>
 					<div class="flex gap-1.5">
 						<input type="color" bind:value={config.customTheme.barBgColor}
 							class="w-9 h-8 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-						<input type="text" bind:value={config.customTheme.barBgColor} placeholder="#1e293b"
+						<input type="text" bind:value={config.customTheme.barBgColor} placeholder={tFn('ovcfg.ph_barbg')}
 							class="flex-1 rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-2.5 py-1.5 text-xs text-white placeholder-slate-700 outline-none font-mono transition-colors"/>
 					</div>
 				</label>
@@ -181,15 +184,15 @@
 
 	<!-- Goal type picker -->
 	<div>
-		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">Type d'objectif</div>
+		<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-2">{tFn('goal.goal_type_title')}</div>
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 			{#each Object.entries(GOAL_META) as [k, m] (k)}
 				{@const isActive = config.goalType === k}
 				<button type="button" onclick={() => config.goalType = k as GoalType}
 					class="text-left rounded-lg border p-3 transition-colors
 						{isActive ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-slate-700/60 bg-slate-900/50 hover:border-slate-600/80'}">
-					<div class="text-sm font-semibold {isActive ? 'text-cyan-200' : 'text-slate-200'}">{m.label}</div>
-					<div class="text-[10px] text-slate-500 mt-0.5 leading-snug">{m.desc}</div>
+					<div class="text-sm font-semibold {isActive ? 'text-cyan-200' : 'text-slate-200'}">{tFn(m.labelKey)}</div>
+					<div class="text-[10px] text-slate-500 mt-0.5 leading-snug">{tFn(m.descKey)}</div>
 				</button>
 			{/each}
 		</div>
@@ -198,29 +201,29 @@
 	<!-- Label + target + accent -->
 	<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 		<div>
-			<label for="goal-label" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">Label affiché</label>
+			<label for="goal-label" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">{tFn('goal.label_shown')}</label>
 			<input id="goal-label" type="text" bind:value={config.label} maxlength="80"
-				placeholder="Ex: 500 followers ce mois"
+				placeholder={tFn('goal.label_ph')}
 				class="w-full rounded-lg bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white placeholder-slate-600 outline-none transition-colors"/>
 		</div>
 		<div>
-			<label for="goal-target" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">Cible</label>
+			<label for="goal-target" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">{tFn('goal.target')}</label>
 			<input id="goal-target" type="number" bind:value={config.target} min="1" max="1000000000" step="1"
 				class="w-full rounded-lg bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white outline-none transition-colors font-mono"/>
 		</div>
 		<div>
-			<label for="goal-accent" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">Couleur d'accent</label>
+			<label for="goal-accent" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">{tFn('goal.accent_color')}</label>
 			<div class="flex gap-1.5">
 				<input id="goal-accent" type="color" bind:value={config.accentColor}
 					class="w-10 h-10 rounded border border-slate-700/60 bg-slate-950 cursor-pointer"/>
-				<input type="text" bind:value={config.accentColor} placeholder="var(--nx-cyan)" maxlength="7"
+				<input type="text" bind:value={config.accentColor} placeholder={tFn('goal.accent_ph')} maxlength="7"
 					class="flex-1 rounded-lg bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white outline-none transition-colors font-mono"/>
 			</div>
 		</div>
 		{#if config.goalType === 'custom'}
 			<div>
 				<label for="goal-current" class="block text-[11px] uppercase tracking-widest font-semibold text-slate-400 mb-1.5">
-					Valeur actuelle <span class="text-cyan-300 font-mono">({Math.min(100, Math.round((config.customCurrent / Math.max(1, config.target)) * 100))}%)</span>
+					{tFn('goal.current_value')} <span class="text-cyan-300 font-mono">({Math.min(100, Math.round((config.customCurrent / Math.max(1, config.target)) * 100))}%)</span>
 				</label>
 				<input id="goal-current" type="number" bind:value={config.customCurrent} min="0" step="1"
 					class="w-full rounded-lg bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white outline-none transition-colors font-mono"/>
@@ -230,6 +233,6 @@
 
 	<button type="button" onclick={save} disabled={saving}
 		class="w-full rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-30 border border-cyan-500/40 text-cyan-200 font-medium px-4 py-2 text-sm transition-colors">
-		{saving ? 'Sauvegarde…' : 'Sauvegarder la config'}
+		{saving ? tFn('ovcfg.saving') : tFn('ovcfg.save_config')}
 	</button>
 </div>
