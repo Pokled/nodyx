@@ -1,47 +1,49 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { t } from '$lib/i18n'
 	import type { PageData, ActionData } from './$types'
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+	const tFn = $derived($t)
 
 	let url = $state(data.webhook?.url ?? '')
 	let enabled = $state(data.webhook?.enabled ?? false)
 </script>
 
-<svelte:head><title>Webhook — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.webhook_title')} — OctoGuard</title></svelte:head>
 
 <header class="og-h">
-	<h2>Webhook sortant</h2>
-	<p>POST signé HMAC-SHA256 sur chaque action OctoGuard. Utile pour mirrorer vers Discord admin, ntfy, Slack, etc.</p>
+	<h2>{tFn('octoguard.webhook_h2')}</h2>
+	<p>{tFn('octoguard.webhook_desc')}</p>
 </header>
 
 {#if form?.error}<div class="og-err">⚠ {form.error}</div>{/if}
-{#if form?.ok}<div class="og-ok">✓ Sauvegardé</div>{/if}
+{#if form?.ok}<div class="og-ok">✓ {tFn('octoguard.saved')}</div>{/if}
 
 <form method="POST" action="?/save" use:enhance class="og-form">
 	<label class="og-checkbox">
 		<input type="checkbox" name="enabled" bind:checked={enabled} value="1" />
-		<span>Activer le webhook</span>
+		<span>{tFn('octoguard.webhook_enable')}</span>
 	</label>
 
 	<label>
-		<span>URL POST</span>
-		<input name="url" type="url" bind:value={url} placeholder="https://example.com/webhook" />
+		<span>{tFn('octoguard.webhook_url_label')}</span>
+		<input name="url" type="url" bind:value={url} placeholder={tFn('octoguard.webhook_url_ph')} />
 	</label>
 
 	<label>
-		<span>Secret HMAC (laisser vide pour ne pas changer)</span>
+		<span>{tFn('octoguard.webhook_secret_label')}</span>
 		<input name="secret" type="password" autocomplete="new-password" minlength="8" maxlength="256"
-			placeholder={data.webhook?.has_secret ? '••••••••• (secret déjà défini)' : 'min 8 caractères'} />
+			placeholder={data.webhook?.has_secret ? tFn('octoguard.webhook_secret_set_ph') : tFn('octoguard.webhook_secret_min_ph')} />
 	</label>
 
 	<div class="og-info">
-		<strong>Format payload</strong> : <code>{`{ action, event_id, target_type, target_id, target_label, metadata, at }`}</code><br/>
-		<strong>Header signature</strong> : <code>X-Octoguard-Signature: sha256=hex</code> (HMAC-SHA256 du body brut avec le secret)<br/>
-		<strong>Performance</strong> : queue Redis fire-and-forget, worker async, timeout 10s par POST. Le pipeline ne paye jamais la latence du webhook.
+		<strong>{tFn('octoguard.webhook_info_format_label')}</strong> : <code>{`{ action, event_id, target_type, target_id, target_label, metadata, at }`}</code><br/>
+		<strong>{tFn('octoguard.webhook_info_header_label')}</strong> : <code>X-Octoguard-Signature: sha256=hex</code> {tFn('octoguard.webhook_info_header_note')}<br/>
+		<strong>{tFn('octoguard.webhook_info_perf_label')}</strong> : {tFn('octoguard.webhook_info_perf_note')}
 	</div>
 
 	<div class="og-actions">
-		<button type="submit" class="og-btn-primary">Enregistrer</button>
+		<button type="submit" class="og-btn-primary">{tFn('octoguard.save')}</button>
 	</div>
 </form>
 

@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/stores'
+	import { t as i18n } from '$lib/i18n'
 	let { children } = $props()
 
+	const tFn = $derived($i18n)
+
 	const tabs = [
-		{ href: '/admin/octoguard',          label: 'Vue d\'ensemble',  icon: '🐙' },
-		{ href: '/admin/octoguard/automod',  label: 'Auto-mod',         icon: '🛡️' },
-		{ href: '/admin/octoguard/welcome',  label: 'Bienvenue',        icon: '👋' },
-		{ href: '/admin/octoguard/commands', label: 'Commandes',        icon: '⚡' },
-		{ href: '/admin/octoguard/mutes',    label: 'Mutes',            icon: '🔇' },
-		{ href: '/admin/octoguard/reports',  label: 'Signalements',     icon: '🚩' },
-		{ href: '/admin/octoguard/logs',     label: 'Journal',          icon: '📋' },
-		{ href: '/admin/octoguard/webhook',  label: 'Webhook',          icon: '🔗' },
+		{ href: '/admin/octoguard',          key: 'octoguard.tab_overview', icon: '🐙' },
+		{ href: '/admin/octoguard/automod',  key: 'octoguard.tab_automod',  icon: '🛡️' },
+		{ href: '/admin/octoguard/welcome',  key: 'octoguard.tab_welcome',  icon: '👋' },
+		{ href: '/admin/octoguard/commands', key: 'octoguard.tab_commands', icon: '⚡' },
+		{ href: '/admin/octoguard/mutes',    key: 'octoguard.tab_mutes',    icon: '🔇' },
+		{ href: '/admin/octoguard/reports',  key: 'octoguard.tab_reports',  icon: '🚩' },
+		{ href: '/admin/octoguard/logs',     key: 'octoguard.tab_logs',     icon: '📋' },
+		{ href: '/admin/octoguard/webhook',  key: 'octoguard.tab_webhook',  icon: '🔗' },
 	]
 
 	function isActive(href: string): boolean {
@@ -23,7 +26,7 @@
 	<header class="og-header">
 		<div class="og-title-wrap">
 			<h1 class="og-title">OctoGuard</h1>
-			<p class="og-subtitle">Modérateur automatique natif Nodyx, Phase 1</p>
+			<p class="og-subtitle">{tFn('octoguard.subtitle')}</p>
 		</div>
 	</header>
 
@@ -31,7 +34,7 @@
 		{#each tabs as t (t.href)}
 			<a href={t.href} class="og-tab" class:og-tab--active={isActive(t.href)}>
 				<span class="og-tab-icon">{t.icon}</span>
-				<span>{t.label}</span>
+				<span>{tFn(t.key)}</span>
 			</a>
 		{/each}
 	</nav>

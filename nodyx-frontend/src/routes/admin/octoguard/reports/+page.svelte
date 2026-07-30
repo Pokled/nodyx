@@ -1,18 +1,20 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { t } from '$lib/i18n'
 	import type { PageData, ActionData } from './$types'
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+	const tFn = $derived($t)
 	const STATUSES = ['open', 'reviewed', 'dismissed', 'actioned']
 </script>
 
-<svelte:head><title>Signalements — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.reports_title')} — OctoGuard</title></svelte:head>
 
 <header class="og-h">
-	<h2>Signalements utilisateurs</h2>
-	<p>Reports envoyés par des membres sur du contenu ou des utilisateurs.</p>
+	<h2>{tFn('octoguard.reports_h2')}</h2>
+	<p>{tFn('octoguard.reports_desc')}</p>
 	<nav class="og-filters">
 		{#each STATUSES as s}
-			<a href={`/admin/octoguard/reports?status=${s}`} class="og-filter" class:active={data.status === s}>{s}</a>
+			<a href={`/admin/octoguard/reports?status=${s}`} class="og-filter" class:active={data.status === s}>{tFn('octoguard.report_status_' + s)}</a>
 		{/each}
 	</nav>
 </header>
@@ -20,7 +22,7 @@
 {#if form?.error}<div class="og-err">⚠ {form.error}</div>{/if}
 
 {#if data.reports.length === 0}
-	<div class="og-empty">Aucun report dans cet état.</div>
+	<div class="og-empty">{tFn('octoguard.reports_empty')}</div>
 {:else}
 	<ul class="og-reports">
 		{#each data.reports as r (r.id)}
@@ -28,23 +30,23 @@
 				<div class="og-report-head">
 					<span class="og-report-cat">{r.category ?? 'other'}</span>
 					<span class="og-report-target">{r.target_type} <code>{r.target_id.slice(0,8)}</code></span>
-					<span class="og-report-by">par {r.reporter_username ?? r.reporter_id?.slice(0,8) ?? '—'}</span>
+					<span class="og-report-by">{tFn('octoguard.reports_by', { name: r.reporter_username ?? r.reporter_id?.slice(0,8) ?? '—' })}</span>
 					<span class="og-report-date">{new Date(r.created_at).toLocaleString()}</span>
 				</div>
 				<p class="og-report-reason">{r.reason}</p>
 				{#if r.resolution}
-					<p class="og-report-resolution"><strong>Résolution :</strong> {r.resolution}</p>
+					<p class="og-report-resolution"><strong>{tFn('octoguard.reports_resolution_label')}</strong> {r.resolution}</p>
 				{/if}
 				{#if r.status === 'open'}
 					<form method="POST" action="?/patch" use:enhance class="og-report-actions">
 						<input type="hidden" name="id" value={r.id} />
-						<input name="resolution" type="text" placeholder="Note de résolution (optionnel)" />
-						<button type="submit" name="status" value="reviewed" class="og-btn-link">Marquer revu</button>
-						<button type="submit" name="status" value="actioned" class="og-btn-link og-btn-link--accent">Action prise</button>
-						<button type="submit" name="status" value="dismissed" class="og-btn-link og-btn-link--danger">Rejeter</button>
+						<input name="resolution" type="text" placeholder={tFn('octoguard.reports_resolution_ph')} />
+						<button type="submit" name="status" value="reviewed" class="og-btn-link">{tFn('octoguard.reports_mark_reviewed')}</button>
+						<button type="submit" name="status" value="actioned" class="og-btn-link og-btn-link--accent">{tFn('octoguard.reports_mark_actioned')}</button>
+						<button type="submit" name="status" value="dismissed" class="og-btn-link og-btn-link--danger">{tFn('octoguard.reports_dismiss')}</button>
 					</form>
 				{:else}
-					<div class="og-report-status">Statut: <code>{r.status}</code></div>
+					<div class="og-report-status">{tFn('octoguard.reports_status_label')} <code>{r.status}</code></div>
 				{/if}
 			</li>
 		{/each}

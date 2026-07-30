@@ -1,21 +1,23 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { t } from '$lib/i18n'
 	import type { PageData, ActionData } from './$types'
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+	const tFn = $derived($t)
 	let showForm = $state(false)
 	let f_command = $state('')
 	let f_response = $state('')
 	let f_cooldown = $state(5)
 </script>
 
-<svelte:head><title>Commandes — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.commands_title')} — OctoGuard</title></svelte:head>
 
 <header class="og-h">
 	<div>
-		<h2>Commandes personnalisées</h2>
-		<p>Les membres tapent <code>!nom</code> en début de message et le bot répond.</p>
+		<h2>{tFn('octoguard.commands_h2')}</h2>
+		<p>{tFn('octoguard.commands_desc_pre')} <code>!nom</code> {tFn('octoguard.commands_desc_post')}</p>
 	</div>
-	<button class="og-btn" onclick={() => showForm = !showForm}>{showForm ? 'Fermer' : '+ Nouvelle commande'}</button>
+	<button class="og-btn" onclick={() => showForm = !showForm}>{showForm ? tFn('octoguard.close') : tFn('octoguard.commands_new')}</button>
 </header>
 
 {#if form?.error}<div class="og-err">⚠ {form.error}</div>{/if}
@@ -26,20 +28,20 @@
 		if (result.type === 'success') { showForm = false; f_command = ''; f_response = ''; }
 	}} class="og-form">
 		<div class="og-row">
-			<label>Nom (sans le !)<input name="command" type="text" required maxlength="64"
-				pattern="[a-z0-9_-]+" bind:value={f_command} placeholder="regles" /></label>
-			<label>Cooldown (s)<input name="cooldown_seconds" type="number" min="0" max="86400" bind:value={f_cooldown} /></label>
+			<label>{tFn('octoguard.commands_name_label')}<input name="command" type="text" required maxlength="64"
+				pattern="[a-z0-9_-]+" bind:value={f_command} placeholder={tFn('octoguard.commands_name_ph')} /></label>
+			<label>{tFn('octoguard.commands_cooldown_label')}<input name="cooldown_seconds" type="number" min="0" max="86400" bind:value={f_cooldown} /></label>
 		</div>
-		<label>Réponse du bot<textarea name="response" rows="3" required maxlength="4000" bind:value={f_response}
-			placeholder="Les règles : ..."></textarea></label>
+		<label>{tFn('octoguard.commands_response_label')}<textarea name="response" rows="3" required maxlength="4000" bind:value={f_response}
+			placeholder={tFn('octoguard.commands_response_ph')}></textarea></label>
 		<div class="og-actions">
-			<button type="submit" class="og-btn-primary">Créer</button>
+			<button type="submit" class="og-btn-primary">{tFn('octoguard.create')}</button>
 		</div>
 	</form>
 {/if}
 
 {#if data.commands.length === 0}
-	<div class="og-empty">Aucune commande. Crée-en une pour répondre à <code>!regles</code>, <code>!faq</code>, etc.</div>
+	<div class="og-empty">{tFn('octoguard.commands_empty')} <code>!regles</code>, <code>!faq</code>, etc.</div>
 {:else}
 	<ul class="og-list">
 		{#each data.commands as c (c.id)}
@@ -47,11 +49,11 @@
 				<span class="og-cmd-name">!{c.command}</span>
 				<span class="og-cmd-resp">{c.response.slice(0, 80)}{c.response.length > 80 ? '…' : ''}</span>
 				<span class="og-cmd-cd">cd:{c.cooldown_seconds}s</span>
-				{#if !c.enabled}<span class="og-tag-off">désactivée</span>{/if}
+				{#if !c.enabled}<span class="og-tag-off">{tFn('octoguard.commands_disabled')}</span>{/if}
 				<form method="POST" action="?/delete" use:enhance class="og-inline-form">
 					<input type="hidden" name="id" value={c.id} />
 					<button type="submit" class="og-btn-link og-btn-link--danger"
-						onclick={(e) => { if (!confirm(`Supprimer "!${c.command}" ?`)) e.preventDefault() }}>Supprimer</button>
+						onclick={(e) => { if (!confirm(tFn('octoguard.commands_delete_confirm', { name: c.command }))) e.preventDefault() }}>{tFn('octoguard.delete')}</button>
 				</form>
 			</li>
 		{/each}

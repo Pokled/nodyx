@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { t } from '$lib/i18n'
 	import type { PageData, ActionData } from './$types'
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+	const tFn = $derived($t)
 
 	const w = $derived(data.welcome ?? {})
 	let enabled       = $state(false)
@@ -17,44 +19,44 @@
 	})
 </script>
 
-<svelte:head><title>Bienvenue — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.welcome_title')} — OctoGuard</title></svelte:head>
 
 <header class="og-h">
-	<h2>Message de bienvenue</h2>
-	<p>Configuré globalement. Posté par le bot fantôme <code>OctoGuard</code> à chaque nouvelle inscription.</p>
+	<h2>{tFn('octoguard.welcome_h2')}</h2>
+	<p>{tFn('octoguard.welcome_desc_pre')} <code>OctoGuard</code> {tFn('octoguard.welcome_desc_post')}</p>
 </header>
 
 {#if form?.error}<div class="og-err">⚠ {form.error}</div>{/if}
-{#if form?.ok}<div class="og-ok">✓ Sauvegardé</div>{/if}
+{#if form?.ok}<div class="og-ok">✓ {tFn('octoguard.saved')}</div>{/if}
 
 <form method="POST" action="?/save" use:enhance class="og-form">
 	<label class="og-label og-checkbox">
 		<input type="checkbox" name="enabled" bind:checked={enabled} value="1" />
-		<span>Activer le message de bienvenue</span>
+		<span>{tFn('octoguard.welcome_enable')}</span>
 	</label>
 
 	<label class="og-label">
-		<span>Channel cible (UUID)</span>
-		<input name="channel_id" type="text" bind:value={channelId} placeholder="uuid-du-channel-général" />
+		<span>{tFn('octoguard.welcome_channel_label')}</span>
+		<input name="channel_id" type="text" bind:value={channelId} placeholder={tFn('octoguard.welcome_channel_ph')} />
 	</label>
 
 	<label class="og-label">
-		<span>Message public (variables : <code>{`{user}`}</code> <code>{`{userMention}`}</code> <code>{`{communityName}`}</code>)</span>
+		<span>{tFn('octoguard.welcome_msg_label')} <code>{`{user}`}</code> <code>{`{userMention}`}</code> <code>{`{communityName}`}</code>)</span>
 		<textarea name="public_message" rows="4" bind:value={publicMessage}
-			placeholder={'Bienvenue {userMention} sur {communityName} !'}></textarea>
+			placeholder={tFn('octoguard.welcome_msg_ph')}></textarea>
 	</label>
 
 	<label class="og-label">
-		<span>Auto-grade à l'inscription (UUID, optionnel)</span>
-		<input name="auto_grade_id" type="text" bind:value={autoGradeId} placeholder="uuid-grade-newcomer" />
+		<span>{tFn('octoguard.welcome_grade_label')}</span>
+		<input name="auto_grade_id" type="text" bind:value={autoGradeId} placeholder={tFn('octoguard.welcome_grade_ph')} />
 	</label>
 
 	<div class="og-info">
-		<strong>Note</strong> : le DM système de bienvenue n'est pas encore disponible (touche au flux DM E2E chiffré). À venir dans la spec 019.
+		<strong>{tFn('octoguard.welcome_note_label')}</strong> : {tFn('octoguard.welcome_note_text')}
 	</div>
 
 	<div class="og-actions">
-		<button type="submit" class="og-btn-primary">Enregistrer</button>
+		<button type="submit" class="og-btn-primary">{tFn('octoguard.save')}</button>
 	</div>
 </form>
 

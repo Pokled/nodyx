@@ -1,57 +1,59 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { t } from '$lib/i18n'
 	import type { PageData, ActionData } from './$types'
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+	const tFn = $derived($t)
 </script>
 
-<svelte:head><title>Mutes — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.mutes_title')} — OctoGuard</title></svelte:head>
 
 <header class="og-h">
-	<h2>Mutes actifs</h2>
-	<p>Les utilisateurs mutés ne peuvent pas envoyer de message dans le chat (global ou par channel).</p>
+	<h2>{tFn('octoguard.mutes_h2')}</h2>
+	<p>{tFn('octoguard.mutes_desc')}</p>
 </header>
 
 {#if form?.error}<div class="og-err">⚠ {form.error}</div>{/if}
 
 <details class="og-create">
-	<summary>+ Appliquer un mute manuel</summary>
+	<summary>{tFn('octoguard.mutes_add')}</summary>
 	<form method="POST" action="?/create" use:enhance class="og-form">
-		<label>UUID utilisateur<input name="user_id" type="text" required /></label>
-		<label>UUID channel (optionnel, vide = global)<input name="channel_id" type="text" /></label>
+		<label>{tFn('octoguard.mutes_user_uuid')}<input name="user_id" type="text" required /></label>
+		<label>{tFn('octoguard.mutes_channel_uuid')}<input name="channel_id" type="text" /></label>
 		<div class="og-row">
-			<label>Durée<input name="duration_value" type="number" min="1" placeholder="1" /></label>
-			<label>Unité
+			<label>{tFn('octoguard.mutes_duration')}<input name="duration_value" type="number" min="1" placeholder="1" /></label>
+			<label>{tFn('octoguard.mutes_unit')}
 				<select name="duration_unit">
-					<option value="m">minutes</option>
-					<option value="h" selected>heures</option>
-					<option value="d">jours</option>
-					<option value="w">semaines</option>
+					<option value="m">{tFn('octoguard.unit_minutes')}</option>
+					<option value="h" selected>{tFn('octoguard.unit_hours')}</option>
+					<option value="d">{tFn('octoguard.unit_days')}</option>
+					<option value="w">{tFn('octoguard.unit_weeks')}</option>
 				</select>
 			</label>
 		</div>
-		<label>Raison<input name="reason" type="text" maxlength="500" placeholder="ex: spam" /></label>
-		<div class="og-actions"><button type="submit" class="og-btn-primary">Appliquer mute</button></div>
+		<label>{tFn('octoguard.field_reason')}<input name="reason" type="text" maxlength="500" placeholder={tFn('octoguard.mutes_reason_ph')} /></label>
+		<div class="og-actions"><button type="submit" class="og-btn-primary">{tFn('octoguard.mutes_apply')}</button></div>
 	</form>
 </details>
 
 {#if data.mutes.length === 0}
-	<div class="og-empty">Aucun mute actif.</div>
+	<div class="og-empty">{tFn('octoguard.mutes_empty')}</div>
 {:else}
 	<table class="og-table">
 		<thead>
-			<tr><th>Utilisateur</th><th>Channel</th><th>Raison</th><th>Expire</th><th></th></tr>
+			<tr><th>{tFn('octoguard.col_user')}</th><th>{tFn('octoguard.col_channel')}</th><th>{tFn('octoguard.col_reason')}</th><th>{tFn('octoguard.col_expires')}</th><th></th></tr>
 		</thead>
 		<tbody>
 			{#each data.mutes as m (m.id)}
 				<tr>
 					<td>{m.user_username ?? m.user_id?.slice(0,8)}</td>
-					<td>{m.channel_id ? m.channel_id.slice(0,8) : '— global —'}</td>
+					<td>{m.channel_id ? m.channel_id.slice(0,8) : tFn('octoguard.global_dash')}</td>
 					<td>{m.reason ?? '—'}</td>
-					<td>{m.expires_at ? new Date(m.expires_at).toLocaleString() : '— permanent —'}</td>
+					<td>{m.expires_at ? new Date(m.expires_at).toLocaleString() : tFn('octoguard.permanent_dash')}</td>
 					<td>
 						<form method="POST" action="?/unmute" use:enhance>
 							<input type="hidden" name="id" value={m.id} />
-							<button type="submit" class="og-btn-link">Unmute</button>
+							<button type="submit" class="og-btn-link">{tFn('octoguard.mutes_unmute')}</button>
 						</form>
 					</td>
 				</tr>

@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
 	import type { PageData } from './$types'
 	let { data }: { data: PageData } = $props()
+	const tFn = $derived($t)
 
 	const enabled       = $derived(data.settings?.enabled === true)
 	const re2Active     = $derived(data.settings?.re2_active === true)
@@ -11,45 +13,45 @@
 	const openReports   = $derived(data.openReports.length)
 </script>
 
-<svelte:head><title>OctoGuard, vue d'ensemble — Admin Nodyx</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.overview_title')} — Admin Nodyx</title></svelte:head>
 
 <!-- État global -->
 <section class="og-section">
-	<h2 class="og-section-title">État global</h2>
+	<h2 class="og-section-title">{tFn('octoguard.overview_global_state')}</h2>
 
 	<div class="og-status-grid">
 		<div class="og-status-card" class:og-status-card--ok={enabled} class:og-status-card--warn={!enabled}>
 			<div class="og-status-label">OctoGuard</div>
-			<div class="og-status-value">{enabled ? 'Activé' : 'Désactivé'}</div>
+			<div class="og-status-value">{enabled ? tFn('octoguard.status_on') : tFn('octoguard.status_off')}</div>
 			<div class="og-status-hint">
 				{#if enabled}
-					Le pipeline auto-mod tourne sur chaque message.
+					{tFn('octoguard.overview_pipeline_on')}
 				{:else}
-					Désactivé via <code>OCTOGUARD_ENABLED</code>. Active dans <code>.env</code> + redémarre PM2.
+					{tFn('octoguard.overview_pipeline_off_1')} <code>OCTOGUARD_ENABLED</code>. {tFn('octoguard.overview_pipeline_off_2')} <code>.env</code> {tFn('octoguard.overview_pipeline_off_3')}
 				{/if}
 			</div>
 		</div>
 
 		<div class="og-status-card" class:og-status-card--ok={re2Active}>
-			<div class="og-status-label">Protection ReDoS</div>
-			<div class="og-status-value">{re2Active ? 're2 actif' : 'Mode dégradé'}</div>
+			<div class="og-status-label">{tFn('octoguard.overview_redos_label')}</div>
+			<div class="og-status-value">{re2Active ? tFn('octoguard.overview_re2_on') : tFn('octoguard.overview_re2_off')}</div>
 			<div class="og-status-hint">
 				{#if re2Active}
-					Matching linéaire garanti, ReDoS impossible by design.
+					{tFn('octoguard.overview_re2_hint_on')}
 				{:else}
-					re2 absent, fallback RegExp natif + safe-regex à l'admission.
+					{tFn('octoguard.overview_re2_hint_off')}
 				{/if}
 			</div>
 		</div>
 
 		<div class="og-status-card" class:og-status-card--ok={hateFilter}>
-			<div class="og-status-label">Filtre haineux</div>
-			<div class="og-status-value">{hateFilter ? 'Activé' : 'Désactivé'}</div>
+			<div class="og-status-label">{tFn('octoguard.overview_hate_label')}</div>
+			<div class="og-status-value">{hateFilter ? tFn('octoguard.status_on') : tFn('octoguard.status_off')}</div>
 			<div class="og-status-hint">
 				{#if hateFilter}
-					Symboles nazis et runes haineuses bloqués automatiquement.
+					{tFn('octoguard.overview_hate_hint_on')}
 				{:else}
-					Désactivé. Tu assumes la responsabilité légale du contenu hébergé.
+					{tFn('octoguard.overview_hate_hint_off')}
 				{/if}
 			</div>
 		</div>
@@ -58,35 +60,35 @@
 
 <!-- Stats rapides -->
 <section class="og-section">
-	<h2 class="og-section-title">Vue d'ensemble</h2>
+	<h2 class="og-section-title">{tFn('octoguard.tab_overview')}</h2>
 
 	<div class="og-stats-grid">
 		<a href="/admin/octoguard/automod" class="og-stat-card">
 			<div class="og-stat-num">{enabledRules}<span class="og-stat-sep">/{totalRules}</span></div>
-			<div class="og-stat-label">Règles auto-mod actives</div>
+			<div class="og-stat-label">{tFn('octoguard.overview_stat_rules')}</div>
 		</a>
 
 		<a href="/admin/octoguard/mutes" class="og-stat-card">
 			<div class="og-stat-num">{activeMutes}</div>
-			<div class="og-stat-label">Mutes actifs</div>
+			<div class="og-stat-label">{tFn('octoguard.mutes_h2')}</div>
 		</a>
 
 		<a href="/admin/octoguard/reports" class="og-stat-card" class:og-stat-card--warn={openReports > 0}>
 			<div class="og-stat-num">{openReports}</div>
-			<div class="og-stat-label">Signalements ouverts</div>
+			<div class="og-stat-label">{tFn('octoguard.overview_stat_reports')}</div>
 		</a>
 	</div>
 </section>
 
 <!-- Aide rapide -->
 <section class="og-section">
-	<h2 class="og-section-title">Comment démarrer</h2>
+	<h2 class="og-section-title">{tFn('octoguard.overview_help_title')}</h2>
 	<ol class="og-help">
-		<li><strong>Active OctoGuard</strong> en ajoutant <code>OCTOGUARD_ENABLED=true</code> dans ton <code>.env</code> et redémarre <code>pm2 restart nodyx-core</code>.</li>
-		<li><strong>Crée tes règles auto-mod</strong> dans <a href="/admin/octoguard/automod">Auto-mod</a>. Commence en mode <code>report_only</code> pour tester sans agir.</li>
-		<li><strong>Configure le message de bienvenue</strong> dans <a href="/admin/octoguard/welcome">Bienvenue</a> si tu veux accueillir les nouveaux membres.</li>
-		<li><strong>Ajoute des commandes</strong> dans <a href="/admin/octoguard/commands">Commandes</a> pour répondre aux <code>!regles</code>, <code>!faq</code>, etc.</li>
-		<li><strong>Surveille les actions</strong> dans <a href="/admin/octoguard/logs">Journal</a> et traite les <a href="/admin/octoguard/reports">signalements</a>.</li>
+		<li><strong>{tFn('octoguard.help1_strong')}</strong> {tFn('octoguard.help1_a')} <code>OCTOGUARD_ENABLED=true</code> {tFn('octoguard.help1_b')} <code>.env</code> {tFn('octoguard.help1_c')} <code>pm2 restart nodyx-core</code>.</li>
+		<li><strong>{tFn('octoguard.help2_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/automod">{tFn('octoguard.tab_automod')}</a>. {tFn('octoguard.help2_b')} <code>report_only</code> {tFn('octoguard.help2_c')}</li>
+		<li><strong>{tFn('octoguard.help3_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/welcome">{tFn('octoguard.tab_welcome')}</a> {tFn('octoguard.help3_b')}</li>
+		<li><strong>{tFn('octoguard.help4_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/commands">{tFn('octoguard.tab_commands')}</a> {tFn('octoguard.help4_b')} <code>!regles</code>, <code>!faq</code>, etc.</li>
+		<li><strong>{tFn('octoguard.help5_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/logs">{tFn('octoguard.tab_logs')}</a> {tFn('octoguard.help5_b')} <a href="/admin/octoguard/reports">{tFn('octoguard.help5_reports_link')}</a>.</li>
 	</ol>
 </section>
 

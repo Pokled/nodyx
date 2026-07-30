@@ -1,26 +1,29 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { t as i18n } from '$lib/i18n'
 	import type { PageData, ActionData } from './$types'
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+
+	const tFn = $derived($i18n)
 
 	let showCreate = $state(false)
 	let editingId = $state<string | null>(null)
 
 	const RULE_TYPES = [
-		{ value: 'regex',         label: 'Regex (texte)',        params: { pattern: '\\b(motA|motB)\\b', flags: 'i' } },
-		{ value: 'caps',          label: 'Majuscules abusives',  params: { min_length: 15, threshold_percent: 70 } },
-		{ value: 'link_domain',   label: 'Filtre de domaines',   params: { mode: 'blacklist', domains: ['discord.gg'] } },
-		{ value: 'mention_spam',  label: 'Spam de mentions',     params: { max_mentions: 5 } },
-		{ value: 'link_spam',     label: 'Spam de liens',        params: { max_links: 2 } },
+		{ value: 'regex',         labelKey: 'octoguard.rule_type_regex',        params: { pattern: '\\b(motA|motB)\\b', flags: 'i' } },
+		{ value: 'caps',          labelKey: 'octoguard.rule_type_caps',         params: { min_length: 15, threshold_percent: 70 } },
+		{ value: 'link_domain',   labelKey: 'octoguard.rule_type_link_domain',  params: { mode: 'blacklist', domains: ['discord.gg'] } },
+		{ value: 'mention_spam',  labelKey: 'octoguard.rule_type_mention_spam', params: { max_mentions: 5 } },
+		{ value: 'link_spam',     labelKey: 'octoguard.rule_type_link_spam',    params: { max_links: 2 } },
 	]
 
 	const ACTIONS = [
-		{ value: 'delete',       label: 'Supprimer le message' },
-		{ value: 'warn',         label: 'Avertir (warn)' },
-		{ value: 'mute',         label: 'Mute (silence)' },
-		{ value: 'ban_temp',     label: 'Bannissement temporaire' },
-		{ value: 'notify_only',  label: 'Notifier seulement (log+webhook)' },
-		{ value: 'report_only',  label: 'Test (dry-run, log only)' },
+		{ value: 'delete',       labelKey: 'octoguard.action_delete' },
+		{ value: 'warn',         labelKey: 'octoguard.action_warn' },
+		{ value: 'mute',         labelKey: 'octoguard.action_mute' },
+		{ value: 'ban_temp',     labelKey: 'octoguard.action_ban_temp' },
+		{ value: 'notify_only',  labelKey: 'octoguard.action_notify_only' },
+		{ value: 'report_only',  labelKey: 'octoguard.action_report_only' },
 	]
 
 	// Form state (create or edit)
@@ -75,7 +78,7 @@
 	}
 </script>
 
-<svelte:head><title>Auto-mod — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.tab_automod')} — OctoGuard</title></svelte:head>
 
 {#if form?.error}
 	<div class="og-error">
@@ -88,11 +91,11 @@
 
 <header class="og-page-header">
 	<div>
-		<h2 class="og-page-title">Règles d'auto-modération</h2>
-		<p class="og-page-sub">{data.rules.length} règle{data.rules.length !== 1 ? 's' : ''}</p>
+		<h2 class="og-page-title">{tFn('octoguard.automod_title')}</h2>
+		<p class="og-page-sub">{data.rules.length !== 1 ? tFn('octoguard.rules_count_many', { n: data.rules.length }) : tFn('octoguard.rules_count_one', { n: data.rules.length })}</p>
 	</div>
 	{#if !showCreate && !editingId}
-		<button class="og-btn-primary" onclick={openCreate}>+ Nouvelle règle</button>
+		<button class="og-btn-primary" onclick={openCreate}>{tFn('octoguard.automod_new')}</button>
 	{/if}
 </header>
 
@@ -105,61 +108,61 @@
 
 		<div class="og-form-row">
 			<label class="og-label">
-				<span>Nom</span>
-				<input name="name" type="text" required maxlength="100" bind:value={f_name} placeholder="ex: anti-gros-mots" />
+				<span>{tFn('octoguard.field_name')}</span>
+				<input name="name" type="text" required maxlength="100" bind:value={f_name} placeholder={tFn('octoguard.automod_name_ph')} />
 			</label>
 			<label class="og-label">
-				<span>Type</span>
+				<span>{tFn('octoguard.field_type')}</span>
 				<select name="type" bind:value={f_type} onchange={onTypeChange}>
-					{#each RULE_TYPES as t}<option value={t.value}>{t.label}</option>{/each}
+					{#each RULE_TYPES as t}<option value={t.value}>{tFn(t.labelKey)}</option>{/each}
 				</select>
 			</label>
 			<label class="og-label">
-				<span>Action</span>
+				<span>{tFn('octoguard.field_action')}</span>
 				<select name="action" bind:value={f_action}>
-					{#each ACTIONS as a}<option value={a.value}>{a.label}</option>{/each}
+					{#each ACTIONS as a}<option value={a.value}>{tFn(a.labelKey)}</option>{/each}
 				</select>
 			</label>
 		</div>
 
 		<label class="og-label">
-			<span>Paramètres (JSON)</span>
+			<span>{tFn('octoguard.automod_params_label')}</span>
 			<textarea name="params" rows="5" bind:value={f_paramsJson}></textarea>
 		</label>
 
 		{#if f_action === 'mute' || f_action === 'ban_temp'}
 			<label class="og-label">
-				<span>Durée (JSON, ex: <code>{`{"value":1,"unit":"h"}`}</code>, vide = permanent)</span>
+				<span>{tFn('octoguard.automod_duration_label_pre')} <code>{`{"value":1,"unit":"h"}`}</code>{tFn('octoguard.automod_duration_label_post')}</span>
 				<input name="action_duration" type="text" bind:value={f_durationJson} placeholder={'{"value":1,"unit":"h"}'} />
 			</label>
 		{/if}
 
 		<label class="og-label">
-			<span>Rôles immunisés (séparés par virgule)</span>
+			<span>{tFn('octoguard.automod_immroles_label')}</span>
 			<input name="immunized_role_types" type="text" bind:value={f_immRoles} />
 		</label>
 
 		<div class="og-form-row">
 			<label class="og-checkbox">
 				<input name="dry_run" type="checkbox" bind:checked={f_dryRun} value="1" />
-				<span>Mode test (dry-run, log seulement)</span>
+				<span>{tFn('octoguard.automod_dryrun_label')}</span>
 			</label>
 			<label class="og-checkbox">
 				<input name="enabled" type="checkbox" bind:checked={f_enabled} value="1" />
-				<span>Activée</span>
+				<span>{tFn('octoguard.automod_enabled_label')}</span>
 			</label>
 		</div>
 
 		<div class="og-form-actions">
-			<button type="button" class="og-btn-secondary" onclick={cancelForm}>Annuler</button>
-			<button type="submit" class="og-btn-primary">{editingId ? 'Enregistrer' : 'Créer'}</button>
+			<button type="button" class="og-btn-secondary" onclick={cancelForm}>{tFn('octoguard.cancel')}</button>
+			<button type="submit" class="og-btn-primary">{editingId ? tFn('octoguard.save') : tFn('octoguard.create')}</button>
 		</div>
 	</form>
 {/if}
 
 {#if data.rules.length === 0 && !showCreate}
 	<div class="og-empty">
-		Aucune règle créée. Clique <strong>+ Nouvelle règle</strong> pour démarrer.
+		{tFn('octoguard.automod_empty_pre')} <strong>{tFn('octoguard.automod_new')}</strong> {tFn('octoguard.automod_empty_post')}
 	</div>
 {:else}
 	<ul class="og-rules-list">
@@ -175,19 +178,19 @@
 					{#if r.dry_run}<span class="og-rule-badge og-rule-badge--dry">dry-run</span>{/if}
 					<div class="og-rule-actions">
 						<button class="og-btn-link" onclick={() => editingId === r.id ? cancelForm() : startEdit(r)}>
-							{editingId === r.id ? 'Fermer' : 'Modifier'}
+							{editingId === r.id ? tFn('octoguard.close') : tFn('octoguard.edit')}
 						</button>
 						<form method="POST" action="?/delete" use:enhance>
 							<input type="hidden" name="id" value={r.id} />
 							<button type="submit" class="og-btn-link og-btn-link--danger"
-								onclick={(e) => { if (!confirm(`Supprimer "${r.name}" ?`)) e.preventDefault() }}>
-								Supprimer
+								onclick={(e) => { if (!confirm(tFn('octoguard.automod_delete_confirm', { name: r.name }))) e.preventDefault() }}>
+								{tFn('octoguard.delete')}
 							</button>
 						</form>
 					</div>
 				</div>
 				<details class="og-rule-detail">
-					<summary>Voir paramètres</summary>
+					<summary>{tFn('octoguard.automod_view_params')}</summary>
 					<pre>{JSON.stringify(r.params, null, 2)}</pre>
 				</details>
 			</li>

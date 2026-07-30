@@ -1,27 +1,29 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { t } from '$lib/i18n'
 	import type { PageData, ActionData } from './$types'
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+	const tFn = $derived($t)
 
 	const totalPages = $derived(Math.ceil(data.total / data.limit))
 </script>
 
-<svelte:head><title>Journal — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.logs_title')} — OctoGuard</title></svelte:head>
 
 <header class="og-h">
-	<h2>Journal des actions</h2>
-	<p>Actions OctoGuard et admin loggées dans <code>admin_audit_log</code>.</p>
+	<h2>{tFn('octoguard.logs_h2')}</h2>
+	<p>{tFn('octoguard.logs_desc')} <code>admin_audit_log</code>.</p>
 </header>
 
 {#if form?.error}<div class="og-err">⚠ {form.error}</div>{/if}
 
 {#if data.logs.length === 0}
-	<div class="og-empty">Aucune action loggée.</div>
+	<div class="og-empty">{tFn('octoguard.logs_empty')}</div>
 {:else}
 	<table class="og-table">
 		<thead>
 			<tr>
-				<th>Date</th><th>Acteur</th><th>Action</th><th>Cible</th><th>Détails</th><th></th>
+				<th>{tFn('octoguard.col_date')}</th><th>{tFn('octoguard.col_actor')}</th><th>{tFn('octoguard.col_action')}</th><th>{tFn('octoguard.col_target')}</th><th>{tFn('octoguard.col_details')}</th><th></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -36,7 +38,7 @@
 						{#if l.metadata?.undoable}
 							<form method="POST" action="?/undo" use:enhance>
 								<input type="hidden" name="id" value={l.id} />
-								<button type="submit" class="og-btn-link">Annuler</button>
+								<button type="submit" class="og-btn-link">{tFn('octoguard.logs_undo')}</button>
 							</form>
 						{/if}
 					</td>
@@ -47,13 +49,13 @@
 
 	{#if totalPages > 1}
 		<div class="og-pager">
-			<span>Page {data.page} / {totalPages} ({data.total} total)</span>
+			<span>{tFn('octoguard.logs_page', { page: data.page, total_pages: totalPages, total: data.total })}</span>
 			<div>
 				{#if data.page > 1}
-					<a href={`?page=${data.page - 1}${data.action ? '&action=' + data.action : ''}`}>← Précédent</a>
+					<a href={`?page=${data.page - 1}${data.action ? '&action=' + data.action : ''}`}>{tFn('octoguard.prev')}</a>
 				{/if}
 				{#if data.page < totalPages}
-					<a href={`?page=${data.page + 1}${data.action ? '&action=' + data.action : ''}`}>Suivant →</a>
+					<a href={`?page=${data.page + 1}${data.action ? '&action=' + data.action : ''}`}>{tFn('octoguard.next')}</a>
 				{/if}
 			</div>
 		</div>
