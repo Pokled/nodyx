@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
 	import { onMount, onDestroy } from 'svelte'
+	import { t } from '$lib/i18n'
 	import SceneCanvas from './SceneCanvas.svelte'
 	import AddSourceModal from './AddSourceModal.svelte'
 	import { consumeFocusedSceneId, focusOverlayAfterNav } from './sceneNav'
+
+	const tFn = $derived($t)
 	import {
 		SOURCE_TYPE_META, FULL_SCENE_VIEWPORT_TYPES,
 		type ObsScene, type ObsSceneLayout, type ObsSceneSource,
@@ -192,9 +195,9 @@
 				newName = ''
 				creating = false
 			} else if (res.status === 409) {
-				flash('Ce nom est déjà pris par une autre scène.', false)
+				flash(tFn('obs.scenes_err_dup'), false)
 			} else {
-				flash('Création impossible.', false)
+				flash(tFn('obs.scenes_err_create'), false)
 			}
 		} finally {
 			saving = false
@@ -204,7 +207,7 @@
 	async function deleteScene(id: string): Promise<void> {
 		const s = scenes.find(x => x.id === id)
 		if (!s) return
-		if (!confirm(`Supprimer la scène "${s.name}" ?`)) return
+		if (!confirm(tFn('obs.scenes_delete_confirm', { name: s.name }))) return
 		const res = await apiFetch(fetch, `/streamer/obs/scenes/${id}`, {
 			method:  'DELETE',
 			headers: { Authorization: `Bearer ${token}` },
@@ -213,7 +216,7 @@
 			scenes = scenes.filter(x => x.id !== id)
 			if (activeId === id) activeId = scenes[0]?.id ?? null
 		} else {
-			flash('Suppression échouée.', false)
+			flash(tFn('obs.scenes_err_delete'), false)
 		}
 	}
 
@@ -226,9 +229,9 @@
 			const d = await res.json() as { scene: ObsScene }
 			scenes = [...scenes, d.scene]
 			activeId = d.scene.id
-			flash(`Scène dupliquée : "${d.scene.name}".`, true)
+			flash(tFn('obs.scenes_dup_ok', { name: d.scene.name }), true)
 		} else {
-			flash('Duplication échouée.', false)
+			flash(tFn('obs.scenes_err_duplicate'), false)
 		}
 	}
 
@@ -260,7 +263,7 @@
 				scenes = scenes.map(s => s.id === d.scene.id ? { ...d.scene, layout: s.layout } : s)
 				lastSaveAt = Date.now()
 			} else {
-				flash('Sauvegarde échouée. Réessaye.', false)
+				flash(tFn('obs.scenes_err_save'), false)
 				lastPushedLayoutJson = ''       // pour réessayer la prochaine fois
 			}
 		} catch {
@@ -394,9 +397,9 @@
 	function fmtSavedAgo(ts: number | null): string {
 		if (!ts) return ''
 		const sec = Math.floor((Date.now() - ts) / 1000)
-		if (sec < 5)  return 'sauvegardé à l\'instant'
-		if (sec < 60) return `sauvegardé il y a ${sec}s`
-		return `sauvegardé il y a ${Math.floor(sec / 60)}min`
+		if (sec < 5)  return tFn('obs.saved_now')
+		if (sec < 60) return tFn('obs.saved_secs', { n: sec })
+		return tFn('obs.saved_mins', { n: Math.floor(sec / 60) })
 	}
 
 	onMount(() => {
@@ -431,8 +434,8 @@
 	<!-- Header : titre + état sauvegarde + lien doc -->
 	<header class="flex items-start justify-between gap-3 flex-wrap">
 		<div>
-			<h2 class="text-lg font-semibold text-zinc-100">Scènes OBS</h2>
-			<p class="text-sm text-zinc-500 mt-0.5">Compose la disposition de tes scènes. <span class="text-zinc-400">Phase A</span> : aperçu indicatif, le rendu final est celui d'OBS. <span class="text-zinc-600">Phase B (à venir)</span> : aperçu réel de la scène OBS via OBS WebSocket.</p>
+			<h2 class="text-lg font-semibold text-zinc-100">{tFn('obs.scenes_title')}</h2>
+			<p class="text-sm text-zinc-500 mt-0.5">{tFn('obs.scenes_desc_1')} <span class="text-zinc-400">Phase A</span> {tFn('obs.scenes_desc_2')} <span class="text-zinc-600">{tFn('obs.scenes_phase_b')}</span> {tFn('obs.scenes_desc_3')}</p>
 		</div>
 		{#if lastSaveAt}
 			<div class="text-[11px] text-zinc-500 flex items-center gap-1.5">
@@ -449,7 +452,7 @@
 	{/if}
 
 	{#if loading}
-		<div class="border border-zinc-800 bg-zinc-900 px-4 py-10 text-sm text-zinc-500 text-center">Chargement…</div>
+		<div class="border border-zinc-800 bg-zinc-900 px-4 py-10 text-sm text-zinc-500 text-center">{tFn('obs.loading')}</div>
 	{:else}
 		<!-- Grille principale OBS-like : canvas en haut large + contrôles à
 		     droite ; 3 colonnes en bas (Scenes / Sources / Mixer). -->
@@ -470,7 +473,7 @@
 					     aperçu live (iframes) ↔ wireframe (placeholders rapides) sans
 					     quitter la scène. -->
 					<div class="flex items-center justify-end gap-2 text-[11px]">
-						<span class="text-zinc-500">Aperçu :</span>
+						<span class="text-zinc-500">{tFn('obs.scenes_preview_label')}</span>
 						<div class="inline-flex items-center bg-zinc-900 border border-zinc-800 rounded-sm p-0.5">
 							{#each (['live', 'wireframe'] as const) as m (m)}
 								<button type="button" onclick={() => previewMode = m}
@@ -486,7 +489,7 @@
 							<rect x="3" y="3" width="18" height="18" rx="2"/>
 							<path d="M3 9h18M9 3v18"/>
 						</svg>
-						<div class="text-sm">Aucune scène. Crée-en une pour démarrer.</div>
+						<div class="text-sm">{tFn('obs.scenes_empty_canvas')}</div>
 					</div>
 				{/if}
 
@@ -495,7 +498,7 @@
 					<!-- Scenes -->
 					<div class="border border-zinc-800 bg-zinc-900 flex flex-col">
 						<header class="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-							<h3 class="text-[10px] uppercase tracking-widest font-semibold text-zinc-400">Scènes</h3>
+							<h3 class="text-[10px] uppercase tracking-widest font-semibold text-zinc-400">{tFn('obs.scenes_col')}</h3>
 							<span class="text-[10px] text-zinc-600 font-mono">{scenes.length}</span>
 						</header>
 						<ul class="flex-1 min-h-[180px] max-h-[260px] overflow-y-auto">
@@ -514,7 +517,7 @@
 							{/each}
 							{#if scenes.length === 0 && !creating}
 								<li class="px-3 py-4 text-[11px] text-zinc-500 text-center leading-snug">
-									Crée ta première scène (ex : Dev, Discussion, Pause).
+									{tFn('obs.scenes_first')}
 								</li>
 							{/if}
 						</ul>
@@ -522,21 +525,21 @@
 						<footer class="border-t border-zinc-800 p-1 flex items-center gap-0.5">
 							{#if !creating}
 								<button type="button" onclick={() => { creating = true; newName = '' }}
-									class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 rounded-sm" title="Nouvelle scène">
+									class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 rounded-sm" title={tFn('obs.scenes_new_title')}>
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
 								</button>
 								<button type="button" onclick={() => activeId && deleteScene(activeId)} disabled={!activeId}
-									class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-rose-300 hover:bg-rose-900/30 rounded-sm disabled:opacity-30" title="Supprimer la scène active">
+									class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-rose-300 hover:bg-rose-900/30 rounded-sm disabled:opacity-30" title={tFn('obs.scenes_delete_active')}>
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
 								</button>
 								<button type="button" onclick={() => activeId && duplicateScene(activeId)} disabled={!activeId}
-									class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 rounded-sm disabled:opacity-30" title="Dupliquer la scène active">
+									class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 rounded-sm disabled:opacity-30" title={tFn('obs.scenes_dup_active')}>
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 										<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
 									</svg>
 								</button>
 							{:else}
-								<input type="text" bind:value={newName} maxlength="80" placeholder="Nom (ex : Dev)"
+								<input type="text" bind:value={newName} maxlength="80" placeholder={tFn('obs.scenes_name_ph')}
 									onkeydown={(e) => { if (e.key === 'Enter') createScene(); if (e.key === 'Escape') creating = false }}
 									class="flex-1 bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 px-1.5 py-0.5 text-[11px] text-zinc-100 placeholder-zinc-600 outline-none rounded-sm" autofocus/>
 								<button type="button" onclick={createScene} disabled={saving || !newName.trim()}
@@ -561,7 +564,7 @@
 									<div class="flex items-center gap-1 px-2 py-1 text-xs transition-colors
 										{isSel ? 'bg-purple-500/15' : 'hover:bg-zinc-800/40'}">
 										<button type="button" onclick={() => toggleSourceVisible(s.id)}
-											class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-zinc-200 shrink-0" title={s.visible ? 'Cacher' : 'Afficher'}>
+											class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-zinc-200 shrink-0" title={s.visible ? tFn('obs.source_hide') : tFn('obs.source_show')}>
 											{#if s.visible}
 												<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
 											{:else}
@@ -569,7 +572,7 @@
 											{/if}
 										</button>
 										<button type="button" onclick={() => toggleSourceLocked(s.id)}
-											class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-amber-300 shrink-0" title={s.locked ? 'Déverrouiller' : 'Verrouiller'}>
+											class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-amber-300 shrink-0" title={s.locked ? tFn('obs.source_unlock') : tFn('obs.source_lock')}>
 											{#if s.locked}
 												<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6a5 5 0 0 0-10 0v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6z"/></svg>
 											{:else}
@@ -582,13 +585,13 @@
 											<span class="truncate" title={displayLabelFor(s)}>{displayLabelFor(s)}</span>
 										</button>
 										<div class="hidden group-hover:flex items-center gap-0.5">
-											<button type="button" onclick={() => moveSourceZ(s.id, 'up')} class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-zinc-200" title="Devant">
+											<button type="button" onclick={() => moveSourceZ(s.id, 'up')} class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-zinc-200" title={tFn('obs.source_front')}>
 												<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
 											</button>
-											<button type="button" onclick={() => moveSourceZ(s.id, 'down')} class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-zinc-200" title="Derrière">
+											<button type="button" onclick={() => moveSourceZ(s.id, 'down')} class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-zinc-200" title={tFn('obs.source_back')}>
 												<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
 											</button>
-											<button type="button" onclick={() => removeSource(s.id)} class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-rose-300" title="Supprimer">
+											<button type="button" onclick={() => removeSource(s.id)} class="w-5 h-5 grid place-items-center text-zinc-500 hover:text-rose-300" title={tFn('obs.delete')}>
 												<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
 											</button>
 										</div>
@@ -597,17 +600,17 @@
 							{/each}
 							{#if activeLayout.sources.length === 0 && activeScene}
 								<li class="px-3 py-4 text-[11px] text-zinc-500 text-center leading-snug">
-									Aucune source. Clique sur <span class="text-zinc-300">＋</span> ci-dessous pour ajouter une caméra, un overlay ou une URL.
+									{tFn('obs.sources_empty_pre')} <span class="text-zinc-300">＋</span> {tFn('obs.sources_empty_post')}
 								</li>
 							{/if}
 						</ul>
 						<footer class="border-t border-zinc-800 p-1 flex items-center gap-0.5">
 							<button type="button" onclick={() => addSourceOpen = true} disabled={!activeScene}
-								class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 rounded-sm disabled:opacity-30" title="Ajouter une source">
+								class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 rounded-sm disabled:opacity-30" title={tFn('obs.add_title')}>
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
 							</button>
 							<button type="button" onclick={() => selectedSrc && removeSource(selectedSrc)} disabled={!selectedSrc}
-								class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-rose-300 hover:bg-rose-900/30 rounded-sm disabled:opacity-30" title="Supprimer la source sélectionnée">
+								class="w-6 h-6 grid place-items-center text-zinc-400 hover:text-rose-300 hover:bg-rose-900/30 rounded-sm disabled:opacity-30" title={tFn('obs.sources_delete_selected')}>
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
 							</button>
 						</footer>
@@ -625,7 +628,7 @@
 								<line x1="7" y1="14" x2="7" y2="14"/><line x1="17" y1="8" x2="17" y2="8"/>
 							</svg>
 							<div class="text-[11px] text-zinc-500 leading-snug max-w-[20ch]">
-								Les sliders de volume des sources audio apparaîtront ici une fois Nodyx connecté à OBS.
+								{tFn('obs.mixer_placeholder')}
 							</div>
 						</div>
 					</div>
@@ -637,7 +640,7 @@
 				<!-- Contrôles OBS (placeholders Phase A) -->
 				<div class="border border-zinc-800 bg-zinc-900">
 					<header class="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-						<h3 class="text-[10px] uppercase tracking-widest font-semibold text-zinc-400">Contrôles</h3>
+						<h3 class="text-[10px] uppercase tracking-widest font-semibold text-zinc-400">{tFn('obs.controls_title')}</h3>
 						<span class="text-[9px] uppercase tracking-wider font-bold text-amber-300/80 bg-amber-500/10 px-1 rounded-sm">Phase C</span>
 					</header>
 					<div class="p-2 space-y-1.5">
@@ -663,15 +666,15 @@
 				<div class="border border-zinc-800 bg-zinc-900">
 					<header class="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
 						<h3 class="text-[10px] uppercase tracking-widest font-semibold text-zinc-400">
-							{selectedSource ? 'Propriétés' : 'Scène'}
+							{selectedSource ? tFn('obs.props_title') : tFn('obs.scene_title')}
 						</h3>
 					</header>
 					<div class="p-2.5 space-y-2.5">
 						{#if !selectedSource}
 							{@const bg = activeLayout.background ?? { kind: 'none' as const }}
-							<div class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">Fond de scène</div>
+							<div class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">{tFn('obs.bg_title')}</div>
 							<div class="grid grid-cols-3 gap-1 bg-zinc-950 border border-zinc-800 p-0.5 rounded-sm">
-								{#each [{ k: 'none', l: 'Aucun' }, { k: 'color', l: 'Couleur' }, { k: 'image', l: 'Image' }] as opt (opt.k)}
+								{#each [{ k: 'none', lk: 'obs.bg_none' }, { k: 'color', lk: 'obs.bg_color' }, { k: 'image', lk: 'obs.bg_image' }] as opt (opt.k)}
 									{@const isSel = bg.kind === opt.k}
 									<button type="button"
 										onclick={() => setBackground({
@@ -680,7 +683,7 @@
 											url:   opt.k === 'image' ? (bg.url   ?? '')        : undefined,
 										})}
 										class="text-[11px] px-2 py-1 rounded-sm transition-colors {isSel ? 'bg-purple-500/15 text-purple-200' : 'text-zinc-400 hover:text-zinc-200'}">
-										{opt.l}
+										{tFn(opt.lk)}
 									</button>
 								{/each}
 							</div>
@@ -699,22 +702,22 @@
 								</label>
 							{:else if bg.kind === 'image'}
 								<label class="block">
-									<span class="text-[9px] uppercase font-semibold text-zinc-500">URL de l'image (HTTPS)</span>
-									<input type="url" value={bg.url ?? ''} placeholder="https://…"
+									<span class="text-[9px] uppercase font-semibold text-zinc-500">{tFn('obs.bg_image_url_label')}</span>
+									<input type="url" value={bg.url ?? ''} placeholder={tFn('obs.url_ph_https')}
 										oninput={(e) => setBackground({ kind: 'image', url: e.currentTarget.value })}
 										class="mt-0.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 px-2 py-1 text-[11px] text-zinc-100 outline-none rounded-sm font-mono"/>
 								</label>
 								<div class="text-[10px] text-zinc-600 leading-snug">
-									L'image est affichée plein cadre derrière les sources (object-cover).
+									{tFn('obs.bg_image_note')}
 								</div>
 							{:else}
 								<div class="text-[10px] text-zinc-500 leading-snug">
-									Aucun fond : la scène reste transparente. Choisis <span class="text-zinc-300">Couleur</span> pour un fond uni ou <span class="text-zinc-300">Image</span> pour un visuel.
+									{tFn('obs.bg_none_note_1')} <span class="text-zinc-300">{tFn('obs.bg_color')}</span> {tFn('obs.bg_none_note_2')} <span class="text-zinc-300">{tFn('obs.bg_image')}</span> {tFn('obs.bg_none_note_3')}
 								</div>
 							{/if}
 
 							<div class="pt-2 border-t border-zinc-800 text-[11px] text-zinc-500 leading-snug">
-								Sélectionne une source dans le canvas ou la liste pour éditer sa position, sa taille ou son contenu.
+								{tFn('obs.props_hint')}
 							</div>
 						{:else}
 							{@const m = SOURCE_TYPE_META[selectedSource.type]}
@@ -732,7 +735,7 @@
 								</div>
 							</div>
 							<label class="block">
-								<span class="text-[9px] uppercase font-semibold text-zinc-500">Nom affiché</span>
+								<span class="text-[9px] uppercase font-semibold text-zinc-500">{tFn('obs.source_display_name')}</span>
 								<input type="text" value={selectedSource.label} maxlength="60"
 									oninput={(e) => patchSelected({ label: e.currentTarget.value })}
 									class="mt-0.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 px-2 py-1 text-xs text-zinc-100 outline-none rounded-sm"/>
@@ -751,13 +754,13 @@
 										class="mt-0.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 px-1.5 py-1 text-xs text-zinc-100 outline-none rounded-sm font-mono"/>
 								</label>
 								<label class="block">
-									<span class="text-[9px] uppercase font-semibold text-zinc-500">Largeur</span>
+									<span class="text-[9px] uppercase font-semibold text-zinc-500">{tFn('obs.source_width')}</span>
 									<input type="number" value={selectedSource.w} min="1" max="1920"
 										oninput={(e) => patchSelected({ w: Math.max(1, Math.min(1920, parseInt(e.currentTarget.value) || 1)) })}
 										class="mt-0.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 px-1.5 py-1 text-xs text-zinc-100 outline-none rounded-sm font-mono"/>
 								</label>
 								<label class="block">
-									<span class="text-[9px] uppercase font-semibold text-zinc-500">Hauteur</span>
+									<span class="text-[9px] uppercase font-semibold text-zinc-500">{tFn('obs.source_height')}</span>
 									<input type="number" value={selectedSource.h} min="1" max="1080"
 										oninput={(e) => patchSelected({ h: Math.max(1, Math.min(1080, parseInt(e.currentTarget.value) || 1)) })}
 										class="mt-0.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 px-1.5 py-1 text-xs text-zinc-100 outline-none rounded-sm font-mono"/>
@@ -765,9 +768,9 @@
 							</div>
 							{#if selectedSource.type === 'browser_source'}
 								<label class="block">
-									<span class="text-[9px] uppercase font-semibold text-zinc-500">URL Browser Source</span>
+									<span class="text-[9px] uppercase font-semibold text-zinc-500">{tFn('obs.source_browser_url')}</span>
 									<input type="url" value={typeof selectedSource.config.url === 'string' ? selectedSource.config.url : ''}
-										placeholder="https://…"
+										placeholder={tFn('obs.url_ph_https')}
 										oninput={(e) => patchSelected({ config: { ...selectedSource.config, url: e.currentTarget.value } })}
 										class="mt-0.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 px-2 py-1 text-[11px] text-zinc-100 outline-none rounded-sm font-mono"/>
 								</label>
@@ -781,12 +784,12 @@
 								<div class="rounded-sm border border-zinc-800 bg-zinc-950 px-2.5 py-2 space-y-1.5">
 									<div class="flex items-center justify-between gap-2">
 										<span class="text-[9px] uppercase tracking-wider font-semibold text-zinc-500">
-											{selectedSource.type === 'playlist' ? 'Playlist ciblée' : 'Overlay lié'}
+											{selectedSource.type === 'playlist' ? tFn('obs.source_playlist_target') : tFn('obs.source_overlay_linked')}
 										</span>
 										<button type="button" onclick={() => { swapSourceId = selectedSource.id }}
 											class="text-[10px] font-medium text-purple-200 hover:text-purple-100 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40">
 											<svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-											Changer
+											{tFn('obs.change')}
 										</button>
 									</div>
 									<div class="text-[11px] text-zinc-300 font-medium truncate" title={displayLabelFor(selectedSource)}>
@@ -805,22 +808,22 @@
 										<svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 											<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
 										</svg>
-										Modifier les couleurs / sons de cet overlay
+										{tFn('obs.source_edit_overlay')}
 									</button>
 								{/if}
 							{:else if selectedSource.type === 'placeholder_video'}
 								<label class="block">
-									<span class="text-[9px] uppercase font-semibold text-zinc-500">Type visé</span>
+									<span class="text-[9px] uppercase font-semibold text-zinc-500">{tFn('obs.source_target_type')}</span>
 									<select value={typeof selectedSource.config.kind === 'string' ? selectedSource.config.kind : 'webcam'}
 										onchange={(e) => patchSelected({ config: { ...selectedSource.config, kind: e.currentTarget.value } })}
 										class="mt-0.5 w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500/60 px-2 py-1 text-[11px] text-zinc-100 outline-none rounded-sm">
-										<option value="webcam">📷 Webcam</option>
-										<option value="capture">🎮 Capture jeu</option>
-										<option value="image">🖼 Image / logo</option>
+										<option value="webcam">{tFn('obs.source_kind_webcam')}</option>
+										<option value="capture">{tFn('obs.source_kind_capture')}</option>
+										<option value="image">{tFn('obs.source_kind_image')}</option>
 									</select>
 								</label>
 								<div class="text-[10px] text-zinc-600 leading-snug">
-									La vraie source OBS sera liée ici quand le bridge OBS WebSocket sera activé (Phase B).
+									{tFn('obs.source_placeholder_note')}
 								</div>
 							{/if}
 						{/if}
@@ -847,8 +850,8 @@
 		{token}
 		initialType={swappingSource.type}
 		title={swappingSource.type === 'playlist'
-			? 'Changer la playlist'
-			: `Changer l'overlay ${SOURCE_TYPE_META[swappingSource.type].label}`}
+			? tFn('obs.swap_playlist_title')
+			: tFn('obs.swap_overlay_title', { label: SOURCE_TYPE_META[swappingSource.type].label })}
 		onPick={(type, config, label) => swapSource(type, config, label)}
 		onClose={() => swapSourceId = null}
 	/>

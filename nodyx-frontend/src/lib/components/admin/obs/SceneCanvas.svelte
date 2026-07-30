@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { browser } from '$app/environment'
+	import { t } from '$lib/i18n'
 	import {
 		CANVAS_WIDTH, CANVAS_HEIGHT, SOURCE_TYPE_META, FULL_SCENE_VIEWPORT_TYPES,
 		resolveSourceUrl,
 		type ObsSceneLayout, type ObsSceneSource,
 	} from '$lib/types/obsScenes'
+
+	const tFn = $derived($t)
 
 	// ─── Canvas scène OBS-like ──────────────────────────────────────────────
 	// Reproduit la zone preview d'OBS : fond noir 16:9, grille subtile, sources
@@ -298,10 +301,10 @@
 				</div>
 			{/if}
 			{#if src.locked}
-				<div class="absolute top-1 right-1 text-[10px] text-amber-400 pointer-events-none" title="Verrouillée">🔒</div>
+				<div class="absolute top-1 right-1 text-[10px] text-amber-400 pointer-events-none" title={tFn('obs.canvas_locked')}>🔒</div>
 			{/if}
 			{#if !src.visible}
-				<div class="absolute top-1 left-1 text-[10px] text-zinc-500 pointer-events-none" title="Cachée">⊘</div>
+				<div class="absolute top-1 left-1 text-[10px] text-zinc-500 pointer-events-none" title={tFn('obs.canvas_hidden')}>⊘</div>
 			{/if}
 
 			<!-- Sélection OBS-style : bordure rouge ardent + poignées aux coins
@@ -326,7 +329,7 @@
 								{h === 'n'  || h === 's'  ? 'cursor-ns-resize' : ''}
 								{h === 'e'  || h === 'w'  ? 'cursor-ew-resize' : ''}
 							"
-							aria-label="Redimensionner ({h})"
+							aria-label={tFn('obs.canvas_resize', { h })}
 							onpointerdown={(e) => startResize(e, src, `resize-${h}` as Exclude<DragMode, null | 'move'>)}>
 						</button>
 					{/each}
@@ -345,8 +348,8 @@
 				<path d="M9 9h6v6H9z"/>
 				<path d="M3 9h6M3 15h6M15 3v6M15 15v6"/>
 			</svg>
-			<div class="text-xs uppercase tracking-widest text-zinc-500">Canvas vide</div>
-			<div class="text-[11px] text-zinc-600 max-w-[24ch] text-center">Ajoute une source depuis la colonne de droite pour démarrer.</div>
+			<div class="text-xs uppercase tracking-widest text-zinc-500">{tFn('obs.canvas_empty_title')}</div>
+			<div class="text-[11px] text-zinc-600 max-w-[24ch] text-center">{tFn('obs.canvas_empty_desc')}</div>
 		</div>
 	{/if}
 

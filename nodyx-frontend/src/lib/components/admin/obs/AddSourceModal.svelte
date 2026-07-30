@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
+	import { t } from '$lib/i18n'
 	import { SOURCE_TYPE_META, SOURCE_TYPE_ORDER, type ObsSceneSourceType } from '$lib/types/obsScenes'
+
+	const tFn = $derived($t)
 
 	// ─── Modal "+ Source" ───────────────────────────────────────────────────
 	// Flow en 2 étapes :
@@ -177,10 +180,10 @@
 				// Sélection automatique du nouveau pour ne pas obliger un 2e clic.
 				pickOverlay(d.overlay)
 			} else {
-				createError = `Création impossible (HTTP ${res.status}).`
+				createError = tFn('obs.place_err_create', { status: res.status })
 			}
 		} catch {
-			createError = 'Erreur réseau.'
+			createError = tFn('obs.err_network')
 		} finally {
 			createBusy = false
 		}
@@ -236,14 +239,14 @@
 		role="document">
 		<header class="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
 			<div class="min-w-0">
-				<div class="text-xs uppercase tracking-widest font-semibold text-purple-300/80">{title ?? 'Ajouter une source'}</div>
+				<div class="text-xs uppercase tracking-widest font-semibold text-purple-300/80">{title ?? tFn('obs.add_title')}</div>
 				<h3 class="text-base font-semibold text-zinc-100 mt-0.5 truncate">
-					{#if step === 'category'}Choisis un type
+					{#if step === 'category'}{tFn('obs.add_choose_type')}
 					{:else if pickedType}{SOURCE_TYPE_META[pickedType].icon} {SOURCE_TYPE_META[pickedType].label}
 					{/if}
 				</h3>
 			</div>
-			<button type="button" onclick={onClose} class="text-zinc-500 hover:text-zinc-200 w-7 h-7 grid place-items-center shrink-0" title="Fermer">✕</button>
+			<button type="button" onclick={onClose} class="text-zinc-500 hover:text-zinc-200 w-7 h-7 grid place-items-center shrink-0" title={tFn('obs.close')}>✕</button>
 		</header>
 
 		{#if step !== 'category' && !initialType}
@@ -252,7 +255,7 @@
 					<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 						<polyline points="15 18 9 12 15 6"/>
 					</svg>
-					Retour au catalogue
+					{tFn('obs.add_back_catalog')}
 				</button>
 			</div>
 		{/if}
@@ -274,21 +277,21 @@
 				{/each}
 			</div>
 			<footer class="px-4 py-2.5 border-t border-zinc-800 text-[11px] text-zinc-600 leading-snug">
-				La taille initiale est centrée sur le canvas. Tu pourras la repositionner / redimensionner après ajout.
+				{tFn('obs.add_footer')}
 			</footer>
 
 		<!-- ── Étape 2A : picker overlay Nodyx ─────────────────────────── -->
 		{:else if step === 'overlay-picker' && pickedType}
 			<div class="p-4 space-y-3">
 				{#if overlaysLoading}
-					<div class="text-center text-xs text-zinc-500 py-6">Chargement…</div>
+					<div class="text-center text-xs text-zinc-500 py-6">{tFn('obs.loading')}</div>
 				{:else if overlays.length === 0 && !createOpen}
 					<div class="rounded-md border border-dashed border-zinc-800 bg-zinc-900/40 px-4 py-5 text-center text-xs text-zinc-500 leading-snug">
-						Aucun overlay <span class="text-zinc-300">{SOURCE_TYPE_META[pickedType].label}</span> n'existe encore.<br/>
-						Crée-en un ci-dessous, il s'ajoutera à ta liste d'overlays.
+						{tFn('obs.add_overlay_empty_pre')} <span class="text-zinc-300">{SOURCE_TYPE_META[pickedType].label}</span> {tFn('obs.add_overlay_empty_post')}<br/>
+						{tFn('obs.add_overlay_empty_2')}
 					</div>
 				{:else}
-					<div class="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">Choisir un overlay existant</div>
+					<div class="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">{tFn('obs.add_choose_overlay')}</div>
 					<ul class="space-y-1.5 max-h-72 overflow-y-auto">
 						{#each overlays as o (o.id)}
 							<li>
@@ -297,7 +300,7 @@
 									<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background: #{SOURCE_TYPE_META[pickedType].accent};"></span>
 									<div class="min-w-0 flex-1">
 										<div class="text-sm text-zinc-100 truncate">{o.label?.trim() || SOURCE_TYPE_META[pickedType].label}</div>
-										<div class="text-[10px] text-zinc-600 font-mono truncate" title={o.token}>token : {o.token.slice(0, 12)}…</div>
+										<div class="text-[10px] text-zinc-600 font-mono truncate" title={o.token}>{tFn('obs.add_token_label')} {o.token.slice(0, 12)}…</div>
 									</div>
 									<svg class="w-3.5 h-3.5 text-zinc-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
 								</button>
@@ -312,14 +315,14 @@
 						<button type="button" onclick={() => { createOpen = true; createLabel = '' }}
 							class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 hover:border-purple-500/70 text-purple-100 rounded-md transition-colors">
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-							Créer un nouvel overlay {SOURCE_TYPE_META[pickedType].label}
+							{tFn('obs.add_create_overlay')} {SOURCE_TYPE_META[pickedType].label}
 						</button>
 					{:else}
 						<div class="space-y-2">
 							<label class="block">
-								<span class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">Label (optionnel)</span>
+								<span class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">{tFn('obs.add_label_label')}</span>
 								<input type="text" bind:value={createLabel} maxlength="60"
-									placeholder="ex : Alert principale"
+									placeholder={tFn('obs.add_label_ph')}
 									onkeydown={(e) => { if (e.key === 'Enter') createOverlay() }}
 									class="mt-1 w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 px-3 py-1.5 text-xs text-zinc-100 outline-none rounded-sm"
 									autofocus/>
@@ -330,11 +333,11 @@
 							<div class="flex items-center gap-2">
 								<button type="button" onclick={createOverlay} disabled={createBusy}
 									class="flex-1 text-xs font-medium bg-purple-500 hover:bg-purple-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-white px-3 py-1.5 rounded-sm transition-colors">
-									{createBusy ? 'Création…' : 'Créer et ajouter'}
+									{createBusy ? tFn('obs.creating') : tFn('obs.add_create_add')}
 								</button>
 								<button type="button" onclick={() => { createOpen = false; createError = null }}
 									class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded-sm">
-									Annuler
+									{tFn('obs.cancel')}
 								</button>
 							</div>
 						</div>
@@ -346,13 +349,13 @@
 		{:else if step === 'playlist-picker'}
 			<div class="p-4 space-y-3">
 				{#if playlistLoading}
-					<div class="text-center text-xs text-zinc-500 py-6">Chargement…</div>
+					<div class="text-center text-xs text-zinc-500 py-6">{tFn('obs.loading')}</div>
 				{:else if playlists.length === 0}
 					<div class="rounded-md border border-dashed border-zinc-800 bg-zinc-900/40 px-4 py-5 text-center text-xs text-zinc-500 leading-snug">
-						Aucune playlist. Crée-en une depuis le tab <span class="text-zinc-300">Soundboard</span>, elle apparaîtra ici.
+						{tFn('obs.add_playlist_empty_pre')} <span class="text-zinc-300">Soundboard</span>{tFn('obs.add_playlist_empty_post')}
 					</div>
 				{:else}
-					<div class="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">Choisir une playlist</div>
+					<div class="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">{tFn('obs.add_choose_playlist')}</div>
 					<ul class="space-y-1.5 max-h-72 overflow-y-auto">
 						{#each playlists as p (p.id)}
 							<li>
@@ -361,7 +364,7 @@
 									<span class="w-2 h-2 rounded-full shrink-0" style="background: {p.color ?? 'var(--nx-accent-2-soft)'};"></span>
 									<div class="min-w-0 flex-1">
 										<div class="text-sm text-zinc-100 truncate">{p.name}</div>
-										<div class="text-[10px] text-zinc-600 font-mono">{p.trackCount} piste{p.trackCount > 1 ? 's' : ''}</div>
+										<div class="text-[10px] text-zinc-600 font-mono">{p.trackCount > 1 ? tFn('obs.track_count_many', { n: p.trackCount }) : tFn('obs.track_count_one', { n: p.trackCount })}</div>
 									</div>
 									<svg class="w-3.5 h-3.5 text-zinc-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
 								</button>
@@ -369,7 +372,7 @@
 						{/each}
 					</ul>
 					<div class="text-[10px] text-zinc-600 leading-snug pt-1">
-						Le token overlay playlist est partagé entre toutes tes playlists. Tu peux l'éditer depuis le tab <span class="text-zinc-300">Overlays OBS</span> si besoin.
+						{tFn('obs.add_playlist_note_pre')} <span class="text-zinc-300">Overlays OBS</span> {tFn('obs.add_playlist_note_post')}
 					</div>
 				{/if}
 			</div>
@@ -382,13 +385,13 @@
 						<span class="text-xl leading-none">🌐</span>
 						<div>
 							<div class="text-sm font-medium text-zinc-100">Browser Source</div>
-							<div class="text-[11px] text-zinc-500">N'importe quelle URL HTTPS (widget externe).</div>
+							<div class="text-[11px] text-zinc-500">{tFn('obs.add_browser_desc')}</div>
 						</div>
 					</div>
 					<label class="block">
 						<span class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">URL</span>
 						<input type="url" bind:value={urlInput}
-							placeholder="https://..."
+							placeholder={tFn('obs.add_url_ph')}
 							onkeydown={(e) => { if (e.key === 'Enter') confirmBrowserUrl() }}
 							class="mt-1 w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 px-3 py-2 text-sm text-zinc-100 outline-none rounded-sm font-mono"
 							autofocus/>
@@ -397,11 +400,11 @@
 				<div class="flex items-center justify-end gap-2">
 					<button type="button" onclick={onClose}
 						class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded-sm">
-						Annuler
+						{tFn('obs.cancel')}
 					</button>
 					<button type="button" onclick={confirmBrowserUrl} disabled={!/^https?:\/\//i.test(urlInput.trim())}
 						class="text-xs bg-purple-500 hover:bg-purple-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-white px-4 py-1.5 rounded-sm font-medium">
-						Ajouter
+						{tFn('obs.add_confirm')}
 					</button>
 				</div>
 			</div>

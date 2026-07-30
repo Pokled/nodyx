@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
 	import { onMount } from 'svelte'
+	import { t } from '$lib/i18n'
 	import { SOURCE_TYPE_META, CANVAS_WIDTH, CANVAS_HEIGHT,
 		type ObsScene, type ObsSceneLayout, type ObsSceneSource, type ObsSceneSourceType } from '$lib/types/obsScenes'
+
+	const tFn = $derived($t)
 
 	// ─── Modal "Placer dans une scène" ──────────────────────────────────────
 	// Appelée depuis Overlays OBS et Soundboard pour rattacher un overlay ou
@@ -100,10 +103,10 @@
 			if (res.ok) {
 				onPlaced(scene.id, scene.name, false)
 			} else {
-				error = `Placement impossible (HTTP ${res.status}).`
+				error = tFn('obs.place_err_place', { status: res.status })
 			}
 		} catch {
-			error = 'Erreur réseau.'
+			error = tFn('obs.err_network')
 		} finally {
 			busy = false
 		}
@@ -127,12 +130,12 @@
 				const d = await res.json() as { scene: ObsScene }
 				onPlaced(d.scene.id, d.scene.name, true)
 			} else if (res.status === 409) {
-				error = 'Une scène a déjà ce nom.'
+				error = tFn('obs.place_err_dup')
 			} else {
-				error = `Création impossible (HTTP ${res.status}).`
+				error = tFn('obs.place_err_create', { status: res.status })
 			}
 		} catch {
-			error = 'Erreur réseau.'
+			error = tFn('obs.err_network')
 		} finally {
 			busy = false
 		}
@@ -151,23 +154,23 @@
 		role="document">
 		<header class="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
 			<div class="min-w-0">
-				<div class="text-xs uppercase tracking-widest font-semibold text-purple-300/80">Placer dans une scène</div>
+				<div class="text-xs uppercase tracking-widest font-semibold text-purple-300/80">{tFn('obs.place_title')}</div>
 				<h3 class="text-sm font-semibold text-zinc-100 mt-0.5 truncate">
 					{SOURCE_TYPE_META[sourceType].icon} {sourceLabel || SOURCE_TYPE_META[sourceType].label}
 				</h3>
 			</div>
-			<button type="button" onclick={onClose} class="text-zinc-500 hover:text-zinc-200 w-7 h-7 grid place-items-center shrink-0" title="Fermer">✕</button>
+			<button type="button" onclick={onClose} class="text-zinc-500 hover:text-zinc-200 w-7 h-7 grid place-items-center shrink-0" title={tFn('obs.close')}>✕</button>
 		</header>
 
 		<div class="p-4 space-y-3">
 			{#if loading}
-				<div class="text-center text-xs text-zinc-500 py-6">Chargement…</div>
+				<div class="text-center text-xs text-zinc-500 py-6">{tFn('obs.loading')}</div>
 			{:else if scenes.length === 0 && !creating}
 				<div class="rounded-md border border-dashed border-zinc-800 bg-zinc-900/40 px-4 py-5 text-center text-xs text-zinc-500 leading-snug">
-					Aucune scène. Crée-en une ci-dessous pour y placer cet élément.
+					{tFn('obs.place_empty')}
 				</div>
 			{:else}
-				<div class="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">Choisis une scène</div>
+				<div class="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">{tFn('obs.place_choose')}</div>
 				<ul class="space-y-1.5 max-h-64 overflow-y-auto">
 					{#each scenes as s (s.id)}
 						<li>
@@ -176,7 +179,7 @@
 								<span class="w-2 h-2 rounded-full shrink-0" style="background: {s.color ?? 'var(--nx-accent-2-soft)'};"></span>
 								<div class="min-w-0 flex-1">
 									<div class="text-sm text-zinc-100 truncate">{s.name}</div>
-									<div class="text-[10px] text-zinc-600">{s.layout.sources.length} source{s.layout.sources.length > 1 ? 's' : ''}</div>
+									<div class="text-[10px] text-zinc-600">{s.layout.sources.length > 1 ? tFn('obs.source_count_many', { n: s.layout.sources.length }) : tFn('obs.source_count_one', { n: s.layout.sources.length })}</div>
 								</div>
 								<svg class="w-3.5 h-3.5 text-zinc-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
 							</button>
@@ -191,14 +194,14 @@
 					<button type="button" onclick={() => { creating = true; newName = '' }}
 						class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 hover:border-purple-500/70 text-purple-100 rounded-md transition-colors">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-						Créer une nouvelle scène
+						{tFn('obs.place_create_new')}
 					</button>
 				{:else}
 					<div class="space-y-2">
 						<label class="block">
-							<span class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">Nom de la scène</span>
+							<span class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">{tFn('obs.place_name_label')}</span>
 							<input type="text" bind:value={newName} maxlength="80"
-								placeholder="ex : Dev, Discussion, Pause"
+								placeholder={tFn('obs.place_name_ph')}
 								onkeydown={(e) => { if (e.key === 'Enter') createAndPlace() }}
 								class="mt-1 w-full bg-zinc-900 border border-zinc-800 focus:border-purple-500/60 px-3 py-1.5 text-xs text-zinc-100 outline-none rounded-sm"
 								autofocus/>
@@ -206,11 +209,11 @@
 						<div class="flex items-center gap-2">
 							<button type="button" onclick={createAndPlace} disabled={busy || !newName.trim()}
 								class="flex-1 text-xs font-medium bg-purple-500 hover:bg-purple-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-white px-3 py-1.5 rounded-sm transition-colors">
-								{busy ? 'Création…' : 'Créer et placer'}
+								{busy ? tFn('obs.creating') : tFn('obs.place_create_place')}
 							</button>
 							<button type="button" onclick={() => { creating = false; error = null }}
 								class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded-sm">
-								Annuler
+								{tFn('obs.cancel')}
 							</button>
 						</div>
 					</div>
