@@ -1,12 +1,15 @@
 <script lang="ts">
 	import ChatTimersPanel    from './ChatTimersPanel.svelte'
 	import ChatCommandsPanel  from './ChatCommandsPanel.svelte'
+	import { t } from '$lib/i18n'
 
 	interface Props {
 		token: string
 	}
 
 	let { token }: Props = $props()
+
+	const tFn = $derived($t)
 
 	type SubTab = 'timers' | 'commands'
 	let active = $state<SubTab>('timers')
@@ -18,7 +21,7 @@
 		<button type="button" onclick={() => active = 'timers'}
 			class="relative py-2.5 text-sm font-medium transition-colors
 				{active === 'timers' ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}">
-			Timers récurrents
+			{tFn('botchat.tab_timers')}
 			{#if active === 'timers'}
 				<span class="absolute left-0 right-0 -bottom-px h-0.5 bg-purple-500"></span>
 			{/if}
@@ -26,7 +29,7 @@
 		<button type="button" onclick={() => active = 'commands'}
 			class="relative py-2.5 text-sm font-medium transition-colors
 				{active === 'commands' ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}">
-			Commandes custom
+			{tFn('botchat.tab_commands')}
 			{#if active === 'commands'}
 				<span class="absolute left-0 right-0 -bottom-px h-0.5 bg-purple-500"></span>
 			{/if}
