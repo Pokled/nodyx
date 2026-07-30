@@ -2,9 +2,12 @@
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
 	import { onMount } from 'svelte'
+	import { t as i18n } from '$lib/i18n'
 	import Tooltip from '$lib/components/ui/Tooltip.svelte'
 	import QRCode from 'qrcode'
 	import type { Deck, DeckAction, DeckActionType as ActionType, DeckButton, DeckLayout, DeckPage } from '$lib/types/deck'
+
+	const tFn = $derived($i18n)
 
 	// Nodyx Deck — éditeur WYSIWYG pour un deck unique. Grille à gauche, panel
 	// d'édition de bouton à droite. Save = PATCH du layout entier (JSONB).
@@ -35,7 +38,7 @@
 			return { rows: r.rows, cols: r.cols, pages: r.pages }
 		}
 		const legacyButtons = Array.isArray(r.buttons) ? r.buttons : []
-		return { rows: r.rows, cols: r.cols, pages: [{ id: newPageId(), name: 'Principal', buttons: legacyButtons }] }
+		return { rows: r.rows, cols: r.cols, pages: [{ id: newPageId(), name: tFn('deckedit.page_principal'), buttons: legacyButtons }] }
 	}
 
 	const currentPage = $derived(layout.pages.find(p => p.id === currentPageId) ?? layout.pages[0])
@@ -44,7 +47,7 @@
 
 	const GRADIENT_PRESETS = [
 		{ key: 'cyber',   label: 'Cyber',   bg: 'bg-gradient-to-br from-cyan-500 to-indigo-700' },
-		{ key: 'neon',    label: 'Néon',    bg: 'bg-gradient-to-br from-pink-500 to-violet-700' },
+		{ key: 'neon',    label: 'Neon',    bg: 'bg-gradient-to-br from-pink-500 to-violet-700' },
 		{ key: 'inferno', label: 'Inferno', bg: 'bg-gradient-to-br from-orange-400 to-red-700' },
 		{ key: 'forest',  label: 'Forest',  bg: 'bg-gradient-to-br from-emerald-400 to-teal-700' },
 		{ key: 'minimal', label: 'Minimal', bg: 'bg-gradient-to-br from-slate-700 to-slate-900' },
@@ -90,7 +93,7 @@
 		const id = newButtonId()
 		currentPage.buttons.push({
 			id, x, y, w: 1, h: 1,
-			label:     'Nouveau',
+			label:     tFn('deckedit.default_label'),
 			icon:      '⬜',
 			iconScale: 1,
 			gradient:  'cyber',
@@ -139,9 +142,9 @@
 	// ── Multi-pages : add / rename / delete / reorder / pick ──────────────────
 
 	function addPage(): void {
-		if (layout.pages.length >= 8) { flash('Limite de 8 pages atteinte.', false); return }
+		if (layout.pages.length >= 8) { flash(tFn('deckedit.err_max_pages'), false); return }
 		const id = newPageId()
-		const name = `Page ${layout.pages.length + 1}`
+		const name = tFn('deckedit.page_n', { n: layout.pages.length + 1 })
 		layout.pages.push({ id, name, buttons: [] })
 		layout = layout
 		currentPageId = id
@@ -158,7 +161,7 @@
 	function renamePage(id: string, name: string): void {
 		const p = layout.pages.find(x => x.id === id)
 		if (!p) return
-		p.name = name.slice(0, 40) || 'Page'
+		p.name = name.slice(0, 40) || tFn('deckedit.page_fallback')
 		layout = layout
 		dirty = true
 	}
@@ -172,10 +175,10 @@
 	}
 
 	function deletePage(id: string): void {
-		if (layout.pages.length <= 1) { flash('Il faut au moins une page.', false); return }
+		if (layout.pages.length <= 1) { flash(tFn('deckedit.err_min_page'), false); return }
 		const p = layout.pages.find(x => x.id === id)
 		if (!p) return
-		if (p.buttons.length > 0 && !confirm(`Supprimer la page "${p.name}" et ses ${p.buttons.length} bouton(s) ?`)) return
+		if (p.buttons.length > 0 && !confirm(tFn('deckedit.delete_page_confirm', { name: p.name, n: p.buttons.length }))) return
 		layout.pages = layout.pages.filter(x => x.id !== id)
 		if (currentPageId === id) currentPageId = layout.pages[0].id
 		// Nettoie les navigate_page qui pointaient vers cette page disparue.
@@ -208,42 +211,42 @@
 		if (preset === 'starter') {
 			layout = {
 				rows: 3, cols: 4,
-				pages: [{ id: pageId, name: 'Principal', buttons: [
+				pages: [{ id: pageId, name: tFn('deckedit.page_principal'), buttons: [
 					{ id: newButtonId(), x: 0, y: 0, w: 1, h: 1, label: 'Top Clips 7j', icon: '🎬', iconScale: 1, gradient: 'cyber',  action: { type: 'top_clips', overlayId: '', period: '7d', count: 5 } },
 					{ id: newButtonId(), x: 1, y: 0, w: 1, h: 1, label: 'Marker',        icon: '📍', iconScale: 1, gradient: 'sunset', action: { type: 'vod_marker', description: 'Highlight' } },
 					{ id: newButtonId(), x: 2, y: 0, w: 1, h: 1, label: '!discord',      icon: '💬', iconScale: 1, gradient: 'neon',   action: { type: 'trigger_command', commandName: '!discord' } },
 					{ id: newButtonId(), x: 3, y: 0, w: 1, h: 1, label: 'Schedule',      icon: '📅', iconScale: 1, gradient: 'forest', action: { type: 'trigger_command', commandName: '!schedule' } },
-					{ id: newButtonId(), x: 0, y: 1, w: 2, h: 1, label: 'Hello chat',    icon: '👋', iconScale: 1, gradient: 'ocean',  action: { type: 'chat_message', text: 'Salut à tous, content de vous voir !' } },
+					{ id: newButtonId(), x: 0, y: 1, w: 2, h: 1, label: 'Hello chat',    icon: '👋', iconScale: 1, gradient: 'ocean',  action: { type: 'chat_message', text: tFn('deckedit.pst_hello_text') } },
 					{ id: newButtonId(), x: 2, y: 1, w: 2, h: 1, label: 'Pub Nodyx',     icon: '🚀', iconScale: 1, gradient: 'amber',  action: { type: 'trigger_command', commandName: '!nodyx' } },
 				] }],
 			}
 		} else if (preset === 'mod') {
 			layout = {
 				rows: 3, cols: 4,
-				pages: [{ id: pageId, name: 'Modération', buttons: [
-					{ id: newButtonId(), x: 0, y: 0, w: 1, h: 1, label: 'Marker',  icon: '📍', iconScale: 1, gradient: 'sunset',  action: { type: 'vod_marker', description: 'Moment important' } },
-					{ id: newButtonId(), x: 1, y: 0, w: 1, h: 1, label: 'Calme',   icon: '🤫', iconScale: 1, gradient: 'minimal', action: { type: 'chat_message', text: 'On respire, on respecte, merci !' } },
-					{ id: newButtonId(), x: 2, y: 0, w: 1, h: 1, label: 'Règles',  icon: '📋', iconScale: 1, gradient: 'ocean',   action: { type: 'chat_message', text: 'Petit rappel des règles du chat : respect, bienveillance, on s\'amuse.' } },
-					{ id: newButtonId(), x: 3, y: 0, w: 1, h: 1, label: 'Lurkers', icon: '👀', iconScale: 1, gradient: 'forest',  action: { type: 'chat_message', text: 'Merci aux lurkers, votre présence compte aussi !' } },
+				pages: [{ id: pageId, name: tFn('deckedit.page_moderation'), buttons: [
+					{ id: newButtonId(), x: 0, y: 0, w: 1, h: 1, label: 'Marker',  icon: '📍', iconScale: 1, gradient: 'sunset',  action: { type: 'vod_marker', description: tFn('deckedit.pmod_marker_desc') } },
+					{ id: newButtonId(), x: 1, y: 0, w: 1, h: 1, label: tFn('deckedit.pmod_calme_label'),   icon: '🤫', iconScale: 1, gradient: 'minimal', action: { type: 'chat_message', text: tFn('deckedit.pmod_calme_text') } },
+					{ id: newButtonId(), x: 2, y: 0, w: 1, h: 1, label: tFn('deckedit.pmod_rules_label'),  icon: '📋', iconScale: 1, gradient: 'ocean',   action: { type: 'chat_message', text: tFn('deckedit.pmod_rules_text') } },
+					{ id: newButtonId(), x: 3, y: 0, w: 1, h: 1, label: 'Lurkers', icon: '👀', iconScale: 1, gradient: 'forest',  action: { type: 'chat_message', text: tFn('deckedit.pmod_lurkers_text') } },
 				] }],
 			}
 		} else {
 			layout = {
 				rows: 3, cols: 4,
-				pages: [{ id: pageId, name: 'Engagement', buttons: [
+				pages: [{ id: pageId, name: tFn('deckedit.page_engagement'), buttons: [
 					{ id: newButtonId(), x: 0, y: 0, w: 2, h: 1, label: 'Top Clips total', icon: '🏆', iconScale: 1, gradient: 'amber',   action: { type: 'top_clips', overlayId: '', period: 'all', count: 5 } },
 					{ id: newButtonId(), x: 2, y: 0, w: 2, h: 1, label: 'Pub Nodyx',       icon: '🚀', iconScale: 1, gradient: 'cyber',   action: { type: 'trigger_command', commandName: '!nodyx' } },
 					{ id: newButtonId(), x: 0, y: 1, w: 1, h: 1, label: 'Discord',         icon: '💬', iconScale: 1, gradient: 'neon',    action: { type: 'trigger_command', commandName: '!discord' } },
 					{ id: newButtonId(), x: 1, y: 1, w: 1, h: 1, label: 'Schedule',        icon: '📅', iconScale: 1, gradient: 'forest',  action: { type: 'trigger_command', commandName: '!schedule' } },
 					{ id: newButtonId(), x: 2, y: 1, w: 1, h: 1, label: 'Social',          icon: '🔗', iconScale: 1, gradient: 'ocean',   action: { type: 'trigger_command', commandName: '!social' } },
-					{ id: newButtonId(), x: 3, y: 1, w: 1, h: 1, label: 'Hype',            icon: '🔥', iconScale: 1, gradient: 'inferno', action: { type: 'chat_message', text: 'C\'est parti pour la suite, on monte d\'un cran !' } },
+					{ id: newButtonId(), x: 3, y: 1, w: 1, h: 1, label: 'Hype',            icon: '🔥', iconScale: 1, gradient: 'inferno', action: { type: 'chat_message', text: tFn('deckedit.peng_hype_text') } },
 				] }],
 			}
 		}
 		currentPageId = pageId
 		selectedId = null
 		dirty = true
-		flash(`Preset "${preset}" chargé. N'oublie pas de configurer les overlayId si tu utilises Top Clips.`, true)
+		flash(tFn('deckedit.preset_loaded', { preset }), true)
 	}
 
 	async function save(): Promise<void> {
@@ -256,14 +259,14 @@
 			})
 			if (res.ok) {
 				const data = await res.json() as { deck: Deck }
-				flash('Deck enregistré.', true)
+				flash(tFn('deckedit.saved_ok'), true)
 				dirty = false
 				onSaved?.(data.deck)
 			} else {
-				flash('Échec de la sauvegarde.', false)
+				flash(tFn('ovcfg.err_save'), false)
 			}
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('ovcfg.err_network'), false)
 		} finally {
 			busy = false
 		}
@@ -272,8 +275,8 @@
 	function copyDeckUrl(): void {
 		if (!browser) return
 		navigator.clipboard.writeText(deckUrl).then(
-			() => flash('URL copiée. Ouvre-la sur ton tel/tablette.', true),
-			() => flash('Impossible de copier (HTTPS requis).', false),
+			() => flash(tFn('deckedit.url_copied'), true),
+			() => flash(tFn('deckedit.err_copy'), false),
 		)
 	}
 
@@ -307,8 +310,8 @@
 
 	function sendByEmail(): void {
 		if (!browser) return
-		const subject = encodeURIComponent(`Nodyx Deck — ${label}`)
-		const body    = encodeURIComponent(`Ouvre ce lien depuis ton téléphone ou ta tablette pour utiliser ton Nodyx Deck :\n\n${deckUrl}\n\nAstuce : ajoute-le à l'écran d'accueil de ton appareil pour un effet app.`)
+		const subject = encodeURIComponent(tFn('deckedit.email_subject', { label }))
+		const body    = encodeURIComponent(tFn('deckedit.email_body', { url: deckUrl }))
 		window.location.href = `mailto:?subject=${subject}&body=${body}`
 	}
 
@@ -318,8 +321,8 @@
 		const nav = navigator as Navigator & { share?: (data: { title?: string; text?: string; url?: string }) => Promise<void> }
 		if (typeof nav.share !== 'function') { sendByEmail(); return }
 		nav.share({
-			title: `Nodyx Deck — ${label}`,
-			text:  `Mon Nodyx Deck "${label}"`,
+			title: tFn('deckedit.email_subject', { label }),
+			text:  tFn('deckedit.share_text', { label }),
 			url:   deckUrl,
 		}).catch(() => { /* user a annulé, no-op */ })
 	}
@@ -419,7 +422,7 @@
 		if (!selected) return
 		updateAction({ trackId: t.id, trackTitle: t.title })
 		// Auto-fill du label si encore "Nouveau" pour aller plus vite.
-		if (selected.label === 'Nouveau' || !selected.label) updateSelected({ label: t.title.slice(0, 40) })
+		if (selected.label === tFn('deckedit.default_label') || !selected.label) updateSelected({ label: t.title.slice(0, 40) })
 	}
 
 	// Quick-add : pose le son dans la première case libre de la page courante
@@ -461,7 +464,7 @@
 		const target = layout.pages.find(p => p.id === targetPageId)
 		if (!target) return
 		const free = findFirstFreeCellInPage(targetPageId)
-		if (!free) { flash(`Page "${target.name}" pleine. Libère une case d'abord.`, false); return }
+		if (!free) { flash(tFn('deckedit.page_full', { name: target.name }), false); return }
 		const btn = selected
 		// Retire de la page courante, place dans la cible avec sa première case libre.
 		currentPage.buttons = currentPage.buttons.filter(b => b.id !== btn.id)
@@ -471,7 +474,7 @@
 		// Le bouton reste sélectionné après le move.
 		selectedId = btn.id
 		dirty = true
-		flash(`Bouton déplacé sur "${target.name}".`, true)
+		flash(tFn('deckedit.btn_moved', { name: target.name }), true)
 	}
 
 	onMount(() => { loadClipsOverlays(); loadCustomCommands(); loadAudioTracks(); loadPlaylistsList() })
@@ -533,7 +536,7 @@
 		<div class="flex items-center gap-3 flex-1 min-w-0">
 			<button type="button" onclick={onClose}
 				class="text-xs text-slate-400 hover:text-white inline-flex items-center gap-1">
-				← Decks
+				{tFn('deckedit.back_decks')}
 			</button>
 			<input type="text" bind:value={label} maxlength="100"
 				oninput={() => { dirty = true }}
@@ -542,15 +545,15 @@
 		<div class="flex items-center gap-2 flex-wrap">
 			<button type="button" onclick={openShareModal}
 				class="text-[11px] bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 px-3 py-1.5 rounded inline-flex items-center gap-1.5 transition-colors font-semibold">
-				📱 Connecter un appareil
+				{tFn('deckedit.connect_device')}
 			</button>
 			<a href={deckUrl} target="_blank" rel="noopener noreferrer"
 				class="text-[11px] bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/60 text-slate-200 px-3 py-1.5 rounded inline-flex items-center gap-1.5 transition-colors">
-				↗ Aperçu
+				{tFn('deckedit.preview')}
 			</a>
 			<button type="button" onclick={save} disabled={busy || !dirty}
 				class="text-xs bg-indigo-500/20 hover:bg-indigo-500/30 disabled:opacity-30 border border-indigo-500/50 text-indigo-100 px-4 py-1.5 rounded font-semibold transition-colors">
-				{busy ? 'Sauvegarde…' : dirty ? 'Enregistrer' : 'À jour'}
+				{busy ? tFn('deckedit.saving') : dirty ? tFn('deckedit.save') : tFn('deckedit.uptodate')}
 			</button>
 		</div>
 	</div>
@@ -564,23 +567,23 @@
 
 				<div class="flex items-center justify-between gap-2">
 					<h3 class="text-sm font-semibold text-white inline-flex items-center gap-2">
-						<span>📱</span> Connecter ton appareil
+						<span>📱</span> {tFn('deckedit.share_title')}
 					</h3>
 					<button type="button" onclick={closeShareModal}
-						class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800" aria-label="Fermer">
+						class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800" aria-label={tFn('deckedit.close')}>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
 					</button>
 				</div>
 
 				<!-- Tabs internes : QR / Autre -->
 				<div>
-					<div class="text-[10px] uppercase tracking-widest font-semibold text-cyan-300 mb-1.5">Méthode rapide : QR code</div>
+					<div class="text-[10px] uppercase tracking-widest font-semibold text-cyan-300 mb-1.5">{tFn('deckedit.qr_method')}</div>
 					<div class="relative rounded-xl bg-white p-3 mx-auto overflow-hidden" style="max-width: 280px;">
 						{#if qrDataUrl}
-							<img src={qrDataUrl} alt="QR code Nodyx Deck"
+							<img src={qrDataUrl} alt={tFn('deckedit.qr_alt')}
 								class="w-full h-auto block transition-[filter] duration-200 {qrRevealed ? '' : 'blur-xl'}"/>
 						{:else}
-							<div class="aspect-square grid place-items-center text-slate-400 text-xs">Génération…</div>
+							<div class="aspect-square grid place-items-center text-slate-400 text-xs">{tFn('deckedit.qr_generating')}</div>
 						{/if}
 
 						<!-- Overlay anti-leak : il faut cliquer pour révéler le QR -->
@@ -589,8 +592,8 @@
 								class="absolute inset-0 grid place-items-center bg-slate-950/50 backdrop-blur-[2px] cursor-pointer group">
 								<span class="flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl bg-slate-900/90 border border-cyan-500/40 text-white group-hover:border-cyan-400 transition-colors">
 									<svg class="w-5 h-5 text-cyan-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-									<span class="text-xs font-semibold">Cliquer pour afficher le QR</span>
-									<span class="text-[10px] text-slate-400 font-normal">Évite de le montrer en live</span>
+									<span class="text-xs font-semibold">{tFn('deckedit.qr_show')}</span>
+									<span class="text-[10px] text-slate-400 font-normal">{tFn('deckedit.qr_warn')}</span>
 								</span>
 							</button>
 						{/if}
@@ -598,50 +601,50 @@
 					<div class="flex items-center justify-center gap-2 mt-2">
 						<span class="text-[11px] text-slate-400 text-center leading-snug">
 							{#if qrRevealed}
-								Ouvre l'appareil photo de ton téléphone et scanne.
+								{tFn('deckedit.qr_scan_hint')}
 							{:else}
-								QR masqué par sécurité (accès au deck). Clique dessus pour l'afficher.
+								{tFn('deckedit.qr_hidden_hint')}
 							{/if}
 						</span>
 						{#if qrRevealed}
 							<button type="button" onclick={() => qrRevealed = false}
-								class="text-[11px] text-cyan-300 hover:text-cyan-200 shrink-0 underline">Masquer</button>
+								class="text-[11px] text-cyan-300 hover:text-cyan-200 shrink-0 underline">{tFn('deckedit.hide')}</button>
 						{/if}
 					</div>
 				</div>
 
 				<!-- Alternatives pour tablette / 2e écran -->
 				<div class="border-t border-slate-700/60 pt-3 space-y-2">
-					<div class="text-[10px] uppercase tracking-widest font-semibold text-slate-400">Pas de caméra ? Autres options</div>
+					<div class="text-[10px] uppercase tracking-widest font-semibold text-slate-400">{tFn('deckedit.no_camera')}</div>
 
 					{#if supportsWebShare}
 						<button type="button" onclick={shareNative}
 							class="w-full text-left text-xs bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-100 px-3 py-2 rounded inline-flex items-center gap-2 transition-colors">
 							<span>📤</span>
-							<span class="flex-1">Partager via les apps de mon appareil</span>
+							<span class="flex-1">{tFn('deckedit.share_apps')}</span>
 						</button>
 					{/if}
 
 					<button type="button" onclick={sendByEmail}
 						class="w-full text-left text-xs bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/60 text-slate-200 px-3 py-2 rounded inline-flex items-center gap-2 transition-colors">
 						<span>✉️</span>
-						<span class="flex-1">M'envoyer le lien par email</span>
+						<span class="flex-1">{tFn('deckedit.send_email')}</span>
 					</button>
 
 					<button type="button" onclick={copyDeckUrl}
 						class="w-full text-left text-xs bg-slate-700/40 hover:bg-slate-700/60 border border-slate-600/60 text-slate-200 px-3 py-2 rounded inline-flex items-center gap-2 transition-colors">
 						<span>🔗</span>
-						<span class="flex-1">Copier l'URL (puis colle dans le navigateur de la tablette)</span>
+						<span class="flex-1">{tFn('deckedit.copy_url')}</span>
 					</button>
 
 					<details class="text-[11px] text-slate-400">
-						<summary class="cursor-pointer hover:text-slate-200">Afficher l'URL complète</summary>
+						<summary class="cursor-pointer hover:text-slate-200">{tFn('deckedit.show_full_url')}</summary>
 						<code class="block mt-1.5 px-2 py-1.5 rounded bg-slate-950 border border-slate-700/60 text-[10px] break-all">{deckUrl}</code>
 					</details>
 				</div>
 
 				<div class="text-[10px] text-slate-500 text-center italic">
-					Astuce : sur ton tel ou ta tablette, ajoute la page à l'écran d'accueil (option du navigateur) pour avoir un effet app.
+					{tFn('deckedit.tip')}
 				</div>
 			</div>
 		</div>
@@ -658,21 +661,21 @@
 	<div class="rounded-lg border border-cyan-500/30 bg-cyan-950/20 p-3">
 		<div class="flex items-center gap-2 mb-2">
 			<svg class="w-3.5 h-3.5 text-cyan-400" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
-			<span class="text-[11px] uppercase tracking-widest font-semibold text-cyan-300">Presets de deck</span>
-			<Tooltip text="Remplace ton layout actuel par un ensemble de boutons pré-configurés. Tu peux ensuite ajuster chaque bouton avant d'enregistrer." variant="tip"/>
+			<span class="text-[11px] uppercase tracking-widest font-semibold text-cyan-300">{tFn('deckedit.presets_title')}</span>
+			<Tooltip text={tFn('deckedit.presets_tooltip')} variant="tip"/>
 		</div>
 		<div class="flex flex-wrap gap-1.5">
 			<button type="button" onclick={() => applyPreset('starter')}
 				class="text-[11px] bg-cyan-500/10 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-100 px-2.5 py-1 rounded transition-colors">
-				🎮 Pack Démarrage
+				{tFn('deckedit.pack_starter')}
 			</button>
 			<button type="button" onclick={() => applyPreset('mod')}
 				class="text-[11px] bg-cyan-500/10 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-100 px-2.5 py-1 rounded transition-colors">
-				🛡️ Pack Modération
+				{tFn('deckedit.pack_mod')}
 			</button>
 			<button type="button" onclick={() => applyPreset('engage')}
 				class="text-[11px] bg-cyan-500/10 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-100 px-2.5 py-1 rounded transition-colors">
-				🔥 Pack Engagement
+				{tFn('deckedit.pack_engage')}
 			</button>
 		</div>
 	</div>
@@ -686,13 +689,13 @@
 				<rect x="3" y="14" width="7" height="7"/>
 				<rect x="14" y="14" width="7" height="7"/>
 			</svg>
-			<span class="text-[11px] uppercase tracking-widest font-semibold text-indigo-200">Pages</span>
-			<Tooltip text="Organise tes boutons en plusieurs écrans. Sur le téléphone, le streamer navigue via les pastilles en bas. Tu peux aussi créer un bouton d'action 'Naviguer' pour sauter entre pages." variant="tip"/>
+			<span class="text-[11px] uppercase tracking-widest font-semibold text-indigo-200">{tFn('deckedit.pages_label')}</span>
+			<Tooltip text={tFn('deckedit.pages_tooltip')} variant="tip"/>
 			<div class="ml-auto flex items-center gap-1.5">
 				<span class="text-[10px] text-slate-500 font-mono">{layout.pages.length}/8</span>
 				<button type="button" onclick={addPage} disabled={layout.pages.length >= 8}
 					class="text-[11px] bg-indigo-500/20 hover:bg-indigo-500/35 disabled:opacity-30 border border-indigo-500/50 text-indigo-100 px-2 py-0.5 rounded inline-flex items-center gap-1 transition-colors font-semibold">
-					<span>+</span> Nouvelle page
+					<span>+</span> {tFn('deckedit.new_page')}
 				</button>
 			</div>
 		</div>
@@ -705,7 +708,7 @@
 						border rounded-lg pl-1.5 pr-1 py-0.5"
 					style={accent}>
 					<!-- Dot couleur de la page (cliquable = picker) -->
-					<label class="relative cursor-pointer shrink-0" title="Choisir une couleur d'accent">
+					<label class="relative cursor-pointer shrink-0" title={tFn('deckedit.pick_accent')}>
 						<span class="block w-2.5 h-2.5 rounded-full ring-1 ring-white/20"
 							style="background: var(--page-accent);"></span>
 						<input type="color" value={p.color ?? 'var(--nx-accent-soft)'}
@@ -721,7 +724,7 @@
 					{:else}
 						<button type="button" onclick={() => selectPage(p.id)} ondblclick={() => editingPageName = p.id}
 							class="text-xs font-semibold pl-0.5 pr-1 py-0.5 transition-colors {active ? 'text-white' : 'text-slate-300 hover:text-white'}"
-							title="Cliquer pour ouvrir, double-cliquer pour renommer">
+							title={tFn('deckedit.page_tab_title')}>
 							{p.name}
 						</button>
 						<span class="text-[9px] font-mono text-slate-500 px-0.5">{p.buttons.length}</span>
@@ -729,19 +732,19 @@
 					<!-- Actions de la page (rename / reorder / delete) — apparaissent au hover -->
 					<div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 pl-0.5">
 						<button type="button" onclick={() => editingPageName = p.id}
-							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60" title="Renommer">
+							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60" title={tFn('deckedit.rename')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 						</button>
 						<button type="button" onclick={() => movePage(p.id, -1)} disabled={i === 0}
-							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60 disabled:opacity-20" title="Déplacer à gauche">
+							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60 disabled:opacity-20" title={tFn('deckedit.move_left')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
 						</button>
 						<button type="button" onclick={() => movePage(p.id, 1)} disabled={i === layout.pages.length - 1}
-							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60 disabled:opacity-20" title="Déplacer à droite">
+							class="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700/60 disabled:opacity-20" title={tFn('deckedit.move_right')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
 						</button>
 						<button type="button" onclick={() => deletePage(p.id)} disabled={layout.pages.length <= 1}
-							class="p-0.5 rounded text-slate-400 hover:text-rose-300 hover:bg-rose-900/40 disabled:opacity-20" title="Supprimer la page">
+							class="p-0.5 rounded text-slate-400 hover:text-rose-300 hover:bg-rose-900/40 disabled:opacity-20" title={tFn('deckedit.delete_page')}>
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
 						</button>
 					</div>
@@ -758,8 +761,8 @@
 			<div class="flex items-center justify-between gap-2 flex-wrap">
 				<div class="flex items-center gap-1.5">
 					<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Layout</span>
-					<Tooltip text="Clique sur une case vide pour créer un bouton, ou sur un bouton existant pour l'éditer à droite." variant="tip"/>
-					{#if currentPage}<span class="text-[10px] text-slate-500">— page <span class="text-indigo-300 font-semibold">{currentPage.name}</span></span>{/if}
+					<Tooltip text={tFn('deckedit.layout_tooltip')} variant="tip"/>
+					{#if currentPage}<span class="text-[10px] text-slate-500">— {tFn('deckedit.page_word')} <span class="text-indigo-300 font-semibold">{currentPage.name}</span></span>{/if}
 				</div>
 				<div class="flex items-center gap-2">
 					<label class="flex items-center gap-1.5 text-[11px] text-slate-400">
@@ -825,22 +828,22 @@
 			{#if !selected}
 				<div class="text-center py-8 text-xs text-slate-500 space-y-1">
 					<div class="text-3xl mb-2">🎛️</div>
-					<div>Aucun bouton sélectionné</div>
-					<div class="text-[10px]">Clique sur une case vide pour ajouter un bouton, ou sur un bouton existant pour l'éditer.</div>
+					<div>{tFn('deckedit.no_button_sel')}</div>
+					<div class="text-[10px]">{tFn('deckedit.no_button_hint')}</div>
 				</div>
 			{:else}
 				<div class="flex items-center justify-between gap-2">
-					<span class="text-[11px] uppercase tracking-widest font-semibold text-cyan-300">Bouton</span>
+					<span class="text-[11px] uppercase tracking-widest font-semibold text-cyan-300">{tFn('deckedit.button_label')}</span>
 					<button type="button" onclick={() => selected && removeButton(selected)}
 						class="text-[10px] bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-200 px-2 py-0.5 rounded transition-colors">
-						Suppr
+						{tFn('deckedit.suppr')}
 					</button>
 				</div>
 
 				<div>
 					<div class="flex items-center gap-1.5">
 						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Label</span>
-						<Tooltip text="Texte affiché sur le bouton. Court et clair (40 chars max)."/>
+						<Tooltip text={tFn('deckedit.label_tooltip')}/>
 					</div>
 					<input type="text" value={selected.label} oninput={(e) => updateSelected({ label: e.currentTarget.value.slice(0, 40) })}
 						class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-2.5 py-1 text-sm text-white outline-none"/>
@@ -848,8 +851,8 @@
 
 				<div>
 					<div class="flex items-center gap-1.5">
-						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Icône</span>
-						<Tooltip text="Emoji affiché en gros sur le bouton. Clique sur un emoji du panel, ou tape directement le tien."/>
+						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">{tFn('deckedit.icon_label')}</span>
+						<Tooltip text={tFn('deckedit.icon_tooltip')}/>
 					</div>
 					<input type="text" value={selected.icon} oninput={(e) => updateSelected({ icon: e.currentTarget.value.slice(0, 8) })}
 						class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-2.5 py-1 text-lg text-white outline-none text-center"/>
@@ -865,8 +868,8 @@
 
 				<div>
 					<div class="flex items-center gap-1.5">
-						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Couleur (gradient)</span>
-						<Tooltip text="Palette de couleurs du bouton. Tu peux aussi taper un gradient custom dans le format hex/hex (ex: ff6b6b/4ecdc4)."/>
+						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">{tFn('deckedit.color_label')}</span>
+						<Tooltip text={tFn('deckedit.color_tooltip')}/>
 					</div>
 					<div class="mt-1.5 grid grid-cols-4 gap-1.5">
 						{#each GRADIENT_PRESETS as p (p.key)}
@@ -884,14 +887,14 @@
 					<div>
 						<div class="flex items-center gap-1.5">
 							<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Page</span>
-							<Tooltip text="Déplace ce bouton vers une autre page. Il se place automatiquement dans la première case libre."/>
+							<Tooltip text={tFn('deckedit.page_move_tooltip')}/>
 						</div>
 						<select value={currentPageId}
 							onchange={(e) => moveSelectedToPage(e.currentTarget.value)}
 							class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-2 py-1 text-xs text-white outline-none">
 							{#each layout.pages as p (p.id)}
 								{@const free = layout.rows * layout.cols - p.buttons.reduce((n, b) => n + b.w * b.h, 0)}
-								<option value={p.id}>{p.name}{p.id === currentPageId ? ' (actuelle)' : ` — ${free} libre${free > 1 ? 's' : ''}`}</option>
+								<option value={p.id}>{p.name}{p.id === currentPageId ? tFn('deckedit.page_current') : ` — ${free} ${free > 1 ? tFn('deckedit.free_many') : tFn('deckedit.free_one')}`}</option>
 							{/each}
 						</select>
 					</div>
@@ -901,48 +904,48 @@
 					 (bord de grille atteint, ou cellule voisine occupée). -->
 				<div>
 					<div class="flex items-center gap-1.5">
-						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Position et taille</span>
-						<Tooltip text="Flèches pour déplacer, +/- pour redimensionner. Un bouton grisé signifie que l'action est bloquée (bord de grille ou cellule voisine occupée)."/>
+						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">{tFn('deckedit.pos_size_label')}</span>
+						<Tooltip text={tFn('deckedit.pos_size_tooltip')}/>
 					</div>
 					<div class="mt-1.5 grid grid-cols-2 gap-2">
 						<div class="rounded-md border border-slate-700/60 p-1.5">
-							<div class="text-[9px] text-slate-500 mb-1 text-center">Déplacer</div>
+							<div class="text-[9px] text-slate-500 mb-1 text-center">{tFn('deckedit.move_label')}</div>
 							<div class="grid grid-cols-3 gap-0.5 text-center">
 								<span></span>
 								<button type="button" disabled={!canMove(0, -1)} onclick={() => moveSelected(0, -1)}
-									title={canMove(0, -1) ? 'Vers le haut' : 'Bord supérieur ou case occupée'}
+									title={canMove(0, -1) ? tFn('deckedit.mv_up') : tFn('deckedit.mv_up_x')}
 									class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-xs">↑</button>
 								<span></span>
 								<button type="button" disabled={!canMove(-1, 0)} onclick={() => moveSelected(-1, 0)}
-									title={canMove(-1, 0) ? 'Vers la gauche' : 'Bord gauche ou case occupée'}
+									title={canMove(-1, 0) ? tFn('deckedit.mv_left') : tFn('deckedit.mv_left_x')}
 									class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-xs">←</button>
 								<span class="text-[9px] text-slate-500 self-center">{selected.x},{selected.y}</span>
 								<button type="button" disabled={!canMove(1, 0)} onclick={() => moveSelected(1, 0)}
-									title={canMove(1, 0) ? 'Vers la droite' : 'Bord droit ou case occupée'}
+									title={canMove(1, 0) ? tFn('deckedit.mv_right') : tFn('deckedit.mv_right_x')}
 									class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-xs">→</button>
 								<span></span>
 								<button type="button" disabled={!canMove(0, 1)} onclick={() => moveSelected(0, 1)}
-									title={canMove(0, 1) ? 'Vers le bas' : 'Bord inférieur ou case occupée'}
+									title={canMove(0, 1) ? tFn('deckedit.mv_down') : tFn('deckedit.mv_down_x')}
 									class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-xs">↓</button>
 								<span></span>
 							</div>
 						</div>
 						<div class="rounded-md border border-slate-700/60 p-1.5">
-							<div class="text-[9px] text-slate-500 mb-1 text-center">Taille</div>
+							<div class="text-[9px] text-slate-500 mb-1 text-center">{tFn('deckedit.size_label')}</div>
 							<div class="grid grid-cols-2 gap-0.5">
 								<div class="text-[9px] text-slate-500 text-center self-center">{selected.w} × {selected.h}</div>
 								<div class="grid grid-cols-2 gap-0.5">
 									<button type="button" disabled={!canResize(1, 0)} onclick={() => resizeSelected(1, 0)}
-										title={canResize(1, 0) ? 'Agrandir en largeur' : 'Limite atteinte ou case voisine occupée'}
+										title={canResize(1, 0) ? tFn('deckedit.grow_w') : tFn('deckedit.grow_blocked')}
 										class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-[10px]">+L</button>
 									<button type="button" disabled={!canResize(-1, 0)} onclick={() => resizeSelected(-1, 0)}
-										title={canResize(-1, 0) ? 'Réduire en largeur' : 'Largeur minimale atteinte'}
+										title={canResize(-1, 0) ? tFn('deckedit.shrink_w') : tFn('deckedit.shrink_w_min')}
 										class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-[10px]">-L</button>
 									<button type="button" disabled={!canResize(0, 1)} onclick={() => resizeSelected(0, 1)}
-										title={canResize(0, 1) ? 'Agrandir en hauteur' : 'Limite atteinte ou case voisine occupée'}
+										title={canResize(0, 1) ? tFn('deckedit.grow_h') : tFn('deckedit.grow_blocked')}
 										class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-[10px]">+H</button>
 									<button type="button" disabled={!canResize(0, -1)} onclick={() => resizeSelected(0, -1)}
-										title={canResize(0, -1) ? 'Réduire en hauteur' : 'Hauteur minimale atteinte'}
+										title={canResize(0, -1) ? tFn('deckedit.shrink_h') : tFn('deckedit.shrink_h_min')}
 										class="rounded bg-slate-800/60 hover:bg-slate-700 disabled:bg-slate-900/40 disabled:text-slate-700 disabled:cursor-not-allowed text-slate-300 px-1 py-0.5 text-[10px]">-H</button>
 								</div>
 							</div>
@@ -954,8 +957,8 @@
 				<div>
 					<div class="flex items-center justify-between gap-1.5">
 						<div class="flex items-center gap-1.5">
-							<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Taille de l'icône</span>
-							<Tooltip text="Multiplicateur appliqué à la taille par défaut de l'icône dans ce bouton. 1× = normal, 3× = très gros (idéal pour les emojis qu'on veut bien voir de loin)."/>
+							<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">{tFn('deckedit.icon_size_label')}</span>
+							<Tooltip text={tFn('deckedit.icon_size_tooltip')}/>
 						</div>
 						<span class="text-[10px] text-slate-400 font-mono">{(selected.iconScale ?? 1).toFixed(1)}×</span>
 					</div>
@@ -967,42 +970,42 @@
 				<!-- Action -->
 				<div class="pt-2 border-t border-slate-700/60">
 					<div class="flex items-center gap-1.5">
-						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Action</span>
-						<Tooltip text="Ce qui se passe quand tu touches le bouton sur ton tel. Top Clips lance ton player, Marker pose un repère VOD, Message envoie un texte libre dans le chat, Commande déclenche une commande chat custom (!discord, !schedule, etc.)."/>
+						<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">{tFn('deckedit.action_label')}</span>
+						<Tooltip text={tFn('deckedit.action_tooltip')}/>
 					</div>
 					<select value={selected.action.type}
 						onchange={(e) => updateAction({ type: e.currentTarget.value as ActionType })}
 						class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-2.5 py-1 text-xs text-white outline-none">
 						<optgroup label="Stream">
-							<option value="top_clips">🎬 Lancer Top Clips</option>
-							<option value="vod_marker">📍 Placer un marker VOD</option>
+							<option value="top_clips">{tFn('deckedit.act_top_clips')}</option>
+							<option value="vod_marker">{tFn('deckedit.act_vod_marker')}</option>
 						</optgroup>
 						<optgroup label="Chat">
-							<option value="chat_message">💬 Message chat libre</option>
-							<option value="trigger_command">🤖 Déclencher commande chat</option>
+							<option value="chat_message">{tFn('deckedit.act_chat_message')}</option>
+							<option value="trigger_command">{tFn('deckedit.act_trigger_command')}</option>
 						</optgroup>
 						<optgroup label="Soundboard">
-							<option value="play_audio">🎵 Jouer un son</option>
-							<option value="stop_audio">⏹ Couper tous les sons</option>
-							<option value="pause_audio">⏸ Mettre en pause</option>
+							<option value="play_audio">{tFn('deckedit.act_play_audio')}</option>
+							<option value="stop_audio">{tFn('deckedit.act_stop_audio')}</option>
+							<option value="pause_audio">{tFn('deckedit.act_pause_audio')}</option>
 						</optgroup>
 						<optgroup label="Playlist (overlay OBS)">
-							<option value="playlist_control">🎛 Contrôle playlist</option>
+							<option value="playlist_control">{tFn('deckedit.act_playlist_control')}</option>
 						</optgroup>
 						<optgroup label="Navigation">
-							<option value="navigate_page">📑 Aller à une page</option>
+							<option value="navigate_page">{tFn('deckedit.act_navigate_page')}</option>
 						</optgroup>
-						<option value="noop">— Aucune (placeholder)</option>
+						<option value="noop">{tFn('deckedit.act_noop')}</option>
 					</select>
 
 					{#if selected.action.type === 'top_clips'}
 						<div class="mt-2 space-y-2">
 							<label class="block">
-								<span class="text-[9px] uppercase font-semibold text-slate-500">Overlay cible</span>
+								<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.overlay_target')}</span>
 								<select value={selected.action.overlayId ?? ''}
 									onchange={(e) => updateAction({ overlayId: e.currentTarget.value })}
 									class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-cyan-500/60">
-									<option value="">— Choisir un overlay clips_player —</option>
+									<option value="">{tFn('deckedit.choose_clips_overlay')}</option>
 									{#each clipsOverlays as o (o.id)}
 										<option value={o.id}>{o.label || `#${o.id.slice(0, 6)}`}</option>
 									{/each}
@@ -1010,17 +1013,17 @@
 							</label>
 							<div class="grid grid-cols-2 gap-2">
 								<label class="block">
-									<span class="text-[9px] uppercase font-semibold text-slate-500">Période</span>
+									<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.period_label')}</span>
 									<select value={selected.action.period ?? '7d'}
 										onchange={(e) => updateAction({ period: e.currentTarget.value as '7d' | '30d' | 'all' })}
 										class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-cyan-500/60">
-										<option value="7d">7 jours</option>
-										<option value="30d">30 jours</option>
-										<option value="all">Total</option>
+										<option value="7d">{tFn('deckedit.period_7d')}</option>
+										<option value="30d">{tFn('deckedit.period_30d')}</option>
+										<option value="all">{tFn('deckedit.period_total')}</option>
 									</select>
 								</label>
 								<label class="block">
-									<span class="text-[9px] uppercase font-semibold text-slate-500">Nombre</span>
+									<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.count_label')}</span>
 									<input type="number" min="1" max="20" value={selected.action.count ?? 5}
 										oninput={(e) => updateAction({ count: Math.max(1, Math.min(20, parseInt(e.currentTarget.value) || 5)) })}
 										class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-cyan-500/60"/>
@@ -1029,35 +1032,35 @@
 						</div>
 					{:else if selected.action.type === 'vod_marker'}
 						<label class="block mt-2">
-							<span class="text-[9px] uppercase font-semibold text-slate-500">Description (140 chars max)</span>
+							<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.marker_desc_label')}</span>
 							<input type="text" value={selected.action.description ?? ''}
 								oninput={(e) => updateAction({ description: e.currentTarget.value.slice(0, 140) })}
-								placeholder="Highlight"
+								placeholder={tFn('deckedit.marker_desc_ph')}
 								class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-cyan-500/60"/>
 						</label>
 					{:else if selected.action.type === 'chat_message'}
 						<label class="block mt-2">
-							<span class="text-[9px] uppercase font-semibold text-slate-500">Texte (500 chars max)</span>
+							<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.chat_text_label')}</span>
 							<textarea rows="3" value={selected.action.text ?? ''}
 								oninput={(e) => updateAction({ text: e.currentTarget.value.slice(0, 500) })}
-								placeholder="Salut à tous !"
+								placeholder={tFn('deckedit.chat_text_ph')}
 								class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-cyan-500/60 resize-none"></textarea>
 						</label>
 					{:else if selected.action.type === 'trigger_command'}
 						<label class="block mt-2">
-							<span class="text-[9px] uppercase font-semibold text-slate-500">Commande à déclencher</span>
+							<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.command_label')}</span>
 							{#if customCommands.length > 0}
 								<select value={selected.action.commandName ?? ''}
 									onchange={(e) => updateAction({ commandName: e.currentTarget.value })}
 									class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-cyan-500/60">
-									<option value="">— Choisir une commande custom —</option>
+									<option value="">{tFn('deckedit.choose_command')}</option>
 									{#each customCommands as c (c.name)}
 										<option value={c.name}>{c.name}</option>
 									{/each}
 								</select>
 							{:else}
 								<div class="mt-0.5 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1.5">
-									Aucune commande custom. Crée-en dans le tab Bot Chat.
+									{tFn('deckedit.no_commands')}
 								</div>
 							{/if}
 						</label>
@@ -1065,29 +1068,29 @@
 						<!-- Soundboard picker : recherche + grille de vignettes -->
 						<div class="mt-2 space-y-2">
 							<div class="flex items-center gap-1.5">
-								<span class="text-[9px] uppercase font-semibold text-slate-500">Son sélectionné</span>
-								<Tooltip text="La piste sera jouée dans l'overlay Soundboard (browser source OBS). La lecture se fait côté stream, pas sur ton téléphone."/>
+								<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.sound_selected')}</span>
+								<Tooltip text={tFn('deckedit.sound_tooltip')}/>
 							</div>
 							{#if selected.action.trackId && selected.action.trackTitle}
 								<div class="flex items-center gap-2 bg-gradient-to-r from-purple-500/15 to-indigo-500/10 border border-purple-500/40 rounded px-2 py-1.5">
 									<span class="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></span>
 									<div class="text-xs font-medium text-purple-100 truncate flex-1 min-w-0">{selected.action.trackTitle}</div>
 									<button type="button" onclick={() => updateAction({ trackId: undefined, trackTitle: undefined })}
-										class="text-[10px] text-slate-400 hover:text-rose-300" title="Désélectionner">✕</button>
+										class="text-[10px] text-slate-400 hover:text-rose-300" title={tFn('deckedit.deselect')}>✕</button>
 								</div>
 							{/if}
 							<div class="relative">
 								<svg class="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 									<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
 								</svg>
-								<input type="search" bind:value={audioPickerQuery} placeholder="Chercher dans le soundboard"
+								<input type="search" bind:value={audioPickerQuery} placeholder={tFn('deckedit.search_soundboard')}
 									class="w-full bg-slate-950 border border-slate-700/60 focus:border-purple-500/60 pl-7 pr-2 py-1 text-xs text-white placeholder-slate-600 outline-none rounded"/>
 							</div>
 							{#if audioTracksLoading}
-								<div class="text-[10px] text-slate-500 text-center py-2">Chargement de la bibliothèque…</div>
+								<div class="text-[10px] text-slate-500 text-center py-2">{tFn('deckedit.loading_library')}</div>
 							{:else if audioTracks.length === 0}
 								<div class="text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1.5">
-									Bibliothèque vide. Upload des sons dans le tab Soundboard.
+									{tFn('deckedit.library_empty')}
 								</div>
 							{:else}
 								<div class="max-h-56 overflow-y-auto space-y-1 pr-0.5">
@@ -1115,18 +1118,18 @@
 										</button>
 									{/each}
 									{#if audioTracksFiltered.length === 0}
-										<div class="text-[10px] text-slate-500 text-center py-2">Aucun résultat</div>
+										<div class="text-[10px] text-slate-500 text-center py-2">{tFn('deckedit.no_results')}</div>
 									{/if}
 								</div>
 							{/if}
 						</div>
 					{:else if selected.action.type === 'stop_audio'}
 						<div class="mt-2 text-[10px] text-slate-400 bg-slate-900/40 border border-slate-700/60 rounded px-2 py-1.5 leading-snug">
-							Coupe immédiatement la lecture en cours dans l'overlay Soundboard (avec fade-out si configuré sur la piste).
+							{tFn('deckedit.stop_audio_desc')}
 						</div>
 					{:else if selected.action.type === 'pause_audio'}
 						<div class="mt-2 text-[10px] text-slate-400 bg-slate-900/40 border border-slate-700/60 rounded px-2 py-1.5 leading-snug">
-							Met en pause la piste en cours. Ré-appuyer sur le bouton Jouer la reprend.
+							{tFn('deckedit.pause_audio_desc')}
 						</div>
 					{:else if selected.action.type === 'playlist_control'}
 						<!-- Picker commande playlist : pilote l'overlay OBS via socket.
@@ -1134,36 +1137,36 @@
 						     agit sur la playlist en cours. -->
 						<div class="mt-2 space-y-2">
 							<div class="flex items-center gap-1.5">
-								<span class="text-[9px] uppercase font-semibold text-slate-500">Commande</span>
-								<Tooltip text="play = démarre / switche sur une playlist précise. toggle = bascule lecture / pause. skip/prev = changer de piste. stop = arrête et remet à zéro. volume = ajuste le volume de l'overlay."/>
+								<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.cmd_label')}</span>
+								<Tooltip text={tFn('deckedit.cmd_tooltip')}/>
 							</div>
 							<select value={selected.action.cmd ?? 'toggle'}
 								onchange={(e) => updateAction({ cmd: e.currentTarget.value as 'play' | 'pause' | 'toggle' | 'skip' | 'prev' | 'stop' | 'volume' })}
 								class="w-full rounded bg-slate-950 border border-slate-700/60 focus:border-purple-500/60 px-2 py-1 text-xs text-white outline-none">
-								<option value="play">▶ Démarrer une playlist (switch)</option>
-								<option value="toggle">⏯ Play / Pause (toggle)</option>
-								<option value="pause">⏸ Pause</option>
-								<option value="skip">⏭ Suivant</option>
-								<option value="prev">⏮ Précédent</option>
-								<option value="stop">⏹ Stop + reset</option>
-								<option value="volume">🔊 Ajuster le volume</option>
+								<option value="play">{tFn('deckedit.cmd_play')}</option>
+								<option value="toggle">{tFn('deckedit.cmd_toggle')}</option>
+								<option value="pause">{tFn('deckedit.cmd_pause')}</option>
+								<option value="skip">{tFn('deckedit.cmd_skip')}</option>
+								<option value="prev">{tFn('deckedit.cmd_prev')}</option>
+								<option value="stop">{tFn('deckedit.cmd_stop')}</option>
+								<option value="volume">{tFn('deckedit.cmd_volume')}</option>
 							</select>
 
 							{#if selected.action.cmd === 'play'}
 								<label class="block">
-									<span class="text-[9px] uppercase font-semibold text-slate-500">Playlist à démarrer</span>
+									<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.playlist_to_start')}</span>
 									{#if playlistsList.length > 0}
 										<select value={selected.action.playlistId ?? ''}
 											onchange={(e) => updateAction({ playlistId: e.currentTarget.value || undefined })}
 											class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-purple-500/60">
-											<option value="">— Choisir une playlist —</option>
+											<option value="">{tFn('deckedit.choose_playlist')}</option>
 											{#each playlistsList as p (p.id)}
 												<option value={p.id}>{p.name} ({p.trackCount})</option>
 											{/each}
 										</select>
 									{:else}
 										<div class="mt-0.5 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1.5">
-											Aucune playlist. Crée-en dans le tab Soundboard.
+											{tFn('deckedit.no_playlists')}
 										</div>
 									{/if}
 								</label>
@@ -1174,12 +1177,12 @@
 										<select value={selected.action.volumeMode ?? 'delta'}
 											onchange={(e) => updateAction({ volumeMode: e.currentTarget.value as 'delta' | 'absolute' })}
 											class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-purple-500/60">
-											<option value="delta">Relatif (+/-)</option>
-											<option value="absolute">Absolu (0-100%)</option>
+											<option value="delta">{tFn('deckedit.vol_relative')}</option>
+											<option value="absolute">{tFn('deckedit.vol_absolute')}</option>
 										</select>
 									</label>
 									<label class="block">
-										<span class="text-[9px] uppercase font-semibold text-slate-500">Valeur</span>
+										<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.value_label')}</span>
 										<input type="number" step="0.05" min={selected.action.volumeMode === 'absolute' ? 0 : -1} max="1"
 											value={selected.action.volumeValue ?? (selected.action.volumeMode === 'absolute' ? 0.6 : 0.05)}
 											oninput={(e) => updateAction({ volumeValue: Math.max(-1, Math.min(1, parseFloat(e.currentTarget.value) || 0)) })}
@@ -1187,35 +1190,35 @@
 									</label>
 								</div>
 								<div class="text-[10px] text-slate-500 leading-snug">
-									Ex : <span class="text-slate-300 font-mono">delta +0.05</span> = bouton « Volume +5% », <span class="text-slate-300 font-mono">absolu 0.0</span> = mute.
+									{tFn('deckedit.vol_ex_1')} <span class="text-slate-300 font-mono">delta +0.05</span> {tFn('deckedit.vol_ex_2')} <span class="text-slate-300 font-mono">absolu 0.0</span> {tFn('deckedit.vol_ex_3')}
 								</div>
 							{:else}
 								<div class="text-[10px] text-slate-400 bg-slate-900/40 border border-slate-700/60 rounded px-2 py-1.5 leading-snug">
-									Cette commande agit sur l'overlay playlist actuellement actif dans OBS.
+									{tFn('deckedit.cmd_generic_desc')}
 								</div>
 							{/if}
 						</div>
 					{:else if selected.action.type === 'navigate_page'}
 						<div class="mt-2 space-y-2">
 							<div class="flex items-center gap-1.5">
-								<span class="text-[9px] uppercase font-semibold text-slate-500">Cible</span>
-								<Tooltip text="Saute vers une page précise, ou utilise un mouvement relatif (suivante / précédente / accueil)."/>
+								<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.target_label')}</span>
+								<Tooltip text={tFn('deckedit.target_tooltip')}/>
 							</div>
 							<div class="grid grid-cols-3 gap-1 bg-slate-900/60 border border-slate-800 p-0.5 rounded">
 								{#each (['home', 'prev', 'next'] as const) as j (j)}
 									{@const isSel = selected.action.pageJump === j && !selected.action.targetPageId}
 									<button type="button" onclick={() => updateAction({ pageJump: j, targetPageId: undefined })}
 										class="text-[10px] px-2 py-1 rounded transition-colors {isSel ? 'bg-indigo-500/30 text-indigo-100' : 'text-slate-400 hover:text-white'}">
-										{j === 'home' ? '⌂ Accueil' : j === 'prev' ? '← Préc.' : 'Suiv. →'}
+										{j === 'home' ? tFn('deckedit.jump_home') : j === 'prev' ? tFn('deckedit.jump_prev') : tFn('deckedit.jump_next')}
 									</button>
 								{/each}
 							</div>
 							<div>
-								<span class="text-[9px] uppercase font-semibold text-slate-500">ou page précise</span>
+								<span class="text-[9px] uppercase font-semibold text-slate-500">{tFn('deckedit.or_specific_page')}</span>
 								<select value={selected.action.targetPageId ?? ''}
 									onchange={(e) => updateAction({ targetPageId: e.currentTarget.value || undefined, pageJump: e.currentTarget.value ? undefined : selected.action.pageJump })}
 									class="mt-0.5 w-full rounded bg-slate-950 border border-slate-700/60 px-2 py-1 text-xs text-white outline-none focus:border-indigo-500/60">
-									<option value="">— Choisir une page —</option>
+									<option value="">{tFn('deckedit.choose_page')}</option>
 									{#each layout.pages.filter(p => p.id !== currentPageId) as p (p.id)}
 										<option value={p.id}>{p.name}</option>
 									{/each}
