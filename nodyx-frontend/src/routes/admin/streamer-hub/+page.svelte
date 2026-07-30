@@ -4,6 +4,7 @@
 	import { onMount, onDestroy } from 'svelte'
 	import { fly } from 'svelte/transition'
 	import { getSocket } from '$lib/socket'
+	import { t as i18n } from '$lib/i18n'
 	import Sparkline from '$lib/components/admin/Sparkline.svelte'
 	import StreamerHero from '$lib/components/admin/StreamerHero.svelte'
 	import StreamControlPanel from '$lib/components/admin/StreamControlPanel.svelte'
@@ -19,6 +20,8 @@
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
+
+	const tFn = $derived($i18n)
 
 	type Subscription = {
 		id:             string
@@ -155,17 +158,17 @@
 	// connecté, on force "config" pour que l'utilisateur voie le bouton Connect.
 	type TabId = 'overview' | 'studio' | 'rewards' | 'overlays' | 'scenes' | 'bot' | 'deck' | 'sounds' | 'audience' | 'config'
 
-	const TABS: Array<{ id: TabId; label: string; iconPath: string; soon?: boolean }> = [
-		{ id: 'overview', label: 'Vue d\'ensemble', iconPath: 'M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z M9 9h6v6H9z' },
-		{ id: 'studio',   label: 'Studio Live',     iconPath: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
-		{ id: 'rewards',  label: 'Récompenses',     iconPath: 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zM5 21h14a2 2 0 002-2v-9a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2z' },
-		{ id: 'overlays', label: 'Overlays OBS',    iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-		{ id: 'scenes',   label: 'Scènes',           iconPath: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM9 5v14M3 11h6M3 15h6' },
-		{ id: 'bot',      label: 'Bot Chat',         iconPath: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-		{ id: 'deck',     label: 'Stream Deck',      iconPath: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
-		{ id: 'sounds',   label: 'Soundboard',       iconPath: 'M9 18V5l12-2v13 M9 18a3 3 0 11-6 0 3 3 0 016 0zM21 16a3 3 0 11-6 0 3 3 0 016 0z' },
-		{ id: 'audience', label: 'Audience',        iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-		{ id: 'config',   label: 'Configuration',   iconPath: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+	const TABS: Array<{ id: TabId; labelKey: string; iconPath: string; soon?: boolean }> = [
+		{ id: 'overview', labelKey: 'shub.tab_overview', iconPath: 'M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z M9 9h6v6H9z' },
+		{ id: 'studio',   labelKey: 'shub.tab_studio',   iconPath: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
+		{ id: 'rewards',  labelKey: 'shub.tab_rewards',  iconPath: 'M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zM5 21h14a2 2 0 002-2v-9a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2z' },
+		{ id: 'overlays', labelKey: 'shub.tab_overlays', iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+		{ id: 'scenes',   labelKey: 'shub.tab_scenes',   iconPath: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM9 5v14M3 11h6M3 15h6' },
+		{ id: 'bot',      labelKey: 'shub.tab_bot',      iconPath: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+		{ id: 'deck',     labelKey: 'shub.tab_deck',     iconPath: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+		{ id: 'sounds',   labelKey: 'shub.tab_sounds',   iconPath: 'M9 18V5l12-2v13 M9 18a3 3 0 11-6 0 3 3 0 016 0zM21 16a3 3 0 11-6 0 3 3 0 016 0z' },
+		{ id: 'audience', labelKey: 'shub.tab_audience', iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+		{ id: 'config',   labelKey: 'shub.tab_config',   iconPath: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 	]
 
 	let activeTab = $state<TabId>('overview')
@@ -259,12 +262,12 @@
 		if (twitch === 'connected') {
 			const login = url.searchParams.get('login') ?? ''
 			const subs  = url.searchParams.get('subs')  ?? '0'
-			pushToast(`Twitch lié : @${login} · ${subs} subscription${parseInt(subs, 10) > 1 ? 's' : ''} EventSub créée${parseInt(subs, 10) > 1 ? 's' : ''}`, true)
+			pushToast(parseInt(subs, 10) > 1 ? tFn('shub.twitch_linked_many', { login, subs }) : tFn('shub.twitch_linked_one', { login, subs }), true)
 		} else if (twitch === 'replayed') {
-			pushToast('Callback déjà traité (probable double-redirect). Le compte est lié.', true)
+			pushToast(tFn('shub.callback_replayed'), true)
 		} else if (twitch === 'error') {
 			const reason = url.searchParams.get('reason') ?? 'inconnu'
-			pushToast(`Connexion Twitch échouée : ${decodeURIComponent(reason)}`, false)
+			pushToast(tFn('shub.twitch_failed', { reason: decodeURIComponent(reason) }), false)
 		}
 
 		// Clean the URL so the toast does not re-trigger on refresh.
@@ -341,14 +344,14 @@
 		try {
 			const res = await fetch('/api/v1/streamer/twitch/auth-init', { headers: authHeaders() })
 			if (!res.ok) {
-				pushToast('Impossible de démarrer OAuth (HTTP ' + res.status + ')', false)
+				pushToast(tFn('shub.oauth_failed', { status: res.status }), false)
 				connecting = false
 				return
 			}
 			const { authorizeUrl } = await res.json()
 			window.location.href = authorizeUrl
 		} catch {
-			pushToast('Erreur réseau', false)
+			pushToast(tFn('shub.err_network'), false)
 			connecting = false
 		}
 	}
@@ -362,14 +365,14 @@
 				headers: authHeaders(),
 			})
 			if (res.ok) {
-				pushToast('Tokens rafraîchis', true)
+				pushToast(tFn('shub.tokens_refreshed'), true)
 				await invalidateAll()
 			} else {
 				const err = await res.json().catch(() => ({}))
-				pushToast(err.message ?? 'Refresh échoué', false)
+				pushToast(err.message ?? tFn('shub.refresh_failed'), false)
 			}
 		} catch {
-			pushToast('Erreur réseau', false)
+			pushToast(tFn('shub.err_network'), false)
 		} finally {
 			refreshing = false
 		}
@@ -385,14 +388,14 @@
 			})
 			if (res.ok) {
 				const j = await res.json()
-				pushToast(`Sync : ${j.created} créées, ${j.skipped} déjà OK, ${j.failed} en échec`, j.failed === 0)
+				pushToast(tFn('shub.sync_result', { created: j.created, skipped: j.skipped, failed: j.failed }), j.failed === 0)
 				await invalidateAll()
 			} else {
 				const err = await res.json().catch(() => ({}))
-				pushToast(err.message ?? 'Sync échoué', false)
+				pushToast(err.message ?? tFn('shub.sync_failed'), false)
 			}
 		} catch {
-			pushToast('Erreur réseau', false)
+			pushToast(tFn('shub.err_network'), false)
 		} finally {
 			syncing = false
 		}
@@ -409,14 +412,14 @@
 			})
 			if (res.ok) {
 				const j = await res.json()
-				pushToast(`Event ${j.eventType} injecté dans le pipeline`, true)
+				pushToast(tFn('shub.event_injected', { type: j.eventType }), true)
 				await invalidateAll()
 			} else {
 				const err = await res.json().catch(() => ({}))
-				pushToast(err.message ?? 'Test event échoué', false)
+				pushToast(err.message ?? tFn('shub.test_failed'), false)
 			}
 		} catch {
-			pushToast('Erreur réseau', false)
+			pushToast(tFn('shub.err_network'), false)
 		} finally {
 			sendingTest = false
 		}
@@ -424,7 +427,7 @@
 
 	async function disconnect() {
 		if (!primary || disconnecting) return
-		if (!confirm(`Déconnecter ${primary.externalLogin} ?\n\nLes tokens chiffrés seront supprimés et les subscriptions EventSub côté Twitch deviendront orphelines. Une reconnexion future les recréera.`)) return
+		if (!confirm(tFn('shub.disconnect_confirm', { login: primary.externalLogin }))) return
 		disconnecting = true
 		try {
 			const res = await fetch(`/api/v1/streamer/twitch/${primary.id}`, {
@@ -432,13 +435,13 @@
 				headers: authHeaders(),
 			})
 			if (res.ok) {
-				pushToast('Streamer déconnecté', true)
+				pushToast(tFn('shub.disconnected'), true)
 				await invalidateAll()
 			} else {
-				pushToast('Déconnexion échouée', false)
+				pushToast(tFn('shub.disconnect_failed'), false)
 			}
 		} catch {
-			pushToast('Erreur réseau', false)
+			pushToast(tFn('shub.err_network'), false)
 		} finally {
 			disconnecting = false
 		}
@@ -460,7 +463,7 @@
 			s < 3600  ? `${Math.floor(s/60)}min` :
 			s < 86400 ? `${Math.floor(s/3600)}h` :
 			            `${Math.floor(s/86400)}j`
-		return future ? `dans ${v}` : `il y a ${v}`
+		return future ? tFn('shub.rel_future', { v }) : tFn('shub.rel_past', { v })
 	}
 
 	function shortId(id: string | null): string {
@@ -468,53 +471,54 @@
 	}
 
 	// Map status -> health bucket + visible label
-	const SUBS_STATUS: Record<Subscription['status'], { ring: string; label: string }> = {
-		enabled: { ring: 'bg-emerald-500',   label: 'OK'      },
-		pending: { ring: 'bg-amber-400',     label: 'En attente' },
-		failed:  { ring: 'bg-rose-500',      label: 'Échec'   },
-		revoked: { ring: 'bg-rose-500',      label: 'Révoqué' },
+	const SUBS_STATUS: Record<Subscription['status'], { ring: string; labelKey: string }> = {
+		enabled: { ring: 'bg-emerald-500',   labelKey: 'shub.status_enabled' },
+		pending: { ring: 'bg-amber-400',     labelKey: 'shub.status_pending' },
+		failed:  { ring: 'bg-rose-500',      labelKey: 'shub.status_failed' },
+		revoked: { ring: 'bg-rose-500',      labelKey: 'shub.status_revoked' },
 	}
 
-	const EVENT_META: Record<string, { label: string; tone: string; desc: string }> = {
-		'channel.follow':            { label: 'Follow',         tone: 'cyan',    desc: 'Nouveau follower' },
-		'channel.subscribe':         { label: 'Sub',            tone: 'purple',  desc: 'Abonnement direct' },
-		'channel.subscription.gift': { label: 'Sub offert',     tone: 'pink',    desc: 'Sub offert à un viewer' },
-		'channel.cheer':             { label: 'Bits',           tone: 'amber',   desc: 'Don de bits' },
-		'channel.raid':              { label: 'Raid',           tone: 'red',     desc: 'Raid entrant' },
-		'channel.poll.begin':        { label: 'Poll lancé',     tone: 'indigo',  desc: 'Sondage démarré' },
-		'channel.poll.end':          { label: 'Poll terminé',   tone: 'indigo',  desc: 'Sondage clôturé' },
-		'channel.chat.message':      { label: 'Message',        tone: 'slate',   desc: 'Message Twitch chat' },
-		'stream.online':             { label: 'Live ON',        tone: 'emerald', desc: 'Diffusion en direct' },
-		'stream.offline':            { label: 'Live OFF',       tone: 'slate',   desc: 'Diffusion terminée' },
+	const EVENT_META: Record<string, { labelKey: string; tone: string; descKey: string }> = {
+		'channel.follow':            { labelKey: 'shub.evt_follow_label',       tone: 'cyan',    descKey: 'shub.evt_follow_desc' },
+		'channel.subscribe':         { labelKey: 'shub.evt_subscribe_label',    tone: 'purple',  descKey: 'shub.evt_subscribe_desc' },
+		'channel.subscription.gift': { labelKey: 'shub.evt_gift_label',         tone: 'pink',    descKey: 'shub.evt_gift_desc' },
+		'channel.cheer':             { labelKey: 'shub.evt_cheer_label',        tone: 'amber',   descKey: 'shub.evt_cheer_desc' },
+		'channel.raid':              { labelKey: 'shub.evt_raid_label',         tone: 'red',     descKey: 'shub.evt_raid_desc' },
+		'channel.poll.begin':        { labelKey: 'shub.evt_poll_begin_label',   tone: 'indigo',  descKey: 'shub.evt_poll_begin_desc' },
+		'channel.poll.end':          { labelKey: 'shub.evt_poll_end_label',     tone: 'indigo',  descKey: 'shub.evt_poll_end_desc' },
+		'channel.chat.message':      { labelKey: 'shub.evt_message_label',      tone: 'slate',   descKey: 'shub.evt_message_desc' },
+		'stream.online':             { labelKey: 'shub.evt_online_label',       tone: 'emerald', descKey: 'shub.evt_online_desc' },
+		'stream.offline':            { labelKey: 'shub.evt_offline_label',      tone: 'slate',   descKey: 'shub.evt_offline_desc' },
 	}
 
 	// Render a human-readable summary from the raw EventSub payload, instead of
 	// dumping JSON. Falls back to the event type if the shape is unexpected.
 	function humanize(evt: RecentEvent): string {
-		const e = evt.payload?.event ?? {}
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const e = (evt.payload?.event ?? {}) as Record<string, any>
 		switch (evt.eventType) {
 			case 'channel.follow':
-				return `${e.user_name ?? e.user_login ?? '?'} a follow`
+				return tFn('shub.hum_follow', { name: e.user_name ?? e.user_login ?? '?' })
 			case 'channel.subscribe': {
 				const tier = String(e.tier ?? '').replace('000', '')
-				return `${e.user_name ?? '?'} s'abonne (tier ${tier || '1'}${e.is_gift ? ' • offert' : ''})`
+				return tFn('shub.hum_subscribe', { name: e.user_name ?? '?', tier: tier || '1', gift: e.is_gift ? tFn('shub.hum_gift_suffix') : '' })
 			}
 			case 'channel.subscription.gift':
-				return `${e.user_name ?? 'Anonyme'} offre ${e.total ?? 1} sub(s)`
+				return tFn('shub.hum_gift', { name: e.user_name ?? tFn('shub.anonymous'), total: e.total ?? 1 })
 			case 'channel.cheer':
-				return `${e.is_anonymous ? 'Anonyme' : e.user_name ?? '?'} a cheer ${e.bits ?? '?'} bits`
+				return tFn('shub.hum_cheer', { name: e.is_anonymous ? tFn('shub.anonymous') : e.user_name ?? '?', bits: e.bits ?? '?' })
 			case 'channel.raid':
-				return `Raid de ${e.from_broadcaster_user_name ?? '?'} avec ${e.viewers ?? '?'} viewers`
+				return tFn('shub.hum_raid', { name: e.from_broadcaster_user_name ?? '?', viewers: e.viewers ?? '?' })
 			case 'channel.poll.begin':
-				return `Poll lancé : « ${e.title ?? '?'} » (${Array.isArray(e.choices) ? e.choices.length : '?'} choix)`
+				return tFn('shub.hum_poll_begin', { title: e.title ?? '?', n: Array.isArray(e.choices) ? e.choices.length : '?' })
 			case 'channel.poll.end':
-				return `Poll terminé : « ${e.title ?? '?'} »`
+				return tFn('shub.hum_poll_end', { title: e.title ?? '?' })
 			case 'channel.chat.message':
 				return `${e.chatter_user_name ?? '?'} : ${typeof e.message === 'object' && e.message && 'text' in e.message ? String((e.message as { text: string }).text).slice(0, 80) : ''}`
 			case 'stream.online':
-				return `Stream live (${e.type ?? 'live'})`
+				return tFn('shub.hum_stream_online', { type: e.type ?? 'live' })
 			case 'stream.offline':
-				return 'Stream terminé'
+				return tFn('shub.hum_stream_offline')
 			default:
 				return evt.eventType
 		}
@@ -542,7 +546,7 @@
 </script>
 
 <svelte:head>
-	<title>Streamer Hub : Administration</title>
+	<title>{tFn('shub.page_title')}</title>
 </svelte:head>
 
 <div class="max-w-6xl mx-auto space-y-6">
@@ -552,13 +556,13 @@
 		<div>
 			<h1 class="text-2xl font-semibold text-zinc-100">Streamer Hub</h1>
 			<p class="text-sm text-zinc-500 mt-1 max-w-2xl">
-				Bridge Twitch auto-hébergé. OAuth chiffré AES-256-GCM, EventSub HMAC, chat unifié bidirectionnel.
+				{tFn('shub.subtitle')}
 			</p>
 		</div>
 		<div class="flex items-center gap-2 px-2.5 py-1 rounded-md border {isConnected ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900'}">
 			<span class="w-1.5 h-1.5 rounded-full {isConnected ? 'bg-emerald-400' : 'bg-zinc-600'}"></span>
 			<span class="text-xs font-medium {isConnected ? 'text-emerald-300' : 'text-zinc-500'}">
-				{isConnected ? 'Connecté' : 'Déconnecté'}
+				{isConnected ? tFn('shub.connected') : tFn('shub.disconnected_status')}
 			</span>
 		</div>
 	</header>
@@ -589,7 +593,7 @@
 							<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" d={tab.iconPath}/>
 							</svg>
-							<span class="hidden sm:inline">{tab.label}</span>
+							<span class="hidden sm:inline">{tFn(tab.labelKey)}</span>
 							{#if tab.soon}
 								<span class="text-[10px] uppercase tracking-wide font-medium text-zinc-500 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5">Soon</span>
 							{/if}
@@ -623,7 +627,7 @@
 		<ClipsPanel token={pageToken} />
 
 		<section class="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-6 text-center space-y-1">
-			<div class="text-[11px] text-slate-500">Bientôt dans Studio Live : raid composer (chercher un streamer + lancer un raid en un clic).</div>
+			<div class="text-[11px] text-slate-500">{tFn('shub.studio_soon')}</div>
 		</section>
 	{/if}
 
@@ -677,9 +681,9 @@
 			setup.overall === 'warning' ? 'bg-amber-400'   :
 			                              'bg-rose-400'}
 		{@const overallLabel =
-			setup.overall === 'ok'      ? `${setup.checks.length} checks passés` :
-			setup.overall === 'warning' ? `${setup.warningCount} avertissement${setup.warningCount > 1 ? 's' : ''}` :
-			                              `${setup.downCount} bloquant${setup.downCount > 1 ? 's' : ''}`}
+			setup.overall === 'ok'      ? tFn('shub.checks_passed', { n: setup.checks.length }) :
+			setup.overall === 'warning' ? (setup.warningCount > 1 ? tFn('shub.warnings_many', { n: setup.warningCount }) : tFn('shub.warnings_one', { n: setup.warningCount })) :
+			                              (setup.downCount > 1 ? tFn('shub.blocking_many', { n: setup.downCount }) : tFn('shub.blocking_one', { n: setup.downCount }))}
 		<section class="rounded-xl border {tone} overflow-hidden">
 			<button type="button" onclick={() => setupOpen = !setupOpen}
 				class="w-full px-5 py-3 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors text-left">
@@ -690,11 +694,11 @@
 					</span>
 					<div>
 						<div class="text-sm font-semibold text-white">
-							{setup.overall === 'ok'      ? 'Ton stream est bien lié, tout passe.' :
-							 setup.overall === 'warning' ? 'Connexion fonctionnelle, des points à surveiller.' :
-							                               'Configuration incomplète, voici ce qu\'il manque.'}
+							{setup.overall === 'ok'      ? tFn('shub.overall_ok') :
+							 setup.overall === 'warning' ? tFn('shub.overall_warning') :
+							                               tFn('shub.overall_incomplete')}
 						</div>
-						<div class="text-[11px] text-slate-400 mt-0.5">{overallLabel} · clique pour voir le détail</div>
+						<div class="text-[11px] text-slate-400 mt-0.5">{overallLabel} · {tFn('shub.click_detail')}</div>
 					</div>
 				</div>
 				<svg class="w-4 h-4 text-slate-400 transition-transform {setupOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
@@ -724,14 +728,14 @@
 								<div class="text-[11px] {c.status === 'ok' ? 'text-slate-500' : 'text-slate-400'} mt-0.5">{c.summary}</div>
 								{#if c.status !== 'ok' && c.fix}
 									<div class="mt-2 rounded-md bg-slate-900/60 border border-slate-700/40 px-3 py-2 text-[11px] text-slate-300 leading-relaxed">
-										<span class="text-[10px] uppercase tracking-wider font-semibold {iconColor} mr-1.5">Comment fixer</span>
+										<span class="text-[10px] uppercase tracking-wider font-semibold {iconColor} mr-1.5">{tFn('shub.how_to_fix')}</span>
 										{c.fix}
 									</div>
 								{/if}
 								{#if c.status !== 'ok' && c.docAnchor}
 									<a href="https://nodyx.dev/streamer-hub#{c.docAnchor}" target="_blank" rel="noopener"
 										class="inline-flex items-center gap-1 text-[11px] text-cyan-300 hover:text-cyan-200 mt-1.5">
-										Voir la section dans la doc
+										{tFn('shub.see_doc_section')}
 										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
 									</a>
 								{/if}
@@ -751,8 +755,8 @@
 				<span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
 			</span>
 			<div class="flex-1">
-				<div class="text-sm font-semibold text-rose-200">Stream live en cours</div>
-				<div class="text-[11px] text-rose-300/80">Démarré {fmtRelative(health.currentSession.startedAt)} · les events EventSub arrivent en temps réel.</div>
+				<div class="text-sm font-semibold text-rose-200">{tFn('shub.stream_live_now')}</div>
+				<div class="text-[11px] text-rose-300/80">{tFn('shub.started')} {fmtRelative(health.currentSession.startedAt)} · {tFn('shub.events_realtime')}</div>
 			</div>
 			<span class="text-[10px] font-mono text-rose-400/60">session {shortId(health.currentSession.id)}</span>
 		</div>
@@ -764,7 +768,7 @@
 			<!-- Connexion -->
 			<div class="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
 				<div class="flex items-center justify-between mb-2">
-					<span class="text-[10px] uppercase tracking-widest text-emerald-400/80 font-semibold">Connexion</span>
+					<span class="text-[10px] uppercase tracking-widest text-emerald-400/80 font-semibold">{tFn('shub.card_connection')}</span>
 					<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
 				</div>
 				<div class="text-base font-semibold text-white truncate" title={primary.externalLogin}>{primary.externalLogin}</div>
@@ -779,35 +783,35 @@
 				</div>
 				<div class="text-base font-semibold text-white">{enabledCount}<span class="text-slate-500 text-sm font-normal"> / {subs.length}</span></div>
 				<div class="text-[11px] text-slate-500 mt-0.5">
-					{failedCount > 0 ? `${failedCount} en échec` : pendingCount > 0 ? `${pendingCount} en attente` : 'Toutes actives'}
+					{failedCount > 0 ? tFn('shub.n_failed', { n: failedCount }) : pendingCount > 0 ? tFn('shub.n_pending', { n: pendingCount }) : tFn('shub.all_active')}
 				</div>
 			</div>
 
 			<!-- Chat bridge -->
-			<div class="rounded-xl border {(health?.chatQueueSize ?? 0) > 50 ? 'border-amber-500/25 bg-amber-500/5' : 'border-emerald-500/25 bg-emerald-500/5'} p-4" title="Queue Redis des messages Nodyx en route vers le chat Twitch. > 50 = surcharge (Twitch rate-limit), Nodyx drop avec audit après 5 tentatives.">
+			<div class="rounded-xl border {(health?.chatQueueSize ?? 0) > 50 ? 'border-amber-500/25 bg-amber-500/5' : 'border-emerald-500/25 bg-emerald-500/5'} p-4" title={tFn('shub.chat_queue_title')}>
 				<div class="flex items-center justify-between mb-2">
 					<span class="text-[10px] uppercase tracking-widest font-semibold {(health?.chatQueueSize ?? 0) > 50 ? 'text-amber-400/80' : 'text-emerald-400/80'}">Chat bridge</span>
 					<span class="w-1.5 h-1.5 rounded-full {(health?.chatQueueSize ?? 0) > 50 ? 'bg-amber-400' : 'bg-emerald-400'}"></span>
 				</div>
 				<div class="text-base font-semibold text-white">
-					{health?.chatQueueSize ?? '—'}<span class="text-slate-500 text-sm font-normal"> en queue</span>
+					{health?.chatQueueSize ?? '—'}<span class="text-slate-500 text-sm font-normal"> {tFn('shub.in_queue')}</span>
 				</div>
 				<div class="text-[11px] text-slate-500 mt-0.5">
-					{health?.linkedViewersCount ?? 0} viewer{(health?.linkedViewersCount ?? 0) > 1 ? 's' : ''} lié{(health?.linkedViewersCount ?? 0) > 1 ? 's' : ''}
+					{(health?.linkedViewersCount ?? 0) > 1 ? tFn('shub.viewers_linked_many', { n: health?.linkedViewersCount ?? 0 }) : tFn('shub.viewers_linked_one', { n: health?.linkedViewersCount ?? 0 })}
 				</div>
 			</div>
 
 			<!-- Activité -->
-			<div class="rounded-xl border {activityHealth === 'ok' ? 'border-emerald-500/25 bg-emerald-500/5' : activityHealth === 'warning' ? 'border-amber-500/25 bg-amber-500/5' : 'border-slate-600/30 bg-slate-700/10'} p-4" title="Heure du dernier événement reçu via EventSub. Si > 6h, vérifie que tes subscriptions sont enabled.">
+			<div class="rounded-xl border {activityHealth === 'ok' ? 'border-emerald-500/25 bg-emerald-500/5' : activityHealth === 'warning' ? 'border-amber-500/25 bg-amber-500/5' : 'border-slate-600/30 bg-slate-700/10'} p-4" title={tFn('shub.activity_title')}>
 				<div class="flex items-center justify-between mb-2">
-					<span class="text-[10px] uppercase tracking-widest font-semibold {activityHealth === 'ok' ? 'text-emerald-400/80' : activityHealth === 'warning' ? 'text-amber-400/80' : 'text-slate-400/80'}">Activité</span>
+					<span class="text-[10px] uppercase tracking-widest font-semibold {activityHealth === 'ok' ? 'text-emerald-400/80' : activityHealth === 'warning' ? 'text-amber-400/80' : 'text-slate-400/80'}">{tFn('shub.card_activity')}</span>
 					<span class="w-1.5 h-1.5 rounded-full {activityHealth === 'ok' ? 'bg-emerald-400' : activityHealth === 'warning' ? 'bg-amber-400' : 'bg-slate-500'}"></span>
 				</div>
 				<div class="text-base font-semibold text-white">
-					{lastEvent ? EVENT_META[lastEvent.eventType]?.label ?? lastEvent.eventType : 'Aucun event'}
+					{lastEvent ? (EVENT_META[lastEvent.eventType] ? tFn(EVENT_META[lastEvent.eventType].labelKey) : lastEvent.eventType) : tFn('shub.no_event')}
 				</div>
 				<div class="text-[11px] text-slate-500 mt-0.5">
-					{lastEvent ? fmtRelative(lastEvent.occurredAt) : 'Lance un live ou demande un follow'}
+					{lastEvent ? fmtRelative(lastEvent.occurredAt) : tFn('shub.no_activity_hint')}
 				</div>
 			</div>
 		</section>
@@ -817,25 +821,25 @@
 	{#if isConnected && stats && activeTab === 'overview'}
 		<section class="space-y-3">
 			<div class="flex items-center justify-between">
-				<h2 class="text-sm font-semibold text-white">Stats des {stats.periodDays} derniers jours</h2>
-				<span class="text-[11px] text-slate-500">Mise à jour à chaque rechargement</span>
+				<h2 class="text-sm font-semibold text-white">{tFn('shub.stats_title', { n: stats.periodDays })}</h2>
+				<span class="text-[11px] text-slate-500">{tFn('shub.stats_update_note')}</span>
 			</div>
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
 				{#each STAT_TYPES as type}
-					{@const meta   = EVENT_META[type] ?? { label: type, tone: 'slate', desc: '' }}
+					{@const meta   = EVENT_META[type]}
 					{@const total  = stats.totals[type] ?? 0}
 					{@const series = stats.daily[type] ?? []}
-					{@const color  = TONE_HEX[meta.tone] ?? TONE_HEX.slate}
+					{@const color  = TONE_HEX[meta?.tone ?? 'slate'] ?? TONE_HEX.slate}
 					{@const trend  = trendOf(series)}
 					<div class="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4 flex flex-col gap-2">
 						<div class="flex items-center justify-between">
-							<span class="text-[10px] uppercase tracking-widest font-semibold text-slate-400">{meta.label}</span>
+							<span class="text-[10px] uppercase tracking-widest font-semibold text-slate-400">{meta ? tFn(meta.labelKey) : type}</span>
 							{#if trend.dir === 'up'}
-								<span class="text-[10px] font-mono text-emerald-400" title="J vs J-1">+{trend.delta}</span>
+								<span class="text-[10px] font-mono text-emerald-400" title={tFn('shub.trend_title')}>+{trend.delta}</span>
 							{:else if trend.dir === 'down'}
-								<span class="text-[10px] font-mono text-rose-400" title="J vs J-1">{trend.delta}</span>
+								<span class="text-[10px] font-mono text-rose-400" title={tFn('shub.trend_title')}>{trend.delta}</span>
 							{:else}
-								<span class="text-[10px] font-mono text-slate-500" title="J vs J-1">=</span>
+								<span class="text-[10px] font-mono text-slate-500" title={tFn('shub.trend_title')}>=</span>
 							{/if}
 						</div>
 						<div class="flex items-end justify-between gap-3">
@@ -850,7 +854,7 @@
 								height={32}
 							/>
 						</div>
-						<div class="text-[11px] text-slate-500">{meta.desc}</div>
+						<div class="text-[11px] text-slate-500">{meta ? tFn(meta.descKey) : ''}</div>
 					</div>
 				{/each}
 			</div>
@@ -865,22 +869,22 @@
 					<svg class="w-6 h-6 text-cyan-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
 				</div>
 				<div class="flex-1">
-					<h2 class="text-lg font-semibold text-white">Connecter ton compte Twitch</h2>
+					<h2 class="text-lg font-semibold text-white">{tFn('shub.connect_title')}</h2>
 					<p class="text-sm text-slate-400 mt-1.5">
-						Tu seras redirigé vers Twitch pour autoriser Nodyx. Au retour, on souscrit automatiquement aux 9 événements EventSub Phase 1 + 2 et on chiffre les tokens AES-256-GCM avant écriture en base.
+						{tFn('shub.connect_desc')}
 					</p>
 				</div>
 			</div>
 
 			<div class="rounded-lg border border-slate-700/60 bg-slate-900/50 p-4 space-y-3">
-				<div class="text-xs font-semibold uppercase tracking-wider text-slate-300">Ce qui sera demandé à Twitch</div>
+				<div class="text-xs font-semibold uppercase tracking-wider text-slate-300">{tFn('shub.scopes_title')}</div>
 				<div class="flex flex-wrap gap-1.5">
 					{#each ['user:read:email', 'channel:read:subscriptions', 'bits:read', 'moderator:read:followers', 'user:read:chat', 'user:write:chat', 'channel:read:polls'] as scope}
 						<code class="text-[10px] font-mono bg-slate-800/80 text-slate-300 px-2 py-0.5 rounded border border-slate-700/60">{scope}</code>
 					{/each}
 				</div>
 				<div class="text-[11px] text-slate-500 leading-relaxed">
-					Aucun de ces scopes ne donne accès à ta clé de streaming, à tes paramètres Twitch ou à ton historique de paiement. Seuls les events temps réel et l'envoi de messages dans ton propre chat sont permis.
+					{tFn('shub.scopes_note')}
 				</div>
 			</div>
 
@@ -890,13 +894,13 @@
 				<div class="flex items-start gap-3">
 					<svg class="w-5 h-5 text-indigo-300 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
 					<div class="flex-1 min-w-0">
-						<div class="text-sm font-semibold text-indigo-200">Première connexion ? Configure tes identifiants Twitch d'abord</div>
+						<div class="text-sm font-semibold text-indigo-200">{tFn('shub.first_connect_title')}</div>
 						<p class="text-[12px] text-slate-400 mt-1 leading-relaxed">
-							Le <span class="text-indigo-300 font-medium">Client ID</span>, le <span class="text-indigo-300 font-medium">Client Secret</span> et la <span class="text-indigo-300 font-medium">clé de chiffrement</span> se saisissent dans
-							<span class="text-indigo-300 font-medium">Paramètres → Streamer Hub</span>, sans toucher au fichier .env. Le diagnostic ci-dessus indique ce qui manque.
+							{tFn('shub.creds_1')} <span class="text-indigo-300 font-medium">Client ID</span>{tFn('shub.creds_2')} <span class="text-indigo-300 font-medium">Client Secret</span> {tFn('shub.creds_3')} <span class="text-indigo-300 font-medium">{tFn('shub.encryption_key')}</span> {tFn('shub.creds_4')}
+							<span class="text-indigo-300 font-medium">{tFn('shub.settings_path')}</span>{tFn('shub.creds_5')}
 						</p>
 						<span class="inline-flex items-center gap-1 text-[12px] text-indigo-300 hover:text-indigo-200 mt-2">
-							Ouvrir les Paramètres
+							{tFn('shub.open_settings')}
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
 						</span>
 					</div>
@@ -907,15 +911,15 @@
 				<button type="button" onclick={() => helpOpen = !helpOpen}
 					class="text-sm text-slate-300 hover:text-white px-4 py-2.5 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors inline-flex items-center gap-2">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-					Prérequis et FAQ
+					{tFn('shub.prereq_faq')}
 				</button>
 				<button type="button" onclick={connectTwitch} disabled={connecting}
 					class="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-semibold px-5 py-2.5 rounded-lg transition-colors inline-flex items-center gap-2 shadow-lg shadow-cyan-500/30">
 					{#if connecting}
 						<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M20 4a16 16 0 00-16 16"/></svg>
-						Redirection…
+						{tFn('shub.redirecting')}
 					{:else}
-						Connecter Twitch
+						{tFn('shub.connect_twitch_btn')}
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
 					{/if}
 				</button>
@@ -935,7 +939,7 @@
 						<span class="text-[10px] font-mono bg-slate-800 text-slate-400 px-2 py-0.5 rounded">twitch_id={primary.externalId}</span>
 					</div>
 					<div class="text-xs text-slate-500 mt-1">
-						Token expire {fmtDate(primary.expiresAt)} · Refresh auto programmé 30 min avant
+						{tFn('shub.token_expires', { date: fmtDate(primary.expiresAt) })}
 					</div>
 					<div class="mt-3 flex flex-wrap gap-1.5">
 						{#each primary.scopes as scope}
@@ -945,19 +949,19 @@
 				</div>
 				<div class="flex flex-col gap-2 shrink-0">
 					<button type="button" onclick={syncSubscriptions} disabled={syncing}
-						title="Recrée les subscriptions EventSub côté Twitch. Utile après l'ajout de nouveaux types d'events sans avoir à reconnecter."
+						title={tFn('shub.sync_title')}
 						class="text-xs bg-cyan-500/10 hover:bg-cyan-500/20 disabled:opacity-50 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg transition-colors">
-						{syncing ? 'Sync…' : 'Synchroniser EventSub'}
+						{syncing ? tFn('shub.syncing') : tFn('shub.sync_btn')}
 					</button>
 					<button type="button" onclick={refreshTokens} disabled={refreshing}
-						title="Force le refresh du access token Twitch via le refresh token. Sans effet si tokens encore frais."
+						title={tFn('shub.refresh_title')}
 						class="text-xs bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 px-3 py-1.5 rounded-lg transition-colors">
-						{refreshing ? 'Refresh…' : 'Refresh tokens'}
+						{refreshing ? tFn('shub.refreshing') : tFn('shub.refresh_btn')}
 					</button>
 					<button type="button" onclick={disconnect} disabled={disconnecting}
-						title="Supprime les tokens chiffrés et révoque la subscription EventSub côté Twitch."
+						title={tFn('shub.disconnect_title')}
 						class="text-xs bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-lg transition-colors">
-						{disconnecting ? 'Déconnexion…' : 'Déconnecter'}
+						{disconnecting ? tFn('shub.disconnecting') : tFn('shub.disconnect_btn')}
 					</button>
 				</div>
 			</div>
@@ -970,9 +974,9 @@
 					<svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
 				</div>
 				<div class="flex-1 min-w-72">
-					<h3 class="text-sm font-semibold text-white">Tester le pipeline</h3>
+					<h3 class="text-sm font-semibold text-white">{tFn('shub.test_pipeline_title')}</h3>
 					<p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-						Injecte un faux événement <strong class="text-slate-300">localement</strong>. Pas d'appel à Twitch, juste du test bout-en-bout (persist en base + dispatch vers <code class="font-mono text-cyan-300">#twitch-chat</code>). Utile pour valider sans attendre un vrai follow.
+						{tFn('shub.test_desc_1')} <strong class="text-slate-300">{tFn('shub.locally')}</strong>{tFn('shub.test_desc_2')} <code class="font-mono text-cyan-300">#twitch-chat</code>{tFn('shub.test_desc_3')}
 					</p>
 				</div>
 				<div class="flex items-center gap-2 shrink-0">
@@ -987,7 +991,7 @@
 					<button type="button" onclick={sendTestEvent} disabled={sendingTest}
 						class="text-xs bg-amber-500/15 hover:bg-amber-500/25 disabled:opacity-50 text-amber-200 border border-amber-500/30 px-3 py-2 rounded-lg transition-colors inline-flex items-center gap-1.5">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-						{sendingTest ? 'Envoi…' : 'Injecter l\'event'}
+						{sendingTest ? tFn('shub.sending') : tFn('shub.inject_event')}
 					</button>
 				</div>
 			</div>
@@ -998,39 +1002,39 @@
 			<header class="px-5 py-3 border-b border-slate-700/60 flex items-center justify-between">
 				<div>
 					<h2 class="text-sm font-semibold text-white">Subscriptions EventSub</h2>
-					<p class="text-[11px] text-slate-500 mt-0.5">Chaque ligne représente un webhook actif côté Twitch. Si une ligne est en échec, clique "Synchroniser" pour la recréer.</p>
+					<p class="text-[11px] text-slate-500 mt-0.5">{tFn('shub.subs_desc')}</p>
 				</div>
 				<div class="flex items-center gap-3 text-xs">
 					<span class="text-emerald-300"><span class="text-emerald-400">●</span> {enabledCount} OK</span>
-					{#if pendingCount > 0}<span class="text-amber-300"><span class="text-amber-400">●</span> {pendingCount} attente</span>{/if}
-					{#if failedCount > 0}<span class="text-rose-300"><span class="text-rose-400">●</span> {failedCount} échec</span>{/if}
+					{#if pendingCount > 0}<span class="text-amber-300"><span class="text-amber-400">●</span> {pendingCount} {tFn('shub.pending_short')}</span>{/if}
+					{#if failedCount > 0}<span class="text-rose-300"><span class="text-rose-400">●</span> {failedCount} {tFn('shub.failed_short')}</span>{/if}
 				</div>
 			</header>
 			<ul class="divide-y divide-slate-700/40">
 				{#each subs as sub}
-					{@const meta = EVENT_META[sub.eventType] ?? { label: sub.eventType, tone: 'slate', desc: '' }}
+					{@const meta = EVENT_META[sub.eventType]}
 					{@const last = lastSeenByType.get(sub.eventType)}
 					<li class="px-5 py-3 flex items-center gap-4 hover:bg-slate-800/20 transition-colors">
-						<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border {TONE_CLASSES[meta.tone]} shrink-0 min-w-20 justify-center">{meta.label}</span>
+						<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border {TONE_CLASSES[meta?.tone ?? 'slate']} shrink-0 min-w-20 justify-center">{meta ? tFn(meta.labelKey) : sub.eventType}</span>
 						<div class="flex-1 min-w-0">
-							<div class="text-sm text-slate-200 font-mono truncate" title={meta.desc}>{sub.eventType}</div>
-							<div class="text-[11px] text-slate-500 mt-0.5">{meta.desc} · sub_id {shortId(sub.externalSubId)}</div>
+							<div class="text-sm text-slate-200 font-mono truncate" title={meta ? tFn(meta.descKey) : ''}>{sub.eventType}</div>
+							<div class="text-[11px] text-slate-500 mt-0.5">{meta ? tFn(meta.descKey) : ''} · sub_id {shortId(sub.externalSubId)}</div>
 						</div>
 						<div class="text-[11px] text-slate-500 text-right hidden sm:block">
 							{#if last}
-								Dernier event<br/><span class="text-slate-300">{fmtRelative(last)}</span>
+								{tFn('shub.last_event_label')}<br/><span class="text-slate-300">{fmtRelative(last)}</span>
 							{:else}
-								<span class="text-slate-600">aucun event reçu</span>
+								<span class="text-slate-600">{tFn('shub.no_event_received')}</span>
 							{/if}
 						</div>
 						<span class="inline-flex items-center gap-1.5 shrink-0">
 							<span class="w-1.5 h-1.5 rounded-full {SUBS_STATUS[sub.status].ring}"></span>
-							<span class="text-[10px] font-medium uppercase tracking-wider text-slate-400">{SUBS_STATUS[sub.status].label}</span>
+							<span class="text-[10px] font-medium uppercase tracking-wider text-slate-400">{tFn(SUBS_STATUS[sub.status].labelKey)}</span>
 						</span>
 					</li>
 				{:else}
 					<li class="px-5 py-10 text-center text-sm text-slate-500">
-						Aucune subscription créée. Rafraîchis la page après le callback OAuth, ou clique "Synchroniser EventSub".
+						{tFn('shub.no_subs')}
 					</li>
 				{/each}
 			</ul>
@@ -1042,8 +1046,8 @@
 		<section class="rounded-xl border border-slate-700/60 bg-slate-900/50 overflow-hidden">
 			<header class="px-5 py-3 border-b border-slate-700/60 flex items-start justify-between gap-3">
 				<div>
-					<h2 class="text-sm font-semibold text-white">Événements récents</h2>
-					<p class="text-[11px] text-slate-500 mt-0.5">{events.length} dans le feed. Chaque event est persisté + diffusé dans <code class="font-mono text-cyan-300">#twitch-chat</code>.</p>
+					<h2 class="text-sm font-semibold text-white">{tFn('shub.recent_events')}</h2>
+					<p class="text-[11px] text-slate-500 mt-0.5">{tFn('shub.feed_desc', { n: events.length })} <code class="font-mono text-cyan-300">#twitch-chat</code>.</p>
 				</div>
 				<span class="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold text-emerald-300 shrink-0">
 					<span class="relative flex h-2 w-2">
@@ -1055,16 +1059,16 @@
 			</header>
 			<ul class="divide-y divide-slate-700/40">
 				{#each events as evt (evt.id)}
-					{@const meta = EVENT_META[evt.eventType] ?? { label: evt.eventType, tone: 'slate', desc: '' }}
+					{@const meta = EVENT_META[evt.eventType]}
 					<li class="px-5 py-2.5 flex items-center gap-3 text-sm hover:bg-slate-800/20 transition-colors"
 						in:fly={{ y: -10, duration: 280 }}>
-						<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border {TONE_CLASSES[meta.tone]} shrink-0 min-w-20 justify-center">{meta.label}</span>
+						<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border {TONE_CLASSES[meta?.tone ?? 'slate']} shrink-0 min-w-20 justify-center">{meta ? tFn(meta.labelKey) : evt.eventType}</span>
 						<span class="flex-1 text-slate-200 truncate" title={humanize(evt)}>{humanize(evt)}</span>
 						<span class="shrink-0 text-[11px] text-slate-500 tabular-nums">{fmtRelative(evt.occurredAt)}</span>
 					</li>
 				{:else}
 					<li class="px-5 py-10 text-center text-sm text-slate-500">
-						Aucun événement reçu. Lance un stream ou demande à un viewer de te follow pour vérifier le pipeline end-to-end.
+						{tFn('shub.no_events')}
 					</li>
 				{/each}
 			</ul>
@@ -1079,39 +1083,39 @@
 			class="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-slate-800/30 transition-colors">
 			<div class="flex items-center gap-3">
 				<svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-				<span class="text-sm font-semibold text-slate-200">Prérequis, dépannage et FAQ</span>
+				<span class="text-sm font-semibold text-slate-200">{tFn('shub.faq_title')}</span>
 			</div>
 			<svg class="w-4 h-4 text-slate-400 transition-transform {helpOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
 		</button>
 		{#if helpOpen}
 			<div class="px-5 pb-5 space-y-5 text-sm text-slate-300 border-t border-slate-700/60 pt-4">
 				<div>
-					<div class="text-xs font-semibold uppercase tracking-wider text-cyan-300 mb-2">Avant de connecter</div>
+					<div class="text-xs font-semibold uppercase tracking-wider text-cyan-300 mb-2">{tFn('shub.faq_before_title')}</div>
 					<ul class="space-y-2 text-slate-400 leading-relaxed">
-						<li><strong class="text-slate-200">TWITCH_CLIENT_ID</strong> et <strong class="text-slate-200">TWITCH_CLIENT_SECRET</strong> doivent être définis dans <code class="font-mono text-cyan-300">nodyx-core/.env</code>. Crée l'app sur <code class="font-mono">dev.twitch.tv/console</code> avec comme redirect URI <code class="font-mono text-cyan-300">https://&lt;ton-domaine&gt;/api/v1/streamer/twitch/callback</code>.</li>
-						<li><strong class="text-slate-200">STREAMER_OAUTH_KEY</strong> (32 octets hex) protège les tokens en base via AES-256-GCM + HKDF. <code class="font-mono text-slate-500">node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code></li>
-						<li><strong class="text-slate-200">PUBLIC_BASE_URL</strong> doit pointer vers ton domaine public en HTTPS, c'est l'URL qui sera utilisée pour les webhooks EventSub (Twitch ne livre que sur HTTPS).</li>
+						<li>{@html tFn('shub.faq_env_1')}</li>
+						<li>{@html tFn('shub.faq_env_2')}</li>
+						<li>{@html tFn('shub.faq_env_3')}</li>
 					</ul>
 				</div>
 				<div>
-					<div class="text-xs font-semibold uppercase tracking-wider text-cyan-300 mb-2">Quand utiliser quelle action</div>
+					<div class="text-xs font-semibold uppercase tracking-wider text-cyan-300 mb-2">{tFn('shub.faq_actions_title')}</div>
 					<ul class="space-y-2 text-slate-400 leading-relaxed">
-						<li><strong class="text-slate-200">Synchroniser EventSub</strong> : après une mise à jour de Nodyx qui ajoute de nouveaux types d'events, ou si une subscription apparaît en échec.</li>
-						<li><strong class="text-slate-200">Refresh tokens</strong> : seulement utile en débogage. Le refresh automatique tourne 30 min avant l'expiration.</li>
-						<li><strong class="text-slate-200">Déconnecter</strong> : supprime les tokens chiffrés. Les subscriptions EventSub deviennent orphelines côté Twitch et seront recréées à la prochaine connexion.</li>
+						<li>{@html tFn('shub.faq_action_1')}</li>
+						<li>{@html tFn('shub.faq_action_2')}</li>
+						<li>{@html tFn('shub.faq_action_3')}</li>
 					</ul>
 				</div>
 				<div>
-					<div class="text-xs font-semibold uppercase tracking-wider text-cyan-300 mb-2">Dépannage rapide</div>
+					<div class="text-xs font-semibold uppercase tracking-wider text-cyan-300 mb-2">{tFn('shub.faq_trouble_title')}</div>
 					<ul class="space-y-2 text-slate-400 leading-relaxed">
-						<li><strong class="text-slate-200">"Pipeline failure" au callback</strong> : vérifie <code class="font-mono text-cyan-300">TWITCH_CLIENT_SECRET</code>, l'URL de redirect Twitch (exact match), et que <code class="font-mono">PUBLIC_BASE_URL</code> est en HTTPS.</li>
-						<li><strong class="text-slate-200">Subscription en échec</strong> : Twitch a renvoyé <code class="font-mono">webhook_callback_verification_failed</code>. Souvent un certificat HTTPS expiré ou un proxy qui bloque le POST avec body brut. Reset la sub via "Synchroniser".</li>
-						<li><strong class="text-slate-200">Aucun event après 30 min</strong> : le HMAC est probablement invalide. Vérifie les logs <code class="font-mono text-cyan-300">pm2 logs nodyx-core | grep EventSub</code>.</li>
+						<li>{@html tFn('shub.faq_trouble_1')}</li>
+						<li>{@html tFn('shub.faq_trouble_2')}</li>
+						<li>{@html tFn('shub.faq_trouble_3')}</li>
 					</ul>
 				</div>
 				<div class="flex flex-wrap gap-3 pt-2 border-t border-slate-700/40">
 					<a href="https://nodyx.dev/streamer-hub" target="_blank" rel="noopener" class="text-xs text-cyan-300 hover:text-cyan-200 inline-flex items-center gap-1">
-						Documentation complète
+						{tFn('shub.doc_complete')}
 						<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
 					</a>
 					<a href="https://dev.twitch.tv/docs/eventsub/" class="text-xs text-slate-400 hover:text-slate-300 inline-flex items-center gap-1">
