@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
 	import { onMount } from 'svelte'
+	import { t } from '$lib/i18n'
 	import type { Deck, DeckButton, DeckLayout } from '$lib/types/deck'
+
+	const tFn = $derived($t)
 
 	// Modal de placement rapide : depuis une biblio (soundboard, clips, etc.),
 	// on choisit un deck + une page + une case libre pour créer un bouton
@@ -78,7 +81,7 @@
 			// Clone profond, ajoute le nouveau bouton dans la page cible, PATCH.
 			const layout: DeckLayout = JSON.parse(JSON.stringify(selectedDeck.layout))
 			const page = layout.pages.find(p => p.id === selectedPage.id)
-			if (!page) { error = 'Page introuvable'; return }
+			if (!page) { error = tFn('sdeck.err_page_notfound'); return }
 			page.buttons.push({
 				...buttonTemplate,
 				id: newButtonId(),
@@ -90,7 +93,7 @@
 				body:    JSON.stringify({ layout }),
 			})
 			if (!res.ok) {
-				error = 'Échec sauvegarde'
+				error = tFn('sdeck.err_save')
 				return
 			}
 			// Met à jour le deck local pour visualiser immédiatement le bouton placé.
@@ -100,7 +103,7 @@
 			// On laisse le modal ouvert : Preston peut enchaîner les placements
 			// (utile pour bâtir une page complète sans rouvrir 10 fois).
 		} catch {
-			error = 'Erreur réseau'
+			error = tFn('sdeck.err_network')
 		} finally {
 			saving = false
 		}
@@ -109,7 +112,7 @@
 	async function placeAuto(): Promise<void> {
 		if (!selectedDeck || !selectedPage) return
 		const free = firstFreeCell(selectedDeck.layout, selectedPage.id)
-		if (!free) { error = 'Page pleine, choisis une autre page ou une case libre.'; return }
+		if (!free) { error = tFn('sdeck.err_page_full'); return }
 		await placeAt(free.x, free.y)
 	}
 
@@ -131,19 +134,19 @@
 				{#if subtitle}<p class="text-xs text-zinc-500 mt-0.5 truncate">{subtitle}</p>{/if}
 			</div>
 			<button type="button" onclick={onClose}
-				class="p-1 rounded text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-colors" aria-label="Fermer">
+				class="p-1 rounded text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-colors" aria-label={tFn('sdeck.close')}>
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
 			</button>
 		</header>
 
 		<div class="p-5 space-y-4">
 			{#if loading}
-				<div class="text-sm text-zinc-500 text-center py-6">Chargement des decks…</div>
+				<div class="text-sm text-zinc-500 text-center py-6">{tFn('sdeck.loading')}</div>
 			{:else if decks.length === 0}
 				<div class="text-center py-6 space-y-2">
 					<div class="text-3xl">🎛️</div>
-					<div class="text-sm text-zinc-300">Aucun Stream Deck créé pour l'instant.</div>
-					<div class="text-xs text-zinc-500">Crée-en un depuis l'onglet <span class="text-purple-300 font-medium">Stream Deck</span>, puis reviens ici.</div>
+					<div class="text-sm text-zinc-300">{tFn('sdeck.empty_title')}</div>
+					<div class="text-xs text-zinc-500">{tFn('sdeck.empty_pre')} <span class="text-purple-300 font-medium">Stream Deck</span>{tFn('sdeck.empty_post')}</div>
 				</div>
 			{:else}
 				<!-- Sélection deck -->
@@ -189,7 +192,7 @@
 					<div>
 						<div class="flex items-center justify-between mb-1.5">
 							<div class="text-[11px] uppercase tracking-wide font-medium text-zinc-500">Placement</div>
-							<span class="text-[10px] text-zinc-500">{cols} × {rows} — clique sur une case libre</span>
+							<span class="text-[10px] text-zinc-500">{tFn('sdeck.grid_hint', { cols, rows })}</span>
 						</div>
 						<div class="mx-auto bg-zinc-950 border border-zinc-800 p-2 rounded-sm" style="max-width: 360px;">
 							<div class="aspect-[4/3] grid gap-1"
@@ -208,7 +211,7 @@
 										<button type="button" onclick={() => placeAt(cx, cy)} disabled={saving}
 											class="rounded-sm border border-dashed border-zinc-700 hover:border-purple-500/80 hover:bg-purple-500/15 disabled:opacity-30 grid place-items-center text-zinc-600 hover:text-purple-200 transition-colors"
 											style="grid-column: {cx + 1}; grid-row: {cy + 1};"
-											title="Placer ici">
+											title={tFn('sdeck.place_here')}>
 											<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
 										</button>
 									{/if}
@@ -226,17 +229,17 @@
 
 		<!-- Footer : auto-place + close -->
 		<footer class="px-5 py-3 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between gap-2">
-			<span class="text-[11px] text-zinc-500">Le modal reste ouvert : tu peux enchaîner plusieurs placements.</span>
+			<span class="text-[11px] text-zinc-500">{tFn('sdeck.footer_hint')}</span>
 			<div class="flex items-center gap-2">
 				{#if decks.length > 0}
 					<button type="button" onclick={placeAuto} disabled={saving || !selectedDeck || !selectedPage}
 						class="text-xs font-medium bg-purple-500 hover:bg-purple-400 disabled:bg-zinc-800 disabled:text-zinc-500 shadow-sm shadow-purple-500/30 disabled:shadow-none text-white px-3 py-1.5 rounded-sm transition-colors">
-						{saving ? 'Placement…' : '⚡ Auto-placement'}
+						{saving ? tFn('sdeck.placing') : tFn('sdeck.auto_place')}
 					</button>
 				{/if}
 				<button type="button" onclick={onClose}
 					class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-3 py-1.5 rounded-sm transition-colors">
-					Fermer
+					{tFn('sdeck.close')}
 				</button>
 			</div>
 		</footer>
