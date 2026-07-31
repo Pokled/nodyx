@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	export interface TwitchProfilePayload {
 		user: {
@@ -74,10 +77,10 @@
 
 	function accountAge(iso: string): string {
 		const days = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24))
-		if (days < 30) return `${days} jour${days > 1 ? 's' : ''}`
-		if (days < 365) return `${Math.floor(days / 30)} mois`
+		if (days < 30) return days > 1 ? tFn('shero.age_days_many', { n: days }) : tFn('shero.age_days_one', { n: days })
+		if (days < 365) return tFn('shero.age_months', { n: Math.floor(days / 30) })
 		const years = (days / 365).toFixed(1)
-		return `${years} an${parseFloat(years) > 1 ? 's' : ''}`
+		return parseFloat(years) > 1 ? tFn('shero.age_years_many', { n: years }) : tFn('shero.age_years_one', { n: years })
 	}
 
 	const typeBadge = $derived(
@@ -115,7 +118,7 @@
 			{/if}
 			<img
 				src={profile.user.avatarUrl}
-				alt="Avatar Twitch de {profile.user.displayName}"
+				alt={tFn('shero.avatar_alt', { name: profile.user.displayName })}
 				class="relative w-20 h-20 md:w-24 md:h-24 rounded-full border-2 ring-4 ring-slate-950
 				       {profile.stream.isLive ? 'border-rose-500' : 'border-cyan-500/60'}"
 				loading="lazy"
@@ -149,13 +152,13 @@
 						<span class="text-cyan-400 font-medium">{profile.stream.gameName}</span>
 					{/if}
 					{#if profile.stream.viewerCount !== null}
-						<span>{formatNumber(profile.stream.viewerCount)} viewer{(profile.stream.viewerCount ?? 0) > 1 ? 's' : ''} actuellement</span>
+						<span>{(profile.stream.viewerCount ?? 0) > 1 ? tFn('shero.viewers_many', { n: formatNumber(profile.stream.viewerCount) }) : tFn('shero.viewers_one', { n: formatNumber(profile.stream.viewerCount) })}</span>
 					{/if}
 					<span class="font-mono text-rose-300">{formatDuration(liveDurationMs)}</span>
 				</div>
 			{:else}
 				<div class="text-xs text-slate-400">
-					Hors ligne · chaine sur Twitch depuis {accountAge(profile.user.accountCreatedAt)}
+					{tFn('shero.offline_since', { age: accountAge(profile.user.accountCreatedAt) })}
 				</div>
 				{#if profile.user.description}
 					<div class="text-xs text-slate-500 mt-1 line-clamp-2 max-w-2xl">{profile.user.description}</div>
@@ -166,12 +169,12 @@
 		<!-- Quick metrics -->
 		<div class="flex md:flex-col gap-4 md:gap-2 shrink-0 md:items-end">
 			<div class="text-right">
-				<div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Followers</div>
+				<div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">{tFn('shero.followers')}</div>
 				<div class="text-xl font-bold text-white tabular-nums">{formatNumber(profile.followers.total)}</div>
 			</div>
 			{#if profile.user.totalViewCount}
 				<div class="text-right">
-					<div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Vues totales</div>
+					<div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">{tFn('shero.total_views')}</div>
 					<div class="text-xl font-bold text-white tabular-nums">{formatNumber(profile.user.totalViewCount)}</div>
 				</div>
 			{/if}

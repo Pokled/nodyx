@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
+
 	interface Props {
 		series:  number[]   // data points, chronological (oldest → newest)
 		color?:  string     // stroke + fill base color
@@ -51,7 +55,7 @@
 	viewBox="0 0 {width} {height}"
 	preserveAspectRatio="none"
 	role="img"
-	aria-label="Tendance sur {len} jour{len > 1 ? 's' : ''}"
+	aria-label={len > 1 ? tFn('spark.trend_many', { n: len }) : tFn('spark.trend_one', { n: len })}
 	class="block"
 >
 	<defs>

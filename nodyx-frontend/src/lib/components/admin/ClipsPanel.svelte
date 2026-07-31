@@ -2,6 +2,9 @@
 	import { onMount } from 'svelte'
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	// Clips Twitch dans Studio Live : 2 onglets internes.
 	//  - Mes top clips : top clips de la chaine connectée, 7j / 30j / total
@@ -54,7 +57,7 @@
 	}
 
 	async function triggerClips(args: { period?: 'top_own_7d' | 'top_own_30d' | 'top_own_all'; broadcasterId?: string; count: number }): Promise<void> {
-		if (!selectedOverlayId) { flash('Crée d\'abord une overlay Clips Player dans l\'onglet Overlays OBS.', false); return }
+		if (!selectedOverlayId) { flash(tFn('clipp.err_no_overlay'), false); return }
 		if (triggering) return
 		triggering = true
 		try {
@@ -68,14 +71,14 @@
 			})
 			if (res.ok) {
 				const data = await res.json() as { count: number }
-				flash(`Session lancée : ${data.count} clip${data.count > 1 ? 's' : ''} envoyés vers l'overlay.`, true)
+				flash(data.count > 1 ? tFn('clipp.session_many', { n: data.count }) : tFn('clipp.session_one', { n: data.count }), true)
 			} else if (res.status === 404) {
-				flash('Aucun clip trouvé sur ce filtre. Choisis une autre période ou un autre raider.', false)
+				flash(tFn('clipp.err_no_clip_filter'), false)
 			} else {
-				flash('Échec du déclenchement.', false)
+				flash(tFn('clipp.err_trigger'), false)
 			}
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('clipp.err_network'), false)
 		} finally {
 			triggering = false
 		}
@@ -141,8 +144,8 @@
 			if (res.ok) {
 				const data = await res.json() as { clips: Clip[] }
 				raiderClips = { ...raiderClips, [broadcasterId]: data.clips ?? [] }
-				if ((data.clips?.length ?? 0) === 0) flash('Aucun clip trouvé pour ce raider (clips trop vieux ou compte sans clip).', false)
-			} else flash('Échec du fetch des clips raider.', false)
+				if ((data.clips?.length ?? 0) === 0) flash(tFn('clipp.err_no_raider_clip'), false)
+			} else flash(tFn('clipp.err_fetch_raider'), false)
 		} finally {
 			const next2 = new Set(raiderClipsLoading); next2.delete(broadcasterId); raiderClipsLoading = next2
 		}
@@ -179,11 +182,11 @@
 	function fmtRelative(iso: string): string {
 		const diff = Date.now() - new Date(iso).getTime()
 		const m = Math.floor(diff / 60_000)
-		if (m < 60)  return `il y a ${m}min`
+		if (m < 60)  return tFn('clipp.mins_ago', { n: m })
 		const h = Math.floor(m / 60)
-		if (h < 24)  return `il y a ${h}h`
+		if (h < 24)  return tFn('clipp.hours_ago', { n: h })
 		const d = Math.floor(h / 24)
-		if (d < 30)  return `il y a ${d}j`
+		if (d < 30)  return tFn('clipp.days_ago', { n: d })
 		return new Date(iso).toLocaleDateString('fr-FR')
 	}
 
@@ -196,17 +199,17 @@
 	<header class="flex items-center justify-between gap-3 flex-wrap">
 		<div class="flex items-center gap-2.5">
 			<svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-			<h2 class="text-sm font-semibold text-white">Clips Twitch</h2>
+			<h2 class="text-sm font-semibold text-white">{tFn('clipp.title')}</h2>
 		</div>
 		<!-- Tabs internes -->
 		<div class="inline-flex rounded-lg border border-slate-700/60 bg-slate-950/60 p-0.5">
 			<button type="button" onclick={() => switchTab('own')}
 				class="px-3 py-1 text-xs font-medium rounded-md transition-colors {tab === 'own' ? 'bg-indigo-500/20 text-indigo-200' : 'text-slate-500 hover:text-slate-300'}">
-				Mes top clips
+				{tFn('clipp.tab_own')}
 			</button>
 			<button type="button" onclick={() => switchTab('raiders')}
 				class="px-3 py-1 text-xs font-medium rounded-md transition-colors {tab === 'raiders' ? 'bg-rose-500/20 text-rose-200' : 'text-slate-500 hover:text-slate-300'}">
-				Clips des raiders
+				{tFn('clipp.tab_raiders')}
 			</button>
 		</div>
 	</header>
@@ -222,8 +225,8 @@
 	<div class="rounded-lg border border-slate-700/60 bg-slate-950/40 p-3 space-y-2">
 		<div class="flex items-center justify-between gap-3 flex-wrap">
 			<div>
-				<div class="text-[11px] uppercase tracking-widest font-semibold text-cyan-400">Lancer dans une Clips Player overlay</div>
-				<div class="text-[10px] text-slate-500 mt-0.5">La session jouera plein écran dans OBS, auto-advance entre clips.</div>
+				<div class="text-[11px] uppercase tracking-widest font-semibold text-cyan-400">{tFn('clipp.launch_title')}</div>
+				<div class="text-[10px] text-slate-500 mt-0.5">{tFn('clipp.launch_desc')}</div>
 			</div>
 			{#if clipsOverlays.length > 0}
 				<select bind:value={selectedOverlayId}
@@ -233,26 +236,26 @@
 					{/each}
 				</select>
 			{:else}
-				<a href="#tab=overlays" class="text-[11px] text-cyan-400 hover:text-cyan-300 underline">→ Crée une overlay Clips Player</a>
+				<a href="#tab=overlays" class="text-[11px] text-cyan-400 hover:text-cyan-300 underline">{tFn('clipp.create_overlay')}</a>
 			{/if}
 		</div>
 		{#if clipsOverlays.length > 0}
 			<div class="flex flex-wrap gap-2 pt-1">
 				<button type="button" onclick={() => triggerClips({ period: 'top_own_7d',  count: 5 })} disabled={triggering}
 					class="text-[11px] bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-3 py-1.5 rounded transition-colors">
-					Top 5 (7j)
+					{tFn('clipp.top5_7d')}
 				</button>
 				<button type="button" onclick={() => triggerClips({ period: 'top_own_30d', count: 5 })} disabled={triggering}
 					class="text-[11px] bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-3 py-1.5 rounded transition-colors">
-					Top 5 (30j)
+					{tFn('clipp.top5_30d')}
 				</button>
 				<button type="button" onclick={() => triggerClips({ period: 'top_own_all', count: 5 })} disabled={triggering}
 					class="text-[11px] bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-3 py-1.5 rounded transition-colors">
-					Top 5 (Total)
+					{tFn('clipp.top5_all')}
 				</button>
 				<button type="button" onclick={() => triggerClips({ period: 'top_own_7d', count: 10 })} disabled={triggering}
 					class="text-[11px] bg-indigo-500/15 hover:bg-indigo-500/25 disabled:opacity-30 border border-indigo-500/40 text-indigo-200 px-3 py-1.5 rounded transition-colors">
-					Top 10 (7j)
+					{tFn('clipp.top10_7d')}
 				</button>
 			</div>
 		{/if}
@@ -262,11 +265,11 @@
 	{#if tab === 'own'}
 		<div class="flex items-center justify-between gap-3 flex-wrap">
 			<div class="flex items-center gap-3 flex-wrap">
-				<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400">Période</div>
+				<div class="text-[11px] uppercase tracking-widest font-semibold text-slate-400">{tFn('clipp.period')}</div>
 				<div class="inline-flex rounded-lg border border-slate-700/60 bg-slate-950/40 p-0.5">
-					<button type="button" onclick={() => ownPeriod = '7d'}   class="px-3 py-1 text-xs font-medium rounded-md transition-colors {ownPeriod === '7d'   ? 'bg-indigo-500/20 text-indigo-200' : 'text-slate-500 hover:text-slate-300'}">7 jours</button>
-					<button type="button" onclick={() => ownPeriod = '30d'}  class="px-3 py-1 text-xs font-medium rounded-md transition-colors {ownPeriod === '30d'  ? 'bg-indigo-500/20 text-indigo-200' : 'text-slate-500 hover:text-slate-300'}">30 jours</button>
-					<button type="button" onclick={() => ownPeriod = 'all'}  class="px-3 py-1 text-xs font-medium rounded-md transition-colors {ownPeriod === 'all'  ? 'bg-indigo-500/20 text-indigo-200' : 'text-slate-500 hover:text-slate-300'}">Total</button>
+					<button type="button" onclick={() => ownPeriod = '7d'}   class="px-3 py-1 text-xs font-medium rounded-md transition-colors {ownPeriod === '7d'   ? 'bg-indigo-500/20 text-indigo-200' : 'text-slate-500 hover:text-slate-300'}">{tFn('clipp.period_7d')}</button>
+					<button type="button" onclick={() => ownPeriod = '30d'}  class="px-3 py-1 text-xs font-medium rounded-md transition-colors {ownPeriod === '30d'  ? 'bg-indigo-500/20 text-indigo-200' : 'text-slate-500 hover:text-slate-300'}">{tFn('clipp.period_30d')}</button>
+					<button type="button" onclick={() => ownPeriod = 'all'}  class="px-3 py-1 text-xs font-medium rounded-md transition-colors {ownPeriod === 'all'  ? 'bg-indigo-500/20 text-indigo-200' : 'text-slate-500 hover:text-slate-300'}">{tFn('clipp.period_all')}</button>
 				</div>
 			</div>
 			{#if ownClips.length > 0 && clipsOverlays.length > 0}
@@ -275,16 +278,16 @@
 					disabled={triggering}
 					class="text-[11px] bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-30 border border-cyan-500/40 text-cyan-200 px-3 py-1.5 rounded transition-colors inline-flex items-center gap-1.5">
 					<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84a1 1 0 011.04.06l9 6a1 1 0 010 1.66l-9 6A1 1 0 016 16V4a1 1 0 01.3-.84z"/></svg>
-					Lancer dans overlay (Top 5)
+					{tFn('clipp.launch_top5')}
 				</button>
 			{/if}
 		</div>
 
 		{#if ownLoading}
-			<div class="text-xs text-slate-500 text-center py-8">Chargement…</div>
+			<div class="text-xs text-slate-500 text-center py-8">{tFn('clipp.loading')}</div>
 		{:else if ownClips.length === 0}
 			<div class="rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 p-8 text-center text-xs text-slate-500">
-				Aucun clip sur cette période. Les viewers Twitch peuvent créer des clips pendant ton live avec le bouton "Clip it !" sous le player.
+				{tFn('clipp.empty_own')}
 			</div>
 		{:else}
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -307,7 +310,7 @@
 						<div class="p-2.5 space-y-1">
 							<div class="text-xs font-semibold text-white line-clamp-2" title={c.title}>{c.title}</div>
 							<div class="text-[10px] text-slate-500 flex justify-between">
-								<span>par {c.creatorName}</span>
+								<span>{tFn('clipp.by', { name: c.creatorName })}</span>
 								<span>{fmtRelative(c.createdAt)}</span>
 							</div>
 						</div>
@@ -320,10 +323,10 @@
 	<!-- ══ Tab : Clips des raiders ════════════════════════════════════════ -->
 	{#if tab === 'raiders'}
 		{#if raidsLoading}
-			<div class="text-xs text-slate-500 text-center py-8">Chargement des raids récents…</div>
+			<div class="text-xs text-slate-500 text-center py-8">{tFn('clipp.loading_raids')}</div>
 		{:else if raids.length === 0}
 			<div class="rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 p-8 text-center text-xs text-slate-500">
-				Aucun raid reçu pour l'instant. Quand un streamer te raid, son nom apparaitra ici avec ses meilleurs clips récents prêts à showcase.
+				{tFn('clipp.empty_raiders')}
 			</div>
 		{:else}
 			<div class="space-y-3">
@@ -338,22 +341,22 @@
 									<div class="text-sm font-semibold text-white">
 										<a href="https://twitch.tv/{raid.fromBroadcasterUserLogin}" target="_blank" rel="noopener noreferrer" class="hover:text-rose-300 transition-colors">{raid.fromBroadcasterUserName}</a>
 									</div>
-									<div class="text-[10px] text-slate-500">{raid.viewers} viewers · {fmtRelative(raid.occurredAt)}</div>
+									<div class="text-[10px] text-slate-500">{tFn('clipp.raid_viewers', { n: raid.viewers })} · {fmtRelative(raid.occurredAt)}</div>
 								</div>
 							</div>
 							<div class="flex items-center gap-2">
 								{#if !clips && !loading}
 									<button type="button" onclick={() => loadRaiderClips(raid.fromBroadcasterUserId)}
 										class="text-[11px] bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-200 px-3 py-1.5 rounded transition-colors">
-										Voir ses clips
+										{tFn('clipp.see_clips')}
 									</button>
 								{:else if loading}
-									<span class="text-[11px] text-slate-500">Chargement…</span>
+									<span class="text-[11px] text-slate-500">{tFn('clipp.loading')}</span>
 								{/if}
 								{#if clips && clips.length > 0 && clipsOverlays.length > 0}
 									<button type="button" onclick={() => triggerClips({ broadcasterId: raid.fromBroadcasterUserId, count: 5 })} disabled={triggering}
 										class="text-[11px] bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-30 border border-cyan-500/40 text-cyan-200 px-3 py-1.5 rounded transition-colors">
-										▶ Lancer dans overlay
+										{tFn('clipp.launch_overlay')}
 									</button>
 								{/if}
 							</div>
@@ -365,7 +368,7 @@
 										class="group text-left rounded border border-slate-700/60 bg-slate-900 overflow-hidden hover:border-rose-500/50 transition-colors">
 										<div class="relative aspect-video">
 											<img src={c.thumbnailUrl} alt={c.title} class="w-full h-full object-cover" loading="lazy"/>
-											<div class="absolute bottom-1 left-1 px-1 py-0.5 rounded bg-black/70 text-[9px] text-white">{fmtNumber(c.viewCount)} vues</div>
+											<div class="absolute bottom-1 left-1 px-1 py-0.5 rounded bg-black/70 text-[9px] text-white">{tFn('clipp.views', { n: fmtNumber(c.viewCount) })}</div>
 											<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
 												<svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84a1 1 0 011.04.06l9 6a1 1 0 010 1.66l-9 6A1 1 0 016 16V4a1 1 0 01.3-.84z"/></svg>
 											</div>
@@ -375,7 +378,7 @@
 								{/each}
 							</div>
 						{:else if clips && clips.length === 0}
-							<div class="text-[11px] text-slate-500 italic">Pas de clips trouvés pour ce raider (30 derniers jours).</div>
+							<div class="text-[11px] text-slate-500 italic">{tFn('clipp.no_raider_clips')}</div>
 						{/if}
 					</div>
 				{/each}
@@ -393,10 +396,10 @@
 			<div class="flex items-center justify-between gap-3 mb-2">
 				<div class="flex-1 min-w-0">
 					<div class="text-sm font-semibold text-white truncate">{playingClip.title}</div>
-					<div class="text-[11px] text-slate-400">par {playingClip.creatorName} · {fmtNumber(playingClip.viewCount)} vues · {fmtDuration(playingClip.duration)}</div>
+					<div class="text-[11px] text-slate-400">{tFn('clipp.player_meta', { name: playingClip.creatorName, views: fmtNumber(playingClip.viewCount), duration: fmtDuration(playingClip.duration) })}</div>
 				</div>
 				<button type="button" onclick={() => playingClip = null}
-					class="p-2 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" aria-label="Fermer">
+					class="p-2 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" aria-label={tFn('clipp.close')}>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
 				</button>
 			</div>
@@ -410,7 +413,7 @@
 				></iframe>
 			</div>
 			<div class="text-[11px] text-slate-500 mt-2 text-right">
-				<a href={playingClip.url} target="_blank" rel="noopener noreferrer" class="hover:text-indigo-300">Ouvrir sur Twitch ↗</a>
+				<a href={playingClip.url} target="_blank" rel="noopener noreferrer" class="hover:text-indigo-300">{tFn('clipp.open_twitch')}</a>
 			</div>
 		</div>
 	</div>

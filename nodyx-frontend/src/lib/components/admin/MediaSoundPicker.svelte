@@ -4,6 +4,9 @@
 	import { browser } from '$app/environment'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { fade, fly } from 'svelte/transition'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	// Modale qui liste les sons uploadés dans la médiathèque Nodyx et
 	// retourne au callback `onPick` l'URL complète du son choisi. Utilisé
@@ -115,14 +118,14 @@
 			<!-- Header -->
 			<header class="px-5 py-3.5 border-b border-slate-700/60 flex items-center justify-between gap-3">
 				<div>
-					<h2 class="text-sm font-semibold text-white">Choisir un son depuis Nodyx</h2>
+					<h2 class="text-sm font-semibold text-white">{tFn('mspick.title')}</h2>
 					<p class="text-[11px] text-slate-500 mt-0.5">
-						Les fichiers de l'onglet Audio de <a href="/admin/media" target="_blank" rel="noopener" class="text-cyan-400 hover:underline">la médiathèque</a>.
+						{tFn('mspick.desc_pre')} <a href="/admin/media" target="_blank" rel="noopener" class="text-cyan-400 hover:underline">{tFn('mspick.media_library')}</a>.
 					</p>
 				</div>
 				<button type="button" onclick={handleClose}
 					class="p-1.5 rounded text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-					aria-label="Fermer">
+					aria-label={tFn('mspick.close')}>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
 				</button>
 			</header>
@@ -130,13 +133,13 @@
 			<!-- Body -->
 			<div class="flex-1 overflow-y-auto p-3 space-y-2">
 				{#if loading}
-					<div class="text-center py-12 text-xs text-slate-500">Chargement…</div>
+					<div class="text-center py-12 text-xs text-slate-500">{tFn('mspick.loading')}</div>
 				{:else if assets.length === 0}
 					<div class="text-center py-12 space-y-3">
-						<div class="text-sm text-slate-400">Aucun son uploadé pour l'instant.</div>
+						<div class="text-sm text-slate-400">{tFn('mspick.empty')}</div>
 						<a href="/admin/media" target="_blank" rel="noopener"
 							class="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 underline decoration-cyan-500/40">
-							Uploader un son dans la médiathèque
+							{tFn('mspick.upload_link')}
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
 						</a>
 					</div>
@@ -146,7 +149,7 @@
 						<div class="rounded-lg border border-slate-700/60 bg-slate-900/40 hover:border-cyan-500/40 transition-colors p-3 flex items-center gap-3">
 							<button type="button" onclick={() => preview(a)}
 								class="shrink-0 w-9 h-9 rounded-full bg-slate-800 hover:bg-cyan-500/20 border border-slate-700 hover:border-cyan-500/50 text-cyan-300 flex items-center justify-center transition-colors"
-								aria-label={isPlaying ? 'Lecture en cours' : 'Preview'}>
+								aria-label={isPlaying ? tFn('mspick.playing') : tFn('mspick.preview')}>
 								{#if isPlaying}
 									<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5.5 3.5A1.5 1.5 0 017 5v10a1.5 1.5 0 01-3 0V5a1.5 1.5 0 011.5-1.5zm9 0A1.5 1.5 0 0116 5v10a1.5 1.5 0 01-3 0V5a1.5 1.5 0 011.5-1.5z"/></svg>
 								{:else}
@@ -159,7 +162,7 @@
 							</div>
 							<button type="button" onclick={() => pick(a)}
 								class="shrink-0 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 px-3 py-1.5 text-xs font-medium transition-colors">
-								Sélectionner
+								{tFn('mspick.select')}
 							</button>
 						</div>
 					{/each}
@@ -168,10 +171,10 @@
 
 			<!-- Footer -->
 			<footer class="px-5 py-3 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-500">
-				<span>{assets.length} son{assets.length > 1 ? 's' : ''} disponible{assets.length > 1 ? 's' : ''}</span>
+				<span>{assets.length > 1 ? tFn('mspick.available_many', { n: assets.length }) : tFn('mspick.available_one', { n: assets.length })}</span>
 				<button type="button" onclick={handleClose}
 					class="text-slate-400 hover:text-slate-200 transition-colors">
-					Annuler
+					{tFn('mspick.cancel')}
 				</button>
 			</footer>
 		</div>

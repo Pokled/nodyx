@@ -2,6 +2,9 @@
 	import { onMount } from 'svelte'
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	// Audience tab : liste des membres Nodyx qui ont link leur compte Twitch
 	// via Flow A. C'est l'écran qui justifie Nodyx comme cross-platform :
@@ -45,10 +48,10 @@
 				const data = await res.json() as { viewers: Viewer[] }
 				viewers = data.viewers ?? []
 			} else {
-				flash('Échec du fetch des linked viewers.', false)
+				flash(tFn('linkv.err_fetch'), false)
 			}
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('linkv.err_network'), false)
 		} finally {
 			loading = false
 		}
@@ -57,16 +60,16 @@
 	onMount(() => { reload() })
 
 	async function unlink(v: Viewer): Promise<void> {
-		if (!confirm(`Délier le compte Twitch de "${v.username}" (twitch: ${v.twitchLogin}) ?\n\nLe membre Nodyx peut re-link à tout moment via Flow A.`)) return
+		if (!confirm(tFn('linkv.unlink_confirm', { username: v.username, login: v.twitchLogin }))) return
 		try {
 			const res = await apiFetch(fetch, `/streamer/twitch/linked-viewers/${v.userId}`, {
 				method:  'DELETE',
 				headers: { Authorization: `Bearer ${token}` },
 			})
-			if (res.ok) { flash(`${v.username} délié.`, true); await reload() }
-			else        flash('Délier échoué.', false)
+			if (res.ok) { flash(tFn('linkv.unlinked', { username: v.username }), true); await reload() }
+			else        flash(tFn('linkv.err_unlink'), false)
 		} catch {
-			flash('Erreur réseau.', false)
+			flash(tFn('linkv.err_network'), false)
 		}
 	}
 
@@ -101,17 +104,17 @@
 	})
 
 	function fmtRelative(iso: string | null): string {
-		if (!iso) return 'jamais'
+		if (!iso) return tFn('linkv.never')
 		const diff = Date.now() - new Date(iso).getTime()
 		const m = Math.floor(diff / 60_000)
-		if (m < 1)    return 'à l\'instant'
-		if (m < 60)   return `il y a ${m} min`
+		if (m < 1)    return tFn('linkv.just_now')
+		if (m < 60)   return tFn('linkv.mins_ago', { n: m })
 		const h = Math.floor(m / 60)
-		if (h < 24)   return `il y a ${h}h`
+		if (h < 24)   return tFn('linkv.hours_ago', { n: h })
 		const d = Math.floor(h / 24)
-		if (d < 30)   return `il y a ${d}j`
+		if (d < 30)   return tFn('linkv.days_ago', { n: d })
 		const mo = Math.floor(d / 30)
-		return `il y a ${mo} mois`
+		return tFn('linkv.months_ago', { n: mo })
 	}
 </script>
 
@@ -119,10 +122,10 @@
 	<header class="flex items-center justify-between gap-3 flex-wrap">
 		<div class="flex items-center gap-2.5">
 			<svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-			<h2 class="text-sm font-semibold text-white">Viewers Twitch liés à Nodyx</h2>
+			<h2 class="text-sm font-semibold text-white">{tFn('linkv.title')}</h2>
 			<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">{viewers.length}</span>
 		</div>
-		<span class="text-[11px] text-slate-500">Membres Nodyx qui ont link leur Twitch via Flow A</span>
+		<span class="text-[11px] text-slate-500">{tFn('linkv.subtitle')}</span>
 	</header>
 
 	{#if toast}
@@ -136,29 +139,29 @@
 	<div class="flex gap-2 flex-wrap">
 		<div class="flex-1 min-w-48 relative">
 			<svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-			<input type="text" bind:value={search} placeholder="Chercher par username Nodyx ou login Twitch…"
+			<input type="text" bind:value={search} placeholder={tFn('linkv.search_ph')}
 				class="w-full rounded-lg bg-slate-950/60 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 pl-9 pr-3 py-2 text-sm text-white placeholder-slate-600 outline-none transition-colors"/>
 		</div>
 		<select bind:value={sortBy}
 			class="rounded-lg bg-slate-950/60 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 px-3 py-2 text-sm text-white outline-none transition-colors">
-			<option value="activity">Dernière activité</option>
-			<option value="messages">Plus de messages</option>
-			<option value="events">Plus d'events</option>
-			<option value="linked">Liaison récente</option>
+			<option value="activity">{tFn('linkv.sort_activity')}</option>
+			<option value="messages">{tFn('linkv.sort_messages')}</option>
+			<option value="events">{tFn('linkv.sort_events')}</option>
+			<option value="linked">{tFn('linkv.sort_linked')}</option>
 		</select>
 	</div>
 
 	<!-- List -->
 	{#if loading}
-		<div class="text-xs text-slate-500 text-center py-8">Chargement…</div>
+		<div class="text-xs text-slate-500 text-center py-8">{tFn('linkv.loading')}</div>
 	{:else if filteredViewers.length === 0}
 		<div class="rounded-lg border border-dashed border-slate-700/60 bg-slate-900/30 p-8 text-center text-xs text-slate-500 space-y-2">
 			{#if search.trim()}
-				<div>Aucun résultat pour "{search}".</div>
+				<div>{tFn('linkv.no_results', { q: search })}</div>
 			{:else}
-				<div class="text-sm text-slate-400">Aucun viewer Twitch lié pour l'instant.</div>
+				<div class="text-sm text-slate-400">{tFn('linkv.empty_title')}</div>
 				<p class="leading-relaxed max-w-md mx-auto">
-					Pour qu'un membre Nodyx link son compte Twitch, il doit passer par <strong class="text-slate-300">Flow A</strong> : page de son profil → bouton "Lier mon Twitch" → OAuth. Ils gagnent le droit d'apparaitre comme eux-mêmes dans le chat #twitch-chat (au lieu d'un ghost <code class="font-mono text-[10px] bg-slate-800 px-1 rounded">tw_&lt;login&gt;</code>).
+					{@html tFn('linkv.empty_help')}
 				</p>
 			{/if}
 		</div>
@@ -185,16 +188,16 @@
 							</a>
 						</div>
 						<div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-							<span><strong class="text-slate-300">{v.messageCount.toLocaleString('fr-FR')}</strong> message{v.messageCount > 1 ? 's' : ''}</span>
-							<span><strong class="text-slate-300">{v.eventCount.toLocaleString('fr-FR')}</strong> event{v.eventCount > 1 ? 's' : ''}</span>
-							<span>Dernière activité : <span class={v.lastActivityAt ? 'text-emerald-400' : 'text-slate-600'}>{fmtRelative(v.lastActivityAt)}</span></span>
-							<span class="text-slate-600">Lié {fmtRelative(v.linkedAt)}</span>
+							<span><strong class="text-slate-300">{v.messageCount.toLocaleString('fr-FR')}</strong> {v.messageCount > 1 ? tFn('linkv.msg_many') : tFn('linkv.msg_one')}</span>
+							<span><strong class="text-slate-300">{v.eventCount.toLocaleString('fr-FR')}</strong> {v.eventCount > 1 ? tFn('linkv.evt_many') : tFn('linkv.evt_one')}</span>
+							<span>{tFn('linkv.last_activity')} <span class={v.lastActivityAt ? 'text-emerald-400' : 'text-slate-600'}>{fmtRelative(v.lastActivityAt)}</span></span>
+							<span class="text-slate-600">{tFn('linkv.linked')} {fmtRelative(v.linkedAt)}</span>
 						</div>
 					</div>
 
 					<button type="button" onclick={() => unlink(v)}
 						class="shrink-0 text-[10px] text-rose-300 hover:text-rose-200 border border-rose-500/30 hover:border-rose-500/50 px-2.5 py-1.5 rounded transition-colors">
-						Délier
+						{tFn('linkv.unlink')}
 					</button>
 				</li>
 			{/each}
