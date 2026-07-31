@@ -2,6 +2,9 @@
 	import { PLUGIN_LIST } from '$lib/components/homepage/plugins';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
+	import { t as i18n } from '$lib/i18n';
+
+	const tFn = $derived($i18n);
 
 	// ── Types ────────────────────────────────────────────────────────────────
 	interface InstalledWidget {
@@ -50,15 +53,15 @@
 		esport: '#f97316', social: '#3b82f6', content: '#94a3b8',
 	}
 	const FAMILY_LABELS: Record<string, string> = {
-		media: 'Média', gaming: 'Gaming', community: 'Communauté',
-		esport: 'Esport', social: 'Social', content: 'Contenu',
+		media: 'widg.fam_media', gaming: 'widg.fam_gaming', community: 'widg.fam_community',
+		esport: 'widg.fam_esport', social: 'widg.fam_social', content: 'widg.fam_content',
 	}
 	const PHASE_LABELS: Record<number, string> = {
-		1: 'Phase 1 — Disponibles',
-		2: 'Phase 2 — Prochainement',
-		3: 'Phase 3 — En roadmap',
-		4: 'Phase 4 — Futur',
-		5: 'Phase 5 — Expérimental',
+		1: 'widg.phase_1',
+		2: 'widg.phase_2',
+		3: 'widg.phase_3',
+		4: 'widg.phase_4',
+		5: 'widg.phase_5',
 	}
 	const byPhase = $derived(() => {
 		const m: Record<number, typeof PLUGIN_LIST> = {}
@@ -66,11 +69,11 @@
 		return m
 	})
 
-	const INSTALL_STEPS: { key: InstallStep; label: string; sub: string }[] = [
-		{ key: 'uploading',    label: 'Envoi du fichier',          sub: 'Transfert vers le serveur...' },
-		{ key: 'validating',   label: 'Validation du manifest',    sub: 'Vérification id, version, entry...' },
-		{ key: 'extracting',   label: 'Extraction des fichiers',   sub: 'Décompression et filtrage sécurisé...' },
-		{ key: 'registering',  label: 'Enregistrement',            sub: 'Activation en base de données...' },
+	const INSTALL_STEPS: { key: InstallStep; labelKey: string; subKey: string }[] = [
+		{ key: 'uploading',    labelKey: 'widg.step_upload',     subKey: 'widg.step_upload_sub' },
+		{ key: 'validating',   labelKey: 'widg.step_validate',   subKey: 'widg.step_validate_sub' },
+		{ key: 'extracting',   labelKey: 'widg.step_extract',    subKey: 'widg.step_extract_sub' },
+		{ key: 'registering',  labelKey: 'widg.step_register',   subKey: 'widg.step_register_sub' },
 	]
 
 	function stepIndex(s: InstallStep): number {
@@ -101,12 +104,12 @@
 	function installWidget(file: File) {
 		if (!file.name.endsWith('.zip')) {
 			step = 'error'
-			errorMsg = 'Le fichier doit être une archive .zip'
+			errorMsg = tFn('widg.err_not_zip')
 			return
 		}
 		if (file.size > 12 * 1024 * 1024) {
 			step = 'error'
-			errorMsg = 'Fichier trop lourd (max 12 Mo)'
+			errorMsg = tFn('widg.err_too_large')
 			return
 		}
 
@@ -150,27 +153,27 @@
 					step = 'done'
 				} catch {
 					step = 'error'
-					errorMsg = 'Réponse serveur invalide'
+					errorMsg = tFn('widg.err_bad_response')
 				}
 			} else {
 				step = 'error'
 				try {
 					const json = JSON.parse(xhr.responseText)
-					errorMsg = json.error ?? `Erreur ${xhr.status}`
+					errorMsg = json.error ?? tFn('widg.err_status', { status: xhr.status })
 				} catch {
-					errorMsg = `Erreur serveur (HTTP ${xhr.status})`
+					errorMsg = tFn('widg.err_server', { status: xhr.status })
 				}
 			}
 		})
 
 		xhr.addEventListener('error', () => {
 			step = 'error'
-			errorMsg = 'Erreur réseau — vérifiez votre connexion'
+			errorMsg = tFn('widg.err_network')
 		})
 
 		xhr.addEventListener('timeout', () => {
 			step = 'error'
-			errorMsg = 'Délai d\'attente dépassé'
+			errorMsg = tFn('widg.err_timeout')
 		})
 
 		xhr.timeout = 30000
@@ -200,8 +203,8 @@
 		})
 		if (res.ok) {
 			installed = installed.map(x => x.id === w.id ? { ...x, enabled: !x.enabled } : x)
-			toast(w.enabled ? 'Widget désactivé' : 'Widget activé')
-		} else toast('Erreur', false)
+			toast(w.enabled ? tFn('widg.toast_disabled') : tFn('widg.toast_enabled'))
+		} else toast(tFn('widg.err'), false)
 	}
 
 	async function deleteWidget(w: InstalledWidget) {
@@ -211,8 +214,8 @@
 		})
 		if (res.ok) {
 			installed = installed.filter(x => x.id !== w.id)
-			toast('Widget désinstallé')
-		} else toast('Erreur désinstallation', false)
+			toast(tFn('widg.toast_uninstalled'))
+		} else toast(tFn('widg.err_uninstall'), false)
 	}
 
 	function resetInstall() {
@@ -226,29 +229,31 @@
 	interface DemoEntry  { id: string; manifest: WidgetManifest }
 
 	// Démos hardcodées — toujours visibles, pas besoin de fetch
-	const BUILTIN_DEMOS: DemoEntry[] = [
-		{
-			id: 'video-player',
-			manifest: {
-				id:          'video-player',
-				label:       'Lecteur Vidéo',
-				version:     '1.0.0',
-				author:      'Nodyx',
-				icon:        '🎬',
-				family:      'media',
-				description: 'Lecteur universel — YouTube, Vimeo ou MP4 direct. Configurable depuis le builder.',
-				entry:       'widget.iife.js',
-				schema: [
-					{ key: 'url',           type: 'text',     label: 'URL de la vidéo',    placeholder: 'https://youtube.com/watch?v=...' },
-					{ key: 'title',         type: 'text',     label: 'Titre affiché',      placeholder: 'Ma vidéo' },
-					{ key: 'autoplay',      type: 'checkbox', label: 'Lecture automatique' },
-					{ key: 'show_controls', type: 'checkbox', label: 'Afficher les contrôles' },
-				] as unknown as WidgetManifest['schema'],
+	function makeBuiltinDemos(): DemoEntry[] {
+		return [
+			{
+				id: 'video-player',
+				manifest: {
+					id:          'video-player',
+					label:       tFn('widg.demo_video_label'),
+					version:     '1.0.0',
+					author:      'Nodyx',
+					icon:        '🎬',
+					family:      'media',
+					description: tFn('widg.demo_video_desc'),
+					entry:       'widget.iife.js',
+					schema: [
+						{ key: 'url',           type: 'text',     label: tFn('widg.demo_url_label'),      placeholder: 'https://youtube.com/watch?v=...' },
+						{ key: 'title',         type: 'text',     label: tFn('widg.demo_title_label'),    placeholder: tFn('widg.demo_video_title_ph') },
+						{ key: 'autoplay',      type: 'checkbox', label: tFn('widg.demo_autoplay_label') },
+						{ key: 'show_controls', type: 'checkbox', label: tFn('widg.demo_controls_label') },
+					] as unknown as WidgetManifest['schema'],
+				},
 			},
-		},
-	]
+		]
+	}
 
-	let demos          = $state<DemoEntry[]>(BUILTIN_DEMOS)
+	let demos          = $state<DemoEntry[]>(makeBuiltinDemos())
 	let demoModal      = $state<DemoEntry | null>(null)
 	let demoSource     = $state<DemoSource | null>(null)
 	let demoSourceLoad = $state(false)
@@ -265,9 +270,10 @@
 			if (res.ok) {
 				const j = await res.json()
 				// Fusionner : garder les démos builtin + ajouter les nouvelles éventuelles
-				const ids = new Set(BUILTIN_DEMOS.map(d => d.id))
+				const builtin = makeBuiltinDemos()
+				const ids = new Set(builtin.map(d => d.id))
 				const extra = (j.demos ?? []).filter((d: DemoEntry) => !ids.has(d.id))
-				if (extra.length > 0) demos = [...BUILTIN_DEMOS, ...extra]
+				if (extra.length > 0) demos = [...builtin, ...extra]
 			}
 		} catch {}
 	}
@@ -316,10 +322,10 @@
 				const idx = installed.findIndex(x => x.id === id)
 				if (idx !== -1) installed[idx] = w
 				else installed = [w, ...installed]
-				toast(`Widget "${json.manifest.label}" installé !`)
+				toast(tFn('widg.toast_installed', { label: json.manifest.label }))
 			} else {
 				const j = await res.json().catch(() => ({}))
-				toast(j.error ?? 'Erreur installation', false)
+				toast(j.error ?? tFn('widg.err_install'), false)
 			}
 		} finally { demoInstalling = false }
 	}
@@ -331,7 +337,7 @@
 		const res = await fetch(`/api/v1/admin/widget-store/demo/${id}/zip`, {
 			headers: { Authorization: `Bearer ${getToken()}` }
 		})
-		if (!res.ok) { toast('Erreur téléchargement', false); return }
+		if (!res.ok) { toast(tFn('widg.err_download'), false); return }
 		const blob = await res.blob()
 		const url  = URL.createObjectURL(blob)
 		const a    = document.createElement('a')
@@ -364,7 +370,7 @@
 				Widget Store
 			</h1>
 			<p class="text-sm mt-1" style="color:#6b7280">
-				{PLUGIN_LIST.filter(p => p.phase === 1).length} natifs · {installed.length} installés · {PLUGIN_LIST.length} en roadmap
+				{tFn('widg.stats', { native: PLUGIN_LIST.filter(p => p.phase === 1).length, installed: installed.length, roadmap: PLUGIN_LIST.length })}
 			</p>
 		</div>
 		<a href="/admin/homepage"
@@ -373,7 +379,7 @@
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
 			</svg>
-			Ouvrir le builder
+			{tFn('widg.open_builder')}
 		</a>
 	</div>
 
@@ -386,7 +392,7 @@
 			<div style="background:#0d0d12; border:1px solid rgba(255,255,255,.07)">
 				<div class="px-4 py-3 flex items-center gap-2" style="border-bottom:1px solid rgba(255,255,255,.05)">
 					<span class="text-base">📦</span>
-					<span class="font-bold text-sm text-white">Installer un widget</span>
+					<span class="font-bold text-sm text-white">{tFn('widg.install_title')}</span>
 				</div>
 
 				<div class="p-4">
@@ -410,15 +416,15 @@
 								</svg>
 							</div>
 							<div class="text-center">
-								<p class="text-sm font-semibold text-white">Glissez votre .zip ici</p>
-								<p class="text-xs mt-1" style="color:#4b5563">ou cliquez pour sélectionner</p>
+								<p class="text-sm font-semibold text-white">{tFn('widg.drop_here')}</p>
+								<p class="text-xs mt-1" style="color:#4b5563">{tFn('widg.or_click')}</p>
 							</div>
 							<div class="flex items-center gap-1.5 px-2.5 py-1 text-xs"
 							     style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); color:#4b5563">
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
 								</svg>
-								Fichiers .js .css .png .svg uniquement extraits
+								{tFn('widg.files_note')}
 							</div>
 							<input
 								id="widget-file-input"
@@ -439,7 +445,7 @@
 										<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
 									</svg>
 								</div>
-								<p class="font-bold text-sm" style="color:#4ade80">Installation réussie !</p>
+								<p class="font-bold text-sm" style="color:#4ade80">{tFn('widg.install_success')}</p>
 							</div>
 							{#if lastInstalled}
 								<div class="flex items-center gap-3 px-3 py-2.5"
@@ -456,7 +462,7 @@
 								class="w-full py-2 text-xs font-bold uppercase tracking-wider transition-all"
 								style="border:1px solid rgba(255,255,255,.08); color:#6b7280"
 							>
-								Installer un autre widget
+								{tFn('widg.install_another')}
 							</button>
 						</div>
 
@@ -470,7 +476,7 @@
 										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 									</svg>
 								</div>
-								<p class="font-bold text-sm" style="color:#ef4444">Échec de l'installation</p>
+								<p class="font-bold text-sm" style="color:#ef4444">{tFn('widg.install_failed')}</p>
 							</div>
 							<div class="px-3 py-2.5 text-sm leading-relaxed"
 							     style="background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2); color:#fca5a5">
@@ -481,7 +487,7 @@
 								class="w-full py-2 text-xs font-bold uppercase tracking-wider transition-all"
 								style="background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#ef4444"
 							>
-								Réessayer
+								{tFn('widg.retry')}
 							</button>
 						</div>
 
@@ -511,9 +517,9 @@
 											{/if}
 										</div>
 										<div class="min-w-0">
-											<p class="text-xs font-semibold" style="color:{isDone ? '#4ade80' : isActive ? '#e2e8f0' : '#374151'}">{s.label}</p>
+											<p class="text-xs font-semibold" style="color:{isDone ? '#4ade80' : isActive ? '#e2e8f0' : '#374151'}">{tFn(s.labelKey)}</p>
 											{#if isActive}
-												<p class="text-[10px] mt-0.5" style="color:#6b7280">{s.sub}</p>
+												<p class="text-[10px] mt-0.5" style="color:#6b7280">{tFn(s.subKey)}</p>
 											{/if}
 										</div>
 									</div>
@@ -524,7 +530,7 @@
 							{#if step === 'uploading'}
 								<div>
 									<div class="flex items-center justify-between mb-1.5">
-										<span class="text-xs" style="color:#4b5563">Transfert en cours</span>
+										<span class="text-xs" style="color:#4b5563">{tFn('widg.transferring')}</span>
 										<span class="text-xs font-bold tabular-nums" style="color:var(--nx-accent-2-soft)">{uploadPct}%</span>
 									</div>
 									<div class="w-full h-1.5 rounded-full overflow-hidden" style="background:rgba(255,255,255,.06)">
@@ -549,11 +555,11 @@
 			<!-- Format attendu -->
 			{#if step === 'idle'}
 				<div class="p-4 text-xs" style="background:#0d0d12; border:1px solid rgba(255,255,255,.05); color:#374151">
-					<p class="font-bold uppercase tracking-wider mb-2" style="color:#4b5563">Format attendu</p>
+					<p class="font-bold uppercase tracking-wider mb-2" style="color:#4b5563">{tFn('widg.expected_format')}</p>
 					<pre class="leading-relaxed" style="color:#4b5563">my-widget-1.0.0.zip
-├── manifest.json  ← requis
+├── manifest.json  ← {tFn('widg.tree_required')}
 ├── widget.iife.js ← entry point
-└── style.css      ← optionnel</pre>
+└── style.css      ← {tFn('widg.tree_optional')}</pre>
 					<div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,.04)">
 						<p class="font-bold uppercase tracking-wider mb-1.5" style="color:#4b5563">manifest.json</p>
 						<pre class="leading-relaxed" style="color:#374151">&#123;
@@ -575,7 +581,7 @@
 				<div class="px-4 py-3 flex items-center justify-between" style="border-bottom:1px solid rgba(255,255,255,.05)">
 					<div class="flex items-center gap-2">
 						<span class="text-base">🔌</span>
-						<span class="font-bold text-sm text-white">Installés</span>
+						<span class="font-bold text-sm text-white">{tFn('widg.installed_title')}</span>
 					</div>
 					<span class="text-xs" style="color:#4b5563">{installed.length}</span>
 				</div>
@@ -583,11 +589,11 @@
 				{#if loadingList}
 					<div class="px-4 py-8 flex items-center justify-center gap-2" style="color:#374151">
 						<div class="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style="border-color:rgba(167,139,250,.3); border-top-color:var(--nx-accent-2-soft)"></div>
-						<span class="text-xs">Chargement...</span>
+						<span class="text-xs">{tFn('widg.loading')}</span>
 					</div>
 				{:else if installed.length === 0}
 					<div class="px-4 py-8 text-center text-sm" style="color:#1f2937">
-						Aucun widget installé pour l'instant.
+						{tFn('widg.no_installed')}
 					</div>
 				{:else}
 					<div class="divide-y" style="border-color:rgba(255,255,255,.04)">
@@ -610,7 +616,7 @@
 										onclick={() => toggleWidget(w)}
 										class="w-7 h-7 flex items-center justify-center transition-colors"
 										style="border:1px solid rgba(255,255,255,.08); color:{w.enabled ? '#4ade80' : '#6b7280'}"
-										title={w.enabled ? 'Désactiver' : 'Activer'}
+										title={w.enabled ? tFn('widg.disable') : tFn('widg.enable')}
 									>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 											<circle cx="12" cy="12" r="10"/>
@@ -624,7 +630,7 @@
 										onclick={() => deleteWidget(w)}
 										class="w-7 h-7 flex items-center justify-center transition-colors"
 										style="border:1px solid rgba(255,255,255,.08); color:#6b7280"
-										title="Désinstaller"
+										title={tFn('widg.uninstall')}
 										onmouseenter={e => (e.currentTarget as HTMLElement).style.color='#ef4444'}
 										onmouseleave={e => (e.currentTarget as HTMLElement).style.color='#6b7280'}
 									>
@@ -649,12 +655,12 @@
 			<div style="background:#0d0d12; border:1px solid rgba(255,255,255,.07)">
 				<div class="px-4 py-3 flex items-center gap-2" style="border-bottom:1px solid rgba(255,255,255,.05)">
 					<span class="text-base">🎁</span>
-					<span class="font-bold text-sm text-white">Widgets de démonstration</span>
+					<span class="font-bold text-sm text-white">{tFn('widg.demos_title')}</span>
 					<span class="ml-1 text-xs px-1.5 py-0.5 font-bold"
 					      style="background:rgb(var(--nx-cyan-rgb) / .08); border:1px solid rgb(var(--nx-cyan-rgb) / .18); color:var(--nx-cyan)">
-						Prêts à installer
+						{tFn('widg.ready_to_install')}
 					</span>
-					<span class="ml-auto text-xs" style="color:#374151">{demos.length} disponible{demos.length > 1 ? 's' : ''}</span>
+					<span class="ml-auto text-xs" style="color:#374151">{demos.length > 1 ? tFn('widg.available_many', { n: demos.length }) : tFn('widg.available_one', { n: demos.length })}</span>
 				</div>
 
 				<div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -686,15 +692,15 @@
 											<svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
 											</svg>
-											Tuto
+											{tFn('widg.tuto')}
 										</a>
 										<!-- Tooltip bubble -->
 										<div class="absolute right-0 top-full mt-2 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
 										     style="width:220px">
 											<div class="p-3 text-xs leading-relaxed"
 											     style="background:#0d0d12; border:1px solid rgba(251,146,60,.25); box-shadow:0 8px 24px rgba(0,0,0,.4)">
-												<p class="font-bold mb-1" style="color:#fb923c">Créez votre propre widget</p>
-												<p style="color:#6b7280">Tuto pas à pas sur nodyx.dev — même sans expérience en code.</p>
+												<p class="font-bold mb-1" style="color:#fb923c">{tFn('widg.create_own')}</p>
+												<p style="color:#6b7280">{tFn('widg.create_own_desc')}</p>
 												<p class="mt-2 font-bold text-[10px]" style="color:#374151">nodyx.dev → Documentation → Widget SDK</p>
 											</div>
 											<!-- Arrow -->
@@ -705,7 +711,7 @@
 								</div>
 								<div class="flex items-center gap-1 shrink-0">
 									<span class="w-1.5 h-1.5 rounded-full" style="background:{color}"></span>
-									<span class="text-[9px] font-bold uppercase" style="color:{color}">{FAMILY_LABELS[demo.manifest.family ?? ''] ?? demo.manifest.family}</span>
+									<span class="text-[9px] font-bold uppercase" style="color:{color}">{FAMILY_LABELS[demo.manifest.family ?? ''] ? tFn(FAMILY_LABELS[demo.manifest.family ?? '']) : demo.manifest.family}</span>
 								</div>
 							</div>
 
@@ -737,7 +743,7 @@
 									<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
 									</svg>
-									Aperçu & code
+									{tFn('widg.preview_code')}
 								</button>
 
 								<!-- Download -->
@@ -759,7 +765,7 @@
 										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
 										</svg>
-										Installé
+										{tFn('widg.installed_badge')}
 									</span>
 								{:else}
 									<button
@@ -776,7 +782,7 @@
 												<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"/>
 											</svg>
 										{/if}
-										Installer
+										{tFn('widg.install')}
 									</button>
 								{/if}
 							</div>
@@ -789,7 +795,7 @@
 			<div style="background:#0d0d12; border:1px solid rgba(255,255,255,.07)">
 				<div class="px-4 py-3 flex items-center gap-2" style="border-bottom:1px solid rgba(255,255,255,.05)">
 					<span class="text-base">📦</span>
-					<span class="font-bold text-sm text-white">Catalogue natif Nodyx</span>
+					<span class="font-bold text-sm text-white">{tFn('widg.native_catalog')}</span>
 					<span class="ml-auto text-xs" style="color:#374151">{PLUGIN_LIST.length} widgets</span>
 				</div>
 				<div class="p-4 flex flex-col gap-6">
@@ -797,13 +803,13 @@
 						<div>
 							<div class="flex items-center gap-3 mb-3">
 								<p class="text-[10px] font-bold uppercase tracking-widest" style="color:#374151">
-									{PHASE_LABELS[Number(phase)] ?? `Phase ${phase}`}
+									{PHASE_LABELS[Number(phase)] ? tFn(PHASE_LABELS[Number(phase)]) : `Phase ${phase}`}
 								</p>
 								<div class="flex-1 h-px" style="background:rgba(255,255,255,.04)"></div>
 								{#if Number(phase) === 1}
-									<span class="text-[10px] font-bold px-1.5 py-0.5" style="background:rgba(74,222,128,.1); border:1px solid rgba(74,222,128,.2); color:#4ade80">Actif</span>
+									<span class="text-[10px] font-bold px-1.5 py-0.5" style="background:rgba(74,222,128,.1); border:1px solid rgba(74,222,128,.2); color:#4ade80">{tFn('widg.active')}</span>
 								{:else}
-									<span class="text-[10px]" style="color:#1f2937">{plugins.length} à venir</span>
+									<span class="text-[10px]" style="color:#1f2937">{tFn('widg.coming_count', { n: plugins.length })}</span>
 								{/if}
 							</div>
 							<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -816,7 +822,7 @@
 											<span class="text-xl leading-none">{plugin.icon}</span>
 											<div class="flex items-center gap-1">
 												<span class="w-1.5 h-1.5 rounded-full" style="background:{color}"></span>
-												<span class="text-[9px] font-bold uppercase" style="color:{color}">{FAMILY_LABELS[plugin.family] ?? plugin.family}</span>
+												<span class="text-[9px] font-bold uppercase" style="color:{color}">{FAMILY_LABELS[plugin.family] ? tFn(FAMILY_LABELS[plugin.family]) : plugin.family}</span>
 											</div>
 										</div>
 										<div>
@@ -826,7 +832,7 @@
 										<div class="flex items-center justify-between mt-auto pt-2" style="border-top:1px solid rgba(255,255,255,.04)">
 											<code class="text-[9px] px-1 py-0.5" style="background:rgba(255,255,255,.04); color:#1f2937">{plugin.id}</code>
 											{#if available}
-												<span class="text-[9px] font-bold px-1.5 py-0.5" style="background:rgba(74,222,128,.08); border:1px solid rgba(74,222,128,.15); color:#4ade80">Inclus</span>
+												<span class="text-[9px] font-bold px-1.5 py-0.5" style="background:rgba(74,222,128,.08); border:1px solid rgba(74,222,128,.15); color:#4ade80">{tFn('widg.included')}</span>
 											{:else}
 												<span class="text-[9px] font-bold px-1.5 py-0.5" style="background:rgba(251,146,60,.06); border:1px solid rgba(251,146,60,.12); color:#fb923c">P{plugin.phase}</span>
 											{/if}
@@ -874,12 +880,12 @@
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
 					</svg>
-					Télécharger .zip
+					{tFn('widg.download_zip')}
 				</button>
 				<!-- Close -->
 				<button
 					onclick={() => demoModal = null}
-					aria-label="Fermer"
+					aria-label={tFn('widg.close')}
 					class="w-8 h-8 flex items-center justify-center transition-colors"
 					style="border:1px solid rgba(255,255,255,.08); color:#6b7280"
 				>
@@ -892,7 +898,7 @@
 			<!-- Tabs -->
 			<div class="flex items-center gap-1 px-5 py-2.5 shrink-0" style="border-bottom:1px solid rgba(255,255,255,.05)">
 				{#each [
-					{ key: 'preview',  label: 'Aperçu',          icon: '👁' },
+					{ key: 'preview',  labelKey: 'widg.tab_preview', icon: '👁' },
 					{ key: 'manifest', label: 'manifest.json',   icon: '📋' },
 					{ key: 'js',       label: 'widget.iife.js',  icon: '⚡' },
 				] as tab}
@@ -902,7 +908,7 @@
 						style="border:1px solid {demoTab === tab.key ? 'rgb(var(--nx-accent-2-rgb) / .4)' : 'transparent'}; background:{demoTab === tab.key ? 'rgb(var(--nx-accent-2-rgb) / .1)' : 'transparent'}; color:{demoTab === tab.key ? 'var(--nx-accent-2-soft)' : '#374151'}"
 					>
 						<span>{tab.icon}</span>
-						<span class="font-mono">{tab.label}</span>
+						<span class="font-mono">{tab.labelKey ? tFn(tab.labelKey) : tab.label}</span>
 					</button>
 				{/each}
 
@@ -913,7 +919,7 @@
 							<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
 							</svg>
-							Installé
+							{tFn('widg.installed_badge')}
 						</span>
 					{:else}
 						<button
@@ -925,12 +931,12 @@
 							{#if demoInstalling}
 								<div class="w-3 h-3 rounded-full border-2 animate-spin"
 								     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
-								Installation...
+								{tFn('widg.installing')}
 							{:else}
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"/>
 								</svg>
-								Installer ce widget
+								{tFn('widg.install_this')}
 							{/if}
 						</button>
 					{/if}
@@ -946,7 +952,7 @@
 							<div class="flex items-center justify-center py-16 gap-3" style="color:#374151">
 								<div class="w-5 h-5 rounded-full border-2 animate-spin"
 								     style="border-color:rgba(167,139,250,.2); border-top-color:var(--nx-accent-2-soft)"></div>
-								<span class="text-sm">Chargement du widget...</span>
+								<span class="text-sm">{tFn('widg.loading_widget')}</span>
 							</div>
 						{:else}
 							<!-- Description + schema -->
@@ -957,7 +963,7 @@
 							<!-- Config fields du schema -->
 							{#if demoModal.manifest.schema && (demoModal.manifest.schema as any[]).length > 0}
 								<div class="mb-4 p-3" style="background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.05)">
-									<p class="text-[10px] font-bold uppercase tracking-wider mb-3" style="color:#374151">Champs configurables</p>
+									<p class="text-[10px] font-bold uppercase tracking-wider mb-3" style="color:#374151">{tFn('widg.config_fields')}</p>
 									<div class="grid grid-cols-2 gap-2">
 										{#each (demoModal.manifest.schema as any[]) as field}
 											<div class="flex flex-col gap-0.5">
@@ -977,11 +983,11 @@
 
 							<!-- Live preview -->
 							<div>
-								<p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#374151">Rendu live</p>
+								<p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#374151">{tFn('widg.live_render')}</p>
 								<!-- svelte-ignore svelte_component_dynamic_element_attributes -->
 								<svelte:element
 									this={`nodyx-widget-${demoModal.id}`}
-									data-config={JSON.stringify({ title: 'Démo — ' + demoModal.manifest.label })}
+									data-config={JSON.stringify({ title: tFn('widg.demo_prefix') + demoModal.manifest.label })}
 									data-title={demoModal.manifest.label}
 									data-instance={JSON.stringify({})}
 									data-user=""
@@ -1004,10 +1010,10 @@
 								     style="background:rgba(255,255,255,.02); border-bottom:1px solid rgba(255,255,255,.05)">
 									<span class="text-[10px] font-mono font-bold" style="color:#4b5563">manifest.json</span>
 									<button
-										onclick={() => demoSource && navigator.clipboard.writeText(demoSource.manifest).then(() => toast('Copié !'))}
+										onclick={() => demoSource && navigator.clipboard.writeText(demoSource.manifest).then(() => toast(tFn('widg.toast_copied')))}
 										class="text-[10px] px-2 py-0.5 transition-colors"
 										style="border:1px solid rgba(255,255,255,.06); color:#374151"
-									>Copier</button>
+									>{tFn('widg.copy')}</button>
 								</div>
 								<pre class="p-4 text-xs leading-relaxed overflow-x-auto" style="color:#a5b4fc; font-family:'Fira Code',monospace; tab-size:2">{demoSource.manifest}</pre>
 							</div>
@@ -1027,12 +1033,12 @@
 								     style="background:rgba(255,255,255,.02); border-bottom:1px solid rgba(255,255,255,.05)">
 									<span class="text-[10px] font-mono font-bold" style="color:#4b5563">{demoSource.entry}</span>
 									<div class="flex items-center gap-2">
-										<span class="text-[10px]" style="color:#1f2937">{(demoSource.js.length / 1024).toFixed(1)} Ko</span>
+										<span class="text-[10px]" style="color:#1f2937">{tFn('widg.kb', { n: (demoSource.js.length / 1024).toFixed(1) })}</span>
 										<button
-											onclick={() => demoSource && navigator.clipboard.writeText(demoSource.js).then(() => toast('Copié !'))}
+											onclick={() => demoSource && navigator.clipboard.writeText(demoSource.js).then(() => toast(tFn('widg.toast_copied')))}
 											class="text-[10px] px-2 py-0.5 transition-colors"
 											style="border:1px solid rgba(255,255,255,.06); color:#374151"
-										>Copier</button>
+										>{tFn('widg.copy')}</button>
 									</div>
 								</div>
 								<pre class="p-4 text-xs leading-relaxed overflow-x-auto" style="color:#86efac; font-family:'Fira Code',monospace; tab-size:2">{demoSource.js}</pre>

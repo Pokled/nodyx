@@ -14,6 +14,9 @@
 		DEFAULT_THEME, genId, makeRow, makeRowFromSpans
 	} from '$lib/types/homepage'
 	import { untrack, tick } from 'svelte'
+	import { t as i18n } from '$lib/i18n'
+
+	const tFn = $derived($i18n)
 
 	let { data }: { data: PageData } = $props()
 
@@ -117,7 +120,7 @@
 			})
 		}
 		markUnsaved()
-		toast('Config appliquée')
+		toast(tFn('hpb.toast_config_applied'))
 	}
 
 	function clearWidget(rowId: string, colId: string) {
@@ -142,14 +145,14 @@
 			return matchSearch && matchFamily
 		})
 	)
-	const FAMILIES: { id: WidgetFamily | ''; label: string; icon: string }[] = [
-		{ id: '',          label: 'Tous',      icon: '⬛' },
-		{ id: 'media',     label: 'Média',     icon: '📺' },
-		{ id: 'gaming',    label: 'Gaming',    icon: '🎮' },
-		{ id: 'community', label: 'Community', icon: '🏘️' },
-		{ id: 'esport',    label: 'Esport',    icon: '🏆' },
-		{ id: 'social',    label: 'Social',    icon: '🌐' },
-		{ id: 'content',   label: 'Contenu',   icon: '📰' },
+	const FAMILIES: { id: WidgetFamily | ''; labelKey: string; icon: string }[] = [
+		{ id: '',          labelKey: 'hpb.fam_all',       icon: '⬛' },
+		{ id: 'media',     labelKey: 'hpb.fam_media',     icon: '📺' },
+		{ id: 'gaming',    labelKey: 'hpb.fam_gaming',    icon: '🎮' },
+		{ id: 'community', labelKey: 'hpb.fam_community', icon: '🏘️' },
+		{ id: 'esport',    labelKey: 'hpb.fam_esport',    icon: '🏆' },
+		{ id: 'social',    labelKey: 'hpb.fam_social',    icon: '🌐' },
+		{ id: 'content',   labelKey: 'hpb.fam_content',   icon: '📰' },
 	]
 	const FAMILY_COLOR: Record<string, string> = {
 		media: '#a78bfa', gaming: '#06b6d4', community: '#4ade80',
@@ -200,7 +203,7 @@
 	}
 
 	function deleteRow(rowId: string) {
-		if (!confirm('Supprimer cette ligne ?')) return
+		if (!confirm(tFn('hpb.confirm_delete_row'))) return
 		draft = { ...draft, rows: draft.rows.filter(r => r.id !== rowId) }
 		if (editRowId === rowId) { editRowId = null; activePanel = 'rows' }
 		if (selectedCol?.rowId === rowId) { selectedCol = null; activePanel = 'rows' }
@@ -211,7 +214,7 @@
 		const row = draft.rows.find(r => r.id === rowId)
 		if (!row) return
 		const currentSum = row.columns.reduce((s, c) => s + c.span, 0)
-		if (currentSum >= 12) { toast('La ligne est déjà à 12/12', false); return }
+		if (currentSum >= 12) { toast(tFn('hpb.toast_row_full'), false); return }
 		const newSpan = Math.min(2, 12 - currentSum)
 		const lastCol = row.columns[row.columns.length - 1]
 		if (lastCol && lastCol.span > newSpan) {
@@ -222,7 +225,7 @@
 			newCols.push({ id: genId(), span: newSpan, widget: null, config: {} })
 			draft = { ...draft, rows: draft.rows.map(r => r.id !== rowId ? r : { ...r, columns: newCols }) }
 		} else {
-			toast('Pas assez de place (span restant < 2)', false)
+			toast(tFn('hpb.toast_no_space'), false)
 			return
 		}
 		markUnsaved()
@@ -366,9 +369,9 @@
 			})
 			if (!res.ok) throw new Error()
 			unsaved = false
-			toast('Brouillon sauvegardé')
+			toast(tFn('hpb.toast_draft_saved'))
 		} catch {
-			toast('Erreur de sauvegarde', false)
+			toast(tFn('hpb.toast_save_err'), false)
 		} finally {
 			saving = false
 		}
@@ -384,16 +387,16 @@
 				headers: { Authorization: `Bearer ${getToken()}` },
 			})
 			if (!res.ok) throw new Error()
-			toast('Publié — la homepage est mise à jour')
+			toast(tFn('hpb.toast_published'))
 		} catch {
-			toast('Erreur lors de la publication', false)
+			toast(tFn('hpb.toast_publish_err'), false)
 		} finally {
 			publishing = false
 		}
 	}
 
 	async function revert() {
-		if (!confirm('Annuler les modifications et revenir à la version publiée ?')) return
+		if (!confirm(tFn('hpb.confirm_revert'))) return
 		try {
 			await fetch('/api/v1/admin/homepage/grid/revert', {
 				method:  'POST',
@@ -401,9 +404,9 @@
 			})
 			draft   = (data.published as GridLayout | null) ?? { rows: [] }
 			unsaved = false
-			toast('Revenu à la version publiée')
+			toast(tFn('hpb.toast_reverted'))
 		} catch {
-			toast('Erreur', false)
+			toast(tFn('hpb.toast_err'), false)
 		}
 	}
 
@@ -441,8 +444,8 @@
 	function ssAddSource(type: SlideshowSource['type']) {
 		const src: SlideshowSource =
 			type === 'articles' ? { type: 'articles', limit: 5 } :
-			type === 'video'    ? { type: 'video',    title: 'Ma vidéo', url: '' } :
-			                      { type: 'custom',   title: 'Mon slide', cta_url: '', cta_text: 'Voir' }
+			type === 'video'    ? { type: 'video',    title: tFn('hpb.default_video_title'), url: '' } :
+			                      { type: 'custom',   title: tFn('hpb.default_slide_title'), cta_url: '', cta_text: tFn('hpb.default_cta') }
 		const sources = [...ssSources(), src]
 		ssApply(sources as SlideshowSource[])
 		ssEditIdx = sources.length - 1
@@ -494,18 +497,18 @@
 			ssShowJson  = false
 			ssJsonError = ''
 		} catch {
-			ssJsonError = 'JSON invalide'
+			ssJsonError = tFn('hpb.json_invalid')
 		}
 	}
 
 	const SS_SOURCE_LABELS: Record<string, string> = {
-		articles: '📰 Articles',
-		video:    '▶ Vidéo',
-		custom:   '✎ Slide custom',
+		articles: 'hpb.ss_articles',
+		video:    'hpb.ss_video',
+		custom:   'hpb.ss_custom',
 	}
 
 	// ── Panel config custom : Liens sociaux ──────────────────────────────────
-	const SOCIAL_NETWORKS = [
+	const SOCIAL_NETWORKS: { id: string; label?: string; labelKey?: string }[] = [
 		// Social
 		{ id: 'discord',     label: 'Discord'      },
 		{ id: 'twitter',     label: 'X / Twitter'  },
@@ -556,7 +559,7 @@
 		{ id: 'npm',         label: 'npm'          },
 		{ id: 'bitbucket',   label: 'Bitbucket'    },
 		// Autre
-		{ id: 'custom',      label: 'Lien custom'  },
+		{ id: 'custom',      labelKey: 'hpb.social_custom'  },
 	]
 
 	function slLinks(): { type: string; url: string; label?: string }[] {
@@ -592,11 +595,11 @@
 	}
 
 	// ── Add row presets ───────────────────────────────────────────────────────
-	const ROW_PRESETS: { label: string; spans: number[] | number; preview: string }[] = [
-		{ label: '1 colonne',   spans: 1,        preview: '████████████' },
-		{ label: '2 égales',    spans: 2,        preview: '██████ ██████' },
-		{ label: '3 égales',    spans: 3,        preview: '████ ████ ████' },
-		{ label: '4 égales',    spans: 4,        preview: '███ ███ ███ ███' },
+	const ROW_PRESETS: { label?: string; labelKey?: string; spans: number[] | number; preview: string }[] = [
+		{ labelKey: 'hpb.preset_1col', spans: 1,        preview: '████████████' },
+		{ labelKey: 'hpb.preset_2eq',  spans: 2,        preview: '██████ ██████' },
+		{ labelKey: 'hpb.preset_3eq',  spans: 3,        preview: '████ ████ ████' },
+		{ labelKey: 'hpb.preset_4eq',  spans: 4,        preview: '███ ███ ███ ███' },
 		{ label: '8 + 4',       spans: [8,4],    preview: '████████ ████' },
 		{ label: '4 + 8',       spans: [4,8],    preview: '████ ████████' },
 		{ label: '6 + 3 + 3',   spans: [6,3,3],  preview: '██████ ███ ███' },
@@ -628,21 +631,21 @@
 		<!-- Tabs -->
 		<div class="panel-tabs">
 			<button class="ptab" class:ptab--active={activePanel === 'rows' || activePanel === 'rowsettings' || activePanel === 'config'} onclick={() => activePanel = 'rows'}>
-				Lignes
+				{tFn('hpb.tab_rows')}
 			</button>
 			<button class="ptab" class:ptab--active={activePanel === 'theme'} onclick={() => activePanel = 'theme'}>
-				Thème
+				{tFn('hpb.tab_theme')}
 			</button>
 		</div>
 
 		<!-- ── Panel : liste des lignes ─────────────────────────────── -->
 		{#if activePanel === 'rows'}
 			<div class="panel-body">
-				<div class="panel-section-title">Structure de la page</div>
+				<div class="panel-section-title">{tFn('hpb.rows_structure')}</div>
 
 				{#if draft.rows.length === 0}
 					<div class="panel-empty">
-						Aucune ligne. Cliquez sur <strong>+ Ligne</strong> pour démarrer.
+						{@html tFn('hpb.rows_empty')}
 					</div>
 				{:else}
 					<div class="row-list">
@@ -658,7 +661,7 @@
 								<button
 									class="row-item-handle"
 									onpointerdown={(e) => onRowDragStart(e, row.id)}
-									title="Déplacer"
+									title={tFn('hpb.move')}
 								>⠿</button>
 
 								<!-- Aperçu spans -->
@@ -673,8 +676,8 @@
 
 								<!-- Actions -->
 								<div class="row-item-actions">
-									<button class="riba" title="Paramètres" onclick={() => { editRowId = row.id; activePanel = 'rowsettings' }}>⚙</button>
-									<button class="riba riba--del" title="Supprimer" onclick={() => deleteRow(row.id)}>✕</button>
+									<button class="riba" title={tFn('hpb.settings')} onclick={() => { editRowId = row.id; activePanel = 'rowsettings' }}>⚙</button>
+									<button class="riba riba--del" title={tFn('hpb.delete')} onclick={() => deleteRow(row.id)}>✕</button>
 								</div>
 							</div>
 						{/each}
@@ -682,46 +685,46 @@
 				{/if}
 
 				<button class="btn-add-row" onclick={() => showAddRow = true}>
-					+ Ajouter une ligne
+					{tFn('hpb.add_row')}
 				</button>
 			</div>
 
 		<!-- ── Panel : paramètres d'une ligne ───────────────────────── -->
 		{:else if activePanel === 'rowsettings' && editRow}
 			<div class="panel-body">
-				<button class="panel-back" onclick={() => { activePanel = 'rows'; editRowId = null }}>← Lignes</button>
-				<div class="panel-section-title">Paramètres — ligne</div>
+				<button class="panel-back" onclick={() => { activePanel = 'rows'; editRowId = null }}>{tFn('hpb.back_rows')}</button>
+				<div class="panel-section-title">{tFn('hpb.row_params')}</div>
 
 				<label class="pfield">
-					<span>Espacement colonnes</span>
+					<span>{tFn('hpb.gap_label')}</span>
 					<select value={editRow.gap} onchange={(e) => updateRowParam(editRow!.id, 'gap', (e.target as HTMLSelectElement).value)}>
-						<option value="0">Aucun</option>
-						<option value="0.5rem">Serré (0.5rem)</option>
-						<option value="1rem">Normal (1rem)</option>
-						<option value="2rem">Large (2rem)</option>
-						<option value="3rem">Très large (3rem)</option>
+						<option value="0">{tFn('hpb.none')}</option>
+						<option value="0.5rem">{tFn('hpb.gap_tight')}</option>
+						<option value="1rem">{tFn('hpb.gap_normal')}</option>
+						<option value="2rem">{tFn('hpb.gap_large')}</option>
+						<option value="3rem">{tFn('hpb.gap_xlarge')}</option>
 					</select>
 				</label>
 
 				<label class="pfield">
-					<span>Padding vertical</span>
+					<span>{tFn('hpb.padding_label')}</span>
 					<select value={editRow.padding_y} onchange={(e) => updateRowParam(editRow!.id, 'padding_y', (e.target as HTMLSelectElement).value)}>
-						<option value="0">Aucun</option>
-						<option value="1rem">Petit (1rem)</option>
-						<option value="2rem">Normal (2rem)</option>
-						<option value="3rem">Grand (3rem)</option>
-						<option value="5rem">Très grand (5rem)</option>
+						<option value="0">{tFn('hpb.none')}</option>
+						<option value="1rem">{tFn('hpb.pad_small')}</option>
+						<option value="2rem">{tFn('hpb.pad_normal')}</option>
+						<option value="3rem">{tFn('hpb.pad_large')}</option>
+						<option value="5rem">{tFn('hpb.pad_xlarge')}</option>
 					</select>
 				</label>
 
 				<label class="pfield">
-					<span>Couleur de fond (override)</span>
+					<span>{tFn('hpb.bg_override')}</span>
 					<div class="pfield-color">
 						<input type="color" value={editRow.bg_override ?? '#05050a'}
 							oninput={(e) => updateRowParam(editRow!.id, 'bg_override', (e.target as HTMLInputElement).value)}
 						/>
 						<input type="text" value={editRow.bg_override ?? ''}
-							placeholder="rgba(…) ou #hex ou vide"
+							placeholder={tFn('hpb.ph_rgba_hex_empty')}
 							onchange={(e) => updateRowParam(editRow!.id, 'bg_override', (e.target as HTMLInputElement).value)}
 						/>
 						{#if editRow.bg_override}
@@ -730,19 +733,19 @@
 					</div>
 				</label>
 
-				<div class="panel-section-title" style="margin-top:16px">Colonnes</div>
+				<div class="panel-section-title" style="margin-top:16px">{tFn('hpb.columns')}</div>
 				<div class="col-manager">
 					{#each editRow.columns as col, ci}
 						<div class="col-mgr-row">
-							<span class="col-mgr-widget">{col.widget ? (catalogIndex[col.widget]?.icon ?? '⬛') + ' ' + col.widget : '(vide)'}</span>
-							<span class="col-mgr-span">span {col.span}</span>
+							<span class="col-mgr-widget">{col.widget ? (catalogIndex[col.widget]?.icon ?? '⬛') + ' ' + col.widget : tFn('hpb.col_empty')}</span>
+							<span class="col-mgr-span">{tFn('hpb.span', { n: col.span })}</span>
 							{#if editRow.columns.length > 1}
 								<button class="col-mgr-del" onclick={() => removeColumn(editRow!.id, col.id)}>✕</button>
 							{/if}
 						</div>
 					{/each}
 					{#if editRow.columns.reduce((s,c)=>s+c.span,0) < 12}
-						<button class="btn-add-col" onclick={() => addColumn(editRow!.id)}>+ Colonne</button>
+						<button class="btn-add-col" onclick={() => addColumn(editRow!.id)}>{tFn('hpb.add_column')}</button>
 					{/if}
 				</div>
 			</div>
@@ -750,17 +753,17 @@
 		<!-- ── Panel : config widget ─────────────────────────────────── -->
 		{:else if activePanel === 'config' && selCol}
 			<div class="panel-body">
-				<button class="panel-back" onclick={() => { activePanel = 'rows'; selectedCol = null }}>← Lignes</button>
+				<button class="panel-back" onclick={() => { activePanel = 'rows'; selectedCol = null }}>{tFn('hpb.back_rows')}</button>
 				<div class="panel-section-title">
 					{selPlugin ? `${selPlugin.icon} ${selPlugin.label}` : selCol.widget ?? 'Widget'}
 				</div>
 
 				{#if selNativePlugin?.customPanel && selNativePlugin.id === 'social-links-bar'}
 					<!-- ══ Panel custom : Liens sociaux ══ -->
-					<div class="panel-section-title">Liens</div>
+					<div class="panel-section-title">{tFn('hpb.links')}</div>
 
 					{#if slLinks().length === 0}
-						<div class="panel-empty">Aucun lien. Ajoutez-en un ci-dessous.</div>
+						<div class="panel-empty">{tFn('hpb.links_empty')}</div>
 					{:else}
 						<div class="sl-editor">
 							{#each slLinks() as link, i}
@@ -771,14 +774,14 @@
 										onchange={(e) => slUpdateLink(i, 'type', (e.target as HTMLSelectElement).value)}
 									>
 										{#each SOCIAL_NETWORKS as n}
-											<option value={n.id}>{n.label}</option>
+											<option value={n.id}>{n.labelKey ? tFn(n.labelKey) : n.label}</option>
 										{/each}
 									</select>
 									<input
 										class="sl-input"
 										type="url"
 										value={link.url}
-										placeholder="https://..."
+										placeholder={tFn('hpb.ph_url')}
 										oninput={(e) => slUpdateLink(i, 'url', (e.target as HTMLInputElement).value)}
 									/>
 									<div class="ss-src-actions">
@@ -791,42 +794,42 @@
 						</div>
 					{/if}
 
-					<button class="ss-add-btn" style="margin-top:6px" onclick={slAddLink}>+ Ajouter un réseau</button>
+					<button class="ss-add-btn" style="margin-top:6px" onclick={slAddLink}>{tFn('hpb.add_network')}</button>
 
-					<div class="panel-section-title" style="margin-top:12px">Réglages</div>
+					<div class="panel-section-title" style="margin-top:12px">{tFn('hpb.settings_section')}</div>
 
 					<label class="pfield">
-						<span>Style</span>
+						<span>{tFn('hpb.style')}</span>
 						<select value={(configFields.style as string) ?? 'icons'}
 							onchange={(e) => { configFields = { ...configFields, style: (e.target as HTMLSelectElement).value }; applyConfig() }}
 						>
-							<option value="icons">Icônes seules</option>
-							<option value="pills">Pills avec fond</option>
+							<option value="icons">{tFn('hpb.style_icons')}</option>
+							<option value="pills">{tFn('hpb.style_pills')}</option>
 						</select>
 					</label>
 					<label class="pfield">
-						<span>Alignement</span>
+						<span>{tFn('hpb.align')}</span>
 						<select value={(configFields.align as string) ?? 'center'}
 							onchange={(e) => { configFields = { ...configFields, align: (e.target as HTMLSelectElement).value }; applyConfig() }}
 						>
-							<option value="flex-start">Gauche</option>
-							<option value="center">Centre</option>
-							<option value="flex-end">Droite</option>
+							<option value="flex-start">{tFn('hpb.align_left')}</option>
+							<option value="center">{tFn('hpb.align_center')}</option>
+							<option value="flex-end">{tFn('hpb.align_right')}</option>
 						</select>
 					</label>
 					<label class="pfield">
-						<span>Taille icônes</span>
+						<span>{tFn('hpb.icon_size')}</span>
 						<select value={(configFields.icon_size as string) ?? '22px'}
 							onchange={(e) => { configFields = { ...configFields, icon_size: (e.target as HTMLSelectElement).value }; applyConfig() }}
 						>
-							<option value="18px">Petite (18px)</option>
-							<option value="22px">Normale (22px)</option>
-							<option value="28px">Grande (28px)</option>
-							<option value="36px">Très grande (36px)</option>
+							<option value="18px">{tFn('hpb.size_small')}</option>
+							<option value="22px">{tFn('hpb.size_normal')}</option>
+							<option value="28px">{tFn('hpb.size_large')}</option>
+							<option value="36px">{tFn('hpb.size_xlarge')}</option>
 						</select>
 					</label>
 					<label class="pfield">
-						<span>Afficher les labels</span>
+						<span>{tFn('hpb.show_labels')}</span>
 						<label class="ptoggle">
 							<input type="checkbox" checked={!!(configFields.show_labels)}
 								onchange={(e) => { configFields = { ...configFields, show_labels: (e.target as HTMLInputElement).checked }; applyConfig() }}
@@ -836,7 +839,7 @@
 					</label>
 
 					<div class="config-actions" style="margin-top:8px">
-						<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>Retirer</button>
+						<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>{tFn('hpb.remove')}</button>
 					</div>
 
 				{:else if selNativePlugin?.customPanel}
@@ -844,7 +847,7 @@
 
 					{#if ssShowJson}
 						<!-- Mode JSON avancé -->
-						<div class="panel-section-title">JSON brut</div>
+						<div class="panel-section-title">{tFn('hpb.json_raw')}</div>
 						<textarea
 							class="ss-json-area"
 							rows="14"
@@ -856,148 +859,148 @@
 							<p class="ss-json-err">{ssJsonError}</p>
 						{/if}
 						<div class="config-actions">
-							<button class="btn-secondary" onclick={() => ssShowJson = false}>Annuler</button>
-							<button class="btn-primary" onclick={ssApplyJson}>Appliquer</button>
+							<button class="btn-secondary" onclick={() => ssShowJson = false}>{tFn('hpb.cancel')}</button>
+							<button class="btn-primary" onclick={ssApplyJson}>{tFn('hpb.apply')}</button>
 						</div>
 
 					{:else if ssEditIdx !== null}
 						<!-- Formulaire édition d'une source -->
 						{@const src = ssSources()[ssEditIdx]}
-						<button class="panel-back" onclick={() => { ssEditIdx = null; ssEditBuf = {} }}>← Sources</button>
+						<button class="panel-back" onclick={() => { ssEditIdx = null; ssEditBuf = {} }}>{tFn('hpb.back_sources')}</button>
 						<div class="panel-section-title">
-							{SS_SOURCE_LABELS[src?.type ?? ''] ?? 'Source'}
+							{tFn(SS_SOURCE_LABELS[src?.type ?? ''] ?? 'hpb.ss_source')}
 						</div>
 
 						{#if ssEditBuf.type === 'articles'}
 							<label class="pfield">
-								<span>Limite d'articles</span>
+								<span>{tFn('hpb.limit_articles')}</span>
 								<input type="number" min="1" max="10"
 									value={(ssEditBuf as any).limit ?? 5}
 									onchange={(e) => ssEditBuf = { ...ssEditBuf, limit: Number((e.target as HTMLInputElement).value) }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>Catégorie (slug ou UUID)</span>
+								<span>{tFn('hpb.category_slug')}</span>
 								<input type="text"
 									value={(ssEditBuf as any).category_id ?? ''}
-									placeholder="Vide = tous les articles mis en avant"
+									placeholder={tFn('hpb.ph_category_empty')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, category_id: (e.target as HTMLInputElement).value || undefined }}
 								/>
-								<span class="pfield-hint">Laissez vide pour afficher les threads marqués "mis en avant"</span>
+								<span class="pfield-hint">{tFn('hpb.hint_featured')}</span>
 							</label>
 
 						{:else if ssEditBuf.type === 'video'}
 							<label class="pfield">
-								<span>Titre *</span>
+								<span>{tFn('hpb.title_req')}</span>
 								<input type="text"
 									value={(ssEditBuf as any).title ?? ''}
-									placeholder="Titre de la vidéo"
+									placeholder={tFn('hpb.ph_video_title')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, title: (e.target as HTMLInputElement).value }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>URL YouTube *</span>
+								<span>{tFn('hpb.url_youtube_req')}</span>
 								<input type="url"
 									value={(ssEditBuf as any).url ?? ''}
-									placeholder="https://youtube.com/watch?v=..."
+									placeholder={tFn('hpb.ph_youtube_url')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, url: (e.target as HTMLInputElement).value }}
 								/>
-								<span class="pfield-hint">La miniature est extraite automatiquement</span>
+								<span class="pfield-hint">{tFn('hpb.hint_thumbnail_auto')}</span>
 							</label>
 							<label class="pfield">
-								<span>Description</span>
+								<span>{tFn('hpb.description')}</span>
 								<input type="text"
 									value={(ssEditBuf as any).excerpt ?? ''}
-									placeholder="Sous-titre affiché sous le titre"
+									placeholder={tFn('hpb.ph_subtitle')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, excerpt: (e.target as HTMLInputElement).value || undefined }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>Label catégorie</span>
+								<span>{tFn('hpb.category_label')}</span>
 								<input type="text"
 									value={(ssEditBuf as any).label ?? ''}
-									placeholder="ex : Vidéo, Trailer, Live..."
+									placeholder={tFn('hpb.ph_category_video')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, label: (e.target as HTMLInputElement).value || undefined }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>Miniature custom (URL image)</span>
+								<span>{tFn('hpb.thumbnail_custom')}</span>
 								<input type="url"
 									value={(ssEditBuf as any).thumbnail ?? ''}
-									placeholder="Laissez vide = auto depuis YouTube"
+									placeholder={tFn('hpb.ph_thumbnail_auto')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, thumbnail: (e.target as HTMLInputElement).value || undefined }}
 								/>
 							</label>
 
 						{:else if ssEditBuf.type === 'custom'}
 							<label class="pfield">
-								<span>Titre *</span>
+								<span>{tFn('hpb.title_req')}</span>
 								<input type="text"
 									value={(ssEditBuf as any).title ?? ''}
-									placeholder="Titre du slide"
+									placeholder={tFn('hpb.ph_slide_title')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, title: (e.target as HTMLInputElement).value }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>Image de fond (URL)</span>
+								<span>{tFn('hpb.image_bg')}</span>
 								<input type="url"
 									value={(ssEditBuf as any).image_url ?? ''}
-									placeholder="https://..."
+									placeholder={tFn('hpb.ph_url')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, image_url: (e.target as HTMLInputElement).value || undefined }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>Description</span>
+								<span>{tFn('hpb.description')}</span>
 								<input type="text"
 									value={(ssEditBuf as any).excerpt ?? ''}
-									placeholder="Texte affiché sous le titre"
+									placeholder={tFn('hpb.ph_text_subtitle')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, excerpt: (e.target as HTMLInputElement).value || undefined }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>Label catégorie</span>
+								<span>{tFn('hpb.category_label')}</span>
 								<input type="text"
 									value={(ssEditBuf as any).category_label ?? ''}
-									placeholder="ex : Événement, Annonce..."
+									placeholder={tFn('hpb.ph_category_custom')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, category_label: (e.target as HTMLInputElement).value || undefined }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>URL du bouton CTA *</span>
+								<span>{tFn('hpb.cta_url_req')}</span>
 								<input type="url"
 									value={(ssEditBuf as any).cta_url ?? ''}
-									placeholder="/events/... ou https://..."
+									placeholder={tFn('hpb.ph_cta_url')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, cta_url: (e.target as HTMLInputElement).value || undefined }}
 								/>
 							</label>
 							<label class="pfield">
-								<span>Texte du bouton CTA</span>
+								<span>{tFn('hpb.cta_text')}</span>
 								<input type="text"
-									value={(ssEditBuf as any).cta_text ?? 'Voir'}
+									value={(ssEditBuf as any).cta_text ?? tFn('hpb.default_cta')}
 									oninput={(e) => ssEditBuf = { ...ssEditBuf, cta_text: (e.target as HTMLInputElement).value || undefined }}
 								/>
 							</label>
 						{/if}
 
 						<div class="config-actions">
-							<button class="btn-secondary" onclick={() => { ssEditIdx = null; ssEditBuf = {} }}>Annuler</button>
-							<button class="btn-primary" onclick={ssApplyEdit}>Appliquer</button>
+							<button class="btn-secondary" onclick={() => { ssEditIdx = null; ssEditBuf = {} }}>{tFn('hpb.cancel')}</button>
+							<button class="btn-primary" onclick={ssApplyEdit}>{tFn('hpb.apply')}</button>
 						</div>
 
 					{:else}
 						<!-- Vue principale : liste des sources + réglages globaux -->
-						<div class="panel-section-title">Sources</div>
+						<div class="panel-section-title">{tFn('hpb.sources')}</div>
 
 						{#if ssSources().length === 0}
-							<div class="panel-empty">Aucune source. Ajoutez-en une ci-dessous.</div>
+							<div class="panel-empty">{tFn('hpb.sources_empty')}</div>
 						{:else}
 							<div class="ss-sources">
 								{#each ssSources() as src, i}
 									<div class="ss-src-card">
-										<span class="ss-src-label">{SS_SOURCE_LABELS[src.type] ?? src.type}</span>
+										<span class="ss-src-label">{SS_SOURCE_LABELS[src.type] ? tFn(SS_SOURCE_LABELS[src.type]) : src.type}</span>
 										<span class="ss-src-desc">
 											{#if src.type === 'articles'}
-												{src.limit ?? 5} article(s){src.category_id ? ` · cat: ${src.category_id}` : ''}
+												{tFn('hpb.articles_count', { n: src.limit ?? 5 })}{src.category_id ? tFn('hpb.cat_suffix', { cat: src.category_id }) : ''}
 											{:else if src.type === 'video'}
 												{src.title}
 											{:else}
@@ -1005,10 +1008,10 @@
 											{/if}
 										</span>
 										<div class="ss-src-actions">
-											<button class="ss-src-btn" onclick={() => ssMoveSource(i, -1)} disabled={i === 0} title="Monter">↑</button>
-											<button class="ss-src-btn" onclick={() => ssMoveSource(i, 1)} disabled={i === ssSources().length - 1} title="Descendre">↓</button>
-											<button class="ss-src-btn" onclick={() => ssOpenEdit(i)} title="Éditer">⚙</button>
-											<button class="ss-src-btn ss-src-btn--del" onclick={() => ssRemoveSource(i)} title="Supprimer">✕</button>
+											<button class="ss-src-btn" onclick={() => ssMoveSource(i, -1)} disabled={i === 0} title={tFn('hpb.move_up')}>↑</button>
+											<button class="ss-src-btn" onclick={() => ssMoveSource(i, 1)} disabled={i === ssSources().length - 1} title={tFn('hpb.move_down')}>↓</button>
+											<button class="ss-src-btn" onclick={() => ssOpenEdit(i)} title={tFn('hpb.edit')}>⚙</button>
+											<button class="ss-src-btn ss-src-btn--del" onclick={() => ssRemoveSource(i)} title={tFn('hpb.delete')}>✕</button>
 										</div>
 									</div>
 								{/each}
@@ -1016,30 +1019,30 @@
 						{/if}
 
 						<div class="ss-add-btns">
-							<button class="ss-add-btn" onclick={() => ssAddSource('articles')}>+ Articles</button>
-							<button class="ss-add-btn" onclick={() => ssAddSource('video')}>+ Vidéo</button>
-							<button class="ss-add-btn" onclick={() => ssAddSource('custom')}>+ Custom</button>
+							<button class="ss-add-btn" onclick={() => ssAddSource('articles')}>{tFn('hpb.add_articles')}</button>
+							<button class="ss-add-btn" onclick={() => ssAddSource('video')}>{tFn('hpb.add_video')}</button>
+							<button class="ss-add-btn" onclick={() => ssAddSource('custom')}>{tFn('hpb.add_custom')}</button>
 						</div>
 
-						<div class="panel-section-title" style="margin-top:12px">Réglages</div>
+						<div class="panel-section-title" style="margin-top:12px">{tFn('hpb.settings_section')}</div>
 
 						<label class="pfield">
-							<span>Vitesse autoplay (ms)</span>
+							<span>{tFn('hpb.autoplay_speed')}</span>
 							<input type="number" min="2000" max="15000" step="500"
 								value={ssSlideMs()}
 								onchange={(e) => ssApply(ssSources(), { slide_ms: Number((e.target as HTMLInputElement).value) })}
 							/>
 						</label>
 						<label class="pfield">
-							<span>Hauteur</span>
+							<span>{tFn('hpb.height')}</span>
 							<input type="text"
 								value={ssHeight()}
-								placeholder="420px"
+								placeholder={tFn('hpb.ph_height')}
 								onchange={(e) => ssApply(ssSources(), { height: (e.target as HTMLInputElement).value })}
 							/>
 						</label>
 						<label class="pfield">
-							<span>Afficher l'excerpt</span>
+							<span>{tFn('hpb.show_excerpt')}</span>
 							<label class="ptoggle">
 								<input type="checkbox" checked={ssExcerpt()}
 									onchange={(e) => ssApply(ssSources(), { show_excerpt: (e.target as HTMLInputElement).checked })}
@@ -1049,11 +1052,11 @@
 						</label>
 
 						<div class="ss-advanced">
-							<button class="ss-json-btn" onclick={ssOpenJson}>&#123;&#125; JSON avancé</button>
+							<button class="ss-json-btn" onclick={ssOpenJson}>&#123;&#125; {tFn('hpb.json_advanced')}</button>
 						</div>
 
 						<div class="config-actions" style="margin-top:8px">
-							<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>Retirer</button>
+							<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>{tFn('hpb.remove')}</button>
 						</div>
 					{/if}
 
@@ -1068,7 +1071,7 @@
 											e.preventDefault()
 											openDetails = openDetails === field.key ? null : field.key
 										}}
-										aria-label="Plus d'informations"
+										aria-label={tFn('hpb.more_info')}
 										aria-expanded={openDetails === field.key}>?</button>
 								{/if}
 							</span>
@@ -1127,29 +1130,29 @@
 					{/each}
 
 					<div class="config-actions">
-						<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>Retirer le widget</button>
-						<button class="btn-primary" onclick={applyConfig}>Appliquer</button>
+						<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>{tFn('hpb.remove_widget')}</button>
+						<button class="btn-primary" onclick={applyConfig}>{tFn('hpb.apply')}</button>
 					</div>
 				{:else}
-					<div class="panel-empty">Ce widget n'a pas de configuration.</div>
-					<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>Retirer le widget</button>
+					<div class="panel-empty">{tFn('hpb.no_config')}</div>
+					<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>{tFn('hpb.remove_widget')}</button>
 				{/if}
 			</div>
 
 		<!-- ── Panel : thème ─────────────────────────────────────────── -->
 		{:else if activePanel === 'theme'}
 			<div class="panel-body">
-				<div class="panel-section-title">Couleurs</div>
+				<div class="panel-section-title">{tFn('hpb.colors')}</div>
 
 				{#each [
-					{ key: 'primary',       label: 'Couleur principale' },
-					{ key: 'accent',        label: 'Couleur accent' },
-					{ key: 'bg',            label: 'Fond de page' },
-					{ key: 'text_primary',  label: 'Texte principal' },
-					{ key: 'text_secondary',label: 'Texte secondaire' },
+					{ key: 'primary',       labelKey: 'hpb.th_primary' },
+					{ key: 'accent',        labelKey: 'hpb.th_accent' },
+					{ key: 'bg',            labelKey: 'hpb.th_bg' },
+					{ key: 'text_primary',  labelKey: 'hpb.th_text_primary' },
+					{ key: 'text_secondary',labelKey: 'hpb.th_text_secondary' },
 				] as f}
 					<label class="pfield">
-						<span>{f.label}</span>
+						<span>{tFn(f.labelKey)}</span>
 						<div class="pfield-color">
 							<input type="color" value={theme[f.key as keyof GridTheme] as string}
 								oninput={(e) => updateTheme(f.key as keyof GridTheme, (e.target as HTMLInputElement).value as any)}
@@ -1161,24 +1164,24 @@
 					</label>
 				{/each}
 
-				<div class="panel-section-title" style="margin-top:8px">Fonds & Bordures</div>
+				<div class="panel-section-title" style="margin-top:8px">{tFn('hpb.backgrounds_borders')}</div>
 				{#each [
-					{ key: 'card_bg',      label: 'Fond des cartes' },
-					{ key: 'border_color', label: 'Couleur des bordures' },
+					{ key: 'card_bg',      labelKey: 'hpb.th_card_bg' },
+					{ key: 'border_color', labelKey: 'hpb.th_border' },
 				] as f}
 					<label class="pfield">
-						<span>{f.label}</span>
+						<span>{tFn(f.labelKey)}</span>
 						<input type="text" value={theme[f.key as keyof GridTheme] as string}
-							placeholder="rgba(...) ou #hex"
+							placeholder={tFn('hpb.ph_rgba_hex')}
 							onchange={(e) => updateTheme(f.key as keyof GridTheme, (e.target as HTMLInputElement).value as any)}
 						/>
 					</label>
 				{/each}
 
-				<div class="panel-section-title" style="margin-top:8px">Typographie</div>
+				<div class="panel-section-title" style="margin-top:8px">{tFn('hpb.typography')}</div>
 
 				<label class="pfield">
-					<span>Police</span>
+					<span>{tFn('hpb.font')}</span>
 					<select value={theme.font_family} onchange={(e) => updateTheme('font_family', (e.target as HTMLSelectElement).value)}>
 						{#each FONTS as f}
 							<option value={f}>{f}</option>
@@ -1187,7 +1190,7 @@
 				</label>
 
 				<label class="pfield">
-					<span>Taille base ({theme.font_size_base})</span>
+					<span>{tFn('hpb.font_size_base', { v: theme.font_size_base })}</span>
 					<input type="range" min="13" max="18" step="1"
 						value={parseInt(theme.font_size_base)}
 						oninput={(e) => updateTheme('font_size_base', `${(e.target as HTMLInputElement).value}px`)}
@@ -1195,20 +1198,20 @@
 				</label>
 
 				<label class="pfield">
-					<span>Graisse titres</span>
+					<span>{tFn('hpb.font_weight')}</span>
 					<select value={theme.font_weight_heading} onchange={(e) => updateTheme('font_weight_heading', (e.target as HTMLSelectElement).value)}>
-						<option value="400">400 — Normal</option>
-						<option value="500">500 — Medium</option>
-						<option value="600">600 — Semi-bold</option>
-						<option value="700">700 — Bold</option>
-						<option value="800">800 — Extra-bold</option>
+						<option value="400">{tFn('hpb.weight_400')}</option>
+						<option value="500">{tFn('hpb.weight_500')}</option>
+						<option value="600">{tFn('hpb.weight_600')}</option>
+						<option value="700">{tFn('hpb.weight_700')}</option>
+						<option value="800">{tFn('hpb.weight_800')}</option>
 					</select>
 				</label>
 
-				<div class="panel-section-title" style="margin-top:8px">Forme</div>
+				<div class="panel-section-title" style="margin-top:8px">{tFn('hpb.shape')}</div>
 
 				<label class="pfield">
-					<span>Arrondi ({theme.border_radius})</span>
+					<span>{tFn('hpb.border_radius', { v: theme.border_radius })}</span>
 					<input type="range" min="0" max="24" step="1"
 						value={parseInt(theme.border_radius)}
 						oninput={(e) => updateTheme('border_radius', `${(e.target as HTMLInputElement).value}px`)}
@@ -1216,7 +1219,7 @@
 				</label>
 
 				<label class="pfield">
-					<span>Ombre</span>
+					<span>{tFn('hpb.shadow')}</span>
 					<input type="text" value={theme.shadow}
 						onchange={(e) => updateTheme('shadow', (e.target as HTMLInputElement).value)}
 					/>
@@ -1242,22 +1245,22 @@
 						title={m}
 					>
 						{m === 'desktop' ? '🖥' : m === 'tablet' ? '▭' : '📱'}
-						<span>{m === 'desktop' ? 'Desktop' : m === 'tablet' ? 'Tablette' : 'Mobile'}</span>
+						<span>{m === 'desktop' ? tFn('hpb.desktop') : m === 'tablet' ? tFn('hpb.tablet') : tFn('hpb.mobile')}</span>
 					</button>
 				{/each}
 			</div>
 
 			<div class="toolbar-status">
-				{#if unsaved}<span class="unsaved-dot"></span><span class="unsaved-label">Non sauvegardé</span>{/if}
+				{#if unsaved}<span class="unsaved-dot"></span><span class="unsaved-label">{tFn('hpb.unsaved')}</span>{/if}
 			</div>
 
 			<div class="toolbar-actions">
-				<button class="btn-tool" onclick={revert} disabled={saving || publishing}>Annuler</button>
+				<button class="btn-tool" onclick={revert} disabled={saving || publishing}>{tFn('hpb.cancel')}</button>
 				<button class="btn-tool btn-tool--save" onclick={saveDraft} disabled={saving || publishing}>
-					{saving ? 'Sauvegarde…' : 'Sauvegarder'}
+					{saving ? tFn('hpb.saving') : tFn('hpb.save')}
 				</button>
 				<button class="btn-tool btn-tool--publish" onclick={publish} disabled={saving || publishing}>
-					{publishing ? 'Publication…' : 'Publier'}
+					{publishing ? tFn('hpb.publishing') : tFn('hpb.publish')}
 				</button>
 			</div>
 		</div>
@@ -1265,7 +1268,7 @@
 		<!-- Bandeau draft -->
 		{#if !data.published}
 			<div class="draft-banner">
-				Aucune version publiée — cliquez sur <strong>Publier</strong> pour mettre en ligne votre layout.
+				{@html tFn('hpb.draft_banner')}
 			</div>
 		{/if}
 
@@ -1278,9 +1281,9 @@
 				{#if draft.rows.length === 0}
 					<div class="canvas-empty">
 						<div class="canvas-empty-icon">⬛</div>
-						<div class="canvas-empty-title">Page vide</div>
-						<div class="canvas-empty-sub">Ajoutez une ligne depuis le panel gauche pour démarrer.</div>
-						<button class="btn-primary" style="margin-top:16px" onclick={() => showAddRow = true}>+ Ajouter une ligne</button>
+						<div class="canvas-empty-title">{tFn('hpb.page_empty')}</div>
+						<div class="canvas-empty-sub">{tFn('hpb.canvas_empty_sub')}</div>
+						<button class="btn-primary" style="margin-top:16px" onclick={() => showAddRow = true}>{tFn('hpb.add_row')}</button>
 					</div>
 				{:else}
 					<GridRenderer
@@ -1316,7 +1319,7 @@
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<span>Nouvelle ligne — choisissez une structure</span>
+				<span>{tFn('hpb.modal_new_row')}</span>
 				<button class="modal-close" onclick={() => showAddRow = false}>✕</button>
 			</div>
 			<div class="modal-body">
@@ -1324,7 +1327,7 @@
 					{#each ROW_PRESETS as p}
 						<button class="preset-btn" onclick={() => addRow(p.spans)}>
 							<span class="preset-preview">{p.preview}</span>
-							<span class="preset-label">{p.label}</span>
+							<span class="preset-label">{p.labelKey ? tFn(p.labelKey) : p.label}</span>
 						</button>
 					{/each}
 				</div>
@@ -1344,13 +1347,13 @@
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<span>Choisir un widget</span>
+				<span>{tFn('hpb.pick_widget')}</span>
 				<button class="modal-close" onclick={() => showPicker = null}>✕</button>
 			</div>
 			<div class="modal-body">
 				<!-- Barre recherche -->
 				<!-- svelte-ignore a11y_autofocus -->
-				<input class="picker-search" type="text" placeholder="Rechercher un widget…"
+				<input class="picker-search" type="text" placeholder={tFn('hpb.search_widget')}
 					bind:value={searchWidget} autofocus
 				/>
 
@@ -1361,13 +1364,13 @@
 							class="fam-btn"
 							class:fam-btn--active={pickerFamily === fam.id}
 							onclick={() => pickerFamily = fam.id}
-						>{fam.icon} {fam.label}</button>
+						>{fam.icon} {tFn(fam.labelKey)}</button>
 					{/each}
 				</div>
 
 				<!-- Grille widgets -->
 				{#if pickerPlugins.length === 0}
-					<div class="picker-empty">Aucun widget trouvé.</div>
+					<div class="picker-empty">{tFn('hpb.no_widget_found')}</div>
 				{:else}
 					<div class="picker-grid">
 						{#each pickerPlugins as plugin}
