@@ -2,6 +2,9 @@
     import { checkOllamaStatus } from "$lib/utils/aiDetector";
     import { fly, fade } from "svelte/transition";
     import { onMount } from "svelte";
+    import { t } from "$lib/i18n";
+
+    const tFn = $derived($t);
 
     // 1. Interfaces
     interface OllamaModel {
@@ -44,7 +47,7 @@
             ...status,
             active: res.active,
             models: (res.models as OllamaModel[]) || [],
-            version: res.version || "Inconnue",
+            version: res.version || tFn("aai.unknown"),
         };
 
         if (status.active) {
@@ -88,12 +91,12 @@
 </script>
 
 <svelte:head>
-    <title>Neural Engine — Admin Nodyx</title>
+    <title>{tFn('aai.page_title')}</title>
 </svelte:head>
 
 <div class="space-y-6 font-sans">
     <div class="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">
-        <span class="font-semibold">En développement</span> — L'intégration Ollama dans nodyx-core n'est pas encore disponible. Le scan local fonctionne, mais l'activation d'un modèle n'a pas d'effet.
+        {@html tFn('aai.dev_notice')}
     </div>
     <div class="flex items-center justify-between">
         <div>
@@ -101,7 +104,7 @@
                 Neural Engine
             </h1>
             <p class="text-xs text-gray-400">
-                Gestion de l'intelligence artificielle locale
+                {tFn('aai.subtitle')}
             </p>
         </div>
         <button
@@ -110,7 +113,7 @@
             class="rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-800 px-4 py-2 text-sm font-semibold text-white transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20"
         >
             {#if isScanning}<span class="animate-spin text-xs">⚙</span>{/if}
-            {isScanning ? "Synchronisation..." : "Scanner Ollama"}
+            {isScanning ? tFn('aai.syncing') : tFn('aai.scan_ollama')}
         </button>
     </div>
 
@@ -121,7 +124,7 @@
             <h2
                 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-6 italic"
             >
-                Moteur Neural Local
+                {tFn('aai.engine_title')}
             </h2>
 
             <div class="space-y-8">
@@ -129,13 +132,13 @@
                     <div
                         class="flex justify-between text-[11px] font-bold text-gray-400 mb-3 uppercase"
                     >
-                        <span>Disponibilité Ollama</span>
+                        <span>{tFn('aai.ollama_availability')}</span>
                         <span
                             class={status.active
                                 ? "text-purple-400"
                                 : "text-red-500 animate-pulse"}
                         >
-                            {status.active ? "PRÊT" : "INACTIF"}
+                            {status.active ? tFn('aai.ready') : tFn('aai.inactive')}
                         </span>
                     </div>
                     <div class="flex gap-1.5 h-4">
@@ -152,10 +155,7 @@
 
                 <div class="rounded-lg bg-black/40 p-4 border border-white/5">
                     <p class="text-[10px] text-gray-400 leading-relaxed italic">
-                        Le Neural Engine permet à Nodyx d'utiliser ta propre
-                        puissance de calcul (GPU RX 570 8GB). Aucune donnée ne
-                        quitte ton infrastructure lors des résumés ou des
-                        analyses privées.
+                        {tFn('aai.engine_note')}
                     </p>
                 </div>
             </div>
@@ -167,7 +167,7 @@
             <h2
                 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4 italic"
             >
-                Modèles Détectés
+                {tFn('aai.models_detected')}
             </h2>
 
             <div class="space-y-2 h-[220px] overflow-y-auto pr-2 custom-scroll">
@@ -201,7 +201,8 @@
                             {#if status.currentModel === model.name}
                                 <span
                                     class="text-[9px] text-purple-400 font-bold uppercase tracking-widest"
-                                    in:fade>Actif</span
+                                    in:fade
+                                    >{tFn('aai.active')}</span
                                 >
                             {:else}
                                 <button
@@ -209,7 +210,7 @@
                                     disabled={isUpdating}
                                     class="opacity-0 group-hover:opacity-100 text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded transition-all uppercase font-bold disabled:opacity-50"
                                 >
-                                    {isUpdating ? "..." : "Activer"}
+                                    {isUpdating ? '...' : tFn('aai.enable')}
                                 </button>
                             {/if}
                         </div>
@@ -219,7 +220,7 @@
                         class="h-full flex flex-col items-center justify-center opacity-30 italic text-sm text-gray-400"
                     >
                         <span class="text-2xl mb-2">📡</span>
-                        <span>Aucun modèle trouvé</span>
+                        <span>{tFn('aai.no_models')}</span>
                     </div>
                 {/if}
             </div>

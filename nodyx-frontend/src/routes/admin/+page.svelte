@@ -1,5 +1,9 @@
 <script lang="ts">
 	import type { PageData } from './$types'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
+
 	let { data }: { data: PageData } = $props()
 	const s = $derived(data.stats)
 
@@ -7,21 +11,21 @@
 	// accent. L'émeraude est réservée aux deltas positifs (sémantique), pas
 	// de couleur par carte. Icônes SVG monochromes (iconPath outline 24x24).
 	const statCards = $derived([
-		{ label: 'Membres',    value: s.users.total,   delta: s.users.new_this_week,   sub: 'cette semaine',
+		{ label: tFn('adash.card_members'),    value: s.users.total,   delta: s.users.new_this_week,   sub: tFn('adash.this_week'),
 		  iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-		{ label: 'Fils',       value: s.threads.total, delta: s.threads.new_this_week, sub: 'cette semaine',
+		{ label: tFn('adash.card_threads'),       value: s.threads.total, delta: s.threads.new_this_week, sub: tFn('adash.this_week'),
 		  iconPath: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 13h4a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l4.586-4.586z' },
-		{ label: 'Messages',   value: s.posts.total,   delta: s.posts.new_this_week,   sub: 'cette semaine',
+		{ label: tFn('adash.card_messages'),   value: s.posts.total,   delta: s.posts.new_this_week,   sub: tFn('adash.this_week'),
 		  iconPath: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-		{ label: 'En ligne',   value: s.online,        delta: null,                    sub: 'utilisateurs actifs', live: true,
+		{ label: tFn('adash.card_online'),   value: s.online,        delta: null,                    sub: tFn('adash.active_users'), live: true,
 		  iconPath: 'M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z' },
-		{ label: 'Événements', value: s.events?.total ?? 0, delta: null, sub: `${s.events?.upcoming ?? 0} à venir`,
+		{ label: tFn('adash.card_events'), value: s.events?.total ?? 0, delta: null, sub: tFn('adash.events_upcoming', { n: s.events?.upcoming ?? 0 }),
 		  iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-		{ label: 'Sondages',   value: s.polls?.total ?? 0,  delta: null, sub: `${s.polls?.open ?? 0} ouverts`,
+		{ label: tFn('adash.card_polls'),   value: s.polls?.total ?? 0,  delta: null, sub: tFn('adash.polls_open', { n: s.polls?.open ?? 0 }),
 		  iconPath: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-		{ label: 'Assets',     value: s.assets?.total ?? 0, delta: null, sub: 'dans la bibliothèque',
+		{ label: tFn('adash.card_assets'),     value: s.assets?.total ?? 0, delta: null, sub: tFn('adash.in_library'),
 		  iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-		{ label: 'Chat',       value: s.chat?.total ?? 0,   delta: s.chat?.new_this_week ?? null, sub: 'cette semaine',
+		{ label: tFn('adash.card_chat'),       value: s.chat?.total ?? 0,   delta: s.chat?.new_this_week ?? null, sub: tFn('adash.this_week'),
 		  iconPath: 'M13 10V3L4 14h7v7l9-11h-7z' },
 	])
 
@@ -55,29 +59,29 @@
 		const m = Math.floor(diff / 60000)
 		const h = Math.floor(m / 60)
 		const day = Math.floor(h / 24)
-		if (m < 1)  return 'à l\'instant'
-		if (m < 60) return `${m}min`
-		if (h < 24) return `${h}h`
-		if (day < 30) return `${day}j`
+		if (m < 1)  return tFn('adash.just_now')
+		if (m < 60) return tFn('adash.ago_min', { n: m })
+		if (h < 24) return tFn('adash.ago_h', { n: h })
+		if (day < 30) return tFn('adash.ago_j', { n: day })
 		return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
 	}
 
 	const quickActions = [
-		{ href: '/admin/members',    label: 'Membres',    iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-		{ href: '/admin/grades',     label: 'Grades',     iconPath: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z' },
-		{ href: '/admin/categories', label: 'Catégories', iconPath: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
-		{ href: '/admin/moderation', label: 'Modération', iconPath: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-		{ href: '/admin/channels',   label: 'Salons',     iconPath: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-		{ href: '/admin/settings',   label: 'Paramètres', iconPath: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+		{ href: '/admin/members',    labelKey: 'adash.qa_members',    iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+		{ href: '/admin/grades',     labelKey: 'adash.qa_grades',     iconPath: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z' },
+		{ href: '/admin/categories', labelKey: 'adash.qa_categories', iconPath: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
+		{ href: '/admin/moderation', labelKey: 'adash.qa_moderation', iconPath: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+		{ href: '/admin/channels',   labelKey: 'adash.qa_channels',     iconPath: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+		{ href: '/admin/settings',   labelKey: 'adash.qa_settings', iconPath: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 	]
 </script>
 
-<svelte:head><title>Dashboard — Admin Nodyx</title></svelte:head>
+<svelte:head><title>{tFn('adash.page_title')}</title></svelte:head>
 
 <div class="space-y-5 max-w-6xl">
 	<div>
-		<h1 class="text-xl font-semibold text-zinc-100">Dashboard</h1>
-		<p class="text-[13px] text-zinc-500 mt-0.5">Vue d'ensemble de l'instance</p>
+		<h1 class="text-xl font-semibold text-zinc-100">{tFn('adash.title')}</h1>
+		<p class="text-[13px] text-zinc-500 mt-0.5">{tFn('adash.subtitle')}</p>
 	</div>
 
 	<!-- ── Stats : 8 cartes uniformes ───────────────────────────────────────── -->
@@ -115,16 +119,16 @@
 		<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
 			<div class="flex items-center justify-between mb-4">
 				<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">
-					Activité · 7 derniers jours
+					{tFn('adash.activity_7d')}
 				</h2>
 				<div class="flex items-center gap-3 text-[11px] text-zinc-500">
 					<span class="flex items-center gap-1.5">
 						<span class="w-2 h-2 rounded-sm bg-indigo-500 inline-block"></span>
-						Messages
+						{tFn('adash.legend_messages')}
 					</span>
 					<span class="flex items-center gap-1.5">
 						<span class="w-2 h-2 rounded-sm bg-zinc-600 inline-block"></span>
-						Inscriptions
+						{tFn('adash.legend_signups')}
 					</span>
 				</div>
 			</div>
@@ -136,13 +140,13 @@
 							<div
 								class="flex-1 rounded-t-sm bg-indigo-500/80 hover:bg-indigo-400 transition-colors min-h-[2px]"
 								style="height: {Math.max((day.posts / chartMax) * 76, day.posts > 0 ? 3 : 0)}px"
-								title="{day.posts} message{day.posts !== 1 ? 's' : ''}"
+								title={day.posts !== 1 ? tFn('adash.messages_many', { n: day.posts }) : tFn('adash.messages_one', { n: day.posts })}
 							></div>
 							<!-- New members bar -->
 							<div
 								class="flex-1 rounded-t-sm bg-zinc-600/80 hover:bg-zinc-500 transition-colors min-h-[2px]"
 								style="height: {Math.max((day.new_members / chartMax) * 76, day.new_members > 0 ? 3 : 0)}px"
-								title="{day.new_members} inscription{day.new_members !== 1 ? 's' : ''}"
+								title={day.new_members !== 1 ? tFn('adash.signups_many', { n: day.new_members }) : tFn('adash.signups_one', { n: day.new_members })}
 							></div>
 						</div>
 						<span class="text-[10px] text-zinc-600 tabular-nums">{day.label}</span>
@@ -154,10 +158,10 @@
 		<!-- Top contributeurs -->
 		<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
 			<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-4">
-				Top contributeurs · 30 jours
+				{tFn('adash.top_contributors')}
 			</h2>
 			{#if s.top_contributors.length === 0}
-				<p class="text-sm text-zinc-600">Aucun message ce mois-ci.</p>
+				<p class="text-sm text-zinc-600">{tFn('adash.no_messages_month')}</p>
 			{:else}
 				<ol class="space-y-2.5">
 					{#each s.top_contributors as c, i}
@@ -173,7 +177,7 @@
 							<a href="/users/{c.username}" class="text-[13px] text-zinc-300 hover:text-white flex-1 font-medium transition-colors">
 								{c.username}
 							</a>
-							<span class="text-xs text-zinc-500 tabular-nums">{c.post_count} msg</span>
+							<span class="text-xs text-zinc-500 tabular-nums">{tFn('adash.msg_short', { n: c.post_count })}</span>
 						</li>
 					{/each}
 				</ol>
@@ -183,10 +187,10 @@
 		<!-- Derniers inscrits -->
 		<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
 			<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-4">
-				Derniers inscrits
+				{tFn('adash.recent_members')}
 			</h2>
 			{#if !s.recent_members || s.recent_members.length === 0}
-				<p class="text-sm text-zinc-600">Aucun membre récent.</p>
+				<p class="text-sm text-zinc-600">{tFn('adash.no_recent_members')}</p>
 			{:else}
 				<ul class="space-y-2.5">
 					{#each s.recent_members as m}
@@ -214,7 +218,7 @@
 					{/each}
 				</ul>
 				<a href="/admin/members" class="mt-4 text-xs text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1 transition-colors">
-					Voir tous les membres
+					{tFn('adash.see_all_members')}
 					<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
 				</a>
 			{/if}
@@ -223,29 +227,29 @@
 		<!-- Forum + Actions rapides -->
 		<div class="space-y-4">
 			<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
-				<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-4">État du forum</h2>
+				<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-4">{tFn('adash.forum_state')}</h2>
 				<dl class="space-y-2 text-[13px]">
 					<div class="flex justify-between">
-						<dt class="text-zinc-500">Catégories</dt>
+						<dt class="text-zinc-500">{tFn('adash.categories')}</dt>
 						<dd class="text-zinc-200 font-medium tabular-nums">{s.categories.total}</dd>
 					</div>
 					<div class="flex justify-between">
-						<dt class="text-zinc-500">Fils épinglés</dt>
+						<dt class="text-zinc-500">{tFn('adash.threads_pinned')}</dt>
 						<dd class="text-zinc-200 font-medium tabular-nums">{s.threads.pinned}</dd>
 					</div>
 					<div class="flex justify-between">
-						<dt class="text-zinc-500">Fils verrouillés</dt>
+						<dt class="text-zinc-500">{tFn('adash.threads_locked')}</dt>
 						<dd class="text-zinc-200 font-medium tabular-nums">{s.threads.locked}</dd>
 					</div>
 					<div class="flex justify-between">
-						<dt class="text-zinc-500">Moy. msgs / fil</dt>
+						<dt class="text-zinc-500">{tFn('adash.avg_msgs')}</dt>
 						<dd class="text-zinc-200 font-medium tabular-nums">
 							{s.threads.total > 0 ? (s.posts.total / s.threads.total).toFixed(1) : '—'}
 						</dd>
 					</div>
 					{#if s.dms}
 					<div class="flex justify-between">
-						<dt class="text-zinc-500">Conversations DM</dt>
+						<dt class="text-zinc-500">{tFn('adash.dm_convos')}</dt>
 						<dd class="text-zinc-200 font-medium tabular-nums">{s.dms.total}</dd>
 					</div>
 					{/if}
@@ -253,7 +257,7 @@
 			</div>
 
 			<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
-				<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-3">Actions rapides</h2>
+				<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-3">{tFn('adash.quick_actions')}</h2>
 				<div class="grid grid-cols-2 gap-2">
 					{#each quickActions as link}
 						<a
@@ -264,7 +268,7 @@
 							<svg class="w-4 h-4 text-zinc-500 shrink-0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 								<path d={link.iconPath}/>
 							</svg>
-							<span class="text-xs font-medium">{link.label}</span>
+							<span class="text-xs font-medium">{tFn(link.labelKey)}</span>
 						</a>
 					{/each}
 				</div>
