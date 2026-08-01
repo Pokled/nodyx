@@ -1267,7 +1267,7 @@
 								<div class="info">
 									<div class="name-row">
 										<span class="name {buildAnimClass(member)}" style={buildNameStyle(member, isMe ? 'var(--nx-accent-2-soft2)' : '#9ca3af')}>{member.username}</span>
-										{#if isMe}<span class="you-tag">vous</span>{/if}
+										{#if isMe}<span class="you-tag">{tFn('common.you')}</span>{/if}
 									</div>
 									{#if isSharing || isStreaming}
 										<div class="status-text flex items-center gap-1">
@@ -1328,7 +1328,7 @@
 								<div class="info">
 									<div class="name-row">
 										<span class="name {buildAnimClass(member)}" style={buildNameStyle(member, isMe ? 'var(--nx-accent-2-soft2)' : '#9ca3af')}>{member.username}</span>
-										{#if isMe}<span class="you-tag">vous</span>{/if}
+										{#if isMe}<span class="you-tag">{tFn('common.you')}</span>{/if}
 									</div>
 									{#if isSharing || isStreaming}
 										<div class="status-text flex items-center gap-1">

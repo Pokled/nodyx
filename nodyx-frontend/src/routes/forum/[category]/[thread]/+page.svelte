@@ -353,8 +353,8 @@
 									if (result.type === 'redirect') await goto(result.location, { invalidateAll: true });
 									else { await applyAction(result); await invalidateAll(); }
 								}}>
-								<button type="submit" class="w-full px-2 py-1bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
-									Oui, supprimer
+								<button type="submit" class="w-full px-2 py-1 bg-red-700 hover:bg-red-600 text-xs text-white font-medium">
+									{tFn('forum.delete_confirm_yes')}
 								</button>
 							</form>
 							<button type="button" onclick={() => confirmDeleteThread = false}
@@ -583,8 +583,8 @@
 	{:else}
 		<div class="mt-8 border-t border-gray-800 pt-6 text-center">
 			<p class="text-sm text-gray-500 mb-3">{tFn('forum.must_login_reply')}</p>
-			<a href="/auth/login" class="inline-flex items-center gap-2 px-4 py-2bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
-				Se connecter
+			<a href="/auth/login" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
+				{tFn('common.login')}
 			</a>
 		</div>
 	{/if}

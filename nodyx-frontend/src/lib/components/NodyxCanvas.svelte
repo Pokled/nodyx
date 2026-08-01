@@ -2335,7 +2335,7 @@
 						       transition-all hover:scale-[1.02] active:scale-[0.98]
 						       flex items-center justify-center gap-2"
 					>
-						<span>📥</span> Exporter PNG + fermer
+						<span>📥</span> {tFn('canvas_r.export_png_close')}
 					</button>
 					<button
 						onclick={doClose}

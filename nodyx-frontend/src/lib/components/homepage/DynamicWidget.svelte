@@ -35,7 +35,7 @@
 			el.src = src
 			el.dataset.nodyx_widget = src
 			el.onload  = () => resolve()
-			el.onerror = () => reject(new Error(`Impossible de charger ${src}`))
+			el.onerror = () => reject(new Error(tFn('dw.load_failed', { src })))
 			document.head.appendChild(el)
 		})
 	}

@@ -23,7 +23,7 @@
 		<h1 class="text-2xl font-bold text-white mb-3">{tFn('banned.title')}</h1>
 		<p class="text-gray-400 text-sm leading-relaxed mb-8">
 			{@html tFn('banned.message', { name: communityName })}
-			Si vous pensez qu'il s'agit d'une erreur, contactez un administrateur.
+			{tFn('banned.contact_admin')}
 		</p>
 
 		<form method="POST" action="?/logout" use:enhance>

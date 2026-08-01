@@ -250,7 +250,7 @@
 							</span>
 						{/if}
 						<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500 border border-gray-700">
-							{instance.members ?? 0} membres
+							{instance.members ?? 0} {tFn('communities.stat_members')}
 						</span>
 					</div>
 
@@ -312,8 +312,7 @@
 	</div>
 	<h3 class="text-lg font-semibold text-white mb-2">Vous avez une instance Nodyx ?</h3>
 	<p class="text-sm text-gray-400 max-w-md mx-auto mb-5">
-		Enregistrez-la dans l'annuaire et recevez un sous-domaine gratuit
-		<code class="text-indigo-400">votre-nom.nodyx.org</code>.
+		{@html tFn('communities.register_intro')}
 		{tFn('communities.register_desc')}
 	</p>
 	<div class="flex flex-wrap gap-3 justify-center">

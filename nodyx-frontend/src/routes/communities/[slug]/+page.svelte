@@ -41,7 +41,7 @@
 			{#if community.description}
 				<p class="text-gray-400 mt-1">{community.description}</p>
 			{/if}
-			<p class="text-xs text-gray-600 mt-1">{members.length} membre{members.length > 1 ? 's' : ''}</p>
+			<p class="text-xs text-gray-600 mt-1">{members.length > 1 ? tFn('community_page.member_many', { n: members.length }) : tFn('community_page.member_one', { n: members.length })}</p>
 		</div>
 
 		<!-- Actions -->
@@ -61,7 +61,7 @@
 						type="submit"
 						class="rounded bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 text-sm font-semibold text-white transition-colors"
 					>
-						Rejoindre
+						{tFn('community_page.join')}
 					</button>
 				</form>
 			{:else if userRole !== 'owner'}
@@ -70,7 +70,7 @@
 						type="submit"
 						class="rounded border border-gray-700 hover:border-red-700 px-4 py-1.5 text-sm text-gray-400 hover:text-red-400 transition-colors"
 					>
-						Quitter
+						{tFn('community_page.leave')}
 					</button>
 				</form>
 			{/if}

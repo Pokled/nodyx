@@ -27,7 +27,7 @@
 				resendError = j.error ?? tFn('auth.resend_error');
 			}
 		} catch {
-			resendError = 'Impossible de contacter le serveur.';
+			resendError = tFn('auth.server_error');
 		} finally {
 			resending = false;
 		}

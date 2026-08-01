@@ -25,8 +25,13 @@ const CHECK = args.has('--check')
 const PUBLIC_ONLY = args.has('--public')
 
 // French signal: accented letters, or a common French UI word.
+// NB : beaucoup de français n'a PAS d'accent (« Se connecter », « Rejoindre »,
+// « membres »…) — c'est l'angle mort qui a laissé passer des chaînes en dur.
+// La wordlist ci-dessous couvre ces cas sans accent (verbes/labels UI courants).
 const ACC = /[àâäéèêëïîôùûüÿçœÀÂÄÉÈÊËÏÎÔÙÛÜŸÇŒ]/
-const FR = /\b(Supprimer|Annuler|Enregistrer|Modifier|Ajouter|Envoyer|Fermer|Retour|Suivant|Rechercher|Aucune?|Nouvelle?|Nouveau|Charger|Membres?|Voir|Connexion|Inscription|Brouillon|Publier|Choisir|Copier|Partager|Effacer|Enlever|Ouvrir|Bienvenue|Attention|Erreur|Chargement)\b/
+const FR = /\b([Ss]upprimer|[Aa]nnuler|[Ee]nregistrer|[Mm]odifier|[Aa]jouter|[Ee]nvoyer|[Ff]ermer|[Rr]etour|[Ss]uivant|[Rr]echercher|Aucune?|Nouvelle?|Nouveau|[Cc]harger|[Mm]embres?|Connexion|Inscription|Brouillon|[Pp]ublier|[Cc]hoisir|[Cc]opier|[Pp]artager|[Ee]ffacer|[Ee]nlever|[Oo]uvrir|Bienvenue|Erreur|Chargement|[Rr]ejoindre|[Qq]uitter|[Ss]uivre|[Ss]uivi|[Cc]onnecte[rz]|[Cc]onnecte-toi|[Cc]ontinuer|[Vv]alider|[Cc]ontacte[rz]|[Pp]articiper|[Dd]iffuse|Lancer pour|Attribution)\b/
+// Contractions et pronoms français : quasi impossibles en anglais → forte fiabilité.
+const FR_FUNC = /(\bvous\b|\bvotre\b|\bvos\b|\bcette\b|qu'il|s'agit|d'une|d'un\b|n'est|c'est|l'instant|parlez|Sois le premier)/
 
 const isAdmin = (p) =>
   p.includes('/routes/admin/') || p.includes('/components/admin/') ||
@@ -73,7 +78,7 @@ for (const f of files) {
     ATTR.lastIndex = 0
     for (let m; (m = ATTR.exec(l)); ) { if (LETTER.test(m[1])) { attrHit = true; break } }
     // (b) French text sitting outside an i18n call
-    const frHit = !l.includes('tFn(') && !l.includes('$t(') && (ACC.test(l) || FR.test(l))
+    const frHit = !l.includes('tFn(') && !l.includes('$t(') && (ACC.test(l) || FR.test(l) || FR_FUNC.test(l))
     if (attrHit || frHit) hits.push({ n: i + 1, s: s.slice(0, 100) })
   })
   if (hits.length) { perFile.push({ f: relative(SRC, f), hits }); total += hits.length }

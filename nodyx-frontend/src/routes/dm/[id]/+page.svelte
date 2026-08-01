@@ -1413,7 +1413,7 @@
 					</div>
 					{#if conversation.created_at}
 						<div class="dm-hero-since">
-							Vous vous parlez depuis le {formatHeroDate(conversation.created_at)}
+							{tFn('dm.talking_since', { date: formatHeroDate(conversation.created_at) })}
 						</div>
 					{/if}
 				</div>

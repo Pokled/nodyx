@@ -242,7 +242,7 @@
 
 	<!-- Member grade assignment -->
 	<div class="mt-10">
-		<h2 class="text-lg font-bold text-white mb-4">Attribution des grades aux membres</h2>
+		<h2 class="text-lg font-bold text-white mb-4">{tFn('grades.assign_title')}</h2>
 
 		{#if data.members.length === 0}
 			<p class="text-sm text-gray-500">{tFn('grades.no_members')}</p>

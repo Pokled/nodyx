@@ -362,7 +362,7 @@
 		<div class="h-full grid place-items-center px-6">
 			<div class="text-center space-y-2">
 				<div class="text-amber-400 text-4xl">⚠️</div>
-				<div class="text-sm text-amber-200">Impossible de se connecter au serveur.</div>
+				<div class="text-sm text-amber-200">{tFn('deck.server_unreachable')}</div>
 				<button onclick={bootstrap} type="button"
 					class="mt-2 text-xs bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-100 px-4 py-1.5 rounded">
 					{tFn('deck.retry')}

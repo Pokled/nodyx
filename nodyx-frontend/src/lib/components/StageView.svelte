@@ -456,7 +456,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5 6 9H2v6h4l5 4V5z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M23 9l-6 6M17 9l6 6"/>
                             </svg>
-                            <span class="text-xs" style="color: rgba(255,255,255,0.7)">Ce partage ne diffuse pas de son</span>
+                            <span class="text-xs" style="color: rgba(255,255,255,0.7)">{tFn('stage.share_no_sound')}</span>
                         {/if}
                     </div>
                 {/if}

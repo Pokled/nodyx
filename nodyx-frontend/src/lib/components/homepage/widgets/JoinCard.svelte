@@ -48,7 +48,7 @@
 	<div>
 		<h3 class="font-extrabold text-base text-white mb-0.5"
 		    style="font-family:'Space Grotesk',sans-serif">
-			{cardTitle || tFn('home.join_community') || `Rejoindre ${instanceName}`}
+			{cardTitle || tFn('home.join_community')}
 		</h3>
 		{#if cardSubtitle}
 			<p class="text-xs leading-relaxed" style="color:#6b7280">{cardSubtitle}</p>
@@ -89,7 +89,7 @@
 	<a href="/auth/register"
 	   class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
 	   style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-strong),var(--nx-cyan-deep)); border:1px solid rgb(var(--nx-accent-2-rgb) / .4)">
-		{ctaText || tFn('common.join') || 'Rejoindre'}
+		{ctaText || tFn('common.join')}
 		<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
 		</svg>

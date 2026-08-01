@@ -296,7 +296,7 @@
 					</div>
 				</div>
 			{:else}
-				<p class="text-xs text-gray-700">Personne pour l'instant. Sois le premier.</p>
+				<p class="text-xs text-gray-700">{tFn('table.nobody_yet')}</p>
 			{/if}
 
 			<p class="text-xs text-gray-800">{tFn('table.mic_required')}</p>
@@ -543,7 +543,7 @@
 					</div>
 					<div>
 						<h3 class="text-sm font-bold text-gray-100">Jukebox</h3>
-						<p class="text-[11px] text-gray-600">Diffuse un lien YouTube pour tout le canal</p>
+						<p class="text-[11px] text-gray-600">{tFn('table.yt_broadcast_hint')}</p>
 					</div>
 					<button
 						aria-label={tFn('table.close')}
@@ -576,7 +576,7 @@
 					style="background: rgba(200,145,74,0.9); color: #07070f; box-shadow: 0 0 24px rgba(200,145,74,0.25);"
 					onclick={handleJukeboxLoad}
 				>
-					Lancer pour tous
+					{tFn('table.launch_all')}
 				</button>
 
 				<p class="text-[10px] mt-4 text-center text-gray-700">

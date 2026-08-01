@@ -303,7 +303,7 @@
 		</div>
 		{#if !me}
 			<p class="text-xs text-center text-gray-500 mt-2">
-				<a href="/auth/login" class="text-indigo-400 hover:underline">Connecte-toi</a> pour participer.
+				{@html tFn('whisper.login_to_participate')}
 			</p>
 		{/if}
 	{/if}

@@ -196,7 +196,7 @@
 						class="ch-voice-item w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded text-sm
 						       {isAdmin ? 'cursor-grab active:cursor-grabbing' : ''}
 						       {inThisChannel ? 'ch-voice-active' : 'ch-voice-idle'}"
-						title={inThisChannel ? 'Quitter le salon vocal' : 'Rejoindre le salon vocal'}
+						title={inThisChannel ? tFn('chsidebar.leave_voice') : tFn('chsidebar.join_voice')}
 					>
 						<!-- Icône : custom prioritaire, sinon onde/micro animé -->
 						{#if ch.icon_emoji}
@@ -250,7 +250,7 @@
 										</div>
 									{/if}
 									<span class="text-xs truncate leading-tight {isMe ? 'text-green-400' : 'text-gray-400'}">
-										{m.username}{isMe ? ' (vous)' : ''}
+										{m.username}{isMe ? ` (${tFn('common.you')})` : ''}
 									</span>
 									{#if isInVoice}
 										<svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 text-gray-700 shrink-0 ml-auto opacity-0 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
