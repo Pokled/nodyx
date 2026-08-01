@@ -3,6 +3,9 @@
 	import { MODULE_DISPLAY, FAMILY_META, FAMILY_ORDER, type ModuleFamily } from '$lib/modules'
 	import { page } from '$app/stores'
 	import { untrack } from 'svelte'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props()
 
@@ -63,15 +66,15 @@
 			})
 
 			if (res.ok) {
-				pushToast(`${display?.name ?? id} ${!currentlyEnabled ? 'activé' : 'désactivé'}`, true)
+				pushToast(`${display?.name ?? id} ${!currentlyEnabled ? tFn('amodul.enabled') : tFn('amodul.disabled')}`, true)
 			} else {
 				moduleState[id] = currentlyEnabled  // revert
 				const err = await res.json().catch(() => ({}))
-				pushToast(err.message ?? 'Erreur lors de la mise à jour', false)
+				pushToast(err.message ?? tFn('amodul.err_update'), false)
 			}
 		} catch {
 			moduleState[id] = currentlyEnabled  // revert
-			pushToast('Erreur réseau', false)
+			pushToast(tFn('amodul.err_network'), false)
 		} finally {
 			saving[id] = false
 		}
@@ -91,15 +94,14 @@
 	<!-- Header -->
 	<div class="flex items-start justify-between gap-4">
 		<div>
-			<h1 class="text-xl font-bold text-white">Modules</h1>
+			<h1 class="text-xl font-bold text-white">{tFn('amodul.title')}</h1>
 			<p class="text-sm text-gray-400 mt-0.5">
-				Activez ou désactivez les fonctionnalités de votre instance.
-				Chaque communauté n'active que ce dont elle a besoin.
+				{tFn('amodul.subtitle')}
 			</p>
 		</div>
 		<div class="shrink-0 flex items-center gap-2 bg-gray-800/60 border border-gray-700/50 rounded-xl px-4 py-2.5">
 			<span class="text-2xl font-bold text-white tabular-nums">{enabledCount}</span>
-			<span class="text-xs text-gray-400 leading-tight">modules<br>actifs</span>
+			<span class="text-xs text-gray-400 leading-tight">{@html tFn('amodul.active_modules')}</span>
 		</div>
 	</div>
 
@@ -110,7 +112,7 @@
 			class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
 			       {activeFamily === 'all' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'}"
 		>
-			Tout
+			{tFn('amodul.all')}
 		</button>
 		{#each FAMILY_ORDER as fam}
 			{@const meta  = FAMILY_META[fam]}
@@ -204,7 +206,7 @@
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
 												      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 											</svg>
-											<span>Bientôt</span>
+											<span>{tFn('amodul.soon')}</span>
 										</div>
 									{:else}
 										<button
@@ -214,7 +216,7 @@
 											       {enabled ? 'focus:ring-violet-500' : 'focus:ring-gray-600'}
 											       {isSaving ? 'opacity-50 cursor-wait' : 'cursor-pointer'}"
 											style="background: {enabled ? (display?.color ?? 'var(--nx-accent-2-strong)') : '#374151'}"
-											aria-label="{enabled ? 'Désactiver' : 'Activer'} {display?.name}"
+											aria-label={`${enabled ? tFn('amodul.disable') : tFn('amodul.enable')} ${display?.name}`}
 										>
 											<span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200
 											             {enabled ? 'translate-x-5' : 'translate-x-0'}"></span>
@@ -229,12 +231,12 @@
 											{display?.name ?? mod.id}
 										</span>
 										{#if isCore}
-											<span class="text-[10px] text-gray-600 font-medium">Toujours actif</span>
+											<span class="text-[10px] text-gray-600 font-medium">{tFn('amodul.always_active')}</span>
 										{:else if isSoon}
-											<span class="text-[10px] text-gray-600 font-medium">En développement</span>
+											<span class="text-[10px] text-gray-600 font-medium">{tFn('amodul.in_dev')}</span>
 										{:else}
 											<span class="text-[10px] font-medium {enabled ? 'text-green-500' : 'text-gray-600'}">
-												{enabled ? '● actif' : '○ inactif'}
+												{enabled ? tFn('amodul.active_dot') : tFn('amodul.inactive_dot')}
 											</span>
 										{/if}
 									</div>
