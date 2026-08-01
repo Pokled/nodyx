@@ -11,11 +11,18 @@ export const load: PageServerLoad = async ({ params, fetch, url }) => {
 
 	const profile = await res.json()
 
-	// Activity (last 12 weeks) — best effort
+	// Activity (last 12 weeks), best effort.
+	// L'API renvoie un tableau [{ date, count }] : on le replie en Record<date, count>
+	// pour que la heatmap puisse faire ses lookups par date (sinon toutes les cases à 0).
 	let activity: Record<string, number> = {}
 	try {
 		const ar = await apiFetch(fetch, `/users/${username}/activity`)
-		if (ar.ok) activity = (await ar.json()).activity ?? {}
+		if (ar.ok) {
+			const raw = (await ar.json()).activity ?? []
+			activity = Array.isArray(raw)
+				? Object.fromEntries(raw.map((r: { date: string; count: number }) => [r.date, r.count]))
+				: raw
+		}
 	} catch { /* ignore */ }
 
 	const origin = url.origin

@@ -239,12 +239,12 @@
 		<div class="stat-sep"></div>
 		<div class="stat-item">
 			<span class="stat-val">{Number(pts).toLocaleString('fr-FR')}</span>
-			<span class="stat-lbl">Points XP</span>
+			<span class="stat-lbl">{tFn('user_card.stat_xp')}</span>
 		</div>
 		<div class="stat-sep"></div>
 		<div class="stat-item">
 			<span class="stat-val">{Math.floor((Date.now() - new Date(profile.created_at).getTime()) / 86400000).toLocaleString('fr-FR')}</span>
-			<span class="stat-lbl">Jours</span>
+			<span class="stat-lbl">{tFn('user_card.stat_days')}</span>
 		</div>
 	</div>
 
@@ -253,7 +253,7 @@
 		<div class="heatmap-header">
 			<span class="heatmap-title">{tFn('user_card.activity')}</span>
 			<span class="heatmap-total">
-				{heatCells.reduce((a, c) => a + c.count, 0)} contributions
+				{tFn('user_card.contrib_total', { n: heatCells.reduce((a, c) => a + c.count, 0) })}
 			</span>
 		</div>
 		<div class="heatmap-grid">
@@ -293,7 +293,7 @@
 					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
 					<circle cx="12" cy="7" r="4"/>
 				</svg>
-				Profil complet
+				{tFn('user_card.full_profile')}
 			</a>
 
 			<!-- Copy link -->

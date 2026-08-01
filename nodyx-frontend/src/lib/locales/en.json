@@ -4387,5 +4387,9 @@
   "forum.delete_confirm_yes": "Yes, delete",
   "communities.register_intro": "Register it in the directory and get a free subdomain <code class=\"text-indigo-400\">your-name.nodyx.org</code>.",
   "community_page.member_one": "{{n}} member",
-  "community_page.member_many": "{{n}} members"
+  "community_page.member_many": "{{n}} members",
+  "user_card.stat_xp": "XP points",
+  "user_card.stat_days": "Days",
+  "user_card.contrib_total": "{{n}} contributions",
+  "user_card.full_profile": "Full profile"
 }

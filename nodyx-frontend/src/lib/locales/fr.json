@@ -4387,5 +4387,9 @@
   "forum.delete_confirm_yes": "Oui, supprimer",
   "communities.register_intro": "Enregistrez-la dans l'annuaire et recevez un sous-domaine gratuit <code class=\"text-indigo-400\">votre-nom.nodyx.org</code>.",
   "community_page.member_one": "{{n}} membre",
-  "community_page.member_many": "{{n}} membres"
+  "community_page.member_many": "{{n}} membres",
+  "user_card.stat_xp": "Points XP",
+  "user_card.stat_days": "Jours",
+  "user_card.contrib_total": "{{n}} contributions",
+  "user_card.full_profile": "Profil complet"
 }
