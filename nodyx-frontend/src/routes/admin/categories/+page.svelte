@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
 	import type { PageData, ActionData } from './$types'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
@@ -21,10 +24,10 @@
 	const flatRows = $derived(renderTree(data.categories))
 </script>
 
-<svelte:head><title>Catégories — Admin Nodyx</title></svelte:head>
+<svelte:head><title>{tFn('acat.page_title')}</title></svelte:head>
 
 <div>
-	<h1 class="text-2xl font-bold text-white mb-6">Catégories</h1>
+	<h1 class="text-2xl font-bold text-white mb-6">{tFn('acat.title')}</h1>
 
 	{#if form?.error}
 		<p class="mb-4 rounded-lg bg-red-900/40 border border-red-800 px-4 py-2 text-sm text-red-300">{form.error}</p>
@@ -33,19 +36,19 @@
 	<!-- Create -->
 	<details class="mb-6 rounded-xl border border-gray-800 bg-gray-900/50">
 		<summary class="cursor-pointer px-5 py-3.5 text-sm font-semibold text-indigo-300 hover:text-indigo-200 select-none flex items-center gap-2">
-			<span>+</span> Nouvelle catégorie
+			<span>+</span> {tFn('acat.new_category')}
 		</summary>
 		<form method="POST" action="?/create" use:enhance class="px-5 pb-5 pt-3 space-y-4 border-t border-gray-800">
 			<div class="grid sm:grid-cols-2 gap-4">
 				<div>
-					<label for="cat-create-name" class="block text-xs text-gray-400 mb-1">Nom *</label>
+					<label for="cat-create-name" class="block text-xs text-gray-400 mb-1">{tFn('acat.name_req')}</label>
 					<input id="cat-create-name" name="name" type="text" required maxlength="100"
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 				</div>
 				<div>
-					<label for="cat-create-parent" class="block text-xs text-gray-400 mb-1">Catégorie parente (optionnel)</label>
+					<label for="cat-create-parent" class="block text-xs text-gray-400 mb-1">{tFn('acat.parent_optional')}</label>
 					<select id="cat-create-parent" name="parent_id" class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
-						<option value="">— Racine —</option>
+						<option value="">{tFn('acat.root')}</option>
 						{#each flatCats as c}
 							<option value={c.id}>{'·'.repeat(c.depth * 2)} {c.name}</option>
 						{/each}
@@ -53,12 +56,12 @@
 				</div>
 			</div>
 			<div>
-				<label for="cat-create-desc" class="block text-xs text-gray-400 mb-1">Description</label>
-				<input id="cat-create-desc" name="description" type="text" maxlength="500" placeholder="Optionnel"
+				<label for="cat-create-desc" class="block text-xs text-gray-400 mb-1">{tFn('acat.description')}</label>
+				<input id="cat-create-desc" name="description" type="text" maxlength="500" placeholder={tFn('acat.optional')}
 					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 			</div>
 			<button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-semibold text-white">
-				Créer
+				{tFn('acat.create')}
 			</button>
 		</form>
 	</details>
@@ -68,9 +71,9 @@
 		<table class="w-full text-sm">
 			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 				<tr>
-					<th class="px-4 py-3 text-left">Catégorie</th>
-					<th class="px-4 py-3 text-center">Fils</th>
-					<th class="px-4 py-3 text-right">Actions</th>
+					<th class="px-4 py-3 text-left">{tFn('acat.col_category')}</th>
+					<th class="px-4 py-3 text-center">{tFn('acat.col_threads')}</th>
+					<th class="px-4 py-3 text-right">{tFn('acat.col_actions')}</th>
 				</tr>
 			</thead>
 			<tbody class="divide-y divide-gray-800/60">
@@ -84,15 +87,15 @@
 									<input type="hidden" name="id" value={cat.id} />
 									<div class="grid sm:grid-cols-2 gap-3">
 										<div>
-											<label for="cat-edit-name-{cat.id}" class="block text-xs text-gray-400 mb-1">Nom</label>
+											<label for="cat-edit-name-{cat.id}" class="block text-xs text-gray-400 mb-1">{tFn('acat.name')}</label>
 											<input id="cat-edit-name-{cat.id}" name="name" type="text" required value={cat.name}
 												class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 										</div>
 										<div>
-											<label for="cat-edit-parent-{cat.id}" class="block text-xs text-gray-400 mb-1">Catégorie parente</label>
+											<label for="cat-edit-parent-{cat.id}" class="block text-xs text-gray-400 mb-1">{tFn('acat.parent')}</label>
 											<select id="cat-edit-parent-{cat.id}" name="parent_id" class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
-												<option value="__unchanged__">— Inchangée —</option>
-												<option value="">— Racine —</option>
+												<option value="__unchanged__">{tFn('acat.unchanged')}</option>
+												<option value="">{tFn('acat.root')}</option>
 												{#each flatCats.filter(c => c.id !== cat.id) as c}
 													<option value={c.id} selected={c.id === cat.parent_id}>
 														{'·'.repeat(c.depth * 2)} {c.name}
@@ -102,13 +105,13 @@
 										</div>
 									</div>
 									<div>
-										<label for="cat-edit-desc-{cat.id}" class="block text-xs text-gray-400 mb-1">Description</label>
+										<label for="cat-edit-desc-{cat.id}" class="block text-xs text-gray-400 mb-1">{tFn('acat.description')}</label>
 										<input id="cat-edit-desc-{cat.id}" name="description" type="text" value={cat.description ?? ''}
 											class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 									</div>
 									<div class="flex gap-2">
-										<button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white">Enregistrer</button>
-										<button type="button" onclick={() => editingId = null} class="rounded-lg bg-gray-700 hover:bg-gray-600 px-3 py-1.5 text-xs text-gray-300">Annuler</button>
+										<button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white">{tFn('acat.save')}</button>
+										<button type="button" onclick={() => editingId = null} class="rounded-lg bg-gray-700 hover:bg-gray-600 px-3 py-1.5 text-xs text-gray-300">{tFn('acat.cancel')}</button>
 									</div>
 								</form>
 							</td>
@@ -127,13 +130,13 @@
 							<td class="px-4 py-3 text-center text-gray-500 tabular-nums">{cat.thread_count}</td>
 							<td class="px-4 py-3 text-right">
 								<div class="flex items-center justify-end gap-3">
-									<button onclick={() => editingId = cat.id} class="text-xs text-indigo-400 hover:text-indigo-300">Modifier</button>
+									<button onclick={() => editingId = cat.id} class="text-xs text-indigo-400 hover:text-indigo-300">{tFn('acat.edit')}</button>
 									<form method="POST" action="?/delete" use:enhance class="inline">
 										<input type="hidden" name="id" value={cat.id} />
 										<button type="submit"
-											onclick={(e) => { if (!confirm(`Supprimer "${cat.name}" ? Cette action est irréversible.`)) e.preventDefault() }}
+											onclick={(e) => { if (!confirm(tFn('acat.confirm_delete', { name: cat.name }))) e.preventDefault() }}
 											class="text-xs text-red-500 hover:text-red-400">
-											Supprimer
+											{tFn('acat.delete')}
 										</button>
 									</form>
 								</div>
