@@ -4391,5 +4391,6 @@
   "user_card.stat_xp": "Points XP",
   "user_card.stat_days": "Jours",
   "user_card.contrib_total": "{{n}} contributions",
-  "user_card.full_profile": "Profil complet"
+  "user_card.full_profile": "Profil complet",
+  "user.card_btn": "Carte"
 }

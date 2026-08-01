@@ -29,7 +29,7 @@ const PUBLIC_ONLY = args.has('--public')
 // « membres »…) — c'est l'angle mort qui a laissé passer des chaînes en dur.
 // La wordlist ci-dessous couvre ces cas sans accent (verbes/labels UI courants).
 const ACC = /[àâäéèêëïîôùûüÿçœÀÂÄÉÈÊËÏÎÔÙÛÜŸÇŒ]/
-const FR = /\b([Ss]upprimer|[Aa]nnuler|[Ee]nregistrer|[Mm]odifier|[Aa]jouter|[Ee]nvoyer|[Ff]ermer|[Rr]etour|[Ss]uivant|[Rr]echercher|Aucune?|Nouvelle?|Nouveau|[Cc]harger|[Mm]embres?|Connexion|Inscription|Brouillon|[Pp]ublier|[Cc]hoisir|[Cc]opier|[Pp]artager|[Ee]ffacer|[Ee]nlever|[Oo]uvrir|Bienvenue|Erreur|Chargement|[Rr]ejoindre|[Qq]uitter|[Ss]uivre|[Ss]uivi|[Cc]onnecte[rz]|[Cc]onnecte-toi|[Cc]ontinuer|[Vv]alider|[Cc]ontacte[rz]|[Pp]articiper|[Dd]iffuse|Lancer pour|Attribution)\b/
+const FR = /\b([Ss]upprimer|[Aa]nnuler|[Ee]nregistrer|[Mm]odifier|[Aa]jouter|[Ee]nvoyer|[Ff]ermer|[Rr]etour|[Ss]uivant|[Rr]echercher|Aucune?|Nouvelle?|Nouveau|[Cc]harger|[Mm]embres?|Connexion|Inscription|Brouillon|[Pp]ublier|[Cc]hoisir|[Cc]opier|[Pp]artager|[Ee]ffacer|[Ee]nlever|[Oo]uvrir|Bienvenue|Erreur|Chargement|[Rr]ejoindre|[Qq]uitter|[Ss]uivre|[Ss]uivi|[Cc]onnecte[rz]|[Cc]onnecte-toi|[Cc]ontinuer|[Vv]alider|[Cc]ontacte[rz]|[Pp]articiper|[Dd]iffuse|Lancer pour|Attribution|[Cc]arte)\b/
 // Contractions et pronoms français : quasi impossibles en anglais → forte fiabilité.
 const FR_FUNC = /(\bvous\b|\bvotre\b|\bvos\b|\bcette\b|qu'il|s'agit|d'une|d'un\b|n'est|c'est|l'instant|parlez|Sois le premier)/
 
