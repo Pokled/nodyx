@@ -2,6 +2,9 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
+	import { t as i18n } from '$lib/i18n';
+
+	const tFn = $derived($i18n);
 
 	let { data }: { data: PageData } = $props();
 
@@ -77,15 +80,15 @@
 		const d = new Date(s);
 		const diff = Date.now() - d.getTime();
 		const m = Math.floor(diff / 60000);
-		if (m < 1)   return 'à l\'instant';
-		if (m < 60)  return `il y a ${m} min`;
+		if (m < 1)   return tFn('abk.just_now');
+		if (m < 60)  return tFn('abk.mins_ago', { n: m });
 		const h = Math.floor(m / 60);
-		if (h < 24)  return `il y a ${h} h`;
+		if (h < 24)  return tFn('abk.hours_ago', { n: h });
 		const d2 = Math.floor(h / 24);
-		return `il y a ${d2} j`;
+		return tFn('abk.days_ago', { n: d2 });
 	}
 	function sourceLabel(s: string): string {
-		return s === 'manual' ? 'Manuel' : s === 'scheduled' ? 'Auto' : 'Pré-restore';
+		return s === 'manual' ? tFn('abk.src_manual') : s === 'scheduled' ? tFn('abk.src_auto') : tFn('abk.src_prerestore');
 	}
 	function sourceColor(s: string): string {
 		return s === 'manual' ? '#a78bfa' : s === 'scheduled' ? '#06b6d4' : '#fb923c';
@@ -121,17 +124,17 @@
 				}),
 			});
 			if (res.ok) {
-				toast('Sauvegarde créée');
+				toast(tFn('abk.created'));
 				createOpen = false;
 				createLabel = '';
 				createIncludeUploads = true;
 				await refresh();
 			} else {
 				const j = await res.json().catch(() => ({}));
-				toast(j.error ?? `Erreur ${res.status}`, false);
+				toast(j.error ?? tFn('abk.err_status', { status: res.status }), false);
 			}
 		} catch (e) {
-			toast(`Erreur : ${(e as Error).message}`, false);
+			toast(tFn('abk.err_generic', { msg: (e as Error).message }), false);
 		} finally {
 			creating = false;
 		}
@@ -145,7 +148,7 @@
 		const res = await fetch(`/api/v1/admin/backups/${b.id}/download`, {
 			headers: { Authorization: `Bearer ${getToken()}` },
 		});
-		if (!res.ok) { toast('Téléchargement échoué', false); return; }
+		if (!res.ok) { toast(tFn('abk.download_failed'), false); return; }
 		const blob = await res.blob();
 		const url  = URL.createObjectURL(blob);
 		const a    = document.createElement('a');
@@ -155,7 +158,7 @@
 		a.click();
 		document.body.removeChild(a);
 		URL.revokeObjectURL(url);
-		toast('Téléchargement lancé');
+		toast(tFn('abk.download_started'));
 	}
 
 	// ── Verify ───────────────────────────────────────────────────────────────
@@ -169,9 +172,9 @@
 			if (res.ok) {
 				const j = await res.json();
 				verifyResults[b.id] = j;
-				toast(j.ok ? 'Sauvegarde vérifiée — intégrité OK' : 'Vérification échouée', j.ok);
+				toast(j.ok ? tFn('abk.verified') : tFn('abk.verify_failed'), j.ok);
 			} else {
-				toast('Erreur vérification', false);
+				toast(tFn('abk.err_verify'), false);
 			}
 		} finally {
 			verifyingId = null;
@@ -180,17 +183,17 @@
 
 	// ── Delete ───────────────────────────────────────────────────────────────
 	async function handleDelete(b: BackupRow) {
-		if (!confirm(`Supprimer définitivement la sauvegarde "${b.filename}" ?`)) return;
+		if (!confirm(tFn('abk.confirm_delete', { name: b.filename }))) return;
 		const res = await fetch(`/api/v1/admin/backups/${b.id}`, {
 			method:  'DELETE',
 			headers: { Authorization: `Bearer ${getToken()}` },
 		});
 		if (res.ok) {
-			toast('Sauvegarde supprimée');
+			toast(tFn('abk.deleted'));
 			await refresh();
 		} else {
 			const j = await res.json().catch(() => ({}));
-			toast(j.error ?? 'Erreur suppression', false);
+			toast(j.error ?? tFn('abk.err_delete'), false);
 		}
 	}
 
@@ -248,16 +251,16 @@
 				body: JSON.stringify({ confirm_slug: restoreSlug, dry_run: false }),
 			});
 			if (res.ok) {
-				toast('Restauration terminée. Tu as été déconnecté.');
+				toast(tFn('abk.restore_done'));
 				// Sessions are flushed on the server, redirect to login
 				setTimeout(() => { window.location.href = '/auth/login'; }, 2000);
 			} else {
 				const j = await res.json().catch(() => ({}));
-				toast(j.error ?? 'Erreur restauration', false);
+				toast(j.error ?? tFn('abk.err_restore'), false);
 				restoring = false;
 			}
 		} catch (e) {
-			toast(`Erreur : ${(e as Error).message}`, false);
+			toast(tFn('abk.err_generic', { msg: (e as Error).message }), false);
 			restoring = false;
 		}
 	}
@@ -282,13 +285,13 @@
 			if (res.ok) {
 				dryRunResult = {
 					ok:      true,
-					message: 'Cette sauvegarde est restorable. Aucune modification effectuée.',
+					message: tFn('abk.dryrun_ok'),
 				};
 			} else {
 				const j = await res.json().catch(() => ({}));
 				dryRunResult = {
 					ok:      false,
-					message: j.error ?? `Erreur ${res.status}`,
+					message: j.error ?? tFn('abk.err_status', { status: res.status }),
 				};
 			}
 		} catch (e) {
@@ -299,7 +302,7 @@
 	}
 </script>
 
-<svelte:head><title>Sauvegardes — Admin</title></svelte:head>
+<svelte:head><title>{tFn('abk.page_title')}</title></svelte:head>
 
 <!-- Toasts -->
 <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
@@ -317,16 +320,16 @@
 	<div class="flex items-center justify-between mb-6">
 		<div>
 			<h1 class="text-2xl font-black" style="font-family:'Space Grotesk',sans-serif; background:linear-gradient(135deg,var(--nx-accent-2-soft),var(--nx-cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text">
-				Sauvegardes & Restauration
+				{tFn('abk.title')}
 			</h1>
 			<p class="text-sm mt-1" style="color:#6b7280">
-				Crée des points de restauration de ton instance. Chaque sauvegarde contient la base, les uploads et la config.
+				{tFn('abk.subtitle')}
 			</p>
 		</div>
 		<a href="/admin/backups/audit"
 		   class="flex items-center gap-2 px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all"
 		   style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); color:#9ca3af">
-			Journal d'audit →
+			{tFn('abk.audit_log')}
 		</a>
 	</div>
 
@@ -335,17 +338,17 @@
 		<div class="flex items-center gap-3">
 			<span class="text-base">💾</span>
 			<div>
-				<p class="text-xs" style="color:#6b7280">Espace utilisé par les sauvegardes</p>
+				<p class="text-xs" style="color:#6b7280">{tFn('abk.storage_used')}</p>
 				<p class="text-sm font-bold">
 					{fmtBytes(storage.used)}
 					<span class="font-normal" style="color:#6b7280">
-						/ {fmtBytes(storage.available)} libre{(storage.available > 1) ? 's' : ''}
+						/ {fmtBytes(storage.available)} {storage.available > 1 ? tFn('abk.free_many') : tFn('abk.free_one')}
 					</span>
 				</p>
 			</div>
 		</div>
 		<div class="text-xs text-right">
-			<p style="color:#6b7280">Sauvegardes en stock</p>
+			<p style="color:#6b7280">{tFn('abk.in_stock')}</p>
 			<p class="font-bold">{total}</p>
 		</div>
 	</div>
@@ -359,7 +362,7 @@
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"/>
 			</svg>
-			Créer une sauvegarde
+			{tFn('abk.create_backup')}
 		</button>
 	</div>
 
@@ -367,13 +370,13 @@
 	<div style="background:#0d0d12; border:1px solid rgba(255,255,255,.07)">
 		<div class="px-4 py-3 flex items-center gap-2" style="border-bottom:1px solid rgba(255,255,255,.05)">
 			<span class="text-base">📦</span>
-			<span class="font-bold text-sm">Sauvegardes existantes</span>
+			<span class="font-bold text-sm">{tFn('abk.existing')}</span>
 			<span class="ml-auto text-xs" style="color:#374151">{backups.length}</span>
 		</div>
 
 		{#if backups.length === 0}
 			<div class="px-4 py-12 text-center text-sm" style="color:#374151">
-				Aucune sauvegarde pour l'instant. Crée la première avec le bouton ci-dessus.
+				{tFn('abk.empty')}
 			</div>
 		{:else}
 			<div class="divide-y" style="border-color:rgba(255,255,255,.04)">
@@ -394,7 +397,7 @@
 								{#if verify}
 									<span class="text-[9px] font-bold uppercase px-1.5 py-0.5"
 									      style="background:rgba({verify.ok ? '74,222,128' : '239,68,68'},.1); border:1px solid rgba({verify.ok ? '74,222,128' : '239,68,68'},.25); color:{verify.ok ? '#4ade80' : '#ef4444'}">
-										{verify.ok ? '✓ Vérifié' : '✗ Erreur'}
+										{verify.ok ? tFn('abk.badge_verified') : tFn('abk.badge_error')}
 									</span>
 								{/if}
 							</div>
@@ -411,7 +414,7 @@
 									<span>·</span><span class="italic">"{b.label}"</span>
 								{/if}
 								{#if b.expires_at}
-									<span>·</span><span style="color:#fb923c">Protégée jusqu'au {fmtDate(b.expires_at)}</span>
+									<span>·</span><span style="color:#fb923c">{tFn('abk.protected_until', { date: fmtDate(b.expires_at) })}</span>
 								{/if}
 							</div>
 						</div>
@@ -420,27 +423,27 @@
 							<button onclick={() => handleDownload(b)}
 							        class="px-2.5 py-1.5 text-xs font-bold transition-colors"
 							        style="border:1px solid rgba(255,255,255,.08); color:#9ca3af"
-							        title="Télécharger">
+							        title={tFn('abk.download_title')}>
 								↓
 							</button>
 							<button onclick={() => handleVerify(b)} disabled={verifyingId === b.id}
 							        class="px-2.5 py-1.5 text-xs font-bold transition-colors disabled:opacity-50"
 							        style="border:1px solid rgba(255,255,255,.08); color:#9ca3af"
-							        title="Vérifier l'intégrité">
+							        title={tFn('abk.verify_title')}>
 								{verifyingId === b.id ? '…' : '✓'}
 							</button>
 							{#if !b.protected}
 								<button onclick={() => openRestore(b)}
 								        class="px-2.5 py-1.5 text-xs font-bold transition-colors"
 								        style="background:rgba(251,146,60,.08); border:1px solid rgba(251,146,60,.2); color:#fb923c"
-								        title="Restaurer">
+								        title={tFn('abk.restore_title')}>
 									↻
 								</button>
 							{/if}
 							<button onclick={() => handleDelete(b)} disabled={b.protected}
 							        class="px-2.5 py-1.5 text-xs font-bold transition-colors disabled:opacity-30"
 							        style="border:1px solid rgba(239,68,68,.2); color:#ef4444"
-							        title={b.protected ? 'Sauvegarde protégée' : 'Supprimer'}>
+							        title={b.protected ? tFn('abk.protected_title') : tFn('abk.delete_title')}>
 								✕
 							</button>
 						</div>
@@ -462,16 +465,16 @@
 		     role="dialog" aria-modal="true" tabindex="-1"
 		     style="background:#0d0d12; border:1px solid rgba(255,255,255,.1)">
 			<div class="px-5 py-4" style="border-bottom:1px solid rgba(255,255,255,.06)">
-				<p class="font-bold text-sm">Créer une sauvegarde</p>
+				<p class="font-bold text-sm">{tFn('abk.create_backup')}</p>
 			</div>
 			<div class="p-5 flex flex-col gap-4">
 				<label class="flex flex-col gap-1.5">
-					<span class="text-xs font-bold uppercase tracking-wider" style="color:#9ca3af">Libellé (optionnel)</span>
+					<span class="text-xs font-bold uppercase tracking-wider" style="color:#9ca3af">{tFn('abk.label_optional')}</span>
 					<input type="text" bind:value={createLabel} maxlength="200"
-					       placeholder="ex: avant migration v2.4"
+					       placeholder={tFn('abk.label_ph')}
 					       class="px-3 py-2 text-sm"
 					       style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); color:#e2e8f0" />
-					<span class="text-[10px]" style="color:#6b7280">Pour t'aider à reconnaître cette sauvegarde plus tard.</span>
+					<span class="text-[10px]" style="color:#6b7280">{tFn('abk.label_hint')}</span>
 				</label>
 
 				<label class="flex items-start gap-2.5 cursor-pointer">
@@ -479,25 +482,25 @@
 					       class="mt-0.5"
 					       style="accent-color:var(--nx-accent-2-soft)" />
 					<div class="flex flex-col">
-						<span class="text-sm font-bold">Inclure les fichiers uploadés</span>
-						<span class="text-[10px]" style="color:#6b7280">Avatars, images, documents. Décocher = sauvegarde DB-only (plus rapide, beaucoup moins lourde).</span>
+						<span class="text-sm font-bold">{tFn('abk.include_uploads')}</span>
+						<span class="text-[10px]" style="color:#6b7280">{tFn('abk.include_uploads_hint')}</span>
 					</div>
 				</label>
 
 				<div class="px-3 py-2 text-[11px] leading-relaxed" style="background:rgba(167,139,250,.05); border:1px solid rgba(167,139,250,.15); color:#9ca3af">
-					ℹ La création peut prendre plusieurs minutes selon le volume. La page reste bloquée pendant l'opération en Phase 1 — on ajoutera une barre de progression Socket.IO en Phase 2.
+					{tFn('abk.create_notice')}
 				</div>
 			</div>
 			<div class="px-5 py-3 flex items-center justify-end gap-2" style="border-top:1px solid rgba(255,255,255,.06)">
 				<button onclick={() => createOpen = false} disabled={creating}
 				        class="px-4 py-1.5 text-xs font-bold disabled:opacity-50"
 				        style="border:1px solid rgba(255,255,255,.08); color:#9ca3af">
-					Annuler
+					{tFn('abk.cancel')}
 				</button>
 				<button onclick={handleCreate} disabled={creating}
 				        class="px-4 py-1.5 text-xs font-bold disabled:opacity-50"
 				        style="background:linear-gradient(135deg,rgb(var(--nx-accent-2-rgb) / .25),rgb(var(--nx-cyan-rgb) / .15)); border:1px solid rgb(var(--nx-accent-2-rgb) / .4); color:var(--nx-accent-2-soft)">
-					{creating ? 'Création...' : 'Créer'}
+					{creating ? tFn('abk.creating') : tFn('abk.create')}
 				</button>
 			</div>
 		</div>
@@ -518,14 +521,14 @@
 			<div class="px-5 py-4 flex items-center gap-3" style="border-bottom:1px solid rgba(239,68,68,.2); background:rgba(239,68,68,.05)">
 				<span class="text-xl">⚠</span>
 				<div>
-					<p class="font-bold text-sm" style="color:#fca5a5">Restaurer cette sauvegarde ?</p>
-					<p class="text-[10px] mt-0.5" style="color:#9ca3af">Action irréversible — toutes les données actuelles seront remplacées.</p>
+					<p class="font-bold text-sm" style="color:#fca5a5">{tFn('abk.restore_confirm_title')}</p>
+					<p class="text-[10px] mt-0.5" style="color:#9ca3af">{tFn('abk.restore_confirm_sub')}</p>
 				</div>
 			</div>
 
 			<div class="p-5 flex flex-col gap-4">
 				<div class="text-[11px] leading-relaxed" style="color:#9ca3af">
-					Sauvegarde du <strong style="color:#e2e8f0">{fmtDate(restoreFor.created_at)}</strong> · {fmtBytes(restoreFor.size_bytes)} · v{restoreFor.nodyx_version}
+					{tFn('abk.backup_of')} <strong style="color:#e2e8f0">{fmtDate(restoreFor.created_at)}</strong> · {fmtBytes(restoreFor.size_bytes)} · v{restoreFor.nodyx_version}
 					{#if restoreFor.label}
 						<br/><span class="italic">"{restoreFor.label}"</span>
 					{/if}
@@ -534,18 +537,18 @@
 				{#if restoreDiff}
 					{@const dd = restoreDiff.delta}
 					<div class="px-3 py-2.5" style="background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06)">
-						<p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#9ca3af">Ce que tu vas perdre depuis cette sauvegarde</p>
+						<p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#9ca3af">{tFn('abk.what_you_lose')}</p>
 						<div class="grid grid-cols-2 gap-2 text-xs">
 							{#each [
-								{ label: 'Fils de discussion', delta: dd.threads,        bytes: false },
-								{ label: 'Posts',              delta: dd.posts,          bytes: false },
-								{ label: 'Messages chat',      delta: dd.messages,       bytes: false },
-								{ label: 'Utilisateurs',       delta: dd.users,          bytes: false },
-								{ label: 'Fichiers uploadés',  delta: dd.uploads_count,  bytes: false },
-								{ label: 'Octets uploadés',    delta: dd.uploads_bytes,  bytes: true  },
+								{ labelKey: 'abk.diff_threads', delta: dd.threads,        bytes: false },
+								{ labelKey: 'abk.diff_posts',              delta: dd.posts,          bytes: false },
+								{ labelKey: 'abk.diff_chat',      delta: dd.messages,       bytes: false },
+								{ labelKey: 'abk.diff_users',       delta: dd.users,          bytes: false },
+								{ labelKey: 'abk.diff_files',  delta: dd.uploads_count,  bytes: false },
+								{ labelKey: 'abk.diff_bytes',    delta: dd.uploads_bytes,  bytes: true  },
 							] as line}
 								<div class="flex items-center gap-2">
-									<span class="text-[10px]" style="color:#6b7280">{line.label}</span>
+									<span class="text-[10px]" style="color:#6b7280">{tFn(line.labelKey)}</span>
 									<span class="text-xs font-mono" style="color:{line.delta > 0 ? '#fca5a5' : line.delta < 0 ? '#86efac' : '#6b7280'}">
 										{line.delta > 0 ? '+' : ''}{line.bytes ? fmtBytes(Math.abs(line.delta)) : line.delta}
 									</span>
@@ -557,33 +560,33 @@
 
 				<!-- Étapes du restore (transparence : ce qui va concrètement se passer) -->
 				<div class="px-3 py-2.5" style="background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06)">
-					<p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#9ca3af">Ce qui va se passer pendant le restore</p>
+					<p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#9ca3af">{tFn('abk.what_happens')}</p>
 					<ol class="flex flex-col gap-1.5 text-[11px]" style="color:#9ca3af">
-						<li class="flex gap-2"><span style="color:#6b7280">1.</span><span>Vérification de l'archive (checksum SHA-256, structure, version compatible)</span></li>
-						<li class="flex gap-2"><span style="color:#6b7280">2.</span><span>Création d'une <strong style="color:#86efac">sauvegarde de sécurité</strong> de l'état actuel (protégée 24h, supprimable manuellement après)</span></li>
-						<li class="flex gap-2"><span style="color:#6b7280">3.</span><span>Restauration de la base PostgreSQL en <strong style="color:#86efac">transaction unique</strong> (atomique : tout ou rien)</span></li>
-						<li class="flex gap-2"><span style="color:#6b7280">4.</span><span>Synchronisation des fichiers uploadés depuis l'archive</span></li>
-						<li class="flex gap-2"><span style="color:#6b7280">5.</span><span>Invalidation des sessions Redis (tout le monde sera déconnecté, toi inclus)</span></li>
-						<li class="flex gap-2"><span style="color:#6b7280">6.</span><span>Redirection automatique vers <code style="color:#e2e8f0">/auth/login</code></span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">1.</span><span>{tFn('abk.step1')}</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">2.</span><span>{@html tFn('abk.step2')}</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">3.</span><span>{@html tFn('abk.step3')}</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">4.</span><span>{tFn('abk.step4')}</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">5.</span><span>{tFn('abk.step5')}</span></li>
+						<li class="flex gap-2"><span style="color:#6b7280">6.</span><span>{@html tFn('abk.step6')}</span></li>
 					</ol>
 				</div>
 
 				<!-- Filet de sécurité explicite -->
 				<div class="px-3 py-2 text-[11px] leading-relaxed" style="background:rgba(74,222,128,.05); border:1px solid rgba(74,222,128,.15); color:#86efac">
-					✓ Si quelque chose tourne mal : la sauvegarde de sécurité (étape 2) reste protégée 24h. Tu peux l'utiliser pour revenir en arrière sans rien perdre.
+					{tFn('abk.safety_net')}
 				</div>
 
 				<!-- Mode test (dry-run) — vérification sans toucher à rien -->
 				<div class="px-3 py-2.5" style="background:rgba(167,139,250,.05); border:1px solid rgba(167,139,250,.18)">
 					<div class="flex items-center justify-between gap-2">
 						<div class="flex flex-col gap-0.5">
-							<p class="text-[11px] font-bold" style="color:var(--nx-accent-2-soft)">Pas sûr ? Lance un test à blanc</p>
-							<p class="text-[10px]" style="color:#6b7280">Vérifie le checksum + la structure de l'archive sans rien modifier. Aucune ligne de DB ni de fichier touché.</p>
+							<p class="text-[11px] font-bold" style="color:var(--nx-accent-2-soft)">{tFn('abk.dryrun_title')}</p>
+							<p class="text-[10px]" style="color:#6b7280">{tFn('abk.dryrun_hint')}</p>
 						</div>
 						<button onclick={handleDryRun} disabled={dryRunRunning || restoring}
 						        class="px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-50 shrink-0"
 						        style="background:rgba(167,139,250,.1); border:1px solid rgba(167,139,250,.3); color:var(--nx-accent-2-soft)">
-							{dryRunRunning ? '…' : 'Tester (dry-run)'}
+							{dryRunRunning ? '…' : tFn('abk.dryrun_btn')}
 						</button>
 					</div>
 					{#if dryRunResult}
@@ -596,7 +599,7 @@
 
 				<label class="flex flex-col gap-1.5">
 					<span class="text-xs font-bold uppercase tracking-wider" style="color:#9ca3af">
-						Pour confirmer la restauration réelle, tape le slug de ton instance :
+						{tFn('abk.confirm_slug_label')}
 						<code class="ml-1" style="color:#e2e8f0">{data.instanceSlug}</code>
 					</span>
 					<input type="text" bind:value={restoreSlug}
@@ -610,14 +613,14 @@
 				<button onclick={closeRestore} disabled={restoring}
 				        class="px-4 py-1.5 text-xs font-bold disabled:opacity-50"
 				        style="border:1px solid rgba(255,255,255,.08); color:#9ca3af">
-					Annuler
+					{tFn('abk.cancel')}
 				</button>
 				<button
 					onclick={handleRestore}
 					disabled={restoring || restoreSlug.trim().toLowerCase() !== data.instanceSlug.toLowerCase() || restoreCountdown > 0}
 					class="px-4 py-1.5 text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed"
 					style="background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.4); color:#fca5a5">
-					{restoring ? 'Restauration...' : restoreCountdown > 0 && restoreSlug.trim().toLowerCase() === data.instanceSlug.toLowerCase() ? `Restaurer dans ${restoreCountdown}s` : 'Restaurer maintenant'}
+					{restoring ? tFn('abk.restoring') : restoreCountdown > 0 && restoreSlug.trim().toLowerCase() === data.instanceSlug.toLowerCase() ? tFn('abk.restore_in', { n: restoreCountdown }) : tFn('abk.restore_now')}
 				</button>
 			</div>
 		</div>
