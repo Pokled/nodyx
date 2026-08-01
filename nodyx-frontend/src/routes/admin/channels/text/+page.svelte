@@ -3,6 +3,9 @@
 	import type { PageData, ActionData } from './$types';
 	import ChannelStyleEditor from '$lib/components/admin/ChannelStyleEditor.svelte';
 	import ChannelIcon from '$lib/components/ChannelIcon.svelte';
+	import { t } from '$lib/i18n';
+
+	const tFn = $derived($t);
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -53,13 +56,13 @@
 	function cancelEdit() { editingId = null }
 </script>
 
-<svelte:head><title>Canaux texte — Admin Nodyx</title></svelte:head>
+<svelte:head><title>{tFn('achtext.page_title')}</title></svelte:head>
 
 <div class="space-y-8">
 
 	<div>
-		<h1 class="text-2xl font-bold text-white mb-1">Canaux textuels</h1>
-		<p class="text-sm text-gray-500">Personnalise chaque canal (nom, couleur, style, icône) selon l'identité de ta communauté.</p>
+		<h1 class="text-2xl font-bold text-white mb-1">{tFn('achtext.title')}</h1>
+		<p class="text-sm text-gray-500">{tFn('achtext.subtitle')}</p>
 	</div>
 
 	{#if form?.error}
@@ -75,12 +78,12 @@
 	<!-- Channel list -->
 	<div class="rounded-xl border border-gray-800 bg-gray-900/40">
 		<div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
-			<h2 class="text-sm font-semibold text-gray-300">Canaux configurés</h2>
-			<span class="text-xs text-gray-600">{orderedChannels.length} canal{orderedChannels.length !== 1 ? 'x' : ''}</span>
+			<h2 class="text-sm font-semibold text-gray-300">{tFn('achtext.configured')}</h2>
+			<span class="text-xs text-gray-600">{orderedChannels.length !== 1 ? tFn('achtext.count_many', { n: orderedChannels.length }) : tFn('achtext.count_one', { n: orderedChannels.length })}</span>
 		</div>
 
 		{#if orderedChannels.length === 0}
-			<p class="px-5 py-8 text-sm text-gray-600 text-center italic">Aucun canal créé pour le moment.</p>
+			<p class="px-5 py-8 text-sm text-gray-600 text-center italic">{tFn('achtext.empty')}</p>
 		{:else}
 			<ul class="divide-y divide-gray-800">
 				{#each orderedChannels as ch, i (ch.id)}
@@ -88,9 +91,9 @@
 						<div class="flex items-center gap-3 px-5 py-3">
 							<div class="flex flex-col gap-0.5 shrink-0">
 								<button type="button" onclick={() => moveChannel(i, -1)} disabled={i === 0}
-									class="text-gray-600 hover:text-gray-300 disabled:opacity-20 text-xs leading-none px-1" title="Monter">▲</button>
+									class="text-gray-600 hover:text-gray-300 disabled:opacity-20 text-xs leading-none px-1" title={tFn('achan.move_up')}>▲</button>
 								<button type="button" onclick={() => moveChannel(i, 1)} disabled={i === orderedChannels.length - 1}
-									class="text-gray-600 hover:text-gray-300 disabled:opacity-20 text-xs leading-none px-1" title="Descendre">▼</button>
+									class="text-gray-600 hover:text-gray-300 disabled:opacity-20 text-xs leading-none px-1" title={tFn('achan.move_down')}>▼</button>
 							</div>
 
 							<span class="shrink-0 inline-flex items-center justify-center min-w-[18px]">
@@ -115,15 +118,15 @@
 							<button type="button"
 								onclick={() => editingId === ch.id ? cancelEdit() : startEdit(ch)}
 								class="text-xs text-gray-500 hover:text-indigo-400 transition-colors px-2 py-1 rounded hover:bg-indigo-900/20">
-								{editingId === ch.id ? 'Fermer' : 'Modifier'}
+								{editingId === ch.id ? tFn('achan.close') : tFn('achan.edit')}
 							</button>
 
 							<form method="POST" action="?/delete" use:enhance>
 								<input type="hidden" name="id" value={ch.id} />
 								<button type="submit"
 									class="text-xs text-gray-600 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-900/20"
-									onclick={(e) => { if (!confirm(`Supprimer #${ch.slug} ?`)) e.preventDefault() }}>
-									Supprimer
+									onclick={(e) => { if (!confirm(tFn('achtext.confirm_delete', { slug: ch.slug }))) e.preventDefault() }}>
+									{tFn('achan.delete')}
 								</button>
 							</form>
 						</div>
@@ -137,12 +140,12 @@
 									<input type="hidden" name="id" value={ch.id} />
 									<div class="grid sm:grid-cols-2 gap-3">
 										<div>
-											<label for={`name-${ch.id}`} class="block text-xs font-medium text-gray-400 mb-1">Nom</label>
+											<label for={`name-${ch.id}`} class="block text-xs font-medium text-gray-400 mb-1">{tFn('achan.name')}</label>
 											<input id={`name-${ch.id}`} name="name" type="text" maxlength="100" required bind:value={eName}
 												class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-600" />
 										</div>
 										<div>
-											<label for={`desc-${ch.id}`} class="block text-xs font-medium text-gray-400 mb-1">Description</label>
+											<label for={`desc-${ch.id}`} class="block text-xs font-medium text-gray-400 mb-1">{tFn('achan.description')}</label>
 											<input id={`desc-${ch.id}`} name="description" type="text" maxlength="500" bind:value={eDescription}
 												class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-600" />
 										</div>
@@ -168,11 +171,11 @@
 									<div class="flex justify-end gap-2 pt-2">
 										<button type="button" onclick={cancelEdit}
 											class="px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
-											Annuler
+											{tFn('achan.cancel')}
 										</button>
 										<button type="submit"
 											class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-medium text-white transition-colors">
-											Enregistrer
+											{tFn('achan.save')}
 										</button>
 									</div>
 								</form>
@@ -186,17 +189,17 @@
 
 	<!-- Create form -->
 	<div class="rounded-xl border border-gray-800 bg-gray-900/40 p-5">
-		<h2 class="text-sm font-semibold text-gray-300 mb-4">Créer un canal</h2>
+		<h2 class="text-sm font-semibold text-gray-300 mb-4">{tFn('achtext.create_title')}</h2>
 		<form method="POST" action="?/create" use:enhance class="space-y-4">
 			<div class="grid sm:grid-cols-2 gap-3">
 				<div>
-					<label for="new-name" class="block text-xs font-medium text-gray-400 mb-1">Nom <span class="text-red-500">*</span></label>
-					<input id="new-name" name="name" type="text" maxlength="100" required placeholder="général" bind:value={name}
+					<label for="new-name" class="block text-xs font-medium text-gray-400 mb-1">{tFn('achan.name')} <span class="text-red-500">*</span></label>
+					<input id="new-name" name="name" type="text" maxlength="100" required placeholder={tFn('achtext.name_ph')} bind:value={name}
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-600" />
 				</div>
 				<div>
-					<label for="new-desc" class="block text-xs font-medium text-gray-400 mb-1">Description <span class="text-gray-600">(optionnel)</span></label>
-					<input id="new-desc" name="description" type="text" maxlength="500" placeholder="Discussions générales" bind:value={description}
+					<label for="new-desc" class="block text-xs font-medium text-gray-400 mb-1">{tFn('achan.description')} <span class="text-gray-600">{tFn('achan.optional')}</span></label>
+					<input id="new-desc" name="description" type="text" maxlength="500" placeholder={tFn('achtext.desc_ph')} bind:value={description}
 						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-600" />
 				</div>
 			</div>
@@ -219,7 +222,7 @@
 
 			<button type="submit" disabled={!name.trim()}
 				class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-white transition-colors">
-				Créer le canal
+				{tFn('achtext.create_btn')}
 			</button>
 		</form>
 	</div>
