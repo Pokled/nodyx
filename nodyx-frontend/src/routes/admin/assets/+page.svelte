@@ -3,6 +3,10 @@
 	import { enhance } from '$app/forms'
 	import { PUBLIC_API_URL } from '$env/static/public'
 
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
+
 	let { data }: { data: PageData } = $props()
 
 	const TYPE_ICONS: Record<string, string> = {
@@ -16,32 +20,32 @@
 	}
 
 	function confirmDelete(name: string) {
-		return confirm(`Supprimer définitivement "${name}" ?`)
+		return confirm(tFn('aast.confirm_delete', { name }))
 	}
 </script>
 
-<svelte:head><title>Admin — Assets</title></svelte:head>
+<svelte:head><title>{tFn('aast.page_title')}</title></svelte:head>
 
 <div class="space-y-6">
 	<div>
-		<h1 class="text-xl font-bold text-white">Assets</h1>
-		<p class="text-sm text-gray-400 mt-0.5">{data.assets.length} asset{data.assets.length > 1 ? 's' : ''} au total</p>
+		<h1 class="text-xl font-bold text-white">{tFn('aast.title')}</h1>
+		<p class="text-sm text-gray-400 mt-0.5">{data.assets.length > 1 ? tFn('aast.total_many', { n: data.assets.length }) : tFn('aast.total_one', { n: data.assets.length })}</p>
 	</div>
 
 	{#if data.assets.length === 0}
-		<p class="text-gray-500 text-sm">Aucun asset.</p>
+		<p class="text-gray-500 text-sm">{tFn('aast.empty')}</p>
 	{:else}
 		<div class="rounded-xl border border-gray-800 overflow-hidden">
 			<table class="w-full text-sm">
 				<thead class="bg-gray-900 text-gray-400 text-xs uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left w-12"></th>
-						<th class="px-4 py-3 text-left">Nom</th>
-						<th class="px-4 py-3 text-left">Type</th>
-						<th class="px-4 py-3 text-left">Créateur</th>
-						<th class="px-4 py-3 text-left">Taille</th>
-						<th class="px-4 py-3 text-left">Statut</th>
-						<th class="px-4 py-3 text-right">Actions</th>
+						<th class="px-4 py-3 text-left">{tFn('aast.col_name')}</th>
+						<th class="px-4 py-3 text-left">{tFn('aast.col_type')}</th>
+						<th class="px-4 py-3 text-left">{tFn('aast.col_creator')}</th>
+						<th class="px-4 py-3 text-left">{tFn('aast.col_size')}</th>
+						<th class="px-4 py-3 text-left">{tFn('aast.col_status')}</th>
+						<th class="px-4 py-3 text-right">{tFn('aast.col_actions')}</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-gray-800">
@@ -65,14 +69,14 @@
 							</td>
 							<td class="px-4 py-3 text-gray-400">{TYPE_ICONS[asset.asset_type] ?? ''} {asset.asset_type}</td>
 							<td class="px-4 py-3 text-gray-400">{asset.creator_username ?? '—'}</td>
-							<td class="px-4 py-3 text-gray-500 text-xs">{Math.round(asset.file_size / 1024)} Ko</td>
+							<td class="px-4 py-3 text-gray-500 text-xs">{tFn('aast.kb', { n: Math.round(asset.file_size / 1024) })}</td>
 							<td class="px-4 py-3">
 								{#if asset.is_banned}
-									<span class="px-2 py-0.5 rounded-full bg-red-900/40 text-red-400 text-xs font-medium">banni</span>
+									<span class="px-2 py-0.5 rounded-full bg-red-900/40 text-red-400 text-xs font-medium">{tFn('aast.banned')}</span>
 								{:else if !asset.is_public}
-									<span class="px-2 py-0.5 rounded-full bg-gray-800 text-gray-500 text-xs font-medium">privé</span>
+									<span class="px-2 py-0.5 rounded-full bg-gray-800 text-gray-500 text-xs font-medium">{tFn('aast.private')}</span>
 								{:else}
-									<span class="px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 text-xs font-medium">public</span>
+									<span class="px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 text-xs font-medium">{tFn('aast.public')}</span>
 								{/if}
 							</td>
 							<td class="px-4 py-3">
@@ -85,7 +89,7 @@
 											       {asset.is_banned
 											         ? 'bg-green-900/40 text-green-400 hover:bg-green-800/60'
 											         : 'bg-yellow-900/40 text-yellow-400 hover:bg-yellow-800/60'}">
-											{asset.is_banned ? 'Débannir' : 'Bannir'}
+											{asset.is_banned ? tFn('aast.unban') : tFn('aast.ban')}
 										</button>
 									</form>
 									<!-- Delete -->
@@ -95,7 +99,7 @@
 										<input type="hidden" name="id" value={asset.id} />
 										<button type="submit"
 											class="px-2.5 py-1 rounded text-xs font-medium bg-red-900/40 text-red-400 hover:bg-red-800/60 transition-colors">
-											Supprimer
+											{tFn('aast.delete')}
 										</button>
 									</form>
 								</div>

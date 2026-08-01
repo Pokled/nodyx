@@ -7,6 +7,9 @@
     sfuPhaseStore, sfuErrorStore, sfuLogStore, sfuConsumersStore, sfuMutedStore,
     sfuAuditStore, sfuScreensStore, sfuLocalScreenStore,
   } from '$lib/voiceSfu'
+  import { t } from '$lib/i18n'
+
+  const tFn = $derived($t)
 
   // Audit réseau : rafraîchi manuellement ou en auto (2 s) pendant une session.
   let autoAudit = $state(false)
@@ -73,9 +76,9 @@
   })
 
   const PHASE_LABEL: Record<string, string> = {
-    idle: 'Inactif', joining: 'Connexion…', mesh: 'Salon en mesh',
-    connecting: 'Établissement…', active: 'SESSION ACTIVE',
-    recovering: 'Reconnexion…', error: 'Erreur',
+    idle: 'asfu.phase_idle', joining: 'asfu.phase_joining', mesh: 'asfu.phase_mesh',
+    connecting: 'asfu.phase_connecting', active: 'asfu.phase_active',
+    recovering: 'asfu.phase_recovering', error: 'asfu.phase_error',
   }
   const PHASE_CLASS: Record<string, string> = {
     idle: 'bg-zinc-800 text-zinc-400',
@@ -88,18 +91,18 @@
   }
 </script>
 
-<svelte:head><title>Labo SFU — Admin Nodyx</title></svelte:head>
+<svelte:head><title>{tFn('asfu.page_title')}</title></svelte:head>
 
 <div class="space-y-6 max-w-3xl">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-white">Labo SFU</h1>
+      <h1 class="text-2xl font-bold text-white">{tFn('asfu.title')}</h1>
       <p class="text-sm text-zinc-500 mt-1">
-        Session vocale via le SFU (mediasoup), isolée du vocal mesh. Expérimental.
+        {tFn('asfu.subtitle')}
       </p>
     </div>
     <span class="rounded-full px-3 py-1 text-xs font-semibold tracking-wide {PHASE_CLASS[phase]}">
-      {PHASE_LABEL[phase]}
+      {tFn(PHASE_LABEL[phase])}
     </span>
   </div>
 
@@ -111,7 +114,7 @@
 
   <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 space-y-4">
     <label class="block">
-      <span class="text-xs font-semibold uppercase tracking-widest text-zinc-500">Channel vocal (UUID)</span>
+      <span class="text-xs font-semibold uppercase tracking-widest text-zinc-500">{tFn('asfu.channel_label')}</span>
       <input
         type="text"
         bind:value={channelId}
@@ -127,19 +130,19 @@
           onclick={() => sfuSetMuted(!$sfuMutedStore)}
           class="rounded-lg px-4 py-2 text-sm font-semibold {$sfuMutedStore ? 'bg-amber-600 hover:bg-amber-500' : 'bg-zinc-700 hover:bg-zinc-600'} text-white"
         >
-          {$sfuMutedStore ? 'Micro coupé' : 'Couper le micro'}
+          {$sfuMutedStore ? tFn('asfu.mic_muted') : tFn('asfu.mute_mic')}
         </button>
         <button
           onclick={() => (localScreen ? void sfuStopScreenShare() : void sfuStartScreenShare())}
           class="rounded-lg px-4 py-2 text-sm font-semibold {localScreen ? 'bg-fuchsia-600 hover:bg-fuchsia-500' : 'bg-zinc-700 hover:bg-zinc-600'} text-white"
         >
-          {localScreen ? 'Arrêter le partage' : "Partager l'écran"}
+          {localScreen ? tFn('asfu.stop_share') : tFn('asfu.share_screen')}
         </button>
         <button
           onclick={() => void sfuLeave()}
           class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
         >
-          Quitter
+          {tFn('asfu.leave')}
         </button>
       {:else}
         <button
@@ -147,14 +150,14 @@
           disabled={busy || channelId.trim().length < 36}
           class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500"
         >
-          {busy ? 'Connexion…' : 'Rejoindre via SFU'}
+          {busy ? tFn('asfu.connecting') : tFn('asfu.join_sfu')}
         </button>
         {#if phase === 'error' || phase === 'mesh'}
           <button
             onclick={() => void sfuLeave()}
             class="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-600"
           >
-            Réinitialiser
+            {tFn('asfu.reset')}
           </button>
         {/if}
       {/if}
@@ -163,10 +166,10 @@
 
   <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
     <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">
-      Flux reçus ({$sfuConsumersStore.length})
+      {tFn('asfu.streams_received', { n: $sfuConsumersStore.length })}
     </h2>
     {#if $sfuConsumersStore.length === 0}
-      <p class="text-sm text-zinc-600">Aucun flux consommé. Ouvre ce labo sur un second compte pour vous entendre.</p>
+      <p class="text-sm text-zinc-600">{tFn('asfu.no_streams')}</p>
     {:else}
       <ul class="space-y-2">
         {#each $sfuConsumersStore as c (c.consumerId)}
@@ -183,14 +186,14 @@
   {#if localScreen || remoteScreens.length > 0}
     <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
       <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">
-        Écrans partagés ({remoteScreens.length + (localScreen ? 1 : 0)})
+        {tFn('asfu.shared_screens', { n: remoteScreens.length + (localScreen ? 1 : 0) })}
       </h2>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {#if localScreen}
           <div class="relative aspect-video overflow-hidden rounded-lg border border-fuchsia-500/40 bg-black">
             <!-- svelte-ignore a11y_media_has_caption -->
             <video use:bindStream={localScreen} autoplay playsinline muted class="h-full w-full object-contain"></video>
-            <span class="absolute left-2 top-2 rounded-full bg-fuchsia-600/80 px-2 py-0.5 text-[10px] font-bold text-white">MON ÉCRAN</span>
+            <span class="absolute left-2 top-2 rounded-full bg-fuchsia-600/80 px-2 py-0.5 text-[10px] font-bold text-white">{tFn('asfu.my_screen')}</span>
           </div>
         {/if}
         {#each remoteScreens as sc (sc.producerId)}
@@ -208,7 +211,7 @@
 
   <div class="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
     <div class="flex items-center justify-between mb-3">
-      <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Audit réseau (IP · ICE · débit · perte)</h2>
+      <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500">{tFn('asfu.network_audit')}</h2>
       <div class="flex items-center gap-3">
         <label class="flex items-center gap-1.5 text-xs text-zinc-400">
           <input type="checkbox" bind:checked={autoAudit} class="accent-indigo-500" /> auto 2s
@@ -218,26 +221,26 @@
           disabled={channelId.trim().length < 36}
           class="rounded-lg bg-zinc-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-600 disabled:opacity-40"
         >
-          Rafraîchir
+          {tFn('asfu.refresh')}
         </button>
       </div>
     </div>
     {#if $sfuAuditStore.length === 0}
-      <p class="text-sm text-zinc-600">Aucun transport. Rejoins un salon en mode SFU, puis rafraîchis (les IP apparaissent une fois ICE connecté).</p>
+      <p class="text-sm text-zinc-600">{tFn('asfu.no_transport')}</p>
     {:else}
       <div class="overflow-x-auto">
         <table class="w-full text-xs font-mono">
           <thead class="text-zinc-500">
             <tr class="text-left">
-              <th class="py-1 pr-3 font-semibold">Participant</th>
+              <th class="py-1 pr-3 font-semibold">{tFn('asfu.col_participant')}</th>
               <th class="py-1 pr-3 font-semibold">Dir</th>
               <th class="py-1 pr-3 font-semibold">ICE</th>
               <th class="py-1 pr-3 font-semibold">Local</th>
-              <th class="py-1 pr-3 font-semibold">Distant (pair)</th>
+              <th class="py-1 pr-3 font-semibold">{tFn('asfu.col_remote')}</th>
               <th class="py-1 pr-3 font-semibold">Proto</th>
               <th class="py-1 pr-3 font-semibold text-right">↓ kbps</th>
               <th class="py-1 pr-3 font-semibold text-right">↑ kbps</th>
-              <th class="py-1 pr-3 font-semibold text-right">Perte</th>
+              <th class="py-1 pr-3 font-semibold text-right">{tFn('asfu.col_loss')}</th>
             </tr>
           </thead>
           <tbody>
@@ -261,10 +264,10 @@
   </div>
 
   <div class="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-    <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Journal</h2>
+    <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{tFn('asfu.log')}</h2>
     <div bind:this={logEl} class="h-64 overflow-y-auto font-mono text-xs leading-relaxed text-zinc-400">
       {#if $sfuLogStore.length === 0}
-        <p class="text-zinc-700">En attente d'une session…</p>
+        <p class="text-zinc-700">{tFn('asfu.awaiting_session')}</p>
       {/if}
       {#each $sfuLogStore as line}
         <div class:text-red-400={line.includes('✘')} class:text-emerald-400={line.includes('✓')}>{line}</div>
@@ -272,10 +275,5 @@
     </div>
   </div>
 
-  <p class="text-xs text-zinc-600">
-    Prérequis serveur : daemon <code class="text-zinc-500">nodyx-sfud</code> actif,
-    <code class="text-zinc-500">VOICE_SFU_URL</code> + <code class="text-zinc-500">VOICE_SFU_TOKEN</code>
-    dans le .env du core. Pour forcer le mode SFU à 2 participants :
-    <code class="text-zinc-500">SFU_MESH_THRESHOLD=0</code> côté daemon.
-  </p>
+  <p class="text-xs text-zinc-600">{@html tFn('asfu.prereq')}</p>
 </div>

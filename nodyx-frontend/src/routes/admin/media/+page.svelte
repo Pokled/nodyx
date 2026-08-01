@@ -2,6 +2,9 @@
 	import { enhance } from '$app/forms'
 	import { apiFetch } from '$lib/api'
 	import { PUBLIC_API_URL } from '$env/static/public'
+	import { t } from '$lib/i18n'
+
+	const tFn = $derived($t)
 
 	type AssetRow = {
 		id:              string
@@ -25,32 +28,32 @@
 	// ── Tabs ─────────────────────────────────────────────────────────────────
 	type TabId = 'images' | 'videos' | 'audios'
 	type TabMeta = {
-		label:        string
+		labelKey:     string
 		assetType:    'image' | 'video' | 'sound'
 		accept:       string
-		desc:         string
+		descKey:      string
 		mimePrefixes: string[]
 	}
 	const TABS: Record<TabId, TabMeta> = {
 		images: {
-			label:        'Images',
+			labelKey:     'amedia.tab_images',
 			assetType:    'image',
 			accept:       'image/jpeg,image/png,image/webp,image/gif',
-			desc:         'JPG, PNG, WebP, GIF · max 12 Mo · sera converti en WebP',
+			descKey:      'amedia.desc_images',
 			mimePrefixes: ['image/'],
 		},
 		videos: {
-			label:        'Vidéos',
+			labelKey:     'amedia.tab_videos',
 			assetType:    'video',
 			accept:       'video/mp4,video/webm,video/ogg,video/quicktime,video/x-matroska',
-			desc:         'MP4, WebM, OGG, MOV, MKV · max selon quota',
+			descKey:      'amedia.desc_videos',
 			mimePrefixes: ['video/'],
 		},
 		audios: {
-			label:        'Audio',
+			labelKey:     'amedia.tab_audios',
 			assetType:    'sound',
 			accept:       'audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/mp4,audio/flac',
-			desc:         'MP3, OGG, WAV, FLAC, WebM, M4A · idéal pour les sons d\'overlay',
+			descKey:      'amedia.desc_audios',
 			mimePrefixes: ['audio/'],
 		},
 	}
@@ -82,7 +85,7 @@
 		const file = files[0]
 		const meta = TABS[activeTab]
 		if (!meta.mimePrefixes.some(p => file.type.startsWith(p))) {
-			uploadError = `Format non supporté pour cet onglet. ${meta.desc}`
+			uploadError = tFn('amedia.err_format', { desc: tFn(meta.descKey) })
 			return
 		}
 
@@ -101,14 +104,14 @@
 			})
 			if (!res.ok) {
 				const j = await res.json()
-				uploadError = j.error ?? 'Erreur lors de l\'upload.'
+				uploadError = j.error ?? tFn('amedia.err_upload')
 			} else {
 				uploadOk = true
 				// Reload to show the new file
 				setTimeout(() => location.reload(), 800)
 			}
 		} catch {
-			uploadError = 'Erreur réseau.'
+			uploadError = tFn('amedia.err_network')
 		} finally {
 			uploading = false
 		}
@@ -136,16 +139,16 @@
 	})
 </script>
 
-<svelte:head><title>Admin — Médiathèque</title></svelte:head>
+<svelte:head><title>{tFn('amedia.page_title')}</title></svelte:head>
 
 <div class="space-y-6">
 
 	<!-- Header -->
 	<div class="flex items-start justify-between gap-4 flex-wrap">
 		<div>
-			<h1 class="text-xl font-bold text-white">Médiathèque</h1>
+			<h1 class="text-xl font-bold text-white">{tFn('amedia.title')}</h1>
 			<p class="text-sm text-gray-400 mt-0.5">
-				Fichiers hébergés sur Nodyx, utilisables comme URLs dans les overlays, posts et autres outils.
+				{tFn('amedia.subtitle')}
 			</p>
 		</div>
 	</div>
@@ -159,7 +162,7 @@
 					{isActive
 						? 'border-indigo-500 text-white'
 						: 'border-transparent text-gray-400 hover:text-gray-200'}">
-				{m.label}
+				{tFn(m.labelKey)}
 				<span class="ml-1.5 text-[10px] font-mono text-gray-500">{tabCounts[k as TabId]}</span>
 			</button>
 		{/each}
@@ -172,7 +175,7 @@
 		       {dragOver ? 'border-indigo-500 bg-indigo-950/30' : 'border-gray-700 hover:border-gray-600'}"
 		role="button"
 		tabindex="0"
-		aria-label="Zone d'upload"
+		aria-label={tFn('amedia.upload_zone_aria')}
 		onclick={() => fileInput?.click()}
 		onkeydown={(e) => e.key === 'Enter' && fileInput?.click()}
 		ondragover={(e) => { e.preventDefault(); dragOver = true }}
@@ -193,14 +196,14 @@
 					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
 					<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
 				</svg>
-				<span class="text-sm font-medium">Upload en cours…</span>
+				<span class="text-sm font-medium">{tFn('amedia.uploading')}</span>
 			</div>
 		{:else if uploadOk}
 			<div class="flex flex-col items-center gap-2 text-green-400">
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
 				</svg>
-				<span class="text-sm font-medium">Fichier uploadé — rechargement…</span>
+				<span class="text-sm font-medium">{tFn('amedia.uploaded')}</span>
 			</div>
 		{:else}
 			<div class="flex flex-col items-center gap-3 pointer-events-none">
@@ -208,8 +211,8 @@
 					<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
 				</svg>
 				<div>
-					<p class="text-sm font-medium text-gray-300">Glisser un fichier ici ou cliquer pour parcourir</p>
-					<p class="text-xs text-gray-500 mt-1">{TABS[activeTab].desc}</p>
+					<p class="text-sm font-medium text-gray-300">{tFn('amedia.drop_hint')}</p>
+					<p class="text-xs text-gray-500 mt-1">{tFn(TABS[activeTab].descKey)}</p>
 				</div>
 			</div>
 		{/if}
@@ -222,7 +225,7 @@
 	<!-- Grille de médias -->
 	{#if currentAssets.length === 0}
 		<div class="text-center py-16 text-gray-600">
-			<p class="text-sm">Aucun fichier dans {TABS[activeTab].label.toLowerCase()} pour l'instant.</p>
+			<p class="text-sm">{tFn('amedia.empty', { tab: tFn(TABS[activeTab].labelKey).toLowerCase() })}</p>
 		</div>
 	{:else}
 		<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
@@ -267,7 +270,7 @@
 									<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
 									</svg>
-									Copié
+									{tFn('amedia.copied')}
 								{:else}
 									<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -277,13 +280,13 @@
 							</button>
 
 							<form method="POST" action="?/delete" use:enhance={({ cancel }) => {
-								if (!confirm(`Supprimer "${asset.name}" ?`)) cancel()
+								if (!confirm(tFn('amedia.confirm_delete', { name: asset.name }))) cancel()
 							}}>
 								<input type="hidden" name="id" value={asset.id} />
 								<button
 									type="submit"
 									class="p-1.5 rounded-lg bg-gray-800 text-gray-600 hover:bg-red-900/40 hover:text-red-400 border border-gray-700/50 hover:border-red-700/50 transition-all"
-									title="Supprimer"
+									title={tFn('amedia.delete_title')}
 								>
 									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
