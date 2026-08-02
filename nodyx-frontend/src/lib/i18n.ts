@@ -147,8 +147,9 @@ export const t = derived(locale, ($locale) => {
   return (key: string, vars?: Record<string, string | number>): string => {
     let str =
       messages[$locale]?.[key] ??
+      messages['en']?.[key] ??   // EN est à 100% de parité : fallback universel avant le FR source
       messages['fr']?.[key] ??
-      key  // fallback = la clé elle-même (jamais de crash)
+      key  // fallback ultime = la clé elle-même (jamais de crash)
 
     if (vars) {
       for (const [k, v] of Object.entries(vars)) {
