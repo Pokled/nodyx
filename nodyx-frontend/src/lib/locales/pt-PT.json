@@ -967,5 +967,17 @@
   "status.placeholder": "O que estás a fazer…",
   "common.clear": "Limpar",
   "presence.joined": "entrou em",
-  "presence.left": "saiu de"
+  "presence.left": "saiu de",
+  "common.validate": "Confirmar",
+  "common.pin": "Fixar",
+  "common.unpin": "Desafixar",
+  "common.pinned": "Fixado",
+  "common.locked": "Bloqueado",
+  "common.featured": "Em destaque",
+  "common.prev_page": "Página anterior",
+  "common.next_page": "Página seguinte",
+  "nav.docs": "Docs",
+  "common.avatar_alt": "Avatar",
+  "common.logo_alt": "Logótipo",
+  "common.add_emoji": "Inserir um emoji"
 }

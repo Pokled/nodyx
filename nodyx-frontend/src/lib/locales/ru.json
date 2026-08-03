@@ -967,5 +967,17 @@
   "status.placeholder": "Чем вы заняты…",
   "common.clear": "Очистить",
   "presence.joined": "присоединился к",
-  "presence.left": "покинул"
+  "presence.left": "покинул",
+  "common.validate": "Подтвердить",
+  "common.pin": "Закрепить",
+  "common.unpin": "Открепить",
+  "common.pinned": "Закреплено",
+  "common.locked": "Заблокировано",
+  "common.featured": "Избранное",
+  "common.prev_page": "Предыдущая страница",
+  "common.next_page": "Следующая страница",
+  "nav.docs": "Документация",
+  "common.avatar_alt": "Аватар",
+  "common.logo_alt": "Логотип",
+  "common.add_emoji": "Вставить эмодзи"
 }

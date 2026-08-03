@@ -967,5 +967,17 @@
   "common.clear": "Löschen",
   "presence.joined": "ist beigetreten",
   "presence.left": "hat verlassen",
-  "editor.toc": "Automatisches Inhaltsverzeichnis (Anker an den Überschriften)"
+  "editor.toc": "Automatisches Inhaltsverzeichnis (Anker an den Überschriften)",
+  "common.validate": "Bestätigen",
+  "common.pin": "Anheften",
+  "common.unpin": "Lösen",
+  "common.pinned": "Angeheftet",
+  "common.locked": "Gesperrt",
+  "common.featured": "Hervorgehoben",
+  "common.prev_page": "Vorherige Seite",
+  "common.next_page": "Nächste Seite",
+  "nav.docs": "Docs",
+  "common.avatar_alt": "Avatar",
+  "common.logo_alt": "Logo",
+  "common.add_emoji": "Emoji einfügen"
 }

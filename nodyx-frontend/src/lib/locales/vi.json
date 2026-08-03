@@ -967,5 +967,17 @@
   "status.placeholder": "Bạn đang làm gì…",
   "common.clear": "Xóa",
   "presence.joined": "đã tham gia",
-  "presence.left": "đã rời"
+  "presence.left": "đã rời",
+  "common.validate": "Xác nhận",
+  "common.pin": "Ghim",
+  "common.unpin": "Bỏ ghim",
+  "common.pinned": "Đã ghim",
+  "common.locked": "Đã khóa",
+  "common.featured": "Nổi bật",
+  "common.prev_page": "Trang trước",
+  "common.next_page": "Trang sau",
+  "nav.docs": "Tài liệu",
+  "common.avatar_alt": "Ảnh đại diện",
+  "common.logo_alt": "Logo",
+  "common.add_emoji": "Chèn emoji"
 }

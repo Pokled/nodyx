@@ -967,5 +967,17 @@
   "common.clear": "Borrar",
   "presence.joined": "se unió a",
   "presence.left": "salió de",
-  "editor.toc": "Índice automático (anclas en los títulos)"
+  "editor.toc": "Índice automático (anclas en los títulos)",
+  "common.validate": "Confirmar",
+  "common.pin": "Fijar",
+  "common.unpin": "Desfijar",
+  "common.pinned": "Fijado",
+  "common.locked": "Bloqueado",
+  "common.featured": "Destacado",
+  "common.prev_page": "Página anterior",
+  "common.next_page": "Página siguiente",
+  "nav.docs": "Docs",
+  "common.avatar_alt": "Avatar",
+  "common.logo_alt": "Logo",
+  "common.add_emoji": "Insertar un emoji"
 }
