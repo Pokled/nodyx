@@ -98,11 +98,11 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
         <sub><b>JoeJoeflyn</b></sub>
       </a>
       <br/>
-      <sub>🌟 × 4</sub>
+      <sub>🌟 × 5</sub>
       <br/>
-      <sub><a href="https://github.com/Pokled/nodyx/pull/306">PR #306</a> · <a href="https://github.com/Pokled/nodyx/pull/314">PR #314</a> · <a href="https://github.com/Pokled/nodyx/issues/327">#327</a> · <a href="https://github.com/Pokled/nodyx/pull/324">PR #324</a></sub>
+      <sub><a href="https://github.com/Pokled/nodyx/pull/306">PR #306</a> · <a href="https://github.com/Pokled/nodyx/pull/314">PR #314</a> · <a href="https://github.com/Pokled/nodyx/issues/327">#327</a> · <a href="https://github.com/Pokled/nodyx/pull/324">PR #324</a> · <a href="https://github.com/Pokled/nodyx/pull/344">PR #344</a></sub>
       <br/>
-      <sub><em>Vietnamese, guest language picker, SSR crash report, collapsible members sidebar</em></sub>
+      <sub><em>Vietnamese, guest language picker, SSR crash report, collapsible members sidebar, unified auth pages</em></sub>
       <br/>
       <sub><strong>First Vietnamese contributor 🇻🇳</strong></sub>
     </td>
@@ -172,6 +172,7 @@ Sometimes a contribution isn't a PR. Sometimes it's just being there at exactly 
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Unified the dark theme across login, register and forgot-password with a responsive split layout, and made the side panels resizable: drag handles, collapse, cookie persistence, and server side reads so the first paint is already correct. | `feat(auth)` | [#344](https://github.com/Pokled/nodyx/pull/344) | [#458](https://github.com/Pokled/nodyx/pull/458), polish below | 2026-08-06 |
 | [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Collapsible members sidebar with a spring/swipe toggle and a shared collapse store, plus an SSR fetch of the channel list so channels show on first paint. Tidied inline styles into Tailwind along the way. | `feat(ui)` | [#324](https://github.com/Pokled/nodyx/pull/324) | [`1142b2e`](https://github.com/Pokled/nodyx/commit/1142b2e) + i18n polish below | 2026-07-20 |
 | [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Reported the SSR 500 on Node 22.4+ / 25+: the new global `localStorage` proxy makes `typeof localStorage === 'undefined'` return false while its methods still throw, breaking the guard in `voiceSettings.ts` and 4 other files. Pinpointed the exact lines and the upstream Node issue. | `bug(ssr)` | [#327](https://github.com/Pokled/nodyx/issues/327) | browser-guard fix (this PR) | 2026-07-20 |
 | [@JoeJoeflyn](https://github.com/JoeJoeflyn) | Moved the language picker out of `/settings` into a guest-accessible layout pane, and read the locale from a cookie in `hooks.server.ts` so SSR paints the right language on first load (no flash from `fr`), auto-detecting the browser's `Accept-Language`. | `feat(lang)` | [#314](https://github.com/Pokled/nodyx/pull/314) | [`c5c3822`](https://github.com/Pokled/nodyx/commit/c5c3822), polish below | 2026-07-19 |
@@ -233,6 +234,20 @@ Caught during production testing after merge. Not visible in async review.
 - Restored the native `Tiếng Việt` label (the PR had switched it to the English `Vietnamese`, while every other locale carries its own name).
 
 Landed after the merge but before the feature was deployed, so production never served the unvalidated attribute. The idea and the feature are entirely his; we just tightened the one line that touched untrusted input.
+
+### PR [#344](https://github.com/Pokled/nodyx/pull/344) · @JoeJoeflyn · `feat(auth): unified dark auth pages + panel resize`
+
+**Original PR:** the three auth pages finally share one theme and one responsive layout, and the side panels became resizable with drag handles, collapse and cookie persistence. The panel state is read server side, so the first paint is already right instead of jumping after hydration. The demo accounts dropdown is correctly gated behind `import.meta.env.DEV`, so it cannot reach a production build.
+
+**Polish (PR [#458](https://github.com/Pokled/nodyx/pull/458)):** `refactor(auth): drop the three.js background and align the auth pages`
+- The login background was a WebGL canvas with eight animated spheres, which pulled `three` in as a runtime dependency: 22.1 MB unpacked over 1195 files, to decorate a panel that already had a CSS gradient behind it. Removed, along with 8 packages in the lockfile. Nothing replaces it. Self-hosting means every megabyte is someone else's server.
+- Two literal English attributes on the new resize handle, and one French string left on the login. Both routed through `tFn`, sharing a single key that mirrors the members handle. Our own gate rejects hardcoded strings in any language now, contributors included.
+- Panel widths went from a cookie into the server render unbounded. They now pass the same 160 to 500 range the drag already enforced, so a hand edited cookie cannot leave the layout broken. Same lesson as PR #314: never reflect an unvalidated cookie, and the client validating does not protect the server.
+- Em dashes removed from four translated strings, radius normalised to `rounded-lg` across the three pages, four unnecessary `(data as any)` casts dropped.
+
+**What his PR taught us about our own code.** The community panel is `position: fixed` and was rendered on every route: on `/admin` it painted straight over the admin sidebar, and it covered the auth pages too. `showChannelSidebar` existed but only drove the padding of `<main>`, never the rendering. That bug was ours, it was live, and his work is what made it visible. Fixed in the same PR.
+
+---
 
 ### PR [#324](https://github.com/Pokled/nodyx/pull/324) · @JoeJoeflyn · `feat: collapsible members sidebar`
 
