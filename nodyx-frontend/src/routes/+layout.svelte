@@ -1424,7 +1424,9 @@
 					</div>
 				</a>
 			{/if}
-			<NodyxVersionBadge version={data.nodyxVersion ?? 'unknown'} variant="footer" />
+			<div class="members-footer">
+				<NodyxVersionBadge version={data.nodyxVersion ?? 'unknown'} variant="footer" />
+			</div>
 		</aside>
 
 	</div>
@@ -2333,6 +2335,17 @@
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.06) transparent;
+}
+
+/* Pied de la sidebar membres : le badge version est centré (avant ce wrapper il
+   était un enfant flex nu, donc collé au bord gauche = décentré). Bordure haute
+   comme l'en-tête, épinglé en bas (flex-shrink: 0). */
+.members-c .members-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .members-c .scroll-inner {
