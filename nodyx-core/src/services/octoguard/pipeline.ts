@@ -124,13 +124,13 @@ async function applyAction(
     }
   }
 
-  // warn : INSERT warn + check escalation + bloque le message (CDC §5)
+  // warn : la décision de blocage est IMMÉDIATE. L'INSERT du warn et le check
+  // d'escalade sont des EFFETS DE BORD (compteur futur), sortis du chemin chaud
+  // en fire-and-forget (patron de logOctoGuardAction) pour ne jamais faire
+  // dépasser le budget 50ms du pipeline sous contention du pool DB (CDC §3ter,
+  // D4 tranché fire-and-forget). L'INSERT précède le COUNT DANS le même bloc
+  // async -> pas de race d'escalade.
   if (action === 'warn') {
-    await db.query(
-      `INSERT INTO octoguard_warns (user_id, rule_id, reason) VALUES ($1, $2, $3)`,
-      [user.userId, rule.id, excerpt]
-    ).catch(err => console.warn('[octoguard] INSERT octoguard_warns failed:', err))
-
     logOctoGuardAction({
       action:       'octoguard.warn_user',
       target_type:  'user',
@@ -139,34 +139,41 @@ async function applyAction(
       metadata:     { ...meta, undoable: true, undo_op: { type: 'clear_last_warn', user_id: user.userId } },
     })
 
-    // Escalation : check count + apply si seuil atteint (STUB Session C pour mute/ban_temp)
-    if (rule.escalation) {
+    void (async () => {
       try {
-        const windowDays = rule.escalation.window_days
-        const { rows } = await db.query<{ cnt: number }>(
-          `SELECT COUNT(*)::int AS cnt
-             FROM octoguard_warns
-            WHERE user_id = $1
-              AND rule_id = $2
-              AND cleared_at IS NULL
-              AND created_at > NOW() - ($3 || ' days')::interval`,
-          [user.userId, rule.id, String(windowDays)]
+        await db.query(
+          `INSERT INTO octoguard_warns (user_id, rule_id, reason) VALUES ($1, $2, $3)`,
+          [user.userId, rule.id, excerpt]
         )
-        const cnt = rows[0]?.cnt ?? 0
-        if (cnt >= rule.escalation.warns_threshold) {
-          console.warn(`[octoguard] escalation triggered (cnt=${cnt} >= ${rule.escalation.warns_threshold}, action=${rule.escalation.action}) → TODO Session C apply mute/ban_temp`)
-          logOctoGuardAction({
-            action:       `octoguard.escalation_${rule.escalation.action}`,
-            target_type:  'user',
-            target_id:    user.userId,
-            target_label: `escalated after ${cnt} warns`,
-            metadata:     { ...meta, escalated_to: rule.escalation.action, warn_count: cnt, stub: true },
-          })
+
+        // Escalation : check count + apply si seuil atteint (STUB Session C pour mute/ban_temp)
+        if (rule.escalation) {
+          const windowDays = rule.escalation.window_days
+          const { rows } = await db.query<{ cnt: number }>(
+            `SELECT COUNT(*)::int AS cnt
+               FROM octoguard_warns
+              WHERE user_id = $1
+                AND rule_id = $2
+                AND cleared_at IS NULL
+                AND created_at > NOW() - ($3 || ' days')::interval`,
+            [user.userId, rule.id, String(windowDays)]
+          )
+          const cnt = rows[0]?.cnt ?? 0
+          if (cnt >= rule.escalation.warns_threshold) {
+            console.warn(`[octoguard] escalation triggered (cnt=${cnt} >= ${rule.escalation.warns_threshold}, action=${rule.escalation.action}) → TODO Session C apply mute/ban_temp`)
+            logOctoGuardAction({
+              action:       `octoguard.escalation_${rule.escalation.action}`,
+              target_type:  'user',
+              target_id:    user.userId,
+              target_label: `escalated after ${cnt} warns`,
+              metadata:     { ...meta, escalated_to: rule.escalation.action, warn_count: cnt, stub: true },
+            })
+          }
         }
       } catch (err) {
-        console.warn('[octoguard] escalation check failed:', err)
+        console.warn('[octoguard] warn side-effects failed:', err)
       }
-    }
+    })()
 
     return {
       blocked: true,
@@ -175,18 +182,28 @@ async function applyAction(
     }
   }
 
-  // mute : applique un mute global communauté via le service mutes
-  // (Session C : implémentation réelle remplace le stub Session B).
+  // mute : applique un mute global communauté via le service mutes.
+  // La décision est IMMÉDIATE ; applyMute part en fire-and-forget. Si le mute se
+  // pose une ms plus tard ou échoue, la règle continue de bloquer les messages
+  // suivants -> dégradation gracieuse, jamais de fail-open (avant ce fix, un
+  // applyMute qui throw retombait dans le catch de runPipeline = blocked:false).
+  // (Session C : implémentation réelle remplace le stub Session B.)
   if (action === 'mute') {
-    await applyMute({
-      userId:     user.userId,
-      channelId:  null,                       // mute global (toute la communauté)
-      duration:   rule.action_duration,
-      reason:     `règle "${rule.name}"`,
-      appliedBy:  null,                       // action automatique
-      ruleId:     rule.id,
-      eventId,                                // hérité du pipeline (cohérence)
-    })
+    void (async () => {
+      try {
+        await applyMute({
+          userId:     user.userId,
+          channelId:  null,                       // mute global (toute la communauté)
+          duration:   rule.action_duration,
+          reason:     `règle "${rule.name}"`,
+          appliedBy:  null,                       // action automatique
+          ruleId:     rule.id,
+          eventId,                                // hérité du pipeline (cohérence)
+        })
+      } catch (err) {
+        console.warn('[octoguard] applyMute failed:', err)
+      }
+    })()
     return {
       blocked: true,
       reason:  `Silence appliqué : règle "${rule.name}"`,
