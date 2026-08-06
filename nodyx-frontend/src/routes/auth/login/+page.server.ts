@@ -7,6 +7,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		redirectTo:    url.searchParams.get('redirectTo') ?? '/',
 		passwordReset: url.searchParams.get('reset') === '1',
 		signetError:   url.searchParams.get('signet_error') ?? null,
+		demoMode:      import.meta.env.DEV,
 	};
 };
 
