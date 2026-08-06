@@ -109,25 +109,52 @@ test: Tests pour la route V
 ## TRADUIRE NODYX
 
 La traduction est la contribution la plus accessible.
-Pas besoin de savoir coder.
+Pas besoin de savoir coder, et aucun compte à créer nulle part, sauf sur GitHub.
 
-### Comment faire
-1. Va dans `nodyx-core/i18n/`
-2. Copie le dossier `en/` et renomme-le avec ton code langue (`fr/`, `de/`, `es/`, `ja/`, etc.)
+**État en direct : [nodyx.org/translate](https://nodyx.org/translate)** liste chaque langue, où elle en est, et renvoie directement sur le fichier à éditer.
+
+### L'interface
+
+Toute l'interface de l'application tient dans un fichier JSON par langue :
+
+```
+nodyx-frontend/src/lib/locales/
+  fr.json          , langue source
+  en.json          , référence, maintenue à 100%
+  de.json  es.json  pt-PT.json  ru.json  vi.json
+```
+
+1. Ouvre [nodyx.org/translate](https://nodyx.org/translate) et trouve ta langue
+2. Clique sur « Traduire sur GitHub », le dépôt est copié pour toi
+3. Remplis les clés manquantes, en laissant chaque `{{variable}}` exactement telle quelle
+4. Ouvre une Pull Request
+
+L'intégration continue vérifie qu'aucune variable n'a bougé : tu ne peux pas casser l'application en traduisant. On relit, on fusionne, ton travail part dans la version suivante.
+
+Ta langue n'est pas dans la liste ? Copie `en.json`, nomme-le avec ton code langue, et ouvre une Issue pour qu'on le branche dans le sélecteur de langue.
+
+### La documentation
+1. Va dans `docs/`
+2. Copie le dossier `en/` et renomme-le avec ton code langue (`de/`, `es/`, `ja/`, etc.)
 3. Traduis les fichiers
 4. Ouvre une Pull Request
 
-### Fichiers a traduire
+Fichiers à traduire :
 ```
-MANIFESTO.md    — Le texte fondateur
-THANKS.md       — Les remerciements
+MANIFESTO.md    , le texte fondateur
+THANKS.md       , les remerciements
+README.md       , la présentation du projet
+CONTRIBUTING.md , ce guide
 ```
 
 ### Regles de traduction
 - Traduis le sens, pas mot a mot
 - Garde le ton original (direct, humain, pas corporatif)
+- Ne touche jamais à ce qui est entre `{{ }}`, ce sont des valeurs que l'application remplit elle-même
 - Si un concept n a pas d equivalent dans ta langue, garde le terme anglais
 - Les noms propres (Nodyx, NodyxPoints, etc.) ne se traduisent pas
+
+Les traducteurs reçoivent une étoile et leur place dans [CONTRIBUTORS.md](../../CONTRIBUTORS.md), comme tous les autres contributeurs.
 
 ---
 
