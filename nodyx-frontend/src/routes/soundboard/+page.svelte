@@ -117,7 +117,7 @@
 	}
 
 	function fmtTime(ms: number | null): string {
-		if (!ms || ms <= 0) return '—'
+		if (!ms || ms <= 0) return '·'
 		const total = Math.max(0, Math.round(ms / 1000))
 		const m = Math.floor(total / 60)
 		const s = total % 60
@@ -242,7 +242,7 @@
 </script>
 
 <svelte:head>
-	<title>Soundboard{streamer?.displayName ? ` — ${streamer.displayName}` : ''}</title>
+	<title>Soundboard{streamer?.displayName ? ` · ${streamer.displayName}` : ''}</title>
 	<meta name="description" content={tFn('soundboard.meta_desc')}/>
 </svelte:head>
 
@@ -293,7 +293,7 @@
 						</div>
 						<div class="flex-1 min-w-0">
 							<div class="text-lg font-semibold text-white truncate" title={nowPlaying.title}>{nowPlaying.title}</div>
-							<div class="text-sm text-zinc-400 truncate">{nowPlaying.artist ?? '—'}</div>
+							<div class="text-sm text-zinc-400 truncate">{nowPlaying.artist ?? '·'}</div>
 							<div class="mt-2 flex items-center gap-2">
 								<div class="flex-1 h-1.5 bg-zinc-950 rounded-sm overflow-hidden">
 									<div class="h-full bg-gradient-to-r from-purple-500 to-indigo-400 transition-[width] duration-200"
@@ -349,7 +349,7 @@
 							</div>
 							<div class="flex-1 min-w-0">
 								<div class="text-sm text-zinc-100 truncate" title={e.title}>{e.title}</div>
-								<div class="text-[11px] text-zinc-500 truncate">{e.artist ?? '—'}</div>
+								<div class="text-[11px] text-zinc-500 truncate">{e.artist ?? '·'}</div>
 							</div>
 							<div class="text-[10px] text-zinc-500 shrink-0 flex items-center gap-1.5">
 								{#if e.source === 'chat'}
@@ -447,7 +447,7 @@
 							     "...". Le titre entier est visible, c'est ça l'idée. -->
 							<div class="flex-1 min-w-0">
 								<div class="text-sm font-medium text-zinc-100 leading-snug break-words line-clamp-2" title={t.title}>{t.title}</div>
-								<div class="text-xs text-zinc-500 truncate mt-0.5">{t.artist ?? '—'}</div>
+								<div class="text-xs text-zinc-500 truncate mt-0.5">{t.artist ?? '·'}</div>
 								<div class="text-[10px] text-zinc-600 mt-1 flex items-center gap-2 flex-wrap">
 									{#if t.durationMs}<span class="font-mono">{fmtTime(t.durationMs)}</span>{/if}
 									{#if t.royaltyFree === true}<span class="text-emerald-400">libre de droits</span>{/if}

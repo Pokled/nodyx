@@ -28,7 +28,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
       <pubDate>${new Date(thread.created_at).toUTCString()}</pubDate>
       <author>${thread.author_username}</author>
       <category><![CDATA[${category.name}]]></category>
-      <description><![CDATA[Sujet posté par ${thread.author_username} dans ${category.name} — ${thread.post_count} réponse(s)]]></description>
+      <description><![CDATA[Sujet posté par ${thread.author_username} dans ${category.name}, ${thread.post_count} réponse(s)]]></description>
     </item>`);
 				}
 			}
@@ -41,7 +41,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 	const feed = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${SITE_NAME} — Derniers sujets</title>
+    <title>${SITE_NAME} · Derniers sujets</title>
     <link>${BASE_URL}</link>
     <description>Les dernières discussions du forum ${SITE_NAME}</description>
     <language>fr-FR</language>

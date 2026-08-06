@@ -145,7 +145,7 @@
 					<div class="flex items-center gap-2">
 						<span class="text-xs font-bold uppercase tracking-widest"
 						      style="color:{meta.accent}">{meta.label}</span>
-						<span class="text-xs text-gray-600">— {meta.description}</span>
+						<span class="text-xs text-gray-600">· {meta.description}</span>
 					</div>
 					<div class="h-px flex-1 bg-gray-800"></div>
 				</div>

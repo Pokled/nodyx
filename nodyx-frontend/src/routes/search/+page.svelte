@@ -22,7 +22,7 @@
 </script>
 
 <svelte:head>
-	<title>{q ? tFn('page_title.search_results', { q }) : tFn('nav.search')} — Nodyx</title>
+	<title>{q ? tFn('page_title.search_results', { q }) : tFn('nav.search')} · Nodyx</title>
 </svelte:head>
 
 <div class="max-w-3xl">

@@ -103,7 +103,7 @@
 		},
 	].filter(Boolean) as { label: string; url: string; handle: string }[])
 
-	const title = $derived(`${profile.display_name || profile.username} — Nodyx`)
+	const title = $derived(`${profile.display_name || profile.username} · Nodyx`)
 	const description = $derived(
 		profile.bio ? profile.bio.slice(0, 160) : `${profile.display_name || profile.username}`
 	)

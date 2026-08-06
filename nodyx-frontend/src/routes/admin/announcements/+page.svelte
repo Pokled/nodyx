@@ -197,7 +197,7 @@
 								{#if ann.expires_at}
 									{new Date(ann.expires_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
 								{:else}
-									<span class="text-gray-700">—</span>
+									<span class="text-gray-700">·</span>
 								{/if}
 							</td>
 

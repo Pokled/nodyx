@@ -33,7 +33,7 @@
 </script>
 
 <svelte:head>
-	<title>{pg?.title ?? 'Wiki'} — {data.communityName}</title>
+	<title>{pg?.title ?? 'Wiki'} · {data.communityName}</title>
 	<meta name="description" content={pg?.excerpt ?? ''} />
 </svelte:head>
 

@@ -35,7 +35,7 @@
 </script>
 
 <svelte:head>
-	<title>{tFn('auth.verify_email.title')} — Nodyx</title>
+	<title>{tFn('auth.verify_email.title')} · Nodyx</title>
 </svelte:head>
 
 <div class="mx-auto max-w-md pt-16 px-4 text-center">

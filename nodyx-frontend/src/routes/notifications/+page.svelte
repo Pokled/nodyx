@@ -56,7 +56,7 @@
 </script>
 
 <svelte:head>
-	<title>{tFn('nav.notifications')} — Nodyx</title>
+	<title>{tFn('nav.notifications')} · Nodyx</title>
 </svelte:head>
 
 <div class="max-w-2xl">

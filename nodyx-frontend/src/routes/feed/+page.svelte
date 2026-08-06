@@ -341,7 +341,7 @@
 </script>
 
 <svelte:head>
-	<title>{tFn('feed.title')} — Nodyx</title>
+	<title>{tFn('feed.title')} · Nodyx</title>
 </svelte:head>
 
 {#snippet linkCard(lp: any)}

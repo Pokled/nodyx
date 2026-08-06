@@ -58,7 +58,7 @@
 </script>
 
 <svelte:head>
-	<title>{tFn('forum.create_topic')} — Nodyx</title>
+	<title>{tFn('forum.create_topic')} · Nodyx</title>
 </svelte:head>
 
 <div class="max-w-3xl">

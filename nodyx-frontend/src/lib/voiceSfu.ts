@@ -448,13 +448,13 @@ export async function sfuAudit(channelId: string): Promise<void> {
   for (const t of (res.transports as Record<string, unknown>[] ?? [])) {
     const stat = (((t.stats as Record<string, unknown>)?.stats) as Record<string, unknown>[] ?? [])[0] ?? {}
     const tuple = (stat.iceSelectedTuple ?? null) as Record<string, unknown> | null
-    const fmt = (ip: unknown, port: unknown) => (ip != null ? `${ip}:${port}` : '—')
+    const fmt = (ip: unknown, port: unknown) => (ip != null ? `${ip}:${port}` : '·')
     rows.push({
       participant: String(t.participant ?? '?'),
       direction:   String(t.direction ?? '?'),
       iceState:    String(stat.iceState ?? 'new'),
-      local:       tuple ? fmt(tuple.localAddress, tuple.localPort) : '—',
-      remote:      tuple ? fmt(tuple.remoteIp, tuple.remotePort) : '—',
+      local:       tuple ? fmt(tuple.localAddress, tuple.localPort) : '·',
+      remote:      tuple ? fmt(tuple.remoteIp, tuple.remotePort) : '·',
       proto:       tuple ? String(tuple.protocol ?? '') : '',
       recvKbps:    Math.round(Number(stat.recvBitrate ?? 0) / 1000),
       sendKbps:    Math.round(Number(stat.sendBitrate ?? 0) / 1000),
@@ -787,12 +787,12 @@ async function maybeRecover(reason: string): Promise<void> {
   // On ne récupère que depuis une session vivante ; pas pendant un leave manuel.
   if (!channel || (phase !== 'active' && phase !== 'recovering')) return
   if (_recoverAttempts >= MAX_RECOVER) {
-    fail(`${reason} — abandon après ${MAX_RECOVER} tentatives`)
+    fail(`${reason}, abandon après ${MAX_RECOVER} tentatives`)
     return
   }
   _recoverAttempts++
   const attempt = _recoverAttempts
-  log(`⟳ ${reason} — reconnexion ${attempt}/${MAX_RECOVER}…`)
+  log(`⟳ ${reason}, reconnexion ${attempt}/${MAX_RECOVER}…`)
   sfuPhaseStore.set('recovering')
 
   // Ferme l'ancienne session localement + prévient le serveur (leave explicite

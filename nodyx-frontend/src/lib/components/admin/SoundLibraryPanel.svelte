@@ -187,7 +187,7 @@
 	}
 
 	function fmtDuration(ms: number | null): string {
-		if (!ms || ms <= 0) return '—:—'
+		if (!ms || ms <= 0) return '--:--'
 		const total = Math.round(ms / 1000)
 		const m = Math.floor(total / 60)
 		const s = total % 60
@@ -574,7 +574,7 @@
 						</div>
 						<div class="min-w-0">
 							<div class="text-sm text-zinc-100 truncate" title={e.title}>{e.title}</div>
-							<div class="text-[11px] text-zinc-500 truncate">{e.artist ?? '—'}</div>
+							<div class="text-[11px] text-zinc-500 truncate">{e.artist ?? '·'}</div>
 						</div>
 						<div class="text-[11px] text-zinc-500 inline-flex items-center gap-1.5">
 							{#if e.source === 'chat'}

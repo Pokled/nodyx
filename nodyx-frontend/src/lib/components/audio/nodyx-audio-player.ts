@@ -251,7 +251,7 @@ class NodyxAudioPlayer extends HTMLElement {
 		}
 		const rows = this._tracks.map((t, i) => {
 			const title = t.title || t.src.split('/').pop() || `Piste ${i + 1}`
-			const artist = t.artist ? ` <span class="tl-artist">— ${escapeHtml(t.artist)}</span>` : ''
+			const artist = t.artist ? ` <span class="tl-artist">· ${escapeHtml(t.artist)}</span>` : ''
 			return `<button type="button" class="tl-row" data-idx="${i}">
 				<span class="tl-num">${i + 1}.</span>
 				<span class="tl-title">${escapeHtml(title)}${artist}</span>
@@ -453,7 +453,7 @@ class NodyxAudioPlayer extends HTMLElement {
 				.meta { display: flex; gap: 8px; min-width: 0; align-items: baseline; }
 				.title { font-size: 13px; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 				.artist { font-size: 11px; color: #a5b4fc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-				.artist:not(:empty)::before { content: '— '; color: #64748b; }
+				.artist:not(:empty)::before { content: '· '; color: #64748b; }
 
 				/* Equalizer: real-time FFT bars (smaller, on top of waveform) */
 				.eq { position: relative; height: 32px; border-radius: 6px; overflow: hidden; background: rgba(15,23,42,0.5); border: 1px solid rgba(99,102,241,0.15); }
@@ -840,7 +840,7 @@ class NodyxAudioPlayer extends HTMLElement {
 			this._showToast('Lien copié')
 		} catch {
 			// Fallback (no clipboard API): show the URL in toast so user can copy
-			this._showToast('Copie impossible — ' + url.slice(0, 40) + '…')
+			this._showToast('Copie impossible : ' + url.slice(0, 40) + '…')
 		}
 		this._closeShareMenu()
 	}

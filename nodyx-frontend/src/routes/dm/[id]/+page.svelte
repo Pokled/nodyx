@@ -1037,7 +1037,7 @@
 </script>
 
 <svelte:head>
-	<title>DM — {conversation ? convLabel(conversation) : tFn('dm.title')}</title>
+	<title>DM · {conversation ? convLabel(conversation) : tFn('dm.title')}</title>
 </svelte:head>
 
 <!-- Layout deux colonnes : sidebar + zone chat -->

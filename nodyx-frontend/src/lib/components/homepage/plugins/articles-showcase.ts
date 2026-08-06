@@ -22,7 +22,7 @@ const plugin: WidgetPlugin = {
 				{ value: 'ticker',     label: 'Ticker (défilement vertical)'   },
 				{ value: 'headlines',  label: 'Headlines (titres numérotés)'   },
 			],
-			hint: 'Chaque layout a sa personnalité — teste-les pour voir ce qui colle à ta page.',
+			hint: 'Chaque layout a sa personnalité, teste-les pour voir ce qui colle à ta page.',
 		},
 		{
 			key: 'cols', type: 'number', label: 'Colonnes (layout Grille)',

@@ -23,7 +23,7 @@
 		return Object.entries(permissions)
 			.filter(([, v]) => v)
 			.map(([k]) => tFn(PERMISSION_LABELS[k] ?? k))
-			.join(', ') || '—'
+			.join(', ') || '·'
 	}
 
 	function luminance(hex: string): number {
@@ -35,7 +35,7 @@
 </script>
 
 <svelte:head>
-	<title>Grades — {data.community.name} — Nodyx</title>
+	<title>Grades · {data.community.name} · Nodyx</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto px-4 py-6">
@@ -271,7 +271,7 @@
 											{member.grade_name}
 										</span>
 									{:else}
-										<span class="text-gray-600 text-xs">—</span>
+										<span class="text-gray-600 text-xs">·</span>
 									{/if}
 								</td>
 								<td class="px-4 py-3">

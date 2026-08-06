@@ -78,7 +78,7 @@
 {:else if loadStatus === 'error'}
 	<!-- Erreur visible uniquement en dev / pour l'admin -->
 	<div class="w-full px-4 py-3 text-xs" style="background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.2); color:#fca5a5">
-		<span class="font-bold">Widget {widgetId} — erreur de chargement :</span>
+		<span class="font-bold">Widget {widgetId} : erreur de chargement</span>
 		{errorMsg}
 	</div>
 

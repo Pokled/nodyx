@@ -19,7 +19,7 @@
 	})
 </script>
 
-<svelte:head><title>{tFn('octoguard.welcome_title')} — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.welcome_title')} · OctoGuard</title></svelte:head>
 
 <header class="og-h">
 	<h2>{tFn('octoguard.welcome_h2')}</h2>

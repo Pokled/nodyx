@@ -19,7 +19,7 @@
 	}
 
 	function permSummary(perms: Record<string, boolean>) {
-		return Object.entries(perms).filter(([,v])=>v).map(([k])=>PERM_LABELS[k]?tFn(PERM_LABELS[k]):k).join(', ') || '—'
+		return Object.entries(perms).filter(([,v])=>v).map(([k])=>PERM_LABELS[k]?tFn(PERM_LABELS[k]):k).join(', ') || '·'
 	}
 
 	function luminance(hex: string) {
@@ -176,7 +176,7 @@
 									{member.grade_name}
 								</span>
 							{:else}
-								<span class="text-gray-600 text-xs">—</span>
+								<span class="text-gray-600 text-xs">·</span>
 							{/if}
 						</td>
 						<td class="px-4 py-3">

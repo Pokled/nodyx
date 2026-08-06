@@ -194,7 +194,7 @@
     {#if remoteScreens.size > 0}
         <div class="space-y-2">
             <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">
-                Partages actifs — {remoteScreens.size}
+                Partages actifs : {remoteScreens.size}
             </p>
             <div class="space-y-2">
                 {#each [...remoteScreens.entries()] as [socketId, stream] (socketId)}

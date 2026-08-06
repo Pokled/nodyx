@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>Activation du compte — Nodyx</title>
+	<title>Activation du compte · Nodyx</title>
 </svelte:head>
 
 <div class="mx-auto max-w-md pt-16 px-4 text-center">

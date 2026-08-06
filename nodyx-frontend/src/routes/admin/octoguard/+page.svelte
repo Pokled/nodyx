@@ -13,7 +13,7 @@
 	const openReports   = $derived(data.openReports.length)
 </script>
 
-<svelte:head><title>{tFn('octoguard.overview_title')} — Admin Nodyx</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.overview_title')} · Admin Nodyx</title></svelte:head>
 
 <!-- État global -->
 <section class="og-section">

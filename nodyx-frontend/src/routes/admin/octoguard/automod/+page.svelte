@@ -78,7 +78,7 @@
 	}
 </script>
 
-<svelte:head><title>{tFn('octoguard.tab_automod')} — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.tab_automod')} · OctoGuard</title></svelte:head>
 
 {#if form?.error}
 	<div class="og-error">

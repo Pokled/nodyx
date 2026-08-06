@@ -169,7 +169,7 @@
 </script>
 
 <svelte:head>
-	<title>{tFn('auth.login.title')} — Nodyx</title>
+	<title>{tFn('auth.login.title')} · Nodyx</title>
 </svelte:head>
 
 <!-- ── Split layout: presentation a gauche, formulaire a droite ── -->

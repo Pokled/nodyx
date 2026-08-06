@@ -160,7 +160,7 @@
 										{/if}
 									</div>
 								{:else}
-									<span class="text-gray-700 text-xs">—</span>
+									<span class="text-gray-700 text-xs">·</span>
 								{/if}
 							</td>
 

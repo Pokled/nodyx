@@ -7,7 +7,7 @@
 	const STATUSES = ['open', 'reviewed', 'dismissed', 'actioned']
 </script>
 
-<svelte:head><title>{tFn('octoguard.reports_title')} — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.reports_title')} · OctoGuard</title></svelte:head>
 
 <header class="og-h">
 	<h2>{tFn('octoguard.reports_h2')}</h2>
@@ -30,7 +30,7 @@
 				<div class="og-report-head">
 					<span class="og-report-cat">{r.category ?? 'other'}</span>
 					<span class="og-report-target">{r.target_type} <code>{r.target_id.slice(0,8)}</code></span>
-					<span class="og-report-by">{tFn('octoguard.reports_by', { name: r.reporter_username ?? r.reporter_id?.slice(0,8) ?? '—' })}</span>
+					<span class="og-report-by">{tFn('octoguard.reports_by', { name: r.reporter_username ?? r.reporter_id?.slice(0,8) ?? '·' })}</span>
 					<span class="og-report-date">{new Date(r.created_at).toLocaleString()}</span>
 				</div>
 				<p class="og-report-reason">{r.reason}</p>

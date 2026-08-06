@@ -444,7 +444,7 @@
 					<p class="text-xs text-gray-600 font-mono mt-0.5">NODYX_COMMUNITY_SLUG</p>
 				</div>
 				<div class="flex-1">
-					<div class="rounded-lg bg-gray-800/60 border border-gray-700 px-3 py-2 text-sm text-gray-400 font-mono">{i.slug || '—'}</div>
+					<div class="rounded-lg bg-gray-800/60 border border-gray-700 px-3 py-2 text-sm text-gray-400 font-mono">{i.slug || '·'}</div>
 					<p class="text-xs text-gray-600 mt-1">{tFn('aset.slug_help')}</p>
 				</div>
 			</div>
@@ -528,7 +528,7 @@
 					</div>
 					<div class="flex items-center justify-between">
 						<span class="text-gray-400">{tFn('aset.sender')}</span>
-						<span class="font-mono text-xs text-gray-200">{smtp.from ?? '—'}</span>
+						<span class="font-mono text-xs text-gray-200">{smtp.from ?? '·'}</span>
 					</div>
 				</div>
 

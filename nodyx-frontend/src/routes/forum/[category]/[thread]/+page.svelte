@@ -76,10 +76,10 @@
 </script>
 
 <svelte:head>
-	<title>{thread.title} — {$page.data.communityName ?? 'Nodyx'}</title>
+	<title>{thread.title} · {$page.data.communityName ?? 'Nodyx'}</title>
 	<meta name="description" content="Discussion : {thread.title} par {thread.author_username}" />
 	<link rel="canonical" href={$page.url.href} />
-	<meta property="og:title"       content="{thread.title} — {$page.data.communityName ?? 'Nodyx'}" />
+	<meta property="og:title"       content="{thread.title} · {$page.data.communityName ?? 'Nodyx'}" />
 	<meta property="og:description" content="Discussion par {thread.author_username} · {thread.post_count} {tFn('forum.replies_label')} · {thread.views} {tFn('forum.views')}" />
 	<meta property="og:type"        content="article" />
 	<meta property="og:url"         content={$page.url.href} />

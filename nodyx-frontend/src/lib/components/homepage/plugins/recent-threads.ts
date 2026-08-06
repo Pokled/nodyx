@@ -5,7 +5,7 @@ export default {
 	id:      'recent-threads',
 	label:   'Threads récents',
 	icon:    '💬',
-	desc:    'Feed des derniers sujets du forum — style liste ou cards.',
+	desc:    'Feed des derniers sujets du forum, style liste ou cards.',
 	family:  'community',
 	phase:   1,
 	component: RecentThreads,

@@ -8,7 +8,7 @@
 	const totalPages = $derived(Math.ceil(data.total / data.limit))
 </script>
 
-<svelte:head><title>{tFn('octoguard.logs_title')} — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.logs_title')} · OctoGuard</title></svelte:head>
 
 <header class="og-h">
 	<h2>{tFn('octoguard.logs_h2')}</h2>
@@ -32,8 +32,8 @@
 					<td class="og-date">{new Date(l.created_at).toLocaleString()}</td>
 					<td>{l.actor_username}</td>
 					<td class="og-action">{l.action.replace('octoguard.', '')}</td>
-					<td>{l.target_type ?? '—'}{l.target_id ? ` ${l.target_id.slice(0,8)}` : ''}</td>
-					<td class="og-label">{l.target_label ?? '—'}</td>
+					<td>{l.target_type ?? '·'}{l.target_id ? ` ${l.target_id.slice(0,8)}` : ''}</td>
+					<td class="og-label">{l.target_label ?? '·'}</td>
 					<td>
 						{#if l.metadata?.undoable}
 							<form method="POST" action="?/undo" use:enhance>

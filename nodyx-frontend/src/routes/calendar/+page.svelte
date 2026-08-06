@@ -19,7 +19,7 @@
 		const start = tFn('event.at', { date: formatDate(ev.starts_at), time: formatTime(ev.starts_at) });
 		if (!ev.ends_at) return start;
 		const sameDay = new Date(ev.starts_at).toDateString() === new Date(ev.ends_at).toDateString();
-		return sameDay ? `${start} – ${formatTime(ev.ends_at)}` : `${start} → ${formatDate(ev.ends_at)}`;
+		return sameDay ? `${start} - ${formatTime(ev.ends_at)}` : `${start} → ${formatDate(ev.ends_at)}`;
 	}
 
 	function isToday(ev: any): boolean {
@@ -42,7 +42,7 @@
 </script>
 
 <svelte:head>
-	<title>Calendrier — {data.communityName ?? 'Nodyx'}</title>
+	<title>Calendrier · {data.communityName ?? 'Nodyx'}</title>
 </svelte:head>
 
 <div class="cal-root">

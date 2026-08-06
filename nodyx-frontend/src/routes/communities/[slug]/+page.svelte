@@ -16,9 +16,9 @@
 </script>
 
 <svelte:head>
-	<title>{community.name} — Nodyx</title>
+	<title>{community.name} · Nodyx</title>
 	<meta name="description" content={community.description ?? tFn('community_page.meta_desc', { name: community.name })} />
-	<meta property="og:title" content="{community.name} — Nodyx" />
+	<meta property="og:title" content="{community.name} · Nodyx" />
 	<meta property="og:type" content="website" />
 </svelte:head>
 

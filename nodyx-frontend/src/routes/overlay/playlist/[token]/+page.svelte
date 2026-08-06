@@ -375,7 +375,7 @@
 </script>
 
 <svelte:head>
-	<title>{playlist?.name ?? 'Playlist'} — Overlay</title>
+	<title>{playlist?.name ?? 'Playlist'} · Overlay</title>
 	<style>
 		html, body { background: transparent !important; margin: 0; padding: 0; }
 	</style>
@@ -437,7 +437,7 @@
 			</div>
 			<div class="text-sm font-medium truncate" title={current.title}>{current.title}</div>
 			<div class="text-[11px] text-zinc-400 truncate flex items-center gap-1.5">
-				<span class="truncate">{current.artist ?? '—'}</span>
+				<span class="truncate">{current.artist ?? '·'}</span>
 				<span class="text-zinc-600 font-mono shrink-0">· {fmtTime(progressMs)} / {fmtTime(durationMs)}</span>
 			</div>
 			<!-- Barre de progression -->

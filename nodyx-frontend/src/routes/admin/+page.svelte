@@ -244,7 +244,7 @@
 					<div class="flex justify-between">
 						<dt class="text-zinc-500">{tFn('adash.avg_msgs')}</dt>
 						<dd class="text-zinc-200 font-medium tabular-nums">
-							{s.threads.total > 0 ? (s.posts.total / s.threads.total).toFixed(1) : '—'}
+							{s.threads.total > 0 ? (s.posts.total / s.threads.total).toFixed(1) : '·'}
 						</dd>
 					</div>
 					{#if s.dms}

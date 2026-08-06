@@ -253,7 +253,7 @@
 				<div>
 					<p class="text-white font-semibold text-sm capitalize">{fDate(ev.starts_at)}</p>
 					{#if !ev.is_all_day}
-						<p class="text-emerald-300 text-sm mt-0.5">{fTime(ev.starts_at)}{ev.ends_at ? ` – ${fTime(ev.ends_at)}` : ''}</p>
+						<p class="text-emerald-300 text-sm mt-0.5">{fTime(ev.starts_at)}{ev.ends_at ? ` - ${fTime(ev.ends_at)}` : ''}</p>
 					{:else}
 						<p class="text-emerald-300 text-xs mt-0.5">{tFn('event.all_day')}</p>
 					{/if}

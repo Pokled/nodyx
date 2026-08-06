@@ -88,7 +88,7 @@
 </script>
 
 <svelte:head>
-	<title>{tFn('auth.register.title')} — Nodyx</title>
+	<title>{tFn('auth.register.title')} · Nodyx</title>
 </svelte:head>
 
 <div class="w-full h-full min-h-0 p-6 sm:p-8 overflow-hidden bg-[#06060a]">

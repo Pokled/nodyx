@@ -6,7 +6,7 @@
 	const tFn = $derived($t)
 </script>
 
-<svelte:head><title>{tFn('octoguard.mutes_title')} — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.mutes_title')} · OctoGuard</title></svelte:head>
 
 <header class="og-h">
 	<h2>{tFn('octoguard.mutes_h2')}</h2>
@@ -48,7 +48,7 @@
 				<tr>
 					<td>{m.user_username ?? m.user_id?.slice(0,8)}</td>
 					<td>{m.channel_id ? m.channel_id.slice(0,8) : tFn('octoguard.global_dash')}</td>
-					<td>{m.reason ?? '—'}</td>
+					<td>{m.reason ?? '·'}</td>
 					<td>{m.expires_at ? new Date(m.expires_at).toLocaleString() : tFn('octoguard.permanent_dash')}</td>
 					<td>
 						<form method="POST" action="?/unmute" use:enhance>

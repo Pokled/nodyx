@@ -68,7 +68,7 @@
 								</a>
 							</td>
 							<td class="px-4 py-3 text-gray-400">{TYPE_ICONS[asset.asset_type] ?? ''} {asset.asset_type}</td>
-							<td class="px-4 py-3 text-gray-400">{asset.creator_username ?? '—'}</td>
+							<td class="px-4 py-3 text-gray-400">{asset.creator_username ?? '·'}</td>
 							<td class="px-4 py-3 text-gray-500 text-xs">{tFn('aast.kb', { n: Math.round(asset.file_size / 1024) })}</td>
 							<td class="px-4 py-3">
 								{#if asset.is_banned}

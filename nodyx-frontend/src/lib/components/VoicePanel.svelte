@@ -133,9 +133,9 @@
         return { excellent: 4, good: 3, fair: 2, poor: 1, unknown: 0 }[q]
     }
 
-    function fmtRtt(v: number | null): string   { return v === null ? '—' : `${v} ms` }
-    function fmtLoss(v: number | null): string  { return v === null ? '—' : `${v} %` }
-    function fmtJitter(v: number | null): string { return v === null ? '—' : `${v} ms` }
+    function fmtRtt(v: number | null): string   { return v === null ? '·' : `${v} ms` }
+    function fmtLoss(v: number | null): string  { return v === null ? '·' : `${v} %` }
+    function fmtJitter(v: number | null): string { return v === null ? '·' : `${v} ms` }
 
     // Inline dot color — safe for Tailwind v4 scanner
     function qualityDotClass(q: NetQuality): string {

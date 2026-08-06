@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>Wiki — {data.communityName}</title>
+	<title>Wiki · {data.communityName}</title>
 </svelte:head>
 
 <!-- ── Header ──────────────────────────────────────────────────────────────── -->

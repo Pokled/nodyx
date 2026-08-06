@@ -96,7 +96,7 @@
 					rel="noopener noreferrer"
 					class="text-sm font-semibold text-gray-200 hover:text-white"
 				>
-					GitHub — {data.login}
+					GitHub · {data.login}
 				</a>
 			</div>
 

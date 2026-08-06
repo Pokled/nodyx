@@ -611,7 +611,7 @@
 	]
 </script>
 
-<svelte:head><title>Grid Builder — Admin</title></svelte:head>
+<svelte:head><title>Grid Builder · Admin</title></svelte:head>
 
 <!-- ── Toasts ───────────────────────────────────────────────────────────────── -->
 <div class="toasts">

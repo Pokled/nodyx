@@ -1026,7 +1026,7 @@
 
 </script>
 
-<svelte:head><title>Chat — Nodyx</title></svelte:head>
+<svelte:head><title>Chat · Nodyx</title></svelte:head>
 
 <!-- Full-height layout — left and right offsets dynamically adjusted on collapse/expand -->
 <div class="fixed top-12 bottom-0 {$panelCollapsedStore ? 'lg:left-14' : 'lg:left-[276px]'} {$membersCollapsedStore ? 'xl:right-0' : 'xl:right-[220px]'} left-0 right-0 flex overflow-hidden z-10 bg-[#080810] [transition:left_.25s_cubic-bezier(.4,0,.2,1),right_.25s_cubic-bezier(.4,0,.2,1)]">

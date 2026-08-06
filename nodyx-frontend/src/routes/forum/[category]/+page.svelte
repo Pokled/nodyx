@@ -249,11 +249,11 @@
 </script>
 
 <svelte:head>
-	<title>{categoryName} — {$page.data.communityName ?? 'Nodyx'}</title>
-	<meta name="description" content="Discussions dans {categoryName} — forum {$page.data.communityName ?? 'Nodyx'}" />
+	<title>{categoryName} · {$page.data.communityName ?? 'Nodyx'}</title>
+	<meta name="description" content="Discussions dans {categoryName}, forum {$page.data.communityName ?? 'Nodyx'}" />
 	<link rel="canonical" href={$page.url.href} />
-	<meta property="og:title"       content="{categoryName} — {$page.data.communityName ?? 'Nodyx'}" />
-	<meta property="og:description" content="Discussions dans {categoryName} — forum {$page.data.communityName ?? 'Nodyx'}" />
+	<meta property="og:title"       content="{categoryName} · {$page.data.communityName ?? 'Nodyx'}" />
+	<meta property="og:description" content="Discussions dans {categoryName}, forum {$page.data.communityName ?? 'Nodyx'}" />
 	<meta property="og:type"        content="website" />
 	<meta property="og:url"         content={$page.url.href} />
 	<meta property="og:image"       content={$page.data.communityBannerUrl ?? $page.data.communityLogoUrl ?? `${$page.url.origin}/default-og-image.png`} />

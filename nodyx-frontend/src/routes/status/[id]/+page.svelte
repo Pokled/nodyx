@@ -106,7 +106,7 @@
 	}
 </script>
 
-<svelte:head><title>Publication de {post.display_name || post.username} — Nodyx</title></svelte:head>
+<svelte:head><title>Publication de {post.display_name || post.username} · Nodyx</title></svelte:head>
 
 {#snippet actions(p: any)}
 	<div class="s-actions">

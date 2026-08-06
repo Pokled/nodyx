@@ -200,7 +200,7 @@
 										<span class="sr">{tFn('translate.core_done')}</span>
 									</span>
 								{:else}
-									<span class="core-no" aria-hidden="true">–</span>
+									<span class="core-no" aria-hidden="true">·</span>
 								{/if}
 							</td>
 							<td>

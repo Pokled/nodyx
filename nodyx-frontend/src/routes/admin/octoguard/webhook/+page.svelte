@@ -9,7 +9,7 @@
 	let enabled = $state(data.webhook?.enabled ?? false)
 </script>
 
-<svelte:head><title>{tFn('octoguard.webhook_title')} — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.webhook_title')} · OctoGuard</title></svelte:head>
 
 <header class="og-h">
 	<h2>{tFn('octoguard.webhook_h2')}</h2>

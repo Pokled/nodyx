@@ -32,8 +32,8 @@ export const MODULE_DISPLAY: Record<string, ModuleDisplay> = {
 
   // community — stable (implemented)
   chat:         { id: 'chat',         name: 'Chat',              description: 'Salons de discussion texte en temps réel.',                            family: 'community',   icon: '⚡', color: '#7c3aed', core: false, hasPublicFace: false, tags: ['gaming', 'sport', 'société'],        status: 'stable' },
-  voice:        { id: 'voice',        name: 'Salons vocaux',     description: 'Salons vocaux WebRTC P2P — sans serveur central.',                     family: 'community',   icon: '🎤', color: '#7c3aed', core: false, hasPublicFace: false, tags: ['gaming', 'sport', 'société'],        status: 'stable' },
-  canvas:       { id: 'canvas',       name: 'Canvas',            description: 'Tableau blanc collaboratif — dessin, post-its, flèches, texte, synchronisation CRDT en temps réel.',   family: 'community',   icon: '🎨', color: '#06b6d4', core: false, hasPublicFace: false, tags: ['gaming', 'créatifs', 'makers'],      status: 'stable' },
+  voice:        { id: 'voice',        name: 'Salons vocaux',     description: 'Salons vocaux WebRTC P2P, sans serveur central.',                     family: 'community',   icon: '🎤', color: '#7c3aed', core: false, hasPublicFace: false, tags: ['gaming', 'sport', 'société'],        status: 'stable' },
+  canvas:       { id: 'canvas',       name: 'Canvas',            description: 'Tableau blanc collaboratif : dessin, post-its, flèches, texte, synchronisation CRDT en temps réel.',   family: 'community',   icon: '🎨', color: '#06b6d4', core: false, hasPublicFace: false, tags: ['gaming', 'créatifs', 'makers'],      status: 'stable' },
   jukebox:      { id: 'jukebox',      name: 'Jukebox',           description: 'Musique partagée P2P avec votes (dans les salons vocaux).',             family: 'community',   icon: '🎵', color: '#06b6d4', core: false, hasPublicFace: false, tags: ['gaming', 'événementiel'],            status: 'stable' },
   calendar:     { id: 'calendar',     name: 'Calendrier',        description: 'Événements partagés avec agenda public/privé.',                        family: 'community',   icon: '📅', color: '#10b981', core: false, hasPublicFace: true,  tags: ['sport', 'coopérative', 'société'],   status: 'stable' },
   polls:        { id: 'polls',        name: 'Sondages',          description: 'Sondages et votes pour impliquer la communauté.',                      family: 'community',   icon: '📊', color: '#10b981', core: false, hasPublicFace: false, tags: ['toutes'],                            status: 'stable' },
@@ -70,7 +70,7 @@ export const MODULE_DISPLAY: Record<string, ModuleDisplay> = {
 }
 
 export const FAMILY_META: Record<ModuleFamily, { label: string; description: string; accent: string }> = {
-  core:        { label: 'Core',          description: 'Toujours actifs — fondations de chaque instance.',          accent: '#374151' },
+  core:        { label: 'Core',          description: 'Toujours actifs, fondations de chaque instance.',          accent: '#374151' },
   community:   { label: 'Communauté',    description: 'Outils internes activables selon votre communauté.',        accent: '#7c3aed' },
   website:     { label: 'Site public',   description: 'Widgets pour construire la vitrine publique de l\'instance.', accent: '#ec4899' },
   integration: { label: 'Intégrations',  description: 'Connexions avec des services et protocoles externes.',       accent: '#6b7280' },

@@ -349,7 +349,7 @@
 	onMount(() => { loadDemos() })
 </script>
 
-<svelte:head><title>Widgets — Admin</title></svelte:head>
+<svelte:head><title>Widgets · Admin</title></svelte:head>
 
 <!-- Toasts -->
 <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">

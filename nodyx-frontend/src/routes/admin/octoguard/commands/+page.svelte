@@ -10,7 +10,7 @@
 	let f_cooldown = $state(5)
 </script>
 
-<svelte:head><title>{tFn('octoguard.commands_title')} — OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('octoguard.commands_title')} · OctoGuard</title></svelte:head>
 
 <header class="og-h">
 	<div>

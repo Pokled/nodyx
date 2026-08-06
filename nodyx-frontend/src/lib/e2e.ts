@@ -353,7 +353,7 @@ export function barbarizeVisual(text: string, esy: EsyKey, intensity = 0.4): str
 // ── ECDH + AES-GCM ────────────────────────────────────────────────────────────
 
 async function _deriveSharedKey(theirPublicKeyB64: string): Promise<CryptoKey> {
-  if (!_keys) throw new Error('Key pair not initialized — call initKeyPair() first')
+  if (!_keys) throw new Error('Key pair not initialized, call initKeyPair() first')
 
   const theirJwk = _b64ToJwk(theirPublicKeyB64)
   const theirKey = await crypto.subtle.importKey(

@@ -353,7 +353,7 @@
 		<div class="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-zinc-950/85 backdrop-blur-md border border-emerald-500/50 rounded-full shadow-2xl flex items-center gap-2 text-xs pointer-events-none animate-fade-out">
 			<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
 			<span class="text-zinc-100 font-medium">{tFn('overlay_sb.ready')}</span>
-			<span class="text-zinc-500">— appuie sur un bouton 🎵 de ton Stream Deck</span>
+			<span class="text-zinc-500">· appuie sur un bouton 🎵 de ton Stream Deck</span>
 		</div>
 	{/if}
 	{#if nowPlaying && config.osdPosition !== 'hidden'}
@@ -371,7 +371,7 @@
 				</div>
 				<div class="flex-1 min-w-0">
 					<div class="text-sm font-semibold text-white truncate" title={nowPlaying.title}>{nowPlaying.title}</div>
-					<div class="text-[11px] text-zinc-400 truncate">{nowPlaying.artist ?? '—'}</div>
+					<div class="text-[11px] text-zinc-400 truncate">{nowPlaying.artist ?? '·'}</div>
 				</div>
 				<div class="text-[10px] font-mono text-zinc-500 shrink-0">
 					{fmtTime(progressMs)}{nowPlaying.durationMs ? ` / ${fmtTime(nowPlaying.durationMs)}` : ''}

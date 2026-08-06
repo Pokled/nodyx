@@ -5,7 +5,7 @@ export default {
 	id:      'social-links-bar',
 	label:   'Liens sociaux',
 	icon:    '🌐',
-	desc:    'Barre d\'icônes réseaux sociaux configurable — Discord, Twitch, YouTube, GitHub...',
+	desc:    'Barre d\'icônes réseaux sociaux configurable : Discord, Twitch, YouTube, GitHub...',
 	family:  'social',
 	phase:   1,
 	component: SocialLinksBar,

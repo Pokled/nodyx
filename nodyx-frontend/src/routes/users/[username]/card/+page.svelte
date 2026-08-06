@@ -132,7 +132,7 @@
 
 <svelte:head>
 	<title>{tFn('user_card.meta_title', { name: displayName })}</title>
-	<meta name="description" content="Profil de {displayName} sur Nodyx — Niveau {level}, {Number(profile.post_count??0).toLocaleString('fr-FR')} posts, {Number(pts).toLocaleString('fr-FR')} XP" />
+	<meta name="description" content="Profil de {displayName} sur Nodyx, Niveau {level}, {Number(profile.post_count??0).toLocaleString('fr-FR')} posts, {Number(pts).toLocaleString('fr-FR')} XP" />
 
 	<!-- Prevent indexing (cards are supplements, not canonical) -->
 	<meta name="robots" content="noindex, follow" />
@@ -140,7 +140,7 @@
 
 	<!-- Open Graph -->
 	<meta property="og:type"        content="profile" />
-	<meta property="og:title"       content="{displayName} — Nodyx" />
+	<meta property="og:title"       content="{displayName} · Nodyx" />
 	<meta property="og:description" content="Niveau {level} · {Number(profile.post_count??0).toLocaleString('fr-FR')} posts · {Number(pts).toLocaleString('fr-FR')} XP{profile.grade ? ` · ${profile.grade.name}` : ''}" />
 	<meta property="og:url"         content={cardUrl} />
 	<meta property="og:image"       content={ogImageUrl} />
@@ -150,7 +150,7 @@
 
 	<!-- Twitter/X -->
 	<meta name="twitter:card"        content="summary_large_image" />
-	<meta name="twitter:title"       content="{displayName} — Nodyx" />
+	<meta name="twitter:title"       content="{displayName} · Nodyx" />
 	<meta name="twitter:description" content="Niveau {level} · {Number(profile.post_count??0).toLocaleString('fr-FR')} posts · {Number(pts).toLocaleString('fr-FR')} XP" />
 	<meta name="twitter:image"       content={ogImageUrl} />
 </svelte:head>

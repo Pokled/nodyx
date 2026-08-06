@@ -762,7 +762,7 @@
 				<div class="flex items-center gap-1.5">
 					<span class="text-[10px] uppercase tracking-wide font-semibold text-slate-400">Layout</span>
 					<Tooltip text={tFn('deckedit.layout_tooltip')} variant="tip"/>
-					{#if currentPage}<span class="text-[10px] text-slate-500">— {tFn('deckedit.page_word')} <span class="text-indigo-300 font-semibold">{currentPage.name}</span></span>{/if}
+					{#if currentPage}<span class="text-[10px] text-slate-500">· {tFn('deckedit.page_word')} <span class="text-indigo-300 font-semibold">{currentPage.name}</span></span>{/if}
 				</div>
 				<div class="flex items-center gap-2">
 					<label class="flex items-center gap-1.5 text-[11px] text-slate-400">
@@ -894,7 +894,7 @@
 							class="mt-1 w-full rounded bg-slate-950 border border-slate-700/60 focus:border-cyan-500/60 px-2 py-1 text-xs text-white outline-none">
 							{#each layout.pages as p (p.id)}
 								{@const free = layout.rows * layout.cols - p.buttons.reduce((n, b) => n + b.w * b.h, 0)}
-								<option value={p.id}>{p.name}{p.id === currentPageId ? tFn('deckedit.page_current') : ` — ${free} ${free > 1 ? tFn('deckedit.free_many') : tFn('deckedit.free_one')}`}</option>
+								<option value={p.id}>{p.name}{p.id === currentPageId ? tFn('deckedit.page_current') : ` · ${free} ${free > 1 ? tFn('deckedit.free_many') : tFn('deckedit.free_one')}`}</option>
 							{/each}
 						</select>
 					</div>
@@ -1110,7 +1110,7 @@
 											</div>
 											<div class="flex-1 min-w-0">
 												<div class="text-xs font-medium text-white truncate">{t.title}</div>
-												<div class="text-[10px] text-slate-500 truncate">{t.artist ?? '—'}</div>
+												<div class="text-[10px] text-slate-500 truncate">{t.artist ?? '·'}</div>
 											</div>
 											{#if t.durationMs}
 												<div class="text-[10px] font-mono text-slate-500 shrink-0">{fmtDuration(t.durationMs)}</div>

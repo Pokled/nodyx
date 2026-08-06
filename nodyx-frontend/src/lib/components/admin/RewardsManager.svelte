@@ -167,7 +167,7 @@
 	}
 
 	function fmtCooldown(sec: number | null): string {
-		if (!sec) return '—'
+		if (!sec) return '·'
 		if (sec < 60) return `${sec}s`
 		if (sec < 3600) return `${Math.floor(sec / 60)}m`
 		return `${Math.floor(sec / 3600)}h`

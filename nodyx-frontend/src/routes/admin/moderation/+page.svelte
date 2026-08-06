@@ -91,7 +91,7 @@
 									<span class="px-1.5 py-0.5 rounded text-xs bg-red-900/50 text-red-400 border border-red-800/50">🔒</span>
 								{/if}
 								{#if !thread.is_pinned && !thread.is_locked}
-									<span class="text-xs text-gray-700">—</span>
+									<span class="text-xs text-gray-700">·</span>
 								{/if}
 							</div>
 						</td>

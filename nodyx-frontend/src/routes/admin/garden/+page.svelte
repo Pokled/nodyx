@@ -69,7 +69,7 @@
 								<span class="text-xs text-gray-400 ml-1">{tFn(`agard.stage_${stage}`)}</span>
 							</td>
 							<td class="px-4 py-3 text-white font-medium">{seed.water_count}</td>
-							<td class="px-4 py-3 text-gray-400">{seed.planter_username ?? '—'}</td>
+							<td class="px-4 py-3 text-gray-400">{seed.planter_username ?? '·'}</td>
 							<td class="px-4 py-3 text-gray-500 text-xs">{formatDate(seed.planted_at)}</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-end gap-2">

@@ -166,7 +166,7 @@
 									{member.grade_name}
 								</span>
 							{:else}
-								<span class="text-gray-700 text-xs">—</span>
+								<span class="text-gray-700 text-xs">·</span>
 							{/if}
 						</td>
 
@@ -256,9 +256,9 @@
 									</div>
 								</td>
 								<td class="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate" title={ban.reason ?? ''}>
-									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">—</span>{/if}
+									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
 								</td>
-								<td class="px-4 py-3 text-xs text-gray-500">{ban.banned_by_username ?? '—'}</td>
+								<td class="px-4 py-3 text-xs text-gray-500">{ban.banned_by_username ?? '·'}</td>
 								<td class="px-4 py-3 text-xs text-gray-500">{new Date(ban.banned_at).toLocaleDateString('fr-FR')}</td>
 								<td class="px-4 py-3 text-right">
 									<form method="POST" action="?/unban" use:enhance class="inline">
@@ -328,9 +328,9 @@
 							<tr class="bg-orange-950/10 hover:bg-orange-950/20 transition-colors">
 								<td class="px-4 py-3 font-mono text-sm text-orange-300">{ban.ip}</td>
 								<td class="px-4 py-3 text-xs text-gray-500">
-									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">—</span>{/if}
+									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
 								</td>
-								<td class="px-4 py-3 text-xs text-gray-500">{ban.banned_by_username ?? '—'}</td>
+								<td class="px-4 py-3 text-xs text-gray-500">{ban.banned_by_username ?? '·'}</td>
 								<td class="px-4 py-3 text-xs text-gray-500">{new Date(ban.banned_at).toLocaleDateString('fr-FR')}</td>
 								<td class="px-4 py-3 text-right">
 									<form method="POST" action="?/unbanIp" use:enhance class="inline">
@@ -402,9 +402,9 @@
 							<tr class="bg-yellow-950/10 hover:bg-yellow-950/20 transition-colors">
 								<td class="px-4 py-3 font-mono text-sm text-yellow-300">{ban.email}</td>
 								<td class="px-4 py-3 text-xs text-gray-500">
-									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">—</span>{/if}
+									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
 								</td>
-								<td class="px-4 py-3 text-xs text-gray-500">{ban.banned_by_username ?? '—'}</td>
+								<td class="px-4 py-3 text-xs text-gray-500">{ban.banned_by_username ?? '·'}</td>
 								<td class="px-4 py-3 text-xs text-gray-500">{new Date(ban.banned_at).toLocaleDateString('fr-FR')}</td>
 								<td class="px-4 py-3 text-right">
 									<form method="POST" action="?/unbanEmail" use:enhance class="inline">

@@ -794,7 +794,7 @@
 					<span class="w-1.5 h-1.5 rounded-full {(health?.chatQueueSize ?? 0) > 50 ? 'bg-amber-400' : 'bg-emerald-400'}"></span>
 				</div>
 				<div class="text-base font-semibold text-white">
-					{health?.chatQueueSize ?? '—'}<span class="text-slate-500 text-sm font-normal"> {tFn('shub.in_queue')}</span>
+					{health?.chatQueueSize ?? '·'}<span class="text-slate-500 text-sm font-normal"> {tFn('shub.in_queue')}</span>
 				</div>
 				<div class="text-[11px] text-slate-500 mt-0.5">
 					{(health?.linkedViewersCount ?? 0) > 1 ? tFn('shub.viewers_linked_many', { n: health?.linkedViewersCount ?? 0 }) : tFn('shub.viewers_linked_one', { n: health?.linkedViewersCount ?? 0 })}

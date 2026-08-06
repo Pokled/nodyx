@@ -99,7 +99,7 @@
 						</span>
 
 						<span class="font-mono shrink-0" style="color:#374151">
-							{e.ip_address ?? '—'}
+							{e.ip_address ?? '·'}
 						</span>
 
 						<span class="shrink-0 px-1.5 py-0.5 text-[9px] font-bold uppercase"

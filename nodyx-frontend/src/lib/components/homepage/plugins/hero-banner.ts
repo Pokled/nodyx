@@ -49,7 +49,7 @@ const plugin: WidgetPlugin = {
 			hint: 'Change l\'apparence selon le contexte : stream en live, événement proche, heure de nuit.',
 		},
 		{
-			key: 'night_image_url', type: 'image', label: 'Image de nuit (22h–6h)',
+			key: 'night_image_url', type: 'image', label: 'Image de nuit (22h-6h)',
 			placeholder: 'https://...',
 			hint: 'Image alternative affichée la nuit (optionnel).',
 		},

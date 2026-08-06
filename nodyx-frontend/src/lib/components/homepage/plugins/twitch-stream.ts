@@ -5,7 +5,7 @@ const plugin: WidgetPlugin = {
 	id:        'twitch-stream',
 	label:     'Twitch Stream',
 	icon:      '📺',
-	desc:      'Embed Twitch player avec habillage Nodyx — pseudo configurable, chat optionnel, bordure gradient animée.',
+	desc:      'Embed Twitch player avec habillage Nodyx, pseudo configurable, chat optionnel, bordure gradient animée.',
 	family:    'media',
 	phase:     1,
 	component: TwitchStream,
@@ -14,7 +14,7 @@ const plugin: WidgetPlugin = {
 			key: 'channel', type: 'text', label: 'Chaîne Twitch',
 			placeholder: 'pokled  ou  https://twitch.tv/pokled',
 			required: true,
-			hint: 'Pseudo ou URL complète — les deux fonctionnent.',
+			hint: 'Pseudo ou URL complète, les deux fonctionnent.',
 		},
 		{
 			key: 'layout', type: 'select', label: 'Disposition',
@@ -42,7 +42,7 @@ const plugin: WidgetPlugin = {
 		{
 			key: 'autoplay', type: 'boolean', label: 'Autoplay',
 			default: false,
-			hint: 'Respecte la politique navigateur — forcé à muted si autoplay.',
+			hint: 'Respecte la politique navigateur, forcé à muted si autoplay.',
 		},
 		{
 			key: 'muted', type: 'boolean', label: 'Muet au démarrage',
@@ -67,7 +67,7 @@ const plugin: WidgetPlugin = {
 				'Comment ça marche\n\n' +
 				'Quand ta chaîne est offline, le widget affiche automatiquement à la place le stream le plus regardé de la catégorie indiquée ici. Pratique pour ne jamais avoir un cadre vide sur ta homepage.\n\n' +
 				'Que mettre dans le champ\n\n' +
-				'Soit le nom exact d\'une catégorie Twitch — par exemple "Software and Game Development", "Just Chatting", "League of Legends".\n\n' +
+				'Soit le nom exact d\'une catégorie Twitch, par exemple "Software and Game Development", "Just Chatting", "League of Legends".\n\n' +
 				'Soit l\'URL complète de la catégorie copiée depuis Twitch — par exemple https://www.twitch.tv/directory/category/software-and-game-development. Le widget extrait le bon nom automatiquement.\n\n' +
 				'Pré-requis côté serveur (action admin)\n\n' +
 				'Cette fonctionnalité interroge l\'API Twitch pour trouver le stream le plus regardé de la catégorie. Il faut donc déclarer une application Twitch puis ajouter ses identifiants au fichier nodyx-core/.env :\n\n' +
