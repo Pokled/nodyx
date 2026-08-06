@@ -14,7 +14,16 @@
 
 	const REPO    = 'https://github.com/Pokled/nodyx'
 	const LOCALES_DIR = `${REPO}/tree/main/nodyx-frontend/src/lib/locales`
-	const CONTRIB = `${REPO}/blob/main/CONTRIBUTING.md`
+
+	// Le guide de contribution vit dans docs/<langue>/, il n'y en a pas a la
+	// racine du depot. On envoie le visiteur droit sur la section traduction,
+	// dans sa langue quand elle existe (fr, en, es), sinon en anglais.
+	const GUIDES: Record<string, string> = {
+		fr: 'docs/fr/CONTRIBUTING.md#traduire-nodyx',
+		en: 'docs/en/CONTRIBUTING.md#translating-nodyx',
+		es: 'docs/es/CONTRIBUTING.md#traducir-nodyx',
+	}
+	const CONTRIB = $derived(`${REPO}/blob/main/${GUIDES[$locale.slice(0, 2)] ?? GUIDES.en}`)
 	const editUrl = (code: string) => `${REPO}/edit/main/nodyx-frontend/src/lib/locales/${code}.json`
 	const viewUrl = (code: string) => `${REPO}/blob/main/nodyx-frontend/src/lib/locales/${code}.json`
 

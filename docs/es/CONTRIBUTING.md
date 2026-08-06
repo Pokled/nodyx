@@ -25,18 +25,16 @@ No pasa nada.
 
 ### Puedes contribuir libremente en
 ```
-nodyx-plugins/    — Crear plugins
-nodyx-themes/     — Crear temas visuales
-nodyx-docs/       — Mejorar la documentación
-i18n/             — Traducir a tu idioma
-community/        — Contenido de la comunidad
+nodyx-frontend/src/lib/locales/  , Traducir la interfaz
+docs/                            , La documentación, y sus traducciones
+nodyx-frontend/src/              , Funcionalidades y correcciones del front
+nodyx-docs/                      , El sitio de documentación nodyx.dev
 ```
 
 ### No puedes modificar sin validación
 ```
-nodyx-core/src/           — Código principal del servidor
-nodyx-core/ARCHITECTURE.md
-nodyx-core/NODYX_CONTEXT.md
+nodyx-core/src/          , Código principal del servidor
+docs/en/ARCHITECTURE.md
 docs/en/MANIFESTO.md
 ```
 

@@ -12,9 +12,9 @@
 ## AVANT DE COMMENCER
 
 Lis ces fichiers dans cet ordre :
-1. `ARCHITECTURE.md` — Comment Nodyx est construit
-2. `NODYX_CONTEXT.md` — La vision et les regles
-3. `i18n/en/MANIFESTO.md` — L ame du projet
+1. `ARCHITECTURE.md`, comment Nodyx est construit
+2. `MANIFESTO.md`, l ame du projet
+3. `ROADMAP.md`, ou on va
 
 Si tu n es pas d accord avec le Manifeste, Nodyx n est peut-etre pas le bon projet pour toi.
 Et c est ok.
@@ -25,19 +25,17 @@ Et c est ok.
 
 ### Tu peux contribuer librement dans
 ```
-nodyx-plugins/    — Cree des plugins
-nodyx-themes/     — Cree des themes visuels
-nodyx-docs/       — Ameliore la documentation
-i18n/             — Traduis dans ta langue
-community/        — Contenus communautaires
+nodyx-frontend/src/lib/locales/  , Traduis l interface
+docs/                            , La documentation, et ses traductions
+nodyx-frontend/src/              , Fonctionnalites et corrections du front
+nodyx-docs/                      , Le site de documentation nodyx.dev
 ```
 
 ### Tu ne peux PAS modifier sans validation
 ```
-nodyx-core/src/           — Code serveur principal
-nodyx-core/ARCHITECTURE.md
-nodyx-core/NODYX_CONTEXT.md
-nodyx-core/i18n/en/MANIFESTO.md
+nodyx-core/src/          , Code serveur principal
+docs/en/ARCHITECTURE.md
+docs/en/MANIFESTO.md
 ```
 
 Si tu penses que quelque chose dans le core doit changer,
