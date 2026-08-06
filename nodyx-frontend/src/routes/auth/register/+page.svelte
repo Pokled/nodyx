@@ -2,7 +2,6 @@
 	import { t } from '$lib/i18n'
 	import type { ActionData } from './$types';
 	import { enhance } from '$app/forms';
-	import GlassOrbs from '$lib/components/GlassOrbs.svelte';
 
 	const tFn = $derived($t)
 
@@ -96,7 +95,7 @@
 
 	<div class="w-full h-full min-h-0 grid grid-cols-1 md:grid-cols-[1fr_minmax(420px,35%)] gap-4 bg-[#06060a]">
 
-		<!-- ════════ Left: Glass orbs + community text ════════ -->
+		<!-- ════════ Left: texte de presentation ════════ -->
 		<div class="relative overflow-hidden hidden md:flex flex-col justify-start min-h-0 p-6 sm:p-8 bg-[#06060a]">
 			<div class="absolute inset-0 pointer-events-none"
 				style="background:
@@ -105,7 +104,6 @@
 					radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
 					background-size: 100%, 100%, 28px 28px">
 			</div>
-			<GlassOrbs />
 			<div class="relative z-10 max-w-md mt-2">
 				<div class="text-[11px] uppercase tracking-[0.15em] mb-3"
 					style="color: var(--nx-cyan-soft, #67e8f9); font-family: ui-monospace, monospace">
@@ -123,7 +121,7 @@
 
 				<!-- Speech bubble -->
 				<div class="relative mb-2 w-full">
-					<div class="rounded-2xl px-4 shadow-md text-center w-full border
+					<div class="rounded-lg px-4 shadow-md text-center w-full border
 					            h-[50px] flex items-center justify-center
 					            transition-colors duration-300
 					            {isError ? 'bg-red-950/60 border-red-800/60' :

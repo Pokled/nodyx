@@ -49,14 +49,32 @@ function normalizeUrl(url: string | null): string | null {
 	return url;
 }
 
+/**
+ * Largeur de panneau lue depuis un cookie.
+ *
+ * Le cookie est écrit par le navigateur, donc modifiable à la main : on le borne
+ * ici avec les mêmes limites que le glisser côté client (voir +layout.svelte),
+ * sinon une valeur farfelue s'applique au rendu serveur et la mise en page reste
+ * cassée jusqu'à ce que l'utilisateur vide ses cookies.
+ */
+const PANEL_WIDTH_MIN = 160;
+const PANEL_WIDTH_MAX = 500;
+const PANEL_WIDTH_DEFAULT = 220;
+
+function panelWidthFromCookie(raw: string | undefined): number {
+	const n = parseInt(raw ?? '', 10);
+	if (!Number.isFinite(n)) return PANEL_WIDTH_DEFAULT;
+	return Math.max(PANEL_WIDTH_MIN, Math.min(PANEL_WIDTH_MAX, n));
+}
+
 export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) => {
 	const token = cookies.get('token');
 	const cookieLocale = cookies.get('nodyx_locale');
 	const ssrLocale = (isKnownLocale(cookieLocale) ? cookieLocale : getLocaleFromAcceptLanguage(request.headers.get('accept-language'))) || 'fr';
 	const panelCollapsed = cookies.get('nodyx_panel_collapsed') === 'true';
 	const membersCollapsed = cookies.get('nodyx_members_collapsed') === 'true';
-	const leftPanelWidth = parseInt(cookies.get('nodyx_left_panel_width') ?? '220', 10) || 220;
-	const rightPanelWidth = parseInt(cookies.get('nodyx_right_panel_width') ?? '220', 10) || 220;
+	const leftPanelWidth = panelWidthFromCookie(cookies.get('nodyx_left_panel_width'));
+	const rightPanelWidth = panelWidthFromCookie(cookies.get('nodyx_right_panel_width'));
 
 	const [infoRes, userRes, directoryJson, announcementRes, modulesRes, channelsRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),

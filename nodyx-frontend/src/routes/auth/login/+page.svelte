@@ -3,7 +3,6 @@
 	import type { ActionData, PageData } from './$types';
 	import { enhance } from '$app/forms';
 	import { untrack } from 'svelte';
-	import GlassOrbs from '$lib/components/GlassOrbs.svelte';
 
 	const tFn = $derived($t)
 
@@ -173,12 +172,12 @@
 	<title>{tFn('auth.login.title')} — Nodyx</title>
 </svelte:head>
 
-<!-- ── Split layout: glass orbs left, login form right ── -->
+<!-- ── Split layout: presentation a gauche, formulaire a droite ── -->
 <div class="w-full h-full min-h-0 p-6 sm:p-8 overflow-hidden bg-[#06060a]">
 
 	<div class="w-full h-full min-h-0 grid grid-cols-1 md:grid-cols-[1fr_minmax(420px,35%)] gap-4 bg-[#06060a]">
 
-		<!-- ════════ Left: Glass orbs + community text ════════ -->
+		<!-- ════════ Left: texte de presentation ════════ -->
 		<div class="relative overflow-hidden hidden md:flex flex-col justify-start min-h-0 p-6 sm:p-8 bg-[#06060a]">
 
 			<!-- Dot grid + radial glows -->
@@ -190,10 +189,7 @@
 					background-size: 100%, 100%, 28px 28px">
 			</div>
 
-			<!-- Three.js canvas -->
-			<GlassOrbs />
-
-			<!-- Community text (top, above orbs) -->
+			<!-- Community text -->
 			<div class="relative z-10 max-w-md mt-2">
 				<div class="text-[11px] uppercase tracking-[0.15em] mb-3"
 					style="color: var(--nx-cyan-soft, #67e8f9); font-family: ui-monospace, monospace">
@@ -226,7 +222,7 @@
 				<div class="flex flex-col items-center">
 					<!-- Speech bubble -->
 					<div class="relative mb-2 w-full max-w-40">
-						<div class="rounded-xl px-3 py-1.5 shadow-md text-center w-full border transition-colors duration-300
+						<div class="rounded-lg px-3 py-1.5 shadow-md text-center w-full border transition-colors duration-300
 						            {form?.error ? 'bg-red-950/60 border-red-800/60' : 'bg-gray-800/90 border-gray-700'}">
 							<p class="text-[11px] leading-tight transition-colors duration-200 {form?.error ? 'text-red-300' : 'text-gray-300'}">
 								{form?.error ? form.error : submitting ? tFn('auth.login.submitting') : focusedField === 'email' ? tFn('auth.register.email_hint') : focusedField === 'password' ? tFn('auth.bot.password_shy') : tFn('auth.register.welcome_message')}
@@ -310,7 +306,7 @@
 			{#if demoOpen}
 			<div class="p-1.5 space-y-1">
 				{#each ['alice', 'bob', 'charlie', 'admin'] as u}
-				<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md"
+				<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg"
 					style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04)">
 					<span class="font-mono text-[11px] text-white shrink-0">{u}@demo.nodyx.org</span>
 					<span class="text-[11px] shrink-0 text-gray-500">demo1234</span>
@@ -335,10 +331,10 @@
 
 			{#if form?.requires_signet}
 				<!-- ── Étape 2 : approbation Signet ─────────────────────────────────── -->
-				<div class="rounded-xl border p-6"
+				<div class="rounded-lg border p-6"
 					style="border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.04)">
 					<div class="flex items-center gap-3 mb-5">
-						<div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-bold shrink-0"
+						<div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl font-bold shrink-0"
 							style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35); color: #fbbf24">
 							◈
 						</div>
@@ -353,10 +349,10 @@
 					{#if signetState === 'idle' || signetState === 'waiting'}
 						<div class="flex flex-col items-center gap-4 py-2">
 							<div class="relative">
-								<div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold signet-icon">
+								<div class="w-14 h-14 rounded-lg flex items-center justify-center text-2xl font-bold signet-icon">
 									◈
 								</div>
-								<div class="absolute inset-0 rounded-2xl animate-ping opacity-20 signet-ping"></div>
+								<div class="absolute inset-0 rounded-lg animate-ping opacity-20 signet-ping"></div>
 							</div>
 							<div class="text-center">
 								<p class="text-sm font-semibold text-white">{tFn('common.waiting_approval')}</p>
@@ -401,7 +397,7 @@
 
 			{:else if form?.requires_totp}
 				<!-- ── Étape 2 : code TOTP ──────────────────────────────────────────── -->
-				<div class="mb-6 rounded-xl border border-indigo-700/40 bg-indigo-900/10 px-5 py-4">
+				<div class="mb-6 rounded-lg border border-indigo-700/40 bg-indigo-900/10 px-5 py-4">
 					<div class="flex items-center gap-3 mb-3">
 						<span class="text-2xl">🔐</span>
 						<div>
@@ -554,7 +550,7 @@
 					<div class="flex-1 h-px bg-gray-800"></div>
 				</div>
 
-				<div class="rounded-xl border p-5 transition-colors"
+				<div class="rounded-lg border p-5 transition-colors"
 					style="border-color: rgba(251,191,36,0.25); background: rgba(251,191,36,0.03)">
 
 					<!-- En-tête -->
@@ -615,7 +611,7 @@
 							<div class="flex flex-col items-center gap-3 py-2">
 								<p class="text-sm font-semibold text-white">{tFn('auth.signet.scan_instruction')}</p>
 								<canvas bind:this={signetQrCanvas}
-									class="rounded-xl"
+									class="rounded-lg"
 									style="background: rgba(0,0,0,0.4); padding: 8px">
 								</canvas>
 								<p class="text-xs text-center text-gray-400">
@@ -635,10 +631,10 @@
 							<!-- Mode challenge classique (compte existant) -->
 							<div class="flex flex-col items-center gap-4 py-3">
 								<div class="relative">
-									<div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold signet-icon">
+									<div class="w-14 h-14 rounded-lg flex items-center justify-center text-2xl font-bold signet-icon">
 										◈
 									</div>
-									<div class="absolute inset-0 rounded-2xl animate-ping opacity-20 signet-ping"></div>
+									<div class="absolute inset-0 rounded-lg animate-ping opacity-20 signet-ping"></div>
 								</div>
 								<div class="text-center">
 									<p class="text-sm font-semibold text-white">{tFn('common.waiting_approval')}</p>

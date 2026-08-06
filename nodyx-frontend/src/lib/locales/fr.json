@@ -541,7 +541,7 @@
   "auth.hero.tagline": "Une instance · une communauté",
   "auth.hero.login_title_1": "Là où votre communauté",
   "auth.hero.login_title_2": "se rassemble",
-  "auth.hero.login_desc": "Forums, chat en direct et salons vocaux — le tout chez vous. Sans algorithmes ni bruit, juste votre communauté.",
+  "auth.hero.login_desc": "Forums, chat en direct et salons vocaux, le tout chez vous. Sans algorithmes ni bruit, juste votre communauté.",
   "auth.hero.register_title_1": "Rejoignez votre communauté",
   "auth.hero.register_title_2": "aujourd'hui",
   "auth.hero.register_desc": "Créez votre compte et commencez à bâtir votre communauté. Forum, chat et vocal au même endroit.",
@@ -4436,5 +4436,6 @@
   "translate.action.view": "Voir le fichier",
   "translate.safety": "<b>Impossible de casser l'application en traduisant.</b> Les traductions passent par pull request : l'intégration continue vérifie que chaque <code>{{variable}}</code> reste intacte avant la moindre fusion.",
   "translate.safety_link": "Comment contribuer",
-  "translate.footer_note": "auto-hébergé, sans télémétrie"
+  "translate.footer_note": "auto-hébergé, sans télémétrie",
+  "nav.panel_toggle_aria": "Redimensionner ou replier le menu communauté"
 }

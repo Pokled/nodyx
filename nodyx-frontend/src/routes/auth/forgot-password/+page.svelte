@@ -2,7 +2,6 @@
 	import { t } from '$lib/i18n'
 	import type { ActionData } from './$types'
 	import { enhance } from '$app/forms'
-	import GlassOrbs from '$lib/components/GlassOrbs.svelte'
 
 	const tFn = $derived($t)
 
@@ -18,7 +17,7 @@
 
 	<div class="w-full h-full min-h-0 grid grid-cols-1 md:grid-cols-[1fr_minmax(420px,35%)] gap-4 bg-[#06060a]">
 
-		<!-- ════════ Left: Glass orbs + community text ════════ -->
+		<!-- ════════ Left: texte de presentation ════════ -->
 		<div class="relative overflow-hidden hidden md:flex flex-col justify-start min-h-0 p-6 sm:p-8 bg-[#06060a]">
 			<div class="absolute inset-0 pointer-events-none"
 				style="background:
@@ -27,7 +26,6 @@
 					radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
 					background-size: 100%, 100%, 28px 28px">
 			</div>
-			<GlassOrbs />
 			<div class="relative z-10 max-w-md mt-2">
 				<div class="text-[11px] uppercase tracking-[0.15em] mb-3"
 					style="color: var(--nx-cyan-soft, #67e8f9); font-family: ui-monospace, monospace">
@@ -57,7 +55,7 @@
 
 				<!-- Icon & Title -->
 				<div class="flex items-center gap-3 mb-3">
-					<div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+					<div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
 						</svg>
@@ -73,7 +71,7 @@
 
 				{#if (form as any)?.sent}
 					<!-- Succès — même message que le compte existe ou non -->
-					<div class="rounded-xl border border-green-500/30 bg-green-500/10 p-5 text-sm text-green-300 space-y-2 backdrop-blur-sm">
+					<div class="rounded-lg border border-green-500/30 bg-green-500/10 p-5 text-sm text-green-300 space-y-2 backdrop-blur-sm">
 						<div class="flex items-center gap-2 text-green-400 font-semibold">
 							<svg class="w-4 h-4 shrink-0 text-green-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -125,7 +123,7 @@
 						</div>
 
 						<!-- Bandeau sécurité -->
-						<div class="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-4 text-xs text-amber-300/90 space-y-2 backdrop-blur-sm">
+						<div class="rounded-lg border border-amber-500/20 bg-amber-500/[0.05] p-4 text-xs text-amber-300/90 space-y-2 backdrop-blur-sm">
 							<div class="flex items-center gap-2 font-semibold text-amber-400">
 								<svg class="w-4 h-4 shrink-0 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751A11.959 11.959 0 0112 2.714z" />

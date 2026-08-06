@@ -541,10 +541,10 @@
   "auth.hero.tagline": "One instance · one community",
   "auth.hero.login_title_1": "Where your people",
   "auth.hero.login_title_2": "gather",
-  "auth.hero.login_desc": "Forum threads, real-time chat, and voice rooms — all under your roof. No algorithms, no noise, just your community.",
+  "auth.hero.login_desc": "Forum threads, real-time chat, and voice rooms, all under your roof. No algorithms, no noise, just your community.",
   "auth.hero.register_title_1": "Join your people",
   "auth.hero.register_title_2": "today",
-  "auth.hero.register_desc": "Create your account and start building your community. Forum, chat, voice — all in one place.",
+  "auth.hero.register_desc": "Create your account and start building your community. Forum, chat, voice, all in one place.",
   "auth.hero.forgot_tagline": "Secure reset",
   "auth.hero.forgot_title_1": "Forgot your",
   "auth.hero.forgot_title_2": "password",
@@ -4436,5 +4436,6 @@
   "translate.action.view": "View file",
   "translate.safety": "<b>You cannot break the app by translating.</b> Translations go through pull requests: continuous integration checks that every <code>{{variable}}</code> is left intact before anything gets merged.",
   "translate.safety_link": "How to contribute",
-  "translate.footer_note": "self-hosted, no telemetry"
+  "translate.footer_note": "self-hosted, no telemetry",
+  "nav.panel_toggle_aria": "Resize or collapse the community menu"
 }

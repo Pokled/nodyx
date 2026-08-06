@@ -238,8 +238,13 @@
 
 	// ── Galaxy Bar mobile drawer ───────────────────────────────────────────────
 	let gallerySidebarOpen = $state(false)
-	let panelCollapsed = $state((data as any).panelCollapsed ?? false)
-	let membersCollapsed = $state((data as any).membersCollapsed ?? false)
+	// Ces deux etats viennent du cookie au premier rendu et n'en dependent plus
+	// ensuite : c'est une preference locale, elle ne doit PAS se reinitialiser a
+	// chaque navigation. Lire la valeur initiale est donc voulu.
+	// svelte-ignore state_referenced_locally
+	let panelCollapsed = $state(data.panelCollapsed ?? false)
+	// svelte-ignore state_referenced_locally
+	let membersCollapsed = $state(data.membersCollapsed ?? false)
 
 	function toggleC(velocity: number | MouseEvent = 0) {
 		if (typeof velocity === 'number') {
@@ -270,8 +275,12 @@
 	});
 
 	// ── Panel resizing logic ──────────────────────────────────────────────────
-	let leftPanelWidth = $state((data as any).leftPanelWidth ?? 220);
-	let rightPanelWidth = $state((data as any).rightPanelWidth ?? 220);
+	// Meme logique que panelCollapsed : largeur initiale lue du cookie, bornee
+	// cote serveur dans +layout.server.ts, puis pilotee par le glisser.
+	// svelte-ignore state_referenced_locally
+	let leftPanelWidth = $state(data.leftPanelWidth ?? 220);
+	// svelte-ignore state_referenced_locally
+	let rightPanelWidth = $state(data.rightPanelWidth ?? 220);
 	let isDraggingLeft = $state(false);
 	let isDraggingRight = $state(false);
 	let draggingPastBoundaryLeft = $state(false);
@@ -737,8 +746,8 @@
 	<nav class="sticky top-0 z-50 shrink-0 h-12 flex items-center px-4 gap-3"
 	     style="background: #0d0d12; border-bottom: 1px solid rgba(255,255,255,.05)">
 
-		<!-- Mobile hamburger -->
-		{#if !isBanned}
+		<!-- Mobile hamburger : ne s'affiche que si le panneau qu'il ouvre existe -->
+		{#if !isBanned && showChannelSidebar}
 		<button
 			class="lg:hidden shrink-0 p-1.5 flex items-center justify-center transition-colors"
 			style="color: {gallerySidebarOpen ? '#fff' : '#6b7280'}"
@@ -1035,7 +1044,13 @@
 		{/if}
 
 		<!-- ── Channel Sidebar (220px panel) — sketch 001 ────────────────────── -->
-		{#if !isBanned}
+		<!--
+		     Le panneau est `position: fixed` : s'il est rendu sur une route qui ne
+		     lui appartient pas (/admin, /auth), il PEINT par-dessus le contenu,
+		     notamment la sidebar du panel admin. On le rend donc seulement quand
+		     showChannelSidebar est vrai, au lieu de le laisser vivre caché.
+		-->
+		{#if !isBanned && showChannelSidebar}
 		<div class="nodyx-sb">
 		<aside class="panel {panelCollapsed ? 'collapsed' : ''} {gallerySidebarOpen ? '' : 'max-lg:!translate-x-[-100%]'}"
 		       id="variant-a-panel"
@@ -1058,8 +1073,8 @@
 			            }
 			        }}
 			        class:dragging-past-boundary={draggingPastBoundaryLeft}
-			        aria-label="Resize community menu"
-			        title="Drag to resize / click to toggle"></button>
+			        aria-label={tFn('nav.panel_toggle_aria')}
+			        title={tFn('nav.panel_toggle_aria')}></button>
 
 			<!-- Panel head -->
 			<div class="panel-head">
