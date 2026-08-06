@@ -364,10 +364,13 @@
 	// transparent, AUCUN chrome Nodyx (ni nav, ni sidebar, ni members bar).
 	// Routes /deck/* sont des pages mobile-first tactiles (Nodyx Deck) : même
 	// principe, on veut tout l'écran pour la grille de boutons.
+	// /translate est une page publique autonome (translate.nodyx.org) : elle
+	// porte sa propre barre d'application, le chrome de l'app ferait doublon.
 	// On bypass complètement le rendu du layout pour ces routes.
-	const isOverlayRoute = $derived(
+	const isBareRoute = $derived(
 		$page.url.pathname.startsWith('/overlay/') ||
-		$page.url.pathname.startsWith('/deck/'),
+		$page.url.pathname.startsWith('/deck/') ||
+		$page.url.pathname === '/translate',
 	)
 
 	// Active channel ID from URL (used on /chat to highlight the current channel)
@@ -588,8 +591,8 @@
 	{/if}
 </svelte:head>
 
-{#if isOverlayRoute}
-	<!-- Overlay OBS : aucun chrome Nodyx, juste la page transparente. -->
+{#if isBareRoute}
+	<!-- Page autonome (overlay OBS, deck, /translate) : aucun chrome Nodyx. -->
 	{@render children()}
 {:else}
 {#if hasMatrix}<MatrixRain />{/if}
@@ -1525,7 +1528,7 @@
 	</nav>
 	{/if}
 </div>
-{/if}<!-- /isOverlayRoute -->
+{/if}<!-- /isBareRoute -->
 
 <!-- ── Status modal ──────────────────────────────────────────────────────── -->
 {#if showStatusModal}
