@@ -4424,5 +4424,6 @@
   "translate.action.view": "Voir le fichier",
   "translate.safety": "<b>Impossible de casser l'application en traduisant.</b> Les traductions passent par pull request : l'intégration continue vérifie que chaque <code>{{variable}}</code> reste intacte avant la moindre fusion.",
   "translate.safety_link": "Comment contribuer",
-  "translate.footer_note": "auto-hébergé, sans télémétrie"
+  "translate.footer_note": "auto-hébergé, sans télémétrie",
+  "home.hero_welcome": "Bienvenue dans la communauté"
 }

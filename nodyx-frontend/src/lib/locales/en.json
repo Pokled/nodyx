@@ -4424,5 +4424,6 @@
   "translate.action.view": "View file",
   "translate.safety": "<b>You cannot break the app by translating.</b> Translations go through pull requests: continuous integration checks that every <code>{{variable}}</code> is left intact before anything gets merged.",
   "translate.safety_link": "How to contribute",
-  "translate.footer_note": "self-hosted, no telemetry"
+  "translate.footer_note": "self-hosted, no telemetry",
+  "home.hero_welcome": "Welcome to the community"
 }
