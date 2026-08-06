@@ -1190,6 +1190,9 @@ if ! runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | gr
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 install pm2-logrotate >/dev/null 2>&1 || true
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:retain 7 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:compress true 2>/dev/null || true
+  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -q pm2-logrotate \
+    || warn "pm2-logrotate could not be registered, PM2 logs will not be rotated"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
