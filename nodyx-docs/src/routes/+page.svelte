@@ -1352,6 +1352,7 @@
         <div class="footer-col-title">Community</div>
         <a href="/manifesto">Manifesto</a>
         <a href="/contributing">Contributing</a>
+        <a href="https://nodyx.org/translate" target="_blank" rel="noopener noreferrer">Translate Nodyx</a>
         <a href="/thanks">Thanks</a>
         <a href="/roadmap">Roadmap</a>
       </div>

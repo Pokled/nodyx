@@ -465,10 +465,16 @@ export default async function socialRoutes(app: FastifyInstance) {
       cursor = `AND sp.created_at < $${params.length}`
     }
 
-    // Re-build postSelect with concrete param index
-    const likedExpr = viewerId
-      ? `EXISTS(SELECT 1 FROM status_likes sl WHERE sl.user_id = '${viewerId}' AND sl.post_id = sp.id)`
-      : 'false'
+    // Re-build postSelect with concrete param index. viewerId is a parameter
+    // ($N), never interpolated into the SQL string, mirroring the /status/:id
+    // route below. It is a server-signed UUID today, so this was not exploitable,
+    // but string-building a query is a latent injection and inconsistent with the
+    // rest of this file.
+    let likedExpr = 'false'
+    if (viewerId) {
+      params.push(viewerId)
+      likedExpr = `EXISTS(SELECT 1 FROM status_likes sl WHERE sl.user_id = $${params.length} AND sl.post_id = sp.id)`
+    }
 
     const result = await db.query(`
       SELECT

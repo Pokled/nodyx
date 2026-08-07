@@ -4,6 +4,10 @@ node_modules/
 build/
 dist/
 .env
+# Toute variante de .env (backups, timestampés, locaux) : secrets, jamais commit.
+# .env.example reste suivi (voir l'exception ci-dessous).
+.env.*
+!.env.example
 .DS_Store
 *.log
 
