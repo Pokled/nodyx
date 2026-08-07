@@ -1296,11 +1296,38 @@ if ufw status 2>/dev/null | head -1 | grep -q "Status: active"; then
   warn "UFW already active - leaving existing rules untouched."
   warn "Make sure SSH (22/tcp) and your tunnel client can reach this host: sudo ufw status verbose"
 else
+  # L'ORDRE ET LES ASSERTIONS SONT CRITIQUES ICI.
+  #
+  # `ufw --force enable` avec une politique « deny incoming » et SANS regle SSH
+  # verrouille l'utilisateur HORS de son propre serveur, definitivement, sur une
+  # machine qui n'a souvent aucun acces console. Le `|| true` sur chaque ligne
+  # neutralisait le `set -e` du script : une seule commande en echec passait
+  # inapercue, et l'installeur annoncait quand meme « Firewall enabled ».
+  #
+  # On n'active donc le pare-feu qu'APRES avoir constate que SSH est autorise,
+  # et on ne declare le succes qu'apres avoir verifie l'etat reel d'ufw.
   ufw default deny incoming  >/dev/null 2>&1 || true
   ufw default allow outgoing >/dev/null 2>&1 || true
-  ufw allow ssh              >/dev/null 2>&1 || true
-  ufw --force enable         >/dev/null 2>&1 || true
-  ok "Firewall enabled (SSH inbound only - tunnel handles web traffic outbound)"
+
+  # `ssh` est un profil applicatif : absent sur certaines images, d'ou le repli
+  # sur le port brut.
+  if ufw allow ssh >/dev/null 2>&1 || ufw allow 22/tcp >/dev/null 2>&1; then
+    ufw --force enable >/dev/null 2>&1 || true
+
+    _ufw_state="$(ufw status 2>/dev/null || true)"
+    if grep -q "Status: active" <<<"$_ufw_state" \
+       && grep -qE '(^|[[:space:]])(22/tcp|OpenSSH|SSH)' <<<"$_ufw_state"; then
+      ok "Firewall enabled (SSH inbound only - tunnel handles web traffic outbound)"
+    else
+      warn "UFW did not come up as expected. Your server may be unprotected."
+      warn "Check it yourself: sudo ufw status verbose"
+    fi
+  else
+    warn "Could not add an SSH rule to UFW."
+    warn "The firewall was left DISABLED on purpose: enabling it now, with"
+    warn "'deny incoming' and no SSH rule, would lock you out of this server."
+    warn "Fix it manually, then enable: sudo ufw allow ssh && sudo ufw enable"
+  fi
 fi
 
 # Pangolin Method B: newt-in-bridge connects to host LAN IP on :80. Loopback
@@ -1601,6 +1628,11 @@ if [[ "$TUNNEL_MODE" == "cf" ]]; then
     sleep 3
     if systemctl is-active --quiet cloudflared; then
       ok "Cloudflare Tunnel service active"
+      # `systemctl enable` est avale par un `|| true` plus haut : sans cette
+      # verification, le tunnel tourne maintenant mais ne remonterait PAS au
+      # prochain redemarrage, et rien ne l'aurait signale.
+      systemctl is-enabled --quiet cloudflared 2>/dev/null \
+        || warn "cloudflared is running but NOT enabled at boot: sudo systemctl enable cloudflared"
     else
       warn "cloudflared service not active - diagnostic: systemctl status cloudflared"
     fi
