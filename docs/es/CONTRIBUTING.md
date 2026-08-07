@@ -25,18 +25,16 @@ No pasa nada.
 
 ### Puedes contribuir libremente en
 ```
-nodyx-plugins/    — Crear plugins
-nodyx-themes/     — Crear temas visuales
-nodyx-docs/       — Mejorar la documentación
-i18n/             — Traducir a tu idioma
-community/        — Contenido de la comunidad
+nodyx-frontend/src/lib/locales/  , Traducir la interfaz
+docs/                            , La documentación, y sus traducciones
+nodyx-frontend/src/              , Funcionalidades y correcciones del front
+nodyx-docs/                      , El sitio de documentación nodyx.dev
 ```
 
 ### No puedes modificar sin validación
 ```
-nodyx-core/src/           — Código principal del servidor
-nodyx-core/ARCHITECTURE.md
-nodyx-core/NODYX_CONTEXT.md
+nodyx-core/src/          , Código principal del servidor
+docs/en/ARCHITECTURE.md
 docs/en/MANIFESTO.md
 ```
 
@@ -112,29 +110,54 @@ Todos los mensajes de commit y comentarios de código deben estar en **inglés**
 
 ## Traducir Nodyx
 
-Traducir es la contribución más accesible. No se necesita saber programar.
+Traducir es la contribución más accesible. No se necesita saber programar, ni crear una cuenta en ningún sitio, salvo en GitHub.
 
-### Cómo hacerlo
+**Estado en vivo: [nodyx.org/translate](https://nodyx.org/translate)** muestra cada idioma, cuánto lleva avanzado, y enlaza directamente al archivo que hay que editar.
+
+### La interfaz
+
+Toda la interfaz de la aplicación cabe en un archivo JSON por idioma:
+
+```
+nodyx-frontend/src/lib/locales/
+  fr.json          , idioma de origen
+  en.json          , referencia, mantenida al 100%
+  de.json  es.json  pt-PT.json  ru.json  vi.json
+```
+
+1. Abre [nodyx.org/translate](https://nodyx.org/translate) y busca tu idioma
+2. Pulsa «Traducir en GitHub», el repositorio se copia para ti
+3. Rellena las claves que falten, dejando cada `{{variable}}` exactamente como está
+4. Abre un Pull Request
+
+La integración continua comprueba que ninguna variable se haya alterado, así que traducir no puede romper la aplicación. Nosotros revisamos, fusionamos, y tu trabajo sale en la siguiente versión.
+
+¿Tu idioma no está en la lista? Copia `en.json`, nómbralo con el código de tu idioma, y abre una Issue para que lo conectemos al selector de idiomas.
+
+### La documentación
 1. Ve a `docs/`
 2. Copia la carpeta `en/` y renómbrala con el código de tu idioma (`de/`, `es/`, `ja/`, etc.)
 3. Traduce los archivos
 4. Abre un Pull Request
 
-### Archivos a traducir
+Archivos a traducir:
 ```
-MANIFESTO.md    — El texto fundacional
-THANKS.md       — Agradecimientos
-README.md       — Descripción general del proyecto
-CONTRIBUTING.md — Esta guía
-ARCHITECTURE.md — Referencia técnica
-ROADMAP.md      — Hoja de ruta del desarrollo
+MANIFESTO.md    , el texto fundacional
+THANKS.md       , agradecimientos
+README.md       , descripción general del proyecto
+CONTRIBUTING.md , esta guía
+ARCHITECTURE.md , referencia técnica
+ROADMAP.md      , hoja de ruta del desarrollo
 ```
 
 ### Reglas de traducción
 - Traduce el significado, no palabra por palabra
 - Mantén el tono original (directo, humano, sin corporativismo)
+- Nunca toques lo que está entre `{{ }}`, son valores que la aplicación rellena sola
 - Si un concepto no tiene equivalente en tu idioma, conserva el término en inglés
 - Los nombres propios (Nodyx, NodyxPoints, Guard Protocol, etc.) nunca se traducen
+
+Quien traduce recibe una estrella y su sitio en [CONTRIBUTORS.md](../../CONTRIBUTORS.md), como cualquier otro contribuidor.
 
 ---
 
