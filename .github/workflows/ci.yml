@@ -80,6 +80,10 @@ jobs:
         working-directory: nodyx-frontend
         run: npm run i18n:keys:check
 
+      - name: i18n — placeholders intacts dans chaque traduction
+        working-directory: nodyx-frontend
+        run: npm run i18n:placeholders:check
+
       - name: i18n — aucune chaîne FR en dur (public + admin)
         working-directory: nodyx-frontend
         run: npm run i18n:check
