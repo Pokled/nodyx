@@ -797,6 +797,30 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 
 </details>
 
+<details>
+<summary><b>v2.11, Screen sharing through the SFU · Nodyx in 7 languages 🌍</b></summary>
+
+| Feature | Version |
+|---|---|
+| **Screen sharing goes through the SFU**, one upload, the server fans it out. Sharing a screen switches the channel over on its own, and a share already running survives the switch (the local track is captured before the mesh teardown, then republished) | v2.11 |
+| **Screen audio travels with the picture**, tab / game / video sound, viewer-side volume and mute, a contextual reminder to tick the box, and an indicator showing which shares carry sound | v2.11 |
+| **Four video bugs, all different**, unpaused consumers losing the keyframe (black until the next one), `srcObject` reassigned on every re-render (black flicker, also fixed the mesh), the mirror never starting when joining an already-switched channel, and a simulcast `scalabilityMode` the browser rejected | v2.11 |
+| **ICE over TCP**, without it, networks that block UDP could not connect at all | v2.11 |
+| **Media worker pool across cores** with headroom, plus `sfu-bench`, a load cannon revealing the real per-router ceiling (multi-room, watch-party and configurable stream profiles), with its own self-hosted site | v2.11 |
+| **Ghosts exorcised**, heartbeat + daemon TTL + client reconciliation, a rejoin replaces instead of being refused, evicted tabs stop instead of looping, mobile sleep survival (wake lock) and automatic reconnection | v2.11 |
+| **Voice channels finally have a chat**, it simply did not exist for voice channels: composer and messages were text-channel only. Now docked beside the room, with the Nodyx editor and moderation | v2.11 |
+| **The Stage**, full-screen sharing with no cropping and no sidebars, its own chat, thumbnails, and a floating window that survives navigation | v2.11 |
+| **A real per-person equalizer** (no more fake bars), roster states (muted, deafened, sharing), channel preview before joining, and a speaker toggle via `setSinkId` | v2.11 |
+| **Nodyx speaks 7 languages**, the whole interface (public and admin) goes through translation keys, English at full parity, runtime fallback through English before French, core UI translated in all seven, Vietnamese added | v2.11 |
+| **`nodyx.org/translate`**, live translation status per language with direct links to each file, computed from the locale files themselves, plus a JSON endpoint feeding nodyx.dev and start.nodyx.org | v2.11 |
+| **Four i18n gates in CI**, no hardcoded strings, no dangling keys, no placeholder corrupted by a translation (`{{var}}`, `{token}` and tag balance), and the coverage table | v2.11 |
+| **Living forum index**, last post, counters and statistics, with subforum columns aligned on their parents | v2.11 |
+| **Twitch embeds in posts**, two iframes (player and chat) without touching the CSP, dedicated sizing when chat is present, and the live no longer lost when a post is edited | v2.11 |
+| **Security**, a latent SQL injection parameterized, OctoGuard warn/mute side effects moved off the moderation hot path, `adm-zip` 0.6.0 (zip-bomb DoS), and `argon2` never auto-bumped again | v2.11 |
+| **The installer packages the SFU**, and `install_tunnel.sh` says honestly that voice stays on mesh: asking users to open ports would betray the zero-port promise | v2.11 |
+
+</details>
+
 ## The Vision
 
 Nodyx is not a Discord alternative.

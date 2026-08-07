@@ -7,6 +7,82 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
+### Vidéo : le partage d'écran passe par le SFU
+
+En 2.10.0 le SFU savait porter la voix. Il porte maintenant l'image. Un partageur envoie **un seul** flux, le serveur le recopie vers chaque spectateur : le mur du mesh (une copie par spectateur, ingérable au-delà de trois ou quatre) n'est plus le plafond du partage d'écran.
+
+- **Le partage d'écran des vrais canaux passe par le SFU** dès que le canal est basculé, et **partager son écran déclenche la bascule** sans attendre de quorum. En mesh, le chemin d'avant n'a pas changé d'une ligne : c'est le filet
+- Un partage **en cours survit à la bascule** : le flux local est capturé avant la démolition des connexions mesh, puis republié. Sans ça il aurait fallu rouvrir le sélecteur d'écran, ce que le navigateur refuse hors geste utilisateur, et le partage serait mort à chaque bascule
+- **Le son part avec l'écran** (onglet, jeu, vidéo), avec volume et coupure côté spectateur, un rappel contextuel pour penser à cocher la case, et un indicateur qui dit si un partage diffuse du son
+- **Chemin TCP de secours** pour l'ICE : sans lui, les réseaux qui bloquent l'UDP ne se connectaient pas du tout
+- **Pool de workers média réparti sur les cœurs**, avec réserve, et `sfu-bench`, un canon de charge qui révèle le plafond réel par router (modes multi-salons, watch-party, profil de flux configurable). Le banc a son propre site, auto-hébergé
+- **Fantômes exorcisés** : heartbeat, TTL côté daemon et réconciliation client. Un rejoin **remplace** au lieu d'être refusé, un onglet évincé s'arrête au lieu de boucler, la session survit à la veille mobile (wake lock), et le client se reconnecte seul après une coupure réseau
+- Consumers et transports orphelins fermés : fuite mémoire sur instance longue
+
+Quatre bugs vidéo qui se ressemblaient et n'avaient rien à voir, tous corrigés :
+
+- **La keyframe perdue.** Les consumers vidéo étaient créés non pausés : mediasoup poussait la keyframe avant que le décodeur du navigateur n'existe, et sans keyframe rien ne se décode. Écran noir jusqu'à la suivante. La vidéo est désormais servie en pause puis reprise côté client. L'audio n'a pas de keyframe : voilà pourquoi il marchait depuis le début
+- **Le clignotement noir.** Réassigner `srcObject` relance l'algorithme de chargement du média **même avec exactement le même objet**. Le store étant republié au moindre frémissement du roster, la vidéo se réinitialisait en boucle. Les cinq actions concernées ne réassignent plus que si le flux change vraiment. Corrige le mesh autant que le SFU
+- **L'écran invisible à l'arrivée.** En rejoignant un canal déjà basculé, le miroir qui recopie les écrans vers l'interface ne démarrait pas : le flux partait bien au serveur, plus rien ne l'affichait
+- **Le simulcast**, ajouté puis retiré : un `scalabilityMode` invalide côté navigateur privait le spectateur de toute vidéo. Remis ensuite, avec de quoi le prouver
+
+### La Scène, et un chat dans les salons vocaux
+
+- **Un canal vocal n'avait aucun fil de discussion.** Pas un défaut d'affichage : le composeur et les messages n'existaient que pour les canaux texte. Le chat vit maintenant à droite du salon, ouvert par défaut et repliable, avec l'éditeur Nodyx et les outils de modération
+- **La Scène** : le partage en plein écran, sans rognage ni sidebar, avec son chat, ses miniatures en bande basse et une fenêtre flottante qui survit à la navigation
+- **Contexte d'empilement** : la Scène était montée sous un `aside` positionné avec un `z-index`, donc son `z-[500]` ne valait qu'à l'intérieur de cet aside. L'en-tête et la sidebar des membres peignaient par-dessus, ce qui rognait l'écran à droite et rendait les boutons de la Scène inatteignables. Elle est montée à la racine du layout. Un overlay plein écran ne doit jamais vivre sous un ancêtre positionné
+
+### Le vocal au quotidien
+
+- **Un équaliseur réel par personne**, fini les barres factices, et le même sur la Scène du salon, là où il se voit le plus
+- **Voir qui est dans un canal avant de le rejoindre**, et les statuts dans le roster : muet, sourd, en train de partager
+- **Bouton haut-parleur** (Android et desktop) via `setSinkId`
+- Le son du partage sort par un `<audio>` dédié, seul chemin fiable sur mobile
+- L'état est republié à chaque arrivée dans le vocal, et la croix de la Scène ne la rouvre plus toute seule
+
+### Nodyx parle sept langues
+
+Le grand audit « plus rien en dur » est terminé. Toute l'interface, publique **et** administration, passe par des clés de traduction, et la CI empêche la moindre régression.
+
+- **`nodyx.org/translate`** : l'état des traductions, langue par langue, avec un lien direct vers le fichier à éditer. Les chiffres sont calculés depuis les fichiers de locale eux-mêmes, la page ne peut donc pas mentir. Un endpoint JSON alimente la même information sur nodyx.dev et start.nodyx.org
+- **Anglais complet**, à parité totale avec la source, et le repli d'exécution passe par l'anglais avant le français : une langue partiellement traduite montre de l'anglais, jamais une phrase française surprise
+- **Le cœur de l'interface est traduit dans les sept langues**, et le vietnamien fait son entrée
+- **Sélecteur de langue accessible aux visiteurs**, locale résolue côté serveur pour que le premier affichage soit déjà dans la bonne langue
+- **Drapeaux rendus en SVG** : Chrome sous Windows n'affiche pas les emoji drapeaux, il écrit « FR » et « GB » à la place
+- **Quatre garde-fous en CI** : aucune chaîne en dur, aucune clé référencée dans le vide, aucun placeholder corrompu par une traduction, et le tableau de couverture. Le contrôle des placeholders vérifie les variables `{{ }}`, les jetons de gabarit `{ }` et l'équilibre des balises, en distinguant ce qu'une traduction **invente** (erreur, ça s'affiche en clair à l'écran) de ce qu'elle **abandonne** (avertissement, c'est souvent un choix de langue)
+- **L'angle mort du scanner** : il ne repérait que le français accentué, donc « Se connecter », « Rejoindre », « membres » avaient traversé toute l'extraction. Environ 25 chaînes corrigées, et le scanner durci
+
+### Forum, contenu, éditeur
+
+- **Un index de forum vivant** : dernier message, compteurs et statistiques, avec les colonnes des sous-forums alignées sur celles des parents
+- **Embeds Twitch dans les posts**, en deux iframes (lecteur et chat), sans toucher à la CSP, avec une taille dédiée quand le chat est présent. Le live ne se perd plus à la réédition d'un post
+- **Popups de l'éditeur** portalées dans le `body` : elles n'étaient plus rognées par un `overflow`, y compris dans les modales
+- **Tableau de tâches** : cartes riches avec l'éditeur Nodyx à la place du champ texte brut, pleine largeur, et le crayon d'édition qui ne faisait rien (un `structuredClone` sur un proxy réactif)
+- La page d'un événement ne déborde plus sous les sidebars
+
+### Interface
+
+- **Sidebar des membres repliable**, badge de version centré en pied de colonne, typographie remontée d'un cran
+- **Pages d'authentification** unifiées autour d'un thème sombre, panneaux redimensionnables dont l'état est lu côté serveur pour éviter tout clignotement au premier affichage, et la dépendance three.js retirée au passage
+- La page d'accueil ne répète plus le nom de l'instance, qui semblait changer de taille en naviguant
+- Le tableau de contributions du profil était vide pour tout le monde : l'API renvoie un tableau, la page attendait un objet indexé par date
+
+### Sécurité et robustesse
+
+- **Injection SQL latente** dans `liked_by_me` : l'identifiant du lecteur était interpolé dans la requête. Non exploitable en pratique, l'identifiant venant d'un JWT signé, mais la requête est désormais paramétrée comme ses voisines
+- **OctoGuard** : les effets de bord d'avertissement et de mise en sourdine quittent le chemin critique de la modération. Le pipeline échouait ouvert sous latence
+- **`adm-zip`** relevé en 0.6.0 : déni de service par archive piégée
+- **`argon2` ne sera jamais relevé automatiquement** : c'est le hachage des mots de passe, il passe par une relecture humaine
+- L'heuristique de forme du pseudo qui recalait de vrais humains à l'inscription est supprimée
+- **Crash SSR** sous Node 22.4 et plus : `localStorage` gardé par `browser` et non par `typeof`
+
+### Installation et infrastructure
+
+- **Le SFU est empaqueté par l'installeur**, il appartient au projet et non plus à un serveur précis
+- **`install_tunnel.sh` dit honnêtement que le vocal reste en mesh** : demander d'ouvrir des ports trahirait la promesse zéro-port, tant que l'ICE complet n'existe pas
+- `npm ci` dans l'installeur, pour des installations reproductibles au verrou près
+- Le serveur TURN Node historique, non déployé, est retiré
+
 ---
 
 ## [2.10.0] — 2026-07-06
