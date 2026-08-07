@@ -267,10 +267,10 @@ export default async function directoryRoutes(app: FastifyInstance) {
   });
 
   // POST /api/directory/ping — heartbeat
-  app.post<{ Body: { token: string; members?: number; online?: number; logo_url?: string | null; banner_url?: string | null } }>(
+  app.post<{ Body: { token: string; members?: number; online?: number; logo_url?: string | null; banner_url?: string | null; version?: string | null } }>(
     '/directory/ping',
     async (req, reply) => {
-      const { token, members, online, logo_url, banner_url } = req.body;
+      const { token, members, online, logo_url, banner_url, version } = req.body;
       if (!token) return reply.status(400).send({ error: 'token required' });
 
       // Capture real IP — req.ip est fiable car Caddy écrase X-Forwarded-For
@@ -288,10 +288,15 @@ export default async function directoryRoutes(app: FastifyInstance) {
              online     = COALESCE($3, online),
              logo_url   = COALESCE($4, logo_url),
              banner_url = COALESCE($5, banner_url),
-             ip         = COALESCE($6, ip)
+             ip         = COALESCE($6, ip),
+             -- La version n'était écrite qu'à l'enregistrement : une instance
+             -- gardait à vie celle qu'elle avait le jour de son inscription.
+             -- NULLIF pour qu'un ping sans version (ancienne instance) ou avec
+             -- une chaîne vide n'efface jamais celle déjà connue.
+             version    = COALESCE(NULLIF($7, ''), version)
          WHERE token = $1
          RETURNING slug, status`,
-        [token, members ?? null, online ?? null, logo_url ?? null, banner_url ?? null, pingIp]
+        [token, members ?? null, online ?? null, logo_url ?? null, banner_url ?? null, pingIp, version ?? null]
       );
 
       if (result.rows.length === 0) {

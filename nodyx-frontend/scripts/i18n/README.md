@@ -1,8 +1,13 @@
 # i18n tooling
 
 Four small, dependency-free scripts that keep Nodyx fully translatable: they
-catch hardcoded strings, dangling keys, corrupted placeholders, and show what is
-left to translate. All four run in CI.
+catch hardcoded strings, dangling keys, English falling behind the source, and
+placeholders corrupted by a translation. All four run in CI.
+
+**The rule they enforce: i18n ships with the feature, never after it.** A new
+user-facing string is a key from its first commit, added to `fr.json` **and**
+`en.json` in the same pull request. That is the whole point: retrofitting i18n
+onto an existing app cost roughly a hundred pull requests once. Never again.
 
 Contributors: the friendly view of all this is **<https://nodyx.org/translate>**.
 You do not need any of these commands to translate Nodyx.
@@ -73,6 +78,23 @@ language needs.
 ```bash
 npm run i18n:placeholders        # full report, errors and warnings
 npm run i18n:placeholders:check  # exit 1 on errors only (CI gate)
+```
+
+## `npm run i18n:parity:check`
+
+Fails when `en.json` is missing a key that exists in the source `fr.json`.
+
+English is not just another language here: it is the **runtime fallback** for
+every locale. The moment it falls behind, every non-French speaker starts seeing
+French again, which is how the drift begins. So English is the one translation
+that is not optional, and CI treats it that way.
+
+Parity is measured against the source, not against the union of all locales: a
+key a translator adds in their own language alone never fails the English gate.
+
+```bash
+npm run i18n:parity:check                       # exit 1 if en.json lags (CI gate)
+node scripts/i18n/coverage.mjs --require en,es  # gate several locales
 ```
 
 ## `npm run i18n:coverage`

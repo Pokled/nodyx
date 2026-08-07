@@ -33,6 +33,15 @@ const src = data[SOURCE] ?? {}
 const argv = process.argv.slice(2)
 const emit = argv.includes('--emit') ? argv[argv.indexOf('--emit') + 1] : null
 const check = argv.includes('--check')
+// Locales qui DOIVENT rester a parite totale avec la source. `en` en fait partie :
+// c'est le repli universel a l'execution, donc des qu'il decroche, tout le monde
+// hors francophone revoit du francais. Le defaut vaut `en` sans argument.
+const requireIdx = argv.indexOf('--require')
+const required = requireIdx === -1
+  ? []
+  : (argv[requireIdx + 1] && !argv[requireIdx + 1].startsWith('--')
+      ? argv[requireIdx + 1].split(',')
+      : ['en'])
 
 if (emit) {
   if (!data[emit]) { console.error(`Unknown locale: ${emit}`); process.exit(2) }
@@ -55,4 +64,27 @@ for (const loc of Object.keys(data).sort()) {
   console.log(`${loc.padEnd(7)}  ${String(have).padStart(4)}   ${String(missing).padStart(6)}    ${pct.padStart(6)}%`)
 }
 console.log(`\nTip: node scripts/i18n/coverage.mjs --emit <locale>  ->  keys left to translate.`)
+
+// ── Porte de parite (CI) ────────────────────────────────────────────────────
+// Mesuree contre la SOURCE et non contre l'union canonique : une cle ajoutee par
+// un traducteur dans sa seule langue ne doit pas faire echouer l'anglais.
+let breaches = 0
+for (const loc of required) {
+  if (!data[loc]) { console.error(`\nUnknown locale in --require: ${loc}`); process.exit(2) }
+  const have = new Set(Object.keys(data[loc]))
+  const missing = Object.keys(src).filter((k) => !have.has(k))
+  if (missing.length === 0) {
+    console.log(`\n\u2713 ${loc}.json is at full parity with ${SOURCE}.json.`)
+    continue
+  }
+  breaches += missing.length
+  console.error(`\n${loc}.json is missing ${missing.length} key(s) present in ${SOURCE}.json:`)
+  for (const k of missing.slice(0, 20)) console.error(`    ${k}`)
+  if (missing.length > 20) console.error(`    ... and ${missing.length - 20} more`)
+  console.error(`\n  Every user-facing string ships translated. Add these to ${loc}.json`)
+  console.error(`  in the same pull request, or run:`)
+  console.error(`      node scripts/i18n/coverage.mjs --emit ${loc}`)
+}
+
+if (breaches > 0) process.exit(1)
 if (check && incomplete > 0) process.exit(1)

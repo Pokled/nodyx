@@ -6,6 +6,7 @@
  */
 import { db, redis } from './config/database'
 import { Server } from 'socket.io'
+import { NODYX_VERSION } from './utils/version'
 
 const PING_INTERVAL_MS         = 5  * 60 * 1000        // 5 minutes
 const ASSET_PUSH_INTERVAL_MS   = 60 * 60 * 1000        // 1 heure
@@ -49,7 +50,9 @@ async function pingDirectory(io: Server) {
     const res = await fetch(`${directoryUrl}/api/directory/ping`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ token, members, online, logo_url, banner_url }),
+      // `version` : sans elle l'annuaire garderait a vie la version du jour
+      // de l'enregistrement (la colonne n'etait ecrite que par /register).
+      body:    JSON.stringify({ token, members, online, logo_url, banner_url, version: NODYX_VERSION }),
       signal:  AbortSignal.timeout(8_000),
     })
 

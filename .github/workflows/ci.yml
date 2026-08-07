@@ -80,6 +80,10 @@ jobs:
         working-directory: nodyx-frontend
         run: npm run i18n:keys:check
 
+      - name: i18n — l'anglais reste à parité avec la source
+        working-directory: nodyx-frontend
+        run: npm run i18n:parity:check
+
       - name: i18n — placeholders intacts dans chaque traduction
         working-directory: nodyx-frontend
         run: npm run i18n:placeholders:check
