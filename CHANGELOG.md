@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
+---
+
+## [2.11.0] — 2026-08-07
+
 ### Vidéo : le partage d'écran passe par le SFU
 
 En 2.10.0 le SFU savait porter la voix. Il porte maintenant l'image. Un partageur envoie **un seul** flux, le serveur le recopie vers chaque spectateur : le mur du mesh (une copie par spectateur, ingérable au-delà de trois ou quatre) n'est plus le plafond du partage d'écran.
