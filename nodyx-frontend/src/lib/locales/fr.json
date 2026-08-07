@@ -4437,5 +4437,6 @@
   "translate.safety": "<b>Impossible de casser l'application en traduisant.</b> Les traductions passent par pull request : l'intégration continue vérifie que chaque <code>{{variable}}</code> reste intacte avant la moindre fusion.",
   "translate.safety_link": "Comment contribuer",
   "translate.footer_note": "auto-hébergé, sans télémétrie",
-  "nav.panel_toggle_aria": "Redimensionner ou replier le menu communauté"
+"nav.panel_toggle_aria": "Redimensionner ou replier le menu communauté",
+"home.hero_welcome": "Bienvenue dans la communauté"
 }

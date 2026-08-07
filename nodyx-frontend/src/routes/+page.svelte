@@ -258,12 +258,12 @@
 				</div>
 			{/if}
 			<div>
+				<!-- Le nom de l'instance vit dans la barre de contexte (taille unique
+				     partout) ; le hero ne le répète plus pour éviter le doublon + l'effet
+				     "le titre change de taille" en quittant l'accueil. Ici : accroche. -->
 				<h1 class="sg font-extrabold leading-none mb-1" style="font-size: clamp(1.3rem,2.5vw,1.9rem)">
-					<span class="gt">{instance.name}</span>
+					<span class="gt">{instance.description || tFn('home.hero_welcome')}</span>
 				</h1>
-				{#if instance.description}
-					<p class="text-sm max-w-lg leading-relaxed" style="color: #6b7280">{instance.description}</p>
-				{/if}
 			</div>
 		</div>
 
