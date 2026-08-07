@@ -25,7 +25,11 @@
 
     let W = 0, H = 0, raf = 0
 
-    function resize() {
+    // Fonction flechee, pas une declaration : une `function` est hoistee, donc
+    // TypeScript considere qu'elle pourrait s'executer AVANT le `if (!canvas)
+    // return` ci-dessus et refuse d'appliquer le narrowing. Le garde existait
+    // deja, c'est seulement l'analyse statique qui ne pouvait pas le voir.
+    const resize = () => {
       const rect = canvas.getBoundingClientRect()
       W = canvas.width  = rect.width  * devicePixelRatio
       H = canvas.height = rect.height * devicePixelRatio

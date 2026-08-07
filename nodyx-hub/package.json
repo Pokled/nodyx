@@ -7,7 +7,8 @@
     "dev": "vite dev --port 7777",
     "build": "vite build",
     "preview": "node build/index.js",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "prepare": "svelte-kit sync || echo ''"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",

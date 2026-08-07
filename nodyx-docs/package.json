@@ -6,7 +6,8 @@
     "dev": "vite dev --port 5175",
     "build": "vite build",
     "start": "node build/index.js",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "prepare": "svelte-kit sync || echo ''"
   },
   "dependencies": {
     "highlight.js": "^11.10.0",
@@ -17,6 +18,7 @@
     "@sveltejs/adapter-node": "^5.5.4",
     "@sveltejs/kit": "^2.63.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@types/node": "^22.20.1",
     "svelte": "^5.56.1",
     "svelte-check": "^4.0.0",
     "typescript": "^5.0.0",
