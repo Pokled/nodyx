@@ -1,0 +1,13 @@
+[Unit]
+Description=Sauvegarde Nodyx (bases + uploads, verifiees)
+After=postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nodyx-backup
+# Le script sort en 1 si une seule archive n'a pas pu etre relue : systemd
+# marque alors l'unite en echec, ce qui rend le probleme visible dans
+# `systemctl list-timers` et `journalctl -u nodyx-backup`.
+StandardOutput=journal
+StandardError=journal

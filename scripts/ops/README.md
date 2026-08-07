@@ -10,6 +10,8 @@ ici pour la même raison que le reste du code.
 | `../deploy-all.sh` | déploie et **vérifie** les 9 applications du serveur | exécuté par le lanceur ci-dessous |
 | `opt-deploy-wrapper.sh` | lanceur hors dépôt : fait le `git pull` puis passe la main | `sudo install -m 755 scripts/ops/opt-deploy-wrapper.sh /opt/deploy-all.sh` |
 | `nodyx-demo-reset.sh` | remise à zéro quotidienne de demo.nodyx.org | `sudo install -m 755 scripts/ops/nodyx-demo-reset.sh /usr/local/bin/nodyx-demo-reset` |
+| `nodyx-backup.sh` | sauvegarde **vérifiée** des 3 bases + uploads | `sudo install -m 755 scripts/ops/nodyx-backup.sh /usr/local/bin/nodyx-backup` |
+| `nodyx-backup.{timer,service}` | la déclenche chaque nuit | `sudo install -m 644 scripts/ops/nodyx-backup.{timer,service} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now nodyx-backup.timer` |
 
 ## Le principe qui a motivé la réécriture du déploiement
 
@@ -26,3 +28,44 @@ réussi sans avoir vérifié. La version actuelle compte ses échecs, ne redéma
 un groupe que si tous ses builds ont réussi, interroge les six domaines à la
 fin, vérifie qu'aucune application PM2 n'est hors ligne, et **sort en code 1**
 s'il reste le moindre problème.
+
+
+## Les sauvegardes
+
+**Le produit ne sauvegarde pas tout seul.** Le panneau « Sauvegardes » de
+l'administration crée des archives à la demande, mais rien ne le déclenche :
+`'scheduled'` n'existe que comme valeur de type dans `backupService.ts`, aucun
+code ne la produit, et aucun installeur ne pose de tâche planifiée. Sur
+nodyx.org, la dernière sauvegarde datait de **48 jours** quand on s'en est
+aperçu, et elle vivait sur le même disque que les données.
+
+`nodyx-backup.sh` comble ce trou côté exploitation, **indépendamment du
+produit** : il n'a besoin ni de l'API ni que l'application tourne, ce qui compte
+précisément le jour où tout est cassé.
+
+Il applique la règle de la maison : **une archive qu'on ne sait pas relire ne
+compte pas comme une sauvegarde**. Chaque dump est relu par `pg_restore --list`
+et chaque archive d'uploads par `tar -t` juste après écriture. Si une seule
+relecture échoue, le script sort en erreur *et* annule la purge des anciennes
+archives : mieux vaut du vieux que rien.
+
+### Restaurer
+
+```bash
+sudo -u postgres createdb ma_restauration
+sudo -u postgres pg_restore -d ma_restauration --no-owner --no-privileges \
+  /var/backups/nodyx/nexus-<horodatage>.dump
+tar xzf /var/backups/nodyx/nexus-uploads-<horodatage>.tar.gz -C /destination
+```
+
+Cette procédure a été **exécutée pour de vrai** le 2026-08-07, dans une base
+jetable : 0 erreur, 94 tables, et des comptages identiques à la production
+(106 utilisateurs, 160 posts, 58 fils, 569 messages). Une sauvegarde jamais
+restaurée n'est pas une sauvegarde.
+
+### Ce qui manque encore
+
+Les archives restent **sur la même machine que les données**. Elles protègent
+d'une bêtise (suppression, migration ratée, restauration à blanc), pas de la
+perte du serveur. Une copie hors-site reste à mettre en place, et elle demande
+un choix de destination et des accès.

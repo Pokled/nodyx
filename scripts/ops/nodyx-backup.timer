@@ -1,0 +1,21 @@
+# Sauvegarde quotidienne de toutes les instances Nodyx.
+#
+#   sudo install -m 644 scripts/ops/nodyx-backup.timer /etc/systemd/system/
+#   sudo install -m 644 scripts/ops/nodyx-backup.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now nodyx-backup.timer
+#
+# Verifier ensuite qu'elle est bien ARMEE, pas seulement installee :
+#   systemctl list-timers nodyx-backup.timer
+[Unit]
+Description=Sauvegarde quotidienne Nodyx (bases + uploads, verifiees)
+
+[Timer]
+# 3h du matin, avec une dispersion d'une heure pour ne pas taper pile a l'heure.
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=1h
+# Rattrape le tir si la machine etait eteinte a l'heure prevue : une sauvegarde
+# ratee en silence est exactement ce qu'on cherche a eviter.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
