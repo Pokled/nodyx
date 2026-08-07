@@ -855,6 +855,16 @@ docs/ideas/  →  design thinking, UX proposals, new ideas
 
 The core (`nodyx-core/src/`) requires discussion first, open an Issue.
 
+### 🌍 Translate Nodyx
+
+Nodyx speaks 7 languages. French and English are complete, and the core interface is translated in all of them. The rest is open.
+
+**👉 [nodyx.org/translate](https://nodyx.org/translate)** shows the exact state of every language and links straight to the file you would edit.
+
+No account to create, no tool to install, no platform in the middle. Each language is one flat JSON file in `nodyx-frontend/src/lib/locales/`. Pick your language, fill in the missing keys, leave every `{{variable}}` alone, open a Pull Request. CI checks the placeholders, so translating cannot break the app.
+
+Two people already brought a whole language in this way, and both are in the Nodyx Stars below.
+
 ---
 
 ## 🌟 Nodyx Stars, Contributors

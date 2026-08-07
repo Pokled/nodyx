@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte'
 	import FederationMap from '$lib/FederationMap.svelte'
 	import ChatDemo from '$lib/ChatDemo.svelte'
+	import TranslationProgress from '$lib/TranslationProgress.svelte'
 
 	// Lightbox state
 	let lightbox = $state<{ src: string; alt: string } | null>(null)
@@ -459,6 +460,9 @@
 		</div>
 	</section>
 
+	<!-- ── TRANSLATIONS ─────────────────────────────────────────────────── -->
+	<TranslationProgress />
+
 	<!-- ── PHILOSOPHY ───────────────────────────────────────────────────── -->
 	<section class="py-24 md:py-32 text-center reveal">
 		<blockquote class="t-headline md:text-[40px] md:leading-[52px] font-medium text-on-surface max-w-3xl mx-auto">
@@ -504,6 +508,7 @@
 			<ul class="space-y-3">
 				<li><a class="t-body text-on-surface-variant hover:text-secondary transition-colors" href="https://github.com/Pokled/nodyx/discussions">Discussions</a></li>
 				<li><a class="t-body text-on-surface-variant hover:text-secondary transition-colors" href="https://github.com/Pokled/nodyx/issues">Issues</a></li>
+				<li><a class="t-body text-on-surface-variant hover:text-secondary transition-colors" href="https://nodyx.org/translate">Translate Nodyx</a></li>
 				<li><a class="t-body text-on-surface-variant hover:text-secondary transition-colors" href="https://github.com/Pokled/nodyx/blob/main/CONTRIBUTORS.md">Nodyx Stars</a></li>
 				<li><a class="t-body text-on-surface-variant hover:text-secondary transition-colors" href="https://ko-fi.com/Pokled">Support</a></li>
 			</ul>
