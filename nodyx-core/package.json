@@ -60,6 +60,6 @@
     "vitest": "^4.1.8"
   },
   "optionalDependencies": {
-    "re2": "^1.25.0"
+    "re2": "^1.26.1"
   }
 }
