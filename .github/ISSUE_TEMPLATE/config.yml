@@ -5,7 +5,10 @@ contact_links:
     about: Ask questions, share ideas, or just say hi
   - name: Documentation
     url: https://nodyx.dev
-    about: Check the docs before opening an issue — your answer might already be there
+    about: Check the docs before opening an issue, your answer might already be there
   - name: Live Demo
     url: https://nodyx.org
     about: Try Nodyx live before reporting a bug
+  - name: Translate Nodyx
+    url: https://nodyx.org/translate
+    about: Every language, how far along it is, and the file to edit. No code required
