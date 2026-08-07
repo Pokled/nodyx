@@ -503,8 +503,10 @@ T_EN[pm2_installed]='PM2 installed'
 T_FR[pm2_installed]='PM2 installé'
 T_EN[pm2_already]='PM2 already present'
 T_FR[pm2_already]='PM2 déjà présent'
-T_EN[pm2_logrotate_set]='pm2-logrotate configured (50M, 7 days)'
-T_FR[pm2_logrotate_set]='pm2-logrotate configuré (50M, 7 jours)'
+T_EN[pm2_logrotate_set]='pm2-logrotate configured (50M, 7 days, compressed)'
+T_FR[pm2_logrotate_set]='pm2-logrotate configuré (50M, 7 jours, compressé)'
+T_EN[pm2_logrotate_fail]='pm2-logrotate could not be registered, PM2 logs will not be rotated'
+T_FR[pm2_logrotate_fail]='pm2-logrotate non enregistré, les logs PM2 ne seront pas tournés'
 T_EN[step_create_user]='Creating system user'
 T_FR[step_create_user]="Création de l'utilisateur système"
 T_EN[user_created_full]="System user 'nodyx' created (/home/nodyx)"
@@ -926,6 +928,31 @@ slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' |
 # Retourne 0 (true) si $1 > $2 en semver
 version_gt() { [[ "$(printf '%s\n' "$1" "$2" | sort -V | tail -1)" == "$1" ]] && [[ "$1" != "$2" ]]; }
 
+# Rotation des logs PM2, sur le daemon 'nodyx' (celui qui fait tourner les apps).
+#
+# ATTENTION, piège vécu en production : "npm install -g pm2-logrotate" NE SUFFIT
+# PAS. Il pose le paquet sur le disque mais n'enregistre AUCUN module dans PM2 :
+# le daemon ne le lance jamais, "pm2 set pm2-logrotate:*" écrit dans le vide, et
+# l'installeur affichait quand même "configuré". Panne 100% SILENCIEUSE : les
+# logs grossissent jusqu'à saturer le disque (constaté sur nodyx.org, 1,2 Go pour
+# le seul nodyx-core-out.log). Seul "pm2 install" enregistre et lance le module.
+#
+# Idempotent : ne fait rien si le module tourne déjà. Suppose l'utilisateur
+# 'nodyx' déjà créé, donc à n'appeler qu'APRÈS la création de l'utilisateur.
+_setup_pm2_logrotate() {
+  local as_nodyx=(runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2)
+  id -u nodyx &>/dev/null || return 0
+  if "${as_nodyx[@]}" list 2>/dev/null | grep -q 'pm2-logrotate'; then
+    return 0
+  fi
+  "${as_nodyx[@]}" install pm2-logrotate >/dev/null 2>&1 || true
+  "${as_nodyx[@]}" set pm2-logrotate:max_size 50M   >/dev/null 2>&1 || true
+  "${as_nodyx[@]}" set pm2-logrotate:retain   7     >/dev/null 2>&1 || true
+  "${as_nodyx[@]}" set pm2-logrotate:compress true  >/dev/null 2>&1 || true
+  # Ne déclarer le succès que si le module est RÉELLEMENT enregistré.
+  "${as_nodyx[@]}" list 2>/dev/null | grep -q 'pm2-logrotate'
+}
+
 # Chemin rapide : mise à jour / réparation sans reconfiguration
 _nodyx_upgrade() {
   local from_ver="$1" to_ver="$2" dir="$3"
@@ -947,11 +974,7 @@ _nodyx_upgrade() {
   chown -R nodyx:nodyx /home/nodyx/.pm2 2>/dev/null || true
 
   # pm2-logrotate si absent (vérifier sur le daemon nodyx)
-  if ! runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -q 'pm2-logrotate'; then
-    npm install -g pm2-logrotate --silent 2>/dev/null || true
-    runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
-    runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:retain 7 2>/dev/null || true
-  fi
+  _setup_pm2_logrotate || true
 
   # Arrêter les anciens processus PM2 root (migration nexus-* → nodyx-*)
   for _old_proc in nexus-core nexus-frontend nodyx-core nodyx-frontend; do
@@ -1940,14 +1963,6 @@ else
   ok "$(t pm2_already)"
 fi
 
-# PM2 log-rotate — check on the nodyx daemon (the one actually running the apps)
-if ! runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list 2>/dev/null | grep -q 'pm2-logrotate'; then
-  npm install -g pm2-logrotate --silent 2>/dev/null || true
-  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:max_size 50M 2>/dev/null || true
-  runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 set pm2-logrotate:retain 7 2>/dev/null || true
-  ok "$(t pm2_logrotate_set)"
-fi
-
 # ── Create the 'nodyx' system user ───────────────────────────────────────────
 step "$(t step_create_user)"
 if ! id -u nodyx &>/dev/null; then
@@ -1958,6 +1973,15 @@ else
 fi
 mkdir -p /home/nodyx/.pm2/logs
 chown -R nodyx:nodyx /home/nodyx/.pm2
+
+# Rotation des logs PM2 — APRÈS la création de l'utilisateur nodyx (ce bloc était
+# exécuté avant, donc sur une install neuve il tournait sans utilisateur cible :
+# toutes les commandes échouaient en silence et l'installeur affichait "configuré").
+if _setup_pm2_logrotate; then
+  ok "$(t pm2_logrotate_set)"
+else
+  warn "$(t pm2_logrotate_fail)"
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  POSTGRESQL
