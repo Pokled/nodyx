@@ -25,18 +25,16 @@ And that's okay.
 
 ### You can contribute freely in
 ```
-nodyx-plugins/   , Create plugins
-nodyx-themes/    , Create visual themes
-nodyx-docs/      , Improve documentation
-i18n/            , Translate into your language
-community/       , Community content
+nodyx-frontend/src/lib/locales/  , Translate the interface
+docs/                            , Documentation, and its translations
+nodyx-frontend/src/              , Frontend features and fixes
+nodyx-docs/                      , The nodyx.dev documentation site
 ```
 
 ### You cannot modify without validation
 ```
 nodyx-core/src/          , Main server code
-nodyx-core/ARCHITECTURE.md
-nodyx-core/NODYX_CONTEXT.md
+docs/en/ARCHITECTURE.md
 docs/en/MANIFESTO.md
 ```
 
@@ -112,15 +110,37 @@ All commit messages and code comments must be in **English**.
 
 ## Translating Nodyx
 
-Translation is the most accessible contribution. No coding required.
+Translation is the most accessible contribution. No coding required, and no account to create anywhere except GitHub.
 
-### How to do it
+**Live status: [nodyx.org/translate](https://nodyx.org/translate)** lists every language, how far along it is, and links straight to the file you would edit.
+
+### The interface
+
+The entire app interface lives in one flat JSON file per language:
+
+```
+nodyx-frontend/src/lib/locales/
+  fr.json          , source language
+  en.json          , reference, kept at 100%
+  de.json  es.json  pt-PT.json  ru.json  vi.json
+```
+
+1. Open [nodyx.org/translate](https://nodyx.org/translate) and find your language
+2. Click "Translate on GitHub", it forks the repository for you
+3. Fill in the missing keys, leaving every `{{variable}}` exactly as it is
+4. Open a Pull Request
+
+Continuous integration checks that no variable was altered, so you cannot break the app by translating. We review, we merge, your work ships in the next release.
+
+Your language is not in the list? Copy `en.json`, name it with your language code, and open an Issue so we can wire it into the language picker.
+
+### The documentation
 1. Go to `docs/`
 2. Copy the `en/` folder and rename it with your language code (`de/`, `es/`, `ja/`, etc.)
 3. Translate the files
 4. Open a Pull Request
 
-### Files to translate
+Files to translate:
 ```
 MANIFESTO.md   , The founding text
 THANKS.md      , Acknowledgements
@@ -133,8 +153,11 @@ ROADMAP.md     , Development roadmap
 ### Translation rules
 - Translate meaning, not word-for-word
 - Keep the original tone (direct, human, not corporate)
+- Never touch what sits inside `{{ }}`, those are values the app fills in at runtime
 - If a concept has no equivalent in your language, keep the English term
 - Proper nouns (Nodyx, NodyxPoints, Guard Protocol, etc.) are never translated
+
+Translators get a star and a place in [CONTRIBUTORS.md](../../CONTRIBUTORS.md), like every other contributor.
 
 ---
 
