@@ -40,6 +40,13 @@ nodyx-core/uploads/**
 !nodyx-core/uploads/*/
 !nodyx-core/uploads/*/.gitkeep
 
+# Cles privees et certificats : jamais dans le depot, meme generes par erreur
+# pendant un test d'installeur ou un essai local.
+*.pem
+*.key
+*.p12
+*.pfx
+
 # Backups locaux (archives tar.gz du Backup System)
 nodyx-core/backups/
 

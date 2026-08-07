@@ -187,3 +187,56 @@ jobs:
       - name: Vite — build production
         working-directory: ${{ matrix.app }}
         run: npm run build
+
+  # ── 5. Hygiène du dépôt ───────────────────────────────────────────────────
+  # Une règle `.gitignore` n'a AUCUN effet sur un fichier déjà suivi. Deux
+  # images uploadées par un utilisateur sont ainsi restées publiques dans le
+  # dépôt d'avril à août 2026, alors que le .gitignore disait déjà « données
+  # personnelles, ne jamais publier ». Ce job transforme l'intention en règle.
+  repo-hygiene:
+    name: "hygiène du dépôt — aucun contenu privé suivi"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Aucun fichier uploadé par un utilisateur n'est suivi
+        run: |
+          # Seuls les .gitkeep (arborescence) et le widget de démonstration
+          # livré avec le produit ont le droit d'être suivis sous uploads/.
+          LEAKED=$(git ls-files 'nodyx-core/uploads/*' \
+            | grep -vE '\.gitkeep$|^nodyx-core/uploads/widgets/video-player/' || true)
+          if [ -n "$LEAKED" ]; then
+            echo "Du contenu utilisateur est suivi par git :"
+            echo "$LEAKED" | sed 's/^/  /'
+            echo ""
+            echo "Ces fichiers seraient publiés avec le dépôt. Retire-les du suivi :"
+            echo "  git rm --cached <fichier>   (le fichier reste sur le disque)"
+            exit 1
+          fi
+          echo "Aucun contenu utilisateur suivi."
+
+      - name: Aucun secret ni clé privée suivis
+        run: |
+          LEAKED=$(git ls-files \
+            | grep -iE '(^|/)\.env($|\.)|\.(pem|key|p12|pfx)$' \
+            | grep -v '\.env\.example' || true)
+          if [ -n "$LEAKED" ]; then
+            echo "Des fichiers sensibles sont suivis par git :"
+            echo "$LEAKED" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "Aucun secret suivi."
+
+      - name: Le dossier .claude n'est jamais suivi
+        run: |
+          # Il contient des notes privées et des données personnelles : sa
+          # présence dans le dépôt serait une fuite, pas une maladresse.
+          LEAKED=$(git ls-files | grep '^\.claude/' || true)
+          if [ -n "$LEAKED" ]; then
+            echo "Le dossier .claude est suivi par git. Fuite de données privées :"
+            echo "$LEAKED" | sed 's/^/  /'
+            exit 1
+          fi
+          echo ".claude n'est pas suivi."
