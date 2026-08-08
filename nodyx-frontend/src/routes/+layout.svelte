@@ -967,9 +967,9 @@
 					</div>
 			{:else}
 				<a href="/auth/login"
-				   class="nx-auth-btn flex items-center justify-center h-8 min-w-[5.5rem] px-3 text-xs font-medium rounded-lg transition-all">{tFn('common.login')}</a>
+				   class="nx-auth-btn flex items-center justify-center h-8 px-2.5 sm:min-w-[5.5rem] sm:px-3 text-xs font-medium rounded-lg transition-all whitespace-nowrap">{tFn('common.login')}</a>
 				<a href="/auth/register"
-				   class="nx-auth-btn nx-auth-btn--primary flex items-center justify-center h-8 min-w-[5.5rem] px-3 text-xs font-bold rounded-lg transition-all">{tFn('common.register')}</a>
+				   class="nx-auth-btn nx-auth-btn--primary flex items-center justify-center h-8 px-2.5 sm:min-w-[5.5rem] sm:px-3 text-xs font-bold rounded-lg transition-all whitespace-nowrap">{tFn('common.register')}</a>
 			{/if}
 		</div>
 	</nav>
