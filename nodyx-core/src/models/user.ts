@@ -30,6 +30,7 @@ export interface User {
   updated_at:                Date
   email_verified:            boolean
   email_verification_token:  string | null
+  locale:                    string | null
 }
 
 // Password excluded — safe to send to clients

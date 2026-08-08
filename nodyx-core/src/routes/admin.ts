@@ -15,6 +15,7 @@ import { generateCategorySlug } from '../models/community'
 import { io } from '../socket/io'
 import { invalidateUserSessions } from './auth'
 import { isSmtpConfigured, sendPasswordResetEmail } from '../services/emailService'
+import { resolveServerLocale } from '../i18n/serverStrings'
 import { scanBuffer } from '../services/fileScanner'
 import { NODYX_VERSION } from '../utils/version'
 import { randomUUID, createHash, randomBytes } from 'crypto'
@@ -320,8 +321,8 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { userId } = request.params as { userId: string }
 
-    const { rows: userRows } = await db.query<{ id: string; username: string; email: string }>(
-      `SELECT id, username, email FROM users WHERE id = $1`,
+    const { rows: userRows } = await db.query<{ id: string; username: string; email: string; locale: string | null }>(
+      `SELECT id, username, email, locale FROM users WHERE id = $1`,
       [userId]
     )
     if (!userRows[0]) return reply.code(404).send({ error: 'User not found' })
@@ -349,7 +350,8 @@ export default async function adminRoutes(app: FastifyInstance) {
     let emailSent = false
     if (isSmtpConfigured()) {
       try {
-        await sendPasswordResetEmail({ to: user.email, username: user.username, resetUrl })
+        const locale = resolveServerLocale(user.locale, process.env.NODYX_COMMUNITY_LANGUAGE)
+        await sendPasswordResetEmail({ to: user.email, username: user.username, resetUrl, locale })
         emailSent = true
       } catch {
         // SMTP configuré mais échec — on retourne quand même le lien
@@ -1012,6 +1014,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         to,
         username: 'Admin',
         resetUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/reset-password/test-smtp`,
+        locale: resolveServerLocale(null, process.env.NODYX_COMMUNITY_LANGUAGE),
       })
       return reply.send({ success: true, message: `Email de test envoyé à ${to}` })
     } catch (err: unknown) {

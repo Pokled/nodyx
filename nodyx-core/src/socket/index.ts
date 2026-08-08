@@ -12,6 +12,7 @@ import * as NotificationModel from '../models/notification'
 import { resolveMentions } from '../utils/mentions'
 import { io } from './io'
 import { sendPushToUser } from '../routes/notifications'
+import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
 import { checkHtmlContent } from '../services/contentFilter'
 import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
 
@@ -599,9 +600,16 @@ export function registerSocketIO(server: Server): void {
             // Separate chat-specific mention badge (won't mix with forum notifications)
             io.to(`user:${notifiedUserId}`).emit('chat:mention')
           }
-          // Web Push si l'utilisateur n'est pas connecté en temps réel
+          // Web Push si l'utilisateur n'est pas connecté en temps réel.
+          // Contrairement à une erreur API, un push envoyé n'est plus retraduisible
+          // une fois reçu (le service worker l'affiche tel quel) : on résout la
+          // langue du destinataire, pas celle de l'auteur du message.
+          const { rows: localeRows } = await db.query<{ locale: string | null }>(
+            `SELECT locale FROM users WHERE id = $1`, [notifiedUserId]
+          ).catch(() => ({ rows: [] }))
+          const pushLocale = resolveServerLocale(localeRows[0]?.locale, process.env.NODYX_COMMUNITY_LANGUAGE)
           sendPushToUser(notifiedUserId, {
-            title: `@${username} vous a mentionné`,
+            title: pushStrings(pushLocale).mentionTitle(username),
             body:  sanitized.slice(0, 80),
             type:  'mention',
             tag:   'chat-mention',

@@ -14,6 +14,7 @@ import { io } from '../socket/io'
 import { scanBuffer } from '../services/fileScanner'
 import { scanImageNSFW } from '../services/nsfwScanner'
 import { checkContent } from '../services/contentFilter'
+import { resolveServerLocale } from '../i18n/serverStrings'
 
 const IMAGE_MAX_WIDTH  = 4096
 const IMAGE_MAX_HEIGHT = 4096
@@ -606,6 +607,30 @@ export default async function userRoutes(app: FastifyInstance) {
 
     // Public route: strict whitelist, no email or PII leaks.
     return reply.send({ user: toPublicUser(user) })
+  })
+
+  // PATCH /api/v1/users/me/locale — langue préférée (emails, notifications push)
+  // Contrairement à un texte d'erreur API (le frontend décide toujours de sa propre
+  // langue d'affichage), un email ou un push partent définitivement dans cette
+  // langue une fois envoyés. Le frontend appelle cette route quand l'utilisateur
+  // change de langue (cookie nodyx_locale), pour que le core suive.
+  app.patch('/me/locale', {
+    preHandler: [rateLimit, requireAuth],
+  }, async (request, reply) => {
+    const me = request.user!.userId
+    const { locale } = (request.body ?? {}) as { locale?: string }
+
+    if (!locale || typeof locale !== 'string') {
+      return reply.code(400).send({ error: 'locale required', code: 'BAD_REQUEST' })
+    }
+
+    // Seules fr/en sont réellement traduites côté core ; toute autre valeur
+    // retombe silencieusement sur le résolveur habituel (langue de l'instance,
+    // puis français) — même doctrine que le frontend pour les 5 autres langues.
+    const resolved = resolveServerLocale(locale, null)
+    await db.query(`UPDATE users SET locale = $1 WHERE id = $2`, [resolved, me])
+
+    return reply.send({ ok: true, locale: resolved })
   })
 
   // PATCH /api/v1/users/me/public-key — store user's ECDH public key (E2E DM encryption)

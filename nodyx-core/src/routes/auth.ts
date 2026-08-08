@@ -11,6 +11,7 @@ import { requireAuth } from '../middleware/auth'
 import * as UserModel from '../models/user'
 import { toSelfUser } from '../utils/publicUser'
 import { isSmtpConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService'
+import { resolveServerLocale } from '../i18n/serverStrings'
 import { getUserTotp, TOTP_PENDING_TTL } from './totp'
 
 // ── Discord security alerts ───────────────────────────────────────────────────
@@ -229,6 +230,14 @@ export default async function authRoutes(app: FastifyInstance) {
     // Store registration IP
     await db.query(`UPDATE users SET registration_ip = $1::inet WHERE id = $2`, [clientIp, user.id]).catch(() => {})
 
+    // Locale déduite d'Accept-Language à l'inscription (pas encore de préférence
+    // explicite) : sert aux emails/push, retraduisibles nulle part une fois envoyés.
+    const signupLocale = resolveServerLocale(
+      request.headers['accept-language'],
+      process.env.NODYX_COMMUNITY_LANGUAGE
+    )
+    await db.query(`UPDATE users SET locale = $1 WHERE id = $2`, [signupLocale, user.id]).catch(() => {})
+
     // Alerte Discord nouvelle inscription
     sendSecurityAlert({
       title:  '👤 Nouvelle inscription',
@@ -274,7 +283,7 @@ export default async function authRoutes(app: FastifyInstance) {
       )
       const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173'
       const verifyUrl = `${frontendUrl}/auth/verify-email/${verificationToken}`
-      sendVerificationEmail({ to: email, username, verifyUrl }).catch(() => {})
+      sendVerificationEmail({ to: email, username, verifyUrl, locale: signupLocale }).catch(() => {})
       return reply.code(201).send({ pending_verification: true })
     }
 
@@ -506,7 +515,8 @@ export default async function authRoutes(app: FastifyInstance) {
 
       if (isSmtpConfigured()) {
         try {
-          await sendPasswordResetEmail({ to: user.email, username: user.username, resetUrl })
+          const locale = resolveServerLocale(user.locale, process.env.NODYX_COMMUNITY_LANGUAGE)
+          await sendPasswordResetEmail({ to: user.email, username: user.username, resetUrl, locale })
         } catch (err) {
           request.log.error({ err }, 'Failed to send password reset email')
           // Ne pas exposer l'erreur SMTP à l'utilisateur
@@ -643,7 +653,8 @@ export default async function authRoutes(app: FastifyInstance) {
 
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173'
     const verifyUrl = `${frontendUrl}/auth/verify-email/${verificationToken}`
-    sendVerificationEmail({ to: user.email, username: user.username, verifyUrl }).catch(() => {})
+    const locale = resolveServerLocale(user.locale, process.env.NODYX_COMMUNITY_LANGUAGE)
+    sendVerificationEmail({ to: user.email, username: user.username, verifyUrl, locale }).catch(() => {})
 
     return reply.send({ message: 'Si ce compte existe et n\'est pas vérifié, un email a été envoyé.' })
   })
