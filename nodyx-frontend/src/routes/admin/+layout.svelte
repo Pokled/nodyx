@@ -94,6 +94,22 @@
 			</div>
 		</div>
 
+		<!-- Retour au forum : en tête de sidebar, pas en pied. Une sidebar longue
+		     (beaucoup de sections) pousse le pied de page hors champ, il faut
+		     dérouler toute la page pour l'atteindre (retour Jonathan, 2026-08-08). -->
+		<div class="p-2 border-b border-zinc-800/80">
+			<a
+				href="/"
+				class="flex items-center gap-2.5 px-2.5 py-[7px] rounded-md text-[13px] text-zinc-500
+				       hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
+			>
+				<svg class="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+					<path d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+				</svg>
+				<span>{tFn('anav.back_to_forum')}</span>
+			</a>
+		</div>
+
 		<!-- Nav -->
 		<nav class="flex-1 overflow-y-auto py-3 px-2">
 			{#each nav as group}
@@ -128,23 +144,11 @@
 		</nav>
 
 		<!-- Footer -->
-		<div class="border-t border-zinc-800/80 p-2 space-y-1">
-			<a
-				href="/"
-				class="flex items-center gap-2.5 px-2.5 py-[7px] rounded-md text-[13px] text-zinc-500
-				       hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
-			>
-				<svg class="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-					<path d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-				</svg>
-				<span>{tFn('anav.back_to_forum')}</span>
-			</a>
-			<div class="px-2.5 pt-1.5 border-t border-zinc-800/60">
-				<NodyxVersionBadge
-					version={data.updateCheck?.current_version ?? (data as any).nodyxVersion ?? 'unknown'}
-					variant="admin"
-				/>
-			</div>
+		<div class="border-t border-zinc-800/80 p-2">
+			<NodyxVersionBadge
+				version={data.updateCheck?.current_version ?? (data as any).nodyxVersion ?? 'unknown'}
+				variant="admin"
+			/>
 		</div>
 	</aside>
 
