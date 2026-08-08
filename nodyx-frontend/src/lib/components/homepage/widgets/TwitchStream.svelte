@@ -235,7 +235,7 @@
 		<!-- Bannière fallback : main offline, on montre un autre stream -->
 		{#if isFallbackLive && widgetData?.main === null && configuredChannel !== activeChannel}
 			<div class="relative flex items-center gap-2 px-4 py-1.5 text-[10px]"
-			     style="background:rgba(145,70,255,.08); border-bottom:1px solid rgba(145,70,255,.2); color:var(--nx-accent-2-soft2)">
+			     style="background:rgba(145,70,255,.08); border-bottom:1px solid rgba(145,70,255,.2); color:var(--np)">
 				<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
 				</svg>
@@ -257,7 +257,7 @@
 				{#if !iframeLoaded}
 					<!-- Skeleton loader pulse -->
 					<div class="absolute inset-0 flex items-center justify-center"
-					     style="background:linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / .08), rgba(14,116,144,.08))">
+					     style="background:linear-gradient(135deg, rgb(var(--np-rgb) / .08), rgba(14,116,144,.08))">
 						<div class="flex flex-col items-center gap-3">
 							<div class="w-8 h-8 rounded-full border-2 animate-spin"
 							     style="border-color:rgba(145,70,255,.2); border-top-color:{accent}"></div>
@@ -322,7 +322,7 @@
 			transparent 0deg,
 			var(--accent) 80deg,
 			transparent 160deg,
-			var(--nx-cyan-deep) 240deg,
+			var(--na) 240deg,
 			transparent 320deg,
 			transparent 360deg
 		);

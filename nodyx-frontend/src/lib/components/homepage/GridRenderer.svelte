@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { hexToRgbTriplet } from '$lib/types/homepage'
 	import type { GridLayout, GridTheme, GridRow, GridColumn } from '$lib/types/homepage'
 	import { DEFAULT_THEME, autoSpanMd, autoSpanSm } from '$lib/types/homepage'
 	import { PLUGIN_REGISTRY } from './plugins'
@@ -50,6 +51,10 @@
 	const cssVars = $derived([
 		`--np: ${t.primary}`,
 		`--na: ${t.accent}`,
+		// Triplets RGB pour les widgets natifs qui composent des rgb(var(--x) / alpha)
+		// (glows, dégradés translucides) — même technique que --nx-*-rgb dans app.css.
+		`--np-rgb: ${hexToRgbTriplet(t.primary)}`,
+		`--na-rgb: ${hexToRgbTriplet(t.accent)}`,
 		`--nb: ${t.bg}`,
 		`--nc: ${t.card_bg}`,
 		`--nborder: ${t.border_color}`,
