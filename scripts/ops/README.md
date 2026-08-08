@@ -11,6 +11,7 @@ ici pour la même raison que le reste du code.
 | `opt-deploy-wrapper.sh` | lanceur hors dépôt : fait le `git pull` puis passe la main | `sudo install -m 755 scripts/ops/opt-deploy-wrapper.sh /opt/deploy-all.sh` |
 | `nodyx-demo-reset.sh` | remise à zéro quotidienne de demo.nodyx.org | `sudo install -m 755 scripts/ops/nodyx-demo-reset.sh /usr/local/bin/nodyx-demo-reset` |
 | `nodyx-backup.sh` | sauvegarde **vérifiée** des 3 bases + uploads | `sudo install -m 755 scripts/ops/nodyx-backup.sh /usr/local/bin/nodyx-backup` |
+| `nodyx-recover.sh` (via `src/scripts/recover.ts`) | reprendre la main sur un compte owner/admin perdu | `sudo install -m 755 scripts/ops/nodyx-recover-wrapper.sh /usr/local/bin/nodyx-recover` |
 | `nodyx-backup.{timer,service}` | la déclenche chaque nuit | `sudo install -m 644 scripts/ops/nodyx-backup.{timer,service} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now nodyx-backup.timer` |
 
 ## Le principe qui a motivé la réécriture du déploiement
@@ -69,3 +70,33 @@ Les archives restent **sur la même machine que les données**. Elles protègent
 d'une bêtise (suppression, migration ratée, restauration à blanc), pas de la
 perte du serveur. Une copie hors-site reste à mettre en place, et elle demande
 un choix de destination et des accès.
+
+
+## Récupération d'accès (compte owner perdu)
+
+Le scénario : l'owner a perdu son mot de passe ET son e-mail (le lien de
+réinitialisation par mail ne sert donc à rien). Sur un auto-hébergement, le seul
+point d'ancrage de confiance qui survit à ça est **l'accès à la machine** : qui
+peut lancer une commande sur le serveur EST le propriétaire.
+
+`nodyx-recover` ne demande donc aucune authentification en ligne, ne démarre pas
+l'application (ni Redis, ni Socket.IO), se connecte juste à la base, et génère le
+**même jeton** qu'un e-mail « mot de passe oublié » aurait envoyé. On obtient un
+lien à ouvrir dans un navigateur : le formulaire de réinitialisation habituel
+fait le reste.
+
+```bash
+sudo nodyx-recover                 # interactif : liste les owners/admins, génère un lien
+sudo nodyx-recover --list          # juste lister
+sudo nodyx-recover --reset <qui>   # lien direct pour un username ou email
+sudo nodyx-recover --promote <qui> # désigner un owner (cas « plus aucun owner »)
+# autre instance :
+NODYX_DIR=/opt/sleemstudio sudo -E nodyx-recover
+```
+
+**Pourquoi pas Nodyx Signet ?** Signet est une méthode d'authentification (un
+appareil). La récupération sert précisément quand les moyens d'auth sont perdus,
+y compris l'appareil : on ne bâtit pas le frein de secours avec la pièce qui peut
+manquer. Le secours doit dépendre du minimum de pièces et être le plus robuste ;
+l'accès machine l'est. Une fois Signet prouvé stable, il pourra devenir un
+facteur EN PLUS, jamais l'ancrage unique.

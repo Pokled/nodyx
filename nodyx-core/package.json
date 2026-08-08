@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:reset": "ts-node src/scripts/seed.ts --reset",
+    "recover": "ts-node src/scripts/recover.ts",
     "generate-esy": "ts-node src/scripts/generate-esy.ts",
     "turn": "node turn-server.js",
     "test": "vitest run",
