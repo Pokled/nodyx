@@ -1285,7 +1285,12 @@
 
 		<!-- ── Contenu principal ───────────────────────────────────────────────── -->
 		<div class="flex-1 overflow-hidden">
-		<main class="{langView ? 'h-[calc(100vh-48px)] overflow-hidden' : 'h-full overflow-y-auto'} min-w-0 pb-[var(--bottom-nav-h)]"
+		<!-- app-shell-main : marqueur pour scoper les décalages (padding-left rail+sidebar,
+		     margin-right membres) à CE main uniquement. Sans ça, `:global(main.app-shell-main)` frappait
+		     AUSSI les <main> imbriqués des pages (profil, settings, admin, dm) et leur
+		     collait un padding-left 276px + margin-right 220px parasites → contenu poussé
+		     au milieu et rétréci. -->
+		<main class="app-shell-main {langView ? 'h-[calc(100vh-48px)] overflow-hidden' : 'h-full overflow-y-auto'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
 		      class:members-collapsed={membersCollapsed}>
 
@@ -1864,16 +1869,16 @@
 }
 
 /* ── Main content transition during collapse/expand ──────────────────────── */
-:global(main) {
+:global(main.app-shell-main) {
   transition: padding-left .25s cubic-bezier(.4,0,.2,1), margin-right .25s cubic-bezier(.4,0,.2,1);
 }
 
-.layout-dragging :global(main) {
+.layout-dragging :global(main.app-shell-main) {
   transition: none !important;
 }
 
 @media (min-width: 1024px) {
-  :global(main) {
+  :global(main.app-shell-main) {
     padding-left: calc(56px + var(--left-panel-width, 220px)) !important;
   }
   :global(main.panel-collapsed) {
@@ -1882,7 +1887,7 @@
 }
 
 @media (min-width: 1280px) {
-  :global(main) {
+  :global(main.app-shell-main) {
     margin-right: var(--right-panel-width, 220px) !important;
   }
   :global(main.members-collapsed) {
