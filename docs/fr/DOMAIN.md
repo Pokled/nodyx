@@ -50,7 +50,7 @@ Tu obtiens un **sous-domaine** d'un domaine qui appartient à No-IP, DuckDNS, et
 ### Type 3 — Sous-domaine offert par Nodyx
 
 > `moncommunaute.nodyx.org` (via le directory Nodyx)
-> `46-225-20-193.sslip.io` (via l'IP publique du serveur)
+> `203-0-113-10.sslip.io` (via l'IP publique du serveur)
 
 Ces sous-domaines sont fournis **automatiquement** par `install.sh`. Tu n'as rien à configurer.
 
@@ -143,7 +143,7 @@ C'est aussi simple que ça : **tu dois posséder le domaine racine** pour que Cl
 
 ### Pourquoi sslip.io ne marche pas non plus avec CF Tunnel
 
-`sslip.io` fonctionne par un mécanisme de DNS magique : `46-225-20-193.sslip.io` résout automatiquement vers `46.225.20.193`. C'est un domaine public géré par ses créateurs — tu n'en es pas propriétaire. Même raisonnement.
+`sslip.io` fonctionne par un mécanisme de DNS magique : `203-0-113-10.sslip.io` résout automatiquement vers `203.0.113.10`. C'est un domaine public géré par ses créateurs — tu n'en es pas propriétaire. Même raisonnement.
 
 ### La seule vraie solution
 

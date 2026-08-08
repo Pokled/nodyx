@@ -135,7 +135,7 @@ Tu peux faire tourner Nodyx sur Windows 10/11 via WSL2 (Sous-système Windows po
 
 ## 🌐 Ai-je besoin d'un nom de domaine ?
 
-**Réponse courte : Non !** Pour un VPS avec `install.sh`, l'installateur crée automatiquement un domaine gratuit `46-225-20-193.sslip.io` + un alias mémorable `ton-slug.nodyx.org`. HTTPS fonctionne sans rien acheter.
+**Réponse courte : Non !** Pour un VPS avec `install.sh`, l'installateur crée automatiquement un domaine gratuit `203-0-113-10.sslip.io` + un alias mémorable `ton-slug.nodyx.org`. HTTPS fonctionne sans rien acheter.
 
 **Pour `install_tunnel.sh` (Cloudflare Tunnel)**, un vrai domaine à toi est obligatoire — les sous-domaines gratuits de type No-IP ou DuckDNS ne fonctionnent pas.
 
@@ -212,7 +212,7 @@ L'installateur va te demander :
 
   Domaine de ton instance
   ┌─ Si tu as un domaine (ex: moncommunaute.fr), entre-le ci-dessous.
-  └─ Sinon, appuie sur Entrée → domaine gratuit 46-225-20-193.sslip.io utilisé automatiquement.
+  └─ Sinon, appuie sur Entrée → domaine gratuit 203-0-113-10.sslip.io utilisé automatiquement.
 
 ? Domaine (Entrée pour obtenir un domaine gratuit): macommunaute.fr   ← ou Entrée pour sslip.io
 
@@ -221,7 +221,7 @@ L'installateur va te demander :
 ? Mot de passe admin: ••••••••
 ```
 
-> 💡 **Pas de domaine ?** Appuie sur Entrée — ton instance sera accessible sur `46-225-20-193.sslip.io` avec HTTPS automatique. Tu peux changer pour ton propre domaine plus tard.
+> 💡 **Pas de domaine ?** Appuie sur Entrée — ton instance sera accessible sur `203-0-113-10.sslip.io` avec HTTPS automatique. Tu peux changer pour ton propre domaine plus tard.
 
 C'est tout. Le script s'occupe du reste automatiquement (≈ 3 à 10 minutes selon la vitesse de ton serveur).
 
@@ -236,7 +236,7 @@ L'installateur affiche un résumé à la fin :
 
   Instance : https://macommunaute.fr
   Admin    : alice / alice@exemple.fr
-  Vocal    : Relais TURN sur 46.225.20.193:3478
+  Vocal    : Relais TURN sur 203.0.113.10:3478
 
   Credentials sauvegardés dans : /root/nodyx-credentials.txt
 ```

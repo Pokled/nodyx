@@ -13,6 +13,7 @@ dist/
 
 # Claude Code
 .claude/
+/CLAUDE.md
 nodyx-core/.claude/
 
 # Fichiers IA/context privés

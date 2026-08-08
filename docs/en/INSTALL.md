@@ -145,7 +145,7 @@ You can run Nodyx on Windows 10/11 using WSL2 (Windows Subsystem for Linux). Thi
 
 ## 🌐 Do I Need a Domain Name?
 
-**Short answer: No!** For a VPS with `install.sh`, the installer automatically creates a free domain `46-225-20-193.sslip.io` + a memorable alias `your-slug.nodyx.org`. HTTPS works without buying anything.
+**Short answer: No!** For a VPS with `install.sh`, the installer automatically creates a free domain `203-0-113-10.sslip.io` + a memorable alias `your-slug.nodyx.org`. HTTPS works without buying anything.
 
 **For `install_tunnel.sh` (Cloudflare Tunnel)**, a real domain you own is required, free subdomains like No-IP or DuckDNS do not work.
 
@@ -222,7 +222,7 @@ The installer will ask you:
 
   Instance domain
   ┌─ If you have a domain (e.g. mycommunity.com), enter it below.
-  └─ Otherwise, press Enter → free domain 46-225-20-193.sslip.io used automatically.
+  └─ Otherwise, press Enter → free domain 203-0-113-10.sslip.io used automatically.
 
 ? Domain (press Enter for a free domain): mycommunity.com   ← or Enter for sslip.io
 
@@ -231,7 +231,7 @@ The installer will ask you:
 ? Admin password: ••••••••
 ```
 
-> 💡 **No domain?** Just press Enter, your instance will be accessible at `46-225-20-193.sslip.io` with automatic HTTPS. You can switch to your own domain later.
+> 💡 **No domain?** Just press Enter, your instance will be accessible at `203-0-113-10.sslip.io` with automatic HTTPS. You can switch to your own domain later.
 
 That's it. The script handles everything else automatically (≈ 3–10 minutes depending on your server speed).
 
@@ -246,7 +246,7 @@ The installer will show you a summary at the end:
 
   Instance : https://mycommunity.com
   Admin    : alice / alice@example.com
-  Voice    : TURN relay on 46.225.20.193:3478
+  Voice    : TURN relay on 203.0.113.10:3478
 
   Credentials saved in: /root/nodyx-credentials.txt
 ```

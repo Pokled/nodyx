@@ -50,7 +50,7 @@ You get a **subdomain** of a domain that belongs to No-IP, DuckDNS, etc. You do 
 ### Type 3, Subdomain Offered by Nodyx
 
 > `mycommunity.nodyx.org` (via the Nodyx directory)
-> `46-225-20-193.sslip.io` (via the server's public IP)
+> `203-0-113-10.sslip.io` (via the server's public IP)
 
 These subdomains are provided **automatically** by `install.sh`. No setup required.
 
@@ -143,7 +143,7 @@ It's that simple: **you must own the root domain** for Cloudflare to write DNS r
 
 ### Why sslip.io Doesn't Work with CF Tunnel Either
 
-`sslip.io` works through a magic DNS mechanism: `46-225-20-193.sslip.io` automatically resolves to `46.225.20.193`. It's a public domain managed by its creators, you don't own it. Same reasoning.
+`sslip.io` works through a magic DNS mechanism: `203-0-113-10.sslip.io` automatically resolves to `203.0.113.10`. It's a public domain managed by its creators, you don't own it. Same reasoning.
 
 ### The Only Real Solution
 

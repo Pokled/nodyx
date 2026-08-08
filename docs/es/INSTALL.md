@@ -145,7 +145,7 @@ Puedes ejecutar Nodyx en Windows 10/11 usando WSL2 (Subsistema de Windows para L
 
 ## 🌐 ¿Necesito un dominio?
 
-**Respuesta corta: ¡No!** Para un VPS con `install.sh`, el instalador crea automáticamente un dominio gratuito `46-225-20-193.sslip.io` más unos alias fáciles de recordar `mi-comunidad.nodyx.org`. HTTPS funciona sin comprar nada.
+**Respuesta corta: ¡No!** Para un VPS con `install.sh`, el instalador crea automáticamente un dominio gratuito `203-0-113-10.sslip.io` más unos alias fáciles de recordar `mi-comunidad.nodyx.org`. HTTPS funciona sin comprar nada.
 
 **Para `install_tunnel.sh` (Cloudflare Tunnel)**, sí es necesario un dominio propio — los subdominios gratuitos como No-IP o DuckDNS no son compatibles.
 
@@ -220,7 +220,7 @@ El instalador te preguntará:
 
   Dominio de la instancia
   ┌─ Si tienes un dominio (ej. midominio.com), introdúcelo abajo.
-  └─ Si no, pulsa Enter → se usará automáticamente el dominio gratuito 46-225-20-193.sslip.io
+  └─ Si no, pulsa Enter → se usará automáticamente el dominio gratuito 203-0-113-10.sslip.io
 
 ? Dominio (pulsa Enter para usar un dominio gratuito): midominio.com   ← o Enter para sslip.io
 
@@ -229,7 +229,7 @@ El instalador te preguntará:
 ? Contraseña del administrador: ••••••••
 ```
 
-> 💡 **¿Sin dominio?** Pulsa Enter — tu instancia estará accesible en `46-225-20-193.sslip.io` con HTTPS automático. Puedes cambiar a tu propio dominio más adelante.
+> 💡 **¿Sin dominio?** Pulsa Enter — tu instancia estará accesible en `203-0-113-10.sslip.io` con HTTPS automático. Puedes cambiar a tu propio dominio más adelante.
 
 Eso es todo. El script se encarga del resto automáticamente (≈ 3–10 minutos según la velocidad de tu servidor).
 
@@ -244,7 +244,7 @@ El instalador te mostrará un resumen al final:
 
   Instancia : https://midominio.com
   Admin     : alice / alice@ejemplo.com
-  Voz       : Relay TURN en 46.225.20.193:3478
+  Voz       : Relay TURN en 203.0.113.10:3478
 
   Credenciales guardadas en: /root/nodyx-credentials.txt
 ```

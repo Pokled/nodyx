@@ -50,9 +50,9 @@ Obtienes un **subdominio** de un dominio que pertenece a No-IP, DuckDNS, etc. **
 ### Tipo 3 — Subdominio proporcionado por Nodyx
 
 > `mi-comunidad.nodyx.org` (a través del directorio Nodyx)
-> `46-225-20-193.sslip.io` (a través de la IP pública del servidor)
+> `203-0-113-10.sslip.io` (a través de la IP pública del servidor)
 
-> 💡 **¿Qué es sslip.io?** Un servicio DNS público que convierte IPs en dominios automáticamente: `46-225-20-193.sslip.io` resuelve a `46.225.20.193` sin ninguna cuenta ni configuración. Si tu IP pública es `46.225.20.193`, ese es tu dominio gratuito instantáneo.
+> 💡 **¿Qué es sslip.io?** Un servicio DNS público que convierte IPs en dominios automáticamente: `203-0-113-10.sslip.io` resuelve a `203.0.113.10` sin ninguna cuenta ni configuración. Si tu IP pública es `203.0.113.10`, ese es tu dominio gratuito instantáneo.
 
 Estos subdominios los proporciona **automáticamente** `install.sh`. Sin configuración necesaria.
 
@@ -145,7 +145,7 @@ Es así de simple: **debes ser propietario del dominio raíz** para que Cloudfla
 
 ### Por qué sslip.io tampoco funciona con CF Tunnel
 
-`sslip.io` funciona mediante un mecanismo DNS especial: `46-225-20-193.sslip.io` resuelve automáticamente a `46.225.20.193`. Es un dominio público gestionado por sus creadores — tú no eres su propietario. El mismo razonamiento.
+`sslip.io` funciona mediante un mecanismo DNS especial: `203-0-113-10.sslip.io` resuelve automáticamente a `203.0.113.10`. Es un dominio público gestionado por sus creadores — tú no eres su propietario. El mismo razonamiento.
 
 ### La única solución real
 

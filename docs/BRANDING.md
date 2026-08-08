@@ -133,13 +133,13 @@ cd nodyx && bash install.sh
 ### 2. Cloudflare — nodyx.org
 
 **DNS Records**
-- [x] `A     nodyx.org`          → `46.225.20.193`  (Proxied)
-- [x] `A     www.nodyx.org`      → `46.225.20.193`  (Proxied)
-- [x] `A     relay.nodyx.org`    → `46.225.20.193`  (**DNS only** — TCP:7443 ne passe pas par le proxy CF)
-- [x] `A     signet.nodyx.org`   → `46.225.20.193`  (Proxied) — Authenticator PWA
-- [x] `A     code.nodyx.org`     → `46.225.20.193`  (Proxied) — VS Code server
-- [x] `A     turn.nodyx.org`     → `46.225.20.193`  (**DNS only** — UDP:3478 ne passe pas par le proxy CF)
-- [x] `A     *.nodyx.org`        → `46.225.20.193`  (Proxied) — wildcard pour toutes les instances relay
+- [x] `A     nodyx.org`          → `203.0.113.10`  (Proxied)
+- [x] `A     www.nodyx.org`      → `203.0.113.10`  (Proxied)
+- [x] `A     relay.nodyx.org`    → `203.0.113.10`  (**DNS only** — TCP:7443 ne passe pas par le proxy CF)
+- [x] `A     signet.nodyx.org`   → `203.0.113.10`  (Proxied) — Authenticator PWA
+- [x] `A     code.nodyx.org`     → `203.0.113.10`  (Proxied) — VS Code server
+- [x] `A     turn.nodyx.org`     → `203.0.113.10`  (**DNS only** — UDP:3478 ne passe pas par le proxy CF)
+- [x] `A     *.nodyx.org`        → `203.0.113.10`  (Proxied) — wildcard pour toutes les instances relay
 
 > Le wildcard `*.nodyx.org` remplace les records CF individuels par instance. Plus besoin de créer un record DNS par slug enregistré.
 
@@ -168,8 +168,8 @@ cd nodyx && bash install.sh
 ### 3. Cloudflare — nodyx.dev
 
 **DNS Records**
-- [x] `A     nodyx.dev`          → `46.225.20.193`  (Proxied)
-- [x] `A     www.nodyx.dev`      → `46.225.20.193`  (Proxied)
+- [x] `A     nodyx.dev`          → `203.0.113.10`  (Proxied)
+- [x] `A     www.nodyx.dev`      → `203.0.113.10`  (Proxied)
 
 **SSL/TLS**
 - [x] Mode : **Full (Strict)**
