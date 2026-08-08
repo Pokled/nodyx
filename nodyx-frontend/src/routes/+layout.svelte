@@ -1290,7 +1290,12 @@
 		     AUSSI les <main> imbriqués des pages (profil, settings, admin, dm) et leur
 		     collait un padding-left 276px + margin-right 220px parasites → contenu poussé
 		     au milieu et rétréci. -->
-		<main class="app-shell-main {langView ? 'h-[calc(100vh-48px)] overflow-hidden' : 'h-full overflow-y-auto'} min-w-0 pb-[var(--bottom-nav-h)]"
+		<!-- overflow-x-hidden : zone de contenu d'appli = défilement vertical seul.
+		     `overflow-y-auto` force sinon overflow-x à `auto` (spec CSS), et le
+		     moindre debordement (ex: banniere full-bleed -mx-6 du profil, +24px)
+		     faisait apparaitre une scrollbar horizontale + du contenu glissant
+		     sous les sidebars. On clippe l'horizontal, plus jamais de scrollbar. -->
+		<main class="app-shell-main {langView ? 'h-[calc(100vh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
 		      class:members-collapsed={membersCollapsed}>
 
