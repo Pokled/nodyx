@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import jwt from 'jsonwebtoken'
 import { buildApp } from './helpers/buildApp'
 
@@ -144,6 +144,71 @@ describe('PATCH /api/v1/users/me/profile', () => {
     const avatarSync = calls.find(c => (c[0] as string).includes('UPDATE users SET avatar'))
     expect(avatarSync).toBeDefined()
   })
+})
+
+// ── Tests — PATCH /me/locale ────────────────────────────────────
+//
+// Prouve le repli exact quand l'utilisateur envoie une locale non supportée
+// par le core (ex: 'de', supportée côté frontend mais pas dans le dictionnaire
+// serveur) : elle doit retomber sur la langue de l'INSTANCE, jamais directement
+// sur 'fr' en ignorant l'instance — sinon un utilisateur allemand sur une
+// instance anglophone recevrait des emails en français.
+
+describe('PATCH /api/v1/users/me/locale', () => {
+	let app: Awaited<ReturnType<typeof buildApp>>
+	const ORIGINAL_LANG = process.env.NODYX_COMMUNITY_LANGUAGE
+
+	beforeEach(async () => {
+		vi.clearAllMocks()
+		vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
+		vi.mocked(db.query).mockResolvedValue({ rows: [], rowCount: 1 } as any)
+		app = await buildApp(a => a.register(userRoutes, { prefix: '/api/v1/users' }))
+	})
+
+	afterEach(() => {
+		if (ORIGINAL_LANG === undefined) delete process.env.NODYX_COMMUNITY_LANGUAGE
+		else process.env.NODYX_COMMUNITY_LANGUAGE = ORIGINAL_LANG
+	})
+
+	it('returns 401 without auth token', async () => {
+		const res = await app.inject({ method: 'PATCH', url: '/api/v1/users/me/locale', payload: { locale: 'en' } })
+		expect(res.statusCode).toBe(401)
+	})
+
+	it('returns 400 without a locale in the body', async () => {
+		const res = await app.inject({
+			method: 'PATCH', url: '/api/v1/users/me/locale',
+			headers: { Authorization: `Bearer ${makeToken()}` }, payload: {},
+		})
+		expect(res.statusCode).toBe(400)
+	})
+
+	it('locale supportée (en) -> stockée telle quelle', async () => {
+		const res = await app.inject({
+			method: 'PATCH', url: '/api/v1/users/me/locale',
+			headers: { Authorization: `Bearer ${makeToken()}` }, payload: { locale: 'en' },
+		})
+		expect(res.statusCode).toBe(200)
+		expect(JSON.parse(res.body).locale).toBe('en')
+	})
+
+	it('locale NON supportée (de) sur une instance FR -> retombe sur fr', async () => {
+		process.env.NODYX_COMMUNITY_LANGUAGE = 'fr'
+		const res = await app.inject({
+			method: 'PATCH', url: '/api/v1/users/me/locale',
+			headers: { Authorization: `Bearer ${makeToken()}` }, payload: { locale: 'de' },
+		})
+		expect(JSON.parse(res.body).locale).toBe('fr')
+	})
+
+	it('locale NON supportée (de) sur une instance EN -> retombe sur EN, pas sur fr', async () => {
+		process.env.NODYX_COMMUNITY_LANGUAGE = 'en'
+		const res = await app.inject({
+			method: 'PATCH', url: '/api/v1/users/me/locale',
+			headers: { Authorization: `Bearer ${makeToken()}` }, payload: { locale: 'de' },
+		})
+		expect(JSON.parse(res.body).locale).toBe('en')
+	})
 })
 
 // ── Tests — GET /:username/profile ────────────────────────────

@@ -627,7 +627,7 @@ export default async function userRoutes(app: FastifyInstance) {
     // Seules fr/en sont réellement traduites côté core ; toute autre valeur
     // retombe silencieusement sur le résolveur habituel (langue de l'instance,
     // puis français) — même doctrine que le frontend pour les 5 autres langues.
-    const resolved = resolveServerLocale(locale, null)
+    const resolved = resolveServerLocale(locale, process.env.NODYX_COMMUNITY_LANGUAGE)
     await db.query(`UPDATE users SET locale = $1 WHERE id = $2`, [resolved, me])
 
     return reply.send({ ok: true, locale: resolved })
