@@ -41,9 +41,10 @@ export const nav: NavSection[] = [
     ],
   },
   {
-    title: 'Widget SDK',
+    title: 'Homepage & Widgets',
     icon:  'puzzle',
     items: [
+      { title: 'Homepage Builder',         slug: 'homepage-builder' },
       { title: 'Create Your First Widget', slug: 'create-widget', badge: 'New' },
     ],
   },

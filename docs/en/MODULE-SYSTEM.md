@@ -3,9 +3,9 @@
 > Available in Nodyx v2.2+. The Module System transforms every instance into a fully configurable community platform, no CLI, no code, no restarts.
 
 :::info Related documentation
-**Module System** and **Homepage Builder** are two distinct but connected systems, read both to understand the full picture.
+**Module System** and **[Homepage Builder](homepage-builder)** are two distinct but connected systems, read both to understand the full picture.
 - The **Module System** controls *what features exist* on your instance (forum, chat, voice, wiki…)
-- The **Homepage Builder** controls *what visitors see* on your public homepage (layout, widgets, theme)
+- The **[Homepage Builder](homepage-builder)** controls *what visitors see* on your public homepage (layout, widgets, theme)
 - A `website` module exposes widgets that appear in the Homepage Builder, but only when the module is active
 ::::
 
