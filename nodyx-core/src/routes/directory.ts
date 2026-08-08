@@ -273,8 +273,9 @@ export default async function directoryRoutes(app: FastifyInstance) {
       const { token, members, online, logo_url, banner_url, version } = req.body;
       if (!token) return reply.status(400).send({ error: 'token required' });
 
-      // Capture real IP — req.ip est fiable car Caddy écrase X-Forwarded-For
-      // (CF-Connecting-IP n'est pas utilisé : non vérifiable sans liste IP Cloudflare)
+      // Capture real IP — req.ip est fiable via la liste de proxys de confiance
+      // (loopback + privé + Cloudflare, cf config/trustedProxies.ts) : un
+      // X-Forwarded-For usurpé ne peut plus le détourner.
       const rawIp = req.ip;
       const isPrivate = !rawIp || rawIp === '127.0.0.1' || rawIp === '::1'
         || rawIp.startsWith('192.168.') || rawIp.startsWith('10.')

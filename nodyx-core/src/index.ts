@@ -6,6 +6,7 @@ import fastifyCors from '@fastify/cors'
 import path from 'path'
 import { getRandomFortune } from './fortunes'
 import { db, redis } from './config/database'
+import { getTrustProxy } from './config/trustedProxies'
 import authRoutes          from './routes/auth'
 import adminRoutes         from './routes/admin'
 import settingsRoutes      from './routes/settings'
@@ -48,7 +49,11 @@ import { initOctoGuard }    from './services/octoguard'
 import { octoguardAdminPlugin, reportsPublicPlugin } from './routes/octoguard'
 import { startScheduler }  from './scheduler'
 
-const server = Fastify({ logger: true, trustProxy: true })
+// trustProxy : PAS `true` (ferait confiance à un X-Forwarded-For usurpé et
+// laisserait l'attaquant dicter request.ip). On ne fait confiance qu'aux proxys
+// légitimes (loopback + privé + Cloudflare), pour que request.ip soit la vraie
+// adresse du visiteur, partout dans le code. cf src/config/trustedProxies.ts
+const server = Fastify({ logger: true, trustProxy: getTrustProxy() })
 
 // ── CORS (pour les appels fetch client-side : upload, chat, mentions) ────────
 const corsOrigin = process.env.FRONTEND_URL

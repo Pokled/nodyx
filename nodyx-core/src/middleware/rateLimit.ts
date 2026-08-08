@@ -28,16 +28,12 @@ export async function rateLimit(request: FastifyRequest, reply: FastifyReply): P
   )
   if (isLoopbackPeer && !hasForwardingHeader) return
 
-  // For the rate-limit key, prefer the real client IP from trusted proxy headers.
-  // NB: on a self-hosted instance with no Cloudflare, these headers are not
-  // authenticated — hardening the key against a rotating X-Forwarded-For is a
-  // separate, deployment-topology-dependent change (see the trustProxy note).
-  const ip = (
-    (request.headers['cf-connecting-ip'] as string) ||
-    (request.headers['x-real-ip'] as string) ||
-    (request.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
-    socketPeer
-  )
+  // Clé = request.ip, calculé par Fastify contre la liste de proxys de confiance
+  // (loopback + privé + Cloudflare, cf config/trustedProxies.ts). C'est la vraie
+  // adresse du visiteur, qu'un X-Forwarded-For usurpé ne peut plus détourner :
+  // les fausses lignes de l'attaquant sont à gauche du dernier proxy de
+  // confiance et sont ignorées. On ne lit donc plus d'en-tête brut ici.
+  const ip = request.ip || socketPeer
 
   const key = `rate:${ip}`
 

@@ -317,7 +317,7 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     if (!user || !valid) {
-      const realIp = (request.headers['cf-connecting-ip'] as string) || request.ip
+      const realIp = request.ip  // fiable via trustProxy (loopback+privé+Cloudflare)
       const logLine = `${new Date().toISOString()} INVALID_CREDENTIALS ip=${realIp}\n`
       fs.appendFile('/var/log/nodyx-auth.log', logLine, () => {})
 
@@ -397,7 +397,7 @@ export default async function authRoutes(app: FastifyInstance) {
     await trackSession(user.id, token)
 
     // Détection connexion depuis une nouvelle IP
-    const loginIp    = (request.headers['cf-connecting-ip'] as string) || request.ip
+    const loginIp    = request.ip  // fiable via trustProxy
     const knownIpKey = `known_ip:${user.id}`
     const knownIp    = await redis.get(knownIpKey)
     await redis.set(knownIpKey, loginIp, 'EX', 60 * 60 * 24 * 30) // 30 jours
@@ -437,7 +437,7 @@ export default async function authRoutes(app: FastifyInstance) {
     const publicUser = toSelfUser(user)
 
     // Alerte connexion admin/owner
-    const realIpLogin = (request.headers['cf-connecting-ip'] as string) || request.ip
+    const realIpLogin = request.ip  // fiable via trustProxy
     db.query(
       `SELECT role FROM community_members
        WHERE user_id = $1 AND role IN ('admin', 'owner') LIMIT 1`,
