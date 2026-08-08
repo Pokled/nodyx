@@ -766,7 +766,10 @@
 		{/if}
 
 		<!-- Mobile: community name logo -->
-		<a href="/" class="lg:hidden shrink-0 font-black text-sm truncate max-w-[140px]"
+		<!-- min-w-0 (pas shrink-0) : sur écran étroit c'est le TITRE qui cède et se
+		     tronque, pas les boutons d'action à droite. Un nom long comme
+		     « Nodyx - Hub Communautaire » débordait sinon de ~25px. -->
+		<a href="/" class="lg:hidden min-w-0 font-black text-sm truncate max-w-[140px]"
 		   style="font-family: 'Space Grotesk', sans-serif; background: linear-gradient(135deg, var(--nx-accent-2-soft), var(--nx-cyan-soft)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent">
 			{communityName}
 		</a>
