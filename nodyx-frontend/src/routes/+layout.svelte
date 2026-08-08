@@ -2474,7 +2474,11 @@ a.nx-icon-btn[class*="active"],
   width: var(--right-panel-width, 220px);
   background: #0d0d12;
   border-left: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
+  /* PAS de `display: flex` ici : ce sélecteur scopé (spécificité + hash Svelte)
+     écrasait le `hidden` de Tailwind et la sidebar restait visible sous 1280px,
+     superposée au contenu sur mobile. On laisse Tailwind piloter l'affichage
+     (`hidden xl:flex` sur l'aside) ; flex-direction ne s'applique que quand
+     Tailwind a mis display:flex à >=1280px. */
   flex-direction: column;
   z-index: 30;
   transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1), width 280ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 200ms ease-out;
