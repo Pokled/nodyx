@@ -202,6 +202,25 @@
 		})
 	}
 
+	// Cliquer une ligne dans le panneau de gauche ne bougeait jamais le canvas :
+	// sur un layout un peu long, la ligne cliquée pouvait être hors écran sans
+	// aucun retour visuel (retour Jonathan, 2026-08-09). Même geste que addRow()
+	// (scroll centré + flash), plus la sélection du premier widget de la ligne
+	// pour que l'aura de .gr-col--selected pointe dessus.
+	function jumpToRow(rowId: string) {
+		const row = draft.rows.find(r => r.id === rowId)
+		if (!row) return
+		const firstWithWidget = row.columns.find(c => c.widget)
+		if (firstWithWidget) selectedCol = { rowId, colId: firstWithWidget.id }
+		tick().then(() => {
+			const el = document.querySelector(`.canvas-preview [data-row-id="${rowId}"]`)
+			if (!el) return
+			el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			el.classList.add('gr-row--jump')
+			setTimeout(() => el.classList.remove('gr-row--jump'), 1600)
+		})
+	}
+
 	function deleteRow(rowId: string) {
 		if (!confirm(tFn('hpb.confirm_delete_row'))) return
 		draft = { ...draft, rows: draft.rows.filter(r => r.id !== rowId) }
@@ -656,11 +675,12 @@
 								class:row-item--dragover={dragOverIdx === idx && dragRowId !== row.id}
 								data-row-id={row.id}
 								role="listitem"
+								onclick={() => jumpToRow(row.id)}
 							>
 								<!-- Handle drag -->
 								<button
 									class="row-item-handle"
-									onpointerdown={(e) => onRowDragStart(e, row.id)}
+									onpointerdown={(e) => { e.stopPropagation(); onRowDragStart(e, row.id) }}
 									title={tFn('hpb.move')}
 								>⠿</button>
 
@@ -676,8 +696,8 @@
 
 								<!-- Actions -->
 								<div class="row-item-actions">
-									<button class="riba" title={tFn('hpb.settings')} onclick={() => { editRowId = row.id; activePanel = 'rowsettings' }}>⚙</button>
-									<button class="riba riba--del" title={tFn('hpb.delete')} onclick={() => deleteRow(row.id)}>✕</button>
+									<button class="riba" title={tFn('hpb.settings')} onclick={(e) => { e.stopPropagation(); editRowId = row.id; activePanel = 'rowsettings'; jumpToRow(row.id) }}>⚙</button>
+									<button class="riba riba--del" title={tFn('hpb.delete')} onclick={(e) => { e.stopPropagation(); deleteRow(row.id) }}>✕</button>
 								</div>
 							</div>
 						{/each}
@@ -1816,6 +1836,17 @@
 		0%   { box-shadow: inset 0 0 0 2px rgba(167, 139, 250, .9);  background: rgba(167, 139, 250, .10); }
 		60%  { box-shadow: inset 0 0 0 2px rgba(167, 139, 250, .45); background: rgba(167, 139, 250, .04); }
 		100% { box-shadow: inset 0 0 0 2px rgba(167, 139, 250, 0);   background: transparent; }
+	}
+
+	/* Même mécanique que gr-row--born, posée par jumpToRow() quand on clique
+	   une ligne existante dans le panneau : deux flashes au lieu d'un fondu
+	   unique, pour se distinguer visuellement de la naissance d'une ligne. */
+	:global(.canvas-preview .gr-row--jump) {
+		animation: row-jump 1.6s ease-out;
+	}
+	@keyframes row-jump {
+		0%, 40%, 100% { box-shadow: inset 0 0 0 2px rgba(167, 139, 250, 0);   background: transparent; }
+		20%, 60%      { box-shadow: inset 0 0 0 2px rgba(167, 139, 250, .85); background: rgba(167, 139, 250, .08); }
 	}
 
 	.canvas-empty {

@@ -296,6 +296,14 @@
 	.gr-col--selected {
 		outline: 2px solid var(--nx-accent-2-soft) !important;
 		outline-offset: -1px;
+		animation: gr-col-aura 1.8s ease-in-out infinite;
+	}
+	@keyframes gr-col-aura {
+		0%, 100% { box-shadow: 0 0 0 0 rgb(var(--nx-accent-2-rgb) / .35), inset 0 0 20px rgb(var(--nx-accent-2-rgb) / .05); }
+		50%      { box-shadow: 0 0 24px 3px rgb(var(--nx-accent-2-rgb) / .55), inset 0 0 30px rgb(var(--nx-accent-2-rgb) / .12); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.gr-col--selected { animation: none; box-shadow: 0 0 16px 2px rgb(var(--nx-accent-2-rgb) / .4); }
 	}
 	.gr-col--empty {
 		min-height: 80px;
