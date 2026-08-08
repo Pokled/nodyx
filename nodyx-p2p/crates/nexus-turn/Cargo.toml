@@ -2,6 +2,7 @@
 name = "nodyx-turn"
 version = "0.1.0"
 edition = "2021"
+license = "AGPL-3.0"
 description = "Nodyx STUN/TURN relay — replaces coturn with a Rust-native implementation"
 
 [[bin]]

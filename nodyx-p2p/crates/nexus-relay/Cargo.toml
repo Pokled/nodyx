@@ -2,6 +2,7 @@
 name = "nodyx-relay"
 version = "0.1.4"
 edition = "2021"
+license = "AGPL-3.0"
 description = "Nodyx P2P relay — tunnel Nodyx instances without open ports or a domain"
 
 [[bin]]

@@ -2,6 +2,7 @@
   "name": "nodyx-hub",
   "version": "1.0.0",
   "private": true,
+  "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 7777",

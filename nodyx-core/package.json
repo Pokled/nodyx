@@ -18,7 +18,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "AGPL-3.0",
   "type": "commonjs",
   "dependencies": {
     "@fastify/cors": "11.2.0",

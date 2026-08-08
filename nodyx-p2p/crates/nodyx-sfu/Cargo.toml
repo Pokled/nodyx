@@ -2,6 +2,7 @@
 name = "nodyx-sfu"
 version = "0.1.0"
 edition = "2021"
+license = "AGPL-3.0"
 description = "SFU media du reseau Nodyx : abstraction moteur (trait MediaEngine) + orchestration. Le moteur concret (mediasoup, puis Rust natif) se branche DERRIERE le trait (swap-ready). Cf SPECS/NODYX_SFU_CDC.md."
 
 [dependencies]
