@@ -155,7 +155,7 @@ The community-tools landscape isn't a battle. Each project optimizes for differe
 - Passwordless login (ECDSA P-256 PWA, Nodyx Signet)
 - Collaborative jukebox (YouTube queue)
 - Event calendar (OSM maps, RSVP, SEO)
-- **Homepage Builder** with 11 layout zones, drag & drop
+- **Homepage Builder**, drag-and-drop rows and columns on a 12-unit grid
 - **Widget Store**, install external widgets via .zip
 - **Widget SDK**, build custom widgets, no framework needed
 - **OctoGuard**, native auto-mod (regex/word/link/emoji-flood, ReDoS-safe via Google `re2`), welcome bot, custom commands, mutes, signed webhook, all admin-tunable, off by default
@@ -166,7 +166,7 @@ The community-tools landscape isn't a battle. Each project optimizes for differe
 
 ## Homepage Builder + Widget SDK
 
-Nodyx ships with a **drag-and-drop Homepage Builder** (11 layout zones, 4 native widgets, per-widget audience and scheduling) and a complete **Widget SDK**, plain JavaScript Custom Elements, no React, no Vue, no npm required. Any developer can package a widget as a `.zip` and install it on any Nodyx instance in one click, no rebuild, no deploy. Two features that no other self-hosted community platform offers together.
+Nodyx ships with a **drag-and-drop Homepage Builder** (rows split into resizable columns on a 12-unit grid, 9 native widgets, per-widget audience rules, draft/publish) and a complete **Widget SDK**, plain JavaScript Custom Elements, no React, no Vue, no npm required. Any developer can package a widget as a `.zip` and install it on any Nodyx instance in one click, no rebuild, no deploy. Two features that no other self-hosted community platform offers together.
 
 → **[Homepage Builder, full guide](docs/en/HOMEPAGE-BUILDER.md)**, layout zones, native widgets, the Widget Store
 → **[Build your first widget](https://nodyx.dev/create-widget)**, step-by-step SDK guide for non-developers
@@ -263,9 +263,9 @@ Board-scoped chat (independent from the voice channel chat)
 
 <b>,  Homepage Builder , </b>
 
-<img src="docs/img/Nodyx_grid_builder_home_page_website.png" alt="Homepage Builder, drag & drop, 11 zones, live preview" width="940"/>
+<img src="docs/img/Nodyx_grid_builder_home_page_website.png" alt="Homepage Builder, drag & drop rows and columns, live preview" width="940"/>
 
-<sub>Drag-and-drop grid editor, 11 layout zones, live preview, per-widget audience rules and scheduling</sub>
+<sub>Drag-and-drop grid editor, resizable rows and columns on a 12-unit grid, live preview, per-widget audience rules</sub>
 
 </div>
 
@@ -427,7 +427,7 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 | TURN relay | **nodyx-turn**, Rust 2.9 MB, replaces coturn |
 | P2P relay | **nodyx-relay**, Rust TCP tunnel, runs on home servers |
 | Collaborative canvas | **NodyxCanvas**, CRDT LWW, Socket.IO sync, 11 tools, resize handles, undo/redo |
-| Homepage | **Homepage Builder**, 11 zones, drag & drop, visibility rules |
+| Homepage | **Homepage Builder**, rows/columns grid, drag & drop, visibility rules |
 | Widgets | **Widget Store**, .zip install + **Widget SDK** (Web Components) |
 | Passwordless auth | **Nodyx Signet**, ECDSA P-256 PWA, `nodyx-authenticator/` |
 

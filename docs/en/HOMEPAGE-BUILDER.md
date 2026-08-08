@@ -1,37 +1,30 @@
 # Homepage Builder
 
-> Available in Nodyx v2.1+. A drag-and-drop admin tool that turns your instance's public homepage into a real, composable website, no template lock-in, no rebuild, no deploy.
+> Available in Nodyx v2.1+, rebuilt as Grid Builder v2 in v2.3. A drag-and-drop admin tool that turns your instance's public homepage into a real, composable website, no template lock-in, no rebuild, no deploy.
 
 :::info Related documentation
-**Homepage Builder** and **Module System** are two distinct but connected systems, read both to understand the full picture.
+**Homepage Builder** and **[Module System](module-system)** are two distinct but connected systems, read both to understand the full picture.
 - The **Homepage Builder** controls *what visitors see* on your public homepage (layout, widgets, theme)
 - The **Module System** controls *what features exist* on your instance (forum, chat, voice, wiki...)
 - A `website` module exposes widgets that appear in the Homepage Builder, but only when the module is active
-
-See [Module System](module-system) for the other half of the picture.
 :::
 
 Nodyx ships with a drag-and-drop Homepage Builder and a complete Widget SDK, two features that no other self-hosted community platform offers together.
 
-## The 11 layout zones
+## Rows and columns, not fixed zones
 
-Place widgets anywhere on your homepage. Positions include:
+Earlier versions positioned widgets into a fixed set of named zones (banner, hero, sidebar...). That system is gone. The homepage is now a free stack of **rows**, each split into **columns** on a 12-unit grid, closer to Bootstrap or CSS Grid than to a template.
 
-```
-banner          → full-width top announcement strip
-hero            → main hero section
-stats-bar       → community counters (members, online, posts)
-main            → above main content
-sidebar         → right column (join card, etc.)
-half-1 / half-2 → 2-column grid
-trio-1/2/3      → 3-column grid
-footer-1/2/3    → footer columns
-footer-bar      → full-width footer strip
-```
+- **Add a row** from a preset: 1, 2, 3 or 4 equal columns, or an asymmetric split like `8+4`, `6+3+3`, `4+4+4`, `2+8+2`. The preset only sets the starting point.
+- **Resize a column** by dragging the handle between two adjacent columns. Its neighbor shrinks by the same amount, the row's spans always sum back to 12, and each column keeps a minimum width of 2 units.
+- **Add or remove a column** inside an existing row at any time, as long as at least one remains.
+- **Reorder rows** by dragging the row handle, drop it above or below any other row.
+- Each row has its own gap, vertical padding and an optional background color override.
+- Every column independently adapts down to tablet and mobile widths, and can be hidden on either.
 
-Every zone accepts any widget, native or third-party. Drag a widget from the picker, drop it in a zone, done, no page reload, no build step.
+There are no named zones left to reason about, a row is a row wherever it sits on the page. Order is everything.
 
-## 4 native widgets (Phase 1)
+## 9 native widgets (Phase 1)
 
 | Widget | Description |
 |---|---|
@@ -39,13 +32,23 @@ Every zone accepts any widget, native or third-party. Drag a widget from the pic
 | **Stats Bar** | Live member count, online count, thread count with animated counters |
 | **Join Card** | CTA card for guests, hidden for logged-in members |
 | **Announcement Banner** | Closeable info/warning/error strip with icon |
+| **Article Slideshow** | Rotating showcase of featured articles |
+| **Articles Showcase** | Configurable grid or list of recent articles |
+| **Recent Threads** | Latest forum activity, with a custom section heading |
+| **Social Links Bar** | Row of social/external links with brand icons |
+| **Twitch Stream** | Embedded live channel, on air or offline state |
+
+Drop any widget into any column, on any row, click the empty cell and pick it from the picker.
 
 ## Visibility rules
 
-Every widget instance carries its own audience and schedule, independent of the others:
+Every widget instance carries its own audience, independent of the others:
 
 - **Audience**: everyone, guests only, or members only
-- **Scheduling**: an optional start and end date, useful for a limited-time event banner that removes itself automatically
+
+## Draft and publish
+
+Edits save as a **draft** (`draft_layout`) that only admins preview, the live site keeps serving the last **published** version (`published_layout`) until you explicitly publish. Nothing a visitor sees changes mid-edit.
 
 ## Widget Store, install in one click
 
@@ -59,7 +62,7 @@ my-widget-1.0.0.zip
 
 The admin panel handles upload, validation, extraction and activation. Under the hood: an XHR progress bar during upload, a 4-step validation pass, and an extraction whitelist so a malicious archive can't write outside its own widget folder. No rebuild, no deploy.
 
-Once installed, a widget from the Store appears in the same picker as the 4 native widgets, drag it into any of the 11 zones like any other.
+Once installed, a widget from the Store appears in the same picker as the 9 native widgets, drop it into any column like any other.
 
 ## Widget SDK, build your own, zero build tools
 
