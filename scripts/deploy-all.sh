@@ -117,6 +117,18 @@ G=ok
 build_app "nodyx-docs"    /var/www/nexus/nodyx-docs    || G=ko
 build_app "nodyx-hub"     /var/www/nexus/nodyx-hub     || G=ko
 build_app "nodyx-landing" /var/www/nexus/nodyx-landing || G=ko
+
+# nodyx-hub écrit une base SQLite (hub.db) DANS son dossier, et tourne en `nodyx`.
+# SQLite en mode WAL recrée hub.db-wal/-shm au démarrage : il lui faut donc un
+# dossier inscriptible par nodyx. Le build ci-dessus tourne en root et laisse le
+# dossier root:root → au restart, le hub tombait en « readonly database » (500).
+# On rend le dossier + la base inscriptibles par le groupe nodyx AVANT le restart.
+if [[ -d /var/www/nexus/nodyx-hub ]]; then
+  chgrp nodyx /var/www/nexus/nodyx-hub && chmod 775 /var/www/nexus/nodyx-hub
+  chown nodyx:nodyx /var/www/nexus/nodyx-hub/hub.db* 2>/dev/null || true
+  ok "nodyx-hub : dossier de données inscriptible par nodyx (SQLite WAL)"
+fi
+
 restart_if_built "$G" nodyx-docs nodyx-hub nodyx-landing
 
 # ── 4. sleemstudio.nodyx.org (dépôt dédié, build figé sur son domaine) ───────
