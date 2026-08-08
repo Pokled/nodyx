@@ -1,4 +1,5 @@
 import type { Handle, HandleFetch } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { getLocaleFromAcceptLanguage, isKnownLocale } from '$lib/i18n';
 
 // Make sure /service-worker.js (and any other SW-like files) are never cached
@@ -61,9 +62,23 @@ export const handleFetch: HandleFetch = ({ event, request, fetch }) => {
 		return fetch(new Request(url, { method: request.method, headers }));
 	}
 
-	// Forward real client IP for SSR calls to the internal backend (127.0.0.1 or localhost)
+	// Appels internes vers le backend (127.0.0.1 / localhost).
+	//
+	// Le rendu d'une page tire ~8 requêtes core (layout + page). Si on forwarde le
+	// X-Forwarded-For du visiteur SANS marquer l'appel comme interne, le core les
+	// compte au nom du visiteur : ~12 pages suffisent à épuiser son quota, le core
+	// répond 429 et le SSR renvoie des pages vides (incident cyclique du 2026-08-08).
+	//
+	// Avec INTERNAL_API_SECRET configuré : on forwarde le vrai IP (pour bans /
+	// inscriptions) ET on marque l'appel comme interne -> le core l'exempte du
+	// rate-limit. Sans secret : on n'ajoute rien, l'appel reste loopback pur et le
+	// core le bypasse via sa règle loopback (dégradation gracieuse, l'IP visiteur
+	// n'est alors pas propagée).
 	if (url.includes('127.0.0.1') || url.includes('localhost')) {
-		headers.set('x-forwarded-for', event.getClientAddress());
+		if (env.INTERNAL_API_SECRET) {
+			headers.set('x-forwarded-for', event.getClientAddress());
+			headers.set('x-nodyx-internal', env.INTERNAL_API_SECRET);
+		}
 		return fetch(new Request(request, { headers }));
 	}
 
