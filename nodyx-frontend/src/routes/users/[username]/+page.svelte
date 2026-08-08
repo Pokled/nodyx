@@ -329,7 +329,7 @@
 
 	<!-- Identity passport — anchored at banner bottom -->
 	<div class="absolute bottom-0 inset-x-0 z-10">
-		<div class="max-w-6xl mx-auto px-6 flex items-end gap-6 pb-6">
+		<div class="max-w-[1600px] mx-auto px-6 flex items-end gap-6 pb-6">
 
 			<!-- Avatar with frame -->
 			<div class="relative shrink-0 translate-y-10" style="width:128px;height:128px;overflow:visible">
@@ -501,7 +501,7 @@
 <!-- ═══════════════════════════════════════════════════════════════
      XP STRIP — full width, cinematic
      ═══════════════════════════════════════════════════════════════ -->
-<div class="max-w-6xl mx-auto px-6 mb-6">
+<div class="max-w-[1600px] mx-auto px-6 mb-6">
 	<div class="profile-xp-strip p-5" style="--accent: {accent}">
 		<div class="flex items-center justify-between mb-3 gap-4 flex-wrap">
 			<div class="flex items-center gap-3">
@@ -541,7 +541,7 @@
 <!-- ═══════════════════════════════════════════════════════════════
      MAIN — 2-column layout
      ═══════════════════════════════════════════════════════════════ -->
-<div class="max-w-6xl mx-auto px-6 pb-16">
+<div class="max-w-[1600px] mx-auto px-6 pb-16">
 	<div class="flex flex-col sm:flex-row gap-5 items-start">
 
 		<!-- ─── LEFT SIDEBAR ─────────────────────────────────────────── -->
