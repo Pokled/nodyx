@@ -76,19 +76,21 @@
 	const allStats: Record<string, () => StatDef> = {
 		members: () => ({
 			key: 'members', value: displayed.members,
-			label: tFn('common.members'), color: '#a78bfa', pulse: false, glow: true,
+			label: tFn('common.members'), color: 'var(--np)', pulse: false, glow: true,
 		}),
 		online: () => ({
+			// Vert "en ligne" volontairement fixe : couleur de statut sémantique,
+			// pas un accent de thème (cohérence avec les autres indicateurs "online" du site).
 			key: 'online', value: displayed.online,
 			label: tFn('common.online'), color: '#4ade80', pulse: true, glow: false,
 		}),
 		threads: () => ({
 			key: 'threads', value: displayed.threads,
-			label: tFn('common.topics'), color: '#67e8f9', pulse: false, glow: false,
+			label: tFn('common.topics'), color: 'var(--na)', pulse: false, glow: false,
 		}),
 		posts: () => ({
 			key: 'posts', value: displayed.posts,
-			label: tFn('nav.dm'), color: '#94a3b8', pulse: false, glow: false,
+			label: tFn('nav.dm'), color: 'var(--ntm)', pulse: false, glow: false,
 		}),
 	};
 
@@ -102,11 +104,11 @@
 <div class="flex flex-wrap items-stretch gap-0.5">
 	{#each visibleStats as stat (stat.key)}
 		<div class="flex flex-col items-center justify-center px-6 py-2 gap-0.5"
-		     style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06)">
+		     style="background:var(--nc); border:var(--nbw) solid var(--nborder)">
 			<span
 				class="font-black text-xl tabular-nums"
 				class:sglow={stat.glow}
-				style="font-family:'Space Grotesk',sans-serif; color:{stat.color}"
+				style="font-family:var(--nfont); color:{stat.color}"
 			>
 				{#if stat.pulse}
 					<span class="flex items-center gap-2">
@@ -117,7 +119,7 @@
 					{stat.value.toLocaleString()}
 				{/if}
 			</span>
-			<span class="text-[9px] uppercase tracking-[.18em] font-bold" style="color:#374151">
+			<span class="text-[9px] uppercase tracking-[.18em] font-bold" style="color:var(--ntm)">
 				{stat.label}
 			</span>
 		</div>

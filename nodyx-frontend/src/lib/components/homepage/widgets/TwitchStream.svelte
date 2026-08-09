@@ -22,7 +22,14 @@
 	const autoplay      = $derived((config.autoplay as boolean) ?? false)
 	const muted         = $derived((config.muted as boolean) ?? true)
 	const showHeader    = $derived((config.show_header as boolean) ?? true)
-	const accent        = $derived((config.accent_color as string) ?? '#9146FF')
+	// Couleur d'accent du widget : si l'admin la fixe (config.accent_color,
+	// ex. le violet de marque Twitch #9146FF), on garde l'astuce hex+alpha.
+	// Sinon on suit le thème du Homepage Builder EN DIRECT via --nl.
+	const customAccent  = $derived(config.accent_color as string | undefined)
+	const accent        = $derived(customAccent ?? 'var(--nl)')
+	const accentBgWeak  = $derived(customAccent ? `${customAccent}1a` : 'rgb(var(--nl-rgb) / .1)')
+	const accentBrdWeak = $derived(customAccent ? `${customAccent}33` : 'rgb(var(--nl-rgb) / .2)')
+	const accentBrdMed  = $derived(customAccent ? `${customAccent}55` : 'rgb(var(--nl-rgb) / .33)')
 	const fallbackCat   = $derived((config.fallback_category as string) ?? '')
 	const fallbackLang  = $derived((config.fallback_language as string) ?? 'any')
 
@@ -152,14 +159,14 @@
 {#if !configuredChannel}
 	<!-- Empty state : aucune chaîne configurée -->
 	<div class="relative flex flex-col items-center justify-center gap-3 px-6 py-12 text-center"
-	     style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07)">
+	     style="background:var(--nc, rgba(255,255,255,.03)); border:var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07))">
 		<svg viewBox="0 0 24 24" class="w-8 h-8" style="color:{accent}" fill="currentColor" aria-hidden="true">
 			<path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
 		</svg>
-		<p class="text-sm font-bold uppercase tracking-[.18em]" style="font-family:'Space Grotesk',sans-serif; color:#e2e8f0">
+		<p class="text-sm font-bold uppercase tracking-[.18em]" style="font-family:var(--nfont, 'Space Grotesk', sans-serif); color:var(--nt, #e2e8f0)">
 			Twitch Stream
 		</p>
-		<p class="text-xs max-w-xs" style="color:#6b7280">
+		<p class="text-xs max-w-xs" style="color:var(--ntm, #6b7280)">
 			{tFn('widgets.twitch_configure')}
 		</p>
 	</div>
@@ -167,7 +174,7 @@
 {:else}
 	<div class="twitch-widget relative overflow-hidden"
 	     class:is-live={isMainLive || isFallbackLive}
-	     style="--accent:{accent}; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07)">
+	     style="--accent:{accent}; background:var(--nc, rgba(255,255,255,.03)); border:var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07))">
 
 		<!-- Gradient shine animée (purple Twitch → teal Nodyx) -->
 		<div class="twitch-shine" aria-hidden="true"></div>
@@ -175,12 +182,12 @@
 		{#if showHeader}
 			<!-- Header : logo + pseudo + badge live + CTA -->
 			<div class="relative flex items-center justify-between gap-3 px-4 py-2.5"
-			     style="background:rgba(0,0,0,.35); border-bottom:1px solid rgba(255,255,255,.06); backdrop-filter:blur(12px)">
+			     style="background:rgba(0,0,0,.35); border-bottom:var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.06)); backdrop-filter:blur(12px)">
 
 				<div class="flex items-center gap-2.5 min-w-0 flex-1">
 					<!-- Twitch glyph -->
 					<div class="relative shrink-0 flex items-center justify-center w-7 h-7"
-					     style="background:{accent}1a; border:1px solid {accent}33">
+					     style="background:{accentBgWeak}; border:1px solid {accentBrdWeak}">
 						<svg viewBox="0 0 24 24" class="w-3.5 h-3.5" style="color:{accent}" fill="currentColor" aria-hidden="true">
 							<path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
 						</svg>
@@ -189,21 +196,21 @@
 					<!-- Channel name + meta -->
 					<div class="min-w-0">
 						<div class="flex items-center gap-2">
-							<p class="text-sm font-bold truncate" style="font-family:'Space Grotesk',sans-serif; color:#e2e8f0">
+							<p class="text-sm font-bold truncate" style="font-family:var(--nfont, 'Space Grotesk', sans-serif); color:var(--nt, #e2e8f0)">
 								{activeChannel}
 							</p>
 
 							{#if isMainLive || isFallbackLive}
 								<!-- Badge LIVE pulsant -->
 								<span class="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[.22em] shrink-0"
-								      style="background:#ef4444; color:#fff; font-family:'Space Grotesk',sans-serif">
+								      style="background:#ef4444; color:#fff; font-family:var(--nfont, 'Space Grotesk', sans-serif)">
 									<span class="w-1.5 h-1.5 rounded-full opulse" style="background:#fff"></span>
 									Live
 								</span>
 							{/if}
 						</div>
 
-						<p class="text-[9px] uppercase tracking-[.22em] font-bold truncate" style="color:#6b7280">
+						<p class="text-[9px] uppercase tracking-[.22em] font-bold truncate" style="color:var(--ntm, #6b7280)">
 							{#if isFallbackLive && currentStream}
 								Fallback · {currentStream.game_name} · {formatViewers(currentStream.viewers)} viewers
 							{:else if isMainLive && currentStream}
@@ -222,7 +229,7 @@
 				   target="_blank"
 				   rel="noopener noreferrer"
 				   class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] transition-all twitch-cta"
-				   style="font-family:'Space Grotesk',sans-serif; color:#e2e8f0; background:{accent}1a; border:1px solid {accent}55"
+				   style="font-family:var(--nfont, 'Space Grotesk', sans-serif); color:var(--nt, #e2e8f0); background:{accentBgWeak}; border:1px solid {accentBrdMed}"
 				   aria-label={tFn('widgets.twitch_open_channel', { channel: activeChannel })}>
 					<span class="hidden sm:inline">{tFn('widgets.open')}</span>
 					<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
@@ -235,12 +242,12 @@
 		<!-- Bannière fallback : main offline, on montre un autre stream -->
 		{#if isFallbackLive && widgetData?.main === null && configuredChannel !== activeChannel}
 			<div class="relative flex items-center gap-2 px-4 py-1.5 text-[10px]"
-			     style="background:rgba(145,70,255,.08); border-bottom:1px solid rgba(145,70,255,.2); color:var(--np)">
+			     style="background:rgb(var(--np-rgb) / .08); border-bottom:1px solid rgb(var(--np-rgb) / .2); color:var(--np)">
 				<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
 				</svg>
 				<span class="truncate">
-					<span style="color:#6b7280">{configuredChannel}</span> {tFn('widgets.twitch_offline_mid')} <span class="font-bold">{activeChannel}</span> {tFn('widgets.twitch_offline_end')}
+					<span style="color:var(--ntm, #6b7280)">{configuredChannel}</span> {tFn('widgets.twitch_offline_mid')} <span class="font-bold">{activeChannel}</span> {tFn('widgets.twitch_offline_end')}
 				</span>
 			</div>
 		{/if}
@@ -257,11 +264,11 @@
 				{#if !iframeLoaded}
 					<!-- Skeleton loader pulse -->
 					<div class="absolute inset-0 flex items-center justify-center"
-					     style="background:linear-gradient(135deg, rgb(var(--np-rgb) / .08), rgba(14,116,144,.08))">
+					     style="background:linear-gradient(135deg, rgb(var(--np-rgb) / .08), rgb(var(--na-rgb) / .08))">
 						<div class="flex flex-col items-center gap-3">
 							<div class="w-8 h-8 rounded-full border-2 animate-spin"
-							     style="border-color:rgba(145,70,255,.2); border-top-color:{accent}"></div>
-							<span class="text-[10px] uppercase tracking-[.18em] font-bold" style="color:#6b7280; font-family:'Space Grotesk',sans-serif">
+							     style="border-color:{accentBrdWeak}; border-top-color:{accent}"></div>
+							<span class="text-[10px] uppercase tracking-[.18em] font-bold" style="color:var(--ntm, #6b7280); font-family:var(--nfont, 'Space Grotesk', sans-serif)">
 								{tFn('widgets.twitch_loading')}
 							</span>
 						</div>
@@ -289,7 +296,7 @@
 				     class:md:w-80={chatRight}
 				     class:md:border-l={chatRight}
 				     class:border-t={!chatRight}
-				     style="height:{chatRight ? `${height}px` : '280px'}; border-color:rgba(255,255,255,.06); background:#0d0d12">
+				     style="height:{chatRight ? `${height}px` : '280px'}; border-color:var(--nborder, rgba(255,255,255,.06)); background:var(--nc, #0d0d12)">
 					{#if mounted && parentDomain}
 						{#key activeChannel + parentDomain}
 							<iframe

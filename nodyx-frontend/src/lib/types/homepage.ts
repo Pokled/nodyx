@@ -32,9 +32,11 @@ export interface HomepageData {
 export interface GridTheme {
 	primary:             string;   // ex: "#a78bfa"
 	accent:              string;   // ex: "#06b6d4"
+	link_color:          string;   // ex: "#a78bfa" — couleur des liens/CTA, distincte de primary/accent
 	bg:                  string;   // ex: "#05050a"
 	card_bg:             string;   // ex: "rgba(255,255,255,.03)"
 	border_color:        string;   // ex: "rgba(255,255,255,.08)"
+	border_width:        string;   // ex: "1px"
 	border_radius:       string;   // ex: "10px"
 	font_family:         string;   // ex: "Space Grotesk"
 	font_size_base:      string;   // ex: "15px"
@@ -47,9 +49,11 @@ export interface GridTheme {
 export const DEFAULT_THEME: GridTheme = {
 	primary:             '#a78bfa',
 	accent:              '#06b6d4',
+	link_color:          '#a78bfa',
 	bg:                  '#05050a',
 	card_bg:             'rgba(255,255,255,.03)',
 	border_color:        'rgba(255,255,255,.08)',
+	border_width:        '1px',
 	border_radius:       '10px',
 	font_family:         'Space Grotesk',
 	font_size_base:      '15px',
@@ -57,6 +61,93 @@ export const DEFAULT_THEME: GridTheme = {
 	text_primary:        '#e2e8f0',
 	text_secondary:      '#6b7280',
 	shadow:              '0 4px 24px rgba(0,0,0,.4)',
+}
+
+/**
+ * Préthèmes prêts à l'emploi : point de départ pour un admin qui n'ose pas
+ * toucher aux couleurs une par une. Un clic remplace le thème entier (couleurs
+ * ET typographie ET forme), avec Réinitialiser pour toujours pouvoir revenir
+ * en arrière sans perte.
+ */
+export interface GridThemePreset {
+	id:    string;
+	label: string;
+	emoji: string;
+	theme: GridTheme;
+}
+
+export const GRID_THEME_PRESETS: GridThemePreset[] = [
+	{ id: 'default', label: 'Nodyx', emoji: '🌑', theme: DEFAULT_THEME },
+	{
+		id: 'midnight', label: 'Minuit', emoji: '🌌',
+		theme: {
+			primary: '#3b82f6', accent: '#22d3ee', link_color: '#60a5fa', bg: '#020617',
+			card_bg: 'rgba(59,130,246,.05)', border_color: 'rgba(59,130,246,.14)', border_width: '1px',
+			border_radius: '10px', font_family: 'Space Grotesk', font_size_base: '15px',
+			font_weight_heading: '700', text_primary: '#e2e8f0', text_secondary: '#64748b',
+			shadow: '0 4px 24px rgba(0,0,0,.5)',
+		},
+	},
+	{
+		id: 'forest', label: 'Forêt', emoji: '🌲',
+		theme: {
+			primary: '#22c55e', accent: '#84cc16', link_color: '#4ade80', bg: '#031f0f',
+			card_bg: 'rgba(34,197,94,.05)', border_color: 'rgba(34,197,94,.14)', border_width: '1px',
+			border_radius: '8px', font_family: 'Inter', font_size_base: '15px',
+			font_weight_heading: '700', text_primary: '#f0fdf4', text_secondary: '#6b9a7d',
+			shadow: '0 4px 24px rgba(0,0,0,.45)',
+		},
+	},
+	{
+		id: 'warm', label: 'Chaleur', emoji: '🔥',
+		theme: {
+			primary: '#f97316', accent: '#facc15', link_color: '#fb923c', bg: '#1c0a00',
+			card_bg: 'rgba(249,115,22,.06)', border_color: 'rgba(249,115,22,.16)', border_width: '1px',
+			border_radius: '12px', font_family: 'Space Grotesk', font_size_base: '16px',
+			font_weight_heading: '800', text_primary: '#fff7ed', text_secondary: '#c99a72',
+			shadow: '0 4px 24px rgba(0,0,0,.45)',
+		},
+	},
+	{
+		id: 'rose', label: 'Rose', emoji: '🌸',
+		theme: {
+			primary: '#ec4899', accent: '#a78bfa', link_color: '#f472b6', bg: '#1a0010',
+			card_bg: 'rgba(236,72,153,.05)', border_color: 'rgba(236,72,153,.15)', border_width: '1px',
+			border_radius: '14px', font_family: 'Space Grotesk', font_size_base: '15px',
+			font_weight_heading: '700', text_primary: '#fdf2f8', text_secondary: '#c48aa8',
+			shadow: '0 4px 24px rgba(0,0,0,.4)',
+		},
+	},
+	{
+		id: 'minimal', label: 'Minimal', emoji: '◻️',
+		theme: {
+			primary: '#e2e8f0', accent: '#94a3b8', link_color: '#e2e8f0', bg: '#0a0a0a',
+			card_bg: 'rgba(255,255,255,.02)', border_color: 'rgba(255,255,255,.10)', border_width: '1px',
+			border_radius: '2px', font_family: 'Inter', font_size_base: '15px',
+			font_weight_heading: '600', text_primary: '#f5f5f5', text_secondary: '#8a8a8a',
+			shadow: '0 2px 12px rgba(0,0,0,.3)',
+		},
+	},
+]
+
+/** Parse une couleur "rgba(r,g,b,a)" ou hex en { hex, alpha } pour un color picker natif + curseur d'opacité. */
+export function parseColorAlpha(input: string): { hex: string; alpha: number } {
+	const rgba = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)/i.exec(input ?? '')
+	if (rgba) {
+		const [, r, g, b, a] = rgba
+		const hex = '#' + [r, g, b].map(v => Math.max(0, Math.min(255, parseInt(v, 10))).toString(16).padStart(2, '0')).join('')
+		return { hex, alpha: a !== undefined ? parseFloat(a) : 1 }
+	}
+	const hexMatch = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(input?.trim() ?? '')
+	if (hexMatch) return { hex: '#' + (hexMatch[1].length === 3 ? hexMatch[1].split('').map(c => c + c).join('') : hexMatch[1]), alpha: 1 }
+	return { hex: '#a78bfa', alpha: 1 }
+}
+
+/** Recompose "rgba(r,g,b,a)" à partir d'un hex (color picker) + une opacité 0-1 (slider). */
+export function composeRgba(hex: string, alpha: number): string {
+	const { hex: h } = parseColorAlpha(hex)
+	const triplet = hexToRgbTriplet(h)
+	return `rgba(${triplet.split(' ').join(',')},${Math.round(alpha * 100) / 100})`
 }
 
 export interface GridColumn {

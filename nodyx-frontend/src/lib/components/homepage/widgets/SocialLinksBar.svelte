@@ -211,8 +211,9 @@
 		},
 
 		// ── Lien custom ───────────────────────────────────────────────────────
+		// Seul type sans marque réelle à respecter : suit la couleur de lien du thème.
 		custom: {
-			color: '#a78bfa',
+			color: 'var(--nl)',
 			stroke: true,
 			path: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14',
 		},
@@ -269,25 +270,25 @@
 		display: flex;
 		align-items: center;
 		gap: .4rem;
-		color: rgba(255,255,255,.4);
+		color: var(--ntm, rgba(255,255,255,.4));
 		text-decoration: none;
-		border-radius: 6px;
+		border-radius: var(--nr, 6px);
 		padding: 6px;
 		transition: color .15s, background .15s, transform .15s;
 	}
 	.sl-link:hover {
-		color: var(--ic, var(--np));
+		color: var(--ic, var(--nl));
 		background: rgba(255,255,255,.06);
 		transform: translateY(-2px);
 	}
 	.sl-link--pill {
 		padding: 5px 12px;
-		background: rgba(255,255,255,.05);
-		border: 1px solid rgba(255,255,255,.08);
+		background: var(--nc, rgba(255,255,255,.05));
+		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.08));
 	}
 	.sl-link--pill:hover {
 		background: rgba(255,255,255,.09);
-		border-color: var(--ic, rgba(167,139,250,.4));
+		border-color: var(--ic, rgb(var(--np-rgb) / .4));
 	}
 	.sl-label {
 		font-size: 12px;

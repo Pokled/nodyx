@@ -2517,6 +2517,14 @@
   "hpb.th_bg": "Page background",
   "hpb.th_text_primary": "Primary text",
   "hpb.th_text_secondary": "Secondary text",
+  "hpb.presets": "Presets",
+  "hpb.reset_theme": "Reset",
+  "hpb.confirm_reset_theme": "Reset the theme to the Nodyx default? All custom colors and settings will be lost.",
+  "hpb.toast_theme_reset": "Theme reset",
+  "hpb.toast_preset_applied": "Preset \"{{name}}\" applied",
+  "hpb.th_link": "Link color",
+  "hpb.opacity": "Opacity ({{v}}%)",
+  "hpb.border_width": "Border width ({{v}})",
   "hpb.backgrounds_borders": "Backgrounds & Borders",
   "hpb.th_card_bg": "Card background",
   "hpb.th_border": "Border color",
@@ -4437,6 +4445,6 @@
   "translate.safety": "<b>You cannot break the app by translating.</b> Translations go through pull requests: continuous integration checks that every <code>{{variable}}</code> is left intact before anything gets merged.",
   "translate.safety_link": "How to contribute",
   "translate.footer_note": "self-hosted, no telemetry",
-"nav.panel_toggle_aria": "Resize or collapse the community menu",
-"home.hero_welcome": "Welcome to the community"
+  "nav.panel_toggle_aria": "Resize or collapse the community menu",
+  "home.hero_welcome": "Welcome to the community"
 }

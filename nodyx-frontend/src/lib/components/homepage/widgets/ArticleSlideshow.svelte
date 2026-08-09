@@ -308,10 +308,12 @@
 <style>
 	/* ── Root ──────────────────────────────────────────────────────────────── */
 	.as-root {
+		/* Couche de base (rarement visible, .as-bg-fallback la recouvre) :
+		   suit le fond de site --nb, pas --nc (réservé aux surfaces "carte"). */
 		position: relative;
 		width: 100%;
 		overflow: hidden;
-		background: #06060d;
+		background: var(--nb, #06060d);
 	}
 
 	/* ── Background ─────────────────────────────────────────────────────────── */
@@ -324,9 +326,11 @@
 		opacity: .48;
 	}
 	.as-bg-fallback {
+		/* Dégradé de secours (pas d'image) : suit primary/accent du thème plutôt
+		   qu'un violet fixe, pour rester cohérent avec un préthème différent. */
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(135deg, #12012c 0%, #020c1b 100%);
+		background: linear-gradient(135deg, rgb(var(--np-rgb) / .35) 0%, var(--nb, #020c1b) 100%);
 	}
 
 	/* ── Overlays ───────────────────────────────────────────────────────────── */
@@ -358,12 +362,12 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: #374151;
+		color: var(--ntm, #374151);
 		font-size: 13px;
 	}
 	.as-spinner {
 		width: 24px; height: 24px;
-		border: 2px solid rgba(167,139,250,.2);
+		border: 2px solid rgb(var(--np-rgb) / .2);
 		border-top-color: var(--np);
 		border-radius: 50%;
 		animation: spin .7s linear infinite;
@@ -438,8 +442,8 @@
 	/* ── Title ──────────────────────────────────────────────────────────────── */
 	.as-title {
 		font-size: clamp(1.25rem, 2.2vw, 1.85rem);
-		font-weight: 800;
-		color: #fff;
+		font-weight: var(--nfwh, 800);
+		color: var(--nt, #fff);
 		line-height: 1.25;
 		-webkit-line-clamp: 3;
 		line-clamp: 3;
@@ -455,12 +459,12 @@
 		text-decoration: none;
 		transition: color .15s;
 	}
-	.as-title a:hover { color: var(--np); }
+	.as-title a:hover { color: var(--nl, var(--np)); }
 
 	/* ── Excerpt ────────────────────────────────────────────────────────────── */
 	.as-excerpt {
 		font-size: 13px;
-		color: #6b7280;
+		color: var(--ntm, #6b7280);
 		line-height: 1.6;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
@@ -496,10 +500,12 @@
 	}
 	.as-avatar img { width: 100%; height: 100%; object-fit: cover; }
 	.as-avatar span { font-size: 11px; font-weight: 700; color: #fff; }
-	.as-author-name { font-size: 13px; color: #9ca3af; }
-	.as-dot { color: #374151; }
-	.as-date { font-size: 13px; color: #6b7280; }
+	.as-author-name { font-size: 13px; color: var(--ntm, #9ca3af); }
+	.as-dot { color: var(--ntm, #374151); }
+	.as-date { font-size: 13px; color: var(--ntm, #6b7280); }
 
+	/* CTA sur fond dégradé primary/accent : texte blanc fixe pour le contraste,
+	   pas --nl (qui pourrait se fondre dans le dégradé selon le préthème). */
 	.as-cta {
 		margin-left: auto;
 		display: flex;
@@ -539,7 +545,7 @@
 	.as-dot-btn {
 		position: relative;
 		height: 2px;
-		background: rgba(255,255,255,.15);
+		background: var(--nborder, rgba(255,255,255,.15));
 		border: none;
 		padding: 0;
 		cursor: pointer;
@@ -569,9 +575,9 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid rgba(255,255,255,.08);
+		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.08));
 		background: transparent;
-		color: #6b7280;
+		color: var(--ntm, #6b7280);
 		cursor: pointer;
 		transition: border-color .15s, color .15s;
 		border-radius: 2px;

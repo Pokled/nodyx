@@ -48,7 +48,11 @@
 	const showCategory  = $derived((config.show_category as boolean) ?? true)
 	const showViews     = $derived((config.show_views    as boolean) ?? false)
 	const ctaText       = $derived((config.cta_text      as string)  ?? tFn('widgets.read_more'))
-	const accent        = $derived((config.accent_color  as string)  ?? '#a78bfa')
+	// Si l'admin fixe une couleur (config.accent_color), elle prime. Sinon on
+	// suit la couleur de lien du thème du Homepage Builder EN DIRECT (var(--nl)
+	// est une référence CSS valide, elle se recompose très bien dans --accent
+	// ci-dessous puisque les custom properties peuvent en référencer d'autres).
+	const accent        = $derived((config.accent_color  as string)  ?? 'var(--nl)')
 	const aspectRatio   = $derived((config.aspect_ratio  as string)  ?? '16:9')
 	const sliderAuto    = $derived((config.slider_autoplay as boolean) ?? true)
 	const sliderDelay   = $derived(Math.max(3, Number(config.slider_delay_sec ?? 6)))
@@ -166,7 +170,9 @@
 						{#if magazineHero.cover_url}
 							<img src={magazineHero.cover_url} alt="" loading="lazy" />
 						{:else}
-							<div class="as-cover-placeholder" style="--cat:{accent}"></div>
+							<!-- --cat: variable morte retirée (jamais lue, le CSS lit var(--accent)
+							     hérité du .as-root ancêtre — même valeur, pas besoin de la reposer ici) -->
+							<div class="as-cover-placeholder"></div>
 						{/if}
 						<div class="as-hero-gradient"></div>
 						{#if showCategory}
@@ -349,8 +355,8 @@
 <style>
 	.as-root {
 		width: 100%;
-		font-family: Inter, system-ui, sans-serif;
-		color: #e2e8f0;
+		font-family: var(--nfont, Inter, system-ui, sans-serif);
+		color: var(--nt, #e2e8f0);
 	}
 
 	/* ─── Header ────────────────────────────────────────────────────────────── */
@@ -361,13 +367,13 @@
 		background: var(--accent);
 	}
 	.as-header h2 {
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 1.25rem; font-weight: 800;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
+		font-size: 1.25rem; font-weight: var(--nfwh, 800);
 		letter-spacing: -.01em;
-		color: #fff;
+		color: var(--nt, #fff);
 		margin: 0;
 	}
-	.as-subheading { font-size: 13px; color: #6b7280; margin: .4rem 0 0 calc(4px + .75rem); }
+	.as-subheading { font-size: 13px; color: var(--ntm, #6b7280); margin: .4rem 0 0 calc(4px + .75rem); }
 
 	/* ─── Loading ───────────────────────────────────────────────────────────── */
 	.as-loading { display: flex; flex-direction: column; gap: .75rem; }
@@ -384,15 +390,15 @@
 
 	.as-empty {
 		padding: 2rem; text-align: center;
-		font-size: 13px; color: #4b5563;
-		background: rgba(255,255,255,.02);
-		border: 1px solid rgba(255,255,255,.06);
+		font-size: 13px; color: var(--ntm, #4b5563);
+		background: var(--nc, rgba(255,255,255,.02));
+		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.06));
 	}
 
 	/* ─── Common cover placeholder + badges ────────────────────────────────── */
 	.as-cover-placeholder {
 		width: 100%; height: 100%;
-		background: linear-gradient(135deg, rgb(var(--np-rgb) / .15), rgba(14,116,144,.12));
+		background: linear-gradient(135deg, rgb(var(--np-rgb) / .15), rgb(var(--na-rgb) / .12));
 		position: relative;
 	}
 	.as-cover-placeholder::after {
@@ -408,7 +414,7 @@
 		font-size: 10px; font-weight: 800;
 		text-transform: uppercase;
 		letter-spacing: .15em;
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
 		color: #fff;
 		background: rgba(0,0,0,.6);
 		backdrop-filter: blur(8px);
@@ -419,23 +425,23 @@
 		display: inline-block;
 		font-size: 10px; font-weight: 800; letter-spacing: .15em;
 		text-transform: uppercase;
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
 		color: var(--accent);
 		margin-bottom: .35rem;
 	}
 
 	.as-meta {
 		display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
-		font-size: 12px; color: #6b7280; margin-top: .5rem;
+		font-size: 12px; color: var(--ntm, #6b7280); margin-top: .5rem;
 	}
 	.as-meta--sm { font-size: 11px; margin-top: .35rem; }
-	.as-meta strong { color: #cbd5e1; font-weight: 600; }
-	.as-meta-dot { color: #374151; }
+	.as-meta strong { color: var(--nt, #cbd5e1); font-weight: 600; }
+	.as-meta-dot { color: var(--ntm, #374151); }
 
 	.as-cta {
 		display: inline-flex; align-items: center; gap: .4rem;
 		font-size: 12px; font-weight: 700;
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
 		text-transform: uppercase; letter-spacing: .12em;
 		color: var(--accent);
 		margin-top: .75rem;
@@ -455,18 +461,18 @@
 
 	.as-hero {
 		display: flex; flex-direction: column;
-		background: rgba(255,255,255,.03);
-		border: 1px solid rgba(255,255,255,.07);
+		background: var(--nc, rgba(255,255,255,.03));
+		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07));
 		overflow: hidden;
 		text-decoration: none; color: inherit;
 		transition: border-color .2s, transform .2s;
 	}
-	.as-hero:hover { border-color: rgba(167,139,250,.4); }
+	.as-hero:hover { border-color: rgb(var(--np-rgb) / .4); }
 	.as-hero-cover {
 		position: relative; width: 100%;
 		padding-top: var(--aspect);
 		overflow: hidden;
-		background: #0d0d12;
+		background: var(--nc, #0d0d12);
 	}
 	.as-hero-cover img {
 		position: absolute; inset: 0; width: 100%; height: 100%;
@@ -481,17 +487,17 @@
 	}
 	.as-hero-body { padding: 1.25rem 1.25rem 1.5rem; }
 	.as-hero-title {
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 1.35rem; font-weight: 800;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
+		font-size: 1.35rem; font-weight: var(--nfwh, 800);
 		line-height: 1.25;
-		color: #fff;
+		color: var(--nt, #fff);
 		margin: 0 0 .5rem;
 		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
 		-webkit-box-orient: vertical; overflow: hidden;
 	}
 	.as-hero-excerpt {
 		font-size: 13px; line-height: 1.55;
-		color: #94a3b8; margin: 0;
+		color: var(--ntm, #94a3b8); margin: 0;
 		display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3;
 		-webkit-box-orient: vertical; overflow: hidden;
 	}
@@ -512,19 +518,19 @@
 	/* ─── CARD générique ───────────────────────────────────────────────────── */
 	.as-card {
 		display: flex; flex-direction: column;
-		background: rgba(255,255,255,.03);
-		border: 1px solid rgba(255,255,255,.07);
+		background: var(--nc, rgba(255,255,255,.03));
+		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07));
 		overflow: hidden;
 		text-decoration: none; color: inherit;
 		transition: border-color .2s;
 	}
-	.as-card:hover { border-color: rgba(167,139,250,.4); }
+	.as-card:hover { border-color: rgb(var(--np-rgb) / .4); }
 
 	.as-card-cover {
 		position: relative; width: 100%;
 		padding-top: var(--aspect);
 		overflow: hidden;
-		background: #0d0d12;
+		background: var(--nc, #0d0d12);
 	}
 	.as-card-cover img {
 		position: absolute; inset: 0; width: 100%; height: 100%;
@@ -536,10 +542,10 @@
 
 	.as-card-body { padding: .875rem 1rem 1rem; flex: 1; display: flex; flex-direction: column; }
 	.as-card-title {
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
 		font-size: 15px; font-weight: 700;
 		line-height: 1.3;
-		color: #fff; margin: 0 0 .35rem;
+		color: var(--nt, #fff); margin: 0 0 .35rem;
 		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
 		-webkit-box-orient: vertical; overflow: hidden;
 	}
@@ -548,7 +554,7 @@
 
 	.as-card-excerpt {
 		font-size: 12px; line-height: 1.5;
-		color: #94a3b8; margin: 0;
+		color: var(--ntm, #94a3b8); margin: 0;
 		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
 		-webkit-box-orient: vertical; overflow: hidden;
 	}
@@ -564,33 +570,33 @@
 	.as-horiz-item {
 		display: grid; grid-template-columns: 180px 1fr auto;
 		gap: 1rem; align-items: center;
-		background: rgba(255,255,255,.025);
-		border: 1px solid rgba(255,255,255,.06);
+		background: var(--nc, rgba(255,255,255,.025));
+		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.06));
 		padding: .75rem;
 		text-decoration: none; color: inherit;
 		transition: border-color .2s, background .2s;
 	}
 	.as-horiz-item:hover {
-		border-color: rgba(167,139,250,.35);
-		background: rgba(167,139,250,.04);
+		border-color: rgb(var(--np-rgb) / .35);
+		background: rgb(var(--np-rgb) / .04);
 	}
 	.as-horiz-cover {
 		width: 180px; height: 110px;
 		position: relative; overflow: hidden;
-		background: #0d0d12;
+		background: var(--nc, #0d0d12);
 	}
 	.as-horiz-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
 	.as-horiz-item:hover .as-horiz-cover img { transform: scale(1.05); }
 	.as-horiz-body { min-width: 0; }
 	.as-horiz-title {
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
 		font-size: 16px; font-weight: 700; line-height: 1.3;
-		color: #fff; margin: 0 0 .3rem;
+		color: var(--nt, #fff); margin: 0 0 .3rem;
 		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
 		-webkit-box-orient: vertical; overflow: hidden;
 	}
 	.as-horiz-excerpt {
-		font-size: 12px; color: #94a3b8; margin: 0 0 .35rem;
+		font-size: 12px; color: var(--ntm, #94a3b8); margin: 0 0 .35rem;
 		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
 		-webkit-box-orient: vertical; overflow: hidden;
 	}
@@ -609,15 +615,15 @@
 	/* ─── SLIDER ───────────────────────────────────────────────────────────── */
 	.as-slider {
 		position: relative;
-		background: rgba(255,255,255,.03);
-		border: 1px solid rgba(255,255,255,.07);
+		background: var(--nc, rgba(255,255,255,.03));
+		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07));
 		overflow: hidden;
 	}
 	.as-slide { display: block; text-decoration: none; color: inherit; }
 	.as-slide-cover {
 		position: relative; width: 100%;
 		padding-top: var(--aspect);
-		background: #0d0d12; overflow: hidden;
+		background: var(--nc, #0d0d12); overflow: hidden;
 	}
 	.as-slide-cover img {
 		position: absolute; inset: 0;
@@ -682,11 +688,11 @@
 	.as-ticker-item {
 		display: flex; align-items: center; gap: .75rem;
 		padding: .75rem 1rem;
-		border-bottom: 1px solid rgba(255,255,255,.05);
+		border-bottom: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.05));
 		text-decoration: none; color: inherit;
 		transition: background .15s;
 	}
-	.as-ticker-item:hover { background: rgba(167,139,250,.05); }
+	.as-ticker-item:hover { background: rgb(var(--np-rgb) / .05); }
 	.as-ticker-cover {
 		width: 56px; height: 56px; flex-shrink: 0;
 		overflow: hidden;
@@ -694,19 +700,19 @@
 	.as-ticker-cover img { width: 100%; height: 100%; object-fit: cover; }
 	.as-ticker-body { flex: 1; min-width: 0; }
 	.as-ticker-title {
-		font-size: 13px; font-weight: 600; color: #fff;
+		font-size: 13px; font-weight: 600; color: var(--nt, #fff);
 		margin: 0 0 .15rem;
 		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
 		-webkit-box-orient: vertical; overflow: hidden;
 	}
-	.as-ticker-date { font-size: 10px; color: #6b7280; }
+	.as-ticker-date { font-size: 10px; color: var(--ntm, #6b7280); }
 
 	/* ─── HEADLINES ────────────────────────────────────────────────────────── */
 	.as-headlines {
 		list-style: none; padding: 0; margin: 0;
-		border-top: 1px solid rgba(255,255,255,.06);
+		border-top: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.06));
 	}
-	.as-headlines li { border-bottom: 1px solid rgba(255,255,255,.06); }
+	.as-headlines li { border-bottom: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.06)); }
 
 	.as-headline {
 		display: grid; grid-template-columns: auto 1fr;
@@ -715,10 +721,10 @@
 		text-decoration: none; color: inherit;
 		transition: background .15s;
 	}
-	.as-headline:hover { background: rgba(167,139,250,.04); }
+	.as-headline:hover { background: rgb(var(--np-rgb) / .04); }
 
 	.as-headline-num {
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
 		font-size: 1.75rem; font-weight: 800;
 		line-height: 1;
 		color: var(--accent); opacity: .4;
@@ -729,9 +735,9 @@
 
 	.as-headline-body { min-width: 0; }
 	.as-headline-title {
-		font-family: 'Space Grotesk', sans-serif;
+		font-family: var(--nfont, 'Space Grotesk', sans-serif);
 		font-size: 15px; font-weight: 700;
-		color: #fff; margin: .1rem 0;
+		color: var(--nt, #fff); margin: .1rem 0;
 		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
 		-webkit-box-orient: vertical; overflow: hidden;
 	}

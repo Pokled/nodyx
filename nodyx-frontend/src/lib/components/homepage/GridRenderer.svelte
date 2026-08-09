@@ -55,9 +55,12 @@
 		// (glows, dégradés translucides) — même technique que --nx-*-rgb dans app.css.
 		`--np-rgb: ${hexToRgbTriplet(t.primary)}`,
 		`--na-rgb: ${hexToRgbTriplet(t.accent)}`,
+		`--nl: ${t.link_color}`,
+		`--nl-rgb: ${hexToRgbTriplet(t.link_color)}`,
 		`--nb: ${t.bg}`,
 		`--nc: ${t.card_bg}`,
 		`--nborder: ${t.border_color}`,
+		`--nbw: ${t.border_width}`,
 		`--nr: ${t.border_radius}`,
 		`--nfont: ${t.font_family}, Inter, sans-serif`,
 		`--nfs: ${t.font_size_base}`,

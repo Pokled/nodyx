@@ -11,7 +11,8 @@
 		GridLayout, GridRow, GridColumn, GridTheme,
 	} from '$lib/types/homepage'
 	import {
-		DEFAULT_THEME, genId, makeRow, makeRowFromSpans
+		DEFAULT_THEME, GRID_THEME_PRESETS, genId, makeRow, makeRowFromSpans,
+		parseColorAlpha, composeRgba,
 	} from '$lib/types/homepage'
 	import { untrack, tick } from 'svelte'
 	import { t as i18n } from '$lib/i18n'
@@ -375,6 +376,36 @@
 	function updateTheme<K extends keyof GridTheme>(key: K, value: GridTheme[K]) {
 		theme = { ...theme, [key]: value }
 		markUnsaved()
+	}
+
+	// Réinitialise le thème entier au défaut Nodyx. Confirmation requise : ça
+	// écrase toutes les couleurs/typo/forme personnalisées d'un coup.
+	function resetTheme() {
+		if (!confirm(tFn('hpb.confirm_reset_theme'))) return
+		theme = { ...DEFAULT_THEME }
+		markUnsaved()
+		toast(tFn('hpb.toast_theme_reset'))
+	}
+
+	// Applique un préthème complet (couleurs + typo + forme) en un clic.
+	function applyPreset(presetId: string) {
+		const preset = GRID_THEME_PRESETS.find(p => p.id === presetId)
+		if (!preset) return
+		theme = { ...preset.theme }
+		markUnsaved()
+		toast(tFn('hpb.toast_preset_applied', { name: preset.label }))
+	}
+
+	// Helpers pour le color picker avec transparence (card_bg / border_color).
+	// Le <input type="color"> natif ne gère pas l'alpha : on le pilote via une
+	// paire { hex, alpha } dérivée de la chaîne rgba() stockée dans le thème.
+	function updateColorAlphaHex(key: 'card_bg' | 'border_color', hex: string) {
+		const { alpha } = parseColorAlpha(theme[key])
+		updateTheme(key, composeRgba(hex, alpha))
+	}
+	function updateColorAlphaOpacity(key: 'card_bg' | 'border_color', alpha: number) {
+		const { hex } = parseColorAlpha(theme[key])
+		updateTheme(key, composeRgba(hex, alpha))
 	}
 
 	// ── Save / Publish ────────────────────────────────────────────────────────
@@ -1162,11 +1193,31 @@
 		<!-- ── Panel : thème ─────────────────────────────────────────── -->
 		{:else if activePanel === 'theme'}
 			<div class="panel-body">
-				<div class="panel-section-title">{tFn('hpb.colors')}</div>
+				<!-- Préthèmes : point de départ sûr, un clic remplace tout, Réinitialiser
+				     permet toujours de revenir en arrière sans perte. -->
+				<div class="panel-section-title">{tFn('hpb.presets')}</div>
+				<div class="preset-theme-grid">
+					{#each GRID_THEME_PRESETS as p}
+						<button
+							class="preset-theme-btn"
+							title={p.label}
+							onclick={() => applyPreset(p.id)}
+						>
+							<span class="preset-theme-swatch" style="background: linear-gradient(135deg, {p.theme.primary}, {p.theme.accent})">{p.emoji}</span>
+							<span class="preset-theme-label">{p.label}</span>
+						</button>
+					{/each}
+				</div>
+				<button class="btn-secondary preset-theme-reset" onclick={resetTheme}>
+					↺ {tFn('hpb.reset_theme')}
+				</button>
+
+				<div class="panel-section-title" style="margin-top:14px">{tFn('hpb.colors')}</div>
 
 				{#each [
 					{ key: 'primary',       labelKey: 'hpb.th_primary' },
 					{ key: 'accent',        labelKey: 'hpb.th_accent' },
+					{ key: 'link_color',     labelKey: 'hpb.th_link' },
 					{ key: 'bg',            labelKey: 'hpb.th_bg' },
 					{ key: 'text_primary',  labelKey: 'hpb.th_text_primary' },
 					{ key: 'text_secondary',labelKey: 'hpb.th_text_secondary' },
@@ -1189,14 +1240,29 @@
 					{ key: 'card_bg',      labelKey: 'hpb.th_card_bg' },
 					{ key: 'border_color', labelKey: 'hpb.th_border' },
 				] as f}
+					{@const parsed = parseColorAlpha(theme[f.key as 'card_bg' | 'border_color'])}
 					<label class="pfield">
 						<span>{tFn(f.labelKey)}</span>
-						<input type="text" value={theme[f.key as keyof GridTheme] as string}
-							placeholder={tFn('hpb.ph_rgba_hex')}
-							onchange={(e) => updateTheme(f.key as keyof GridTheme, (e.target as HTMLInputElement).value as any)}
-						/>
+						<div class="pfield-color">
+							<input type="color" value={parsed.hex}
+								oninput={(e) => updateColorAlphaHex(f.key as 'card_bg' | 'border_color', (e.target as HTMLInputElement).value)}
+							/>
+							<input type="range" min="0" max="1" step="0.01" value={parsed.alpha}
+								title={tFn('hpb.opacity', { v: Math.round(parsed.alpha * 100) })}
+								oninput={(e) => updateColorAlphaOpacity(f.key as 'card_bg' | 'border_color', parseFloat((e.target as HTMLInputElement).value))}
+							/>
+							<span class="pfield-opacity-val">{Math.round(parsed.alpha * 100)}%</span>
+						</div>
 					</label>
 				{/each}
+
+				<label class="pfield">
+					<span>{tFn('hpb.border_width', { v: theme.border_width })}</span>
+					<input type="range" min="0" max="4" step="1"
+						value={parseInt(theme.border_width)}
+						oninput={(e) => updateTheme('border_width', `${(e.target as HTMLInputElement).value}px`)}
+					/>
+				</label>
 
 				<div class="panel-section-title" style="margin-top:8px">{tFn('hpb.typography')}</div>
 
@@ -1689,9 +1755,51 @@
 		flex-shrink: 0;
 	}
 	.pfield-color input[type="text"] { flex: 1; }
+	.pfield-color input[type="range"] { flex: 1; }
+	.pfield-opacity-val {
+		font-size: 10px; color: #6b7280;
+		width: 32px; text-align: right; flex-shrink: 0;
+		font-variant-numeric: tabular-nums;
+	}
 	.pfield-clear {
 		background: none; border: none; color: #6b7280;
 		cursor: pointer; font-size: 11px;
+	}
+
+	/* ── Préthèmes ────────────────────────────────────────────────────────────── */
+	.preset-theme-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 6px;
+	}
+	.preset-theme-btn {
+		display: flex; flex-direction: column; align-items: center; gap: 5px;
+		padding: 8px 4px;
+		background: rgba(255,255,255,.03);
+		border: 1px solid rgba(255,255,255,.08);
+		border-radius: 5px;
+		cursor: pointer;
+		transition: border-color .15s, background .15s;
+	}
+	.preset-theme-btn:hover {
+		background: rgba(167,139,250,.06);
+		border-color: rgba(167,139,250,.35);
+	}
+	.preset-theme-swatch {
+		width: 32px; height: 32px;
+		border-radius: 50%;
+		display: flex; align-items: center; justify-content: center;
+		font-size: 15px;
+		box-shadow: inset 0 0 0 1px rgba(255,255,255,.15);
+	}
+	.preset-theme-label {
+		font-size: 10px; color: #9ca3af;
+		white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+	}
+	.preset-theme-reset {
+		width: 100%;
+		margin-top: 8px;
+		font-size: 11px;
 	}
 
 	/* Toggle */

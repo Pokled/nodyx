@@ -3619,6 +3619,14 @@
   "hpb.th_bg": "Fond de page",
   "hpb.th_text_primary": "Texte principal",
   "hpb.th_text_secondary": "Texte secondaire",
+  "hpb.presets": "Préthèmes",
+  "hpb.reset_theme": "Réinitialiser",
+  "hpb.confirm_reset_theme": "Réinitialiser le thème au défaut Nodyx ? Toutes les couleurs et réglages personnalisés seront perdus.",
+  "hpb.toast_theme_reset": "Thème réinitialisé",
+  "hpb.toast_preset_applied": "Préthème « {{name}} » appliqué",
+  "hpb.th_link": "Couleur des liens",
+  "hpb.opacity": "Opacité ({{v}}%)",
+  "hpb.border_width": "Épaisseur de bordure ({{v}})",
   "hpb.backgrounds_borders": "Fonds & Bordures",
   "hpb.th_card_bg": "Fond des cartes",
   "hpb.th_border": "Couleur des bordures",
@@ -4437,6 +4445,6 @@
   "translate.safety": "<b>Impossible de casser l'application en traduisant.</b> Les traductions passent par pull request : l'intégration continue vérifie que chaque <code>{{variable}}</code> reste intacte avant la moindre fusion.",
   "translate.safety_link": "Comment contribuer",
   "translate.footer_note": "auto-hébergé, sans télémétrie",
-"nav.panel_toggle_aria": "Redimensionner ou replier le menu communauté",
-"home.hero_welcome": "Bienvenue dans la communauté"
+  "nav.panel_toggle_aria": "Redimensionner ou replier le menu communauté",
+  "home.hero_welcome": "Bienvenue dans la communauté"
 }
