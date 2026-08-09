@@ -1,3 +1,21 @@
+// ── Polices proposées par le thème du Homepage Builder ────────────────────────
+// Choisir une police dans le panneau ne l'affichait jamais : aucun <link>
+// Google Fonts ne les chargeait nulle part (seule 'Space Grotesk' l'était,
+// par un lien codé en dur SANS RAPPORT avec ce sélecteur). URL construite une
+// fois pour les 10 polices, chargée à la fois sur la page publique et dans
+// l'éditeur admin, même technique que GOOGLE_FONTS_URL dans nameEffects.ts.
+export const GRID_FONTS = [
+	'Space Grotesk', 'Inter', 'DM Sans', 'Sora', 'Outfit',
+	'Nunito', 'Poppins', 'Raleway', 'Rubik', 'Manrope',
+] as const;
+
+export const GRID_GOOGLE_FONTS_URL = (() => {
+	const families = GRID_FONTS
+		.map(f => `family=${encodeURIComponent(f)}:wght@400;500;600;700;800`)
+		.join('&');
+	return `https://fonts.googleapis.com/css2?${families}&display=swap`;
+})();
+
 // ── Ancien système (positions fixes) ──────────────────────────────────────────
 export interface HomepageWidget {
 	id:           string;
@@ -54,7 +72,11 @@ export const DEFAULT_THEME: GridTheme = {
 	card_bg:             'rgba(255,255,255,.03)',
 	border_color:        'rgba(255,255,255,.08)',
 	border_width:        '1px',
-	border_radius:       '10px',
+	// 0 par défaut : l'identité "flat design" du site (voir CHANGELOG v1.9.5,
+	// "forum redesign, flat design, zero radius") ne doit pas changer d'un coup
+	// pour les instances existantes le jour où border_radius devient réellement
+	// appliqué. Les préthèmes ci-dessous, eux, arrondissent volontairement.
+	border_radius:       '0px',
 	font_family:         'Space Grotesk',
 	font_size_base:      '15px',
 	font_weight_heading: '700',

@@ -313,6 +313,7 @@
 		position: relative;
 		width: 100%;
 		overflow: hidden;
+		border-radius: var(--nr, 0px);
 		background: var(--nb, #06060d);
 	}
 

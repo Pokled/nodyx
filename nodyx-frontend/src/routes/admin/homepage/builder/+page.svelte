@@ -11,7 +11,7 @@
 		GridLayout, GridRow, GridColumn, GridTheme,
 	} from '$lib/types/homepage'
 	import {
-		DEFAULT_THEME, GRID_THEME_PRESETS, genId, makeRow, makeRowFromSpans,
+		DEFAULT_THEME, GRID_THEME_PRESETS, GRID_GOOGLE_FONTS_URL, genId, makeRow, makeRowFromSpans,
 		parseColorAlpha, composeRgba,
 	} from '$lib/types/homepage'
 	import { untrack, tick } from 'svelte'
@@ -661,7 +661,14 @@
 	]
 </script>
 
-<svelte:head><title>Grid Builder · Admin</title></svelte:head>
+<svelte:head>
+	<title>Grid Builder · Admin</title>
+	<!-- Polices du thème (--nfont) : sans ce lien, le sélecteur change une valeur
+	     que le navigateur ne peut pas afficher, l'aperçu ne bouge pas. -->
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link href={GRID_GOOGLE_FONTS_URL} rel="stylesheet" />
+</svelte:head>
 
 <!-- ── Toasts ───────────────────────────────────────────────────────────────── -->
 <div class="toasts">

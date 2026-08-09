@@ -271,6 +271,7 @@
 		overflow: hidden;
 		background: var(--nc, #0a0a0f);
 		border-bottom: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.05));
+		border-radius: var(--nr, 0px);
 	}
 
 	.noise::after {

@@ -104,7 +104,7 @@
 <div class="flex flex-wrap items-stretch gap-0.5">
 	{#each visibleStats as stat (stat.key)}
 		<div class="flex flex-col items-center justify-center px-6 py-2 gap-0.5"
-		     style="background:var(--nc); border:var(--nbw) solid var(--nborder)">
+		     style="background:var(--nc); border:var(--nbw) solid var(--nborder); border-radius:var(--nr, 0px)">
 			<span
 				class="font-black text-xl tabular-nums"
 				class:sglow={stat.glow}

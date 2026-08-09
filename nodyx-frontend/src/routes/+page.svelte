@@ -5,6 +5,7 @@
 	import WidgetZone from '$lib/components/homepage/WidgetZone.svelte';
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte';
 	import type { HomepagePosition, GridLayout, GridTheme } from '$lib/types/homepage';
+	import { GRID_GOOGLE_FONTS_URL } from '$lib/types/homepage';
 	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
@@ -86,7 +87,10 @@
 	<meta property="og:description" content={instance.description} />
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet" />
+	<!-- Les 10 polices proposées par le thème du Homepage Builder (--nfont) : sans
+	     ce lien, choisir une police dans le panneau n'a aucun effet visuel, le
+	     navigateur retombe sur une police système générique. -->
+	<link href={GRID_GOOGLE_FONTS_URL} rel="stylesheet" />
 </svelte:head>
 
 <style>

@@ -42,7 +42,7 @@
 </script>
 
 <div class="p-5 flex flex-col gap-4"
-     style="background:var(--nc); border:var(--nbw) solid var(--nborder)">
+     style="background:var(--nc); border:var(--nbw) solid var(--nborder); border-radius:var(--nr, 0px); overflow:hidden">
 
 	<!-- Title -->
 	<div>

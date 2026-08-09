@@ -463,6 +463,7 @@
 		display: flex; flex-direction: column;
 		background: var(--nc, rgba(255,255,255,.03));
 		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07));
+		border-radius: var(--nr, 0px);
 		overflow: hidden;
 		text-decoration: none; color: inherit;
 		transition: border-color .2s, transform .2s;
@@ -520,6 +521,7 @@
 		display: flex; flex-direction: column;
 		background: var(--nc, rgba(255,255,255,.03));
 		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07));
+		border-radius: var(--nr, 0px);
 		overflow: hidden;
 		text-decoration: none; color: inherit;
 		transition: border-color .2s;
@@ -572,6 +574,7 @@
 		gap: 1rem; align-items: center;
 		background: var(--nc, rgba(255,255,255,.025));
 		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.06));
+		border-radius: var(--nr, 0px);
 		padding: .75rem;
 		text-decoration: none; color: inherit;
 		transition: border-color .2s, background .2s;
@@ -583,6 +586,7 @@
 	.as-horiz-cover {
 		width: 180px; height: 110px;
 		position: relative; overflow: hidden;
+		border-radius: var(--nr, 0px);
 		background: var(--nc, #0d0d12);
 	}
 	.as-horiz-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
@@ -617,6 +621,7 @@
 		position: relative;
 		background: var(--nc, rgba(255,255,255,.03));
 		border: var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07));
+		border-radius: var(--nr, 0px);
 		overflow: hidden;
 	}
 	.as-slide { display: block; text-decoration: none; color: inherit; }
