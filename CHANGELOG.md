@@ -9,6 +9,38 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ---
 
+## [2.12.0] — 2026-08-10
+
+### Personnalisation visuelle : l'admin reprend la main sur ce qu'on voit en premier
+
+Cette version sort d'un test grandeur nature : une vraie communauté multigaming, avec de vrais membres, déployée sur une instance Nodyx. Le premier réflexe de son admin a été de vouloir changer ce qu'un visiteur voit en arrivant, et de se cogner à des éléments non configurables. Tout ce qui suit vient de là.
+
+**Nouveau widget « En-tête »** (Homepage Builder). Le widget Hero Banner reste tel quel pour qui veut du simple ; celui-ci apporte le contrôle qui manquait :
+
+- Image de fond **et** logo téléversables, chacun positionnable (horizontal, vertical) et redimensionnable. Le fichier est stocké **brut**, sans recompression : pas de perte de qualité entre ce que vous envoyez et ce qui s'affiche
+- Titre et sous-titre : texte, position, couleur, police (parmi les 10 réellement chargées par le thème, pas une liste décorative)
+- **Chaque élément s'affiche ou non** : fond, logo, titre, sous-titre, bouton, statistiques, membres en ligne. Un admin qui ne veut que sa bannière et son logo coupe tout le reste
+- Le bouton absent est vraiment absent. Hero Banner, lui, retombe sur des liens de navigation en dur quand on vide le champ : c'est le piège qu'on ne reproduit pas ici
+
+**Fond d'image pour la sidebar des membres.** Elle est visible sur toutes les pages, son fond ne pouvait donc pas passer par le Homepage Builder : il vit désormais côté serveur, à côté du logo et de la bannière d'instance. Trois réglages nés de l'usage réel, pas de la théorie :
+
+- **Visibilité** : visiteurs, membres connectés, ou tout le monde. Par défaut *visiteurs seulement*, parce qu'une fois connecté cette sidebar est un outil de travail et qu'une image derrière la rend illisible
+- **Assombrissement réglable** : il était figé, et trop faible dès que l'image était chargée
+- **Dézoom** (jusqu'à 0,4) : on pouvait zoomer, pas dézoomer, donc impossible de faire tenir une affiche entière dans le cadre
+
+Sans image configurée, **rien ne change, au pixel près** : les deux fonctionnalités sont additives et éteintes par défaut.
+
+### Corrigé
+
+- **Le troisième widget à panneau personnalisé aurait affiché le panneau d'un autre.** La chaîne de panneaux de configuration du builder n'avait aucune garde sur l'identifiant du plugin : invisible tant qu'il n'y en avait que deux, le suivant héritait silencieusement du panneau du Diaporama. Trouvé en ajoutant précisément ce troisième widget
+- **Dézoomer coupait l'image.** `transform: scale()` réduit autour du centre de la boîte, alors que le cadrage vise un autre point : en dessous de 1, le décalage entre les deux ouvrait un vide asymétrique, visible comme une coupure. L'origine de la transformation suit maintenant la position choisie
+- **Positionner une image au glisser-déposer ne fonctionnait pas.** Le glisser natif du navigateur prenait la main (curseur « sens interdit »), et l'image elle-même n'était pas cliquable. Remplacé par des curseurs, qui n'ont aucun de ces pièges
+
+### Exploitation
+
+- **La quatrième instance du serveur n'était sauvegardée nulle part**, et n'aurait reçu aucune mise à jour, en silence. Elle est désormais couverte par les deux scripts. Sauvegarde **et restauration** vérifiées pour de vrai : base restaurée dans une base jetable, mêmes comptages, empreinte des fichiers identique à ce qui est servi en ligne
+- Les cahiers des charges de communautés hébergées sont exclus du dépôt public : c'est le contenu privé de l'instance concernée, pas celui de la plateforme
+
 ## [2.11.0] — 2026-08-07
 
 ### Vidéo : le partage d'écran passe par le SFU
