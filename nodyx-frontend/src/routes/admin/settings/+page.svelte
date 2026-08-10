@@ -4,6 +4,7 @@
 	import { page } from '$app/stores'
 	import { onMount, untrack } from 'svelte'
 	import { t } from '$lib/i18n'
+	import ImagePositionPicker from '$lib/components/homepage/ImagePositionPicker.svelte'
 
 	const tFn = $derived($t)
 
@@ -13,6 +14,13 @@
 	// Branding state
 	let logoUrl   = $state<string>(i.logo_url   ?? '')
 	let bannerUrl = $state<string>(i.banner_url ?? '')
+	const sidebarBgInit: { background_image_url?: string; background_offset_x?: number; background_offset_y?: number; background_scale?: number; overlay_opacity?: number; visibility?: 'all' | 'guests' | 'members' } | null = i.sidebar_bg ?? null
+	let sidebarBgUrl        = $state<string>(sidebarBgInit?.background_image_url ?? '')
+	let sidebarBgX          = $state<number>(sidebarBgInit?.background_offset_x  ?? 50)
+	let sidebarBgY          = $state<number>(sidebarBgInit?.background_offset_y  ?? 50)
+	let sidebarBgScale      = $state<number>(sidebarBgInit?.background_scale     ?? 1)
+	let sidebarBgOverlay    = $state<number>(sidebarBgInit?.overlay_opacity      ?? 0.6)
+	let sidebarBgVisibility = $state<'all' | 'guests' | 'members'>(sidebarBgInit?.visibility ?? 'guests')
 
 	// SMTP state
 	let smtp = $state<{ configured: boolean; host: string | null; port: number; from: string | null } | null>(null)
@@ -178,12 +186,14 @@
 		}
 	}
 
-	let logoMode   = $state<'url' | 'file'>('url')
-	let bannerMode = $state<'url' | 'file'>('url')
-	let uploadingLogo   = $state(false)
-	let uploadingBanner = $state(false)
+	let logoMode      = $state<'url' | 'file'>('url')
+	let bannerMode    = $state<'url' | 'file'>('url')
+	let sidebarBgMode = $state<'url' | 'file'>('url')
+	let uploadingLogo      = $state(false)
+	let uploadingBanner    = $state(false)
+	let uploadingSidebarBg = $state(false)
 
-	async function uploadBrandingFile(type: 'logo' | 'banner', file: File) {
+	async function uploadBrandingFile(type: 'logo' | 'banner' | 'sidebar', file: File) {
 		const token = ($page.data as any).token as string | null
 		if (!token) return
 
@@ -198,8 +208,9 @@
 		const { url } = await res.json()
 		// url est déjà un chemin relatif (/uploads/logos/xxx.jpg)
 		// On le stocke tel quel → Vite proxy ou reverse proxy gère la résolution
-		if (type === 'logo')   logoUrl   = url
-		if (type === 'banner') bannerUrl = url
+		if (type === 'logo')    logoUrl      = url
+		if (type === 'banner')  bannerUrl    = url
+		if (type === 'sidebar') sidebarBgUrl = url
 	}
 
 	async function handleLogoFile(e: Event) {
@@ -218,6 +229,21 @@
 		await uploadBrandingFile('banner', file)
 		uploadingBanner = false
 		bannerMode = 'url'
+	}
+
+	async function handleSidebarBgFile(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0]
+		if (!file) return
+		uploadingSidebarBg = true
+		await uploadBrandingFile('sidebar', file)
+		uploadingSidebarBg = false
+		sidebarBgMode = 'url'
+	}
+
+	function sidebarBgChangeLive(patch: { offsetX?: number; offsetY?: number; scale?: number }) {
+		if (patch.offsetX !== undefined) sidebarBgX = patch.offsetX
+		if (patch.offsetY !== undefined) sidebarBgY = patch.offsetY
+		if (patch.scale   !== undefined) sidebarBgScale = patch.scale
 	}
 </script>
 
@@ -331,6 +357,78 @@
 						</label>
 					{/if}
 					<input type="hidden" name="banner_url" value={bannerUrl} />
+				</div>
+			</div>
+
+			<!-- Sidebar background -->
+			<div class="mb-6">
+				<span class="block text-sm font-medium text-gray-300 mb-2">{tFn('aset.sidebar_bg_label')}</span>
+				<p class="text-xs text-gray-600 mb-3">{tFn('aset.sidebar_bg_hint')}</p>
+				<div class="space-y-2">
+					{#if sidebarBgUrl}
+						<ImagePositionPicker
+							imageUrl={sidebarBgUrl}
+							offsetX={sidebarBgX}
+							offsetY={sidebarBgY}
+							scale={sidebarBgScale}
+							showZoom={true}
+							height="140px"
+							onChangeLive={sidebarBgChangeLive}
+							onCommit={() => {}}
+						/>
+					{:else}
+						<div class="w-full h-24 rounded-xl border border-dashed border-gray-700 bg-gray-800/40 flex items-center justify-center text-gray-600 text-sm">
+							{tFn('aset.no_sidebar_bg')}
+						</div>
+					{/if}
+					<!-- Toggle -->
+					<div class="flex gap-2">
+						<button type="button" onclick={() => sidebarBgMode = 'url'}
+							class="px-3 py-1 rounded text-xs font-medium transition-colors {sidebarBgMode === 'url' ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}">
+							URL
+						</button>
+						<button type="button" onclick={() => sidebarBgMode = 'file'}
+							class="px-3 py-1 rounded text-xs font-medium transition-colors {sidebarBgMode === 'file' ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}">
+							{tFn('aset.file_pc')}
+						</button>
+						{#if sidebarBgUrl}
+							<button type="button" onclick={() => sidebarBgUrl = ''} class="ml-auto px-3 py-1 rounded text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20 transition-colors">
+								{tFn('aset.delete')}
+							</button>
+						{/if}
+					</div>
+					{#if sidebarBgMode === 'url'}
+						<input type="url" bind:value={sidebarBgUrl} placeholder={tFn('aset.url_ph')} class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+					{:else}
+						<label class="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-dashed border-gray-600 hover:border-indigo-500 transition-colors text-sm text-gray-400 hover:text-white">
+							{#if uploadingSidebarBg}
+								<span>{tFn('aset.uploading')}</span>
+							{:else}
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+								<span>{tFn('aset.choose_image')}</span>
+							{/if}
+							<input type="file" accept="image/*" class="hidden" onchange={handleSidebarBgFile} disabled={uploadingSidebarBg} />
+						</label>
+					{/if}
+
+					{#if sidebarBgUrl}
+						<div class="grid grid-cols-2 gap-3 pt-1">
+							<label class="text-xs text-gray-400 space-y-1">
+								<span class="block">{tFn('aset.sidebar_bg_overlay')}</span>
+								<input type="range" min="0" max="0.9" step="0.05" bind:value={sidebarBgOverlay} class="w-full" />
+							</label>
+							<label class="text-xs text-gray-400 space-y-1">
+								<span class="block">{tFn('aset.sidebar_bg_visibility')}</span>
+								<select bind:value={sidebarBgVisibility} class="w-full rounded-lg bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+									<option value="guests">{tFn('aset.sidebar_bg_vis_guests')}</option>
+									<option value="members">{tFn('aset.sidebar_bg_vis_members')}</option>
+									<option value="all">{tFn('aset.sidebar_bg_vis_all')}</option>
+								</select>
+							</label>
+						</div>
+					{/if}
+
+					<input type="hidden" name="sidebar_bg" value={sidebarBgUrl ? JSON.stringify({ background_image_url: sidebarBgUrl, background_offset_x: sidebarBgX, background_offset_y: sidebarBgY, background_scale: sidebarBgScale, overlay_opacity: sidebarBgOverlay, visibility: sidebarBgVisibility }) : ''} />
 				</div>
 			</div>
 

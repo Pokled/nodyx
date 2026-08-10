@@ -49,6 +49,20 @@
 
 	const user            = $derived(data.user);
 	const isBanned        = $derived(data.user?.is_banned === true);
+	// Fond de la sidebar membres : visibilité tout/visiteurs/connectés — pour
+	// les connectés la sidebar est fonctionnelle (liste des membres), un fond
+	// trop présent la rend illisible ; les visiteurs, eux, n'ont qu'une carte
+	// d'invitation, l'image peut y rester pleinement.
+	const sidebarBgVisible = $derived.by(() => {
+		const bg = data.sidebarBg;
+		if (!bg?.background_image_url) return false;
+		// Par défaut "visiteurs seulement" : la sidebar est un outil fonctionnel une
+		// fois connecté (liste des membres), pas juste une vitrine.
+		const vis = bg.visibility ?? 'guests';
+		if (vis === 'guests')  return !user;
+		if (vis === 'members') return !!user;
+		return true;
+	});
 	const announcement    = $derived((data as any).activeAnnouncement as { id: string; message: string; color: string } | null);
 	let announcementDismissed = $state<string | null>(null)
 	const showAnnouncement = $derived(
@@ -1395,9 +1409,15 @@
 
 		<aside class="hidden xl:flex members members-c"
 		       class:collapsed={membersCollapsed}
+		       class:has-bg={sidebarBgVisible}
 		       id="members-c"
 		       style="width: {membersCollapsed ? '0px' : 'var(--right-panel-width, 220px)'};"
 		       class:dragging={isDraggingRight}>
+			{#if sidebarBgVisible && data.sidebarBg?.background_image_url}
+				<img class="members-bg" src={data.sidebarBg.background_image_url} alt=""
+					style="object-position:{data.sidebarBg.background_offset_x ?? 50}% {data.sidebarBg.background_offset_y ?? 50}%; transform-origin:{data.sidebarBg.background_offset_x ?? 50}% {data.sidebarBg.background_offset_y ?? 50}%; transform: scale({Math.min(2.5, Math.max(0.4, data.sidebarBg.background_scale ?? 1))})" />
+				<div class="members-bg-overlay" style="opacity:{data.sidebarBg.overlay_opacity ?? 0.6}"></div>
+			{/if}
 			<button class="edge-handle"
 			        onpointerdown={startRightDrag}
 			        onpointermove={handleRightDragMove}
@@ -2501,6 +2521,34 @@ a.nx-icon-btn[class*="active"],
 
 .members-c.dragging {
   transition: none !important;
+}
+
+.members-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+.members-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: #0d0d12;
+  z-index: -1;
+}
+
+/* Lisibilité du texte/avatars quand un fond d'image est actif : la teinte de
+   l'overlay assure l'essentiel, ce filet supplémentaire évite que le texte se
+   perde sur les zones les plus claires d'une image chargée. */
+.members-c.has-bg .members-header .label,
+.members-c.has-bg .members-header .online-num,
+.members-c.has-bg .guest-members-card {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .85);
+}
+.members-c.has-bg .members-header {
+  background: rgba(13, 13, 18, .35);
+  backdrop-filter: blur(3px);
 }
 
 .members-c.collapsed {

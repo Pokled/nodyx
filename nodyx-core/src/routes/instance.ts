@@ -99,10 +99,10 @@ export default async function instanceRoutes(app: FastifyInstance) {
       db.query(`SELECT COUNT(*)::int AS count FROM posts`),
       io ? io.in('presence').fetchSockets() : Promise.resolve([]),
       communityId
-        ? db.query<{ logo_url: string | null; banner_url: string | null }>(
-            `SELECT logo_url, banner_url FROM communities WHERE id = $1`, [communityId]
+        ? db.query<{ logo_url: string | null; banner_url: string | null; sidebar_bg: Record<string, unknown> | null }>(
+            `SELECT logo_url, banner_url, sidebar_bg FROM communities WHERE id = $1`, [communityId]
           )
-        : Promise.resolve({ rows: [{ logo_url: null, banner_url: null }] }),
+        : Promise.resolve({ rows: [{ logo_url: null, banner_url: null, sidebar_bg: null }] }),
       // Thème d'instance posé par l'owner (son univers, base pour tous) :
       //  - theme_vars : thème structuré (--p-bg/--p-accent…), base de la cascade
       //  - theme_css  : surcharge CSS libre (variables Tailwind) en complément
@@ -114,7 +114,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
     const seen = new Set<string>()
     for (const s of presenceSockets) { if (s.data.userId) seen.add(s.data.userId) }
 
-    const branding = brandingRes.rows[0] ?? { logo_url: null, banner_url: null }
+    const branding = brandingRes.rows[0] ?? { logo_url: null, banner_url: null, sidebar_bg: null }
 
     return reply.send({
       name:        process.env.NODYX_COMMUNITY_NAME        || 'Nodyx',
@@ -130,6 +130,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       post_count:   postRes.rows[0].count,
       logo_url:     branding.logo_url,
       banner_url:   branding.banner_url,
+      sidebar_bg:   branding.sidebar_bg,
       theme_css:    themeRes.rows.find(r => r.key === 'theme_css')?.value ?? null,
       theme_vars:   (() => {
         const raw = themeRes.rows.find(r => r.key === 'theme_vars')?.value

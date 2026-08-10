@@ -878,31 +878,32 @@ export default async function adminRoutes(app: FastifyInstance) {
     const communityId = await getCommunityId()
     if (!communityId) return reply.code(404).send({ error: 'Community not found' })
 
-    const body = request.body as { logo_url?: string | null; banner_url?: string | null }
+    const body = request.body as { logo_url?: string | null; banner_url?: string | null; sidebar_bg?: Record<string, unknown> | null }
     const fields: string[] = []
     const values: unknown[] = []
     let i = 1
 
     if (body.logo_url   !== undefined) { fields.push(`logo_url = $${i++}`);   values.push(body.logo_url)   }
     if (body.banner_url !== undefined) { fields.push(`banner_url = $${i++}`); values.push(body.banner_url) }
+    if (body.sidebar_bg !== undefined) { fields.push(`sidebar_bg = $${i++}`); values.push(body.sidebar_bg ? JSON.stringify(body.sidebar_bg) : null) }
 
     if (fields.length === 0) return reply.code(400).send({ error: 'Nothing to update' })
 
     values.push(communityId)
     const { rows } = await db.query(
-      `UPDATE communities SET ${fields.join(', ')} WHERE id = $${i} RETURNING logo_url, banner_url`,
+      `UPDATE communities SET ${fields.join(', ')} WHERE id = $${i} RETURNING logo_url, banner_url, sidebar_bg`,
       values
     )
     return reply.send({ branding: rows[0] })
   })
 
-  // POST /api/v1/admin/branding/upload?type=logo|banner — upload image file
+  // POST /api/v1/admin/branding/upload?type=logo|banner|sidebar — upload image file
   app.post('/branding/upload', {
     preHandler: [rateLimit, adminOnly],
   }, async (request, reply) => {
     const { type } = request.query as { type?: string }
-    if (!type || !['logo', 'banner'].includes(type)) {
-      return reply.code(400).send({ error: 'type must be "logo" or "banner"' })
+    if (!type || !['logo', 'banner', 'sidebar'].includes(type)) {
+      return reply.code(400).send({ error: 'type must be "logo", "banner" or "sidebar"' })
     }
 
     const data = await request.file()

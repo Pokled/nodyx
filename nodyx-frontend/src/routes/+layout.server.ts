@@ -114,6 +114,11 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const instanceTheme: Record<string, unknown> | null = infoJson?.theme_vars ?? null;
 	// Effet de fond optionnel posé par l'owner (ex 'matrix' = pluie de caractères)
 	const instanceEffect: string | null = infoJson?.theme_effect ?? null;
+	// Fond d'image de la sidebar membres (#members-c), visible sur toutes les pages
+	const rawSidebarBg = infoJson?.sidebar_bg as { background_image_url?: string; background_offset_x?: number; background_offset_y?: number; background_scale?: number; overlay_opacity?: number; visibility?: 'all' | 'guests' | 'members' } | null | undefined;
+	const sidebarBg = rawSidebarBg?.background_image_url
+		? { ...rawSidebarBg, background_image_url: normalizeUrl(rawSidebarBg.background_image_url) }
+		: null;
 
 	// Toutes les instances du réseau (directory), filtre l'instance courante
 	const allInstances: Array<{
@@ -122,7 +127,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (((directoryJson as any)?.instances) ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, channels: [], demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, channels: [], demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, sidebarBg, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth };
 	}
 
 	const { user } = await userRes.json();
@@ -152,5 +157,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, channels, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, channels, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, sidebarBg, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth };
 };
