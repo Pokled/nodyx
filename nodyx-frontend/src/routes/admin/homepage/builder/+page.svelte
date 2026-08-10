@@ -2,6 +2,7 @@
 	import type { PageData } from './$types'
 	import { page } from '$app/stores'
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte'
+	import ImagePositionPicker from '$lib/components/homepage/ImagePositionPicker.svelte'
 	import type { WidgetFamily } from '$lib/components/homepage/plugins'
 	import {
 		buildCatalog, buildCatalogIndex, toInstalledWidgetsMap,
@@ -108,7 +109,11 @@
 		}
 	}
 
-	function applyConfig() {
+	// Coeur silencieux, réutilisé par le drag de position (ImagePositionPicker,
+	// pad de position du logo) : ces interactions déclenchent des dizaines
+	// d'appels par seconde pendant un pointermove, un toast à chaque tick
+	// serait un spam. applyConfig() (avec toast) reste l'usage normal au clic.
+	function applyConfigSilent() {
 		if (!selectedCol) return
 		draft = {
 			...draft,
@@ -121,6 +126,10 @@
 			})
 		}
 		markUnsaved()
+	}
+
+	function applyConfig() {
+		applyConfigSilent()
 		toast(tFn('hpb.toast_config_applied'))
 	}
 
@@ -637,6 +646,59 @@
 		slApply(links)
 	}
 
+	// ── Panel config custom : En-tête ─────────────────────────────────────────
+	let hdrBgMode        = $state<'url' | 'file'>('url')
+	let hdrLogoMode      = $state<'url' | 'file'>('url')
+	let hdrUploadingBg   = $state(false)
+	let hdrUploadingLogo = $state(false)
+
+	async function hdrUploadImage(kind: 'background' | 'logo', file: File) {
+		const token = getToken()
+		if (!token) return
+		const fd = new FormData()
+		fd.append('file', file)
+		const type = kind === 'background' ? 'banner' : 'logo'
+		const res = await fetch(`/api/v1/admin/branding/upload?type=${type}`, {
+			method:  'POST',
+			headers: { Authorization: `Bearer ${token}` },
+			body:    fd,
+		})
+		if (!res.ok) { toast(tFn('pedit.upload_error'), false); return }
+		const { url } = await res.json()
+		const key = kind === 'background' ? 'background_image_url' : 'logo_url'
+		configFields = { ...configFields, [key]: url }
+		applyConfig()
+	}
+
+	async function hdrHandleBgFile(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0]
+		if (!file) return
+		hdrUploadingBg = true
+		await hdrUploadImage('background', file)
+		hdrUploadingBg = false
+		hdrBgMode = 'url'
+	}
+	async function hdrHandleLogoFile(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0]
+		if (!file) return
+		hdrUploadingLogo = true
+		await hdrUploadImage('logo', file)
+		hdrUploadingLogo = false
+		hdrLogoMode = 'url'
+	}
+
+	// Fond : drag + zoom via ImagePositionPicker (object-position + transform: scale)
+	function hdrBgChangeLive(patch: { offsetX?: number; offsetY?: number; scale?: number }) {
+		configFields = {
+			...configFields,
+			...(patch.offsetX !== undefined ? { background_offset_x: patch.offsetX } : {}),
+			...(patch.offsetY !== undefined ? { background_offset_y: patch.offsetY } : {}),
+			...(patch.scale   !== undefined ? { background_scale:    patch.scale   } : {}),
+		}
+		applyConfigSilent()
+	}
+	function hdrBgCommit() { applyConfig() }
+
 	// ── Preview width ─────────────────────────────────────────────────────────
 	const PREVIEW_W: Record<string, string> = {
 		desktop: '100%',
@@ -900,7 +962,265 @@
 						<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>{tFn('hpb.remove')}</button>
 					</div>
 
-				{:else if selNativePlugin?.customPanel}
+				{:else if selNativePlugin?.customPanel && selNativePlugin.id === 'header'}
+					<!-- ══ Panel custom : En-tête ══ -->
+					<div class="panel-section-title">{tFn('hpb.header_bg')}</div>
+					<label class="pfield">
+						<span>{tFn('hpb.header_show_bg')}</span>
+						<label class="ptoggle">
+							<input type="checkbox" checked={(configFields.show_background as boolean) ?? true}
+								onchange={(e) => { configFields = { ...configFields, show_background: (e.target as HTMLInputElement).checked }; applyConfig() }}
+							/>
+							<span class="ptoggle-track"><span class="ptoggle-thumb"></span></span>
+						</label>
+					</label>
+
+					{#if (configFields.show_background as boolean) ?? true}
+						<div class="hdr-upload-toggle">
+							<button type="button" class:active={hdrBgMode === 'url'} onclick={() => hdrBgMode = 'url'}>URL</button>
+							<button type="button" class:active={hdrBgMode === 'file'} onclick={() => hdrBgMode = 'file'}>{tFn('aset.file_pc')}</button>
+						</div>
+						{#if hdrBgMode === 'url'}
+							<div class="pfield">
+								<input type="url" value={(configFields.background_image_url as string) ?? ''}
+									placeholder={tFn('hpb.ph_url')}
+									oninput={(e) => { configFields = { ...configFields, background_image_url: (e.target as HTMLInputElement).value }; applyConfig() }}
+								/>
+							</div>
+						{:else}
+							<input type="file" accept="image/*" disabled={hdrUploadingBg} onchange={hdrHandleBgFile} />
+						{/if}
+
+						<ImagePositionPicker
+							imageUrl={(configFields.background_image_url as string) ?? ''}
+							offsetX={(configFields.background_offset_x as number) ?? 50}
+							offsetY={(configFields.background_offset_y as number) ?? 50}
+							scale={(configFields.background_scale as number) ?? 1}
+							showZoom
+							emptyLabel={tFn('hpb.header_no_image')}
+							onChangeLive={hdrBgChangeLive}
+							onCommit={hdrBgCommit}
+						/>
+
+						<label class="pfield">
+							<span>{tFn('hpb.header_overlay')}</span>
+							<input type="range" min="0" max="1" step="0.05"
+								value={(configFields.background_overlay_opacity as number) ?? 0.45}
+								oninput={(e) => { configFields = { ...configFields, background_overlay_opacity: Number((e.target as HTMLInputElement).value) }; applyConfigSilent() }}
+								onchange={() => applyConfig()}
+							/>
+						</label>
+						<label class="pfield">
+							<span>{tFn('hpb.height')}</span>
+							<select value={(configFields.height as string) ?? '420px'}
+								onchange={(e) => { configFields = { ...configFields, height: (e.target as HTMLSelectElement).value }; applyConfig() }}
+							>
+								<option value="280px">280px</option>
+								<option value="360px">360px</option>
+								<option value="420px">420px</option>
+								<option value="520px">520px</option>
+								<option value="640px">640px</option>
+							</select>
+						</label>
+					{/if}
+
+					<div class="panel-section-title" style="margin-top:12px">{tFn('hpb.header_logo')}</div>
+					<label class="pfield">
+						<span>{tFn('hpb.header_show_logo')}</span>
+						<label class="ptoggle">
+							<input type="checkbox" checked={(configFields.show_logo as boolean) ?? true}
+								onchange={(e) => { configFields = { ...configFields, show_logo: (e.target as HTMLInputElement).checked }; applyConfig() }}
+							/>
+							<span class="ptoggle-track"><span class="ptoggle-thumb"></span></span>
+						</label>
+					</label>
+
+					{#if (configFields.show_logo as boolean) ?? true}
+						<div class="hdr-upload-toggle">
+							<button type="button" class:active={hdrLogoMode === 'url'} onclick={() => hdrLogoMode = 'url'}>URL</button>
+							<button type="button" class:active={hdrLogoMode === 'file'} onclick={() => hdrLogoMode = 'file'}>{tFn('aset.file_pc')}</button>
+						</div>
+						{#if hdrLogoMode === 'url'}
+							<div class="pfield">
+								<input type="url" value={(configFields.logo_url as string) ?? ''}
+									placeholder={tFn('hpb.ph_url')}
+									oninput={(e) => { configFields = { ...configFields, logo_url: (e.target as HTMLInputElement).value }; applyConfig() }}
+								/>
+							</div>
+						{:else}
+							<input type="file" accept="image/*" disabled={hdrUploadingLogo} onchange={hdrHandleLogoFile} />
+						{/if}
+
+						<div class="hdr-logo-pad">
+							{#if configFields.background_image_url}
+								<img src={configFields.background_image_url as string} alt="" class="hdr-logo-pad-bg" />
+							{/if}
+							{#if configFields.logo_url}
+								<img src={configFields.logo_url as string} alt="" class="hdr-logo-pad-marker"
+									style="left:{(configFields.logo_offset_x as number) ?? 50}%; top:{(configFields.logo_offset_y as number) ?? 50}%;"
+								/>
+							{/if}
+						</div>
+
+						<label class="pfield">
+							<span>{tFn('hpb.header_pos_x')}</span>
+							<input type="range" min="0" max="100" step="1"
+								value={(configFields.logo_offset_x as number) ?? 50}
+								oninput={(e) => { configFields = { ...configFields, logo_offset_x: Number((e.target as HTMLInputElement).value) }; applyConfigSilent() }}
+								onchange={() => applyConfig()}
+							/>
+						</label>
+						<label class="pfield">
+							<span>{tFn('hpb.header_pos_y')}</span>
+							<input type="range" min="0" max="100" step="1"
+								value={(configFields.logo_offset_y as number) ?? 50}
+								oninput={(e) => { configFields = { ...configFields, logo_offset_y: Number((e.target as HTMLInputElement).value) }; applyConfigSilent() }}
+								onchange={() => applyConfig()}
+							/>
+						</label>
+						<label class="pfield">
+							<span>{tFn('hpb.header_logo_size')}</span>
+							<input type="range" min="32" max="480" step="8"
+								value={(configFields.logo_size as number) ?? 56}
+								oninput={(e) => { configFields = { ...configFields, logo_size: Number((e.target as HTMLInputElement).value) }; applyConfigSilent() }}
+								onchange={() => applyConfig()}
+							/>
+						</label>
+					{/if}
+
+					<div class="panel-section-title" style="margin-top:12px">{tFn('hpb.header_title')}</div>
+					<label class="pfield">
+						<span>{tFn('hpb.header_show_title')}</span>
+						<label class="ptoggle">
+							<input type="checkbox" checked={(configFields.show_title as boolean) ?? true}
+								onchange={(e) => { configFields = { ...configFields, show_title: (e.target as HTMLInputElement).checked }; applyConfig() }}
+							/>
+							<span class="ptoggle-track"><span class="ptoggle-thumb"></span></span>
+						</label>
+					</label>
+					{#if (configFields.show_title as boolean) ?? true}
+						<div class="pfield">
+							<input type="text" value={(configFields.title_text as string) ?? ''}
+								placeholder={tFn('hpb.header_title_placeholder')}
+								oninput={(e) => { configFields = { ...configFields, title_text: (e.target as HTMLInputElement).value }; applyConfig() }}
+							/>
+						</div>
+					{/if}
+
+					<label class="pfield" style="margin-top:8px">
+						<span>{tFn('hpb.header_show_subtitle')}</span>
+						<label class="ptoggle">
+							<input type="checkbox" checked={(configFields.show_subtitle as boolean) ?? true}
+								onchange={(e) => { configFields = { ...configFields, show_subtitle: (e.target as HTMLInputElement).checked }; applyConfig() }}
+							/>
+							<span class="ptoggle-track"><span class="ptoggle-thumb"></span></span>
+						</label>
+					</label>
+					{#if (configFields.show_subtitle as boolean) ?? true}
+						<div class="pfield">
+							<input type="text" value={(configFields.subtitle_text as string) ?? ''}
+								placeholder={tFn('hpb.header_subtitle_placeholder')}
+								oninput={(e) => { configFields = { ...configFields, subtitle_text: (e.target as HTMLInputElement).value }; applyConfig() }}
+							/>
+						</div>
+					{/if}
+
+					<label class="pfield">
+						<span>{tFn('hpb.align')}</span>
+						<select value={(configFields.text_h_align as string) ?? 'left'}
+							onchange={(e) => { configFields = { ...configFields, text_h_align: (e.target as HTMLSelectElement).value }; applyConfig() }}
+						>
+							<option value="left">{tFn('hpb.align_left')}</option>
+							<option value="center">{tFn('hpb.align_center')}</option>
+							<option value="right">{tFn('hpb.align_right')}</option>
+						</select>
+					</label>
+					<label class="pfield">
+						<span>{tFn('hpb.header_valign')}</span>
+						<select value={(configFields.text_v_align as string) ?? 'center'}
+							onchange={(e) => { configFields = { ...configFields, text_v_align: (e.target as HTMLSelectElement).value }; applyConfig() }}
+						>
+							<option value="top">{tFn('hpb.header_valign_top')}</option>
+							<option value="center">{tFn('hpb.align_center')}</option>
+							<option value="bottom">{tFn('hpb.header_valign_bottom')}</option>
+						</select>
+					</label>
+					<label class="pfield">
+						<span>{tFn('hpb.header_title_color')}</span>
+						<input type="color" value={(configFields.title_color as string) || '#e5e7eb'}
+							oninput={(e) => { configFields = { ...configFields, title_color: (e.target as HTMLInputElement).value }; applyConfigSilent() }}
+							onchange={() => applyConfig()}
+						/>
+					</label>
+					<label class="pfield">
+						<span>{tFn('hpb.header_subtitle_color')}</span>
+						<input type="color" value={(configFields.subtitle_color as string) || '#9ca3af'}
+							oninput={(e) => { configFields = { ...configFields, subtitle_color: (e.target as HTMLInputElement).value }; applyConfigSilent() }}
+							onchange={() => applyConfig()}
+						/>
+					</label>
+					<label class="pfield">
+						<span>{tFn('hpb.font')}</span>
+						<select value={(configFields.text_font as string) ?? ''}
+							onchange={(e) => { configFields = { ...configFields, text_font: (e.target as HTMLSelectElement).value }; applyConfig() }}
+						>
+							<option value="">{tFn('hpb.header_font_theme_default')}</option>
+							{#each FONTS as f}
+								<option value={f}>{f}</option>
+							{/each}
+						</select>
+					</label>
+
+					<div class="panel-section-title" style="margin-top:12px">{tFn('hpb.header_show_cta')}</div>
+					<label class="pfield">
+						<span>{tFn('hpb.header_show_cta')}</span>
+						<label class="ptoggle">
+							<input type="checkbox" checked={(configFields.show_cta as boolean) ?? false}
+								onchange={(e) => { configFields = { ...configFields, show_cta: (e.target as HTMLInputElement).checked }; applyConfig() }}
+							/>
+							<span class="ptoggle-track"><span class="ptoggle-thumb"></span></span>
+						</label>
+					</label>
+					{#if (configFields.show_cta as boolean) ?? false}
+						<div class="pfield">
+							<input type="text" value={(configFields.cta_text as string) ?? ''}
+								placeholder={tFn('hpb.cta_text')}
+								oninput={(e) => { configFields = { ...configFields, cta_text: (e.target as HTMLInputElement).value }; applyConfig() }}
+							/>
+						</div>
+						<div class="pfield">
+							<input type="url" value={(configFields.cta_url as string) ?? ''}
+								placeholder={tFn('hpb.ph_url')}
+								oninput={(e) => { configFields = { ...configFields, cta_url: (e.target as HTMLInputElement).value }; applyConfig() }}
+							/>
+						</div>
+					{/if}
+
+					<div class="panel-section-title" style="margin-top:12px">{tFn('hpb.header_docks')}</div>
+					<label class="pfield">
+						<span>{tFn('hpb.header_show_stats')}</span>
+						<label class="ptoggle">
+							<input type="checkbox" checked={(configFields.show_stats as boolean) ?? true}
+								onchange={(e) => { configFields = { ...configFields, show_stats: (e.target as HTMLInputElement).checked }; applyConfig() }}
+							/>
+							<span class="ptoggle-track"><span class="ptoggle-thumb"></span></span>
+						</label>
+					</label>
+					<label class="pfield">
+						<span>{tFn('hpb.header_show_live')}</span>
+						<label class="ptoggle">
+							<input type="checkbox" checked={(configFields.show_live as boolean) ?? true}
+								onchange={(e) => { configFields = { ...configFields, show_live: (e.target as HTMLInputElement).checked }; applyConfig() }}
+							/>
+							<span class="ptoggle-track"><span class="ptoggle-thumb"></span></span>
+						</label>
+					</label>
+
+					<div class="config-actions" style="margin-top:8px">
+						<button class="btn-secondary" onclick={() => clearWidget(selectedCol!.rowId, selectedCol!.colId)}>{tFn('hpb.remove')}</button>
+					</div>
+
+				{:else if selNativePlugin?.customPanel && selNativePlugin.id === 'article-slideshow'}
 					<!-- ══ Panel custom : Diaporama ══ -->
 
 					{#if ssShowJson}
@@ -2243,5 +2563,51 @@
 	.sl-input:focus, .sl-select:focus {
 		outline: none;
 		border-color: rgba(167,139,250,.5);
+	}
+
+	/* ── Panel Header : toggle URL/fichier, pad de placement du logo ──────────── */
+	.hdr-upload-toggle {
+		display: flex; gap: 4px; margin-bottom: 6px;
+	}
+	.hdr-upload-toggle button {
+		flex: 1;
+		padding: 4px 8px;
+		font-size: 11px; font-weight: 600;
+		background: rgba(255,255,255,.04);
+		border: 1px solid rgba(255,255,255,.1);
+		color: #9ca3af;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: background .12s, color .12s;
+	}
+	.hdr-upload-toggle button.active {
+		background: rgba(167,139,250,.16);
+		border-color: rgba(167,139,250,.4);
+		color: #e2e8f0;
+	}
+	.hdr-logo-pad {
+		position: relative;
+		width: 100%;
+		height: 90px;
+		margin: 6px 0;
+		border-radius: 6px;
+		border: 1px solid rgba(255,255,255,.12);
+		background: repeating-conic-gradient(rgba(255,255,255,.04) 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+		overflow: hidden;
+	}
+	.hdr-logo-pad-bg {
+		position: absolute; inset: 0;
+		width: 100%; height: 100%;
+		object-fit: cover;
+		opacity: .55;
+	}
+	.hdr-logo-pad-marker {
+		position: absolute;
+		width: 28px; height: 28px;
+		object-fit: cover;
+		border-radius: 4px;
+		outline: 2px solid rgba(167,139,250,.8);
+		outline-offset: 1px;
+		transform: translate(-50%, -50%);
 	}
 </style>

@@ -5,6 +5,7 @@ import type { WidgetPlugin } from './_types'
 
 // Phase 1 — disponibles
 import heroBanner         from './hero-banner'
+import header             from './header'
 import statsBar           from './stats-bar'
 import joinCard           from './join-card'
 import announcementBanner from './announcement-banner'
@@ -16,6 +17,7 @@ import twitchStream       from './twitch-stream'
 
 export const PLUGIN_REGISTRY: Record<string, WidgetPlugin> = {
 	[heroBanner.id]:         heroBanner,
+	[header.id]:             header,
 	[statsBar.id]:           statsBar,
 	[joinCard.id]:           joinCard,
 	[announcementBanner.id]: announcementBanner,
