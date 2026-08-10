@@ -155,13 +155,26 @@ else
   fail "git pull demo en échec, instance NON déployée"
 fi
 
-# ── 6. Vérification : on ne déclare le succès qu'après l'avoir constaté ──────
+# ── 6. vieuxlooters.nodyx.org (4e instance, ajoutée au déploiement) ─────────
+head_ "vieuxlooters.nodyx.org (build en nodyx)"
+if sudo -u nodyx bash -lc 'cd /opt/vieuxlooters && git pull --ff-only' >/dev/null 2>&1; then
+  ok "dépôt vieuxlooters à jour"
+  G=ok
+  build_app "vieuxlooters-core"     /opt/vieuxlooters/nodyx-core     nodyx || G=ko
+  build_app "vieuxlooters-frontend" /opt/vieuxlooters/nodyx-frontend nodyx || G=ko
+  restart_if_built "$G" vieuxlooters-core vieuxlooters-frontend
+else
+  fail "git pull vieuxlooters en échec, instance NON déployée"
+fi
+
+# ── 7. Vérification : on ne déclare le succès qu'après l'avoir constaté ──────
 head_ "Vérification des services"
 sleep 8
 check_url "nodyx.org"             "https://nodyx.org/"
 check_url "nodyx.org/translate"   "https://nodyx.org/translate"
 check_url "sleemstudio.nodyx.org" "https://sleemstudio.nodyx.org/"
 check_url "demo.nodyx.org"        "https://demo.nodyx.org/"
+check_url "vieuxlooters.nodyx.org" "https://vieuxlooters.nodyx.org/"
 check_url "nodyx.dev"             "https://nodyx.dev/"
 check_url "start.nodyx.org"       "https://start.nodyx.org/"
 

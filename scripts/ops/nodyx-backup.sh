@@ -42,6 +42,7 @@ INSTANCES=(
   "nodyx.org:nexus:/var/www/nexus"
   "sleemstudio:sleemstudio:/opt/sleemstudio"
   "demo:demo:/opt/demo"
+  "vieuxlooters:vieuxlooters:/opt/vieuxlooters"
 )
 
 mkdir -p "$DEST"
