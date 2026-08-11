@@ -1558,6 +1558,7 @@
   "voice_room.click_expand": "Cliquer pour ouvrir en grand",
   "voice_room.expand": "Ouvrir en grand",
   "voice_room.fullscreen": "Plein écran",
+  "voice_room.resize_preview": "Redimensionner l'aperçu (flèches haut/bas)",
   "voice_room.show_chat": "Afficher le chat du salon",
   "voice_settings.input_volume": "🎙️ Volume d'entrée",
   "voice_settings.gain_high": "⚠️ Gain élevé, risque de saturation",

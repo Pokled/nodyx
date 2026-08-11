@@ -54,6 +54,36 @@
 		}
 	});
 
+	// ── Hauteur de la bande d'aperçu ──────────────────────────────────────────
+	// Elle était figée à 42vh. Pour qui REGARDE un partage sans vouloir ouvrir la
+	// Scène, c'était trop peu et rien ne permettait d'en gagner. On la rend donc
+	// ajustable à la souris et on mémorise le choix, comme les deux sidebars.
+	const SCREEN_H_MIN = 20;
+	const SCREEN_H_MAX = 80;
+	let screenBandVh = $state(
+		browser ? Number(localStorage.getItem('nodyx:voice:screen_h')) || 42 : 42,
+	);
+	let resizingBand = $state(false);
+
+	function startBandResize(e: PointerEvent) {
+		e.preventDefault();
+		resizingBand = true;
+		const startY  = e.clientY;
+		const startVh = screenBandVh;
+		const move = (ev: PointerEvent) => {
+			const deltaVh = ((ev.clientY - startY) / window.innerHeight) * 100;
+			screenBandVh = Math.min(SCREEN_H_MAX, Math.max(SCREEN_H_MIN, startVh + deltaVh));
+		};
+		const up = () => {
+			resizingBand = false;
+			if (browser) localStorage.setItem('nodyx:voice:screen_h', String(Math.round(screenBandVh)));
+			window.removeEventListener('pointermove', move);
+			window.removeEventListener('pointerup', up);
+		};
+		window.addEventListener('pointermove', move);
+		window.addEventListener('pointerup', up);
+	}
+
 	// Grille qui TIENT dans la hauteur allouée, quel que soit le nombre d'écrans.
 	// Avant : colonnes fixes + tuiles forcées en `aspect-ratio: 16/9` dans un
 	// conteneur `overflow-y-auto` → sur une colonne large, la tuile devenait plus
@@ -286,7 +316,7 @@
 	<div class="shrink-0 grid gap-2 p-3 overflow-hidden"
 	     style="grid-template-columns: repeat({gridCols}, minmax(0, 1fr));
 	            grid-template-rows: repeat({gridRows}, minmax(0, 1fr));
-	            height: 42vh; background: #07070f; border-bottom: 1px solid rgba(255,255,255,0.05);">
+	            height: {screenBandVh}vh; background: #07070f; border-bottom: 1px solid rgba(255,255,255,0.05);">
 		{#if localScreen}
 			<div class="relative group/sc overflow-hidden bg-black min-w-0 min-h-0"
 			     style="border: 1px solid rgba(59,130,246,0.35); box-shadow: 0 0 24px rgba(59,130,246,0.12);">
@@ -375,6 +405,25 @@
 			</div>
 		{/each}
 	</div>
+
+	<!-- Poignée de redimensionnement de la bande d'aperçu. Au clavier aussi :
+	     flèches haut/bas, sinon la fonction n'existe que pour ceux qui peuvent
+	     viser 6px à la souris. -->
+	<button
+		type="button"
+		class="shrink-0 w-full h-1.5 cursor-ns-resize transition-colors"
+		class:bg-indigo-500={resizingBand}
+		style="background: {resizingBand ? '' : 'rgba(255,255,255,0.05)'};"
+		aria-label={tFn('voice_room.resize_preview')}
+		onpointerdown={startBandResize}
+		onkeydown={(e) => {
+			if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+			e.preventDefault();
+			const next = screenBandVh + (e.key === 'ArrowDown' ? 2 : -2);
+			screenBandVh = Math.min(SCREEN_H_MAX, Math.max(SCREEN_H_MIN, next));
+			if (browser) localStorage.setItem('nodyx:voice:screen_h', String(Math.round(screenBandVh)));
+		}}
+	></button>
 {/if}
 
 <!-- ── Stage (participants) ────────────────────────────────────────────────── -->

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { portal } from '$lib/actions/portal'
 	import { onMount, onDestroy }   from 'svelte'
 	import { browser }              from '$app/environment'
 	import CanvasLeftToolbar        from './CanvasLeftToolbar.svelte'
@@ -1882,14 +1883,6 @@
 	}
 	function onKeyup(e: KeyboardEvent) {
 		if (e.code === 'Space') spaceDown = false
-	}
-
-	// ── Portal ────────────────────────────────────────────────────────────────
-
-	function portal(node: HTMLElement) {
-		if (!browser) return
-		document.body.appendChild(node)
-		return { destroy() { if (document.body.contains(node)) document.body.removeChild(node) } }
 	}
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────

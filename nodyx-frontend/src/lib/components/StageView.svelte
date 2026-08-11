@@ -549,7 +549,10 @@
              laisse un onglet fin pour le rouvrir (on ne cherche pas un bouton). -->
         {#if channelId}
             {#if showChat}
-                <div class="w-80 shrink-0 min-h-0 xl:w-96">
+                <!-- Largeur FIXE à 320px, y compris sur très grand écran : le
+                     `xl:w-96` d'avant élargissait le chat à 384px là où c'est
+                     justement la vidéo qui doit récupérer la place gagnée. -->
+                <div class="w-80 shrink-0 min-h-0">
                     <StageChat channelId={channelId} oncollapse={() => showChat = false}/>
                 </div>
             {:else}

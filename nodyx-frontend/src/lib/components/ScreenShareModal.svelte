@@ -1,5 +1,6 @@
 <script lang="ts">
     import { startScreenShare, screenShareSupported, type DisplaySurface, type ShareQuality, type ShareFps } from '$lib/voice'
+    import { portal } from '$lib/actions/portal'
     import { t } from '$lib/i18n'
 
     const tFn = $derived($t)
@@ -47,7 +48,13 @@
 </script>
 
 <!-- Overlay -->
+<!-- Portalée dans <body> : ce composant est ouvert depuis VoicePanel, qui vit
+     dans la sidebar gauche. Celle-ci porte `transform: translateX(0)` pour son
+     animation de repli, ce qui en fait le bloc conteneur des descendants
+     `fixed` : sans portal, `inset-0` désignait la sidebar (220px) et non le
+     viewport, la carte tombait à ~188px et `max-w-md` ne s'appliquait jamais. -->
 <div
+    use:portal
     class="fixed inset-0 z-[300] flex items-center justify-center p-4"
     style="background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);"
     role="dialog"

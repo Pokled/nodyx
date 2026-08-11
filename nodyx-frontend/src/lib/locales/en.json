@@ -4003,6 +4003,7 @@
   "voice_room.click_expand": "Click to open in large view",
   "voice_room.expand": "Open in large view",
   "voice_room.fullscreen": "Fullscreen",
+  "voice_room.resize_preview": "Resize preview (up/down arrows)",
   "voice_room.show_chat": "Show the room chat",
   "communities.lang.all": "All",
   "communities.lang.fr": "🇫🇷 Français",

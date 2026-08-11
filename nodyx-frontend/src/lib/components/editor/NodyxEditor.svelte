@@ -2,6 +2,7 @@
 	import { onMount, onDestroy, untrack } from 'svelte'
 	import { page } from '$app/stores'
 	import { apiFetch } from '$lib/api'
+	import { anchoredPopover } from '$lib/actions/anchoredPopover'
 	import { t } from '$lib/i18n'
 	import { TextSelection } from '@tiptap/pm/state'
 
@@ -643,49 +644,9 @@
 		}
 	}
 
-	// ── Placement des popups (portalées dans <body>) ─────────────────────────
-	// Bug RÉCURRENT : les popups (lien/YouTube/image/audio/emoji/tableau) étaient
-	// tronquées dès que l'éditeur vivait dans un conteneur en overflow (modal du
-	// chat, carte de tâche, panneau qui scrolle). Un simple `position: fixed` ne
-	// suffit PAS : dès qu'un ancêtre a un `transform`/`filter`/`backdrop-filter`
-	// (le modal du chat en a un), il devient le « bloc conteneur » du fixed, qui se
-	// retrouve piégé et re-clippé. La seule solution robuste : PORTALER la popup
-	// dans <body>, où plus aucun ancêtre ne la piège, et la positionner en `fixed`
-	// depuis son bouton, bornée à l'écran des DEUX côtés, bascule haut/bas.
-	function autoFlip(node: HTMLElement) {
-		const anchor = node.parentElement   // le groupe du bouton, AVANT de déplacer
-		document.body.appendChild(node)
-		function place() {
-			if (!anchor) return
-			node.style.left = '0px'
-			node.style.top = '0px'
-			node.style.right = 'auto'
-			node.style.bottom = 'auto'
-			const pw = node.offsetWidth
-			const ph = node.offsetHeight
-			const a = anchor.getBoundingClientRect()
-			const vw = window.innerWidth
-			const vh = window.innerHeight
-			const left = Math.max(8, Math.min(a.left, vw - pw - 8))
-			let top = a.bottom + 4
-			if (top + ph > vh - 8 && a.top - ph - 4 >= 8) top = a.top - ph - 4
-			node.style.left = `${Math.round(left)}px`
-			node.style.top = `${Math.round(top)}px`
-		}
-		place()
-		const ro = new ResizeObserver(place)
-		ro.observe(node)
-		window.addEventListener('resize', place)
-		window.addEventListener('scroll', place, true)  // suit le scroll (fixed ne suit pas seul)
-		return {
-			destroy() {
-				ro.disconnect()
-				window.removeEventListener('resize', place)
-				window.removeEventListener('scroll', place, true)
-				node.remove()   // retire la popup portalée
-			},
-		}
-	}
+	// Placement des popups : action partagée `anchoredPopover` (portal dans <body>
+	// + ancrage au bouton + bornage écran + bascule). Le calcul vient d'ici à
+	// l'origine ; il est désormais mutualisé, cf src/lib/actions/anchoredPopover.ts.
 
 	$effect(() => {
 		document.addEventListener('click', onDocClick)
@@ -1258,7 +1219,7 @@
 				<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M7 20h10M12 4l5 12H7L12 4z"/></svg>
 			</button>
 			{#if showColor}
-			<div class="popup w-48 grid grid-cols-6 gap-1 p-2" use:autoFlip>
+			<div class="popup w-48 grid grid-cols-6 gap-1 p-2" use:anchoredPopover>
 				<button type="button" onclick={() => editor?.chain().focus().unsetColor().run()} class="col-span-6 text-xs text-gray-400 hover:text-white text-left mb-1">{tFn('editor.color_reset')}</button>
 				{#each COLORS as c}
 					<button type="button" onclick={() => setColor(c)} class="w-6 h-6 rounded border border-gray-700 hover:scale-110 transition-transform" style="background:{c}" title={c}></button>
@@ -1275,7 +1236,7 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
 			</button>
 			{#if showLink}
-			<div class="popup w-72 flex flex-col gap-2 p-3" use:autoFlip>
+			<div class="popup w-72 flex flex-col gap-2 p-3" use:anchoredPopover>
 				<input type="url" bind:value={linkUrl} placeholder={tFn('editor.link.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertLink()} />
 				<div class="flex gap-2">
 					<button type="button" onclick={insertLink} class="flex-1 popup-btn-primary">{tFn('editor.insert')}</button>
@@ -1291,7 +1252,7 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15l-5-5L5 21"/></svg>
 			</button>
 			{#if showImage}
-			<div class="popup w-80 flex flex-col gap-2 p-3" use:autoFlip>
+			<div class="popup w-80 flex flex-col gap-2 p-3" use:anchoredPopover>
 				{#if replaceImagePos !== null}
 					<div class="flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1">
 						<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/></svg>
@@ -1332,7 +1293,7 @@
 				<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
 			</button>
 			{#if showVideo}
-			<div class="popup w-80 flex flex-col gap-2 p-3" use:autoFlip>
+			<div class="popup w-80 flex flex-col gap-2 p-3" use:anchoredPopover>
 				<p class="text-xs text-gray-500">{tFn('editor.video_hint')}</p>
 				<input type="url" bind:value={videoUrl} placeholder={tFn('editor.video.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertVideo()} />
 				<button type="button" onclick={insertVideo} class="popup-btn-primary">{tFn('editor.embed_video')}</button>
@@ -1346,7 +1307,7 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
 			</button>
 			{#if showAudio}
-			<div class="popup w-96 flex flex-col gap-2 p-3" use:autoFlip>
+			<div class="popup w-96 flex flex-col gap-2 p-3" use:anchoredPopover>
 				<p class="text-xs text-gray-500">{tFn('editor.audio.hint')}</p>
 				<input
 					bind:this={audioFileEl}
@@ -1433,7 +1394,7 @@
 		<div class="relative">
 			<button type="button" onclick={() => { showEmoji = !showEmoji; showColor = showLink = showImage = showVideo = showAudio = showTable = false }} class="tb-btn text-base" title={tFn('editor.insert_emoji')}>😊</button>
 			{#if showEmoji}
-			<div class="popup w-72 p-2 grid grid-cols-10 gap-0.5 max-h-48 overflow-y-auto" use:autoFlip>
+			<div class="popup w-72 p-2 grid grid-cols-10 gap-0.5 max-h-48 overflow-y-auto" use:anchoredPopover>
 				{#each EMOJIS as e}
 					<button type="button" onclick={() => insertEmoji(e)} class="text-base p-1 rounded hover:bg-gray-700 transition-colors leading-none">{e}</button>
 				{/each}
@@ -1456,7 +1417,7 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><path stroke-width="1.5" d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
 			</button>
 			{#if showTable}
-			<div class="popup w-52 p-2 flex flex-col gap-1" use:autoFlip>
+			<div class="popup w-52 p-2 flex flex-col gap-1" use:anchoredPopover>
 				{#if !a.table}
 					<button type="button" onclick={() => { toggleAny('insertTable'); showTable = false }} class="table-btn">{tFn('editor.insert_table')}</button>
 				{:else}
@@ -1639,7 +1600,7 @@
 
 	/* ── Popups ────────────────────────────────────────────────────────── */
 	:global(.popup) {
-		position: fixed;        /* échappe au clipping des overflow ancêtres ; placée par use:autoFlip */
+		position: fixed;        /* échappe au clipping des overflow ancêtres ; placée par use:anchoredPopover */
 		z-index: 1000;          /* au-dessus des modals (chat z-400, tâches…) */
 		max-width: calc(100vw - 16px);   /* jamais plus large que l'écran (mobile) */
 		background-color: rgb(31 41 55);

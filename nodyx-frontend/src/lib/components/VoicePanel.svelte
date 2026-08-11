@@ -12,6 +12,7 @@
     import VoiceSettings    from './VoiceSettings.svelte'
     import ScreenShareModal from './ScreenShareModal.svelte'
     import { stageOpenStore } from '$lib/stageStore'
+    import { portal } from '$lib/actions/portal'
     import { onMount } from 'svelte'
     import { t } from '$lib/i18n'
     import { voicePanelTarget } from '$lib/voicePanel'
@@ -228,13 +229,16 @@
     <!-- ── Panneau "Vous" ──────────────────────────────────────────── -->
     {#if selfInfo !== null}
         {@const si = selfInfo}
-        <div class='fixed inset-0 z-40 backdrop-blur-sm bg-black/20'
+        <!-- use:portal — en mode sidebar ce panneau est rendu dans un conteneur
+             transformé (voir actions/portal.ts) : sans portal, `left-1/2` se
+             calcule sur 220px et le panneau part hors écran. -->
+        <div use:portal class='fixed inset-0 z-40 backdrop-blur-sm bg-black/20'
              role='button' tabindex='-1'
              onclick={() => selfInfo = null}
              onkeydown={e => e.key === 'Escape' && (selfInfo = null)}
              aria-label={tFn('voice.close_panel')}></div>
 
-        <div class='fixed bottom-16 left-1/2 -translate-x-1/2 z-50 w-72 rounded-2xl
+        <div use:portal class='fixed bottom-16 left-1/2 -translate-x-1/2 z-50 w-72 rounded-2xl
                     bg-gradient-to-b from-gray-900 to-gray-950
                     border border-green-500/30 shadow-2xl shadow-green-500/10
                     overflow-hidden backdrop-blur-sm
@@ -314,6 +318,7 @@
 
         <!-- Overlay de fermeture -->
         <div
+            use:portal
             class='fixed inset-0 z-40 backdrop-blur-sm bg-black/20'
             role='button' tabindex='-1'
             onclick={closePanel}
@@ -322,7 +327,7 @@
         ></div>
 
         <!-- Panneau popup -->
-        <div class='fixed bottom-16 left-1/2 -translate-x-1/2 z-50 w-72 rounded-2xl 
+        <div use:portal class='fixed bottom-16 left-1/2 -translate-x-1/2 z-50 w-72 rounded-2xl
                     bg-gradient-to-b from-gray-900 to-gray-950 
                     border border-indigo-500/30 shadow-2xl shadow-indigo-500/20 
                     overflow-hidden backdrop-blur-sm
@@ -1056,15 +1061,20 @@
                 </button>
             </div>
 
-            <!-- VoiceSettings popup (fixed, échappe la sidebar) -->
+            <!-- VoiceSettings popup — `fixed` NE SUFFIT PAS à échapper la sidebar :
+                 celle-ci porte `transform: translateX(0)` (animation de repli), donc
+                 elle devient le bloc conteneur des descendants fixed. `left-1/2` se
+                 calculait sur 220px et `-translate-x-1/2` de 360px sortait le panneau
+                 à -14px : les libellés étaient cisaillés à gauche. Le portal le sort
+                 pour de bon (voir actions/portal.ts). -->
             {#if showVoiceSettings}
-                <div class="fixed inset-0 z-[199] backdrop-blur-sm bg-black/20"
+                <div use:portal class="fixed inset-0 z-[199] backdrop-blur-sm bg-black/20"
                      role="button" tabindex="-1"
                      onclick={() => showVoiceSettings = false}
                      onkeydown={e => e.key === 'Escape' && (showVoiceSettings = false)}
                      aria-label={tFn('voice_panel.close_settings')}>
                 </div>
-                <div class="fixed bottom-24 left-1/2 -translate-x-1/2 w-[360px] z-[200]
+                <div use:portal class="fixed bottom-24 left-1/2 -translate-x-1/2 w-[360px] z-[200]
                             animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div class="relative bg-gradient-to-b from-gray-900 to-gray-950
                                 border border-amber-500/30 rounded-2xl shadow-2xl shadow-amber-500/10
