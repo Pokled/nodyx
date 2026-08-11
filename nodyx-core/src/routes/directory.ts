@@ -164,9 +164,17 @@ export default async function directoryRoutes(app: FastifyInstance) {
              logo_url, banner_url
       FROM directory_instances
       WHERE status = 'active'
+        -- Archivage (migration 083) : la colonne et ses index existaient, mais
+        -- la requete ne les lisait pas. Une instance archivee restait donc
+        -- affichee, l'archivage n'avait aucun effet visible.
+        AND archived_at IS NULL
         AND (
-          last_seen IS NULL
-          OR last_seen > NOW() - INTERVAL '15 minutes'
+          last_seen > NOW() - INTERVAL '15 minutes'
+          -- Une instance fraichement enregistree n'a pas encore pingue : on lui
+          -- laisse le temps de demarrer, mais BORNE dans le temps. Avant, un
+          -- simple "last_seen IS NULL" la rendait visible A VIE, meme si elle
+          -- n'avait jamais ete allumee une seule seconde.
+          OR (last_seen IS NULL AND registered_at > NOW() - INTERVAL '15 minutes')
         )
       ORDER BY members DESC, registered_at ASC
     `);
