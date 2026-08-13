@@ -146,9 +146,14 @@ export async function mountYTPlayer(containerId: string): Promise<void> {
         // playVideo() and sometimes losing, leaving the player stuck in
         // a CUED state with no audio AND no progress. Starting muted at
         // the iframe level guarantees autoplay works on every browser.
-        // The host's own jukeboxLoad() / jukeboxPlay() flow un-mutes
-        // immediately because the user has interacted; peers see the
-        // green "Activer le son" overlay and unmute on click.
+        // Ce démarrage muet DOIT être compensé par un unMute() explicite :
+        // setVolume() sur un lecteur muet ne fait aucun son. Les deux endroits
+        // qui le font sont onReady (préférence utilisateur) et jukeboxLoad
+        // (dans la pile du clic). Ce commentaire affirmait auparavant que
+        // jukeboxLoad démutait « immédiatement » : c'était faux, aucun unMute()
+        // ne s'y trouvait, et l'hôte lançait sa musique en silence.
+        // Les pairs sans geste utilisateur restent muets et voient la
+        // bannière verte « Activer le son ».
         controls: 0, modestbranding: 1, rel: 0,
         playsinline: 1, mute: 1, origin: window.location.origin,
       },
@@ -159,7 +164,11 @@ export async function mountYTPlayer(containerId: string): Promise<void> {
           const vol   = get(jukeboxVolume)
           const muted = get(jukeboxMuted)
           _ytPlayer.setVolume(vol)
+          // Le lecteur démarre avec playerVars.mute=1 (garantie anti-autoplay).
+          // setVolume() sur un lecteur muet ne produit AUCUN son : il faut un
+          // unMute() explicite, sinon l'hôte lance sa piste et n'entend rien.
           if (muted) _ytPlayer.mute()
+          else       _ytPlayer.unMute()
           if (_pendingOp) { _pendingOp(); _pendingOp = null }
           resolve()
         },
@@ -254,6 +263,51 @@ function _livePosition(state: JukeboxState): number {
   return state.position + (Date.now() - state.syncedAt) / 1000
 }
 
+/** Écart de position au-delà duquel on resynchronise (secondes). */
+export const JUKEBOX_DRIFT_TOLERANCE = 0.8
+
+export type JukeboxAction =
+  | { kind: 'load';  videoId: string; at: number; play: boolean }
+  | { kind: 'seek';  at: number; play: boolean }
+  | { kind: 'play' }
+  | { kind: 'pause' }
+  | { kind: 'stop' }
+
+/**
+ * Décide QUOI faire du lecteur, sans le toucher.
+ *
+ * Cette fonction existe parce que le bug qu'elle corrige était invisible :
+ * `_applyState` écrivait le store PUIS relisait ce même store pour savoir quel
+ * morceau jouait « avant ». `prev` et `state` étaient donc le même objet, la
+ * comparaison de videoId se faisait entre une valeur et elle-même, et valait
+ * toujours vrai. Résultat : la branche qui appelle `loadVideoById` chez un
+ * auditeur n'était JAMAIS atteinte. Son lecteur recevait `seekTo` et
+ * `playVideo` sans avoir jamais reçu de vidéo : titre affiché, silence total.
+ *
+ * La référence n'est donc plus le store (qui décrit ce qu'on VEUT) mais
+ * `loadedVideoId`, ce que le lecteur A réellement chargé. C'est idempotent,
+ * insensible à l'ordre des appels, et auto-réparateur : un lecteur qui a perdu
+ * sa vidéo la recharge au lieu de jouer dans le vide.
+ */
+export function decideJukeboxAction(
+  loadedVideoId: string | null,
+  currentTime:   number,
+  state:         JukeboxState,
+  livePosition:  number,
+): JukeboxAction {
+  if (!state.track) return { kind: 'stop' }
+
+  if (loadedVideoId !== state.track.videoId) {
+    return { kind: 'load', videoId: state.track.videoId, at: livePosition, play: state.playing }
+  }
+
+  if (Math.abs(currentTime - livePosition) > JUKEBOX_DRIFT_TOLERANCE) {
+    return { kind: 'seek', at: livePosition, play: state.playing }
+  }
+
+  return state.playing ? { kind: 'play' } : { kind: 'pause' }
+}
+
 function _broadcastState(): void {
   if (_suppressBroadcast) return
   if (!_socket || !_channelId || !_ytPlayer || !_ytReady) return
@@ -273,9 +327,12 @@ function _applyState(state: JukeboxState): void {
   jukeboxStore.set(state)
   const apply = () => {
     if (!_ytPlayer || !_ytReady) { _pendingOp = () => _applyState(state); return }
-    const prev      = get(jukeboxStore)
-    const sameVideo = prev.track?.videoId === state.track?.videoId
-    const target    = _livePosition(state)
+    // Référence = ce que le lecteur a VRAIMENT chargé, pas le store. Voir le
+    // commentaire de decideJukeboxAction : relire le store qu'on vient d'écrire
+    // rendait la comparaison toujours vraie et tuait le chargement chez l'auditeur.
+    const loadedId = _ytPlayer.getVideoData?.()?.video_id ?? null
+    const current  = _ytPlayer.getCurrentTime?.() ?? 0
+    const action   = decideJukeboxAction(loadedId, current, state, _livePosition(state))
 
     // Audio policy: the player boots with playerVars.mute=1 so unmuted
     // autoplay can never be denied. Two paths from here:
@@ -300,46 +357,49 @@ function _applyState(state: JukeboxState): void {
       }
     }
 
-    if (state.track) {
-      if (!sameVideo) {
-        // New video: load, then explicitly play/pause
-        _ytPlayer.loadVideoById({ videoId: state.track.videoId, startSeconds: target })
-        if (state.playing) {
+    // Détecteur d'autoplay bloqué. Il teste `state.playing` CAPTURÉ ici, et non
+    // `get(jukeboxStore).playing` : la boucle de progression (toutes les 500 ms)
+    // écrase `playing` avec l'état du lecteur local, donc à T+2000 ms le store
+    // disait déjà `false` et ce détecteur ne se déclenchait jamais. Or la
+    // bannière qu'il arme est le SEUL chemin d'un auditeur vers loadVideoById.
+    const armBlockageProbe = () => {
+      if (!state.playing) return
+      setTimeout(() => {
+        const ps = _ytPlayer?.getPlayerState?.()
+        if (ps !== 1 && ps !== 3) jukeboxAutoplayBlocked.set(true)
+      }, 2000)
+    }
+
+    switch (action.kind) {
+      case 'stop':
+        _ytPlayer.stopVideo?.()
+        break
+
+      case 'load':
+        _ytPlayer.loadVideoById({ videoId: action.videoId, startSeconds: action.at })
+        if (action.play) {
           _ytPlayer.playVideo()
           setTimeout(() => _ytPlayer?.playVideo(), 600)
-          // Detect browser autoplay blockage AFTER the muted-start fallback.
-          // Muted play is almost always allowed, so this banner now only
-          // triggers in pathological cases (extension blocking, etc.).
-          // State 1=playing, 3=buffering → OK ; anything else → blocked
-          setTimeout(() => {
-            const ps = _ytPlayer?.getPlayerState?.()
-            if (ps !== 1 && ps !== 3 && get(jukeboxStore).playing) {
-              jukeboxAutoplayBlocked.set(true)
-            }
-          }, 2000)
+          armBlockageProbe()
         } else {
           setTimeout(() => _ytPlayer?.pauseVideo(), 800)
         }
-      } else {
-        // Same video: sync position if drift > 0.8s (tightened from 2.5s for
-        // a noticeably tighter shared-listening experience).
-        const cur = _ytPlayer.getCurrentTime?.() ?? 0
-        if (Math.abs(cur - target) > 0.8) _ytPlayer.seekTo(target, true)
-        if (state.playing) {
-          _ytPlayer.playVideo()
-          // Detect blockage for same-video play commands too
-          setTimeout(() => {
-            const ps = _ytPlayer?.getPlayerState?.()
-            if (ps !== 1 && ps !== 3 && get(jukeboxStore).playing) {
-              jukeboxAutoplayBlocked.set(true)
-            }
-          }, 2000)
-        } else {
-          _ytPlayer.pauseVideo()
-        }
-      }
-    } else {
-      _ytPlayer.stopVideo?.()
+        break
+
+      case 'seek':
+        _ytPlayer.seekTo(action.at, true)
+        if (action.play) { _ytPlayer.playVideo(); armBlockageProbe() }
+        else             { _ytPlayer.pauseVideo() }
+        break
+
+      case 'play':
+        _ytPlayer.playVideo()
+        armBlockageProbe()
+        break
+
+      case 'pause':
+        _ytPlayer.pauseVideo()
+        break
     }
   }
   apply()
@@ -484,12 +544,28 @@ export function jukeboxLoad(url: string): boolean {
   // ── Lancement direct dans le contexte du geste utilisateur ───────────────
   // Ne jamais mettre d'await avant ce bloc — le navigateur bloque playVideo()
   // si on sort du stack frame du clic (règle autoplay Chrome/Firefox).
+  // On démute ICI, dans la pile d'appel du clic : c'est ce que la politique
+  // autoplay autorise. Sans ça, l'hôte jouait muet, et son SEUL démutage
+  // automatique était _applyState, qui ne s'exécute que sur un événement
+  // ENTRANT. Or le serveur exclut l'émetteur de son propre broadcast : il
+  // dépendait donc de l'écho d'un pair, d'où le « parfois » et le besoin de
+  // marteler pause/lecture jusqu'à ce qu'un écho tombe.
+  const unmuteIfWanted = () => {
+    if (get(jukeboxMuted)) return
+    try {
+      _ytPlayer?.unMute()
+      _ytPlayer?.setVolume(get(jukeboxVolume))
+    } catch { /* ignore */ }
+  }
+
   if (_ytPlayer && _ytReady) {
     _ytPlayer.loadVideoById({ videoId, startSeconds: 0 })
+    unmuteIfWanted()
     _ytPlayer.playVideo()
   } else {
     _pendingOp = () => {
       _ytPlayer?.loadVideoById({ videoId, startSeconds: 0 })
+      unmuteIfWanted()
       _ytPlayer?.playVideo()
     }
   }
