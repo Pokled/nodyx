@@ -207,17 +207,19 @@ export function jukeboxToggleMute(): void {
 // Called by user click — clears the autoplay-blocked banner and resumes playback
 export function jukeboxUnblock(): void {
   jukeboxAutoplayBlocked.set(false)
-  if (!_ytPlayer || !_ytReady) return
-  const state = get(jukeboxStore)
-  if (state.playing && state.track) {
-    const target = _livePosition(state)
-    // Suppress broadcast for 3s: loadVideoById triggers onStateChange(1) which calls
-    // _broadcastState() with getCurrentTime()≈0 before seek resolves — this would
-    // send position=0 to Morty who would rewind to 0 and broadcast back, creating a loop.
-    _suppressBroadcast = true
-    _ytPlayer.loadVideoById({ videoId: state.track.videoId, startSeconds: Math.floor(target) })
-    setTimeout(() => { _suppressBroadcast = false }, 3000)
-  }
+  jukeboxStartedMuted.set(false)
+  // Ce bouton chargeait bien la vidéo, mais restait conditionné à
+  // `state.playing`, que la boucle de progression remet à false chez un
+  // auditeur dont le lecteur est vide : il ne faisait alors rien. Et il ne
+  // lançait ni ne démutait ensuite.
+  //
+  // La suppression de diffusion reste nécessaire : charger une vidéo déclenche
+  // onStateChange(1), donc _broadcastState() avec une position ≈0 avant que le
+  // positionnement ait pris effet. Le pair rembobinerait à 0 et rediffuserait :
+  // boucle.
+  _suppressBroadcast = true
+  setTimeout(() => { _suppressBroadcast = false }, 3000)
+  _resyncFromUserGesture()
 }
 
 // Called by user click on the "Activer le son" overlay. The track is already
@@ -226,34 +228,12 @@ export function jukeboxUnblock(): void {
 // the host's current position so the audio is in time with what the listener
 // has been seeing visually.
 export function jukeboxEnableAudio(): void {
-  _userInteracted = true
   jukeboxStartedMuted.set(false)
-  if (!_ytPlayer || !_ytReady) return
-
-  // Restore audio: respect the user's per-session mute preference if they had
-  // already toggled it, otherwise un-mute and restore the volume slider.
-  const userPrefMuted = get(jukeboxMuted)
-  if (!userPrefMuted) {
-    try {
-      _ytPlayer.unMute()
-      _ytPlayer.setVolume(get(jukeboxVolume))
-    } catch { /* ignore */ }
-  }
-
-  // Resync to current host position AND force the player to actually play.
-  // The track may be sitting in a CUED state (state 5) if the initial
-  // muted-autoplay attempt didn't fully transition the player, especially
-  // when the audio policy is strict on the browser. seekTo + playVideo +
-  // a 500ms retry covers all the YouTube IFrame state machine quirks.
-  const state = get(jukeboxStore)
-  if (state.playing && state.track) {
-    const target = _livePosition(state)
-    try {
-      _ytPlayer.seekTo(target, true)
-      _ytPlayer.playVideo()
-      setTimeout(() => _ytPlayer?.playVideo(), 500)
-    } catch { /* ignore */ }
-  }
+  jukeboxAutoplayBlocked.set(false)
+  // Ce bouton faisait seekTo + playVideo SANS jamais charger la vidéo : sur le
+  // lecteur d'un auditeur, resté vide, il ne produisait donc rien du tout.
+  // On passe par le chemin unique, qui charge si nécessaire.
+  _resyncFromUserGesture()
 }
 
 // ── Sync helpers ──────────────────────────────────────────────────────────────
@@ -265,6 +245,22 @@ function _livePosition(state: JukeboxState): number {
 
 /** Écart de position au-delà duquel on resynchronise (secondes). */
 export const JUKEBOX_DRIFT_TOLERANCE = 0.8
+
+/**
+ * Rallume le son, sauf si l'utilisateur a explicitement coupé le sien.
+ *
+ * Indispensable après tout `loadVideoById` déclenché par un clic : le lecteur
+ * démarre avec `playerVars.mute=1`, et un auditeur qui n'avait pas encore
+ * interagi a pu être muté par `_syncPlayerTo`. Sans ça, changer de piste
+ * rejoue en silence.
+ */
+function _unmuteIfWanted(): void {
+  if (get(jukeboxMuted)) return
+  try {
+    _ytPlayer?.unMute()
+    _ytPlayer?.setVolume(get(jukeboxVolume))
+  } catch { /* ignore */ }
+}
 
 export type JukeboxAction =
   | { kind: 'load';  videoId: string; at: number; play: boolean }
@@ -323,10 +319,21 @@ function _broadcastState(): void {
   _socket.emit('jukebox:update', { channelId: _channelId, state })
 }
 
-function _applyState(state: JukeboxState): void {
-  jukeboxStore.set(state)
+/**
+ * Aligne le lecteur sur un état partagé. UNIQUE chemin autorisé.
+ *
+ * Tous les points d'entrée passent ici : réception d'un état distant, bouton
+ * « Activer le son », bouton « Synchroniser », bouton lecture. Avant, chacun
+ * bricolait sa propre séquence et TROIS d'entre eux faisaient seekTo/playVideo
+ * sans jamais charger la vidéo : sur un lecteur vide, ils ne produisaient
+ * strictement rien, et l'auditeur cliquait dans le vide.
+ *
+ * `forceAudio` = le geste utilisateur est certain (clic sur un bouton), donc on
+ * démute sans se demander si un geste a eu lieu.
+ */
+function _syncPlayerTo(state: JukeboxState, opts: { forceAudio?: boolean } = {}): void {
   const apply = () => {
-    if (!_ytPlayer || !_ytReady) { _pendingOp = () => _applyState(state); return }
+    if (!_ytPlayer || !_ytReady) { _pendingOp = () => _syncPlayerTo(state, opts); return }
     // Référence = ce que le lecteur a VRAIMENT chargé, pas le store. Voir le
     // commentaire de decideJukeboxAction : relire le store qu'on vient d'écrire
     // rendait la comparaison toujours vraie et tuait le chargement chez l'auditeur.
@@ -345,13 +352,14 @@ function _applyState(state: JukeboxState): void {
     //     via jukeboxEnableAudio().
     if (state.playing) {
       const userPrefMuted = get(jukeboxMuted)
-      if (_userInteracted && !userPrefMuted) {
+      // forceAudio : l'appel vient d'un clic, le geste utilisateur est certain.
+      if ((_userInteracted || opts.forceAudio) && !userPrefMuted) {
         try {
           _ytPlayer.unMute()
           _ytPlayer.setVolume(get(jukeboxVolume))
         } catch { /* ignore */ }
         jukeboxStartedMuted.set(false)
-      } else if (!_userInteracted) {
+      } else if (!_userInteracted && !opts.forceAudio) {
         try { _ytPlayer.mute() } catch { /* ignore */ }
         jukeboxStartedMuted.set(true)
       }
@@ -404,6 +412,22 @@ function _applyState(state: JukeboxState): void {
   }
   apply()
   _startProgressLoop()
+}
+
+/** Réception d'un état distant : on mémorise, puis on aligne le lecteur. */
+function _applyState(state: JukeboxState): void {
+  jukeboxStore.set(state)
+  _syncPlayerTo(state)
+}
+
+/**
+ * Aligne le lecteur sur l'état partagé COURANT, avec certitude d'un geste
+ * utilisateur. C'est ce qu'appellent les boutons de secours : eux seuls
+ * peuvent garantir que le navigateur autorisera le son.
+ */
+function _resyncFromUserGesture(): void {
+  _userInteracted = true
+  _syncPlayerTo(get(jukeboxStore), { forceAudio: true })
 }
 
 function _startProgressLoop(): void {
@@ -462,7 +486,7 @@ function _advanceQueue(): void {
   const nextIdx  = queue.findIndex(q => q.videoId === next.videoId && q.addedBy === next.addedBy)
   const newQueue = queue.filter((_, i) => i !== nextIdx)
 
-  _ytPlayer?.loadVideoById({ videoId: next.videoId, startSeconds: 0 })
+  _unmuteIfWanted(); _ytPlayer?.loadVideoById({ videoId: next.videoId, startSeconds: 0 })
   _ytPlayer?.playVideo()
   setTimeout(() => _ytPlayer?.playVideo(), 600)
 
@@ -550,22 +574,14 @@ export function jukeboxLoad(url: string): boolean {
   // ENTRANT. Or le serveur exclut l'émetteur de son propre broadcast : il
   // dépendait donc de l'écho d'un pair, d'où le « parfois » et le besoin de
   // marteler pause/lecture jusqu'à ce qu'un écho tombe.
-  const unmuteIfWanted = () => {
-    if (get(jukeboxMuted)) return
-    try {
-      _ytPlayer?.unMute()
-      _ytPlayer?.setVolume(get(jukeboxVolume))
-    } catch { /* ignore */ }
-  }
-
   if (_ytPlayer && _ytReady) {
     _ytPlayer.loadVideoById({ videoId, startSeconds: 0 })
-    unmuteIfWanted()
+    _unmuteIfWanted()
     _ytPlayer.playVideo()
   } else {
     _pendingOp = () => {
       _ytPlayer?.loadVideoById({ videoId, startSeconds: 0 })
-      unmuteIfWanted()
+      _unmuteIfWanted()
       _ytPlayer?.playVideo()
     }
   }
@@ -609,7 +625,13 @@ export function jukeboxLoad(url: string): boolean {
 
 export function jukeboxPlay(): void {
   jukeboxAutoplayBlocked.set(false)
-  _ytPlayer?.playVideo()
+  jukeboxStartedMuted.set(false)
+  // Ne faisait que playVideo(). Chez un auditeur dont le lecteur n'a jamais
+  // recu de video, appuyer sur Lecture ne faisait donc rien : on passe par le
+  // chemin unique, qui charge d'abord si nécessaire.
+  const state = get(jukeboxStore)
+  _userInteracted = true
+  _syncPlayerTo({ ...state, playing: true }, { forceAudio: true })
   setTimeout(_broadcastState, 200)
 }
 
@@ -685,11 +707,11 @@ export function jukeboxSkipPrev(): void {
   const [prev, ...rest] = state.history
 
   if (_ytPlayer && _ytReady) {
-    _ytPlayer.loadVideoById({ videoId: prev.videoId, startSeconds: 0 })
+    _unmuteIfWanted(); _ytPlayer.loadVideoById({ videoId: prev.videoId, startSeconds: 0 })
     _ytPlayer.playVideo()
   } else {
     _pendingOp = () => {
-      _ytPlayer?.loadVideoById({ videoId: prev.videoId, startSeconds: 0 })
+      _unmuteIfWanted(); _ytPlayer?.loadVideoById({ videoId: prev.videoId, startSeconds: 0 })
       _ytPlayer?.playVideo()
     }
   }
@@ -718,11 +740,11 @@ export function jukeboxToggleShuffle(): void {
 
 export function jukeboxReplayFromHistory(track: JukeboxTrack): void {
   if (_ytPlayer && _ytReady) {
-    _ytPlayer.loadVideoById({ videoId: track.videoId, startSeconds: 0 })
+    _unmuteIfWanted(); _ytPlayer.loadVideoById({ videoId: track.videoId, startSeconds: 0 })
     _ytPlayer.playVideo()
   } else {
     _pendingOp = () => {
-      _ytPlayer?.loadVideoById({ videoId: track.videoId, startSeconds: 0 })
+      _unmuteIfWanted(); _ytPlayer?.loadVideoById({ videoId: track.videoId, startSeconds: 0 })
       _ytPlayer?.playVideo()
     }
   }
