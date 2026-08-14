@@ -172,6 +172,14 @@ Trois précisions qui évitent une CSP de façade :
 - **le JS d'extension est un asset same-origin**, chargé par balise depuis `<origine_instance>`, jamais inline. Seul l'amorceur injecté par l'hôte porte le nonce. C'est ce qui permet la mise en cache par version.
 - `frame-src 'none'` : une extension ne peut pas embarquer d'iframe tierce en v1 (voir §12, limite assumée).
 
+**Deux exigences découvertes en production le 2026-08-14, qui n'étaient dans aucune version antérieure de ce document, et sans lesquelles aucune surface ne démarre.**
+
+**1. Les ressources de la frame doivent accepter `Origin: null`, sans identifiants.** Une frame en origine opaque envoie littéralement `Origin: null`, et un script de module comme tout `import()` est récupéré en mode CORS. Une politique CORS qui refuse cette valeur fait échouer le chargement du SDK, donc tout. L'exigence est bornée et ne relâche rien : elle vaut **uniquement pour `/api/v1/extensions/*`**, et **sans `credentials`**, donc le navigateur n'envoie aucun cookie. Ces routes servent soit des fichiers publics, soit des données protégées par le jeton d'extension passé en en-tête, qu'un tiers n'a pas. L'exposition est celle d'un `Access-Control-Allow-Origin: *` sur un fichier statique public.
+
+   Accepter `Origin: null` **globalement et avec identifiants** serait en revanche dangereux : n'importe quel site ouvrirait une frame en bac à sable et lirait des réponses authentifiées. La distinction est tout le sujet.
+
+**2. La page hôte doit pouvoir encadrer sa propre origine.** Sa politique de sécurité a besoin de `'self'` dans `frame-src`. Une politique qui l'omet interdit à une page d'encadrer une frame venant de son propre domaine, donc aucune extension ne démarre, quoi que fasse le code. Constaté sur trois instances de production dont la configuration de proxy avait divergé du dépôt, et qui cassait déjà, pour la même raison, l'aperçu en iframe du canevas Scènes de l'administration.
+
 ### 4.3 Les assets
 
 Servis par `GET /api/v1/extensions/:id/:version/assets/*`, avec la version dans le chemin : une mise à jour invalide le cache d'elle-même, et une frame ouverte ne peut pas se retrouver à mélanger l'ancien et le nouveau code.
@@ -541,24 +549,28 @@ Ce qu'ils ne font pas et qui devient notre signature : **la fiche affiche les pe
 
 Compteur d'installations : agrégé au téléchargement du paquet, sans stockage d'IP ni d'identifiant d'instance. Le « zéro analytics » vaut aussi pour nous.
 
-### 9.5 Installer depuis le site
+### 9.5 Installer, et où le geste se produit
 
-Le magasin ne pousse jamais rien vers une instance. Le flux ne s'inverse pas :
+**Révisé le 2026-08-14, sur proposition de Jonathan, après essai réel du parcours.**
 
-```
-fiche → « Installer » → saisie du domaine de l'instance
-      → redirection vers https://<instance>/admin/extensions/install?src=…&id=…&v=…
-      → admin authentifié, écran de permissions
-      → l'INSTANCE télécharge le paquet, vérifie le sha256 de l'index, installe
-```
+Le premier dessin faisait rebondir l'admin du site vers son instance, avec l'identifiant et le registre en paramètres d'URL. Ça marchait, mais ça créait un lien porteur d'un ordre d'installation, donc une surface d'attaque à défendre (`src` validé contre les registres configurés, POST confirmé, provenance affichée). Défendable, mais c'est une défense qu'on peut simplement ne pas avoir besoin d'écrire.
 
-Depuis l'admin, la même chose sans l'aller-retour. Installation par fichier local toujours disponible, avec le même écran de permissions.
+**Le geste se produit là où l'admin est déjà authentifié, et le passage d'un site à l'autre disparaît.**
 
-**Le lien d'installation est une surface d'attaque, et il faut la traiter comme telle.** Un lien fabriqué avec `src=<registre_de_l_attaquant>` envoyé à un owner installerait du code arbitraire en un clic. Trois règles :
+| Où | Ce qu'on peut faire |
+|---|---|
+| `extensions.nodyx.org` | flâner, lire une fiche, voir les permissions, **télécharger** le `.nyx` |
+| Administration de l'instance | parcourir le **même catalogue**, rendu nativement depuis l'index, et installer d'un bouton, ou téléverser le fichier qu'on vient de télécharger |
 
-- `src` est validé contre la **liste des registres configurés dans l'instance**, jamais suivi tel quel. Un registre inconnu affiche un refus, pas une invite à l'ajouter.
-- le lien ne fait **que pré-remplir un écran**. L'installation est un `POST` authentifié, protégé contre le CSRF, avec confirmation explicite.
-- l'écran nomme la provenance en clair : « depuis `extensions.nodyx.org` », jamais un simple « Installer ».
+Trois conséquences, toutes bénéfiques :
+
+- **Aucun lien ne porte un ordre d'installation.** La règle sur `src` devient sans objet : l'admin choisit dans une liste que son instance a chargée, il ne suit pas une URL qu'on lui a envoyée.
+- **Le bouton d'installation n'existe que dans l'administration**, donc la condition « seulement si connecté en admin » est acquise par construction, sans code de garde supplémentaire.
+- **Le site reste utile hors ligne du reste** : télécharger puis téléverser est un chemin complet, qui ne dépend d'aucun registre atteignable.
+
+Le catalogue de l'administration est **redessiné à partir de l'index**, jamais le site embarqué en iframe (§9.2). Les raisons tiennent toujours : thème et langue de l'instance, politique de sécurité propre, et surtout un catalogue qui survit à l'indisponibilité du magasin.
+
+La provenance reste affichée en clair sur l'écran de permissions, et l'installation reste un `POST` authentifié avec confirmation explicite.
 
 **Jamais de mise à jour automatique.** Une mise à jour est une action d'admin, avec le changelog et surtout le **diff de capacités** en évidence. Pas seulement les permissions : ce qui compte, c'est le changement de profil de risque.
 
@@ -702,7 +714,7 @@ Proxy réseau plus secrets, `core:read`, médiathèque portée en extension et d
 **Porte d'entrée de P1 : aucune API réseau d'extension n'existe tant que les tests de confinement de §14, point 1, ne sont pas verts.** Le proxy est lui-même une capacité de sécurité, il ne se pose pas sur un bac à sable non prouvé.
 
 **P2, la place de marché**
-Satellite `nodyx-store` (site public plus index signé), fiches et catégories, catalogue rendu nativement dans l'admin, flux d'installation depuis le site, mises à jour avec diff de permissions, dépôt `nodyx-extensions` et sa CI, formulaire de soumission générateur de PR, amorçage des 12 fiches, réécriture de `CREATE-WIDGET.md` en manuel SDK généré sur `nodyx.dev`. Renommage `/admin/modules` en Fonctionnalités.
+Satellite `nodyx-store` (site public plus index signé), fiches et catégories, **catalogue rendu nativement dans l'admin avec installation d'un bouton**, téléchargement depuis le site, mises à jour avec diff de permissions, dépôt `nodyx-extensions` et sa CI, formulaire de soumission générateur de PR, amorçage des 12 fiches, réécriture de `CREATE-WIDGET.md` en manuel SDK généré sur `nodyx.dev`. Renommage `/admin/modules` en Fonctionnalités.
 
 ### 13.1 Plan de non-régression de P0-A
 

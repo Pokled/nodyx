@@ -114,6 +114,17 @@ L'isolation elle même ne dépend pas de la CSP : elle vient de l'origine opaque
 
 **Ajouter un drapeau de bac à sable est un changement de modèle de sécurité**, pas un réglage. Toute demande passe par une révision de ce document.
 
+**`Origin: null` n'est pas une authentification, mais il doit être ACCEPTÉ sur les routes d'extension** (découvert en production le 2026-08-14). Une frame opaque envoie littéralement cette valeur, et un script de module comme tout `import()` est récupéré en mode CORS : une politique qui la refuse fait échouer le chargement du SDK, donc tout.
+
+L'acceptation est bornée, et la nuance est tout le sujet :
+
+| | |
+|---|---|
+| `/api/v1/extensions/*`, **sans identifiants** | accepté. Fichiers publics, ou données protégées par le jeton d'extension en en-tête, qu'un tiers n'a pas. L'exposition vaut celle d'un `Access-Control-Allow-Origin: *` sur un fichier statique. |
+| Partout ailleurs, ou **avec identifiants** | refusé. Sinon n'importe quel site ouvrirait une frame en bac à sable et lirait des réponses authentifiées. |
+
+**La page hôte doit aussi pouvoir encadrer sa propre origine** : `'self'` dans `frame-src`. Une politique qui l'omet interdit toute surface d'extension, quoi que fasse le code.
+
 ### 4.2 Le canal
 
 Dans une origine opaque, `event.origin` vaut `"null"` et ne prouve rien. Filtrer à la main serait fragile, donc on ne filtre pas : **l'hôte n'envoie qu'un seul message sur `window`**, celui d'amorçage, qui transfère un `MessagePort`. Tout le reste passe par ce port privé, propre à cette frame et à cette session. Une autre frame n'a rien à usurper, il n'y a pas d'adresse publique à viser.
@@ -184,11 +195,11 @@ Même vigilance pour toute chaîne du manifeste rendue dans l'administration : e
 
 Le magasin ne pousse jamais rien. Le flux ne s'inverse pas : la fiche redirige vers l'administration de l'instance, l'admin voit les permissions, et **c'est l'instance qui télécharge**.
 
-Le lien d'installation est une surface d'attaque à part entière : un lien fabriqué avec `src=<registre_de_l_attaquant>`, envoyé à un owner, installerait du code arbitraire en un clic (adversaire A6). Trois contrôles :
+**Révision du 2026-08-14 : le lien porteur d'un ordre d'installation a été supprimé.** Le premier dessin faisait rebondir l'admin du site vers son instance avec le registre en paramètre d'URL, ce qui créait exactement la surface visée par l'adversaire A6 : un lien fabriqué, envoyé à un owner, installant du code arbitraire en un clic. On peut défendre cette surface, on peut aussi ne pas la créer.
 
-- `src` validé contre la **liste des registres configurés dans l'instance**, jamais suivi tel quel. Un registre inconnu est refusé, pas proposé à l'ajout.
-- le lien **ne fait que pré-remplir un écran**. L'installation est un `POST` authentifié, protégé contre le CSRF, avec confirmation explicite.
-- l'écran nomme la provenance en clair.
+Désormais, le site permet de **télécharger** un paquet, et l'installation se fait dans l'administration de l'instance, là où l'admin est déjà authentifié : soit depuis le catalogue rendu nativement, soit en téléversant le fichier téléchargé. Aucune URL ne porte plus un ordre.
+
+Ce qui subsiste : l'installation est un `POST` authentifié, protégé contre le CSRF, avec confirmation explicite, et l'écran nomme la provenance en clair.
 
 Chaîne de confiance de la distribution, trois maillons à ne pas confondre :
 
