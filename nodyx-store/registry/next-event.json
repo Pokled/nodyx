@@ -2,17 +2,25 @@
   "id": "next-event",
   "label": "Prochain événement",
   "description": "Un compte à rebours vers le prochain rendez-vous de la communauté. Titre et date configurables, aucune permission demandée.",
-  "author": { "name": "Nodyx", "url": "https://nodyx.org" },
+  "author": {
+    "name": "Nodyx",
+    "url": "https://nodyx.org"
+  },
   "source": "https://github.com/Pokled/nodyx/tree/main/nodyx-core/examples/next-event",
   "license": "AGPL-3.0-or-later",
   "family": "community",
-  "surfaces": ["widget"],
-  "locales": ["en", "fr"],
+  "surfaces": [
+    "widget"
+  ],
+  "locales": [
+    "en",
+    "fr"
+  ],
   "official": true,
   "versions": [
     {
       "version": "1.0.0",
-      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "sha256": "e0cb0a896003ab0809bde38a348be7f41085584ead220f6283fddd2f9fed0972",
       "url": "https://extensions.nodyx.org/p/next-event-1.0.0.nyx",
       "permissions": [],
       "sensitive": [],

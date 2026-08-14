@@ -11,7 +11,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "registry:check": "node scripts/check-registry.mjs",
-    "prepare": "svelte-kit sync || echo ''"
+    "prepare": "svelte-kit sync || echo ''",
+    "pack": "node scripts/pack-example.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.0",
