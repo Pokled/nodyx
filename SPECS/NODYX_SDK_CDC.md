@@ -706,7 +706,18 @@ Configuration réellement enregistrée dans la mise en page publiée de nodyx.or
 
 Les quatre clés attendues, et rien d'autre. Le composant natif doit les lire telles quelles, y compris `title` vide (qui doit retomber sur le titre par défaut) et `show_controls` absent traité comme vrai.
 
-**Attention à la source du port** (signalé par Jonathan) : la copie installée en production provient d'une démonstration d'installation par `.zip` faite avec une version ancienne. Tout ce qui est observable est en v1.2.0, disque et base, sur les quatre instances, mais **s'il existe une version plus récente hors dépôt, c'est elle qui fait référence pour le port**, pas celle qui est déployée.
+**Source du port, vérifiée.** Jonathan a signalé que la copie installée venait d'une démonstration d'installation par `.zip` faite avec une version ancienne, donc possiblement pas la dernière. Recherche menée le 2026-08-14 :
+
+| Piste | Résultat |
+|---|---|
+| Fichiers des 4 instances | v1.2.0, empreinte identique partout |
+| Source du dépôt `widget-demos/` | v1.2.0, même empreinte |
+| Manifeste stocké en base | v1.2.0, équivalent au fichier (seul l'ordre des clés diffère, JSONB réordonne) |
+| Historique git, toutes branches | deux versions seulement : v1.1.0 le 2026-05-05, v1.2.0 le 2026-05-06 |
+| Sauvegardes, 10 jours de rétention | v1.2.0, même empreinte sur toutes |
+| Archives `.zip` ou `.nyx` sur la machine | aucune |
+
+**Aucune trace d'une version supérieure à 1.2.0.** L'installation de démonstration a donc soit utilisé la 1.1.0 puis été réécrite, soit utilisé la 1.2.0. La référence du port est **v1.2.0**, et c'est aussi ce que rend la page d'accueil aujourd'hui. Si une version plus récente existe sur une machine de développement, le port en composant Svelte reste trivial à mettre à jour, mais rien ici ne l'atteste.
 
 **Ce qui ne doit pas bouger, et pourquoi ça tient**
 
