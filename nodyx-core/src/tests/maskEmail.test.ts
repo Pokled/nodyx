@@ -53,3 +53,20 @@ describe('masquage des adresses', () => {
     expect(out.role).toBe('admin')
   })
 })
+
+// La revelation d'une adresse est une route, et un identifiant malforme doit
+// se refuser proprement. Vu en production : un `undefined` cote client faisait
+// lever PostgreSQL sur le transtypage, donc 500, donc une faute d'appel
+// ressemblait a une panne serveur.
+describe('forme d un identifiant de membre', () => {
+  const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  it('accepte un identifiant reel', () => {
+    expect(RE_UUID.test('3f2504e0-4f89-11d3-9a0c-0305e82c3301')).toBe(true)
+  })
+
+  it.each(['undefined', '', 'null', '123', "3f2504e0-4f89-11d3-9a0c", "' OR 1=1--"])(
+    'refuse %p', (raw) => {
+      expect(RE_UUID.test(raw)).toBe(false)
+    })
+})

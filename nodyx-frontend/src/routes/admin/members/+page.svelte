@@ -141,14 +141,14 @@
 									     activer ne protégerait personne : c'est le soir où on oublie
 									     de l'allumer que ça se voit. -->
 									<div class="text-xs text-gray-600 flex items-center gap-1.5">
-										<span>{revealed[member.id] ?? member.email}</span>
-										{#if !revealed[member.id]}
+										<span>{revealed[member.user_id] ?? member.email}</span>
+										{#if !revealed[member.user_id]}
 											<button
 												type="button"
 												class="text-[10px] text-gray-500 hover:text-gray-300 underline underline-offset-2"
-												onclick={() => revealEmail(member.id)}
-												disabled={revealing[member.id]}
-											>{revealing[member.id] ? tFn('amem.revealing') : tFn('amem.reveal_email')}</button>
+												onclick={() => revealEmail(member.user_id)}
+												disabled={revealing[member.user_id]}
+											>{revealing[member.user_id] ? tFn('amem.revealing') : tFn('amem.reveal_email')}</button>
 										{/if}
 									</div>
 								</div>

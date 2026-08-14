@@ -340,6 +340,13 @@ export default async function adminRoutes(app: FastifyInstance) {
     const { userId }  = request.params as { userId: string }
     const adminUser   = (request as any).user as { userId: string }
 
+    // Un identifiant malforme se refuse ICI. Sans ce garde, PostgreSQL leve sur
+    // le transtypage et la route rend un 500, ce qui fait passer une faute
+    // d'appel pour une panne du serveur. Vu en production avec un `undefined`.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId ?? '')) {
+      return reply.code(400).send({ error: 'Identifiant de membre invalide', code: 'INVALID_USER_ID' })
+    }
+
     const { rows } = await db.query(`SELECT username, email FROM users WHERE id = $1`, [userId])
     const target = rows[0] as { username: string; email: string } | undefined
     if (!target) return reply.code(404).send({ error: 'Membre introuvable', code: 'MEMBER_NOT_FOUND' })
