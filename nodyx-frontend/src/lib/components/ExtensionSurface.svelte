@@ -12,7 +12,7 @@
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/environment'
 	import { t } from '$lib/i18n'
-	import { createHostHandler, buildBootPayload, frameUrl, createStorageCaller, type HostSurface } from '$lib/extensions/host'
+	import { createHostHandler, buildBootPayload, frameUrl, createStorageCaller, createFetchCaller, type HostSurface } from '$lib/extensions/host'
 
 	const tFn = $derived($t)
 
@@ -64,7 +64,10 @@
 			// déjà « pas encore » avec un code explicite, ce qui vaut mieux qu'un
 			// silence pour qui développe une extension.
 		},
-		{ storage: createStorageCaller({ extensionId, version, surface }, () => token) },
+		{
+			storage: createStorageCaller({ extensionId, version, surface }, () => token),
+			fetch:   createFetchCaller({ extensionId, version, surface }, () => token),
+		},
 	)
 
 	/** Frappe le jeton de surface et récupère l'identité projetée. */

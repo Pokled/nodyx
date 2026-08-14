@@ -21,6 +21,9 @@ import { storageGet, storageSet, storageDelete, storageList } from '../extension
 import { projectUser, columnsFor } from '../extensions/identity'
 import { parseSize } from '../extensions/manifest'
 import { STORAGE } from '../extensions/limits'
+import { proxyFetch } from '../extensions/netFetch'
+import { classifyHost } from '../extensions/manifest'
+import type { GrantedNetwork } from '../extensions/net'
 import { PACKAGE, SURFACE }      from '../extensions/limits'
 
 const RE_ID      = /^[a-z][a-z0-9-]{2,38}$/
@@ -292,6 +295,76 @@ export async function extensionRoutes(app: FastifyInstance) {
       return reply.code(status).send({ error: result.message, code: result.code })
     }
     return reply.send({ result: result.value })
+  })
+
+  // ── POST /extensions/:id/fetch ──────────────────────────────────────────
+  //
+  // Le seul chemin par lequel une extension atteint un service tiers. Le
+  // navigateur du visiteur ne parle jamais directement a personne d'autre qu'a
+  // sa communaute : c'est la traduction technique du « zero analytics ».
+  app.post('/extensions/:id/fetch', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const surface = request.headers['x-nodyx-surface']
+    const header  = request.headers.authorization
+
+    if (!RE_ID.test(id) || typeof surface !== 'string' || !RE_SURFACE.test(surface)) {
+      return reply.code(400).send({ error: 'Requête invalide', code: 'INVALID_REQUEST' })
+    }
+    if (!header?.startsWith('Bearer ')) return reply.code(401).send({ error: 'Jeton absent', code: 'TOKEN_MISSING' })
+    if (!appSecret) return reply.code(500).send({ error: 'Instance mal configurée', code: 'MISSING_SECRET' })
+
+    const revoked = await redis.exists(`ext:revoked:${id}`).catch(() => 0)
+    const verified = verifyExtensionToken(header.slice(7), { instanceId, extensionId: id, surface }, appSecret, () => revoked === 1)
+    if (!verified.ok) {
+      return reply.code(verified.code === 'SESSION_EXPIRED' ? 401 : 403).send({ error: verified.message, code: verified.code })
+    }
+
+    const { rows } = await db.query(
+      `SELECT manifest, enabled, granted FROM installed_extensions WHERE id = $1`, [id],
+    )
+    const row = rows[0] as { manifest: Record<string, unknown>; enabled: boolean; granted: string[] } | undefined
+    if (!row)         return reply.code(404).send({ error: 'Extension introuvable', code: 'EXTENSION_NOT_FOUND' })
+    if (!row.enabled) return reply.code(403).send({ error: 'Extension désactivée', code: 'EXTENSION_DISABLED' })
+
+    // Ce qui est joignable = ce que le manifeste declare ET que l'admin a
+    // accorde. L'intersection, jamais l'un des deux seul.
+    const declared = (row.manifest as { permissions?: { network?: GrantedNetwork } }).permissions?.network ?? {}
+    const grantedCaps = new Set(Array.isArray(row.granted) ? row.granted : [])
+    const granted: GrantedNetwork = {}
+    const allowPrivate = new Set<string>()
+    for (const [host, rule] of Object.entries(declared)) {
+      if (!grantedCaps.has(`net:${host}`)) continue
+      granted[host] = rule
+      // Un reseau prive n'est joignable que parce que l'admin a accepte CET
+      // hote la, ce que l'ecran de permissions lui a montre a part.
+      if (classifyHost(host) === 'private') allowPrivate.add(host)
+    }
+    if (Object.keys(granted).length === 0) {
+      return reply.code(403).send({ error: 'Aucun accès réseau accordé', code: 'PERMISSION_DENIED' })
+    }
+
+    // Les secrets ne quittent JAMAIS le serveur : ils sont injectes par le
+    // proxy selon une recette que l'extension ne choisit pas.
+    const { rows: secretRows } = await db.query(
+      `SELECT name, value FROM extension_secrets WHERE extension_id = $1`, [id],
+    )
+    const secrets: Record<string, string> = {}
+    for (const r of secretRows as Array<{ name: string; value: string }>) secrets[r.name] = r.value
+
+    const body = (request.body ?? {}) as Record<string, unknown>
+    const result = await proxyFetch(
+      { url: body.url, method: body.method, headers: body.headers, body: body.body },
+      { granted, allowPrivate, secrets },
+    )
+
+    if (!result.ok) {
+      const status = result.code === 'UPSTREAM_TIMEOUT'   ? 504
+                   : result.code === 'RESPONSE_TOO_LARGE' ? 502
+                   : result.code === 'UPSTREAM_ERROR'     ? 502
+                   : 403
+      return reply.code(status).send({ error: result.message, code: result.code })
+    }
+    return reply.send({ result: result.response })
   })
 
   // ── POST /extensions/:id/session ────────────────────────────────────────

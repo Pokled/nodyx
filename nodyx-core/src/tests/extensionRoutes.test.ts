@@ -384,3 +384,90 @@ describe('liste publique', () => {
     expect(JSON.parse(r.body).extensions).toEqual([])
   })
 })
+
+// ── Proxy reseau ───────────────────────────────────────────────────────────
+
+describe('proxy reseau', () => {
+  const M = {
+    ...MANIFEST,
+    permissions: {
+      network: {
+        'api.tmdb.example': { methods: ['GET'], paths: ['/3/*'], secret: 'TMDB' },
+        '10.0.0.5':         { methods: ['GET'], paths: ['/api/*'] },
+      },
+    },
+  }
+
+  async function tokenFor(granted: string[]) {
+    dbQuery.mockResolvedValue({ rows: [installedRow({ granted, manifest: M })] })
+    const r = await session({ surface: 'page' }, 'Bearer membre')
+    return JSON.parse(r.body).token as string
+  }
+
+  const call = (token: string, body: unknown) => app.inject({
+    method: 'POST', url: '/api/v1/extensions/demo-ext/fetch',
+    headers: { authorization: `Bearer ${token}`, 'x-nodyx-surface': 'page' },
+    payload: body,
+  })
+
+  it('refuse sans jeton', async () => {
+    const r = await app.inject({
+      method: 'POST', url: '/api/v1/extensions/demo-ext/fetch',
+      headers: { 'x-nodyx-surface': 'page' }, payload: { url: 'https://api.tmdb.example/3/movie/1' },
+    })
+    expect(r.statusCode).toBe(401)
+  })
+
+  it('refuse quand aucun acces reseau n a ete accorde', async () => {
+    const token = await tokenFor(['storage.user'])
+    dbQuery.mockReset()
+    dbQuery.mockResolvedValue({ rows: [{ manifest: M, enabled: true, granted: ['storage.user'] }] })
+    const r = await call(token, { url: 'https://api.tmdb.example/3/movie/1' })
+    expect(r.statusCode).toBe(403)
+    expect(JSON.parse(r.body).code).toBe('PERMISSION_DENIED')
+  })
+
+  it('refuse un hote declare au manifeste mais NON accorde par l admin', async () => {
+    // L'intersection, jamais l'un des deux seul : le manifeste demande deux
+    // hotes, l'admin n'en a accorde qu'un.
+    const token = await tokenFor(['net:api.tmdb.example'])
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [{ manifest: M, enabled: true, granted: ['net:api.tmdb.example'] }] })
+      .mockResolvedValueOnce({ rows: [] })
+    const r = await call(token, { url: 'http://10.0.0.5/api/stock' })
+    expect(r.statusCode).toBe(403)
+    expect(JSON.parse(r.body).code).toBe('HOST_NOT_ALLOWED')
+  })
+
+  it('refuse un chemin hors des prefixes declares', async () => {
+    const token = await tokenFor(['net:api.tmdb.example'])
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [{ manifest: M, enabled: true, granted: ['net:api.tmdb.example'] }] })
+      .mockResolvedValueOnce({ rows: [] })
+    const r = await call(token, { url: 'https://api.tmdb.example/4/account' })
+    expect(r.statusCode).toBe(403)
+    expect(JSON.parse(r.body).code).toBe('PATH_NOT_ALLOWED')
+  })
+
+  it('refuse une extension desactivee', async () => {
+    const token = await tokenFor(['net:api.tmdb.example'])
+    dbQuery.mockReset()
+    dbQuery.mockResolvedValue({ rows: [{ manifest: M, enabled: false, granted: ['net:api.tmdb.example'] }] })
+    const r = await call(token, { url: 'https://api.tmdb.example/3/movie/1' })
+    expect(r.statusCode).toBe(403)
+    expect(JSON.parse(r.body).code).toBe('EXTENSION_DISABLED')
+  })
+
+  it('ne renvoie JAMAIS la valeur d un secret', async () => {
+    const token = await tokenFor(['net:api.tmdb.example'])
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [{ manifest: M, enabled: true, granted: ['net:api.tmdb.example'] }] })
+      .mockResolvedValueOnce({ rows: [{ name: 'TMDB', value: 'SECRET-ULTRA' }] })
+    const r = await call(token, { url: 'https://api.tmdb.example/3/movie/1' })
+    // L'appel sortant echoue (hote inexistant), mais rien ne doit fuir.
+    expect(r.body).not.toContain('SECRET-ULTRA')
+  })
+})

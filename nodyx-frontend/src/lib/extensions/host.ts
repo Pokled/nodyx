@@ -43,6 +43,7 @@ export interface BootPayload {
  */
 export interface HostRuntime {
 	storage?: (op: 'get' | 'set' | 'delete' | 'list', payload: Record<string, unknown>) => Promise<unknown>
+	fetch?:   (payload: Record<string, unknown>) => Promise<unknown>
 }
 
 export interface HostActions {
@@ -117,7 +118,7 @@ export class RequestLedger {
  * et un développeur doit le lire dans la console au lieu de le deviner.
  */
 const RUNTIME_API_TYPES = new Set([
-	'net.fetch', 'core.get', 'session.renew',
+	'core.get', 'session.renew',
 ])
 
 /** Erreur portant le code rendu par le coeur, pour le retransmettre tel quel. */
@@ -136,18 +137,28 @@ export class RuntimeCallError extends Error {
  * coeur, dont le jeton est lie a une surface precise.
  */
 export function createStorageCaller(surface: HostSurface, getToken: () => string | null) {
-	return async function callStorage(op: string, payload: Record<string, unknown>): Promise<unknown> {
+	return createRuntimeCaller(surface, getToken, 'storage')
+}
+
+/** Appelle le proxy reseau du coeur au nom d'une surface. */
+export function createFetchCaller(surface: HostSurface, getToken: () => string | null) {
+	const call = createRuntimeCaller(surface, getToken, 'fetch')
+	return (payload: Record<string, unknown>) => call('', payload)
+}
+
+function createRuntimeCaller(surface: HostSurface, getToken: () => string | null, route: 'storage' | 'fetch') {
+	return async function callRuntime(op: string, payload: Record<string, unknown>): Promise<unknown> {
 		const token = getToken()
 		if (!token) throw new RuntimeCallError('SESSION_EXPIRED', 'aucun jeton d\'extension')
 
-		const res = await fetch(`/api/v1/extensions/${surface.extensionId}/storage`, {
+		const res = await fetch(`/api/v1/extensions/${surface.extensionId}/${route}`, {
 			method:  'POST',
 			headers: {
 				'content-type':    'application/json',
 				'authorization':   `Bearer ${token}`,
 				'x-nodyx-surface': surface.surface,
 			},
-			body: JSON.stringify({ op, ...payload }),
+			body: JSON.stringify(op ? { op, ...payload } : payload),
 		})
 
 		const body = await res.json().catch(() => ({}))
@@ -216,6 +227,16 @@ export function createHostHandler(surface: HostSurface, actions: HostActions = {
 				if (!isSafeExternalUrl(payload.url)) return err(id, 'INVALID_ARGUMENT', 'URL externe invalide')
 				actions.external?.(payload.url)
 				return null
+			}
+
+			case 'net.fetch': {
+				if (!runtime.fetch) return err(id, 'NOT_IMPLEMENTED', 'le réseau n\'est pas branché sur cet hôte')
+				try {
+					return ok(id, await runtime.fetch(payload))
+				} catch (e) {
+					const code = (e as { code?: string })?.code ?? 'UNKNOWN'
+					return err(id, code, (e as Error)?.message ?? 'appel réseau en échec')
+				}
 			}
 
 			case 'storage.get':

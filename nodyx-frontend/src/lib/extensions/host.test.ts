@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
-	createHostHandler, buildBootPayload, frameUrl, createStorageCaller, RuntimeCallError,
+	createHostHandler, buildBootPayload, frameUrl, createStorageCaller, createFetchCaller, RuntimeCallError,
 	isSafeInternalPath, isSafeExternalUrl, RequestLedger, PROTOCOL,
 	type HostSurface,
 } from './host'
@@ -183,8 +183,41 @@ describe('appel de stockage vers le coeur', () => {
 	})
 })
 
+describe('reseau, proxy par l hote', () => {
+	it('transmet l appel au runtime et rend la reponse', async () => {
+		const netFetch = vi.fn().mockResolvedValue({ status: 200, headers: {}, body: '{}' })
+		const handle = createHostHandler(SURFACE, {}, { fetch: netFetch })
+		const r = await handle(req({ type: 'net.fetch', payload: { url: 'https://a.example/x', method: 'GET' } }))
+		expect(netFetch).toHaveBeenCalledWith({ url: 'https://a.example/x', method: 'GET' })
+		expect(r).toMatchObject({ ok: true })
+	})
+
+	it('retransmet le code du coeur, pour distinguer un refus d un service en panne', async () => {
+		const netFetch = vi.fn().mockRejectedValue(new RuntimeCallError('HOST_NOT_ALLOWED', 'non accorde'))
+		const handle = createHostHandler(SURFACE, {}, { fetch: netFetch })
+		const r = await handle(req({ type: 'net.fetch', payload: { url: 'https://evil.example/' } }))
+		expect(r).toMatchObject({ ok: false, error: { code: 'HOST_NOT_ALLOWED' } })
+	})
+
+	it('repond « pas branche » quand l hote n a pas de reseau', async () => {
+		const handle = createHostHandler(SURFACE)
+		expect(await handle(req({ type: 'net.fetch' }))).toMatchObject({ ok: false, error: { code: 'NOT_IMPLEMENTED' } })
+	})
+
+	it('poste la charge telle quelle, sans champ op', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ result: { status: 200 } }) })
+		vi.stubGlobal('fetch', fetchMock)
+		const call = createFetchCaller(SURFACE, () => 'JETON')
+		await call({ url: 'https://a.example/x', method: 'GET' })
+		const [url, init] = fetchMock.mock.calls[0]
+		expect(url).toBe('/api/v1/extensions/library/fetch')
+		expect(JSON.parse(init.body)).toEqual({ url: 'https://a.example/x', method: 'GET' })
+		vi.unstubAllGlobals()
+	})
+})
+
 describe('ce qui appartient au lot suivant', () => {
-	it.each(['net.fetch', 'core.get', 'session.renew'])(
+	it.each(['core.get', 'session.renew'])(
 		'%s repond « pas encore », pas un refus muet', async (type) => {
 			// Une extension doit pouvoir distinguer « pas encore » de « refuse ».
 			const handle = createHostHandler(SURFACE)
