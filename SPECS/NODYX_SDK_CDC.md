@@ -17,7 +17,8 @@ Préalable au code (règle maison : CDC formel avant tout module critique)
 | D4 | Points d'accroche v1 | **page pleine** (entre les sidebars) et **widget** (grille d'accueil). Le reste plus tard. |
 | D5 | i18n d'une extension | Les chaînes du manifeste sont des **clés**, résolues dans les bundles livrés avec le paquet. `default_locale` obligatoire, refus à l'installation sinon. |
 | D6 | Distribution | **Une vitrine et un tuyau** : satellite `nodyx-store` sur `extensions.nodyx.org` (site public façon extensions.joomla.org) qui sert aussi l'index JSON signé consommé par les instances. Publication par PR GitHub assistée, zéro infra à opérer, **zéro monétisation, zéro étoile**. La vitrine est une surface de visibilité durable, donc soumise aux exigences de fabrication de §9.9 (i18n, design, référencement). |
-| D7 | Compatibilité | `api: 1` dans le manifeste. Le format actuel (sans `api`) est **cassé volontairement** : un seul widget existe et il est à nous. |
+| D7 | Compatibilité | `api: 1` dans le manifeste. Le format actuel (sans `api`) est **cassé volontairement** : un seul widget existe et il est à nous. `video-player` est **repaqueté en extension v1**, pas passé en natif (révisé le 2026-08-14, cf §12). |
+| D9 | Embarquement de fournisseurs tiers | **Primitive rendue par l'hôte, en v1.** Une extension ne peut pas encadrer un tiers depuis le bac à sable, c'est mesuré (§12). Elle appelle `nodyx.ui.embed()`, l'hôte pose la frame du fournisseur depuis une liste livrée avec Nodyx. |
 | D8 | Vocabulaire | **Extension** = le paquet distribué. Deux types : **Widget** (bloc du frontpage editor) et **Module** (application avec ses pages, ex la médiathèque). Les 35 interrupteurs natifs de `/admin/modules` deviennent les **Fonctionnalités**. Le mot « plugin » sort du vocabulaire. |
 
 Le banc d'essai qui valide tout : **la médiathèque devient une extension**. Si le bac à sable ne la porte pas, le bac à sable est faux.
@@ -643,7 +644,22 @@ Règles fondatrices intactes : note de curation obligatoire, zéro étoile, zér
 ## 12. Ce qu'on casse, assumé (D7)
 
 - **Le format v0 disparaît.** Un manifeste sans `api: 1` est refusé, avec un message qui pointe le guide de migration. Coût réel : un widget, `video-player`, qui est à nous.
-- **`video-player` devient natif.** Il embarque des iframes YouTube, Twitch, Vimeo, or une frame à origine opaque ne peut pas embarquer de frame tierce (les drapeaux du bac à sable se propagent aux contextes imbriqués, l'embed casse). Il a sa place à l'étage 1, il garde son `id`, donc **les layouts d'accueil existants continuent de rendre à l'identique**.
+- **`video-player` reste une extension, et devient l'exemple de référence** (décision Jonathan, 2026-08-14, qui renverse la position précédente). L'argument est produit, pas technique : *si un simple lecteur vidéo ne passe pas en extension, le SDK ne vaut rien pour tout ce qui est plus ambitieux.* C'est juste. Le lecteur est le plus petit cas réaliste, il doit passer, sinon la place de marché n'a aucun sens.
+
+  **Mesure, banc identique, seule différence l'attribut `sandbox`** (Chromium, 2026-08-14) :
+
+  | Fournisseur | Sans bac à sable | Dans le bac à sable |
+  |---|---|---|
+  | YouTube | lecteur monté, 6 contrôles | document vide |
+  | Vimeo | lecteur monté, 14 contrôles | document vide |
+  | Dailymotion | 3 éléments média | quasi rien |
+  | Twitch | lecteur monté | **refus net, `frame-ancestors` violé** |
+  | SoundCloud | contenu rendu | document vide |
+  | Spotify | rendu | rendu, seul survivant |
+
+  Cinq sur six meurent. Le stockage est refusé (`SecurityError`) dans tous les cas, et Twitch va plus loin : sa propre politique `frame-ancestors` **ne peut pas être satisfaite depuis une origine opaque**, donc l'embarquement est refusé avant même de charger. C'est structurel.
+
+  **Conséquence : la primitive d'embarquement rendue par l'hôte (D9) passe de P3 à la v1.** Elle n'est plus un confort, elle est ce qui rend un lecteur possible en extension. Répartition : l'extension fait l'analyse d'URL, la détection de plateforme, l'habillage, la configuration et l'i18n ; l'hôte pose la frame du fournisseur, et lui seul sait renseigner correctement le paramètre `parent=` qu'exige Twitch, qui dépend du domaine de l'instance.
 - **`installed_widgets` est remplacée** par `installed_extensions`. Migration 112 : création. La suppression de l'ancienne table attend la release suivante, une fois les 4 instances vérifiées.
 - **L'embed tiers dans une extension** (un lecteur YouTube dans une extension de la communauté) est impossible en v1 : les drapeaux du bac à sable se propagent aux frames imbriquées, donc l'embed du fournisseur casse.
 
@@ -661,10 +677,10 @@ Règles fondatrices intactes : note de curation obligatoire, zéro étoile, zér
 
 Le P0 initial contenait presque tout le système, ce qui rend les régressions impossibles à localiser. Découpage :
 
-- **P0-A, le substrat de sécurité.** Lecteur de paquet, JSON Schema du manifeste, validateur, assainissement SVG, installation par fichier, document de frame et sa CSP, route d'assets versionnée, `MessageChannel` et protocole `p:1`, `ext_token`, **suppression du chargeur par balise script et de `/widget-assets`**, `video-player` passé natif.
-  Cette suppression tient **dès le premier lot** : une fois `video-player` natif, il n'existe plus aucune extension tierce en production sur les 4 instances. Le chemin non isolé meurt donc avant même qu'une surface tierce existe, ce qui est l'ordre le plus sûr.
+- **P0-A, le substrat de sécurité.** Lecteur de paquet, JSON Schema du manifeste, validateur, assainissement SVG, installation par fichier, document de frame et sa CSP, route d'assets versionnée, `MessageChannel` et protocole `p:1`, `ext_token`, **suppression du chargeur par balise script et de `/widget-assets`**.
+  Attention à l'ordre, il a changé avec D7 révisé : `video-player` restant une extension, le chemin non isolé ne peut mourir qu'une fois la surface `widget` isolée disponible. La suppression bascule donc en **fin de P0-C**, et P0-A se contente de ne plus créer de nouveau chemin non isolé. Tant que la bascule n'est pas faite, l'ancien chargeur reste le seul à servir la page d'accueil de nodyx.org.
 - **P0-B, l'API de runtime.** `config`, thème, i18n, `identity`, `storage` et ses limites, redimensionnement, routeur, UI rendue par l'hôte.
-- **P0-C, les surfaces.** `widget` dans le builder, `page` dans la coque, `CatalogEntry` v2, écran de permissions, administration des extensions.
+- **P0-C, les surfaces.** `widget` dans le builder, `page` dans la coque, primitive d'embarquement (D9), `CatalogEntry` v2, écran de permissions, administration des extensions, repaquetage de `video-player`, **puis** suppression de l'ancien chargeur.
 
 Aucun lot ne réintroduit un chemin non isolé, et chacun se déploie seul.
 
@@ -727,7 +743,9 @@ Les quatre clés attendues, et rien d'autre. Le composant natif doit les lire te
 
 **Ce qui ne doit pas bouger, et pourquoi ça tient**
 
-1. **Les mises en page enregistrées.** La grille stocke `widget_type: 'video-player'`. Les deux renderers testent le natif **en premier** (`{#if plugin}` dans `GridRenderer`, `{#if nativePlugin}` dans `WidgetZone`), et `catalog.ts` filtre déjà les widgets installés qui masqueraient un natif (`filter(m => !PLUGIN_REGISTRY[m.id])`, `toInstalledWidgetsMap` fait de même). Enregistrer `video-player` dans le registre natif **suffit** à ce que les mises en page existantes rendent, sans migration de données. Condition : le composant natif lit **exactement** les mêmes clés de configuration, `url`, `title`, `autoplay`, `show_controls`.
+1. **Les mises en page enregistrées.** La grille stocke `widget_type: 'video-player'` avec sa configuration. Le widget restant une extension (D7 révisé), la continuité ne passe plus par le registre natif mais par un **repaquetage en extension v1, réinstallé sous le même `id`**. La mise en page n'est pas touchée : elle référence un identifiant et une configuration, que le nouveau format conserve à l'identique (`url`, `title`, `autoplay`, `show_controls`). C'est plus exigeant que la bascule en natif, et c'est le prix de la décision : **la continuité de la page d'accueil de nodyx.org devient la première preuve que le bac à sable tient en vrai.**
+
+   Filet pendant la bascule : la seule instance concernée est nodyx.org, et le repli est le retour arrière du frontend, la table `installed_widgets` et les fichiers restant en place une release entière.
 2. **Les deux chargements serveur** qui appellent `/widget-store-public` (`routes/+page.server.ts` L14 et `admin/homepage/builder/+page.server.ts` L11) doivent être migrés **en même temps** que la route, sinon l'accueil et le builder cassent ensemble.
 3. **La table `installed_widgets` et les dossiers `uploads/widgets/`** restent en place le temps d'une release. Aucune suppression dans le même lot que la bascule.
 
