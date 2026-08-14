@@ -46,7 +46,10 @@ export type CatalogEntry =
 			kind:        'extension'
 			id:          string      // identifiant de mise en page, prefixe `ext:`
 			label:       string
+			/** Caractere affiche a cote du libelle. JAMAIS une URL. */
 			icon:        string
+			/** Icone livree par l'extension, pour un rendu en image. */
+			iconUrl:     string | null
 			family:      WidgetFamily | string
 			desc:        string
 			schema:      FieldSchema[]
@@ -119,7 +122,8 @@ export function buildCatalog(
 		kind:          'extension',
 		id:            e.id,
 		label:         e.label,
-		icon:          e.icon ?? '🧩',
+		icon:          e.icon,
+		iconUrl:       e.iconUrl,
 		family:        e.family,
 		desc:          e.desc,
 		schema:        e.schema,

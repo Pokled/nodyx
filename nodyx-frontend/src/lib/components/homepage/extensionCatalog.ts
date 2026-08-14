@@ -84,7 +84,10 @@ export interface ExtensionSurfaceEntry {
 	version:     string
 	entry:       string
 	label:       string
-	icon:        string | null
+	/** Caractere affiche a cote du libelle. JAMAIS une URL. */
+	icon:        string
+	/** Icone livree par l'extension, pour un rendu en image. */
+	iconUrl:     string | null
 	family:      string
 	desc:        string
 	schema:      FieldSchema[]
@@ -106,7 +109,11 @@ export function extensionWidgetEntries(extensions: PublicExtension[] = []): Exte
 				version:       ext.version,
 				entry:         s.entry,
 				label:         s.label || ext.label,
-				icon:          ext.icon,
+				// Le builder rend `icon` comme du TEXTE a cote du libelle : y
+				// mettre l'URL l'affichait en clair dans le picker, a la place
+				// du nom. Vu en production.
+				icon:          '🧩',
+				iconUrl:       ext.icon ?? null,
 				family:        ext.family,
 				desc:          ext.description,
 				schema:        (s.schema ?? []).map(canonField).filter((f): f is FieldSchema => f !== null),

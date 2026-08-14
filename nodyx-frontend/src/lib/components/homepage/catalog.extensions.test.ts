@@ -117,3 +117,24 @@ describe('cohabitation avec les widgets natifs', () => {
 			.toEqual(['ext:library:shelf', 'ext:library:tonight'])
 	})
 })
+
+// Regression vue en production : le picker du builder rend `icon` comme du
+// TEXTE. Une URL d'icone s'y affichait donc en clair, a la place du nom.
+describe('icone du picker', () => {
+	it('ne met jamais une URL dans un champ rendu en texte', () => {
+		const e = extensionWidgetEntries([EXT])[0]
+		expect(e.icon).not.toMatch(/^https?:|^\//)
+		expect(e.icon.length).toBeLessThanOrEqual(4)
+	})
+
+	it('mais conserve l URL a part, pour un rendu en image', () => {
+		expect(extensionWidgetEntries([EXT])[0].iconUrl).toBe(EXT.icon)
+	})
+
+	it('supporte une extension sans icone', () => {
+		const sans = { ...EXT, icon: null }
+		const e = extensionWidgetEntries([sans as PublicExtension])[0]
+		expect(e.icon).toBeTruthy()
+		expect(e.iconUrl).toBeNull()
+	})
+})
