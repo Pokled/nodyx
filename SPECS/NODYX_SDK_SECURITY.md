@@ -104,7 +104,7 @@ style-src-attr 'unsafe-inline'; img-src <origine> data: blob:; media-src <origin
 connect-src <origine>; frame-src 'none'; form-action 'none'; base-uri 'none'
 ```
 
-`frame-src 'none'` : pas d'iframe imbriquée. C'est aussi ce qui rend impossible l'embarquement d'un lecteur tiers, limite assumée de la v1.
+`frame-src 'none'` : pas d'iframe imbriquée. C'est aussi ce qui rend impossible l'embarquement d'un lecteur tiers, limite assumée de la v1. Le déverrouillage prévu en P3 ne l'affaiblit pas : c'est l'hôte qui pose l'iframe du fournisseur, hors du bac à sable, depuis une liste livrée avec Nodyx. L'extension demande, elle n'obtient jamais le droit d'encadrer elle même.
 
 **Cette politique est posée en en-tête ET en balise `meta` dans le document.** Vérifié sur notre production le 2026-08-14 : le proxy pose la politique du site en mode `set`, donc il **remplace** celle de l'application, y compris sur les réponses d'API. Un en-tête seul serait effacé et la frame hériterait d'une politique permissive, ce qui rouvrirait le réseau sortant direct et annulerait la garantie G5. Une balise `meta` n'est pas réécrite par un proxy, et quand deux politiques coexistent le navigateur applique leur intersection, donc la plus stricte gagne.
 

@@ -544,7 +544,7 @@ Dépassement : une erreur nette avec un code stable. **Jamais de troncature sile
 | Appeler `/api/v1` directement | votre frame n'a pas la session | `nodyx.core.get` |
 | Écrire dans le forum, le chat, les membres | v1 en lecture seule | attendez les écritures avec consentement, v2 |
 | Appeler un service tiers depuis le navigateur | doctrine, aucune fuite chez un tiers | `nodyx.fetch`, déclaré au manifeste |
-| Embarquer une iframe tierce (lecteur vidéo externe) | les drapeaux du bac à sable se propagent, l'embed casserait | v1 : non. Un lecteur externe reste un widget natif de Nodyx |
+| Embarquer une iframe tierce (lecteur vidéo externe) | les drapeaux du bac à sable se propagent, l'embed casserait | v1 : non, un lecteur externe reste un widget natif. P3 : `nodyx.ui.embed({ provider, id })`, l'hôte pose l'iframe du fournisseur pour vous, avec la même liste de fournisseurs sur toutes les instances |
 | Livrer du code serveur, une table, une migration | le cœur est sanctuarisé | `storage`, jeu de données livré, proxy réseau |
 | Ouvrir une popup, naviguer la page du haut, télécharger un fichier | drapeaux non accordés | `nodyx.openExternal`, `nodyx.navigate` |
 | Charger une police, un script ou une image depuis un CDN | politique de sécurité de la frame | livrez-les dans le paquet |

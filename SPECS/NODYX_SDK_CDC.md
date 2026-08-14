@@ -645,7 +645,13 @@ Règles fondatrices intactes : note de curation obligatoire, zéro étoile, zér
 - **Le format v0 disparaît.** Un manifeste sans `api: 1` est refusé, avec un message qui pointe le guide de migration. Coût réel : un widget, `video-player`, qui est à nous.
 - **`video-player` devient natif.** Il embarque des iframes YouTube, Twitch, Vimeo, or une frame à origine opaque ne peut pas embarquer de frame tierce (les drapeaux du bac à sable se propagent aux contextes imbriqués, l'embed casse). Il a sa place à l'étage 1, il garde son `id`, donc **les layouts d'accueil existants continuent de rendre à l'identique**.
 - **`installed_widgets` est remplacée** par `installed_extensions`. Migration 112 : création. La suppression de l'ancienne table attend la release suivante, une fois les 4 instances vérifiées.
-- **L'embed tiers dans une extension** (un lecteur YouTube dans une extension de la communauté) exige une origine dédiée `ext.<domaine>`, donc du DNS et un certificat, donc une entorse au zéro configuration. Reporté en P3, activable par ceux qui ont le DNS, jamais exigé.
+- **L'embed tiers dans une extension** (un lecteur YouTube dans une extension de la communauté) est impossible en v1 : les drapeaux du bac à sable se propagent aux frames imbriquées, donc l'embed du fournisseur casse.
+
+  **C'est la limite la plus gênante du modèle, et il faut la nommer** : la catégorie de widget la plus évidente pour une communauté, le lecteur média, est justement celle que la v1 ferme aux tiers. Un contributeur qui voudrait écrire un meilleur lecteur que le nôtre ne le pourra pas en extension, seulement en natif, donc par une PR sur le dépôt.
+
+  **Déverrouillage retenu pour P3 : une primitive d'embarquement rendue par l'hôte.** L'extension déclare `embed: ["youtube", "twitch"]`, appelle `nodyx.ui.embed({ provider, id, rect })`, et l'hôte pose l'iframe du fournisseur **hors du bac à sable**, à l'emplacement indiqué. L'extension ne gagne aucun privilège, le fournisseur tourne en première partie comme aujourd'hui, et la liste des fournisseurs embarquables est **livrée avec Nodyx**, donc identique partout. Coût : le positionnement d'une surface superposée, et une liste à maintenir. Bénéfice secondaire non négligeable : l'ensemble des tiers qui peuvent être encadrés est revu par nous, pas choisi par un auteur d'extension.
+
+  **L'idée d'une origine dédiée `ext.<domaine>` est écartée** (Jonathan, 2026-08-14). L'objection décisive n'est pas la friction DNS, c'est la portabilité : **une extension s'installe sur n'importe quelle instance.** Si les embeds ne fonctionnaient que là où un sous-domaine a été configuré, la même extension se comporterait différemment selon l'hébergeur, un auteur ne pourrait pas savoir si son travail marchera chez ses utilisateurs, et le magasin ne pourrait plus affirmer qu'une extension fonctionne. C'est de la fragmentation du contrat, pas un simple coût d'installation. Le paquet est portable, la capacité doit l'être aussi.
 
 ---
 
@@ -756,7 +762,7 @@ Action, dans P0-A, avant le port : **aligner `svelte.config.js` sur ce que la pr
 Le rapprochement de la configuration du proxy avec le disque reste hors de ce lot, et soumis au danger déjà documenté dans `CLAUDE.md`.
 
 **P3, l'ouverture**
-Surfaces `panel` et `card` (enrichissement chat et forum, l'étagère de la communauté), écritures core avec consentement, origine dédiée optionnelle pour les embeds tiers.
+Surfaces `panel` et `card` (enrichissement chat et forum, l'étagère de la communauté), écritures core avec consentement, primitive d'embarquement rendue par l'hôte pour les lecteurs tiers (§12).
 
 ---
 
