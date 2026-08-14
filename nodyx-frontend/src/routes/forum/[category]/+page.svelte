@@ -4,6 +4,7 @@
 	import type { FlyParams, FadeParams } from 'svelte/transition';
 	import { page } from '$app/stores';
 	import { t } from '$lib/i18n';
+	import { replyCount, isUnanswered } from '$lib/forumCounts';
 
 	const tFn = $derived($t)
 
@@ -95,10 +96,10 @@
 				filtered = filtered.filter(t => t.is_pinned);
 				break;
 			case 'unanswered':
-				filtered = filtered.filter(t => (t.post_count || 0) === 0);
+				filtered = filtered.filter(t => isUnanswered(t.post_count));
 				break;
 			case 'popular':
-				filtered = filtered.filter(t => (t.post_count || 0) >= 10);
+				filtered = filtered.filter(t => replyCount(t.post_count) >= 10);
 				break;
 			case 'today':
 				const today = new Date();
@@ -124,6 +125,9 @@
 					new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
 				);
 			case 'popular':
+				// Volontairement sur post_count et non sur replyCount : retrancher le
+				// message d'ouverture des DEUX côtés ne change pas l'ordre. Passer par
+				// le helper ici n'apporterait rien qu'un appel de plus par comparaison.
 				return filtered.sort((a, b) => (b.post_count || 0) - (a.post_count || 0));
 			case 'views':
 				return filtered.sort((a, b) => (b.views || 0) - (a.views || 0));
@@ -225,8 +229,8 @@
 	const categoryStats = $derived({
 		total: threads.length,
 		pinned: threads.filter(t => t.is_pinned).length,
-		unanswered: threads.filter(t => (t.post_count || 0) === 0).length,
-		popular: threads.filter(t => (t.post_count || 0) >= 10).length,
+		unanswered: threads.filter(t => isUnanswered(t.post_count)).length,
+		popular: threads.filter(t => replyCount(t.post_count) >= 10).length,
 		today: threads.filter(t => {
 			const today = new Date();
 			today.setHours(0, 0, 0, 0);
@@ -688,7 +692,7 @@
 				<div class="flex items-center gap-4 shrink-0">
 					<!-- Compteur de réponses -->
 					<div class="flex flex-col items-center px-3 py-1.5 border border-white/[.06] group-hover:border-indigo-700/50 transition-colors min-w-[60px] text-center">
-						<span class="text-lg font-bold text-indigo-400 leading-none">{thread.post_count}</span>
+						<span class="text-lg font-bold text-indigo-400 leading-none">{replyCount(thread.post_count)}</span>
 						<span class="text-[10px] text-gray-500 uppercase tracking-wider">{tFn('forum.replies_label')}</span>
 					</div>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
+	import { replyCount } from '$lib/forumCounts';
 	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
@@ -120,7 +121,7 @@
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
 								</svg>
-								{t.post_count}
+								{replyCount(t.post_count)}
 							</span>
 						{/if}
 					</div>
@@ -159,12 +160,12 @@
 							{#if showDate}
 								<span class="rt-meta-date">{timeAgo(t.last_post_at ?? t.created_at)}</span>
 							{/if}
-							{#if showReplies && t.post_count > 0}
+							{#if showReplies && replyCount(t.post_count) > 0}
 								<span class="rt-meta-replies">
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
 									</svg>
-									{t.post_count}
+									{replyCount(t.post_count)}
 								</span>
 							{/if}
 						</div>

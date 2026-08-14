@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { onMount, onDestroy } from 'svelte';
 	import { t } from '$lib/i18n';
+	import { replyCount } from '$lib/forumCounts';
 	import WidgetZone from '$lib/components/homepage/WidgetZone.svelte';
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte';
 	import type { PublicExtension } from '$lib/components/homepage/extensionCatalog';
@@ -556,8 +557,8 @@
 						<span class="text-[10px] ml-auto" style="color: #374151">{timeAgo(thread.created_at)}</span>
 					</div>
 				</div>
-				{#if (thread.post_count ?? 0) > 1}
-					<span class="sg shrink-0 text-[10px] font-bold tabular-nums mt-0.5" style="color: #374151">{thread.post_count}</span>
+				{#if replyCount(thread.post_count) > 0}
+					<span class="sg shrink-0 text-[10px] font-bold tabular-nums mt-0.5" style="color: #374151">{replyCount(thread.post_count)}</span>
 				{/if}
 			</a>
 			{:else}
@@ -622,7 +623,7 @@
 					<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
 					</svg>
-					<span class="sg text-[10px] font-bold">{thread.post_count ?? 0}</span>
+					<span class="sg text-[10px] font-bold">{replyCount(thread.post_count)}</span>
 				</div>
 			</div>
 

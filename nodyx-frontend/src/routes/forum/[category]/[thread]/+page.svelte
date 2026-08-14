@@ -19,6 +19,7 @@
 	import PollCard from '$lib/components/PollCard.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import { t } from '$lib/i18n';
+	import { replyCount } from '$lib/forumCounts';
 
 	const tFn = $derived($t)
 
@@ -35,6 +36,9 @@
 			$page.url.origin,
 		) ?? `${$page.url.origin}/og-image.jpg`,
 	);
+	// post_count compte le message d'ouverture : ce n'est PAS un nombre de
+	// réponses. Voir $lib/forumCounts.
+	const replies = $derived(replyCount(thread.post_count));
 	const user   = $derived(data.user);
 	const isMod  = $derived(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'moderator');
 
@@ -125,7 +129,7 @@
 	<meta name="description" content="Discussion : {thread.title} par {thread.author_username}" />
 	<link rel="canonical" href={$page.url.href} />
 	<meta property="og:title"       content="{thread.title} · {$page.data.communityName ?? 'Nodyx'}" />
-	<meta property="og:description" content="Discussion par {thread.author_username} · {thread.post_count} {tFn('forum.replies_label')} · {thread.views} {tFn('forum.views')}" />
+	<meta property="og:description" content="Discussion par {thread.author_username} · {replies} {tFn('forum.replies_label')} · {thread.views} {tFn('forum.views')}" />
 	<meta property="og:type"        content="article" />
 	<meta property="og:url"         content={$page.url.href} />
 	<!-- Pas de og:image:width/height ici : l'image de tête d'un article a des
@@ -143,7 +147,7 @@
 		"author": { "@type": "Person", "name": thread.author_username },
 		"datePublished": thread.created_at,
 		"dateModified": thread.updated_at ?? thread.created_at,
-		"commentCount": thread.post_count,
+		"commentCount": replies,
 		"interactionStatistic": {
 			"@type": "InteractionCounter",
 			"interactionType": "https://schema.org/ViewAction",
@@ -299,7 +303,7 @@
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 							</svg>
-							<span class="font-medium text-gray-300">{thread.post_count}</span>
+							<span class="font-medium text-gray-300">{replies}</span>
 							<span class="text-gray-600 text-xs">{tFn('forum.replies_label')}</span>
 						</div>
 

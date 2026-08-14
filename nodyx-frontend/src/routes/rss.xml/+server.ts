@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { apiFetch } from '$lib/api';
+import { replyCount } from '$lib/forumCounts';
 
 const BASE_URL  = 'https://nodyx.example.com';
 const SITE_NAME = 'Nodyx';
@@ -28,7 +29,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
       <pubDate>${new Date(thread.created_at).toUTCString()}</pubDate>
       <author>${thread.author_username}</author>
       <category><![CDATA[${category.name}]]></category>
-      <description><![CDATA[Sujet posté par ${thread.author_username} dans ${category.name}, ${thread.post_count} réponse(s)]]></description>
+      <description><![CDATA[Sujet posté par ${thread.author_username} dans ${category.name}, ${replyCount(thread.post_count)} réponse(s)]]></description>
     </item>`);
 				}
 			}
