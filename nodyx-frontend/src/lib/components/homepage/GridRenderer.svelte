@@ -4,6 +4,8 @@
 	import { DEFAULT_THEME, autoSpanMd, autoSpanSm } from '$lib/types/homepage'
 	import { PLUGIN_REGISTRY } from './plugins'
 	import DynamicWidget from './DynamicWidget.svelte'
+	import ExtensionSurface from '$lib/components/ExtensionSurface.svelte'
+	import { extensionIndex, type PublicExtension } from './extensionCatalog'
 	import { t as i18n } from '$lib/i18n'   // `t` est déjà utilisé pour le thème
 
 	const tFn = $derived($i18n)
@@ -14,6 +16,7 @@
 		instance?:        Record<string, unknown>
 		user?:            Record<string, unknown> | null
 		installedWidgets?: Record<string, { entry: string; [k: string]: unknown }>
+		extensions?:       PublicExtension[]
 		// Mode édition : affiche overlays, handles, slots vides
 		editMode?:         boolean
 		// Callbacks édition
@@ -34,6 +37,7 @@
 		instance = {},
 		user = null,
 		installedWidgets = {},
+		extensions = [],
 		editMode = false,
 		onRowDragStart,
 		onColClick,
@@ -86,6 +90,12 @@
 		return installedWidgets[widgetType] ?? null
 	}
 
+	// Surfaces d'extension, resolues par identifiant prefixe `ext:<ext>:<surface>`.
+	const extIndex = $derived(extensionIndex(extensions))
+	function getExtension(widgetType: string) {
+		return extIndex[widgetType] ?? null
+	}
+
 	function colKey(row: GridRow, col: GridColumn) {
 		return `${row.id}:${col.id}`
 	}
@@ -125,6 +135,7 @@
 			{#each row.columns as col, colIdx (col.id)}
 				{@const plugin  = col.widget ? getPlugin(col.widget) : null}
 				{@const dynamic = col.widget ? getDynamic(col.widget) : null}
+				{@const ext     = col.widget ? getExtension(col.widget) : null}
 				{@const isSelected = selectedColKey === colKey(row, col)}
 
 				<!-- ── COLUMN ──────────────────────────────────────────────── -->
@@ -149,6 +160,18 @@
 							{instance}
 							{user}
 							title={col.title}
+						/>
+					{:else if ext}
+						<ExtensionSurface
+							extensionId={ext.extensionId}
+							version={ext.version}
+							surface={`widget:${ext.surfaceId}`}
+							entry={ext.entry}
+							label={ext.label}
+							config={col.config ?? {}}
+							messages={ext.messages}
+							defaultHeight={ext.defaultHeight}
+							{instance}
 						/>
 					{:else if dynamic}
 						<DynamicWidget

@@ -2,6 +2,8 @@
 	import type { HomepageWidget } from '$lib/types/homepage';
 	import { PLUGIN_REGISTRY } from './plugins';
 	import DynamicWidget from './DynamicWidget.svelte';
+	import ExtensionSurface from '$lib/components/ExtensionSurface.svelte';
+	import { extensionIndex, type PublicExtension } from './extensionCatalog';
 
 	interface Props {
 		widgets:          HomepageWidget[];
@@ -9,9 +11,12 @@
 		user:             Record<string, unknown> | null;
 		layout?:          string;
 		installedWidgets?: Record<string, { entry: string; [k: string]: unknown }>;
+		extensions?:       PublicExtension[];
 	}
 
-	let { widgets, instance, user, layout = 'full', installedWidgets = {} }: Props = $props();
+	let { widgets, instance, user, layout = 'full', installedWidgets = {}, extensions = [] }: Props = $props();
+
+	const extIndex = $derived(extensionIndex(extensions));
 
 	function isVisible(w: HomepageWidget): boolean {
 		const v = w.visibility ?? { audience: 'all' };
@@ -31,7 +36,8 @@
 		{#each visibleWidgets as widget (widget.id)}
 			{@const nativePlugin  = PLUGIN_REGISTRY[widget.widget_type]}
 			{@const dynamicManifest = installedWidgets[widget.widget_type]}
-			{#if nativePlugin || dynamicManifest}
+			{@const extSurface = extIndex[widget.widget_type]}
+			{#if nativePlugin || dynamicManifest || extSurface}
 				<div
 					class="widget-wrapper"
 					class:hide-mobile={widget.hide_mobile}
@@ -46,6 +52,19 @@
 							{instance}
 							{user}
 							title={widget.title}
+						/>
+					{:else if extSurface}
+						<!-- Surface d'extension, montée en frame isolée -->
+						<ExtensionSurface
+							extensionId={extSurface.extensionId}
+							version={extSurface.version}
+							surface={`widget:${extSurface.surfaceId}`}
+							entry={extSurface.entry}
+							label={extSurface.label}
+							config={widget.config ?? {}}
+							messages={extSurface.messages}
+							defaultHeight={extSurface.defaultHeight}
+							{instance}
 						/>
 					{:else}
 						<!-- Widget installé — Web Component chargé dynamiquement -->
