@@ -58,7 +58,8 @@ export function frameCsp(origin: string, nonce: string): string {
   ].join('; ')
 }
 
-function frameHtml(nonce: string, csp: string, sdkUrl: string): string {
+/** Exporte pour que le banc de confinement teste le DOCUMENT REEL, pas une copie. */
+export function frameHtml(nonce: string, csp: string, sdkUrl: string): string {
   // La politique est posée DEUX FOIS, en en-tête et ici.
   //
   // Vérifié sur notre propre production : le proxy pose la politique du site
@@ -94,6 +95,28 @@ function harden(reply: FastifyReply): FastifyReply {
     .header('X-Content-Type-Options', 'nosniff')
     .header('Referrer-Policy', 'no-referrer')
     .header('Cross-Origin-Resource-Policy', 'same-origin')
+}
+
+/**
+ * Durcissement des ressources que la FRAME doit pouvoir charger.
+ *
+ * Une frame en origine opaque envoie `Origin: null`, et un script de module,
+ * comme tout `import()` dynamique, est recupere en mode CORS. Sans en-tete
+ * d'autorisation, le navigateur refuse : le SDK ne se charge pas, et aucune
+ * surface ne demarre. `Cross-Origin-Resource-Policy: same-origin` bloque la
+ * meme chose une seconde fois, une origine opaque n'etant pas la notre.
+ *
+ * Ouvrir ces deux en-tetes n'expose rien : ce sont des fichiers statiques
+ * publics, deja lisibles par quiconque connait l'URL, et servis sans aucune
+ * information d'authentification. Ce qui protege l'instance, c'est le bac a
+ * sable et la politique de securite de la frame, pas l'obscurite d'un asset.
+ */
+function hardenFrameResource(reply: FastifyReply): FastifyReply {
+  return reply
+    .header('X-Content-Type-Options', 'nosniff')
+    .header('Referrer-Policy', 'no-referrer')
+    .header('Cross-Origin-Resource-Policy', 'cross-origin')
+    .header('Access-Control-Allow-Origin', '*')
 }
 
 export async function extensionFrameRoutes(app: FastifyInstance) {
@@ -132,7 +155,7 @@ export async function extensionFrameRoutes(app: FastifyInstance) {
   app.get('/extensions/sdk.js', { preHandler: [rateLimit] }, async (_request, reply) => {
     try {
       const source = await fs.readFile(path.join(process.cwd(), 'sdk', 'nodyx-sdk.js'))
-      return harden(reply)
+      return hardenFrameResource(reply)
         .header('Content-Type', 'application/javascript; charset=utf-8')
         .header('Cache-Control', 'public, max-age=3600')
         .send(source)
@@ -173,7 +196,7 @@ export async function extensionFrameRoutes(app: FastifyInstance) {
       return harden(reply).code(404).send({ error: 'Asset not found', code: 'ASSET_NOT_FOUND' })
     }
 
-    const r = harden(reply)
+    const r = hardenFrameResource(reply)
       .header('Content-Type', CONTENT_TYPES[ext] ?? 'application/octet-stream')
       .header('Cache-Control', 'public, max-age=31536000, immutable')
 

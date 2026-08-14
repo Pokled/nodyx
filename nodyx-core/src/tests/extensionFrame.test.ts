@@ -132,6 +132,19 @@ describe('assets', () => {
     expect((await asset('ui/widget.js')).headers['cache-control']).toContain('immutable')
   })
 
+  it('est chargeable DEPUIS la frame, qui est en origine opaque', async () => {
+    // Une frame opaque envoie Origin: null et recupere les modules en mode
+    // CORS. Sans ces deux en-tetes, le SDK ne se charge pas et aucune surface
+    // ne demarre : c'est un blocage total, pas une gene.
+    for (const url of ['/api/v1/extensions/sdk.js', '/api/v1/extensions/demo-ext/1.0.0/assets/ui/widget.js']) {
+      const r = await app.inject({ url, headers: { origin: 'null' } })
+      expect(r.statusCode).toBe(200)
+      expect(r.headers['access-control-allow-origin']).toBe('*')
+      expect(r.headers['cross-origin-resource-policy']).toBe('cross-origin')
+      expect(r.headers['x-content-type-options']).toBe('nosniff')
+    }
+  })
+
   it('sert un SVG inerte, parce qu il s affiche hors du bac à sable', async () => {
     const r = await asset('icon.svg')
     expect(r.statusCode).toBe(200)
