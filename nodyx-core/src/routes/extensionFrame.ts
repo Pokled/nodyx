@@ -38,16 +38,26 @@ const RE_VERSION = /^\d+\.\d+\.\d+$/
  * correspond à rien. `frame-src 'none'` interdit toute iframe imbriquée, donc
  * tout embarquement de tiers, qui passera par une primitive de l'hôte.
  *
- * `style-src-attr 'unsafe-inline'` est délibéré et borné aux attributs
- * `style=""`, qui sont réels dans du code d'interface. Il n'y a PAS de
- * `'unsafe-inline'` dans `style-src` ni dans `script-src` : un nonce le
- * neutraliserait de toute façon, l'écrire ne ferait que masquer l'intention.
+ * **Les styles sont libres DANS la frame, les scripts ne le sont pas.**
+ *
+ * Corrigé le 2026-08-14 après constat en production : une extension injecte sa
+ * feuille de style avec un `<style>` qu'elle crée elle même, et elle ne peut
+ * pas connaître le nonce. Avec un `style-src` à nonce, cette feuille était
+ * rejetée en silence, et la surface s'affichait en texte brut empilé. Le widget
+ * marchait, il était juste illisible.
+ *
+ * Autoriser `'unsafe-inline'` pour les styles n'affaiblit rien ici : nous
+ * sommes dans une frame à origine opaque qui exécute DÉJÀ le code de
+ * l'extension. Lui interdire son CSS n'empêche aucune attaque, ça l'empêche
+ * seulement de dessiner. Ce qui protège l'instance reste entier : origine
+ * opaque, `connect-src` fermé, `frame-src 'none'`, et surtout `script-src` qui
+ * garde son nonce, donc aucun script étranger ne s'exécute.
  */
 export function frameCsp(origin: string, nonce: string): string {
   return [
     `default-src 'none'`,
     `script-src 'nonce-${nonce}' ${origin}`,
-    `style-src 'nonce-${nonce}' ${origin}`,
+    `style-src 'unsafe-inline' ${origin}`,
     `style-src-attr 'unsafe-inline'`,
     `img-src ${origin} data: blob:`,
     `media-src ${origin} blob:`,

@@ -68,11 +68,24 @@ describe('document de frame', () => {
     expect(csp).toContain(ORIGIN)
   })
 
-  it('n autorise pas unsafe-inline pour les scripts ni les styles', async () => {
+  it('garde le nonce sur les SCRIPTS, donc aucun script étranger ne s exécute', () => {
+    // C'est la ligne qui compte : les styles sont libres dans la frame, les
+    // scripts ne le sont pas.
+    return frame().then((r) => {
+      const csp = r.headers['content-security-policy'] as string
+      expect(/script-src[^;]*unsafe-inline/.test(csp)).toBe(false)
+      expect(csp).toMatch(/script-src 'nonce-[^']+'/)
+    })
+  })
+
+  it('autorise en revanche les STYLES, sinon une extension ne peut pas dessiner', async () => {
+    // Constaté en production : une extension injecte sa feuille avec un <style>
+    // qu'elle cree elle meme, et elle ne peut pas connaitre le nonce. Avec un
+    // style-src a nonce, sa feuille etait rejetee en silence et la surface
+    // s'affichait en texte brut empile.
     const csp = (await frame()).headers['content-security-policy'] as string
-    expect(/script-src[^;]*unsafe-inline/.test(csp)).toBe(false)
-    expect(/style-src '[^;]*unsafe-inline/.test(csp)).toBe(false)
-    expect(csp).toContain("style-src-attr 'unsafe-inline'")   // borné aux attributs, délibéré
+    expect(csp).toContain("style-src 'unsafe-inline'")
+    expect(csp).toContain("style-src-attr 'unsafe-inline'")
   })
 
   it('utilise un nonce neuf à chaque requête', async () => {

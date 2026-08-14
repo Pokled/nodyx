@@ -101,6 +101,29 @@ export async function mount({ root, nodyx }) {
     return 'statut ' + r.status + ', ' + (await r.text()).slice(0, 40)
   })
 
+  // ── Styles : autorises DANS la frame, mais rien de plus ───────────────────
+  await attempt('feuille de style injectee', 'autorisee, une extension doit dessiner', () => {
+    const st = document.createElement('style')
+    st.textContent = '.sonde-evil { color: rgb(1, 2, 3) }'
+    document.head.appendChild(st)
+    const el = document.createElement('div')
+    el.className = 'sonde-evil'
+    document.body.appendChild(el)
+    const applique = getComputedStyle(el).color === 'rgb(1, 2, 3)'
+    el.remove(); st.remove()
+    // Ici l'attendu est l'INVERSE des autres : si la feuille ne s'applique pas,
+    // aucune extension ne peut dessiner, et la surface s'affiche en texte brut.
+    if (!applique) throw new Error('feuille rejetee')
+    return 'appliquee'
+  })
+
+  await attempt('police chargee depuis un tiers', 'bloquee par la politique', () => new Promise((resolve, reject) => {
+    const st = document.createElement('style')
+    st.textContent = '@font-face { font-family: evil; src: url(https://evil.example/f.woff2) }'
+    document.head.appendChild(st)
+    setTimeout(() => { st.remove(); reject(new Error('aucune requete partie')) }, 800)
+  }))
+
   // ── Le pont ───────────────────────────────────────────────────────────────
   await attempt('capacite non declaree', 'refusee', async () => {
     const v = await nodyx.storage.get('quoi-que-ce-soit')
