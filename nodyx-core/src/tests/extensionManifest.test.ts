@@ -234,9 +234,31 @@ describe('permissions réseau', () => {
     'https://api.example.com',
     'api.example.com:8443',
     'api.example.com/v1',
-    '127.0.0.1',
-  ])('refuse l hôte %s', (host) => {
+    '10.0.0.999',
+  ])('refuse l hôte mal formé %s', (host) => {
     expect(issues({ ...base(), permissions: { network: { [host]: { methods: ['GET'], paths: ['/'] } } } })).toContain('NETWORK_HOST_INVALID')
+  })
+
+  // Une instance peut vivre en intranet, sur un reseau domestique, ou sur une
+  // simple adresse IP sans nom de domaine. On ne ferme pas la porte, on
+  // demande l'accord de l'admin. Seule la machine de l'instance elle meme
+  // reste hors de portee.
+  it.each(['10.0.0.5', '192.168.1.50', '172.16.4.4', '100.64.0.9', 'inventaire.local', 'srv.internal', 'nas.lan'])(
+    'accepte l hôte privé %s, en le signalant a l admin', (host) => {
+      const r = validateManifest({ ...base(), permissions: { network: { [host]: { methods: ['GET'], paths: ['/api'] } } } })
+      if (!r.ok) throw new Error('refusé à tort : ' + JSON.stringify(r.issues))
+      expect(r.privateNetworkHosts).toEqual([host])
+    })
+
+  it.each(['127.0.0.1', '127.1.2.3', 'localhost', 'app.localhost', '169.254.169.254', '0.0.0.0', '224.0.0.1'])(
+    'refuse toujours %s, qui vise la machine de l instance', (host) => {
+      expect(issues({ ...base(), permissions: { network: { [host]: { methods: ['GET'], paths: ['/'] } } } })).toContain('NETWORK_HOST_FORBIDDEN')
+    })
+
+  it('ne signale rien quand tous les hôtes sont publics', () => {
+    const r = validateManifest({ ...base(), permissions: { network: { 'api.themoviedb.org': { methods: ['GET'], paths: ['/3/'] } } } })
+    if (!r.ok) throw new Error('refusé à tort')
+    expect(r.privateNetworkHosts).toEqual([])
   })
 
   it('refuse une méthode inconnue', () => {

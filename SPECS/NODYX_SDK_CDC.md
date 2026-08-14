@@ -417,7 +417,19 @@ Aucune requête sortante depuis la frame. Et le proxy **n'est pas un `fetch` gé
 `nodyx.fetch()` tape `POST /api/v1/extensions/:id/fetch`, qui applique dans l'ordre :
 
 1. **hôte, méthode et préfixe de chemin** vérifiés contre la déclaration accordée. Le port est celui du schéma (443), un port explicite non déclaré est refusé.
-2. **résolution DNS puis validation de l'adresse obtenue**, et connexion **à cette adresse** (épinglage). Vérifier le nom avant de résoudre ne protège de rien : un nom public qui résout en adresse privée est le contournement classique. Sont refusés : RFC1918, loopback v4 et v6, lien-local, ULA, multicast, adresses mappées, et les écritures exotiques d'IP.
+2. **résolution DNS puis validation de l'adresse obtenue**, et connexion **à cette adresse** (épinglage). Vérifier le nom avant de résoudre ne protège de rien : un nom public qui résout en adresse privée est le contournement classique.
+
+   **Trois niveaux, pas un interdit** (révisé le 2026-08-14). Une instance Nodyx vit très bien sur un intranet d'entreprise, un réseau domestique, ou une simple adresse IP sans nom de domaine. Refuser en bloc les adresses privées reviendrait à interdire les extensions qui servent justement à parler aux services de cette maison, et à réserver le SDK aux instances publiques. Ce n'est pas notre public.
+
+   | Cible | Traitement |
+   |---|---|
+   | adresse publique | déclarable, accordée comme tout appel sortant |
+   | **réseau privé** : RFC1918, ULA, partage d'adresse opérateur, `.local`, `.internal`, `.lan`, `.home.arpa` | déclarable, mais exige un **accord explicite et distinct de l'admin**, montré à part sur l'écran de permissions : « cette extension veut joindre `10.0.0.5`, une machine de votre réseau interne » |
+   | **boucle locale et lien local** : `127.0.0.0/8`, `::1`, `localhost`, `169.254.0.0/16` | **jamais**, même avec l'accord de l'admin |
+
+   La dernière ligne n'est pas une rigidité de principe : ces cibles sont la machine de l'instance elle même, donc sa base, son cache, son API interne et les métadonnées d'identité de l'hébergeur. Un admin n'y gagne rien de légitime qu'il n'obtienne en exposant son service sur l'adresse de son réseau. Pour le développement, une variable d'environnement dédiée lève la restriction sur une instance de développement, jamais en production.
+
+   Restent refusés en toute circonstance : multicast, diffusion, plages réservées, adresses mappées et écritures exotiques d'IP.
 3. **redirections limitées à 3, chacune revalidée intégralement** (hôte, chemin, adresse résolue).
 4. **secrets injectés par le serveur, selon une recette que le serveur possède** (nom de l'en-tête ou du paramètre, emplacement). L'extension déclare `"secret": "TMDB_API_KEY"` et ne choisit ni le nom de l'en-tête ni sa destination. Sans ça, `nodyx.fetch()` pourrait demander `X-Peu-Importe: <secret>` vers un hôte contrôlé et récupérer indirectement ce qu'il n'a pas le droit de voir.
 5. **en-têtes filtrés dans les deux sens** (liste blanche courte à l'aller, `Set-Cookie` et compagnie retirés au retour).

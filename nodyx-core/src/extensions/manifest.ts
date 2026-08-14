@@ -30,19 +30,56 @@ export const RE_LOCALE       = /^[a-z]{2}(-[A-Za-z]{2})?$/
 export const RE_MESSAGE_KEY  = /^@[A-Za-z0-9_][A-Za-z0-9_.-]*$/
 export const RE_HOST         = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/
 
+export type HostClass = 'public' | 'private' | 'forbidden' | 'invalid'
+
+const RE_IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+
 /**
- * Un hôte déclarable : un nom de domaine, jamais une adresse IP littérale.
+ * Classe un hôte déclarable au manifeste. Trois niveaux, pas un interdit.
  *
- * Le proxy refuse déjà les adresses privées au moment de la connexion, après
- * résolution (NODYX_SDK_SECURITY.md §4.4). Mais une IP littérale n'a aucune
- * raison d'apparaître dans un manifeste : elle ne veut rien dire pour l'admin
- * qui lit l'écran de permissions, et elle ne sert qu'à viser une machine
- * précise. On la refuse à la déclaration, pas seulement à l'usage.
+ * Une instance Nodyx peut très bien vivre sur un intranet d'entreprise, sur un
+ * réseau domestique, ou sur une simple adresse IP sans nom de domaine. Refuser
+ * en bloc les adresses privées reviendrait à interdire les extensions qui
+ * servent justement à parler aux services de cette maison. L'admin est la
+ * racine de confiance de son instance : à lui de décider, en connaissance de
+ * cause.
+ *
+ *   public     déclarable librement
+ *   private    déclarable, mais exige un accord EXPLICITE de l'admin (§6.4)
+ *   forbidden  jamais : ces cibles sont la machine de l'instance elle même,
+ *              donc sa base, son cache, son API interne, ses identifiants de
+ *              plateforme d'hébergement. Un admin n'y gagne rien de légitime.
+ *   invalid    forme inacceptable
+ *
+ * Attention à ne pas confondre les deux couches : cette classification porte
+ * sur la LISIBILITÉ de la déclaration. L'application réelle se fait à la
+ * connexion, après résolution DNS et sur l'adresse obtenue, parce qu'un nom
+ * public peut pointer vers une adresse privée (NODYX_SDK_SECURITY.md §4.4).
  */
-export function isDeclarableHost(host: string): boolean {
-  if (!RE_HOST.test(host)) return false
-  const last = host.slice(host.lastIndexOf('.') + 1)
-  return /[a-z]/.test(last)          // un TLD tout en chiffres = adresse IPv4
+export function classifyHost(host: string): HostClass {
+  if (!host || host.includes(':') || host.includes('/')) return 'invalid'
+
+  const lower = host.toLowerCase()
+  const ip = RE_IPV4.exec(lower)
+
+  if (ip) {
+    const o = ip.slice(1).map(Number)
+    if (o.some(n => n > 255)) return 'invalid'
+    const [a, b] = o
+    if (a === 127) return 'forbidden'                        // boucle locale
+    if (a === 169 && b === 254) return 'forbidden'           // lien local, métadonnées d'hébergeur
+    if (a === 0 || a >= 224) return 'forbidden'              // réservé, multicast, diffusion
+    if (a === 10) return 'private'
+    if (a === 172 && b >= 16 && b <= 31) return 'private'
+    if (a === 192 && b === 168) return 'private'
+    if (a === 100 && b >= 64 && b <= 127) return 'private'   // partage d'adresse opérateur
+    return 'public'
+  }
+
+  if (!RE_HOST.test(lower) && lower !== 'localhost') return 'invalid'
+  if (lower === 'localhost' || lower.endsWith('.localhost')) return 'forbidden'
+  if (/\.(local|internal|lan|intranet)$/.test(lower) || lower.endsWith('.home.arpa')) return 'private'
+  return 'public'
 }
 export const RE_RATE         = /^\d+\/(s|min|h)$/
 export const RE_SIZE         = /^\d+(kb|mb)$/
@@ -175,7 +212,18 @@ export interface ValidationIssue {
 }
 
 export type ValidationResult =
-  | { ok: true;  manifest: ExtensionManifest; messageKeys: string[] }
+  | {
+      ok: true
+      manifest: ExtensionManifest
+      messageKeys: string[]
+      /**
+       * Hôtes déclarés qui visent un réseau privé. Le manifeste est valide,
+       * mais ces cibles exigent un accord EXPLICITE et distinct de l'admin à
+       * l'installation : l'écran de permissions doit les montrer à part, pas
+       * les noyer dans la liste des appels sortants ordinaires.
+       */
+      privateNetworkHosts: string[]
+    }
   | { ok: false; issues: ValidationIssue[] }
 
 /** Toutes les clés de traduction référencées par le manifeste, sans le @. */
@@ -251,10 +299,16 @@ function preflight(raw: unknown): ValidationIssue[] {
           message: 'un hôte réseau doit déclarer ses méthodes et ses préfixes de chemin, sinon l\'écran de permissions est illisible',
         })
       }
-      if (!isDeclarableHost(host)) {
+      const klass = classifyHost(host)
+      if (klass === 'invalid') {
         issues.push({
           code: 'NETWORK_HOST_INVALID', path: `permissions.network.${host}`,
-          message: 'hôte invalide : nom de domaine attendu, sans schéma, sans port, sans chemin, et jamais une adresse IP',
+          message: 'hôte invalide : nom de domaine ou adresse IPv4 attendu, sans schéma, sans port, sans chemin',
+        })
+      } else if (klass === 'forbidden') {
+        issues.push({
+          code: 'NETWORK_HOST_FORBIDDEN', path: `permissions.network.${host}`,
+          message: 'cette cible est la machine de l\'instance elle même (boucle locale, lien local, métadonnées d\'hébergeur) : elle n\'est jamais déclarable',
         })
       }
     }
@@ -355,5 +409,14 @@ export function validateManifest(raw: unknown): ValidationResult {
   const late = [...early, ...postflight(parsed.data)]
   if (late.length) return { ok: false, issues: late }
 
-  return { ok: true, manifest: parsed.data, messageKeys: collectMessageKeys(parsed.data) }
+  const privateNetworkHosts = Object.keys(parsed.data.permissions?.network ?? {})
+    .filter(h => classifyHost(h) === 'private')
+    .sort()
+
+  return {
+    ok: true,
+    manifest: parsed.data,
+    messageKeys: collectMessageKeys(parsed.data),
+    privateNetworkHosts,
+  }
 }

@@ -143,7 +143,9 @@ Le jeton ne transite que par le port privé. Jamais dans une URL, un `src`, un r
 Ce n'est pas un `fetch` générique derrière une liste blanche, c'est une porte bornée par ce que le manifeste déclare et que l'admin a accepté. Contrôles, dans l'ordre :
 
 1. hôte, **méthode** et **préfixe de chemin** vérifiés contre l'accord ; port implicite du schéma, un port explicite non déclaré est refusé
-2. résolution DNS, validation de **l'adresse obtenue**, puis connexion **à cette adresse**. Vérifier le nom avant de résoudre ne protège de rien : le rebinding DNS est l'attaque de référence. Refusés : RFC1918, loopback v4 et v6, lien local, ULA, multicast, adresses mappées, écritures exotiques d'IP
+2. résolution DNS, validation de **l'adresse obtenue**, puis connexion **à cette adresse**. Vérifier le nom avant de résoudre ne protège de rien : le rebinding DNS est l'attaque de référence.
+
+   Le refus n'est pas uniforme, et ce n'est pas un relâchement (révisé le 2026-08-14) : **une instance en intranet est un usage normal, pas une anomalie.** Réseau privé, déclarable et accordé sur consentement explicite et distinct de l'admin, qui est la racine de confiance de son instance. Boucle locale et lien local (`127.0.0.0/8`, `::1`, `localhost`, `169.254.0.0/16`, donc les métadonnées d'hébergeur), refusés en toute circonstance y compris avec l'accord de l'admin, parce qu'ils visent la machine de l'instance elle même, sa base, son cache et son API interne. Une variable d'environnement dédiée lève la restriction sur une instance de développement, jamais en production. Restent refusés partout : multicast, diffusion, plages réservées, adresses mappées, écritures exotiques d'IP
 3. 3 redirections au maximum, **chacune revalidée intégralement**, adresse comprise
 4. secrets injectés **selon une recette que le serveur possède** : l'extension nomme le secret, elle ne choisit ni l'en-tête ni sa destination. Sans cette règle, une extension demanderait `X-Peu-Importe: <secret>` vers un hôte qu'elle contrôle
 5. en-têtes filtrés à l'aller (liste blanche courte) et au retour (`Set-Cookie` et apparentés retirés)
