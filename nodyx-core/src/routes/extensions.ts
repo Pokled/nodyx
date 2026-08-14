@@ -154,6 +154,70 @@ export async function extensionRoutes(app: FastifyInstance) {
     return reply.send({ success: true })
   })
 
+  // ── GET /extensions/public ──────────────────────────────────────────────
+  //
+  // Ce que le frontend a besoin de savoir pour AFFICHER des extensions, et
+  // rien de plus : ni permissions accordees, ni empreinte, ni qui a installe.
+  //
+  // Les libelles sont resolus ICI, dans la langue demandee. Le frontend n'a
+  // donc aucune logique de cles a porter, et une extension ne peut pas lui
+  // faire afficher une chaine qui n'est pas dans ses dictionnaires.
+  app.get('/extensions/public', { preHandler: [rateLimit] }, async (request, reply) => {
+    const asked = String((request.query as { locale?: string }).locale ?? '').slice(0, 5)
+
+    const { rows } = await db.query(
+      `SELECT id, manifest, messages, version
+         FROM installed_extensions
+        WHERE enabled = true
+        ORDER BY id`,
+    )
+
+    const extensions = (rows as Array<{ id: string; manifest: Record<string, unknown>; messages: Record<string, Record<string, string>>; version: string }>)
+      .map((row) => {
+        const parsed = validateManifest(row.manifest)
+        if (!parsed.ok) return null                 // manifeste corrompu : on l'ignore plutot que de servir n'importe quoi
+
+        const m = parsed.manifest
+        const dict = { ...(row.messages?.[m.default_locale] ?? {}), ...(asked ? row.messages?.[asked] ?? {} : {}) }
+        const tr = (v?: string) => (v?.startsWith('@') ? dict[v.slice(1)] ?? v.slice(1) : v)
+
+        return {
+          id:          m.id,
+          version:     row.version,
+          label:       tr(m.label),
+          description: tr(m.description),
+          icon:        m.icon ? `/api/v1/extensions/${m.id}/${row.version}/assets/${m.icon}` : null,
+          family:      m.family ?? 'content',
+          messages:    dict,
+          surfaces:    m.surfaces.map((s) => s.type === 'widget'
+            ? {
+                type:  'widget' as const,
+                id:    s.id,
+                entry: s.entry,
+                label: tr(s.label),
+                defaultHeight: s.default_height ?? null,
+                schema: (s.schema ?? []).map((f) => ({
+                  ...f,
+                  label:   tr(f.label),
+                  hint:    tr(f.hint),
+                  details: tr(f.details),
+                  options: f.options?.map((o) => ({ ...o, label: tr(o.label) })),
+                })),
+              }
+            : {
+                type:  'page' as const,
+                path:  s.path,
+                entry: s.entry,
+                label: tr(s.label) ?? tr(m.label),
+                nav:   s.nav ? { label: tr(s.nav.label), icon: s.nav.icon ?? null } : null,
+              }),
+        }
+      })
+      .filter((e) => e !== null)
+
+    return reply.send({ extensions })
+  })
+
   // ── POST /extensions/:id/storage ────────────────────────────────────────
   //
   // Authentifiee par le JETON D'EXTENSION, jamais par le cookie de session :

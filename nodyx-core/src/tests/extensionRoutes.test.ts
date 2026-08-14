@@ -317,3 +317,70 @@ describe('stockage', () => {
     expect(r.statusCode).toBe(400)
   })
 })
+
+// ── Liste publique, ce que le frontend a le droit de savoir ────────────────
+
+describe('liste publique', () => {
+  const M = {
+    ...MANIFEST,
+    icon: 'icon.svg',
+    label: '@label',
+    description: '@desc',
+    surfaces: [
+      { type: 'widget', id: 'main', entry: 'ui/widget.js', label: '@w.label',
+        default_height: 200,
+        schema: [{ key: 'mood', type: 'select', label: '@f.mood', options: [{ value: 'a', label: '@o.a' }] }] },
+      { type: 'page', path: 'demo', entry: 'ui/page.js', nav: { label: '@nav.label', icon: 'twemoji:star' } },
+    ],
+  }
+  const MESSAGES = {
+    en: { label: 'Demo', desc: 'A demo.', 'w.label': 'Widget', 'f.mood': 'Mood', 'o.a': 'A', 'nav.label': 'Demo page' },
+    fr: { label: 'Démo', 'w.label': 'Widget FR' },
+  }
+
+  const publicList = (locale?: string) => app.inject({
+    method: 'GET', url: `/api/v1/extensions/public${locale ? `?locale=${locale}` : ''}`,
+  })
+
+  beforeEach(() => {
+    dbQuery.mockResolvedValue({ rows: [{ id: 'demo-ext', manifest: M, messages: MESSAGES, version: '1.0.0' }] })
+  })
+
+  it('resout les libelles cote serveur, dans la langue demandee', async () => {
+    const r = await publicList('fr')
+    const e = JSON.parse(r.body).extensions[0]
+    expect(e.label).toBe('Démo')                       // traduit en francais
+    expect(e.description).toBe('A demo.')              // repli sur la locale par defaut
+    expect(e.surfaces[0].label).toBe('Widget FR')
+  })
+
+  it('resout aussi les libelles du schema et de ses options', async () => {
+    const e = JSON.parse((await publicList()).body).extensions[0]
+    expect(e.surfaces[0].schema[0].label).toBe('Mood')
+    expect(e.surfaces[0].schema[0].options[0].label).toBe('A')
+  })
+
+  it('ne divulgue ni permissions accordees, ni empreinte, ni installateur', async () => {
+    const body = (await publicList()).body
+    for (const secret of ['granted', 'sha256', 'installed_by', 'permissions']) {
+      expect(body).not.toContain(secret)
+    }
+  })
+
+  it('pointe l icone vers la route d assets versionnee', async () => {
+    const e = JSON.parse((await publicList()).body).extensions[0]
+    expect(e.icon).toBe('/api/v1/extensions/demo-ext/1.0.0/assets/icon.svg')
+  })
+
+  it('ne liste que les extensions activees', async () => {
+    await publicList()
+    expect(dbQuery.mock.calls[0][0]).toContain('WHERE enabled = true')
+  })
+
+  it('ignore un manifeste corrompu plutot que de servir n importe quoi', async () => {
+    dbQuery.mockResolvedValue({ rows: [{ id: 'x', manifest: { api: 99 }, messages: {}, version: '1.0.0' }] })
+    const r = await publicList()
+    expect(r.statusCode).toBe(200)
+    expect(JSON.parse(r.body).extensions).toEqual([])
+  })
+})

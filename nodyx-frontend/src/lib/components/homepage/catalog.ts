@@ -12,7 +12,8 @@
 // vue de surface (CatalogEntry) qui sera vraiment unifiée en Phase 2.
 
 import { PLUGIN_LIST, PLUGIN_REGISTRY } from './plugins'
-import type { WidgetPlugin, FieldSchema, FieldType, WidgetFamily } from './plugins/_types'
+import type { WidgetPlugin, FieldSchema, WidgetFamily } from './plugins/_types'
+import { canonField } from './extensionCatalog'
 
 // Manifest d'un widget installé tel que renvoyé par /api/v1/widget-store-public.
 export interface InstalledWidgetManifest {
@@ -53,33 +54,6 @@ export type CatalogEntry =
 			version: string
 			author?: string
 		}
-
-// Les SDK externes utilisent souvent `checkbox` là où le builder attend
-// `boolean`. On accepte les deux à l'entrée pour ne pas casser les widgets
-// déjà publiés (le SDK officiel devra à terme imposer `boolean`).
-function canonFieldType(raw: string): FieldType {
-	if (raw === 'checkbox') return 'boolean'
-	return raw as FieldType
-}
-
-function canonField(raw: unknown): FieldSchema | null {
-	if (!raw || typeof raw !== 'object') return null
-	const r = raw as Record<string, unknown>
-	if (typeof r.key !== 'string' || typeof r.label !== 'string' || typeof r.type !== 'string') return null
-	return {
-		key:         r.key,
-		label:       r.label,
-		type:        canonFieldType(r.type),
-		placeholder: typeof r.placeholder === 'string' ? r.placeholder : undefined,
-		default:     r.default,
-		required:    typeof r.required === 'boolean' ? r.required : undefined,
-		options:     Array.isArray(r.options) ? r.options as { value: string; label: string }[] : undefined,
-		min:         typeof r.min === 'number' ? r.min : undefined,
-		max:         typeof r.max === 'number' ? r.max : undefined,
-		hint:        typeof r.hint === 'string' ? r.hint : undefined,
-		details:     typeof r.details === 'string' ? r.details : undefined,
-	}
-}
 
 function manifestToEntry(m: InstalledWidgetManifest): CatalogEntry {
 	const schema = (m.schema ?? [])
