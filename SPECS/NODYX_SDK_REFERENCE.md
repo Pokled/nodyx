@@ -448,7 +448,7 @@ L'hôte n'envoie **qu'un seul message** sur `window`, celui d'amorçage, qui tra
 
 Un `id` inconnu, déjà consommé, ou reçu avant la fin de la poignée de main est rejeté et journalisé côté hôte. Un message envoyé sur `window` après l'amorçage est ignoré.
 
-Types de requête : `session.renew`, `storage.get|set|delete|list`, `net.fetch`, `core.get`, `ui.toast|confirm|modal`, `router.push|replace`, `nav.go`, `nav.external`, `surface.resize`.
+Types de requête : `session.renew`, `storage.get|set|delete|list`, `net.fetch`, `core.get`, `ui.toast|confirm|modal`, `router.push|replace`, `host.navigate`, `host.external`, `surface.resize`.
 
 ---
 

@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nodyx SFU · Benchmark de charge</title>
+<meta name="description" content="Le moteur vocal SFU de Nodyx à l'épreuve : 100 participants audio à 100 % de forwarding, sur un seul cœur. Données réelles, auto-hébergé.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Nodyx SFU — 100 participants, un cœur, zéro perte">
+<meta property="og:description" content="Le benchmark de charge du moteur vocal souverain de Nodyx. Données réelles.">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    color-scheme: light dark;
+    --paper:#f4f6f9; --surface:#fff; --surface-2:#eef1f5; --line:#d7dce4;
+    --ink:#10141c; --ink-2:#47505f; --ink-3:#6b7482;
+    --brand:#5b5ef0;
+    --cpu:#0e9fc4; --cpu-soft:#0e9fc422; --mem:#6d5ef2; --mem-soft:#6d5ef222;
+    --ok:#0f9d6a; --warn:#d98708; --crit:#dc3a3a; --ok-soft:#0f9d6a1f; --crit-soft:#dc3a3a1a; --grid:#e4e8ee;
+    --shadow:0 1px 2px rgba(16,20,28,.04),0 8px 24px rgba(16,20,28,.05);
+    --mono:ui-monospace,"SF Mono","SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --paper:#0b0d13; --surface:#12151d; --surface-2:#171b24; --line:#262c38;
+    --ink:#eef1f6; --ink-2:#a7b0be; --ink-3:#6d7787; --brand:#8f92ff;
+    --cpu:#37c6e8; --cpu-soft:#37c6e820; --mem:#9d90ff; --mem-soft:#9d90ff20;
+    --ok:#2bd08a; --warn:#f2a83a; --crit:#ff6a6a; --ok-soft:#2bd08a1c; --crit-soft:#ff6a6a1c; --grid:#1e2430;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.4);
+  }}
+  :root[data-theme="light"]{
+    --paper:#f4f6f9; --surface:#fff; --surface-2:#eef1f5; --line:#d7dce4;
+    --ink:#10141c; --ink-2:#47505f; --ink-3:#6b7482; --brand:#5b5ef0;
+    --cpu:#0e9fc4; --cpu-soft:#0e9fc422; --mem:#6d5ef2; --mem-soft:#6d5ef222;
+    --ok:#0f9d6a; --warn:#d98708; --crit:#dc3a3a; --ok-soft:#0f9d6a1f; --crit-soft:#dc3a3a1a; --grid:#e4e8ee;
+    --shadow:0 1px 2px rgba(16,20,28,.04),0 8px 24px rgba(16,20,28,.05);
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b0d13; --surface:#12151d; --surface-2:#171b24; --line:#262c38;
+    --ink:#eef1f6; --ink-2:#a7b0be; --ink-3:#6d7787; --brand:#8f92ff;
+    --cpu:#37c6e8; --cpu-soft:#37c6e820; --mem:#9d90ff; --mem-soft:#9d90ff20;
+    --ok:#2bd08a; --warn:#f2a83a; --crit:#ff6a6a; --ok-soft:#2bd08a1c; --crit-soft:#ff6a6a1c; --grid:#1e2430;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px;}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+
+  .topbar{display:flex;justify-content:flex-end;padding:16px 0 0;}
+  .theme-btn{font-family:var(--mono);font-size:.74rem;background:var(--surface);color:var(--ink-2);border:1px solid var(--line);border-radius:7px;padding:7px 11px;cursor:pointer;display:inline-flex;gap:7px;align-items:center;}
+  .theme-btn:hover{border-color:var(--brand);}
+  .theme-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+
+  header{padding:44px 0 40px;border-bottom:1px solid var(--line);}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);display:flex;gap:10px;align-items:center;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft);}
+  h1{font-size:clamp(2.3rem,6vw,3.9rem);line-height:1.02;margin:20px 0 0;letter-spacing:-.03em;font-weight:680;text-wrap:balance;max-width:16ch;}
+  h1 .accent{color:var(--brand);}
+  .lede{margin:20px 0 0;font-size:1.12rem;color:var(--ink-2);max-width:60ch;}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:28px;align-items:center;}
+  .meta{font-family:var(--mono);font-size:.78rem;color:var(--ink-3);}
+  .meta b{color:var(--ink-2);font-weight:500;}
+  button.replay{font-family:var(--mono);font-size:.78rem;letter-spacing:.04em;background:var(--surface);color:var(--ink);border:1px solid var(--line);padding:8px 14px;border-radius:7px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;transition:border-color .15s,transform .05s;}
+  button.replay:hover{border-color:var(--brand);}
+  button.replay:active{transform:translateY(1px);}
+  button.replay:disabled{opacity:.55;cursor:default;}
+  button.replay:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+  button.replay .tri{width:0;height:0;border-left:7px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent;}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:40px 0;}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 22px 20px;box-shadow:var(--shadow);}
+  .stat .k{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);}
+  .stat .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:clamp(2rem,5vw,2.9rem);letter-spacing:-.03em;margin-top:10px;line-height:1;}
+  .stat .u{font-size:.95rem;color:var(--ink-2);margin-top:8px;}
+  .stat.hero .v{color:var(--ok);}
+  .stat.mid .v{color:var(--cpu);}
+  .stat.cmp .v{color:var(--brand);}
+
+  .callout{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:22px 24px;margin:32px 0 0;box-shadow:var(--shadow);}
+  .callout .cl-badge{display:inline-block;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand);border:1px solid var(--brand);border-radius:20px;padding:3px 11px;margin-bottom:13px;}
+  .callout p{margin:0;color:var(--ink);font-size:1.02rem;line-height:1.65;}
+  .callout b{color:var(--ink);font-weight:640;}
+
+  section{padding:48px 0;border-top:1px solid var(--line);}
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:26px;}
+  h2{font-size:1.45rem;letter-spacing:-.02em;margin:0;font-weight:640;}
+  .sec-head p{margin:0;color:var(--ink-2);font-size:.95rem;max-width:46ch;}
+
+  figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 20px 8px;box-shadow:var(--shadow);position:relative;}
+  figure.hero-chart{padding-bottom:14px;}
+  .fig-title{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);display:flex;align-items:center;gap:10px;}
+  .fig-title .swatch{width:10px;height:10px;border-radius:3px;}
+  .chart{width:100%;height:auto;display:block;margin-top:6px;overflow:visible;touch-action:none;}
+  .grid-line{stroke:var(--grid);stroke-width:1;}
+  .axis-txt{font-family:var(--mono);font-size:11px;fill:var(--ink-3);}
+  .series-line{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;}
+  .endpoint{stroke:var(--surface);stroke-width:2.5;}
+  .dlabel{font-family:var(--mono);font-size:12px;font-weight:600;}
+  .dlabel-bg{fill:var(--surface);opacity:.85;}
+  .crosshair{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3;opacity:0;}
+
+  .small-mult{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .rupture-band{fill:var(--crit-soft);}
+  .refline{stroke:var(--ink-3);stroke-width:1.4;stroke-dasharray:5 4;opacity:.7;}
+
+  .insight{display:grid;grid-template-columns:1.15fr 1fr;gap:20px;align-items:stretch;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:var(--shadow);}
+  .card h3{margin:0 0 12px;font-size:1.08rem;letter-spacing:-.01em;}
+  .card p{margin:0 0 12px;color:var(--ink-2);font-size:.96rem;}
+  .card p:last-child{margin-bottom:0;}
+  .card code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);padding:1px 6px;border-radius:5px;color:var(--ink);}
+  .pool{display:flex;gap:6px;margin:16px 0 6px;}
+  .core{flex:1;height:46px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.72rem;color:var(--ink-3);position:relative;overflow:hidden;transition:border-color .2s,color .2s;}
+  .core.on{border-color:var(--cpu);color:var(--cpu);}
+  .core.on::before{content:"";position:absolute;inset:0;background:var(--cpu-soft);}
+  .core span{position:relative;}
+  .pool-note{font-family:var(--mono);font-size:.74rem;color:var(--ink-3);}
+
+  .versus{display:grid;gap:14px;}
+  .vs-row{display:grid;grid-template-columns:78px 1fr 74px;align-items:center;gap:16px;}
+  .vs-row .lbl{font-family:var(--mono);font-size:.82rem;color:var(--ink-2);}
+  .vs-track{height:30px;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;overflow:hidden;}
+  .vs-fill{height:100%;border-radius:6px 0 0 6px;transition:width 1.7s cubic-bezier(.22,.61,.36,1);width:0;}
+  .vs-fill.mesh{background:linear-gradient(90deg,var(--ink-3),var(--ink-2));}
+  .vs-fill.sfu{background:linear-gradient(90deg,var(--brand),var(--cpu));}
+  .vs-row .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.4rem;text-align:right;letter-spacing:-.02em;}
+
+  .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);}
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.86rem;min-width:560px;}
+  th,td{padding:11px 16px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500;position:sticky;top:0;background:var(--surface);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr.break td{background:var(--crit-soft);}
+  .tag{font-family:var(--mono);font-size:.72rem;padding:2px 8px;border-radius:20px;display:inline-block;}
+  .tag.ok{color:var(--ok);background:var(--ok-soft);}
+  .tag.crit{color:var(--crit);background:var(--crit-soft);}
+  td .tag{min-width:62px;text-align:center;}
+
+  .tip{position:fixed;pointer-events:none;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 11px;box-shadow:var(--shadow);font-family:var(--mono);font-size:.78rem;opacity:0;transition:opacity .1s;min-width:120px;}
+  .tip .tn{color:var(--ink-3);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;}
+  .tip .tv{color:var(--ink);font-size:1.05rem;margin-top:3px;}
+  .tip .ts{color:var(--ink-2);margin-top:2px;font-size:.74rem;}
+
+  footer{border-top:1px solid var(--line);padding:40px 0 72px;color:var(--ink-3);}
+  footer h4{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);margin:0 0 14px;}
+  footer ul{margin:0;padding-left:18px;font-size:.9rem;line-height:1.7;}
+  footer li{margin-bottom:4px;}
+  footer .sig{margin-top:26px;font-family:var(--mono);font-size:.76rem;}
+  footer a{color:var(--brand);text-decoration:none;}
+  footer a:hover{text-decoration:underline;}
+
+  @media (max-width:720px){
+    .stats{grid-template-columns:1fr;}
+    .small-mult,.insight{grid-template-columns:1fr;}
+  }
+  /* Le respect de "réduire les animations" est géré en JS : rendu statique au chargement passif,
+     mais le clic explicite sur "Rejouer" anime quand même (l'utilisateur l'a demandé). */
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <button class="theme-btn" id="theme" type="button" aria-label="Basculer le thème clair/sombre"><span id="theme-ico">◐</span> Thème</button>
+  </div>
+  <header>
+    <div class="eyebrow"><span class="dot"></span> Nodyx · Vocal auto-hébergé · test grandeur nature</div>
+    <h1>Jusqu'à 600 personnes en vocal.<br>Sur <span class="accent">un seul serveur.</span></h1>
+    <p class="lede">Nodyx fait tourner le vocal de ta communauté, comme Discord, mais sur
+      <b>ton propre serveur</b>. On l'a poussé à fond : voici combien de monde il fait tenir,
+      en même temps.</p>
+    <div class="meta-row">
+      <span class="meta"><b>Chiffres mesurés</b>, sans filtre, sur une machine réelle</span>
+      <button class="replay" id="replay" type="button"><span class="tri"></span> <span id="replay-label">Rejouer le test</span></button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat hero">
+      <div class="k">En vocal, en même temps</div>
+      <div class="v">~<span data-count="600">0</span></div>
+      <div class="u">personnes réparties en pièces, sur un seul serveur</div>
+    </div>
+    <div class="stat mid">
+      <div class="k">Par pièce vocale</div>
+      <div class="v"><span data-count="100">0</span></div>
+      <div class="u">une communauté entière qui se parle, sans perdre un mot</div>
+    </div>
+    <div class="stat cmp">
+      <div class="k">Gardés pour le reste</div>
+      <div class="v"><span data-count="2">0</span><span style="font-size:.5em"> cœurs</span></div>
+      <div class="u">forum, chat, fichiers : la plateforme tourne à côté</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="cl-badge">Le pire cas imaginable</span>
+    <p>Ces 600 personnes <b>parlent ET écoutent tout le monde en même temps</b>, en continu : comme si
+      chacune diffusait sa voix à toutes les autres sans jamais s'arrêter. Dans la vraie vie, ça
+      <b>n'arrive jamais</b> : dans une conversation, une ou deux personnes parlent à la fois, pas 600.
+      On a choisi exprès le scénario <b>le plus dur qui soit</b>, pour ne rien enjoliver. En conditions
+      réelles, un serveur en tient donc <b>bien, bien plus</b>.</p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>Concrètement, ça veut dire quoi ?</h2>
+      <p>Sans le jargon : ce que ces chiffres changent pour toi et ta communauté.</p>
+    </div>
+    <div class="small-mult">
+      <div class="card">
+        <h3>Une pièce = une communauté active</h3>
+        <p>Jusqu'à ~100 personnes qui se parlent dans la même pièce vocale, en même temps, sans qu'un
+          seul mot se perde. C'est déjà plus qu'un gros vocal bien rempli.</p>
+      </div>
+      <div class="card">
+        <h3>Plein de pièces à la fois</h3>
+        <p>Besoin de plus ? On ouvre d'autres pièces. Le serveur les répartit sur ses différents
+          « cœurs » et les fait tourner en parallèle : on a mesuré <b>600 personnes sur 6 pièces</b>,
+          en même temps, sur une seule machine.</p>
+      </div>
+      <div class="card">
+        <h3>Léger quand c'est calme</h3>
+        <p>Une pièce de 100 personnes n'occupe qu'un <b>huitième</b> du serveur. La plupart des salons
+          sont bien plus petits : le forum, le chat et les fichiers tournent à côté sans broncher.</p>
+      </div>
+      <div class="card">
+        <h3>Chez toi, adapté à ta machine</h3>
+        <p>Tout se passe sur ton serveur : aucune donnée ne part chez un géant. Et ça s'adapte,
+          gros serveur = plus de monde, petit Raspberry = ça marche quand même.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Pour les curieux : comment on l'a mesuré</h2>
+      <p>La suite, c'est le détail technique, sans filtre. Pas besoin de tout comprendre : les chiffres
+        bruts sont là pour ceux qui veulent vérifier par eux-mêmes.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Jusqu'où tient une seule pièce</h2>
+      <p>Dans une seule pièce, tout est parfait jusqu'à ~100 personnes : aucun mot perdu. Au-delà, une
+        pièce seule sature, et c'est là qu'on en ouvre d'autres (voir plus haut). La limite d'une pièce
+        est nette : environ cent.</p>
+    </div>
+    <figure class="hero-chart">
+      <div class="fig-title"><span class="swatch" style="background:var(--ok)"></span> Santé du forwarding — paquets reçus / attendus</div>
+      <svg class="chart" id="c-health" viewBox="0 0 900 340" role="img" aria-label="Santé du forwarding : plate à 100 % jusqu'à 100 participants, puis chute à 68 % (125), 46 % (150), 24 % (200), 9 % (300)."></svg>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Ce qui plie, et ce qui ne plie pas</h2>
+      <p>Le CPU grimpe, puis se fige à un cœur. La mémoire, elle, continue de monter. Deux histoires, deux courbes.</p>
+    </div>
+    <div class="small-mult">
+      <figure>
+        <div class="fig-title"><span class="swatch" style="background:var(--cpu)"></span> CPU — cœurs occupés</div>
+        <svg class="chart" id="c-cpu" viewBox="0 0 440 300" role="img" aria-label="CPU : monte jusqu'à 0,97 cœur à 100 participants, puis plafonne autour de 1,1 cœur même à 300."></svg>
+      </figure>
+      <figure>
+        <div class="fig-title"><span class="swatch" style="background:var(--mem)"></span> Mémoire — RSS (Mo)</div>
+        <svg class="chart" id="c-mem" viewBox="0 0 440 300" role="img" aria-label="Mémoire résidente : de 24 Mo à 2 participants jusqu'à 985 Mo à 300 participants."></svg>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Pourquoi une pièce tient sur un seul cœur</h2>
+      <p>Le détail qui explique la limite des ~100, et qui a guidé la suite.</p>
+    </div>
+    <div class="insight">
+      <div class="card">
+        <h3>Une pièce vit sur un seul cœur</h3>
+        <p>Même avec 300 personnes entassées dans <em>une</em> pièce, le serveur n'utilise qu'environ
+          <b class="mono">un cœur</b> sur 8 : techniquement, une pièce tourne sur un seul fil d'exécution.</p>
+        <p>La limite à ~100, ce n'est donc pas le serveur qui sature, c'est <em>un seul</em> de ses cœurs.
+          Les sept autres attendent leur tour.</p>
+      </div>
+      <div class="card">
+        <h3>La solution : utiliser tous les cœurs</h3>
+        <p>On répartit les pièces sur tous les cœurs du serveur, une par cœur. La capacité suit alors la
+          machine, et c'est exactement ce qu'on mesure juste après.</p>
+        <div class="pool" id="pool" aria-hidden="true"></div>
+        <p class="pool-note">Adapté à la machine : 8 cœurs sur ce serveur, 4 sur un mini-PC, <b class="mono">1</b>
+          sur un Raspberry. Jamais supposé : on lit la vraie machine.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Les pièces s'étalent sur la machine</h2>
+      <p>Chaque pièce vocale tourne sur un « cœur » du serveur, et une machine en a plusieurs. En ouvrant
+        plusieurs pièces, on utilise plusieurs cœurs à la fois : c'est pour ça que le serveur en encaisse autant.</p>
+    </div>
+    <div class="stats">
+      <div class="stat mid">
+        <div class="k">Personnes en vocal</div>
+        <div class="v"><span data-count="600">0</span></div>
+        <div class="u">réparties sur 6 pièces, toutes en même temps</div>
+      </div>
+      <div class="stat cmp">
+        <div class="k">Cœurs utilisés</div>
+        <div class="v"><span data-count="6.03" data-dec="2">0</span></div>
+        <div class="u">à 600 personnes, sur 8 : 2 gardés pour le reste</div>
+      </div>
+      <div class="stat hero">
+        <div class="k">Son intact</div>
+        <div class="v"><span data-count="96" data-dec="0">0</span><span style="font-size:.5em"> %</span></div>
+        <div class="u">à pleine charge ; 99 % en dessous de 400</div>
+      </div>
+    </div>
+    <figure class="hero-chart">
+      <div class="fig-title"><span class="swatch" style="background:var(--cpu)"></span> Charge du serveur selon le nombre de pièces ouvertes (chaque pièce sur un cœur)</div>
+      <svg class="chart" id="c-pool" viewBox="0 0 900 340" role="img" aria-label="Charge du serveur : 0,99 cœur pour 1 pièce (100 personnes), 2 pour 2, 4 pour 4, 6 cœurs pour 6 pièces (600 personnes). Montée parfaitement linéaire : chaque pièce prend un cœur."></svg>
+    </figure>
+    <div class="card" style="margin-top:16px">
+      <h3>Une pièce par cœur</h3>
+      <p>À 6 pièces ouvertes, le serveur en a mis exactement une par cœur (toujours le moins occupé).
+        Les 6 cœurs travaillent, aucun ne porte tout le monde.</p>
+      <div class="pool" id="pool-work" aria-hidden="true"></div>
+      <p class="pool-note">Répartition mesurée : <b class="mono">une pièce sur chacun des 6 cœurs</b> —
+        une pièce surchargée ne prend plus tout le serveur.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Pourquoi c'est mieux qu'avant</h2>
+      <p>L'ancienne méthode : chacun envoyait son son directement à tous les autres. Ça explose très vite
+        (ça calait vers quatre personnes en partage d'écran). Nodyx reçoit le son une seule fois, puis le
+        redistribue : beaucoup, beaucoup plus de monde.</p>
+    </div>
+    <div class="versus">
+      <div class="vs-row">
+        <span class="lbl">Ancienne méthode</span>
+        <div class="vs-track"><div class="vs-fill mesh" data-w="4"></div></div>
+        <span class="val" style="color:var(--ink-2)">4</span>
+      </div>
+      <div class="vs-row">
+        <span class="lbl">Nodyx</span>
+        <div class="vs-track"><div class="vs-fill sfu" data-w="100"></div></div>
+        <span class="val" style="color:var(--brand)">100</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Les mesures brutes</h2>
+      <p>Aucun chiffre arrangé. La sortie directe de l'outil, palier par palier.</p>
+    </div>
+    <div class="table-scroll">
+      <table id="data-table">
+        <thead>
+          <tr><th>Participants</th><th>Chemins</th><th>CPU (cœurs)</th><th>% machine</th><th>RSS (Mo)</th><th>Santé</th><th>État</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <h4>Méthode & honnêteté</h4>
+    <ul>
+      <li><b>Full-mesh = le pire cas.</b> Ici chaque participant consomme <em>tous</em> les autres (N×(N-1) chemins).
+        Une vraie watch-party (un partage d'écran, N spectateurs) est bien plus légère — la capacité réelle en
+        participants est nettement supérieure.</li>
+      <li><b>Audio seul.</b> Le partage d'écran (vidéo) est plus lourd par flux ; il aura son propre banc d'essai.</li>
+      <li><b>In-process, sans réseau.</b> RTP injecté en direct dans le moteur (DirectTransport) pour isoler le coût
+        de forwarding, sans le bruit du réseau ni des ports UDP.</li>
+      <li><b>Mesure de charge, pas de latence.</b> Le point de rupture est défini par la santé du forwarding
+        (paquets reçus / attendus) sur une fenêtre de 4 s par palier.</li>
+    </ul>
+    <div class="sig">Données réelles issues de <span style="color:var(--ink-2)">sfu-bench</span> ·
+      <a href="https://nodyx.org">Nodyx</a>, moteur vocal souverain, auto-hébergé · AGPL-3.0</div>
+  </footer>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+(() => {
+  "use strict";
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ── theme toggle ──
+  const root = document.documentElement, ico = document.getElementById("theme-ico");
+  try { const s = localStorage.getItem("nodyx-bench-theme"); if (s) root.setAttribute("data-theme", s); } catch (e) {}
+  const syncIco = () => { const t = root.getAttribute("data-theme"); ico.textContent = t === "dark" ? "●" : t === "light" ? "○" : "◐"; };
+  syncIco();
+  document.getElementById("theme").addEventListener("click", () => {
+    const cur = root.getAttribute("data-theme");
+    const next = cur === "dark" ? "light" : cur === "light" ? "dark" :
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark");
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("nodyx-bench-theme", next); } catch (e) {}
+    syncIco(); draw(false);
+  });
+
+  const DATA = [
+    { n: 2,   cpu: 0.010, box: 0.1,  rss: 24,  paths: 2,     health: 100 },
+    { n: 5,   cpu: 0.015, box: 0.2,  rss: 25,  paths: 20,    health: 100 },
+    { n: 10,  cpu: 0.027, box: 0.3,  rss: 26,  paths: 90,    health: 100 },
+    { n: 20,  cpu: 0.057, box: 0.7,  rss: 28,  paths: 380,   health: 100 },
+    { n: 50,  cpu: 0.312, box: 3.9,  rss: 46,  paths: 2450,  health: 100 },
+    { n: 75,  cpu: 0.580, box: 7.2,  rss: 73,  paths: 5550,  health: 100 },
+    { n: 100, cpu: 0.970, box: 12.1, rss: 110, paths: 9900,  health: 100 },
+    { n: 125, cpu: 1.045, box: 13.1, rss: 162, paths: 15500, health: 67.9 },
+    { n: 150, cpu: 1.050, box: 13.1, rss: 305, paths: 22350, health: 45.9 },
+    { n: 200, cpu: 1.072, box: 13.4, rss: 484, paths: 39800, health: 24.0 },
+    { n: 300, cpu: 1.097, box: 13.7, rss: 985, paths: 89700, health: 9.2 },
+  ];
+  // Le pool à pleine puissance : K pièces de 100, réparties sur 6 cœurs (mesuré).
+  const POOL = [
+    { rooms: 1, cpu: 0.99, total: 100, health: 99.6 },
+    { rooms: 2, cpu: 2.03, total: 200, health: 98.7 },
+    { rooms: 4, cpu: 4.08, total: 400, health: 98.9 },
+    { rooms: 6, cpu: 6.03, total: 600, health: 96.4 },
+  ];
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (t, a = {}) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const tip = document.getElementById("tip");
+  const lines = [];
+
+  function healthGradient(svg) {
+    const defs = el("defs", {});
+    const g = el("linearGradient", { id: "hg", x1: "0", y1: "0", x2: "1", y2: "0" });
+    [[0, "--ok"], [.60, "--ok"], [.66, "--warn"], [.75, "--crit"], [1, "--crit"]].forEach(([o, c]) => g.appendChild(el("stop", { offset: o, "stop-color": css(c) })));
+    defs.appendChild(g);
+    const gf = el("linearGradient", { id: "hgf", x1: "0", y1: "0", x2: "1", y2: "0" });
+    [[0, "--ok-soft"], [.60, "--ok-soft"], [.75, "--crit-soft"], [1, "--crit-soft"]].forEach(([o, c]) => gf.appendChild(el("stop", { offset: o, "stop-color": css(c) })));
+    defs.appendChild(gf);
+    svg.appendChild(defs);
+  }
+
+  function chart(svg, opts) {
+    const W = +svg.viewBox.baseVal.width, H = +svg.viewBox.baseVal.height;
+    const m = opts.margin || { t: 24, r: 20, b: 34, l: 46 };
+    const rows = opts.rows || DATA;
+    const xkey = opts.xkey || (d => d.n);
+    const pw = W - m.l - m.r, ph = H - m.t - m.b, N = rows.length;
+    const x = i => m.l + (N === 1 ? pw / 2 : (i / (N - 1)) * pw);
+    const y = v => m.t + ph - (v / opts.max) * ph;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    if (opts.defs) opts.defs(svg);
+    if (opts.ruptureFrom != null) {
+      const xi = x(opts.ruptureFrom);
+      svg.appendChild(el("rect", { x: xi, y: m.t, width: m.l + pw - xi, height: ph, class: "rupture-band" }));
+    }
+    (opts.yticks || []).forEach(t => {
+      const yy = y(t);
+      svg.appendChild(el("line", { x1: m.l, y1: yy, x2: m.l + pw, y2: yy, class: "grid-line" }));
+      const lb = el("text", { x: m.l - 8, y: yy + 4, class: "axis-txt", "text-anchor": "end" });
+      lb.textContent = opts.yfmt ? opts.yfmt(t) : t; svg.appendChild(lb);
+    });
+    if (opts.ref != null) {
+      const yy = y(opts.ref);
+      svg.appendChild(el("line", { x1: m.l, y1: yy, x2: m.l + pw, y2: yy, class: "refline" }));
+      const rt = el("text", { x: m.l + pw, y: yy - 7, class: "axis-txt", "text-anchor": "end", fill: css("--ink-2") });
+      rt.textContent = opts.refLabel || ""; svg.appendChild(rt);
+    }
+    rows.forEach((d, i) => {
+      if (opts.xevery && !opts.xevery.includes(xkey(d))) return;
+      const t = el("text", { x: x(i), y: H - 12, class: "axis-txt", "text-anchor": "middle" });
+      t.textContent = xkey(d); svg.appendChild(t);
+    });
+    const pts = rows.map((d, i) => [x(i), y(opts.val(d))]);
+    const baseY = m.t + ph;
+    const linePath = arr => { let s = `M ${arr[0][0]} ${arr[0][1]} `; for (let i = 1; i < arr.length; i++) s += `L ${arr[i][0]} ${arr[i][1]} `; return s; };
+    const areaPath = arr => { let s = `M ${arr[0][0]} ${baseY} `; arr.forEach(p => s += `L ${p[0]} ${p[1]} `); s += `L ${arr[arr.length - 1][0]} ${baseY} Z`; return s; };
+    const area = el("path", { d: areaPath(pts), fill: opts.areaFill });
+    svg.appendChild(area);
+    const line = el("path", { d: linePath(pts), class: "series-line", stroke: opts.stroke });
+    svg.appendChild(line);
+    const last = pts[pts.length - 1];
+    const endpoint = el("circle", { cx: last[0], cy: last[1], r: 4.5, fill: opts.stroke, class: "endpoint" });
+    svg.appendChild(endpoint);
+    const labelObjs = [];
+    (opts.labels || []).forEach(L => {
+      const i = rows.findIndex(d => xkey(d) === L.n); if (i < 0) return;
+      const px = x(i), py = y(opts.val(rows[i])), g = el("g", { style: "transition:opacity .35s" });
+      const tw = L.text.length * 7.6 + 12, lx = Math.min(px + L.dx, m.l + pw - tw / 2 - 2);
+      g.appendChild(el("rect", { x: lx - tw / 2, y: py + L.dy - 12, width: tw, height: 18, rx: 5, class: "dlabel-bg" }));
+      const tx = el("text", { x: lx, y: py + L.dy + 1, class: "dlabel", "text-anchor": "middle", fill: L.color || opts.stroke });
+      tx.textContent = L.text; g.appendChild(tx); svg.appendChild(g);
+      labelObjs.push({ g, px });
+    });
+    // Rejeu : on reconstruit progressivement la géométrie, de 0 à e (fraction horizontale). La courbe se redessine vraiment.
+    function reveal(e) {
+      const xMax = m.l + e * pw, inc = [];
+      for (let i = 0; i < pts.length; i++) {
+        if (pts[i][0] <= xMax) inc.push(pts[i]);
+        else { if (i > 0) { const a = pts[i - 1], b = pts[i], tt = (xMax - a[0]) / (b[0] - a[0]); inc.push([xMax, a[1] + (b[1] - a[1]) * tt]); } break; }
+      }
+      if (!inc.length) inc.push([pts[0][0], pts[0][1]]);
+      line.setAttribute("d", linePath(inc));
+      area.setAttribute("d", areaPath(inc));
+      const tp = inc[inc.length - 1];
+      endpoint.setAttribute("cx", tp[0]); endpoint.setAttribute("cy", tp[1]);
+      labelObjs.forEach(o => o.g.style.opacity = xMax >= o.px ? 1 : 0);
+    }
+    const cross = el("line", { class: "crosshair", y1: m.t, y2: m.t + ph });
+    svg.appendChild(cross);
+    const hoverDot = el("circle", { r: 5, fill: opts.stroke, class: "endpoint", opacity: 0 });
+    svg.appendChild(hoverDot);
+    const overlay = el("rect", { x: m.l, y: m.t, width: pw, height: ph, fill: "transparent", style: "cursor:crosshair" });
+    svg.appendChild(overlay);
+    const move = ev => {
+      const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * W;
+      let best = 0, bd = 1e9;
+      pts.forEach((p, i) => { const d = Math.abs(p[0] - sx); if (d < bd) { bd = d; best = i; } });
+      const p = pts[best], d = rows[best];
+      cross.setAttribute("x1", p[0]); cross.setAttribute("x2", p[0]); cross.setAttribute("opacity", 1);
+      hoverDot.setAttribute("cx", p[0]); hoverDot.setAttribute("cy", p[1]); hoverDot.setAttribute("opacity", 1);
+      tip.innerHTML = `<div class="tn">${d.n} participants</div><div class="tv">${opts.tipVal(d)}</div><div class="ts">${opts.tipSub(d)}</div>`;
+      tip.style.opacity = 1;
+      tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px";
+      tip.style.top = (ev.clientY - tip.offsetHeight - 10) + "px";
+    };
+    overlay.addEventListener("pointermove", move);
+    overlay.addEventListener("pointerleave", () => { cross.setAttribute("opacity", 0); hoverDot.setAttribute("opacity", 0); tip.style.opacity = 0; });
+    return { line, area, reveal };
+  }
+
+  function draw(animate) {
+    lines.length = 0;
+    lines.push(chart(document.getElementById("c-health"), {
+      max: 108, ruptureFrom: 6, defs: healthGradient,
+      yticks: [0, 25, 50, 75, 100], yfmt: t => t + "%",
+      xevery: [2, 20, 50, 100, 125, 150, 200, 300],
+      val: d => d.health, stroke: "url(#hg)", areaFill: "url(#hgf)",
+      labels: [{ n: 100, text: "100 % · 100 part.", dx: -6, dy: -14, color: css("--ok") }, { n: 150, text: "rupture", dx: 4, dy: 24, color: css("--crit") }],
+      tipVal: d => (d.health % 1 ? d.health.toFixed(1).replace(".", ",") : d.health) + " %",
+      tipSub: d => d.paths.toLocaleString("fr") + " chemins de forwarding",
+    }));
+    lines.push(chart(document.getElementById("c-cpu"), {
+      max: 1.25, ref: 1.0, refLabel: "1 cœur · 1 thread",
+      yticks: [0, 0.5, 1.0], yfmt: t => t.toFixed(1),
+      xevery: [2, 50, 100, 200, 300],
+      val: d => d.cpu, stroke: css("--cpu"), areaFill: css("--cpu-soft"),
+      labels: [{ n: 100, text: "0,97", dx: -2, dy: -12, color: css("--cpu") }],
+      tipVal: d => d.cpu.toFixed(2).replace(".", ",") + " cœur",
+      tipSub: d => (d.box + "").replace(".", ",") + " % du VPS",
+    }));
+    lines.push(chart(document.getElementById("c-mem"), {
+      max: 1050, yticks: [0, 250, 500, 750, 1000], yfmt: t => t,
+      xevery: [2, 50, 100, 200, 300],
+      val: d => d.rss, stroke: css("--mem"), areaFill: css("--mem-soft"),
+      labels: [{ n: 300, text: "985 Mo", dx: -30, dy: -8, color: css("--mem") }],
+      tipVal: d => d.rss.toLocaleString("fr") + " Mo",
+      tipSub: d => d.n + " participants",
+    }));
+    lines.push(chart(document.getElementById("c-pool"), {
+      max: 7, yticks: [0, 2, 4, 6], yfmt: t => t,
+      rows: POOL, xkey: d => d.rooms, xevery: [1, 2, 4, 6],
+      val: d => d.cpu, stroke: css("--cpu"), areaFill: css("--cpu-soft"),
+      labels: [{ n: 6, text: "600 personnes · 6 cœurs", dx: -40, dy: -14, color: css("--cpu") }],
+      tipVal: d => d.cpu.toFixed(2).replace(".", ",") + " cœur",
+      tipSub: d => d.total + " personnes · " + d.rooms + " pièces",
+    }));
+    if (animate) animateReveal();
+  }
+
+  // Rejeu : chaque courbe se redessine de 0 à 1. Les graphes entrent en cascade (stagger) pour un effet orchestré.
+  const REVEAL_DUR = 1600, REVEAL_STAGGER = 420;
+  function animateReveal() {
+    lines.forEach((c, idx) => {
+      c.reveal(0);
+      const t0 = performance.now() + idx * REVEAL_STAGGER;
+      const step = t => {
+        if (t < t0) { requestAnimationFrame(step); return; }
+        const p = Math.min((t - t0) / REVEAL_DUR, 1), e = 1 - Math.pow(1 - p, 3);
+        c.reveal(e);
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  function counters(animate) {
+    document.querySelectorAll("[data-count]").forEach(s => {
+      const to = parseFloat(s.dataset.count), dec = +(s.dataset.dec || 0);
+      if (!animate) { s.textContent = to.toFixed(dec).replace(".", ","); return; }
+      const t0 = performance.now(), dur = 1700;
+      const step = t => {
+        const p = Math.min((t - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+        s.textContent = (to * e).toFixed(dec).replace(".", ",");
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  function versus(animate) {
+    document.querySelectorAll(".vs-fill").forEach(f => {
+      if (!animate) { f.style.transition = "none"; f.style.width = f.dataset.w + "%"; return; }
+      f.style.transition = "none"; f.style.width = "0%";
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        f.style.transition = "width 1.7s cubic-bezier(.22,.61,.36,1)";
+        f.style.width = f.dataset.w + "%";
+      }));
+    });
+  }
+
+  const pool = document.getElementById("pool");
+  for (let i = 0; i < 8; i++) {
+    const c = document.createElement("div");
+    c.className = "core";
+    c.innerHTML = `<span>${i === 0 ? "actif" : "cœur " + (i + 1)}</span>`;
+    pool.appendChild(c);
+  }
+  // Répartition mesurée du pool : 6 workers, un salon chacun (statique, allumé).
+  const poolWork = document.getElementById("pool-work");
+  for (let i = 0; i < 6; i++) {
+    const c = document.createElement("div");
+    c.className = "core on";
+    c.innerHTML = `<span>1 salon</span>`;
+    poolWork.appendChild(c);
+  }
+  function poolAnim(animate) {
+    const cores = [...pool.children];
+    cores.forEach(c => c.classList.remove("on"));
+    if (!animate) { cores.forEach(c => c.classList.add("on")); return; }
+    cores.forEach((c, i) => setTimeout(() => c.classList.add("on"), 400 + i * 160));
+  }
+
+  const tb = document.querySelector("#data-table tbody");
+  DATA.forEach(d => {
+    const ok = d.health >= 99, tr = document.createElement("tr");
+    if (!ok) tr.className = "break";
+    tr.innerHTML = `<td>${d.n}</td><td>${d.paths.toLocaleString("fr")}</td>`
+      + `<td>${d.cpu.toFixed(2).replace(".", ",")}</td><td>${(d.box + "").replace(".", ",")} %</td>`
+      + `<td>${d.rss.toLocaleString("fr")}</td><td>${(d.health % 1 ? d.health.toFixed(1) : d.health + "").replace(".", ",")} %</td>`
+      + `<td><span class="tag ${ok ? "ok" : "crit"}">${ok ? "OK" : "rupture"}</span></td>`;
+    tb.appendChild(tr);
+  });
+
+  const replayBtn = document.getElementById("replay");
+  const replayLabel = document.getElementById("replay-label");
+  let playing = false;
+  // force = clic explicite sur "Rejouer" -> on anime même si le système demande de réduire les animations.
+  function play(force) {
+    if (playing) return;
+    const motion = force || !REDUCED;
+    playing = true;
+    replayBtn.disabled = true;
+    replayLabel.textContent = motion ? "Lecture…" : "Rejouer le test";
+    draw(motion); counters(motion); versus(motion); poolAnim(motion);
+    setTimeout(() => { playing = false; replayBtn.disabled = false; replayLabel.textContent = "Rejouer le test"; }, motion ? 2900 : 60);
+  }
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => draw(false));
+  addEventListener("resize", () => draw(false));
+  replayBtn.addEventListener("click", () => play(true));
+  play(false);
+})();
+</script>
+</body>
+</html>

@@ -18,7 +18,7 @@ export const REQUEST_TYPES = [
   'core.get',
   'ui.toast', 'ui.confirm', 'ui.modal',
   'router.push', 'router.replace',
-  'nav.go', 'nav.external',
+  'host.navigate', 'host.external',
   'surface.resize',
 ] as const
 

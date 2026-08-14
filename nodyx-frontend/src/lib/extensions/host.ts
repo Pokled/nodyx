@@ -1,0 +1,208 @@
+// Côté hôte du pont d'extension.
+//
+// Ce module est volontairement séparé du composant Svelte : il ne touche ni au
+// DOM ni aux stores, il transforme une enveloppe en réponse. C'est ce qui le
+// rend testable sans navigateur, et c'est aussi ce qui permet de le relire
+// comme une frontière de sécurité plutôt que comme du code d'interface.
+//
+// Référence : SPECS/NODYX_SDK_CDC.md §4, SPECS/NODYX_SDK_REFERENCE.md §6
+
+export const PROTOCOL = 1
+
+export type SurfaceRef = string   // 'page' | 'widget:<id>'
+
+export interface HostSurface {
+	extensionId: string
+	version:     string
+	surface:     SurfaceRef
+}
+
+export interface BootPayload {
+	p:         typeof PROTOCOL
+	type:      'nodyx:boot'
+	ext:       string
+	version:   string
+	surface:   SurfaceRef
+	entryUrl:  string
+	imageBase: string
+	config:    Record<string, unknown>
+	messages:  Record<string, string>
+	locale:    string
+	theme:     Record<string, string>
+	instance:  Record<string, unknown>
+	user:      Record<string, unknown> | null
+	route:     string
+}
+
+export interface HostActions {
+	resize?:     (height: number) => void
+	toast?:      (message: string) => void
+	confirm?:    (options: unknown) => Promise<boolean>
+	modal?:      (options: unknown) => Promise<unknown>
+	routePush?:  (path: string, replace: boolean) => void
+	navigate?:   (path: string) => void
+	external?:   (url: string) => void
+}
+
+export type Envelope =
+	| { p: number; id: string; ok: true;  result: unknown }
+	| { p: number; id: string; ok: false; error: { code: string; message: string } }
+
+const RE_REQ_ID  = /^[A-Za-z0-9_-]{1,64}$/
+const RE_SURFACE = /^(page|widget:[a-z][a-z0-9-]{0,30})$/
+
+/**
+ * Chemins internes acceptés pour le routeur d'une extension.
+ *
+ * Une extension navigue dans SON espace, jamais ailleurs. Sans ce contrôle,
+ * `router.push('/admin/settings')` réécrirait l'URL de l'hôte et donnerait à
+ * une extension l'apparence d'une page d'administration.
+ */
+export function isSafeInternalPath(path: unknown): path is string {
+	if (typeof path !== 'string' || !path.startsWith('/')) return false
+	if (path.startsWith('//') || path.includes('..') || path.includes('\\')) return false
+	return path.length <= 512
+}
+
+/** Seuls http et https sortent, et jamais sans que l'hôte le sache. */
+export function isSafeExternalUrl(raw: unknown): raw is string {
+	if (typeof raw !== 'string' || raw.length > 2048) return false
+	try {
+		const u = new URL(raw)
+		return u.protocol === 'https:' || u.protocol === 'http:'
+	} catch {
+		return false
+	}
+}
+
+function ok(id: string, result: unknown): Envelope {
+	return { p: PROTOCOL, id, ok: true, result }
+}
+
+function err(id: string, code: string, message: string): Envelope {
+	return { p: PROTOCOL, id, ok: false, error: { code, message } }
+}
+
+/**
+ * Suit les identifiants déjà répondus, pour refuser un rejeu, en restant borné
+ * en mémoire : une frame bavarde ne doit pas faire grossir l'onglet.
+ */
+export class RequestLedger {
+	private readonly seen = new Set<string>()
+	constructor(private readonly max = 512) {}
+	accept(id: string): boolean {
+		if (this.seen.has(id)) return false
+		this.seen.add(id)
+		if (this.seen.size > this.max) this.seen.delete(this.seen.values().next().value as string)
+		return true
+	}
+}
+
+/**
+ * Capacités qui appartiennent au lot suivant.
+ *
+ * Elles sont refusées avec un code explicite plutôt que silencieusement
+ * ignorées : une extension doit pouvoir distinguer « pas encore » de « refusé »,
+ * et un développeur doit le lire dans la console au lieu de le deviner.
+ */
+const RUNTIME_API_TYPES = new Set([
+	'storage.get', 'storage.set', 'storage.delete', 'storage.list',
+	'net.fetch', 'core.get', 'session.renew',
+])
+
+export function createHostHandler(surface: HostSurface, actions: HostActions = {}) {
+	const ledger = new RequestLedger()
+
+	return async function handle(raw: unknown): Promise<Envelope | null> {
+		if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return null
+		const m = raw as Record<string, unknown>
+
+		// Un événement remonté par la frame n'attend pas de réponse.
+		if (typeof m.event === 'string') return null
+
+		const id = typeof m.id === 'string' && RE_REQ_ID.test(m.id) ? m.id : null
+		if (!id) return null                            // sans identifiant, rien à corréler
+
+		if (m.p !== PROTOCOL)      return err(id, 'PROTOCOL_VERSION', `protocole non supporté`)
+		if (!ledger.accept(id))    return err(id, 'PROTOCOL_REPLAY', 'identifiant de requête déjà utilisé')
+
+		// Une frame ne parle que pour elle même.
+		if (m.ext !== surface.extensionId)                                     return err(id, 'PROTOCOL_WRONG_EXTENSION', 'cette frame ne parle pas pour cette extension')
+		if (typeof m.surface !== 'string' || !RE_SURFACE.test(m.surface) ||
+		    m.surface !== surface.surface)                                     return err(id, 'PROTOCOL_WRONG_SURFACE', 'cette frame ne parle pas pour cette surface')
+
+		const type    = typeof m.type === 'string' ? m.type : ''
+		const payload = (m.payload ?? {}) as Record<string, unknown>
+
+		switch (type) {
+			case 'surface.resize': {
+				const h = payload.height
+				if (typeof h === 'number' && Number.isFinite(h) && h >= 0 && h <= 20000) actions.resize?.(Math.ceil(h))
+				return null                              // notification, pas de réponse
+			}
+
+			case 'ui.toast': {
+				const msg = payload.message
+				if (typeof msg === 'string') actions.toast?.(msg.slice(0, 200))
+				return null
+			}
+
+			case 'ui.confirm':
+				return ok(id, actions.confirm ? await actions.confirm(payload) : false)
+
+			case 'ui.modal':
+				return ok(id, actions.modal ? await actions.modal(payload) : null)
+
+			case 'router.push':
+			case 'router.replace': {
+				if (!isSafeInternalPath(payload.path)) return err(id, 'INVALID_ARGUMENT', 'chemin interne invalide')
+				actions.routePush?.(payload.path, type === 'router.replace')
+				return null
+			}
+
+			case 'host.navigate': {
+				if (!isSafeInternalPath(payload.path)) return err(id, 'INVALID_ARGUMENT', 'chemin invalide')
+				actions.navigate?.(payload.path)
+				return null
+			}
+
+			case 'host.external': {
+				if (!isSafeExternalUrl(payload.url)) return err(id, 'INVALID_ARGUMENT', 'URL externe invalide')
+				actions.external?.(payload.url)
+				return null
+			}
+
+			default:
+				if (RUNTIME_API_TYPES.has(type)) {
+					return err(id, 'NOT_IMPLEMENTED', `${type} arrive avec l'API de runtime (P0-B)`)
+				}
+				return err(id, 'PROTOCOL_UNKNOWN_TYPE', `type de requête inconnu : ${type}`)
+		}
+	}
+}
+
+/** Construit la charge d'amorçage transférée avec le port privé. */
+export function buildBootPayload(
+	surface: HostSurface,
+	origin: string,
+	entryPath: string,
+	ctx: Omit<BootPayload, 'p' | 'type' | 'ext' | 'version' | 'surface' | 'entryUrl' | 'imageBase'>,
+): BootPayload {
+	const base = `${origin}/api/v1/extensions/${surface.extensionId}/${surface.version}`
+	return {
+		p:         PROTOCOL,
+		type:      'nodyx:boot',
+		ext:       surface.extensionId,
+		version:   surface.version,
+		surface:   surface.surface,
+		entryUrl:  `${base}/assets/${entryPath}`,
+		imageBase: `${base}/img?u=`,
+		...ctx,
+	}
+}
+
+/** URL du document de frame, pour l'attribut src de l'iframe. */
+export function frameUrl(surface: HostSurface, origin = ''): string {
+	const q = encodeURIComponent(surface.surface)
+	return `${origin}/api/v1/extensions/${surface.extensionId}/${surface.version}/frame?surface=${q}`
+}

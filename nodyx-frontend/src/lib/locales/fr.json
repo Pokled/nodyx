@@ -4480,5 +4480,8 @@
   "translate.safety_link": "Comment contribuer",
   "translate.footer_note": "auto-hébergé, sans télémétrie",
   "nav.panel_toggle_aria": "Redimensionner ou replier le menu communauté",
-  "home.hero_welcome": "Bienvenue dans la communauté"
+  "home.hero_welcome": "Bienvenue dans la communauté",
+  "ext.loading": "Chargement de l'extension…",
+  "ext.failed": "L'extension {{name}} n'a pas pu se charger.",
+  "ext.marker_aria": "Surface fournie par l'extension {{name}}"
 }

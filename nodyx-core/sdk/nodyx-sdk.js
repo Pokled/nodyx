@@ -150,8 +150,8 @@ function buildNodyx(boot, bridge) {
       get current() { return state.route },
     },
 
-    navigate:     (path) => bridge.notify('nav.go',       { path }),
-    openExternal: (url)  => bridge.notify('nav.external', { url }),
+    navigate:     (path) => bridge.notify('host.navigate',       { path }),
+    openExternal: (url)  => bridge.notify('host.external', { url }),
 
     resize: (height) => bridge.notify('surface.resize', { height }),
     on:     (event, fn) => bridge.on(event, fn),

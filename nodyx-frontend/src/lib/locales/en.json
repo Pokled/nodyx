@@ -4480,5 +4480,8 @@
   "translate.safety_link": "How to contribute",
   "translate.footer_note": "self-hosted, no telemetry",
   "nav.panel_toggle_aria": "Resize or collapse the community menu",
-  "home.hero_welcome": "Welcome to the community"
+  "home.hero_welcome": "Welcome to the community",
+  "ext.loading": "Loading extension…",
+  "ext.failed": "The {{name}} extension failed to load.",
+  "ext.marker_aria": "Surface provided by the {{name}} extension"
 }
