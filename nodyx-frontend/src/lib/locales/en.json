@@ -4511,5 +4511,11 @@
   "ext_admin.cap_storage_write": "modify the instance's shared data",
   "ext_admin.cap_core": "read {{scope}}",
   "ext_admin.cap_net": "reach {{host}}",
-  "anav.lbl_extensions": "Extensions"
+  "anav.lbl_extensions": "Extensions",
+  "ext_install.title": "Install an extension",
+  "ext_install.from": "From {{registry}}",
+  "ext_install.reading": "Reading the package from {{registry}}…",
+  "ext_install.bad_link": "This install link is incomplete.",
+  "ext_install.back": "Back to extensions",
+  "ext_install.allowed_registries": "Registries accepted on this instance: {{list}}."
 }
