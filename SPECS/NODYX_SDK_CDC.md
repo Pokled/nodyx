@@ -905,3 +905,35 @@ Le CDC r1 a été soumis à une revue externe. Verdict : direction validée, feu
 
 - *« les migrations vont jusqu'à 097 »* : faux. La branche `spec/mediatheque` et `origin/main` sont toutes deux à **111** (`111_community_sidebar_bg.sql`). La recommandation de ne pas figer le numéro reste bonne et est appliquée, mais pas pour la raison avancée.
 - *« l'arborescence frontend a évolué, le CDC est basé sur une photographie obsolète »* : les chemins de la r1 étaient exacts. Ce qui manquait, c'est que `homepage/plugins/` (descripteurs `.ts`) et `homepage/widgets/` (composants `.svelte`) coexistent. La conséquence, elle, est réelle et a été corrigée : le renommage proposé en r1 vers `widgets/native/` entrait en collision avec un dossier existant.
+
+---
+
+## 17. Le chantier suivant : données riches et surface d'administration
+
+Ouvert le 2026-08-14, à partir des scénarios que Jonathan a listés en regardant ce qui naîtra vraiment sur une place de marché : location de voitures, annonces immobilières, partage de fichiers catégorisés, galerie vidéo par membre. Ce ne sont pas des cas limites, c'est le cas normal d'un magasin vivant.
+
+Confrontés au SDK livré, ils révèlent **quatre manques précis**, et un principe qui doit les encadrer.
+
+### 17.1 Les quatre manques
+
+**Les fichiers.** Le plus gros, et il touche tous les scénarios cités. Photos, contrats, tableurs, musique, vidéo. Une extension dispose aujourd'hui de JSON clé-valeur plafonné à 64 Ko par valeur, et d'**aucun moyen de recevoir un téléversement ni de stocker un octet binaire**. Un module de location de voitures n'est pas difficile à écrire, il est impossible.
+
+**Les collections.** Réservations, annonces, catalogues, galeries : il faut lister, filtrer par date, paginer, compter. Cinq cents clés dans un magasin clé-valeur ne rendent pas ce service. Il faut de vraies collections interrogeables.
+
+**La visibilité entre membres.** `storage.user` est strictement l'espace du membre courant, invisible aux autres, par construction. Or une galerie sur un profil suppose que les autres la voient, et une réservation appartient à un membre tout en devant être lue par l'admin. Il manque la notion de donnée **par utilisateur mais visible**, selon une règle.
+
+**La surface d'administration.** Le manifeste connaît `widget` et `page`, rien pour l'écran où un admin règle et **modère**. Une extension qui gère du contenu communautaire n'a nulle part où mettre sa modération, et contrairement à un module natif elle ne peut pas se glisser ailleurs : elle est en bac à sable.
+
+Ce manque a un jumeau côté natif, et c'est le même problème vu de l'autre côté : un module a trois états distincts, **son existence, sa configuration, sa modération**, et seul le premier est aujourd'hui de première classe. Les sondages s'allument mais ne se modèrent pas.
+
+### 17.2 Le principe qui encadre
+
+**Rien de tout cela ne rouvre la porte au code serveur tiers ni aux migrations d'extension.** D3 tient. La réponse n'est pas d'assouplir, c'est d'offrir un service de données plus riche mais **toujours détenu par le cœur** : collections, fichiers, règles de visibilité, avec leurs quotas. L'extension décrit ce qu'elle veut, le cœur l'exécute.
+
+### 17.3 Le garde-fou à surveiller
+
+Plus le SDK devient puissant, plus l'écran de permissions doit rester **lisible**. « Peut stocker 2 Go de fichiers, lire tous les membres, recevoir des téléversements de visiteurs » doit se comprendre d'un coup d'œil. Le jour où cette phrase devient une liste de vingt lignes, on aura reconstruit les permissions que personne ne lit, et le consentement redeviendra décoratif.
+
+### 17.4 Portée
+
+Ce chantier mérite **son propre CDC**, écrit avant la moindre ligne, avec un audit préalable de ce dont les modules natifs ont réellement besoin. Il ne bloque pas la page Extensions, qui se livre avec ses deux onglets.
