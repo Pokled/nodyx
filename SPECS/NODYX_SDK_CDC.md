@@ -677,7 +677,7 @@ Règles fondatrices intactes : note de curation obligatoire, zéro étoile, zér
 
 Le P0 initial contenait presque tout le système, ce qui rend les régressions impossibles à localiser. Découpage :
 
-- **P0-A, le substrat de sécurité.** Lecteur de paquet, JSON Schema du manifeste, validateur, assainissement SVG, installation par fichier, document de frame et sa CSP, route d'assets versionnée, `MessageChannel` et protocole `p:1`, `ext_token`, **suppression du chargeur par balise script et de `/widget-assets`**.
+- **P0-A, le substrat de sécurité.** Lecteur de paquet, JSON Schema du manifeste, validateur, assainissement SVG, installation par fichier, document de frame et sa CSP (en-tête et balise `meta`), route d'assets versionnée, `MessageChannel` et protocole `p:1`, `ext_token`. Aucun nouveau chemin non isolé n'est créé, mais l'ancien survit jusqu'en P0-C.
   Attention à l'ordre, il a changé avec D7 révisé : `video-player` restant une extension, le chemin non isolé ne peut mourir qu'une fois la surface `widget` isolée disponible. La suppression bascule donc en **fin de P0-C**, et P0-A se contente de ne plus créer de nouveau chemin non isolé. Tant que la bascule n'est pas faite, l'ancien chargeur reste le seul à servir la page d'accueil de nodyx.org.
 - **P0-B, l'API de runtime.** `config`, thème, i18n, `identity`, `storage` et ses limites, redimensionnement, routeur, UI rendue par l'hôte.
 - **P0-C, les surfaces.** `widget` dans le builder, `page` dans la coque, primitive d'embarquement (D9), `CatalogEntry` v2, écran de permissions, administration des extensions, repaquetage de `video-player`, **puis** suppression de l'ancien chargeur.
