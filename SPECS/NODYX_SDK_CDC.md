@@ -686,6 +686,28 @@ Ce lot touche le rendu de la page d'accueil des 4 instances de production. Inven
 | core `widgetStore.ts` | route `/widget-assets` supprimée, store remplacé |
 | core `widgetDemo.ts` | démo devenue inutile, `video-player` étant natif |
 
+**État réel de l'existant, relevé le 2026-08-14 sur les quatre instances**
+
+| Instance | Fichiers sur disque | Ligne en base | Présent dans une mise en page |
+|---|---|---|---|
+| nodyx.org | v1.2.0 | `video-player` v1.2.0 | **oui, brouillon et publié** |
+| demo | v1.2.0 | aucune | non |
+| sleemstudio | v1.2.0 | aucune | non |
+| vieuxlooters | v1.2.0 | aucune | non |
+
+Les fichiers sont identiques partout (même empreinte), et identiques à la source du dépôt `nodyx-core/widget-demos/video-player/`. Trois instances portent donc les fichiers sans que le widget soit installé : **une seule instance est réellement concernée par la bascule, et son widget est le nôtre.**
+
+Configuration réellement enregistrée dans la mise en page publiée de nodyx.org :
+
+```json
+{ "url": "https://www.youtube.com/watch?v=...", "title": "",
+  "autoplay": false, "show_controls": true }
+```
+
+Les quatre clés attendues, et rien d'autre. Le composant natif doit les lire telles quelles, y compris `title` vide (qui doit retomber sur le titre par défaut) et `show_controls` absent traité comme vrai.
+
+**Attention à la source du port** (signalé par Jonathan) : la copie installée en production provient d'une démonstration d'installation par `.zip` faite avec une version ancienne. Tout ce qui est observable est en v1.2.0, disque et base, sur les quatre instances, mais **s'il existe une version plus récente hors dépôt, c'est elle qui fait référence pour le port**, pas celle qui est déployée.
+
 **Ce qui ne doit pas bouger, et pourquoi ça tient**
 
 1. **Les mises en page enregistrées.** La grille stocke `widget_type: 'video-player'`. Les deux renderers testent le natif **en premier** (`{#if plugin}` dans `GridRenderer`, `{#if nativePlugin}` dans `WidgetZone`), et `catalog.ts` filtre déjà les widgets installés qui masqueraient un natif (`filter(m => !PLUGIN_REGISTRY[m.id])`, `toInstalledWidgetsMap` fait de même). Enregistrer `video-player` dans le registre natif **suffit** à ce que les mises en page existantes rendent, sans migration de données. Condition : le composant natif lit **exactement** les mêmes clés de configuration, `url`, `title`, `autoplay`, `show_controls`.

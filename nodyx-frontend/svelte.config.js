@@ -38,6 +38,17 @@ const config = {
                     'https://www.youtube-nocookie.com',
                     'https://player.vimeo.com',
                     'https://www.openstreetmap.org',
+                    // Plateformes du lecteur multimédia. Ces six hôtes sont DEJA autorisés par la
+                    // politique servie en production (posée par le proxy en mode set, qui remplace
+                    // celle-ci) : sans eux ici, un rapprochement de la config du proxy avec le disque
+                    // casserait Twitch, Dailymotion, SoundCloud et Spotify. Alignement sur l'existant,
+                    // pas un élargissement. cf SPECS/NODYX_SDK_CDC.md §13.1
+                    'https://player.twitch.tv',
+                    'https://www.twitch.tv',
+                    'https://clips.twitch.tv',
+                    'https://geo.dailymotion.com',
+                    'https://w.soundcloud.com',
+                    'https://open.spotify.com',
                 ],
                 'object-src':   ['none'],
                 'base-uri':     ['self'],
