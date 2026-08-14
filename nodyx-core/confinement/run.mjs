@@ -68,7 +68,12 @@ const HOST_PAGE = `<!doctype html><meta charset="utf-8"><title>hote</title>
   f.src = '/frame';
   f.width = 400; f.height = 200;
   window.__results = null;
-  window.addEventListener('message', (e) => {
+
+  // L'hote ecoute EN RETARD, expres. C'est ce qui arrive dans le builder,
+  // dont l'apercu se redessine : sans rappels de la poignee de main, la frame
+  // reste bloquee et le banc doit le voir.
+  const RETARD_MS = 1200;
+  const brancher = () => window.addEventListener('message', (e) => {
     if (e.data?.type === 'nodyx:hello' && e.source === f.contentWindow) {
       const ch = new MessageChannel();
       // L'hote repond, sinon une promesse du pont reste suspendue et le
@@ -91,6 +96,7 @@ const HOST_PAGE = `<!doctype html><meta charset="utf-8"><title>hote</title>
     if (e.data?.type === 'evil:results') window.__results = e.data.results;
   });
   document.body.append(f);
+  setTimeout(brancher, RETARD_MS);
 </script>
 </body>`
 

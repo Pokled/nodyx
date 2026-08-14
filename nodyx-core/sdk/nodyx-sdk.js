@@ -196,6 +196,7 @@ window.addEventListener('message', async (e) => {
   const port = e.ports?.[0]
   if (!port) return
   booted = true
+  stopHello()
 
   const bridge = createBridge(port, boot.ext, boot.surface)
   const nodyx  = buildNodyx(boot, bridge)
@@ -219,6 +220,29 @@ window.addEventListener('message', async (e) => {
   }
 })
 
-// L'hôte attend ce signal pour savoir que le SDK est en place et transférer
-// le port. Sans lui, il pourrait poster avant que l'écouteur existe.
-window.parent?.postMessage({ p: PROTOCOL, type: 'nodyx:hello' }, '*')
+// ── La poignee de main, qui doit survivre au desordre ───────────────────────
+//
+// L'hote attend ce signal pour transferer le port. Un seul envoi ne suffit
+// PAS, et ca s'est vu en production : dans le builder d'accueil, l'apercu se
+// redessine a chaque interaction, donc l'hote peut ne pas encore ecouter quand
+// la frame demarre, ou la frame peut etre recreee apres le premier essai. Le
+// message part alors dans le vide et la surface reste bloquee sur son erreur.
+//
+// On repete donc l'appel jusqu'a ce que l'amorcage arrive. C'est sans risque :
+// l'hote ignore un `hello` en trop, et le garde `booted` empeche tout double
+// montage.
+const HELLO_EVERY_MS = 250
+const HELLO_FOR_MS   = 8000
+
+let helloTimer = null
+function sayHello() {
+  if (booted) return stopHello()
+  try { window.parent?.postMessage({ p: PROTOCOL, type: 'nodyx:hello' }, '*') } catch { /* rien a faire */ }
+}
+function stopHello() {
+  if (helloTimer) { clearInterval(helloTimer); helloTimer = null }
+}
+
+sayHello()
+helloTimer = setInterval(sayHello, HELLO_EVERY_MS)
+setTimeout(stopHello, HELLO_FOR_MS)

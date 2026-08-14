@@ -94,6 +94,13 @@
 		if (!frame || e.source !== frame.contentWindow) return
 		if (e.data?.type !== 'nodyx:hello') return
 
+		// Un `hello` qui arrive alors qu'on avait abandonné veut dire que la
+		// frame a redémarré : on repart proprement plutôt que de rester bloqué
+		// sur une erreur. Vu dans le builder, dont l'aperçu se redessine à
+		// chaque interaction.
+		if (status === 'error') status = 'loading'
+		channel?.port1.close()
+
 		channel = new MessageChannel()
 		channel.port1.onmessage = async (ev) => {
 			if (ev.data?.event === 'ready') { status = 'ready'; clearBootTimer(); return }
@@ -119,7 +126,10 @@
 	onMount(() => {
 		if (!browser) return
 		window.addEventListener('message', onWindowMessage)
-		bootTimer = setTimeout(() => { if (status === 'loading') status = 'error' }, 5000)
+		// Le délai laisse la place aux rappels de la poignée de main : abandonner
+		// plus tôt que la frame n'a le droit d'insister produirait une erreur
+		// alors que tout allait bien.
+		bootTimer = setTimeout(() => { if (status === 'loading') status = 'error' }, 10000)
 		// Sans jeton la surface s'affiche quand même : elle n'aura simplement
 		// aucune capacité, ce que le pont lui dira avec un code explicite.
 		void openSession()
