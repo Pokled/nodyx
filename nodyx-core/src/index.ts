@@ -1,8 +1,8 @@
-import Fastify from 'fastify'
+import Fastify, { type FastifyRequest } from 'fastify'
 import { Server } from 'socket.io'
 import fastifyStatic from '@fastify/static'
 import fastifyMultipart from '@fastify/multipart'
-import fastifyCors from '@fastify/cors'
+import fastifyCors, { type FastifyCorsOptions } from '@fastify/cors'
 import path from 'path'
 import { getRandomFortune } from './fortunes'
 import { db, redis } from './config/database'
@@ -64,19 +64,49 @@ const corsOrigin = process.env.FRONTEND_URL
 // Signet PWA origin (signet.nodyx.org ou équivalent auto-hébergé)
 const signetOrigin = process.env.SIGNET_URL || null
 
-server.register(fastifyCors, {
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true) // SSR / curl
-    const allowed = [
-      typeof corsOrigin === 'string' ? corsOrigin : null,
-      signetOrigin,
-    ].filter(Boolean) as string[]
-    if (typeof corsOrigin === 'boolean' && corsOrigin) return cb(null, true)
-    if (allowed.some(o => origin === o)) return cb(null, true)
-    cb(new Error('CORS: origin non autorisée'), false)
-  },
-  credentials: true,
-  methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+const CORS_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+
+/** La politique historique : le frontend de l'instance, et Signet. */
+function checkAppOrigin(origin: string | undefined, cb: (err: Error | null, ok: boolean) => void) {
+  if (!origin) return cb(null, true) // SSR / curl
+  const allowed = [
+    typeof corsOrigin === 'string' ? corsOrigin : null,
+    signetOrigin,
+  ].filter(Boolean) as string[]
+  if (typeof corsOrigin === 'boolean' && corsOrigin) return cb(null, true)
+  if (allowed.some(o => origin === o)) return cb(null, true)
+  cb(new Error('CORS: origin non autorisée'), false)
+}
+
+/**
+ * CORS decide PAR REQUETE, parce que les routes d'extension ont un besoin que
+ * le reste de l'API n'a pas.
+ *
+ * Une surface d'extension vit dans une iframe a ORIGINE OPAQUE : son en-tete
+ * `Origin` vaut litteralement la chaine "null", et un script de module comme
+ * tout import() est recupere en mode CORS. La politique historique refusait
+ * cette valeur avec une erreur, donc 500, donc AUCUNE surface ne pouvait
+ * charger son SDK. Constate en production le 2026-08-14.
+ *
+ * L'ouverture est bornee, et c'est la nuance qui fait tout :
+ *   - elle ne vaut que pour `/api/v1/extensions/*` ;
+ *   - elle est SANS IDENTIFIANTS, donc le navigateur n'envoie aucun cookie.
+ *
+ * Ces routes servent soit des fichiers publics, soit des donnees protegees par
+ * le jeton d'extension passe en en-tete, qu'un tiers n'a pas. L'exposition est
+ * celle d'un `Access-Control-Allow-Origin: *` sur un fichier statique.
+ *
+ * Accepter "null" partout ET avec identifiants serait en revanche dangereux :
+ * n'importe quel site ouvrirait une frame en bac a sable et lirait des
+ * reponses authentifiees. C'est pour ca que la decision est prise par requete
+ * et pas une bonne fois pour toutes.
+ * cf SPECS/NODYX_SDK_SECURITY.md §4.1
+ */
+server.register(fastifyCors, () => (req: FastifyRequest, cb: (err: Error | null, opts: FastifyCorsOptions) => void) => {
+  if (req.url?.startsWith('/api/v1/extensions/')) {
+    return cb(null, { origin: true, credentials: false, methods: CORS_METHODS })
+  }
+  cb(null, { origin: checkAppOrigin, credentials: true, methods: CORS_METHODS })
 })
 
 // ── Static files (uploads) ───────────────────────────────────
