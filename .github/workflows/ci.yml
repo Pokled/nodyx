@@ -163,7 +163,7 @@ jobs:
     strategy:
       fail-fast: false   # un satellite cassé ne doit pas masquer l'état des autres
       matrix:
-        app: [nodyx-docs, nodyx-hub, nodyx-landing, nodyx-authenticator]
+        app: [nodyx-docs, nodyx-hub, nodyx-landing, nodyx-authenticator, nodyx-store]
 
     steps:
       - name: Checkout
@@ -183,6 +183,11 @@ jobs:
       - name: Svelte — typecheck (svelte-check)
         working-directory: ${{ matrix.app }}
         run: npm run check
+
+      - name: Vitest — tests (si l'app en a)
+        if: hashFiles(format('{0}/vitest.config.ts', matrix.app)) != ''
+        working-directory: ${{ matrix.app }}
+        run: npm test
 
       - name: Vite — build production
         working-directory: ${{ matrix.app }}

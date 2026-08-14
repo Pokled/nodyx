@@ -1,0 +1,50 @@
+/* Palette sobre, deux thèmes, aucun effet de verre, aucun halo, aucun dégradé.
+   Références assumées : Linear, Vercel, Stripe. Un catalogue est un outil de
+   navigation dense, pas une page d'atterrissage.
+   Rayons bornés à l'échelle de la maison : 8px pour les surfaces, 6px pour les
+   contrôles, arrondi complet réservé aux pastilles. */
+
+:root {
+	--bg:          #ffffff;
+	--bg-soft:     #fafafa;
+	--fg:          #18181b;
+	--fg-muted:    #71717a;
+	--line:        #e4e4e7;
+	--accent:      #6d28d9;
+	--accent-soft: #f5f3ff;
+	--warn:        #b45309;
+	--radius:      8px;
+	--radius-sm:   6px;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg:          #0c0c0f;
+		--bg-soft:     #121216;
+		--fg:          #e4e4e7;
+		--fg-muted:    #8b8b94;
+		--line:        #26262c;
+		--accent:      #a78bfa;
+		--accent-soft: #1a1626;
+		--warn:        #f59e0b;
+	}
+}
+
+* { box-sizing: border-box; }
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	font-size: 15px;
+	line-height: 1.55;
+	-webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); }
+
+h1 { font-size: 24px; line-height: 1.25; margin: 0 0 8px; }
+h2 { font-size: 16px; margin: 0 0 10px; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
