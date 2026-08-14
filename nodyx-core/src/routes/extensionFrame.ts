@@ -58,7 +58,7 @@ export function frameCsp(origin: string, nonce: string): string {
   ].join('; ')
 }
 
-function frameHtml(origin: string, nonce: string, csp: string, sdkUrl: string, entryUrl: string): string {
+function frameHtml(nonce: string, csp: string, sdkUrl: string): string {
   // La politique est posée DEUX FOIS, en en-tête et ici.
   //
   // Vérifié sur notre propre production : le proxy pose la politique du site
@@ -84,7 +84,7 @@ function frameHtml(origin: string, nonce: string, csp: string, sdkUrl: string, e
 </head>
 <body>
 <div id="root"></div>
-<script nonce="${nonce}" type="module" src="${sdkUrl}" data-entry="${entryUrl}"></script>
+<script nonce="${nonce}" type="module" src="${sdkUrl}"></script>
 </body>
 </html>`
 }
@@ -117,13 +117,28 @@ export async function extensionFrameRoutes(app: FastifyInstance) {
 
     const nonce = randomBytes(16).toString('base64')
     const csp   = frameCsp(origin, nonce)
-    const base  = `${origin}/api/v1/extensions/${id}/${version}`
 
     return harden(reply)
       .header('Content-Security-Policy', csp)
       .header('Cache-Control', 'no-store')
       .type('text/html; charset=utf-8')
-      .send(frameHtml(origin, nonce, csp, `${origin}/api/v1/extensions/sdk.js`, `${base}/assets/`))
+      .send(frameHtml(nonce, csp, `${origin}/api/v1/extensions/sdk.js`))
+  })
+
+  // ── GET /extensions/sdk.js ──────────────────────────────────────────────
+  // Le SDK est servi par l'INSTANCE, jamais empaquete par l'auteur : sa version
+  // suit celle de Nodyx, donc aucune derive de contrat n'est possible entre une
+  // extension et son hote.
+  app.get('/extensions/sdk.js', { preHandler: [rateLimit] }, async (_request, reply) => {
+    try {
+      const source = await fs.readFile(path.join(process.cwd(), 'sdk', 'nodyx-sdk.js'))
+      return harden(reply)
+        .header('Content-Type', 'application/javascript; charset=utf-8')
+        .header('Cache-Control', 'public, max-age=3600')
+        .send(source)
+    } catch {
+      return harden(reply).code(500).send({ error: 'SDK introuvable', code: 'SDK_MISSING' })
+    }
   })
 
   // ── GET /extensions/:id/:version/assets/* ───────────────────────────────

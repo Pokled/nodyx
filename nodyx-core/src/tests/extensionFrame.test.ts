@@ -19,6 +19,11 @@ beforeAll(async () => {
   await fs.writeFile(path.join(dir, 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1H0z"/></svg>')
   await fs.writeFile(path.join(cwd, 'secret.txt'), 'ceci ne doit jamais sortir')
 
+  // Le SDK est lu depuis `sdk/` relativement au dossier de travail : on
+  // reproduit la disposition reelle du deploiement plutot que de la simuler.
+  await fs.mkdir(path.join(cwd, 'sdk'), { recursive: true })
+  await fs.copyFile(path.join(process.cwd(), 'sdk', 'nodyx-sdk.js'), path.join(cwd, 'sdk', 'nodyx-sdk.js'))
+
   vi.spyOn(process, 'cwd').mockReturnValue(cwd)
   process.env.FRONTEND_URL = ORIGIN
 
@@ -94,6 +99,24 @@ describe('document de frame', () => {
   it('refuse une référence d extension ou de version mal formée', async () => {
     expect((await app.inject({ url: '/api/v1/extensions/Demo/1.0.0/frame' })).statusCode).toBe(400)
     expect((await app.inject({ url: '/api/v1/extensions/demo-ext/latest/frame' })).statusCode).toBe(400)
+  })
+})
+
+describe('SDK servi par l instance', () => {
+  it('sert le SDK, que le document de frame reference', async () => {
+    // Sans cette route, la frame chargerait son propre SDK dans le vide.
+    const r = await app.inject({ url: '/api/v1/extensions/sdk.js' })
+    expect(r.statusCode).toBe(200)
+    expect(r.headers['content-type']).toContain('application/javascript')
+    expect(r.body).toContain('nodyx:boot')
+  })
+
+  it('le document de frame pointe vers une route qui existe vraiment', async () => {
+    const html = (await frame()).body
+    const src  = /<script[^>]+src="([^"]+)"/.exec(html)![1]
+    expect(src).toBe(`${ORIGIN}/api/v1/extensions/sdk.js`)
+    const r = await app.inject({ url: src.replace(ORIGIN, '') })
+    expect(r.statusCode).toBe(200)
   })
 })
 
