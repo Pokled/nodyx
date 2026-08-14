@@ -13,7 +13,7 @@
 
 import { PLUGIN_LIST, PLUGIN_REGISTRY } from './plugins'
 import type { WidgetPlugin, FieldSchema, WidgetFamily } from './plugins/_types'
-import { canonField } from './extensionCatalog'
+import { canonField, extensionWidgetEntries, type PublicExtension } from './extensionCatalog'
 
 // Manifest d'un widget installé tel que renvoyé par /api/v1/widget-store-public.
 export interface InstalledWidgetManifest {
@@ -41,6 +41,21 @@ export type CatalogEntry =
 			desc:   string
 			schema: FieldSchema[]
 			plugin: WidgetPlugin
+		}
+	| {
+			kind:        'extension'
+			id:          string      // identifiant de mise en page, prefixe `ext:`
+			label:       string
+			icon:        string
+			family:      WidgetFamily | string
+			desc:        string
+			schema:      FieldSchema[]
+			extensionId: string
+			surfaceId:   string
+			version:     string
+			entry:       string
+			messages:    Record<string, string>
+			defaultHeight: number
 		}
 	| {
 			kind:    'installed'
@@ -88,14 +103,34 @@ function pluginToEntry(p: WidgetPlugin): CatalogEntry {
 
 // Catalogue complet pour le picker du builder. Natifs phase 1 d'abord
 // (toujours disponibles), puis widgets installés non-shadowés par un natif.
-export function buildCatalog(installed: InstalledWidgetManifest[] = []): CatalogEntry[] {
+export function buildCatalog(
+	installed: InstalledWidgetManifest[] = [],
+	extensions: PublicExtension[] = [],
+): CatalogEntry[] {
 	const natives = PLUGIN_LIST
 		.filter(p => p.phase === 1)
 		.map(pluginToEntry)
 	const dyns = installed
 		.filter(m => !PLUGIN_REGISTRY[m.id]) // un installed ne masque jamais un natif
 		.map(manifestToEntry)
-	return [...natives, ...dyns]
+	// Les surfaces d'extension ne peuvent masquer personne : leur identifiant
+	// est prefixe, et aucun identifiant natif ne contient de deux-points.
+	const exts = extensionWidgetEntries(extensions).map((e): CatalogEntry => ({
+		kind:          'extension',
+		id:            e.id,
+		label:         e.label,
+		icon:          e.icon ?? '🧩',
+		family:        e.family,
+		desc:          e.desc,
+		schema:        e.schema,
+		extensionId:   e.extensionId,
+		surfaceId:     e.surfaceId,
+		version:       e.version,
+		entry:         e.entry,
+		messages:      e.messages,
+		defaultHeight: e.defaultHeight,
+	}))
+	return [...natives, ...dyns, ...exts]
 }
 
 // Index par id pour la résolution O(1) (icône, schema, etc.) côté UI.

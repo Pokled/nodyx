@@ -81,3 +81,39 @@ describe('entrees du catalogue', () => {
 		expect(Object.keys(extensionIndex([EXT]))).toEqual(['ext:library:tonight'])
 	})
 })
+
+// Le catalogue complet vit dans catalog.ts, qui importe des composants Svelte
+// et n'est donc pas transformable ici. On verifie la partie qui compte et qui
+// est pure : un identifiant d'extension ne peut pas entrer en collision avec
+// un identifiant natif, quel que soit l'ordre d'assemblage.
+describe('cohabitation avec les widgets natifs', () => {
+	const NATIFS = [
+		'hero-banner', 'header', 'stats-bar', 'join-card', 'announcement-banner',
+		'article-slideshow', 'articles-showcase', 'recent-threads',
+		'social-links-bar', 'twitch-stream', 'video-player',
+	]
+
+	it('aucun identifiant d extension ne peut valoir un identifiant natif', () => {
+		const ids = extensionWidgetEntries([EXT]).map(e => e.id)
+		for (const id of ids) expect(NATIFS).not.toContain(id)
+	})
+
+	it('aucun identifiant natif ne se decompose comme une extension', () => {
+		for (const id of NATIFS) expect(parseExtensionWidgetId(id)).toBeNull()
+	})
+
+	it('deux extensions differentes ne se marchent pas dessus', () => {
+		const autre = { ...EXT, id: 'autre', surfaces: [{ ...EXT.surfaces[0] }] }
+		const index = extensionIndex([EXT, autre as PublicExtension])
+		expect(Object.keys(index).sort()).toEqual(['ext:autre:tonight', 'ext:library:tonight'])
+	})
+
+	it('deux surfaces de la meme extension ne se marchent pas dessus', () => {
+		const deux = { ...EXT, surfaces: [
+			EXT.surfaces[0],
+			{ ...EXT.surfaces[0], id: 'shelf', label: 'Etagere' },
+		] }
+		expect(Object.keys(extensionIndex([deux as PublicExtension])).sort())
+			.toEqual(['ext:library:shelf', 'ext:library:tonight'])
+	})
+})

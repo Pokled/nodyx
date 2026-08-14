@@ -8,6 +8,7 @@
 		buildCatalog, buildCatalogIndex, toInstalledWidgetsMap,
 		type CatalogEntry, type InstalledWidgetManifest,
 	} from '$lib/components/homepage/catalog'
+	import type { PublicExtension } from '$lib/components/homepage/extensionCatalog'
 	import type {
 		GridLayout, GridRow, GridColumn, GridTheme,
 	} from '$lib/types/homepage'
@@ -79,7 +80,10 @@
 	)
 
 	// Catalogue widgets (natifs phase 1 + widgets installés depuis l'admin store)
-	const catalog       = $derived(buildCatalog((data.installedWidgets ?? []) as InstalledWidgetManifest[]))
+	const catalog       = $derived(buildCatalog(
+		(data.installedWidgets ?? []) as InstalledWidgetManifest[],
+		(data.extensions ?? []) as PublicExtension[],
+	))
 	const catalogIndex  = $derived(buildCatalogIndex(catalog))
 	const installedMap  = $derived(toInstalledWidgetsMap((data.installedWidgets ?? []) as InstalledWidgetManifest[]))
 
@@ -1705,6 +1709,7 @@
 						instance={{}}
 						user={null}
 						installedWidgets={installedMap}
+						extensions={(data.extensions ?? []) as PublicExtension[]}
 						editMode={true}
 						{selectedColKey}
 						dragOverRowId={dragOverIdx !== null && dragRowId !== null ? (draft.rows[dragOverIdx]?.id ?? null) : null}
