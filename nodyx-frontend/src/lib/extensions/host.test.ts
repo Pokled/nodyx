@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
-	createHostHandler, buildBootPayload, frameUrl,
+	createHostHandler, buildBootPayload, frameUrl, createStorageCaller, RuntimeCallError,
 	isSafeInternalPath, isSafeExternalUrl, RequestLedger, PROTOCOL,
 	type HostSurface,
 } from './host'
@@ -115,8 +115,76 @@ describe('navigation : une extension reste chez elle', () => {
 	})
 })
 
+describe('stockage, proxy par l hote', () => {
+	it('transmet l operation et la charge au runtime', async () => {
+		const storage = vi.fn().mockResolvedValue([603])
+		const handle = createHostHandler(SURFACE, {}, { storage })
+		const r = await handle(req({ type: 'storage.get', payload: { key: 'watched', scope: 'user' } }))
+		expect(storage).toHaveBeenCalledWith('get', { key: 'watched', scope: 'user' })
+		expect(r).toMatchObject({ ok: true, result: [603] })
+	})
+
+	it.each(['get', 'set', 'delete', 'list'])('route l operation %s', async (op) => {
+		const storage = vi.fn().mockResolvedValue(null)
+		const handle = createHostHandler(SURFACE, {}, { storage })
+		await handle(req({ type: `storage.${op}` }))
+		expect(storage.mock.calls[0][0]).toBe(op)
+	})
+
+	it('retransmet le code du coeur tel quel', async () => {
+		// Une extension doit distinguer un quota atteint d'une permission
+		// refusee : le manuel promet des codes stables.
+		const storage = vi.fn().mockRejectedValue(new RuntimeCallError('QUOTA_EXCEEDED', 'quota atteint'))
+		const handle = createHostHandler(SURFACE, {}, { storage })
+		const r = await handle(req({ type: 'storage.set', payload: { key: 'k', value: 1 } }))
+		expect(r).toMatchObject({ ok: false, error: { code: 'QUOTA_EXCEEDED' } })
+	})
+
+	it('repond « pas branche » quand l hote n a pas de runtime', async () => {
+		const handle = createHostHandler(SURFACE)
+		expect(await handle(req({ type: 'storage.get' }))).toMatchObject({ ok: false, error: { code: 'NOT_IMPLEMENTED' } })
+	})
+})
+
+describe('appel de stockage vers le coeur', () => {
+	it('porte le jeton et la surface en en-tetes, pas dans le corps', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true, json: async () => ({ result: 'ok' }),
+		})
+		vi.stubGlobal('fetch', fetchMock)
+
+		const call = createStorageCaller(SURFACE, () => 'JETON')
+		expect(await call('get', { key: 'k' })).toBe('ok')
+
+		const [url, init] = fetchMock.mock.calls[0]
+		expect(url).toBe('/api/v1/extensions/library/storage')
+		expect(init.headers.authorization).toBe('Bearer JETON')
+		expect(init.headers['x-nodyx-surface']).toBe('widget:tonight')
+		expect(JSON.parse(init.body)).toEqual({ op: 'get', key: 'k' })
+		vi.unstubAllGlobals()
+	})
+
+	it('leve avec le code du coeur quand l appel est refuse', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+			ok: false, json: async () => ({ code: 'PERMISSION_DENIED', error: 'refuse' }),
+		}))
+		const call = createStorageCaller(SURFACE, () => 'JETON')
+		await expect(call('get', { key: 'k' })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' })
+		vi.unstubAllGlobals()
+	})
+
+	it('leve sans jeton plutot que d appeler dans le vide', async () => {
+		const fetchMock = vi.fn()
+		vi.stubGlobal('fetch', fetchMock)
+		const call = createStorageCaller(SURFACE, () => null)
+		await expect(call('get', { key: 'k' })).rejects.toMatchObject({ code: 'SESSION_EXPIRED' })
+		expect(fetchMock).not.toHaveBeenCalled()
+		vi.unstubAllGlobals()
+	})
+})
+
 describe('ce qui appartient au lot suivant', () => {
-	it.each(['storage.get', 'storage.set', 'net.fetch', 'core.get', 'session.renew'])(
+	it.each(['net.fetch', 'core.get', 'session.renew'])(
 		'%s repond « pas encore », pas un refus muet', async (type) => {
 			// Une extension doit pouvoir distinguer « pas encore » de « refuse ».
 			const handle = createHostHandler(SURFACE)

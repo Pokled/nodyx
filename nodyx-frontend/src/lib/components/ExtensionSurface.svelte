@@ -12,7 +12,7 @@
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/environment'
 	import { t } from '$lib/i18n'
-	import { createHostHandler, buildBootPayload, frameUrl, type HostSurface } from '$lib/extensions/host'
+	import { createHostHandler, buildBootPayload, frameUrl, createStorageCaller, type HostSurface } from '$lib/extensions/host'
 
 	const tFn = $derived($t)
 
@@ -29,7 +29,6 @@
 		locale?:     string
 		theme?:      Record<string, string>
 		instance?:   Record<string, unknown>
-		user?:       Record<string, unknown> | null
 		defaultHeight?: number
 		/** Une page occupe la zone de contenu, un widget suit sa hauteur. */
 		fill?:       boolean
@@ -38,8 +37,14 @@
 	let {
 		extensionId, version, surface, entry, label,
 		config = {}, messages = {}, locale = 'fr', theme = {},
-		instance = {}, user = null, defaultHeight = 160, fill = false,
+		instance = {}, defaultHeight = 160, fill = false,
 	}: Props = $props()
+
+	// L'identite N'EST PAS une propriete : elle vient de la route de session,
+	// projetee cote serveur selon ce que l'admin a accorde. Un composant ne
+	// peut donc pas passer par erreur l'objet utilisateur entier.
+	let token: string | null = null
+	let grantedUser: Record<string, unknown> | null = null
 
 	let frame:  HTMLIFrameElement | null = $state(null)
 	let status: 'loading' | 'ready' | 'error' = $state('loading')
@@ -55,11 +60,30 @@
 		{
 			resize: (h) => { if (!fill) height = h },
 			toast:  (message) => { console.info('[extension]', extensionId, message) },
-			// Les autres actions arrivent avec l'API de runtime : le pont répond
+			// Les autres actions arrivent avec les lots suivants : le pont répond
 			// déjà « pas encore » avec un code explicite, ce qui vaut mieux qu'un
 			// silence pour qui développe une extension.
 		},
+		{ storage: createStorageCaller({ extensionId, version, surface }, () => token) },
 	)
+
+	/** Frappe le jeton de surface et récupère l'identité projetée. */
+	async function openSession(): Promise<boolean> {
+		try {
+			const res = await fetch(`/api/v1/extensions/${extensionId}/session`, {
+				method:  'POST',
+				headers: { 'content-type': 'application/json' },
+				body:    JSON.stringify({ surface }),
+			})
+			if (!res.ok) return false
+			const body = await res.json()
+			token       = body.token ?? null
+			grantedUser = body.user  ?? null
+			return Boolean(token)
+		} catch {
+			return false
+		}
+	}
 
 	function onWindowMessage(e: MessageEvent) {
 		// `e.origin` vaut "null" pour une frame en origine opaque, donc il ne
@@ -77,7 +101,7 @@
 		channel.port1.start()
 
 		const boot = buildBootPayload(ref, window.location.origin, entry, {
-			config, messages, locale, theme, instance, user, route: '/',
+			config, messages, locale, theme, instance, user: grantedUser, route: '/',
 		})
 		// Cible '*' : la frame est en origine opaque, aucune autre valeur ne
 		// correspondrait. Ce n'est pas une faiblesse, le message ne contient rien
@@ -93,6 +117,9 @@
 		if (!browser) return
 		window.addEventListener('message', onWindowMessage)
 		bootTimer = setTimeout(() => { if (status === 'loading') status = 'error' }, 5000)
+		// Sans jeton la surface s'affiche quand même : elle n'aura simplement
+		// aucune capacité, ce que le pont lui dira avec un code explicite.
+		void openSession()
 	})
 
 	onDestroy(() => {

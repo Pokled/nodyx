@@ -34,6 +34,17 @@ export interface BootPayload {
 	route:     string
 }
 
+/**
+ * Acces au runtime, cote hote.
+ *
+ * L'hote proxie vers le coeur avec le jeton d'extension : la frame ne peut pas
+ * appeler l'API elle meme, elle n'a ni session ni jeton. C'est ce passage
+ * oblige qui rend les capacites verifiables.
+ */
+export interface HostRuntime {
+	storage?: (op: 'get' | 'set' | 'delete' | 'list', payload: Record<string, unknown>) => Promise<unknown>
+}
+
 export interface HostActions {
 	resize?:     (height: number) => void
 	toast?:      (message: string) => void
@@ -106,11 +117,46 @@ export class RequestLedger {
  * et un développeur doit le lire dans la console au lieu de le deviner.
  */
 const RUNTIME_API_TYPES = new Set([
-	'storage.get', 'storage.set', 'storage.delete', 'storage.list',
 	'net.fetch', 'core.get', 'session.renew',
 ])
 
-export function createHostHandler(surface: HostSurface, actions: HostActions = {}) {
+/** Erreur portant le code rendu par le coeur, pour le retransmettre tel quel. */
+export class RuntimeCallError extends Error {
+	constructor(public readonly code: string, message: string) {
+		super(message)
+		this.name = 'RuntimeCallError'
+	}
+}
+
+/**
+ * Appelle le stockage du coeur au nom d'une surface.
+ *
+ * Le jeton et la surface voyagent en en-tetes : le corps ne porte que
+ * l'operation. Une frame qui mentirait sur sa surface se ferait refuser par le
+ * coeur, dont le jeton est lie a une surface precise.
+ */
+export function createStorageCaller(surface: HostSurface, getToken: () => string | null) {
+	return async function callStorage(op: string, payload: Record<string, unknown>): Promise<unknown> {
+		const token = getToken()
+		if (!token) throw new RuntimeCallError('SESSION_EXPIRED', 'aucun jeton d\'extension')
+
+		const res = await fetch(`/api/v1/extensions/${surface.extensionId}/storage`, {
+			method:  'POST',
+			headers: {
+				'content-type':    'application/json',
+				'authorization':   `Bearer ${token}`,
+				'x-nodyx-surface': surface.surface,
+			},
+			body: JSON.stringify({ op, ...payload }),
+		})
+
+		const body = await res.json().catch(() => ({}))
+		if (!res.ok) throw new RuntimeCallError(body?.code ?? 'UNKNOWN', body?.error ?? 'appel refusé')
+		return body?.result
+	}
+}
+
+export function createHostHandler(surface: HostSurface, actions: HostActions = {}, runtime: HostRuntime = {}) {
 	const ledger = new RequestLedger()
 
 	return async function handle(raw: unknown): Promise<Envelope | null> {
@@ -170,6 +216,23 @@ export function createHostHandler(surface: HostSurface, actions: HostActions = {
 				if (!isSafeExternalUrl(payload.url)) return err(id, 'INVALID_ARGUMENT', 'URL externe invalide')
 				actions.external?.(payload.url)
 				return null
+			}
+
+			case 'storage.get':
+			case 'storage.set':
+			case 'storage.delete':
+			case 'storage.list': {
+				if (!runtime.storage) return err(id, 'NOT_IMPLEMENTED', 'le stockage n\'est pas branché sur cet hôte')
+				const op = type.slice('storage.'.length) as 'get' | 'set' | 'delete' | 'list'
+				try {
+					return ok(id, await runtime.storage(op, payload))
+				} catch (e) {
+					// Le code du coeur traverse tel quel : une extension doit pouvoir
+					// distinguer un quota atteint d'une permission refusée, et le
+					// manuel promet des codes stables.
+					const code = (e as { code?: string })?.code ?? 'UNKNOWN'
+					return err(id, code, (e as Error)?.message ?? 'appel de stockage en échec')
+				}
 			}
 
 			default:
