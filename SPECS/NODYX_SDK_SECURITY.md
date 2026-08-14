@@ -106,6 +106,12 @@ connect-src <origine>; frame-src 'none'; form-action 'none'; base-uri 'none'
 
 `frame-src 'none'` : pas d'iframe imbriquée. C'est aussi ce qui rend impossible l'embarquement d'un lecteur tiers, limite assumée de la v1.
 
+**Cette politique est posée en en-tête ET en balise `meta` dans le document.** Vérifié sur notre production le 2026-08-14 : le proxy pose la politique du site en mode `set`, donc il **remplace** celle de l'application, y compris sur les réponses d'API. Un en-tête seul serait effacé et la frame hériterait d'une politique permissive, ce qui rouvrirait le réseau sortant direct et annulerait la garantie G5. Une balise `meta` n'est pas réécrite par un proxy, et quand deux politiques coexistent le navigateur applique leur intersection, donc la plus stricte gagne.
+
+Règle générale, valable au delà de ce cas : **une frontière de sécurité ne doit jamais dépendre d'un en-tête qu'un intermédiaire peut réécrire.** Un produit auto-hébergé tourne derrière le proxy de son administrateur, pas derrière le nôtre.
+
+L'isolation elle même ne dépend pas de la CSP : elle vient de l'origine opaque portée par l'attribut `sandbox`, que rien d'externe ne peut modifier. La CSP est la défense en profondeur, et c'est elle qui ferme le réseau direct.
+
 **Ajouter un drapeau de bac à sable est un changement de modèle de sécurité**, pas un réglage. Toute demande passe par une révision de ce document.
 
 ### 4.2 Le canal

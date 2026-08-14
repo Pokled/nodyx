@@ -155,6 +155,16 @@ Content-Security-Policy:
   base-uri        'none';
 ```
 
+**Cette politique est servie DEUX FOIS : en en-tête de réponse, et en `<meta http-equiv="Content-Security-Policy">` dans le document lui même.** Ce n'est pas de la ceinture et bretelles décorative, c'est une nécessité vérifiée le 2026-08-14 sur notre propre production :
+
+- le proxy de nodyx.org pose la politique du site avec l'opération **`set`**, donc il **remplace** celle que l'application envoie, y compris sur `/api/v1/*` (constaté : une réponse d'API porte la CSP du site)
+- un en-tête seul serait donc effacé, et le document de frame hériterait de la politique permissive du site, ce qui rouvrirait le réseau sortant direct depuis la frame et annulerait le principe 3
+- une balise `meta` n'est pas réécrite par un proxy. Quand les deux politiques coexistent, le navigateur applique **l'intersection**, donc la plus stricte l'emporte directive par directive : le résultat est correct avec ou sans proxy réécrivant
+
+Cette contrainte n'est pas propre à notre hébergement. Un produit auto-hébergé tourne derrière le proxy que son administrateur a choisi, et beaucoup de configurations toutes faites imposent des en-têtes de sécurité. **Une frontière de sécurité ne doit jamais dépendre d'un en-tête qu'un intermédiaire peut réécrire.**
+
+À noter, l'isolation elle même ne dépend pas de la CSP : elle vient de l'origine opaque, portée par l'attribut `sandbox`, que rien d'externe ne peut modifier. La CSP est la défense en profondeur, et c'est elle qui interdit le réseau direct.
+
 Trois précisions qui évitent une CSP de façade :
 
 - **pas de `'unsafe-inline'` dans `style-src`.** Un nonce le neutralise de toute façon quand les deux sont présents, donc l'écrire ne fait que masquer l'intention. Les attributs `style=""` dynamiques, eux, sont réels et fréquents : ils passent par `style-src-attr`, exactement comme le frontend principal le fait déjà.
@@ -697,6 +707,20 @@ Ce lot touche le rendu de la page d'accueil des 4 instances de production. Inven
 - `sidebar_bg` et les autres réglages d'instance inchangés (le déploiement touche le frontend, pas la configuration)
 
 **Repli** : le lot est réversible par retour arrière du frontend seul tant que la table `installed_widgets` n'est pas supprimée. C'est la raison pour laquelle sa suppression est repoussée d'une release.
+
+**Mine découverte le 2026-08-14, antérieure à ce chantier, à désamorcer avant le port de `video-player`.** La politique de sécurité servie en production **ne vient pas de l'application** : le proxy la pose en mode `set` sur tous les hôtes, et elle **diverge de celle du dépôt**.
+
+| | `frame-src` en production | `frame-src` dans `svelte.config.js` |
+|---|---|---|
+| YouTube, Vimeo, OpenStreetMap | présents | présents |
+| `player.twitch.tv`, `www.twitch.tv`, `clips.twitch.tv` | présents | **absents** |
+| `geo.dailymotion.com`, `w.soundcloud.com`, `open.spotify.com` | présents | **absents** |
+
+Conséquence directe : `video-player` annonce sept plateformes, quatre d'entre elles ne fonctionnent en production **que** parce que le proxy est plus permissif que le dépôt. Le jour où la configuration du proxy est réconciliée avec le disque, ces embarquements cassent, et le coupable désigné sera le port en natif alors que la cause lui est antérieure.
+
+Action, dans P0-A, avant le port : **aligner `svelte.config.js` sur ce que la production sert déjà** pour ces six hôtes. C'est un alignement du dépôt sur la réalité, pas un élargissement de la politique en vigueur. En revanche, le `'unsafe-inline'` présent dans le `script-src` du proxy et volontairement retiré du dépôt **n'est pas réintroduit** : c'est un durcissement voulu, et il devra être vérifié au moment où la configuration du proxy sera réconciliée.
+
+Le rapprochement de la configuration du proxy avec le disque reste hors de ce lot, et soumis au danger déjà documenté dans `CLAUDE.md`.
 
 **P3, l'ouverture**
 Surfaces `panel` et `card` (enrichissement chat et forum, l'étagère de la communauté), écritures core avec consentement, origine dédiée optionnelle pour les embeds tiers.
