@@ -32,6 +32,7 @@ import wikiRoutes            from './routes/wiki'
 import socialRoutes          from './routes/social'
 import memberRoutes          from './routes/members'
 import { widgetStoreRoutes } from './routes/widgetStore'
+import { extensionFrameRoutes } from './routes/extensionFrame'
 import { widgetDemoRoutes }  from './routes/widgetDemo'
 import { adminBackupRoutes } from './routes/admin_backups'
 import canvasRoutes          from './routes/canvas'
@@ -173,6 +174,9 @@ server.register(wikiRoutes,           { prefix: '/api/v1/wiki' })
 server.register(socialRoutes,         { prefix: '/api/v1/social' })
 server.register(memberRoutes,         { prefix: '/api/v1/members' })
 server.register(widgetStoreRoutes,    { prefix: '/api/v1' })
+// SDK d'extensions (P0-A) : document de frame et assets versionnés.
+// Additif : l'ancien chemin widget reste servi jusqu'à la fin de P0-C.
+server.register(extensionFrameRoutes, { prefix: '/api/v1' })
 server.register(widgetDemoRoutes,     { prefix: '/api/v1' })
 server.register(adminBackupRoutes,    { prefix: '/api/v1' })
 server.register(canvasRoutes,         { prefix: '/api/v1/canvas' })
