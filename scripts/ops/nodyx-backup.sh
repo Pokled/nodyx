@@ -19,9 +19,17 @@
 #
 # ─── La règle de la maison ───────────────────────────────────────────────────
 # On ne déclare jamais un succès qu'on n'a pas constaté. Chaque archive est
-# donc RELUE après écriture : le dump doit être listable par `pg_restore`, et
-# l'archive des uploads doit être parcourable par `tar -t`. Une archive qu'on
-# ne sait pas relire ne compte pas comme une sauvegarde.
+# donc RELUE après écriture : le dump doit être listable par `pg_restore`,
+# l'archive des uploads doit être parcourable par `tar -t`, et la copie SQLite
+# doit répondre « ok » à `pragma integrity_check`. Une archive qu'on ne sait
+# pas relire ne compte pas comme une sauvegarde.
+#
+# ─── Les bases SQLite (ajout 2026-08-14) ─────────────────────────────────────
+# Le script ne couvrait que PostgreSQL et les uploads. Deux bases SQLite
+# passaient donc entre les mailles depuis leur création : `mediatheque.db`
+# (229 œuvres, 229 notes de curation, du travail humain irremplaçable) et
+# `hub.db`. Aucune sauvegarde, nulle part. Découvert en faisant le ménage des
+# branches, pas par une alerte : c'est bien le problème.
 
 set -uo pipefail
 
@@ -43,6 +51,13 @@ INSTANCES=(
   "sleemstudio:sleemstudio:/opt/sleemstudio"
   "demo:demo:/opt/demo"
   "vieuxlooters:vieuxlooters:/opt/vieuxlooters"
+)
+
+# Bases SQLite des satellites, hors du modèle une-instance-un-PostgreSQL.
+# nom:chemin
+SQLITE_DBS=(
+  "mediatheque:/var/www/nexus/nodyx-mediatheque/mediatheque.db"
+  "hub:/var/www/nexus/nodyx-hub/hub.db"
 )
 
 mkdir -p "$DEST"
@@ -113,6 +128,54 @@ backup_uploads() {
   ok "$label : uploads sauvegardés ($(du -h "$out" | cut -f1), $n entrées relues)"
 }
 
+# ── Sauvegarde d'une base SQLite, puis relecture pour preuve ────────────────
+backup_sqlite() {
+  local label="$1" src="$2"
+  local out="$DEST/${label}-${STAMP}.sqlite"
+
+  [[ -f "$src" ]] || { warn "$label : base introuvable, ignorée"; return 0; }
+
+  if ! command -v sqlite3 >/dev/null 2>&1; then
+    fail "$label : sqlite3 absent, base NON sauvegardée"
+    return 1
+  fi
+
+  # `-readonly` n'est pas un détail de confort, c'est la sûreté du service.
+  # Ces bases sont en mode WAL et tournent sous l'utilisateur `nodyx`, alors
+  # que ce script s'exécute en root. Un `sqlite3` ouvert en écriture fusionne
+  # le WAL dans la base et peut laisser des `-wal`/`-shm` appartenant à root :
+  # au redémarrage suivant, le service ne peut plus recréer son WAL et sert des
+  # « readonly database ». C'est exactement la panne déjà vue sur nodyx-hub.
+  # Un simple `cp` est pire encore : il copie la base sans le WAL, donc sans
+  # les dernières écritures, et produit une sauvegarde silencieusement tronquée.
+  if ! sqlite3 -readonly "$src" ".backup '$out'" 2>/dev/null; then
+    fail "$label : .backup en échec"
+    rm -f "$out"
+    return 1
+  fi
+
+  # Relecture : `integrity_check` doit répondre « ok » ET la copie doit contenir
+  # au moins une table. Les deux, parce qu'un fichier vide passe le premier test.
+  #
+  # Ce que `integrity_check` attrape, mesuré sur une vraie base (2026-08-14) :
+  # en-tête abîmé et champ « taille de page » abîmé → « file is not a database » ;
+  # page de données abîmée → « database disk image is malformed ». Il répond « ok »
+  # quand la corruption tombe dans l'espace libre, et c'est CORRECT : dump avant
+  # et après vérifiés strictement identiques, aucune donnée perdue. Le contrôle
+  # signale la perte de données, pas le bruit sans conséquence.
+  local integrity tables
+  integrity="$(sqlite3 "$out" 'pragma integrity_check;' 2>/dev/null | head -1)"
+  tables="$(sqlite3 "$out" "select count(*) from sqlite_master where type='table';" 2>/dev/null)"
+  if [[ "$integrity" != "ok" || "${tables:-0}" -lt 1 ]]; then
+    fail "$label : copie illisible (integrity=${integrity:-néant}, tables=${tables:-0})"
+    rm -f "$out"
+    return 1
+  fi
+
+  chmod 600 "$out"
+  ok "$label : base SQLite sauvegardée ($(du -h "$out" | cut -f1), $tables tables, integrity ok)"
+}
+
 # ── Revérification des archives déjà présentes ──────────────────────────────
 verify_existing() {
   echo -e "\n${BOLD}Relecture des archives présentes${RESET}"
@@ -135,6 +198,15 @@ verify_existing() {
       fail "ILLISIBLE : $(basename "$f")"
     fi
   done
+  for f in "$DEST"/*.sqlite; do
+    [[ -e "$f" ]] || continue
+    n=$((n + 1))
+    if [[ "$(sqlite3 "$f" 'pragma integrity_check;' 2>/dev/null | head -1)" == "ok" ]]; then
+      ok "lisible : $(basename "$f")"
+    else
+      fail "ILLISIBLE : $(basename "$f")"
+    fi
+  done
   [[ $n -eq 0 ]] && warn "aucune archive dans $DEST"
 }
 
@@ -150,12 +222,18 @@ else
     backup_uploads "$label" "$db" "$root"
   done
 
+  echo -e "\n${BOLD}### Bases SQLite${RESET}"
+  for entry in "${SQLITE_DBS[@]}"; do
+    IFS=':' read -r label path <<< "$entry"
+    backup_sqlite "$label" "$path"
+  done
+
   # Purge : uniquement les archives plus vieilles que la rétention, et
   # seulement si la sauvegarde du jour a réussi. Sinon on garde tout : mieux
   # vaut du vieux que rien.
   echo -e "\n${BOLD}### Rétention${RESET}"
   if [[ $FAILURES -eq 0 ]]; then
-    purged="$(find "$DEST" -maxdepth 1 -type f \( -name '*.dump' -o -name '*.tar.gz' \) -mtime "+$RETAIN_DAYS" -print -delete | wc -l)"
+    purged="$(find "$DEST" -maxdepth 1 -type f \( -name '*.dump' -o -name '*.tar.gz' -o -name '*.sqlite' \) -mtime "+$RETAIN_DAYS" -print -delete | wc -l)"
     ok "archives de plus de $RETAIN_DAYS jours supprimées : $purged"
   else
     warn "purge annulée : la sauvegarde du jour a échoué, on conserve l'ancien"
