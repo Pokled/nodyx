@@ -51,6 +51,23 @@
 		)
 	)
 
+	// Adresses revelees pendant cette session d'ecran, jamais persistees.
+	let revealed:  Record<string, string>  = $state({})
+	let revealing: Record<string, boolean> = $state({})
+
+	async function revealEmail(userId: string) {
+		if (revealed[userId] || revealing[userId]) return
+		revealing[userId] = true
+		try {
+			const res = await fetch(`/api/v1/admin/members/${userId}/email`, {
+				headers: { Authorization: `Bearer ${$page.data.token}` },
+			})
+			if (res.ok) revealed[userId] = (await res.json()).email
+		} finally {
+			revealing[userId] = false
+		}
+	}
+
 	const bans: Array<{ user_id: string; username: string; email: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = untrack(() => data.bans ?? [])
 	const ipBans: Array<{ ip: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = untrack(() => data.ipBans ?? [])
 	const emailBans: Array<{ email: string; reason: string | null; banned_at: string; banned_by_username: string | null }> = untrack(() => data.emailBans ?? [])
@@ -119,7 +136,21 @@
 									<a href="/users/{member.username}" class="font-medium text-white hover:text-indigo-300 transition-colors">
 										{member.username}
 									</a>
-									<div class="text-xs text-gray-600">{member.email}</div>
+									<!-- Adresse masquée par défaut, révélée par un geste explicite qui
+									     laisse une trace dans le journal d'audit. Un mode discret à
+									     activer ne protégerait personne : c'est le soir où on oublie
+									     de l'allumer que ça se voit. -->
+									<div class="text-xs text-gray-600 flex items-center gap-1.5">
+										<span>{revealed[member.id] ?? member.email}</span>
+										{#if !revealed[member.id]}
+											<button
+												type="button"
+												class="text-[10px] text-gray-500 hover:text-gray-300 underline underline-offset-2"
+												onclick={() => revealEmail(member.id)}
+												disabled={revealing[member.id]}
+											>{revealing[member.id] ? tFn('amem.revealing') : tFn('amem.reveal_email')}</button>
+										{/if}
+									</div>
 								</div>
 							</div>
 						</td>

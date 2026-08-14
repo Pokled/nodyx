@@ -7,6 +7,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { db, redis } from '../config/database'
+import { maskEmail } from '../utils/maskEmail'
 import { adminOnly } from '../middleware/adminOnly'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
@@ -216,7 +217,10 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     // Recent registrations (last 5)
     const recentMembersRes = await db.query(
-      `SELECT u.username, u.avatar, u.email, cm.joined_at, cm.role
+      // L'adresse ne sort PAS du tableau de bord : on veut y voir qui vient
+      // d'arriver, pas son courriel. Ouvrir cette page en direct diffusait
+      // les adresses des membres.
+      `SELECT u.username, u.avatar, cm.joined_at, cm.role
        FROM community_members cm
        JOIN users u ON u.id = cm.user_id
        WHERE cm.community_id = $1
@@ -282,7 +286,17 @@ export default async function adminRoutes(app: FastifyInstance) {
       [communityId]
     )
 
-    return reply.send({ members: rows })
+    // L'adresse part MASQUEE. Le masquage se fait ici, au serveur, et pas a
+    // l'affichage : une adresse qui ne quitte pas la base ne peut pas fuir par
+    // une capture d'ecran, un journal de navigateur ou un partage de session.
+    // Un admin qui a besoin de l'adresse complete la demande par la route
+    // dediee, et cette demande est tracee.
+    const members = (rows as Array<Record<string, unknown>>).map((m) => ({
+      ...m,
+      email: maskEmail(m.email as string | null),
+    }))
+
+    return reply.send({ members })
   })
 
   app.patch('/members/:userId', {
@@ -311,6 +325,28 @@ export default async function adminRoutes(app: FastifyInstance) {
     }
 
     return reply.send({ ok: true })
+  })
+
+  // ── GET /api/v1/admin/members/:userId/email ─────────────────────────────
+  //
+  // Reveler une adresse est une ACTION, et elle est tracee.
+  //
+  // Un admin garde le pouvoir de voir une adresse quand il en a besoin, pour
+  // un support ou un bannissement. Mais ce n'est plus quelque chose qui
+  // s'affiche par accident sur une capture d'ecran : c'est un geste
+  // deliberе, et le journal d'audit garde qui l'a fait et pour qui. Ca protege
+  // le membre, et ca protege aussi l'admin.
+  app.get('/members/:userId/email', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const { userId }  = request.params as { userId: string }
+    const adminUser   = (request as any).user as { userId: string }
+
+    const { rows } = await db.query(`SELECT username, email FROM users WHERE id = $1`, [userId])
+    const target = rows[0] as { username: string; email: string } | undefined
+    if (!target) return reply.code(404).send({ error: 'Membre introuvable', code: 'MEMBER_NOT_FOUND' })
+
+    await logAction(adminUser.userId, 'reveal_email', 'user', userId, target.username)
+
+    return reply.send({ email: target.email })
   })
 
   // POST /api/v1/admin/members/:userId/reset-link

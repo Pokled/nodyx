@@ -206,7 +206,7 @@
 								<a href="/users/{m.username}" class="text-[13px] text-zinc-300 hover:text-white font-medium block truncate transition-colors">
 									{m.username}
 								</a>
-								<span class="text-xs text-zinc-600 truncate block">{m.email}</span>
+								<span class="text-xs text-zinc-600 truncate block">{tFn('adash.member_joined')}</span>
 							</div>
 							<div class="text-right shrink-0">
 								<span class="text-xs text-zinc-500 tabular-nums">{timeAgo(m.joined_at)}</span>

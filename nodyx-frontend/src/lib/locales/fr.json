@@ -4517,5 +4517,8 @@
   "ext_install.reading": "Lecture du paquet depuis {{registry}}…",
   "ext_install.bad_link": "Ce lien d'installation est incomplet.",
   "ext_install.back": "Retour aux extensions",
-  "ext_install.allowed_registries": "Registres acceptés sur cette instance : {{list}}."
+  "ext_install.allowed_registries": "Registres acceptés sur cette instance : {{list}}.",
+  "amem.reveal_email": "révéler",
+  "amem.revealing": "…",
+  "adash.member_joined": "nouveau membre"
 }
