@@ -262,3 +262,29 @@ describe('outils', () => {
 		expect(isSafeExternalUrl('ftp://a.example')).toBe(false)
 	})
 })
+
+// Regression vue en production, dans le builder d'accueil.
+//
+// `postMessage` clone la charge, et le clonage structure NE SAIT PAS cloner un
+// proxy `$state` de Svelte 5 : il leve un DataCloneError et la frame ne
+// demarre jamais. Sur la page d'accueil la configuration vient du serveur,
+// donc c'est un objet ordinaire et rien ne se voyait.
+describe('la charge d amorcage doit etre clonable', () => {
+	it('une charge normale passe le clonage structure', () => {
+		const boot = buildBootPayload(SURFACE, 'https://instance.example', 'ui/w.js', {
+			config: { titre: 'x', n: 1 }, messages: { a: 'b' }, locale: 'fr',
+			theme: { accent: '#000' }, instance: { name: 'N' }, user: null, route: '/',
+		})
+		expect(() => structuredClone(boot)).not.toThrow()
+	})
+
+	it('une charge portant une valeur non clonable EST rejetee, ce qui prouve le test', () => {
+		// Sans cette moitie, le test precedent ne demontrerait rien : il faut
+		// que le clonage sache echouer.
+		const boot = buildBootPayload(SURFACE, 'https://instance.example', 'ui/w.js', {
+			config: { rappel: () => 'non clonable' } as unknown as Record<string, unknown>,
+			messages: {}, locale: 'fr', theme: {}, instance: {}, user: null, route: '/',
+		})
+		expect(() => structuredClone(boot)).toThrow()
+	})
+})

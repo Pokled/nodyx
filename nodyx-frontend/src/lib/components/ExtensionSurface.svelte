@@ -110,8 +110,20 @@
 		}
 		channel.port1.start()
 
+		// `postMessage` clone la charge, et le clonage structuré NE SAIT PAS
+		// cloner un proxy `$state` de Svelte 5 : il lève un DataCloneError.
+		// Sur la page d'accueil la configuration vient du serveur, donc c'est un
+		// objet ordinaire et tout passe ; dans le builder, c'est de l'état
+		// réactif, et la frame ne démarrait jamais. Le même piège avait déjà
+		// coûté un correctif sur le jukebox.
 		const boot = buildBootPayload(ref, window.location.origin, entry, {
-			config, messages, locale, theme, instance, user: grantedUser, route: '/',
+			config:   $state.snapshot(config)   as Record<string, unknown>,
+			messages: $state.snapshot(messages) as Record<string, string>,
+			theme:    $state.snapshot(theme)    as Record<string, string>,
+			instance: $state.snapshot(instance) as Record<string, unknown>,
+			user:     grantedUser,
+			locale,
+			route: '/',
 		})
 		// Cible '*' : la frame est en origine opaque, aucune autre valeur ne
 		// correspondrait. Ce n'est pas une faiblesse, le message ne contient rien
