@@ -1,0 +1,27 @@
+{
+  "api": 1,
+  "id": "next-event",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-or-later",
+  "author": { "name": "Nodyx", "url": "https://nodyx.org" },
+  "source": "https://github.com/Pokled/nodyx",
+  "default_locale": "en",
+  "label": "@label",
+  "description": "@description",
+  "icon": "icon.svg",
+  "family": "community",
+  "surfaces": [
+    {
+      "type": "widget",
+      "id": "countdown",
+      "entry": "ui/widget.js",
+      "label": "@label",
+      "default_height": 160,
+      "schema": [
+        { "key": "title", "type": "text", "label": "@field.title", "required": true },
+        { "key": "date", "type": "text", "label": "@field.date", "hint": "@field.date.hint", "required": true },
+        { "key": "accent", "type": "boolean", "label": "@field.accent", "default": true }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "label": "Next event",
+  "description": "A countdown to your next community event.",
+  "field.title": "Event name",
+  "field.date": "Date and time",
+  "field.date.hint": "ISO format, for example 2026-12-24T20:00",
+  "field.accent": "Use the community accent colour",
+  "days": "days",
+  "hours": "hours",
+  "minutes": "min",
+  "past": "This event has already taken place.",
+  "invalid": "Invalid date."
+}

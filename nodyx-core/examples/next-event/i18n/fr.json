@@ -1,0 +1,13 @@
+{
+  "label": "Prochain événement",
+  "description": "Un compte à rebours vers le prochain rendez-vous de la communauté.",
+  "field.title": "Nom de l'événement",
+  "field.date": "Date et heure",
+  "field.date.hint": "Format ISO, par exemple 2026-12-24T20:00",
+  "field.accent": "Utiliser la couleur d'accent de la communauté",
+  "days": "jours",
+  "hours": "heures",
+  "minutes": "min",
+  "past": "Cet événement a déjà eu lieu.",
+  "invalid": "Date invalide."
+}
