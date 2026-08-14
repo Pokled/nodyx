@@ -165,6 +165,10 @@ const surface = z.discriminatedUnion('type', [widgetSurface, pageSurface])
 const networkRule = z.object({
   methods: z.array(z.enum(HTTP_METHODS)).min(1),
   paths:   z.array(z.string().startsWith('/')).min(1),
+  // Un service d'intranet vit rarement sur 443. Le port se DECLARE, donc il
+  // reste visible sur l'ecran de permissions : declarer un hote n'ouvre pas
+  // toutes ses portes, mais on ne rend pas l'intranet indeclarable.
+  port:    z.number().int().min(1).max(65535).optional(),
   secret:  z.string().regex(/^[A-Z][A-Z0-9_]{2,63}$/).optional(),
   rate:    z.string().regex(RE_RATE).optional(),
 }).strict()
