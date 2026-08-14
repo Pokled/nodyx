@@ -22,9 +22,17 @@ const MANIFEST = {
 
 const dbQuery = vi.fn()
 
+const redisIncr = vi.fn().mockResolvedValue(1)
 vi.mock('../config/database', () => ({
   db:    { query: (...a: unknown[]) => dbQuery(...a) },
-  redis: { exists: vi.fn().mockResolvedValue(0), setex: vi.fn(), incr: vi.fn().mockResolvedValue(1), expire: vi.fn() },
+  redis: {
+    exists: vi.fn().mockResolvedValue(0),
+    setex:  vi.fn().mockResolvedValue('OK'),
+    incr:   (...a: unknown[]) => redisIncr(...a),
+    // Doit rendre une promesse : le vrai ioredis en rend une, et la route y
+    // enchaine un .catch(). Un mock qui rend undefined fabrique un faux 500.
+    expire: vi.fn().mockResolvedValue(1),
+  },
 }))
 vi.mock('../middleware/rateLimit', () => ({ rateLimit: vi.fn(async () => {}) }))
 vi.mock('../middleware/adminOnly', () => ({
@@ -171,5 +179,109 @@ describe('administration', () => {
   it('exige une authentification pour installer', async () => {
     const r = await app.inject({ method: 'POST', url: '/api/v1/admin/extensions/install' })
     expect(r.statusCode).toBe(401)
+  })
+})
+
+// ── Stockage, authentifie par le jeton d'extension ─────────────────────────
+
+describe('stockage', () => {
+  const MANIFEST_STORAGE = {
+    ...MANIFEST,
+    permissions: { storage: { user: '1mb' } },
+  }
+
+  async function tokenFor(granted: string[] = ['storage.user']) {
+    dbQuery.mockResolvedValue({ rows: [installedRow({ granted, manifest: MANIFEST_STORAGE })] })
+    const r = await session({ surface: 'page' }, 'Bearer membre')
+    return JSON.parse(r.body).token as string
+  }
+
+  const call = (token: string, body: unknown, surface = 'page') => app.inject({
+    method: 'POST', url: '/api/v1/extensions/demo-ext/storage',
+    headers: { authorization: `Bearer ${token}`, 'x-nodyx-surface': surface },
+    payload: body,
+  })
+
+  it('lit une cle avec un jeton valide', async () => {
+    const token = await tokenFor()
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [{ manifest: MANIFEST_STORAGE, enabled: true }] })
+      .mockResolvedValueOnce({ rows: [{ value: [603] }] })
+    const r = await call(token, { op: 'get', key: 'watched' })
+    expect(r.statusCode).toBe(200)
+    expect(JSON.parse(r.body).result).toEqual([603])
+  })
+
+  it('refuse sans jeton', async () => {
+    const r = await app.inject({
+      method: 'POST', url: '/api/v1/extensions/demo-ext/storage',
+      headers: { 'x-nodyx-surface': 'page' }, payload: { op: 'get', key: 'k' },
+    })
+    expect(r.statusCode).toBe(401)
+    expect(JSON.parse(r.body).code).toBe('TOKEN_MISSING')
+  })
+
+  it('refuse un jeton frappe pour une AUTRE surface', async () => {
+    const token = await tokenFor()
+    const r = await call(token, { op: 'get', key: 'k' }, 'widget:main')
+    expect(r.statusCode).toBe(403)
+    expect(JSON.parse(r.body).code).toBe('TOKEN_WRONG_SURFACE')
+  })
+
+  it('refuse une capacite non accordee, meme avec un jeton valide', async () => {
+    const token = await tokenFor([])            // aucune capacite accordee
+    dbQuery.mockReset()
+    dbQuery.mockResolvedValue({ rows: [{ manifest: MANIFEST_STORAGE, enabled: true }] })
+    const r = await call(token, { op: 'get', key: 'k' })
+    expect(r.statusCode).toBe(403)
+    expect(JSON.parse(r.body).code).toBe('PERMISSION_DENIED')
+  })
+
+  it('refuse quand l extension a ete desactivee entre temps', async () => {
+    const token = await tokenFor()
+    dbQuery.mockReset()
+    dbQuery.mockResolvedValue({ rows: [{ manifest: MANIFEST_STORAGE, enabled: false }] })
+    const r = await call(token, { op: 'get', key: 'k' })
+    expect(r.statusCode).toBe(403)
+    expect(JSON.parse(r.body).code).toBe('EXTENSION_DISABLED')
+  })
+
+  it('plafonne les ecritures par membre', async () => {
+    const token = await tokenFor()
+    redisIncr.mockResolvedValueOnce(31)
+    const r = await call(token, { op: 'set', key: 'k', value: 1 })
+    expect(r.statusCode).toBe(429)
+    expect(JSON.parse(r.body).code).toBe('RATE_LIMITED')
+  })
+
+  it('ne plafonne PAS les lectures', async () => {
+    const token = await tokenFor()
+    redisIncr.mockClear()
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [{ manifest: MANIFEST_STORAGE, enabled: true }] })
+      .mockResolvedValueOnce({ rows: [] })
+    await call(token, { op: 'get', key: 'k' })
+    expect(redisIncr).not.toHaveBeenCalled()
+  })
+
+  it('rend 507 quand le quota est atteint', async () => {
+    const token = await tokenFor()
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [{ manifest: MANIFEST_STORAGE, enabled: true }] })
+      .mockResolvedValueOnce({ rows: [{ n: 1, total: 1024 * 1024 }] })
+    const r = await call(token, { op: 'set', key: 'k', value: 'x'.repeat(100) })
+    expect(r.statusCode).toBe(507)
+    expect(JSON.parse(r.body).code).toBe('QUOTA_EXCEEDED')
+  })
+
+  it('refuse une operation inconnue', async () => {
+    const token = await tokenFor()
+    dbQuery.mockReset()
+    dbQuery.mockResolvedValue({ rows: [{ manifest: MANIFEST_STORAGE, enabled: true }] })
+    const r = await call(token, { op: 'truncate' })
+    expect(r.statusCode).toBe(400)
   })
 })

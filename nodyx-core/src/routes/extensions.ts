@@ -9,14 +9,17 @@
 
 import type { FastifyInstance } from 'fastify'
 import { randomUUID } from 'crypto'
-import { db }           from '../config/database'
+import { db, redis }    from '../config/database'
 import { adminOnly }    from '../middleware/adminOnly'
 import { optionalAuth } from '../middleware/auth'
 import { rateLimit }    from '../middleware/rateLimit'
 import { installExtension, uninstallExtension } from '../extensions/installer'
 import { sensitiveCapabilities } from '../extensions/capabilities'
 import { validateManifest }      from '../extensions/manifest'
-import { mintExtensionToken }    from '../extensions/token'
+import { mintExtensionToken, verifyExtensionToken, type ExtensionTokenClaims } from '../extensions/token'
+import { storageGet, storageSet, storageDelete, storageList } from '../extensions/storage'
+import { parseSize } from '../extensions/manifest'
+import { STORAGE } from '../extensions/limits'
 import { PACKAGE, SURFACE }      from '../extensions/limits'
 
 const RE_ID      = /^[a-z][a-z0-9-]{2,38}$/
@@ -148,6 +151,82 @@ export async function extensionRoutes(app: FastifyInstance) {
     if (!RE_ID.test(id)) return reply.code(400).send({ error: 'Identifiant invalide', code: 'INVALID_ID' })
     await uninstallExtension(id, { query })
     return reply.send({ success: true })
+  })
+
+  // ── POST /extensions/:id/storage ────────────────────────────────────────
+  //
+  // Authentifiee par le JETON D'EXTENSION, jamais par le cookie de session :
+  // la frame n'a pas de session, et c'est tout l'interet. Origin: null est
+  // accepte, parce que c'est ce qu'envoie une origine opaque, mais il ne vaut
+  // strictement rien comme preuve : l'identite vient du jeton.
+  app.post('/extensions/:id/storage', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const surface = request.headers['x-nodyx-surface']
+    const header  = request.headers.authorization
+
+    if (!RE_ID.test(id) || typeof surface !== 'string' || !RE_SURFACE.test(surface)) {
+      return reply.code(400).send({ error: 'Requête invalide', code: 'INVALID_REQUEST' })
+    }
+    if (!header?.startsWith('Bearer ')) {
+      return reply.code(401).send({ error: 'Jeton absent', code: 'TOKEN_MISSING' })
+    }
+    if (!appSecret) return reply.code(500).send({ error: 'Instance mal configurée', code: 'MISSING_SECRET' })
+
+    const revoked = await redis.exists(`ext:revoked:${id}`).catch(() => 0)
+    const verified = verifyExtensionToken(
+      header.slice(7),
+      { instanceId, extensionId: id, surface },
+      appSecret,
+      () => revoked === 1,
+    )
+    if (!verified.ok) {
+      const status = verified.code === 'SESSION_EXPIRED' ? 401 : 403
+      return reply.code(status).send({ error: verified.message, code: verified.code })
+    }
+    const claims: ExtensionTokenClaims = verified.claims
+
+    const body = (request.body ?? {}) as { op?: string; key?: unknown; value?: unknown; scope?: unknown }
+
+    // Les ecritures sont plafonnees par membre et par extension : sans ca, une
+    // extension martele la base sans jamais approcher son quota d'octets.
+    if (body.op === 'set' || body.op === 'delete') {
+      const bucket = `ext:writes:${id}:${claims.sub ?? 'anon'}`
+      const hits = await redis.incr(bucket).catch(() => 0)
+      if (hits === 1) await redis.expire(bucket, 60).catch(() => {})
+      if (hits > STORAGE.writesPerMinute) {
+        return reply.code(429).send({ error: 'Trop d\'écritures', code: 'RATE_LIMITED' })
+      }
+    }
+
+    // Le quota vient du manifeste INSTALLE, jamais de la requete.
+    const { rows } = await db.query(
+      `SELECT manifest, enabled FROM installed_extensions WHERE id = $1`, [id],
+    )
+    const row = rows[0] as { manifest: Record<string, unknown>; enabled: boolean } | undefined
+    if (!row)         return reply.code(404).send({ error: 'Extension introuvable', code: 'EXTENSION_NOT_FOUND' })
+    if (!row.enabled) return reply.code(403).send({ error: 'Extension désactivée', code: 'EXTENSION_DISABLED' })
+
+    const declared = (row.manifest as { permissions?: { storage?: Record<string, string> } }).permissions?.storage ?? {}
+    const scopeKey = body.scope === 'instance' ? 'instance' : 'user'
+    const quotaBytes = Math.min(parseSize(declared[scopeKey] ?? '') ?? 0, STORAGE.maxQuotaBytes)
+
+    const caller = { extensionId: id, userId: claims.sub, granted: claims.prm, quotaBytes }
+    const query  = (sql: string, params?: unknown[]) => db.query(sql, params) as Promise<{ rows: unknown[] }>
+
+    const result = body.op === 'get'    ? await storageGet(caller, body.key, body.scope, query)
+                 : body.op === 'set'    ? await storageSet(caller, body.key, body.value, body.scope, query)
+                 : body.op === 'delete' ? await storageDelete(caller, body.key, body.scope, query)
+                 : body.op === 'list'   ? await storageList(caller, body.scope, query)
+                 : { ok: false as const, code: 'INVALID_ARGUMENT' as const, message: 'operation inconnue' }
+
+    if (!result.ok) {
+      const status = result.code === 'PERMISSION_DENIED'  ? 403
+                   : result.code === 'NOT_AUTHENTICATED'  ? 401
+                   : result.code === 'QUOTA_EXCEEDED'     ? 507
+                   : 400
+      return reply.code(status).send({ error: result.message, code: result.code })
+    }
+    return reply.send({ result: result.value })
   })
 
   // ── POST /extensions/:id/session ────────────────────────────────────────
