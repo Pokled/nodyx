@@ -66,7 +66,7 @@
 	<h1 class="mt-2 text-2xl font-bold text-white mb-6">{tFn('forum.create_topic')}</h1>
 
 	{#if form?.error}
-		<p class="mb-4bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
+		<p class="mb-4 bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
 			{form.error}
 		</p>
 	{/if}
@@ -168,7 +168,7 @@
 				<button
 					type="button"
 					onclick={() => showPollSection = true}
-					class="flex items-center gap-2 px-3 py-2border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
+					class="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
 				>
 					<span>📊</span>
 					<span>{tFn('forum.attach_poll')} <span class="text-gray-600 text-xs">{tFn('common.optional')}</span></span>

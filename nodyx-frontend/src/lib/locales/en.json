@@ -4520,5 +4520,8 @@
   "ext_install.allowed_registries": "Registries accepted on this instance: {{list}}.",
   "amem.reveal_email": "reveal",
   "amem.revealing": "…",
-  "adash.member_joined": "new member"
+  "adash.member_joined": "new member",
+  "forum.share_copied": "Link copied",
+  "forum.share_failed": "Copy failed",
+  "forum.moderate": "Moderate"
 }
