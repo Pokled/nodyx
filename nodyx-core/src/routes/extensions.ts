@@ -18,6 +18,7 @@ import { sensitiveCapabilities } from '../extensions/capabilities'
 import { validateManifest }      from '../extensions/manifest'
 import { mintExtensionToken, verifyExtensionToken, type ExtensionTokenClaims } from '../extensions/token'
 import { storageGet, storageSet, storageDelete, storageList } from '../extensions/storage'
+import { projectUser, columnsFor } from '../extensions/identity'
 import { parseSize } from '../extensions/manifest'
 import { STORAGE } from '../extensions/limits'
 import { PACKAGE, SURFACE }      from '../extensions/limits'
@@ -259,13 +260,30 @@ export async function extensionRoutes(app: FastifyInstance) {
     )
     if (!known) return reply.code(404).send({ error: 'Surface inconnue', code: 'SURFACE_NOT_FOUND' })
 
+    // L'identite est projetee ICI, cote serveur, et pas dans la page qui monte
+    // la surface : si le frontend devait filtrer, un composant distrait passant
+    // l'objet utilisateur entier suffirait a faire partir une adresse de
+    // courriel dans une extension tierce.
+    const granted = Array.isArray(row.granted) ? row.granted : []
+    let projectedUser: Record<string, unknown> | null = null
+    if (request.user?.userId) {
+      const cols = columnsFor(granted)
+      if (cols.length) {
+        const { rows: userRows } = await db.query(
+          `SELECT ${cols.join(', ')} FROM users WHERE id = $1`,
+          [request.user.userId],
+        )
+        projectedUser = projectUser(userRows[0] as Record<string, unknown> | undefined, granted)
+      }
+    }
+
     const token = mintExtensionToken({
       issuer:      origin,
       instanceId,
       extensionId: id,
       surface,
       userId:      request.user?.userId ?? null,
-      permissions: Array.isArray(row.granted) ? row.granted : [],
+      permissions: granted,
       jti:         randomUUID(),
     }, appSecret)
 
@@ -274,6 +292,8 @@ export async function extensionRoutes(app: FastifyInstance) {
       expiresIn: SURFACE.tokenTtlSeconds,
       version:   row.version,
       surface,
+      granted,
+      user: projectedUser,
     })
   })
 }

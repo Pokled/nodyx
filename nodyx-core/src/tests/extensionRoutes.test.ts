@@ -126,6 +126,38 @@ describe('frappe du jeton de surface', () => {
     expect(r.statusCode).toBe(404)
   })
 
+  it('projette l identite cote SERVEUR, jamais l objet utilisateur entier', async () => {
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [installedRow({ granted: ['identity', 'identity:id', 'identity:username'] })] })
+      .mockResolvedValueOnce({ rows: [{ id: 'user-42', username: 'ada' }] })
+    const r = await session({ surface: 'page' }, 'Bearer membre')
+    const body = JSON.parse(r.body)
+    expect(body.user).toEqual({ id: 'user-42', username: 'ada' })
+
+    // La requete ne LIT que les colonnes accordees : ramener le courriel pour
+    // le jeter ensuite finirait par le laisser fuir dans un journal.
+    const sql = dbQuery.mock.calls[1][0] as string
+    expect(sql).toContain('SELECT id, username FROM users')
+    expect(sql).not.toContain('email')
+  })
+
+  it('ne lit meme pas la table users quand identity n est pas accorde', async () => {
+    dbQuery.mockReset()
+    dbQuery.mockResolvedValue({ rows: [installedRow({ granted: ['storage.user'] })] })
+    const r = await session({ surface: 'page' }, 'Bearer membre')
+    expect(JSON.parse(r.body).user).toBeNull()
+    expect(dbQuery).toHaveBeenCalledOnce()
+  })
+
+  it('rend un utilisateur nul pour un visiteur, sans echouer', async () => {
+    dbQuery.mockReset()
+    dbQuery.mockResolvedValue({ rows: [installedRow({ granted: ['identity', 'identity:id'] })] })
+    const r = await session({ surface: 'page' })
+    expect(r.statusCode).toBe(200)
+    expect(JSON.parse(r.body).user).toBeNull()
+  })
+
   it('le jeton frappé ne vaut pas pour une autre surface', async () => {
     dbQuery.mockResolvedValue({ rows: [installedRow()] })
     const { token } = JSON.parse((await session({ surface: 'page' }, 'Bearer membre')).body)
