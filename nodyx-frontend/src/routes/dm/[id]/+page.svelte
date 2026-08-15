@@ -1696,7 +1696,13 @@
 		</div>
 
 		<!-- Zone de saisie -->
-		<div class="shrink-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/30">
+		<!-- `--bottom-nav-h` réserve la hauteur de la barre de navigation mobile,
+		     qui est `fixed bottom-0` et passerait donc PAR DESSUS ce champ. La
+		     variable vaut 56px plus la zone sûre du téléphone, et 0 à partir de
+		     `lg` où la barre n'existe plus. Le chat le faisait déjà, cette page
+		     ne l'a jamais fait : on y écrivait sous le menu. -->
+		<div class="shrink-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/30"
+		     style="padding-bottom: max(1rem, var(--bottom-nav-h))">
 			<!-- Banner reply : indique le message qu'on est en train de citer -->
 			{#if replyingTo}
 				<div class="dm-reply-banner">
