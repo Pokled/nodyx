@@ -1649,8 +1649,15 @@
 
 	<!-- ══ BOTTOM NAV mobile (lg:hidden) — hidden for banned users ═════════ -->
 	{#if !isBanned}
+	<!-- Fond OPAQUE, et surtout pas `--p-card-bg`. Celui-ci est un fond de CARTE :
+	     six thèmes sur sept sont translucides par construction, dont un à 5%
+	     d'opacité. Une carte translucide posée sur un fond de page est voulue,
+	     une barre FIXE avec du contenu qui défile dessous devient du verre. Le
+	     2026-08-15, on lisait « Dernier message » et « Pokled » au travers, par
+	     dessus les icônes. `--p-bg` est opaque sur les sept thèmes.
+	     Gardé par tests/responsive/bottom-nav.spec.ts. -->
 	<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-45 border-t border-gray-800 flex items-stretch"
-	     style="background: var(--p-card-bg); border-color: var(--p-card-border); padding-bottom: env(safe-area-inset-bottom, 0px)">
+	     style="background: var(--p-bg); border-color: var(--p-card-border); padding-bottom: env(safe-area-inset-bottom, 0px)">
 
 		<!-- Fil d'actu (si connecté) -->
 		{#if user}

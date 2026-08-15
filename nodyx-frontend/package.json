@@ -20,9 +20,12 @@
     "i18n:placeholders:check": "node scripts/i18n/check-placeholders.mjs --check --quiet",
     "i18n:parity:check": "node scripts/i18n/coverage.mjs --require en",
     "i18n:public:check": "node scripts/i18n/scan.mjs --public --check",
-    "i18n:check": "node scripts/i18n/scan.mjs --check"
+    "i18n:check": "node scripts/i18n/scan.mjs --check",
+    "test:responsive": "playwright test",
+    "test:responsive:ui": "playwright test --ui"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@sveltejs/adapter-auto": "7.0.1",
     "@sveltejs/adapter-node": "5.5.7",
     "@sveltejs/kit": "^2.68.0",
