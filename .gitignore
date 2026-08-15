@@ -78,3 +78,7 @@ nodyx-frontend/test-results/
 nodyx-frontend/playwright-report/
 nodyx-frontend/blob-report/
 .cache/ms-playwright/
+
+# Etat de session Playwright et identifiants du compte de test : JAMAIS commites
+nodyx-frontend/playwright/.auth/
+nodyx-frontend/.env.test

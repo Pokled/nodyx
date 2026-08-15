@@ -45,8 +45,40 @@ export default defineConfig({
 	},
 
 	projects: [
-		{ name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
-		{ name: 'mobile-webkit',   use: { ...devices['iPhone 14'] } },
-		{ name: 'tablette-webkit', use: { ...devices['iPad Mini'] } },
+		// Ouvre une session une fois, les projets authentifiés la reutilisent.
+		{ name: 'session', testMatch: /auth\.setup\.ts/ },
+
+		// Pages publiques : aucune session, on teste ce que voit un inconnu.
+		{
+			name: 'mobile-chromium',
+			use: { ...devices['Pixel 7'] },
+			testIgnore: /authentifie\.spec\.ts/,
+		},
+		{
+			name: 'mobile-webkit',
+			use: { ...devices['iPhone 14'] },
+			testIgnore: /authentifie\.spec\.ts/,
+		},
+		{
+			name: 'tablette-webkit',
+			use: { ...devices['iPad Mini'] },
+			testIgnore: /authentifie\.spec\.ts/,
+		},
+
+		// Pages derriere une connexion : chat, messages prives, sidebar. C'est
+		// precisement la que les defauts ont survecu le plus longtemps, faute de
+		// test capable de les atteindre.
+		{
+			name: 'connecte-chromium',
+			use: { ...devices['Pixel 7'], storageState: 'playwright/.auth/session.json' },
+			dependencies: ['session'],
+			testMatch: /authentifie\.spec\.ts/,
+		},
+		{
+			name: 'connecte-webkit',
+			use: { ...devices['iPhone 14'], storageState: 'playwright/.auth/session.json' },
+			dependencies: ['session'],
+			testMatch: /authentifie\.spec\.ts/,
+		},
 	],
 })
