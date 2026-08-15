@@ -1,7 +1,9 @@
 # CDC, le premier contact avec Nodyx
 
-Statut : **PROPOSITION, en attente de validation Jonathan**
-Date : 2026-08-14
+Statut : **DIFFÉRÉ par Jonathan le 2026-08-15.** Constats et mesures conservés, décisions NON prises.
+Déclencheur de réouverture : quand la passe UX et responsive sera faite, et quand la démo et l'annuaire
+cesseront d'être creux (cf §1.2, c'est la vraie raison du report).
+Date : 2026-08-14, révision 2 le 2026-08-15
 Auteur : session Nodyx
 Préalable au code (règle maison : CDC formel avant tout module critique)
 
@@ -26,6 +28,34 @@ Préalable au code (règle maison : CDC formel avant tout module critique)
 
 ---
 
+## 0.1 Réponses de Jonathan, 2026-08-15
+
+| Question | Réponse |
+|---|---|
+| Sous-domaine de l'instance amirale | `hub.nodyx.org` convient, **mais la question de fond est rouverte**, voir ci-dessous |
+| Langues de la vitrine | Toutes, avec des drapeaux en SVG (jamais en emoji, cf `ChannelIcon`) |
+| Instances hors ligne dans l'annuaire | À revoir. « On n'a pas de véritables instances, et notre annuaire actuel est MOCHE » |
+| Bascule franche ou cohabitation | Reporté |
+
+**Ce qui remet en cause D1 et D2.** Jonathan précise que `nodyx.org` n'est pas son forum
+personnel posé par accident sur le domaine principal : c'est **une zone d'information
+communautaire pour tout Nodyx, « un peu l'instance de tout le monde »**. Et
+`start.nodyx.org` n'est qu'une vitrine statique, sans aucune interaction.
+
+Si la confusion entre le projet et cette instance est un **choix assumé** et non un
+défaut, l'échange d'adresses de §3 perd l'essentiel de sa justification. La décision D1
+n'est donc PAS prise, et ce document ne doit pas être appliqué tel quel.
+
+Une option moins risquée avait émergé et reste sur la table : ne rien déménager, et
+servir sur `nodyx.org` la vitrine au visiteur non connecté, le forum au membre connecté.
+Aucune redirection, aucun creux de référencement, aucune session cassée, et surtout
+aucune intervention sur Caddy.
+
+**Décision du 2026-08-15 : on passe d'abord sur le responsive, les défauts d'UX et les
+clients. Le reste attendra.**
+
+---
+
 ## 1. Déclencheur
 
 Deux constats de Jonathan, le 2026-08-14.
@@ -33,6 +63,21 @@ Deux constats de Jonathan, le 2026-08-14.
 Le premier : « quand l'utilisateur va vouloir utiliser Nodyx pour la première fois, il va tomber sur nodyx.org, et ce n'est pas parlant du tout ».
 
 Le second, plus profond : « les gens ont l'habitude de Discord et de vouloir se créer un serveur. Mais là, nous c'est du self-hosted ». Le geste que le public connaît, créer un serveur en deux clics, n'existe pas chez nous. C'est structurel, pas un manque d'ergonomie.
+
+### 1.2 Ce qui est creux aujourd'hui, mesuré le 2026-08-14
+
+C'est la vraie raison du report : les trois choses « utiles » qu'une vitrine mettrait en
+avant sont vides.
+
+| Brique | Mesure | Conséquence |
+|---|---|---|
+| Démo `demo.nodyx.org` | **4 utilisateurs, 2 sujets, 2 messages** | Y envoyer un curieux prouve l'inverse de ce qu'on veut |
+| Annuaire | **23 instances dont 21 à nous**, 2 tierces | Afficher « 23 communautés » est démenti au premier clic |
+| Langues | fr et en à 100%, **de, es, pt-PT, ru, vi à 21%** | Sept drapeaux dont cinq mènent à une interface à moitié traduite |
+
+Aucune vitrine ne peut s'appuyer là-dessus. Ce qui est réel et solide, c'est le
+**logiciel** : v2.12, forum, chat, vocal avec SFU, 4525 clés d'interface, une PWA
+complète, des installeurs durcis. Peupler la démo est le préalable à tout le reste.
 
 ### 1.1 État réel, vérifié le 2026-08-14
 
