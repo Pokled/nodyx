@@ -194,7 +194,7 @@
   "chat.send": "Envoyer (Entrée)",
   "chat.new_poll": "Créer un sondage",
   "chat.rich_editor": "Éditeur riche (Ctrl+Maj+E)",
-  "chat.input_placeholder": "Message dans # {{channel}}  ·  /roll /flip /8ball /rps",
+  "chat.input_placeholder": "Message dans # {{channel}}",
   "chat.message_refused": "Message refusé : contenu interdit",
   "chat.voice.insecure": "WebRTC exige HTTPS ou localhost.",
   "chat.voice.denied": "Microphone bloqué. Vérifiez les paramètres du navigateur.",
@@ -4523,5 +4523,9 @@
   "adash.member_joined": "nouveau membre",
   "forum.share_copied": "Lien copié",
   "forum.share_failed": "Copie impossible",
-  "forum.moderate": "Modérer"
+  "forum.moderate": "Modérer",
+  "chat.cmd_help_roll": "lance des dés",
+  "chat.cmd_help_flip": "pile ou face",
+  "chat.cmd_help_8ball": "pose une question",
+  "chat.cmd_help_rps": "pierre feuille ciseaux"
 }

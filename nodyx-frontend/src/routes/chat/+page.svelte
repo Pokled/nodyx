@@ -181,6 +181,33 @@
 	let mentionQuery       = $state('');
 	let mentionSuggestions = $state<{ username: string; avatar: string | null }[]>([]);
 	let showMentions       = $state(false);
+
+	/**
+	 * Les quatre commandes, listées quand l'utilisateur tape « / ».
+	 *
+	 * Elles vivaient dans le placeholder du champ, ce qui posait deux problèmes.
+	 * Le premier, mesuré : « Message dans # {{channel}} · /roll /flip /8ball
+	 * /rps » fait 54 caractères et passe à DEUX lignes dès que le champ est en
+	 * dessous de 340px de large, ce qui déborde un textarea en `rows={1}` et
+	 * fait apparaître une barre de défilement parasite. Le second : on ne lit un
+	 * placeholder qu'avant d'écrire, or on cherche une commande au moment où on
+	 * la tape.
+	 */
+	const COMMANDES = [
+		{ nom: 'roll',  args: '2d6',        cle: 'chat.cmd_help_roll' },
+		{ nom: 'flip',  args: '',           cle: 'chat.cmd_help_flip' },
+		{ nom: '8ball', args: '…',          cle: 'chat.cmd_help_8ball' },
+		{ nom: 'rps',   args: '🪨 📄 ✂️',   cle: 'chat.cmd_help_rps' },
+	];
+
+	// N'apparaît que sur un « / » en tête, et disparaît dès qu'une commande
+	// complète est écrite : la liste ne doit pas gêner la frappe.
+	const suggestions = $derived.by(() => {
+		const t = inputText;
+		if (!t.startsWith('/') || t.includes(' ')) return [];
+		const q = t.slice(1).toLowerCase();
+		return COMMANDES.filter(c => c.nom.startsWith(q));
+	});
 	let mentionIndex       = $state(0);
 
 	// Reply/quote
@@ -776,6 +803,9 @@
 		inputText = '';
 		showMentions = false;
 		replyTo = null;
+		// Le champ vient d'être vidé : sans ça il resterait à la hauteur du
+		// message qu'on vient d'envoyer.
+		ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input'));
 	}
 
 	function sendRich() {
@@ -826,7 +856,30 @@
 		if (e.key === 'E' && e.ctrlKey && e.shiftKey) { e.preventDefault(); openRichCompose(); }
 	}
 
+	/**
+	 * Ajuste la hauteur du champ à son contenu.
+	 *
+	 * Le textarea était en `rows={1}` avec `resize-none` et un `max-h-32`, mais
+	 * RIEN ne le faisait jamais grandir : il restait sur une ligne quel que soit
+	 * le message, et le `scrollbar-width: thin` faisait apparaître une barre de
+	 * défilement minuscule dès la deuxième ligne. On écrivait donc ses messages
+	 * dans une fente.
+	 *
+	 * `height = 'auto'` avant la mesure n'est pas décoratif : sans cette remise
+	 * à zéro, `scrollHeight` ne redescend jamais quand on efface du texte, et le
+	 * champ resterait grand après avoir été vidé.
+	 */
+	function ajusterHauteur(el: HTMLTextAreaElement | null) {
+		if (!el) return
+		el.style.height = 'auto'
+		// 128px = max-h-32, la borne au-delà de laquelle on rend la main au
+		// défilement plutôt que de manger tout l'écran.
+		el.style.height = Math.min(el.scrollHeight, 128) + 'px'
+	}
+
 	async function handleInput() {
+		ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input'))
+
 		// Typing indicator (throttled) — server + P2P fast path
 		if (s && selectedChannel) {
 			if (!typingThrottle) {
@@ -1555,6 +1608,31 @@
 					<div class="flex items-center gap-2 px-3 py-2 mb-1 bg-red-900/40 border border-red-700/60 rounded-lg text-xs text-red-300">
 						<span>⏱</span>
 						<span>{tFn('chat.antispam', { s: String(Math.ceil((rateLimitedUntil - Date.now()) / 1000)) })}</span>
+					</div>
+				{/if}
+
+				<!-- Aide aux commandes, à l'endroit et au moment où on la cherche :
+				     au-dessus du champ, dès qu'on tape « / ». Elle ne prend aucune
+				     place le reste du temps, contrairement au placeholder de 54
+				     caractères qu'elle remplace. -->
+				{#if suggestions.length > 0}
+					<div class="mb-1 flex flex-wrap gap-1.5 px-1">
+						{#each suggestions as c}
+							<button
+								type="button"
+								onclick={() => {
+									inputText = `/${c.nom} `;
+									const el = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
+									el?.focus();
+									ajusterHauteur(el);
+								}}
+								class="inline-flex items-center gap-1.5 px-2 py-1 border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] hover:border-indigo-700/50 transition-colors text-left"
+							>
+								<span class="text-xs font-semibold text-indigo-300">/{c.nom}</span>
+								{#if c.args}<span class="text-[10px] text-gray-600">{c.args}</span>{/if}
+								<span class="text-[11px] text-gray-500">{tFn(c.cle)}</span>
+							</button>
+						{/each}
 					</div>
 				{/if}
 
