@@ -62,7 +62,9 @@
 	}
 </script>
 
-<div class="flex items-center gap-6 p-5"
+<!-- Empile sous `sm` : cote a cote, les anneaux laissaient 200px a la
+     legende, qui en demande 256. Ses libelles etaient donc coupes de 56px. -->
+<div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-5"
      style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 
 	<!-- SVG rings -->

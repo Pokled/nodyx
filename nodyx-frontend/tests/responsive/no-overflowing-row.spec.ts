@@ -1,0 +1,83 @@
+import { test, expect } from '@playwright/test'
+
+/**
+ * Rangées dont le contenu ne rentre pas.
+ *
+ * Troisième détecteur, et le plus fin des trois. Les deux autres regardent la
+ * page (`no-overflow`) et les éléments géants (`no-clipping`, seuil à 1,5x).
+ * Celui-ci attrape ce qui leur échappe : un conteneur de taille normale dont le
+ * contenu déborde de quelques dizaines de pixels et se fait couper.
+ *
+ * Le cas qui l'a motivé, signalé le 2026-08-15 : dans l'en-tête d'un sujet, la
+ * rangée « vues / réponses / dernier posteur » était en `flex` SANS `flex-wrap`.
+ * Les trois encarts tenaient donc sur une ligne quoi qu'il arrive, et le
+ * troisième était tranché au bord de l'écran. Trop petit pour le seuil de
+ * `no-clipping`, invisible pour `no-overflow` puisqu'un ancêtre clippait.
+ *
+ * La mesure : `scrollWidth > clientWidth` sur un élément qui n'est pas censé
+ * défiler. C'est la définition même de « du contenu est coupé ici ».
+ */
+
+const PAGES = [
+	// Un sujet AVEC des reponses d'un autre membre : sans ca l'encart
+	// « dernier posteur » ne s'affiche pas et le test ne prouve rien.
+	['sujet',           '/forum/annonces/nodyx-v2-0-dm-chiffres-e2e-reactions-typing-sons-a1000001'],
+	['forum catégorie', '/forum/annonces'],
+	['profil',          '/users/Pokled'],
+]
+
+for (const [nom, chemin] of PAGES) {
+	test(`${nom} : aucune rangée ne coupe son contenu`, async ({ page }) => {
+		await page.goto(chemin, { waitUntil: 'domcontentloaded' })
+		await page.waitForTimeout(1800)
+
+		const coupables = await page.evaluate(() => {
+			const out: { perdu: number; boite: number; tag: string; cls: string; txt: string }[] = []
+
+			for (const el of document.querySelectorAll('body *')) {
+				if (el.namespaceURI === 'http://www.w3.org/2000/svg') continue
+
+				const st = getComputedStyle(el)
+				// Défilement horizontal assumé : ce n'est pas une coupure.
+				if (st.overflowX === 'auto' || st.overflowX === 'scroll') continue
+				// `truncate` coupe VOLONTAIREMENT, avec une ellipse pour le dire.
+				if (st.textOverflow === 'ellipsis') continue
+
+				const perdu = el.scrollWidth - el.clientWidth
+				// 4px de tolérance pour les arrondis de mise à l'échelle.
+				if (perdu <= 4) continue
+				if (el.clientWidth < 60) continue
+				if (!(el.textContent || '').trim()) continue
+
+				out.push({
+					perdu,
+					boite: el.clientWidth,
+					tag: el.tagName.toLowerCase(),
+					cls: (el.className?.toString?.() || '').slice(0, 65),
+					txt: (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40),
+				})
+			}
+
+			// On ne garde que la coupure la plus profonde de chaque lignée : les
+			// ancêtres répètent le même symptôme et noieraient le vrai coupable.
+			out.sort((a, b) => b.perdu - a.perdu)
+			const vus = new Set<string>()
+			return out
+				.filter((o) => {
+					const cle = o.txt.slice(0, 25)
+					if (vus.has(cle)) return false
+					vus.add(cle)
+					return true
+				})
+				.slice(0, 4)
+		})
+
+		expect(
+			coupables,
+			'rangées dont le contenu est coupé :\n' +
+				coupables
+					.map((c) => `  -${c.perdu}px (boîte ${c.boite}px) <${c.tag}> ${c.cls}\n     « ${c.txt} »`)
+					.join('\n'),
+		).toEqual([])
+	})
+}

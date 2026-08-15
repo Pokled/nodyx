@@ -287,7 +287,11 @@
 					</div>
 
 					<!-- Statistiques -->
-					<div class="flex items-center gap-3">
+					<!-- `flex-wrap` : sans lui les trois encarts (vues, reponses,
+					     dernier posteur) tiennent sur une seule ligne quoi qu'il arrive,
+					     et le troisieme se fait couper au bord de l'ecran sur un
+					     telephone. Le conteneur PARENT en avait un, pas celui-ci. -->
+					<div class="flex flex-wrap items-center gap-3">
 						<!-- Vues -->
 						<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 border border-gray-700">
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

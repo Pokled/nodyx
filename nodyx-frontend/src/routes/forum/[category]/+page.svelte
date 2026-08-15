@@ -265,7 +265,10 @@
 </svelte:head>
 
 <!-- EN-TÊTE DE CATÉGORIE -->
-<div class="relative mb-8 overflow-hidden border border-white/[.06] bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30 p-8">
+<!-- `p-5` sur mobile : `p-8` seul mangeait 64px de rembourrage horizontal
+     sur un ecran de 390px, et le contenu de l'en-tete (fil d'Ariane, titre,
+     pastilles de statistiques) se faisait couper de 80px. -->
+<div class="relative mb-8 overflow-hidden border border-white/[.06] bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30 p-5 sm:p-8">
 	<!-- Effets de lumière -->
 	<div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
 	<div class="absolute -top-20 -right-20 w-80 h-80 bg-indigo-600/10 blur-3xl"></div>
