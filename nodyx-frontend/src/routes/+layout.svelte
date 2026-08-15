@@ -153,16 +153,54 @@
 	// On ne recharge pas brutalement : on attend la PROCHAINE navigation de l'user
 	// pour faire un full reload vers sa destination -> il récupère la version fraîche
 	// sans jamais avoir à hard-refresh. Plus de "5-6 refresh après une mise à jour".
+	// ── Pourquoi un rechargement IMMÉDIAT et non plus « à la prochaine
+	//    navigation » (corrigé le 2026-08-15) ────────────────────────────────
+	// Le service worker fait `skipWaiting()` + `clients.claim()` : le NOUVEAU
+	// service worker prend donc le contrôle d'une page qui exécute encore
+	// l'ANCIEN JavaScript. Il lui sert alors les chunks de la nouvelle version,
+	// dont les noms hachés ne correspondent plus à ce que ce code attend :
+	// l'hydratation Svelte casse et plus AUCUN clic ne répond. La page a l'air
+	// normale, elle est morte.
+	//
+	// Attendre une navigation ne suffit pas : cliquer sur le menu burger n'en
+	// est pas une, et l'utilisateur reste bloqué indéfiniment. Symptôme constaté
+	// sur téléphone, y compris en « mode ordinateur », alors que tout
+	// fonctionnait en navigation privée, c'est-à-dire sans service worker.
+	//
+	// On recharge donc dès la prise de contrôle. Un rechargement automatique
+	// juste après un déploiement est infiniment préférable à une application
+	// figée.
 	let swUpdateReady = false;
+	let swReloading   = false;
 	onMount(() => {
 		if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
-		const markReady = () => { swUpdateReady = true; };
-		const onMessage = (e: MessageEvent) => { if ((e.data as any)?.type === 'sw:updated') markReady(); };
+
+		/** L'utilisateur est-il en train d'écrire ? On ne lui vole pas son texte. */
+		function enTrainDEcrire(): boolean {
+			const el = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+			if (!el) return false;
+			const editable = el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable;
+			return editable && !!(el.value?.trim() || el.textContent?.trim());
+		}
+
+		function rechargerPourNouvelleVersion() {
+			// Garde-fou : `controllerchange` peut se déclencher plus d'une fois,
+			// et un rechargement en boucle serait pire que le bug d'origine.
+			if (swReloading) return;
+			swUpdateReady = true;
+			if (enTrainDEcrire()) return;   // le beforeNavigate ci-dessous prendra le relais
+			swReloading = true;
+			window.location.reload();
+		}
+
+		const onMessage = (e: MessageEvent) => {
+			if ((e.data as any)?.type === 'sw:updated') rechargerPourNouvelleVersion();
+		};
 		navigator.serviceWorker.addEventListener('message', onMessage);
-		navigator.serviceWorker.addEventListener('controllerchange', markReady);
+		navigator.serviceWorker.addEventListener('controllerchange', rechargerPourNouvelleVersion);
 		return () => {
 			navigator.serviceWorker.removeEventListener('message', onMessage);
-			navigator.serviceWorker.removeEventListener('controllerchange', markReady);
+			navigator.serviceWorker.removeEventListener('controllerchange', rechargerPourNouvelleVersion);
 		};
 	});
 	beforeNavigate((nav) => {
