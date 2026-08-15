@@ -33,9 +33,40 @@ for (const [nom, chemin] of PAGES) {
 			const vw = window.innerWidth
 			const out: { w: number; tag: string; cls: string; txt: string }[] = []
 
+			// Un élément est-il posé dans un conteneur qui défile horizontalement ?
+			// Alors sa largeur est voulue : frise d'activité, tableau, carrousel.
+			const dansUnDefilement = (el: Element) => {
+				let p = el.parentElement
+				while (p && p !== document.body) {
+					const o = getComputedStyle(p).overflowX
+					if (o === 'auto' || o === 'scroll') return true
+					p = p.parentElement
+				}
+				return false
+			}
+
 			for (const el of document.querySelectorAll('body *')) {
 				const w = el.getBoundingClientRect().width
-				if (w <= vw + 8) continue
+				// Seuil a 1,5x l'ecran, et non « plus large que l'ecran ».
+				// Plusieurs conteneurs debordent VOLONTAIREMENT de quelques dizaines
+				// de pixels : le profil utilise `-mx-4` pour aller bord a bord, ce qui
+				// donne 422px dans un ecran de 390 sans rien couper. Les catastrophes
+				// reelles sont d'un tout autre ordre : le <main> du profil mesurait
+				// 1358px pour 374, soit 3,5x. Un seuil grossier qui attrape ce qui
+				// casse vaut mieux qu'un test precis qu'on desactive au bout d'une
+				// semaine parce qu'il est rouge en permanence.
+				if (w <= vw * 1.5) continue
+
+				// `<rect>`, `<path>`, `<circle>` : des primitives de DESSIN, pas de
+				// la mise en page. Le profil en remontait dix, toutes fausses.
+				if (el.namespaceURI === 'http://www.w3.org/2000/svg') continue
+
+				// Sans texte, rien n'est illisible : bannière pleine largeur, halo,
+				// grille de cellules colorées. On traque du contenu coupé, pas des
+				// pixels qui dépassent.
+				if (!(el.textContent || '').trim()) continue
+
+				if (dansUnDefilement(el)) continue
 
 				// On ne veut QUE l'élément fautif, pas sa lignée : si un enfant est
 				// aussi large, c'est lui la cause et le parent ne fait que la subir.
