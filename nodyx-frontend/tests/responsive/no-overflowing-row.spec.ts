@@ -52,8 +52,16 @@ for (const [nom, chemin] of PAGES) {
 				if (st.overflowX === 'hidden' || st.overflow === 'hidden') continue
 
 				const perdu = el.scrollWidth - el.clientWidth
-				// 4px de tolérance pour les arrondis de mise à l'échelle.
-				if (perdu <= 4) continue
+				// Tolérance de 32px, et non 4. En dessous, c'est presque toujours un
+				// débord VOULU (`-mx-4` pour aller bord à bord donne 16px) ou un écart
+				// de calcul entre moteurs : WebKit compte le débord par marge négative
+				// dans `scrollWidth`, Chromium non, et le profil remontait donc 16px
+				// sur l'un et rien sur l'autre.
+				// Les vraies coupures sont d'un tout autre ordre : la rangée de
+				// statistiques d'un sujet débordait de 182px. Un seuil qui separe
+				// franchement les deux vaut mieux qu'un test rouge sur un seul moteur,
+				// qu'on finirait par ignorer.
+				if (perdu <= 32) continue
 				if (el.clientWidth < 60) continue
 				if (!(el.textContent || '').trim()) continue
 
