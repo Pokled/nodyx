@@ -701,7 +701,7 @@
 					<!-- Compteur de réponses -->
 					<div class="flex flex-col items-center px-3 py-1.5 border border-white/[.06] group-hover:border-indigo-700/50 transition-colors min-w-[60px] text-center">
 						<span class="text-lg font-bold text-indigo-400 leading-none">{replyCount(thread.post_count)}</span>
-						<span class="text-[10px] text-gray-500 uppercase tracking-wider">{tFn('forum.replies_label')}</span>
+						<span class="text-[11px] text-gray-500 uppercase tracking-wider">{tFn('forum.replies_label')}</span>
 					</div>
 
 					<!-- Dernier posteur -->
