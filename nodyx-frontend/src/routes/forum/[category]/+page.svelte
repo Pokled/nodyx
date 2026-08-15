@@ -655,7 +655,12 @@
 					</div>
 
 					<!-- Titre -->
-					<p class="text-base font-semibold text-white group-hover:text-indigo-400 transition-colors line-clamp-1">
+					<!-- Deux lignes sur mobile, une seule des `sm`. Le bloc de droite est
+					     en `shrink-0` et prélève environ 150px avant que le titre n'ait sa
+					     part : sur un téléphone, `line-clamp-1` réduisait des titres comme
+					     « Nodyx Soundboard v2.7.0 : tes sons, ta queue... » à un moignon
+					     illisible. -->
+					<p class="text-base font-semibold text-white group-hover:text-indigo-400 transition-colors line-clamp-2 sm:line-clamp-1">
 						{thread.title}
 					</p>
 
@@ -698,7 +703,7 @@
 
 					<!-- Dernier posteur -->
 					{#if lastPoster}
-						<div class="flex items-center gap-2 pl-2 border-l border-gray-800">
+						<div class="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-800">
 							<div class="text-right hidden sm:block">
 								<p class="text-[10px] text-gray-600">{tFn('forum.last_reply')}</p>
 								<p class="text-xs font-medium text-gray-300">{lastPoster.author_username}</p>
@@ -716,7 +721,7 @@
 				</div>
 
 				<!-- Flèche -->
-				<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-700 group-hover:text-indigo-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<svg xmlns="http://www.w3.org/2000/svg" class="hidden sm:block w-5 h-5 text-gray-700 group-hover:text-indigo-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
 				</svg>
 			</a>
