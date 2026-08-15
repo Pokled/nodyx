@@ -763,16 +763,16 @@
 		<!-- Mobile hamburger : ne s'affiche que si le panneau qu'il ouvre existe -->
 		{#if !isBanned && showChannelSidebar}
 		<button
-			class="lg:hidden shrink-0 p-1.5 flex items-center justify-center transition-colors"
+			class="lg:hidden shrink-0 p-2.5 -m-1 flex items-center justify-center transition-colors"
 			style="color: {gallerySidebarOpen ? '#fff' : '#6b7280'}"
 			onclick={() => gallerySidebarOpen = !gallerySidebarOpen}
 			aria-label={tFn('nav.community_menu')} aria-expanded={gallerySidebarOpen} aria-controls="galaxy-sidebar">
 			{#if gallerySidebarOpen}
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 				</svg>
 			{:else}
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
 				</svg>
 			{/if}
@@ -1928,8 +1928,12 @@
 }
 
 /* ── Sketch 001: Discord two-tier sidebar — exact sketch CSS, scoped ────── */
+/* Sur mobile le rail et le panneau forment un TIROIR qui recouvre la page.
+   Les 48px reserves a la barre du haut y sont une bande morte : le tiroir a
+   sa propre croix de fermeture, il n'a pas besoin de laisser voir la barre.
+   Au-dessus de lg ils redeviennent des colonnes, sous la barre. */
 .nodyx-sb .rail {
-  position: fixed; top: 48px; bottom: 0; left: 0; width: 56px;
+  position: fixed; top: 0; bottom: 0; left: 0; width: 56px;
   background: #000; border-right: 1px solid #111;
   display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 4px; z-index: 40;
 }
@@ -1955,11 +1959,21 @@
 .nodyx-sb .rail .icon.docs:hover { background: #111; color: #818cf8; border-radius: 8px; }
 
 .nodyx-sb .panel {
-  position: fixed; top: 48px; bottom: 0; left: 56px;
+  position: fixed; top: 0; bottom: 0; left: 56px;
   width: var(--left-panel-width, 220px);
   background: #0a0a0a; border-right: 1px solid #111;
   z-index: 39; display: flex; flex-direction: column;
   transform: translateX(0); transition: transform .25s cubic-bezier(.4,0,.2,1), width .25s cubic-bezier(.4,0,.2,1);
+}
+
+/* Au-dessus de lg le rail et le panneau ne sont plus un tiroir mais deux
+   colonnes permanentes : ils reprennent leur place SOUS la barre du haut,
+   qui doit rester visible et cliquable. Cette regle DOIT venir apres les
+   deux definitions ci-dessus : a specificite egale, c'est l'ordre qui
+   tranche, et placee avant elle etait purement et simplement annulee. */
+@media (min-width: 1024px) {
+  .nodyx-sb .rail,
+  .nodyx-sb .panel { top: 48px; }
 }
 .nodyx-sb .panel.collapsed { transform: translateX(-100%); }
 .nodyx-sb .panel.dragging {
