@@ -42,6 +42,14 @@ for (const [nom, chemin] of PAGES) {
 				if (st.overflowX === 'auto' || st.overflowX === 'scroll') continue
 				// `truncate` coupe VOLONTAIREMENT, avec une ellipse pour le dire.
 				if (st.textOverflow === 'ellipsis') continue
+				// `overflow: hidden` est une DECISION explicite de l'auteur : « ce qui
+				// depasse ici, je le rogne exprès ». Le detecteur n'a pas a la
+				// contredire. Sans cette regle, l'en-tete de categorie remontait 80px
+				// causes par ses deux halos decoratifs en `absolute -right-20`, larges
+				// a dessein et rognes par la carte. Contrepartie assumee : on ne verra
+				// pas un `overflow-hidden` pose a la va-vite pour MASQUER un vrai
+				// debordement. Les deux autres detecteurs restent la pour ca.
+				if (st.overflowX === 'hidden' || st.overflow === 'hidden') continue
 
 				const perdu = el.scrollWidth - el.clientWidth
 				// 4px de tolérance pour les arrondis de mise à l'échelle.

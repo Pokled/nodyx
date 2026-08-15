@@ -63,8 +63,12 @@
 </script>
 
 <!-- Empile sous `sm` : cote a cote, les anneaux laissaient 200px a la
-     legende, qui en demande 256. Ses libelles etaient donc coupes de 56px. -->
-<div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-5"
+     legende, qui en demande 256. Ses libelles etaient donc coupes de 56px.
+     `items-stretch` est INDISPENSABLE en plus de `flex-col` : en colonne l'axe
+     transversal est HORIZONTAL, et `items-center` demande aux enfants de ne pas
+     s'etirer. Empiler seul ne corrigeait donc rien, la legende restait a 202px
+     dans un conteneur de 374. Meme piege que sur le profil avec `items-start`. -->
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6 p-5"
      style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
 
 	<!-- SVG rings -->
