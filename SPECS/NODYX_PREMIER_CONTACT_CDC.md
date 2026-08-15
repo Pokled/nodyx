@@ -64,21 +64,6 @@ Le premier : « quand l'utilisateur va vouloir utiliser Nodyx pour la première 
 
 Le second, plus profond : « les gens ont l'habitude de Discord et de vouloir se créer un serveur. Mais là, nous c'est du self-hosted ». Le geste que le public connaît, créer un serveur en deux clics, n'existe pas chez nous. C'est structurel, pas un manque d'ergonomie.
 
-### 1.2 Ce qui est creux aujourd'hui, mesuré le 2026-08-14
-
-C'est la vraie raison du report : les trois choses « utiles » qu'une vitrine mettrait en
-avant sont vides.
-
-| Brique | Mesure | Conséquence |
-|---|---|---|
-| Démo `demo.nodyx.org` | **4 utilisateurs, 2 sujets, 2 messages** | Y envoyer un curieux prouve l'inverse de ce qu'on veut |
-| Annuaire | **23 instances dont 21 à nous**, 2 tierces | Afficher « 23 communautés » est démenti au premier clic |
-| Langues | fr et en à 100%, **de, es, pt-PT, ru, vi à 21%** | Sept drapeaux dont cinq mènent à une interface à moitié traduite |
-
-Aucune vitrine ne peut s'appuyer là-dessus. Ce qui est réel et solide, c'est le
-**logiciel** : v2.12, forum, chat, vocal avec SFU, 4525 clés d'interface, une PWA
-complète, des installeurs durcis. Peupler la démo est le préalable à tout le reste.
-
 ### 1.1 État réel, vérifié le 2026-08-14
 
 Le diagnostic n'est **pas** qu'il manque une porte d'entrée. Elle existe, elle est derrière la maison.
@@ -97,6 +82,21 @@ Le domaine que Jonathan communique, celui que les gens retiennent et tapent, tom
 Il ne manque donc ni données ni page. Il manque **un chemin depuis la porte**.
 
 ---
+
+### 1.2 Ce qui est creux aujourd'hui, mesuré le 2026-08-14
+
+C'est la vraie raison du report : les trois choses « utiles » qu'une vitrine mettrait en
+avant sont vides.
+
+| Brique | Mesure | Conséquence |
+|---|---|---|
+| Démo `demo.nodyx.org` | **4 utilisateurs, 2 sujets, 2 messages** | Y envoyer un curieux prouve l'inverse de ce qu'on veut |
+| Annuaire | **23 instances dont 21 à nous**, 2 tierces | Afficher « 23 communautés » est démenti au premier clic |
+| Langues | fr et en à 100%, **de, es, pt-PT, ru, vi à 21%** | Sept drapeaux dont cinq mènent à une interface à moitié traduite |
+
+Aucune vitrine ne peut s'appuyer là-dessus. Ce qui est réel et solide, c'est le
+**logiciel** : v2.12, forum, chat, vocal avec SFU, 4525 clés d'interface, une PWA
+complète, des installeurs durcis. Peupler la démo est le préalable à tout le reste.
 
 ## 2. Le parcours cible
 
