@@ -604,7 +604,7 @@
 	})
 
 	// Effet 0 : inhiber le scroll de la fenêtre (body + html) tant que le DM
-	// est monté. Le +layout global a min-h-screen sur sa racine + un <main>
+	// est monté. Le +layout global a min-h-dvh sur sa racine + un <main>
 	// avec h-full overflow-y-auto, ce qui crée une deuxième scrollbar de
 	// fenêtre quand le DM rentre dans le viewport mais que le main pense
 	// avoir une hauteur géante. En bloquant le scroll fenêtre, seul le

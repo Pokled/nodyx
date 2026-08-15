@@ -1352,7 +1352,7 @@
 /* ── Root layout ─────────────────────────────────────────────────────────── */
 .settings-root {
     display: flex;
-    min-height: calc(100vh - 48px);
+    min-height: calc(100dvh - 48px);
     background: #06060a;
     color: #e2e8f0;
 }
@@ -1367,7 +1367,7 @@
     border-right: 1px solid rgba(255,255,255,0.05);
     position: sticky;
     top: 48px;
-    height: calc(100vh - 48px);
+    height: calc(100dvh - 48px);
     overflow-y: auto;
     scrollbar-width: thin;
 }

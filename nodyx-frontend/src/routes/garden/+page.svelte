@@ -290,7 +290,7 @@
 <style>
 /* ── Root ──────────────────────────────────────────────────────────────────── */
 .garden-root {
-	min-height: 100vh;
+	min-height: 100dvh;
 	background: #09090f;
 	display: flex;
 	flex-direction: column;

@@ -174,7 +174,7 @@
 	<title>{tFn('whisper.meta_title')}</title>
 </svelte:head>
 
-<div class="flex flex-col h-[calc(100vh-64px)] max-w-2xl mx-auto px-2 py-4">
+<div class="flex flex-col h-[calc(100dvh-64px)] max-w-2xl mx-auto px-2 py-4">
 
 	<!-- Header -->
 	<div class="flex items-center gap-3 mb-3 px-2">

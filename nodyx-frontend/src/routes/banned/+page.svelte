@@ -12,7 +12,7 @@
 	<title>{tFn('banned.title')}</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+<div class="min-h-dvh bg-gray-950 flex items-center justify-center px-4">
 	<div class="max-w-md w-full text-center">
 		<div class="w-20 h-20 rounded-full bg-red-900/30 border border-red-800/60 flex items-center justify-center mx-auto mb-6">
 			<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
