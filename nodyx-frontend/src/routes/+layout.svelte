@@ -2616,12 +2616,21 @@ a.nx-icon-btn[class*="active"],
   pointer-events: none;
 }
 
+/* Poignee de redimensionnement des panneaux.
+   MASQUEE sous lg : redimensionner n'a de sens que pour des COLONNES, or sous ce
+   point de rupture le panneau est un TIROIR. Elle y restait pourtant, invisible,
+   large de 6px et haute de tout l'ecran, a intercepter les touchers au bord.
+   L'audit du 15/08 la remontait comme la pire cible tactile du produit
+   (6 x 752px). Au doigt, elle est de toute facon inattrapable.
+   Elargie a 10px sur grand ecran : 6px se rate a la souris, et comme elle est
+   transparente, l'elargir ne change rien a l'apparence. */
 .panel .edge-handle,
 .members-c .edge-handle {
+  display: none;
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 6px;
+  width: 10px;
   cursor: ew-resize;
   z-index: 10;
   background: transparent;
@@ -2636,6 +2645,15 @@ a.nx-icon-btn[class*="active"],
 
 .members-c .edge-handle {
   left: 0;
+}
+
+/* La poignee ne sert que sur de vraies COLONNES. Cette reprise DOIT venir
+   apres la regle `display: none` ci-dessus : a specificite egale c'est
+   l'ordre qui tranche, et placee avant elle etait purement annulee (piege
+   deja rencontre le 15/08 sur le `top` du tiroir, dans cette meme feuille). */
+@media (min-width: 1024px) {
+  .panel .edge-handle,
+  .members-c .edge-handle { display: block; }
 }
 
 .panel .edge-handle:hover,
