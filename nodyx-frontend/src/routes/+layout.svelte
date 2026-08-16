@@ -443,6 +443,33 @@
 		gallerySidebarOpen = false
 	})
 
+	// ── Diagnostic : « écran flouté sans sidebar » ───────────────────────────
+	// Symptôme signalé le 2026-08-16, intermittent et jamais reproduit ici : au
+	// clic sur le burger, le voile apparaît mais le panneau non. Le voile est
+	// désormais monté sous la MÊME condition que le panneau, ce qui rend ce cas
+	// impossible par construction. Ce garde-fou reste pour le cas où le panneau
+	// serait présent mais invisible pour une AUTRE raison (transform figé,
+	// z-index, contexte d'empilement) : il rend alors l'état lisible en console
+	// au lieu de laisser l'utilisateur face à un écran flou muet.
+	$effect(() => {
+		if (!gallerySidebarOpen || typeof document === 'undefined') return
+		const t = setTimeout(() => {
+			const panneau = document.querySelector<HTMLElement>('.nodyx-sb .panel')
+			if (!panneau) { console.warn('[nodyx] drawer ouvert, panneau ABSENT du DOM'); return }
+			const r = panneau.getBoundingClientRect()
+			const st = getComputedStyle(panneau)
+			// Hors de l'écran, invisible ou derrière le voile : on le dit.
+			if (r.right <= 0 || r.left >= window.innerWidth || st.visibility === 'hidden' || st.display === 'none') {
+				console.warn('[nodyx] drawer ouvert mais panneau invisible', {
+					x: Math.round(r.x), largeur: Math.round(r.width),
+					transform: st.transform, display: st.display,
+					visibility: st.visibility, zIndex: st.zIndex,
+				})
+			}
+		}, 400)   // après la transition d'ouverture
+		return () => clearTimeout(t)
+	})
+
 	// Bloque le scroll du body quand le drawer est ouvert
 	$effect(() => {
 		if (!browser) return
@@ -1035,7 +1062,13 @@
 	     class:layout-dragging={isDraggingLeft || isDraggingRight}>
 
 		<!-- ── Backdrop Channel Sidebar — mobile ──────────────────────────────── -->
-		{#if !isBanned && gallerySidebarOpen}
+		<!-- Le voile est monte sous la MEME condition que le panneau, `showChannelSidebar`
+		     comprise. Avant, le voile ne dependait que de `gallerySidebarOpen` et le
+		     panneau aussi de `showChannelSidebar` : des que la seconde devenait fausse
+		     (routes /admin, /auth, /banned), on obtenait un ECRAN FLOUTE SANS SIDEBAR,
+		     exactement le symptome signale le 16/08. Les lier rend ce cas impossible,
+		     quelle que soit la sequence qui y menait. -->
+		{#if !isBanned && showChannelSidebar && gallerySidebarOpen}
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div class="lg:hidden fixed inset-0 bg-black/60 z-[54] backdrop-blur-xs"
 		     role="button" tabindex="-1" aria-label={tFn('common.close_menu')}
