@@ -121,6 +121,41 @@ test.describe('pages authentifiées', () => {
 		).toBe(0)
 	})
 
+	/**
+	 * Defaut du 16/08 : sur un salon VOCAL, le chat du salon s'ouvrait par defaut,
+	 * y compris sur telephone ou il mangeait la moitie de l'ecran. On vient
+	 * pourtant d'abord pour rejoindre la voix.
+	 *
+	 * Le test NETTOIE le choix stocke avant de mesurer : la session Playwright
+	 * embarque le localStorage, et un choix explicite de l'utilisateur doit etre
+	 * respecte. Sans ce nettoyage, on mesurerait une preference, pas le defaut.
+	 */
+	test('le chat d un salon vocal reste ferme par defaut sur telephone', async ({ page }, info) => {
+		test.skip(info.project.name.startsWith('tablette'), 'ce defaut ne concerne que le mobile')
+
+		await page.goto('/chat', { waitUntil: 'domcontentloaded' })
+		await page.evaluate(() => localStorage.removeItem('nodyx:voice:chat'))
+		await page.goto('/chat?channel=a3010bd6-cc2e-4ab5-9b6a-8a9046ffbbe5', {
+			waitUntil: 'domcontentloaded',
+		})
+		await page.waitForTimeout(2500)
+
+		const panneau = await page.evaluate(() => {
+			const entete = [...document.querySelectorAll('*')].find((e) =>
+				/chat du salon|room chat/i.test(e.textContent ?? '') && e.children.length < 4,
+			)
+			return entete ? Math.round(entete.getBoundingClientRect().width) : 0
+		})
+		expect(panneau, 'le chat du salon est ouvert par defaut sur telephone').toBe(0)
+
+		// Et le bouton qui l'ouvre doit etre attrapable au pouce.
+		const bouton = page.locator('button[aria-label*="chat" i]').first()
+		if (await bouton.count()) {
+			const b = await bouton.boundingBox()
+			expect(Math.round(b!.width), 'bouton d ouverture du chat trop etroit').toBeGreaterThanOrEqual(40)
+		}
+	})
+
 	/** Le burger doit rester attrapable au pouce : 44px est la recommandation. */
 	test('le burger est assez grand pour un pouce', async ({ page }, info) => {
 		test.skip(info.project.name.startsWith('tablette'), 'le burger est masqué dès lg')

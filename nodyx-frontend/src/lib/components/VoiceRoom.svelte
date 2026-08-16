@@ -44,10 +44,23 @@
 	// ── Chat du salon vocal ───────────────────────────────────────────────────
 	// Un canal VOCAL n'avait tout simplement pas de chat : la page n'affiche le
 	// fil de discussion que pour les canaux TEXTE (`{:else}` côté +page.svelte).
-	// On l'ajoute ici, à droite, OUVERT par défaut et repliable d'une flèche.
-	let showChatPanel = $state(
-		!browser || localStorage.getItem('nodyx:voice:chat') !== '0',
-	);
+	// On l'ajoute ici, à droite, repliable.
+	//
+	// OUVERT par défaut sur grand écran, FERMÉ sur mobile : sur un téléphone il
+	// mangeait la moitié de la page d'un salon VOCAL, où l'on vient d'abord pour
+	// rejoindre la voix. Un choix explicite de l'utilisateur, lui, est toujours
+	// respecté, quelle que soit la taille d'écran.
+	//
+	// Rendu SSR à `false` puis corrigé au montage : partir fermé évite qu'un
+	// téléphone affiche brièvement un panneau qui va disparaître.
+	let showChatPanel = $state(false);
+	$effect(() => {
+		if (!browser) return;
+		const choix = localStorage.getItem('nodyx:voice:chat');
+		showChatPanel = choix !== null
+			? choix === '1'
+			: window.matchMedia('(min-width: 1024px)').matches;
+	});
 	$effect(() => {
 		if (browser) {
 			localStorage.setItem('nodyx:voice:chat', showChatPanel ? '1' : '0');
@@ -453,13 +466,16 @@
 {:else}
 	<button
 		onclick={() => (showChatPanel = true)}
-		class="flex w-8 shrink-0 items-center justify-center transition-colors hover:bg-white/5"
+		class="flex w-11 shrink-0 items-center justify-center transition-colors hover:bg-white/5 lg:w-8"
 		style="background: rgba(6,6,12,0.75); border-left: 1px solid rgba(255,255,255,0.05); color: rgb(148,163,184)"
 		title={tFn('voice_room.show_chat')}
 		aria-label={tFn('voice_room.show_chat')}
 	>
-		<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+		<!-- Une bulle de discussion, pas un chevron : le chevron ne disait pas ce
+		     qu'il ouvrait. Meme icone que l'entree « Chat » de la barre du bas,
+		     pour qu'on la reconnaisse. -->
+		<svg class="h-5 w-5 lg:h-4 lg:w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
 		</svg>
 	</button>
 {/if}
