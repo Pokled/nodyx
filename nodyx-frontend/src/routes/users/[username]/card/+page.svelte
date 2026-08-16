@@ -132,7 +132,15 @@
 
 <svelte:head>
 	<title>{tFn('user_card.meta_title', { name: displayName })}</title>
-	<meta name="description" content="Profil de {displayName} sur Nodyx, Niveau {level}, {Number(profile.post_count??0).toLocaleString('fr-FR')} posts, {Number(pts).toLocaleString('fr-FR')} XP" />
+	<!-- Meta-description lue par les moteurs : elle etait codee en dur en
+	     francais, y compris son `toLocaleString('fr-FR')` qui formatait les
+	     nombres a la francaise pour un visiteur anglophone. -->
+	<meta name="description" content={tFn('ucard.meta_description', {
+		name:  displayName,
+		level: String(level),
+		posts: Number(profile.post_count ?? 0).toLocaleString(),
+		xp:    Number(pts).toLocaleString(),
+	})} />
 
 	<!-- Prevent indexing (cards are supplements, not canonical) -->
 	<meta name="robots" content="noindex, follow" />

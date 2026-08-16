@@ -42,7 +42,7 @@
 </script>
 
 <svelte:head>
-	<title>Calendrier · {data.communityName ?? 'Nodyx'}</title>
+	<title>{tFn('calendar.page_title')} · {data.communityName ?? 'Nodyx'}</title>
 </svelte:head>
 
 <div class="cal-root">

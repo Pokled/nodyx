@@ -4534,5 +4534,7 @@
   "nav.bar_dm": "DMs",
   "nav.bar_library": "Library",
   "nav.bar_directory": "Explore",
-  "nav.bar_profile": "Profile"
+  "nav.bar_profile": "Profile",
+  "calendar.page_title": "Calendar",
+  "ucard.meta_description": "Profile of {{name}} on Nodyx, level {{level}}, {{posts}} posts, {{xp}} XP"
 }

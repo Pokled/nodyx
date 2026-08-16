@@ -4534,5 +4534,7 @@
   "nav.bar_dm": "MP",
   "nav.bar_library": "Biblio",
   "nav.bar_directory": "Réseau",
-  "nav.bar_profile": "Profil"
+  "nav.bar_profile": "Profil",
+  "calendar.page_title": "Calendrier",
+  "ucard.meta_description": "Profil de {{name}} sur Nodyx, niveau {{level}}, {{posts}} messages, {{xp}} XP"
 }
