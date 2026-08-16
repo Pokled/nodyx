@@ -113,7 +113,12 @@
 <div class="h-full flex">
 
 	<!-- ── Sidebar gauche ─────────────────────────────────────────────────── -->
-	<div class="w-72 shrink-0 flex flex-col border-r border-white/[0.06] bg-gray-950/60">
+	<!-- Pleine largeur sous `md`, largeur fixe au-delà. Avant le 2026-08-15 elle
+	     était figée à `w-72 shrink-0` à TOUTES les largeurs : sur un écran de
+	     502px, les 288px de la liste ne laissaient que 214px au panneau de
+	     droite, dont le contenu est prévu en `max-w-sm` (384px). Il était donc
+	     rogné, et la page n'avait aucun point de rupture responsive. -->
+	<div class="w-full md:w-72 shrink-0 flex flex-col md:border-r border-white/[0.06] bg-gray-950/60">
 
 		<!-- Header -->
 		<div class="px-4 pt-5 pb-3">
@@ -271,7 +276,12 @@
 	</div>
 
 	<!-- ── Zone vide / Sélection ───────────────────────────────────────────── -->
-	<div class="flex-1 flex flex-col items-center justify-center bg-gray-950/20">
+	<!-- Masquée sous `md` : sur mobile la liste occupe tout l'écran, et une
+	     conversation s'ouvre sur sa propre page. Aucun état à gérer pour ça, les
+	     entrées de la liste sont déjà de vrais liens vers `/dm/[id]`. Inviter à
+	     « choisir une conversation » à côté de la liste qu'on est en train de
+	     lire n'apportait rien, et coûtait la moitié de l'écran. -->
+	<div class="hidden md:flex flex-1 flex-col items-center justify-center bg-gray-950/20">
 		<div class="flex flex-col items-center gap-4 text-center px-8 max-w-sm">
 			<!-- Illustration -->
 			<div class="relative">

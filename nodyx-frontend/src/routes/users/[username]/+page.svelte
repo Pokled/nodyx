@@ -542,7 +542,15 @@
      MAIN — 2-column layout
      ═══════════════════════════════════════════════════════════════ -->
 <div class="max-w-[1600px] mx-auto px-6 pb-16">
-	<div class="flex flex-col sm:flex-row gap-5 items-start">
+	<!-- `items-stretch` sur mobile, `items-start` seulement à partir de `sm`.
+	     Piège corrigé le 2026-08-15 : en `flex-col`, l'axe TRANSVERSAL est
+	     horizontal, et `items-start` demande aux enfants de ne PAS s'étirer. Le
+	     `<main>` prenait donc la largeur de son contenu, 1358px dans un
+	     conteneur de 374px, et tout le profil était rogné. Son `min-w-0` n'y
+	     changeait rien, et `flex-1` ne gouverne que l'axe principal, ici la
+	     hauteur. En `sm:flex-row`, `items-start` retrouve son sens : aligner les
+	     deux colonnes en haut. -->
+	<div class="flex flex-col sm:flex-row gap-5 items-stretch sm:items-start">
 
 		<!-- ─── LEFT SIDEBAR ─────────────────────────────────────────── -->
 		<aside class="w-full sm:w-64 sm:shrink-0 space-y-3">

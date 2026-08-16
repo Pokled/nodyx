@@ -153,16 +153,54 @@
 	// On ne recharge pas brutalement : on attend la PROCHAINE navigation de l'user
 	// pour faire un full reload vers sa destination -> il récupère la version fraîche
 	// sans jamais avoir à hard-refresh. Plus de "5-6 refresh après une mise à jour".
+	// ── Pourquoi un rechargement IMMÉDIAT et non plus « à la prochaine
+	//    navigation » (corrigé le 2026-08-15) ────────────────────────────────
+	// Le service worker fait `skipWaiting()` + `clients.claim()` : le NOUVEAU
+	// service worker prend donc le contrôle d'une page qui exécute encore
+	// l'ANCIEN JavaScript. Il lui sert alors les chunks de la nouvelle version,
+	// dont les noms hachés ne correspondent plus à ce que ce code attend :
+	// l'hydratation Svelte casse et plus AUCUN clic ne répond. La page a l'air
+	// normale, elle est morte.
+	//
+	// Attendre une navigation ne suffit pas : cliquer sur le menu burger n'en
+	// est pas une, et l'utilisateur reste bloqué indéfiniment. Symptôme constaté
+	// sur téléphone, y compris en « mode ordinateur », alors que tout
+	// fonctionnait en navigation privée, c'est-à-dire sans service worker.
+	//
+	// On recharge donc dès la prise de contrôle. Un rechargement automatique
+	// juste après un déploiement est infiniment préférable à une application
+	// figée.
 	let swUpdateReady = false;
+	let swReloading   = false;
 	onMount(() => {
 		if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
-		const markReady = () => { swUpdateReady = true; };
-		const onMessage = (e: MessageEvent) => { if ((e.data as any)?.type === 'sw:updated') markReady(); };
+
+		/** L'utilisateur est-il en train d'écrire ? On ne lui vole pas son texte. */
+		function enTrainDEcrire(): boolean {
+			const el = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+			if (!el) return false;
+			const editable = el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable;
+			return editable && !!(el.value?.trim() || el.textContent?.trim());
+		}
+
+		function rechargerPourNouvelleVersion() {
+			// Garde-fou : `controllerchange` peut se déclencher plus d'une fois,
+			// et un rechargement en boucle serait pire que le bug d'origine.
+			if (swReloading) return;
+			swUpdateReady = true;
+			if (enTrainDEcrire()) return;   // le beforeNavigate ci-dessous prendra le relais
+			swReloading = true;
+			window.location.reload();
+		}
+
+		const onMessage = (e: MessageEvent) => {
+			if ((e.data as any)?.type === 'sw:updated') rechargerPourNouvelleVersion();
+		};
 		navigator.serviceWorker.addEventListener('message', onMessage);
-		navigator.serviceWorker.addEventListener('controllerchange', markReady);
+		navigator.serviceWorker.addEventListener('controllerchange', rechargerPourNouvelleVersion);
 		return () => {
 			navigator.serviceWorker.removeEventListener('message', onMessage);
-			navigator.serviceWorker.removeEventListener('controllerchange', markReady);
+			navigator.serviceWorker.removeEventListener('controllerchange', rechargerPourNouvelleVersion);
 		};
 	});
 	beforeNavigate((nav) => {
@@ -746,7 +784,7 @@
 	{@render children()}
 {:else}
 {#if hasMatrix}<MatrixRain />{/if}
-<div class="min-h-screen flex flex-col" style="{appVars}; background: {hasMatrix ? 'transparent' : 'var(--p-bg)'}; color: var(--p-text)">
+<div class="min-h-dvh flex flex-col" style="{appVars}; background: {hasMatrix ? 'transparent' : 'var(--p-bg)'}; color: var(--p-text)">
 
 	<!-- Listener Streamer Hub : joue les sons de notif pour les admins/owners. -->
 	{#if data.user?.role}
@@ -763,16 +801,16 @@
 		<!-- Mobile hamburger : ne s'affiche que si le panneau qu'il ouvre existe -->
 		{#if !isBanned && showChannelSidebar}
 		<button
-			class="lg:hidden shrink-0 p-1.5 flex items-center justify-center transition-colors"
+			class="lg:hidden shrink-0 p-2.5 -m-1 flex items-center justify-center transition-colors"
 			style="color: {gallerySidebarOpen ? '#fff' : '#6b7280'}"
 			onclick={() => gallerySidebarOpen = !gallerySidebarOpen}
 			aria-label={tFn('nav.community_menu')} aria-expanded={gallerySidebarOpen} aria-controls="galaxy-sidebar">
 			{#if gallerySidebarOpen}
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 				</svg>
 			{:else}
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
 				</svg>
 			{/if}
@@ -1309,7 +1347,7 @@
 		     moindre debordement (ex: banniere full-bleed -mx-6 du profil, +24px)
 		     faisait apparaitre une scrollbar horizontale + du contenu glissant
 		     sous les sidebars. On clippe l'horizontal, plus jamais de scrollbar. -->
-		<main class="app-shell-main {langView ? 'h-[calc(100vh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
+		<main class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
 		      class:members-collapsed={membersCollapsed}>
 
@@ -1649,8 +1687,15 @@
 
 	<!-- ══ BOTTOM NAV mobile (lg:hidden) — hidden for banned users ═════════ -->
 	{#if !isBanned}
+	<!-- Fond OPAQUE, et surtout pas `--p-card-bg`. Celui-ci est un fond de CARTE :
+	     six thèmes sur sept sont translucides par construction, dont un à 5%
+	     d'opacité. Une carte translucide posée sur un fond de page est voulue,
+	     une barre FIXE avec du contenu qui défile dessous devient du verre. Le
+	     2026-08-15, on lisait « Dernier message » et « Pokled » au travers, par
+	     dessus les icônes. `--p-bg` est opaque sur les sept thèmes.
+	     Gardé par tests/responsive/bottom-nav.spec.ts. -->
 	<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-45 border-t border-gray-800 flex items-stretch"
-	     style="background: var(--p-card-bg); border-color: var(--p-card-border); padding-bottom: env(safe-area-inset-bottom, 0px)">
+	     style="background: var(--p-bg); border-color: var(--p-card-border); padding-bottom: env(safe-area-inset-bottom, 0px)">
 
 		<!-- Fil d'actu (si connecté) -->
 		{#if user}
@@ -1658,7 +1703,7 @@
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18M3 6h18M3 18h12"/>
 			</svg>
-			<span class="text-[10px] font-medium">Actu</span>
+			<span class="text-xs font-medium">Actu</span>
 		</a>
 		{/if}
 
@@ -1668,7 +1713,7 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
 				<polyline stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/>
 			</svg>
-			<span class="text-[10px] font-medium">Forum</span>
+			<span class="text-xs font-medium">Forum</span>
 		</a>
 
 		<!-- Chat (si connecté) -->
@@ -1682,7 +1727,7 @@
 					{unreadCount > 9 ? '9+' : unreadCount}
 				</span>
 			{/if}
-			<span class="text-[10px] font-medium">Chat</span>
+			<span class="text-xs font-medium">Chat</span>
 		</a>
 		{/if}
 
@@ -1697,7 +1742,7 @@
 					{dmUnread > 9 ? '9+' : dmUnread}
 				</span>
 			{/if}
-			<span class="text-[10px] font-medium">DMs</span>
+			<span class="text-xs font-medium">DMs</span>
 		</a>
 		{/if}
 
@@ -1707,7 +1752,7 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
 				<path stroke-linecap="round" stroke-linejoin="round" d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
 			</svg>
-			<span class="text-[10px] font-medium">Biblio</span>
+			<span class="text-xs font-medium">Biblio</span>
 		</a>
 
 		<!-- Annuaire -->
@@ -1717,7 +1762,7 @@
 				<line x1="2" y1="12" x2="22" y2="12"/>
 				<path stroke-linecap="round" stroke-linejoin="round" d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
 			</svg>
-			<span class="text-[10px] font-medium">Annuaire</span>
+			<span class="text-xs font-medium">Annuaire</span>
 		</a>
 
 		<!-- Profil / Connexion -->
@@ -1731,7 +1776,7 @@
 					{user.username.charAt(0).toUpperCase()}
 				</div>
 			{/if}
-			<span class="text-[10px] font-medium">Profil</span>
+			<span class="text-xs font-medium">Profil</span>
 		</a>
 		{:else}
 		<a href="/auth/login" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 text-gray-500">
@@ -1740,7 +1785,7 @@
 				<polyline stroke-linecap="round" stroke-linejoin="round" points="10 17 15 12 10 7"/>
 				<line x1="15" y1="12" x2="3" y2="12"/>
 			</svg>
-			<span class="text-[10px] font-medium">{tFn("common.login")}</span>
+			<span class="text-xs font-medium">{tFn("common.login")}</span>
 		</a>
 		{/if}
 	</nav>
@@ -1921,8 +1966,12 @@
 }
 
 /* ── Sketch 001: Discord two-tier sidebar — exact sketch CSS, scoped ────── */
+/* Sur mobile le rail et le panneau forment un TIROIR qui recouvre la page.
+   Les 48px reserves a la barre du haut y sont une bande morte : le tiroir a
+   sa propre croix de fermeture, il n'a pas besoin de laisser voir la barre.
+   Au-dessus de lg ils redeviennent des colonnes, sous la barre. */
 .nodyx-sb .rail {
-  position: fixed; top: 48px; bottom: 0; left: 0; width: 56px;
+  position: fixed; top: 0; bottom: 0; left: 0; width: 56px;
   background: #000; border-right: 1px solid #111;
   display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 4px; z-index: 40;
 }
@@ -1948,11 +1997,21 @@
 .nodyx-sb .rail .icon.docs:hover { background: #111; color: #818cf8; border-radius: 8px; }
 
 .nodyx-sb .panel {
-  position: fixed; top: 48px; bottom: 0; left: 56px;
+  position: fixed; top: 0; bottom: 0; left: 56px;
   width: var(--left-panel-width, 220px);
   background: #0a0a0a; border-right: 1px solid #111;
   z-index: 39; display: flex; flex-direction: column;
   transform: translateX(0); transition: transform .25s cubic-bezier(.4,0,.2,1), width .25s cubic-bezier(.4,0,.2,1);
+}
+
+/* Au-dessus de lg le rail et le panneau ne sont plus un tiroir mais deux
+   colonnes permanentes : ils reprennent leur place SOUS la barre du haut,
+   qui doit rester visible et cliquable. Cette regle DOIT venir apres les
+   deux definitions ci-dessus : a specificite egale, c'est l'ordre qui
+   tranche, et placee avant elle etait purement et simplement annulee. */
+@media (min-width: 1024px) {
+  .nodyx-sb .rail,
+  .nodyx-sb .panel { top: 48px; }
 }
 .nodyx-sb .panel.collapsed { transform: translateX(-100%); }
 .nodyx-sb .panel.dragging {

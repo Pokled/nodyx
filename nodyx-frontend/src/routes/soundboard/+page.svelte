@@ -246,7 +246,7 @@
 	<meta name="description" content={tFn('soundboard.meta_desc')}/>
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100">
+<div class="min-h-dvh bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100">
 	<div class="max-w-5xl mx-auto px-4 py-8 space-y-8">
 
 		<!-- Toast feedback ajout queue -->
