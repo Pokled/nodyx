@@ -4527,5 +4527,12 @@
   "chat.cmd_help_roll": "lance des dés",
   "chat.cmd_help_flip": "pile ou face",
   "chat.cmd_help_8ball": "pose une question",
-  "chat.cmd_help_rps": "pierre feuille ciseaux"
+  "chat.cmd_help_rps": "pierre feuille ciseaux",
+  "nav.bar_feed": "Actu",
+  "nav.bar_forum": "Forum",
+  "nav.bar_chat": "Chat",
+  "nav.bar_dm": "MP",
+  "nav.bar_library": "Biblio",
+  "nav.bar_directory": "Réseau",
+  "nav.bar_profile": "Profil"
 }

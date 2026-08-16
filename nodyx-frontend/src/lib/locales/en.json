@@ -4527,5 +4527,12 @@
   "chat.cmd_help_roll": "roll dice",
   "chat.cmd_help_flip": "flip a coin",
   "chat.cmd_help_8ball": "ask a question",
-  "chat.cmd_help_rps": "rock paper scissors"
+  "chat.cmd_help_rps": "rock paper scissors",
+  "nav.bar_feed": "Feed",
+  "nav.bar_forum": "Forum",
+  "nav.bar_chat": "Chat",
+  "nav.bar_dm": "DMs",
+  "nav.bar_library": "Library",
+  "nav.bar_directory": "Explore",
+  "nav.bar_profile": "Profile"
 }

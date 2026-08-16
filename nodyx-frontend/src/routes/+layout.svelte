@@ -1703,7 +1703,7 @@
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18M3 6h18M3 18h12"/>
 			</svg>
-			<span class="text-xs font-medium">Actu</span>
+			<span class="text-xs font-medium">{tFn('nav.bar_feed')}</span>
 		</a>
 		{/if}
 
@@ -1713,7 +1713,7 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
 				<polyline stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/>
 			</svg>
-			<span class="text-xs font-medium">Forum</span>
+			<span class="text-xs font-medium">{tFn('nav.bar_forum')}</span>
 		</a>
 
 		<!-- Chat (si connecté) -->
@@ -1727,7 +1727,7 @@
 					{unreadCount > 9 ? '9+' : unreadCount}
 				</span>
 			{/if}
-			<span class="text-xs font-medium">Chat</span>
+			<span class="text-xs font-medium">{tFn('nav.bar_chat')}</span>
 		</a>
 		{/if}
 
@@ -1742,7 +1742,7 @@
 					{dmUnread > 9 ? '9+' : dmUnread}
 				</span>
 			{/if}
-			<span class="text-xs font-medium">DMs</span>
+			<span class="text-xs font-medium">{tFn('nav.bar_dm')}</span>
 		</a>
 		{/if}
 
@@ -1752,7 +1752,7 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
 				<path stroke-linecap="round" stroke-linejoin="round" d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
 			</svg>
-			<span class="text-xs font-medium">Biblio</span>
+			<span class="text-xs font-medium">{tFn('nav.bar_library')}</span>
 		</a>
 
 		<!-- Annuaire -->
@@ -1762,7 +1762,7 @@
 				<line x1="2" y1="12" x2="22" y2="12"/>
 				<path stroke-linecap="round" stroke-linejoin="round" d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
 			</svg>
-			<span class="text-xs font-medium">Annuaire</span>
+			<span class="text-xs font-medium">{tFn('nav.bar_directory')}</span>
 		</a>
 
 		<!-- Profil / Connexion -->
@@ -1776,7 +1776,7 @@
 					{user.username.charAt(0).toUpperCase()}
 				</div>
 			{/if}
-			<span class="text-xs font-medium">Profil</span>
+			<span class="text-xs font-medium">{tFn('nav.bar_profile')}</span>
 		</a>
 		{:else}
 		<a href="/auth/login" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 text-gray-500">
