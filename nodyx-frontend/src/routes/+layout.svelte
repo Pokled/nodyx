@@ -454,8 +454,9 @@
 	$effect(() => {
 		if (!gallerySidebarOpen || typeof document === 'undefined') return
 		const t = setTimeout(() => {
-			const panneau = document.querySelector<HTMLElement>('.nodyx-sb .panel')
-			if (!panneau) { console.warn('[nodyx] drawer ouvert, panneau ABSENT du DOM'); return }
+			const tous = [...document.querySelectorAll<HTMLElement>('.nodyx-sb .panel')]
+			if (tous.length === 0) { console.warn('[nodyx] drawer ouvert, panneau ABSENT du DOM'); return }
+			const panneau = tous[tous.length - 1]
 			const r = panneau.getBoundingClientRect()
 			const st = getComputedStyle(panneau)
 			// Hors de l'écran, invisible ou derrière le voile : on le dit.
@@ -464,6 +465,15 @@
 					x: Math.round(r.x), largeur: Math.round(r.width),
 					transform: st.transform, display: st.display,
 					visibility: st.visibility, zIndex: st.zIndex,
+					// Les trois informations qui manquaient pour trancher :
+					// la classe est-elle encore la ? l'etat Svelte dit-il ouvert ?
+					// et la media query mobile s'applique-t-elle vraiment ?
+					nbPanneaux: tous.length,
+					classe: panneau.className,
+					etatSvelte: gallerySidebarOpen,
+					largeurEcran: window.innerWidth,
+					mobileActif: window.matchMedia('(max-width: 1023px)').matches,
+					styleInline: panneau.getAttribute('style'),
 				})
 			}
 		}, 400)   // après la transition d'ouverture
@@ -830,7 +840,17 @@
 		<button
 			class="lg:hidden shrink-0 p-2.5 -m-1 flex items-center justify-center transition-colors"
 			style="color: {gallerySidebarOpen ? '#fff' : '#6b7280'}"
-			onclick={() => gallerySidebarOpen = !gallerySidebarOpen}
+			onclick={() => {
+				gallerySidebarOpen = !gallerySidebarOpen;
+				// Ouvrir le tiroir doit AUSSI le deplier. `panelCollapsed` est un
+				// etat de BUREAU (replier le panneau sur le rail), mais la regle
+				// `.panel.collapsed` pose son propre `translateX(-100%)`, qui
+				// survit sur mobile. Or la croix du panneau pose
+				// `panelCollapsed = true` en fermant : au clic suivant sur le
+				// burger, le voile revenait SANS le panneau, reste hors ecran.
+				// Bug du 16/08, reproduit puis corrige.
+				if (gallerySidebarOpen) panelCollapsed = false;
+			}}
 			aria-label={tFn('nav.community_menu')} aria-expanded={gallerySidebarOpen} aria-controls="galaxy-sidebar">
 			{#if gallerySidebarOpen}
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

@@ -80,6 +80,47 @@ test.describe('pages authentifiées', () => {
 		).toBeGreaterThan(avant)
 	})
 
+	/**
+	 * Defaut du 16/08 : ouvrir le tiroir, le fermer par la CROIX du panneau, puis
+	 * le rouvrir au burger donnait un ecran floute SANS sidebar.
+	 *
+	 * La croix pose `panelCollapsed = true` en fermant, et la regle
+	 * `.panel.collapsed` porte son propre `translateX(-100%)`. Rouvrir remettait
+	 * donc `gallerySidebarOpen` a vrai (le voile revenait) pendant que le panneau
+	 * restait hors ecran. Le symptome semblait aleatoire : il dependait en fait
+	 * de la FACON dont on avait ferme la fois precedente.
+	 */
+	test('rouvrir apres une fermeture par la croix montre bien le panneau', async ({ page }, info) => {
+		test.skip(info.project.name.startsWith('tablette'), 'le tiroir n existe pas des lg')
+
+		await page.goto('/forum', { waitUntil: 'domcontentloaded' })
+		await page.waitForTimeout(1800)
+
+		const burger = page.locator('[aria-controls="galaxy-sidebar"]')
+		const posX = () =>
+			page.evaluate(() => {
+				const t = [...document.querySelectorAll('.nodyx-sb .panel')]
+				const el = t[t.length - 1]
+				return el ? Math.round(el.getBoundingClientRect().x) : NaN
+			})
+
+		await burger.click()
+		await page.waitForTimeout(700)
+		expect(await posX(), 'le panneau ne s ouvre pas la premiere fois').toBe(0)
+
+		const croix = page.locator('.nodyx-sb .panel .close').last()
+		test.skip((await croix.count()) === 0, 'croix de fermeture introuvable')
+		await croix.click()
+		await page.waitForTimeout(700)
+
+		await burger.click()
+		await page.waitForTimeout(900)
+		expect(
+			await posX(),
+			'panneau hors ecran apres une fermeture par la croix : `panelCollapsed` n a pas ete remis a zero',
+		).toBe(0)
+	})
+
 	/** Le burger doit rester attrapable au pouce : 44px est la recommandation. */
 	test('le burger est assez grand pour un pouce', async ({ page }, info) => {
 		test.skip(info.project.name.startsWith('tablette'), 'le burger est masqué dès lg')
