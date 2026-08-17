@@ -56,8 +56,8 @@
 	{#if tags.length === 0}
 		<p class="text-sm text-gray-500">{tFn('atags.empty')}</p>
 	{:else}
-		<div class="rounded-xl border border-gray-800 overflow-hidden">
-			<table class="w-full text-sm">
+		<div class="rounded-xl border border-gray-800 overflow-x-auto">
+			<table class="w-full text-sm min-w-[480px]">
 				<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left">{tFn('atags.col_tag')}</th>

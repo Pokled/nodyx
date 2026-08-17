@@ -20,7 +20,7 @@
 {#if data.logs.length === 0}
 	<div class="og-empty">{tFn('octoguard.logs_empty')}</div>
 {:else}
-	<table class="og-table">
+	<table class="og-table min-w-[620px]">
 		<thead>
 			<tr>
 				<th>{tFn('octoguard.col_date')}</th><th>{tFn('octoguard.col_actor')}</th><th>{tFn('octoguard.col_action')}</th><th>{tFn('octoguard.col_target')}</th><th>{tFn('octoguard.col_details')}</th><th></th>

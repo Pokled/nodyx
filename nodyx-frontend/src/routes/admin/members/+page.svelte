@@ -110,8 +110,8 @@
 		/>
 	</div>
 
-	<div class="rounded-xl border border-gray-800 overflow-hidden">
-		<table class="w-full text-sm">
+	<div class="rounded-xl border border-gray-800 overflow-x-auto">
+		<table class="w-full text-sm min-w-[720px]">
 			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 				<tr>
 					<th class="px-4 py-3 text-left">{tFn('amem.col_member')}</th>
@@ -261,8 +261,8 @@
 		<div class="mt-10">
 			<h2 class="text-base font-semibold text-white mb-1">{tFn('amem.banned_members')} <span class="text-gray-600 font-normal text-sm">({bans.length})</span></h2>
 			<p class="text-xs text-gray-600 mb-4">{tFn('amem.banned_hint')}</p>
-			<div class="rounded-xl border border-red-900/40 overflow-hidden">
-				<table class="w-full text-sm">
+			<div class="rounded-xl border border-red-900/40 overflow-x-auto">
+				<table class="w-full text-sm min-w-[620px]">
 					<thead class="bg-red-950/30 border-b border-red-900/40 text-xs text-red-400/70 uppercase tracking-wider">
 						<tr>
 							<th class="px-4 py-3 text-left">{tFn('amem.col_member')}</th>
@@ -343,8 +343,8 @@
 		<div class="mt-8">
 			<h2 class="text-base font-semibold text-white mb-1">{tFn('amem.banned_ips')} <span class="text-gray-600 font-normal text-sm">({ipBans.length})</span></h2>
 			<p class="text-xs text-gray-600 mb-4">{tFn('amem.banned_ips_hint')}</p>
-			<div class="rounded-xl border border-orange-900/40 overflow-hidden">
-				<table class="w-full text-sm">
+			<div class="rounded-xl border border-orange-900/40 overflow-x-auto">
+				<table class="w-full text-sm min-w-[620px]">
 					<thead class="bg-orange-950/20 border-b border-orange-900/40 text-xs text-orange-400/70 uppercase tracking-wider">
 						<tr>
 							<th class="px-4 py-3 text-left">{tFn('amem.col_ip')}</th>
@@ -417,8 +417,8 @@
 		<div class="mt-8">
 			<h2 class="text-base font-semibold text-white mb-1">{tFn('amem.banned_emails')} <span class="text-gray-600 font-normal text-sm">({emailBans.length})</span></h2>
 			<p class="text-xs text-gray-600 mb-4">{tFn('amem.banned_emails_hint')}</p>
-			<div class="rounded-xl border border-yellow-900/40 overflow-hidden">
-				<table class="w-full text-sm">
+			<div class="rounded-xl border border-yellow-900/40 overflow-x-auto">
+				<table class="w-full text-sm min-w-[620px]">
 					<thead class="bg-yellow-950/20 border-b border-yellow-900/40 text-xs text-yellow-400/70 uppercase tracking-wider">
 						<tr>
 							<th class="px-4 py-3 text-left">{tFn('amem.col_email_domain')}</th>

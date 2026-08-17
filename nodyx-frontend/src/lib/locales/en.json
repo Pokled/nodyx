@@ -2669,6 +2669,8 @@
   "widg.kb": "{{n}} KB",
   "widg.tab_preview": "Preview",
   "anav.sec_community": "Community",
+  "anav.open_menu": "Open the menu",
+  "anav.close_menu": "Close the menu",
   "anav.sec_communication": "Communication",
   "anav.sec_content": "Content",
   "anav.sec_platform": "Platform",

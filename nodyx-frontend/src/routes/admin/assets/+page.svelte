@@ -35,8 +35,8 @@
 	{#if data.assets.length === 0}
 		<p class="text-gray-500 text-sm">{tFn('aast.empty')}</p>
 	{:else}
-		<div class="rounded-xl border border-gray-800 overflow-hidden">
-			<table class="w-full text-sm">
+		<div class="rounded-xl border border-gray-800 overflow-x-auto">
+			<table class="w-full text-sm min-w-[720px]">
 				<thead class="bg-gray-900 text-gray-400 text-xs uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left w-12"></th>

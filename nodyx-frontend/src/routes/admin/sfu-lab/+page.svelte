@@ -229,7 +229,7 @@
       <p class="text-sm text-zinc-600">{tFn('asfu.no_transport')}</p>
     {:else}
       <div class="overflow-x-auto">
-        <table class="w-full text-xs font-mono">
+        <table class="w-full text-xs font-mono min-w-[720px]">
           <thead class="text-zinc-500">
             <tr class="text-left">
               <th class="py-1 pr-3 font-semibold">{tFn('asfu.col_participant')}</th>

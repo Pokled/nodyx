@@ -131,13 +131,13 @@
 	</div>
 
 	<!-- ── Existing announcements ───────────────────────────────────────────── -->
-	<div class="rounded-xl border border-gray-800 overflow-hidden">
+	<div class="rounded-xl border border-gray-800 overflow-x-auto">
 		{#if data.announcements.length === 0}
 			<div class="px-6 py-10 text-center text-sm text-gray-600">
 				{tFn('aann.empty')}
 			</div>
 		{:else}
-			<table class="w-full text-sm">
+			<table class="w-full text-sm min-w-[620px]">
 				<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left">{tFn('aann.message')}</th>

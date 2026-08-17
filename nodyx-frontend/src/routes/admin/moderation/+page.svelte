@@ -48,8 +48,8 @@
 		</form>
 	</div>
 
-	<div class="rounded-xl border border-gray-800 overflow-hidden">
-		<table class="w-full text-sm">
+	<div class="rounded-xl border border-gray-800 overflow-x-auto">
+		<table class="w-full text-sm min-w-[620px]">
 			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 				<tr>
 					<th class="px-4 py-3 text-left">{tFn('amod.col_thread')}</th>

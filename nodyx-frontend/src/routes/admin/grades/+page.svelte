@@ -80,8 +80,8 @@
 	{#if data.grades.length === 0}
 		<p class="text-sm text-gray-500">{tFn('agrade.empty')}</p>
 	{:else}
-		<div class="rounded-xl border border-gray-800 overflow-hidden mb-10">
-			<table class="w-full text-sm">
+		<div class="rounded-xl border border-gray-800 overflow-x-auto mb-10">
+			<table class="w-full text-sm min-w-[480px]">
 				<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left">{tFn('agrade.col_grade')}</th>
@@ -154,8 +154,8 @@
 
 	<!-- Assign grades to members -->
 	<h2 class="text-lg font-bold text-white mb-4">{tFn('agrade.assign_title')}</h2>
-	<div class="rounded-xl border border-gray-800 overflow-hidden">
-		<table class="w-full text-sm">
+	<div class="rounded-xl border border-gray-800 overflow-x-auto">
+		<table class="w-full text-sm min-w-[480px]">
 			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 				<tr>
 					<th class="px-4 py-3 text-left">{tFn('agrade.col_member')}</th>

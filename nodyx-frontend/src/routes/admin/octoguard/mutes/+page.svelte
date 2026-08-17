@@ -39,7 +39,7 @@
 {#if data.mutes.length === 0}
 	<div class="og-empty">{tFn('octoguard.mutes_empty')}</div>
 {:else}
-	<table class="og-table">
+	<table class="og-table min-w-[620px]">
 		<thead>
 			<tr><th>{tFn('octoguard.col_user')}</th><th>{tFn('octoguard.col_channel')}</th><th>{tFn('octoguard.col_reason')}</th><th>{tFn('octoguard.col_expires')}</th><th></th></tr>
 		</thead>

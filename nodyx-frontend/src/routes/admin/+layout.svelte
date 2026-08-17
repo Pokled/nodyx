@@ -75,12 +75,37 @@
 		exact
 			? $page.url.pathname === href
 			: $page.url.pathname.startsWith(href)
+
+	// TIROIR MOBILE. Mesure du 17/08 a 390px : la barre laterale `w-56` (224px)
+	// restait affichee, il ne restait donc que 166px pour le contenu. Le titre de
+	// page etait coupe, et les tableaux amputes (5920 elements hors ecran sur la
+	// page Membres, sans aucun defilement possible).
+	let menuOuvert = $state(false)
+
+	// Fermer a chaque navigation, sinon le tiroir masque la page qu'on vient
+	// d'ouvrir depuis le tiroir lui-meme.
+	$effect(() => {
+		void $page.url.pathname
+		menuOuvert = false
+	})
 </script>
 
 <div class="flex flex-1 min-h-0">
 
+	<!-- Voile, sous `lg` uniquement : le tiroir se ferme au clic a cote. -->
+	{#if menuOuvert}
+		<div class="lg:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
+		     role="button" tabindex="-1"
+		     onclick={() => (menuOuvert = false)}
+		     onkeydown={(e) => e.key === 'Escape' && (menuOuvert = false)}
+		     aria-label={tFn('anav.close_menu')}></div>
+	{/if}
+
 	<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
-	<aside class="w-56 shrink-0 border-r border-zinc-800/80 bg-zinc-950 flex flex-col">
+	<aside class="w-56 shrink-0 border-r border-zinc-800/80 bg-zinc-950 flex flex-col
+	               max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:overflow-y-auto
+	               max-lg:transition-transform max-lg:duration-200
+	               {menuOuvert ? 'max-lg:translate-x-0' : 'max-lg:-translate-x-full'}">
 
 		<!-- Header -->
 		<div class="h-14 flex items-center gap-2.5 px-4 border-b border-zinc-800/80">
@@ -178,8 +203,16 @@
 		{/if}
 
 		<!-- Top bar -->
-		<header class="h-14 border-b border-zinc-800/80 bg-zinc-950/60 flex items-center justify-between px-6 shrink-0">
-			<nav class="text-[13px] text-zinc-500 flex items-center gap-1.5">
+		<header class="h-14 border-b border-zinc-800/80 bg-zinc-950/60 flex items-center justify-between px-4 lg:px-6 shrink-0 gap-2">
+			<button type="button" onclick={() => (menuOuvert = true)}
+			        class="lg:hidden shrink-0 -ml-2 w-11 h-11 flex items-center justify-center rounded-lg
+			               text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+			        aria-label={tFn('anav.open_menu')}>
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
+					<path d="M4 6h16M4 12h16M4 18h16"/>
+				</svg>
+			</button>
+			<nav class="text-[13px] text-zinc-500 flex items-center gap-1.5 min-w-0">
 				<a href="/" class="hover:text-zinc-300 transition-colors">{tFn('anav.forum')}</a>
 				<svg class="w-3 h-3 text-zinc-700" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
 				<span class="text-zinc-300">{tFn('anav.admin_title')}</span>
