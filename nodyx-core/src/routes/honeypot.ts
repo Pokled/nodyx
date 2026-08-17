@@ -5,6 +5,7 @@ import fs from 'fs'
 import { reportHoneypotToMISP } from '../services/mispService.js'
 import { enrichIP, type OSINTResult } from '../services/osintService.js'
 import { sendCERTEmail } from '../services/certEmailService.js'
+import { getClientIp } from '../utils/clientIp'
 
 // 1×1 transparent PNG — served by the tracking pixel endpoint
 const PIXEL_PNG = Buffer.from(
@@ -1074,7 +1075,7 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
 
       const headers = request.headers
-      const ip = request.ip || '0.0.0.0'  // fiable via trustProxy
+      const ip = getClientIp(request) || '0.0.0.0'  // fiable via trustProxy
 
       const originalPath = decodeURIComponent((request.query as any).p || '/').slice(0, 512)
       const userAgent    = (headers['user-agent'] || '').slice(0, 512)
@@ -1275,7 +1276,7 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
     const { log: username = '', pwd: password = '', _incident: incidentRef = '', _origin_path: loginPath = '/' } = request.body ?? {}
 
     const headers = request.headers
-    const ip = request.ip || '0.0.0.0'  // fiable via trustProxy
+    const ip = getClientIp(request) || '0.0.0.0'  // fiable via trustProxy
     const userAgent  = (headers['user-agent'] || '').slice(0, 512)
     const incidentId = genIncidentId()
 
@@ -1389,7 +1390,7 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
     if (!fp_hash || !/^[A-F0-9]{8,64}$/.test(fp_hash)) return reply.code(400).send({})
 
     const headers = request.headers
-    const ip = request.ip || '0.0.0.0'  // fiable via trustProxy
+    const ip = getClientIp(request) || '0.0.0.0'  // fiable via trustProxy
 
     try {
       // Upsert fingerprint
@@ -1585,7 +1586,7 @@ export default async function honeypotRoutes(fastify: FastifyInstance) {
       return reply.code(200).send(PIXEL_PNG)
     }
 
-    const ip        = request.ip || '0.0.0.0'  // fiable via trustProxy
+    const ip        = getClientIp(request) || '0.0.0.0'  // fiable via trustProxy
     const userAgent = (request.headers['user-agent'] || '').slice(0, 512)
     const referer   = (request.headers['referer']    || '').slice(0, 512)
 

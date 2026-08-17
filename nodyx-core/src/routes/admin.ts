@@ -23,6 +23,7 @@ import { randomUUID, createHash, randomBytes } from 'crypto'
 import { createWriteStream, mkdirSync } from 'fs'
 import { pipeline } from 'stream/promises'
 import path from 'path'
+import { getClientIp } from '../utils/clientIp'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 const ALLOWED_MIME_BRANDING = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -385,7 +386,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await db.query(
       `INSERT INTO password_resets (user_id, token_hash, expires_at, ip_address)
        VALUES ($1, $2, $3, $4)`,
-      [userId, tokenHash, expiresAt, request.ip]
+      [userId, tokenHash, expiresAt, getClientIp(request)]
     )
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`

@@ -19,6 +19,7 @@
  */
 
 import { FastifyInstance, FastifyRequest } from 'fastify'
+import { getClientIp } from '../utils/clientIp'
 import '../middleware/auth' // augments FastifyRequest with `user?: JwtPayload`
 import { z }                                from 'zod'
 import { adminOnly }                        from '../middleware/adminOnly'
@@ -71,7 +72,7 @@ const AuditQuery = z.object({
 function actor(req: FastifyRequest): AuditActor {
   return {
     user_id:    req.user?.userId || null,
-    ip_address: req.ip || null,
+    ip_address: getClientIp(req) || null,
     user_agent: req.headers['user-agent'] || null,
   }
 }

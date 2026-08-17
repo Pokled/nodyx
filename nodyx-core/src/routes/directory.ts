@@ -6,10 +6,11 @@ import https from 'https';
 import http from 'http';
 import sanitizeHtml from 'sanitize-html';
 import { db, redis } from '../config/database';
+import { getClientIp } from '../utils/clientIp'
 
 // Strict rate-limit for public search endpoint (30 req/min per IP)
 async function searchRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const key = `rate:search:${request.ip}`;
+  const key = `rate:search:${getClientIp(request)}`;
   const count = await redis.incr(key);
   if (count === 1) await redis.expire(key, 60);
   if (count > 30) {
@@ -284,7 +285,7 @@ export default async function directoryRoutes(app: FastifyInstance) {
       // Capture real IP — req.ip est fiable via la liste de proxys de confiance
       // (loopback + privé + Cloudflare, cf config/trustedProxies.ts) : un
       // X-Forwarded-For usurpé ne peut plus le détourner.
-      const rawIp = req.ip;
+      const rawIp = getClientIp(req);
       const isPrivate = !rawIp || rawIp === '127.0.0.1' || rawIp === '::1'
         || rawIp.startsWith('192.168.') || rawIp.startsWith('10.')
         || rawIp.startsWith('172.16.') || rawIp.startsWith('::ffff:127.');

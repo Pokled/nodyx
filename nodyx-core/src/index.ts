@@ -155,7 +155,7 @@ server.addHook('onRequest', async (request, reply) => {
     url.startsWith('/api/directory/blocklist')
   ) return
 
-  const ip = request.ip
+  const ip = getClientIp(request)
   if (!ip || ip === '127.0.0.1' || ip === '::1' ||
       ip.startsWith('192.168.') || ip.startsWith('10.') ||
       ip.startsWith('::ffff:127.') || ip.startsWith('172.16.')) return
@@ -174,6 +174,7 @@ server.addHook('onRequest', async (request, reply) => {
 // Returns 503 on user-facing writes while a backup/restore window is active.
 // Skips reads, admin endpoints, and the maintenance status endpoint itself.
 import { maintenanceGuard } from './middleware/maintenanceGuard'
+import { getClientIp } from './utils/clientIp'
 server.addHook('onRequest', maintenanceGuard)
 
 // ── Routes ───────────────────────────────────────────────────

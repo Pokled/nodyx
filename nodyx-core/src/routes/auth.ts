@@ -13,6 +13,7 @@ import { toSelfUser } from '../utils/publicUser'
 import { isSmtpConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService'
 import { resolveServerLocale } from '../i18n/serverStrings'
 import { getUserTotp, TOTP_PENDING_TTL } from './totp'
+import { getClientIp } from '../utils/clientIp'
 
 // ── Discord security alerts ───────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ const BCRYPT_ROUNDS = 12
 
 // Rate limit strict pour forgot-password : 3 req / 15 min / IP
 async function forgotPasswordRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const key   = `reset_rate:${request.ip}`
+  const key   = `reset_rate:${getClientIp(request)}`
   const count = await redis.incr(key)
   if (count === 1) await redis.expire(key, 15 * 60)
   if (count > 3) {
@@ -63,7 +64,7 @@ async function forgotPasswordRateLimit(request: FastifyRequest, reply: FastifyRe
 
 // Rate limit strict pour login : 5 tentatives / 15 min / IP
 async function loginRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const key   = `login_rate:${request.ip}`
+  const key   = `login_rate:${getClientIp(request)}`
   const count = await redis.incr(key)
   if (count === 1) await redis.expire(key, 15 * 60)
   if (count > 5) {
@@ -78,7 +79,7 @@ async function loginRateLimit(request: FastifyRequest, reply: FastifyReply): Pro
 
 // Rate limit pour register : 5 comptes / heure / IP
 async function registerRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  const key   = `register_rate:${request.ip}`
+  const key   = `register_rate:${getClientIp(request)}`
   const count = await redis.incr(key)
   if (count === 1) await redis.expire(key, 60 * 60)
   if (count > 5) {
@@ -150,7 +151,7 @@ export default async function authRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const body = request.body as z.infer<typeof RegisterBody>
     const { username, email, password, website, form_t } = body
-    const clientIpEarly = request.ip
+    const clientIpEarly = getClientIp(request)
     const userAgent = String(request.headers['user-agent'] ?? '').slice(0, 500)
 
     // Helper : log dans stdout + INSERT en DB pour monitoring Olympus
@@ -301,7 +302,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     const [user, ipBanRes] = await Promise.all([
       UserModel.findByEmail(email),
-      db.query(`SELECT 1 FROM ip_bans WHERE ip = $1::inet LIMIT 1`, [request.ip]),
+      db.query(`SELECT 1 FROM ip_bans WHERE ip = $1::inet LIMIT 1`, [getClientIp(request)]),
     ])
 
     if (ipBanRes.rows.length > 0) {
@@ -326,7 +327,7 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     if (!user || !valid) {
-      const realIp = request.ip  // fiable via trustProxy (loopback+privé+Cloudflare)
+      const realIp = getClientIp(request)  // fiable via trustProxy (loopback+privé+Cloudflare)
       const logLine = `${new Date().toISOString()} INVALID_CREDENTIALS ip=${realIp}\n`
       fs.appendFile('/var/log/nodyx-auth.log', logLine, () => {})
 
@@ -406,7 +407,7 @@ export default async function authRoutes(app: FastifyInstance) {
     await trackSession(user.id, token)
 
     // Détection connexion depuis une nouvelle IP
-    const loginIp    = request.ip  // fiable via trustProxy
+    const loginIp    = getClientIp(request)  // fiable via trustProxy
     const knownIpKey = `known_ip:${user.id}`
     const knownIp    = await redis.get(knownIpKey)
     await redis.set(knownIpKey, loginIp, 'EX', 60 * 60 * 24 * 30) // 30 jours
@@ -446,7 +447,7 @@ export default async function authRoutes(app: FastifyInstance) {
     const publicUser = toSelfUser(user)
 
     // Alerte connexion admin/owner
-    const realIpLogin = request.ip  // fiable via trustProxy
+    const realIpLogin = getClientIp(request)  // fiable via trustProxy
     db.query(
       `SELECT role FROM community_members
        WHERE user_id = $1 AND role IN ('admin', 'owner') LIMIT 1`,
@@ -508,7 +509,7 @@ export default async function authRoutes(app: FastifyInstance) {
       await db.query(
         `INSERT INTO password_resets (user_id, token_hash, expires_at, ip_address, user_agent)
          VALUES ($1, $2, $3, $4, $5)`,
-        [user.id, tokenHash, expiresAt, request.ip, request.headers['user-agent'] ?? null]
+        [user.id, tokenHash, expiresAt, getClientIp(request), request.headers['user-agent'] ?? null]
       )
 
       const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`
@@ -627,7 +628,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     // Rate limit : 1 renvoi / 5 min / email ET 3 / 5 min / IP
     const rateLimitKey = `resend_verify:${email.toLowerCase()}`
-    const rateLimitIp  = `resend_verify_ip:${request.ip}`
+    const rateLimitIp  = `resend_verify_ip:${getClientIp(request)}`
     const [countEmail, countIp] = await Promise.all([
       redis.incr(rateLimitKey),
       redis.incr(rateLimitIp),

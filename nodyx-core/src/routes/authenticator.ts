@@ -21,6 +21,7 @@ import { db, redis } from '../config/database'
 import { requireAuth } from '../middleware/auth'
 import { adminOnly }  from '../middleware/adminOnly'
 import { trackSession } from './auth'
+import { getClientIp } from '../utils/clientIp'
 
 // JwkPublicKey n'est pas dans lib ES2022 sans DOM — on définit le minimum nécessaire
 type JwkPublicKey = Record<string, unknown>
@@ -97,7 +98,7 @@ function signToken(userId: string, username: string): string {
 // ─── Rate limits ──────────────────────────────────────────────────────────────
 
 async function approveRateLimit(request: FastifyRequest, reply: FastifyReply) {
-  const key = `auth_approve_rate:${request.ip}`
+  const key = `auth_approve_rate:${getClientIp(request)}`
   const count = await redis.incr(key)
   if (count === 1) await redis.expire(key, 60)
   if (count > 10) {  // 10/min — assez pour les tests + usage normal
@@ -109,7 +110,7 @@ async function approveRateLimit(request: FastifyRequest, reply: FastifyReply) {
 // non-bruteforçable par définition, mais sans rate limit un attaquant pourrait
 // inonder la DB et les logs.
 async function enrollRateLimit(request: FastifyRequest, reply: FastifyReply) {
-  const key = `auth_enroll_rate:${request.ip}`
+  const key = `auth_enroll_rate:${getClientIp(request)}`
   const count = await redis.incr(key)
   if (count === 1) await redis.expire(key, 300) // fenêtre 5 min
   if (count > 3) {
@@ -315,7 +316,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
     const challengeBytes = crypto.randomBytes(32).toString('base64url')
     const pollNonce = crypto.randomBytes(16).toString('hex')
     const expiresAt = new Date(Date.now() + CHALLENGE_TTL_SEC * 1000)
-    const sourceIp = request.ip
+    const sourceIp = getClientIp(request)
 
     const { rows } = await db.query(
       `INSERT INTO authenticator_challenges
@@ -490,7 +491,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
       )
     } else {
       // Appareil inconnu → vérifier le rate limit de création de compte (3/IP/heure)
-      const creationKey = `account_creation:${request.ip}`
+      const creationKey = `account_creation:${getClientIp(request)}`
       const creationCount = await redis.incr(creationKey)
       if (creationCount === 1) await redis.expire(creationKey, 3600)
       if (creationCount > 3) {

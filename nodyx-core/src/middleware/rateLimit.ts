@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { timingSafeEqual } from 'crypto'
 import { redis } from '../config/database'
+import { getClientIp } from '../utils/clientIp'
 
 const WINDOW_SECONDS = 60
 const MAX_REQUESTS   = 100
@@ -58,7 +59,7 @@ export async function rateLimit(request: FastifyRequest, reply: FastifyReply): P
   // adresse du visiteur, qu'un X-Forwarded-For usurpé ne peut plus détourner :
   // les fausses lignes de l'attaquant sont à gauche du dernier proxy de
   // confiance et sont ignorées. On ne lit donc plus d'en-tête brut ici.
-  const ip = request.ip || socketPeer
+  const ip = getClientIp(request) || socketPeer
 
   const key = `rate:${ip}`
 

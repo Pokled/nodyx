@@ -6,6 +6,7 @@
 // Voir spec 015 §4 (OAuth) + §5 (EventSub) + §12 (sécurité).
 
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify'
+import { getClientIp } from '../utils/clientIp'
 import { adminOnly } from '../middleware/adminOnly'
 import { requireAuth } from '../middleware/auth'
 import { db, redis } from '../config/database'
@@ -244,7 +245,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     const state = await createOAuthState({
       kind:         'streamer',
       targetUserId: request.user!.userId,
-      ip:           request.ip,
+      ip:           getClientIp(request),
     })
     const authorizeUrl = provider.buildAuthorizeUrl({
       redirectUri: redirectUri(),
@@ -262,7 +263,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     const state = await createOAuthState({
       kind:         'viewer',
       targetUserId: request.user!.userId,
-      ip:           request.ip,
+      ip:           getClientIp(request),
     })
     const authorizeUrl = provider.buildAuthorizeUrl({
       redirectUri: redirectUri(),
@@ -283,7 +284,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
   server.delete('/twitch/viewer/unlink', { preHandler: requireAuth }, async (request, reply) => {
     const ok = await unlinkViewerTwitch({
       viewerUserId: request.user!.userId,
-      ip:           request.ip,
+      ip:           getClientIp(request),
     })
     if (!ok) return reply.code(404).send({ ok: false, error: 'no_twitch_link' })
     return { ok: true }
@@ -298,7 +299,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     if (q.error) {
       await audit({
         action: 'connect_twitch', status: 'failed',
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata: { stage: 'callback', twitchError: q.error, description: q.error_description ?? null },
       })
       return reply.code(400).send({
@@ -314,7 +315,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     if (!consumed) {
       await audit({
         action: 'connect_twitch', status: 'failed',
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata: { stage: 'state', reason: 'invalid_or_expired' },
       })
       return reply.code(400).send({ ok: false, error: 'invalid_or_expired_state' })
@@ -338,7 +339,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
           code:         q.code,
           redirectUri:  redirectUri(),
           viewerUserId: stateData.targetUserId,
-          ip:           request.ip,
+          ip:           getClientIp(request),
         })
         // Si Twitch déjà lié à un autre Nodyx, on renvoie 409 + détail
         if (result.alreadyLinkedTo) {
@@ -374,7 +375,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         redirectUri: redirectUri(),
         publicBase:  publicBase(),
         adminUserId: stateData.targetUserId,
-        ip:          request.ip,
+        ip:          getClientIp(request),
       })
       // Redirect to the admin dashboard with a success marker. Email + token
       // payload are intentionally NOT forwarded in the URL: the dashboard will
@@ -387,7 +388,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
       const e = err as Error
       await audit({
         action: 'connect_twitch', status: 'failed',
-        userId: stateData.targetUserId, ipAddress: request.ip,
+        userId: stateData.targetUserId, ipAddress: getClientIp(request),
         metadata: { stage: 'callback_pipeline' },
         error:    e.message,
       })
@@ -435,7 +436,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         provider: getProvider('twitch'),
         rowId:    request.params.rowId,
         userId:   request.user!.userId,
-        ip:       request.ip,
+        ip:       getClientIp(request),
       })
       if (!updated) return reply.code(404).send({ ok: false, error: 'not_found' })
       return reply.send({ ok: true, streamer: updated })
@@ -452,7 +453,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     const ok = await revokeTokens({
       rowId:  request.params.rowId,
       userId: request.user!.userId,
-      ip:     request.ip,
+      ip:     getClientIp(request),
     })
     if (!ok) return reply.code(404).send({ ok: false, error: 'not_found' })
     return reply.send({ ok: true })
@@ -513,7 +514,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
           action:   'channel_update_failed',
           status:   'failed',
           userId:   request.user!.userId,
-          ipAddress: request.ip,
+          ipAddress: getClientIp(request),
           metadata: { status: r.status, reason: r.reason },
         })
         return reply.code(r.status >= 400 && r.status < 600 ? r.status : 502)
@@ -523,7 +524,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'channel_update',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  {
           titleSet:  typeof request.body?.title  === 'string',
           gameIdSet: typeof request.body?.gameId === 'string',
@@ -566,7 +567,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'vod_marker_created',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { markerId: r.data.id, positionSeconds: r.data.positionSeconds },
       })
       return reply.send({ ok: true, marker: r.data })
@@ -608,7 +609,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
           action:    'poll_create_failed',
           status:    'failed',
           userId:    request.user!.userId,
-          ipAddress: request.ip,
+          ipAddress: getClientIp(request),
           metadata:  { reason: r.reason, status: r.status },
         })
         return reply.code(r.status >= 400 && r.status < 600 ? r.status : 502).send({ ok: false, error: r.reason })
@@ -617,7 +618,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'poll_created',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { pollId: r.data.id, choices: r.data.choices.length, duration: r.data.durationSeconds },
       })
       return reply.send({ ok: true, poll: r.data })
@@ -638,7 +639,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'poll_ended',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { pollId: request.params.id, finalStatus: status },
       })
       return reply.send({ ok: true, poll: r.data })
@@ -666,7 +667,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
           action:    'prediction_create_failed',
           status:    'failed',
           userId:    request.user!.userId,
-          ipAddress: request.ip,
+          ipAddress: getClientIp(request),
           metadata:  { reason: r.reason, status: r.status },
         })
         return reply.code(r.status >= 400 && r.status < 600 ? r.status : 502).send({ ok: false, error: r.reason })
@@ -675,7 +676,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'prediction_created',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { predictionId: r.data.id, outcomes: r.data.outcomes.length, window: r.data.predictionWindowSeconds },
       })
       return reply.send({ ok: true, prediction: r.data })
@@ -699,7 +700,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'prediction_patched',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { predictionId: request.params.id, newStatus: status, winningOutcomeId: winningOutcomeId ?? null },
       })
       return reply.send({ ok: true, prediction: r.data })
@@ -818,7 +819,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'unlink_twitch_viewer_admin',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { targetUserId: request.params.userId },
       })
       return reply.send({ ok: true })
@@ -876,7 +877,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'chat_timer_created',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { timerId: timer.id, label: timer.label },
       })
       return reply.send({ ok: true, timer })
@@ -944,7 +945,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'chat_timer_updated',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { timerId: timer.id, fields: Object.keys(patch) },
       })
       return reply.send({ ok: true, timer })
@@ -962,7 +963,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'chat_timer_deleted',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { timerId: request.params.id, label: existed?.label },
       })
       return reply.send({ ok: true })
@@ -990,7 +991,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'chat_timer_send_now',
         status:    r.ok ? 'success' : 'failed',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { timerId: request.params.id, reason: r.reason },
       })
       return reply.send(r)
@@ -1044,7 +1045,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
           action:    'chat_command_created',
           status:    'success',
           userId:    request.user!.userId,
-          ipAddress: request.ip,
+          ipAddress: getClientIp(request),
           metadata:  { commandId: cmd.id, name: cmd.name },
         })
         return reply.send({ ok: true, command: cmd })
@@ -1096,7 +1097,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
           action:    'chat_command_updated',
           status:    'success',
           userId:    request.user!.userId,
-          ipAddress: request.ip,
+          ipAddress: getClientIp(request),
           metadata:  { commandId: cmd.id, fields: Object.keys(patch) },
         })
         return reply.send({ ok: true, command: cmd })
@@ -1119,7 +1120,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'chat_command_deleted',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { commandId: request.params.id, name: existed?.name },
       })
       return reply.send({ ok: true })
@@ -1145,7 +1146,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'deck_created',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { deckId: deck.id, label: deck.label },
       })
       return reply.send({ ok: true, deck })
@@ -1166,7 +1167,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'deck_updated',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { deckId: deck.id, fields: Object.keys(patch) },
       })
       return reply.send({ ok: true, deck })
@@ -1183,7 +1184,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'deck_revoked',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { deckId: request.params.id },
       })
       return reply.send({ ok: true })
@@ -1232,7 +1233,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'deck_action_executed',
         status:    result.ok ? 'success' : 'failed',
         userId:    null,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { deckId: deck.id, buttonId, actionType: button.action.type, message: result.message },
       })
       return reply.send(result)
@@ -1296,7 +1297,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
           action:    'audio_track_added',
           status:    'success',
           userId:    request.user!.userId,
-          ipAddress: request.ip,
+          ipAddress: getClientIp(request),
           metadata:  { trackId: track.id, assetId: b.assetId, title: track.title },
         })
         return reply.send({ ok: true, track })
@@ -1321,7 +1322,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'audio_track_updated',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { trackId: request.params.id, fields: Object.keys(request.body ?? {}) },
       })
       return { ok: true, track }
@@ -1339,7 +1340,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'audio_track_deleted',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { trackId: request.params.id, title: existed?.title },
       })
       return { ok: true }
@@ -1586,7 +1587,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
     const trackId = (request.body?.trackId ?? '').toString().slice(0, 64)
     if (!trackId) return reply.code(400).send({ ok: false, reason: 'invalid_track_id' })
 
-    const ip = request.ip
+    const ip = getClientIp(request)
     const result = await addToSoundboardQueue({
       ownerUserId: owner.userId,
       trackId,
@@ -1678,7 +1679,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
           action:    'reward_create_failed',
           status:    'failed',
           userId:    request.user!.userId,
-          ipAddress: request.ip,
+          ipAddress: getClientIp(request),
           metadata:  { reason: r.reason, status: r.status, title: b.title },
         })
         return reply.code(r.status >= 400 && r.status < 600 ? r.status : 502).send({ ok: false, error: r.reason })
@@ -1687,7 +1688,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'reward_created',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { rewardId: r.data.id, title: r.data.title, cost: r.data.cost },
       })
       return reply.send({ ok: true, reward: r.data })
@@ -1715,7 +1716,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'reward_updated',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { rewardId: r.data.id, patchedFields: Object.keys(b) },
       })
       return reply.send({ ok: true, reward: r.data })
@@ -1732,7 +1733,7 @@ export const streamerAdminPlugin: FastifyPluginAsync = async (server) => {
         action:    'reward_deleted',
         status:    'success',
         userId:    request.user!.userId,
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata:  { rewardId: request.params.id },
       })
       return reply.send({ ok: true })
@@ -2419,7 +2420,7 @@ export const streamerEventsubPlugin: FastifyPluginAsync = async (server) => {
       await audit({
         action:   'hmac_invalid',
         status:   'failed',
-        ipAddress: request.ip,
+        ipAddress: getClientIp(request),
         metadata: { nonce: nonce.slice(0, 8) + '…', messageId, msgType },
       })
       request.log.warn({ messageId, nonce: nonce.slice(0, 8) + '…' }, 'EventSub HMAC invalid')
