@@ -26,6 +26,16 @@
     function setNoiseGateThreshold(e: Event) {
         updateLocalAudio({ noiseGateThreshold: +(e.target as HTMLInputElement).value })
     }
+
+    let { onclose }: { onclose?: () => void } = $props()
+
+    // Sortie portee par le COMPOSANT et non par son conteneur.
+    // Le 17/08, deux correctifs successifs ont ajoute une croix aux conteneurs de
+    // VoicePanel sans aucun effet : ce composant se rend par un TROISIEME chemin,
+    // quasiment nu (sa racine est un simple `<div class="p-4">`, sans decor). La
+    // croix voyage donc desormais AVEC le contenu, a cote de son propre titre,
+    // la ou l'utilisateur la cherche. Optionnelle : sans `onclose`, rien ne
+    // s'affiche et les usages existants ne changent pas.
 </script>
 
 <div class="p-4 space-y-5 text-sm select-none">
@@ -34,6 +44,19 @@
     <div class="flex items-center gap-2">
         <span class="text-base">⚙️</span>
         <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider">{tFn('voice_settings.header')}</h3>
+        {#if onclose}
+            <button
+                onclick={onclose}
+                aria-label={tFn('voice_panel.close_settings')}
+                class="ml-auto shrink-0 w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center rounded-full
+                       text-gray-200 hover:text-white bg-black/50 border border-gray-600
+                       hover:border-amber-500/60 transition-colors"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        {/if}
     </div>
 
     <!-- ── Gain micro ─────────────────────────────────────────────── -->

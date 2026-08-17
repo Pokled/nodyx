@@ -911,7 +911,7 @@
                                 </button>
                             </div>
                             <div class="flex-1 overflow-y-auto sm:flex-none sm:overflow-visible">
-                                <VoiceSettings />
+                                <VoiceSettings onclose={() => showVoiceSettings = false} />
                             </div>
                             <button
                                 onclick={() => showVoiceSettings = false}
@@ -1100,7 +1100,7 @@
                             </button>
                         </div>
 
-                        <VoiceSettings />
+                        <VoiceSettings onclose={() => showVoiceSettings = false} />
                     </div>
                 </div>
             {/if}
