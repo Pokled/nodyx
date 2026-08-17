@@ -329,7 +329,18 @@
 
 	<!-- Identity passport — anchored at banner bottom -->
 	<div class="absolute bottom-0 inset-x-0 z-10">
-		<div class="max-w-[1600px] mx-auto px-6 flex items-end gap-6 pb-6">
+		<!-- `lg:px-12` : la banniere est PLEIN-CADRE, elle deborde de 24px sous les
+		     barres laterales. Un `px-6` (24px) annulait donc exactement ce
+		     debordement et laissait ZERO gouttiere. Mesure a 1920 : couloir libre
+		     276..1700, avatar a 276 et dernier bouton a 1700, les deux collaient
+		     la barre. Les cartes en dessous s'en sortent grace a leur `p-5`
+		     interne ; cette rangee n'en a pas.
+
+		     `flex-wrap` : a 502px, avatar (128) + boutons (209) + 2 gouttieres ne
+		     laissaient que 101px au bloc du nom. Resultat, « Pokled » tronque en
+		     « Pok… » et la rangee des abonnes passant SOUS les boutons. Les
+		     boutons descendent donc sur leur propre ligne sous `md`. -->
+		<div class="max-w-[1600px] mx-auto px-6 lg:px-12 flex flex-wrap items-end gap-6 pb-6">
 
 			<!-- Avatar with frame -->
 			<div class="relative shrink-0 translate-y-10" style="width:128px;height:128px;overflow:visible">
@@ -433,7 +444,7 @@
 			</div>
 
 			<!-- Action button — inside max-w-6xl, aligned bottom-right -->
-			<div class="ml-auto pb-2 shrink-0">
+			<div class="ml-auto pb-2 shrink-0 flex justify-end max-md:w-full max-md:mt-3">
 				{#if isOwnProfile}
 					<div class="flex items-center gap-2">
 						<a href="/users/{profile.username}/card" target="_blank" class="profile-action-btn"
