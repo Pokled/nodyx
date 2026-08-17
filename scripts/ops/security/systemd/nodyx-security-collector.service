@@ -1,0 +1,23 @@
+[Unit]
+Description=Nodyx — collecteur CrowdSec vers PostgreSQL
+Documentation=file:///var/www/nexus/SPECS/OLYMPUS_OBSERVABILITE_CDC.md
+After=crowdsec.service postgresql.service
+Wants=crowdsec.service
+
+[Service]
+Type=oneshot
+# Root : `cscli` exige l'acces aux identifiants locaux de CrowdSec. Le collecteur
+# ne fait que LIRE CrowdSec et ECRIRE dans PostgreSQL. Il ne decide rien, ne
+# bloque rien, n'appelle jamais nftables.
+User=root
+ExecStart=/usr/bin/node /var/www/nexus/scripts/ops/security/collector.mjs
+TimeoutStartSec=120
+
+# Durcissement : il n'a besoin d'ecrire nulle part sur le disque.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

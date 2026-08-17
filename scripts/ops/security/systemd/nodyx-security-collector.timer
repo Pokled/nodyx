@@ -1,0 +1,13 @@
+[Unit]
+Description=Nodyx — collecte CrowdSec toutes les 2 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+# Deux minutes : assez frais pour qu'Olympus soit utile pendant une attaque,
+# assez espace pour ne rien peser. CrowdSec garde l'historique de son cote, une
+# collecte manquee est rattrapee au tour suivant (le collecteur est idempotent).
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
