@@ -20,7 +20,7 @@
 {#if data.logs.length === 0}
 	<div class="og-empty">{tFn('octoguard.logs_empty')}</div>
 {:else}
-	<table class="og-table min-w-[620px]">
+	<table class="tableau-cartes og-table md:min-w-[620px]">
 		<thead>
 			<tr>
 				<th>{tFn('octoguard.col_date')}</th><th>{tFn('octoguard.col_actor')}</th><th>{tFn('octoguard.col_action')}</th><th>{tFn('octoguard.col_target')}</th><th>{tFn('octoguard.col_details')}</th><th></th>
@@ -29,11 +29,11 @@
 		<tbody>
 			{#each data.logs as l (l.id)}
 				<tr>
-					<td class="og-date">{new Date(l.created_at).toLocaleString()}</td>
-					<td>{l.actor_username}</td>
+					<td class="og-date" data-label={tFn('octoguard.col_date')}>{new Date(l.created_at).toLocaleString()}</td>
+					<td data-label={tFn('octoguard.col_actor')}>{l.actor_username}</td>
 					<td class="og-action">{l.action.replace('octoguard.', '')}</td>
-					<td>{l.target_type ?? '·'}{l.target_id ? ` ${l.target_id.slice(0,8)}` : ''}</td>
-					<td class="og-label">{l.target_label ?? '·'}</td>
+					<td data-label={tFn('octoguard.col_target')}>{l.target_type ?? '·'}{l.target_id ? ` ${l.target_id.slice(0,8)}` : ''}</td>
+					<td class="og-label" data-label={tFn('octoguard.col_details')}>{l.target_label ?? '·'}</td>
 					<td>
 						{#if l.metadata?.undoable}
 							<form method="POST" action="?/undo" use:enhance>

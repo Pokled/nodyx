@@ -39,17 +39,17 @@
 {#if data.mutes.length === 0}
 	<div class="og-empty">{tFn('octoguard.mutes_empty')}</div>
 {:else}
-	<table class="og-table min-w-[620px]">
+	<table class="tableau-cartes og-table md:min-w-[620px]">
 		<thead>
 			<tr><th>{tFn('octoguard.col_user')}</th><th>{tFn('octoguard.col_channel')}</th><th>{tFn('octoguard.col_reason')}</th><th>{tFn('octoguard.col_expires')}</th><th></th></tr>
 		</thead>
 		<tbody>
 			{#each data.mutes as m (m.id)}
 				<tr>
-					<td>{m.user_username ?? m.user_id?.slice(0,8)}</td>
-					<td>{m.channel_id ? m.channel_id.slice(0,8) : tFn('octoguard.global_dash')}</td>
-					<td>{m.reason ?? '·'}</td>
-					<td>{m.expires_at ? new Date(m.expires_at).toLocaleString() : tFn('octoguard.permanent_dash')}</td>
+					<td data-label={tFn('octoguard.col_user')}>{m.user_username ?? m.user_id?.slice(0,8)}</td>
+					<td data-label={tFn('octoguard.col_channel')}>{m.channel_id ? m.channel_id.slice(0,8) : tFn('octoguard.global_dash')}</td>
+					<td data-label={tFn('octoguard.col_reason')}>{m.reason ?? '·'}</td>
+					<td data-label={tFn('octoguard.col_expires')}>{m.expires_at ? new Date(m.expires_at).toLocaleString() : tFn('octoguard.permanent_dash')}</td>
 					<td>
 						<form method="POST" action="?/unmute" use:enhance>
 							<input type="hidden" name="id" value={m.id} />

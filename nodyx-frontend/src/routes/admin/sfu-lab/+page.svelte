@@ -229,7 +229,7 @@
       <p class="text-sm text-zinc-600">{tFn('asfu.no_transport')}</p>
     {:else}
       <div class="overflow-x-auto">
-        <table class="w-full text-xs font-mono min-w-[720px]">
+        <table class="tableau-cartes w-full text-xs font-mono md:min-w-[720px]">
           <thead class="text-zinc-500">
             <tr class="text-left">
               <th class="py-1 pr-3 font-semibold">{tFn('asfu.col_participant')}</th>
@@ -246,15 +246,15 @@
           <tbody>
             {#each $sfuAuditStore as r (r.participant + r.direction)}
               <tr class="border-t border-zinc-800/60">
-                <td class="py-1 pr-3 text-zinc-300">{r.participant.slice(0, 8)}</td>
-                <td class="py-1 pr-3 text-zinc-500">{r.direction}</td>
-                <td class="py-1 pr-3 {iceClass(r.iceState)}">{r.iceState}</td>
-                <td class="py-1 pr-3 text-zinc-400">{r.local}</td>
-                <td class="py-1 pr-3 text-indigo-300">{r.remote}</td>
-                <td class="py-1 pr-3 text-zinc-500">{r.proto}</td>
-                <td class="py-1 pr-3 text-right text-zinc-300">{r.recvKbps}</td>
-                <td class="py-1 pr-3 text-right text-zinc-300">{r.sendKbps}</td>
-                <td class="py-1 pr-3 text-right {lossClass(Math.max(r.lossRecv, r.lossSent))}">{(Math.max(r.lossRecv, r.lossSent) * 100).toFixed(1)}%</td>
+                <td class="py-1 pr-3 text-zinc-300" data-label={tFn('asfu.col_participant')}>{r.participant.slice(0, 8)}</td>
+                <td class="py-1 pr-3 text-zinc-500" data-label="Dir">{r.direction}</td>
+                <td class="py-1 pr-3 {iceClass(r.iceState)}" data-label="ICE">{r.iceState}</td>
+                <td class="py-1 pr-3 text-zinc-400" data-label="Local">{r.local}</td>
+                <td class="py-1 pr-3 text-indigo-300" data-label={tFn('asfu.col_remote')}>{r.remote}</td>
+                <td class="py-1 pr-3 text-zinc-500" data-label="Proto">{r.proto}</td>
+                <td class="py-1 pr-3 text-right text-zinc-300" data-label="↓ kbps">{r.recvKbps}</td>
+                <td class="py-1 pr-3 text-right text-zinc-300" data-label="↑ kbps">{r.sendKbps}</td>
+                <td class="py-1 pr-3 text-right {lossClass(Math.max(r.lossRecv, r.lossSent))}" data-label={tFn('asfu.col_loss')}>{(Math.max(r.lossRecv, r.lossSent) * 100).toFixed(1)}%</td>
               </tr>
             {/each}
           </tbody>

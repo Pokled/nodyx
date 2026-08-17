@@ -49,7 +49,7 @@
 	</div>
 
 	<div class="rounded-xl border border-gray-800 overflow-x-auto">
-		<table class="w-full text-sm min-w-[620px]">
+		<table class="tableau-cartes w-full text-sm md:min-w-[620px]">
 			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 				<tr>
 					<th class="px-4 py-3 text-left">{tFn('amod.col_thread')}</th>
@@ -64,7 +64,7 @@
 				{#each data.threads as thread}
 					<tr class="bg-gray-900/30 hover:bg-gray-900/60 transition-colors">
 						<!-- Title -->
-						<td class="px-4 py-3 max-w-[280px]">
+						<td class="px-4 py-3 max-w-[280px]" data-label={tFn('amod.col_thread')}>
 							<a href="/forum/{thread.category_slug ?? thread.category_id}/{thread.slug ?? thread.id}"
 								class="font-medium text-white hover:text-indigo-300 transition-colors line-clamp-1 text-sm">
 								{thread.title}
@@ -75,14 +75,14 @@
 						</td>
 
 						<!-- Category -->
-						<td class="px-4 py-3 text-xs text-gray-400">{thread.category_name}</td>
+						<td class="px-4 py-3 text-xs text-gray-400" data-label={tFn('amod.col_category')}>{thread.category_name}</td>
 
 						<!-- Counts -->
-						<td class="px-4 py-3 text-center text-gray-400 tabular-nums">{thread.post_count}</td>
-						<td class="px-4 py-3 text-center text-gray-400 tabular-nums">{thread.views}</td>
+						<td class="px-4 py-3 text-center text-gray-400 tabular-nums" data-label={tFn('amod.col_msgs')}>{thread.post_count}</td>
+						<td class="px-4 py-3 text-center text-gray-400 tabular-nums" data-label={tFn('amod.col_views')}>{thread.views}</td>
 
 						<!-- Status badges -->
-						<td class="px-4 py-3">
+						<td class="px-4 py-3" data-label={tFn('amod.col_status')}>
 							<div class="flex items-center justify-center gap-1.5">
 								{#if thread.is_pinned}
 									<span class="px-1.5 py-0.5 rounded text-xs bg-yellow-900/50 text-yellow-400 border border-yellow-800/50">📌</span>

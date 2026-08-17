@@ -39,7 +39,7 @@
 		<p class="text-gray-500 text-sm">{tFn('agard.empty')}</p>
 	{:else}
 		<div class="rounded-xl border border-gray-800 overflow-x-auto">
-			<table class="w-full text-sm min-w-[720px]">
+			<table class="tableau-cartes w-full text-sm md:min-w-[720px]">
 				<thead class="bg-gray-900 text-gray-400 text-xs uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left">{tFn('agard.col_idea')}</th>
@@ -55,22 +55,22 @@
 					{#each data.seeds as seed}
 						{@const stage = growthStage(seed.water_count)}
 						<tr class="bg-gray-900/40 hover:bg-gray-800/40 transition-colors {seed.harvest_date ? 'opacity-60' : ''}">
-							<td class="px-4 py-3 max-w-xs">
+							<td class="px-4 py-3 max-w-xs" data-label={tFn('agard.col_idea')}>
 								<p class="text-white font-medium truncate">{seed.title}</p>
 								{#if seed.description}
 									<p class="text-gray-500 text-xs truncate mt-0.5">{seed.description}</p>
 								{/if}
 							</td>
-							<td class="px-4 py-3 text-gray-400">
+							<td class="px-4 py-3 text-gray-400" data-label={tFn('agard.col_category')}>
 								{CATEGORY_ICONS[seed.category] ?? ''} {seed.category}
 							</td>
-							<td class="px-4 py-3">
+							<td class="px-4 py-3" data-label={tFn('agard.col_stage')}>
 								<span class="text-base">{STAGE_ICONS[stage]}</span>
 								<span class="text-xs text-gray-400 ml-1">{tFn(`agard.stage_${stage}`)}</span>
 							</td>
-							<td class="px-4 py-3 text-white font-medium">{seed.water_count}</td>
-							<td class="px-4 py-3 text-gray-400">{seed.planter_username ?? '·'}</td>
-							<td class="px-4 py-3 text-gray-500 text-xs">{formatDate(seed.planted_at)}</td>
+							<td class="px-4 py-3 text-white font-medium" data-label={tFn('agard.col_votes')}>{seed.water_count}</td>
+							<td class="px-4 py-3 text-gray-400" data-label={tFn('agard.col_planted_by')}>{seed.planter_username ?? '·'}</td>
+							<td class="px-4 py-3 text-gray-500 text-xs" data-label={tFn('agard.col_date')}>{formatDate(seed.planted_at)}</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-end gap-2">
 									{#if !seed.harvest_date}

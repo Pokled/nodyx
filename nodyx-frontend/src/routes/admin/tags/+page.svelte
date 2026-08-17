@@ -57,7 +57,7 @@
 		<p class="text-sm text-gray-500">{tFn('atags.empty')}</p>
 	{:else}
 		<div class="rounded-xl border border-gray-800 overflow-x-auto">
-			<table class="w-full text-sm min-w-[480px]">
+			<table class="tableau-cartes w-full text-sm md:min-w-[480px]">
 				<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left">{tFn('atags.col_tag')}</th>
@@ -68,13 +68,13 @@
 				<tbody class="divide-y divide-gray-800/60">
 					{#each tags as tag}
 						<tr class="bg-gray-900/30 hover:bg-gray-900/60 transition-colors">
-							<td class="px-4 py-3">
+							<td class="px-4 py-3" data-label={tFn('atags.col_tag')}>
 								<span class="inline-block rounded-full px-3 py-1 text-xs font-semibold"
 									style="background:{tag.color}; color:{luminance(tag.color) > 0.5 ? '#111' : '#fff'}">
 									{tag.name}
 								</span>
 							</td>
-							<td class="px-4 py-3 text-gray-400 font-mono text-xs">{tag.slug}</td>
+							<td class="px-4 py-3 text-gray-400 font-mono text-xs" data-label={tFn('atags.col_slug')}>{tag.slug}</td>
 							<td class="px-4 py-3 text-right">
 								<form method="POST" action="?/delete" use:enhance class="inline">
 									<input type="hidden" name="tag_id" value={tag.id} />

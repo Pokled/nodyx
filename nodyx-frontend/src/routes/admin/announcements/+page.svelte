@@ -137,7 +137,7 @@
 				{tFn('aann.empty')}
 			</div>
 		{:else}
-			<table class="w-full text-sm min-w-[620px]">
+			<table class="tableau-cartes w-full text-sm md:min-w-[620px]">
 				<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left">{tFn('aann.message')}</th>
@@ -152,7 +152,7 @@
 					{#each data.announcements as ann}
 						<tr class="bg-gray-900/30 hover:bg-gray-900/60 transition-colors">
 							<!-- Message -->
-							<td class="px-4 py-3 max-w-xs">
+							<td class="px-4 py-3 max-w-xs" data-label={tFn('aann.message')}>
 								<div class="flex items-start gap-2">
 									<span class="inline-block w-2.5 h-2.5 rounded-full mt-1 shrink-0
 									             {ann.color === 'indigo' ? 'bg-indigo-500' :
@@ -167,12 +167,12 @@
 							</td>
 
 							<!-- Color label -->
-							<td class="px-4 py-3 text-center">
+							<td class="px-4 py-3 text-center" data-label={tFn('aann.color')}>
 								<span class="text-xs text-gray-500 capitalize">{ann.color}</span>
 							</td>
 
 							<!-- Status toggle -->
-							<td class="px-4 py-3 text-center">
+							<td class="px-4 py-3 text-center" data-label={tFn('aann.status')}>
 								<form method="POST" action="?/toggle" use:enhance>
 									<input type="hidden" name="id" value={ann.id} />
 									<input type="hidden" name="is_active" value={String(!ann.is_active)} />
@@ -187,13 +187,13 @@
 							</td>
 
 							<!-- Created -->
-							<td class="px-4 py-3 text-center text-xs text-gray-500 tabular-nums">
+							<td class="px-4 py-3 text-center text-xs text-gray-500 tabular-nums" data-label={tFn('aann.created_col')}>
 								{timeAgo(ann.created_at)}
 							</td>
 
 							<!-- Expires -->
 							<td class="px-4 py-3 text-center text-xs tabular-nums
-							           {ann.expires_at && new Date(ann.expires_at) < new Date() ? 'text-red-500' : 'text-gray-500'}">
+							           {ann.expires_at && new Date(ann.expires_at) < new Date() ? 'text-red-500' : 'text-gray-500'}" data-label={tFn('aann.expires_col')}>
 								{#if ann.expires_at}
 									{new Date(ann.expires_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
 								{:else}

@@ -109,7 +109,7 @@
 				{tFn('alog.empty')}
 			</div>
 		{:else}
-			<table class="w-full text-sm min-w-[620px]">
+			<table class="tableau-cartes w-full text-sm md:min-w-[620px]">
 				<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left w-40">{tFn('alog.col_date')}</th>
@@ -124,12 +124,12 @@
 						{@const m = meta(entry.action)}
 						<tr class="bg-gray-900/30 hover:bg-gray-900/60 transition-colors">
 							<!-- Date -->
-							<td class="px-4 py-3 text-xs text-gray-500 tabular-nums whitespace-nowrap" title={formatDate(entry.created_at)}>
+							<td class="px-4 py-3 text-xs text-gray-500 tabular-nums whitespace-nowrap" title={formatDate(entry.created_at)} data-label={tFn('alog.col_date')}>
 								{timeAgo(entry.created_at)}
 							</td>
 
 							<!-- Actor -->
-							<td class="px-4 py-3">
+							<td class="px-4 py-3" data-label={tFn('alog.col_admin')}>
 								<a href="/users/{entry.actor_username}"
 									class="text-sm font-medium text-gray-200 hover:text-indigo-300 transition-colors">
 									{entry.actor_username}
@@ -145,7 +145,7 @@
 							</td>
 
 							<!-- Target -->
-							<td class="px-4 py-3 max-w-[200px]">
+							<td class="px-4 py-3 max-w-[200px]" data-label={tFn('alog.col_target')}>
 								{#if entry.target_label}
 									<div class="flex items-center gap-1.5">
 										<span class="text-xs text-gray-500 capitalize">{entry.target_type}</span>
@@ -165,7 +165,7 @@
 							</td>
 
 							<!-- Detail -->
-							<td class="px-4 py-3 text-xs text-gray-500">
+							<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('alog.col_detail')}>
 								{metaDesc(entry)}
 							</td>
 						</tr>

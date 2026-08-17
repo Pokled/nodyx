@@ -68,7 +68,7 @@
 
 	<!-- Tree table -->
 	<div class="rounded-xl border border-gray-800 overflow-x-auto">
-		<table class="w-full text-sm min-w-[480px]">
+		<table class="tableau-cartes w-full text-sm md:min-w-[480px]">
 			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 				<tr>
 					<th class="px-4 py-3 text-left">{tFn('acat.col_category')}</th>
@@ -116,7 +116,7 @@
 								</form>
 							</td>
 						{:else}
-							<td class="px-4 py-3">
+							<td class="px-4 py-3" data-label={tFn('acat.col_category')}>
 								<div style="padding-left: {cat.depth * 1.5}rem" class="flex items-center gap-2">
 									{#if cat.depth > 0}<span class="text-gray-700 text-xs">└</span>{/if}
 									<div>
@@ -127,7 +127,7 @@
 									</div>
 								</div>
 							</td>
-							<td class="px-4 py-3 text-center text-gray-500 tabular-nums">{cat.thread_count}</td>
+							<td class="px-4 py-3 text-center text-gray-500 tabular-nums" data-label={tFn('acat.col_threads')}>{cat.thread_count}</td>
 							<td class="px-4 py-3 text-right">
 								<div class="flex items-center justify-end gap-3">
 									<button onclick={() => editingId = cat.id} class="text-xs text-indigo-400 hover:text-indigo-300">{tFn('acat.edit')}</button>

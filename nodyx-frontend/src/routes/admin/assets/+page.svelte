@@ -36,7 +36,7 @@
 		<p class="text-gray-500 text-sm">{tFn('aast.empty')}</p>
 	{:else}
 		<div class="rounded-xl border border-gray-800 overflow-x-auto">
-			<table class="w-full text-sm min-w-[720px]">
+			<table class="tableau-cartes w-full text-sm md:min-w-[720px]">
 				<thead class="bg-gray-900 text-gray-400 text-xs uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left w-12"></th>
@@ -61,16 +61,16 @@
 									</div>
 								{/if}
 							</td>
-							<td class="px-4 py-3">
+							<td class="px-4 py-3" data-label={tFn('aast.col_name')}>
 								<a href="/library/{asset.id}" target="_blank"
 									class="text-white hover:text-indigo-300 font-medium truncate max-w-xs block">
 									{asset.name}
 								</a>
 							</td>
-							<td class="px-4 py-3 text-gray-400">{TYPE_ICONS[asset.asset_type] ?? ''} {asset.asset_type}</td>
-							<td class="px-4 py-3 text-gray-400">{asset.creator_username ?? '·'}</td>
-							<td class="px-4 py-3 text-gray-500 text-xs">{tFn('aast.kb', { n: Math.round(asset.file_size / 1024) })}</td>
-							<td class="px-4 py-3">
+							<td class="px-4 py-3 text-gray-400" data-label={tFn('aast.col_type')}>{TYPE_ICONS[asset.asset_type] ?? ''} {asset.asset_type}</td>
+							<td class="px-4 py-3 text-gray-400" data-label={tFn('aast.col_creator')}>{asset.creator_username ?? '·'}</td>
+							<td class="px-4 py-3 text-gray-500 text-xs" data-label={tFn('aast.col_size')}>{tFn('aast.kb', { n: Math.round(asset.file_size / 1024) })}</td>
+							<td class="px-4 py-3" data-label={tFn('aast.col_status')}>
 								{#if asset.is_banned}
 									<span class="px-2 py-0.5 rounded-full bg-red-900/40 text-red-400 text-xs font-medium">{tFn('aast.banned')}</span>
 								{:else if !asset.is_public}
