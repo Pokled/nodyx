@@ -551,7 +551,25 @@
 
     {#if mode === 'float'}
     <!-- Barre vocale flottante -->
-    <div class='fixed left-0 lg:left-[220px] right-0 z-40 pointer-events-none {extraClass}' style='bottom: var(--bottom-nav-h)'>
+    <!-- Le `z` MONTE quand les reglages sont ouverts, et ce n'est pas cosmetique.
+         Mesure dans le navigateur de l'utilisateur (500x996, 17/08) : le panneau
+         des reglages est `fixed inset-0 z-[200]`, mais il est DESCENDANT de cette
+         barre. Un `z-index` sur un element `fixed` cree un contexte d'empilement :
+         le 200 du panneau ne vaut QUE dans ce contexte. A l'etage du dessus, la
+         comparaison est 40 contre le `z-50` de l'entete de l'application, et
+         l'entete gagne. Ses 48px recouvraient les 31 premiers pixels de la croix
+         de fermeture, sur les 44 qu'elle mesure :
+
+             croix top:17 (44x44)
+             y=4  -> NAV.sticky top-0 z-50 h-12   <- l'entete, pas le panneau
+             y=40 -> DIV.flex items-center ...    <- toujours l'entete
+             y=52 -> LA CROIX                     <- enfin, sous les 48px
+
+         Le panneau n'etait ni coupe ni rogne : il etait RECOUVERT. C'est pourquoi
+         ni le collage en haut (#573) ni le bornage a l'ecran (#575) n'y pouvaient
+         rien. On ne monte le `z` que pendant l'ouverture, la barre reste sous
+         l'entete le reste du temps. -->
+    <div class='fixed left-0 lg:left-[220px] right-0 {showVoiceSettings ? "z-[60]" : "z-40"} pointer-events-none {extraClass}' style='bottom: var(--bottom-nav-h)'>
         <div class='mx-auto max-w-4xl px-4 pb-2 pointer-events-auto'>
             <div class='relative group'>
                 <!-- Effet de glow externe -->

@@ -87,6 +87,32 @@ describe('sortie des paramètres audio', () => {
 		}
 	})
 
+	it("fait passer la barre flottante au-dessus de l'en-tête pendant l'ouverture", () => {
+		// LA vraie cause, mesurée dans le navigateur de l'utilisateur (500x996).
+		//
+		// Le panneau des réglages est `fixed inset-0 z-[200]`, mais il descend de la
+		// barre vocale flottante, qui portait un `z-40` fixe. Un `z-index` sur un
+		// élément `fixed` crée un contexte d'empilement : le 200 du panneau ne vaut
+		// QUE dans ce contexte. À l'étage du dessus la comparaison est 40 contre le
+		// `z-50` de l'en-tête de l'application, et l'en-tête gagne. Ses 48px
+		// recouvraient les 31 premiers pixels de la croix, sur 44 :
+		//
+		//     y=4  -> NAV.sticky top-0 z-50 h-12   (l'en-tête, pas le panneau)
+		//     y=52 -> LA CROIX                     (enfin, sous les 48px)
+		//
+		// Le panneau n'était ni coupé ni rogné : il était RECOUVERT. C'est pourquoi
+		// ni le collage en haut ni le bornage à l'écran n'y pouvaient rien.
+		const barre = PANNEAU.match(/<div class='fixed left-0[^']*'/)
+		expect(barre, 'barre vocale flottante introuvable').not.toBeNull()
+		expect(barre![0], "le `z` de la barre doit dépendre de l'ouverture des réglages").toMatch(
+			/showVoiceSettings \?/,
+		)
+		// Doit dépasser le `z-50` de l'en-tête, sinon le correctif ne corrige rien.
+		const ouvert = barre![0].match(/showVoiceSettings \? "z-\[(\d+)\]"/)
+		expect(ouvert, 'valeur du `z` en position ouverte illisible').not.toBeNull()
+		expect(Number(ouvert![1])).toBeGreaterThan(50)
+	})
+
 	it('donne à la croix une cible atteignable au pouce', () => {
 		// 44px est le plancher recommandé sur mobile. On tolère plus petit à
 		// partir de `sm`, où le pointeur est précis.
