@@ -1,0 +1,24 @@
+type: leaky
+name: nodyx/sensitive-paths
+description: "Sondage de chemins sensibles sur une instance Nodyx"
+# TOUTE requete sur /api/v1/_hp est un sondage, par construction : le pot de miel
+# n'est atteint que depuis un chemin-leurre (/wp-login.php, /.env, /xmlrpc.php...).
+# Le vrai chemin voyage dans `?p=`, encode. Filtrer sur l'ENDPOINT plutot que sur
+# le parametre decode est plus simple et ne peut pas rater un encodage exotique.
+#
+# On exclut le loopback : le rendu serveur appelle le coeur en interne, et une
+# de ces lignes portait bien `ip=127.0.0.1`. Sans cette exclusion, l'instance se
+# bannirait elle-meme.
+filter: |
+  evt.Meta.log_type == 'http_access' &&
+  evt.Meta.http_path startsWith '/api/v1/_hp' &&
+  evt.Meta.source_ip != '127.0.0.1' &&
+  evt.Meta.source_ip != '::1'
+groupby: evt.Meta.source_ip
+capacity: 3
+leakspeed: 5m
+blackhole: 5m
+labels:
+  service: nodyx
+  type: scan
+  remediation: true

@@ -1,0 +1,14 @@
+# ─── Journaux du coeur Nodyx ──────────────────────────────────────────────────
+#
+# Ces lignes portent la VRAIE adresse du visiteur depuis #588. Avant, le
+# serialiseur de Fastify ecrivait `socket.remoteAddress`, soit 127.0.0.1 derriere
+# Cloudflare : brancher CrowdSec dessus n'aurait banni personne.
+#
+# On lit le flux de sortie de PM2 plutot que les fichiers /var/log/nodyx-*.log :
+# ceux-ci sont en root:root alors que le coeur tourne en `nodyx`, et les erreurs
+# d'ecriture y sont avalees. La jail fail2ban du pot de miel est aveugle depuis
+# le 29 mars pour cette raison exacte.
+filenames:
+  - /home/nodyx/.pm2/logs/nodyx-core-out.log
+labels:
+  type: nodyx-core

@@ -1,5 +1,5 @@
 import Fastify, { type FastifyRequest } from 'fastify'
-import { buildLoggerOptions } from './config/logger'
+import { buildLoggerOptions, journaliserAcces } from './config/logger'
 import { getClientIp } from './utils/clientIp'
 import { Server } from 'socket.io'
 import fastifyStatic from '@fastify/static'
@@ -61,7 +61,27 @@ import { startScheduler }  from './scheduler'
 // Fastify écrit `socket.remoteAddress`, donc `127.0.0.1` derrière Cloudflare.
 // Ces journaux sont la source prévue de la détection comportementale ; aveugles,
 // ils n'auraient permis de bannir personne. cf src/config/logger.ts
-const server = Fastify({ logger: buildLoggerOptions(), trustProxy: getTrustProxy() })
+// `disableRequestLogging` : Fastify journalise DEUX lignes par requete, dont
+// aucune n'est exploitable seule (l'une a l'URL sans le statut, l'autre le
+// statut sans l'URL). On emet une ligne unique et complete a la reponse, via le
+// crochet plus bas. GoAccess et les scenarios CrowdSec deviennent utilisables,
+// et le volume est divise par deux. cf src/config/logger.ts
+const server = Fastify({
+  logger: buildLoggerOptions(),
+  trustProxy: getTrustProxy(),
+  disableRequestLogging: true,
+})
+
+// Duree de la requete, mesuree ici plutot que reconstruite : `reply.elapsedTime`
+// n'existe pas dans toutes les versions.
+server.addHook('onRequest', async (request) => {
+  ;(request as unknown as { _debut: bigint })._debut = process.hrtime.bigint()
+})
+server.addHook('onResponse', async (request, reply) => {
+  const debut = (request as unknown as { _debut?: bigint })._debut
+  const ms = debut ? Number(process.hrtime.bigint() - debut) / 1e6 : 0
+  journaliserAcces(request, reply, ms)
+})
 
 // ── CORS (pour les appels fetch client-side : upload, chat, mentions) ────────
 const corsOrigin = process.env.FRONTEND_URL

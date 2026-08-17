@@ -75,11 +75,44 @@ function typeDepuisScenario(scenario = '') {
   return 'anomaly'
 }
 
-function severiteDepuisEvenements(n) {
-  if (n >= 50) return 'critical'
-  if (n >= 20) return 'high'
-  if (n >= 5) return 'medium'
-  return 'low'
+function severite(scenario = '', n = 0) {
+  // La gravite tient d'abord a la NATURE de l'evenement, ensuite a l'insistance.
+  // Une seule tentative d'authentification echouee sur un compte vaut plus qu'un
+  // scan bruyant de 50 requetes sur /wp-admin qui ne mene nulle part. Le volume
+  // ne fait que remonter d'un cran.
+  const s = scenario.toLowerCase()
+  let base
+  if (s.includes('bf') || s.includes('bruteforce') || s.includes('auth')) base = 'high'
+  else if (s.includes('exploit') || s.includes('rce') || s.includes('sqli')) base = 'critical'
+  else if (s.includes('scan') || s.includes('crawl') || s.includes('path')) base = 'medium'
+  else base = 'low'
+
+  if (n < 20) return base
+  const echelle = ['low', 'medium', 'high', 'critical']
+  return echelle[Math.min(echelle.indexOf(base) + 1, echelle.length - 1)]
+}
+
+/** « 4h », « 59m30s », « -1h » -> secondes. CrowdSec renvoie une duree textuelle. */
+function dureeEnSecondes(texte) {
+  if (typeof texte !== 'string') return null
+  let total = 0
+  let vu = false
+  for (const [, n, u] of texte.matchAll(/(-?\d+(?:\.\d+)?)([hms])/g)) {
+    total += Number(n) * (u === 'h' ? 3600 : u === 'm' ? 60 : 1)
+    vu = true
+  }
+  return vu ? Math.round(total) : null
+}
+
+function expiration(texte) {
+  const s = dureeEnSecondes(texte)
+  return s && s > 0 ? new Date(Date.now() + s * 1000).toISOString() : null
+}
+
+/** Memes plages que la contrainte SQL : on ne tente pas ce qui sera refuse. */
+function nonPublique(ip) {
+  return /^(127\.|10\.|192\.168\.|169\.254\.|::1$|fe80:|fc|fd)/i.test(ip) ||
+         /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
 }
 
 async function ingererAlertes(client) {
@@ -98,7 +131,7 @@ async function ingererAlertes(client) {
       [
         a.created_at ?? new Date().toISOString(),
         typeDepuisScenario(a.scenario),
-        severiteDepuisEvenements(a.events_count ?? 0),
+        severite(a.scenario, a.events_count ?? 0),
         ip,
         a.source?.cn ?? null,
         a.source?.as_name ?? null,
@@ -118,6 +151,13 @@ async function ingererDecisions(client) {
   for (const bloc of decisions) {
     for (const d of bloc.decisions ?? []) {
       if (!d.value) continue
+      // Une adresse privee ou de bouclage ne designe aucun visiteur, et la
+      // contrainte CHECK de la table la refuserait — ce qui ferait ECHOUER tout
+      // le tour de collecte. On l'ecarte ici, en le signalant.
+      if (nonPublique(d.value)) {
+        console.error(`[collecteur] decision ignoree, adresse non publique : ${d.value}`)
+        continue
+      }
       const ref = `crowdsec:decision:${d.id}`
       // `enforcement_plane` : sans bouncer, RIEN n'est applique. On l'ecrit donc
       // `none`, et `enforced_at` reste NULL. C'est ce qui empechera Olympus
@@ -133,8 +173,8 @@ async function ingererDecisions(client) {
           d.value,
           (d.type ?? 'ban').toLowerCase() === 'ban' ? 'ban' : 'watch',
           d.scenario ?? 'crowdsec',
-          null,
-          null,
+          dureeEnSecondes(d.duration),
+          expiration(d.duration),
           ref,
           JSON.stringify({ scenario: d.scenario, origin: d.origin, duration: d.duration }),
         ],

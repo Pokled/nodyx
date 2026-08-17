@@ -69,6 +69,10 @@ function entetesRetenus(request: FastifyRequest): Record<string, string> {
 export function buildLoggerOptions(): FastifyServerOptions['logger'] {
   return {
     level: process.env.LOG_LEVEL ?? 'info',
+    // Horodatage ISO plutot que l'epoque en millisecondes de pino : GoAccess
+    // sait lire une date ISO, pas un entier en millisecondes. Et une ligne de
+    // journal lue par un humain gagne a etre datee lisiblement.
+    timestamp: () => `,"time":"${new Date().toISOString()}"`,
     redact: {
       // Ceinture et bretelles : même si un sérialiseur changeait, ces chemins
       // ne sortiraient pas.
@@ -101,4 +105,60 @@ export function buildLoggerOptions(): FastifyServerOptions['logger'] {
       },
     },
   }
+}
+
+/**
+ * Le crochet de fin de requête : UNE ligne par requête, complète.
+ *
+ * POURQUOI. Fastify en journalise deux : « incoming request » porte l'adresse et
+ * l'URL, « request completed » porte le code de statut. Aucune des deux n'est
+ * exploitable seule :
+ *
+ *   - GoAccess a besoin d'adresse + URL + statut sur la MEME ligne ;
+ *   - les scénarios HTTP de CrowdSec s'appuient sur les taux de 404, absents de
+ *     la ligne qui porte l'URL ;
+ *   - et le volume double pour rien (17 Mo de journal en une journée).
+ *
+ * On désactive donc la journalisation automatique (`disableRequestLogging`) et on
+ * émet une ligne unique à la réponse. Volume divisé par deux, et les deux outils
+ * deviennent utilisables.
+ *
+ * MÊMES INTERDITS QUE PLUS HAUT : ni corps, ni cookie, ni autorisation. Un
+ * journal d'accès qui aspire les corps devient la fuite qu'il prétend prévenir.
+ */
+export function journaliserAcces(request: FastifyRequest, reply: FastifyReply, tempsMs: number): void {
+  const h = request.headers
+  const usurpation = ENTETES_USURPATION.filter((n) => h[n] !== undefined)
+  // `ts` : horodatage compact DEDIE a GoAccess, qui refuse les millisecondes et
+  // le `Z` de l'ISO (`%x` ne les analyse pas). On garde donc `time` en ISO
+  // complet pour les humains et la correlation fine — deux evenements dans la
+  // meme seconde restent distinguables — et on ajoute ce champ pour l'outil.
+  const d = new Date()
+  const p2 = (n: number) => String(n).padStart(2, '0')
+  // Deux champs separes : GoAccess veut `%d` pour la date et `%t` pour l'heure.
+  // Son `%x` combine exige que les deux formats correspondent au meme jeton, ce
+  // qui ne fonctionne pas avec un horodatage ISO.
+  const log_date = `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}`
+  const log_time = `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())}`
+
+  request.log.info(
+    {
+      log_date,
+      log_time,
+      // `ip` est l'adresse RÉELLE du visiteur ; `peer` le proxy local. Deux
+      // champs distincts : les fusionner, c'est perdre la détection d'usurpation.
+      ip: getClientIp(request),
+      peer: request.socket?.remoteAddress,
+      method: request.method,
+      url: request.url,
+      status: reply.statusCode,
+      duree: Math.round(tempsMs * 100) / 100,
+      ua: typeof h['user-agent'] === 'string' ? h['user-agent'].slice(0, 300) : undefined,
+      referer: typeof h.referer === 'string' ? h.referer.slice(0, 300) : undefined,
+      host: typeof h.host === 'string' ? h.host : undefined,
+      // Présence conjointe = empreinte d'outillage (1369 tentatives mesurées).
+      usurpation: usurpation.length ? usurpation.join(',') : undefined,
+    },
+    'access',
+  )
 }

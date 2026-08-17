@@ -1,0 +1,28 @@
+onsuccess: next_stage
+name: nodyx/core-logs
+description: "Analyse le journal d'acces du coeur Nodyx (une ligne par requete)"
+filter: "evt.Line.Labels.type == 'nodyx-core' && evt.Line.Raw startsWith '{'"
+nodes:
+  # UNE ligne par requete depuis le journal d'acces dedie : adresse, chemin,
+  # statut et duree ensemble. Avant, Fastify en emettait deux — l'une avec
+  # l'URL sans le statut, l'autre l'inverse — et aucune n'etait exploitable.
+  - filter: "JsonExtract(evt.Line.Raw, 'msg') == 'access'"
+    statics:
+      - meta: log_type
+        value: http_access
+      - meta: service
+        value: nodyx-core
+      # `ip` est la VRAIE adresse du visiteur. Surtout pas `peer`, le proxy local.
+      - meta: source_ip
+        expression: JsonExtract(evt.Line.Raw, "ip")
+      - meta: http_path
+        expression: JsonExtract(evt.Line.Raw, "url")
+      - meta: http_verb
+        expression: JsonExtract(evt.Line.Raw, "method")
+      - meta: http_status
+        expression: JsonExtract(evt.Line.Raw, "status")
+      - meta: http_user_agent
+        expression: JsonExtract(evt.Line.Raw, "ua")
+      # Presence conjointe d'en-tetes d'usurpation : empreinte d'outillage.
+      - meta: nodyx_spoof
+        expression: JsonExtract(evt.Line.Raw, "usurpation")
