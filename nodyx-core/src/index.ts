@@ -1,4 +1,6 @@
 import Fastify, { type FastifyRequest } from 'fastify'
+import { buildLoggerOptions } from './config/logger'
+import { getClientIp } from './utils/clientIp'
 import { Server } from 'socket.io'
 import fastifyStatic from '@fastify/static'
 import fastifyMultipart from '@fastify/multipart'
@@ -178,8 +180,6 @@ server.addHook('onRequest', async (request, reply) => {
 // Returns 503 on user-facing writes while a backup/restore window is active.
 // Skips reads, admin endpoints, and the maintenance status endpoint itself.
 import { maintenanceGuard } from './middleware/maintenanceGuard'
-import { buildLoggerOptions } from './config/logger'
-import { getClientIp } from './utils/clientIp'
 server.addHook('onRequest', maintenanceGuard)
 
 // ── Routes ───────────────────────────────────────────────────
