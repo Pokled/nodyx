@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { attendreMesurable } from './_attente'
 
 /**
  * Rangées dont le contenu ne rentre pas.
@@ -29,7 +30,7 @@ const PAGES = [
 for (const [nom, chemin] of PAGES) {
 	test(`${nom} : aucune rangée ne coupe son contenu`, async ({ page }) => {
 		await page.goto(chemin, { waitUntil: 'domcontentloaded' })
-		await page.waitForTimeout(1800)
+		await attendreMesurable(page)
 
 		const coupables = await page.evaluate(() => {
 			const out: { perdu: number; boite: number; tag: string; cls: string; txt: string }[] = []

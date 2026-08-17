@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { attendreMesurable } from './_attente'
 
 /**
  * Débordement horizontal, le défaut responsive le plus courant.
@@ -21,7 +22,7 @@ const PAGES_PUBLIQUES = [
 for (const [nom, chemin] of PAGES_PUBLIQUES) {
 	test(`${nom} ne déborde pas horizontalement`, async ({ page }) => {
 		await page.goto(chemin, { waitUntil: 'domcontentloaded' })
-		await page.waitForTimeout(1200)
+		await attendreMesurable(page)
 
 		const mesure = await page.evaluate(() => {
 			const de = document.documentElement

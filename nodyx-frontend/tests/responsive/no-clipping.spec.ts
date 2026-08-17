@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { attendreMesurable } from './_attente'
 
 /**
  * Contenu ROGNÉ, à ne pas confondre avec le débordement de page.
@@ -27,7 +28,7 @@ const PAGES = [
 for (const [nom, chemin] of PAGES) {
 	test(`${nom} : aucun élément plus large que l'écran`, async ({ page }, info) => {
 		await page.goto(chemin, { waitUntil: 'domcontentloaded' })
-		await page.waitForTimeout(1800)
+		await attendreMesurable(page)
 
 		const coupables = await page.evaluate(() => {
 			const vw = window.innerWidth

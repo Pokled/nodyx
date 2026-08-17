@@ -32,7 +32,12 @@ export default defineConfig({
 	// Un test de rendu qui dépend de l'ordre d'exécution ment.
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 1 : 0,
+	// Un reessai TOUJOURS, pas seulement en CI. Le service worker recharge la
+	// page des qu'une nouvelle version prend le controle, ce qui arrive au
+	// premier chargement de CHAQUE contexte apres un deploiement, donc de
+	// chaque test. C'est le comportement attendu du produit, pas un defaut :
+	// un test qui passe au second essai dans ce cas est un test qui a raison.
+	retries: 1,
 	reporter: process.env.CI ? 'github' : 'list',
 
 	use: {
