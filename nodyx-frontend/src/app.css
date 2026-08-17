@@ -804,6 +804,17 @@ select option {
 		white-space: normal;
 		overflow-wrap: anywhere;
 	}
+	/* ET SES DESCENDANTS. Mesure du 17/08 sur /admin/audit-log : la regle
+	 * ci-dessus visait la cellule, mais le `whitespace-nowrap` etait porte par le
+	 * LIEN qu'elle contient, un titre de discussion. Resultat, 508px de contenu
+	 * pour 340px de zone alors que la cellule elle-meme etait a la bonne taille.
+	 * Le selecteur (0,0,1,1) l'emporte sur l'utilitaire (0,0,1,0), toujours sans
+	 * `!important`. Le `min-width` laisse les enfants d'une cellule en flex
+	 * retrecir au lieu de pousser la carte. */
+	.tableau-cartes td * {
+		white-space: normal;
+		min-width: 0;
+	}
 	.tableau-cartes td[data-label]::before {
 		content: attr(data-label);
 		flex: 0 0 auto;
