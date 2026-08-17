@@ -789,6 +789,20 @@ select option {
 		padding: 0.35rem 1rem;
 		border: 0;
 		text-align: left;
+		min-width: 0;
+		/* Mesure du 17/08 : la cellule faisait bien 340px, c'est son CONTENU qui
+		 * debordait. Deux causes, deux lignes.
+		 *
+		 * `white-space` : des cellules portent un `whitespace-nowrap` utilitaire,
+		 * legitime en tableau, absurde en carte. Notre selecteur est plus
+		 * specifique (0,1,1 contre 0,1,0), il gagne sans `!important`.
+		 *
+		 * `overflow-wrap` : un identifiant insecable comme
+		 * `ghost-1504412991@twitch...` ne se coupe nulle part et poussait la carte
+		 * a 451px pour 340px de zone. `anywhere` autorise la coupure au caractere,
+		 * ce qui est le comportement voulu pour un identifiant technique. */
+		white-space: normal;
+		overflow-wrap: anywhere;
 	}
 	.tableau-cartes td[data-label]::before {
 		content: attr(data-label);
