@@ -55,7 +55,11 @@ import { startScheduler }  from './scheduler'
 // laisserait l'attaquant dicter request.ip). On ne fait confiance qu'aux proxys
 // légitimes (loopback + privé + Cloudflare), pour que request.ip soit la vraie
 // adresse du visiteur, partout dans le code. cf src/config/trustedProxies.ts
-const server = Fastify({ logger: true, trustProxy: getTrustProxy() })
+// `logger: buildLoggerOptions()` et non `true` : le sérialiseur par défaut de
+// Fastify écrit `socket.remoteAddress`, donc `127.0.0.1` derrière Cloudflare.
+// Ces journaux sont la source prévue de la détection comportementale ; aveugles,
+// ils n'auraient permis de bannir personne. cf src/config/logger.ts
+const server = Fastify({ logger: buildLoggerOptions(), trustProxy: getTrustProxy() })
 
 // ── CORS (pour les appels fetch client-side : upload, chat, mentions) ────────
 const corsOrigin = process.env.FRONTEND_URL
@@ -174,6 +178,7 @@ server.addHook('onRequest', async (request, reply) => {
 // Returns 503 on user-facing writes while a backup/restore window is active.
 // Skips reads, admin endpoints, and the maintenance status endpoint itself.
 import { maintenanceGuard } from './middleware/maintenanceGuard'
+import { buildLoggerOptions } from './config/logger'
 import { getClientIp } from './utils/clientIp'
 server.addHook('onRequest', maintenanceGuard)
 
