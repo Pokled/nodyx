@@ -1,0 +1,22 @@
+[Unit]
+Description=Nodyx — rapport GoAccess du trafic web
+Documentation=file:///var/www/nexus/SPECS/OLYMPUS_OBSERVABILITE_CDC.md
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/nodyx-goaccess-rapport.sh
+TimeoutStartSec=180
+Nice=10
+# Le rapport contient les adresses des visiteurs : il vit dans un repertoire
+# lisible par le seul groupe `nodyx`, et le hub le servira derriere son
+# authentification. Jamais expose publiquement.
+ReadWritePaths=/var/lib/nodyx-goaccess
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

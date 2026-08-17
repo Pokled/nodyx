@@ -1,0 +1,14 @@
+[Unit]
+Description=Nodyx — regeneration du rapport GoAccess toutes les minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+# Une minute : assez frais pour suivre une attaque en cours, assez espace pour
+# que la generation (qui relit tout le journal) ne pese pas. Le mode temps reel
+# natif de GoAccess exigerait un WebSocket proxifie par Caddy, dont la
+# configuration vivante ne doit pas etre rechargee.
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
