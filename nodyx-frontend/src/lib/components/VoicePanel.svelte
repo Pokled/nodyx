@@ -915,9 +915,9 @@
                             </div>
                             <button
                                 onclick={() => showVoiceSettings = false}
-                                class="hidden sm:flex absolute top-4 right-4 text-gray-500 hover:text-white
-                                       bg-black/40 w-7 h-7 rounded-full items-center justify-center
-                                       backdrop-blur-sm border border-gray-700 hover:border-amber-500/50
+                                class="hidden sm:flex absolute top-4 right-4 text-gray-200 hover:text-white
+                                       bg-black/70 w-8 h-8 rounded-full items-center justify-center
+                                       backdrop-blur-sm border border-gray-600 hover:border-amber-500/50
                                        transition-all duration-200 hover:scale-110"
                                 style="pointer-events: auto; z-index: 201;"
                             >
@@ -1080,14 +1080,27 @@
                                 border border-amber-500/30 rounded-2xl shadow-2xl shadow-amber-500/10
                                 overflow-hidden backdrop-blur-md">
                         <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
+
+                        <!-- EN-TETE AVEC SORTIE, toujours visible. Cette variante n'en
+                             avait AUCUN : sur telephone le panneau s'affichait en pleine
+                             page sans la moindre croix, et on ne pouvait plus en sortir
+                             (signale le 17/08, capture a l'appui). Une croix flottante de
+                             28px existait mais elle etait invisible en pratique. Un
+                             en-tete barre, lui, ne peut pas se confondre avec le contenu. -->
+                        <div class="flex items-center justify-between gap-2 px-4 py-2 border-b border-gray-800 bg-gray-900/95">
+                            <span class="text-sm font-semibold text-white truncate">{tFn('voice.audio_settings_title')}</span>
+                            <button onclick={() => showVoiceSettings = false}
+                                    aria-label={tFn('voice_panel.close_settings')}
+                                    class="shrink-0 w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center rounded-full
+                                           text-gray-200 hover:text-white bg-black/50 border border-gray-600
+                                           hover:border-amber-500/50 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+
                         <VoiceSettings />
-                        <button onclick={() => showVoiceSettings = false}
-                            class="absolute top-4 right-4 text-gray-500 hover:text-white
-                                   bg-black/40 w-7 h-7 rounded-full flex items-center justify-center
-                                   backdrop-blur-sm border border-gray-700 hover:border-amber-500/50
-                                   transition-all duration-200 hover:scale-110">
-                            <span class="text-sm">✕</span>
-                        </button>
                     </div>
                 </div>
             {/if}
