@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
 # Regenere le rapport GoAccess a partir du journal d'acces du coeur.
 #
-# Pourquoi pas le mode --real-time-html de GoAccess : il ouvre un serveur
-# WebSocket sur un port dedie, qu'il faudrait proxifier dans Caddy. Or la
-# configuration Caddy vivante de cette machine vient de `autosave.json`, et un
-# rechargement fait tomber le HTTPS de nodyx.org (cf CLAUDE.md). Une
-# regeneration periodique donne 95 % du benefice pour 0 % du risque.
+# SORTIE EN JSON, PAS EN HTML. Le rapport HTML de GoAccess se rend entierement
+# en JavaScript et utilise `new Function`, que la CSP d'Olympus interdit
+# (`script-src 'self' 'unsafe-inline'`, sans `unsafe-eval`). Resultat mesure :
+# 6052 caracteres rendus sans CSP, ZERO avec celle de production — page blanche.
+#
+# Plutot qu'affaiblir la CSP d'une page qui affiche des adresses de visiteurs, on
+# laisse GoAccess faire ce qu'il fait le mieux — l'agregation — et Olympus rend
+# avec ses propres composants. Aucun `eval`, aucune CSP a toucher, et un rendu
+# coherent avec le reste du hub.
+#
+# Le mode --real-time-html est ecarte pour une autre raison : il ouvre un serveur
+# WebSocket qu'il faudrait proxifier dans Caddy, dont la configuration vivante ne
+# doit pas etre rechargee (cf CLAUDE.md).
 set -euo pipefail
 
 JOURNAL=/home/nodyx/.pm2/logs/nodyx-core-out.log
-SORTIE=/var/lib/nodyx-goaccess/rapport.html
+SORTIE=/var/lib/nodyx-goaccess/rapport.json
 TAMPON=$(mktemp /tmp/goaccess-acces.XXXXXX)
 trap 'rm -f "$TAMPON"' EXIT
 
@@ -22,10 +30,10 @@ if [ ! -s "$TAMPON" ]; then
   exit 0
 fi
 
-TMP_HTML="${SORTIE%.html}.tmp.html"
-goaccess "$TAMPON" -p /etc/goaccess/nodyx.conf -o "$TMP_HTML"
+TMP="${SORTIE%.json}.tmp.json"
+goaccess "$TAMPON" -p /etc/goaccess/nodyx.conf -o "$TMP"
 # Remplacement atomique : le hub ne doit jamais lire un fichier a moitie ecrit.
-mv -f "$TMP_HTML" "$SORTIE"
+mv -f "$TMP" "$SORTIE"
 # Le hub tourne en `nodyx` et doit pouvoir le lire.
 chown root:nodyx "$SORTIE"
 chmod 640 "$SORTIE"

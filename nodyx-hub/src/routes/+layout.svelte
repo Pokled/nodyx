@@ -9,6 +9,7 @@
     { href: '/instances',    label: 'Instances',   icon: '◎' },
     { href: '/security',     label: 'Sécurité',    icon: '⚠' },
     { href: '/newsletter',   label: 'Newsletter',  icon: '◈' },
+    { href: '/security/trafic', label: 'Trafic',    icon: '◑' },
     { href: '/logs',         label: 'Logs',        icon: '▸' },
   ];
 </script>
