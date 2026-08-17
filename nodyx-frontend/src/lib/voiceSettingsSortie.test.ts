@@ -76,41 +76,48 @@ describe('sortie des paramètres audio', () => {
 		//
 		// Un en-tête `sticky` ne sert à rien sans zone défilante : c'est pourquoi
 		// ce contrôle vit à côté de celui du collage, pas à sa place.
-		const conteneurs = PANNEAU.split('<VoiceSettings').slice(0, -1)
-		expect(conteneurs.length, 'les deux sites de rendu doivent être présents').toBe(2)
-		for (const [i, amont] of conteneurs.entries()) {
-			// On regarde le conteneur immédiat, pas toute la page.
-			const proche = amont.slice(-700)
-			expect(proche, `site de rendu ${i + 1} : aucune borne sur la hauteur`).toMatch(
-				/max-h-\[calc\(100dvh/,
-			)
+		const blocs = PANNEAU.split('{#if showVoiceSettings}').slice(1)
+		const rendus = blocs.filter((b) => b.slice(0, b.indexOf('{/if}')).includes('<VoiceSettings'))
+		expect(rendus.length, 'les deux sites de rendu doivent être présents').toBe(2)
+		for (const [i, bloc] of rendus.entries()) {
+			expect(bloc.slice(0, bloc.indexOf('{/if}')), `site de rendu ${i + 1} : aucune borne`)
+				.toMatch(/max-h-\[calc\(100dvh/)
 		}
 	})
 
-	it("fait passer la barre flottante au-dessus de l'en-tête pendant l'ouverture", () => {
-		// LA vraie cause, mesurée dans le navigateur de l'utilisateur (500x996).
+	it('sort les deux fenêtres de leur arbre avec un portal', () => {
+		// LA vraie cause, mesurée chez l'utilisateur (500x996) après deux
+		// correctifs qui visaient à côté.
 		//
-		// Le panneau des réglages est `fixed inset-0 z-[200]`, mais il descend de la
-		// barre vocale flottante, qui portait un `z-40` fixe. Un `z-index` sur un
-		// élément `fixed` crée un contexte d'empilement : le 200 du panneau ne vaut
-		// QUE dans ce contexte. À l'étage du dessus la comparaison est 40 contre le
-		// `z-50` de l'en-tête de l'application, et l'en-tête gagne. Ses 48px
-		// recouvraient les 31 premiers pixels de la croix, sur 44 :
+		// La fenêtre est `z-[200]` et elle était quand même RECOUVERTE par
+		// l'en-tête de l'application (`NAV.sticky top-0 z-50`, 48px), qui mangeait
+		// les 31 premiers pixels de la croix sur 44 :
 		//
-		//     y=4  -> NAV.sticky top-0 z-50 h-12   (l'en-tête, pas le panneau)
-		//     y=52 -> LA CROIX                     (enfin, sous les 48px)
+		//     y=4  -> NAV.sticky top-0 z-50 h-12   (l'en-tête)
+		//     y=52 -> LA CROIX                     (enfin)
 		//
-		// Le panneau n'était ni coupé ni rogné : il était RECOUVERT. C'est pourquoi
-		// ni le collage en haut ni le bornage à l'écran n'y pouvaient rien.
-		const barre = PANNEAU.match(/<div class='fixed left-0[^']*'/)
-		expect(barre, 'barre vocale flottante introuvable').not.toBeNull()
-		expect(barre![0], "le `z` de la barre doit dépendre de l'ouverture des réglages").toMatch(
-			/showVoiceSettings \?/,
-		)
-		// Doit dépasser le `z-50` de l'en-tête, sinon le correctif ne corrige rien.
-		const ouvert = barre![0].match(/showVoiceSettings \? "z-\[(\d+)\]"/)
-		expect(ouvert, 'valeur du `z` en position ouverte illisible').not.toBeNull()
-		expect(Number(ouvert![1])).toBeGreaterThan(50)
+		// La chaîne des ancêtres dit pourquoi :
+		//
+		//     panneau            z:200
+		//     barre vocale       z:40
+		//     DIV.fixed top-12   z:10   <- le plafond
+		//
+		// Chaque `z-index` sur un `fixed` crée un contexte d'empilement : le 200 ne
+		// vaut que dans celui de la barre, qui ne vaut que dans celui à z:10. Face
+		// au z-50 de l'en-tête, c'est 10 contre 50. Monter la barre de 40 à 60 était
+		// INERTE, mesure à l'appui : le plafond était un cran plus haut.
+		//
+		// Seul le portal règle ça, en sortant la fenêtre à la racine.
+		// On découpe sur le bloc, pas sur une distance en caractères : un simple
+		// commentaire ajouté au-dessus suffisait à faire sortir `use:portal` d'une
+		// fenêtre fixe, et le test tombait sur du code correct.
+		const blocs = PANNEAU.split('{#if showVoiceSettings}').slice(1)
+		const rendus = blocs.filter((b) => b.slice(0, b.indexOf('{/if}')).includes('<VoiceSettings'))
+		expect(rendus.length, 'les deux sites de rendu doivent être présents').toBe(2)
+		for (const [i, bloc] of rendus.entries()) {
+			expect(bloc.slice(0, bloc.indexOf('{/if}')), `site de rendu ${i + 1} : pas de portal`)
+				.toMatch(/use:portal/)
+		}
 	})
 
 	it('donne à la croix une cible atteignable au pouce', () => {
