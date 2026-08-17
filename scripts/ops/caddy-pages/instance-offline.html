@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="robots" content="noindex, nofollow">
+	<title>Instance hors-ligne — Nodyx</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+	<style>
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+		html, body { height: 100%; }
+		body {
+			font-family: 'Inter', system-ui, sans-serif;
+			background: #0a0a0f;
+			color: #e2e8f0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 1.5rem;
+			overflow: hidden;
+			position: relative;
+		}
+
+		/* Gradient orbs de fond */
+		body::before, body::after {
+			content: '';
+			position: absolute;
+			border-radius: 50%;
+			filter: blur(80px);
+			opacity: .25;
+			pointer-events: none;
+			animation: float 14s ease-in-out infinite;
+		}
+		body::before {
+			width: 500px; height: 500px;
+			background: #7c3aed;
+			top: -150px; left: -150px;
+		}
+		body::after {
+			width: 400px; height: 400px;
+			background: #0e7490;
+			bottom: -120px; right: -120px;
+			animation-delay: -7s;
+		}
+		@keyframes float {
+			0%, 100% { transform: translate(0, 0); }
+			50%      { transform: translate(30px, -40px); }
+		}
+
+		.card {
+			position: relative;
+			max-width: 560px;
+			width: 100%;
+			padding: 2.5rem 2.25rem;
+			background: rgba(20, 20, 28, .65);
+			border: 1px solid rgba(255, 255, 255, .08);
+			backdrop-filter: blur(20px);
+			-webkit-backdrop-filter: blur(20px);
+			text-align: center;
+			z-index: 1;
+		}
+
+		.glyph {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 56px;
+			height: 56px;
+			background: linear-gradient(135deg, rgba(124, 58, 237, .18), rgba(14, 116, 144, .18));
+			border: 1px solid rgba(167, 139, 250, .3);
+			margin-bottom: 1.25rem;
+			position: relative;
+		}
+		.glyph::after {
+			content: '';
+			position: absolute;
+			top: 8px; right: 8px;
+			width: 10px; height: 10px;
+			border-radius: 50%;
+			background: #f59e0b;
+			box-shadow: 0 0 0 2px rgba(10, 10, 15, 1);
+			animation: pulse 2s ease-in-out infinite;
+		}
+		.glyph svg { width: 28px; height: 28px; color: #a78bfa; }
+		@keyframes pulse {
+			0%, 100% { transform: scale(1);   opacity: 1;  }
+			50%      { transform: scale(1.2); opacity: .6; }
+		}
+
+		.eyebrow {
+			font-family: 'Space Grotesk', sans-serif;
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: .22em;
+			text-transform: uppercase;
+			color: #a78bfa;
+			margin-bottom: .75rem;
+		}
+
+		h1 {
+			font-family: 'Space Grotesk', sans-serif;
+			font-size: clamp(1.6rem, 4vw, 2rem);
+			font-weight: 800;
+			line-height: 1.15;
+			letter-spacing: -.02em;
+			color: #fff;
+			margin-bottom: .875rem;
+		}
+
+		.subdomain {
+			display: inline-block;
+			font-family: 'Space Grotesk', sans-serif;
+			font-size: 13px;
+			font-weight: 700;
+			padding: .3rem .75rem;
+			margin-bottom: 1.25rem;
+			background: rgba(167, 139, 250, .08);
+			border: 1px solid rgba(167, 139, 250, .25);
+			color: #c4b5fd;
+		}
+
+		p.lead {
+			font-size: 14px;
+			line-height: 1.65;
+			color: #94a3b8;
+			margin-bottom: 1.5rem;
+			max-width: 440px;
+			margin-left: auto;
+			margin-right: auto;
+		}
+
+		.reasons {
+			text-align: left;
+			list-style: none;
+			padding: 1rem 1.125rem;
+			margin-bottom: 1.75rem;
+			background: rgba(255, 255, 255, .02);
+			border: 1px solid rgba(255, 255, 255, .05);
+			font-size: 13px;
+			line-height: 1.6;
+			color: #94a3b8;
+		}
+		.reasons li {
+			display: flex;
+			align-items: flex-start;
+			gap: .6rem;
+			padding: .25rem 0;
+		}
+		.reasons li::before {
+			content: '→';
+			color: #a78bfa;
+			font-weight: 700;
+			flex-shrink: 0;
+		}
+
+		.actions {
+			display: flex;
+			gap: .75rem;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+
+		.btn {
+			display: inline-flex;
+			align-items: center;
+			gap: .5rem;
+			padding: .7rem 1.25rem;
+			font-family: 'Space Grotesk', sans-serif;
+			font-size: 12px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: .14em;
+			text-decoration: none;
+			cursor: pointer;
+			border: 1px solid transparent;
+			background: transparent;
+			transition: all .2s ease;
+		}
+		.btn-primary {
+			background: linear-gradient(135deg, #7c3aed, #6d28d9);
+			color: #fff;
+			border-color: rgba(167, 139, 250, .5);
+		}
+		.btn-primary:hover {
+			background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+			transform: translateY(-1px);
+			box-shadow: 0 8px 24px rgba(124, 58, 237, .35);
+		}
+		.btn-ghost {
+			color: #cbd5e1;
+			border-color: rgba(255, 255, 255, .12);
+		}
+		.btn-ghost:hover {
+			border-color: rgba(255, 255, 255, .25);
+			background: rgba(255, 255, 255, .03);
+		}
+		.btn svg { width: 14px; height: 14px; }
+
+		.footer {
+			margin-top: 1.75rem;
+			padding-top: 1.25rem;
+			border-top: 1px solid rgba(255, 255, 255, .05);
+			font-size: 11px;
+			color: #4b5563;
+		}
+		.footer a {
+			color: #a78bfa;
+			text-decoration: none;
+			font-weight: 600;
+		}
+		.footer a:hover { text-decoration: underline; }
+
+		#countdown {
+			font-variant-numeric: tabular-nums;
+			font-weight: 700;
+			color: #a78bfa;
+		}
+	
+    .diag { margin: 1.25rem 0; padding: 0.9rem 1rem; border: 1px solid #4b5563; border-radius: 0.6rem; background: rgba(10,10,15,0.6); text-align: left; }
+    .diag-titre { margin: 0 0 0.5rem; font-size: 0.85rem; color: #c4b5fd; font-weight: 600; }
+    .diag { max-width: 100%; overflow: hidden; }
+    .diag pre { margin: 0; padding: 0.7rem 0.8rem; background: #0a0a0f; border-radius: 0.4rem; overflow-x: auto; max-width: 100%; }
+    .diag code, li code { font-family: ui-monospace, monospace; font-size: 0.8rem; color: #a78bfa; overflow-wrap: anywhere; }
+    .diag pre code { color: #cbd5e1; line-height: 1.7; display: block; white-space: pre; font-size: 0.72rem; }
+    .diag-note { margin: 0.7rem 0 0; font-size: 0.8rem; color: #94a3b8; line-height: 1.6; }
+    .langues { margin-top: 1rem; text-align: left; font-size: 0.8rem; color: #94a3b8; }
+    .langues summary { cursor: pointer; color: #a78bfa; }
+    .langues p { margin: 0.6rem 0 0; line-height: 1.6; }
+  </style>
+</head>
+<body>
+	<main class="card">
+		<div class="glyph" aria-hidden="true">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M12 2a10 10 0 1 0 10 10"/>
+				<path d="M12 6v6l4 2"/>
+			</svg>
+		</div>
+
+		<div class="eyebrow">Nodyx · Instance hors-ligne</div>
+
+		<h1>Cette instance est temporairement injoignable</h1>
+
+		<div class="subdomain" id="host">—</div>
+
+		<p class="lead">
+			Le tunnel Nodyx est enregistré, mais le serveur de la communauté ne répond pas pour le moment.
+		</p>
+
+		<ul>
+      <li><b>Le plus fréquent :</b> votre réseau bloque les connexions sortantes vers le port
+        <code>7443</code>. C'est le cas de beaucoup de réseaux d'entreprise, d'université ou
+        d'institut, qui n'autorisent que le 443. Votre instance fonctionne, mais son tunnel
+        n'arrive pas jusqu'à nous.</li>
+      <li>L'installation est peut-être encore en cours (la compilation prend quelques minutes).</li>
+      <li>Le serveur de la communauté a redémarré, ou le client relais est arrêté.</li>
+    </ul>
+
+    <div class="diag">
+      <p class="diag-titre">Vérifier en une commande, sur votre serveur :</p>
+      <pre><code>nc -zv relay.nodyx.org 7443     # doit répondre « succeeded »
+systemctl status nodyx-relay    # le client doit être « active »
+journalctl -u nodyx-relay -n 20 # les tentatives de reconnexion</code></pre>
+      <p class="diag-note">
+        Si <code>nc</code> échoue alors que votre serveur accède bien à Internet, c'est votre
+        pare-feu sortant. Autorisez le port <code>7443</code> en sortie, ou contactez
+        l'administrateur du réseau. <b>Vous n'avez aucun port à ouvrir en entrée</b> — Nodyx ne
+        le demande jamais.
+      </p>
+    </div>
+
+    <details class="langues">
+      <summary>English / Português</summary>
+      <p><b>English —</b> Most often, your network blocks <b>outbound</b> connections to port
+        <code>7443</code>. Many corporate, university and institute networks only allow 443. Your
+        instance is running; its tunnel just cannot reach us. Test with
+        <code>nc -zv relay.nodyx.org 7443</code>. You never need to open any <i>inbound</i> port.</p>
+      <p><b>Português —</b> Na maioria das vezes, a sua rede bloqueia conexões <b>de saída</b> para
+        a porta <code>7443</code>. Muitas redes corporativas, universitárias e de institutos só
+        permitem a 443. A sua instância está funcionando; apenas o túnel não consegue nos alcançar.
+        Teste com <code>nc -zv relay.nodyx.org 7443</code>. Você nunca precisa abrir nenhuma porta
+        de <i>entrada</i>.</p>
+    </details>
+
+		<div class="actions">
+			<button class="btn btn-primary" onclick="window.location.reload()">
+				Réessayer <span id="countdown">(30s)</span>
+			</button>
+			<a class="btn btn-ghost" href="https://nodyx.org">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+				Retour à Nodyx
+			</a>
+		</div>
+
+		<div class="footer">
+			Le réseau <a href="https://nodyx.org">Nodyx</a> est décentralisé —
+			chaque communauté héberge sa propre instance.
+		</div>
+	</main>
+
+	<script>
+		// Affiche le sous-domaine concerné
+		try {
+			document.getElementById('host').textContent = window.location.hostname;
+		} catch (e) {}
+
+		// Compte à rebours + auto-reload toutes les 30s
+		(function() {
+			var seconds = 30;
+			var el = document.getElementById('countdown');
+			var tick = setInterval(function() {
+				seconds -= 1;
+				if (el) el.textContent = '(' + seconds + 's)';
+				if (seconds <= 0) {
+					clearInterval(tick);
+					window.location.reload();
+				}
+			}, 1000);
+		})();
+	</script>
+</body>
+</html>
