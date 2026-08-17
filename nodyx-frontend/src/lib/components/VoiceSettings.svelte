@@ -41,7 +41,13 @@
 <div class="p-4 space-y-5 text-sm select-none">
 
     <!-- ── Header ────────────────────────────────────────────────── -->
-    <div class="flex items-center gap-2">
+    <!-- COLLE EN HAUT : ce panneau defile, et l'en-tete partait avec lui. Des
+         qu'on descendait dans les reglages, la seule sortie disparaissait par le
+         haut (signale le 17/08, capture ou il ne restait que l'arc inferieur du
+         cercle). Les marges negatives compensent le `p-4` de la racine pour que
+         le fond couvre toute la largeur. -->
+    <div class="sticky top-0 z-20 -mx-4 -mt-4 px-4 pt-4 pb-2 flex items-center gap-2
+                bg-gray-950/95 backdrop-blur-sm border-b border-white/[0.06]">
         <span class="text-base">⚙️</span>
         <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-wider">{tFn('voice_settings.header')}</h3>
         {#if onclose}
