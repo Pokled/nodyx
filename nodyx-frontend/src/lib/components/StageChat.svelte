@@ -29,7 +29,19 @@
         channelId,
         channelName = '',
         oncollapse,
-    }: { channelId: string; channelName?: string; oncollapse?: () => void } = $props()
+        // Reserver la hauteur de la barre de navigation mobile sous la zone de
+        // saisie. VRAI dans un salon vocal, ou la barre est visible et opaque et
+        // recouvrait entierement le champ (mesure : champ a 801-821, barre a
+        // partir de 787, soit 34px de recouvrement, defaut du 17/08).
+        // FAUX dans la Scene, qui est un plein ecran RECOUVRANT la barre :
+        // y reserver la place gacherait 56px pour rien.
+        reserverBarreBasse = false,
+    }: {
+        channelId: string
+        channelName?: string
+        oncollapse?: () => void
+        reserverBarreBasse?: boolean
+    } = $props()
 
     type StageMessage = {
         id:              string
@@ -259,7 +271,8 @@
     </div>
 
     <!-- Composeur -->
-    <div class="shrink-0 p-3" style="border-top: 1px solid rgba(255,255,255,0.05)">
+    <div class="shrink-0 p-3"
+         style="border-top: 1px solid rgba(255,255,255,0.05); {reserverBarreBasse ? 'padding-bottom: max(0.75rem, var(--bottom-nav-h))' : ''}">
         <div class="flex items-center gap-2 rounded-lg px-3 py-2"
              style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07)">
             <button

@@ -458,6 +458,7 @@
 {#if showChatPanel}
 	<div class="w-72 shrink-0 min-h-0 xl:w-80">
 		<StageChat
+			reserverBarreBasse
 			channelId={selectedChannel.id}
 			channelName={selectedChannel.name}
 			oncollapse={() => (showChatPanel = false)}
