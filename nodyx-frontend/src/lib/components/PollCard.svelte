@@ -3,7 +3,7 @@
 
 	const tFn = $derived($t)
   import { onMount, onDestroy, untrack } from 'svelte'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { fly, fade } from 'svelte/transition'
   import { flip } from 'svelte/animate'
 
@@ -282,7 +282,7 @@
     return `${m}m`
   }
 
-  const currentUserId = $derived(($page.data as any).user?.id as string | undefined)
+  const currentUserId = $derived((page.data as any).user?.id as string | undefined)
   const isCreator     = $derived(poll ? String(poll.created_by ?? '') === String(currentUserId) : false)
   const hasVoted      = $derived((poll?.user_votes ?? []).length > 0)
   const canVote       = $derived(poll?.is_open && !voting)

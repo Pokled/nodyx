@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { browser } from '$app/environment'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { fly, fade, scale } from 'svelte/transition'
@@ -16,7 +16,7 @@
 	// par l'admin et substitue les variables `{user_name}`, `{bits}`, etc.
 	// dans les templates par event type.
 
-	const token = $derived(($page.params as { token: string }).token)
+	const token = $derived((page.params as { token: string }).token)
 
 	type AlertTheme = 'cyber' | 'soft' | 'retro' | 'neon' | 'holographic' | 'minimal' | 'custom'
 	type AlertPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'center'

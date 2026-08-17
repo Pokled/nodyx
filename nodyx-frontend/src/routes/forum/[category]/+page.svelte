@@ -2,7 +2,7 @@
 	import type { PageData } from './$types';
 	import { fly, fade } from 'svelte/transition';
 	import type { FlyParams, FadeParams } from 'svelte/transition';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { t } from '$lib/i18n';
 	import { replyCount, isUnanswered } from '$lib/forumCounts';
 
@@ -253,15 +253,15 @@
 </script>
 
 <svelte:head>
-	<title>{categoryName} · {$page.data.communityName ?? 'Nodyx'}</title>
-	<meta name="description" content="Discussions dans {categoryName}, forum {$page.data.communityName ?? 'Nodyx'}" />
-	<link rel="canonical" href={$page.url.href} />
-	<meta property="og:title"       content="{categoryName} · {$page.data.communityName ?? 'Nodyx'}" />
-	<meta property="og:description" content="Discussions dans {categoryName}, forum {$page.data.communityName ?? 'Nodyx'}" />
+	<title>{categoryName} · {page.data.communityName ?? 'Nodyx'}</title>
+	<meta name="description" content="Discussions dans {categoryName}, forum {page.data.communityName ?? 'Nodyx'}" />
+	<link rel="canonical" href={page.url.href} />
+	<meta property="og:title"       content="{categoryName} · {page.data.communityName ?? 'Nodyx'}" />
+	<meta property="og:description" content="Discussions dans {categoryName}, forum {page.data.communityName ?? 'Nodyx'}" />
 	<meta property="og:type"        content="website" />
-	<meta property="og:url"         content={$page.url.href} />
-	<meta property="og:image"       content={$page.data.communityBannerUrl ?? $page.data.communityLogoUrl ?? `${$page.url.origin}/default-og-image.png`} />
-	<meta property="og:site_name"   content={$page.data.communityName ?? 'Nodyx'} />
+	<meta property="og:url"         content={page.url.href} />
+	<meta property="og:image"       content={page.data.communityBannerUrl ?? page.data.communityLogoUrl ?? `${page.url.origin}/default-og-image.png`} />
+	<meta property="og:site_name"   content={page.data.communityName ?? 'Nodyx'} />
 </svelte:head>
 
 <!-- EN-TÊTE DE CATÉGORIE -->

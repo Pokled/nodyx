@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { t as i18n } from '$lib/i18n'
 	let { children } = $props()
 
@@ -17,8 +17,8 @@
 	]
 
 	function isActive(href: string): boolean {
-		if (href === '/admin/octoguard') return $page.url.pathname === href
-		return $page.url.pathname.startsWith(href)
+		if (href === '/admin/octoguard') return page.url.pathname === href
+		return page.url.pathname.startsWith(href)
 	}
 </script>
 

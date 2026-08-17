@@ -4,7 +4,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import type { LayoutData } from './$types';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { browser } from '$app/environment';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { initSocket, unreadCountStore, chatMentionStore, dmUnreadStore, onlineMembersStore, getSocket } from '$lib/socket';
@@ -45,7 +45,7 @@
 		'/users/[username]/card',
 		'/calendar/[id]',
 	]);
-	const ownsOgImage = $derived(PAGES_WITH_OWN_OG.has($page.route.id ?? ''));
+	const ownsOgImage = $derived(PAGES_WITH_OWN_OG.has(page.route.id ?? ''));
 
 	const user            = $derived(data.user);
 	const isBanned        = $derived(data.user?.is_banned === true);
@@ -95,7 +95,7 @@
 
 	// Reset chat mention badge when user is on /chat
 	$effect(() => {
-		if ($page.url.pathname.startsWith('/chat') && $chatMentionStore > 0) {
+		if (page.url.pathname.startsWith('/chat') && $chatMentionStore > 0) {
 			chatMentionStore.set(0)
 		}
 	})
@@ -104,7 +104,7 @@
 	let _lastMentionCount = 0
 	$effect(() => {
 		const c = $chatMentionStore
-		if (c > _lastMentionCount && !$page.url.pathname.startsWith('/chat')) {
+		if (c > _lastMentionCount && !page.url.pathname.startsWith('/chat')) {
 			playMention()
 		}
 		_lastMentionCount = c
@@ -140,8 +140,8 @@
 
 	const isActive = (href: string) =>
 		href === '/'
-			? $page.url.pathname === '/'
-			: $page.url.pathname.startsWith(href)
+			? page.url.pathname === '/'
+			: page.url.pathname.startsWith(href)
 
 	// App-wide theme — cascade : défaut → thème d'INSTANCE (owner, son univers) → thème du MEMBRE (override perso)
 	const appVars = $derived(themeToVars(resolveTheme((data as any).appTheme, (data as any).instanceTheme)))
@@ -439,7 +439,7 @@
 
 	// Ferme le drawer sur changement de page (navigation SvelteKit)
 	$effect(() => {
-		const _ = $page.url.pathname
+		const _ = page.url.pathname
 		gallerySidebarOpen = false
 	})
 
@@ -500,7 +500,7 @@
 	// mounted over the new page until the user clicks "back".
 	let skipLangReset = false
 	$effect(() => {
-		$page.url.pathname
+		page.url.pathname
 		if (skipLangReset) { skipLangReset = false; return }
 		langView = false
 	})
@@ -580,9 +580,9 @@
 	}
 	const showChannelSidebar = $derived(
 		!isBanned &&
-		!$page.url.pathname.startsWith('/admin') &&
-		!$page.url.pathname.startsWith('/auth') &&
-		$page.url.pathname !== '/banned'
+		!page.url.pathname.startsWith('/admin') &&
+		!page.url.pathname.startsWith('/auth') &&
+		page.url.pathname !== '/banned'
 	)
 
 	// Routes /overlay/* sont des pages OBS browser source : fullscreen
@@ -593,13 +593,13 @@
 	// porte sa propre barre d'application, le chrome de l'app ferait doublon.
 	// On bypass complètement le rendu du layout pour ces routes.
 	const isBareRoute = $derived(
-		$page.url.pathname.startsWith('/overlay/') ||
-		$page.url.pathname.startsWith('/deck/') ||
-		$page.url.pathname === '/translate',
+		page.url.pathname.startsWith('/overlay/') ||
+		page.url.pathname.startsWith('/deck/') ||
+		page.url.pathname === '/translate',
 	)
 
 	// Active channel ID from URL (used on /chat to highlight the current channel)
-	const activeChatChannelId = $derived($page.url.searchParams.get('channel') ?? null)
+	const activeChatChannelId = $derived(page.url.searchParams.get('channel') ?? null)
 
 	// ── Voice state (for member roster in sidebar) ─────────────────────────────
 	const voiceState       = $derived($voiceStore)
@@ -717,8 +717,8 @@
 
 	// ── Contextual breadcrumb ──────────────────────────────────────────────────
 	const breadcrumbs = $derived((() => {
-		const path = $page.url.pathname;
-		const d = $page.data as any;
+		const path = page.url.pathname;
+		const d = page.data as any;
 		if (path === '/') return [];
 		const crumbs: { label: string; href?: string }[] = [];
 		if (path.startsWith('/forum')) {
@@ -730,7 +730,7 @@
 			if (d?.thread?.title) crumbs.push({ label: d.thread.title });
 		} else if (path.startsWith('/chat')) {
 			crumbs.push({ label: tFn('nav.chat') });
-			const chId = $page.url.searchParams.get('channel');
+			const chId = page.url.searchParams.get('channel');
 			if (chId) {
 				const ch = layoutChannels.find(c => c.id === chId);
 				if (ch) crumbs.push({ label: (ch.type === 'voice' ? '🔊 ' : '# ') + ch.name });
@@ -798,10 +798,10 @@
 	     s'affichait jamais dans les partages). Les pages qui définissent
 	     leur propre og:image (threads) ajoutent la leur en plus. -->
 	{#if !ownsOgImage}
-		<meta property="og:image" content="{$page.url.origin}/og-image.jpg" />
+		<meta property="og:image" content="{page.url.origin}/og-image.jpg" />
 		<meta property="og:image:width"  content="1200" />
 		<meta property="og:image:height" content="630" />
-		<meta name="twitter:image" content="{$page.url.origin}/og-image.jpg" />
+		<meta name="twitter:image" content="{page.url.origin}/og-image.jpg" />
 	{/if}
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="theme-color" content="var(--nx-accent)" />
@@ -1432,7 +1432,7 @@
             {/if}
 
 
-            <div class="w-full flex-1 flex flex-col {langView ? 'lang-view-wrap h-full' : ($page.url.pathname === '/' || $page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/admin') || $page.url.pathname.startsWith('/users/') || $page.url.pathname.startsWith('/feed') || $page.url.pathname.startsWith('/settings') || $page.url.pathname.startsWith('/garden') || $page.url.pathname.startsWith('/calendar') || $page.url.pathname.startsWith('/discover') || $page.url.pathname.startsWith('/wiki') || $page.url.pathname.startsWith('/library') || $page.url.pathname.startsWith('/dm') || $page.url.pathname.startsWith('/auth/') ? 'h-full' : ($page.url.pathname.startsWith('/forum') || $page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8')}">
+            <div class="w-full flex-1 flex flex-col {langView ? 'lang-view-wrap h-full' : (page.url.pathname === '/' || page.url.pathname.startsWith('/chat') || page.url.pathname.startsWith('/admin') || page.url.pathname.startsWith('/users/') || page.url.pathname.startsWith('/feed') || page.url.pathname.startsWith('/settings') || page.url.pathname.startsWith('/garden') || page.url.pathname.startsWith('/calendar') || page.url.pathname.startsWith('/discover') || page.url.pathname.startsWith('/wiki') || page.url.pathname.startsWith('/library') || page.url.pathname.startsWith('/dm') || page.url.pathname.startsWith('/auth/') ? 'h-full' : (page.url.pathname.startsWith('/forum') || page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8')}">
                 {#if langView}
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <div class="fixed inset-0 bg-black/40 backdrop-blur-xs z-40" onclick={() => langView = false} transition:fade={{ duration: 200 }}></div>
@@ -1821,7 +1821,7 @@
 		<!-- Profil / Connexion -->
 		{#if user}
 		<a href="/users/{user.username}"
-		   class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {$page.url.pathname.startsWith('/users/') ? 'text-indigo-400' : 'text-gray-500'}">
+		   class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {page.url.pathname.startsWith('/users/') ? 'text-indigo-400' : 'text-gray-500'}">
 			{#if user.avatar}
 				<img src={user.avatar} class="w-5 h-5 rounded-full object-cover" alt="" />
 			{:else}

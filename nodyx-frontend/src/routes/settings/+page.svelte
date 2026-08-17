@@ -1,7 +1,7 @@
 <script lang="ts">
     import NetworkDoctor from '$lib/components/NetworkDoctor.svelte';
     import E2EKeyBackup from '$lib/components/E2EKeyBackup.svelte';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
 
     import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$env/static/public';
     import { tick } from 'svelte';
@@ -24,7 +24,7 @@
 
     // Visibilité de la section Notifs Streamer : owners/admins seulement.
     const isStreamerNotifVisible = $derived(() => {
-        const u = $page.data.user as { role?: string } | null | undefined
+        const u = page.data.user as { role?: string } | null | undefined
         return u?.role === 'owner' || u?.role === 'admin'
     })
 
@@ -60,7 +60,7 @@
     let twitchError             = $state<string | null>(null)
 
     async function loadTwitchLink() {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token) { twitchLoaded = true; return }
         try {
             const res = await fetch('/api/v1/streamer/twitch/viewer/me', {
@@ -79,7 +79,7 @@
         twitchConnecting = true
         twitchError = null
         try {
-            const token = ($page.data as any).token as string | null
+            const token = (page.data as any).token as string | null
             const res = await fetch('/api/v1/streamer/twitch/viewer/auth-init', {
                 headers: { Authorization: `Bearer ${token}` },
             })
@@ -102,7 +102,7 @@
         twitchUnlinking = true
         twitchError = null
         try {
-            const token = ($page.data as any).token as string | null
+            const token = (page.data as any).token as string | null
             const res = await fetch('/api/v1/streamer/twitch/viewer/unlink', {
                 method:  'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
@@ -123,7 +123,7 @@
 
     // Lis ?just_linked_twitch=login au mount → toast + ouvre la section
     $effect(() => {
-        const justLinked = $page.url.searchParams.get('just_linked_twitch')
+        const justLinked = page.url.searchParams.get('just_linked_twitch')
         if (justLinked) {
             activeSection = 'connected-accounts'
             twitchToast   = get(t)('settings.twitch.linked_toast', { login: justLinked })
@@ -137,7 +137,7 @@
 
     // Deep-link ?section=xxx (ex: bouton « Paramètres » depuis les DM)
     $effect(() => {
-        const s = $page.url.searchParams.get('section')
+        const s = page.url.searchParams.get('section')
         if (s) {
             activeSection = s
             const url = new URL(window.location.href)
@@ -167,7 +167,7 @@
     let signetQrLink      = $state<string | null>(null)
 
     async function loadSignetDevices() {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token) return
         try {
             const res = await fetch(`${PUBLIC_API_URL}/api/auth/devices`, {
@@ -182,7 +182,7 @@
     }
 
     async function generateSignetToken() {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token) return
         signetGenerating = true
         signetToken = null
@@ -211,7 +211,7 @@
     }
 
     async function revokeSignetDevice(deviceId: string) {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token) return
         signetRevoking = deviceId
         try {
@@ -232,7 +232,7 @@
     }
 
     $effect(() => {
-        if ($page.data.user) loadSignetDevices()
+        if (page.data.user) loadSignetDevices()
     })
 
     // ── 2FA TOTP ──────────────────────────────────────────────────────────────
@@ -250,7 +250,7 @@
     let totpSuccess   = $state('')
 
     $effect(() => {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token || totpLoaded) return
         fetch('/api/v1/auth/totp/status', { headers: { Authorization: `Bearer ${token}` } })
             .then(r => r.ok ? r.json() : null)
@@ -260,7 +260,7 @@
     })
 
     async function totpStartSetup() {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token) return
         totpLoading = true; totpError = ''
         try {
@@ -276,7 +276,7 @@
     }
 
     async function totpConfirm() {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token || !totpCode) return
         totpLoading = true; totpError = ''
         try {
@@ -296,7 +296,7 @@
     }
 
     async function totpDisable() {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token || !totpCode) return
         totpLoading = true; totpError = ''
         try {
@@ -321,11 +321,11 @@
 
     // ── Instances liées (Galaxy Bar) ──────────────────────────────────────────
 
-    const user = $derived($page.data.user as { linked_instances?: string[] } | null);
+    const user = $derived(page.data.user as { linked_instances?: string[] } | null);
     let linkedSlugs = $state<string[]>([]);
     $effect(() => { linkedSlugs = user?.linked_instances ?? [] });
 
-    const directoryInstances = $derived($page.data.directoryInstances as Array<{
+    const directoryInstances = $derived(page.data.directoryInstances as Array<{
         slug: string; name: string; url: string; logo_url: string | null;
     }> ?? []);
 
@@ -347,7 +347,7 @@
         try {
             const res = await fetch(`${PUBLIC_API_URL}/api/v1/users/me/linked-instances`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${$page.data.token}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${page.data.token}` },
                 body: JSON.stringify({ action: 'add', slug }),
             });
             const json = await res.json();
@@ -362,7 +362,7 @@
     async function removeInstance(slug: string) {
         const res = await fetch(`${PUBLIC_API_URL}/api/v1/users/me/linked-instances`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${$page.data.token}` },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${page.data.token}` },
             body: JSON.stringify({ action: 'remove', slug }),
         });
         const json = await res.json();
@@ -403,7 +403,7 @@
     }
 
     async function togglePush() {
-        const token = ($page.data as any).token as string | null
+        const token = (page.data as any).token as string | null
         if (!token || !pushSupported) return
         pushLoading = true
         pushError   = ''
@@ -627,7 +627,7 @@
                 </div>
             </div>
 
-            {#if pushSupported && $page.data.user}
+            {#if pushSupported && page.data.user}
             <div class="s-card">
                 <div class="s-row">
                     <div class="s-row-info">
@@ -765,7 +765,7 @@
         {/if}
 
         <!-- ═══ SÉCURITÉ 2FA ════════════════════════════════════════════════ -->
-        {#if activeSection === 'security' && $page.data.user}
+        {#if activeSection === 'security' && page.data.user}
         <div class="s-pane" style="--accent: #f87171; --accent-bg: rgba(239,68,68,0.07); --accent-border: rgba(239,68,68,0.18)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
@@ -909,7 +909,7 @@
         {/if}
 
         <!-- ═══ MESSAGES CHIFFRÉS (sauvegarde de clé E2E) ════════════════════ -->
-        {#if activeSection === 'encryption' && $page.data.user}
+        {#if activeSection === 'encryption' && page.data.user}
         <div class="s-pane" style="--accent: var(--nx-accent-soft); --accent-bg: rgb(var(--nx-accent-rgb) / 0.08); --accent-border: rgb(var(--nx-accent-rgb) / 0.2)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
@@ -923,9 +923,9 @@
                 </div>
             </div>
 
-            {#if ($page.data as any).token}
+            {#if (page.data as any).token}
             <div class="s-card">
-                <E2EKeyBackup token={($page.data as any).token} mode="manage" />
+                <E2EKeyBackup token={(page.data as any).token} mode="manage" />
             </div>
             {/if}
         </div>

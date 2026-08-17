@@ -2,7 +2,7 @@
 	import { onMount, onDestroy, tick, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { browser } from '$app/environment';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { socket, getSocket } from '$lib/socket';
@@ -92,7 +92,7 @@
 	// où le timing de goto est plus lent que le state Svelte. Avec untrack le
 	// $effect ne fire QUE quand l'URL change réellement.
 	$effect(() => {
-		const urlChannelId = $page.url.searchParams.get('channel');
+		const urlChannelId = page.url.searchParams.get('channel');
 		untrack(() => {
 			if (localChannels.length === 0) return;
 			if (urlChannelId) {

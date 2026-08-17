@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types'
 	import { enhance } from '$app/forms'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { onMount, untrack } from 'svelte'
 	import { t } from '$lib/i18n'
 	import ImagePositionPicker from '$lib/components/homepage/ImagePositionPicker.svelte'
@@ -81,7 +81,7 @@
 	}
 
 	onMount(async () => {
-		const token = ($page.data as any).token as string | null
+		const token = (page.data as any).token as string | null
 		if (!token) return
 		try {
 			const res = await fetch('/api/v1/admin/smtp/status', {
@@ -110,7 +110,7 @@
 	}
 
 	async function saveConfig() {
-		const token = ($page.data as any).token as string | null
+		const token = (page.data as any).token as string | null
 		if (!token || !cfg) return
 		cfgSaving = true
 		cfgSaved = false
@@ -147,7 +147,7 @@
 	}
 
 	async function testTwitch() {
-		const token = ($page.data as any).token as string | null
+		const token = (page.data as any).token as string | null
 		if (!token) return
 		twitchTesting = true
 		twitchTestResult = null
@@ -165,7 +165,7 @@
 	}
 
 	async function sendSmtpTest() {
-		const token = ($page.data as any).token as string | null
+		const token = (page.data as any).token as string | null
 		if (!token || !smtpTestTo.trim()) return
 		smtpTesting = true
 		smtpTestResult = null
@@ -194,7 +194,7 @@
 	let uploadingSidebarBg = $state(false)
 
 	async function uploadBrandingFile(type: 'logo' | 'banner' | 'sidebar', file: File) {
-		const token = ($page.data as any).token as string | null
+		const token = (page.data as any).token as string | null
 		if (!token) return
 
 		const fd = new FormData()

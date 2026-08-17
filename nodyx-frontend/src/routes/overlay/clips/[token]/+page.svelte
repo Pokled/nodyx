@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { browser } from '$app/environment'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { fade } from 'svelte/transition'
@@ -17,7 +17,7 @@
 	// pas les clips, et l'iframe statique se fait bloquer par Chrome autoplay
 	// policy). Bonus : on a un vrai contrôle (play/pause/ended event).
 
-	const token = $derived(($page.params as { token: string }).token)
+	const token = $derived((page.params as { token: string }).token)
 
 	type Clip = {
 		id:           string

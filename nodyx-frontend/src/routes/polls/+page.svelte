@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { goto } from '$app/navigation'
   import { fly, fade } from 'svelte/transition'
   import PollCard     from '$lib/components/PollCard.svelte'

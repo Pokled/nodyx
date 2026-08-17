@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { browser } from '$app/environment'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { fade, fly, scale } from 'svelte/transition'
@@ -14,7 +14,7 @@
 	// socket pour config-updated. Mode "récap fin de stream" auto-trigger sur
 	// stream.offline.
 
-	const token = $derived(($page.params as { token: string }).token)
+	const token = $derived((page.params as { token: string }).token)
 
 	type Category = 'subs' | 'bits' | 'raids' | 'chatters'
 	type Period   = 'session' | '7d' | '30d' | 'all'

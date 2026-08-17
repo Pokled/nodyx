@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { browser } from '$app/environment'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { fade } from 'svelte/transition'
@@ -15,7 +15,7 @@
 	// Push socket en live, CSS animation pure pour le scroll (0 charge JS
 	// pendant que ça tourne dans OBS), bootstrap REST au premier load.
 
-	const token = $derived(($page.params as { token: string }).token)
+	const token = $derived((page.params as { token: string }).token)
 
 	type TickerEventKey =
 		| 'channel.follow' | 'channel.subscribe' | 'channel.subscription.gift'

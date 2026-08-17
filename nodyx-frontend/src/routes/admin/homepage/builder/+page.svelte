@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte'
 	import ImagePositionPicker from '$lib/components/homepage/ImagePositionPicker.svelte'
 	import type { WidgetFamily } from '$lib/components/homepage/plugins'
@@ -66,7 +66,7 @@
 		toasts = [...toasts, { id, text, ok }]
 		setTimeout(() => { toasts = toasts.filter(t => t.id !== id) }, 3000)
 	}
-	function getToken() { return ($page.data as any).token as string ?? '' }
+	function getToken() { return (page.data as any).token as string ?? '' }
 
 	function markUnsaved() { unsaved = true }
 

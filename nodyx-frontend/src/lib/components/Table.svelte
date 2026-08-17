@@ -4,7 +4,7 @@
 	import VoiceEqualizer from '$lib/components/VoiceEqualizer.svelte'
 	import { goto } from '$app/navigation'
 	import { PUBLIC_API_URL } from '$env/static/public'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import type { Socket } from 'socket.io-client'
 	import { t } from '$lib/i18n'
 
@@ -133,7 +133,7 @@
 	}
 	function closeMenu() { menuPlayer = null }
 
-	const userRole = $derived(($page.data as any)?.user?.role as string | undefined)
+	const userRole = $derived((page.data as any)?.user?.role as string | undefined)
 	const canModerate = $derived(
 		userRole === 'owner' || userRole === 'admin' || userRole === 'moderator'
 	)

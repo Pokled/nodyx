@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	// Image de partage (og:image) : la première image du premier post, donc la
 	// bannière de l'article. Lue côté serveur pour que Discord/Twitter/Facebook
 	// (qui n'exécutent pas de JS) la voient dans le HTML SSR. Chemin relatif :
-	// le composant l'absolutise via $page.url.origin.
+	// le composant l'absolutise via page.url.origin.
 	const ogImagePath: string | null =
 		(json.posts?.[0]?.content ?? '').match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i)?.[1] ?? null;
 

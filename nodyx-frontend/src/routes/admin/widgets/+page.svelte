@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PLUGIN_LIST } from '$lib/components/homepage/plugins';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { t as i18n } from '$lib/i18n';
 
@@ -81,7 +81,7 @@
 	}
 
 	// ── Fetch installed ──────────────────────────────────────────────────────
-	function getToken() { return ($page.data as any).token as string ?? '' }
+	function getToken() { return (page.data as any).token as string ?? '' }
 
 	async function loadInstalled() {
 		loadingList = true

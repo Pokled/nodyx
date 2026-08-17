@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n'
 	import type { PageData } from './$types'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { apiFetch } from '$lib/api'
 	import { onMount, untrack } from 'svelte'
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
@@ -12,8 +12,8 @@
 
 	let { data }: { data: PageData } = $props()
 
-	const me    = $derived(($page.data as any).user)
-	const token = $derived(($page.data as any).token as string)
+	const me    = $derived((page.data as any).user)
+	const token = $derived((page.data as any).token as string)
 
 	// ── Posts state ───────────────────────────────────────────────────────────
 	let posts     = $state<any[]>(untrack(() => data.posts ?? []))

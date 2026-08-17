@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import type { ActionData, PageData } from './$types';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';

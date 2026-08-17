@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { invalidateAll, replaceState } from '$app/navigation'
 	import { onMount, onDestroy } from 'svelte'
 	import { fly } from 'svelte/transition'
@@ -149,7 +149,7 @@
 	const engagementHasPolls       = $derived<boolean>((data as { engagementHasPolls?: boolean }).engagementHasPolls === true)
 	const engagementHasPredictions = $derived<boolean>((data as { engagementHasPredictions?: boolean }).engagementHasPredictions === true)
 	const rewardsHasScope          = $derived<boolean>((data as { rewardsHasScope?: boolean }).rewardsHasScope === true)
-	const pageToken     = $derived(($page.data as { token?: string }).token ?? '')
+	const pageToken     = $derived((page.data as { token?: string }).token ?? '')
 
 	// ── Onglets ─────────────────────────────────────────────────────────────
 	// 6 zones pour ne pas surcharger la page : overview / studio live /
@@ -334,7 +334,7 @@
 	}
 
 	function authHeaders(): Record<string, string> {
-		const token = $page.data.token as string | null
+		const token = page.data.token as string | null
 		return token ? { 'Authorization': `Bearer ${token}` } : {}
 	}
 

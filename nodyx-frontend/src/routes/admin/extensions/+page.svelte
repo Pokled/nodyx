@@ -7,7 +7,7 @@
 	// extension qui ne demande rien, parce que c'est la meme porte pour tout le
 	// monde.
 
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { invalidateAll } from '$app/navigation'
 	import { t } from '$lib/i18n'
 	import type { PageData } from './$types'
@@ -30,7 +30,7 @@
 	let busy        = $state(false)
 	let notice      = $state('')
 
-	const token = $derived($page.data.token as string | null)
+	const token = $derived(page.data.token as string | null)
 
 	/** Libelle lisible d'une capacite, sans jargon de code. */
 	function capabilityLabel(cap: string): string {

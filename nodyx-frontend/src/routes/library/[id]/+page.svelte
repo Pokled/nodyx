@@ -2,7 +2,7 @@
 	import type { PageData } from './$types'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { goto } from '$app/navigation'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { p2pManager, p2pAssetPeers } from '$lib/p2p'
 	import { t } from '$lib/i18n'
 	import { browser } from '$app/environment'
@@ -11,7 +11,7 @@
 
 	let { data }: { data: PageData } = $props()
 	const asset = $derived(data.asset)
-	const me    = $derived(($page.data as any).user)
+	const me    = $derived((page.data as any).user)
 
 	const TYPE_ICONS: Record<string, string> = {
 		frame: '🖼️', banner: '🎨', badge: '🏅', sticker: '⭐',
@@ -48,7 +48,7 @@
 	)
 
 	// Token from layout data (HttpOnly cookie — not accessible via document.cookie)
-	const token = $derived(($page.data as any).token as string | null)
+	const token = $derived((page.data as any).token as string | null)
 
 	let equipping      = $state(false)
 	let equipToast     = $state<'ok' | 'err' | null>(null)

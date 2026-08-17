@@ -138,16 +138,16 @@ export async function initSocket(token: string, initialCount: number): Promise<v
   // ── DM ─────────────────────────────────────────────────────────────────────
   // Incrémenter le badge DM quand un message arrive d'un autre utilisateur
   _socket.on('dm:message', (msg: { sender_id: string }) => {
-    import('$app/stores').then(({ page }) => {
-      let currentPath = ''
-      page.subscribe(p => { currentPath = p.url.pathname })()
-      // Ne pas incrémenter si l'user est déjà sur la conversation
-      if (!currentPath.startsWith('/dm/')) {
-        dmUnreadStore.update(n => n + 1)
-      }
-    }).catch(() => {
+    // `$app/state` n'expose plus de `.subscribe()`, et surtout : on n'a besoin
+    // ici que du chemin courant, dans un gestionnaire d'evenement du navigateur.
+    // `window.location.pathname` le donne directement, y compris apres une
+    // navigation cote client (SvelteKit passe par `history.pushState`). C'est
+    // deja ce qu'utilise le gestionnaire `banned` quelques lignes plus haut.
+    // Au passage : plus d'import dynamique, donc plus de repli en `.catch()` qui
+    // incrementait le compteur deux fois si l'import echouait.
+    if (!window.location.pathname.startsWith('/dm/')) {
       dmUnreadStore.update(n => n + 1)
-    })
+    }
   })
 
   socket.set(_socket)

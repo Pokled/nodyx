@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Les scrapers OG (Discord, Twitter, Facebook) exigent des URLs absolues
-	// et lisent le HTML SSR : l'origin vient de $page.url, jamais de window.
+	// et lisent le HTML SSR : l'origin vient de page.url, jamais de window.
 	// Les bannières/logos sont stockés en chemins relatifs (/uploads/...).
 	function absolutize(url: string | null | undefined, origin: string): string | null {
 		if (!url) return null
@@ -11,7 +11,7 @@
 	import { enhance, applyAction } from '$app/forms';
 	import { untrack } from 'svelte';
 	import { invalidateAll, goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import ProfileCard from '$lib/components/ProfileCard.svelte';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
@@ -32,9 +32,9 @@
 	// communauté → logo → og-image par défaut. Toujours une seule og:image.
 	const shareImage = $derived(
 		absolutize(
-			data.ogImagePath ?? $page.data.communityBannerUrl ?? $page.data.communityLogoUrl,
-			$page.url.origin,
-		) ?? `${$page.url.origin}/og-image.jpg`,
+			data.ogImagePath ?? page.data.communityBannerUrl ?? page.data.communityLogoUrl,
+			page.url.origin,
+		) ?? `${page.url.origin}/og-image.jpg`,
 	);
 	// post_count compte le message d'ouverture : ce n'est PAS un nombre de
 	// réponses. Voir $lib/forumCounts.
@@ -74,7 +74,7 @@
 	}
 
 	async function shareThread() {
-		const url = $page.url.href;
+		const url = page.url.href;
 
 		if (typeof navigator !== 'undefined' && navigator.share) {
 			try {
@@ -125,25 +125,25 @@
 </script>
 
 <svelte:head>
-	<title>{thread.title} · {$page.data.communityName ?? 'Nodyx'}</title>
+	<title>{thread.title} · {page.data.communityName ?? 'Nodyx'}</title>
 	<meta name="description" content="Discussion : {thread.title} par {thread.author_username}" />
-	<link rel="canonical" href={$page.url.href} />
-	<meta property="og:title"       content="{thread.title} · {$page.data.communityName ?? 'Nodyx'}" />
+	<link rel="canonical" href={page.url.href} />
+	<meta property="og:title"       content="{thread.title} · {page.data.communityName ?? 'Nodyx'}" />
 	<meta property="og:description" content="Discussion par {thread.author_username} · {replies} {tFn('forum.replies_label')} · {thread.views} {tFn('forum.views')}" />
 	<meta property="og:type"        content="article" />
-	<meta property="og:url"         content={$page.url.href} />
+	<meta property="og:url"         content={page.url.href} />
 	<!-- Pas de og:image:width/height ici : l'image de tête d'un article a des
 	     dimensions variables (le pipeline d'upload re-encode/redimensionne).
 	     Déclarer une taille fixe fausserait l'aperçu. Les scrapers lisent la
 	     vraie taille de l'image. -->
 	<meta property="og:image"        content={shareImage} />
 	<meta name="twitter:image"       content={shareImage} />
-	<meta property="og:site_name"   content={$page.data.communityName ?? 'Nodyx'} />
+	<meta property="og:site_name"   content={page.data.communityName ?? 'Nodyx'} />
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		"@context": "https://schema.org",
 		"@type": "DiscussionForumPosting",
 		"headline": thread.title,
-		"url": $page.url.href,
+		"url": page.url.href,
 		"author": { "@type": "Person", "name": thread.author_username },
 		"datePublished": thread.created_at,
 		"dateModified": thread.updated_at ?? thread.created_at,
@@ -155,8 +155,8 @@
 		},
 		"isPartOf": {
 			"@type": "DiscussionForumPosting",
-			"name": $page.data.communityName ?? 'Nodyx',
-			"url": $page.url.origin + '/forum'
+			"name": page.data.communityName ?? 'Nodyx',
+			"url": page.url.origin + '/forum'
 		}
 	})}</script>`}
 </svelte:head>

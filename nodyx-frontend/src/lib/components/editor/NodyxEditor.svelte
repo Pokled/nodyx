@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy, untrack } from 'svelte'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { apiFetch } from '$lib/api'
 	import { anchoredPopover } from '$lib/actions/anchoredPopover'
 	import { t } from '$lib/i18n'
@@ -24,7 +24,7 @@
 	const tFn = $derived($t)
 
 	// ── Auth token (used for authenticated uploads) ─────────────────────────
-	const token = $derived(($page.data as any)?.token as string | undefined)
+	const token = $derived((page.data as any)?.token as string | undefined)
 
 	// ── Placeholder (i18n fallback) ─────────────────────────────────────────
 	const resolvedPlaceholder = $derived(placeholder || tFn('editor.default_placeholder'))

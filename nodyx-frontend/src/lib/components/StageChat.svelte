@@ -17,7 +17,7 @@
     // l'éditeur riche s'ouvre en plein écran sur mobile, en carte sur desktop.
 
     import { socket } from '$lib/socket'
-    import { page } from '$app/stores'
+    import { page } from '$app/state'
     import { linkifyHtml } from '$lib/linkify'
     import { renderCustomEmojis, customEmojisStore } from '$lib/customEmojis'
     import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
@@ -74,7 +74,7 @@
     let editorKey   = $state(0)                     // remonte l'éditeur à chaque ouverture
 
     // ── Qui suis-je (pour la modération) ──────────────────────────────────────
-    const me      = $derived(($page.data as { user?: { id?: string; role?: string } })?.user)
+    const me      = $derived((page.data as { user?: { id?: string; role?: string } })?.user)
     const userId  = $derived(me?.id ?? '')
     const isAdmin = $derived(me?.role === 'owner' || me?.role === 'admin')
     const canActOn = (m: StageMessage) => m.author_id === userId || isAdmin

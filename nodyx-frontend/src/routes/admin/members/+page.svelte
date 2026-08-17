@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
 	import type { PageData } from './$types'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { untrack } from 'svelte'
 	import { t } from '$lib/i18n'
@@ -20,7 +20,7 @@
 		resetLinkError = ''
 		resetLinkResult = null
 		try {
-			const token = ($page.data as any).token as string | null
+			const token = (page.data as any).token as string | null
 			const res = await fetch(`${PUBLIC_API_URL}/api/v1/admin/members/${userId}/reset-link`, {
 				method:  'POST',
 				headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -60,7 +60,7 @@
 		revealing[userId] = true
 		try {
 			const res = await fetch(`/api/v1/admin/members/${userId}/email`, {
-				headers: { Authorization: `Bearer ${$page.data.token}` },
+				headers: { Authorization: `Bearer ${page.data.token}` },
 			})
 			if (res.ok) revealed[userId] = (await res.json()).email
 		} finally {

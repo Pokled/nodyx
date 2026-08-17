@@ -16,9 +16,9 @@
     import { onMount } from 'svelte'
     import { t } from '$lib/i18n'
     import { voicePanelTarget } from '$lib/voicePanel'
-    import { page } from '$app/stores'
+    import { page } from '$app/state'
 
-    const userRole = $derived(($page.data as any)?.user?.role as string | undefined)
+    const userRole = $derived((page.data as any)?.user?.role as string | undefined)
     const canModerate = $derived(
         userRole === 'owner' || userRole === 'admin' || userRole === 'moderator'
     )

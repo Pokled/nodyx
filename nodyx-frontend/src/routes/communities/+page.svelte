@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { PUBLIC_API_URL } from '$env/static/public';
 	import { t } from '$lib/i18n';
 
@@ -28,10 +28,10 @@
 	let { data }: { data: PageData } = $props()
 
 	const instances = $derived<NodyxInstance[]>(data.instances ?? [])
-	const user      = $derived($page.data.user)
+	const user      = $derived(page.data.user)
 
 	// Slugs liés — initialisé depuis le serveur, puis géré localement (optimistic updates)
-	let linkedSlugs = $state<string[]>(($page.data.user as any)?.linked_instances ?? [])
+	let linkedSlugs = $state<string[]>((page.data.user as any)?.linked_instances ?? [])
 
 	let linkLoading = $state<string | null>(null) // slug en cours
 
@@ -46,7 +46,7 @@
 		try {
 			const res = await fetch(`${PUBLIC_API_URL}/api/v1/users/me/linked-instances`, {
 				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${$page.data.token}` },
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${page.data.token}` },
 				body: JSON.stringify({ action, slug }),
 			})
 			const json = await res.json()

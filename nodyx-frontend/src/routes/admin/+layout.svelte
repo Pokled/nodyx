@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import type { LayoutData } from './$types'
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte'
 	import { t } from '$lib/i18n'
@@ -73,8 +73,8 @@
 
 	const isActive = (href: string, exact = false) =>
 		exact
-			? $page.url.pathname === href
-			: $page.url.pathname.startsWith(href)
+			? page.url.pathname === href
+			: page.url.pathname.startsWith(href)
 
 	// TIROIR MOBILE. Mesure du 17/08 a 390px : la barre laterale `w-56` (224px)
 	// restait affichee, il ne restait donc que 166px pour le contenu. Le titre de
@@ -85,7 +85,7 @@
 	// Fermer a chaque navigation, sinon le tiroir masque la page qu'on vient
 	// d'ouvrir depuis le tiroir lui-meme.
 	$effect(() => {
-		void $page.url.pathname
+		void page.url.pathname
 		menuOuvert = false
 	})
 </script>

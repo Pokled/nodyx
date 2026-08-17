@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { browser } from '$app/environment'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { fade } from 'svelte/transition'
@@ -16,7 +16,7 @@
 	//
 	// 6 thèmes (cyber/soft/retro/neon/minimal/custom), 5 positions, 3 formats.
 
-	const token = $derived(($page.params as { token: string }).token)
+	const token = $derived((page.params as { token: string }).token)
 
 	type State = { isLive: boolean; startedAt: string | null }
 	type Theme    = 'cyber' | 'soft' | 'retro' | 'neon' | 'minimal' | 'custom'

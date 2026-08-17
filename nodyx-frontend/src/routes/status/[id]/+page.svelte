@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { apiFetch } from '$lib/api'
 	import { t } from '$lib/i18n'
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
@@ -7,7 +7,7 @@
 
 	let { data }: { data: PageData } = $props()
 	const tFn   = $derived($t)
-	const me    = $derived(($page.data as any).user)
+	const me    = $derived((page.data as any).user)
 	const token = $derived(data.token as string)
 
 	let post    = $state<any>(data.post)

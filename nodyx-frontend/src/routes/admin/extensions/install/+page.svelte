@@ -6,7 +6,7 @@
 	// Un lien fabrique ne peut donc pas installer quoi que ce soit tout seul.
 	// cf SPECS/NODYX_SDK_CDC.md §9.5
 
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { onMount } from 'svelte'
 	import { t } from '$lib/i18n'
 
@@ -22,10 +22,10 @@
 		version:             string
 	}
 
-	const token    = $derived($page.data.token as string | null)
-	const registry = $derived($page.url.searchParams.get('src') ?? '')
-	const id       = $derived($page.url.searchParams.get('id') ?? '')
-	const version  = $derived($page.url.searchParams.get('v') ?? '')
+	const token    = $derived(page.data.token as string | null)
+	const registry = $derived(page.url.searchParams.get('src') ?? '')
+	const id       = $derived(page.url.searchParams.get('id') ?? '')
+	const version  = $derived(page.url.searchParams.get('v') ?? '')
 
 	let inspection: Inspection | null = $state(null)
 	let issues: Array<{ code: string; path?: string; message: string }> = $state([])

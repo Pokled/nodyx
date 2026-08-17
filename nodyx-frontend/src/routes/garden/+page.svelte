@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types'
 	import { goto } from '$app/navigation'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { enhance } from '$app/forms'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { untrack } from 'svelte'
@@ -55,7 +55,7 @@
 	}
 
 	function applyCategory(cat: string) {
-		const u = new URL($page.url)
+		const u = new URL(page.url)
 		if (cat) u.searchParams.set('category', cat)
 		else u.searchParams.delete('category')
 		u.searchParams.delete('offset')

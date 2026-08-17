@@ -6,7 +6,7 @@
 	import CanvasTopBar             from './CanvasTopBar.svelte'
 	import CanvasBottomBar          from './CanvasBottomBar.svelte'
 	import CanvasRightPanel         from './CanvasRightPanel.svelte'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import {
 		CanvasState, DEFAULT_TRANSFORM, screenToWorld, worldToScreen, zoomAt,
 		type CanvasTool, type CanvasElement, type ViewTransform,
@@ -1632,7 +1632,7 @@
 	async function placeImage(file: File, wx: number, wy: number) {
 		imageUploading = true
 		try {
-			const token = $page.data?.token ?? null
+			const token = page.data?.token ?? null
 			const form  = new FormData()
 			form.append('name', file.name.replace(/\.[^.]+$/, '') || 'canvas-image')
 			form.append('asset_type', 'image')

@@ -4,7 +4,7 @@
 	import ReputationRings from '$lib/components/ReputationRings.svelte'
 	import GenerativeBanner from '$lib/components/GenerativeBanner.svelte'
 	import ActivityHeatmap from '$lib/components/ActivityHeatmap.svelte'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { goto } from '$app/navigation'
 	import { resolveTheme, themeToStyle } from '$lib/profileThemes'
 	import { socket } from '$lib/socket'
@@ -18,7 +18,7 @@
 	const profile = $derived(data.profile)
 
 	// Logged-in user — from parent layout
-	const me = $derived(($page.data as any).user)
+	const me = $derived((page.data as any).user)
 	const isOwnProfile = $derived(me?.username === profile.username)
 
 	// Initials fallback
@@ -182,7 +182,7 @@
 	)
 
 	// ── Follow system ──────────────────────────────────────────────
-	const token = $derived(($page.data as any).token as string | null)
+	const token = $derived((page.data as any).token as string | null)
 
 	let following      = $state(untrack(() => data.isFollowing ?? false))
 	let followersCount = $state(untrack(() => Number(profile.followers_count ?? 0)))

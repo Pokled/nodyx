@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types'
 	import { MODULE_DISPLAY, FAMILY_META, FAMILY_ORDER, type ModuleFamily } from '$lib/modules'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { untrack } from 'svelte'
 	import { t } from '$lib/i18n'
 
@@ -55,7 +55,7 @@
 		saving[id]      = true
 
 		try {
-			const token = $page.data.token as string | null
+			const token = page.data.token as string | null
 			const res = await fetch(`/api/v1/admin/modules/${id}`, {
 				method:  'PATCH',
 				headers: {

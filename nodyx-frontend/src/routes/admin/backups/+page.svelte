@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 	import { t as i18n } from '$lib/i18n';
@@ -63,7 +63,7 @@
 		setTimeout(() => { toasts = toasts.filter(t => t.id !== id); }, 3500);
 	}
 
-	function getToken() { return ($page.data as any).token as string ?? ''; }
+	function getToken() { return (page.data as any).token as string ?? ''; }
 
 	// ── Helpers ──────────────────────────────────────────────────────────────
 	function fmtBytes(n: number): string {

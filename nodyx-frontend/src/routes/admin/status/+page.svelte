@@ -1,6 +1,6 @@
 <script lang="ts">
     import { runNetworkDiagnostic } from '$lib/utils/networkTester';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
     import { fade, fly } from 'svelte/transition';
     import { t } from '$lib/i18n';
 
@@ -46,7 +46,7 @@
         addLog(tFn('astatus.log_init'));
         // Token : le test récupère des credentials TURN FRAIS via l'API
         // (les statiques de build expirent en <24h → RELAY OFFLINE menteur).
-        const token = $page.data.token as string | null;
+        const token = page.data.token as string | null;
         runNetworkDiagnostic((res) => { diag = res; }, token);
 
         // Séquence synchronisée avec ton UI

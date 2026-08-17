@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { goto } from '$app/navigation'
 	import type { PageData } from './$types'
 	import { untrack } from 'svelte'
@@ -14,7 +14,7 @@
 	let board   = $state(untrack(() => structuredClone(data.board)))
 	let members = $state(untrack(() => data.members))
 
-	const token     = $derived($page.data.token as string)
+	const token     = $derived(page.data.token as string)
 	const API       = '/api/v1/tasks'
 
 	// ── Drag & drop ───────────────────────────────────────────────────────────
