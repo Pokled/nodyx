@@ -81,7 +81,7 @@
 		<p class="text-sm text-gray-500">{tFn('agrade.empty')}</p>
 	{:else}
 		<div class="rounded-xl border border-gray-800 overflow-x-auto mb-10">
-			<table class="w-full text-sm min-w-[480px]">
+			<table class="tableau-cartes w-full text-sm md:min-w-[480px]">
 				<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 					<tr>
 						<th class="px-4 py-3 text-left">{tFn('agrade.col_grade')}</th>
@@ -129,13 +129,13 @@
 									</form>
 								</td>
 							{:else}
-								<td class="px-4 py-3">
+								<td class="px-4 py-3" data-label={tFn('agrade.col_grade')}>
 									<span class="inline-block rounded px-2.5 py-1 text-xs font-semibold"
 										style="background:{grade.color}; color:{luminance(grade.color)>0.5?'#111':'#fff'}">
 										{grade.name}
 									</span>
 								</td>
-								<td class="px-4 py-3 text-xs text-gray-400">{permSummary(grade.permissions ?? {})}</td>
+								<td class="px-4 py-3 text-xs text-gray-400" data-label={tFn('agrade.permissions')}>{permSummary(grade.permissions ?? {})}</td>
 								<td class="px-4 py-3 text-right flex items-center justify-end gap-3">
 									<button onclick={() => editingId = grade.id} class="text-xs text-indigo-400 hover:text-indigo-300">{tFn('agrade.edit')}</button>
 									<form method="POST" action="?/delete" use:enhance class="inline">
@@ -155,7 +155,7 @@
 	<!-- Assign grades to members -->
 	<h2 class="text-lg font-bold text-white mb-4">{tFn('agrade.assign_title')}</h2>
 	<div class="rounded-xl border border-gray-800 overflow-x-auto">
-		<table class="w-full text-sm min-w-[480px]">
+		<table class="tableau-cartes w-full text-sm md:min-w-[480px]">
 			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
 				<tr>
 					<th class="px-4 py-3 text-left">{tFn('agrade.col_member')}</th>
@@ -167,9 +167,9 @@
 			<tbody class="divide-y divide-gray-800/60">
 				{#each data.members as member}
 					<tr class="bg-gray-900/30 hover:bg-gray-900/60">
-						<td class="px-4 py-3 font-medium text-white">{member.username}</td>
-						<td class="px-4 py-3 text-xs text-gray-500 capitalize">{member.role}</td>
-						<td class="px-4 py-3">
+						<td class="px-4 py-3 font-medium text-white" data-label={tFn('agrade.col_member')}>{member.username}</td>
+						<td class="px-4 py-3 text-xs text-gray-500 capitalize" data-label={tFn('agrade.col_role')}>{member.role}</td>
+						<td class="px-4 py-3" data-label={tFn('agrade.col_current_grade')}>
 							{#if member.grade_name && member.grade_color}
 								<span class="inline-block rounded px-2 py-0.5 text-xs font-medium"
 									style="background:{member.grade_color}; color:{luminance(member.grade_color)>0.5?'#111':'#fff'}">
@@ -179,7 +179,7 @@
 								<span class="text-gray-600 text-xs">·</span>
 							{/if}
 						</td>
-						<td class="px-4 py-3">
+						<td class="px-4 py-3" data-label={tFn('agrade.col_assign')}>
 							<form method="POST" action="?/assign" use:enhance class="flex items-center gap-2">
 								<input type="hidden" name="user_id" value={member.user_id} />
 								<select name="grade_id" class="rounded-lg bg-gray-800 border border-gray-700 px-2 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500">
