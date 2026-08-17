@@ -32,6 +32,10 @@ const SOURCE = readFileSync(
 	new URL('./components/VoiceSettings.svelte', import.meta.url).pathname,
 	'utf-8',
 )
+const PANNEAU = readFileSync(
+	new URL('./components/VoicePanel.svelte', import.meta.url).pathname,
+	'utf-8',
+)
 
 /** Un bouton dont le libellé d'accessibilité parle de fermeture. */
 const BOUTONS_FERMETURE = SOURCE.match(/<button[^>]*aria-label=\{?[^>]*close[^>]*>/gi) ?? []
@@ -60,6 +64,27 @@ describe('sortie des paramètres audio', () => {
 		expect(enTete![1]).toMatch(/\btop-0\b/)
 		// Fond opaque, sinon les réglages se voient passer sous l'en-tête.
 		expect(enTete![1]).toMatch(/\bbg-/)
+	})
+
+	it("borne la fenêtre à la hauteur de l'écran", () => {
+		// LE vrai défaut du 17/08, celui que le collage seul ne corrigeait pas.
+		//
+		// Mesuré sur la prod : la fenêtre ancrée en bas faisait 619px de haut sur
+		// un écran de 600px. Ancrée par `bottom-24`, son sommet tombait à -115px,
+		// et `overflow-hidden` interdisait tout défilement. L'excédent n'était pas
+		// atteignable, il était AMPUTÉ, avec l'en-tête et la croix dedans.
+		//
+		// Un en-tête `sticky` ne sert à rien sans zone défilante : c'est pourquoi
+		// ce contrôle vit à côté de celui du collage, pas à sa place.
+		const conteneurs = PANNEAU.split('<VoiceSettings').slice(0, -1)
+		expect(conteneurs.length, 'les deux sites de rendu doivent être présents').toBe(2)
+		for (const [i, amont] of conteneurs.entries()) {
+			// On regarde le conteneur immédiat, pas toute la page.
+			const proche = amont.slice(-700)
+			expect(proche, `site de rendu ${i + 1} : aucune borne sur la hauteur`).toMatch(
+				/max-h-\[calc\(100dvh/,
+			)
+		}
 	})
 
 	it('donne à la croix une cible atteignable au pouce', () => {

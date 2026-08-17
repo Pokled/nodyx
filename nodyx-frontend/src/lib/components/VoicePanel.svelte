@@ -895,11 +895,14 @@
                     <div class="fixed inset-0 sm:absolute sm:inset-auto sm:bottom-full sm:mb-2 sm:right-0 sm:w-[340px] z-[200]
                                 flex flex-col sm:block animate-in fade-in slide-in-from-bottom-4 duration-300"
                          style="pointer-events: auto;">
+                        <!-- Sous `sm` le panneau occupe tout l'ecran et defile deja. A
+                             partir de `sm` il pousse vers le HAUT (`bottom-full`) : sans
+                             borne il deborde d'une fenetre courte, meme defaut qu'en bas. -->
                         <div class="relative flex-1 sm:flex-none bg-gradient-to-b from-gray-900 to-gray-950
                                     border border-amber-500/30 sm:rounded-2xl shadow-2xl shadow-amber-500/10
-                                    overflow-hidden backdrop-blur-md flex flex-col">
+                                    sm:max-h-[calc(100dvh-8rem)] overflow-hidden backdrop-blur-md flex flex-col">
                             <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
-                            <div class="flex-1 overflow-y-auto sm:flex-none sm:overflow-visible">
+                            <div class="flex-1 overflow-y-auto sm:flex-none sm:overflow-y-auto">
                                 <VoiceSettings onclose={() => showVoiceSettings = false} />
                             </div>
                         </div>
@@ -1055,9 +1058,14 @@
                 </div>
                 <div use:portal class="fixed bottom-24 left-1/2 -translate-x-1/2 w-[360px] z-[200]
                             animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <!-- BORNE A L'ECRAN. Sans `max-h`, ce panneau mesurait 619px de haut
+                         sur un ecran de 600px. Ancre en bas (`bottom-24`), son sommet
+                         tombait a -115px, et `overflow-hidden` interdisait tout
+                         defilement : l'excedent etait purement AMPUTE par le haut, avec
+                         l'en-tete et la croix de fermeture dedans. Mesure du 17/08. -->
                     <div class="relative bg-gradient-to-b from-gray-900 to-gray-950
                                 border border-amber-500/30 rounded-2xl shadow-2xl shadow-amber-500/10
-                                overflow-hidden backdrop-blur-md">
+                                max-h-[calc(100dvh-7rem)] overflow-y-auto backdrop-blur-md">
                         <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
 
                         <VoiceSettings onclose={() => showVoiceSettings = false} />
