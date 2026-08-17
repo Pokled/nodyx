@@ -1504,7 +1504,7 @@
 			</div>
 
 			<!-- Input area -->
-			<div class="px-4 shrink-0" style="padding-bottom: max(1rem, var(--bottom-nav-h))">
+			<div class="px-4 shrink-0" style="padding-bottom: calc(var(--bottom-nav-h) + 1rem)">
 				<!-- @mention dropdown -->
 				{#if showMentions && mentionSuggestions.length > 0}
 					<div class="relative">

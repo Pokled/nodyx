@@ -35,6 +35,12 @@
         // partir de 787, soit 34px de recouvrement, defaut du 17/08).
         // FAUX dans la Scene, qui est un plein ecran RECOUVRANT la barre :
         // y reserver la place gacherait 56px pour rien.
+        //
+        // `calc(--bottom-nav-h + 0.75rem)` et non `max(...)` : un `max` donnait
+        // EXACTEMENT la hauteur de la barre, donc zero respiration. Mesure du
+        // 17/08 : boite de saisie finissant a 788, barre commencant a 787,
+        // elles se touchaient a un pixel pres. La marge est en plus, pas au
+        // lieu de.
         reserverBarreBasse = false,
     }: {
         channelId: string
@@ -272,7 +278,7 @@
 
     <!-- Composeur -->
     <div class="shrink-0 p-3"
-         style="border-top: 1px solid rgba(255,255,255,0.05); {reserverBarreBasse ? 'padding-bottom: max(0.75rem, var(--bottom-nav-h))' : ''}">
+         style="border-top: 1px solid rgba(255,255,255,0.05); {reserverBarreBasse ? 'padding-bottom: calc(var(--bottom-nav-h) + 0.75rem)' : ''}">
         <div class="flex items-center gap-2 rounded-lg px-3 py-2"
              style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07)">
             <button

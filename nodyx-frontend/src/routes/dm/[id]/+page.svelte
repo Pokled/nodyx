@@ -1702,7 +1702,7 @@
 		     `lg` où la barre n'existe plus. Le chat le faisait déjà, cette page
 		     ne l'a jamais fait : on y écrivait sous le menu. -->
 		<div class="shrink-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/30"
-		     style="padding-bottom: max(1rem, var(--bottom-nav-h))">
+		     style="padding-bottom: calc(var(--bottom-nav-h) + 1rem)">
 			<!-- Banner reply : indique le message qu'on est en train de citer -->
 			{#if replyingTo}
 				<div class="dm-reply-banner">
