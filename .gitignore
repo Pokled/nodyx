@@ -82,3 +82,9 @@ nodyx-frontend/blob-report/
 # Etat de session Playwright et identifiants du compte de test : JAMAIS commites
 nodyx-frontend/playwright/.auth/
 nodyx-frontend/.env.test
+
+# CDC decrivant des faiblesses NON CORRIGEES : jamais dans un depot public.
+# Copies privees dans ~/.claude/projects/-var-www-nexus/specs-privees/
+SPECS/OLYMPUS_OBSERVABILITE_CDC.md
+SPECS/RELAIS_TLS_443_CDC.md
+SPECS/TODO_*.md
