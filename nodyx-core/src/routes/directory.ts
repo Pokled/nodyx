@@ -6,7 +6,7 @@ import https from 'https';
 import http from 'http';
 import sanitizeHtml from 'sanitize-html';
 import { db, redis } from '../config/database';
-import { getClientIp } from '../utils/clientIp'
+import { getClientIp, estPubliquementRoutable } from '../utils/clientIp'
 
 // Strict rate-limit for public search endpoint (30 req/min per IP)
 async function searchRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -699,6 +699,24 @@ export default async function directoryRoutes(app: FastifyInstance) {
         [token]
       )
       if (!inst) return reply.status(403).send({ error: 'invalid token' })
+
+      // Une adresse privee, de bouclage ou reservee ne designe AUCUN visiteur
+      // d'Internet : la signaler au reseau federe serait du bruit distribue a
+      // toutes les instances. La table porte une contrainte CHECK depuis la
+      // migration 113 ; sans ce garde-fou en amont, la violation remonterait en
+      // erreur 500 chez l'instance qui signale.
+      //
+      // Le cas est REEL, pas theorique : toute instance tournant une version
+      // anterieure au correctif d'identification (2026-08-17) enregistre
+      // `127.0.0.1` pour ses visiteurs et signalerait donc du loopback. On lui
+      // repond clairement plutot que de lui renvoyer une panne.
+      if (!estPubliquementRoutable(ip)) {
+        return reply.status(400).send({
+          error: 'ip is not publicly routable',
+          code: 'IP_NOT_ROUTABLE',
+          hint: "Votre instance enregistre peut-etre l'adresse du proxy au lieu de celle du visiteur.",
+        })
+      }
 
       await db.query(
         `INSERT INTO reported_ips (ip, reason, path, instance_slug)

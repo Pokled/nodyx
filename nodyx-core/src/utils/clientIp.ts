@@ -67,7 +67,7 @@ function parse(valeur: string): ipaddr.IPv4 | ipaddr.IPv6 | null {
 }
 
 /** Une adresse d'Internet : ni privée, ni loopback, ni réservée. */
-function estPubliquementRoutable(valeur: string): boolean {
+export function estPubliquementRoutable(valeur: string): boolean {
   const adr = parse(valeur)
   if (!adr) return false
   if (PLAGES_NON_PUBLIQUES.has(adr.range())) return false
