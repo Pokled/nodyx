@@ -24,6 +24,11 @@
 		es: 'docs/es/CONTRIBUTING.md#traducir-nodyx',
 	}
 	const CONTRIB = $derived(`${REPO}/blob/main/${GUIDES[$locale.slice(0, 2)] ?? GUIDES.en}`)
+
+	// Une langue absente de la liste ne peut pas etre ajoutee par le visiteur seul :
+	// le cablage est en dur dans i18n.ts (type Locale, LOCALES, imports, messages).
+	// Le gabarit d'issue est donc la vraie porte d'entree, pas une pull request.
+	const NEW_LANG = `${REPO}/issues/new?template=new_language.yml`
 	const editUrl = (code: string) => `${REPO}/edit/main/nodyx-frontend/src/lib/locales/${code}.json`
 	const viewUrl = (code: string) => `${REPO}/blob/main/nodyx-frontend/src/lib/locales/${code}.json`
 
@@ -220,6 +225,24 @@
 		</div>
 	</section>
 
+	<!-- ══ La langue absente ════════════════════════════════════════════════
+	     La table ne montre que les langues livrees. Sans ce bloc, un visiteur
+	     dont la langue manque n'a aucune porte : il en deduit que le projet ne
+	     l'accepte pas. Signale dans la discussion #595.                       -->
+	<section class="newlang">
+		<svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/>
+		</svg>
+		<div class="txt">
+			<h2>{tFn('translate.newlang.title')}</h2>
+			<p>{tFn('translate.newlang.desc')}</p>
+		</div>
+		<a class="ask" href={NEW_LANG} target="_blank" rel="noopener">
+			{tFn('translate.newlang.cta')}
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+		</a>
+	</section>
+
 	<!-- ══ Le filet ═════════════════════════════════════════════════════════ -->
 	<div class="info">
 		<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
@@ -357,6 +380,29 @@
 	tr:hover .icat.edit { color: #8b93ff; }
 
 	/* ── Filet + pied ────────────────────────────────────────────────────── */
+	/* La porte d'entree d'une langue absente. Meme registre sobre que le reste,
+	   mais un contour un peu plus present : c'est la seule action de la page qui
+	   ne concerne pas une langue deja listee. */
+	.newlang {
+		display: flex; align-items: center; gap: 15px; margin-top: 16px; padding: 16px 18px;
+		border: 1px solid #24273a; border-radius: 10px; background: #0f1016;
+	}
+	.newlang .globe { width: 26px; height: 26px; flex: none; color: #8b93ff; opacity: .85; }
+	.newlang .txt { flex: 1; min-width: 0; }
+	.newlang h2 { margin: 0 0 3px; font-size: 14px; font-weight: 600; color: #e7e8ef; }
+	.newlang p  { margin: 0; font-size: 13px; line-height: 1.5; color: #9698ab; }
+	/* Classe distincte de `.cta` : celle-ci habille le bouton plein de l'en-tete,
+	   et l'heriter apporterait son ombre interne sans qu'on l'ait demande. */
+	.newlang .ask {
+		flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+		padding: 9px 15px; border-radius: 8px; border: 1px solid #343a5e;
+		background: #191c2e; color: #b9beff; font-size: 13px; font-weight: 600;
+		text-decoration: none; transition: background .15s, border-color .15s;
+	}
+	.newlang .ask svg { width: 15px; height: 15px; }
+	.newlang .ask:hover { background: #202541; border-color: #4a527f; }
+	.newlang .ask:focus-visible { outline: 2px solid #8b93ff; outline-offset: 2px; }
+
 	.info {
 		display: flex; align-items: center; gap: 13px; margin-top: 16px; padding: 13px 16px;
 		border: 1px solid #1c1e28; border-radius: 10px; background: #0f1016; color: #9698ab; font-size: 13px;
@@ -376,5 +422,17 @@
 	@media (max-width: 640px) {
 		.metric { padding: 0 14px; }
 		.search input { width: 150px; }
+
+		/* En colonne, `align-items: center` empecherait le bouton de prendre la
+		   largeur : on repasse explicitement en `stretch`. */
+		.newlang { flex-direction: column; align-items: stretch; text-align: left; gap: 12px; }
+		.newlang .globe { width: 22px; height: 22px; }
+
+		/* La barre etait en ligne unique, hauteur fixe et sans repli : a 390px le
+		   bouton sortait de 149px hors ecran, mesure. On autorise le repli plutot
+		   que de masquer le lien « Fichiers », qui n'a pas d'autre acces ici. */
+		.chrome { height: auto; flex-wrap: wrap; gap: 8px 14px; padding: 9px 14px; }
+		.chrome .grow { display: none; }
+		nav.top { flex: 1; }
 	}
 </style>
