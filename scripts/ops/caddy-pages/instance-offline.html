@@ -10,16 +10,30 @@
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
 	<style>
 		* { box-sizing: border-box; margin: 0; padding: 0; }
-		html, body { height: 100%; }
+		/* `overflow-x` DOIT etre pose ici, pas sur `body`. La fenetre est gouvernee
+		   par l'element racine ; declare sur `body` seul, le masquage horizontal
+		   restait sans effet et la page se decalait encore de 150 px. Mesure :
+		   `html { overflow-x: hidden }` ramene le decalage a 0. */
+		html { height: 100%; overflow-x: hidden; }
 		body {
 			font-family: 'Inter', system-ui, sans-serif;
 			background: #0a0a0f;
 			color: #e2e8f0;
 			display: flex;
+			/* `center` seul ROGNE par le haut ET par le bas des qu'une carte depasse
+			   la fenetre : le debordement d'un conteneur flex centre est inatteignable.
+			   `safe center` centre tant que ca tient, puis s'aligne au debut. La
+			   premiere declaration reste le repli pour les navigateurs anciens. */
 			align-items: center;
+			align-items: safe center;
 			justify-content: center;
 			padding: 1.5rem;
-			overflow: hidden;
+			/* `height: 100%` + `overflow: hidden` rendait le bas de la page
+			   inaccessible, sans aucune barre de defilement. On garde le masquage
+			   horizontal, qui existe pour les halos en `position: absolute`. */
+			min-height: 100%;
+			overflow-x: hidden;
+			overflow-y: auto;
 			position: relative;
 		}
 
@@ -160,6 +174,9 @@
 			gap: .75rem;
 			justify-content: center;
 			flex-wrap: wrap;
+			/* Sans cette marge, les boutons touchaient le lien « English / Português »
+			   juste au-dessus, au point qu'on ne distinguait plus les deux zones. */
+			margin-top: 1.25rem;
 		}
 
 		.btn {
