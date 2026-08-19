@@ -1778,7 +1778,7 @@
 					disabled={!richContent.trim()}
 					class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-sm text-white font-medium transition-colors"
 				>
-					{editingRichId ? 'Enregistrer' : tFn('chat.send')}
+					{editingRichId ? tFn('common.save') : tFn('chat.send')}
 				</button>
 			</div>
 		</div>

@@ -15,6 +15,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { stripI18n } from './strip.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', '..', 'src')
@@ -78,7 +79,16 @@ for (const f of files) {
     ATTR.lastIndex = 0
     for (let m; (m = ATTR.exec(l)); ) { if (LETTER.test(m[1])) { attrHit = true; break } }
     // (b) French text sitting outside an i18n call
-    const frHit = !l.includes('tFn(') && !l.includes('$t(') && (ACC.test(l) || FR.test(l) || FR_FUNC.test(l))
+    //
+    // On NEUTRALISE les appels i18n au lieu d'exempter la ligne entiere. Avant,
+    // `!l.includes('tFn(')` laissait passer TOUTE ligne contenant un appel, donc
+    // celle-ci echappait au controle alors qu'elle porte une chaine en dur :
+    //
+    //     {cond ? 'Remplacer' : tFn('editor.insert')}
+    //
+    // Cas reel, trouve le 2026-08-19 : la porte annoncait 0 chaine en dur.
+    const reste = stripI18n(l)
+    const frHit = ACC.test(reste) || FR.test(reste) || FR_FUNC.test(reste)
     if (attrHit || frHit) hits.push({ n: i + 1, s: s.slice(0, 100) })
   })
   if (hits.length) { perFile.push({ f: relative(SRC, f), hits }); total += hits.length }

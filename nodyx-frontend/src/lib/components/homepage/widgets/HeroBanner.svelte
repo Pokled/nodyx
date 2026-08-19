@@ -173,7 +173,7 @@
 		<div class="hb-stats-dock">
 			<div class="hb-stat">
 				<span class="hb-stat-num hb-stat--purple">{dispMembers.toLocaleString()}</span>
-				<span class="hb-stat-label">{tFn('common.members') || 'membres'}</span>
+				<span class="hb-stat-label">{tFn('common.members')}</span>
 			</div>
 			<div class="hb-stat-sep" aria-hidden="true"></div>
 			<div class="hb-stat">

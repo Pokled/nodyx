@@ -108,7 +108,7 @@
         { id: 'profile',       group: 'GO TO',    label: tFn('nav.my_profile'),          sub: `/users/${user.username}`, paths: ICONS.user,    action: () => navigate(`/users/${user.username}`), keywords: ['profile', 'profil', 'compte', user.username] },
         { id: 'notifications', group: 'GO TO',    label: tFn('nav.notifications'),       sub: '/notifications',          paths: ICONS.bell,    action: () => navigate('/notifications'),          keywords: ['notif', 'notifications', 'alertes'] },
         { id: 'dm',            group: 'GO TO',    label: tFn('nav.direct_messages'),     sub: '/dm',                     paths: ICONS.dm,      action: () => navigate('/dm'),                    keywords: ['dm', 'message', 'privé', 'direct'] },
-        { id: 'new-thread',    group: 'ACTIONS',  label: tFn('nav.new_thread'),       sub: 'Créer une discussion',    paths: ICONS.plus,    action: () => navigate('/forum'),                 keywords: ['new', 'thread', 'sujet', 'créer', 'post', 'nouveau'] },
+        { id: 'new-thread',    group: 'ACTIONS',  label: tFn('nav.new_thread'),       sub: '/forum',    paths: ICONS.plus,    action: () => navigate('/forum'),                 keywords: ['new', 'thread', 'sujet', 'créer', 'post', 'nouveau'] },
         { id: 'settings',      group: 'ACTIONS',  label: tFn('nav.account_settings'), sub: '/settings',             paths: ICONS.gear,    action: () => navigate('/settings'),              keywords: ['settings', 'paramètres', 'compte', 'config'] },
       )
     }

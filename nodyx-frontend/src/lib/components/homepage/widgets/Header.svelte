@@ -170,7 +170,7 @@
 		<div class="hdr-stats-dock">
 			<div class="hdr-stat">
 				<span class="hdr-stat-num hdr-stat--purple">{dispMembers.toLocaleString()}</span>
-				<span class="hdr-stat-label">{tFn('common.members') || 'membres'}</span>
+				<span class="hdr-stat-label">{tFn('common.members')}</span>
 			</div>
 			<div class="hdr-stat-sep" aria-hidden="true"></div>
 			<div class="hdr-stat">

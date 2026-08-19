@@ -1530,7 +1530,7 @@
 									<!-- Bouton répondre (visible pour tous, sauf messages systèmes) -->
 									<button onclick={() => startReply(msg)}
 										class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-indigo-400 transition-colors"
-										title={tFn('dm.reply') ?? 'Répondre'}>
+										title={tFn('dm.reply')}>
 										<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 											<polyline points="9 14 4 9 9 4"/>
 											<path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
@@ -1744,7 +1744,7 @@
 						class="dm-composer-emoji-btn w-8 h-8 rounded-xl flex items-center justify-center
 						       text-gray-500 hover:text-gray-200 hover:bg-white/[0.06]
 						       transition-all duration-150"
-						title={tFn('common.add_emoji') ?? 'Insérer un emoji'}
+						title={tFn('common.add_emoji')}
 						aria-label={tFn('dm.insert_emoji')}
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
