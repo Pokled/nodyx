@@ -13,7 +13,7 @@ import { browser }                from '$app/environment'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type Locale = 'fr' | 'en' | 'es' | 'de' | 'ru' | 'pt-PT' | 'vi'
+export type Locale = 'fr' | 'en' | 'es' | 'de' | 'ru' | 'pt-PT' | 'pt-BR' | 'vi'
 
 export interface LocaleMeta {
   code:  Locale
@@ -28,7 +28,10 @@ export const LOCALES: LocaleMeta[] = [
   { code: 'es',    label: 'Español',    flag: '🇪🇸', flagIcon: 'twemoji:flag-spain' },
   { code: 'de',    label: 'Deutsch',    flag: '🇩🇪', flagIcon: 'twemoji:flag-germany' },
   { code: 'ru',    label: 'Русский',    flag: '🇷🇺', flagIcon: 'twemoji:flag-russia' },
-  { code: 'pt-PT', label: 'Português',  flag: '🇵🇹', flagIcon: 'twemoji:flag-portugal' },
+  // Deux portugais : sans le suffixe, le sélecteur afficherait deux fois la même
+  // étiquette et personne ne saurait lequel il choisit.
+  { code: 'pt-PT', label: 'Português (PT)', flag: '🇵🇹', flagIcon: 'twemoji:flag-portugal' },
+  { code: 'pt-BR', label: 'Português (BR)', flag: '🇧🇷', flagIcon: 'twemoji:flag-brazil' },
   { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳', flagIcon: 'twemoji:flag-vietnam' },
 ]
 
@@ -41,10 +44,11 @@ import es from './locales/es.json'
 import de from './locales/de.json'
 import ru from './locales/ru.json'
 import ptPT from './locales/pt-PT.json'
+import ptBR from './locales/pt-BR.json'
 import vi from './locales/vi.json'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-PT': ptPT, vi }
+const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-PT': ptPT, 'pt-BR': ptBR, vi }
 
 // ── Store locale ──────────────────────────────────────────────────────────────
 
@@ -68,7 +72,11 @@ export function getLocaleFromAcceptLanguage(header: string | null): Locale | und
     for (const lang of parsed) {
       const code = lang.code
       const nav = code.slice(0, 2)
-      if (code === 'pt-pt' || (nav === 'pt' && !code.startsWith('pt-br'))) return 'pt-PT'
+      // Le brésilien d'abord : c'est la variante la plus demandée, et la ligne
+      // précédente l'EXCLUAIT du repli vers pt-PT sans rien lui proposer. Un
+      // navigateur n'annonçant que `pt-BR` ne recevait donc aucun portugais.
+      if (code.startsWith('pt-br')) return 'pt-BR'
+      if (nav === 'pt') return 'pt-PT'
       if (nav === 'fr') return 'fr'
       if (nav === 'es') return 'es'
       if (nav === 'de') return 'de'
@@ -97,7 +105,8 @@ function getInitialLocale(): Locale {
   // Détection navigateur
   const full = navigator.language.toLowerCase()
   const nav = full.slice(0, 2)
-  if (full === 'pt-pt' || (nav === 'pt' && !full.startsWith('pt-br'))) return 'pt-PT'
+  if (full.startsWith('pt-br')) return 'pt-BR'
+  if (nav === 'pt') return 'pt-PT'
   if (nav === 'fr') return 'fr'
   if (nav === 'es') return 'es'
   if (nav === 'de') return 'de'
