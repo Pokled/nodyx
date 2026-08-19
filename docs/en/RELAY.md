@@ -1,4 +1,4 @@
-# ⚡ Nodyx Relay, Install without a domain or open ports
+# Nodyx Relay, Install without a domain or open ports
 
 > **The problem:** You want to host Nodyx at home, on a Raspberry Pi, an old PC, your home router setup, but you don't have a domain, and your ISP blocks incoming ports.
 >
@@ -8,18 +8,18 @@
 
 ## Table of Contents
 
-- [How it works](#-how-it-works)
-- [Requirements](#-requirements)
-- [Installation](#-installation)
-- [Comparison with other methods](#-comparison-with-other-methods)
-- [Checking that the tunnel is active](#-checking-that-the-tunnel-is-active)
-- [Troubleshooting](#-troubleshooting)
-- [FAQ](#-faq)
-- [For the curious, Technical architecture](#-for-the-curious--technical-architecture)
+- [How it works](#how-it-works)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Comparison with other methods](#comparison-with-other-methods)
+- [Checking that the tunnel is active](#checking-that-the-tunnel-is-active)
+- [Troubleshooting](#troubleshooting)
+- [FAQ](#faq)
+- [For the curious, Technical architecture](#for-the-curious-technical-architecture)
 
 ---
 
-## 🔌 How it works
+## How it works
 
 ```
                     Your machine (at home)
@@ -47,22 +47,23 @@
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 | Element | Required? | Notes |
 |---|---|---|
-| Personal domain | ❌ No | The relay provides `your-slug.nodyx.org` for free |
-| Open ports 80/443 | ❌ No | The relay only uses **outbound** traffic |
-| Cloudflare account | ❌ No | Complete independence |
-| Internet connection | ✅ Yes | Any connection works (fiber, 4G, satellite) |
-| 64-bit Linux OS | ✅ Yes | Ubuntu 22.04/24.04, Debian 11/12, Raspberry Pi OS 64-bit |
-| Architecture | ✅ `x86_64` or `aarch64` | PC/VPS or Raspberry Pi 3/4/5 |
+| Personal domain | No | The relay provides `your-slug.nodyx.org` for free |
+| Open ports 80/443 | No | The relay only uses **outbound** traffic |
+| Cloudflare account | No | Complete independence |
+| Internet connection | Yes | Fiber, 4G, satellite, all fine |
+| **Outbound** TCP on port `7443` | Yes | The one real requirement. Home connections allow it by default. Company, university and institute networks often do **not**. [How to check in five seconds](#the-tunnel-never-connects-the-port-7443-wall) |
+| 64-bit Linux OS | Yes | Ubuntu 22.04/24.04, Debian 11/12, Raspberry Pi OS 64-bit |
+| Architecture | `x86_64` or `aarch64` | PC/VPS or Raspberry Pi 3/4/5 |
 
-> 💡 **Raspberry Pi 4, 8 GB RAM, Ubuntu Server 24.04 (arm64):** tested and validated in real-world conditions, March 1, 2026.
+> **Raspberry Pi 4, 8 GB RAM, Ubuntu Server 24.04 (arm64):** tested and validated in real-world conditions, March 1, 2026.
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Method 1, Interactive installer (recommended)
 
@@ -129,26 +130,26 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now nodyx-relay-client
 ```
 
-> 💡 Your token is available in `/root/nodyx-credentials.txt` if you used `install.sh`, or in the JSON response from the nodyx.org registration API.
+> **Tip.** Your token is available in `/root/nodyx-credentials.txt` if you used `install.sh`, or in the JSON response from the nodyx.org registration API.
 
 ---
 
-## ⚖️ Comparison with other methods
+## Comparison with other methods
 
 | Method | Domain required | Ports to open | Third-party account | Dependency |
 |---|---|---|---|---|
-| **Nodyx Relay** ⭐ | ❌ No | ❌ No | ❌ No | Our infrastructure only |
-| VPS + own domain | ✅ Yes (~€1/year) | ✅ 80, 443 | ❌ No | None |
-| sslip.io auto | ❌ No | ✅ 80, 443 | ❌ No | None |
-| Cloudflare Tunnel | ✅ Yes (CF domain) | ❌ No | ✅ Cloudflare | Cloudflare |
-| Tailscale + Funnel | ❌ No | ❌ No | ✅ Tailscale | Tailscale |
-| Ngrok | ❌ No | ❌ No | ✅ Ngrok | Ngrok |
+| **Nodyx Relay** | No | No | No | Our infrastructure only |
+| VPS + own domain | Yes (~€1/year) | 80, 443 | No | None |
+| sslip.io auto | No | 80, 443 | No | None |
+| Cloudflare Tunnel | Yes (CF domain) | No | Cloudflare | Cloudflare |
+| Tailscale + Funnel | No | No | Tailscale | Tailscale |
+| Ngrok | No | No | Ngrok | Ngrok |
 
 > **Nodyx philosophy:** The relay is open source, self-hosted on our own VPS, and can be replaced by a community relay. Zero dependency on a third-party company.
 
 ---
 
-## 🔍 Checking that the tunnel is active
+## Checking that the tunnel is active
 
 ```bash
 # Service status
@@ -172,7 +173,85 @@ curl -I https://your-slug.nodyx.org/
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
+
+### The tunnel never connects, the port 7443 wall
+
+**Start here.** This is the most common failure, and the least guessable one, because nothing on your machine is misconfigured.
+
+Your instance opens **one outbound connection** to `relay.nodyx.org` on TCP port `7443`. That is the whole mechanism. Nothing comes in, nothing is forwarded, no rule is ever added to your box.
+
+The catch: many networks only let `80` and `443` out. Home connections almost always allow `7443`. Company, university, school and institute networks frequently do not, and they rarely tell you.
+
+#### Find out in five seconds
+
+```bash
+nc -zv relay.nodyx.org 7443
+```
+
+Three answers are possible, and each one means something different:
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `succeeded!` or `Connected` | The port is open, traffic goes through | The problem is elsewhere, keep reading below |
+| `Connection refused` | Something answered and said no. Your network is fine | The relay itself is down, please [tell us](https://github.com/Pokled/nodyx/discussions) |
+| **Nothing, it just hangs, then times out** | Your network silently drops the packets | **This is the wall. Read on** |
+
+> **Read that table twice.** The difference between *refused* and *times out* is the single most useful signal in this whole page. A refusal is an answer. Silence is a filter.
+
+No `nc` on your machine? This works everywhere Python is installed:
+
+```bash
+python3 -c "import socket;socket.create_connection(('relay.nodyx.org',7443),timeout=8);print('open')"
+```
+
+#### If your network filters the port
+
+You have three ways out, easiest first.
+
+**1. Ask for the port to be opened, outbound only.**
+
+Network administrators say no to vague requests and yes to precise ones. Here is a paragraph you can copy and send as is:
+
+> Hello,
+> I need to allow **outbound** TCP traffic from my machine to `relay.nodyx.org` (`46.225.20.193`) on port `7443`.
+> This is an outgoing connection only. It requires **no incoming rule**, no port forwarding, and no exposed service on my side. The machine stays unreachable from the outside.
+> The connection stays open and carries the traffic of a self-hosted community platform.
+> Thank you.
+
+**2. Use IPv6, if your network provides it.**
+
+Since August 2026 the relay also answers on a dedicated IPv6 name. Some networks that filter IPv4 leave IPv6 alone, and IPv6-only networks can now connect at all, which was impossible before.
+
+```bash
+# Does your machine have working IPv6?
+python3 -c "import socket;socket.create_connection(('relay6.nodyx.org',7443),timeout=8);print('IPv6 works')"
+```
+
+If that prints `IPv6 works`, point your client at it:
+
+```bash
+sudo systemctl edit --full nodyx-relay-client
+# in the ExecStart line, replace:
+# --server relay.nodyx.org:7443
+# with:
+# --server relay6.nodyx.org:7443
+sudo systemctl restart nodyx-relay-client
+```
+
+> `relay6.nodyx.org` publishes an `AAAA` record only. It is the same relay, the same port, the same token. Only the road differs.
+
+**3. Move the machine to another connection.**
+
+A 4G or 5G phone share is enough to confirm the diagnosis in two minutes. If the tunnel comes up instantly there, the wall really was your network, not your setup.
+
+#### What this is not
+
+- **Not** a port to open on your router. There is nothing to open inbound, ever.
+- **Not** a firewall problem on your own machine. Outgoing traffic is allowed by default on Linux.
+- **Not** something you misconfigured. A filtered network gives no error message on your side, which is exactly what makes it so confusing.
+
+---
 
 ### The service won't start
 
@@ -182,7 +261,8 @@ sudo journalctl -u nodyx-relay-client --no-pager -n 50
 
 | Error | Cause | Solution |
 |---|---|---|
-| `Connection refused` | relay.nodyx.org unreachable | Check your Internet connection |
+| `Connection refused` | Something answered and said no, so your network is fine | The relay itself may be down, [tell us](https://github.com/Pokled/nodyx/discussions) |
+| `Connection timed out`, or nothing at all | Your network silently drops port `7443` | [The port 7443 wall](#the-tunnel-never-connects-the-port-7443-wall) |
 | `Registration rejected: Invalid slug or token` | Incorrect token | Check `/root/nodyx-credentials.txt` |
 | `Binary not found` | Binary not installed | Reinstall with `install.sh` or Method 2 |
 | `Address already in use` (port 80) | Another service listening on :80 | `sudo ss -tlnp \| grep :80` |
@@ -206,7 +286,7 @@ sudo systemctl restart nodyx-relay-client
 
 ---
 
-## ❓ FAQ
+## FAQ
 
 **Q: Does my data transit through your server?**
 
@@ -234,7 +314,7 @@ Yes. The `nodyx-relay client` binary can run outside the Docker container, just 
 
 ---
 
-## 🏗️ For the curious, Technical architecture
+## For the curious, Technical architecture
 
 ### The relay server (nodyx.org)
 

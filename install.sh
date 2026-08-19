@@ -403,6 +403,20 @@ T_EN[relay_mode_url]='Nodyx Relay mode — URL: %s%s%s'
 T_FR[relay_mode_url]='Mode Nodyx Relay — URL : %s%s%s'
 T_EN[relay_mode_no_port]='No port to open. The tunnel will be established to relay.nodyx.org.'
 T_FR[relay_mode_no_port]='Aucun port à ouvrir. Le tunnel sera établi vers relay.nodyx.org.'
+T_EN[relay_probe]='Checking that your network lets the tunnel out on port 7443...'
+T_FR[relay_probe]='Vérification que votre réseau laisse sortir le tunnel sur le port 7443...'
+T_EN[relay_probe_ok]='Outbound port 7443 is open. The tunnel will work.'
+T_FR[relay_probe_ok]='Le port 7443 sort bien. Le tunnel fonctionnera.'
+T_EN[relay_probe_v6]='Port 7443 is filtered over IPv4, but IPv6 works. Using %s instead.'
+T_FR[relay_probe_v6]='Le port 7443 est filtré en IPv4, mais IPv6 fonctionne. Utilisation de %s à la place.'
+T_EN[relay_probe_blocked]='Your network silently drops outbound port 7443. The tunnel cannot come up.'
+T_FR[relay_probe_blocked]='Votre réseau bloque silencieusement le port 7443 en sortie. Le tunnel ne pourra pas monter.'
+T_EN[relay_probe_hint]='This is a network restriction, not a mistake on your side. Company, university and institute networks often allow only 80 and 443.'
+T_FR[relay_probe_hint]="C'est une restriction du réseau, pas une erreur de votre part. Les réseaux d'entreprise, d'université et d'institut n'autorisent souvent que 80 et 443."
+T_EN[relay_probe_doc]='What to do, including a message to send to your network administrator: %s'
+T_FR[relay_probe_doc]="Que faire, avec un message prêt à envoyer à votre administrateur réseau : %s"
+T_EN[relay_probe_continue]='Continue anyway? The instance will install correctly but stay unreachable until the port is opened. [y/N]'
+T_FR[relay_probe_continue]="Continuer quand même ? L'instance s'installera correctement mais restera injoignable tant que le port ne sera pas ouvert. [o/N]"
 T_EN[auto_domain]='Auto domain: %s%s%s'
 T_FR[auto_domain]='Domaine automatique : %s%s%s'
 T_EN[sslip_resolves]='sslip.io auto-resolves to %s — HTTPS certificate handled by Caddy.'
@@ -1063,7 +1077,7 @@ _nodyx_upgrade() {
 Description=Nodyx Relay Client
 After=network.target
 [Service]
-ExecStart=/usr/local/bin/nodyx-relay client --server relay.nodyx.org:7443 --slug ${_slug} --token ${_dir_token} --local-port 80
+ExecStart=/usr/local/bin/nodyx-relay client --server ${RELAY_SERVER:-relay.nodyx.org:7443} --slug ${_slug} --token ${_dir_token} --local-port 80
 Restart=on-failure
 RestartSec=5s
 StartLimitIntervalSec=60
@@ -1785,6 +1799,49 @@ NET_MODE="${NET_MODE:-2}"
 RELAY_MODE=false
 DOMAIN_IS_AUTO=false
 
+# ── La sonde qui évite une installation « réussie » mais injoignable ──────────
+#
+# Le relais n'a besoin que d'UNE sortie TCP sur 7443. Les connexions grand public
+# l'autorisent, les réseaux d'entreprise, d'université et d'institut souvent pas,
+# et ils ne le disent jamais. Sans ce contrôle, l'installeur se terminait en
+# annonçant un succès, puis l'instance restait muette sans le moindre indice.
+# Cas réel : une inscription en août 2026, tombée exactement là-dessus.
+#
+# Un port filtré ne REFUSE pas, il ne répond rien : on borne donc l'essai.
+RELAY_SERVER="relay.nodyx.org:7443"
+
+_relay_joignable() {
+  timeout 8 bash -c "exec 3<>/dev/tcp/$1/$2" 2>/dev/null
+}
+
+verifier_sortie_relais() {
+  info "$(t relay_probe)"
+
+  if _relay_joignable relay.nodyx.org 7443; then
+    ok "$(t relay_probe_ok)"
+    return 0
+  fi
+
+  # IPv4 filtrée. Certains réseaux laissent passer l'IPv6, et un réseau IPv6 seul
+  # ne pouvait pas se connecter du tout avant que ce nom existe.
+  if _relay_joignable relay6.nodyx.org 7443; then
+    RELAY_SERVER="relay6.nodyx.org:7443"
+    ok "$(printf "$(t relay_probe_v6)" "relay6.nodyx.org")"
+    return 0
+  fi
+
+  warn "$(t relay_probe_blocked)"
+  info "$(t relay_probe_hint)"
+  info "$(printf "$(t relay_probe_doc)" "https://nodyx.dev/relay#the-tunnel-never-connects-the-port-7443-wall")"
+
+  local reponse=""
+  read -r -p "  $(t relay_probe_continue) " reponse || true
+  case "${reponse,,}" in
+    y|yes|o|oui) return 0 ;;
+    *) die "$(t relay_probe_blocked)" ;;
+  esac
+}
+
 case "$NET_MODE" in
   1)
     prompt DOMAIN "$(t prompt_domain)"
@@ -1794,6 +1851,7 @@ case "$NET_MODE" in
     DOMAIN="${COMMUNITY_SLUG}.nodyx.org"
     ok "$(printf "$(t relay_mode_url)" "${BOLD}" "https://${DOMAIN}" "${RESET}")"
     info "$(t relay_mode_no_port)"
+    verifier_sortie_relais
     ;;
   3|*)
     DOMAIN="${PUBLIC_IP//./-}.sslip.io"
@@ -2995,7 +3053,7 @@ After=network.target
 
 [Service]
 ExecStart=/usr/local/bin/nodyx-relay client \
-  --server relay.nodyx.org:7443 \
+  --server ${RELAY_SERVER:-relay.nodyx.org:7443} \
   --slug ${COMMUNITY_SLUG} \
   --token ${NODYX_DIRECTORY_TOKEN} \
   --local-port 80

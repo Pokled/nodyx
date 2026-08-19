@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta name="robots" content="noindex, nofollow">
-	<title>Instance hors-ligne — Nodyx</title>
+	<title>Instance hors-ligne · Nodyx</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
@@ -243,7 +243,7 @@
 
 		<h1>Cette instance est temporairement injoignable</h1>
 
-		<div class="subdomain" id="host">—</div>
+		<div class="subdomain" id="host">…</div>
 
 		<p class="lead">
 			Le tunnel Nodyx est enregistré, mais le serveur de la communauté ne répond pas pour le moment.
@@ -261,27 +261,43 @@
     <div class="diag">
       <p class="diag-titre">Vérifier en une commande, sur votre serveur :</p>
       <pre><code>nc -zv relay.nodyx.org 7443     # doit répondre « succeeded »
+nc -zv relay6.nodyx.org 7443    # la même chose, en IPv6
 systemctl status nodyx-relay    # le client doit être « active »
 journalctl -u nodyx-relay -n 20 # les tentatives de reconnexion</code></pre>
       <p class="diag-note">
         Si <code>nc</code> échoue alors que votre serveur accède bien à Internet, c'est votre
         pare-feu sortant. Autorisez le port <code>7443</code> en sortie, ou contactez
-        l'administrateur du réseau. <b>Vous n'avez aucun port à ouvrir en entrée</b> — Nodyx ne
+        l'administrateur du réseau. <b>Vous n'avez aucun port à ouvrir en entrée</b>, Nodyx ne
         le demande jamais.
+      </p>
+      <p class="diag-note">
+        Si la première commande échoue mais que la seconde répond, votre réseau laisse passer
+        l'IPv6 : basculez le client sur <code>relay6.nodyx.org:7443</code>, c'est le même relais
+        par une autre route.
+      </p>
+      <p class="diag-note">
+        <b><a href="https://nodyx.dev/relay#the-tunnel-never-connects-the-port-7443-wall">Guide complet
+        de déblocage</a></b> : comment lire le résultat de chaque commande, et un message prêt à
+        envoyer à votre administrateur réseau.
       </p>
     </div>
 
     <details class="langues">
       <summary>English / Português</summary>
-      <p><b>English —</b> Most often, your network blocks <b>outbound</b> connections to port
+      <p><b>English.</b> Most often, your network blocks <b>outbound</b> connections to port
         <code>7443</code>. Many corporate, university and institute networks only allow 443. Your
         instance is running; its tunnel just cannot reach us. Test with
-        <code>nc -zv relay.nodyx.org 7443</code>. You never need to open any <i>inbound</i> port.</p>
-      <p><b>Português —</b> Na maioria das vezes, a sua rede bloqueia conexões <b>de saída</b> para
+        <code>nc -zv relay.nodyx.org 7443</code>. You never need to open any <i>inbound</i> port.
+        If IPv6 works on your network, <code>relay6.nodyx.org:7443</code> is the same relay by
+        another road. <b><a href="https://nodyx.dev/relay#the-tunnel-never-connects-the-port-7443-wall">Full unblocking guide</a></b>, including a message you can
+        send to your network administrator.</p>
+      <p><b>Português.</b> Na maioria das vezes, a sua rede bloqueia conexões <b>de saída</b> para
         a porta <code>7443</code>. Muitas redes corporativas, universitárias e de institutos só
         permitem a 443. A sua instância está funcionando; apenas o túnel não consegue nos alcançar.
         Teste com <code>nc -zv relay.nodyx.org 7443</code>. Você nunca precisa abrir nenhuma porta
-        de <i>entrada</i>.</p>
+        de <i>entrada</i>. Se a sua rede tiver IPv6, <code>relay6.nodyx.org:7443</code> é o mesmo
+        relay por outro caminho. <b><a href="https://nodyx.dev/relay#the-tunnel-never-connects-the-port-7443-wall">Guia completo de desbloqueio</a></b>, com uma
+        mensagem pronta para enviar ao administrador da sua rede.</p>
     </details>
 
 		<div class="actions">
@@ -295,7 +311,7 @@ journalctl -u nodyx-relay -n 20 # les tentatives de reconnexion</code></pre>
 		</div>
 
 		<div class="footer">
-			Le réseau <a href="https://nodyx.org">Nodyx</a> est décentralisé —
+			Le réseau <a href="https://nodyx.org">Nodyx</a> est décentralisé,
 			chaque communauté héberge sa propre instance.
 		</div>
 	</main>
