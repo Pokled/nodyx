@@ -50,7 +50,10 @@
 	let linkUrl     = $state('')
 	let imageUrl    = $state('')
 	let imageAlt    = $state('')
-	let imageAlign  = $state<'left'|'center'|'right'|'full'>('center')
+	// `inline` place l'image DANS la ligne de texte, au lieu de la poser sur sa
+	// propre ligne comme les quatre autres. C'est ce qui permet une icône devant
+	// un lien, un logo au fil d'une phrase, un pictogramme dans un tableau.
+	let imageAlign  = $state<'left'|'center'|'right'|'full'|'inline'>('center')
 	// Position du noeud image sélectionné quand on ouvre le menu image : permet
 	// de REMPLACER l'image au lieu d'en insérer une nouvelle (la sélection se
 	// perd dès qu'on tape dans le champ URL, on la capture donc à l'ouverture).
@@ -695,7 +698,7 @@
 
 	function insertImage() {
 		if (!imageUrl.trim()) return
-		const alignClass = { left: 'float-left mr-4', right: 'float-right ml-4', center: 'mx-auto block', full: 'w-full block' }[imageAlign]
+		const alignClass = { left: 'float-left mr-4', right: 'float-right ml-4', center: 'mx-auto block', full: 'w-full block', inline: 'inline align-middle' }[imageAlign]
 		const attrs = { src: imageUrl, alt: imageAlt || '', class: alignClass, 'data-align': imageAlign, align: imageAlign }
 		if (replaceImagePos !== null) {
 			// Remplace l'image existante à sa position (conserve le noeud, change
@@ -1274,15 +1277,18 @@
 				</div>
 				<input type="url" bind:value={imageUrl} placeholder={tFn('editor.image_url_placeholder')} class="popup-input" />
 				<input type="text" bind:value={imageAlt} placeholder={tFn('editor.image_alt_placeholder')} class="popup-input" />
-				<div class="flex gap-1">
-					{#each [['left', tFn('editor.img_align_left')],['center', tFn('editor.img_align_center')],['right', tFn('editor.img_align_right')],['full', tFn('editor.img_align_full')]] as [v, label]}
+				<!-- `flex-wrap` : à cinq choix, les libellés traduits ne tiennent plus
+				     forcément sur une ligne. Sans lui, un libellé long écraserait les
+				     autres au lieu de passer dessous. -->
+				<div class="flex flex-wrap gap-1">
+					{#each [['left', tFn('editor.img_align_left')],['center', tFn('editor.img_align_center')],['right', tFn('editor.img_align_right')],['full', tFn('editor.img_align_full')],['inline', tFn('editor.img_align_inline')]] as [v, label]}
 						<button type="button" onclick={() => imageAlign = v as any}
 							class="flex-1 text-xs px-2 py-1 rounded border transition-colors {imageAlign === v ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300' : 'border-gray-700 text-gray-500 hover:border-gray-500'}">
 							{label}
 						</button>
 					{/each}
 				</div>
-				<button type="button" onclick={insertImage} class="popup-btn-primary">{replaceImagePos !== null ? 'Remplacer' : tFn('editor.insert')}</button>
+				<button type="button" onclick={insertImage} class="popup-btn-primary">{replaceImagePos !== null ? tFn('editor.replace') : tFn('editor.insert')}</button>
 			</div>
 			{/if}
 		</div>

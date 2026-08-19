@@ -447,6 +447,34 @@ select option {
 .nodyx-prose img[data-align="center"] { margin-left: auto; margin-right: auto; display: block; }
 .nodyx-prose img[data-align="full"]   { display: block; float: none; }
 .nodyx-prose img[data-align="full"]:not([width]) { width: 100%; }
+/* `inline` : l'image vit DANS la ligne de texte. Sans elle, une icône de 20px
+   posée devant un lien atterrit seule sur sa propre ligne, parce que la remise
+   à zéro de Tailwind met tout `img` en `display: block`.
+   Trois précautions :
+   - les marges verticales de la règle de base ne s'appliquent pas à un élément
+     en ligne, on les remet donc à zéro et on garde un filet horizontal ;
+   - le rayon de 0.5rem rognerait un logo de 20px, on l'annule ;
+   - sans largeur explicite, on plafonne la hauteur : une capture d'écran
+     passée en `inline` par mégarde ne doit pas faire exploser la ligne. */
+.nodyx-prose img[data-align="inline"] {
+    display: inline;
+    vertical-align: middle;
+    float: none;
+    margin: 0 0.3em;
+    border-radius: 0;
+}
+.nodyx-prose img[data-align="inline"]:not([width]) { max-height: 1.4em; width: auto; }
+
+/* Même logique dans l'éditeur, sur l'enveloppe du NodeView. Elle est déjà en
+   `inline-block` mais alignée en haut : on la recale sur le milieu de la ligne
+   et on supprime les marges verticales des autres alignements. */
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="inline"] {
+    display: inline-block;
+    vertical-align: middle;
+    float: none;
+    margin: 0 0.3em;
+}
+.nodyx-content .tiptap .nodyx-img-wrap[data-align="inline"] img { border-radius: 0; }
 
 /* ── Éditeur : NodeView avec poignées de redimensionnement ─────────────────── */
 .nodyx-content .tiptap .nodyx-img-wrap {
