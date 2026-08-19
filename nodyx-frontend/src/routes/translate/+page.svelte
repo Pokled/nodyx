@@ -328,7 +328,19 @@
 	.search input:focus-visible { border-color: var(--nx-accent); box-shadow: 0 0 0 3px rgb(109 118 245 / 0.15); }
 	.search input::placeholder { color: #61647a; }
 
-	.tscroll { overflow-x: auto; }
+	/* `position: relative` N'EST PAS DECORATIF, il corrige un debordement.
+	   La page defilait horizontalement de 337 px sous 727 px de large, sans
+	   qu'aucun element visible ne depasse : la zone a droite etait vide.
+	   Cause, trouvee au troisieme essai. Les libelles `.sr` reserves aux lecteurs
+	   d'ecran sont en `position: absolute`. Sans ancetre positionne, leur bloc
+	   conteneur est le bloc conteneur INITIAL, pas ce conteneur defilant : ils
+	   lui echappaient et etendaient la zone defilable du document jusqu'a 727 px,
+	   la ou se trouve le dernier d'entre eux dans la table de 800 px.
+	   Mesure : `body` ne debordait pas (390 pour 390), seul `html` debordait.
+	   C'est la signature d'un element positionne par rapport au bloc initial.
+	   En rendant ce conteneur positionne, les `.sr` redeviennent les siens, donc
+	   contenus et rognes. Ils restent lus par les lecteurs d'ecran. */
+	.tscroll { overflow-x: auto; position: relative; }
 	table { width: 100%; border-collapse: collapse; min-width: 720px; }
 	th { text-align: left; padding: 0; border-bottom: 1px solid #1c1e28; white-space: nowrap; }
 	th.mid { padding: 11px 16px; text-align: center; }
