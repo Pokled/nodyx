@@ -164,6 +164,24 @@
 
 		// ── Custom Image with alignment ──────────────────────────────────────
 		const AlignableImage = Image.extend({
+			// `inline: true` est STRUCTUREL, pas cosmétique.
+			//
+			// Par défaut l'extension Image crée un nœud de BLOC (`group: 'block'`).
+			// Un nœud de bloc ne peut pas vivre dans un paragraphe : à la lecture,
+			// ProseMirror l'EXTRAIT et le pose entre deux paragraphes. Une icône
+			// posée devant un lien se retrouvait donc seule sur sa ligne dès que
+			// l'auteur rouvrait son article dans l'éditeur, alors qu'elle était
+			// correcte à la publication. Constaté en production le 2026-08-19.
+			//
+			// En `inline`, l'image devient un nœud de ligne : elle reste dans le
+			// paragraphe. Les alignements de bloc (`center`, `full`) continuent de
+			// s'afficher en bloc, c'est le CSS qui les gouverne, pas le schéma.
+			addOptions() {
+				// `this.parent?.()` est typé optionnel, mais il est toujours défini
+				// sur une extension dérivée : sans l'assertion, le type résultant a
+				// des champs facultatifs et ne satisfait plus `ImageOptions`.
+				return { ...this.parent!(), inline: true }
+			},
 			addAttributes() {
 				return {
 					...this.parent?.(),

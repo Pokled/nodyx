@@ -27,6 +27,14 @@ const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
   'p':      ['class', 'style', 'data-align', 'data-type'],
   // id sur les titres : permet les sommaires à ancres (#section). Pas d'id
   // ailleurs pour limiter le risque de DOM clobbering.
+  //
+  // h1 EN FAIT PARTIE, et son absence a coûté cher (2026-08-19). Un rédacteur a
+  // passé deux titres ancrés de h2 à h1 depuis l'éditeur : TipTap avait bien
+  // conservé leur id, mais cette liste le retirait, et deux entrées du sommaire
+  // sont mortes SANS le moindre message. Perdre une ancre en silence parce qu'on
+  // a changé un niveau de titre est un piège, pas une protection : les trois
+  // autres niveaux l'autorisaient déjà, la surface de risque est la même.
+  'h1':     ['class', 'id', 'style', 'data-align', 'data-type'],
   'h2':     ['class', 'id', 'style', 'data-align', 'data-type'],
   'h3':     ['class', 'id', 'data-align', 'data-type'],
   'h4':     ['class', 'id', 'data-align', 'data-type'],
