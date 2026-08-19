@@ -4,10 +4,32 @@ import { join, resolve }     from 'path'
 import { marked }            from 'marked'
 import hljs                  from 'highlight.js'
 import { slugToFile }        from './nav.js'
+import { DOC_LANGS, isDocLang } from './langs.js'
+import type { DocLang }      from './langs.js'
+export { DOC_LANGS, isDocLang }
+export type { DocLang }
 
 // Resolve docs directory relative to the repo root
 const REPO_ROOT = resolve(process.cwd(), '..')
-const DOCS_DIR  = join(REPO_ROOT, 'docs', 'en')
+const DOCS_ROOT = join(REPO_ROOT, 'docs')
+const DOCS_DIR  = join(DOCS_ROOT, 'en')
+
+
+/**
+ * Les langues qui ont au moins une page. Un dossier vide (`de`, `it` au
+ * 19/08) ne doit pas apparaître dans le sélecteur : proposer une langue qui
+ * renvoie systématiquement de l'anglais est pire que ne pas la proposer.
+ */
+export async function availableDocLangs(): Promise<{ code: DocLang; label: string; pages: number }[]> {
+  const out: { code: DocLang; label: string; pages: number }[] = []
+  for (const { code, label } of DOC_LANGS) {
+    const dir = join(DOCS_ROOT, code)
+    if (!existsSync(dir)) continue
+    const pages = (await readdir(dir)).filter((f) => f.endsWith('.md')).length
+    if (pages > 0) out.push({ code, label, pages })
+  }
+  return out
+}
 
 // ── Custom renderer ───────────────────────────────────────────────────────────
 
@@ -183,8 +205,12 @@ export async function buildSearchIndex(pages: Array<{ slug: string; title: strin
   const entries: SearchEntry[] = []
   for (const page of pages) {
     try {
-      const raw = await readDocFile(page.slug)
-      if (!raw) continue
+      // L'index de recherche reste anglophone : c'est la seule langue complete,
+      // et melanger les langues dans un index unique renverrait des resultats
+      // que le lecteur ne peut pas lire.
+      const found = await readDocFile(page.slug, 'en')
+      if (!found) continue
+      const raw = found.raw
 
       // Whole-page entry — first 500 chars of plain text, anchored at top of page
       const wholePlain = stripMarkdown(raw.replace(/^#{1,6}\s+/gm, ''))
@@ -278,18 +304,46 @@ export interface DocResult {
   description: string
   readingTime: string
   raw:         string
+  /** La langue réellement servie. Retombe sur `en` si la page n'est pas traduite. */
+  lang:        DocLang
+  /** La langue demandée dans l'URL. Différente de `lang` = repli en cours. */
+  requested:   DocLang
 }
 
-async function readDocFile(slug: string): Promise<string | null> {
+/**
+ * Le fichier de la page, dans la langue demandée, sinon en anglais.
+ *
+ * Le repli est indispensable et non cosmétique : au 19/08, le français couvrait
+ * 14 pages sur 21 et l'espagnol 9. Sans lui, deux tiers des liens d'un lecteur
+ * francophone finiraient en 404.
+ *
+ * On renvoie la langue RÉELLEMENT servie, pour que la page puisse le dire au
+ * lecteur. Servir de l'anglais sous une URL `/fr/` sans le signaler laisserait
+ * croire que la traduction est faite.
+ */
+async function readDocFile(
+  slug: string,
+  lang: DocLang = 'en',
+): Promise<{ raw: string; served: DocLang } | null> {
   const filename = slugToFile(slug)
-  const filepath = join(DOCS_DIR, filename)
-  if (!existsSync(filepath)) return null
-  return readFile(filepath, 'utf-8')
+
+  if (lang !== 'en') {
+    const traduit = join(DOCS_ROOT, lang, filename)
+    if (existsSync(traduit)) {
+      return { raw: await readFile(traduit, 'utf-8'), served: lang }
+    }
+  }
+
+  const anglais = join(DOCS_DIR, filename)
+  if (!existsSync(anglais)) return null
+  return { raw: await readFile(anglais, 'utf-8'), served: 'en' }
 }
 
-export async function renderDoc(slug: string): Promise<DocResult | null> {
-  const raw = await readDocFile(slug)
-  if (raw === null) return null
+export async function renderDoc(slug: string, lang: DocLang = 'en'): Promise<DocResult | null> {
+  const found = await readDocFile(slug, lang)
+  if (found === null) return null
+
+  const { raw, served } = found
 
   const processed  = processCallouts(raw)
   const html       = await marked.parse(processed)
@@ -304,5 +358,8 @@ export async function renderDoc(slug: string): Promise<DocResult | null> {
   const description = extractDescription(raw)
   const rt          = readingTime(raw)
 
-  return { html, headings, title, description, readingTime: rt, raw }
+  // `requested` et `served` diffèrent quand la page n'est pas encore traduite :
+  // c'est ce qui permet à la page de le DIRE au lecteur au lieu de lui servir
+  // de l'anglais sous une URL française sans prévenir.
+  return { html, headings, title, description, readingTime: rt, raw, lang: served, requested: lang }
 }

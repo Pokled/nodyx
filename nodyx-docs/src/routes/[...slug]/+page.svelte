@@ -1,8 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Heading } from '$lib/docs.server.js'
+  import { langPrefix } from '$lib/langs.js'
 
   const { data } = $props()
+
+  // L'anglais vit a la racine, les autres langues sous leur code.
+  const prefixe = $derived(langPrefix(data.lang))
 
   // Copy button handler (injected into rendered HTML)
   onMount(() => {
@@ -170,13 +174,40 @@
 
 <!-- Breadcrumb -->
 <nav class="breadcrumb" aria-label="Breadcrumb">
-  <a href="/">Docs</a>
+  <a href="{prefixe}/">Docs</a>
   <span aria-hidden="true">/</span>
   <span aria-current="page">{data.title}</span>
 </nav>
 
-<!-- Reading time -->
-<div class="reading-time" aria-label="Reading time">{data.readingTime}</div>
+<!-- Reading time + langues -->
+<div class="meta-bar">
+  <div class="reading-time" aria-label="Reading time">{data.readingTime}</div>
+
+  {#if data.langs.length > 1}
+    <nav class="langues" aria-label="Language">
+      {#each data.langs as l}
+        <a
+          href="{l.code === 'en' ? '' : '/' + l.code}/{data.slug}"
+          class="langue"
+          class:actif={l.code === data.requested}
+          hreflang={l.code}
+          aria-current={l.code === data.requested ? 'true' : undefined}
+        >{l.label}</a>
+      {/each}
+    </nav>
+  {/if}
+</div>
+
+{#if data.fallback}
+  <!-- Servir de l'anglais sous une URL /fr/ SANS le dire laisserait croire que
+       la page est traduite. Au 19/08, le francais couvrait 14 pages sur 21. -->
+  <p class="pas-traduit" role="note">
+    Cette page n'est pas encore traduite. Vous lisez la version anglaise.
+    <a href="https://github.com/Pokled/nodyx/blob/main/docs/en/{data.slug.toUpperCase()}.md">
+      Contribuer a sa traduction
+    </a>
+  </p>
+{/if}
 
 <div class="doc-layout">
   <!-- Main content -->
@@ -213,7 +244,7 @@
   <nav class="doc-nav" aria-label="Previous and next pages">
     <div class="doc-nav-inner">
       {#if data.prev}
-        <a href="/{data.prev.slug}" class="doc-nav-btn doc-nav-prev">
+        <a href="{prefixe}/{data.prev.slug}" class="doc-nav-btn doc-nav-prev">
           <span class="doc-nav-label">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M15 18l-6-6 6-6"/>
@@ -226,7 +257,7 @@
         <div></div>
       {/if}
       {#if data.next}
-        <a href="/{data.next.slug}" class="doc-nav-btn doc-nav-next">
+        <a href="{prefixe}/{data.next.slug}" class="doc-nav-btn doc-nav-next">
           <span class="doc-nav-label">
             Next
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -441,4 +472,29 @@
   .toc { display: none; }
   .doc-layout { display: block; }
 }
+
+/* ── Langues de la documentation ─────────────────────────────────────────── */
+.meta-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.langues { display: flex; gap: .35rem; flex-wrap: wrap; }
+.langue {
+  font-size: .78rem; padding: .2rem .55rem; border-radius: 999px;
+  text-decoration: none; color: var(--text-muted, #94a3b8);
+  border: 1px solid transparent;
+}
+.langue:hover { color: var(--text, #e2e8f0); background: rgb(148 163 184 / .12); }
+.langue.actif {
+  color: var(--accent, #a78bfa);
+  border-color: color-mix(in srgb, var(--accent, #a78bfa) 45%, transparent);
+}
+.pas-traduit {
+  margin: .9rem 0 0; padding: .6rem .8rem; border-radius: .5rem;
+  font-size: .85rem; line-height: 1.55;
+  color: var(--text-muted, #94a3b8);
+  background: rgb(148 163 184 / .09);
+  border-left: 3px solid var(--accent, #a78bfa);
+}
+.pas-traduit a { color: var(--accent, #a78bfa); }
 </style>

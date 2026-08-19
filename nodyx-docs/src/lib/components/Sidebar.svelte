@@ -2,7 +2,10 @@
   import { nav, type NavSection, type NavItem } from '../nav.js'
   import { page } from '$app/stores'
 
-  const { currentSlug }: { currentSlug: string } = $props()
+  // `lang` prefixe chaque lien. Sans lui, un lecteur arrive sur /fr/relay puis
+  // retombe en anglais au premier clic de la barre laterale.
+  const { currentSlug, lang = 'en' }: { currentSlug: string; lang?: string } = $props()
+  const prefixe = $derived(lang === 'en' ? '' : `/${lang}`)
 
   function isActive(item: NavItem) {
     return item.slug === currentSlug
@@ -20,7 +23,7 @@
           {#each section.items as item}
             <li>
               <a
-                href="/{item.slug}"
+                href="{prefixe}/{item.slug}"
                 class="nav-item"
                 class:active={isActive(item)}
                 aria-current={isActive(item) ? 'page' : undefined}
