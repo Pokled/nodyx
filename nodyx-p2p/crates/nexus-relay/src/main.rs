@@ -28,6 +28,21 @@ enum Commands {
         #[arg(long, default_value = "7443")]
         tcp_port: u16,
 
+        /// Address the relay listens on for client connections.
+        ///
+        /// Defaults to `[::]`, which on Linux accepts BOTH IPv6 and IPv4 as long
+        /// as `net.ipv6.bindv6only` is 0 (the kernel default, and not overridden
+        /// anywhere in /etc/sysctl.d on the production VPS). Before this default,
+        /// the relay bound `0.0.0.0` and was unreachable from an IPv6-only
+        /// network.
+        ///
+        /// Kept configurable on purpose: if a host ever sets `bindv6only=1`, a
+        /// `[::]` socket silently stops accepting IPv4, which would strand every
+        /// existing instance. Setting `--tcp-bind 0.0.0.0` restores the old
+        /// behaviour without rebuilding.
+        #[arg(long, env = "RELAY_TCP_BIND", default_value = "[::]")]
+        tcp_bind: String,
+
         /// HTTP port for Caddy reverse proxy.
         #[arg(long, default_value = "7001")]
         http_port: u16,
@@ -82,11 +97,12 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::Server {
             tcp_port,
+            tcp_bind,
             http_port,
             database_url,
             main_slug,
         } => {
-            server::run(tcp_port, http_port, &database_url, &main_slug).await?;
+            server::run(&tcp_bind, tcp_port, http_port, &database_url, &main_slug).await?;
         }
 
         Commands::Client {

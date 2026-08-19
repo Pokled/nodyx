@@ -61,7 +61,13 @@ pub async fn run(
     pg: Arc<DbPool>,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(bind).await?;
-    info!("TCP relay listener on {bind}");
+    // The address actually obtained, not the one requested: a `[::]` socket that
+    // silently ended up IPv6-only (bindv6only=1) is invisible otherwise, and every
+    // IPv4 instance would fail to connect without a single error on this side.
+    match listener.local_addr() {
+        Ok(addr) => info!("TCP relay listener on {addr} (requested {bind})"),
+        Err(e) => info!("TCP relay listener on {bind} (local_addr unavailable: {e})"),
+    }
 
     let ban_map: BanMap = Arc::new(DashMap::new());
 
