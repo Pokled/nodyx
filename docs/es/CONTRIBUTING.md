@@ -132,7 +132,7 @@ nodyx-frontend/src/lib/locales/
 
 La integración continua comprueba que ninguna variable se haya alterado, así que traducir no puede romper la aplicación. Nosotros revisamos, fusionamos, y tu trabajo sale en la siguiente versión.
 
-¿Tu idioma no está en la lista? Copia `en.json`, nómbralo con el código de tu idioma, y abre una Issue para que lo conectemos al selector de idiomas.
+¿Tu idioma no está en la lista? Abre una [Issue «New Language»](https://github.com/Pokled/nodyx/issues/new?template=new_language.yml) y lo conectamos al selector por ti. Añadir un idioma requiere un cambio de código por nuestra parte: un archivo simplemente depositado no aparecería.
 
 ### La documentación
 1. Ve a `docs/`

@@ -1,0 +1,74 @@
+name: New Language
+description: Ask for a language to be added to Nodyx, or say you are translating one
+title: "[i18n]: "
+labels: ["i18n", "good first issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for wanting to translate Nodyx.
+
+        **You may not need this form at all.** If your language is already listed on
+        [nodyx.org/translate](https://nodyx.org/translate), just open a Pull Request on its file.
+        No issue, no permission needed.
+
+        This form is for a language that is **not in the list yet**. Adding one means wiring it
+        into the language picker, which is a code change we make on our side, so we need to know
+        it is coming.
+
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: The name in English, and the name as your language writes it
+      placeholder: "Brazilian Portuguese / Português (Brasil)"
+    validations:
+      required: true
+
+  - type: input
+    id: code
+    attributes:
+      label: Language code
+      description: >
+        The BCP 47 code. Use the regional form only when the language genuinely differs
+        by region, like pt-BR against pt-PT.
+      placeholder: "pt-BR"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: What are you planning to translate?
+      description: Every answer is welcome. Partial work ships, missing strings fall back to English.
+      options:
+        - The interface (one JSON file)
+        - The documentation (docs/)
+        - Both
+        - I am only requesting the language, someone else may translate it
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything we should know
+      description: >
+        Optional. Regional conventions, an existing translation you want to build on,
+        a term you would rather keep in English, or a question.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ### What happens next
+
+        1. We add your language to the picker and create the empty file
+        2. You translate at your own pace and open a Pull Request
+        3. Continuous integration checks that no `{{variable}}` was altered, so you cannot
+           break the app by translating
+        4. Your work ships in the next release, and you get a place in `CONTRIBUTORS.md`
+
+        The full process, including the translation rules, is in
+        [CONTRIBUTING.md](https://github.com/Pokled/nodyx/blob/main/docs/en/CONTRIBUTING.md#translating-nodyx).

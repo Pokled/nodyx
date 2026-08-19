@@ -129,7 +129,7 @@ nodyx-frontend/src/lib/locales/
 
 L'intégration continue vérifie qu'aucune variable n'a bougé : tu ne peux pas casser l'application en traduisant. On relit, on fusionne, ton travail part dans la version suivante.
 
-Ta langue n'est pas dans la liste ? Copie `en.json`, nomme-le avec ton code langue, et ouvre une Issue pour qu'on le branche dans le sélecteur de langue.
+Ta langue n'est pas dans la liste ? Ouvre une [Issue « New Language »](https://github.com/Pokled/nodyx/issues/new?template=new_language.yml) et on la branche dans le sélecteur pour toi. Ajouter une langue demande une modification de code chez nous : un fichier simplement déposé n'apparaîtrait pas.
 
 ### La documentation
 1. Va dans `docs/`

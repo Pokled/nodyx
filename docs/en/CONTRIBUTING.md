@@ -132,7 +132,7 @@ nodyx-frontend/src/lib/locales/
 
 Continuous integration checks that no variable was altered, so you cannot break the app by translating. We review, we merge, your work ships in the next release.
 
-Your language is not in the list? Copy `en.json`, name it with your language code, and open an Issue so we can wire it into the language picker.
+Your language is not in the list? Open a [New Language issue](https://github.com/Pokled/nodyx/issues/new?template=new_language.yml) and we wire it into the language picker for you. Adding a language is a code change on our side, so a dropped file alone would not show up.
 
 ### The documentation
 1. Go to `docs/`
