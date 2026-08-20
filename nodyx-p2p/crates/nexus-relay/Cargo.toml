@@ -50,7 +50,14 @@ socket2 = { version = "0.5", features = ["all"] }
 
 # WebSocket door. Server side only: Caddy terminates TLS in front, so the
 # client and TLS features are left out rather than carried unused.
-tokio-tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
+# WebSocket door and client. `connect` and rustls are needed on the client
+# side, which dials a public host and MUST validate its certificate: an
+# unvalidated tunnel would give away the encryption it exists to provide.
+# webpki roots rather than the system store, so a self-hosted binary behaves
+# the same on every distribution.
+tokio-tungstenite = { version = "0.30", default-features = false, features = [
+    "handshake", "connect", "rustls-tls-webpki-roots", "url",
+] }
 # Only the Stream and Sink traits, to bridge the WebSocket to AsyncRead and
 # AsyncWrite. Already in the tree via tokio-tungstenite; named here because
 # the adapter uses the traits directly.

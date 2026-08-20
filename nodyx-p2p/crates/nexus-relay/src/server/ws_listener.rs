@@ -34,7 +34,7 @@ use tracing::{error, info, warn};
 use super::db::DbPool;
 use super::registry::Registry;
 use super::session::{self, BanMap, Transport, is_auth_banned};
-use super::ws_stream::WsByteStream;
+use crate::ws_stream::WsByteStream;
 use crate::client_ip::client_ip;
 
 /// Accept tunnels over WebSocket until the process ends.

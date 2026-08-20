@@ -4,7 +4,6 @@ pub mod registry;
 pub mod session;
 pub mod tcp_listener;
 pub mod ws_listener;
-pub mod ws_stream;
 
 use std::sync::Arc;
 use tracing::info;

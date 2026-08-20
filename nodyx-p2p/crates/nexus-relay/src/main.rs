@@ -2,6 +2,7 @@ mod client;
 mod client_ip;
 mod keepalive;
 mod protocol;
+mod ws_stream;
 mod server;
 
 use clap::{Parser, Subcommand};
