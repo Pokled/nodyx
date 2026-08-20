@@ -15,6 +15,10 @@ AUTOSAVE=/var/lib/caddy/.config/caddy/autosave.json
 HORODATE="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 
 mkdir -p "$DEST"
+# La configuration ne contient aucun secret, mais elle decrit toute la topologie
+# interne : chaque service, chaque port. Inutile de l'offrir en lecture a tout
+# compte local. Defense en profondeur, elle ne coute rien.
+chmod 700 "$DEST"
 
 echo "--- configuration vivante ---"
 if ! curl -sf -m 15 "${CADDY_API:-http://localhost:2019}/config/" > "$DEST/live-$HORODATE.json"; then
@@ -40,6 +44,7 @@ else
   echo "  ABSENT : Caddy repartirait du Caddyfile disque au prochain demarrage" >&2
 fi
 
+chmod 600 "$DEST/live-$HORODATE.json"
 ln -sfn "live-$HORODATE.json" "$DEST/derniere-live.json"
 
 # Le tout premier etat connu, ecrit UNE SEULE FOIS et jamais reecrit.
@@ -53,6 +58,7 @@ ln -sfn "live-$HORODATE.json" "$DEST/derniere-live.json"
 # rien d'autre n'est sur.
 if [ ! -f "$DEST/etat-initial.json" ]; then
   cp -a "$DEST/live-$HORODATE.json" "$DEST/etat-initial.json"
+  chmod 600 "$DEST/etat-initial.json"
   echo "  etat-initial.json cree (point de retour immuable)"
 else
   echo "  etat-initial.json deja present, laisse intact ($(stat -c%s "$DEST/etat-initial.json") octets)"
