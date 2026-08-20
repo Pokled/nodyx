@@ -12,7 +12,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
 use dashmap::DashMap;
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
@@ -39,6 +39,35 @@ pub const BAN_DURATION_SECS: u64 = 300; // 5 minutes
 /// the far end die unnoticed.
 const PING_INTERVAL_SECS: u64 = 30;
 
+/// How long a fresh connection has to say who it is.
+///
+/// Without this bound a connection that completes the handshake and then falls
+/// silent holds a task and a socket for as long as it pleases, and **no ban can
+/// ever apply** because no authentication was attempted: the ban map only counts
+/// failures. Opening many such connections costs the attacker almost nothing.
+///
+/// The client sends `Register` immediately on connect, so ten seconds is far
+/// more than a real one needs, even on a slow link.
+const REGISTER_DEADLINE: Duration = Duration::from_secs(10);
+
+/// Read the very first message, or give up.
+///
+/// Split out from [`run`] so the deadline can be tested on its own: reaching
+/// [`run`] would need a live database, and a rule this cheap to break deserves a
+/// test that does not depend on one.
+async fn read_registration<R>(reader: &mut R, culprit: IpAddr) -> anyhow::Result<Option<ClientMessage>>
+where
+    R: tokio::io::AsyncRead + Unpin,
+{
+    match tokio::time::timeout(REGISTER_DEADLINE, read_msg::<_, ClientMessage>(reader)).await {
+        Ok(res) => Ok(res?),
+        Err(_) => Err(anyhow::anyhow!(
+            "{culprit} opened a connection and never registered within {}s",
+            REGISTER_DEADLINE.as_secs()
+        )),
+    }
+}
+
 /// Compile-time guard on the keep-alive budget.
 ///
 /// Cloudflare closes an idle WebSocket at around 100 s, and TCP keepalive only
@@ -48,6 +77,9 @@ const PING_INTERVAL_SECS: u64 = 30;
 /// Checked here rather than in a test: the build should fail, not the suite.
 const _: () = assert!(PING_INTERVAL_SECS < 90);
 const _: () = assert!(READ_DEADLINE_SECS > PING_INTERVAL_SECS * 2);
+
+/// An unauthenticated connection must never outlive an authenticated idle one.
+const _: () = assert!(REGISTER_DEADLINE.as_secs() < READ_DEADLINE_SECS);
 
 /// [`READ_DEADLINE`] in seconds, so the guard above can be evaluated at compile time.
 const READ_DEADLINE_SECS: u64 = READ_DEADLINE.as_secs();
@@ -140,9 +172,10 @@ where
 {
     let (mut reader, mut writer) = tokio::io::split(stream);
 
-    // 1. Expect Register as the very first message.
+    // 1. Expect Register as the very first message, and do not wait forever for
+    //    it: an unauthenticated caller must not be able to hold a task open.
     let Some(ClientMessage::Register { slug, token }) =
-        read_msg::<_, ClientMessage>(&mut reader).await?
+        read_registration(&mut reader, culprit).await?
     else {
         write_msg(
             &mut writer,
@@ -316,6 +349,46 @@ mod tests {
 
     fn ip(s: &str) -> IpAddr {
         s.parse().expect("test address should parse")
+    }
+
+    /// The defect this guards against, reproduced.
+    ///
+    /// A caller completes the handshake and then says nothing at all. No
+    /// authentication is attempted, so the ban map never sees it and no ban can
+    /// ever apply. Before the deadline existed this waited forever, and opening
+    /// such connections by the thousand cost the caller almost nothing.
+    ///
+    /// Time is paused, so this test spends no real seconds waiting.
+    #[tokio::test(start_paused = true)]
+    async fn a_caller_that_never_registers_is_dropped() {
+        // The far end is held open on purpose: dropping it would signal EOF,
+        // which is a different case entirely and would not exercise the deadline.
+        let (_far_end, mut near_end) = tokio::io::duplex(64);
+
+        let err = read_registration(&mut near_end, ip("203.0.113.9"))
+            .await
+            .expect_err("a silent caller must not be waited on forever");
+
+        assert!(
+            format!("{err}").contains("never registered"),
+            "the failure must name what went wrong, got: {err}"
+        );
+    }
+
+    /// The deadline must not be so long that it fails to bound anything.
+    ///
+    /// The client sends `Register` on connect, so anything past a few seconds is
+    /// only patience for an attacker.
+    #[test]
+    fn the_registration_deadline_actually_bounds_something() {
+        assert!(
+            REGISTER_DEADLINE.as_secs() >= 3 && REGISTER_DEADLINE.as_secs() <= 30,
+            "unreasonable registration deadline: {REGISTER_DEADLINE:?}"
+        );
+        // An unauthenticated connection must never outlive an authenticated idle
+        // one. Also asserted at compile time; kept here so the intent is visible
+        // to anyone reading the suite.
+        assert!(REGISTER_DEADLINE.as_secs() < READ_DEADLINE.as_secs());
     }
 
     #[test]

@@ -63,6 +63,12 @@ tokio-tungstenite = { version = "0.30", default-features = false, features = [
 # the adapter uses the traits directly.
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 
+[dev-dependencies]
+# `test-util` gives the suite a paused clock, so a test about a ten second
+# deadline costs no real seconds. It is deliberately NOT part of tokio's "full"
+# feature, and it stays out of the shipped binary by living here.
+tokio = { version = "1", features = ["full", "test-util"] }
+
 [profile.release]
 opt-level = 3
 lto = true
