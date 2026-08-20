@@ -280,6 +280,28 @@
 		// donc au rechargement l'extension ne reconnaissait plus son wrapper et
 		// JETAIT l'iframe (vidéos qui disparaissent à la réédition). On ajoute
 		// une règle parseHTML qui reparse aussi un <iframe> nu d'origine YouTube.
+		// ── Liens : une ancre interne ne s'ouvre pas dans un onglet ──────────
+		//
+		// L'extension Link applique par DÉFAUT `target="_blank"` et
+		// `rel="noopener noreferrer nofollow"` à tous les liens, sans distinguer
+		// leur destination. Appliqué à une ancre `#section`, ça ouvre un onglet
+		// VIDE au lieu de descendre dans la page : tout sommaire éditable était
+		// donc cassé dès la première réouverture de l'article. Constaté en
+		// production le 2026-08-19.
+		//
+		// On ne retire ces attributs que pour les ancres, jamais pour les liens
+		// sortants, où ils restent la bonne pratique.
+		const SmartLink = Link.extend({
+			renderHTML({ HTMLAttributes }: any) {
+				const href = HTMLAttributes?.href
+				if (typeof href === 'string' && href.startsWith('#')) {
+					const { target: _t, rel: _r, ...interne } = HTMLAttributes
+					return ['a', mergeAttributes(interne), 0]
+				}
+				return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0]
+			},
+		})
+
 		const RobustYoutube = Youtube.extend({
 			parseHTML() {
 				return [
@@ -627,7 +649,7 @@
 				StarterKit.configure({ codeBlock: false, link: false, underline: false }),
 				Underline,
 				TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
-				Link.configure({ openOnClick: false, autolink: true }),
+				SmartLink.configure({ openOnClick: false, autolink: true }),
 				AlignableImage,
 				RobustYoutube.configure({ nocookie: true }),
 				Table.configure({ resizable: false }),
