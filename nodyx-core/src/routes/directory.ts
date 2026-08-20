@@ -7,6 +7,7 @@ import http from 'http';
 import sanitizeHtml from 'sanitize-html';
 import { db, redis } from '../config/database';
 import { getClientIp, estPubliquementRoutable } from '../utils/clientIp'
+import { isReservedSlug } from '../utils/reservedSlugs'
 
 // Strict rate-limit for public search endpoint (30 req/min per IP)
 async function searchRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -198,6 +199,18 @@ export default async function directoryRoutes(app: FastifyInstance) {
 
     if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(slug)) {
       return reply.status(400).send({ error: 'Invalid slug format (lowercase alphanumeric and hyphens, 3-63 chars)' });
+    }
+
+    // Un slug revendique `<slug>.nodyx.org`. Plusieurs sous-domaines portent
+    // deja de l'infrastructure, et la validation ci-dessus est purement
+    // formelle : sans ce controle, `olympus`, `relay` ou `tunnel` etaient
+    // inscriptibles. Voir utils/reservedSlugs.ts pour ce que ca permettait.
+    if (isReservedSlug(slug)) {
+      return reply.status(400).send({
+        error: 'This slug is reserved for Nodyx infrastructure',
+        code: 'SLUG_RESERVED',
+        hint: 'Choisissez un autre nom : celui-ci designe un service de la plateforme.',
+      });
     }
 
     try {
