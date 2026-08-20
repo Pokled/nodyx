@@ -48,6 +48,14 @@ tokio-util = { version = "0.7", features = ["codec"] }
 # TCP keepalive (portable setsockopt wrapper)
 socket2 = { version = "0.5", features = ["all"] }
 
+# WebSocket door. Server side only: Caddy terminates TLS in front, so the
+# client and TLS features are left out rather than carried unused.
+tokio-tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
+# Only the Stream and Sink traits, to bridge the WebSocket to AsyncRead and
+# AsyncWrite. Already in the tree via tokio-tungstenite; named here because
+# the adapter uses the traits directly.
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+
 [profile.release]
 opt-level = 3
 lto = true

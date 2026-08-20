@@ -1,13 +1,17 @@
 pub mod db;
 pub mod http_proxy;
 pub mod registry;
+pub mod session;
 pub mod tcp_listener;
+pub mod ws_listener;
+pub mod ws_stream;
 
 use std::sync::Arc;
 use tracing::info;
 
 use db::DbPool;
 use registry::Registry;
+use session::BanMap;
 
 /// Build the listen address from a host and a port.
 ///
@@ -20,12 +24,14 @@ pub fn listen_addr(host: &str, port: u16) -> String {
 pub async fn run(
     tcp_bind_host: &str,
     tcp_port: u16,
+    ws_port: u16,
     http_port: u16,
     database_url: &str,
     main_slug: &str,
 ) -> anyhow::Result<()> {
     info!("Starting nodyx-relay server");
     info!("  TCP relay bind  : {tcp_bind_host}:{tcp_port}");
+    info!("  WebSocket port  : {ws_port} (loopback, behind Caddy)");
     info!("  HTTP proxy port : {http_port}");
     info!("  Main slug       : {main_slug}");
 
@@ -34,12 +40,34 @@ pub async fn run(
 
     let registry = Registry::new();
 
-    let tcp_bind  = listen_addr(tcp_bind_host, tcp_port);
+    // One ban list for both doors. A ban is about who is calling, not about the
+    // road they took: an address turned away on one side must not be welcome on
+    // the other, or the defence would be trivially side-stepped.
+    let ban_map: BanMap = Arc::new(dashmap::DashMap::new());
+
+    // Expiry runs here rather than in a listener, so it happens once however
+    // many doors are open.
+    {
+        let ban_map = ban_map.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(session::BAN_DURATION_SECS))
+                    .await;
+                session::prune_bans(&ban_map);
+            }
+        });
+    }
+
+    let tcp_bind = listen_addr(tcp_bind_host, tcp_port);
+    // Loopback only: Caddy is the front door, and binding this port publicly
+    // would expose an unauthenticated upgrade with no TLS in front of it.
+    let ws_bind = format!("127.0.0.1:{ws_port}");
     let http_bind = format!("127.0.0.1:{http_port}");
     let main_slug = main_slug.to_owned();
 
     tokio::try_join!(
-        tcp_listener::run(&tcp_bind, registry.clone(), pg.clone()),
+        tcp_listener::run(&tcp_bind, registry.clone(), pg.clone(), ban_map.clone()),
+        ws_listener::run(&ws_bind, registry.clone(), pg.clone(), ban_map.clone()),
         http_proxy::run(&http_bind, registry.clone(), pg.clone(), main_slug),
     )?;
 
@@ -49,8 +77,7 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use super::listen_addr;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::{TcpListener, TcpStream};
+    use tokio::net::TcpListener;
 
     #[test]
     fn ipv6_literal_stays_bracketed() {
@@ -70,15 +97,18 @@ mod tests {
         }
     }
 
-    /// THE point of the change: a relay bound on `[::]` must still serve the 24
-    /// existing instances, which all connect over IPv4. Before it, the relay bound
+    /// THE point of the dual-stack default: a relay bound on `[::]` must still
+    /// serve the instances that connect over IPv4. Before it, the relay bound
     /// `0.0.0.0` and an IPv6-only network could not reach it at all.
     ///
-    /// This test fails on a host where `net.ipv6.bindv6only` is 1, which is exactly
-    /// the condition that would silently strand every IPv4 instance. Failing loudly
-    /// here is the whole point.
+    /// This test fails on a host where `net.ipv6.bindv6only` is 1, which is
+    /// exactly the condition that would silently strand every IPv4 instance.
+    /// Failing loudly here is the whole point.
     #[tokio::test]
     async fn ipv4_client_reaches_a_dual_stack_listener() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpStream;
+
         let listener = TcpListener::bind(listen_addr("[::]", 0)).await.unwrap();
         let port = listener.local_addr().unwrap().port();
 
@@ -101,7 +131,6 @@ mod tests {
         let (got, peer) = accepted.await.unwrap();
         assert_eq!(&got, b"ping");
         assert_eq!(&back, b"pong");
-        // The peer arrives as an IPv4-mapped IPv6 address, proof the socket carried it.
         assert!(peer.is_ipv6() || peer.is_ipv4(), "unexpected peer family: {peer}");
     }
 }
