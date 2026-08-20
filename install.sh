@@ -2536,7 +2536,13 @@ NODYX_VERSION=${NODYX_VERSION}
 
 # Serveur
 PORT=3000
-HOST=0.0.0.0
+# Loopback, volontairement. Caddy tourne sur la même machine et mandate vers
+# localhost:3000 : écouter sur toutes les interfaces publierait l'API sur
+# Internet, et il ne resterait qu'une règle de pare-feu entre elle et le monde.
+# Une ligne de défense n'en fait pas deux.
+#
+# À changer seulement si votre mandataire vit sur une AUTRE machine.
+HOST=127.0.0.1
 NODE_ENV=production
 
 # JWT
