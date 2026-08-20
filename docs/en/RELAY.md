@@ -207,9 +207,38 @@ python3 -c "import socket;socket.create_connection(('relay.nodyx.org',7443),time
 
 #### If your network filters the port
 
-You have three ways out, easiest first.
+**Since August 2026 the installer handles this for you.** It tries the direct port first, then IPv6, then the same tunnel carried over HTTPS on port `443`. A network that lets you browse the web at all will let that last one through. If you are installing today there is nothing to do: the installer says which road it took.
 
-**1. Ask for the port to be opened, outbound only.**
+The rest of this section is for instances installed before that, and for anyone who prefers to switch by hand.
+
+**1. Take the HTTPS door.**
+
+The relay accepts the very same tunnel as a WebSocket over HTTPS, on port `443`, the port your browser already uses. Same slug, same token, same behaviour. Only the road differs.
+
+```bash
+sudo systemctl edit --full nodyx-relay-client
+# in the ExecStart line, replace:
+# --server relay.nodyx.org:7443
+# with:
+# --server wss://tunnel.nodyx.org/tunnel
+sudo systemctl restart nodyx-relay-client
+```
+
+Check from your machine that the door answers:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -m 5 --http1.1 \
+  -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+  -H 'Sec-WebSocket-Version: 13' \
+  -H "Sec-WebSocket-Key: $(head -c16 /dev/urandom | base64)" \
+  https://tunnel.nodyx.org/tunnel
+```
+
+`101` means the door is open and the tunnel will come up.
+
+> **Read the number, not curl's exit code.** curl is not a WebSocket client: once it has its `101` it waits for data that never comes, then gives up with exit code `28`. Here, a successful probe is the one that times out. Testing the exit code would reject a door that is wide open.
+
+**2. Ask for the port to be opened, outbound only.**
 
 Network administrators say no to vague requests and yes to precise ones. Here is a paragraph you can copy and send as is:
 
@@ -219,7 +248,7 @@ Network administrators say no to vague requests and yes to precise ones. Here is
 > The connection stays open and carries the traffic of a self-hosted community platform.
 > Thank you.
 
-**2. Use IPv6, if your network provides it.**
+**3. Use IPv6, if your network provides it.**
 
 Since August 2026 the relay also answers on a dedicated IPv6 name. Some networks that filter IPv4 leave IPv6 alone, and IPv6-only networks can now connect at all, which was impossible before.
 
@@ -241,7 +270,7 @@ sudo systemctl restart nodyx-relay-client
 
 > `relay6.nodyx.org` publishes an `AAAA` record only. It is the same relay, the same port, the same token. Only the road differs.
 
-**3. Move the machine to another connection.**
+**4. Move the machine to another connection.**
 
 A 4G or 5G phone share is enough to confirm the diagnosis in two minutes. If the tunnel comes up instantly there, the wall really was your network, not your setup.
 

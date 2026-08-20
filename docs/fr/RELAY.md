@@ -174,6 +174,111 @@ curl -I https://ton-slug.nodyx.org/
 
 ## 🔧 Dépannage
 
+### Le tunnel ne se connecte jamais, le mur du port 7443
+
+**Commence par là.** C'est la panne la plus fréquente, et la moins devinable, parce que rien n'est mal réglé chez toi.
+
+Ton instance ouvre **une connexion sortante** vers `relay.nodyx.org`, en TCP sur le port `7443`. C'est tout le mécanisme. Rien n'entre, rien n'est redirigé, aucune règle n'est jamais ajoutée sur ta box.
+
+Le piège : beaucoup de réseaux ne laissent sortir que `80` et `443`. Les connexions grand public autorisent presque toujours `7443`. Les réseaux d'entreprise, d'université, d'école et d'institut, souvent pas, et ils ne le disent jamais.
+
+#### Le savoir en cinq secondes
+
+```bash
+nc -zv relay.nodyx.org 7443
+```
+
+Trois réponses sont possibles, et chacune veut dire autre chose :
+
+| Ce que tu vois | Ce que ça signifie | Quoi faire |
+|---|---|---|
+| `succeeded!` ou `Connected` | Le port est ouvert, le trafic passe | Le problème est ailleurs, continue plus bas |
+| `Connection refused` | Quelque chose a répondu, et a dit non. Ton réseau va bien | C'est le relais qui est à terre, [dis-le nous](https://github.com/Pokled/nodyx/discussions) |
+| **Rien, ça reste suspendu, puis ça expire** | Ton réseau jette les paquets en silence | **C'est le mur. Lis la suite** |
+
+> **Relis ce tableau deux fois.** La différence entre *refusé* et *expiré* est le signal le plus utile de toute cette page. Un refus est une réponse. Le silence est un filtre.
+
+Pas de `nc` sur ta machine ? Ceci marche partout où Python est installé :
+
+```bash
+python3 -c "import socket;socket.create_connection(('relay.nodyx.org',7443),timeout=8);print('ouvert')"
+```
+
+#### Si ton réseau filtre le port
+
+**Depuis août 2026, l'installeur s'en charge tout seul.** Il essaie le port direct, puis l'IPv6, puis le même tunnel porté en HTTPS sur le port `443`. Un réseau qui te laisse simplement naviguer sur le web laissera passer ce dernier. Si tu installes aujourd'hui, tu n'as rien à faire : l'installeur t'annonce la route qu'il a prise.
+
+La suite de cette section s'adresse aux instances installées avant, et à qui préfère basculer à la main.
+
+**1. Prendre la porte HTTPS.**
+
+Le relais accepte exactement le même tunnel sous forme de WebSocket en HTTPS, sur le port `443`, celui qu'utilise déjà ton navigateur. Même slug, même token, même comportement. Seule la route change.
+
+```bash
+sudo systemctl edit --full nodyx-relay-client
+# dans la ligne ExecStart, remplace :
+# --server relay.nodyx.org:7443
+# par :
+# --server wss://tunnel.nodyx.org/tunnel
+sudo systemctl restart nodyx-relay-client
+```
+
+Vérifie depuis ta machine que la porte répond :
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -m 5 --http1.1 \
+  -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+  -H 'Sec-WebSocket-Version: 13' \
+  -H "Sec-WebSocket-Key: $(head -c16 /dev/urandom | base64)" \
+  https://tunnel.nodyx.org/tunnel
+```
+
+`101` veut dire que la porte est ouverte et que le tunnel montera.
+
+> **Lis le nombre, pas le code de sortie de curl.** curl n'est pas un client WebSocket : une fois son `101` obtenu, il attend des données qui ne viendront pas, puis abandonne avec le code `28`. Ici, la sonde qui réussit est celle qui expire. Tester le code de sortie ferait rejeter une porte grande ouverte.
+
+**2. Demander l'ouverture du port, en sortie seulement.**
+
+Les administrateurs réseau disent non aux demandes vagues et oui aux demandes précises. Voici un paragraphe à copier tel quel :
+
+> Bonjour,
+> J'ai besoin d'autoriser le trafic TCP **sortant** depuis ma machine vers `relay.nodyx.org` (`46.225.20.193`) sur le port `7443`.
+> Il s'agit uniquement d'une connexion sortante. Elle ne nécessite **aucune règle entrante**, aucune redirection de port, et aucun service exposé de mon côté. La machine reste injoignable depuis l'extérieur.
+> La connexion reste ouverte et transporte le trafic d'une plateforme communautaire auto-hébergée.
+> Merci.
+
+**3. Passer par l'IPv6, si ton réseau en fournit.**
+
+Depuis août 2026, le relais répond aussi sur un nom IPv6 dédié. Certains réseaux qui filtrent l'IPv4 laissent l'IPv6 tranquille, et les réseaux uniquement IPv6 peuvent enfin se connecter, ce qui était impossible avant.
+
+```bash
+# Ta machine a-t-elle une IPv6 qui marche ?
+python3 -c "import socket;socket.create_connection(('relay6.nodyx.org',7443),timeout=8);print('IPv6 OK')"
+```
+
+Si ça affiche `IPv6 OK`, pointe ton client dessus :
+
+```bash
+sudo systemctl edit --full nodyx-relay-client
+# dans la ligne ExecStart, remplace :
+# --server relay.nodyx.org:7443
+# par :
+# --server relay6.nodyx.org:7443
+sudo systemctl restart nodyx-relay-client
+```
+
+> `relay6.nodyx.org` ne publie qu'un enregistrement `AAAA`. C'est le même relais, le même port, le même token. Seule la route diffère.
+
+**4. Déplacer la machine sur une autre connexion.**
+
+Un partage de connexion 4G ou 5G suffit à confirmer le diagnostic en deux minutes. Si le tunnel monte instantanément là-bas, le mur était bien ton réseau, pas ton installation.
+
+#### Ce que ce n'est pas
+
+- **Pas** un port à ouvrir sur ta box. Il n'y a jamais rien à ouvrir en entrée.
+- **Pas** un problème de pare-feu sur ta propre machine. Le trafic sortant est autorisé par défaut sous Linux.
+- **Pas** une erreur de ta part. Un réseau filtrant ne renvoie aucun message d'erreur de ton côté, et c'est exactement ce qui rend la panne si déroutante.
+
 ### Le service ne démarre pas
 
 ```bash
