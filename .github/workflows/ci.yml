@@ -92,6 +92,15 @@ jobs:
         working-directory: nodyx-frontend
         run: npm run i18n:check
 
+      # Les .ts échappaient entièrement au scanner jusqu'au 2026-08-20, ce qui
+      # cachait ~375 chaînes. Les résorber prend du temps, alors cette porte est
+      # un CLIQUET : la dette gelée dans dette-ts.json est tolérée, toute
+      # nouvelle chaîne fait tomber la construction. Elle peut baisser, jamais
+      # monter.
+      - name: i18n — pas de NOUVELLE chaîne FR en dur dans les .ts
+        working-directory: nodyx-frontend
+        run: npm run i18n:ts:check
+
       - name: Vitest — tests frontend
         working-directory: nodyx-frontend
         run: npm test

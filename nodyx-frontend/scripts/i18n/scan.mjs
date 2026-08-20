@@ -11,8 +11,20 @@
  *   node scripts/i18n/scan.mjs --list     also print every offending line
  *   node scripts/i18n/scan.mjs --public   ignore admin / studio (owner-only) pages
  *   node scripts/i18n/scan.mjs --check    exit 1 if anything is found (CI gate)
+ *
+ * `--ts` scans `.ts` files instead, which the gate ignored entirely until
+ * 2026-08-20. That blind spot hid ~300 user-facing strings: icon labels, module
+ * names, widget schemas. Clearing them is a long job, so this mode is a RATCHET
+ * rather than a wall: the existing debt is frozen in `dette-ts.json`, and the
+ * gate fails only when a file gains new strings or a new file appears.
+ *
+ * The debt can shrink freely and can never grow. That is the whole point: the
+ * July 2026 extraction marathon happened because nothing stopped it building up.
+ *
+ *   node scripts/i18n/scan.mjs --ts --check     CI gate, against the baseline
+ *   node scripts/i18n/scan.mjs --ts --baseline  rewrite the baseline after work
  */
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs'
 import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { stripI18n } from './strip.mjs'
@@ -24,6 +36,9 @@ const args = new Set(process.argv.slice(2))
 const LIST = args.has('--list')
 const CHECK = args.has('--check')
 const PUBLIC_ONLY = args.has('--public')
+const TS = args.has('--ts')
+const WRITE_BASELINE = args.has('--baseline')
+const BASELINE = join(HERE, 'dette-ts.json')
 
 // French signal: accented letters, or a common French UI word.
 // NB : beaucoup de français n'a PAS d'accent (« Se connecter », « Rejoindre »,
@@ -38,10 +53,16 @@ const isAdmin = (p) =>
   p.includes('/routes/admin/') || p.includes('/components/admin/') ||
   /(streamer-hub|\/obs\/|StreamControl|StudioEngagement|RewardsManager|PlaylistSidebar|SoundLibrary|ChatTimers|ChatCommands|DeckEditor|OverlayManager|AlertBox)/.test(p)
 
+// Les fichiers de test contiennent du francais VOLONTAIREMENT : ce sont les
+// fixtures qui verifient que ce scanner attrape bien ce qu'il doit attraper.
+// Les signaler reviendrait a demander de traduire l'appat.
+const isFixture = (nom) => /\.(test|spec)\.ts$/.test(nom)
+
 function walk(dir, out = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name)
     if (e.isDirectory()) walk(p, out)
+    else if (TS) { if (e.name.endsWith('.ts') && !isFixture(e.name)) out.push(p) }
     else if (e.name.endsWith('.svelte')) out.push(p)
   }
   return out
@@ -100,4 +121,61 @@ for (const { f, hits } of perFile) {
   if (LIST) for (const h of hits) console.log(`        ${h.n}: ${h.s}`)
 }
 console.log(`\n${total} hardcoded French string(s) in ${perFile.length} file(s)${PUBLIC_ONLY ? ' (public only)' : ''}.`)
-if (CHECK && total > 0) process.exit(1)
+
+if (!TS) {
+  if (CHECK && total > 0) process.exit(1)
+  process.exit(0)
+}
+
+// ── Mode `--ts` : le cliquet ──────────────────────────────────────────────────
+const courant = Object.fromEntries(perFile.map(({ f, hits }) => [f, hits.length]))
+
+if (WRITE_BASELINE) {
+  const trie = Object.fromEntries(Object.entries(courant).sort(([a], [b]) => a.localeCompare(b)))
+  writeFileSync(BASELINE, JSON.stringify(trie, null, 2) + '\n')
+  console.log(`\nBaseline écrite : ${relative(process.cwd(), BASELINE)} (${Object.keys(trie).length} fichiers)`)
+  process.exit(0)
+}
+
+if (!existsSync(BASELINE)) {
+  console.error(`\nBaseline absente. La créer : node scripts/i18n/scan.mjs --ts --baseline`)
+  process.exit(1)
+}
+const base = JSON.parse(readFileSync(BASELINE, 'utf8'))
+
+const nouveaux = []   // fichier absent de la baseline, mais qui contient du français
+const aggraves = []   // fichier connu, dont le compte a AUGMENTÉ
+const ameliores = []  // fichier connu, dont le compte a baissé : bonne nouvelle
+
+for (const [f, n] of Object.entries(courant)) {
+  if (!(f in base)) nouveaux.push([f, n])
+  else if (n > base[f]) aggraves.push([f, n, base[f]])
+  else if (n < base[f]) ameliores.push([f, n, base[f]])
+}
+// Un fichier entièrement nettoyé disparaît de `courant` : c'est aussi un progrès.
+const nettoyes = Object.keys(base).filter((f) => !(f in courant))
+
+const dette = Object.values(base).reduce((a, b) => a + b, 0)
+console.log(`\nDette gelée : ${dette} chaîne(s) dans ${Object.keys(base).length} fichier(s).`)
+
+for (const [f, n, avant] of ameliores) console.log(`  mieux    ${f} : ${avant} -> ${n}`)
+for (const f of nettoyes)              console.log(`  nettoyé  ${f}`)
+
+if (!nouveaux.length && !aggraves.length) {
+  const gagne = ameliores.reduce((a, [, n, avant]) => a + (avant - n), 0)
+             + nettoyes.reduce((a, f) => a + base[f], 0)
+  if (gagne > 0) {
+    console.log(`\n✓ ${gagne} chaîne(s) de moins qu'au gel. Penser à : npm run i18n:ts:baseline`)
+  } else {
+    console.log(`\n✓ aucune nouvelle chaîne en dur dans les .ts.`)
+  }
+  process.exit(0)
+}
+
+console.error('\n✗ La dette a GRANDI :')
+for (const [f, n] of nouveaux)          console.error(`  nouveau  ${f} : ${n} chaîne(s)`)
+for (const [f, n, avant] of aggraves)   console.error(`  aggravé  ${f} : ${avant} -> ${n}`)
+console.error(`\nCes chaînes doivent devenir des clés i18n (fr.json ET en.json),`)
+console.error(`comme n'importe quelle chaîne d'un .svelte. La dette existante est`)
+console.error(`tolérée le temps d'être résorbée, elle n'a pas vocation à croître.`)
+process.exit(1)

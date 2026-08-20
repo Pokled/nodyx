@@ -21,6 +21,9 @@
     "i18n:parity:check": "node scripts/i18n/coverage.mjs --require en",
     "i18n:public:check": "node scripts/i18n/scan.mjs --public --check",
     "i18n:check": "node scripts/i18n/scan.mjs --check",
+    "i18n:ts": "node scripts/i18n/scan.mjs --ts --list",
+    "i18n:ts:check": "node scripts/i18n/scan.mjs --ts --check",
+    "i18n:ts:baseline": "node scripts/i18n/scan.mjs --ts --baseline",
     "test:responsive": "playwright test",
     "test:responsive:ui": "playwright test --ui"
   },
