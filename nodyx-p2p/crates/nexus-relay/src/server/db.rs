@@ -59,6 +59,39 @@ impl DbPool {
         }
     }
 
+    /// Exécute une écriture. Même logique de reconnexion que `query_opt` : sans
+    /// elle, une coupure de PostgreSQL rendrait le client définitivement cassé.
+    ///
+    /// Renvoie le nombre de lignes touchées, ce qui permet à l'appelant de
+    /// distinguer « écrit » de « aucune ligne ne correspondait ».
+    pub async fn execute(
+        &self,
+        sql: &str,
+        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
+    ) -> anyhow::Result<u64> {
+        {
+            let guard = self.client.lock().await;
+            if let Some(c) = guard.as_ref() {
+                match c.execute(sql, params).await {
+                    Ok(n) => return Ok(n),
+                    Err(e) => warn!("DB execute failed ({e}), reconnecting…"),
+                }
+            }
+        }
+
+        match Self::new_connection(&self.database_url).await {
+            Ok(fresh) => {
+                let n = fresh.execute(sql, params).await?;
+                *self.client.lock().await = Some(fresh);
+                Ok(n)
+            }
+            Err(e) => {
+                *self.client.lock().await = None;
+                Err(e)
+            }
+        }
+    }
+
     async fn new_connection(database_url: &str) -> anyhow::Result<Client> {
         let (client, conn) = tokio_postgres::connect(database_url, NoTls).await?;
         tokio::spawn(async move {

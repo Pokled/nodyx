@@ -167,6 +167,30 @@ async fn handle_client(
     registry.insert(slug.clone(), TunnelHandle { tx });
     info!("Slug '{slug}' registered in relay");
 
+    // Telemetrie de depreciation. Le port 7443 ne pourra etre retire que le jour
+    // ou plus personne ne s'y rattache, et rien ne permettait de le savoir : une
+    // instance en TCP brut etait indistinguable d'une instance en WebSocket.
+    // Fermer le port aurait donc ete un pari, avec le risque de couper quelqu'un
+    // sans jamais l'apprendre.
+    //
+    // On enregistre le transport et la date, RIEN d'autre : pas d'adresse, pas de
+    // compteur. La seule question a laquelle ca sert a repondre est « reste-t-il
+    // quelqu'un sur 7443 ? ».
+    //
+    // Une ecriture en echec ne doit JAMAIS empecher un tunnel de monter : la
+    // telemetrie est un confort d'exploitation, le tunnel est le service.
+    if let Err(e) = pg
+        .execute(
+            "UPDATE directory_instances \
+             SET relay_transport = 'tcp7443', relay_transport_at = NOW() \
+             WHERE slug = $1",
+            &[&slug],
+        )
+        .await
+    {
+        warn!("Relay: transport non enregistre pour '{slug}' ({e}) — tunnel maintenu");
+    }
+
     write_msg(&mut stream, &ServerMessage::Registered { ok: true, error: None }).await?;
 
     // 4. Split the stream for concurrent read + write.
