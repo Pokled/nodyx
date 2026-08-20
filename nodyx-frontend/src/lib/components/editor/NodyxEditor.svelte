@@ -280,7 +280,50 @@
 		// donc au rechargement l'extension ne reconnaissait plus son wrapper et
 		// JETAIT l'iframe (vidéos qui disparaissent à la réédition). On ajoute
 		// une règle parseHTML qui reparse aussi un <iframe> nu d'origine YouTube.
+		// ── Liens : une ancre interne ne s'ouvre pas dans un onglet ──────────
+		//
+		// L'extension Link applique par DÉFAUT `target="_blank"` et
+		// `rel="noopener noreferrer nofollow"` à tous les liens, sans distinguer
+		// leur destination. Appliqué à une ancre `#section`, ça ouvre un onglet
+		// VIDE au lieu de descendre dans la page : tout sommaire éditable était
+		// donc cassé dès la première réouverture de l'article. Constaté en
+		// production le 2026-08-19.
+		//
+		// On ne retire ces attributs que pour les ancres, jamais pour les liens
+		// sortants, où ils restent la bonne pratique.
+		const SmartLink = Link.extend({
+			renderHTML({ HTMLAttributes }: any) {
+				const href = HTMLAttributes?.href
+				if (typeof href === 'string' && href.startsWith('#')) {
+					const { target: _t, rel: _r, ...interne } = HTMLAttributes
+					return ['a', mergeAttributes(interne), 0]
+				}
+				return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0]
+			},
+		})
+
 		const RobustYoutube = Youtube.extend({
+			// L'extension enveloppe l'iframe dans `<div data-youtube-video>`. Or
+			// l'assainisseur du coeur n'autorise pas cet attribut : il le retire et
+			// laisse un `<div>` NU, sans aucune prise pour le style. Consequence
+			// mesuree le 2026-08-20 : toute video inseree depuis l'editeur perdait
+			// sa mise en forme, gardant 360 px de haut pour 324 de large, donc un
+			// ratio faux. Ce n'etait pas un defaut d'aller-retour, c'etait le cas
+			// NORMAL, et les videos ecrites a la main etaient l'exception.
+			//
+			// `class` fait partie des attributs autorises : on y accroche la classe
+			// que la feuille de style attend deja, sans rien retirer de ce que
+			// l'extension produit pour son propre usage dans l'editeur.
+			renderHTML(props: any) {
+				// `this.parent!` et non `?.` : sur une extension derivee le parent est
+				// toujours defini, et `renderHTML` doit rendre un DOMOutputSpec, jamais
+				// `undefined`. Meme contrainte que pour `addOptions` plus bas.
+				const rendu = this.parent!(props)
+				if (Array.isArray(rendu) && rendu[0] === 'div' && rendu[1] && typeof rendu[1] === 'object') {
+					rendu[1] = mergeAttributes(rendu[1], { class: 'youtube-wrapper' })
+				}
+				return rendu
+			},
 			parseHTML() {
 				return [
 					...(this.parent?.() ?? []),
@@ -627,7 +670,7 @@
 				StarterKit.configure({ codeBlock: false, link: false, underline: false }),
 				Underline,
 				TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
-				Link.configure({ openOnClick: false, autolink: true }),
+				SmartLink.configure({ openOnClick: false, autolink: true }),
 				AlignableImage,
 				RobustYoutube.configure({ nocookie: true }),
 				Table.configure({ resizable: false }),

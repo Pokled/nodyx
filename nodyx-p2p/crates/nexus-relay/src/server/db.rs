@@ -59,6 +59,40 @@ impl DbPool {
         }
     }
 
+    /// Run a write. Same reconnect behaviour as `query_opt`: without it, a
+    /// PostgreSQL restart would leave the client permanently broken, which is
+    /// the very failure this wrapper exists to absorb.
+    ///
+    /// Returns the number of rows affected, so callers can tell "written" from
+    /// "nothing matched".
+    pub async fn execute(
+        &self,
+        sql: &str,
+        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
+    ) -> anyhow::Result<u64> {
+        {
+            let guard = self.client.lock().await;
+            if let Some(c) = guard.as_ref() {
+                match c.execute(sql, params).await {
+                    Ok(n) => return Ok(n),
+                    Err(e) => warn!("DB execute failed ({e}), reconnecting…"),
+                }
+            }
+        }
+
+        match Self::new_connection(&self.database_url).await {
+            Ok(fresh) => {
+                let n = fresh.execute(sql, params).await?;
+                *self.client.lock().await = Some(fresh);
+                Ok(n)
+            }
+            Err(e) => {
+                *self.client.lock().await = None;
+                Err(e)
+            }
+        }
+    }
+
     async fn new_connection(database_url: &str) -> anyhow::Result<Client> {
         let (client, conn) = tokio_postgres::connect(database_url, NoTls).await?;
         tokio::spawn(async move {

@@ -55,6 +55,11 @@ where
     let len = json.len() as u32;
     writer.write_all(&len.to_be_bytes()).await?;
     writer.write_all(&json).await?;
+    // Required, not cosmetic. A buffered writer emits nothing until it is
+    // flushed, and the WebSocket adapter is exactly that: it batches a message
+    // and sends it here, so one protocol message becomes one WebSocket message.
+    // On a raw socket the call costs nothing.
+    writer.flush().await?;
     Ok(())
 }
 
