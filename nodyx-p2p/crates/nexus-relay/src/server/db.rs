@@ -59,11 +59,12 @@ impl DbPool {
         }
     }
 
-    /// Exécute une écriture. Même logique de reconnexion que `query_opt` : sans
-    /// elle, une coupure de PostgreSQL rendrait le client définitivement cassé.
+    /// Run a write. Same reconnect behaviour as `query_opt`: without it, a
+    /// PostgreSQL restart would leave the client permanently broken, which is
+    /// the very failure this wrapper exists to absorb.
     ///
-    /// Renvoie le nombre de lignes touchées, ce qui permet à l'appelant de
-    /// distinguer « écrit » de « aucune ligne ne correspondait ».
+    /// Returns the number of rows affected, so callers can tell "written" from
+    /// "nothing matched".
     pub async fn execute(
         &self,
         sql: &str,

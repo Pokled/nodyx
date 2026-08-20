@@ -8,6 +8,7 @@ use super::db::DbPool;
 use tracing::{error, info, warn};
 use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
 
+use crate::client_ip::client_ip;
 use crate::keepalive::{self, READ_DEADLINE};
 use crate::protocol::{ClientMessage, ServerMessage, read_msg, write_msg};
 use super::registry::{PendingRequest, Registry, RelayResponse, TunnelHandle};
@@ -117,6 +118,15 @@ async fn handle_client(
     pg: Arc<DbPool>,
     ban_map: BanMap,
 ) -> anyhow::Result<()> {
+    // The address a ban is keyed on. On this listener the peer *is* the client:
+    // it is reached directly, with no proxy in front, so there are no forwarding
+    // headers to consult and the lookup is empty by construction.
+    //
+    // Going through `client_ip` anyway is deliberate. The WebSocket transport
+    // arrives through Caddy, where the peer is always `127.0.0.1` and the real
+    // caller lives in a header. Having both listeners ask the same question
+    // means nobody has to remember to update this one when that lands.
+    let culprit = client_ip(addr.ip(), |_| None);
     // Aggressive TCP keepalive so we detect dead peers in ~60s instead
     // of the kernel default of ~2 hours.
     if let Err(e) = keepalive::enable(&stream) {
@@ -147,10 +157,10 @@ async fn handle_client(
         .await?;
 
     if row.is_none() {
-        record_auth_failure(&ban_map, addr.ip());
-        warn!("Relay: auth failure from {} (slug='{}') — {} attempt(s)",
-              addr.ip(), slug,
-              ban_map.get(&addr.ip()).map(|e| e.0).unwrap_or(1));
+        record_auth_failure(&ban_map, culprit);
+        warn!("Relay: auth failure from {} (slug='{}') - {} attempt(s)",
+              culprit, slug,
+              ban_map.get(&culprit).map(|e| e.0).unwrap_or(1));
         write_msg(
             &mut stream,
             &ServerMessage::Registered {
@@ -167,18 +177,17 @@ async fn handle_client(
     registry.insert(slug.clone(), TunnelHandle { tx });
     info!("Slug '{slug}' registered in relay");
 
-    // Telemetrie de depreciation. Le port 7443 ne pourra etre retire que le jour
-    // ou plus personne ne s'y rattache, et rien ne permettait de le savoir : une
-    // instance en TCP brut etait indistinguable d'une instance en WebSocket.
-    // Fermer le port aurait donc ete un pari, avec le risque de couper quelqu'un
-    // sans jamais l'apprendre.
+    // Deprecation telemetry. Port 7443 can only be retired once nobody attaches
+    // to it any more, and nothing recorded that: a raw-TCP instance was
+    // indistinguishable from a WebSocket one. Closing the port would have been a
+    // gamble, with the risk of cutting somebody off and never finding out.
     //
-    // On enregistre le transport et la date, RIEN d'autre : pas d'adresse, pas de
-    // compteur. La seule question a laquelle ca sert a repondre est « reste-t-il
-    // quelqu'un sur 7443 ? ».
+    // We record the transport and the date, NOTHING else: no address, no usage
+    // counter. The only question these columns answer is "is anyone still on
+    // 7443?".
     //
-    // Une ecriture en echec ne doit JAMAIS empecher un tunnel de monter : la
-    // telemetrie est un confort d'exploitation, le tunnel est le service.
+    // A failed write must NEVER stop a tunnel from coming up. Telemetry is an
+    // operational convenience; the tunnel is the service.
     if let Err(e) = pg
         .execute(
             "UPDATE directory_instances \
@@ -188,7 +197,7 @@ async fn handle_client(
         )
         .await
     {
-        warn!("Relay: transport non enregistre pour '{slug}' ({e}) — tunnel maintenu");
+        warn!("Relay: transport not recorded for '{slug}' ({e}) - tunnel kept up");
     }
 
     write_msg(&mut stream, &ServerMessage::Registered { ok: true, error: None }).await?;
