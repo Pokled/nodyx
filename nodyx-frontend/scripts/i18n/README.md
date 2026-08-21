@@ -1,8 +1,8 @@
 # i18n tooling
 
-Four small, dependency-free scripts that keep Nodyx fully translatable: they
-catch hardcoded strings, dangling keys, English falling behind the source, and
-placeholders corrupted by a translation. All four run in CI.
+Small, dependency-free scripts that keep Nodyx fully translatable: they catch
+hardcoded strings, dangling keys, English falling behind the source, and
+placeholders corrupted by a translation. **Five gates run in CI.**
 
 **The rule they enforce: i18n ships with the feature, never after it.** A new
 user-facing string is a key from its first commit, added to `fr.json` **and**
@@ -45,6 +45,36 @@ It sits at **0**, and CI keeps it there for the whole frontend.
 Known blind spot: the heuristic looks for accents, a French wordlist, and French
 contractions. A sentence that is French, accent-free, and outside the wordlist
 can still slip through. The scanner is a net, not a proof.
+
+## `npm run i18n:ts:check` — the ratchet
+
+Until 2026-08-20 the scanner walked **`.svelte` files only**. Every `.ts` file
+was invisible to it, and about **375 user-facing strings** were living there
+unnoticed: icon labels, module names, widget schemas, server-side page messages.
+
+Clearing them is a long job, so this gate is a **ratchet, not a wall**:
+
+- the debt is frozen, file by file, in `dette-ts.json`;
+- a **new** file with French, or a known file that **gains** strings, fails CI;
+- the count may fall freely. It may never rise.
+
+That is the whole point. The 2026 extraction marathon happened because nothing
+stopped the debt building up in the first place.
+
+```bash
+npm run i18n:ts                # list what is still hardcoded in .ts
+npm run i18n:ts:check          # exit 1 if the debt grew (CI gate)
+npm run i18n:ts:baseline       # re-freeze after clearing some, then commit it
+```
+
+Test fixtures (`*.test.ts`, `*.spec.ts`) are excluded on purpose: their French is
+the bait that proves the scanner works. Flagging it would ask you to translate
+the trap.
+
+**Working some off?** Turn the strings into keys exactly as anywhere else, in
+`fr.json` **and** `en.json`, then run `i18n:ts:baseline` and commit the updated
+`dette-ts.json` in the same pull request. The gate will then hold the new, lower
+number.
 
 ## `npm run i18n:keys`
 
