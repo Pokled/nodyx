@@ -1,0 +1,13 @@
+[Unit]
+Description=Nodyx — surveillance des coeurs PM2 toutes les 2 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+# Meme cadence que le collecteur de securite : assez frais pour ne pas laisser
+# une instance muette des heures, assez espace pour ne rien peser. Le
+# 22/08/2026, une instance coincee au demarrage l'est restee 5h sans surveillance.
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
