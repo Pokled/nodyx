@@ -1,0 +1,21 @@
+[Unit]
+Description=Nodyx — relance un coeur PM2 vivant mais muet
+Documentation=file:///var/www/nexus/scripts/ops/veille/README.md
+After=postgresql.service
+
+[Service]
+Type=oneshot
+# Root : necessaire pour `sudo -u nodyx pm2 restart`. Il ne fait rien d'autre
+# que sonder des ports locaux et relancer via pm2, jamais nftables ni Caddy.
+User=root
+ExecStart=/var/www/nexus/scripts/ops/veille/verifier-ecoute.sh
+TimeoutStartSec=60
+
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/var/backups/nodyx/veille
+
+[Install]
+WantedBy=multi-user.target
