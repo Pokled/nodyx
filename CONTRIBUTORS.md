@@ -143,6 +143,21 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
       <br/>
       <sub><strong>First dual-stack hunter 🌐</strong></sub>
     </td>
+    <td align="center" width="200">
+      <a href="https://github.com/oorpheas">
+        <img src="https://github.com/oorpheas.png?size=120" width="120" height="120" style="border-radius:50%;" alt="orfeu"/>
+        <br/>
+        <sub><b>orfeu</b></sub>
+      </a>
+      <br/>
+      <sub>🌟 × 1</sub>
+      <br/>
+      <sub><a href="https://github.com/Pokled/nodyx/pull/626">PR #626</a></sub>
+      <br/>
+      <sub><em>Brazilian Portuguese translation, ~2,000 strings, careful gender-neutral phrasing</em></sub>
+      <br/>
+      <sub><strong>First pt-BR translator 🇧🇷</strong></sub>
+    </td>
   </tr>
 </table>
 
