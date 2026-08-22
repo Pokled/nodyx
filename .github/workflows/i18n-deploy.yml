@@ -1,0 +1,71 @@
+name: Deploy translations
+
+# Ferme la boucle qui a laisse /translate afficher pt-BR a 21% pendant deux
+# jours apres la fusion de la traduction reelle (44%) : les locales sont
+# importees en dur au moment de la compilation (`import ptBR from
+# './locales/pt-BR.json'`), jamais lues depuis le disque a l'execution. Une
+# fusion sur GitHub ne recompile donc rien tant que personne ne le fait a la
+# main.
+#
+# Perimetre volontairement etroit : SEULS les fichiers de locale declenchent
+# ce deploiement, jamais une fusion de code. nodyx-frontend n'a qu'une seule
+# instance PM2 (pas de grappe) : ce redemarrage coupe le site principal
+# quelques secondes, exactement comme docs-deploy.yml le fait deja pour
+# nodyx-docs. Un choix assume, pas une fonctionnalite cachee.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nodyx-frontend/src/lib/locales/**'
+      - '.github/workflows/i18n-deploy.yml'
+
+# Ce workflow lit les secrets VPS_HOST / VPS_USER / VPS_SSH_KEY pour pousser
+# le deploiement par SSH. Aucun besoin d'ecrire au repo : permission minimale
+# pour reduire la surface en cas de compromission de l'action SSH tierce
+# (scenario tj-actions/changed-files mars 2025).
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build & deploy translations to nodyx.org
+    runs-on: ubuntu-latest
+
+    steps:
+      # appleboy/ssh-action est une action communautaire (pas officielle
+      # GitHub). Elle a acces direct aux secrets VPS_*. Pin par SHA strict :
+      # si appleboy se fait pwn et retaggue v1.2.0 vers un commit malveillant
+      # qui exfiltre les secrets, nos secrets restent proteges tant qu'on ne
+      # bumpe pas le SHA manuellement.
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host:     ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key:      ${{ secrets.VPS_SSH_KEY }}
+          port:     22
+          script: |
+            set -euo pipefail
+
+            cd /var/www/nexus
+
+            echo "── git pull ──"
+            git pull origin main
+
+            echo "── npm install ──"
+            cd nodyx-frontend
+            npm ci --prefer-offline
+
+            echo "── build ──"
+            npm run build
+
+            echo "── restart ──"
+            sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-frontend
+
+            echo "── done ──"
+            sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 show nodyx-frontend | grep -E "status|restart"
+
+            echo "── verification : les chiffres sont-ils a jour ? ──"
+            sleep 3
+            curl -sf https://nodyx.org/translate/progress.json | head -c 500
