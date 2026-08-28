@@ -4211,7 +4211,7 @@
   "grades.edit": "Editar",
   "grades.edit_aria": "Editar {{name}}",
   "grades.delete": "Excluir",
-  "grades.delete_aria": "Excluir {{nome}}", 
+  "grades.delete_aria": "Excluir {{name}}", 
   "grades.confirm_delete": "Excluir o grau \"{{name}}\"?", 
   "grades.no_members": "Nenhum membro nesta comunidade.", 
   "grades.role": "Função", 
