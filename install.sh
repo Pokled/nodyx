@@ -3116,7 +3116,7 @@ SVC
 
   systemctl daemon-reload
   systemctl enable nodyx-relay-client --quiet
-  systemctl start nodyx-relay-client
+  systemctl restart nodyx-relay-client
   ok "$(printf "$(t relay_client_started)" "${RELAY_SERVER:-relay.nodyx.org:7443}")"
   info "$(printf "$(t relay_client_url_soon)" "${DOMAIN}")"
 fi
