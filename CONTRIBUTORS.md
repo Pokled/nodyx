@@ -113,11 +113,11 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
         <sub><b>orfeu</b></sub>
       </a>
       <br/>
-      <sub>🌟 × 3</sub>
+      <sub>🌟 × 4</sub>
       <br/>
-      <sub><a href="https://github.com/Pokled/nodyx/pull/626">PR #626</a> · <a href="https://github.com/Pokled/nodyx/issues/642">#642</a> · <a href="https://github.com/Pokled/nodyx/pull/644">PR #644</a></sub>
+      <sub><a href="https://github.com/Pokled/nodyx/pull/626">PR #626</a> · <a href="https://github.com/Pokled/nodyx/issues/642">#642</a> · <a href="https://github.com/Pokled/nodyx/pull/644">PR #644</a> · <a href="https://github.com/Pokled/nodyx/pull/647">PR #647</a></sub>
       <br/>
-      <sub><em>Brazilian Portuguese translation (0% → 67%), plus a precisely diagnosed installer bug (Node 20 vs mediasoup's Node 22 requirement)</em></sub>
+      <sub><em>Brazilian Portuguese: the whole interface, 0% → 100%. Plus a precisely diagnosed installer bug (Node 20 vs mediasoup's Node 22 requirement)</em></sub>
       <br/>
       <sub><strong>First pt-BR translator 🇧🇷</strong></sub>
     </td>
@@ -187,6 +187,7 @@ Sometimes a contribution isn't a PR. Sometimes it's just being there at exactly 
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| [@oorpheas](https://github.com/oorpheas) | Finished the Brazilian Portuguese interface: the last ~1,500 strings, bringing `pt-BR` from 67% to full parity with the source (4,567 / 4,567 keys). First non-source locale to reach 100%. Documentation and a real-world test with a small group are planned for September. | `feat(i18n)` | [#647](https://github.com/Pokled/nodyx/pull/647) | _follow-up: 2 malformed keys (`aset. saving`, `canvas_r.canvas_r.loading`) corrected so coverage reads a true 100%_ | 2026-08-29 |
 | [@oorpheas](https://github.com/oorpheas) | Second Brazilian Portuguese translation pass: ~1,050 new/fixed strings, coverage jumped from 23% to 67%. Also corrected an earlier mistranslation (`"Stream Deck"` → `"Painel de Transmissão"` instead of the literal `"Conjunto de Stream"`). | `feat(i18n)` | [#644](https://github.com/Pokled/nodyx/pull/644) | _merged as-is, 0 placeholder errors_ | 2026-08-25 |
 | [@oorpheas](https://github.com/oorpheas) | Reported the frontend install failure on a clean machine: `install.sh` pinned Node 20, but `mediasoup-client`/`awaitqueue` (voice frontend) require Node ≥22, so `npm install` always failed with `EBADENGINE`. Included the full install log and traced it to the exact dependency. | `bug(installer)` | [#642](https://github.com/Pokled/nodyx/issues/642) | [#643](https://github.com/Pokled/nodyx/pull/643) | 2026-08-24 |
 | [@oorpheas](https://github.com/oorpheas) | Brazilian Portuguese translation: ~1,999 strings (44% coverage), with a deliberate approach to gender-neutral phrasing explained in the PR description, and only 2 entries honestly flagged `(*revisar)` where context was missing rather than guessed. | `feat(i18n)` | [#626](https://github.com/Pokled/nodyx/pull/626) | _merged as-is, 0 placeholder errors_ | 2026-08-22 |
