@@ -77,7 +77,19 @@
 	// réduit à 64x64 pour rester léger dans le roster.
 	const avatarCache = new Map<string, string | null>()
 
-	async function resolveAvatarPng(url: string): Promise<string | null> {
+	// Un avatar hébergé par l'instance (chemin /uploads/…) est ramené sur
+	// l'origine courante : le domaine stocké en base peut être un ancien nom
+	// (rebrand), et rester same-origin évite tout souci CORS.
+	function sameOriginIfLocal(raw: string): string {
+		try {
+			const u = new URL(raw, activityOrigin)
+			if (u.pathname.startsWith('/uploads/')) return activityOrigin + u.pathname + u.search
+			return u.href
+		} catch { return raw }
+	}
+
+	async function resolveAvatarPng(rawUrl: string): Promise<string | null> {
+		const url = sameOriginIfLocal(rawUrl)
 		if (avatarCache.has(url)) return avatarCache.get(url) ?? null
 		try {
 			const res = await fetch(url, { mode: 'cors', credentials: 'omit' })
@@ -102,14 +114,14 @@
 	}
 
 	function withCachedAvatar(m: ActivityMember): ActivityMember {
-		const png = m.avatar_url ? avatarCache.get(m.avatar_url) : undefined
+		const png = m.avatar_url ? avatarCache.get(sameOriginIfLocal(m.avatar_url)) : undefined
 		return png === undefined ? m : { ...m, avatar_png: png }
 	}
 
 	/** Lance la résolution des avatars manquants ; pousse un `member_update` quand un avatar arrive. */
 	function resolvePending(list: ActivityMember[]) {
 		for (const m of list) {
-			if (!m.avatar_url || avatarCache.has(m.avatar_url)) continue
+			if (!m.avatar_url || avatarCache.has(sameOriginIfLocal(m.avatar_url))) continue
 			resolveAvatarPng(m.avatar_url).then((png) => {
 				if (status === 'ready' && png) {
 					toGuest({ event: 'member_update', member: { ...m, avatar_png: png } })
