@@ -140,6 +140,17 @@ describe('capacités : le manifeste demande, l admin accorde', () => {
     expect(sensitiveCapabilities(parse(MANIFEST))).toEqual([])
   })
 
+  it('realtime est une capacité demandée ET sensible', () => {
+    const act = parse({
+      ...MANIFEST,
+      surfaces: [{ type: 'activity', id: 'battle', entry: 'index.html', label: '@label' }],
+      app: { url: 'https://cdn.example/app.zip', sha256: 'c'.repeat(64), bytes: 999 },
+      permissions: { identity: ['username'], realtime: true },
+    })
+    expect(requestedCapabilities(act)).toContain('realtime')
+    expect(sensitiveCapabilities(act)).toContain('realtime')
+  })
+
   it('sans décision, tout ce qui est demandé est accordé', () => {
     const { granted, denied } = applyGrant(full)
     expect(granted).toEqual(requestedCapabilities(full))

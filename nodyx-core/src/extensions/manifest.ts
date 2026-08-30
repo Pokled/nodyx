@@ -16,7 +16,7 @@
 //     l'humain, le code est pour la machine.
 
 import { z } from 'zod'
-import { API_VERSION, STORAGE } from './limits'
+import { API_VERSION, STORAGE, APP_BUNDLE } from './limits'
 import { isReservedExtensionId } from './reserved'
 
 // ── Formes ────────────────────────────────────────────────────────────────────
@@ -104,6 +104,24 @@ export function parseSize(raw: string): number | null {
   return raw.endsWith('mb') ? n * 1024 * 1024 : n * 1024
 }
 
+/**
+ * URL de récupération d'un bundle applicatif (`app.url`).
+ *
+ * Le bundle est téléchargé UNE seule fois à l'installation, vérifié par
+ * empreinte, puis servi par l'instance elle-même : `app.url` ne sert jamais au
+ * runtime. On exige quand même https + hôte public (jamais la machine de
+ * l'instance). En dev, `http://localhost` / `http://127.0.0.1` sont tolérés.
+ */
+export function isAppBundleUrl(u: string): boolean {
+  let url: URL
+  try { url = new URL(u) } catch { return false }
+  if (url.protocol === 'http:' && process.env.NODE_ENV !== 'production'
+      && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) {
+    return true
+  }
+  return url.protocol === 'https:' && classifyHost(url.hostname) === 'public'
+}
+
 // ── Schéma ────────────────────────────────────────────────────────────────────
 
 const messageKey = z.string().regex(RE_MESSAGE_KEY, 'doit être une clé de traduction commençant par @')
@@ -160,7 +178,34 @@ const pageSurface = z.object({
   nav:         navSchema.optional(),
 }).strict()
 
-const surface = z.discriminatedUnion('type', [widgetSurface, pageSurface])
+// Une activité (cf SPECS/NODYX_ACTIVITIES_CDC.md) : une app interactive qui
+// tourne dans un canal vocal. Le build (ex. wasm Godot 54 Mo) ne rentre pas
+// dans un `.nyx` : il vit dans un bundle applicatif (champ `app` du manifeste),
+// que l'instance télécharge une fois et sert elle-même. `entry` est le chemin
+// du document HTML DANS ce bundle.
+const appEntryPath = z.string().refine(
+  p => isSafePackagePath(p) && /\.html?$/i.test(p),
+  'doit être un chemin de bundle sûr se terminant par .html',
+)
+
+const activitySurface = z.object({
+  type:           z.literal('activity'),
+  id:             z.string().regex(RE_SURFACE_ID),
+  entry:          appEntryPath,
+  label:          messageKey,
+  description:    messageKey.optional(),
+  default_aspect: z.enum(['16:9', '4:3', 'fill']).optional(),
+}).strict()
+
+const surface = z.discriminatedUnion('type', [widgetSurface, pageSurface, activitySurface])
+
+// Le bundle applicatif : récupéré UNE fois à l'installation (ou téléversé),
+// empreinte vérifiée, décompressé dans uploads/extensions/<id>/<version>/app/.
+const appBundle = z.object({
+  url:    z.string().url().refine(isAppBundleUrl, 'doit être https vers un hôte public (http://localhost en dev)'),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/, 'empreinte sha256 hexadécimale (64 caractères)'),
+  bytes:  z.number().int().positive().max(APP_BUNDLE.maxBytes),
+}).strict()
 
 const networkRule = z.object({
   methods: z.array(z.enum(HTTP_METHODS)).min(1),
@@ -186,6 +231,9 @@ const permissions = z.object({
   storage:  storagePermission.optional(),
   core:     z.array(z.enum(CORE_SCOPES)).min(1).optional(),
   network:  z.record(z.string(), networkRule).optional(),
+  // Échange de données temps-réel avec les autres membres du canal vocal
+  // (activités seulement). Capacité sensible : cf NODYX_ACTIVITIES_CDC.md §4.
+  realtime: z.boolean().optional(),
 }).strict()
 
 const manifestSchema = z.object({
@@ -202,6 +250,7 @@ const manifestSchema = z.object({
   icon:           z.string().refine(isSafePackagePath, 'chemin de paquet invalide').optional(),
   family:         z.enum(['media', 'gaming', 'community', 'esport', 'social', 'content']).optional(),
   surfaces:       z.array(surface).min(1),
+  app:            appBundle.optional(),
   permissions:    permissions.optional(),
 }).strict()
 
@@ -324,8 +373,10 @@ function preflight(raw: unknown): ValidationIssue[] {
 function postflight(m: ExtensionManifest): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 
-  const widgetIds = new Set<string>()
-  const pagePaths = new Set<string>()
+  const widgetIds   = new Set<string>()
+  const pagePaths   = new Set<string>()
+  const activityIds = new Set<string>()
+  let hasActivity   = false
   for (const [i, s] of m.surfaces.entries()) {
     if (s.type === 'widget') {
       if (widgetIds.has(s.id)) {
@@ -339,12 +390,37 @@ function postflight(m: ExtensionManifest): ValidationIssue[] {
         }
         keys.add(f.key)
       }
+    } else if (s.type === 'activity') {
+      hasActivity = true
+      if (activityIds.has(s.id)) {
+        issues.push({ code: 'DUPLICATE_SURFACE_ID', path: `surfaces[${i}].id`, message: `deux surfaces activity portent l'identifiant "${s.id}"` })
+      }
+      activityIds.add(s.id)
     } else {
       if (pagePaths.has(s.path)) {
         issues.push({ code: 'DUPLICATE_PAGE_PATH', path: `surfaces[${i}].path`, message: `deux surfaces page portent le chemin "${s.path}"` })
       }
       pagePaths.add(s.path)
     }
+  }
+
+  if (m.permissions?.realtime && !hasActivity) {
+    issues.push({
+      code: 'REALTIME_WITHOUT_ACTIVITY', path: 'permissions.realtime',
+      message: 'la capacité `realtime` n\'a de sens que pour une surface `activity`',
+    })
+  }
+  if (hasActivity && !m.app) {
+    issues.push({
+      code: 'ACTIVITY_WITHOUT_APP', path: 'app',
+      message: 'une surface `activity` exige un champ `app` (le bundle applicatif à héberger)',
+    })
+  }
+  if (m.app && !hasActivity) {
+    issues.push({
+      code: 'APP_WITHOUT_ACTIVITY', path: 'app',
+      message: 'le champ `app` n\'a de sens qu\'avec une surface `activity`',
+    })
   }
 
   const st = m.permissions?.storage

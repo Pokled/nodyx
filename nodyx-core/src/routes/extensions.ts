@@ -260,8 +260,9 @@ export async function extensionRoutes(app: FastifyInstance) {
           icon:        m.icon ? `/api/v1/extensions/${m.id}/${row.version}/assets/${m.icon}` : null,
           family:      m.family ?? 'content',
           messages:    dict,
-          surfaces:    m.surfaces.map((s) => s.type === 'widget'
-            ? {
+          surfaces:    m.surfaces.map((s) => {
+            if (s.type === 'widget') {
+              return {
                 type:  'widget' as const,
                 id:    s.id,
                 entry: s.entry,
@@ -275,13 +276,26 @@ export async function extensionRoutes(app: FastifyInstance) {
                   options: f.options?.map((o) => ({ ...o, label: tr(o.label) })),
                 })),
               }
-            : {
-                type:  'page' as const,
-                path:  s.path,
-                entry: s.entry,
-                label: tr(s.label) ?? tr(m.label),
-                nav:   s.nav ? { label: tr(s.nav.label), icon: s.nav.icon ?? null } : null,
-              }),
+            }
+            if (s.type === 'activity') {
+              return {
+                type:        'activity' as const,
+                id:          s.id,
+                // Servi par l'instance elle-même : plus aucune dépendance externe.
+                appUrl:      `/api/v1/extensions/${m.id}/${row.version}/app/${s.entry}`,
+                label:       tr(s.label) ?? tr(m.label),
+                description: tr(s.description),
+                aspect:      s.default_aspect ?? '16:9',
+              }
+            }
+            return {
+              type:  'page' as const,
+              path:  s.path,
+              entry: s.entry,
+              label: tr(s.label) ?? tr(m.label),
+              nav:   s.nav ? { label: tr(s.nav.label), icon: s.nav.icon ?? null } : null,
+            }
+          }),
         }
       })
       .filter((e) => e !== null)
