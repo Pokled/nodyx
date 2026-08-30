@@ -2,6 +2,7 @@ import { registerVoiceHandlers, sendVoiceSnapshot } from './voice'
 import { registerVoiceSfuHandlers } from './voiceSfu'
 import { registerWhisperHandlers } from './whisper'
 import { registerCanvasHandlers }  from './canvas'
+import { registerActivityHandlers } from './activity'
 import { checkRateLimit } from './rateLimiter'
 import { Server, Socket } from 'socket.io'
 import jwt from 'jsonwebtoken'
@@ -770,6 +771,10 @@ export function registerSocketIO(server: Server): void {
     registerVoiceHandlers(socket, server)
     // SFU (relais vers nodyx-sfud, DORMANT sans VOICE_SFU_URL — CDC SFU §17)
     registerVoiceSfuHandlers(socket, server)
+    // Nodyx Activities : relais temps-réel d'une activité dans le canal vocal
+    // (CDC SPECS/NODYX_ACTIVITIES_CDC.md §3). Inerte tant qu'aucune activité
+    // n'est montée côté client : ce ne sont que trois `socket.on`.
+    registerActivityHandlers(socket, server)
 
     // ── DM events ─────────────────────────────────────────────────────────────
 
