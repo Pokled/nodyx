@@ -1123,6 +1123,7 @@
 					socket={s}
 					{userId}
 					{canvasRecapChannelId}
+					activities={data.activities ?? []}
 					onjoinCurrentVoice={joinCurrentVoiceChannel}
 				/>
 

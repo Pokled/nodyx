@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
 	createHostHandler, buildBootPayload, frameUrl, createStorageCaller, createFetchCaller, RuntimeCallError,
 	isSafeInternalPath, isSafeExternalUrl, RequestLedger, PROTOCOL,
+	createActivityHostHandler, buildActivityBootPayload,
 	type HostSurface,
 } from './host'
 
@@ -286,5 +287,83 @@ describe('la charge d amorcage doit etre clonable', () => {
 			messages: {}, locale: 'fr', theme: {}, instance: {}, user: null, route: '/',
 		})
 		expect(() => structuredClone(boot)).toThrow()
+	})
+})
+
+// ── Activités ────────────────────────────────────────────────────────────────
+
+describe('createActivityHostHandler', () => {
+	function mk() {
+		const calls: { fn: string; args: unknown[] }[] = []
+		const handle = createActivityHostHandler({
+			room: {
+				send:        (payload, opts) => calls.push({ fn: 'send', args: [payload, opts] }),
+				snapshot:    (blob) => calls.push({ fn: 'snapshot', args: [blob] }),
+				requestSync: () => calls.push({ fn: 'sync', args: [] }),
+			},
+			toast: (m) => calls.push({ fn: 'toast', args: [m] }),
+		})
+		return { handle, calls }
+	}
+
+	it('room.send transmet payload + to + reliable', () => {
+		const { handle, calls } = mk()
+		handle({ p: PROTOCOL, type: 'room.send', payload: { t: 'king' }, to: 'u-1', reliable: false })
+		expect(calls).toEqual([{ fn: 'send', args: [{ t: 'king' }, { to: 'u-1', reliable: false }] }])
+	})
+
+	it('room.send sans to/reliable : broadcast fiable par defaut', () => {
+		const { handle, calls } = mk()
+		handle({ p: PROTOCOL, type: 'room.send', payload: { x: 1 } })
+		expect(calls[0].args[1]).toEqual({ to: '', reliable: true })
+	})
+
+	it('room.send : payload > 8 Ko ignore', () => {
+		const { handle, calls } = mk()
+		handle({ p: PROTOCOL, type: 'room.send', payload: { big: 'x'.repeat(9000) } })
+		expect(calls).toHaveLength(0)
+	})
+
+	it('room.send : payload cyclique ignore, pas de crash', () => {
+		const { handle, calls } = mk()
+		const c: Record<string, unknown> = {}; c.self = c
+		handle({ p: PROTOCOL, type: 'room.send', payload: c })
+		expect(calls).toHaveLength(0)
+	})
+
+	it('room.snapshot : blob string borne', () => {
+		const { handle, calls } = mk()
+		handle({ p: PROTOCOL, type: 'room.snapshot', blob: 'AAAA' })
+		handle({ p: PROTOCOL, type: 'room.snapshot', blob: 'A'.repeat(20000) })
+		handle({ p: PROTOCOL, type: 'room.snapshot', blob: 42 })
+		expect(calls).toEqual([{ fn: 'snapshot', args: ['AAAA'] }])
+	})
+
+	it('room.sync et ui.toast', () => {
+		const { handle, calls } = mk()
+		handle({ p: PROTOCOL, type: 'room.sync' })
+		handle({ p: PROTOCOL, type: 'ui.toast', message: 'coucou' })
+		expect(calls.map(c => c.fn)).toEqual(['sync', 'toast'])
+	})
+
+	it('mauvais protocole ou type inconnu : ignore', () => {
+		const { handle, calls } = mk()
+		handle({ p: 2, type: 'room.send', payload: {} })
+		handle({ p: PROTOCOL, type: 'core.get' })
+		handle(null)
+		handle('x')
+		expect(calls).toHaveLength(0)
+	})
+})
+
+describe('buildActivityBootPayload', () => {
+	it('forme et clonabilite', () => {
+		const boot = buildActivityBootPayload('kings-race', '0.3.0', {
+			user: { id: 'u1', name: 'Alice', avatar: '' },
+			members: [{ id: 'u1', name: 'Alice', avatar_url: '', seatIndex: 0, speaking: false }],
+			locale: 'fr', theme: {},
+		})
+		expect(boot).toMatchObject({ p: PROTOCOL, type: 'nodyx:activity-boot', activity: 'kings-race', version: '0.3.0' })
+		expect(() => structuredClone(boot)).not.toThrow()
 	})
 })

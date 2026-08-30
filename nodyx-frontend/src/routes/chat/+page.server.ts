@@ -12,5 +12,15 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 
 	const channels = res.ok ? (await res.json()).channels ?? [] : [];
 
-	return { channels, token };
+	// Extensions installées avec une surface `activity` : ce sont les jeux
+	// jouables dans un canal vocal (cf SPECS/NODYX_ACTIVITIES_CDC.md).
+	const extRes = await apiFetch(fetch, '/extensions/public');
+	const extensions = extRes.ok ? (await extRes.json()).extensions ?? [] : [];
+	const activities = extensions.flatMap((e: any) =>
+		(e.surfaces ?? [])
+			.filter((s: any) => s.type === 'activity' && s.appUrl)
+			.map((s: any) => ({ id: e.id, version: e.version, surfaceId: s.id, appUrl: s.appUrl, label: s.label })),
+	);
+
+	return { channels, token, activities };
 };
