@@ -41,6 +41,9 @@
 		/** Le canal vocal rejoint. Lié par le parent, jamais par l'activité. */
 		channelId:  string
 		socket:     any
+		/** Jeton de session de l'utilisateur : projette son identité dans le
+		 *  jeton d'extension (records `scope: user`). */
+		token?:     string | null
 		userId:     string
 		username:   string
 		userAvatar?: string | null
@@ -53,7 +56,7 @@
 
 	let {
 		activityId, surfaceId, version, appUrl, label, channelId, socket,
-		userId, username, userAvatar = null,
+		token = null, userId, username, userAvatar = null,
 		members = [], locale = 'fr', theme = {},
 		onclose = () => {},
 	}: Props = $props()
@@ -71,7 +74,12 @@
 		try {
 			const res = await fetch(`/api/v1/extensions/${activityId}/session`, {
 				method:  'POST',
-				headers: { 'content-type': 'application/json' },
+				headers: {
+					'content-type': 'application/json',
+					// Sans ça le jeton est frappé pour un visiteur : les records
+					// `scope: user` ne pourraient pas s'écrire.
+					...(token ? { authorization: `Bearer ${token}` } : {}),
+				},
 				body:    JSON.stringify({ surface: storageSurface }),
 			})
 			if (!res.ok) return null
