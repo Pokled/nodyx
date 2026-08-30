@@ -537,6 +537,7 @@
 {#if showActivity && activity && connected && voiceState.channelId}
 	<ActivitySurface
 		activityId={activity.id}
+		surfaceId={activity.surfaceId}
 		version={activity.version}
 		appUrl={activity.appUrl}
 		label={activity.label}

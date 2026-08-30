@@ -32,6 +32,8 @@
 
 	interface Props {
 		activityId: string
+		/** Id de la surface `activity` dans le manifeste (ex. 'battle'). */
+		surfaceId:  string
 		version:    string
 		/** Chemin relatif servi par l'instance : /api/v1/extensions/<id>/<version>/app/<entry> */
 		appUrl:     string
@@ -50,11 +52,36 @@
 	}
 
 	let {
-		activityId, version, appUrl, label, channelId, socket,
+		activityId, surfaceId, version, appUrl, label, channelId, socket,
 		userId, username, userAvatar = null,
 		members = [], locale = 'fr', theme = {},
 		onclose = () => {},
 	}: Props = $props()
+
+	// ── Persistance (records, classement) ──────────────────────────────────
+	// Jeton court frappé par l'hôte (la frame n'a pas de session) et passé dans
+	// le boot. La frame étant same-origin, elle appelle /storage directement.
+	// Cf SPECS/NODYX_ACTIVITIES_CDC.md §10.
+	const storageSurface = `activity:${surfaceId}`
+	const storageUrl     = `/api/v1/extensions/${activityId}/storage`
+	let storageToken: string | null = $state(null)
+	let mintTimer: ReturnType<typeof setInterval> | null = null
+
+	async function mintToken(): Promise<string | null> {
+		try {
+			const res = await fetch(`/api/v1/extensions/${activityId}/session`, {
+				method:  'POST',
+				headers: { 'content-type': 'application/json' },
+				body:    JSON.stringify({ surface: storageSurface }),
+			})
+			if (!res.ok) return null
+			const body = await res.json()
+			storageToken = body.token ?? null
+			return storageToken
+		} catch {
+			return null
+		}
+	}
 
 	// Le bundle est servi sur notre propre origine.
 	const activityOrigin = typeof window !== 'undefined' ? window.location.origin : ''
@@ -193,6 +220,11 @@
 		channel.port1.onmessage = (ev) => {
 			if (ev.data?.event === 'ready') { status = 'ready'; clearBootTimer(); return }
 			if (ev.data?.event === 'error') { status = 'error'; clearBootTimer(); return }
+			// La frame demande un jeton frais (le sien a expiré en pleine partie).
+			if (ev.data?.type === 'session.refresh') {
+				mintToken().then((tok) => toGuest({ event: 'session', token: tok }))
+				return
+			}
 			handle(ev.data)
 		}
 		channel.port1.start()
@@ -204,6 +236,7 @@
 			members: snap,
 			locale,
 			theme:   $state.snapshot(theme) as Record<string, string>,
+			storage: { url: storageUrl, surface: storageSurface, token: storageToken },
 		})
 		frame.contentWindow?.postMessage(boot, activityOrigin, [channel.port2])
 		resolvePending(snap)   // les avatars qui manquent arriveront en `member_update`
@@ -217,6 +250,11 @@
 		if (!browser) return
 		if (!activityOrigin) { status = 'error'; return }
 		resolvePending(members)   // pré-charge les avatars pendant que le wasm télécharge
+		void mintToken()          // jeton prêt avant le boot (sinon la frame en redemandera un)
+		// Le jeton vit 600 s : on le renouvelle et on le pousse dans la frame.
+		mintTimer = setInterval(() => {
+			void mintToken().then((tok) => { if (status === 'ready') toGuest({ event: 'session', token: tok }) })
+		}, 8 * 60 * 1000)
 		window.addEventListener('message', onWindowMessage)
 		bootTimer = setTimeout(() => { if (status === 'loading') status = 'error' }, 15000)
 		socket?.on('activity:msg',          onActivityMsg)
@@ -229,6 +267,7 @@
 		if (!browser) return
 		window.removeEventListener('message', onWindowMessage)
 		clearBootTimer()
+		if (mintTimer) clearInterval(mintTimer)
 		channel?.port1.close()
 		socket?.off('activity:msg',          onActivityMsg)
 		socket?.off('activity:snap',         onActivitySnap)

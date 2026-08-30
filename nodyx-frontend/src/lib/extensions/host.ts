@@ -61,7 +61,7 @@ export type Envelope =
 	| { p: number; id: string; ok: false; error: { code: string; message: string } }
 
 const RE_REQ_ID  = /^[A-Za-z0-9_-]{1,64}$/
-const RE_SURFACE = /^(page|widget:[a-z][a-z0-9-]{0,30})$/
+const RE_SURFACE = /^(page|(widget|activity):[a-z][a-z0-9-]{0,30})$/
 
 /**
  * Chemins internes acceptés pour le routeur d'une extension.
@@ -325,6 +325,9 @@ export interface ActivityBootPayload {
 	members:  ActivityMember[]
 	locale:   string
 	theme:    Record<string, string>
+	/** Persistance : la frame est same-origin, elle appelle `url` directement
+	 *  (jamais par le port). `token` court, ré-émis via l'event `session`. */
+	storage?: { url: string; surface: string; token: string | null }
 }
 
 export interface ActivityActions {
