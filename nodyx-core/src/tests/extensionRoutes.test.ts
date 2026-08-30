@@ -398,7 +398,7 @@ describe('liste publique', () => {
     const e = JSON.parse((await publicList('fr')).body).extensions[0]
     expect(e.surfaces[0]).toMatchObject({
       type: 'activity', id: 'battle',
-      appUrl: '/api/v1/extensions/kings-race/0.3.0/app/index.html',
+      appUrl: '/api/v1/extensions/kings-race/0.3.0/app/index.html?v=0.3.0',
       label: 'Course aux Rois', aspect: '16:9',
     })
     const body = (await publicList()).body

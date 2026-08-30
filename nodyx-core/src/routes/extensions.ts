@@ -282,7 +282,11 @@ export async function extensionRoutes(app: FastifyInstance) {
                 type:        'activity' as const,
                 id:          s.id,
                 // Servi par l'instance elle-même : plus aucune dépendance externe.
-                appUrl:      `/api/v1/extensions/${m.id}/${row.version}/app/${s.entry}`,
+                // `?v=` : le chemin porte déjà la version, mais le paramètre
+                // garantit qu'un navigateur qui aurait mis en cache une ancienne
+                // réponse (en-têtes compris) refait la requête sur une nouvelle
+                // version.
+                appUrl:      `/api/v1/extensions/${m.id}/${row.version}/app/${s.entry}?v=${row.version}`,
                 label:       tr(s.label) ?? tr(m.label),
                 description: tr(s.description),
                 aspect:      s.default_aspect ?? '16:9',
