@@ -71,6 +71,53 @@
 		channel?.port1.postMessage(msg)
 	}
 
+	// ── Avatars Nodyx -> PNG 64x64 en base64 ────────────────────────────────
+	// L'activité tourne avec `connect-src 'self'` : elle ne peut pas récupérer
+	// un avatar cross-origin (nexusnode.app, un CDN…). L'hôte, lui, le peut. On
+	// réduit à 64x64 pour rester léger dans le roster.
+	const avatarCache = new Map<string, string | null>()
+
+	async function resolveAvatarPng(url: string): Promise<string | null> {
+		if (avatarCache.has(url)) return avatarCache.get(url) ?? null
+		try {
+			const res = await fetch(url, { mode: 'cors', credentials: 'omit' })
+			if (!res.ok) throw new Error(String(res.status))
+			const bmp = await createImageBitmap(await res.blob())
+			const S = 64
+			const c = document.createElement('canvas')
+			c.width = S; c.height = S
+			const ctx = c.getContext('2d')
+			if (!ctx) throw new Error('no 2d context')
+			const scale = Math.max(S / bmp.width, S / bmp.height)
+			const w = bmp.width * scale, h = bmp.height * scale
+			ctx.drawImage(bmp, (S - w) / 2, (S - h) / 2, w, h)
+			bmp.close?.()
+			const b64 = c.toDataURL('image/png').split(',')[1] ?? null
+			avatarCache.set(url, b64)
+			return b64
+		} catch {
+			avatarCache.set(url, null)   // échec (CORS, 404…) : on n'insiste pas
+			return null
+		}
+	}
+
+	function withCachedAvatar(m: ActivityMember): ActivityMember {
+		const png = m.avatar_url ? avatarCache.get(m.avatar_url) : undefined
+		return png === undefined ? m : { ...m, avatar_png: png }
+	}
+
+	/** Lance la résolution des avatars manquants ; pousse un `member_update` quand un avatar arrive. */
+	function resolvePending(list: ActivityMember[]) {
+		for (const m of list) {
+			if (!m.avatar_url || avatarCache.has(m.avatar_url)) continue
+			resolveAvatarPng(m.avatar_url).then((png) => {
+				if (status === 'ready' && png) {
+					toGuest({ event: 'member_update', member: { ...m, avatar_png: png } })
+				}
+			})
+		}
+	}
+
 	// ── Le pont : messages de l'activité -> émissions socket ─────────────────
 	const handle = createActivityHostHandler({
 		room: {
@@ -111,12 +158,13 @@
 		const current = new Map(members.map((m) => [m.id, m]))
 		if (status !== 'ready') { return }
 		for (const [id, m] of current) {
-			if (!sentMemberIds.has(id)) toGuest({ event: 'member_join', member: m })
+			if (!sentMemberIds.has(id)) toGuest({ event: 'member_join', member: withCachedAvatar(m) })
 		}
 		for (const id of sentMemberIds) {
 			if (!current.has(id)) toGuest({ event: 'member_leave', member: { id } })
 		}
 		sentMemberIds = new Set(current.keys())
+		resolvePending(members)
 	})
 
 	function onWindowMessage(e: MessageEvent) {
@@ -138,13 +186,15 @@
 		channel.port1.start()
 
 		sentMemberIds = new Set(members.map((m) => m.id))
+		const snap = ($state.snapshot(members) as ActivityMember[]).map(withCachedAvatar)
 		const boot = buildActivityBootPayload(activityId, version, {
 			user:    { id: userId, name: username, avatar: userAvatar ?? '' },
-			members: $state.snapshot(members) as ActivityMember[],
+			members: snap,
 			locale,
 			theme:   $state.snapshot(theme) as Record<string, string>,
 		})
 		frame.contentWindow?.postMessage(boot, activityOrigin, [channel.port2])
+		resolvePending(snap)   // les avatars qui manquent arriveront en `member_update`
 	}
 
 	function clearBootTimer() {
@@ -154,6 +204,7 @@
 	onMount(() => {
 		if (!browser) return
 		if (!activityOrigin) { status = 'error'; return }
+		resolvePending(members)   // pré-charge les avatars pendant que le wasm télécharge
 		window.addEventListener('message', onWindowMessage)
 		bootTimer = setTimeout(() => { if (status === 'loading') status = 'error' }, 15000)
 		socket?.on('activity:msg',          onActivityMsg)
