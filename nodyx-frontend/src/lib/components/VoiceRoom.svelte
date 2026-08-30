@@ -543,6 +543,7 @@
 		label={activity.label}
 		channelId={voiceState.channelId}
 		socket={socket}
+		{token}
 		{userId}
 		username={myUsername}
 		userAvatar={myAvatar}
