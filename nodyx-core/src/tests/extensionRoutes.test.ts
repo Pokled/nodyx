@@ -167,6 +167,78 @@ describe('frappe du jeton de surface', () => {
   })
 })
 
+// ── Surface activity : jeton + stockage (records, classement) ──────────────
+// Cf SPECS/NODYX_ACTIVITIES_CDC.md §10. Une activité est une surface de
+// stockage de plein droit : `RE_SURFACE` accepte `activity:<id>`, `/session`
+// lui frappe un jeton, `/storage` marche tel quel.
+
+describe('surface activity : jeton + stockage', () => {
+  const MANIFEST_ACTIVITY = {
+    ...MANIFEST,
+    icon: 'icon.svg',
+    surfaces: [{ type: 'activity', id: 'battle', entry: 'index.html', label: '@label' }],
+    app: { url: 'https://github.com/x/y/releases/download/v1.0.0/app.zip', sha256: 'a'.repeat(64), bytes: 5000 },
+    permissions: { storage: { user: '16kb', instance: '64kb', instance_write: true } },
+  }
+
+  const storeCall = (token: string, body: unknown) => app.inject({
+    method: 'POST', url: '/api/v1/extensions/demo-ext/storage',
+    headers: { authorization: `Bearer ${token}`, 'x-nodyx-surface': 'activity:battle' },
+    payload: body,
+  })
+
+  async function activityToken(granted: string[]) {
+    dbQuery.mockResolvedValue({ rows: [installedRow({ manifest: MANIFEST_ACTIVITY, granted })] })
+    const r = await session({ surface: 'activity:battle' }, 'Bearer membre')
+    return JSON.parse(r.body).token as string
+  }
+
+  it('frappe un jeton pour la surface activity du manifeste, lié à l utilisateur', async () => {
+    const token = await activityToken(['storage.user'])
+    const v = verifyExtensionToken(token, { instanceId: ORIGIN, extensionId: 'demo-ext', surface: 'activity:battle' }, SECRET)
+    expect(v.ok).toBe(true)
+    if (v.ok) expect(v.claims.sub).toBe('user-42')
+  })
+
+  it('refuse une surface activity absente du manifeste', async () => {
+    dbQuery.mockResolvedValue({ rows: [installedRow({ manifest: MANIFEST_ACTIVITY })] })
+    const r = await session({ surface: 'activity:inconnu' }, 'Bearer membre')
+    expect(r.statusCode).toBe(404)
+    expect(JSON.parse(r.body).code).toBe('SURFACE_NOT_FOUND')
+  })
+
+  it('écrit un record perso (scope user)', async () => {
+    const token = await activityToken(['storage.user'])
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [{ manifest: MANIFEST_ACTIVITY, enabled: true }] })
+      .mockResolvedValueOnce({ rows: [{ n: 0, total: 0 }] })
+      .mockResolvedValueOnce({ rows: [] })
+    const r = await storeCall(token, { op: 'set', key: 'stats', value: { games: 1, wins: 1 }, scope: 'user' })
+    expect(r.statusCode).toBe(200)
+  })
+
+  it('refuse le classement partagé sans storage.instance.write', async () => {
+    const token = await activityToken(['storage.user'])
+    dbQuery.mockReset()
+    dbQuery.mockResolvedValue({ rows: [{ manifest: MANIFEST_ACTIVITY, enabled: true }] })
+    const r = await storeCall(token, { op: 'set', key: 'leaderboard', value: [], scope: 'instance' })
+    expect(r.statusCode).toBe(403)
+    expect(JSON.parse(r.body).code).toBe('PERMISSION_DENIED')
+  })
+
+  it('accepte le classement partagé avec storage.instance.write (écriture de l arbitre)', async () => {
+    const token = await activityToken(['storage.instance.read', 'storage.instance.write'])
+    dbQuery.mockReset()
+    dbQuery
+      .mockResolvedValueOnce({ rows: [{ manifest: MANIFEST_ACTIVITY, enabled: true }] })
+      .mockResolvedValueOnce({ rows: [{ n: 0, total: 0 }] })
+      .mockResolvedValueOnce({ rows: [] })
+    const r = await storeCall(token, { op: 'set', key: 'leaderboard', value: [{ id: 'u-1', wins: 3 }], scope: 'instance' })
+    expect(r.statusCode).toBe(200)
+  })
+})
+
 describe('administration', () => {
   it('exige une authentification sur la liste', async () => {
     const r = await app.inject({ method: 'GET', url: '/api/v1/admin/extensions' })

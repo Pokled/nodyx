@@ -28,7 +28,7 @@ import type { GrantedNetwork } from '../extensions/net'
 import { PACKAGE, SURFACE }      from '../extensions/limits'
 
 const RE_ID      = /^[a-z][a-z0-9-]{2,38}$/
-const RE_SURFACE = /^(page|widget:[a-z][a-z0-9-]{0,30})$/
+const RE_SURFACE = /^(page|(widget|activity):[a-z][a-z0-9-]{0,30})$/
 
 interface InstalledRow {
   id:       string
@@ -479,7 +479,9 @@ export async function extensionRoutes(app: FastifyInstance) {
     if (!parsed.ok) return reply.code(500).send({ error: 'Manifeste installé invalide', code: 'MANIFEST_CORRUPT' })
 
     const known = parsed.manifest.surfaces.some(s =>
-      s.type === 'page' ? surface === 'page' : surface === `widget:${s.id}`,
+      s.type === 'page'     ? surface === 'page'
+      : s.type === 'activity' ? surface === `activity:${s.id}`
+      :                         surface === `widget:${s.id}`,
     )
     if (!known) return reply.code(404).send({ error: 'Surface inconnue', code: 'SURFACE_NOT_FOUND' })
 

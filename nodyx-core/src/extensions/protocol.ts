@@ -48,7 +48,7 @@ export interface ProtocolEvent {
 
 const RE_ID      = /^[A-Za-z0-9_-]{1,64}$/
 const RE_EXT     = /^[a-z][a-z0-9-]{2,38}$/
-const RE_SURFACE = /^(page|widget:[a-z][a-z0-9-]{0,30})$/
+const RE_SURFACE = /^(page|(widget|activity):[a-z][a-z0-9-]{0,30})$/
 
 export type ParseResult =
   | { ok: true;  request: ProtocolRequest }

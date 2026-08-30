@@ -1,7 +1,7 @@
 # CDC, Nodyx Activities — une application interactive dans un canal vocal
 
-Statut : **PROPOSÉ, en attente de validation du propriétaire** (nodyx-core = SANCTUAIRE)
-Date : 2026-08-30 (r1) · **r2 2026-08-30 : l'activité s'auto-héberge, plus de dépendance runtime à nodyx.org**
+Statut : **VALIDÉ (r1 + r2 livrés sur nodyx.org)** — nodyx-core = SANCTUAIRE
+Date : 2026-08-30 (r1) · **r2 2026-08-30 : l'activité s'auto-héberge, plus de dépendance runtime à nodyx.org** · **r3 2026-08-30 : records par joueur + classement d'instance (§10), valide A7/A8 amendés**
 Auteur : session Nodyx
 Préalable au code (règle maison : CDC formel avant tout module critique)
 Banc d'essai : **NodyxBattle** (`Pokled/nodyx-battle`) devient la première activité installable.
@@ -18,8 +18,8 @@ Banc d'essai : **NodyxBattle** (`Pokled/nodyx-battle`) devient la première acti
 | A4 | Transport temps-réel | Nouveau handler `socket/activity.ts`, **calqué verbatim sur `jukebox:update`** (`voice.ts:371-378`). L'hôte (le composant Svelte) relaie pour l'activité via le **socket déjà authentifié de la page**, uniquement dans `voice:<channelId>`. L'activité n'a **ni socket ni token propre**. |
 | A5 | Nouvelle capacité | `permissions.realtime` (booléen), marquée **sensible** sur l'écran de permissions (code tiers + diffusion dans le salon). |
 | A6 | Qui arbitre (host) ? | Le membre au plus petit `seatIndex` du salon vocal — déterministe sur tous les clients depuis `voice:channel_update`, zéro état backend, promotion auto si le host part. **Pas** le propriétaire de communauté (éviterait un `ownerUserId` de plus dans le roster = surface SANCTUAIRE élargie). |
-| A7 | Persistance | **Aucune** en v1. Pas de `/session`, pas de token → pas de `storage`/`core`/`network` pour une activité. ELO / historique = chantier suivant (ajouter `activity:<id>` au mint + `RE_SURFACE`). |
-| A8 | Migration | **Aucune.** `installed_extensions.granted` (JSONB) portera juste `"realtime"`. Activités éphémères, rien à persister. |
+| A7 | Persistance | ~~Aucune en v1~~ **AMENDÉ r3 (§10)** : la surface `activity:<id>` devient une **surface de stockage de plein droit**. `RE_SURFACE` accepte `activity:<id>`, `/session` frappe un jeton court pour elle, la frame (same-origin) appelle `POST /extensions/:id/storage` directement. `storage.user` (records par joueur) + `storage.instance.*` (classement). Pas de `core`/`network` pour une activité. |
+| A8 | Migration | **Aucune.** `installed_extensions.granted` (JSONB) porte `"realtime"` et, si accordées, `"storage.user"` / `"storage.instance.read"` / `"storage.instance.write"`. La table `extension_storage` existe déjà (SDK widget/page). |
 
 ---
 
@@ -326,7 +326,8 @@ les embeds YouTube/Twitch/Vimeo). **Aucun sous-domaine, aucun hébergeur externe
 - Surface `page` (jamais montée aujourd'hui — cf `NODYX_SDK_CDC.md` D4, dette G1).
 - `nodyx.ui.embed` : inutile ici, l'activité **est** l'embed.
 - `core.get`, renouvellement de jeton, `nodyx.imageUrl` (dettes G4/G5/G6 du SDK).
-- Persistance d'activité (ELO, historique de match) : pas de `/session`, pas de `storage` pour une activité.
+- ~~Persistance d'activité~~ **livré r3, cf §10** (records par joueur + classement d'instance).
+  Reste hors périmètre : validateur anti-triche du classement, historique de match détaillé.
 - Sélecteur si plusieurs activités installées (v1 ouvre la première).
 - Mise à jour incrémentale du bundle (v1 : nouveau `version` = nouveau dossier `app/` complet).
 - Lockstep déterministe, features multi jalon 2 du jeu.
@@ -353,3 +354,62 @@ les embeds YouTube/Twitch/Vimeo). **Aucun sous-domaine, aucun hébergeur externe
 7. **Phase infra (simplifiée) :** publier `kings-race-app-<ver>.zip` (GitHub Releases) + son sha256 dans
    le `manifest.json` du `.nyx` ; `pack_widget.sh` ; installer le `.nyx` (+ zip en option hors-ligne) ;
    recette bout-en-bout 2 utilisateurs. **Plus de sous-domaine, plus de route Caddy, plus de patch CSP prod.**
+
+---
+
+## 10. Persistance — records par joueur & classement d'instance (r3)
+
+**Amende A7.** Une activité peut désormais persister. Le stockage clé/valeur du SDK
+(`src/extensions/storage.ts`, table `extension_storage`, route `POST /extensions/:id/storage`,
+quotas au manifeste, plafonds fins, `writesPerMinute: 30`) est **déjà complet** : il ne connaissait
+pas les activités uniquement parce que `RE_SURFACE` ne matchait que `page` / `widget:<id>`.
+
+### 10.1 Changements nodyx-core (minimes, forward-only, AUCUNE migration)
+
+- `src/routes/extensions.ts` — `RE_SURFACE` : `^(page|widget:<id>|activity:<id>)$` (mêmes bornes
+  `RE_SURFACE_ID` que `widget:`). Sert `/storage`, `/fetch`, `/session`.
+- `src/routes/extensions.ts` — check « surface connue » de `POST /session` : accepte
+  `surface === 'activity:' + s.id` quand `s.type === 'activity'`.
+- `src/extensions/protocol.ts` — `RE_SURFACE` alignée (cohérence ; l'activité ne passe pas par
+  `parseRequest` aujourd'hui, mais un futur pont RPC d'activité le ferait).
+- `nodyx-frontend/src/lib/extensions/host.ts` — `RE_SURFACE` alignée.
+- `src/extensions/manifest.ts`, `capabilities.ts`, `limits.ts` — **inchangés**.
+  `storagePermission` + le mapping `storage.user` / `storage.instance.read` / `storage.instance.write`
+  (déjà `sensitive`) fonctionnent tels quels.
+
+### 10.2 Le jeton voyage dans le boot payload
+
+La frame d'activité est **same-origin** avec l'instance (§2.3). Elle appelle `POST /extensions/:id/storage`
+**directement** (`connect-src 'self'` de la CSP document l'autorise) — pas de round-trip par le port.
+
+- `ActivitySurface.svelte` : `openSession()` (`POST /session`, `surface: 'activity:<id>'`) →
+  ajoute `token` + `storageSurface` au boot payload. Ré-émission ~8 min : `port.postMessage({ event: 'session', token })`.
+- `host.ts` : `ActivityBootPayload` gagne `token?`, `storageSurface?`. `createActivityHostHandler`
+  inchangé (le stockage ne transite pas par le port).
+- Jeton court (`SURFACE.tokenTtlSeconds` = 600 s), `userId` projeté côté serveur depuis la session
+  réelle de la page (comme page/widget) → `scope: user` porte le vrai `claims.sub`.
+
+### 10.3 Modèle d'écriture
+
+| Donnée | scope | clé | écrit par |
+|---|---|---|---|
+| Records perso (parties, victoires, défaites, meilleure vague) | `user` | `stats` | chaque joueur, en fin de partie |
+| Classement d'instance (top 20 : id, nom, victoires…) | `instance` | `leaderboard` | **l'arbitre seul** (membre siège 0), une écriture en fin de COURSE AUX ROIS |
+
+`scope: instance` en écriture = `storage.instance.write`, **capacité sensible**, accordée
+explicitement par l'admin à l'installation. Compromis assumé : l'activité (code tiers) peut écrire
+n'importe quoi dans la clé `leaderboard`. Borné par : bundle épinglé sha256 + validé par l'admin,
+`writesPerMinute: 30`, quota `instance` (64 Ko), merge idempotent (`ON CONFLICT DO UPDATE`, tableau
+trié + plafonné). Un **validateur de classement** (recoupement des `MatchDirector.cmd_log`) est
+renvoyé au jalon 3.
+
+### 10.4 Tests (même session que le code)
+
+| Fichier | Cas |
+|---|---|
+| `src/tests/extensionRoutes.test.ts` | `/session` frappe un jeton `activity:battle` si le manifeste a la surface ; refuse `activity:inconnu` ; `/storage` avec ce jeton : `set`/`get`/`list` scope `user` ; `set` scope `instance` refusé sans `storage.instance.write`, accepté avec |
+| `src/tests/extensionManifest.test.ts` | manifeste `activity` + `permissions.storage` accepté ; `storage.instance.write` dans les capacités sensibles |
+
+### 10.5 Hors périmètre (toujours)
+
+Validateur anti-triche du classement · classement multi-instances · records chiffrés.

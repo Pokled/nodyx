@@ -3,6 +3,7 @@ import {
   validateManifest, collectMessageKeys, parseSize, isSafePackagePath,
   type ExtensionManifest,
 } from '../extensions/manifest'
+import { requestedCapabilities, sensitiveCapabilities } from '../extensions/capabilities'
 
 // Manifeste minimal valide : le socle de tous les cas négatifs ci dessous.
 function base(): Record<string, unknown> {
@@ -265,6 +266,18 @@ describe('surface activity + bundle applicatif', () => {
   it('realtime accepté avec activity, refusé sans', () => {
     expect(validateManifest({ ...activity(), permissions: { realtime: true } }).ok).toBe(true)
     expect(issues({ ...base(), permissions: { realtime: true } })).toContain('REALTIME_WITHOUT_ACTIVITY')
+  })
+
+  it('accepte le stockage (records perso + classement) sur une activité', () => {
+    const r = validateManifest({
+      ...activity(),
+      permissions: { storage: { user: '16kb', instance: '64kb', instance_write: true } },
+    })
+    if (!r.ok) throw new Error('refusé : ' + JSON.stringify(r.issues))
+    expect(requestedCapabilities(r.manifest)).toEqual(expect.arrayContaining([
+      'storage.user', 'storage.instance.read', 'storage.instance.write',
+    ]))
+    expect(sensitiveCapabilities(r.manifest)).toContain('storage.instance.write')
   })
 })
 
