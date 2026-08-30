@@ -59,21 +59,26 @@ const APP_CONTENT_TYPES: Record<string, string> = {
 /**
  * CSP du document d'entrée d'un bundle d'activité.
  *
- * Servi sur l'origine de l'instance, encadré par le frontend de l'instance
- * (`frame-ancestors 'self'`). `'wasm-unsafe-eval'` : le chargeur Godot 4.7 en a
- * besoin. `connect-src 'self'` : le bundle ne peut appeler QUE l'instance — le
- * relais temps-réel passe par le socket de la page, pas par un `fetch` du jeu.
+ * Servi sur l'origine de l'instance, épinglé par sha256 et validé par l'admin à
+ * l'installation, encadré par le seul frontend de l'instance
+ * (`frame-ancestors 'self'`). Les scripts inline sont autorisés (`'unsafe-inline'`) :
+ * un moteur wasm comme celui de Godot amorce son runtime depuis un `<script>`
+ * inline, et le contenu est de confiance de l'instance. `'wasm-unsafe-eval'` pour
+ * l'instanciation du module wasm. Ce qui borne le risque : `connect-src 'self'`
+ * (le jeu ne joint QUE l'instance ; le relais temps-réel passe par le socket de
+ * la page, pas par un `fetch` du bundle) et `frame-ancestors 'self'`.
  */
 export function appDocumentCsp(): string {
   return [
     `default-src 'none'`,
-    `script-src 'self' 'wasm-unsafe-eval'`,
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
-    `media-src 'self' blob:`,
+    `media-src 'self' data: blob:`,
     `font-src 'self' data:`,
     `connect-src 'self'`,
     `worker-src 'self' blob:`,
+    `child-src 'self' blob:`,
     `frame-src 'none'`,
     `frame-ancestors 'self'`,
     `form-action 'none'`,
@@ -301,14 +306,19 @@ export async function extensionFrameRoutes(app: FastifyInstance) {
       return harden(reply).code(404).send({ error: 'App file not found', code: 'APP_FILE_NOT_FOUND' })
     }
 
+    const isDoc = ext === '.html' || ext === '.htm'
     const r = reply
       .header('X-Content-Type-Options', 'nosniff')
       .header('Referrer-Policy', 'no-referrer')
       .header('Cross-Origin-Resource-Policy', 'same-origin')
       .header('Content-Type', APP_CONTENT_TYPES[ext] ?? 'application/octet-stream')
-      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      // Le document d'entrée porte la CSP dans l'en-tête : `no-store` pour qu'un
+      // ajustement serveur prenne effet immédiatement (un 304 réutiliserait les
+      // en-têtes en cache, donc l'ancienne CSP). Le reste du bundle est figé par
+      // version (le chemin porte la version).
+      .header('Cache-Control', isDoc ? 'no-store' : 'public, max-age=31536000, immutable')
 
-    if (ext === '.html' || ext === '.htm') {
+    if (isDoc) {
       r.header('Content-Security-Policy', appDocumentCsp())
     }
 

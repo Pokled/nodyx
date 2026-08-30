@@ -114,12 +114,18 @@ l'install est atomique (tout ou rien). `uninstallExtension` fait déjà `fs.rm` 
 - `Content-Type` depuis une table serveur incluant **`application/wasm`** ; `X-Content-Type-Options: nosniff`.
 - `Cross-Origin-Resource-Policy: same-origin` (c'est le même hôte que le frontend).
 - Sur le **document d'entrée** (`.html`), en-tête CSP :
-  `default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline';
-   connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self' blob:;
-   frame-ancestors 'self'; base-uri 'none'; form-action 'none'`.
-  (`'wasm-unsafe-eval'` : le chargeur Godot 4.7 en a besoin. À confirmer en Phase 0 ; élargir à
-  `'unsafe-eval'` si le chargeur l'exige encore.)
-- `Cache-Control: public, max-age=31536000, immutable` (le chemin porte la version, il est figé).
+  `default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval';
+   style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:;
+   media-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; child-src 'self' blob:;
+   frame-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'`.
+  Un moteur wasm comme Godot **amorce son runtime depuis un `<script>` inline** dans son
+  `index.html` : `'unsafe-inline'` est indispensable, sinon le loader s'arrête avant même de
+  télécharger le wasm (écran noir). `'unsafe-eval'` par sécurité (runtime emscripten). C'est
+  acceptable : le bundle est épinglé sha256 + validé par l'admin, et `connect-src 'self'` +
+  `frame-ancestors 'self'` bornent le risque (il ne peut ni appeler l'extérieur ni être encadré
+  ailleurs) — équivalent à « l'admin a installé un plugin ».
+- `Cache-Control` : `no-cache` sur le `.html` (un ajustement serveur de CSP prend effet sans purge),
+  `public, max-age=31536000, immutable` sur le reste (le chemin porte la version).
 
 ### 2.5 Rendu — `nodyx-frontend/src/lib/components/ActivitySurface.svelte`
 

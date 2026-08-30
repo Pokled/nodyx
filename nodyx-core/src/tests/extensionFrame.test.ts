@@ -19,6 +19,11 @@ beforeAll(async () => {
   await fs.writeFile(path.join(dir, 'icon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1H0z"/></svg>')
   await fs.writeFile(path.join(cwd, 'secret.txt'), 'ceci ne doit jamais sortir')
 
+  // Bundle applicatif d'une activité (runtime lourd d'un jeu, par ex.).
+  await fs.mkdir(path.join(dir, 'app'), { recursive: true })
+  await fs.writeFile(path.join(dir, 'app', 'index.html'), '<!doctype html><script>engine.startGame()</script>')
+  await fs.writeFile(path.join(dir, 'app', 'game.wasm'), Buffer.from([0, 0x61, 0x73, 0x6d]))
+
   // Le SDK est lu depuis `sdk/` relativement au dossier de travail : on
   // reproduit la disposition reelle du deploiement plutot que de la simuler.
   await fs.mkdir(path.join(cwd, 'sdk'), { recursive: true })
@@ -192,5 +197,47 @@ describe('assets', () => {
   it('ne sert pas la version voisine', async () => {
     const r = await app.inject({ url: '/api/v1/extensions/demo-ext/9.9.9/assets/ui/widget.js' })
     expect(r.statusCode).toBe(404)
+  })
+})
+
+describe('bundle applicatif (surface activity)', () => {
+  const appFile = (p: string) => app.inject({ method: 'GET', url: `/api/v1/extensions/demo-ext/1.0.0/app/${p}` })
+
+  it('sert le document d entree avec une CSP qui laisse tourner un moteur wasm', async () => {
+    const r = await appFile('index.html')
+    expect(r.statusCode).toBe(200)
+    expect(r.headers['content-type']).toContain('text/html')
+    const csp = r.headers['content-security-policy'] as string
+    // Un moteur comme Godot amorce depuis un <script> inline et instancie du wasm.
+    expect(csp).toContain("'unsafe-inline'")
+    expect(csp).toContain("'wasm-unsafe-eval'")
+    // Ce qui borne le risque, immuable :
+    expect(csp).toContain("connect-src 'self'")
+    expect(csp).toContain("frame-ancestors 'self'")
+    // Le document est revalidé pour qu'un ajustement de CSP prenne effet.
+    expect(r.headers['cache-control']).toBe('no-store')
+  })
+
+  it('sert le wasm avec le bon type et un cache long', async () => {
+    const r = await appFile('game.wasm')
+    expect(r.statusCode).toBe(200)
+    expect(r.headers['content-type']).toBe('application/wasm')
+    expect(r.headers['cache-control']).toContain('immutable')
+    expect(r.headers['content-security-policy']).toBeUndefined()
+  })
+
+  it('refuse une sortie du dossier app', async () => {
+    const r = await appFile('..%2f..%2fsecret.txt')
+    expect(r.statusCode).toBeGreaterThanOrEqual(400)
+    expect(r.body).not.toContain('ne doit jamais sortir')
+  })
+
+  it('rend 404 pour un fichier de bundle absent', async () => {
+    expect((await appFile('nope.js')).statusCode).toBe(404)
+  })
+
+  it('refuse un type non servi dans le bundle', async () => {
+    await fs.writeFile(path.join(cwd, 'uploads', 'extensions', 'demo-ext', '1.0.0', 'app', 'run.sh'), '#!/bin/sh')
+    expect((await appFile('run.sh')).statusCode).toBe(403)
   })
 })
