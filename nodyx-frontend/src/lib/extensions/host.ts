@@ -306,11 +306,14 @@ const ACTIVITY_MSG_MAX  = 8 * 1024
 const ACTIVITY_SNAP_MAX = 16 * 1024
 
 export interface ActivityMember {
-	id:         string
-	name:       string
-	avatar_url: string
-	seatIndex:  number
-	speaking:   boolean
+	id:          string
+	name:        string
+	avatar_url:  string
+	/** Avatar réduit en PNG 64x64, base64 sans préfixe. Résolu par l'hôte pour
+	 *  que l'activité (CSP verrouillée) n'ait pas à faire un fetch cross-origin. */
+	avatar_png?: string | null
+	seatIndex:   number
+	speaking:    boolean
 }
 
 export interface ActivityBootPayload {
