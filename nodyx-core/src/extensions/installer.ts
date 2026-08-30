@@ -14,6 +14,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { createHash } from 'crypto'
 import { readExtensionPackage } from './package'
+import { fetchAndUnpackAppBundle } from './appBundle'
 import { applyGrant, type GrantDecision } from './capabilities'
 import type { ValidationIssue } from './manifest'
 
@@ -31,6 +32,9 @@ export interface InstallInput {
   origin:       string
   installedBy?: string | null
   grant?:       GrantDecision
+  /** Octets du bundle applicatif, si l'admin le téléverse à côté du `.nyx`
+   *  (installation hors ligne). Sinon il est récupéré depuis `manifest.app.url`. */
+  appBundle?:   Buffer
 }
 
 export interface InstallSuccess {
@@ -85,6 +89,16 @@ export async function installExtension(input: InstallInput, ctx: InstallContext)
       }
       await fs.mkdir(path.dirname(dest), { recursive: true })
       await fs.writeFile(dest, f.content)
+    }
+
+    // Bundle applicatif (activité) : récupéré/vérifié/décompressé DANS le
+    // staging, donc l'installation reste atomique — tout ou rien.
+    if (manifest.app) {
+      const bundle = await fetchAndUnpackAppBundle(manifest, staging, { uploaded: input.appBundle })
+      if (!bundle.ok) {
+        await fs.rm(staging, { recursive: true, force: true }).catch(() => {})
+        return { ok: false, issues: bundle.issues }
+      }
     }
 
     await fs.rm(target, { recursive: true, force: true })

@@ -204,6 +204,70 @@ describe('surfaces', () => {
   })
 })
 
+describe('surface activity + bundle applicatif', () => {
+  const SHA = 'a'.repeat(64)
+  const APP = { url: 'https://github.com/Pokled/nodyx-battle/releases/download/v0.3.0/app.zip', sha256: SHA, bytes: 54_000_000 }
+  const activity = (over: Record<string, unknown> = {}, appOver: Record<string, unknown> | null = {}) => {
+    const m: Record<string, unknown> = {
+      ...base(),
+      surfaces: [{ type: 'activity', id: 'battle', entry: 'index.html', label: '@label', ...over }],
+    }
+    if (appOver !== null) m.app = { ...APP, ...appOver }
+    return m
+  }
+
+  it('accepte une activité avec un bundle app https/public', () => {
+    const r = validateManifest(activity())
+    if (!r.ok) throw new Error('refusé à tort : ' + JSON.stringify(r.issues, null, 2))
+    expect(r.manifest.surfaces[0].type).toBe('activity')
+    expect(r.manifest.app?.sha256).toBe(SHA)
+  })
+
+  it('refuse un entry qui ne finit pas par .html', () => {
+    expect(issues(activity({ entry: 'main.js' })).length).toBeGreaterThan(0)
+  })
+
+  it('refuse un entry remontant', () => {
+    expect(issues(activity({ entry: '../escape.html' })).length).toBeGreaterThan(0)
+  })
+
+  it('refuse une activité SANS champ app', () => {
+    expect(issues(activity({}, null))).toContain('ACTIVITY_WITHOUT_APP')
+  })
+
+  it('refuse un champ app SANS surface activity', () => {
+    expect(issues({ ...base(), app: APP })).toContain('APP_WITHOUT_ACTIVITY')
+  })
+
+  it('refuse app.url non-https', () => {
+    expect(issues(activity({}, { url: 'http://evil.example/app.zip' })).length).toBeGreaterThan(0)
+  })
+
+  it('refuse app.url loopback', () => {
+    expect(issues(activity({}, { url: 'https://127.0.0.1/app.zip' })).length).toBeGreaterThan(0)
+  })
+
+  it('refuse une empreinte sha256 mal formée', () => {
+    expect(issues(activity({}, { sha256: 'pas-hex' })).length).toBeGreaterThan(0)
+  })
+
+  it('refuse deux activités de même identifiant', () => {
+    const s = { type: 'activity', id: 'battle', entry: 'index.html', label: '@label' }
+    expect(issues({ ...base(), app: APP, surfaces: [s, { ...s }] })).toContain('DUPLICATE_SURFACE_ID')
+  })
+
+  it('collecte les clés de message de l\'activité', () => {
+    const r = validateManifest(activity({ label: '@a.title', description: '@a.blurb' }))
+    if (!r.ok) throw new Error('refusé')
+    expect(collectMessageKeys(r.manifest)).toEqual(expect.arrayContaining(['a.title', 'a.blurb']))
+  })
+
+  it('realtime accepté avec activity, refusé sans', () => {
+    expect(validateManifest({ ...activity(), permissions: { realtime: true } }).ok).toBe(true)
+    expect(issues({ ...base(), permissions: { realtime: true } })).toContain('REALTIME_WITHOUT_ACTIVITY')
+  })
+})
+
 describe('points d entrée, aucune remontée de chemin', () => {
   it.each([
     '../../etc/passwd.js',

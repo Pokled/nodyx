@@ -1,0 +1,248 @@
+<script lang="ts">
+	// Monte une ACTIVITÉ (surface d'extension `type: "activity"`) en overlay
+	// plein écran dans un canal vocal.
+	//
+	// Le bundle applicatif (le jeu) est servi PAR L'INSTANCE elle-même, depuis
+	// `/api/v1/extensions/<id>/<version>/app/<entry>` (téléchargé et vérifié à
+	// l'installation) : même origine que ce frontend, aucune dépendance externe
+	// au runtime. Cf SPECS/NODYX_ACTIVITIES_CDC.md §2.
+	//
+	// Différences avec ExtensionSurface :
+	//   - `sandbox="allow-scripts allow-same-origin"` : Godot a besoin de
+	//     `allow-same-origin` (IndexedDB). Le `sandbox` bloque quand même nav du
+	//     top, popups, alert(), formulaires, téléchargements.
+	//   - aucune session, aucun jeton : l'identité vient des props
+	//   - l'hôte relaie le temps-réel via le socket AUTHENTIFIÉ de la page, et
+	//     seulement dans `voice:<channelId>` (cf CDC §3)
+	//
+	// Sécurité : le `channelId` est fixé par le parent, jamais fourni par
+	// l'activité ; le serveur re-vérifie l'appartenance à la room ; le `from` des
+	// messages est estampillé serveur ; le bundle servi est épinglé par sha256.
+
+	import { onMount, onDestroy } from 'svelte'
+	import { browser } from '$app/environment'
+	import { portal } from '$lib/actions/portal'
+	import { t } from '$lib/i18n'
+	import {
+		buildActivityBootPayload, createActivityHostHandler,
+		type ActivityMember,
+	} from '$lib/extensions/host'
+
+	const tFn = $derived($t)
+
+	interface Props {
+		activityId: string
+		version:    string
+		/** Chemin relatif servi par l'instance : /api/v1/extensions/<id>/<version>/app/<entry> */
+		appUrl:     string
+		label:      string
+		/** Le canal vocal rejoint. Lié par le parent, jamais par l'activité. */
+		channelId:  string
+		socket:     any
+		userId:     string
+		username:   string
+		userAvatar?: string | null
+		/** Roster du canal vocal, dérivé par le parent. */
+		members?:   ActivityMember[]
+		locale?:    string
+		theme?:     Record<string, string>
+		onclose?:   () => void
+	}
+
+	let {
+		activityId, version, appUrl, label, channelId, socket,
+		userId, username, userAvatar = null,
+		members = [], locale = 'fr', theme = {},
+		onclose = () => {},
+	}: Props = $props()
+
+	// Le bundle est servi sur notre propre origine.
+	const activityOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+	const originHost = (() => { try { return new URL(activityOrigin).host } catch { return '' } })()
+
+	let frame:  HTMLIFrameElement | null = $state(null)
+	let status: 'loading' | 'ready' | 'error' = $state('loading')
+	let channel: MessageChannel | null = null
+	let bootTimer: ReturnType<typeof setTimeout> | null = null
+	/** userIds présents au dernier envoi, pour diffuser des deltas de roster. */
+	let sentMemberIds = new Set<string>()
+
+	function toGuest(msg: Record<string, unknown>) {
+		channel?.port1.postMessage(msg)
+	}
+
+	// ── Le pont : messages de l'activité -> émissions socket ─────────────────
+	const handle = createActivityHostHandler({
+		room: {
+			send: (payload, { to }) => {
+				socket?.emit('activity:send', { channelId, to, payload })
+			},
+			snapshot: (blob) => {
+				socket?.emit('activity:snapshot', { channelId, blob })
+			},
+			requestSync: () => {
+				socket?.emit('activity:sync_request', { channelId })
+			},
+		},
+		toast: (message) => { console.info('[activity]', activityId, message) },
+	})
+
+	// ── Socket -> port de l'activité ────────────────────────────────────────
+	function onActivityMsg(d: { from?: string; payload?: unknown }) {
+		if (status !== 'ready') return
+		toGuest({ event: 'msg', from: d.from, payload: d.payload })
+	}
+	function onActivitySnap(d: { from?: string; blob?: string }) {
+		if (status !== 'ready') return
+		toGuest({ event: 'snap', from: d.from, blob: d.blob })
+	}
+	function onActivitySync(d: { from?: string }) {
+		if (status !== 'ready') return
+		toGuest({ event: 'sync', from: d.from })
+	}
+	function onVoiceSpeaking(d: { userId?: string; speaking?: boolean }) {
+		if (status !== 'ready') return
+		toGuest({ event: 'speaking', userId: d.userId, speaking: !!d.speaking })
+	}
+
+	// Deltas de roster : on n'envoie plus jamais le roster complet après le boot
+	// (un reset effacerait l'état "prêt" côté activité). Uniquement join / leave.
+	$effect(() => {
+		const current = new Map(members.map((m) => [m.id, m]))
+		if (status !== 'ready') { return }
+		for (const [id, m] of current) {
+			if (!sentMemberIds.has(id)) toGuest({ event: 'member_join', member: m })
+		}
+		for (const id of sentMemberIds) {
+			if (!current.has(id)) toGuest({ event: 'member_leave', member: { id } })
+		}
+		sentMemberIds = new Set(current.keys())
+	})
+
+	function onWindowMessage(e: MessageEvent) {
+		if (!frame || e.source !== frame.contentWindow) return
+		// L'iframe est same-origin (bundle servi par l'instance) : `e.origin` est
+		// vérifiable et vaut notre propre origine.
+		if (e.origin !== activityOrigin) return
+		if (e.data?.type !== 'nodyx:hello') return
+
+		if (status === 'error') status = 'loading'
+		channel?.port1.close()
+
+		channel = new MessageChannel()
+		channel.port1.onmessage = (ev) => {
+			if (ev.data?.event === 'ready') { status = 'ready'; clearBootTimer(); return }
+			if (ev.data?.event === 'error') { status = 'error'; clearBootTimer(); return }
+			handle(ev.data)
+		}
+		channel.port1.start()
+
+		sentMemberIds = new Set(members.map((m) => m.id))
+		const boot = buildActivityBootPayload(activityId, version, {
+			user:    { id: userId, name: username, avatar: userAvatar ?? '' },
+			members: $state.snapshot(members) as ActivityMember[],
+			locale,
+			theme:   $state.snapshot(theme) as Record<string, string>,
+		})
+		frame.contentWindow?.postMessage(boot, activityOrigin, [channel.port2])
+	}
+
+	function clearBootTimer() {
+		if (bootTimer) { clearTimeout(bootTimer); bootTimer = null }
+	}
+
+	onMount(() => {
+		if (!browser) return
+		if (!activityOrigin) { status = 'error'; return }
+		window.addEventListener('message', onWindowMessage)
+		bootTimer = setTimeout(() => { if (status === 'loading') status = 'error' }, 15000)
+		socket?.on('activity:msg',          onActivityMsg)
+		socket?.on('activity:snap',         onActivitySnap)
+		socket?.on('activity:sync_request', onActivitySync)
+		socket?.on('voice:speaking',        onVoiceSpeaking)
+	})
+
+	onDestroy(() => {
+		if (!browser) return
+		window.removeEventListener('message', onWindowMessage)
+		clearBootTimer()
+		channel?.port1.close()
+		socket?.off('activity:msg',          onActivityMsg)
+		socket?.off('activity:snap',         onActivitySnap)
+		socket?.off('activity:sync_request', onActivitySync)
+		socket?.off('voice:speaking',        onVoiceSpeaking)
+	})
+</script>
+
+<div
+	use:portal
+	role="dialog"
+	aria-label={label}
+	tabindex="-1"
+	class="act-overlay"
+>
+	<!-- Chrome dessiné par l'HÔTE : une activité ne peut ni l'imiter ni le
+	     masquer. Sans lui, un faux écran de connexion serait indiscernable. -->
+	<div class="act-bar">
+		<span class="act-marker" aria-label={tFn('activity.marker_aria', { name: label })}>
+			<span class="act-dot" aria-hidden="true"></span>
+			<span class="act-name">{label}</span>
+			<span class="act-origin">{originHost}</span>
+		</span>
+		<button class="act-leave" onclick={onclose}>{tFn('activity.leave')}</button>
+	</div>
+
+	{#if status === 'error'}
+		<div class="act-msg act-err">{tFn('activity.failed', { name: label })}</div>
+	{:else}
+		<iframe
+			bind:this={frame}
+			src={appUrl}
+			title={label}
+			sandbox="allow-scripts allow-same-origin"
+			allow="fullscreen"
+			referrerpolicy="no-referrer"
+			class="act-frame"
+			class:act-hidden={status !== 'ready'}
+		></iframe>
+		{#if status === 'loading'}
+			<div class="act-msg">{tFn('activity.loading')}</div>
+		{/if}
+	{/if}
+</div>
+
+<style>
+	.act-overlay {
+		position: fixed; inset: 0; z-index: 9999;
+		background: #07070c;
+		display: flex; flex-direction: column; overflow: hidden;
+	}
+	.act-bar {
+		flex-shrink: 0; height: 34px;
+		display: flex; align-items: center; justify-content: space-between;
+		padding: 0 10px;
+		background: #0d0d14; border-bottom: 1px solid rgba(255,255,255,0.06);
+	}
+	.act-marker {
+		display: flex; align-items: center; gap: 8px;
+		font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+		color: var(--nx-text-muted, #6b7280); min-width: 0;
+	}
+	.act-dot { width: 5px; height: 5px; border-radius: 999px; background: #73cc8c; flex: none; }
+	.act-name { color: var(--nx-text, #cbd5e1); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.act-origin { color: #4b5563; text-transform: none; letter-spacing: 0; }
+	.act-leave {
+		flex: none; padding: 4px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
+		color: #cbd5e1; background: rgba(255,255,255,0.06);
+		border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+	}
+	.act-leave:hover { background: rgba(255,255,255,0.12); }
+	.act-frame { flex: 1; width: 100%; border: 0; display: block; background: #000; }
+	.act-hidden { visibility: hidden; }
+	.act-msg {
+		position: absolute; inset: 34px 0 0 0;
+		display: flex; align-items: center; justify-content: center;
+		font-size: 13px; color: var(--nx-text-muted, #6b7280);
+	}
+	.act-err { color: #fca5a5; }
+</style>

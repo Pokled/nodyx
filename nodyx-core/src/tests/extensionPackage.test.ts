@@ -64,6 +64,22 @@ describe('paquet valide', () => {
     if (!r.ok) throw new Error('refusé à tort')
     expect(r.pkg.privateNetworkHosts).toEqual(['10.0.0.5'])
   })
+
+  it('accepte une activité SANS aucun JS (le code vit dans le bundle app)', () => {
+    const zip = new AdmZip()
+    zip.addFile('manifest.json', Buffer.from(JSON.stringify({
+      ...MANIFEST,
+      icon: 'icon.svg',
+      surfaces: [{ type: 'activity', id: 'battle', entry: 'index.html', label: '@label' }],
+      app: { url: 'https://cdn.example/app.zip', sha256: 'b'.repeat(64), bytes: 12345 },
+      permissions: { identity: ['username'], realtime: true },
+    })))
+    zip.addFile('i18n/en.json', Buffer.from(JSON.stringify(EN)))
+    zip.addFile('icon.svg', Buffer.from(ICON))
+    const r = readExtensionPackage(zip.toBuffer())
+    if (!r.ok) throw new Error('refusé à tort : ' + JSON.stringify(r.issues, null, 2))
+    expect(r.pkg.files.map(f => f.path).sort()).toEqual(['i18n/en.json', 'icon.svg', 'manifest.json'])
+  })
 })
 
 describe('structure du paquet', () => {

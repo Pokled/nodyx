@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { t } from '$lib/i18n';
-	import Table        from '$lib/components/Table.svelte';
-	import NodyxCanvas  from '$lib/components/NodyxCanvas.svelte';
-	import VoiceJukebox from '$lib/components/VoiceJukebox.svelte';
+	import { t, locale } from '$lib/i18n';
+	import Table          from '$lib/components/Table.svelte';
+	import NodyxCanvas    from '$lib/components/NodyxCanvas.svelte';
+	import ActivitySurface from '$lib/components/ActivitySurface.svelte';
+	import VoiceJukebox   from '$lib/components/VoiceJukebox.svelte';
 	import { localScreenStore, remoteScreenStore, screenShareStore } from '$lib/voice';
 	import { openStage, stageOpenStore } from '$lib/stageStore';
 	import StageChat from './StageChat.svelte';
@@ -22,6 +23,7 @@
 		socket = null as Socket | null,
 		userId = '',
 		canvasRecapChannelId = null as string | null,
+		activities = [] as ActivityEntry[],
 		onjoinCurrentVoice,
 	}: {
 		selectedChannel: any;
@@ -33,8 +35,11 @@
 		socket: Socket | null;
 		userId: string;
 		canvasRecapChannelId: string | null;
+		activities?: ActivityEntry[];
 		onjoinCurrentVoice: () => Promise<void>;
 	} = $props();
+
+	type ActivityEntry = { id: string; version: string; surfaceId: string; appUrl: string; label: string };
 
 	const localScreen      = $derived($localScreenStore);
 	const remoteScreens    = $derived($remoteScreenStore);
@@ -156,6 +161,25 @@
 
 	const connected = $derived(voiceState.active && voiceState.channelId === selectedChannel.id);
 	const peerCount = $derived(connected ? voiceState.peers.length + 1 : 0);
+
+	// ── Activité (jeu dans le canal vocal) ───────────────────────────────────
+	// v1 : on ouvre la première activité installée. Un sélecteur viendra si
+	// plusieurs sont installées.
+	let showActivity = $state(false);
+	const activity = $derived(activities[0] ?? null);
+	// Le roster de l'activité = les membres du canal vocal, avec leur siège.
+	// L'arbitre (host) est déterministe côté activité : le plus petit seatIndex.
+	const activityMembers = $derived(
+		connected
+			? [
+				{ id: userId, name: myUsername, avatar_url: myAvatar ?? '', seatIndex: voiceState.mySeatIndex ?? 0, speaking: !!voiceState.mySpeaking },
+				...voiceState.peers.map((p: any) => ({
+					id: p.userId, name: p.username, avatar_url: p.avatar ?? '', seatIndex: p.seatIndex ?? 99, speaking: false,
+				})),
+			]
+			: [],
+	);
+	$effect(() => { if (!connected) showActivity = false; });
 
 	// ⚠ Ne JAMAIS réassigner srcObject sans avoir vérifié qu'il change vraiment.
 	// Assigner srcObject déclenche l'algorithme de chargement du média MÊME quand on
@@ -299,13 +323,26 @@
 		<span>Fichiers</span>
 	</button>
 
-	<!-- Jeux (stub) -->
-	<button disabled title={tFn('voice_room.games_soon')}
-		class="toolbar-btn opacity-25 cursor-not-allowed">
-		<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"/>
-		</svg>
-		<span>Jeux</span>
+	<!-- Jeux (activité) -->
+	<button
+		onclick={() => { if (activity && connected) showActivity = !showActivity; }}
+		disabled={!activity || !connected}
+		class="toolbar-btn {showActivity ? 'active-emerald' : ''} {!activity || !connected ? 'opacity-35' : ''}"
+		title={!activity
+			? tFn('voice_room.games_none')
+			: !connected ? tFn('voice_room.games_join_first') : tFn('voice_room.games')}
+	>
+		{#if showActivity}
+			<span class="relative flex w-1.5 h-1.5 shrink-0">
+				<span class="absolute inline-flex h-full w-full rounded-full bg-emerald-400/60 animate-ping"></span>
+				<span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+			</span>
+		{:else}
+			<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"/>
+			</svg>
+		{/if}
+		<span>{tFn('voice_room.games')}</span>
 	</button>
 </div>
 
@@ -493,6 +530,24 @@
 		username={myUsername}
 		userAvatar={myAvatar}
 		onclose={() => showCanvas = false}
+	/>
+{/if}
+
+<!-- ── Activité (jeu) overlay ──────────────────────────────────────────────── -->
+{#if showActivity && activity && connected && voiceState.channelId}
+	<ActivitySurface
+		activityId={activity.id}
+		version={activity.version}
+		appUrl={activity.appUrl}
+		label={activity.label}
+		channelId={voiceState.channelId}
+		socket={socket}
+		{userId}
+		username={myUsername}
+		userAvatar={myAvatar}
+		members={activityMembers}
+		locale={$locale}
+		onclose={() => showActivity = false}
 	/>
 {/if}
 

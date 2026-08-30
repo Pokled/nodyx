@@ -290,3 +290,90 @@ export function frameUrl(surface: HostSurface, origin = ''): string {
 	const q = encodeURIComponent(surface.surface)
 	return `${origin}/api/v1/extensions/${surface.extensionId}/${surface.version}/frame?surface=${q}`
 }
+
+// ── Activités ────────────────────────────────────────────────────────────────
+//
+// Une surface `activity` est une iframe cross-origin montée dans un canal
+// vocal. Elle n'a ni jeton ni session : l'hôte relaie pour elle, via le socket
+// authentifié de la page, uniquement dans la room `voice:<channelId>` que
+// l'utilisateur a rejointe (cf SPECS/NODYX_ACTIVITIES_CDC.md §3).
+//
+// Le pont est plus petit que celui des widgets : tous les messages de l'activité
+// sont des notifications (aucune réponse), et il n'y a que quatre types.
+
+/** Plafonds de garde côté hôte, avant l'émission socket. Le serveur re-plafonne. */
+const ACTIVITY_MSG_MAX  = 8 * 1024
+const ACTIVITY_SNAP_MAX = 16 * 1024
+
+export interface ActivityMember {
+	id:         string
+	name:       string
+	avatar_url: string
+	seatIndex:  number
+	speaking:   boolean
+}
+
+export interface ActivityBootPayload {
+	p:        typeof PROTOCOL
+	type:     'nodyx:activity-boot'
+	activity: string
+	version:  string
+	user:     { id: string; name: string; avatar: string }
+	members:  ActivityMember[]
+	locale:   string
+	theme:    Record<string, string>
+}
+
+export interface ActivityActions {
+	room: {
+		send:        (payload: unknown, opts: { to: string; reliable: boolean }) => void
+		snapshot:    (blob: string) => void
+		requestSync: () => void
+	}
+	toast?: (message: string) => void
+}
+
+export function buildActivityBootPayload(
+	activityId: string,
+	version: string,
+	ctx: Omit<ActivityBootPayload, 'p' | 'type' | 'activity' | 'version'>,
+): ActivityBootPayload {
+	return { p: PROTOCOL, type: 'nodyx:activity-boot', activity: activityId, version, ...ctx }
+}
+
+/**
+ * Pont hôte d'une activité. Toutes les entrées sont des notifications : la
+ * fonction ne renvoie rien. Gardes ceinture (payload sérialisable + borné) en
+ * plus du re-plafonnement serveur.
+ */
+export function createActivityHostHandler(actions: ActivityActions) {
+	return function handle(raw: unknown): void {
+		if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return
+		const m = raw as Record<string, unknown>
+		if (m.p !== PROTOCOL || typeof m.type !== 'string') return
+
+		switch (m.type) {
+			case 'room.send': {
+				let serialized: string
+				try { serialized = JSON.stringify(m.payload ?? null) } catch { return }
+				if (serialized.length > ACTIVITY_MSG_MAX) return
+				actions.room.send(m.payload, {
+					to:       typeof m.to === 'string' ? m.to : '',
+					reliable: m.reliable !== false,
+				})
+				return
+			}
+			case 'room.snapshot': {
+				if (typeof m.blob !== 'string' || m.blob.length > ACTIVITY_SNAP_MAX) return
+				actions.room.snapshot(m.blob)
+				return
+			}
+			case 'room.sync':
+				actions.room.requestSync()
+				return
+			case 'ui.toast':
+				if (typeof m.message === 'string') actions.toast?.(m.message.slice(0, 200))
+				return
+		}
+	}
+}

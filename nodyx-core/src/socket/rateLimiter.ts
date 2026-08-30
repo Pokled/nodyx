@@ -41,6 +41,12 @@ export const RATE_RULES: Record<string, RuleConfig[]> = {
   'voice:state':          [{ limit: 5,  windowMs: 2_000  }],
   'jukebox:update':       [{ limit: 5,  windowMs: 1_000  }],
   'jukebox:request_sync': [{ limit: 3,  windowMs: 1_000  }],
+  // Nodyx Activities : le `send` porte le canal `cmd` du jeu (petit, sporadique),
+  // le `snapshot` sa photo de plateau (~6 Hz en match). Bornés pour qu'un client
+  // hostile ne puisse pas saturer le fan-out de la room vocale.
+  'activity:send':         [{ limit: 25, windowMs: 1_000 }, { limit: 120, windowMs: 10_000 }],
+  'activity:snapshot':     [{ limit: 9,  windowMs: 1_000  }],
+  'activity:sync_request': [{ limit: 3,  windowMs: 5_000  }],
   'voice:ping':           [{ limit: 3,  windowMs: 1_000  }],
   'voice:stats':          [{ limit: 10, windowMs: 1_000  }],
   // Signaling SFU (voiceSfu.ts) : requête/réponse, cadence humaine attendue

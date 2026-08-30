@@ -26,6 +26,7 @@ export function requestedCapabilities(m: ExtensionManifest): string[] {
   if (p.storage?.instance_write) caps.add('storage.instance.write')
   for (const scope of p.core ?? []) caps.add(`core:${scope}`)
   for (const host of Object.keys(p.network ?? {})) caps.add(`net:${host}`)
+  if (p.realtime) caps.add('realtime')
 
   return [...caps].sort()
 }
@@ -34,14 +35,16 @@ export function requestedCapabilities(m: ExtensionManifest): string[] {
  * Ce qui exige un consentement DISTINCT, montré à part sur l'écran de
  * permissions plutôt que noyé dans la liste ordinaire.
  *
- * Deux familles : l'écriture sur les données partagées de l'instance, et les
- * appels vers un réseau privé. La seconde existe parce qu'une instance en
- * intranet est un usage normal, pas une anomalie : on ne l'interdit pas, on la
- * fait remarquer.
+ * Trois familles : l'écriture sur les données partagées de l'instance, les
+ * appels vers un réseau privé, et le temps-réel d'activité. La deuxième existe
+ * parce qu'une instance en intranet est un usage normal, pas une anomalie : on
+ * ne l'interdit pas, on la fait remarquer. La troisième parce qu'une activité
+ * charge du code tiers ET diffuse dans le canal vocal.
  */
 export function sensitiveCapabilities(m: ExtensionManifest): string[] {
   const out: string[] = []
   if (m.permissions?.storage?.instance_write) out.push('storage.instance.write')
+  if (m.permissions?.realtime)                out.push('realtime')
   for (const host of Object.keys(m.permissions?.network ?? {})) {
     if (classifyHost(host) === 'private') out.push(`net:${host}`)
   }

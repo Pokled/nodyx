@@ -141,7 +141,10 @@ export function readExtensionPackage(archive: Buffer): PackageResult {
   const { manifest, messageKeys, privateNetworkHosts } = validated
 
   // ── Points d'entrée et icône ────────────────────────────────────────────
+  // Une surface `activity` n'a pas d'`entry` empaqueté : son code est servi
+  // depuis l'URL déclarée (cf NODYX_ACTIVITIES_CDC.md §2.2).
   for (const [i, s] of manifest.surfaces.entries()) {
+    if (s.type === 'activity') continue
     if (!byPath.has(s.entry)) {
       issues.push(fail('ENTRY_MISSING', `le point d'entrée "${s.entry}" est déclaré mais absent de l'archive`, `surfaces[${i}].entry`))
     }

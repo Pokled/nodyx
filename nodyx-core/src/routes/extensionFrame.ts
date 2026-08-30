@@ -12,7 +12,7 @@ import path from 'path'
 import { rateLimit } from '../middleware/rateLimit'
 import { defaultExtensionsDir } from '../extensions/installer'
 import { isSafePackagePath } from '../extensions/manifest'
-import { PACKAGE } from '../extensions/limits'
+import { PACKAGE, APP_BUNDLE } from '../extensions/limits'
 
 /** Types servis, déterminés par le serveur, jamais devinés depuis le contenu. */
 const CONTENT_TYPES: Record<string, string> = {
@@ -26,6 +26,59 @@ const CONTENT_TYPES: Record<string, string> = {
   '.webp':  'image/webp',
   '.woff2': 'font/woff2',
   '.md':    'text/markdown; charset=utf-8',
+}
+
+/** Types servis pour un bundle applicatif d'activité (runtime lourd : wasm, etc.). */
+const APP_CONTENT_TYPES: Record<string, string> = {
+  '.html':  'text/html; charset=utf-8',
+  '.htm':   'text/html; charset=utf-8',
+  '.js':    'application/javascript; charset=utf-8',
+  '.mjs':   'application/javascript; charset=utf-8',
+  '.css':   'text/css; charset=utf-8',
+  '.json':  'application/json; charset=utf-8',
+  '.wasm':  'application/wasm',
+  '.pck':   'application/octet-stream',
+  '.data':  'application/octet-stream',
+  '.png':   'image/png',
+  '.jpg':   'image/jpeg',
+  '.jpeg':  'image/jpeg',
+  '.webp':  'image/webp',
+  '.gif':   'image/gif',
+  '.svg':   'image/svg+xml',
+  '.ico':   'image/x-icon',
+  '.woff2': 'font/woff2',
+  '.ttf':   'font/ttf',
+  '.otf':   'font/otf',
+  '.mp3':   'audio/mpeg',
+  '.ogg':   'audio/ogg',
+  '.wav':   'audio/wav',
+  '.txt':   'text/plain; charset=utf-8',
+  '.map':   'application/json; charset=utf-8',
+}
+
+/**
+ * CSP du document d'entrée d'un bundle d'activité.
+ *
+ * Servi sur l'origine de l'instance, encadré par le frontend de l'instance
+ * (`frame-ancestors 'self'`). `'wasm-unsafe-eval'` : le chargeur Godot 4.7 en a
+ * besoin. `connect-src 'self'` : le bundle ne peut appeler QUE l'instance — le
+ * relais temps-réel passe par le socket de la page, pas par un `fetch` du jeu.
+ */
+export function appDocumentCsp(): string {
+  return [
+    `default-src 'none'`,
+    `script-src 'self' 'wasm-unsafe-eval'`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' data: blob:`,
+    `media-src 'self' blob:`,
+    `font-src 'self' data:`,
+    `connect-src 'self'`,
+    `worker-src 'self' blob:`,
+    `frame-src 'none'`,
+    `frame-ancestors 'self'`,
+    `form-action 'none'`,
+    `base-uri 'none'`,
+  ].join('; ')
 }
 
 const RE_ID      = /^[a-z][a-z0-9-]{2,38}$/
@@ -213,6 +266,51 @@ export async function extensionFrameRoutes(app: FastifyInstance) {
     // Un SVG est assaini à l'installation, mais il est servi sur notre origine
     // et affiché hors du bac à sable : on le sert inerte, par principe.
     if (ext === '.svg') r.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'")
+
+    return r.send(content)
+  })
+
+  // ── GET /extensions/:id/:version/app/* ─────────────────────────────────────
+  // Le bundle applicatif d'une activité (runtime lourd hors `.nyx`), téléchargé
+  // et vérifié à l'installation, servi ensuite par l'instance elle-même.
+  // Le document d'entrée (.html) porte une CSP dédiée ; il est encadré par le
+  // frontend de l'instance dans un overlay de canal vocal.
+  app.get('/extensions/:id/:version/app/*', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id, version } = request.params as { id: string; version: string }
+    const rel = ((request.params as Record<string, string>)['*'] ?? '').replace(/\\/g, '/')
+
+    if (!RE_ID.test(id) || !RE_VERSION.test(version) || !isSafePackagePath(rel)) {
+      return harden(reply).code(400).send({ error: 'Invalid app reference', code: 'INVALID_APP_REF' })
+    }
+
+    const ext = path.extname(rel).toLowerCase()
+    if (!(APP_BUNDLE.allowedExtensions as readonly string[]).includes(ext)) {
+      return harden(reply).code(403).send({ error: 'App file type not served', code: 'APP_TYPE_REFUSED' })
+    }
+
+    const appDir = path.join(root, id, version, 'app')
+    const target = path.resolve(appDir, rel)
+    if (target !== appDir && !target.startsWith(appDir + path.sep)) {
+      return harden(reply).code(403).send({ error: 'Forbidden', code: 'APP_PATH_ESCAPE' })
+    }
+
+    let content: Buffer
+    try {
+      content = await fs.readFile(target)
+    } catch {
+      return harden(reply).code(404).send({ error: 'App file not found', code: 'APP_FILE_NOT_FOUND' })
+    }
+
+    const r = reply
+      .header('X-Content-Type-Options', 'nosniff')
+      .header('Referrer-Policy', 'no-referrer')
+      .header('Cross-Origin-Resource-Policy', 'same-origin')
+      .header('Content-Type', APP_CONTENT_TYPES[ext] ?? 'application/octet-stream')
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+
+    if (ext === '.html' || ext === '.htm') {
+      r.header('Content-Security-Policy', appDocumentCsp())
+    }
 
     return r.send(content)
   })

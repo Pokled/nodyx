@@ -383,6 +383,30 @@ describe('liste publique', () => {
     expect(r.statusCode).toBe(200)
     expect(JSON.parse(r.body).extensions).toEqual([])
   })
+
+  it('expose une surface activity avec l URL servie par l instance, jamais le champ app', async () => {
+    dbQuery.mockResolvedValue({ rows: [{
+      id: 'kings-race', version: '0.3.0',
+      messages: { en: { label: 'King\'s Race', desc: 'A TD.' }, fr: { label: 'Course aux Rois' } },
+      manifest: {
+        ...MANIFEST, id: 'kings-race', icon: 'icon.svg', label: '@label', description: '@desc',
+        surfaces: [{ type: 'activity', id: 'battle', entry: 'index.html', label: '@label', default_aspect: '16:9' }],
+        app: { url: 'https://github.com/x/y/releases/download/v0.3.0/app.zip', sha256: 'a'.repeat(64), bytes: 54000000 },
+        permissions: { identity: ['username'], realtime: true },
+      },
+    }] })
+    const e = JSON.parse((await publicList('fr')).body).extensions[0]
+    expect(e.surfaces[0]).toMatchObject({
+      type: 'activity', id: 'battle',
+      appUrl: '/api/v1/extensions/kings-race/0.3.0/app/index.html',
+      label: 'Course aux Rois', aspect: '16:9',
+    })
+    const body = (await publicList()).body
+    // ni la capacité, ni l'URL/empreinte de récupération du bundle
+    expect(body).not.toContain('realtime')
+    expect(body).not.toContain('github.com')
+    expect(body).not.toContain('sha256')
+  })
 })
 
 // ── Proxy reseau ───────────────────────────────────────────────────────────

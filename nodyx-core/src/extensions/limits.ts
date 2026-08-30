@@ -36,6 +36,23 @@ export const STORAGE = {
   maxQuotaBytes:    64 * 1024 * 1024,
 } as const
 
+/**
+ * Bundle applicatif d'une activité (cf SPECS/NODYX_ACTIVITIES_CDC.md §2).
+ * Le runtime lourd (wasm, etc.) qui ne rentre pas dans le `.nyx`, téléchargé
+ * une fois à l'installation, servi ensuite par l'instance.
+ */
+export const APP_BUNDLE = {
+  maxBytes:    128 * 1024 * 1024,
+  maxFiles:    500,
+  maxFileBytes: 96 * 1024 * 1024,   // un .wasm de moteur peut être gros
+  /** Types servables, jamais exécutables côté serveur. */
+  allowedExtensions: [
+    '.html', '.htm', '.js', '.mjs', '.css', '.json', '.wasm', '.pck', '.data',
+    '.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg', '.ico',
+    '.woff2', '.ttf', '.otf', '.mp3', '.ogg', '.wav', '.txt', '.map',
+  ] as const,
+} as const
+
 /** Proxy réseau */
 export const NETWORK = {
   maxRedirects:      3,

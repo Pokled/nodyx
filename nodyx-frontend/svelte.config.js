@@ -49,6 +49,10 @@ const config = {
                     'https://geo.dailymotion.com',
                     'https://w.soundcloud.com',
                     'https://open.spotify.com',
+                    // Nodyx Activities : le bundle d'une activité (jeu dans un
+                    // canal vocal) est servi PAR l'instance elle-même sous
+                    // /api/v1/extensions/.../app/ → `'self'` suffit, rien à
+                    // ajouter. SPECS/NODYX_ACTIVITIES_CDC.md §2.
                 ],
                 'object-src':   ['none'],
                 'base-uri':     ['self'],
