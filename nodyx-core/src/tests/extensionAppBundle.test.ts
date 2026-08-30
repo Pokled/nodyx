@@ -13,7 +13,7 @@ import { createHash } from 'crypto'
 import { promises as fs } from 'fs'
 import os from 'os'
 import path from 'path'
-import { fetchAndUnpackAppBundle, extractAppBundleTo } from '../extensions/appBundle'
+import { fetchAndUnpackAppBundle, extractAppBundleTo, resolveGuarded } from '../extensions/appBundle'
 import { validateManifest, type ExtensionManifest } from '../extensions/manifest'
 
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex')
@@ -112,5 +112,23 @@ describe('extractAppBundleTo : défenses', () => {
     const r = await extractAppBundleTo(Buffer.from('pas un zip'), path.join(dir, 'app'))
     expect(r.ok).toBe(false)
     expect(r.issues.map(i => i.code)).toContain('APP_BUNDLE_UNREADABLE')
+  })
+})
+
+describe('resolveGuarded : garde SSRF (redirection incluse)', () => {
+  it('refuse la boucle locale, meme en dev', async () => {
+    await expect(resolveGuarded('127.0.0.1', true)).rejects.toThrow()
+  })
+
+  it('refuse les metadonnees d hebergeur (169.254.169.254)', async () => {
+    await expect(resolveGuarded('169.254.169.254', true)).rejects.toThrow()
+  })
+
+  it('refuse une adresse privee sans accord', async () => {
+    await expect(resolveGuarded('10.0.0.5', false)).rejects.toThrow()
+  })
+
+  it('accepte une adresse privee AVEC accord (instance intranet)', async () => {
+    await expect(resolveGuarded('10.0.0.5', true)).resolves.toBe('10.0.0.5')
   })
 })

@@ -29,48 +29,43 @@ function isSymlink(entry: AdmZip.IZipEntry): boolean {
 }
 
 const DOWNLOAD_TIMEOUT_MS = 60_000
+const MAX_REDIRECTS = 5
 
-/**
- * GET binaire avec épinglage de résolution : la pile appelle NOTRE lookup, qui
- * refuse toute adresse privée / lien local (sauf `allowPrivate`, en dev). Une
- * redirection est refusée : la cible est celle du manifeste, pas une autre.
- */
-export function downloadAppBundle(rawUrl: string, allowPrivate: boolean): Promise<Buffer> {
-  const url = new URL(rawUrl)
+/** Résout un hôte et refuse l'adresse si elle est privée / lien local. */
+export async function resolveGuarded(hostname: string, allowPrivate: boolean): Promise<string> {
+  const { address } = await dns.promises.lookup(hostname, { verbatim: true })
+  const v = addressAllowed(address, allowPrivate)
+  if (!v.ok) {
+    throw Object.assign(new Error(`${hostname} résout vers une adresse refusée (${address})`), { code: 'EBLOCKED' })
+  }
+  return address
+}
+
+/** Un seul GET vers une IP déjà validée, sans suivre de redirection. */
+function rawGet(
+  url: URL, ip: string,
+): Promise<{ status: number; location: string | null; body: Buffer | null }> {
   const mod = url.protocol === 'https:' ? https : http
-
   return new Promise((resolve, reject) => {
     const req = mod.get(
       {
         protocol:   url.protocol,
-        hostname:   url.hostname,
+        host:       ip,                                   // on se connecte à l'IP validée
         port:       url.port || (url.protocol === 'https:' ? 443 : 80),
         path:       url.pathname + url.search,
-        servername: url.hostname,
+        headers:    { host: url.host },                   // le vrai hôte pour le serveur
+        servername: url.hostname,                         // SNI correct
         timeout:    DOWNLOAD_TIMEOUT_MS,
-        lookup: ((host: string, _opts: unknown, cb: (e: NodeJS.ErrnoException | null, a: string, f: number) => void) => {
-          dns.lookup(host, { all: true, verbatim: true }, (err, addrs) => {
-            if (err) return cb(err, '', 4)
-            const list = Array.isArray(addrs) ? addrs : []
-            if (!list.length) return cb(Object.assign(new Error('résolution vide'), { code: 'ENOTFOUND' }), '', 4)
-            for (const a of list) {
-              if (!addressAllowed(a.address, allowPrivate).ok) {
-                return cb(Object.assign(new Error('adresse refusée (privée ou lien local)'), { code: 'EBLOCKED' }), '', 4)
-              }
-            }
-            cb(null, list[0].address, list[0].family)
-          })
-        }) as unknown as undefined,
       },
       (res) => {
-        const code = res.statusCode ?? 0
-        if (code >= 300 && code < 400) {
+        const status = res.statusCode ?? 0
+        if (status >= 300 && status < 400 && res.headers.location) {
           res.destroy()
-          return reject(Object.assign(new Error('redirection refusée'), { code: 'EREDIRECT' }))
+          return resolve({ status, location: res.headers.location, body: null })
         }
-        if (code !== 200) {
+        if (status !== 200) {
           res.destroy()
-          return reject(new Error(`réponse HTTP ${code}`))
+          return reject(new Error(`réponse HTTP ${status}`))
         }
         let size = 0
         const chunks: Buffer[] = []
@@ -83,13 +78,34 @@ export function downloadAppBundle(rawUrl: string, allowPrivate: boolean): Promis
           }
           chunks.push(c)
         })
-        res.on('end', () => resolve(Buffer.concat(chunks)))
+        res.on('end', () => resolve({ status, location: null, body: Buffer.concat(chunks) }))
         res.on('error', reject)
       },
     )
     req.on('timeout', () => req.destroy(Object.assign(new Error('délai dépassé'), { code: 'ETIMEDOUT' })))
     req.on('error', reject)
   })
+}
+
+/**
+ * GET binaire avec épinglage de résolution : chaque hôte est résolu et son
+ * adresse validée AVANT la connexion (refus des adresses privées / lien local,
+ * sauf `allowPrivate` en dev). Les redirections sont suivies, chacune
+ * re-validée intégralement (une redirection est une nouvelle cible).
+ */
+export async function downloadAppBundle(rawUrl: string, allowPrivate: boolean): Promise<Buffer> {
+  let url = new URL(rawUrl)
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      throw new Error(`schéma non supporté : ${url.protocol}`)
+    }
+    const ip = await resolveGuarded(url.hostname, allowPrivate)
+    const res = await rawGet(url, ip)
+    if (res.body) return res.body
+    if (res.location) { url = new URL(res.location, url); continue }
+    throw new Error(`réponse HTTP ${res.status}`)
+  }
+  throw Object.assign(new Error('trop de redirections'), { code: 'EREDIRECT' })
 }
 
 /** Décompresse un bundle vérifié dans `destDir`, en posant les mêmes gardes que le `.nyx`. */
