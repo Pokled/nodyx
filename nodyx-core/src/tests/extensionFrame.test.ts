@@ -215,7 +215,7 @@ describe('bundle applicatif (surface activity)', () => {
     expect(csp).toContain("connect-src 'self'")
     expect(csp).toContain("frame-ancestors 'self'")
     // Le document est revalidé pour qu'un ajustement de CSP prenne effet.
-    expect(r.headers['cache-control']).toBe('no-cache')
+    expect(r.headers['cache-control']).toBe('no-store')
   })
 
   it('sert le wasm avec le bon type et un cache long', async () => {

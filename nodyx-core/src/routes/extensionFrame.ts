@@ -312,10 +312,11 @@ export async function extensionFrameRoutes(app: FastifyInstance) {
       .header('Referrer-Policy', 'no-referrer')
       .header('Cross-Origin-Resource-Policy', 'same-origin')
       .header('Content-Type', APP_CONTENT_TYPES[ext] ?? 'application/octet-stream')
-      // Le document d'entrée porte la CSP dans l'en-tête : on le revalide pour
-      // qu'un ajustement serveur prenne effet sans purge de cache. Le reste du
-      // bundle est figé par version (le chemin porte la version).
-      .header('Cache-Control', isDoc ? 'no-cache' : 'public, max-age=31536000, immutable')
+      // Le document d'entrée porte la CSP dans l'en-tête : `no-store` pour qu'un
+      // ajustement serveur prenne effet immédiatement (un 304 réutiliserait les
+      // en-têtes en cache, donc l'ancienne CSP). Le reste du bundle est figé par
+      // version (le chemin porte la version).
+      .header('Cache-Control', isDoc ? 'no-store' : 'public, max-age=31536000, immutable')
 
     if (isDoc) {
       r.header('Content-Security-Policy', appDocumentCsp())
