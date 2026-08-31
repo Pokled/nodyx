@@ -329,7 +329,11 @@
 
 	<!-- Jeux (galerie d'activités) -->
 	<button
-		onclick={() => { if (activities.length && connected) showGames = true; }}
+		onclick={() => {
+			if (!activities.length || !connected) return;
+			showGames = !showGames;
+			if (!showGames) selectedActivity = null;
+		}}
 		disabled={!activities.length || !connected}
 		class="toolbar-btn {showGames ? 'active-emerald' : ''} {!activities.length || !connected ? 'opacity-35' : ''}"
 		title={!activities.length
@@ -480,17 +484,44 @@
 	></button>
 {/if}
 
-<!-- ── Stage (participants) ────────────────────────────────────────────────── -->
+<!-- ── Zone de contenu : participants, OU la galerie/le jeu (entre les sidebars,
+     avec un bouton plein écran) quand « Jeux » est ouvert. ─────────────────── -->
 <div class="flex-1 overflow-hidden">
-	<Table
-		channelName={selectedChannel.name}
-		channelId={selectedChannel.id}
-		me={{ username: myUsername, avatar: myAvatar }}
-		{token}
-		joined={voiceState.active && voiceState.channelId === selectedChannel.id}
-		onjoin={onjoinCurrentVoice}
-		socket={socket}
-	/>
+	{#if showGames && connected && !selectedActivity}
+		<ActivityGallery
+			activities={activities}
+			onselect={(a) => selectedActivity = a}
+			onclose={() => showGames = false}
+		/>
+	{:else if showGames && selectedActivity && connected && voiceState.channelId}
+		<ActivitySurface
+			activityId={selectedActivity.id}
+			surfaceId={selectedActivity.surfaceId}
+			version={selectedActivity.version}
+			appUrl={selectedActivity.appUrl}
+			label={selectedActivity.label}
+			channelId={voiceState.channelId}
+			socket={socket}
+			{token}
+			{userId}
+			username={myUsername}
+			userAvatar={myAvatar}
+			members={activityMembers}
+			locale={$locale}
+			onclose={() => selectedActivity = null}
+			onexit={() => { selectedActivity = null; showGames = false; }}
+		/>
+	{:else}
+		<Table
+			channelName={selectedChannel.name}
+			channelId={selectedChannel.id}
+			me={{ username: myUsername, avatar: myAvatar }}
+			{token}
+			joined={voiceState.active && voiceState.channelId === selectedChannel.id}
+			onjoin={onjoinCurrentVoice}
+			socket={socket}
+		/>
+	{/if}
 </div>
 
 </div><!-- /colonne contenu vocal -->
@@ -534,33 +565,6 @@
 		username={myUsername}
 		userAvatar={myAvatar}
 		onclose={() => showCanvas = false}
-	/>
-{/if}
-
-<!-- ── Jeux : galerie puis activité, en overlay plein écran ─────────────────── -->
-{#if showGames && connected && !selectedActivity}
-	<ActivityGallery
-		activities={activities}
-		onselect={(a) => selectedActivity = a}
-		onclose={() => showGames = false}
-	/>
-{/if}
-{#if showGames && selectedActivity && connected && voiceState.channelId}
-	<ActivitySurface
-		activityId={selectedActivity.id}
-		surfaceId={selectedActivity.surfaceId}
-		version={selectedActivity.version}
-		appUrl={selectedActivity.appUrl}
-		label={selectedActivity.label}
-		channelId={voiceState.channelId}
-		socket={socket}
-		{token}
-		{userId}
-		username={myUsername}
-		userAvatar={myAvatar}
-		members={activityMembers}
-		locale={$locale}
-		onclose={() => selectedActivity = null}
 	/>
 {/if}
 

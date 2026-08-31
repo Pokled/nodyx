@@ -21,7 +21,6 @@
 
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/environment'
-	import { portal } from '$lib/actions/portal'
 	import { t } from '$lib/i18n'
 	import {
 		buildActivityBootPayload, createActivityHostHandler,
@@ -51,15 +50,33 @@
 		members?:   ActivityMember[]
 		locale?:    string
 		theme?:     Record<string, string>
+		/** Retour à la galerie des jeux. */
 		onclose?:   () => void
+		/** Fermer complètement (revenir aux participants du salon). */
+		onexit?:    () => void
 	}
 
 	let {
 		activityId, surfaceId, version, appUrl, label, channelId, socket,
 		token = null, userId, username, userAvatar = null,
 		members = [], locale = 'fr', theme = {},
-		onclose = () => {},
+		onclose = () => {}, onexit = () => {},
 	}: Props = $props()
+
+	// ── Plein écran ────────────────────────────────────────────────────────
+	// Par défaut le jeu vit dans la zone de contenu du salon (entre les
+	// sidebars). Un bouton bascule en vrai plein écran (API Fullscreen) : pas
+	// de démontage de l'iframe, donc le jeu ne redémarre pas.
+	let rootEl: HTMLDivElement | null = $state(null)
+	let isFs = $state(false)
+	function onFsChange() { isFs = browser && document.fullscreenElement === rootEl }
+	async function toggleFs() {
+		if (!browser || !rootEl) return
+		try {
+			if (document.fullscreenElement === rootEl) await document.exitFullscreen()
+			else await rootEl.requestFullscreen()
+		} catch { /* refusé (permissions, iframe) : on reste en fenêtré */ }
+	}
 
 	// ── Persistance (records, classement) ──────────────────────────────────
 	// Jeton court frappé par l'hôte (la frame n'a pas de session) et passé dans
@@ -264,6 +281,7 @@
 			void mintToken().then((tok) => { if (status === 'ready') toGuest({ event: 'session', token: tok }) })
 		}, 8 * 60 * 1000)
 		window.addEventListener('message', onWindowMessage)
+		document.addEventListener('fullscreenchange', onFsChange)
 		bootTimer = setTimeout(() => { if (status === 'loading') status = 'error' }, 15000)
 		socket?.on('activity:msg',          onActivityMsg)
 		socket?.on('activity:snap',         onActivitySnap)
@@ -274,6 +292,8 @@
 	onDestroy(() => {
 		if (!browser) return
 		window.removeEventListener('message', onWindowMessage)
+		document.removeEventListener('fullscreenchange', onFsChange)
+		if (document.fullscreenElement === rootEl) document.exitFullscreen().catch(() => {})
 		clearBootTimer()
 		if (mintTimer) clearInterval(mintTimer)
 		channel?.port1.close()
@@ -285,11 +305,10 @@
 </script>
 
 <div
-	use:portal
-	role="dialog"
+	bind:this={rootEl}
 	aria-label={label}
-	tabindex="-1"
-	class="act-overlay"
+	class="act-shell"
+	class:act-fs={isFs}
 >
 	<!-- Chrome dessiné par l'HÔTE : une activité ne peut ni l'imiter ni le
 	     masquer. Sans lui, un faux écran de connexion serait indiscernable. -->
@@ -300,7 +319,14 @@
 			<span class="act-name">{label}</span>
 			<span class="act-origin">{originHost}</span>
 		</span>
-		<button class="act-leave" onclick={onclose}>{tFn('activity.leave')}</button>
+		<button class="act-fsbtn" onclick={toggleFs} title={tFn('voice_room.fullscreen')} aria-label={tFn('voice_room.fullscreen')}>
+			{#if isFs}
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4M9 9H4m0 6h5v5m6-11h5m-5 0V4m0 16v-5m0 0h5"/></svg>
+			{:else}
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+			{/if}
+		</button>
+		<button class="act-leave" onclick={onexit}>{tFn('activity.leave')}</button>
 	</div>
 
 	{#if status === 'error'}
@@ -323,11 +349,15 @@
 </div>
 
 <style>
-	.act-overlay {
-		position: fixed; inset: 0; z-index: 9999;
+	/* Docké : remplit la zone de contenu du salon vocal (entre les sidebars). */
+	.act-shell {
+		position: relative; width: 100%; height: 100%;
 		background: #07070c;
 		display: flex; flex-direction: column; overflow: hidden;
 	}
+	/* Plein écran (API Fullscreen) : le navigateur dimensionne l'élément ;
+	   :fullscreen suffit, .act-fs n'est là que pour l'état des icônes. */
+	.act-shell:fullscreen { width: 100vw; height: 100vh; }
 	.act-bar {
 		flex-shrink: 0; height: 34px;
 		display: flex; align-items: center; justify-content: space-between;
@@ -348,6 +378,12 @@
 	.act-dot { width: 5px; height: 5px; border-radius: 999px; background: #73cc8c; flex: none; }
 	.act-name { color: var(--nx-text, #cbd5e1); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.act-origin { color: #4b5563; text-transform: none; letter-spacing: 0; }
+	.act-fsbtn {
+		flex: none; width: 26px; height: 22px; margin-right: 6px; padding: 3px; cursor: pointer;
+		color: #9aa3b2; background: transparent; border: 0; border-radius: 6px;
+	}
+	.act-fsbtn svg { width: 100%; height: 100%; display: block; }
+	.act-fsbtn:hover { color: #cbd5e1; background: rgba(255,255,255,0.06); }
 	.act-leave {
 		flex: none; padding: 4px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
 		color: #cbd5e1; background: rgba(255,255,255,0.06);

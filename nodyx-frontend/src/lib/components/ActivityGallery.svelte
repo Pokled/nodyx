@@ -7,7 +7,6 @@
 	// /extensions/public, résolues côté serveur. Cf SPECS/NODYX_ACTIVITIES_CDC.md.
 
 	import { onDestroy } from 'svelte'
-	import { portal } from '$lib/actions/portal'
 	import { t } from '$lib/i18n'
 
 	const tFn = $derived($t)
@@ -56,14 +55,9 @@
 		return a.id === hovered ? a.screenshots[shotIndex % a.screenshots.length] : a.screenshots[0]
 	}
 
-	function onKey(e: KeyboardEvent) {
-		if (e.key === 'Escape') onclose()
-	}
 </script>
 
-<svelte:window on:keydown={onKey} />
-
-<div use:portal role="dialog" aria-label={tFn('games.gallery_title')} class="gal-overlay">
+<div aria-label={tFn('games.gallery_title')} class="gal-shell">
 	<div class="gal-bar">
 		<div class="gal-head">
 			<span class="gal-title">{tFn('games.gallery_title')}</span>
@@ -124,8 +118,8 @@
 </div>
 
 <style>
-	.gal-overlay {
-		position: fixed; inset: 0; z-index: 9999;
+	.gal-shell {
+		position: relative; width: 100%; height: 100%;
 		background: #07070c;
 		display: flex; flex-direction: column; overflow: hidden;
 	}
