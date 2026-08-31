@@ -355,9 +355,9 @@
 		background: #07070c;
 		display: flex; flex-direction: column; overflow: hidden;
 	}
-	/* Plein écran (API Fullscreen) : le navigateur dimensionne l'élément ;
-	   :fullscreen suffit, .act-fs n'est là que pour l'état des icônes. */
-	.act-shell:fullscreen { width: 100vw; height: 100vh; }
+	/* En plein écran (API Fullscreen), le navigateur fait du .act-shell le bloc
+	   conteneur = le viewport ; width/height:100% ci-dessus suffisent. .act-fs
+	   n'est là que pour l'état des icônes de la barre. */
 	.act-bar {
 		flex-shrink: 0; height: 34px;
 		display: flex; align-items: center; justify-content: space-between;
