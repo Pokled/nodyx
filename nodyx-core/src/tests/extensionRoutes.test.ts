@@ -444,6 +444,21 @@ describe('liste publique', () => {
     expect(e.icon).toBe('/api/v1/extensions/demo-ext/1.0.0/assets/icon.svg')
   })
 
+  it('resout tagline + captures pour la vitrine, jamais le chemin brut', async () => {
+    dbQuery.mockResolvedValue({ rows: [{
+      id: 'demo-ext', version: '1.0.0',
+      messages: { en: { label: 'Demo', desc: 'A demo.', tag: 'Un jeu de folie' } },
+      manifest: { ...M, tagline: '@tag', screenshots: ['media/cover.png', 'media/shot1.webp'] },
+    }] })
+    const e = JSON.parse((await publicList()).body).extensions[0]
+    expect(e.tagline).toBe('Un jeu de folie')
+    expect(e.screenshots).toEqual([
+      '/api/v1/extensions/demo-ext/1.0.0/assets/media/cover.png',
+      '/api/v1/extensions/demo-ext/1.0.0/assets/media/shot1.webp',
+    ])
+    expect((await publicList()).body).not.toContain('"media/cover.png"')
+  })
+
   it('ne liste que les extensions activees', async () => {
     await publicList()
     expect(dbQuery.mock.calls[0][0]).toContain('WHERE enabled = true')

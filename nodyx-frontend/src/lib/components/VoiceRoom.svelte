@@ -4,6 +4,7 @@
 	import Table          from '$lib/components/Table.svelte';
 	import NodyxCanvas    from '$lib/components/NodyxCanvas.svelte';
 	import ActivitySurface from '$lib/components/ActivitySurface.svelte';
+	import ActivityGallery from '$lib/components/ActivityGallery.svelte';
 	import VoiceJukebox   from '$lib/components/VoiceJukebox.svelte';
 	import { localScreenStore, remoteScreenStore, screenShareStore } from '$lib/voice';
 	import { openStage, stageOpenStore } from '$lib/stageStore';
@@ -39,7 +40,11 @@
 		onjoinCurrentVoice: () => Promise<void>;
 	} = $props();
 
-	type ActivityEntry = { id: string; version: string; surfaceId: string; appUrl: string; label: string };
+	type ActivityEntry = {
+		id: string; version: string; surfaceId: string; appUrl: string; label: string;
+		tagline: string | null; description: string | null; icon: string | null;
+		screenshots: string[]; family: string; author: { name: string; url?: string } | null;
+	};
 
 	const localScreen      = $derived($localScreenStore);
 	const remoteScreens    = $derived($remoteScreenStore);
@@ -162,11 +167,10 @@
 	const connected = $derived(voiceState.active && voiceState.channelId === selectedChannel.id);
 	const peerCount = $derived(connected ? voiceState.peers.length + 1 : 0);
 
-	// ── Activité (jeu dans le canal vocal) ───────────────────────────────────
-	// v1 : on ouvre la première activité installée. Un sélecteur viendra si
-	// plusieurs sont installées.
-	let showActivity = $state(false);
-	const activity = $derived(activities[0] ?? null);
+	// ── Activités (jeux dans le canal vocal) ─────────────────────────────────
+	// Le bouton « Jeux » ouvre la galerie ; on y choisit le jeu à lancer.
+	let showGames = $state(false);
+	let selectedActivity = $state<ActivityEntry | null>(null);
 	// Le roster de l'activité = les membres du canal vocal, avec leur siège.
 	// L'arbitre (host) est déterministe côté activité : le plus petit seatIndex.
 	const activityMembers = $derived(
@@ -179,7 +183,7 @@
 			]
 			: [],
 	);
-	$effect(() => { if (!connected) showActivity = false; });
+	$effect(() => { if (!connected) { showGames = false; selectedActivity = null; } });
 
 	// ⚠ Ne JAMAIS réassigner srcObject sans avoir vérifié qu'il change vraiment.
 	// Assigner srcObject déclenche l'algorithme de chargement du média MÊME quand on
@@ -323,16 +327,16 @@
 		<span>Fichiers</span>
 	</button>
 
-	<!-- Jeux (activité) -->
+	<!-- Jeux (galerie d'activités) -->
 	<button
-		onclick={() => { if (activity && connected) showActivity = !showActivity; }}
-		disabled={!activity || !connected}
-		class="toolbar-btn {showActivity ? 'active-emerald' : ''} {!activity || !connected ? 'opacity-35' : ''}"
-		title={!activity
+		onclick={() => { if (activities.length && connected) showGames = true; }}
+		disabled={!activities.length || !connected}
+		class="toolbar-btn {showGames ? 'active-emerald' : ''} {!activities.length || !connected ? 'opacity-35' : ''}"
+		title={!activities.length
 			? tFn('voice_room.games_none')
 			: !connected ? tFn('voice_room.games_join_first') : tFn('voice_room.games')}
 	>
-		{#if showActivity}
+		{#if showGames}
 			<span class="relative flex w-1.5 h-1.5 shrink-0">
 				<span class="absolute inline-flex h-full w-full rounded-full bg-emerald-400/60 animate-ping"></span>
 				<span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
@@ -533,14 +537,21 @@
 	/>
 {/if}
 
-<!-- ── Activité (jeu) overlay ──────────────────────────────────────────────── -->
-{#if showActivity && activity && connected && voiceState.channelId}
+<!-- ── Jeux : galerie puis activité, en overlay plein écran ─────────────────── -->
+{#if showGames && connected && !selectedActivity}
+	<ActivityGallery
+		activities={activities}
+		onselect={(a) => selectedActivity = a}
+		onclose={() => showGames = false}
+	/>
+{/if}
+{#if showGames && selectedActivity && connected && voiceState.channelId}
 	<ActivitySurface
-		activityId={activity.id}
-		surfaceId={activity.surfaceId}
-		version={activity.version}
-		appUrl={activity.appUrl}
-		label={activity.label}
+		activityId={selectedActivity.id}
+		surfaceId={selectedActivity.surfaceId}
+		version={selectedActivity.version}
+		appUrl={selectedActivity.appUrl}
+		label={selectedActivity.label}
 		channelId={voiceState.channelId}
 		socket={socket}
 		{token}
@@ -549,7 +560,7 @@
 		userAvatar={myAvatar}
 		members={activityMembers}
 		locale={$locale}
-		onclose={() => showActivity = false}
+		onclose={() => selectedActivity = null}
 	/>
 {/if}
 

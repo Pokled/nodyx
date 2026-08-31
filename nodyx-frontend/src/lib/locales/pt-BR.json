@@ -4572,5 +4572,19 @@
   "translate.contributors.view_pr": "Ver o pull request #{{n}}",
   "translate.contributors.view_commit": "Ver o commit",
   "translate.contributors.close": "Fechar",
-  "translate.newlang.horizon": "O Nodyx ainda não chegou a esse horizonte."
+  "translate.newlang.horizon": "O Nodyx ainda não chegou a esse horizonte.",
+  "games.gallery_title": "Jogos",
+  "games.gallery_subtitle": "Escolha um jogo para iniciar na sala de voz",
+  "games.play": "Jogar",
+  "games.close": "Fechar",
+  "games.none": "Nenhum jogo instalado",
+  "games.none_hint": "Um administrador pode instalar alguns nas extensões.",
+  "games.by": "por {{name}}",
+  "games.back_to_list": "Jogos",
+  "games.family.gaming": "Jogo",
+  "games.family.media": "Mídia",
+  "games.family.community": "Comunidade",
+  "games.family.esport": "Esport",
+  "games.family.social": "Social",
+  "games.family.content": "Conteúdo"
 }

@@ -294,6 +294,7 @@
 	<!-- Chrome dessiné par l'HÔTE : une activité ne peut ni l'imiter ni le
 	     masquer. Sans lui, un faux écran de connexion serait indiscernable. -->
 	<div class="act-bar">
+		<button class="act-back" onclick={onclose}>‹ {tFn('games.back_to_list')}</button>
 		<span class="act-marker" aria-label={tFn('activity.marker_aria', { name: label })}>
 			<span class="act-dot" aria-hidden="true"></span>
 			<span class="act-name">{label}</span>
@@ -333,10 +334,16 @@
 		padding: 0 10px;
 		background: #0d0d14; border-bottom: 1px solid rgba(255,255,255,0.06);
 	}
+	.act-back {
+		flex: none; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
+		color: #9aa3b2; background: transparent; border: 0; border-radius: 6px;
+	}
+	.act-back:hover { color: #cbd5e1; background: rgba(255,255,255,0.06); }
 	.act-marker {
 		display: flex; align-items: center; gap: 8px;
 		font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
 		color: var(--nx-text-muted, #6b7280); min-width: 0;
+		flex: 1; justify-content: center;
 	}
 	.act-dot { width: 5px; height: 5px; border-radius: 999px; background: #73cc8c; flex: none; }
 	.act-name { color: var(--nx-text, #cbd5e1); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -145,6 +145,31 @@ describe('identité et forme', () => {
   })
 })
 
+describe('vitrine : tagline + captures', () => {
+  it('accepte tagline + jusqu à 6 captures empaquetées', () => {
+    const r = validateManifest({
+      ...base(),
+      tagline: '@tagline',
+      screenshots: ['media/1.png', 'media/2.webp', 'shots/3.jpg'],
+    })
+    expect(r.ok).toBe(true)
+  })
+
+  it('collecte la tagline comme clé de message', () => {
+    const r = validateManifest({ ...base(), tagline: '@game.tagline' })
+    if (!r.ok) throw new Error('refusé')
+    expect(collectMessageKeys(r.manifest)).toContain('game.tagline')
+  })
+
+  it('refuse une capture qui remonte hors du paquet', () => {
+    expect(issues({ ...base(), screenshots: ['../secret.png'] }).length).toBeGreaterThan(0)
+  })
+
+  it('refuse plus de 6 captures', () => {
+    expect(issues({ ...base(), screenshots: Array(7).fill('media/x.png') }).length).toBeGreaterThan(0)
+  })
+})
+
 describe('i18n : toute chaîne visible est une clé', () => {
   it('refuse un libellé écrit en dur', () => {
     expect(issues({ ...base(), label: 'Mon widget' }).length).toBeGreaterThan(0)
