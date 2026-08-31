@@ -247,7 +247,11 @@ const manifestSchema = z.object({
   default_locale: z.string().regex(RE_LOCALE),
   label:          messageKey,
   description:    messageKey,
+  /** Accroche courte pour la galerie (une phrase). `description` reste le texte long. */
+  tagline:        messageKey.optional(),
   icon:           z.string().refine(isSafePackagePath, 'chemin de paquet invalide').optional(),
+  /** Captures d'écran empaquetées dans le `.nyx`, servies par la route assets. Pour la vitrine. */
+  screenshots:    z.array(z.string().refine(isSafePackagePath, 'chemin de paquet invalide')).max(6).optional(),
   family:         z.enum(['media', 'gaming', 'community', 'esport', 'social', 'content']).optional(),
   surfaces:       z.array(surface).min(1),
   app:            appBundle.optional(),
@@ -283,7 +287,7 @@ export type ValidationResult =
 export function collectMessageKeys(m: ExtensionManifest): string[] {
   const keys = new Set<string>()
   const add = (v?: string) => { if (v) keys.add(v.slice(1)) }
-  add(m.label); add(m.description)
+  add(m.label); add(m.description); add(m.tagline)
   for (const s of m.surfaces) {
     add(s.label); add(s.description)
     if (s.type === 'page') { add(s.nav?.label) }

@@ -4572,5 +4572,19 @@
   "nav.bar_directory": "Réseau",
   "nav.bar_profile": "Profil",
   "calendar.page_title": "Calendrier",
-  "ucard.meta_description": "Profil de {{name}} sur Nodyx, niveau {{level}}, {{posts}} messages, {{xp}} XP"
+  "ucard.meta_description": "Profil de {{name}} sur Nodyx, niveau {{level}}, {{posts}} messages, {{xp}} XP",
+  "games.gallery_title": "Jeux",
+  "games.gallery_subtitle": "Choisis un jeu à lancer dans le salon vocal",
+  "games.play": "Jouer",
+  "games.close": "Fermer",
+  "games.none": "Aucun jeu installé",
+  "games.none_hint": "Un administrateur peut en installer depuis les extensions.",
+  "games.by": "par {{name}}",
+  "games.back_to_list": "Jeux",
+  "games.family.gaming": "Jeu",
+  "games.family.media": "Média",
+  "games.family.community": "Communauté",
+  "games.family.esport": "Esport",
+  "games.family.social": "Social",
+  "games.family.content": "Contenu"
 }

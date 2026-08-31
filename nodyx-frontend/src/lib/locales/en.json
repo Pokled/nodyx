@@ -4572,5 +4572,19 @@
   "nav.bar_directory": "Explore",
   "nav.bar_profile": "Profile",
   "calendar.page_title": "Calendar",
-  "ucard.meta_description": "Profile of {{name}} on Nodyx, level {{level}}, {{posts}} posts, {{xp}} XP"
+  "ucard.meta_description": "Profile of {{name}} on Nodyx, level {{level}}, {{posts}} posts, {{xp}} XP",
+  "games.gallery_title": "Games",
+  "games.gallery_subtitle": "Pick a game to launch in the voice room",
+  "games.play": "Play",
+  "games.close": "Close",
+  "games.none": "No games installed",
+  "games.none_hint": "An admin can install some from the extensions.",
+  "games.by": "by {{name}}",
+  "games.back_to_list": "Games",
+  "games.family.gaming": "Game",
+  "games.family.media": "Media",
+  "games.family.community": "Community",
+  "games.family.esport": "Esport",
+  "games.family.social": "Social",
+  "games.family.content": "Content"
 }

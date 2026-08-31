@@ -257,7 +257,11 @@ export async function extensionRoutes(app: FastifyInstance) {
           version:     row.version,
           label:       tr(m.label),
           description: tr(m.description),
+          tagline:     tr(m.tagline) ?? null,
           icon:        m.icon ? `/api/v1/extensions/${m.id}/${row.version}/assets/${m.icon}` : null,
+          screenshots: (m.screenshots ?? []).map((p) => `/api/v1/extensions/${m.id}/${row.version}/assets/${p}`),
+          author:      m.author ?? null,
+          source:      m.source ?? null,
           family:      m.family ?? 'content',
           messages:    dict,
           surfaces:    m.surfaces.map((s) => {

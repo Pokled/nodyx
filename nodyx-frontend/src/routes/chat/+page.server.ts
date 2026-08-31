@@ -19,7 +19,19 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const activities = extensions.flatMap((e: any) =>
 		(e.surfaces ?? [])
 			.filter((s: any) => s.type === 'activity' && s.appUrl)
-			.map((s: any) => ({ id: e.id, version: e.version, surfaceId: s.id, appUrl: s.appUrl, label: s.label })),
+			.map((s: any) => ({
+				id: e.id,
+				version: e.version,
+				surfaceId: s.id,
+				appUrl: s.appUrl,
+				label: s.label ?? e.label,
+				tagline: e.tagline ?? null,
+				description: s.description ?? e.description ?? null,
+				icon: e.icon ?? null,
+				screenshots: e.screenshots ?? [],
+				family: e.family ?? 'gaming',
+				author: e.author ?? null,
+			})),
 	);
 
 	return { channels, token, activities };
