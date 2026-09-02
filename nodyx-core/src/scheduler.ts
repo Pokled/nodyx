@@ -128,6 +128,11 @@ async function pushAssetsToDirectory() {
 }
 
 // ── Global Search announce (SPEC 010) ─────────────────────────────────────────
+//
+// Ne pousse à l'annuaire fédéré que les fils EXPLICITEMENT mis en avant
+// (is_featured, posé par un admin). Avant le durcissement du 2026-09, le seul
+// critère était is_indexed (défaut = true), donc n'importe quel fil d'un membre
+// partait dans la fédération. Incident « nerti » du 2026-09-01.
 
 export async function announceThreadsToDirectory() {
   if (!process.env.NODYX_GLOBAL_INDEXING || process.env.NODYX_GLOBAL_INDEXING !== 'true') return
@@ -155,6 +160,7 @@ export async function announceThreadsToDirectory() {
        FROM threads t
        LEFT JOIN categories c ON c.id = t.category_id
        WHERE t.is_indexed = true
+         AND t.is_featured = true
          AND (t.last_indexed_at IS NULL OR t.updated_at > t.last_indexed_at)
        LIMIT 100`
     )

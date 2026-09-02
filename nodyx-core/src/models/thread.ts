@@ -136,7 +136,12 @@ export async function update(id: string, data: {
   if (data.title      !== undefined) { fields.push(`title = $${i++}`);      values.push(data.title)      }
   if (data.is_pinned  !== undefined) { fields.push(`is_pinned = $${i++}`);  values.push(data.is_pinned)  }
   if (data.is_locked  !== undefined) { fields.push(`is_locked = $${i++}`);  values.push(data.is_locked)  }
-  if (data.is_featured !== undefined) { fields.push(`is_featured = $${i++}`); values.push(data.is_featured) }
+  if (data.is_featured !== undefined) {
+    fields.push(`is_featured = $${i++}`); values.push(data.is_featured)
+    // showcased_at pilote l'ordre et l'éligibilité des surfaces vitrine :
+    // horodaté à la mise en avant, remis à NULL au retrait.
+    fields.push(`showcased_at = ${data.is_featured ? 'NOW()' : 'NULL'}`)
+  }
 
   if (fields.length === 0) {
     const { rows } = await db.query<Thread>(`SELECT * FROM threads WHERE id = $1`, [id])
@@ -167,7 +172,10 @@ export async function incrementViews(id: string): Promise<void> {
 
 export async function getFeatured(limit = 5, categoryId?: string): Promise<FeaturedThread[]> {
   if (categoryId) {
-    // Par catégorie : threads récents (pas forcément featured)
+    // Par catégorie : uniquement les fils explicitement mis en avant par un
+    // admin (showcased_at). Avant le durcissement du 2026-09, cette branche
+    // renvoyait « les fils récents de la catégorie », ce qui laissait
+    // n'importe quel membre atteindre la vitrine en postant dans 📣 Annonces.
     const { rows } = await db.query<FeaturedThread>(
       `SELECT
          t.id,
@@ -183,7 +191,8 @@ export async function getFeatured(limit = 5, categoryId?: string): Promise<Featu
        JOIN categories c ON c.id = t.category_id
        JOIN users u      ON u.id = t.author_id
        WHERE (c.id::text = $2 OR c.slug = $2)
-       ORDER BY t.created_at DESC
+         AND t.showcased_at IS NOT NULL
+       ORDER BY t.showcased_at DESC
        LIMIT $1`,
       [limit, categoryId]
     )
@@ -204,7 +213,7 @@ export async function getFeatured(limit = 5, categoryId?: string): Promise<Featu
      JOIN categories c ON c.id = t.category_id
      JOIN users u      ON u.id = t.author_id
      WHERE t.is_featured = true
-     ORDER BY t.created_at DESC
+     ORDER BY COALESCE(t.showcased_at, t.created_at) DESC
      LIMIT $1`,
     [limit]
   )
