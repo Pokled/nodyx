@@ -40,7 +40,10 @@
 	// réponses. Voir $lib/forumCounts.
 	const replies = $derived(replyCount(thread.post_count));
 	const user   = $derived(data.user);
-	const isMod  = $derived(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'moderator');
+	const isMod   = $derived(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'moderator');
+	// Épingler / verrouiller / mettre en avant : réservé owner + admin côté back
+	// (routes/forums.ts). Les modérateurs voient le reste du panneau, pas ça.
+	const canAdmin = $derived(user?.role === 'owner' || user?.role === 'admin');
 
 	// ── État local ────────────────────────────────────────────────────────
 	let replyKey      = $state(0);
@@ -386,6 +389,7 @@
 				</button>
 
 				<div class="{showModActions ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+					{#if canAdmin}
 					<!-- Épingler/Désépingler -->
 					<form method="POST" action="?/pinThread" use:enhance={() => {
 						return async ({ update }) => { await update({ reset: false }) }
@@ -427,6 +431,7 @@
 							{thread.is_featured ? tFn('forum.unfeature') : tFn('forum.feature')}
 						</button>
 					</form>
+					{/if}
 
 					<!-- Supprimer le thread -->
 					{#if !confirmDeleteThread}

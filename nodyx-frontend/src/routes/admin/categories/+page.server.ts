@@ -44,6 +44,8 @@ export const actions: Actions = {
 		const desc = form.get('description') as string
 		if (desc !== '') body.description = desc
 		if (parent_id !== '__unchanged__') body.parent_id = parent_id === '' ? null : parent_id
+		const postMinRole = form.get('post_min_role') as string
+		if (postMinRole) body.post_min_role = postMinRole
 
 		const res = await apiFetch(fetch, `/admin/categories/${id}`, {
 			method: 'PATCH',

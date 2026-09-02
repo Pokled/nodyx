@@ -59,8 +59,16 @@ export const actions: Actions = {
 			headers: { Authorization: `Bearer ${token}` },
 			body:    JSON.stringify({ reason, ban_ip, ban_email }),
 		})
-		if (!res.ok) return fail(400, { error: (await res.json()).error })
-		return { ok: true }
+		const json = await res.json().catch(() => ({}))
+		if (!res.ok) return fail(400, { error: json.error })
+		// json.ip_ban_applied = null quand « bannir l'IP » a été demandé mais
+		// qu'aucune adresse publique n'est connue : le back ne peut pas bannir
+		// une IP fantôme, on le dit au lieu de laisser croire que c'est fait.
+		return {
+			ok: true,
+			ipBanRequested:  json.ip_ban_requested ?? false,
+			ipBanApplied:    json.ip_ban_applied ?? null,
+		}
 	},
 
 	unban: async ({ fetch, request, cookies }) => {
