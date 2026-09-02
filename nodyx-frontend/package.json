@@ -49,7 +49,7 @@
     "@iconify/svelte": "^5.2.2",
     "@jitsi/rnnoise-wasm": "0.2.1",
     "@resvg/resvg-js": "2.6.2",
-    "@tiptap/core": "3.27.1",
+    "@tiptap/core": "3.30.4",
     "@tiptap/extension-character-count": "3.27.1",
     "@tiptap/extension-code-block-lowlight": "3.27.1",
     "@tiptap/extension-color": "3.27.1",
