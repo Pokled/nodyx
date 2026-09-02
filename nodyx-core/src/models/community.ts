@@ -44,8 +44,9 @@ export interface Category {
   name:         string
   slug:         string | null
   description:  string | null
-  position:     number
-  parent_id:    string | null
+  position:      number
+  parent_id:     string | null
+  post_min_role: 'member' | 'moderator' | 'admin' | 'owner'
   thread_count: number
   post_count:   number
   last_post:    CategoryLastPost | null

@@ -16,19 +16,34 @@
 	let submitting = $state(false);
 
 	// ── Sélecteur catégorie / sous-catégorie ──────────────────────────────
-	type CatNode = { id: string; name: string; children: CatNode[] };
+	type CatNode = { id: string; name: string; post_min_role?: string; children: CatNode[] };
+
+	// Rôle de l'utilisateur courant vs post_min_role de la catégorie. Un
+	// non-membre vaut -1, donc en dessous de 'member' : le back tranche pour de
+	// bon (routes/forums.ts), ceci ne fait qu'éviter d'afficher un choix voué au 403.
+	const RANK: Record<string, number> = { member: 0, moderator: 1, admin: 2, owner: 3 };
+	const userRank = $derived(RANK[(data.user as { role?: string } | null)?.role ?? ''] ?? -1);
+	function canPostIn(cat: CatNode): boolean {
+		return userRank >= (RANK[cat.post_min_role ?? 'member'] ?? 0);
+	}
 
 	function findInitial(cats: CatNode[], targetId: string): { parentId: string; subId: string | null } {
 		for (const cat of cats) {
-			if (cat.id === targetId) return { parentId: cat.id, subId: null };
+			if (cat.id === targetId && canPostIn(cat)) return { parentId: cat.id, subId: null };
 			for (const child of cat.children ?? []) {
-				if (child.id === targetId) return { parentId: cat.id, subId: child.id };
+				if (child.id === targetId && canPostIn(child)) return { parentId: cat.id, subId: child.id };
 			}
 		}
 		return { parentId: cats[0]?.id ?? targetId, subId: null };
 	}
 
-	const rootCategories = $derived((data.categories ?? []) as CatNode[]);
+	// N'expose que les catégories où l'utilisateur peut réellement ouvrir un fil.
+	const rootCategories = $derived(
+		((data.categories ?? []) as CatNode[])
+			.filter(canPostIn)
+			.map(c => ({ ...c, children: (c.children ?? []).filter(canPostIn) }))
+	);
+	const noCategory = $derived(rootCategories.length === 0);
 	const initial        = $derived(findInitial(rootCategories, data.currentCategoryId ?? ''));
 
 	let selectedParentId = $state(untrack(() => initial.parentId));
@@ -67,10 +82,15 @@
 
 	{#if form?.error}
 		<p class="mb-4 bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
-			{form.error}
+			{form.code === 'CATEGORY_RESTRICTED' ? tFn('forum.category_restricted') : form.error}
 		</p>
 	{/if}
 
+	{#if noCategory}
+		<p class="mb-4 bg-gray-800 border border-gray-700 px-4 py-3 text-sm text-gray-400">
+			{tFn('forum.new_topic_no_category')}
+		</p>
+	{:else}
 	<form
 		method="POST"
 		use:enhance={() => {
@@ -222,4 +242,5 @@
 			<a href="/forum/{finalCategoryId}" class="bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">{tFn('common.cancel')}</a>
 		</div>
 	</form>
+	{/if}
 </div>

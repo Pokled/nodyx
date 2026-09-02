@@ -62,10 +62,11 @@ const PatchThreadBody = z.object({
 })
 
 const PatchCategoryBody = z.object({
-  name:        z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional(),
-  position:    z.number().int().min(0).optional(),
-  parent_id:   z.string().uuid().nullable().optional(),
+  name:          z.string().min(1).max(100).optional(),
+  description:   z.string().max(500).optional(),
+  position:      z.number().int().min(0).optional(),
+  parent_id:     z.string().uuid().nullable().optional(),
+  post_min_role: z.enum(['member', 'moderator', 'admin', 'owner']).optional(),
 })
 
 const HexColor    = z.string().regex(/^#[0-9A-Fa-f]{6}$/)
@@ -465,9 +466,9 @@ export default async function adminRoutes(app: FastifyInstance) {
     const adminUser   = (request as any).user as { userId: string }
     const body        = (request.body ?? {}) as { reason?: string; ban_ip?: boolean; ban_email?: boolean }
 
-    // Fetch user info (role + registration_ip + email)
+    // Fetch user info (role + registration_ip + last_seen_ip + email)
     const { rows: userRows } = await db.query(
-      `SELECT u.username, u.email, u.registration_ip,
+      `SELECT u.username, u.email, u.registration_ip, u.last_seen_ip,
               cm.role
        FROM users u
        LEFT JOIN community_members cm ON cm.community_id = $1 AND cm.user_id = u.id
@@ -477,7 +478,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     if (!userRows[0]) return reply.code(404).send({ error: 'User not found' })
     if (userRows[0].role === 'owner') return reply.code(403).send({ error: 'Cannot ban the owner' })
 
-    const { username: targetUsername, email, registration_ip } = userRows[0]
+    const { username: targetUsername, email, registration_ip, last_seen_ip } = userRows[0]
 
     // Insert community ban (upsert — idempotent)
     await db.query(
@@ -492,15 +493,24 @@ export default async function adminRoutes(app: FastifyInstance) {
       [communityId, userId]
     )
 
-    // Optional: ban IP — never ban internal/loopback addresses
+    // Optional: ban IP — jamais une adresse interne/loopback. On préfère
+    // last_seen_ip (vraie adresse captée au login) à registration_ip, qui vaut
+    // 127.0.0.1 pour tout le monde depuis la bascule tunnel. Quand aucune
+    // adresse publique n'est connue, on le signale au lieu de prétendre.
     const PROTECTED_IPS = ['127.0.0.1', '::1', '0.0.0.0', 'localhost']
-    if (body.ban_ip && registration_ip && !PROTECTED_IPS.includes(registration_ip)) {
-      await db.query(
-        `INSERT INTO ip_bans (ip, reason, banned_by)
-         VALUES ($1::inet, $2, $3)
-         ON CONFLICT (ip) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
-        [registration_ip, body.reason ?? null, adminUser.userId]
-      ).catch(() => {})
+    const banCandidateIp = [last_seen_ip, registration_ip]
+      .find(ip => ip && !PROTECTED_IPS.includes(ip)) ?? null
+    let ipBanApplied: string | null = null
+    if (body.ban_ip && banCandidateIp) {
+      try {
+        await db.query(
+          `INSERT INTO ip_bans (ip, reason, banned_by)
+           VALUES ($1::inet, $2, $3)
+           ON CONFLICT (ip) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
+          [banCandidateIp, body.reason ?? null, adminUser.userId]
+        )
+        ipBanApplied = banCandidateIp
+      } catch { /* IP malformée en base : on n'échoue pas le ban pour autant */ }
     }
 
     // Optional: ban email
@@ -531,8 +541,15 @@ export default async function adminRoutes(app: FastifyInstance) {
     }
 
     logAction(adminUser.userId, 'ban_user', 'user', userId, targetUsername,
-      { reason: body.reason ?? null, ban_ip: !!body.ban_ip, ban_email: !!body.ban_email })
-    return reply.send({ ok: true, registration_ip: registration_ip ?? null })
+      { reason: body.reason ?? null, ban_ip: !!body.ban_ip, ban_email: !!body.ban_email, ip_ban_applied: ipBanApplied })
+    return reply.send({
+      ok: true,
+      registration_ip: registration_ip ?? null,
+      // null quand ban_ip était demandé mais qu'aucune IP publique n'est connue :
+      // le front affiche « IP réelle indisponible, non bannie » au lieu d'un succès.
+      ip_ban_applied: ipBanApplied,
+      ip_ban_requested: !!body.ban_ip,
+    })
   })
 
   // DELETE /api/v1/admin/members/:userId/ban — unban
@@ -786,15 +803,17 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body   = request.body as z.infer<typeof PatchCategoryBody>
+    const adminUser = (request as any).user as { userId: string }
 
     const fields: string[] = []
     const values: unknown[] = []
     let i = 1
 
-    if (body.name        !== undefined) { fields.push(`name = $${i++}`);        values.push(body.name);                                fields.push(`slug = $${i++}`); values.push(generateCategorySlug(body.name)) }
-    if (body.description !== undefined) { fields.push(`description = $${i++}`); values.push(body.description) }
-    if (body.position    !== undefined) { fields.push(`position = $${i++}`);    values.push(body.position)    }
-    if (body.parent_id   !== undefined) { fields.push(`parent_id = $${i++}`);   values.push(body.parent_id)   }
+    if (body.name          !== undefined) { fields.push(`name = $${i++}`);        values.push(body.name);                                fields.push(`slug = $${i++}`); values.push(generateCategorySlug(body.name)) }
+    if (body.description   !== undefined) { fields.push(`description = $${i++}`); values.push(body.description) }
+    if (body.position      !== undefined) { fields.push(`position = $${i++}`);    values.push(body.position)    }
+    if (body.parent_id     !== undefined) { fields.push(`parent_id = $${i++}`);   values.push(body.parent_id)   }
+    if (body.post_min_role !== undefined) { fields.push(`post_min_role = $${i++}`); values.push(body.post_min_role) }
 
     if (fields.length === 0) return reply.code(400).send({ error: 'Nothing to update' })
 
@@ -804,6 +823,11 @@ export default async function adminRoutes(app: FastifyInstance) {
       values
     )
     if (!rows[0]) return reply.code(404).send({ error: 'Category not found' })
+
+    if (body.post_min_role !== undefined) {
+      logAction(adminUser.userId, 'category_set_post_role', 'category', id, rows[0].name,
+        { post_min_role: body.post_min_role })
+    }
 
     return reply.send({ category: rows[0] })
   })

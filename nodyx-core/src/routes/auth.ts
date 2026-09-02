@@ -13,7 +13,7 @@ import { toSelfUser } from '../utils/publicUser'
 import { isSmtpConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService'
 import { resolveServerLocale } from '../i18n/serverStrings'
 import { getUserTotp, TOTP_PENDING_TTL } from './totp'
-import { getClientIp } from '../utils/clientIp'
+import { getClientIp, estPubliquementRoutable } from '../utils/clientIp'
 
 // ── Discord security alerts ───────────────────────────────────────────────────
 
@@ -111,7 +111,9 @@ export async function invalidateUserSessions(userId: string): Promise<void> {
 }
 
 const RegisterBody = z.object({
-  username: z.string().min(3).max(50),
+  // trim() AVANT min/max : une espace de tête ou de fin donnait un pseudo
+  // « nerti » (avec espace) dont la page profil renvoie 404. Incident 2026-09.
+  username: z.string().trim().min(3).max(50),
   email:    z.string().email(),
   password: z.string().min(8).max(100),
   // Anti-bot couche 1 : honeypot field. Doit être vide (humain ne le voit
@@ -411,6 +413,13 @@ export default async function authRoutes(app: FastifyInstance) {
     const knownIpKey = `known_ip:${user.id}`
     const knownIp    = await redis.get(knownIpKey)
     await redis.set(knownIpKey, loginIp, 'EX', 60 * 60 * 24 * 30) // 30 jours
+
+    // Cible utile pour le bannissement d'IP : registration_ip vaut 127.0.0.1
+    // pour tout le monde (inscription via proxy SSR). On ne persiste qu'une
+    // adresse réellement publique.
+    if (estPubliquementRoutable(loginIp)) {
+      db.query(`UPDATE users SET last_seen_ip = $1 WHERE id = $2`, [loginIp, user.id]).catch(() => {})
+    }
     if (knownIp && knownIp !== loginIp) {
       sendSecurityAlert({
         title:  '🌍 Connexion depuis une nouvelle IP',

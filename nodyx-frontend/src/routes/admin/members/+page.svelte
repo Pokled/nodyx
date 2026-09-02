@@ -77,6 +77,8 @@
 	let banReason  = $state('')
 	let banIp      = $state(false)
 	let banEmail   = $state(false)
+	// Message affiché après un ban : dit si l'IP a réellement été bannie.
+	let banNotice  = $state<{ kind: 'ok' | 'warn'; text: string } | null>(null)
 
 	const ROLE_COLORS: Record<string, string> = {
 		owner:     'bg-yellow-900/50 text-yellow-400 border-yellow-800/50',
@@ -96,6 +98,15 @@
 <svelte:head><title>{tFn('amem.page_title')}</title></svelte:head>
 
 <div>
+	{#if banNotice}
+		<div class="mb-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm
+			{banNotice.kind === 'ok'
+				? 'bg-green-900/30 border-green-800 text-green-300'
+				: 'bg-amber-900/30 border-amber-800 text-amber-300'}">
+			<span>{banNotice.text}</span>
+			<button onclick={() => banNotice = null} class="text-lg leading-none opacity-70 hover:opacity-100">✕</button>
+		</div>
+	{/if}
 	<div class="flex items-center justify-between mb-6">
 		<div>
 			<h1 class="text-2xl font-bold text-white">{tFn('amem.title')}</h1>
@@ -481,9 +492,17 @@
 			<p class="text-sm text-gray-400 mb-4">
 				{tFn('amem.ban_modal_desc')}
 			</p>
-			<form method="POST" action="?/ban" use:enhance={({ cancel }) => {
+			<form method="POST" action="?/ban" use:enhance={() => {
 					return async ({ result, update }) => {
 						await update()
+						if (result.type === 'success') {
+							const d = result.data as { ipBanRequested?: boolean; ipBanApplied?: string | null } | undefined
+							if (d?.ipBanRequested) {
+								banNotice = d.ipBanApplied
+									? { kind: 'ok',   text: tFn('amem.ip_ban_applied', { ip: d.ipBanApplied }) }
+									: { kind: 'warn', text: tFn('amem.ip_ban_unavailable') }
+							}
+						}
 						if (result.type !== 'failure') banTarget = null
 					}
 				}}>

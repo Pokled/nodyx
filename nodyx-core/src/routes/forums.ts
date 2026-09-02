@@ -49,6 +49,13 @@ async function isAdmin(userId: string, threadId: string): Promise<boolean> {
   return role === 'owner' || role === 'admin'
 }
 
+// Ordre des rôles communautaires. Un rôle inconnu (non membre) vaut -1, donc
+// strictement inférieur à 'member' : il ne passe aucune catégorie restreinte.
+const ROLE_RANK: Record<string, number> = { member: 0, moderator: 1, admin: 2, owner: 3 }
+function roleRank(role: string | undefined | null): number {
+  return role && role in ROLE_RANK ? ROLE_RANK[role] : -1
+}
+
 // Get author_id of a post (used for thanks)
 async function getPostAuthor(postId: string): Promise<{ author_id: string; thread_id: string } | null> {
   return PostModel.getAuthorAndThread(postId)
@@ -205,8 +212,8 @@ app.get('/threads', {
     }
 
     // Check if user is banned from this community
-    const { rows: catRows } = await db.query<{ community_id: string }>(
-      `SELECT community_id FROM categories WHERE id = $1 LIMIT 1`, [category_id]
+    const { rows: catRows } = await db.query<{ community_id: string; post_min_role: string }>(
+      `SELECT community_id, post_min_role FROM categories WHERE id = $1 LIMIT 1`, [category_id]
     )
     if (catRows[0]) {
       const { rows: banRows } = await db.query(
@@ -215,6 +222,22 @@ app.get('/threads', {
       )
       if (banRows.length > 0) {
         return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
+      }
+
+      // Catégorie restreinte : vérifier que le rôle de l'auteur est suffisant.
+      // 'member' (défaut) laisse tout le monde poster — aucun coût si la
+      // catégorie n'est pas restreinte.
+      if (catRows[0].post_min_role !== 'member') {
+        const { rows: roleRows } = await db.query<{ role: string }>(
+          `SELECT role FROM community_members WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
+          [catRows[0].community_id, request.user!.userId]
+        )
+        if (roleRank(roleRows[0]?.role) < roleRank(catRows[0].post_min_role)) {
+          return reply.code(403).send({
+            error: 'Cette catégorie est réservée à l’équipe.',
+            code:  'CATEGORY_RESTRICTED',
+          })
+        }
       }
     }
 
@@ -487,11 +510,13 @@ app.get('/threads', {
       return reply.send({ thread: updated })
     }
 
-    // Pin / lock are restricted to owner or admin (not moderator)
-    if ((body.is_pinned !== undefined || body.is_locked !== undefined)) {
+    // Pin / lock / feature are restricted to owner or admin (not moderator).
+    // is_featured décide de l'apparition en vitrine publique et de l'annonce à
+    // l'annuaire fédéré : même exigence que pin/lock.
+    if (body.is_pinned !== undefined || body.is_locked !== undefined || body.is_featured !== undefined) {
       const adminAccess = await isAdmin(userId, threadId)
       if (!adminAccess) {
-        return reply.code(403).send({ error: 'Only admins and owners can pin or lock threads', code: 'FORBIDDEN' })
+        return reply.code(403).send({ error: 'Only admins and owners can pin, lock or feature threads', code: 'FORBIDDEN' })
       }
     }
 
