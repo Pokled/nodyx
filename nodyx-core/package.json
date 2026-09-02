@@ -40,7 +40,7 @@
     "pg": "8.22.0",
     "qrcode": "1.5.4",
     "safe-regex": "^2.1.1",
-    "sanitize-html": "2.17.5",
+    "sanitize-html": "2.17.7",
     "sharp": "0.35.3",
     "socket.io": "4.8.3",
     "web-push": "3.6.7",
