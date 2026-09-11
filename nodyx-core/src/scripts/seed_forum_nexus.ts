@@ -984,10 +984,12 @@ async function seed() {
     const threadId = tRows[0].id
     threadCount++
 
-    // Featured ?
+    // Featured ? Les surfaces vitrine (showcase, getFeatured) exigent
+    // showcased_at depuis le durcissement du 2026-09 : sans lui, un fil seedé
+    // "featured" resterait invisible partout où il devrait être mis en avant.
     if (t.featured) {
       await db.query(
-        `UPDATE threads SET is_featured = true WHERE id = $1`,
+        `UPDATE threads SET is_featured = true, showcased_at = NOW() WHERE id = $1`,
         [threadId]
       )
     }

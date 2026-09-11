@@ -379,6 +379,18 @@ export default async function authRoutes(app: FastifyInstance) {
       }
     }
 
+    // Cible utile pour le bannissement d'IP : registration_ip vaut 127.0.0.1
+    // pour tout le monde (inscription via proxy SSR). On ne persiste qu'une
+    // adresse réellement publique. Posé ICI, avant les branches 2FA qui
+    // renvoient tôt (signet/TOTP) : un compte protégé par 2FA ne repasse
+    // jamais par la fin de cette fonction, donc last_seen_ip ne serait sinon
+    // jamais peuplé pour lui — exactement les comptes admin les plus probables
+    // à activer 2FA, et donc les plus probables à devoir bannir une IP depuis.
+    const loginIp = getClientIp(request)  // fiable via trustProxy
+    if (estPubliquementRoutable(loginIp)) {
+      db.query(`UPDATE users SET last_seen_ip = $1 WHERE id = $2`, [loginIp, user.id]).catch(() => {})
+    }
+
     // ── 2FA Signet — prioritaire sur TOTP ────────────────────────────────────
     // Si l'user a au moins un appareil Signet enregistré, on délègue le 2ème
     // facteur à Signet (plus fort qu'un TOTP code) — même flow que le login
@@ -409,17 +421,10 @@ export default async function authRoutes(app: FastifyInstance) {
     await trackSession(user.id, token)
 
     // Détection connexion depuis une nouvelle IP
-    const loginIp    = getClientIp(request)  // fiable via trustProxy
     const knownIpKey = `known_ip:${user.id}`
     const knownIp    = await redis.get(knownIpKey)
     await redis.set(knownIpKey, loginIp, 'EX', 60 * 60 * 24 * 30) // 30 jours
 
-    // Cible utile pour le bannissement d'IP : registration_ip vaut 127.0.0.1
-    // pour tout le monde (inscription via proxy SSR). On ne persiste qu'une
-    // adresse réellement publique.
-    if (estPubliquementRoutable(loginIp)) {
-      db.query(`UPDATE users SET last_seen_ip = $1 WHERE id = $2`, [loginIp, user.id]).catch(() => {})
-    }
     if (knownIp && knownIp !== loginIp) {
       sendSecurityAlert({
         title:  '🌍 Connexion depuis une nouvelle IP',

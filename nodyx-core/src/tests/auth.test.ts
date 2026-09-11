@@ -39,6 +39,7 @@ vi.mock('../models/user', () => ({
 
 import * as UserModel from '../models/user'
 import authRoutes from '../routes/auth'
+import { db } from '../config/database'
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -253,6 +254,63 @@ describe('POST /api/v1/auth/login', () => {
     })
 
     expect(res.statusCode).toBe(400)
+  })
+
+  // ── last_seen_ip doit être posé AVANT les branches 2FA ──────────────────
+  //
+  // Bug trouvé en revue (durcissement vitrine, #660) : la mise à jour de
+  // last_seen_ip vivait après les `return` signet/TOTP, donc un compte 2FA ne
+  // la voyait jamais — exactement les comptes admin les plus susceptibles
+  // d'activer 2FA, et donc les plus susceptibles d'avoir besoin de bannir une
+  // IP un jour. Ces deux tests tombent sur le code d'avant le correctif.
+
+  it('pose last_seen_ip même quand le login s’arrête sur requires_signet', async () => {
+    vi.mocked(UserModel.findByEmail).mockResolvedValueOnce(FAKE_USER)
+    vi.mocked(UserModel.verifyPassword).mockResolvedValueOnce(true)
+    vi.mocked(db.query).mockImplementation((sql: any) => {
+      const q = String(sql)
+      if (q.includes('authenticator_devices')) return Promise.resolve({ rows: [{ id: 'device-1' }], rowCount: 1 })
+      if (q.includes('community_bans') || q.includes('ip_bans') || q.includes('email_bans')) return Promise.resolve({ rows: [], rowCount: 0 })
+      return Promise.resolve({ rows: [{ id: 'community-uuid' }], rowCount: 1 })
+    })
+
+    const res = await app.inject({
+      method:  'POST',
+      url:     '/api/v1/auth/login',
+      headers: { 'cf-connecting-ip': '31.215.70.26' }, // adresse publique : pair loopback de confiance
+      payload: { email: 'test@nodyx.dev', password: 'password123' },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body)).toHaveProperty('requires_signet', true)
+    const ipUpdate = vi.mocked(db.query).mock.calls.find(c => String(c[0]).includes('SET last_seen_ip'))
+    expect(ipUpdate).toBeDefined()
+    expect(ipUpdate?.[1]).toEqual(expect.arrayContaining([FAKE_USER.id]))
+  })
+
+  it('pose last_seen_ip même quand le login s’arrête sur requires_totp', async () => {
+    vi.mocked(UserModel.findByEmail).mockResolvedValueOnce(FAKE_USER)
+    vi.mocked(UserModel.verifyPassword).mockResolvedValueOnce(true)
+    vi.mocked(db.query).mockImplementation((sql: any) => {
+      const q = String(sql)
+      if (q.includes('authenticator_devices')) return Promise.resolve({ rows: [], rowCount: 0 })
+      if (q.includes('totp_enabled')) return Promise.resolve({ rows: [{ totp_enabled: true, totp_secret: 'secret' }], rowCount: 1 })
+      if (q.includes('community_bans') || q.includes('ip_bans') || q.includes('email_bans')) return Promise.resolve({ rows: [], rowCount: 0 })
+      return Promise.resolve({ rows: [{ id: 'community-uuid' }], rowCount: 1 })
+    })
+
+    const res = await app.inject({
+      method:  'POST',
+      url:     '/api/v1/auth/login',
+      headers: { 'cf-connecting-ip': '31.215.70.26' }, // adresse publique : pair loopback de confiance
+      payload: { email: 'test@nodyx.dev', password: 'password123' },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body)).toHaveProperty('requires_totp', true)
+    const ipUpdate = vi.mocked(db.query).mock.calls.find(c => String(c[0]).includes('SET last_seen_ip'))
+    expect(ipUpdate).toBeDefined()
+    expect(ipUpdate?.[1]).toEqual(expect.arrayContaining([FAKE_USER.id]))
   })
 })
 

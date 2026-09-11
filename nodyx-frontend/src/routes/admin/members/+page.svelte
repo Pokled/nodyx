@@ -247,7 +247,7 @@
 										</button>
 									</form>
 									<button
-										onclick={() => { banTarget = { userId: member.user_id, username: member.username }; banReason = ''; banIp = false; banEmail = false }}
+										onclick={() => { banTarget = { userId: member.user_id, username: member.username }; banReason = ''; banIp = false; banEmail = false; banNotice = null }}
 										class="text-xs text-red-500 hover:text-red-400 font-medium"
 									>
 										{tFn('amem.ban')}
