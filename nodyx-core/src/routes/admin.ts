@@ -454,7 +454,15 @@ export default async function adminRoutes(app: FastifyInstance) {
        ORDER BY cb.banned_at DESC`,
       [communityId]
     )
-    return reply.send(rows)
+    // Même règle que GET /members (#540) : l'adresse part masquée, le geste
+    // de la révéler passe par GET /members/:userId/email et laisse une trace
+    // d'audit. Cette route servait l'adresse en clair, angle mort du fix #540
+    // qui n'avait couvert que le tableau de bord et la liste des membres.
+    const bans = (rows as Array<Record<string, unknown>>).map((b) => ({
+      ...b,
+      email: maskEmail(b.email as string | null),
+    }))
+    return reply.send(bans)
   })
 
   // POST /api/v1/admin/members/:userId/ban — ban member (kick + blacklist)

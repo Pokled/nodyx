@@ -175,6 +175,58 @@ describe('GET /api/v1/admin/members', () => {
   })
 })
 
+// ── Tests — GET /admin/bans ────────────────────────────────────
+//
+// Trouvé en audit de stabilité (2026-09-11) : cette route servait l'email des
+// membres bannis en clair, angle mort du fix #540 (qui n'avait couvert que le
+// tableau de bord et GET /members). Même règle ici : masqué par défaut.
+
+describe('GET /api/v1/admin/bans', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+
+  beforeEach(async () => {
+    vi.resetAllMocks()
+    app = await buildApp(a => a.register(adminRoutes, { prefix: '/api/v1/admin' }))
+  })
+
+  it('returns 401 without auth', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/v1/admin/bans' })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('renvoie l’email masqué, jamais en clair', async () => {
+    const fakeBan = {
+      user_id:             USER_UUID,
+      username:            'nerti',
+      email:               'jonathan.dupont@gmail.com',
+      avatar:              null,
+      reason:              'spam',
+      banned_at:           new Date(),
+      banned_by_username:  'Pokled',
+    }
+    vi.mocked(db.query).mockImplementation(async (sql: string) => {
+      if (typeof sql === 'string' && sql.includes('SELECT id FROM communities')) {
+        return { rows: [{ id: COMMUNITY_UUID }], rowCount: 1 } as any
+      }
+      return { rows: [fakeBan], rowCount: 1 } as any
+    })
+
+    const res = await app.inject({
+      method:  'GET',
+      url:     '/api/v1/admin/bans',
+      headers: { Authorization: `Bearer ${makeAdminToken()}` },
+    })
+
+    expect(res.statusCode).toBe(200)
+    const body = JSON.parse(res.body)
+    expect(Array.isArray(body)).toBe(true)
+    expect(body[0].username).toBe('nerti')
+    expect(body[0].email).not.toBe('jonathan.dupont@gmail.com')
+    expect(body[0].email).not.toContain('dupont')
+    expect(body[0].email).toMatch(/^j•+@g•+\.com$/)
+  })
+})
+
 // ── Tests — PATCH /admin/members/:userId ─────────────────────
 
 describe('PATCH /api/v1/admin/members/:userId', () => {

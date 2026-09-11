@@ -293,7 +293,19 @@
 										</div>
 										<div>
 											<p class="font-medium text-gray-300">{ban.username}</p>
-											<p class="text-xs text-gray-600">{ban.email}</p>
+											<!-- Même masquage par défaut que la liste des membres (#540) :
+											     ce panneau s'ouvre parfois en direct/partage d'écran. -->
+											<div class="text-xs text-gray-600 flex items-center gap-1.5">
+												<span>{revealed[ban.user_id] ?? ban.email}</span>
+												{#if !revealed[ban.user_id]}
+													<button
+														type="button"
+														class="text-[10px] text-gray-500 hover:text-gray-300 underline underline-offset-2"
+														onclick={() => revealEmail(ban.user_id)}
+														disabled={revealing[ban.user_id]}
+													>{revealing[ban.user_id] ? tFn('amem.revealing') : tFn('amem.reveal_email')}</button>
+												{/if}
+											</div>
 										</div>
 									</div>
 								</td>
