@@ -17,7 +17,7 @@
     "better-sqlite3": "^9.6.0",
     "geoip-lite": "^2.0.2",
     "leaflet": "^1.9.4",
-    "nodemailer": "^9.0.1",
+    "nodemailer": "^9.1.1",
     "pg": "^8.11.5"
   },
   "devDependencies": {

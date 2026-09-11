@@ -76,9 +76,11 @@ describe('getTrustProxy — réglages d\'échappatoire', () => {
     delete process.env.TRUST_PROXY
   })
 
-  it('TRUST_PROXY=2 est interprété comme un nombre de hops', () => {
+  it('TRUST_PROXY=2 (compteur de hops) est ignoré : fastify a retiré ce mode', () => {
     process.env.TRUST_PROXY = '2'
-    expect(getTrustProxy()).toBe(2)
+    // Plus de nombre : une valeur purement numérique est écartée (over-restrictif,
+    // jamais une faille) au lieu d'usurpable via X-Forwarded-*.
+    expect(getTrustProxy()).toEqual([])
     delete process.env.TRUST_PROXY
   })
 

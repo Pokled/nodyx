@@ -46,19 +46,32 @@ const LOCAL_RANGES = ['loopback', 'linklocal', 'uniquelocal']
  *
  * Réglages d'échappatoire, pour les topologies non prévues (autre CDN, proxy
  * maison en frontal) :
- *   - TRUST_PROXY            : override COMPLET. 'true'/'false', un nombre de
- *                              hops, ou une liste d'IP/CIDR séparée par virgules.
+ *   - TRUST_PROXY            : override COMPLET. 'true'/'false', ou une liste
+ *                              d'IP/CIDR séparée par virgules.
  *   - TRUSTED_PROXIES_EXTRA  : CIDR supplémentaires à AJOUTER à la liste par
  *                              défaut (ex: l'IP d'un reverse proxy en amont).
+ *
+ * Le mode « nombre de hops » (`TRUST_PROXY=2`) n'est plus accepté : fastify
+ * 5.12.1 l'a retiré (GHSA — usurpation des en-têtes X-Forwarded-*). Un compteur
+ * de hops ne valide pas l'adresse du pair immédiat, donc un client direct peut
+ * pré-écrire de fausses lignes. On ignore toute valeur purement numérique, avec
+ * un avertissement, plutôt que de laisser proxy-addr lever au démarrage.
  */
-export function getTrustProxy(): boolean | number | string[] {
+export function getTrustProxy(): boolean | string[] {
   const override = process.env.TRUST_PROXY?.trim()
   if (override) {
     if (override === 'true')  return true
     if (override === 'false') return false
-    const n = Number(override)
-    if (Number.isInteger(n) && n >= 0) return n
-    return override.split(',').map((s) => s.trim()).filter(Boolean)
+    const list = override.split(',').map((s) => s.trim()).filter(Boolean)
+    const numeric = list.filter((s) => /^\d+$/.test(s))
+    if (numeric.length) {
+      console.warn(
+        `[trustProxy] valeur numérique ignorée (${numeric.join(', ')}) : `
+        + 'le mode compteur de hops a été retiré par fastify. '
+        + 'Utilisez une liste IP/CIDR.',
+      )
+    }
+    return list.filter((s) => !/^\d+$/.test(s))
   }
 
   const extra = (process.env.TRUSTED_PROXIES_EXTRA ?? '')
