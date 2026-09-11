@@ -285,7 +285,7 @@ describe('POST /api/v1/auth/login', () => {
     expect(JSON.parse(res.body)).toHaveProperty('requires_signet', true)
     const ipUpdate = vi.mocked(db.query).mock.calls.find(c => String(c[0]).includes('SET last_seen_ip'))
     expect(ipUpdate).toBeDefined()
-    expect(ipUpdate?.[1]).toEqual(expect.arrayContaining([FAKE_USER.id]))
+    expect(ipUpdate?.[1]).toEqual(['31.215.70.26', FAKE_USER.id])
   })
 
   it('pose last_seen_ip même quand le login s’arrête sur requires_totp', async () => {
@@ -310,7 +310,7 @@ describe('POST /api/v1/auth/login', () => {
     expect(JSON.parse(res.body)).toHaveProperty('requires_totp', true)
     const ipUpdate = vi.mocked(db.query).mock.calls.find(c => String(c[0]).includes('SET last_seen_ip'))
     expect(ipUpdate).toBeDefined()
-    expect(ipUpdate?.[1]).toEqual(expect.arrayContaining([FAKE_USER.id]))
+    expect(ipUpdate?.[1]).toEqual(['31.215.70.26', FAKE_USER.id])
   })
 })
 
