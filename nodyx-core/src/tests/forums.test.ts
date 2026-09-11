@@ -259,3 +259,127 @@ describe('POST /api/v1/forums/posts', () => {
     expect(res.statusCode).toBe(201)
   })
 })
+
+// ── Durcissement vitrine (incident nerti 2026-09-01) ──────────
+//
+// 1. POST /threads : une catégorie post_min_role != 'member' refuse un membre.
+// 2. PATCH /threads/:id : is_featured est réservé aux admins/owners.
+
+describe('POST /api/v1/forums/threads — catégorie restreinte', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+  const COMMUNITY_UUID = '7ba7b810-9dad-11d1-80b4-00c04fd430c8'
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
+    vi.mocked(redis.incr).mockResolvedValue(1 as any)
+    vi.mocked(redis.expire).mockResolvedValue(1 as any)
+    app = await buildApp(a => a.register(forumRoutes, { prefix: '/api/v1/forums' }))
+  })
+
+  function routeQueries(opts: { postMinRole: string; memberRole: string | null }) {
+    vi.mocked(db.query).mockImplementation((sql: any) => {
+      const q = String(sql)
+      if (q.includes('post_min_role FROM categories')) {
+        return Promise.resolve({ rows: [{ community_id: COMMUNITY_UUID, post_min_role: opts.postMinRole }], rowCount: 1 } as any)
+      }
+      if (q.includes('FROM community_bans')) {
+        return Promise.resolve({ rows: [], rowCount: 0 } as any)
+      }
+      if (q.includes('role FROM community_members')) {
+        return Promise.resolve({ rows: opts.memberRole ? [{ role: opts.memberRole }] : [], rowCount: opts.memberRole ? 1 : 0 } as any)
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 } as any)
+    })
+  }
+
+  it('renvoie 403 CATEGORY_RESTRICTED pour un membre dans une catégorie admin-only', async () => {
+    routeQueries({ postMinRole: 'admin', memberRole: 'member' })
+
+    const res = await app.inject({
+      method:  'POST',
+      url:     '/api/v1/forums/threads',
+      headers: { authorization: `Bearer ${makeToken()}` },
+      payload: { category_id: CATEGORY_UUID, title: 'Alsouq Alshabi', content: '<p>spam</p>' },
+    })
+
+    expect(res.statusCode).toBe(403)
+    expect(JSON.parse(res.body).code).toBe('CATEGORY_RESTRICTED')
+    expect(ThreadModel.create).not.toHaveBeenCalled()
+  })
+
+  it('laisse un admin poster dans la même catégorie', async () => {
+    routeQueries({ postMinRole: 'admin', memberRole: 'admin' })
+    vi.mocked(ThreadModel.create).mockResolvedValueOnce(FAKE_THREAD as any)
+    vi.mocked(PostModel.create).mockResolvedValueOnce(FAKE_POST as any)
+
+    const res = await app.inject({
+      method:  'POST',
+      url:     '/api/v1/forums/threads',
+      headers: { authorization: `Bearer ${makeToken()}` },
+      payload: { category_id: CATEGORY_UUID, title: 'Release v3', content: '<p>notes</p>' },
+    })
+
+    expect(res.statusCode).toBe(201)
+  })
+
+  it('non-régression : catégorie ouverte (member) accepte un membre', async () => {
+    routeQueries({ postMinRole: 'member', memberRole: 'member' })
+    vi.mocked(ThreadModel.create).mockResolvedValueOnce(FAKE_THREAD as any)
+    vi.mocked(PostModel.create).mockResolvedValueOnce(FAKE_POST as any)
+
+    const res = await app.inject({
+      method:  'POST',
+      url:     '/api/v1/forums/threads',
+      headers: { authorization: `Bearer ${makeToken()}` },
+      payload: { category_id: CATEGORY_UUID, title: 'Coucou', content: '<p>hello</p>' },
+    })
+
+    expect(res.statusCode).toBe(201)
+  })
+})
+
+describe('PATCH /api/v1/forums/threads/:id — is_featured réservé aux admins', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+  const OTHER_AUTHOR = '8ba7b810-9dad-11d1-80b4-00c04fd430c8'
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
+    vi.mocked(redis.incr).mockResolvedValue(1 as any)
+    vi.mocked(redis.expire).mockResolvedValue(1 as any)
+    app = await buildApp(a => a.register(forumRoutes, { prefix: '/api/v1/forums' }))
+  })
+
+  it('renvoie 403 pour un modérateur (pas admin)', async () => {
+    vi.mocked(ThreadModel.findById).mockResolvedValueOnce({ ...FAKE_THREAD, author_id: OTHER_AUTHOR } as any)
+    // isMod -> moderator (true) ; isAdmin -> moderator (false)
+    vi.mocked(db.query).mockResolvedValue({ rows: [{ role: 'moderator' }], rowCount: 1 } as any)
+
+    const res = await app.inject({
+      method:  'PATCH',
+      url:     `/api/v1/forums/threads/${THREAD_UUID}`,
+      headers: { authorization: `Bearer ${makeToken()}` },
+      payload: { is_featured: true },
+    })
+
+    expect(res.statusCode).toBe(403)
+    expect(ThreadModel.update).not.toHaveBeenCalled()
+  })
+
+  it('laisse un admin mettre en avant', async () => {
+    vi.mocked(ThreadModel.findById).mockResolvedValueOnce({ ...FAKE_THREAD, author_id: OTHER_AUTHOR } as any)
+    vi.mocked(db.query).mockResolvedValue({ rows: [{ role: 'admin' }], rowCount: 1 } as any)
+    vi.mocked(ThreadModel.update).mockResolvedValueOnce({ ...FAKE_THREAD, is_featured: true } as any)
+
+    const res = await app.inject({
+      method:  'PATCH',
+      url:     `/api/v1/forums/threads/${THREAD_UUID}`,
+      headers: { authorization: `Bearer ${makeToken()}` },
+      payload: { is_featured: true },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(ThreadModel.update).toHaveBeenCalledWith(THREAD_UUID, expect.objectContaining({ is_featured: true }))
+  })
+})

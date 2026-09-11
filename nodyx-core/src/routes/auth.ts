@@ -13,7 +13,7 @@ import { toSelfUser } from '../utils/publicUser'
 import { isSmtpConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService'
 import { resolveServerLocale } from '../i18n/serverStrings'
 import { getUserTotp, TOTP_PENDING_TTL } from './totp'
-import { getClientIp } from '../utils/clientIp'
+import { getClientIp, estPubliquementRoutable } from '../utils/clientIp'
 
 // ── Discord security alerts ───────────────────────────────────────────────────
 
@@ -111,7 +111,9 @@ export async function invalidateUserSessions(userId: string): Promise<void> {
 }
 
 const RegisterBody = z.object({
-  username: z.string().min(3).max(50),
+  // trim() AVANT min/max : une espace de tête ou de fin donnait un pseudo
+  // « nerti » (avec espace) dont la page profil renvoie 404. Incident 2026-09.
+  username: z.string().trim().min(3).max(50),
   email:    z.string().email(),
   password: z.string().min(8).max(100),
   // Anti-bot couche 1 : honeypot field. Doit être vide (humain ne le voit
@@ -377,6 +379,18 @@ export default async function authRoutes(app: FastifyInstance) {
       }
     }
 
+    // Cible utile pour le bannissement d'IP : registration_ip vaut 127.0.0.1
+    // pour tout le monde (inscription via proxy SSR). On ne persiste qu'une
+    // adresse réellement publique. Posé ICI, avant les branches 2FA qui
+    // renvoient tôt (signet/TOTP) : un compte protégé par 2FA ne repasse
+    // jamais par la fin de cette fonction, donc last_seen_ip ne serait sinon
+    // jamais peuplé pour lui — exactement les comptes admin les plus probables
+    // à activer 2FA, et donc les plus probables à devoir bannir une IP depuis.
+    const loginIp = getClientIp(request)  // fiable via trustProxy
+    if (estPubliquementRoutable(loginIp)) {
+      db.query(`UPDATE users SET last_seen_ip = $1 WHERE id = $2`, [loginIp, user.id]).catch(() => {})
+    }
+
     // ── 2FA Signet — prioritaire sur TOTP ────────────────────────────────────
     // Si l'user a au moins un appareil Signet enregistré, on délègue le 2ème
     // facteur à Signet (plus fort qu'un TOTP code) — même flow que le login
@@ -407,10 +421,10 @@ export default async function authRoutes(app: FastifyInstance) {
     await trackSession(user.id, token)
 
     // Détection connexion depuis une nouvelle IP
-    const loginIp    = getClientIp(request)  // fiable via trustProxy
     const knownIpKey = `known_ip:${user.id}`
     const knownIp    = await redis.get(knownIpKey)
     await redis.set(knownIpKey, loginIp, 'EX', 60 * 60 * 24 * 30) // 30 jours
+
     if (knownIp && knownIp !== loginIp) {
       sendSecurityAlert({
         title:  '🌍 Connexion depuis une nouvelle IP',

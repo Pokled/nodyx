@@ -109,6 +109,15 @@
 										<input id="cat-edit-desc-{cat.id}" name="description" type="text" value={cat.description ?? ''}
 											class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
 									</div>
+									<div>
+										<label for="cat-edit-role-{cat.id}" class="block text-xs text-gray-400 mb-1">{tFn('acat.post_min_role_label')}</label>
+										<select id="cat-edit-role-{cat.id}" name="post_min_role"
+											class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+											{#each [['member', tFn('acat.role_member')], ['moderator', tFn('acat.role_moderator')], ['admin', tFn('acat.role_admin')], ['owner', tFn('acat.role_owner')]] as [value, label]}
+												<option {value} selected={(cat.post_min_role ?? 'member') === value}>{label}</option>
+											{/each}
+										</select>
+									</div>
 									<div class="flex gap-2">
 										<button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white">{tFn('acat.save')}</button>
 										<button type="button" onclick={() => editingId = null} class="rounded-lg bg-gray-700 hover:bg-gray-600 px-3 py-1.5 text-xs text-gray-300">{tFn('acat.cancel')}</button>
@@ -121,6 +130,11 @@
 									{#if cat.depth > 0}<span class="text-gray-700 text-xs">└</span>{/if}
 									<div>
 										<span class="font-medium text-white">{cat.name}</span>
+										{#if (cat.post_min_role ?? 'member') !== 'member'}
+											<span class="ml-2 inline-flex items-center rounded bg-amber-900/40 border border-amber-800 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
+												{tFn('acat.restricted_badge', { role: tFn(`acat.role_${cat.post_min_role}`) })}
+											</span>
+										{/if}
 										{#if cat.description}
 											<span class="text-xs text-gray-500 ml-2">{cat.description}</span>
 										{/if}

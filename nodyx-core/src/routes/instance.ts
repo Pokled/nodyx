@@ -258,6 +258,10 @@ export default async function instanceRoutes(app: FastifyInstance) {
        JOIN categories c ON c.id = t.category_id
        JOIN users     u ON u.id = t.author_id
        WHERE c.community_id = $1
+         -- Un fil d'une catégorie restreinte (annonces) ne remonte dans le flux
+         -- public que s'il a été explicitement mis en avant : un brouillon
+         -- d'annonce ne doit pas fuiter avant publication.
+         AND (c.post_min_role = 'member' OR t.is_featured = true)
        ORDER BY COALESCE(
          (SELECT MAX(p3.created_at) FROM posts p3 WHERE p3.thread_id = t.id),
          t.created_at
@@ -271,7 +275,10 @@ export default async function instanceRoutes(app: FastifyInstance) {
 
   // GET /api/v1/instance/threads/showcase
   // Threads "éditorialisés" avec cover image + excerpt extraits du 1er post.
-  // Query params: category (slug ou UUID), pinned_only, limit (max 20), order (recent|popular|most_viewed)
+  // Ne renvoie QUE les fils mis en avant par un admin (threads.showcased_at) :
+  // durcissement du 2026-09, sans quoi n'importe quel membre atteignait la
+  // vitrine en postant un fil récent. Query params: category (slug ou UUID),
+  // pinned_only, limit (max 20), order (recent|popular|most_viewed).
   app.get('/threads/showcase', { preHandler: [rateLimit] }, async (request, reply) => {
     const communityId = await getCommunityId()
     if (!communityId) return reply.send({ threads: [] })
@@ -303,7 +310,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       return reply.send(JSON.parse(cached))
     }
 
-    const conditions: string[] = ['c.community_id = $1']
+    const conditions: string[] = ['c.community_id = $1', 't.showcased_at IS NOT NULL']
     const params: unknown[] = [communityId]
 
     if (categoryRaw) {
@@ -313,9 +320,9 @@ export default async function instanceRoutes(app: FastifyInstance) {
     if (pinnedOnly) conditions.push('t.is_pinned = true')
 
     const orderClause =
-      orderKey === 'popular'     ? 'post_count DESC NULLS LAST, t.created_at DESC' :
-      orderKey === 'most_viewed' ? 't.views DESC, t.created_at DESC' :
-      'COALESCE((SELECT MAX(p3.created_at) FROM posts p3 WHERE p3.thread_id = t.id), t.created_at) DESC'
+      orderKey === 'popular'     ? 'post_count DESC NULLS LAST, t.showcased_at DESC' :
+      orderKey === 'most_viewed' ? 't.views DESC, t.showcased_at DESC' :
+      't.showcased_at DESC'
 
     params.push(limit)
     const limitIdx = params.length

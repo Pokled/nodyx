@@ -53,7 +53,10 @@ export const actions: Actions = {
 		const json = await res.json();
 
 		if (!res.ok) {
-			return fail(res.status, { error: json.error });
+			return fail(res.status, {
+				error: json.error,
+				code: json.code ?? null,
+			});
 		}
 
 		// Si un sondage est joint, le créer avec le thread_id
