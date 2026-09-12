@@ -194,7 +194,10 @@ Indexed forum with canonical URLs, JSON-LD and a sitemap · real-time chat with 
 A collaborative P2P canvas for whiteboarding in real time · WebRTC DataChannels carrying typing indicators and reactions peer-to-peer · a rich article editor with a table of contents, image resize handles, protected code blocks and two-column layouts, all safe through the sanitizer on the way back out.
 
 **Own your front door**
-A drag-and-drop **Homepage Builder**, rows and columns on a 12-unit grid · a **Widget Store** for installing external widgets from a `.zip`, no rebuild · a **Widget SDK** for building your own, plain JavaScript, no framework required.
+A drag-and-drop **Homepage Builder**, rows and columns on a 12-unit grid · an **Extension SDK** with a real security substrate (sandboxed identity, cloistered storage, a network proxy that pins the destination address), install from [extensions.nodyx.org](https://extensions.nodyx.org) in one click, no rebuild.
+
+**Play together, without leaving the call**
+Games and activities dock right inside a voice channel while you talk, a Play Store style gallery to pick one, full screen when you want it, the same extension surface as the marketplace above.
 
 **Run it from a spare laptop**
 Home server support with no port forwarding and no domain required · a federated community directory with cross-instance search · a collaborative jukebox, an event calendar with maps and RSVP, an asset library for frames, badges and banners, passwordless login via ECDSA P-256.
@@ -209,7 +212,7 @@ A native **Streamer Hub**: Soundboard with ID3 tags and a viewer queue, a `!ns` 
 
 ## Homepage Builder + Widget SDK
 
-Nodyx ships with a **drag-and-drop Homepage Builder** (rows split into resizable columns on a 12-unit grid, 9 native widgets, per-widget audience rules, draft/publish) and a complete **Widget SDK**, plain JavaScript Custom Elements, no React, no Vue, no npm required. Any developer can package a widget as a `.zip` and install it on any Nodyx instance in one click, no rebuild, no deploy. Two features that no other self-hosted community platform offers together.
+Nodyx ships with a **drag-and-drop Homepage Builder** (rows split into resizable columns on a 12-unit grid, 9 native widgets, per-widget audience rules, draft/publish) and a complete **Extension SDK**, plain JavaScript Custom Elements, no React, no Vue, no npm required. Any developer can package an extension as a `.zip` and install it on any Nodyx instance in one click, no rebuild, no deploy. An extension runs sandboxed: a projected identity instead of real accounts, storage cloistered per extension, network egress through a proxy that pins the target address. **[extensions.nodyx.org](https://extensions.nodyx.org)** hosts the marketplace, the registry and the index, games playable inside a voice channel included.
 
 → **[Homepage Builder, full guide](docs/en/HOMEPAGE-BUILDER.md)**, layout zones, native widgets, the Widget Store
 → **[Build your first widget](https://nodyx.dev/create-widget)**, step-by-step SDK guide for non-developers
@@ -478,7 +481,7 @@ Each Nodyx instance runs a **Gossip Protocol** scheduler that periodically pings
 
 ## What's built. What's coming.
 
-Nodyx has shipped 12 major releases since February 2026: the forum, chat and voice foundation, a full paranoid security audit (Argon2id, honeypots, fail2ban, 2FA), private E2E-encrypted DMs, a Homepage Builder with a Widget SDK, a native Streamer Hub, a verified backup system with one-click restore, OctoGuard native auto-moderation, and now an experimental Rust SFU carrying voice and screen sharing through your own server.
+Nodyx has shipped 12 major releases since February 2026: the forum, chat and voice foundation, a full paranoid security audit (Argon2id, honeypots, fail2ban, 2FA), private E2E-encrypted DMs, a Homepage Builder with an Extension SDK and its own marketplace, games that dock inside a voice channel, a native Streamer Hub, a verified backup system with one-click restore, OctoGuard native auto-moderation, and now an experimental Rust SFU carrying voice and screen sharing through your own server.
 
 → **[Full changelog, every version in detail](CHANGELOG.md)**
 → **[Roadmap, where we're going](docs/en/ROADMAP.md)**
