@@ -12,6 +12,7 @@ import { FastifyInstance } from 'fastify'
 import { rateLimit } from '../middleware/rateLimit'
 import { adminOnly } from '../middleware/adminOnly'
 import { db } from '../config/database'
+import { parseBuffer } from 'music-metadata'
 import { scanBuffer } from '../services/fileScanner'
 import { uploadAsset } from '../services/assetService'
 import { generateLicensePdf } from '../services/licenseDocument'
@@ -266,7 +267,7 @@ export default async function musicRoutes(app: FastifyInstance) {
   app.post('/tracks', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
     const body = request.body as {
       category_id?: string; title?: string; description?: string
-      audio_asset_id?: string; image_asset_id?: string
+      audio_asset_id?: string; image_asset_id?: string; duration_seconds?: number
     }
     if (!body.category_id || !body.audio_asset_id) {
       return reply.code(400).send({ error: 'category_id and audio_asset_id are required', code: 'MISSING_FIELDS' })
@@ -281,11 +282,12 @@ export default async function musicRoutes(app: FastifyInstance) {
     if (!category) return reply.code(404).send({ error: 'Category not found', code: 'NOT_FOUND' })
 
     const track = await MusicTrackModel.create({
-      category_id:     body.category_id,
-      title:           body.title.trim(),
-      description:     body.description?.trim() || null,
-      audio_asset_id:  body.audio_asset_id,
-      image_asset_id:  body.image_asset_id || null,
+      category_id:       body.category_id,
+      title:             body.title.trim(),
+      description:       body.description?.trim() || null,
+      audio_asset_id:    body.audio_asset_id,
+      image_asset_id:    body.image_asset_id || null,
+      duration_seconds:  Number.isFinite(body.duration_seconds) ? body.duration_seconds : null,
     })
     return reply.code(201).send({ track })
   })
@@ -342,7 +344,17 @@ export default async function musicRoutes(app: FastifyInstance) {
       assetType:        'sound',
       name:             data.filename,
     })
-    return reply.send({ asset_id: asset.id, url: `/uploads/${asset.file_path}` })
+
+    // Duree extraite une fois ici, jamais recalculee a la volee. Best-effort :
+    // un fichier au format inhabituel ne doit pas faire echouer l'upload,
+    // juste laisser la duree vide (l'affichage s'en passe proprement).
+    let durationSeconds: number | null = null
+    try {
+      const metadata = await parseBuffer(buffer, data.mimetype)
+      if (metadata.format.duration) durationSeconds = Math.round(metadata.format.duration)
+    } catch { /* duree non critique, l'upload reste valide */ }
+
+    return reply.send({ asset_id: asset.id, url: `/uploads/${asset.file_path}`, duration_seconds: durationSeconds })
   })
 
   app.post('/upload/image', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
