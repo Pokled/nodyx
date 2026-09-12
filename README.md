@@ -202,6 +202,9 @@ Games and activities dock right inside a voice channel while you talk, a Play St
 **Run it from a spare laptop**
 Home server support with no port forwarding and no domain required · a federated community directory with cross-instance search · a collaborative jukebox, an event calendar with maps and RSVP, an asset library for frames, badges and banners, passwordless login via ECDSA P-256.
 
+**Show what you make**
+A public media showcase at `/musique`, categories and tracks managed entirely from the admin, reorder with a click, a provenance PDF generated on demand for anything you need to prove was made in-house. Title, subtitle and banner are editable too, not tied to any single use case.
+
 **Keep it yours to moderate**
 **OctoGuard**, native auto-moderation (regex/word/link/emoji-flood, ReDoS-safe via Google `re2`), a welcome bot, custom commands, mutes, signed webhooks, every switch admin-tunable and off by default.
 

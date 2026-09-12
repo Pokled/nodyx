@@ -10,6 +10,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 Un mois de travail depuis la 2.12.0, sur plusieurs chantiers en parallèle. Résumé par thème,
 pas par commit : le détail de chacun reste dans son historique git et ses PR.
 
+### Vitrine musique, un module pensé pour devenir générique
+
+Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une
+bande originale de jeu vidéo composée en interne et la distribuer à un studio partenaire, mais
+pas figé sur ce seul usage : titre, sous-titre et bannière de la page publique sont éditables par
+l'admin, avec repli propre sur des valeurs par défaut si rien n'est renseigné. Catégories
+illustrées et réordonnables (boutons monter/descendre, pas de glisser-déposer fragile), morceaux
+uploadés en un geste depuis l'admin (audio et image, scan anti-malware avant stockage, même
+garde que le reste des uploads), titre et description corrigeables en place sans jamais recréer
+un morceau pour une coquille. Chaque catégorie porte une note de licence libre qui alimente une
+attestation PDF générée à la volée et téléchargeable à côté de chaque morceau : une preuve de
+provenance datée, pas un avis juridique.
+
 ### SDK d'extensions et place de marché (extensions.nodyx.org)
 
 Nodyx peut désormais être étendu par des tiers, sans toucher au cœur : un SDK complet, pensé
