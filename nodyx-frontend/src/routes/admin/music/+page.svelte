@@ -10,7 +10,7 @@
 
 	interface Category {
 		id: string; slug: string; title: string; description: string | null;
-		image_url: string | null; track_count: number;
+		license_note: string | null; image_url: string | null; track_count: number;
 	}
 	interface Track {
 		id: string; category_id: string; title: string; description: string | null;
@@ -101,6 +101,23 @@
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ title, description: description || null }),
+			});
+			await refreshCategories();
+		} catch (e) {
+			errorMsg = (e as Error).message;
+		} finally {
+			busy = null;
+		}
+	}
+
+	async function updateCategoryLicense(cat: Category, licenseNote: string) {
+		busy = `license-category-${cat.id}`;
+		errorMsg = null;
+		try {
+			await api(`/categories/${cat.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ license_note: licenseNote || null }),
 			});
 			await refreshCategories();
 		} catch (e) {
@@ -295,6 +312,25 @@
 
 				{#if openCat === cat.id}
 					<div class="border-t border-gray-800 p-4 space-y-3 bg-gray-950/40">
+						<div class="rounded-lg border border-gray-800 bg-gray-900/60 p-3 space-y-2">
+							<div class="flex items-center justify-between gap-2">
+								<p class="text-xs font-semibold text-indigo-300">{tFn('amusic.license_note')}</p>
+								{#if cat.license_note}
+									<a href={`/api/v1/music/categories/${cat.id}/license.pdf`} class="text-xs text-indigo-400 hover:text-indigo-300">
+										{tFn('amusic.download_license')} ↓
+									</a>
+								{/if}
+							</div>
+							<p class="text-[11px] text-gray-500">{tFn('amusic.license_note_help')}</p>
+							<textarea
+								value={cat.license_note ?? ''}
+								rows="3"
+								placeholder={tFn('amusic.license_note_ph')}
+								onblur={(e) => { const v = (e.target as HTMLTextAreaElement).value.trim(); if (v !== (cat.license_note ?? '')) updateCategoryLicense(cat, v); }}
+								class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-xs focus:outline-none focus:border-indigo-500"
+							></textarea>
+						</div>
+
 						{#if tracksByCat[cat.id]}
 							{#each tracksByCat[cat.id] as track (track.id)}
 								<div class="flex items-center gap-3 rounded-lg bg-gray-900/50 border border-gray-800 p-2.5">

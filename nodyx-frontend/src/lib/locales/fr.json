@@ -4611,6 +4611,7 @@
   "music.share_category": "Copier le lien de cette ambiance",
   "music.share_track": "Copier le lien de ce morceau",
   "music.link_copied": "Lien copié",
+  "music.download_license": "Licence (PDF)",
   "amusic.page_title": "Musique (admin)",
   "amusic.title": "Musique",
   "amusic.subtitle": "Catégories et morceaux affichés sur la page publique /musique.",
@@ -4635,5 +4636,9 @@
   "amusic.confirm_delete_category": "Supprimer la catégorie « {{title}} » et tous ses morceaux ?",
   "amusic.confirm_delete_track": "Supprimer le morceau « {{title}} » ?",
   "amusic.err_generic": "Erreur {{status}}",
-  "amusic.err_upload_failed": "Échec de l'envoi ({{kind}})"
+  "amusic.err_upload_failed": "Échec de l'envoi ({{kind}})",
+  "amusic.license_note": "Note de licence",
+  "amusic.license_note_help": "Studio, jeu, outil utilisé (Suno, etc.), conditions applicables. Sert à générer le PDF téléchargeable ci-dessus, à côté de chaque morceau sur la page publique.",
+  "amusic.license_note_ph": "Ex : Musique composée par Pokled pour Twisted Reality (Sleem Studio), générée avec Suno. Conditions : suno.com/terms-of-service",
+  "amusic.download_license": "Télécharger la licence (PDF)"
 }
