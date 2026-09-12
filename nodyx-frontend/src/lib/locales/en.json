@@ -4632,6 +4632,8 @@
   "amusic.page_settings": "Public page (title, subtitle, banner)",
   "amusic.field_subtitle": "Subtitle",
   "amusic.field_banner": "Banner",
+  "amusic.default_license_note": "Default license note",
+  "amusic.default_license_note_help": "Applied automatically to any new category (still editable per category afterwards).",
   "amusic.upload_banner": "Add a banner",
   "amusic.remove_banner": "Remove banner",
   "amusic.new_category": "New category",

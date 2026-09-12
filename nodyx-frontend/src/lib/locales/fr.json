@@ -4632,6 +4632,8 @@
   "amusic.page_settings": "Page publique (titre, sous-titre, bannière)",
   "amusic.field_subtitle": "Sous-titre",
   "amusic.field_banner": "Bannière",
+  "amusic.default_license_note": "Note de licence par défaut",
+  "amusic.default_license_note_help": "Appliquée automatiquement à toute nouvelle catégorie (modifiable ensuite catégorie par catégorie).",
   "amusic.upload_banner": "Ajouter une bannière",
   "amusic.remove_banner": "Retirer la bannière",
   "amusic.new_category": "Nouvelle catégorie",
