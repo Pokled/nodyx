@@ -6,7 +6,7 @@
 
 	let { data }: { data: PageData } = $props();
 
-	interface Category { id: string; slug: string; title: string; description: string | null; image_url: string | null }
+	interface Category { id: string; slug: string; title: string; description: string | null; license_note: string | null; image_url: string | null }
 	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null }
 
 	const category = $derived(data.category as Category);
@@ -73,9 +73,16 @@
 					<div class="mus-track-main">
 						<div class="mus-track-head">
 							<p class="mus-track-title">{track.title}</p>
-							<button type="button" class="mus-share-btn" onclick={() => copyTrackLink(track.id)}>
-								{copiedId === track.id ? tFn('music.link_copied') : tFn('music.share_track')}
-							</button>
+							<span class="mus-track-actions">
+								{#if category.license_note}
+									<a class="mus-share-btn" href={`/api/v1/music/categories/${category.id}/license.pdf`}>
+										{tFn('music.download_license')}
+									</a>
+								{/if}
+								<button type="button" class="mus-share-btn" onclick={() => copyTrackLink(track.id)}>
+									{copiedId === track.id ? tFn('music.link_copied') : tFn('music.share_track')}
+								</button>
+							</span>
 						</div>
 						{#if track.description}
 							<p class="mus-track-desc">{track.description}</p>
@@ -241,11 +248,19 @@
 		margin: 0;
 	}
 
+	.mus-track-actions {
+		flex: none;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
 	.mus-share-btn {
 		flex: none;
 		background: none;
 		border: none;
 		padding: 0;
+		text-decoration: none;
 		font-size: 0.6875rem;
 		color: rgba(255, 255, 255, 0.35);
 		cursor: pointer;

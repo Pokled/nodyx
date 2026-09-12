@@ -11,6 +11,7 @@ import { adminOnly } from '../middleware/adminOnly'
 import { db } from '../config/database'
 import { scanBuffer } from '../services/fileScanner'
 import { uploadAsset } from '../services/assetService'
+import { generateLicensePdf } from '../services/licenseDocument'
 import * as MusicCategoryModel from '../models/musicCategory'
 import * as MusicTrackModel from '../models/musicTrack'
 
@@ -56,6 +57,33 @@ export default async function musicRoutes(app: FastifyInstance) {
     return reply.send({ category, tracks })
   })
 
+  // GET /categories/:id/license.pdf : attestation de provenance, publique et
+  // téléchargeable (pensée pour être transmise au développeur destinataire).
+  app.get('/categories/:id/license.pdf', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const category = await MusicCategoryModel.findById(id)
+    if (!category) return reply.code(404).send({ error: 'Category not found', code: 'NOT_FOUND' })
+    if (!category.license_note) return reply.code(404).send({ error: 'No license note for this category', code: 'NO_LICENSE' })
+
+    const [tracks, communityRows] = await Promise.all([
+      MusicTrackModel.listByCategory(category.id),
+      db.query<{ name: string }>(`SELECT name FROM communities WHERE id = $1`, [category.community_id]),
+    ])
+
+    const pdf = await generateLicensePdf({
+      categoryTitle: category.title,
+      licenseNote:   category.license_note,
+      communityName: communityRows.rows[0]?.name ?? 'Nodyx',
+      trackTitles:   tracks.map(t => t.title),
+      generatedAt:   new Date(),
+    })
+
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="licence-${category.slug}.pdf"`)
+      .send(pdf)
+  })
+
   // ── Écriture admin : catégories ──────────────────────────────────────────
 
   app.post('/categories', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
@@ -76,7 +104,7 @@ export default async function musicRoutes(app: FastifyInstance) {
 
   app.patch('/categories/:id', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const body = request.body as { title?: string; description?: string | null; position?: number }
+    const body = request.body as { title?: string; description?: string | null; license_note?: string | null; image_asset_id?: string | null; position?: number }
     if (body.title !== undefined && (body.title.trim().length < 2 || body.title.length > 120)) {
       return reply.code(400).send({ error: 'title must be 2 to 120 characters', code: 'INVALID_TITLE' })
     }

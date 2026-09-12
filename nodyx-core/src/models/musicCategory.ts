@@ -7,6 +7,7 @@ export interface MusicCategory {
   slug:         string
   title:        string
   description:  string | null
+  license_note: string | null
   image_url:    string | null
   track_count:  number
   position:     number
@@ -18,7 +19,7 @@ export interface MusicCategory {
 // vit dans community_assets, servi tel quel sous /uploads/<file_path>.
 const SELECT = `
   SELECT
-    mc.id, mc.community_id, mc.slug, mc.title, mc.description, mc.position,
+    mc.id, mc.community_id, mc.slug, mc.title, mc.description, mc.license_note, mc.position,
     mc.created_at, mc.updated_at,
     CASE WHEN a.file_path IS NOT NULL THEN '/uploads/' || a.file_path END AS image_url,
     COUNT(mt.id)::int AS track_count
@@ -92,6 +93,7 @@ export async function create(data: {
 export async function update(id: string, data: {
   title?:          string
   description?:    string | null
+  license_note?:   string | null
   image_asset_id?: string | null
   position?:       number
 }): Promise<MusicCategory | null> {
@@ -101,6 +103,7 @@ export async function update(id: string, data: {
 
   if (data.title          !== undefined) { fields.push(`title = $${i++}`);          values.push(data.title) }
   if (data.description    !== undefined) { fields.push(`description = $${i++}`);    values.push(data.description) }
+  if (data.license_note   !== undefined) { fields.push(`license_note = $${i++}`);   values.push(data.license_note) }
   if (data.image_asset_id !== undefined) { fields.push(`image_asset_id = $${i++}`); values.push(data.image_asset_id) }
   if (data.position       !== undefined) { fields.push(`position = $${i++}`);        values.push(data.position) }
   if (fields.length === 0) return findById(id)
