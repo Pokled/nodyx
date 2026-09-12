@@ -108,8 +108,25 @@ export default async function musicRoutes(app: FastifyInstance) {
     const category = await MusicCategoryModel.findBySlug(communityId, slug)
     if (!category) return reply.code(404).send({ error: 'Category not found', code: 'NOT_FOUND' })
 
-    const tracks = await MusicTrackModel.listByCategory(category.id)
+    const [tracks] = await Promise.all([
+      MusicTrackModel.listByCategory(category.id),
+      MusicCategoryModel.incrementViews(category.id),
+    ])
+    category.views += 1 // reflète l'incrément dans la reponse sans re-selectionner la ligne
     return reply.send({ category, tracks })
+  })
+
+  // POST /tracks/:id/like : "j'aime" public, anonyme, un entier qui monte.
+  // Pas de compte requis (page pensee pour des visiteurs venus de Discord),
+  // donc pas de garde-fou serveur contre les clics repetes au-dela du
+  // rateLimit global : la garde vit cote client (un like par appareil,
+  // cf +page.svelte), proportionne a l'enjeu (un signal d'appreciation,
+  // pas un vote a securiser).
+  app.post('/tracks/:id/like', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const track = await MusicTrackModel.addLike(id)
+    if (!track) return reply.code(404).send({ error: 'Track not found', code: 'NOT_FOUND' })
+    return reply.send({ likes: track.likes })
   })
 
   // GET /categories/:id/license.pdf : attestation de provenance, publique et
