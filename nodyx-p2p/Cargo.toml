@@ -9,5 +9,8 @@ members = [
 # Le moteur mediasoup (spike §15 du CDC SFU) est HORS workspace : sa compilation
 # inclut le worker C++ (plusieurs minutes) et n'a rien à faire dans chaque run
 # de CI tant que le spike n'est pas promu P1. Build : cd crates/nodyx-sfu-mediasoup.
-exclude = ["crates/nodyx-sfu-mediasoup"]
+# Même traitement pour le spike str0m (SPECS/NODYX_MEDIA_ENGINE_RUST.md, Phase A) :
+# dépendance crypto (aws-lc-rs) qui tire cmake/clang, aucune raison d'imposer ça
+# à chaque build de nodyx-server/nodyx-gossip. Build : cd crates/nodyx-sfu-str0m.
+exclude = ["crates/nodyx-sfu-mediasoup", "crates/nodyx-sfu-str0m"]
 resolver = "2"
