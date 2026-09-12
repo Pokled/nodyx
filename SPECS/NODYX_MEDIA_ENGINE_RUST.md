@@ -1,6 +1,9 @@
 # CDC : MediaEngine Rust natif + WireGuard (promesse zéro-port)
 
-> Statut : **SQUELETTE, en conception. À remplir collaborativement (piloté via le module Tâches).**
+> Statut : **Phase A démarrée (12/09/2026), gel du 16/07/2026 levé.** Code du spike prêt et
+> vérifié (`nodyx-p2p/crates/nodyx-sfu-str0m`), **verdict du perçage NAT en attente du test
+> terrain** (protocole §9.1, à faire sur une box résidentielle réelle — voir le README du
+> crate). Rien au-delà de la Phase A n'est engagé tant que ce verdict n'est pas rendu.
 > Réf. : `memory/project_promesse_zero_port.md`, `NODYX_SFU_CDC.md`, `docs/en/ROADMAP.md` (Phase 3.0-D).
 
 ---
@@ -59,6 +62,17 @@ elle rembourse ici.
 > À VÉRIFIER : le trait `MediaEngine` couvre-t-il tout ce dont un moteur natif a besoin, ou
 > a-t-il des fuites d'abstraction propres à mediasoup (le « CodecAdapter » identifié au CDC) ?
 > → première carte d'investigation.
+>
+> **Première réponse (spike Phase A, 12/09) : le trait tient, avec une hypothèse implicite à
+> documenter.** `transport_params`/`connect_transport` supposent que le MOTEUR génère le
+> premier message SDP (l'« offre ») et que le client répond. Ça colle à mediasoup (ICE/DTLS
+> générés serveur), donc `Str0mEngine` fait pareil : str0m OFFREUR. Ce n'est pas une fuite
+> rédhibitoire, juste un rôle à choisir par adaptateur et à documenter (fait dans
+> `nodyx-sfu-str0m/src/engine.rs`). Prouvé par `trait-spike` : `transport_params` produit un
+> vrai `a=ice-ufrag`/`a=fingerprint`/`a=candidate`, `connect_transport` rejette proprement un
+> payload invalide, `close_*` sont idempotents. `produce`/`consume` restent volontairement
+> `Unsupported` : ils exigent la boucle réseau (`poll_output`/`handle_input`) tournant en
+> tâche de fond, ce qui appartient à la Phase B, pas à ce spike.
 
 ---
 
