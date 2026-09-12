@@ -7,6 +7,83 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
+Un mois de travail depuis la 2.12.0, sur plusieurs chantiers en parallèle. Résumé par thème,
+pas par commit : le détail de chacun reste dans son historique git et ses PR.
+
+### SDK d'extensions et place de marché (extensions.nodyx.org)
+
+Nodyx peut désormais être étendu par des tiers, sans toucher au cœur : un SDK complet, pensé
+sécurité d'abord (P0-A, P0-B). Une extension tourne dans une surface isolée, parle à l'hôte par
+un pont défini, stocke ses données dans un espace clé/valeur cloisonné par extension, ne voit
+qu'une identité projetée (jamais les vrais comptes), et sort vers le réseau par un proxy qui
+épingle l'adresse cible (protection anti SSRF). Un écran de permissions donne à l'admin le
+contrôle de ce qu'une extension peut faire. La première vraie extension (`next-event`) sert de
+preuve, tenue par des tests. `extensions.nodyx.org` héberge la vitrine, le registre et l'index :
+une extension s'installe depuis là, avec un premier paquet réel, téléchargeable et vérifiable.
+Les surfaces d'extension s'affichent sur la page d'accueil et entrent dans le Homepage Builder.
+
+### Activités communautaires dans les salons vocaux
+
+Un salon vocal peut désormais héberger une activité, un jeu joué à plusieurs pendant qu'on parle,
+sur le modèle des extensions : bundle applicatif livré par l'instance, relais temps réel dédié
+(`activity:*`), identité et avatars Nodyx résolus côté hôte pour l'activité. Une galerie façon
+Play Store remplace le lancement direct, le jeu se docke dans le salon avec un bouton plein
+écran, et la surface activity sert aussi de stockage applicatif (scores, état de partie).
+
+### Durcissement de la vitrine publique et des catégories d'annonce
+
+Suite à l'incident du 1er septembre (un compte `member` standard qui fait remonter du spam en
+page d'accueil et dans l'annuaire fédéré, sans aucune faille d'authentification) : les catégories
+peuvent désormais être restreintes par rôle (`post_min_role`), la vitrine publique et l'annuaire
+ne reprennent plus que les fils explicitement mis en avant par un admin, et le bannissement d'IP
+dit désormais la vérité (`ip_ban_applied`) au lieu d'un succès générique quand aucune adresse
+publique n'est connue pour le compte. CDC complet dans `SPECS/NODYX_DURCISSEMENT_VITRINE_CDC.md`.
+
+### Traduction et communauté
+
+Le portugais brésilien a atteint la parité complète (4567 clés), première locale communautaire à
+y arriver. La page `/translate` met en avant tous les contributeurs, pas seulement les
+traducteurs, avec un fond photo réel par langue en rotation façon guide touristique et un
+sélecteur de langue enfin traduit lui-même. Une cinquième porte i18n couvre désormais les
+fichiers `.ts`, angle mort des quatre portes précédentes. Fusionner une traduction déploie
+maintenant automatiquement (avant, une traduction mergée pouvait rester invisible plusieurs jours).
+
+### Réseau et sécurité du relais
+
+Le relais écoute en double pile et journalise l'adresse réelle du client derrière le proxy
+inverse. Une seconde porte WebSocket sur le port 443 permet de joindre le relais quand un réseau
+institutionnel ne laisse sortir que ce port (le cas du 7443 restait fermé pour certains). Modèle
+unifié des événements et décisions de sécurité, collecteur CrowdSec vers PostgreSQL, journal
+d'accès à ligne unique exploitable par GoAccess et CrowdSec : de quoi voir venir plutôt que
+découvrir après coup.
+
+### Corrigé
+
+- **`GET /admin/bans` renvoyait l'email des membres bannis en clair.** Le correctif d'août qui
+  avait masqué le tableau de bord et la liste des membres n'avait jamais couvert cette route.
+  Corrigé au même pattern : masqué par défaut, révélé par un geste tracé.
+- Identification du visiteur réel derrière le tunnel Cloudflare restaurée (les journaux
+  enregistraient l'adresse du proxy, pas celle du visiteur).
+- Éditeur : une vidéo insérée perdait sa mise en forme, un article se disloquait à la réouverture,
+  le sommaire ouvrait un onglet vide au lieu de descendre à l'ancre.
+  Alignement « dans le texte » ajouté pour les images.
+  N'importe qui pouvait réserver un sous-domaine d'infrastructure via l'annuaire fédéré.
+- Salon vocal : la fenêtre des réglages audio débordait de l'écran, sa croix de fermeture était
+  recouverte ou partait avec le défilement selon les cas. Le chat d'un salon vocal envahissait
+  l'écran sur téléphone.
+- Responsive : tableaux d'administration passés en cartes sous les petits écrans (14 tableaux),
+  page d'édition de profil, sidebar mobile qui mangeait 224 des 390 pixels disponibles.
+
+### Exploration (pas encore une décision)
+
+Spike de la Phase A du moteur média Rust natif (`str0m`), pour lever le verrou "zéro port ouvert"
+qui touche encore le SFU vocal (mediasoup est ICE-Lite, un auto-hébergeur derrière une box doit
+aujourd'hui ouvrir un port pour les salons qui dépassent le mesh). Code écrit et vérifié
+(`nodyx-p2p/crates/nodyx-sfu-str0m`) : un client STUN testé contre l'infrastructure réelle, un
+moteur qui implémente le contrat existant sans réécrire le métier. Le verdict du perçage NAT
+attend encore un test sur une vraie box résidentielle. Détail dans
+`SPECS/NODYX_MEDIA_ENGINE_RUST.md`.
+
 ---
 
 ## [2.12.0] — 2026-08-10
