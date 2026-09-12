@@ -76,10 +76,20 @@
 							<span class="mus-track-actions">
 								{#if category.license_note}
 									<a class="mus-share-btn" href={`/api/v1/music/categories/${category.id}/license.pdf`}>
+										<svg class="mus-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+										</svg>
 										{tFn('music.download_license')}
 									</a>
 								{/if}
 								<button type="button" class="mus-share-btn" onclick={() => copyTrackLink(track.id)}>
+									<svg class="mus-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+										{#if copiedId === track.id}
+											<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+										{:else}
+											<path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342a4 4 0 000-2.684m0 2.684a4 4 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a4 4 0 105.368-5.368 4 4 0 00-5.368 5.368zm0 6.684a4 4 0 105.368 5.368 4 4 0 00-5.368-5.368z" />
+										{/if}
+									</svg>
 									{copiedId === track.id ? tFn('music.link_copied') : tFn('music.share_track')}
 								</button>
 							</span>
@@ -204,8 +214,14 @@
 		display: flex;
 		align-items: flex-start;
 		gap: 14px;
-		padding: 16px 0;
+		padding: 14px 12px;
+		margin: 0 -12px;
+		border-radius: 10px;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+		transition: background 0.15s;
+	}
+	.mus-track:hover {
+		background: rgba(255, 255, 255, 0.025);
 	}
 
 	.mus-track-num {
@@ -257,16 +273,30 @@
 
 	.mus-share-btn {
 		flex: none;
-		background: none;
-		border: none;
-		padding: 0;
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 20px;
+		padding: 4px 10px 4px 8px;
 		text-decoration: none;
 		font-size: 0.6875rem;
-		color: rgba(255, 255, 255, 0.35);
+		color: rgba(255, 255, 255, 0.45);
 		cursor: pointer;
-		transition: color 0.15s;
+		transition: color 0.15s, border-color 0.15s, background 0.15s;
 	}
-	.mus-share-btn:hover { color: var(--nx-accent-2-soft2); }
+	.mus-share-btn:hover {
+		color: var(--nx-accent-2-soft2);
+		border-color: rgba(139, 92, 246, 0.4);
+		background: rgba(139, 92, 246, 0.08);
+	}
+
+	.mus-icon {
+		width: 12px;
+		height: 12px;
+		flex: none;
+	}
 
 	.mus-track-desc {
 		font-size: 0.8125rem;
