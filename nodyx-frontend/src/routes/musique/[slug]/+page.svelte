@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
 	import type { PageData } from './$types';
+	import { moodFor, sideLetter } from '$lib/music/mood';
+	import MoodCanvas from '$lib/music/MoodCanvas.svelte';
 
 	const tFn = $derived($t);
 
@@ -11,8 +13,14 @@
 
 	const category = $derived(data.category as Category);
 	const tracks   = $derived(data.tracks as Track[]);
+	const index    = $derived(data.index as number);
+	const mood     = $derived(moodFor(category.title, index));
+	const side     = $derived(sideLetter(index));
 
-	let copiedId = $state<string | null>(null);
+	let openTrack = $state<string | null>(null);
+	let copiedId  = $state<string | null>(null);
+
+	function trackCode(i: number): string { return `${side}${i + 1}`; }
 
 	async function copyTrackLink(id: string) {
 		const url = `${location.origin}${location.pathname}#${id}`;
@@ -34,52 +42,61 @@
 	{/if}
 </svelte:head>
 
-<div class="mus-page">
+<div class="mus-page" style={`--mood: ${mood.accent}`}>
 	<a class="mus-back" href="/musique">← {tFn('music.title')}</a>
 
-	<header
-		class="mus-banner"
-		style={category.image_url ? `background-image:linear-gradient(180deg, rgba(10,8,14,0.15), rgba(10,8,14,0.92)), url('${category.image_url}')` : ''}
-	>
-		<h1 class="mus-banner-title">{category.title}</h1>
-		{#if category.description}
-			<p class="mus-banner-desc">{category.description}</p>
-		{/if}
+	<header class="mus-sleeve-hero">
+		<MoodCanvas seed={category.slug} wash={mood.wash} />
+		<div class="mus-sleeve-hero-inner">
+			{#if category.image_url}
+				<span class="mus-label" style={`background-image:url('${category.image_url}')`}></span>
+			{/if}
+			<h1 class="mus-title">{category.title}</h1>
+			{#if category.description}
+				<p class="mus-desc">{category.description}</p>
+			{/if}
+			<p class="mus-meta">
+				{tFn('music.side_label')} {side}
+				<span class="mus-dot">·</span>
+				{tFn(tracks.length === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(tracks.length))}
+			</p>
+		</div>
 	</header>
 
 	{#if tracks.length === 0}
 		<p class="mus-empty">{tFn('music.empty_category')}</p>
 	{:else}
 		<div class="mus-tracklist">
-			{#each tracks as track (track.id)}
-				<article class="mus-track" id={track.id}>
-					<div
-						class="mus-track-cover"
-						style={(track.image_url ?? category.image_url) ? `background-image:url('${track.image_url ?? category.image_url}')` : ''}
-					></div>
-					<div class="mus-track-body">
-						<div class="mus-track-head">
-							<h3 class="mus-track-title">{track.title}</h3>
-							<button
-								class="mus-share-btn"
-								type="button"
-								onclick={() => copyTrackLink(track.id)}
-								title={tFn('music.share_track')}
-								aria-label={tFn('music.share_track')}
-							>
-								{copiedId === track.id ? tFn('music.link_copied') : '🔗'}
+			{#each tracks as track, i (track.id)}
+				{@const isOpen = openTrack === track.id}
+				<article class="mus-track" id={track.id} class:mus-track--open={isOpen}>
+					<button type="button" class="mus-track-row" onclick={() => { openTrack = isOpen ? null : track.id; }}>
+						<span class="mus-track-code">{trackCode(i)}</span>
+						{#if track.image_url}
+							<span class="mus-track-thumb" style={`background-image:url('${track.image_url}')`}></span>
+						{/if}
+						<span class="mus-track-info">
+							<span class="mus-track-title">{track.title}</span>
+							{#if track.description}
+								<span class="mus-track-desc">{track.description}</span>
+							{/if}
+						</span>
+						<span class="mus-track-toggle">{isOpen ? '−' : '▶'}</span>
+					</button>
+
+					{#if isOpen}
+						<div class="mus-track-player">
+							<nodyx-audio-player
+								src={track.audio_url}
+								track-title={track.title}
+								cover={track.image_url ?? category.image_url ?? undefined}
+								download="1"
+							></nodyx-audio-player>
+							<button type="button" class="mus-share-btn" onclick={() => copyTrackLink(track.id)}>
+								{copiedId === track.id ? tFn('music.link_copied') : tFn('music.share_track')}
 							</button>
 						</div>
-						{#if track.description}
-							<p class="mus-track-desc">{track.description}</p>
-						{/if}
-						<nodyx-audio-player
-							src={track.audio_url}
-							track-title={track.title}
-							cover={track.image_url ?? category.image_url ?? undefined}
-							download="1"
-						></nodyx-audio-player>
-					</div>
+					{/if}
 				</article>
 			{/each}
 		</div>
@@ -89,49 +106,85 @@
 <style>
 	.mus-page {
 		width: 100%;
-		max-width: 1100px;
+		max-width: 900px;
 		margin: 0 auto;
-		padding: 24px clamp(20px, 4vw, 56px) 72px;
+		padding: 28px clamp(20px, 4vw, 48px) 96px;
+		background: var(--mus-paper);
+		color: var(--mus-ink);
 	}
 
 	.mus-back {
 		display: inline-block;
-		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.45);
+		font-family: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+		font-size: 0.75rem;
+		letter-spacing: 0.06em;
+		color: var(--mus-ink-dim);
 		text-decoration: none;
-		margin-bottom: 20px;
+		margin-bottom: 24px;
 		transition: color 0.15s;
 	}
-	.mus-back:hover { color: var(--nx-accent-2-soft2); }
+	.mus-back:hover { color: var(--mood); }
 
-	/* ── Banner ───────────────────────────────────────────────────────────── */
-	.mus-banner {
-		border-radius: 14px;
-		padding: 48px 32px 32px;
+	/* ── Hero sleeve ──────────────────────────────────────────────────────── */
+	.mus-sleeve-hero {
+		position: relative;
+		border: 1px solid var(--mus-groove);
+		background: var(--mus-paper-raised);
+		padding: clamp(40px, 7vw, 72px) clamp(24px, 5vw, 48px);
+		margin-bottom: 40px;
+		overflow: hidden;
+	}
+
+	.mus-sleeve-hero-inner {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 14px;
+	}
+
+	.mus-label {
+		width: 84px;
+		height: 84px;
+		border-radius: 50%;
 		background-size: cover;
 		background-position: center;
-		background-color: rgba(139, 92, 246, 0.12);
-		border: 1px solid rgba(255, 255, 255, 0.07);
-		margin-bottom: 32px;
+		border: 1px solid var(--mus-groove);
+		box-shadow: 0 0 0 6px var(--mus-paper);
+		margin-bottom: 6px;
 	}
 
-	.mus-banner-title {
-		font-size: clamp(1.75rem, 3vw, 2.5rem);
-		font-weight: 800;
-		color: #fff;
-		margin: 0 0 8px;
-		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+	.mus-title {
+		font-family: 'Fraunces', ui-serif, Georgia, serif;
+		font-style: italic;
+		font-weight: 900;
+		font-size: clamp(2rem, 5vw, 3.4rem);
+		line-height: 1.05;
+		margin: 0;
+		text-wrap: balance;
+		max-width: 22ch;
 	}
 
-	.mus-banner-desc {
+	.mus-desc {
 		font-size: 0.9375rem;
-		color: rgba(255, 255, 255, 0.7);
-		max-width: 65ch;
+		color: var(--mus-ink-dim);
+		max-width: 60ch;
 		margin: 0;
 	}
 
+	.mus-meta {
+		font-family: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+		font-size: 0.6875rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--mood);
+		margin: 4px 0 0;
+	}
+
+	.mus-dot { color: var(--mus-groove); margin: 0 2px; }
+
 	.mus-empty {
-		color: rgba(255, 255, 255, 0.4);
+		color: var(--mus-ink-dim);
 		font-size: 0.9rem;
 		font-style: italic;
 	}
@@ -140,72 +193,96 @@
 	.mus-tracklist {
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
+		border-top: 1px solid var(--mus-groove);
 	}
 
 	.mus-track {
-		display: flex;
-		gap: 16px;
-		background: rgba(255, 255, 255, 0.025);
-		border: 1px solid rgba(255, 255, 255, 0.06);
-		border-radius: 10px;
-		padding: 16px;
+		border-bottom: 1px solid var(--mus-groove);
 		scroll-margin-top: 24px;
 	}
 
-	.mus-track-cover {
-		flex: none;
-		width: 72px;
-		height: 72px;
-		border-radius: 8px;
-		background-size: cover;
-		background-position: center;
-		background-color: rgba(139, 92, 246, 0.1);
+	.mus-track-row {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 16px 4px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		text-align: left;
+		color: var(--mus-ink);
 	}
 
-	.mus-track-body {
+	.mus-track--open .mus-track-row { color: var(--mood); }
+
+	.mus-track-code {
+		flex: none;
+		font-family: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+		font-size: 0.8125rem;
+		color: var(--mus-ink-dim);
+		width: 2.6ch;
+	}
+
+	.mus-track-thumb {
+		flex: none;
+		width: 40px;
+		height: 40px;
+		border-radius: 6px;
+		background-size: cover;
+		background-position: center;
+	}
+
+	.mus-track-info {
 		flex: 1;
 		min-width: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
-	}
-
-	.mus-track-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 10px;
+		gap: 2px;
 	}
 
 	.mus-track-title {
-		font-size: 1rem;
+		font-family: 'Fraunces', ui-serif, Georgia, serif;
 		font-weight: 600;
-		color: #fff;
-		margin: 0;
+		font-size: 1rem;
 	}
-
-	.mus-share-btn {
-		flex: none;
-		background: none;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.5);
-		font-size: 0.6875rem;
-		padding: 4px 9px;
-		cursor: pointer;
-		white-space: nowrap;
-		transition: color 0.15s, border-color 0.15s;
-	}
-	.mus-share-btn:hover { color: var(--nx-accent-2-soft2); border-color: rgba(139, 92, 246, 0.4); }
 
 	.mus-track-desc {
 		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.45);
-		margin: 0;
+		color: var(--mus-ink-dim);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
+	.mus-track-toggle {
+		flex: none;
+		font-size: 0.875rem;
+		color: var(--mus-ink-dim);
+		width: 1.5em;
+		text-align: center;
+	}
+
+	.mus-track-player {
+		padding: 0 4px 20px 4ch;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 10px;
+	}
+
+	.mus-share-btn {
+		background: none;
+		border: 1px solid var(--mus-groove);
+		color: var(--mus-ink-dim);
+		font-size: 0.75rem;
+		padding: 5px 10px;
+		cursor: pointer;
+		transition: color 0.15s, border-color 0.15s;
+	}
+	.mus-share-btn:hover { color: var(--mood); border-color: var(--mood); }
+
 	@media (max-width: 560px) {
-		.mus-track { flex-direction: column; }
-		.mus-track-cover { width: 100%; height: 140px; }
+		.mus-track-thumb { display: none; }
 	}
 </style>
