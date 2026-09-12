@@ -4,8 +4,8 @@ import { apiFetch } from '$lib/api';
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
 	const res = await apiFetch(fetch, `/music/categories/${params.slug}`);
-	if (res.status === 404) error(404, 'Catégorie introuvable.');
-	if (!res.ok) error(500, 'Erreur serveur.');
+	if (res.status === 404) error(404, 'Category not found.');
+	if (!res.ok) error(500, 'Server error.');
 	const { category, tracks } = await res.json();
 	return { category, tracks };
 };
