@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Nodyx — spike str0m, perçage NAT</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; background:#0d0d16; color:#e5e5ea; }
+  h1 { font-size: 1.1rem; }
+  textarea { width: 100%; height: 8rem; font-family: monospace; font-size: 0.75rem; background:#151520; color:#9ad; border:1px solid #333; }
+  button { padding: 0.5rem 1rem; margin: 0.5rem 0; cursor: pointer; }
+  #status { font-weight: bold; padding: 0.5rem; border-radius: 4px; }
+  .ok { background: #163; }
+  .err { background: #611; }
+  .wait { background: #440; }
+  label { display:block; margin-top:1rem; font-size:0.85rem; color:#999; }
+</style>
+</head>
+<body>
+<h1>Spike str0m — page de test manuel (CDC §9.1, protocole du perçage NAT)</h1>
+<p>Aucun serveur derrière cette page : tout se passe dans ce navigateur. Ouvrir en <code>file://</code>
+   fonctionne (getUserMedia autorise localhost/file:// comme contexte sécurisé).</p>
+
+<p id="status" class="wait">1. Clique « Générer l'offre », autorise le micro.</p>
+
+<button id="btnOffer">1. Générer l'offre</button>
+<label for="offerBox">Offre SDP à copier dans le terminal du binaire <code>nat-probe</code> :</label>
+<textarea id="offerBox" readonly placeholder="(apparaît ici après avoir cliqué)"></textarea>
+
+<label for="answerBox">2. Colle ici la réponse (SDP brut) imprimée par <code>nat-probe</code> :</label>
+<textarea id="answerBox" placeholder="v=0..."></textarea>
+<button id="btnAnswer">3. Appliquer la réponse</button>
+
+<script>
+const statusEl = document.getElementById('status');
+function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = cls; }
+
+// STUN pointé sur nexus-turn (souverain) — à remplacer par l'IP publique du
+// VPS de l'instance si ce n'est pas 127.0.0.1. Ne change rien à ce qu'on
+// mesure côté serveur (str0m) : ceci n'aide que LE NAVIGATEUR à trouver ses
+// propres candidats, ce qui n'est pas la question posée par ce spike.
+const STUN_URL = 'stun:CHANGE_ME:3478';
+
+let pc;
+
+document.getElementById('btnOffer').onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    pc = new RTCPeerConnection({ iceServers: [{ urls: STUN_URL }] });
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+
+    pc.oniceconnectionstatechange = () => {
+      const st = pc.iceConnectionState;
+      if (st === 'connected' || st === 'completed') setStatus('✅ ICE connecté (état: ' + st + ')', 'ok');
+      else if (st === 'failed' || st === 'disconnected') setStatus('❌ ICE ' + st, 'err');
+      else setStatus('… ICE : ' + st, 'wait');
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // Signaling "vanilla" (pas de trickle) : on attend la fin de la collecte
+    // des candidats locaux pour que l'offre embarque tout, copier-coller
+    // unique sans échange de candidats séparé.
+    await new Promise(resolve => {
+      if (pc.iceGatheringState === 'complete') return resolve();
+      pc.addEventListener('icegatheringstatechange', () => {
+        if (pc.iceGatheringState === 'complete') resolve();
+      });
+    });
+
+    const full = pc.localDescription;
+    // SDP brut, sans enrobage JSON : nat-probe utilise SdpOffer::from_sdp_string.
+    document.getElementById('offerBox').value = full.sdp;
+    setStatus('Offre prête. Colle-la dans le terminal nat-probe, colle sa réponse ci-dessous.', 'wait');
+  } catch (e) {
+    setStatus('Erreur : ' + e, 'err');
+  }
+};
+
+document.getElementById('btnAnswer').onclick = async () => {
+  try {
+    const raw = document.getElementById('answerBox').value.trim();
+    await pc.setRemoteDescription({ type: 'answer', sdp: raw });
+    setStatus('Réponse appliquée, en attente de connexion ICE…', 'wait');
+  } catch (e) {
+    setStatus('Erreur en appliquant la réponse : ' + e, 'err');
+  }
+};
+</script>
+</body>
+</html>

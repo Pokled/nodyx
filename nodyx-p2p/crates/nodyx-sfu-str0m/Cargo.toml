@@ -1,0 +1,26 @@
+[package]
+name = "nodyx-sfu-str0m"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0"
+description = "Spike Phase A (SPECS/NODYX_MEDIA_ENGINE_RUST.md) : str0m derriere MediaEngine. Hors workspace : cible str0m/aws-lc-rs, non necessaire au reste du repo."
+
+[dependencies]
+nodyx-sfu   = { path = "../nodyx-sfu" }
+str0m       = "0.23"
+tokio       = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "io-util", "sync"] }
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+tracing     = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+clap        = { version = "4", features = ["derive", "env"] }
+anyhow      = "1"
+rand        = "0.8"
+
+[[bin]]
+name = "nat-probe"
+path = "src/bin/nat-probe.rs"
+
+[[bin]]
+name = "trait-spike"
+path = "src/bin/trait-spike.rs"
