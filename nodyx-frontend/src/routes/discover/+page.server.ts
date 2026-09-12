@@ -17,7 +17,13 @@ export const load: PageServerLoad = async ({ fetch, url }) => {
 		if (q)        params.set('q', q);
 		if (upcoming) params.set('upcoming', upcoming);
 
-		const res = await globalThis.fetch(`${DIRECTORY_URL}/api/directory/search?${params}`);
+		// Sans timeout, un directory qui ne répond jamais (pas une erreur immédiate,
+		// un vrai silence réseau) bloque le rendu SSR de la page indéfiniment.
+		// Même classe d'incident que celui déjà corrigé dans +layout.server.ts
+		// (page d'accueil à 27s, trouvé en audit de stabilité, F-040, 2026-09-11).
+		const res = await globalThis.fetch(`${DIRECTORY_URL}/api/directory/search?${params}`, {
+			signal: AbortSignal.timeout(5000)
+		});
 		if (res.ok) {
 			const json = await res.json();
 			results = json.results ?? [];
