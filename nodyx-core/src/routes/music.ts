@@ -41,14 +41,18 @@ async function getCommunityId(): Promise<string | null> {
 }
 
 interface MusicPageSettings {
-  title:      string | null
-  subtitle:   string | null
-  banner_url: string | null
+  title:                string | null
+  subtitle:             string | null
+  banner_url:           string | null
+  default_license_note: string | null
 }
 
 async function getPageSettings(communityId: string): Promise<MusicPageSettings> {
-  const { rows } = await db.query<{ music_page_title: string | null; music_page_subtitle: string | null; file_path: string | null }>(
-    `SELECT c.music_page_title, c.music_page_subtitle, a.file_path
+  const { rows } = await db.query<{
+    music_page_title: string | null; music_page_subtitle: string | null
+    music_default_license_note: string | null; file_path: string | null
+  }>(
+    `SELECT c.music_page_title, c.music_page_subtitle, c.music_default_license_note, a.file_path
      FROM communities c
      LEFT JOIN community_assets a ON a.id = c.music_page_banner_asset_id
      WHERE c.id = $1`,
@@ -56,9 +60,10 @@ async function getPageSettings(communityId: string): Promise<MusicPageSettings> 
   )
   const row = rows[0]
   return {
-    title:      row?.music_page_title ?? null,
-    subtitle:   row?.music_page_subtitle ?? null,
-    banner_url: row?.file_path ? `/uploads/${row.file_path}` : null,
+    title:                row?.music_page_title ?? null,
+    subtitle:             row?.music_page_subtitle ?? null,
+    banner_url:           row?.file_path ? `/uploads/${row.file_path}` : null,
+    default_license_note: row?.music_default_license_note ?? null,
   }
 }
 
@@ -74,12 +79,15 @@ export default async function musicRoutes(app: FastifyInstance) {
   })
 
   app.patch('/settings', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
-    const body = request.body as { title?: string | null; subtitle?: string | null; banner_asset_id?: string | null }
+    const body = request.body as { title?: string | null; subtitle?: string | null; banner_asset_id?: string | null; default_license_note?: string | null }
     if (body.title !== undefined && body.title !== null && body.title.length > 120) {
       return reply.code(400).send({ error: 'title must be 120 characters or fewer', code: 'INVALID_TITLE' })
     }
     if (body.subtitle !== undefined && body.subtitle !== null && body.subtitle.length > 300) {
       return reply.code(400).send({ error: 'subtitle must be 300 characters or fewer', code: 'INVALID_SUBTITLE' })
+    }
+    if (body.default_license_note !== undefined && body.default_license_note !== null && body.default_license_note.length > 4000) {
+      return reply.code(400).send({ error: 'default_license_note must be 4000 characters or fewer', code: 'INVALID_LICENSE_NOTE' })
     }
     const communityId = await getCommunityId()
     if (!communityId) return reply.code(503).send({ error: 'Community not configured' })
@@ -87,9 +95,10 @@ export default async function musicRoutes(app: FastifyInstance) {
     const fields: string[] = []
     const values: unknown[] = []
     let i = 1
-    if (body.title           !== undefined) { fields.push(`music_page_title = $${i++}`);           values.push(body.title) }
-    if (body.subtitle        !== undefined) { fields.push(`music_page_subtitle = $${i++}`);         values.push(body.subtitle) }
-    if (body.banner_asset_id !== undefined) { fields.push(`music_page_banner_asset_id = $${i++}`);  values.push(body.banner_asset_id) }
+    if (body.title                 !== undefined) { fields.push(`music_page_title = $${i++}`);              values.push(body.title) }
+    if (body.subtitle              !== undefined) { fields.push(`music_page_subtitle = $${i++}`);            values.push(body.subtitle) }
+    if (body.banner_asset_id       !== undefined) { fields.push(`music_page_banner_asset_id = $${i++}`);     values.push(body.banner_asset_id) }
+    if (body.default_license_note  !== undefined) { fields.push(`music_default_license_note = $${i++}`);    values.push(body.default_license_note) }
     if (fields.length > 0) {
       values.push(communityId)
       await db.query(`UPDATE communities SET ${fields.join(', ')} WHERE id = $${i}`, values)
@@ -230,10 +239,16 @@ export default async function musicRoutes(app: FastifyInstance) {
     const communityId = await getCommunityId()
     if (!communityId) return reply.code(503).send({ error: 'Community not configured' })
 
+    // Applique la note de licence par defaut de l'instance si elle existe :
+    // evite de la retaper a chaque nouvelle categorie (meme studio, meme
+    // jeu, meme outil dans la grande majorite des cas reels).
+    const settings = await getPageSettings(communityId)
+
     const category = await MusicCategoryModel.create({
       community_id: communityId,
       title:        title.trim(),
       description:  description?.trim() || null,
+      license_note: settings.default_license_note,
     })
     return reply.code(201).send({ category })
   })

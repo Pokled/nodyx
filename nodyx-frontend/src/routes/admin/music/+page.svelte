@@ -24,14 +24,14 @@
 		const s = Math.round(seconds % 60).toString().padStart(2, '0');
 		return `${m}:${s}`;
 	}
-	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; }
+	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; default_license_note: string | null; }
 
 	let categories  = $state<Category[]>(data.categories ?? []);
 	let tracksByCat = $state<Record<string, Track[]>>({});
 	let openCat     = $state<string | null>(null);
 	let busy        = $state<string | null>(null); // clé de l'opération en cours (feedback UI)
 	let errorMsg    = $state<string | null>(null);
-	let settings    = $state<Settings>(data.settings ?? { title: null, subtitle: null, banner_url: null });
+	let settings    = $state<Settings>(data.settings ?? { title: null, subtitle: null, banner_url: null, default_license_note: null });
 	let bannerInput = $state<HTMLInputElement | null>(null);
 
 	// ── Nouvelle catégorie ───────────────────────────────────────────────────
@@ -70,7 +70,7 @@
 		categories = json.categories;
 	}
 
-	async function patchSettings(patch: { title?: string | null; subtitle?: string | null; banner_asset_id?: string | null }) {
+	async function patchSettings(patch: { title?: string | null; subtitle?: string | null; banner_asset_id?: string | null; default_license_note?: string | null }) {
 		const json = await api('/settings', {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
@@ -79,7 +79,7 @@
 		settings = json.settings;
 	}
 
-	async function updateSettingsText(patch: { title?: string | null; subtitle?: string | null }) {
+	async function updateSettingsText(patch: { title?: string | null; subtitle?: string | null; default_license_note?: string | null }) {
 		busy = 'settings';
 		errorMsg = null;
 		try {
@@ -429,6 +429,14 @@
 					placeholder={tFn('music.subtitle')}
 					onblur={(e) => { const v = (e.target as HTMLTextAreaElement).value.trim(); if (v !== (settings.subtitle ?? '')) updateSettingsText({ subtitle: v || null }); }}
 					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">{settings.subtitle ?? ''}</textarea>
+			</div>
+			<div>
+				<label for="page-default-license" class="block text-xs text-gray-400 mb-1">{tFn('amusic.default_license_note')}</label>
+				<p class="text-[11px] text-gray-500 mb-1">{tFn('amusic.default_license_note_help')}</p>
+				<textarea id="page-default-license" rows="3" maxlength="4000"
+					placeholder={tFn('amusic.license_note_ph')}
+					onblur={(e) => { const v = (e.target as HTMLTextAreaElement).value.trim(); if (v !== (settings.default_license_note ?? '')) updateSettingsText({ default_license_note: v || null }); }}
+					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-xs focus:outline-none focus:border-indigo-500">{settings.default_license_note ?? ''}</textarea>
 			</div>
 			<div>
 				<p class="block text-xs text-gray-400 mb-1">{tFn('amusic.field_banner')}</p>

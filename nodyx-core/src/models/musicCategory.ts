@@ -59,9 +59,10 @@ export async function findById(id: string): Promise<MusicCategory | null> {
 }
 
 export async function create(data: {
-  community_id: string
-  title:        string
-  description?: string | null
+  community_id:  string
+  title:         string
+  description?:  string | null
+  license_note?: string | null
 }): Promise<MusicCategory> {
   const baseSlug = generateCategorySlug(data.title)
 
@@ -84,9 +85,9 @@ export async function create(data: {
   )
 
   const { rows } = await db.query<{ id: string }>(
-    `INSERT INTO music_categories (community_id, slug, title, description, position)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [data.community_id, slug, data.title, data.description ?? null, posRows[0].next]
+    `INSERT INTO music_categories (community_id, slug, title, description, license_note, position)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [data.community_id, slug, data.title, data.description ?? null, data.license_note ?? null, posRows[0].next]
   )
   return (await findById(rows[0].id))!
 }
