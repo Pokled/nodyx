@@ -24,6 +24,12 @@
 	const settings = $derived(data.settings as Settings | null);
 	const totalComments = $derived(tracks.reduce((sum, t) => sum + (commentsByTrack[t.id] ?? t.comments).length, 0));
 
+	// ?t=<id> (voir +page.server.ts) : le lien de partage d'un morceau precis
+	// porte son propre id, pour que l'apercu Discord montre CE morceau (titre,
+	// image) plutot que celui de la categorie entiere. Contenu affiche au
+	// visiteur humain inchange, seules les balises og: en dependent.
+	const featuredTrack = $derived(tracks.find(t => t.id === data.featuredTrackId) ?? null);
+
 	// Discord/Twitter/Facebook exigent une URL absolue et n'exécutent aucun JS :
 	// on résout ici, côté SSR, jamais via window.
 	function absolutize(url: string | null | undefined, origin: string): string | null {
@@ -32,20 +38,29 @@
 		return origin + url;
 	}
 
-	// Couverture de la catégorie → image du 1er morceau → bannière de la page
-	// musique → bannière/logo de la communauté → image par défaut du site.
+	// Couverture du morceau partagé (si un lien de morceau précis) → couverture
+	// de la catégorie → image du 1er morceau → bannière de page → bannière/logo
+	// de communauté → image par défaut du site.
 	const shareImage = $derived(
 		absolutize(
-			category.image_url ?? tracks[0]?.image_url ?? settings?.banner_url ?? (page.data as any).communityBannerUrl ?? (page.data as any).communityLogoUrl,
+			featuredTrack?.image_url ?? category.image_url ?? tracks[0]?.image_url ?? settings?.banner_url ?? (page.data as any).communityBannerUrl ?? (page.data as any).communityLogoUrl,
 			page.url.origin,
 		) ?? `${page.url.origin}/og-image.jpg`,
 	);
 
+	const shareTitle = $derived(featuredTrack ? `${featuredTrack.title} · ${category.title}` : category.title);
+
 	const richDescription = $derived(
-		[
-			category.description,
-			`${tFn(tracks.length === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(tracks.length))}${category.views > 0 ? ' · ' + tFn(category.views === 1 ? 'music.views_one' : 'music.views_plural').replace('{{n}}', String(category.views)) : ''}`,
-		].filter(Boolean).join(' · ')
+		featuredTrack
+			? [
+				featuredTrack.description,
+				formatDuration(featuredTrack.duration_seconds),
+				tFn('music.from_category').replace('{{category}}', category.title),
+			].filter(Boolean).join(' · ')
+			: [
+				category.description,
+				`${tFn(tracks.length === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(tracks.length))}${category.views > 0 ? ' · ' + tFn(category.views === 1 ? 'music.views_one' : 'music.views_plural').replace('{{n}}', String(category.views)) : ''}`,
+			].filter(Boolean).join(' · ')
 	);
 
 	let copiedId = $state<string | null>(null);
@@ -136,7 +151,9 @@
 	}
 
 	async function copyTrackLink(id: string) {
-		const url = `${location.origin}${location.pathname}#${id}`;
+		// ?t=<id> donne son propre apercu Discord au morceau (voir shareTitle/
+		// shareImage plus haut) ; #<id> fait defiler jusqu'a lui a l'ouverture.
+		const url = `${location.origin}${location.pathname}?t=${id}#${id}`;
 		try {
 			await navigator.clipboard.writeText(url);
 			copiedId = id;
@@ -146,9 +163,9 @@
 </script>
 
 <svelte:head>
-	<title>{category.title} · {tFn('music.title')}</title>
+	<title>{shareTitle} · {tFn('music.title')}</title>
 	<meta name="description" content={richDescription} />
-	<meta property="og:title" content={category.title} />
+	<meta property="og:title" content={shareTitle} />
 	<meta property="og:description" content={richDescription} />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content={page.url.href} />
