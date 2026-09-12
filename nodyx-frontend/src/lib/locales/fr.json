@@ -4635,6 +4635,8 @@
   "amusic.uploading": "Envoi en cours…",
   "amusic.confirm_delete_category": "Supprimer la catégorie « {{title}} » et tous ses morceaux ?",
   "amusic.confirm_delete_track": "Supprimer le morceau « {{title}} » ?",
+  "amusic.move_up": "Monter",
+  "amusic.move_down": "Descendre",
   "amusic.err_generic": "Erreur {{status}}",
   "amusic.err_upload_failed": "Échec de l'envoi ({{kind}})",
   "amusic.license_note": "Note de licence",

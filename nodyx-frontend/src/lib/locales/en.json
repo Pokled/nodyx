@@ -4635,6 +4635,8 @@
   "amusic.uploading": "Uploading...",
   "amusic.confirm_delete_category": "Delete category \"{{title}}\" and all its tracks?",
   "amusic.confirm_delete_track": "Delete track \"{{title}}\"?",
+  "amusic.move_up": "Move up",
+  "amusic.move_down": "Move down",
   "amusic.err_generic": "Error {{status}}",
   "amusic.err_upload_failed": "Upload failed ({{kind}})",
   "amusic.license_note": "License note",

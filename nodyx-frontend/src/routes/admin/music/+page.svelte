@@ -11,10 +11,11 @@
 	interface Category {
 		id: string; slug: string; title: string; description: string | null;
 		license_note: string | null; image_url: string | null; track_count: number;
+		position: number;
 	}
 	interface Track {
 		id: string; category_id: string; title: string; description: string | null;
-		audio_url: string; image_url: string | null;
+		audio_url: string; image_url: string | null; position: number;
 	}
 
 	let categories  = $state<Category[]>(data.categories ?? []);
@@ -85,6 +86,32 @@
 		errorMsg = null;
 		try {
 			await api(`/categories/${cat.id}`, { method: 'DELETE' });
+			await refreshCategories();
+		} catch (e) {
+			errorMsg = (e as Error).message;
+		} finally {
+			busy = null;
+		}
+	}
+
+	async function moveCategory(index: number, direction: -1 | 1) {
+		const otherIndex = index + direction;
+		if (otherIndex < 0 || otherIndex >= categories.length) return;
+		const a = categories[index];
+		const b = categories[otherIndex];
+		busy = `reorder-category-${a.id}`;
+		errorMsg = null;
+		try {
+			await api(`/categories/${a.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ position: b.position }),
+			});
+			await api(`/categories/${b.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ position: a.position }),
+			});
 			await refreshCategories();
 		} catch (e) {
 			errorMsg = (e as Error).message;
@@ -227,6 +254,34 @@
 		}
 	}
 
+	async function moveTrack(cat: Category, index: number, direction: -1 | 1) {
+		const list = tracksByCat[cat.id];
+		if (!list) return;
+		const otherIndex = index + direction;
+		if (otherIndex < 0 || otherIndex >= list.length) return;
+		const a = list[index];
+		const b = list[otherIndex];
+		busy = `reorder-track-${a.id}`;
+		errorMsg = null;
+		try {
+			await api(`/tracks/${a.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ position: b.position }),
+			});
+			await api(`/tracks/${b.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ position: a.position }),
+			});
+			await refreshTracks(cat.id, cat.slug);
+		} catch (e) {
+			errorMsg = (e as Error).message;
+		} finally {
+			busy = null;
+		}
+	}
+
 	async function deleteTrack(cat: Category, track: Track) {
 		if (!confirm(tFn('amusic.confirm_delete_track').replace('{{title}}', track.title))) return;
 		busy = `delete-track-${track.id}`;
@@ -290,9 +345,23 @@
 	{/if}
 
 	<div class="space-y-4">
-		{#each categories as cat (cat.id)}
+		{#each categories as cat, catIndex (cat.id)}
 			<div class="rounded-xl border border-gray-800 bg-gray-900/30 overflow-hidden">
 				<div class="flex items-center gap-4 p-4">
+					<div class="mus-reorder shrink-0">
+						<button type="button" onclick={() => moveCategory(catIndex, -1)} disabled={catIndex === 0}
+							class="mus-btn-move" aria-label={tFn('amusic.move_up')} title={tFn('amusic.move_up')}>
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+							</svg>
+						</button>
+						<button type="button" onclick={() => moveCategory(catIndex, 1)} disabled={catIndex === categories.length - 1}
+							class="mus-btn-move" aria-label={tFn('amusic.move_down')} title={tFn('amusic.move_down')}>
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+							</svg>
+						</button>
+					</div>
 					<button type="button"
 						class="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-800 cursor-pointer group"
 						title={tFn('amusic.change_image')}
@@ -361,8 +430,22 @@
 						</div>
 
 						{#if tracksByCat[cat.id]}
-							{#each tracksByCat[cat.id] as track (track.id)}
+							{#each tracksByCat[cat.id] as track, trackIndex (track.id)}
 								<div class="mus-track-row flex items-center gap-3 rounded-lg bg-gray-900/50 border border-gray-800 p-2.5">
+									<div class="mus-reorder mus-reorder--tight shrink-0">
+										<button type="button" onclick={() => moveTrack(cat, trackIndex, -1)} disabled={trackIndex === 0}
+											class="mus-btn-move" aria-label={tFn('amusic.move_up')} title={tFn('amusic.move_up')}>
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+											</svg>
+										</button>
+										<button type="button" onclick={() => moveTrack(cat, trackIndex, 1)} disabled={trackIndex === (tracksByCat[cat.id]?.length ?? 0) - 1}
+											class="mus-btn-move" aria-label={tFn('amusic.move_down')} title={tFn('amusic.move_down')}>
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+											</svg>
+										</button>
+									</div>
 									{#if track.image_url}
 										<img src={track.image_url} alt="" class="w-10 h-10 rounded object-cover shrink-0" />
 									{/if}
@@ -518,4 +601,27 @@
 		border-color: #374151;
 		background: rgba(255, 255, 255, 0.03);
 	}
+
+	.mus-reorder {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	.mus-reorder--tight { gap: 0; }
+
+	.mus-btn-move {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 22px;
+		height: 18px;
+		color: rgba(255, 255, 255, 0.35);
+		background: none;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: color 0.15s, background 0.15s;
+	}
+	.mus-btn-move:hover:not(:disabled) { color: #a5b4fc; background: rgba(99, 102, 241, 0.1); }
+	.mus-btn-move:disabled { opacity: 0.2; cursor: default; }
 </style>
