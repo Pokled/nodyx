@@ -10,24 +10,34 @@
 		id: string; slug: string; title: string; description: string | null;
 		image_url: string | null; track_count: number;
 	}
+	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; }
+
 	const categories = $derived(data.categories as Category[]);
+	const settings   = $derived(data.settings as Settings | null);
+
+	const pageTitle    = $derived(settings?.title    || tFn('music.title'));
+	const pageSubtitle = $derived(settings?.subtitle || tFn('music.subtitle'));
 </script>
 
 <svelte:head>
-	<title>{tFn('music.page_title')}</title>
-	<meta name="description" content={tFn('music.meta_desc')} />
-	<meta property="og:title" content={tFn('music.page_title')} />
-	<meta property="og:description" content={tFn('music.meta_desc')} />
-	{#if categories[0]?.image_url}
-		<meta property="og:image" content={categories[0].image_url} />
+	<title>{pageTitle}</title>
+	<meta name="description" content={pageSubtitle} />
+	<meta property="og:title" content={pageTitle} />
+	<meta property="og:description" content={pageSubtitle} />
+	{#if settings?.banner_url ?? categories[0]?.image_url}
+		<meta property="og:image" content={settings?.banner_url ?? categories[0].image_url} />
 	{/if}
 </svelte:head>
+
+{#if settings?.banner_url}
+	<div class="mus-banner"><img src={settings.banner_url} alt="" class="mus-banner-img" /></div>
+{/if}
 
 <div class="mus-header">
 	<div class="mus-header-row">
 		<div>
-			<h1 class="mus-title">{tFn('music.title')}</h1>
-			<p class="mus-subtitle">{tFn('music.subtitle')}</p>
+			<h1 class="mus-title">{pageTitle}</h1>
+			<p class="mus-subtitle">{pageSubtitle}</p>
 		</div>
 	</div>
 </div>
@@ -64,6 +74,19 @@
 </div>
 
 <style>
+	.mus-banner {
+		width: 100%;
+		max-height: 280px;
+		overflow: hidden;
+	}
+	.mus-banner-img {
+		width: 100%;
+		height: 100%;
+		max-height: 280px;
+		object-fit: cover;
+		display: block;
+	}
+
 	.mus-header {
 		position: sticky;
 		top: 0;
