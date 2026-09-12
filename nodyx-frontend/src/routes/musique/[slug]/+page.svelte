@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { t } from '$lib/i18n';
 	import type { PageData } from './$types';
 
@@ -8,9 +9,35 @@
 
 	interface Category { id: string; slug: string; title: string; description: string | null; license_note: string | null; image_url: string | null; views: number }
 	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null; likes: number }
+	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; }
 
 	const category = $derived(data.category as Category);
 	const tracks   = $derived(data.tracks as Track[]);
+	const settings = $derived(data.settings as Settings | null);
+
+	// Discord/Twitter/Facebook exigent une URL absolue et n'exécutent aucun JS :
+	// on résout ici, côté SSR, jamais via window.
+	function absolutize(url: string | null | undefined, origin: string): string | null {
+		if (!url) return null;
+		if (/^https?:\/\//.test(url)) return url;
+		return origin + url;
+	}
+
+	// Couverture de la catégorie → image du 1er morceau → bannière de la page
+	// musique → bannière/logo de la communauté → image par défaut du site.
+	const shareImage = $derived(
+		absolutize(
+			category.image_url ?? tracks[0]?.image_url ?? settings?.banner_url ?? (page.data as any).communityBannerUrl ?? (page.data as any).communityLogoUrl,
+			page.url.origin,
+		) ?? `${page.url.origin}/og-image.jpg`,
+	);
+
+	const richDescription = $derived(
+		[
+			category.description,
+			`${tFn(tracks.length === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(tracks.length))}${category.views > 0 ? ' · ' + tFn(category.views === 1 ? 'music.views_one' : 'music.views_plural').replace('{{n}}', String(category.views)) : ''}`,
+		].filter(Boolean).join(' · ')
+	);
 
 	let copiedId = $state<string | null>(null);
 
@@ -59,12 +86,14 @@
 
 <svelte:head>
 	<title>{category.title} · {tFn('music.title')}</title>
-	<meta name="description" content={category.description ?? tFn('music.meta_desc')} />
+	<meta name="description" content={richDescription} />
 	<meta property="og:title" content={category.title} />
-	<meta property="og:description" content={category.description ?? tFn('music.meta_desc')} />
-	{#if category.image_url}
-		<meta property="og:image" content={category.image_url} />
-	{/if}
+	<meta property="og:description" content={richDescription} />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content={page.url.href} />
+	<meta property="og:image" content={shareImage} />
+	<meta name="twitter:image" content={shareImage} />
+	<meta property="og:site_name" content={(page.data as any).communityName ?? 'Nodyx'} />
 </svelte:head>
 
 <div class="mus-header">

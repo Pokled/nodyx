@@ -4609,6 +4609,8 @@
   "music.track_count_plural": "{{n}} morceaux",
   "music.views_one": "{{n}} vue",
   "music.views_plural": "{{n}} vues",
+  "music.category_count_one": "{{n}} catégorie",
+  "music.category_count_plural": "{{n}} catégories",
   "music.composed_for": "Composé pour",
   "music.share_category": "Copier le lien de cette ambiance",
   "music.share_track": "Copier le lien de ce morceau",
