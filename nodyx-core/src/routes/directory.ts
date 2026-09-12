@@ -1,13 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomBytes } from 'crypto';
-import { lookup } from 'dns';
-import { promisify } from 'util';
-import https from 'https';
-import http from 'http';
 import sanitizeHtml from 'sanitize-html';
 import { db, redis } from '../config/database';
 import { getClientIp, estPubliquementRoutable } from '../utils/clientIp'
 import { isReservedSlug } from '../utils/reservedSlugs'
+import { resolveSsrfSafe } from '../utils/ssrfGuard'
 
 // Strict rate-limit for public search endpoint (30 req/min per IP)
 async function searchRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -20,8 +17,6 @@ async function searchRateLimit(request: FastifyRequest, reply: FastifyReply): Pr
     return reply.code(429).send({ error: 'Too many requests', code: 'RATE_LIMITED' });
   }
 }
-
-const dnsLookup = promisify(lookup);
 
 const CF_BASE = 'https://api.cloudflare.com/client/v4';
 
@@ -42,48 +37,14 @@ async function cfRequest(method: string, path: string, body?: object) {
   return res.json() as Promise<any>;
 }
 
-function isPrivateHostname(hostname: string): boolean {
-  const h = hostname.toLowerCase()
-  // Loopback
-  if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '0.0.0.0') return true
-  // IPv6-mapped IPv4 (e.g. ::ffff:127.0.0.1 or [::ffff:7f00:1])
-  if (/^::ffff:/i.test(h)) {
-    const v4 = h.slice(7)
-    if (isPrivateHostname(v4)) return true
-  }
-  // RFC 1918 private ranges
-  if (h.startsWith('192.168.') || h.startsWith('10.')) return true
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true
-  // Link-local + CGNAT
-  if (h.startsWith('169.254.') || h.startsWith('100.64.')) return true
-  // IPv6 private (ULA, link-local)
-  if (h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80')) return true
-  // Other loopback range (127.x.x.x)
-  if (/^127\./.test(h)) return true
-  return false
-}
-
-async function checkUrl(url: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    try {
-      const parsed = new URL(url);
-      // Bloquer les adresses privées / loopback (anti-SSRF)
-      if (isPrivateHostname(parsed.hostname)) return resolve(false);
-      // En production, exiger HTTPS
-      if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') return resolve(false);
-      const lib = parsed.protocol === 'https:' ? https : http;
-      const req = lib.request(
-        { hostname: parsed.hostname, path: '/', method: 'HEAD', timeout: 5000 },
-        (res) => { resolve((res.statusCode ?? 0) < 500); }
-      );
-      req.on('error', () => resolve(false));
-      req.on('timeout', () => { req.destroy(); resolve(false); });
-      req.end();
-    } catch {
-      resolve(false);
-    }
-  });
-}
+// isPrivateHostname/checkUrl (validation littérale du hostname, sans résolution
+// DNS) ont été retirés le 12/09/2026 (F-055, audit de stabilité) : checkUrl
+// n'avait AUCUN appelant depuis sa création (2026-03-17, vérifié par grep sur
+// tout le dépôt), et isPrivateHostname jugeait la CHAÎNE du hostname, jamais
+// l'adresse réellement résolue — un domaine qui pointe vers une IP privée au
+// moment de la connexion (DNS rebinding) passait la validation. Remplacé par
+// `resolveSsrfSafe` (utils/ssrfGuard.ts, partagé avec chat.ts), qui résout le
+// DNS et rejette si l'adresse OBTENUE est privée.
 
 async function createCloudflareSubdomain(slug: string, ip: string): Promise<string | null> {
   try {
@@ -218,7 +179,9 @@ export default async function directoryRoutes(app: FastifyInstance) {
       if (parsed.protocol !== 'https:') {
         return reply.status(400).send({ error: 'URL must use HTTPS' });
       }
-      if (isPrivateHostname(parsed.hostname)) {
+      // Résout le DNS avant de juger (anti rebinding, F-055) : un hostname
+      // dont le nom semble innocent peut pointer vers une IP privée.
+      if ((await resolveSsrfSafe(parsed.hostname)) === null) {
         return reply.status(400).send({ error: 'Private or reserved IP addresses are not allowed' });
       }
     } catch {
@@ -598,10 +561,11 @@ export default async function directoryRoutes(app: FastifyInstance) {
       }
 
       // Validation du schéma HTTPS + rejet des IPs privées (anti-SSRF / directory poisoning)
+      // Résout le DNS avant de juger (anti rebinding, F-055).
       try {
         const parsed = new URL(instance_url);
         if (parsed.protocol !== 'https:') throw new Error('https required');
-        if (isPrivateHostname(parsed.hostname)) throw new Error('private ip');
+        if ((await resolveSsrfSafe(parsed.hostname)) === null) throw new Error('private ip');
       } catch {
         return reply.status(400).send({ error: 'invalid instance_url' });
       }
