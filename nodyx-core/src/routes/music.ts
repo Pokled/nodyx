@@ -115,7 +115,14 @@ export default async function musicRoutes(app: FastifyInstance) {
       MusicCategoryModel.incrementViews(category.id),
     ])
     category.views += 1 // reflète l'incrément dans la reponse sans re-selectionner la ligne
-    return reply.send({ category, tracks })
+
+    // Commentaires embarqués : affichés d'emblée sur la page publique (pas
+    // de clic pour les révéler), donc chargés ici en une seule reponse plutot
+    // que d'un aller-retour par morceau depuis le client.
+    const tracksWithComments = await Promise.all(
+      tracks.map(async (track) => ({ ...track, comments: await MusicCommentModel.listByTrack(track.id) }))
+    )
+    return reply.send({ category, tracks: tracksWithComments })
   })
 
   // POST /tracks/:id/like : "j'aime" public, anonyme, un entier qui monte.
@@ -151,6 +158,14 @@ export default async function musicRoutes(app: FastifyInstance) {
     }
     if (commentBody.length < 1 || commentBody.length > 1000) {
       return reply.code(400).send({ error: 'body must be 1 to 1000 characters', code: 'INVALID_BODY' })
+    }
+    // Ni lien ni domaine dans un commentaire public sans compte : evite qu'un
+    // commentaire serve de vecteur de spam/phishing. Le rendu cote client
+    // n'a de toute facon jamais transforme un lien en URL cliquable, mais on
+    // refuse la source elle-meme plutot que de compter sur le seul affichage.
+    const LINK_PATTERN = /https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|io|fr|gg|xyz|info|biz|ru|cn)\b/i
+    if (LINK_PATTERN.test(authorName) || LINK_PATTERN.test(commentBody)) {
+      return reply.code(422).send({ error: 'Les liens ne sont pas autorisés dans les commentaires', code: 'LINK_NOT_ALLOWED' })
     }
     const nameCheck = checkContent(authorName)
     if (!nameCheck.ok) return reply.code(422).send({ error: nameCheck.reason, code: 'CONTENT_BLOCKED' })

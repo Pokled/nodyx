@@ -4621,6 +4621,8 @@
   "music.comment_body_ph": "Your thoughts on this track",
   "music.comment_send": "Send",
   "music.comment_error": "The comment could not be sent.",
+  "music.comment_count_one": "{{n}} comment",
+  "music.comment_count_plural": "{{n}} comments",
   "music.link_copied": "Link copied",
   "music.download_license": "License (PDF)",
   "amusic.page_title": "Music (admin)",
