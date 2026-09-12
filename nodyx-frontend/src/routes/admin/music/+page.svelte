@@ -345,6 +345,43 @@
 			busy = null;
 		}
 	}
+
+	// ── Modération des commentaires (lecture publique, suppression admin) ──
+	interface Comment { id: string; author_name: string; body: string; created_at: string }
+	let openTrackComments = $state<Set<string>>(new Set());
+	let trackComments     = $state<Record<string, Comment[]>>({});
+
+	function formatCommentDate(iso: string): string {
+		return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+	}
+
+	async function toggleTrackComments(track: Track) {
+		const next = new Set(openTrackComments);
+		if (next.has(track.id)) {
+			next.delete(track.id);
+			openTrackComments = next;
+			return;
+		}
+		next.add(track.id);
+		openTrackComments = next;
+		if (!trackComments[track.id]) {
+			const json = await api(`/tracks/${track.id}/comments`);
+			trackComments = { ...trackComments, [track.id]: json.comments };
+		}
+	}
+
+	async function deleteComment(track: Track, commentId: string) {
+		busy = `delete-comment-${commentId}`;
+		errorMsg = null;
+		try {
+			await api(`/comments/${commentId}`, { method: 'DELETE' });
+			trackComments = { ...trackComments, [track.id]: (trackComments[track.id] ?? []).filter(c => c.id !== commentId) };
+		} catch (e) {
+			errorMsg = (e as Error).message;
+		} finally {
+			busy = null;
+		}
+	}
 </script>
 
 <svelte:head><title>{tFn('amusic.page_title')}</title></svelte:head>
@@ -523,7 +560,8 @@
 
 						{#if tracksByCat[cat.id]}
 							{#each tracksByCat[cat.id] as track, trackIndex (track.id)}
-								<div class="mus-track-row flex items-center gap-3 rounded-lg bg-gray-900/50 border border-gray-800 p-2.5">
+								<div class="mus-track-row rounded-lg bg-gray-900/50 border border-gray-800 p-2.5">
+								<div class="flex items-center gap-3">
 									<div class="mus-reorder mus-reorder--tight shrink-0">
 										<button type="button" onclick={() => moveTrack(cat, trackIndex, -1)} disabled={trackIndex === 0}
 											class="mus-btn-move" aria-label={tFn('amusic.move_up')} title={tFn('amusic.move_up')}>
@@ -551,12 +589,47 @@
 											class="w-full bg-transparent text-xs text-gray-500 focus:outline-none focus:border-b focus:border-indigo-500" />
 										<audio src={track.audio_url} controls class="w-full h-8 mt-1"></audio>
 									</div>
+									<button type="button" onclick={() => toggleTrackComments(track)}
+										class="mus-btn-ghost shrink-0" title={tFn('music.comments')}>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+										</svg>
+										{#if trackComments[track.id]?.length}{trackComments[track.id].length}{/if}
+									</button>
 									<button type="button" onclick={() => deleteTrack(cat, track)} disabled={busy === `delete-track-${track.id}`}
 										class="mus-btn-danger shrink-0" aria-label={tFn('common.delete')} title={tFn('common.delete')}>
 										<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
 										</svg>
 									</button>
+								</div>
+
+								{#if openTrackComments.has(track.id)}
+									<div class="mt-2 pt-2 border-t border-gray-800 space-y-2">
+										{#if trackComments[track.id]}
+											{#each trackComments[track.id] as comment (comment.id)}
+												<div class="flex items-start justify-between gap-2">
+													<div class="min-w-0">
+														<p class="text-xs">
+															<span class="font-semibold text-white">{comment.author_name}</span>
+															<span class="text-gray-500 ml-1">{formatCommentDate(comment.created_at)}</span>
+														</p>
+														<p class="text-xs text-gray-400">{comment.body}</p>
+													</div>
+													<button type="button" onclick={() => deleteComment(track, comment.id)}
+														disabled={busy === `delete-comment-${comment.id}`}
+														class="mus-btn-danger shrink-0" aria-label={tFn('common.delete')} title={tFn('common.delete')}>
+														<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+														</svg>
+													</button>
+												</div>
+											{:else}
+												<p class="text-xs text-gray-500 italic">{tFn('music.no_comments')}</p>
+											{/each}
+										{/if}
+									</div>
+								{/if}
 								</div>
 							{:else}
 								<p class="text-xs text-gray-500 italic">{tFn('music.empty_category')}</p>

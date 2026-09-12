@@ -39,7 +39,75 @@
 		].filter(Boolean).join(' · ')
 	);
 
+	interface Comment { id: string; author_name: string; body: string; created_at: string }
+
 	let copiedId = $state<string | null>(null);
+
+	// Commentaires publics par morceau : sert le vrai usage (un développeur
+	// destinataire laisse un avis), aucun compte requis. Chargés à la demande
+	// (pas d'un coup pour tous les morceaux au chargement de la page).
+	const COMMENT_NAME_KEY = 'nodyx-music-comment-name';
+	let openComments   = $state<Set<string>>(new Set());
+	let commentsByTrack = $state<Record<string, Comment[]>>({});
+	let commentName    = $state('');
+	let commentBodies  = $state<Record<string, string>>({});
+	let commentBusy    = $state<string | null>(null);
+	let commentError   = $state<string | null>(null);
+
+	$effect(() => {
+		try {
+			commentName = localStorage.getItem(COMMENT_NAME_KEY) ?? '';
+		} catch { /* localStorage indisponible : le champ reste simplement vide */ }
+	});
+
+	async function toggleComments(track: Track) {
+		const next = new Set(openComments);
+		if (next.has(track.id)) {
+			next.delete(track.id);
+			openComments = next;
+			return;
+		}
+		next.add(track.id);
+		openComments = next;
+		if (!commentsByTrack[track.id]) {
+			const res = await fetch(`/api/v1/music/tracks/${track.id}/comments`);
+			if (res.ok) {
+				const json = await res.json();
+				commentsByTrack = { ...commentsByTrack, [track.id]: json.comments };
+			}
+		}
+	}
+
+	async function submitComment(track: Track) {
+		const name = commentName.trim();
+		const body = (commentBodies[track.id] ?? '').trim();
+		if (!name || !body) return;
+		commentBusy = track.id;
+		commentError = null;
+		try {
+			const res = await fetch(`/api/v1/music/tracks/${track.id}/comments`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ author_name: name, body }),
+			});
+			if (!res.ok) {
+				const err = await res.json().catch(() => ({}));
+				throw new Error(err.error ?? tFn('music.comment_error'));
+			}
+			const { comment } = await res.json();
+			commentsByTrack = { ...commentsByTrack, [track.id]: [comment, ...(commentsByTrack[track.id] ?? [])] };
+			commentBodies = { ...commentBodies, [track.id]: '' };
+			try { localStorage.setItem(COMMENT_NAME_KEY, name); } catch { /* pas bloquant */ }
+		} catch (e) {
+			commentError = (e as Error).message;
+		} finally {
+			commentBusy = null;
+		}
+	}
+
+	function formatCommentDate(iso: string): string {
+		return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+	}
 
 	// "J'aime" public et anonyme : aucun compte requis (page pensee pour des
 	// visiteurs venus de Discord). La garde "un like par appareil" vit dans
@@ -165,6 +233,12 @@
 									</svg>
 									{copiedId === track.id ? tFn('music.link_copied') : tFn('music.share_track')}
 								</button>
+								<button type="button" class="mus-share-btn" onclick={() => toggleComments(track)}>
+									<svg class="mus-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+									</svg>
+									{tFn('music.comments')}{#if commentsByTrack[track.id]?.length} ({commentsByTrack[track.id].length}){/if}
+								</button>
 							</span>
 						</div>
 						{#if track.description}
@@ -176,6 +250,43 @@
 							cover={track.image_url ?? category.image_url ?? undefined}
 							download="1"
 						></nodyx-audio-player>
+
+						{#if openComments.has(track.id)}
+							<div class="mus-comments">
+								{#if commentError}
+									<p class="mus-comment-error">{commentError}</p>
+								{/if}
+								{#if commentsByTrack[track.id]}
+									{#each commentsByTrack[track.id] as comment (comment.id)}
+										<div class="mus-comment">
+											<div class="mus-comment-head">
+												<span class="mus-comment-author">{comment.author_name}</span>
+												<span class="mus-comment-date">{formatCommentDate(comment.created_at)}</span>
+											</div>
+											<p class="mus-comment-body">{comment.body}</p>
+										</div>
+									{:else}
+										<p class="mus-comment-empty">{tFn('music.no_comments')}</p>
+									{/each}
+								{/if}
+
+								<div class="mus-comment-form">
+									<input type="text" bind:value={commentName} maxlength="60"
+										placeholder={tFn('music.comment_name_ph')}
+										class="mus-comment-input mus-comment-input--name" />
+									<textarea rows="2" maxlength="1000"
+										value={commentBodies[track.id] ?? ''}
+										oninput={(e) => { commentBodies = { ...commentBodies, [track.id]: (e.target as HTMLTextAreaElement).value }; }}
+										placeholder={tFn('music.comment_body_ph')}
+										class="mus-comment-input"></textarea>
+									<button type="button" class="mus-comment-submit"
+										disabled={commentBusy === track.id || !commentName.trim() || !(commentBodies[track.id] ?? '').trim()}
+										onclick={() => submitComment(track)}>
+										{commentBusy === track.id ? tFn('common.loading') : tFn('music.comment_send')}
+									</button>
+								</div>
+							</div>
+						{/if}
 					</div>
 				</article>
 			{/each}
@@ -401,6 +512,95 @@
 		color: rgba(255, 255, 255, 0.4);
 		margin: 0;
 	}
+
+	/* ── Commentaires ─────────────────────────────────────────────────────── */
+	.mus-comments {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid rgba(255, 255, 255, 0.05);
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.mus-comment-error {
+		font-size: 0.75rem;
+		color: #f87171;
+		margin: 0;
+	}
+
+	.mus-comment {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.mus-comment-head {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+	}
+
+	.mus-comment-author {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: #fff;
+	}
+
+	.mus-comment-date {
+		font-size: 0.6875rem;
+		color: rgba(255, 255, 255, 0.3);
+	}
+
+	.mus-comment-body {
+		font-size: 0.8125rem;
+		color: rgba(255, 255, 255, 0.55);
+		margin: 0;
+		white-space: pre-wrap;
+	}
+
+	.mus-comment-empty {
+		font-size: 0.8125rem;
+		color: rgba(255, 255, 255, 0.3);
+		font-style: italic;
+		margin: 0;
+	}
+
+	.mus-comment-form {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		max-width: 420px;
+	}
+
+	.mus-comment-input {
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 6px;
+		padding: 6px 10px;
+		font-size: 0.8125rem;
+		color: #fff;
+		font-family: inherit;
+		resize: vertical;
+	}
+	.mus-comment-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+	.mus-comment-input:focus { outline: none; border-color: rgba(139, 92, 246, 0.5); }
+	.mus-comment-input--name { max-width: 220px; }
+
+	.mus-comment-submit {
+		align-self: flex-start;
+		background: rgba(139, 92, 246, 0.85);
+		border: none;
+		border-radius: 6px;
+		padding: 6px 14px;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: #fff;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+	.mus-comment-submit:hover:not(:disabled) { background: rgba(139, 92, 246, 1); }
+	.mus-comment-submit:disabled { opacity: 0.5; cursor: default; }
 
 	@media (max-width: 560px) {
 		.mus-banner { flex-direction: column; align-items: flex-start; }
