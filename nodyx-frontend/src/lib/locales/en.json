@@ -4596,5 +4596,17 @@
   "games.family.community": "Community",
   "games.family.esport": "Esport",
   "games.family.social": "Social",
-  "games.family.content": "Content"
+  "games.family.content": "Content",
+  "music.page_title": "Music — Nodyx",
+  "music.meta_desc": "Original soundtracks composed for indie video games, hosted and streamed directly on Nodyx.",
+  "music.title": "Music",
+  "music.subtitle": "Original compositions for indie video games, sorted by mood.",
+  "music.empty_project": "No tracks published yet. Check back soon.",
+  "music.empty_category": "Track coming soon.",
+  "music.track_count_one": "{{n}} track",
+  "music.track_count_plural": "{{n}} tracks",
+  "music.composed_for": "Composed for",
+  "music.share_category": "Copy the link to this mood",
+  "music.share_track": "Copy the link to this track",
+  "music.link_copied": "Link copied"
 }

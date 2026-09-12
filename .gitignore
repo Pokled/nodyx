@@ -41,6 +41,17 @@ nodyx-core/uploads/**
 !nodyx-core/uploads/*/
 !nodyx-core/uploads/*/.gitkeep
 
+# uploads/ost/<categorie>/ est un niveau plus profond (musiques par ambiance,
+# cf content/README-musique.md) : le double motif "**" + "*/" ne suffit pas a
+# re-inclure un second niveau, il faut chaque palier explicitement.
+!nodyx-core/uploads/ost/
+!nodyx-core/uploads/ost/*/
+!nodyx-core/uploads/ost/*/.gitkeep
+
+# Catalogue musique.json : contenu editorial vivant, edite a la main sur le
+# serveur (voir content/README-musique.md). Seul l'exemple est versionne.
+nodyx-frontend/content/musique.json
+
 # Cles privees et certificats : jamais dans le depot, meme generes par erreur
 # pendant un test d'installeur ou un essai local.
 *.pem
