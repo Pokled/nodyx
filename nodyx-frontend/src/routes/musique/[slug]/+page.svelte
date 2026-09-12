@@ -114,8 +114,6 @@
 
 	.mus-body {
 		padding: 24px 28px 48px;
-		max-width: 760px;
-		margin: 0 auto;
 	}
 
 	/* ── Banner ───────────────────────────────────────────────────────────── */
