@@ -77,6 +77,9 @@ export default async function musicRoutes(app: FastifyInstance) {
     if (body.title !== undefined && body.title !== null && body.title.length > 120) {
       return reply.code(400).send({ error: 'title must be 120 characters or fewer', code: 'INVALID_TITLE' })
     }
+    if (body.subtitle !== undefined && body.subtitle !== null && body.subtitle.length > 300) {
+      return reply.code(400).send({ error: 'subtitle must be 300 characters or fewer', code: 'INVALID_SUBTITLE' })
+    }
     const communityId = await getCommunityId()
     if (!communityId) return reply.code(503).send({ error: 'Community not configured' })
 
@@ -118,10 +121,10 @@ export default async function musicRoutes(app: FastifyInstance) {
 
     // Commentaires embarqués : affichés d'emblée sur la page publique (pas
     // de clic pour les révéler), donc chargés ici en une seule reponse plutot
-    // que d'un aller-retour par morceau depuis le client.
-    const tracksWithComments = await Promise.all(
-      tracks.map(async (track) => ({ ...track, comments: await MusicCommentModel.listByTrack(track.id) }))
-    )
+    // que d'un aller-retour par morceau depuis le client. Une seule requete
+    // pour tous les morceaux (pas N), meme a mesure que la categorie grossit.
+    const commentsByTrack = await MusicCommentModel.listByTrackIds(tracks.map(t => t.id))
+    const tracksWithComments = tracks.map(track => ({ ...track, comments: commentsByTrack.get(track.id) ?? [] }))
     return reply.send({ category, tracks: tracksWithComments })
   })
 
@@ -220,6 +223,9 @@ export default async function musicRoutes(app: FastifyInstance) {
     if (!title || title.trim().length < 2 || title.length > 120) {
       return reply.code(400).send({ error: 'title must be 2 to 120 characters', code: 'INVALID_TITLE' })
     }
+    if (description !== undefined && description.length > 500) {
+      return reply.code(400).send({ error: 'description must be 500 characters or fewer', code: 'INVALID_DESCRIPTION' })
+    }
     const communityId = await getCommunityId()
     if (!communityId) return reply.code(503).send({ error: 'Community not configured' })
 
@@ -236,6 +242,12 @@ export default async function musicRoutes(app: FastifyInstance) {
     const body = request.body as { title?: string; description?: string | null; license_note?: string | null; image_asset_id?: string | null; position?: number }
     if (body.title !== undefined && (body.title.trim().length < 2 || body.title.length > 120)) {
       return reply.code(400).send({ error: 'title must be 2 to 120 characters', code: 'INVALID_TITLE' })
+    }
+    if (body.description !== undefined && body.description !== null && body.description.length > 500) {
+      return reply.code(400).send({ error: 'description must be 500 characters or fewer', code: 'INVALID_DESCRIPTION' })
+    }
+    if (body.license_note !== undefined && body.license_note !== null && body.license_note.length > 4000) {
+      return reply.code(400).send({ error: 'license_note must be 4000 characters or fewer', code: 'INVALID_LICENSE_NOTE' })
     }
     const category = await MusicCategoryModel.update(id, body)
     if (!category) return reply.code(404).send({ error: 'Category not found', code: 'NOT_FOUND' })
@@ -262,6 +274,9 @@ export default async function musicRoutes(app: FastifyInstance) {
     if (!body.title || body.title.trim().length < 1 || body.title.length > 150) {
       return reply.code(400).send({ error: 'title must be 1 to 150 characters', code: 'INVALID_TITLE' })
     }
+    if (body.description !== undefined && body.description.length > 500) {
+      return reply.code(400).send({ error: 'description must be 500 characters or fewer', code: 'INVALID_DESCRIPTION' })
+    }
     const category = await MusicCategoryModel.findById(body.category_id)
     if (!category) return reply.code(404).send({ error: 'Category not found', code: 'NOT_FOUND' })
 
@@ -280,6 +295,9 @@ export default async function musicRoutes(app: FastifyInstance) {
     const body = request.body as { title?: string; description?: string | null; image_asset_id?: string | null; position?: number }
     if (body.title !== undefined && (body.title.trim().length < 1 || body.title.length > 150)) {
       return reply.code(400).send({ error: 'title must be 1 to 150 characters', code: 'INVALID_TITLE' })
+    }
+    if (body.description !== undefined && body.description !== null && body.description.length > 500) {
+      return reply.code(400).send({ error: 'description must be 500 characters or fewer', code: 'INVALID_DESCRIPTION' })
     }
     const track = await MusicTrackModel.update(id, body)
     if (!track) return reply.code(404).send({ error: 'Track not found', code: 'NOT_FOUND' })
