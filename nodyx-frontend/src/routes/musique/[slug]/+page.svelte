@@ -7,13 +7,15 @@
 
 	let { data }: { data: PageData } = $props();
 
+	interface Comment { id: string; author_name: string; body: string; created_at: string }
 	interface Category { id: string; slug: string; title: string; description: string | null; license_note: string | null; image_url: string | null; views: number }
-	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null; likes: number }
+	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null; likes: number; comments: Comment[] }
 	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; }
 
 	const category = $derived(data.category as Category);
 	const tracks   = $derived(data.tracks as Track[]);
 	const settings = $derived(data.settings as Settings | null);
+	const totalComments = $derived(tracks.reduce((sum, t) => sum + (commentsByTrack[t.id] ?? t.comments).length, 0));
 
 	// Discord/Twitter/Facebook exigent une URL absolue et n'exécutent aucun JS :
 	// on résout ici, côté SSR, jamais via window.
@@ -39,15 +41,13 @@
 		].filter(Boolean).join(' · ')
 	);
 
-	interface Comment { id: string; author_name: string; body: string; created_at: string }
-
 	let copiedId = $state<string | null>(null);
 
 	// Commentaires publics par morceau : sert le vrai usage (un développeur
-	// destinataire laisse un avis), aucun compte requis. Chargés à la demande
-	// (pas d'un coup pour tous les morceaux au chargement de la page).
+	// destinataire laisse un avis), aucun compte requis. Affichés d'emblée,
+	// deja fournis avec la categorie (pas de clic pour les revéler, pas
+	// d'aller-retour supplementaire au chargement).
 	const COMMENT_NAME_KEY = 'nodyx-music-comment-name';
-	let openComments   = $state<Set<string>>(new Set());
 	let commentsByTrack = $state<Record<string, Comment[]>>({});
 	let commentName    = $state('');
 	let commentBodies  = $state<Record<string, string>>({});
@@ -60,22 +60,8 @@
 		} catch { /* localStorage indisponible : le champ reste simplement vide */ }
 	});
 
-	async function toggleComments(track: Track) {
-		const next = new Set(openComments);
-		if (next.has(track.id)) {
-			next.delete(track.id);
-			openComments = next;
-			return;
-		}
-		next.add(track.id);
-		openComments = next;
-		if (!commentsByTrack[track.id]) {
-			const res = await fetch(`/api/v1/music/tracks/${track.id}/comments`);
-			if (res.ok) {
-				const json = await res.json();
-				commentsByTrack = { ...commentsByTrack, [track.id]: json.comments };
-			}
-		}
+	function commentsFor(track: Track): Comment[] {
+		return commentsByTrack[track.id] ?? track.comments;
 	}
 
 	async function submitComment(track: Track) {
@@ -95,7 +81,7 @@
 				throw new Error(err.error ?? tFn('music.comment_error'));
 			}
 			const { comment } = await res.json();
-			commentsByTrack = { ...commentsByTrack, [track.id]: [comment, ...(commentsByTrack[track.id] ?? [])] };
+			commentsByTrack = { ...commentsByTrack, [track.id]: [comment, ...commentsFor(track)] };
 			commentBodies = { ...commentBodies, [track.id]: '' };
 			try { localStorage.setItem(COMMENT_NAME_KEY, name); } catch { /* pas bloquant */ }
 		} catch (e) {
@@ -190,6 +176,9 @@
 			{#if category.views > 0}
 				<span class="mus-views">{tFn(category.views === 1 ? 'music.views_one' : 'music.views_plural').replace('{{n}}', String(category.views))}</span>
 			{/if}
+			{#if totalComments > 0}
+				<span class="mus-views">{tFn(totalComments === 1 ? 'music.comment_count_one' : 'music.comment_count_plural').replace('{{n}}', String(totalComments))}</span>
+			{/if}
 		</div>
 	</div>
 
@@ -233,12 +222,6 @@
 									</svg>
 									{copiedId === track.id ? tFn('music.link_copied') : tFn('music.share_track')}
 								</button>
-								<button type="button" class="mus-share-btn" onclick={() => toggleComments(track)}>
-									<svg class="mus-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-									</svg>
-									{tFn('music.comments')}{#if commentsByTrack[track.id]?.length} ({commentsByTrack[track.id].length}){/if}
-								</button>
 							</span>
 						</div>
 						{#if track.description}
@@ -251,42 +234,38 @@
 							download="1"
 						></nodyx-audio-player>
 
-						{#if openComments.has(track.id)}
-							<div class="mus-comments">
-								{#if commentError}
-									<p class="mus-comment-error">{commentError}</p>
-								{/if}
-								{#if commentsByTrack[track.id]}
-									{#each commentsByTrack[track.id] as comment (comment.id)}
-										<div class="mus-comment">
-											<div class="mus-comment-head">
-												<span class="mus-comment-author">{comment.author_name}</span>
-												<span class="mus-comment-date">{formatCommentDate(comment.created_at)}</span>
-											</div>
-											<p class="mus-comment-body">{comment.body}</p>
-										</div>
-									{:else}
-										<p class="mus-comment-empty">{tFn('music.no_comments')}</p>
-									{/each}
-								{/if}
-
-								<div class="mus-comment-form">
-									<input type="text" bind:value={commentName} maxlength="60"
-										placeholder={tFn('music.comment_name_ph')}
-										class="mus-comment-input mus-comment-input--name" />
-									<textarea rows="2" maxlength="1000"
-										value={commentBodies[track.id] ?? ''}
-										oninput={(e) => { commentBodies = { ...commentBodies, [track.id]: (e.target as HTMLTextAreaElement).value }; }}
-										placeholder={tFn('music.comment_body_ph')}
-										class="mus-comment-input"></textarea>
-									<button type="button" class="mus-comment-submit"
-										disabled={commentBusy === track.id || !commentName.trim() || !(commentBodies[track.id] ?? '').trim()}
-										onclick={() => submitComment(track)}>
-										{commentBusy === track.id ? tFn('common.loading') : tFn('music.comment_send')}
-									</button>
+						<div class="mus-comments">
+							{#if commentError}
+								<p class="mus-comment-error">{commentError}</p>
+							{/if}
+							{#each commentsFor(track) as comment (comment.id)}
+								<div class="mus-comment">
+									<div class="mus-comment-head">
+										<span class="mus-comment-author">{comment.author_name}</span>
+										<span class="mus-comment-date">{formatCommentDate(comment.created_at)}</span>
+									</div>
+									<p class="mus-comment-body">{comment.body}</p>
 								</div>
+							{:else}
+								<p class="mus-comment-empty">{tFn('music.no_comments')}</p>
+							{/each}
+
+							<div class="mus-comment-form">
+								<input type="text" bind:value={commentName} maxlength="60"
+									placeholder={tFn('music.comment_name_ph')}
+									class="mus-comment-input mus-comment-input--name" />
+								<textarea rows="2" maxlength="1000"
+									value={commentBodies[track.id] ?? ''}
+									oninput={(e) => { commentBodies = { ...commentBodies, [track.id]: (e.target as HTMLTextAreaElement).value }; }}
+									placeholder={tFn('music.comment_body_ph')}
+									class="mus-comment-input"></textarea>
+								<button type="button" class="mus-comment-submit"
+									disabled={commentBusy === track.id || !commentName.trim() || !(commentBodies[track.id] ?? '').trim()}
+									onclick={() => submitComment(track)}>
+									{commentBusy === track.id ? tFn('common.loading') : tFn('music.comment_send')}
+								</button>
 							</div>
-						{/if}
+						</div>
 					</div>
 				</article>
 			{/each}
