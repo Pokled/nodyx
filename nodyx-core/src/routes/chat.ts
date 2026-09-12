@@ -9,61 +9,12 @@ import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as ChannelModel from '../models/channel'
 import { redis } from '../config/database'
-import dns from 'dns/promises'
-import net from 'net'
 import https from 'https'
 import http from 'http'
-
-// ── SSRF guard — bloque les IPs privées / loopback / link-local ───────────────
-
-function isPrivateIp(ip: string): boolean {
-  // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1) — bypass critique
-  const mapped4 = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
-  if (mapped4) return isPrivateIp(mapped4[1])
-  // IPv4-in-IPv6 hex notation (e.g. ::ffff:7f00:0001 = 127.0.0.1)
-  const mapped4hex = ip.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i)
-  if (mapped4hex) {
-    const a = parseInt(mapped4hex[1], 16)
-    const b = parseInt(mapped4hex[2], 16)
-    const ipv4 = `${(a >> 8) & 0xff}.${a & 0xff}.${(b >> 8) & 0xff}.${b & 0xff}`
-    return isPrivateIp(ipv4)
-  }
-
-  // IPv6 loopback et private
-  if (ip === '::1' || ip === '::') return true
-  if (ip.startsWith('fc') || ip.startsWith('fd')) return true  // fc00::/7
-  if (ip.startsWith('fe80')) return true                        // link-local
-  if (ip.startsWith('2001:db8')) return true                    // documentation (RFC 3849)
-
-  // IPv4
-  if (!net.isIPv4(ip)) return false
-  const parts = ip.split('.').map(Number)
-  const [a, b] = parts
-  return (
-    a === 10 ||                          // 10.0.0.0/8
-    a === 127 ||                         // 127.0.0.0/8 loopback
-    a === 0 ||                           // 0.0.0.0/8
-    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
-    (a === 192 && b === 168) ||          // 192.168.0.0/16
-    (a === 169 && b === 254) ||          // 169.254.0.0/16 link-local (cloud metadata)
-    (a === 100 && b >= 64 && b <= 127)   // 100.64.0.0/10 shared address space
-  )
-}
-
-/**
- * Résout le hostname UNE FOIS et retourne l'IP résolue si sûre, null sinon.
- * On retourne l'IP pour que le fetch l'utilise directement (anti-DNS rebinding).
- */
-async function resolveSsrfSafe(hostname: string): Promise<string | null> {
-  // Adresse IP directe — valider sans DNS
-  if (net.isIP(hostname)) return isPrivateIp(hostname) ? null : hostname
-  try {
-    const { address } = await dns.lookup(hostname)
-    return isPrivateIp(address) ? null : address
-  } catch {
-    return null
-  }
-}
+// Garde anti-SSRF partagée (F-055, 2026-09-12) : vivait ici en copie locale,
+// consolidée avec linkPreview.ts et directory.ts dans un seul module — ce
+// dernier était le seul des trois à ne PAS résoudre le DNS avant de juger.
+import { resolveSsrfSafe } from '../utils/ssrfGuard'
 
 // ── Resolve instance community (cached) ──────────────────────────────────────
 
