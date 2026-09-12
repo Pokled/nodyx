@@ -40,6 +40,7 @@ import { widgetDemoRoutes }  from './routes/widgetDemo'
 import { adminBackupRoutes } from './routes/admin_backups'
 import canvasRoutes          from './routes/canvas'
 import twitchRoutes           from './routes/twitch'
+import musicRoutes            from './routes/music'
 import { streamerAdminPlugin, streamerEventsubPlugin } from './routes/streamer'
 import { startChatOutboundWorker } from './services/streamer/twitchChatBridge'
 import { startChatTimersScheduler } from './services/streamer/chatTimersService'
@@ -239,6 +240,7 @@ server.register(widgetDemoRoutes,     { prefix: '/api/v1' })
 server.register(adminBackupRoutes,    { prefix: '/api/v1' })
 server.register(canvasRoutes,         { prefix: '/api/v1/canvas' })
 server.register(twitchRoutes,         { prefix: '/api/v1/twitch' })
+server.register(musicRoutes,          { prefix: '/api/v1/music' })
 
 // ── Streamer Hub (spec 015, Phase 1) ─────────────────────────────────────────
 // Deux scopes : admin OAuth + viewer feed sous /streamer, webhook EventSub
