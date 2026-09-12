@@ -148,6 +148,14 @@
 	let newTrackAudio = $state<Record<string, File | null>>({});
 	let newTrackImage = $state<Record<string, File | null>>({});
 
+	// Refs vers les <input type="file"> cachés (un par catégorie ouverte) :
+	// on ouvre le sélecteur nous-mêmes via .click(), plutôt que de compter sur
+	// le rendu natif du bouton de fichier (minuscule et peu visible sur fond
+	// sombre, cf gotcha rencontré le 12/09 : Jonathan ne le voyait pas).
+	let coverInputRefs = $state<Record<string, HTMLInputElement | null>>({});
+	let audioInputRefs = $state<Record<string, HTMLInputElement | null>>({});
+	let imageInputRefs = $state<Record<string, HTMLInputElement | null>>({});
+
 	async function addTrack(cat: Category) {
 		const title = (newTrackTitle[cat.id] ?? '').trim();
 		const audio = newTrackAudio[cat.id];
@@ -246,19 +254,21 @@
 		{#each categories as cat (cat.id)}
 			<div class="rounded-xl border border-gray-800 bg-gray-900/30 overflow-hidden">
 				<div class="flex items-center gap-4 p-4">
-					<label class="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-800 cursor-pointer group"
-						title={tFn('amusic.change_image')}>
+					<button type="button"
+						class="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-800 cursor-pointer group"
+						title={tFn('amusic.change_image')}
+						onclick={() => coverInputRefs[cat.id]?.click()}>
 						{#if cat.image_url}
 							<img src={cat.image_url} alt="" class="w-full h-full object-cover" />
 						{:else}
 							<div class="w-full h-full flex items-center justify-center text-gray-600 text-xs text-center px-1">{tFn('amusic.no_image')}</div>
 						{/if}
 						<div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-white transition-opacity">
-							{tFn('amusic.change_image')}
+							{busy === `image-category-${cat.id}` ? tFn('common.loading') : tFn('amusic.change_image')}
 						</div>
-						<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"
-							onchange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) changeCategoryImage(cat, f); }} />
-					</label>
+						<input bind:this={coverInputRefs[cat.id]} type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"
+							onchange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) changeCategoryImage(cat, f); (e.target as HTMLInputElement).value = ''; }} />
+					</button>
 
 					<div class="flex-1 min-w-0">
 						<input type="text" value={cat.title} maxlength="120"
@@ -316,18 +326,21 @@
 								placeholder={tFn('amusic.field_description')} maxlength="500"
 								class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500" />
 							<div class="flex flex-wrap gap-2 items-center">
-								<label class="text-xs text-gray-400">
-									{tFn('amusic.audio_file')}
-									<input type="file" accept="audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/mp4,audio/flac,audio/x-m4a"
-										onchange={(e) => { newTrackAudio = { ...newTrackAudio, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }}
-										class="block mt-1 text-xs text-gray-300" />
-								</label>
-								<label class="text-xs text-gray-400">
-									{tFn('amusic.cover_optional')}
-									<input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
-										onchange={(e) => { newTrackImage = { ...newTrackImage, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }}
-										class="block mt-1 text-xs text-gray-300" />
-								</label>
+								<input bind:this={audioInputRefs[cat.id]} type="file"
+									accept="audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/mp4,audio/flac,audio/x-m4a" class="hidden"
+									onchange={(e) => { newTrackAudio = { ...newTrackAudio, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }} />
+								<button type="button" onclick={() => audioInputRefs[cat.id]?.click()}
+									class="rounded-lg border border-gray-700 bg-gray-800 hover:border-indigo-500 px-3 py-1.5 text-xs text-gray-300">
+									{newTrackAudio[cat.id]?.name ?? tFn('amusic.audio_file')}
+								</button>
+
+								<input bind:this={imageInputRefs[cat.id]} type="file"
+									accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"
+									onchange={(e) => { newTrackImage = { ...newTrackImage, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }} />
+								<button type="button" onclick={() => imageInputRefs[cat.id]?.click()}
+									class="rounded-lg border border-gray-700 bg-gray-800 hover:border-indigo-500 px-3 py-1.5 text-xs text-gray-300">
+									{newTrackImage[cat.id]?.name ?? tFn('amusic.cover_optional')}
+								</button>
 							</div>
 							<button type="button" onclick={() => addTrack(cat)}
 								disabled={busy === `add-track-${cat.id}` || !(newTrackTitle[cat.id] ?? '').trim() || !newTrackAudio[cat.id]}
