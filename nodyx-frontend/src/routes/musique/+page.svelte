@@ -107,7 +107,10 @@
 	/* ── Grid ─────────────────────────────────────────────────────────────── */
 	.mus-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		/* auto-fit (pas auto-fill) : avec peu de catégories, les cartes
+		   s'étirent pour occuper toute la largeur au lieu de laisser des
+		   colonnes vides sur la droite. */
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 		gap: 1px;
 		background: rgba(255, 255, 255, 0.04);
 	}
@@ -129,7 +132,9 @@
 	}
 
 	.mus-card-thumb {
-		aspect-ratio: 1;
+		/* 16/9 plutôt que carré : avec peu de catégories, une carte étirée par
+		   auto-fit reste une belle bannière au lieu d'un carré démesuré. */
+		aspect-ratio: 16 / 9;
 		overflow: hidden;
 		background: rgba(255, 255, 255, 0.03);
 	}
