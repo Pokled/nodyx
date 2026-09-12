@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { t } from '$lib/i18n';
 	import type { PageData } from './$types';
 
@@ -17,16 +18,42 @@
 
 	const pageTitle    = $derived(settings?.title    || tFn('music.title'));
 	const pageSubtitle = $derived(settings?.subtitle || tFn('music.subtitle'));
+	const totalTracks  = $derived(categories.reduce((sum, c) => sum + c.track_count, 0));
+
+	// Discord/Twitter/Facebook exigent une URL absolue et n'exécutent aucun JS :
+	// on résout ici, cote SSR, jamais via window.
+	function absolutize(url: string | null | undefined, origin: string): string | null {
+		if (!url) return null;
+		if (/^https?:\/\//.test(url)) return url;
+		return origin + url;
+	}
+
+	// Bannière de page → couverture de la première catégorie → bannière/logo de
+	// la communauté → image par défaut du site. Toujours une seule og:image.
+	const shareImage = $derived(
+		absolutize(
+			settings?.banner_url ?? categories[0]?.image_url ?? (page.data as any).communityBannerUrl ?? (page.data as any).communityLogoUrl,
+			page.url.origin,
+		) ?? `${page.url.origin}/og-image.jpg`,
+	);
+
+	const richDescription = $derived(
+		categories.length > 0
+			? `${pageSubtitle} · ${tFn(categories.length === 1 ? 'music.category_count_one' : 'music.category_count_plural').replace('{{n}}', String(categories.length))} · ${tFn(totalTracks === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(totalTracks))}`
+			: pageSubtitle
+	);
 </script>
 
 <svelte:head>
 	<title>{pageTitle}</title>
-	<meta name="description" content={pageSubtitle} />
+	<meta name="description" content={richDescription} />
 	<meta property="og:title" content={pageTitle} />
-	<meta property="og:description" content={pageSubtitle} />
-	{#if settings?.banner_url ?? categories[0]?.image_url}
-		<meta property="og:image" content={settings?.banner_url ?? categories[0].image_url} />
-	{/if}
+	<meta property="og:description" content={richDescription} />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content={page.url.href} />
+	<meta property="og:image" content={shareImage} />
+	<meta name="twitter:image" content={shareImage} />
+	<meta property="og:site_name" content={(page.data as any).communityName ?? 'Nodyx'} />
 </svelte:head>
 
 {#if settings?.banner_url}

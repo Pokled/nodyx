@@ -44,6 +44,8 @@
 		'/users/[username]',
 		'/users/[username]/card',
 		'/calendar/[id]',
+		'/musique',
+		'/musique/[slug]',
 	]);
 	const ownsOgImage = $derived(PAGES_WITH_OWN_OG.has(page.route.id ?? ''));
 
