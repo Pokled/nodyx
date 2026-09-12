@@ -26,7 +26,6 @@ the work of thousands of developers who chose freedom over ownership.
 | **Ollama** | Local AI | MIT |
 | **Socket.io** | Realtime events | MIT |
 | **Git** | Project history | GPL v2 |
-| **Fraunces** (Undercase Type) | Music showcase typography | OFL 1.1 |
 
 ---
 
