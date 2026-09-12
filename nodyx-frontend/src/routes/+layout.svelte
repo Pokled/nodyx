@@ -748,6 +748,7 @@
 		} else if (path.startsWith('/tasks'))        { crumbs.push({ label: tFn('nav.tasks') });
 		} else if (path.startsWith('/wiki'))         { crumbs.push({ label: tFn('nav.wiki') });
 		} else if (path.startsWith('/library'))      { crumbs.push({ label: tFn('nav.library') });
+		} else if (path.startsWith('/musique'))      { crumbs.push({ label: tFn('nav.music') });
 		} else if (path.startsWith('/search'))       { crumbs.push({ label: tFn('nav.search') });
 		} else if (path.startsWith('/garden'))       { crumbs.push({ label: tFn('nav.garden') });
 		} else {
@@ -1227,6 +1228,7 @@
 						{ href: '/tasks',    label: tFn('nav.tasks'),       icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',                                                                                                                                                    show: mods.tasks !== false },
 						{ href: '/wiki',     label: tFn('nav.wiki'),         icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',                                             show: !!mods.wiki },
 						{ href: '/library',  label: tFn('nav.library'), icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',                                             show: true },
+						{ href: '/musique',  label: tFn('nav.music'),   icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z',                                                                                                                                                              show: true },
 						{ href: '/garden',   label: tFn('nav.garden'),       icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',                                                                                                                                            show: true },
 						{ href: '/discover', label: tFn('nav.discover'),    icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',                                                                                         show: true },
 					].filter(i => i.show) as item}
@@ -1432,7 +1434,7 @@
             {/if}
 
 
-            <div class="w-full flex-1 flex flex-col {langView ? 'lang-view-wrap h-full' : (page.url.pathname === '/' || page.url.pathname.startsWith('/chat') || page.url.pathname.startsWith('/admin') || page.url.pathname.startsWith('/users/') || page.url.pathname.startsWith('/feed') || page.url.pathname.startsWith('/settings') || page.url.pathname.startsWith('/garden') || page.url.pathname.startsWith('/calendar') || page.url.pathname.startsWith('/discover') || page.url.pathname.startsWith('/wiki') || page.url.pathname.startsWith('/library') || page.url.pathname.startsWith('/dm') || page.url.pathname.startsWith('/auth/') ? 'h-full' : (page.url.pathname.startsWith('/forum') || page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8')}">
+            <div class="w-full flex-1 flex flex-col {langView ? 'lang-view-wrap h-full' : (page.url.pathname === '/' || page.url.pathname.startsWith('/chat') || page.url.pathname.startsWith('/admin') || page.url.pathname.startsWith('/users/') || page.url.pathname.startsWith('/feed') || page.url.pathname.startsWith('/settings') || page.url.pathname.startsWith('/garden') || page.url.pathname.startsWith('/calendar') || page.url.pathname.startsWith('/discover') || page.url.pathname.startsWith('/wiki') || page.url.pathname.startsWith('/library') || page.url.pathname.startsWith('/musique') || page.url.pathname.startsWith('/dm') || page.url.pathname.startsWith('/auth/') ? 'h-full' : (page.url.pathname.startsWith('/forum') || page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8')}">
                 {#if langView}
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <div class="fixed inset-0 bg-black/40 backdrop-blur-xs z-40" onclick={() => langView = false} transition:fade={{ duration: 200 }}></div>
