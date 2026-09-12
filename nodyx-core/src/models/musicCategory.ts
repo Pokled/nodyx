@@ -10,6 +10,7 @@ export interface MusicCategory {
   license_note: string | null
   image_url:    string | null
   track_count:  number
+  views:        number
   position:     number
   created_at:   string
   updated_at:   string
@@ -19,7 +20,7 @@ export interface MusicCategory {
 // vit dans community_assets, servi tel quel sous /uploads/<file_path>.
 const SELECT = `
   SELECT
-    mc.id, mc.community_id, mc.slug, mc.title, mc.description, mc.license_note, mc.position,
+    mc.id, mc.community_id, mc.slug, mc.title, mc.description, mc.license_note, mc.views, mc.position,
     mc.created_at, mc.updated_at,
     CASE WHEN a.file_path IS NOT NULL THEN '/uploads/' || a.file_path END AS image_url,
     COUNT(mt.id)::int AS track_count
@@ -112,6 +113,10 @@ export async function update(id: string, data: {
   values.push(id)
   await db.query(`UPDATE music_categories SET ${fields.join(', ')} WHERE id = $${i}`, values)
   return findById(id)
+}
+
+export async function incrementViews(id: string): Promise<void> {
+  await db.query(`UPDATE music_categories SET views = views + 1 WHERE id = $1`, [id])
 }
 
 export async function remove(id: string): Promise<boolean> {

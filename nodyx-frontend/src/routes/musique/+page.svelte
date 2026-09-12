@@ -8,7 +8,7 @@
 
 	interface Category {
 		id: string; slug: string; title: string; description: string | null;
-		image_url: string | null; track_count: number;
+		image_url: string | null; track_count: number; views: number;
 	}
 	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; }
 
@@ -63,9 +63,14 @@
 						{#if category.description}
 							<p class="mus-card-desc">{category.description}</p>
 						{/if}
-						<span class="mus-badge">
-							{tFn(category.track_count === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(category.track_count))}
-						</span>
+						<div class="mus-card-meta">
+							<span class="mus-badge">
+								{tFn(category.track_count === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(category.track_count))}
+							</span>
+							{#if category.views > 0}
+								<span class="mus-views">{tFn(category.views === 1 ? 'music.views_one' : 'music.views_plural').replace('{{n}}', String(category.views))}</span>
+							{/if}
+						</div>
 					</div>
 				</a>
 			{/each}
@@ -206,6 +211,12 @@
 		overflow: hidden;
 	}
 
+	.mus-card-meta {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
 	.mus-badge {
 		display: inline-flex;
 		align-items: center;
@@ -215,5 +226,10 @@
 		border: 1px solid rgba(139, 92, 246, 0.25);
 		background: rgba(139, 92, 246, 0.1);
 		color: var(--nx-accent-2-soft2);
+	}
+
+	.mus-views {
+		font-size: 0.6875rem;
+		color: rgba(255, 255, 255, 0.3);
 	}
 </style>

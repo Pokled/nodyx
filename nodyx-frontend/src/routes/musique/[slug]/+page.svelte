@@ -6,13 +6,46 @@
 
 	let { data }: { data: PageData } = $props();
 
-	interface Category { id: string; slug: string; title: string; description: string | null; license_note: string | null; image_url: string | null }
-	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null }
+	interface Category { id: string; slug: string; title: string; description: string | null; license_note: string | null; image_url: string | null; views: number }
+	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null; likes: number }
 
 	const category = $derived(data.category as Category);
 	const tracks   = $derived(data.tracks as Track[]);
 
 	let copiedId = $state<string | null>(null);
+
+	// "J'aime" public et anonyme : aucun compte requis (page pensee pour des
+	// visiteurs venus de Discord). La garde "un like par appareil" vit dans
+	// le localStorage du navigateur, jamais cote serveur : rien qui identifie
+	// qui a aime quoi.
+	const LIKED_KEY = 'nodyx-music-liked';
+	let likedTracks = $state<Set<string>>(new Set());
+	let likeCounts  = $state<Record<string, number>>({});
+
+	$effect(() => {
+		try {
+			const raw = localStorage.getItem(LIKED_KEY);
+			if (raw) likedTracks = new Set(JSON.parse(raw));
+		} catch { /* localStorage indisponible : le bouton reste simplement cliquable */ }
+	});
+
+	function likesFor(track: Track): number {
+		return likeCounts[track.id] ?? track.likes;
+	}
+
+	async function likeTrack(track: Track) {
+		if (likedTracks.has(track.id)) return;
+		likeCounts = { ...likeCounts, [track.id]: likesFor(track) + 1 };
+		likedTracks = new Set(likedTracks).add(track.id);
+		try { localStorage.setItem(LIKED_KEY, JSON.stringify([...likedTracks])); } catch { /* tant pis, pas bloquant */ }
+		try {
+			const res = await fetch(`/api/v1/music/tracks/${track.id}/like`, { method: 'POST' });
+			if (res.ok) {
+				const json = await res.json();
+				likeCounts = { ...likeCounts, [track.id]: json.likes };
+			}
+		} catch { /* le compte optimiste reste affiche */ }
+	}
 
 	async function copyTrackLink(id: string) {
 		const url = `${location.origin}${location.pathname}#${id}`;
@@ -57,6 +90,9 @@
 			<span class="mus-badge">
 				{tFn(tracks.length === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(tracks.length))}
 			</span>
+			{#if category.views > 0}
+				<span class="mus-views">{tFn(category.views === 1 ? 'music.views_one' : 'music.views_plural').replace('{{n}}', String(category.views))}</span>
+			{/if}
 		</div>
 	</div>
 
@@ -74,6 +110,14 @@
 						<div class="mus-track-head">
 							<p class="mus-track-title">{track.title}</p>
 							<span class="mus-track-actions">
+								<button type="button" class="mus-share-btn mus-like-btn" class:mus-like-btn--active={likedTracks.has(track.id)}
+									onclick={() => likeTrack(track)} disabled={likedTracks.has(track.id)}
+									aria-label={tFn('music.like_track')} title={tFn('music.like_track')}>
+									<svg class="mus-icon" fill={likedTracks.has(track.id) ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21l-7.682-8.318a4.5 4.5 0 010-6.364z" />
+									</svg>
+									{#if likesFor(track) > 0}{likesFor(track)}{/if}
+								</button>
 								{#if category.license_note}
 									<a class="mus-share-btn" href={`/api/v1/music/categories/${category.id}/license.pdf`}>
 										<svg class="mus-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -198,6 +242,11 @@
 		color: var(--nx-accent-2-soft2);
 	}
 
+	.mus-views {
+		font-size: 0.6875rem;
+		color: rgba(255, 255, 255, 0.3);
+	}
+
 	.mus-empty {
 		color: rgba(255, 255, 255, 0.4);
 		font-size: 0.8125rem;
@@ -296,6 +345,26 @@
 		width: 12px;
 		height: 12px;
 		flex: none;
+	}
+
+	.mus-like-btn--active {
+		color: #fb7185;
+		border-color: rgba(251, 113, 133, 0.4);
+		background: rgba(251, 113, 133, 0.08);
+		cursor: default;
+	}
+	.mus-like-btn:not(.mus-like-btn--active):hover {
+		color: #fb7185;
+		border-color: rgba(251, 113, 133, 0.4);
+		background: rgba(251, 113, 133, 0.08);
+	}
+	.mus-like-btn--active .mus-icon {
+		animation: mus-like-pulse 0.35s ease-out;
+	}
+	@keyframes mus-like-pulse {
+		0%   { transform: scale(1); }
+		40%  { transform: scale(1.35); }
+		100% { transform: scale(1); }
 	}
 
 	.mus-track-desc {

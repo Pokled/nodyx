@@ -7,6 +7,7 @@ export interface MusicTrack {
   description: string | null
   audio_url:   string
   image_url:   string | null
+  likes:       number
   position:    number
   created_at:  string
   updated_at:  string
@@ -14,7 +15,7 @@ export interface MusicTrack {
 
 const SELECT = `
   SELECT
-    mt.id, mt.category_id, mt.title, mt.description, mt.position,
+    mt.id, mt.category_id, mt.title, mt.description, mt.likes, mt.position,
     mt.created_at, mt.updated_at,
     '/uploads/' || audio.file_path AS audio_url,
     CASE WHEN img.thumbnail_path IS NOT NULL THEN '/uploads/' || img.thumbnail_path
@@ -76,6 +77,11 @@ export async function update(id: string, data: {
   fields.push(`updated_at = NOW()`)
   values.push(id)
   await db.query(`UPDATE music_tracks SET ${fields.join(', ')} WHERE id = $${i}`, values)
+  return findById(id)
+}
+
+export async function addLike(id: string): Promise<MusicTrack | null> {
+  await db.query(`UPDATE music_tracks SET likes = likes + 1 WHERE id = $1`, [id])
   return findById(id)
 }
 
