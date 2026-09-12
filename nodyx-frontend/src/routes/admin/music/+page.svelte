@@ -17,12 +17,15 @@
 		id: string; category_id: string; title: string; description: string | null;
 		audio_url: string; image_url: string | null; position: number;
 	}
+	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; }
 
 	let categories  = $state<Category[]>(data.categories ?? []);
 	let tracksByCat = $state<Record<string, Track[]>>({});
 	let openCat     = $state<string | null>(null);
 	let busy        = $state<string | null>(null); // clé de l'opération en cours (feedback UI)
 	let errorMsg    = $state<string | null>(null);
+	let settings    = $state<Settings>(data.settings ?? { title: null, subtitle: null, banner_url: null });
+	let bannerInput = $state<HTMLInputElement | null>(null);
 
 	// ── Nouvelle catégorie ───────────────────────────────────────────────────
 	let newCatTitle = $state('');
@@ -58,6 +61,52 @@
 	async function refreshCategories() {
 		const json = await api('/categories');
 		categories = json.categories;
+	}
+
+	async function patchSettings(patch: { title?: string | null; subtitle?: string | null; banner_asset_id?: string | null }) {
+		const json = await api('/settings', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(patch),
+		});
+		settings = json.settings;
+	}
+
+	async function updateSettingsText(patch: { title?: string | null; subtitle?: string | null }) {
+		busy = 'settings';
+		errorMsg = null;
+		try {
+			await patchSettings(patch);
+		} catch (e) {
+			errorMsg = (e as Error).message;
+		} finally {
+			busy = null;
+		}
+	}
+
+	async function changeBanner(file: File) {
+		busy = 'settings-banner';
+		errorMsg = null;
+		try {
+			const { asset_id } = await uploadFile('image', file);
+			await patchSettings({ banner_asset_id: asset_id });
+		} catch (e) {
+			errorMsg = (e as Error).message;
+		} finally {
+			busy = null;
+		}
+	}
+
+	async function removeBanner() {
+		busy = 'settings-banner';
+		errorMsg = null;
+		try {
+			await patchSettings({ banner_asset_id: null });
+		} catch (e) {
+			errorMsg = (e as Error).message;
+		} finally {
+			busy = null;
+		}
 	}
 
 	async function createCategory() {
@@ -315,6 +364,49 @@
 	{#if errorMsg}
 		<p class="mb-4 rounded-lg bg-red-900/40 border border-red-800 px-4 py-2 text-sm text-red-300">{errorMsg}</p>
 	{/if}
+
+	<!-- Page publique : titre, sous-titre, bannière -->
+	<details class="mb-6 rounded-xl border border-gray-800 bg-gray-900/50">
+		<summary class="cursor-pointer px-5 py-3.5 text-sm font-semibold text-indigo-300 hover:text-indigo-200 select-none">
+			{tFn('amusic.page_settings')}
+		</summary>
+		<div class="px-5 pb-5 pt-3 border-t border-gray-800 space-y-3">
+			<div>
+				<label for="page-title" class="block text-xs text-gray-400 mb-1">{tFn('amusic.field_title')}</label>
+				<input id="page-title" type="text" value={settings.title ?? ''} maxlength="120"
+					placeholder={tFn('music.title')}
+					onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v !== (settings.title ?? '')) updateSettingsText({ title: v || null }); }}
+					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+			</div>
+			<div>
+				<label for="page-subtitle" class="block text-xs text-gray-400 mb-1">{tFn('amusic.field_subtitle')}</label>
+				<textarea id="page-subtitle" rows="2" maxlength="300"
+					placeholder={tFn('music.subtitle')}
+					onblur={(e) => { const v = (e.target as HTMLTextAreaElement).value.trim(); if (v !== (settings.subtitle ?? '')) updateSettingsText({ subtitle: v || null }); }}
+					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">{settings.subtitle ?? ''}</textarea>
+			</div>
+			<div>
+				<p class="block text-xs text-gray-400 mb-1">{tFn('amusic.field_banner')}</p>
+				{#if settings.banner_url}
+					<div class="relative w-full max-w-md rounded-lg overflow-hidden border border-gray-700">
+						<img src={settings.banner_url} alt="" class="w-full h-28 object-cover" />
+						<button type="button" onclick={removeBanner} disabled={busy === 'settings-banner'}
+							class="mus-btn-danger mus-banner-remove" aria-label={tFn('amusic.remove_banner')} title={tFn('amusic.remove_banner')}>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</div>
+				{:else}
+					<input bind:this={bannerInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"
+						onchange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) changeBanner(f); (e.target as HTMLInputElement).value = ''; }} />
+					<button type="button" onclick={() => bannerInput?.click()} disabled={busy === 'settings-banner'} class="mus-btn-file">
+						{busy === 'settings-banner' ? tFn('common.loading') : tFn('amusic.upload_banner')}
+					</button>
+				{/if}
+			</div>
+		</div>
+	</details>
 
 	<!-- Nouvelle catégorie -->
 	<details class="mb-6 rounded-xl border border-gray-800 bg-gray-900/50">
@@ -624,4 +716,12 @@
 	}
 	.mus-btn-move:hover:not(:disabled) { color: #a5b4fc; background: rgba(99, 102, 241, 0.1); }
 	.mus-btn-move:disabled { opacity: 0.2; cursor: default; }
+
+	.mus-banner-remove {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		background: rgba(0, 0, 0, 0.55);
+	}
+	.mus-banner-remove:hover { background: rgba(0, 0, 0, 0.75); }
 </style>

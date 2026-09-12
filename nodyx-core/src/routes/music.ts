@@ -1,5 +1,8 @@
 /**
- * NODYX : vitrine musique (bandes originales composées pour des jeux vidéo)
+ * NODYX : vitrine musique. Titre, sous-titre et bannière sont éditables par
+ * l'admin (music_page_* sur communities), donc réutilisable pour n'importe
+ * quel usage (bandes originales, DJ set, bibliothèque sonore...), pas figée
+ * sur un seul contexte.
  * Lecture publique (aucune authentification requise, pensé pour des visiteurs
  * venant de Discord), écriture réservée à l'admin de l'instance.
  * Prefix: /api/v1/music
@@ -34,9 +37,61 @@ async function getCommunityId(): Promise<string | null> {
   return null
 }
 
+interface MusicPageSettings {
+  title:      string | null
+  subtitle:   string | null
+  banner_url: string | null
+}
+
+async function getPageSettings(communityId: string): Promise<MusicPageSettings> {
+  const { rows } = await db.query<{ music_page_title: string | null; music_page_subtitle: string | null; file_path: string | null }>(
+    `SELECT c.music_page_title, c.music_page_subtitle, a.file_path
+     FROM communities c
+     LEFT JOIN community_assets a ON a.id = c.music_page_banner_asset_id
+     WHERE c.id = $1`,
+    [communityId]
+  )
+  const row = rows[0]
+  return {
+    title:      row?.music_page_title ?? null,
+    subtitle:   row?.music_page_subtitle ?? null,
+    banner_url: row?.file_path ? `/uploads/${row.file_path}` : null,
+  }
+}
+
 export default async function musicRoutes(app: FastifyInstance) {
 
   // ── Lecture publique ────────────────────────────────────────────────────
+
+  app.get('/settings', { preHandler: [rateLimit] }, async (_request, reply) => {
+    const communityId = await getCommunityId()
+    if (!communityId) return reply.code(503).send({ error: 'Community not configured' })
+    const settings = await getPageSettings(communityId)
+    return reply.send({ settings })
+  })
+
+  app.patch('/settings', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const body = request.body as { title?: string | null; subtitle?: string | null; banner_asset_id?: string | null }
+    if (body.title !== undefined && body.title !== null && body.title.length > 120) {
+      return reply.code(400).send({ error: 'title must be 120 characters or fewer', code: 'INVALID_TITLE' })
+    }
+    const communityId = await getCommunityId()
+    if (!communityId) return reply.code(503).send({ error: 'Community not configured' })
+
+    const fields: string[] = []
+    const values: unknown[] = []
+    let i = 1
+    if (body.title           !== undefined) { fields.push(`music_page_title = $${i++}`);           values.push(body.title) }
+    if (body.subtitle        !== undefined) { fields.push(`music_page_subtitle = $${i++}`);         values.push(body.subtitle) }
+    if (body.banner_asset_id !== undefined) { fields.push(`music_page_banner_asset_id = $${i++}`);  values.push(body.banner_asset_id) }
+    if (fields.length > 0) {
+      values.push(communityId)
+      await db.query(`UPDATE communities SET ${fields.join(', ')} WHERE id = $${i}`, values)
+    }
+
+    const settings = await getPageSettings(communityId)
+    return reply.send({ settings })
+  })
 
   app.get('/categories', { preHandler: [rateLimit] }, async (_request, reply) => {
     const communityId = await getCommunityId()
