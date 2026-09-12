@@ -210,6 +210,23 @@
 		}
 	}
 
+	async function updateTrackText(cat: Category, track: Track, title: string, description: string) {
+		busy = `update-track-${track.id}`;
+		errorMsg = null;
+		try {
+			await api(`/tracks/${track.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ title, description: description || null }),
+			});
+			await refreshTracks(cat.id, cat.slug);
+		} catch (e) {
+			errorMsg = (e as Error).message;
+		} finally {
+			busy = null;
+		}
+	}
+
 	async function deleteTrack(cat: Category, track: Track) {
 		if (!confirm(tFn('amusic.confirm_delete_track').replace('{{title}}', track.title))) return;
 		busy = `delete-track-${track.id}`;
@@ -231,7 +248,12 @@
 <div>
 	<div class="flex items-center justify-between mb-2">
 		<h1 class="text-2xl font-bold text-white">{tFn('amusic.title')}</h1>
-		<a href="/musique" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300">{tFn('amusic.view_public')} ↗</a>
+		<a href="/musique" target="_blank" class="mus-link-btn">
+			{tFn('amusic.view_public')}
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+			</svg>
+		</a>
 	</div>
 	<p class="text-sm text-gray-500 mb-6">{tFn('amusic.subtitle')}</p>
 
@@ -257,7 +279,7 @@
 					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"></textarea>
 			</div>
 			<button type="button" onclick={createCategory} disabled={busy === 'create-category' || newCatTitle.trim().length < 2}
-				class="rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-4 py-2 text-sm font-semibold text-white transition-colors">
+				class="mus-btn-primary">
 				{busy === 'create-category' ? tFn('common.loading') : tFn('amusic.create_category')}
 			</button>
 		</div>
@@ -299,14 +321,18 @@
 
 					<span class="text-xs text-gray-500 shrink-0">{cat.track_count} {cat.track_count === 1 ? tFn('amusic.track_singular') : tFn('amusic.track_plural')}</span>
 
-					<button type="button" onclick={() => toggleCategory(cat)}
-						class="shrink-0 text-xs text-indigo-400 hover:text-indigo-300 px-2 py-1">
+					<button type="button" onclick={() => toggleCategory(cat)} class="mus-btn-ghost shrink-0">
 						{openCat === cat.id ? tFn('amusic.collapse') : tFn('amusic.manage_tracks')}
+						<svg class="w-3.5 h-3.5 transition-transform" class:mus-rotate={openCat === cat.id} fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+						</svg>
 					</button>
 
 					<button type="button" onclick={() => deleteCategory(cat)} disabled={busy === `delete-category-${cat.id}`}
-						class="shrink-0 text-xs text-red-500 hover:text-red-400 px-2 py-1">
-						{tFn('common.delete')}
+						class="mus-btn-danger shrink-0" aria-label={tFn('common.delete')} title={tFn('common.delete')}>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+						</svg>
 					</button>
 				</div>
 
@@ -316,8 +342,11 @@
 							<div class="flex items-center justify-between gap-2">
 								<p class="text-xs font-semibold text-indigo-300">{tFn('amusic.license_note')}</p>
 								{#if cat.license_note}
-									<a href={`/api/v1/music/categories/${cat.id}/license.pdf`} class="text-xs text-indigo-400 hover:text-indigo-300">
-										{tFn('amusic.download_license')} ↓
+									<a href={`/api/v1/music/categories/${cat.id}/license.pdf`} class="mus-link-btn">
+										{tFn('amusic.download_license')}
+										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+										</svg>
 									</a>
 								{/if}
 							</div>
@@ -333,17 +362,25 @@
 
 						{#if tracksByCat[cat.id]}
 							{#each tracksByCat[cat.id] as track (track.id)}
-								<div class="flex items-center gap-3 rounded-lg bg-gray-900/50 border border-gray-800 p-2.5">
+								<div class="mus-track-row flex items-center gap-3 rounded-lg bg-gray-900/50 border border-gray-800 p-2.5">
 									{#if track.image_url}
 										<img src={track.image_url} alt="" class="w-10 h-10 rounded object-cover shrink-0" />
 									{/if}
-									<div class="flex-1 min-w-0">
-										<p class="text-sm text-white truncate">{track.title}</p>
+									<div class="flex-1 min-w-0 space-y-1">
+										<input type="text" value={track.title} maxlength="150"
+											onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v && v !== track.title) updateTrackText(cat, track, v, track.description ?? ''); }}
+											class="w-full bg-transparent text-sm text-white font-medium focus:outline-none focus:border-b focus:border-indigo-500" />
+										<input type="text" value={track.description ?? ''} maxlength="500"
+											placeholder={tFn('amusic.field_description')}
+											onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v !== (track.description ?? '')) updateTrackText(cat, track, track.title, v); }}
+											class="w-full bg-transparent text-xs text-gray-500 focus:outline-none focus:border-b focus:border-indigo-500" />
 										<audio src={track.audio_url} controls class="w-full h-8 mt-1"></audio>
 									</div>
 									<button type="button" onclick={() => deleteTrack(cat, track)} disabled={busy === `delete-track-${track.id}`}
-										class="shrink-0 text-xs text-red-500 hover:text-red-400 px-2">
-										{tFn('common.delete')}
+										class="mus-btn-danger shrink-0" aria-label={tFn('common.delete')} title={tFn('common.delete')}>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+										</svg>
 									</button>
 								</div>
 							{:else}
@@ -365,22 +402,26 @@
 								<input bind:this={audioInputRefs[cat.id]} type="file"
 									accept="audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/mp4,audio/flac,audio/x-m4a" class="hidden"
 									onchange={(e) => { newTrackAudio = { ...newTrackAudio, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }} />
-								<button type="button" onclick={() => audioInputRefs[cat.id]?.click()}
-									class="rounded-lg border border-gray-700 bg-gray-800 hover:border-indigo-500 px-3 py-1.5 text-xs text-gray-300">
-									{newTrackAudio[cat.id]?.name ?? tFn('amusic.audio_file')}
+								<button type="button" onclick={() => audioInputRefs[cat.id]?.click()} class="mus-btn-file">
+									<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+									</svg>
+									<span class="truncate max-w-[14ch]">{newTrackAudio[cat.id]?.name ?? tFn('amusic.audio_file')}</span>
 								</button>
 
 								<input bind:this={imageInputRefs[cat.id]} type="file"
 									accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"
 									onchange={(e) => { newTrackImage = { ...newTrackImage, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }} />
-								<button type="button" onclick={() => imageInputRefs[cat.id]?.click()}
-									class="rounded-lg border border-gray-700 bg-gray-800 hover:border-indigo-500 px-3 py-1.5 text-xs text-gray-300">
-									{newTrackImage[cat.id]?.name ?? tFn('amusic.cover_optional')}
+								<button type="button" onclick={() => imageInputRefs[cat.id]?.click()} class="mus-btn-file">
+									<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+									</svg>
+									<span class="truncate max-w-[14ch]">{newTrackImage[cat.id]?.name ?? tFn('amusic.cover_optional')}</span>
 								</button>
 							</div>
 							<button type="button" onclick={() => addTrack(cat)}
 								disabled={busy === `add-track-${cat.id}` || !(newTrackTitle[cat.id] ?? '').trim() || !newTrackAudio[cat.id]}
-								class="rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-3 py-1.5 text-xs font-semibold text-white transition-colors">
+								class="mus-btn-primary">
 								{busy === `add-track-${cat.id}` ? tFn('amusic.uploading') : tFn('amusic.add_track')}
 							</button>
 						</div>
@@ -390,3 +431,91 @@
 		{/each}
 	</div>
 </div>
+
+<style>
+	.mus-link-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 0.75rem;
+		color: #818cf8;
+		text-decoration: none;
+		transition: color 0.15s;
+	}
+	.mus-link-btn:hover { color: #a5b4fc; }
+
+	.mus-btn-ghost {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 0.75rem;
+		color: #818cf8;
+		background: none;
+		border: none;
+		padding: 5px 8px;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: color 0.15s, background 0.15s;
+	}
+	.mus-btn-ghost:hover { color: #a5b4fc; background: rgba(99, 102, 241, 0.08); }
+
+	.mus-rotate { transform: rotate(180deg); }
+
+	.mus-btn-danger {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: rgba(255, 255, 255, 0.3);
+		background: none;
+		border: none;
+		padding: 6px;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: color 0.15s, background 0.15s;
+	}
+	.mus-btn-danger:hover { color: #f87171; background: rgba(248, 113, 113, 0.08); }
+	.mus-btn-danger:disabled { opacity: 0.4; cursor: default; }
+
+	.mus-btn-file {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		border-radius: 8px;
+		border: 1px solid #374151;
+		background: #1f2937;
+		padding: 7px 12px;
+		font-size: 0.75rem;
+		color: #d1d5db;
+		cursor: pointer;
+		transition: border-color 0.15s, background 0.15s;
+	}
+	.mus-btn-file:hover { border-color: #6366f1; background: #24304d; }
+
+	.mus-btn-primary {
+		border-radius: 8px;
+		background: #4f46e5;
+		border: none;
+		padding: 9px 18px;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: #fff;
+		cursor: pointer;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+		transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+	}
+	.mus-btn-primary:hover:not(:disabled) {
+		background: #6366f1;
+		transform: translateY(-1px);
+		box-shadow: 0 6px 16px -4px rgba(99, 102, 241, 0.5);
+	}
+	.mus-btn-primary:active:not(:disabled) { transform: translateY(0); }
+	.mus-btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+	.mus-track-row {
+		transition: background 0.15s, border-color 0.15s;
+	}
+	.mus-track-row:hover {
+		border-color: #374151;
+		background: rgba(255, 255, 255, 0.03);
+	}
+</style>
