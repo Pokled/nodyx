@@ -4625,6 +4625,7 @@
   "music.comment_count_plural": "{{n}} comments",
   "music.link_copied": "Link copied",
   "music.download_license": "License (PDF)",
+  "music.from_category": "from {{category}}",
   "amusic.page_title": "Music (admin)",
   "amusic.title": "Music",
   "amusic.subtitle": "Categories and tracks shown on the public /musique page.",
