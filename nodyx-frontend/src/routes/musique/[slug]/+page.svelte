@@ -9,7 +9,14 @@
 
 	interface Comment { id: string; author_name: string; body: string; created_at: string }
 	interface Category { id: string; slug: string; title: string; description: string | null; license_note: string | null; image_url: string | null; views: number }
-	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null; likes: number; comments: Comment[] }
+	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null; likes: number; duration_seconds: number | null; comments: Comment[] }
+
+	function formatDuration(seconds: number | null): string {
+		if (!seconds || seconds <= 0) return '';
+		const m = Math.floor(seconds / 60);
+		const s = Math.round(seconds % 60).toString().padStart(2, '0');
+		return `${m}:${s}`;
+	}
 	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; }
 
 	const category = $derived(data.category as Category);
@@ -194,7 +201,12 @@
 					{/if}
 					<div class="mus-track-main">
 						<div class="mus-track-head">
-							<p class="mus-track-title">{track.title}</p>
+							<p class="mus-track-title">
+								{track.title}
+								{#if formatDuration(track.duration_seconds)}
+									<span class="mus-track-duration">{formatDuration(track.duration_seconds)}</span>
+								{/if}
+							</p>
 							<span class="mus-track-actions">
 								<button type="button" class="mus-share-btn mus-like-btn" class:mus-like-btn--active={likedTracks.has(track.id)}
 									onclick={() => likeTrack(track)} disabled={likedTracks.has(track.id)}
@@ -430,6 +442,15 @@
 		font-weight: 600;
 		color: #fff;
 		margin: 0;
+	}
+
+	.mus-track-duration {
+		font-family: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 0.75rem;
+		font-weight: 400;
+		color: rgba(255, 255, 255, 0.35);
+		margin-left: 8px;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.mus-track-actions {

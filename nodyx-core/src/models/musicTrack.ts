@@ -8,6 +8,7 @@ export interface MusicTrack {
   audio_url:   string
   image_url:   string | null
   likes:       number
+  duration_seconds: number | null
   position:    number
   created_at:  string
   updated_at:  string
@@ -15,7 +16,7 @@ export interface MusicTrack {
 
 const SELECT = `
   SELECT
-    mt.id, mt.category_id, mt.title, mt.description, mt.likes, mt.position,
+    mt.id, mt.category_id, mt.title, mt.description, mt.likes, mt.duration_seconds, mt.position,
     mt.created_at, mt.updated_at,
     '/uploads/' || audio.file_path AS audio_url,
     CASE WHEN img.thumbnail_path IS NOT NULL THEN '/uploads/' || img.thumbnail_path
@@ -40,20 +41,21 @@ export async function findById(id: string): Promise<MusicTrack | null> {
 }
 
 export async function create(data: {
-  category_id:     string
-  title:           string
-  description?:    string | null
-  audio_asset_id:  string
-  image_asset_id?: string | null
+  category_id:       string
+  title:             string
+  description?:      string | null
+  audio_asset_id:    string
+  image_asset_id?:   string | null
+  duration_seconds?: number | null
 }): Promise<MusicTrack> {
   const { rows: posRows } = await db.query<{ next: number }>(
     `SELECT COALESCE(MAX(position), -1) + 1 AS next FROM music_tracks WHERE category_id = $1`,
     [data.category_id]
   )
   const { rows } = await db.query<{ id: string }>(
-    `INSERT INTO music_tracks (category_id, title, description, audio_asset_id, image_asset_id, position)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-    [data.category_id, data.title, data.description ?? null, data.audio_asset_id, data.image_asset_id ?? null, posRows[0].next]
+    `INSERT INTO music_tracks (category_id, title, description, audio_asset_id, image_asset_id, duration_seconds, position)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+    [data.category_id, data.title, data.description ?? null, data.audio_asset_id, data.image_asset_id ?? null, data.duration_seconds ?? null, posRows[0].next]
   )
   return (await findById(rows[0].id))!
 }

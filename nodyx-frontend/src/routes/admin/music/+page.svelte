@@ -15,7 +15,14 @@
 	}
 	interface Track {
 		id: string; category_id: string; title: string; description: string | null;
-		audio_url: string; image_url: string | null; position: number;
+		audio_url: string; image_url: string | null; position: number; duration_seconds: number | null;
+	}
+
+	function formatDuration(seconds: number | null): string {
+		if (!seconds || seconds <= 0) return '';
+		const m = Math.floor(seconds / 60);
+		const s = Math.round(seconds % 60).toString().padStart(2, '0');
+		return `${m}:${s}`;
 	}
 	interface Settings { title: string | null; subtitle: string | null; banner_url: string | null; }
 
@@ -43,7 +50,7 @@
 		return res.status === 204 ? null : res.json();
 	}
 
-	async function uploadFile(kind: 'audio' | 'image', file: File): Promise<{ asset_id: string; url: string }> {
+	async function uploadFile(kind: 'audio' | 'image', file: File): Promise<{ asset_id: string; url: string; duration_seconds?: number | null }> {
 		const fd = new FormData();
 		fd.append('file', file);
 		const res = await fetch(`/api/v1/music/upload/${kind}`, {
@@ -269,6 +276,7 @@
 					description:    (newTrackDesc[cat.id] ?? '').trim() || undefined,
 					audio_asset_id: audioUp.asset_id,
 					image_asset_id: imageUp?.asset_id,
+					duration_seconds: audioUp.duration_seconds ?? undefined,
 				}),
 			});
 
@@ -583,10 +591,15 @@
 										<input type="text" value={track.title} maxlength="150"
 											onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v && v !== track.title) updateTrackText(cat, track, v, track.description ?? ''); }}
 											class="w-full bg-transparent text-sm text-white font-medium focus:outline-none focus:border-b focus:border-indigo-500" />
-										<input type="text" value={track.description ?? ''} maxlength="500"
-											placeholder={tFn('amusic.field_description')}
-											onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v !== (track.description ?? '')) updateTrackText(cat, track, track.title, v); }}
-											class="w-full bg-transparent text-xs text-gray-500 focus:outline-none focus:border-b focus:border-indigo-500" />
+										<div class="flex items-center gap-2">
+											<input type="text" value={track.description ?? ''} maxlength="500"
+												placeholder={tFn('amusic.field_description')}
+												onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v !== (track.description ?? '')) updateTrackText(cat, track, track.title, v); }}
+												class="flex-1 min-w-0 bg-transparent text-xs text-gray-500 focus:outline-none focus:border-b focus:border-indigo-500" />
+											{#if formatDuration(track.duration_seconds)}
+												<span class="shrink-0 text-xs text-gray-500 font-mono">{formatDuration(track.duration_seconds)}</span>
+											{/if}
+										</div>
 										<audio src={track.audio_url} controls class="w-full h-8 mt-1"></audio>
 									</div>
 									<button type="button" onclick={() => toggleTrackComments(track)}
