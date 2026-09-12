@@ -15,8 +15,10 @@ import { db } from '../config/database'
 import { scanBuffer } from '../services/fileScanner'
 import { uploadAsset } from '../services/assetService'
 import { generateLicensePdf } from '../services/licenseDocument'
+import { checkContent } from '../services/contentFilter'
 import * as MusicCategoryModel from '../models/musicCategory'
 import * as MusicTrackModel from '../models/musicTrack'
+import * as MusicCommentModel from '../models/musicComment'
 
 const ALLOWED_AUDIO_MIME = ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/flac']
 const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -127,6 +129,46 @@ export default async function musicRoutes(app: FastifyInstance) {
     const track = await MusicTrackModel.addLike(id)
     if (!track) return reply.code(404).send({ error: 'Track not found', code: 'NOT_FOUND' })
     return reply.send({ likes: track.likes })
+  })
+
+  // Commentaires publics par morceau : sert le vrai cas d'usage (un
+  // développeur destinataire laisse un avis), aucun compte requis, comme le
+  // reste de la page. Modération réservée à l'admin (DELETE plus bas).
+  app.get('/tracks/:id/comments', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const comments = await MusicCommentModel.listByTrack(id)
+    return reply.send({ comments })
+  })
+
+  app.post('/tracks/:id/comments', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = request.body as { author_name?: string; body?: string }
+    const authorName = (body.author_name ?? '').trim()
+    const commentBody = (body.body ?? '').trim()
+
+    if (authorName.length < 1 || authorName.length > 60) {
+      return reply.code(400).send({ error: 'author_name must be 1 to 60 characters', code: 'INVALID_AUTHOR' })
+    }
+    if (commentBody.length < 1 || commentBody.length > 1000) {
+      return reply.code(400).send({ error: 'body must be 1 to 1000 characters', code: 'INVALID_BODY' })
+    }
+    const nameCheck = checkContent(authorName)
+    if (!nameCheck.ok) return reply.code(422).send({ error: nameCheck.reason, code: 'CONTENT_BLOCKED' })
+    const bodyCheck = checkContent(commentBody)
+    if (!bodyCheck.ok) return reply.code(422).send({ error: bodyCheck.reason, code: 'CONTENT_BLOCKED' })
+
+    const track = await MusicTrackModel.findById(id)
+    if (!track) return reply.code(404).send({ error: 'Track not found', code: 'NOT_FOUND' })
+
+    const comment = await MusicCommentModel.create({ track_id: id, author_name: authorName, body: commentBody })
+    return reply.code(201).send({ comment })
+  })
+
+  app.delete('/comments/:id', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const ok = await MusicCommentModel.remove(id)
+    if (!ok) return reply.code(404).send({ error: 'Comment not found', code: 'NOT_FOUND' })
+    return reply.code(204).send()
   })
 
   // GET /categories/:id/license.pdf : attestation de provenance, publique et
