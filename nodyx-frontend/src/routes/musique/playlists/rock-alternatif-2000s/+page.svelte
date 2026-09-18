@@ -131,6 +131,10 @@
 	let history: Track[] = $state([]);
 	let shuffle = $state(false);
 	let volume = $state(80);
+	let repeat = $state<'off' | 'all' | 'one'>('off');
+	let isPlaying = $state(false);
+	let currentTime = $state(0);
+	let duration = $state(0);
 
 	function play(track: Track) {
 		if (nowPlaying && nowPlaying.yt !== track.yt) history.push(nowPlaying);
@@ -139,7 +143,9 @@
 
 	const currentIndex = $derived(nowPlaying ? allTracks.findIndex((t) => t.yt === nowPlaying!.yt) : -1);
 	const hasPrev = $derived(history.length > 0);
-	const hasNext = $derived(shuffle ? allTracks.length > 1 : currentIndex >= 0 && currentIndex < allTracks.length - 1);
+	const hasNext = $derived(
+		shuffle || repeat === 'all' ? allTracks.length > 1 : currentIndex >= 0 && currentIndex < allTracks.length - 1,
+	);
 
 	function playPrev() {
 		const prev = history.pop();
@@ -149,8 +155,74 @@
 		if (!nowPlaying || !hasNext) return;
 		const next = shuffle
 			? allTracks.filter((t) => t.yt !== nowPlaying!.yt)[Math.floor(Math.random() * (allTracks.length - 1))]
-			: allTracks[currentIndex + 1];
+			: currentIndex < allTracks.length - 1
+				? allTracks[currentIndex + 1]
+				: allTracks[0];
 		play(next);
+	}
+
+	function cycleRepeat() {
+		repeat = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
+	}
+
+	function handleEnded() {
+		if (repeat === 'one') {
+			player?.seekTo?.(0, true);
+			player?.playVideo?.();
+			return;
+		}
+		playNext();
+	}
+
+	function togglePlay() {
+		if (!player) return;
+		if (isPlaying) player.pauseVideo();
+		else player.playVideo();
+	}
+
+	function formatTime(seconds: number): string {
+		if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+		const m = Math.floor(seconds / 60);
+		const s = Math.floor(seconds % 60);
+		return `${m}:${String(s).padStart(2, '0')}`;
+	}
+
+	let progressTimer: ReturnType<typeof setInterval> | null = null;
+	function startProgressPolling() {
+		if (progressTimer) return;
+		progressTimer = setInterval(() => {
+			if (!player?.getCurrentTime) return;
+			currentTime = player.getCurrentTime();
+			duration = player.getDuration() || 0;
+		}, 500);
+	}
+	function stopProgressPolling() {
+		if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+	}
+
+	function seek(e: MouseEvent) {
+		if (!player?.seekTo || !duration) return;
+		const bar = e.currentTarget as HTMLElement;
+		const rect = bar.getBoundingClientRect();
+		const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+		player.seekTo(ratio * duration, true);
+		currentTime = ratio * duration;
+	}
+
+	// stopPropagation : la barre focus les fleches pour avancer/reculer de 5s,
+	// le raccourci clavier global (fenetre entiere) les utilise pour changer de
+	// piste. Sans ca, les deux se declenchent en meme temps sur la meme touche.
+	function onProgressKey(e: KeyboardEvent) {
+		if (!player?.seekTo || !duration) return;
+		if (e.key === 'ArrowRight') {
+			e.preventDefault(); e.stopPropagation();
+			currentTime = Math.min(duration, currentTime + 5);
+			player.seekTo(currentTime, true);
+		} else if (e.key === 'ArrowLeft') {
+			e.preventDefault(); e.stopPropagation();
+			currentTime = Math.max(0, currentTime - 5);
+			player.seekTo(currentTime, true);
+		}
 	}
 
 	// Suggestions "plus dans le meme genre" : catalogue fige, jamais de titre
@@ -173,18 +245,34 @@
 		const w = window as any;
 		if (w.YT && w.YT.Player) {
 			apiReady = true;
-			return;
+		} else {
+			const prevCallback = w.onYouTubeIframeAPIReady;
+			w.onYouTubeIframeAPIReady = () => {
+				prevCallback?.();
+				apiReady = true;
+			};
+			if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+				const tag = document.createElement('script');
+				tag.src = 'https://www.youtube.com/iframe_api';
+				document.head.appendChild(tag);
+			}
 		}
-		const prevCallback = w.onYouTubeIframeAPIReady;
-		w.onYouTubeIframeAPIReady = () => {
-			prevCallback?.();
-			apiReady = true;
-		};
-		if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-			const tag = document.createElement('script');
-			tag.src = 'https://www.youtube.com/iframe_api';
-			document.head.appendChild(tag);
+
+		// Raccourcis clavier type lecteur de bureau : ignores si un champ texte
+		// (recherche, volume) a le focus, pour ne pas voler la saisie ou la barre
+		// d'espace du navigateur.
+		function handleKey(e: KeyboardEvent) {
+			const target = e.target as HTMLElement;
+			if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
+			if (!nowPlaying) return;
+			if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+			else if (e.key === 'ArrowRight') { if (hasNext) playNext(); }
+			else if (e.key === 'ArrowLeft') { if (hasPrev) playPrev(); }
+			else if (e.key === 'ArrowUp') { e.preventDefault(); volume = Math.min(100, volume + 5); onVolumeInput(); }
+			else if (e.key === 'ArrowDown') { e.preventDefault(); volume = Math.max(0, volume - 5); onVolumeInput(); }
 		}
+		window.addEventListener('keydown', handleKey);
+		return () => window.removeEventListener('keydown', handleKey);
 	});
 
 	$effect(() => {
@@ -200,18 +288,42 @@
 				events: {
 					onReady: (e: any) => e.target.setVolume(volume),
 					onStateChange: (e: any) => {
-						if (e.data === w.YT.PlayerState.ENDED) playNext();
+						isPlaying = e.data === w.YT.PlayerState.PLAYING;
+						if (isPlaying) startProgressPolling();
+						else stopProgressPolling();
+						if (e.data === w.YT.PlayerState.ENDED) handleEnded();
 					},
 				},
 			});
 		} else if (typeof player.loadVideoById === 'function') {
+			currentTime = 0;
+			duration = 0;
 			player.loadVideoById(nowPlaying.yt);
 		}
+	});
+
+	// Fait defiler la liste pour garder la piste active visible, y compris quand
+	// le changement vient du clavier, de suivant/precedent ou d'une suggestion
+	// (pas seulement d'un clic direct dans la liste visible).
+	let listRoot = $state<HTMLDivElement>();
+	$effect(() => {
+		if (!nowPlaying || !listRoot) return;
+		listRoot.querySelector('.pl-row--active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 	});
 
 	function onVolumeInput() {
 		player?.setVolume?.(volume);
 	}
+
+	let filterQuery = $state('');
+	function matchesFilter(t: Track): boolean {
+		if (!filterQuery.trim()) return true;
+		if (t.unknown) return false;
+		const q = filterQuery.toLowerCase();
+		return t.artist.toLowerCase().includes(q) || t.title.toLowerCase().includes(q);
+	}
+	const filteredSection1 = $derived(section1.filter(matchesFilter));
+	const filteredSection2 = $derived(section2.filter(matchesFilter));
 
 	const total = allTracks.length;
 	const pageTitle = $derived(`${tFn('music.playlist.eyebrow')} - 2000s · Nodyx`);
@@ -231,7 +343,7 @@
 	<a href="/musique" class="pl-back">← {tFn('music.playlist.back')}</a>
 
 	<div class="pl-layout">
-		<div class="pl-main">
+		<div class="pl-main" bind:this={listRoot}>
 			<header class="pl-hero">
 				<div class="pl-hero-art">
 					<img src={`https://img.youtube.com/vi/${section1[6].yt}/hqdefault.jpg`} alt="" loading="lazy" />
@@ -243,10 +355,15 @@
 				</div>
 			</header>
 
+			<div class="pl-search">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+				<input type="text" bind:value={filterQuery} placeholder={tFn('music.playlist.search_placeholder')} aria-label={tFn('music.playlist.search_placeholder')} />
+			</div>
+
 			<section class="pl-section">
 				<h2 class="pl-section-title">{tFn('music.playlist.section_yours')}</h2>
 				<ol class="pl-list">
-					{#each section1 as track (track.n)}
+					{#each filteredSection1 as track (track.n)}
 						<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
 							<button type="button" class="pl-row-btn" onclick={() => play(track)}
 							        aria-label={track.unknown ? tFn('music.playlist.unknown_track') : `${track.artist} - ${track.title}`}>
@@ -272,7 +389,7 @@
 			<section class="pl-section">
 				<h2 class="pl-section-title">🔥 {tFn('music.playlist.section_new')}</h2>
 				<ol class="pl-list" start={section1.length + 1}>
-					{#each section2 as track (track.n)}
+					{#each filteredSection2 as track (track.n)}
 						<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
 							<button type="button" class="pl-row-btn" onclick={() => play(track)} aria-label={`${track.artist} - ${track.title}`}>
 								<span class="pl-row-n">{track.n}</span>
@@ -297,13 +414,21 @@
 					<div bind:this={playerHost}></div>
 				</div>
 				<div class="pl-panel-body">
-					<p class="pl-panel-label">{tFn('music.playlist.now_playing')}</p>
+					<p class="pl-panel-label">{tFn('music.playlist.now_playing')} · {nowPlaying.n}/{total}</p>
 					{#if nowPlaying.unknown}
 						<p class="pl-panel-title">{tFn('music.playlist.unknown_track')}</p>
 					{:else}
 						<p class="pl-panel-artist">{nowPlaying.artist}</p>
 						<p class="pl-panel-title">{nowPlaying.title}</p>
 					{/if}
+
+					<div class="pl-progress-row">
+						<span class="pl-progress-time">{formatTime(currentTime)}</span>
+						<div class="pl-progress" onclick={seek} onkeydown={onProgressKey} role="slider" aria-label={tFn('music.playlist.seek')} aria-valuemin="0" aria-valuemax={duration} aria-valuenow={currentTime} tabindex="0">
+							<div class="pl-progress-fill" style:width="{duration ? (currentTime / duration) * 100 : 0}%"></div>
+						</div>
+						<span class="pl-progress-time">{formatTime(duration)}</span>
+					</div>
 
 					<div class="pl-panel-controls">
 						<button type="button" class="pl-ctrl-shuffle" class:active={shuffle} onclick={() => (shuffle = !shuffle)} aria-pressed={shuffle} aria-label={tFn('music.playlist.shuffle')}>
@@ -318,9 +443,24 @@
 						<button type="button" onclick={playPrev} disabled={!hasPrev} aria-label={tFn('music.playlist.prev')}>
 							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
 						</button>
-						<span class="pl-panel-position">{nowPlaying.n} / {total}</span>
+						<button type="button" class="pl-ctrl-play" onclick={togglePlay} aria-label={tFn(isPlaying ? 'music.playlist.pause' : 'music.playlist.play')}>
+							{#if isPlaying}
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+							{:else}
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+							{/if}
+						</button>
 						<button type="button" onclick={playNext} disabled={!hasNext} aria-label={tFn('music.playlist.next')}>
 							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
+						</button>
+						<button type="button" class="pl-ctrl-repeat" class:active={repeat !== 'off'} onclick={cycleRepeat} aria-label={tFn('music.playlist.repeat')}>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="17 1 21 5 17 9"></polyline>
+								<path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+								<polyline points="7 23 3 19 7 15"></polyline>
+								<path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+							</svg>
+							{#if repeat === 'one'}<span class="pl-ctrl-repeat-one">1</span>{/if}
 						</button>
 					</div>
 
@@ -413,21 +553,39 @@
 	}
 	.pl-panel-artist { font-size: 0.8125rem; color: rgba(255,255,255,.5); margin: 0; }
 	.pl-panel-title { font-size: 1.0625rem; font-weight: 700; margin: 0 0 12px; }
+
+	.pl-progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+	.pl-progress-time { font-size: 0.6875rem; color: rgba(255,255,255,.35); font-variant-numeric: tabular-nums; min-width: 30px; }
+	.pl-progress-time:last-child { text-align: right; }
+	.pl-progress {
+		flex: 1; height: 3px; background: rgba(255,255,255,.12); border-radius: 999px; cursor: pointer; position: relative;
+	}
+	.pl-progress-fill { height: 100%; background: rgba(139, 92, 246, 0.9); border-radius: 999px; }
+
 	.pl-panel-controls {
-		display: flex; align-items: center; justify-content: center; gap: 20px;
+		display: flex; align-items: center; justify-content: center; gap: 14px;
 		padding: 10px 0 14px; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: 12px;
 	}
 	.pl-panel-controls button {
 		background: transparent; border: none; color: #fff; cursor: pointer;
 		width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-		border-radius: 999px; transition: background .12s;
+		border-radius: 999px; transition: background .12s; position: relative;
 	}
 	.pl-panel-controls button:hover:not(:disabled) { background: rgba(255,255,255,.08); }
 	.pl-panel-controls button:disabled { color: rgba(255,255,255,.2); cursor: default; }
 	.pl-panel-controls svg { width: 20px; height: 20px; }
-	.pl-panel-position { font-size: 0.75rem; color: rgba(255,255,255,.4); font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
-	.pl-ctrl-shuffle svg { width: 16px; height: 16px; }
-	.pl-ctrl-shuffle.active { color: rgba(139, 92, 246, 1); background: rgba(139, 92, 246, 0.14); }
+	.pl-ctrl-shuffle svg, .pl-ctrl-repeat svg { width: 16px; height: 16px; }
+	.pl-ctrl-shuffle.active, .pl-ctrl-repeat.active { color: rgba(139, 92, 246, 1); background: rgba(139, 92, 246, 0.14); }
+	.pl-ctrl-repeat-one {
+		position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 999px;
+		background: rgba(139, 92, 246, 1); color: #fff; font-size: 0.5625rem; font-weight: 700;
+		display: flex; align-items: center; justify-content: center; line-height: 1;
+	}
+	.pl-ctrl-play {
+		width: 44px !important; height: 44px !important; background: #fff !important; color: #09090f !important;
+	}
+	.pl-ctrl-play:hover { background: rgba(255,255,255,.9) !important; }
+	.pl-ctrl-play svg { width: 22px; height: 22px; }
 	.pl-panel-bio { font-size: 0.75rem; line-height: 1.6; color: rgba(255,255,255,.45); margin: 0; }
 
 	.pl-panel-volume {
@@ -468,6 +626,16 @@
 	}
 	.pl-panel-empty svg { width: 36px; height: 36px; }
 	.pl-panel-empty p { font-size: 0.8125rem; margin: 0; }
+
+	.pl-search {
+		display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding: 8px 12px;
+		background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 8px;
+	}
+	.pl-search svg { width: 16px; height: 16px; color: rgba(255,255,255,.35); flex: none; }
+	.pl-search input {
+		flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 0.8125rem;
+	}
+	.pl-search input::placeholder { color: rgba(255,255,255,.3); }
 
 	.pl-hero { display: flex; align-items: flex-end; gap: 20px; margin-bottom: 32px; }
 	.pl-hero-art { width: 132px; height: 132px; flex: none; overflow: hidden; box-shadow: 0 16px 40px -12px rgba(0,0,0,.6); }
