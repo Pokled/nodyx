@@ -72,14 +72,55 @@
 		{ n: 50, artist: 'Sick Puppies',            title: "You're Going Down",              yt: 'liW-kWFiXtQ' },
 	];
 
-	let nowPlaying = $state<Track | null>(null);
-	function play(track: Track) {
-		nowPlaying = track;
-		queueMicrotask(() => document.getElementById('player-bar')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-	}
+	const allTracks = [...section1, ...section2];
 
-	const total = section1.length + section2.length;
-	const pageTitle = $derived(`${tFn('music.playlist.eyebrow')} — 2000s · Nodyx`);
+	// Verifie une par une (WebSearch, 19/09), jamais devine : un an ou un pays
+	// faux serait pire que ne rien afficher. Pas de fiche pour les 2 titres non
+	// identifies, il n'y a rien de fiable a en dire. La cle i18n porte le texte
+	// (music.playlist.bio.*, fr.json + en.json), jamais la chaine en dur ici :
+	// meme regle que partout ailleurs dans Nodyx.
+	const artistInfo: Record<string, string> = {
+		'3 Doors Down':                    'music.playlist.bio.3doorsdown',
+		'blink-182':                       'music.playlist.bio.blink182',
+		'Blue October':                    'music.playlist.bio.blueoctober',
+		'Apocalyptica feat. Brent Smith':  'music.playlist.bio.apocalyptica',
+		'Disturbed':                       'music.playlist.bio.disturbed',
+		'Slipknot':                        'music.playlist.bio.slipknot',
+		'Korn':                            'music.playlist.bio.korn',
+		'Drowning Pool':                   'music.playlist.bio.drowningpool',
+		'Thirty Seconds to Mars':          'music.playlist.bio.thirtysecondstomars',
+		'Foo Fighters':                    'music.playlist.bio.foofighters',
+		'Snow Patrol':                     'music.playlist.bio.snowpatrol',
+		'Cold':                            'music.playlist.bio.cold',
+		'Chevelle':                        'music.playlist.bio.chevelle',
+		'Evans Blue':                      'music.playlist.bio.evansblue',
+		'Sick Puppies':                    'music.playlist.bio.sickpuppies',
+		'Bullet for My Valentine':         'music.playlist.bio.bulletformyvalentine',
+		'Billy Talent':                    'music.playlist.bio.billytalent',
+		'Breaking Benjamin':               'music.playlist.bio.breakingbenjamin',
+		'Papa Roach':                      'music.playlist.bio.paparoach',
+		'Mudvayne':                        'music.playlist.bio.mudvayne',
+		'Deftones':                        'music.playlist.bio.deftones',
+		'Incubus':                         'music.playlist.bio.incubus',
+		'System of a Down':                'music.playlist.bio.systemofadown',
+		'Seether':                         'music.playlist.bio.seether',
+		'Trapt':                           'music.playlist.bio.trapt',
+		'Audioslave':                      'music.playlist.bio.audioslave',
+		'10 Years':                        'music.playlist.bio.tenyears',
+		'Taproot':                         'music.playlist.bio.taproot',
+	};
+
+	let nowPlaying = $state<Track | null>(null);
+	function play(track: Track) { nowPlaying = track; }
+
+	const currentIndex = $derived(nowPlaying ? allTracks.findIndex((t) => t.yt === nowPlaying!.yt) : -1);
+	const hasPrev = $derived(currentIndex > 0);
+	const hasNext = $derived(currentIndex >= 0 && currentIndex < allTracks.length - 1);
+	function playPrev() { if (hasPrev) play(allTracks[currentIndex - 1]); }
+	function playNext() { if (hasNext) play(allTracks[currentIndex + 1]); }
+
+	const total = allTracks.length;
+	const pageTitle = $derived(`${tFn('music.playlist.eyebrow')} - 2000s · Nodyx`);
 </script>
 
 <svelte:head>
@@ -95,96 +136,114 @@
 <div class="pl-page">
 	<a href="/musique" class="pl-back">← {tFn('music.playlist.back')}</a>
 
-	<header class="pl-hero">
-		<div class="pl-hero-art">
-			<img src={`https://img.youtube.com/vi/${section1[6].yt}/hqdefault.jpg`} alt="" loading="lazy" />
-		</div>
-		<div class="pl-hero-info">
-			<p class="pl-hero-kicker">{tFn('music.playlist.eyebrow')}</p>
-			<h1 class="pl-hero-title">Rock / Alternative — 2000s</h1>
-			<p class="pl-hero-meta">{tFn('music.playlist.track_count').replace('{{n}}', String(total))}</p>
-		</div>
-	</header>
+	<div class="pl-layout">
+		<div class="pl-main">
+			<header class="pl-hero">
+				<div class="pl-hero-art">
+					<img src={`https://img.youtube.com/vi/${section1[6].yt}/hqdefault.jpg`} alt="" loading="lazy" />
+				</div>
+				<div class="pl-hero-info">
+					<p class="pl-hero-kicker">{tFn('music.playlist.eyebrow')}</p>
+					<h1 class="pl-hero-title">Rock / Alternative - 2000s</h1>
+					<p class="pl-hero-meta">{tFn('music.playlist.track_count').replace('{{n}}', String(total))}</p>
+				</div>
+			</header>
 
-	<section class="pl-section">
-		<h2 class="pl-section-title">{tFn('music.playlist.section_yours')}</h2>
-		<ol class="pl-list">
-			{#each section1 as track (track.n)}
-				<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
-					<button type="button" class="pl-row-btn" onclick={() => play(track)}
-					        aria-label={track.unknown ? tFn('music.playlist.unknown_track') : `${track.artist} — ${track.title}`}>
-						<span class="pl-row-n">{track.n}</span>
-						<span class="pl-row-thumb">
-							<img src={`https://img.youtube.com/vi/${track.yt}/default.jpg`} alt="" loading="lazy" />
-							<svg class="pl-row-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-						</span>
-						<span class="pl-row-text">
-							{#if track.unknown}
-								<span class="pl-row-title pl-row-title--unknown">{tFn('music.playlist.unknown_track')}</span>
-							{:else}
-								<span class="pl-row-artist">{track.artist}</span>
-								<span class="pl-row-title">{track.title}</span>
-							{/if}
-						</span>
-					</button>
-				</li>
-			{/each}
-		</ol>
-	</section>
+			<section class="pl-section">
+				<h2 class="pl-section-title">{tFn('music.playlist.section_yours')}</h2>
+				<ol class="pl-list">
+					{#each section1 as track (track.n)}
+						<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
+							<button type="button" class="pl-row-btn" onclick={() => play(track)}
+							        aria-label={track.unknown ? tFn('music.playlist.unknown_track') : `${track.artist} - ${track.title}`}>
+								<span class="pl-row-n">{track.n}</span>
+								<span class="pl-row-thumb">
+									<img src={`https://img.youtube.com/vi/${track.yt}/default.jpg`} alt="" loading="lazy" />
+									<svg class="pl-row-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+								</span>
+								<span class="pl-row-text">
+									{#if track.unknown}
+										<span class="pl-row-title pl-row-title--unknown">{tFn('music.playlist.unknown_track')}</span>
+									{:else}
+										<span class="pl-row-artist">{track.artist}</span>
+										<span class="pl-row-title">{track.title}</span>
+									{/if}
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ol>
+			</section>
 
-	<section class="pl-section">
-		<h2 class="pl-section-title">🔥 {tFn('music.playlist.section_new')}</h2>
-		<ol class="pl-list" start={section1.length + 1}>
-			{#each section2 as track (track.n)}
-				<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
-					<button type="button" class="pl-row-btn" onclick={() => play(track)} aria-label={`${track.artist} — ${track.title}`}>
-						<span class="pl-row-n">{track.n}</span>
-						<span class="pl-row-thumb">
-							<img src={`https://img.youtube.com/vi/${track.yt}/default.jpg`} alt="" loading="lazy" />
-							<svg class="pl-row-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-						</span>
-						<span class="pl-row-text">
-							<span class="pl-row-artist">{track.artist}</span>
-							<span class="pl-row-title">{track.title}</span>
-						</span>
-					</button>
-				</li>
-			{/each}
-		</ol>
-	</section>
-</div>
-
-{#if nowPlaying}
-	<div id="player-bar" class="pl-player" role="region" aria-label={tFn('music.playlist.now_playing')}>
-		<div class="pl-player-inner">
-			<div class="pl-player-frame">
-				<iframe
-					src={`https://www.youtube-nocookie.com/embed/${nowPlaying.yt}?autoplay=1`}
-					title={nowPlaying.unknown ? tFn('music.playlist.unknown_track') : `${nowPlaying.artist} — ${nowPlaying.title}`}
-					allow="autoplay; encrypted-media"
-					allowfullscreen
-				></iframe>
-			</div>
-			<div class="pl-player-meta">
-				<p class="pl-player-label">{tFn('music.playlist.now_playing')}</p>
-				{#if nowPlaying.unknown}
-					<p class="pl-player-title">{tFn('music.playlist.unknown_track')}</p>
-				{:else}
-					<p class="pl-player-title">{nowPlaying.artist} — {nowPlaying.title}</p>
-				{/if}
-			</div>
-			<button type="button" class="pl-player-close" onclick={() => nowPlaying = null} aria-label={tFn('common.close')}>
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
-			</button>
+			<section class="pl-section">
+				<h2 class="pl-section-title">🔥 {tFn('music.playlist.section_new')}</h2>
+				<ol class="pl-list" start={section1.length + 1}>
+					{#each section2 as track (track.n)}
+						<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
+							<button type="button" class="pl-row-btn" onclick={() => play(track)} aria-label={`${track.artist} - ${track.title}`}>
+								<span class="pl-row-n">{track.n}</span>
+								<span class="pl-row-thumb">
+									<img src={`https://img.youtube.com/vi/${track.yt}/default.jpg`} alt="" loading="lazy" />
+									<svg class="pl-row-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+								</span>
+								<span class="pl-row-text">
+									<span class="pl-row-artist">{track.artist}</span>
+									<span class="pl-row-title">{track.title}</span>
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ol>
+			</section>
 		</div>
+
+		<aside class="pl-panel" class:pl-panel--empty={!nowPlaying}>
+			{#if nowPlaying}
+				<div class="pl-panel-frame">
+					<iframe
+						src={`https://www.youtube-nocookie.com/embed/${nowPlaying.yt}?autoplay=1`}
+						title={nowPlaying.unknown ? tFn('music.playlist.unknown_track') : `${nowPlaying.artist} - ${nowPlaying.title}`}
+						allow="autoplay; encrypted-media"
+						allowfullscreen
+					></iframe>
+				</div>
+				<div class="pl-panel-body">
+					<p class="pl-panel-label">{tFn('music.playlist.now_playing')}</p>
+					{#if nowPlaying.unknown}
+						<p class="pl-panel-title">{tFn('music.playlist.unknown_track')}</p>
+					{:else}
+						<p class="pl-panel-artist">{nowPlaying.artist}</p>
+						<p class="pl-panel-title">{nowPlaying.title}</p>
+					{/if}
+
+					<div class="pl-panel-controls">
+						<button type="button" onclick={playPrev} disabled={!hasPrev} aria-label={tFn('music.playlist.prev')}>
+							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+						</button>
+						<span class="pl-panel-position">{currentIndex + 1} / {total}</span>
+						<button type="button" onclick={playNext} disabled={!hasNext} aria-label={tFn('music.playlist.next')}>
+							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
+						</button>
+					</div>
+
+					{#if !nowPlaying.unknown && artistInfo[nowPlaying.artist]}
+						<p class="pl-panel-bio">{tFn(artistInfo[nowPlaying.artist])}</p>
+					{/if}
+				</div>
+			{:else}
+				<div class="pl-panel-empty">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 5v14l11-7z"/></svg>
+					<p>{tFn('music.playlist.pick_track')}</p>
+				</div>
+			{/if}
+		</aside>
 	</div>
-{/if}
+</div>
 
 <style>
 	.pl-page {
-		max-width: 860px;
-		margin: 0 auto;
-		padding: 24px 20px calc(140px + var(--bottom-nav-h, 0px));
+		width: 100%;
+		padding: 24px 28px 48px;
 		color: #fff;
 	}
 	.pl-back {
@@ -197,49 +256,66 @@
 	}
 	.pl-back:hover { color: #fff; }
 
-	.pl-hero {
-		display: flex;
-		align-items: flex-end;
-		gap: 20px;
-		margin-bottom: 32px;
+	/* ── Deux colonnes pleine largeur : liste a gauche, lecteur colle a droite,
+	   sur toute la largeur laissee par les sidebars de l'appli, pas une colonne
+	   centree qui gaspille l'espace (retour direct de Jonathan, 19/09). ── */
+	.pl-layout {
+		display: grid;
+		grid-template-columns: 1fr 420px;
+		gap: 32px;
+		align-items: start;
 	}
-	.pl-hero-art {
-		width: 132px; height: 132px;
-		flex: none;
-		overflow: hidden;
-		box-shadow: 0 16px 40px -12px rgba(0,0,0,.6);
+	.pl-main { min-width: 0; }
+
+	.pl-panel {
+		position: sticky;
+		top: 24px;
+		background: rgba(255,255,255,.03);
+		border: 1px solid rgba(255,255,255,.06);
 	}
+	.pl-panel-frame { aspect-ratio: 16 / 9; background: #000; }
+	.pl-panel-frame iframe { width: 100%; height: 100%; border: none; display: block; }
+	.pl-panel-body { padding: 16px; }
+	.pl-panel-label {
+		font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+		color: rgba(139, 92, 246, 0.85); margin: 0 0 6px;
+	}
+	.pl-panel-artist { font-size: 0.8125rem; color: rgba(255,255,255,.5); margin: 0; }
+	.pl-panel-title { font-size: 1.0625rem; font-weight: 700; margin: 0 0 12px; }
+	.pl-panel-controls {
+		display: flex; align-items: center; justify-content: center; gap: 20px;
+		padding: 10px 0 14px; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: 12px;
+	}
+	.pl-panel-controls button {
+		background: transparent; border: none; color: #fff; cursor: pointer;
+		width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+		border-radius: 999px; transition: background .12s;
+	}
+	.pl-panel-controls button:hover:not(:disabled) { background: rgba(255,255,255,.08); }
+	.pl-panel-controls button:disabled { color: rgba(255,255,255,.2); cursor: default; }
+	.pl-panel-controls svg { width: 20px; height: 20px; }
+	.pl-panel-position { font-size: 0.75rem; color: rgba(255,255,255,.4); font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
+	.pl-panel-bio { font-size: 0.75rem; line-height: 1.6; color: rgba(255,255,255,.45); margin: 0; }
+
+	.pl-panel--empty { aspect-ratio: auto; }
+	.pl-panel-empty {
+		display: flex; flex-direction: column; align-items: center; justify-content: center;
+		gap: 10px; padding: 60px 20px; color: rgba(255,255,255,.25); text-align: center;
+	}
+	.pl-panel-empty svg { width: 36px; height: 36px; }
+	.pl-panel-empty p { font-size: 0.8125rem; margin: 0; }
+
+	.pl-hero { display: flex; align-items: flex-end; gap: 20px; margin-bottom: 32px; }
+	.pl-hero-art { width: 132px; height: 132px; flex: none; overflow: hidden; box-shadow: 0 16px 40px -12px rgba(0,0,0,.6); }
 	.pl-hero-art img { width: 100%; height: 100%; object-fit: cover; }
-	.pl-hero-kicker {
-		font-size: 0.6875rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: .08em;
-		color: rgba(139, 92, 246, 0.85);
-		margin: 0 0 6px;
-	}
-	.pl-hero-title {
-		font-size: 1.75rem;
-		font-weight: 800;
-		letter-spacing: -0.01em;
-		margin: 0 0 8px;
-	}
-	.pl-hero-meta {
-		font-size: 0.8125rem;
-		color: rgba(255,255,255,.45);
-		margin: 0;
-	}
+	.pl-hero-kicker { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: rgba(139, 92, 246, 0.85); margin: 0 0 6px; }
+	.pl-hero-title { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 8px; }
+	.pl-hero-meta { font-size: 0.8125rem; color: rgba(255,255,255,.45); margin: 0; }
 
 	.pl-section { margin-bottom: 28px; }
 	.pl-section-title {
-		font-size: 0.75rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: .06em;
-		color: rgba(255,255,255,.4);
-		margin: 0 0 8px;
-		padding-bottom: 8px;
-		border-bottom: 1px solid rgba(255,255,255,.06);
+		font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+		color: rgba(255,255,255,.4); margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.06);
 	}
 
 	.pl-list { list-style: none; margin: 0; padding: 0; }
@@ -247,133 +323,33 @@
 	.pl-row--active { background: rgba(139, 92, 246, 0.1); }
 
 	.pl-row-btn {
-		width: 100%;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 7px 10px;
-		background: transparent;
-		border: none;
-		color: inherit;
-		text-align: left;
-		cursor: pointer;
-		border-radius: 6px;
-		transition: background .12s;
+		width: 100%; display: flex; align-items: center; gap: 12px; padding: 7px 10px;
+		background: transparent; border: none; color: inherit; text-align: left; cursor: pointer;
+		border-radius: 6px; transition: background .12s;
 	}
 	.pl-row-btn:hover { background: rgba(255,255,255,.04); }
 
-	.pl-row-n {
-		width: 22px;
-		flex: none;
-		font-size: 0.75rem;
-		font-variant-numeric: tabular-nums;
-		color: rgba(255,255,255,.3);
-		text-align: right;
-	}
+	.pl-row-n { width: 22px; flex: none; font-size: 0.75rem; font-variant-numeric: tabular-nums; color: rgba(255,255,255,.3); text-align: right; }
 	.pl-row--active .pl-row-n { color: rgba(139, 92, 246, 0.9); }
 
-	.pl-row-thumb {
-		position: relative;
-		width: 40px; height: 40px;
-		flex: none;
-		overflow: hidden;
-		background: rgba(255,255,255,.05);
-	}
+	.pl-row-thumb { position: relative; width: 40px; height: 40px; flex: none; overflow: hidden; background: rgba(255,255,255,.05); }
 	.pl-row-thumb img { width: 100%; height: 100%; object-fit: cover; }
 	.pl-row-play {
-		position: absolute; inset: 0;
-		width: 16px; height: 16px;
-		margin: auto;
-		color: #fff;
-		opacity: 0;
-		filter: drop-shadow(0 1px 3px rgba(0,0,0,.6));
-		transition: opacity .12s;
+		position: absolute; inset: 0; width: 16px; height: 16px; margin: auto; color: #fff; opacity: 0;
+		filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); transition: opacity .12s;
 	}
-	.pl-row-btn:hover .pl-row-play,
-	.pl-row--active .pl-row-play { opacity: 1; }
+	.pl-row-btn:hover .pl-row-play, .pl-row--active .pl-row-play { opacity: 1; }
 
-	.pl-row-text {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-	.pl-row-artist {
-		font-size: 0.6875rem;
-		color: rgba(255,255,255,.4);
-	}
-	.pl-row-title {
-		font-size: 0.8125rem;
-		font-weight: 600;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.pl-row-title--unknown {
-		font-style: italic;
-		color: rgba(255,255,255,.4);
-		font-weight: 400;
-	}
+	.pl-row-text { display: flex; flex-direction: column; min-width: 0; }
+	.pl-row-artist { font-size: 0.6875rem; color: rgba(255,255,255,.4); }
+	.pl-row-title { font-size: 0.8125rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.pl-row-title--unknown { font-style: italic; color: rgba(255,255,255,.4); font-weight: 400; }
 
-	.pl-player {
-		/* bottom: var(--bottom-nav-h) : sur mobile l'app a sa propre barre de
-		   navigation fixe en bas (56px + encoche), sinon la barre de lecture
-		   passait dessous, invisible. 0 sur desktop ou la barre n'existe pas. */
-		position: fixed;
-		left: 0; right: 0; bottom: var(--bottom-nav-h, 0px);
-		z-index: 40;
-		background: rgba(9, 9, 15, 0.97);
-		backdrop-filter: blur(16px);
-		border-top: 1px solid rgba(255,255,255,.08);
-		padding: 10px max(16px, env(safe-area-inset-left)) 10px max(16px, env(safe-area-inset-right));
-	}
-	.pl-player-inner {
-		max-width: 860px;
-		margin: 0 auto;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-	.pl-player-frame {
-		width: 96px;
-		aspect-ratio: 16 / 9;
-		flex: none;
-		overflow: hidden;
-		background: #000;
-	}
-	.pl-player-frame iframe { width: 100%; height: 100%; border: none; display: block; }
-	.pl-player-meta { min-width: 0; flex: 1; }
-	.pl-player-label {
-		font-size: 0.625rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: .05em;
-		color: rgba(139, 92, 246, 0.85);
-		margin: 0 0 2px;
-	}
-	.pl-player-title {
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: #fff;
-		margin: 0;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.pl-player-close {
-		flex: none;
-		width: 30px; height: 30px;
-		display: flex; align-items: center; justify-content: center;
-		background: transparent;
-		border: none;
-		color: rgba(255,255,255,.5);
-		cursor: pointer;
-	}
-	.pl-player-close svg { width: 16px; height: 16px; }
-	.pl-player-close:hover { color: #fff; }
-
-	@media (max-width: 640px) {
+	@media (max-width: 900px) {
+		.pl-page { padding: 20px 16px 40px; }
+		.pl-layout { grid-template-columns: 1fr; }
+		.pl-panel { position: static; order: -1; }
 		.pl-hero { flex-direction: column; align-items: flex-start; }
 		.pl-hero-art { width: 100px; height: 100px; }
-		.pl-player-frame { width: 72px; }
 	}
 </style>

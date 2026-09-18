@@ -107,7 +107,7 @@
 	<a href="/musique/playlists/rock-alternatif-2000s" class="mus-playlist-link">
 		<span class="mus-playlist-icon">🎧</span>
 		<span class="mus-playlist-text">
-			<span class="mus-playlist-title">Rock / Alternative — 2000s</span>
+			<span class="mus-playlist-title">Rock / Alternative - 2000s</span>
 			<span class="mus-playlist-sub">{tFn('music.playlist.track_count').replace('{{n}}', '50')}</span>
 		</span>
 		<span class="mus-playlist-arrow">→</span>
