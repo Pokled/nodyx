@@ -209,9 +209,14 @@
 	function reshuffle() {
 		shuffledOrder = fisherYates(queueSource.filter((t) => t.yt !== nowPlaying?.yt));
 	}
+	function savePrefs() {
+		try { localStorage.setItem('nodyx-playlist-prefs', JSON.stringify({ volume, shuffle, repeat })); } catch { /* stockage indisponible, tant pis */ }
+	}
+
 	function toggleShuffle() {
 		shuffle = !shuffle;
 		if (shuffle) reshuffle();
+		savePrefs();
 	}
 
 	function play(track: Track, source?: Track[]) {
@@ -263,6 +268,7 @@
 
 	function cycleRepeat() {
 		repeat = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
+		savePrefs();
 	}
 
 	function handleEnded() {
@@ -347,7 +353,24 @@
 			if (rawFav) favorites = new Set(JSON.parse(rawFav));
 			const rawRecent = localStorage.getItem('nodyx-playlist-recent');
 			if (rawRecent) recentIds = JSON.parse(rawRecent);
+			const rawPrefs = localStorage.getItem('nodyx-playlist-prefs');
+			if (rawPrefs) {
+				const prefs = JSON.parse(rawPrefs);
+				if (typeof prefs.volume === 'number') volume = prefs.volume;
+				if (typeof prefs.shuffle === 'boolean') shuffle = prefs.shuffle;
+				if (prefs.repeat === 'off' || prefs.repeat === 'all' || prefs.repeat === 'one') repeat = prefs.repeat;
+			}
 		} catch { /* stockage indisponible, tant pis */ }
+
+		// Controles depuis l'ecran verrouille, un casque Bluetooth ou les touches
+		// multimedia du clavier : rien a construire, l'API du navigateur s'en
+		// charge des qu'on lui donne les metadonnees et les actions.
+		if ('mediaSession' in navigator) {
+			navigator.mediaSession.setActionHandler('play', () => player?.playVideo?.());
+			navigator.mediaSession.setActionHandler('pause', () => player?.pauseVideo?.());
+			navigator.mediaSession.setActionHandler('previoustrack', () => { if (hasPrev) playPrev(); });
+			navigator.mediaSession.setActionHandler('nexttrack', () => { if (hasNext) playNext(); });
+		}
 
 		const w = window as any;
 		if (w.YT && w.YT.Player) {
@@ -379,7 +402,15 @@
 			else if (e.key === 'ArrowDown') { e.preventDefault(); volume = Math.max(0, volume - 5); onVolumeInput(); }
 		}
 		window.addEventListener('keydown', handleKey);
-		return () => window.removeEventListener('keydown', handleKey);
+		return () => {
+			window.removeEventListener('keydown', handleKey);
+			if ('mediaSession' in navigator) {
+				navigator.mediaSession.setActionHandler('play', null);
+				navigator.mediaSession.setActionHandler('pause', null);
+				navigator.mediaSession.setActionHandler('previoustrack', null);
+				navigator.mediaSession.setActionHandler('nexttrack', null);
+			}
+		};
 	});
 
 	$effect(() => {
@@ -418,8 +449,22 @@
 		listRoot.querySelector('.pl-row--active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 	});
 
+	$effect(() => {
+		if (!nowPlaying || !('mediaSession' in navigator)) return;
+		navigator.mediaSession.metadata = new MediaMetadata({
+			title: nowPlaying.unknown ? tFn('music.playlist.unknown_track') : nowPlaying.title,
+			artist: nowPlaying.unknown ? '' : nowPlaying.artist,
+			album: 'Nodyx',
+			artwork: [{ src: `https://img.youtube.com/vi/${nowPlaying.yt}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }],
+		});
+	});
+	$effect(() => {
+		if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+	});
+
 	function onVolumeInput() {
 		player?.setVolume?.(volume);
+		savePrefs();
 	}
 
 	const total = allTracks.length;
@@ -638,6 +683,30 @@
 			{/if}
 		</aside>
 	</div>
+
+	{#if nowPlaying}
+		<button type="button" class="pl-mini" onclick={() => document.querySelector('.pl-panel')?.scrollIntoView({ behavior: 'smooth' })}>
+			<img src={`https://img.youtube.com/vi/${nowPlaying.yt}/default.jpg`} alt="" />
+			<span class="pl-mini-text">
+				{#if nowPlaying.unknown}
+					<span class="pl-mini-title">{tFn('music.playlist.unknown_track')}</span>
+				{:else}
+					<span class="pl-mini-artist">{nowPlaying.artist}</span>
+					<span class="pl-mini-title">{nowPlaying.title}</span>
+				{/if}
+			</span>
+			<span class="pl-mini-play" onclick={(e) => { e.stopPropagation(); togglePlay(); }} role="button" tabindex="0"
+			      onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); togglePlay(); } }}
+			      aria-label={tFn(isPlaying ? 'music.playlist.pause' : 'music.playlist.play')}>
+				{#if isPlaying}
+					<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+				{:else}
+					<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+				{/if}
+			</span>
+			<span class="pl-mini-progress" style:width="{duration ? (currentTime / duration) * 100 : 0}%"></span>
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -843,11 +912,36 @@
 	.pl-row-title { font-size: 0.8125rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.pl-row-title--unknown { font-style: italic; color: rgba(255,255,255,.4); font-weight: 400; }
 
+	/* Mini-lecteur colle en bas, visible pendant le scroll de la liste sur
+	   mobile : sur desktop le panneau sticky suffit deja, ce bandeau reste
+	   cache (display:none par defaut, reactive seulement dans le media query
+	   mobile ci-dessous). */
+	.pl-mini {
+		display: none;
+		position: fixed; left: 0; right: 0; bottom: var(--bottom-nav-h, 0px); z-index: 40;
+		align-items: center; gap: 10px; padding: 8px 12px;
+		background: #0d0b12; border-top: 1px solid rgba(255,255,255,.08);
+		width: 100%; text-align: left; cursor: pointer; overflow: hidden;
+	}
+	.pl-mini img { width: 36px; height: 36px; flex: none; object-fit: cover; border-radius: 4px; }
+	.pl-mini-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+	.pl-mini-artist { font-size: 0.625rem; color: rgba(255,255,255,.4); }
+	.pl-mini-title { font-size: 0.8125rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.pl-mini-play {
+		flex: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+		color: #fff; border-radius: 999px;
+	}
+	.pl-mini-play svg { width: 18px; height: 18px; }
+	.pl-mini-progress {
+		position: absolute; left: 0; bottom: 0; height: 2px; background: rgba(139, 92, 246, 0.9);
+	}
+
 	@media (max-width: 900px) {
-		.pl-page { padding: 20px 16px 40px; }
+		.pl-page { padding: 20px 16px calc(72px + var(--bottom-nav-h, 0px)); }
 		.pl-layout { grid-template-columns: 1fr; }
 		.pl-panel { position: static; order: -1; }
 		.pl-hero { flex-direction: column; align-items: flex-start; }
 		.pl-hero-art { width: 100px; height: 100px; }
+		.pl-mini { display: flex; }
 	}
 </style>
