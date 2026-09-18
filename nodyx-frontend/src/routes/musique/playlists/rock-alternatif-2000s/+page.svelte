@@ -136,16 +136,113 @@
 	let currentTime = $state(0);
 	let duration = $state(0);
 
-	function play(track: Track) {
-		if (nowPlaying && nowPlaying.yt !== track.yt) history.push(nowPlaying);
-		nowPlaying = track;
+	// Playlists "intelligentes" derivees du meme catalogue de 50 pistes deja
+	// verifiees, jamais un vrai systeme multi-utilisateurs cote back (portee
+	// choisie avec Jonathan, 19/09) : perso, nouveautes, favoris (localStorage),
+	// recemment ecoute (localStorage) et genre. Zero piste inventee.
+	type TabId = 'yours' | 'new' | 'favorites' | 'recent' | Genre | 'other';
+	const otherGenres: Genre[] = ['pop_punk', 'metalcore', 'post_hardcore'];
+
+	let favorites = $state<Set<string>>(new Set());
+	let recentIds = $state<string[]>([]);
+
+	function toggleFavorite(yt: string, e?: MouseEvent) {
+		e?.stopPropagation();
+		const next = new Set(favorites);
+		if (next.has(yt)) next.delete(yt); else next.add(yt);
+		favorites = next;
+		try { localStorage.setItem('nodyx-playlist-favorites', JSON.stringify([...next])); } catch { /* stockage indisponible, tant pis */ }
 	}
 
-	const currentIndex = $derived(nowPlaying ? allTracks.findIndex((t) => t.yt === nowPlaying!.yt) : -1);
+	function pushRecent(track: Track) {
+		if (track.unknown) return;
+		recentIds = [track.yt, ...recentIds.filter((id) => id !== track.yt)].slice(0, 10);
+		try { localStorage.setItem('nodyx-playlist-recent', JSON.stringify(recentIds)); } catch { /* stockage indisponible, tant pis */ }
+	}
+
+	const recentTracks = $derived(
+		recentIds.map((id) => allTracks.find((t) => t.yt === id)).filter((t): t is Track => !!t),
+	);
+
+	interface Tab { id: TabId; label: string; tracks: Track[]; }
+	const tabs = $derived<Tab[]>([
+		{ id: 'yours',       label: tFn('music.playlist.section_yours'),      tracks: section1 },
+		{ id: 'new',         label: `🔥 ${tFn('music.playlist.section_new')}`, tracks: section2 },
+		{ id: 'favorites',   label: tFn('music.playlist.tab_favorites'),      tracks: allTracks.filter((t) => favorites.has(t.yt)) },
+		{ id: 'recent',      label: tFn('music.playlist.tab_recent'),         tracks: recentTracks },
+		{ id: 'post_grunge', label: tFn(genreLabel.post_grunge),              tracks: allTracks.filter((t) => t.genre === 'post_grunge') },
+		{ id: 'nu_metal',    label: tFn(genreLabel.nu_metal),                 tracks: allTracks.filter((t) => t.genre === 'nu_metal') },
+		{ id: 'alt_metal',   label: tFn(genreLabel.alt_metal),                tracks: allTracks.filter((t) => t.genre === 'alt_metal') },
+		{ id: 'alt_rock',    label: tFn(genreLabel.alt_rock),                 tracks: allTracks.filter((t) => t.genre === 'alt_rock') },
+		{ id: 'other',       label: tFn('music.playlist.tab_other'),          tracks: allTracks.filter((t) => otherGenres.includes(t.genre as Genre)) },
+	]);
+
+	let activeTabId = $state<TabId>('yours');
+	const activeTab = $derived(tabs.find((t) => t.id === activeTabId) ?? tabs[0]);
+
+	let filterQuery = $state('');
+	function matchesFilter(t: Track): boolean {
+		if (!filterQuery.trim()) return true;
+		if (t.unknown) return false;
+		const q = filterQuery.toLowerCase();
+		return t.artist.toLowerCase().includes(q) || t.title.toLowerCase().includes(q);
+	}
+	const activeList = $derived(activeTab.tracks.filter(matchesFilter));
+
+	// File d'attente : capturee au moment ou on lance une lecture depuis un
+	// onglet donne, pas recalculee en continu depuis l'onglet regarde. Sinon
+	// naviguer dans la liste pendant une lecture changerait la piste suivante
+	// sans le vouloir. Le mode aleatoire tire un ordre fige une fois (pas un
+	// tirage a chaque "suivant"), pour ne pas repasser deux fois sur le meme
+	// titre avant d'avoir fait le tour.
+	let queueSource = $state<Track[]>(section1);
+	let shuffledOrder = $state<Track[]>([]);
+
+	function fisherYates(arr: Track[]): Track[] {
+		const a = [...arr];
+		for (let i = a.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[a[i], a[j]] = [a[j], a[i]];
+		}
+		return a;
+	}
+	function reshuffle() {
+		shuffledOrder = fisherYates(queueSource.filter((t) => t.yt !== nowPlaying?.yt));
+	}
+	function toggleShuffle() {
+		shuffle = !shuffle;
+		if (shuffle) reshuffle();
+	}
+
+	function play(track: Track, source?: Track[]) {
+		if (nowPlaying && nowPlaying.yt !== track.yt) history.push(nowPlaying);
+		if (source) {
+			queueSource = source;
+			if (shuffle) reshuffle();
+		} else if (shuffle) {
+			const idx = shuffledOrder.findIndex((t) => t.yt === track.yt);
+			if (idx >= 0) shuffledOrder = shuffledOrder.slice(idx + 1);
+		}
+		nowPlaying = track;
+		pushRecent(track);
+	}
+
+	const currentIndex = $derived(nowPlaying ? queueSource.findIndex((t) => t.yt === nowPlaying!.yt) : -1);
 	const hasPrev = $derived(history.length > 0);
 	const hasNext = $derived(
-		shuffle || repeat === 'all' ? allTracks.length > 1 : currentIndex >= 0 && currentIndex < allTracks.length - 1,
+		shuffle
+			? shuffledOrder.length > 0 || (repeat === 'all' && queueSource.length > 1)
+			: (currentIndex >= 0 && currentIndex < queueSource.length - 1) || (repeat === 'all' && queueSource.length > 1),
 	);
+
+	const upNext = $derived.by(() => {
+		if (!nowPlaying) return [] as Track[];
+		if (shuffle) return shuffledOrder.slice(0, 5);
+		if (currentIndex < 0) return [] as Track[];
+		const rest = queueSource.slice(currentIndex + 1);
+		if (rest.length > 0) return rest.slice(0, 5);
+		return repeat === 'all' ? queueSource.filter((t) => t.yt !== nowPlaying!.yt).slice(0, 5) : [];
+	});
 
 	function playPrev() {
 		const prev = history.pop();
@@ -153,11 +250,14 @@
 	}
 	function playNext() {
 		if (!nowPlaying || !hasNext) return;
-		const next = shuffle
-			? allTracks.filter((t) => t.yt !== nowPlaying!.yt)[Math.floor(Math.random() * (allTracks.length - 1))]
-			: currentIndex < allTracks.length - 1
-				? allTracks[currentIndex + 1]
-				: allTracks[0];
+		if (shuffle) {
+			if (shuffledOrder.length === 0) reshuffle();
+			const next = shuffledOrder[0];
+			shuffledOrder = shuffledOrder.slice(1);
+			if (next) play(next);
+			return;
+		}
+		const next = currentIndex < queueSource.length - 1 ? queueSource[currentIndex + 1] : queueSource[0];
 		play(next);
 	}
 
@@ -242,6 +342,13 @@
 	let apiReady = $state(false);
 
 	onMount(() => {
+		try {
+			const rawFav = localStorage.getItem('nodyx-playlist-favorites');
+			if (rawFav) favorites = new Set(JSON.parse(rawFav));
+			const rawRecent = localStorage.getItem('nodyx-playlist-recent');
+			if (rawRecent) recentIds = JSON.parse(rawRecent);
+		} catch { /* stockage indisponible, tant pis */ }
+
 		const w = window as any;
 		if (w.YT && w.YT.Player) {
 			apiReady = true;
@@ -315,16 +422,6 @@
 		player?.setVolume?.(volume);
 	}
 
-	let filterQuery = $state('');
-	function matchesFilter(t: Track): boolean {
-		if (!filterQuery.trim()) return true;
-		if (t.unknown) return false;
-		const q = filterQuery.toLowerCase();
-		return t.artist.toLowerCase().includes(q) || t.title.toLowerCase().includes(q);
-	}
-	const filteredSection1 = $derived(section1.filter(matchesFilter));
-	const filteredSection2 = $derived(section2.filter(matchesFilter));
-
 	const total = allTracks.length;
 	const pageTitle = $derived(`${tFn('music.playlist.eyebrow')} - 2000s · Nodyx`);
 </script>
@@ -355,56 +452,62 @@
 				</div>
 			</header>
 
+			<div class="pl-tabs">
+				{#each tabs as tab (tab.id)}
+					<button type="button" class="pl-tab" class:active={activeTabId === tab.id} onclick={() => (activeTabId = tab.id)}>
+						{tab.label}
+						{#if tab.tracks.length > 0}<span class="pl-tab-count">{tab.tracks.length}</span>{/if}
+					</button>
+				{/each}
+			</div>
+
 			<div class="pl-search">
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 				<input type="text" bind:value={filterQuery} placeholder={tFn('music.playlist.search_placeholder')} aria-label={tFn('music.playlist.search_placeholder')} />
 			</div>
 
 			<section class="pl-section">
-				<h2 class="pl-section-title">{tFn('music.playlist.section_yours')}</h2>
-				<ol class="pl-list">
-					{#each filteredSection1 as track (track.n)}
-						<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
-							<button type="button" class="pl-row-btn" onclick={() => play(track)}
-							        aria-label={track.unknown ? tFn('music.playlist.unknown_track') : `${track.artist} - ${track.title}`}>
-								<span class="pl-row-n">{track.n}</span>
-								<span class="pl-row-thumb">
-									<img src={`https://img.youtube.com/vi/${track.yt}/default.jpg`} alt="" loading="lazy" />
-									<svg class="pl-row-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-								</span>
-								<span class="pl-row-text">
-									{#if track.unknown}
-										<span class="pl-row-title pl-row-title--unknown">{tFn('music.playlist.unknown_track')}</span>
-									{:else}
-										<span class="pl-row-artist">{track.artist}</span>
-										<span class="pl-row-title">{track.title}</span>
-									{/if}
-								</span>
-							</button>
-						</li>
-					{/each}
-				</ol>
-			</section>
-
-			<section class="pl-section">
-				<h2 class="pl-section-title">🔥 {tFn('music.playlist.section_new')}</h2>
-				<ol class="pl-list" start={section1.length + 1}>
-					{#each filteredSection2 as track (track.n)}
-						<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
-							<button type="button" class="pl-row-btn" onclick={() => play(track)} aria-label={`${track.artist} - ${track.title}`}>
-								<span class="pl-row-n">{track.n}</span>
-								<span class="pl-row-thumb">
-									<img src={`https://img.youtube.com/vi/${track.yt}/default.jpg`} alt="" loading="lazy" />
-									<svg class="pl-row-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-								</span>
-								<span class="pl-row-text">
-									<span class="pl-row-artist">{track.artist}</span>
-									<span class="pl-row-title">{track.title}</span>
-								</span>
-							</button>
-						</li>
-					{/each}
-				</ol>
+				<h2 class="pl-section-title">{activeTab.label}</h2>
+				{#if activeList.length === 0}
+					<p class="pl-empty-tab">
+						{#if filterQuery.trim()}{tFn('music.playlist.empty_search')}
+						{:else if activeTabId === 'favorites'}{tFn('music.playlist.empty_favorites')}
+						{:else if activeTabId === 'recent'}{tFn('music.playlist.empty_recent')}
+						{:else}{tFn('music.playlist.empty_search')}{/if}
+					</p>
+				{:else}
+					<ol class="pl-list">
+						{#each activeList as track (track.yt)}
+							<li class="pl-row" class:pl-row--active={nowPlaying?.yt === track.yt}>
+								<button type="button" class="pl-row-btn" onclick={() => play(track, activeTab.tracks)}
+								        aria-label={track.unknown ? tFn('music.playlist.unknown_track') : `${track.artist} - ${track.title}`}>
+									<span class="pl-row-n">{track.n}</span>
+									<span class="pl-row-thumb">
+										<img src={`https://img.youtube.com/vi/${track.yt}/default.jpg`} alt="" loading="lazy" />
+										<svg class="pl-row-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+									</span>
+									<span class="pl-row-text">
+										{#if track.unknown}
+											<span class="pl-row-title pl-row-title--unknown">{tFn('music.playlist.unknown_track')}</span>
+										{:else}
+											<span class="pl-row-artist">{track.artist}</span>
+											<span class="pl-row-title">{track.title}</span>
+										{/if}
+									</span>
+								</button>
+								{#if !track.unknown}
+									<button type="button" class="pl-row-fav" class:active={favorites.has(track.yt)}
+									        onclick={(e) => toggleFavorite(track.yt, e)} aria-pressed={favorites.has(track.yt)}
+									        aria-label={tFn('music.playlist.favorite')}>
+										<svg viewBox="0 0 24 24" fill={favorites.has(track.yt) ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+											<path d="M12 21s-6.7-4.35-9.3-8.05C1.02 10.7 1.6 7.5 4.2 6.1 6.2 5 8.7 5.6 10 7.3l2 2.6 2-2.6c1.3-1.7 3.8-2.3 5.8-1.2 2.6 1.4 3.18 4.6 1.5 6.85C18.7 16.65 12 21 12 21z"/>
+										</svg>
+									</button>
+								{/if}
+							</li>
+						{/each}
+					</ol>
+				{/if}
 			</section>
 		</div>
 
@@ -414,13 +517,26 @@
 					<div bind:this={playerHost}></div>
 				</div>
 				<div class="pl-panel-body">
-					<p class="pl-panel-label">{tFn('music.playlist.now_playing')} · {nowPlaying.n}/{total}</p>
-					{#if nowPlaying.unknown}
-						<p class="pl-panel-title">{tFn('music.playlist.unknown_track')}</p>
-					{:else}
-						<p class="pl-panel-artist">{nowPlaying.artist}</p>
-						<p class="pl-panel-title">{nowPlaying.title}</p>
-					{/if}
+					<div class="pl-panel-title-row">
+						<div>
+							<p class="pl-panel-label">{tFn('music.playlist.now_playing')} · {currentIndex + 1}/{queueSource.length}</p>
+							{#if nowPlaying.unknown}
+								<p class="pl-panel-title">{tFn('music.playlist.unknown_track')}</p>
+							{:else}
+								<p class="pl-panel-artist">{nowPlaying.artist}</p>
+								<p class="pl-panel-title">{nowPlaying.title}</p>
+							{/if}
+						</div>
+						{#if !nowPlaying.unknown}
+							<button type="button" class="pl-panel-fav" class:active={favorites.has(nowPlaying.yt)}
+							        onclick={(e) => toggleFavorite(nowPlaying!.yt, e)} aria-pressed={favorites.has(nowPlaying.yt)}
+							        aria-label={tFn('music.playlist.favorite')}>
+								<svg viewBox="0 0 24 24" fill={favorites.has(nowPlaying.yt) ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2">
+									<path d="M12 21s-6.7-4.35-9.3-8.05C1.02 10.7 1.6 7.5 4.2 6.1 6.2 5 8.7 5.6 10 7.3l2 2.6 2-2.6c1.3-1.7 3.8-2.3 5.8-1.2 2.6 1.4 3.18 4.6 1.5 6.85C18.7 16.65 12 21 12 21z"/>
+								</svg>
+							</button>
+						{/if}
+					</div>
 
 					<div class="pl-progress-row">
 						<span class="pl-progress-time">{formatTime(currentTime)}</span>
@@ -431,7 +547,7 @@
 					</div>
 
 					<div class="pl-panel-controls">
-						<button type="button" class="pl-ctrl-shuffle" class:active={shuffle} onclick={() => (shuffle = !shuffle)} aria-pressed={shuffle} aria-label={tFn('music.playlist.shuffle')}>
+						<button type="button" class="pl-ctrl-shuffle" class:active={shuffle} onclick={toggleShuffle} aria-pressed={shuffle} aria-label={tFn('music.playlist.shuffle')}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<polyline points="16 3 21 3 21 8"></polyline>
 								<line x1="4" y1="20" x2="21" y2="3"></line>
@@ -476,13 +592,32 @@
 						<span class="pl-panel-genre">{tFn(genreLabel[nowPlaying.genre])}</span>
 					{/if}
 
+					{#if upNext.length > 0}
+						<div class="pl-panel-more">
+							<p class="pl-panel-more-label">{tFn('music.playlist.queue_label')}</p>
+							<ul class="pl-more-list">
+								{#each upNext as q (q.yt)}
+									<li>
+										<button type="button" class="pl-more-btn" onclick={() => play(q)}>
+											<img src={`https://img.youtube.com/vi/${q.yt}/default.jpg`} alt="" loading="lazy" />
+											<span class="pl-more-text">
+												<span class="pl-more-artist">{q.artist}</span>
+												<span class="pl-more-title">{q.title}</span>
+											</span>
+										</button>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+
 					{#if suggestions.length > 0}
 						<div class="pl-panel-more">
 							<p class="pl-panel-more-label">{tFn('music.playlist.more_like_this')}</p>
 							<ul class="pl-more-list">
 								{#each suggestions as s (s.yt)}
 									<li>
-										<button type="button" class="pl-more-btn" onclick={() => play(s)}>
+										<button type="button" class="pl-more-btn" onclick={() => play(s, allTracks.filter((t) => t.genre === nowPlaying?.genre))}>
 											<img src={`https://img.youtube.com/vi/${s.yt}/default.jpg`} alt="" loading="lazy" />
 											<span class="pl-more-text">
 												<span class="pl-more-artist">{s.artist}</span>
@@ -551,8 +686,16 @@
 		font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
 		color: rgba(139, 92, 246, 0.85); margin: 0 0 6px;
 	}
+	.pl-panel-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 	.pl-panel-artist { font-size: 0.8125rem; color: rgba(255,255,255,.5); margin: 0; }
 	.pl-panel-title { font-size: 1.0625rem; font-weight: 700; margin: 0 0 12px; }
+	.pl-panel-fav {
+		flex: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+		background: transparent; border: none; color: rgba(255,255,255,.3); cursor: pointer; border-radius: 999px;
+	}
+	.pl-panel-fav:hover { background: rgba(255,255,255,.06); }
+	.pl-panel-fav.active { color: rgb(139, 92, 246); }
+	.pl-panel-fav svg { width: 18px; height: 18px; }
 
 	.pl-progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 	.pl-progress-time { font-size: 0.6875rem; color: rgba(255,255,255,.35); font-variant-numeric: tabular-nums; min-width: 30px; }
@@ -627,6 +770,20 @@
 	.pl-panel-empty svg { width: 36px; height: 36px; }
 	.pl-panel-empty p { font-size: 0.8125rem; margin: 0; }
 
+	.pl-tabs {
+		display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 16px;
+	}
+	.pl-tab {
+		flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 999px;
+		background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); color: rgba(255,255,255,.55);
+		font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .12s, color .12s;
+	}
+	.pl-tab:hover { color: #fff; }
+	.pl-tab.active { background: rgba(139, 92, 246, 0.16); border-color: rgba(139, 92, 246, 0.4); color: #fff; }
+	.pl-tab-count { font-size: 0.625rem; opacity: .6; }
+
+	.pl-empty-tab { font-size: 0.8125rem; color: rgba(255,255,255,.35); padding: 24px 4px; text-align: center; }
+
 	.pl-search {
 		display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding: 8px 12px;
 		background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 8px;
@@ -651,15 +808,24 @@
 	}
 
 	.pl-list { list-style: none; margin: 0; padding: 0; }
-	.pl-row { border-radius: 6px; }
+	.pl-row { border-radius: 6px; display: flex; align-items: center; }
 	.pl-row--active { background: rgba(139, 92, 246, 0.1); }
 
 	.pl-row-btn {
-		width: 100%; display: flex; align-items: center; gap: 12px; padding: 7px 10px;
+		flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 7px 10px;
 		background: transparent; border: none; color: inherit; text-align: left; cursor: pointer;
 		border-radius: 6px; transition: background .12s;
 	}
 	.pl-row-btn:hover { background: rgba(255,255,255,.04); }
+
+	.pl-row-fav {
+		flex: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+		background: transparent; border: none; color: rgba(255,255,255,.2); cursor: pointer; border-radius: 999px;
+		transition: color .12s, background .12s;
+	}
+	.pl-row-fav:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.5); }
+	.pl-row-fav.active { color: rgb(139, 92, 246); }
+	.pl-row-fav svg { width: 15px; height: 15px; }
 
 	.pl-row-n { width: 22px; flex: none; font-size: 0.75rem; font-variant-numeric: tabular-nums; color: rgba(255,255,255,.3); text-align: right; }
 	.pl-row--active .pl-row-n { color: rgba(139, 92, 246, 0.9); }
