@@ -113,7 +113,11 @@
 		})),
 	);
 
+	// "all" en premier (donc onglet par defaut) : le lien d'entree sur /musique
+	// annonce "50 titres", atterrir sur un onglet qui n'en montre que 20 (Tes
+	// morceaux) contredisait la promesse (retour Jonathan, 19/09).
 	const customSections = $derived([
+		{ id: 'all', label: tFn('music.playlist.section_all'), trackYts: allTracks.map((t) => t.yt) },
 		{ id: 'yours', label: tFn('music.playlist.section_yours'), trackYts: section1.map((t) => t.yt) },
 		{ id: 'new', label: `🔥 ${tFn('music.playlist.section_new')}`, trackYts: section2.map((t) => t.yt) },
 	]);

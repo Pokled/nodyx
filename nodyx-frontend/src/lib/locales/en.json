@@ -4617,6 +4617,7 @@
   "music.playlist.meta_desc": "A 2000s rock and alternative playlist, listenable straight from Nodyx.",
   "music.playlist.back": "Back to music",
   "music.playlist.track_count": "{{n}} tracks",
+  "music.playlist.section_all": "All tracks",
   "music.playlist.section_yours": "Your tracks",
   "music.playlist.section_new": "30 new",
   "music.playlist.unknown_track": "Unidentified track",
