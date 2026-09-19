@@ -178,6 +178,13 @@
 	]);
 
 	let activeTabId = $state<TabId>('yours');
+	// Une recherche tapee dans une playlist qui resterait active en changeant de
+	// playlist ferait croire que des titres ont disparu sans raison : on la vide
+	// a chaque changement (retour Jonathan, 19/09).
+	function selectTab(id: TabId) {
+		activeTabId = id;
+		filterQuery = '';
+	}
 	const activeTab = $derived(tabs.find((t) => t.id === activeTabId) ?? tabs[0]);
 
 	let filterQuery = $state('');
@@ -402,8 +409,13 @@
 			else if (e.key === 'ArrowDown') { e.preventDefault(); volume = Math.max(0, volume - 5); onVolumeInput(); }
 		}
 		window.addEventListener('keydown', handleKey);
+		window.addEventListener('scroll', updatePanelFixed, { passive: true });
+		window.addEventListener('resize', updatePanelFixed);
+		updatePanelFixed();
 		return () => {
 			window.removeEventListener('keydown', handleKey);
+			window.removeEventListener('scroll', updatePanelFixed);
+			window.removeEventListener('resize', updatePanelFixed);
 			if ('mediaSession' in navigator) {
 				navigator.mediaSession.setActionHandler('play', null);
 				navigator.mediaSession.setActionHandler('pause', null);
@@ -449,6 +461,29 @@
 		listRoot.querySelector('.pl-row--active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 	});
 
+	// `position: sticky` ne suffit pas ici : le <main> de l'appli porte bien
+	// overflow-y:auto, mais sur cette page il grandit avec son contenu au lieu
+	// de scroller lui-meme, donc c'est la fenetre qui scrolle. Sticky reste
+	// ancre a un <main> qui ne bouge jamais de son point de vue et decroche
+	// (retour Jonathan, 19/09 : "la zone de droite doit rester en haut").
+	// Parade : on mesure la position naturelle du panneau et on bascule en
+	// position fixed nous-memes une fois qu'elle passerait sous top:24px.
+	let panelSlot = $state<HTMLDivElement>();
+	let panelFixed = $state(false);
+	let panelLeft = $state(0);
+	let panelWidth = $state(0);
+
+	function updatePanelFixed() {
+		if (!panelSlot || window.innerWidth <= 900) { panelFixed = false; return; }
+		const rect = panelSlot.getBoundingClientRect();
+		panelLeft = rect.left;
+		panelWidth = rect.width;
+		panelFixed = rect.top <= 24;
+	}
+	$effect(() => {
+		if (nowPlaying) updatePanelFixed();
+	});
+
 	$effect(() => {
 		if (!nowPlaying || !('mediaSession' in navigator)) return;
 		navigator.mediaSession.metadata = new MediaMetadata({
@@ -465,6 +500,17 @@
 	function onVolumeInput() {
 		player?.setVolume?.(volume);
 		savePrefs();
+	}
+
+	let previousVolume = 80;
+	function toggleMute() {
+		if (volume > 0) {
+			previousVolume = volume;
+			volume = 0;
+		} else {
+			volume = previousVolume || 80;
+		}
+		onVolumeInput();
 	}
 
 	const total = allTracks.length;
@@ -500,7 +546,7 @@
 			<div class="pl-tab-select">
 				<label for="pl-playlist-select" class="pl-tab-select-label">{tFn('music.playlist.choose_playlist')}</label>
 				<div class="pl-tab-select-control">
-					<select id="pl-playlist-select" bind:value={activeTabId}>
+					<select id="pl-playlist-select" value={activeTabId} onchange={(e) => selectTab((e.currentTarget as HTMLSelectElement).value as TabId)}>
 						{#each tabs as tab (tab.id)}
 							<option value={tab.id}>{tab.label} ({tab.tracks.length})</option>
 						{/each}
@@ -559,7 +605,9 @@
 			</section>
 		</div>
 
-		<aside class="pl-panel" class:pl-panel--empty={!nowPlaying}>
+		<div class="pl-panel-slot" bind:this={panelSlot}>
+		<aside class="pl-panel" class:pl-panel--empty={!nowPlaying} class:pl-panel--fixed={panelFixed}
+		       style:left={panelFixed ? `${panelLeft}px` : null} style:width={panelFixed ? `${panelWidth}px` : null}>
 			{#if nowPlaying}
 				<div class="pl-panel-frame">
 					<div bind:this={playerHost}></div>
@@ -629,8 +677,18 @@
 					</div>
 
 					<div class="pl-panel-volume">
-						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 12c0-1.77-1-3.29-2.5-4.03v8.05c1.5-.74 2.5-2.26 2.5-4.02z"/></svg>
-						<input type="range" min="0" max="100" bind:value={volume} oninput={onVolumeInput} aria-label={tFn('music.playlist.volume')} />
+						<button type="button" class="pl-volume-icon" onclick={toggleMute} aria-label={tFn(volume === 0 ? 'music.playlist.unmute' : 'music.playlist.mute')}>
+							{#if volume === 0}
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="m19 9-4.5 6M14.5 9 19 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+							{:else if volume < 50}
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>
+							{:else}
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 12c0-1.77-1-3.29-2.5-4.03v8.05c1.5-.74 2.5-2.26 2.5-4.02z"/></svg>
+							{/if}
+						</button>
+						<input type="range" min="0" max="100" bind:value={volume} oninput={onVolumeInput} aria-label={tFn('music.playlist.volume')}
+						       style:background={`linear-gradient(to right, rgba(139,92,246,.9) ${volume}%, rgba(255,255,255,.12) ${volume}%)`} />
+						<span class="pl-volume-pct">{volume}%</span>
 					</div>
 
 					{#if !nowPlaying.unknown && artistInfo[nowPlaying.artist]}
@@ -685,6 +743,7 @@
 				</div>
 			{/if}
 		</aside>
+		</div>
 	</div>
 
 	{#if nowPlaying}
@@ -739,11 +798,20 @@
 	}
 	.pl-main { min-width: 0; }
 
+	.pl-panel-slot { min-width: 0; }
+
 	.pl-panel {
-		position: sticky;
-		top: 24px;
 		background: rgba(255,255,255,.03);
 		border: 1px solid rgba(255,255,255,.06);
+	}
+	/* position:fixed pilotee en JS (voir updatePanelFixed) : sticky ne marche
+	   pas sur cette page, cf commentaire dans le script. */
+	.pl-panel--fixed {
+		position: fixed;
+		top: 24px;
+		z-index: 30;
+		max-height: calc(100dvh - 48px);
+		overflow-y: auto;
 	}
 	.pl-panel-frame { aspect-ratio: 16 / 9; background: #000; }
 	/* :global() car cet iframe est injecte a l'execution par l'API YouTube, pas
@@ -804,17 +872,28 @@
 	.pl-panel-bio { font-size: 0.75rem; line-height: 1.6; color: rgba(255,255,255,.45); margin: 0; }
 
 	.pl-panel-volume {
-		display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; color: rgba(255,255,255,.4);
+		display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; color: rgba(255,255,255,.6);
 	}
-	.pl-panel-volume svg { width: 16px; height: 16px; flex: none; }
+	.pl-volume-icon {
+		flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+		background: transparent; border: none; color: inherit; cursor: pointer; border-radius: 999px;
+	}
+	.pl-volume-icon:hover { background: rgba(255,255,255,.08); color: #fff; }
+	.pl-volume-icon svg { width: 17px; height: 17px; }
 	.pl-panel-volume input[type="range"] {
-		flex: 1; height: 3px; appearance: none; background: rgba(255,255,255,.12); border-radius: 999px; outline: none;
+		flex: 1; height: 5px; appearance: none; border-radius: 999px; outline: none;
 	}
 	.pl-panel-volume input[type="range"]::-webkit-slider-thumb {
-		appearance: none; width: 12px; height: 12px; border-radius: 999px; background: #fff; cursor: pointer;
+		appearance: none; width: 14px; height: 14px; border-radius: 999px; background: #fff; cursor: pointer;
+		box-shadow: 0 0 0 3px rgba(0,0,0,.25);
 	}
 	.pl-panel-volume input[type="range"]::-moz-range-thumb {
-		width: 12px; height: 12px; border: none; border-radius: 999px; background: #fff; cursor: pointer;
+		width: 14px; height: 14px; border: none; border-radius: 999px; background: #fff; cursor: pointer;
+		box-shadow: 0 0 0 3px rgba(0,0,0,.25);
+	}
+	.pl-volume-pct {
+		flex: none; width: 36px; text-align: right; font-size: 0.75rem; font-variant-numeric: tabular-nums;
+		color: rgba(255,255,255,.5);
 	}
 
 	.pl-panel-more { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.06); }
@@ -950,7 +1029,7 @@
 	@media (max-width: 900px) {
 		.pl-page { padding: 20px 16px calc(72px + var(--bottom-nav-h, 0px)); }
 		.pl-layout { grid-template-columns: 1fr; }
-		.pl-panel { position: static; order: -1; }
+		.pl-panel-slot { order: -1; }
 		.pl-hero { flex-direction: column; align-items: flex-start; }
 		.pl-hero-art { width: 100px; height: 100px; }
 		.pl-mini { display: flex; }

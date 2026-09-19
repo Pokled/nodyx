@@ -4641,6 +4641,8 @@
   "music.playlist.empty_recent": "Rien d'écouté pour l'instant.",
   "music.playlist.empty_search": "Aucun résultat.",
   "music.playlist.choose_playlist": "Playlist",
+  "music.playlist.mute": "Couper le son",
+  "music.playlist.unmute": "Réactiver le son",
   "music.playlist.genre.post_grunge": "Post-grunge",
   "music.playlist.genre.pop_punk": "Pop punk",
   "music.playlist.genre.alt_rock": "Rock alternatif",
