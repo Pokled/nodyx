@@ -328,25 +328,26 @@
 	/* ── Banner ───────────────────────────────────────────────────────────── */
 	.mus-banner {
 		display: flex;
-		align-items: center;
-		gap: 20px;
-		padding-bottom: 24px;
+		align-items: flex-end;
+		gap: 24px;
+		padding-bottom: 28px;
 		margin-bottom: 8px;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 	}
 
 	.mus-banner-img {
 		flex: none;
-		width: 96px;
-		height: 96px;
+		width: 132px;
+		height: 132px;
 		border-radius: 8px;
 		object-fit: cover;
+		box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
 	}
 
 	.mus-banner-fallback {
 		flex: none;
-		width: 96px;
-		height: 96px;
+		width: 132px;
+		height: 132px;
 		border-radius: 8px;
 		background: rgba(255, 255, 255, 0.03);
 		display: flex;
@@ -355,8 +356,8 @@
 	}
 
 	.mus-banner-icon {
-		width: 32px;
-		height: 32px;
+		width: 40px;
+		height: 40px;
 		color: rgba(255, 255, 255, 0.15);
 	}
 
@@ -365,10 +366,10 @@
 	}
 
 	.mus-title {
-		font-size: 1.375rem;
-		font-weight: 700;
+		font-size: 1.75rem;
+		font-weight: 800;
 		color: #fff;
-		margin: 0 0 4px;
+		margin: 0 0 8px;
 		letter-spacing: -0.01em;
 	}
 
@@ -433,8 +434,8 @@
 
 	.mus-track-thumb {
 		flex: none;
-		width: 44px;
-		height: 44px;
+		width: 52px;
+		height: 52px;
 		border-radius: 6px;
 		object-fit: cover;
 	}
@@ -455,8 +456,8 @@
 	}
 
 	.mus-track-title {
-		font-size: 0.9375rem;
-		font-weight: 600;
+		font-size: 1rem;
+		font-weight: 700;
 		color: #fff;
 		margin: 0;
 	}
@@ -621,6 +622,7 @@
 
 	@media (max-width: 560px) {
 		.mus-banner { flex-direction: column; align-items: flex-start; }
+		.mus-banner-img, .mus-banner-fallback { width: 100px; height: 100px; }
 		.mus-track-thumb { display: none; }
 	}
 </style>
