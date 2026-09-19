@@ -4604,6 +4604,8 @@
   "music.title": "Musique",
   "music.subtitle": "Des compositions originales pour des jeux vidéo indépendants, classées par ambiance.",
   "music.empty_project": "Aucun morceau publié pour l'instant. Revenez bientôt.",
+  "music.section_playlists": "Playlists",
+  "music.section_categories": "Catégories",
   "music.empty_category": "Morceau à venir.",
   "music.track_count_one": "{{n}} morceau",
   "music.track_count_plural": "{{n}} morceaux",

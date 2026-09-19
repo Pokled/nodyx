@@ -455,7 +455,13 @@
 </script>
 
 <div class="pl-page">
-	<a href={backHref} class="pl-back">← {tFn('music.playlist.back')}</a>
+	<div class="pl-top-row">
+		<a href={backHref} class="pl-back">← {tFn('music.playlist.back')}</a>
+		<div class="pl-search">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+			<input type="text" bind:value={filterQuery} placeholder={tFn('music.playlist.search_placeholder')} aria-label={tFn('music.playlist.search_placeholder')} />
+		</div>
+	</div>
 
 	<div class="pl-layout">
 		<div class="pl-main" bind:this={listRoot}>
@@ -482,11 +488,6 @@
 					</select>
 					<svg class="pl-tab-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
 				</div>
-			</div>
-
-			<div class="pl-search">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-				<input type="text" bind:value={filterQuery} placeholder={tFn('music.playlist.search_placeholder')} aria-label={tFn('music.playlist.search_placeholder')} />
 			</div>
 
 			<section class="pl-section">
@@ -706,13 +707,19 @@
 		padding: 24px 28px 48px;
 		color: #fff;
 	}
+	.pl-top-row {
+		display: flex;
+		align-items: center;
+		gap: 20px;
+		margin-bottom: 20px;
+	}
 	.pl-back {
-		display: inline-block;
+		flex: none;
 		font-size: 0.8125rem;
 		color: rgba(255,255,255,.5);
 		text-decoration: none;
-		margin-bottom: 20px;
 		transition: color .15s;
+		white-space: nowrap;
 	}
 	.pl-back:hover { color: #fff; }
 
@@ -873,9 +880,11 @@
 	.pl-empty-tab { font-size: 0.8125rem; color: rgba(255,255,255,.35); padding: 24px 4px; text-align: center; }
 
 	.pl-search {
-		display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding: 8px 12px;
-		background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 8px;
+		display: flex; align-items: center; gap: 10px; padding: 7px 12px; max-width: 320px; margin-left: auto;
+		background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 999px;
+		transition: border-color .15s, background .15s;
 	}
+	.pl-search:focus-within { border-color: rgba(139,92,246,.4); background: rgba(255,255,255,.06); }
 	.pl-search svg { width: 16px; height: 16px; color: rgba(255,255,255,.35); flex: none; }
 	.pl-search input {
 		flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 0.8125rem;
@@ -957,6 +966,8 @@
 
 	@media (max-width: 900px) {
 		.pl-page { padding: 20px 16px calc(72px + var(--bottom-nav-h, 0px)); }
+		.pl-top-row { flex-wrap: wrap; }
+		.pl-search { max-width: none; width: 100%; margin-left: 0; }
 		.pl-layout { grid-template-columns: 1fr; }
 		.pl-panel-slot { order: -1; }
 		.pl-hero { flex-direction: column; align-items: flex-start; }

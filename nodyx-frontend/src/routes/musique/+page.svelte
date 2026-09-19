@@ -16,9 +16,18 @@
 	const categories = $derived(data.categories as Category[]);
 	const settings   = $derived(data.settings as Settings | null);
 
+	// Playlists YouTube (liens curés a la main, hors du pipeline d'upload) :
+	// donnee statique par choix assume, cf SPECS/NODYX_MUSIQUE_PLAYLISTS_CDC.md.
+	// Ajouter une playlist ici quand une nouvelle page existe sous
+	// /musique/playlists/<slug>, sans toucher au backend.
+	interface Playlist { slug: string; title: string; trackCount: number; heroYt: string; }
+	const playlists: Playlist[] = [
+		{ slug: 'rock-alternatif-2000s', title: 'Rock / Alternative - 2000s', trackCount: 50, heroYt: '5abamRO41fE' },
+	];
+
 	const pageTitle    = $derived(settings?.title    || tFn('music.title'));
 	const pageSubtitle = $derived(settings?.subtitle || tFn('music.subtitle'));
-	const totalTracks  = $derived(categories.reduce((sum, c) => sum + c.track_count, 0));
+	const totalTracks  = $derived(categories.reduce((sum, c) => sum + c.track_count, 0) + playlists.reduce((sum, p) => sum + p.trackCount, 0));
 
 	// Discord/Twitter/Facebook exigent une URL absolue et n'exécutent aucun JS :
 	// on résout ici, cote SSR, jamais via window.
@@ -70,48 +79,73 @@
 </div>
 
 <div class="mus-body">
-	{#if categories.length === 0}
-		<p class="mus-empty">{tFn('music.empty_project')}</p>
-	{:else}
-		<div class="mus-grid">
-			{#each categories as category (category.id)}
-				<a class="mus-card" href={`/musique/${category.slug}`}>
-					<div class="mus-card-thumb" class:mus-card-thumb--icon={!category.image_url}>
-						{#if category.image_url}
-							<img src={category.image_url} alt="" class="mus-card-img" loading="lazy" />
-						{:else}
-							<svg class="mus-card-fallback-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
-							</svg>
-						{/if}
-					</div>
-					<div class="mus-card-info">
-						<p class="mus-card-name">{category.title}</p>
-						{#if category.description}
-							<p class="mus-card-desc">{category.description}</p>
-						{/if}
-						<div class="mus-card-meta">
-							<span class="mus-badge">
-								{tFn(category.track_count === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(category.track_count))}
+	{#if playlists.length > 0}
+		<section class="mus-section">
+			<h2 class="mus-section-title">{tFn('music.section_playlists')}</h2>
+			<div class="mus-grid mus-grid--compact">
+				{#each playlists as playlist (playlist.slug)}
+					<a class="mus-card" href={`/musique/playlists/${playlist.slug}`}>
+						<div class="mus-card-thumb">
+							<img src={`https://img.youtube.com/vi/${playlist.heroYt}/hqdefault.jpg`} alt="" class="mus-card-img" loading="lazy" />
+							<span class="mus-card-play">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
 							</span>
-							{#if category.views > 0}
-								<span class="mus-views">{tFn(category.views === 1 ? 'music.views_one' : 'music.views_plural').replace('{{n}}', String(category.views))}</span>
-							{/if}
 						</div>
-					</div>
-				</a>
-			{/each}
-		</div>
+						<div class="mus-card-info">
+							<p class="mus-card-name">{playlist.title}</p>
+							<div class="mus-card-meta">
+								<span class="mus-badge">
+									{tFn(playlist.trackCount === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(playlist.trackCount))}
+								</span>
+							</div>
+						</div>
+					</a>
+				{/each}
+			</div>
+		</section>
 	{/if}
 
-	<a href="/musique/playlists/rock-alternatif-2000s" class="mus-playlist-link">
-		<span class="mus-playlist-icon">🎧</span>
-		<span class="mus-playlist-text">
-			<span class="mus-playlist-title">Rock / Alternative - 2000s</span>
-			<span class="mus-playlist-sub">{tFn('music.playlist.track_count').replace('{{n}}', '50')}</span>
-		</span>
-		<span class="mus-playlist-arrow">→</span>
-	</a>
+	{#if categories.length > 0}
+		<section class="mus-section">
+			{#if playlists.length > 0}<h2 class="mus-section-title">{tFn('music.section_categories')}</h2>{/if}
+			<div class="mus-grid">
+				{#each categories as category (category.id)}
+					<a class="mus-card" href={`/musique/${category.slug}`}>
+						<div class="mus-card-thumb" class:mus-card-thumb--icon={!category.image_url}>
+							{#if category.image_url}
+								<img src={category.image_url} alt="" class="mus-card-img" loading="lazy" />
+							{:else}
+								<svg class="mus-card-fallback-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+								</svg>
+							{/if}
+							<span class="mus-card-play">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+							</span>
+						</div>
+						<div class="mus-card-info">
+							<p class="mus-card-name">{category.title}</p>
+							{#if category.description}
+								<p class="mus-card-desc">{category.description}</p>
+							{/if}
+							<div class="mus-card-meta">
+								<span class="mus-badge">
+									{tFn(category.track_count === 1 ? 'music.track_count_one' : 'music.track_count_plural').replace('{{n}}', String(category.track_count))}
+								</span>
+								{#if category.views > 0}
+									<span class="mus-views">{tFn(category.views === 1 ? 'music.views_one' : 'music.views_plural').replace('{{n}}', String(category.views))}</span>
+								{/if}
+							</div>
+						</div>
+					</a>
+				{/each}
+			</div>
+		</section>
+	{/if}
+
+	{#if categories.length === 0 && playlists.length === 0}
+		<p class="mus-empty">{tFn('music.empty_project')}</p>
+	{/if}
 </div>
 
 <style>
@@ -168,15 +202,28 @@
 		font-size: 0.8125rem;
 	}
 
+	.mus-section { margin-bottom: 32px; }
+	.mus-section-title {
+		font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+		color: rgba(255, 255, 255, 0.4); margin: 0 0 12px;
+	}
+
 	/* ── Grid ─────────────────────────────────────────────────────────────── */
 	.mus-grid {
 		display: grid;
 		/* auto-fit (pas auto-fill) : avec peu de catégories, les cartes
 		   s'étirent pour occuper toute la largeur au lieu de laisser des
 		   colonnes vides sur la droite. */
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 		gap: 1px;
 		background: rgba(255, 255, 255, 0.04);
+	}
+	/* Section playlists : peu d'entrées prevues au depart (une seule au 19/09),
+	   un etirement plein ecran d'une seule carte a l'air casse plutot que sobre.
+	   auto-fill (pas auto-fit) + largeur plafonnee : la carte garde une taille
+	   raisonnable, les colonnes vides restent juste invisibles. */
+	.mus-grid--compact {
+		grid-template-columns: repeat(auto-fill, minmax(220px, 320px));
 	}
 
 	.mus-card {
@@ -195,12 +242,36 @@
 		transform: scale(1.04);
 	}
 
+	.mus-card:hover .mus-card-play {
+		opacity: 1;
+		transform: scale(1);
+	}
+
 	.mus-card-thumb {
 		/* 16/9 plutôt que carré : avec peu de catégories, une carte étirée par
 		   auto-fit reste une belle bannière au lieu d'un carré démesuré. */
+		position: relative;
 		aspect-ratio: 16 / 9;
 		overflow: hidden;
 		background: rgba(255, 255, 255, 0.03);
+	}
+
+	.mus-card-play {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.35);
+		opacity: 0;
+		transform: scale(0.85);
+		transition: opacity 0.15s, transform 0.15s;
+	}
+	.mus-card-play svg {
+		width: 40px;
+		height: 40px;
+		color: #fff;
+		filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
 	}
 
 	.mus-card-thumb--icon {
@@ -269,24 +340,4 @@
 		color: rgba(255, 255, 255, 0.3);
 	}
 
-	.mus-playlist-link {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin-top: 24px;
-		padding: 14px 16px;
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.06);
-		text-decoration: none;
-		transition: background 0.15s, border-color 0.15s;
-	}
-	.mus-playlist-link:hover {
-		background: rgba(139, 92, 246, 0.08);
-		border-color: rgba(139, 92, 246, 0.25);
-	}
-	.mus-playlist-icon { font-size: 1.25rem; flex: none; }
-	.mus-playlist-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-	.mus-playlist-title { font-size: 0.8125rem; font-weight: 600; color: #fff; }
-	.mus-playlist-sub { font-size: 0.6875rem; color: rgba(255, 255, 255, 0.4); }
-	.mus-playlist-arrow { color: rgba(255, 255, 255, 0.3); flex: none; }
 </style>
