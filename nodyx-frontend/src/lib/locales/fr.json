@@ -4640,6 +4640,7 @@
   "music.playlist.empty_favorites": "Aucun favori pour l'instant. Clique sur le cœur d'un morceau pour l'ajouter.",
   "music.playlist.empty_recent": "Rien d'écouté pour l'instant.",
   "music.playlist.empty_search": "Aucun résultat.",
+  "music.playlist.choose_playlist": "Playlist",
   "music.playlist.genre.post_grunge": "Post-grunge",
   "music.playlist.genre.pop_punk": "Pop punk",
   "music.playlist.genre.alt_rock": "Rock alternatif",

@@ -497,13 +497,16 @@
 				</div>
 			</header>
 
-			<div class="pl-tabs">
-				{#each tabs as tab (tab.id)}
-					<button type="button" class="pl-tab" class:active={activeTabId === tab.id} onclick={() => (activeTabId = tab.id)}>
-						{tab.label}
-						{#if tab.tracks.length > 0}<span class="pl-tab-count">{tab.tracks.length}</span>{/if}
-					</button>
-				{/each}
+			<div class="pl-tab-select">
+				<label for="pl-playlist-select" class="pl-tab-select-label">{tFn('music.playlist.choose_playlist')}</label>
+				<div class="pl-tab-select-control">
+					<select id="pl-playlist-select" bind:value={activeTabId}>
+						{#each tabs as tab (tab.id)}
+							<option value={tab.id}>{tab.label} ({tab.tracks.length})</option>
+						{/each}
+					</select>
+					<svg class="pl-tab-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+				</div>
 			</div>
 
 			<div class="pl-search">
@@ -839,17 +842,25 @@
 	.pl-panel-empty svg { width: 36px; height: 36px; }
 	.pl-panel-empty p { font-size: 0.8125rem; margin: 0; }
 
-	.pl-tabs {
-		display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 16px;
+	/* Un seul menu deroulant plutot qu'une rangee de 9 pastilles qui debordent
+	   et se ressemblent toutes : un point de decision clair, pas une liste a
+	   scanner (retour direct de Jonathan, 19/09 : "meme moi j'en fais quoi"). */
+	.pl-tab-select { margin-bottom: 16px; }
+	.pl-tab-select-label {
+		display: block; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+		color: rgba(255,255,255,.35); margin-bottom: 6px;
 	}
-	.pl-tab {
-		flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 999px;
-		background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); color: rgba(255,255,255,.55);
-		font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .12s, color .12s;
+	.pl-tab-select-control { position: relative; }
+	.pl-tab-select-control select {
+		width: 100%; appearance: none; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+		border-radius: 8px; padding: 10px 40px 10px 14px; color: #fff; font-size: 0.875rem; font-weight: 600; cursor: pointer;
 	}
-	.pl-tab:hover { color: #fff; }
-	.pl-tab.active { background: rgba(139, 92, 246, 0.16); border-color: rgba(139, 92, 246, 0.4); color: #fff; }
-	.pl-tab-count { font-size: 0.625rem; opacity: .6; }
+	.pl-tab-select-control select:focus { outline: none; border-color: rgba(139, 92, 246, 0.5); }
+	.pl-tab-select-control select option { background: #14121a; color: #fff; }
+	.pl-tab-select-chevron {
+		position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px;
+		color: rgba(255,255,255,.4); pointer-events: none;
+	}
 
 	.pl-empty-tab { font-size: 0.8125rem; color: rgba(255,255,255,.35); padding: 24px 4px; text-align: center; }
 
