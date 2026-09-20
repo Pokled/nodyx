@@ -282,10 +282,11 @@ export default async function musicRoutes(app: FastifyInstance) {
   app.post('/tracks', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
     const body = request.body as {
       category_id?: string; title?: string; description?: string
-      audio_asset_id?: string; image_asset_id?: string; duration_seconds?: number
+      source_type?: string; audio_asset_id?: string; youtube_id?: string; artist?: string; genre?: string
+      image_asset_id?: string; duration_seconds?: number
     }
-    if (!body.category_id || !body.audio_asset_id) {
-      return reply.code(400).send({ error: 'category_id and audio_asset_id are required', code: 'MISSING_FIELDS' })
+    if (!body.category_id) {
+      return reply.code(400).send({ error: 'category_id is required', code: 'MISSING_FIELDS' })
     }
     if (!body.title || body.title.trim().length < 1 || body.title.length > 150) {
       return reply.code(400).send({ error: 'title must be 1 to 150 characters', code: 'INVALID_TITLE' })
@@ -293,6 +294,29 @@ export default async function musicRoutes(app: FastifyInstance) {
     if (body.description !== undefined && body.description.length > 500) {
       return reply.code(400).send({ error: 'description must be 500 characters or fewer', code: 'INVALID_DESCRIPTION' })
     }
+
+    // Deux sources exclusives : un fichier uploade (comportement historique,
+    // 'upload' par defaut si non precise pour ne pas casser d'appelant
+    // existant) ou un lien YouTube (playlists, cf migration 125). Jamais les
+    // deux, jamais aucun des deux.
+    const sourceType = body.source_type === 'youtube' ? 'youtube' : 'upload'
+
+    if (sourceType === 'upload') {
+      if (!body.audio_asset_id) {
+        return reply.code(400).send({ error: 'audio_asset_id is required for an uploaded track', code: 'MISSING_FIELDS' })
+      }
+    } else {
+      if (!body.youtube_id || !/^[A-Za-z0-9_-]{11}$/.test(body.youtube_id)) {
+        return reply.code(400).send({ error: 'youtube_id must be a valid 11-character YouTube video id', code: 'INVALID_YOUTUBE_ID' })
+      }
+      if (!body.artist || body.artist.trim().length < 1 || body.artist.length > 120) {
+        return reply.code(400).send({ error: 'artist must be 1 to 120 characters for a YouTube track', code: 'INVALID_ARTIST' })
+      }
+    }
+    if (body.genre !== undefined && body.genre.length > 30) {
+      return reply.code(400).send({ error: 'genre must be 30 characters or fewer', code: 'INVALID_GENRE' })
+    }
+
     const category = await MusicCategoryModel.findById(body.category_id)
     if (!category) return reply.code(404).send({ error: 'Category not found', code: 'NOT_FOUND' })
 
@@ -300,7 +324,11 @@ export default async function musicRoutes(app: FastifyInstance) {
       category_id:       body.category_id,
       title:             body.title.trim(),
       description:       body.description?.trim() || null,
-      audio_asset_id:    body.audio_asset_id,
+      source_type:       sourceType,
+      audio_asset_id:    sourceType === 'upload' ? body.audio_asset_id : null,
+      youtube_id:        sourceType === 'youtube' ? body.youtube_id : null,
+      artist:            sourceType === 'youtube' ? body.artist!.trim() : null,
+      genre:             body.genre?.trim() || null,
       image_asset_id:    body.image_asset_id || null,
       duration_seconds:  Number.isFinite(body.duration_seconds) ? body.duration_seconds : null,
     })
@@ -309,12 +337,21 @@ export default async function musicRoutes(app: FastifyInstance) {
 
   app.patch('/tracks/:id', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const body = request.body as { title?: string; description?: string | null; image_asset_id?: string | null; position?: number }
+    const body = request.body as {
+      title?: string; description?: string | null; image_asset_id?: string | null
+      artist?: string | null; genre?: string | null; position?: number
+    }
     if (body.title !== undefined && (body.title.trim().length < 1 || body.title.length > 150)) {
       return reply.code(400).send({ error: 'title must be 1 to 150 characters', code: 'INVALID_TITLE' })
     }
     if (body.description !== undefined && body.description !== null && body.description.length > 500) {
       return reply.code(400).send({ error: 'description must be 500 characters or fewer', code: 'INVALID_DESCRIPTION' })
+    }
+    if (body.artist !== undefined && body.artist !== null && body.artist.length > 120) {
+      return reply.code(400).send({ error: 'artist must be 120 characters or fewer', code: 'INVALID_ARTIST' })
+    }
+    if (body.genre !== undefined && body.genre !== null && body.genre.length > 30) {
+      return reply.code(400).send({ error: 'genre must be 30 characters or fewer', code: 'INVALID_GENRE' })
     }
     const track = await MusicTrackModel.update(id, body)
     if (!track) return reply.code(404).send({ error: 'Track not found', code: 'NOT_FOUND' })

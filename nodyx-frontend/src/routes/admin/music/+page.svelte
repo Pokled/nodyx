@@ -15,7 +15,30 @@
 	}
 	interface Track {
 		id: string; category_id: string; title: string; description: string | null;
-		audio_url: string; image_url: string | null; position: number; duration_seconds: number | null;
+		source_type?: 'upload' | 'youtube'; audio_url: string | null; youtube_id?: string | null;
+		artist?: string | null; genre?: string | null;
+		image_url: string | null; position: number; duration_seconds: number | null;
+	}
+
+	// Accepte un id nu ou n'importe quel format d'URL YouTube courant : coller
+	// le lien tel quel depuis la barre d'adresse doit marcher sans manipulation.
+	function extractYoutubeId(input: string): string | null {
+		const trimmed = input.trim();
+		if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
+		try {
+			const url = new URL(trimmed);
+			if (url.hostname.includes('youtu.be')) {
+				const id = url.pathname.slice(1);
+				return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+			}
+			if (url.hostname.includes('youtube.com')) {
+				const v = url.searchParams.get('v');
+				if (v && /^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+				const m = url.pathname.match(/\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})/);
+				if (m) return m[1];
+			}
+		} catch { /* pas une URL valide, tant pis */ }
+		return null;
 	}
 
 	function formatDuration(seconds: number | null): string {
@@ -267,10 +290,17 @@
 	}
 
 	// ── Nouveau morceau (par catégorie) ─────────────────────────────────────
-	let newTrackTitle = $state<Record<string, string>>({});
-	let newTrackDesc  = $state<Record<string, string>>({});
-	let newTrackAudio = $state<Record<string, File | null>>({});
-	let newTrackImage = $state<Record<string, File | null>>({});
+	let newTrackTitle  = $state<Record<string, string>>({});
+	let newTrackDesc   = $state<Record<string, string>>({});
+	let newTrackAudio  = $state<Record<string, File | null>>({});
+	let newTrackImage  = $state<Record<string, File | null>>({});
+	// Playlists YouTube (cf SPECS/NODYX_MUSIQUE_PLAYLISTS_CDC.md) : une source
+	// alternative au fichier uploade, jamais les deux a la fois pour un meme
+	// morceau (le serveur refuse la combinaison de toute facon).
+	let newTrackSource = $state<Record<string, 'upload' | 'youtube'>>({});
+	let newTrackYoutube = $state<Record<string, string>>({});
+	let newTrackArtist  = $state<Record<string, string>>({});
+	let newTrackGenre   = $state<Record<string, string>>({});
 
 	// Refs vers les <input type="file"> cachés (un par catégorie ouverte) :
 	// on ouvre le sélecteur nous-mêmes via .click(), plutôt que de compter sur
@@ -285,14 +315,29 @@
 
 	async function addTrack(cat: Category) {
 		const title = (newTrackTitle[cat.id] ?? '').trim();
+		const source = newTrackSource[cat.id] ?? 'upload';
 		const audio = newTrackAudio[cat.id];
-		if (!title || !audio) return;
+		const youtubeId = source === 'youtube' ? extractYoutubeId(newTrackYoutube[cat.id] ?? '') : null;
+		const artist = (newTrackArtist[cat.id] ?? '').trim();
+
+		if (!title) return;
+		if (source === 'upload' && !audio) return;
+		if (source === 'youtube' && (!youtubeId || !artist)) return;
+
 		busy = `add-track-${cat.id}`;
 		errorMsg = null;
 		try {
-			const audioUp = await uploadFile('audio', audio);
+			let audioAssetId: string | undefined;
+			let imageAssetId: string | undefined;
+			let durationSeconds: number | undefined;
+
+			if (source === 'upload') {
+				const audioUp = await uploadFile('audio', audio!);
+				audioAssetId = audioUp.asset_id;
+				durationSeconds = audioUp.duration_seconds ?? undefined;
+			}
 			const image = newTrackImage[cat.id];
-			const imageUp = image ? await uploadFile('image', image) : null;
+			if (image) imageAssetId = (await uploadFile('image', image)).asset_id;
 
 			await api('/tracks', {
 				method: 'POST',
@@ -301,16 +346,23 @@
 					category_id:    cat.id,
 					title,
 					description:    (newTrackDesc[cat.id] ?? '').trim() || undefined,
-					audio_asset_id: audioUp.asset_id,
-					image_asset_id: imageUp?.asset_id,
-					duration_seconds: audioUp.duration_seconds ?? undefined,
+					source_type:    source,
+					audio_asset_id: audioAssetId,
+					youtube_id:     youtubeId ?? undefined,
+					artist:         source === 'youtube' ? artist : undefined,
+					genre:          (newTrackGenre[cat.id] ?? '').trim() || undefined,
+					image_asset_id: imageAssetId,
+					duration_seconds: durationSeconds,
 				}),
 			});
 
-			newTrackTitle = { ...newTrackTitle, [cat.id]: '' };
-			newTrackDesc  = { ...newTrackDesc,  [cat.id]: '' };
-			newTrackAudio = { ...newTrackAudio, [cat.id]: null };
-			newTrackImage = { ...newTrackImage, [cat.id]: null };
+			newTrackTitle   = { ...newTrackTitle,   [cat.id]: '' };
+			newTrackDesc    = { ...newTrackDesc,    [cat.id]: '' };
+			newTrackAudio   = { ...newTrackAudio,   [cat.id]: null };
+			newTrackImage   = { ...newTrackImage,   [cat.id]: null };
+			newTrackYoutube = { ...newTrackYoutube, [cat.id]: '' };
+			newTrackArtist  = { ...newTrackArtist,  [cat.id]: '' };
+			newTrackGenre   = { ...newTrackGenre,   [cat.id]: '' };
 
 			await refreshTracks(cat.id, cat.slug);
 			await refreshCategories();
@@ -738,6 +790,18 @@
 
 						<div class="rounded-lg border border-gray-800 bg-gray-900/60 p-3 space-y-2">
 							<p class="text-xs font-semibold text-indigo-300">{tFn('amusic.add_track')}</p>
+
+							<div class="flex gap-1.5">
+								<button type="button" onclick={() => (newTrackSource = { ...newTrackSource, [cat.id]: 'upload' })}
+									class="mus-source-tab" class:mus-source-tab--active={(newTrackSource[cat.id] ?? 'upload') === 'upload'}>
+									{tFn('amusic.source_upload')}
+								</button>
+								<button type="button" onclick={() => (newTrackSource = { ...newTrackSource, [cat.id]: 'youtube' })}
+									class="mus-source-tab" class:mus-source-tab--active={newTrackSource[cat.id] === 'youtube'}>
+									{tFn('amusic.source_youtube')}
+								</button>
+							</div>
+
 							<input type="text" value={newTrackTitle[cat.id] ?? ''}
 								oninput={(e) => { newTrackTitle = { ...newTrackTitle, [cat.id]: (e.target as HTMLInputElement).value }; }}
 								placeholder={tFn('amusic.track_title_ph')} maxlength="150"
@@ -746,29 +810,53 @@
 								oninput={(e) => { newTrackDesc = { ...newTrackDesc, [cat.id]: (e.target as HTMLInputElement).value }; }}
 								placeholder={tFn('amusic.field_description')} maxlength="500"
 								class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500" />
-							<div class="flex flex-wrap gap-2 items-center">
-								<input bind:this={audioInputRefs[cat.id]} type="file"
-									accept="audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/mp4,audio/flac,audio/x-m4a" class="hidden"
-									onchange={(e) => { newTrackAudio = { ...newTrackAudio, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }} />
-								<button type="button" onclick={() => audioInputRefs[cat.id]?.click()} class="mus-btn-file">
-									<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
-									</svg>
-									<span class="truncate max-w-[14ch]">{newTrackAudio[cat.id]?.name ?? tFn('amusic.audio_file')}</span>
-								</button>
 
-								<input bind:this={imageInputRefs[cat.id]} type="file"
-									accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"
-									onchange={(e) => { newTrackImage = { ...newTrackImage, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }} />
-								<button type="button" onclick={() => imageInputRefs[cat.id]?.click()} class="mus-btn-file">
-									<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-									</svg>
-									<span class="truncate max-w-[14ch]">{newTrackImage[cat.id]?.name ?? tFn('amusic.cover_optional')}</span>
-								</button>
-							</div>
+							{#if (newTrackSource[cat.id] ?? 'upload') === 'youtube'}
+								<input type="text" value={newTrackYoutube[cat.id] ?? ''}
+									oninput={(e) => { newTrackYoutube = { ...newTrackYoutube, [cat.id]: (e.target as HTMLInputElement).value }; }}
+									placeholder={tFn('amusic.youtube_url_ph')}
+									class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500" />
+								<input type="text" value={newTrackArtist[cat.id] ?? ''}
+									oninput={(e) => { newTrackArtist = { ...newTrackArtist, [cat.id]: (e.target as HTMLInputElement).value }; }}
+									placeholder={tFn('amusic.artist_ph')} maxlength="120"
+									class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500" />
+								<input type="text" value={newTrackGenre[cat.id] ?? ''}
+									oninput={(e) => { newTrackGenre = { ...newTrackGenre, [cat.id]: (e.target as HTMLInputElement).value }; }}
+									placeholder={tFn('amusic.genre_optional_ph')} maxlength="30"
+									class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500" />
+								{#if (newTrackYoutube[cat.id] ?? '').trim() && !extractYoutubeId(newTrackYoutube[cat.id])}
+									<p class="text-xs text-red-400">{tFn('amusic.youtube_url_invalid')}</p>
+								{/if}
+							{:else}
+								<div class="flex flex-wrap gap-2 items-center">
+									<input bind:this={audioInputRefs[cat.id]} type="file"
+										accept="audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/mp4,audio/flac,audio/x-m4a" class="hidden"
+										onchange={(e) => { newTrackAudio = { ...newTrackAudio, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }} />
+									<button type="button" onclick={() => audioInputRefs[cat.id]?.click()} class="mus-btn-file">
+										<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+										</svg>
+										<span class="truncate max-w-[14ch]">{newTrackAudio[cat.id]?.name ?? tFn('amusic.audio_file')}</span>
+									</button>
+
+									<input bind:this={imageInputRefs[cat.id]} type="file"
+										accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"
+										onchange={(e) => { newTrackImage = { ...newTrackImage, [cat.id]: (e.target as HTMLInputElement).files?.[0] ?? null }; }} />
+									<button type="button" onclick={() => imageInputRefs[cat.id]?.click()} class="mus-btn-file">
+										<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										<span class="truncate max-w-[14ch]">{newTrackImage[cat.id]?.name ?? tFn('amusic.cover_optional')}</span>
+									</button>
+								</div>
+							{/if}
+
 							<button type="button" onclick={() => addTrack(cat)}
-								disabled={busy === `add-track-${cat.id}` || !(newTrackTitle[cat.id] ?? '').trim() || !newTrackAudio[cat.id]}
+								disabled={busy === `add-track-${cat.id}` ||
+									!(newTrackTitle[cat.id] ?? '').trim() ||
+									((newTrackSource[cat.id] ?? 'upload') === 'upload'
+										? !newTrackAudio[cat.id]
+										: !extractYoutubeId(newTrackYoutube[cat.id] ?? '') || !(newTrackArtist[cat.id] ?? '').trim())}
 								class="mus-btn-primary">
 								{busy === `add-track-${cat.id}` ? tFn('amusic.uploading') : tFn('amusic.add_track')}
 							</button>
@@ -823,6 +911,23 @@
 	}
 	.mus-btn-danger:hover { color: #f87171; background: rgba(248, 113, 113, 0.08); }
 	.mus-btn-danger:disabled { opacity: 0.4; cursor: default; }
+
+	.mus-source-tab {
+		border-radius: 6px;
+		border: 1px solid #374151;
+		background: #1f2937;
+		padding: 4px 10px;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		color: #9ca3af;
+		cursor: pointer;
+		transition: border-color 0.15s, background 0.15s, color 0.15s;
+	}
+	.mus-source-tab--active {
+		border-color: #6366f1;
+		background: rgba(99, 102, 241, 0.15);
+		color: #fff;
+	}
 
 	.mus-btn-file {
 		display: inline-flex;

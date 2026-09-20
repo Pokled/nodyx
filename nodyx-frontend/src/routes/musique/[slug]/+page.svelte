@@ -9,7 +9,11 @@
 
 	interface Comment { id: string; author_name: string; body: string; created_at: string }
 	interface Category { id: string; slug: string; title: string; description: string | null; license_note: string | null; image_url: string | null; views: number }
-	interface Track { id: string; title: string; description: string | null; audio_url: string; image_url: string | null; likes: number; duration_seconds: number | null; comments: Comment[] }
+	interface Track {
+		id: string; title: string; description: string | null;
+		source_type?: 'upload' | 'youtube'; audio_url: string | null; youtube_id?: string | null; artist?: string | null;
+		image_url: string | null; likes: number; duration_seconds: number | null; comments: Comment[]
+	}
 
 	function formatDuration(seconds: number | null): string {
 		if (!seconds || seconds <= 0) return '';
@@ -219,7 +223,7 @@
 					<div class="mus-track-main">
 						<div class="mus-track-head">
 							<p class="mus-track-title">
-								{track.title}
+								{#if track.artist}<span class="mus-track-artist">{track.artist}</span> · {/if}{track.title}
 								{#if formatDuration(track.duration_seconds)}
 									<span class="mus-track-duration">{formatDuration(track.duration_seconds)}</span>
 								{/if}
@@ -256,12 +260,22 @@
 						{#if track.description}
 							<p class="mus-track-desc">{track.description}</p>
 						{/if}
-						<nodyx-audio-player
-							src={track.audio_url}
-							track-title={track.title}
-							cover={track.image_url ?? category.image_url ?? undefined}
-							download="1"
-						></nodyx-audio-player>
+						{#if track.source_type === 'youtube' && track.youtube_id}
+							<div class="mus-track-yt">
+								<iframe
+									src={`https://www.youtube-nocookie.com/embed/${track.youtube_id}`}
+									title={track.artist ? `${track.artist} - ${track.title}` : track.title}
+									allow="encrypted-media" allowfullscreen loading="lazy"
+								></iframe>
+							</div>
+						{:else}
+							<nodyx-audio-player
+								src={track.audio_url}
+								track-title={track.title}
+								cover={track.image_url ?? category.image_url ?? undefined}
+								download="1"
+							></nodyx-audio-player>
+						{/if}
 
 						<div class="mus-comments">
 							{#if commentError}
@@ -470,6 +484,19 @@
 		margin-left: 8px;
 		font-variant-numeric: tabular-nums;
 	}
+
+	.mus-track-artist { color: rgba(255, 255, 255, 0.5); font-weight: 500; }
+
+	.mus-track-yt {
+		position: relative;
+		width: 100%;
+		max-width: 480px;
+		aspect-ratio: 16 / 9;
+		background: #000;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+	.mus-track-yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
 
 	.mus-track-actions {
 		flex: none;
