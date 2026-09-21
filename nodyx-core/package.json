@@ -61,7 +61,7 @@
     "@vitest/coverage-v8": "^4.1.9",
     "ts-node": "10.9.2",
     "typescript": "7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.1"
   },
   "optionalDependencies": {
     "re2": "^1.25.0"
