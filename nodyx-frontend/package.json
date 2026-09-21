@@ -29,7 +29,7 @@
     "test:responsive:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "@iconify-json/hugeicons": "^1.2.34",
+    "@iconify-json/hugeicons": "^1.2.35",
     "@playwright/test": "^1.63.0",
     "@sveltejs/adapter-auto": "7.0.1",
     "@sveltejs/adapter-node": "5.5.7",
@@ -43,7 +43,7 @@
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
     "vite": "^7.3.6",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.1"
   },
   "dependencies": {
     "@iconify/svelte": "^5.2.2",
