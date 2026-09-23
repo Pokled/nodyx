@@ -28,6 +28,8 @@
 	import { get } from 'svelte/store';
 	import { voiceStore, voiceChannelMembersStore, voiceEventsStore, screenShareStore, remoteScreenStore } from '$lib/voice';
 	import { locale, t, LOCALES, type Locale } from '$lib/i18n';
+	import { registerPublicKey } from '$lib/e2e';
+	import { shouldOfferRestore } from '$lib/e2eBackupClient';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 	import { activeCommunityNameStore, panelCollapsedStore, membersCollapsedStore } from '$lib/communityStore';
 	import { playMention, playDm } from '$lib/sounds';
@@ -240,6 +242,32 @@
 		if (data.user && data.token && !data.user.is_banned) {
 			// SSR provided a valid session — use it directly (skip if banned)
 			initSocket(data.token, data.unreadCount ?? 0)
+
+			// Clé de chiffrement DM : enregistrée ici, sur TOUTE page, pas
+			// seulement en ouvrant une conversation. Avant ce correctif, la
+			// toute première fois que deux personnes qui ne s'étaient jamais
+			// écrit s'envoyaient un message, si l'un des deux n'avait encore
+			// JAMAIS ouvert ses messages, sa clé n'existait pas encore côté
+			// serveur — le premier message partait alors sans chiffrement
+			// (repli volontaire, rien ne se perdait, mais ce n'était pas
+			// protégé). En l'enregistrant dès la connexion, elle est prête
+			// avant même qu'on en ait besoin.
+			//
+			// Garde IMPORTANTE : sur un appareil neuf avec une sauvegarde
+			// existante côté serveur, `registerPublicKey` génèrerait sinon
+			// une clé fraîche et l'enregistrerait AVANT que l'utilisateur
+			// n'ait vu la proposition de restauration (elle ne vit que sur
+			// la page d'une conversation) — l'identité restaurable serait
+			// écrasée par une neuve, en silence, dès la première page visitée
+			// après une connexion. `shouldOfferRestore` protège exactement
+			// contre ça : si un backup existe et qu'aucune clé locale n'est
+			// présente, on laisse la main à la page DM, on n'enregistre rien.
+			// Ne bloque rien (pas de await sur le tout) : une lenteur ici ne
+			// doit jamais retarder l'affichage de la page.
+			const e2eToken = data.token
+			shouldOfferRestore(e2eToken).then(offerRestore => {
+				if (!offerRestore) registerPublicKey(e2eToken)
+			})
 
 			// Optimistically add current user to the online store immediately.
 			// presence:init will override with server-authoritative data once the

@@ -51,6 +51,7 @@ import { registerOverlayNamespace } from './socket/overlay'
 import { runMigrations }    from './scripts/migrate'
 import { loadSettingsIntoEnv } from './config/settings'
 import { initOctoGuard }    from './services/octoguard'
+import { ensureEsyKeyExists } from './utils/esyKeyGen'
 import { octoguardAdminPlugin, reportsPublicPlugin } from './routes/octoguard'
 import { startScheduler }  from './scheduler'
 
@@ -262,6 +263,19 @@ const start = async () => {
   }
 
   await runMigrations()
+
+  // ESY key (DM chiffrés) : générée ici si absente. Jusqu'au 23/09, seul un
+  // `npm run generate-esy` manuel (jamais documenté, jamais appelé par un
+  // installeur) créait ce fichier — résultat en prod : nodyx.org l'avait
+  // (générée à la main), mais toute instance installée depuis tournait sans,
+  // DM chiffrés cassés en silence (issue #752). Idempotente : ne touche
+  // jamais une clé existante.
+  {
+    const esy = ensureEsyKeyExists()
+    if (esy.created) {
+      console.log(`[ESY] Clé instance.esy générée (première utilisation) — ${esy.path} (fingerprint ${esy.fingerprint})`)
+    }
+  }
 
   // Settings admin (spec 017) : injecte les réglages DB dans process.env APRÈS
   // les migrations (la table existe) et AVANT que quoi que ce soit les lise au

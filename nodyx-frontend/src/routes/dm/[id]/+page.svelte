@@ -106,6 +106,10 @@
 	let sendGuardAck  = $state(false)
 	// Des messages n'ont pas pu être déchiffrés (clé locale ne correspond pas)
 	let decryptFailed = $derived(messages.some((m) => m._decryptFailed))
+	// Échec d'envoi (ex: chiffrement E2E impossible — instance.esy absent) :
+	// avant le 23/09 cette erreur partait dans le vide (try/finally sans catch),
+	// le champ était déjà vidé, l'utilisateur ne voyait RIEN (issue #752).
+	let sendError = $state('')
 
 	function dismissE2eBanner() {
 		showE2eBanner = false
@@ -130,8 +134,22 @@
 				return
 			}
 
-			// 2. Récupérer la clé publique du peer
+			// 1bis. Deux inconnus qui s'écrivent pour la toute première fois peuvent
+			// arriver ici en même temps : générer une paire ECDH + l'enregistrer
+			// prend, ici mesuré, jusqu'à quelques secondes (pas instantané). Sans
+			// ce filet, celui qui ouvre la conversation en second voit le peer
+			// pas encore prêt, tombe en repli texte-clair, et n'en ressort plus
+			// (rien ne redéclenche initE2E ensuite). Un seul nouvel essai après
+			// un court délai couvre ce cas réel — au-delà, le repli reste légitime
+			// (l'autre n'a peut-être vraiment pas encore de clé).
+
+			// 2. Récupérer la clé publique du peer — un essai, puis un seul retry
+			// après 1,5s si absent (cf. note 1bis ci-dessus).
 			peerPublicKey = await fetchPeerPublicKey(conversation.other_username, data.token)
+			if (!peerPublicKey) {
+				await new Promise(r => setTimeout(r, 1500))
+				peerPublicKey = await fetchPeerPublicKey(conversation.other_username, data.token)
+			}
 
 			// 3. Charger la clé ESY de l'instance
 			try {
@@ -516,7 +534,14 @@
 				messages = messages.map(m => m.id === editingMsgId
 					? { ...m, content: ciphertext, _decrypted: content, edited_at: new Date().toISOString() }
 					: m)
-			} catch { /* échec chiffrement — annuler */ }
+			} catch (err) {
+				// Échec de chiffrement (ex: instance.esy absent) : on garde la boîte
+				// d'édition ouverte avec le texte tapé plutôt que de le perdre en
+				// silence (même défaut que sendMessage — cf issue #752).
+				console.error('[DM] saveEdit encryptDM failed:', err)
+				sendError = tFn('dm.err.edit_failed')
+				return
+			}
 		} else {
 			if (sock) sock.emit('dm:edit', { msgId: editingMsgId, content })
 		}
@@ -914,7 +939,7 @@
 		}
 
 		sendingMsg = true
-		messageInput = ''
+		sendError = ''
 		// On capture le replyingTo AVANT le clear (pour l'envoyer avec le message)
 		const replyId = replyingTo?.id ?? null
 		replyingTo = null
@@ -931,7 +956,12 @@
 					await new Promise(r => setTimeout(r, 350))
 				}
 
+				// Vidé seulement ICI, une fois le chiffrement réussi — avant le
+				// 23/09 le champ était vidé AVANT ce bloc, donc un échec de
+				// chiffrement (ex: instance.esy absent, cf issue #752) faisait
+				// disparaître le message sans jamais l'envoyer ni prévenir personne.
 				const { ciphertext, nonce } = await encryptDM(content, peerPublicKey, data.token)
+				messageInput = ''
 				sendingVisual = null
 
 				if (sock) {
@@ -945,10 +975,15 @@
 				}
 			} else {
 				// ── Fallback texte clair ────────────────────────────────────────
+				messageInput = ''
 				if (sock) {
 					sock.emit('dm:send', { conversationId, content, reply_to_id: replyId })
 				}
 			}
+		} catch (err) {
+			console.error('[DM] sendMessage failed:', err)
+			sendError = tFn('dm.err.send_failed')
+			replyingTo = replyId ? messages.find(m => m.id === replyId) ?? null : null
 		} finally {
 			sendingMsg = false
 			sendingVisual = null
@@ -1722,6 +1757,21 @@
 			{#if sendingVisual}
 				<div class="mb-2 px-3 py-1.5 rounded-xl bg-indigo-900/20 border border-indigo-500/15 text-xs font-mono text-indigo-300/60 truncate tracking-widest animate-pulse">
 					{sendingVisual}
+				</div>
+			{/if}
+			<!-- Échec d'envoi/édition (ex: chiffrement E2E indisponible) : visible,
+			     jamais silencieux — cf issue #752. -->
+			{#if sendError}
+				<div class="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-900/20 border border-red-500/25 text-xs text-red-300">
+					<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+					</svg>
+					<span class="flex-1">{sendError}</span>
+					<button type="button" onclick={() => sendError = ''} class="shrink-0 opacity-70 hover:opacity-100" aria-label={tFn('common.close')}>
+						<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+							<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+						</svg>
+					</button>
 				</div>
 			{/if}
 			<div class="flex items-end gap-3 bg-white/[0.04] border border-white/[0.07] rounded-2xl px-4 py-3
