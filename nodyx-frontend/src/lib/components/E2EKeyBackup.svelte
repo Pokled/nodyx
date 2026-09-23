@@ -16,8 +16,14 @@
 		onSkip?: () => void
 	} = $props()
 
+	// Le code de récupération est TOUJOURS généré par la machine, jamais tapé
+	// par l'utilisateur : plus de champ à remplir, plus de second champ pour
+	// confirmer, plus de risque de faute de frappe qui invaliderait le backup
+	// sans qu'on le sache avant d'en avoir besoin. Simplification demandée par
+	// Jonathan après le signalement "l'utilisation n'est pas claire... la
+	// passe phrase, bref" — le mécanisme ne change pas (PBKDF2 + AES-GCM côté
+	// client, serveur aveugle), seule la façon de l'obtenir change.
 	let phrase  = $state('')
-	let phrase2 = $state('')
 	let busy    = $state(false)
 	let error   = $state('')
 	let success = $state('')
@@ -27,7 +33,6 @@
 	let canBackup    = $state(true)
 	let ready        = $state(false)
 	let confirmRegen = $state(false)
-	let showPhrase   = $state(false)
 	let copied       = $state(false)
 	// Restauration depuis les réglages (device qui a déjà une clé différente)
 	let restoreMode  = $state(false)
@@ -50,8 +55,8 @@
 	}
 
 	function suggestPhrase() {
-		const p = generateRecoveryPhrase()
-		phrase = p; phrase2 = p; showPhrase = true; error = ''; copied = false
+		phrase = generateRecoveryPhrase()
+		error = ''; copied = false
 	}
 
 	async function copyPhrase() {
@@ -62,6 +67,9 @@
 		if (mode === 'manage') {
 			backupExists = await hasServerBackup(token)
 			canBackup    = await canBackupLocalKey()
+			// Premier réglage : un code est déjà prêt à l'écran dès l'ouverture,
+			// zéro action avant de pouvoir copier + activer.
+			if (!backupExists && canBackup) phrase = generateRecoveryPhrase()
 		}
 		ready = true
 	})
@@ -69,14 +77,13 @@
 	async function setupBackup() {
 		error = ''; success = ''
 		if (phrase.length < 8) { error = tFn('e2ebackup.err.too_short'); return }
-		if (!showPhrase && phrase !== phrase2) { error = tFn('e2ebackup.err.mismatch'); return }
 		busy = true
 		try {
 			const ok = await uploadKeyBackup(token, phrase)
 			if (ok) {
 				success = tFn('e2ebackup.msg.enabled')
 				backupExists = true
-				phrase = ''; phrase2 = ''
+				phrase = ''
 				onDone?.()
 			} else {
 				error = tFn('e2ebackup.err.save_failed')
@@ -203,39 +210,29 @@
 				</div>
 			{/if}
 		{:else if ready}
-			<div class="kb-gen">
-				<button class="kb-btn-soft" type="button" onclick={suggestPhrase}>{tFn('e2ebackup.btn.suggest')}</button>
-				{#if phrase && showPhrase}
+			{#if phrase}
+				<!-- Code déjà prêt à l'écran (premier réglage, ou régénération demandée) :
+				     zéro saisie, on copie puis on active. -->
+				<div class="kb-code-box">
+					<code class="kb-code">{phrase}</code>
 					<button class="kb-copy" type="button" onclick={copyPhrase}>{copied ? tFn('e2ebackup.btn.copied') : tFn('e2ebackup.btn.copy')}</button>
-				{/if}
-			</div>
-			<div class="kb-examples">
-				{@html tFn('e2ebackup.examples')}
-			</div>
-
-			<div class="kb-field">
-				<input class="kb-input" type={showPhrase ? 'text' : 'password'} placeholder={tFn('e2ebackup.ph.your_phrase')}
-					bind:value={phrase} autocomplete="new-password" />
-				<button class="kb-eye" type="button" onclick={() => showPhrase = !showPhrase}>{showPhrase ? tFn('e2ebackup.btn.hide') : tFn('e2ebackup.btn.show')}</button>
-			</div>
-			{#if !showPhrase}
-				<input class="kb-input" type="password" placeholder={tFn('e2ebackup.ph.confirm')}
-					bind:value={phrase2} autocomplete="new-password" />
-			{/if}
-
-			{#if error}<div class="kb-error">{error}</div>{/if}
-			{#if success}<div class="kb-success">{success}</div>{/if}
-			<div class="kb-actions">
-				<button class="kb-btn-primary" type="button" onclick={setupBackup} disabled={busy}>
-					{busy ? '…' : backupExists ? tFn('e2ebackup.btn.update') : tFn('e2ebackup.btn.enable')}
-				</button>
-				{#if backupExists}
+				</div>
+				<div class="kb-hint">{tFn('e2ebackup.hint.tip')}</div>
+				{#if error}<div class="kb-error">{error}</div>{/if}
+				<div class="kb-actions">
+					<button class="kb-btn-primary" type="button" onclick={setupBackup} disabled={busy}>
+						{busy ? '…' : backupExists ? tFn('e2ebackup.btn.update') : tFn('e2ebackup.btn.enable')}
+					</button>
+					<button class="kb-btn-ghost" type="button" onclick={suggestPhrase} disabled={busy}>{tFn('e2ebackup.btn.regenerate')}</button>
+				</div>
+			{:else}
+				<!-- Backup déjà actif, rien en cours : juste la possibilité d'en changer. -->
+				{#if success}<div class="kb-success">{success}</div>{/if}
+				<div class="kb-actions">
+					<button class="kb-btn-soft" type="button" onclick={suggestPhrase}>{tFn('e2ebackup.btn.new_code')}</button>
 					<button class="kb-btn-danger" type="button" onclick={removeBackup} disabled={busy}>{tFn('e2ebackup.btn.delete')}</button>
-				{/if}
-			</div>
-			<div class="kb-hint">
-				{tFn('e2ebackup.hint.tip')}
-			</div>
+				</div>
+			{/if}
 		{/if}
 	{/if}
 </div>
@@ -278,21 +275,17 @@
 	.kb-info-row span:first-child { flex-shrink: 0; }
 	.kb-info-row :global(strong) { color: #e0e7ff; }
 	.kb-note { font-size: 13px; color: #cbd5e1; line-height: 1.45; }
-	.kb-gen { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 	.kb-btn-soft { padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
 		color: #c7d2fe; background: rgb(var(--nx-accent-rgb) / .12); border: 1px solid rgb(var(--nx-accent-rgb) / .25);
 		transition: background .15s; }
 	.kb-btn-soft:hover { background: rgb(var(--nx-accent-rgb) / .2); }
-	.kb-copy { padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
+	.kb-code-box { display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+		background: rgba(15,23,42,.7); border: 1px solid rgb(var(--nx-accent-rgb) / .3); border-radius: 12px; }
+	.kb-code { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 14px; font-weight: 600; color: #e0e7ff; letter-spacing: .01em;
+		white-space: pre-wrap; word-break: break-word; user-select: all; }
+	.kb-copy { flex-shrink: 0; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
 		color: #cbd5e1; background: transparent; border: 1px solid rgba(148,163,184,.3); }
-	.kb-examples { font-size: 12px; color: #94a3b8; line-height: 1.5; }
-	.kb-examples :global(code) { background: rgba(15,23,42,.7); border: 1px solid rgba(148,163,184,.18);
-		border-radius: 6px; padding: 1px 6px; color: #c7d2fe; font-size: 12px; }
-	.kb-field { display: flex; gap: 8px; align-items: stretch; }
-	.kb-field .kb-input { flex: 1; }
-	.kb-eye { flex-shrink: 0; padding: 0 12px; border-radius: 10px; cursor: pointer;
-		font-size: 13px; font-weight: 600; color: #94a3b8;
-		background: transparent; border: 1px solid rgba(148,163,184,.2); }
 	.kb-restore-box { display: flex; flex-direction: column; gap: 10px;
 		background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.2);
 		border-radius: 12px; padding: 12px 14px; }
