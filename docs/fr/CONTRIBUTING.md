@@ -1,4 +1,4 @@
-# NODYX — Contributing Guide
+# NODYX : Contributing Guide
 ### Bienvenue dans la communaute Nodyx
 
 ---
