@@ -24,8 +24,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// actually ship, otherwise a crafted cookie could break out of the attribute (XSS).
 	const locale = (isKnownLocale(cookieLocale) ? cookieLocale : getLocaleFromAcceptLanguage(acceptLang)) || 'fr';
 
+	// Même précaution que le cookie de locale ci-dessus : n'accepter que les
+	// deux valeurs connues, jamais injecter la valeur brute du cookie dans le HTML.
+	const cookieTheme = event.cookies.get('nodyx_theme');
+	const themeAttr = cookieTheme === 'light' ? ' data-theme="light"'
+		: cookieTheme === 'dark' ? ' data-theme="dark"'
+		: '';
+
+	// replaceAll (pas replace) : un %lang% ou %theme-attr% pris dans un
+	// commentaire HTML plus haut dans app.html gagnerait sinon le vrai
+	// marqueur du tag <html>, puisque replace() ne touche que la première
+	// occurrence (piège vécu le 23/09 avec %theme-attr% dans son propre
+	// commentaire d'explication).
 	const response = await resolve(event, {
-		transformPageChunk: ({ html }) => html.replace('%lang%', locale)
+		transformPageChunk: ({ html }) => html.replaceAll('%lang%', locale).replaceAll('%theme-attr%', themeAttr)
 	});
 	if (NO_CACHE_PATHS.has(event.url.pathname)) {
 		response.headers.set('cache-control', 'no-cache, no-store, must-revalidate');

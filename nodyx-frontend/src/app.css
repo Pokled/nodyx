@@ -45,6 +45,71 @@ html, body {
   --nx-cyan-rgb:        6 182 212;    /* cyan-500 */
 }
 
+/* ── Contenant, nouvelle génération (SPECS/NODYX_CONTENANT_DESIGN_CDC.md) ───
+   Tokens sémantiques du chantier header/sidebars. Volontairement distincts
+   des --nx-accent* ci-dessus (encore utilisés par ~80 fichiers ailleurs dans
+   l'app) : rien ici ne doit changer le rendu du reste du site tant que la
+   migration du CDC n'est pas arrivée à ces fichiers-là.
+
+   Premier essai (18/09) : neutres ET accent dans la même famille chaude,
+   jugé "marron" par Jonathan à raison, rien ne ressortait. Corrigé (19/09) :
+   les neutres redeviennent proches du vrai noir/blanc, seul l'accent porte
+   la couleur, un ambre franc plutôt que le bourbeux d'avant.
+
+   Validation en cours en clair sur vieuxlooters.nodyx.org : `data-theme`
+   forcé à "light" plus bas tant qu'aucun bouton de bascule n'existe
+   (étape suivante du CDC). La branche sombre est déjà posée proprement en
+   dessous pour ne pas la refaire à la légère le jour venu. */
+:root {
+  --nx-bg:                #faf8f4;
+  --nx-surface:           #ffffff;
+  --nx-surface-raised:    #ffffff;
+  --nx-border:            #e6e0d3;
+  --nx-border-soft:       #eee9dd;
+  --nx-text:              #1c1a16;
+  --nx-text-muted:        #6b6459;
+  --nx-text-faint:        #98917f;
+  --nx-header-accent:        #c67c00;
+  --nx-header-accent-strong: #a66700;
+  --nx-header-accent-soft:   rgb(198 124 0 / 0.12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --nx-bg:                #100e0b;
+    --nx-surface:           #17140f;
+    --nx-surface-raised:    #1e1a14;
+    --nx-border:            #2c261c;
+    --nx-border-soft:       #221d16;
+    --nx-text:              #f5f2ec;
+    --nx-text-muted:        #a89f8d;
+    --nx-text-faint:        #6e6759;
+    --nx-header-accent:        #ffb020;
+    --nx-header-accent-strong: #e89900;
+    --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
+  }
+}
+:root[data-theme="dark"] {
+  --nx-bg:                #100e0b;
+  --nx-surface:           #17140f;
+  --nx-surface-raised:    #1e1a14;
+  --nx-border:            #2c261c;
+  --nx-border-soft:       #221d16;
+  --nx-text:              #f5f2ec;
+  --nx-text-muted:        #a89f8d;
+  --nx-text-faint:        #6e6759;
+  --nx-header-accent:        #ffb020;
+  --nx-header-accent-strong: #e89900;
+  --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
+}
+/* Mascotte poulpe (nodyx-octopus.png) : PNG blanc plein, neutre par choix
+   (cf SPECS/NODYX_CONTENANT_DESIGN_CDC.md, une mascotte ne doit pas rentrer
+   en concurrence avec la couleur d'état actif). Inversé en clair. */
+.nx-mark-octopus { filter: none; }
+:root:not([data-theme="dark"]) .nx-mark-octopus { filter: invert(1) brightness(0.15); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .nx-mark-octopus { filter: none; }
+}
+
 /* ── Theme CSS vars (définis dynamiquement par +layout.svelte via appVars) ──
    Portée actuelle :
      · Layout chrome (nav, galaxy bar, members bar, bottom nav) ✓
