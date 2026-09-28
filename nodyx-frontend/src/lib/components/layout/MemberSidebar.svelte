@@ -123,7 +123,7 @@
 	}
 </script>
 
-<aside class="hidden xl:flex members members-c"
+<aside class="hidden xl:flex members members-c nx-plate"
        class:collapsed={membersCollapsed}
        class:has-bg={sidebarBgVisible}
        id="members-c"
@@ -362,14 +362,16 @@
 </aside>
 
 <style>
+	/* 28/09 : plaque flottante en verre (.nx-plate, app.css), sous la barre
+	   du haut et décollée du bord droit. Un fond d'image posé par l'admin
+	   reste clippé par les coins arrondis (overflow: hidden plus bas). */
 	.members-c {
 	  position: fixed;
-	  right: 0;
-	  top: 48px;
-	  bottom: 0;
+	  right: var(--shell-gap);
+	  top: calc(var(--shell-gap) * 2 + var(--shell-head-h));
+	  bottom: var(--shell-gap);
 	  width: var(--right-panel-width, 220px);
-	  background: var(--nx-surface);
-	  border-left: 1px solid var(--nx-border);
+	  font-family: var(--font-shell);
 	  /* PAS de `display: flex` ici : ce sélecteur scopé (spécificité + hash Svelte)
 	     écrasait le `hidden` de Tailwind et la sidebar restait visible sous 1280px,
 	     superposée au contenu sur mobile. On laisse Tailwind piloter l'affichage
@@ -416,7 +418,7 @@
 
 	.members-c.collapsed {
 	  width: 0;
-	  border-left-color: transparent;
+	  opacity: 0;
 	  pointer-events: none;
 	}
 

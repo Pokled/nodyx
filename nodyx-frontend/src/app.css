@@ -110,6 +110,116 @@ html, body {
   :root:not([data-theme="light"]) .nx-mark-octopus { filter: none; }
 }
 
+/* ── Contenant flottant (28/09) ─────────────────────────────────────────────
+   Direction demandée par Jonathan : « Discord, mais en version folle
+   Apple/iPhone ». Même structure (rail, canaux, contenu, membres), mais les
+   panneaux ne sont plus des colonnes collées aux bords : ce sont des plaques
+   posées sur le papier peint de l'instance (sa propre bannière, floutée), en
+   verre dépoli, comme la barre latérale d'iPadOS/macOS.
+
+   Tout passe par ces variables. Sous 1024px, --shell-gap vaut 0 : le tiroir
+   mobile et la barre basse gardent EXACTEMENT leur comportement actuel. */
+:root {
+  --shell-gap:    0px;
+  --shell-radius: 0px;
+  --shell-rail-w: 56px;
+  --shell-head-h: 48px;
+  /* Courbe unique du contenant (Vaul, Emil Kowalski) + un ressort qui
+     dépasse légèrement pour ce qui « se pose » (pastille active). */
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.36, 0.64, 1);
+  /* Typo système : SF Pro sur Apple, Segoe sur Windows, sans téléchargement.
+     Le nom de communauté prend la version arrondie quand elle existe. */
+  --font-shell:         -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-shell-rounded: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif;
+
+  /* Verre (clair par défaut) */
+  --nx-glass:        color-mix(in srgb, var(--nx-surface) 72%, transparent);
+  --nx-glass-strong: color-mix(in srgb, var(--nx-surface) 86%, transparent);
+  --nx-glass-rim:    rgb(255 255 255 / 0.75);
+  --nx-glass-edge:   rgb(0 0 0 / 0.07);
+  --nx-glass-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -8px rgb(60 40 10 / 0.18), 0 24px 60px -20px rgb(60 40 10 / 0.22);
+  --nx-wallpaper-filter: blur(22px) saturate(1.3) brightness(1.1);
+  --nx-wallpaper-veil:   rgb(250 248 244 / 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --nx-glass:        color-mix(in srgb, var(--nx-surface) 62%, transparent);
+    --nx-glass-strong: color-mix(in srgb, var(--nx-surface) 82%, transparent);
+    --nx-glass-rim:    rgb(255 255 255 / 0.09);
+    --nx-glass-edge:   rgb(0 0 0 / 0.45);
+    --nx-glass-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -8px rgb(0 0 0 / 0.55), 0 30px 80px -24px rgb(0 0 0 / 0.6);
+    --nx-wallpaper-filter: blur(22px) saturate(1.35) brightness(0.8);
+    --nx-wallpaper-veil:   rgb(10 8 6 / 0.25);
+  }
+}
+:root[data-theme="dark"] {
+  --nx-glass:        color-mix(in srgb, var(--nx-surface) 62%, transparent);
+  --nx-glass-strong: color-mix(in srgb, var(--nx-surface) 82%, transparent);
+  --nx-glass-rim:    rgb(255 255 255 / 0.09);
+  --nx-glass-edge:   rgb(0 0 0 / 0.45);
+  --nx-glass-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -8px rgb(0 0 0 / 0.55), 0 30px 80px -24px rgb(0 0 0 / 0.6);
+  --nx-wallpaper-filter: blur(22px) saturate(1.35) brightness(0.8);
+  --nx-wallpaper-veil:   rgb(10 8 6 / 0.25);
+}
+@media (min-width: 1024px) {
+  :root { --shell-gap: 10px; --shell-radius: 18px; }
+}
+/* Accessibilité : qui a demandé moins de transparence au système obtient
+   des plaques pleines, même géométrie. */
+@media (prefers-reduced-transparency: reduce) {
+  :root, :root[data-theme] {
+    --nx-glass: var(--nx-surface);
+    --nx-glass-strong: var(--nx-surface);
+  }
+}
+
+/* Le « matériau » commun des plaques : fond translucide, flou de ce qui est
+   derrière, liseré lumineux en haut (le reflet d'une vitre), bord sombre
+   très fin, ombre douce à trois couches. Les coins deviennent de vrais
+   squircles là où le navigateur sait les dessiner (Chrome 139+). */
+.nx-plate {
+  background: var(--nx-glass);
+  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  backdrop-filter: blur(28px) saturate(1.7);
+  box-shadow: inset 0 1px 0 0 var(--nx-glass-rim), 0 0 0 1px var(--nx-glass-edge), var(--nx-glass-shadow);
+  border-radius: var(--shell-radius);
+}
+@supports (corner-shape: squircle) {
+  .nx-plate { corner-shape: squircle; border-radius: calc(var(--shell-radius) * 1.7); }
+}
+@media (max-width: 1023px) {
+  /* Mobile : pas de plaque, le tiroir garde son rendu plein actuel. */
+  .nx-plate {
+    background: var(--nx-surface);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    box-shadow: none; border-radius: 0;
+  }
+}
+
+/* Papier peint : la bannière de l'instance, floutée très fort, derrière tout.
+   Image statique composée une seule fois : aucun coût au défilement. */
+.nx-wallpaper { display: none; }
+@media (min-width: 1024px) {
+  .nx-wallpaper {
+    display: block; position: fixed; inset: 0; z-index: -1;
+    overflow: hidden; pointer-events: none;
+    background: var(--nx-bg);
+  }
+  .nx-wallpaper img {
+    position: absolute; inset: -12%; width: 124%; height: 124%;
+    object-fit: cover; filter: var(--nx-wallpaper-filter);
+  }
+  .nx-wallpaper::after {
+    content: ''; position: absolute; inset: 0; background: var(--nx-wallpaper-veil);
+  }
+  /* Un élément en z-index négatif se peint SOUS le fond du <body> (ordre de
+     peinture CSS) : le fond sombre anti-rebond ci-dessus le masquait en
+     entier. On le lève seulement quand un papier peint est là ; <html> garde
+     sa couleur, le rebond élastique reste invisible. */
+  body:has(> * .nx-wallpaper), body:has(.nx-wallpaper) { background-color: transparent; }
+}
+
 /* ── Theme CSS vars (définis dynamiquement par +layout.svelte via appVars) ──
    Portée actuelle :
      · Layout chrome (nav, galaxy bar, members bar, bottom nav) ✓

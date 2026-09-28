@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { tick } from 'svelte';
 	import { t } from '$lib/i18n';
 	import { activeCommunityNameStore } from '$lib/communityStore';
 	import { voiceStore, voiceChannelMembersStore } from '$lib/voice';
@@ -16,6 +17,55 @@
 			? page.url.pathname === '/'
 			: page.url.pathname.startsWith(href);
 	const activeChatChannelId = $derived(page.url.searchParams.get('channel') ?? null);
+
+	// ── Pastille de sélection à ressort (contenant flottant, 28/09) ──────────
+	// Un seul fond « actif » qui GLISSE d'un lien à l'autre au lieu de
+	// s'éteindre ici pour se rallumer là : on voit d'où on vient et où on va.
+	// Le salon de chat actif prime sur le lien « Chat » générique. Repositionnée
+	// à chaque navigation et quand la liste change de taille (salon vocal qui
+	// se déplie au-dessus, par exemple).
+	let scrollEl = $state<HTMLDivElement>();
+	let pill = $state({ y: 0, h: 0, on: false, ready: false });
+	function placePill() {
+		if (!scrollEl) return;
+		const el = scrollEl.querySelector<HTMLElement>('.channel.active') ?? scrollEl.querySelector<HTMLElement>('.nav-link.active');
+		if (!el) { pill.on = false; return; }
+		movePillTo(el);
+	}
+	function movePillTo(el: HTMLElement) {
+		if (!scrollEl) return;
+		const y = el.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop;
+		pill = { y, h: el.offsetHeight, on: true, ready: pill.ready };
+		// Première pose sans animation (sinon la pastille glisse depuis le haut
+		// à chaque chargement de page) : la transition s'arme juste après.
+		if (!pill.ready) requestAnimationFrame(() => { pill.ready = true; });
+	}
+	$effect(() => {
+		void page.url.href;
+		void activeChatChannelId;
+		tick().then(placePill);
+	});
+	// La pastille part dès l'APPUI, pas quand la page suivante a fini de
+	// charger ses données (mesuré : ~120 ms d'immobilité sinon). Règle de
+	// Rauno reprise dans le CDC : une action réversible réagit au début du
+	// geste. La navigation terminée, placePill() confirme la même cible.
+	$effect(() => {
+		const root = scrollEl;
+		if (!root) return;
+		const onDown = (e: PointerEvent) => {
+			if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+			const el = (e.target as HTMLElement).closest<HTMLElement>('a.nav-link, a.channel');
+			if (el && root.contains(el)) movePillTo(el);
+		};
+		root.addEventListener('pointerdown', onDown);
+		return () => root.removeEventListener('pointerdown', onDown);
+	});
+	$effect(() => {
+		if (!scrollEl) return;
+		const ro = new ResizeObserver(() => placePill());
+		for (const child of Array.from(scrollEl.children)) ro.observe(child);
+		return () => ro.disconnect();
+	});
 	const voiceState = $derived($voiceStore);
 	const vcMembers = $derived($voiceChannelMembersStore);
 	const darkBg = $derived($isDarkTheme);
@@ -145,7 +195,7 @@
 
 {#if !isBanned && showChannelSidebar}
 <div class="nodyx-sb">
-<aside class="panel {panelCollapsed ? 'collapsed' : ''} {gallerySidebarOpen ? '' : 'max-lg:!translate-x-[-100%]'}"
+<aside class="panel nx-plate {panelCollapsed ? 'collapsed' : ''} {gallerySidebarOpen ? '' : 'max-lg:!translate-x-[-100%]'}"
        id="variant-a-panel"
        role={gallerySidebarOpen ? 'dialog' : undefined}
        aria-modal={gallerySidebarOpen ? 'true' : undefined}
@@ -184,7 +234,9 @@
 	</div>
 
 	<!-- Panel scroll: nav + channels together as one block (sketch) -->
-	<div class="panel-scroll">
+	<div class="panel-scroll" bind:this={scrollEl}>
+		<div class="sel-pill" class:on={pill.on} class:ready={pill.ready} aria-hidden="true"
+		     style="transform: translateY({pill.y}px); height: {pill.h}px;"></div>
 
 		<!-- Nav section -->
 		<div class="nav-section">
@@ -374,22 +426,36 @@
 {/if}
 
 <style>
+	/* 28/09 : plaque flottante en verre (.nx-plate, app.css) posée à côté du
+	   rail. Repliée, elle repasse DERRIÈRE le rail en s'effaçant, au lieu de
+	   laisser dépasser une bande entre les deux. */
 	.nodyx-sb .panel {
-	  position: fixed; top: 0; bottom: 0; left: 56px;
+	  position: fixed; top: var(--shell-gap); bottom: var(--shell-gap);
+	  left: calc(var(--shell-gap) * 2 + var(--shell-rail-w));
 	  width: var(--left-panel-width, 220px);
-	  background: var(--nx-surface); border-right: 1px solid var(--nx-border);
 	  z-index: 39; display: flex; flex-direction: column;
-	  transform: translateX(0); transition: transform .25s cubic-bezier(.4,0,.2,1), width .25s cubic-bezier(.4,0,.2,1);
+	  font-family: var(--font-shell);
+	  transform: translateX(0);
+	  transition: transform .42s var(--ease-out-soft), width .42s var(--ease-out-soft), opacity .3s var(--ease-out-soft);
 	}
-	.nodyx-sb .panel.collapsed { transform: translateX(-100%); }
+	.nodyx-sb .panel.collapsed {
+	  transform: translateX(calc(-100% - var(--shell-gap) * 2 - var(--shell-rail-w)));
+	  opacity: 0;
+	}
 	.nodyx-sb .panel.dragging {
 	  transition: none !important;
 	}
 	.nodyx-sb .panel .panel-head {
-	  padding: 14px 16px; border-bottom: 1px solid var(--nx-border-soft); display: flex; align-items: center; gap: 8px;
+	  padding: 16px 16px 10px 18px; display: flex; align-items: center; gap: 8px;
 	  font-weight: 600; font-size: 13px; color: var(--nx-text);
 	}
-	.nodyx-sb .panel .panel-head .community-name { letter-spacing: -.01em; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	/* Le nom de la communauté en « grand titre » façon iOS : arrondi, plein,
+	   une seule couleur, jamais de dégradé. */
+	.nodyx-sb .panel .panel-head .community-name {
+	  font-family: var(--font-shell-rounded); font-size: 17px; font-weight: 700; line-height: 1.2;
+	  letter-spacing: -.02em; flex: 1; overflow: hidden;
+	  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+	}
 	.nodyx-sb .panel .panel-head .close {
 	  margin-left: auto; cursor: pointer; color: var(--nx-text-faint); padding: 3px 7px; border-radius: 6px;
 	  font-size: 16px; transition: all .12s; line-height: 1; background: none; border: none;
@@ -403,23 +469,47 @@
 	.nodyx-sb .panel .panel-head .head-icon:hover { background: var(--nx-surface-raised); color: var(--nx-header-accent); }
 
 	.nodyx-sb .panel .panel-scroll {
-	  flex: 1; overflow-y: auto; padding: 8px 10px 12px;
+	  position: relative;
+	  flex: 1; overflow-y: auto; padding: 4px 10px 12px;
 	  scrollbar-width: thin; scrollbar-color: var(--nx-border) transparent;
 	}
 	.nodyx-sb .panel .panel-scroll::-webkit-scrollbar { width: 4px; }
 	.nodyx-sb .panel .panel-scroll::-webkit-scrollbar-thumb { background: var(--nx-border); border-radius: 2px; }
 	.nodyx-sb .panel .panel-scroll::-webkit-scrollbar-track { background: transparent; }
+	/* Des groupes qui respirent, plus de filets entre eux (CDC : de l'air
+	   entre les sections, pas entre chaque ligne). */
 	.nodyx-sb .panel .panel-scroll .nav-section {
-	  padding: 6px 0; display: flex; flex-direction: column; gap: 2px;
-	  border-bottom: 1px solid var(--nx-border-soft); margin-bottom: 6px;
+	  padding: 4px 0; display: flex; flex-direction: column; gap: 1px;
+	  margin-bottom: 10px;
+	}
+
+	/* La pastille : un seul fond actif pour tout le panneau, qui glisse. Le
+	   ressort (--ease-spring) dépasse à peine sa cible puis s'y pose. */
+	.nodyx-sb .panel .sel-pill {
+	  position: absolute; top: 0; left: 10px; right: 10px; z-index: 0;
+	  border-radius: 10px; pointer-events: none;
+	  background: var(--nx-header-accent-soft);
+	  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-header-accent) 22%, transparent);
+	  opacity: 0;
+	}
+	@supports (corner-shape: squircle) {
+	  .nodyx-sb .panel .sel-pill { corner-shape: squircle; border-radius: 16px; }
+	}
+	.nodyx-sb .panel .sel-pill.on { opacity: 1; }
+	.nodyx-sb .panel .sel-pill.ready {
+	  transition: transform .5s var(--ease-spring), height .35s var(--ease-out-soft), opacity .2s;
+	}
+	@media (prefers-reduced-motion: reduce) {
+	  .nodyx-sb .panel .sel-pill.ready { transition: opacity .2s; }
 	}
 	.nodyx-sb .panel .panel-scroll .nav-link {
-	  border-radius: 7px; padding: 7px 10px;
+	  position: relative; z-index: 1;
+	  border-radius: 10px; padding: 7px 10px;
 	  font-size: 13px; font-weight: 500; color: var(--nx-text-muted); gap: 10px; display: flex; align-items: center; cursor: pointer;
 	  transition: background-color .12s, color .12s; text-decoration: none;
 	}
-	.nodyx-sb .panel .panel-scroll .nav-link:hover { background: var(--nx-surface-raised); color: var(--nx-text); }
-	.nodyx-sb .panel .panel-scroll .nav-link.active { background: var(--nx-header-accent-soft); color: var(--nx-header-accent); }
+	.nodyx-sb .panel .panel-scroll .nav-link:hover { background: color-mix(in srgb, var(--nx-text) 6%, transparent); color: var(--nx-text); }
+	.nodyx-sb .panel .panel-scroll .nav-link.active { background: transparent; color: var(--nx-header-accent); }
 
 	.nodyx-sb .panel .panel-scroll .nav-link .badge { margin-left: auto; background: #ef4444; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
 	.nodyx-sb .panel .panel-scroll .channel-group-label {
@@ -427,15 +517,23 @@
 	  letter-spacing: .08em; font-weight: 600; color: var(--nx-text-faint); text-transform: uppercase;
 	}
 	.nodyx-sb .panel .panel-scroll .channel {
-	  border-radius: 7px; padding: 6px 8px;
+	  position: relative; z-index: 1;
+	  border-radius: 10px; padding: 6px 8px;
 	  font-size: 13px; font-weight: 500; color: var(--nx-text-muted); gap: 6px; display: flex; align-items: center; cursor: pointer;
 	  transition: background-color .12s, color .12s; text-decoration: none;
 	}
-	.nodyx-sb .panel .panel-scroll .channel:hover { background: var(--nx-surface-raised); color: var(--nx-text); }
-	.nodyx-sb .panel .panel-scroll .channel.active { background: var(--nx-header-accent-soft); color: var(--nx-header-accent); }
+	.nodyx-sb .panel .panel-scroll .channel:hover { background: color-mix(in srgb, var(--nx-text) 6%, transparent); color: var(--nx-text); }
+	.nodyx-sb .panel .panel-scroll .channel.active { background: transparent; color: var(--nx-header-accent); }
+	/* Carte « moi » en bas : une tuile en relief DANS la plaque, comme la
+	   carte de compte en tête des Réglages iOS. */
 	.nodyx-sb .panel .panel-bottom {
-	  padding: 10px 12px; border-top: 1px solid var(--nx-border-soft); background: var(--nx-surface);
+	  margin: 0 8px 8px; padding: 10px 12px; border-radius: 14px;
+	  background: color-mix(in srgb, var(--nx-surface-raised) 70%, transparent);
+	  box-shadow: inset 0 1px 0 0 var(--nx-glass-rim), 0 0 0 1px var(--nx-glass-edge);
 	  display: flex; align-items: center; gap: 8px;
+	}
+	@media (max-width: 1023px) {
+	  .nodyx-sb .panel .panel-bottom { margin: 0; border-radius: 0; box-shadow: none; border-top: 1px solid var(--nx-border-soft); background: var(--nx-surface); }
 	}
 	.nodyx-sb .panel .panel-bottom .user-group {
 	  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
@@ -504,6 +602,7 @@
 	   disparaît (voir InstanceRail.svelte) et le panneau devient LE tiroir
 	   plein écran (280px fixes, au-dessus de tout : z-index 55). */
 	@media (max-width: 1023px) {
-	  .nodyx-sb .panel { left: 0; width: 280px; z-index: 55; }
+	  .nodyx-sb .panel { left: 0; width: 280px; z-index: 55; border-right: 1px solid var(--nx-border); }
+	  .nodyx-sb .panel.collapsed { opacity: 1; }
 	}
 </style>

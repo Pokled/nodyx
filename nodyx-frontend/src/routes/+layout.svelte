@@ -528,6 +528,15 @@
 		!page.url.pathname.startsWith('/auth') &&
 		page.url.pathname !== '/banned'
 	)
+	// Géométrie du contenant flottant (app.css, « Contenant flottant ») : bord
+	// gauche du contenu = marge + rail + marge (+ panneau + marge s'il est
+	// ouvert). Même condition que `panel-collapsed` sur <main>, calculée une
+	// seule fois ici pour le header, <main> et les pages en `fixed` (chat).
+	const leftPanelOpen = $derived(!(isBanned || !showChannelSidebar || panelCollapsed))
+	const shellVars = $derived(
+		`--shell-left: calc(var(--shell-gap) * 2 + var(--shell-rail-w)${leftPanelOpen ? ` + ${leftPanelWidth}px + var(--shell-gap)` : ''});` +
+		`--shell-members: ${membersCollapsed ? '0px' : `calc(${rightPanelWidth}px + var(--shell-gap))`}`
+	)
 
 	// Routes /overlay/* sont des pages OBS browser source : fullscreen
 	// transparent, AUCUN chrome Nodyx (ni nav, ni sidebar, ni members bar).
@@ -766,7 +775,16 @@
 	{@render children()}
 {:else}
 {#if hasMatrix}<MatrixRain />{/if}
-<div class="min-h-dvh flex flex-col" style="{appVars}; background: {hasMatrix ? 'transparent' : 'var(--p-bg)'}; color: var(--p-text)">
+<div class="nx-shell min-h-dvh flex flex-col" class:has-wallpaper={!!communityBanner && !hasMatrix}
+     style="{appVars}; {shellVars}; --shell-bg: {hasMatrix ? 'transparent' : 'var(--p-bg)'}; color: var(--p-text)">
+
+	{#if communityBanner && !hasMatrix}
+		<!-- Papier peint du contenant flottant : la bannière de l'instance, floutée
+		     (app.css, .nx-wallpaper). Décoratif, masqué sous 1024px. -->
+		<div class="nx-wallpaper" aria-hidden="true">
+			<img src={communityBanner} alt="" decoding="async" fetchpriority="low" />
+		</div>
+	{/if}
 
 	<!-- Listener Streamer Hub : joue les sons de notif pour les admins/owners. -->
 	{#if data.user?.role}
@@ -1233,29 +1251,43 @@
 }
 
 /* ── Main content transition during collapse/expand ──────────────────────── */
+.nx-shell { background: var(--shell-bg); }
+
 :global(main.app-shell-main) {
-  transition: padding-left .25s cubic-bezier(.4,0,.2,1), margin-right .25s cubic-bezier(.4,0,.2,1);
+  transition: margin-left .42s var(--ease-out-soft), margin-right .42s var(--ease-out-soft);
 }
 
 .layout-dragging :global(main.app-shell-main) {
   transition: none !important;
 }
 
+/* Contenant flottant : le contenu est lui-même une plaque, décollée des
+   panneaux par --shell-gap. Géométrie calculée dans le script (shellVars). */
 @media (min-width: 1024px) {
+  /* Autour des plaques : le fond du contenant (clair ou sombre), ou le papier
+     peint quand l'instance a une bannière. */
+  .nx-shell { background: var(--nx-bg); }
+  .nx-shell.has-wallpaper { background: transparent; }
+  /* La feuille de contenu garde le fond de page ACTUEL (--shell-bg) : les
+     pages ont encore leurs couleurs sombres codées en dur (hors périmètre du
+     CDC), elles deviendraient illisibles sur une feuille claire. */
   :global(main.app-shell-main) {
-    padding-left: calc(56px + var(--left-panel-width, 220px)) !important;
+    margin: var(--shell-gap) var(--shell-gap) var(--shell-gap) var(--shell-left) !important;
+    height: calc(100% - var(--shell-gap) * 2) !important;
+    border-radius: var(--shell-radius);
+    background: var(--shell-bg);
+    box-shadow: 0 0 0 1px var(--nx-glass-edge), var(--nx-glass-shadow);
   }
-  :global(main.panel-collapsed) {
-    padding-left: 56px !important;
+}
+@supports (corner-shape: squircle) {
+  @media (min-width: 1024px) {
+    :global(main.app-shell-main) { corner-shape: squircle; border-radius: calc(var(--shell-radius) * 1.7); }
   }
 }
 
 @media (min-width: 1280px) {
   :global(main.app-shell-main) {
-    margin-right: var(--right-panel-width, 220px) !important;
-  }
-  :global(main.members-collapsed) {
-    margin-right: 0px !important;
+    margin-right: calc(var(--shell-gap) + var(--shell-members)) !important;
   }
 }
 

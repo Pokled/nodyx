@@ -60,13 +60,6 @@
 
 	let dropdownOpen = $state(false);
 
-	// Le rail (56px) est toujours visible hors bannissement ; le panneau de
-	// canaux s'y ajoute sauf s'il est replié/absent — même condition que
-	// `main.app-shell-main` (+layout.svelte) pour rester en phase avec elle.
-	const panelOffset = $derived(
-		(isBanned || !showChannelSidebar || panelCollapsed) ? '56px' : `calc(56px + ${leftPanelWidth}px)`
-	);
-
 	// Meme calcul que le composant d'origine, recopie ici plutot que passe en
 	// prop : depend uniquement de `user`, deja disponible, pas la peine de le
 	// faire transiter par le parent.
@@ -88,9 +81,8 @@
 	}
 </script>
 
-<nav class="nx-app-nav sticky top-0 z-50 shrink-0 h-12 flex items-center px-4 gap-3"
-     class:dragging={isDraggingLeftPanel}
-     style="background: var(--nx-surface); border-bottom: 1px solid var(--nx-border); --panel-offset: {panelOffset}">
+<nav class="nx-app-nav nx-plate sticky top-0 z-50 shrink-0 h-12 flex items-center px-4 gap-3"
+     class:dragging={isDraggingLeftPanel}>
 
 	<!-- Mobile hamburger : ne s'affiche que si le panneau qu'il ouvre existe -->
 	{#if !isBanned && showChannelSidebar}
@@ -370,15 +362,24 @@
 	   tiroir superposé, la nav doit rester pleine largeur. Transition coupée
 	   pendant un drag de redimensionnement pour ne pas trainer derrière le
 	   curseur (même principe que `.layout-dragging main.app-shell-main`). */
+	/* 28/09 : barre flottante en verre (.nx-plate, app.css). Son bord gauche
+	   suit --shell-left, calculé UNE fois dans +layout.svelte pour elle, <main>
+	   et les pages en `fixed` : plus de second calcul ici qui puisse diverger.
+	   Sous lg, marges nulles (--shell-gap = 0) : barre pleine largeur, inchangée. */
 	.nx-app-nav {
-		transition: margin-left .25s cubic-bezier(.4, 0, .2, 1);
+		font-family: var(--font-shell);
+		transition: margin-left .42s var(--ease-out-soft);
 	}
 	.nx-app-nav.dragging {
 		transition: none !important;
 	}
+	@media (max-width: 1023px) {
+		.nx-app-nav { border-bottom: 1px solid var(--nx-border); }
+	}
 	@media (min-width: 1024px) {
 		.nx-app-nav {
-			margin-left: var(--panel-offset, 56px);
+			top: var(--shell-gap);
+			margin: var(--shell-gap) var(--shell-gap) 0 var(--shell-left);
 		}
 	}
 

@@ -38,7 +38,7 @@
 
 {#if !isBanned}
 <div class="nodyx-sb">
-<aside class="rail">
+<aside class="rail nx-plate">
 	<div class="scroll">
 		<!-- Current instance (logo) — click toggles panel open -->
 		<button type="button" class="icon logo {!activeCommunityName ? 'active' : ''} {pulsingHome ? 'pulse' : ''}" data-tip={communityName} title={communityName} onclick={() => {
@@ -99,40 +99,59 @@
 	   Les 48px reserves a la barre du haut y sont une bande morte : le tiroir a
 	   sa propre croix de fermeture, il n'a pas besoin de laisser voir la barre.
 	   Au-dessus de lg ils redeviennent des colonnes, sous la barre. */
+	/* 28/09 : capsule flottante en verre (.nx-plate, app.css), décollée des
+	   bords par --shell-gap. Les icônes deviennent des squircles de 40px qui
+	   se creusent au survol, et le logo de l'instance courante porte un anneau
+	   lumineux : c'est « là où on est », visible sans rien lire. */
 	.nodyx-sb .rail {
-	  position: fixed; top: 0; bottom: 0; left: 0; width: 56px;
-	  background: var(--nx-bg); border-right: 1px solid var(--nx-border);
-	  display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 4px; z-index: 40;
+	  position: fixed; top: var(--shell-gap); bottom: var(--shell-gap); left: var(--shell-gap);
+	  width: var(--shell-rail-w);
+	  display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 6px; z-index: 40;
+	}
+	@media (max-width: 1023px) {
+	  .nodyx-sb .rail { background: var(--nx-bg); border-right: 1px solid var(--nx-border); }
 	}
 	.nodyx-sb .rail .scroll {
 	  flex: 1; overflow-y: auto; width: 100%; display: flex; flex-direction: column;
 	  align-items: center; gap: 4px; padding: 4px 0; scrollbar-width: none;
 	}
 	.nodyx-sb .rail .scroll::-webkit-scrollbar { display: none; }
-	.nodyx-sb .rail .rail-sep { width: 32px; height: 1px; background: var(--nx-border); margin: 4px 0; }
+	.nodyx-sb .rail .rail-sep { width: 24px; height: 2px; border-radius: 2px; background: var(--nx-border); margin: 6px 0; }
 	.nodyx-sb .rail .icon {
-	  width: 32px; height: 32px; border-radius: 6px; shrink: 0; cursor: pointer;
+	  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; cursor: pointer;
 	  display: flex; align-items: center; justify-content: center; position: relative;
-	  transition: border-radius .12s, background-color .12s, border-color .12s, color .12s;
-	  font-weight: 700; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+	  transition: transform .35s var(--ease-spring), border-radius .25s var(--ease-out-soft),
+	              background-color .15s, border-color .15s, color .15s, box-shadow .25s var(--ease-out-soft);
+	  font-weight: 700; font-size: 13px; font-family: var(--font-shell-rounded);
 	  text-decoration: none;
 	}
-	.nodyx-sb .rail .icon.logo { background: var(--nx-header-accent); color: #fff; }
-	.nodyx-sb .rail .icon.logo:hover { border-radius: 8px; }
+	@supports (corner-shape: squircle) {
+	  .nodyx-sb .rail .icon { corner-shape: squircle; border-radius: 20px; }
+	}
+	.nodyx-sb .rail .icon img { border-radius: inherit; }
+	@supports (corner-shape: squircle) {
+	  .nodyx-sb .rail .icon img { corner-shape: squircle; }
+	}
+	.nodyx-sb .rail .icon:hover { transform: translateY(-1px) scale(1.06); }
+	.nodyx-sb .rail .icon:active { transform: scale(0.94); transition-duration: .1s; }
+	.nodyx-sb .rail .icon.logo {
+	  background: var(--nx-header-accent); color: #fff;
+	  box-shadow: 0 0 0 2px var(--nx-glass), 0 0 0 4px var(--nx-header-accent), 0 6px 18px -4px color-mix(in srgb, var(--nx-header-accent) 60%, transparent);
+	}
 	.nodyx-sb .rail .icon.net { background: var(--nx-surface-raised); color: var(--nx-text-muted); border: 1px solid var(--nx-border); }
-	.nodyx-sb .rail .icon.net:hover { background: var(--nx-surface); border-radius: 8px; }
+	.nodyx-sb .rail .icon.net:hover { background: var(--nx-surface); }
 	.nodyx-sb .rail .icon.net.active { background: var(--nx-surface); color: var(--nx-text); border-color: var(--nx-border-soft); }
 	.nodyx-sb .rail .icon.net.linked:hover { border-color: var(--nx-header-accent); }
 	.nodyx-sb .rail .icon .dot {
 	  position: absolute; bottom: 2px; right: 2px; width: 8px; height: 8px;
-	  border-radius: 999px; border: 2px solid var(--nx-bg);
+	  border-radius: 999px; border: 2px solid var(--nx-surface);
 	}
 	.nodyx-sb .rail .icon .dot.on { background: #22c55e; }
 	.nodyx-sb .rail .icon .dot.off { background: var(--nx-text-faint); }
 	.nodyx-sb .rail .icon.add { background: transparent; border: 1px dashed var(--nx-border); color: var(--nx-text-faint); font-size: 15px; font-weight: 300; }
-	.nodyx-sb .rail .icon.add:hover { border-color: var(--nx-header-accent); color: var(--nx-header-accent); border-radius: 8px; }
+	.nodyx-sb .rail .icon.add:hover { border-color: var(--nx-header-accent); color: var(--nx-header-accent); }
 	.nodyx-sb .rail .icon.docs { background: transparent; color: var(--nx-text-faint); border: none; margin-top: auto; }
-	.nodyx-sb .rail .icon.docs:hover { background: var(--nx-surface-raised); color: var(--nx-header-accent); border-radius: 8px; }
+	.nodyx-sb .rail .icon.docs:hover { background: var(--nx-surface-raised); color: var(--nx-header-accent); }
 
 	/* ── Pouls de fédération ──────────────────────────────────────────────────
 	   Au survol d'une instance du réseau EN LIGNE, un anneau part du logo de
