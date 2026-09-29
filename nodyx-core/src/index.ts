@@ -11,6 +11,7 @@ import { db, redis } from './config/database'
 import { getTrustProxy } from './config/trustedProxies'
 import authRoutes          from './routes/auth'
 import adminRoutes         from './routes/admin'
+import appearanceRoutes    from './routes/appearance'
 import settingsRoutes      from './routes/settings'
 import communityRoutes     from './routes/communities'
 import forumRoutes         from './routes/forums'
@@ -209,6 +210,7 @@ server.addHook('onRequest', maintenanceGuard)
 server.register(authRoutes,      { prefix: '/api/v1/auth' })
 server.register(adminRoutes,     { prefix: '/api/v1/admin' })
 server.register(settingsRoutes,  { prefix: '/api/v1/admin/settings' })
+server.register(appearanceRoutes, { prefix: '/api/v1/admin/appearance' })
 server.register(octoguardAdminPlugin, { prefix: '/api/v1/admin/octoguard' })
 server.register(reportsPublicPlugin,  { prefix: '/api/v1/reports' })
 server.register(communityRoutes, { prefix: '/api/v1/communities' })

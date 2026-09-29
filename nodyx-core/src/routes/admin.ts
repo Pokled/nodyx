@@ -99,7 +99,7 @@ const ReorderChannelsBody = z.object({ ids: z.array(z.string().uuid()).min(1) })
 
 // ── Audit log helper ──────────────────────────────────────────────────────────
 
-async function logAction(
+export async function logAction(
   actorId: string,
   action: string,
   targetType: string | null,
