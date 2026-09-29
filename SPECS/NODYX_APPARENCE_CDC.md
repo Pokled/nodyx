@@ -94,17 +94,21 @@ referme tout.
   d'édition de la grille bloc par bloc en direct** : le Grid Builder fait
   2 600 lignes, le refaire en place coûterait des semaines pour peu de gain.
 
-Le moteur ne change pas (stockage `theme_shell`, `PATCH /admin/appearance`,
-brouillon puis Publier, plancher de contraste). L'entrée « Apparence » de la
-navigation admin lance simplement ce mode sur la page d'accueil. Réservé au
+**Deux entrées, un seul moteur (décision de Jonathan, 29/09).** « Parfois
+c'est mieux d'avoir une édition globale, et parfois on a envie d'éditer une
+seule zone. » On garde donc les deux : l'écran Apparence décrit plus bas
+pour l'édition globale, et le stylo en direct pour l'édition d'une zone. Ce
+qui évite le foutoir, c'est qu'ils partagent LE MÊME brouillon côté serveur
+(`theme_shell_draft`) : une retouche au stylo se retrouve dans l'écran
+Apparence et inversement, et il n'y a qu'un seul « Publier ». Même stockage,
+même endpoint, même plancher de contraste. Réservé au
 grand écran (1024px et plus) dans cette première version, comme le
 contenant flottant.
 
-La section suivante décrit l'écran séparé envisagé au départ : ses contenus
-(onglets Identité, Ambiance, Page d'accueil) deviennent les panneaux qui
-s'ouvrent depuis les stylos.
+Les panneaux qui s'ouvrent depuis les stylos reprennent les contrôles de
+l'écran Apparence décrit ci-dessous (mêmes composants, pas de doublon de code).
 
-## L'écran « Apparence » (version initiale, remplacée par l'édition en direct)
+## L'écran « Apparence » (l'entrée globale)
 
 Deux colonnes. À gauche, les réglages en **trois onglets** ; à droite, un
 **aperçu vivant** du vrai contenant qui réagit à chaque geste, avant
@@ -188,7 +192,7 @@ enregistrement.
   `/instance/info`). **Aucune migration.** Format :
   `{ accent: "#rrggbb", backdrop: "banner"|"custom"|"none", backdrop_url?, intensity: 0..100, default_mode: "dark"|"light"|"system" }`.
 - **Core** (sanctuaire, validé par Jonathan le 29/09) : `/instance/info`
-  renvoie `theme_shell` ; nouvel endpoint `PATCH /admin/appearance`
+  renvoie `theme_shell` ; nouvel endpoint `/admin/appearance` (brouillon + publication)
   (`adminOnly`) qui écrit Identité + Ambiance **en une seule transaction**
   (colonnes de `communities` + clés d'`instance_settings`), valeurs
   validées par schéma, erreurs avec `code` stable. `/admin/branding` reste
@@ -202,7 +206,7 @@ enregistrement.
 
 ## Phasage, chaque étape déployée et vérifiée sur vieuxlooters
 
-1. **Core** : `theme_shell` dans `/instance/info` + `PATCH /admin/appearance`,
+1. **Core** : `theme_shell` dans `/instance/info` + `/admin/appearance` (brouillon + publication),
    tests Vitest (validation, transaction, droits).
 2. **`shellTheme.ts`** : dérivation + plancher de contraste, tests ; le
    contenant lit enfin ses couleurs depuis l'instance au lieu d'`app.css`.
@@ -225,6 +229,6 @@ enregistrement.
   désactivé, rien ne change sans action de l'admin.
 - **D7.** Nettoyage de la navigation : suppression de « Homepage »,
   renommage du Grid Builder, identité sortie de Paramètres.
-- **D8.** (révision du 29/09) L'édition en direct remplace l'écran séparé ;
+- **D8.** (révision du 29/09, validé) Deux entrées pour un seul brouillon : écran Apparence ET édition en direct ;
   bouton scindé Administration | stylo ; stylos visibles uniquement en mode
   édition ; pas d'édition de la grille d'accueil bloc par bloc.
