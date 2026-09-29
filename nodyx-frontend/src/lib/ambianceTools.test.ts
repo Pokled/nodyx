@@ -159,3 +159,17 @@ describe('ambiances prêtes', () => {
 		expect(new Set(ids).size).toBe(ids.length)
 	})
 })
+
+describe('palette de la grille qui suit l’ambiance', () => {
+	it('chaque ambiance donne à la grille des textes lisibles sur ses cartes (fond sombre)', async () => {
+		const { ambiancePalette } = await import('./shellTheme')
+		for (const p of [ORIGINEL, ...AMBIANCE_PRESETS]) {
+			const t = applyPreset(T(), p)
+			const pal = ambiancePalette(t)
+			const surface = deriveShellVars(t, true)['--nx-surface']
+			expect(contrast(pal.text, surface), `${p.id} texte`).toBeGreaterThanOrEqual(7)
+			expect(contrast(pal.muted, surface), `${p.id} atténué`).toBeGreaterThanOrEqual(4.5)
+			expect(contrast(pal.accent, surface), `${p.id} accent`).toBeGreaterThanOrEqual(4.5)
+		}
+	})
+})

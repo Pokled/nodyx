@@ -251,11 +251,45 @@ export function deriveShellVars(theme: ShellTheme, dark: boolean): ShellVars {
 const block = (vars: ShellVars) => Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';')
 
 /**
+ * Anciennes variables de marque (--nx-accent*, --nx-cyan*, ~720 usages dans
+ * 81 fichiers de pages) recalées sur l'ambiance, PAR RÔLE, mesuré dans le
+ * code le 29/09 :
+ *   - « soft », « mid », cyan : surtout des couleurs de TEXTE sur fond sombre
+ *     → l'accent lisible sur fond sombre (≥ 4,5:1) ;
+ *   - base, « strong », « deep » : surtout des FONDS de bouton, souvent sous
+ *     du texte BLANC codé en dur → l'accent assombri juste assez pour que le
+ *     blanc y reste lisible (≥ 4,5:1), ce qui le garde visible sur fond
+ *     sombre (≥ 3:1) ; les deux contraintes ont toujours une solution ;
+ *   - triplets -rgb (halos) → la teinte de l'ambiance.
+ * Sombre dans les deux modes : les pages sont encore sombres (CDC contenant).
+ * N'est émis que pour une ambiance PUBLIÉE (ou en aperçu) : une instance qui
+ * a personnalisé ces variables via son ancien thème et n'a rien publié garde
+ * son rendu.
+ */
+export function legacyAccentVars(theme: ShellTheme): ShellVars {
+	const dark = deriveShellVars(theme, true)
+	const text = dark['--nx-header-accent']
+	// Assombri pour le blanc posé dessus, PUIS éclairci s'il se perdait dans
+	// le fond sombre (accent déjà très foncé : bleu nuit, noir). Éclaircir
+	// jusqu'à 3:1 sur #0b0c0f laisse le blanc à plus de 6:1 : pas de conflit.
+	const band = ensureContrast(ensureContrast(theme.accent.toLowerCase(), '#ffffff', 4.5), '#0b0c0f', 3)
+	const shift = (hex: string, dl: number) => { const o = rgbToOklch(hexToRgb(hex)); return oklchToHex({ ...o, l: Math.min(0.97, Math.max(0.05, o.l + dl)) }) }
+	const trip = hexToRgb(text).map(v => Math.round(v * 255)).join(' ')
+	return {
+		'--nx-accent': band, '--nx-accent-strong': shift(band, -0.05), '--nx-accent-deep': shift(band, -0.08),
+		'--nx-accent-2': band, '--nx-accent-2-strong': band, '--nx-cyan-deep': band,
+		'--nx-accent-soft': text, '--nx-accent-2-mid': text, '--nx-accent-2-soft': text, '--nx-cyan': text,
+		'--nx-accent-2-soft2': shift(text, 0.06), '--nx-cyan-soft': shift(text, 0.06),
+		'--nx-accent-rgb': trip, '--nx-accent-2-rgb': trip, '--nx-cyan-rgb': trip,
+	}
+}
+
+/**
  * Feuille de style complète de l'ambiance, même structure qu'app.css :
  * clair par défaut, sombre via prefers-color-scheme ou data-theme forcé.
  * Injectée après app.css, elle en remplace les valeurs codées en dur.
  */
-export function shellThemeCss(theme: ShellTheme): string {
+export function shellThemeCss(theme: ShellTheme, opts: { legacy?: boolean } = {}): string {
 	const light = block(deriveShellVars(theme, false))
 	const dark = block(deriveShellVars(theme, true))
 	// `:root:root` : même élément, mais une priorité STRICTEMENT supérieure à
@@ -277,16 +311,31 @@ export function shellThemeCss(theme: ShellTheme): string {
 		// priorité, sinon l'ambiance rendrait le verre transparent même pour qui
 		// a demandé moins de transparence au système.
 		`@media (prefers-reduced-transparency: reduce){:root:root,:root:root[data-theme]{--nx-glass:var(--nx-surface);--nx-glass-strong:var(--nx-surface)}}`,
+		...(opts.legacy ? [`:root:root{${block(legacyAccentVars(theme))}}`] : []),
 	].join('\n')
 }
 
 /**
- * Accent de l'ambiance tel qu'il s'affiche sur fond sombre : ce que la grille
- * d'accueil reprend quand elle « suit l'ambiance » (ses widgets sont conçus
- * pour un fond sombre).
+ * Palette de l'ambiance telle qu'elle s'affiche sur fond sombre : ce que la
+ * grille d'accueil reprend quand elle « suit l'ambiance ». TOUTE la palette,
+ * pas seulement l'accent : une grille réglée pour un fond clair (titres gris,
+ * descriptions pâles) devenait illisible sur la feuille sombre si seul
+ * l'accent suivait (vécu sur vieuxlooters, 29/09). Sombre dans les deux
+ * modes : la feuille centrale reste sombre tant que les pages ne sont pas
+ * migrées (CDC contenant).
  */
-export function ambianceAccent(theme: ShellTheme | null | undefined): string {
-	return deriveShellVars(theme ?? DEFAULT_SHELL_THEME, true)['--nx-header-accent']
+export interface AmbiancePalette { accent: string; text: string; muted: string; card: string; border: string }
+
+export function ambiancePalette(theme: ShellTheme | null | undefined): AmbiancePalette {
+	const v = deriveShellVars(theme ?? DEFAULT_SHELL_THEME, true)
+	const rgb = (hex: string) => hexToRgb(hex).map(x => Math.round(x * 255)).join(' ')
+	return {
+		accent: v['--nx-header-accent'],
+		text:   v['--nx-text'],
+		muted:  v['--nx-text-muted'],
+		card:   `rgb(${rgb(v['--nx-surface'])} / 0.55)`,
+		border: `rgb(${rgb(v['--nx-border'])} / 0.7)`,
+	}
 }
 
 /** Source du papier peint selon le décor choisi (null = pas de décor). */

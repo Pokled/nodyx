@@ -5,7 +5,7 @@
 	import { replyCount } from '$lib/forumCounts';
 	import WidgetZone from '$lib/components/homepage/WidgetZone.svelte';
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte';
-	import { ambianceAccent } from '$lib/shellTheme';
+	import { ambiancePalette } from '$lib/shellTheme';
 	import { shellPreview } from '$lib/shellPreview';
 	import type { PublicExtension } from '$lib/components/homepage/extensionCatalog';
 	import type { HomepagePosition, GridLayout, GridTheme } from '$lib/types/homepage';
@@ -206,7 +206,10 @@
 
 </style>
 
-<div class="dotbg min-h-full hp-root">
+<!-- Le fond à points (et ses halos violet-cyan) n'apparaît plus quand la
+     grille suit l'ambiance : il se montrait à travers le fond devenu
+     transparent de la grille (signalé par Jonathan le 29/09). -->
+<div class="min-h-full hp-root" class:dotbg={!(hasGrid && gridTheme.follow_ambiance)}>
 
 <!-- ═══════════════════════════════════════════════════════════════════
      GRID BUILDER v2 — remplace tout le contenu si un layout est publié
@@ -215,7 +218,7 @@
 	<GridRenderer
 		layout={gridLayout!}
 		theme={gridTheme}
-		ambianceAccent={ambianceAccent($shellPreview ?? (data as any).shellTheme)}
+		ambiance={ambiancePalette($shellPreview ?? (data as any).shellTheme)}
 		{instance}
 		{user}
 		{installedWidgets}

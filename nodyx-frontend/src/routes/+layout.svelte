@@ -141,7 +141,11 @@
 	// Sans ambiance publiée, l'Originel (le thème de confort par défaut de
 	// Nodyx), et non plus l'ancien ambre codé en dur dans app.css.
 	const shellTheme      = $derived(($shellPreview ?? (data as any).shellTheme ?? DEFAULT_SHELL_THEME) as ShellTheme);
-	const shellCss        = $derived(shellTheme ? shellThemeCss(shellTheme) : '');
+	// Les anciennes variables de marque des pages ne suivent l'ambiance que si
+	// elle est PUBLIÉE (ou en aperçu), jamais sur l'Originel par défaut : une
+	// instance à l'ancien thème personnalisé garde son rendu tant qu'elle n'a
+	// rien choisi.
+	const shellCss        = $derived(shellThemeCss(shellTheme, { legacy: !!($shellPreview ?? (data as any).shellTheme) }));
 	const shellBackdrop   = $derived(backdropSource(shellTheme, communityBanner));
 	const rawNetworkInstances = $derived((data as any).networkInstances as Array<{
 		slug: string; name: string; url: string;

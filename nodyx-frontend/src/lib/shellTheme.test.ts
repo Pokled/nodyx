@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
 	hexToRgb, rgbToHex, rgbToOklch, oklchToHex, contrast, ensureContrast, onColor,
-	deriveShellVars, shellThemeCss, backdropSource, DEFAULT_SHELL_THEME, type ShellTheme,
+	deriveShellVars, shellThemeCss, backdropSource, DEFAULT_SHELL_THEME, legacyAccentVars, type ShellTheme,
 } from './shellTheme'
 
 const theme = (over: Partial<ShellTheme> = {}): ShellTheme => ({ ...DEFAULT_SHELL_THEME, ...over })
@@ -147,5 +147,29 @@ describe('backdropSource', () => {
 		expect(backdropSource(theme({ backdrop: 'banner' }), '/uploads/b.jpg')).toBe('/uploads/b.jpg')
 		expect(backdropSource(theme({ backdrop: 'custom', backdrop_url: '/uploads/c.jpg' }), '/uploads/b.jpg')).toBe('/uploads/c.jpg')
 		expect(backdropSource(theme({ backdrop: 'none' }), '/uploads/b.jpg')).toBeNull()
+	})
+})
+
+describe('anciennes variables de marque des pages (legacyAccentVars)', () => {
+	const PAGE_DARK = '#0b0c0f'
+	for (const accent of ACCENTS) {
+		it(`${accent} : texte lisible sur fond sombre, fond de bouton lisible sous du blanc`, () => {
+			const v = legacyAccentVars(theme({ accent }))
+			for (const k of ['--nx-accent-soft', '--nx-accent-2-soft', '--nx-cyan']) expect(contrast(v[k], PAGE_DARK), k).toBeGreaterThanOrEqual(4.5)
+			for (const k of ['--nx-accent', '--nx-accent-2-strong']) {
+				expect(contrast('#ffffff', v[k]), `${k} sous du blanc`).toBeGreaterThanOrEqual(4.5)
+				expect(contrast(v[k], PAGE_DARK), `${k} visible sur sombre`).toBeGreaterThanOrEqual(3)
+			}
+		})
+	}
+
+	it('plus de violet ni de cyan : tout vient de la teinte de l’ambiance', () => {
+		const v = legacyAccentVars(theme({ accent: '#22e36b' }))
+		for (const k of ['--nx-accent', '--nx-accent-2-soft', '--nx-cyan']) expect(Math.abs(rgbToOklch(hexToRgb(v[k])).h - rgbToOklch(hexToRgb('#22e36b')).h)).toBeLessThan(15)
+	})
+
+	it('émises seulement quand on le demande (ambiance publiée), jamais sur le défaut', () => {
+		expect(shellThemeCss(theme())).not.toContain('--nx-accent-2-soft')
+		expect(shellThemeCss(theme(), { legacy: true })).toContain('--nx-accent-2-soft')
 	})
 })

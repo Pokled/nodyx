@@ -5,6 +5,7 @@
 	import { PLUGIN_REGISTRY } from './plugins'
 	import DynamicWidget from './DynamicWidget.svelte'
 	import { provideFollowAmbiance } from './followAmbiance'
+	import type { AmbiancePalette } from '$lib/shellTheme'
 	import ExtensionSurface from '$lib/components/ExtensionSurface.svelte'
 	import { extensionIndex, type PublicExtension } from './extensionCatalog'
 	import { t as i18n } from '$lib/i18n'   // `t` est déjà utilisé pour le thème
@@ -30,8 +31,8 @@
 		// Highlight pour drag feedback
 		dragOverRowId?:    string | null
 		selectedColKey?:   string | null  // 'rowId:colId'
-		/** Accent de l'ambiance (sombre), utilisé si le thème « suit l'ambiance ». */
-		ambianceAccent?:   string | null
+		/** Palette de l'ambiance (sombre), utilisée si le thème « suit l'ambiance ». */
+		ambiance?:         AmbiancePalette | null
 	}
 
 	let {
@@ -50,20 +51,26 @@
 		onResizeStart,
 		dragOverRowId = null,
 		selectedColKey = null,
-		ambianceAccent = null,
+		ambiance = null,
 	}: Props = $props()
 
-	// « Suivre l'ambiance » : les couleurs de marque viennent de l'écran
-	// Apparence, et le fond s'efface pour laisser voir la feuille (qui suit
-	// elle aussi l'ambiance). Sans ambianceAccent fourni, rien ne change.
+	// « Suivre l'ambiance » : TOUTE la palette (accent, textes, cartes,
+	// bordures) vient de l'écran Apparence, et le fond s'efface pour laisser
+	// voir la feuille (qui suit elle aussi l'ambiance). Sans palette fournie,
+	// rien ne change.
 	const t = $derived.by(() => {
 		const base = { ...DEFAULT_THEME, ...theme } as GridTheme
-		if (!base.follow_ambiance || !ambianceAccent) return base
-		return { ...base, primary: ambianceAccent, accent: ambianceAccent, link_color: ambianceAccent, bg: 'transparent' }
+		if (!base.follow_ambiance || !ambiance) return base
+		return {
+			...base,
+			primary: ambiance.accent, accent: ambiance.accent, link_color: ambiance.accent,
+			text_primary: ambiance.text, text_secondary: ambiance.muted,
+			card_bg: ambiance.card, border_color: ambiance.border, bg: 'transparent',
+		}
 	})
 
 	// Les widgets à couleur propre lisent cet état (followAmbiance.ts).
-	provideFollowAmbiance(() => !!t.follow_ambiance && !!ambianceAccent)
+	provideFollowAmbiance(() => !!t.follow_ambiance && !!ambiance)
 
 	// ── CSS custom properties thème ──────────────────────────────────────────
 	const cssVars = $derived([

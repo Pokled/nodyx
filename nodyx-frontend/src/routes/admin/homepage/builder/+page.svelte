@@ -2,7 +2,7 @@
 	import type { PageData } from './$types'
 	import { page } from '$app/state'
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte'
-	import { ambianceAccent } from '$lib/shellTheme'
+	import { ambiancePalette } from '$lib/shellTheme'
 	import { page as appPage } from '$app/state'
 	import ImagePositionPicker from '$lib/components/homepage/ImagePositionPicker.svelte'
 	import type { WidgetFamily } from '$lib/components/homepage/plugins'
@@ -1723,7 +1723,7 @@
 					<GridRenderer
 						layout={draft}
 						{theme}
-						ambianceAccent={ambianceAccent((appPage.data as any).shellTheme)}
+						ambiance={ambiancePalette((appPage.data as any).shellTheme)}
 						instance={{}}
 						user={null}
 						installedWidgets={installedMap}
