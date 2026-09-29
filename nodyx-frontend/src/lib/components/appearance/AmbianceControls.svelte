@@ -9,28 +9,34 @@
 	import { t } from '$lib/i18n'
 	import { deriveShellVars, type ShellTheme } from '$lib/shellTheme'
 	import { extractPalette, loadImagePixels } from '$lib/paletteFromImage'
+	import { AMBIANCE_PRESETS, applyPreset } from '$lib/ambianceTools'
 
 	let { value, banner, token, onchange }: {
 		value: ShellTheme
 		banner: string | null
 		token: string | null
-		onchange: (v: ShellTheme) => void
+		/** `continuous` : geste qui glisse (curseur, sélecteur de couleur). Ses
+		 *  valeurs successives comptent pour UN seul pas d'Annuler. */
+		onchange: (v: ShellTheme, opts?: { continuous?: boolean }) => void
 	} = $props()
 
 	const tFn = $derived($t)
-	const set = (patch: Partial<ShellTheme>) => onchange({ ...value, ...patch })
+	const set = (patch: Partial<ShellTheme>, continuous = false) => onchange({ ...value, ...patch }, { continuous })
 
 	// ── « Les couleurs de ta bannière » ─────────────────────────────────────
 	let palette = $state<string[]>([])
-	let paletteState = $state<'idle' | 'loading' | 'ready' | 'none'>('idle')
+	// Trois échecs distincts, trois messages : pas de bannière, bannière
+	// illisible (hébergée ailleurs sans CORS), ou bannière sans couleur franche.
+	let paletteState = $state<'idle' | 'loading' | 'ready' | 'none' | 'nobanner' | 'unreadable'>('idle')
 	$effect(() => {
 		const url = banner
-		if (!url) { palette = []; paletteState = 'none'; return }
+		if (!url) { palette = []; paletteState = 'nobanner'; return }
 		paletteState = 'loading'
 		let cancelled = false
 		loadImagePixels(url).then(px => {
 			if (cancelled) return
-			palette = px ? extractPalette(px, 5) : []
+			if (!px) { palette = []; paletteState = 'unreadable'; return }
+			palette = extractPalette(px, 5)
 			paletteState = palette.length ? 'ready' : 'none'
 		})
 		return () => { cancelled = true }
@@ -73,6 +79,19 @@
 		}
 	}
 
+	// Groupes « radio » au clavier : flèches gauche/droite (et haut/bas)
+	// déplacent la sélection ET le focus, comme un vrai groupe de boutons radio.
+	function radioKeys(e: KeyboardEvent) {
+		const keys: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
+		if (!(e.key in keys)) return
+		const btns = Array.from((e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('button[role="radio"]'))
+		const i = btns.indexOf(document.activeElement as HTMLButtonElement)
+		if (i < 0) return
+		e.preventDefault()
+		const next = btns[(i + keys[e.key] + btns.length) % btns.length]
+		next.focus(); next.click()
+	}
+
 	const backdrops = $derived([
 		{ id: 'banner' as const, label: tFn('appr.backdrop_banner') },
 		{ id: 'custom' as const, label: tFn('appr.backdrop_custom') },
@@ -86,6 +105,23 @@
 </script>
 
 <div class="amb" style="--amb: {value.accent}">
+	<!-- ── Ambiances prêtes : un point de départ en un clic ────────────── -->
+	<section class="amb-sec">
+		<header>
+			<h3>{tFn('appr.presets_title')}</h3>
+			<p>{tFn('appr.presets_help')}</p>
+		</header>
+		<div class="amb-presets">
+			{#each AMBIANCE_PRESETS as p (p.id)}
+				{@const on = p.accent === value.accent.toLowerCase() && p.intensity === value.intensity}
+				<button type="button" class="amb-preset" class:on aria-pressed={on} onclick={() => onchange(applyPreset(value, p))}>
+					<span class="amb-preset-dot" style="background: {p.accent}"></span>
+					{tFn(p.labelKey)}
+				</button>
+			{/each}
+		</div>
+	</section>
+
 	<!-- ── Accent ──────────────────────────────────────────────────────── -->
 	<section class="amb-sec">
 		<header>
@@ -95,7 +131,7 @@
 
 		<div class="amb-accent">
 			<label class="amb-swatch" title={tFn('appr.accent_pick')}>
-				<input type="color" value={value.accent} oninput={(e) => set({ accent: (e.currentTarget as HTMLInputElement).value.toLowerCase() })} aria-label={tFn('appr.accent_pick')} />
+				<input type="color" value={value.accent} oninput={(e) => set({ accent: (e.currentTarget as HTMLInputElement).value.toLowerCase() }, true)} aria-label={tFn('appr.accent_pick')} />
 			</label>
 			<input class="amb-hex" value={hexInput} maxlength="7" spellcheck="false" aria-label={tFn('appr.accent_hex')}
 			       oninput={(e) => onHexInput((e.currentTarget as HTMLInputElement).value)} />
@@ -112,6 +148,10 @@
 						        title={c} aria-label={tFn('appr.palette_use', { color: c })} onclick={() => set({ accent: c })}></button>
 					{/each}
 				</div>
+			{:else if paletteState === 'nobanner'}
+				<span class="amb-hint">{tFn('appr.palette_nobanner')}</span>
+			{:else if paletteState === 'unreadable'}
+				<span class="amb-hint">{tFn('appr.palette_unreadable')}</span>
 			{:else}
 				<span class="amb-hint">{tFn('appr.palette_none')}</span>
 			{/if}
@@ -130,9 +170,9 @@
 			<h3>{tFn('appr.backdrop_title')}</h3>
 			<p>{tFn('appr.backdrop_help')}</p>
 		</header>
-		<div class="amb-seg" role="radiogroup" aria-label={tFn('appr.backdrop_title')}>
+		<div class="amb-seg" role="radiogroup" tabindex="-1" onkeydown={radioKeys} aria-label={tFn('appr.backdrop_title')}>
 			{#each backdrops as b (b.id)}
-				<button type="button" role="radio" aria-checked={value.backdrop === b.id} class:on={value.backdrop === b.id}
+				<button type="button" role="radio" aria-checked={value.backdrop === b.id} tabindex={value.backdrop === b.id ? 0 : -1} class:on={value.backdrop === b.id}
 				        onclick={() => b.id === 'custom' && !value.backdrop_url ? document.getElementById('amb-backdrop-file')?.click() : set({ backdrop: b.id })}>
 					{b.label}
 				</button>
@@ -163,7 +203,7 @@
 		<div class="amb-range">
 			<span>{tFn('appr.intensity_min')}</span>
 			<input type="range" min="0" max="100" step="1" value={value.intensity} aria-label={tFn('appr.intensity_title')}
-			       oninput={(e) => set({ intensity: Number((e.currentTarget as HTMLInputElement).value) })} />
+			       oninput={(e) => set({ intensity: Number((e.currentTarget as HTMLInputElement).value) }, true)} />
 			<span>{tFn('appr.intensity_max')}</span>
 		</div>
 	</section>
@@ -174,9 +214,9 @@
 			<h3>{tFn('appr.mode_title')}</h3>
 			<p>{tFn('appr.mode_help')}</p>
 		</header>
-		<div class="amb-seg" role="radiogroup" aria-label={tFn('appr.mode_title')}>
+		<div class="amb-seg" role="radiogroup" tabindex="-1" onkeydown={radioKeys} aria-label={tFn('appr.mode_title')}>
 			{#each modes as m (m.id)}
-				<button type="button" role="radio" aria-checked={value.default_mode === m.id} class:on={value.default_mode === m.id}
+				<button type="button" role="radio" aria-checked={value.default_mode === m.id} tabindex={value.default_mode === m.id ? 0 : -1} class:on={value.default_mode === m.id}
 				        onclick={() => set({ default_mode: m.id })}>{m.label}</button>
 			{/each}
 		</div>
@@ -241,6 +281,21 @@
 	.amb-range { display: flex; align-items: center; gap: 12px; font-size: 12px; color: #9ca3af; }
 	.amb-range input { flex: 1; accent-color: var(--amb); }
 
+	.amb-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+	.amb-preset {
+		display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 999px;
+		font-size: 13px; color: #d1d5db; background: #111827; border: 1px solid #1f2937; cursor: pointer;
+		transition: border-color .15s, background-color .15s, transform .3s var(--ease-spring);
+	}
+	.amb-preset:hover { border-color: #374151; color: #fff; transform: translateY(-1px); }
+	.amb-preset.on { border-color: var(--amb); color: #fff; background: color-mix(in srgb, var(--amb) 12%, #111827); }
+	.amb-preset-dot { width: 16px; height: 16px; border-radius: 999px; box-shadow: inset 0 1px 0 rgb(255 255 255 / .25), 0 0 0 1px rgb(0 0 0 / .4); }
+	.amb-preset:focus-visible { outline: 2px solid var(--amb); outline-offset: 2px; }
+
+	/* Focus clavier visible partout (V3 de la passe de vérification du 29/09). */
+	.amb-swatch:focus-within, .amb-dot:focus-visible, .amb-seg button:focus-visible, .amb-btn:focus-within {
+		outline: 2px solid var(--amb); outline-offset: 2px;
+	}
 	.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 	@media (prefers-reduced-motion: reduce) { .amb-swatch, .amb-dot { transition: none; } }
 </style>

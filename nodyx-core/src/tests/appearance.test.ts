@@ -133,6 +133,7 @@ describe('/api/v1/admin/appearance', () => {
 
   it.each([
     ['GET', '/'], ['PUT', '/draft'], ['DELETE', '/draft'], ['POST', '/publish'],
+    ['PUT', '/draft/identity'], ['DELETE', '/draft/identity'],
   ] as const)('%s %s refusé sans droits admin, sans toucher la base', async (method, url) => {
     const res = await call(method, url, VALID, '')
     expect(res.statusCode).toBe(401)
@@ -181,6 +182,13 @@ describe('/api/v1/admin/appearance', () => {
     const res = await call('DELETE', '/draft')
     expect(res.statusCode).toBe(200)
     expect(query.mock.calls[0][1]).toEqual([SHELL_KEY_DRAFT, IDENTITY_KEY_DRAFT])
+  })
+
+  it('DELETE /draft/identity ne retire QUE le brouillon d’identité', async () => {
+    query.mockResolvedValueOnce({ rows: [] })
+    const res = await call('DELETE', '/draft/identity')
+    expect(res.statusCode).toBe(200)
+    expect(query.mock.calls[0][1]).toEqual([IDENTITY_KEY_DRAFT])
   })
 
   it('PUT /draft/identity refuse une adresse dangereuse, sans écrire', async () => {

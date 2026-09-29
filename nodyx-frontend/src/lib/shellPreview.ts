@@ -10,3 +10,9 @@ import type { ShellTheme } from './shellTheme'
  * à la version publiée.
  */
 export const shellPreview = writable<ShellTheme | null>(null)
+
+/**
+ * Aperçu d'une IDENTITÉ non publiée (logo, bannière) : même principe que
+ * shellPreview. Un champ absent = on garde la valeur publiée ; null = retiré.
+ */
+export const identityPreview = writable<{ logo_url?: string | null; banner_url?: string | null } | null>(null)

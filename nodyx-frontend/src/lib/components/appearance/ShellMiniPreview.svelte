@@ -7,12 +7,17 @@
 	 * à la préférence de l'admin qui regarde.
 	 */
 	import { t } from '$lib/i18n'
-	import { deriveShellVars, backdropSource, type ShellTheme } from '$lib/shellTheme'
+	import { deriveShellVars, backdropSource, contrast, type ShellTheme } from '$lib/shellTheme'
 
 	let { theme, dark, banner, label }: { theme: ShellTheme; dark: boolean; banner: string | null; label: string } = $props()
 	const tFn = $derived($t)
 
-	const vars = $derived(Object.entries(deriveShellVars(theme, dark)).map(([k, v]) => `${k}:${v}`).join(';'))
+	const shellVars = $derived(deriveShellVars(theme, dark))
+	const vars = $derived(Object.entries(shellVars).map(([k, v]) => `${k}:${v}`).join(';'))
+	// Contraste réel de l'accent comme texte sur les plaques : la garantie de
+	// lisibilité, rendue visible (AA dès 4,5:1, AAA dès 7:1).
+	const ratio = $derived(contrast(shellVars['--nx-header-accent'], shellVars['--nx-surface']))
+	const grade = $derived(ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : '')
 	const backdrop = $derived(backdropSource(theme, banner))
 	const links = $derived([tFn('nav.home'), tFn('nav.forum'), tFn('nav.dm')])
 </script>
@@ -34,7 +39,10 @@
 		<div class="mini-line short"></div>
 		<span class="mini-btn">{tFn('appr.preview_button')}</span>
 	</div>
-	<figcaption>{label}</figcaption>
+	<figcaption>
+		{#if grade}<span class="mini-grade" title={tFn('appr.contrast_title')}>{grade} · {ratio.toFixed(1)}:1</span>{/if}
+		{label}
+	</figcaption>
 </figure>
 
 <style>
@@ -71,6 +79,10 @@
 	}
 	figcaption {
 		position: absolute; right: 10px; bottom: 8px; font-size: 10px; font-weight: 600; letter-spacing: .04em;
-		color: var(--nx-text-faint);
+		color: var(--nx-text-faint); display: flex; align-items: center; gap: 8px;
+	}
+	.mini-grade {
+		letter-spacing: 0; font-variant-numeric: tabular-nums; padding: 1px 6px; border-radius: 999px;
+		color: var(--nx-header-accent); background: var(--nx-header-accent-soft);
 	}
 </style>

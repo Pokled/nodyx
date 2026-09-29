@@ -13,6 +13,7 @@
  *   GET    /                → { published, draft, identity: { published, draft } }
  *   PUT    /draft           → brouillon d'Ambiance (valeurs validées, jamais de CSS)
  *   PUT    /draft/identity  → brouillon d'Identité
+ *   DELETE /draft/identity  → abandonne le seul brouillon d'identité
  *   DELETE /draft           → abandonne les DEUX brouillons
  *   POST   /publish         → publie ce qui est en brouillon, tout ou rien
  */
@@ -77,6 +78,12 @@ export default async function appearanceRoutes(app: FastifyInstance) {
     const draft = request.body as IdentityDraft
     await db.query(UPSERT, [IDENTITY_KEY_DRAFT, JSON.stringify(draft), userId])
     return reply.send({ draft })
+  })
+
+  // Identité revenue à la version publiée : on retire son seul brouillon.
+  app.delete('/draft/identity', { preHandler: [rateLimit, adminOnly] }, async (_request, reply) => {
+    await db.query(`DELETE FROM instance_settings WHERE key = $1`, [IDENTITY_KEY_DRAFT])
+    return reply.send({ ok: true })
   })
 
   app.delete('/draft', { preHandler: [rateLimit, adminOnly] }, async (_request, reply) => {

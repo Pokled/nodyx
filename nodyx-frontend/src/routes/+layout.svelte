@@ -23,7 +23,7 @@
 	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
 	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import { shellThemeCss, backdropSource, type ShellTheme } from '$lib/shellTheme';
-	import { shellPreview } from '$lib/shellPreview';
+	import { shellPreview, identityPreview } from '$lib/shellPreview';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
 	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
 	import ExternalLinkWarning from '$lib/components/ExternalLinkWarning.svelte';
@@ -132,8 +132,10 @@
 	const activeCommunityName = $derived($activeCommunityNameStore);
 	const communityName      = $derived(data.communityName ?? 'Nodyx');
 	const displayCommunityName = $derived(activeCommunityName ?? communityName);
-	const communityLogo      = $derived((data as any).communityLogoUrl  as string | null);
-	const communityBanner    = $derived((data as any).communityBannerUrl as string | null);
+	// Identité : un logo ou une bannière en brouillon (écran Apparence) passe
+	// devant la version publiée, pour l'admin seul (SPECS/NODYX_APPARENCE_CDC.md).
+	const communityLogo      = $derived(($identityPreview?.logo_url !== undefined ? $identityPreview.logo_url : (data as any).communityLogoUrl) as string | null);
+	const communityBanner    = $derived(($identityPreview?.banner_url !== undefined ? $identityPreview.banner_url : (data as any).communityBannerUrl) as string | null);
 	// Ambiance (SPECS/NODYX_APPARENCE_CDC.md) : l'aperçu d'un brouillon en cours
 	// d'édition passe devant la version publiée, pour l'admin seul.
 	const shellTheme      = $derived(($shellPreview ?? (data as any).shellTheme ?? null) as ShellTheme | null);
