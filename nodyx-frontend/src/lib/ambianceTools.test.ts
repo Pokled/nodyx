@@ -50,6 +50,18 @@ describe('code d’ambiance', () => {
 		expect(decodeAmbiance(encodeAmbiance(t))).toEqual({ ...t, accent: '#2d8cf0', backdrop_url: null })
 	})
 
+	it('un décor d’ambiance voyage (toute instance Nodyx l’a)', () => {
+		const t = T({ backdrop: 'custom', backdrop_url: '/ambiances/cyberpunk.jpg' })
+		expect(decodeAmbiance(encodeAmbiance(t))).toMatchObject({ backdrop: 'custom', backdrop_url: '/ambiances/cyberpunk.jpg' })
+	})
+
+	it('un code ne peut pas faire passer une autre adresse pour un décor d’ambiance', () => {
+		const forged = 'NODYX-AMB-1:' + btoa(JSON.stringify({ a: '#ffffff', b: 'custom', u: '/uploads/../x.jpg', i: 50, m: 'dark' })).replace(/=+$/, '')
+		expect(decodeAmbiance(forged)).toBeNull()
+		const ext = 'NODYX-AMB-1:' + btoa(JSON.stringify({ a: '#ffffff', b: 'custom', u: 'https://evil.example/x.jpg', i: 50, m: 'dark' })).replace(/=+$/, '')
+		expect(decodeAmbiance(ext)).toBeNull()
+	})
+
 	it('une image personnalisée (propre à son instance) devient la bannière de l’instance qui importe', () => {
 		const code = encodeAmbiance(T({ backdrop: 'custom', backdrop_url: '/uploads/banners/x.jpg' }))
 		expect(code).not.toContain('uploads')
@@ -92,9 +104,19 @@ describe('ambiances prêtes', () => {
 		expect(out.default_mode).toBe('light')
 	})
 
-	it('une ambiance « univers » fixe tout, et retire l’image personnalisée si elle change de décor', () => {
+	it('une ambiance « univers » fixe tout, et apporte SON décor à la place de la bannière', () => {
 		const out = applyPreset(T({ backdrop: 'custom', backdrop_url: '/uploads/banners/x.jpg' }), byId('matrix'))
-		expect(out).toMatchObject({ accent: '#22e36b', backdrop: 'none', backdrop_url: null, default_mode: 'dark' })
+		expect(out).toMatchObject({ accent: '#22e36b', backdrop: 'custom', backdrop_url: '/ambiances/matrix.jpg', default_mode: 'dark' })
+		for (const id of ['matrix', 'cyberpunk', 'synthwave', 'sepia']) expect(byId(id).theme.backdrop_url).toMatch(/^\/ambiances\/[a-z]+\.jpg$/)
+	})
+
+	it('Cyberpunk et Synthwave en fonds graphite : un jaune ou un rose désaturés virent au brun', () => {
+		expect(byId('cyberpunk').theme.neutrals).toBe('graphite')
+		expect(byId('synthwave').theme.neutrals).toBe('graphite')
+	})
+
+	it('Gazette : aucun décor, le journal reste nu', () => {
+		expect(applyPreset(T(), byId('gazette')).backdrop).toBe('none')
 	})
 
 	it('on peut toujours revenir à l’Originel, et à l’ambiance de sa bannière', () => {

@@ -22,12 +22,16 @@ export const SHELL_KEY_DRAFT     = 'theme_shell_draft'
 /** Brouillon de l'Identité (logo, bannière) : publié dans `communities`. */
 export const IDENTITY_KEY_DRAFT  = 'theme_identity_draft'
 
-// Décor personnalisé : un fichier téléversé sur l'instance (/uploads/…) ou une
-// URL https. Rien d'autre : ni javascript:, ni data:, ni remontée de dossier.
+// Décor personnalisé : un fichier téléversé sur l'instance (/uploads/…), un
+// décor d'ambiance livré avec Nodyx (/ambiances/nom.jpg, fichiers statiques du
+// frontend, donc présents sur TOUTE instance), ou une URL https. Rien d'autre :
+// ni javascript:, ni data:, ni remontée de dossier.
 const UPLOAD_PATH = /^\/uploads\/[A-Za-z0-9_\-./]+$/
+const AMBIANCE_PATH = /^\/ambiances\/[a-z0-9-]{1,40}\.(jpg|webp|png)$/
 
 export function isSafeBackdropUrl(url: string): boolean {
   if (url.length > 500) return false
+  if (url.startsWith('/ambiances/')) return AMBIANCE_PATH.test(url)
   if (url.startsWith('/')) return UPLOAD_PATH.test(url) && !url.includes('..') && !url.includes('//')
   try {
     return new URL(url).protocol === 'https:'

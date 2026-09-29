@@ -4842,5 +4842,9 @@
   "appr.neutrals_title": "Fonds",
   "appr.neutrals_help": "Graphite : des gris de confort pensés pour de longues heures, quelle que soit ta couleur. Assortis : des gris teintés d'une pointe de ton accent.",
   "appr.neutrals_graphite": "Graphite (confort)",
-  "appr.neutrals_tinted": "Assortis à l'accent"
+  "appr.neutrals_tinted": "Assortis à l'accent",
+  "hpb.follow_ambiance": "Suivre l'ambiance de l'instance",
+  "hpb.follow_ambiance_on": "Les couleurs de la page d'accueil viennent de l'écran Apparence, y compris celles réglées widget par widget : une seule source, tout reste accordé.",
+  "hpb.follow_ambiance_off": "La grille garde ses propres couleurs. Active pour qu'elle suive l'ambiance choisie dans Apparence.",
+  "hpb.follow_ambiance_open": "Régler l'ambiance dans Apparence"
 }

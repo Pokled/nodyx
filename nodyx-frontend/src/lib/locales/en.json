@@ -4842,5 +4842,9 @@
   "appr.neutrals_title": "Backgrounds",
   "appr.neutrals_help": "Graphite: comfort grays designed for long hours, whatever your color. Matching: grays with a hint of your accent.",
   "appr.neutrals_graphite": "Graphite (comfort)",
-  "appr.neutrals_tinted": "Match the accent"
+  "appr.neutrals_tinted": "Match the accent",
+  "hpb.follow_ambiance": "Follow the instance ambiance",
+  "hpb.follow_ambiance_on": "Homepage colors come from the Appearance screen, including those set widget by widget: one source, everything stays in tune.",
+  "hpb.follow_ambiance_off": "The grid keeps its own colors. Turn on to follow the ambiance chosen in Appearance.",
+  "hpb.follow_ambiance_open": "Set the ambiance in Appearance"
 }

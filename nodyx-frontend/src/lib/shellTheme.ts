@@ -262,15 +262,31 @@ export function shellThemeCss(theme: ShellTheme): string {
 	// celle d'app.css. Sans ce doublement, l'ordre de chargement décidait, et la
 	// feuille principale du site (chargée après la balise injectée par le
 	// layout) écrasait l'ambiance : vécu le 29/09, accent resté ambre.
+	// La feuille centrale prend la TEINTE de l'ambiance en mode sombre, mais
+	// reste profonde (fond mêlé de noir) : les pages ont encore leurs gris codés
+	// en dur, pensés pour un fond presque noir ; sur un graphite aussi clair
+	// que les plaques, leurs textes secondaires perdraient en lisibilité. En
+	// clair, la feuille garde son fond actuel tant que les pages ne sont pas
+	// migrées (hors périmètre, CDC contenant).
+	const sheet = '--nx-sheet-bg:color-mix(in oklab, var(--nx-bg) 58%, #000)'
 	return [
 		`:root:root{${light}}`,
-		`@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]){${dark}}}`,
-		`:root:root[data-theme="dark"]{${dark}}`,
+		`@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]){${dark};${sheet}}}`,
+		`:root:root[data-theme="dark"]{${dark};${sheet}}`,
 		// Reprise de la règle d'accessibilité d'app.css, au même niveau de
 		// priorité, sinon l'ambiance rendrait le verre transparent même pour qui
 		// a demandé moins de transparence au système.
 		`@media (prefers-reduced-transparency: reduce){:root:root,:root:root[data-theme]{--nx-glass:var(--nx-surface);--nx-glass-strong:var(--nx-surface)}}`,
 	].join('\n')
+}
+
+/**
+ * Accent de l'ambiance tel qu'il s'affiche sur fond sombre : ce que la grille
+ * d'accueil reprend quand elle « suit l'ambiance » (ses widgets sont conçus
+ * pour un fond sombre).
+ */
+export function ambianceAccent(theme: ShellTheme | null | undefined): string {
+	return deriveShellVars(theme ?? DEFAULT_SHELL_THEME, true)['--nx-header-accent']
 }
 
 /** Source du papier peint selon le décor choisi (null = pas de décor). */

@@ -62,6 +62,10 @@ export interface GridTheme {
 	text_primary:        string;   // ex: "#e2e8f0"
 	text_secondary:      string;   // ex: "#6b7280"
 	shadow:              string;   // ex: "0 4px 24px rgba(0,0,0,.4)"
+	/** Suivre l'ambiance de l'instance (SPECS/NODYX_APPARENCE_CDC.md) : les
+	 *  couleurs principale, d'accent et de liens viennent de l'écran Apparence.
+	 *  Absent = non : une grille déjà personnalisée ne change pas en silence. */
+	follow_ambiance?:    boolean;
 }
 
 export const DEFAULT_THEME: GridTheme = {

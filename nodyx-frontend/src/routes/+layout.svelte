@@ -1300,7 +1300,9 @@
     margin: var(--shell-gap) var(--shell-gap) var(--shell-gap) var(--shell-left) !important;
     height: calc(100% - var(--shell-gap) * 2) !important;
     border-radius: var(--shell-radius);
-    background: var(--shell-bg);
+    /* --nx-sheet-bg : teinte de l'ambiance en mode sombre (lib/shellTheme.ts) ;
+       sinon le fond de page actuel. */
+    background: var(--nx-sheet-bg, var(--shell-bg));
     box-shadow: 0 0 0 1px var(--nx-glass-edge), var(--nx-glass-shadow);
   }
 }

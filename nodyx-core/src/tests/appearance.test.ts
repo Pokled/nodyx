@@ -72,6 +72,8 @@ describe('isSafeBackdropUrl', () => {
   it.each([
     '/uploads/banners/abc-123.webp',
     'https://images.example.org/fond.jpg',
+    '/ambiances/cyberpunk.jpg',
+    '/ambiances/sepia.webp',
   ])('accepte %s', url => expect(isSafeBackdropUrl(url)).toBe(true))
 
   it.each([
@@ -83,6 +85,11 @@ describe('isSafeBackdropUrl', () => {
     '/api/v1/admin/users',
     '/uploads//evil.example/x.png',
     '/uploads/a"onerror="x.png',
+    '/ambiances/../uploads/x.jpg',
+    '/ambiances/Cyber.JPG',
+    '/ambiances/sous/dossier.jpg',
+    '/ambiances/cyberpunk.svg',
+    '/ambiances/cyberpunk.jpg?x=1',
     'https://' + 'a'.repeat(600) + '.png',
   ])('refuse %s', url => expect(isSafeBackdropUrl(url)).toBe(false))
 })

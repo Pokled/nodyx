@@ -5,6 +5,8 @@
 	import { replyCount } from '$lib/forumCounts';
 	import WidgetZone from '$lib/components/homepage/WidgetZone.svelte';
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte';
+	import { ambianceAccent } from '$lib/shellTheme';
+	import { shellPreview } from '$lib/shellPreview';
 	import type { PublicExtension } from '$lib/components/homepage/extensionCatalog';
 	import type { HomepagePosition, GridLayout, GridTheme } from '$lib/types/homepage';
 	import { GRID_GOOGLE_FONTS_URL } from '$lib/types/homepage';
@@ -213,6 +215,7 @@
 	<GridRenderer
 		layout={gridLayout!}
 		theme={gridTheme}
+		ambianceAccent={ambianceAccent($shellPreview ?? (data as any).shellTheme)}
 		{instance}
 		{user}
 		{installedWidgets}

@@ -44,13 +44,20 @@ export function historyRedo<T>(h: History<T>): History<T> {
 // bannière de l'instance qui importe.
 
 const PREFIX = 'NODYX-AMB-1:'
+/** Décors livrés avec Nodyx (static/ambiances), même règle que le core. */
+const AMBIANCE_DECOR = /^\/ambiances\/[a-z0-9-]{1,40}\.(jpg|webp|png)$/
 
 const b64url = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 const unb64url = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))))
 
 export function encodeAmbiance(t: ShellTheme): string {
-	const backdrop = t.backdrop === 'custom' ? 'banner' : t.backdrop
-	return PREFIX + b64url(JSON.stringify({ a: t.accent.toLowerCase(), b: backdrop, i: t.intensity, m: t.default_mode, n: t.neutrals ?? 'tinted' }))
+	// Un décor d'ambiance (/ambiances/…) existe sur TOUTE instance : il voyage.
+	// Une image téléversée est propre à son instance : elle devient la bannière.
+	const amb = t.backdrop === 'custom' && t.backdrop_url && AMBIANCE_DECOR.test(t.backdrop_url) ? t.backdrop_url : null
+	const backdrop = t.backdrop === 'custom' && !amb ? 'banner' : t.backdrop
+	const o: Record<string, unknown> = { a: t.accent.toLowerCase(), b: backdrop, i: t.intensity, m: t.default_mode, n: t.neutrals ?? 'tinted' }
+	if (amb) o.u = amb
+	return PREFIX + b64url(JSON.stringify(o))
 }
 
 /**
@@ -65,12 +72,13 @@ export function decodeAmbiance(code: string): ShellTheme | null {
 		const o = JSON.parse(unb64url(s.slice(PREFIX.length)))
 		if (typeof o !== 'object' || o === null) return null
 		if (typeof o.a !== 'string' || !/^#[0-9a-f]{6}$/i.test(o.a)) return null
-		if (o.b !== 'banner' && o.b !== 'none') return null
+		const decor = o.b === 'custom' && typeof o.u === 'string' && AMBIANCE_DECOR.test(o.u) ? o.u : null
+		if (o.b !== 'banner' && o.b !== 'none' && !decor) return null
 		if (!Number.isInteger(o.i) || o.i < 0 || o.i > 100) return null
 		if (o.m !== 'dark' && o.m !== 'light' && o.m !== 'system') return null
 		// `n` (fonds) est venu après les premiers codes : absent = gris teintés.
 		if (o.n !== undefined && o.n !== 'graphite' && o.n !== 'tinted') return null
-		return { accent: o.a.toLowerCase(), backdrop: o.b, backdrop_url: null, intensity: o.i, default_mode: o.m, neutrals: o.n ?? 'tinted' }
+		return { accent: o.a.toLowerCase(), backdrop: o.b, backdrop_url: decor, intensity: o.i, default_mode: o.m, neutrals: o.n ?? 'tinted' }
 	} catch {
 		return null
 	}
@@ -79,7 +87,11 @@ export function decodeAmbiance(code: string): ShellTheme | null {
 // ── Ambiances prêtes à l'emploi ───────────────────────────────────────────
 // Des ambiances COMPLÈTES (29/09, demande de Jonathan : « genre Matrix,
 // cyberpunk, journal... ») : chacune fixe ce qui fait son caractère, et
-// seulement ça. Un champ absent garde le réglage de l'admin (une ambiance
+// seulement ça. Un univers apporte SON décor (vraie photo, static/ambiances,
+// crédits dans CREDITS.md) : avec la bannière de l'instance derrière, il ne
+// s'imposait pas (Cyberpunk mêlé au bois et aux braises des Vieux Looters,
+// retour de Jonathan). Cyberpunk et Synthwave en fonds graphite : un jaune ou
+// un rose très peu saturés, c'est du brun et du mauve terne. Un champ absent garde le réglage de l'admin (une ambiance
 // nature ne force ni le mode ni le décor). Teintes choisies HORS des familles
 // cyan et indigo-violet que le CDC contenant bannit (vérifié par les tests).
 
@@ -89,11 +101,11 @@ export const ORIGINEL: AmbiancePreset = { id: 'originel', labelKey: 'appr.preset
 
 export const AMBIANCE_PRESETS: AmbiancePreset[] = [
 	// Univers : ils fixent tout, décor et mode compris.
-	{ id: 'matrix',    labelKey: 'appr.preset_matrix',    theme: { accent: '#22e36b', neutrals: 'tinted',   intensity: 85,  default_mode: 'dark',  backdrop: 'none' } },
-	{ id: 'cyberpunk', labelKey: 'appr.preset_cyberpunk', theme: { accent: '#fcee0a', neutrals: 'tinted',   intensity: 100, default_mode: 'dark',  backdrop: 'banner' } },
-	{ id: 'synthwave', labelKey: 'appr.preset_synthwave', theme: { accent: '#ff3fa4', neutrals: 'tinted',   intensity: 95,  default_mode: 'dark',  backdrop: 'banner' } },
+	{ id: 'matrix',    labelKey: 'appr.preset_matrix',    theme: { accent: '#22e36b', neutrals: 'tinted',   intensity: 85,  default_mode: 'dark',  backdrop: 'custom', backdrop_url: '/ambiances/matrix.jpg' } },
+	{ id: 'cyberpunk', labelKey: 'appr.preset_cyberpunk', theme: { accent: '#fcee0a', neutrals: 'graphite', intensity: 100, default_mode: 'dark',  backdrop: 'custom', backdrop_url: '/ambiances/cyberpunk.jpg' } },
+	{ id: 'synthwave', labelKey: 'appr.preset_synthwave', theme: { accent: '#ff3fa4', neutrals: 'graphite', intensity: 95,  default_mode: 'dark',  backdrop: 'custom', backdrop_url: '/ambiances/synthwave.jpg' } },
 	{ id: 'gazette',   labelKey: 'appr.preset_gazette',   theme: { accent: '#1c1c1c', neutrals: 'graphite', intensity: 0,   default_mode: 'light', backdrop: 'none' } },
-	{ id: 'sepia',     labelKey: 'appr.preset_sepia',     theme: { accent: '#9c5b2e', neutrals: 'tinted',   intensity: 30,  default_mode: 'light', backdrop: 'banner' } },
+	{ id: 'sepia',     labelKey: 'appr.preset_sepia',     theme: { accent: '#9c5b2e', neutrals: 'tinted',   intensity: 30,  default_mode: 'light', backdrop: 'custom', backdrop_url: '/ambiances/sepia.jpg' } },
 	// Couleurs : elles ne touchent qu'à la teinte, aux fonds et à l'intensité.
 	{ id: 'embers',    labelKey: 'appr.preset_embers',    theme: { accent: '#ff7a3d', neutrals: 'tinted',   intensity: 70 } },
 	{ id: 'forest',    labelKey: 'appr.preset_forest',    theme: { accent: '#3fae6a', neutrals: 'tinted',   intensity: 45 } },

@@ -4,6 +4,7 @@
 	import { DEFAULT_THEME, autoSpanMd, autoSpanSm } from '$lib/types/homepage'
 	import { PLUGIN_REGISTRY } from './plugins'
 	import DynamicWidget from './DynamicWidget.svelte'
+	import { provideFollowAmbiance } from './followAmbiance'
 	import ExtensionSurface from '$lib/components/ExtensionSurface.svelte'
 	import { extensionIndex, type PublicExtension } from './extensionCatalog'
 	import { t as i18n } from '$lib/i18n'   // `t` est déjà utilisé pour le thème
@@ -29,6 +30,8 @@
 		// Highlight pour drag feedback
 		dragOverRowId?:    string | null
 		selectedColKey?:   string | null  // 'rowId:colId'
+		/** Accent de l'ambiance (sombre), utilisé si le thème « suit l'ambiance ». */
+		ambianceAccent?:   string | null
 	}
 
 	let {
@@ -47,9 +50,20 @@
 		onResizeStart,
 		dragOverRowId = null,
 		selectedColKey = null,
+		ambianceAccent = null,
 	}: Props = $props()
 
-	const t = $derived({ ...DEFAULT_THEME, ...theme } as GridTheme)
+	// « Suivre l'ambiance » : les couleurs de marque viennent de l'écran
+	// Apparence, et le fond s'efface pour laisser voir la feuille (qui suit
+	// elle aussi l'ambiance). Sans ambianceAccent fourni, rien ne change.
+	const t = $derived.by(() => {
+		const base = { ...DEFAULT_THEME, ...theme } as GridTheme
+		if (!base.follow_ambiance || !ambianceAccent) return base
+		return { ...base, primary: ambianceAccent, accent: ambianceAccent, link_color: ambianceAccent, bg: 'transparent' }
+	})
+
+	// Les widgets à couleur propre lisent cet état (followAmbiance.ts).
+	provideFollowAmbiance(() => !!t.follow_ambiance && !!ambianceAccent)
 
 	// ── CSS custom properties thème ──────────────────────────────────────────
 	const cssVars = $derived([
