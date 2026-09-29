@@ -1032,3 +1032,39 @@ select option {
 		justify-content: flex-start;
 	}
 }
+
+/* ── Barre de défilement flottante (lib/actions/overlayScroll.ts) ───────────
+   Rail : zone de saisie de 12px, invisible. Le pouce visible est bien plus
+   fin : geste possible > geste visible (poignée de Vaul, citée au CDC). La
+   barre native n'est masquée QUE sur une zone où l'action est active. */
+/* !important voulu : les sidebars déclarent leur propre barre en CSS scopé
+   (spécificité plus forte), qui sinon s'afficherait EN PLUS de celle-ci. */
+.nx-overlay-scroll { scrollbar-width: none !important; }
+.nx-overlay-scroll::-webkit-scrollbar { display: none !important; width: 0 !important; }
+.nx-oscroll {
+  position: absolute; z-index: 20; width: 12px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .35s var(--ease-out-soft);
+}
+.nx-oscroll.visible { opacity: 1; pointer-events: auto; }
+.nx-oscroll-thumb {
+  position: absolute; top: 0; right: 3px; width: 5px;
+  border-radius: 999px; cursor: grab;
+  background: color-mix(in srgb, var(--nx-text) 38%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--nx-bg) 55%, transparent);
+  transition: width .3s var(--ease-spring), right .3s var(--ease-spring),
+              background-color .2s, box-shadow .3s var(--ease-out-soft);
+  will-change: transform;
+}
+/* Survol ou saisie : la pilule s'épaissit avec un ressort et prend l'accent
+   de l'instance, avec un halo doux de la même teinte. */
+.nx-oscroll.hot .nx-oscroll-thumb {
+  width: 8px; right: 2px;
+  background: var(--nx-header-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--nx-bg) 40%, transparent),
+              0 0 14px 1px color-mix(in srgb, var(--nx-header-accent) 45%, transparent);
+}
+.nx-oscroll-thumb.dragging { cursor: grabbing; }
+@media (prefers-reduced-motion: reduce) {
+  .nx-oscroll, .nx-oscroll-thumb { transition: none; }
+}

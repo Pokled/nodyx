@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
+	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import { t } from '$lib/i18n';
 	import { activeCommunityNameStore } from '$lib/communityStore';
 	import { voiceStore, voiceChannelMembersStore } from '$lib/voice';
@@ -234,7 +235,7 @@
 	</div>
 
 	<!-- Panel scroll: nav + channels together as one block (sketch) -->
-	<div class="panel-scroll" bind:this={scrollEl}>
+	<div class="panel-scroll" bind:this={scrollEl} use:overlayScroll={{ inset: 8 }}>
 		<div class="sel-pill" class:on={pill.on} class:ready={pill.ready} aria-hidden="true"
 		     style="transform: translateY({pill.y}px); height: {pill.h}px;"></div>
 

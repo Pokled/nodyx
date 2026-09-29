@@ -21,7 +21,7 @@
 	import MemberScreenPreview from '$lib/components/MemberScreenPreview.svelte';
 	import VoiceEqualizer from '$lib/components/VoiceEqualizer.svelte';
 	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
-	import OverlayScrollbar from '$lib/components/layout/OverlayScrollbar.svelte';
+	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
 	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
 	import ExternalLinkWarning from '$lib/components/ExternalLinkWarning.svelte';
@@ -533,7 +533,6 @@
 	// gauche du contenu = marge + rail + marge (+ panneau + marge s'il est
 	// ouvert). Même condition que `panel-collapsed` sur <main>, calculée une
 	// seule fois ici pour le header, <main> et les pages en `fixed` (chat).
-	let shellMain = $state<HTMLElement>();
 	const leftPanelOpen = $derived(!(isBanned || !showChannelSidebar || panelCollapsed))
 	const shellVars = $derived(
 		`--shell-left: calc(var(--shell-gap) * 2 + var(--shell-rail-w)${leftPanelOpen ? ` + ${leftPanelWidth}px + var(--shell-gap)` : ''});` +
@@ -870,7 +869,6 @@
 
 		<!-- ── Contenu principal ───────────────────────────────────────────────── -->
 		<div class="relative flex-1 overflow-hidden">
-		<OverlayScrollbar target={shellMain} />
 		<!-- app-shell-main : marqueur pour scoper les décalages (padding-left rail+sidebar,
 		     margin-right membres) à CE main uniquement. Sans ça, `:global(main.app-shell-main)` frappait
 		     AUSSI les <main> imbriqués des pages (profil, settings, admin, dm) et leur
@@ -881,7 +879,7 @@
 		     moindre debordement (ex: banniere full-bleed -mx-6 du profil, +24px)
 		     faisait apparaitre une scrollbar horizontale + du contenu glissant
 		     sous les sidebars. On clippe l'horizontal, plus jamais de scrollbar. -->
-		<main bind:this={shellMain} class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
+		<main use:overlayScroll class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
 		      class:members-collapsed={membersCollapsed}>
 
@@ -1277,10 +1275,7 @@
      le haut glissait sous la barre flottante et le bas n'avait plus de fin.
      Jonathan : « il faudrait que cela reste dans une zone définie ». */
   .nx-shell { height: 100dvh; }
-  /* La barre native est remplacée par OverlayScrollbar (flottante, qui
-     respecte les arrondis) : masquée seulement quand celle-ci est active. */
-  :global(main.nx-overlay-scroll) { scrollbar-width: none; }
-  :global(main.nx-overlay-scroll::-webkit-scrollbar) { display: none; }
+  /* Barre de défilement : use:overlayScroll (flottante, respecte les arrondis). */
   /* La feuille de contenu garde le fond de page ACTUEL (--shell-bg) : les
      pages ont encore leurs couleurs sombres codées en dur (hors périmètre du
      CDC), elles deviendraient illisibles sur une feuille claire. */

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n';
 	import { buildNameStyle, buildAnimClass } from '$lib/nameEffects';
@@ -158,7 +159,7 @@
 	</div>
 
 	{#if user}
-	<div class="members-scroll">
+	<div class="members-scroll" use:overlayScroll={{ inset: 8 }}>
 		<div class="scroll-inner">
 
 			<!-- ── Grouped by grade ──────────────────────────────────────── -->
