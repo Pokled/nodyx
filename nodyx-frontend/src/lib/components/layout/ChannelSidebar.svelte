@@ -545,7 +545,7 @@
 	.nodyx-sb .panel .panel-bottom .user-avatar {
 	  width: 32px; height: 32px; border-radius: 9px; shrink: 0;
 	  display: flex; align-items: center; justify-content: center;
-	  font-weight: 600; font-size: 13px; color: #fff;
+	  font-weight: 600; font-size: 13px; color: var(--nx-on-accent);
 	  background: linear-gradient(135deg, var(--nx-header-accent), var(--nx-header-accent-strong));
 	  position: relative; overflow: hidden;
 	}

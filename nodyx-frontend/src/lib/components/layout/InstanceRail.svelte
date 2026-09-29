@@ -135,7 +135,7 @@
 	.nodyx-sb .rail .icon:hover { transform: translateY(-1px) scale(1.06); }
 	.nodyx-sb .rail .icon:active { transform: scale(0.94); transition-duration: .1s; }
 	.nodyx-sb .rail .icon.logo {
-	  background: var(--nx-header-accent); color: #fff;
+	  background: var(--nx-header-accent); color: var(--nx-on-accent);
 	  box-shadow: 0 0 0 2px var(--nx-glass), 0 0 0 4px var(--nx-header-accent), 0 6px 18px -4px color-mix(in srgb, var(--nx-header-accent) 60%, transparent);
 	}
 	.nodyx-sb .rail .icon.net { background: var(--nx-surface-raised); color: var(--nx-text-muted); border: 1px solid var(--nx-border); }

@@ -72,6 +72,9 @@ html, body {
   --nx-header-accent:        #c67c00;
   --nx-header-accent-strong: #a66700;
   --nx-header-accent-soft:   rgb(198 124 0 / 0.12);
+  /* Texte posé SUR l'accent : calculé (lib/shellTheme.ts, onColor), le blanc
+     sur cet ambre ne contrastait qu'à 1,9:1. */
+  --nx-on-accent:            #16120c;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -86,6 +89,7 @@ html, body {
     --nx-header-accent:        #ffb020;
     --nx-header-accent-strong: #e89900;
     --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
+    --nx-on-accent:            #16120c;
   }
 }
 :root[data-theme="dark"] {
@@ -100,6 +104,7 @@ html, body {
   --nx-header-accent:        #ffb020;
   --nx-header-accent-strong: #e89900;
   --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
+  --nx-on-accent:            #16120c;
 }
 /* Mascotte poulpe (nodyx-octopus.png) : PNG blanc plein, neutre par choix
    (cf SPECS/NODYX_CONTENANT_DESIGN_CDC.md, une mascotte ne doit pas rentrer

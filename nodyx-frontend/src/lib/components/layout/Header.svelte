@@ -239,7 +239,7 @@
 					<path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-4 4v-4z"/>
 				</svg>
 				{#if dmUnread > 0}
-					<span class="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 flex items-center justify-center text-[9px] font-black rounded-full leading-none ring-1" style="background: var(--nx-header-accent); color: #14110d; --tw-ring-color: var(--nx-surface)">{dmUnread > 9 ? '9+' : dmUnread}</span>
+					<span class="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 flex items-center justify-center text-[9px] font-black rounded-full leading-none ring-1" style="background: var(--nx-header-accent); color: var(--nx-on-accent); --tw-ring-color: var(--nx-surface)">{dmUnread > 9 ? '9+' : dmUnread}</span>
 				{/if}
 			</a>
 			{#if user.role === 'owner' || user.role === 'admin'}
@@ -258,7 +258,7 @@
 						{#if user.avatar}
 							<img src={user.avatar} alt={tFn('common.avatar_alt')} class="w-6 h-6 rounded-md object-cover" style="outline: 1px solid var(--nx-border)" />
 						{:else}
-							<div class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold select-none" style="background: var(--nx-header-accent); color: #14110d">{user.username.charAt(0).toUpperCase()}</div>
+							<div class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold select-none" style="background: var(--nx-header-accent); color: var(--nx-on-accent)">{user.username.charAt(0).toUpperCase()}</div>
 						{/if}
 						<span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-400" style="border: 1.5px solid var(--nx-surface)"></span>
 					</div>
@@ -275,7 +275,7 @@
 									{#if user.avatar}
 										<img src={user.avatar} alt={tFn('common.avatar_alt')} class="w-12 h-12 rounded-full object-cover shrink-0" style="border: 2px solid var(--nx-border)" />
 									{:else}
-										<div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold shrink-0 select-none" style="background: var(--nx-header-accent); color: #14110d; border: 2px solid var(--nx-border)">{user.username.charAt(0).toUpperCase()}</div>
+										<div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold shrink-0 select-none" style="background: var(--nx-header-accent); color: var(--nx-on-accent); border: 2px solid var(--nx-border)">{user.username.charAt(0).toUpperCase()}</div>
 									{/if}
 									<div class="min-w-0 flex-1">
 										<div class="font-semibold text-sm truncate" style="color: var(--nx-text)">{user.username}</div>
@@ -484,7 +484,7 @@
 	}
 	.nx-auth-btn:active { transform: scale(0.97); }
 	.nx-auth-btn--primary {
-		color: #14110d;
+		color: var(--nx-on-accent);
 		background: var(--nx-header-accent);
 		border-color: transparent;
 		box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 14px color-mix(in srgb, var(--nx-header-accent) 30%, transparent);

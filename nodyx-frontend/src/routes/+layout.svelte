@@ -22,6 +22,8 @@
 	import VoiceEqualizer from '$lib/components/VoiceEqualizer.svelte';
 	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
 	import { overlayScroll } from '$lib/actions/overlayScroll';
+	import { shellThemeCss, backdropSource, type ShellTheme } from '$lib/shellTheme';
+	import { shellPreview } from '$lib/shellPreview';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
 	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
 	import ExternalLinkWarning from '$lib/components/ExternalLinkWarning.svelte';
@@ -132,6 +134,11 @@
 	const displayCommunityName = $derived(activeCommunityName ?? communityName);
 	const communityLogo      = $derived((data as any).communityLogoUrl  as string | null);
 	const communityBanner    = $derived((data as any).communityBannerUrl as string | null);
+	// Ambiance (SPECS/NODYX_APPARENCE_CDC.md) : l'aperçu d'un brouillon en cours
+	// d'édition passe devant la version publiée, pour l'admin seul.
+	const shellTheme      = $derived(($shellPreview ?? (data as any).shellTheme ?? null) as ShellTheme | null);
+	const shellCss        = $derived(shellTheme ? shellThemeCss(shellTheme) : '');
+	const shellBackdrop   = $derived(backdropSource(shellTheme, communityBanner));
 	const rawNetworkInstances = $derived((data as any).networkInstances as Array<{
 		slug: string; name: string; url: string;
 		logo_url: string | null; members: number; online: number; last_seen: string | null;
@@ -766,6 +773,11 @@
 	<link rel="stylesheet" href={GOOGLE_FONTS_URL} />
 	<!-- Thème d'instance : surcharge des variables CSS, posé par l'owner (instance_settings.theme_css).
 	     On retire tout '<' pour empêcher un breakout </style>. -->
+	<!-- Ambiance de l'instance : variables --nx-* DÉRIVÉES de réglages validés
+	     (couleurs calculées, nombres), jamais une chaîne fournie telle quelle. -->
+	{#if shellCss}
+		{@html `<style id="nx-shell-theme">${shellCss.replace(/</g, '')}</style>`}
+	{/if}
 	{#if data.themeCss}
 		{@html `<style id="instance-theme">${data.themeCss.replace(/</g, '')}</style>`}
 	{/if}
@@ -776,14 +788,15 @@
 	{@render children()}
 {:else}
 {#if hasMatrix}<MatrixRain />{/if}
-<div class="nx-shell min-h-dvh flex flex-col" class:has-wallpaper={!!communityBanner && !hasMatrix}
+<div class="nx-shell min-h-dvh flex flex-col" class:has-wallpaper={!!shellBackdrop && !hasMatrix}
      style="{appVars}; {shellVars}; --shell-bg: {hasMatrix ? 'transparent' : 'var(--p-bg)'}; color: var(--p-text)">
 
-	{#if communityBanner && !hasMatrix}
-		<!-- Papier peint du contenant flottant : la bannière de l'instance, floutée
-		     (app.css, .nx-wallpaper). Décoratif, masqué sous 1024px. -->
+	{#if shellBackdrop && !hasMatrix}
+		<!-- Papier peint du contenant flottant : le décor choisi dans l'ambiance
+		     (la bannière par défaut), flouté (app.css, .nx-wallpaper).
+		     Décoratif, masqué sous 1024px. -->
 		<div class="nx-wallpaper" aria-hidden="true">
-			<img src={communityBanner} alt="" decoding="async" fetchpriority="low" />
+			<img src={shellBackdrop} alt="" decoding="async" fetchpriority="low" />
 		</div>
 	{/if}
 

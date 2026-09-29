@@ -805,7 +805,7 @@
 	.guest-members-card:hover .guest-radar-core {
 		background: var(--nx-header-accent);
 		border-color: var(--nx-header-accent);
-		color: #fff;
+		color: var(--nx-on-accent);
 	}
 
 	/* Ghost avatars */
@@ -897,7 +897,7 @@
 	.guest-members-card:hover .guest-cta {
 		background: var(--nx-header-accent);
 		border-color: var(--nx-header-accent);
-		color: #fff;
+		color: var(--nx-on-accent);
 		box-shadow: 0 0 18px var(--nx-header-accent-soft);
 	}
 
