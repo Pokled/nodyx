@@ -72,11 +72,36 @@ describe('deriveShellVars : aucun réglage ne rend l’instance illisible', () =
 		}
 	}
 
-	it('l’ambiance par défaut reproduit le contenant d’origine (ambre, fonds quasi noirs)', () => {
+	// L'Originel : les propriétés de confort mesurées chez Discord (29/09),
+	// verrouillées ici pour qu'une retouche future ne les perde pas en silence.
+	it('Originel sombre : pas de noir, texte blanc cassé vers 10:1 (pas 21), atténué au-dessus de AA', () => {
 		const v = deriveShellVars(DEFAULT_SHELL_THEME, true)
-		expect(v['--nx-header-accent']).toBe('#ffb020')
-		expect(contrast(v['--nx-bg'], '#100e0b')).toBeLessThan(1.1)
-		expect(contrast(v['--nx-text'], '#f5f2ec')).toBeLessThan(1.1)
+		const s = v['--nx-surface']
+		expect(rgbToOklch(hexToRgb(v['--nx-bg'])).l).toBeGreaterThan(0.18)          // jamais de noir
+		expect(rgbToOklch(hexToRgb(s)).c).toBeLessThan(0.015)                        // un gris, pas une couleur
+		expect(contrast(v['--nx-text'], s)).toBeGreaterThanOrEqual(9.5)
+		expect(contrast(v['--nx-text'], s)).toBeLessThanOrEqual(11)                   // pas d'éblouissement
+		expect(contrast(v['--nx-text-muted'], s)).toBeGreaterThanOrEqual(4.5)
+		expect(rgbToOklch(hexToRgb(v['--nx-text'])).l).toBeLessThan(0.95)            // pas de blanc pur
+	})
+
+	it('Originel clair : pas de noir pour le texte (vers 12,5:1), fonds à peine froids', () => {
+		const v = deriveShellVars(DEFAULT_SHELL_THEME, false)
+		const c = contrast(v['--nx-text'], v['--nx-surface'])
+		expect(c).toBeGreaterThanOrEqual(11.5)
+		expect(c).toBeLessThanOrEqual(13.5)
+		expect(v['--nx-text']).not.toBe('#000000')
+	})
+
+	it('Originel : un ambre ADOUCI, moins saturé que l’ambre d’origine qui vibrait sur fond sombre', () => {
+		expect(rgbToOklch(hexToRgb(DEFAULT_SHELL_THEME.accent)).c).toBeLessThan(rgbToOklch(hexToRgb('#ffb020')).c)
+	})
+
+	it('les gris Graphite ne dépendent pas de l’accent ; les gris teintés, si', () => {
+		const g = (accent: string) => deriveShellVars(theme({ accent, neutrals: 'graphite' }), true)['--nx-surface']
+		const t = (accent: string) => deriveShellVars(theme({ accent, neutrals: 'tinted' }), true)['--nx-surface']
+		expect(g('#ff0000')).toBe(g('#00ff00'))
+		expect(t('#ff0000')).not.toBe(t('#00ff00'))
 	})
 
 	it('intensité : Sobre floute et voile plus, et rend le verre plus opaque, qu’Immersif', () => {

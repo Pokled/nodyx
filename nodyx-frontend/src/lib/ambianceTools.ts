@@ -4,7 +4,7 @@
  * d'ambiance à partager entre instances, ambiances prêtes à l'emploi.
  * Fonctions pures, testées dans ambianceTools.test.ts.
  */
-import type { ShellTheme } from './shellTheme'
+import { DEFAULT_SHELL_THEME, type ShellTheme } from './shellTheme'
 
 // ── Historique Annuler / Rétablir ─────────────────────────────────────────
 
@@ -50,7 +50,7 @@ const unb64url = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, '
 
 export function encodeAmbiance(t: ShellTheme): string {
 	const backdrop = t.backdrop === 'custom' ? 'banner' : t.backdrop
-	return PREFIX + b64url(JSON.stringify({ a: t.accent.toLowerCase(), b: backdrop, i: t.intensity, m: t.default_mode }))
+	return PREFIX + b64url(JSON.stringify({ a: t.accent.toLowerCase(), b: backdrop, i: t.intensity, m: t.default_mode, n: t.neutrals ?? 'tinted' }))
 }
 
 /**
@@ -68,30 +68,59 @@ export function decodeAmbiance(code: string): ShellTheme | null {
 		if (o.b !== 'banner' && o.b !== 'none') return null
 		if (!Number.isInteger(o.i) || o.i < 0 || o.i > 100) return null
 		if (o.m !== 'dark' && o.m !== 'light' && o.m !== 'system') return null
-		return { accent: o.a.toLowerCase(), backdrop: o.b, backdrop_url: null, intensity: o.i, default_mode: o.m }
+		// `n` (fonds) est venu après les premiers codes : absent = gris teintés.
+		if (o.n !== undefined && o.n !== 'graphite' && o.n !== 'tinted') return null
+		return { accent: o.a.toLowerCase(), backdrop: o.b, backdrop_url: null, intensity: o.i, default_mode: o.m, neutrals: o.n ?? 'tinted' }
 	} catch {
 		return null
 	}
 }
 
 // ── Ambiances prêtes à l'emploi ───────────────────────────────────────────
-// Un point de départ, pas un thème imposé : un preset ne touche qu'à l'accent
-// et à l'intensité, jamais au décor ni au mode choisis par l'admin. Teintes
-// choisies HORS de la paire violet-cyan que le CDC contenant identifie comme
-// la signature du « design généré ».
+// Des ambiances COMPLÈTES (29/09, demande de Jonathan : « genre Matrix,
+// cyberpunk, journal... ») : chacune fixe ce qui fait son caractère, et
+// seulement ça. Un champ absent garde le réglage de l'admin (une ambiance
+// nature ne force ni le mode ni le décor). Teintes choisies HORS des familles
+// cyan et indigo-violet que le CDC contenant bannit (vérifié par les tests).
 
-export interface AmbiancePreset { id: string; labelKey: string; accent: string; intensity: number }
+export interface AmbiancePreset { id: string; labelKey: string; theme: Partial<ShellTheme> }
+
+export const ORIGINEL: AmbiancePreset = { id: 'originel', labelKey: 'appr.preset_originel', theme: { ...DEFAULT_SHELL_THEME } }
 
 export const AMBIANCE_PRESETS: AmbiancePreset[] = [
-	{ id: 'embers',  labelKey: 'appr.preset_embers',  accent: '#ff7a3d', intensity: 70 },
-	{ id: 'gold',    labelKey: 'appr.preset_gold',    accent: '#ffb020', intensity: 60 },
-	{ id: 'forest',  labelKey: 'appr.preset_forest',  accent: '#3fae6a', intensity: 45 },
-	{ id: 'ocean',   labelKey: 'appr.preset_ocean',   accent: '#2d8cf0', intensity: 55 },
-	{ id: 'coral',   labelKey: 'appr.preset_coral',   accent: '#ff5a6e', intensity: 65 },
-	{ id: 'frost',   labelKey: 'appr.preset_frost',   accent: '#8fb8d8', intensity: 25 },
-	{ id: 'mono',    labelKey: 'appr.preset_mono',    accent: '#d4d4d4', intensity: 15 },
+	// Univers : ils fixent tout, décor et mode compris.
+	{ id: 'matrix',    labelKey: 'appr.preset_matrix',    theme: { accent: '#22e36b', neutrals: 'tinted',   intensity: 85,  default_mode: 'dark',  backdrop: 'none' } },
+	{ id: 'cyberpunk', labelKey: 'appr.preset_cyberpunk', theme: { accent: '#fcee0a', neutrals: 'tinted',   intensity: 100, default_mode: 'dark',  backdrop: 'banner' } },
+	{ id: 'synthwave', labelKey: 'appr.preset_synthwave', theme: { accent: '#ff3fa4', neutrals: 'tinted',   intensity: 95,  default_mode: 'dark',  backdrop: 'banner' } },
+	{ id: 'gazette',   labelKey: 'appr.preset_gazette',   theme: { accent: '#1c1c1c', neutrals: 'graphite', intensity: 0,   default_mode: 'light', backdrop: 'none' } },
+	{ id: 'sepia',     labelKey: 'appr.preset_sepia',     theme: { accent: '#9c5b2e', neutrals: 'tinted',   intensity: 30,  default_mode: 'light', backdrop: 'banner' } },
+	// Couleurs : elles ne touchent qu'à la teinte, aux fonds et à l'intensité.
+	{ id: 'embers',    labelKey: 'appr.preset_embers',    theme: { accent: '#ff7a3d', neutrals: 'tinted',   intensity: 70 } },
+	{ id: 'forest',    labelKey: 'appr.preset_forest',    theme: { accent: '#3fae6a', neutrals: 'tinted',   intensity: 45 } },
+	{ id: 'ocean',     labelKey: 'appr.preset_ocean',     theme: { accent: '#2d8cf0', neutrals: 'graphite', intensity: 55 } },
+	{ id: 'coral',     labelKey: 'appr.preset_coral',     theme: { accent: '#ff5a6e', neutrals: 'graphite', intensity: 65 } },
+	{ id: 'frost',     labelKey: 'appr.preset_frost',     theme: { accent: '#8fb8d8', neutrals: 'graphite', intensity: 25 } },
+	{ id: 'mono',      labelKey: 'appr.preset_mono',      theme: { accent: '#d4d4d4', neutrals: 'graphite', intensity: 15 } },
 ]
 
+/** L'ambiance « Ta bannière » : construite sur la couleur principale de la bannière. */
+export function bannerPreset(accent: string): AmbiancePreset {
+	return { id: 'banner', labelKey: 'appr.preset_banner', theme: { accent, neutrals: 'tinted', intensity: 70, backdrop: 'banner' } }
+}
+
 export function applyPreset(t: ShellTheme, p: AmbiancePreset): ShellTheme {
-	return { ...t, accent: p.accent, intensity: p.intensity }
+	const next: ShellTheme = { ...t, ...p.theme }
+	if (p.theme.backdrop && p.theme.backdrop !== 'custom') next.backdrop_url = null
+	return next
+}
+
+/** L'ambiance courante correspond-elle à ce preset (sur les champs qu'il fixe) ? */
+export function presetMatches(t: ShellTheme, p: AmbiancePreset): boolean {
+	return (Object.keys(p.theme) as (keyof ShellTheme)[])
+		.filter(k => k !== 'backdrop_url')
+		.every(k => {
+			const a = t[k] ?? (k === 'neutrals' ? 'tinted' : undefined)
+			const b = p.theme[k]
+			return typeof a === 'string' && typeof b === 'string' ? a.toLowerCase() === b.toLowerCase() : a === b
+		})
 }

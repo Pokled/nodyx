@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
 	historyStart, historyPush, historyUndo, historyRedo,
-	encodeAmbiance, decodeAmbiance, AMBIANCE_PRESETS, applyPreset,
+	encodeAmbiance, decodeAmbiance, AMBIANCE_PRESETS, ORIGINEL, applyPreset, presetMatches, bannerPreset,
 } from './ambianceTools'
 import { DEFAULT_SHELL_THEME, deriveShellVars, contrast, rgbToOklch, hexToRgb, type ShellTheme } from './shellTheme'
 
@@ -56,8 +56,13 @@ describe('code d’ambiance', () => {
 		expect(decodeAmbiance(code)?.backdrop).toBe('banner')
 	})
 
+	it('un code d’avant le réglage des fonds reste valide (gris teintés)', () => {
+		const ancien = 'NODYX-AMB-1:' + btoa(JSON.stringify({ a: '#ffb020', b: 'banner', i: 60, m: 'dark' })).replace(/=+$/, '')
+		expect(decodeAmbiance(ancien)?.neutrals).toBe('tinted')
+	})
+
 	it('reste court, facile à copier', () => {
-		expect(encodeAmbiance(T()).length).toBeLessThan(90)
+		expect(encodeAmbiance(T()).length).toBeLessThan(110)
 	})
 
 	const forge = (o: unknown) => 'NODYX-AMB-1:' + btoa(JSON.stringify(o)).replace(/=+$/, '')
@@ -69,6 +74,7 @@ describe('code d’ambiance', () => {
 		['décor personnalisé (URL étrangère)', forge({ a: '#ffffff', b: 'custom', i: 50, m: 'dark' })],
 		['intensité hors bornes', forge({ a: '#ffffff', b: 'banner', i: 500, m: 'dark' })],
 		['mode inconnu', forge({ a: '#ffffff', b: 'banner', i: 50, m: 'sepia' })],
+		['fonds inconnus', forge({ a: '#ffffff', b: 'banner', i: 50, m: 'dark', n: 'rose' })],
 		['code démesuré', 'NODYX-AMB-1:' + 'A'.repeat(500)],
 	])('refuse un code invalide ou trafiqué : %s', (_l, code) => {
 		expect(decodeAmbiance(code)).toBeNull()
@@ -76,15 +82,38 @@ describe('code d’ambiance', () => {
 })
 
 describe('ambiances prêtes', () => {
-	it('un preset ne touche qu’à l’accent et à l’intensité', () => {
-		const base = T({ backdrop: 'none', default_mode: 'light' })
-		const out = applyPreset(base, AMBIANCE_PRESETS[0])
-		expect(out.backdrop).toBe('none')
+	const byId = (id: string) => AMBIANCE_PRESETS.find(p => p.id === id)!
+
+	it('une ambiance « couleur » garde le décor et le mode choisis par l’admin', () => {
+		const base = T({ backdrop: 'custom', backdrop_url: '/uploads/banners/x.jpg', default_mode: 'light' })
+		const out = applyPreset(base, byId('forest'))
+		expect(out.backdrop).toBe('custom')
+		expect(out.backdrop_url).toBe('/uploads/banners/x.jpg')
 		expect(out.default_mode).toBe('light')
 	})
 
-	it('chaque preset reste lisible dans les deux modes', () => {
-		for (const p of AMBIANCE_PRESETS) for (const dark of [false, true]) {
+	it('une ambiance « univers » fixe tout, et retire l’image personnalisée si elle change de décor', () => {
+		const out = applyPreset(T({ backdrop: 'custom', backdrop_url: '/uploads/banners/x.jpg' }), byId('matrix'))
+		expect(out).toMatchObject({ accent: '#22e36b', backdrop: 'none', backdrop_url: null, default_mode: 'dark' })
+	})
+
+	it('on peut toujours revenir à l’Originel, et à l’ambiance de sa bannière', () => {
+		const matrix = applyPreset(T(), byId('matrix'))
+		expect(applyPreset(matrix, ORIGINEL)).toMatchObject({ ...DEFAULT_SHELL_THEME })
+		expect(presetMatches(applyPreset(matrix, ORIGINEL), ORIGINEL)).toBe(true)
+		const b = applyPreset(matrix, bannerPreset('#e5a867'))
+		expect(b).toMatchObject({ accent: '#e5a867', backdrop: 'banner' })
+		expect(presetMatches(b, bannerPreset('#E5A867'))).toBe(true)
+	})
+
+	it('presetMatches : une retouche après le clic désélectionne la carte', () => {
+		const t = applyPreset(T(), byId('ocean'))
+		expect(presetMatches(t, byId('ocean'))).toBe(true)
+		expect(presetMatches({ ...t, intensity: t.intensity + 1 }, byId('ocean'))).toBe(false)
+	})
+
+	it('chaque ambiance, Originel compris, reste lisible dans les deux modes', () => {
+		for (const p of [ORIGINEL, ...AMBIANCE_PRESETS]) for (const dark of [false, true]) {
 			const v = deriveShellVars(applyPreset(T(), p), dark)
 			expect(contrast(v['--nx-header-accent'], v['--nx-surface'])).toBeGreaterThanOrEqual(4.5)
 		}
@@ -95,15 +124,16 @@ describe('ambiances prêtes', () => {
 	// indigo-500/600 + violet-400/600 (277-294). Le bleu franc n'en fait pas
 	// partie. Marge de ±12° autour de chaque famille.
 	it('aucun preset dans les familles cyan ou indigo-violet bannies par le CDC', () => {
-		for (const p of AMBIANCE_PRESETS) {
-			const { h, c } = rgbToOklch(hexToRgb(p.accent))
+		for (const p of [ORIGINEL, ...AMBIANCE_PRESETS]) {
+			const { h, c } = rgbToOklch(hexToRgb(p.theme.accent!))
 			if (c <= 0.04) continue   // quasi-neutre : pas de teinte
 			expect(h >= 195 && h <= 227, `${p.id} dans le cyan (${h.toFixed(0)})`).toBe(false)
 			expect(h >= 265 && h <= 306, `${p.id} dans l'indigo-violet (${h.toFixed(0)})`).toBe(false)
 		}
 	})
 
-	it('identifiants uniques (sinon {#each} casse toute la page)', () => {
-		expect(new Set(AMBIANCE_PRESETS.map(p => p.id)).size).toBe(AMBIANCE_PRESETS.length)
+	it('identifiants uniques, Originel et bannière compris (sinon {#each} casse toute la page)', () => {
+		const ids = [ORIGINEL.id, bannerPreset('#000000').id, ...AMBIANCE_PRESETS.map(p => p.id)]
+		expect(new Set(ids).size).toBe(ids.length)
 	})
 })

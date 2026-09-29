@@ -27,11 +27,25 @@ export interface ShellTheme {
 	backdrop_url?: string | null
 	intensity: number
 	default_mode: 'dark' | 'light' | 'system'
+	/** Fonds : 'graphite' = gris de confort, indépendants de l'accent (le thème
+	 *  Originel) ; 'tinted' = gris teintés d'une pointe de l'accent. Absent =
+	 *  'tinted' (ambiances publiées avant l'apparition de ce réglage). */
+	neutrals?: 'graphite' | 'tinted'
 }
 
-/** Ambiance par défaut : reproduit le contenant tel qu'il était avant réglage. */
+/**
+ * L'Originel : l'ambiance par défaut de toute instance Nodyx (29/09).
+ *
+ * Calée sur ce qui rend l'interface de Discord confortable, MESURÉ en OKLCH
+ * (voir neutrals() plus bas) : jamais de noir, des graphites à peine froids,
+ * un texte blanc cassé vers 9:1 et non 21:1 (moins d'éblouissement), le texte
+ * atténué au plancher AA. Notre identité : un ambre ADOUCI (moins saturé que
+ * l'ambre d'origine, qui « vibrait » sur fond sombre), chaud sur gris froid,
+ * comme un feu la nuit. Pas de bleu : un bleu saturé sur fond sombre bave à
+ * l'œil (aberration chromatique), et l'indigo-violet est banni par le CDC.
+ */
 export const DEFAULT_SHELL_THEME: ShellTheme = {
-	accent: '#ffb020', backdrop: 'banner', backdrop_url: null, intensity: 60, default_mode: 'system',
+	accent: '#f2ae4e', backdrop: 'banner', backdrop_url: null, intensity: 45, default_mode: 'system', neutrals: 'graphite',
 }
 
 // ── Couleur : sRGB ↔ OKLCH, contraste ─────────────────────────────────────
@@ -138,6 +152,40 @@ export type ShellVars = Record<string, string>
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 const round = (v: number, d = 3) => Number(v.toFixed(d))
 
+/**
+ * Gris de confort (thème Originel), indépendants de l'accent. Échelle calée
+ * sur les mesures de l'interface de Discord (OKLCH, 29/09) :
+ *   Discord sombre : rail L 0,24 · sidebar 0,30 · fil 0,32, teinte ~265,
+ *   chroma ~0,008 ; texte L 0,90 (9,4:1), titres 0,96, atténué pile 4,5:1.
+ *   Discord clair  : fonds blancs à peine froids, texte L 0,32 (12,6:1).
+ * Nos plaques se posent entre le rail et la sidebar de Discord (0,275) : le
+ * décor flouté doit rester lisible autour sans que le verre paraisse délavé.
+ * Teinte 255 : un gris un rien moins bleu que le leur, pour ne pas refroidir
+ * l'ambre posé dessus.
+ */
+function graphite(dark: boolean): ShellVars {
+	const n = (l: number, c: number) => oklchToHex({ l, c, h: 255 })
+	return dark ? {
+		'--nx-bg':             n(0.215, 0.007),
+		'--nx-surface':        n(0.275, 0.009),
+		'--nx-surface-raised': n(0.31, 0.010),
+		'--nx-border':         n(0.36, 0.011),
+		'--nx-border-soft':    n(0.325, 0.010),
+		'--nx-text':           n(0.88, 0.006),
+		'--nx-text-muted':     n(0.715, 0.013),
+		'--nx-text-faint':     n(0.575, 0.012),
+	} : {
+		'--nx-bg':             n(0.955, 0.005),
+		'--nx-surface':        n(0.993, 0.002),
+		'--nx-surface-raised': '#ffffff',
+		'--nx-border':         n(0.895, 0.006),
+		'--nx-border-soft':    n(0.93, 0.005),
+		'--nx-text':           n(0.32, 0.012),
+		'--nx-text-muted':     n(0.5, 0.013),
+		'--nx-text-faint':     n(0.635, 0.012),
+	}
+}
+
 function neutrals(h: number, dark: boolean): ShellVars {
 	// Neutres teintés : chroma très faible, juste assez pour que le gris
 	// « appartienne » à l'accent (valeurs calées sur le contenant d'origine).
@@ -166,7 +214,7 @@ function neutrals(h: number, dark: boolean): ShellVars {
 /** Variables d'un mode (clair ou sombre) pour une ambiance donnée. */
 export function deriveShellVars(theme: ShellTheme, dark: boolean): ShellVars {
 	const base = rgbToOklch(hexToRgb(theme.accent))
-	const vars = neutrals(base.h, dark)
+	const vars = theme.neutrals === 'graphite' ? graphite(dark) : neutrals(base.h, dark)
 	const surface = vars['--nx-surface']
 
 	// Accent lisible comme TEXTE sur les plaques (lien actif, rôle…).

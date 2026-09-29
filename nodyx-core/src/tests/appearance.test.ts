@@ -42,8 +42,13 @@ const VALID = { accent: '#FFB020', backdrop: 'banner', intensity: 60, default_mo
 // ── Schéma ────────────────────────────────────────────────────
 
 describe('ShellThemeSchema', () => {
-  it('accepte une ambiance valide', () => {
+  it('accepte une ambiance valide, avec ou sans le réglage des fonds', () => {
     expect(ShellThemeSchema.safeParse(VALID).success).toBe(true)
+    expect(ShellThemeSchema.safeParse({ ...VALID, neutrals: 'graphite' }).success).toBe(true)
+  })
+
+  it('une ambiance publiée AVANT le réglage des fonds reste relue, en gris teintés', () => {
+    expect(parseStoredShellTheme(JSON.stringify(VALID))?.neutrals).toBe('tinted')
   })
 
   it.each([
@@ -57,6 +62,7 @@ describe('ShellThemeSchema', () => {
     ['mode inconnu',             { ...VALID, default_mode: 'sepia' }],
     ['clé en trop (CSS libre)',  { ...VALID, css: 'body{display:none}' }],
     ['décor perso sans url',     { ...VALID, backdrop: 'custom' }],
+    ['fonds inconnus',           { ...VALID, neutrals: 'rose' }],
   ])('refuse : %s', (_label, value) => {
     expect(ShellThemeSchema.safeParse(value).success).toBe(false)
   })
@@ -97,7 +103,7 @@ describe('IdentityDraftSchema', () => {
 describe('normalizeShellTheme / parseStoredShellTheme', () => {
   it('accent en minuscules, url retirée si le décor n’est pas personnalisé', () => {
     expect(normalizeShellTheme({ ...VALID, backdrop_url: '/uploads/x.png' })).toEqual({
-      accent: '#ffb020', backdrop: 'banner', backdrop_url: null, intensity: 60, default_mode: 'dark',
+      accent: '#ffb020', backdrop: 'banner', backdrop_url: null, intensity: 60, default_mode: 'dark', neutrals: 'tinted',
     })
   })
 
@@ -152,7 +158,7 @@ describe('/api/v1/admin/appearance', () => {
     const res = await call('GET', '/')
     expect(res.statusCode).toBe(200)
     expect(res.json()).toEqual({
-      published: { ...VALID, accent: '#ffb020', backdrop_url: null },
+      published: { ...VALID, accent: '#ffb020', backdrop_url: null, neutrals: 'tinted' },
       draft: null,
       identity: { published: { logo_url: '/uploads/logos/a.png', banner_url: null }, draft: { logo_url: '/uploads/logos/n.png' } },
     })
@@ -172,7 +178,7 @@ describe('/api/v1/admin/appearance', () => {
     const [sql, params] = query.mock.calls[0]
     expect(String(sql)).toMatch(/INSERT INTO instance_settings/)
     expect(params[0]).toBe(SHELL_KEY_DRAFT)
-    expect(JSON.parse(params[1] as string)).toEqual({ ...VALID, accent: '#ffb020', backdrop_url: null })
+    expect(JSON.parse(params[1] as string)).toEqual({ ...VALID, accent: '#ffb020', backdrop_url: null, neutrals: 'tinted' })
     expect(params[2]).toBe('admin-uuid')
     expect(writtenKeys()).toEqual([SHELL_KEY_DRAFT])
   })

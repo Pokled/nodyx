@@ -9,7 +9,7 @@
 	import { t } from '$lib/i18n'
 	import { deriveShellVars, type ShellTheme } from '$lib/shellTheme'
 	import { extractPalette, loadImagePixels } from '$lib/paletteFromImage'
-	import { AMBIANCE_PRESETS, applyPreset } from '$lib/ambianceTools'
+	import { AMBIANCE_PRESETS, ORIGINEL, applyPreset, presetMatches, bannerPreset, type AmbiancePreset } from '$lib/ambianceTools'
 
 	let { value, banner, token, onchange }: {
 		value: ShellTheme
@@ -92,6 +92,23 @@
 		next.focus(); next.click()
 	}
 
+	// Cartes d'ambiance : l'Originel d'abord (on peut TOUJOURS y revenir),
+	// puis « Ta bannière » dès que sa palette est lue, puis les autres. Chaque
+	// carte montre un vrai échantillon : le fond et l'accent qu'elle donnera.
+	const cards = $derived<(AmbiancePreset & { special?: 'default' | 'banner' })[]>([
+		{ ...ORIGINEL, special: 'default' },
+		...(palette[0] ? [{ ...bannerPreset(palette[0]), special: 'banner' as const }] : []),
+		...AMBIANCE_PRESETS,
+	])
+	function swatch(p: AmbiancePreset) {
+		const v = deriveShellVars(applyPreset(value, p), (p.theme.default_mode ?? 'dark') !== 'light')
+		return { bg: v['--nx-surface'], accent: v['--nx-header-accent'], text: v['--nx-text'] }
+	}
+	const neutralsOpts = $derived([
+		{ id: 'graphite' as const, label: tFn('appr.neutrals_graphite') },
+		{ id: 'tinted'   as const, label: tFn('appr.neutrals_tinted') },
+	])
+
 	const backdrops = $derived([
 		{ id: 'banner' as const, label: tFn('appr.backdrop_banner') },
 		{ id: 'custom' as const, label: tFn('appr.backdrop_custom') },
@@ -105,18 +122,26 @@
 </script>
 
 <div class="amb" style="--amb: {value.accent}">
-	<!-- ── Ambiances prêtes : un point de départ en un clic ────────────── -->
+	<!-- ── Ambiances : l'Originel, ta bannière, et des univers ────────── -->
 	<section class="amb-sec">
 		<header>
 			<h3>{tFn('appr.presets_title')}</h3>
 			<p>{tFn('appr.presets_help')}</p>
 		</header>
-		<div class="amb-presets">
-			{#each AMBIANCE_PRESETS as p (p.id)}
-				{@const on = p.accent === value.accent.toLowerCase() && p.intensity === value.intensity}
-				<button type="button" class="amb-preset" class:on aria-pressed={on} onclick={() => onchange(applyPreset(value, p))}>
-					<span class="amb-preset-dot" style="background: {p.accent}"></span>
-					{tFn(p.labelKey)}
+		<div class="amb-cards">
+			{#each cards as p (p.id)}
+				{@const sw = swatch(p)}
+				{@const on = presetMatches(value, p)}
+				<button type="button" class="amb-card" class:on aria-pressed={on} onclick={() => onchange(applyPreset(value, p))}>
+					<span class="amb-card-sw" style="background: {sw.bg}; color: {sw.text}">
+						<span class="amb-card-line" style="background: {sw.text}"></span>
+						<span class="amb-card-line short" style="background: {sw.text}"></span>
+						<span class="amb-card-dot" style="background: {sw.accent}"></span>
+					</span>
+					<span class="amb-card-name">
+						{tFn(p.labelKey)}
+						{#if p.special === 'default'}<em>{tFn('appr.preset_default')}</em>{/if}
+					</span>
 				</button>
 			{/each}
 		</div>
@@ -162,6 +187,21 @@
 				{adjusted.light && adjusted.dark ? tFn('appr.adjusted_both') : adjusted.light ? tFn('appr.adjusted_light') : tFn('appr.adjusted_dark')}
 			</p>
 		{/if}
+	</section>
+
+	<!-- ── Fonds ───────────────────────────────────────────────────────── -->
+	<section class="amb-sec">
+		<header>
+			<h3>{tFn('appr.neutrals_title')}</h3>
+			<p>{tFn('appr.neutrals_help')}</p>
+		</header>
+		<div class="amb-seg" role="radiogroup" tabindex="-1" onkeydown={radioKeys} aria-label={tFn('appr.neutrals_title')}>
+			{#each neutralsOpts as o (o.id)}
+				{@const cur = value.neutrals ?? 'tinted'}
+				<button type="button" role="radio" aria-checked={cur === o.id} tabindex={cur === o.id ? 0 : -1} class:on={cur === o.id}
+				        onclick={() => set({ neutrals: o.id })}>{o.label}</button>
+			{/each}
+		</div>
 	</section>
 
 	<!-- ── Décor ───────────────────────────────────────────────────────── -->
@@ -281,16 +321,24 @@
 	.amb-range { display: flex; align-items: center; gap: 12px; font-size: 12px; color: #9ca3af; }
 	.amb-range input { flex: 1; accent-color: var(--amb); }
 
-	.amb-presets { display: flex; flex-wrap: wrap; gap: 8px; }
-	.amb-preset {
-		display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 999px;
-		font-size: 13px; color: #d1d5db; background: #111827; border: 1px solid #1f2937; cursor: pointer;
-		transition: border-color .15s, background-color .15s, transform .3s var(--ease-spring);
+	.amb-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+	.amb-card {
+		display: flex; flex-direction: column; gap: 7px; padding: 6px; border-radius: 12px; text-align: left; cursor: pointer;
+		background: #111827; border: 1px solid #1f2937;
+		transition: border-color .15s, transform .3s var(--ease-spring), box-shadow .2s;
 	}
-	.amb-preset:hover { border-color: #374151; color: #fff; transform: translateY(-1px); }
-	.amb-preset.on { border-color: var(--amb); color: #fff; background: color-mix(in srgb, var(--amb) 12%, #111827); }
-	.amb-preset-dot { width: 16px; height: 16px; border-radius: 999px; box-shadow: inset 0 1px 0 rgb(255 255 255 / .25), 0 0 0 1px rgb(0 0 0 / .4); }
-	.amb-preset:focus-visible { outline: 2px solid var(--amb); outline-offset: 2px; }
+	.amb-card:hover { border-color: #374151; transform: translateY(-2px); }
+	.amb-card.on { border-color: var(--amb); box-shadow: 0 0 0 1px var(--amb), 0 8px 20px -10px var(--amb); }
+	.amb-card-sw {
+		position: relative; height: 54px; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; gap: 5px; padding: 10px;
+		box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06);
+	}
+	.amb-card-line { height: 4px; width: 62%; border-radius: 2px; opacity: .55; }
+	.amb-card-line.short { width: 40%; opacity: .3; }
+	.amb-card-dot { position: absolute; right: 9px; bottom: 9px; width: 16px; height: 16px; border-radius: 999px; box-shadow: 0 0 10px -2px currentColor; }
+	.amb-card-name { font-size: 12.5px; font-weight: 500; color: #e5e7eb; padding: 0 4px 3px; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+	.amb-card-name em { font-style: normal; font-size: 10px; font-weight: 600; color: var(--amb); }
+	.amb-card:focus-visible { outline: 2px solid var(--amb); outline-offset: 2px; }
 
 	/* Focus clavier visible partout (V3 de la passe de vérification du 29/09). */
 	.amb-swatch:focus-within, .amb-dot:focus-visible, .amb-seg button:focus-visible, .amb-btn:focus-within {

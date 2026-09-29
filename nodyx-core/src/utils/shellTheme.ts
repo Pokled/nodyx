@@ -42,6 +42,10 @@ export const ShellThemeSchema = z.object({
   backdrop_url: z.string().nullable().optional(),
   intensity:    z.number().int().min(0).max(100),
   default_mode: z.enum(['dark', 'light', 'system']),
+  // Fonds : gris de confort indépendants de l'accent (thème Originel) ou gris
+  // teintés par l'accent. Optionnel : les ambiances publiées avant ce réglage
+  // restent valides et gardent leur rendu ('tinted').
+  neutrals:     z.enum(['graphite', 'tinted']).optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.backdrop === 'custom' && !v.backdrop_url) {
     ctx.addIssue({ code: 'custom', path: ['backdrop_url'], message: 'backdrop_url requis pour un décor personnalisé' })
@@ -61,6 +65,7 @@ export function normalizeShellTheme(v: ShellTheme): ShellTheme {
     backdrop_url: v.backdrop === 'custom' ? (v.backdrop_url ?? null) : null,
     intensity:    v.intensity,
     default_mode: v.default_mode,
+    neutrals:     v.neutrals ?? 'tinted',
   }
 }
 

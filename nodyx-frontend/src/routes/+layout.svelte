@@ -22,7 +22,7 @@
 	import VoiceEqualizer from '$lib/components/VoiceEqualizer.svelte';
 	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
 	import { overlayScroll } from '$lib/actions/overlayScroll';
-	import { shellThemeCss, backdropSource, type ShellTheme } from '$lib/shellTheme';
+	import { shellThemeCss, backdropSource, DEFAULT_SHELL_THEME, type ShellTheme } from '$lib/shellTheme';
 	import { shellPreview, identityPreview } from '$lib/shellPreview';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
 	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
@@ -138,7 +138,9 @@
 	const communityBanner    = $derived(($identityPreview?.banner_url !== undefined ? $identityPreview.banner_url : (data as any).communityBannerUrl) as string | null);
 	// Ambiance (SPECS/NODYX_APPARENCE_CDC.md) : l'aperçu d'un brouillon en cours
 	// d'édition passe devant la version publiée, pour l'admin seul.
-	const shellTheme      = $derived(($shellPreview ?? (data as any).shellTheme ?? null) as ShellTheme | null);
+	// Sans ambiance publiée, l'Originel (le thème de confort par défaut de
+	// Nodyx), et non plus l'ancien ambre codé en dur dans app.css.
+	const shellTheme      = $derived(($shellPreview ?? (data as any).shellTheme ?? DEFAULT_SHELL_THEME) as ShellTheme);
 	const shellCss        = $derived(shellTheme ? shellThemeCss(shellTheme) : '');
 	const shellBackdrop   = $derived(backdropSource(shellTheme, communityBanner));
 	const rawNetworkInstances = $derived((data as any).networkInstances as Array<{

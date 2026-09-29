@@ -303,15 +303,19 @@
 	.appr-tabs button:hover { color: #f3f4f6; }
 	.appr-tabs button.on { background: #374151; color: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .4); }
 	.appr-tab-dot { display: inline-block; width: 6px; height: 6px; border-radius: 999px; margin-left: 6px; vertical-align: middle; background: var(--nx-header-accent); }
-	/* Info-bulle maison : apparaît sous l'onglet au survol ET au focus clavier. */
+	/* Info-bulle maison : apparaît sous l'onglet au survol ET au focus clavier.
+	   Alignée sur le BORD GAUCHE de l'onglet, jamais centrée : centrée, celle du
+	   premier onglet débordait à gauche et passait sous la sidebar de l'admin
+	   (signalé par Jonathan le 29/09). Monter le z-index n'y changeait rien,
+	   c'est le conteneur de l'admin qui la coupait. */
 	.appr-tip {
-		position: absolute; top: calc(100% + 8px); left: 50%; transform: translate(-50%, -4px); z-index: 30;
+		position: absolute; top: calc(100% + 8px); left: 0; transform: translateY(-4px); z-index: 30;
 		width: max-content; max-width: 280px; padding: 8px 11px; border-radius: 9px; text-align: left; white-space: normal;
 		font-size: 12px; font-weight: 400; line-height: 1.4; color: #e5e7eb;
 		background: #0b0f17; box-shadow: 0 0 0 1px #374151, 0 10px 24px -8px rgb(0 0 0 / .8);
 		opacity: 0; pointer-events: none; transition: opacity .15s, transform .25s var(--ease-out-soft);
 	}
-	.appr-tabs button:hover .appr-tip, .appr-tabs button:focus-visible .appr-tip { opacity: 1; transform: translate(-50%, 0); transition-delay: .25s; }
+	.appr-tabs button:hover .appr-tip, .appr-tabs button:focus-visible .appr-tip { opacity: 1; transform: none; transition-delay: .25s; }
 
 	.appr-link, .appr-btn {
 		display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
