@@ -32,7 +32,7 @@ const ALLOWED_MIME_BRANDING = ['image/jpeg', 'image/png', 'image/webp', 'image/g
 
 let _communityId: string | null = null
 
-async function getCommunityId(): Promise<string | null> {
+export async function getCommunityId(): Promise<string | null> {
   if (_communityId) return _communityId
   const slug = process.env.NODYX_COMMUNITY_SLUG
   if (slug) {

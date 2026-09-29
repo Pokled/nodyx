@@ -19,6 +19,8 @@ import { z } from 'zod'
 
 export const SHELL_KEY_PUBLISHED = 'theme_shell'
 export const SHELL_KEY_DRAFT     = 'theme_shell_draft'
+/** Brouillon de l'Identité (logo, bannière) : publié dans `communities`. */
+export const IDENTITY_KEY_DRAFT  = 'theme_identity_draft'
 
 // Décor personnalisé : un fichier téléversé sur l'instance (/uploads/…) ou une
 // URL https. Rien d'autre : ni javascript:, ni data:, ni remontée de dossier.
@@ -72,6 +74,29 @@ export function parseStoredShellTheme(raw: string | null | undefined): ShellThem
   try {
     const parsed = ShellThemeSchema.safeParse(JSON.parse(raw))
     return parsed.success ? normalizeShellTheme(parsed.data) : null
+  } catch {
+    return null
+  }
+}
+
+// ── Identité en brouillon (logo, bannière) ────────────────────────────────
+// Même brouillon partagé que l'Ambiance, un seul « Publier ». Chaque champ est
+// optionnel : absent = inchangé, null = retiré. Mêmes règles d'URL que le
+// décor : un fichier téléversé sur l'instance ou une adresse https.
+const IdentityUrl = z.string().max(500).refine(isSafeBackdropUrl, 'doit être un fichier /uploads/ ou une URL https').nullable()
+
+export const IdentityDraftSchema = z.object({
+  logo_url:   IdentityUrl.optional(),
+  banner_url: IdentityUrl.optional(),
+}).strict().refine(v => v.logo_url !== undefined || v.banner_url !== undefined, 'au moins un champ')
+
+export type IdentityDraft = z.infer<typeof IdentityDraftSchema>
+
+export function parseStoredIdentityDraft(raw: string | null | undefined): IdentityDraft | null {
+  if (!raw) return null
+  try {
+    const parsed = IdentityDraftSchema.safeParse(JSON.parse(raw))
+    return parsed.success ? parsed.data : null
   } catch {
     return null
   }

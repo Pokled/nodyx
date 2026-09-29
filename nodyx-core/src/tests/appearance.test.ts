@@ -3,10 +3,10 @@ import { buildApp } from './helpers/buildApp'
 
 // ── Mocks ─────────────────────────────────────────────────────
 
-const { query } = vi.hoisted(() => ({ query: vi.fn() }))
+const { query, clientQuery, release } = vi.hoisted(() => ({ query: vi.fn(), clientQuery: vi.fn(), release: vi.fn() }))
 
 vi.mock('../config/database', () => ({
-  db: { query },
+  db: { query, connect: vi.fn(async () => ({ query: clientQuery, release })) },
   redis: {
     exists: vi.fn().mockResolvedValue(0),
     incr:   vi.fn().mockResolvedValue(1),
@@ -25,12 +25,16 @@ vi.mock('../middleware/adminOnly', () => ({
 }))
 
 const logAction = vi.fn()
-vi.mock('../routes/admin', () => ({ logAction: (...a: unknown[]) => logAction(...a) }))
+const getCommunityId = vi.fn()
+vi.mock('../routes/admin', () => ({
+  logAction: (...a: unknown[]) => logAction(...a),
+  getCommunityId: (...a: unknown[]) => getCommunityId(...a),
+}))
 
 import appearanceRoutes from '../routes/appearance'
 import {
   ShellThemeSchema, normalizeShellTheme, parseStoredShellTheme, isSafeBackdropUrl,
-  SHELL_KEY_DRAFT, SHELL_KEY_PUBLISHED,
+  IdentityDraftSchema, SHELL_KEY_DRAFT, SHELL_KEY_PUBLISHED, IDENTITY_KEY_DRAFT,
 } from '../utils/shellTheme'
 
 const VALID = { accent: '#FFB020', backdrop: 'banner', intensity: 60, default_mode: 'dark' } as const
@@ -75,6 +79,19 @@ describe('isSafeBackdropUrl', () => {
     '/uploads/a"onerror="x.png',
     'https://' + 'a'.repeat(600) + '.png',
   ])('refuse %s', url => expect(isSafeBackdropUrl(url)).toBe(false))
+})
+
+describe('IdentityDraftSchema', () => {
+  it('accepte un logo seul, une bannière seule, ou un retrait (null)', () => {
+    expect(IdentityDraftSchema.safeParse({ logo_url: '/uploads/logos/a.png' }).success).toBe(true)
+    expect(IdentityDraftSchema.safeParse({ banner_url: null }).success).toBe(true)
+  })
+  it.each([
+    ['vide', {}],
+    ['javascript:', { logo_url: 'javascript:alert(1)' }],
+    ['remontée de dossier', { banner_url: '/uploads/../../etc/passwd' }],
+    ['clé inconnue', { logo_url: '/uploads/a.png', name: 'x' }],
+  ])('refuse : %s', (_l, v) => expect(IdentityDraftSchema.safeParse(v).success).toBe(false))
 })
 
 describe('normalizeShellTheme / parseStoredShellTheme', () => {
@@ -122,14 +139,22 @@ describe('/api/v1/admin/appearance', () => {
     expect(query).not.toHaveBeenCalled()
   })
 
-  it('GET renvoie la version publiée et le brouillon, relus et validés', async () => {
-    query.mockResolvedValueOnce({ rows: [
-      { key: SHELL_KEY_PUBLISHED, value: JSON.stringify(VALID) },
-      { key: SHELL_KEY_DRAFT,     value: '{corrompu' },
-    ] })
+  it('GET renvoie ambiance ET identité, publiées et en brouillon, relues et validées', async () => {
+    getCommunityId.mockResolvedValue('comm-1')
+    query
+      .mockResolvedValueOnce({ rows: [
+        { key: SHELL_KEY_PUBLISHED, value: JSON.stringify(VALID) },
+        { key: SHELL_KEY_DRAFT,     value: '{corrompu' },
+        { key: IDENTITY_KEY_DRAFT,  value: JSON.stringify({ logo_url: '/uploads/logos/n.png' }) },
+      ] })
+      .mockResolvedValueOnce({ rows: [{ logo_url: '/uploads/logos/a.png', banner_url: null }] })
     const res = await call('GET', '/')
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ published: { ...VALID, accent: '#ffb020', backdrop_url: null }, draft: null })
+    expect(res.json()).toEqual({
+      published: { ...VALID, accent: '#ffb020', backdrop_url: null },
+      draft: null,
+      identity: { published: { logo_url: '/uploads/logos/a.png', banner_url: null }, draft: { logo_url: '/uploads/logos/n.png' } },
+    })
   })
 
   it('PUT /draft refuse une valeur invalide avec un code stable, sans écrire', async () => {
@@ -151,11 +176,25 @@ describe('/api/v1/admin/appearance', () => {
     expect(writtenKeys()).toEqual([SHELL_KEY_DRAFT])
   })
 
-  it('DELETE /draft abandonne le brouillon seulement', async () => {
+  it('DELETE /draft abandonne les DEUX brouillons, jamais la version publiée', async () => {
     query.mockResolvedValueOnce({ rows: [] })
     const res = await call('DELETE', '/draft')
     expect(res.statusCode).toBe(200)
-    expect(query.mock.calls[0][1]).toEqual([SHELL_KEY_DRAFT])
+    expect(query.mock.calls[0][1]).toEqual([SHELL_KEY_DRAFT, IDENTITY_KEY_DRAFT])
+  })
+
+  it('PUT /draft/identity refuse une adresse dangereuse, sans écrire', async () => {
+    const res = await call('PUT', '/draft/identity', { logo_url: 'javascript:alert(1)' })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().code).toBe('VALIDATION_ERROR')
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it('PUT /draft/identity enregistre le brouillon d’identité (null = retirer)', async () => {
+    query.mockResolvedValueOnce({ rows: [] })
+    const res = await call('PUT', '/draft/identity', { logo_url: '/uploads/logos/n.png', banner_url: null })
+    expect(res.statusCode).toBe(200)
+    expect(query.mock.calls[0][1]).toEqual([IDENTITY_KEY_DRAFT, JSON.stringify({ logo_url: '/uploads/logos/n.png', banner_url: null }), 'admin-uuid'])
   })
 
   it('POST /publish sans brouillon : 409 NO_DRAFT, rien d’écrit', async () => {
@@ -174,27 +213,67 @@ describe('/api/v1/admin/appearance', () => {
     expect(query).toHaveBeenCalledTimes(1)
   })
 
-  it('POST /publish : une seule instruction retire le brouillon RELU et l’installe comme version publique', async () => {
+  // Requêtes exécutées DANS la transaction, sans BEGIN/COMMIT/ROLLBACK.
+  const txSql = () => clientQuery.mock.calls.map(c => String(c[0])).filter(q => !/^(BEGIN|COMMIT|ROLLBACK)$/.test(q))
+  const txOps = () => clientQuery.mock.calls.map(c => String(c[0])).filter(q => /^(BEGIN|COMMIT|ROLLBACK)$/.test(q))
+
+  it('POST /publish : dans une transaction, retire le brouillon RELU et l’installe comme version publique', async () => {
     const raw = JSON.stringify({ ...VALID, accent: '#ffb020', backdrop_url: null })
-    query
-      .mockResolvedValueOnce({ rows: [{ key: SHELL_KEY_DRAFT, value: raw }] })
-      .mockResolvedValueOnce({ rows: [{ value: raw }] })
+    query.mockResolvedValueOnce({ rows: [{ key: SHELL_KEY_DRAFT, value: raw }] })
+    clientQuery.mockImplementation(async (q: string) => /WITH d AS/.test(q) ? { rows: [{ value: raw }] } : { rows: [] })
     const res = await call('POST', '/publish')
     expect(res.statusCode).toBe(200)
     expect(res.json().published.accent).toBe('#ffb020')
-    const [sql, params] = query.mock.calls[1]
-    expect(String(sql)).toMatch(/WITH d AS \(\s*DELETE FROM instance_settings WHERE key = \$1 AND value = \$2/)
-    expect(params).toEqual([SHELL_KEY_DRAFT, raw, SHELL_KEY_PUBLISHED, 'admin-uuid'])
-    expect(logAction).toHaveBeenCalledWith('admin-uuid', 'publish_appearance', 'instance', null, null, expect.objectContaining({ accent: '#ffb020' }))
+    const call1 = clientQuery.mock.calls.find(c => /WITH d AS/.test(String(c[0])))!
+    expect(String(call1[0])).toMatch(/WITH d AS \(\s*DELETE FROM instance_settings WHERE key = \$1 AND value = \$2/)
+    expect(call1[1]).toEqual([SHELL_KEY_DRAFT, raw, SHELL_KEY_PUBLISHED, 'admin-uuid'])
+    expect(txOps()).toEqual(['BEGIN', 'COMMIT'])
+    expect(release).toHaveBeenCalled()
+    expect(logAction).toHaveBeenCalledWith('admin-uuid', 'publish_appearance', 'instance', null, null, expect.objectContaining({ ambiance: expect.objectContaining({ accent: '#ffb020' }) }))
   })
 
-  it('POST /publish : brouillon réenregistré pendant la publication, 409 DRAFT_CHANGED', async () => {
-    query
-      .mockResolvedValueOnce({ rows: [{ key: SHELL_KEY_DRAFT, value: JSON.stringify(VALID) }] })
-      .mockResolvedValueOnce({ rows: [] })
+  it('POST /publish : brouillon réenregistré pendant la publication, tout est annulé (ROLLBACK, 409)', async () => {
+    query.mockResolvedValueOnce({ rows: [{ key: SHELL_KEY_DRAFT, value: JSON.stringify(VALID) }] })
+    clientQuery.mockResolvedValue({ rows: [] })
     const res = await call('POST', '/publish')
     expect(res.statusCode).toBe(409)
     expect(res.json().code).toBe('DRAFT_CHANGED')
+    expect(txOps()).toEqual(['BEGIN', 'ROLLBACK'])
     expect(logAction).not.toHaveBeenCalled()
+  })
+
+  it('POST /publish : ambiance ET identité publiées ensemble, identité écrite dans communities', async () => {
+    getCommunityId.mockResolvedValue('comm-1')
+    const rawA = JSON.stringify(VALID), rawI = JSON.stringify({ banner_url: '/uploads/banners/b.jpg' })
+    query.mockResolvedValueOnce({ rows: [{ key: SHELL_KEY_DRAFT, value: rawA }, { key: IDENTITY_KEY_DRAFT, value: rawI }] })
+    clientQuery.mockImplementation(async (q: string) => /RETURNING/.test(q) ? { rows: [{ value: rawA, key: IDENTITY_KEY_DRAFT }] } : { rows: [] })
+    const res = await call('POST', '/publish')
+    expect(res.statusCode).toBe(200)
+    const upd = clientQuery.mock.calls.find(c => /UPDATE communities/.test(String(c[0])))!
+    expect(String(upd[0])).toBe('UPDATE communities SET banner_url = $1 WHERE id = $2')
+    expect(upd[1]).toEqual(['/uploads/banners/b.jpg', 'comm-1'])
+    expect(txOps()).toEqual(['BEGIN', 'COMMIT'])
+  })
+
+  it('POST /publish : identité changée pendant la publication, l’AMBIANCE n’est pas publiée non plus', async () => {
+    getCommunityId.mockResolvedValue('comm-1')
+    const rawA = JSON.stringify(VALID), rawI = JSON.stringify({ logo_url: null })
+    query.mockResolvedValueOnce({ rows: [{ key: SHELL_KEY_DRAFT, value: rawA }, { key: IDENTITY_KEY_DRAFT, value: rawI }] })
+    clientQuery.mockImplementation(async (q: string) => /WITH d AS/.test(q) ? { rows: [{ value: rawA }] } : { rows: [] })
+    const res = await call('POST', '/publish')
+    expect(res.statusCode).toBe(409)
+    expect(txOps()).toEqual(['BEGIN', 'ROLLBACK'])
+    expect(txSql().some(q => /UPDATE communities/.test(q))).toBe(false)
+  })
+
+  it('POST /publish : identité seule, sans ambiance en brouillon', async () => {
+    getCommunityId.mockResolvedValue('comm-1')
+    const rawI = JSON.stringify({ logo_url: '/uploads/logos/n.png' })
+    query.mockResolvedValueOnce({ rows: [{ key: IDENTITY_KEY_DRAFT, value: rawI }] })
+    clientQuery.mockImplementation(async (q: string) => /RETURNING key/.test(q) ? { rows: [{ key: IDENTITY_KEY_DRAFT }] } : { rows: [] })
+    const res = await call('POST', '/publish')
+    expect(res.statusCode).toBe(200)
+    expect(txSql().some(q => /WITH d AS/.test(q))).toBe(false)
+    expect(res.json()).toEqual({ published: null, identity: { logo_url: '/uploads/logos/n.png' } })
   })
 })
