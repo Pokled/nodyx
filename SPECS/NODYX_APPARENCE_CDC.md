@@ -232,3 +232,136 @@ enregistrement.
 - **D8.** (révision du 29/09, validé) Deux entrées pour un seul brouillon : écran Apparence ET édition en direct ;
   bouton scindé Administration | stylo ; stylos visibles uniquement en mode
   édition ; pas d'édition de la grille d'accueil bloc par bloc.
+
+---
+
+# Partie 2 (30/09) : le stylo, la jonction avec le Grid Builder, les modules
+
+> Jonathan, 30/09 : « Pourrais-tu en profiter pour améliorer la jonction
+> Grid Builder et Apparence ? Je sais que c'est un travail monstrueux, mais
+> on n'a pas le choix. Car après, on va même devoir s'attaquer aux
+> différents modules (forum, wiki, chat, canvas, sondages...). Prends le
+> temps. »
+
+## Où on en est (livré sur vieuxlooters, branche feat/contenant-design)
+
+Écran Apparence complet (ambiance + identité, un brouillon, un « Publier »),
+thème Originel de confort par défaut, ambiances « univers » avec leur propre
+décor, fonds Graphite / Assortis / Noir, « Suivre l'ambiance » dans le Grid
+Builder, anciennes variables de marque des pages recalées sur l'ambiance.
+
+## Constat, mesuré dans le code le 30/09
+
+**La jonction Grid Builder / Apparence est encore bancale :**
+- le panneau Thème du Grid Builder règle 6 couleurs, 2 fonds et bordures, la
+  forme et la typographie, plus ses propres préréglages (émojis, dégradés
+  violet-cyan) : quand la grille suit l'ambiance, ces couleurs sont
+  silencieusement ignorées, alors que le panneau les montre toujours comme
+  modifiables. L'admin règle un champ, rien ne bouge, sans explication ;
+- deux systèmes de préréglages coexistent (ceux de la grille, ceux de
+  l'Apparence), qui ne se connaissent pas ;
+- **incohérence de publication** : dans le Grid Builder, enregistrer le
+  thème le rend public IMMÉDIATEMENT (colonne `homepage_grid.theme`, pas de
+  brouillon) ; seule la mise en page passe par « Publier ». L'Apparence, elle,
+  passe tout par un brouillon ;
+- une nouvelle grille ne suit pas l'ambiance par défaut.
+
+**Les modules sont l'essentiel du travail restant :**
+
+| Module | Fichiers | Couleurs codées en dur |
+|---|---|---|
+| Calendrier | 4 | 451 |
+| Forum | 4 | 430 |
+| Profils (`users`) | 6 | 324 |
+| Messages privés | 2 | 286 |
+| Chat | 1 | 181 |
+| Tâches | 2 | 173 |
+| Paramètres membre | 1 | 163 |
+| Wiki | 4 | 117 |
+| Fil d'actu | 1 | 111 |
+| Bibliothèque | 2 | 104 |
+| Canvas | 2 | 95 |
+| Jardin | 1 | 88 |
+| Musique | 3 | 65 |
+| Découvrir | 1 | 48 |
+| Notifications | 1 | 30 |
+| Sondages | 1 | 18 |
+| **Composants partagés** | (lib/components) | **~3 400** |
+
+Environ 6 300 couleurs en dur au total. C'est ce qui empêche la feuille
+centrale de passer en clair, et ce qui laisse des restes d'indigo sous
+certaines ambiances.
+
+## Volet A : un seul moteur d'apparence côté navigateur
+
+Prérequis des deux autres volets. Aujourd'hui, le brouillon, l'historique
+et la publication vivent DANS la page Apparence. Le stylo en direct ne peut
+pas les réutiliser. On les sort dans un module unique
+(`lib/appearanceDraft.ts`) : chargement, enregistrement automatique,
+Annuler/Rétablir, publication, abandon. La page Apparence et le stylo
+l'utilisent tous les deux : une retouche au stylo se voit dans l'écran
+Apparence et inversement, par construction, pas par synchronisation.
+
+## Volet B : le stylo en direct
+
+- **Bouton scindé** `[ Administration | stylo ]` dans le header, pour les
+  admins et le propriétaire seulement. Le stylo active le mode édition ; un
+  second clic ou Échap le referme.
+- **Barre flottante** en mode édition : état du brouillon, Annuler/Rétablir,
+  « Ouvrir Apparence », Publier, Quitter.
+- **Zones éditables** : rien en navigation normale. En mode édition, un
+  liseré discret et une pastille stylo au survol ; un clic ouvre un panneau
+  ancré à la zone, avec les MÊMES contrôles que l'écran Apparence :
+  - le logo du rail → logo ;
+  - la pastille de sélection (canaux) → couleur d'accent, couleurs de la
+    bannière, ambiances ;
+  - le décor (bords autour des plaques) → décor et intensité ;
+  - la page d'accueil → « Suivre l'ambiance » et l'éditeur de mise en page.
+- Grand écran seulement (1024 px et plus), comme le contenant flottant.
+- Accessibilité : chaque zone est atteignable au clavier en mode édition,
+  les panneaux se ferment à Échap et rendent le focus.
+
+## Volet C : la jonction Grid Builder / Apparence
+
+- **Une seule source de couleur quand la grille suit l'ambiance** : dans le
+  panneau Thème, les champs de couleur et les préréglages de la grille sont
+  remplacés par une carte « Couleurs : l'ambiance de l'instance », avec
+  l'échantillon réel de l'ambiance publiée et un lien vers Apparence. Plus de
+  champ affiché qui ne fait rien. « Personnaliser les couleurs de la grille »
+  détache la grille et rend les champs.
+- **La forme et la typographie restent à la grille** (arrondis, ombre,
+  bordures, police) : l'ambiance ne les couvre pas, et ce sont des choix de
+  mise en page.
+- **Suivre l'ambiance par défaut pour une grille neuve** (une grille déjà
+  personnalisée reste comme elle est, D6).
+- **Onglet « Page d'accueil » de l'Apparence** : état réel (suit l'ambiance
+  ou a ses propres couleurs), bascule en un clic, ouverture de l'éditeur.
+- **Incohérence de publication** du thème de la grille : documentée ici,
+  corrigée dans un second temps (le passer en brouillon touche le core et le
+  flux du Grid Builder ; hors de cette passe pour ne pas tout mêler).
+
+## Volet D : la méthode pour les modules (plan, pas encore de code)
+
+1. **Des jetons de CONTENU**, pas seulement de contenant : `--nx-content-bg`,
+   `-card`, `-card-hover`, `-text`, `-muted`, `-faint`, `-border`,
+   `-accent`, `-accent-text`, `-danger`, `-success`... définis par l'ambiance
+   en clair ET en sombre, dans lib/shellTheme.ts, testés comme le reste
+   (plancher de contraste).
+2. **Une table de correspondance** des couleurs en dur les plus fréquentes
+   vers ces jetons (`bg-gray-900` → carte, `text-gray-400` → atténué,
+   `text-indigo-400` → accent...), établie en mesurant les usages réels, pas
+   en devinant.
+3. **Un outil de migration assistée** : il propose les remplacements
+   fichier par fichier ; chaque cas ambigu est tranché à la main.
+4. **Un module par PR**, dans l'ordre d'usage (forum, chat, messages,
+   profils, puis les autres), chacun vérifié par captures avant/après en
+   sombre ET en clair, et par les détecteurs Playwright existants.
+5. Quand tous les modules sont migrés : la feuille centrale suit enfin le
+   mode clair, et une nouvelle porte CI interdit toute nouvelle couleur en
+   dur dans les pages (même principe que les portes i18n : un cliquet).
+
+## Ordre de réalisation
+
+A (moteur partagé) → B (stylo) → C (jonction) → D (modules, un par un).
+Chaque étape testée, déployée et vérifiée sur vieuxlooters, avec un point à
+Jonathan entre deux.
