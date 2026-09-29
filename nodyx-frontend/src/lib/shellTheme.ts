@@ -30,7 +30,7 @@ export interface ShellTheme {
 	/** Fonds : 'graphite' = gris de confort, indépendants de l'accent (le thème
 	 *  Originel) ; 'tinted' = gris teintés d'une pointe de l'accent. Absent =
 	 *  'tinted' (ambiances publiées avant l'apparition de ce réglage). */
-	neutrals?: 'graphite' | 'tinted'
+	neutrals?: 'graphite' | 'tinted' | 'black'
 }
 
 /**
@@ -186,6 +186,27 @@ function graphite(dark: boolean): ShellVars {
 	}
 }
 
+/**
+ * Noir (OLED) : vrai noir neutre, sans teinte. Demandé pour l'ambiance
+ * « Coquin » (29/09), utile à tous : économie de batterie sur écran OLED, et
+ * certains le préfèrent. Texte blanc cassé vers 13:1 (pas le 21:1 du blanc
+ * pur sur noir pur, qui éblouit). En clair, mêmes fonds que Graphite.
+ */
+function black(dark: boolean): ShellVars {
+	if (!dark) return graphite(false)
+	const n = (l: number) => oklchToHex({ l, c: 0, h: 0 })
+	return {
+		'--nx-bg':             n(0.13),
+		'--nx-surface':        n(0.175),
+		'--nx-surface-raised': n(0.21),
+		'--nx-border':         n(0.27),
+		'--nx-border-soft':    n(0.225),
+		'--nx-text':           n(0.9),
+		'--nx-text-muted':     n(0.7),
+		'--nx-text-faint':     n(0.55),
+	}
+}
+
 function neutrals(h: number, dark: boolean): ShellVars {
 	// Neutres teintés : chroma très faible, juste assez pour que le gris
 	// « appartienne » à l'accent (valeurs calées sur le contenant d'origine).
@@ -214,7 +235,7 @@ function neutrals(h: number, dark: boolean): ShellVars {
 /** Variables d'un mode (clair ou sombre) pour une ambiance donnée. */
 export function deriveShellVars(theme: ShellTheme, dark: boolean): ShellVars {
 	const base = rgbToOklch(hexToRgb(theme.accent))
-	const vars = theme.neutrals === 'graphite' ? graphite(dark) : neutrals(base.h, dark)
+	const vars = theme.neutrals === 'graphite' ? graphite(dark) : theme.neutrals === 'black' ? black(dark) : neutrals(base.h, dark)
 	const surface = vars['--nx-surface']
 
 	// Accent lisible comme TEXTE sur les plaques (lien actif, rôle…).

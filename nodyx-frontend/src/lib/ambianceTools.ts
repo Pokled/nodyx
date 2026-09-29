@@ -77,7 +77,7 @@ export function decodeAmbiance(code: string): ShellTheme | null {
 		if (!Number.isInteger(o.i) || o.i < 0 || o.i > 100) return null
 		if (o.m !== 'dark' && o.m !== 'light' && o.m !== 'system') return null
 		// `n` (fonds) est venu après les premiers codes : absent = gris teintés.
-		if (o.n !== undefined && o.n !== 'graphite' && o.n !== 'tinted') return null
+		if (o.n !== undefined && o.n !== 'graphite' && o.n !== 'tinted' && o.n !== 'black') return null
 		return { accent: o.a.toLowerCase(), backdrop: o.b, backdrop_url: decor, intensity: o.i, default_mode: o.m, neutrals: o.n ?? 'tinted' }
 	} catch {
 		return null
@@ -104,6 +104,9 @@ export const AMBIANCE_PRESETS: AmbiancePreset[] = [
 	{ id: 'matrix',    labelKey: 'appr.preset_matrix',    theme: { accent: '#22e36b', neutrals: 'tinted',   intensity: 85,  default_mode: 'dark',  backdrop: 'custom', backdrop_url: '/ambiances/matrix.jpg' } },
 	{ id: 'cyberpunk', labelKey: 'appr.preset_cyberpunk', theme: { accent: '#fcee0a', neutrals: 'graphite', intensity: 100, default_mode: 'dark',  backdrop: 'custom', backdrop_url: '/ambiances/cyberpunk.jpg' } },
 	{ id: 'synthwave', labelKey: 'appr.preset_synthwave', theme: { accent: '#ff3fa4', neutrals: 'graphite', intensity: 95,  default_mode: 'dark',  backdrop: 'custom', backdrop_url: '/ambiances/synthwave.jpg' } },
+	// Noir profond, orange vif, texte blanc : clin d'œil à un site bien connu,
+	// sans son nom ni son logo (demande de Jonathan, 29/09). Aucun décor.
+	{ id: 'coquin',    labelKey: 'appr.preset_coquin',    theme: { accent: '#ff9000', neutrals: 'black',    intensity: 0,   default_mode: 'dark',  backdrop: 'none' } },
 	{ id: 'gazette',   labelKey: 'appr.preset_gazette',   theme: { accent: '#1c1c1c', neutrals: 'graphite', intensity: 0,   default_mode: 'light', backdrop: 'none' } },
 	{ id: 'sepia',     labelKey: 'appr.preset_sepia',     theme: { accent: '#9c5b2e', neutrals: 'tinted',   intensity: 30,  default_mode: 'light', backdrop: 'custom', backdrop_url: '/ambiances/sepia.jpg' } },
 	// Couleurs : elles ne touchent qu'à la teinte, aux fonds et à l'intensité.

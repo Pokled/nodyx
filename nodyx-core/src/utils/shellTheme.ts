@@ -49,7 +49,7 @@ export const ShellThemeSchema = z.object({
   // Fonds : gris de confort indépendants de l'accent (thème Originel) ou gris
   // teintés par l'accent. Optionnel : les ambiances publiées avant ce réglage
   // restent valides et gardent leur rendu ('tinted').
-  neutrals:     z.enum(['graphite', 'tinted']).optional(),
+  neutrals:     z.enum(['graphite', 'tinted', 'black']).optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.backdrop === 'custom' && !v.backdrop_url) {
     ctx.addIssue({ code: 'custom', path: ['backdrop_url'], message: 'backdrop_url requis pour un décor personnalisé' })

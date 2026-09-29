@@ -115,6 +115,13 @@ describe('ambiances prêtes', () => {
 		expect(byId('synthwave').theme.neutrals).toBe('graphite')
 	})
 
+	it('Coquin : noir profond, orange vif, aucun décor, et le texte posé sur l’orange est lisible', () => {
+		const t = applyPreset(T(), byId('coquin'))
+		expect(t).toMatchObject({ accent: '#ff9000', neutrals: 'black', backdrop: 'none', default_mode: 'dark' })
+		const v = deriveShellVars(t, true)
+		expect(contrast(v['--nx-on-accent'], v['--nx-header-accent'])).toBeGreaterThanOrEqual(4.5)
+	})
+
 	it('Gazette : aucun décor, le journal reste nu', () => {
 		expect(applyPreset(T(), byId('gazette')).backdrop).toBe('none')
 	})

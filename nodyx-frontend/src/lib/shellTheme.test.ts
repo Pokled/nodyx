@@ -173,3 +173,16 @@ describe('anciennes variables de marque des pages (legacyAccentVars)', () => {
 		expect(shellThemeCss(theme(), { legacy: true })).toContain('--nx-accent-2-soft')
 	})
 })
+
+describe('fonds Noir (OLED)', () => {
+	it('vrai noir neutre en sombre, texte lisible sans éblouir, mêmes fonds que Graphite en clair', () => {
+		const v = deriveShellVars(theme({ neutrals: 'black' }), true)
+		expect(rgbToOklch(hexToRgb(v['--nx-bg'])).l).toBeLessThan(0.15)
+		expect(rgbToOklch(hexToRgb(v['--nx-surface'])).c).toBeLessThan(0.002)
+		const c = contrast(v['--nx-text'], v['--nx-surface'])
+		expect(c).toBeGreaterThanOrEqual(10)
+		expect(c).toBeLessThan(18)
+		expect(contrast(v['--nx-text-muted'], v['--nx-surface'])).toBeGreaterThanOrEqual(4.5)
+		expect(deriveShellVars(theme({ neutrals: 'black' }), false)['--nx-bg']).toBe(deriveShellVars(theme({ neutrals: 'graphite' }), false)['--nx-bg'])
+	})
+})

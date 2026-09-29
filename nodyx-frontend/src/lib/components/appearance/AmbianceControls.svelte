@@ -107,6 +107,7 @@
 	const neutralsOpts = $derived([
 		{ id: 'graphite' as const, label: tFn('appr.neutrals_graphite') },
 		{ id: 'tinted'   as const, label: tFn('appr.neutrals_tinted') },
+		{ id: 'black'    as const, label: tFn('appr.neutrals_black') },
 	])
 
 	const backdrops = $derived([

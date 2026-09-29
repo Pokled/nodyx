@@ -45,6 +45,7 @@ describe('ShellThemeSchema', () => {
   it('accepte une ambiance valide, avec ou sans le réglage des fonds', () => {
     expect(ShellThemeSchema.safeParse(VALID).success).toBe(true)
     expect(ShellThemeSchema.safeParse({ ...VALID, neutrals: 'graphite' }).success).toBe(true)
+    expect(ShellThemeSchema.safeParse({ ...VALID, neutrals: 'black' }).success).toBe(true)
   })
 
   it('une ambiance publiée AVANT le réglage des fonds reste relue, en gris teintés', () => {
