@@ -136,10 +136,18 @@
 
 	// ── Parallax ────────────────────────────────────────────────────
 	let parallaxY = $state(0)
+	// Sur grand écran, c'est la feuille de contenu (main.app-shell-main) qui
+	// défile, plus la fenêtre (contenant flottant) ; sur mobile, la fenêtre.
+	// On écoute les deux et on lit celui qui a bougé.
 	$effect(() => {
-		function onScroll() { parallaxY = window.scrollY }
+		const sheet = document.querySelector<HTMLElement>('main.app-shell-main')
+		function onScroll() { parallaxY = Math.max(window.scrollY, sheet?.scrollTop ?? 0) }
 		window.addEventListener('scroll', onScroll, { passive: true })
-		return () => window.removeEventListener('scroll', onScroll)
+		sheet?.addEventListener('scroll', onScroll, { passive: true })
+		return () => {
+			window.removeEventListener('scroll', onScroll)
+			sheet?.removeEventListener('scroll', onScroll)
+		}
 	})
 
 	// ── Timeline jalons ─────────────────────────────────────────────

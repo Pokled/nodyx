@@ -817,7 +817,7 @@
 	/>
 
 	<!-- ══ BODY ═══════════════════════════════════════════════════════════════ -->
-	<div class="flex flex-1"
+	<div class="flex flex-1 min-h-0"
 	     style="--left-panel-width: {leftPanelWidth}px; --right-panel-width: {rightPanelWidth}px;"
 	     class:layout-dragging={isDraggingLeft || isDraggingRight}>
 
@@ -1268,6 +1268,16 @@
      peint quand l'instance a une bannière. */
   .nx-shell { background: var(--nx-bg); }
   .nx-shell.has-wallpaper { background: transparent; }
+  /* Le contenant est calé sur l'écran : c'est la FEUILLE qui défile, jamais le
+     document. Sinon, sur une page longue (accueil, forum), la feuille s'étirait
+     à la hauteur de son contenu (1931px pour 900 à l'écran, mesuré le 29/09) :
+     le haut glissait sous la barre flottante et le bas n'avait plus de fin.
+     Jonathan : « il faudrait que cela reste dans une zone définie ». */
+  .nx-shell { height: 100dvh; }
+  :global(main.app-shell-main) {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--nx-text) 22%, transparent) transparent;
+  }
   /* La feuille de contenu garde le fond de page ACTUEL (--shell-bg) : les
      pages ont encore leurs couleurs sombres codées en dur (hors périmètre du
      CDC), elles deviendraient illisibles sur une feuille claire. */
