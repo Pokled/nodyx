@@ -365,3 +365,57 @@ Apparence et inversement, par construction, pas par synchronisation.
 A (moteur partagé) → B (stylo) → C (jonction) → D (modules, un par un).
 Chaque étape testée, déployée et vérifiée sur vieuxlooters, avec un point à
 Jonathan entre deux.
+
+---
+
+# Partie 3 (30/09) : chaque zone a son propre style
+
+> Jonathan, 30/09, après un premier essai du stylo : « après avoir modifié
+> une zone (par exemple la sidebar de gauche), cela a modifié tout le
+> template, cela n'a pas respecté une zone individuelle. » Puis : « je veux
+> tout ! Une zone éditable, c'est comme si on en modifiait le CSS. Toutes
+> les zones. »
+
+## Ce qui n'allait pas
+
+Le stylo du volet B ouvrait les réglages GLOBAUX depuis une zone : changer
+la couleur « depuis la sidebar » changeait toute l'instance. Mauvaise
+lecture de l'intention : une zone éditable doit avoir son propre style.
+
+## Le modèle : un style par zone, typé, qui surcharge l'ambiance
+
+Chaque zone peut porter un style propre, qui l'emporte sur l'ambiance
+pour elle seule. Absent = la zone suit l'ambiance (comportement actuel).
+
+**Pas de CSS libre**, par décision de sécurité (déjà posée en partie 1) : un
+champ CSS libre casse une instance d'un point-virgule et ouvre la porte à
+l'injection. À la place, TOUS les réglages visuels d'une feuille de style
+pour une plaque, typés et bornés :
+
+| Réglage | Valeur | Garde-fou |
+|---|---|---|
+| Couleur d'accent | #rrggbb | plancher de contraste sur le fond de la zone |
+| Couleur du panneau | #rrggbb | textes recalculés (blanc cassé ou gris foncé) |
+| Opacité du verre | 0 à 100 | aucun (0 = plein) |
+| Flou du décor derrière | 0 à 40 px | coût GPU borné |
+| Bordure | couleur + 0 à 3 px | |
+| Arrondi | 0 à 32 px | |
+| Ombre | 0 à 100 | |
+| Image de fond | /uploads/, /ambiances/ ou https ; recadrage (x, y), zoom, voile 0 à 100 | mêmes règles d'adresse que le décor |
+| Police | système, arrondie, serif, mono | liste fermée, polices locales |
+
+**Zones** : rail, sidebar de canaux, barre du haut, liste des membres,
+feuille de contenu. Les blocs de la page d'accueil viennent ensuite (ils
+passent par le Grid Builder, qui a déjà une configuration par widget).
+
+**Stockage** : `theme_shell.zones.<zone>` dans le même brouillon que
+l'ambiance, même « Publier », validé par schéma strict côté core.
+
+**Rendu** : chaque plaque porte `data-nx-zone` ; la feuille d'ambiance émet,
+par zone stylée, les variables surchargées (`--nx-header-accent`,
+`--nx-glass`, `--nx-text`...) sur ce seul sélecteur. Les calculs de
+lisibilité sont les MÊMES que pour l'ambiance.
+
+**Stylo** : le panneau d'une zone s'ouvre sur « Cette zone » ; un onglet
+séparé, nommé « Toute l'instance », garde l'accès à l'ambiance globale ;
+« Revenir à l'ambiance » efface le style de la zone.
