@@ -95,6 +95,43 @@ describe('isSafeBackdropUrl', () => {
   ])('refuse %s', url => expect(isSafeBackdropUrl(url)).toBe(false))
 })
 
+describe('styles par zone (partie 3)', () => {
+  const FULL = {
+    accent: '#FF3FA4', surface: '#101828', opacity: 80, blur: 12, border_color: '#334155', border_width: 1,
+    radius: 16, shadow: 40, image: { url: '/ambiances/cyberpunk.jpg', x: 50, y: 30, zoom: 120, veil: 60 }, font: 'rounded',
+  }
+
+  it('accepte une zone entièrement stylée, et normalise ses couleurs', () => {
+    const r = ShellThemeSchema.safeParse({ ...VALID, zones: { sidebar: FULL, rail: { accent: '#00FF00' } } })
+    expect(r.success).toBe(true)
+    const n = normalizeShellTheme(r.data!)
+    expect(n.zones?.sidebar?.accent).toBe('#ff3fa4')
+    expect(n.zones?.rail?.accent).toBe('#00ff00')
+  })
+
+  it('une zone vide disparaît : elle suit l’ambiance', () => {
+    const n = normalizeShellTheme({ ...VALID, zones: { header: {} } } as any)
+    expect(n.zones).toBeUndefined()
+  })
+
+  it.each([
+    ['zone inconnue',              { widget: { accent: '#ffffff' } }],
+    ['réglage inconnu (CSS libre)', { sidebar: { css: 'display:none' } }],
+    ['couleur avec CSS injecté',   { sidebar: { accent: '#fff;background:url(x)' } }],
+    ['opacité hors bornes',        { sidebar: { opacity: 150 } }],
+    ['flou démesuré',              { sidebar: { blur: 400 } }],
+    ['bordure trop épaisse',       { sidebar: { border_width: 20 } }],
+    ['arrondi démesuré',           { sidebar: { radius: 999 } }],
+    ['police inconnue',            { sidebar: { font: 'Comic Sans' } }],
+    ['image javascript:',          { sidebar: { image: { url: 'javascript:alert(1)', x: 50, y: 50, zoom: 100, veil: 0 } } }],
+    ['image data:',                { sidebar: { image: { url: 'data:image/png;base64,AA', x: 50, y: 50, zoom: 100, veil: 0 } } }],
+    ['image sans recadrage',       { sidebar: { image: { url: '/uploads/a.png' } } }],
+    ['zoom hors bornes',           { sidebar: { image: { url: '/uploads/a.png', x: 50, y: 50, zoom: 1000, veil: 0 } } }],
+  ])('refuse : %s', (_l, zones) => {
+    expect(ShellThemeSchema.safeParse({ ...VALID, zones }).success).toBe(false)
+  })
+})
+
 describe('IdentityDraftSchema', () => {
   it('accepte un logo seul, une bannière seule, ou un retrait (null)', () => {
     expect(IdentityDraftSchema.safeParse({ logo_url: '/uploads/logos/a.png' }).success).toBe(true)

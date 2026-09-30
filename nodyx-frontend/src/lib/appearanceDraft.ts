@@ -43,6 +43,26 @@ type Msg = string | (() => string)
 const msg = (m: Msg) => typeof m === 'function' ? m() : m
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
+/**
+ * Le réglage touché, jusqu'au champ d'une zone (« zones.rail.opacity ») :
+ * glisser l'opacité puis le flou d'une même zone fait DEUX pas d'Annuler.
+ */
+export function changedField(a: ShellTheme, b: ShellTheme): string {
+	const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof ShellTheme>
+	for (const k of keys) {
+		if (same(a[k], b[k])) continue
+		if (k !== 'zones') return k
+		const za = a.zones ?? {}, zb = b.zones ?? {}
+		for (const z of new Set([...Object.keys(za), ...Object.keys(zb)]) as Set<keyof typeof za>) {
+			const fa = (za[z] ?? {}) as Record<string, unknown>, fb = (zb[z] ?? {}) as Record<string, unknown>
+			if (same(fa, fb)) continue
+			const f = [...new Set([...Object.keys(fa), ...Object.keys(fb)])].find(f => !same(fa[f], fb[f]))
+			return `zones.${z}.${f ?? ''}`
+		}
+	}
+	return ''
+}
+
 export function createAppearanceDraft(deps: DraftDeps) {
 	const initial = (): DraftState => ({
 		status: 'idle', error: '', published: null, identityPublished: null,
@@ -140,7 +160,7 @@ export function createAppearanceDraft(deps: DraftDeps) {
 	function setAmbiance(v: ShellTheme, opts: { continuous?: boolean } = {}) {
 		const s = get(store)
 		const cur = s.hist.present.ambiance
-		const field = v.intensity !== cur.intensity ? 'intensity' : v.accent !== cur.accent ? 'accent' : 'other'
+		const field = changedField(cur, v)
 		const merge = !!opts.continuous && field === lastContinuous
 		lastContinuous = opts.continuous ? field : ''
 		commit(historyPush(s.hist, { ...s.hist.present, ambiance: v }, merge))

@@ -2,6 +2,7 @@
 	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n';
+	import { editZone } from '$lib/actions/editZone';
 	import { buildNameStyle, buildAnimClass } from '$lib/nameEffects';
 	import { isDarkTheme } from '$lib/theme';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
@@ -129,7 +130,10 @@
        class:has-bg={sidebarBgVisible}
        id="members-c"
        style="width: {membersCollapsed ? '0px' : 'var(--right-panel-width, 220px)'};"
+       data-nx-zone="members"
+       use:editZone={{ zone: 'members', label: tFn('edit.zone_members') }}
        class:dragging={isDraggingRight}>
+	<div class="nx-zone-img" aria-hidden="true"></div>
 	{#if sidebarBgVisible && sidebarBg?.background_image_url}
 		<img class="members-bg" src={sidebarBg.background_image_url} alt=""
 			style="object-position:{sidebarBg.background_offset_x ?? 50}% {sidebarBg.background_offset_y ?? 50}%; transform-origin:{sidebarBg.background_offset_x ?? 50}% {sidebarBg.background_offset_y ?? 50}%; transform: scale({Math.min(2.5, Math.max(0.4, sidebarBg.background_scale ?? 1))})" />

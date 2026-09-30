@@ -185,9 +185,12 @@ html, body {
    squircles là où le navigateur sait les dessiner (Chrome 139+). */
 .nx-plate {
   background: var(--nx-glass);
-  -webkit-backdrop-filter: blur(28px) saturate(1.7);
-  backdrop-filter: blur(28px) saturate(1.7);
-  box-shadow: inset 0 1px 0 0 var(--nx-glass-rim), 0 0 0 1px var(--nx-glass-edge), var(--nx-glass-shadow);
+  /* --zone-blur / --zone-bw / --zone-bc : style propre à une zone
+     (CDC partie 3), sinon les valeurs de l'ambiance. */
+  -webkit-backdrop-filter: blur(var(--zone-blur, 28px)) saturate(1.7);
+  backdrop-filter: blur(var(--zone-blur, 28px)) saturate(1.7);
+  box-shadow: inset 0 1px 0 0 var(--nx-glass-rim), 0 0 0 1px var(--nx-glass-edge),
+              0 0 0 var(--zone-bw, 0px) var(--zone-bc, transparent), var(--nx-glass-shadow);
   border-radius: var(--shell-radius);
 }
 @supports (corner-shape: squircle) {
@@ -1095,3 +1098,25 @@ select option {
 .nx-edit-pen:focus-visible { outline: 2px solid var(--nx-text); outline-offset: 3px; }
 .nx-edit-pen.active { box-shadow: 0 0 0 3px var(--nx-header-accent-soft), 0 0 18px var(--nx-header-accent); }
 @media (prefers-reduced-motion: reduce) { .nx-edit-pen { transition: opacity .15s; transform: none; } }
+
+/* Police propre à une zone : sans --zone-font, déclaration invalide = héritage. */
+[data-nx-zone] { font-family: var(--zone-font); }
+
+/* ── Image de fond propre à une zone (CDC Apparence, partie 3) ─────────────
+   Un calque sous le contenu de la plaque (z-index -1 dans la plaque, qui est
+   un contexte d'empilement), jamais un overflow sur la plaque elle-même :
+   il couperait les menus déroulants de la barre du haut. Invisible tant que
+   la zone n'a pas d'image (--zone-img-display). */
+.nx-zone-img {
+  display: var(--zone-img-display, none);
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: inherit; overflow: hidden;
+}
+@supports (corner-shape: squircle) { .nx-zone-img { corner-shape: squircle; } }
+.nx-zone-img::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--zone-img, none) var(--zone-img-pos, 50% 50%) / cover no-repeat;
+  transform: scale(var(--zone-img-zoom, 1)); transform-origin: var(--zone-img-pos, 50% 50%);
+}
+.nx-zone-img::after { content: ''; position: absolute; inset: 0; background: var(--zone-img-veil, transparent); }
+@media (max-width: 1023px) { .nx-zone-img { display: none; } }

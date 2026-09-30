@@ -31,6 +31,25 @@ export interface ShellTheme {
 	 *  Originel) ; 'tinted' = gris teintés d'une pointe de l'accent. Absent =
 	 *  'tinted' (ambiances publiées avant l'apparition de ce réglage). */
 	neutrals?: 'graphite' | 'tinted' | 'black'
+	/** Style propre à chaque zone (CDC partie 3) ; absent = la zone suit l'ambiance. */
+	zones?: Partial<Record<ShellZone, ZoneStyle>>
+}
+
+export const SHELL_ZONES = ['rail', 'sidebar', 'header', 'members', 'sheet'] as const
+export type ShellZone = typeof SHELL_ZONES[number]
+
+/** « Comme si on en modifiait le CSS », mais typé et borné (validé par le core). */
+export interface ZoneStyle {
+	accent?: string
+	surface?: string
+	opacity?: number        // 0..100 : opacité du panneau
+	blur?: number           // 0..40 px : flou de ce qui est derrière
+	border_color?: string
+	border_width?: number   // 0..3 px
+	radius?: number         // 0..32 px
+	shadow?: number         // 0..100
+	image?: { url: string; x: number; y: number; zoom: number; veil: number }
+	font?: 'system' | 'rounded' | 'serif' | 'mono'
 }
 
 /**
@@ -271,6 +290,96 @@ export function deriveShellVars(theme: ShellTheme, dark: boolean): ShellVars {
 
 const block = (vars: ShellVars) => Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';')
 
+// ── Style propre à une zone (CDC Apparence, partie 3) ─────────────────────
+
+const ZONE_FONTS: Record<NonNullable<ZoneStyle['font']>, string> = {
+	system:  "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif",
+	rounded: "ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+	serif:   "ui-serif, 'New York', Georgia, 'Times New Roman', serif",
+	mono:    "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace",
+}
+
+/**
+ * Variables d'UNE zone, en surcharge de l'ambiance, pour un mode donné.
+ * Seuls les réglages présents sont émis : le reste s'hérite de l'ambiance.
+ * Une couleur de panneau entraîne TOUTE sa palette de textes, recalculée
+ * sur ce fond : texte visé à 7:1 et JAMAIS sous 4,5:1 (sur un fond de
+ * clarté moyenne, un gris #808080 par exemple, même le noir plafonne à
+ * 5,3:1 : 7:1 y est mathématiquement impossible, on prend le meilleur),
+ * atténué ≥ 4,5:1, discret ≥ 3:1, accent ≥ 4,5:1 : une zone ne peut pas
+ * devenir illisible, quel que soit le réglage.
+ */
+export function deriveZoneVars(theme: ShellTheme, zone: ShellZone, dark: boolean): ShellVars {
+	const z = theme.zones?.[zone]
+	if (!z) return {}
+	const base = deriveShellVars(theme, dark)
+	const out: ShellVars = {}
+	const rgb = (hex: string) => hexToRgb(hex).map(v => Math.round(v * 255)).join(' ')
+	const surface = z.surface?.toLowerCase() ?? base['--nx-surface']
+
+	if (z.surface) {
+		// Famille de textes selon la clarté du fond, puis planchers garantis.
+		const onDark = luminance(surface) < 0.18
+		const fam = graphite(onDark)
+		const o = rgbToOklch(hexToRgb(surface))
+		const tint = (dl: number) => oklchToHex({ ...o, l: Math.min(0.99, Math.max(0.02, o.l + dl)) })
+		out['--nx-surface'] = surface
+		out['--nx-surface-raised'] = tint(onDark ? 0.04 : -0.03)
+		out['--nx-border'] = tint(onDark ? 0.1 : -0.1)
+		out['--nx-border-soft'] = tint(onDark ? 0.06 : -0.06)
+		out['--nx-text'] = ensureContrast(fam['--nx-text'], surface, 7)
+		out['--nx-text-muted'] = ensureContrast(fam['--nx-text-muted'], surface, 4.5)
+		out['--nx-text-faint'] = ensureContrast(fam['--nx-text-faint'], surface, 3)
+	}
+	if (z.accent || z.surface) {
+		const accent = ensureContrast((z.accent ?? theme.accent).toLowerCase(), surface, 4.5)
+		const a = rgbToOklch(hexToRgb(accent))
+		out['--nx-header-accent'] = accent
+		out['--nx-header-accent-strong'] = oklchToHex({ ...a, l: Math.max(0, a.l - 0.07) })
+		out['--nx-header-accent-soft'] = `rgb(${rgb(accent)} / ${dark ? 0.16 : 0.12})`
+		out['--nx-on-accent'] = onColor(accent)
+	}
+	if (z.surface || z.opacity !== undefined) {
+		const alpha = z.opacity !== undefined ? round(z.opacity / 100, 2) : (dark ? 0.62 : 0.72)
+		out['--nx-glass'] = `rgb(${rgb(surface)} / ${alpha})`
+		out['--nx-glass-strong'] = `rgb(${rgb(surface)} / ${round(Math.min(1, alpha + 0.18), 2)})`
+		// La feuille de contenu n'est pas en verre : c'est son fond qui change.
+		if (zone === 'sheet') out['--nx-sheet-bg'] = `rgb(${rgb(surface)} / ${z.opacity !== undefined ? alpha : 1})`
+	}
+	if (z.blur !== undefined) out['--zone-blur'] = `${z.blur}px`
+	if (z.radius !== undefined) out['--shell-radius'] = `${z.radius}px`
+	if (z.border_width !== undefined || z.border_color) {
+		out['--zone-bw'] = `${z.border_width ?? 1}px`
+		out['--zone-bc'] = z.border_color?.toLowerCase() ?? base['--nx-border']
+	}
+	if (z.shadow !== undefined) {
+		const k = z.shadow / 100
+		out['--nx-glass-shadow'] = `0 1px 2px rgb(0 0 0 / ${round(0.3 * k, 2)}), 0 10px 30px -8px rgb(0 0 0 / ${round(0.6 * k, 2)}), 0 30px 80px -24px rgb(0 0 0 / ${round(0.7 * k, 2)})`
+	}
+	// --zone-font : lu par TOUTES les plaques (le rail et la feuille ne lisent
+	// pas --font-shell). Absente, la règle est invalide et la police s'hérite.
+	if (z.font) out['--font-shell'] = out['--zone-font'] = ZONE_FONTS[z.font]
+	if (z.image) {
+		// Adresse déjà validée par le core ; échappée quand même (guillemets,
+		// parenthèses) : elle finit dans url() d'une feuille de style.
+		// encodeURIComponent n'encode ni ( ) ni ' : encodage explicite, un par un.
+		const safe = z.image.url.replace(/["'()\\\s<>]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))
+		out['--zone-img'] = `url("${safe}")`
+		out['--zone-img-display'] = 'block'
+		out['--zone-img-pos'] = `${z.image.x}% ${z.image.y}%`
+		out['--zone-img-zoom'] = `${round(z.image.zoom / 100, 2)}`
+		out['--zone-img-veil'] = `rgb(${rgb(surface)} / ${round(z.image.veil / 100, 2)})`
+	}
+	return out
+}
+
+/** Règles CSS des zones stylées, pour un préfixe de mode donné. */
+function zoneRules(theme: ShellTheme, dark: boolean, prefix: string): string[] {
+	return SHELL_ZONES
+		.filter(k => theme.zones?.[k])
+		.map(k => `${prefix} [data-nx-zone="${k}"]{${block(deriveZoneVars(theme, k, dark))}}`)
+}
+
 /**
  * Anciennes variables de marque (--nx-accent*, --nx-cyan*, ~720 usages dans
  * 81 fichiers de pages) recalées sur l'ambiance, PAR RÔLE, mesuré dans le
@@ -331,6 +440,10 @@ export function shellThemeCss(theme: ShellTheme, opts: { legacy?: boolean } = {}
 		// Reprise de la règle d'accessibilité d'app.css, au même niveau de
 		// priorité, sinon l'ambiance rendrait le verre transparent même pour qui
 		// a demandé moins de transparence au système.
+		// Zones stylées (partie 3) : après l'ambiance, sur leur seul élément.
+		...zoneRules(theme, false, ':root:root'),
+		...zoneRules(theme, true, '@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"])').map(r => r + '}'),
+		...zoneRules(theme, true, ':root:root[data-theme="dark"]'),
 		`@media (prefers-reduced-transparency: reduce){:root:root,:root:root[data-theme]{--nx-glass:var(--nx-surface);--nx-glass-strong:var(--nx-surface)}}`,
 		...(opts.legacy ? [`:root:root{${block(legacyAccentVars(theme))}}`] : []),
 	].join('\n')

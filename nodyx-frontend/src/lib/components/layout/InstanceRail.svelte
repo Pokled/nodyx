@@ -39,7 +39,8 @@
 
 {#if !isBanned}
 <div class="nodyx-sb">
-<aside class="rail nx-plate" use:editZone={{ zone: 'logo', label: tFn('edit.zone_logo') }}>
+<aside class="rail nx-plate" data-nx-zone="rail" use:editZone={{ zone: 'logo', label: tFn('edit.zone_logo') }}>
+	<div class="nx-zone-img" aria-hidden="true"></div>
 	<div class="scroll">
 		<!-- Current instance (logo) — click toggles panel open -->
 		<button type="button" class="icon logo {!activeCommunityName ? 'active' : ''} {pulsingHome ? 'pulse' : ''}" data-tip={communityName} title={communityName} onclick={() => {

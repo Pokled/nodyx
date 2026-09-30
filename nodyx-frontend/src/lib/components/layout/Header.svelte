@@ -84,8 +84,10 @@
 </script>
 
 <nav class="nx-app-nav nx-plate sticky top-0 z-50 shrink-0 h-12 flex items-center px-4 gap-3"
+     data-nx-zone="header"
      use:editZone={{ zone: 'decor', label: tFn('edit.zone_decor') }}
      class:dragging={isDraggingLeftPanel}>
+	<div class="nx-zone-img" aria-hidden="true"></div>
 
 	<!-- Mobile hamburger : ne s'affiche que si le panneau qu'il ouvre existe -->
 	{#if !isBanned && showChannelSidebar}

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { get } from 'svelte/store'
-import { createAppearanceDraft } from './appearanceDraft'
+import { createAppearanceDraft, changedField } from './appearanceDraft'
 import { DEFAULT_SHELL_THEME, type ShellTheme } from './shellTheme'
 
 const PUBLISHED: ShellTheme = { ...DEFAULT_SHELL_THEME, accent: '#3fae6a' }
@@ -75,6 +75,24 @@ describe('appearanceDraft : édition', () => {
 		draft.setAmbiance({ ...get(draft).hist.present.ambiance, accent: '#bbbbbb' })
 		draft.undo()
 		expect(get(draft).hist.present.ambiance.accent).toBe('#aaaaaa')
+	})
+
+	it('zones : glisser l’opacité puis le flou d’une zone = deux pas, pas un', async () => {
+		const { draft } = setup()
+		await draft.load()
+		const withZone = (z: object) => ({ ...get(draft).hist.present.ambiance, zones: { rail: { ...get(draft).hist.present.ambiance.zones?.rail, ...z } } })
+		for (const o of [40, 50, 60]) draft.setAmbiance(withZone({ opacity: o }), { continuous: true })
+		for (const b of [4, 8]) draft.setAmbiance(withZone({ blur: b }), { continuous: true })
+		draft.undo()
+		expect(get(draft).hist.present.ambiance.zones?.rail).toEqual({ opacity: 60 })
+		draft.undo()
+		expect(get(draft).hist.present.ambiance.zones).toBeUndefined()
+	})
+
+	it('changedField descend jusqu’au champ de la zone', () => {
+		expect(changedField(PUBLISHED, { ...PUBLISHED, accent: '#000000' })).toBe('accent')
+		expect(changedField(PUBLISHED, { ...PUBLISHED, zones: { sheet: { radius: 4 } } })).toBe('zones.sheet.radius')
+		expect(changedField({ ...PUBLISHED, zones: { sheet: { radius: 4 } } }, { ...PUBLISHED, zones: { sheet: { radius: 4, blur: 2 } } })).toBe('zones.sheet.blur')
 	})
 
 	it('identité revenue à la version publiée : on retire son seul brouillon', async () => {

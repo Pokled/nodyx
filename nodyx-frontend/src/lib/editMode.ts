@@ -7,8 +7,14 @@
  * comportement (les liens naviguent) ; seul le stylo ouvre le panneau.
  */
 import { writable } from 'svelte/store'
+import type { ShellZone } from './shellTheme'
 
-export type EditZone = 'logo' | 'ambiance' | 'decor' | 'home'
+export type EditZone = 'logo' | 'ambiance' | 'decor' | 'members' | 'home' | 'sheet'
+
+/** La plaque du contenant que chaque stylo stylise (CDC partie 3). */
+export const ZONE_OF: Record<EditZone, ShellZone> = {
+	logo: 'rail', ambiance: 'sidebar', decor: 'header', members: 'members', home: 'sheet', sheet: 'sheet',
+}
 
 export const editMode = writable(false)
 

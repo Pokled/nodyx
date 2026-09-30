@@ -905,7 +905,7 @@
 		     moindre debordement (ex: banniere full-bleed -mx-6 du profil, +24px)
 		     faisait apparaitre une scrollbar horizontale + du contenu glissant
 		     sous les sidebars. On clippe l'horizontal, plus jamais de scrollbar. -->
-		<main use:overlayScroll use:editZone={{ zone: page.url.pathname === '/' ? 'home' : null, label: tFn('edit.zone_home') }} class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
+		<main data-nx-zone="sheet" use:overlayScroll use:editZone={{ zone: page.url.pathname === '/' ? 'home' : 'sheet', label: page.url.pathname === '/' ? tFn('edit.zone_home') : tFn('edit.zone_sheet') }} class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
 		      class:members-collapsed={membersCollapsed}>
 
@@ -1312,6 +1312,12 @@
     /* --nx-sheet-bg : teinte de l'ambiance en mode sombre (lib/shellTheme.ts) ;
        sinon le fond de page actuel. */
     background: var(--nx-sheet-bg, var(--shell-bg));
+    /* Image propre à la feuille : son PROPRE fond (un calque intérieur
+       défilerait avec le contenu). Reste en place pendant le défilement. */
+    background-image: linear-gradient(var(--zone-img-veil, transparent), var(--zone-img-veil, transparent)), var(--zone-img, none);
+    background-position: center, var(--zone-img-pos, 50% 50%);
+    background-size: auto, cover;
+    background-repeat: no-repeat;
     box-shadow: 0 0 0 1px var(--nx-glass-edge), var(--nx-glass-shadow);
   }
 }

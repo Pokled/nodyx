@@ -4,7 +4,7 @@
  * d'ambiance à partager entre instances, ambiances prêtes à l'emploi.
  * Fonctions pures, testées dans ambianceTools.test.ts.
  */
-import { DEFAULT_SHELL_THEME, type ShellTheme } from './shellTheme'
+import { DEFAULT_SHELL_THEME, SHELL_ZONES, type ShellTheme, type ShellZone, type ZoneStyle } from './shellTheme'
 
 // ── Historique Annuler / Rétablir ─────────────────────────────────────────
 
@@ -138,4 +138,41 @@ export function presetMatches(t: ShellTheme, p: AmbiancePreset): boolean {
 			const b = p.theme[k]
 			return typeof a === 'string' && typeof b === 'string' ? a.toLowerCase() === b.toLowerCase() : a === b
 		})
+}
+
+// ── Style propre à une zone (CDC partie 3) ────────────────────────────────
+// Un réglage à `undefined` revient à l'ambiance ; une zone sans aucun réglage
+// disparaît, et `zones` aussi quand plus rien n'est stylé : l'ambiance
+// enregistrée reste exactement celle d'avant quand on a tout remis.
+
+export function setZoneStyle(t: ShellTheme, zone: ShellZone, patch: Partial<Record<keyof ZoneStyle, unknown>>): ShellTheme {
+	const cur: Record<string, unknown> = { ...(t.zones?.[zone] ?? {}) }
+	for (const [k, v] of Object.entries(patch)) {
+		if (v === undefined) delete cur[k]
+		else cur[k] = v
+	}
+	return withZone(t, zone, Object.keys(cur).length ? cur as ZoneStyle : undefined)
+}
+
+/** « Revenir à l'ambiance » : la zone perd tous ses réglages propres. */
+export function clearZone(t: ShellTheme, zone: ShellZone): ShellTheme {
+	return withZone(t, zone, undefined)
+}
+
+/** Copie le style d'une zone sur toutes les autres (le contenant entier). */
+export function copyZoneToAll(t: ShellTheme, zone: ShellZone): ShellTheme {
+	const z = t.zones?.[zone]
+	if (!z) return t
+	let next = t
+	for (const k of SHELL_ZONES) next = withZone(next, k, structuredClone(z))
+	return next
+}
+
+function withZone(t: ShellTheme, zone: ShellZone, z: ZoneStyle | undefined): ShellTheme {
+	const zones = { ...(t.zones ?? {}) }
+	if (z) zones[zone] = z
+	else delete zones[zone]
+	const next: ShellTheme = { ...t, zones }
+	if (!Object.keys(zones).length) delete next.zones
+	return next
 }

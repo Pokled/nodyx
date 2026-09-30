@@ -64,7 +64,10 @@ describe('deriveShellVars : aucun réglage ne rend l’instance illisible', () =
 				const v = deriveShellVars(theme({ accent }), dark)
 				const surface = v['--nx-surface']
 				expect(contrast(v['--nx-header-accent'], surface)).toBeGreaterThanOrEqual(4.5)
-				expect(contrast(v['--nx-text'], surface)).toBeGreaterThanOrEqual(7)
+				// Jamais sous AA ; 7:1 quand le fond le permet (pas sur un gris moyen).
+				expect(contrast(v['--nx-text'], surface)).toBeGreaterThanOrEqual(4.5)
+				const best = Math.max(contrast('#ffffff', surface), contrast('#000000', surface))
+				if (best >= 8) expect(contrast(v['--nx-text'], surface)).toBeGreaterThanOrEqual(7)
 				expect(contrast(v['--nx-text-muted'], surface)).toBeGreaterThanOrEqual(4.5)
 				expect(contrast(v['--nx-text-faint'], surface)).toBeGreaterThanOrEqual(3)
 				expect(contrast(v['--nx-on-accent'], v['--nx-header-accent'])).toBeGreaterThanOrEqual(4.5)
@@ -184,5 +187,67 @@ describe('fonds Noir (OLED)', () => {
 		expect(c).toBeLessThan(18)
 		expect(contrast(v['--nx-text-muted'], v['--nx-surface'])).toBeGreaterThanOrEqual(4.5)
 		expect(deriveShellVars(theme({ neutrals: 'black' }), false)['--nx-bg']).toBe(deriveShellVars(theme({ neutrals: 'graphite' }), false)['--nx-bg'])
+	})
+})
+
+describe('styles par zone (partie 3)', () => {
+	it('une zone sans style n’émet rien : elle suit l’ambiance', async () => {
+		const { deriveZoneVars } = await import('./shellTheme')
+		expect(deriveZoneVars(theme(), 'sidebar', true)).toEqual({})
+	})
+
+	for (const surface of ['#000000', '#ffffff', '#fcee0a', '#0b1f5c', '#808080', '#ff3fa4']) {
+		it(`panneau ${surface} : textes et accent recalculés, toujours lisibles`, async () => {
+			const { deriveZoneVars } = await import('./shellTheme')
+			for (const dark of [true, false]) {
+				const v = deriveZoneVars(theme({ zones: { sidebar: { surface, accent: '#3fae6a' } } }), 'sidebar', dark)
+				// Jamais sous AA ; 7:1 quand le fond le permet (pas sur un gris moyen).
+				expect(contrast(v['--nx-text'], surface)).toBeGreaterThanOrEqual(4.5)
+				const best = Math.max(contrast('#ffffff', surface), contrast('#000000', surface))
+				if (best >= 8) expect(contrast(v['--nx-text'], surface)).toBeGreaterThanOrEqual(7)
+				expect(contrast(v['--nx-text-muted'], surface)).toBeGreaterThanOrEqual(4.5)
+				expect(contrast(v['--nx-text-faint'], surface)).toBeGreaterThanOrEqual(3)
+				expect(contrast(v['--nx-header-accent'], surface)).toBeGreaterThanOrEqual(4.5)
+				expect(contrast(v['--nx-on-accent'], v['--nx-header-accent'])).toBeGreaterThanOrEqual(4.5)
+			}
+		})
+	}
+
+	it('accent seul : lisible sur le fond HÉRITÉ de l’ambiance, sans toucher aux textes', async () => {
+		const { deriveZoneVars } = await import('./shellTheme')
+		const v = deriveZoneVars(theme({ zones: { rail: { accent: '#fff27a' } } }), 'rail', false)
+		expect(contrast(v['--nx-header-accent'], deriveShellVars(theme(), false)['--nx-surface'])).toBeGreaterThanOrEqual(4.5)
+		expect(v['--nx-text']).toBeUndefined()
+	})
+
+	it('forme, police, bordure, ombre, flou : seulement ce qui est réglé', async () => {
+		const { deriveZoneVars } = await import('./shellTheme')
+		const v = deriveZoneVars(theme({ zones: { header: { radius: 0, blur: 4, border_width: 2, border_color: '#FF0000', font: 'mono', shadow: 0 } } }), 'header', true)
+		expect(v).toMatchObject({ '--shell-radius': '0px', '--zone-blur': '4px', '--zone-bw': '2px', '--zone-bc': '#ff0000' })
+		expect(v['--font-shell']).toContain('monospace')
+		expect(v['--zone-font']).toBe(v['--font-shell'])
+		expect(v['--nx-glass-shadow']).toContain('/ 0)')
+		expect(v['--nx-header-accent']).toBeUndefined()
+	})
+
+	it('la feuille de contenu change de FOND (pas de verre)', async () => {
+		const { deriveZoneVars } = await import('./shellTheme')
+		const v = deriveZoneVars(theme({ zones: { sheet: { surface: '#1a1033' } } }), 'sheet', true)
+		expect(v['--nx-sheet-bg']).toBe('rgb(26 16 51 / 1)')
+	})
+
+	it('une image dont l’adresse contient des caractères piégés ne sort pas de url()', async () => {
+		const { deriveZoneVars } = await import('./shellTheme')
+		const v = deriveZoneVars(theme({ zones: { members: { image: { url: '/uploads/a") ;x:y("b.png', x: 50, y: 50, zoom: 100, veil: 0 } } } }), 'members', true)
+		expect(v['--zone-img']).toMatch(/^url\("[^"()]*"\)$/)
+	})
+
+	it('la feuille n’applique un style qu’au sélecteur de SA zone, dans les deux modes', () => {
+		const css = shellThemeCss(theme({ zones: { sidebar: { accent: '#ff3fa4' } } }))
+		expect(css).toContain(':root:root [data-nx-zone="sidebar"]{')
+		expect(css).toContain(':root:root:not([data-theme="light"]) [data-nx-zone="sidebar"]{')
+		expect(css).toContain(':root:root[data-theme="dark"] [data-nx-zone="sidebar"]{')
+		expect(css).not.toContain('[data-nx-zone="rail"]')
+		expect(css).not.toMatch(/<|<\/style/i)
 	})
 })

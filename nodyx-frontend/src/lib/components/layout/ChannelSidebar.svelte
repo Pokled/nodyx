@@ -203,7 +203,9 @@
        aria-modal={gallerySidebarOpen ? 'true' : undefined}
        aria-label={tFn('nav.community_menu')}
        style="width: var(--left-panel-width, 220px);"
+       data-nx-zone="sidebar"
        class:dragging={isDraggingLeft}>
+	<div class="nx-zone-img" aria-hidden="true"></div>
 
 	<button class="edge-handle"
 	        onpointerdown={startLeftDrag}

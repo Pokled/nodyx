@@ -40,6 +40,39 @@ export function isSafeBackdropUrl(url: string): boolean {
   }
 }
 
+// ── Style propre à une zone (CDC Apparence, partie 3) ──────────────────────
+// « Une zone éditable, c'est comme si on en modifiait le CSS » (Jonathan,
+// 30/09) : tous les réglages visuels d'une plaque, mais TYPÉS et BORNÉS,
+// jamais de CSS libre. Chaque réglage est optionnel : absent, la zone suit
+// l'ambiance.
+const Hex = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+const Int = (min: number, max: number) => z.number().int().min(min).max(max)
+
+export const SHELL_ZONES = ['rail', 'sidebar', 'header', 'members', 'sheet'] as const
+
+export const ZoneStyleSchema = z.object({
+  accent:       Hex.optional(),
+  surface:      Hex.optional(),
+  opacity:      Int(0, 100).optional(),
+  blur:         Int(0, 40).optional(),
+  border_color: Hex.optional(),
+  border_width: Int(0, 3).optional(),
+  radius:       Int(0, 32).optional(),
+  shadow:       Int(0, 100).optional(),
+  image: z.object({
+    url:  z.string().max(500).refine(isSafeBackdropUrl, 'image : fichier /uploads/, /ambiances/ ou https'),
+    x:    Int(0, 100),
+    y:    Int(0, 100),
+    zoom: Int(100, 300),
+    veil: Int(0, 100),
+  }).strict().optional(),
+  font:         z.enum(['system', 'rounded', 'serif', 'mono']).optional(),
+}).strict()
+
+export type ZoneStyle = z.infer<typeof ZoneStyleSchema>
+
+const ZonesSchema = z.object(Object.fromEntries(SHELL_ZONES.map(k => [k, ZoneStyleSchema.optional()])) as Record<typeof SHELL_ZONES[number], z.ZodOptional<typeof ZoneStyleSchema>>).strict()
+
 export const ShellThemeSchema = z.object({
   accent:       z.string().regex(/^#[0-9a-fA-F]{6}$/),
   backdrop:     z.enum(['banner', 'custom', 'none']),
@@ -50,6 +83,7 @@ export const ShellThemeSchema = z.object({
   // teintés par l'accent. Optionnel : les ambiances publiées avant ce réglage
   // restent valides et gardent leur rendu ('tinted').
   neutrals:     z.enum(['graphite', 'tinted', 'black']).optional(),
+  zones:        ZonesSchema.optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.backdrop === 'custom' && !v.backdrop_url) {
     ctx.addIssue({ code: 'custom', path: ['backdrop_url'], message: 'backdrop_url requis pour un décor personnalisé' })
@@ -70,7 +104,24 @@ export function normalizeShellTheme(v: ShellTheme): ShellTheme {
     intensity:    v.intensity,
     default_mode: v.default_mode,
     neutrals:     v.neutrals ?? 'tinted',
+    ...(normalizeZones(v.zones) ? { zones: normalizeZones(v.zones) } : {}),
   }
+}
+
+/** Couleurs en minuscules ; une zone sans aucun réglage disparaît (elle suit l'ambiance). */
+function normalizeZones(zones: ShellTheme['zones']): ShellTheme['zones'] | undefined {
+  if (!zones) return undefined
+  const out: Record<string, ZoneStyle> = {}
+  for (const [k, z] of Object.entries(zones)) {
+    if (!z || Object.keys(z).length === 0) continue
+    out[k] = {
+      ...z,
+      ...(z.accent ? { accent: z.accent.toLowerCase() } : {}),
+      ...(z.surface ? { surface: z.surface.toLowerCase() } : {}),
+      ...(z.border_color ? { border_color: z.border_color.toLowerCase() } : {}),
+    }
+  }
+  return Object.keys(out).length ? out as ShellTheme['zones'] : undefined
 }
 
 /**

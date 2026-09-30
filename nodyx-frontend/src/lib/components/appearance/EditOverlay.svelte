@@ -10,11 +10,13 @@
 	import { page } from '$app/state'
 	import { invalidateAll } from '$app/navigation'
 	import { t } from '$lib/i18n'
-	import { editMode, editPanel, type EditZone } from '$lib/editMode'
+	import { editMode, editPanel, ZONE_OF, type EditZone } from '$lib/editMode'
+	import { isDarkTheme } from '$lib/theme'
 	import { appearance, setAppearanceToken } from '$lib/appearanceEngine'
 	import { anchoredPopover } from '$lib/actions/anchoredPopover'
 	import AmbianceControls from './AmbianceControls.svelte'
 	import IdentityControls from './IdentityControls.svelte'
+	import ZoneStyleControls from './ZoneStyleControls.svelte'
 	import PublishBar from './PublishBar.svelte'
 
 	const tFn = $derived($t)
@@ -43,6 +45,19 @@
 	// voir la zone qu'on modifie. Les autres : sous le stylo, aligné à droite.
 	const sideZones: EditZone[] = ['logo', 'ambiance']
 
+	// Deux portées, un seul panneau (retour de Jonathan du 30/09 : le stylo
+	// changeait TOUT le contenant). « Cette zone » d'abord : c'est ce qu'on
+	// attend d'un stylo posé sur une zone. « Toute l'instance » : l'ambiance.
+	let scope = $state<'zone' | 'all'>('zone')
+	$effect(() => { if ($editPanel) scope = 'zone' })
+	function scopeKeys(e: KeyboardEvent) {
+		if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+			e.preventDefault()
+			scope = scope === 'zone' ? 'all' : 'zone'
+			;(e.currentTarget as HTMLElement).querySelector<HTMLButtonElement>(`[data-scope="${scope}"]`)?.focus()
+		}
+	}
+
 	function exit() { editMode.set(false) }
 	function onKey(e: KeyboardEvent) {
 		if (e.key !== 'Escape' || !$editMode) return
@@ -54,7 +69,8 @@
 	}
 
 	const titles: Record<EditZone, string> = $derived({
-		logo: tFn('edit.zone_logo'), ambiance: tFn('edit.zone_ambiance'), decor: tFn('edit.zone_decor'), home: tFn('edit.zone_home'),
+		logo: tFn('zone.name_rail'), ambiance: tFn('zone.name_sidebar'), decor: tFn('zone.name_header'), members: tFn('zone.name_members'),
+		home: tFn('edit.zone_home'), sheet: tFn('zone.name_sheet'),
 	})
 
 	// ── Page d'accueil : « Suivre l'ambiance » (thème de la grille) ─────────
@@ -97,15 +113,26 @@
 				<header>
 					<h2>{titles[$editPanel.zone]}</h2>
 					<button type="button" class="edp-close" aria-label={tFn('common.close')} onclick={() => editPanel.set(null)}>×</button>
+					<div class="edp-scope" role="tablist" tabindex="-1" aria-label={tFn('zone.scope')} onkeydown={scopeKeys}>
+						<button type="button" role="tab" data-scope="zone" aria-selected={scope === 'zone'} tabindex={scope === 'zone' ? 0 : -1} class:on={scope === 'zone'}
+						        onclick={() => scope = 'zone'}>{tFn('zone.scope_zone')}{#if value.zones?.[ZONE_OF[$editPanel.zone]]}<i class="edp-dot" aria-hidden="true"></i>{/if}</button>
+						<button type="button" role="tab" data-scope="all" aria-selected={scope === 'all'} tabindex={scope === 'all' ? 0 : -1} class:on={scope === 'all'}
+						        onclick={() => scope = 'all'}>{tFn('zone.scope_all')}</button>
+					</div>
 				</header>
-				<div class="edp-body">
-					{#if $editPanel.zone === 'logo'}
-						<IdentityControls only="logo" published={identityPublished} draft={identity} {token} onchange={(n) => appearance.setIdentity(n)} />
-					{:else if $editPanel.zone === 'ambiance'}
-						<AmbianceControls sections={['presets', 'accent', 'neutrals']} {value} {banner} {token} onchange={(v, o) => appearance.setAmbiance(v, o)} />
-					{:else if $editPanel.zone === 'decor'}
-						<AmbianceControls sections={['backdrop', 'intensity', 'mode']} {value} {banner} {token} onchange={(v, o) => appearance.setAmbiance(v, o)} />
+				<div class="edp-body" role="tabpanel">
+					{#if scope === 'all'}
+						<p class="edp-note">{tFn('zone.scope_all_help')}</p>
+						<AmbianceControls {value} {banner} {token} onchange={(v, o) => appearance.setAmbiance(v, o)} />
 					{:else}
+						{#if $editPanel.zone === 'logo'}
+							<IdentityControls only="logo" published={identityPublished} draft={identity} {token} onchange={(n) => appearance.setIdentity(n)} />
+							<div class="edp-gap"></div>
+						{/if}
+						<ZoneStyleControls {value} zone={ZONE_OF[$editPanel.zone]} {token} dark={$isDarkTheme} onchange={(v, o) => appearance.setAmbiance(v, o)} />
+					{/if}
+					{#if scope === 'zone' && $editPanel.zone === 'home'}
+						<div class="edp-gap"></div>
 						<IdentityControls only="banner" published={identityPublished} draft={identity} {token} onchange={(n) => appearance.setIdentity(n)} />
 						<div class="edp-follow">
 							<label class="edp-switch" class:on={!!gridTheme?.follow_ambiance}>
@@ -139,12 +166,23 @@
 	}
 	@keyframes edp-in { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
 	@media (prefers-reduced-motion: reduce) { .edp { animation: none; } }
-	.edp header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; background: inherit; }
+	.edp header { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 14px 16px 12px; margin-bottom: 4px; background: rgb(15 18 24); box-shadow: 0 1px 0 rgb(255 255 255 / .05); }
 	.edp h2 { font: 700 15px var(--font-shell-rounded); color: #f9fafb; }
 	.edp-close { width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: #9ca3af; font-size: 18px; cursor: pointer; }
 	.edp-close:hover { background: rgb(255 255 255 / .06); color: #fff; }
 	.edp-close:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
 	.edp-body { padding: 4px 16px 18px; }
+	.edp-scope { flex-basis: 100%; display: flex; gap: 2px; margin-top: 10px; padding: 3px; border-radius: 10px; background: #0b0e13; border: 1px solid #1f2937; }
+	.edp-scope button {
+		flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 10px; border-radius: 8px; border: none; cursor: pointer;
+		background: transparent; color: #9ca3af; font-size: 13px; font-weight: 600; transition: background-color .15s, color .15s;
+	}
+	.edp-scope button:hover { color: #f3f4f6; }
+	.edp-scope button.on { background: #374151; color: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .4), inset 0 1px 0 rgb(255 255 255 / .06); }
+	.edp-scope button:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
+	.edp-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--nx-header-accent); }
+	.edp-note { font-size: 12.5px; color: #9ca3af; margin-bottom: 16px; line-height: 1.45; }
+	.edp-gap { height: 22px; }
 	.edp-follow { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
 	.edp-switch { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: #111827; border: 1px solid #1f2937; cursor: pointer; }
 	.edp-switch.on { border-color: var(--nx-header-accent); }

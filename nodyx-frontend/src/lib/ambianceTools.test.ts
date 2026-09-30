@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
 	historyStart, historyPush, historyUndo, historyRedo,
 	encodeAmbiance, decodeAmbiance, AMBIANCE_PRESETS, ORIGINEL, applyPreset, presetMatches, bannerPreset,
+	setZoneStyle, clearZone, copyZoneToAll,
 } from './ambianceTools'
 import { DEFAULT_SHELL_THEME, deriveShellVars, contrast, rgbToOklch, hexToRgb, type ShellTheme } from './shellTheme'
 
@@ -178,5 +179,32 @@ describe('palette de la grille qui suit l’ambiance', () => {
 			expect(contrast(pal.muted, surface), `${p.id} atténué`).toBeGreaterThanOrEqual(4.5)
 			expect(contrast(pal.accent, surface), `${p.id} accent`).toBeGreaterThanOrEqual(4.5)
 		}
+	})
+})
+
+describe('style propre à une zone', () => {
+	const base: ShellTheme = { ...DEFAULT_SHELL_THEME }
+
+	it('pose un réglage sur UNE zone, sans toucher aux autres', () => {
+		const t = setZoneStyle(base, 'rail', { opacity: 40 })
+		expect(t.zones).toEqual({ rail: { opacity: 40 } })
+		expect(t.accent).toBe(base.accent)
+	})
+
+	it('un réglage remis à undefined revient à l’ambiance, et la zone vide disparaît', () => {
+		const t = setZoneStyle(setZoneStyle(base, 'rail', { opacity: 40 }), 'rail', { opacity: undefined })
+		expect(t).toEqual(base)
+		expect('zones' in t).toBe(false)
+	})
+
+	it('revenir à l’ambiance ne vide que la zone visée', () => {
+		const t = setZoneStyle(setZoneStyle(base, 'rail', { blur: 4 }), 'sheet', { radius: 6 })
+		expect(clearZone(t, 'rail').zones).toEqual({ sheet: { radius: 6 } })
+	})
+
+	it('copier vers toutes les zones : des copies, pas le même objet partagé', () => {
+		const t = copyZoneToAll(setZoneStyle(base, 'header', { image: { url: '/ambiances/matrix.jpg', x: 50, y: 50, zoom: 100, veil: 40 } }), 'header')
+		expect(Object.keys(t.zones ?? {}).sort()).toEqual(['header', 'members', 'rail', 'sheet', 'sidebar'])
+		expect(t.zones?.rail?.image).not.toBe(t.zones?.header?.image)
 	})
 })
