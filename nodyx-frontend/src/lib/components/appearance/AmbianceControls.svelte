@@ -11,16 +11,20 @@
 	import { extractPalette, loadImagePixels } from '$lib/paletteFromImage'
 	import { AMBIANCE_PRESETS, ORIGINEL, applyPreset, presetMatches, bannerPreset, type AmbiancePreset } from '$lib/ambianceTools'
 
-	let { value, banner, token, onchange }: {
+	type Section = 'presets' | 'accent' | 'neutrals' | 'backdrop' | 'intensity' | 'mode'
+	let { value, banner, token, onchange, sections }: {
 		value: ShellTheme
 		banner: string | null
 		token: string | null
+		/** Sous-ensemble à afficher (panneaux du stylo). Absent = tout. */
+		sections?: Section[]
 		/** `continuous` : geste qui glisse (curseur, sélecteur de couleur). Ses
 		 *  valeurs successives comptent pour UN seul pas d'Annuler. */
 		onchange: (v: ShellTheme, opts?: { continuous?: boolean }) => void
 	} = $props()
 
 	const tFn = $derived($t)
+	const show = (k: Section) => !sections || sections.includes(k)
 	const set = (patch: Partial<ShellTheme>, continuous = false) => onchange({ ...value, ...patch }, { continuous })
 
 	// ── « Les couleurs de ta bannière » ─────────────────────────────────────
@@ -123,6 +127,7 @@
 </script>
 
 <div class="amb" style="--amb: {value.accent}">
+	{#if show('presets')}
 	<!-- ── Ambiances : l'Originel, ta bannière, et des univers ────────── -->
 	<section class="amb-sec">
 		<header>
@@ -147,7 +152,9 @@
 			{/each}
 		</div>
 	</section>
+	{/if}
 
+	{#if show('accent')}
 	<!-- ── Accent ──────────────────────────────────────────────────────── -->
 	<section class="amb-sec">
 		<header>
@@ -189,7 +196,9 @@
 			</p>
 		{/if}
 	</section>
+	{/if}
 
+	{#if show('neutrals')}
 	<!-- ── Fonds ───────────────────────────────────────────────────────── -->
 	<section class="amb-sec">
 		<header>
@@ -204,7 +213,9 @@
 			{/each}
 		</div>
 	</section>
+	{/if}
 
+	{#if show('backdrop')}
 	<!-- ── Décor ───────────────────────────────────────────────────────── -->
 	<section class="amb-sec">
 		<header>
@@ -234,7 +245,9 @@
 		</div>
 		{#if uploadError}<p class="amb-error">{uploadError}</p>{/if}
 	</section>
+	{/if}
 
+	{#if show('intensity')}
 	<!-- ── Intensité ───────────────────────────────────────────────────── -->
 	<section class="amb-sec">
 		<header>
@@ -248,7 +261,9 @@
 			<span>{tFn('appr.intensity_max')}</span>
 		</div>
 	</section>
+	{/if}
 
+	{#if show('mode')}
 	<!-- ── Mode par défaut ─────────────────────────────────────────────── -->
 	<section class="amb-sec">
 		<header>
@@ -262,6 +277,7 @@
 			{/each}
 		</div>
 	</section>
+	{/if}
 </div>
 
 <style>

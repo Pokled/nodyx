@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
 	import { overlayScroll } from '$lib/actions/overlayScroll';
+	import { editZone } from '$lib/actions/editZone';
 	import { t } from '$lib/i18n';
 	import { activeCommunityNameStore } from '$lib/communityStore';
 	import { voiceStore, voiceChannelMembersStore } from '$lib/voice';
@@ -196,7 +197,7 @@
 
 {#if !isBanned && showChannelSidebar}
 <div class="nodyx-sb">
-<aside class="panel nx-plate {panelCollapsed ? 'collapsed' : ''} {gallerySidebarOpen ? '' : 'max-lg:!translate-x-[-100%]'}"
+<aside use:editZone={{ zone: 'ambiance', label: tFn('edit.zone_ambiance') }} class="panel nx-plate {panelCollapsed ? 'collapsed' : ''} {gallerySidebarOpen ? '' : 'max-lg:!translate-x-[-100%]'}"
        id="variant-a-panel"
        role={gallerySidebarOpen ? 'dialog' : undefined}
        aria-modal={gallerySidebarOpen ? 'true' : undefined}

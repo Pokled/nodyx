@@ -4848,5 +4848,15 @@
   "hpb.follow_ambiance_off": "La grille garde ses propres couleurs. Active pour qu'elle suive l'ambiance choisie dans Apparence.",
   "hpb.follow_ambiance_open": "Régler l'ambiance dans Apparence",
   "appr.preset_coquin": "Coquin",
-  "appr.neutrals_black": "Noir (OLED)"
+  "appr.neutrals_black": "Noir (OLED)",
+  "edit.pen_enter": "Modifier l'apparence en direct",
+  "edit.pen_exit": "Quitter le mode édition",
+  "edit.zone_logo": "Logo",
+  "edit.zone_ambiance": "Couleur et ambiances",
+  "edit.zone_decor": "Décor et intensité",
+  "edit.zone_home": "Page d'accueil",
+  "edit.open_appearance": "Ouvrir Apparence",
+  "edit.exit": "Quitter",
+  "edit.open_builder": "Modifier la mise en page dans le Grid Builder",
+  "edit.follow_live": "Ce réglage s'applique tout de suite, sans passer par « Publier »."
 }

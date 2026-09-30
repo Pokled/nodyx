@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { editMode } from '$lib/editMode';
+	import { editZone } from '$lib/actions/editZone';
 	import { page } from '$app/state';
 	import { t, LOCALES } from '$lib/i18n';
 	import { themePreference, isDarkTheme } from '$lib/theme';
@@ -82,6 +84,7 @@
 </script>
 
 <nav class="nx-app-nav nx-plate sticky top-0 z-50 shrink-0 h-12 flex items-center px-4 gap-3"
+     use:editZone={{ zone: 'decor', label: tFn('edit.zone_decor') }}
      class:dragging={isDraggingLeftPanel}>
 
 	<!-- Mobile hamburger : ne s'affiche que si le panneau qu'il ouvre existe -->
@@ -243,10 +246,20 @@
 				{/if}
 			</a>
 			{#if user.role === 'owner' || user.role === 'admin'}
-				<a href="/admin"
-				   class="nx-admin-pill hidden sm:flex items-center px-2.5 h-7 text-[10px] font-black uppercase tracking-wider rounded-md transition-all"
-				   class:active={isActive('/admin')}
-				   >{tFn('nav.admin')}</a>
+				<!-- Bouton scindé : Administration | stylo (mode édition en direct,
+				     grand écran seulement, comme le contenant flottant). -->
+				<div class="nx-admin-split hidden sm:flex">
+					<a href="/admin"
+					   class="nx-admin-pill flex items-center px-2.5 h-7 text-[10px] font-black uppercase tracking-wider transition-all"
+					   class:active={isActive('/admin')}
+					   >{tFn('nav.admin')}</a>
+					<button type="button" class="nx-admin-pen hidden lg:inline-flex" class:on={$editMode}
+					        aria-pressed={$editMode} title={$editMode ? tFn('edit.pen_exit') : tFn('edit.pen_enter')}
+					        aria-label={$editMode ? tFn('edit.pen_exit') : tFn('edit.pen_enter')}
+					        onclick={() => editMode.update(v => !v)}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+					</button>
+				</div>
 			{/if}
 			<!-- User dropdown -->
 			<div class="relative">
@@ -455,6 +468,22 @@
 		outline: none;
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-header-accent) 45%, transparent);
 	}
+	/* Bouton scindé : les deux moitiés partagent une seule forme arrondie. */
+	.nx-admin-split { align-items: stretch; }
+	.nx-admin-split .nx-admin-pill { border-radius: 6px; }
+	@media (min-width: 1024px) {
+		.nx-admin-split .nx-admin-pill { border-radius: 6px 0 0 6px; }
+	}
+	.nx-admin-pen {
+		align-items: center; justify-content: center; width: 30px; height: 28px; margin-left: -1px; cursor: pointer;
+		border-radius: 0 6px 6px 0; border: 1px solid var(--nx-border); background: transparent; color: var(--nx-text-faint);
+		transition: color .15s, background-color .15s, border-color .15s;
+	}
+	.nx-admin-pen svg { width: 14px; height: 14px; transition: transform .35s var(--ease-spring); }
+	.nx-admin-pen:hover { color: var(--nx-text); background: var(--nx-surface-raised); }
+	.nx-admin-pen:hover svg { transform: rotate(-12deg); }
+	.nx-admin-pen.on { color: var(--nx-on-accent); background: var(--nx-header-accent); border-color: var(--nx-header-accent); }
+	.nx-admin-pen:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
 	/* Admin pill in top bar */
 	.nx-admin-pill {
 		color: var(--nx-text-faint);

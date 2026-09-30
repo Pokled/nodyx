@@ -22,6 +22,8 @@
 	import VoiceEqualizer from '$lib/components/VoiceEqualizer.svelte';
 	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
 	import { overlayScroll } from '$lib/actions/overlayScroll';
+	import { editZone } from '$lib/actions/editZone';
+	import EditOverlay from '$lib/components/appearance/EditOverlay.svelte';
 	import { shellThemeCss, backdropSource, DEFAULT_SHELL_THEME, type ShellTheme } from '$lib/shellTheme';
 	import { shellPreview, identityPreview } from '$lib/shellPreview';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
@@ -813,6 +815,9 @@
 		<StreamerNotifListener role={data.user.role} />
 	{/if}
 
+	<!-- Mode « au stylo » : barre, panneaux, Échap (inerte hors mode édition). -->
+	{#if user?.role === 'owner' || user?.role === 'admin'}<EditOverlay />{/if}
+
 	<!-- ══ MAINTENANCE BANNER (sticky top, hidden when no op in progress) ════════ -->
 	<MaintenanceBanner />
 
@@ -900,7 +905,7 @@
 		     moindre debordement (ex: banniere full-bleed -mx-6 du profil, +24px)
 		     faisait apparaitre une scrollbar horizontale + du contenu glissant
 		     sous les sidebars. On clippe l'horizontal, plus jamais de scrollbar. -->
-		<main use:overlayScroll class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
+		<main use:overlayScroll use:editZone={{ zone: page.url.pathname === '/' ? 'home' : null, label: tFn('edit.zone_home') }} class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
 		      class:members-collapsed={membersCollapsed}>
 

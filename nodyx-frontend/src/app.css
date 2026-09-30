@@ -1073,3 +1073,25 @@ select option {
 @media (prefers-reduced-motion: reduce) {
   .nx-oscroll, .nx-oscroll-thumb { transition: none; }
 }
+
+/* ── Mode « au stylo » (lib/actions/editZone.ts, EditOverlay.svelte) ────────
+   Rien de tout ceci n'existe hors mode édition. Le liseré n'apparaît qu'au
+   survol d'une zone : naviguer en mode édition reste confortable. */
+.nx-edit-zone { transition: box-shadow .2s var(--ease-out-soft); }
+.nx-edit-zone.nx-edit-hover {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--nx-header-accent) 70%, transparent), var(--nx-glass-shadow, 0 0 0 transparent);
+}
+.nx-edit-pen {
+  position: fixed; z-index: 75; width: 32px; height: 32px; border-radius: 999px; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--nx-header-accent); color: var(--nx-on-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-bg) 70%, transparent), 0 8px 20px -6px rgb(0 0 0 / .6);
+  opacity: 0; transform: scale(.6); pointer-events: none;
+  transition: opacity .18s, transform .35s var(--ease-spring);
+}
+.nx-edit-pen svg { width: 15px; height: 15px; }
+.nx-edit-pen.shown, .nx-edit-pen:focus-visible, .nx-edit-pen.active { opacity: 1; transform: none; pointer-events: auto; }
+.nx-edit-pen:hover { transform: scale(1.08); }
+.nx-edit-pen:focus-visible { outline: 2px solid var(--nx-text); outline-offset: 3px; }
+.nx-edit-pen.active { box-shadow: 0 0 0 3px var(--nx-header-accent-soft), 0 0 18px var(--nx-header-accent); }
+@media (prefers-reduced-motion: reduce) { .nx-edit-pen { transition: opacity .15s; transform: none; } }

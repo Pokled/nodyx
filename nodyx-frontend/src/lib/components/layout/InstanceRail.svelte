@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { editZone } from '$lib/actions/editZone';
 	import { t } from '$lib/i18n';
 	import { activeCommunityNameStore } from '$lib/communityStore';
 
@@ -38,7 +39,7 @@
 
 {#if !isBanned}
 <div class="nodyx-sb">
-<aside class="rail nx-plate">
+<aside class="rail nx-plate" use:editZone={{ zone: 'logo', label: tFn('edit.zone_logo') }}>
 	<div class="scroll">
 		<!-- Current instance (logo) — click toggles panel open -->
 		<button type="button" class="icon logo {!activeCommunityName ? 'active' : ''} {pulsingHome ? 'pulse' : ''}" data-tip={communityName} title={communityName} onclick={() => {

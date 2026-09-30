@@ -9,11 +9,13 @@
 	import { t } from '$lib/i18n'
 
 	type Ident = { logo_url?: string | null; banner_url?: string | null }
-	let { published, draft, token, onchange }: {
+	let { published, draft, token, onchange, only }: {
 		published: { logo_url: string | null; banner_url: string | null } | null
 		draft: Ident | null
 		token: string | null
 		onchange: (next: Ident | null) => void
+		/** Une seule image (panneaux du stylo). Absent = les deux. */
+		only?: 'logo' | 'banner'
 	} = $props()
 
 	const tFn = $derived($t)
@@ -46,10 +48,11 @@
 		}
 	}
 
-	const cards = $derived([
+	const allCards = $derived([
 		{ kind: 'logo' as const,   key: 'logo_url' as const,   title: tFn('appr.id_logo'),   where: tFn('appr.id_logo_where'),   action: tFn('appr.id_logo_change'),   hint: tFn('appr.id_logo_hint') },
 		{ kind: 'banner' as const, key: 'banner_url' as const, title: tFn('appr.id_banner'), where: tFn('appr.id_banner_where'), action: tFn('appr.id_banner_change'), hint: tFn('appr.id_banner_hint') },
 	])
+	const cards = $derived(only ? allCards.filter(c => c.kind === only) : allCards)
 </script>
 
 <div class="idc">

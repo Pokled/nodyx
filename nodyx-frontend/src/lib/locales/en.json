@@ -4848,5 +4848,15 @@
   "hpb.follow_ambiance_off": "The grid keeps its own colors. Turn on to follow the ambiance chosen in Appearance.",
   "hpb.follow_ambiance_open": "Set the ambiance in Appearance",
   "appr.preset_coquin": "Naughty",
-  "appr.neutrals_black": "Black (OLED)"
+  "appr.neutrals_black": "Black (OLED)",
+  "edit.pen_enter": "Edit the appearance live",
+  "edit.pen_exit": "Leave edit mode",
+  "edit.zone_logo": "Logo",
+  "edit.zone_ambiance": "Color and ambiances",
+  "edit.zone_decor": "Backdrop and intensity",
+  "edit.zone_home": "Homepage",
+  "edit.open_appearance": "Open Appearance",
+  "edit.exit": "Exit",
+  "edit.open_builder": "Edit the layout in the Grid Builder",
+  "edit.follow_live": "This setting applies immediately, without going through “Publish”."
 }
