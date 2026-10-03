@@ -10,6 +10,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 Un mois de travail depuis la 2.12.0, sur plusieurs chantiers en parallèle. Résumé par thème,
 pas par commit : le détail de chacun reste dans son historique git et ses PR.
 
+### Sécurité : l'IP des visiteurs n'arrivait pas jusqu'à Nodyx (installations standard)
+
+Sur toute instance installée avec `install.sh` en domaine direct, le Caddyfile généré retirait
+l'en-tête qui porte l'IP du visiteur. Nodyx voyait alors tout Internet comme `127.0.0.1` : la
+limitation de débit générale ne s'appliquait plus, celle des connexions devenait commune à toute
+l'instance (quelques requêtes suffisaient à empêcher tout le monde de se connecter), les
+bannissements ne visaient personne, et un en-tête `CF-Connecting-IP` forgé était cru. nodyx.org
+n'était pas concerné.
+
+Le Caddyfile calcule désormais lui-même l'IP du visiteur et l'impose ; aucun en-tête écrit par le
+visiteur ne peut s'y substituer. Le rendu serveur s'authentifie auprès du core par un secret
+partagé, et les fichiers de secrets ne sont plus lisibles par les autres utilisateurs du serveur
+(le `.env` du core était en 644).
+
+**Si tu héberges une instance installée avant ce correctif**, lance une fois :
+
+```bash
+sudo bash /opt/nodyx/install.sh --upgrade
+```
+
+La migration est automatique : copie de l'ancien Caddyfile, validation par Caddy avant de le
+remplacer, retour arrière si Caddy refuse. Si ton Caddyfile sert aussi d'autres sites, il n'est
+pas réécrit : la modification exacte à faire à la main est affichée.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

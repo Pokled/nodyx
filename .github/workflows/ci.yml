@@ -267,7 +267,26 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: ShellCheck (avertissements bloquants)
-        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh
+        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh
 
       - name: Banc de uninstall.sh
         run: bash scripts/tests/uninstall.test.sh
+
+      # Le banc du Caddyfile fait tourner un VRAI Caddy : binaire officiel, empreinte
+      # SHA-512 vérifiée contre le fichier de sommes publié avec la version.
+      - name: Caddy (binaire officiel, empreinte vérifiée)
+        run: |
+          V=2.11.1
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "https://github.com/caddyserver/caddy/releases/download/v${V}/caddy_${V}_checksums.txt"
+          curl -fsSLO "https://github.com/caddyserver/caddy/releases/download/v${V}/caddy_${V}_linux_amd64.tar.gz"
+          grep " caddy_${V}_linux_amd64.tar.gz$" "caddy_${V}_checksums.txt" | sha512sum -c -
+          tar -xzf "caddy_${V}_linux_amd64.tar.gz" caddy
+          sudo install -m 755 caddy /usr/local/bin/caddy
+          caddy version
+
+      # Caddyfile d'install.sh : l'IP du visiteur parvient au core, aucun en-tête
+      # forgé ne passe (domaine direct et relais), migration des installations
+      # existantes, modèles d'install.sh.
+      - name: Banc du Caddyfile d'install.sh
+        run: bash scripts/tests/caddyfile.test.sh

@@ -121,6 +121,12 @@ T_EN[services_restart]="Restarting services..."
 T_FR[services_restart]="Redémarrage des services..."
 T_EN[relay_recreate]="Relay client missing or inactive — reconfiguring..."
 T_FR[relay_recreate]="Relay client absent ou inactif — reconfiguration..."
+T_EN[caddy_invalid]="Generated Caddyfile rejected by caddy validate. Nothing was changed in Caddy. Please report it: https://github.com/Pokled/nodyx/issues"
+T_FR[caddy_invalid]="Caddyfile généré refusé par caddy validate. Rien n'a été changé dans Caddy. Signale-le : https://github.com/Pokled/nodyx/issues"
+T_EN[caddy_backup]="Previous Caddyfile saved: %s"
+T_FR[caddy_backup]="Ancien Caddyfile sauvegardé : %s"
+T_EN[install_lib_missing]="Installer library missing in the cloned repository: %s"
+T_FR[install_lib_missing]="Bibliothèque de l'installeur absente du dépôt cloné : %s"
 T_EN[relay_restarted]="Relay client restarted — tunnel to relay.nodyx.org active"
 T_FR[relay_restarted]="Relay client redémarré — tunnel vers relay.nodyx.org actif"
 T_EN[upgrade_done]='✔  Nodyx v%s operational'
@@ -145,6 +151,8 @@ T_EN[db_autobackup_restore_hint]="warn 'Restore the DB if needed: sudo gunzip -c
 T_FR[db_autobackup_restore_hint]="warn 'Restaurer la DB si besoin : sudo gunzip -c %s | sudo -u postgres psql nodyx'"
 T_EN[db_autobackup_fail]="DB backup failed (DB empty or inaccessible) — continuing."
 T_FR[db_autobackup_fail]="Sauvegarde DB échouée (DB vide ou inaccessible) — on continue."
+T_EN[wipe_backup_failed]="The database backup failed or could not be verified: wipe CANCELLED, nothing was deleted. Free some disk space in /root, then try again."
+T_FR[wipe_backup_failed]="La sauvegarde de la base a échoué ou n'a pas pu être vérifiée : effacement ANNULÉ, rien n'a été supprimé. Libère de la place dans /root, puis recommence."
 
 # §4 — Banner + system info
 T_EN[banner_subtitle]='Forum · Chat · Voice · Canvas'
@@ -1011,6 +1019,14 @@ _nodyx_upgrade() {
   git -C "$dir" pull --ff-only || die "$(t git_pull_fail)"
   ok "$(t code_uptodate)"
 
+  # Migrations de configuration livrées avec le code (03/10/2026 : l'IP du
+  # visiteur jusqu'au core, cf scripts/install/caddyfile.sh).
+  if [[ -f "${dir}/scripts/install/caddyfile.sh" ]]; then
+    # shellcheck source=scripts/install/caddyfile.sh
+    . "${dir}/scripts/install/caddyfile.sh"
+    nodyx_migrate_client_ip "$dir" || warn "$(t caddy_invalid)"
+  fi
+
   info "$(t backend_rebuild)"
   cd "${dir}/nodyx-core"
   npm ci --no-fund --no-audit --silent || die "$(t npm_install_backend_fail)"
@@ -1139,9 +1155,15 @@ trap '_nodyx_rollback' EXIT
 _auto_backup_db() {
   local reason="${1:-pre-action}"
   [[ "${_DB_EXISTS:-false}" == "true" ]] || return 0
-  local bak="/root/nodyx-db-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+  local bak
+  bak="/root/nodyx-db-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
   info "$(t db_autobackup "$reason")"
-  if sudo -u postgres pg_dump nodyx 2>/dev/null | gzip > "$bak"; then
+  # Réussie seulement si l'archive est intacte ET contient bien un dump : un
+  # pg_dump coupé par un disque plein laisse un .gz valide mais tronqué.
+  if (umask 077; sudo -u postgres pg_dump nodyx 2>/dev/null | gzip > "$bak") \
+     && gzip -t "$bak" 2>/dev/null \
+     && gzip -dc "$bak" 2>/dev/null | grep -q -m1 "PostgreSQL database dump complete"; then
+    _AUTO_BACKUP_OK=true
     local sz; sz=$(du -sh "$bak" 2>/dev/null | cut -f1 || echo "?")
     ok "$(t db_autobackup_done "${BOLD}" "$bak" "${RESET}" "$sz")"
     _rollback_register "$(t db_autobackup_restore_hint "$bak")"
@@ -1490,7 +1512,7 @@ if command -v psql &>/dev/null \
   _EXISTING_MSGS+=("$(t detect_db "${_DB_TABLE_COUNT}")")
 fi
 
-if $_EXISTING; then
+if $_EXISTING && [[ -z "$_FORCE_MODE" ]]; then
   echo ""
 
   # ── Contextual title based on the situation ──
@@ -1581,6 +1603,24 @@ if $_EXISTING; then
   [[ "$INSTALL_MODE" == "wipe" ]]      && warn "$(t wipe_warning)"
   [[ "$INSTALL_MODE" == "reinstall" ]] && warn "$(t reinstall_notice)"
   echo ""
+fi
+
+# ── Mode imposé en ligne de commande (--upgrade, --repair, --reinstall, --wipe)
+# Traité ICI, avant les conflits de ports et la détection d'IP : avant le
+# 03/10/2026 il venait APRÈS le menu interactif (qui s'affichait donc quand
+# même) et après le contrôle des ports, qui prenait Nodyx lui-même, en train
+# de tourner sur 3000/4173, pour un conflit à tuer.
+if [[ -n "$_FORCE_MODE" ]]; then
+  INSTALL_MODE="$_FORCE_MODE"
+  info "$(printf "$(t force_mode_cli)" "${BOLD}" "${INSTALL_MODE}" "${RESET}")"
+  if [[ "$INSTALL_MODE" == "upgrade" || "$INSTALL_MODE" == "repair" ]]; then
+    [[ -d "$_NODYX_CHECK_DIR" ]] || die "$(printf "$(t force_no_install)" "${_NODYX_CHECK_DIR}" "${INSTALL_MODE}")"
+    _nodyx_upgrade "${_INSTALLED_VERSION:-?}" "$NODYX_VERSION" "$_NODYX_CHECK_DIR"
+    _INSTALL_COMPLETE=true
+    exit 0
+  fi
+  [[ "$INSTALL_MODE" == "wipe" ]]      && warn "$(t wipe_warning)"
+  [[ "$INSTALL_MODE" == "reinstall" ]] && warn "$(t reinstall_notice)"
 fi
 
 # ── 2. Conflits de ports ─────────────────────────────────────────────────────
@@ -1710,19 +1750,6 @@ if [[ -z "$PUBLIC_IP" ]]; then
   prompt PUBLIC_IP "$(t prompt_public_ip)"
 else
   ok "$(printf "$(t ip_detected)" "${BOLD}" "$PUBLIC_IP" "${RESET}")"
-fi
-
-# ── _FORCE_MODE bypass : si flag CLI, court-circuiter le menu de détection ──
-if [[ -n "$_FORCE_MODE" ]]; then
-  INSTALL_MODE="$_FORCE_MODE"
-  info "$(printf "$(t force_mode_cli)" "${BOLD}" "${INSTALL_MODE}" "${RESET}")"
-  if [[ "$INSTALL_MODE" == "upgrade" || "$INSTALL_MODE" == "repair" ]]; then
-    [[ -d "$_NODYX_CHECK_DIR" ]] || die "$(printf "$(t force_no_install)" "${_NODYX_CHECK_DIR}" "${INSTALL_MODE}")"
-    _installed_ver=$(node -p "require('${_NODYX_CHECK_DIR}/nodyx-core/package.json').version" 2>/dev/null || echo "?")
-    _nodyx_upgrade "$_installed_ver" "$NODYX_VERSION" "$_NODYX_CHECK_DIR"
-    _INSTALL_COMPLETE=true
-    exit 0
-  fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2012,6 +2039,9 @@ DB_USER="nodyx_user"
 DB_PASSWORD=$(gen_pass)
 JWT_SECRET=$(gen_secret)
 TURN_SECRET=$(gen_secret)
+# Secret partagé frontend <-> core : le rendu serveur s'en sert pour transmettre
+# l'IP du visiteur et être exempté de la limitation de débit (rateLimit.ts).
+INTERNAL_API_SECRET=$(gen_secret)
 NODYX_DIR="/opt/nodyx"
 REPO_URL="https://github.com/Pokled/nodyx.git"
 
@@ -2170,6 +2200,11 @@ fi
 
 # Wipe mode: drop existing DB cleanly
 if [[ "$INSTALL_MODE" == "wipe" ]]; then
+  # Jamais d'effacement sans sauvegarde relue (avant le 03/10/2026, un échec de
+  # sauvegarde affichait un avertissement puis la base était supprimée quand même).
+  if [[ "${_DB_EXISTS:-false}" == "true" && "${_AUTO_BACKUP_OK:-false}" != "true" ]]; then
+    die "$(t wipe_backup_failed)"
+  fi
   info "$(t pg_wipe_dropping)"
   sudo -u postgres psql -c \
     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" \
@@ -2503,6 +2538,13 @@ else
 fi
 ok "$(printf "$(t clone_done)" "$NODYX_DIR")"
 
+# Bibliothèque de l'installeur, livrée avec le code : génération du Caddyfile
+# (testée par scripts/tests/caddyfile.test.sh avec un vrai Caddy).
+_INSTALL_LIB="${NODYX_DIR}/scripts/install/caddyfile.sh"
+[[ -f "$_INSTALL_LIB" ]] || die "$(printf "$(t install_lib_missing)" "$_INSTALL_LIB")"
+# shellcheck source=scripts/install/caddyfile.sh
+. "$_INSTALL_LIB"
+
 # Réconciliation : si le repo cloné contient un fichier VERSION, on s'y aligne
 # (priorité absolue car c'est ce que le code Nodyx lira au boot). Sinon on
 # garde la valeur résolue avant clone (via _resolve_version).
@@ -2547,6 +2589,9 @@ NODE_ENV=production
 
 # JWT
 JWT_SECRET=${JWT_SECRET}
+
+# Secret partagé avec le frontend (appels internes du rendu serveur)
+INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
 
 # PostgreSQL
 DB_HOST=localhost
@@ -2681,92 +2726,26 @@ ok "$(t frontend_built)"
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_caddy)"
 
-# Two Caddyfile shapes:
-#   $RELAY_MODE → :80 (loopback HTTP, TLS handled upstream by nodyx-relay)
-#   else        → ${DOMAIN} (Caddy terminates Let's Encrypt itself)
-# Both share the same security headers, honeypot, and proxy snippets to
-# prevent drift. HSTS only ships on the direct-domain shape because Caddy
-# controls TLS end-to-end there; in relay mode the upstream may be HTTP for
-# debug, and an HSTS cache could lock visitors out for months.
-_HSTS_HEADER=""
-if ! $RELAY_MODE; then
-  _HSTS_HEADER='Strict-Transport-Security "max-age=31536000; includeSubDomains"'
+# Deux formes, générées par scripts/install/caddyfile.sh :
+#   relais          → :80 (HTTP en boucle locale, le TLS est fait en amont)
+#   domaine direct  → ${DOMAIN} (Caddy obtient lui-même le certificat)
+# Dans les deux cas, Caddy calcule l'IP du visiteur et l'impose au core :
+# aucun en-tête écrit par le visiteur ne peut s'y substituer.
+_CADDY_MODE=direct
+$RELAY_MODE && _CADDY_MODE=relay
+_NEW_CADDYFILE="$(mktemp /etc/caddy/.Caddyfile.nodyx.XXXXXX)"
+nodyx_caddyfile "$_CADDY_MODE" "$DOMAIN" > "$_NEW_CADDYFILE"
+if ! caddy validate --config "$_NEW_CADDYFILE" --adapter caddyfile >/dev/null 2>&1; then
+  rm -f "$_NEW_CADDYFILE"
+  die "$(t caddy_invalid)"
 fi
-
-if $RELAY_MODE; then
-  _SITE_BLOCK=":80"
-else
-  _SITE_BLOCK="${DOMAIN}"
+if [[ -s /etc/caddy/Caddyfile ]]; then
+  _CADDY_BAK="/etc/caddy/Caddyfile.avant-nodyx-$(date +%Y%m%d-%H%M%S)"
+  cp -p /etc/caddy/Caddyfile "$_CADDY_BAK"
+  info "$(printf "$(t caddy_backup)" "$_CADDY_BAK")"
 fi
-
-cat > /etc/caddy/Caddyfile <<CADDY
-{
-    servers {
-        # Cap header size so slow-header DoS can't keep workers busy. 16KB
-        # comfortably fits cookies + Authorization (JWT ~500B) + proxy chain.
-        max_header_size 16KB
-    }
-}
-
-(security_headers) {
-    header {
-        X-Content-Type-Options    "nosniff"
-        X-Frame-Options           "SAMEORIGIN"
-        Referrer-Policy           "strict-origin-when-cross-origin"
-        Permissions-Policy        "camera=(self), microphone=(self), geolocation=(self)"
-        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://geo.dailymotion.com https://player.twitch.tv https://clips.twitch.tv https://w.soundcloud.com https://open.spotify.com; object-src 'none'; base-uri 'self'; form-action 'self';"
-        ${_HSTS_HEADER}
-        -Server
-    }
-}
-
-(proxy_backend) {
-    reverse_proxy 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
-        # 5s dial is huge for loopback; 30s response_header covers Socket.IO
-        # long-poll without cutting WebSocket upgrades short.
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 30s
-        }
-    }
-}
-
-(proxy_frontend) {
-    reverse_proxy 127.0.0.1:4173 {
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 30s
-        }
-    }
-}
-
-${_SITE_BLOCK} {
-    encode gzip
-
-    import security_headers
-
-    @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
-    handle @honeypot {
-        rewrite * /api/v1/_hp?p={http.request.uri.path}
-        import proxy_backend
-    }
-
-    handle /api/* {
-        import proxy_backend
-    }
-    handle /uploads/* {
-        import proxy_backend
-    }
-    handle /socket.io/* {
-        import proxy_backend
-    }
-
-    handle {
-        import proxy_frontend
-    }
-}
-CADDY
+install -m 644 "$_NEW_CADDYFILE" /etc/caddy/Caddyfile
+rm -f "$_NEW_CADDYFILE"
 
 systemctl enable caddy --quiet
 systemctl restart caddy
@@ -2798,7 +2777,7 @@ module.exports = {
       cwd: '${NODYX_DIR}/nodyx-frontend',
       watch: false,
       max_memory_restart: '${_PM2_FRONT_MEM}',
-      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1' },
+      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1', INTERNAL_API_SECRET: '${INTERNAL_API_SECRET}', ADDRESS_HEADER: 'x-forwarded-for', XFF_DEPTH: '1' },
     },
   ],
 }
@@ -2806,6 +2785,9 @@ PM2
 
 # Donner la propriété du répertoire à l'utilisateur nodyx
 chown -R nodyx:nodyx "${NODYX_DIR}"
+# Les fichiers de secrets (JWT, base, SMTP, secret interne) ne sont lisibles
+# que par nodyx : avant le 03/10/2026, le .env du core était en 644.
+chmod 600 "${NODYX_DIR}/ecosystem.config.js" "${NODYX_DIR}/nodyx-core/.env" "${NODYX_DIR}/nodyx-frontend/.env"
 
 # Arrêter les anciens processus nodyx (root ou nodyx) sans toucher aux autres apps PM2
 pm2 delete nodyx-core     2>/dev/null || true
@@ -3193,6 +3175,12 @@ info "Récupération des dernières modifications..."
 git config --global --add safe.directory "$NODYX_DIR" 2>/dev/null || true
 git -C "$NODYX_DIR" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json 2>/dev/null || true
 git -C "$NODYX_DIR" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits."
+
+# Migrations de configuration livrées avec le code.
+if [[ -f "$NODYX_DIR/scripts/install/caddyfile.sh" ]]; then
+  . "$NODYX_DIR/scripts/install/caddyfile.sh"
+  nodyx_migrate_client_ip "$NODYX_DIR" || warn "Migration de configuration incomplète (voir ci-dessus)."
+fi
 
 info "Rebuild backend..."
 cd "${NODYX_DIR}/nodyx-core"
