@@ -2,6 +2,8 @@
 	import type { PageData } from './$types'
 	import { page } from '$app/state'
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte'
+	import { ambiancePalette } from '$lib/shellTheme'
+	import { page as appPage } from '$app/state'
 	import ImagePositionPicker from '$lib/components/homepage/ImagePositionPicker.svelte'
 	import type { WidgetFamily } from '$lib/components/homepage/plugins'
 	import {
@@ -1526,6 +1528,21 @@
 			<div class="panel-body">
 				<!-- Préthèmes : point de départ sûr, un clic remplace tout, Réinitialiser
 				     permet toujours de revenir en arrière sans perte. -->
+				<!-- Suivre l'ambiance de l'instance (écran Apparence) : les couleurs
+				     de marque de la grille viennent de là, une seule source de vérité. -->
+				<label class="follow-amb" class:on={theme.follow_ambiance}>
+					<input type="checkbox" checked={!!theme.follow_ambiance}
+					       onchange={(e) => updateTheme('follow_ambiance', (e.currentTarget as HTMLInputElement).checked)} />
+					<span class="follow-amb-switch" aria-hidden="true"></span>
+					<span class="follow-amb-text">
+						<strong>{tFn('hpb.follow_ambiance')}</strong>
+						<small>{theme.follow_ambiance ? tFn('hpb.follow_ambiance_on') : tFn('hpb.follow_ambiance_off')}</small>
+					</span>
+				</label>
+				{#if theme.follow_ambiance}
+					<a class="follow-amb-link" href="/admin/appearance">{tFn('hpb.follow_ambiance_open')}</a>
+				{/if}
+
 				<div class="panel-section-title">{tFn('hpb.presets')}</div>
 				<div class="preset-theme-grid">
 					{#each GRID_THEME_PRESETS as p}
@@ -1706,6 +1723,7 @@
 					<GridRenderer
 						layout={draft}
 						{theme}
+						ambiance={ambiancePalette((appPage.data as any).shellTheme)}
 						instance={{}}
 						user={null}
 						installedWidgets={installedMap}
@@ -2615,4 +2633,24 @@
 		outline-offset: 1px;
 		transform: translate(-50%, -50%);
 	}
+	.follow-amb {
+		display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 12px; border-radius: 10px; cursor: pointer;
+		background: #111827; border: 1px solid #1f2937;
+	}
+	.follow-amb.on { border-color: var(--nx-header-accent); }
+	.follow-amb input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+	.follow-amb-switch {
+		flex-shrink: 0; position: relative; width: 32px; height: 18px; margin-top: 2px; border-radius: 999px; background: #374151; transition: background-color .2s;
+	}
+	.follow-amb-switch::after {
+		content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 999px; background: #fff;
+		transition: transform .3s var(--ease-spring);
+	}
+	.follow-amb.on .follow-amb-switch { background: var(--nx-header-accent); }
+	.follow-amb.on .follow-amb-switch::after { transform: translateX(14px); }
+	.follow-amb input:focus-visible + .follow-amb-switch { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
+	.follow-amb-text { display: flex; flex-direction: column; gap: 2px; }
+	.follow-amb-text strong { font-size: 13px; color: #f3f4f6; font-weight: 600; }
+	.follow-amb-text small { font-size: 11.5px; color: #9ca3af; line-height: 1.35; }
+	.follow-amb-link { display: inline-block; margin: -4px 0 14px 2px; font-size: 12px; color: var(--nx-header-accent); }
 </style>

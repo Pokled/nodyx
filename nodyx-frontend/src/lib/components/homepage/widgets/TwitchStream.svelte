@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useFollowAmbiance } from '../followAmbiance'
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/environment'
 	import { apiFetch } from '$lib/api'
@@ -25,7 +26,8 @@
 	// Couleur d'accent du widget : si l'admin la fixe (config.accent_color,
 	// ex. le violet de marque Twitch #9146FF), on garde l'astuce hex+alpha.
 	// Sinon on suit le thème du Homepage Builder EN DIRECT via --nl.
-	const customAccent  = $derived(config.accent_color as string | undefined)
+	const follow        = useFollowAmbiance()
+	const customAccent  = $derived(follow() ? undefined : config.accent_color as string | undefined)
 	const accent        = $derived(customAccent ?? 'var(--nl)')
 	const accentBgWeak  = $derived(customAccent ? `${customAccent}1a` : 'rgb(var(--nl-rgb) / .1)')
 	const accentBrdWeak = $derived(customAccent ? `${customAccent}33` : 'rgb(var(--nl-rgb) / .2)')

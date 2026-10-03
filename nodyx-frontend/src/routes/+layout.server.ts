@@ -3,6 +3,7 @@ import type { LayoutServerLoad } from './$types';
 import { apiFetch } from '$lib/api';
 import { env } from '$env/dynamic/public';
 import { getLocaleFromAcceptLanguage, isKnownLocale } from '$lib/i18n';
+import type { ShellTheme } from '$lib/shellTheme';
 
 const DIRECTORY_URL = (env.PUBLIC_DIRECTORY_URL ?? 'https://nodyx.org') + '/api/directory';
 
@@ -67,7 +68,7 @@ function panelWidthFromCookie(raw: string | undefined): number {
 	return Math.max(PANEL_WIDTH_MIN, Math.min(PANEL_WIDTH_MAX, n));
 }
 
-export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) => {
+export const load: LayoutServerLoad = async ({ fetch, cookies, request, url, locals }) => {
 	const token = cookies.get('token');
 	const cookieLocale = cookies.get('nodyx_locale');
 	const ssrLocale = (isKnownLocale(cookieLocale) ? cookieLocale : getLocaleFromAcceptLanguage(request.headers.get('accept-language'))) || 'fr';
@@ -75,6 +76,8 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const membersCollapsed = cookies.get('nodyx_members_collapsed') === 'true';
 	const leftPanelWidth = panelWidthFromCookie(cookies.get('nodyx_left_panel_width'));
 	const rightPanelWidth = panelWidthFromCookie(cookies.get('nodyx_right_panel_width'));
+	const cookieTheme = cookies.get('nodyx_theme');
+	const themePref = cookieTheme === 'light' || cookieTheme === 'dark' ? cookieTheme : 'system';
 
 	const [infoRes, userRes, directoryJson, announcementRes, modulesRes, channelsRes] = await Promise.all([
 		apiFetch(fetch, '/instance/info'),
@@ -114,6 +117,11 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const instanceTheme: Record<string, unknown> | null = infoJson?.theme_vars ?? null;
 	// Effet de fond optionnel posé par l'owner (ex 'matrix' = pluie de caractères)
 	const instanceEffect: string | null = infoJson?.theme_effect ?? null;
+	// Ambiance publiée par l'admin (SPECS/NODYX_APPARENCE_CDC.md). Déjà validée
+	// par le core ; son mode par défaut part vers hooks.server.ts, qui écrit
+	// <html data-theme> APRÈS ce chargement (pas de flash du mauvais thème).
+	const shellTheme: ShellTheme | null = infoJson?.theme_shell ?? null;
+	locals.shellDefaultMode = shellTheme?.default_mode;
 	// Fond d'image de la sidebar membres (#members-c), visible sur toutes les pages
 	const rawSidebarBg = infoJson?.sidebar_bg as { background_image_url?: string; background_offset_x?: number; background_offset_y?: number; background_scale?: number; overlay_opacity?: number; visibility?: 'all' | 'guests' | 'members' } | null | undefined;
 	const sidebarBg = rawSidebarBg?.background_image_url
@@ -127,7 +135,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	}> = (((directoryJson as any)?.instances) ?? []).filter((i: { slug: string }) => i.slug !== currentSlug);
 
 	if (!token || !userRes?.ok) {
-		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, channels: [], demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, sidebarBg, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth };
+		return { user: null, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount: 0, token: null, networkInstances: [], directoryInstances: allInstances, activeAnnouncement, modules, channels: [], demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, sidebarBg, shellTheme, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth, themePref };
 	}
 
 	const { user } = await userRes.json();
@@ -157,5 +165,5 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, request, url }) =
 	const linkedSlugs: string[] = user.linked_instances ?? [];
 	const networkInstances = allInstances.filter(i => linkedSlugs.includes(i.slug));
 
-	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, channels, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, sidebarBg, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth };
+	return { user, communityName, communityLogoUrl, communityBannerUrl, memberCount, unreadCount, token: token || null, appTheme, networkInstances, directoryInstances: allInstances, activeAnnouncement, modules, channels, demoMode, nodyxVersion, themeCss, instanceTheme, instanceEffect, sidebarBg, shellTheme, ssrLocale, panelCollapsed, membersCollapsed, leftPanelWidth, rightPanelWidth, themePref };
 };

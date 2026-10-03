@@ -45,6 +45,189 @@ html, body {
   --nx-cyan-rgb:        6 182 212;    /* cyan-500 */
 }
 
+/* ── Contenant, nouvelle génération (SPECS/NODYX_CONTENANT_DESIGN_CDC.md) ───
+   Tokens sémantiques du chantier header/sidebars. Volontairement distincts
+   des --nx-accent* ci-dessus (encore utilisés par ~80 fichiers ailleurs dans
+   l'app) : rien ici ne doit changer le rendu du reste du site tant que la
+   migration du CDC n'est pas arrivée à ces fichiers-là.
+
+   Premier essai (18/09) : neutres ET accent dans la même famille chaude,
+   jugé "marron" par Jonathan à raison, rien ne ressortait. Corrigé (19/09) :
+   les neutres redeviennent proches du vrai noir/blanc, seul l'accent porte
+   la couleur, un ambre franc plutôt que le bourbeux d'avant.
+
+   Validation en cours en clair sur vieuxlooters.nodyx.org : `data-theme`
+   forcé à "light" plus bas tant qu'aucun bouton de bascule n'existe
+   (étape suivante du CDC). La branche sombre est déjà posée proprement en
+   dessous pour ne pas la refaire à la légère le jour venu. */
+:root {
+  --nx-bg:                #faf8f4;
+  --nx-surface:           #ffffff;
+  --nx-surface-raised:    #ffffff;
+  --nx-border:            #e6e0d3;
+  --nx-border-soft:       #eee9dd;
+  --nx-text:              #1c1a16;
+  --nx-text-muted:        #6b6459;
+  --nx-text-faint:        #98917f;
+  --nx-header-accent:        #c67c00;
+  --nx-header-accent-strong: #a66700;
+  --nx-header-accent-soft:   rgb(198 124 0 / 0.12);
+  /* Texte posé SUR l'accent : calculé (lib/shellTheme.ts, onColor), le blanc
+     sur cet ambre ne contrastait qu'à 1,9:1. */
+  --nx-on-accent:            #16120c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --nx-bg:                #100e0b;
+    --nx-surface:           #17140f;
+    --nx-surface-raised:    #1e1a14;
+    --nx-border:            #2c261c;
+    --nx-border-soft:       #221d16;
+    --nx-text:              #f5f2ec;
+    --nx-text-muted:        #a89f8d;
+    --nx-text-faint:        #6e6759;
+    --nx-header-accent:        #ffb020;
+    --nx-header-accent-strong: #e89900;
+    --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
+    --nx-on-accent:            #16120c;
+  }
+}
+:root[data-theme="dark"] {
+  --nx-bg:                #100e0b;
+  --nx-surface:           #17140f;
+  --nx-surface-raised:    #1e1a14;
+  --nx-border:            #2c261c;
+  --nx-border-soft:       #221d16;
+  --nx-text:              #f5f2ec;
+  --nx-text-muted:        #a89f8d;
+  --nx-text-faint:        #6e6759;
+  --nx-header-accent:        #ffb020;
+  --nx-header-accent-strong: #e89900;
+  --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
+  --nx-on-accent:            #16120c;
+}
+/* Mascotte poulpe (nodyx-octopus.png) : PNG blanc plein, neutre par choix
+   (cf SPECS/NODYX_CONTENANT_DESIGN_CDC.md, une mascotte ne doit pas rentrer
+   en concurrence avec la couleur d'état actif). Inversé en clair. */
+.nx-mark-octopus { filter: none; }
+:root:not([data-theme="dark"]) .nx-mark-octopus { filter: invert(1) brightness(0.15); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .nx-mark-octopus { filter: none; }
+}
+
+/* ── Contenant flottant (28/09) ─────────────────────────────────────────────
+   Direction demandée par Jonathan : « Discord, mais en version folle
+   Apple/iPhone ». Même structure (rail, canaux, contenu, membres), mais les
+   panneaux ne sont plus des colonnes collées aux bords : ce sont des plaques
+   posées sur le papier peint de l'instance (sa propre bannière, floutée), en
+   verre dépoli, comme la barre latérale d'iPadOS/macOS.
+
+   Tout passe par ces variables. Sous 1024px, --shell-gap vaut 0 : le tiroir
+   mobile et la barre basse gardent EXACTEMENT leur comportement actuel. */
+:root {
+  --shell-gap:    0px;
+  --shell-radius: 0px;
+  --shell-rail-w: 56px;
+  --shell-head-h: 48px;
+  /* Courbe unique du contenant (Vaul, Emil Kowalski) + un ressort qui
+     dépasse légèrement pour ce qui « se pose » (pastille active). */
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.36, 0.64, 1);
+  /* Typo système : SF Pro sur Apple, Segoe sur Windows, sans téléchargement.
+     Le nom de communauté prend la version arrondie quand elle existe. */
+  --font-shell:         -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-shell-rounded: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif;
+
+  /* Verre (clair par défaut) */
+  --nx-glass:        color-mix(in srgb, var(--nx-surface) 72%, transparent);
+  --nx-glass-strong: color-mix(in srgb, var(--nx-surface) 86%, transparent);
+  --nx-glass-rim:    rgb(255 255 255 / 0.75);
+  --nx-glass-edge:   rgb(0 0 0 / 0.07);
+  --nx-glass-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -8px rgb(60 40 10 / 0.18), 0 24px 60px -20px rgb(60 40 10 / 0.22);
+  --nx-wallpaper-filter: blur(22px) saturate(1.3) brightness(1.1);
+  --nx-wallpaper-veil:   rgb(250 248 244 / 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --nx-glass:        color-mix(in srgb, var(--nx-surface) 62%, transparent);
+    --nx-glass-strong: color-mix(in srgb, var(--nx-surface) 82%, transparent);
+    --nx-glass-rim:    rgb(255 255 255 / 0.09);
+    --nx-glass-edge:   rgb(0 0 0 / 0.45);
+    --nx-glass-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -8px rgb(0 0 0 / 0.55), 0 30px 80px -24px rgb(0 0 0 / 0.6);
+    --nx-wallpaper-filter: blur(22px) saturate(1.35) brightness(0.8);
+    --nx-wallpaper-veil:   rgb(10 8 6 / 0.25);
+  }
+}
+:root[data-theme="dark"] {
+  --nx-glass:        color-mix(in srgb, var(--nx-surface) 62%, transparent);
+  --nx-glass-strong: color-mix(in srgb, var(--nx-surface) 82%, transparent);
+  --nx-glass-rim:    rgb(255 255 255 / 0.09);
+  --nx-glass-edge:   rgb(0 0 0 / 0.45);
+  --nx-glass-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -8px rgb(0 0 0 / 0.55), 0 30px 80px -24px rgb(0 0 0 / 0.6);
+  --nx-wallpaper-filter: blur(22px) saturate(1.35) brightness(0.8);
+  --nx-wallpaper-veil:   rgb(10 8 6 / 0.25);
+}
+@media (min-width: 1024px) {
+  :root { --shell-gap: 10px; --shell-radius: 18px; }
+}
+/* Accessibilité : qui a demandé moins de transparence au système obtient
+   des plaques pleines, même géométrie. */
+@media (prefers-reduced-transparency: reduce) {
+  :root, :root[data-theme] {
+    --nx-glass: var(--nx-surface);
+    --nx-glass-strong: var(--nx-surface);
+  }
+}
+
+/* Le « matériau » commun des plaques : fond translucide, flou de ce qui est
+   derrière, liseré lumineux en haut (le reflet d'une vitre), bord sombre
+   très fin, ombre douce à trois couches. Les coins deviennent de vrais
+   squircles là où le navigateur sait les dessiner (Chrome 139+). */
+.nx-plate {
+  background: var(--nx-glass);
+  /* --zone-blur / --zone-bw / --zone-bc : style propre à une zone
+     (CDC partie 3), sinon les valeurs de l'ambiance. */
+  -webkit-backdrop-filter: blur(var(--zone-blur, 28px)) saturate(1.7);
+  backdrop-filter: blur(var(--zone-blur, 28px)) saturate(1.7);
+  box-shadow: inset 0 1px 0 0 var(--nx-glass-rim), 0 0 0 1px var(--nx-glass-edge),
+              0 0 0 var(--zone-bw, 0px) var(--zone-bc, transparent), var(--nx-glass-shadow);
+  border-radius: var(--shell-radius);
+}
+@supports (corner-shape: squircle) {
+  .nx-plate { corner-shape: squircle; border-radius: calc(var(--shell-radius) * 1.7); }
+}
+@media (max-width: 1023px) {
+  /* Mobile : pas de plaque, le tiroir garde son rendu plein actuel. */
+  .nx-plate {
+    background: var(--nx-surface);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    box-shadow: none; border-radius: 0;
+  }
+}
+
+/* Papier peint : la bannière de l'instance, floutée très fort, derrière tout.
+   Image statique composée une seule fois : aucun coût au défilement. */
+.nx-wallpaper { display: none; }
+@media (min-width: 1024px) {
+  .nx-wallpaper {
+    display: block; position: fixed; inset: 0; z-index: -1;
+    overflow: hidden; pointer-events: none;
+    background: var(--nx-bg);
+  }
+  .nx-wallpaper img {
+    position: absolute; inset: -12%; width: 124%; height: 124%;
+    object-fit: cover; filter: var(--nx-wallpaper-filter);
+  }
+  .nx-wallpaper::after {
+    content: ''; position: absolute; inset: 0; background: var(--nx-wallpaper-veil);
+  }
+  /* Un élément en z-index négatif se peint SOUS le fond du <body> (ordre de
+     peinture CSS) : le fond sombre anti-rebond ci-dessus le masquait en
+     entier. On le lève seulement quand un papier peint est là ; <html> garde
+     sa couleur, le rebond élastique reste invisible. */
+  body:has(> * .nx-wallpaper), body:has(.nx-wallpaper) { background-color: transparent; }
+}
+
 /* ── Theme CSS vars (définis dynamiquement par +layout.svelte via appVars) ──
    Portée actuelle :
      · Layout chrome (nav, galaxy bar, members bar, bottom nav) ✓
@@ -857,3 +1040,83 @@ select option {
 		justify-content: flex-start;
 	}
 }
+
+/* ── Barre de défilement flottante (lib/actions/overlayScroll.ts) ───────────
+   Rail : zone de saisie de 12px, invisible. Le pouce visible est bien plus
+   fin : geste possible > geste visible (poignée de Vaul, citée au CDC). La
+   barre native n'est masquée QUE sur une zone où l'action est active. */
+/* !important voulu : les sidebars déclarent leur propre barre en CSS scopé
+   (spécificité plus forte), qui sinon s'afficherait EN PLUS de celle-ci. */
+.nx-overlay-scroll { scrollbar-width: none !important; }
+.nx-overlay-scroll::-webkit-scrollbar { display: none !important; width: 0 !important; }
+.nx-oscroll {
+  position: absolute; z-index: 20; width: 12px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .35s var(--ease-out-soft);
+}
+.nx-oscroll.visible { opacity: 1; pointer-events: auto; }
+.nx-oscroll-thumb {
+  position: absolute; top: 0; right: 3px; width: 5px;
+  border-radius: 999px; cursor: grab;
+  background: color-mix(in srgb, var(--nx-text) 38%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--nx-bg) 55%, transparent);
+  transition: width .3s var(--ease-spring), right .3s var(--ease-spring),
+              background-color .2s, box-shadow .3s var(--ease-out-soft);
+  will-change: transform;
+}
+/* Survol ou saisie : la pilule s'épaissit avec un ressort et prend l'accent
+   de l'instance, avec un halo doux de la même teinte. */
+.nx-oscroll.hot .nx-oscroll-thumb {
+  width: 8px; right: 2px;
+  background: var(--nx-header-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--nx-bg) 40%, transparent),
+              0 0 14px 1px color-mix(in srgb, var(--nx-header-accent) 45%, transparent);
+}
+.nx-oscroll-thumb.dragging { cursor: grabbing; }
+@media (prefers-reduced-motion: reduce) {
+  .nx-oscroll, .nx-oscroll-thumb { transition: none; }
+}
+
+/* ── Mode « au stylo » (lib/actions/editZone.ts, EditOverlay.svelte) ────────
+   Rien de tout ceci n'existe hors mode édition. Le liseré n'apparaît qu'au
+   survol d'une zone : naviguer en mode édition reste confortable. */
+.nx-edit-zone { transition: box-shadow .2s var(--ease-out-soft); }
+.nx-edit-zone.nx-edit-hover {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--nx-header-accent) 70%, transparent), var(--nx-glass-shadow, 0 0 0 transparent);
+}
+.nx-edit-pen {
+  position: fixed; z-index: 75; width: 32px; height: 32px; border-radius: 999px; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--nx-header-accent); color: var(--nx-on-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-bg) 70%, transparent), 0 8px 20px -6px rgb(0 0 0 / .6);
+  opacity: 0; transform: scale(.6); pointer-events: none;
+  transition: opacity .18s, transform .35s var(--ease-spring);
+}
+.nx-edit-pen svg { width: 15px; height: 15px; }
+.nx-edit-pen.shown, .nx-edit-pen:focus-visible, .nx-edit-pen.active { opacity: 1; transform: none; pointer-events: auto; }
+.nx-edit-pen:hover { transform: scale(1.08); }
+.nx-edit-pen:focus-visible { outline: 2px solid var(--nx-text); outline-offset: 3px; }
+.nx-edit-pen.active { box-shadow: 0 0 0 3px var(--nx-header-accent-soft), 0 0 18px var(--nx-header-accent); }
+@media (prefers-reduced-motion: reduce) { .nx-edit-pen { transition: opacity .15s; transform: none; } }
+
+/* Police propre à une zone : sans --zone-font, déclaration invalide = héritage. */
+[data-nx-zone] { font-family: var(--zone-font); }
+
+/* ── Image de fond propre à une zone (CDC Apparence, partie 3) ─────────────
+   Un calque sous le contenu de la plaque (z-index -1 dans la plaque, qui est
+   un contexte d'empilement), jamais un overflow sur la plaque elle-même :
+   il couperait les menus déroulants de la barre du haut. Invisible tant que
+   la zone n'a pas d'image (--zone-img-display). */
+.nx-zone-img {
+  display: var(--zone-img-display, none);
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: inherit; overflow: hidden;
+}
+@supports (corner-shape: squircle) { .nx-zone-img { corner-shape: squircle; } }
+.nx-zone-img::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--zone-img, none) var(--zone-img-pos, 50% 50%) / cover no-repeat;
+  transform: scale(var(--zone-img-zoom, 1)); transform-origin: var(--zone-img-pos, 50% 50%);
+}
+.nx-zone-img::after { content: ''; position: absolute; inset: 0; background: var(--zone-img-veil, transparent); }
+@media (max-width: 1023px) { .nx-zone-img { display: none; } }
