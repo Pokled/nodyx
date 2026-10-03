@@ -887,66 +887,39 @@ cd ../nodyx-frontend && npm install && npm run build && pm2 restart nodyx-fronte
 
 ## 🗑️ Désinstallation propre
 
-Si tu veux supprimer Nodyx complètement de ton serveur :
+Le script `uninstall.sh` retire Nodyx **sans toucher au reste du serveur**. Commence toujours par une simulation : elle affiche tout ce qui serait fait, sans rien modifier.
 
 ```bash
-# 1. Arrêter et supprimer les processus PM2
-pm2 delete nodyx-core nodyx-frontend
-pm2 save
-
-# 2. Supprimer le démarrage automatique PM2
-pm2 unstartup systemd
-
-# 3. Supprimer le répertoire Nodyx
-rm -rf /opt/nodyx
-
-# 4. Supprimer la base de données et l'utilisateur PostgreSQL
-sudo -u postgres psql -c "DROP DATABASE IF EXISTS nodyx;"
-sudo -u postgres psql -c "DROP ROLE IF EXISTS nodyx_user;"
-
-# 5. Supprimer la configuration Caddy
-sudo rm -f /etc/caddy/Caddyfile
-sudo systemctl restart caddy
-
-# 6. Arrêter et désactiver coturn
-sudo systemctl stop coturn
-sudo systemctl disable coturn
-sudo rm -f /etc/turnserver.conf
-
-# 7. Réinitialiser le pare-feu (optionnel)
-sudo ufw --force reset
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow ssh
-sudo ufw --force enable
-
-# 8. Supprimer le fichier de credentials
-rm -f /root/nodyx-credentials.txt
+cd /opt/nodyx
+sudo bash uninstall.sh --dry-run   # simulation : rien n'est modifié
+sudo bash uninstall.sh             # pour de vrai
 ```
 
-> ⚠️ **Uploads** (avatars, bannières, etc.) sont dans `/opt/nodyx/nodyx-core/uploads/`. Fais une sauvegarde avant de supprimer si tu veux conserver les fichiers des utilisateurs.
+Ce qu'il fait, dans l'ordre :
+
+1. **Vérifie** qu'il s'agit bien d'une installation Nodyx (`/opt/nodyx`, ou `--dir=…`). Sinon il s'arrête sans rien toucher.
+2. **Te demande de taper ton domaine** pour confirmer.
+3. **Sauvegarde** (proposé, recommandé) dans `/root/nodyx-uninstall-<date>/` : la base, les uploads, les `.env`, les archives de sauvegarde de Nodyx et le Caddyfile. Si la sauvegarde de la base échoue, il s'arrête avant toute suppression.
+4. Arrête les applications PM2 de Nodyx et retire ses services (`nodyx-turn`, `nodyx-sfud`, relais, tunnel Cloudflare).
+5. Ne retire **que la part de Nodyx** :
+   - **Caddy** : le Caddyfile n'est remis à zéro que s'il ne sert que Nodyx. S'il contient d'autres sites, il n'y touche pas.
+   - **Redis** : seulement les clés `nodyx:*`. Le serveur Redis reste.
+   - **PostgreSQL** : la base et l'utilisateur de Nodyx. Le serveur PostgreSQL reste.
+   - **Pare-feu** : seulement les ports vocaux de Nodyx (3478, 5349, 40000-40999, 49152-65535). Les ports 80 et 443 sur demande. Il ne touche jamais à la règle SSH ni à la politique par défaut.
+6. Supprime `/opt/nodyx`, puis, sur demande, les identifiants et l'utilisateur système `nodyx`.
+
+Chaque étape destructive demande ton accord. Le bilan final liste les étapes en échec, s'il y en a.
 
 ### Désinstaller les paquets système (optionnel)
 
-Ne fais ça que si ces paquets ont été installés uniquement pour Nodyx :
+Le script garde Redis et PostgreSQL : d'autres services peuvent s'en servir. Ne les supprime que s'ils n'ont été installés que pour Nodyx :
 
 ```bash
-# Supprimer coturn
-sudo apt-get remove --purge -y coturn
-
-# Supprimer Caddy
-sudo apt-get remove --purge -y caddy
-sudo rm -f /etc/apt/sources.list.d/caddy-stable.list
-
-# Supprimer Redis (seulement si aucun autre service ne l'utilise)
+# Redis (seulement si aucun autre service ne l'utilise)
 sudo apt-get remove --purge -y redis-server
 
-# Supprimer PostgreSQL (DANGER : supprime toutes les DB du serveur)
+# PostgreSQL (DANGER : supprime TOUTES les bases du serveur)
 # sudo apt-get remove --purge -y postgresql postgresql-contrib
-# sudo rm -rf /var/lib/postgresql/
-
-# Supprimer Node.js
-# sudo apt-get remove --purge -y nodejs
 ```
 
 ---

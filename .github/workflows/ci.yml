@@ -254,3 +254,20 @@ jobs:
             exit 1
           fi
           echo ".claude n'est pas suivi."
+
+  # uninstall.sh détruit des données : il a son banc d'essai (faux système de
+  # fichiers, doublures pour systemctl/ufw/psql/redis…, PATH hermétique). Sans
+  # ce job, il était resté 7 mois sans relecture pendant qu'install.sh évoluait.
+  scripts-shell:
+    name: "scripts — shellcheck + banc de uninstall.sh"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: ShellCheck (avertissements bloquants)
+        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh
+
+      - name: Banc de uninstall.sh
+        run: bash scripts/tests/uninstall.test.sh
