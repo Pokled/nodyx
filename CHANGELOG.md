@@ -34,6 +34,15 @@ La migration est automatique : copie de l'ancien Caddyfile, validation par Caddy
 remplacer, retour arrière si Caddy refuse. Si ton Caddyfile sert aussi d'autres sites, il n'est
 pas réécrit : la modification exacte à faire à la main est affichée.
 
+### Sécurité : l'installeur ne peut plus enfermer l'administrateur hors de son serveur
+
+`install.sh` et `install_tunnel.sh` n'ouvraient que le port 22 avant d'activer le pare-feu : un
+serveur dont SSH écoute sur un autre port devenait injoignable pour son propre administrateur.
+`install.sh` effaçait en plus toutes les règles de pare-feu existantes. Les deux installeurs
+détectent désormais les vrais ports SSH (sshd, `ssh.socket` d'Ubuntu 24.04, session en cours),
+vérifient que la règle est en place AVANT d'activer le pare-feu, et ne l'activent pas du tout
+s'ils ne trouvent aucun port SSH. Les règles déjà présentes sont conservées.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

@@ -1291,10 +1291,41 @@ ok "Redis running"
 #  etc. The previous "ufw --force reset" wiped all of that silently. Now we
 #  only apply our default profile when UFW is inactive (fresh install).
 # ═══════════════════════════════════════════════════════════════════════════════
+# ── Ports SSH réels ──────────────────────────────────────────────────────────
+# Les ports TCP par lesquels on peut VRAIMENT se connecter en SSH :
+#   - sshd en écoute, quel que soit son port ;
+#   - ssh.socket actif (systemd écoute à la place de sshd : Ubuntu 24.04+) ;
+#   - la configuration de sshd (sshd -T) ;
+#   - la connexion SSH en cours, celle qui lance peut-être cet installeur.
+# Avant le 03/10/2026, seul le port 22 était ouvert : un serveur dont SSH écoute
+# ailleurs se retrouvait fermé à son propre administrateur.
+# Copie IDENTIQUE dans install.sh et install_tunnel.sh (vérifié par
+# scripts/tests/firewall-ssh.test.sh) : les deux règlent le pare-feu avant
+# d'avoir cloné le dépôt, ils ne peuvent pas partager une bibliothèque.
+# Ne fait jamais échouer l'appelant : aucun port trouvé = sortie vide.
+_nodyx_ssh_ports() {
+  {
+    ss -Htlnp 2>/dev/null | awk '/"sshd"/ { n = split($4, a, ":"); print a[n] }'
+    if systemctl is-active --quiet ssh.socket 2>/dev/null; then
+      systemctl show ssh.socket -p Listen 2>/dev/null | sed -nE 's/^Listen=.*:([0-9]+) \(Stream\)$/\1/p'
+    fi
+    sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }'
+    ss -Htnp state established 2>/dev/null | awk '/"sshd"/ { n = split($3, a, ":"); print a[n] }'
+    if [[ -n "${SSH_CONNECTION:-}" ]]; then awk '{ print $4 }' <<<"$SSH_CONNECTION"; fi
+    true
+  } | { grep -E '^[0-9]{1,5}$' || true; } | sort -un
+}
+
 step "$(t step_firewall)"
+_ssh_ports="$(_nodyx_ssh_ports)"
 if ufw status 2>/dev/null | head -1 | grep -q "Status: active"; then
   warn "UFW already active - leaving existing rules untouched."
-  warn "Make sure SSH (22/tcp) and your tunnel client can reach this host: sudo ufw status verbose"
+  warn "Make sure SSH (detected port(s): ${_ssh_ports//$'\n'/ }) and your tunnel client can reach this host: sudo ufw status verbose"
+elif [[ -z "$_ssh_ports" ]]; then
+  warn "Could not find the port SSH listens on."
+  warn "The firewall was left DISABLED on purpose: enabling it with 'deny incoming'"
+  warn "and no SSH rule would lock you out of this server."
+  warn "Configure it yourself: sudo ufw allow <your-ssh-port>/tcp && sudo ufw enable"
 else
   # L'ORDRE ET LES ASSERTIONS SONT CRITIQUES ICI.
   #
@@ -1309,24 +1340,28 @@ else
   ufw default deny incoming  >/dev/null 2>&1 || true
   ufw default allow outgoing >/dev/null 2>&1 || true
 
-  # `ssh` est un profil applicatif : absent sur certaines images, d'ou le repli
-  # sur le port brut.
-  if ufw allow ssh >/dev/null 2>&1 || ufw allow 22/tcp >/dev/null 2>&1; then
+  # Les VRAIS ports SSH (avant le 03/10/2026 : 22 seulement), chacun vérifié
+  # dans les règles AVANT l'activation.
+  _ssh_missing=""
+  for _p in $_ssh_ports; do
+    ufw allow "${_p}/tcp" comment 'SSH' >/dev/null 2>&1 || true
+    ufw show added 2>/dev/null | grep -qE "^ufw allow ${_p}/tcp( |$)" || _ssh_missing+="${_p} "
+  done
+  if [[ -z "$_ssh_missing" ]]; then
     ufw --force enable >/dev/null 2>&1 || true
 
     _ufw_state="$(ufw status 2>/dev/null || true)"
-    if grep -q "Status: active" <<<"$_ufw_state" \
-       && grep -qE '(^|[[:space:]])(22/tcp|OpenSSH|SSH)' <<<"$_ufw_state"; then
-      ok "Firewall enabled (SSH inbound only - tunnel handles web traffic outbound)"
+    if grep -q "Status: active" <<<"$_ufw_state"; then
+      ok "Firewall enabled (SSH inbound only, port(s): ${_ssh_ports//$'\n'/ } - tunnel handles web traffic outbound)"
     else
       warn "UFW did not come up as expected. Your server may be unprotected."
       warn "Check it yourself: sudo ufw status verbose"
     fi
   else
-    warn "Could not add an SSH rule to UFW."
+    warn "Could not add an SSH rule to UFW (port(s): ${_ssh_missing})."
     warn "The firewall was left DISABLED on purpose: enabling it now, with"
     warn "'deny incoming' and no SSH rule, would lock you out of this server."
-    warn "Fix it manually, then enable: sudo ufw allow ssh && sudo ufw enable"
+    warn "Fix it manually, then enable: sudo ufw allow <your-ssh-port>/tcp && sudo ufw enable"
   fi
 fi
 

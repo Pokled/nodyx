@@ -121,6 +121,16 @@ T_EN[services_restart]="Restarting services..."
 T_FR[services_restart]="Redémarrage des services..."
 T_EN[relay_recreate]="Relay client missing or inactive — reconfiguring..."
 T_FR[relay_recreate]="Relay client absent ou inactif — reconfiguration..."
+T_EN[ufw_no_ssh_port]="Could not find the port SSH listens on: the firewall was left UNTOUCHED (enabling it could lock you out of this server). Configure it yourself: sudo ufw allow <your-ssh-port>/tcp && sudo ufw enable"
+T_FR[ufw_no_ssh_port]="Port SSH introuvable : pare-feu laissé TEL QUEL (l'activer pourrait t'enfermer dehors). Configure-le toi-même : sudo ufw allow <ton-port-ssh>/tcp && sudo ufw enable"
+T_EN[ufw_kept_rules]="Firewall already active: your rules are kept, Nodyx only adds its own (copy: %s)"
+T_FR[ufw_kept_rules]="Pare-feu déjà actif : tes règles sont conservées, Nodyx ajoute seulement les siennes (copie : %s)"
+T_EN[ufw_ssh_rule_missing]="The SSH rule for port %s could not be added: firewall NOT enabled, so as not to lock you out."
+T_FR[ufw_ssh_rule_missing]="La règle SSH du port %s n'a pas pu être ajoutée : pare-feu NON activé, pour ne pas t'enfermer dehors."
+T_EN[ufw_configured_ssh]="Firewall active, SSH allowed on port(s): %s"
+T_FR[ufw_configured_ssh]="Pare-feu actif, SSH autorisé sur le(s) port(s) : %s"
+T_EN[ufw_not_active]="UFW did not come up as expected: check it yourself (sudo ufw status verbose)."
+T_FR[ufw_not_active]="UFW ne s'est pas activé comme prévu : vérifie toi-même (sudo ufw status verbose)."
 T_EN[caddy_invalid]="Generated Caddyfile rejected by caddy validate. Nothing was changed in Caddy. Please report it: https://github.com/Pokled/nodyx/issues"
 T_FR[caddy_invalid]="Caddyfile généré refusé par caddy validate. Rien n'a été changé dans Caddy. Signale-le : https://github.com/Pokled/nodyx/issues"
 T_EN[caddy_backup]="Previous Caddyfile saved: %s"
@@ -617,8 +627,8 @@ T_EN[step_firewall]='Configuring the firewall'
 T_FR[step_firewall]='Configuration du pare-feu'
 T_EN[ufw_existing_saved]='Existing UFW rules saved to %s'
 T_FR[ufw_existing_saved]='Règles UFW existantes sauvegardées dans %s'
-T_EN[ufw_rollback_msg]="warn 'UFW modified — restore manually if needed: ufw --force reset && ufw allow ssh && ufw --force enable'"
-T_FR[ufw_rollback_msg]="warn 'UFW modifié — restaure manuellement si besoin : ufw --force reset && ufw allow ssh && ufw --force enable'"
+T_EN[ufw_rollback_msg]="warn 'UFW: rules added by Nodyx are marked SSH or Nodyx, see: sudo ufw status numbered'"
+T_FR[ufw_rollback_msg]="warn 'UFW : les règles ajoutées par Nodyx sont marquées SSH ou Nodyx, voir : sudo ufw status numbered'"
 T_EN[ufw_configured]='Firewall configured%s'
 T_FR[ufw_configured]='Pare-feu configuré%s'
 T_EN[ufw_relay_note]=' (Relay mode — only SSH open, outbound free)'
@@ -2446,39 +2456,91 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_firewall)"
 
-# Backup existing UFW rules before reset
-if command -v ufw &>/dev/null && ufw status 2>/dev/null | grep -q 'Status: active'; then
-  _ufw_bak="/root/ufw-backup-$(date +%Y%m%d-%H%M%S).rules"
-  ufw status verbose > "$_ufw_bak" 2>/dev/null || true
-  warn "$(printf "$(t ufw_existing_saved)" "${_ufw_bak}")"
-fi
+# ── Ports SSH réels ──────────────────────────────────────────────────────────
+# Les ports TCP par lesquels on peut VRAIMENT se connecter en SSH :
+#   - sshd en écoute, quel que soit son port ;
+#   - ssh.socket actif (systemd écoute à la place de sshd : Ubuntu 24.04+) ;
+#   - la configuration de sshd (sshd -T) ;
+#   - la connexion SSH en cours, celle qui lance peut-être cet installeur.
+# Avant le 03/10/2026, seul le port 22 était ouvert : un serveur dont SSH écoute
+# ailleurs se retrouvait fermé à son propre administrateur.
+# Copie IDENTIQUE dans install.sh et install_tunnel.sh (vérifié par
+# scripts/tests/firewall-ssh.test.sh) : les deux règlent le pare-feu avant
+# d'avoir cloné le dépôt, ils ne peuvent pas partager une bibliothèque.
+# Ne fait jamais échouer l'appelant : aucun port trouvé = sortie vide.
+_nodyx_ssh_ports() {
+  {
+    ss -Htlnp 2>/dev/null | awk '/"sshd"/ { n = split($4, a, ":"); print a[n] }'
+    if systemctl is-active --quiet ssh.socket 2>/dev/null; then
+      systemctl show ssh.socket -p Listen 2>/dev/null | sed -nE 's/^Listen=.*:([0-9]+) \(Stream\)$/\1/p'
+    fi
+    sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }'
+    ss -Htnp state established 2>/dev/null | awk '/"sshd"/ { n = split($3, a, ":"); print a[n] }'
+    if [[ -n "${SSH_CONNECTION:-}" ]]; then awk '{ print $4 }' <<<"$SSH_CONNECTION"; fi
+    true
+  } | { grep -E '^[0-9]{1,5}$' || true; } | sort -un
+}
+
+# _nodyx_firewall <relais:true|false> <sans-turn:true|false> <sfu:true|false>
+# - ne réinitialise JAMAIS les règles existantes (avant : `ufw --force reset`
+#   effaçait silencieusement les règles de l'administrateur) ;
+# - ouvre les VRAIS ports SSH, puis vérifie que chacun figure dans les règles
+#   AVANT d'activer le pare-feu ;
+# - ne touche à rien si aucun port SSH n'est trouvé.
+# Code 0 : pare-feu actif avec SSH autorisé. Code 1 : pare-feu non activé
+# (l'installation continue, l'administrateur est prévenu).
+_nodyx_firewall() {
+  local relay="$1" skip_turn="$2" sfu="$3" ports p bak active=false
+  ports="$(_nodyx_ssh_ports)"
+  if [[ -z "$ports" ]]; then
+    warn "$(t ufw_no_ssh_port)"
+    return 1
+  fi
+  if ufw status 2>/dev/null | grep -q 'Status: active'; then active=true; fi
+  if $active; then
+    bak="/root/ufw-backup-$(date +%Y%m%d-%H%M%S).rules"
+    ufw status verbose > "$bak" 2>/dev/null || true
+    info "$(printf "$(t ufw_kept_rules)" "$bak")"
+  else
+    ufw default deny incoming  >/dev/null 2>&1 || true
+    ufw default allow outgoing >/dev/null 2>&1 || true
+  fi
+  for p in $ports; do ufw allow "${p}/tcp" comment 'SSH' >/dev/null 2>&1 || true; done
+  if ! $relay; then
+    ufw allow 80/tcp  comment 'Nodyx web' >/dev/null 2>&1 || true
+    ufw allow 443/tcp comment 'Nodyx web' >/dev/null 2>&1 || true
+    if ! $skip_turn; then
+      for p in 3478/tcp 3478/udp 5349/tcp 5349/udp 49152:65535/udp; do
+        ufw allow "$p" comment 'Nodyx TURN' >/dev/null 2>&1 || true
+      done
+    fi
+    # Ports média du SFU. Le TCP n'est PAS un luxe : c'est le repli des réseaux qui
+    # bloquent l'UDP (entreprises, hôtels, certains opérateurs). Sans lui, ces
+    # utilisateurs ne se connectent PAS DU TOUT au vocal — pas « moins bien » : rien,
+    # avec un écran noir et aucun message.
+    if $sfu; then
+      ufw allow 40000:40999/udp comment 'Nodyx SFU' >/dev/null 2>&1 || true
+      ufw allow 40000:40999/tcp comment 'Nodyx SFU' >/dev/null 2>&1 || true
+    fi
+  fi
+  # Chaque port SSH doit figurer dans les règles AVANT toute activation.
+  for p in $ports; do
+    if ! ufw show added 2>/dev/null | grep -qE "^ufw allow ${p}/tcp( |$)"; then
+      warn "$(printf "$(t ufw_ssh_rule_missing)" "$p")"
+      return 1
+    fi
+  done
+  $active || ufw --force enable >/dev/null 2>&1 || true
+  if ufw status 2>/dev/null | grep -q 'Status: active'; then
+    ok "$(printf "$(t ufw_configured_ssh)" "$(echo $ports)")"
+    return 0
+  fi
+  warn "$(t ufw_not_active)"
+  return 1
+}
 
 _rollback_register "$(t ufw_rollback_msg)"
-ufw --force reset >/dev/null 2>&1
-ufw default deny incoming >/dev/null 2>&1
-ufw default allow outgoing >/dev/null 2>&1
-ufw allow ssh >/dev/null 2>&1
-if ! $RELAY_MODE; then
-  ufw allow 80/tcp >/dev/null 2>&1
-  ufw allow 443/tcp >/dev/null 2>&1
-  if ! $SKIP_TURN; then
-    ufw allow 3478/tcp >/dev/null 2>&1
-    ufw allow 3478/udp >/dev/null 2>&1
-    ufw allow 5349/tcp >/dev/null 2>&1
-    ufw allow 5349/udp >/dev/null 2>&1
-    ufw allow 49152:65535/udp >/dev/null 2>&1
-  fi
-  # Ports média du SFU. Le TCP n'est PAS un luxe : c'est le repli des réseaux qui
-  # bloquent l'UDP (entreprises, hôtels, certains opérateurs). Sans lui, ces
-  # utilisateurs ne se connectent PAS DU TOUT au vocal — pas « moins bien » : rien,
-  # avec un écran noir et aucun message.
-  if $_SFU_INSTALLED; then
-    ufw allow 40000:40999/udp >/dev/null 2>&1
-    ufw allow 40000:40999/tcp >/dev/null 2>&1
-  fi
-fi
-ufw --force enable >/dev/null 2>&1
-ok "$(printf "$(t ufw_configured)" "$($RELAY_MODE && t ufw_relay_note || true)")"
+_nodyx_firewall "$RELAY_MODE" "$SKIP_TURN" "$_SFU_INSTALLED" || true
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  NODYX RELAY CLIENT — binaire (mode Relay uniquement)
