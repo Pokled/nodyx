@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useFollowAmbiance } from '../followAmbiance'
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/environment'
 	import { t, locale } from '$lib/i18n'
@@ -52,7 +53,8 @@
 	// suit la couleur de lien du thème du Homepage Builder EN DIRECT (var(--nl)
 	// est une référence CSS valide, elle se recompose très bien dans --accent
 	// ci-dessous puisque les custom properties peuvent en référencer d'autres).
-	const accent        = $derived((config.accent_color  as string)  ?? 'var(--nl)')
+	const follow        = useFollowAmbiance()
+	const accent        = $derived((follow() ? undefined : config.accent_color as string) ?? 'var(--nl)')
 	const aspectRatio   = $derived((config.aspect_ratio  as string)  ?? '16:9')
 	const sliderAuto    = $derived((config.slider_autoplay as boolean) ?? true)
 	const sliderDelay   = $derived(Math.max(3, Number(config.slider_delay_sec ?? 6)))

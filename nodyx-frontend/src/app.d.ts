@@ -31,7 +31,11 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		interface Locals {
+			/** Mode par défaut de l'ambiance publiée (SPECS/NODYX_APPARENCE_CDC.md),
+			 *  posé par +layout.server.ts, lu par hooks.server.ts pour <html>. */
+			shellDefaultMode?: 'dark' | 'light' | 'system'
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
