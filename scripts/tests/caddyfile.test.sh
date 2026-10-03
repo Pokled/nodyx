@@ -37,6 +37,11 @@ require('http').createServer((q, r) => r.end(JSON.stringify({
 }))).listen(18181, '127.0.0.1')
 EOF
 node "$W/echo.js" & PIDS+=($!)
+# Attendre que le faux core RÉPONDE avant de lancer Caddy : sur une machine
+# lente (CI), Caddy répondait 502 aux premières requêtes, ce qui donnait des
+# échecs intermittents sans rapport avec le Caddyfile (reproduit le 03/10).
+for _ in $(seq 1 40); do curl -sf -o /dev/null http://127.0.0.1:18181/ && break; sleep 0.25; done
+curl -sf -o /dev/null http://127.0.0.1:18181/ || { echo "faux core injoignable : banc impossible"; exit 1; }
 
 # Le Caddyfile généré, rendu exécutable en test : pas de certificat, pas
 # d'API d'admin, le faux core à la place du vrai, un port haut à la place du
@@ -49,7 +54,8 @@ testable() {
 
 run_caddy() { # <fichier>
   caddy run --config "$1" --adapter caddyfile >"$1.log" 2>&1 & PIDS+=($!)
-  for _ in $(seq 1 40); do curl -s -o /dev/null "http://${2:-127.0.0.1}:18190/api/x" 2>/dev/null && return 0; sleep 0.25; done
+  # -f : un 502 (faux core pas encore joignable) n'est PAS « prêt ».
+  for _ in $(seq 1 40); do curl -sf -o /dev/null "http://${2:-127.0.0.1}:18190/api/x" 2>/dev/null && return 0; sleep 0.25; done
   echo "  Caddy n'a pas démarré :"; tail -5 "$1.log"; return 1
 }
 
