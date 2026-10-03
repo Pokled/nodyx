@@ -267,7 +267,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: ShellCheck (avertissements bloquants)
-        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh
+        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh
 
       - name: Banc de uninstall.sh
         run: bash scripts/tests/uninstall.test.sh
@@ -276,6 +276,11 @@ jobs:
       # (vrai port SSH, règle vérifiée AVANT activation, règles existantes gardées).
       - name: Banc du pare-feu des installeurs
         run: bash scripts/tests/firewall-ssh.test.sh
+
+      # Confirmations d'install.sh : « non » veut dire non, Entrée n'arrête jamais
+      # un serveur web existant, un Caddyfile partagé n'est pas écrasé en silence.
+      - name: Banc des confirmations d'install.sh
+        run: bash scripts/tests/install-prompts.test.sh
 
       # Le banc du Caddyfile fait tourner un VRAI Caddy : binaire officiel, empreinte
       # SHA-512 vérifiée contre le fichier de sommes publié avec la version.

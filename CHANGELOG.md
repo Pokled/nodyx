@@ -43,6 +43,15 @@ détectent désormais les vrais ports SSH (sshd, `ssh.socket` d'Ubuntu 24.04, se
 vérifient que la règle est en place AVANT d'activer le pare-feu, et ne l'activent pas du tout
 s'ils ne trouvent aucun port SSH. Les règles déjà présentes sont conservées.
 
+### Installeur : « non » veut dire non
+
+Les confirmations d'`install.sh` prenaient tout ce qui n'était pas exactement « n » pour un oui :
+répondre « non » à « Démarrer l'installation ? » lançait l'installation. Elles comprennent
+désormais oui et non (o/n, y/n, oui/non, yes/no) et reposent la question sinon. Face à un nginx ou
+un Apache déjà en place, Entrée annule au lieu de l'arrêter et de le désactiver. Un Caddyfile qui
+sert déjà d'autres sites est signalé avant toute modification et n'est remplacé que sur réponse
+explicite ; `--yes` ne peut jamais en décider.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

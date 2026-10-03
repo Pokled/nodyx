@@ -219,6 +219,18 @@ T_FR[unknown_flag]='Flag inconnu : %s (ignoré)'
 # §6 — Confirm / prompt helpers
 T_EN[confirm_yn]='[Y/n]'
 T_FR[confirm_yn]='[O/n]'
+T_EN[confirm_ny]='[y/N]'
+T_FR[confirm_ny]='[o/N]'
+T_EN[confirm_invalid]='Please answer yes or no (y/n).'
+T_FR[confirm_invalid]='Réponds oui ou non (o/n).'
+T_EN[caddy_other_sites]='Your Caddyfile also serves: %s. The installer writes its own Caddyfile: those sites would no longer be served (a copy of the file is kept).'
+T_FR[caddy_other_sites]='Ton Caddyfile sert aussi : %s. L'"'"'installeur écrit son propre Caddyfile : ces sites ne seraient plus servis (une copie du fichier est gardée).'
+T_EN[caddy_other_sites_q]='Replace it anyway?'
+T_FR[caddy_other_sites_q]='Le remplacer quand même ?'
+T_EN[caddy_other_sites_stop]='Installation stopped before any change. Install Nodyx on another server, or add its site block to your Caddyfile by hand (model: scripts/install/caddyfile.sh in the repository).'
+T_FR[caddy_other_sites_stop]='Installation arrêtée avant toute modification. Installe Nodyx sur un autre serveur, ou ajoute son bloc de site à ton Caddyfile à la main (modèle : scripts/install/caddyfile.sh dans le dépôt).'
+T_EN[caddy_other_sites_yes]='--yes cannot decide to stop serving other sites: run the installer interactively. Nothing was changed.'
+T_FR[caddy_other_sites_yes]='--yes ne peut pas décider de couper d'"'"'autres sites : lance l'"'"'installeur en interactif. Rien n'"'"'a été modifié.'
 T_EN[confirm_auto_yes]='%s → yes (--yes)'
 T_FR[confirm_auto_yes]='%s → oui (--yes)'
 T_EN[prompt_preset]='%s: %s%s%s  %s(pre-filled)%s'
@@ -327,8 +339,8 @@ T_EN[port_stop_disable]='Stop and disable %s — frees the ports %s(recommended)
 T_FR[port_stop_disable]='Arrêter et désactiver %s — libère les ports %s(recommandé)%s'
 T_EN[port_continue]='Continue without stopping — risk of conflict when Caddy starts'
 T_FR[port_continue]='Continuer sans arrêter — risque de conflit au démarrage de Caddy'
-T_EN[port_choice_prompt]='Choice [1-3] (default: 1):'
-T_FR[port_choice_prompt]='Choix [1-3] (défaut: 1) :'
+T_EN[port_choice_prompt]='Choice [1-3] (default: 3):'
+T_FR[port_choice_prompt]='Choix [1-3] (défaut : 3) :'
 T_EN[port_svc_stopped]='%s stopped and disabled'
 T_FR[port_svc_stopped]='%s arrêté et désactivé'
 T_EN[port_svc_remain]='Services left running — Caddy may fail to start on 80/443.'
@@ -1276,15 +1288,26 @@ done
 
 # Shortcut: --yes auto-confirms (replaces read -rp for confirmations)
 _confirm() {
-  # Usage: _confirm "message" [default=y]  → returns 0 if yes, 1 if no
-  local msg="$1" default="${2:-y}"
-  # Accept legacy 'o' (oui) as default for backward compat with FR-era callers
+  # Usage: _confirm "message" [défaut y|n]  → 0 si oui, 1 si non.
+  # Seuls oui/yes/o/y et non/no/n sont compris ; Entrée prend le défaut ; toute
+  # autre réponse fait REPOSER la question. Avant le 03/10/2026, tout ce qui
+  # n'était pas exactement « n » valait OUI : « non » lançait l'installation.
+  local msg="$1" default="${2:-y}" _c _fd _hint
   [[ "$default" == "o" ]] && default="y"
   if $_AUTO_YES; then info "$(t confirm_auto_yes "$msg")"; return 0; fi
-  read -rp "$(echo -e "  ${BOLD}${msg} $(t confirm_yn): ${RESET}")" _c </dev/tty
-  _c="${_c:-$default}"
-  # 'n' rejects; everything else (y/Y/o/O/empty) accepts — works regardless of UI language
-  [[ "${_c,,}" != "n" ]]
+  [[ "$default" == "n" ]] && _hint="$(t confirm_ny)" || _hint="$(t confirm_yn)"
+  exec {_fd}<"${_NODYX_TTY:-/dev/tty}"
+  while true; do
+    _c=""
+    read -r -u "$_fd" -p "$(echo -e "  ${BOLD}${msg} ${_hint}: ${RESET}")" _c || { exec {_fd}<&-; return 1; }
+    _c="${_c//[[:space:]]/}"
+    _c="${_c:-$default}"
+    case "${_c,,}" in
+      y|yes|o|oui) exec {_fd}<&-; return 0 ;;
+      n|no|non)    exec {_fd}<&-; return 1 ;;
+      *)           warn "$(t confirm_invalid)" ;;
+    esac
+  done
 }
 
 #
@@ -1704,7 +1727,9 @@ if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
     echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel)"
     echo ""
     read -rp "$(echo -e "  ${BOLD}$(t port_choice_prompt) ${RESET}")" _port_choice </dev/tty
-    _port_choice="${_port_choice:-1}"
+    # Défaut = annuler : Entrée ne doit JAMAIS arrêter et désactiver le serveur
+    # web existant (avant le 03/10/2026, c'était le choix par défaut).
+    _port_choice="${_port_choice:-3}"
     case "$_port_choice" in
       1)
         for _svc in "${_stoppable[@]}"; do
@@ -2039,6 +2064,30 @@ echo -e "  ${CYAN}│${RESET}  $(t recap_smtp) ${YELLOW}$(t recap_smtp_off)${RES
 fi
 echo -e "  ${BOLD}${CYAN}└──────────────────────────────────────────────────┘${RESET}"
 echo ""
+# ── Un Caddyfile qui sert d'autres sites : décider AVANT de commencer ────────
+# Lecture des sites identique à nodyx_caddy_sites (scripts/install/caddyfile.sh,
+# vérifié par scripts/tests/install-prompts.test.sh) : la bibliothèque n'est
+# chargée qu'après le clonage, trop tard pour cette décision.
+_nodyx_caddy_other_sites() { # <fichier> <domaine>
+  [[ -f "$1" ]] || return 0
+  awk -v dom="$2" '
+    { line=$0; sub(/#.*/, "", line) }
+    depth==0 && line ~ /\{[[:space:]]*$/ {
+      head=line; sub(/\{[[:space:]]*$/, "", head); gsub(/^[[:space:]]+|[[:space:]]+$/, "", head)
+      if (head != "" && head !~ /^\(/) { n=split(head, a, /[ ,]+/); for (i=1;i<=n;i++) {
+        h=a[i]; sub(/^https?:\/\//, "", h)
+        if (a[i] != "" && h != ":80" && h != dom) printf "%s ", a[i] } }
+    }
+    { o=gsub(/\{/, "{", line); c=gsub(/\}/, "}", line); depth+=o-c }
+  ' "$1"
+}
+_CADDY_OTHER_SITES="$(_nodyx_caddy_other_sites /etc/caddy/Caddyfile "$DOMAIN")"
+if [[ -n "$_CADDY_OTHER_SITES" ]]; then
+  warn "$(printf "$(t caddy_other_sites)" "${_CADDY_OTHER_SITES% }")"
+  $_AUTO_YES && die "$(t caddy_other_sites_yes)"
+  _confirm "$(t caddy_other_sites_q)" n || die "$(t caddy_other_sites_stop)"
+fi
+
 _confirm "$(t start_install)" || die "$(t install_cancelled)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
