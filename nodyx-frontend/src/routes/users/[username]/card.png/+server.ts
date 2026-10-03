@@ -3,8 +3,9 @@ import { apiFetch } from '$lib/api'
 import satori from 'satori'
 import { Resvg } from '@resvg/resvg-js'
 import { error } from '@sveltejs/kit'
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync } from 'fs'
 import path from 'path'
+import { readUploadFile } from '$lib/server/uploadFile'
 
 // Uploads are stored in nodyx-core — read directly from disk to avoid HTTP overhead
 const UPLOADS_DIR = '/var/www/nexus/nodyx-core/uploads'
@@ -81,21 +82,13 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 	const rawAvatar = profile.avatar_url ?? profile.avatar ?? null
 	if (rawAvatar) {
 		try {
-			// Extract relative path from either absolute URL or relative path
-			let uploadPath: string
-			if (rawAvatar.startsWith('http')) {
-				uploadPath = new URL(rawAvatar).pathname // e.g. /uploads/avatars/uuid.png
-			} else {
-				uploadPath = rawAvatar // e.g. /uploads/avatars/uuid.png
-			}
-			// Strip leading /uploads/ to get path relative to UPLOADS_DIR
-			const relPath  = uploadPath.replace(/^\/uploads\//, '')
-			const filePath = path.join(UPLOADS_DIR, relPath)
-			if (existsSync(filePath)) {
-				const buf = readFileSync(filePath)
+			// Lecture bornée au dossier des uploads (cf. readUploadFile) : jamais
+			// path.join() sur une valeur venue du profil.
+			const buf = readUploadFile(rawAvatar, UPLOADS_DIR)
+			if (buf) {
 				const b64 = buf.toString('base64')
 				// Detect MIME from extension
-				const ext = path.extname(filePath).toLowerCase()
+				const ext = path.extname(rawAvatar.split(/[?#]/)[0]).toLowerCase()
 				const mimeMap: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' }
 				const ct  = mimeMap[ext] ?? 'image/jpeg'
 				avatarDataUrl = `data:${ct};base64,${b64}`

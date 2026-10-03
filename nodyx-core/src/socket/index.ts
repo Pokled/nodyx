@@ -17,6 +17,7 @@ import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
 import { checkHtmlContent } from '../services/contentFilter'
 import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
+import { isContainedUploadPath } from '../utils/uploadPath'
 
 interface JwtPayload {
   userId:   string
@@ -95,7 +96,7 @@ const ALLOWED_IMG_HOSTS = new Set([
 
 function isAllowedImgSrc(src: string): boolean {
   if (!src) return false
-  if (src.startsWith('/uploads/')) return true
+  if (src.startsWith('/uploads/')) return isContainedUploadPath(src)
   if (src.startsWith('data:image/')) return true  // images collées depuis le presse-papiers
   try {
     return ALLOWED_IMG_HOSTS.has(new URL(src).hostname)
