@@ -12,6 +12,7 @@ import * as path from 'path'
 
 import { NODYX_VERSION } from '../utils/version'
 import { db, redis } from '../config/database'
+import { parseStoredShellTheme } from '../utils/shellTheme'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
 import * as CommunityModel from '../models/community'
@@ -107,7 +108,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       //  - theme_vars : thème structuré (--p-bg/--p-accent…), base de la cascade
       //  - theme_css  : surcharge CSS libre (variables Tailwind) en complément
       db.query<{ key: string; value: string | null }>(
-        `SELECT key, value FROM instance_settings WHERE key IN ('theme_css','theme_vars','theme_effect')`
+        `SELECT key, value FROM instance_settings WHERE key IN ('theme_css','theme_vars','theme_effect','theme_shell')`
       ).catch(() => ({ rows: [] as { key: string; value: string | null }[] })),
     ])
 
@@ -138,6 +139,9 @@ export default async function instanceRoutes(app: FastifyInstance) {
         try { return JSON.parse(raw) } catch { return null }
       })(),
       theme_effect: themeRes.rows.find(r => r.key === 'theme_effect')?.value ?? null,
+      // Ambiance publiée (SPECS/NODYX_APPARENCE_CDC.md). Le brouillon n'est
+      // JAMAIS servi ici : il ne concerne que l'admin, via /admin/appearance.
+      theme_shell:  parseStoredShellTheme(themeRes.rows.find(r => r.key === 'theme_shell')?.value),
       demo_mode:    process.env.NODYX_DEMO_MODE === 'true',
     })
   })

@@ -1,5 +1,12 @@
 <!doctype html>
-<html lang="%lang%">
+<!-- Le marqueur juste après lang="%lang%" ci-dessous est substitué côté
+     serveur par hooks.server.ts depuis le cookie nodyx_theme (attribut
+     data-theme="light"/"dark", ou rien pour laisser prefers-color-scheme
+     trancher) — évite un flash du mauvais thème avant hydratation. Cf.
+     $lib/theme.ts. Ecrit ici sans les signes % qui l'entourent pour ne pas
+     etre lui-meme substitue par erreur (piege deja rencontre le 23/09: le
+     premier remplacement gagnait celui-ci, pas celui du tag html). -->
+<html lang="%lang%"%theme-attr%>
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

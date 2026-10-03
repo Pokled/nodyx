@@ -64,7 +64,7 @@
 		{/if}
 	</div>
 
-	<div class="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-6">
+	<div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-6">
 
 		<!-- ── Catégories ────────────────────────────────────────────── -->
 		<div class="space-y-2">
