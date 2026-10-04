@@ -52,6 +52,18 @@ un Apache déjà en place, Entrée annule au lieu de l'arrêter et de le désact
 sert déjà d'autres sites est signalé avant toute modification et n'est remplacé que sur réponse
 explicite ; `--yes` ne peut jamais en décider.
 
+### Installeur : rien ne se perd ni ne se coupe en route
+
+- Les valeurs saisies (nom de la communauté, description, identifiants SMTP…) sont écrites dans
+  le `.env` entre délimiteurs : un « # » coupait la valeur (un mot de passe SMTP `abc#123` devenait
+  `abc`, les e-mails tombaient en panne sans explication).
+- Le mot de passe de l'administrateur ne passe plus en argument d'une commande, où tout utilisateur
+  du serveur pouvait le lire pendant l'installation ; un « " » ou un « \ » dans ce mot de passe ne
+  fait plus échouer la création du compte. Même chose pour l'inscription à l'annuaire.
+- Un PostgreSQL déjà présent mais arrêté, dont les données sont rangées ailleurs que l'emplacement
+  par défaut, n'est plus jamais supprimé pour être recréé.
+- `sudo` n'est plus nécessaire (absent des images Debian minimales et des conteneurs LXC).
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

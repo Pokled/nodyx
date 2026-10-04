@@ -223,6 +223,10 @@ T_EN[confirm_ny]='[y/N]'
 T_FR[confirm_ny]='[o/N]'
 T_EN[confirm_invalid]='Please answer yes or no (y/n).'
 T_FR[confirm_invalid]='Réponds oui ou non (o/n).'
+T_EN[env_unquotable]="The value of « %s » contains both ' and \` : it cannot be stored safely. Change it and run the installer again."
+T_FR[env_unquotable]="La valeur de « %s » contient à la fois ' et \` : impossible de l'enregistrer sans risque. Modifie-la puis relance l'installeur."
+T_EN[pg_datadir_kept]="A PostgreSQL data directory already exists (%s): it is kept, never recreated."
+T_FR[pg_datadir_kept]="Un dossier de données PostgreSQL existe déjà (%s) : il est conservé, jamais recréé."
 T_EN[caddy_other_sites]='Your Caddyfile also serves: %s. The installer writes its own Caddyfile: those sites would no longer be served (a copy of the file is kept).'
 T_FR[caddy_other_sites]='Ton Caddyfile sert aussi : %s. L'"'"'installeur écrit son propre Caddyfile : ces sites ne seraient plus servis (une copie du fichier est gardée).'
 T_EN[caddy_other_sites_q]='Replace it anyway?'
@@ -973,6 +977,19 @@ gen_secret()  { openssl rand -hex 32; }
 gen_pass()    { openssl rand -base64 18 | tr -d '/+='; }
 slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'; }
 
+# _env_quote <valeur> : la valeur entre délimiteurs, lue telle quelle par dotenv.
+# Sans délimiteur, dotenv coupe au premier « # » (mot de passe SMTP « abc#123 »
+# lu « abc », mesuré le 03/10/2026). On prend le premier délimiteur absent de
+# la valeur, ' puis ` ; jamais " (dotenv y transforme \n en retour à la ligne).
+# Échoue si la valeur contient les deux : l'appelant la refuse.
+_env_quote() {
+  local v="$1" q
+  for q in "'" '`'; do
+    if [[ "$v" != *"$q"* ]]; then printf '%s%s%s' "$q" "$v" "$q"; return 0; fi
+  done
+  return 1
+}
+
 # Retourne 0 (true) si $1 > $2 en semver
 version_gt() { [[ "$(printf '%s\n' "$1" "$2" | sort -V | tail -1)" == "$1" ]] && [[ "$1" != "$2" ]]; }
 
@@ -1182,7 +1199,7 @@ _auto_backup_db() {
   info "$(t db_autobackup "$reason")"
   # Réussie seulement si l'archive est intacte ET contient bien un dump : un
   # pg_dump coupé par un disque plein laisse un .gz valide mais tronqué.
-  if (umask 077; sudo -u postgres pg_dump nodyx 2>/dev/null | gzip > "$bak") \
+  if (umask 077; runuser -u postgres -- pg_dump nodyx 2>/dev/null | gzip > "$bak") \
      && gzip -t "$bak" 2>/dev/null \
      && gzip -dc "$bak" 2>/dev/null | grep -q -m1 "PostgreSQL database dump complete"; then
     _AUTO_BACKUP_OK=true
@@ -1536,10 +1553,10 @@ if [[ -d "$_NODYX_CHECK_DIR" ]]; then
 fi
 # PostgreSQL database
 if command -v psql &>/dev/null \
-   && sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='nodyx'" 2>/dev/null | grep -q 1; then
+   && runuser -u postgres -- psql -tc "SELECT 1 FROM pg_database WHERE datname='nodyx'" 2>/dev/null | grep -q 1; then
   _EXISTING=true
   _DB_EXISTS=true
-  _DB_TABLE_COUNT=$(sudo -u postgres psql -d nodyx -tc \
+  _DB_TABLE_COUNT=$(runuser -u postgres -- psql -d nodyx -tc \
     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" \
     2>/dev/null | tr -d ' \n' || echo 0)
   _EXISTING_MSGS+=("$(t detect_db "${_DB_TABLE_COUNT}")")
@@ -2064,6 +2081,11 @@ echo -e "  ${CYAN}│${RESET}  $(t recap_smtp) ${YELLOW}$(t recap_smtp_off)${RES
 fi
 echo -e "  ${BOLD}${CYAN}└──────────────────────────────────────────────────┘${RESET}"
 echo ""
+# ── Valeurs libres : toutes doivent pouvoir s'écrire dans le .env ─────────────
+for _v in COMMUNITY_NAME COMMUNITY_DESC COMMUNITY_LANG COMMUNITY_COUNTRY SMTP_HOST SMTP_USER SMTP_PASS SMTP_FROM; do
+  _env_quote "${!_v:-}" >/dev/null || die "$(printf "$(t env_unquotable)" "$_v")"
+done
+
 # ── Un Caddyfile qui sert d'autres sites : décider AVANT de commencer ────────
 # Lecture des sites identique à nodyx_caddy_sites (scripts/install/caddyfile.sh,
 # vérifié par scripts/tests/install-prompts.test.sh) : la bibliothèque n'est
@@ -2194,6 +2216,14 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_pg)"
 
+# _pg_datadir <version> : le dossier de données CONFIGURÉ du cluster « main »
+# (celui que pg_dropcluster supprimerait), à défaut l'emplacement standard.
+_pg_datadir() {
+  local d
+  d="$(pg_conftool -s "$1" main show data_directory 2>/dev/null || true)"
+  printf '%s' "${d:-/var/lib/postgresql/$1/main}"
+}
+
 # Detect installed PostgreSQL version (needed for the versioned service name)
 _PG_VER=$(ls /usr/lib/postgresql/ 2>/dev/null | sort -Vr | head -1)
 [[ -z "$_PG_VER" ]] && die "$(t pg_not_found)"
@@ -2207,7 +2237,7 @@ systemctl start   "postgresql@${_PG_VER}-main" 2>/dev/null || true
 info "$(t pg_waiting)"
 _PG_READY=false
 for _pg_i in {1..15}; do
-  sudo -u postgres pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
+  runuser -u postgres -- pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
   sleep 2
 done
 
@@ -2220,9 +2250,14 @@ if ! $_PG_READY; then
     apt-get install -y -q "postgresql-${_PG_VER}" >/dev/null 2>&1 || true
   fi
 
-  # If the cluster config exists but the data directory is not initialized
-  # (pg_lsclusters shows "down / <unknown>"), drop the config and recreate cleanly
-  if [[ ! -f "/var/lib/postgresql/${_PG_VER}/main/PG_VERSION" ]]; then
+  # Recréer le cluster SEULEMENT si son dossier de données (celui qui est
+  # CONFIGURÉ, pas seulement l'emplacement par défaut) est absent ou vide.
+  # pg_dropcluster supprime ce dossier : avant le 03/10/2026, un PostgreSQL
+  # existant mais arrêté, aux données rangées ailleurs, était effacé ici.
+  _PG_DATADIR="$(_pg_datadir "${_PG_VER}")"
+  if [[ -d "$_PG_DATADIR" && -n "$(ls -A "$_PG_DATADIR" 2>/dev/null)" ]]; then
+    info "$(printf "$(t pg_datadir_kept)" "$_PG_DATADIR")"
+  else
     info "$(t pg_recreate_cluster)"
     pg_dropcluster   "${_PG_VER}" main 2>/dev/null || true
     pg_createcluster "${_PG_VER}" main 2>/dev/null || true
@@ -2233,7 +2268,7 @@ if ! $_PG_READY; then
   systemctl restart "postgresql@${_PG_VER}-main" 2>/dev/null || true
 
   for _pg_i in {1..15}; do
-    sudo -u postgres pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
+    runuser -u postgres -- pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
     sleep 2
   done
 fi
@@ -2242,7 +2277,7 @@ $_PG_READY || die "$(printf "$(t pg_did_not_start)" "${_PG_VER}")"
 ok "$(printf "$(t pg_ready)" "${_PG_VER}")"
 
 # Create role + database (idempotent)
-sudo -u postgres psql -c "
+runuser -u postgres -- psql -c "
   DO \$\$ BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DB_USER}') THEN
       CREATE ROLE ${DB_USER} WITH LOGIN PASSWORD '${DB_PASSWORD}';
@@ -2265,20 +2300,20 @@ if [[ "$INSTALL_MODE" == "wipe" ]]; then
     die "$(t wipe_backup_failed)"
   fi
   info "$(t pg_wipe_dropping)"
-  sudo -u postgres psql -c \
+  runuser -u postgres -- psql -c \
     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" \
     >/dev/null 2>/dev/null || true
-  sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_NAME};" >/dev/null
+  runuser -u postgres -- psql -c "DROP DATABASE IF EXISTS ${DB_NAME};" >/dev/null
   ok "$(printf "$(t pg_db_dropped)" "${DB_NAME}")"
 fi
 
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" \
+runuser -u postgres -- psql -tc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" \
   | grep -q 1 \
-  || sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" >/dev/null
+  || runuser -u postgres -- psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" >/dev/null
 
-sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" >/dev/null
+runuser -u postgres -- psql -d "$DB_NAME" -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" >/dev/null
 # PG15+ revokes CREATE on public schema by default — grant it explicitly for migrations
-sudo -u postgres psql -d "$DB_NAME" -c "GRANT CREATE ON SCHEMA public TO ${DB_USER};" >/dev/null
+runuser -u postgres -- psql -d "$DB_NAME" -c "GRANT CREATE ON SCHEMA public TO ${DB_USER};" >/dev/null
 ok "$(printf "$(t pg_db_ready)" "${DB_NAME}")"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2676,11 +2711,11 @@ cat > "${NODYX_DIR}/nodyx-core/.env" <<COREENV
 # Généré par install.sh — ne pas modifier manuellement
 
 # Identité de la communauté
-NODYX_COMMUNITY_NAME=${COMMUNITY_NAME}
+NODYX_COMMUNITY_NAME=$(_env_quote "${COMMUNITY_NAME}")
 NODYX_COMMUNITY_SLUG=${COMMUNITY_SLUG}
-NODYX_COMMUNITY_DESCRIPTION=${COMMUNITY_DESC}
-NODYX_COMMUNITY_LANGUAGE=${COMMUNITY_LANG}
-NODYX_COMMUNITY_COUNTRY=${COMMUNITY_COUNTRY}
+NODYX_COMMUNITY_DESCRIPTION=$(_env_quote "${COMMUNITY_DESC}")
+NODYX_COMMUNITY_LANGUAGE=$(_env_quote "${COMMUNITY_LANG}")
+NODYX_COMMUNITY_COUNTRY=$(_env_quote "${COMMUNITY_COUNTRY}")
 # Note: NODYX_VERSION ci-dessous est purement informationnel depuis v2.5.0.
 # La version réelle est lue par nodyx-core depuis le fichier VERSION à la
 # racine du repo (cf src/utils/version.ts). Cette ligne reste pour les
@@ -2724,12 +2759,12 @@ TURN_SECRET=${TURN_SECRET:-}
 TURN_PORT=3478
 
 # SMTP
-SMTP_HOST=${SMTP_HOST}
+SMTP_HOST=$(_env_quote "${SMTP_HOST}")
 SMTP_PORT=${SMTP_PORT}
 SMTP_SECURE=${SMTP_SECURE}
-SMTP_USER=${SMTP_USER}
-SMTP_PASS=${SMTP_PASS}
-SMTP_FROM=${SMTP_FROM:-noreply@${DOMAIN}}
+SMTP_USER=$(_env_quote "${SMTP_USER}")
+SMTP_PASS=$(_env_quote "${SMTP_PASS}")
+SMTP_FROM=$(_env_quote "${SMTP_FROM:-noreply@${DOMAIN}}")
 COREENV
 # En mode Relay, ajouter des STUN publics en fallback (pas de nodyx-turn)
 if $RELAY_MODE; then
@@ -2985,14 +3020,16 @@ fi
 
 # Register admin account — retry jusqu'à 3 fois (backend peut encore démarrer)
 _REGISTER_OK=false
+_REG_OUT="$(mktemp)"
 for _reg_try in 1 2 3; do
-  _REG_JSON=$(python3 -c "import json,sys; print(json.dumps({'username':sys.argv[1],'email':sys.argv[2],'password':sys.argv[3]}))" \
-    "$ADMIN_USERNAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD" 2>/dev/null \
-    || printf '{"username":"%s","email":"%s","password":"%s"}' "$ADMIN_USERNAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD")
-  HTTP_CODE=$(curl -s -o /tmp/nodyx_register.json -w "%{http_code}" \
-    -X POST http://localhost:3000/api/v1/auth/register \
-    -H "Content-Type: application/json" \
-    -d "$_REG_JSON" 2>/dev/null || echo "000")
+  # Le mot de passe ne passe JAMAIS en argument d'une commande (visible de tous
+  # via `ps`) : Node le lit dans son environnement, curl le lit sur son entrée.
+  HTTP_CODE=$(NX_U="$ADMIN_USERNAME" NX_E="$ADMIN_EMAIL" NX_P="$ADMIN_PASSWORD" \
+    node -e 'process.stdout.write(JSON.stringify({username: process.env.NX_U, email: process.env.NX_E, password: process.env.NX_P}))' \
+    | curl -s -o "$_REG_OUT" -w "%{http_code}" \
+        -X POST http://localhost:3000/api/v1/auth/register \
+        -H "Content-Type: application/json" \
+        --data-binary @- 2>/dev/null || echo "000")
   if [[ "$HTTP_CODE" == "201" || "$HTTP_CODE" == "200" ]]; then
     ok "$(printf "$(t admin_created)" "${ADMIN_USERNAME}")"
     _REGISTER_OK=true; break
@@ -3000,11 +3037,12 @@ for _reg_try in 1 2 3; do
     ok "$(printf "$(t admin_exists)" "${ADMIN_USERNAME}")"
     _REGISTER_OK=true; break
   else
-    warn "$(printf "$(t admin_try_n)" "${_reg_try}" "${HTTP_CODE}" "$(cat /tmp/nodyx_register.json 2>/dev/null | head -c 200)")"
+    warn "$(printf "$(t admin_try_n)" "${_reg_try}" "${HTTP_CODE}" "$(head -c 200 "$_REG_OUT" 2>/dev/null)")"
     [[ $_reg_try -lt 3 ]] && { info "$(t admin_retry_in)"; sleep 8; }
   fi
 done
 
+rm -f "$_REG_OUT"
 if ! $_REGISTER_OK; then
   warn "$(t admin_register_failed)"
   warn "$(printf "$(t admin_register_manual)" "${DOMAIN}")"
@@ -3017,11 +3055,11 @@ COMMUNITY_NAME_SQL="${COMMUNITY_NAME//\'/\'\'}"
 COMMUNITY_DESC_SQL="${COMMUNITY_DESC//\'/\'\'}"
 ADMIN_EMAIL_SQL="${ADMIN_EMAIL//\'/\'\'}"
 
-USER_ID=$(sudo -u postgres psql -d "$DB_NAME" -tc \
+USER_ID=$(runuser -u postgres -- psql -d "$DB_NAME" -tc \
   "SELECT id FROM users WHERE lower(email)=lower('${ADMIN_EMAIL_SQL}');" 2>/dev/null | tr -d ' \n')
 
 if [[ -n "$USER_ID" ]]; then
-  sudo -u postgres psql -d "$DB_NAME" <<SQL >/dev/null
+  runuser -u postgres -- psql -d "$DB_NAME" <<SQL >/dev/null
     -- Create the instance community
     INSERT INTO communities (name, slug, description, owner_id, is_public)
     VALUES (
@@ -3052,6 +3090,14 @@ step "$(t step_subdomain)"
 
 NODYX_SUBDOMAIN=""
 NODYX_DIRECTORY_TOKEN=""
+
+# _nodyx_directory_json <url> : le corps JSON de l'inscription à l'annuaire,
+# construit par Node (un « " » dans le nom de la communauté cassait l'ancien
+# JSON concaténé à la main).
+_nodyx_directory_json() {
+  NX_NAME="$COMMUNITY_NAME" NX_SLUG="$COMMUNITY_SLUG" NX_URL="$1" NX_LANG="$COMMUNITY_LANG" NX_VER="$NODYX_VERSION" \
+    node -e 'const e = process.env; process.stdout.write(JSON.stringify({name: e.NX_NAME, slug: e.NX_SLUG, url: e.NX_URL, language: e.NX_LANG, version: e.NX_VER}))'
+}
 NODYX_DIRECTORY_URL="https://nodyx.org/api/directory"
 
 echo ""
@@ -3077,15 +3123,9 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
   info "$(t sub_registering)"
 
   REGISTER_HTTP_CODE=""
-  REGISTER_RESPONSE=$(curl -s -w '\n__HTTP_CODE__:%{http_code}' -X POST "${NODYX_DIRECTORY_URL}/register" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"name\":        \"${COMMUNITY_NAME}\",
-      \"slug\":        \"${COMMUNITY_SLUG}\",
-      \"url\":         \"https://${DOMAIN}\",
-      \"language\":    \"${COMMUNITY_LANG}\",
-      \"version\":     \"${NODYX_VERSION}\"
-    }" 2>/dev/null || true)
+  REGISTER_RESPONSE=$(_nodyx_directory_json "https://${DOMAIN}" \
+    | curl -s -w '\n__HTTP_CODE__:%{http_code}' -X POST "${NODYX_DIRECTORY_URL}/register" \
+        -H "Content-Type: application/json" --data-binary @- 2>/dev/null || true)
   REGISTER_HTTP_CODE=$(echo "$REGISTER_RESPONSE" | grep -o '__HTTP_CODE__:[0-9]*' | cut -d: -f2 || echo "000")
   REGISTER_RESPONSE=$(echo "$REGISTER_RESPONSE" | grep -v '__HTTP_CODE__' || true)
 
@@ -3130,15 +3170,9 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
             die "$(t sub_slug_empty)"
           fi
           COMMUNITY_SLUG="$_new_slug"
-          REGISTER_RESPONSE=$(curl -fsSL -X POST "https://nodyx.org/api/directory/register" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"slug\":        \"${COMMUNITY_SLUG}\",
-              \"name\":        \"${COMMUNITY_NAME}\",
-              \"url\":         \"https://${COMMUNITY_SLUG}.nodyx.org\",
-              \"language\":    \"${COMMUNITY_LANG}\",
-              \"version\":     \"${NODYX_VERSION}\"
-            }" 2>/dev/null || true)
+          REGISTER_RESPONSE=$(_nodyx_directory_json "https://${COMMUNITY_SLUG}.nodyx.org" \
+            | curl -fsSL -X POST "https://nodyx.org/api/directory/register" \
+                -H "Content-Type: application/json" --data-binary @- 2>/dev/null || true)
           REGISTER_TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
           REGISTER_SLUG=$(echo "$REGISTER_RESPONSE" | grep -o '"subdomain":"[^"]*"' | cut -d'"' -f4 || true)
           if [[ -n "$REGISTER_TOKEN" ]]; then
@@ -3400,11 +3434,11 @@ fi
 
 # ── Base de données ───────────────────────────────────────────────────────────
 _sect "Base de données"
-if sudo -u postgres pg_isready -q 2>/dev/null; then
-  _tables=$(sudo -u postgres psql -d "$DB_NAME" -tc \
+if runuser -u postgres -- pg_isready -q 2>/dev/null; then
+  _tables=$(runuser -u postgres -- psql -d "$DB_NAME" -tc \
     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" \
     2>/dev/null | tr -d ' \n' || echo "?")
-  _dbsz=$(sudo -u postgres psql -d "$DB_NAME" -tc \
+  _dbsz=$(runuser -u postgres -- psql -d "$DB_NAME" -tc \
     "SELECT pg_size_pretty(pg_database_size('${DB_NAME}'))" 2>/dev/null | tr -d ' \n' || echo "?")
   _pass "PostgreSQL '${DB_NAME}'" "${_tables} tables  ${_dbsz}"
 else
@@ -3443,7 +3477,7 @@ _jwt=$(grep '^JWT_SECRET=' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null | cut -d= 
 [[ "${#_jwt}" -ge 32 ]] \
   && _pass "JWT_SECRET" "(${#_jwt} chars — fort)" \
   || _fail "JWT_SECRET" "trop court (${#_jwt} chars) — régénère dans nodyx-core/.env !"
-_smtp=$(grep '^SMTP_HOST=' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null | cut -d= -f2 || echo "")
+_smtp=$(grep '^SMTP_HOST=' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null | cut -d= -f2- | tr -d "'\`" || echo "")
 [[ -n "$_smtp" ]] \
   && _pass "SMTP" "configuré (${_smtp})" \
   || _warn "SMTP" "non configuré — emails désactivés"
