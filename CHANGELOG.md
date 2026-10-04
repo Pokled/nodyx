@@ -124,6 +124,22 @@ service, lisible par tous. Ils sont désormais lus dans un fichier réservé à 
 conserve aussi le serveur de relais choisi à l'installation, au lieu de revenir au port 7443 (ce
 qui coupait les instances passées par la porte WebSocket).
 
+### Installeur : une mise à jour ratée ne fait plus tomber le site
+
+`install.sh --upgrade` commençait par tuer tout ce qui écoutait sur les ports 3000 et 4173, puis
+recompilait dans le dossier servi : pendant toute la compilation le site était hors ligne, et si
+elle échouait (mémoire, dépendance indisponible, erreur), il le restait. Aucune sauvegarde de la
+base n'était faite avant. `nodyx-update` était une troisième copie de la mise à jour, avec les
+mêmes défauts.
+
+Désormais le core et le frontend sont compilés dans un dossier à part, pendant que l'ancienne
+version continue de servir. Le site ne bascule qu'une fois les deux compilés, en un instant ; si
+l'un échoue, rien n'est touché et le site tourne toujours sur la version précédente. La base est
+sauvegardée et vérifiée avant de tirer le code ; sans sauvegarde valide, la mise à jour demande
+un « oui » explicite, et ne se fait jamais en mode `--yes`. `nodyx-update` est devenu un simple
+raccourci vers l'installeur : un seul chemin de mise à jour, testé. Même chose pour
+`install_tunnel.sh`.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

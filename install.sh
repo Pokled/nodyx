@@ -145,6 +145,20 @@ T_EN[relay_restarted]="Relay client restarted — tunnel to relay.nodyx.org acti
 T_FR[relay_restarted]="Relay client redémarré — tunnel vers relay.nodyx.org actif"
 T_EN[upgrade_done]='✔  Nodyx v%s operational'
 T_FR[upgrade_done]='✔  Nodyx v%s opérationnel'
+T_EN[upgrade_no_backup_confirm]='The database backup could not be verified. Update anyway, WITHOUT a backup?'
+T_FR[upgrade_no_backup_confirm]="La sauvegarde de la base n'a pas pu être vérifiée. Mettre à jour quand même, SANS sauvegarde ?"
+T_EN[upgrade_no_backup_auto]='The database backup could not be verified (--yes never updates without one).'
+T_FR[upgrade_no_backup_auto]="La sauvegarde de la base n'a pas pu être vérifiée (--yes ne met jamais à jour sans)."
+T_EN[upgrade_cancelled_untouched]='Update cancelled. Nothing was changed.'
+T_FR[upgrade_cancelled_untouched]="Mise à jour annulée. Rien n'a été modifié."
+T_EN[upgrade_lib_missing]='scripts/install/build.sh is missing from the updated code: update stopped, the site still runs the previous version.'
+T_FR[upgrade_lib_missing]="scripts/install/build.sh manque dans le code mis à jour : mise à jour arrêtée, le site tourne toujours sur la version précédente."
+T_EN[upgrade_workdir_fail]='Could not create the build directories (disk full?). The site still runs the previous version.'
+T_FR[upgrade_workdir_fail]="Impossible de créer les dossiers de compilation (disque plein ?). Le site tourne toujours sur la version précédente."
+T_EN[upgrade_site_untouched]='The site was NOT touched: it still runs the previous version.'
+T_FR[upgrade_site_untouched]="Le site n'a PAS été touché : il tourne toujours sur la version précédente."
+T_EN[upgrade_swap_fail]='Could not switch to the new version; the previous one was put back. Run sudo nodyx-doctor.'
+T_FR[upgrade_swap_fail]="Impossible de basculer sur la nouvelle version ; la précédente a été remise en place. Lance sudo nodyx-doctor."
 
 # §2 — Rollback trap
 T_EN[rollback_failed]='  ✘  Installation failed (code: %s) — rolling back...'
@@ -1114,6 +1128,20 @@ _nodyx_migrate_service_secrets() {
   return $changed
 }
 
+# nodyx-update : un simple raccourci vers `install.sh --upgrade` (04/10/2026).
+# Avant, c'était une 3e copie de la mise à jour, qui compilait dans le dossier
+# servi, sans sauvegarde de la base ni remise des droits à nodyx.
+_nodyx_write_update_script() { # <chemin> <dossier nodyx>
+  cat > "$1" <<UPDATESCRIPT
+#!/usr/bin/env bash
+# nodyx-update : met à jour Nodyx (raccourci vers install.sh --upgrade).
+set -euo pipefail
+[[ \$EUID -eq 0 ]] || { echo "Lance en root : sudo nodyx-update" >&2; exit 1; }
+exec bash "$2/install.sh" --upgrade "\$@"
+UPDATESCRIPT
+  chmod 755 "$1"
+}
+
 # Chemin rapide : mise à jour / réparation sans reconfiguration
 _nodyx_upgrade() {
   local from_ver="$1" to_ver="$2" dir="$3"
@@ -1137,17 +1165,17 @@ _nodyx_upgrade() {
   # pm2-logrotate si absent (vérifier sur le daemon nodyx)
   _setup_pm2_logrotate || true
 
-  # Arrêter les anciens processus PM2 root (migration nexus-* → nodyx-*)
-  for _old_proc in nexus-core nexus-frontend nodyx-core nodyx-frontend; do
-    pm2 delete "$_old_proc" 2>/dev/null || true
-  done
-  # Libérer les ports même si les process appartiennent à un autre utilisateur
-  for _port in 3000 4173; do
-    fuser -k "${_port}/tcp" 2>/dev/null || true
-  done
+  # Sauvegarde de la base AVANT tout : au redémarrage, le nouveau core applique
+  # ses migrations. Sans sauvegarde vérifiée, on demande (Entrée = non).
+  _auto_backup_db upgrade
+  if [[ "${_DB_EXISTS:-false}" == "true" && "${_AUTO_BACKUP_OK:-false}" != "true" ]]; then
+    $_AUTO_YES && die "$(t upgrade_no_backup_auto) $(t upgrade_cancelled_untouched)"
+    _confirm "$(t upgrade_no_backup_confirm)" n || die "$(t upgrade_cancelled_untouched)"
+  fi
 
   info "$(t code_fetch)"
-  git config --global --add safe.directory "$dir" 2>/dev/null || true
+  git config --global --get-all safe.directory 2>/dev/null | grep -qxF "$dir" \
+    || git config --global --add safe.directory "$dir" 2>/dev/null || true
   # Reset generated files (package-lock.json, ecosystem.config.js…) to unblock the pull
   # ecosystem.config.js is in the repo but rewritten by the installer — reset to avoid a git conflict
   git -C "$dir" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json ecosystem.config.js 2>/dev/null || true
@@ -1162,14 +1190,26 @@ _nodyx_upgrade() {
     nodyx_migrate_client_ip "$dir" || warn "$(t caddy_invalid)"
   fi
 
+  # Compilation « à côté » (04/10/2026, scripts/install/build.sh) : l'ancienne
+  # version continue de servir pendant la compilation, et rien ne bascule tant
+  # que le core ET le frontend ne sont pas compilés. Avant, un `fuser -k` tuait
+  # tout ce qui écoutait sur 3000/4173 puis on compilait dans le dossier servi :
+  # une compilation ratée laissait le site à terre.
+  [[ -f "${dir}/scripts/install/build.sh" ]] || die "$(t upgrade_lib_missing)"
+  # shellcheck source=scripts/install/build.sh
+  . "${dir}/scripts/install/build.sh"
+  local _wc _wf
+  _wc="$(nodyx_work_dir "$dir" core)" && _wf="$(nodyx_work_dir "$dir" frontend)" \
+    || die "$(t upgrade_workdir_fail)"
+  _nodyx_upgrade_cleanup() { rm -rf -- "$_wc" "$_wf"; }
+
   info "$(t backend_rebuild)"
-  cd "${dir}/nodyx-core"
-  npm ci --no-fund --no-audit --silent || die "$(t npm_install_backend_fail)"
-  npm run build || die "$(t backend_build_fail)"
+  if ! nodyx_build_aside "${dir}/nodyx-core" dist "$_wc/app"; then
+    _nodyx_upgrade_cleanup; die "$(t backend_build_fail) $(t upgrade_site_untouched)"
+  fi
   ok "$(t backend_built)"
 
   info "$(t frontend_rebuild)"
-  cd "${dir}/nodyx-frontend"
   # Heap cap scaled to total RAM (see fresh-install path for the rationale)
   _RB_RAM_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $2}' || echo 4096)
   if   [[ "$_RB_RAM_MB" -lt 1500 ]]; then export NODE_OPTIONS="--max-old-space-size=768"
@@ -1177,16 +1217,39 @@ _nodyx_upgrade() {
   elif [[ "$_RB_RAM_MB" -lt 8000 ]]; then export NODE_OPTIONS="--max-old-space-size=2048"
   else                                    export NODE_OPTIONS="--max-old-space-size=4096"
   fi
-  npm ci --no-fund --no-audit --silent || die "$(t npm_install_frontend_fail)"
-  npm run build || die "$(t frontend_build_fail)"
+  if ! nodyx_build_aside "${dir}/nodyx-frontend" build "$_wf/app"; then
+    unset NODE_OPTIONS; _nodyx_upgrade_cleanup
+    die "$(t frontend_build_fail) $(t upgrade_site_untouched)"
+  fi
   unset NODE_OPTIONS
   ok "$(t frontend_built)"
+
+  # Bascule : deux `mv` par application. Si le frontend ne bascule pas, le
+  # core revient à sa version précédente : jamais un core neuf avec un vieux
+  # frontend.
+  if ! nodyx_swap_outputs "${dir}/nodyx-core" dist "$_wc/app"; then
+    _nodyx_upgrade_cleanup; die "$(t upgrade_swap_fail)"
+  fi
+  if ! nodyx_swap_outputs "${dir}/nodyx-frontend" build "$_wf/app"; then
+    nodyx_swap_back "${dir}/nodyx-core" dist "$_wc/app"
+    _nodyx_upgrade_cleanup; die "$(t upgrade_swap_fail)"
+  fi
+
+  # Anciens processus PM2 de root (migration nexus-* → nodyx-*), seulement si un
+  # démon PM2 root existe : `pm2 delete` en démarrerait un sinon.
+  if [[ -S /root/.pm2/rpc.sock ]]; then
+    for _old_proc in nexus-core nexus-frontend nodyx-core nodyx-frontend; do
+      PM2_HOME=/root/.pm2 pm2 delete "$_old_proc" 2>/dev/null || true
+    done
+  fi
 
   info "$(t services_restart)"
   chown -R nodyx:nodyx "$dir" 2>/dev/null || true
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart "${dir}/ecosystem.config.js" --update-env 2>/dev/null \
     || runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${dir}/ecosystem.config.js" --update-env
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
+  _nodyx_upgrade_cleanup
+  [[ -f /usr/local/bin/nodyx-update ]] && _nodyx_write_update_script /usr/local/bin/nodyx-update "$dir"
 
   # ── Relay client : upgrade du binaire si version périmée ─────────────────────
   # Sans ça, un client v0.1.3 pouvait rester 13 jours connecté à un pipe mort
@@ -3355,59 +3418,7 @@ chmod 600 "$CREDS_FILE"
 
 # ── Génération du script de mise à jour ───────────────────────────────────────
 UPDATE_SCRIPT="/usr/local/bin/nodyx-update"
-cat > "$UPDATE_SCRIPT" <<'UPDATESCRIPT'
-#!/usr/bin/env bash
-# nodyx-update — Met à jour Nodyx vers la dernière version
-set -euo pipefail
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
-ok()   { echo -e "${GREEN}✔${RESET}  $*"; }
-info() { echo -e "${CYAN}→${RESET}  $*"; }
-warn() { echo -e "${YELLOW}⚠${RESET}  $*"; }
-die()  { echo -e "${RED}✘  $*${RESET}" >&2; exit 1; }
-UPDATESCRIPT
-
-# Injecter NODYX_DIR (résolu au moment de l'install)
-cat >> "$UPDATE_SCRIPT" <<UPDATESCRIPT2
-NODYX_DIR="${NODYX_DIR}"
-UPDATESCRIPT2
-
-cat >> "$UPDATE_SCRIPT" <<'UPDATESCRIPT3'
-
-[[ $EUID -ne 0 ]] && die "Lance en root : sudo nodyx-update"
-echo -e "\n${BOLD}━━━  Mise à jour Nodyx  ━━━${RESET}\n"
-
-info "Récupération des dernières modifications..."
-git config --global --add safe.directory "$NODYX_DIR" 2>/dev/null || true
-git -C "$NODYX_DIR" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json 2>/dev/null || true
-git -C "$NODYX_DIR" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits."
-
-# Migrations de configuration livrées avec le code.
-if [[ -f "$NODYX_DIR/scripts/install/caddyfile.sh" ]]; then
-  . "$NODYX_DIR/scripts/install/caddyfile.sh"
-  nodyx_migrate_client_ip "$NODYX_DIR" || warn "Migration de configuration incomplète (voir ci-dessus)."
-fi
-
-info "Rebuild backend..."
-cd "${NODYX_DIR}/nodyx-core"
-npm ci --no-fund --no-audit --silent
-npm run build || die "Build backend échoué."
-ok "Backend compilé"
-
-info "Rebuild frontend..."
-cd "${NODYX_DIR}/nodyx-frontend"
-npm ci --no-fund --no-audit --silent
-npm run build || die "Build frontend échoué."
-ok "Frontend compilé"
-
-info "Redémarrage des services..."
-cd "$NODYX_DIR"
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart ecosystem.config.js --update-env
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
-
-echo ""
-ok "Nodyx mis à jour et redémarré."
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list
-UPDATESCRIPT3
+_nodyx_write_update_script "$UPDATE_SCRIPT" "$NODYX_DIR"
 
 chmod +x "$UPDATE_SCRIPT"
 ok "$(printf "$(t update_script_done)" "${BOLD}" "${RESET}")"

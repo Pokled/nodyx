@@ -420,6 +420,20 @@ T_EN[services_restart]='Restarting services...'
 T_FR[services_restart]='Redémarrage des services...'
 T_EN[upgrade_done]='Nodyx operational'
 T_FR[upgrade_done]='Nodyx opérationnel'
+T_EN[upgrade_no_backup_confirm]='The database backup could not be verified. Update anyway, WITHOUT a backup?'
+T_FR[upgrade_no_backup_confirm]="La sauvegarde de la base n'a pas pu être vérifiée. Mettre à jour quand même, SANS sauvegarde ?"
+T_EN[upgrade_no_backup_auto]='The database backup could not be verified (--yes never updates without one).'
+T_FR[upgrade_no_backup_auto]="La sauvegarde de la base n'a pas pu être vérifiée (--yes ne met jamais à jour sans)."
+T_EN[upgrade_cancelled_untouched]='Update cancelled. Nothing was changed.'
+T_FR[upgrade_cancelled_untouched]="Mise à jour annulée. Rien n'a été modifié."
+T_EN[upgrade_lib_missing]='scripts/install/build.sh is missing from the updated code: update stopped, the site still runs the previous version.'
+T_FR[upgrade_lib_missing]="scripts/install/build.sh manque dans le code mis à jour : mise à jour arrêtée, le site tourne toujours sur la version précédente."
+T_EN[upgrade_workdir_fail]='Could not create the build directories (disk full?). The site still runs the previous version.'
+T_FR[upgrade_workdir_fail]="Impossible de créer les dossiers de compilation (disque plein ?). Le site tourne toujours sur la version précédente."
+T_EN[upgrade_site_untouched]='The site was NOT touched: it still runs the previous version.'
+T_FR[upgrade_site_untouched]="Le site n'a PAS été touché : il tourne toujours sur la version précédente."
+T_EN[upgrade_swap_fail]='Could not switch to the new version; the previous one was put back. Run sudo nodyx-doctor.'
+T_FR[upgrade_swap_fail]="Impossible de basculer sur la nouvelle version ; la précédente a été remise en place. Lance sudo nodyx-doctor."
 
 # §10 - Auto-backup DB
 T_EN[db_autobackup]='Automatic DB backup (%s)...'
@@ -857,6 +871,20 @@ _ensure_pangolin_ufw() {
 # ═══════════════════════════════════════════════════════════════════════════════
 #  UPGRADE / REPAIR FAST PATH
 # ═══════════════════════════════════════════════════════════════════════════════
+# nodyx-update : un simple raccourci vers `install_tunnel.sh --upgrade`
+# (04/10/2026). Avant, c'était une 2e copie de la mise à jour, qui compilait
+# dans le dossier servi, sans sauvegarde de la base.
+_nodyx_write_update_script() { # <chemin> <dossier nodyx>
+  cat > "$1" <<UPDATESCRIPT
+#!/usr/bin/env bash
+# nodyx-update : met à jour Nodyx (raccourci vers install_tunnel.sh --upgrade).
+set -euo pipefail
+[[ \$EUID -eq 0 ]] || { echo "Run as root: sudo nodyx-update" >&2; exit 1; }
+exec bash "$2/install_tunnel.sh" --upgrade "\$@"
+UPDATESCRIPT
+  chmod 755 "$1"
+}
+
 _nodyx_upgrade() {
   local title; title=$(t upgrade_title)
   [[ "${1:-}" == "repair" ]] && title=$(t repair_title)
@@ -868,6 +896,12 @@ _nodyx_upgrade() {
   # helper is a no-op if the DB is empty/unreachable, so it costs nothing on
   # a freshly-installed host where there's nothing to lose anyway.
   _auto_backup_db "${1:-upgrade}"
+  # Sans sauvegarde vérifiée, on ne continue que sur un OUI explicite (Entrée =
+  # non), et jamais en mode --yes : au redémarrage, le core applique ses migrations.
+  if [[ "${_AUTO_BACKUP_OK:-false}" != "true" ]]; then
+    $_AUTO_YES && die "$(t upgrade_no_backup_auto) $(t upgrade_cancelled_untouched)"
+    _confirm "$(t upgrade_no_backup_confirm)" n || die "$(t upgrade_cancelled_untouched)"
+  fi
 
   if [[ "${1:-}" != "repair" ]]; then
     info "$(t code_fetch)"
@@ -892,23 +926,44 @@ _nodyx_upgrade() {
     NODYX_CADDYFILE=/nonexistent nodyx_migrate_client_ip "$NODYX_DIR" || true
   fi
 
+  # Compilation « à côté » (04/10/2026, scripts/install/build.sh, même logique
+  # qu'install.sh) : l'ancienne version sert pendant la compilation, et rien ne
+  # bascule tant que le core ET le frontend ne sont pas compilés.
+  [[ -f "${NODYX_DIR}/scripts/install/build.sh" ]] || die "$(t upgrade_lib_missing)"
+  # shellcheck source=scripts/install/build.sh
+  . "${NODYX_DIR}/scripts/install/build.sh"
+  local _wc _wf
+  _wc="$(nodyx_work_dir "$NODYX_DIR" core)" && _wf="$(nodyx_work_dir "$NODYX_DIR" frontend)" \
+    || die "$(t upgrade_workdir_fail)"
+  _nodyx_upgrade_cleanup() { rm -rf -- "$_wc" "$_wf"; }
+
   info "$(t backend_rebuild)"
-  cd "${NODYX_DIR}/nodyx-core"
-  run_bg "npm install (backend)" npm ci --no-fund --no-audit
-  run_bg "npm run build (backend)" npm run build
+  if ! run_bg "npm ci + build (backend)" nodyx_build_aside "${NODYX_DIR}/nodyx-core" dist "$_wc/app"; then
+    _nodyx_upgrade_cleanup; die "$(t backend_build_fail) $(t upgrade_site_untouched)"
+  fi
   ok "$(t backend_built)"
 
   info "$(t frontend_rebuild)"
-  cd "${NODYX_DIR}/nodyx-frontend"
-  run_bg "npm install (frontend)" npm ci --no-fund --no-audit
-  run_bg "npm run build (frontend)" npm run build
+  if ! run_bg "npm ci + build (frontend)" nodyx_build_aside "${NODYX_DIR}/nodyx-frontend" build "$_wf/app"; then
+    _nodyx_upgrade_cleanup; die "$(t frontend_build_fail) $(t upgrade_site_untouched)"
+  fi
   ok "$(t frontend_built)"
+
+  if ! nodyx_swap_outputs "${NODYX_DIR}/nodyx-core" dist "$_wc/app"; then
+    _nodyx_upgrade_cleanup; die "$(t upgrade_swap_fail)"
+  fi
+  if ! nodyx_swap_outputs "${NODYX_DIR}/nodyx-frontend" build "$_wf/app"; then
+    nodyx_swap_back "${NODYX_DIR}/nodyx-core" dist "$_wc/app"
+    _nodyx_upgrade_cleanup; die "$(t upgrade_swap_fail)"
+  fi
 
   info "$(t services_restart)"
   chown -R nodyx:nodyx "$NODYX_DIR" 2>/dev/null || true
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env 2>/dev/null \
     || pm2 restart all 2>/dev/null || true
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save 2>/dev/null || true
+  _nodyx_upgrade_cleanup
+  [[ -f /usr/local/bin/nodyx-update ]] && _nodyx_write_update_script /usr/local/bin/nodyx-update "$NODYX_DIR"
   local _persisted_mode="cf"
   [[ -f /etc/nodyx/tunnel-mode ]] && _persisted_mode=$(cat /etc/nodyx/tunnel-mode 2>/dev/null || echo cf)
 
@@ -1966,85 +2021,7 @@ chmod 600 "$CREDS_FILE"
 step "$(t step_helpers)"
 
 # nodyx-update
-cat > /usr/local/bin/nodyx-update <<'UPDATESH'
-#!/usr/bin/env bash
-set -euo pipefail
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
-ok()   { echo -e "${GREEN}✔${RESET}  $*"; }
-info() { echo -e "${CYAN}→${RESET}  $*"; }
-die()  { echo -e "${RED}✘  $*${RESET}" >&2; exit 1; }
-[[ $EUID -ne 0 ]] && die "Run as root: sudo nodyx-update"
-UPDATESH
-echo "NODYX_DIR=\"${NODYX_DIR}\"" >> /usr/local/bin/nodyx-update
-cat >> /usr/local/bin/nodyx-update <<'UPDATESH2'
-
-TUNNEL_MODE_FILE="/etc/nodyx/tunnel-mode"
-TUNNEL_MODE_VAL="cf"
-[[ -f "$TUNNEL_MODE_FILE" ]] && TUNNEL_MODE_VAL=$(cat "$TUNNEL_MODE_FILE" 2>/dev/null || echo cf)
-
-echo -e "\n${BOLD}━━━  Nodyx update  ━━━${RESET}\n"
-
-_read_repo_version() {
-  if [[ -f "${NODYX_DIR}/VERSION" ]]; then
-    tr -d '[:space:]' < "${NODYX_DIR}/VERSION" 2>/dev/null
-  else
-    node -p "require('${NODYX_DIR}/nodyx-core/package.json').version" 2>/dev/null || echo "unknown"
-  fi
-}
-
-_VER_BEFORE="$(_read_repo_version)"
-info "Version actuelle: ${BOLD}${_VER_BEFORE}${RESET}"
-
-info "Pulling latest..."
-git -C "$NODYX_DIR" pull --ff-only || die "git pull failed."
-
-# Migrations de configuration livrées avec le code.
-if [[ -f "$NODYX_DIR/scripts/install/caddyfile.sh" ]]; then
-  . "$NODYX_DIR/scripts/install/caddyfile.sh"
-  NODYX_CADDYFILE=/nonexistent nodyx_migrate_client_ip "$NODYX_DIR" || true
-fi
-
-_VER_AFTER="$(_read_repo_version)"
-if [[ "$_VER_BEFORE" != "$_VER_AFTER" ]]; then
-  info "Version cible: ${BOLD}${_VER_AFTER}${RESET} (mise à jour)"
-else
-  info "Déjà à jour sur ${BOLD}${_VER_AFTER}${RESET} (rebuild forcé)"
-fi
-
-info "Rebuild backend..."
-cd "${NODYX_DIR}/nodyx-core"
-npm ci --no-fund --no-audit --silent
-npm run build || die "Backend build failed."
-ok "Backend compiled"
-
-info "Rebuild frontend..."
-cd "${NODYX_DIR}/nodyx-frontend"
-npm ci --no-fund --no-audit --silent
-npm run build || die "Frontend build failed."
-ok "Frontend compiled"
-
-info "Restart services..."
-chown -R nodyx:nodyx "$NODYX_DIR"
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${NODYX_DIR}/ecosystem.config.js" --update-env
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
-
-case "$TUNNEL_MODE_VAL" in
-  cf)
-    systemctl restart cloudflared 2>/dev/null || true
-    ;;
-  pangolin)
-    info "Pangolin mode: newt is managed externally (skipping cloudflared restart)."
-    ;;
-  none)
-    info "Custom tunnel mode: no managed tunnel client to restart."
-    ;;
-esac
-
-echo ""
-ok "Nodyx ${BOLD}${_VER_AFTER}${RESET} updated and restarted (tunnel mode: $TUNNEL_MODE_VAL)."
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list
-UPDATESH2
-chmod +x /usr/local/bin/nodyx-update
+_nodyx_write_update_script /usr/local/bin/nodyx-update "$NODYX_DIR"
 printf "  ${GREEN}✔${RESET}  $(t update_script_made)\n" "${BOLD}" "${RESET}"
 
 # nodyx-doctor
