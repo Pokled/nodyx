@@ -119,6 +119,13 @@ GOT="$(env NODYX_ADMIN_PASSWORD=Variable-Secret1 bash -c "set -euo pipefail; $CO
 check "tunnel : jeton par fichier, mot de passe par variable, variables retirées" '[[ "$GOT" == *"MDP=Variable-Secret1 JETON=eyJjeton-du-fichier"* && "$(tail -1 <<<"$GOT")" == 0 ]]'
 check "tunnel : --tunnel-token et --admin-password signalés" 'grep -qF "_SECRET_ARGV+=\" --tunnel-token\"" "$TUNNEL" && grep -qF "_SECRET_ARGV+=\" --admin-password\"" "$TUNNEL"'
 
+PRE="$(block "$INSTALL" '# Pre-fill from CLI args' '[[ -n "$_ARG_DOMAIN" ]]')"
+GOT="$(env ADMIN_PASSWORD=Herite-Piege1 DOMAIN=piege.example bash -c "set -uo pipefail
+  _ARG_NAME=''; _ARG_SLUG=''; _ARG_ADMIN_USER=''; _ARG_ADMIN_EMAIL=''; _ARG_ADMIN_PASS=''; _ARG_DOMAIN=''
+  $PRE
+  echo \"MDP=[\$ADMIN_PASSWORD] DOMAINE=[\$DOMAIN]\"" 2>&1)"
+check "ADMIN_PASSWORD / DOMAIN hérités de l'environnement : jamais pris en silence" '[[ "$GOT" == *"MDP=[] DOMAINE=[]"* ]]'
+
 echo "── install.sh : mode réseau, SMTP"
 NET="$(fn "$INSTALL" _tty_needed; block "$INSTALL" 'case "$_ARG_NETWORK" in' 'NET_MODE="${NET_MODE:-2}"')"
 net() { # <--network> <--domain> <--yes>
@@ -170,6 +177,10 @@ check "unité de « cloudflared service install » : migrée, jeton sorti de la 
 H="$(cat "$R/etc/systemd/system/cloudflared.service" "$R/etc/cloudflared/tunnel.env" | md5sum)"
 cf "$R" "_nodyx_migrate_cloudflared_token && echo migre || echo rien"
 check "déjà migrée : rien n'est touché" '[[ "$GOT" == *rien* && "$(cat "$R/etc/systemd/system/cloudflared.service" "$R/etc/cloudflared/tunnel.env" | md5sum)" == "$H" ]]'
+R="$W/cf-recent"; mkdir -p "$R/etc/systemd/system"
+printf '[Service]\nType=notify\nExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run --token-file /etc/cloudflared/token\n' > "$R/etc/systemd/system/cloudflared.service"
+cf "$R" "_nodyx_migrate_cloudflared_token && echo migre || echo rien"
+check "unité de cloudflared >= 2026.9 (--token-file, déjà sûre) : pas touchée" '[[ "$GOT" == *rien* && ! -e "$R/etc/cloudflared/tunnel.env" ]] && grep -q -- "--token-file /etc/cloudflared/token" "$R/etc/systemd/system/cloudflared.service"'
 check "la mise à jour appelle la migration" 'grep -q "if _nodyx_migrate_cloudflared_token; then" "$TUNNEL"'
 if command -v cloudflared >/dev/null; then
   # Vrai cloudflared : le jeton de tunnel.env lui parvient bien (un jeton

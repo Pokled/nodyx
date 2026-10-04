@@ -64,7 +64,8 @@ extrait() {
   awk '$0 == "_nodyx_upgrade() {" {p=1}
        p && (index($0, "  # ── Relay client : upgrade du binaire") == 1 || index($0, "  local _persisted_mode=") == 1) {print "}"; exit}
        p {print}' "$1" \
-    | sed -e "s#/home/nodyx#$W/home#g" -e "s#/usr/local/bin/nodyx-update#$W/nodyx-update#g" -e "s#/root/.pm2#$W/rootpm2#g"
+    | sed -e "s#/home/nodyx#$W/home#g" -e "s#/usr/local/bin/nodyx-update#$W/nodyx-update#g" -e "s#/root/.pm2#$W/rootpm2#g" \
+          -e "s#/run/lock/nodyx-upgrade.lock#$W/verrou#g"
 }
 fn() { awk -v f="$2() {" -v g="$2() { #" '$0 == f || index($0, g) == 1 {p=1} p {print} p && $0 == "}" {exit}' "$1"; }
 
@@ -121,6 +122,19 @@ for INST in "$INSTALL" "$TUNNEL"; do
     check "$N/$casse : dossiers de travail effacés" '[[ $(restes "$D") -eq 0 ]]'
   done
 
+  echo "── $N : verrou et restes d'une mise à jour interrompue"
+  D="$W/$N/verrou/opt/nodyx"; fausse_install "$D"
+  # Le porteur du verrou EST le sleep (exec) : le tuer libère vraiment le verrou.
+  ( exec 9>"$W/verrou"; flock 9; exec sleep 30 ) & PORTEUR=$!
+  until ! flock -n "$W/verrou" true; do :; done
+  maj "$INST" "$D" true "" false
+  check "$N : une autre mise à jour en cours : refus, rien tiré ni compilé" '[[ $CODE -ne 0 && "$GOT" == *upgrade_already_running* ]] && ! journal | grep -q "^git .*pull\|^npm" && sert "$D" v1'
+  kill "$PORTEUR" 2>/dev/null; wait "$PORTEUR" 2>/dev/null
+  mkdir -p "$(dirname "$D")/.nodyx-maj-core.ABANDON"; echo "SECRET=x" > "$(dirname "$D")/.nodyx-maj-core.ABANDON/.env"
+  mkdir -p "$(dirname "$D")/autre-dossier"
+  maj "$INST" "$D" true "" false
+  check "$N : dossiers abandonnés par une mise à jour interrompue effacés" '[[ "$GOT" == *FIN* && $(restes "$D") -eq 0 && -d "$(dirname "$D")/autre-dossier" ]]'
+
   echo "── $N : sauvegarde de la base impossible"
   D="$W/$N/sansbk/opt/nodyx"; fausse_install "$D"
   maj "$INST" "$D" false "" false
@@ -130,6 +144,28 @@ for INST in "$INSTALL" "$TUNNEL"; do
   maj "$INST" "$D" false "oui" false
   check "$N : « oui » explicite : la mise à jour se fait" '[[ "$GOT" == *FIN* ]] && sert "$D" v2'
 done
+
+echo "── sauvegardes de mise à jour : les 5 plus récentes, jamais les autres"
+mkdir -p "$W/bk/bin"; printf '#!/bin/bash\nprintf -- "-- PostgreSQL database dump\\n-- PostgreSQL database dump complete\\n"\n' > "$W/bk/bin/runuser"; chmod +x "$W/bk/bin/runuser"
+prepare_bk() { # <dossier> <préfixe> : 7 vieilles sauvegardes de mise à jour + 1 d'un --wipe
+  local i; mkdir -p "$1"
+  for i in 1 2 3 4 5 6 7; do echo x > "$1/$2$i.sql.gz"; touch -d "2026-01-0$i" "$1/$2$i.sql.gz"; done
+  echo w > "$1/AVANT-WIPE.sql.gz"; touch -d 2025-01-01 "$1/AVANT-WIPE.sql.gz"
+}
+D="$W/bk/i"; prepare_bk "$D" nodyx-db-backup-upgrade-ancienne
+GOT="$(PATH="$W/bk/bin:$PATH" bash -c "set -euo pipefail; t() { printf '%s' \"\$1\"; }; info() { :; }; ok() { :; }; warn() { echo WARN; }
+  _rollback_register() { :; }; _DB_EXISTS=true; BOLD=''; RESET=''
+  $(fn "$INSTALL" _nodyx_prune_backups | sed "s#/root/#$D/#g")
+  $(fn "$INSTALL" _auto_backup_db | sed "s#/root/#$D/#g")
+  _auto_backup_db upgrade; echo OK=\$_AUTO_BACKUP_OK" 2>&1)"
+check "install.sh : 5 sauvegardes de mise à jour gardées, la nouvelle comprise" '[[ "$GOT" == *OK=true* && $(ls "$D"/nodyx-db-backup-upgrade-* | wc -l) -eq 5 && ! -e "$D/nodyx-db-backup-upgrade-ancienne1.sql.gz" && -e "$D/nodyx-db-backup-upgrade-ancienne7.sql.gz" ]]'
+check "install.sh : la sauvegarde d'avant --wipe n'est jamais supprimée" '[[ -e "$D/AVANT-WIPE.sql.gz" ]]'
+D="$W/bk/t"; prepare_bk "$D" nodyx_upgrade_ancienne
+GOT="$(PATH="$W/bk/bin:$PATH" bash -c "set -euo pipefail; t() { printf '%s' \"\$1\"; }; warn() { echo WARN; }; CYAN=''; GREEN=''; RESET=''; DB_NAME=nodyx
+  $(fn "$TUNNEL" _nodyx_prune_backups)
+  $(fn "$TUNNEL" _auto_backup_db | sed "s#/var/backups/nodyx#$D#")
+  _auto_backup_db upgrade; echo OK=\$_AUTO_BACKUP_OK" 2>&1)"
+check "tunnel : 5 sauvegardes de mise à jour gardées, celle d'avant --wipe intacte" '[[ "$GOT" == *OK=true* && $(ls "$D"/nodyx_upgrade_* | wc -l) -eq 5 && -e "$D/AVANT-WIPE.sql.gz" ]]'
 
 echo "── bibliothèque : bascule tout ou rien"
 # shellcheck source=scripts/install/build.sh
@@ -141,10 +177,13 @@ check "sortie neuve absente : refus AVANT tout déplacement" '[[ $c -ne 0 ]] && 
 mkdir -p "$W/lib/w/dist"; echo v2 > "$W/lib/w/dist/version"
 nodyx_swap_outputs "$D" dist "$W/lib/w" && nodyx_swap_back "$D" dist "$W/lib/w"; c=$?
 check "retour arrière : l'ancienne version revient entière" '[[ $c -eq 0 && "$(cat "$D/dist/version")/$(cat "$D/node_modules/version")" == v1/v1 ]]'
-D="$W/lib/src"; mkdir -p "$D/node_modules/lourd" "$D/build/vieux" "$D/.svelte-kit" "$D/src"
+D="$W/lib/src"; mkdir -p "$D/node_modules/lourd" "$D/build/vieux" "$D/.svelte-kit" "$D/src" "$D/uploads/avatars" "$D/backups" "$D/static"
+echo photo > "$D/uploads/avatars/a.png"; echo archive > "$D/backups/b.tar.gz"; echo verif > "$D/static/BingSiteAuth.xml"
 echo build > "$D/.sortie"; echo v2 > "$D/version"
 PATH="$W/bin:$PATH" JOURNAL="$W/journal" nodyx_build_aside "$D" build "$W/lib/t"; c=$?
 check "copie de travail sans node_modules, ancienne sortie ni .svelte-kit" '[[ $c -eq 0 && -d "$W/lib/t/src" && ! -e "$W/lib/t/node_modules/lourd" && ! -e "$W/lib/t/build/vieux" && ! -e "$W/lib/t/.svelte-kit" ]]'
+check "copie de travail SANS les données vivantes (uploads, backups)" '[[ ! -e "$W/lib/t/uploads" && ! -e "$W/lib/t/backups" ]]'
+check "mais AVEC les fichiers propres à l'instance (static/ non suivi)" '[[ -f "$W/lib/t/static/BingSiteAuth.xml" ]]'
 
 echo ""
 echo "Résultat : $PASS réussis, $FAIL échoués"

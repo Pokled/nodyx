@@ -145,10 +145,10 @@ T_EN[help_admin_email]='    --admin-email=EMAIL     Admin email'
 T_FR[help_admin_email]='    --admin-email=EMAIL     Email admin'
 T_EN[help_admin_pass]='    --admin-password=PASS   Admin password (discouraged: readable by any local user via ps)'
 T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin (déconseillé : lisible par tout utilisateur via ps)'
-T_EN[help_admin_pass_file]='    --admin-password-file=FILE  Admin password read from a file (or env NODYX_ADMIN_PASSWORD)'
-T_FR[help_admin_pass_file]='    --admin-password-file=FICHIER  Mot de passe admin lu dans un fichier (ou variable NODYX_ADMIN_PASSWORD)'
-T_EN[help_token_file]='    --tunnel-token-file=FILE  Cloudflare Tunnel token read from a file (or env NODYX_TUNNEL_TOKEN)'
-T_FR[help_token_file]='    --tunnel-token-file=FICHIER  Jeton du tunnel Cloudflare lu dans un fichier (ou variable NODYX_TUNNEL_TOKEN)'
+T_EN[help_admin_pass_file]='    --admin-password-file=FILE  Admin password read from a file (recommended). NODYX_ADMIN_PASSWORD also works, from a root shell only: "sudo VAR=..." puts it back on the command line'
+T_FR[help_admin_pass_file]='    --admin-password-file=FICHIER  Mot de passe admin lu dans un fichier (recommandé). NODYX_ADMIN_PASSWORD marche aussi, depuis un shell root seulement : « sudo VAR=… » la remet dans la ligne de commande'
+T_EN[help_token_file]='    --tunnel-token-file=FILE  Cloudflare Tunnel token read from a file (recommended). NODYX_TUNNEL_TOKEN also works, from a root shell only'
+T_FR[help_token_file]='    --tunnel-token-file=FICHIER  Jeton du tunnel Cloudflare lu dans un fichier (recommandé). NODYX_TUNNEL_TOKEN marche aussi, depuis un shell root seulement'
 T_EN[secret_file_unreadable]='%s: cannot read a value from %s.'
 T_FR[secret_file_unreadable]='%s : impossible de lire une valeur dans %s.'
 T_EN[secret_argv_warn]='%s: readable by every user of this server (ps), and kept in your shell history and the sudo log. Prefer the -file option or the environment variable (see --help), and change that secret after installation.'
@@ -452,6 +452,8 @@ T_EN[upgrade_site_untouched]='The site was NOT touched: it still runs the previo
 T_FR[upgrade_site_untouched]="Le site n'a PAS été touché : il tourne toujours sur la version précédente."
 T_EN[upgrade_swap_fail]='Could not switch to the new version; the previous one was put back. Run sudo nodyx-doctor.'
 T_FR[upgrade_swap_fail]="Impossible de basculer sur la nouvelle version ; la précédente a été remise en place. Lance sudo nodyx-doctor."
+T_EN[upgrade_already_running]='Another Nodyx update is already running. Nothing was changed.'
+T_FR[upgrade_already_running]="Une autre mise à jour de Nodyx est déjà en cours. Rien n'a été modifié."
 
 # §10 - Auto-backup DB
 T_EN[db_autobackup]='Automatic DB backup (%s)...'
@@ -717,6 +719,18 @@ DB_USER="nodyx_user"
 # ═══════════════════════════════════════════════════════════════════════════════
 #  AUTO-BACKUP DB
 # ═══════════════════════════════════════════════════════════════════════════════
+# _nodyx_prune_backups <motif> : ne garde que les 5 sauvegardes les plus récentes
+# correspondant au motif. Réservé aux sauvegardes de MISE À JOUR (une par
+# nodyx-update : sans ce ménage, un nodyx-update quotidien remplit le disque).
+# Celles d'un --wipe ou d'une réinstallation ne sont jamais supprimées.
+_nodyx_prune_backups() {
+  local f n=0
+  while IFS= read -r f; do
+    n=$((n+1))
+    [[ $n -le 5 ]] || rm -f -- "$f"
+  done < <(ls -1t -- $1 2>/dev/null)
+}
+
 _auto_backup_db() {
   local mode="$1"
   local backup_dir="/var/backups/nodyx"
@@ -731,6 +745,9 @@ _auto_backup_db() {
       _AUTO_BACKUP_OK=true
       local size; size=$(du -h "$target" | awk '{print $1}')
       printf "  ${GREEN}✔${RESET}  $(t db_autobackup_done)\n" "$target" "$size"
+      case "$mode" in
+        upgrade|repair) _nodyx_prune_backups "${backup_dir}/nodyx_${mode}_*.sql.gz" ;;
+      esac
     else
       rm -f "$target"
       warn "$(t db_autobackup_fail)"
@@ -1015,6 +1032,11 @@ _nodyx_upgrade() {
   [[ "${1:-}" == "repair" ]] && title=$(t repair_title)
   step "$title"
 
+  # Une seule mise à jour à la fois : un nodyx-update en cron et un lancé à la
+  # main feraient sinon git pull et bascule en même temps, dans un ordre imprévisible.
+  exec {_NODYX_LOCK_FD}>/run/lock/nodyx-upgrade.lock
+  flock -n "$_NODYX_LOCK_FD" || die "$(t upgrade_already_running)"
+
   # Snapshot the DB before any potentially destructive step. An "upgrade" pulls
   # new migrations that may fail mid-run; a "repair" rebuilds in place but a
   # botched build can still leave the schema in an inconsistent state. The
@@ -1057,6 +1079,7 @@ _nodyx_upgrade() {
   [[ -f "${NODYX_DIR}/scripts/install/build.sh" ]] || die "$(t upgrade_lib_missing)"
   # shellcheck source=scripts/install/build.sh
   . "${NODYX_DIR}/scripts/install/build.sh"
+  nodyx_purge_stale_work "$NODYX_DIR"
   local _wc _wf
   _wc="$(nodyx_work_dir "$NODYX_DIR" core)" && _wf="$(nodyx_work_dir "$NODYX_DIR" frontend)" \
     || die "$(t upgrade_workdir_fail)"

@@ -140,6 +140,11 @@ un « oui » explicite, et ne se fait jamais en mode `--yes`. `nodyx-update` est
 raccourci vers l'installeur : un seul chemin de mise à jour, testé. Même chose pour
 `install_tunnel.sh`.
 
+Deux mises à jour ne peuvent plus tourner en même temps (verrou). La compilation ne recopie
+jamais les données vivantes (`uploads/`, `backups/`), et les restes d'une mise à jour
+interrompue sont effacés à la suivante. Seules les 5 sauvegardes de mise à jour les plus
+récentes sont gardées ; celles d'un `--wipe` ou d'une réinstallation ne sont jamais supprimées.
+
 ### Installeur : sans terminal, et sans secret dans la ligne de commande
 
 L'installation silencieuse documentée en tête d'`install.sh` n'a jamais pu aboutir : le mot de
@@ -151,10 +156,11 @@ toujours demandés, sans option pour y répondre. Sans terminal du tout (cron, A
   l'installeur proprement, en la nommant.
 - `--network=direct|relay|sslip` ; `--domain` seul implique le mode direct.
 - Les champs « optionnels » (description, pays) le sont enfin : Entrée les laisse vides.
-- Le mot de passe se donne par `--admin-password-file=FICHIER` ou `NODYX_ADMIN_PASSWORD`, le jeton
-  Cloudflare par `--tunnel-token-file=FICHIER` ou `NODYX_TUNNEL_TOKEN`. En argument, tout
-  utilisateur du serveur les lit via `ps` : `--admin-password` et `--tunnel-token` restent
-  acceptés, avec un avertissement.
+- Le mot de passe se donne par `--admin-password-file=FICHIER`, le jeton Cloudflare par
+  `--tunnel-token-file=FICHIER`. En argument, tout utilisateur du serveur les lit via `ps` :
+  `--admin-password` et `--tunnel-token` restent acceptés, avec un avertissement. Les variables
+  `NODYX_ADMIN_PASSWORD` et `NODYX_TUNNEL_TOKEN` marchent aussi, mais seulement depuis un shell
+  déjà root : `sudo NODYX_ADMIN_PASSWORD=…` remet le secret dans la ligne de commande de sudo.
 - Le jeton du tunnel Cloudflare n'est plus dans la ligne de commande de `cloudflared`, où il restait
   lisible par tous tant que le tunnel tournait : il vit dans `/etc/cloudflared/tunnel.env` (600).
 - Inscription facultative à l'annuaire public : répondre « non » inscrivait l'instance. Réponse

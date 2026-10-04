@@ -18,8 +18,11 @@
 #      --admin-user=admin  --admin-email=admin@ma-communaute.fr \
 #      --admin-password-file=/root/mdp-admin.txt  --yes
 #
-#    Le mot de passe se donne par fichier ou par la variable NODYX_ADMIN_PASSWORD :
-#    en argument (--admin-password=…), tout utilisateur du serveur le lit via ps.
+#    Le mot de passe se donne par fichier : en argument (--admin-password=…),
+#    tout utilisateur du serveur le lit via ps. La variable NODYX_ADMIN_PASSWORD
+#    marche aussi, mais seulement depuis un shell déjà root (sudo -i) : sudo vide
+#    l'environnement, et « sudo NODYX_ADMIN_PASSWORD=… » remet le secret dans la
+#    ligne de commande de sudo, visible via ps et inscrite dans son journal.
 #    Sans terminal (Ansible, cron), --yes accepte les réponses par défaut ; une
 #    question sans option ni défaut arrête l'installeur en disant laquelle.
 #
@@ -171,6 +174,8 @@ T_EN[upgrade_site_untouched]='The site was NOT touched: it still runs the previo
 T_FR[upgrade_site_untouched]="Le site n'a PAS été touché : il tourne toujours sur la version précédente."
 T_EN[upgrade_swap_fail]='Could not switch to the new version; the previous one was put back. Run sudo nodyx-doctor.'
 T_FR[upgrade_swap_fail]="Impossible de basculer sur la nouvelle version ; la précédente a été remise en place. Lance sudo nodyx-doctor."
+T_EN[upgrade_already_running]='Another Nodyx update is already running. Nothing was changed.'
+T_FR[upgrade_already_running]="Une autre mise à jour de Nodyx est déjà en cours. Rien n'a été modifié."
 
 # §2 — Rollback trap
 T_EN[rollback_failed]='  ✘  Installation failed (code: %s) — rolling back...'
@@ -229,8 +234,8 @@ T_EN[help_admin_email]='    --admin-email=EMAIL     Admin email'
 T_FR[help_admin_email]='    --admin-email=EMAIL     Email admin'
 T_EN[help_admin_pass]='    --admin-password=PASS   Admin password (discouraged: readable by any local user via ps)'
 T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin (déconseillé : lisible par tout utilisateur via ps)'
-T_EN[help_admin_pass_file]='    --admin-password-file=FILE  Admin password read from a file (or env NODYX_ADMIN_PASSWORD)'
-T_FR[help_admin_pass_file]='    --admin-password-file=FICHIER  Mot de passe admin lu dans un fichier (ou variable NODYX_ADMIN_PASSWORD)'
+T_EN[help_admin_pass_file]='    --admin-password-file=FILE  Admin password read from a file (recommended). NODYX_ADMIN_PASSWORD also works, from a root shell only: "sudo VAR=..." puts it back on the command line'
+T_FR[help_admin_pass_file]='    --admin-password-file=FICHIER  Mot de passe admin lu dans un fichier (recommandé). NODYX_ADMIN_PASSWORD marche aussi, depuis un shell root seulement : « sudo VAR=… » la remet dans la ligne de commande'
 T_EN[help_network]='    --network=direct|relay|sslip  Network mode (--domain implies direct; --yes defaults to relay)'
 T_FR[help_network]='    --network=direct|relay|sslip  Mode réseau (--domain implique direct ; --yes choisit le relais)'
 T_EN[admin_pass_file_unreadable]='--admin-password-file: cannot read a password from %s.'
@@ -1197,6 +1202,11 @@ _nodyx_upgrade() {
   # pm2-logrotate si absent (vérifier sur le daemon nodyx)
   _setup_pm2_logrotate || true
 
+  # Une seule mise à jour à la fois : un nodyx-update en cron et un lancé à la
+  # main feraient sinon git pull et bascule en même temps, dans un ordre imprévisible.
+  exec {_NODYX_LOCK_FD}>/run/lock/nodyx-upgrade.lock
+  flock -n "$_NODYX_LOCK_FD" || die "$(t upgrade_already_running)"
+
   # Sauvegarde de la base AVANT tout : au redémarrage, le nouveau core applique
   # ses migrations. Sans sauvegarde vérifiée, on demande (Entrée = non).
   _auto_backup_db upgrade
@@ -1230,6 +1240,7 @@ _nodyx_upgrade() {
   [[ -f "${dir}/scripts/install/build.sh" ]] || die "$(t upgrade_lib_missing)"
   # shellcheck source=scripts/install/build.sh
   . "${dir}/scripts/install/build.sh"
+  nodyx_purge_stale_work "$dir"
   local _wc _wf
   _wc="$(nodyx_work_dir "$dir" core)" && _wf="$(nodyx_work_dir "$dir" frontend)" \
     || die "$(t upgrade_workdir_fail)"
@@ -1372,11 +1383,27 @@ _nodyx_rollback() {
 trap '_nodyx_rollback' EXIT
 
 # ── Auto-backup DB avant action destructive ───────────────────────────────────
+# _nodyx_prune_backups <motif> : ne garde que les 5 sauvegardes les plus récentes
+# correspondant au motif. Réservé aux sauvegardes de MISE À JOUR (une par
+# nodyx-update : sans ce ménage, un nodyx-update quotidien remplit le disque).
+# Celles d'un --wipe ou d'une réinstallation ne sont jamais supprimées.
+_nodyx_prune_backups() {
+  local f n=0
+  while IFS= read -r f; do
+    n=$((n+1))
+    [[ $n -le 5 ]] || rm -f -- "$f"
+  done < <(ls -1t -- $1 2>/dev/null)
+}
+
 _auto_backup_db() {
   local reason="${1:-pre-action}"
   [[ "${_DB_EXISTS:-false}" == "true" ]] || return 0
   local bak
-  bak="/root/nodyx-db-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+  if [[ "$reason" == upgrade ]]; then
+    bak="/root/nodyx-db-backup-upgrade-$(date +%Y%m%d-%H%M%S).sql.gz"
+  else
+    bak="/root/nodyx-db-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+  fi
   info "$(t db_autobackup "$reason")"
   # Réussie seulement si l'archive est intacte ET contient bien un dump : un
   # pg_dump coupé par un disque plein laisse un .gz valide mais tronqué.
@@ -1387,6 +1414,7 @@ _auto_backup_db() {
     local sz; sz=$(du -sh "$bak" 2>/dev/null | cut -f1 || echo "?")
     ok "$(t db_autobackup_done "${BOLD}" "$bak" "${RESET}" "$sz")"
     _rollback_register "$(t db_autobackup_restore_hint "$bak")"
+    [[ "$reason" == upgrade ]] && _nodyx_prune_backups '/root/nodyx-db-backup-upgrade-*.sql.gz'
   else
     warn "$(t db_autobackup_fail)"
     rm -f "$bak"
@@ -1528,8 +1556,8 @@ done
 # ── Secrets hors de la ligne de commande (04/10/2026) ─────────────────────────
 # Un argument est lisible par tout utilisateur du serveur (ps), reste dans
 # l'historique du shell et dans le journal de sudo. Le mot de passe se donne
-# donc par fichier (--admin-password-file) ou par variable d'environnement
-# (NODYX_ADMIN_PASSWORD), effacée aussitôt lue pour ne pas suivre les
+# donc par fichier (--admin-password-file), ou par variable d'environnement
+# depuis un shell root (NODYX_ADMIN_PASSWORD), effacée aussitôt lue pour ne pas suivre les
 # programmes lancés ensuite. --admin-password=… reste accepté, avec un avertissement.
 if [[ -n "$_ARG_ADMIN_PASS_FILE" ]]; then
   [[ -f "$_ARG_ADMIN_PASS_FILE" && -r "$_ARG_ADMIN_PASS_FILE" ]] \
@@ -2132,6 +2160,10 @@ step "$(t step_configure)"
 echo ""
 
 # Pre-fill from CLI args (prompt() will skip already-set vars)
+# Seules les options préremplissent : une variable du même nom héritée de
+# l'environnement (ADMIN_PASSWORD, DOMAIN…) ne doit jamais être prise en silence.
+COMMUNITY_NAME="" COMMUNITY_SLUG="" COMMUNITY_LANG="" COMMUNITY_DESC="" COMMUNITY_COUNTRY=""
+ADMIN_USERNAME="" ADMIN_EMAIL="" ADMIN_PASSWORD="" DOMAIN=""
 [[ -n "$_ARG_NAME" ]]        && COMMUNITY_NAME="$_ARG_NAME"
 [[ -n "$_ARG_SLUG" ]]        && COMMUNITY_SLUG="$_ARG_SLUG"
 [[ -n "$_ARG_ADMIN_USER" ]]  && ADMIN_USERNAME="$_ARG_ADMIN_USER"

@@ -15,14 +15,18 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # nodyx_build_aside <dossier de l'appli> <sortie : dist|build> <dossier de travail>
-# Copie la source (sans node_modules ni l'ancienne sortie), installe les
+# Copie la source (sans node_modules, ancienne sortie ni données vivantes), installe les
 # dépendances et compile DANS le dossier de travail. L'appli en service n'est
 # pas touchée. Code 0 seulement si la sortie ET les dépendances existent.
 nodyx_build_aside() {
   local app="$1" out="$2" work="$3"
   [[ -d "$app" && -n "$out" && -n "$work" ]] || return 2
   mkdir -p "$work" || return 1
-  tar -C "$app" --exclude=./node_modules --exclude="./$out" --exclude=./.svelte-kit -cf - . \
+  # Jamais les données vivantes : uploads/ et backups/ du core pèsent des
+  # gigaoctets (1,1 Go sur nodyx.org) et n'ont rien à faire dans une compilation.
+  tar -C "$app" --exclude=./node_modules --exclude="./$out" --exclude=./.svelte-kit \
+      --exclude=./uploads --exclude=./backups --exclude=./test-results --exclude=./playwright \
+      -cf - . \
     | tar -C "$work" -xf - || return 1
   ( cd "$work" && npm ci --no-fund --no-audit --silent && npm run build ) || return 1
   [[ -d "$work/$out" && -d "$work/node_modules" ]]
@@ -62,4 +66,15 @@ nodyx_swap_back() {
 # système de fichiers que l'installation (mv instantané), hors du dépôt git.
 nodyx_work_dir() {
   mktemp -d "$(dirname "$1")/.nodyx-maj-$2.XXXXXX"
+}
+
+# nodyx_purge_stale_work <dossier nodyx> : efface les dossiers de travail laissés
+# par une mise à jour interrompue (Ctrl-C, coupure SSH) : des centaines de Mo et
+# une copie des .env. À appeler SOUS le verrou de mise à jour seulement.
+nodyx_purge_stale_work() {
+  local d
+  for d in "$(dirname "$1")"/.nodyx-maj-core.* "$(dirname "$1")"/.nodyx-maj-frontend.*; do
+    [[ -d "$d" ]] && rm -rf -- "$d"
+  done
+  return 0
 }
