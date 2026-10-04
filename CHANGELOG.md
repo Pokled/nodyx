@@ -237,6 +237,10 @@ découvrir après coup.
   Corrigé au même pattern : masqué par défaut, révélé par un geste tracé.
 - Identification du visiteur réel derrière le tunnel Cloudflare restaurée (les journaux
   enregistraient l'adresse du proxy, pas celle du visiteur).
+- Choix de la langue : ouvrir le panneau renvoyait à l'accueil, et « Retour » y laissait (page,
+  brouillon et position de lecture perdus) ; recliquer sur le drapeau ne refermait rien. La page
+  reste désormais sous le panneau, « Retour » ramène exactement là où on était, et le drapeau
+  ouvre comme il referme.
 - Éditeur : une vidéo insérée perdait sa mise en forme, un article se disloquait à la réouverture,
   le sommaire ouvrait un onglet vide au lieu de descendre à l'ancre.
   Alignement « dans le texte » ajouté pour les images.

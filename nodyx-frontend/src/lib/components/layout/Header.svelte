@@ -37,6 +37,7 @@
 		myStatus,
 		onOpenPalette,
 		onOpenLang,
+		langOpen = false,
 		onToggleMembers,
 		onOpenStatusModal,
 	}: {
@@ -56,6 +57,7 @@
 		myStatus: { emoji?: string; text?: string } | null;
 		onOpenPalette: () => void;
 		onOpenLang: () => void;
+		langOpen?: boolean;
 		onToggleMembers: (velocity?: number | MouseEvent) => void;
 		onOpenStatusModal: () => void;
 	} = $props();
@@ -203,6 +205,7 @@
 		<!-- Language button (guest + logged-in) -->
 		<button
 			onclick={onOpenLang}
+			aria-expanded={langOpen}
 			class="lang-nav-btn p-2 transition-colors flex items-center gap-1.5"
 			style="color: var(--nx-text-muted)"
 			title={tFn('settings.language.label')}

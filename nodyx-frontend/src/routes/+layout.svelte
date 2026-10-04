@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import type { LayoutData } from './$types';
@@ -460,16 +460,33 @@
 	let langSavedTimeout: ReturnType<typeof setTimeout> | undefined
 	// Close the language pane when the route changes — otherwise it stays
 	// mounted over the new page until the user clicks "back".
-	let skipLangReset = false
 	$effect(() => {
 		page.url.pathname
-		if (skipLangReset) { skipLangReset = false; return }
 		langView = false
 	})
+	// Le panneau s'ouvre PAR-DESSUS la page en cours, qui reste montée (cachée) :
+	// « Retour » ramène exactement là où on était, brouillon et position de
+	// lecture compris. Avant, l'ouverture naviguait vers l'accueil et le
+	// panneau remplaçait la page, détruite. Le drapeau ouvre ET referme.
+	// Selon la largeur, c'est <main> (bureau) ou la fenêtre (mobile) qui défile :
+	// les deux positions sont gardées. La fermeture est instantanée (pas
+	// d'animation de sortie) : pendant une sortie animée le panneau occupait
+	// encore la place au-dessus de la page et faussait la position rendue.
+	let mainEl: HTMLElement | undefined = $state()
+	let langScroll = { main: 0, win: 0 }
 	function openLang() {
-		skipLangReset = true
+		if (langView) { closeLang(); return }
+		langScroll = { main: mainEl?.scrollTop ?? 0, win: window.scrollY }
 		langView = true
-		goto('/', { noScroll: true })
+	}
+	async function closeLang() {
+		if (!langView) return
+		langView = false
+		await tick()
+		requestAnimationFrame(() => {
+			if (mainEl) mainEl.scrollTop = langScroll.main
+			window.scrollTo(0, langScroll.win)
+		})
 	}
 	const currentLocale = $derived($locale)
 	function pickLocale(code: Locale) {
@@ -492,7 +509,7 @@
 	function onLangTouchEnd() {
 		const diff = touchCurrentY - touchStartY
 		if (diff > 100) {
-			langView = false
+			closeLang()
 		}
 		langDragY = 0
 	}
@@ -750,7 +767,7 @@
 		// Escape closes language pane
 		if (e.key === 'Escape' && langView) {
 			e.preventDefault()
-			langView = false
+			closeLang()
 		}
 	}
 </script>
@@ -839,6 +856,7 @@
 		{myStatus}
 		onOpenPalette={() => paletteOpen = true}
 		onOpenLang={openLang}
+		langOpen={langView}
 		onToggleMembers={toggleC}
 		onOpenStatusModal={openStatusModal}
 	/>
@@ -905,7 +923,7 @@
 		     moindre debordement (ex: banniere full-bleed -mx-6 du profil, +24px)
 		     faisait apparaitre une scrollbar horizontale + du contenu glissant
 		     sous les sidebars. On clippe l'horizontal, plus jamais de scrollbar. -->
-		<main data-nx-zone="sheet" use:overlayScroll use:editZone={{ zone: page.url.pathname === '/' ? 'home' : 'sheet', label: page.url.pathname === '/' ? tFn('edit.zone_home') : tFn('edit.zone_sheet') }} class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
+		<main bind:this={mainEl} data-nx-zone="sheet" use:overlayScroll use:editZone={{ zone: page.url.pathname === '/' ? 'home' : 'sheet', label: page.url.pathname === '/' ? tFn('edit.zone_home') : tFn('edit.zone_sheet') }} class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
 		      class:members-collapsed={membersCollapsed}>
 
@@ -940,7 +958,7 @@
             <div class="w-full flex-1 flex flex-col {langView ? 'lang-view-wrap h-full' : (page.url.pathname === '/' || page.url.pathname.startsWith('/chat') || page.url.pathname.startsWith('/admin') || page.url.pathname.startsWith('/users/') || page.url.pathname.startsWith('/feed') || page.url.pathname.startsWith('/settings') || page.url.pathname.startsWith('/garden') || page.url.pathname.startsWith('/calendar') || page.url.pathname.startsWith('/discover') || page.url.pathname.startsWith('/wiki') || page.url.pathname.startsWith('/library') || page.url.pathname.startsWith('/musique') || page.url.pathname.startsWith('/dm') || page.url.pathname.startsWith('/auth/') ? 'h-full' : (page.url.pathname.startsWith('/forum') || page.url.pathname.startsWith('/tasks')) ? 'px-4 sm:px-6 py-8' : 'max-w-5xl mx-auto px-4 py-8')}">
                 {#if langView}
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
-                    <div class="fixed inset-0 bg-black/40 backdrop-blur-xs z-40" onclick={() => langView = false} transition:fade={{ duration: 200 }}></div>
+                    <div class="fixed inset-0 bg-black/40 backdrop-blur-xs z-40" onclick={closeLang} in:fade={{ duration: 200 }}></div>
                     <div
                         class="lang-view flex flex-col gap-4 w-full h-full min-h-0 p-6 sm:p-8 relative z-41"
                         role="dialog"
@@ -948,12 +966,12 @@
                         aria-labelledby="lang-title"
                         aria-describedby="lang-desc"
                         style="transform: translateY({langDragY}px); transition: transform {langDragY > 0 ? 'none' : '0.3s cubic-bezier(0.16, 1, 0.3, 1)'};"
-                        transition:fly={{ y: 20, duration: 300, easing: cubicOut }}
+                        in:fly={{ y: 20, duration: 300, easing: cubicOut }}
                         ontouchstart={onLangTouchStart}
                         ontouchmove={onLangTouchMove}
                         ontouchend={onLangTouchEnd}
                     >
-                        <button onclick={() => langView = false} class="lang-back inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0 bg-transparent border border-white/[0.12] rounded-md px-3 py-2 cursor-pointer" aria-label={tFn('common.back')}>
+                        <button onclick={closeLang} class="lang-back inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0 bg-transparent border border-white/[0.12] rounded-md px-3 py-2 cursor-pointer" aria-label={tFn('common.back')}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 5l-7 7 7 7"/>
                             </svg>
@@ -996,9 +1014,12 @@
                             {/if}
                         </div>
                     </div>
-                {:else}
-                    {@render children()}
                 {/if}
+                <!-- La page reste montée sous le panneau des langues (display:
+                     contents : aucun effet sur la mise en page quand elle est visible). -->
+                <div style:display={langView ? 'none' : 'contents'}>
+                    {@render children()}
+                </div>
             </div>
         </main>
 		</div>
