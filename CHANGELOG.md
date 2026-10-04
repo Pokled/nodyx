@@ -91,6 +91,21 @@ visiteur, comme pour `install.sh`.
 sudo bash /opt/nodyx/install_tunnel.sh --repair
 ```
 
+### Installeur tunnel : durcissement complet
+
+Lecture complète d'`install_tunnel.sh`, défauts corrigés :
+
+- l'API du core écoutait sur toutes les interfaces (`HOST=0.0.0.0`), en contournant Caddy : elle
+  n'écoute plus qu'en local, et `--repair` / `--upgrade` corrigent les instances existantes ;
+- Node.js 20 était installé alors que le vocal exige Node 22 ;
+- toute réponse autre que « n », « no » ou « non » valait oui ; un mot de passe administrateur d'un
+  seul caractère était accepté sans confirmation (8 caractères et double saisie désormais) ;
+- le nom de la communauté et `--domain` n'étaient ni nettoyés ni validés ;
+- `--wipe` effaçait la base même si la sauvegarde avait échoué ; un PostgreSQL existant pouvait être
+  supprimé pour être recréé ;
+- sur ARM64, cloudflared était installé depuis un paquet non vérifié (désormais le dépôt signé de
+  Cloudflare, comme sur amd64), et le jeton du tunnel était lisible par tous dans son service.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

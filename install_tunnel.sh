@@ -427,6 +427,10 @@ T_FR[db_autobackup]='Sauvegarde automatique de la DB (%s)...'
 T_EN[db_autobackup_done]='Backup: %s  (%s)'
 T_FR[db_autobackup_done]='Sauvegarde : %s  (%s)'
 T_EN[db_autobackup_fail]='DB backup failed (DB empty or inaccessible) : continuing.'
+T_EN[confirm_ny]='[y/N]'
+T_FR[confirm_ny]='[o/N]'
+T_EN[confirm_invalid]='Please answer yes or no (y/n).'
+T_FR[confirm_invalid]='Réponds oui ou non (o/n).'
 T_FR[db_autobackup_fail]='Sauvegarde DB échouée (DB vide ou inaccessible) : on continue.'
 
 # ── t() lookup with FR → EN → key fallback ──────────────────────────────────
@@ -552,7 +556,7 @@ for _arg in "$@"; do
     --repair)               INSTALL_MODE="repair" ;;
     --reinstall)            INSTALL_MODE="reinstall" ;;
     --wipe)                 INSTALL_MODE="wipe" ;;
-    --yes|-y)               AUTO_YES=true ;;
+    --yes|-y)               AUTO_YES=true; _AUTO_YES=true ;;
     --domain=*)             DOMAIN_FLAG="${_arg#*=}" ;;
     --tunnel-token=*)       TUNNEL_TOKEN_FLAG="${_arg#*=}" ;;
     --tunnel=*)             TUNNEL_MODE="${_arg#*=}" ;;
@@ -567,17 +571,28 @@ for _arg in "$@"; do
   esac
 done
 
+_AUTO_YES="${AUTO_YES:-false}"
 _confirm() {
-  local msg="$1"
-  if $AUTO_YES; then
-    printf "  ${CYAN}?${RESET}  "; printf "$(t confirm_auto_yes)\n" "$msg"
-    return 0
-  fi
-  read -rp "$(echo -e "  ${BOLD}${msg}${RESET} $(t confirm_yn) ")" _ans
-  case "${_ans,,}" in
-    n|no|non) return 1 ;;
-    *)        return 0 ;;
-  esac
+  # Usage: _confirm "message" [défaut y|n]  → 0 si oui, 1 si non.
+  # Seuls oui/yes/o/y et non/no/n sont compris ; Entrée prend le défaut ; toute
+  # autre réponse fait REPOSER la question. Avant le 03/10/2026, tout ce qui
+  # n'était pas exactement « n » valait OUI : « non » lançait l'installation.
+  local msg="$1" default="${2:-y}" _c _fd _hint
+  [[ "$default" == "o" ]] && default="y"
+  if $_AUTO_YES; then info "$(t confirm_auto_yes "$msg")"; return 0; fi
+  [[ "$default" == "n" ]] && _hint="$(t confirm_ny)" || _hint="$(t confirm_yn)"
+  exec {_fd}<"${_NODYX_TTY:-/dev/tty}"
+  while true; do
+    _c=""
+    read -r -u "$_fd" -p "$(echo -e "  ${BOLD}${msg} ${_hint}: ${RESET}")" _c || { exec {_fd}<&-; return 1; }
+    _c="${_c//[[:space:]]/}"
+    _c="${_c:-$default}"
+    case "${_c,,}" in
+      y|yes|o|oui) exec {_fd}<&-; return 0 ;;
+      n|no|non)    exec {_fd}<&-; return 1 ;;
+      *)           warn "$(t confirm_invalid)" ;;
+    esac
+  done
 }
 
 prompt() {
@@ -617,8 +632,11 @@ _auto_backup_db() {
   local stamp; stamp=$(date +%Y%m%d_%H%M%S)
   local target="${backup_dir}/nodyx_${mode}_${stamp}.sql.gz"
   printf "  ${CYAN}→${RESET}  $(t db_autobackup)\n" "$mode"
-  if runuser -u postgres -- pg_dump -d "$DB_NAME" 2>/dev/null | gzip > "$target" 2>/dev/null; then
-    if [[ -s "$target" ]]; then
+  # Réussie seulement si l'archive est intacte ET contient un dump COMPLET :
+  # un pg_dump coupé (disque plein) laisse un .gz non vide mais tronqué.
+  if (umask 077; runuser -u postgres -- pg_dump -d "$DB_NAME" 2>/dev/null | gzip > "$target" 2>/dev/null); then
+    if gzip -t "$target" 2>/dev/null && gzip -dc "$target" 2>/dev/null | grep -q -m1 "PostgreSQL database dump complete"; then
+      _AUTO_BACKUP_OK=true
       local size; size=$(du -h "$target" | awk '{print $1}')
       printf "  ${GREEN}✔${RESET}  $(t db_autobackup_done)\n" "$target" "$size"
     else
@@ -857,6 +875,14 @@ _nodyx_upgrade() {
     ok "$(t code_uptodate)"
   fi
 
+  # Le core n'écoute qu'en boucle locale (avant le 04/10/2026 : 0.0.0.0, l'API
+  # contournait Caddy sur toutes les interfaces). Le Caddyfile du tunnel mandate
+  # vers 127.0.0.1:3000 : rien d'autre n'en dépend dans une installation standard.
+  if grep -qx 'HOST=0.0.0.0' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null; then
+    sed -i 's/^HOST=0\.0\.0\.0$/HOST=127.0.0.1/' "${NODYX_DIR}/nodyx-core/.env"
+    ok "nodyx-core : listens on 127.0.0.1 only (was 0.0.0.0)"
+  fi
+
   # Migrations de configuration livrées avec le code (cf install.sh) : secret
   # interne frontend <-> core, IP du visiteur pour le frontend, droits des
   # fichiers de secrets. Le Caddyfile du tunnel est régénéré plus bas.
@@ -924,8 +950,7 @@ fi
 
 _arch=$(uname -m)
 case "$_arch" in
-  x86_64|amd64) CF_ARCH="amd64" ;;
-  aarch64|arm64) CF_ARCH="arm64" ;;
+  x86_64|amd64|aarch64|arm64) ;;   # architectures prises en charge
   *) die "$(printf "$(t err_arch)" "$_arch")" ;;
 esac
 
@@ -1042,6 +1067,8 @@ else
   COMMUNITY_SLUG_DEFAULT=$(slugify "$COMMUNITY_NAME")
   prompt COMMUNITY_SLUG "$(t cfg_slug)" "$COMMUNITY_SLUG_DEFAULT"
 fi
+COMMUNITY_SLUG="$(slugify "$COMMUNITY_SLUG")"
+[[ ${#COMMUNITY_SLUG} -ge 3 ]] || die "The slug must have at least 3 characters (letters, digits, dashes)."
 
 COMMUNITY_LANG_DEFAULT="$NODYX_LANG"
 prompt COMMUNITY_LANG "$(t cfg_lang)" "$COMMUNITY_LANG_DEFAULT"
@@ -1051,8 +1078,12 @@ echo ""
 echo -e "  ${BOLD}$(t cfg_domain_header)${RESET}"
 echo -e "  ${CYAN}$(t cfg_domain_help)${RESET}"
 echo ""
+# Nom de domaine : lettres, chiffres, tirets et points seulement. Il finit dans
+# ecosystem.config.js (ORIGIN) et dans le .env : rien d'autre n'y a sa place.
+_valid_domain() { [[ "$1" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$ ]]; }
 if [[ -n "$DOMAIN_FLAG" ]]; then
-  DOMAIN="$DOMAIN_FLAG"
+  DOMAIN="${DOMAIN_FLAG#https://}"; DOMAIN="${DOMAIN#http://}"; DOMAIN="${DOMAIN%/}"
+  _valid_domain "$DOMAIN" || die "$(printf "$(t cfg_domain_invalid)" "$DOMAIN")"
 else
   _domain_ok=false
   while ! $_domain_ok; do
@@ -1061,7 +1092,7 @@ else
     DOMAIN="${DOMAIN%/}";        DOMAIN="${DOMAIN// /}"
     if [[ -z "$DOMAIN" ]]; then
       :
-    elif [[ "$DOMAIN" != *.* ]]; then
+    elif ! _valid_domain "$DOMAIN"; then
       printf "  ${RED}✘  $(t cfg_domain_invalid)${RESET}\n" "$DOMAIN"
     else
       _domain_ok=true
@@ -1130,10 +1161,20 @@ if [[ -n "$ADMIN_EMAIL_FLAG" ]]; then
 else
   prompt ADMIN_EMAIL "$(t cfg_admin_email)"
 fi
+# 8 caractères minimum et double saisie, comme install.sh (avant le 04/10/2026 :
+# un seul caractère suffisait, sans confirmation).
 if [[ -n "$ADMIN_PASS_FLAG" ]]; then
   ADMIN_PASSWORD="$ADMIN_PASS_FLAG"
+  [[ ${#ADMIN_PASSWORD} -ge 8 ]] || die "--admin-password: at least 8 characters."
 else
-  prompt_secret ADMIN_PASSWORD "$(t cfg_admin_pass)"
+  while true; do
+    prompt_secret ADMIN_PASSWORD "$(t cfg_admin_pass)"
+    if [[ ${#ADMIN_PASSWORD} -lt 8 ]]; then warn "At least 8 characters."; continue; fi
+    prompt_secret _ADMIN_PASSWORD2 "$(t cfg_admin_pass) (confirm)"
+    [[ "$ADMIN_PASSWORD" == "$_ADMIN_PASSWORD2" ]] && break
+    warn "Passwords do not match."
+  done
+  unset _ADMIN_PASSWORD2
 fi
 
 # Recap
@@ -1177,11 +1218,14 @@ apt-get install -y -q \
   >/dev/null 2>&1
 ok "System packages installed"
 
-# Node.js 20 LTS
-if ! command -v node &>/dev/null || [[ "$(node -e 'process.stdout.write(process.version.split(".")[0].slice(1))')" -lt 20 ]]; then
-  info "Installing Node.js 20 LTS..."
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
+# Node.js 22 LTS : mediasoup-client et awaitqueue (vocal) exigent >= 22 (#642).
+# Avant le 04/10/2026 cet installeur posait Node 20.
+if ! command -v node &>/dev/null || [[ "$(node -e 'process.stdout.write(process.version.split(".")[0].slice(1))')" -lt 22 ]]; then
+  info "Installing Node.js 22 LTS..."
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null 2>&1
   apt-get install -y -q nodejs >/dev/null 2>&1
+  [[ "$(node -e 'process.stdout.write(process.version.split(".")[0].slice(1))' 2>/dev/null || echo 0)" -ge 22 ]] \
+    || die "Node.js 22 could not be installed (found: $(node -v 2>/dev/null || echo none)). Nodyx needs Node >= 22."
   ok "Node.js $(node -v) installed"
 else
   ok "Node.js $(node -v) already present"
@@ -1244,6 +1288,14 @@ step "$(t step_pg)"
 _PG_VER=$(ls /usr/lib/postgresql/ 2>/dev/null | sort -Vr | head -1)
 [[ -z "$_PG_VER" ]] && die "PostgreSQL not found after install."
 
+# _pg_datadir : copie identique d'install.sh (vérifiée par le banc).
+_pg_datadir() {
+  local d
+  d="$(pg_conftool -s "$1" main show data_directory 2>/dev/null || true)"
+  printf '%s' "${d:-/var/lib/postgresql/$1/main}"
+}
+
+
 systemctl enable  "postgresql@${_PG_VER}-main" --quiet 2>/dev/null || true
 systemctl start   "postgresql@${_PG_VER}-main" 2>/dev/null || true
 
@@ -1254,7 +1306,12 @@ for _pg_i in {1..15}; do
 done
 
 if ! $_PG_READY; then
-  if [[ ! -f "/var/lib/postgresql/${_PG_VER}/main/PG_VERSION" ]]; then
+  # Recréer le cluster SEULEMENT si son dossier de données CONFIGURÉ est absent
+  # ou vide : pg_dropcluster le supprime (cf install.sh, 03/10/2026).
+  _PG_DATADIR="$(_pg_datadir "${_PG_VER}")"
+  if [[ -d "$_PG_DATADIR" && -n "$(ls -A "$_PG_DATADIR" 2>/dev/null)" ]]; then
+    info "An existing PostgreSQL data directory was found (${_PG_DATADIR}): kept, never recreated."
+  else
     pg_dropcluster   "${_PG_VER}" main 2>/dev/null || true
     pg_createcluster "${_PG_VER}" main 2>/dev/null || true
   fi
@@ -1284,6 +1341,12 @@ if [[ "$INSTALL_MODE" == "wipe" || "$INSTALL_MODE" == "reinstall" ]]; then
 fi
 
 if [[ "$INSTALL_MODE" == "wipe" ]]; then
+  # Jamais d'effacement sans sauvegarde relue (avant le 04/10/2026 : simple
+  # avertissement, puis la base était supprimée quand même).
+  if runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" 2>/dev/null | grep -q 1 \
+     && [[ "${_AUTO_BACKUP_OK:-false}" != "true" ]]; then
+    die "The database backup failed or could not be verified: wipe CANCELLED, nothing was deleted. Free some disk space in /var/backups, then try again."
+  fi
   runuser -u postgres -- psql -c \
     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" \
     >/dev/null 2>/dev/null || true
@@ -1444,7 +1507,9 @@ NODYX_COMMUNITY_LANGUAGE=$(_env_quote "${COMMUNITY_LANG}")
 NODYX_COMMUNITY_COUNTRY=
 
 PORT=3000
-HOST=0.0.0.0
+# Boucle locale seulement : Caddy (et lui seul) parle au core. Avant le
+# 04/10/2026, 0.0.0.0 publiait l'API sur toutes les interfaces, Caddy contourné.
+HOST=127.0.0.1
 NODE_ENV=production
 
 JWT_SECRET=${JWT_SECRET}
@@ -1651,26 +1716,19 @@ if [[ "$TUNNEL_MODE" == "cf" ]]; then
   if command -v cloudflared &>/dev/null; then
     ok "cloudflared already installed: $(cloudflared --version 2>&1 | head -1)"
   else
-    if [[ "$CF_ARCH" == "amd64" ]]; then
-      info "Installing cloudflared via apt (Cloudflare repo)..."
-      mkdir -p --mode=0755 /usr/share/keyrings
-      curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-        -o /usr/share/keyrings/cloudflare-main.gpg 2>/dev/null
-      _DIST=$(. /etc/os-release && echo "$VERSION_CODENAME")
-      echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared ${_DIST} main" \
-        > /etc/apt/sources.list.d/cloudflared.list
-      apt-get update -q
-      apt-get install -y -q cloudflared >/dev/null 2>&1 \
-        || die "cloudflared apt install failed. Check /etc/apt/sources.list.d/cloudflared.list"
-    else
-      info "Installing cloudflared via .deb (arm64)..."
-      _DEB=$(mktemp /tmp/cloudflared_XXXXXX.deb)
-      curl -fsSL --max-time 120 \
-        "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb" \
-        -o "$_DEB" || die "cloudflared download failed."
-      dpkg -i "$_DEB" >/dev/null 2>&1 || apt-get install -f -y -q >/dev/null 2>&1
-      rm -f "$_DEB"
-    fi
+    # Dépôt APT signé de Cloudflare, pour amd64 ET arm64 (avant le 04/10/2026,
+    # arm64 installait en root un .deb « latest » de GitHub, sans vérification).
+    info "Installing cloudflared via apt (signed Cloudflare repository)..."
+    mkdir -p --mode=0755 /usr/share/keyrings
+    curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
+      -o /usr/share/keyrings/cloudflare-main.gpg 2>/dev/null \
+      || die "Could not download the Cloudflare repository key."
+    _DIST=$(. /etc/os-release && echo "$VERSION_CODENAME")
+    echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared ${_DIST} main" \
+      > /etc/apt/sources.list.d/cloudflared.list
+    apt-get update -q
+    apt-get install -y -q cloudflared >/dev/null 2>&1 \
+      || die "cloudflared apt install failed. Check /etc/apt/sources.list.d/cloudflared.list"
     command -v cloudflared &>/dev/null || die "cloudflared install completed but binary not on PATH."
     ok "cloudflared $(cloudflared --version 2>&1 | head -1) installed"
   fi
@@ -1704,6 +1762,10 @@ if [[ "$TUNNEL_MODE" == "cf" ]]; then
     fi
     (umask 077; echo -n "$_TOKEN_HASH" > "$_TOKEN_HASH_FILE")
     chmod 600 "$_TOKEN_HASH_FILE"
+    # cloudflared recopie le jeton du tunnel dans son unité systemd, lisible par
+    # tous par défaut : n'importe quel utilisateur local pouvait le lire et
+    # détourner le tunnel.
+    [[ -f /etc/systemd/system/cloudflared.service ]] && chmod 600 /etc/systemd/system/cloudflared.service
 
     systemctl enable cloudflared --quiet 2>/dev/null || true
     systemctl restart cloudflared 2>/dev/null || true
