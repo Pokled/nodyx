@@ -121,6 +121,10 @@ T_EN[services_restart]="Restarting services..."
 T_FR[services_restart]="Redémarrage des services..."
 T_EN[relay_recreate]="Relay client missing or inactive — reconfiguring..."
 T_FR[relay_recreate]="Relay client absent ou inactif — reconfiguration..."
+T_EN[bin_checksum_bad]="%s: the downloaded file does NOT match its pinned SHA-256 checksum. It was NOT installed. Please report it: https://github.com/Pokled/nodyx/issues"
+T_FR[bin_checksum_bad]="%s : le fichier téléchargé NE correspond PAS à son empreinte SHA-256 épinglée. Il n'a PAS été installé. Signale-le : https://github.com/Pokled/nodyx/issues"
+T_EN[bin_checksum_missing]="%s: no pinned SHA-256 checksum for this version: refusing to install an unverified binary."
+T_FR[bin_checksum_missing]="%s : aucune empreinte SHA-256 épinglée pour cette version : refus d'installer un binaire non vérifié."
 T_EN[ufw_no_ssh_port]="Could not find the port SSH listens on: the firewall was left UNTOUCHED (enabling it could lock you out of this server). Configure it yourself: sudo ufw allow <your-ssh-port>/tcp && sudo ufw enable"
 T_FR[ufw_no_ssh_port]="Port SSH introuvable : pare-feu laissé TEL QUEL (l'activer pourrait t'enfermer dehors). Configure-le toi-même : sudo ufw allow <ton-port-ssh>/tcp && sudo ufw enable"
 T_EN[ufw_kept_rules]="Firewall already active: your rules are kept, Nodyx only adds its own (copy: %s)"
@@ -1121,18 +1125,11 @@ _nodyx_upgrade() {
         aarch64) _RELAY_ARCH="arm64" ;;
       esac
       if [[ -n "$_RELAY_ARCH" ]]; then
-        local _RELAY_URL="https://github.com/Pokled/nodyx/releases/download/${NODYX_RELAY_VERSION}/nodyx-relay-linux-${_RELAY_ARCH}"
-        local _RELAY_TMP; _RELAY_TMP=$(mktemp /tmp/nodyx-relay.XXXXXX)
-        if curl -fsSL --max-time 60 "$_RELAY_URL" -o "$_RELAY_TMP" \
-             && file "$_RELAY_TMP" 2>/dev/null | grep -q ELF; then
-          chmod +x "$_RELAY_TMP"
-          mv -f "$_RELAY_TMP" /usr/local/bin/nodyx-relay
-          chmod +x /usr/local/bin/nodyx-relay
+        if _nodyx_fetch_bin "$NODYX_RELAY_VERSION" "nodyx-relay-linux-${_RELAY_ARCH}" /usr/local/bin/nodyx-relay; then
           systemctl restart nodyx-relay-client 2>/dev/null || true
           ok "nodyx-relay upgraded to $(/usr/local/bin/nodyx-relay --version 2>&1 || echo '?')"
         else
-          rm -f "$_RELAY_TMP"
-          warn "Could not download nodyx-relay ${NODYX_RELAY_VERSION} — kept current version"
+          warn "Could not install a verified nodyx-relay ${NODYX_RELAY_VERSION} — kept current version"
         fi
       fi
     fi
@@ -1258,6 +1255,42 @@ NODYX_VERSION="$(_resolve_version)"
 INSTALLER_VERSION="$NODYX_VERSION"
 # Relay client binary — single source of truth, used by install AND nodyx-update
 NODYX_RELAY_VERSION="v0.1.4-p2p"
+
+# ── Empreintes SHA-256 des binaires téléchargés et exécutés en root ───────────
+# Clé : « <version>/<fichier publié> ». Vérifiées le 04/10/2026 : empreinte
+# calculée sur le fichier téléchargé == empreinte publiée par GitHub ; fichiers
+# déposés par Pokled ou par la CI du dépôt, jamais modifiés depuis.
+# Changer une version = ajouter son empreinte ICI, dans le même commit : sans
+# elle, _nodyx_fetch_bin refuse d'installer (scripts/tests/install-binaries.test.sh).
+declare -A NODYX_BIN_SHA256=(
+  [v0.1.2-p2p/nexus-turn-linux-amd64]=37bad0141b28aa2bbbc70fffdb6dbd8541972c26c9a3e64db9a3b978b3717adb
+  [v0.1.2-p2p/nexus-turn-linux-arm64]=c1d6f755cd45d3e207333adc2b7f82e55b0b999fe192eab30b94acdf541a9320
+  [sfu-v0.1.0/nodyx-sfud-linux-amd64]=3f0a5c3704a56e6a87ff9e8d1c6499f58aaf3a33f6aef11c87bd12b3ac9aa564
+  [sfu-v0.1.0/nodyx-sfud-linux-arm64]=15df9007a2f159ff17c1a3c851c72e29747af2677a91bec8400518a47d772ca6
+  [v0.1.4-p2p/nodyx-relay-linux-amd64]=93432a3da431971a2f4dd559c324402fbd4d0f89d07a67667ba6fbbd426ef621
+  [v0.1.4-p2p/nodyx-relay-linux-arm64]=e34308368253084948f047d10a36c7d681a7dfb3efe1d25e585b371387c435ef
+)
+
+# _nodyx_fetch_bin <version> <fichier publié> <destination>
+# Télécharge depuis les publications GitHub de Nodyx, vérifie l'empreinte
+# épinglée, et n'installe QUE si elle correspond (avant le 04/10/2026 : seul
+# « c'est un ELF » était vérifié). Codes : 0 installé, 1 téléchargement
+# impossible, 2 aucune empreinte épinglée, 3 empreinte différente.
+_nodyx_fetch_bin() {
+  local version="$1" asset="$2" dest="$3" want got tmp
+  want="${NODYX_BIN_SHA256[$version/$asset]:-}"
+  if [[ -z "$want" ]]; then warn "$(printf "$(t bin_checksum_missing)" "$version/$asset")"; return 2; fi
+  tmp="$(mktemp /tmp/nodyx-bin.XXXXXX)"
+  if ! curl -fsSL --max-time 180 "https://github.com/Pokled/nodyx/releases/download/${version}/${asset}" -o "$tmp"; then
+    rm -f "$tmp"; return 1
+  fi
+  got="$(sha256sum "$tmp" | cut -d' ' -f1)"
+  if [[ "$got" != "$want" ]]; then
+    rm -f "$tmp"; warn "$(printf "$(t bin_checksum_bad)" "$version/$asset")"; return 3
+  fi
+  chmod 755 "$tmp"
+  mv -f "$tmp" "$dest"   # mv atomique : fonctionne même si l'ancien binaire tourne
+}
 
 # ── CLI flags ─────────────────────────────────────────────────────────────────
 _FORCE_MODE=""        # upgrade | repair | reinstall | wipe (bypass detection menu)
@@ -2416,17 +2449,12 @@ if ! $RELAY_MODE && ! $SKIP_TURN; then
   # rename. The downloaded binary is identical; we just save it as nodyx-turn.
   _TURN_URL="https://github.com/Pokled/nodyx/releases/download/${_TURN_VERSION}/nexus-turn-linux-${_TURN_ARCH}"
   info "$(printf "$(t turn_downloading)" "${_TURN_VERSION}" "${_TURN_ARCH}")"
-  _TURN_TMP="$(mktemp /tmp/nodyx-turn.XXXXXX)"
-  if ! curl -fsSL --max-time 60 "$_TURN_URL" -o "$_TURN_TMP"; then
-    rm -f "$_TURN_TMP"
-    die "$(printf "$(t turn_dl_fail)" "${_TURN_URL}" "${_TURN_VERSION}")"
-  fi
-  if ! file "$_TURN_TMP" 2>/dev/null | grep -q ELF; then
-    rm -f "$_TURN_TMP"
-    die "$(printf "$(t turn_not_binary)" "${_TURN_URL}")"
-  fi
-  chmod +x "$_TURN_TMP"
-  mv -f "$_TURN_TMP" /usr/local/bin/nodyx-turn
+  _nodyx_fetch_bin "$_TURN_VERSION" "nexus-turn-linux-${_TURN_ARCH}" /usr/local/bin/nodyx-turn && _rc=0 || _rc=$?
+  case $_rc in
+    0) ;;
+    1) die "$(printf "$(t turn_dl_fail)" "${_TURN_URL}" "${_TURN_VERSION}")" ;;
+    *) die "$(t bin_checksum_bad "nodyx-turn")" ;;
+  esac
 
   # Fichier de configuration (secret partagé avec nodyx-core)
   cat > /etc/nodyx-turn.env <<TURNENV
@@ -2503,17 +2531,12 @@ elif ! $SKIP_SFU; then
     _SFU_VERSION="sfu-v0.1.0"
     _SFU_URL="https://github.com/Pokled/nodyx/releases/download/${_SFU_VERSION}/nodyx-sfud-linux-${_SFU_ARCH}"
     info "$(printf "$(t sfu_downloading)" "${_SFU_VERSION}" "${_SFU_ARCH}")"
-    _SFU_TMP="$(mktemp /tmp/nodyx-sfud.XXXXXX)"
-
-    if ! curl -fsSL --max-time 180 "$_SFU_URL" -o "$_SFU_TMP"; then
-      rm -f "$_SFU_TMP"
+    _nodyx_fetch_bin "$_SFU_VERSION" "nodyx-sfud-linux-${_SFU_ARCH}" /usr/local/bin/nodyx-sfud && _rc=0 || _rc=$?
+    if [[ $_rc -eq 1 ]]; then
       _sfu_skip "$(printf "$(t sfu_reason_dl)" "${_SFU_URL}")"
-    elif ! file "$_SFU_TMP" 2>/dev/null | grep -q ELF; then
-      rm -f "$_SFU_TMP"
+    elif [[ $_rc -ne 0 ]]; then
       _sfu_skip "$(t sfu_reason_notbin)"
     else
-      chmod +x "$_SFU_TMP"
-      mv -f "$_SFU_TMP" /usr/local/bin/nodyx-sfud
 
       SFU_TOKEN="$(openssl rand -hex 32)"
 
@@ -2690,20 +2713,12 @@ if $RELAY_MODE; then
   _RELAY_URL="https://github.com/Pokled/nodyx/releases/download/${_RELAY_VERSION}/nodyx-relay-linux-${_RELAY_ARCH}"
 
   info "$(printf "$(t relay_downloading)" "${_RELAY_VERSION}" "${_RELAY_ARCH}")"
-  _RELAY_TMP="$(mktemp /tmp/nodyx-relay.XXXXXX)"
-  if ! curl -fsSL --max-time 60 "$_RELAY_URL" -o "$_RELAY_TMP"; then
-    rm -f "$_RELAY_TMP"
-    die "$(printf "$(t relay_dl_fail)" "${_RELAY_URL}" "${_RELAY_VERSION}")"
-  fi
-  # Verify it's an ELF binary (not an HTML error page)
-  if ! file "$_RELAY_TMP" 2>/dev/null | grep -q ELF; then
-    rm -f "$_RELAY_TMP"
-    die "$(printf "$(t relay_not_binary)" "${_RELAY_URL}")"
-  fi
-  # Atomic mv: works even if the old binary is running
-  chmod +x "$_RELAY_TMP"
-  mv -f "$_RELAY_TMP" /usr/local/bin/nodyx-relay
-  chmod +x /usr/local/bin/nodyx-relay
+  _nodyx_fetch_bin "$_RELAY_VERSION" "nodyx-relay-linux-${_RELAY_ARCH}" /usr/local/bin/nodyx-relay && _rc=0 || _rc=$?
+  case $_rc in
+    0) ;;
+    1) die "$(printf "$(t relay_dl_fail)" "${_RELAY_URL}" "${_RELAY_VERSION}")" ;;
+    *) die "$(t bin_checksum_bad "nodyx-relay")" ;;
+  esac
   ok "$(printf "$(t relay_installed)" "$(/usr/local/bin/nodyx-relay --version 2>&1 || echo '?')")"
 fi
 

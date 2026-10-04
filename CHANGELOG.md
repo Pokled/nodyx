@@ -106,6 +106,15 @@ Lecture complète d'`install_tunnel.sh`, défauts corrigés :
 - sur ARM64, cloudflared était installé depuis un paquet non vérifié (désormais le dépôt signé de
   Cloudflare, comme sur amd64), et le jeton du tunnel était lisible par tous dans son service.
 
+### Sécurité : les programmes téléchargés par l'installeur sont vérifiés
+
+`install.sh` télécharge trois programmes depuis les publications GitHub de Nodyx (`nodyx-turn`,
+`nodyx-sfud`, `nodyx-relay`) et les exécute en root. Il vérifiait seulement qu'il s'agissait d'un
+exécutable : une publication remplacée aurait été installée sans que rien ne le voie. Chaque fichier
+a désormais son empreinte SHA-256 épinglée dans l'installeur, vérifiée avant toute installation ; un
+fichier qui ne correspond pas n'est jamais installé. À chaque intégration continue, ces empreintes
+sont comparées à celles que GitHub publie.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une
