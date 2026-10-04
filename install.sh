@@ -950,7 +950,11 @@ T_EN[hc_failures]='✘  %s/%s OK — %s error(s) / %s warning(s)'
 T_FR[hc_failures]='✘  %s/%s OK — %s erreur(s) / %s avertissement(s)'
 
 # §26 — Final summary banner
-T_EN[banner_online]='║    ✦   N O D Y X   ·   I N S T A N C E   O N L I N E   ✦  ║'
+T_EN[banner_online]='║    ✦   N O D Y X   ·   I N S T A N C E   O N L I N E   ✦     ║'
+T_EN[banner_errors]='║     ✘   I N S T A L L E D ,   W I T H   E R R O R S   ✘      ║'
+T_FR[banner_errors]='║    ✘   I N S T A L L É E ,   A V E C   E R R E U R S   ✘     ║'
+T_EN[install_errors_exit]='Installation finished with %s error(s) in the health check (see above): exit code 1. Diagnosis: sudo nodyx-doctor'
+T_FR[install_errors_exit]="Installation terminée avec %s erreur(s) au bilan de santé (voir ci-dessus) : code de sortie 1. Diagnostic : sudo nodyx-doctor"
 T_FR[banner_online]='║   ✦   N O D Y X   ·   I N S T A N C E   E N   L I G N E   ✦  ║'
 T_EN[summ_instance]='Instance'
 T_FR[summ_instance]='Instance'
@@ -1374,7 +1378,7 @@ _nodyx_rollback() {
   else
     echo -e "${YELLOW}$(t rollback_manual_hint)${RESET}"
     echo -e "${YELLOW}    • PM2  : ${BOLD}runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list${RESET}"
-    echo -e "${YELLOW}    • Logs : ${BOLD}journalctl -u nodyx-core -n 50${RESET}"
+    echo -e "${YELLOW}    • Logs : ${BOLD}runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core --lines 50${RESET}"
     echo -e "${YELLOW}    • DB   : ${BOLD}sudo -u postgres psql -c '\\l'${RESET}"
     echo -e "${YELLOW}$(t rollback_relaunch)${RESET}"
   fi
@@ -3757,6 +3761,8 @@ _hc_sect "$(t hc_services)"
 _HC_SVCS="postgresql redis-server caddy"
 if ! $RELAY_MODE && ! $SKIP_TURN; then _HC_SVCS="$_HC_SVCS nodyx-turn"; fi
 if $RELAY_MODE; then _HC_SVCS="$_HC_SVCS nodyx-relay-client"; fi
+# Le vocal : contrôlé dès qu'il a été installé (avant le 04/10/2026, jamais).
+if $_SFU_INSTALLED; then _HC_SVCS="$_HC_SVCS nodyx-sfud"; fi
 for _svc in $_HC_SVCS; do
   if systemctl is-active --quiet "$_svc" 2>/dev/null; then
     _hc_pass "$_svc"
@@ -3852,10 +3858,15 @@ echo ""
 #  SUMMARY
 # ═══════════════════════════════════════════════════════════════════════════════
 echo ""
-echo -e "${GREEN}${BOLD}"
+# Le verdict du bilan décide de la bannière ET du code de sortie (04/10/2026) :
+# avant, « INSTANCE ONLINE » en vert et code 0 s'affichaient même avec des
+# erreurs, et une automatisation (Ansible, CI) croyait à un succès.
+_BANNER="$GREEN"; _BANNER_TXT="$(t banner_online)"
+if [[ $HC_FAIL -gt 0 ]]; then _BANNER="$RED"; _BANNER_TXT="$(t banner_errors)"; fi
+echo -e "${_BANNER}${BOLD}"
 echo "  ╔══════════════════════════════════════════════════════════════╗"
 echo "  ║                                                              ║"
-echo "  $(t banner_online)"
+echo "  ${_BANNER_TXT}"
 echo "  ║                                                              ║"
 echo "  ╠══════════════════════════════════════════════════════════════╣"
 echo -e "${RESET}"
@@ -3873,7 +3884,7 @@ fi
 echo -e "     ${BOLD}$(t summ_version)   ${RESET}${NODYX_VERSION}"
 echo -e "     ${BOLD}$(t summ_dir)   ${RESET}${NODYX_DIR}"
 echo ""
-echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
+echo -e "${_BANNER}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
 echo -e "     ${BOLD}${CYAN}$(t summ_management)${RESET}"
 echo -e "       runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
@@ -3900,7 +3911,7 @@ if $RELAY_MODE; then
   echo -e "       journalctl -u nodyx-relay-client -f"
 fi
 echo ""
-echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
+echo -e "${_BANNER}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
 echo -e "     ${BOLD}$(t summ_creds_arrow)  ${CYAN}${CREDS_FILE}${RESET}"
 echo -e "     ${CYAN}$(t summ_creds_warn)${RESET}"
@@ -3911,8 +3922,17 @@ else
   echo -e "     ${YELLOW}$(printf "$(t summ_dns_check)" "${BOLD}" "${DOMAIN}" "${RESET}" "${YELLOW}" "${PUBLIC_IP}")${RESET}"
 fi
 echo ""
-echo -e "${GREEN}${BOLD}  ╚══════════════════════════════════════════════════════════════╝${RESET}"
+echo -e "${_BANNER}${BOLD}  ╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo ""
 
 # Marquer l'installation comme complète — désactive le rollback trap
 _INSTALL_COMPLETE=true
+
+# Installée mais pas en bonne santé : code 1, pour qu'aucune automatisation ne
+# prenne ça pour un succès. Le retour arrière reste désactivé (ligne ci-dessus) :
+# l'installation est là, elle se diagnostique, elle ne se défait pas.
+if [[ $HC_FAIL -gt 0 ]]; then
+  echo -e "${RED}${BOLD}  $(t install_errors_exit "$HC_FAIL")${RESET}"
+  echo ""
+  exit 1
+fi

@@ -170,6 +170,16 @@ toujours demandés, sans option pour y répondre. Sans terminal du tout (cron, A
 `sudo bash /opt/nodyx/install_tunnel.sh --upgrade` : le jeton est sorti de la ligne de commande
 automatiquement.
 
+### Installeur : « en ligne » seulement si c'est vrai
+
+Le bilan de santé de fin d'installation comptait ses erreurs, puis les ignorait : bannière verte
+« INSTANCE EN LIGNE » et code de sortie 0 même avec un service à terre, si bien qu'une
+automatisation (Ansible, CI) croyait à un succès. Désormais, une erreur au bilan affiche une
+bannière rouge « installée, avec erreurs », garde le récapitulatif (adresse, identifiants) et
+sort en code 1 en renvoyant vers `nodyx-doctor`. Les simples avertissements (DNS qui se propage)
+ne changent rien. Le serveur vocal `nodyx-sfud` est enfin contrôlé quand il est installé. Dans les
+deux installeurs.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

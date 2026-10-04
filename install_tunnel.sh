@@ -367,6 +367,10 @@ T_FR[summary_dashboard_step3]='3. Subdomain (vide), Domain %s, Service HTTP, URL
 # Mode-aware summary titles
 T_EN[summary_title_cf]='✔  Nodyx installed via Cloudflare Tunnel!'
 T_FR[summary_title_cf]='✔  Nodyx installé via Cloudflare Tunnel !'
+T_EN[summary_title_errors]='✘  Nodyx installed, WITH ERRORS (above)  '
+T_FR[summary_title_errors]='✘  Nodyx installé, AVEC DES ERREURS      '
+T_EN[install_errors_exit]='Installation finished with %s error(s) in the health check (see above): exit code 1. Diagnosis: sudo nodyx-doctor'
+T_FR[install_errors_exit]="Installation terminée avec %s erreur(s) au bilan de santé (voir ci-dessus) : code de sortie 1. Diagnostic : sudo nodyx-doctor"
 T_EN[summary_title_pangolin]='✔  Nodyx ready for Pangolin!'
 T_FR[summary_title_pangolin]='✔  Nodyx prêt pour Pangolin !'
 T_EN[summary_title_none]='✔  Nodyx ready (custom tunnel mode)!'
@@ -2412,9 +2416,13 @@ case "$TUNNEL_MODE" in
   pangolin) _SUMMARY_TITLE=$(t summary_title_pangolin) ;;
   none)     _SUMMARY_TITLE=$(t summary_title_none) ;;
 esac
-echo -e "${GREEN}${BOLD}╔═════════════════════════════════════════════╗${RESET}"
-echo -e "${GREEN}${BOLD}║  ${_SUMMARY_TITLE}  ║${RESET}"
-echo -e "${GREEN}${BOLD}╚═════════════════════════════════════════════╝${RESET}"
+# Le verdict du bilan décide du titre ET du code de sortie (04/10/2026) : avant,
+# « installé ! » en vert et code 0 même avec des erreurs au bilan.
+_BANNER="$GREEN"
+if [[ $HC_FAIL -gt 0 ]]; then _BANNER="$RED"; _SUMMARY_TITLE=$(t summary_title_errors); fi
+echo -e "${_BANNER}${BOLD}╔═════════════════════════════════════════════╗${RESET}"
+echo -e "${_BANNER}${BOLD}║  ${_SUMMARY_TITLE}  ║${RESET}"
+echo -e "${_BANNER}${BOLD}╚═════════════════════════════════════════════╝${RESET}"
 echo ""
 echo -e "  ${BOLD}$(t summary_url):${RESET}    https://${DOMAIN}"
 echo -e "  ${BOLD}$(t summary_admin):${RESET}  ${ADMIN_USERNAME} / ${ADMIN_EMAIL}"
@@ -2503,3 +2511,11 @@ case "$TUNNEL_MODE" in
     ;;
 esac
 echo ""
+
+# Installée mais pas en bonne santé : code 1, pour qu'aucune automatisation ne
+# prenne ça pour un succès.
+if [[ $HC_FAIL -gt 0 ]]; then
+  echo -e "${RED}${BOLD}  $(t install_errors_exit "$HC_FAIL")${RESET}"
+  echo ""
+  exit 1
+fi
