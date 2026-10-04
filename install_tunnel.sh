@@ -648,11 +648,23 @@ _render_caddyfile() {
   fi
   [[ -z "$_mode" ]] && _mode="cf"
 
-  local _CADDY_CLIENT_IP_HEADERS
+  # Qui a le droit de nous dire l'IP du visiteur, et dans quel en-tête.
+  # Mesuré le 04/10/2026 avec Caddy 2.11 : sans trusted_proxies_strict, Caddy lit
+  # X-Forwarded-For par la GAUCHE, la partie écrite par le visiteur
+  # (« X-Forwarded-For: 6.6.6.6 » était retenu) ; et un CF-Connecting-IP forgé
+  # arrivait intact au core, qui le lit en premier. En Pangolin ou derrière un
+  # autre proxy, chaque visiteur choisissait donc son IP.
+  #   cf       : cloudflared tourne sur la machine : seule la boucle locale ;
+  #   pangolin : newt, sur la machine ou dans le réseau Docker (172.16.0.0/12) ;
+  #   none     : un proxy à toi, quelque part sur ton réseau privé.
+  local _CADDY_CLIENT_IP_HEADERS _CADDY_TRUSTED
   case "$_mode" in
-    cf)       _CADDY_CLIENT_IP_HEADERS='client_ip_headers CF-Connecting-IP X-Forwarded-For' ;;
-    pangolin) _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
-    *)        _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
+    cf)       _CADDY_TRUSTED='127.0.0.1/8 ::1/128'
+              _CADDY_CLIENT_IP_HEADERS='client_ip_headers CF-Connecting-IP' ;;
+    pangolin) _CADDY_TRUSTED='127.0.0.1/8 ::1/128 172.16.0.0/12'
+              _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
+    *)        _CADDY_TRUSTED='private_ranges'
+              _CADDY_CLIENT_IP_HEADERS='client_ip_headers X-Forwarded-For' ;;
   esac
 
   local _HOST_PRIMARY_IP
@@ -677,15 +689,18 @@ _render_caddyfile() {
   # this, a syntax error after editing the heredoc would leave a broken
   # Caddyfile on disk - and on next reload Caddy would refuse to start.
   local _new_caddyfile
-  _new_caddyfile=$(mktemp /etc/caddy/.Caddyfile.new.XXXXXX) || return 1
+  local _caddy_dir="${NODYX_CADDY_DIR:-/etc/caddy}"   # paramétrable pour les tests
+  _new_caddyfile=$(mktemp "${_caddy_dir}/.Caddyfile.new.XXXXXX") || return 1
 
   cat > "$_new_caddyfile" <<CADDY
 {
     servers {
-        # Trust loopback + RFC1918 sources so the tunnel client (cloudflared,
-        # newt, frpc, ...) can forward the real visitor IP. Without this every
-        # visitor would look like 127.0.0.1 and rate-limits/IP-bans break.
-        trusted_proxies static private_ranges
+        # Le client du tunnel (cloudflared, newt, ...) transmet l'IP du
+        # visiteur ; on ne le croit que venant de LUI (cf. _CADDY_TRUSTED), et
+        # on lit l'en-tête par la droite (strict) : la partie gauche est écrite
+        # par le visiteur.
+        trusted_proxies static ${_CADDY_TRUSTED}
+        trusted_proxies_strict
         ${_CADDY_CLIENT_IP_HEADERS}
 
         # Cap header size at 16KB. Default is 1MB, which leaves the door open
@@ -712,6 +727,7 @@ _render_caddyfile() {
     reverse_proxy 127.0.0.1:3000 {
         header_up X-Real-IP {client_ip}
         header_up X-Forwarded-For {client_ip}
+        header_up -CF-Connecting-IP
         # dial_timeout: loopback should connect in <100ms; 5s = generous margin.
         # response_header_timeout: 30s covers Socket.IO long-poll (pingTimeout
         # defaults to 25s) without blocking forever on a hung backend.
@@ -727,6 +743,7 @@ _render_caddyfile() {
     reverse_proxy 127.0.0.1:4173 {
         header_up X-Real-IP {client_ip}
         header_up X-Forwarded-For {client_ip}
+        header_up -CF-Connecting-IP
         transport http {
             dial_timeout 5s
             response_header_timeout 30s
@@ -780,7 +797,7 @@ CADDY
   # Atomic replacement (mv on the same filesystem is atomic). chmod first so
   # the file inherits the same perms it would have via cat (root:root, 0644).
   chmod 0644 "$_new_caddyfile" 2>/dev/null || true
-  mv -f "$_new_caddyfile" /etc/caddy/Caddyfile
+  mv -f "$_new_caddyfile" "${_caddy_dir}/Caddyfile"
   return 0
 }
 
@@ -838,6 +855,15 @@ _nodyx_upgrade() {
     info "$(t code_fetch)"
     git -C "$NODYX_DIR" pull --ff-only || die "$(t git_pull_fail)"
     ok "$(t code_uptodate)"
+  fi
+
+  # Migrations de configuration livrées avec le code (cf install.sh) : secret
+  # interne frontend <-> core, IP du visiteur pour le frontend, droits des
+  # fichiers de secrets. Le Caddyfile du tunnel est régénéré plus bas.
+  if [[ -f "${NODYX_DIR}/scripts/install/caddyfile.sh" ]]; then
+    # shellcheck source=scripts/install/caddyfile.sh
+    . "${NODYX_DIR}/scripts/install/caddyfile.sh"
+    NODYX_CADDYFILE=/nonexistent nodyx_migrate_client_ip "$NODYX_DIR" || true
   fi
 
   info "$(t backend_rebuild)"
@@ -1132,6 +1158,8 @@ _confirm "$(t cfg_recap_proceed)" || die "$(t install_cancelled)"
 # ═══════════════════════════════════════════════════════════════════════════════
 DB_PASSWORD=$(gen_pass)
 JWT_SECRET=$(gen_secret)
+# Secret partagé frontend <-> core (appels internes du rendu serveur)
+INTERNAL_API_SECRET=$(gen_secret)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  SYSTEM PACKAGES
@@ -1420,6 +1448,7 @@ HOST=0.0.0.0
 NODE_ENV=production
 
 JWT_SECRET=${JWT_SECRET}
+INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
 
 DB_HOST=localhost
 DB_PORT=5432
@@ -1554,13 +1583,15 @@ module.exports = {
       cwd: '${NODYX_DIR}/nodyx-frontend',
       watch: false,
       max_memory_restart: '${_PM2_FRONT_MEM}',
-      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1' },
+      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1', INTERNAL_API_SECRET: '${INTERNAL_API_SECRET}', ADDRESS_HEADER: 'x-forwarded-for', XFF_DEPTH: '1' },
     },
   ],
 }
 PM2
 
 chown -R nodyx:nodyx "${NODYX_DIR}"
+# Fichiers de secrets : lisibles par nodyx seulement.
+chmod 600 "${NODYX_DIR}/ecosystem.config.js" "${NODYX_DIR}/nodyx-core/.env" "${NODYX_DIR}/nodyx-frontend/.env" 2>/dev/null || true
 
 # Stop legacy root-owned PM2 instances + nodyx-owned ones (idempotent)
 pm2 delete nodyx-core     2>/dev/null || true
@@ -1904,6 +1935,12 @@ info "Version actuelle: ${BOLD}${_VER_BEFORE}${RESET}"
 
 info "Pulling latest..."
 git -C "$NODYX_DIR" pull --ff-only || die "git pull failed."
+
+# Migrations de configuration livrées avec le code.
+if [[ -f "$NODYX_DIR/scripts/install/caddyfile.sh" ]]; then
+  . "$NODYX_DIR/scripts/install/caddyfile.sh"
+  NODYX_CADDYFILE=/nonexistent nodyx_migrate_client_ip "$NODYX_DIR" || true
+fi
 
 _VER_AFTER="$(_read_repo_version)"
 if [[ "$_VER_BEFORE" != "$_VER_AFTER" ]]; then

@@ -74,6 +74,23 @@ en lecture seule `GET /api/directory/check/:slug`, limitée en débit), et un no
 s'il est pris, réservé ou invalide. Le bilan de santé de l'installeur interrogeait une route qui
 n'existait pas : il utilise maintenant celle-ci.
 
+### Sécurité : installations en tunnel, l'IP du visiteur ne se choisit plus
+
+Sur les instances installées avec `install_tunnel.sh` en mode Pangolin ou derrière un autre proxy,
+chaque visiteur pouvait choisir l'IP sous laquelle Nodyx le voyait : Caddy lisait `X-Forwarded-For`
+par la gauche, la partie écrite par le visiteur, et un `CF-Connecting-IP` forgé arrivait intact
+au core. Limitation de débit et bannissements étaient contournables, et l'IP de quelqu'un d'autre
+pouvait être bannie. Caddy lit désormais l'en-tête par la droite, ne fait confiance qu'au client du
+tunnel (la machine elle-même en mode Cloudflare, plus le réseau Docker de newt en Pangolin) et ne
+transmet jamais `CF-Connecting-IP`. Le rendu serveur reçoit aussi son secret interne et l'IP du
+visiteur, comme pour `install.sh`.
+
+**Si ton instance est installée en tunnel**, relance une fois :
+
+```bash
+sudo bash /opt/nodyx/install_tunnel.sh --repair
+```
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

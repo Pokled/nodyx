@@ -267,7 +267,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: ShellCheck (avertissements bloquants)
-        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh scripts/tests/install-data.test.sh scripts/tests/install-slug.test.sh
+        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh scripts/tests/install-data.test.sh scripts/tests/install-slug.test.sh scripts/tests/tunnel-caddyfile.test.sh
 
       - name: Banc de uninstall.sh
         run: bash scripts/tests/uninstall.test.sh
@@ -311,3 +311,8 @@ jobs:
       # existantes, modèles d'install.sh.
       - name: Banc du Caddyfile d'install.sh
         run: bash scripts/tests/caddyfile.test.sh
+
+      # Caddyfile d'install_tunnel.sh, trois modes, vrai Caddy : X-Forwarded-For lu
+      # par la droite, CF-Connecting-IP jamais transmis, confiance réduite par mode.
+      - name: Banc du Caddyfile d'install_tunnel.sh
+        run: bash scripts/tests/tunnel-caddyfile.test.sh
