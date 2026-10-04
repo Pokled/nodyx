@@ -16,7 +16,12 @@
 #    curl -fsSL https://raw.githubusercontent.com/Pokled/nodyx/main/install.sh | sudo bash -s -- \
 #      --domain=ma-communaute.fr  --name="Ma Communauté"  --slug=ma-communaute \
 #      --admin-user=admin  --admin-email=admin@ma-communaute.fr \
-#      --admin-password=MonMotDePasse  --yes
+#      --admin-password-file=/root/mdp-admin.txt  --yes
+#
+#    Le mot de passe se donne par fichier ou par la variable NODYX_ADMIN_PASSWORD :
+#    en argument (--admin-password=…), tout utilisateur du serveur le lit via ps.
+#    Sans terminal (Ansible, cron), --yes accepte les réponses par défaut ; une
+#    question sans option ni défaut arrête l'installeur en disant laquelle.
 #
 #  ── Autres options ──────────────────────────────────────────────────────────
 #
@@ -27,17 +32,24 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-# ── Auto-relaunch si stdin est un pipe (curl|bash) ────────────────────────────
-# Les prompts interactifs (read) nécessitent un vrai terminal.
-# Si stdin n'est pas un TTY (ex: curl|bash), on se télécharge dans /tmp et on relance.
-if [[ ! -t 0 ]]; then
+# ── Auto-relaunch si le script est lu depuis un pipe (curl|bash) ──────────────
+# Lu depuis un pipe, le script ne peut pas lire les réponses sur son entrée
+# standard (c'est lui-même) : on se télécharge dans /tmp et on relance.
+# Seulement dans ce cas : lancé depuis un fichier (nodyx-update, cron, Ansible),
+# il n'y a rien à relancer. Avant le 04/10/2026, toute entrée qui n'était pas un
+# terminal déclenchait la relance avec `</dev/tty`, qui n'existe pas sans
+# terminal : le script mourait aussitôt, --yes ou pas.
+if [[ ! -t 0 && -z "${_NODYX_RELAUNCHED:-}" ]] \
+   && [[ -z "${BASH_SOURCE[0]:-}" || ! -f "${BASH_SOURCE[0]:-}" ]]; then
   _SELF=$(mktemp /tmp/nodyx_install_XXXXXX.sh)
   curl -fsSL https://raw.githubusercontent.com/Pokled/nodyx/main/install.sh -o "$_SELF" 2>/dev/null \
     || wget -qO "$_SELF" https://raw.githubusercontent.com/Pokled/nodyx/main/install.sh
   # Drain remaining stdin avant exec : sinon le curl en amont continue d'écrire
   # dans un pipe fermé après le exec et sort en code 23 (write error).
   cat >/dev/null 2>&1 || true
-  exec bash "$_SELF" "$@" </dev/tty
+  export _NODYX_RELAUNCHED=1
+  if { : </dev/tty; } 2>/dev/null; then exec bash "$_SELF" "$@" </dev/tty; fi
+  exec bash "$_SELF" "$@" </dev/null
 fi
 
 # ── Auto-update si lancé directement (fichier local potentiellement ancien) ───
@@ -215,8 +227,28 @@ T_EN[help_admin_user]='    --admin-user=USER       Admin username'
 T_FR[help_admin_user]="    --admin-user=USER       Nom d'utilisateur admin"
 T_EN[help_admin_email]='    --admin-email=EMAIL     Admin email'
 T_FR[help_admin_email]='    --admin-email=EMAIL     Email admin'
-T_EN[help_admin_pass]='    --admin-password=PASS   Admin password'
-T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin'
+T_EN[help_admin_pass]='    --admin-password=PASS   Admin password (discouraged: readable by any local user via ps)'
+T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin (déconseillé : lisible par tout utilisateur via ps)'
+T_EN[help_admin_pass_file]='    --admin-password-file=FILE  Admin password read from a file (or env NODYX_ADMIN_PASSWORD)'
+T_FR[help_admin_pass_file]='    --admin-password-file=FICHIER  Mot de passe admin lu dans un fichier (ou variable NODYX_ADMIN_PASSWORD)'
+T_EN[help_network]='    --network=direct|relay|sslip  Network mode (--domain implies direct; --yes defaults to relay)'
+T_FR[help_network]='    --network=direct|relay|sslip  Mode réseau (--domain implique direct ; --yes choisit le relais)'
+T_EN[admin_pass_file_unreadable]='--admin-password-file: cannot read a password from %s.'
+T_FR[admin_pass_file_unreadable]='--admin-password-file : impossible de lire un mot de passe dans %s.'
+T_EN[admin_pass_argv_warn]='--admin-password is readable by every user of this server (ps) and stays in your shell history and the sudo log. Prefer --admin-password-file or NODYX_ADMIN_PASSWORD, and change this password after installation.'
+T_FR[admin_pass_argv_warn]="--admin-password est lisible par tout utilisateur de ce serveur (ps) et reste dans l'historique du shell et le journal de sudo. Préfère --admin-password-file ou NODYX_ADMIN_PASSWORD, et change ce mot de passe après l'installation."
+T_EN[no_tty_question]='No terminal to ask: « %s ». Give the matching option (see --help), add --yes to accept the defaults, or run the installer in a terminal. Nothing more was changed.'
+T_FR[no_tty_question]="Aucun terminal pour poser la question : « %s ». Donne l'option correspondante (voir --help), ajoute --yes pour accepter les réponses par défaut, ou lance l'installeur dans un terminal. Rien de plus n'a été modifié."
+T_EN[prompt_default_auto]='%s → %s (--yes, default)'
+T_FR[prompt_default_auto]='%s → %s (--yes, défaut)'
+T_EN[secret_preset]='%s: provided, kept'
+T_FR[secret_preset]='%s : fourni, conservé'
+T_EN[secret_preset_too_short]='The provided admin password is too short: at least %s characters.'
+T_FR[secret_preset_too_short]='Le mot de passe admin fourni est trop court : %s caractères minimum.'
+T_EN[network_invalid]='--network=%s: expected direct, relay or sslip.'
+T_FR[network_invalid]='--network=%s : direct, relay ou sslip attendu.'
+T_EN[network_domain_conflict]='--domain only goes with --network=direct (relay and sslip choose the address themselves).'
+T_FR[network_domain_conflict]="--domain ne va qu'avec --network=direct (relais et sslip choisissent l'adresse eux-mêmes)."
 T_EN[help_options_header]='  Options:'
 T_FR[help_options_header]='  Options :'
 T_EN[help_yes]='    --yes, -y          Auto-confirm all prompts'
@@ -795,8 +827,8 @@ T_EN[sub_optional_alias]='Optional alias: %s'
 T_FR[sub_optional_alias]='Alias optionnel : %s'
 T_EN[sub_alias_redirect]='Redirects to your instance — useful as a memorable shortcut.'
 T_FR[sub_alias_redirect]='Redirige vers ton instance — utile comme raccourci mémorable.'
-T_EN[sub_enable_q]='Enable %s? [Y/n] '
-T_FR[sub_enable_q]='Activer %s ? [O/n] '
+T_EN[sub_enable_q]='Enable %s?'
+T_FR[sub_enable_q]='Activer %s ?'
 T_EN[sub_registering]='Registering with the nodyx.org directory...'
 T_FR[sub_registering]='Enregistrement auprès du directory nodyx.org...'
 T_EN[sub_registered]='Registered! Subdomain: %s'
@@ -1439,6 +1471,7 @@ _SFU_INSTALLED=false  # vrai seulement si le daemon SFU tourne réellement
 SKIP_SUBDOMAIN=false  # --no-subdomain
 _ARG_DOMAIN=""  _ARG_SLUG=""  _ARG_NAME=""
 _ARG_ADMIN_USER=""  _ARG_ADMIN_EMAIL=""  _ARG_ADMIN_PASS=""
+_ARG_ADMIN_PASS_FILE=""  _ARG_ADMIN_PASS_ARGV=false  _ARG_NETWORK=""
 
 for _arg in "$@"; do
   case "$_arg" in
@@ -1455,7 +1488,9 @@ for _arg in "$@"; do
     --name=*)             _ARG_NAME="${_arg#*=}"   ;;
     --admin-user=*)       _ARG_ADMIN_USER="${_arg#*=}"  ;;
     --admin-email=*)      _ARG_ADMIN_EMAIL="${_arg#*=}" ;;
-    --admin-password=*)   _ARG_ADMIN_PASS="${_arg#*=}"  ;;
+    --admin-password=*)   _ARG_ADMIN_PASS="${_arg#*=}"; _ARG_ADMIN_PASS_ARGV=true ;;
+    --admin-password-file=*) _ARG_ADMIN_PASS_FILE="${_arg#*=}" ;;
+    --network=*)          _ARG_NETWORK="${_arg#*=}" ;;
     --help|-h)
       echo ""
       echo "$(t help_usage)"
@@ -1473,6 +1508,8 @@ for _arg in "$@"; do
       echo "$(t help_admin_user)"
       echo "$(t help_admin_email)"
       echo "$(t help_admin_pass)"
+      echo "$(t help_admin_pass_file)"
+      echo "$(t help_network)"
       echo ""
       echo "$(t help_options_header)"
       echo "$(t help_yes)"
@@ -1488,6 +1525,37 @@ for _arg in "$@"; do
   esac
 done
 
+# ── Secrets hors de la ligne de commande (04/10/2026) ─────────────────────────
+# Un argument est lisible par tout utilisateur du serveur (ps), reste dans
+# l'historique du shell et dans le journal de sudo. Le mot de passe se donne
+# donc par fichier (--admin-password-file) ou par variable d'environnement
+# (NODYX_ADMIN_PASSWORD), effacée aussitôt lue pour ne pas suivre les
+# programmes lancés ensuite. --admin-password=… reste accepté, avec un avertissement.
+if [[ -n "$_ARG_ADMIN_PASS_FILE" ]]; then
+  [[ -f "$_ARG_ADMIN_PASS_FILE" && -r "$_ARG_ADMIN_PASS_FILE" ]] \
+    || die "$(t admin_pass_file_unreadable "$_ARG_ADMIN_PASS_FILE")"
+  IFS= read -r _ARG_ADMIN_PASS < "$_ARG_ADMIN_PASS_FILE" || true
+  _ARG_ADMIN_PASS="${_ARG_ADMIN_PASS%$'\r'}"
+  [[ -n "$_ARG_ADMIN_PASS" ]] || die "$(t admin_pass_file_unreadable "$_ARG_ADMIN_PASS_FILE")"
+elif [[ -n "${NODYX_ADMIN_PASSWORD:-}" ]]; then
+  _ARG_ADMIN_PASS="$NODYX_ADMIN_PASSWORD"
+elif $_ARG_ADMIN_PASS_ARGV; then
+  warn "$(t admin_pass_argv_warn)"
+fi
+unset NODYX_ADMIN_PASSWORD
+
+# ── Terminal disponible ? ─────────────────────────────────────────────────────
+# Les questions sont posées sur le terminal (/dev/tty), jamais sur l'entrée
+# standard. Sans terminal (cron, Ansible, ssh sans -t), une question qui n'a
+# ni option ni réponse par défaut acceptée par --yes arrête l'installeur
+# proprement, en disant laquelle : avant, il mourait sur une erreur de bash.
+_NODYX_TTY="${_NODYX_TTY:-/dev/tty}"
+_HAS_TTY=false
+{ : <"$_NODYX_TTY"; } 2>/dev/null && _HAS_TTY=true
+_tty_needed() { # <question>
+  $_HAS_TTY || die "$(t no_tty_question "$1")"
+}
+
 # Shortcut: --yes auto-confirms (replaces read -rp for confirmations)
 _confirm() {
   # Usage: _confirm "message" [défaut y|n]  → 0 si oui, 1 si non.
@@ -1497,6 +1565,7 @@ _confirm() {
   local msg="$1" default="${2:-y}" _c _fd _hint
   [[ "$default" == "o" ]] && default="y"
   if $_AUTO_YES; then info "$(t confirm_auto_yes "$msg")"; return 0; fi
+  _tty_needed "$msg"
   [[ "$default" == "n" ]] && _hint="$(t confirm_ny)" || _hint="$(t confirm_yn)"
   exec {_fd}<"${_NODYX_TTY:-/dev/tty}"
   while true; do
@@ -1518,20 +1587,31 @@ _confirm() {
 #   Un seul install.sh entry point, des modules sourcés par fonction.
 #   NE PAS FAIRE avant d'avoir un vrai cas d'usage RHEL à tester.
 
+# prompt <variable> <question> [défaut]
+# Un 3e argument, même vide, est un défaut : Entrée l'accepte (avant le
+# 04/10/2026, un défaut vide rendait obligatoires les champs « optionnels »).
+# Avec --yes, le défaut est pris sans demander.
 prompt() {
-  local var="$1" msg="$2" default="${3:-}" val=''
+  local var="$1" msg="$2" default="${3:-}" has_default=false val=''
+  [[ $# -ge 3 ]] && has_default=true
   # If the variable is already pre-filled (via CLI arg), skip the prompt
   local _preset="${!var:-}"
   if [[ -n "$_preset" ]]; then
     info "$(t prompt_preset "$msg" "${BOLD}" "${_preset}" "${RESET}" "${CYAN}" "${RESET}")"
     return
   fi
-  if [[ -n "$default" ]]; then
-    read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val </dev/tty
+  if $has_default && $_AUTO_YES; then
+    printf -v "$var" '%s' "$default"
+    info "$(t prompt_default_auto "$msg" "${default:--}")"
+    return
+  fi
+  _tty_needed "$msg"
+  if $has_default; then
+    read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val <"$_NODYX_TTY"
     val="${val:-$default}"
   else
     while [[ -z "$val" ]]; do
-      read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
+      read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val <"$_NODYX_TTY"
     done
   fi
   printf -v "$var" '%s' "$val"
@@ -1540,24 +1620,35 @@ prompt() {
 prompt_secret() {
   local var="$1" msg="$2" minlen="${3:-1}"
   local val=''
+  _tty_needed "$msg"
   while [[ ${#val} -lt $minlen ]]; do
     [[ -n "$val" ]] && echo -e "  ${YELLOW}⚠${RESET}  $(t secret_too_short "$minlen")"
-    read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
+    read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val <"$_NODYX_TTY"
     echo
   done
   printf -v "$var" '%s' "$val"
 }
 
+# Une valeur déjà fournie (fichier, variable, option) est vérifiée et gardée :
+# avant le 04/10/2026, elle était ignorée et redemandée au terminal, ce qui
+# rendait impossible l'installation silencieuse documentée en tête de fichier.
 prompt_secret_confirm() {
   local var="$1" msg="$2" minlen="${3:-1}"
   local val='' val2=''
+  local _preset="${!var:-}"
+  if [[ -n "$_preset" ]]; then
+    [[ ${#_preset} -ge $minlen ]] || die "$(t secret_preset_too_short "$minlen")"
+    info "$(t secret_preset "$msg")"
+    return
+  fi
+  _tty_needed "$msg"
   while true; do
     while [[ ${#val} -lt $minlen ]]; do
       [[ -n "$val" ]] && echo -e "  ${YELLOW}⚠${RESET}  $(t secret_too_short "$minlen")"
-      read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
+      read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val <"$_NODYX_TTY"
       echo
     done
-    read -rsp "$(echo -e "  ${CYAN}?${RESET} $(t secret_confirm): ")" val2 </dev/tty
+    read -rsp "$(echo -e "  ${CYAN}?${RESET} $(t secret_confirm): ")" val2 <"$_NODYX_TTY"
     echo
     if [[ "$val" == "$val2" ]]; then
       break
@@ -1779,7 +1870,8 @@ if $_EXISTING && [[ -z "$_FORCE_MODE" ]]; then
       echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel)"
     fi
     echo ""
-    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "${_cancel_opt}" "1") ${RESET}")" _det_choice </dev/tty
+    _tty_needed "$(t menu_what_do) (--upgrade, --repair, --reinstall, --wipe)"
+    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "${_cancel_opt}" "1") ${RESET}")" _det_choice <"$_NODYX_TTY"
     _det_choice="${_det_choice:-1}"
     case "$_det_choice" in
       1) INSTALL_MODE="upgrade"   ;;
@@ -1796,7 +1888,8 @@ if $_EXISTING && [[ -z "$_FORCE_MODE" ]]; then
     echo -e "  ${RED}[2]${RESET} $(t menu_force_reinstall "${NODYX_VERSION}" "${RED}" "${RESET}")"
     echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel) ${YELLOW}$(t menu_recommended)${RESET}"
     echo ""
-    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "3" "3") ${RESET}")" _det_choice </dev/tty
+    _tty_needed "$(t menu_what_do) (--upgrade, --repair, --reinstall, --wipe)"
+    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "3" "3") ${RESET}")" _det_choice <"$_NODYX_TTY"
     _det_choice="${_det_choice:-3}"
     case "$_det_choice" in
       1) INSTALL_MODE="repair"    ;;
@@ -1817,7 +1910,8 @@ if $_EXISTING && [[ -z "$_FORCE_MODE" ]]; then
       echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel)"
     fi
     echo ""
-    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "${_cancel_opt}" "${_cancel_opt}") ${RESET}")" _det_choice </dev/tty
+    _tty_needed "$(t menu_what_do) (--upgrade, --repair, --reinstall, --wipe)"
+    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "${_cancel_opt}" "${_cancel_opt}") ${RESET}")" _det_choice <"$_NODYX_TTY"
     _det_choice="${_det_choice:-${_cancel_opt}}"
     case "$_det_choice" in
       1) INSTALL_MODE="repair"    ;;
@@ -1928,7 +2022,8 @@ if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
     echo -e "  ${CYAN}[2]${RESET} $(t port_continue)"
     echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel)"
     echo ""
-    read -rp "$(echo -e "  ${BOLD}$(t port_choice_prompt) ${RESET}")" _port_choice </dev/tty
+    _tty_needed "$(t port_choice_prompt)"
+    read -rp "$(echo -e "  ${BOLD}$(t port_choice_prompt) ${RESET}")" _port_choice <"$_NODYX_TTY"
     # Défaut = annuler : Entrée ne doit JAMAIS arrêter et désactiver le serveur
     # web existant (avant le 03/10/2026, c'était le choix par défaut).
     _port_choice="${_port_choice:-3}"
@@ -1944,7 +2039,8 @@ if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
     esac
   else
     echo -e "  ${YELLOW}$(t port_force_hint)${RESET}"
-    read -rp "$(echo -e "  ${BOLD}$(t port_force_prompt) ${RESET}")" _port_force </dev/tty
+    _tty_needed "$(t port_force_prompt)"
+    read -rp "$(echo -e "  ${BOLD}$(t port_force_prompt) ${RESET}")" _port_force <"$_NODYX_TTY"
     # Accept y/Y/o/O regardless of UI language
     [[ ! "${_port_force,,}" =~ ^(y|o)$ ]] && die "$(t install_cancelled)"
     for _bp in "${_PORT_BLOCKER_PORTS[@]}"; do
@@ -2061,7 +2157,25 @@ echo -e "  ┌─ ${BOLD}$(t net_mode_1)${RESET}  $(t net_mode_1_desc)"
 echo -e "  ├─ ${BOLD}$(t net_mode_2)${RESET}         $(printf "$(t net_mode_2_desc)" "${GREEN}" "${RESET}")"
 echo -e "  └─ ${BOLD}$(t net_mode_3)${RESET}       $(t net_mode_3_desc)"
 echo ""
-read -rp "$(echo -e "  ${CYAN}?${RESET} $(t net_mode_prompt) ")" NET_MODE
+# Avant le 04/10/2026, la question était posée même avec --domain, sans option
+# pour y répondre : aucune installation silencieuse ne pouvait aboutir.
+case "$_ARG_NETWORK" in
+  direct) NET_MODE=1 ;;
+  relay)  NET_MODE=2 ;;
+  sslip)  NET_MODE=3 ;;
+  "")
+    if [[ -n "$_ARG_DOMAIN" ]]; then
+      NET_MODE=1
+    elif $_AUTO_YES; then
+      NET_MODE=2; info "$(t prompt_default_auto "$(t net_mode_prompt)" "2")"
+    else
+      _tty_needed "$(t net_mode_prompt) (--network=direct|relay|sslip)"
+      read -rp "$(echo -e "  ${CYAN}?${RESET} $(t net_mode_prompt) ")" NET_MODE <"$_NODYX_TTY"
+    fi ;;
+  *) die "$(t network_invalid "$_ARG_NETWORK")" ;;
+esac
+[[ "$_ARG_NETWORK" == direct || -z "$_ARG_NETWORK" ]] || [[ -z "$_ARG_DOMAIN" ]] \
+  || die "$(t network_domain_conflict)"
 NET_MODE="${NET_MODE:-2}"
 
 RELAY_MODE=false
@@ -2140,7 +2254,9 @@ verifier_sortie_relais() {
   info "$(printf "$(t relay_probe_doc)" "https://nodyx.dev/relay#the-tunnel-never-connects-the-port-7443-wall")"
 
   local reponse=""
-  read -r -p "  $(t relay_probe_continue) " reponse || true
+  $_AUTO_YES && die "$(t relay_probe_blocked)"
+  _tty_needed "$(t relay_probe_continue)"
+  read -r -p "  $(t relay_probe_continue) " reponse <"$_NODYX_TTY" || true
   case "${reponse,,}" in
     y|yes|o|oui) return 0 ;;
     *) die "$(t relay_probe_blocked)" ;;
@@ -2208,7 +2324,11 @@ conf_section "$(t conf_smtp)"
 echo -e "  $(t smtp_use)"
 echo -e "  $(printf "$(t smtp_compat)" "${BOLD}" "${RESET}")"
 echo ""
-read -rp "$(echo -e "  ${CYAN}?${RESET} $(t smtp_now) ")" want_smtp </dev/tty
+want_smtp=""
+if ! $_AUTO_YES; then
+  _tty_needed "$(t smtp_now)"
+  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t smtp_now) ")" want_smtp <"$_NODYX_TTY"
+fi
 want_smtp="${want_smtp:-n}"
 
 SMTP_HOST=""
@@ -2221,7 +2341,7 @@ SMTP_FROM=""
 if [[ "${want_smtp,,}" =~ ^(o|y)$ ]]; then
   prompt   SMTP_HOST   "$(t prompt_smtp_host)"
   prompt   SMTP_PORT   "$(t prompt_smtp_port)" "587"
-  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t smtp_force_tls) ")" _smtp_tls </dev/tty
+  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t smtp_force_tls) ")" _smtp_tls <"$_NODYX_TTY"
   [[ "${_smtp_tls,,}" =~ ^(o|y)$ ]] && SMTP_SECURE="true" && SMTP_PORT="465"
   prompt   SMTP_USER   "$(t prompt_smtp_user)"
   prompt_secret SMTP_PASS "$(t prompt_smtp_pass)" 1
@@ -3297,7 +3417,10 @@ else
   echo -e "  $(printf "$(t sub_optional_alias)" "${BOLD}${COMMUNITY_SLUG}.nodyx.org${RESET}")"
   echo -e "  $(t sub_alias_redirect)"
   echo ""
-  read -rp "$(echo -e "  $(printf "$(t sub_enable_q)" "${BOLD}${COMMUNITY_SLUG}.nodyx.org${RESET}")")" want_subdomain
+  # _confirm : avant le 04/10/2026, toute réponse autre que « n » valait oui,
+  # « non » compris, et inscrivait l'instance dans l'annuaire public.
+  want_subdomain="n"
+  _confirm "$(t sub_enable_q "${COMMUNITY_SLUG}.nodyx.org")" y && want_subdomain="o"
 fi
 
 if [[ "${want_subdomain,,}" != "n" ]]; then

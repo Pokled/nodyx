@@ -267,7 +267,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: ShellCheck (avertissements bloquants)
-        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh scripts/tests/install-data.test.sh scripts/tests/install-slug.test.sh scripts/tests/tunnel-caddyfile.test.sh scripts/tests/tunnel-hardening.test.sh scripts/tests/install-binaries.test.sh scripts/tests/install-services.test.sh scripts/install/build.sh scripts/tests/install-update.test.sh
+        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh scripts/tests/install-data.test.sh scripts/tests/install-slug.test.sh scripts/tests/tunnel-caddyfile.test.sh scripts/tests/tunnel-hardening.test.sh scripts/tests/install-binaries.test.sh scripts/tests/install-services.test.sh scripts/install/build.sh scripts/tests/install-update.test.sh scripts/tests/install-noninteractive.test.sh
 
       - name: Banc de uninstall.sh
         run: bash scripts/tests/uninstall.test.sh
@@ -311,6 +311,13 @@ jobs:
       # base avant ; plus de fuser -k ; nodyx-update délègue à l'installeur.
       - name: Banc de la mise à jour
         run: bash scripts/tests/install-update.test.sh
+
+      # Sans terminal (cron, Ansible, nodyx-update par ssh) : plus de mort sur
+      # </dev/tty, --yes prend les défauts, une question sans réponse arrête
+      # proprement. Mot de passe et jeton par fichier ou variable, jeton du
+      # tunnel Cloudflare hors de la ligne de commande de cloudflared.
+      - name: Banc du mode non interactif et des secrets
+        run: bash scripts/tests/install-noninteractive.test.sh
 
       - name: Banc des binaires (empreintes, contre GitHub)
         env:

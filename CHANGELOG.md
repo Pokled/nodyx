@@ -140,6 +140,30 @@ un « oui » explicite, et ne se fait jamais en mode `--yes`. `nodyx-update` est
 raccourci vers l'installeur : un seul chemin de mise à jour, testé. Même chose pour
 `install_tunnel.sh`.
 
+### Installeur : sans terminal, et sans secret dans la ligne de commande
+
+L'installation silencieuse documentée en tête d'`install.sh` n'a jamais pu aboutir : le mot de
+passe passé par `--admin-password` était ignoré et redemandé, le mode réseau et le SMTP étaient
+toujours demandés, sans option pour y répondre. Sans terminal du tout (cron, Ansible,
+`ssh serveur sudo nodyx-update` sans `-t`), les deux installeurs mouraient dès leur première ligne.
+
+- `--yes` accepte les réponses par défaut. Une question qui n'a ni option ni défaut arrête
+  l'installeur proprement, en la nommant.
+- `--network=direct|relay|sslip` ; `--domain` seul implique le mode direct.
+- Les champs « optionnels » (description, pays) le sont enfin : Entrée les laisse vides.
+- Le mot de passe se donne par `--admin-password-file=FICHIER` ou `NODYX_ADMIN_PASSWORD`, le jeton
+  Cloudflare par `--tunnel-token-file=FICHIER` ou `NODYX_TUNNEL_TOKEN`. En argument, tout
+  utilisateur du serveur les lit via `ps` : `--admin-password` et `--tunnel-token` restent
+  acceptés, avec un avertissement.
+- Le jeton du tunnel Cloudflare n'est plus dans la ligne de commande de `cloudflared`, où il restait
+  lisible par tous tant que le tunnel tournait : il vit dans `/etc/cloudflared/tunnel.env` (600).
+- Inscription facultative à l'annuaire public : répondre « non » inscrivait l'instance. Réponse
+  stricte désormais.
+
+**Si ton instance passe par un tunnel Cloudflare**, lance une fois
+`sudo bash /opt/nodyx/install_tunnel.sh --upgrade` : le jeton est sorti de la ligne de commande
+automatiquement.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

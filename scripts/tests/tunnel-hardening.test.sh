@@ -93,7 +93,7 @@ check "--wipe refusé tant que la sauvegarde n'est pas validée" 'grep -qF "wipe
 echo "── cloudflared"
 check "plus aucun .deb « latest » installé sans vérification" '! grep -q "releases/latest/download/cloudflared" "$TUNNEL"'
 check "dépôt APT signé pour toutes les architectures" 'grep -q "signed-by=/usr/share/keyrings/cloudflare-main.gpg" "$TUNNEL" && ! grep -q "CF_ARCH\" == \"amd64\"" "$TUNNEL"'
-check "unité systemd (qui contient le jeton) en 600" 'grep -qF "chmod 600 /etc/systemd/system/cloudflared.service" "$TUNNEL"'
+check "jeton jamais passé à cloudflared en argument (cf install-noninteractive.test.sh)" '! grep -vE "^[[:space:]]*#" "$TUNNEL" | grep -qE "cloudflared service install|--token \\\$"'
 
 echo ""
 echo "Résultat : $PASS réussis, $FAIL échoués"

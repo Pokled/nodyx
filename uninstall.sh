@@ -252,7 +252,17 @@ run systemctl daemon-reload 2>/dev/null || true
 # Tunnel Cloudflare (install_tunnel.sh) : le jeton du tunnel vit dans le service.
 if [[ -f "$ROOT/etc/nodyx/tunnel-mode" && -f "$ROOT/etc/systemd/system/cloudflared.service" ]] && have cloudflared; then
   if ask "$(m "Retirer le service du tunnel Cloudflare (cloudflared) et son jeton ?" "Remove the Cloudflare tunnel service (cloudflared) and its token?")"; then
-    run cloudflared service uninstall >/dev/null 2>&1 && ok "$(m "Tunnel Cloudflare retiré" "Cloudflare tunnel removed")" || fail "cloudflared service uninstall"
+    # Depuis le 04/10/2026 l'unité est écrite par install_tunnel.sh et le jeton
+    # vit dans /etc/cloudflared/tunnel.env : `cloudflared service uninstall` ne
+    # connaît pas ce fichier, on retire donc unité et jeton nous-mêmes.
+    run cloudflared service uninstall >/dev/null 2>&1 || true
+    run systemctl disable --now cloudflared >/dev/null 2>&1 || true
+    run rm -f "$ROOT/etc/systemd/system/cloudflared.service" "$ROOT/etc/cloudflared/tunnel.env" "$ROOT/etc/cloudflared/.token_hash"
+    if $DRY || [[ ! -e "$ROOT/etc/systemd/system/cloudflared.service" && ! -e "$ROOT/etc/cloudflared/tunnel.env" ]]; then
+      ok "$(m "Tunnel Cloudflare retiré, jeton compris" "Cloudflare tunnel removed, token included")"
+    else
+      fail "cloudflared : /etc/systemd/system/cloudflared.service ou /etc/cloudflared/tunnel.env"
+    fi
   else
     skip "$(m "Tunnel Cloudflare conservé" "Cloudflare tunnel kept")"
   fi

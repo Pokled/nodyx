@@ -67,14 +67,20 @@ _cleanup_on_exit() {
 trap _cleanup_on_exit EXIT
 
 # ── Auto-relaunch if stdin is piped (curl|bash) ───────────────────────────────
-if [[ ! -t 0 ]]; then
+# Seulement si le script est lu depuis un pipe : lancé depuis un fichier sans
+# terminal (nodyx-update, cron, Ansible), la relance `</dev/tty` le tuait
+# aussitôt (avant le 04/10/2026), --yes ou pas.
+if [[ ! -t 0 && -z "${_NODYX_RELAUNCHED:-}" ]] \
+   && [[ -z "${BASH_SOURCE[0]:-}" || ! -f "${BASH_SOURCE[0]:-}" ]]; then
   _SELF=$(mktemp /tmp/nodyx_tunnel_XXXXXX.sh)
   curl -fsSL https://raw.githubusercontent.com/Pokled/nodyx/main/install_tunnel.sh -o "$_SELF" 2>/dev/null \
     || wget -qO "$_SELF" https://raw.githubusercontent.com/Pokled/nodyx/main/install_tunnel.sh
   # Drain remaining stdin so the upstream curl finishes writing into its pipe
   # before we exec — otherwise curl exits with code 23 (write to closed pipe).
   cat >/dev/null 2>&1 || true
-  exec bash "$_SELF" "$@" </dev/tty
+  export _NODYX_RELAUNCHED=1
+  if { : </dev/tty; } 2>/dev/null; then exec bash "$_SELF" "$@" </dev/tty; fi
+  exec bash "$_SELF" "$@" </dev/null
 fi
 
 # ── Colours ───────────────────────────────────────────────────────────────────
@@ -127,8 +133,8 @@ T_EN[help_domain]='    --domain=DOMAIN         Public domain managed by Cloudfla
 T_FR[help_domain]='    --domain=DOMAIN         Domaine public géré par Cloudflare'
 T_EN[help_tunnel]='    --tunnel=cf|pangolin|none  Reverse-tunnel provider (default: ask)'
 T_FR[help_tunnel]='    --tunnel=cf|pangolin|none  Fournisseur du tunnel inverse (défaut : demande)'
-T_EN[help_token]='    --tunnel-token=TOKEN    Cloudflare Tunnel token (cf mode only)'
-T_FR[help_token]='    --tunnel-token=TOKEN    Token du tunnel Cloudflare (mode cf uniquement)'
+T_EN[help_token]='    --tunnel-token=TOKEN    Cloudflare Tunnel token, cf mode (discouraged: readable via ps)'
+T_FR[help_token]='    --tunnel-token=TOKEN    Jeton du tunnel Cloudflare, mode cf (déconseillé : lisible via ps)'
 T_EN[help_slug]='    --slug=SLUG             Community identifier'
 T_FR[help_slug]='    --slug=SLUG             Identifiant de la communauté'
 T_EN[help_name]='    --name=NAME             Community name'
@@ -137,8 +143,20 @@ T_EN[help_admin_user]='    --admin-user=USER       Admin username'
 T_FR[help_admin_user]="    --admin-user=USER       Nom d'utilisateur admin"
 T_EN[help_admin_email]='    --admin-email=EMAIL     Admin email'
 T_FR[help_admin_email]='    --admin-email=EMAIL     Email admin'
-T_EN[help_admin_pass]='    --admin-password=PASS   Admin password'
-T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin'
+T_EN[help_admin_pass]='    --admin-password=PASS   Admin password (discouraged: readable by any local user via ps)'
+T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin (déconseillé : lisible par tout utilisateur via ps)'
+T_EN[help_admin_pass_file]='    --admin-password-file=FILE  Admin password read from a file (or env NODYX_ADMIN_PASSWORD)'
+T_FR[help_admin_pass_file]='    --admin-password-file=FICHIER  Mot de passe admin lu dans un fichier (ou variable NODYX_ADMIN_PASSWORD)'
+T_EN[help_token_file]='    --tunnel-token-file=FILE  Cloudflare Tunnel token read from a file (or env NODYX_TUNNEL_TOKEN)'
+T_FR[help_token_file]='    --tunnel-token-file=FICHIER  Jeton du tunnel Cloudflare lu dans un fichier (ou variable NODYX_TUNNEL_TOKEN)'
+T_EN[secret_file_unreadable]='%s: cannot read a value from %s.'
+T_FR[secret_file_unreadable]='%s : impossible de lire une valeur dans %s.'
+T_EN[secret_argv_warn]='%s: readable by every user of this server (ps), and kept in your shell history and the sudo log. Prefer the -file option or the environment variable (see --help), and change that secret after installation.'
+T_FR[secret_argv_warn]="%s : lisible par tout utilisateur de ce serveur (ps), et conservé dans l'historique du shell et le journal de sudo. Préfère l'option -file ou la variable d'environnement (voir --help), et change ce secret après l'installation."
+T_EN[no_tty_question]='No terminal to ask: « %s ». Give the matching option (see --help), add --yes to accept the defaults, or run the installer in a terminal. Nothing more was changed.'
+T_FR[no_tty_question]="Aucun terminal pour poser la question : « %s ». Donne l'option correspondante (voir --help), ajoute --yes pour accepter les réponses par défaut, ou lance l'installeur dans un terminal. Rien de plus n'a été modifié."
+T_EN[prompt_default_auto]='%s → %s (--yes, default)'
+T_FR[prompt_default_auto]='%s → %s (--yes, défaut)'
 T_EN[help_options_header]='  Options:'
 T_FR[help_options_header]='  Options :'
 T_EN[help_yes]='    --yes, -y          Auto-confirm all prompts'
@@ -449,13 +467,21 @@ T_FR[db_autobackup_fail]='Sauvegarde DB échouée (DB vide ou inaccessible) : on
 
 # ── t() lookup with FR → EN → key fallback ──────────────────────────────────
 t() {
-  local k="$1"
+  # Comme install.sh : avec des arguments, la chaîne sert de format (avant le
+  # 04/10/2026, ils étaient ignorés et _confirm affichait « %s → oui (--yes) »).
+  local k="$1" v; shift
   if [[ "$NODYX_LANG" == "fr" && -n "${T_FR[$k]:-}" ]]; then
-    printf '%s' "${T_FR[$k]}"
+    v="${T_FR[$k]}"
   elif [[ -n "${T_EN[$k]:-}" ]]; then
-    printf '%s' "${T_EN[$k]}"
+    v="${T_EN[$k]}"
   else
-    printf '%s' "$k"
+    v="$k"
+  fi
+  if (( $# > 0 )); then
+    # shellcheck disable=SC2059
+    printf "$v" "$@"
+  else
+    printf '%s' "$v"
   fi
 }
 
@@ -534,6 +560,9 @@ NAME_FLAG=""
 ADMIN_USER_FLAG=""
 ADMIN_EMAIL_FLAG=""
 ADMIN_PASS_FLAG=""
+ADMIN_PASS_FILE=""
+TUNNEL_TOKEN_FILE=""
+_SECRET_ARGV=""
 AUTO_YES=false
 
 show_help() {
@@ -550,11 +579,13 @@ show_help() {
   echo "$(t help_domain)"
   echo "$(t help_tunnel)"
   echo "$(t help_token)"
+  echo "$(t help_token_file)"
   echo "$(t help_slug)"
   echo "$(t help_name)"
   echo "$(t help_admin_user)"
   echo "$(t help_admin_email)"
   echo "$(t help_admin_pass)"
+  echo "$(t help_admin_pass_file)"
   echo ""
   echo "$(t help_options_header)"
   echo "$(t help_yes)"
@@ -572,13 +603,15 @@ for _arg in "$@"; do
     --wipe)                 INSTALL_MODE="wipe" ;;
     --yes|-y)               AUTO_YES=true; _AUTO_YES=true ;;
     --domain=*)             DOMAIN_FLAG="${_arg#*=}" ;;
-    --tunnel-token=*)       TUNNEL_TOKEN_FLAG="${_arg#*=}" ;;
+    --tunnel-token=*)       TUNNEL_TOKEN_FLAG="${_arg#*=}"; _SECRET_ARGV+=" --tunnel-token" ;;
+    --tunnel-token-file=*)  TUNNEL_TOKEN_FILE="${_arg#*=}" ;;
     --tunnel=*)             TUNNEL_MODE="${_arg#*=}" ;;
     --slug=*)               SLUG_FLAG="${_arg#*=}" ;;
     --name=*)               NAME_FLAG="${_arg#*=}" ;;
     --admin-user=*)         ADMIN_USER_FLAG="${_arg#*=}" ;;
     --admin-email=*)        ADMIN_EMAIL_FLAG="${_arg#*=}" ;;
-    --admin-password=*)     ADMIN_PASS_FLAG="${_arg#*=}" ;;
+    --admin-password=*)     ADMIN_PASS_FLAG="${_arg#*=}"; _SECRET_ARGV+=" --admin-password" ;;
+    --admin-password-file=*) ADMIN_PASS_FILE="${_arg#*=}" ;;
     --lang=*)               ;;  # already parsed
     --help|-h)              show_help ;;
     *)                      printf "$(t unknown_flag)\n" "$_arg" >&2 ;;
@@ -586,6 +619,40 @@ for _arg in "$@"; do
 done
 
 _AUTO_YES="${AUTO_YES:-false}"
+
+# ── Secrets hors de la ligne de commande (04/10/2026) ─────────────────────────
+# Un argument est lisible par tout utilisateur du serveur (ps), reste dans
+# l'historique du shell et le journal de sudo. Mot de passe et jeton se donnent
+# par fichier ou par variable d'environnement, effacée aussitôt lue.
+# _secret_from_file <option> <fichier> <variable>
+_secret_from_file() {
+  local _v=""
+  [[ -f "$2" && -r "$2" ]] && { IFS= read -r _v < "$2" || true; }
+  _v="${_v%$'\r'}"
+  [[ -n "$_v" ]] || die "$(t secret_file_unreadable "$1" "$2")"
+  printf -v "$3" '%s' "$_v"
+}
+if [[ -n "$ADMIN_PASS_FILE" ]]; then
+  _secret_from_file --admin-password-file "$ADMIN_PASS_FILE" ADMIN_PASS_FLAG
+elif [[ -n "${NODYX_ADMIN_PASSWORD:-}" ]]; then
+  ADMIN_PASS_FLAG="$NODYX_ADMIN_PASSWORD"
+fi
+if [[ -n "$TUNNEL_TOKEN_FILE" ]]; then
+  _secret_from_file --tunnel-token-file "$TUNNEL_TOKEN_FILE" TUNNEL_TOKEN_FLAG
+elif [[ -n "${NODYX_TUNNEL_TOKEN:-}" ]]; then
+  TUNNEL_TOKEN_FLAG="$NODYX_TUNNEL_TOKEN"
+fi
+unset NODYX_ADMIN_PASSWORD NODYX_TUNNEL_TOKEN
+[[ -n "$_SECRET_ARGV" ]] && warn "$(t secret_argv_warn "${_SECRET_ARGV# }")"
+
+# ── Terminal disponible ? (cf install.sh) ─────────────────────────────────────
+_NODYX_TTY="${_NODYX_TTY:-/dev/tty}"
+_HAS_TTY=false
+{ : <"$_NODYX_TTY"; } 2>/dev/null && _HAS_TTY=true
+_tty_needed() { # <question>
+  $_HAS_TTY || die "$(t no_tty_question "$1")"
+}
+
 _confirm() {
   # Usage: _confirm "message" [défaut y|n]  → 0 si oui, 1 si non.
   # Seuls oui/yes/o/y et non/no/n sont compris ; Entrée prend le défaut ; toute
@@ -594,6 +661,7 @@ _confirm() {
   local msg="$1" default="${2:-y}" _c _fd _hint
   [[ "$default" == "o" ]] && default="y"
   if $_AUTO_YES; then info "$(t confirm_auto_yes "$msg")"; return 0; fi
+  _tty_needed "$msg"
   [[ "$default" == "n" ]] && _hint="$(t confirm_ny)" || _hint="$(t confirm_yn)"
   exec {_fd}<"${_NODYX_TTY:-/dev/tty}"
   while true; do
@@ -609,14 +677,23 @@ _confirm() {
   done
 }
 
+# prompt <variable> <question> [défaut] : avec --yes, le défaut est pris sans
+# demander ; les réponses sont lues sur le terminal, jamais sur l'entrée standard.
 prompt() {
-  local var="$1" msg="$2" default="${3:-}" val=''
-  if [[ -n "$default" ]]; then
-    read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val
+  local var="$1" msg="$2" default="${3:-}" has_default=false val=''
+  [[ $# -ge 3 ]] && has_default=true
+  if $has_default && $_AUTO_YES; then
+    printf -v "$var" '%s' "$default"
+    info "$(t prompt_default_auto "$msg" "${default:--}")"
+    return
+  fi
+  _tty_needed "$msg"
+  if $has_default; then
+    read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val <"$_NODYX_TTY"
     val="${val:-$default}"
   else
     while [[ -z "$val" ]]; do
-      read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val
+      read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val <"$_NODYX_TTY"
     done
   fi
   printf -v "$var" '%s' "$val"
@@ -624,8 +701,9 @@ prompt() {
 
 prompt_secret() {
   local var="$1" msg="$2" val=''
+  _tty_needed "$msg"
   while [[ -z "$val" ]]; do
-    read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val; echo
+    read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val <"$_NODYX_TTY"; echo
   done
   printf -v "$var" '%s' "$val"
 }
@@ -874,6 +952,53 @@ _ensure_pangolin_ufw() {
 # nodyx-update : un simple raccourci vers `install_tunnel.sh --upgrade`
 # (04/10/2026). Avant, c'était une 2e copie de la mise à jour, qui compilait
 # dans le dossier servi, sans sauvegarde de la base.
+# ── Jeton du tunnel Cloudflare hors de la ligne de commande (04/10/2026) ──────
+# `cloudflared service install <jeton>` écrit une unité qui lance
+# `cloudflared tunnel run --token <jeton>` : le processus portait le jeton dans
+# sa ligne de commande, lisible par tout utilisateur via ps, tant qu'il tournait
+# (le chmod 600 de l'unité n'y changeait rien). cloudflared lit aussi le jeton
+# dans TUNNEL_TOKEN : il vit désormais dans /etc/cloudflared/tunnel.env (600).
+# NODYX_TEST_ROOT : racine de test (bancs), vide en vrai.
+_nodyx_write_cloudflared_unit() { # <jeton>
+  local root="${NODYX_TEST_ROOT:-}" bin
+  # Un jeton Cloudflare est du base64 : rien d'autre ne doit finir dans le fichier.
+  [[ "$1" =~ ^[A-Za-z0-9+/=_-]+$ ]] || return 2
+  bin="$(command -v cloudflared 2>/dev/null || echo /usr/bin/cloudflared)"
+  mkdir -p "$root/etc/cloudflared" "$root/etc/systemd/system"
+  (umask 077; printf 'TUNNEL_TOKEN=%s\n' "$1" > "$root/etc/cloudflared/tunnel.env")
+  chmod 600 "$root/etc/cloudflared/tunnel.env"
+  cat > "$root/etc/systemd/system/cloudflared.service" <<CFUNIT
+[Unit]
+Description=cloudflared (Nodyx tunnel)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+TimeoutStartSec=15
+Type=notify
+EnvironmentFile=/etc/cloudflared/tunnel.env
+ExecStart=${bin} --no-autoupdate tunnel run
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+CFUNIT
+  chmod 644 "$root/etc/systemd/system/cloudflared.service"
+}
+
+# Installations existantes : unité de `cloudflared service install`, jeton en
+# argument. Code 0 si l'unité a été réécrite (daemon-reload + restart à faire).
+_nodyx_migrate_cloudflared_token() {
+  local root="${NODYX_TEST_ROOT:-}" unit tok
+  unit="$root/etc/systemd/system/cloudflared.service"
+  [[ -f "$unit" ]] || return 1
+  tok="$(grep -m1 '^ExecStart=' "$unit" | grep -oE -- '--token[ =][A-Za-z0-9+/=_-]+' | head -1 || true)"
+  tok="${tok#--token}"; tok="${tok#[ =]}"
+  [[ -n "$tok" ]] || return 1
+  _nodyx_write_cloudflared_unit "$tok"
+}
+
 _nodyx_write_update_script() { # <chemin> <dossier nodyx>
   cat > "$1" <<UPDATESCRIPT
 #!/usr/bin/env bash
@@ -984,6 +1109,10 @@ _nodyx_upgrade() {
   TUNNEL_MODE="$_persisted_mode" _ensure_pangolin_ufw || true
 
   if [[ "$_persisted_mode" == "cf" ]]; then
+    if _nodyx_migrate_cloudflared_token; then
+      systemctl daemon-reload
+      ok "cloudflared: tunnel token moved out of the command line (/etc/cloudflared/tunnel.env)"
+    fi
     systemctl restart cloudflared 2>/dev/null || true
   fi
 
@@ -1079,7 +1208,8 @@ if [[ -d "$NODYX_DIR/.git" && -z "$INSTALL_MODE" ]]; then
   echo "  $(t detect_4)"
   echo "  $(t detect_5)"
   echo ""
-  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t detect_prompt): ")" _choice
+  _tty_needed "$(t detect_prompt) (--upgrade, --repair, --reinstall, --wipe)"
+  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t detect_prompt): ")" _choice <"$_NODYX_TTY"
   case "$_choice" in
     1) INSTALL_MODE="upgrade" ;;
     2) INSTALL_MODE="repair" ;;
@@ -1140,9 +1270,10 @@ if [[ -n "$DOMAIN_FLAG" ]]; then
   DOMAIN="${DOMAIN_FLAG#https://}"; DOMAIN="${DOMAIN#http://}"; DOMAIN="${DOMAIN%/}"
   _valid_domain "$DOMAIN" || die "$(printf "$(t cfg_domain_invalid)" "$DOMAIN")"
 else
+  _tty_needed "$(t cfg_domain_prompt) (--domain=…)"
   _domain_ok=false
   while ! $_domain_ok; do
-    read -rp "$(echo -e "  ${CYAN}?${RESET} $(t cfg_domain_prompt): ")" DOMAIN
+    read -rp "$(echo -e "  ${CYAN}?${RESET} $(t cfg_domain_prompt): ")" DOMAIN <"$_NODYX_TTY"
     DOMAIN="${DOMAIN#https://}"; DOMAIN="${DOMAIN#http://}"
     DOMAIN="${DOMAIN%/}";        DOMAIN="${DOMAIN// /}"
     if [[ -z "$DOMAIN" ]]; then
@@ -1169,8 +1300,9 @@ echo ""
 case "$TUNNEL_MODE" in
   cf|pangolin|none) ;;
   "")
+    _tty_needed "$(t cfg_tunnel_prompt) (--tunnel=cf|pangolin|none)"
     while true; do
-      read -rp "$(echo -e "  ${CYAN}?${RESET} $(t cfg_tunnel_prompt): ")" _tm
+      read -rp "$(echo -e "  ${CYAN}?${RESET} $(t cfg_tunnel_prompt): ")" _tm <"$_NODYX_TTY"
       case "$_tm" in
         1|cf)        TUNNEL_MODE="cf";       break ;;
         2|pangolin)  TUNNEL_MODE="pangolin"; break ;;
@@ -1810,17 +1942,13 @@ if [[ "$TUNNEL_MODE" == "cf" ]]; then
     systemctl stop cloudflared 2>/dev/null || true
 
     info "Registering cloudflared service with the token..."
-    _CF_LOG=$(mktemp /tmp/nodyx_cf_install_XXXXXX.log); _register_temp "$_CF_LOG"
-    if ! cloudflared service install "$CF_TUNNEL_TOKEN" >"$_CF_LOG" 2>&1; then
-      cat "$_CF_LOG" >&2
-      die "cloudflared service install failed. Check the token in your CF dashboard."
-    fi
+    # Notre unité, jeton dans /etc/cloudflared/tunnel.env (600) : jamais dans
+    # une ligne de commande (cf _nodyx_write_cloudflared_unit).
+    _nodyx_write_cloudflared_unit "$CF_TUNNEL_TOKEN" \
+      || die "The Cloudflare tunnel token contains unexpected characters. Copy it again from your CF dashboard."
+    systemctl daemon-reload
     (umask 077; echo -n "$_TOKEN_HASH" > "$_TOKEN_HASH_FILE")
     chmod 600 "$_TOKEN_HASH_FILE"
-    # cloudflared recopie le jeton du tunnel dans son unité systemd, lisible par
-    # tous par défaut : n'importe quel utilisateur local pouvait le lire et
-    # détourner le tunnel.
-    [[ -f /etc/systemd/system/cloudflared.service ]] && chmod 600 /etc/systemd/system/cloudflared.service
 
     systemctl enable cloudflared --quiet 2>/dev/null || true
     systemctl restart cloudflared 2>/dev/null || true

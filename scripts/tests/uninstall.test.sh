@@ -191,6 +191,17 @@ PM2_JLIST='[{"name":"nodyx-core","pm2_env":{}},{"name":"demo-core","pm2_env":{}}
   run_case autres_instances ma-commu.example.org o o o o o o o
 check "autres instances Nodyx : refus affiché, rien touché" '[[ $CODE -ne 0 ]] && grep -q "autres instances Nodyx" <<<"$OUT" && unchanged'
 
+# ═══ 10c. Installation en tunnel Cloudflare ══════════════════════════════════
+# Depuis le 04/10/2026 le jeton vit dans /etc/cloudflared/tunnel.env, un fichier
+# que `cloudflared service uninstall` ne connaît pas (doublure : ne fait rien).
+tunnel_cf() {
+  mkdir -p "$1/etc/nodyx" "$1/etc/cloudflared"; echo cf > "$1/etc/nodyx/tunnel-mode"
+  printf '[Service]\nEnvironmentFile=/etc/cloudflared/tunnel.env\nExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run\n' > "$1/etc/systemd/system/cloudflared.service"
+  echo 'TUNNEL_TOKEN=eyJjeton' > "$1/etc/cloudflared/tunnel.env"
+}
+PRE_HOOK=tunnel_cf run_case tunnel_cf ma-commu.example.org o o n o n o o o
+check "tunnel Cloudflare : unité ET fichier du jeton retirés" '[[ $CODE -eq 0 && ! -e "$R/etc/systemd/system/cloudflared.service" && ! -e "$R/etc/cloudflared/tunnel.env" ]]'
+
 # ═══ 11. Pas de terminal ═════════════════════════════════════════════════════
 R="$WORK/sans_tty"; make_root "$R"; LOG="$WORK/sans_tty.log"; : > "$LOG"
 OUT="$(env -i PATH="$BIN" LANG=fr_FR.UTF-8 SHIM_LOG="$LOG" SHIM_BIN="$BIN" NODYX_UNINSTALL_ROOT="$R" \
