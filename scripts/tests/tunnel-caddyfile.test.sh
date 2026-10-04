@@ -74,7 +74,8 @@ echo "── installation neuve et mise à jour"
 check "le core reçoit un secret interne (.env)" 'grep -q "^INTERNAL_API_SECRET=\${INTERNAL_API_SECRET}$" "$TUNNEL"'
 check "le frontend reçoit secret, en-tête d'IP et profondeur (ecosystem)" 'grep -qF "INTERNAL_API_SECRET: '"'"'\${INTERNAL_API_SECRET}'"'"', ADDRESS_HEADER: '"'"'x-forwarded-for'"'"', XFF_DEPTH: '"'"'1'"'"'" "$TUNNEL"'
 check "fichiers de secrets en 600" 'grep -qF "chmod 600 \"\${NODYX_DIR}/ecosystem.config.js\"" "$TUNNEL"'
-check "--upgrade/--repair et nodyx-update appellent la migration partagée" '[[ $(grep -c "nodyx_migrate_client_ip" "$TUNNEL") -ge 2 ]]'
+check "--upgrade/--repair appellent la migration partagée" 'awk "/^_nodyx_upgrade\\(\\) \\{/,/^}/" "$TUNNEL" | grep -q "nodyx_migrate_client_ip"'
+check "nodyx-update passe par --upgrade (donc par la migration)" 'grep -qF "exec bash \"\$2/install_tunnel.sh\" --upgrade" "$TUNNEL"'
 
 echo ""
 echo "Résultat : $PASS réussis, $FAIL échoués"
