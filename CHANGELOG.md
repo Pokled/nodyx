@@ -64,6 +64,16 @@ explicite ; `--yes` ne peut jamais en décider.
   par défaut, n'est plus jamais supprimé pour être recréé.
 - `sudo` n'est plus nécessaire (absent des images Debian minimales et des conteneurs LXC).
 
+### Installeur : le nom de l'instance est vérifié avant de commencer
+
+En mode relais, un nom `<slug>.nodyx.org` déjà pris n'était découvert qu'au moment de s'inscrire à
+l'annuaire, une fois l'instance compilée pour ce nom. L'installeur changeait alors de nom sans
+recompiler le frontend, qui continuait d'appeler l'ancien domaine : celui d'une autre communauté.
+Le nom est désormais vérifié auprès de l'annuaire avant toute modification (nouvelle route publique
+en lecture seule `GET /api/directory/check/:slug`, limitée en débit), et un nouveau nom est demandé
+s'il est pris, réservé ou invalide. Le bilan de santé de l'installeur interrogeait une route qui
+n'existait pas : il utilise maintenant celle-ci.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

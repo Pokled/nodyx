@@ -805,6 +805,20 @@ T_EN[sub_register_new_failed]='Registration failed with the new slug. Check your
 T_FR[sub_register_new_failed]='Enregistrement échoué avec le nouveau slug. Vérifie ta connexion et réessaie.'
 T_EN[sub_install_cancelled]="Installation cancelled. Contact nodyx.org support to release the slug '%s'."
 T_FR[sub_install_cancelled]="Installation annulée. Contacte le support nodyx.org pour libérer le slug '%s'."
+T_EN[slug_checking]="Checking that %s.nodyx.org is available..."
+T_FR[slug_checking]="Vérification que %s.nodyx.org est libre..."
+T_EN[slug_available]="%s.nodyx.org is available"
+T_FR[slug_available]="%s.nodyx.org est libre"
+T_EN[slug_unavailable]="%s.nodyx.org is not available (%s): choose another name."
+T_FR[slug_unavailable]="%s.nodyx.org n'est pas disponible (%s) : choisis un autre nom."
+T_EN[slug_unavailable_yes]="%s.nodyx.org is not available (%s): run the installer again with --slug=another-name. Nothing was changed."
+T_FR[slug_unavailable_yes]="%s.nodyx.org n'est pas disponible (%s) : relance l'installeur avec --slug=autre-nom. Rien n'a été modifié."
+T_EN[slug_check_unknown]="Could not check the name with the directory (offline?): continuing; it will be checked again at registration."
+T_FR[slug_check_unknown]="Impossible de vérifier le nom auprès de l'annuaire (hors ligne ?) : on continue, il sera revérifié à l'inscription."
+T_EN[slug_taken_late]="%s.nodyx.org was taken by someone else during the installation. Nothing has been sent to that name. Run the installer again with --slug=another-name."
+T_FR[slug_taken_late]="%s.nodyx.org a été pris par quelqu'un d'autre pendant l'installation. Rien n'a été envoyé vers ce nom. Relance l'installeur avec --slug=autre-nom."
+T_EN[hc_dir_registered]='Directory  →  %s is registered'
+T_FR[hc_dir_registered]='Annuaire  →  %s est inscrite'
 T_EN[sub_reinstall_overwrite]='If this is a reinstall, the old entry will be overwritten on the next ping.'
 T_FR[sub_reinstall_overwrite]="Si c'est une réinstallation, l'ancienne entrée sera écrasée au prochain ping."
 T_EN[sub_register_failed]='Registration failed.'
@@ -1981,6 +1995,39 @@ case "$NET_MODE" in
     ;;
 esac
 
+# ── Le nom <slug>.nodyx.org est-il libre ? Avant de modifier quoi que ce soit ──
+# Obligatoire en relais (c'est l'adresse de l'instance) et en mode automatique
+# (adresse publique de l'instance). Avant le 04/10/2026, un nom déjà pris
+# n'était découvert qu'à l'inscription, l'instance déjà compilée pour lui.
+# _nodyx_slug_check <slug> : available | taken | reserved | invalid | unknown
+_nodyx_slug_check() {
+  local r
+  r="$(curl -s --max-time 8 "https://nodyx.org/api/directory/check/$1" 2>/dev/null || true)"
+  case "$r" in
+    *'"available":true'*)    echo available ;;
+    *'"reason":"taken"'*)    echo taken ;;
+    *'"reason":"reserved"'*) echo reserved ;;
+    *'"reason":"invalid"'*)  echo invalid ;;
+    *)                       echo unknown ;;
+  esac
+}
+if $RELAY_MODE || $DOMAIN_IS_AUTO; then
+  while true; do
+    info "$(printf "$(t slug_checking)" "$COMMUNITY_SLUG")"
+    _SLUG_STATE="$(_nodyx_slug_check "$COMMUNITY_SLUG")"
+    case "$_SLUG_STATE" in
+      available) ok "$(printf "$(t slug_available)" "$COMMUNITY_SLUG")"; break ;;
+      unknown)   warn "$(t slug_check_unknown)"; break ;;
+    esac
+    $_AUTO_YES && die "$(printf "$(t slug_unavailable_yes)" "$COMMUNITY_SLUG" "$_SLUG_STATE")"
+    warn "$(printf "$(t slug_unavailable)" "$COMMUNITY_SLUG" "$_SLUG_STATE")"
+    COMMUNITY_SLUG=""
+    prompt COMMUNITY_SLUG "$(t sub_new_slug_prompt)"
+    COMMUNITY_SLUG="$(slugify "$COMMUNITY_SLUG")"
+    $RELAY_MODE && DOMAIN="${COMMUNITY_SLUG}.nodyx.org"
+  done
+fi
+
 conf_section "$(t conf_admin)"
 prompt        ADMIN_USERNAME "$(t prompt_admin_user)"
 prompt        ADMIN_EMAIL    "$(t prompt_admin_email)"
@@ -3156,50 +3203,11 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
     if [[ "${REGISTER_HTTP_CODE}" == "409" ]] || echo "$REGISTER_RESPONSE" | grep -qi 'already taken\|slug.*conflict\|already registered'; then
       warn "$(printf "$(t sub_slug_taken)" "${COMMUNITY_SLUG}")"
       if $RELAY_MODE; then
-        echo ""
-        echo -e "  ${BOLD}$(t sub_options)${RESET}"
-        echo -e "  ${GREEN}$(t sub_choose_new_slug)${RESET}"
-        echo -e "  ${YELLOW}$(t sub_cancel_contact)${RESET}"
-        echo ""
-        read -rp "$(echo -e "  ${BOLD}$(t sub_choice_prompt) ${RESET}")" _slug_choice </dev/tty
-        _slug_choice="${_slug_choice:-1}"
-        if [[ "$_slug_choice" == "1" ]]; then
-          read -rp "$(echo -e "  ${BOLD}$(t sub_new_slug_prompt) ${RESET}")" _new_slug </dev/tty
-          _new_slug="${_new_slug:-}"
-          if [[ -z "$_new_slug" ]]; then
-            die "$(t sub_slug_empty)"
-          fi
-          COMMUNITY_SLUG="$_new_slug"
-          REGISTER_RESPONSE=$(_nodyx_directory_json "https://${COMMUNITY_SLUG}.nodyx.org" \
-            | curl -fsSL -X POST "https://nodyx.org/api/directory/register" \
-                -H "Content-Type: application/json" --data-binary @- 2>/dev/null || true)
-          REGISTER_TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
-          REGISTER_SLUG=$(echo "$REGISTER_RESPONSE" | grep -o '"subdomain":"[^"]*"' | cut -d'"' -f4 || true)
-          if [[ -n "$REGISTER_TOKEN" ]]; then
-            NODYX_DIRECTORY_TOKEN="$REGISTER_TOKEN"
-            NODYX_SUBDOMAIN="${REGISTER_SLUG:-${COMMUNITY_SLUG}.nodyx.org}"
-            DOMAIN="${COMMUNITY_SLUG}.nodyx.org"
-            ok "$(printf "$(t sub_registered)" "${BOLD}https://${NODYX_SUBDOMAIN}${RESET}")"
-            # Injecter le token dans .env + mettre à jour le domaine partout
-            {
-              printf "\n# Annuaire nodyx.org\n"
-              printf "DIRECTORY_TOKEN=%s\n" "${NODYX_DIRECTORY_TOKEN}"
-              printf "DIRECTORY_API_URL=https://nodyx.org\n"
-              printf "SELF_URL=http://127.0.0.1:3000\n"
-              printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
-              printf "NODYX_GLOBAL_INDEXING=true\n"
-            } >> "${NODYX_DIR}/nodyx-core/.env"
-            # Mettre à jour FRONTEND_URL, PUBLIC_API_URL et ORIGIN avec le nouveau slug
-            sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=https://${DOMAIN}|" "${NODYX_DIR}/nodyx-core/.env"
-            sed -i "s|^PUBLIC_API_URL=.*|PUBLIC_API_URL=https://${DOMAIN}|" "${NODYX_DIR}/nodyx-frontend/.env"
-            sed -i "s|ORIGIN: 'https://[^']*'|ORIGIN: 'https://${DOMAIN}'|g" "${NODYX_DIR}/ecosystem.config.js"
-            cd "${NODYX_DIR}" && runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core 2>/dev/null || true
-          else
-            die "$(t sub_register_new_failed)"
-          fi
-        else
-          die "$(printf "$(t sub_install_cancelled)" "${COMMUNITY_SLUG}")"
-        fi
+        # Le nom a été pris PENDANT l'installation (il était libre à la
+        # vérification du début). On n'essaie plus de changer de nom après coup :
+        # le frontend est compilé pour celui-ci (PUBLIC_API_URL), il appellerait
+        # le domaine d'une AUTRE communauté. Arrêt propre, rien n'a été envoyé.
+        die "$(printf "$(t slug_taken_late)" "${COMMUNITY_SLUG}")"
       else
         warn "$(t sub_reinstall_overwrite)"
       fi
@@ -3596,14 +3604,15 @@ if [[ -n "${NODYX_SUBDOMAIN:-}" ]]; then
     _hc_warn "$(printf "$(t hc_dir_dns_propagating)" "${NODYX_SUBDOMAIN}" "${YELLOW}" "${RESET}")"
   fi
 
-  _dir_status=$(curl -s --max-time 5 "${NODYX_DIRECTORY_URL}/instances/${COMMUNITY_SLUG}" 2>/dev/null \
-    | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
-  if [[ "$_dir_status" == "active" ]]; then
-    _hc_pass "$(printf "$(t hc_dir_active)" "${GREEN}" "${RESET}")"
-  elif [[ -n "$_dir_status" ]]; then
-    _hc_warn "$(printf "$(t hc_dir_status)" "${_dir_status}")"
-  else
+  # (Avant le 04/10/2026 : /instances/<slug>, une route qui n'existe pas.
+  # Ce contrôle ne pouvait jamais réussir.)
+  _dir_state="$(_nodyx_slug_check "$COMMUNITY_SLUG")"
+  if [[ "$_dir_state" == "taken" ]]; then
+    _hc_pass "$(printf "$(t hc_dir_registered)" "${NODYX_SUBDOMAIN}")"
+  elif [[ "$_dir_state" == "unknown" ]]; then
     _hc_warn "$(printf "$(t hc_dir_unreachable)" "${YELLOW}" "${RESET}")"
+  else
+    _hc_warn "$(printf "$(t hc_dir_status)" "${_dir_state}")"
   fi
 fi
 
