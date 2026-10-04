@@ -115,6 +115,15 @@ a désormais son empreinte SHA-256 épinglée dans l'installeur, vérifiée avan
 fichier qui ne correspond pas n'est jamais installé. À chaque intégration continue, ces empreintes
 sont comparées à celles que GitHub publie.
 
+### Sécurité : plus de secrets dans la ligne de commande des services
+
+Le jeton de l'annuaire (service du relais) et le secret TURN étaient passés en arguments : tout
+utilisateur du serveur pouvait les lire avec `ps`, et le jeton figurait en clair dans le fichier du
+service, lisible par tous. Ils sont désormais lus dans un fichier réservé à root (`/etc/nodyx/relay.env`,
+`/etc/nodyx-turn.env`). La mise à jour (`install.sh --upgrade`) migre les services existants ; elle
+conserve aussi le serveur de relais choisi à l'installation, au lieu de revenir au port 7443 (ce
+qui coupait les instances passées par la porte WebSocket).
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

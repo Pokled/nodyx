@@ -1036,6 +1036,84 @@ _setup_pm2_logrotate() {
   "${as_nodyx[@]}" list 2>/dev/null | grep -q 'pm2-logrotate'
 }
 
+# ── Services nodyx-relay-client et nodyx-turn : secrets HORS de la ligne de ──
+# commande (04/10/2026). Avant, le jeton de l'annuaire et le secret TURN étaient
+# des arguments : lisibles par tout utilisateur via `ps`, et le jeton en clair
+# dans l'unité systemd, lisible par tous. Les binaires publiés les lisent dans
+# l'environnement (NODYX_RELAY_TOKEN, TURN_SECRET), chargé par systemd depuis un
+# fichier en 600. Le serveur et le slug du relais (non secrets) restent des
+# arguments, lus dans le même fichier : la mise à jour ne les perd plus (avant,
+# elle remettait relay.nodyx.org:7443 et cassait les instances passées par wss://).
+# NODYX_TEST_ROOT préfixe les chemins (tests seulement).
+_nodyx_write_relay_unit() { # <serveur> <slug> <jeton>
+  local r="${NODYX_TEST_ROOT:-}"
+  install -d -m 755 "$r/etc/nodyx" "$r/etc/systemd/system"
+  (umask 077; printf 'NODYX_RELAY_SERVER=%s\nNODYX_RELAY_SLUG=%s\nNODYX_RELAY_TOKEN=%s\n' "$1" "$2" "$3" > "$r/etc/nodyx/relay.env")
+  chmod 600 "$r/etc/nodyx/relay.env"
+  cat > "$r/etc/systemd/system/nodyx-relay-client.service" <<'_SVC'
+[Unit]
+Description=Nodyx Relay Client — tunnel vers relay.nodyx.org
+After=network.target
+
+[Service]
+# Serveur, slug et jeton : /etc/nodyx/relay.env (600). Le jeton est lu par
+# nodyx-relay dans son environnement, jamais passé en argument.
+EnvironmentFile=/etc/nodyx/relay.env
+ExecStart=/usr/local/bin/nodyx-relay client --server ${NODYX_RELAY_SERVER} --slug ${NODYX_RELAY_SLUG} --local-port 80
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=5
+User=nodyx
+
+[Install]
+WantedBy=multi-user.target
+_SVC
+}
+
+_nodyx_write_turn_unit() {
+  local r="${NODYX_TEST_ROOT:-}"
+  install -d -m 755 "$r/etc/systemd/system"
+  cat > "$r/etc/systemd/system/nodyx-turn.service" <<'_SVC'
+[Unit]
+Description=Nodyx TURN Server (WebRTC relay)
+After=network.target
+
+[Service]
+# Port, IP publique, royaume, secret et durée : lus par nodyx-turn dans son
+# environnement, chargé depuis /etc/nodyx-turn.env (600). Rien en argument.
+EnvironmentFile=/etc/nodyx-turn.env
+ExecStart=/usr/local/bin/nodyx-turn server
+Restart=on-failure
+RestartSec=5s
+User=nodyx
+
+[Install]
+WantedBy=multi-user.target
+_SVC
+}
+
+# _nodyx_migrate_service_secrets : réécrit les services à l'ancienne forme
+# (secret en argument). Le serveur, le slug et le jeton du relais sont relus
+# dans l'unité existante : rien n'est perdu, rien n'est inventé.
+_nodyx_migrate_service_secrets() {
+  local r="${NODYX_TEST_ROOT:-}" u srv slg tok changed=1
+  u="$r/etc/systemd/system/nodyx-relay-client.service"
+  if [[ -f "$u" ]] && grep -q -- '--token ' "$u"; then
+    srv="$(grep -oE -- '--server [^ \\]+' "$u" | head -1 | awk '{print $2}')"
+    slg="$(grep -oE -- '--slug [^ \\]+' "$u" | head -1 | awk '{print $2}')"
+    tok="$(grep -oE -- '--token [^ \\]+' "$u" | head -1 | awk '{print $2}')"
+    if [[ -n "$srv" && -n "$slg" && -n "$tok" ]]; then
+      _nodyx_write_relay_unit "$srv" "$slg" "$tok"; changed=0
+    fi
+  fi
+  u="$r/etc/systemd/system/nodyx-turn.service"
+  if [[ -f "$u" && -f "$r/etc/nodyx-turn.env" ]] && grep -q -- '--secret' "$u"; then
+    _nodyx_write_turn_unit; changed=0
+  fi
+  return $changed
+}
+
 # Chemin rapide : mise à jour / réparation sans reconfiguration
 _nodyx_upgrade() {
   local from_ver="$1" to_ver="$2" dir="$3"
@@ -1139,23 +1217,20 @@ _nodyx_upgrade() {
   local _env_file="${dir}/nodyx-core/.env"
   local _dir_token; _dir_token=$(grep '^DIRECTORY_TOKEN=' "$_env_file" 2>/dev/null | cut -d= -f2- || true)
   local _slug;      _slug=$(grep '^NODYX_COMMUNITY_SLUG=' "$_env_file" 2>/dev/null | cut -d= -f2- || true)
+  # Secrets hors de la ligne de commande (04/10/2026) pour les services existants.
+  if _nodyx_migrate_service_secrets; then
+    systemctl daemon-reload
+    systemctl is-active --quiet nodyx-relay-client 2>/dev/null && systemctl restart nodyx-relay-client 2>/dev/null || true
+    systemctl is-active --quiet nodyx-turn 2>/dev/null && systemctl restart nodyx-turn 2>/dev/null || true
+    ok "Services nodyx-relay-client / nodyx-turn : secrets moved out of the command line"
+  fi
   if [[ -n "$_dir_token" && -n "$_slug" ]] && ! systemctl is-active --quiet nodyx-relay-client 2>/dev/null; then
     if [[ -f /usr/local/bin/nodyx-relay ]]; then
       info "$(t relay_recreate)"
-      cat > /etc/systemd/system/nodyx-relay-client.service <<_SVC
-[Unit]
-Description=Nodyx Relay Client
-After=network.target
-[Service]
-ExecStart=/usr/local/bin/nodyx-relay client --server ${RELAY_SERVER:-relay.nodyx.org:7443} --slug ${_slug} --token ${_dir_token} --local-port 80
-Restart=on-failure
-RestartSec=5s
-StartLimitIntervalSec=60
-StartLimitBurst=5
-User=nodyx
-[Install]
-WantedBy=multi-user.target
-_SVC
+      # Le serveur choisi à l'installation (7443, IPv6 ou wss://) est conservé
+      # dans /etc/nodyx/relay.env ; à défaut seulement, le serveur par défaut.
+      _srv="$(grep -m1 '^NODYX_RELAY_SERVER=' /etc/nodyx/relay.env 2>/dev/null | cut -d= -f2- || true)"
+      _nodyx_write_relay_unit "${_srv:-${RELAY_SERVER:-relay.nodyx.org:7443}}" "$_slug" "$_dir_token"
       systemctl daemon-reload
       systemctl enable nodyx-relay-client --quiet
       systemctl start nodyx-relay-client
@@ -2467,26 +2542,7 @@ TURNENV
   chmod 600 /etc/nodyx-turn.env
 
   # Service systemd
-  cat > /etc/systemd/system/nodyx-turn.service <<SVC
-[Unit]
-Description=Nodyx TURN Server (WebRTC relay)
-After=network.target
-
-[Service]
-EnvironmentFile=/etc/nodyx-turn.env
-ExecStart=/usr/local/bin/nodyx-turn server \
-  --udp-port \${TURN_PORT} \
-  --public-ip \${TURN_PUBLIC_IP} \
-  --realm \${TURN_REALM} \
-  --secret \${TURN_SECRET} \
-  --ttl \${TURN_TTL}
-Restart=on-failure
-RestartSec=5s
-User=nodyx
-
-[Install]
-WantedBy=multi-user.target
-SVC
+  _nodyx_write_turn_unit
 
   systemctl daemon-reload
   systemctl enable nodyx-turn --quiet
@@ -3243,26 +3299,7 @@ fi
 if $RELAY_MODE && [[ -n "$NODYX_DIRECTORY_TOKEN" ]]; then
   step "$(t step_relay_client)"
 
-  cat > /etc/systemd/system/nodyx-relay-client.service <<SVC
-[Unit]
-Description=Nodyx Relay Client — tunnel vers relay.nodyx.org
-After=network.target
-
-[Service]
-ExecStart=/usr/local/bin/nodyx-relay client \
-  --server ${RELAY_SERVER:-relay.nodyx.org:7443} \
-  --slug ${COMMUNITY_SLUG} \
-  --token ${NODYX_DIRECTORY_TOKEN} \
-  --local-port 80
-Restart=on-failure
-RestartSec=5s
-StartLimitIntervalSec=60
-StartLimitBurst=5
-User=nodyx
-
-[Install]
-WantedBy=multi-user.target
-SVC
+  _nodyx_write_relay_unit "${RELAY_SERVER:-relay.nodyx.org:7443}" "$COMMUNITY_SLUG" "$NODYX_DIRECTORY_TOKEN"
 
   systemctl daemon-reload
   systemctl enable nodyx-relay-client --quiet

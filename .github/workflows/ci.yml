@@ -267,7 +267,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: ShellCheck (avertissements bloquants)
-        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh scripts/tests/install-data.test.sh scripts/tests/install-slug.test.sh scripts/tests/tunnel-caddyfile.test.sh scripts/tests/tunnel-hardening.test.sh scripts/tests/install-binaries.test.sh
+        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh scripts/tests/install-data.test.sh scripts/tests/install-slug.test.sh scripts/tests/tunnel-caddyfile.test.sh scripts/tests/tunnel-hardening.test.sh scripts/tests/install-binaries.test.sh scripts/tests/install-services.test.sh
 
       - name: Banc de uninstall.sh
         run: bash scripts/tests/uninstall.test.sh
@@ -301,6 +301,11 @@ jobs:
       # Binaires exécutés en root par install.sh : empreinte SHA-256 épinglée et
       # vérifiée avant installation ; à chaque CI, les empreintes épinglées sont
       # comparées à celles que GitHub publie (une publication remplacée échoue ici).
+      # Services relais et TURN : secrets hors de la ligne de commande, migration
+      # des unités existantes sans perdre le serveur du relais.
+      - name: Banc des services relais / TURN
+        run: bash scripts/tests/install-services.test.sh
+
       - name: Banc des binaires (empreintes, contre GitHub)
         env:
           NODYX_TEST_GITHUB: "1"
