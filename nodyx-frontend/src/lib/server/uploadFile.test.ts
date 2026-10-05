@@ -7,7 +7,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { readUploadFile } from './uploadFile'
+import { readUploadFile, instanceUploadsDir } from './uploadFile'
 
 let base: string
 let uploads: string
@@ -58,5 +58,33 @@ describe('readUploadFile', () => {
 		expect(readUploadFile('/uploads/avatars/absent.png', uploads)).toBeNull()
 		expect(readUploadFile('/icons/icon-192.png', uploads)).toBeNull()
 		expect(readUploadFile('https://[mal-forme', uploads)).toBeNull()
+	})
+})
+
+/**
+ * Régression 05/10 : card.png cherchait les uploads dans /var/www/nexus en dur.
+ * Sur vieuxlooters, demo, sleemstudio ou une installation standard (/opt/nodyx),
+ * la carte s'affichait sans avatar alors que le fichier existait.
+ */
+describe('instanceUploadsDir', () => {
+	it('se déduit du dossier de l\'instance, quel qu\'il soit', () => {
+		expect(instanceUploadsDir('/opt/vieuxlooters/nodyx-frontend', {})).toBe('/opt/vieuxlooters/nodyx-core/uploads')
+		expect(instanceUploadsDir('/opt/nodyx/nodyx-frontend', {})).toBe('/opt/nodyx/nodyx-core/uploads')
+	})
+	it('NODYX_UPLOADS_DIR force un autre chemin', () => {
+		expect(instanceUploadsDir('/opt/nodyx/nodyx-frontend', { NODYX_UPLOADS_DIR: '/srv/uploads' })).toBe('/srv/uploads')
+	})
+	it('lit vraiment l\'avatar d\'une instance installée ailleurs que /var/www/nexus', () => {
+		const instance = path.join(base, 'instance')
+		fs.mkdirSync(path.join(instance, 'nodyx-core', 'uploads', 'avatars'), { recursive: true })
+		fs.mkdirSync(path.join(instance, 'nodyx-frontend'), { recursive: true })
+		fs.writeFileSync(path.join(instance, 'nodyx-core', 'uploads', 'avatars', 'a.jpg'), 'PHOTO')
+		const dir = instanceUploadsDir(path.join(instance, 'nodyx-frontend'), {})
+		expect(readUploadFile('https://autre.example/uploads/avatars/a.jpg', dir)?.toString()).toBe('PHOTO')
+	})
+	it('card.png n\'a plus de chemin d\'instance écrit en dur', () => {
+		const src = fs.readFileSync(path.resolve(__dirname, '../../routes/users/[username]/card.png/+server.ts'), 'utf8')
+		expect(src).not.toContain('/var/www/nexus')
+		expect(src).toContain('instanceUploadsDir()')
 	})
 })

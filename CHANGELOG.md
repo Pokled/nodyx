@@ -264,6 +264,9 @@ découvrir après coup.
   trouvée en vérifiant cette correction : les secrets étaient générés avec `openssl` AVANT
   l'installation des paquets (qui l'apporte), et « libérer les ports » ne faisait rien sans
   `psmisc` ; un échec d'`apt` arrêtait aussi l'installeur tunnel sans le moindre message.
+- Carte de profil partageable (`card.png`) : sur toute instance autre que nodyx.org, l'avatar
+  manquait (remplacé par l'initiale), le dossier des fichiers envoyés étant écrit en dur. Il se
+  déduit désormais de l'instance.
 - Choix de la langue : ouvrir le panneau renvoyait à l'accueil, et « Retour » y laissait (page,
   brouillon et position de lecture perdus) ; recliquer sur le drapeau ne refermait rien. La page
   reste désormais sous le panneau, « Retour » ramène exactement là où on était, et le drapeau

@@ -40,3 +40,14 @@ export function readUploadFile(url: string, uploadsDir: string, maxBytes = 5 * 1
 		return null   // absent, illisible, dossier des uploads introuvable
 	}
 }
+
+/**
+ * Dossier des uploads de CETTE instance : le frontend tourne dans
+ * <instance>/nodyx-frontend, les uploads vivent dans <instance>/nodyx-core/uploads.
+ * Avant le 05/10/2026, card.png lisait /var/www/nexus en dur : sur toute autre
+ * instance, la carte de profil s'affichait sans avatar. NODYX_UPLOADS_DIR force
+ * un autre chemin.
+ */
+export function instanceUploadsDir(cwd: string = process.cwd(), env: NodeJS.ProcessEnv = process.env): string {
+	return env.NODYX_UPLOADS_DIR || path.resolve(cwd, '..', 'nodyx-core', 'uploads')
+}

@@ -5,10 +5,11 @@ import { Resvg } from '@resvg/resvg-js'
 import { error } from '@sveltejs/kit'
 import { readFileSync } from 'fs'
 import path from 'path'
-import { readUploadFile } from '$lib/server/uploadFile'
+import { readUploadFile, instanceUploadsDir } from '$lib/server/uploadFile'
 
-// Uploads are stored in nodyx-core — read directly from disk to avoid HTTP overhead
-const UPLOADS_DIR = '/var/www/nexus/nodyx-core/uploads'
+// Uploads are stored in nodyx-core — read directly from disk to avoid HTTP overhead.
+// Le chemin se déduit de l'instance (cf. instanceUploadsDir).
+const UPLOADS_DIR = instanceUploadsDir()
 
 // Load system fonts once at module level (DejaVu — always available on Ubuntu)
 const fontRegular = readFileSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
