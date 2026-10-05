@@ -83,11 +83,70 @@ L_DROP="$(grep -nE '^ +pg_dropcluster ' "$INSTALL" | head -1 | cut -d: -f1)"
 GOT="dossier:$L_DIR contrôle:$L_CHK pg_dropcluster:$L_DROP"
 check "pg_dropcluster vient APRÈS le contrôle du dossier configuré, dans sa branche « vide »" '[[ -n "$L_DIR" && -n "$L_CHK" && -n "$L_DROP" && $L_DIR -lt $L_CHK && $L_CHK -lt $L_DROP && $((L_DROP - L_CHK)) -le 4 ]]'
 
-echo "── sudo"
-for f in "$INSTALL" "$TUNNEL"; do
-  GOT="$(grep -nE "sudo -u (postgres|nodyx) " "$f" | grep -vE "echo|warn|info|printf|T_(EN|FR)\[|^[0-9]+: *#")"
-  check "$(basename "$f") : aucune commande ne dépend de sudo (runuser à la place)" '[[ -z "$GOT" ]]'
+echo "── sudo (issue #784 : absent d'une Debian 13 minimale, l'installation s'arrêtait à PostgreSQL)"
+# Deux règles simples, sans analyseur de shell :
+#  1. aucun « sudo -u » nulle part, même dans un message (runuser fait pareil
+#     et existe toujours : util-linux, priorité required) ;
+#  2. aucun sudo en position de COMMANDE (début de ligne, après $( | && || ; then if !).
+#     Un message qui conseille « sudo nodyx-update » reste permis.
+for f in "$INSTALL" "$TUNNEL" "$ROOT/uninstall.sh" "$ROOT"/scripts/install/*.sh; do
+  GOT="$(grep -nE 'sudo -u ' "$f" | grep -vE '^[0-9]+:[[:space:]]*#')"
+  check "$(basename "$f") : aucun « sudo -u » (runuser à la place)" '[[ -z "$GOT" ]]'
+  GOT="$(grep -nE '(^|\$\(|[|;&!]|\bthen|\bif|\bdo|\belse)[[:space:]]*sudo[[:space:]]' "$f" \
+    | grep -vE '^[0-9]+:[[:space:]]*(#|T_(EN|FR)\[|echo |printf |warn |info |die |ok |skip |_hc_|_pass |_warn |_fail )')"
+  check "$(basename "$f") : aucun sudo exécuté" '[[ -z "$GOT" ]]'
 done
+
+echo "── Debian minimale : outils absents tant que les paquets ne sont pas installés"
+# Debian 13 netinst sans « utilitaires standard » : ni sudo (#784), ni openssl,
+# ni psmisc (fuser). L'ordre des opérations doit en tenir compte.
+ligne() { grep -nF -- "$2" "$1" | head -1 | cut -d: -f1; }
+for f in "$INSTALL" "$TUNNEL"; do
+  N="$(basename "$f")"
+  # D'après le contenu : install.sh installe $_SYS_PKGS, le tunnel une liste en ligne.
+  APT="$(ligne "$f" 'apt-get install -y -q $_SYS_PKGS')"
+  [[ -n "$APT" ]] || APT="$(grep -nE '^  fonts-dejavu-core \\$' "$f" | head -1 | cut -d: -f1)"
+  SSL="$(ligne "$f" 'command -v openssl >/dev/null || die')"
+  GEN="$(grep -nE '^[A-Z_]+=\$\(gen_(pass|secret)\)' "$f" | head -1 | cut -d: -f1)"
+  GOT="paquets:$APT openssl vérifié:$SSL 1er secret:$GEN"
+  check "$N : secrets générés APRÈS l'installation des paquets (openssl), présence vérifiée" '[[ -n "$APT" && -n "$SSL" && -n "$GEN" && $APT -lt $SSL && $SSL -lt $GEN ]]'
+  GOT="$(grep -nF 'pkg_install_failed' "$f" | grep -c die)"
+  check "$N : un échec d'apt s'annonce clairement (plus d'arrêt muet)" '[[ $GOT -ge 1 ]]'
+done
+# Exécution réelle de la section (paquets → openssl → secrets), avec un PATH
+# minimal : openssl présent, openssl ABSENT, apt en échec.
+mkdir -p "$W/min-avec" "$W/min-sans"
+for d in min-avec min-sans; do
+  for b in tr head cat; do ln -sf "$(command -v "$b")" "$W/$d/$b"; done
+  printf '#!/bin/bash\n[[ -n "$APT_ECHEC" && "$*" == *install* ]] && exit 100\nexit 0\n' > "$W/$d/apt-get"; chmod +x "$W/$d/apt-get"
+done
+ln -sf "$(command -v openssl)" "$W/min-avec/openssl"
+block() { awk -v a="$2" -v b="$3" 'index($0, a) == 1 {p=1} p {print} p && index($0, b) == 1 {exit}' "$1"; }
+section() { # <installeur> <dossier PATH> <APT_ECHEC>
+  local deb
+  # D'après le CONTENU, pas le nom (une copie de main s'appelle autrement).
+  if grep -qF 'step "$(t step_install_deps)"' "$1"; then deb='step "$(t step_install_deps)"'; else deb='step "$(t step_packages)"'; fi
+  GOT="$(env -i PATH="$W/$2" APT_ECHEC="$3" /bin/bash -c "set -euo pipefail
+    t() { printf '%s' \"\$1\"; }; step() { :; }; ok() { :; }; info() { :; }; warn() { :; }
+    die() { echo \"DIE \$*\"; exit 1; }
+    $(grep -E '^gen_(secret|pass)\(\)' "$1")
+    $(block "$1" "$deb" 'INTERNAL_API_SECRET=$(gen_secret)')
+    echo \"SECRETS jwt=\${#JWT_SECRET} db=\${#DB_PASSWORD} interne=\${#INTERNAL_API_SECRET}\"" 2>&1)"; CODE=$?
+}
+for f in "$INSTALL" "$TUNNEL"; do
+  N="$(basename "$f")"
+  section "$f" min-avec ""
+  check "$N : openssl présent : secrets générés (64 hex, mot de passe non vide)" '[[ $CODE -eq 0 && "$GOT" == *"SECRETS jwt=64"* && "$GOT" != *"db=0"* && "$GOT" == *"interne=64"* ]]'
+  section "$f" min-sans ""
+  check "$N : openssl ABSENT : arrêt clair, aucun secret vide" '[[ $CODE -ne 0 && "$GOT" == *"DIE openssl_missing"* && "$GOT" != *SECRETS* ]]'
+  section "$f" min-avec 1
+  check "$N : apt en échec : arrêt clair avant tout secret" '[[ $CODE -ne 0 && "$GOT" == *"DIE pkg_install_failed"* && "$GOT" != *SECRETS* ]]'
+done
+PS="$(ligne "$INSTALL" 'apt-get install -y -q psmisc')"
+FU="$(grep -nE '^[[:space:]]+fuser -k' "$INSTALL" | head -1 | cut -d: -f1)"
+GOT="psmisc:$PS fuser:$FU"
+check "install_tunnel.sh : sans curl, pas de fausse alerte « HTTPS en panne »" 'grep -qF "elif command -v curl >/dev/null && ! curl -fsS" "$TUNNEL"'
+check "install.sh : psmisc installé avant fuser (sinon « libérer les ports » ne faisait rien)" '[[ -n "$PS" && -n "$FU" && $PS -lt $FU ]]'
 
 echo ""
 echo "Résultat : $PASS réussis, $FAIL échoués"
