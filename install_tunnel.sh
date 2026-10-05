@@ -1446,7 +1446,7 @@ _confirm "$(t cfg_recap_proceed)" || die "$(t install_cancelled)"
 step "$(t step_packages)"
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -q
+apt-get update -q || die "$(t pkg_install_failed)"
 apt-get install -y -q \
   git curl wget gnupg2 ca-certificates lsb-release \
   openssl ufw build-essential \

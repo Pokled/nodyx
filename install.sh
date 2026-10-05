@@ -2108,8 +2108,13 @@ if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
     [[ ! "${_port_force,,}" =~ ^(y|o)$ ]] && die "$(t install_cancelled)"
     # fuser vient de psmisc, absent d'une Debian minimale : sans lui, « libérer
     # les ports » ne faisait RIEN, en silence, et l'installation continuait.
-    command -v fuser >/dev/null || apt-get install -y -q psmisc >/dev/null 2>&1 \
-      || die "$(t pkg_install_failed)"
+    # (Sur certaines images, la liste des paquets est vide tant qu'on n'a pas
+    # fait « apt-get update » : seconde tentative après une mise à jour.)
+    if ! command -v fuser >/dev/null; then
+      apt-get install -y -q psmisc >/dev/null 2>&1 \
+        || { apt-get update -q >/dev/null 2>&1 && apt-get install -y -q psmisc >/dev/null 2>&1; } \
+        || die "$(t pkg_install_failed)"
+    fi
     for _bp in "${_PORT_BLOCKER_PORTS[@]}"; do
       for _p in $_bp; do
         fuser -k "${_p}/tcp" 2>/dev/null || true
@@ -2535,9 +2540,9 @@ REPO_URL="https://github.com/Pokled/nodyx.git"
 step "$(t step_install_deps)"
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -q
+apt-get update -q || die "$(t pkg_install_failed)"
 # git first — needed to clone the repo, and most VPS images don't ship with it
-apt-get install -y -q git 2>/dev/null
+apt-get install -y -q git 2>/dev/null || die "$(t pkg_install_failed)"
 _SYS_PKGS="curl wget gnupg2 ca-certificates lsb-release openssl ufw build-essential postgresql postgresql-contrib redis-server fonts-dejavu-core file"
 # shellcheck disable=SC2086
 apt-get install -y -q $_SYS_PKGS 2>/dev/null || die "$(t pkg_install_failed)"
