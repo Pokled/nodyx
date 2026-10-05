@@ -95,7 +95,7 @@ make_root() {
   echo archive > "$R/opt/nodyx/nodyx-core/backups/nodyx-2026.tar.gz"
   printf '{\n  servers {\n  }\n}\n\n(security_headers) {\n  header X a\n}\n\nma-commu.example.org {\n  import security_headers\n  reverse_proxy 127.0.0.1:3000\n}\n' > "$R/etc/caddy/Caddyfile"
   for s in nodyx-turn nodyx-sfud nodyx-relay-client pm2-nodyx; do echo "[Unit]" > "$R/etc/systemd/system/$s.service"; done
-  for b in nodyx-turn nodyx-sfud nodyx-relay nodyx-doctor nodyx-update; do echo bin > "$R/usr/local/bin/$b"; done
+  for b in nodyx-turn nodyx-sfud nodyx-relay nodyx-doctor nodyx-update nodyx-recover; do echo bin > "$R/usr/local/bin/$b"; done
   echo 'TURN=x' > "$R/etc/nodyx-turn.env"
   echo 'admin:secret' > "$R/root/nodyx-credentials.txt"
 }
@@ -138,6 +138,7 @@ check "pare-feu : 80/443 gardés (réponse non)" '! grep -qE "delete allow (80|4
 check "Caddyfile ramené à la page par défaut, sans le domaine" 'grep -q "^:80" "$R/etc/caddy/Caddyfile" && ! grep -q "ma-commu" "$R/etc/caddy/Caddyfile"'
 check "services, programmes et configuration retirés" '[[ ! -e "$R/etc/systemd/system/nodyx-sfud.service" && ! -e "$R/etc/systemd/system/pm2-nodyx.service" && ! -e "$R/usr/local/bin/nodyx-doctor" && ! -e "$R/etc/nodyx-turn.env" ]]'
 check "dossier Nodyx supprimé" '[[ ! -e "$R/opt/nodyx" ]]'
+check "nodyx-recover retiré aussi" '[[ ! -e "$R/usr/local/bin/nodyx-recover" ]]'
 check "utilisateur nodyx supprimé" 'grep -q "userdel -r nodyx" "$LOG"'
 
 # ═══ 2. Simulation : tout « oui », rien ne doit bouger ═══════════════════════

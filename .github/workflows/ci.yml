@@ -267,7 +267,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: ShellCheck (avertissements bloquants)
-        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh scripts/tests/install-data.test.sh scripts/tests/install-slug.test.sh scripts/tests/tunnel-caddyfile.test.sh scripts/tests/tunnel-hardening.test.sh scripts/tests/install-binaries.test.sh scripts/tests/install-services.test.sh scripts/install/build.sh scripts/tests/install-update.test.sh scripts/tests/install-noninteractive.test.sh scripts/tests/install-verdict.test.sh
+        run: shellcheck -S warning uninstall.sh scripts/tests/uninstall.test.sh scripts/install/caddyfile.sh scripts/tests/caddyfile.test.sh scripts/tests/firewall-ssh.test.sh scripts/tests/install-prompts.test.sh scripts/tests/install-data.test.sh scripts/tests/install-slug.test.sh scripts/tests/tunnel-caddyfile.test.sh scripts/tests/tunnel-hardening.test.sh scripts/tests/install-binaries.test.sh scripts/tests/install-services.test.sh scripts/install/build.sh scripts/tests/install-update.test.sh scripts/tests/install-noninteractive.test.sh scripts/tests/install-verdict.test.sh scripts/tests/install-recover.test.sh
 
       - name: Banc de uninstall.sh
         run: bash scripts/tests/uninstall.test.sh
@@ -323,6 +323,11 @@ jobs:
       # code de sortie 1, plus jamais « en ligne » ; le vocal est contrôlé.
       - name: Banc du verdict de fin d'installation
         run: bash scripts/tests/install-verdict.test.sh
+
+      # Accès de secours : mot de passe admin plus conservé en clair,
+      # nodyx-recover installé et fonctionnel (version compilée).
+      - name: Banc de l'accès de secours
+        run: bash scripts/tests/install-recover.test.sh
 
       - name: Banc des binaires (empreintes, contre GitHub)
         env:

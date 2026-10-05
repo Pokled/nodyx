@@ -174,6 +174,8 @@ T_EN[upgrade_site_untouched]='The site was NOT touched: it still runs the previo
 T_FR[upgrade_site_untouched]="Le site n'a PAS été touché : il tourne toujours sur la version précédente."
 T_EN[upgrade_swap_fail]='Could not switch to the new version; the previous one was put back. Run sudo nodyx-doctor.'
 T_FR[upgrade_swap_fail]="Impossible de basculer sur la nouvelle version ; la précédente a été remise en place. Lance sudo nodyx-doctor."
+T_EN[creds_password_kept]='%s still holds the admin password in clear text. It is no longer needed (lost password: sudo nodyx-recover). Remove the "Admin password" line once you have noted it elsewhere.'
+T_FR[creds_password_kept]="%s contient encore le mot de passe admin en clair. Il n'est plus nécessaire (mot de passe perdu : sudo nodyx-recover). Supprime la ligne « Admin password » une fois notée ailleurs."
 T_EN[upgrade_already_running]='Another Nodyx update is already running. Nothing was changed.'
 T_FR[upgrade_already_running]="Une autre mise à jour de Nodyx est déjà en cours. Rien n'a été modifié."
 
@@ -984,6 +986,8 @@ T_EN[summ_diag]='▸ Diagnostic'
 T_FR[summ_diag]='▸ Diagnostic'
 T_EN[summ_diag_hint]='full report (services, TLS, DB, RAM...)'
 T_FR[summ_diag_hint]='rapport complet (services, TLS, DB, RAM...)'
+T_EN[summ_recover_hint]='# lost admin access: reset link for an account'
+T_FR[summ_recover_hint]="# accès admin perdu : lien de réinitialisation d'un compte"
 T_EN[summ_relay_tunnel]='▸ Relay tunnel'
 T_FR[summ_relay_tunnel]='▸ Tunnel Relay'
 T_EN[summ_creds_arrow]='Credentials →'
@@ -1169,6 +1173,24 @@ _nodyx_migrate_service_secrets() {
   return $changed
 }
 
+# nodyx-recover : reprendre la main sur l'instance quand mot de passe et e-mail
+# sont perdus (04/10/2026). L'outil existait dans le core mais n'était installé
+# nulle part, et `npm run recover` (ts-node) plantait avec TypeScript 7 : on
+# lance la version compilée. Le mot de passe admin n'est plus conservé en clair
+# dans /root/nodyx-credentials.txt, c'est cet outil qui le remplace.
+_nodyx_write_recover_script() { # <chemin> <dossier nodyx>
+  cat > "$1" <<RECOVERSCRIPT
+#!/usr/bin/env bash
+# nodyx-recover : lien de réinitialisation pour un compte, depuis le serveur.
+#   sudo nodyx-recover --list | --reset <utilisateur|email> | --promote <qui>
+set -euo pipefail
+[[ \$EUID -eq 0 ]] || { echo "Lance en root : sudo nodyx-recover" >&2; exit 1; }
+cd "$2/nodyx-core"
+exec node dist/scripts/recover.js "\$@"
+RECOVERSCRIPT
+  chmod 755 "$1"
+}
+
 # nodyx-update : un simple raccourci vers `install.sh --upgrade` (04/10/2026).
 # Avant, c'était une 3e copie de la mise à jour, qui compilait dans le dossier
 # servi, sans sauvegarde de la base ni remise des droits à nodyx.
@@ -1297,6 +1319,12 @@ _nodyx_upgrade() {
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
   _nodyx_upgrade_cleanup
   [[ -f /usr/local/bin/nodyx-update ]] && _nodyx_write_update_script /usr/local/bin/nodyx-update "$dir"
+  _nodyx_write_recover_script /usr/local/bin/nodyx-recover "$dir"
+  # Anciennes installations : le mot de passe admin en clair est signalé, jamais
+  # retiré d'office (la personne ne l'a peut-être noté nulle part ailleurs).
+  if grep -qE '^Admin password   : [^(]' /root/nodyx-credentials.txt 2>/dev/null; then
+    warn "$(t creds_password_kept /root/nodyx-credentials.txt)"
+  fi
 
   # ── Relay client : upgrade du binaire si version périmée ─────────────────────
   # Sans ça, un client v0.1.3 pouvait rester 13 jours connecté à un pipe mort
@@ -1454,7 +1482,6 @@ _resolve_version() {
   echo "unknown"
 }
 NODYX_VERSION="$(_resolve_version)"
-INSTALLER_VERSION="$NODYX_VERSION"
 # Relay client binary — single source of truth, used by install AND nodyx-update
 NODYX_RELAY_VERSION="v0.1.4-p2p"
 
@@ -3556,7 +3583,7 @@ cat > "$CREDS_FILE" <<CREDS
 URL              : https://${DOMAIN}
 Admin username   : ${ADMIN_USERNAME}
 Admin email      : ${ADMIN_EMAIL}
-Admin password   : ${ADMIN_PASSWORD}
+Admin password   : (non conservé : celui choisi à l'installation. Perdu ? sudo nodyx-recover --reset ${ADMIN_USERNAME})
 
 PostgreSQL user  : ${DB_USER}
 PostgreSQL pass  : ${DB_PASSWORD}
@@ -3578,6 +3605,7 @@ chmod 600 "$CREDS_FILE"
 # ── Génération du script de mise à jour ───────────────────────────────────────
 UPDATE_SCRIPT="/usr/local/bin/nodyx-update"
 _nodyx_write_update_script "$UPDATE_SCRIPT" "$NODYX_DIR"
+_nodyx_write_recover_script /usr/local/bin/nodyx-recover "$NODYX_DIR"
 
 chmod +x "$UPDATE_SCRIPT"
 ok "$(printf "$(t update_script_done)" "${BOLD}" "${RESET}")"
@@ -3902,6 +3930,7 @@ echo -e "       sudo -u postgres pg_dump ${DB_NAME} > backup_\$(date +%F).sql"
 echo ""
 echo -e "     ${BOLD}${CYAN}$(t summ_diag)${RESET}"
 echo -e "       sudo nodyx-doctor               $(t summ_diag_hint)"
+echo -e "       sudo nodyx-recover --list       $(t summ_recover_hint)"
 echo -e "       systemctl status caddy"
 echo -e "       curl -s http://localhost:3000/api/v1/instance/info | python3 -m json.tool"
 if $RELAY_MODE; then

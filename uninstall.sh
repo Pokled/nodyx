@@ -243,7 +243,7 @@ for _svc in nodyx-relay-client nodyx-turn nodyx-sfud; do
   fi
 done
 for _f in /usr/local/bin/nodyx-relay /usr/local/bin/nodyx-turn /usr/local/bin/nodyx-sfud \
-          /usr/local/bin/nodyx-doctor /usr/local/bin/nodyx-update \
+          /usr/local/bin/nodyx-doctor /usr/local/bin/nodyx-update /usr/local/bin/nodyx-recover \
           /etc/nodyx-turn.env /etc/nodyx-sfud.env; do
   [[ -e "$ROOT$_f" ]] && { run rm -f "$ROOT$_f"; ok "$(m Supprimé Removed) : $_f"; }
 done

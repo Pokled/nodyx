@@ -180,6 +180,17 @@ sort en code 1 en renvoyant vers `nodyx-doctor`. Les simples avertissements (DNS
 ne changent rien. Le serveur vocal `nodyx-sfud` est enfin contrôlé quand il est installé. Dans les
 deux installeurs.
 
+### Installeur : le mot de passe admin n'est plus conservé en clair
+
+`/root/nodyx-credentials.txt` gardait le mot de passe administrateur en clair, et avec lui toutes
+les sauvegardes de `/root`, alors que l'administrateur l'a choisi lui-même. Il n'y est plus écrit.
+En cas de perte, `sudo nodyx-recover --reset <utilisateur>` donne un lien de réinitialisation
+depuis le serveur, sans e-mail ni connexion. L'outil existait dans le cœur mais n'était installé
+nulle part, et `npm run recover` plantait (ts-node 10 avec TypeScript 7) : il est désormais
+installé par les deux installeurs, à l'installation comme à chaque mise à jour, et lance la
+version compilée. Les fichiers déjà écrits ne sont jamais modifiés d'office : la mise à jour
+signale seulement la ligne à supprimer.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une

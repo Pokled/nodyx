@@ -64,7 +64,7 @@ extrait() {
   awk '$0 == "_nodyx_upgrade() {" {p=1}
        p && (index($0, "  # ── Relay client : upgrade du binaire") == 1 || index($0, "  local _persisted_mode=") == 1) {print "}"; exit}
        p {print}' "$1" \
-    | sed -e "s#/home/nodyx#$W/home#g" -e "s#/usr/local/bin/nodyx-update#$W/nodyx-update#g" -e "s#/root/.pm2#$W/rootpm2#g" \
+    | sed -e "s#/home/nodyx#$W/home#g" -e "s#/usr/local/bin/#$W/usr-local-bin/#g" -e "s#/root/#$W/root/#g" \
           -e "s#/run/lock/nodyx-upgrade.lock#$W/verrou#g"
 }
 fn() { awk -v f="$2() {" -v g="$2() { #" '$0 == f || index($0, g) == 1 {p=1} p {print} p && $0 == "}" {exit}' "$1"; }
@@ -82,9 +82,12 @@ maj() {
     BOLD=''; RESET=''; GREEN=''; CYAN=''; RED=''; YELLOW=''
     _auto_backup_db() { echo \"backup \$1\" >> \"\$JOURNAL\"; _AUTO_BACKUP_OK=$bk; }
     _DB_EXISTS=true; _AUTO_YES=$auto; DB_NAME=nodyx
+    _NODYX_TTY="$W/tty"; _HAS_TTY=true
+    $(fn "$inst" _tty_needed)
     $(fn "$inst" _confirm)
     $(fn "$inst" run_bg)
     $(fn "$inst" _nodyx_write_update_script)
+    $(fn "$inst" _nodyx_write_recover_script)
     $(extrait "$inst")
     $appel; echo FIN" 2>&1)"; CODE=$?
 }
@@ -98,7 +101,7 @@ for INST in "$INSTALL" "$TUNNEL"; do
   check "$N : _nodyx_upgrade extraite" '[[ $(wc -l < "$W/f") -gt 20 ]]'
 
   echo "── $N : mise à jour réussie"
-  D="$W/$N/ok/opt/nodyx"; fausse_install "$D"; echo ancien > "$W/nodyx-update"
+  D="$W/$N/ok/opt/nodyx"; fausse_install "$D"; mkdir -p "$W/usr-local-bin" "$W/root"; echo ancien > "$W/usr-local-bin/nodyx-update"
   maj "$INST" "$D" true "" false
   check "$N : le site sert la nouvelle version (core, frontend, dépendances)" '[[ "$GOT" == *FIN* ]] && sert "$D" v2'
   check "$N : services redémarrés" 'journal | grep -q "pm2 .*restart\|pm2 .*startOrRestart"'
@@ -108,8 +111,9 @@ for INST in "$INSTALL" "$TUNNEL"; do
   GOT="sauvegarde ligne ${B:-AUCUNE}, code ligne ${P:-?}"
   check "$N : base sauvegardée AVANT de tirer le code" '[[ -n "$B" && -n "$P" && $B -lt $P ]]'
   check "$N : dossiers de travail effacés" '[[ $(restes "$D") -eq 0 ]]'
-  GOT="$(cat "$W/nodyx-update")"
-  check "$N : nodyx-update régénéré en raccourci vers l'installeur" 'grep -qxF "exec bash \"$D/$N\" --upgrade \"\$@\"" "$W/nodyx-update" && ! grep -q "npm" "$W/nodyx-update" && bash -n "$W/nodyx-update"'
+  GOT="$(cat "$W/usr-local-bin/nodyx-update")"
+  check "$N : nodyx-recover installé, vers la bonne instance" 'grep -qF "cd \"$D/nodyx-core\"" "$W/usr-local-bin/nodyx-recover"'
+  check "$N : nodyx-update régénéré en raccourci vers l'installeur" 'grep -qxF "exec bash \"$D/$N\" --upgrade \"\$@\"" "$W/usr-local-bin/nodyx-update" && ! grep -q "npm" "$W/usr-local-bin/nodyx-update" && bash -n "$W/usr-local-bin/nodyx-update"'
 
   for casse in nodyx-frontend nodyx-core; do
     echo "── $N : compilation de $casse ratée"
