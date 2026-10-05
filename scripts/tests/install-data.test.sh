@@ -83,10 +83,18 @@ L_DROP="$(grep -nE '^ +pg_dropcluster ' "$INSTALL" | head -1 | cut -d: -f1)"
 GOT="dossier:$L_DIR contrôle:$L_CHK pg_dropcluster:$L_DROP"
 check "pg_dropcluster vient APRÈS le contrôle du dossier configuré, dans sa branche « vide »" '[[ -n "$L_DIR" && -n "$L_CHK" && -n "$L_DROP" && $L_DIR -lt $L_CHK && $L_CHK -lt $L_DROP && $((L_DROP - L_CHK)) -le 4 ]]'
 
-echo "── sudo"
-for f in "$INSTALL" "$TUNNEL"; do
-  GOT="$(grep -nE "sudo -u (postgres|nodyx) " "$f" | grep -vE "echo|warn|info|printf|T_(EN|FR)\[|^[0-9]+: *#")"
-  check "$(basename "$f") : aucune commande ne dépend de sudo (runuser à la place)" '[[ -z "$GOT" ]]'
+echo "── sudo (issue #784 : absent d'une Debian 13 minimale, l'installation s'arrêtait à PostgreSQL)"
+# Deux règles simples, sans analyseur de shell :
+#  1. aucun « sudo -u » nulle part, même dans un message (runuser fait pareil
+#     et existe toujours : util-linux, priorité required) ;
+#  2. aucun sudo en position de COMMANDE (début de ligne, après $( | && || ; then if !).
+#     Un message qui conseille « sudo nodyx-update » reste permis.
+for f in "$INSTALL" "$TUNNEL" "$ROOT/uninstall.sh" "$ROOT"/scripts/install/*.sh; do
+  GOT="$(grep -nE 'sudo -u ' "$f" | grep -vE '^[0-9]+:[[:space:]]*#')"
+  check "$(basename "$f") : aucun « sudo -u » (runuser à la place)" '[[ -z "$GOT" ]]'
+  GOT="$(grep -nE '(^|\$\(|[|;&!]|\bthen|\bif|\bdo|\belse)[[:space:]]*sudo[[:space:]]' "$f" \
+    | grep -vE '^[0-9]+:[[:space:]]*(#|T_(EN|FR)\[|echo |printf |warn |info |die |ok |skip |_hc_|_pass |_warn |_fail )')"
+  check "$(basename "$f") : aucun sudo exécuté" '[[ -z "$GOT" ]]'
 done
 
 echo ""

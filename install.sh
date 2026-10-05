@@ -194,8 +194,8 @@ T_EN[db_autobackup]='Automatic DB backup (%s)...'
 T_FR[db_autobackup]='Sauvegarde automatique de la DB (%s)...'
 T_EN[db_autobackup_done]='Backup: %s%s%s  (%s)'
 T_FR[db_autobackup_done]='Sauvegarde : %s%s%s  (%s)'
-T_EN[db_autobackup_restore_hint]="warn 'Restore the DB if needed: sudo gunzip -c %s | sudo -u postgres psql nodyx'"
-T_FR[db_autobackup_restore_hint]="warn 'Restaurer la DB si besoin : sudo gunzip -c %s | sudo -u postgres psql nodyx'"
+T_EN[db_autobackup_restore_hint]="warn 'Restore the DB if needed: gunzip -c %s | runuser -u postgres -- psql nodyx'"
+T_FR[db_autobackup_restore_hint]="warn 'Restaurer la DB si besoin : gunzip -c %s | runuser -u postgres -- psql nodyx'"
 T_EN[db_autobackup_fail]="DB backup failed (DB empty or inaccessible) — continuing."
 T_FR[db_autobackup_fail]="Sauvegarde DB échouée (DB vide ou inaccessible) — on continue."
 T_EN[wipe_backup_failed]="The database backup failed or could not be verified: wipe CANCELLED, nothing was deleted. Free some disk space in /root, then try again."
@@ -1407,7 +1407,7 @@ _nodyx_rollback() {
     echo -e "${YELLOW}$(t rollback_manual_hint)${RESET}"
     echo -e "${YELLOW}    • PM2  : ${BOLD}runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list${RESET}"
     echo -e "${YELLOW}    • Logs : ${BOLD}runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core --lines 50${RESET}"
-    echo -e "${YELLOW}    • DB   : ${BOLD}sudo -u postgres psql -c '\\l'${RESET}"
+    echo -e "${YELLOW}    • DB   : ${BOLD}runuser -u postgres -- psql -c '\\l'${RESET}"
     echo -e "${YELLOW}$(t rollback_relaunch)${RESET}"
   fi
   echo ""
@@ -3925,8 +3925,8 @@ echo -e "     ${BOLD}${CYAN}$(t summ_update)${RESET}"
 echo -e "       sudo nodyx-update                $(t summ_update_hint)"
 echo ""
 echo -e "     ${BOLD}${CYAN}$(t summ_database)${RESET}"
-echo -e "       sudo -u postgres psql ${DB_NAME}"
-echo -e "       sudo -u postgres pg_dump ${DB_NAME} > backup_\$(date +%F).sql"
+echo -e "       runuser -u postgres -- psql ${DB_NAME}"
+echo -e "       runuser -u postgres -- pg_dump ${DB_NAME} > backup_\$(date +%F).sql"
 echo ""
 echo -e "     ${BOLD}${CYAN}$(t summ_diag)${RESET}"
 echo -e "       sudo nodyx-doctor               $(t summ_diag_hint)"
