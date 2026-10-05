@@ -174,6 +174,10 @@ T_EN[upgrade_site_untouched]='The site was NOT touched: it still runs the previo
 T_FR[upgrade_site_untouched]="Le site n'a PAS été touché : il tourne toujours sur la version précédente."
 T_EN[upgrade_swap_fail]='Could not switch to the new version; the previous one was put back. Run sudo nodyx-doctor.'
 T_FR[upgrade_swap_fail]="Impossible de basculer sur la nouvelle version ; la précédente a été remise en place. Lance sudo nodyx-doctor."
+T_EN[pkg_install_failed]='Installing the system packages failed (apt). Check your connection and your apt sources (apt-get update), then run the installer again.'
+T_FR[pkg_install_failed]="L'installation des paquets système a échoué (apt). Vérifie la connexion et les sources apt (apt-get update), puis relance l'installeur."
+T_EN[openssl_missing]='openssl is still missing after installing the packages: secrets cannot be generated.'
+T_FR[openssl_missing]="openssl manque toujours après l'installation des paquets : impossible de générer les secrets."
 T_EN[creds_password_kept]='%s still holds the admin password in clear text. It is no longer needed (lost password: sudo nodyx-recover). Remove the "Admin password" line once you have noted it elsewhere.'
 T_FR[creds_password_kept]="%s contient encore le mot de passe admin en clair. Il n'est plus nécessaire (mot de passe perdu : sudo nodyx-recover). Supprime la ligne « Admin password » une fois notée ailleurs."
 T_EN[upgrade_already_running]='Another Nodyx update is already running. Nothing was changed.'
@@ -2102,6 +2106,10 @@ if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
     read -rp "$(echo -e "  ${BOLD}$(t port_force_prompt) ${RESET}")" _port_force <"$_NODYX_TTY"
     # Accept y/Y/o/O regardless of UI language
     [[ ! "${_port_force,,}" =~ ^(y|o)$ ]] && die "$(t install_cancelled)"
+    # fuser vient de psmisc, absent d'une Debian minimale : sans lui, « libérer
+    # les ports » ne faisait RIEN, en silence, et l'installation continuait.
+    command -v fuser >/dev/null || apt-get install -y -q psmisc >/dev/null 2>&1 \
+      || die "$(t pkg_install_failed)"
     for _bp in "${_PORT_BLOCKER_PORTS[@]}"; do
       for _p in $_bp; do
         fuser -k "${_p}/tcp" 2>/dev/null || true
@@ -2518,12 +2526,6 @@ _confirm "$(t start_install)" || die "$(t install_cancelled)"
 # ═══════════════════════════════════════════════════════════════════════════════
 DB_NAME="nodyx"
 DB_USER="nodyx_user"
-DB_PASSWORD=$(gen_pass)
-JWT_SECRET=$(gen_secret)
-TURN_SECRET=$(gen_secret)
-# Secret partagé frontend <-> core : le rendu serveur s'en sert pour transmettre
-# l'IP du visiteur et être exempté de la limitation de débit (rateLimit.ts).
-INTERNAL_API_SECRET=$(gen_secret)
 NODYX_DIR="/opt/nodyx"
 REPO_URL="https://github.com/Pokled/nodyx.git"
 
@@ -2538,8 +2540,19 @@ apt-get update -q
 apt-get install -y -q git 2>/dev/null
 _SYS_PKGS="curl wget gnupg2 ca-certificates lsb-release openssl ufw build-essential postgresql postgresql-contrib redis-server fonts-dejavu-core file"
 # shellcheck disable=SC2086
-apt-get install -y -q $_SYS_PKGS 2>/dev/null
+apt-get install -y -q $_SYS_PKGS 2>/dev/null || die "$(t pkg_install_failed)"
 ok "$(t deps_installed)"
+
+# Secrets générés APRÈS les paquets (05/10/2026) : openssl n'est pas dans une
+# Debian minimale et n'était installé qu'ici, alors que les secrets étaient
+# générés avant (même famille que l'issue #784, sudo absent de Debian 13).
+command -v openssl >/dev/null || die "$(t openssl_missing)"
+DB_PASSWORD=$(gen_pass)
+JWT_SECRET=$(gen_secret)
+TURN_SECRET=$(gen_secret)
+# Secret partagé frontend <-> core : le rendu serveur s'en sert pour transmettre
+# l'IP du visiteur et être exempté de la limitation de débit (rateLimit.ts).
+INTERNAL_API_SECRET=$(gen_secret)
 
 # Node.js 22 LTS — mediasoup-client/awaitqueue (voice) require >=22 (#642)
 _NODE_MAJOR=$(node --version 2>/dev/null | sed 's/v//;s/\..*//' || echo 0)

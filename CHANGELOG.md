@@ -260,7 +260,10 @@ découvrir après coup.
   enregistraient l'adresse du proxy, pas celle du visiteur).
 - Installeur sur Debian 13 minimale (sans `sudo`) : l'installation s'arrêtait à l'étape PostgreSQL
   (#784). Corrigé par le passage à `runuser` (#785) ; les conseils affichés n'utilisent plus
-  `sudo -u` non plus, et un contrôle en CI empêche tout `sudo` exécuté de revenir.
+  `sudo -u` non plus, et un contrôle en CI empêche tout `sudo` exécuté de revenir. Même famille,
+  trouvée en vérifiant cette correction : les secrets étaient générés avec `openssl` AVANT
+  l'installation des paquets (qui l'apporte), et « libérer les ports » ne faisait rien sans
+  `psmisc` ; un échec d'`apt` arrêtait aussi l'installeur tunnel sans le moindre message.
 - Choix de la langue : ouvrir le panneau renvoyait à l'accueil, et « Retour » y laissait (page,
   brouillon et position de lecture perdus) ; recliquer sur le drapeau ne refermait rien. La page
   reste désormais sous le panneau, « Retour » ramène exactement là où on était, et le drapeau

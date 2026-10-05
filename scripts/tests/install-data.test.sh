@@ -97,6 +97,26 @@ for f in "$INSTALL" "$TUNNEL" "$ROOT/uninstall.sh" "$ROOT"/scripts/install/*.sh;
   check "$(basename "$f") : aucun sudo exécuté" '[[ -z "$GOT" ]]'
 done
 
+echo "── Debian minimale : outils absents tant que les paquets ne sont pas installés"
+# Debian 13 netinst sans « utilitaires standard » : ni sudo (#784), ni openssl,
+# ni psmisc (fuser). L'ordre des opérations doit en tenir compte.
+ligne() { grep -nF -- "$2" "$1" | head -1 | cut -d: -f1; }
+for f in "$INSTALL" "$TUNNEL"; do
+  N="$(basename "$f")"
+  if [[ "$N" == install.sh ]]; then APT="$(ligne "$f" 'apt-get install -y -q $_SYS_PKGS')"; else APT="$(ligne "$f" '>/dev/null 2>&1 || die "$(t pkg_install_failed)"')"; fi
+  SSL="$(ligne "$f" 'command -v openssl >/dev/null || die')"
+  GEN="$(grep -nE '^[A-Z_]+=\$\(gen_(pass|secret)\)' "$f" | head -1 | cut -d: -f1)"
+  GOT="paquets:$APT openssl vérifié:$SSL 1er secret:$GEN"
+  check "$N : secrets générés APRÈS l'installation des paquets (openssl), présence vérifiée" '[[ -n "$APT" && -n "$SSL" && -n "$GEN" && $APT -lt $SSL && $SSL -lt $GEN ]]'
+  GOT="$(grep -nF 'pkg_install_failed' "$f" | grep -c die)"
+  check "$N : un échec d'apt s'annonce clairement (plus d'arrêt muet)" '[[ $GOT -ge 1 ]]'
+done
+PS="$(ligne "$INSTALL" 'command -v fuser >/dev/null || apt-get install -y -q psmisc')"
+FU="$(grep -nE '^[[:space:]]+fuser -k' "$INSTALL" | head -1 | cut -d: -f1)"
+GOT="psmisc:$PS fuser:$FU"
+check "install_tunnel.sh : sans curl, pas de fausse alerte « HTTPS en panne »" 'grep -qF "elif command -v curl >/dev/null && ! curl -fsS" "$TUNNEL"'
+check "install.sh : psmisc installé avant fuser (sinon « libérer les ports » ne faisait rien)" '[[ -n "$PS" && -n "$FU" && $PS -lt $FU ]]'
+
 echo ""
 echo "Résultat : $PASS réussis, $FAIL échoués"
 [[ $FAIL -eq 0 ]]

@@ -456,6 +456,10 @@ T_EN[upgrade_site_untouched]='The site was NOT touched: it still runs the previo
 T_FR[upgrade_site_untouched]="Le site n'a PAS été touché : il tourne toujours sur la version précédente."
 T_EN[upgrade_swap_fail]='Could not switch to the new version; the previous one was put back. Run sudo nodyx-doctor.'
 T_FR[upgrade_swap_fail]="Impossible de basculer sur la nouvelle version ; la précédente a été remise en place. Lance sudo nodyx-doctor."
+T_EN[pkg_install_failed]='Installing the system packages failed (apt). Check your connection and your apt sources (apt-get update), then run the installer again.'
+T_FR[pkg_install_failed]="L'installation des paquets système a échoué (apt). Vérifie la connexion et les sources apt (apt-get update), puis relance l'installeur."
+T_EN[openssl_missing]='openssl is still missing after installing the packages: secrets cannot be generated.'
+T_FR[openssl_missing]="openssl manque toujours après l'installation des paquets : impossible de générer les secrets."
 T_EN[creds_password_kept]='%s still holds the admin password in clear text. It is no longer needed (lost password: sudo nodyx-recover). Remove the "Admin password" line once you have noted it elsewhere.'
 T_FR[creds_password_kept]="%s contient encore le mot de passe admin en clair. Il n'est plus nécessaire (mot de passe perdu : sudo nodyx-recover). Supprime la ligne « Admin password » une fois notée ailleurs."
 T_EN[upgrade_already_running]='Another Nodyx update is already running. Nothing was changed.'
@@ -1242,7 +1246,9 @@ if ! getent hosts github.com >/dev/null 2>&1; then
   warn "DNS lookup for github.com failed - the install needs outbound DNS."
   warn "Check /etc/resolv.conf, systemd-resolved, or your container DNS config."
   _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
-elif ! curl -fsS --max-time 5 -o /dev/null https://github.com 2>/dev/null; then
+# curl peut manquer (lancé par wget, Debian minimale) : on ne conclut pas alors
+# à une panne réseau, les paquets l'installeront.
+elif command -v curl >/dev/null && ! curl -fsS --max-time 5 -o /dev/null https://github.com 2>/dev/null; then
   warn "Outbound HTTPS to github.com is failing - the install needs port 443 open."
   warn "Check firewall, corporate proxy, or VPN routing."
   _confirm "$(t continue_anyway)" || die "$(t install_cancelled)"
@@ -1435,14 +1441,6 @@ echo ""
 _confirm "$(t cfg_recap_proceed)" || die "$(t install_cancelled)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  GENERATED SECRETS
-# ═══════════════════════════════════════════════════════════════════════════════
-DB_PASSWORD=$(gen_pass)
-JWT_SECRET=$(gen_secret)
-# Secret partagé frontend <-> core (appels internes du rendu serveur)
-INTERNAL_API_SECRET=$(gen_secret)
-
-# ═══════════════════════════════════════════════════════════════════════════════
 #  SYSTEM PACKAGES
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_packages)"
@@ -1455,8 +1453,16 @@ apt-get install -y -q \
   postgresql postgresql-contrib \
   redis-server \
   fonts-dejavu-core \
-  >/dev/null 2>&1
+  >/dev/null 2>&1 || die "$(t pkg_install_failed)"
 ok "System packages installed"
+
+# Secrets générés APRÈS les paquets (05/10/2026) : openssl n'est pas dans une
+# Debian minimale et n'était installé qu'ici (cf install.sh, issue #784).
+command -v openssl >/dev/null || die "$(t openssl_missing)"
+DB_PASSWORD=$(gen_pass)
+JWT_SECRET=$(gen_secret)
+# Secret partagé frontend <-> core (appels internes du rendu serveur)
+INTERNAL_API_SECRET=$(gen_secret)
 
 # Node.js 22 LTS : mediasoup-client et awaitqueue (vocal) exigent >= 22 (#642).
 # Avant le 04/10/2026 cet installeur posait Node 20.
