@@ -81,7 +81,7 @@ All REST routes are under `/api/v1/` **except** authenticator routes which are u
 ```bash
 cd nodyx-core
 npm install
-npm run dev         # ts-node src/index.ts, port 3000
+npm run dev         # tsx src/index.ts, port 3000
 npm run build       # tsc → dist/
 npm run test        # vitest run (63 tests, 6 files)
 npm run test:watch  # vitest interactive

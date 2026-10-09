@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 // ─── nodyx-recover — reprendre la main sur son instance ──────────────────────
 //
 //   cd <instance>/nodyx-core
