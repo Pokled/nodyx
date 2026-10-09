@@ -194,7 +194,8 @@ jobs:
         run: npm run check
 
       - name: Vitest — tests (si l'app en a)
-        if: hashFiles(format('{0}/vitest.config.ts', matrix.app)) != ''
+        # .ts OU .mts : un simple renommage ne doit jamais désactiver les tests en silence.
+        if: hashFiles(format('{0}/vitest.config.ts', matrix.app), format('{0}/vitest.config.mts', matrix.app)) != ''
         working-directory: ${{ matrix.app }}
         run: npm test
 
