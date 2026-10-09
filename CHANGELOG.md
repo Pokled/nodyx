@@ -264,6 +264,10 @@ découvrir après coup.
   trouvée en vérifiant cette correction : les secrets étaient générés avec `openssl` AVANT
   l'installation des paquets (qui l'apporte), et « libérer les ports » ne faisait rien sans
   `psmisc` ; un échec d'`apt` arrêtait aussi l'installeur tunnel sans le moindre message.
+- Développement : `npm run dev`, `seed` et `generate-esy` ne démarraient plus. TypeScript 7 est
+  désormais un compilateur natif dont le paquet npm n'expose plus l'API sur laquelle reposait
+  ts-node. Remplacé par `tsx`, qui n'en dépend pas ; la compilation de production (`tsc`) n'était
+  pas touchée.
 - Carte de profil partageable (`card.png`) : sur toute instance autre que nodyx.org, l'avatar
   manquait (remplacé par l'initiale), le dossier des fichiers envoyés étant écrit en dur. Il se
   déduit désormais de l'instance.

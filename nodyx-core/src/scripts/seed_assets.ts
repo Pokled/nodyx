@@ -1,6 +1,6 @@
 /**
  * Seed script — génère des assets d'exemple pour la bibliothèque
- * Usage : npx ts-node src/scripts/seed_assets.ts
+ * Usage : npx tsx src/scripts/seed_assets.ts
  */
 import crypto from 'crypto'
 import fs from 'fs/promises'
