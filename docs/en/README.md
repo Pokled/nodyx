@@ -155,7 +155,7 @@ $env:PGPASSWORD="your_password"
 Start:
 
 ```bash
-npm run dev       # development (ts-node, port 3000)
+npm run dev       # development (tsx, port 3000)
 npm run build     # TypeScript compilation
 npm start         # production (node dist/)
 ```
