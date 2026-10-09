@@ -4,13 +4,13 @@
   "description": "Nodyx Core - Sanctuaire du projet. Le noyau intouchable.",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node src/index.ts",
+    "dev": "tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "seed": "ts-node src/scripts/seed.ts",
-    "seed:reset": "ts-node src/scripts/seed.ts --reset",
+    "seed": "tsx src/scripts/seed.ts",
+    "seed:reset": "tsx src/scripts/seed.ts --reset",
     "recover": "node dist/scripts/recover.js",
-    "generate-esy": "ts-node src/scripts/generate-esy.ts",
+    "generate-esy": "tsx src/scripts/generate-esy.ts",
     "turn": "node turn-server.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -30,7 +30,7 @@
     "adm-zip": "0.6.1",
     "argon2": "0.44.0",
     "bcrypt": "6.0.0",
-    "dotenv": "17.4.2",
+    "dotenv": "18.0.5",
     "fastify": "^5.12.4",
     "ioredis": "6.0.0",
     "jsonwebtoken": "9.0.3",
@@ -58,10 +58,10 @@
     "@types/safe-regex": "^1.1.6",
     "@types/sanitize-html": "2.16.2",
     "@types/web-push": "3.6.4",
-    "@vitest/coverage-v8": "^4.1.9",
-    "ts-node": "10.9.2",
+    "@vitest/coverage-v8": "^5.0.3",
+    "tsx": "4.23.15",
     "typescript": "7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.3"
   },
   "optionalDependencies": {
     "re2": "^1.27.0"

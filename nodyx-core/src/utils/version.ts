@@ -20,7 +20,7 @@ import { resolve } from 'node:path'
 function resolveVersion(): string {
   // 1. VERSION file (priorité absolue)
   // __dirname = .../nodyx-core/dist/utils ou .../nodyx-core/src/utils selon
-  // build vs ts-node. On remonte jusqu'à la racine du repo (nodyx-core/..).
+  // build vs tsx. On remonte jusqu'à la racine du repo (nodyx-core/..).
   const candidates = [
     resolve(__dirname, '../../../VERSION'),  // src/utils → repo root
     resolve(__dirname, '../../VERSION'),     // dist/utils → repo root (build flat)

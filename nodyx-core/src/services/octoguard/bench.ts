@@ -3,7 +3,7 @@
  * Cf. spec v2.1.1 + memory project_octoguard_roadmap §R5.
  *
  * Lancement :
- *   OCTOGUARD_ENABLED=true npx ts-node src/services/octoguard/bench.ts
+ *   OCTOGUARD_ENABLED=true npx tsx src/services/octoguard/bench.ts
  *
  * Le bench :
  *   1. Insère ~10 règles auto-mod variées (regex, caps, link_domain,

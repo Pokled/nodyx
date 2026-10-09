@@ -7,7 +7,7 @@
  * dehors du cycle de boot (ex: avant un premier déploiement, en CI).
  *
  * Usage :
- *   npx ts-node src/scripts/generate-esy.ts
+ *   npx tsx src/scripts/generate-esy.ts
  *   ou après build : node dist/scripts/generate-esy.js
  *
  * Idempotent : si le fichier existe déjà, le script s'arrête.
