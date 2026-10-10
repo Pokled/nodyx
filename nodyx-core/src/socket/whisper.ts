@@ -161,10 +161,10 @@ export function registerWhisperHandlers(io: Server, socket: Socket): void {
   })
 
   // ── On disconnect: notify all whisper rooms the user was in ─────────────────
-  socket.on('disconnect', () => {
-    // Socket.IO automatically removes the socket from all rooms on disconnect.
-    // We just emit leave to all whisper rooms it was in.
-    for (const room of socket.rooms) {
+  // `disconnecting` : à `disconnect`, Socket.IO 4 a déjà vidé `socket.rooms`
+  // et personne n'était prévenu du départ (même piège que voice.ts, 10/10/2026).
+  socket.on('disconnecting', () => {
+    for (const room of [...socket.rooms]) {
       if (room.startsWith('whisper:')) {
         const roomId = room.slice('whisper:'.length)
         socket.to(`whisper:${roomId}`).emit('whisper:user_leave', { roomId, userId, username })
