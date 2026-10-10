@@ -446,7 +446,12 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
   })
 
   // ── Cleanup on disconnect ─────────────────────────────────────────────────
-  socket.on('disconnect', async () => {
+  // `disconnecting` et non `disconnect` : à `disconnect`, Socket.IO 4 a déjà
+  // vidé `socket.rooms` et cette boucle ne faisait rien (reproduit en prod le
+  // 10/10/2026 : fantôme jamais retiré de la liste, place jamais libérée,
+  // bascule SFU qui compte le fantôme). Ici le socket est encore dans ses
+  // salons, d'où l'exclusion explicite dans broadcastVoiceChannelUpdate.
+  socket.on('disconnecting', async () => {
     // Leave all voice rooms and notify peers
     const allRooms = [...socket.rooms]
     for (const room of allRooms) {
@@ -454,7 +459,7 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
         const channelId = room.slice(6)
         freeSeat(channelId, socket.id)
         server.to(room).emit('voice:peer_left', { channelId, socketId: socket.id })
-        // Exclude this socket manually — socket.rooms not yet cleared at disconnect
+        // Exclure ce socket : il est encore dans le salon à `disconnecting`
         await broadcastVoiceChannelUpdate(server, channelId, socket.id)
         bascule.onLeave(server, channelId, socket.id, getChannelSeats(channelId).size)
       }
