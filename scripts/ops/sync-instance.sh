@@ -68,10 +68,15 @@ if [[ -d "$OVERLAY/files" ]]; then
 fi
 
 # ── 1. Propriétaires ─────────────────────────────────────────────────────────
+# Exception (10/10/2026) : un .env ou ecosystem.config.js en root:<utilisateur>
+# est un secret VOLONTAIREMENT protégé (lisible par l'instance, pas réécrivable
+# par elle), comme en production. Ce n'est pas un fichier égaré : on n'y touche
+# pas. Un root:root, lui, reste un oubli et est rendu.
+proteges() { find "$DIR" -not -user "$AS" -not \( -user root -group "$AS" \( -name .env -o -name ecosystem.config.js \) \) "$@"; }
 if [[ "$(id -u)" == 0 ]]; then
-  n="$(find "$DIR" -not -user "$AS" | wc -l)"
+  n="$(proteges | wc -l)"
   if [[ "$n" -gt 0 ]]; then
-    find "$DIR" -not -user "$AS" -exec chown -h "$AS:$AS" {} +
+    proteges -exec chown -h "$AS:$AS" {} +
     say "$n élément(s) rendus à $AS (posés par un autre utilisateur)"
   fi
 fi
@@ -94,13 +99,20 @@ if [[ ${#PATCHES[@]} -gt 0 ]]; then
 fi
 
 # ── 3. Retrait de l'overlay ──────────────────────────────────────────────────
-# Les patches se retirent en ordre inverse. S'ils ne se déplient pas, c'est
-# que quelqu'un a retouché ces fichiers à la main : on ne devine pas.
+# Les patches se retirent en ordre inverse, UN PAR UN : chacun est vérifié sur
+# l'arbre tel qu'il est une fois les suivants retirés. (Avant le 10/10/2026, tous
+# étaient vérifiés d'avance, les suivants encore appliqués : deux patches sur des
+# lignes voisines donnaient un faux refus.) S'il ne se déplie pas, quelqu'un a
+# retouché ces fichiers à la main : on remet ceux déjà retirés et on ne devine pas.
+RETIRES=()
 for (( i=${#PATCHES[@]}-1; i>=0; i-- )); do
-  g apply -R --check "${PATCHES[$i]}" 2>/dev/null \
-    || die "le patch $(basename "${PATCHES[$i]}") n'est pas appliqué tel quel (fichiers retouchés à la main ?), instance NON touchée"
+  if g apply -R --check "${PATCHES[$i]}" 2>/dev/null; then
+    g apply -R "${PATCHES[$i]}"; RETIRES+=("$i")
+  else
+    for (( j=${#RETIRES[@]}-1; j>=0; j-- )); do g apply "${PATCHES[${RETIRES[$j]}]}"; done
+    die "le patch $(basename "${PATCHES[$i]}") n'est pas appliqué tel quel (fichiers retouchés à la main ?), instance NON touchée"
+  fi
 done
-for (( i=${#PATCHES[@]}-1; i>=0; i-- )); do g apply -R "${PATCHES[$i]}"; done
 for f in "${FILES[@]}"; do
   if g ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
     g checkout -q -- "$f"

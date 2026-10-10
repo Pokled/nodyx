@@ -2,6 +2,8 @@
 # Test de sync-instance.sh sur des dépôts jetables (jamais sur /opt).
 #   sudo bash scripts/ops/tests/test-sync-instance.sh
 # Doit tourner en root : il vérifie aussi la reprise des fichiers root:root.
+# Variables lues dans les conditions passées à check (eval).
+# shellcheck disable=SC2034
 set -uo pipefail
 SYNC="$(cd "$(dirname "$0")/.." && pwd)/sync-instance.sh"
 AS="${INSTANCE_USER:-nodyx}"
@@ -64,5 +66,35 @@ echo "T6 sans overlay, arbre propre : simple pull"
 setup; gi "$T/inst" apply -R "$T/ov/patches/01-proto.patch"; gi "$T/inst" checkout -q -- static/logo; upstream "echo 2 > VERSION"
 check "sortie 0" "INSTANCE_USER=$AS bash $SYNC $T/inst $T/vide >/dev/null 2>&1"
 check "VERSION nouvelle" "[[ \$(cat $T/inst/VERSION) == 2 ]]"
+
+echo "T7 deux patchs VOISINS (lignes adjacentes) : mis à jour, les deux reposés"
+# Avant le 10/10/2026, chaque patch était vérifié « à l'envers » pendant que les
+# suivants restaient appliqués : deux patchs voisins = faux refus.
+setup
+u bash -c "cd $T/inst && git add -A && sed -i 's/^c\$/c-deux/' layout.svelte && git diff > $T/ov/patches/02-voisin.patch && git reset -q"
+upstream "echo 2 > VERSION"
+check "sortie 0" "INSTANCE_USER=$AS bash $SYNC $T/inst $T/ov >/dev/null 2>&1"
+check "patch 01 reposé" "grep -q b-proto $T/inst/layout.svelte"
+check "patch 02 reposé" "grep -q c-deux $T/inst/layout.svelte"
+check "VERSION nouvelle" "[[ \$(cat $T/inst/VERSION) == 2 ]]"
+check "idempotent (2e passage)" "INSTANCE_USER=$AS bash $SYNC $T/inst $T/ov >/dev/null 2>&1 && grep -q c-deux $T/inst/layout.svelte"
+
+echo "T9 deux patchs, le PREMIER retouché à la main : arrêt, le second remis, instance intacte"
+setup
+u bash -c "cd $T/inst && git add -A && sed -i 's/^c\$/c-deux/' layout.svelte && git diff > $T/ov/patches/02-voisin.patch && git reset -q"
+upstream "echo 2 > VERSION"; u bash -c "echo retouche >> $T/inst/theme.ts"
+before="$(snapshot)"
+check "sortie ≠ 0" "! INSTANCE_USER=$AS bash $SYNC $T/inst $T/ov >/dev/null 2>&1"
+check "rien n'a bougé (patch 02 remis après son retrait)" "[[ \"\$(snapshot)\" == \"\$before\" ]] && grep -q c-deux $T/inst/layout.svelte"
+
+echo "T8 secrets volontairement protégés (root:$AS 640) : jamais rendus à $AS"
+# La prod protège ainsi ecosystem.config.js et les .env (nodyx peut les lire, pas
+# les réécrire). Le chown de l'étape 1 ne doit pas défaire ce choix.
+setup; upstream "echo 2 > VERSION"
+printf '.env\necosystem.config.js\n' >> "$T/inst/.git/info/exclude"
+for f in .env ecosystem.config.js; do echo secret > "$T/inst/$f"; chown "root:$AS" "$T/inst/$f"; chmod 640 "$T/inst/$f"; done
+check "sortie 0" "INSTANCE_USER=$AS bash $SYNC $T/inst $T/ov >/dev/null 2>&1"
+check ".env toujours root:$AS 640" "[[ \$(stat -c '%U:%G %a' $T/inst/.env) == 'root:$AS 640' ]]"
+check "ecosystem.config.js toujours root:$AS 640" "[[ \$(stat -c '%U:%G %a' $T/inst/ecosystem.config.js) == 'root:$AS 640' ]]"
 
 echo; echo "$PASS réussi(s), $FAILN échec(s)"; [[ $FAILN == 0 ]]
