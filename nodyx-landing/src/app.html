@@ -4,12 +4,44 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#0f172a" />
-		<meta name="description" content="Nodyx — the self-hosted community platform you actually own. Forum, chat, voice, P2P, all in one install. AGPL. No analytics. Forever." />
-		<meta property="og:title" content="Nodyx — Your community. Your server. Forever." />
-		<meta property="og:description" content="Self-hosted forum, chat and voice in one install. AGPL. No cloud. No analytics. The network is the people." />
+		<meta name="description" content="Nodyx is the self-hosted community platform you actually own: forum, chat, voice and video, and your own homepage, in one install. Free, AGPL-3.0, no analytics, no ads." />
+		<link rel="canonical" href="https://start.nodyx.org/" />
+		<meta property="og:site_name" content="Nodyx" />
+		<meta property="og:title" content="Nodyx: your community, your server, forever" />
+		<meta property="og:description" content="Forum, chat, voice and video in one install, on a server you control. Free, AGPL-3.0, no analytics. The network is the people." />
 		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://start.nodyx.org/" />
+		<meta name="twitter:card" content="summary" />
 		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-		<title>Nodyx — Your community. Your server. Forever.</title>
+		<title>Nodyx: your community, your server, forever</title>
+		<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@graph": [
+				{
+					"@type": "SoftwareApplication",
+					"@id": "https://start.nodyx.org/#software",
+					"name": "Nodyx",
+					"description": "Self-hosted community platform: forum, real-time chat, voice and video channels and a public homepage in one install. One installation hosts one community.",
+					"url": "https://start.nodyx.org/",
+					"applicationCategory": "CommunicationApplication",
+					"operatingSystem": "Linux (Debian, Ubuntu)",
+					"license": "https://www.gnu.org/licenses/agpl-3.0.html",
+					"isAccessibleForFree": true,
+					"offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+					"softwareHelp": { "@type": "CreativeWork", "url": "https://nodyx.dev" },
+					"sameAs": ["https://github.com/Pokled/nodyx", "https://nodyx.dev", "https://nodyx.org"]
+				},
+				{
+					"@type": "WebSite",
+					"@id": "https://start.nodyx.org/#website",
+					"name": "Nodyx",
+					"url": "https://start.nodyx.org/",
+					"about": { "@id": "https://start.nodyx.org/#software" }
+				}
+			]
+		}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
