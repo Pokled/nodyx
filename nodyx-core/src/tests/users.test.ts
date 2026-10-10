@@ -144,6 +144,27 @@ describe('PATCH /api/v1/users/me/profile', () => {
     const avatarSync = calls.find(c => (c[0] as string).includes('UPDATE users SET avatar'))
     expect(avatarSync).toBeDefined()
   })
+
+  // Régression 03/10 : `/uploads/../.env` passait (le validateur ne regardait
+  // que le début), puis le frontend lisait ce fichier pour la carte de profil.
+  it.each([
+    ['avatar_url', '/uploads/../.env'],
+    ['avatar_url', '/uploads/../../../../dev/zero'],
+    ['banner_url', '/uploads/avatars/../../.env'],
+    ['avatar_url', '/uploads/%2e%2e/.env'],
+    ['name_font_url', '/uploads/../.env'],
+  ])('refuse un %s qui remonte hors des uploads (%s), sans rien écrire', async (field, value) => {
+    const token = makeToken()
+    const res = await app.inject({
+      method:  'PATCH',
+      url:     '/api/v1/users/me/profile',
+      headers: { Authorization: `Bearer ${token}` },
+      payload: { [field]: value },
+    })
+    expect(res.statusCode).toBe(400)
+    const writes = vi.mocked(db.query).mock.calls.filter(c => /UPDATE|INSERT/i.test(c[0] as string))
+    expect(writes).toEqual([])
+  })
 })
 
 // ── Tests — PATCH /me/locale ────────────────────────────────────

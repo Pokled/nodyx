@@ -16,7 +16,15 @@
 #    curl -fsSL https://raw.githubusercontent.com/Pokled/nodyx/main/install.sh | sudo bash -s -- \
 #      --domain=ma-communaute.fr  --name="Ma Communauté"  --slug=ma-communaute \
 #      --admin-user=admin  --admin-email=admin@ma-communaute.fr \
-#      --admin-password=MonMotDePasse  --yes
+#      --admin-password-file=/root/mdp-admin.txt  --yes
+#
+#    Le mot de passe se donne par fichier : en argument (--admin-password=…),
+#    tout utilisateur du serveur le lit via ps. La variable NODYX_ADMIN_PASSWORD
+#    marche aussi, mais seulement depuis un shell déjà root (sudo -i) : sudo vide
+#    l'environnement, et « sudo NODYX_ADMIN_PASSWORD=… » remet le secret dans la
+#    ligne de commande de sudo, visible via ps et inscrite dans son journal.
+#    Sans terminal (Ansible, cron), --yes accepte les réponses par défaut ; une
+#    question sans option ni défaut arrête l'installeur en disant laquelle.
 #
 #  ── Autres options ──────────────────────────────────────────────────────────
 #
@@ -27,17 +35,24 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-# ── Auto-relaunch si stdin est un pipe (curl|bash) ────────────────────────────
-# Les prompts interactifs (read) nécessitent un vrai terminal.
-# Si stdin n'est pas un TTY (ex: curl|bash), on se télécharge dans /tmp et on relance.
-if [[ ! -t 0 ]]; then
+# ── Auto-relaunch si le script est lu depuis un pipe (curl|bash) ──────────────
+# Lu depuis un pipe, le script ne peut pas lire les réponses sur son entrée
+# standard (c'est lui-même) : on se télécharge dans /tmp et on relance.
+# Seulement dans ce cas : lancé depuis un fichier (nodyx-update, cron, Ansible),
+# il n'y a rien à relancer. Avant le 04/10/2026, toute entrée qui n'était pas un
+# terminal déclenchait la relance avec `</dev/tty`, qui n'existe pas sans
+# terminal : le script mourait aussitôt, --yes ou pas.
+if [[ ! -t 0 && -z "${_NODYX_RELAUNCHED:-}" ]] \
+   && [[ -z "${BASH_SOURCE[0]:-}" || ! -f "${BASH_SOURCE[0]:-}" ]]; then
   _SELF=$(mktemp /tmp/nodyx_install_XXXXXX.sh)
   curl -fsSL https://raw.githubusercontent.com/Pokled/nodyx/main/install.sh -o "$_SELF" 2>/dev/null \
     || wget -qO "$_SELF" https://raw.githubusercontent.com/Pokled/nodyx/main/install.sh
   # Drain remaining stdin avant exec : sinon le curl en amont continue d'écrire
   # dans un pipe fermé après le exec et sort en code 23 (write error).
   cat >/dev/null 2>&1 || true
-  exec bash "$_SELF" "$@" </dev/tty
+  export _NODYX_RELAUNCHED=1
+  if { : </dev/tty; } 2>/dev/null; then exec bash "$_SELF" "$@" </dev/tty; fi
+  exec bash "$_SELF" "$@" </dev/null
 fi
 
 # ── Auto-update si lancé directement (fichier local potentiellement ancien) ───
@@ -121,10 +136,52 @@ T_EN[services_restart]="Restarting services..."
 T_FR[services_restart]="Redémarrage des services..."
 T_EN[relay_recreate]="Relay client missing or inactive — reconfiguring..."
 T_FR[relay_recreate]="Relay client absent ou inactif — reconfiguration..."
+T_EN[bin_checksum_bad]="%s: the downloaded file does NOT match its pinned SHA-256 checksum. It was NOT installed. Please report it: https://github.com/Pokled/nodyx/issues"
+T_FR[bin_checksum_bad]="%s : le fichier téléchargé NE correspond PAS à son empreinte SHA-256 épinglée. Il n'a PAS été installé. Signale-le : https://github.com/Pokled/nodyx/issues"
+T_EN[bin_checksum_missing]="%s: no pinned SHA-256 checksum for this version: refusing to install an unverified binary."
+T_FR[bin_checksum_missing]="%s : aucune empreinte SHA-256 épinglée pour cette version : refus d'installer un binaire non vérifié."
+T_EN[ufw_no_ssh_port]="Could not find the port SSH listens on: the firewall was left UNTOUCHED (enabling it could lock you out of this server). Configure it yourself: sudo ufw allow <your-ssh-port>/tcp && sudo ufw enable"
+T_FR[ufw_no_ssh_port]="Port SSH introuvable : pare-feu laissé TEL QUEL (l'activer pourrait t'enfermer dehors). Configure-le toi-même : sudo ufw allow <ton-port-ssh>/tcp && sudo ufw enable"
+T_EN[ufw_kept_rules]="Firewall already active: your rules are kept, Nodyx only adds its own (copy: %s)"
+T_FR[ufw_kept_rules]="Pare-feu déjà actif : tes règles sont conservées, Nodyx ajoute seulement les siennes (copie : %s)"
+T_EN[ufw_ssh_rule_missing]="The SSH rule for port %s could not be added: firewall NOT enabled, so as not to lock you out."
+T_FR[ufw_ssh_rule_missing]="La règle SSH du port %s n'a pas pu être ajoutée : pare-feu NON activé, pour ne pas t'enfermer dehors."
+T_EN[ufw_configured_ssh]="Firewall active, SSH allowed on port(s): %s"
+T_FR[ufw_configured_ssh]="Pare-feu actif, SSH autorisé sur le(s) port(s) : %s"
+T_EN[ufw_not_active]="UFW did not come up as expected: check it yourself (sudo ufw status verbose)."
+T_FR[ufw_not_active]="UFW ne s'est pas activé comme prévu : vérifie toi-même (sudo ufw status verbose)."
+T_EN[caddy_invalid]="Generated Caddyfile rejected by caddy validate. Nothing was changed in Caddy. Please report it: https://github.com/Pokled/nodyx/issues"
+T_FR[caddy_invalid]="Caddyfile généré refusé par caddy validate. Rien n'a été changé dans Caddy. Signale-le : https://github.com/Pokled/nodyx/issues"
+T_EN[caddy_backup]="Previous Caddyfile saved: %s"
+T_FR[caddy_backup]="Ancien Caddyfile sauvegardé : %s"
+T_EN[install_lib_missing]="Installer library missing in the cloned repository: %s"
+T_FR[install_lib_missing]="Bibliothèque de l'installeur absente du dépôt cloné : %s"
 T_EN[relay_restarted]="Relay client restarted — tunnel to relay.nodyx.org active"
 T_FR[relay_restarted]="Relay client redémarré — tunnel vers relay.nodyx.org actif"
 T_EN[upgrade_done]='✔  Nodyx v%s operational'
 T_FR[upgrade_done]='✔  Nodyx v%s opérationnel'
+T_EN[upgrade_no_backup_confirm]='The database backup could not be verified. Update anyway, WITHOUT a backup?'
+T_FR[upgrade_no_backup_confirm]="La sauvegarde de la base n'a pas pu être vérifiée. Mettre à jour quand même, SANS sauvegarde ?"
+T_EN[upgrade_no_backup_auto]='The database backup could not be verified (--yes never updates without one).'
+T_FR[upgrade_no_backup_auto]="La sauvegarde de la base n'a pas pu être vérifiée (--yes ne met jamais à jour sans)."
+T_EN[upgrade_cancelled_untouched]='Update cancelled. Nothing was changed.'
+T_FR[upgrade_cancelled_untouched]="Mise à jour annulée. Rien n'a été modifié."
+T_EN[upgrade_lib_missing]='scripts/install/build.sh is missing from the updated code: update stopped, the site still runs the previous version.'
+T_FR[upgrade_lib_missing]="scripts/install/build.sh manque dans le code mis à jour : mise à jour arrêtée, le site tourne toujours sur la version précédente."
+T_EN[upgrade_workdir_fail]='Could not create the build directories (disk full?). The site still runs the previous version.'
+T_FR[upgrade_workdir_fail]="Impossible de créer les dossiers de compilation (disque plein ?). Le site tourne toujours sur la version précédente."
+T_EN[upgrade_site_untouched]='The site was NOT touched: it still runs the previous version.'
+T_FR[upgrade_site_untouched]="Le site n'a PAS été touché : il tourne toujours sur la version précédente."
+T_EN[upgrade_swap_fail]='Could not switch to the new version; the previous one was put back. Run sudo nodyx-doctor.'
+T_FR[upgrade_swap_fail]="Impossible de basculer sur la nouvelle version ; la précédente a été remise en place. Lance sudo nodyx-doctor."
+T_EN[pkg_install_failed]='Installing the system packages failed (apt). Check your connection and your apt sources (apt-get update), then run the installer again.'
+T_FR[pkg_install_failed]="L'installation des paquets système a échoué (apt). Vérifie la connexion et les sources apt (apt-get update), puis relance l'installeur."
+T_EN[openssl_missing]='openssl is still missing after installing the packages: secrets cannot be generated.'
+T_FR[openssl_missing]="openssl manque toujours après l'installation des paquets : impossible de générer les secrets."
+T_EN[creds_password_kept]='%s still holds the admin password in clear text. It is no longer needed (lost password: sudo nodyx-recover). Remove the "Admin password" line once you have noted it elsewhere.'
+T_FR[creds_password_kept]="%s contient encore le mot de passe admin en clair. Il n'est plus nécessaire (mot de passe perdu : sudo nodyx-recover). Supprime la ligne « Admin password » une fois notée ailleurs."
+T_EN[upgrade_already_running]='Another Nodyx update is already running. Nothing was changed.'
+T_FR[upgrade_already_running]="Une autre mise à jour de Nodyx est déjà en cours. Rien n'a été modifié."
 
 # §2 — Rollback trap
 T_EN[rollback_failed]='  ✘  Installation failed (code: %s) — rolling back...'
@@ -141,10 +198,12 @@ T_EN[db_autobackup]='Automatic DB backup (%s)...'
 T_FR[db_autobackup]='Sauvegarde automatique de la DB (%s)...'
 T_EN[db_autobackup_done]='Backup: %s%s%s  (%s)'
 T_FR[db_autobackup_done]='Sauvegarde : %s%s%s  (%s)'
-T_EN[db_autobackup_restore_hint]="warn 'Restore the DB if needed: sudo gunzip -c %s | sudo -u postgres psql nodyx'"
-T_FR[db_autobackup_restore_hint]="warn 'Restaurer la DB si besoin : sudo gunzip -c %s | sudo -u postgres psql nodyx'"
+T_EN[db_autobackup_restore_hint]="warn 'Restore the DB if needed: gunzip -c %s | runuser -u postgres -- psql nodyx'"
+T_FR[db_autobackup_restore_hint]="warn 'Restaurer la DB si besoin : gunzip -c %s | runuser -u postgres -- psql nodyx'"
 T_EN[db_autobackup_fail]="DB backup failed (DB empty or inaccessible) — continuing."
 T_FR[db_autobackup_fail]="Sauvegarde DB échouée (DB vide ou inaccessible) — on continue."
+T_EN[wipe_backup_failed]="The database backup failed or could not be verified: wipe CANCELLED, nothing was deleted. Free some disk space in /root, then try again."
+T_FR[wipe_backup_failed]="La sauvegarde de la base a échoué ou n'a pas pu être vérifiée : effacement ANNULÉ, rien n'a été supprimé. Libère de la place dans /root, puis recommence."
 
 # §4 — Banner + system info
 T_EN[banner_subtitle]='Forum · Chat · Voice · Canvas'
@@ -179,8 +238,28 @@ T_EN[help_admin_user]='    --admin-user=USER       Admin username'
 T_FR[help_admin_user]="    --admin-user=USER       Nom d'utilisateur admin"
 T_EN[help_admin_email]='    --admin-email=EMAIL     Admin email'
 T_FR[help_admin_email]='    --admin-email=EMAIL     Email admin'
-T_EN[help_admin_pass]='    --admin-password=PASS   Admin password'
-T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin'
+T_EN[help_admin_pass]='    --admin-password=PASS   Admin password (discouraged: readable by any local user via ps)'
+T_FR[help_admin_pass]='    --admin-password=PASS   Mot de passe admin (déconseillé : lisible par tout utilisateur via ps)'
+T_EN[help_admin_pass_file]='    --admin-password-file=FILE  Admin password read from a file (recommended). NODYX_ADMIN_PASSWORD also works, from a root shell only: "sudo VAR=..." puts it back on the command line'
+T_FR[help_admin_pass_file]='    --admin-password-file=FICHIER  Mot de passe admin lu dans un fichier (recommandé). NODYX_ADMIN_PASSWORD marche aussi, depuis un shell root seulement : « sudo VAR=… » la remet dans la ligne de commande'
+T_EN[help_network]='    --network=direct|relay|sslip  Network mode (--domain implies direct; --yes defaults to relay)'
+T_FR[help_network]='    --network=direct|relay|sslip  Mode réseau (--domain implique direct ; --yes choisit le relais)'
+T_EN[admin_pass_file_unreadable]='--admin-password-file: cannot read a password from %s.'
+T_FR[admin_pass_file_unreadable]='--admin-password-file : impossible de lire un mot de passe dans %s.'
+T_EN[admin_pass_argv_warn]='--admin-password is readable by every user of this server (ps) and stays in your shell history and the sudo log. Prefer --admin-password-file or NODYX_ADMIN_PASSWORD, and change this password after installation.'
+T_FR[admin_pass_argv_warn]="--admin-password est lisible par tout utilisateur de ce serveur (ps) et reste dans l'historique du shell et le journal de sudo. Préfère --admin-password-file ou NODYX_ADMIN_PASSWORD, et change ce mot de passe après l'installation."
+T_EN[no_tty_question]='No terminal to ask: « %s ». Give the matching option (see --help), add --yes to accept the defaults, or run the installer in a terminal. Nothing more was changed.'
+T_FR[no_tty_question]="Aucun terminal pour poser la question : « %s ». Donne l'option correspondante (voir --help), ajoute --yes pour accepter les réponses par défaut, ou lance l'installeur dans un terminal. Rien de plus n'a été modifié."
+T_EN[prompt_default_auto]='%s → %s (--yes, default)'
+T_FR[prompt_default_auto]='%s → %s (--yes, défaut)'
+T_EN[secret_preset]='%s: provided, kept'
+T_FR[secret_preset]='%s : fourni, conservé'
+T_EN[secret_preset_too_short]='The provided admin password is too short: at least %s characters.'
+T_FR[secret_preset_too_short]='Le mot de passe admin fourni est trop court : %s caractères minimum.'
+T_EN[network_invalid]='--network=%s: expected direct, relay or sslip.'
+T_FR[network_invalid]='--network=%s : direct, relay ou sslip attendu.'
+T_EN[network_domain_conflict]='--domain only goes with --network=direct (relay and sslip choose the address themselves).'
+T_FR[network_domain_conflict]="--domain ne va qu'avec --network=direct (relais et sslip choisissent l'adresse eux-mêmes)."
 T_EN[help_options_header]='  Options:'
 T_FR[help_options_header]='  Options :'
 T_EN[help_yes]='    --yes, -y          Auto-confirm all prompts'
@@ -201,6 +280,22 @@ T_FR[unknown_flag]='Flag inconnu : %s (ignoré)'
 # §6 — Confirm / prompt helpers
 T_EN[confirm_yn]='[Y/n]'
 T_FR[confirm_yn]='[O/n]'
+T_EN[confirm_ny]='[y/N]'
+T_FR[confirm_ny]='[o/N]'
+T_EN[confirm_invalid]='Please answer yes or no (y/n).'
+T_FR[confirm_invalid]='Réponds oui ou non (o/n).'
+T_EN[env_unquotable]="The value of « %s » contains both ' and \` : it cannot be stored safely. Change it and run the installer again."
+T_FR[env_unquotable]="La valeur de « %s » contient à la fois ' et \` : impossible de l'enregistrer sans risque. Modifie-la puis relance l'installeur."
+T_EN[pg_datadir_kept]="A PostgreSQL data directory already exists (%s): it is kept, never recreated."
+T_FR[pg_datadir_kept]="Un dossier de données PostgreSQL existe déjà (%s) : il est conservé, jamais recréé."
+T_EN[caddy_other_sites]='Your Caddyfile also serves: %s. The installer writes its own Caddyfile: those sites would no longer be served (a copy of the file is kept).'
+T_FR[caddy_other_sites]='Ton Caddyfile sert aussi : %s. L'"'"'installeur écrit son propre Caddyfile : ces sites ne seraient plus servis (une copie du fichier est gardée).'
+T_EN[caddy_other_sites_q]='Replace it anyway?'
+T_FR[caddy_other_sites_q]='Le remplacer quand même ?'
+T_EN[caddy_other_sites_stop]='Installation stopped before any change. Install Nodyx on another server, or add its site block to your Caddyfile by hand (model: scripts/install/caddyfile.sh in the repository).'
+T_FR[caddy_other_sites_stop]='Installation arrêtée avant toute modification. Installe Nodyx sur un autre serveur, ou ajoute son bloc de site à ton Caddyfile à la main (modèle : scripts/install/caddyfile.sh dans le dépôt).'
+T_EN[caddy_other_sites_yes]='--yes cannot decide to stop serving other sites: run the installer interactively. Nothing was changed.'
+T_FR[caddy_other_sites_yes]='--yes ne peut pas décider de couper d'"'"'autres sites : lance l'"'"'installeur en interactif. Rien n'"'"'a été modifié.'
 T_EN[confirm_auto_yes]='%s → yes (--yes)'
 T_FR[confirm_auto_yes]='%s → oui (--yes)'
 T_EN[prompt_preset]='%s: %s%s%s  %s(pre-filled)%s'
@@ -309,8 +404,8 @@ T_EN[port_stop_disable]='Stop and disable %s — frees the ports %s(recommended)
 T_FR[port_stop_disable]='Arrêter et désactiver %s — libère les ports %s(recommandé)%s'
 T_EN[port_continue]='Continue without stopping — risk of conflict when Caddy starts'
 T_FR[port_continue]='Continuer sans arrêter — risque de conflit au démarrage de Caddy'
-T_EN[port_choice_prompt]='Choice [1-3] (default: 1):'
-T_FR[port_choice_prompt]='Choix [1-3] (défaut: 1) :'
+T_EN[port_choice_prompt]='Choice [1-3] (default: 3):'
+T_FR[port_choice_prompt]='Choix [1-3] (défaut : 3) :'
 T_EN[port_svc_stopped]='%s stopped and disabled'
 T_FR[port_svc_stopped]='%s arrêté et désactivé'
 T_EN[port_svc_remain]='Services left running — Caddy may fail to start on 80/443.'
@@ -609,8 +704,8 @@ T_EN[step_firewall]='Configuring the firewall'
 T_FR[step_firewall]='Configuration du pare-feu'
 T_EN[ufw_existing_saved]='Existing UFW rules saved to %s'
 T_FR[ufw_existing_saved]='Règles UFW existantes sauvegardées dans %s'
-T_EN[ufw_rollback_msg]="warn 'UFW modified — restore manually if needed: ufw --force reset && ufw allow ssh && ufw --force enable'"
-T_FR[ufw_rollback_msg]="warn 'UFW modifié — restaure manuellement si besoin : ufw --force reset && ufw allow ssh && ufw --force enable'"
+T_EN[ufw_rollback_msg]="warn 'UFW: rules added by Nodyx are marked SSH or Nodyx, see: sudo ufw status numbered'"
+T_FR[ufw_rollback_msg]="warn 'UFW : les règles ajoutées par Nodyx sont marquées SSH ou Nodyx, voir : sudo ufw status numbered'"
 T_EN[ufw_configured]='Firewall configured%s'
 T_FR[ufw_configured]='Pare-feu configuré%s'
 T_EN[ufw_relay_note]=' (Relay mode — only SSH open, outbound free)'
@@ -743,8 +838,8 @@ T_EN[sub_optional_alias]='Optional alias: %s'
 T_FR[sub_optional_alias]='Alias optionnel : %s'
 T_EN[sub_alias_redirect]='Redirects to your instance — useful as a memorable shortcut.'
 T_FR[sub_alias_redirect]='Redirige vers ton instance — utile comme raccourci mémorable.'
-T_EN[sub_enable_q]='Enable %s? [Y/n] '
-T_FR[sub_enable_q]='Activer %s ? [O/n] '
+T_EN[sub_enable_q]='Enable %s?'
+T_FR[sub_enable_q]='Activer %s ?'
 T_EN[sub_registering]='Registering with the nodyx.org directory...'
 T_FR[sub_registering]='Enregistrement auprès du directory nodyx.org...'
 T_EN[sub_registered]='Registered! Subdomain: %s'
@@ -771,6 +866,20 @@ T_EN[sub_register_new_failed]='Registration failed with the new slug. Check your
 T_FR[sub_register_new_failed]='Enregistrement échoué avec le nouveau slug. Vérifie ta connexion et réessaie.'
 T_EN[sub_install_cancelled]="Installation cancelled. Contact nodyx.org support to release the slug '%s'."
 T_FR[sub_install_cancelled]="Installation annulée. Contacte le support nodyx.org pour libérer le slug '%s'."
+T_EN[slug_checking]="Checking that %s.nodyx.org is available..."
+T_FR[slug_checking]="Vérification que %s.nodyx.org est libre..."
+T_EN[slug_available]="%s.nodyx.org is available"
+T_FR[slug_available]="%s.nodyx.org est libre"
+T_EN[slug_unavailable]="%s.nodyx.org is not available (%s): choose another name."
+T_FR[slug_unavailable]="%s.nodyx.org n'est pas disponible (%s) : choisis un autre nom."
+T_EN[slug_unavailable_yes]="%s.nodyx.org is not available (%s): run the installer again with --slug=another-name. Nothing was changed."
+T_FR[slug_unavailable_yes]="%s.nodyx.org n'est pas disponible (%s) : relance l'installeur avec --slug=autre-nom. Rien n'a été modifié."
+T_EN[slug_check_unknown]="Could not check the name with the directory (offline?): continuing; it will be checked again at registration."
+T_FR[slug_check_unknown]="Impossible de vérifier le nom auprès de l'annuaire (hors ligne ?) : on continue, il sera revérifié à l'inscription."
+T_EN[slug_taken_late]="%s.nodyx.org was taken by someone else during the installation. Nothing has been sent to that name. Run the installer again with --slug=another-name."
+T_FR[slug_taken_late]="%s.nodyx.org a été pris par quelqu'un d'autre pendant l'installation. Rien n'a été envoyé vers ce nom. Relance l'installeur avec --slug=autre-nom."
+T_EN[hc_dir_registered]='Directory  →  %s is registered'
+T_FR[hc_dir_registered]='Annuaire  →  %s est inscrite'
 T_EN[sub_reinstall_overwrite]='If this is a reinstall, the old entry will be overwritten on the next ping.'
 T_FR[sub_reinstall_overwrite]="Si c'est une réinstallation, l'ancienne entrée sera écrasée au prochain ping."
 T_EN[sub_register_failed]='Registration failed.'
@@ -847,7 +956,11 @@ T_EN[hc_failures]='✘  %s/%s OK — %s error(s) / %s warning(s)'
 T_FR[hc_failures]='✘  %s/%s OK — %s erreur(s) / %s avertissement(s)'
 
 # §26 — Final summary banner
-T_EN[banner_online]='║    ✦   N O D Y X   ·   I N S T A N C E   O N L I N E   ✦  ║'
+T_EN[banner_online]='║    ✦   N O D Y X   ·   I N S T A N C E   O N L I N E   ✦     ║'
+T_EN[banner_errors]='║     ✘   I N S T A L L E D ,   W I T H   E R R O R S   ✘      ║'
+T_FR[banner_errors]='║    ✘   I N S T A L L É E ,   A V E C   E R R E U R S   ✘     ║'
+T_EN[install_errors_exit]='Installation finished with %s error(s) in the health check (see above): exit code 1. Diagnosis: sudo nodyx-doctor'
+T_FR[install_errors_exit]="Installation terminée avec %s erreur(s) au bilan de santé (voir ci-dessus) : code de sortie 1. Diagnostic : sudo nodyx-doctor"
 T_FR[banner_online]='║   ✦   N O D Y X   ·   I N S T A N C E   E N   L I G N E   ✦  ║'
 T_EN[summ_instance]='Instance'
 T_FR[summ_instance]='Instance'
@@ -877,6 +990,8 @@ T_EN[summ_diag]='▸ Diagnostic'
 T_FR[summ_diag]='▸ Diagnostic'
 T_EN[summ_diag_hint]='full report (services, TLS, DB, RAM...)'
 T_FR[summ_diag_hint]='rapport complet (services, TLS, DB, RAM...)'
+T_EN[summ_recover_hint]='# lost admin access: reset link for an account'
+T_FR[summ_recover_hint]="# accès admin perdu : lien de réinitialisation d'un compte"
 T_EN[summ_relay_tunnel]='▸ Relay tunnel'
 T_FR[summ_relay_tunnel]='▸ Tunnel Relay'
 T_EN[summ_creds_arrow]='Credentials →'
@@ -943,6 +1058,19 @@ gen_secret()  { openssl rand -hex 32; }
 gen_pass()    { openssl rand -base64 18 | tr -d '/+='; }
 slugify()     { echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'; }
 
+# _env_quote <valeur> : la valeur entre délimiteurs, lue telle quelle par dotenv.
+# Sans délimiteur, dotenv coupe au premier « # » (mot de passe SMTP « abc#123 »
+# lu « abc », mesuré le 03/10/2026). On prend le premier délimiteur absent de
+# la valeur, ' puis ` ; jamais " (dotenv y transforme \n en retour à la ligne).
+# Échoue si la valeur contient les deux : l'appelant la refuse.
+_env_quote() {
+  local v="$1" q
+  for q in "'" '`'; do
+    if [[ "$v" != *"$q"* ]]; then printf '%s%s%s' "$q" "$v" "$q"; return 0; fi
+  done
+  return 1
+}
+
 # Retourne 0 (true) si $1 > $2 en semver
 version_gt() { [[ "$(printf '%s\n' "$1" "$2" | sort -V | tail -1)" == "$1" ]] && [[ "$1" != "$2" ]]; }
 
@@ -971,6 +1099,116 @@ _setup_pm2_logrotate() {
   "${as_nodyx[@]}" list 2>/dev/null | grep -q 'pm2-logrotate'
 }
 
+# ── Services nodyx-relay-client et nodyx-turn : secrets HORS de la ligne de ──
+# commande (04/10/2026). Avant, le jeton de l'annuaire et le secret TURN étaient
+# des arguments : lisibles par tout utilisateur via `ps`, et le jeton en clair
+# dans l'unité systemd, lisible par tous. Les binaires publiés les lisent dans
+# l'environnement (NODYX_RELAY_TOKEN, TURN_SECRET), chargé par systemd depuis un
+# fichier en 600. Le serveur et le slug du relais (non secrets) restent des
+# arguments, lus dans le même fichier : la mise à jour ne les perd plus (avant,
+# elle remettait relay.nodyx.org:7443 et cassait les instances passées par wss://).
+# NODYX_TEST_ROOT préfixe les chemins (tests seulement).
+_nodyx_write_relay_unit() { # <serveur> <slug> <jeton>
+  local r="${NODYX_TEST_ROOT:-}"
+  install -d -m 755 "$r/etc/nodyx" "$r/etc/systemd/system"
+  (umask 077; printf 'NODYX_RELAY_SERVER=%s\nNODYX_RELAY_SLUG=%s\nNODYX_RELAY_TOKEN=%s\n' "$1" "$2" "$3" > "$r/etc/nodyx/relay.env")
+  chmod 600 "$r/etc/nodyx/relay.env"
+  cat > "$r/etc/systemd/system/nodyx-relay-client.service" <<'_SVC'
+[Unit]
+Description=Nodyx Relay Client — tunnel vers relay.nodyx.org
+After=network.target
+
+[Service]
+# Serveur, slug et jeton : /etc/nodyx/relay.env (600). Le jeton est lu par
+# nodyx-relay dans son environnement, jamais passé en argument.
+EnvironmentFile=/etc/nodyx/relay.env
+ExecStart=/usr/local/bin/nodyx-relay client --server ${NODYX_RELAY_SERVER} --slug ${NODYX_RELAY_SLUG} --local-port 80
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60
+StartLimitBurst=5
+User=nodyx
+
+[Install]
+WantedBy=multi-user.target
+_SVC
+}
+
+_nodyx_write_turn_unit() {
+  local r="${NODYX_TEST_ROOT:-}"
+  install -d -m 755 "$r/etc/systemd/system"
+  cat > "$r/etc/systemd/system/nodyx-turn.service" <<'_SVC'
+[Unit]
+Description=Nodyx TURN Server (WebRTC relay)
+After=network.target
+
+[Service]
+# Port, IP publique, royaume, secret et durée : lus par nodyx-turn dans son
+# environnement, chargé depuis /etc/nodyx-turn.env (600). Rien en argument.
+EnvironmentFile=/etc/nodyx-turn.env
+ExecStart=/usr/local/bin/nodyx-turn server
+Restart=on-failure
+RestartSec=5s
+User=nodyx
+
+[Install]
+WantedBy=multi-user.target
+_SVC
+}
+
+# _nodyx_migrate_service_secrets : réécrit les services à l'ancienne forme
+# (secret en argument). Le serveur, le slug et le jeton du relais sont relus
+# dans l'unité existante : rien n'est perdu, rien n'est inventé.
+_nodyx_migrate_service_secrets() {
+  local r="${NODYX_TEST_ROOT:-}" u srv slg tok changed=1
+  u="$r/etc/systemd/system/nodyx-relay-client.service"
+  if [[ -f "$u" ]] && grep -q -- '--token ' "$u"; then
+    srv="$(grep -oE -- '--server [^ \\]+' "$u" | head -1 | awk '{print $2}')"
+    slg="$(grep -oE -- '--slug [^ \\]+' "$u" | head -1 | awk '{print $2}')"
+    tok="$(grep -oE -- '--token [^ \\]+' "$u" | head -1 | awk '{print $2}')"
+    if [[ -n "$srv" && -n "$slg" && -n "$tok" ]]; then
+      _nodyx_write_relay_unit "$srv" "$slg" "$tok"; changed=0
+    fi
+  fi
+  u="$r/etc/systemd/system/nodyx-turn.service"
+  if [[ -f "$u" && -f "$r/etc/nodyx-turn.env" ]] && grep -q -- '--secret' "$u"; then
+    _nodyx_write_turn_unit; changed=0
+  fi
+  return $changed
+}
+
+# nodyx-recover : reprendre la main sur l'instance quand mot de passe et e-mail
+# sont perdus (04/10/2026). L'outil existait dans le core mais n'était installé
+# nulle part, et `npm run recover` (ts-node) plantait avec TypeScript 7 : on
+# lance la version compilée. Le mot de passe admin n'est plus conservé en clair
+# dans /root/nodyx-credentials.txt, c'est cet outil qui le remplace.
+_nodyx_write_recover_script() { # <chemin> <dossier nodyx>
+  cat > "$1" <<RECOVERSCRIPT
+#!/usr/bin/env bash
+# nodyx-recover : lien de réinitialisation pour un compte, depuis le serveur.
+#   sudo nodyx-recover --list | --reset <utilisateur|email> | --promote <qui>
+set -euo pipefail
+[[ \$EUID -eq 0 ]] || { echo "Lance en root : sudo nodyx-recover" >&2; exit 1; }
+cd "$2/nodyx-core"
+exec node dist/scripts/recover.js "\$@"
+RECOVERSCRIPT
+  chmod 755 "$1"
+}
+
+# nodyx-update : un simple raccourci vers `install.sh --upgrade` (04/10/2026).
+# Avant, c'était une 3e copie de la mise à jour, qui compilait dans le dossier
+# servi, sans sauvegarde de la base ni remise des droits à nodyx.
+_nodyx_write_update_script() { # <chemin> <dossier nodyx>
+  cat > "$1" <<UPDATESCRIPT
+#!/usr/bin/env bash
+# nodyx-update : met à jour Nodyx (raccourci vers install.sh --upgrade).
+set -euo pipefail
+[[ \$EUID -eq 0 ]] || { echo "Lance en root : sudo nodyx-update" >&2; exit 1; }
+exec bash "$2/install.sh" --upgrade "\$@"
+UPDATESCRIPT
+  chmod 755 "$1"
+}
+
 # Chemin rapide : mise à jour / réparation sans reconfiguration
 _nodyx_upgrade() {
   local from_ver="$1" to_ver="$2" dir="$3"
@@ -994,31 +1232,57 @@ _nodyx_upgrade() {
   # pm2-logrotate si absent (vérifier sur le daemon nodyx)
   _setup_pm2_logrotate || true
 
-  # Arrêter les anciens processus PM2 root (migration nexus-* → nodyx-*)
-  for _old_proc in nexus-core nexus-frontend nodyx-core nodyx-frontend; do
-    pm2 delete "$_old_proc" 2>/dev/null || true
-  done
-  # Libérer les ports même si les process appartiennent à un autre utilisateur
-  for _port in 3000 4173; do
-    fuser -k "${_port}/tcp" 2>/dev/null || true
-  done
+  # Une seule mise à jour à la fois : un nodyx-update en cron et un lancé à la
+  # main feraient sinon git pull et bascule en même temps, dans un ordre imprévisible.
+  exec {_NODYX_LOCK_FD}>/run/lock/nodyx-upgrade.lock
+  flock -n "$_NODYX_LOCK_FD" || die "$(t upgrade_already_running)"
+
+  # Sauvegarde de la base AVANT tout : au redémarrage, le nouveau core applique
+  # ses migrations. Sans sauvegarde vérifiée, on demande (Entrée = non).
+  _auto_backup_db upgrade
+  if [[ "${_DB_EXISTS:-false}" == "true" && "${_AUTO_BACKUP_OK:-false}" != "true" ]]; then
+    $_AUTO_YES && die "$(t upgrade_no_backup_auto) $(t upgrade_cancelled_untouched)"
+    _confirm "$(t upgrade_no_backup_confirm)" n || die "$(t upgrade_cancelled_untouched)"
+  fi
 
   info "$(t code_fetch)"
-  git config --global --add safe.directory "$dir" 2>/dev/null || true
+  git config --global --get-all safe.directory 2>/dev/null | grep -qxF "$dir" \
+    || git config --global --add safe.directory "$dir" 2>/dev/null || true
   # Reset generated files (package-lock.json, ecosystem.config.js…) to unblock the pull
   # ecosystem.config.js is in the repo but rewritten by the installer — reset to avoid a git conflict
   git -C "$dir" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json ecosystem.config.js 2>/dev/null || true
   git -C "$dir" pull --ff-only || die "$(t git_pull_fail)"
   ok "$(t code_uptodate)"
 
+  # Migrations de configuration livrées avec le code (03/10/2026 : l'IP du
+  # visiteur jusqu'au core, cf scripts/install/caddyfile.sh).
+  if [[ -f "${dir}/scripts/install/caddyfile.sh" ]]; then
+    # shellcheck source=scripts/install/caddyfile.sh
+    . "${dir}/scripts/install/caddyfile.sh"
+    nodyx_migrate_client_ip "$dir" || warn "$(t caddy_invalid)"
+  fi
+
+  # Compilation « à côté » (04/10/2026, scripts/install/build.sh) : l'ancienne
+  # version continue de servir pendant la compilation, et rien ne bascule tant
+  # que le core ET le frontend ne sont pas compilés. Avant, un `fuser -k` tuait
+  # tout ce qui écoutait sur 3000/4173 puis on compilait dans le dossier servi :
+  # une compilation ratée laissait le site à terre.
+  [[ -f "${dir}/scripts/install/build.sh" ]] || die "$(t upgrade_lib_missing)"
+  # shellcheck source=scripts/install/build.sh
+  . "${dir}/scripts/install/build.sh"
+  nodyx_purge_stale_work "$dir"
+  local _wc _wf
+  _wc="$(nodyx_work_dir "$dir" core)" && _wf="$(nodyx_work_dir "$dir" frontend)" \
+    || die "$(t upgrade_workdir_fail)"
+  _nodyx_upgrade_cleanup() { rm -rf -- "$_wc" "$_wf"; }
+
   info "$(t backend_rebuild)"
-  cd "${dir}/nodyx-core"
-  npm ci --no-fund --no-audit --silent || die "$(t npm_install_backend_fail)"
-  npm run build || die "$(t backend_build_fail)"
+  if ! nodyx_build_aside "${dir}/nodyx-core" dist "$_wc/app"; then
+    _nodyx_upgrade_cleanup; die "$(t backend_build_fail) $(t upgrade_site_untouched)"
+  fi
   ok "$(t backend_built)"
 
   info "$(t frontend_rebuild)"
-  cd "${dir}/nodyx-frontend"
   # Heap cap scaled to total RAM (see fresh-install path for the rationale)
   _RB_RAM_MB=$(free -m 2>/dev/null | awk '/^Mem/{print $2}' || echo 4096)
   if   [[ "$_RB_RAM_MB" -lt 1500 ]]; then export NODE_OPTIONS="--max-old-space-size=768"
@@ -1026,16 +1290,45 @@ _nodyx_upgrade() {
   elif [[ "$_RB_RAM_MB" -lt 8000 ]]; then export NODE_OPTIONS="--max-old-space-size=2048"
   else                                    export NODE_OPTIONS="--max-old-space-size=4096"
   fi
-  npm ci --no-fund --no-audit --silent || die "$(t npm_install_frontend_fail)"
-  npm run build || die "$(t frontend_build_fail)"
+  if ! nodyx_build_aside "${dir}/nodyx-frontend" build "$_wf/app"; then
+    unset NODE_OPTIONS; _nodyx_upgrade_cleanup
+    die "$(t frontend_build_fail) $(t upgrade_site_untouched)"
+  fi
   unset NODE_OPTIONS
   ok "$(t frontend_built)"
+
+  # Bascule : deux `mv` par application. Si le frontend ne bascule pas, le
+  # core revient à sa version précédente : jamais un core neuf avec un vieux
+  # frontend.
+  if ! nodyx_swap_outputs "${dir}/nodyx-core" dist "$_wc/app"; then
+    _nodyx_upgrade_cleanup; die "$(t upgrade_swap_fail)"
+  fi
+  if ! nodyx_swap_outputs "${dir}/nodyx-frontend" build "$_wf/app"; then
+    nodyx_swap_back "${dir}/nodyx-core" dist "$_wc/app"
+    _nodyx_upgrade_cleanup; die "$(t upgrade_swap_fail)"
+  fi
+
+  # Anciens processus PM2 de root (migration nexus-* → nodyx-*), seulement si un
+  # démon PM2 root existe : `pm2 delete` en démarrerait un sinon.
+  if [[ -S /root/.pm2/rpc.sock ]]; then
+    for _old_proc in nexus-core nexus-frontend nodyx-core nodyx-frontend; do
+      PM2_HOME=/root/.pm2 pm2 delete "$_old_proc" 2>/dev/null || true
+    done
+  fi
 
   info "$(t services_restart)"
   chown -R nodyx:nodyx "$dir" 2>/dev/null || true
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart "${dir}/ecosystem.config.js" --update-env 2>/dev/null \
     || runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 startOrRestart "${dir}/ecosystem.config.js" --update-env
   runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
+  _nodyx_upgrade_cleanup
+  [[ -f /usr/local/bin/nodyx-update ]] && _nodyx_write_update_script /usr/local/bin/nodyx-update "$dir"
+  _nodyx_write_recover_script /usr/local/bin/nodyx-recover "$dir"
+  # Anciennes installations : le mot de passe admin en clair est signalé, jamais
+  # retiré d'office (la personne ne l'a peut-être noté nulle part ailleurs).
+  if grep -qE '^Admin password   : [^(]' /root/nodyx-credentials.txt 2>/dev/null; then
+    warn "$(t creds_password_kept /root/nodyx-credentials.txt)"
+  fi
 
   # ── Relay client : upgrade du binaire si version périmée ─────────────────────
   # Sans ça, un client v0.1.3 pouvait rester 13 jours connecté à un pipe mort
@@ -1052,18 +1345,11 @@ _nodyx_upgrade() {
         aarch64) _RELAY_ARCH="arm64" ;;
       esac
       if [[ -n "$_RELAY_ARCH" ]]; then
-        local _RELAY_URL="https://github.com/Pokled/nodyx/releases/download/${NODYX_RELAY_VERSION}/nodyx-relay-linux-${_RELAY_ARCH}"
-        local _RELAY_TMP; _RELAY_TMP=$(mktemp /tmp/nodyx-relay.XXXXXX)
-        if curl -fsSL --max-time 60 "$_RELAY_URL" -o "$_RELAY_TMP" \
-             && file "$_RELAY_TMP" 2>/dev/null | grep -q ELF; then
-          chmod +x "$_RELAY_TMP"
-          mv -f "$_RELAY_TMP" /usr/local/bin/nodyx-relay
-          chmod +x /usr/local/bin/nodyx-relay
+        if _nodyx_fetch_bin "$NODYX_RELAY_VERSION" "nodyx-relay-linux-${_RELAY_ARCH}" /usr/local/bin/nodyx-relay; then
           systemctl restart nodyx-relay-client 2>/dev/null || true
           ok "nodyx-relay upgraded to $(/usr/local/bin/nodyx-relay --version 2>&1 || echo '?')"
         else
-          rm -f "$_RELAY_TMP"
-          warn "Could not download nodyx-relay ${NODYX_RELAY_VERSION} — kept current version"
+          warn "Could not install a verified nodyx-relay ${NODYX_RELAY_VERSION} — kept current version"
         fi
       fi
     fi
@@ -1073,23 +1359,20 @@ _nodyx_upgrade() {
   local _env_file="${dir}/nodyx-core/.env"
   local _dir_token; _dir_token=$(grep '^DIRECTORY_TOKEN=' "$_env_file" 2>/dev/null | cut -d= -f2- || true)
   local _slug;      _slug=$(grep '^NODYX_COMMUNITY_SLUG=' "$_env_file" 2>/dev/null | cut -d= -f2- || true)
+  # Secrets hors de la ligne de commande (04/10/2026) pour les services existants.
+  if _nodyx_migrate_service_secrets; then
+    systemctl daemon-reload
+    systemctl is-active --quiet nodyx-relay-client 2>/dev/null && systemctl restart nodyx-relay-client 2>/dev/null || true
+    systemctl is-active --quiet nodyx-turn 2>/dev/null && systemctl restart nodyx-turn 2>/dev/null || true
+    ok "Services nodyx-relay-client / nodyx-turn : secrets moved out of the command line"
+  fi
   if [[ -n "$_dir_token" && -n "$_slug" ]] && ! systemctl is-active --quiet nodyx-relay-client 2>/dev/null; then
     if [[ -f /usr/local/bin/nodyx-relay ]]; then
       info "$(t relay_recreate)"
-      cat > /etc/systemd/system/nodyx-relay-client.service <<_SVC
-[Unit]
-Description=Nodyx Relay Client
-After=network.target
-[Service]
-ExecStart=/usr/local/bin/nodyx-relay client --server ${RELAY_SERVER:-relay.nodyx.org:7443} --slug ${_slug} --token ${_dir_token} --local-port 80
-Restart=on-failure
-RestartSec=5s
-StartLimitIntervalSec=60
-StartLimitBurst=5
-User=nodyx
-[Install]
-WantedBy=multi-user.target
-_SVC
+      # Le serveur choisi à l'installation (7443, IPv6 ou wss://) est conservé
+      # dans /etc/nodyx/relay.env ; à défaut seulement, le serveur par défaut.
+      _srv="$(grep -m1 '^NODYX_RELAY_SERVER=' /etc/nodyx/relay.env 2>/dev/null | cut -d= -f2- || true)"
+      _nodyx_write_relay_unit "${_srv:-${RELAY_SERVER:-relay.nodyx.org:7443}}" "$_slug" "$_dir_token"
       systemctl daemon-reload
       systemctl enable nodyx-relay-client --quiet
       systemctl start nodyx-relay-client
@@ -1127,8 +1410,8 @@ _nodyx_rollback() {
   else
     echo -e "${YELLOW}$(t rollback_manual_hint)${RESET}"
     echo -e "${YELLOW}    • PM2  : ${BOLD}runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list${RESET}"
-    echo -e "${YELLOW}    • Logs : ${BOLD}journalctl -u nodyx-core -n 50${RESET}"
-    echo -e "${YELLOW}    • DB   : ${BOLD}sudo -u postgres psql -c '\\l'${RESET}"
+    echo -e "${YELLOW}    • Logs : ${BOLD}runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 logs nodyx-core --lines 50${RESET}"
+    echo -e "${YELLOW}    • DB   : ${BOLD}runuser -u postgres -- psql -c '\\l'${RESET}"
     echo -e "${YELLOW}$(t rollback_relaunch)${RESET}"
   fi
   echo ""
@@ -1136,15 +1419,38 @@ _nodyx_rollback() {
 trap '_nodyx_rollback' EXIT
 
 # ── Auto-backup DB avant action destructive ───────────────────────────────────
+# _nodyx_prune_backups <motif> : ne garde que les 5 sauvegardes les plus récentes
+# correspondant au motif. Réservé aux sauvegardes de MISE À JOUR (une par
+# nodyx-update : sans ce ménage, un nodyx-update quotidien remplit le disque).
+# Celles d'un --wipe ou d'une réinstallation ne sont jamais supprimées.
+_nodyx_prune_backups() {
+  local f n=0
+  while IFS= read -r f; do
+    n=$((n+1))
+    [[ $n -le 5 ]] || rm -f -- "$f"
+  done < <(ls -1t -- $1 2>/dev/null)
+}
+
 _auto_backup_db() {
   local reason="${1:-pre-action}"
   [[ "${_DB_EXISTS:-false}" == "true" ]] || return 0
-  local bak="/root/nodyx-db-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+  local bak
+  if [[ "$reason" == upgrade ]]; then
+    bak="/root/nodyx-db-backup-upgrade-$(date +%Y%m%d-%H%M%S).sql.gz"
+  else
+    bak="/root/nodyx-db-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+  fi
   info "$(t db_autobackup "$reason")"
-  if sudo -u postgres pg_dump nodyx 2>/dev/null | gzip > "$bak"; then
+  # Réussie seulement si l'archive est intacte ET contient bien un dump : un
+  # pg_dump coupé par un disque plein laisse un .gz valide mais tronqué.
+  if (umask 077; runuser -u postgres -- pg_dump nodyx 2>/dev/null | gzip > "$bak") \
+     && gzip -t "$bak" 2>/dev/null \
+     && gzip -dc "$bak" 2>/dev/null | grep -q -m1 "PostgreSQL database dump complete"; then
+    _AUTO_BACKUP_OK=true
     local sz; sz=$(du -sh "$bak" 2>/dev/null | cut -f1 || echo "?")
     ok "$(t db_autobackup_done "${BOLD}" "$bak" "${RESET}" "$sz")"
     _rollback_register "$(t db_autobackup_restore_hint "$bak")"
+    [[ "$reason" == upgrade ]] && _nodyx_prune_backups '/root/nodyx-db-backup-upgrade-*.sql.gz'
   else
     warn "$(t db_autobackup_fail)"
     rm -f "$bak"
@@ -1180,9 +1486,44 @@ _resolve_version() {
   echo "unknown"
 }
 NODYX_VERSION="$(_resolve_version)"
-INSTALLER_VERSION="$NODYX_VERSION"
 # Relay client binary — single source of truth, used by install AND nodyx-update
 NODYX_RELAY_VERSION="v0.1.4-p2p"
+
+# ── Empreintes SHA-256 des binaires téléchargés et exécutés en root ───────────
+# Clé : « <version>/<fichier publié> ». Vérifiées le 04/10/2026 : empreinte
+# calculée sur le fichier téléchargé == empreinte publiée par GitHub ; fichiers
+# déposés par Pokled ou par la CI du dépôt, jamais modifiés depuis.
+# Changer une version = ajouter son empreinte ICI, dans le même commit : sans
+# elle, _nodyx_fetch_bin refuse d'installer (scripts/tests/install-binaries.test.sh).
+declare -A NODYX_BIN_SHA256=(
+  [v0.1.2-p2p/nexus-turn-linux-amd64]=37bad0141b28aa2bbbc70fffdb6dbd8541972c26c9a3e64db9a3b978b3717adb
+  [v0.1.2-p2p/nexus-turn-linux-arm64]=c1d6f755cd45d3e207333adc2b7f82e55b0b999fe192eab30b94acdf541a9320
+  [sfu-v0.1.0/nodyx-sfud-linux-amd64]=3f0a5c3704a56e6a87ff9e8d1c6499f58aaf3a33f6aef11c87bd12b3ac9aa564
+  [sfu-v0.1.0/nodyx-sfud-linux-arm64]=15df9007a2f159ff17c1a3c851c72e29747af2677a91bec8400518a47d772ca6
+  [v0.1.4-p2p/nodyx-relay-linux-amd64]=93432a3da431971a2f4dd559c324402fbd4d0f89d07a67667ba6fbbd426ef621
+  [v0.1.4-p2p/nodyx-relay-linux-arm64]=e34308368253084948f047d10a36c7d681a7dfb3efe1d25e585b371387c435ef
+)
+
+# _nodyx_fetch_bin <version> <fichier publié> <destination>
+# Télécharge depuis les publications GitHub de Nodyx, vérifie l'empreinte
+# épinglée, et n'installe QUE si elle correspond (avant le 04/10/2026 : seul
+# « c'est un ELF » était vérifié). Codes : 0 installé, 1 téléchargement
+# impossible, 2 aucune empreinte épinglée, 3 empreinte différente.
+_nodyx_fetch_bin() {
+  local version="$1" asset="$2" dest="$3" want got tmp
+  want="${NODYX_BIN_SHA256[$version/$asset]:-}"
+  if [[ -z "$want" ]]; then warn "$(printf "$(t bin_checksum_missing)" "$version/$asset")"; return 2; fi
+  tmp="$(mktemp /tmp/nodyx-bin.XXXXXX)"
+  if ! curl -fsSL --max-time 180 "https://github.com/Pokled/nodyx/releases/download/${version}/${asset}" -o "$tmp"; then
+    rm -f "$tmp"; return 1
+  fi
+  got="$(sha256sum "$tmp" | cut -d' ' -f1)"
+  if [[ "$got" != "$want" ]]; then
+    rm -f "$tmp"; warn "$(printf "$(t bin_checksum_bad)" "$version/$asset")"; return 3
+  fi
+  chmod 755 "$tmp"
+  mv -f "$tmp" "$dest"   # mv atomique : fonctionne même si l'ancien binaire tourne
+}
 
 # ── CLI flags ─────────────────────────────────────────────────────────────────
 _FORCE_MODE=""        # upgrade | repair | reinstall | wipe (bypass detection menu)
@@ -1193,6 +1534,7 @@ _SFU_INSTALLED=false  # vrai seulement si le daemon SFU tourne réellement
 SKIP_SUBDOMAIN=false  # --no-subdomain
 _ARG_DOMAIN=""  _ARG_SLUG=""  _ARG_NAME=""
 _ARG_ADMIN_USER=""  _ARG_ADMIN_EMAIL=""  _ARG_ADMIN_PASS=""
+_ARG_ADMIN_PASS_FILE=""  _ARG_ADMIN_PASS_ARGV=false  _ARG_NETWORK=""
 
 for _arg in "$@"; do
   case "$_arg" in
@@ -1209,7 +1551,9 @@ for _arg in "$@"; do
     --name=*)             _ARG_NAME="${_arg#*=}"   ;;
     --admin-user=*)       _ARG_ADMIN_USER="${_arg#*=}"  ;;
     --admin-email=*)      _ARG_ADMIN_EMAIL="${_arg#*=}" ;;
-    --admin-password=*)   _ARG_ADMIN_PASS="${_arg#*=}"  ;;
+    --admin-password=*)   _ARG_ADMIN_PASS="${_arg#*=}"; _ARG_ADMIN_PASS_ARGV=true ;;
+    --admin-password-file=*) _ARG_ADMIN_PASS_FILE="${_arg#*=}" ;;
+    --network=*)          _ARG_NETWORK="${_arg#*=}" ;;
     --help|-h)
       echo ""
       echo "$(t help_usage)"
@@ -1227,6 +1571,8 @@ for _arg in "$@"; do
       echo "$(t help_admin_user)"
       echo "$(t help_admin_email)"
       echo "$(t help_admin_pass)"
+      echo "$(t help_admin_pass_file)"
+      echo "$(t help_network)"
       echo ""
       echo "$(t help_options_header)"
       echo "$(t help_yes)"
@@ -1242,17 +1588,60 @@ for _arg in "$@"; do
   esac
 done
 
+# ── Secrets hors de la ligne de commande (04/10/2026) ─────────────────────────
+# Un argument est lisible par tout utilisateur du serveur (ps), reste dans
+# l'historique du shell et dans le journal de sudo. Le mot de passe se donne
+# donc par fichier (--admin-password-file), ou par variable d'environnement
+# depuis un shell root (NODYX_ADMIN_PASSWORD), effacée aussitôt lue pour ne pas suivre les
+# programmes lancés ensuite. --admin-password=… reste accepté, avec un avertissement.
+if [[ -n "$_ARG_ADMIN_PASS_FILE" ]]; then
+  [[ -f "$_ARG_ADMIN_PASS_FILE" && -r "$_ARG_ADMIN_PASS_FILE" ]] \
+    || die "$(t admin_pass_file_unreadable "$_ARG_ADMIN_PASS_FILE")"
+  IFS= read -r _ARG_ADMIN_PASS < "$_ARG_ADMIN_PASS_FILE" || true
+  _ARG_ADMIN_PASS="${_ARG_ADMIN_PASS%$'\r'}"
+  [[ -n "$_ARG_ADMIN_PASS" ]] || die "$(t admin_pass_file_unreadable "$_ARG_ADMIN_PASS_FILE")"
+elif [[ -n "${NODYX_ADMIN_PASSWORD:-}" ]]; then
+  _ARG_ADMIN_PASS="$NODYX_ADMIN_PASSWORD"
+elif $_ARG_ADMIN_PASS_ARGV; then
+  warn "$(t admin_pass_argv_warn)"
+fi
+unset NODYX_ADMIN_PASSWORD
+
+# ── Terminal disponible ? ─────────────────────────────────────────────────────
+# Les questions sont posées sur le terminal (/dev/tty), jamais sur l'entrée
+# standard. Sans terminal (cron, Ansible, ssh sans -t), une question qui n'a
+# ni option ni réponse par défaut acceptée par --yes arrête l'installeur
+# proprement, en disant laquelle : avant, il mourait sur une erreur de bash.
+_NODYX_TTY="${_NODYX_TTY:-/dev/tty}"
+_HAS_TTY=false
+{ : <"$_NODYX_TTY"; } 2>/dev/null && _HAS_TTY=true
+_tty_needed() { # <question>
+  $_HAS_TTY || die "$(t no_tty_question "$1")"
+}
+
 # Shortcut: --yes auto-confirms (replaces read -rp for confirmations)
 _confirm() {
-  # Usage: _confirm "message" [default=y]  → returns 0 if yes, 1 if no
-  local msg="$1" default="${2:-y}"
-  # Accept legacy 'o' (oui) as default for backward compat with FR-era callers
+  # Usage: _confirm "message" [défaut y|n]  → 0 si oui, 1 si non.
+  # Seuls oui/yes/o/y et non/no/n sont compris ; Entrée prend le défaut ; toute
+  # autre réponse fait REPOSER la question. Avant le 03/10/2026, tout ce qui
+  # n'était pas exactement « n » valait OUI : « non » lançait l'installation.
+  local msg="$1" default="${2:-y}" _c _fd _hint
   [[ "$default" == "o" ]] && default="y"
   if $_AUTO_YES; then info "$(t confirm_auto_yes "$msg")"; return 0; fi
-  read -rp "$(echo -e "  ${BOLD}${msg} $(t confirm_yn): ${RESET}")" _c </dev/tty
-  _c="${_c:-$default}"
-  # 'n' rejects; everything else (y/Y/o/O/empty) accepts — works regardless of UI language
-  [[ "${_c,,}" != "n" ]]
+  _tty_needed "$msg"
+  [[ "$default" == "n" ]] && _hint="$(t confirm_ny)" || _hint="$(t confirm_yn)"
+  exec {_fd}<"${_NODYX_TTY:-/dev/tty}"
+  while true; do
+    _c=""
+    read -r -u "$_fd" -p "$(echo -e "  ${BOLD}${msg} ${_hint}: ${RESET}")" _c || { exec {_fd}<&-; return 1; }
+    _c="${_c//[[:space:]]/}"
+    _c="${_c:-$default}"
+    case "${_c,,}" in
+      y|yes|o|oui) exec {_fd}<&-; return 0 ;;
+      n|no|non)    exec {_fd}<&-; return 1 ;;
+      *)           warn "$(t confirm_invalid)" ;;
+    esac
+  done
 }
 
 #
@@ -1261,20 +1650,31 @@ _confirm() {
 #   Un seul install.sh entry point, des modules sourcés par fonction.
 #   NE PAS FAIRE avant d'avoir un vrai cas d'usage RHEL à tester.
 
+# prompt <variable> <question> [défaut]
+# Un 3e argument, même vide, est un défaut : Entrée l'accepte (avant le
+# 04/10/2026, un défaut vide rendait obligatoires les champs « optionnels »).
+# Avec --yes, le défaut est pris sans demander.
 prompt() {
-  local var="$1" msg="$2" default="${3:-}" val=''
+  local var="$1" msg="$2" default="${3:-}" has_default=false val=''
+  [[ $# -ge 3 ]] && has_default=true
   # If the variable is already pre-filled (via CLI arg), skip the prompt
   local _preset="${!var:-}"
   if [[ -n "$_preset" ]]; then
     info "$(t prompt_preset "$msg" "${BOLD}" "${_preset}" "${RESET}" "${CYAN}" "${RESET}")"
     return
   fi
-  if [[ -n "$default" ]]; then
-    read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val </dev/tty
+  if $has_default && $_AUTO_YES; then
+    printf -v "$var" '%s' "$default"
+    info "$(t prompt_default_auto "$msg" "${default:--}")"
+    return
+  fi
+  _tty_needed "$msg"
+  if $has_default; then
+    read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg} [${default}]: ")" val <"$_NODYX_TTY"
     val="${val:-$default}"
   else
     while [[ -z "$val" ]]; do
-      read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
+      read -rp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val <"$_NODYX_TTY"
     done
   fi
   printf -v "$var" '%s' "$val"
@@ -1283,24 +1683,35 @@ prompt() {
 prompt_secret() {
   local var="$1" msg="$2" minlen="${3:-1}"
   local val=''
+  _tty_needed "$msg"
   while [[ ${#val} -lt $minlen ]]; do
     [[ -n "$val" ]] && echo -e "  ${YELLOW}⚠${RESET}  $(t secret_too_short "$minlen")"
-    read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
+    read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val <"$_NODYX_TTY"
     echo
   done
   printf -v "$var" '%s' "$val"
 }
 
+# Une valeur déjà fournie (fichier, variable, option) est vérifiée et gardée :
+# avant le 04/10/2026, elle était ignorée et redemandée au terminal, ce qui
+# rendait impossible l'installation silencieuse documentée en tête de fichier.
 prompt_secret_confirm() {
   local var="$1" msg="$2" minlen="${3:-1}"
   local val='' val2=''
+  local _preset="${!var:-}"
+  if [[ -n "$_preset" ]]; then
+    [[ ${#_preset} -ge $minlen ]] || die "$(t secret_preset_too_short "$minlen")"
+    info "$(t secret_preset "$msg")"
+    return
+  fi
+  _tty_needed "$msg"
   while true; do
     while [[ ${#val} -lt $minlen ]]; do
       [[ -n "$val" ]] && echo -e "  ${YELLOW}⚠${RESET}  $(t secret_too_short "$minlen")"
-      read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val </dev/tty
+      read -rsp "$(echo -e "  ${CYAN}?${RESET} ${msg}: ")" val <"$_NODYX_TTY"
       echo
     done
-    read -rsp "$(echo -e "  ${CYAN}?${RESET} $(t secret_confirm): ")" val2 </dev/tty
+    read -rsp "$(echo -e "  ${CYAN}?${RESET} $(t secret_confirm): ")" val2 <"$_NODYX_TTY"
     echo
     if [[ "$val" == "$val2" ]]; then
       break
@@ -1481,16 +1892,16 @@ if [[ -d "$_NODYX_CHECK_DIR" ]]; then
 fi
 # PostgreSQL database
 if command -v psql &>/dev/null \
-   && sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='nodyx'" 2>/dev/null | grep -q 1; then
+   && runuser -u postgres -- psql -tc "SELECT 1 FROM pg_database WHERE datname='nodyx'" 2>/dev/null | grep -q 1; then
   _EXISTING=true
   _DB_EXISTS=true
-  _DB_TABLE_COUNT=$(sudo -u postgres psql -d nodyx -tc \
+  _DB_TABLE_COUNT=$(runuser -u postgres -- psql -d nodyx -tc \
     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" \
     2>/dev/null | tr -d ' \n' || echo 0)
   _EXISTING_MSGS+=("$(t detect_db "${_DB_TABLE_COUNT}")")
 fi
 
-if $_EXISTING; then
+if $_EXISTING && [[ -z "$_FORCE_MODE" ]]; then
   echo ""
 
   # ── Contextual title based on the situation ──
@@ -1522,7 +1933,8 @@ if $_EXISTING; then
       echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel)"
     fi
     echo ""
-    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "${_cancel_opt}" "1") ${RESET}")" _det_choice </dev/tty
+    _tty_needed "$(t menu_what_do) (--upgrade, --repair, --reinstall, --wipe)"
+    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "${_cancel_opt}" "1") ${RESET}")" _det_choice <"$_NODYX_TTY"
     _det_choice="${_det_choice:-1}"
     case "$_det_choice" in
       1) INSTALL_MODE="upgrade"   ;;
@@ -1539,7 +1951,8 @@ if $_EXISTING; then
     echo -e "  ${RED}[2]${RESET} $(t menu_force_reinstall "${NODYX_VERSION}" "${RED}" "${RESET}")"
     echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel) ${YELLOW}$(t menu_recommended)${RESET}"
     echo ""
-    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "3" "3") ${RESET}")" _det_choice </dev/tty
+    _tty_needed "$(t menu_what_do) (--upgrade, --repair, --reinstall, --wipe)"
+    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "3" "3") ${RESET}")" _det_choice <"$_NODYX_TTY"
     _det_choice="${_det_choice:-3}"
     case "$_det_choice" in
       1) INSTALL_MODE="repair"    ;;
@@ -1560,7 +1973,8 @@ if $_EXISTING; then
       echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel)"
     fi
     echo ""
-    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "${_cancel_opt}" "${_cancel_opt}") ${RESET}")" _det_choice </dev/tty
+    _tty_needed "$(t menu_what_do) (--upgrade, --repair, --reinstall, --wipe)"
+    read -rp "$(echo -e "  ${BOLD}$(t menu_choice_prompt "${_cancel_opt}" "${_cancel_opt}") ${RESET}")" _det_choice <"$_NODYX_TTY"
     _det_choice="${_det_choice:-${_cancel_opt}}"
     case "$_det_choice" in
       1) INSTALL_MODE="repair"    ;;
@@ -1581,6 +1995,24 @@ if $_EXISTING; then
   [[ "$INSTALL_MODE" == "wipe" ]]      && warn "$(t wipe_warning)"
   [[ "$INSTALL_MODE" == "reinstall" ]] && warn "$(t reinstall_notice)"
   echo ""
+fi
+
+# ── Mode imposé en ligne de commande (--upgrade, --repair, --reinstall, --wipe)
+# Traité ICI, avant les conflits de ports et la détection d'IP : avant le
+# 03/10/2026 il venait APRÈS le menu interactif (qui s'affichait donc quand
+# même) et après le contrôle des ports, qui prenait Nodyx lui-même, en train
+# de tourner sur 3000/4173, pour un conflit à tuer.
+if [[ -n "$_FORCE_MODE" ]]; then
+  INSTALL_MODE="$_FORCE_MODE"
+  info "$(printf "$(t force_mode_cli)" "${BOLD}" "${INSTALL_MODE}" "${RESET}")"
+  if [[ "$INSTALL_MODE" == "upgrade" || "$INSTALL_MODE" == "repair" ]]; then
+    [[ -d "$_NODYX_CHECK_DIR" ]] || die "$(printf "$(t force_no_install)" "${_NODYX_CHECK_DIR}" "${INSTALL_MODE}")"
+    _nodyx_upgrade "${_INSTALLED_VERSION:-?}" "$NODYX_VERSION" "$_NODYX_CHECK_DIR"
+    _INSTALL_COMPLETE=true
+    exit 0
+  fi
+  [[ "$INSTALL_MODE" == "wipe" ]]      && warn "$(t wipe_warning)"
+  [[ "$INSTALL_MODE" == "reinstall" ]] && warn "$(t reinstall_notice)"
 fi
 
 # ── 2. Conflits de ports ─────────────────────────────────────────────────────
@@ -1653,8 +2085,11 @@ if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
     echo -e "  ${CYAN}[2]${RESET} $(t port_continue)"
     echo -e "  ${YELLOW}[3]${RESET} $(t menu_cancel)"
     echo ""
-    read -rp "$(echo -e "  ${BOLD}$(t port_choice_prompt) ${RESET}")" _port_choice </dev/tty
-    _port_choice="${_port_choice:-1}"
+    _tty_needed "$(t port_choice_prompt)"
+    read -rp "$(echo -e "  ${BOLD}$(t port_choice_prompt) ${RESET}")" _port_choice <"$_NODYX_TTY"
+    # Défaut = annuler : Entrée ne doit JAMAIS arrêter et désactiver le serveur
+    # web existant (avant le 03/10/2026, c'était le choix par défaut).
+    _port_choice="${_port_choice:-3}"
     case "$_port_choice" in
       1)
         for _svc in "${_stoppable[@]}"; do
@@ -1667,9 +2102,19 @@ if [[ ${#_PORT_BLOCKER_SVCS[@]} -gt 0 ]]; then
     esac
   else
     echo -e "  ${YELLOW}$(t port_force_hint)${RESET}"
-    read -rp "$(echo -e "  ${BOLD}$(t port_force_prompt) ${RESET}")" _port_force </dev/tty
+    _tty_needed "$(t port_force_prompt)"
+    read -rp "$(echo -e "  ${BOLD}$(t port_force_prompt) ${RESET}")" _port_force <"$_NODYX_TTY"
     # Accept y/Y/o/O regardless of UI language
     [[ ! "${_port_force,,}" =~ ^(y|o)$ ]] && die "$(t install_cancelled)"
+    # fuser vient de psmisc, absent d'une Debian minimale : sans lui, « libérer
+    # les ports » ne faisait RIEN, en silence, et l'installation continuait.
+    # (Sur certaines images, la liste des paquets est vide tant qu'on n'a pas
+    # fait « apt-get update » : seconde tentative après une mise à jour.)
+    if ! command -v fuser >/dev/null; then
+      apt-get install -y -q psmisc >/dev/null 2>&1 \
+        || { apt-get update -q >/dev/null 2>&1 && apt-get install -y -q psmisc >/dev/null 2>&1; } \
+        || die "$(t pkg_install_failed)"
+    fi
     for _bp in "${_PORT_BLOCKER_PORTS[@]}"; do
       for _p in $_bp; do
         fuser -k "${_p}/tcp" 2>/dev/null || true
@@ -1710,19 +2155,6 @@ if [[ -z "$PUBLIC_IP" ]]; then
   prompt PUBLIC_IP "$(t prompt_public_ip)"
 else
   ok "$(printf "$(t ip_detected)" "${BOLD}" "$PUBLIC_IP" "${RESET}")"
-fi
-
-# ── _FORCE_MODE bypass : si flag CLI, court-circuiter le menu de détection ──
-if [[ -n "$_FORCE_MODE" ]]; then
-  INSTALL_MODE="$_FORCE_MODE"
-  info "$(printf "$(t force_mode_cli)" "${BOLD}" "${INSTALL_MODE}" "${RESET}")"
-  if [[ "$INSTALL_MODE" == "upgrade" || "$INSTALL_MODE" == "repair" ]]; then
-    [[ -d "$_NODYX_CHECK_DIR" ]] || die "$(printf "$(t force_no_install)" "${_NODYX_CHECK_DIR}" "${INSTALL_MODE}")"
-    _installed_ver=$(node -p "require('${_NODYX_CHECK_DIR}/nodyx-core/package.json').version" 2>/dev/null || echo "?")
-    _nodyx_upgrade "$_installed_ver" "$NODYX_VERSION" "$_NODYX_CHECK_DIR"
-    _INSTALL_COMPLETE=true
-    exit 0
-  fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1772,6 +2204,10 @@ step "$(t step_configure)"
 echo ""
 
 # Pre-fill from CLI args (prompt() will skip already-set vars)
+# Seules les options préremplissent : une variable du même nom héritée de
+# l'environnement (ADMIN_PASSWORD, DOMAIN…) ne doit jamais être prise en silence.
+COMMUNITY_NAME="" COMMUNITY_SLUG="" COMMUNITY_LANG="" COMMUNITY_DESC="" COMMUNITY_COUNTRY=""
+ADMIN_USERNAME="" ADMIN_EMAIL="" ADMIN_PASSWORD="" DOMAIN=""
 [[ -n "$_ARG_NAME" ]]        && COMMUNITY_NAME="$_ARG_NAME"
 [[ -n "$_ARG_SLUG" ]]        && COMMUNITY_SLUG="$_ARG_SLUG"
 [[ -n "$_ARG_ADMIN_USER" ]]  && ADMIN_USERNAME="$_ARG_ADMIN_USER"
@@ -1797,7 +2233,25 @@ echo -e "  ┌─ ${BOLD}$(t net_mode_1)${RESET}  $(t net_mode_1_desc)"
 echo -e "  ├─ ${BOLD}$(t net_mode_2)${RESET}         $(printf "$(t net_mode_2_desc)" "${GREEN}" "${RESET}")"
 echo -e "  └─ ${BOLD}$(t net_mode_3)${RESET}       $(t net_mode_3_desc)"
 echo ""
-read -rp "$(echo -e "  ${CYAN}?${RESET} $(t net_mode_prompt) ")" NET_MODE
+# Avant le 04/10/2026, la question était posée même avec --domain, sans option
+# pour y répondre : aucune installation silencieuse ne pouvait aboutir.
+case "$_ARG_NETWORK" in
+  direct) NET_MODE=1 ;;
+  relay)  NET_MODE=2 ;;
+  sslip)  NET_MODE=3 ;;
+  "")
+    if [[ -n "$_ARG_DOMAIN" ]]; then
+      NET_MODE=1
+    elif $_AUTO_YES; then
+      NET_MODE=2; info "$(t prompt_default_auto "$(t net_mode_prompt)" "2")"
+    else
+      _tty_needed "$(t net_mode_prompt) (--network=direct|relay|sslip)"
+      read -rp "$(echo -e "  ${CYAN}?${RESET} $(t net_mode_prompt) ")" NET_MODE <"$_NODYX_TTY"
+    fi ;;
+  *) die "$(t network_invalid "$_ARG_NETWORK")" ;;
+esac
+[[ "$_ARG_NETWORK" == direct || -z "$_ARG_NETWORK" ]] || [[ -z "$_ARG_DOMAIN" ]] \
+  || die "$(t network_domain_conflict)"
 NET_MODE="${NET_MODE:-2}"
 
 RELAY_MODE=false
@@ -1876,7 +2330,9 @@ verifier_sortie_relais() {
   info "$(printf "$(t relay_probe_doc)" "https://nodyx.dev/relay#the-tunnel-never-connects-the-port-7443-wall")"
 
   local reponse=""
-  read -r -p "  $(t relay_probe_continue) " reponse || true
+  $_AUTO_YES && die "$(t relay_probe_blocked)"
+  _tty_needed "$(t relay_probe_continue)"
+  read -r -p "  $(t relay_probe_continue) " reponse <"$_NODYX_TTY" || true
   case "${reponse,,}" in
     y|yes|o|oui) return 0 ;;
     *) die "$(t relay_probe_blocked)" ;;
@@ -1902,6 +2358,39 @@ case "$NET_MODE" in
     ;;
 esac
 
+# ── Le nom <slug>.nodyx.org est-il libre ? Avant de modifier quoi que ce soit ──
+# Obligatoire en relais (c'est l'adresse de l'instance) et en mode automatique
+# (adresse publique de l'instance). Avant le 04/10/2026, un nom déjà pris
+# n'était découvert qu'à l'inscription, l'instance déjà compilée pour lui.
+# _nodyx_slug_check <slug> : available | taken | reserved | invalid | unknown
+_nodyx_slug_check() {
+  local r
+  r="$(curl -s --max-time 8 "https://nodyx.org/api/directory/check/$1" 2>/dev/null || true)"
+  case "$r" in
+    *'"available":true'*)    echo available ;;
+    *'"reason":"taken"'*)    echo taken ;;
+    *'"reason":"reserved"'*) echo reserved ;;
+    *'"reason":"invalid"'*)  echo invalid ;;
+    *)                       echo unknown ;;
+  esac
+}
+if $RELAY_MODE || $DOMAIN_IS_AUTO; then
+  while true; do
+    info "$(printf "$(t slug_checking)" "$COMMUNITY_SLUG")"
+    _SLUG_STATE="$(_nodyx_slug_check "$COMMUNITY_SLUG")"
+    case "$_SLUG_STATE" in
+      available) ok "$(printf "$(t slug_available)" "$COMMUNITY_SLUG")"; break ;;
+      unknown)   warn "$(t slug_check_unknown)"; break ;;
+    esac
+    $_AUTO_YES && die "$(printf "$(t slug_unavailable_yes)" "$COMMUNITY_SLUG" "$_SLUG_STATE")"
+    warn "$(printf "$(t slug_unavailable)" "$COMMUNITY_SLUG" "$_SLUG_STATE")"
+    COMMUNITY_SLUG=""
+    prompt COMMUNITY_SLUG "$(t sub_new_slug_prompt)"
+    COMMUNITY_SLUG="$(slugify "$COMMUNITY_SLUG")"
+    $RELAY_MODE && DOMAIN="${COMMUNITY_SLUG}.nodyx.org"
+  done
+fi
+
 conf_section "$(t conf_admin)"
 prompt        ADMIN_USERNAME "$(t prompt_admin_user)"
 prompt        ADMIN_EMAIL    "$(t prompt_admin_email)"
@@ -1911,7 +2400,11 @@ conf_section "$(t conf_smtp)"
 echo -e "  $(t smtp_use)"
 echo -e "  $(printf "$(t smtp_compat)" "${BOLD}" "${RESET}")"
 echo ""
-read -rp "$(echo -e "  ${CYAN}?${RESET} $(t smtp_now) ")" want_smtp </dev/tty
+want_smtp=""
+if ! $_AUTO_YES; then
+  _tty_needed "$(t smtp_now)"
+  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t smtp_now) ")" want_smtp <"$_NODYX_TTY"
+fi
 want_smtp="${want_smtp:-n}"
 
 SMTP_HOST=""
@@ -1924,7 +2417,7 @@ SMTP_FROM=""
 if [[ "${want_smtp,,}" =~ ^(o|y)$ ]]; then
   prompt   SMTP_HOST   "$(t prompt_smtp_host)"
   prompt   SMTP_PORT   "$(t prompt_smtp_port)" "587"
-  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t smtp_force_tls) ")" _smtp_tls </dev/tty
+  read -rp "$(echo -e "  ${CYAN}?${RESET} $(t smtp_force_tls) ")" _smtp_tls <"$_NODYX_TTY"
   [[ "${_smtp_tls,,}" =~ ^(o|y)$ ]] && SMTP_SECURE="true" && SMTP_PORT="465"
   prompt   SMTP_USER   "$(t prompt_smtp_user)"
   prompt_secret SMTP_PASS "$(t prompt_smtp_pass)" 1
@@ -2002,6 +2495,35 @@ echo -e "  ${CYAN}│${RESET}  $(t recap_smtp) ${YELLOW}$(t recap_smtp_off)${RES
 fi
 echo -e "  ${BOLD}${CYAN}└──────────────────────────────────────────────────┘${RESET}"
 echo ""
+# ── Valeurs libres : toutes doivent pouvoir s'écrire dans le .env ─────────────
+for _v in COMMUNITY_NAME COMMUNITY_DESC COMMUNITY_LANG COMMUNITY_COUNTRY SMTP_HOST SMTP_USER SMTP_PASS SMTP_FROM; do
+  _env_quote "${!_v:-}" >/dev/null || die "$(printf "$(t env_unquotable)" "$_v")"
+done
+
+# ── Un Caddyfile qui sert d'autres sites : décider AVANT de commencer ────────
+# Lecture des sites identique à nodyx_caddy_sites (scripts/install/caddyfile.sh,
+# vérifié par scripts/tests/install-prompts.test.sh) : la bibliothèque n'est
+# chargée qu'après le clonage, trop tard pour cette décision.
+_nodyx_caddy_other_sites() { # <fichier> <domaine>
+  [[ -f "$1" ]] || return 0
+  awk -v dom="$2" '
+    { line=$0; sub(/#.*/, "", line) }
+    depth==0 && line ~ /\{[[:space:]]*$/ {
+      head=line; sub(/\{[[:space:]]*$/, "", head); gsub(/^[[:space:]]+|[[:space:]]+$/, "", head)
+      if (head != "" && head !~ /^\(/) { n=split(head, a, /[ ,]+/); for (i=1;i<=n;i++) {
+        h=a[i]; sub(/^https?:\/\//, "", h)
+        if (a[i] != "" && h != ":80" && h != dom) printf "%s ", a[i] } }
+    }
+    { o=gsub(/\{/, "{", line); c=gsub(/\}/, "}", line); depth+=o-c }
+  ' "$1"
+}
+_CADDY_OTHER_SITES="$(_nodyx_caddy_other_sites /etc/caddy/Caddyfile "$DOMAIN")"
+if [[ -n "$_CADDY_OTHER_SITES" ]]; then
+  warn "$(printf "$(t caddy_other_sites)" "${_CADDY_OTHER_SITES% }")"
+  $_AUTO_YES && die "$(t caddy_other_sites_yes)"
+  _confirm "$(t caddy_other_sites_q)" n || die "$(t caddy_other_sites_stop)"
+fi
+
 _confirm "$(t start_install)" || die "$(t install_cancelled)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2009,9 +2531,6 @@ _confirm "$(t start_install)" || die "$(t install_cancelled)"
 # ═══════════════════════════════════════════════════════════════════════════════
 DB_NAME="nodyx"
 DB_USER="nodyx_user"
-DB_PASSWORD=$(gen_pass)
-JWT_SECRET=$(gen_secret)
-TURN_SECRET=$(gen_secret)
 NODYX_DIR="/opt/nodyx"
 REPO_URL="https://github.com/Pokled/nodyx.git"
 
@@ -2021,13 +2540,24 @@ REPO_URL="https://github.com/Pokled/nodyx.git"
 step "$(t step_install_deps)"
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -q
+apt-get update -q || die "$(t pkg_install_failed)"
 # git first — needed to clone the repo, and most VPS images don't ship with it
-apt-get install -y -q git 2>/dev/null
+apt-get install -y -q git 2>/dev/null || die "$(t pkg_install_failed)"
 _SYS_PKGS="curl wget gnupg2 ca-certificates lsb-release openssl ufw build-essential postgresql postgresql-contrib redis-server fonts-dejavu-core file"
 # shellcheck disable=SC2086
-apt-get install -y -q $_SYS_PKGS 2>/dev/null
+apt-get install -y -q $_SYS_PKGS 2>/dev/null || die "$(t pkg_install_failed)"
 ok "$(t deps_installed)"
+
+# Secrets générés APRÈS les paquets (05/10/2026) : openssl n'est pas dans une
+# Debian minimale et n'était installé qu'ici, alors que les secrets étaient
+# générés avant (même famille que l'issue #784, sudo absent de Debian 13).
+command -v openssl >/dev/null || die "$(t openssl_missing)"
+DB_PASSWORD=$(gen_pass)
+JWT_SECRET=$(gen_secret)
+TURN_SECRET=$(gen_secret)
+# Secret partagé frontend <-> core : le rendu serveur s'en sert pour transmettre
+# l'IP du visiteur et être exempté de la limitation de débit (rateLimit.ts).
+INTERNAL_API_SECRET=$(gen_secret)
 
 # Node.js 22 LTS — mediasoup-client/awaitqueue (voice) require >=22 (#642)
 _NODE_MAJOR=$(node --version 2>/dev/null | sed 's/v//;s/\..*//' || echo 0)
@@ -2105,6 +2635,14 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_pg)"
 
+# _pg_datadir <version> : le dossier de données CONFIGURÉ du cluster « main »
+# (celui que pg_dropcluster supprimerait), à défaut l'emplacement standard.
+_pg_datadir() {
+  local d
+  d="$(pg_conftool -s "$1" main show data_directory 2>/dev/null || true)"
+  printf '%s' "${d:-/var/lib/postgresql/$1/main}"
+}
+
 # Detect installed PostgreSQL version (needed for the versioned service name)
 _PG_VER=$(ls /usr/lib/postgresql/ 2>/dev/null | sort -Vr | head -1)
 [[ -z "$_PG_VER" ]] && die "$(t pg_not_found)"
@@ -2118,7 +2656,7 @@ systemctl start   "postgresql@${_PG_VER}-main" 2>/dev/null || true
 info "$(t pg_waiting)"
 _PG_READY=false
 for _pg_i in {1..15}; do
-  sudo -u postgres pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
+  runuser -u postgres -- pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
   sleep 2
 done
 
@@ -2131,9 +2669,14 @@ if ! $_PG_READY; then
     apt-get install -y -q "postgresql-${_PG_VER}" >/dev/null 2>&1 || true
   fi
 
-  # If the cluster config exists but the data directory is not initialized
-  # (pg_lsclusters shows "down / <unknown>"), drop the config and recreate cleanly
-  if [[ ! -f "/var/lib/postgresql/${_PG_VER}/main/PG_VERSION" ]]; then
+  # Recréer le cluster SEULEMENT si son dossier de données (celui qui est
+  # CONFIGURÉ, pas seulement l'emplacement par défaut) est absent ou vide.
+  # pg_dropcluster supprime ce dossier : avant le 03/10/2026, un PostgreSQL
+  # existant mais arrêté, aux données rangées ailleurs, était effacé ici.
+  _PG_DATADIR="$(_pg_datadir "${_PG_VER}")"
+  if [[ -d "$_PG_DATADIR" && -n "$(ls -A "$_PG_DATADIR" 2>/dev/null)" ]]; then
+    info "$(printf "$(t pg_datadir_kept)" "$_PG_DATADIR")"
+  else
     info "$(t pg_recreate_cluster)"
     pg_dropcluster   "${_PG_VER}" main 2>/dev/null || true
     pg_createcluster "${_PG_VER}" main 2>/dev/null || true
@@ -2144,7 +2687,7 @@ if ! $_PG_READY; then
   systemctl restart "postgresql@${_PG_VER}-main" 2>/dev/null || true
 
   for _pg_i in {1..15}; do
-    sudo -u postgres pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
+    runuser -u postgres -- pg_isready -q 2>/dev/null && { _PG_READY=true; break; }
     sleep 2
   done
 fi
@@ -2153,7 +2696,7 @@ $_PG_READY || die "$(printf "$(t pg_did_not_start)" "${_PG_VER}")"
 ok "$(printf "$(t pg_ready)" "${_PG_VER}")"
 
 # Create role + database (idempotent)
-sudo -u postgres psql -c "
+runuser -u postgres -- psql -c "
   DO \$\$ BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DB_USER}') THEN
       CREATE ROLE ${DB_USER} WITH LOGIN PASSWORD '${DB_PASSWORD}';
@@ -2170,21 +2713,26 @@ fi
 
 # Wipe mode: drop existing DB cleanly
 if [[ "$INSTALL_MODE" == "wipe" ]]; then
+  # Jamais d'effacement sans sauvegarde relue (avant le 03/10/2026, un échec de
+  # sauvegarde affichait un avertissement puis la base était supprimée quand même).
+  if [[ "${_DB_EXISTS:-false}" == "true" && "${_AUTO_BACKUP_OK:-false}" != "true" ]]; then
+    die "$(t wipe_backup_failed)"
+  fi
   info "$(t pg_wipe_dropping)"
-  sudo -u postgres psql -c \
+  runuser -u postgres -- psql -c \
     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" \
     >/dev/null 2>/dev/null || true
-  sudo -u postgres psql -c "DROP DATABASE IF EXISTS ${DB_NAME};" >/dev/null
+  runuser -u postgres -- psql -c "DROP DATABASE IF EXISTS ${DB_NAME};" >/dev/null
   ok "$(printf "$(t pg_db_dropped)" "${DB_NAME}")"
 fi
 
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" \
+runuser -u postgres -- psql -tc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" \
   | grep -q 1 \
-  || sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" >/dev/null
+  || runuser -u postgres -- psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" >/dev/null
 
-sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" >/dev/null
+runuser -u postgres -- psql -d "$DB_NAME" -c "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" >/dev/null
 # PG15+ revokes CREATE on public schema by default — grant it explicitly for migrations
-sudo -u postgres psql -d "$DB_NAME" -c "GRANT CREATE ON SCHEMA public TO ${DB_USER};" >/dev/null
+runuser -u postgres -- psql -d "$DB_NAME" -c "GRANT CREATE ON SCHEMA public TO ${DB_USER};" >/dev/null
 ok "$(printf "$(t pg_db_ready)" "${DB_NAME}")"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2240,17 +2788,12 @@ if ! $RELAY_MODE && ! $SKIP_TURN; then
   # rename. The downloaded binary is identical; we just save it as nodyx-turn.
   _TURN_URL="https://github.com/Pokled/nodyx/releases/download/${_TURN_VERSION}/nexus-turn-linux-${_TURN_ARCH}"
   info "$(printf "$(t turn_downloading)" "${_TURN_VERSION}" "${_TURN_ARCH}")"
-  _TURN_TMP="$(mktemp /tmp/nodyx-turn.XXXXXX)"
-  if ! curl -fsSL --max-time 60 "$_TURN_URL" -o "$_TURN_TMP"; then
-    rm -f "$_TURN_TMP"
-    die "$(printf "$(t turn_dl_fail)" "${_TURN_URL}" "${_TURN_VERSION}")"
-  fi
-  if ! file "$_TURN_TMP" 2>/dev/null | grep -q ELF; then
-    rm -f "$_TURN_TMP"
-    die "$(printf "$(t turn_not_binary)" "${_TURN_URL}")"
-  fi
-  chmod +x "$_TURN_TMP"
-  mv -f "$_TURN_TMP" /usr/local/bin/nodyx-turn
+  _nodyx_fetch_bin "$_TURN_VERSION" "nexus-turn-linux-${_TURN_ARCH}" /usr/local/bin/nodyx-turn && _rc=0 || _rc=$?
+  case $_rc in
+    0) ;;
+    1) die "$(printf "$(t turn_dl_fail)" "${_TURN_URL}" "${_TURN_VERSION}")" ;;
+    *) die "$(t bin_checksum_bad "nodyx-turn")" ;;
+  esac
 
   # Fichier de configuration (secret partagé avec nodyx-core)
   cat > /etc/nodyx-turn.env <<TURNENV
@@ -2263,26 +2806,7 @@ TURNENV
   chmod 600 /etc/nodyx-turn.env
 
   # Service systemd
-  cat > /etc/systemd/system/nodyx-turn.service <<SVC
-[Unit]
-Description=Nodyx TURN Server (WebRTC relay)
-After=network.target
-
-[Service]
-EnvironmentFile=/etc/nodyx-turn.env
-ExecStart=/usr/local/bin/nodyx-turn server \
-  --udp-port \${TURN_PORT} \
-  --public-ip \${TURN_PUBLIC_IP} \
-  --realm \${TURN_REALM} \
-  --secret \${TURN_SECRET} \
-  --ttl \${TURN_TTL}
-Restart=on-failure
-RestartSec=5s
-User=nodyx
-
-[Install]
-WantedBy=multi-user.target
-SVC
+  _nodyx_write_turn_unit
 
   systemctl daemon-reload
   systemctl enable nodyx-turn --quiet
@@ -2327,17 +2851,12 @@ elif ! $SKIP_SFU; then
     _SFU_VERSION="sfu-v0.1.0"
     _SFU_URL="https://github.com/Pokled/nodyx/releases/download/${_SFU_VERSION}/nodyx-sfud-linux-${_SFU_ARCH}"
     info "$(printf "$(t sfu_downloading)" "${_SFU_VERSION}" "${_SFU_ARCH}")"
-    _SFU_TMP="$(mktemp /tmp/nodyx-sfud.XXXXXX)"
-
-    if ! curl -fsSL --max-time 180 "$_SFU_URL" -o "$_SFU_TMP"; then
-      rm -f "$_SFU_TMP"
+    _nodyx_fetch_bin "$_SFU_VERSION" "nodyx-sfud-linux-${_SFU_ARCH}" /usr/local/bin/nodyx-sfud && _rc=0 || _rc=$?
+    if [[ $_rc -eq 1 ]]; then
       _sfu_skip "$(printf "$(t sfu_reason_dl)" "${_SFU_URL}")"
-    elif ! file "$_SFU_TMP" 2>/dev/null | grep -q ELF; then
-      rm -f "$_SFU_TMP"
+    elif [[ $_rc -ne 0 ]]; then
       _sfu_skip "$(t sfu_reason_notbin)"
     else
-      chmod +x "$_SFU_TMP"
-      mv -f "$_SFU_TMP" /usr/local/bin/nodyx-sfud
 
       SFU_TOKEN="$(openssl rand -hex 32)"
 
@@ -2411,39 +2930,91 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_firewall)"
 
-# Backup existing UFW rules before reset
-if command -v ufw &>/dev/null && ufw status 2>/dev/null | grep -q 'Status: active'; then
-  _ufw_bak="/root/ufw-backup-$(date +%Y%m%d-%H%M%S).rules"
-  ufw status verbose > "$_ufw_bak" 2>/dev/null || true
-  warn "$(printf "$(t ufw_existing_saved)" "${_ufw_bak}")"
-fi
+# ── Ports SSH réels ──────────────────────────────────────────────────────────
+# Les ports TCP par lesquels on peut VRAIMENT se connecter en SSH :
+#   - sshd en écoute, quel que soit son port ;
+#   - ssh.socket actif (systemd écoute à la place de sshd : Ubuntu 24.04+) ;
+#   - la configuration de sshd (sshd -T) ;
+#   - la connexion SSH en cours, celle qui lance peut-être cet installeur.
+# Avant le 03/10/2026, seul le port 22 était ouvert : un serveur dont SSH écoute
+# ailleurs se retrouvait fermé à son propre administrateur.
+# Copie IDENTIQUE dans install.sh et install_tunnel.sh (vérifié par
+# scripts/tests/firewall-ssh.test.sh) : les deux règlent le pare-feu avant
+# d'avoir cloné le dépôt, ils ne peuvent pas partager une bibliothèque.
+# Ne fait jamais échouer l'appelant : aucun port trouvé = sortie vide.
+_nodyx_ssh_ports() {
+  {
+    ss -Htlnp 2>/dev/null | awk '/"sshd"/ { n = split($4, a, ":"); print a[n] }'
+    if systemctl is-active --quiet ssh.socket 2>/dev/null; then
+      systemctl show ssh.socket -p Listen 2>/dev/null | sed -nE 's/^Listen=.*:([0-9]+) \(Stream\)$/\1/p'
+    fi
+    sshd -T 2>/dev/null | awk '$1 == "port" { print $2 }'
+    ss -Htnp state established 2>/dev/null | awk '/"sshd"/ { n = split($3, a, ":"); print a[n] }'
+    if [[ -n "${SSH_CONNECTION:-}" ]]; then awk '{ print $4 }' <<<"$SSH_CONNECTION"; fi
+    true
+  } | { grep -E '^[0-9]{1,5}$' || true; } | sort -un
+}
+
+# _nodyx_firewall <relais:true|false> <sans-turn:true|false> <sfu:true|false>
+# - ne réinitialise JAMAIS les règles existantes (avant : `ufw --force reset`
+#   effaçait silencieusement les règles de l'administrateur) ;
+# - ouvre les VRAIS ports SSH, puis vérifie que chacun figure dans les règles
+#   AVANT d'activer le pare-feu ;
+# - ne touche à rien si aucun port SSH n'est trouvé.
+# Code 0 : pare-feu actif avec SSH autorisé. Code 1 : pare-feu non activé
+# (l'installation continue, l'administrateur est prévenu).
+_nodyx_firewall() {
+  local relay="$1" skip_turn="$2" sfu="$3" ports p bak active=false
+  ports="$(_nodyx_ssh_ports)"
+  if [[ -z "$ports" ]]; then
+    warn "$(t ufw_no_ssh_port)"
+    return 1
+  fi
+  if ufw status 2>/dev/null | grep -q 'Status: active'; then active=true; fi
+  if $active; then
+    bak="/root/ufw-backup-$(date +%Y%m%d-%H%M%S).rules"
+    ufw status verbose > "$bak" 2>/dev/null || true
+    info "$(printf "$(t ufw_kept_rules)" "$bak")"
+  else
+    ufw default deny incoming  >/dev/null 2>&1 || true
+    ufw default allow outgoing >/dev/null 2>&1 || true
+  fi
+  for p in $ports; do ufw allow "${p}/tcp" comment 'SSH' >/dev/null 2>&1 || true; done
+  if ! $relay; then
+    ufw allow 80/tcp  comment 'Nodyx web' >/dev/null 2>&1 || true
+    ufw allow 443/tcp comment 'Nodyx web' >/dev/null 2>&1 || true
+    if ! $skip_turn; then
+      for p in 3478/tcp 3478/udp 5349/tcp 5349/udp 49152:65535/udp; do
+        ufw allow "$p" comment 'Nodyx TURN' >/dev/null 2>&1 || true
+      done
+    fi
+    # Ports média du SFU. Le TCP n'est PAS un luxe : c'est le repli des réseaux qui
+    # bloquent l'UDP (entreprises, hôtels, certains opérateurs). Sans lui, ces
+    # utilisateurs ne se connectent PAS DU TOUT au vocal — pas « moins bien » : rien,
+    # avec un écran noir et aucun message.
+    if $sfu; then
+      ufw allow 40000:40999/udp comment 'Nodyx SFU' >/dev/null 2>&1 || true
+      ufw allow 40000:40999/tcp comment 'Nodyx SFU' >/dev/null 2>&1 || true
+    fi
+  fi
+  # Chaque port SSH doit figurer dans les règles AVANT toute activation.
+  for p in $ports; do
+    if ! ufw show added 2>/dev/null | grep -qE "^ufw allow ${p}/tcp( |$)"; then
+      warn "$(printf "$(t ufw_ssh_rule_missing)" "$p")"
+      return 1
+    fi
+  done
+  $active || ufw --force enable >/dev/null 2>&1 || true
+  if ufw status 2>/dev/null | grep -q 'Status: active'; then
+    ok "$(printf "$(t ufw_configured_ssh)" "$(echo $ports)")"
+    return 0
+  fi
+  warn "$(t ufw_not_active)"
+  return 1
+}
 
 _rollback_register "$(t ufw_rollback_msg)"
-ufw --force reset >/dev/null 2>&1
-ufw default deny incoming >/dev/null 2>&1
-ufw default allow outgoing >/dev/null 2>&1
-ufw allow ssh >/dev/null 2>&1
-if ! $RELAY_MODE; then
-  ufw allow 80/tcp >/dev/null 2>&1
-  ufw allow 443/tcp >/dev/null 2>&1
-  if ! $SKIP_TURN; then
-    ufw allow 3478/tcp >/dev/null 2>&1
-    ufw allow 3478/udp >/dev/null 2>&1
-    ufw allow 5349/tcp >/dev/null 2>&1
-    ufw allow 5349/udp >/dev/null 2>&1
-    ufw allow 49152:65535/udp >/dev/null 2>&1
-  fi
-  # Ports média du SFU. Le TCP n'est PAS un luxe : c'est le repli des réseaux qui
-  # bloquent l'UDP (entreprises, hôtels, certains opérateurs). Sans lui, ces
-  # utilisateurs ne se connectent PAS DU TOUT au vocal — pas « moins bien » : rien,
-  # avec un écran noir et aucun message.
-  if $_SFU_INSTALLED; then
-    ufw allow 40000:40999/udp >/dev/null 2>&1
-    ufw allow 40000:40999/tcp >/dev/null 2>&1
-  fi
-fi
-ufw --force enable >/dev/null 2>&1
-ok "$(printf "$(t ufw_configured)" "$($RELAY_MODE && t ufw_relay_note || true)")"
+_nodyx_firewall "$RELAY_MODE" "$SKIP_TURN" "$_SFU_INSTALLED" || true
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  NODYX RELAY CLIENT — binaire (mode Relay uniquement)
@@ -2462,20 +3033,12 @@ if $RELAY_MODE; then
   _RELAY_URL="https://github.com/Pokled/nodyx/releases/download/${_RELAY_VERSION}/nodyx-relay-linux-${_RELAY_ARCH}"
 
   info "$(printf "$(t relay_downloading)" "${_RELAY_VERSION}" "${_RELAY_ARCH}")"
-  _RELAY_TMP="$(mktemp /tmp/nodyx-relay.XXXXXX)"
-  if ! curl -fsSL --max-time 60 "$_RELAY_URL" -o "$_RELAY_TMP"; then
-    rm -f "$_RELAY_TMP"
-    die "$(printf "$(t relay_dl_fail)" "${_RELAY_URL}" "${_RELAY_VERSION}")"
-  fi
-  # Verify it's an ELF binary (not an HTML error page)
-  if ! file "$_RELAY_TMP" 2>/dev/null | grep -q ELF; then
-    rm -f "$_RELAY_TMP"
-    die "$(printf "$(t relay_not_binary)" "${_RELAY_URL}")"
-  fi
-  # Atomic mv: works even if the old binary is running
-  chmod +x "$_RELAY_TMP"
-  mv -f "$_RELAY_TMP" /usr/local/bin/nodyx-relay
-  chmod +x /usr/local/bin/nodyx-relay
+  _nodyx_fetch_bin "$_RELAY_VERSION" "nodyx-relay-linux-${_RELAY_ARCH}" /usr/local/bin/nodyx-relay && _rc=0 || _rc=$?
+  case $_rc in
+    0) ;;
+    1) die "$(printf "$(t relay_dl_fail)" "${_RELAY_URL}" "${_RELAY_VERSION}")" ;;
+    *) die "$(t bin_checksum_bad "nodyx-relay")" ;;
+  esac
   ok "$(printf "$(t relay_installed)" "$(/usr/local/bin/nodyx-relay --version 2>&1 || echo '?')")"
 fi
 
@@ -2503,6 +3066,13 @@ else
 fi
 ok "$(printf "$(t clone_done)" "$NODYX_DIR")"
 
+# Bibliothèque de l'installeur, livrée avec le code : génération du Caddyfile
+# (testée par scripts/tests/caddyfile.test.sh avec un vrai Caddy).
+_INSTALL_LIB="${NODYX_DIR}/scripts/install/caddyfile.sh"
+[[ -f "$_INSTALL_LIB" ]] || die "$(printf "$(t install_lib_missing)" "$_INSTALL_LIB")"
+# shellcheck source=scripts/install/caddyfile.sh
+. "$_INSTALL_LIB"
+
 # Réconciliation : si le repo cloné contient un fichier VERSION, on s'y aligne
 # (priorité absolue car c'est ce que le code Nodyx lira au boot). Sinon on
 # garde la valeur résolue avant clone (via _resolve_version).
@@ -2523,11 +3093,11 @@ cat > "${NODYX_DIR}/nodyx-core/.env" <<COREENV
 # Généré par install.sh — ne pas modifier manuellement
 
 # Identité de la communauté
-NODYX_COMMUNITY_NAME=${COMMUNITY_NAME}
+NODYX_COMMUNITY_NAME=$(_env_quote "${COMMUNITY_NAME}")
 NODYX_COMMUNITY_SLUG=${COMMUNITY_SLUG}
-NODYX_COMMUNITY_DESCRIPTION=${COMMUNITY_DESC}
-NODYX_COMMUNITY_LANGUAGE=${COMMUNITY_LANG}
-NODYX_COMMUNITY_COUNTRY=${COMMUNITY_COUNTRY}
+NODYX_COMMUNITY_DESCRIPTION=$(_env_quote "${COMMUNITY_DESC}")
+NODYX_COMMUNITY_LANGUAGE=$(_env_quote "${COMMUNITY_LANG}")
+NODYX_COMMUNITY_COUNTRY=$(_env_quote "${COMMUNITY_COUNTRY}")
 # Note: NODYX_VERSION ci-dessous est purement informationnel depuis v2.5.0.
 # La version réelle est lue par nodyx-core depuis le fichier VERSION à la
 # racine du repo (cf src/utils/version.ts). Cette ligne reste pour les
@@ -2547,6 +3117,9 @@ NODE_ENV=production
 
 # JWT
 JWT_SECRET=${JWT_SECRET}
+
+# Secret partagé avec le frontend (appels internes du rendu serveur)
+INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
 
 # PostgreSQL
 DB_HOST=localhost
@@ -2568,12 +3141,12 @@ TURN_SECRET=${TURN_SECRET:-}
 TURN_PORT=3478
 
 # SMTP
-SMTP_HOST=${SMTP_HOST}
+SMTP_HOST=$(_env_quote "${SMTP_HOST}")
 SMTP_PORT=${SMTP_PORT}
 SMTP_SECURE=${SMTP_SECURE}
-SMTP_USER=${SMTP_USER}
-SMTP_PASS=${SMTP_PASS}
-SMTP_FROM=${SMTP_FROM:-noreply@${DOMAIN}}
+SMTP_USER=$(_env_quote "${SMTP_USER}")
+SMTP_PASS=$(_env_quote "${SMTP_PASS}")
+SMTP_FROM=$(_env_quote "${SMTP_FROM:-noreply@${DOMAIN}}")
 COREENV
 # En mode Relay, ajouter des STUN publics en fallback (pas de nodyx-turn)
 if $RELAY_MODE; then
@@ -2681,92 +3254,26 @@ ok "$(t frontend_built)"
 # ═══════════════════════════════════════════════════════════════════════════════
 step "$(t step_caddy)"
 
-# Two Caddyfile shapes:
-#   $RELAY_MODE → :80 (loopback HTTP, TLS handled upstream by nodyx-relay)
-#   else        → ${DOMAIN} (Caddy terminates Let's Encrypt itself)
-# Both share the same security headers, honeypot, and proxy snippets to
-# prevent drift. HSTS only ships on the direct-domain shape because Caddy
-# controls TLS end-to-end there; in relay mode the upstream may be HTTP for
-# debug, and an HSTS cache could lock visitors out for months.
-_HSTS_HEADER=""
-if ! $RELAY_MODE; then
-  _HSTS_HEADER='Strict-Transport-Security "max-age=31536000; includeSubDomains"'
+# Deux formes, générées par scripts/install/caddyfile.sh :
+#   relais          → :80 (HTTP en boucle locale, le TLS est fait en amont)
+#   domaine direct  → ${DOMAIN} (Caddy obtient lui-même le certificat)
+# Dans les deux cas, Caddy calcule l'IP du visiteur et l'impose au core :
+# aucun en-tête écrit par le visiteur ne peut s'y substituer.
+_CADDY_MODE=direct
+$RELAY_MODE && _CADDY_MODE=relay
+_NEW_CADDYFILE="$(mktemp /etc/caddy/.Caddyfile.nodyx.XXXXXX)"
+nodyx_caddyfile "$_CADDY_MODE" "$DOMAIN" > "$_NEW_CADDYFILE"
+if ! caddy validate --config "$_NEW_CADDYFILE" --adapter caddyfile >/dev/null 2>&1; then
+  rm -f "$_NEW_CADDYFILE"
+  die "$(t caddy_invalid)"
 fi
-
-if $RELAY_MODE; then
-  _SITE_BLOCK=":80"
-else
-  _SITE_BLOCK="${DOMAIN}"
+if [[ -s /etc/caddy/Caddyfile ]]; then
+  _CADDY_BAK="/etc/caddy/Caddyfile.avant-nodyx-$(date +%Y%m%d-%H%M%S)"
+  cp -p /etc/caddy/Caddyfile "$_CADDY_BAK"
+  info "$(printf "$(t caddy_backup)" "$_CADDY_BAK")"
 fi
-
-cat > /etc/caddy/Caddyfile <<CADDY
-{
-    servers {
-        # Cap header size so slow-header DoS can't keep workers busy. 16KB
-        # comfortably fits cookies + Authorization (JWT ~500B) + proxy chain.
-        max_header_size 16KB
-    }
-}
-
-(security_headers) {
-    header {
-        X-Content-Type-Options    "nosniff"
-        X-Frame-Options           "SAMEORIGIN"
-        Referrer-Policy           "strict-origin-when-cross-origin"
-        Permissions-Policy        "camera=(self), microphone=(self), geolocation=(self)"
-        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://geo.dailymotion.com https://player.twitch.tv https://clips.twitch.tv https://w.soundcloud.com https://open.spotify.com; object-src 'none'; base-uri 'self'; form-action 'self';"
-        ${_HSTS_HEADER}
-        -Server
-    }
-}
-
-(proxy_backend) {
-    reverse_proxy 127.0.0.1:3000 {
-        header_up -X-Forwarded-For
-        # 5s dial is huge for loopback; 30s response_header covers Socket.IO
-        # long-poll without cutting WebSocket upgrades short.
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 30s
-        }
-    }
-}
-
-(proxy_frontend) {
-    reverse_proxy 127.0.0.1:4173 {
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 30s
-        }
-    }
-}
-
-${_SITE_BLOCK} {
-    encode gzip
-
-    import security_headers
-
-    @honeypot path_regexp hp ^/(\.env|\.env\.|\.git/|\.htaccess|\.htpasswd|wp-admin|wp-login\.php|wp-config\.php|xmlrpc\.php|phpmyadmin|pma/|adminer|myadmin|shell\.php|cmd\.php|c99\.php|r57\.php|webshell|config\.php|configuration\.php|web\.config|settings\.php|backup\.sql|dump\.sql|db\.sql|database\.sql|install\.php|setup\.php|installer|console|manager/|administrator|eval\.php|debug|id_rsa|credentials|config\.json|database\.yml|\.aws|\.ssh)
-    handle @honeypot {
-        rewrite * /api/v1/_hp?p={http.request.uri.path}
-        import proxy_backend
-    }
-
-    handle /api/* {
-        import proxy_backend
-    }
-    handle /uploads/* {
-        import proxy_backend
-    }
-    handle /socket.io/* {
-        import proxy_backend
-    }
-
-    handle {
-        import proxy_frontend
-    }
-}
-CADDY
+install -m 644 "$_NEW_CADDYFILE" /etc/caddy/Caddyfile
+rm -f "$_NEW_CADDYFILE"
 
 systemctl enable caddy --quiet
 systemctl restart caddy
@@ -2798,7 +3305,7 @@ module.exports = {
       cwd: '${NODYX_DIR}/nodyx-frontend',
       watch: false,
       max_memory_restart: '${_PM2_FRONT_MEM}',
-      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1' },
+      env: { NODE_ENV: 'production', PORT: '4173', HOST: '127.0.0.1', ORIGIN: 'https://${DOMAIN}', PRIVATE_API_SSR_URL: 'http://127.0.0.1:3000/api/v1', INTERNAL_API_SECRET: '${INTERNAL_API_SECRET}', ADDRESS_HEADER: 'x-forwarded-for', XFF_DEPTH: '1' },
     },
   ],
 }
@@ -2806,6 +3313,9 @@ PM2
 
 # Donner la propriété du répertoire à l'utilisateur nodyx
 chown -R nodyx:nodyx "${NODYX_DIR}"
+# Les fichiers de secrets (JWT, base, SMTP, secret interne) ne sont lisibles
+# que par nodyx : avant le 03/10/2026, le .env du core était en 644.
+chmod 600 "${NODYX_DIR}/ecosystem.config.js" "${NODYX_DIR}/nodyx-core/.env" "${NODYX_DIR}/nodyx-frontend/.env"
 
 # Arrêter les anciens processus nodyx (root ou nodyx) sans toucher aux autres apps PM2
 pm2 delete nodyx-core     2>/dev/null || true
@@ -2892,14 +3402,16 @@ fi
 
 # Register admin account — retry jusqu'à 3 fois (backend peut encore démarrer)
 _REGISTER_OK=false
+_REG_OUT="$(mktemp)"
 for _reg_try in 1 2 3; do
-  _REG_JSON=$(python3 -c "import json,sys; print(json.dumps({'username':sys.argv[1],'email':sys.argv[2],'password':sys.argv[3]}))" \
-    "$ADMIN_USERNAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD" 2>/dev/null \
-    || printf '{"username":"%s","email":"%s","password":"%s"}' "$ADMIN_USERNAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD")
-  HTTP_CODE=$(curl -s -o /tmp/nodyx_register.json -w "%{http_code}" \
-    -X POST http://localhost:3000/api/v1/auth/register \
-    -H "Content-Type: application/json" \
-    -d "$_REG_JSON" 2>/dev/null || echo "000")
+  # Le mot de passe ne passe JAMAIS en argument d'une commande (visible de tous
+  # via `ps`) : Node le lit dans son environnement, curl le lit sur son entrée.
+  HTTP_CODE=$(NX_U="$ADMIN_USERNAME" NX_E="$ADMIN_EMAIL" NX_P="$ADMIN_PASSWORD" \
+    node -e 'process.stdout.write(JSON.stringify({username: process.env.NX_U, email: process.env.NX_E, password: process.env.NX_P}))' \
+    | curl -s -o "$_REG_OUT" -w "%{http_code}" \
+        -X POST http://localhost:3000/api/v1/auth/register \
+        -H "Content-Type: application/json" \
+        --data-binary @- 2>/dev/null || echo "000")
   if [[ "$HTTP_CODE" == "201" || "$HTTP_CODE" == "200" ]]; then
     ok "$(printf "$(t admin_created)" "${ADMIN_USERNAME}")"
     _REGISTER_OK=true; break
@@ -2907,11 +3419,12 @@ for _reg_try in 1 2 3; do
     ok "$(printf "$(t admin_exists)" "${ADMIN_USERNAME}")"
     _REGISTER_OK=true; break
   else
-    warn "$(printf "$(t admin_try_n)" "${_reg_try}" "${HTTP_CODE}" "$(cat /tmp/nodyx_register.json 2>/dev/null | head -c 200)")"
+    warn "$(printf "$(t admin_try_n)" "${_reg_try}" "${HTTP_CODE}" "$(head -c 200 "$_REG_OUT" 2>/dev/null)")"
     [[ $_reg_try -lt 3 ]] && { info "$(t admin_retry_in)"; sleep 8; }
   fi
 done
 
+rm -f "$_REG_OUT"
 if ! $_REGISTER_OK; then
   warn "$(t admin_register_failed)"
   warn "$(printf "$(t admin_register_manual)" "${DOMAIN}")"
@@ -2924,11 +3437,11 @@ COMMUNITY_NAME_SQL="${COMMUNITY_NAME//\'/\'\'}"
 COMMUNITY_DESC_SQL="${COMMUNITY_DESC//\'/\'\'}"
 ADMIN_EMAIL_SQL="${ADMIN_EMAIL//\'/\'\'}"
 
-USER_ID=$(sudo -u postgres psql -d "$DB_NAME" -tc \
+USER_ID=$(runuser -u postgres -- psql -d "$DB_NAME" -tc \
   "SELECT id FROM users WHERE lower(email)=lower('${ADMIN_EMAIL_SQL}');" 2>/dev/null | tr -d ' \n')
 
 if [[ -n "$USER_ID" ]]; then
-  sudo -u postgres psql -d "$DB_NAME" <<SQL >/dev/null
+  runuser -u postgres -- psql -d "$DB_NAME" <<SQL >/dev/null
     -- Create the instance community
     INSERT INTO communities (name, slug, description, owner_id, is_public)
     VALUES (
@@ -2959,6 +3472,14 @@ step "$(t step_subdomain)"
 
 NODYX_SUBDOMAIN=""
 NODYX_DIRECTORY_TOKEN=""
+
+# _nodyx_directory_json <url> : le corps JSON de l'inscription à l'annuaire,
+# construit par Node (un « " » dans le nom de la communauté cassait l'ancien
+# JSON concaténé à la main).
+_nodyx_directory_json() {
+  NX_NAME="$COMMUNITY_NAME" NX_SLUG="$COMMUNITY_SLUG" NX_URL="$1" NX_LANG="$COMMUNITY_LANG" NX_VER="$NODYX_VERSION" \
+    node -e 'const e = process.env; process.stdout.write(JSON.stringify({name: e.NX_NAME, slug: e.NX_SLUG, url: e.NX_URL, language: e.NX_LANG, version: e.NX_VER}))'
+}
 NODYX_DIRECTORY_URL="https://nodyx.org/api/directory"
 
 echo ""
@@ -2977,22 +3498,19 @@ else
   echo -e "  $(printf "$(t sub_optional_alias)" "${BOLD}${COMMUNITY_SLUG}.nodyx.org${RESET}")"
   echo -e "  $(t sub_alias_redirect)"
   echo ""
-  read -rp "$(echo -e "  $(printf "$(t sub_enable_q)" "${BOLD}${COMMUNITY_SLUG}.nodyx.org${RESET}")")" want_subdomain
+  # _confirm : avant le 04/10/2026, toute réponse autre que « n » valait oui,
+  # « non » compris, et inscrivait l'instance dans l'annuaire public.
+  want_subdomain="n"
+  _confirm "$(t sub_enable_q "${COMMUNITY_SLUG}.nodyx.org")" y && want_subdomain="o"
 fi
 
 if [[ "${want_subdomain,,}" != "n" ]]; then
   info "$(t sub_registering)"
 
   REGISTER_HTTP_CODE=""
-  REGISTER_RESPONSE=$(curl -s -w '\n__HTTP_CODE__:%{http_code}' -X POST "${NODYX_DIRECTORY_URL}/register" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"name\":        \"${COMMUNITY_NAME}\",
-      \"slug\":        \"${COMMUNITY_SLUG}\",
-      \"url\":         \"https://${DOMAIN}\",
-      \"language\":    \"${COMMUNITY_LANG}\",
-      \"version\":     \"${NODYX_VERSION}\"
-    }" 2>/dev/null || true)
+  REGISTER_RESPONSE=$(_nodyx_directory_json "https://${DOMAIN}" \
+    | curl -s -w '\n__HTTP_CODE__:%{http_code}' -X POST "${NODYX_DIRECTORY_URL}/register" \
+        -H "Content-Type: application/json" --data-binary @- 2>/dev/null || true)
   REGISTER_HTTP_CODE=$(echo "$REGISTER_RESPONSE" | grep -o '__HTTP_CODE__:[0-9]*' | cut -d: -f2 || echo "000")
   REGISTER_RESPONSE=$(echo "$REGISTER_RESPONSE" | grep -v '__HTTP_CODE__' || true)
 
@@ -3023,56 +3541,11 @@ if [[ "${want_subdomain,,}" != "n" ]]; then
     if [[ "${REGISTER_HTTP_CODE}" == "409" ]] || echo "$REGISTER_RESPONSE" | grep -qi 'already taken\|slug.*conflict\|already registered'; then
       warn "$(printf "$(t sub_slug_taken)" "${COMMUNITY_SLUG}")"
       if $RELAY_MODE; then
-        echo ""
-        echo -e "  ${BOLD}$(t sub_options)${RESET}"
-        echo -e "  ${GREEN}$(t sub_choose_new_slug)${RESET}"
-        echo -e "  ${YELLOW}$(t sub_cancel_contact)${RESET}"
-        echo ""
-        read -rp "$(echo -e "  ${BOLD}$(t sub_choice_prompt) ${RESET}")" _slug_choice </dev/tty
-        _slug_choice="${_slug_choice:-1}"
-        if [[ "$_slug_choice" == "1" ]]; then
-          read -rp "$(echo -e "  ${BOLD}$(t sub_new_slug_prompt) ${RESET}")" _new_slug </dev/tty
-          _new_slug="${_new_slug:-}"
-          if [[ -z "$_new_slug" ]]; then
-            die "$(t sub_slug_empty)"
-          fi
-          COMMUNITY_SLUG="$_new_slug"
-          REGISTER_RESPONSE=$(curl -fsSL -X POST "https://nodyx.org/api/directory/register" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"slug\":        \"${COMMUNITY_SLUG}\",
-              \"name\":        \"${COMMUNITY_NAME}\",
-              \"url\":         \"https://${COMMUNITY_SLUG}.nodyx.org\",
-              \"language\":    \"${COMMUNITY_LANG}\",
-              \"version\":     \"${NODYX_VERSION}\"
-            }" 2>/dev/null || true)
-          REGISTER_TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
-          REGISTER_SLUG=$(echo "$REGISTER_RESPONSE" | grep -o '"subdomain":"[^"]*"' | cut -d'"' -f4 || true)
-          if [[ -n "$REGISTER_TOKEN" ]]; then
-            NODYX_DIRECTORY_TOKEN="$REGISTER_TOKEN"
-            NODYX_SUBDOMAIN="${REGISTER_SLUG:-${COMMUNITY_SLUG}.nodyx.org}"
-            DOMAIN="${COMMUNITY_SLUG}.nodyx.org"
-            ok "$(printf "$(t sub_registered)" "${BOLD}https://${NODYX_SUBDOMAIN}${RESET}")"
-            # Injecter le token dans .env + mettre à jour le domaine partout
-            {
-              printf "\n# Annuaire nodyx.org\n"
-              printf "DIRECTORY_TOKEN=%s\n" "${NODYX_DIRECTORY_TOKEN}"
-              printf "DIRECTORY_API_URL=https://nodyx.org\n"
-              printf "SELF_URL=http://127.0.0.1:3000\n"
-              printf "VPS_IP=%s\n" "${PUBLIC_IP:-}"
-              printf "NODYX_GLOBAL_INDEXING=true\n"
-            } >> "${NODYX_DIR}/nodyx-core/.env"
-            # Mettre à jour FRONTEND_URL, PUBLIC_API_URL et ORIGIN avec le nouveau slug
-            sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=https://${DOMAIN}|" "${NODYX_DIR}/nodyx-core/.env"
-            sed -i "s|^PUBLIC_API_URL=.*|PUBLIC_API_URL=https://${DOMAIN}|" "${NODYX_DIR}/nodyx-frontend/.env"
-            sed -i "s|ORIGIN: 'https://[^']*'|ORIGIN: 'https://${DOMAIN}'|g" "${NODYX_DIR}/ecosystem.config.js"
-            cd "${NODYX_DIR}" && runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-core 2>/dev/null || true
-          else
-            die "$(t sub_register_new_failed)"
-          fi
-        else
-          die "$(printf "$(t sub_install_cancelled)" "${COMMUNITY_SLUG}")"
-        fi
+        # Le nom a été pris PENDANT l'installation (il était libre à la
+        # vérification du début). On n'essaie plus de changer de nom après coup :
+        # le frontend est compilé pour celui-ci (PUBLIC_API_URL), il appellerait
+        # le domaine d'une AUTRE communauté. Arrêt propre, rien n'a été envoyé.
+        die "$(printf "$(t slug_taken_late)" "${COMMUNITY_SLUG}")"
       else
         warn "$(t sub_reinstall_overwrite)"
       fi
@@ -3093,26 +3566,7 @@ fi
 if $RELAY_MODE && [[ -n "$NODYX_DIRECTORY_TOKEN" ]]; then
   step "$(t step_relay_client)"
 
-  cat > /etc/systemd/system/nodyx-relay-client.service <<SVC
-[Unit]
-Description=Nodyx Relay Client — tunnel vers relay.nodyx.org
-After=network.target
-
-[Service]
-ExecStart=/usr/local/bin/nodyx-relay client \
-  --server ${RELAY_SERVER:-relay.nodyx.org:7443} \
-  --slug ${COMMUNITY_SLUG} \
-  --token ${NODYX_DIRECTORY_TOKEN} \
-  --local-port 80
-Restart=on-failure
-RestartSec=5s
-StartLimitIntervalSec=60
-StartLimitBurst=5
-User=nodyx
-
-[Install]
-WantedBy=multi-user.target
-SVC
+  _nodyx_write_relay_unit "${RELAY_SERVER:-relay.nodyx.org:7443}" "$COMMUNITY_SLUG" "$NODYX_DIRECTORY_TOKEN"
 
   systemctl daemon-reload
   systemctl enable nodyx-relay-client --quiet
@@ -3147,7 +3601,7 @@ cat > "$CREDS_FILE" <<CREDS
 URL              : https://${DOMAIN}
 Admin username   : ${ADMIN_USERNAME}
 Admin email      : ${ADMIN_EMAIL}
-Admin password   : ${ADMIN_PASSWORD}
+Admin password   : (non conservé : celui choisi à l'installation. Perdu ? sudo nodyx-recover --reset ${ADMIN_USERNAME})
 
 PostgreSQL user  : ${DB_USER}
 PostgreSQL pass  : ${DB_PASSWORD}
@@ -3168,53 +3622,8 @@ chmod 600 "$CREDS_FILE"
 
 # ── Génération du script de mise à jour ───────────────────────────────────────
 UPDATE_SCRIPT="/usr/local/bin/nodyx-update"
-cat > "$UPDATE_SCRIPT" <<'UPDATESCRIPT'
-#!/usr/bin/env bash
-# nodyx-update — Met à jour Nodyx vers la dernière version
-set -euo pipefail
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
-ok()   { echo -e "${GREEN}✔${RESET}  $*"; }
-info() { echo -e "${CYAN}→${RESET}  $*"; }
-warn() { echo -e "${YELLOW}⚠${RESET}  $*"; }
-die()  { echo -e "${RED}✘  $*${RESET}" >&2; exit 1; }
-UPDATESCRIPT
-
-# Injecter NODYX_DIR (résolu au moment de l'install)
-cat >> "$UPDATE_SCRIPT" <<UPDATESCRIPT2
-NODYX_DIR="${NODYX_DIR}"
-UPDATESCRIPT2
-
-cat >> "$UPDATE_SCRIPT" <<'UPDATESCRIPT3'
-
-[[ $EUID -ne 0 ]] && die "Lance en root : sudo nodyx-update"
-echo -e "\n${BOLD}━━━  Mise à jour Nodyx  ━━━${RESET}\n"
-
-info "Récupération des dernières modifications..."
-git config --global --add safe.directory "$NODYX_DIR" 2>/dev/null || true
-git -C "$NODYX_DIR" checkout -- nodyx-core/package-lock.json nodyx-frontend/package-lock.json 2>/dev/null || true
-git -C "$NODYX_DIR" pull --ff-only || die "git pull échoué. Vérifie ta connexion ou résous les conflits."
-
-info "Rebuild backend..."
-cd "${NODYX_DIR}/nodyx-core"
-npm ci --no-fund --no-audit --silent
-npm run build || die "Build backend échoué."
-ok "Backend compilé"
-
-info "Rebuild frontend..."
-cd "${NODYX_DIR}/nodyx-frontend"
-npm ci --no-fund --no-audit --silent
-npm run build || die "Build frontend échoué."
-ok "Frontend compilé"
-
-info "Redémarrage des services..."
-cd "$NODYX_DIR"
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 restart ecosystem.config.js --update-env
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 save
-
-echo ""
-ok "Nodyx mis à jour et redémarré."
-runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list
-UPDATESCRIPT3
+_nodyx_write_update_script "$UPDATE_SCRIPT" "$NODYX_DIR"
+_nodyx_write_recover_script /usr/local/bin/nodyx-recover "$NODYX_DIR"
 
 chmod +x "$UPDATE_SCRIPT"
 ok "$(printf "$(t update_script_done)" "${BOLD}" "${RESET}")"
@@ -3301,11 +3710,11 @@ fi
 
 # ── Base de données ───────────────────────────────────────────────────────────
 _sect "Base de données"
-if sudo -u postgres pg_isready -q 2>/dev/null; then
-  _tables=$(sudo -u postgres psql -d "$DB_NAME" -tc \
+if runuser -u postgres -- pg_isready -q 2>/dev/null; then
+  _tables=$(runuser -u postgres -- psql -d "$DB_NAME" -tc \
     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" \
     2>/dev/null | tr -d ' \n' || echo "?")
-  _dbsz=$(sudo -u postgres psql -d "$DB_NAME" -tc \
+  _dbsz=$(runuser -u postgres -- psql -d "$DB_NAME" -tc \
     "SELECT pg_size_pretty(pg_database_size('${DB_NAME}'))" 2>/dev/null | tr -d ' \n' || echo "?")
   _pass "PostgreSQL '${DB_NAME}'" "${_tables} tables  ${_dbsz}"
 else
@@ -3344,7 +3753,7 @@ _jwt=$(grep '^JWT_SECRET=' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null | cut -d= 
 [[ "${#_jwt}" -ge 32 ]] \
   && _pass "JWT_SECRET" "(${#_jwt} chars — fort)" \
   || _fail "JWT_SECRET" "trop court (${#_jwt} chars) — régénère dans nodyx-core/.env !"
-_smtp=$(grep '^SMTP_HOST=' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null | cut -d= -f2 || echo "")
+_smtp=$(grep '^SMTP_HOST=' "${NODYX_DIR}/nodyx-core/.env" 2>/dev/null | cut -d= -f2- | tr -d "'\`" || echo "")
 [[ -n "$_smtp" ]] \
   && _pass "SMTP" "configuré (${_smtp})" \
   || _warn "SMTP" "non configuré — emails désactivés"
@@ -3398,6 +3807,8 @@ _hc_sect "$(t hc_services)"
 _HC_SVCS="postgresql redis-server caddy"
 if ! $RELAY_MODE && ! $SKIP_TURN; then _HC_SVCS="$_HC_SVCS nodyx-turn"; fi
 if $RELAY_MODE; then _HC_SVCS="$_HC_SVCS nodyx-relay-client"; fi
+# Le vocal : contrôlé dès qu'il a été installé (avant le 04/10/2026, jamais).
+if $_SFU_INSTALLED; then _HC_SVCS="$_HC_SVCS nodyx-sfud"; fi
 for _svc in $_HC_SVCS; do
   if systemctl is-active --quiet "$_svc" 2>/dev/null; then
     _hc_pass "$_svc"
@@ -3463,14 +3874,15 @@ if [[ -n "${NODYX_SUBDOMAIN:-}" ]]; then
     _hc_warn "$(printf "$(t hc_dir_dns_propagating)" "${NODYX_SUBDOMAIN}" "${YELLOW}" "${RESET}")"
   fi
 
-  _dir_status=$(curl -s --max-time 5 "${NODYX_DIRECTORY_URL}/instances/${COMMUNITY_SLUG}" 2>/dev/null \
-    | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
-  if [[ "$_dir_status" == "active" ]]; then
-    _hc_pass "$(printf "$(t hc_dir_active)" "${GREEN}" "${RESET}")"
-  elif [[ -n "$_dir_status" ]]; then
-    _hc_warn "$(printf "$(t hc_dir_status)" "${_dir_status}")"
-  else
+  # (Avant le 04/10/2026 : /instances/<slug>, une route qui n'existe pas.
+  # Ce contrôle ne pouvait jamais réussir.)
+  _dir_state="$(_nodyx_slug_check "$COMMUNITY_SLUG")"
+  if [[ "$_dir_state" == "taken" ]]; then
+    _hc_pass "$(printf "$(t hc_dir_registered)" "${NODYX_SUBDOMAIN}")"
+  elif [[ "$_dir_state" == "unknown" ]]; then
     _hc_warn "$(printf "$(t hc_dir_unreachable)" "${YELLOW}" "${RESET}")"
+  else
+    _hc_warn "$(printf "$(t hc_dir_status)" "${_dir_state}")"
   fi
 fi
 
@@ -3492,10 +3904,15 @@ echo ""
 #  SUMMARY
 # ═══════════════════════════════════════════════════════════════════════════════
 echo ""
-echo -e "${GREEN}${BOLD}"
+# Le verdict du bilan décide de la bannière ET du code de sortie (04/10/2026) :
+# avant, « INSTANCE ONLINE » en vert et code 0 s'affichaient même avec des
+# erreurs, et une automatisation (Ansible, CI) croyait à un succès.
+_BANNER="$GREEN"; _BANNER_TXT="$(t banner_online)"
+if [[ $HC_FAIL -gt 0 ]]; then _BANNER="$RED"; _BANNER_TXT="$(t banner_errors)"; fi
+echo -e "${_BANNER}${BOLD}"
 echo "  ╔══════════════════════════════════════════════════════════════╗"
 echo "  ║                                                              ║"
-echo "  $(t banner_online)"
+echo "  ${_BANNER_TXT}"
 echo "  ║                                                              ║"
 echo "  ╠══════════════════════════════════════════════════════════════╣"
 echo -e "${RESET}"
@@ -3513,7 +3930,7 @@ fi
 echo -e "     ${BOLD}$(t summ_version)   ${RESET}${NODYX_VERSION}"
 echo -e "     ${BOLD}$(t summ_dir)   ${RESET}${NODYX_DIR}"
 echo ""
-echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
+echo -e "${_BANNER}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
 echo -e "     ${BOLD}${CYAN}$(t summ_management)${RESET}"
 echo -e "       runuser -u nodyx -- env PM2_HOME=/home/nodyx/.pm2 pm2 list"
@@ -3526,11 +3943,12 @@ echo -e "     ${BOLD}${CYAN}$(t summ_update)${RESET}"
 echo -e "       sudo nodyx-update                $(t summ_update_hint)"
 echo ""
 echo -e "     ${BOLD}${CYAN}$(t summ_database)${RESET}"
-echo -e "       sudo -u postgres psql ${DB_NAME}"
-echo -e "       sudo -u postgres pg_dump ${DB_NAME} > backup_\$(date +%F).sql"
+echo -e "       runuser -u postgres -- psql ${DB_NAME}"
+echo -e "       runuser -u postgres -- pg_dump ${DB_NAME} > backup_\$(date +%F).sql"
 echo ""
 echo -e "     ${BOLD}${CYAN}$(t summ_diag)${RESET}"
 echo -e "       sudo nodyx-doctor               $(t summ_diag_hint)"
+echo -e "       sudo nodyx-recover --list       $(t summ_recover_hint)"
 echo -e "       systemctl status caddy"
 echo -e "       curl -s http://localhost:3000/api/v1/instance/info | python3 -m json.tool"
 if $RELAY_MODE; then
@@ -3540,7 +3958,7 @@ if $RELAY_MODE; then
   echo -e "       journalctl -u nodyx-relay-client -f"
 fi
 echo ""
-echo -e "${GREEN}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
+echo -e "${_BANNER}${BOLD}  ╠══════════════════════════════════════════════════════════════╣${RESET}"
 echo ""
 echo -e "     ${BOLD}$(t summ_creds_arrow)  ${CYAN}${CREDS_FILE}${RESET}"
 echo -e "     ${CYAN}$(t summ_creds_warn)${RESET}"
@@ -3551,8 +3969,17 @@ else
   echo -e "     ${YELLOW}$(printf "$(t summ_dns_check)" "${BOLD}" "${DOMAIN}" "${RESET}" "${YELLOW}" "${PUBLIC_IP}")${RESET}"
 fi
 echo ""
-echo -e "${GREEN}${BOLD}  ╚══════════════════════════════════════════════════════════════╝${RESET}"
+echo -e "${_BANNER}${BOLD}  ╚══════════════════════════════════════════════════════════════╝${RESET}"
 echo ""
 
 # Marquer l'installation comme complète — désactive le rollback trap
 _INSTALL_COMPLETE=true
+
+# Installée mais pas en bonne santé : code 1, pour qu'aucune automatisation ne
+# prenne ça pour un succès. Le retour arrière reste désactivé (ligne ci-dessus) :
+# l'installation est là, elle se diagnostique, elle ne se défait pas.
+if [[ $HC_FAIL -gt 0 ]]; then
+  echo -e "${RED}${BOLD}  $(t install_errors_exit "$HC_FAIL")${RESET}"
+  echo ""
+  exit 1
+fi

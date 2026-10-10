@@ -10,6 +10,187 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 Un mois de travail depuis la 2.12.0, sur plusieurs chantiers en parallèle. Résumé par thème,
 pas par commit : le détail de chacun reste dans son historique git et ses PR.
 
+### Sécurité : l'IP des visiteurs n'arrivait pas jusqu'à Nodyx (installations standard)
+
+Sur toute instance installée avec `install.sh` en domaine direct, le Caddyfile généré retirait
+l'en-tête qui porte l'IP du visiteur. Nodyx voyait alors tout Internet comme `127.0.0.1` : la
+limitation de débit générale ne s'appliquait plus, celle des connexions devenait commune à toute
+l'instance (quelques requêtes suffisaient à empêcher tout le monde de se connecter), les
+bannissements ne visaient personne, et un en-tête `CF-Connecting-IP` forgé était cru. nodyx.org
+n'était pas concerné.
+
+Le Caddyfile calcule désormais lui-même l'IP du visiteur et l'impose ; aucun en-tête écrit par le
+visiteur ne peut s'y substituer. Le rendu serveur s'authentifie auprès du core par un secret
+partagé, et les fichiers de secrets ne sont plus lisibles par les autres utilisateurs du serveur
+(le `.env` du core était en 644).
+
+**Si tu héberges une instance installée avant ce correctif**, lance une fois :
+
+```bash
+sudo bash /opt/nodyx/install.sh --upgrade
+```
+
+La migration est automatique : copie de l'ancien Caddyfile, validation par Caddy avant de le
+remplacer, retour arrière si Caddy refuse. Si ton Caddyfile sert aussi d'autres sites, il n'est
+pas réécrit : la modification exacte à faire à la main est affichée.
+
+### Sécurité : l'installeur ne peut plus enfermer l'administrateur hors de son serveur
+
+`install.sh` et `install_tunnel.sh` n'ouvraient que le port 22 avant d'activer le pare-feu : un
+serveur dont SSH écoute sur un autre port devenait injoignable pour son propre administrateur.
+`install.sh` effaçait en plus toutes les règles de pare-feu existantes. Les deux installeurs
+détectent désormais les vrais ports SSH (sshd, `ssh.socket` d'Ubuntu 24.04, session en cours),
+vérifient que la règle est en place AVANT d'activer le pare-feu, et ne l'activent pas du tout
+s'ils ne trouvent aucun port SSH. Les règles déjà présentes sont conservées.
+
+### Installeur : « non » veut dire non
+
+Les confirmations d'`install.sh` prenaient tout ce qui n'était pas exactement « n » pour un oui :
+répondre « non » à « Démarrer l'installation ? » lançait l'installation. Elles comprennent
+désormais oui et non (o/n, y/n, oui/non, yes/no) et reposent la question sinon. Face à un nginx ou
+un Apache déjà en place, Entrée annule au lieu de l'arrêter et de le désactiver. Un Caddyfile qui
+sert déjà d'autres sites est signalé avant toute modification et n'est remplacé que sur réponse
+explicite ; `--yes` ne peut jamais en décider.
+
+### Installeur : rien ne se perd ni ne se coupe en route
+
+- Les valeurs saisies (nom de la communauté, description, identifiants SMTP…) sont écrites dans
+  le `.env` entre délimiteurs : un « # » coupait la valeur (un mot de passe SMTP `abc#123` devenait
+  `abc`, les e-mails tombaient en panne sans explication).
+- Le mot de passe de l'administrateur ne passe plus en argument d'une commande, où tout utilisateur
+  du serveur pouvait le lire pendant l'installation ; un « " » ou un « \ » dans ce mot de passe ne
+  fait plus échouer la création du compte. Même chose pour l'inscription à l'annuaire.
+- Un PostgreSQL déjà présent mais arrêté, dont les données sont rangées ailleurs que l'emplacement
+  par défaut, n'est plus jamais supprimé pour être recréé.
+- `sudo` n'est plus nécessaire (absent des images Debian minimales et des conteneurs LXC).
+
+### Installeur : le nom de l'instance est vérifié avant de commencer
+
+En mode relais, un nom `<slug>.nodyx.org` déjà pris n'était découvert qu'au moment de s'inscrire à
+l'annuaire, une fois l'instance compilée pour ce nom. L'installeur changeait alors de nom sans
+recompiler le frontend, qui continuait d'appeler l'ancien domaine : celui d'une autre communauté.
+Le nom est désormais vérifié auprès de l'annuaire avant toute modification (nouvelle route publique
+en lecture seule `GET /api/directory/check/:slug`, limitée en débit), et un nouveau nom est demandé
+s'il est pris, réservé ou invalide. Le bilan de santé de l'installeur interrogeait une route qui
+n'existait pas : il utilise maintenant celle-ci.
+
+### Sécurité : installations en tunnel, l'IP du visiteur ne se choisit plus
+
+Sur les instances installées avec `install_tunnel.sh` en mode Pangolin ou derrière un autre proxy,
+chaque visiteur pouvait choisir l'IP sous laquelle Nodyx le voyait : Caddy lisait `X-Forwarded-For`
+par la gauche, la partie écrite par le visiteur, et un `CF-Connecting-IP` forgé arrivait intact
+au core. Limitation de débit et bannissements étaient contournables, et l'IP de quelqu'un d'autre
+pouvait être bannie. Caddy lit désormais l'en-tête par la droite, ne fait confiance qu'au client du
+tunnel (la machine elle-même en mode Cloudflare, plus le réseau Docker de newt en Pangolin) et ne
+transmet jamais `CF-Connecting-IP`. Le rendu serveur reçoit aussi son secret interne et l'IP du
+visiteur, comme pour `install.sh`.
+
+**Si ton instance est installée en tunnel**, relance une fois :
+
+```bash
+sudo bash /opt/nodyx/install_tunnel.sh --repair
+```
+
+### Installeur tunnel : durcissement complet
+
+Lecture complète d'`install_tunnel.sh`, défauts corrigés :
+
+- l'API du core écoutait sur toutes les interfaces (`HOST=0.0.0.0`), en contournant Caddy : elle
+  n'écoute plus qu'en local, et `--repair` / `--upgrade` corrigent les instances existantes ;
+- Node.js 20 était installé alors que le vocal exige Node 22 ;
+- toute réponse autre que « n », « no » ou « non » valait oui ; un mot de passe administrateur d'un
+  seul caractère était accepté sans confirmation (8 caractères et double saisie désormais) ;
+- le nom de la communauté et `--domain` n'étaient ni nettoyés ni validés ;
+- `--wipe` effaçait la base même si la sauvegarde avait échoué ; un PostgreSQL existant pouvait être
+  supprimé pour être recréé ;
+- sur ARM64, cloudflared était installé depuis un paquet non vérifié (désormais le dépôt signé de
+  Cloudflare, comme sur amd64), et le jeton du tunnel était lisible par tous dans son service.
+
+### Sécurité : les programmes téléchargés par l'installeur sont vérifiés
+
+`install.sh` télécharge trois programmes depuis les publications GitHub de Nodyx (`nodyx-turn`,
+`nodyx-sfud`, `nodyx-relay`) et les exécute en root. Il vérifiait seulement qu'il s'agissait d'un
+exécutable : une publication remplacée aurait été installée sans que rien ne le voie. Chaque fichier
+a désormais son empreinte SHA-256 épinglée dans l'installeur, vérifiée avant toute installation ; un
+fichier qui ne correspond pas n'est jamais installé. À chaque intégration continue, ces empreintes
+sont comparées à celles que GitHub publie.
+
+### Sécurité : plus de secrets dans la ligne de commande des services
+
+Le jeton de l'annuaire (service du relais) et le secret TURN étaient passés en arguments : tout
+utilisateur du serveur pouvait les lire avec `ps`, et le jeton figurait en clair dans le fichier du
+service, lisible par tous. Ils sont désormais lus dans un fichier réservé à root (`/etc/nodyx/relay.env`,
+`/etc/nodyx-turn.env`). La mise à jour (`install.sh --upgrade`) migre les services existants ; elle
+conserve aussi le serveur de relais choisi à l'installation, au lieu de revenir au port 7443 (ce
+qui coupait les instances passées par la porte WebSocket).
+
+### Installeur : une mise à jour ratée ne fait plus tomber le site
+
+`install.sh --upgrade` commençait par tuer tout ce qui écoutait sur les ports 3000 et 4173, puis
+recompilait dans le dossier servi : pendant toute la compilation le site était hors ligne, et si
+elle échouait (mémoire, dépendance indisponible, erreur), il le restait. Aucune sauvegarde de la
+base n'était faite avant. `nodyx-update` était une troisième copie de la mise à jour, avec les
+mêmes défauts.
+
+Désormais le core et le frontend sont compilés dans un dossier à part, pendant que l'ancienne
+version continue de servir. Le site ne bascule qu'une fois les deux compilés, en un instant ; si
+l'un échoue, rien n'est touché et le site tourne toujours sur la version précédente. La base est
+sauvegardée et vérifiée avant de tirer le code ; sans sauvegarde valide, la mise à jour demande
+un « oui » explicite, et ne se fait jamais en mode `--yes`. `nodyx-update` est devenu un simple
+raccourci vers l'installeur : un seul chemin de mise à jour, testé. Même chose pour
+`install_tunnel.sh`.
+
+Deux mises à jour ne peuvent plus tourner en même temps (verrou). La compilation ne recopie
+jamais les données vivantes (`uploads/`, `backups/`), et les restes d'une mise à jour
+interrompue sont effacés à la suivante. Seules les 5 sauvegardes de mise à jour les plus
+récentes sont gardées ; celles d'un `--wipe` ou d'une réinstallation ne sont jamais supprimées.
+
+### Installeur : sans terminal, et sans secret dans la ligne de commande
+
+L'installation silencieuse documentée en tête d'`install.sh` n'a jamais pu aboutir : le mot de
+passe passé par `--admin-password` était ignoré et redemandé, le mode réseau et le SMTP étaient
+toujours demandés, sans option pour y répondre. Sans terminal du tout (cron, Ansible,
+`ssh serveur sudo nodyx-update` sans `-t`), les deux installeurs mouraient dès leur première ligne.
+
+- `--yes` accepte les réponses par défaut. Une question qui n'a ni option ni défaut arrête
+  l'installeur proprement, en la nommant.
+- `--network=direct|relay|sslip` ; `--domain` seul implique le mode direct.
+- Les champs « optionnels » (description, pays) le sont enfin : Entrée les laisse vides.
+- Le mot de passe se donne par `--admin-password-file=FICHIER`, le jeton Cloudflare par
+  `--tunnel-token-file=FICHIER`. En argument, tout utilisateur du serveur les lit via `ps` :
+  `--admin-password` et `--tunnel-token` restent acceptés, avec un avertissement. Les variables
+  `NODYX_ADMIN_PASSWORD` et `NODYX_TUNNEL_TOKEN` marchent aussi, mais seulement depuis un shell
+  déjà root : `sudo NODYX_ADMIN_PASSWORD=…` remet le secret dans la ligne de commande de sudo.
+- Le jeton du tunnel Cloudflare n'est plus dans la ligne de commande de `cloudflared`, où il restait
+  lisible par tous tant que le tunnel tournait : il vit dans `/etc/cloudflared/tunnel.env` (600).
+- Inscription facultative à l'annuaire public : répondre « non » inscrivait l'instance. Réponse
+  stricte désormais.
+
+**Si ton instance passe par un tunnel Cloudflare**, lance une fois
+`sudo bash /opt/nodyx/install_tunnel.sh --upgrade` : le jeton est sorti de la ligne de commande
+automatiquement.
+
+### Installeur : « en ligne » seulement si c'est vrai
+
+Le bilan de santé de fin d'installation comptait ses erreurs, puis les ignorait : bannière verte
+« INSTANCE EN LIGNE » et code de sortie 0 même avec un service à terre, si bien qu'une
+automatisation (Ansible, CI) croyait à un succès. Désormais, une erreur au bilan affiche une
+bannière rouge « installée, avec erreurs », garde le récapitulatif (adresse, identifiants) et
+sort en code 1 en renvoyant vers `nodyx-doctor`. Les simples avertissements (DNS qui se propage)
+ne changent rien. Le serveur vocal `nodyx-sfud` est enfin contrôlé quand il est installé. Dans les
+deux installeurs.
+
+### Installeur : le mot de passe admin n'est plus conservé en clair
+
+`/root/nodyx-credentials.txt` gardait le mot de passe administrateur en clair, et avec lui toutes
+les sauvegardes de `/root`, alors que l'administrateur l'a choisi lui-même. Il n'y est plus écrit.
+En cas de perte, `sudo nodyx-recover --reset <utilisateur>` donne un lien de réinitialisation
+depuis le serveur, sans e-mail ni connexion. L'outil existait dans le cœur mais n'était installé
+nulle part, et `npm run recover` plantait (ts-node 10 avec TypeScript 7) : il est désormais
+installé par les deux installeurs, à l'installation comme à chaque mise à jour, et lance la
+version compilée. Les fichiers déjà écrits ne sont jamais modifiés d'office : la mise à jour
+signale seulement la ligne à supprimer.
+
 ### Vitrine musique, un module pensé pour devenir générique
 
 Nouveau module public, `/musique`, géré entièrement depuis `/admin/music`. Né pour héberger une
@@ -77,6 +258,23 @@ découvrir après coup.
   Corrigé au même pattern : masqué par défaut, révélé par un geste tracé.
 - Identification du visiteur réel derrière le tunnel Cloudflare restaurée (les journaux
   enregistraient l'adresse du proxy, pas celle du visiteur).
+- Installeur sur Debian 13 minimale (sans `sudo`) : l'installation s'arrêtait à l'étape PostgreSQL
+  (#784). Corrigé par le passage à `runuser` (#785) ; les conseils affichés n'utilisent plus
+  `sudo -u` non plus, et un contrôle en CI empêche tout `sudo` exécuté de revenir. Même famille,
+  trouvée en vérifiant cette correction : les secrets étaient générés avec `openssl` AVANT
+  l'installation des paquets (qui l'apporte), et « libérer les ports » ne faisait rien sans
+  `psmisc` ; un échec d'`apt` arrêtait aussi l'installeur tunnel sans le moindre message.
+- Développement : `npm run dev`, `seed` et `generate-esy` ne démarraient plus. TypeScript 7 est
+  désormais un compilateur natif dont le paquet npm n'expose plus l'API sur laquelle reposait
+  ts-node. Remplacé par `tsx`, qui n'en dépend pas ; la compilation de production (`tsc`) n'était
+  pas touchée.
+- Carte de profil partageable (`card.png`) : sur toute instance autre que nodyx.org, l'avatar
+  manquait (remplacé par l'initiale), le dossier des fichiers envoyés étant écrit en dur. Il se
+  déduit désormais de l'instance.
+- Choix de la langue : ouvrir le panneau renvoyait à l'accueil, et « Retour » y laissait (page,
+  brouillon et position de lecture perdus) ; recliquer sur le drapeau ne refermait rien. La page
+  reste désormais sous le panneau, « Retour » ramène exactement là où on était, et le drapeau
+  ouvre comme il referme.
 - Éditeur : une vidéo insérée perdait sa mise en forme, un article se disloquait à la réouverture,
   le sommaire ouvrait un onglet vide au lieu de descendre à l'ancre.
   Alignement « dans le texte » ajouté pour les images.

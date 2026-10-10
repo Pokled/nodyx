@@ -15,6 +15,7 @@ import { scanBuffer } from '../services/fileScanner'
 import { scanImageNSFW } from '../services/nsfwScanner'
 import { checkContent } from '../services/contentFilter'
 import { resolveServerLocale } from '../i18n/serverStrings'
+import { isContainedUploadPath } from '../utils/uploadPath'
 
 const IMAGE_MAX_WIDTH  = 4096
 const IMAGE_MAX_HEIGHT = 4096
@@ -29,7 +30,7 @@ const ALLOWED_TYPES = ['avatar', 'banner', 'font']
 // URL validator : HTTPS ou upload local (prévention tracking pixel / SSRF)
 const httpsUrlOrNull = z.string().max(500).refine(
   v => {
-    if (v.startsWith('/uploads/')) return true
+    if (v.startsWith('/uploads/')) return isContainedUploadPath(v)
     try { return new URL(v).protocol === 'https:' } catch { return false }
   },
   { message: 'URL must use HTTPS or point to /uploads/' }
@@ -38,7 +39,7 @@ const httpsUrlOrNull = z.string().max(500).refine(
 // Font URL : uploads locaux uniquement + caractères CSS-sûrs (prévention CSS injection)
 // Le chemin est injecté dans @font-face { src: url('...') } — les guillemets et backslashes sont interdits
 const localFontUrl = z.string().max(500).refine(
-  v => v.startsWith('/uploads/') && !/['"\\]/.test(v),
+  v => isContainedUploadPath(v) && !/['"\\]/.test(v),
   { message: 'Font URL must point to /uploads/ and must not contain quotes or backslashes' }
 ).nullable().optional()
 

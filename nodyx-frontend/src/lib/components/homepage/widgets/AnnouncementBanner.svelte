@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { useFollowAmbiance } from '../followAmbiance'
 
 	import { t } from '$lib/i18n'
 	const tFn = $derived($t)
@@ -15,7 +16,8 @@
 	// Couleur d'accent de la bannière : si l'admin en fixe une (config.color),
 	// on garde l'astuce hex+alpha (#rrggbb + "22"/"55"). Sinon on suit le thème
 	// du Homepage Builder EN DIRECT via --nl (couleur de lien), pas un hex figé.
-	const customColor = $derived(config.color as string | undefined);
+	const follow      = useFollowAmbiance();
+	const customColor = $derived(follow() ? undefined : config.color as string | undefined);
 	const bannerBg     = $derived(customColor ? `${customColor}22` : 'rgb(var(--nl-rgb) / .13)');
 	const bannerBorder = $derived(customColor ? `${customColor}55` : 'rgb(var(--nl-rgb) / .33)');
 	const bannerDot    = $derived(customColor ?? 'var(--nl)');

@@ -24,8 +24,25 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// actually ship, otherwise a crafted cookie could break out of the attribute (XSS).
 	const locale = (isKnownLocale(cookieLocale) ? cookieLocale : getLocaleFromAcceptLanguage(acceptLang)) || 'fr';
 
+	// Même précaution que le cookie de locale ci-dessus : n'accepter que les
+	// deux valeurs connues, jamais injecter la valeur brute du cookie dans le HTML.
+	const cookieTheme = event.cookies.get('nodyx_theme');
+	// Sans préférence du visiteur, le mode par défaut choisi par l'admin
+	// (ambiance publiée). Lu PARESSEUSEMENT dans transformPageChunk : c'est
+	// +layout.server.ts qui le pose dans locals, pendant resolve(), donc avant
+	// que la page ne soit écrite. Même liste fermée de valeurs que le cookie.
+	const themeAttr = () => {
+		const mode = cookieTheme === 'light' || cookieTheme === 'dark' ? cookieTheme : event.locals.shellDefaultMode;
+		return mode === 'light' ? ' data-theme="light"' : mode === 'dark' ? ' data-theme="dark"' : '';
+	};
+
+	// replaceAll (pas replace) : un %lang% ou %theme-attr% pris dans un
+	// commentaire HTML plus haut dans app.html gagnerait sinon le vrai
+	// marqueur du tag <html>, puisque replace() ne touche que la première
+	// occurrence (piège vécu le 23/09 avec %theme-attr% dans son propre
+	// commentaire d'explication).
 	const response = await resolve(event, {
-		transformPageChunk: ({ html }) => html.replace('%lang%', locale)
+		transformPageChunk: ({ html }) => html.replaceAll('%lang%', locale).replaceAll('%theme-attr%', themeAttr())
 	});
 	if (NO_CACHE_PATHS.has(event.url.pathname)) {
 		response.headers.set('cache-control', 'no-cache, no-store, must-revalidate');

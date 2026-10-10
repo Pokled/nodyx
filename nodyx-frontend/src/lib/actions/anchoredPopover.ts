@@ -7,8 +7,10 @@ export interface AnchoredPopoverOptions {
 	gap?: number
 	/** Marge minimale conservée avec les bords de l'écran. */
 	margin?: number
-	/** 'bottom' ouvre sous l'ancre et bascule au-dessus si ça déborde ; 'top' l'inverse. */
-	placement?: 'bottom' | 'top'
+	/** 'bottom' ouvre sous l'ancre et bascule au-dessus si ça déborde ; 'top' l'inverse ;
+	 *  'right' ouvre à droite de l'ancre, aligné sur son haut (panneau qui ne doit
+	 *  pas recouvrir ce qu'il modifie, ex. le stylo d'une sidebar). */
+	placement?: 'bottom' | 'top' | 'right'
 	/** Aligne le panneau sur le bord droit de l'ancre plutôt que sur le gauche. */
 	align?: 'start' | 'end'
 }
@@ -57,6 +59,14 @@ export function anchoredPopover(node: HTMLElement, options: AnchoredPopoverOptio
 		const a  = anchor.getBoundingClientRect()
 		const vw = window.innerWidth
 		const vh = window.innerHeight
+
+		if (placement === 'right') {
+			const l = Math.max(margin, Math.min(a.right + gap, vw - pw - margin))
+			const t = Math.max(margin, Math.min(a.top, vh - ph - margin))
+			node.style.left = `${Math.round(l)}px`
+			node.style.top  = `${Math.round(t)}px`
+			return
+		}
 
 		const wanted = align === 'end' ? a.right - pw : a.left
 		const left   = Math.max(margin, Math.min(wanted, vw - pw - margin))

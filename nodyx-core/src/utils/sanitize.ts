@@ -1,4 +1,5 @@
 import sanitizeHtml from 'sanitize-html'
+import { isContainedUploadPath } from './uploadPath'
 
 // ── Sanitizer HTML partagé (forum + réseau social) ──────────────────────────
 // Allowlist éprouvée : on autorise le rendu riche de l'éditeur Nodyx (titres,
@@ -57,7 +58,7 @@ const ALLOWED_IMG_HOSTS = new Set([
 
 function isAllowedImgSrc(src: string): boolean {
   if (!src) return false
-  if (src.startsWith('/uploads/')) return true
+  if (src.startsWith('/uploads/')) return isContainedUploadPath(src)
   if (src.startsWith('data:image/')) return true
   try {
     return ALLOWED_IMG_HOSTS.has(new URL(src).hostname)
@@ -69,7 +70,7 @@ function isAllowedImgSrc(src: string): boolean {
 // Audio : uniquement les fichiers servis par notre /uploads/.
 function isAllowedAudioSrc(src: string): boolean {
   if (!src) return false
-  return src.startsWith('/uploads/')
+  return isContainedUploadPath(src)
 }
 
 const _envBlocked = (process.env.BLOCKED_LINK_DOMAINS ?? '')

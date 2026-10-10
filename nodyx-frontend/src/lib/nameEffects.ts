@@ -6,6 +6,7 @@
  */
 
 import { browser } from '$app/environment'
+import { contrastSafeColor } from '$lib/theme'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -106,10 +107,17 @@ export function ensureFontLoaded(fontFamily: string | null | undefined, fontUrl:
  */
 export function buildNameStyle(
   fields: NameEffectFields | PresenceEffects,
-  fallbackColor = '#ffffff'
+  fallbackColor = '#ffffff',
+  // `true` (sombre) par défaut : comportement historique de l'appli avant le
+  // bouton de bascule clair/sombre, préservé pour les appelants pas encore
+  // migrés. Un membre choisit sa couleur pour LE thème qu'il regarde au
+  // moment du choix (ex: blanc, lisible sur fond sombre) — sans ce garde-fou,
+  // basculer en clair rendrait ce blanc invisible sur fond clair.
+  isDarkBg = true
 ): string {
   // Normalise to snake_case
-  const color     = (fields as any).name_color     ?? (fields as any).nameColor     ?? fallbackColor
+  const rawColor  = (fields as any).name_color     ?? (fields as any).nameColor     ?? fallbackColor
+  const color     = contrastSafeColor(rawColor, fallbackColor, isDarkBg)
   const glow      = (fields as any).name_glow      ?? (fields as any).nameGlow      ?? null
   const intensity = (fields as any).name_glow_intensity ?? (fields as any).nameGlowIntensity ?? 10
   const fontFamily = (fields as any).name_font_family ?? (fields as any).nameFontFamily ?? null

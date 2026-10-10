@@ -19,6 +19,7 @@
 import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { isContainedUploadPath } from '../utils/uploadPath'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'inline_images')
 
@@ -47,7 +48,7 @@ export interface RehostResult {
 
 function isAlreadyAllowed(src: string): boolean {
   if (!src) return true
-  if (src.startsWith('/uploads/')) return true
+  if (src.startsWith('/uploads/')) return isContainedUploadPath(src)
   if (src.startsWith('data:image/')) return true
   try {
     const host = new URL(src).hostname.toLowerCase()

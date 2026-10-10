@@ -4,6 +4,8 @@
 	import { DEFAULT_THEME, autoSpanMd, autoSpanSm } from '$lib/types/homepage'
 	import { PLUGIN_REGISTRY } from './plugins'
 	import DynamicWidget from './DynamicWidget.svelte'
+	import { provideFollowAmbiance } from './followAmbiance'
+	import type { AmbiancePalette } from '$lib/shellTheme'
 	import ExtensionSurface from '$lib/components/ExtensionSurface.svelte'
 	import { extensionIndex, type PublicExtension } from './extensionCatalog'
 	import { t as i18n } from '$lib/i18n'   // `t` est déjà utilisé pour le thème
@@ -29,6 +31,8 @@
 		// Highlight pour drag feedback
 		dragOverRowId?:    string | null
 		selectedColKey?:   string | null  // 'rowId:colId'
+		/** Palette de l'ambiance (sombre), utilisée si le thème « suit l'ambiance ». */
+		ambiance?:         AmbiancePalette | null
 	}
 
 	let {
@@ -47,9 +51,26 @@
 		onResizeStart,
 		dragOverRowId = null,
 		selectedColKey = null,
+		ambiance = null,
 	}: Props = $props()
 
-	const t = $derived({ ...DEFAULT_THEME, ...theme } as GridTheme)
+	// « Suivre l'ambiance » : TOUTE la palette (accent, textes, cartes,
+	// bordures) vient de l'écran Apparence, et le fond s'efface pour laisser
+	// voir la feuille (qui suit elle aussi l'ambiance). Sans palette fournie,
+	// rien ne change.
+	const t = $derived.by(() => {
+		const base = { ...DEFAULT_THEME, ...theme } as GridTheme
+		if (!base.follow_ambiance || !ambiance) return base
+		return {
+			...base,
+			primary: ambiance.accent, accent: ambiance.accent, link_color: ambiance.accent,
+			text_primary: ambiance.text, text_secondary: ambiance.muted,
+			card_bg: ambiance.card, border_color: ambiance.border, bg: 'transparent',
+		}
+	})
+
+	// Les widgets à couleur propre lisent cet état (followAmbiance.ts).
+	provideFollowAmbiance(() => !!t.follow_ambiance && !!ambiance)
 
 	// ── CSS custom properties thème ──────────────────────────────────────────
 	const cssVars = $derived([

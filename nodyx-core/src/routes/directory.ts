@@ -144,6 +144,28 @@ export default async function directoryRoutes(app: FastifyInstance) {
     return reply.send({ instances: result.rows });
   });
 
+  // GET /api/directory/check/:slug
+  // Le slug est-il libre ? L'installeur le demande AVANT de compiler l'instance
+  // (04/10/2026). Avant, il ne le découvrait qu'en s'inscrivant, le frontend
+  // déjà compilé pour `<slug>.nodyx.org` : en cas de conflit il changeait de
+  // slug sans recompiler, et le frontend appelait le domaine d'une AUTRE
+  // communauté. Ne révèle rien de plus que POST /register (409) : ni statut,
+  // ni url, ni nom. Mêmes règles de format et de réservation que /register.
+  app.get<{ Params: { slug: string } }>('/directory/check/:slug', { preHandler: [searchRateLimit] }, async (req, reply) => {
+    const slug = String(req.params.slug ?? '');
+    if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(slug)) {
+      return reply.send({ slug, available: false, reason: 'invalid' });
+    }
+    if (isReservedSlug(slug)) {
+      return reply.send({ slug, available: false, reason: 'reserved' });
+    }
+    const existing = await db.query('SELECT id FROM directory_instances WHERE slug = $1', [slug]);
+    if (existing.rows.length > 0) {
+      return reply.send({ slug, available: false, reason: 'taken' });
+    }
+    return reply.send({ slug, available: true });
+  });
+
   // POST /api/directory/register
   app.post<{
     Body: {
