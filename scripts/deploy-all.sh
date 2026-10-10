@@ -21,7 +21,8 @@
 # /var/www/nexus appartient à root (source + node_modules + dist). PM2 tourne
 # sous l'utilisateur `nodyx` mais n'a besoin que de LIRE dist/ pour exécuter
 # node : on build donc en root ici, et on redémarre en `nodyx`.
-# /opt/sleemstudio et /opt/demo appartiennent à `nodyx` : tout s'y fait en nodyx.
+# /opt/<instance> appartiennent à `nodyx` : tout s'y fait en nodyx, et
+# sync-instance.sh rend à nodyx tout fichier qu'un passage en root y aurait laissé.
 
 set -uo pipefail
 
@@ -131,41 +132,28 @@ fi
 
 restart_if_built "$G" nodyx-docs nodyx-hub nodyx-landing
 
-# ── 4. sleemstudio.nodyx.org (dépôt dédié, build figé sur son domaine) ───────
-head_ "sleemstudio.nodyx.org (build en nodyx)"
-if sudo -u nodyx bash -lc 'cd /opt/sleemstudio && git pull --ff-only' >/dev/null 2>&1; then
-  ok "dépôt sleemstudio à jour"
-  G=ok
-  build_app "sleemstudio-core"     /opt/sleemstudio/nodyx-core     nodyx || G=ko
-  build_app "sleemstudio-frontend" /opt/sleemstudio/nodyx-frontend nodyx || G=ko
-  restart_if_built "$G" sleemstudio-core sleemstudio-frontend
-else
-  fail "git pull sleemstudio en échec, instance NON déployée"
-fi
+# ── 4-6. Instances secondaires (un clone git chacune, build en nodyx) ────────
+# sync-instance.sh amène le clone sur origin/main en préservant l'overlay de
+# l'instance (/opt/overlays/<instance> : branding, patches en essai) et remet
+# d'aplomb les fichiers posés en root. S'il refuse, l'instance reste
+# exactement comme avant et on ne build rien : l'ancienne version reste en ligne.
+deploy_instance() {
+  local name="$1"
+  head_ "${name}.nodyx.org (build en nodyx)"
+  if bash /var/www/nexus/scripts/ops/sync-instance.sh "/opt/${name}"; then
+    ok "dépôt ${name} à jour"
+    local G=ok
+    build_app "${name}-core"     "/opt/${name}/nodyx-core"     nodyx || G=ko
+    build_app "${name}-frontend" "/opt/${name}/nodyx-frontend" nodyx || G=ko
+    restart_if_built "$G" "${name}-core" "${name}-frontend"
+  else
+    fail "mise à jour git de ${name} refusée (détail ci-dessus), instance NON déployée"
+  fi
+}
 
-# ── 5. demo.nodyx.org (oubliée par l'ancien script) ──────────────────────────
-head_ "demo.nodyx.org (build en nodyx)"
-if sudo -u nodyx bash -lc 'cd /opt/demo && git pull --ff-only' >/dev/null 2>&1; then
-  ok "dépôt demo à jour"
-  G=ok
-  build_app "demo-core"     /opt/demo/nodyx-core     nodyx || G=ko
-  build_app "demo-frontend" /opt/demo/nodyx-frontend nodyx || G=ko
-  restart_if_built "$G" demo-core demo-frontend
-else
-  fail "git pull demo en échec, instance NON déployée"
-fi
-
-# ── 6. vieuxlooters.nodyx.org (4e instance, ajoutée au déploiement) ─────────
-head_ "vieuxlooters.nodyx.org (build en nodyx)"
-if sudo -u nodyx bash -lc 'cd /opt/vieuxlooters && git pull --ff-only' >/dev/null 2>&1; then
-  ok "dépôt vieuxlooters à jour"
-  G=ok
-  build_app "vieuxlooters-core"     /opt/vieuxlooters/nodyx-core     nodyx || G=ko
-  build_app "vieuxlooters-frontend" /opt/vieuxlooters/nodyx-frontend nodyx || G=ko
-  restart_if_built "$G" vieuxlooters-core vieuxlooters-frontend
-else
-  fail "git pull vieuxlooters en échec, instance NON déployée"
-fi
+deploy_instance sleemstudio
+deploy_instance demo
+deploy_instance vieuxlooters
 
 # ── 7. Vérification : on ne déclare le succès qu'après l'avoir constaté ──────
 head_ "Vérification des services"
