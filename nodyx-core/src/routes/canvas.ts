@@ -6,6 +6,7 @@ import { validate }    from '../middleware/validate'
 import { db }          from '../config/database'
 import { create as createNotification } from '../models/notification'
 import { SnapshotSchema } from '../utils/canvasSchema'
+import { forgetBoard } from '../socket/canvas'
 
 // Schémas des éléments : utils/canvasSchema.ts, partagés avec le socket.
 
@@ -279,6 +280,8 @@ export default async function canvasRoutes(app: FastifyInstance) {
        RETURNING id, name, updated_at`,
       params
     )
+    // La base vient de changer : la copie en mémoire du socket n'est plus à jour.
+    if (snapshot !== undefined) forgetBoard(req.params.boardId)
     if (!rows[0]) return reply.code(404).send({ error: 'Board introuvable.' })
     return reply.send({ board: rows[0] })
   })
@@ -298,6 +301,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
       [req.params.boardId, userId, isAdmin]
     )
     if (!rows[0]) return reply.code(404).send({ error: 'Board introuvable ou non autorisé.' })
+    forgetBoard(req.params.boardId)
     return reply.send({ ok: true })
   })
 
