@@ -15,6 +15,7 @@
 		type CanvasPeer, type CanvasChatMsg,
 	} from '$lib/canvas'
 	import { voiceStore } from '$lib/voice'
+	import { buildTextLines, noteLines } from '$lib/canvasText'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { t as i18n } from '$lib/i18n'   // `t` est déjà une variable locale (transform / paramétrage)
 
@@ -655,7 +656,7 @@
 			ctx.fillStyle   = d.color
 			ctx.shadowColor = 'rgba(0,0,0,0.5)'
 			ctx.shadowBlur  = 4
-			const lines = buildTextLines(ctx, d.text, maxW)
+			const lines = buildTextLines(t => ctx.measureText(t).width, d.text, maxW)
 			let ty = d.y
 			for (const line of lines) {
 				const lx = d.align === 'center' ? d.x + maxW / 2 :
@@ -829,38 +830,14 @@
 		}
 	}
 
-	/** Split text into wrapped lines (returns array of strings). */
-	function buildTextLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
-		const result: string[] = []
-		for (const para of text.split('\n')) {
-			const words = para.split(' ')
-			let line = ''
-			for (const word of words) {
-				const test = line ? `${line} ${word}` : word
-				if (ctx.measureText(test).width > maxW && line) {
-					result.push(line); line = word
-				} else { line = test }
-			}
-			result.push(line)
-		}
-		return result
-	}
-
+	/** Texte d'une note : retours à la ligne respectés, rien sous le bas de la note. */
 	function wrapText(
 		ctx: CanvasRenderingContext2D,
 		text: string, x: number, y: number,
 		maxW: number, lineH: number, maxH: number
 	) {
-		const words = text.split(' ')
-		let line = '', ty = y
-		for (const word of words) {
-			const test = line ? `${line} ${word}` : word
-			if (ctx.measureText(test).width > maxW && line) {
-				ctx.fillText(line, x, ty, maxW); line = word; ty += lineH
-				if (ty > y + maxH) break
-			} else { line = test }
-		}
-		if (line) ctx.fillText(line, x, ty, maxW)
+		noteLines(t => ctx.measureText(t).width, text, maxW, lineH, maxH)
+			.forEach((line, i) => ctx.fillText(line, x, y + i * lineH, maxW))
 	}
 
 	function drawArrow(
