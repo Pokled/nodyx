@@ -1,0 +1,36 @@
+# Nodyx
+
+> Nodyx is free, open-source community software that a community installs on its own server: a forum, real-time chat, voice and video channels and a public homepage, together in one install. One installation hosts one community. It is licensed under the AGPL-3.0, has no analytics and no ads, and the data stays on the server its admins control.
+
+Nodyx is for groups that want a home they actually own: gaming clans, creative studios, associations, open-source projects, local communities. It installs with one command on Debian or Ubuntu. A spare laptop or a small home server is enough: thanks to the Nodyx relay, an instance can be reached from the internet without opening a single port on the home router and without buying a domain name.
+
+What a community gets in a single install:
+
+- A forum indexed by search engines, with categories, rich articles, polls and a wiki.
+- Real-time chat with replies, reactions, pins and direct messages that are end-to-end encrypted.
+- Voice and video channels with screen sharing, served by a built-in media server written in Rust.
+- A homepage the admins build themselves with a drag-and-drop editor, plus extensions, games played inside a voice channel, an event calendar, a music showcase and a shared canvas.
+- Moderation tools, roles and grades, and an optional passwordless login.
+- An interface translated by its community into several languages.
+
+Nodyx is a young project developed in the open by its founder and contributors. Installations are independent: there is no central account, and a community keeps working even if the project's own websites disappear.
+
+## Start here
+
+- [Documentation](https://nodyx.dev): the complete guide, in English, French and Spanish.
+- [Installation](https://nodyx.dev/install): one-command install on a server with a domain name.
+- [Install at home, no open ports](https://nodyx.dev/install-tunnel): running Nodyx behind a home router.
+- [Why Nodyx](https://nodyx.dev/why-nodyx): the reasons the project exists.
+
+## The project
+
+- [Source code](https://github.com/Pokled/nodyx): the GitHub repository, AGPL-3.0.
+- [Changelog](https://github.com/Pokled/nodyx/blob/main/CHANGELOG.md): everything that changed, release by release.
+- [Roadmap](https://nodyx.dev/roadmap): what is done and what comes next.
+- [A live community](https://nodyx.org): the project's own Nodyx instance.
+- [Extensions](https://extensions.nodyx.org): the catalogue of extensions that install in one click.
+
+## Optional
+
+- [Documentation index for language models](https://nodyx.dev/llms.txt)
+- [The whole documentation in one file](https://nodyx.dev/llms-full.txt)

@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'fs/promises'
+import { readFile, readdir, stat } from 'fs/promises'
 import { existsSync }        from 'fs'
 import { join, resolve }     from 'path'
 import { marked }            from 'marked'
@@ -337,6 +337,38 @@ async function readDocFile(
   const anglais = join(DOCS_DIR, filename)
   if (!existsSync(anglais)) return null
   return { raw: await readFile(anglais, 'utf-8'), served: 'en' }
+}
+
+// ── Pour les moteurs et les IA (10/10/2026) ──────────────────────────────────
+
+function docPath(slug: string, lang: DocLang): string {
+  const filename = slugToFile(slug)
+  return lang === 'en' ? join(DOCS_DIR, filename) : join(DOCS_ROOT, lang, filename)
+}
+
+/**
+ * Les langues dans lesquelles CETTE page existe vraiment, anglais en tête.
+ * Sert aux balises hreflang et au plan du site : annoncer une version française
+ * qui renvoie de l'anglais tromperait les moteurs autant que les lecteurs.
+ */
+export function pageTranslations(slug: string): DocLang[] {
+  return DOC_LANGS.map(l => l.code as DocLang).filter(code => existsSync(docPath(slug, code)))
+}
+
+/** Date de dernière modification réelle du fichier de la page (null si absent). */
+export async function pageLastModified(slug: string, lang: DocLang = 'en'): Promise<Date | null> {
+  try { return (await stat(docPath(slug, lang))).mtime } catch { return null }
+}
+
+/** Le markdown anglais brut d'une page (null si absent). */
+export async function englishSource(slug: string): Promise<string | null> {
+  const p = docPath(slug, 'en')
+  return existsSync(p) ? readFile(p, 'utf-8') : null
+}
+
+/** L'adresse publique d'une page dans une langue (l'anglais n'a pas de préfixe). */
+export function pageUrl(slug: string, lang: DocLang = 'en'): string {
+  return `https://nodyx.dev${lang === 'en' ? '' : '/' + lang}/${slug}`
 }
 
 export async function renderDoc(slug: string, lang: DocLang = 'en'): Promise<DocResult | null> {

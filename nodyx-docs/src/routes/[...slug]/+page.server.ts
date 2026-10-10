@@ -1,9 +1,9 @@
 import { error, redirect }     from '@sveltejs/kit'
-import { renderDoc, isDocLang, availableDocLangs } from '$lib/docs.server.js'
+import { renderDoc, isDocLang, availableDocLangs, pageTranslations } from '$lib/docs.server.js'
 import type { DocLang }        from '$lib/docs.server.js'
 import { findPage, prevNext }  from '$lib/nav.js'
 
-export async function load({ params }) {
+export async function load({ params, locals }) {
   let slug = params.slug || 'readme'
 
   // Une langue en tête d'URL : /fr/relay, /es/install. La route est déjà un
@@ -29,6 +29,9 @@ export async function load({ params }) {
   const doc = await renderDoc(slug, lang)
   if (!doc) error(404, `Documentation page "${slug}" not found`)
 
+  // Langue réellement servie : lue par hooks.server.ts pour <html lang>.
+  locals.lang = doc.lang
+
   const page   = findPage(slug)
   const pn     = prevNext(slug)
 
@@ -39,6 +42,8 @@ export async function load({ params }) {
     /** Vrai quand la page n'existe pas encore dans la langue demandée. */
     fallback:    doc.lang !== doc.requested,
     langs:       await availableDocLangs(),
+    /** Langues dans lesquelles cette page existe vraiment (hreflang). */
+    translations: pageTranslations(slug),
     html:        doc.html,
     headings:    doc.headings,
     title:       page?.title ?? doc.title,
