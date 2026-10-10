@@ -1,75 +1,13 @@
 import type { FastifyInstance } from 'fastify'
-import { z } from 'zod'
 import { requireAuth } from '../middleware/auth'
 import { adminOnly }   from '../middleware/adminOnly'
 import { rateLimit }   from '../middleware/rateLimit'
 import { validate }    from '../middleware/validate'
 import { db }          from '../config/database'
 import { create as createNotification } from '../models/notification'
+import { SnapshotSchema } from '../utils/canvasSchema'
 
-// ── Types (mirror of frontend canvas.ts) ─────────────────────────────────────
-
-const PointSchema   = z.tuple([z.number(), z.number()])
-const PathDataSchema = z.object({
-  points: z.array(PointSchema),
-  color:  z.string().max(32),
-  width:  z.number().min(1).max(100),
-})
-const StickyDataSchema = z.object({
-  x:     z.number(),
-  y:     z.number(),
-  text:  z.string().max(1000),
-  color: z.string().max(32),
-  w:     z.number().optional(),
-  h:     z.number().optional(),
-})
-const ShapeDataSchema = z.object({
-  x:     z.number(),
-  y:     z.number(),
-  w:     z.number(),
-  h:     z.number(),
-  color: z.string().max(32),
-  fill:  z.boolean(),
-})
-const TextDataSchema = z.object({
-  x:        z.number(),
-  y:        z.number(),
-  text:     z.string().max(2000),
-  color:    z.string().max(32),
-  fontSize: z.number().min(8).max(200).optional(),
-  bold:     z.boolean().optional(),
-  italic:   z.boolean().optional(),
-})
-const ArrowDataSchema = z.object({
-  x1: z.number(), y1: z.number(),
-  x2: z.number(), y2: z.number(),
-  color: z.string().max(32),
-  width: z.number().min(1).max(50),
-})
-const ImageDataSchema = z.object({
-  x:      z.number(),
-  y:      z.number(),
-  w:      z.number(),
-  h:      z.number(),
-  url:    z.string().max(500),
-  assetId: z.string().uuid().optional(),
-})
-
-const VALID_KINDS = ['pen', 'sticky', 'rect', 'circle', 'text', 'arrow', 'image', 'eraser'] as const
-
-const CanvasElementSchema = z.object({
-  id:      z.string().uuid(),
-  ts:      z.number(),
-  author:  z.string().uuid(),
-  kind:    z.enum(VALID_KINDS),
-  data:    z.union([
-    PathDataSchema, StickyDataSchema, ShapeDataSchema,
-    TextDataSchema, ArrowDataSchema, ImageDataSchema,
-  ]),
-  deleted: z.boolean().optional(),
-})
-
-const SnapshotSchema = z.array(CanvasElementSchema).max(5000)
+// Schémas des éléments : utils/canvasSchema.ts, partagés avec le socket.
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -313,11 +251,14 @@ export default async function canvasRoutes(app: FastifyInstance) {
 
     const { snapshot, name } = req.body as { snapshot?: unknown[]; name?: string }
 
+    // On stocke la version validée : les champs inconnus n'entrent pas en base.
+    let cleanSnapshot: unknown[] = []
     if (snapshot !== undefined) {
       const parsed = SnapshotSchema.safeParse(snapshot)
       if (!parsed.success) {
-        return reply.code(400).send({ error: 'Snapshot invalide.', details: parsed.error.issues })
+        return reply.code(400).send({ error: 'Snapshot invalide.', code: 'CANVAS_SNAPSHOT_INVALID', details: parsed.error.issues })
       }
+      cleanSnapshot = parsed.data
     }
 
     const updates: string[] = ['updated_at = NOW()']
@@ -328,7 +269,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
       updates.push(`name = $${params.length}`)
     }
     if (snapshot !== undefined) {
-      params.push(JSON.stringify(snapshot))
+      params.push(JSON.stringify(cleanSnapshot))
       updates.push(`snapshot = $${params.length}`)
     }
 
