@@ -155,6 +155,17 @@ function scheduleFlush(boardId: string): void {
   flushTimers.set(boardId, t)
 }
 
+/**
+ * Oublie la copie en mémoire d'un tableau (sans la sauvegarder), pour qu'une
+ * écriture faite ailleurs (PATCH de l'API) fasse foi : sinon la vieille copie
+ * est servie aux arrivants puis réécrite en base au premier coup de crayon.
+ */
+export function forgetBoard(boardId: string): void {
+  const existing = flushTimers.get(boardId)
+  if (existing) { clearTimeout(existing); flushTimers.delete(boardId) }
+  snapshots.delete(boardId)
+}
+
 /** Flush immédiat + annule le debounce. */
 async function flushNow(boardId: string): Promise<void> {
   const existing = flushTimers.get(boardId)
@@ -327,15 +338,18 @@ export function registerCanvasHandlers(io: Server, socket: Socket): void {
   })
 
   // ── Nettoyage à la déconnexion ─────────────────────────────────────────────
-  socket.on('disconnect', async () => {
-    // Flush toutes les rooms canvas que ce socket avait rejointes
-    for (const room of socket.rooms) {
+  // `disconnecting` et non `disconnect` : à `disconnect`, Socket.IO 4 a déjà
+  // vidé `socket.rooms`, et cette boucle ne faisait rien (tableaux jamais
+  // libérés, ni sauvegardés au départ du dernier). Ici le socket est encore
+  // dans ses salons : il est seul si le salon ne compte que lui.
+  socket.on('disconnecting', async () => {
+    for (const room of [...socket.rooms]) {
       if (!room.startsWith('canvas:')) continue
       const boardId = room.slice('canvas:'.length)
       socket.to(room).emit('canvas:peer:left', { boardId, userId })
 
       const remaining = io.sockets.adapter.rooms.get(room)
-      if (!remaining || remaining.size === 0) {
+      if (!remaining || remaining.size <= 1) {
         await flushNow(boardId)
         snapshots.delete(boardId)
       }
