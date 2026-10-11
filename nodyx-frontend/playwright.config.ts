@@ -57,17 +57,25 @@ export default defineConfig({
 		{
 			name: 'mobile-chromium',
 			use: { ...devices['Pixel 7'] },
-			testIgnore: /authentifie\.spec\.ts/,
+			testIgnore: /(authentifie|bureau)\.spec\.ts/,
 		},
 		{
 			name: 'mobile-webkit',
 			use: { ...devices['iPhone 14'] },
-			testIgnore: /authentifie\.spec\.ts/,
+			testIgnore: /(authentifie|bureau)\.spec\.ts/,
 		},
 		{
 			name: 'tablette-webkit',
 			use: { ...devices['iPad Mini'] },
-			testIgnore: /authentifie\.spec\.ts/,
+			testIgnore: /(authentifie|bureau)\.spec\.ts/,
+		},
+
+		// Écran de bureau : les défauts qui n'existent qu'entre deux barres
+		// latérales (forum écrasé à 1440 px, 11/10/2026).
+		{
+			name: 'bureau-chromium',
+			use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+			testMatch: /bureau\.spec\.ts/,
 		},
 
 		// Pages derriere une connexion : chat, messages prives, sidebar. C'est

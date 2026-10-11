@@ -67,7 +67,12 @@
 	<div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-6">
 
 		<!-- ── Catégories ────────────────────────────────────────────── -->
-		<div class="space-y-2">
+		<!-- @container : les colonnes secondaires (compteurs, dernier message)
+		     s'affichent selon la largeur RÉELLE de la liste, pas celle de la
+		     fenêtre. Entre les barres latérales, à 1440 px de fenêtre, la liste
+		     ne fait que ~550 px : avec `lg:`, le dernier message (224 px) et les
+		     compteurs écrasaient le nom sur 3 lignes de 28 px (11/10/2026). -->
+		<div class="space-y-2 @container">
 			{#each topLevel as cat}
 			<div class="border border-white/[.06] hover:border-white/10 transition-colors"
 			     style="background: rgba(255,255,255,.025)">
@@ -93,7 +98,7 @@
 					</div>
 
 					<!-- Compteurs : sujets ET messages, comme sur un vrai index de forum -->
-					<div class="hidden sm:flex shrink-0 items-center gap-5 text-right">
+					<div class="hidden @lg:flex shrink-0 items-center gap-5 text-right">
 						<div class="flex flex-col items-end w-12">
 							<span class="text-sm font-bold text-gray-300 tabular-nums">{cat.thread_count ?? 0}</span>
 							<span class="text-[10px] text-gray-600 uppercase tracking-wide">{tFn('common.topics')}</span>
@@ -106,7 +111,7 @@
 
 					<!-- Dernier message : c'est LUI qui montre que le forum est vivant.
 					     Sans, on ne voit que des portes ; avec, on voit ce qu'il y a derrière. -->
-					<div class="hidden lg:flex shrink-0 w-56 items-center gap-2.5 pl-5
+					<div class="hidden @3xl:flex shrink-0 w-56 items-center gap-2.5 pl-5
 					            border-l border-white/[.06]">
 						{#if cat.last_post}
 							{#if cat.last_post.avatar}
@@ -162,12 +167,12 @@
 								{/if}
 							</div>
 							<!-- Compteurs compacts : le sous-forum reste secondaire -->
-							<div class="hidden sm:flex shrink-0 items-center gap-5 text-right">
+							<div class="hidden @lg:flex shrink-0 items-center gap-5 text-right">
 								<span class="w-12 text-xs font-bold text-gray-500 tabular-nums">{sub.thread_count ?? 0}</span>
 								<span class="w-12 text-xs font-bold text-gray-600 tabular-nums">{sub.post_count ?? 0}</span>
 							</div>
 							<!-- Dernier message, en plus discret que le forum parent -->
-							<div class="hidden lg:flex shrink-0 w-56 items-center gap-2 pl-5 border-l border-white/[.04]">
+							<div class="hidden @3xl:flex shrink-0 w-56 items-center gap-2 pl-5 border-l border-white/[.04]">
 								{#if sub.last_post}
 									{#if sub.last_post.avatar}
 										<img src={sub.last_post.avatar} alt="" class="w-6 h-6 rounded-full object-cover shrink-0"/>
