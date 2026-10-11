@@ -21,6 +21,7 @@
 	import MemberScreenPreview from '$lib/components/MemberScreenPreview.svelte';
 	import VoiceEqualizer from '$lib/components/VoiceEqualizer.svelte';
 	import MaintenanceBanner from '$lib/components/MaintenanceBanner.svelte';
+	import { surveillerServiceWorker } from '$lib/swReload';
 	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import { editZone } from '$lib/actions/editZone';
 	import EditOverlay from '$lib/components/appearance/EditOverlay.svelte';
@@ -220,14 +221,18 @@
 			window.location.reload();
 		}
 
+		// Seul le REMPLACEMENT d'une version par une autre recharge : la première
+		// prise de contrôle (première visite) ne périme rien (cf $lib/swReload).
+		const signal = surveillerServiceWorker(navigator.serviceWorker.controller, rechargerPourNouvelleVersion);
 		const onMessage = (e: MessageEvent) => {
-			if ((e.data as any)?.type === 'sw:updated') rechargerPourNouvelleVersion();
+			if ((e.data as any)?.type === 'sw:updated') signal(e.source as ServiceWorker | null);
 		};
+		const onControllerChange = () => signal(navigator.serviceWorker.controller);
 		navigator.serviceWorker.addEventListener('message', onMessage);
-		navigator.serviceWorker.addEventListener('controllerchange', rechargerPourNouvelleVersion);
+		navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 		return () => {
 			navigator.serviceWorker.removeEventListener('message', onMessage);
-			navigator.serviceWorker.removeEventListener('controllerchange', rechargerPourNouvelleVersion);
+			navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
 		};
 	});
 	beforeNavigate((nav) => {
