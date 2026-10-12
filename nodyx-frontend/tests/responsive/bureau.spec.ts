@@ -29,3 +29,4 @@ for (const largeur of [1280, 1440, 1920]) {
 		expect(noms.filter(n => n.lignes > 1)).toEqual([])
 	})
 }
+

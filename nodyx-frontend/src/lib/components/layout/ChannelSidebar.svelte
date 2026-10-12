@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ajusterTaille } from '$lib/actions/ajusterTaille';
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
 	import { overlayScroll } from '$lib/actions/overlayScroll';
@@ -225,7 +226,7 @@
 
 	<!-- Panel head -->
 	<div class="panel-head">
-		<span class="community-name" id="variant-a-community">{displayCommunityName}</span>
+		<span class="community-name" id="variant-a-community" use:ajusterTaille={displayCommunityName}>{displayCommunityName}</span>
 		{#if user?.role === 'owner' || user?.role === 'admin'}
 		<a href="/admin" title={tFn('nav.admin')} class="head-icon text-gray-600">
 			<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

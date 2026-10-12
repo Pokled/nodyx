@@ -57,17 +57,17 @@ export default defineConfig({
 		{
 			name: 'mobile-chromium',
 			use: { ...devices['Pixel 7'] },
-			testIgnore: /(authentifie|bureau)\.spec\.ts/,
+			testIgnore: /(authentifie|bureau|bureau-admin)\.spec\.ts/,
 		},
 		{
 			name: 'mobile-webkit',
 			use: { ...devices['iPhone 14'] },
-			testIgnore: /(authentifie|bureau)\.spec\.ts/,
+			testIgnore: /(authentifie|bureau|bureau-admin)\.spec\.ts/,
 		},
 		{
 			name: 'tablette-webkit',
 			use: { ...devices['iPad Mini'] },
-			testIgnore: /(authentifie|bureau)\.spec\.ts/,
+			testIgnore: /(authentifie|bureau|bureau-admin)\.spec\.ts/,
 		},
 
 		// Écran de bureau : les défauts qui n'existent qu'entre deux barres
@@ -75,7 +75,14 @@ export default defineConfig({
 		{
 			name: 'bureau-chromium',
 			use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
-			testMatch: /bureau\.spec\.ts/,
+			testMatch: /\/bureau\.spec\.ts/,
+		},
+		// Même écran, connecté avec un compte ADMINISTRATEUR (NODYX_TEST_EMAIL).
+		{
+			name: 'bureau-admin-chromium',
+			use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, storageState: 'playwright/.auth/session.json' },
+			dependencies: ['session'],
+			testMatch: /bureau-admin\.spec\.ts/,
 		},
 
 		// Pages derriere une connexion : chat, messages prives, sidebar. C'est
