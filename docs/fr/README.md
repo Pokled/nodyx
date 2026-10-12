@@ -53,6 +53,10 @@ Pas de Docker, pas de compte cloud, pas besoin de nom de domaine. L'installeur p
 
 Un vrai forum, avec ses catégories, ses sous-forums et le dernier message de chacun : on voit d'un coup d'œil où se trouve la vie. Chaque sujet a une adresse publique propre, des données structurées et sa place dans le plan du site. Ce que votre communauté écrit se retrouve, par les moteurs de recherche comme par le prochain arrivant. À côté, un chat en temps réel avec réponses, réactions et messages épinglés, des messages privés chiffrés de bout en bout, et des salons vocaux avec partage d'écran.
 
+<img src="../img/vitrine/voice-screenshare.webp" alt="Un salon vocal avec le partage d'écran de Blender en direct sur le Nodyx Stage" width="900"/>
+
+Le partage d'écran s'ouvre sur le **Nodyx Stage**, en plein écran ou en fenêtre flottante, et quiconque rejoint le salon en cours de partage le voit aussitôt.
+
 ### Faire des choses ensemble
 
 <table>

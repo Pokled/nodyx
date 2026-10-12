@@ -56,6 +56,10 @@ No Docker, no cloud account, no domain required. The installer sets everything u
 
 A real forum, with categories, sub-forums and the latest message of each, so you see at a glance where the life is. Every thread has a clean public URL, structured data and a place in the sitemap: what your community writes can be found again, by search engines and by the next newcomer. Next to it, real-time chat with replies, reactions and pins, end-to-end encrypted private messages, and voice channels with screen sharing.
 
+<img src="docs/img/vitrine/voice-screenshare.webp" alt="A voice channel with a live screen share of Blender on the Nodyx Stage" width="900"/>
+
+Screen sharing opens on the **Nodyx Stage**, in full screen or as a floating window, and anyone who joins the room while you share sees it straight away.
+
 ### Make things together
 
 <table>

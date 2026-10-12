@@ -53,6 +53,10 @@ Sin Docker, sin cuenta en la nube, sin necesidad de dominio. El instalador lo pr
 
 Un foro de verdad, con categorías, subforos y el último mensaje de cada uno, para ver de un vistazo dónde está la vida. Cada hilo tiene una dirección pública limpia, datos estructurados y su lugar en el mapa del sitio: lo que escribe tu comunidad se puede volver a encontrar, desde un buscador o por el próximo que llegue. Al lado, chat en tiempo real con respuestas, reacciones y mensajes fijados, mensajes privados cifrados de extremo a extremo y canales de voz con pantalla compartida.
 
+<img src="../img/vitrine/voice-screenshare.webp" alt="Un canal de voz con la pantalla de Blender compartida en directo en el Nodyx Stage" width="900"/>
+
+La pantalla compartida se abre en el **Nodyx Stage**, a pantalla completa o en una ventana flotante, y quien entra en la sala a mitad del directo la ve al momento.
+
 ### Crear cosas juntos
 
 <table>
