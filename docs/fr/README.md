@@ -1,874 +1,290 @@
 <div align="center">
 
-<img src="../img/nodyx-icon.svg" alt="Nodyx" width="80"/>
+<img src="https://nodyx.org/uploads/assets/36644490ed9ac75ec1fb64b027c8cade8c1d0673e695b29d2bc0492102173d8f.webp" alt="Nodyx" width="80"/>
 
 # Nodyx
 
-### *"Le réseau, c'est les gens."*
+### *« Le réseau, c'est les gens. »*
 
-**La plateforme communautaire auto-hébergée qui vous appartient vraiment.**  
-Forum + Chat + Voix + P2P + Canvas + Constructeur de page d'accueil + Streamer Hub, un seul serveur, une communauté, pour toujours.
+**La plateforme communautaire auto-hébergée qui vous appartient vraiment.**<br/>
+Forum, chat, vocal, canvas et votre propre page d'accueil. Une installation, sur votre serveur, pour une communauté.
 
 [![Version](https://img.shields.io/github/v/release/Pokled/nodyx?label=version&color=7c3aed)](https://github.com/Pokled/nodyx/releases/latest)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Licence : AGPL-3.0](https://img.shields.io/badge/Licence-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![CI](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Pokled/Nodyx/actions/workflows/ci.yml)
-[![Stack](https://img.shields.io/badge/stack-Fastify%20%2B%20SvelteKit%20%2B%20PostgreSQL%20%2B%20Rust-green)](./ARCHITECTURE.md)
-[![Ko-fi](https://img.shields.io/badge/Soutenir-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/Pokled)
+[![Traduit en direct](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fnodyx.org%2Ftranslate%2Fprogress.json&query=%24.overallPct&suffix=%25&label=traduit%20en%20direct&color=6d76f5)](https://nodyx.org/translate)
+[![Instances fédérées](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fnodyx.org%2Fapi%2Fdirectory&query=%24.instances.length&label=instances%20f%C3%A9d%C3%A9r%C3%A9es&color=2ece93)](https://nodyx.org/discover)
 
-<sub>⭐ Si Nodyx vous parle, une étoile aide les autres à le trouver, et nous garde en vie.</sub>
+[![Démo en ligne](https://img.shields.io/badge/D%C3%A9mo-nodyx.org-6d76f5?style=flat-square)](https://nodyx.org)
+[![Documentation](https://img.shields.io/badge/Documentation-nodyx.dev-6d76f5?style=flat-square)](https://nodyx.dev)
+[![Découvrir](https://img.shields.io/badge/D%C3%A9couvrir-start.nodyx.org-6d76f5?style=flat-square)](https://start.nodyx.org)
+[![English](https://img.shields.io/badge/EN-English-12131b?style=flat-square)](https://github.com/Pokled/nodyx/blob/main/README.md)
+[![Español](https://img.shields.io/badge/ES-Espa%C3%B1ol-12131b?style=flat-square)](../es/README.md)
+
+<br/>
+
+<img src="../img/vitrine/home.webp" alt="La page d'accueil d'une communauté Nodyx : articles à la une, dernières discussions, mise en page magazine" width="900"/>
+
+<sub>nodyx.org, la communauté du projet, qui tourne avec le même Nodyx que celui que vous installez.</sub>
 
 </div>
 
 ---
 
-<div align="center">
+## Ce que c'est
 
-**[🌐 Découvrir → start.nodyx.org](https://start.nodyx.org)** &nbsp;·&nbsp;
-**[📖 Documentation → nodyx.dev](https://nodyx.dev)** &nbsp;·&nbsp;
-**[🚀 Démo en direct → nodyx.org](https://nodyx.org)** &nbsp;·&nbsp;
-<a href="../../README.md"><img src="https://flagcdn.com/16x12/gb.png" alt="EN"> English</a> · <img src="https://flagcdn.com/16x12/fr.png" alt="FR"> Français
-
-</div>
-
----
-
-> **Avant de scroller.** Nodyx ne cherche pas à faire la guerre à Discord, et n'essaie pas d'être la seule alternative ouverte. Il y a des super projets là-dehors. Matrix, Stoat, Fluxer, Mattermost, Rocket.Chat, Discourse, Haven et d'autres. Et on veut sincèrement que tu les connaisses. On les liste, avec leurs repos GitHub, sur une page qu'on a écrite nous-mêmes : **[→ Pourquoi Nodyx (et les autres alternatives qu'on respecte)](https://nodyx.dev/why-nodyx)**.
->
-> *Le combat n'est pas entre nous. Il est entre les silos fermés et les communautés qui se possèdent vraiment. Choisis l'outil qui te va. On t'applaudira dans tous les cas.*
-
----
-
-<div align="center">
-  <img src="../img/nodyx_home_page.png" alt="Nodyx, Constructeur de page d'accueil" width="860"/>
-</div>
-
----
-
-## Pourquoi Nodyx
-
-- **La plupart des communautés ne possèdent pas l'endroit où elles vivent.** Des années d'historique, de savoir et de souvenirs reposent sur des plateformes qui peuvent changer les règles, bannir des comptes, ou disparaître. Ce n'est pas de la malveillance, c'est juste comme ça que les systèmes fermés fonctionnent par défaut.
-- **L'auto-hébergement aujourd'hui est fragmenté.** Forum, chat temps réel, voix, et page d'accueil publique veulent souvent dire coudre cinq outils séparés ensemble.
-- **Nodyx les réunit en une seule installation** pour qu'une communauté puisse pleinement posséder sa présence, texte, voix, et homepage, sur du matériel que ses admins contrôlent.
-
-Une commande. Votre serveur. Pour toujours.
-
-### Construit sur
-
-| Couche | Technologie |
-|---|---|
-| API Backend | **TypeScript** + **Fastify v5** + Socket.IO, `nodyx-core/` |
-| Frontend | **SvelteKit 5** + Tailwind v4 + éditeur TipTap, `nodyx-frontend/` |
-| Base de données | **PostgreSQL 16** (FTS, migrations) + **Redis 7** (sessions, présence) <sup>[¹](../en/ARCHITECTURE.md#why-postgresql-16-and-not-17-or-18)</sup> |
-| Relais voix | **nodyx-turn**, STUN/TURN en Rust (remplace coturn, binaire de 2,9 Mo) |
-| Tunnel P2P | **nodyx-relay**, tunnel TCP Rust (serveur domestique, sans ports ouverts) |
-| Temps réel | Maillage P2P WebRTC + fallback Socket.IO |
-| Auth (optionnel) | **Nodyx Signet**, PWA sans mot de passe ECDSA P-256, `nodyx-authenticator/` |
-| Gestionnaire de processus | **PM2** sous un utilisateur système dédié `nodyx` |
-| Proxy inverse | **Caddy**, TLS Let's Encrypt automatique |
-
-> **Docker non requis.** L'installateur déploie Node.js + PostgreSQL + Redis + Caddy + PM2 nativement. `docker-compose.yml` est fourni uniquement pour le développement local.
-
----
-
-## Internet a cassé quelque chose.
-
-Les plateformes fermées ont fini par accueillir plus de conversations que le web ouvert n'en a jamais hébergé. Pas par malveillance, par défaut. Elles étaient gratuites, faciles, et tout le monde y était déjà.
-
-Mais dix ans de discussions, tutoriels et savoirs collectifs sont aujourd'hui derrière des murs de connexion. Invisibles aux moteurs de recherche. Soumis à des conditions générales rédigées dans un tribunal du Delaware. Disparus quand la plateforme le décide.
-
-**Vous n'en avez jamais été propriétaire.**
-
----
-
-## Nodyx vous le rend.
-
-Une commande. Votre serveur. Vos règles. Votre communauté, définitivement.
+Nodyx donne à une communauté une maison qui lui appartient. On y trouve un forum que les moteurs de recherche savent lire, un chat en temps réel, des salons vocaux avec partage d'écran, un canvas collaboratif, des événements, des sondages, et une page d'accueil publique que vous composez par glisser-déposer. Le tout tourne sur un serveur que vous contrôlez, du petit VPS au Raspberry Pi posé derrière votre box.
 
 ```bash
 curl -fsSL https://nodyx.org/install.sh | bash
 ```
 
-Fonctionne sur un Raspberry Pi derrière un routeur domestique. Sans domaine. Sans ports ouverts. Sans compte cloud.
+Pas de Docker, pas de compte cloud, pas besoin de nom de domaine. L'installeur prépare tout et vous remet un compte administrateur quelques minutes plus tard.
+
+> **Avant d'aller plus loin.** Nodyx n'est pas là pour combattre Discord, et ce n'est pas la seule alternative libre. Matrix, Discourse, Stoat, Fluxer, Mattermost, Rocket.Chat, Haven et d'autres sont de beaux projets, et nous les présentons sur une page écrite par nous : **[Pourquoi Nodyx, et les alternatives que nous respectons](https://nodyx.dev/why-nodyx)**. Le combat n'est pas entre nous. Il est entre les silos fermés et les communautés qui s'appartiennent.
 
 ---
 
-## Là où chaque projet brille
+## Le tour du propriétaire
 
-Le paysage des outils communautaires n'est pas un combat. Chaque projet optimise pour des choses différentes, et le bon choix dépend de ce que vous construisez. Voici comme on le conseillerait à un ami :
+### Se parler, comme votre communauté se parle vraiment
+
+<img src="../img/vitrine/forum.webp" alt="Le forum Nodyx : catégories, sous-forums, dernier message de chaque catégorie, statistiques et activité récente" width="900"/>
+
+Un vrai forum, avec ses catégories, ses sous-forums et le dernier message de chacun : on voit d'un coup d'œil où se trouve la vie. Chaque sujet a une adresse publique propre, des données structurées et sa place dans le plan du site. Ce que votre communauté écrit se retrouve, par les moteurs de recherche comme par le prochain arrivant. À côté, un chat en temps réel avec réponses, réactions et messages épinglés, des messages privés chiffrés de bout en bout, et des salons vocaux avec partage d'écran.
+
+### Faire des choses ensemble
+
+<table>
+  <tr>
+    <td width="50%"><img src="../img/vitrine/canvas.webp" alt="NodyxCanvas : un tableau collaboratif avec cadres, notes, hexagones et connecteurs"/></td>
+    <td width="50%"><img src="../img/vitrine/tasks.webp" alt="Un tableau de tâches en colonnes : à faire, en cours, terminé"/></td>
+  </tr>
+  <tr>
+    <td><b>NodyxCanvas.</b> Un tableau blanc partagé : cadres, notes, formes, connecteurs, images. Tout le monde dessine en même temps, tout est sauvegardé.</td>
+    <td><b>Tableaux de tâches.</b> Préparer une sortie, un tournoi ou une rencontre en colonnes, avec priorités et échéances.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="../img/vitrine/calendar.webp" alt="Le calendrier de la communauté avec trois événements à venir"/></td>
+    <td width="50%"><img src="../img/vitrine/polls.webp" alt="Un sondage sur le sujet du prochain atelier"/></td>
+  </tr>
+  <tr>
+    <td><b>Événements.</b> Soirées jeux, ateliers, sorties de version, avec un lieu, une carte et des inscriptions.</td>
+    <td><b>Sondages.</b> Choix, classement ou planning, avec les résultats en direct.</td>
+  </tr>
+</table>
+
+### Votre vitrine, à votre façon
+
+<img src="../img/vitrine/homepage-builder.webp" alt="L'éditeur de page d'accueil : la structure de la page à gauche, l'aperçu en direct à droite" width="900"/>
+
+La page d'accueil se compose comme vous l'entendez : des lignes et des colonnes sur une grille de 12, des widgets intégrés, un brouillon que vous seul voyez jusqu'à la publication, et un aperçu sur ordinateur, tablette et mobile. Il vous manque quelque chose ? Le **SDK d'extensions** permet à n'importe qui de créer un widget ou un jeu en JavaScript simple, et [extensions.nodyx.org](https://extensions.nodyx.org) l'installe en un clic. Une extension tourne isolée : elle ne voit jamais les vrais comptes, son stockage est cloisonné, son accès au réseau passe par un proxy qui la surveille.
+
+<table>
+  <tr>
+    <td width="50%"><img src="../img/vitrine/appearance.webp" alt="Les réglages d'apparence : ambiances toutes prêtes comme Matrix, Cyberpunk, Gazette ou Océan, avec un aperçu en sombre et en clair"/></td>
+    <td width="50%"><img src="../img/vitrine/home-light.webp" alt="La même page d'accueil avec l'interface claire"/></td>
+  </tr>
+  <tr>
+    <td><b>Ambiances.</b> Quatorze ambiances toutes prêtes, ou vos propres couleurs. Le contraste est vérifié pour vous, et les membres ne voient rien tant que vous n'avez pas publié.</td>
+    <td><b>Clair ou sombre.</b> Chaque membre choisit, l'identité de la communauté reste.</td>
+  </tr>
+</table>
+
+### Fait par des gens, pour des gens
+
+<table>
+  <tr>
+    <td width="50%"><img src="../img/vitrine/translate.webp" alt="La page de traduction : huit langues, leur avancement, les contributeurs"/></td>
+    <td width="50%"><img src="../img/vitrine/profile.webp" alt="Un profil de membre avec niveau, réputation et centres d'intérêt"/></td>
+  </tr>
+  <tr>
+    <td><b>Huit langues, traduites par la communauté.</b> Chaque langue tient dans un simple fichier texte : pas de compte, pas d'outil, aucune plateforme au milieu. <a href="https://nodyx.org/translate">L'état de chacune, en direct.</a></td>
+    <td><b>Des profils qui racontent quelque chose.</b> Niveau, réputation, centres d'intérêt, présence : un membre est plus qu'un pseudo.</td>
+  </tr>
+</table>
+
+### Et le reste de la maison
+
+- **Un serveur à la maison, sans ouvrir de port.** Le relais Nodyx, écrit en Rust, donne une adresse publique à votre instance (`votreclub.nodyx.org`) avec des connexions sortantes seulement. Le site, le chat et le vocal à quelques-uns fonctionnent derrière une box. Les grands salons vocaux passent par un serveur de diffusion (SFU) qui doit encore être joignable depuis Internet ; le faire fonctionner derrière une box aussi, c'est le prochain grand chantier.
+- **Un vocal qui tient la charge.** Les petits salons se parlent de pair à pair. Quand un salon grossit ou que quelqu'un partage son écran, il bascule sur le SFU de votre propre serveur : un seul envoi par personne qui parle, quelle que soit la taille de l'auditoire.
+- **Des jeux dans le salon vocal.** Les activités s'installent directement dans un salon, pour jouer ensemble sans raccrocher.
+- **Un réseau de communautés.** Chaque instance peut figurer dans un annuaire commun et être cherchée depuis les autres, sans aucun compte central.
+- **Streamer Hub.** Soundboard avec file d'attente des spectateurs, stream deck sur mobile, sept overlays OBS, chat Twitch intégré. [Le guide, en anglais](../en/STREAMER-HUB.md)
+- **Bibliothèque, musique, wiki, jardin à idées.** Cadres, badges et bannières partagés par les membres, une vitrine musicale publique, un wiki, et un jardin où les idées grandissent avec les votes de la communauté.
+- **Des outils de modération.** Rôles et grades, journal de modération, bannissement de comptes et d'adresses, et OctoGuard, un automodérateur optionnel (filtres de mots, de liens et d'inondation, messages de bienvenue, commandes maison), dont chaque réglage est désactivé par défaut.
+
+---
+
+## Chaque projet a son terrain
+
+Le paysage des outils communautaires n'est pas un champ de bataille. Chaque projet optimise autre chose, et le bon choix dépend de ce que vous construisez. Voici comment nous le dirions à un ami :
 
 | Projet | Ce qu'il fait le mieux | Quand le choisir |
 |---|---|---|
-| **Discord** | Voix + chat temps réel pour groupes fermés, mobile-first, 10+ ans d'écosystème de bots | Si votre communauté est privée et informelle |
-| **Matrix** ([Element](https://github.com/element-hq/element-web)) | Protocole fédéré avec des bridges vers presque tout (Discord, Slack, Telegram, IRC, ...) | Si l'interopérabilité est non négociable |
-| **[Discourse](https://github.com/discourse/discourse)** | Forums indexés, recherchables, bases de connaissances | Si la discussion async long-format est votre cœur |
-| **[Mattermost](https://github.com/mattermost/mattermost)** / **[Rocket.Chat](https://github.com/RocketChat/Rocket.Chat)** | Compliance entreprise, remplaçant Slack à grande échelle | Si vous avez une équipe achats |
-| **[Haven](https://github.com/ancsemi/Haven)** | Chat privacy-first, zéro cloud, clients natifs Windows/Linux/Android, zéro télémétrie | Si garder chaque octet sur votre propre machine compte avant tout |
-| **[Stoat](https://github.com/stoatchat/self-hosted)** (ex-Revolt) / **[Fluxer](https://github.com/fluxerapp/fluxer)** | UI proche de Discord, migration facile | Si vos membres connaissent déjà Discord |
-| **Lemmy** | Forums threadés style Reddit, fédéré | Si vous voulez une présence native dans le fédiverse |
-| **Nodyx** | Forum + chat + voix + canvas + constructeur de page d'accueil, en une seule installation auto-hébergée avec un relais P2P pour serveurs domestiques | Si vous voulez pleinement posséder une communauté multi-formats sur votre propre matériel |
+| **Discord** | Vocal et chat en temps réel pour des groupes fermés, pensé mobile, un immense écosystème de bots | Votre communauté est privée et informelle |
+| **Matrix** ([Element](https://github.com/element-hq/element-web)) | Un protocole fédéré avec des passerelles vers presque tout | L'interopérabilité n'est pas négociable |
+| **[Discourse](https://github.com/discourse/discourse)** | Des forums et bases de connaissances indexés et cherchables | La discussion de fond est votre cœur |
+| **[Mattermost](https://github.com/mattermost/mattermost)** / **[Rocket.Chat](https://github.com/RocketChat/Rocket.Chat)** | Conformité entreprise, remplaçant de Slack à grande échelle | Vous avez un service achats |
+| **[Haven](https://github.com/ancsemi/Haven)** | Chat centré sur la vie privée, clients natifs, aucune télémétrie | Chaque octet doit rester sur votre machine |
+| **[Stoat](https://github.com/stoatchat/self-hosted)** / **[Fluxer](https://github.com/fluxerapp/fluxer)** | Une interface à la Discord, migration facile | Vos membres connaissent déjà Discord |
+| **Lemmy** | Forums fédérés en fils, façon Reddit | Vous voulez une présence native dans le fédivers |
+| **Nodyx** | Forum, chat, vocal, canvas et page d'accueil en une installation, avec un relais pour les serveurs à la maison | Vous voulez posséder une communauté aux formats multiples, sur votre propre matériel |
 
-> Nodyx est **le seul projet** combinant tous ces formats en une seule installation, mais si vous n'avez besoin que d'un ou deux, un autre outil ci-dessus peut vous correspondre mieux.
->
-> [Lire notre prise honnête, avec les alternatives qu'on respecte →](https://nodyx.dev/why-nodyx)
-
-### Ce qu'il y a dans l'installation Nodyx
-
-- Forum indexé (URLs canoniques, JSON-LD, sitemap, friendly Google)
-- Chat temps réel avec réponses, épingles, réactions, unfurls
-- Salons vocaux P2P, zéro relais Big Tech
-- Canvas P2P collaboratif (whiteboard)
-- DataChannels WebRTC pour la frappe / les réactions instantanées
-- Support serveur domestique, sans redirection de ports, sans domaine requis
-- Annuaire fédéré de communautés + recherche globale inter-instances
-- Bibliothèque d'assets (cadres, badges, bannières, thèmes de profil)
-- Salles chuchotées éphémères
-- Connexion sans mot de passe (PWA ECDSA P-256, Nodyx Signet)
-- Jukebox collaboratif (file YouTube)
-- Calendrier d'événements (cartes OSM, RSVP, SEO)
-- **Constructeur de page d'accueil** avec 11 zones, drag & drop
-- **Boutique de widgets**, installer des widgets externes via .zip
-- **SDK Widget**, créer des widgets custom, sans framework
-- **OctoGuard**, auto-modération native (regex/word/link/emoji-flood, anti-ReDoS via `re2` Google), bot de bienvenue, commandes custom, mutes, webhook signé, entièrement paramétrable par l'admin, désactivé par défaut
-- **Streamer Hub**, intégration Twitch avec un Soundboard natif (tags ID3, queue viewers, commande chat `!ns`), un Stream Deck mobile multi-pages, des overlays OBS en browser source (alertes, objectifs, timers, tickers, classements, clips, soundboard) et des playlists audio avec scènes OBS dédiées
-- **Éditeur d'articles riche**, sommaire par ancre à la sélection, redimensionnement d'image aux poignées, blocs code/rendu protégés, colonnes, médias embarqués, le tout robuste au round-trip via le sanitizer
+Si vous n'avez besoin que d'un ou deux de ces formats, un autre outil du tableau vous ira peut-être mieux. [Notre avis honnête, alternatives comprises.](./WHY-NODYX.md)
 
 ---
 
-## Constructeur de page d'accueil + SDK Widget
+## Sécurité
 
-Nodyx est livré avec un **Constructeur de page d'accueil drag-and-drop** et un **SDK Widget** complet, deux fonctionnalités qu'aucune autre plateforme communautaire auto-hébergée ne propose.
+S'auto-héberger, c'est prendre en charge la sécurité de sa communauté. Nodyx est conçu pour rendre cette charge plus légère.
 
-### 11 zones de mise en page
-
-Placez des widgets n'importe où sur votre page d'accueil. Les positions disponibles sont :
-
-```
-banner          → bandeau d'annonce pleine largeur en haut
-hero            → section héro principale
-stats-bar       → compteurs communautaires (membres, en ligne, posts)
-main            → au-dessus du contenu principal
-sidebar         → colonne de droite (carte d'adhésion, etc.)
-half-1 / half-2 → grille 2 colonnes
-trio-1/2/3      → grille 3 colonnes
-footer-1/2/3    → colonnes de pied de page
-footer-bar      → bande de pied de page pleine largeur
-```
-
-### 4 widgets natifs (Phase 1)
-
-| Widget | Description |
+| Surface | Comment c'est traité |
 |---|---|
-| **Bannière Héro** | Héro animé avec variantes live/événement/nuit résolues côté serveur |
-| **Barre de stats** | Compteurs animés de membres, d'utilisateurs en ligne et de fils de discussion |
-| **Carte d'adhésion** | CTA pour les visiteurs, masquée pour les membres connectés |
-| **Bannière d'annonce** | Bandeau info/avertissement/erreur avec icône, refermable |
+| Mots de passe | Argon2id avec les paramètres de l'OWASP, anciens hachages bcrypt migrés sans rien demander |
+| Messages privés | Chiffrés de bout en bout (ECDH P-256 et AES-256-GCM). Les clés ne quittent jamais le navigateur, le serveur ne stocke que du chiffré |
+| Double authentification | Applications TOTP, ou Nodyx Signet, une application de connexion sans mot de passe (ECDSA P-256) |
+| Chaque entrée | Validée par un schéma, requêtes SQL paramétrées uniquement |
+| Chaque réponse | CSP, HSTS, protection contre l'encadrement, HTML assaini |
+| Limitation de débit | Calculée sur la vraie adresse du visiteur, derrière Cloudflare, Caddy ou un tunnel |
+| Sauvegardes | Prouvées chaque nuit par une restauration automatique, pas seulement copiées |
 
-### Boutique de widgets, installation en un clic
-
-N'importe quel développeur peut packager un widget en `.zip` et l'installer sur n'importe quelle instance Nodyx :
-
-```
-my-widget-1.0.0.zip
-├── manifest.json     ← id, label, version, schéma (champs de config)
-└── widget.iife.js    ← Web Component, isolé en Shadow DOM
-```
-
-Le panneau d'administration gère l'upload, la validation, l'extraction et l'activation. Pas de recompilation, pas de déploiement.
-
-### SDK Widget, créez le vôtre, zéro outil de build
-
-Les widgets sont des **Custom Elements** standard (Web Components). JavaScript pur, pas de React, pas de Vue, pas de npm.
-
-```javascript
-class MyWidget extends HTMLElement {
-  connectedCallback() { this._render() }
-
-  _render() {
-    var cfg = JSON.parse(this.dataset.config || '{}')
-    if (!this.shadowRoot) this.attachShadow({ mode: 'open' })
-    this.shadowRoot.innerHTML = `<div>Bonjour ${cfg.title}</div>`
-  }
-}
-customElements.define('nodyx-widget-my-widget', MyWidget)
-```
-
-→ **[Guide complet pas à pas pour non-développeurs → nodyx.dev/create-widget](https://nodyx.dev/create-widget)**
+Vous avez trouvé une faille ? **N'ouvrez pas de ticket public, s'il vous plaît.** Écrivez à `security@nodyx.org` ou passez par les [alertes privées de GitHub](https://github.com/Pokled/nodyx/security/advisories/new). Réponse sous 48 heures, évaluation sous 7 jours, et votre nom dans les notes de version si vous le souhaitez. [La politique de sécurité complète](https://github.com/Pokled/nodyx/blob/main/.github/SECURITY.md)
 
 ---
 
-## Streamer Hub, tout ton live depuis Nodyx
+## Installer
 
-Nodyx embarque un **Streamer Hub** complet (v2.5 à v2.7) : un Soundboard natif, un Stream Deck mobile, des overlays OBS en browser source et l'intégration Twitch. Tu démarres OBS, puis tu n'y touches presque plus. Pas trois SaaS à câbler ensemble, pas de bots mensuels, ta communauté possède tout le setup.
-
-### Soundboard
-
-Le streamer upload ses sons, les viewers aident à remplir la queue, OBS les joue.
-
-- Upload drag-and-drop (mp3, ogg, wav, flac), **tags ID3** automatiques (titre, artiste, durée, cover embarquée)
-- Réglages par piste : visibilité (privé / public), volume par défaut (0 à 2x), fade in/out, loop, indicateur royalty-free
-- Déclenché depuis le **Stream Deck mobile**, le **chat Twitch**, ou l'overlay OBS lui-même
-- **Page viewers publique** (`/soundboard`, sans login) : parcourir la bibliothèque, preview au survol, ajouter un son à la queue
-- **Queue viewers** Redis FIFO (max 50, rate-limit et cap par IP, déduplication globale), toggle admin + skip + tout vider, anti-raid par conception
-- Commande chat **`!ns <nom>`** (alias `!nextsound`) avec fuzzy matcher et détection d'ambiguïté : si deux sons sont trop proches, le bot demande au viewer de préciser au lieu de deviner mal
-
-### Stream Deck, mobile et multi-pages
-
-- Jusqu'à **8 pages logiques** (sons, commandes, modération...) avec couleurs d'accent, rename inline, drag-to-reorder
-- Actions : `play_audio`, `stop_audio`, `pause_audio`, `navigate_page`, plus alertes, changements de scène et commandes chat
-- Dock de pages flottant sur mobile (haptique, safe-area iOS), rétrocompatible avec les decks V1 mono-page (sans migration)
-- Modal « Envoyer au Deck » : rattacher un son à un bouton depuis le tab Soundboard, mini-grille pour choisir une case libre, auto-placement
-
-### Overlays OBS, browser sources
-
-Sept types d'overlay, chacun une URL browser source transparente à déposer dans OBS :
-
-```
-alert · goal · timer · ticker · leaderboard · clips · soundboard
-```
-
-- Fade et cross-fade Web Audio, OSD configurable (4 coins ou caché)
-- **Playlists audio** : listes nommées (Dev, Discussion...), chacune avec son URL d'overlay OBS dédiée, pilotable depuis le Deck
-- **Compositeur de scènes OBS** : un éditeur visuel façon OBS pour placer overlays et playlists par scène, avec création inline
-
----
-
-## La Stack P2P, 100% Rust écrit à la main
-
-C'est là que Nodyx va plus loin que quiconque.
-
-### nodyx-turn, serveur STUN/TURN en Rust *(remplace coturn)*
-
-coturn est le standard de l'industrie, un serveur C mature utilisé par Signal, Jitsi, Matrix.
-Nous l'avons remplacé par un **binaire Rust de 2,9 Mo** qui fait exactement ce dont Nodyx a besoin. Rien de plus.
-
-```
-RFC 5389 (STUN) + RFC 5766 (TURN) + RFC 6062 (TURN-over-TCP)
-Identifiants basés sur le temps HMAC-SHA1 (username={expires}:{userId})
-MESSAGE-INTEGRITY sur toutes les réponses (RFC 5389 §10.3), compatible Firefox/Chrome
-Limitation de débit + quotas d'allocation (MAX_LIFETIME=300s) + carte de bannissement
-Runtime async tokio, UDP:3478 + TCP:3478 (contournement VPN/pare-feu)
-Zéro dépendance coturn en production
-```
-
-### nodyx-relay, tunnel TCP P2P en Rust *(sans domaine, sans ports ouverts)*
-
-Un Raspberry Pi sous votre bureau. Sans domaine. Sans redirection de ports sur le routeur. Sans compte Cloudflare.
-Faites tourner Nodyx quand même.
-
-```
-nodyx-relay server  →  écoute TCP:7443 + HTTP:7001
-nodyx-relay client  →  tunnel TCP persistant → expose le port local 80
-```
-
-- Reconnexion automatique avec backoff exponentiel (1s → 30s max)
-- Authentification JWT par instance
-- Routage par slug : `votreclub.nodyx.org` → proxifié vers le Pi derrière votre routeur
-- Validé sur un vrai Raspberry Pi 4 sans aucun port ouvert ✅
-
-### DataChannels WebRTC, P2P sans le serveur
-
-Messages entre pairs qui ne passent jamais par le serveur.
-
-- **Indicateurs de frappe instantanés**, < 5ms de latence locale (vs 80-200ms via serveur)
-- **Réactions emoji optimistes**, apparaissent instantanément, le serveur confirme en arrière-plan
-- **Transfert de fichiers P2P**, assets partagés directement entre pairs
-- **Fallback élégant**, si le DataChannel est indisponible (NAT strict), Socket.IO prend le relais en transparence
-
-### NodyxCanvas, Tableau blanc collaboratif (v2.2)
-
-<div align="center">
-  <img src="../img/Nodyx_canvas_alternative_Mural.png" alt="NodyxCanvas, tableau blanc collaboratif" width="860"/>
-</div>
-
-Dessinez, annotez et construisez ensemble en temps réel, directement dans les salons vocaux.
-Synchronisé via CRDT Socket.IO. Chaque opération est persistante (snapshot PostgreSQL JSONB).
-
-```
-CRDT Last-Write-Wins par élément (UUID + timestamp)
-canvas:op / canvas:clear / canvas:cursor / canvas:chat  →  Socket.IO
-Curseurs conscients de la voix : le curseur d'un pair pulse quand il parle
-Panneau de participants en temps réel avec outil actif + avatar
-Chat propre au tableau (indépendant du chat du salon vocal)
-```
-
-**Outils (v2.2) :**
-
-| Outil | Touche | Description |
-|---|---|---|
-| Sélection | V | Déplacer + redimensionner avec 8 poignées (coins + points médians) |
-| Stylo | P | Dessin à main levée, couleur, largeur, opacité |
-| Texte | T | Texte inline riche, gras/italique/souligné/barré, alignement, police, taille |
-| Post-it | N | Note autocollante, 8 couleurs, multiligne |
-| Rect / Cercle | R / C | Remplissage + contour avec couleurs et largeur indépendants |
-| Forme | S | Formes avancées, triangle, losange, étoile, hexagone, nuage |
-| Flèche | A | Flèches stylisées, pleine/tiretée/pointillée, 3 types de pointe |
-| Connecteur | X | Connecteurs intelligents, droit/bézier/coudé, pointes début+fin indépendantes |
-| Image | I | Glisser-déposer ou sélecteur de fichier → uploadé dans `/assets`, rendu sur le canvas |
-| Cadre | F | Section nommée, étiquette + bordure tiretée, regroupe les éléments visuellement |
-| Gomme | E | Gomme ponctuelle |
-
-**Fonctionnalités du canvas :**
-- Annuler / Rétablir, pile de 50 opérations par session, Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z
-- Aimantation à la grille, grille monde de 28px, activable (G)
-- Zoom, Ctrl+Molette, pincement, ou boutons de la barre d'outils (5% → 1000%)
-- Panoramique, Espace+glisser ou glisser avec le bouton central
-- Barre de bas de page, % de zoom, bascule grille, bascule aimantation
-- Exporter PNG, télécharge le canvas complet, publie un récapitulatif dans le salon de chat
-
----
-
-## Captures d'écran
-
-<div align="center"><sub>Communauté · Constructeur · Admin · Fonctionnalités, tout tourne sur une seule installation</sub></div>
-
-<br/>
-
-<div align="center"><b>,  Expérience communautaire , </b></div>
-
-<table>
-  <tr>
-    <td align="center"><b>Page d'accueil, Constructeur de grille</b></td>
-    <td align="center"><b>Forum</b></td>
-  </tr>
-  <tr>
-    <td><img src="../img/nodyx_home_page.png" alt="Page d'accueil avec widgets du Constructeur de grille" width="460"/></td>
-    <td><img src="../img/Nodyx_Forum.png" alt="Forum, catégories, fils, éditeur riche" width="460"/></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Chat en temps réel</b></td>
-    <td align="center"><b>Salons vocaux, WebRTC P2P</b></td>
-  </tr>
-  <tr>
-    <td><img src="../img/Nodyx_chat.png" alt="Chat texte en temps réel" width="460"/></td>
-    <td><img src="../img/Vocal_Nodyx_salon.png" alt="Salon vocal avec maillage P2P" width="460"/></td>
-  </tr>
-</table>
-
-<br/>
-
-<div align="center">
-
-<b>,  Constructeur de page d'accueil , </b>
-
-<img src="../img/Nodyx_grid_builder_home_page_website.png" alt="Constructeur de page d'accueil, drag & drop, 11 zones, aperçu en direct" width="940"/>
-
-<sub>Éditeur de grille drag-and-drop, 11 zones de mise en page, aperçu en direct, règles d'audience par widget et planification</sub>
-
-</div>
-
-<br/>
-
-<table>
-  <tr>
-    <td align="center"><b>Boutique de widgets, installation via .zip</b></td>
-    <td align="center"><b>Gestion des modules</b></td>
-  </tr>
-  <tr>
-    <td><img src="../img/widget_store_nodyx.png" alt="Boutique de widgets, installation .zip en un clic" width="460"/></td>
-    <td><img src="../img/Nodyx_gestion_des_modules.png" alt="Gestion des modules, 26 modules activables" width="460"/></td>
-  </tr>
-</table>
-
-<br/>
-
-<div align="center"><b>,  Fonctionnalités , </b></div>
-
-<table>
-  <tr>
-    <td align="center"><b>Recherche inter-instances</b></td>
-    <td align="center"><b>Sondages, Forum & Chat</b></td>
-  </tr>
-  <tr>
-    <td><img src="../img/Nodyx_Moteur_de_recherche_inter_reseau.png" alt="Moteur de recherche fédéré inter-instances" width="460"/></td>
-    <td><img src="../img/Nodyx_sondage.png" alt="Sondages avec résultats en temps réel" width="460"/></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Wiki</b></td>
-    <td align="center"><b>Bibliothèque d'assets</b></td>
-  </tr>
-  <tr>
-    <td><img src="../img/Nodyx_wiki.png" alt="Wiki communautaire" width="460"/></td>
-    <td><img src="../img/Asset_nodyx.png" alt="Bibliothèque d'assets, cadres, badges, bannières" width="460"/></td>
-  </tr>
-</table>
-
----
-
-## Démarrage rapide
-
-### Prérequis
-
-L'installateur gère tout automatiquement. Votre système n'a besoin que de **`curl`** et **`git`** pour démarrer.
-
-```bash
-# Ubuntu / Debian
-apt-get install -y git curl
-```
-
-**Les limites mémoire PM2 sont automatiquement ajustées à votre machine :**
-
-| RAM totale | nodyx-core | nodyx-frontend | Swap auto | Fonctionne sur |
-|---|---|---|---|---|
-| < 1,5 Go | 256 Mo | 192 Mo | 2 Go créés | Raspberry Pi 1 Go |
-| 1,5 - 3 Go | 384 Mo | 256 Mo | 1 Go si besoin | RPi 4 / petit VPS |
-| ≥ 3 Go | 512 Mo | 512 Mo | 1 Go si besoin | VPS standard ⭐ |
-
-> Raspberry Pi : utilisez un **OS 64 bits** (Raspberry Pi OS 64-bit ou Ubuntu ARM64). Le 32 bits n'est pas pris en charge.
-
-### Installation en un clic
+Il vous faut une machine sous **Ubuntu 22.04 / 24.04** ou **Debian 11 / 12 / 13** (64 bits, ARM64 compris : un Raspberry Pi 4 ou 5 convient), et `curl`.
 
 ```bash
 curl -fsSL https://nodyx.org/install.sh | bash
 ```
 
-Ou clonez d'abord :
+L'installeur vous demande comment votre instance sera jointe :
 
-```bash
-git clone https://github.com/Pokled/Nodyx.git && cd Nodyx && sudo bash install.sh
-```
-
-L'installateur propose **trois modes réseau** :
-
-| Mode | Prérequis | Résultat |
+| Mode | Ce qu'il vous faut | Ce que vous obtenez |
 |---|---|---|
-| **Nodyx Relay** ⭐ | Rien, TCP sortant uniquement | `votreclub.nodyx.org` en quelques minutes |
-| **Ports ouverts** | Ports 80 + 443, domaine ou IP | HTTPS Let's Encrypt, contrôle total |
-| **Cloudflare Tunnel** | Compte CF + domaine perso | Votre domaine personnalisé, sans ports ouverts |
+| **Relais Nodyx** (recommandé) | Rien, des connexions sortantes seulement | `votreclub.nodyx.org`, même derrière une box |
+| **Votre propre domaine** | Un nom de domaine et les ports 80/443 ouverts | HTTPS avec Let's Encrypt, contrôle total |
+| **sslip.io** | Les ports 80/443 ouverts, sans domaine | Une adresse automatique et gratuite |
 
-> **Nodyx Relay** est la valeur par défaut recommandée, fonctionne sur un Raspberry Pi derrière un routeur domestique.
-> Sans domaine. Sans redirection de ports. Sans compte cloud. Lancez simplement le script.
+Déjà derrière un tunnel ? `install_tunnel.sh` gère **Cloudflare Tunnel**, **Pangolin** et les tunnels maison (frp, rathole, votre propre proxy inverse).
 
-Installe automatiquement : **Node.js 22, PostgreSQL 16, Redis 7, Caddy (HTTPS), PM2, nodyx-turn** (Rust STUN/TURN).  
-Génère les secrets, exécute toutes les migrations de la base de données, crée votre compte administrateur. **Sans Docker. Sans configuration manuelle.**
+L'installeur met en place Node.js, PostgreSQL, Redis, Caddy, PM2 et le relais vocal en Rust, génère tous les secrets, applique les migrations de la base et crée votre compte administrateur. Il sait aussi travailler sans surveillance (`--yes`, `--network=relay`, `--admin-password-file`).
 
-> Pris en charge : Ubuntu 22.04 / 24.04, Debian 11 / 12 / 13.
-
-→ **[Guide d'installation complet (EN)](../install.md)**  
-→ **[Guide d'installation complet (FR)](./INSTALL.md)**
-
-### Mise à jour d'une instance existante
+Une fois installé :
 
 ```bash
-cd /var/www/nexus && git pull && \
-  cd nodyx-core && npm run build && sudo -u nodyx pm2 restart nodyx-core && \
-  cd ../nodyx-frontend && npm run build && sudo -u nodyx pm2 restart nodyx-frontend
+sudo nodyx-update    # passer à la dernière version, base sauvegardée d'abord
+sudo nodyx-doctor    # vérifier que chaque service va bien
+sudo nodyx-recover   # retrouver l'accès à un compte administrateur perdu
 ```
 
-Les migrations de base de données sont appliquées automatiquement au démarrage, pas de SQL manuel.
+[Le guide d'installation complet](./INSTALL.md) · [Installer derrière un tunnel](./INSTALL-TUNNEL.md)
 
 ---
 
-## Architecture
-
-### Structure du dépôt
-
-```
-nodyx/
-├── nodyx-core/          → API REST Fastify v5 + TypeScript, Socket.IO, migrations DB
-├── nodyx-frontend/      → SPA SvelteKit 5 + Tailwind v4 (SSR + hydratation client)
-├── nodyx-p2p/           → Workspace Rust : nodyx-relay (tunnel TCP) + nexus-turn (STUN/TURN)
-├── nodyx-authenticator/ → Nodyx Signet, PWA auth sans mot de passe ECDSA P-256 (SvelteKit 5)
-├── nodyx-hub/           → Olympus Hub, tableau de bord admin interne (SvelteKit 5)
-├── nodyx-docs/          → Site de documentation nodyx.dev (SvelteKit 5)
-├── docs/                → Docs Markdown (EN + FR), servies par nodyx-docs
-├── install.sh           → Installateur en un clic (Node + PG + Redis + Caddy + PM2, sans Docker)
-├── ecosystem.config.js  → Config des processus PM2 (production)
-└── docker-compose.yml   → Développement local uniquement, non utilisé en production
-```
-
-### Fédération, comment ça fonctionne
-
-Chaque instance Nodyx fait tourner un scheduler **Protocole Gossip** qui pinge périodiquement l'annuaire central (`nodyx.org/api/directory`). Les instances partagent leurs métadonnées publiques (nom, slug, URL, nombre de membres) et sont découvrables via la page `/discover` sur n'importe quelle instance. Les événements (calendrier) se fédèrent entre instances via le même mécanisme gossip. Il n'y a aucune dépendance à ActivityPub, le protocole est intentionnellement minimal et autonome.
-
-### Diagramme d'exécution
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Votre Navigateur                        │
-└──────────────┬──────────────────────────────┬───────────────┘
-               │ HTTP / WebSocket             │ WebRTC P2P
-               ▼                             ▼
-┌──────────────────────────┐    ┌────────────────────────────┐
-│   nodyx-core (Fastify)   │    │  Connexion directe entre   │
-│   nodyx-frontend (Svelte)│    │  pairs, DataChannels +    │
-│   PostgreSQL + Redis     │    │  Canvas + Voix + Partage   │
-└──────────────────────────┘    └────────────────────────────┘
-               │                             │
-        ┌──────┴──────┐               ┌──────┴──────┐
-        │ nodyx-relay │               │ nodyx-turn  │
-        │ (Rust TCP)  │               │ (Rust TURN) │
-        │ serveur dom.│               │ bypass NAT  │
-        └─────────────┘               └─────────────┘
-```
+## Sous le capot
 
 | Couche | Technologie |
 |---|---|
-| API | TypeScript + Fastify v5, `nodyx-core/` |
-| Base de données | PostgreSQL 16 · 53 migrations, automatiques au démarrage |
-| Cache / Sessions | Redis 7, sessions JWT, présence, limitation de débit |
-| Recherche plein texte | PostgreSQL FTS (tsvector + GIN), inter-instances via Gossip |
-| Frontend | SvelteKit 5 + Tailwind v4, `nodyx-frontend/` |
-| Éditeur | TipTap (WYSIWYG) |
-| Temps réel | Socket.IO (polling en premier, upgrade WebSocket) |
-| Voix | Maillage P2P WebRTC, sans relais audio central |
-| Relais TURN | **nodyx-turn**, Rust 2,9 Mo, remplace coturn |
-| Relais P2P | **nodyx-relay**, tunnel TCP Rust, fonctionne sur serveurs domestiques |
-| Canvas collaboratif | **NodyxCanvas**, CRDT LWW, sync Socket.IO, 11 outils, poignées de redimensionnement, annuler/rétablir |
-| Page d'accueil | **Constructeur de page d'accueil**, 11 zones, drag & drop, règles de visibilité |
-| Widgets | **Boutique de widgets**, installation .zip + **SDK Widget** (Web Components) |
-| Auth sans mot de passe | **Nodyx Signet**, ECDSA P-256 PWA, `nodyx-authenticator/` |
+| API | TypeScript, Fastify 5, Socket.IO (`nodyx-core/`) |
+| Application web | SvelteKit 5, Tailwind 4, éditeur TipTap (`nodyx-frontend/`) |
+| Données | PostgreSQL 16 avec recherche plein texte, Redis 7 pour les sessions et la présence, 125 migrations appliquées automatiquement au démarrage |
+| Vocal | WebRTC de pair à pair pour les petits salons, un SFU sur votre serveur pour les grands et le partage d'écran |
+| Réseau | `nodyx-relay` (serveurs à la maison sans port ouvert) et `nodyx-turn` (STUN/TURN), tous deux en Rust (`nodyx-p2p/`) |
+| Connexion sans mot de passe | Nodyx Signet, une application ECDSA P-256 (`nodyx-authenticator/`) |
+| Processus et proxy | PM2 sous un utilisateur `nodyx` dédié, Caddy avec HTTPS automatique |
+
+<details>
+<summary>L'organisation du dépôt</summary>
+
+```
+nodyx/
+├── nodyx-core/          API, Socket.IO, migrations de la base
+├── nodyx-frontend/      application web SvelteKit
+├── nodyx-p2p/           Rust : relais et serveur TURN
+├── nodyx-authenticator/ Nodyx Signet, connexion sans mot de passe
+├── nodyx-docs/          nodyx.dev, le site de documentation
+├── nodyx-landing/       start.nodyx.org
+├── docs/                documentation Markdown (EN, FR, ES)
+├── install.sh           installeur (relais, domaine propre, sslip.io)
+└── install_tunnel.sh    installeur derrière Cloudflare Tunnel, Pangolin ou votre tunnel
+```
+
+</details>
+
+<details>
+<summary>Comment les instances se trouvent</summary>
+
+Chaque instance peut s'inscrire dans un annuaire commun et y partager régulièrement sa carte publique : nom, adresse, nombre de membres. La page `/discover` de n'importe quelle instance cherche dans les sujets et les événements publics des autres. Il n'y a pas de compte global ni de dépendance à ActivityPub : le protocole est volontairement petit, et une instance qui quitte l'annuaire continue de fonctionner exactement pareil.
+
+</details>
 
 ---
 
-## Ce qui est fait. Ce qui arrive.
+## Où ça va
 
-<details>
-<summary><b>v0.1 → v1.3, Fondations</b></summary>
+Nodyx est né le 18 février 2026 et a livré douze versions depuis : les fondations forum, chat et vocal, les messages chiffrés de bout en bout, le constructeur de page d'accueil et sa place de marché d'extensions, les jeux dans les salons vocaux, le Streamer Hub, les sauvegardes vérifiées, le SFU en Rust pour le vocal et le partage d'écran. La prochaine grande étape : faire fonctionner les grands salons vocaux depuis un serveur à la maison, pour qu'aucun administrateur de Nodyx n'ait jamais à ouvrir un port.
 
-| Fonctionnalité | Version |
-|---|---|
-| Forum (catégories, fils, posts, réactions, tags) | v0.1 |
-| Recherche plein texte (PostgreSQL FTS) | v0.1 |
-| Chat en temps réel (Socket.IO) | v0.1 |
-| Salons vocaux (WebRTC P2P) | v0.1 |
-| Partage d'écran + enregistrement de clip | v0.2 |
-| Panneau d'administration | v0.2 |
-| SEO (sitemap, RSS, JSON-LD) | v0.3 |
-| Installateur en un clic | v0.4 |
-| Annuaire d'instances + DNS automatique | v0.5 |
-| nodyx-relay, tunnel TCP P2P en Rust | v0.5 |
-| Bibliothèque d'assets communautaires (cadres, bannières, badges) | v0.6 |
-| Feature Garden, vote communautaire | v0.6 |
-| Annuaire d'assets fédéré (partage inter-instances) | v0.7 |
-| Chuchotements, salles de chat chiffrées éphémères (TTL 1h) | v0.7 |
-| DataChannels P2P, frappe instantanée, réactions optimistes | v0.8 |
-| nodyx-turn, Rust STUN/TURN remplaçant coturn | v0.9 |
-| NodyxCanvas, tableau blanc P2P collaboratif | v0.9 |
-| Système de thèmes de profil, 6 préréglages, moteur CSS par utilisateur à l'échelle de l'app | v1.0 |
-| Interface responsive mobile | v1.0 |
-| Chat, Répondre/citer, messages épinglés, aperçus de liens, badge @mention | v1.1 |
-| Présence, Statut personnalisé + liste des membres hors ligne | v1.1 |
-| Messages directs (DM), conversations privées 1:1 | v1.2 |
-| Sondages, dans le chat et le forum, 3 types, résultats en temps réel | v1.2 |
-| Système de bannissement, IP ban, email ban, application multicouche | v1.2 |
-| nodyx-turn, TURN-over-TCP (RFC 6062) | v1.3 |
-| Voix, Basculement vers le relais + ajustement Opus | v1.3 |
-
-</details>
-
-<details>
-<summary><b>v1.4 → v1.9, Sécurité & Finitions</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| URLs de fils par slug + SEO complet (canonical, OG, JSON-LD, sitemap) | v1.4 |
-| Slugs de catégories + sous-catégories | v1.5 |
-| Recherche globale, index FTS inter-instances, UI /discover | v1.5 |
-| Calendrier d'événements, CRUD, RSVP, cartes OSM, image de couverture, rich snippets | v1.6 |
-| Protocole Gossip, fédération d'événements entre instances | v1.6 |
-| Nodyx Signet, PWA d'authentification sans mot de passe ECDSA P-256 | v1.7 |
-| Inscription QR + UI Optimiste + Centre de notifications | v1.7 |
-| Tâches / Kanban, tableaux par communauté, drag & drop, échéances | v1.8 |
-| Alerte de mise à jour + affichage de la version de l'instance | v1.8 |
-| Audit de sécurité paranoïaque complet, 38 vulnérabilités corrigées | v1.8.2 |
-| Honeypot, 25+ chemins de scanner piégés ; tarpit ; géolocalisation ; journalisation DB | v1.9.0 |
-| fail2ban, 5 jails : SSH, force brute, honeypot (7j), liste noire permanente | v1.9.0 |
-| Argon2id, hashage de mots de passe OWASP 2026 | v1.9.0 |
-| 2FA TOTP (RFC 6238) + 2FA via Nodyx Signet | v1.9.1 |
-| Pièges de collecte de credentials + fichiers Canary + empreinte Canvas | v1.9.2 |
-| Slowloris inverse, streaming octet par octet brûle les threads de l'attaquant 45-90s | v1.9.2 |
-| Tableau de bord de sécurité Olympus Hub | v1.9.2 |
-| Isolation des processus, tous les processus sous l'utilisateur système `nodyx` | v1.9.4 |
-| 181 tests Node.js + 18 tests unitaires Rust + pipeline CI | v1.9.4 |
-| Profil Vivant, Bannière générative (Lissajous/FNV-1a), Anneaux de réputation (SVG animé), Carte d'activité | v1.9.5 |
-| Héro parallaxe, arcs d'avatar rotatifs, Chronologie, `/reputation` formules transparentes | v1.9.5 |
-| Refonte du forum, design plat, zéro radius, contenu pleine largeur | v1.9.5 |
-
-</details>
-
-<details>
-<summary><b>v2.0, Communications Privées & Souveraines 🔒</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **Chiffrement E2E des DM**, ECDH P-256 + AES-256-GCM, clé privée ne quittant jamais le navigateur (IndexedDB non extractible) | v2.0 |
-| **Couche ESY Barbare**, obfuscation par permutation d'octets par instance au-dessus d'AES-GCM, le serveur ne voit qu'un chiffré opaque | v2.0 |
-| **Bouclier E2E**, indicateur en direct dans l'en-tête DM (pulse vert = actif, orange = partiel), info-bulle empreinte ESY | v2.0 |
-| **Animation Barbarize**, l'expéditeur voit le texte obfusqué pendant le chiffrement, le destinataire le voit se déchiffrer en temps réel | v2.0 |
-| **Édition de messages DM**, édition inline avec rechiffrement pour les messages E2E, propagation temps réel via socket | v2.0 |
-| **Suppression de messages DM**, soft-delete temps réel propagé à tous les participants instantanément | v2.0 |
-| **Refonte pleine largeur des DM**, layout splitté, sidebar glassmorphisme, bulles style iMessage, messages groupés | v2.0 |
-| **AudioContext partagé**, contexte unique pour tous les VAD pairs (correction limite 6 contextes Chrome) | v2.0 |
-
-</details>
-
-<details>
-<summary><b>v2.1, Constructeur de page d'accueil + SDK Widget 🧩</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **Constructeur de page d'accueil**, admin drag-and-drop, 11 zones de mise en page (banner, hero, stats-bar, main, sidebar, half ×2, trio ×3, footer ×4) | v2.1 |
-| **Registre de plugins**, chaque widget natif est un fichier autonome, zéro changement core pour en ajouter de nouveaux | v2.1 |
-| **4 widgets natifs Phase 1**, Bannière Héro (variantes live/événement/nuit), Barre de stats (compteurs animés), Carte d'adhésion, Bannière d'annonce | v2.1 |
-| **Règles de visibilité**, audience par widget (tous / visiteurs / membres) + dates de début/fin planifiées | v2.1 |
-| **Boutique de widgets**, installation de widgets externes via upload `.zip` (barre de progression XHR, validation en 4 étapes, liste blanche d'extraction) | v2.1 |
-| **Chargeur de widgets dynamique**, Web Components chargés à l'exécution, sans recompilation, sans déploiement | v2.1 |
-| **SDK Widget**, Custom Elements JS pur (Shadow DOM), schéma `manifest.json` → champs de config auto-générés dans le constructeur | v2.1 |
-| **Widget démo : Lecteur Vidéo**, YouTube / Vimeo / MP4 avec aperçu en direct, visualiseur de source, installation en un clic | v2.1 |
-| **nodyx.dev/create-widget**, guide pas à pas pour non-développeurs (7 étapes, EN) | v2.1 |
-
-</details>
-
-<details>
-<summary><b>v2.2, Mise à jour majeure NodyxCanvas 🎨</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **Refonte UI Canvas**, 4 composants dédiés : CanvasLeftToolbar, CanvasTopBar (contextuel par outil), CanvasBottomBar, CanvasRightPanel | v2.2 |
-| **Annuler / Rétablir**, pile de 50 opérations, Ctrl+Z/Y/Shift+Z, boutons avec état actif/désactivé. Timestamp CRDT LWW corrigé pour que l'annulation s'applique toujours | v2.2 |
-| **Aimantation à la grille**, grille monde de 28px, bascule (touche G), superposition visuelle de la grille | v2.2 |
-| **Texte riche**, gras, italique, souligné, barré, alignement (gauche/centre/droite), 3 familles de polices (sans/serif/mono), 12 tailles de police | v2.2 |
-| **Formes avancées**, triangle, losange, étoile, hexagone, nuage, rendus via Path2D, remplissage + contour + étiquette | v2.2 |
-| **Connecteurs**, lignes droites / bézier / coudées, pointes début & fin indépendantes (flèche/point/aucune), style plein/tiret/pointillé, création en 2 clics | v2.2 |
-| **Cadres / Sections**, régions rectangulaires nommées avec bordure tiretée, étiquette rendue au-dessus, saisie du nom inline à la création | v2.2 |
-| **Insertion d'images**, glisser-déposer depuis le bureau ou sélecteur de fichier, uploadé dans `/api/v1/assets`, mis en cache et rendu sur le canvas, dimensionnement proportionnel | v2.2 |
-| **Poignées de redimensionnement**, 8 poignées (coins + points médians) sur les éléments rect/cercle/forme/cadre/image/post-it sélectionnés, aperçu en direct, respecte l'aimantation | v2.2 |
-| **Vrais avatars utilisateurs**, le panneau de participants affiche les vrais avatars (avec initiales en fallback) et leur outil actif | v2.2 |
-| **Chat du tableau**, chat temps réel limité au tableau canvas, indépendant du chat du salon vocal | v2.2 |
-| **Raccourcis clavier complets**, V P T N R C S A X I F E (outils) + G (grille) + Ctrl+Z/Y/Shift+Z (annuler/rétablir) + Suppr + Échap | v2.2 |
-| **Rendu Portal**, canvas monté sur `document.body` via action portal, contourne les ancêtres CSS `transform` qui cassent `position:fixed` | v2.2 |
-
-</details>
-
-<details>
-<summary><b>v2.3, Lecteur Média Universel + Fusion du Catalogue Builder 🎬</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **Lecteur Média Universel**, auto-détection YouTube, Vimeo, Dailymotion, Twitch (live / VOD / clip), SoundCloud, Spotify, plus les fichiers `.mp4` / `.webm` / `.mp3` hébergés. Un seul champ URL, plateforme inférée au rendu | v2.3 |
-| **Fusion du catalogue Builder**, les widgets installés apparaissent dans le picker du Grid Builder à côté des plugins natifs | v2.3 |
-| **Durcissement de l'installeur tunnel (#23)**, 12 correctifs mode Pangolin : réécriture de l'adresse Caddy, regen atomique du Caddyfile au `--repair`, règles UFW RFC1918, garde-fou faux-positif du doctor | v2.3 |
-| **Réécriture de la recherche docs**, index par titres avec ancres deep-link, sommaire scrollspy, passe de correction des slugs | v2.3 |
-| **Posture Why-Nodyx**, page de positionnement listant les alternatives (Matrix, Stoat, Fluxer, Haven...), cadre « silos vs liberté, pas Nodyx vs X » | v2.3 |
-| **i18n**, traductions allemand (`de.json`) + espagnol (`es.json`), relecture native | v2.3 |
-| **Nodyx Stars**, système de reconnaissance des contributeurs externes (CONTRIBUTORS.md public, bloc avatars dans le README) | v2.3 |
-
-</details>
-
-<details>
-<summary><b>v2.4, Système de Sauvegarde + Mode Maintenance Live 💾</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **UI de sauvegarde admin**, page `/admin/backups` avec indicateur de stockage, table d'archives, actions par ligne Télécharger / Vérifier / Restaurer / Supprimer | v2.4 |
-| **Créer une sauvegarde**, `pg_dump --format=custom --compress=9` + `tar`, checksum SHA-256, manifest. Inclusion optionnelle des fichiers uploadés | v2.4 |
-| **Restaurer avec filet**, `pg_restore --single-transaction` atomique, snapshot pré-restauration protégé 24h (rollback en un clic), confirmation par slug + compte à rebours | v2.4 |
-| **Dry-run**, vérifier checksum + compat de version + structure tar sans toucher à la DB ni au filesystem | v2.4 |
-| **Journal d'audit**, chaque action sensible loggée avec utilisateur + IP + user-agent, page dédiée `/admin/backups/audit` | v2.4 |
-| **Mode Maintenance Live**, flag Redis pendant create/restore, hook global qui renvoie 503 sur les écritures (les lectures et l'admin restent ouverts), bannière sticky, auto-clear avec ceinture de sécurité | v2.4 |
-| **Tables système exclues du dump**, une restauration ne peut pas effacer son propre filet (découvert en prod, voir « The Yannick Story » dans le CHANGELOG) | v2.4 |
-| **13 tests vitest**, invariants du service (path traversal, refus de version, bypass protégé), 194 au total, 0 régression | v2.4 |
-
-</details>
-
-<details>
-<summary><b>v2.5, Streamer Hub Phase 2 : chat Twitch ↔ Nodyx unifié 💬</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **Chat bidirectionnel temps réel**, pont entre une instance Nodyx et le chat Twitch du streamer, 100% EventSub + Helix, zéro IRC. Vérifié en prod (277 messages pendant la session test) | v2.5 |
-| **Entrant (Twitch → Nodyx)**, EventSub `channel.chat.message`, channel `#twitch-chat` auto-créé, chaque message mappé à un author Nodyx (résolu via `twitch_id` ou placeholder) | v2.5 |
-| **Sortant (Nodyx → Twitch)**, les membres qui écrivent dans `#twitch-chat` sont relayés via Helix, préfixe `[username]` pour la transparence, uniquement pendant une session live | v2.5 |
-| **Queue anti rate-limit**, sur 429 Twitch le message est enqueué dans un sorted set Redis, worker qui dépile par batch avec backoff exponentiel, alerte audit en cas d'overflow | v2.5 |
-| **Cycle de vie des sessions**, `stream.online` / `stream.offline` suivis dans `streamer_sessions` (idempotent), gating du pont sortant | v2.5 |
-| **Emotes & badges**, emotes Twitch natives, BTTV / FFZ / 7TV fetchées et cachées (24h), badges globaux + channel via Helix, dégradation gracieuse | v2.5 |
-| **65 nouveaux tests**, pont, emotes, lifecycle, queue sortante, badges. Suite complète 269/269 verts | v2.5 |
-
-</details>
-
-<details>
-<summary><b>v2.6, OctoGuard Phase 1 : auto-modération native 🐙</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **Pipeline auto-mod OctoGuard**, fail-open 50 ms, 5 types de matchers : substring, word-boundary, regex, link allow/blocklist, emoji-flood. Anti-ReDoS via moteur linéaire `re2` Google (84 s natif vs 0 ms `re2` mesuré en bench) + `safe-regex` heuristique à l'admission | v2.6 |
-| **6 actions**, `delete`, `warn`, `mute_timed`, `kick`, `ban` (avec `community_bans.expires_at` optionnel pour bans temporaires), `report_only` dry-run | v2.6 |
-| **Flux de bienvenue**, ghost bot `OctoGuard` (`users.is_system=true`, login refusé), message public avec variables `{user}` / `{userMention}` / `{communityName}`, auto-grade optionnel à l'inscription. Message DM système reporté à la spec 019 | v2.6 |
-| **Commandes personnalisées**, `!règles`, `!discord`, ... en markdown, cooldown Redis par canal (`SET NX EX`), canaux et rôles autorisés configurables par commande | v2.6 |
-| **Mutes chat**, nouvelle table `chat_mutes`, portée globale ou par canal, durée libre (`15m`, `2h`, `1w`, permanent), cache Redis 60 s, worker de purge en arrière-plan | v2.6 |
-| **File de signalements**, driven par les membres, anti-abus rate limit par signaleur + cooldown par cible via Redis, inbox admin avec actions mute/delete/dismiss | v2.6 |
-| **Webhook HMAC-SHA256**, POST sortant signé `X-Octoguard-Signature: sha256=hex`, queue Redis, worker async timeout 10 s. Le pipeline chat ne paye jamais la latence webhook | v2.6 |
-| **Journal d'audit**, chaque action persistée dans `admin_audit_log` avec `event_id`. Logger fire-and-forget IIFE (capté par le bench pré-emptif : p95 passé de 13 ms à 0,2 ms) | v2.6 |
-| **UI admin**, `/admin/octoguard` avec 8 onglets : vue d'ensemble, automod, bienvenue, commandes, mutes, signalements, journal, webhook. CRUD complet avec formulaires `enhance` optimistes | v2.6 |
-| **Kill-switch**, `OCTOGUARD_ENABLED=false` court-circuite tout le pipeline. Table de règles vide = impact zéro même activé. Pattern de rollout dégressif | v2.6 |
-| **69 tests Vitest** + script `bench.ts` dédié, prouve p95 < 1 ms en charge, a permis d'attraper le goulot du logger avant activation prod | v2.6 |
-
-</details>
-
-<details>
-<summary><b>v2.7, Streamer Hub : Soundboard + Stream Deck multi-pages 🔊</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **Soundboard**, upload de sons (mp3/ogg/wav/flac), tags ID3 automatiques (titre, artiste, cover), volume / fade / loop / visibilité par piste, upload batch avec progression live | v2.7 |
-| **Overlay OBS Soundboard**, browser source transparente, fade et cross-fade Web Audio, OSD discret (4 coins ou caché), plusieurs overlays par owner | v2.7 |
-| **Page viewers publique** (`/soundboard`, sans login), parcours de la bibliothèque, preview au survol, « en cours » et « à suivre » en temps réel | v2.7 |
-| **Queue viewers**, FIFO Redis (max 50, rate-limit et cap par IP, dédup globale), toggle admin + skip + tout vider, auto-consume sur `audio:ended`, anti-raid | v2.7 |
-| **Commande chat `!ns`** (alias `!nextsound`), fuzzy matcher avec normalisation, scoring en cascade et Levenshtein, détection d'ambiguïté qui demande au viewer au lieu de deviner mal | v2.7 |
-| **Stream Deck multi-pages**, jusqu'à 8 pages logiques avec couleurs d'accent, rename inline, drag-to-reorder, rétrocompatible decks V1 (sans migration) | v2.7 |
-| **Nouvelles actions Deck**, `play_audio`, `stop_audio`, `pause_audio`, `navigate_page` (intercepté client-side pour zéro latence) | v2.7 |
-| **Deck mobile**, dock de pages flottant avec haptique et safe-area iOS, modal « Envoyer au Deck » avec mini-grille et auto-placement | v2.7 |
-
-</details>
-
-<details open>
-<summary><b>v2.8, Refonte de l'Éditeur d'Articles · Playlists & Scènes OBS · Sécurité ✍️</b></summary>
-
-| Fonctionnalité | Version |
-|---|---|
-| **Robustesse round-trip de l'éditeur**, les colonnes et vidéos YouTube ne disparaissent plus à la réédition (parse sur la classe, pas sur les `data-*` retirés). Audit complet dans `docs/audits/2026-06-15-editeur-rich.md` | v2.8 |
-| **Bloc console SSH protégé**, nœud atomique qui préserve son HTML, avec un toggle Rendu / Code façon CMS, source éditable mais jamais corrompue au clavier | v2.8 |
-| **Sommaire par ancre à la sélection**, barre flottante avec un bouton « Ancre » qui transforme la ligne en section et l'ajoute à un menu dérivé (avec flash de feedback) | v2.8 |
-| **Redimensionnement d'image**, poignées de coin avec aimant aux largeurs clés (25 / 50 / 75 / 100 %), largeur stockée en attribut `width`, robuste au round-trip | v2.8 |
-| **Zone éditable bornée + barre d'outils collante**, toujours accessible sur les longs articles | v2.8 |
-| **Playlists Streamer Hub + Scènes OBS**, playlists audio nommées avec URL d'overlay OBS dédiée, plus un compositeur de scènes visuel façon OBS | v2.8 |
-| **Fondations SEO / GEO**, correction du sitemap (14 → 60+ URLs), `og:image` unique et correct par page (partages Discord / Twitter), `llms.txt` réécrit, guides comparatif + installation débutant (FR + EN) | v2.8 |
-| **Refonte admin**, design sobre Linear / Vercel / Stripe pour la sidebar et le dashboard | v2.8 |
-| **Performance**, fetch directory SSR non bloquant + cache showcase par clé de version, rafraîchissement de la home après suppression de thread | v2.8 |
-| **Balayage sécurité**, ws (high) et tar (medium) patchés, esbuild >= 0.28.1 via override sur les 4 projets SvelteKit, nodemailer 8 → 9 validé en prod | v2.8 |
-
-</details>
-
-## La Vision
-
-Nodyx n'est pas une alternative à Discord.
-
-C'est une réponse différente à une question différente.
-
-Discord s'est demandé : *"Comment grandir vite et capturer des communautés ?"*  
-Nodyx se demande : *"Comment donner aux communautés la souveraineté sur leur propre existence ?"*
-
-Chaque instance Nodyx est un nœud souverain. Elle tourne là où vous la faites tourner, un VPS, un Pi, un vieux laptop. Elle stocke ce que vous choisissez de stocker. Elle partage ce que vous choisissez de partager. Elle s'arrête quand vous le décidez, pas quand une entreprise pivote.
-
-Internet était décentralisé par conception. SMTP, IRC, NNTP, n'importe qui pouvait faire tourner un serveur et parler à celui de n'importe qui d'autre. C'était la promesse. Les Big Tech l'ont centralisée en silos sur deux décennies.
-
-**Nodyx, c'est la promesse tenue.**
-
-Et elle se propage de la même façon. Chaque instance qui se lance expose d'autres personnes à l'idée. Chaque événement public indexé par Google attire quelqu'un de nouveau. Chaque communauté qui choisit la souveraineté en inspire une autre.
-
-> *"Forkez-nous si nous vous trahissons."*, AGPL-3.0
-
----
-
-## Documentation
-
-| Langue | Docs |
-|---|---|
-| <img src="https://flagcdn.com/16x12/gb.png" alt="EN"> English | [nodyx.dev](https://nodyx.dev) · [docs/en/](https://github.com/Pokled/nodyx/tree/main/docs/en) |
-| <img src="https://flagcdn.com/16x12/fr.png" alt="FR"> Français | [docs/fr/](https://github.com/Pokled/nodyx/tree/main/docs/fr) |
-| <img src="https://flagcdn.com/16x12/es.png" alt="ES"> Español | *bientôt disponible* |
-| <img src="https://flagcdn.com/16x12/de.png" alt="DE"> Deutsch | *bientôt disponible* |
-
-- [**nodyx.dev**](https://nodyx.dev), Wiki de documentation complet
-- [**Créer un Widget**](https://nodyx.dev/create-widget), Guide SDK Widget pas à pas
-- [Manifeste](./MANIFESTO.md), Pourquoi Nodyx existe
-- [Architecture](./ARCHITECTURE.md), Comment c'est construit
-- [Roadmap](./ROADMAP.md), Où on va
-- [Moteur Audio](./AUDIO.md), EQ broadcast, RNNoise, chaîne audio complète
-- [Moteur Neural](./NEURAL-ENGINE.md), IA locale avec Ollama
-- [**NODYX-ETHER**](https://github.com/Pokled/nodyx/blob/main/docs/ideas/NODYX-ETHER.md), La vision de la couche physique (LoRa / radio HF / ionosphère)
+[Journal des versions](https://github.com/Pokled/nodyx/blob/main/CHANGELOG.md) · [Feuille de route](./ROADMAP.md) · [Manifeste](./MANIFESTO.md)
 
 ---
 
 ## Contribuer
 
-Nodyx appartient à sa communauté.
+Nodyx appartient à sa communauté. Lisez [CONTRIBUTING.md](./CONTRIBUTING.md), parcourez les [tickets](https://github.com/Pokled/Nodyx/issues) ou lancez une [discussion](https://github.com/Pokled/Nodyx/discussions). La documentation et les idées (`docs/`, `docs/ideas/`) sont ouvertes à tous sans demander ; une modification du cœur commence par un ticket.
 
-1. Parcourez les [Issues ouvertes](https://github.com/Pokled/Nodyx/issues) ou ouvrez une [Discussion](https://github.com/Pokled/Nodyx/discussions)
-2. Lisez [CONTRIBUTING.md](./CONTRIBUTING.md) avant d'ouvrir une PR
-3. Les commits suivent les [Conventional Commits](https://www.conventionalcommits.org/), rédigés en anglais
+**Traduire Nodyx.** Le français et l'anglais sont complets, le portugais du Brésil presque, et cinq autres langues sont en route. Choisissez la vôtre sur [nodyx.org/translate](https://nodyx.org/translate), complétez les lignes manquantes d'un fichier JSON, ouvrez une pull request. La CI vérifie chaque variable, une traduction ne peut pas casser l'application.
 
-Contribuez librement, sans validation préalable requise :
+### Les Nodyx Stars
 
-```
-docs/        →  améliorer ou traduire la documentation
-docs/ideas/  →  design thinking, propositions UX, nouvelles idées
-```
+Chaque contribution extérieure vaut une étoile, et chaque étoile entre dans [notre galerie des contributeurs](https://github.com/Pokled/nodyx/blob/main/CONTRIBUTORS.md), avec son histoire. L'open source sans reconnaissance, c'est du travail gratuit, et ce n'est pas notre façon de faire.
 
-Le core (`nodyx-core/src/`) nécessite une discussion préalable, ouvrez une Issue.
+<table>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://github.com/Pranto2003"><img src="https://github.com/Pranto2003.png?size=80" width="64" height="64" alt="Pranto"/></a><br/>
+      <b>Pranto Goswamee</b><br/><sub>🌟 Premier contributeur</sub>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/waazaa-fr"><img src="https://github.com/waazaa-fr.png?size=80" width="64" height="64" alt="waazaa-fr"/></a><br/>
+      <b>waazaa-fr</b><br/><sub>🌟🌟 Bugs de l'installeur</sub>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/naranco66"><img src="https://github.com/naranco66.png?size=80" width="64" height="64" alt="naranco66"/></a><br/>
+      <b>naranco66</b><br/><sub>🌟🌟🌟 Espagnol (es-ES)</sub>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/forke24x7"><img src="https://github.com/forke24x7.png?size=80" width="64" height="64" alt="forke24x7"/></a><br/>
+      <b>forke24x7</b><br/><sub>🌟🌟🌟🌟🌟 Allemand (de)</sub>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/lukasMega"><img src="https://github.com/lukasMega.png?size=80" width="64" height="64" alt="Lukáš Melega"/></a><br/>
+      <b>Lukáš Melega</b><br/><sub>🌟🌟 Recherche dans la doc</sub>
+    </td>
+  </tr>
+</table>
 
----
-
-## 🌟 Étoiles Nodyx, Contributeurs
-
-Toute contribution externe vaut une étoile. Chaque Étoile figure sur [notre Hall of Fame](https://github.com/Pokled/nodyx/blob/main/CONTRIBUTORS.md), avec avatar, lien de profil et rang.
-
-**La reconnaissance n'est pas optionnelle ici.** L'open source sans reconnaissance, c'est du travail gratuit, et ce n'est pas notre façon de faire.
-
-### 🏆 Premier contributeur externe
-
-<a href="https://github.com/Pranto2003"><img src="https://github.com/Pranto2003.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="Pranto"/></a>
-
-**[Pranto Goswamee](https://github.com/Pranto2003)** : 🌟 × 1, a ajouté la duplication canvas `Ctrl/Cmd + D` ([PR #11](https://github.com/Pokled/nodyx/pull/11)).
-
-*Première contribution externe à Nodyx. Merci 🙏*
-
-<br/>
-
-### 🎯 Premier Régulier
-
-<a href="https://github.com/waazaa-fr"><img src="https://github.com/waazaa-fr.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="waazaa-fr"/></a>
-
-**[waazaa-fr](https://github.com/waazaa-fr)** : 🌟 × 2, a trouvé et signalé deux bugs d'installation à la suite ([#14](https://github.com/Pokled/nodyx/issues/14), [#15](https://github.com/Pokled/nodyx/issues/15)), tous deux corrigés en quelques heures.
-
-*Les chasseurs de bugs fiables gardent l'installateur honnête. Merci waazaa 🙏*
-
-<br/>
-
-### 🇪🇸 Hablas español ? Nodyx aussi maintenant
-
-<a href="https://github.com/naranco66"><img src="https://github.com/naranco66.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="naranco66"/></a>
-
-**[naranco66](https://github.com/naranco66)** : 🌟 × 3, a apporté l'espagnol (es-ES) à Nodyx via [PR #16](https://github.com/Pokled/nodyx/pull/16) (719 chaînes, parité complète clé + placeholder), est revenu avec [PR #19](https://github.com/Pokled/nodyx/pull/19) pour une révision native des chaînes community pulse, puis a sauté de l'i18n à l'ops avec [PR #22](https://github.com/Pokled/nodyx/pull/22) : corrigé des références `nexus-*` orphelines dans `docker-compose.yml` et une incompatibilité de chemin de police Alpine qui cassait le build Docker frontend.
-
-*Troisième locale, troisième pont vers le monde, et une config Docker qui fonctionne vraiment dès le départ. Gracias naranco 🙏*
-
-<br/>
-
-### 🇩🇪 Sprichst du Deutsch ? Nodyx aussi maintenant
-
-<a href="https://github.com/forke24x7"><img src="https://github.com/forke24x7.png?size=80" width="60" height="60" align="left" style="border-radius:50%; margin-right:12px;" alt="forke24x7"/></a>
-
-**[forke24x7](https://github.com/forke24x7)** : 🌟 × 3, a apporté l'allemand (de) à Nodyx en joignant un `de.json` relu nativement (741 chaînes) sur [l'issue #5](https://github.com/Pokled/nodyx/issues/5), a déclenché le travail de support Pangolin / tunnel alternatif via [l'issue #18](https://github.com/Pokled/nodyx/issues/18), et a détecté une régression du build frontend dans `install_tunnel.sh` le jour même du test Pangolin ([#21](https://github.com/Pokled/nodyx/issues/21)).
-
-*Quatrième locale, une demande de fonctionnalité qui a amélioré l'installateur pour toute la communauté auto-hébergement, et une chasse à la régression le jour même. Danke forke 🙏*
-
-<br/>
-
-👉 **[Voir tous les contributeurs →](https://github.com/Pokled/nodyx/blob/main/CONTRIBUTORS.md)**
+[Toutes les histoires, tous les contributeurs](https://github.com/Pokled/nodyx/blob/main/CONTRIBUTORS.md)
 
 ---
 
 ## Soutenir Nodyx
 
-Nodyx est construit par un seul développeur, sans argent de VC et sans conditions. Si le projet vous est utile, pensez à le soutenir :
+Nodyx est construit par un seul développeur, sans investisseur et sans condition. S'il vous est utile, une étoile aide d'autres à le trouver, et [Ko-fi](https://ko-fi.com/Pokled) aide à payer les serveurs.
 
 <a href="https://ko-fi.com/Pokled"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Soutenir sur Ko-fi"/></a>
-
-Votre soutien aide à couvrir les coûts serveur et maintient Nodyx 100% gratuit et open-source.
 
 ---
 
 ## Licence
 
-**AGPL-3.0**, La licence open source la plus forte pour les logiciels en réseau.
-
-Si vous utilisez Nodyx, même via un réseau, vos modifications doivent être open source.
-Si Nodyx trahit un jour ses principes, cette licence permet à n'importe qui de le forker et de continuer dans l'esprit du [Manifeste](./MANIFESTO.md).
-
----
+**AGPL-3.0.** Si vous faites tourner un Nodyx modifié pour d'autres, même à travers le réseau, vos modifications restent ouvertes. Et si Nodyx trahissait un jour ses principes, cette licence permet à n'importe qui de le reprendre et de continuer dans l'esprit du [Manifeste](./MANIFESTO.md).
 
 <div align="center">
+  <br/>
   <p><em>Né le 18 février 2026.</em></p>
-  <p><strong>"Forkez-nous si nous vous trahissons."</strong></p>
+  <p><strong>« Forkez-nous si on vous trahit. »</strong></p>
 </div>
