@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@iconify-json/hugeicons": "^1.2.35",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.0",
     "@sveltejs/adapter-auto": "7.0.1",
     "@sveltejs/adapter-node": "5.5.7",
     "@sveltejs/kit": "^2.70.3",
@@ -38,7 +38,7 @@
     "@tailwindcss/vite": "4.3.3",
     "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-basic-ssl": "2.3.0",
-    "svelte": "^5.57.1",
+    "svelte": "^5.57.2",
     "svelte-check": "4.7.6",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
@@ -68,9 +68,9 @@
     "@tiptap/starter-kit": "3.31.4",
     "lowlight": "3.3.0",
     "lucide-svelte": "1.0.1",
-    "mediasoup-client": "3.24.4",
+    "mediasoup-client": "3.24.5",
     "qrcode": "1.5.4",
-    "satori": "0.33.5",
+    "satori": "0.44.3",
     "socket.io-client": "4.8.4"
   },
   "overrides": {
