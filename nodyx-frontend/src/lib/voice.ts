@@ -4,6 +4,7 @@
  * Architecture Phase 2 : mesh direct via Socket.IO signaling
  * Architecture Phase 3 : remplacer le transport Socket.IO par DHT/libp2p
  */
+import { proposerPartageEnCours } from './partageArrivant'
 import { writable, derived, get } from 'svelte/store'
 import type { Socket } from 'socket.io-client'
 import { voiceSettingsStore, getPeerVolume, type VoiceSettings } from './voiceSettings'
@@ -279,6 +280,9 @@ let _socket:           Socket | null = null
 let _localStream:      MediaStream | null = null   // flux brut getUserMedia
 let _processedStream:  MediaStream | null = null   // flux traité → WebRTC
 let _screenStream:     MediaStream | null = null
+// Qualité choisie au lancement du partage : réappliquée aux connexions des arrivants.
+let _screenQuality: ShareQuality = '1080p'
+let _screenFps:     ShareFps     = 30
 let _peerConns:        Map<string, RTCPeerConnection> = new Map()
 let _iceQueues:        Map<string, RTCIceCandidateInit[]> = new Map()
 // Perfect negotiation: track which side sent the first offer (initiator = polite peer),
@@ -878,6 +882,16 @@ function createPeerConn(
     }
   }
 
+  // Partage d'écran déjà en cours (mesh) et connexion à NOTRE initiative
+  // (reconnexion, ICE restart) : la vidéo entre dès la première offre. Dans
+  // l'autre sens, c'est onOffer qui la propose après avoir répondu.
+  if (isInitiator && _channelMode !== 'sfu' && _screenStream) {
+    void proposerPartageEnCours(pc, _screenStream, {
+      offrir:    false,
+      plafonner: sender => capScreenShareBitrate(sender, _screenQuality, _screenFps),
+    })
+  }
+
   _initiatorMap.set(remoteSocketId, isInitiator)
   _peerConns.set(remoteSocketId, pc)
   return pc
@@ -1310,6 +1324,8 @@ export async function startScreenShare(
     })
 
     _screenStream = displayStream
+    _screenQuality = quality
+    _screenFps     = fps
     localScreenStore.set(displayStream)
     screenShareStore.set(true)
     publishVoiceState()   // le roster du canal doit montrer « partage son écran »
@@ -1670,6 +1686,19 @@ async function onOffer({ from, sdp, channelId }: { from: string; sdp: RTCSession
 
     await pc.setLocalDescription({ type: 'answer', sdp: tunedSdp })
     _socket?.emit('voice:answer', { to: from, sdp: pc.localDescription, channelId })
+
+    // Un arrivant nous a fait son offre (audio seul) pendant que nous partageons
+    // notre écran : nous ne sommes pas à l'initiative de cette connexion, donc
+    // personne d'autre ne renégociera. On ajoute la vidéo et on fait l'offre
+    // nous-mêmes, sinon l'arrivant ne voit jamais le partage (12/10/2026).
+    if (_channelMode !== 'sfu' && _screenStream) {
+      await proposerPartageEnCours(pc, _screenStream, {
+        offrir:      true,
+        plafonner:   sender => capScreenShareBitrate(sender, _screenQuality, _screenFps),
+        preparerSdp: sdp => applyOpusTuning(sdp, get(voiceSettingsStore).bitrate, _peerConns.size),
+        envoyerOffre: description => _socket?.emit('voice:offer', { to: from, sdp: description, channelId }),
+      })
+    }
   } catch (e) {
     console.warn('[voice] onOffer error:', e)
   } finally {
