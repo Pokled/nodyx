@@ -4181,6 +4181,8 @@
   "polls.empty_all": "No poll.",
   "polls.create_first": "Create the first poll",
   "polls.closed_label": "Closed",
+  "polls.option_count": "{{n}} option",
+  "polls.option_count_plural": "{{n}} options",
   "polls.voted": "✓ Voted",
   "polls.meta_title": "Polls · Nodyx",
   "polls.h1": "📊 Polls",

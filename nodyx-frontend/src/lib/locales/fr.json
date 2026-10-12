@@ -1947,6 +1947,8 @@
   "polls.empty_all": "Aucun sondage.",
   "polls.create_first": "Créer le premier sondage",
   "polls.closed_label": "Terminé",
+  "polls.option_count": "{{n}} option",
+  "polls.option_count_plural": "{{n}} options",
   "polls.voted": "✓ Voté",
   "polls.meta_title": "Sondages · Nodyx",
   "polls.h1": "📊 Sondages",

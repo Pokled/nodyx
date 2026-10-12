@@ -41,9 +41,6 @@
     reload()
   }
 
-  const TYPE_ICON: Record<string, string> = {
-    choice: '📊', schedule: '📅', ranking: '🏆',
-  }
 
   function formatDate(iso: string) {
     return new Intl.DateTimeFormat('fr-FR', {
@@ -113,7 +110,7 @@
           <!-- Carte résumé -->
           <div class="poll-summary">
             <div class="poll-summary-header">
-              <span class="ptype-badge">{TYPE_ICON[poll.type]} {poll.type}</span>
+              <span class="ptype-badge">{tFn(`poll.type_${poll.type}`)}</span>
               {#if poll.is_open}
                 <span class="status-dot open"></span>
                 {#if poll.closes_at}
@@ -131,9 +128,11 @@
             <h3 class="poll-summary-title">{poll.title}</h3>
 
             <div class="poll-summary-meta">
-              <span>{poll.participant_count} participant{poll.participant_count !== 1 ? 's' : ''}</span>
+              <!-- La liste renvoie total_votes, pas de nombre de participants : on affiche
+                   les votes (le champ lu avant n'existait pas, « participants » sans nombre). -->
+              <span>{tFn((poll.total_votes ?? 0) !== 1 ? 'poll.vote_count_plural' : 'poll.vote_count', { n: String(poll.total_votes ?? 0) })}</span>
               <span>·</span>
-              <span>{poll.option_count} option{poll.option_count !== 1 ? 's' : ''}</span>
+              <span>{tFn(poll.option_count !== 1 ? 'polls.option_count_plural' : 'polls.option_count', { n: String(poll.option_count) })}</span>
               <span>·</span>
               <span>{formatDate(poll.created_at)}</span>
             </div>
@@ -160,7 +159,7 @@
   <PollCreator
     token={data.token}
     channelId={null}
-    onCreated={poll => { polls = [{ ...poll, is_open: true, has_voted: false, option_count: 0, participant_count: 0 }, ...polls]; showCreator = false }}
+    onCreated={poll => { polls = [{ ...poll, is_open: true, has_voted: false, option_count: 0, total_votes: 0 }, ...polls]; showCreator = false }}
     onClose={() => showCreator = false}
   />
 {/if}
