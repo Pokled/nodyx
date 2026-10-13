@@ -203,6 +203,14 @@ jamais les données vivantes (`uploads/`, `backups/`), et les restes d'une mise 
 interrompue sont effacés à la suivante. Seules les 5 sauvegardes de mise à jour les plus
 récentes sont gardées ; celles d'un `--wipe` ou d'une réinstallation ne sont jamais supprimées.
 
+### Installeur : la mise à jour garantit Node.js 22
+
+`install.sh --upgrade` et `install_tunnel.sh --upgrade` ne vérifiaient jamais la version de
+Node.js : seule l'installation initiale le faisait. Une instance installée en tunnel avant le
+04/10/2026 restait donc en Node 20, alors que le vocal exige Node 22. La mise à jour installe
+maintenant Node.js 22 avant de compiler s'il manque, et s'arrête proprement (le site garde sa
+version) si l'installation échoue.
+
 ### Installeur : sans terminal, et sans secret dans la ligne de commande
 
 L'installation silencieuse documentée en tête d'`install.sh` n'a jamais pu aboutir : le mot de

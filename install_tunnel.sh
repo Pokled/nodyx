@@ -448,6 +448,12 @@ T_EN[upgrade_no_backup_auto]='The database backup could not be verified (--yes n
 T_FR[upgrade_no_backup_auto]="La sauvegarde de la base n'a pas pu être vérifiée (--yes ne met jamais à jour sans)."
 T_EN[upgrade_cancelled_untouched]='Update cancelled. Nothing was changed.'
 T_FR[upgrade_cancelled_untouched]="Mise à jour annulée. Rien n'a été modifié."
+T_EN[node_installed]='Node.js %s installed'
+T_FR[node_installed]='Node.js %s installé'
+T_EN[node_upgrading]='Node.js is older than 22: installing Node.js 22 before building...'
+T_FR[node_upgrading]="Node.js est antérieur à 22 : installation de Node.js 22 avant la compilation..."
+T_EN[node_upgrade_fail]='Could not install Node.js 22: update stopped, the site still runs the previous version.'
+T_FR[node_upgrade_fail]="Impossible d'installer Node.js 22 : mise à jour arrêtée, le site tourne toujours sur la version précédente."
 T_EN[upgrade_lib_missing]='scripts/install/build.sh is missing from the updated code: update stopped, the site still runs the previous version.'
 T_FR[upgrade_lib_missing]="scripts/install/build.sh manque dans le code mis à jour : mise à jour arrêtée, le site tourne toujours sur la version précédente."
 T_EN[upgrade_workdir_fail]='Could not create the build directories (disk full?). The site still runs the previous version.'
@@ -1107,6 +1113,13 @@ _nodyx_upgrade() {
   [[ -f "${NODYX_DIR}/scripts/install/build.sh" ]] || die "$(t upgrade_lib_missing)"
   # shellcheck source=scripts/install/build.sh
   . "${NODYX_DIR}/scripts/install/build.sh"
+  # Node.js 22 avant de compiler : une ancienne installation peut être restée
+  # en Node 20 (le vocal et music-metadata exigent 22).
+  if (( $(nodyx_node_major) < 22 )); then
+    info "$(t node_upgrading)"
+    nodyx_ensure_node 22 || die "$(t node_upgrade_fail)"
+    ok "$(printf "$(t node_installed)" "$(node -v)")"
+  fi
   nodyx_purge_stale_work "$NODYX_DIR"
   local _wc _wf
   _wc="$(nodyx_work_dir "$NODYX_DIR" core)" && _wf="$(nodyx_work_dir "$NODYX_DIR" frontend)" \

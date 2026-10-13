@@ -46,7 +46,7 @@ uuid    = { version = "1", features = ["v4"] }
 tokio-util = { version = "0.7", features = ["codec"] }
 
 # TCP keepalive (portable setsockopt wrapper)
-socket2 = { version = "0.5", features = ["all"] }
+socket2 = { version = "0.6", features = ["all"] }
 
 # WebSocket door. Server side only: Caddy terminates TLS in front, so the
 # client and TLS features are left out rather than carried unused.
