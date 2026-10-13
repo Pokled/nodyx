@@ -38,6 +38,7 @@
 	import { get } from 'svelte/store';
 	import { voiceStore, voiceChannelMembersStore, voiceEventsStore, screenShareStore, remoteScreenStore } from '$lib/voice';
 	import { locale, t, LOCALES, type Locale } from '$lib/i18n';
+	import { filAriane } from '$lib/filAriane';
 	import { themePreference } from '$lib/theme';
 	import { registerPublicKey } from '$lib/e2e';
 	import { shouldOfferRestore } from '$lib/e2eBackupClient';
@@ -709,47 +710,12 @@
 	}
 
 	// ── Contextual breadcrumb ──────────────────────────────────────────────────
-	const breadcrumbs = $derived((() => {
-		const path = page.url.pathname;
-		const d = page.data as any;
-		if (path === '/') return [];
-		const crumbs: { label: string; href?: string }[] = [];
-		if (path.startsWith('/forum')) {
-			crumbs.push({ label: tFn('nav.forum'), href: '/forum' });
-			if (d?.category?.name) {
-				const name = (d.category.name as string).replace(/^\p{Emoji}\s*/u, '');
-				crumbs.push({ label: name, href: `/forum/${d.category.slug ?? d.category.id}` });
-			}
-			if (d?.thread?.title) crumbs.push({ label: d.thread.title });
-		} else if (path.startsWith('/chat')) {
-			crumbs.push({ label: tFn('nav.chat') });
-			const chId = page.url.searchParams.get('channel');
-			if (chId) {
-				const ch = layoutChannels.find(c => c.id === chId);
-				if (ch) crumbs.push({ label: (ch.type === 'voice' ? '🔊 ' : '# ') + ch.name });
-			}
-		} else if (path.startsWith('/dm'))           { crumbs.push({ label: tFn('nav.dm') });
-		} else if (path.startsWith('/calendar'))     { crumbs.push({ label: tFn('nav.calendar') });
-		} else if (path.startsWith('/discover'))     { crumbs.push({ label: tFn('nav.discover') });
-		} else if (path.startsWith('/admin'))        { crumbs.push({ label: tFn('nav.admin') });
-		} else if (path.startsWith('/notifications')){ crumbs.push({ label: tFn('nav.notifications') });
-		} else if (path.startsWith('/settings'))     { crumbs.push({ label: tFn('nav.settings') });
-		} else if (path.startsWith('/users/me/edit')){ crumbs.push({ label: tFn('nav.edit_profile') });
-		} else if (path.startsWith('/users/'))       { crumbs.push({ label: path.split('/')[2] ?? tFn('nav.profile') });
-		} else if (path.startsWith('/communities'))  { crumbs.push({ label: tFn('nav.communities') });
-		} else if (path.startsWith('/polls'))        { crumbs.push({ label: tFn('nav.polls') });
-		} else if (path.startsWith('/tasks'))        { crumbs.push({ label: tFn('nav.tasks') });
-		} else if (path.startsWith('/wiki'))         { crumbs.push({ label: tFn('nav.wiki') });
-		} else if (path.startsWith('/library'))      { crumbs.push({ label: tFn('nav.library') });
-		} else if (path.startsWith('/musique'))      { crumbs.push({ label: tFn('nav.music') });
-		} else if (path.startsWith('/search'))       { crumbs.push({ label: tFn('nav.search') });
-		} else if (path.startsWith('/garden'))       { crumbs.push({ label: tFn('nav.garden') });
-		} else {
-			const seg = path.split('/')[1];
-			if (seg) crumbs.push({ label: seg.charAt(0).toUpperCase() + seg.slice(1) });
-		}
-		return crumbs;
-	})())
+	const breadcrumbs = $derived(filAriane(page.url.pathname, {
+		tFn,
+		data:   page.data as any,
+		canal:  page.url.searchParams.get('channel'),
+		salons: layoutChannels,
+	}))
 
 	// ── Header search ──────────────────────────────────────────────────────────
 	let searchQ      = $state('');
