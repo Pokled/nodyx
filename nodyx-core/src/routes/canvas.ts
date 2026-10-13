@@ -79,7 +79,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
     },
   }, async (req, reply) => {
     if (!await isModuleEnabled()) {
-      return reply.code(403).send({ error: 'Le module Canvas n\'est pas activé.' })
+      return reply.code(403).send({ error: 'Le module Tableau blanc n\'est pas activé.' })
     }
 
     const { name, channel_id, visibility } = req.body as { name?: string; channel_id?: string; visibility?: string }
@@ -112,7 +112,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth],
   }, async (req, reply) => {
     if (!await isModuleEnabled()) {
-      return reply.code(403).send({ error: 'Le module Canvas n\'est pas activé.' })
+      return reply.code(403).send({ error: 'Le module Tableau blanc n\'est pas activé.' })
     }
 
     const { channelId } = req.params
@@ -134,7 +134,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth],
   }, async (req, reply) => {
     if (!await isModuleEnabled()) {
-      return reply.code(403).send({ error: 'Le module Canvas n\'est pas activé.' })
+      return reply.code(403).send({ error: 'Le module Tableau blanc n\'est pas activé.' })
     }
     // Lot 1 : on ne liste que MES projets standalone. La galerie publique
     // (projets d'autres membres en visibility='public') arrive au Lot 2 avec
@@ -160,7 +160,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth],
   }, async (req, reply) => {
     if (!await isModuleEnabled()) {
-      return reply.code(403).send({ error: 'Le module Canvas n\'est pas activé.' })
+      return reply.code(403).send({ error: 'Le module Tableau blanc n\'est pas activé.' })
     }
     const userId = req.user!.userId
     const { rows } = await db.query(
@@ -182,7 +182,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth],
   }, async (req, reply) => {
     if (!await isModuleEnabled()) {
-      return reply.code(403).send({ error: 'Le module Canvas n\'est pas activé.' })
+      return reply.code(403).send({ error: 'Le module Tableau blanc n\'est pas activé.' })
     }
 
     const { rows } = await db.query<{
@@ -222,7 +222,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth],
   }, async (req, reply) => {
     if (!await isModuleEnabled()) {
-      return reply.code(403).send({ error: 'Le module Canvas n\'est pas activé.' })
+      return reply.code(403).send({ error: 'Le module Tableau blanc n\'est pas activé.' })
     }
 
     const userId = req.user!.userId
@@ -310,7 +310,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireAuth],
   }, async (req, reply) => {
     if (!await isModuleEnabled()) {
-      return reply.code(403).send({ error: 'Le module Canvas n\'est pas activé.' })
+      return reply.code(403).send({ error: 'Le module Tableau blanc n\'est pas activé.' })
     }
     const userId = req.user!.userId
     const { rows: [board] } = await db.query<{
