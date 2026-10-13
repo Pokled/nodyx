@@ -857,18 +857,24 @@
 .feed-main   { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 
 /* Onglets Découvrir / Abonnements */
+/* Collés tout en haut de la zone qui défile. Avant : top 56px, calé sur la
+   hauteur d'un en-tête censé rester collé lui aussi, mais qui part avec le
+   défilement (le contenant flottant défile, pas la fenêtre). Les onglets
+   flottaient donc 56px trop bas, le contenu visible au-dessus et à travers
+   leur fond presque transparent. Fond opaque, et un liseré de la couleur du
+   fond au-dessus pour que rien ne passe entre eux et le bord. */
 .feed-tabs {
 	display: flex;
 	gap: 0.25rem;
 	margin-bottom: 0.5rem;
 	padding: 0.25rem;
-	background: rgba(255,255,255,0.03);
-	border: 1px solid rgba(255,255,255,0.06);
+	background: #0e0e16;
+	border: 1px solid rgba(255,255,255,0.08);
 	border-radius: 14px;
 	position: sticky;
-	top: 56px;
+	top: 0.5rem;
 	z-index: 5;
-	backdrop-filter: blur(8px);
+	box-shadow: 0 -0.75rem 0 0 #09090f, 0 8px 20px -10px rgba(0,0,0,0.7);
 }
 .feed-tab {
 	flex: 1;
