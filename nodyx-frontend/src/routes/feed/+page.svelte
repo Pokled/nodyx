@@ -65,7 +65,7 @@
 	const waveWidth = $derived(Math.min(100, (textLen / 500) * 100))
 	const isEmpty   = $derived(content === '' || content === '<p></p>' || content === '<p><br></p>')
 	const charLeft  = $derived(500 - textLen)
-	const charColor = $derived(charLeft < 0 ? '#ef4444' : charLeft < 100 ? '#f59e0b' : '#6b7280')
+	const charColor = $derived(charLeft < 0 ? '#ef4444' : charLeft < 100 ? '#f59e0b' : '#9ca3af')
 
 	// ── Image upload ──────────────────────────────────────────────────────────
 	let fileInput: HTMLInputElement
@@ -827,7 +827,7 @@
 }
 .feed-sub {
 	font-size: 0.7rem;
-	color: rgba(255,255,255,0.3);
+	color: rgba(255,255,255,0.55);
 	margin-top: 1px;
 }
 .feed-explore-btn {
@@ -1076,7 +1076,7 @@
 .composer-cancel {
 	font-size: 0.75rem;
 	font-weight: 600;
-	color: rgba(255,255,255,0.3);
+	color: rgba(255,255,255,0.55);
 	padding: 0.375rem 0.75rem;
 	border: 1px solid rgba(255,255,255,0.08);
 	transition: all 0.15s;
@@ -1152,7 +1152,7 @@
 .post-author:hover { color: var(--nx-accent-soft); }
 .post-username { font-size: 0.8rem; color: rgba(255,255,255,0.3); }
 .post-dot      { font-size: 0.8rem; color: rgba(255,255,255,0.2); }
-.post-time     { font-size: 0.75rem; color: rgba(255,255,255,0.25); }
+.post-time     { font-size: 0.75rem; color: rgba(255,255,255,0.55); }
 
 .post-delete-btn {
 	margin-left: auto;
@@ -1377,8 +1377,8 @@
 	0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
 	40%           { transform: scale(1);   opacity: 1; }
 }
-.feed-end { font-size: 0.75rem; color: rgba(255,255,255,0.2); }
-:global(.feed-end a) { color: rgb(var(--nx-accent-rgb) / 0.6); transition: color 0.15s; }
+.feed-end { font-size: 0.75rem; color: rgba(255,255,255,0.55); }
+:global(.feed-end a) { color: var(--nx-accent-soft); transition: color 0.15s; }
 :global(.feed-end a:hover) { color: var(--nx-accent-soft); }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
@@ -1392,7 +1392,7 @@
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 1px;
-	color: rgba(255,255,255,0.25);
+	color: rgba(255,255,255,0.55);
 	margin-bottom: 0.875rem;
 }
 
@@ -1411,7 +1411,7 @@
 	flex-shrink: 0;
 }
 .sidebar-me-name   { font-size: 0.875rem; font-weight: 700; color: rgba(255,255,255,0.8); }
-.sidebar-me-handle { font-size: 0.75rem; color: rgba(255,255,255,0.3); }
+.sidebar-me-handle { font-size: 0.75rem; color: rgba(255,255,255,0.55); }
 
 .sidebar-suggest-avatar {
 	width: 36px; height: 36px; border-radius: 50%; overflow: hidden;
@@ -1452,10 +1452,10 @@
 	gap: 0.3rem;
 	font-size: 0.75rem;
 	font-weight: 600;
-	color: rgb(var(--nx-accent-rgb) / 0.6);
+	color: var(--nx-accent-soft);
 	transition: color 0.15s;
 }
-.post-replies-btn:hover        { color: rgb(var(--nx-accent-rgb) / 0.9); }
+.post-replies-btn:hover        { color: #a5b4fc; }
 .post-replies-btn--open        { color: var(--nx-accent-soft); }
 
 .replies-thread {

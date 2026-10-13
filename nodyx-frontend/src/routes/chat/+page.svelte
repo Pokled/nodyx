@@ -1145,7 +1145,7 @@
 						<span class="text-sm font-black shrink-0" style="color: var(--nx-accent-2-soft); font-family: 'Space Grotesk', sans-serif">#</span>
 						<span class="text-sm font-bold truncate" style="color: #e2e8f0; font-family: 'Space Grotesk', sans-serif">{selectedChannel.name}</span>
 						{#if selectedChannel.description}
-							<span class="hidden sm:inline text-[11px] truncate" style="color: #374151; border-left: 1px solid rgba(255,255,255,.08); padding-left: 0.75rem; margin-left: 0.25rem">{selectedChannel.description}</span>
+							<span class="hidden sm:inline text-[11px] truncate" style="color: #8b919c; border-left: 1px solid rgba(255,255,255,.08); padding-left: 0.75rem; margin-left: 0.25rem">{selectedChannel.description}</span>
 						{/if}
 					</div>
 					<!-- P2P indicator -->
@@ -1165,7 +1165,7 @@
 						{:else if $p2pStatus === 'connecting'}
 							<div class="flex items-center gap-1.5 px-2 h-6" style="border: 1px solid rgba(255,255,255,.05)">
 								<span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #374151"></span>
-								<span class="text-[10px] font-black uppercase tracking-wider" style="color: #374151">P2P</span>
+								<span class="text-[10px] font-black uppercase tracking-wider" style="color: #8b919c">P2P</span>
 							</div>
 						{/if}
 					</div>
@@ -1177,14 +1177,14 @@
 					<svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="#a78bfa"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
 					<span class="font-black uppercase tracking-wider shrink-0 text-[10px]" style="color: var(--nx-accent-2-soft); font-family: 'Space Grotesk', sans-serif">{tFn('chat.pinned')}</span>
 					<span class="truncate flex-1" style="color: #6b7280">
-						<span class="font-semibold" style="color: #4b5563">{pinnedMessage.author_username} · </span>{pinnedMessage.content?.replace(/<[^>]*>/g, '').slice(0, 120) ?? ''}
+						<span class="font-semibold" style="color: #8b919c">{pinnedMessage.author_username} · </span>{pinnedMessage.content?.replace(/<[^>]*>/g, '').slice(0, 120) ?? ''}
 					</span>
 					{#if isAdmin}
 						<button onclick={() => s?.emit('chat:pin', { channelId: selectedChannel?.id, messageId: null })}
-						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #374151" title={tFn('chat.unpin')}>×</button>
+						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #8b919c" title={tFn('chat.unpin')}>×</button>
 					{:else}
 						<button onclick={() => showPinned = false}
-						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #374151" title={tFn('chat.hide')}>×</button>
+						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: #8b919c" title={tFn('chat.hide')}>×</button>
 					{/if}
 				</div>
 			{/if}
@@ -1208,7 +1208,7 @@
 					<!-- Day separator -->
 					<div class="flex items-center gap-3 my-4 px-4">
 						<div class="flex-1 h-px" style="background: linear-gradient(to right, transparent, rgba(255,255,255,.06))"></div>
-						<span class="text-[10px] font-black uppercase tracking-[.15em] px-3 py-1 shrink-0" style="color: #374151; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05); font-family: 'Space Grotesk', sans-serif">{group.day}</span>
+						<span class="text-[10px] font-black uppercase tracking-[.15em] px-3 py-1 shrink-0" style="color: #8b919c; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05); font-family: 'Space Grotesk', sans-serif">{group.day}</span>
 						<div class="flex-1 h-px" style="background: linear-gradient(to left, transparent, rgba(255,255,255,.06))"></div>
 					</div>
 
@@ -1243,7 +1243,7 @@
 									</div>
 								{/if}
 							{:else}
-								<span class="text-[9px] tabular-nums opacity-0 group-hover:opacity-100 transition-opacity select-none" style="color: #374151; padding-top: 3px">
+								<span class="text-[9px] tabular-nums opacity-0 group-hover:opacity-100 transition-opacity select-none" style="color: #8b919c; padding-top: 3px">
 									{formatTime(msg.created_at)}
 								</span>
 							{/if}
@@ -1261,11 +1261,11 @@
 									>
 										{msg.author_username}
 									</button>
-									<span class="text-[10px] tabular-nums" style="color: #374151">
+									<span class="text-[10px] tabular-nums" style="color: #8b919c">
 										{formatTime(msg.created_at)}
 									</span>
 									{#if msg.edited_at && !msg.is_deleted}
-										<span class="text-[10px] italic" style="color: #374151">{tFn('chat.edited')}</span>
+										<span class="text-[10px] italic" style="color: #8b919c">{tFn('chat.edited')}</span>
 									{/if}
 								</div>
 							{/if}
@@ -1274,7 +1274,7 @@
 							{#if msg.reply_to_id && !msg.is_deleted}
 								<div class="flex items-center gap-2 mb-1.5 pl-2 py-0.5 opacity-70" style="border-left: 2px solid var(--nx-accent-2-strong)">
 									<span class="text-[10px] font-bold shrink-0" style="color: var(--nx-accent-2-soft)">{msg.reply_to_username}</span>
-									<span class="text-[10px] truncate" style="color: #4b5563">{msg.reply_to_content?.replace(/<[^>]*>/g, '').slice(0, 100) ?? tFn('chat.deleted')}</span>
+									<span class="text-[10px] truncate" style="color: #8b919c">{msg.reply_to_content?.replace(/<[^>]*>/g, '').slice(0, 100) ?? tFn('chat.deleted')}</span>
 								</div>
 							{/if}
 
@@ -1300,7 +1300,7 @@
 								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: #d1d5db">
 									{@html renderCustomEmojis(linkifyHtml(msg.content ?? ''), customEmojis)}
 									{#if shouldGroup && msg.edited_at}
-										<span class="text-[9px] text-gray-700 italic ml-2">{tFn('chat.edited')}</span>
+										<span class="text-[9px] italic ml-2" style="color: #8b919c">{tFn('chat.edited')}</span>
 									{/if}
 								</div>
 								<!-- Link preview card -->
@@ -1382,9 +1382,9 @@
 								<!-- Réagir (full picker) -->
 								<div data-picker class="relative">
 									<button onclick={() => toggleEmojiPicker(msg.id)} title={tFn('chat.more')}
-									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #8b919c"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
-									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#8b919c'}>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
 									</button>
 									{#if pickerMsgId === msg.id}
@@ -1396,43 +1396,43 @@
 								<span class="w-px h-4 mx-0.5" style="background: rgba(255,255,255,.07)"></span>
 								<!-- Répondre -->
 								<button onclick={() => startReply(msg)} title={tFn('chat.reply')}
-								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #8b919c"
 								        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
-								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#8b919c'}>
 									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
 								</button>
 								{#if msg.author_id === userId}
 									<!-- Modifier -->
 									<button onclick={() => startEdit(msg)} title={tFn('common.edit')}
-									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #8b919c"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
-									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#8b919c'}>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
 									</button>
 								{/if}
 								{#if isAdmin}
 									<!-- Épingler -->
 									<button onclick={() => pinMessage(msg)} title={pinnedMessage?.id === msg.id ? tFn('common.unpin') : tFn('common.pin')}
-									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: {pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : '#4b5563'}"
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: {pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : '#8b919c'}"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
-									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : '#4b5563'}>
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : '#8b919c'}>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
 									</button>
 								{/if}
 								{#if msg.author_id === userId || isAdmin}
 									<!-- Supprimer -->
 									<button onclick={() => confirmDelete(msg.id)} title={tFn('common.delete')}
-									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #8b919c"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#ef4444'}
-									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#8b919c'}>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
 									</button>
 								{/if}
 								<!-- Copier -->
 								<button onclick={() => { navigator.clipboard.writeText(msg.content?.replace(/<[^>]*>/g, '') ?? '') }} title={tFn('common.copy')}
-								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+								        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #8b919c"
 								        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#9ca3af'}
-								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#8b919c'}>
 									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
 								</button>
 							</div>
@@ -1446,8 +1446,8 @@
 						<div class="w-12 h-12 flex items-center justify-center" style="background: rgb(var(--nx-accent-2-rgb) / .08); border: 1px solid rgb(var(--nx-accent-2-rgb) / .15)">
 							<svg class="w-6 h-6" fill="none" stroke="#7c3aed" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
 						</div>
-						<p class="text-sm font-semibold text-center" style="color: #4b5563; font-family: 'Space Grotesk', sans-serif">{tFn('chat.no_messages')}</p>
-						<p class="text-xs text-center" style="color: #374151">{tFn('chat.empty_channel', { channel: selectedChannel.name })}</p>
+						<p class="text-sm font-semibold text-center" style="color: #8b919c; font-family: 'Space Grotesk', sans-serif">{tFn('chat.no_messages')}</p>
+						<p class="text-xs text-center" style="color: #8b919c">{tFn('chat.empty_channel', { channel: selectedChannel.name })}</p>
 					</div>
 				{/if}
 			</div>
@@ -1480,7 +1480,7 @@
 							<span class="typing-dot" style="animation-delay: 160ms"></span>
 							<span class="typing-dot" style="animation-delay: 320ms"></span>
 						</div>
-						<span class="text-[10px] font-semibold italic" style="color: #4b5563">
+						<span class="text-[10px] font-semibold italic" style="color: #8b919c">
 							{#if typingUsers.length === 1}
 								<span style="color: var(--nx-accent-2-soft)">{typingUsers[0]}</span> {tFn('chat.typing_suffix_one')}
 							{:else if typingUsers.length === 2}
@@ -1593,9 +1593,9 @@
 					<div class="flex items-center gap-2.5 px-3 py-1.5 mb-2 text-xs" style="background: rgb(var(--nx-accent-2-rgb) / .08); border-left: 2px solid var(--nx-accent-2-strong)">
 						<svg class="w-3 h-3 shrink-0" fill="none" stroke="#a78bfa" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
 						<span class="font-bold shrink-0" style="color: var(--nx-accent-2-soft)">{replyTo.author_username}</span>
-						<span class="truncate flex-1" style="color: #4b5563">{replyTo.content?.replace(/<[^>]*>/g, '').slice(0, 80) ?? ''}</span>
+						<span class="truncate flex-1" style="color: #8b919c">{replyTo.content?.replace(/<[^>]*>/g, '').slice(0, 80) ?? ''}</span>
 						<button onclick={() => replyTo = null} title={tFn('common.cancel')}
-						        class="shrink-0 w-4 h-4 flex items-center justify-center text-sm leading-none transition-colors" style="color: #374151">×</button>
+						        class="shrink-0 w-4 h-4 flex items-center justify-center text-sm leading-none transition-colors" style="color: #8b919c">×</button>
 					</div>
 				{/if}
 
@@ -1658,7 +1658,7 @@
 						<div class="relative" data-emoji-picker>
 							<button onclick={() => showComposerEmoji = !showComposerEmoji} title={tFn('chat.emoji')}
 							        class="w-7 h-7 flex items-center justify-center transition-colors"
-							        style="color: {showComposerEmoji ? 'var(--nx-accent-2-soft)' : '#4b5563'}">
+							        style="color: {showComposerEmoji ? 'var(--nx-accent-2-soft)' : '#8b919c'}">
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 10h.01M15 10h.01M8.5 14.5c.9.8 2.1 1.3 3.5 1.3s2.6-.5 3.5-1.3"/></svg>
 							</button>
 							{#if showComposerEmoji}
@@ -1671,19 +1671,19 @@
 						<button data-gif-picker onclick={() => { showGifPicker = !showGifPicker; if (showGifPicker && gifProvider) gifQuery = ''; }}
 						        title={tFn('chat.gif')}
 						        class="w-7 h-7 flex items-center justify-center text-[10px] font-black uppercase tracking-wide transition-colors"
-						        style="color: {showGifPicker ? 'var(--nx-accent-2-soft)' : '#4b5563'}; background: {showGifPicker ? 'rgb(var(--nx-accent-2-rgb) / .12)' : 'transparent'}">GIF</button>
+						        style="color: {showGifPicker ? 'var(--nx-accent-2-soft)' : '#8b919c'}; background: {showGifPicker ? 'rgb(var(--nx-accent-2-rgb) / .12)' : 'transparent'}">GIF</button>
 						<!-- Poll -->
 						<button onclick={() => showPollCreator = true} title={tFn('chat.new_poll')}
-						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #8b919c"
 						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
-						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#8b919c'}>
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
 						</button>
 						<!-- Rich editor -->
 						<button onclick={openRichCompose} title={tFn('chat.rich_editor')}
-						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #4b5563"
+						        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: #8b919c"
 						        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
-						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#4b5563'}>
+						        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = '#8b919c'}>
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
 						</button>
 						<!-- Divider -->
@@ -1691,7 +1691,7 @@
 						<!-- Send -->
 						<button onclick={sendMessage} disabled={!inputText.trim() || isRateLimited}
 						        class="w-7 h-7 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))' : 'rgba(255,255,255,.06)'}; color: {inputText.trim() ? '#fff' : '#4b5563'}"
+						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))' : 'rgba(255,255,255,.06)'}; color: {inputText.trim() ? '#fff' : '#8b919c'}"
 						        title={isRateLimited ? tFn('chat.antispam_loading') : tFn('chat.send')}>
 							{#if isRateLimited}
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1701,7 +1701,7 @@
 						</button>
 					</div>
 				</div>
-				<p class="text-[10px] mt-1" style="color: #1f2937">{tFn('chat.composer_hint')}</p>
+				<p class="text-[10px] mt-1" style="color: #8b919c">{tFn('chat.composer_hint')}</p>
 			</div>
 
 			{/if}<!-- end voice/text branch -->

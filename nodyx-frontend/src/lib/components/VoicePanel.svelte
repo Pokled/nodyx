@@ -502,30 +502,6 @@
                     {tFn('voice.message_btn')}
                 </a>
             </div>
-            <!-- Interactions futures -->
-            <div class='px-3 pb-3 grid grid-cols-2 gap-2 mt-2'>
-                <button disabled title={tFn('voice.file_btn_title')}
-                    class='flex items-center justify-center gap-1.5 py-2
-                           rounded-lg bg-gray-800/40 text-gray-600 text-xs
-                           border border-gray-800 cursor-not-allowed select-none'>
-                    <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
-                        <path stroke-linecap='round' stroke-linejoin='round' d='M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13'/>
-                    </svg>
-                    <span>{tFn('voice.file_btn')}</span>
-                    <span class='text-[9px] text-gray-700 font-medium uppercase tracking-wider'>{tFn('voice.coming_soon')}</span>
-                </button>
-                <button disabled title={tFn('voice.game_btn_title')}
-                    class='flex items-center justify-center gap-1.5 py-2
-                           rounded-lg bg-gray-800/40 text-gray-600 text-xs
-                           border border-gray-800 cursor-not-allowed select-none'>
-                    <svg xmlns='http://www.w3.org/2000/svg' class='w-3.5 h-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2'>
-                        <rect x='2' y='6' width='20' height='12' rx='2'/>
-                        <path stroke-linecap='round' stroke-linejoin='round' d='M6 12h4m-2-2v4M15 11h.01M18 11h.01'/>
-                    </svg>
-                    <span>{tFn('voice.game_btn')}</span>
-                    <span class='text-[9px] text-gray-700 font-medium uppercase tracking-wider'>{tFn('voice.coming_soon')}</span>
-                </button>
-            </div>
 
             {#if canModerate}
                 <!-- Modération -->

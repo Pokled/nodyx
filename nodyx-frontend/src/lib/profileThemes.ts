@@ -21,7 +21,9 @@ export const DEFAULT_THEME: ProfileThemeVars = {
 	cardBorder:  '#1f2937',
 	accent:      '#6366f1',
 	text:        '#f9fafb',
-	textMuted:   '#6b7280',
+	// gray-400 et non gray-500 : les petits textes du profil (calendrier d'activité,
+	// paliers de niveau) restaient sous 4:1 sur les cartes sombres.
+	textMuted:   '#9ca3af',
 	bgImage:     '',
 }
 
@@ -42,7 +44,7 @@ export const PROFILE_PRESETS: ProfilePreset[] = [
 			cardBorder: '#1e3a5f',
 			accent:     '#3b82f6',
 			text:       '#e2e8f0',
-			textMuted:  '#64748b',
+			textMuted:  '#94a3b8',
 			bgImage:    '',
 		},
 	},

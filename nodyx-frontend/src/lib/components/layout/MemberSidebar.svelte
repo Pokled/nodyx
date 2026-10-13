@@ -487,7 +487,7 @@
 	  font-weight: 700;
 	  text-transform: uppercase;
 	  letter-spacing: 0.1em;
-	  color: var(--nx-text-faint);
+	  color: var(--nx-text-muted);
 	}
 
 	.members-c.collapsed .members-header .label {
