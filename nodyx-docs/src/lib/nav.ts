@@ -16,7 +16,7 @@ export const nav: NavSection[] = [
     icon:  'rocket',
     items: [
       { title: 'Introduction',   slug: 'readme'         },
-      { title: 'Why Nodyx',      slug: 'why-nodyx',      badge: 'New' },
+      { title: 'Why Nodyx',      slug: 'why-nodyx' },
       { title: 'Installation',   slug: 'install'        },
       { title: 'Tunnel Install', slug: 'install-tunnel'  },
       { title: 'Domain & DNS',   slug: 'domain'         },
@@ -37,7 +37,7 @@ export const nav: NavSection[] = [
     title: 'Module System',
     icon:  'layers',
     items: [
-      { title: 'Module System Overview', slug: 'module-system', badge: 'v2.2' },
+      { title: 'Module System Overview', slug: 'module-system' },
     ],
   },
   {
@@ -45,22 +45,22 @@ export const nav: NavSection[] = [
     icon:  'puzzle',
     items: [
       { title: 'Homepage Builder',         slug: 'homepage-builder' },
-      { title: 'Create Your First Widget', slug: 'create-widget', badge: 'New' },
+      { title: 'Create Your First Widget', slug: 'create-widget' },
     ],
   },
   {
     title: 'Creating Content',
     icon:  'pen',
     items: [
-      { title: 'Article Editor', slug: 'editor', badge: 'v2.8' },
+      { title: 'Article Editor', slug: 'editor' },
     ],
   },
   {
     title: 'Admin Modules',
     icon:  'wrench',
     items: [
-      { title: 'OctoGuard (auto-mod)',  slug: 'octoguard',    badge: 'v2.6' },
-      { title: 'Streamer Hub (Twitch)', slug: 'streamer-hub', badge: 'v2.8' },
+      { title: 'OctoGuard (auto-mod)',  slug: 'octoguard' },
+      { title: 'Streamer Hub (Twitch)', slug: 'streamer-hub' },
     ],
   },
   {

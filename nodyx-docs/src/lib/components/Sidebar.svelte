@@ -4,7 +4,7 @@
 
   // `lang` prefixe chaque lien. Sans lui, un lecteur arrive sur /fr/relay puis
   // retombe en anglais au premier clic de la barre laterale.
-  const { currentSlug, lang = 'en' }: { currentSlug: string; lang?: string } = $props()
+  const { currentSlug, lang = 'en', ouvert = false }: { currentSlug: string; lang?: string; ouvert?: boolean } = $props()
   const prefixe = $derived(lang === 'en' ? '' : `/${lang}`)
 
   function isActive(item: NavItem) {
@@ -12,7 +12,7 @@
   }
 </script>
 
-<nav class="sidebar" aria-label="Documentation">
+<nav class="sidebar" class:ouvert id="doc-nav" aria-label="Documentation">
   <div class="sidebar-inner">
     {#each nav as section}
       <div class="nav-section">
@@ -56,6 +56,19 @@
 
 .sidebar-inner {
   padding: 1.5rem 0 3rem;
+}
+
+/* Téléphone : repliée, ouverte par le bouton « Documentation menu » du gabarit. */
+@media (max-width: 900px) {
+  .sidebar {
+    display: none;
+    width: auto;
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar.ouvert { display: block; }
 }
 
 .nav-section {
