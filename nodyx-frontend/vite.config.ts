@@ -2,6 +2,16 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
+// Relais du serveur de dev uniquement : le cœur n'autorise que l'origine publique
+// de l'instance. Depuis http://127.0.0.1:<port>, le navigateur envoie cette origine
+// locale et le cœur répond 500 (« CORS: origin non autorisée ») : chat vide, appels
+// refusés. Le relais retire l'en-tête, la requête arrive comme un appel local.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sansOrigine = (proxy: any) => {
+	proxy.on('proxyReq', (req: { removeHeader(n: string): void }) => req.removeHeader('origin'))
+	proxy.on('proxyReqWs', (req: { removeHeader(n: string): void }) => req.removeHeader('origin'))
+}
+
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 
@@ -38,15 +48,18 @@ export default defineConfig({
 			'/api': {
 				target:      'http://127.0.0.1:3000',
 				changeOrigin: true,
+				configure:   sansOrigine,
 			},
 			'/socket.io': {
 				target:      'http://127.0.0.1:3000',
 				changeOrigin: true,
 				ws:           true, // WebSocket (Socket.IO)
+				configure:   sansOrigine,
 			},
 			'/uploads': {
 				target:      'http://127.0.0.1:3000',
 				changeOrigin: true,
+				configure:   sansOrigine,
 			},
 		},
 	},

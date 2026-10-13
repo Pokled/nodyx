@@ -1,4 +1,5 @@
 import type { Handle, HandleFetch } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { getLocaleFromAcceptLanguage, isKnownLocale } from '$lib/i18n';
 
@@ -95,6 +96,15 @@ export const handleFetch: HandleFetch = ({ event, request, fetch }) => {
 		if (env.INTERNAL_API_SECRET) {
 			headers.set('x-forwarded-for', event.getClientAddress());
 			headers.set('x-nodyx-internal', env.INTERNAL_API_SECRET);
+		}
+		// En développement seulement : le fetch de SvelteKit ajoute un en-tête Origin
+		// à cet appel serveur. En prod c'est https://nodyx.org, que le cœur autorise ;
+		// en local c'est http://127.0.0.1:<port>, que le cœur refuse (« CORS: origin
+		// non autorisée », 500), et aucune session ne tenait sur un serveur de dev
+		// branché sur un vrai cœur. Le fetch natif de Node n'en ajoute pas.
+		if (dev) {
+			headers.delete('origin');
+			return globalThis.fetch(new Request(request, { headers }));
 		}
 		return fetch(new Request(request, { headers }));
 	}
