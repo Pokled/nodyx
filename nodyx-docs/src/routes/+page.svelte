@@ -1,3569 +1,461 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-
+  // Accueil de nodyx.dev, réécrit le 13/10/2026. L'ancienne page (3 569 lignes)
+  // affichait des chiffres figés et faux, des données de démonstration inventées
+  // et des captures d'avril. Ici : la même voix que les README, de vraies
+  // captures de nodyx.org, et des chiffres lus en direct (+page.server.ts).
   const { data } = $props()
 
-  let copied    = $state(false)
-  let canvasEl  = $state<HTMLCanvasElement | null>(null)
-  let activeRow = $state(1)
-
-  const instanceCount = $derived(data.instanceCount as number | null)
-
   const INSTALL_CMD = 'curl -fsSL https://nodyx.org/install.sh | bash'
+  let copie = $state(false)
 
-  function copyInstall() {
+  function copier() {
     navigator.clipboard.writeText(INSTALL_CMD)
-    copied = true
-    setTimeout(() => { copied = false }, 2000)
+    copie = true
+    setTimeout(() => { copie = false }, 2000)
   }
 
-  // ── Animated node graph ────────────────────────────────────────────────────
-  onMount(() => {
-    const canvas = canvasEl
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
+  const DESCRIPTION = 'Documentation for Nodyx, the self-hosted community platform you actually own: forum, chat, voice, canvas and your own homepage in one install, on your own server.'
 
-    let W = 0, H = 0, raf = 0
-
-    // Fonction flechee, pas une declaration : une `function` est hoistee, donc
-    // TypeScript considere qu'elle pourrait s'executer AVANT le `if (!canvas)
-    // return` ci-dessus et refuse d'appliquer le narrowing. Le garde existait
-    // deja, c'est seulement l'analyse statique qui ne pouvait pas le voir.
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect()
-      W = canvas.width  = rect.width  * devicePixelRatio
-      H = canvas.height = rect.height * devicePixelRatio
-      ctx.scale(devicePixelRatio, devicePixelRatio)
-      W /= devicePixelRatio
-      H /= devicePixelRatio
-    }
-
-    const ro = new ResizeObserver(resize)
-    ro.observe(canvas)
-    resize()
-
-    // Node definitions: [x%, y%, size, color, speed]
-    const NODES_DEF = [
-      [0.15, 0.18, 4,   '#3b82f6', 0.6],
-      [0.50, 0.10, 3.5, '#818cf8', 0.45],
-      [0.82, 0.22, 4,   '#06b6d4', 0.55],
-      [0.25, 0.50, 5,   '#3b82f6', 0.35], // main-ish left
-      [0.55, 0.45, 7,   '#ffffff', 0.25], // CENTER, biggest
-      [0.78, 0.55, 4,   '#818cf8', 0.5],
-      [0.12, 0.75, 3.5, '#06b6d4', 0.65],
-      [0.42, 0.80, 4,   '#3b82f6', 0.4],
-      [0.72, 0.82, 3.5, '#818cf8', 0.55],
-      [0.90, 0.40, 3,   '#06b6d4', 0.7],
-    ]
-
-    // Connections: [fromIndex, toIndex]
-    const EDGES = [
-      [0,1],[1,2],[0,3],[1,4],[2,5],[2,9],
-      [3,4],[4,5],[4,6],[4,7],[4,8],
-      [3,6],[5,9],[6,7],[7,8],[8,5],
-      [0,4],[9,5],
-    ]
-
-    type Node = {
-      bx: number; by: number
-      x: number; y: number
-      r: number; color: string
-      ox: number; oy: number; speed: number
-      phase: number
-    }
-
-    let nodes: Node[] = []
-    let t = 0
-
-    function initNodes() {
-      nodes = NODES_DEF.map(([px, py, r, color, speed]) => {
-        const bx = (px as number) * W
-        const by = (py as number) * H
-        return {
-          bx, by, x: bx, y: by,
-          r: r as number,
-          color: color as string,
-          speed: speed as number,
-          ox: (Math.random() - 0.5) * 40,
-          oy: (Math.random() - 0.5) * 30,
-          phase: Math.random() * Math.PI * 2,
-        }
-      })
-    }
-
-    function tick() {
-      t += 0.008
-      ctx.clearRect(0, 0, W, H)
-
-      // Update node positions (gentle floating)
-      nodes.forEach(n => {
-        n.x = n.bx + n.ox * Math.sin(t * n.speed + n.phase)
-        n.y = n.by + n.oy * Math.cos(t * n.speed * 0.7 + n.phase)
-      })
-
-      // Draw edges
-      EDGES.forEach(([a, b]) => {
-        const na = nodes[a], nb = nodes[b]
-        if (!na || !nb) return
-        const dx = nb.x - na.x, dy = nb.y - na.y
-        const dist = Math.sqrt(dx*dx + dy*dy)
-        const alpha = Math.max(0, 1 - dist / 320) * 0.35
-
-        const grad = ctx.createLinearGradient(na.x, na.y, nb.x, nb.y)
-        grad.addColorStop(0, na.color + '60')
-        grad.addColorStop(1, nb.color + '60')
-
-        // Traveling pulse on the edge
-        const pulse = ((t * 60 * 0.3 + a * 37 + b * 13) % dist) / dist
-        ctx.save()
-        ctx.strokeStyle = grad
-        ctx.lineWidth = 1
-        ctx.globalAlpha = alpha
-        ctx.setLineDash([dist * 0.25, dist * 0.75])
-        ctx.lineDashOffset = -dist * pulse
-        ctx.beginPath()
-        ctx.moveTo(na.x, na.y)
-        ctx.lineTo(nb.x, nb.y)
-        ctx.stroke()
-        ctx.setLineDash([])
-        ctx.restore()
-
-        // Base line (faint)
-        ctx.save()
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 0.5
-        ctx.globalAlpha = alpha * 0.4
-        ctx.beginPath()
-        ctx.moveTo(na.x, na.y)
-        ctx.lineTo(nb.x, nb.y)
-        ctx.stroke()
-        ctx.restore()
-      })
-
-      // Draw nodes
-      nodes.forEach((n, i) => {
-        const pulse = 0.85 + 0.15 * Math.sin(t * 1.8 + n.phase)
-        const r = n.r * pulse
-
-        // Outer glow
-        const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 5)
-        glow.addColorStop(0, n.color + '30')
-        glow.addColorStop(1, n.color + '00')
-        ctx.save()
-        ctx.fillStyle = glow
-        ctx.beginPath()
-        ctx.arc(n.x, n.y, r * 5, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.restore()
-
-        // Core
-        ctx.save()
-        ctx.fillStyle = n.color
-        ctx.shadowColor = n.color
-        ctx.shadowBlur = r * 4
-        ctx.globalAlpha = i === 4 ? 1 : 0.85
-        ctx.beginPath()
-        ctx.arc(n.x, n.y, r, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.restore()
-      })
-
-      raf = requestAnimationFrame(tick)
-    }
-
-    initNodes()
-    raf = requestAnimationFrame(tick)
-
-    return () => {
-      cancelAnimationFrame(raf)
-      ro.disconnect()
-    }
-  })
-
-  const FEATURES = [
+  const visite = [
     {
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
-      title: 'Forum & threads',
-      desc: 'Categories, subcategories, threaded replies, rich editor, polls, pinned threads, flat, wide, professional by design.',
-      color: '#3b82f6',
+      image: '/img/vitrine/forum.webp',
+      alt: 'The Nodyx forum: categories, sub-forums, the latest message of each, recent activity',
+      titre: 'A forum that lasts, a chat that lives',
+      texte: 'Categories and sub-forums with the latest message of each, so you see where the life is. Every thread has a clean public URL and structured data, so what your community writes can be found again. Next to it: real-time chat, end-to-end encrypted private messages.',
+      liens: [{ href: '/readme', label: 'Overview' }, { href: '/editor', label: 'The editor' }],
     },
     {
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
-      title: 'Real-time chat',
-      desc: 'Socket.IO powered channels, DMs, replies, pins, link unfurling, online presence, zero latency.',
-      color: '#8b5cf6',
+      image: '/img/vitrine/voice-screenshare.webp',
+      alt: 'A voice channel with a live screen share of Blender on the Nodyx Stage',
+      titre: 'Voice and screen sharing',
+      texte: 'Small rooms talk peer to peer. When a room grows or someone shares their screen, it switches to an SFU on your own server: one upload per speaker, whatever the audience. The share opens on the Stage, and anyone joining mid-share sees it right away.',
+      liens: [{ href: '/audio', label: 'Audio engine' }, { href: '/relay', label: 'Relay and P2P' }],
     },
     {
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>`,
-      title: 'Voice channels',
-      desc: 'WebRTC audio rooms with noise cancellation, echo suppression, per-user gain control and screen sharing.',
-      color: '#06b6d4',
+      image: '/img/vitrine/canvas.webp',
+      alt: 'NodyxCanvas: a shared board with frames, sticky notes, hexagons and connectors',
+      titre: 'Make things together',
+      texte: 'A shared whiteboard where everyone draws at once, task boards to plan a release or a tournament, events with a place and sign-ups, polls with live results. All of it saved on your server.',
+      liens: [{ href: '/roadmap', label: 'What is shipped' }],
     },
     {
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
-      title: 'P2P Relay',
-      desc: 'nodyx-relay lets you expose any instance behind a NAT. No port forwarding, no cloud lock-in, pure Rust TCP tunneling.',
-      color: '#f59e0b',
-    },
-    {
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
-      title: 'Living Profiles',
-      desc: 'Generative animated banners, reputation rings, activity heatmaps, XP levels and custom name effects. Plus a shareable invite card for Discord & social.',
-      color: '#a855f7',
-    },
-    {
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-      title: 'Social Feed',
-      desc: 'A chronological follow feed, posts, replies, resonances. No algorithm, no engagement trap. Just the people you chose to follow.',
-      color: '#10b981',
-    },
-    {
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-      title: 'AGPL-3.0, Free forever',
-      desc: 'Open source, copyleft, community-owned. Fork it, contribute, run it. No enterprise tier, no feature gating.',
-      color: '#ef4444',
+      image: '/img/vitrine/homepage-builder.webp',
+      alt: 'The Homepage Builder: the page structure on the left, a live preview on the right',
+      titre: 'Your front door, your way',
+      texte: 'Compose the homepage on a 12-column grid with a live preview on desktop, tablet and mobile. Pick one of fourteen ambiances or your own colors, with contrast checked for you. Missing something? Build a widget in plain JavaScript and install it in one click.',
+      liens: [{ href: '/homepage-builder', label: 'Homepage Builder' }, { href: '/create-widget', label: 'Create a widget' }],
     },
   ]
 
-  const STEPS = [
+  const aiguillage = [
     {
-      n: '01',
-      title: 'One command install',
-      code: 'curl -fsSL https://nodyx.org/install.sh | bash',
-      desc: 'Detects your OS, installs Node, PostgreSQL, Redis, configures Caddy reverse proxy and sets up PM2. Done in under 3 minutes.',
+      titre: 'Host a community',
+      texte: 'From a fresh server to your first members.',
+      liens: [
+        { href: '/install', label: 'Installation' },
+        { href: '/install-tunnel', label: 'Install behind a tunnel' },
+        { href: '/domain', label: 'Domain and HTTPS' },
+        { href: '/relay', label: 'Home server, no open port' },
+        { href: '/email', label: 'Email' },
+      ],
     },
     {
-      n: '02',
-      title: 'Name your community',
-      code: 'NODYX_COMMUNITY_NAME="The Hive"\nNODYX_COMMUNITY_SLUG="the-hive"',
-      desc: 'Set a handful of environment variables. Your instance, your name, your identity, no approval required.',
+      titre: 'Build on Nodyx',
+      texte: 'Widgets, games and how the pieces fit.',
+      liens: [
+        { href: '/create-widget', label: 'Create a widget' },
+        { href: '/homepage-builder', label: 'Homepage Builder' },
+        { href: '/module-system', label: 'Module system' },
+        { href: '/architecture', label: 'Architecture' },
+      ],
     },
     {
-      n: '03',
-      title: 'Invite your people',
-      code: 'https://your-domain.com/auth/register',
-      desc: 'Registration opens immediately. First user becomes admin. Start building, forum, channels, voice rooms are all ready.',
+      titre: 'Join the project',
+      texte: 'Code, words, or a language you speak.',
+      liens: [
+        { href: '/contributing', label: 'Contributing' },
+        { href: 'https://nodyx.org/translate', label: 'Translate Nodyx', externe: true },
+        { href: '/roadmap', label: 'Roadmap' },
+        { href: '/manifesto', label: 'Manifesto' },
+      ],
     },
   ]
-
-  // ── Homepage Builder section animations ───────────────────────────────────
-  onMount(() => {
-    // Entrance observer, fade + slide up on scroll into view
-    const obs = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) {
-          (e.target as HTMLElement).style.opacity = '1'
-          ;(e.target as HTMLElement).style.transform = 'translateY(0)'
-          obs.unobserve(e.target)
-        }
-      }
-    }, { threshold: 0.12 })
-    document.querySelectorAll('.hb-entrance').forEach(el => obs.observe(el))
-
-    // Active row cycling, drives highlights in builder mockup
-    const iv = setInterval(() => {
-      activeRow = activeRow >= 3 ? 1 : activeRow + 1
-    }, 2600)
-
-    return () => { obs.disconnect(); clearInterval(iv) }
-  })
 </script>
 
 <svelte:head>
-  <title>Nodyx Docs, Self-hosted community platform</title>
-  <meta name="description"        content="Official documentation for Nodyx, the open-source, self-hosted community platform. Forum + real-time chat + P2P voice. One command install." />
-  <link rel="canonical"           href="https://nodyx.dev" />
+  <title>Nodyx Docs, the self-hosted community platform you actually own</title>
+  <meta name="description" content={DESCRIPTION} />
+  <link rel="canonical" href="https://nodyx.dev" />
 
-  <!-- Open Graph -->
-  <meta property="og:type"        content="website" />
-  <meta property="og:title"       content="Nodyx Docs, Self-hosted community platform" />
-  <meta property="og:description" content="Official documentation for Nodyx, the open-source, self-hosted community platform. Forum + real-time chat + P2P voice. One command install." />
-  <meta property="og:url"         content="https://nodyx.dev" />
-  <meta property="og:image"       content="https://nodyx.dev/og-default.png" />
-  <meta property="og:image:width" content="1200" />
+  <meta property="og:type"         content="website" />
+  <meta property="og:title"        content="Nodyx Docs, the self-hosted community platform you actually own" />
+  <meta property="og:description"  content={DESCRIPTION} />
+  <meta property="og:url"          content="https://nodyx.dev" />
+  <meta property="og:image"        content="https://nodyx.dev/og-default.png" />
+  <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
 
-  <!-- Twitter/X card -->
   <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:title"       content="Nodyx Docs, Self-hosted community platform" />
-  <meta name="twitter:description" content="Official documentation for Nodyx, open-source, self-hosted, P2P. Forum + Chat + Voice. One command install." />
+  <meta name="twitter:title"       content="Nodyx Docs, the self-hosted community platform you actually own" />
+  <meta name="twitter:description" content={DESCRIPTION} />
   <meta name="twitter:image"       content="https://nodyx.dev/og-default.png" />
 
-  <!-- JSON-LD: WebSite + SearchAction -->
+  <!-- Pas de SearchAction : l'ancienne page en déclarait une vers /search, qui
+       n'existe pas (404). La recherche du site passe par l'en-tête. -->
   {@html `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Nodyx Docs",
-    "url": "https://nodyx.dev",
-    "description": "Official documentation for Nodyx, the open-source, self-hosted community platform",
-    "inLanguage": "en",
-    "publisher": { "@type": "Organization", "name": "Nodyx", "url": "https://nodyx.org" },
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": { "@type": "EntryPoint", "urlTemplate": "https://nodyx.dev/search?q={search_term_string}" },
-      "query-input": "required name=search_term_string"
-    }
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Nodyx Docs',
+    url: 'https://nodyx.dev',
+    description: DESCRIPTION,
+    inLanguage: 'en',
+    publisher: { '@type': 'Organization', name: 'Nodyx', url: 'https://nodyx.org' },
   })}</script>`}
 </svelte:head>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- HERO                                                                     -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="hero">
-  <!-- Background grid -->
-  <div class="hero-grid" aria-hidden="true"></div>
+<div class="accueil">
+  <section class="ouverture">
+    <p class="surtitre">Nodyx documentation</p>
+    <h1>The self-hosted community platform you actually own.</h1>
+    <p class="chapeau">
+      Forum, chat, voice, canvas and your own homepage, in one install on a server you control,
+      from a small VPS to a Raspberry Pi behind your home router.
+    </p>
 
-  <div class="hero-inner">
-    <div class="hero-text">
-      <div class="badge-row">
-        <span class="badge badge-agpl">AGPL-3.0</span>
-        <span class="badge badge-self">Self-hosted</span>
-        <span class="badge badge-p2p">P2P</span>
-        <span class="badge badge-os">Open Source</span>
+    <div class="commande">
+      <code>{INSTALL_CMD}</code>
+      <button type="button" onclick={copier} aria-label="Copy the install command">
+        {copie ? 'Copied' : 'Copy'}
+      </button>
+    </div>
+
+    <div class="actions">
+      <a class="bouton principal" href="/install">Installation guide</a>
+      <a class="bouton" href="/readme">Read the docs</a>
+      <a class="bouton" href="https://nodyx.org" target="_blank" rel="noopener noreferrer">See it live</a>
+    </div>
+
+    <img class="capture-ouverture" src="/img/vitrine/home.webp"
+         alt="The home page of nodyx.org, a community running Nodyx: featured articles and the latest discussions"
+         width="1688" height="1088" />
+    <p class="legende">nodyx.org, the project's own community, running the same Nodyx you install.</p>
+  </section>
+
+  {#if data.version || data.instances || data.traduction}
+    <ul class="chiffres" aria-label="Nodyx today">
+      {#if data.version}
+        <li><a href="https://github.com/Pokled/nodyx/releases/latest" target="_blank" rel="noopener noreferrer">
+          <strong>{data.version}</strong><span>latest release</span></a></li>
+      {/if}
+      {#if data.instances}
+        <li><a href="https://nodyx.org/discover" target="_blank" rel="noopener noreferrer">
+          <strong>{data.instances}</strong><span>{data.instances === 1 ? 'community' : 'communities'} in the public directory</span></a></li>
+      {/if}
+      {#if data.traduction}
+        <li><a href="https://nodyx.org/translate" target="_blank" rel="noopener noreferrer">
+          <strong>{data.traduction.langues}</strong><span>interface languages, translated by the community</span></a></li>
+      {/if}
+      <li><a href="https://www.gnu.org/licenses/agpl-3.0" target="_blank" rel="noopener noreferrer">
+        <strong>AGPL-3.0</strong><span>free software, for good</span></a></li>
+    </ul>
+  {/if}
+
+  <section class="visite" aria-label="A tour of Nodyx">
+    {#each visite as bloc, i (bloc.image)}
+      <article class="bloc" class:inverse={i % 2 === 1}>
+        <img src={bloc.image} alt={bloc.alt} width="1688" height="1088" loading="lazy" />
+        <div class="bloc-texte">
+          <h2>{bloc.titre}</h2>
+          <p>{bloc.texte}</p>
+          <p class="liens">
+            {#each bloc.liens as lien (lien.href)}<a href={lien.href}>{lien.label}</a>{/each}
+          </p>
+        </div>
+      </article>
+    {/each}
+  </section>
+
+  <section class="partout">
+    <h2>Wherever you run it</h2>
+    <p>
+      The installer asks one question: how will people reach your community? The Nodyx relay,
+      written in Rust, gives a home server a public address with outbound connections only:
+      website, chat and small-group voice work from behind a router. Large voice rooms still need
+      a reachable server today; making them work from home too is the next big piece of work.
+    </p>
+    <div class="modes">
+      <div><strong>Nodyx Relay</strong><span>Nothing to open. <code>yourclub.nodyx.org</code>, even behind a home router.</span></div>
+      <div><strong>Your own domain</strong><span>Ports 80 and 443, HTTPS from Let's Encrypt, full control.</span></div>
+      <div><strong>A tunnel</strong><span>Cloudflare Tunnel, Pangolin, or your own reverse proxy.</span></div>
+    </div>
+    <p class="liens">
+      <a href="/install">Installation</a><a href="/install-tunnel">Behind a tunnel</a><a href="/relay">How the relay works</a>
+    </p>
+  </section>
+
+  <section class="aiguillage" aria-label="Where to go next">
+    {#each aiguillage as carte (carte.titre)}
+      <div class="carte">
+        <h2>{carte.titre}</h2>
+        <p>{carte.texte}</p>
+        <ul>
+          {#each carte.liens as lien (lien.href)}
+            <li>
+              {#if lien.externe}
+                <a href={lien.href} target="_blank" rel="noopener noreferrer">{lien.label}</a>
+              {:else}
+                <a href={lien.href}>{lien.label}</a>
+              {/if}
+            </li>
+          {/each}
+        </ul>
       </div>
+    {/each}
+  </section>
 
-      <h1 class="hero-title">
-        Build the community<br>
-        <span class="hero-accent">you actually own.</span>
-      </h1>
-
-      <p class="hero-sub">
-        Nodyx is a self-hosted, open-source community platform.<br>
-        Forum + real-time chat + voice channels, one server, one community, zero lock-in.
-      </p>
-
-      <div class="install-box">
-        <span class="install-prompt">$</span>
-        <code class="install-cmd">{INSTALL_CMD}</code>
-        <button
-          class="install-copy"
-          class:install-copied={copied}
-          onclick={copyInstall}
-          aria-label="Copy install command"
-          title={copied ? 'Copied!' : 'Copy'}
-        >
-          {#if copied}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          {:else}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          {/if}
-        </button>
-      </div>
-
-      <div class="hero-ctas">
-        <a href="/install" class="cta-primary">
-          Get started
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </a>
-        <a href="/architecture" class="cta-secondary">
-          How it works
-        </a>
-        <a href="https://github.com/Pokled/nodyx" target="_blank" rel="noopener noreferrer" class="cta-ghost">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
-          GitHub
-        </a>
-      </div>
-    </div>
-
-    <div class="hero-canvas-wrap" aria-hidden="true">
-      <canvas bind:this={canvasEl} class="hero-canvas"></canvas>
-      <div class="hero-canvas-label">
-        <span class="canvas-dot canvas-dot-blue"></span> your-community.nodyx.org
-      </div>
-    </div>
-  </div>
-
-  <!-- Scroll indicator -->
-  <div class="scroll-hint" aria-hidden="true">
-    <span class="scroll-hint-text">Discover more</span>
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- STAT BAR                                                                 -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<div class="stat-bar">
-  <div class="stat-bar-inner">
-    <div class="stat">
-      <span class="stat-val">v1.9.5</span>
-      <span class="stat-label">Latest stable</span>
-    </div>
-    <div class="stat-sep"></div>
-    <div class="stat">
-      <span class="stat-val">{instanceCount !== null ? instanceCount : '-'}</span>
-      <span class="stat-label">
-        {#if instanceCount !== null}
-          <span class="stat-live-dot" aria-hidden="true"></span>
-        {/if}
-        Instances live
-      </span>
-    </div>
-    <div class="stat-sep"></div>
-    <div class="stat">
-      <span class="stat-val">53</span>
-      <span class="stat-label">DB migrations</span>
-    </div>
-    <div class="stat-sep"></div>
-    <div class="stat">
-      <span class="stat-val">Rust + Node</span>
-      <span class="stat-label">Hybrid backend</span>
-    </div>
-    <div class="stat-sep"></div>
-    <div class="stat">
-      <span class="stat-val">AGPL-3.0</span>
-      <span class="stat-label">Free forever</span>
-    </div>
-  </div>
+  <section class="fin">
+    <p>
+      Nodyx isn't the only open alternative, and it doesn't need to be. If another tool fits your
+      community better, use it: <a href="/why-nodyx">Why Nodyx, and the alternatives we respect</a>.
+    </p>
+  </section>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- FEATURES                                                                 -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section">
-  <div class="section-inner">
-    <div class="section-label">CAPABILITIES</div>
-    <h2 class="section-title">Everything a community needs. Nothing it doesn't.</h2>
-    <p class="section-sub">No feature gating. No tiers. The full platform, from day one.</p>
-
-    <div class="features-grid">
-      {#each FEATURES as f}
-        <div class="feature-card" style="--fc: {f.color}">
-          <div class="feature-icon" style="color: {f.color}">
-            {@html f.icon}
-          </div>
-          <h3 class="feature-title">{f.title}</h3>
-          <p class="feature-desc">{f.desc}</p>
-        </div>
-      {/each}
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- PHILOSOPHY BANNER                                                        -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="manifesto">
-  <div class="manifesto-inner">
-    <div class="manifesto-quote">
-      <span class="manifesto-mark">"</span>
-      We built the internet to bring people together. Not to divide them.
-      <span class="manifesto-mark">"</span>
-    </div>
-    <p class="manifesto-sub">
-      One instance = one community. Chronological feeds, no algorithmic manipulation,<br>
-      no engagement traps, no data brokers. Just a space that belongs to your people.
-    </p>
-    <a href="/manifesto" class="manifesto-cta">Read the manifesto</a>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- QUICK START                                                              -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section section-alt">
-  <div class="section-inner">
-    <div class="section-label">QUICK START</div>
-    <h2 class="section-title">Up and running in minutes.</h2>
-    <p class="section-sub">One script. Three environment variables. A community that's yours forever.</p>
-
-    <div class="steps">
-      {#each STEPS as s}
-        <div class="step">
-          <div class="step-num">{s.n}</div>
-          <div class="step-body">
-            <h3 class="step-title">{s.title}</h3>
-            <div class="step-code-wrap">
-              <pre class="step-code"><code>{s.code}</code></pre>
-            </div>
-            <p class="step-desc">{s.desc}</p>
-          </div>
-        </div>
-      {/each}
-    </div>
-
-    <div class="steps-cta">
-      <a href="/install" class="cta-primary">Full install guide</a>
-      <a href="/domain" class="cta-secondary">Domain setup</a>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SCREENSHOTS                                                               -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section ss-section">
-  <div class="section-inner">
-    <div class="section-label">SCREENSHOTS</div>
-    <h2 class="section-title">The real product. No mockup.</h2>
-    <p class="section-sub">Every screenshot taken from <a href="https://nodyx.org" target="_blank" rel="noopener noreferrer" style="color:var(--accent,#818cf8);text-decoration:none">nodyx.org</a>, the live production instance.</p>
-
-    <!-- Row 1: Hero screenshot full-width -->
-    <div class="ss-hero-shot">
-      <img src="/img/nodyx_home_page.png" alt="Nodyx homepage built with Grid Builder" loading="lazy"/>
-      <div class="ss-hero-caption">Homepage, assembled in the Grid Builder, live on nodyx.org</div>
-    </div>
-
-    <!-- Row 2: 2-col grid, Forum + Chat -->
-    <div class="ss-grid">
-      <figure class="ss-fig">
-        <img src="/img/Nodyx_Forum.png" alt="Forum, categories and threads" loading="lazy"/>
-        <figcaption>Forum, categories, threads, rich editor, polls</figcaption>
-      </figure>
-      <figure class="ss-fig">
-        <img src="/img/Nodyx_chat.png" alt="Real-time chat channels" loading="lazy"/>
-        <figcaption>Real-time chat, Socket.IO, DMs, replies, mentions</figcaption>
-      </figure>
-      <figure class="ss-fig">
-        <img src="/img/Vocal_Nodyx_salon.png" alt="Voice channel, P2P WebRTC" loading="lazy"/>
-        <figcaption>Voice channels, P2P WebRTC mesh, noise cancellation</figcaption>
-      </figure>
-      <figure class="ss-fig">
-        <img src="/img/Nodyx_grid_builder_home_page_website.png" alt="Homepage Builder, drag and drop grid editor" loading="lazy"/>
-        <figcaption>Homepage Builder, free grid, drag & drop, live preview</figcaption>
-      </figure>
-      <figure class="ss-fig">
-        <img src="/img/widget_store_nodyx.png" alt="Widget Store, install .zip widgets" loading="lazy"/>
-        <figcaption>Widget Store, install community widgets in one click</figcaption>
-      </figure>
-      <figure class="ss-fig">
-        <img src="/img/Nodyx_Moteur_de_recherche_inter_reseau.png" alt="Cross-instance federated search" loading="lazy"/>
-        <figcaption>Cross-instance search, federated FTS across the network</figcaption>
-      </figure>
-      <figure class="ss-fig ss-fig--wide">
-        <img src="/img/Nodyx_canvas_alternative_Mural.png" alt="NodyxCanvas, collaborative whiteboard" loading="lazy"/>
-        <figcaption>NodyxCanvas, collaborative whiteboard, 11 tools, CRDT sync, voice-aware cursors</figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- LIVING PROFILE                                                            -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section section-alt">
-  <div class="section-inner lp-layout">
-
-    <!-- Left: text -->
-    <div class="lp-text">
-      <div class="section-label">LIVING PROFILES</div>
-      <h2 class="section-title" style="margin-bottom: 1rem;">Identity, not just an avatar.</h2>
-      <p class="lp-intro">
-        Profiles in Nodyx are alive. Every user gets a generative animated banner
-        that's unique to them, a reputation ring that grows with their activity,
-        and an activity heatmap that tells their story at a glance.
-      </p>
-      <ul class="lp-features">
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Generative banner</strong>, procedural animation seeded from username, unique per user
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Reputation rings</strong>, concentric SVG arcs tracking posts, replies, reactions, updated live
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Activity heatmap</strong>, 12-week GitHub-style contribution grid
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>XP levels &amp; grades</strong>, sqrt-based progression, custom colors, animated name effects
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Shareable invite card</strong>, <code style="font-size:0.8em;background:rgba(255,255,255,0.07);padding:0.1em 0.3em">/users/:username/card</code> generates a rich OG image for Discord &amp; social shares
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Follow system</strong>, follow members, build your feed, see who resonates with your posts
-        </li>
-      </ul>
-    </div>
-
-    <!-- Right: CSS profile card mockup -->
-    <div class="lp-card-wrap" aria-hidden="true">
-      <div class="lp-card">
-        <!-- Generative banner animation -->
-        <div class="lp-banner">
-          <div class="lp-banner-anim"></div>
-        </div>
-
-        <!-- Avatar + rings -->
-        <div class="lp-avatar-area">
-          <div class="lp-ring lp-ring-outer"></div>
-          <div class="lp-ring lp-ring-mid"></div>
-          <div class="lp-ring lp-ring-inner"></div>
-          <div class="lp-avatar">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-        </div>
-
-        <!-- Username + grade -->
-        <div class="lp-identity">
-          <span class="lp-username">nekr0s</span>
-          <span class="lp-grade">Core Member</span>
-        </div>
-
-        <!-- XP bar -->
-        <div class="lp-xp-row">
-          <span class="lp-xp-label">Lv. 14</span>
-          <div class="lp-xp-track">
-            <div class="lp-xp-bar"></div>
-          </div>
-          <span class="lp-xp-label">Lv. 15</span>
-        </div>
-
-        <!-- Stats row -->
-        <div class="lp-stats">
-          <div class="lp-stat">
-            <span class="lp-stat-val">847</span>
-            <span class="lp-stat-lbl">Posts</span>
-          </div>
-          <div class="lp-stat-sep"></div>
-          <div class="lp-stat">
-            <span class="lp-stat-val">2.1k</span>
-            <span class="lp-stat-lbl">Replies</span>
-          </div>
-          <div class="lp-stat-sep"></div>
-          <div class="lp-stat">
-            <span class="lp-stat-val">94</span>
-            <span class="lp-stat-lbl">Merci</span>
-          </div>
-        </div>
-
-        <!-- Heatmap (12×7 grid) -->
-        <div class="lp-heatmap">
-          {#each { length: 84 } as _, i}
-            {@const intensity = Math.random()}
-            <div class="lp-cell" style="opacity: {0.07 + intensity * 0.85}; background: {intensity > 0.7 ? '#818cf8' : intensity > 0.4 ? '#6366f1' : '#3b3f6e'}"></div>
-          {/each}
-        </div>
-        <div class="lp-heatmap-label">Activity, last 12 weeks</div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- REPUTATION & STATS                                                        -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section">
-  <div class="section-inner rep-layout">
-
-    <div class="rep-text">
-      <div class="section-label">REPUTATION SYSTEM</div>
-      <h2 class="section-title" style="margin-bottom: 1rem;">A score that actually means something.</h2>
-      <p class="rep-intro">
-        Nodyx tracks every meaningful action, forum posts, replies, reactions, chat participation,
-        and translates them into a transparent, community-owned reputation score.
-        No black box, no pay-to-win. Just real contribution.
-      </p>
-      <ul class="lp-features">
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Public leaderboard</strong>, top contributors ranked by reputation score, visible to all
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Detailed breakdown</strong>, posts, replies, reactions, chat, events, each category tracked separately
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Animated progress curves</strong>, SVG reputation rings that grow and pulse with your activity
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Open formula</strong>, the scoring algorithm is in the codebase, auditable, forkable
-        </li>
-      </ul>
-      <div class="rep-cta-row">
-        <a href="https://nodyx.org/reputation" target="_blank" rel="noopener noreferrer" class="cta-secondary">
-          See it live →
-        </a>
-      </div>
-    </div>
-
-    <!-- Reputation rings mockup -->
-    <div class="rep-rings-wrap" aria-hidden="true">
-      <div class="rep-rings">
-        <!-- Outer ring, Posts -->
-        <svg class="rep-ring-svg rep-ring-svg--1" viewBox="0 0 160 160">
-          <circle cx="80" cy="80" r="72" fill="none" stroke="rgba(99,102,241,0.1)" stroke-width="6"/>
-          <circle cx="80" cy="80" r="72" fill="none" stroke="#6366f1" stroke-width="6"
-            stroke-dasharray="452" stroke-dashoffset="113"
-            stroke-linecap="round" transform="rotate(-90 80 80)"/>
-        </svg>
-        <!-- Mid ring, Replies -->
-        <svg class="rep-ring-svg rep-ring-svg--2" viewBox="0 0 160 160">
-          <circle cx="80" cy="80" r="58" fill="none" stroke="rgba(139,92,246,0.1)" stroke-width="5"/>
-          <circle cx="80" cy="80" r="58" fill="none" stroke="#8b5cf6" stroke-width="5"
-            stroke-dasharray="364" stroke-dashoffset="91"
-            stroke-linecap="round" transform="rotate(-90 80 80)"/>
-        </svg>
-        <!-- Inner ring, Reactions -->
-        <svg class="rep-ring-svg rep-ring-svg--3" viewBox="0 0 160 160">
-          <circle cx="80" cy="80" r="44" fill="none" stroke="rgba(6,182,212,0.1)" stroke-width="4"/>
-          <circle cx="80" cy="80" r="44" fill="none" stroke="#06b6d4" stroke-width="4"
-            stroke-dasharray="276" stroke-dashoffset="69"
-            stroke-linecap="round" transform="rotate(-90 80 80)"/>
-        </svg>
-        <!-- Center -->
-        <div class="rep-rings-center">
-          <span class="rep-score">4 821</span>
-          <span class="rep-score-lbl">reputation</span>
-        </div>
-      </div>
-      <div class="rep-legend">
-        <div class="rep-legend-item"><span class="rep-dot" style="background:#6366f1"></span>Forum posts</div>
-        <div class="rep-legend-item"><span class="rep-dot" style="background:#8b5cf6"></span>Replies</div>
-        <div class="rep-legend-item"><span class="rep-dot" style="background:#06b6d4"></span>Reactions</div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SOCIAL FEED                                                               -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section section-alt">
-  <div class="section-inner feed-showcase-layout">
-
-    <!-- Left: feed mockup -->
-    <div class="feed-mockup" aria-hidden="true">
-      <div class="feed-mock-header">
-        <span class="feed-mock-title">Fil d'actu</span>
-        <span class="feed-mock-sub">Posts des personnes que vous suivez</span>
-      </div>
-      <div class="feed-mock-post">
-        <div class="feed-mock-avatar feed-mock-avatar--a"></div>
-        <div class="feed-mock-body">
-          <div class="feed-mock-meta"><strong>nekr0s</strong> <span>@nekr0s · 2min</span></div>
-          <div class="feed-mock-text">Just shipped the new audio pipeline. Noise cancellation is <strong>wild</strong> now 🎙️</div>
-          <div class="feed-mock-actions">
-            <span class="feed-mock-action">↩ 3 réponses</span>
-            <span class="feed-mock-action feed-mock-action--active">♥ 14</span>
-          </div>
-        </div>
-      </div>
-      <div class="feed-mock-post">
-        <div class="feed-mock-avatar feed-mock-avatar--b"></div>
-        <div class="feed-mock-body">
-          <div class="feed-mock-meta"><strong>solara</strong> <span>@solara · 18min</span></div>
-          <div class="feed-mock-text">Anyone else find that Nodyx voice rooms are just <em>better</em> for focus sessions?</div>
-          <div class="feed-mock-actions">
-            <span class="feed-mock-action">↩ répondre</span>
-            <span class="feed-mock-action">♥ 7</span>
-          </div>
-        </div>
-      </div>
-      <div class="feed-mock-post feed-mock-post--faded">
-        <div class="feed-mock-avatar feed-mock-avatar--c"></div>
-        <div class="feed-mock-body">
-          <div class="feed-mock-meta"><strong>drift</strong> <span>@drift · 1h</span></div>
-          <div class="feed-mock-text">The reputation leaderboard is live. Let's gooo</div>
-          <div class="feed-mock-actions">
-            <span class="feed-mock-action">↩ 1 réponse</span>
-            <span class="feed-mock-action">♥ 22</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right: text -->
-    <div class="feed-showcase-text">
-      <div class="section-label">SOCIAL FEED</div>
-      <h2 class="section-title" style="margin-bottom: 1rem;">Your community, in real time.</h2>
-      <p class="rep-intro">
-        Follow the people you care about. See their posts as they happen.
-        Reply, resonate, that's it. No algorithm deciding what you see, no engagement
-        engineering, no ads.
-      </p>
-      <ul class="lp-features">
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Chronological, always</strong>, newest first, no ranking, no surprises
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Rich posts</strong>, TipTap editor with formatting, images, links, code blocks
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Résonances</strong>, our take on likes, with a pulse animation for popular posts
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Inline thread replies</strong>, expand replies directly in the feed, no page jump
-        </li>
-      </ul>
-    </div>
-
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- E2E ENCRYPTION                                                            -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section e2e-section">
-  <div class="e2e-grid-bg" aria-hidden="true"></div>
-  <div class="e2e-orb e2e-orb-left" aria-hidden="true"></div>
-  <div class="e2e-orb e2e-orb-right" aria-hidden="true"></div>
-
-  <div class="section-inner e2e-layout">
-
-    <!-- LEFT: headline + layers -->
-    <div class="e2e-text">
-      <div class="section-label" style="color: #4ade80; border-color: #4ade8030; background: #4ade8010;">PRIVATE MESSAGING</div>
-      <h2 class="section-title" style="margin-bottom: 1rem;">
-        Your messages.<br/>
-        <span class="e2e-gradient">Only yours.</span>
-      </h2>
-      <p class="e2e-intro">
-        Every DM is encrypted <strong>in your browser</strong> before it leaves your device,
-        three independent layers. The server stores only opaque ciphertext it can never read.
-      </p>
-
-      <!-- 3 layers -->
-      <div class="e2e-layers">
-        <div class="e2e-layer">
-          <div class="e2e-layer-num">1</div>
-          <div class="e2e-layer-body">
-            <div class="e2e-layer-title">
-              ECDH P-256
-              <span class="e2e-layer-tag">Key exchange</span>
-            </div>
-            <p class="e2e-layer-desc">
-              Your private key is generated in the browser and <strong>never leaves it</strong>, stored as a non-extractable CryptoKey. The server only holds your public key.
-            </p>
-          </div>
-        </div>
-        <div class="e2e-layer">
-          <div class="e2e-layer-num">2</div>
-          <div class="e2e-layer-body">
-            <div class="e2e-layer-title">
-              AES-256-GCM
-              <span class="e2e-layer-tag">Encryption</span>
-            </div>
-            <p class="e2e-layer-desc">
-              Military-grade authenticated encryption. Each message gets a unique 12-byte random IV. The database stores only <strong>opaque ciphertext</strong>.
-            </p>
-          </div>
-        </div>
-        <div class="e2e-layer e2e-layer-esy">
-          <div class="e2e-layer-num e2e-layer-num-green">3</div>
-          <div class="e2e-layer-body">
-            <div class="e2e-layer-title e2e-layer-title-green">
-              ESY Barbare
-              <span class="e2e-layer-tag e2e-layer-tag-green">Unique to each instance</span>
-            </div>
-            <p class="e2e-layer-desc">
-              A per-instance obfuscation layer on top of AES-GCM, byte-permutation + deterministic PRNG noise. Even if AES were broken, an attacker still needs <strong>this instance's secret</strong>.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT: live simulation mockup -->
-    <div class="e2e-demo" aria-label="Encryption simulation">
-
-      <!-- Shield header -->
-      <div class="e2e-demo-header">
-        <div class="e2e-shield-wrap">
-          <div class="e2e-ring e2e-ring-1"></div>
-          <div class="e2e-ring e2e-ring-2"></div>
-          <span class="e2e-dot-live">
-            <span class="e2e-dot-ping"></span>
-            <span class="e2e-dot-core"></span>
-          </span>
-        </div>
-        <div>
-          <div class="e2e-status-label">End-to-End Encrypted</div>
-          <div class="e2e-fingerprint">ESY · 189a9474·fcc66f78</div>
-        </div>
-        <div class="e2e-shield-badge">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-      </div>
-
-      <!-- Conversation mock -->
-      <div class="e2e-convo">
-        <!-- Outgoing plain text -->
-        <div class="e2e-msg-row e2e-msg-row-out">
-          <div class="e2e-bubble e2e-bubble-out">
-            Hey, rendez-vous demain à 18h ?
-          </div>
-        </div>
-
-        <!-- Encryption indicator -->
-        <div class="e2e-encrypt-step">
-          <div class="e2e-step-line"></div>
-          <div class="e2e-step-pill">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-            ECDH · AES-GCM · ESY
-          </div>
-          <div class="e2e-step-line"></div>
-        </div>
-
-        <!-- Ciphertext on the wire -->
-        <div class="e2e-msg-row e2e-msg-row-out">
-          <div class="e2e-bubble e2e-bubble-cipher">
-            <span class="e2e-cipher-shimmer">v2SB3l9OKY2adNW·aT1NZpECecR7+l3·kJ0LTuJ0kzFP7wri·C8G9WyDQCtCxI6z</span>
-          </div>
-        </div>
-
-        <!-- Receiver side -->
-        <div class="e2e-receiver-label">
-          <span>Receiver</span>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-
-        <div class="e2e-msg-row e2e-msg-row-in">
-          <div class="e2e-bubble e2e-bubble-in">
-            Hey, rendez-vous demain à 18h ?
-            <span class="e2e-lock-icon" aria-label="E2E verified">
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-            </span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- ARCHITECTURE PILL STRIP                                                  -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section">
-  <div class="section-inner">
-    <div class="section-label">TECH STACK</div>
-    <h2 class="section-title">Built on proven, boring technology.</h2>
-    <p class="section-sub">No blockchain. No AI hype. Just the right tools for a fast, reliable community platform.</p>
-
-    <div class="arch-grid">
-      <div class="arch-layer">
-        <div class="arch-layer-label">Frontend</div>
-        <div class="arch-pills">
-          <span class="arch-pill">SvelteKit 5</span>
-          <span class="arch-pill">Tailwind v4</span>
-          <span class="arch-pill">WebRTC</span>
-          <span class="arch-pill">Socket.IO client</span>
-          <span class="arch-pill">TipTap editor</span>
-        </div>
-      </div>
-      <div class="arch-arrow">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </div>
-      <div class="arch-layer">
-        <div class="arch-layer-label">Backend</div>
-        <div class="arch-pills">
-          <span class="arch-pill arch-pill-rust">Rust / Axum</span>
-          <span class="arch-pill">Node / Fastify v5</span>
-          <span class="arch-pill">Socket.IO server</span>
-          <span class="arch-pill">JWT + Redis sessions</span>
-        </div>
-      </div>
-      <div class="arch-arrow">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </div>
-      <div class="arch-layer">
-        <div class="arch-layer-label">Data</div>
-        <div class="arch-pills">
-          <span class="arch-pill">PostgreSQL</span>
-          <span class="arch-pill">Redis</span>
-          <span class="arch-pill">S3-compatible</span>
-        </div>
-      </div>
-      <div class="arch-arrow">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </div>
-      <div class="arch-layer">
-        <div class="arch-layer-label">Infra</div>
-        <div class="arch-pills">
-          <span class="arch-pill">Caddy (TLS)</span>
-          <span class="arch-pill arch-pill-rust">nodyx-relay (Rust)</span>
-          <span class="arch-pill arch-pill-rust">nexus-turn (STUN/TURN)</span>
-          <span class="arch-pill">PM2</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="arch-note">
-      <a href="/architecture">Full architecture reference →</a>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- DECENTRALIZED SECTION                                                    -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section section-alt">
-  <div class="section-inner decentralized">
-    <div class="decent-text">
-      <div class="section-label">DECENTRALIZED</div>
-      <h2 class="section-title" style="margin-bottom: 1rem;">The network lives without us.</h2>
-      <p class="decent-p">
-        Every Nodyx instance is independent. No central server, no corporate hub.
-        Instances can discover each other via the <strong>global directory</strong>, relay through
-        <strong>nodyx-relay</strong> even behind NAT, and the network keeps running if any single node goes dark,
-        including ours.
-      </p>
-      <p class="decent-p">
-        This is the fundamental design goal: <strong>Nodyx must survive without nodyx.org.</strong>
-      </p>
-      <div class="decent-links">
-        <a href="/relay" class="cta-secondary">nodyx-relay docs</a>
-        <a href="/architecture" class="cta-ghost-subtle">Architecture deep-dive</a>
-      </div>
-    </div>
-
-    <!-- Instance constellation diagram -->
-    <div class="decent-diagram" aria-hidden="true">
-      <div class="inst-node inst-main">
-        <div class="inst-dot inst-dot-blue"></div>
-        <span>your-community.nodyx.org</span>
-      </div>
-      <div class="inst-line inst-line-1"></div>
-      <div class="inst-node inst-b">
-        <div class="inst-dot inst-dot-purple"></div>
-        <span>art-collective.net</span>
-      </div>
-      <div class="inst-line inst-line-2"></div>
-      <div class="inst-node inst-c">
-        <div class="inst-dot inst-dot-teal"></div>
-        <span>gamedev-hub.io</span>
-      </div>
-      <div class="inst-line inst-line-3"></div>
-      <div class="inst-node inst-d">
-        <div class="inst-dot inst-dot-blue"></div>
-        <span>home-server.local</span>
-      </div>
-      <div class="decent-relay-badge">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        nodyx-relay mesh
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- HOMEPAGE BUILDER + WIDGET SDK                                            -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section section-alt hb-section">
-  <div class="section-inner hb-layout">
-
-    <!-- LEFT: text -->
-    <div class="hb-text hb-entrance">
-      <div class="section-label" style="color:#a78bfa; border-color:#a78bfa30; background:#a78bfa10">
-        HOMEPAGE BUILDER · GRID BUILDER · WIDGET SDK
-      </div>
-      <h2 class="section-title" style="margin-bottom:1rem">
-        Your homepage,<br>
-        <span class="hb-gradient">your grid.</span>
-      </h2>
-      <p class="hb-intro">
-        Build your community's public face visually, free rows, resizable columns,
-        live preview. Configure themes, drop widgets, publish instantly.
-        Zero code, zero restart.
-      </p>
-
-      <ul class="lp-features" style="margin-bottom: 2rem">
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Free Grid Builder</strong>, N columns per row, drag to resize, spans 1–12
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Live WYSIWYG preview</strong>, real shell, real widgets, changes instantly
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Theme Editor</strong>, colors, font, border-radius, all in one panel
-        </li>
-        <li>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>Widget SDK</strong>, upload a <code>.zip</code>, runs in Shadow DOM, no rebuild
-        </li>
-      </ul>
-
-      <!-- Widget SDK card -->
-      <div class="hb-sdk-card">
-        <div class="hb-sdk-header">
-          <div class="hb-sdk-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-            </svg>
-          </div>
-          <div>
-            <div class="hb-sdk-title">Widget SDK</div>
-            <div class="hb-sdk-sub">Two files. Zero build tools. Works for everyone.</div>
-          </div>
-        </div>
-        <div class="hb-sdk-files">
-          <div class="hb-sdk-file">
-            <span class="hb-sdk-file-name">manifest.json</span>
-            <span class="hb-sdk-file-desc">id, label, version, config schema</span>
-          </div>
-          <div class="hb-sdk-file">
-            <span class="hb-sdk-file-name">widget.iife.js</span>
-            <span class="hb-sdk-file-desc">Web Component, Shadow DOM isolated</span>
-          </div>
-        </div>
-        <a href="/create-widget" class="hb-sdk-cta">
-          Read the step-by-step guide
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </a>
-      </div>
-    </div>
-
-    <!-- RIGHT: real Grid Builder screenshot -->
-    <div class="hb-mockup hb-entrance" style="--hb-delay:0.18s" aria-hidden="true">
-
-      <!-- Browser chrome -->
-      <div class="hb-browser">
-        <div class="hb-browser-bar">
-          <div class="hb-browser-dots">
-            <span></span><span></span><span></span>
-          </div>
-          <div class="hb-browser-url">nodyx.org/admin/homepage/builder</div>
-          <div class="hb-browser-actions">
-            <span class="hb-browser-btn">Save</span>
-            <span class="hb-browser-btn hb-browser-btn-pub">Publish</span>
-          </div>
-        </div>
-
-        <!-- Real screenshot of the Grid Builder -->
-        <img
-          src="/img/Nodyx_grid_builder_home_page_website.png"
-          alt="Grid Builder, drag and drop homepage editor"
-          class="hb-real-shot"
-          loading="lazy"
-        />
-
-      </div><!-- /browser -->
-
-    </div><!-- /mockup -->
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- MODULE SYSTEM                                                            -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="section mod-section">
-  <div class="section-inner">
-
-    <div class="mod-header">
-      <div class="section-label">MODULE SYSTEM</div>
-      <h2 class="section-title">One platform. Every community.</h2>
-      <p class="section-sub">Activate only what you need. No CLI. No rebuild. No restart. One click from the admin panel.</p>
-    </div>
-
-    <!-- Two-face concept -->
-    <div class="mod-faces">
-      <div class="mod-face mod-face-public">
-        <div class="mod-face-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        </div>
-        <div class="mod-face-label">Public Face</div>
-        <div class="mod-face-desc">Your community's website, visible without an account. Hero, news, events, gallery, contact form, sponsors.</div>
-        <div class="mod-face-tag">No login required</div>
-      </div>
-      <div class="mod-face-sep">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </div>
-      <div class="mod-face mod-face-internal">
-        <div class="mod-face-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </div>
-        <div class="mod-face-label">Internal Face</div>
-        <div class="mod-face-desc">The platform your members actually use, forum, chat, voice, wiki, calendar, DMs, tasks.</div>
-        <div class="mod-face-tag">Members only</div>
-      </div>
-    </div>
-
-    <!-- Module families grid -->
-    <div class="mod-families">
-
-      <div class="mod-family">
-        <div class="mod-family-header">
-          <span class="mod-family-dot" style="background:#6366f1"></span>
-          <span class="mod-family-name">Core</span>
-          <span class="mod-family-hint">Always active</span>
-        </div>
-        <div class="mod-cards">
-          <div class="mod-card mod-card-core"><span class="mod-card-icon">🔐</span><span>Auth</span></div>
-          <div class="mod-card mod-card-core"><span class="mod-card-icon">👥</span><span>Members</span></div>
-          <div class="mod-card mod-card-core"><span class="mod-card-icon">💬</span><span>Forum</span></div>
-          <div class="mod-card mod-card-core"><span class="mod-card-icon">⚙️</span><span>Admin</span></div>
-        </div>
-      </div>
-
-      <div class="mod-family">
-        <div class="mod-family-header">
-          <span class="mod-family-dot" style="background:#3b82f6"></span>
-          <span class="mod-family-name">Community</span>
-          <span class="mod-family-hint">Internal tools</span>
-        </div>
-        <div class="mod-cards">
-          <div class="mod-card"><span class="mod-card-icon">⚡</span><span>Chat</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🎤</span><span>Voice</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🔒</span><span>DMs</span></div>
-          <div class="mod-card"><span class="mod-card-icon">📅</span><span>Calendar</span></div>
-          <div class="mod-card"><span class="mod-card-icon">📖</span><span>Wiki</span></div>
-          <div class="mod-card"><span class="mod-card-icon">📁</span><span>Files</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🗳️</span><span>Polls</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🏆</span><span>Leaderboard</span></div>
-          <div class="mod-card"><span class="mod-card-icon">✅</span><span>Tasks</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🎨</span><span>Canvas</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🎵</span><span>Jukebox</span></div>
-          <div class="mod-card"><span class="mod-card-icon">📌</span><span>Announce</span></div>
-        </div>
-      </div>
-
-      <div class="mod-family">
-        <div class="mod-family-header">
-          <span class="mod-family-dot" style="background:#06b6d4"></span>
-          <span class="mod-family-name">Website</span>
-          <span class="mod-family-hint">Public face</span>
-        </div>
-        <div class="mod-cards">
-          <div class="mod-card"><span class="mod-card-icon">🌟</span><span>Hero</span></div>
-          <div class="mod-card"><span class="mod-card-icon">📰</span><span>News</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🖼️</span><span>Gallery</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🗺️</span><span>Map</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🛒</span><span>Shop</span></div>
-          <div class="mod-card"><span class="mod-card-icon">✉️</span><span>Newsletter</span></div>
-          <div class="mod-card"><span class="mod-card-icon">❓</span><span>FAQ</span></div>
-          <div class="mod-card"><span class="mod-card-icon">📞</span><span>Contact</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🤝</span><span>Sponsors</span></div>
-        </div>
-      </div>
-
-      <div class="mod-family">
-        <div class="mod-family-header">
-          <span class="mod-family-dot" style="background:#f59e0b"></span>
-          <span class="mod-family-name">Integration</span>
-          <span class="mod-family-hint">External connections</span>
-        </div>
-        <div class="mod-cards">
-          <div class="mod-card"><span class="mod-card-icon">📡</span><span>RSS</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🔗</span><span>Webhook</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🔄</span><span>iCal Sync</span></div>
-          <div class="mod-card"><span class="mod-card-icon">🔑</span><span>OAuth</span></div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Activation flow -->
-    <div class="mod-flow">
-      <div class="mod-flow-step">
-        <div class="mod-flow-num">1</div>
-        <div class="mod-flow-text">Open <strong>Admin → Modules</strong></div>
-      </div>
-      <div class="mod-flow-arrow">→</div>
-      <div class="mod-flow-step">
-        <div class="mod-flow-num">2</div>
-        <div class="mod-flow-text">Click <strong>Enable</strong></div>
-      </div>
-      <div class="mod-flow-arrow">→</div>
-      <div class="mod-flow-step">
-        <div class="mod-flow-num">3</div>
-        <div class="mod-flow-text">Done. <strong>Zero downtime.</strong></div>
-      </div>
-    </div>
-
-    <div class="mod-cta-row">
-      <a href="/module-system" class="cta-secondary">Read the full spec →</a>
-      <span class="mod-badge-coming">Coming in v2.2</span>
-    </div>
-
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- FINAL CTA                                                                -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="final-cta">
-  <div class="final-cta-inner">
-    <h2 class="final-cta-title">Ready to own your community?</h2>
-    <p class="final-cta-sub">Free. Forever. Yours.</p>
-    <div class="final-cta-btns">
-      <a href="/install" class="cta-primary cta-lg">Start in 3 minutes</a>
-      <a href="/readme" class="cta-secondary cta-lg">Read the docs</a>
-    </div>
-    <p class="final-cta-footnote">
-      No account needed &middot; No credit card &middot; No vendor lock-in
-    </p>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- FOOTER                                                                   -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<footer class="footer">
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <svg width="18" height="18" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <rect width="32" height="32" rx="8" fill="var(--accent)"/>
-        <circle cx="16" cy="16" r="5" fill="white" opacity="0.9"/>
-        <circle cx="6"  cy="8"  r="2.5" fill="white" opacity="0.6"/>
-        <circle cx="26" cy="8"  r="2.5" fill="white" opacity="0.6"/>
-        <circle cx="6"  cy="24" r="2.5" fill="white" opacity="0.6"/>
-        <circle cx="26" cy="24" r="2.5" fill="white" opacity="0.6"/>
-        <line x1="6"  y1="8"  x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.4"/>
-        <line x1="26" y1="8"  x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.4"/>
-        <line x1="6"  y1="24" x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.4"/>
-        <line x1="26" y1="24" x2="16" y2="16" stroke="white" stroke-width="1.2" opacity="0.4"/>
-      </svg>
-      <span class="footer-name">nodyx<span style="color: var(--accent)">.dev</span></span>
-    </div>
-
-    <nav class="footer-nav" aria-label="Footer navigation">
-      <div class="footer-col">
-        <div class="footer-col-title">Docs</div>
-        <a href="/readme">Overview</a>
-        <a href="/install">Installation</a>
-        <a href="/domain">Domain</a>
-        <a href="/email">Email</a>
-      </div>
-      <div class="footer-col">
-        <div class="footer-col-title">Module System</div>
-        <a href="/module-system">Overview</a>
-        <a href="/module-system#the-4-module-families">Module families</a>
-        <a href="/module-system#activation-flow">Activation flow</a>
-        <a href="/module-system#module-manifest">Module manifest</a>
-      </div>
-      <div class="footer-col">
-        <div class="footer-col-title">Widget SDK</div>
-        <a href="/create-widget">Create a widget</a>
-        <a href="/create-widget#step-2-write-the-manifestjson">manifest.json</a>
-        <a href="/create-widget#step-3-write-the-widget-code">Widget code</a>
-        <a href="/create-widget#going-further">Going further</a>
-      </div>
-      <div class="footer-col">
-        <div class="footer-col-title">Architecture</div>
-        <a href="/architecture">Overview</a>
-        <a href="/relay">Relay</a>
-        <a href="/audio">Audio</a>
-        <a href="/neural-engine">Neural Engine</a>
-      </div>
-      <div class="footer-col">
-        <div class="footer-col-title">Community</div>
-        <a href="/manifesto">Manifesto</a>
-        <a href="/contributing">Contributing</a>
-        <a href="https://nodyx.org/translate" target="_blank" rel="noopener noreferrer">Translate Nodyx</a>
-        <a href="/thanks">Thanks</a>
-        <a href="/roadmap">Roadmap</a>
-      </div>
-      <div class="footer-col">
-        <div class="footer-col-title">Links</div>
-        <a href="https://nodyx.org" target="_blank" rel="noopener noreferrer">nodyx.org</a>
-        <a href="https://github.com/Pokled/nodyx" target="_blank" rel="noopener noreferrer">GitHub</a>
-        <a href="https://github.com/Pokled/nodyx/issues" target="_blank" rel="noopener noreferrer">Issues</a>
-        <a href="https://github.com/Pokled/nodyx/releases" target="_blank" rel="noopener noreferrer">Releases</a>
-      </div>
+<footer class="pied">
+  <div class="pied-interieur">
+    <span>AGPL-3.0. Born February 18, 2026. <em>"Fork us if we betray you."</em></span>
+    <nav aria-label="Project links">
+      <a href="https://github.com/Pokled/nodyx" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://github.com/Pokled/nodyx/releases" target="_blank" rel="noopener noreferrer">Releases</a>
+      <a href="https://github.com/Pokled/nodyx/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+      <a href="https://nodyx.org" target="_blank" rel="noopener noreferrer">nodyx.org</a>
+      <a href="https://start.nodyx.org" target="_blank" rel="noopener noreferrer">start.nodyx.org</a>
     </nav>
-  </div>
-
-  <div class="footer-bottom">
-    <span>AGPL-3.0, built in the open, for the people.</span>
-    <span>One instance = one community.</span>
   </div>
 </footer>
 
-
 <style>
-/* ── Hero ──────────────────────────────────────────────────────────────────── */
-
-.hero {
-  position: relative;
-  min-height: min(88vh, 860px);
-  display: flex;
-  flex-direction: column;
-  background: #030712;
-  overflow: hidden;
-}
-
-.hero-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 40%, transparent 100%);
-}
-
-.hero-inner {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 5rem 3rem 4rem;
-  width: 100%;
-  position: relative;
-  z-index: 1;
-}
-
-/* Badge row */
-.badge-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1.75rem;
-}
-
-.badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.25em 0.7em;
-  border-radius: 100px;
-  border: 1px solid;
-}
-
-.badge-agpl   { color: #ef4444; border-color: #ef444430; background: #ef444410; }
-.badge-self   { color: #10b981; border-color: #10b98130; background: #10b98110; }
-.badge-p2p    { color: #f59e0b; border-color: #f59e0b30; background: #f59e0b10; }
-.badge-os     { color: #3b82f6; border-color: #3b82f630; background: #3b82f610; }
-
-/* Title */
-.hero-title {
-  font-size: clamp(2.5rem, 5vw, 3.75rem);
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  line-height: 1.08;
-  color: #ffffff;
-  margin: 0 0 1.25rem;
-}
-
-.hero-accent {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6 50%, #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Subtitle */
-.hero-sub {
-  font-size: 1.05rem;
-  line-height: 1.65;
-  color: #94a3b8;
-  margin: 0 0 2rem;
-}
-
-/* Install box */
-.install-box {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: #0f172a;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 0.7rem 1rem;
-  margin-bottom: 2rem;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  overflow: hidden;
-}
-
-.install-prompt {
-  color: #3b82f6;
-  flex-shrink: 0;
-  font-weight: 700;
-}
-
-.install-cmd {
-  color: #e2e8f0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: none;
-  border: none;
-  padding: 0;
-  font-family: inherit;
-  font-size: inherit;
-}
-
-.install-copy {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #94a3b8;
-  transition: color 0.12s, border-color 0.12s;
-}
-
-.install-copy:hover { color: #e2e8f0; border-color: #475569; }
-.install-copied     { color: #22c55e !important; border-color: #22c55e40 !important; }
-
-/* CTAs */
-.hero-ctas {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.cta-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.2rem;
-  background: #3b82f6;
-  color: #fff;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.15s, transform 0.12s;
-  border: 1px solid transparent;
-}
-.cta-primary:hover { background: #2563eb; transform: translateY(-1px); }
-.cta-lg { padding: 0.75rem 1.75rem; font-size: 0.95rem; }
-
-.cta-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.2rem;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background 0.15s, border-color 0.15s;
-}
-.cta-secondary:hover { background: var(--bg-hover); border-color: var(--text-muted); }
-.cta-lg.cta-secondary { padding: 0.75rem 1.75rem; font-size: 0.95rem; }
-
-.cta-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1rem;
-  color: #94a3b8;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: color 0.12s;
-  border-radius: 8px;
-}
-.cta-ghost:hover { color: #e2e8f0; }
-
-.cta-ghost-subtle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.2rem;
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: color 0.12s, border-color 0.12s;
-}
-.cta-ghost-subtle:hover { color: var(--text); border-color: var(--border-strong); }
-
-/* Canvas */
-.hero-canvas-wrap {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.75rem;
-}
-
-.hero-canvas {
-  width: 100%;
-  height: 380px;
-  border-radius: 16px;
-  border: 1px solid #1e293b;
-  background: transparent;
-}
-
-.hero-canvas-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.72rem;
-  color: #475569;
-  font-family: var(--font-mono);
-}
-
-.canvas-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-.canvas-dot-blue { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(0.85); }
-}
-
-/* Scroll hint */
-.scroll-hint {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 1.25rem 0 2rem;
-  color: #475569;
-  animation: bounce-down 2.2s ease-in-out infinite;
-}
-
-.scroll-hint-text {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-@keyframes bounce-down {
-  0%, 100% { transform: translateY(0); opacity: 0.8; }
-  50%       { transform: translateY(6px); opacity: 1; }
-}
-
-/* ── Stat bar ────────────────────────────────────────────────────────────── */
-
-.stat-bar {
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-subtle);
-}
-
-.stat-bar-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem 0;
-  gap: 0.15rem;
-  flex: 1;
-  min-width: 100px;
-}
-
-.stat-val {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.02em;
-}
-
-.stat-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.stat-live-dot {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 6px #4ade80;
-  animation: pulse-dot 2s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.stat-sep {
-  width: 1px;
-  height: 2.5rem;
-  background: var(--border);
-  flex-shrink: 0;
-}
-
-/* ── Sections ────────────────────────────────────────────────────────────── */
-
-.section {
-  padding: 6rem 0;
-}
-
-.section-alt {
-  background: var(--bg-subtle);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.section-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 3rem;
-}
-
-.section-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #3b82f6;
-  margin-bottom: 0.75rem;
-}
-
-.section-title {
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  color: var(--text);
-  margin: 0 0 0.75rem;
-  line-height: 1.15;
-}
-
-.section-sub {
-  font-size: 1rem;
-  color: var(--text-muted);
-  margin: 0 0 3rem;
-  max-width: 540px;
-}
-
-/* ── Feature cards ───────────────────────────────────────────────────────── */
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
-}
-
-.feature-card {
-  padding: 1.5rem;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
-  position: relative;
-  overflow: hidden;
-}
-
-.feature-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--fc) 8%, transparent), transparent 60%);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.feature-card:hover {
-  border-color: color-mix(in srgb, var(--fc) 40%, var(--border));
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px color-mix(in srgb, var(--fc) 10%, transparent);
-}
-.feature-card:hover::before { opacity: 1; }
-
-.feature-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--fc) 12%, var(--bg-subtle));
-  margin-bottom: 1rem;
-  position: relative;
-}
-
-.feature-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0 0 0.5rem;
-}
-
-.feature-desc {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  line-height: 1.65;
-  margin: 0;
-}
-
-/* ── Manifesto ───────────────────────────────────────────────────────────── */
-
-.manifesto {
-  background: #030712;
-  padding: 6rem 3rem;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.manifesto::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 60% 80% at 50% 50%, #3b82f610, transparent);
-}
-
-.manifesto-inner {
-  position: relative;
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.manifesto-quote {
-  font-size: clamp(1.3rem, 3vw, 2rem);
-  font-weight: 700;
-  line-height: 1.4;
-  color: #f8fafc;
-  letter-spacing: -0.02em;
-  margin-bottom: 1.5rem;
-}
-
-.manifesto-mark {
-  color: #3b82f6;
-  font-size: 1.5em;
-  line-height: 0;
-  vertical-align: -0.2em;
-}
-
-.manifesto-sub {
-  font-size: 0.95rem;
-  color: #64748b;
-  line-height: 1.7;
-  margin: 0 0 2rem;
-}
-
-.manifesto-cta {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.6rem 1.4rem;
-  border: 1px solid #1e293b;
-  border-radius: 8px;
-  color: #94a3b8;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: color 0.12s, border-color 0.12s;
-}
-.manifesto-cta:hover { color: #e2e8f0; border-color: #334155; }
-
-/* ── Steps ───────────────────────────────────────────────────────────────── */
-
-.steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-bottom: 2.5rem;
-}
-
-.step {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.step-num {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: #3b82f6;
-  font-family: var(--font-mono);
-}
-
-.step-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.step-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0;
-}
-
-.step-code-wrap {
-  background: var(--code-bg);
-  border: 1px solid var(--code-border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.step-code {
-  margin: 0;
-  padding: 0.85rem 1rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.6;
-  color: var(--code-text);
-  overflow-x: auto;
-  white-space: pre;
-}
-
-.step-desc {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  line-height: 1.65;
-  margin: 0;
-}
-
-.steps-cta {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-/* ── Architecture ────────────────────────────────────────────────────────── */
-
-.arch-grid {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.75rem;
-}
-
-.arch-layer {
-  flex: 1;
-  min-width: 150px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
-}
-
-.arch-layer-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 0.75rem;
-}
-
-.arch-pills {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.arch-pill {
-  display: inline-flex;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 0.25em 0.6em;
-}
-
-.arch-pill-rust {
-  color: #f59e0b;
-  background: #f59e0b10;
-  border-color: #f59e0b30;
-}
-
-.arch-arrow {
-  display: flex;
-  align-items: center;
-  padding-top: 2.5rem;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.arch-note {
-  font-size: 0.82rem;
-}
-
-.arch-note a {
-  color: #3b82f6;
-  text-decoration: none;
-}
-.arch-note a:hover { text-decoration: underline; }
-
-/* ── Decentralized ───────────────────────────────────────────────────────── */
-
-.decentralized {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5rem;
-  align-items: center;
-}
-
-.decent-p {
-  font-size: 0.9375rem;
-  color: var(--text-secondary);
-  line-height: 1.75;
-  margin: 0 0 1rem;
-}
-
-.decent-links {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 1.75rem;
-}
-
-/* Instance diagram */
-.decent-diagram {
-  position: relative;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 2rem;
-  min-height: 240px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.inst-node {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.78rem;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-}
-
-.inst-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-.inst-dot-blue   { background: #3b82f6; box-shadow: 0 0 5px #3b82f6; }
-.inst-dot-purple { background: #8b5cf6; box-shadow: 0 0 5px #8b5cf6; animation-delay: 0.5s; }
-.inst-dot-teal   { background: #06b6d4; box-shadow: 0 0 5px #06b6d4; animation-delay: 1s; }
-
-.inst-line {
-  height: 1px;
-  background: linear-gradient(90deg, var(--border), transparent);
-  margin-left: 4px;
-  opacity: 0.6;
-  animation: line-travel 3s linear infinite;
-  background-size: 200% 100%;
-}
-
-.inst-line-1 { width: 70%; animation-delay: 0s; }
-.inst-line-2 { width: 55%; animation-delay: 1s; }
-.inst-line-3 { width: 65%; animation-delay: 0.5s; }
-
-@keyframes line-travel {
-  0%   { background-position: 0% 0%; }
-  100% { background-position: 200% 0%; }
-}
-
-.decent-relay-badge {
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: #f59e0b;
-  background: #f59e0b10;
-  border: 1px solid #f59e0b30;
-  border-radius: 100px;
-  padding: 0.25em 0.7em;
-}
-
-/* ── Module System ───────────────────────────────────────────────────────── */
-
-.mod-section { padding: 5rem 0; background: #05050a; }
-
-.mod-header { text-align: center; margin-bottom: 3.5rem; }
-
-/* Two-face concept */
-.mod-faces {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  margin-bottom: 4rem;
-  flex-wrap: wrap;
-}
-
-.mod-face {
-  flex: 1;
-  min-width: 220px;
-  max-width: 340px;
-  border-radius: 12px;
-  padding: 1.75rem;
-  border: 1px solid rgba(255,255,255,.07);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.mod-face-public {
-  background: linear-gradient(135deg, rgba(6,182,212,.06) 0%, rgba(6,182,212,.02) 100%);
-  border-color: rgba(6,182,212,.18);
-}
-
-.mod-face-internal {
-  background: linear-gradient(135deg, rgba(99,102,241,.06) 0%, rgba(99,102,241,.02) 100%);
-  border-color: rgba(99,102,241,.18);
-}
-
-.mod-face-icon {
-  width: 36px; height: 36px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 0.25rem;
-}
-
-.mod-face-public .mod-face-icon  { background: rgba(6,182,212,.12); color: #06b6d4; border: 1px solid rgba(6,182,212,.2); }
-.mod-face-internal .mod-face-icon { background: rgba(99,102,241,.12); color: #818cf8; border: 1px solid rgba(99,102,241,.2); }
-
-.mod-face-label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-}
-.mod-face-public .mod-face-label  { color: #06b6d4; }
-.mod-face-internal .mod-face-label { color: #818cf8; }
-
-.mod-face-desc {
-  font-size: 0.8rem;
-  color: #6b7280;
-  line-height: 1.5;
-}
-
-.mod-face-tag {
-  margin-top: 0.5rem;
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-.mod-face-public .mod-face-tag  { background: rgba(6,182,212,.1); color: #06b6d4; border: 1px solid rgba(6,182,212,.2); }
-.mod-face-internal .mod-face-tag { background: rgba(99,102,241,.1); color: #818cf8; border: 1px solid rgba(99,102,241,.2); }
-
-.mod-face-sep { color: rgba(255,255,255,.15); flex-shrink: 0; }
-
-/* Families */
-.mod-families {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
-  margin-bottom: 3rem;
-}
-
-.mod-family {
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 10px;
-  padding: 1.25rem;
-  background: rgba(255,255,255,.02);
-}
-
-.mod-family-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.mod-family-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.mod-family-name {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #e2e8f0;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-
-.mod-family-hint {
-  font-size: 0.68rem;
-  color: #374151;
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-.mod-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.mod-card {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 3px 8px;
-  border-radius: 5px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.06);
-  font-size: 0.7rem;
-  color: #9ca3af;
-  white-space: nowrap;
-  transition: border-color .15s, color .15s;
-}
-
-.mod-card:hover {
-  border-color: rgba(255,255,255,.14);
-  color: #d1d5db;
-}
-
-.mod-card-core {
-  background: rgba(99,102,241,.06);
-  border-color: rgba(99,102,241,.15);
-  color: #a5b4fc;
-}
-
-.mod-card-icon { font-size: 0.75rem; }
-
-/* Activation flow */
-.mod-flow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 1.5rem 2rem;
-  border-radius: 10px;
-  background: rgba(255,255,255,.02);
-  border: 1px solid rgba(255,255,255,.06);
-  margin-bottom: 2.5rem;
-  flex-wrap: wrap;
-}
-
-.mod-flow-step {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.mod-flow-num {
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: rgba(99,102,241,.15);
-  border: 1px solid rgba(99,102,241,.3);
-  color: #818cf8;
-  font-size: 0.7rem;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-
-.mod-flow-text {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-.mod-flow-text strong { color: #e2e8f0; }
-
-.mod-flow-arrow { color: rgba(255,255,255,.15); font-size: 1rem; }
-
-.mod-cta-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.mod-badge-coming {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  padding: 3px 10px;
-  border-radius: 20px;
-  background: rgba(245,158,11,.08);
-  border: 1px solid rgba(245,158,11,.2);
-  color: #fbbf24;
-}
-
-@media (max-width: 900px) {
-  .mod-families { grid-template-columns: repeat(2, 1fr); }
-  .mod-faces { flex-direction: column; align-items: stretch; }
-  .mod-face-sep { transform: rotate(90deg); align-self: center; }
-}
-
-@media (max-width: 500px) {
-  .mod-families { grid-template-columns: 1fr; }
-}
-
-/* ── Final CTA ───────────────────────────────────────────────────────────── */
-
-.final-cta {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  padding: 7rem 3rem;
-  text-align: center;
-}
-
-.final-cta-inner {
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-.final-cta-title {
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  color: #f8fafc;
-  margin: 0 0 0.75rem;
-  line-height: 1.1;
-}
-
-.final-cta-sub {
-  font-size: 1.1rem;
-  color: #64748b;
-  margin: 0 0 2.5rem;
-}
-
-.final-cta-btns {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.25rem;
-}
-
-.final-cta-footnote {
-  font-size: 0.78rem;
-  color: #334155;
-  margin: 0;
-}
-
-/* ── Footer ──────────────────────────────────────────────────────────────── */
-
-.footer {
-  background: var(--bg-subtle);
-  border-top: 1px solid var(--border);
-  padding: 3.5rem 0 0;
-}
-
-.footer-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 3rem 3rem;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4rem;
-  align-items: start;
-}
-
-.footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.footer-name { color: var(--text); }
-
-.footer-nav {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2rem;
-}
-
-.footer-col {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.footer-col-title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
-}
-
-.footer-col a {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: color 0.12s;
-}
-.footer-col a:hover { color: var(--text); }
-
-.footer-bottom {
-  border-top: 1px solid var(--border);
-  padding: 1rem 3rem;
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  max-width: 100%;
-}
-
-/* ── Screenshots section ─────────────────────────────────────────────────── */
-
-.ss-section { background: #0d0f17; }
-
-.ss-hero-shot {
-  margin: 2.5rem 0 2rem;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.07);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-}
-.ss-hero-shot img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-.ss-hero-caption {
-  padding: 0.7rem 1.25rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  background: rgba(255,255,255,0.03);
-  border-top: 1px solid rgba(255,255,255,0.06);
-  text-align: center;
-}
-
-.ss-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.25rem;
-  margin-top: 0.5rem;
-}
-
-.ss-fig {
-  margin: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.07);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-  background: rgba(255,255,255,0.02);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.ss-fig:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-}
-.ss-fig img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-.ss-fig figcaption {
-  padding: 0.55rem 0.85rem;
-  font-size: 0.74rem;
-  color: var(--text-muted);
-  border-top: 1px solid rgba(255,255,255,0.05);
-  line-height: 1.4;
-}
-.ss-fig--wide {
-  grid-column: 1 / -1;
-}
-
-/* ── Responsive ──────────────────────────────────────────────────────────── */
-
-@media (max-width: 1024px) {
-  .hero-inner         { grid-template-columns: 1fr; gap: 2rem; padding: 3.5rem 2rem 3rem; }
-  .hero-canvas-wrap   { display: none; }
-  .features-grid      { grid-template-columns: repeat(2, 1fr); }
-  .ss-grid            { grid-template-columns: repeat(2, 1fr); }
-  .steps              { grid-template-columns: 1fr; gap: 2.5rem; }
-  .decentralized      { grid-template-columns: 1fr; gap: 2.5rem; }
-  .arch-grid          { flex-direction: column; }
-  .arch-arrow         { transform: rotate(90deg); padding: 0; align-self: center; }
-  .footer-inner       { grid-template-columns: 1fr; gap: 2rem; }
-  .footer-nav         { grid-template-columns: repeat(2, 1fr); }
-}
-
-@media (max-width: 640px) {
-  .section-inner, .manifesto, .final-cta, .stat-bar-inner { padding-left: 1.25rem; padding-right: 1.25rem; }
-  .features-grid  { grid-template-columns: 1fr; }
-  .ss-grid        { grid-template-columns: 1fr; }
-  .hero-inner     { padding: 2.5rem 1.25rem 2rem; }
-  .stat-bar-inner { justify-content: center; gap: 0; }
-  .stat-sep       { display: none; }
-  .stat           { min-width: 110px; }
-  .footer-nav     { grid-template-columns: repeat(2, 1fr); }
-  .footer-bottom  { padding-left: 1.25rem; padding-right: 1.25rem; }
-  .footer-inner   { padding: 0 1.25rem 2rem; }
-  .lp-layout      { flex-direction: column; }
-  .lp-card-wrap   { justify-content: center; }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
-/* LIVING PROFILE SECTION                                                       */
-/* ═══════════════════════════════════════════════════════════════════════════ */
-
-.lp-layout {
-  display: flex;
-  gap: 4rem;
-  align-items: center;
-}
-
-.lp-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.lp-intro {
-  font-size: 0.9375rem;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin-bottom: 1.5rem;
-}
-
-.lp-features {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.lp-features li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.lp-features li svg {
-  flex-shrink: 0;
-  margin-top: 0.15rem;
-  color: #6366f1;
-}
-
-.lp-features strong {
-  color: var(--text);
-  font-weight: 600;
-}
-
-/* Card wrapper */
-.lp-card-wrap {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.lp-card {
-  width: 280px;
-  background: #0c0c12;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  overflow: hidden;
-}
-
-/* Generative banner */
-.lp-banner {
-  height: 72px;
-  position: relative;
-  overflow: hidden;
-  background: #0a0a14;
-}
-
-.lp-banner-anim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    120deg,
-    #1a1040 0%,
-    #2d1b6e 20%,
-    #4c1d95 35%,
-    #0e3a5c 55%,
-    #1a1040 75%,
-    #3b0764 90%,
-    #1a1040 100%
-  );
-  background-size: 300% 100%;
-  animation: banner-shift 8s ease-in-out infinite alternate;
-  opacity: 0.9;
-}
-
-.lp-banner-anim::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.15) 2px,
-    rgba(0, 0, 0, 0.15) 3px
-  );
-  opacity: 0.4;
-}
-
-@keyframes banner-shift {
-  from { background-position: 0% 50%; }
-  to   { background-position: 100% 50%; }
-}
-
-/* Avatar + reputation rings */
-.lp-avatar-area {
-  position: relative;
-  width: 56px;
-  height: 56px;
-  margin: -28px 0 0 16px;
-}
-
-.lp-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid transparent;
-}
-
-.lp-ring-outer {
-  inset: -4px;
-  border-color: rgba(99, 102, 241, 0.25);
-  animation: ring-pulse 3s ease-in-out infinite;
-}
-
-.lp-ring-mid {
-  inset: -1px;
-  border-color: rgba(99, 102, 241, 0.55);
-  border-width: 1.5px;
-}
-
-.lp-ring-inner {
-  inset: 0;
-  border-color: rgba(139, 92, 246, 0.8);
-  border-width: 1.5px;
-  animation: ring-pulse 3s ease-in-out infinite 1s;
-}
-
-@keyframes ring-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.lp-avatar {
-  position: absolute;
-  inset: 0;
-  background: #1a1040;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Identity */
-.lp-identity {
-  padding: 0.6rem 1rem 0;
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.lp-username {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #a78bfa;
-  letter-spacing: -0.01em;
-}
-
-.lp-grade {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.25);
-}
-
-/* XP bar */
-.lp-xp-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 1rem;
-}
-
-.lp-xp-label {
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.2);
-  font-family: ui-monospace, monospace;
-  white-space: nowrap;
-}
-
-.lp-xp-track {
-  flex: 1;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.06);
-  overflow: hidden;
-}
-
-.lp-xp-bar {
-  height: 100%;
-  width: 62%;
-  background: linear-gradient(90deg, #6366f1, #a855f7);
-  animation: xp-pulse 2.5s ease-in-out infinite;
-}
-
-@keyframes xp-pulse {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 0.6; }
-}
-
-/* Stats row */
-.lp-stats {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.lp-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
-}
-
-.lp-stat-val {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.8);
-  letter-spacing: -0.02em;
-}
-
-.lp-stat-lbl {
-  font-size: 0.58rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.2);
-  font-weight: 600;
-}
-
-.lp-stat-sep {
-  width: 1px;
-  height: 1.5rem;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-/* Activity heatmap */
-.lp-heatmap {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 2px;
-  padding: 0.6rem 1rem 0.25rem;
-}
-
-.lp-cell {
-  aspect-ratio: 1;
-}
-
-.lp-heatmap-label {
-  padding: 0 1rem 0.75rem;
-  font-size: 0.58rem;
-  color: rgba(255, 255, 255, 0.15);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-weight: 600;
-}
-
-/* ── Reputation section ───────────────────────────────────────────────────── */
-.rep-layout {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4rem;
-  align-items: center;
-}
-@media (max-width: 768px) {
-  .rep-layout { grid-template-columns: 1fr; gap: 2.5rem; }
-}
-.rep-intro {
-  font-size: 0.9375rem;
-  color: rgba(255,255,255,0.5);
-  line-height: 1.7;
-  margin-bottom: 1.5rem;
-}
-.rep-cta-row { margin-top: 1.75rem; }
-
-.rep-rings-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-  flex-shrink: 0;
-}
-.rep-rings {
-  position: relative;
-  width: 160px;
-  height: 160px;
-}
-.rep-ring-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.rep-ring-svg--1 { animation: ring-spin 12s linear infinite; }
-.rep-ring-svg--2 { animation: ring-spin 9s linear infinite reverse; }
-.rep-ring-svg--3 { animation: ring-spin 6s linear infinite; }
-@keyframes ring-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-.rep-rings-center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.15rem;
-}
-.rep-score     { font-size: 1.25rem; font-weight: 800; color: rgba(255,255,255,0.9); letter-spacing: -0.5px; }
-.rep-score-lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); font-weight: 600; }
-
-.rep-legend { display: flex; flex-direction: column; gap: 0.375rem; }
-.rep-legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; color: rgba(255,255,255,0.4); }
-.rep-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-/* ── Social Feed showcase ─────────────────────────────────────────────────── */
-.feed-showcase-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: center;
-}
-@media (max-width: 768px) {
-  .feed-showcase-layout { grid-template-columns: 1fr; gap: 2.5rem; }
-  .feed-mockup { order: 2; }
-  .feed-showcase-text { order: 1; }
-}
-
-.feed-mockup {
-  border: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.015);
-  overflow: hidden;
-}
-.feed-mock-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-.feed-mock-title { font-size: 0.8rem; font-weight: 800; color: rgba(255,255,255,0.85); }
-.feed-mock-sub   { font-size: 0.65rem; color: rgba(255,255,255,0.25); }
-
-.feed-mock-post {
-  display: flex;
-  gap: 0.625rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  transition: background 0.15s;
-}
-.feed-mock-post:hover { background: rgba(255,255,255,0.02); }
-.feed-mock-post--faded { opacity: 0.5; }
-.feed-mock-post:last-child { border-bottom: none; }
-
-.feed-mock-avatar {
-  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-}
-.feed-mock-avatar--a { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
-.feed-mock-avatar--b { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
-.feed-mock-avatar--c { background: linear-gradient(135deg, #f59e0b, #ef4444); }
-
-.feed-mock-body { flex: 1; min-width: 0; }
-.feed-mock-meta {
-  font-size: 0.72rem;
-  color: rgba(255,255,255,0.85);
-  margin-bottom: 0.25rem;
-  display: flex;
-  gap: 0.375rem;
-  align-items: baseline;
-}
-.feed-mock-meta span { color: rgba(255,255,255,0.25); font-weight: 400; }
-.feed-mock-text {
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.65);
-  line-height: 1.5;
-  margin-bottom: 0.375rem;
-}
-.feed-mock-actions {
-  display: flex;
-  gap: 1rem;
-}
-.feed-mock-action {
-  font-size: 0.68rem;
-  color: rgba(255,255,255,0.25);
-  cursor: default;
-}
-.feed-mock-action--active { color: #f43f5e; }
-
-.feed-showcase-text .rep-intro { margin-bottom: 1.5rem; }
-
-/* ── E2E Section ──────────────────────────────────────────────────────────── */
-.e2e-section {
-  position: relative;
-  overflow: hidden;
-}
-
-.e2e-grid-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(74,222,128,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(74,222,128,.04) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 20%, transparent 100%);
-}
-
-.e2e-orb {
-  position: absolute;
-  width: 500px; height: 500px;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.e2e-orb-left  { top: -180px; left: -80px;  background: radial-gradient(circle, rgba(74,222,128,.06) 0%, transparent 65%); }
-.e2e-orb-right { bottom: -180px; right: -80px; background: radial-gradient(circle, rgba(99,102,241,.06) 0%, transparent 65%); }
-
-.e2e-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: start;
-  position: relative;
-  z-index: 1;
-}
-
-.e2e-gradient {
-  background: linear-gradient(135deg, #818cf8, #4ade80);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.e2e-intro {
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: var(--text-muted);
-  margin-bottom: 2rem;
-}
-.e2e-intro strong { color: var(--text); }
-
-/* Layers */
-.e2e-layers { display: flex; flex-direction: column; gap: 0.75rem; }
-
-.e2e-layer {
-  display: flex;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  background: rgba(255,255,255,.025);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 12px;
-  transition: border-color .2s, background .2s;
-}
-.e2e-layer:hover { border-color: rgba(99,102,241,.3); background: rgba(255,255,255,.04); }
-.e2e-layer-esy { background: rgba(74,222,128,.03); border-color: rgba(74,222,128,.12); }
-.e2e-layer-esy:hover { border-color: rgba(74,222,128,.3) !important; background: rgba(74,222,128,.05) !important; }
-
-.e2e-layer-num {
-  flex-shrink: 0;
-  width: 2rem; height: 2rem;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.8rem; font-weight: 900;
-  background: rgba(99,102,241,.15); color: #818cf8;
-  border: 1px solid rgba(99,102,241,.2);
-}
-.e2e-layer-num-green { background: rgba(74,222,128,.12); color: #4ade80; border-color: rgba(74,222,128,.2); }
-
-.e2e-layer-title {
-  display: flex; align-items: center; gap: 0.5rem;
-  font-size: 0.85rem; font-weight: 700;
-  color: var(--text);
-  margin-bottom: 0.3rem;
-}
-.e2e-layer-title-green { color: #4ade80; }
-
-.e2e-layer-tag {
-  font-size: 0.65rem; font-weight: 700;
-  font-family: var(--font-mono);
-  padding: 0.15em 0.55em; border-radius: 4px;
-  background: rgba(99,102,241,.1); color: #818cf8;
-}
-.e2e-layer-tag-green { background: rgba(74,222,128,.1); color: #4ade80; }
-
-.e2e-layer-desc {
-  font-size: 0.78rem; line-height: 1.55;
-  color: var(--text-muted); margin: 0;
-}
-.e2e-layer-desc strong { color: var(--text); font-weight: 600; }
-
-/* Demo card */
-.e2e-demo {
-  background: rgba(255,255,255,.025);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 16px;
-  overflow: hidden;
-  transition: border-color .2s;
-}
-.e2e-demo:hover { border-color: rgba(74,222,128,.18); }
-
-.e2e-demo-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.9rem 1.25rem;
-  background: rgba(255,255,255,.02);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-}
-
-.e2e-shield-wrap {
-  position: relative;
-  width: 2.25rem; height: 2.25rem;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.e2e-ring {
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  transform-origin: center;
-}
-.e2e-ring-1 { border: 1px solid rgba(74,222,128,.35); animation: e2e-ring 3s ease-in-out infinite; }
-.e2e-ring-2 { border: 1px solid rgba(74,222,128,.15); animation: e2e-ring 3s ease-in-out infinite .9s; }
-@keyframes e2e-ring {
-  0%,100% { transform: scale(1);   opacity: .7; }
-  50%      { transform: scale(1.7); opacity: 0;  }
-}
-.e2e-dot-live {
-  position: relative;
-  display: inline-flex;
-  width: 0.6rem; height: 0.6rem;
-}
-.e2e-dot-ping {
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  background: #4ade80;
-  animation: ping .2s cubic-bezier(0,0,.2,1) infinite;
-  opacity: .75;
-}
-@keyframes ping {
-  75%,100% { transform: scale(2); opacity: 0; }
-}
-.e2e-dot-core {
-  position: relative;
-  width: 0.6rem; height: 0.6rem;
-  border-radius: 50%;
-  background: #4ade80;
-}
-
-.e2e-status-label {
-  font-size: 0.68rem; font-weight: 800;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: #4ade80;
-}
-.e2e-fingerprint {
-  font-size: 0.65rem; font-family: var(--font-mono);
-  color: rgba(74,222,128,.5);
-  letter-spacing: 0.05em;
-}
-.e2e-shield-badge {
-  margin-left: auto;
-  color: rgba(74,222,128,.4);
-}
-
-/* Conversation */
-.e2e-convo {
-  padding: 1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.e2e-msg-row { display: flex; }
-.e2e-msg-row-out { justify-content: flex-end; }
-.e2e-msg-row-in  { justify-content: flex-start; }
-
-.e2e-bubble {
-  max-width: 80%;
-  padding: 0.5rem 0.9rem;
-  border-radius: 16px;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  animation: e2e-pop .4s cubic-bezier(.16,1,.3,1) both;
-}
-@keyframes e2e-pop {
-  from { opacity: 0; transform: translateY(5px) scale(.96); }
-  to   { opacity: 1; transform: none; }
-}
-.e2e-bubble-out {
-  background: #4f46e5; color: white;
-  border-bottom-right-radius: 4px;
-}
-.e2e-bubble-cipher {
-  background: rgba(99,102,241,.1);
-  border: 1px solid rgba(99,102,241,.2);
-  border-bottom-right-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  max-width: 92%;
-  word-break: break-all;
-  animation-delay: .1s;
-}
-.e2e-cipher-shimmer {
-  background: linear-gradient(90deg, #818cf8 0%, #4ade80 45%, #818cf8 90%);
-  background-size: 200% auto;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 3.5s linear infinite;
-}
-@keyframes shimmer {
-  from { background-position: 200% center; }
-  to   { background-position:   0% center; }
-}
-.e2e-bubble-in {
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(255,255,255,.08);
-  color: var(--text);
-  border-bottom-left-radius: 4px;
-  animation-delay: .2s;
-}
-
-.e2e-encrypt-step {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.25rem 0;
-}
-.e2e-step-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(99,102,241,.3), transparent); }
-.e2e-step-pill {
-  display: flex; align-items: center; gap: 0.35rem;
-  padding: 0.2em 0.65em;
-  border-radius: 999px;
-  font-size: 0.62rem; font-family: var(--font-mono); font-weight: 700;
-  background: rgba(99,102,241,.1);
-  border: 1px solid rgba(99,102,241,.25);
-  color: #818cf8;
-  white-space: nowrap;
-}
-
-.e2e-receiver-label {
-  display: flex; align-items: center; gap: 0.3rem;
-  font-size: 0.62rem; text-transform: uppercase;
-  letter-spacing: .1em; font-weight: 700;
-  color: rgba(255,255,255,.15);
-  margin-top: 0.5rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255,255,255,.05);
-}
-
-.e2e-lock-icon {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 0.35rem;
-  color: rgba(74,222,128,.45);
-  vertical-align: middle;
-}
-
-/* Responsive */
-@media (max-width: 860px) {
-  .e2e-layout { grid-template-columns: 1fr; gap: 2.5rem; }
-}
-
-/* ── Homepage Builder + Widget SDK ──────────────────────────────────────── */
-
-/* Entrance animation */
-.hb-entrance {
-  opacity: 0;
-  transform: translateY(22px);
-  transition: opacity 0.65s ease calc(var(--hb-delay, 0s)), transform 0.65s ease calc(var(--hb-delay, 0s));
-}
-
-.hb-section { padding: 5rem 0; }
-
-.hb-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5rem;
-  align-items: center;
-}
-
-.hb-gradient {
-  background: linear-gradient(135deg, #a78bfa, #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hb-intro {
-  font-size: 0.95rem;
-  color: var(--text-muted);
-  line-height: 1.7;
-  margin: 0 0 1.75rem;
-  max-width: 480px;
-}
-
-/* SDK card */
-.hb-sdk-card {
-  background: var(--bg);
-  border: 1px solid rgba(167,139,250,.2);
-  padding: 1.25rem 1.5rem;
-  position: relative;
-  overflow: hidden;
-}
-.hb-sdk-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 0 0, rgba(167,139,250,.06), transparent 60%);
-  pointer-events: none;
-}
-.hb-sdk-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-.hb-sdk-icon {
-  width: 32px; height: 32px;
-  background: rgba(167,139,250,.12);
-  border: 1px solid rgba(167,139,250,.2);
-  display: flex; align-items: center; justify-content: center;
-  color: #a78bfa; flex-shrink: 0;
-}
-.hb-sdk-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
-.hb-sdk-sub   { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
-.hb-sdk-files { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
-.hb-sdk-file  {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.05);
-}
-.hb-sdk-file-name {
-  font-family: 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 0.78rem; color: #a78bfa; flex-shrink: 0;
-}
-.hb-sdk-file-desc { font-size: 0.72rem; color: var(--text-muted); }
-.hb-sdk-cta {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  font-size: 0.8rem; font-weight: 700; color: #a78bfa; text-decoration: none;
-  padding: 0.5rem 1rem;
-  border: 1px solid rgba(167,139,250,.3);
-  background: rgba(167,139,250,.08);
-  transition: background 0.15s, border-color 0.15s;
-}
-.hb-sdk-cta:hover { background: rgba(167,139,250,.15); border-color: rgba(167,139,250,.5); }
-
-/* Mockup wrapper */
-.hb-mockup { position: relative; }
-
-.hb-real-shot {
-  width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 0 0 8px 8px;
-}
-
-/* Browser chrome */
-.hb-browser {
-  border: 1px solid rgba(255,255,255,.08);
-  background: #08080e;
-  overflow: hidden;
-  box-shadow: 0 28px 72px rgba(0,0,0,.55);
-}
-
-.hb-browser-bar {
-  display: flex; align-items: center; gap: 0.6rem;
-  padding: 0.55rem 0.85rem;
-  background: rgba(255,255,255,.025);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-}
-.hb-browser-dots { display: flex; gap: 5px; flex-shrink: 0; }
-.hb-browser-dots span { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.1); }
-.hb-browser-dots span:first-child  { background: rgba(239,68,68,.45); }
-.hb-browser-dots span:nth-child(2) { background: rgba(251,191,36,.45); }
-.hb-browser-dots span:last-child   { background: rgba(74,222,128,.45); }
-.hb-browser-url {
-  flex: 1;
-  font-size: 0.64rem; font-family: monospace;
-  color: rgba(255,255,255,.2);
-  background: rgba(255,255,255,.035);
-  padding: 0.22rem 0.75rem; text-align: center;
-}
-.hb-browser-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
-.hb-browser-btn {
-  font-size: 0.62rem; font-weight: 600; padding: 2px 8px;
-  border: 1px solid rgba(255,255,255,.1);
-  color: rgba(255,255,255,.35); cursor: default;
-}
-.hb-browser-btn-pub {
-  background: rgba(167,139,250,.12);
-  border-color: rgba(167,139,250,.3);
-  color: #a78bfa;
-}
-
-/* Builder split view */
-.hb-builder-split {
-  display: flex;
-  height: 260px;
-}
-
-/* Left panel */
-.hb-panel {
-  width: 100px;
-  border-right: 1px solid rgba(255,255,255,.05);
-  padding: 0.5rem 0;
-  display: flex; flex-direction: column;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-.hb-panel-add {
-  margin: 0 0.5rem 0.4rem;
-  padding: 0.3rem 0;
-  font-size: 0.62rem; font-weight: 700;
-  color: #a78bfa;
-  border: 1px dashed rgba(167,139,250,.35);
-  background: rgba(167,139,250,.06);
-  text-align: center;
-  cursor: default;
-  transition: background 0.15s;
-}
-.hb-panel-section {
-  font-size: 0.58rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .07em;
-  color: rgba(255,255,255,.2);
-  padding: 0.3rem 0.6rem 0.2rem;
-}
-.hb-panel-rows { display: flex; flex-direction: column; gap: 1px; margin-bottom: 0.25rem; }
-.hb-panel-row {
-  display: flex; align-items: center; gap: 0.3rem;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.62rem; color: rgba(255,255,255,.3);
-  transition: background 0.25s, color 0.25s;
-  cursor: default;
-}
-.hb-panel-row-active {
-  background: rgba(167,139,250,.1);
-  color: #c4b5fd;
-}
-.hb-panel-drag { color: rgba(255,255,255,.15); font-size: 0.65rem; }
-.hb-panel-row-label { flex: 1; font-weight: 600; }
-.hb-panel-span-hint {
-  font-size: 0.55rem;
-  color: rgba(255,255,255,.18);
-  font-family: monospace;
-}
-.hb-panel-row-active .hb-panel-span-hint { color: rgba(167,139,250,.6); }
-.hb-panel-divider {
-  height: 1px; background: rgba(255,255,255,.05);
-  margin: 0.35rem 0.5rem;
-}
-.hb-panel-theme { padding: 0 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
-.hb-theme-row { display: flex; align-items: center; gap: 0.3rem; }
-.hb-theme-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-.hb-theme-label { font-size: 0.58rem; color: rgba(255,255,255,.25); flex: 1; }
-.hb-theme-val { font-size: 0.55rem; font-family: monospace; color: rgba(255,255,255,.18); }
-.hb-theme-slider-row { gap: 0.3rem; }
-.hb-theme-slider {
-  flex: 1; height: 3px;
-  background: rgba(255,255,255,.08); position: relative;
-}
-.hb-theme-thumb {
-  position: absolute; top: 50%; left: 60%;
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #a78bfa;
-  transform: translate(-50%, -50%);
-}
-
-/* Canvas */
-.hb-canvas {
-  flex: 1;
-  padding: 0.6rem;
-  display: flex; flex-direction: column;
-  gap: 5px;
-  overflow: hidden;
-  min-width: 0;
-}
-
-.hb-canvas-row {
-  display: flex;
-  gap: 4px;
-  align-items: stretch;
-  transition: opacity 0.3s;
-}
-
-.hb-canvas-row-active .hb-canvas-col {
-  border-color: rgba(167,139,250,.4);
-  background: rgba(167,139,250,.05);
-}
-
-.hb-canvas-col {
-  position: relative;
-  border: 1px dashed rgba(255,255,255,.1);
-  display: flex; align-items: center; gap: 0.3rem;
-  padding: 0.3rem 0.5rem;
-  min-height: 40px;
-  min-width: 0;
-  transition: border-color 0.3s, background 0.3s;
-}
-
-.hb-col-full    { flex: 12; }
-.hb-col-quarter { flex: 3; }
-
-/* Animated resize col */
-@keyframes hb-col-a-anim {
-  0%, 25%, 100% { flex: 8; }
-  60%, 75% { flex: 6; }
-}
-@keyframes hb-col-b-anim {
-  0%, 25%, 100% { flex: 4; }
-  60%, 75% { flex: 6; }
-}
-.hb-col-resize-a { animation: hb-col-a-anim 5s ease-in-out infinite; }
-.hb-col-resize-b { animation: hb-col-b-anim 5s ease-in-out infinite; }
-
-.hb-span-badge {
-  font-size: 0.52rem; font-family: monospace; font-weight: 700;
-  color: rgba(255,255,255,.2);
-  flex-shrink: 0;
-}
-.hb-canvas-row-active .hb-span-badge { color: rgba(167,139,250,.7); }
-
-.hb-col-icon  { font-size: 0.75rem; flex-shrink: 0; }
-.hb-col-name  {
-  font-size: 0.6rem; font-weight: 600;
-  color: rgba(255,255,255,.4);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  min-width: 0;
-}
-.hb-canvas-row-active .hb-col-name { color: rgba(255,255,255,.65); }
-
-.hb-col-gear {
-  margin-left: auto;
-  font-size: 0.65rem;
-  color: rgba(167,139,250,.4);
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.hb-col-gear.visible { opacity: 1; }
-
-/* Resize handle */
-.hb-resize-handle {
-  width: 10px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,.1);
-  cursor: col-resize;
-  transition: color 0.3s;
-}
-.hb-handle-active { color: rgba(167,139,250,.5); }
-.hb-handle-sm { width: 7px; }
-
-.hb-canvas-add-row {
-  display: flex; align-items: center; justify-content: center; gap: 0.3rem;
-  padding: 0.3rem;
-  border: 1px dashed rgba(255,255,255,.06);
-  font-size: 0.62rem; color: rgba(255,255,255,.15);
-  cursor: default;
-  margin-top: auto;
-}
-
-/* Floating config panel */
-.hb-config-panel {
-  position: absolute;
-  bottom: -0.75rem;
-  right: -1.25rem;
-  width: 160px;
-  background: #0e0e1a;
-  border: 1px solid rgba(167,139,250,.25);
-  box-shadow: 0 12px 32px rgba(0,0,0,.6);
-  opacity: 0;
-  transform: translateY(8px) scale(0.97);
-  transition: opacity 0.35s ease, transform 0.35s ease;
-  pointer-events: none;
-}
-.hb-config-visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-.hb-config-header {
-  display: flex; align-items: center; gap: 0.4rem;
-  padding: 0.45rem 0.65rem;
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,.75);
-}
-.hb-config-icon { color: #a78bfa; font-size: 0.7rem; }
-.hb-config-close {
-  margin-left: auto;
-  color: rgba(255,255,255,.2);
-  font-size: 0.6rem;
-}
-.hb-config-field {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0.32rem 0.65rem;
-  border-bottom: 1px solid rgba(255,255,255,.04);
-}
-.hb-config-label { font-size: 0.62rem; color: rgba(255,255,255,.35); }
-.hb-config-val   { font-size: 0.62rem; color: rgba(255,255,255,.65); font-weight: 600; }
-.hb-config-toggle {
-  font-size: 0.55rem; font-weight: 700; letter-spacing: .05em;
-  padding: 1px 5px; border-radius: 3px;
-}
-.hb-config-on {
-  background: rgba(74,222,128,.12);
-  border: 1px solid rgba(74,222,128,.25);
-  color: #4ade80;
-}
-
-@media (max-width: 1024px) {
-  .hb-layout { grid-template-columns: 1fr; gap: 3rem; }
-  .hb-config-panel { display: none; }
-}
-@media (max-width: 640px) {
-  .hb-panel { width: 80px; }
-  .hb-panel-span-hint { display: none; }
-  .hb-builder-split { height: 220px; }
-}
+  .accueil {
+    /* Élément flexible du gabarit : sans min-width: 0, il ne rétrécit jamais
+       sous la largeur de la commande d'installation (qui ne passe pas à la
+       ligne) et la page débordait sur téléphone. */
+    min-width: 0;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+    box-sizing: border-box;
+  }
+
+  /* ── Ouverture ───────────────────────────────────────────────────────── */
+  .ouverture { padding: 72px 0 24px; text-align: center; }
+  .surtitre {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-size: clamp(2.1rem, 5vw, 3.6rem);
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+    font-weight: 800;
+    max-width: 15ch;
+    margin: 0 auto;
+    color: var(--text);
+  }
+  .chapeau {
+    max-width: 38rem;
+    margin: 22px auto 0;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .commande {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 34rem;
+    margin: 32px auto 0;
+    padding: 8px 8px 8px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--code-bg);
+  }
+  .commande code {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    color: var(--code-text);
+  }
+  .commande button {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .commande button:hover { background: var(--bg-hover); }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .bouton {
+    padding: 10px 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .bouton:hover { background: var(--bg-hover); }
+  .bouton.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .bouton.principal:hover { background: var(--accent-hover); }
+
+  .capture-ouverture {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 56px auto 0;
+  }
+  .legende { margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted); }
+
+  /* ── Chiffres en direct ──────────────────────────────────────────────── */
+  .chiffres {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px;
+    margin: 48px 0 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--border);
+  }
+  .chiffres li { background: var(--bg); }
+  .chiffres a {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    height: 100%;
+    padding: 18px 20px;
+    text-decoration: none;
+  }
+  .chiffres a:hover { background: var(--bg-hover); }
+  .chiffres strong { font-size: 1.35rem; color: var(--text); letter-spacing: -0.02em; }
+  .chiffres span { font-size: 0.88rem; color: var(--text-muted); }
+
+  /* ── Visite ──────────────────────────────────────────────────────────── */
+  .visite { margin-top: 96px; display: flex; flex-direction: column; gap: 88px; }
+  .bloc {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  .bloc.inverse { grid-template-columns: 1fr 1.35fr; }
+  .bloc.inverse img { order: 2; }
+  .bloc img { width: 100%; height: auto; display: block; }
+  h2 {
+    font-size: 1.6rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+    color: var(--text);
+  }
+  .bloc-texte p, .partout p, .fin p {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin: 0;
+  }
+  .liens { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 18px !important; }
+  .liens a, .fin a, .carte a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .liens a:hover, .fin a:hover, .carte a:hover { text-decoration: underline; }
+
+  /* ── Partout ─────────────────────────────────────────────────────────── */
+  .partout {
+    margin-top: 104px;
+    padding: 40px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-subtle);
+  }
+  .partout > p { max-width: 46rem; }
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 28px;
+  }
+  .modes div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+  }
+  .modes strong { color: var(--text); }
+  .modes span { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; }
+  .modes code { font-family: var(--font-mono); font-size: 0.85em; }
+
+  /* ── Aiguillage ──────────────────────────────────────────────────────── */
+  .aiguillage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 72px;
+  }
+  .carte { padding: 24px; border: 1px solid var(--border); border-radius: 12px; }
+  .carte h2 { font-size: 1.15rem; margin-bottom: 6px; }
+  .carte p { margin: 0 0 14px; color: var(--text-muted); font-size: 0.92rem; }
+  .carte ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+
+  /* ── Fin et pied ─────────────────────────────────────────────────────── */
+  .fin { margin: 72px auto 0; max-width: 44rem; text-align: center; padding-bottom: 72px; }
+  .pied { border-top: 1px solid var(--border); }
+  .pied-interieur {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 14px;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+  }
+  .pied nav { display: flex; flex-wrap: wrap; gap: 18px; }
+  .pied a { color: var(--text-secondary); text-decoration: none; }
+  .pied a:hover { color: var(--text); }
+
+  /* ── Téléphone et tablette ───────────────────────────────────────────── */
+  @media (max-width: 860px) {
+    .accueil { padding: 0 16px; }
+    .ouverture { padding-top: 48px; }
+    .capture-ouverture { margin-top: 36px; }
+    .visite { margin-top: 64px; gap: 56px; }
+    .bloc, .bloc.inverse { grid-template-columns: 1fr; gap: 20px; }
+    .bloc.inverse img { order: 0; }
+    .partout { margin-top: 64px; padding: 24px 18px; }
+    .modes, .aiguillage { grid-template-columns: 1fr; }
+    .pied-interieur { padding: 20px 16px; }
+  }
 </style>

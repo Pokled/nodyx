@@ -407,6 +407,15 @@ kbd {
 
 .btn-launch:hover { opacity: 0.88; transform: translateY(-1px); }
 
+/* Téléphone : sans ces règles, l'en-tête dépassait de 194 px à 390 px de large
+   et faisait glisser toute la page sur le côté (13/10/2026). */
+@media (max-width: 640px) {
+  .header-inner { gap: 0.5rem; padding: 0 0.75rem; }
+  .search-trigger { flex: 0 0 auto; padding: 0.45rem 0.6rem; }
+  .search-placeholder, kbd { display: none; }
+  .btn-launch { display: none; }
+}
+
 /* Search modal */
 .search-overlay {
   position: fixed;

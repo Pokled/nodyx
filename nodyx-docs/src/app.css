@@ -343,3 +343,20 @@ body {
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: var(--border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Images du contenu : jamais plus larges que leur colonne. GitHub réduit
+   d'office les captures des README ; ici elles s'affichaient à leur taille
+   réelle (1 688 px), et un tableau de captures faisait 3 748 px de large. */
+.prose img { max-width: 100%; height: auto; }
+.prose table:has(img) { table-layout: fixed; }
+
+/* Téléphone : un tableau ou un mot trop long (commande, adresse, nom de
+   fichier) élargissait toute la page de documentation, jusqu'à 383 px de trop
+   sur /install à 390 px de large (13/10/2026). */
+@media (max-width: 760px) {
+  .prose table { display: block; overflow-x: auto; }
+  .prose :not(pre) > code,
+  .prose h1, .prose h2, .prose h3, .prose h4,
+  .prose a { overflow-wrap: anywhere; }
+}
+

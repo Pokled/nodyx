@@ -412,7 +412,9 @@
 
 .doc-nav-inner {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, 1fr) : une colonne 1fr ne rétrécit pas sous la largeur de son
+     titre, et ces deux boutons faisaient déborder chaque page sur téléphone. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
   max-width: var(--content-max);
 }
@@ -480,6 +482,11 @@
 }
 
 /* Responsive: hide TOC on smaller screens */
+@media (max-width: 640px) {
+  .doc-nav-inner { grid-template-columns: minmax(0, 1fr); }
+  .doc-nav-title { overflow-wrap: anywhere; }
+}
+
 @media (max-width: 1200px) {
   .toc { display: none; }
   .doc-layout { display: block; }
