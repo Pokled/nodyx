@@ -55,7 +55,7 @@ Real-time chat              ✓  Socket.IO, channels, replies, pins, link previe
 Voice channels              ✓  WebRTC P2P mesh, mute, deafen, PTT, noise filter
 Screen sharing              ✓  WebRTC screen share + clip recording
 P2P DataChannels            ✓  Instant typing, optimistic reactions, file transfer
-NodyxCanvas                 ✓  Collaborative P2P whiteboard in voice channels
+Whiteboard                  ✓  Collaborative P2P whiteboard in voice channels
 Notifications               ✓  reply, thanks, @mention, badge, center, auto-purge 30d
 Direct messages             ✓  1:1 DMs, E2E encrypted (ECDH P-256 + AES-256-GCM + ESY layer)
   ↳ E2E shield              ✓  Live indicator (green/orange), ESY fingerprint tooltip

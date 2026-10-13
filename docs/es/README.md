@@ -7,7 +7,7 @@
 ### *«La red es la gente.»*
 
 **La plataforma comunitaria autoalojada que de verdad es tuya.**<br/>
-Foro, chat, voz, lienzo y tu propia página de inicio. Una instalación, en tu servidor, para una comunidad.
+Foro, chat, voz, pizarra y tu propia página de inicio. Una instalación, en tu servidor, para una comunidad.
 
 [![Versión](https://img.shields.io/github/v/release/Pokled/nodyx?label=versi%C3%B3n&color=7c3aed)](https://github.com/Pokled/nodyx/releases/latest)
 [![Licencia: AGPL-3.0](https://img.shields.io/badge/Licencia-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
@@ -33,7 +33,7 @@ Foro, chat, voz, lienzo y tu propia página de inicio. Una instalación, en tu s
 
 ## Qué es
 
-Nodyx le da a una comunidad un hogar que le pertenece: un foro que los buscadores saben leer, chat en tiempo real, canales de voz con pantalla compartida, un lienzo colaborativo, eventos, encuestas y una página de inicio pública que montas arrastrando y soltando. Todo funciona en un servidor que controlas tú, desde un VPS barato hasta una Raspberry Pi detrás del router de casa.
+Nodyx le da a una comunidad un hogar que le pertenece: un foro que los buscadores saben leer, chat en tiempo real, canales de voz con pantalla compartida, un pizarra colaborativa, eventos, encuestas y una página de inicio pública que montas arrastrando y soltando. Todo funciona en un servidor que controlas tú, desde un VPS barato hasta una Raspberry Pi detrás del router de casa.
 
 ```bash
 curl -fsSL https://nodyx.org/install.sh | bash
@@ -61,11 +61,11 @@ La pantalla compartida se abre en el **Nodyx Stage**, a pantalla completa o en u
 
 <table>
   <tr>
-    <td width="50%"><img src="../img/vitrine/canvas.webp" alt="NodyxCanvas: un tablero colaborativo con marcos, notas, hexágonos y conectores"/></td>
+    <td width="50%"><img src="../img/vitrine/canvas.webp" alt="La pizarra: un tablero colaborativo con marcos, notas, hexágonos y conectores"/></td>
     <td width="50%"><img src="../img/vitrine/tasks.webp" alt="Un tablero de tareas por columnas: pendiente, en curso, terminado"/></td>
   </tr>
   <tr>
-    <td><b>NodyxCanvas.</b> Una pizarra compartida: marcos, notas, formas, conectores, imágenes. Todos dibujan a la vez y todo se guarda.</td>
+    <td><b>Pizarra.</b> Un tablero compartido: marcos, notas, formas, conectores, imágenes. Todos dibujan a la vez y todo se guarda.</td>
     <td><b>Tableros de tareas.</b> Organiza un lanzamiento, un torneo o una quedada por columnas, con prioridades y fechas.</td>
   </tr>
   <tr>
@@ -133,7 +133,7 @@ El panorama de herramientas comunitarias no es una batalla. Cada proyecto optimi
 | **[Haven](https://github.com/ancsemi/Haven)** | Chat centrado en la privacidad, clientes nativos, sin telemetría | Cada byte debe quedarse en tu máquina |
 | **[Stoat](https://github.com/stoatchat/self-hosted)** / **[Fluxer](https://github.com/fluxerapp/fluxer)** | Una interfaz al estilo Discord, migración fácil | Tus miembros ya conocen Discord |
 | **Lemmy** | Foros federados por hilos, al estilo Reddit | Quieres una presencia nativa en el fediverso |
-| **Nodyx** | Foro, chat, voz, lienzo y página de inicio en una instalación, con un relé para servidores caseros | Quieres que una comunidad de muchos formatos sea tuya, en tu propio hardware |
+| **Nodyx** | Foro, chat, voz, pizarra y página de inicio en una instalación, con un relé para servidores caseros | Quieres que una comunidad de muchos formatos sea tuya, en tu propio hardware |
 
 Si solo necesitas uno o dos de estos formatos, quizá otra herramienta de la tabla te encaje mejor. [Nuestra opinión sincera, alternativas incluidas (en inglés).](https://nodyx.dev/why-nodyx)
 

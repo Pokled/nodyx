@@ -14,7 +14,7 @@
     setTimeout(() => { copie = false }, 2000)
   }
 
-  const DESCRIPTION = 'Documentation for Nodyx, the self-hosted community platform you actually own: forum, chat, voice, canvas and your own homepage in one install, on your own server.'
+  const DESCRIPTION = 'Documentation for Nodyx, the self-hosted community platform you actually own: forum, chat, voice, whiteboard and your own homepage in one install, on your own server.'
 
   const visite = [
     {
@@ -33,7 +33,7 @@
     },
     {
       image: '/img/vitrine/canvas.webp',
-      alt: 'NodyxCanvas: a shared board with frames, sticky notes, hexagons and connectors',
+      alt: 'The whiteboard: a shared board with frames, sticky notes, hexagons and connectors',
       titre: 'Make things together',
       texte: 'A shared whiteboard where everyone draws at once, task boards to plan a release or a tournament, events with a place and sign-ups, polls with live results. All of it saved on your server.',
       liens: [{ href: '/roadmap', label: 'What is shipped' }],
@@ -118,7 +118,7 @@
     <p class="surtitre">Nodyx documentation</p>
     <h1>The self-hosted community platform you actually own.</h1>
     <p class="chapeau">
-      Forum, chat, voice, canvas and your own homepage, in one install on a server you control,
+      Forum, chat, voice, whiteboard and your own homepage, in one install on a server you control,
       from a small VPS to a Raspberry Pi behind your home router.
     </p>
 

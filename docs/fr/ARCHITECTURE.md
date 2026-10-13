@@ -34,7 +34,7 @@ La voix et la vidéo ne passent pas par ce chemin : elles vont de navigateur à 
 
 - **Fastify v5 + TypeScript**, compilé dans `dist/` et lancé par PM2.
 - **API REST sous `/api/v1/`**, un fichier par domaine dans `src/routes/` (environ 35 fichiers : auth, forums, chat, dm, users, polls, events, wiki, tasks, canvas, music, extensions, admin, etc.).
-- **Socket.IO** pour tout le temps réel : chat, présence, « en train d'écrire », signalisation vocale, Canvas collaboratif, salons de chuchotement. Il est branché **après** `server.listen()`, une contrainte de Fastify v5.
+- **Socket.IO** pour tout le temps réel : chat, présence, « en train d'écrire », signalisation vocale, tableau blanc collaboratif, salons de chuchotement. Il est branché **après** `server.listen()`, une contrainte de Fastify v5.
 - **Middlewares** dans `src/middleware/` : `requireAuth`, `optionalAuth`, `adminOnly`, permissions, limitation de débit, validation (zod).
 - **Migrations** dans `src/migrations/` : de simples fichiers SQL numérotés, appliqués automatiquement au démarrage. Un changement de base est toujours un nouveau fichier, jamais la modification d'un ancien.
 

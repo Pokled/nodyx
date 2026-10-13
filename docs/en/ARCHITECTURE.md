@@ -33,7 +33,7 @@ Voice and video do not travel through this path: they go browser to browser over
 
 - **Fastify v5 + TypeScript**, compiled to `dist/` and run by PM2.
 - **REST API under `/api/v1/`**, one file per domain in `src/routes/` (about 35 files: auth, forums, chat, dm, users, polls, events, wiki, tasks, canvas, music, extensions, admin, and more).
-- **Socket.IO** for everything real time: chat, presence, typing, voice signaling, the collaborative canvas, whisper rooms. It is attached **after** `server.listen()`, a constraint of Fastify v5.
+- **Socket.IO** for everything real time: chat, presence, typing, voice signaling, the collaborative whiteboard, whisper rooms. It is attached **after** `server.listen()`, a constraint of Fastify v5.
 - **Middleware** in `src/middleware/`: `requireAuth`, `optionalAuth`, `adminOnly`, permissions, rate limiting, validation (zod).
 - **Migrations** in `src/migrations/`, plain numbered SQL files applied automatically at startup. A database change is always a new file, never an edit of an old one.
 

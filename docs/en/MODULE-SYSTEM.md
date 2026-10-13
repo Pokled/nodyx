@@ -132,7 +132,7 @@ These modules build the public-facing side of your instance, no account required
 | Gallery |, | ✅ | ✅ |, |
 | Leaderboard | ✅ | ✅ |, |, |
 | Tasks |, |, | ✅ | ✅ |
-| Canvas | ✅ |, |, |, |
+| Whiteboard | ✅ |, |, |, |
 | Map (public) |, | ✅ | ✅ |, |
 | Shop (public) |, | ✅ | ✅ |, |
 | Newsletter |, | ✅ | ✅ | ✅ |
@@ -242,7 +242,7 @@ Filters: [All ▾]  [Community ▾]  [Active only]
 ● COMMUNITY
   ✅ Chat           v1.8 , [Configure]  [Disable]
   ✅ Voice          v1.5 , [Configure]  [Disable]
-  ◻  Canvas         v1.2 , [Enable]
+  ◻  Whiteboard     v1.2 , [Enable]
   ◻  Wiki           v1.0 , [Enable]
   ◻  Tasks          v0.9 , [Enable]  [Beta]
 

@@ -9,7 +9,7 @@ What a community gets in a single install:
 - A forum indexed by search engines, with categories, rich articles, polls and a wiki.
 - Real-time chat with replies, reactions, pins and direct messages that are end-to-end encrypted.
 - Voice and video channels with screen sharing, served by a built-in media server written in Rust.
-- A homepage the admins build themselves with a drag-and-drop editor, plus extensions, games played inside a voice channel, an event calendar, a music showcase and a shared canvas.
+- A homepage the admins build themselves with a drag-and-drop editor, plus extensions, games played inside a voice channel, an event calendar, a music showcase and a shared whiteboard.
 - Moderation tools, roles and grades, and an optional passwordless login.
 - An interface translated by its community into several languages.
 

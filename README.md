@@ -7,7 +7,7 @@
 ### *"The network is the people."*
 
 **The self-hosted community platform you actually own.**<br/>
-Forum, chat, voice, canvas and your own homepage. One install, on your server, for one community.
+Forum, chat, voice, whiteboard and your own homepage. One install, on your server, for one community.
 
 [![Version](https://img.shields.io/github/v/release/Pokled/nodyx?label=version&color=7c3aed)](https://github.com/Pokled/nodyx/releases/latest)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
@@ -36,7 +36,7 @@ Forum, chat, voice, canvas and your own homepage. One install, on your server, f
 
 ## What it is
 
-Nodyx gives a community one home that it owns: a forum that search engines can read, real-time chat, voice channels with screen sharing, a collaborative canvas, events, polls, and a public homepage you build by drag and drop. Everything runs on one server that you control, from a cheap VPS to a Raspberry Pi behind your home router.
+Nodyx gives a community one home that it owns: a forum that search engines can read, real-time chat, voice channels with screen sharing, a collaborative whiteboard, events, polls, and a public homepage you build by drag and drop. Everything runs on one server that you control, from a cheap VPS to a Raspberry Pi behind your home router.
 
 ```bash
 curl -fsSL https://nodyx.org/install.sh | bash
@@ -64,11 +64,11 @@ Screen sharing opens on the **Nodyx Stage**, in full screen or as a floating win
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/img/vitrine/canvas.webp" alt="NodyxCanvas: a collaborative board with frames, sticky notes, hexagons and connectors"/></td>
+    <td width="50%"><img src="docs/img/vitrine/canvas.webp" alt="The whiteboard: a collaborative board with frames, sticky notes, hexagons and connectors"/></td>
     <td width="50%"><img src="docs/img/vitrine/tasks.webp" alt="A kanban task board with To do, In progress and Done columns"/></td>
   </tr>
   <tr>
-    <td><b>NodyxCanvas.</b> A shared whiteboard: frames, notes, shapes, connectors, images. Everyone draws at the same time, everything is saved.</td>
+    <td><b>Whiteboard.</b> A shared board: frames, notes, shapes, connectors, images. Everyone draws at the same time, everything is saved.</td>
     <td><b>Task boards.</b> Plan a release, a tournament or a meetup in columns, with priorities and due dates.</td>
   </tr>
   <tr>
@@ -136,7 +136,7 @@ The community-tools landscape isn't a battle. Each project optimizes for differe
 | **[Haven](https://github.com/ancsemi/Haven)** | Privacy-first chat, native clients, no telemetry | Every byte must stay on your own machine |
 | **[Stoat](https://github.com/stoatchat/self-hosted)** / **[Fluxer](https://github.com/fluxerapp/fluxer)** | A Discord-shaped interface, easy migration | Your members already know Discord |
 | **Lemmy** | Federated, Reddit-style threaded forums | You want a fediverse-native presence |
-| **Nodyx** | Forum, chat, voice, canvas and homepage in one install, with a relay for home servers | You want to own a multi-format community on your own hardware |
+| **Nodyx** | Forum, chat, voice, whiteboard and homepage in one install, with a relay for home servers | You want to own a multi-format community on your own hardware |
 
 If you only need one or two of these formats, another tool above may suit you better. [Our honest take, alternatives included.](https://nodyx.dev/why-nodyx)
 

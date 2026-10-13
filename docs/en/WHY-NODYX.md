@@ -54,9 +54,9 @@ Nodyx is one of many projects asking the question: *what if a community could ow
 Not "Discord is bad, here's why we're better". Just the calls we made:
 
 - **One instance = one community.** Your server, your hardware (or your VPS), your data. If we disappear tomorrow, your instance keeps running. Forever.
-- **Forum + chat + voice + canvas + homepage builder, in one piece.** A community is not just a chat. It needs persistent threads (forum), real-time chat, voice, collaborative canvas, and a public-facing homepage. We bundle these so you don't stitch five tools together.
+- **Forum + chat + voice + whiteboard + homepage builder, in one piece.** A community is not just a chat. It needs persistent threads (forum), real-time chat, voice, a collaborative whiteboard, and a public-facing homepage. We bundle these so you don't stitch five tools together.
 - **P2P relay for NAT traversal.** Run Nodyx on a Raspberry Pi behind your home router, no port forwarding, no Cloudflare account required. Our relay is a Rust service that punches through NAT for you, optionally.
-- **Modules you turn on, not features dumped on you.** Activate the wiki, the events calendar, the jukebox, the canvas, only when your community needs them. CMS-style, not feature-bloat.
+- **Modules you turn on, not features dumped on you.** Activate the wiki, the events calendar, the jukebox, the whiteboard, only when your community needs them. CMS-style, not feature-bloat.
 - **Reputation that you can audit.** Reputation scores are computed from on-chain (well, on-server) actions. The math is open, the history is visible. No mystery algorithm.
 - **End-to-end encrypted DMs by default.** ECDH key exchange + AES-256-GCM. Your DMs are unreadable even to your own instance admin.
 - **Public credit for contributors.** Every external PR is acknowledged in the README and in our `CONTRIBUTORS.md`. We call this Nodyx Stars. The people who help build this deserve to be visible.

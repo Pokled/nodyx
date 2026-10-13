@@ -7,7 +7,7 @@
 ### *« Le réseau, c'est les gens. »*
 
 **La plateforme communautaire auto-hébergée qui vous appartient vraiment.**<br/>
-Forum, chat, vocal, canvas et votre propre page d'accueil. Une installation, sur votre serveur, pour une communauté.
+Forum, chat, vocal, tableau blanc et votre propre page d'accueil. Une installation, sur votre serveur, pour une communauté.
 
 [![Version](https://img.shields.io/github/v/release/Pokled/nodyx?label=version&color=7c3aed)](https://github.com/Pokled/nodyx/releases/latest)
 [![Licence : AGPL-3.0](https://img.shields.io/badge/Licence-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
@@ -33,7 +33,7 @@ Forum, chat, vocal, canvas et votre propre page d'accueil. Une installation, sur
 
 ## Ce que c'est
 
-Nodyx donne à une communauté une maison qui lui appartient. On y trouve un forum que les moteurs de recherche savent lire, un chat en temps réel, des salons vocaux avec partage d'écran, un canvas collaboratif, des événements, des sondages, et une page d'accueil publique que vous composez par glisser-déposer. Le tout tourne sur un serveur que vous contrôlez, du petit VPS au Raspberry Pi posé derrière votre box.
+Nodyx donne à une communauté une maison qui lui appartient. On y trouve un forum que les moteurs de recherche savent lire, un chat en temps réel, des salons vocaux avec partage d'écran, un tableau blanc collaboratif, des événements, des sondages, et une page d'accueil publique que vous composez par glisser-déposer. Le tout tourne sur un serveur que vous contrôlez, du petit VPS au Raspberry Pi posé derrière votre box.
 
 ```bash
 curl -fsSL https://nodyx.org/install.sh | bash
@@ -61,11 +61,11 @@ Le partage d'écran s'ouvre sur le **Nodyx Stage**, en plein écran ou en fenêt
 
 <table>
   <tr>
-    <td width="50%"><img src="../img/vitrine/canvas.webp" alt="NodyxCanvas : un tableau collaboratif avec cadres, notes, hexagones et connecteurs"/></td>
+    <td width="50%"><img src="../img/vitrine/canvas.webp" alt="Le tableau blanc : un tableau collaboratif avec cadres, notes, hexagones et connecteurs"/></td>
     <td width="50%"><img src="../img/vitrine/tasks.webp" alt="Un tableau de tâches en colonnes : à faire, en cours, terminé"/></td>
   </tr>
   <tr>
-    <td><b>NodyxCanvas.</b> Un tableau blanc partagé : cadres, notes, formes, connecteurs, images. Tout le monde dessine en même temps, tout est sauvegardé.</td>
+    <td><b>Tableau blanc.</b> Un tableau partagé : cadres, notes, formes, connecteurs, images. Tout le monde dessine en même temps, tout est sauvegardé.</td>
     <td><b>Tableaux de tâches.</b> Préparer une sortie, un tournoi ou une rencontre en colonnes, avec priorités et échéances.</td>
   </tr>
   <tr>
@@ -133,7 +133,7 @@ Le paysage des outils communautaires n'est pas un champ de bataille. Chaque proj
 | **[Haven](https://github.com/ancsemi/Haven)** | Chat centré sur la vie privée, clients natifs, aucune télémétrie | Chaque octet doit rester sur votre machine |
 | **[Stoat](https://github.com/stoatchat/self-hosted)** / **[Fluxer](https://github.com/fluxerapp/fluxer)** | Une interface à la Discord, migration facile | Vos membres connaissent déjà Discord |
 | **Lemmy** | Forums fédérés en fils, façon Reddit | Vous voulez une présence native dans le fédivers |
-| **Nodyx** | Forum, chat, vocal, canvas et page d'accueil en une installation, avec un relais pour les serveurs à la maison | Vous voulez posséder une communauté aux formats multiples, sur votre propre matériel |
+| **Nodyx** | Forum, chat, vocal, tableau blanc et page d'accueil en une installation, avec un relais pour les serveurs à la maison | Vous voulez posséder une communauté aux formats multiples, sur votre propre matériel |
 
 Si vous n'avez besoin que d'un ou deux de ces formats, un autre outil du tableau vous ira peut-être mieux. [Notre avis honnête, alternatives comprises.](./WHY-NODYX.md)
 

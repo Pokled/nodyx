@@ -54,9 +54,9 @@ Nodyx fait partie de plein de projets qui posent la même question : *et si une 
 Pas "Discord est mauvais, voilà pourquoi on est mieux". Juste les choix qu'on a faits :
 
 - **Une instance = une communauté.** Ton serveur, ton matériel (ou ton VPS), tes données. Si on disparaît demain, ton instance continue de tourner. Pour toujours.
-- **Forum + chat + voice + canvas + homepage builder, dans un seul outil.** Une communauté ce n'est pas juste un chat. Ça a besoin de fils persistants (forum), de chat temps réel, de voix, d'un canvas collaboratif, et d'une page d'accueil publique. On regroupe tout ça pour que tu n'aies pas à coudre cinq outils ensemble.
+- **Forum + chat + vocal + tableau blanc + éditeur de page d'accueil, dans un seul outil.** Une communauté ce n'est pas juste un chat. Ça a besoin de fils persistants (forum), de chat temps réel, de voix, d'un tableau blanc collaboratif, et d'une page d'accueil publique. On regroupe tout ça pour que tu n'aies pas à coudre cinq outils ensemble.
 - **Un relay P2P pour passer le NAT.** Lance Nodyx sur un Raspberry Pi derrière ta box, sans port forwarding, sans compte Cloudflare requis. Notre relay est un service Rust qui perce le NAT pour toi, en option.
-- **Des modules que tu actives, pas des fonctionnalités balancées par-dessus.** Active le wiki, le calendrier d'évènements, le jukebox, le canvas, seulement quand ta communauté en a besoin. Style CMS, pas du feature-bloat.
+- **Des modules que tu actives, pas des fonctionnalités balancées par-dessus.** Active le wiki, le calendrier d'évènements, le jukebox, le tableau blanc, seulement quand ta communauté en a besoin. Style CMS, pas du feature-bloat.
 - **Une réputation auditable.** Les scores de réputation sont calculés à partir d'actions on-chain (enfin, on-server). Le calcul est ouvert, l'historique est visible. Pas d'algo mystère.
 - **DMs chiffrés bout en bout par défaut.** ECDH pour l'échange de clés + AES-256-GCM. Tes DMs sont illisibles même pour l'admin de ton instance.
 - **Reconnaissance publique des contributeurs.** Chaque PR externe est créditée dans le README et dans `CONTRIBUTORS.md`. On appelle ça les Nodyx Stars. Les gens qui aident à construire ça méritent d'être visibles.
