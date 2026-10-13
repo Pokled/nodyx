@@ -151,7 +151,7 @@
 					const r2 = await fetch('/api/v1/canvas', {
 						method: 'POST',
 						headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-						body: JSON.stringify({ channel_id: channelId, name: selectedChannel.name ?? 'Canvas' }),
+						body: JSON.stringify({ channel_id: channelId, name: selectedChannel.name ?? tFn('nav.canvas') }),
 					})
 					if (r2.ok) {
 						const data2 = await r2.json() as { board: { id: string } }
