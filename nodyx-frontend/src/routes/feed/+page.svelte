@@ -948,7 +948,7 @@
 	justify-content: center;
 }
 .composer-avatar-img   { width: 100%; height: 100%; object-fit: cover; }
-.composer-avatar-initial { font-size: 0.875rem; font-weight: 700; color: var(--nx-accent); }
+.composer-avatar-initial { font-size: 0.875rem; font-weight: 700; color: var(--nx-header-accent); }
 
 .composer-body { flex: 1; min-width: 0; }
 
@@ -1407,7 +1407,7 @@
 	width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
 	background: rgb(var(--nx-accent-rgb) / 0.15);
 	display: flex; align-items: center; justify-content: center;
-	font-weight: 700; font-size: 0.875rem; color: var(--nx-accent);
+	font-weight: 700; font-size: 0.875rem; color: var(--nx-header-accent);
 	flex-shrink: 0;
 }
 .sidebar-me-name   { font-size: 0.875rem; font-weight: 700; color: var(--nx-text-muted); }
@@ -1417,7 +1417,7 @@
 	width: 36px; height: 36px; border-radius: 50%; overflow: hidden;
 	background: rgb(var(--nx-accent-rgb) / 0.1);
 	display: flex; align-items: center; justify-content: center;
-	font-size: 0.8rem; font-weight: 700; color: var(--nx-accent);
+	font-size: 0.8rem; font-weight: 700; color: var(--nx-header-accent);
 	flex-shrink: 0;
 }
 .sidebar-suggest-name   { display: block; font-size: 0.8rem; font-weight: 600; color: var(--nx-text-muted); }
