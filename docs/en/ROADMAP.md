@@ -11,33 +11,36 @@
 
 ---
 
-## CURRENT STATE, September 2026, v2.12.0 and beyond
+## CURRENT STATE, October 2026, v2.13.0 on the way
 
 | Phase | Title | Status |
 |---|---|---|
-| **Phase 1** | Forum MVP + Admin | ✅ Complete |
-| **Phase 2** | Real-time Chat + Directory + Network Identity | ✅ Complete |
-| **Phase 2.5** | Community customization + Light federation | ✅ Complete |
-| **Phase 3** | P2P Infrastructure + Rust Foundation | 🔨 In progress (see 3.0-D) |
-| **Phase 4** | Platform enrichment | ✅ Complete |
-| **Phase 4.5 to 4.16** | Security hardening, stability, testing, OctoGuard | ✅ Complete |
-| **Phase 4.17** | Streamer Hub, the full toolkit for streamers | ✅ Complete |
-| **Phase 4.18** | Next-gen voice: the SFU (audio + video) | ✅ Complete |
-| **Phase 4.19** | Nodyx speaks seven languages | ✅ Complete (translation is ongoing) |
-| **Phase 4.20** | Advanced instance customization | ✅ Complete |
-| **Phase 4.21** | Extension SDK + marketplace | ✅ Complete (v1) |
-| **Phase 4.22** | Community activities in voice channels | ✅ Complete (v1) |
-| **Phase 4.23** | Music showcase + public showcase hardening | ✅ Complete |
-| Phase 5 | Mobile + Nodes + Reputation | 🔨 In progress |
-| **Phase Horizon** | NODYX-ETHER, physical layer sovereignty | 🌌 Vision |
-| **Phase Radio** | NODYX-RADIO, internet radio tuner + cooperative ad network | 📻 Vision |
+| **Phase 1** | Forum MVP + Admin | Complete |
+| **Phase 2** | Real-time Chat + Directory + Network Identity | Complete |
+| **Phase 2.5** | Community customization + Light federation | Complete |
+| **Phase 3** | P2P Infrastructure + Rust Foundation | In progress (see 3.0-D) |
+| **Phase 4** | Platform enrichment | Complete |
+| **Phase 4.5 to 4.16** | Security hardening, stability, testing, OctoGuard | Complete |
+| **Phase 4.17** | Streamer Hub, the full toolkit for streamers | Complete |
+| **Phase 4.18** | Next-gen voice: the SFU (audio + video) | Complete |
+| **Phase 4.19** | Nodyx speaks eight languages | Complete (translation is ongoing) |
+| **Phase 4.20** | Advanced instance customization | Complete |
+| **Phase 4.21** | Extension SDK + marketplace | Complete (v1) |
+| **Phase 4.22** | Community activities in voice channels | Complete (v1) |
+| **Phase 4.23** | Music showcase + public showcase hardening | Complete |
+| **Phase 4.24** | Ambiances and the floating shell | Complete |
+| **Phase 4.25** | Installer rebuilt, security audit | Complete |
+| **Phase 4.26** | Stabilization: hunting bugs in real use | In progress |
+| Phase 5 | Mobile + Nodes + Reputation | In progress |
+| **Phase Horizon** | NODYX-ETHER, physical layer sovereignty | Vision |
+| **Phase Radio** | NODYX-RADIO, internet radio tuner + cooperative ad network | Vision |
 
 Each entry below gives the essentials. Full detail (migrations, files, benchmarks, PRs) lives
 in the CHANGELOG at the version listed.
 
 ---
 
-## PHASE 1, MVP Forum + Admin ✅ COMPLETE
+## PHASE 1, MVP Forum + Admin (complete)
 
 A community can install, configure, and run on Nodyx in full autonomy.
 
@@ -53,7 +56,7 @@ engines, without being a developer. Validated.
 
 ---
 
-## PHASE 2, Real-time Chat + Directory + Network Identity ✅ COMPLETE
+## PHASE 2, Real-time Chat + Directory + Network Identity (complete)
 
 Members talk live, the directory is real, every instance gets its own URL.
 
@@ -64,7 +67,7 @@ Members talk live, the directory is real, every instance gets its own URL.
 
 ---
 
-## PHASE 2.5, Community Customization + Light Federation ✅ COMPLETE
+## PHASE 2.5, Community Customization + Light Federation (complete)
 
 Every instance becomes unique, and instances can share what they create.
 
@@ -73,28 +76,28 @@ Every instance becomes unique, and instances can share what they create.
 
 ---
 
-## PHASE 3, P2P Infrastructure + Rust Foundation 🔨 IN PROGRESS
+## PHASE 3, P2P Infrastructure + Rust Foundation (in progress)
 
 > *"P2P is the soul. Rust is the body."*
 > Rust sits below, invisible to the user, handling low-level networking, encryption,
 > WireGuard, the DHT. Talks to `nodyx-core` over a local Unix socket.
 
-### 3.0-A, `nodyx-relay-client` ✅ VALIDATED, March 2026
+### 3.0-A, `nodyx-relay-client` (validated, March 2026)
 Replaces `install_tunnel.sh` + Cloudflare Tunnel. Zero domain, zero open port, tested on a
 Raspberry Pi. Static Rust binary, automatic reconnection, wired into `install.sh`.
 
-### 3.0-B, Browser P2P Nodes (WebRTC DataChannels) ✅ SHIPPED, March 2026
+### 3.0-B, Browser P2P Nodes (WebRTC DataChannels) (shipped, March 2026)
 Browsers become active nodes: 1-N mesh, instant P2P typing indicators, optimistic reactions,
 peer-to-peer asset transfer in chunks. Reuses the existing `voice.ts` signaling, zero new server
 infrastructure.
 
-### 3.0-C, `nodyx-turn` (replaces coturn) ✅ VALIDATED, March 2026
+### 3.0-C, `nodyx-turn` (replaces coturn) (validated, March 2026)
 A 2.9 MB, zero-dependency Rust STUN/TURN server. TURN-over-TCP (RFC 6062), dynamic HMAC
 credentials, rate limiting, allocation quotas. Core fix in v2.9: the relay port range now
 belongs to the server itself instead of the kernel's ephemeral range (voice was intermittent
 for a chunk of self-hosters before this).
 
-### 3.0-D, `nodyx-p2p` core, long-term vision 🔨 STARTED
+### 3.0-D, `nodyx-p2p` core, long-term vision (started)
 The distributed core: DHT, WireGuard mesh, gossip, CRDTs, replication, resilience without a
 central server.
 - [x] **`nodyx-gossip`** (v2.9): peer discovery via epidemic anti-entropy, standard library only,
@@ -105,7 +108,7 @@ central server.
 - [x] VoicePanel sidebar, member interaction panel (RTT/jitter/packet loss), self-monitoring
 - [ ] Amphitheater mode (1→N broadcast), Nodes-as-a-Service
 
-### v1.0, Collaborative Table ⏳ PLANNED
+### v1.0, Collaborative Table (planned)
 The voice channel becomes a living space: games, files, shared music, all in the same window.
 P2P DataChannel foundation already shipped (v0.9). Still to build: SVG table, `table:*`
 protocol, collaborative jukebox, games (dice, chess, poker), a `plugins/table-templates/`
@@ -116,7 +119,7 @@ plugin system.
 
 ---
 
-## PHASE 4, Platform Enrichment ✅ COMPLETE
+## PHASE 4, Platform Enrichment (complete)
 
 Nodyx becomes the complete community platform: NodyxCanvas (P2P collaborative whiteboard),
 profile themes, mobile-responsive UI, chat replies/quotes and pinned messages, end-to-end
@@ -128,34 +131,34 @@ Line-by-line detail in the CHANGELOG, versions 1.1 through 1.8.
 
 ---
 
-## PHASE 4.5, Security Hardening ✅ COMPLETE (March 2026)
+## PHASE 4.5, Security Hardening (complete, March 2026)
 SQL injection, JWT, SSRF/DNS rebinding, Socket.IO IDOR, CSS/XSS injection, auth rate limiting,
 crypto input validation. The project's first full security audit, before opening up Phase 5.
 
-## PHASE 4.6, Active Defense & Runtime Security ✅ COMPLETE
+## PHASE 4.6, Active Defense & Runtime Security (complete)
 Honeypot (25+ trapped scanner paths, tarpit, fingerprinting, honeytokens), fail2ban (5 jails),
 permanent blocklist, Argon2id, chat anti-spam, content filtering, optional NSFW scanning,
 Olympus Hub (security command center).
 
-## PHASE 4.7, Two-Factor Authentication ✅ COMPLETE
+## PHASE 4.7, Two-Factor Authentication (complete)
 TOTP (RFC 6238) and Nodyx Signet as a second factor, priority Signet > TOTP > direct login.
 
-## PHASE 4.8, Production Stability & Cross-Runtime Consistency ✅ COMPLETE
+## PHASE 4.8, Production Stability & Cross-Runtime Consistency (complete)
 A surgical audit across Node.js/Rust/Caddy/PM2/systemd: unified Redis keyPrefix, bans and rate
 limiting consistent across both runtimes, session invalidation on password change, automatic
 Caddy failover if the Rust service goes down.
 
-## PHASE 4.9, Process Isolation, Test Coverage & CI ✅ COMPLETE
+## PHASE 4.9, Process Isolation, Test Coverage & CI (complete)
 Every process runs under the `nodyx` system user (nothing but systemd stays root), hardened
 file permissions, first Rust tests, critical dependencies pinned, a two-job parallel CI
 pipeline.
 
-## PHASE 4.10 through 4.15 ✅ COMPLETE
+## PHASE 4.10 through 4.15 (complete)
 Living Profile and forum redesign (v1.9.5), end-to-end encrypted DMs (v2.0), Homepage Builder
 and Widget SDK v1 (v2.1), NodyxCanvas major upgrade (v2.2), universal media player and tunnel
 hardening (v2.3), backup system and live maintenance mode (v2.4).
 
-## PHASE 4.16, OctoGuard Phase 1, Native Auto-moderation ✅ COMPLETE (v2.6)
+## PHASE 4.16, OctoGuard Phase 1, Native Auto-moderation (complete, v2.6)
 > *"Admin freedom is not negotiable. OctoGuard ships disabled, every rule is opt-in."*
 
 A fail-open auto-mod pipeline under 50ms, ReDoS protection (the `re2` engine), 6 actions
@@ -168,7 +171,7 @@ Bot API, Python SDK) are tracked separately in `docs/specs/016-Octoguard/`.
 
 ---
 
-## PHASE 4.17, Streamer Hub, the Full Toolkit for Streamers ✅ COMPLETE (v2.5 → v2.8)
+## PHASE 4.17, Streamer Hub, the Full Toolkit for Streamers (complete, v2.5 → v2.8)
 
 A complete two-way bridge between a Nodyx instance and Twitch, built so a streamer stops
 juggling three separate SaaS tools.
@@ -188,7 +191,7 @@ Full spec and phase reports in `docs/specs/015-streamer-hub/`.
 
 ---
 
-## PHASE 4.18, Next-gen Voice, the SFU ✅ COMPLETE (v2.9 → v2.11)
+## PHASE 4.18, Next-gen Voice, the SFU (complete, v2.9 → v2.11)
 
 The mesh's math problem (15 viewers at 3 Mbps each is impossible on a residential connection)
 had an answer written into the CDC long before it shipped. It's live now.
@@ -206,13 +209,13 @@ had an answer written into the CDC long before it shipped. It's live now.
 
 ---
 
-## PHASE 4.19, Nodyx Speaks Seven Languages ✅ COMPLETE (translation is ongoing)
+## PHASE 4.19, Nodyx Speaks Eight Languages (complete, translation is ongoing)
 
 The "nothing left hardcoded" audit is done: the entire interface, public and admin, runs
 through translation keys, guarded by five CI gates against regression (including one dedicated
 to `.ts` files, a blind spot found along the way).
 
-- Seven languages across the core interface, English at full parity (the execution fallback
+- Eight languages across the core interface, English at full parity (the execution fallback
   before French), Brazilian Portuguese the first community locale to reach 100% (4,567 keys)
 - `nodyx.org/translate`: translation status computed straight from the locale files, a page
   that can't lie, crediting every contributor
@@ -220,7 +223,7 @@ to `.ts` files, a blind spot found along the way).
 
 ---
 
-## PHASE 4.20, Advanced Instance Customization ✅ COMPLETE (v2.12)
+## PHASE 4.20, Advanced Instance Customization (complete, v2.12)
 
 Born from a real-world test: a genuine multigaming community hit non-configurable elements on
 its admin's very first instinct.
@@ -233,7 +236,7 @@ its admin's very first instinct.
 
 ---
 
-## PHASE 4.21, Extension SDK + Marketplace ✅ COMPLETE (v1)
+## PHASE 4.21, Extension SDK + Marketplace (complete, v1)
 
 Nodyx can now be extended by third parties without touching the core. Covers a good part of
 Phase 5's "documented public API for third-party developers" goal.
@@ -250,7 +253,7 @@ Full CDC in `SPECS/NODYX_SDK_CDC.md`, `SPECS/NODYX_SDK_SECURITY.md`,
 
 ---
 
-## PHASE 4.22, Community Activities in Voice Channels ✅ COMPLETE (v1)
+## PHASE 4.22, Community Activities in Voice Channels (complete, v1)
 
 A voice channel can now host an activity, a multiplayer game played while talking, on the same
 model as extensions: an app bundle shipped by the instance, a dedicated real-time relay,
@@ -261,7 +264,7 @@ Detail in `SPECS/NODYX_ACTIVITIES_CDC.md`.
 
 ---
 
-## PHASE 4.23, Music Showcase + Public Showcase Hardening ✅ COMPLETE
+## PHASE 4.23, Music Showcase + Public Showcase Hardening (complete)
 
 **Music showcase**: a public `/musique` module managed from `/admin/music`, born to host an
 in-house game soundtrack and grown generic (editable title, subtitle, banner). Reorderable
@@ -281,7 +284,51 @@ forum thread titles. Still ongoing as this is written.
 
 ---
 
-## PHASE 5, Mobile & Reputation 🔨 IN PROGRESS
+## PHASE 4.24, Ambiances and the Floating Shell (complete, v2.13)
+
+The look of an instance, set in depth by its admin, without ever writing CSS.
+
+- On large screens the content floats in glass panes over the instance's own wallpaper
+- Fourteen ready-made ambiances (Matrix, Cyberpunk, Gazette, Ocean...) with real photos under a
+  free license, or the admin's own accent, backgrounds, decor and intensity
+- Contrast computed, never guessed (at least 4.5:1); a server-side draft nobody sees before
+  "Publish", undo and redo, an ambiance code to share
+- A pen right on the site to style each zone (background, blur, corners, image, font), with
+  bounded settings revalidated by the core
+
+---
+
+## PHASE 4.25, Installer Rebuilt, Security Audit (complete, v2.13)
+
+`install.sh` and `install_tunnel.sh` read line by line, then largely rebuilt, after a bug report
+on a minimal Debian 13.
+
+- Updates no longer take the site down: the new version builds alongside, the switch happens
+  only if everything succeeded, the database is backed up and checked first
+- The real visitor address reaches Nodyx on every kind of install (rate limiting and bans
+  depended on it), the firewall can no longer lock the admin out
+- Downloaded programs verified by SHA-256, no secret left in a command line or in clear on disk
+- Unattended installs (`--yes`, `--network`, password and token files), `nodyx-update`,
+  `nodyx-doctor`, `nodyx-recover`, a rewritten `uninstall.sh`
+- Test benches for every installer path, run in CI
+
+---
+
+## PHASE 4.26, Stabilization: Hunting Bugs in Real Use (in progress)
+
+Using Nodyx every day on nodyx.org, and taking the screenshots for this documentation, surfaced
+bugs that no test had seen. Each fix ships with a test that fails on the old code, and is checked
+live after deployment.
+
+- Canvas: frames, advanced shapes and connectors were lost on reload since v2.2
+- Voice: a closed tab left a ghost in the room; someone joining during a screen share never saw it
+- A first visit loaded every page twice; forum and sidebar layouts crushed on desktop screens
+- Next: making large voice rooms work from a home server too (the `str0m` engine, Phase 4.18),
+  so that no Nodyx admin ever has to open a port
+
+---
+
+## PHASE 5, Mobile & Reputation (in progress)
 ### Nodyx in everyone's pocket
 
 - [ ] iOS app via Capacitor
