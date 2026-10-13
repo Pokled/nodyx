@@ -1050,7 +1050,7 @@
 	}
 	.profile-follow-count-label {
 		font-size: 0.7rem;
-		color: rgba(255,255,255,0.4);
+		color: rgba(255,255,255,0.55);
 		font-weight: 500;
 	}
 	.profile-follow-sep {

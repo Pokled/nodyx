@@ -519,7 +519,7 @@
 	.nodyx-sb .panel .panel-scroll .nav-link .badge { margin-left: auto; background: #ef4444; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
 	.nodyx-sb .panel .panel-scroll .channel-group-label {
 	  font-size: 10px; padding: 12px 10px 4px;
-	  letter-spacing: .08em; font-weight: 600; color: var(--nx-text-faint); text-transform: uppercase;
+	  letter-spacing: .08em; font-weight: 600; color: var(--nx-text-muted); text-transform: uppercase;
 	}
 	.nodyx-sb .panel .panel-scroll .channel {
 	  position: relative; z-index: 1;

@@ -455,7 +455,8 @@
 		border: 1px solid var(--nx-border);
 		padding: 0.05rem 0.28rem;
 		border-radius: 4px;
-		color: var(--nx-text-faint);
+		/* muted (AA garanti) et non faint (3:1) : texte de 9,6px, il doit rester lisible. */
+		color: var(--nx-text-muted);
 		font-family: ui-monospace, monospace;
 	}
 	.nx-icon-btn {
@@ -499,7 +500,7 @@
 	.nx-admin-pen:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
 	/* Admin pill in top bar */
 	.nx-admin-pill {
-		color: var(--nx-text-faint);
+		color: var(--nx-text-muted);
 		background: transparent;
 		border: 1px solid var(--nx-border);
 	}
