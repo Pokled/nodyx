@@ -139,9 +139,11 @@
 	<!-- Desktop: logo + breadcrumb -->
 	<div class="hidden lg:flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
 		<!-- Logo toujours visible -->
-		<a href="/" class="shrink-0 flex items-center gap-1.5 font-bold text-sm" style="color: var(--nx-text)">
+		<!-- Le nom peut rétrécir (points de suspension) : déclaré « ne rétrécit
+		     jamais », un nom long écrasait le fil d'Ariane jusqu'à une lettre. -->
+		<a href="/" class="min-w-0 shrink-[4] flex items-center gap-1.5 font-bold text-sm" style="color: var(--nx-text)" title={communityName}>
 			<img src="/nodyx-octopus.png" alt="" class="nx-mark-octopus w-5 h-5 shrink-0" />
-			<span>{communityName}</span>
+			<span class="truncate max-w-[16rem]">{communityName}</span>
 		</a>
 		<!-- Breadcrumb dynamique (masqué sur la homepage) -->
 		{#if breadcrumbs.length > 0}
@@ -154,11 +156,17 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
 					</svg>
 				{/if}
-				{#if crumb.href && i < breadcrumbs.length - 1}
-					<a href={crumb.href}
-					   class="nx-breadcrumb-link text-xs font-medium shrink-0 transition-colors truncate max-w-40">{crumb.label}</a>
+				{#if i < breadcrumbs.length - 1}
+					<!-- Miettes intermédiaires : largeur bornée mais jamais écrasées
+					     (« Chat », sans lien, finissait réduit à « C »). -->
+					{#if crumb.href}
+						<a href={crumb.href}
+						   class="nx-breadcrumb-link text-xs font-medium shrink-0 transition-colors truncate max-w-40">{crumb.label}</a>
+					{:else}
+						<span class="text-xs font-medium shrink-0 truncate max-w-40" style="color: var(--nx-text-muted)">{crumb.label}</span>
+					{/if}
 				{:else}
-					<span class="text-xs font-semibold truncate min-w-0"
+					<span class="text-xs font-semibold truncate min-w-[5rem]"
 					      style="color: var(--nx-text)">{crumb.label}</span>
 				{/if}
 			{/each}
