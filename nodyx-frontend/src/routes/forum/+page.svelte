@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { page } from '$app/state';
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props();
@@ -207,24 +207,24 @@
 			     Calculées depuis les données déjà chargées, aucun appel en plus. -->
 			<div class="border border-white/[.06]" style="background: rgba(255,255,255,.025)">
 				<div class="px-4 py-3 border-b border-white/5">
-					<span class="text-[10px] font-black uppercase tracking-[.15em] text-gray-500">Statistiques</span>
+					<span class="text-[10px] font-black uppercase tracking-[.15em] text-gray-500">{tFn('forum.stats_title')}</span>
 				</div>
 				<div class="px-4 py-3 space-y-2">
 					<div class="flex items-baseline justify-between">
 						<span class="text-[11px] text-gray-600">{tFn('common.topics')}</span>
-						<span class="text-xs font-bold text-gray-300 tabular-nums">{totThreads.toLocaleString('fr-FR')}</span>
+						<span class="text-xs font-bold text-gray-300 tabular-nums">{totThreads.toLocaleString($locale)}</span>
 					</div>
 					<div class="flex items-baseline justify-between">
-						<span class="text-[11px] text-gray-600">Messages</span>
-						<span class="text-xs font-bold text-gray-300 tabular-nums">{totPosts.toLocaleString('fr-FR')}</span>
+						<span class="text-[11px] text-gray-600">{tFn('forum.stats_messages')}</span>
+						<span class="text-xs font-bold text-gray-300 tabular-nums">{totPosts.toLocaleString($locale)}</span>
 					</div>
 					<div class="flex items-baseline justify-between">
 						<span class="text-[11px] text-gray-600">{tFn('common.members')}</span>
-						<span class="text-xs font-bold text-gray-300 tabular-nums">{totMembers.toLocaleString('fr-FR')}</span>
+						<span class="text-xs font-bold text-gray-300 tabular-nums">{totMembers.toLocaleString($locale)}</span>
 					</div>
 					{#if lastPoster}
 						<div class="flex items-center justify-between gap-2 pt-2 border-t border-white/[.05]">
-							<span class="shrink-0 text-[11px] text-gray-600">Dernier message</span>
+							<span class="shrink-0 text-[11px] text-gray-600">{tFn('forum.stats_last_post')}</span>
 							<span class="truncate text-[11px] font-semibold" style="color: var(--nx-accent-2-soft)">
 								{lastPoster.username}
 							</span>

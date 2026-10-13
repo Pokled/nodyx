@@ -109,8 +109,8 @@
 					style="color: var(--nx-cyan-soft, #67e8f9); font-family: ui-monospace, monospace">
 					{tFn('auth.hero.tagline')}
 				</div>
-				<h2 class="text-4xl font-bold leading-tight mb-3 text-white" style="letter-spacing: -0.02em">
-					{tFn('auth.hero.register_title_1')} <span style="color: var(--nx-accent-2-soft, #a78bfa)">{tFn('auth.hero.register_title_2')}</span>.
+				<h2 class="titre-heros text-4xl font-bold leading-tight mb-3 text-white">
+					{tFn('auth.hero.register_title_1')}<span class="titre-heros-sep">{' '}</span><span style="color: var(--nx-accent-2-soft, #a78bfa)">{tFn('auth.hero.register_title_2')}</span><span class="titre-heros-point">.</span>
 				</h2>
 				<p class="text-sm leading-relaxed text-gray-400">
 					{tFn('auth.hero.register_desc')}

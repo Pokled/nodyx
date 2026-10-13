@@ -13,7 +13,7 @@ import { browser }                from '$app/environment'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type Locale = 'fr' | 'en' | 'es' | 'de' | 'ru' | 'pt-PT' | 'pt-BR' | 'vi'
+export type Locale = 'fr' | 'en' | 'es' | 'de' | 'ru' | 'pt-PT' | 'pt-BR' | 'vi' | 'zh-Hans'
 
 export interface LocaleMeta {
   code:  Locale
@@ -33,6 +33,9 @@ export const LOCALES: LocaleMeta[] = [
   { code: 'pt-PT', label: 'Português (PT)', flag: '🇵🇹', flagIcon: 'twemoji:flag-portugal' },
   { code: 'pt-BR', label: 'Português (BR)', flag: '🇧🇷', flagIcon: 'twemoji:flag-brazil' },
   { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳', flagIcon: 'twemoji:flag-vietnam' },
+  // Une langue lue dans plusieurs pays (Chine, Singapour, Malaisie, diaspora) :
+  // une icône de langue, pas le drapeau d'un pays.
+  { code: 'zh-Hans', label: '简体中文', flag: '🌏', flagIcon: 'twemoji:globe-showing-asia-australia' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -46,11 +49,23 @@ import ru from './locales/ru.json'
 import ptPT from './locales/pt-PT.json'
 import ptBR from './locales/pt-BR.json'
 import vi from './locales/vi.json'
+import zhHans from './locales/zh-Hans.json'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-PT': ptPT, 'pt-BR': ptBR, vi }
+const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-PT': ptPT, 'pt-BR': ptBR, vi, 'zh-Hans': zhHans }
 
 // ── Store locale ──────────────────────────────────────────────────────────────
+
+/**
+ * Chinois simplifié : `zh`, `zh-CN`, `zh-SG`, `zh-MY`, `zh-Hans(-*)`. Les formes
+ * traditionnelles (`zh-TW`, `zh-HK`, `zh-MO`, `zh-Hant(-*)`) s'écrivent avec
+ * d'autres caractères : elles ne reçoivent PAS le simplifié et gardent le repli.
+ */
+function estChinoisSimplifie(code: string): boolean {
+  const c = code.toLowerCase()
+  if (c === 'zh' || c.startsWith('zh-hans')) return true
+  return c === 'zh-cn' || c === 'zh-sg' || c === 'zh-my'
+}
 
 const STORAGE_KEY = 'nodyx_locale'
 const COOKIE_KEY = 'nodyx_locale'
@@ -69,8 +84,12 @@ export function getLocaleFromAcceptLanguage(header: string | null): Locale | und
       })
       .sort((a, b) => b.weight - a.weight)
 
+    // Chrome à Taïwan envoie `zh-TW,zh;q=0.9` : ce `zh` générique y désigne le
+    // traditionnel déjà demandé, il ne doit pas faire servir le simplifié.
+    let traditionnelDemande = false
     for (const lang of parsed) {
       const code = lang.code
+      if (code.startsWith('zh-') && !estChinoisSimplifie(code)) traditionnelDemande = true
       const nav = code.slice(0, 2)
       // Le brésilien d'abord : c'est la variante la plus demandée, et la ligne
       // précédente l'EXCLUAIT du repli vers pt-PT sans rien lui proposer. Un
@@ -82,6 +101,7 @@ export function getLocaleFromAcceptLanguage(header: string | null): Locale | und
       if (nav === 'de') return 'de'
       if (nav === 'ru') return 'ru'
       if (nav === 'vi') return 'vi'
+      if (estChinoisSimplifie(code) && !(code === 'zh' && traditionnelDemande)) return 'zh-Hans'
       if (nav === 'en') return 'en'
     }
   } catch {
@@ -112,6 +132,7 @@ function getInitialLocale(): Locale {
   if (nav === 'de') return 'de'
   if (nav === 'ru') return 'ru'
   if (nav === 'vi') return 'vi'
+  if (estChinoisSimplifie(full)) return 'zh-Hans'
   return 'en'
 }
 

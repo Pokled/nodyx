@@ -4905,5 +4905,8 @@
   "zone.reset_one": "Revenir à l'ambiance pour ce réglage",
   "zone.reset_all": "Revenir à l'ambiance",
   "zone.copy_all": "Appliquer à toutes les zones",
-  "zone.others_styled": "Autres zones avec leur propre style : {{count}}"
+  "zone.others_styled": "Autres zones avec leur propre style : {{count}}",
+  "forum.stats_title": "Statistiques",
+  "forum.stats_messages": "Messages",
+  "forum.stats_last_post": "Dernier message"
 }
