@@ -4911,5 +4911,9 @@
   "forum.stats_last_post": "Dernier message",
   "nav.canvas": "Tableau blanc",
   "communities.since": "Depuis {{date}}",
-  "ucard.og_description": "Niveau {{level}} · {{posts}} posts · {{xp}} XP"
+  "ucard.og_description": "Niveau {{level}} · {{posts}} posts · {{xp}} XP",
+  "table.alone_title": "Personne d'autre ici pour l'instant",
+  "table.alone_sub": "Envoie le lien du salon à quelqu'un, ou lance un morceau en attendant.",
+  "table.copy_link": "Copier le lien du salon",
+  "table.link_copied": "Lien copié"
 }

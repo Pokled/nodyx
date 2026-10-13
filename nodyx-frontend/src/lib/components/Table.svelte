@@ -33,6 +33,15 @@
 	// n'avait aucun sens : on décide de rejoindre justement en voyant qui est là.
 	const present = $derived($voiceChannelMembersStore[channelId] ?? [])
 
+	// Lien du salon, à envoyer à quelqu'un pour le faire venir.
+	let lienCopie = $state(false)
+	async function copierLien() {
+		const url = `${page.url.origin}/chat?channel=${channelId}`
+		try { await navigator.clipboard.writeText(url) } catch { return }
+		lienCopie = true
+		setTimeout(() => (lienCopie = false), 2000)
+	}
+
 	type NetQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown'
 	const QUALITY_COLOR: Record<NetQuality, string> = {
 		excellent: '#4ade80',
@@ -305,7 +314,7 @@
 	{:else}
 
 		<!-- ── Players stage grid ──────────────────────────────────────────── -->
-		<div class="flex-1 flex items-center justify-center p-6 relative z-10 overflow-auto">
+		<div class="flex-1 flex flex-col items-center justify-center gap-6 p-6 relative z-10 overflow-auto">
 			<div
 				class="grid gap-3 w-full"
 				style="grid-template-columns: repeat({gridCols}, minmax(0, 1fr)); max-width: {gridMax};"
@@ -462,6 +471,21 @@
 					</div>
 				{/each}
 			</div>
+
+			<!-- Seul dans le salon : plutôt qu'une carte perdue au milieu du vide,
+			     un mot d'accueil et de quoi faire venir quelqu'un. -->
+			{#if players.length === 1}
+				<div class="alone-card w-full text-center px-5 py-4" style="max-width: 360px">
+					<p class="text-sm font-semibold" style="color: rgba(255,255,255,0.85)">{tFn('table.alone_title')}</p>
+					<p class="text-xs mt-1" style="color: rgba(255,255,255,0.55)">{tFn('table.alone_sub')}</p>
+					<button type="button" class="alone-invite mt-3 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold" onclick={copierLien}>
+						<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+						</svg>
+						{lienCopie ? tFn('table.link_copied') : tFn('table.copy_link')}
+					</button>
+				</div>
+			{/if}
 		</div>
 
 		<!-- ── Jukebox bar ─────────────────────────────────────────────────── -->
@@ -711,4 +735,17 @@
 	.jukebox-idle:hover {
 		color: rgba(200, 145, 74, 0.75) !important;
 	}
+	.alone-card {
+		background: rgba(13,13,22,0.7);
+		border: 1px dashed rgba(255,255,255,0.1);
+		border-radius: 14px;
+	}
+	.alone-invite {
+		border-radius: 10px;
+		color: #fff;
+		background: linear-gradient(135deg, rgb(var(--nx-accent-2-rgb) / 0.35), rgb(var(--nx-cyan-rgb) / 0.25));
+		border: 1px solid rgb(var(--nx-accent-2-rgb) / 0.4);
+		transition: filter 0.15s;
+	}
+	.alone-invite:hover { filter: brightness(1.15); }
 </style>

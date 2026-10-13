@@ -4911,5 +4911,9 @@
   "forum.stats_last_post": "Last post",
   "nav.canvas": "Whiteboard",
   "communities.since": "Since {{date}}",
-  "ucard.og_description": "Level {{level}} · {{posts}} posts · {{xp}} XP"
+  "ucard.og_description": "Level {{level}} · {{posts}} posts · {{xp}} XP",
+  "table.alone_title": "Nobody else here yet",
+  "table.alone_sub": "Send the room link to someone, or play a track while you wait.",
+  "table.copy_link": "Copy room link",
+  "table.link_copied": "Link copied"
 }
