@@ -19,7 +19,7 @@
 	}
 </script>
 
-<svelte:head><title>{data.board?.name ?? 'Canvas'} : Canvas</title></svelte:head>
+<svelte:head><title>{data.board?.name ?? tFn('nav.canvas')} : {tFn('nav.canvas')}</title></svelte:head>
 
 {#if $socket}
 	<NodyxCanvas

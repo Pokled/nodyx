@@ -52,11 +52,11 @@ describe('câblage de la langue', () => {
     expect(isKnownLocale('zh-Hans')).toBe(true)
   })
 
-  it("s'affiche sous son propre nom, avec une icône de langue et non un drapeau de pays", () => {
-    // Le simplifié se lit en Chine, à Singapour, en Malaisie et dans la diaspora :
-    // un drapeau national désignerait un pays, pas une langue.
+  it("s'affiche comme le portugais : la langue, puis la variante entre parenthèses", () => {
+    // Même logique que « Português (BR) » / « Português (PT) » : le jour où le
+    // chinois traditionnel arrivera, « 中文 (繁體) » se distinguera sans ambiguïté.
     const zh = LOCALES.find((l) => l.code === 'zh-Hans')
-    expect(zh?.label).toBe('简体中文')
-    expect(zh?.flagIcon).toBe('twemoji:globe-showing-asia-australia')
+    expect(zh?.label).toBe('中文 (简体)')
+    expect(zh?.flagIcon).toBe('twemoji:flag-china')
   })
 })
