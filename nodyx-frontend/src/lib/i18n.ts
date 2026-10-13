@@ -33,9 +33,9 @@ export const LOCALES: LocaleMeta[] = [
   { code: 'pt-PT', label: 'Português (PT)', flag: '🇵🇹', flagIcon: 'twemoji:flag-portugal' },
   { code: 'pt-BR', label: 'Português (BR)', flag: '🇧🇷', flagIcon: 'twemoji:flag-brazil' },
   { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳', flagIcon: 'twemoji:flag-vietnam' },
-  // Une langue lue dans plusieurs pays (Chine, Singapour, Malaisie, diaspora) :
-  // une icône de langue, pas le drapeau d'un pays.
-  { code: 'zh-Hans', label: '简体中文', flag: '🌏', flagIcon: 'twemoji:globe-showing-asia-australia' },
+  // Comme les deux portugais : la langue, puis la variante. Le jour où le
+  // traditionnel arrivera, « 中文 (繁體) » se distinguera sans ambiguïté.
+  { code: 'zh-Hans', label: '中文 (简体)', flag: '🇨🇳', flagIcon: 'twemoji:flag-china' },
 ]
 
 // ── Messages ──────────────────────────────────────────────────────────────────

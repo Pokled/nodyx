@@ -4908,5 +4908,6 @@
   "zone.others_styled": "Other zones with their own style: {{count}}",
   "forum.stats_title": "Statistics",
   "forum.stats_messages": "Posts",
-  "forum.stats_last_post": "Last post"
+  "forum.stats_last_post": "Last post",
+  "nav.canvas": "Canvas"
 }
