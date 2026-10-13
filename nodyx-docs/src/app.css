@@ -225,6 +225,9 @@ body {
   border-top: 1px solid var(--border);
   margin: 2rem 0;
 }
+/* Un séparateur juste avant un titre qui porte déjà sa propre bordure
+   dessinait deux lignes l'une sur l'autre. */
+.prose hr:has(+ h2) { display: none; }
 
 /* Heading anchors */
 .prose .anchor {
