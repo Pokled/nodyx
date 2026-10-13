@@ -150,7 +150,7 @@
   <meta property="og:description" content={data.description} />
   <meta property="og:url"         content={pageUrl(data.lang)} />
   <meta property="og:site_name"   content="Nodyx Docs" />
-  <meta property="og:image"       content="https://nodyx.dev/og-default.svg" />
+  <meta property="og:image"       content="https://nodyx.dev/og-default.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
@@ -158,7 +158,7 @@
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="{data.docTitle} · Nodyx Docs" />
   <meta name="twitter:description" content={data.description} />
-  <meta name="twitter:image"       content="https://nodyx.dev/og-default.svg" />
+  <meta name="twitter:image"       content="https://nodyx.dev/og-default.png" />
 
   <!-- JSON-LD: TechArticle + BreadcrumbList -->
   {@html `<script type="application/ld+json">${JSON.stringify([
