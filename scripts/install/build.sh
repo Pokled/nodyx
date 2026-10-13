@@ -78,3 +78,24 @@ nodyx_purge_stale_work() {
   done
   return 0
 }
+
+# nodyx_node_major : version majeure de Node.js installée, 0 si absent ou illisible.
+nodyx_node_major() {
+  local v
+  v="$(node --version 2>/dev/null | sed 's/^v//; s/\..*//')"
+  [[ "$v" =~ ^[0-9]+$ ]] && echo "$v" || echo 0
+}
+
+# nodyx_ensure_node <majeur minimal> : garantit Node.js >= ce majeur, en
+# l'installant depuis NodeSource au besoin (comme l'installation initiale).
+# Code 0 si la version voulue est là au retour. Ajouté le 13/10/2026 : la mise à
+# jour ne revérifiait jamais Node, et une instance installée en tunnel avant le
+# 04/10/2026 restait en Node 20 alors que le vocal exige 22.
+nodyx_ensure_node() {
+  local min="${1:-22}"
+  (( $(nodyx_node_major) >= min )) && return 0
+  curl -fsSL "https://deb.nodesource.com/setup_${min}.x" | bash - >/dev/null 2>&1 || return 1
+  apt-get install -y -q nodejs >/dev/null 2>&1 || return 1
+  (( $(nodyx_node_major) >= min ))
+}
+

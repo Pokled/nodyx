@@ -189,6 +189,48 @@ check "copie de travail sans node_modules, ancienne sortie ni .svelte-kit" '[[ $
 check "copie de travail SANS les données vivantes (uploads, backups)" '[[ ! -e "$W/lib/t/uploads" && ! -e "$W/lib/t/backups" ]]'
 check "mais AVEC les fichiers propres à l'instance (static/ non suivi)" '[[ -f "$W/lib/t/static/BingSiteAuth.xml" ]]'
 
+echo "── Node.js 22 garanti par la mise à jour"
+# Une instance installée en tunnel avant le 04/10/2026 tourne en Node 20, et
+# --upgrade ne revérifiait jamais Node : le vocal exige 22, music-metadata 12
+# aussi. Faux node / curl / apt-get : on regarde ce qui est appelé.
+mkdir -p "$W/node/bin"
+cat > "$W/node/bin/node" <<'EON'
+#!/usr/bin/env bash
+cat "$NODE_VERSION_FILE"
+EON
+cat > "$W/node/bin/curl" <<'EON'
+#!/usr/bin/env bash
+echo "curl $*" >> "$JOURNAL_NODE"; echo 'echo setup'
+EON
+cat > "$W/node/bin/apt-get" <<'EON'
+#!/usr/bin/env bash
+echo "apt-get $*" >> "$JOURNAL_NODE"
+[[ -f "$APT_ECHEC" ]] && exit 1
+echo 22 > "$NODE_VERSION_FILE"
+EON
+chmod +x "$W/node/bin/"*
+essai_node() {  # essai_node <version de départ> [echec-apt] -> code de retour de nodyx_ensure_node 22
+  : > "$W/node/journal"; echo "$1" > "$W/node/version"; rm -f "$W/node/apt-echec"
+  [[ "${2:-}" == echec ]] && touch "$W/node/apt-echec"
+  PATH="$W/node/bin:$PATH" NODE_VERSION_FILE="$W/node/version" JOURNAL_NODE="$W/node/journal" APT_ECHEC="$W/node/apt-echec" \
+    bash -c ". '$LIB'; nodyx_ensure_node 22"
+}
+essai_node 22; c=$?
+check "Node 22 déjà là : rien n'est installé" '[[ $c -eq 0 && ! -s "$W/node/journal" ]]'
+essai_node 20; c=$?; GOT="$(cat "$W/node/journal")"
+check "Node 20 : NodeSource 22 puis apt-get nodejs, et succès" '[[ $c -eq 0 && "$GOT" == *setup_22.x* && "$GOT" == *"install -y -q nodejs"* ]]'
+essai_node 20 echec; c=$?
+check "installation ratée : échec signalé (la mise à jour s'arrêtera)" '[[ $c -ne 0 ]]'
+essai_node "pas-un-nombre"; c=$?
+check "version illisible : traitée comme absente, Node 22 installé" '[[ $c -eq 0 && -s "$W/node/journal" ]]'
+for f in "$INSTALL" "$TUNNEL"; do
+  n="$(basename "$f")"
+  corps="$(awk '/^_nodyx_upgrade\(\)/{f=1} f{print} f&&/^}/{exit}' "$f")"
+  avant="$(printf '%s\n' "$corps" | grep -n 'nodyx_ensure_node' | head -1 | cut -d: -f1)"
+  build="$(printf '%s\n' "$corps" | grep -n 'nodyx_build_aside' | head -1 | cut -d: -f1)"
+  check "$n : la mise à jour garantit Node 22 AVANT de compiler" '[[ -n "$avant" && -n "$build" && "$avant" -lt "$build" ]]'
+done
+
 echo ""
 echo "Résultat : $PASS réussis, $FAIL échoués"
 [[ $FAIL -eq 0 ]]
