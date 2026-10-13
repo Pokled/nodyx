@@ -318,14 +318,6 @@
 
 	<div class="toolbar-sep"></div>
 
-	<!-- Fichiers (stub) -->
-	<button disabled title={tFn('voice_room.files_soon')}
-		class="toolbar-btn opacity-25 cursor-not-allowed">
-		<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/>
-		</svg>
-		<span>Fichiers</span>
-	</button>
 
 	<!-- Jeux (galerie d'activités) -->
 	<button
