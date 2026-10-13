@@ -350,11 +350,6 @@
 							<div class="py-1.5">
 								<a href="/settings" onclick={() => dropdownOpen = false} class="nx-dropdown-item flex items-center gap-3 px-4 py-2 text-sm transition-colors"><span class="text-base">⚙️</span><span>{tFn('nav.settings')}</span></a>
 								<a href="https://nodyx.dev" target="_blank" rel="noopener" onclick={() => dropdownOpen = false} class="nx-dropdown-item flex items-center gap-3 px-4 py-2 text-sm transition-colors"><span class="text-base">📖</span><span>{tFn('nav.documentation')}</span></a>
-								{#each [{ icon: '📊', label: tFn('user.my_activity') }, { icon: '👫', label: tFn('user.friends') }, { icon: '🏆', label: tFn('user.badges') }] as item}
-									<div class="flex items-center gap-3 px-4 py-2 text-sm cursor-not-allowed select-none" style="color: var(--nx-text-faint)">
-										<span class="text-base opacity-50">{item.icon}</span><span class="flex-1">{item.label}</span><span class="text-[10px] uppercase tracking-wider font-medium" style="color: var(--nx-text-faint)">{tFn('common.soon')}</span>
-									</div>
-								{/each}
 							</div>
 							<div class="mx-3" style="border-top: 1px solid var(--nx-border)"></div>
 							<div class="py-1.5">

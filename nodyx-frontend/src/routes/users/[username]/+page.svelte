@@ -668,29 +668,6 @@
 				</div>
 			{/if}
 
-			<!-- Showcase placeholder — future home of badges, karma, achievements -->
-			<div class="p-4"
-			     style="background: var(--p-card-bg); border: 1px solid var(--p-card-border)">
-				<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">{tFn('user.showcase')}</p>
-				<div class="flex flex-wrap gap-2">
-					<div class="w-10 h-10 flex items-center justify-center text-lg"
-					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
-					     title={tFn('user.coming_soon')}>
-						🔒
-					</div>
-					<div class="w-10 h-10 flex items-center justify-center text-lg"
-					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
-					     title={tFn('user_profile.soon')}>
-						🔒
-					</div>
-					<div class="w-10 h-10 flex items-center justify-center text-lg"
-					     style="background: color-mix(in srgb, var(--p-accent) 8%, transparent); border: 1px dashed color-mix(in srgb, var(--p-accent) 20%, transparent)"
-					     title={tFn('user_profile.soon')}>
-						🔒
-					</div>
-				</div>
-				<p class="text-[10px] mt-2" style="color: var(--p-text-muted)">{tFn('user.badges_soon')}</p>
-			</div>
 
 		</aside>
 
