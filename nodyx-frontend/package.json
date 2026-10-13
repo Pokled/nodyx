@@ -31,7 +31,6 @@
   "devDependencies": {
     "@iconify-json/hugeicons": "^1.2.35",
     "@playwright/test": "^1.64.0",
-    "@sveltejs/adapter-auto": "7.0.1",
     "@sveltejs/adapter-node": "5.5.7",
     "@sveltejs/kit": "^2.70.3",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
