@@ -19,8 +19,9 @@ import ru   from './locales/ru.json'
 import ptPT from './locales/pt-PT.json'
 import ptBR from './locales/pt-BR.json'
 import vi   from './locales/vi.json'
+import zhHans from './locales/zh-Hans.json'
 
-const messages: Record<Locale, Record<string, string>> = { fr, en, es, de, ru, 'pt-PT': ptPT, 'pt-BR': ptBR, vi }
+const messages: Record<Locale, Record<string, string>> = { fr, en, es, de, ru, 'pt-PT': ptPT, 'pt-BR': ptBR, vi, 'zh-Hans': zhHans }
 
 const SOURCE: Locale = 'fr'
 
