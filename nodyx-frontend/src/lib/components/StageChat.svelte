@@ -22,6 +22,7 @@
     import { renderCustomEmojis, customEmojisStore } from '$lib/customEmojis'
     import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
     import { t } from '$lib/i18n'
+    import { messagesVisibles } from '$lib/chatFil'
 
     const tFn = $derived($t)
 
@@ -220,7 +221,7 @@
                 {tFn('stage_chat.empty')}
             </p>
         {/if}
-        {#each messages as msg (msg.id)}
+        {#each messagesVisibles(messages) as msg (msg.id)}
             {#if msg.is_deleted}
                 <p class="pl-8 text-[11px] italic" style="color: rgba(255,255,255,0.25)">{tFn('stage_chat.deleted')}</p>
             {:else if msg.content}

@@ -23,6 +23,7 @@
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects';
 	// FloatingReactions : retiré, géré globalement dans +layout.svelte
 	import { t } from '$lib/i18n';
+	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 	import { playMessage, playMention } from '$lib/sounds';
 	const tFn = $derived($t)
@@ -428,7 +429,8 @@
 		});
 
 		sock.on('chat:message_deleted', ({ messageId }: { messageId: string }) => {
-			messages = messages.map((m) => m.id === messageId ? { ...m, is_deleted: true, content: null } : m);
+			messages = marquerSupprime(messages, messageId);
+			if (pinnedMessage?.id === messageId) pinnedMessage = null;
 		});
 
 		sock.on('chat:pinned', ({ channelId, message }: { channelId: string; message: Message | null }) => {
@@ -1061,7 +1063,7 @@
 		return groups;
 	}
 
-	const messageGroups = $derived(groupByDay(messages));
+	const messageGroups = $derived(groupByDay(messagesVisibles(messages)));
 
 	// ── Current user info (for voice room display) ─────────────────────────────
 	const myUsername = $derived(((data as unknown as { user?: { username?: string } }).user?.username) ?? '');

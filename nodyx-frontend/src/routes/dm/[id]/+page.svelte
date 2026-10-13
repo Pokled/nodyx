@@ -1036,6 +1036,9 @@
 		const groups: { date: string; msgs: DmMessage[] }[] = []
 		let currentDate = ''
 		for (const m of messages) {
+			// Un message supprimé disparaît du fil (même règle que le chat, cf $lib/chatFil).
+			// Il reste dans `messages` : le chargement de l'historique s'appuie dessus.
+			if (m.deleted_at) continue
 			const d = formatDate(m.created_at)
 			if (d !== currentDate) {
 				currentDate = d
