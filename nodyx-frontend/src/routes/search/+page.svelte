@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 	import type { PageData } from './$types';
 
 	const tFn = $derived($t)
@@ -15,7 +15,7 @@
 	$effect(() => { query = data.q ?? ''; });
 
 	function formatDate(iso: string) {
-		return new Date(iso).toLocaleDateString('fr-FR', {
+		return new Date(iso).toLocaleDateString($locale, {
 			day: '2-digit', month: 'short', year: 'numeric'
 		});
 	}

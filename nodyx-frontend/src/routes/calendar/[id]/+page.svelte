@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 	const tFn = $derived($t);
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
@@ -14,19 +14,19 @@
 
 	// ── Formatage dates ────────────────────────────────────────────────────────
 	function fDate(iso: string) {
-		return new Date(iso).toLocaleDateString('fr-FR', {
+		return new Date(iso).toLocaleDateString($locale, {
 			weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
 		});
 	}
 	function fTime(iso: string) {
-		return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+		return new Date(iso).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' });
 	}
 	function fDateShort(iso: string) {
-		return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+		return new Date(iso).toLocaleDateString($locale, { day: 'numeric', month: 'short' });
 	}
 	function dayNum(iso: string) { return new Date(iso).getDate(); }
 	function monthShort(iso: string) {
-		return new Date(iso).toLocaleDateString('fr-FR', { month: 'short' }).toUpperCase();
+		return new Date(iso).toLocaleDateString($locale, { month: 'short' }).toUpperCase();
 	}
 	function isPast(iso: string) { return new Date(iso) < new Date(); }
 
@@ -50,7 +50,7 @@
 	function formatPrice(price: number | null, currency: string): string {
 		if (price === null || price === undefined) return 'Gratuit';
 		if (price === 0) return 'Gratuit';
-		return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(price);
+		return new Intl.NumberFormat($locale, { style: 'currency', currency }).format(price);
 	}
 
 	// ── Statut capacité ───────────────────────────────────────────────────────

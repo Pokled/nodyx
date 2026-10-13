@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 	import { onMount, onDestroy, tick, untrack } from 'svelte'
 	import { getSocket, dmUnreadStore } from '$lib/socket'
 	import { apiFetch } from '$lib/api'
@@ -746,7 +746,7 @@
 		if (!iso) return ''
 		try {
 			const d = new Date(iso)
-			return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+			return d.toLocaleDateString($locale, { day: 'numeric', month: 'long', year: 'numeric' })
 		} catch { return '' }
 	}
 

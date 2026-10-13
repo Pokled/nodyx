@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 
 	const tFn = $derived($t);
 
@@ -23,7 +23,7 @@
 	const entries = data.entries as AuditEntry[];
 
 	function fmtDate(s: string): string {
-		return new Date(s).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' });
+		return new Date(s).toLocaleString($locale, { dateStyle: 'short', timeStyle: 'medium' });
 	}
 	function actionLabel(a: string): string {
 		const key = ({

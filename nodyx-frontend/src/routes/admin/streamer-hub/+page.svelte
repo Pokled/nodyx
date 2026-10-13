@@ -4,7 +4,7 @@
 	import { onMount, onDestroy } from 'svelte'
 	import { fly } from 'svelte/transition'
 	import { getSocket } from '$lib/socket'
-	import { t as i18n } from '$lib/i18n'
+	import { t as i18n, locale } from '$lib/i18n'
 	import Sparkline from '$lib/components/admin/Sparkline.svelte'
 	import StreamerHero from '$lib/components/admin/StreamerHero.svelte'
 	import StreamControlPanel from '$lib/components/admin/StreamControlPanel.svelte'
@@ -448,7 +448,7 @@
 	}
 
 	function fmtDate(iso: string): string {
-		return new Date(iso).toLocaleString('fr-FR', {
+		return new Date(iso).toLocaleString($locale, {
 			day: '2-digit', month: 'short', year: 'numeric',
 			hour: '2-digit', minute: '2-digit',
 		})

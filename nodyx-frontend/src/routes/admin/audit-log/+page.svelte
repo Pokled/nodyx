@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types'
 
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -37,11 +37,11 @@
 		if (m < 60)  return tFn('alog.ago_min', { n: m })
 		if (h < 24)  return tFn('alog.ago_h', { n: h })
 		if (day < 7) return tFn('alog.ago_j', { n: day })
-		return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+		return new Date(d).toLocaleDateString($locale, { day: '2-digit', month: 'short' })
 	}
 
 	function formatDate(d: string) {
-		return new Date(d).toLocaleString('fr-FR', {
+		return new Date(d).toLocaleString($locale, {
 			day: '2-digit', month: '2-digit', year: 'numeric',
 			hour: '2-digit', minute: '2-digit',
 		})

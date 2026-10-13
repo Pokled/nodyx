@@ -4909,5 +4909,7 @@
   "forum.stats_title": "统计",
   "forum.stats_messages": "帖子",
   "forum.stats_last_post": "最新发帖",
-  "nav.canvas": "白板"
+  "nav.canvas": "白板",
+  "communities.since": "{{date}} 加入",
+  "ucard.og_description": "{{level}} 级 · {{posts}} 条帖子 · {{xp}} 经验值"
 }

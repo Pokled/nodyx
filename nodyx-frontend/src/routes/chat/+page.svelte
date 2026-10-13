@@ -22,7 +22,7 @@
 	import MiniProfileCard from '$lib/components/MiniProfileCard.svelte';
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects';
 	// FloatingReactions : retiré, géré globalement dans +layout.svelte
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 	import { playMessage, playMention } from '$lib/sounds';
@@ -1045,11 +1045,11 @@
 
 	// ── Format ───────────────────────────────────────────────────────────────
 	function formatTime(iso: string): string {
-		return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+		return new Date(iso).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' });
 	}
 
 	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+		return new Date(iso).toLocaleDateString($locale, { day: 'numeric', month: 'short' });
 	}
 
 	function groupByDay(msgs: Message[]) {

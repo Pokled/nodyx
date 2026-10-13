@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte'
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -187,7 +187,7 @@
 		if (h < 24)  return tFn('clipp.hours_ago', { n: h })
 		const d = Math.floor(h / 24)
 		if (d < 30)  return tFn('clipp.days_ago', { n: d })
-		return new Date(iso).toLocaleDateString('fr-FR')
+		return new Date(iso).toLocaleDateString($locale)
 	}
 
 	// Embed URL Twitch exige un parent= correspondant au host courant pour

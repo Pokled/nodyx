@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte'
 	import { apiFetch } from '$lib/api'
 	import { browser } from '$app/environment'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -188,8 +188,8 @@
 							</a>
 						</div>
 						<div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-							<span><strong class="text-slate-300">{v.messageCount.toLocaleString('fr-FR')}</strong> {v.messageCount > 1 ? tFn('linkv.msg_many') : tFn('linkv.msg_one')}</span>
-							<span><strong class="text-slate-300">{v.eventCount.toLocaleString('fr-FR')}</strong> {v.eventCount > 1 ? tFn('linkv.evt_many') : tFn('linkv.evt_one')}</span>
+							<span><strong class="text-slate-300">{v.messageCount.toLocaleString($locale)}</strong> {v.messageCount > 1 ? tFn('linkv.msg_many') : tFn('linkv.msg_one')}</span>
+							<span><strong class="text-slate-300">{v.eventCount.toLocaleString($locale)}</strong> {v.eventCount > 1 ? tFn('linkv.evt_many') : tFn('linkv.evt_one')}</span>
 							<span>{tFn('linkv.last_activity')} <span class={v.lastActivityAt ? 'text-emerald-400' : 'text-slate-600'}>{fmtRelative(v.lastActivityAt)}</span></span>
 							<span class="text-slate-600">{tFn('linkv.linked')} {fmtRelative(v.linkedAt)}</span>
 						</div>

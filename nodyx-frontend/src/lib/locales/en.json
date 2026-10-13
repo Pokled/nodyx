@@ -4909,5 +4909,7 @@
   "forum.stats_title": "Statistics",
   "forum.stats_messages": "Posts",
   "forum.stats_last_post": "Last post",
-  "nav.canvas": "Whiteboard"
+  "nav.canvas": "Whiteboard",
+  "communities.since": "Since {{date}}",
+  "ucard.og_description": "Level {{level}} · {{posts}} posts · {{xp}} XP"
 }

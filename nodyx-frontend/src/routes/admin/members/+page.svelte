@@ -4,7 +4,7 @@
 	import { page } from '$app/state'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { untrack } from 'svelte'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -218,7 +218,7 @@
 
 						<!-- Date -->
 						<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_joined')}>
-							{new Date(member.joined_at).toLocaleDateString('fr-FR')}
+							{new Date(member.joined_at).toLocaleDateString($locale)}
 						</td>
 
 						<!-- Actions -->
@@ -313,7 +313,7 @@
 									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
 								</td>
 								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString('fr-FR')}</td>
+								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
 								<td class="px-4 py-3 text-right">
 									<form method="POST" action="?/unban" use:enhance class="inline">
 										<input type="hidden" name="user_id" value={ban.user_id} />
@@ -385,7 +385,7 @@
 									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
 								</td>
 								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString('fr-FR')}</td>
+								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
 								<td class="px-4 py-3 text-right">
 									<form method="POST" action="?/unbanIp" use:enhance class="inline">
 										<input type="hidden" name="ip" value={ban.ip} />
@@ -459,7 +459,7 @@
 									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
 								</td>
 								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString('fr-FR')}</td>
+								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
 								<td class="px-4 py-3 text-right">
 									<form method="POST" action="?/unbanEmail" use:enhance class="inline">
 										<input type="hidden" name="email" value={ban.email} />
@@ -604,7 +604,7 @@
 				</div>
 
 				<p class="text-xs text-gray-600">
-					{tFn('amem.expires_at', { date: new Date(resetLinkResult.expires_at).toLocaleString('fr-FR') })}
+					{tFn('amem.expires_at', { date: new Date(resetLinkResult.expires_at).toLocaleString($locale) })}
 				</p>
 			{:else if resetLinkError}
 				<div class="flex items-center justify-between mb-4">

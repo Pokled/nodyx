@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte'
 	import { browser } from '$app/environment'
 	import GenerativeBanner from '$lib/components/GenerativeBanner.svelte'
-	import { t as i18n } from '$lib/i18n'   // `t` sert de variable locale
+	import { t as i18n, locale } from '$lib/i18n'   // `t` sert de variable locale
 
 	const tFn = $derived($i18n)
 
@@ -133,7 +133,7 @@
 <svelte:head>
 	<title>{tFn('user_card.meta_title', { name: displayName })}</title>
 	<!-- Meta-description lue par les moteurs : elle etait codee en dur en
-	     francais, y compris son `toLocaleString('fr-FR')` qui formatait les
+	     francais, y compris le formatage fr-FR qui ecrivait les
 	     nombres a la francaise pour un visiteur anglophone. -->
 	<meta name="description" content={tFn('ucard.meta_description', {
 		name:  displayName,
@@ -149,7 +149,7 @@
 	<!-- Open Graph -->
 	<meta property="og:type"        content="profile" />
 	<meta property="og:title"       content="{displayName} · Nodyx" />
-	<meta property="og:description" content="Niveau {level} · {Number(profile.post_count??0).toLocaleString('fr-FR')} posts · {Number(pts).toLocaleString('fr-FR')} XP{profile.grade ? ` · ${profile.grade.name}` : ''}" />
+	<meta property="og:description" content={tFn('ucard.og_description', { level: String(level), posts: Number(profile.post_count ?? 0).toLocaleString($locale), xp: Number(pts).toLocaleString($locale) }) + (profile.grade ? ` · ${profile.grade.name}` : '')} />
 	<meta property="og:url"         content={cardUrl} />
 	<meta property="og:image"       content={ogImageUrl} />
 	<meta property="og:image:width" content="600" />
@@ -159,7 +159,7 @@
 	<!-- Twitter/X -->
 	<meta name="twitter:card"        content="summary_large_image" />
 	<meta name="twitter:title"       content="{displayName} · Nodyx" />
-	<meta name="twitter:description" content="Niveau {level} · {Number(profile.post_count??0).toLocaleString('fr-FR')} posts · {Number(pts).toLocaleString('fr-FR')} XP" />
+	<meta name="twitter:description" content={tFn('ucard.og_description', { level: String(level), posts: Number(profile.post_count ?? 0).toLocaleString($locale), xp: Number(pts).toLocaleString($locale) })} />
 	<meta name="twitter:image"       content={ogImageUrl} />
 </svelte:head>
 
@@ -236,22 +236,22 @@
 	<!-- ── Stats ──────────────────────────────────────────────────────────── -->
 	<div class="stats-row">
 		<div class="stat-item">
-			<span class="stat-val">{Number(profile.post_count ?? 0).toLocaleString('fr-FR')}</span>
+			<span class="stat-val">{Number(profile.post_count ?? 0).toLocaleString($locale)}</span>
 			<span class="stat-lbl">Posts</span>
 		</div>
 		<div class="stat-sep"></div>
 		<div class="stat-item">
-			<span class="stat-val">{Number(profile.thread_count ?? 0).toLocaleString('fr-FR')}</span>
+			<span class="stat-val">{Number(profile.thread_count ?? 0).toLocaleString($locale)}</span>
 			<span class="stat-lbl">Threads</span>
 		</div>
 		<div class="stat-sep"></div>
 		<div class="stat-item">
-			<span class="stat-val">{Number(pts).toLocaleString('fr-FR')}</span>
+			<span class="stat-val">{Number(pts).toLocaleString($locale)}</span>
 			<span class="stat-lbl">{tFn('user_card.stat_xp')}</span>
 		</div>
 		<div class="stat-sep"></div>
 		<div class="stat-item">
-			<span class="stat-val">{Math.floor((Date.now() - new Date(profile.created_at).getTime()) / 86400000).toLocaleString('fr-FR')}</span>
+			<span class="stat-val">{Math.floor((Date.now() - new Date(profile.created_at).getTime()) / 86400000).toLocaleString($locale)}</span>
 			<span class="stat-lbl">{tFn('user_card.stat_days')}</span>
 		</div>
 	</div>

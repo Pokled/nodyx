@@ -1,6 +1,6 @@
 <script lang="ts">
 
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 	const tFn = $derived($t)
 	import { API_URL } from '$lib/api'
 
@@ -44,7 +44,7 @@
 				// Month label on first cell of each new month
 				if (inRange && cursor.getMonth() !== lastMonth && d === 0) {
 					months.push({
-						label: cursor.toLocaleDateString('fr-FR', { month: 'short' }),
+						label: cursor.toLocaleDateString($locale, { month: 'short' }),
 						col,
 					})
 					lastMonth = cursor.getMonth()
@@ -104,7 +104,7 @@
 	function hideTip() { tooltip = null }
 
 	function fmtDate(d: string) {
-		return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+		return new Date(d + 'T00:00:00').toLocaleDateString($locale, { day: 'numeric', month: 'long', year: 'numeric' })
 	}
 
 	// ── Color scale ──────────────────────────────────────────────────

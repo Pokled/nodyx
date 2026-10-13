@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
-	import { t as i18n } from '$lib/i18n';
+	import { t as i18n, locale } from '$lib/i18n';
 
 	const tFn = $derived($i18n);
 
@@ -74,7 +74,7 @@
 	}
 	function fmtDate(s: string): string {
 		const d = new Date(s);
-		return d.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+		return d.toLocaleString($locale, { dateStyle: 'short', timeStyle: 'short' });
 	}
 	function fmtRelative(s: string): string {
 		const d = new Date(s);

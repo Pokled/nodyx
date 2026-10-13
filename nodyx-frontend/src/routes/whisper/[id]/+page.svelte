@@ -6,7 +6,7 @@
 	import { getSocket } from '$lib/socket'
 	import { PUBLIC_API_URL } from '$env/static/public'
 	import { linkifyText } from '$lib/linkify'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -45,7 +45,7 @@
 	}
 
 	function formatTime(d: string) {
-		return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(d))
+		return new Intl.DateTimeFormat($locale, { hour: '2-digit', minute: '2-digit' }).format(new Date(d))
 	}
 
 	async function scrollBottom() {

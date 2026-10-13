@@ -2,7 +2,7 @@
 	import type { PageData } from './$types';
 	import { page } from '$app/state';
 	import { PUBLIC_API_URL } from '$env/static/public';
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 
 	const tFn = $derived($t);
 
@@ -136,7 +136,7 @@
 				<div class="text-xs text-gray-500">{tFn('communities.stat_instances')}</div>
 			</div>
 			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
-				<div class="text-xl font-bold text-white">{instances.reduce((s,i)=>s+(i.members??0),0).toLocaleString('fr-FR')}</div>
+				<div class="text-xl font-bold text-white">{instances.reduce((s,i)=>s+(i.members??0),0).toLocaleString($locale)}</div>
 				<div class="text-xs text-gray-500">{tFn('communities.stat_members')}</div>
 			</div>
 		</div>
@@ -180,7 +180,7 @@
 <div class="flex items-center justify-between mb-4 text-xs text-gray-600">
 	<span>{filtered.length > 1 ? tFn('communities.found_many', { count: filtered.length }) : tFn('communities.found_one', { count: filtered.length })}</span>
 	{#if langFilter !== 'all' || searchQuery}
-		<span class="text-gray-500">{totalMembers.toLocaleString('fr-FR')} {tFn('communities.stat_members')}</span>
+		<span class="text-gray-500">{totalMembers.toLocaleString($locale)} {tFn('communities.stat_members')}</span>
 	{/if}
 </div>
 
@@ -256,7 +256,7 @@
 
 					<div class="flex items-center justify-between pt-3 border-t border-gray-800/60 gap-2">
 						<div class="text-xs text-gray-600 shrink-0">
-							Depuis {new Date(instance.registered_at).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+							{tFn('communities.since', { date: new Date(instance.registered_at).toLocaleDateString($locale, { month: 'short', year: 'numeric' }) })}
 						</div>
 						<div class="flex items-center gap-2">
 							{#if user}

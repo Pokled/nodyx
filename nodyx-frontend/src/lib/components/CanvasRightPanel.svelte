@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { CanvasPeer, CanvasChatMsg, CanvasTool } from '$lib/canvas'
 	import { tick } from 'svelte'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -60,7 +60,7 @@
 	}
 
 	function formatTime(ts: number) {
-		return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+		return new Date(ts).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' })
 	}
 
 	// Color from userId hash (deterministic)

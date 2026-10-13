@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -42,7 +42,7 @@
 		}
 		return axis.map(d => ({
 			day: d,
-			label: new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+			label: new Date(d + 'T12:00:00').toLocaleDateString($locale, { day: '2-digit', month: '2-digit' }),
 			posts: byDay[d]?.posts ?? 0,
 			new_members: byDay[d]?.new_members ?? 0,
 		}))
@@ -63,7 +63,7 @@
 		if (m < 60) return tFn('adash.ago_min', { n: m })
 		if (h < 24) return tFn('adash.ago_h', { n: h })
 		if (day < 30) return tFn('adash.ago_j', { n: day })
-		return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+		return new Date(d).toLocaleDateString($locale, { day: '2-digit', month: 'short' })
 	}
 
 	const quickActions = [
@@ -95,7 +95,7 @@
 					</svg>
 				</div>
 				<div class="flex items-baseline gap-2">
-					<span class="text-2xl font-semibold text-zinc-100 tabular-nums leading-none">{card.value.toLocaleString('fr-FR')}</span>
+					<span class="text-2xl font-semibold text-zinc-100 tabular-nums leading-none">{card.value.toLocaleString($locale)}</span>
 					{#if card.live}
 						<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mb-0.5"></span>
 					{/if}

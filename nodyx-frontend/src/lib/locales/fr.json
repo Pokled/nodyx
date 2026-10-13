@@ -4909,5 +4909,7 @@
   "forum.stats_title": "Statistiques",
   "forum.stats_messages": "Messages",
   "forum.stats_last_post": "Dernier message",
-  "nav.canvas": "Tableau blanc"
+  "nav.canvas": "Tableau blanc",
+  "communities.since": "Depuis {{date}}",
+  "ucard.og_description": "Niveau {{level}} · {{posts}} posts · {{xp}} XP"
 }

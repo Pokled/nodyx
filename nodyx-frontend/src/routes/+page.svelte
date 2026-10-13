@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { onMount, onDestroy } from 'svelte';
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 	import { replyCount } from '$lib/forumCounts';
 	import WidgetZone from '$lib/components/homepage/WidgetZone.svelte';
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte';
@@ -769,8 +769,8 @@
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 			{#each publicEvents as ev}
 				{@const d  = new Date(ev.starts_at)}
-				{@const day = d.toLocaleDateString(instance.language === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric' })}
-				{@const mon = d.toLocaleDateString(instance.language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short' })}
+				{@const day = d.toLocaleDateString($locale, { day: 'numeric' })}
+				{@const mon = d.toLocaleDateString($locale, { month: 'short' })}
 				{@const time = ev.is_all_day ? tFn('home.all_day') : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 				<a href="/calendar" class="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200"
 					style="background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);"
