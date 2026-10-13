@@ -158,7 +158,7 @@
 		<span class="label">{tFn('common.members')}</span>
 		<div class="online-count">
 			<span class="online-dot"></span>
-			<span class="online-num">{onlineMembers.length}</span>
+			<span class="online-num" style="color: {$isDarkTheme ? '#4ade80' : '#15803d'}">{onlineMembers.length}</span>
 		</div>
 	</div>
 
@@ -206,7 +206,7 @@
 						</div>
 						<div class="info">
 							<div class="name-row">
-								<span class="name {buildAnimClass(member)}" style={buildNameStyle(member, isMe ? 'var(--nx-accent-2-soft2)' : '#9ca3af', $isDarkTheme)}>{member.username}</span>
+								<span class="name {buildAnimClass(member)}" style={buildNameStyle(member, isMe ? 'var(--nx-header-accent)' : 'var(--nx-text-muted)', $isDarkTheme)}>{member.username}</span>
 								{#if isMe}<span class="you-tag">{tFn('common.you')}</span>{/if}
 							</div>
 							{#if isSharing || isStreaming}
@@ -267,7 +267,7 @@
 						</div>
 						<div class="info">
 							<div class="name-row">
-								<span class="name {buildAnimClass(member)}" style={buildNameStyle(member, isMe ? 'var(--nx-accent-2-soft2)' : '#9ca3af', $isDarkTheme)}>{member.username}</span>
+								<span class="name {buildAnimClass(member)}" style={buildNameStyle(member, isMe ? 'var(--nx-header-accent)' : 'var(--nx-text-muted)', $isDarkTheme)}>{member.username}</span>
 								{#if isMe}<span class="you-tag">{tFn('common.you')}</span>{/if}
 							</div>
 							{#if isSharing || isStreaming}
@@ -557,7 +557,7 @@
 	  font-weight: 600;
 	  text-transform: uppercase;
 	  letter-spacing: 0.08em;
-	  color: var(--nx-text-faint);
+	  color: var(--nx-text-muted);
 	  overflow: hidden;
 	}
 
