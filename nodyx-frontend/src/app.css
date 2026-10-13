@@ -1120,3 +1120,17 @@ select option {
 }
 .nx-zone-img::after { content: ''; position: absolute; inset: 0; background: var(--zone-img-veil, transparent); }
 @media (max-width: 1023px) { .nx-zone-img { display: none; } }
+
+/* ── Titre des pages de connexion, en écriture chinoise, japonaise, coréenne ───
+   Le titre est en deux morceaux (le second en couleur). En latin : une espace
+   entre eux, un point final, des lettres resserrées. En CJK, ces trois choses
+   sont des fautes : pas d'espace entre les mots, pas de point occidental, et
+   un espacement négatif colle les idéogrammes. Un cran plus petit aussi : un
+   idéogramme gras à 36px pèse bien plus lourd qu'un mot latin. */
+.titre-heros { letter-spacing: -0.02em; }
+:lang(zh) .titre-heros, :lang(ja) .titre-heros, :lang(ko) .titre-heros {
+  letter-spacing: 0.02em;
+  font-size: 1.875rem;
+}
+:lang(zh) .titre-heros-sep, :lang(ja) .titre-heros-sep,
+:lang(zh) .titre-heros-point, :lang(ja) .titre-heros-point { display: none; }
