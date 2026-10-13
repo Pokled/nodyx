@@ -166,8 +166,10 @@
 						<span class="text-xs font-medium shrink-0 truncate max-w-40" style="color: var(--nx-text-muted)">{crumb.label}</span>
 					{/if}
 				{:else}
-					<span class="text-xs font-semibold truncate min-w-[5rem]"
-					      style="color: var(--nx-text)">{crumb.label}</span>
+					<!-- La dernière miette (salon, sujet) garde sa taille jusqu'à 14rem :
+					     c'est le nom de la communauté, seul à rétrécir, qui cède la place. -->
+					<span class="text-xs font-semibold truncate shrink-0 max-w-[14rem]"
+					      style="color: var(--nx-text)" title={crumb.label}>{crumb.label}</span>
 				{/if}
 			{/each}
 		{/if}
