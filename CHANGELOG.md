@@ -7,8 +7,66 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
-Un mois de travail depuis la 2.12.0, sur plusieurs chantiers en parallèle. Résumé par thème,
+Deux mois de travail depuis la 2.12.0, sur plusieurs chantiers en parallèle. Résumé par thème,
 pas par commit : le détail de chacun reste dans son historique git et ses PR.
+
+### Apparence : le contenant flottant et les ambiances
+
+L'apparence d'une instance se règle désormais en profondeur (#767). Sur grand écran, le contenu
+flotte en plaques de verre sur le papier peint de l'instance. L'admin choisit une **ambiance** :
+l'Originel sobre par défaut, « Ta bannière » qui reprend ses couleurs, ou un univers tout prêt
+(Matrix, Cyberpunk, Synthwave, Gazette, Sépia, Océan…, 14 en tout, avec de vraies photos sous
+licence libre). Il peut aussi régler lui-même l'accent, les fonds, le décor et l'intensité. Le
+contraste est calculé (au moins 4,5:1), et rien ne change pour les membres avant « Publier » :
+brouillon côté serveur, annuler et rétablir, code d'ambiance à partager. Deux entrées pour un
+même brouillon, l'écran Administration → Apparence et un stylo directement sur le site, qui permet
+aussi de styler chaque zone (fond, flou, arrondi, image, police) avec des réglages bornés et
+revalidés par le cœur, jamais de CSS libre.
+
+### Canvas : ce qui est dessiné reste dessiné
+
+- **Les cadres, les formes avancées (triangle, losange, étoile, hexagone, nuage) et les
+  connecteurs disparaissaient au rechargement** depuis la 2.2 : le serveur ne connaissait que 8
+  types d'éléments sur 11, et ignorait les autres en silence. Une définition unique des éléments,
+  miroir exact du frontend, sert maintenant à la sauvegarde en direct comme à l'API, et un test
+  compare les deux : un type ajouté d'un seul côté fait tomber la CI (#817).
+- Un tableau restait en mémoire jusqu'au redémarrage, et sa vieille copie pouvait masquer puis
+  écraser une sauvegarde faite par l'API (#818).
+- Les retours à la ligne tapés dans une note étaient perdus à l'affichage (#819).
+
+### Voix : plus de fantômes, et le partage d'écran pour tout le monde
+
+- **Un onglet fermé ou une connexion perdue pendant un appel laissait un fantôme** : les autres
+  le voyaient toujours, sa place n'était jamais rendue (au bout de 25, salon « plein » jusqu'au
+  redémarrage), et la bascule vers le SFU le comptait. Le nettoyage de fin de connexion ne
+  s'exécutait jamais (#820).
+- **Quelqu'un qui arrivait pendant un partage d'écran ne le recevait jamais**, seulement ceux
+  qui étaient là au lancement. Le partageur propose maintenant son écran aux arrivants (#827).
+  Vérifié en direct à deux sur nodyx.org.
+
+### Sécurité : un chemin d'envoi ne remonte plus hors de son dossier
+
+Les chemins de fichiers envoyés (avatar, bannière, police de pseudo…) n'étaient vérifiés que sur
+leur début : un chemin contenant `..` était accepté, et la carte de profil le lisait. Une règle
+unique refuse désormais tout segment douteux, à tous les endroits concernés (#779). Aucune
+exploitation constatée. Dépendances mises à jour pour fermer des alertes publiées (envoi de
+fichiers, analyseur d'adresses e-mail, sérialisation) : #770, #771, #773, #777, #811.
+
+### Désinstallation : `uninstall.sh` réécrit
+
+L'ancien script ne désinstallait pas vraiment Nodyx et pouvait abîmer ce qui ne lui appartient
+pas : écraser tout un Caddyfile partagé, effacer les sessions Redis d'autres applications, laisser
+le pare-feu grand ouvert, supprimer la base sans sauvegarde. Il est réécrit à partir de l'inventaire
+exact de ce que posent les installeurs, avec son banc d'essai (#780).
+
+### Vitrine et documentation
+
+- Les README anglais, français et espagnol sont réécrits autour de captures récentes de
+  nodyx.org (#825, #826, #828). nodyx.dev sert désormais directement les images de `docs/img/`,
+  au lieu d'une copie manuelle jamais resynchronisée (#826).
+- nodyx.dev et start.nodyx.org accueillent les moteurs de recherche et les assistants IA :
+  `robots.txt`, plan du site multilingue, `llms.txt`, pages françaises et espagnoles enfin
+  indexables, données structurées (#816). Vraies images d'aperçu pour les liens partagés (#838).
 
 ### Sécurité : l'IP des visiteurs n'arrivait pas jusqu'à Nodyx (installations standard)
 
@@ -284,6 +342,14 @@ découvrir après coup.
   l'écran sur téléphone.
 - Responsive : tableaux d'administration passés en cartes sous les petits écrans (14 tableaux),
   page d'édition de profil, sidebar mobile qui mangeait 224 des 390 pixels disponibles.
+- Première visite : la page se chargeait deux fois (le service worker qui s'installait était pris
+  pour une mise à jour), et consommait deux fois le quota de requêtes du visiteur ; assez, sur la
+  page des sondages, pour afficher « Sondage indisponible » (#821).
+- Forum sur écran de bureau : entre les barres latérales, les noms de catégories étaient écrasés
+  sur trois lignes (#822). Nom de l'instance rogné en tête de barre latérale chez les
+  administrateurs (#823). Carte résumé des sondages : type affiché brut et compteur sans nombre
+  (#824).
+- Développement : la suite de tests du cœur ne peut plus joindre les vrais services (#813).
 
 ### Exploration (pas encore une décision)
 

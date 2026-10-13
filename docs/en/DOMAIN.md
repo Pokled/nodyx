@@ -199,7 +199,7 @@ You have **nothing to configure manually**. The script creates the CNAME automat
 ## 📎 Useful Links
 
 - [Full Installation Guide](INSTALL.md)
-- [Cloudflare Tunnel Section in INSTALL.md](INSTALL.md#-hosting-at-home-without-opening-ports)
+- [Install behind a tunnel (Cloudflare Tunnel, Pangolin)](./INSTALL-TUNNEL.md)
 - [Cloudflare Registrar](https://cloudflare.com/products/registrar/)
 - [Porkbun, affordable domains](https://porkbun.com)
 - [What is sslip.io?](https://sslip.io)
