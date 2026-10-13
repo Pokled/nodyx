@@ -1,935 +1,198 @@
-![Screenshot of a comment on a GitHub issue showing an image, added in the Markdown, of an Octocat smiling and raising a tentacle.](https://github.com/Pokled/Nodyx/blob/main/docs/img/Nodyx_Install.png?raw=true)
+# Installer Nodyx
 
-# 🚀 Nodyx — Guide d'installation complet
-
-> **En bref :** Clone le repo sur un serveur Linux, lance `bash install.sh`, réponds à quelques questions. C'est tout. ☕
->
-> **Nouveau — Nodyx Relay :** Tu n'as pas de domaine et aucun port ouvert ? Raspberry Pi, vieux PC, box maison ?
-> **Choisis l'option `[2] Nodyx Relay`** au moment de l'installation → ton instance est en ligne sous `ton-slug.nodyx.org` sans rien configurer.
-> [→ Guide complet Nodyx Relay](RELAY.md)
-
----
-
-## Sommaire
-
-- [Avant de commencer](#-avant-de-commencer)
-- [Où héberger ?](#-où-héberger-)
-- [Ai-je besoin d'un nom de domaine ?](#-ai-je-besoin-dun-nom-de-domaine-) — [Guide complet des domaines →](DOMAIN.md)
-- [Quels ports ouvrir ?](#-quels-ports-ouvrir-)
-- [Installation — La méthode simple](#-installation--la-méthode-simple-recommandée)
-- [Utilisateurs Windows — Guide WSL](#-utilisateurs-windows--guide-wsl)
-- [Serveur maison / Derrière un routeur (NAT)](#-serveur-maison--derrière-un-routeur-nat)
-- [Héberger SANS ouvrir de ports (Nodyx Relay, Cloudflare Tunnel, Tailscale)](#-héberger-chez-soi-sans-ouvrir-de-ports)
-- [Derrière un VPN ou WireGuard](#-derrière-un-vpn-ou-wireguard)
-- [Erreurs fréquentes et solutions](#-erreurs-fréquentes-et-solutions)
-- [Après l'installation](#-après-linstallation)
-- [Conseils et astuces](#-conseils-et-astuces)
-- [Configurer les emails →](EMAIL.md)
-
----
-
-## 📋 Avant de commencer
-
-### Configuration matérielle minimale
-
-| Composant | Minimum | Recommandé |
-|---|---|---|
-| CPU | 1 vCPU / 1 cœur | 2 vCPU ou plus |
-| RAM | 1 Go | 2 Go ou plus |
-| Disque | 10 Go SSD | 20 Go SSD |
-| Bande passante | 10 Mbps | 100 Mbps |
-| OS | Ubuntu 22.04 | Ubuntu 24.04 LTS |
-
-> 💡 **Exemple réel :** Une communauté de 50 utilisateurs actifs tourne sans problème sur un VPS à 4€/mois (Hetzner CX22, 2 vCPU / 4 Go RAM). Les salons vocaux sont en P2P — ils ne consomment pas la bande passante du serveur.
-
-### Systèmes d'exploitation supportés
-
-| OS | Support | Notes |
-|---|---|---|
-| Ubuntu 24.04 LTS | ✅ Recommandé | Le mieux testé |
-| Ubuntu 22.04 LTS | ✅ Supporté | Fonctionne parfaitement |
-| Debian 12 (Bookworm) | ✅ Supporté | Entièrement compatible |
-| Debian 11 (Bullseye) | ✅ Supporté | Compatible |
-| Windows (WSL2) | ✅ Supporté | [Voir section WSL](#-utilisateurs-windows--guide-wsl) |
-| macOS | ⚠️ Manuel seulement | install.sh est Linux uniquement |
-| CentOS / RHEL / Fedora | ❌ Non supporté | Utilise Docker à la place |
-| Raspberry Pi OS | ✅ Supporté | Utilise la version 64 bits |
-
-### Un seul prérequis — Git
-
-L'installateur a besoin de `git` pour cloner le dépôt Nodyx. La plupart des images VPS ne l'incluent pas par défaut. Installe-le en premier :
+Une commande, quelques questions, et votre communauté a une maison. Ce guide vous accompagne du choix de la machine jusqu'à votre première soirée avec vos membres.
 
 ```bash
-# Ubuntu / Debian
-sudo apt-get update && sudo apt-get install -y git
-
-# C'est tout. L'installateur s'occupe du reste.
+curl -fsSL https://nodyx.org/install.sh | bash
 ```
 
----
-
-### Ce que `install.sh` installe automatiquement
-
-Tu n'as rien d'autre à installer manuellement. Le script s'occupe de tout :
-
-- **Node.js 22 LTS** — Runtime JavaScript
-- **PostgreSQL 16** — Base de données principale
-- **Redis 7** — Cache et sessions temps réel
-- **Coturn** — Relais TURN/STUN pour les salons vocaux (WebRTC, traversée NAT)
-- **Caddy** — Reverse proxy + HTTPS automatique (Let's Encrypt)
-- **PM2** — Gestionnaire de processus (redémarrage auto, démarrage au boot)
+C'est vraiment tout. La suite de cette page explique ce qui se passe, les choix qu'on vous propose, et quoi faire si quelque chose coince.
 
 ---
 
-## 🖥️ Où héberger ?
+## En bref
 
-### Option 1 — VPS (Recommandé pour débuter)
+| Étape | Ce que vous faites | Durée |
+|---|---|---|
+| 1. Une machine | Un petit VPS, un Raspberry Pi, un vieux portable | 10 minutes pour en louer un |
+| 2. La commande | Lancer la ligne ci-dessus en root | Quelques secondes |
+| 3. Les questions | Le nom, le compte administrateur, comment on vous rejoint | Environ 2 minutes |
+| 4. L'attente | L'installeur construit et démarre tout | Quelques minutes, plus sur un Raspberry Pi |
+| 5. Votre communauté | Vous connecter, choisir une ambiance, inviter du monde | Autant que vous voudrez |
 
-Un VPS (serveur privé virtuel) est une machine Linux distante louée au mois. Elle est toujours en ligne, a une IP fixe, et tu peux t'y connecter en SSH depuis n'importe où.
+---
 
-**Hébergeurs recommandés :**
+## 1. Choisir une machine
 
-| Hébergeur | Offre d'entrée | Prix/mois | Notes |
-|---|---|---|---|
-| [Hetzner Cloud](https://hetzner.com/cloud) | CX22 (2 vCPU, 4 Go) | ~3,5€ | Meilleur rapport qualité/prix en Europe |
-| [DigitalOcean](https://digitalocean.com) | Basic (1 vCPU, 1 Go) | 6$ | Panel très accessible aux débutants |
-| [Vultr](https://vultr.com) | Cloud Compute 1 vCPU | 6$ | Bonne couverture mondiale |
-| [OVH](https://ovh.com) | VPS Starter | ~3€ | Hébergeur français |
+Nodyx tourne sur **Ubuntu 22.04 ou 24.04**, ou **Debian 11, 12 ou 13**, en 64 bits (x86 ou ARM64). Il vous faut `curl` et un accès root (`sudo` n'est même pas nécessaire).
 
-> 💡 **Conseil :** Choisis toujours un VPS proche de tes utilisateurs (Europe → Frankfurt ou Paris, Amérique du Nord → New York ou Dallas).
+| Machine | Mémoire | Pour qui |
+|---|---|---|
+| Raspberry Pi 4 ou 5, vieux portable | 1 à 2 Go | Une petite communauté, à la maison |
+| Petit VPS | 2 à 4 Go | La plupart des communautés |
+| VPS plus costaud | 4 Go et plus | Des salons vocaux animés, beaucoup de membres |
 
-**Comment créer un VPS (exemple avec Hetzner) :**
-1. Crée un compte sur hetzner.com
-2. Va dans **Cloud → Projects → New Project**
-3. Clique sur **Add Server**
-4. Choisis : Location (ex: Nuremberg), Image = **Ubuntu 24.04**, Type = **CX22**
-5. Ajoute ta clé SSH publique (recommandé) ou définis un mot de passe root
-6. Clique sur **Create & Buy**
-7. L'IP de ton serveur apparaît dans le dashboard en 30 secondes
+Sous 1,5 Go de mémoire, l'installeur passe tout seul en mode économique : des limites de mémoire réduites, et un fichier d'échange s'il n'y en a pas assez. Sur un Raspberry Pi, prenez un système **64 bits** (Raspberry Pi OS 64 bits ou Ubuntu ARM64).
 
-**Connexion à ton VPS :**
+> **Astuce.** Un serveur neuf, c'est le plus simple. Nodyx installe son propre serveur web (Caddy), sa base de données (PostgreSQL) et son cache (Redis) ; si un serveur web comme nginx ou Apache tourne déjà sur la machine, l'installeur vous prévient et vous demande avant de toucher à quoi que ce soit.
+
+---
+
+## 2. Comment on vous rejoint
+
+C'est le seul vrai choix. L'installeur vous le pose, mais autant connaître la réponse avant de commencer.
+
+| Si... | Choisissez | Vous obtenez |
+|---|---|---|
+| La machine est chez vous, derrière une box | **Relais Nodyx** (recommandé) | `votreclub.nodyx.org`, aucun port à ouvrir, aucun domaine à acheter |
+| Vous avez un domaine et un serveur avec les ports 80 et 443 ouverts | **Votre propre domaine** | `votrecommunaute.fr`, HTTPS par Let's Encrypt, contrôle total |
+| Les ports 80 et 443 sont ouverts mais vous n'avez pas de domaine | **sslip.io** | Une adresse automatique et gratuite, tirée de votre IP |
+| Vous utilisez déjà Cloudflare Tunnel ou Pangolin | L'**installeur tunnel** | Votre domaine, par votre tunnel, aucun port ouvert |
+
+Le **relais Nodyx**, écrit en Rust, relie votre serveur au relais par des connexions sortantes seulement : rien à régler sur votre box. Le site, le chat et le vocal à quelques-uns fonctionnent. Les grands salons vocaux et le partage d'écran devant beaucoup de monde passent par un serveur de diffusion (SFU) qui doit encore être joignable depuis Internet ; le faire fonctionner depuis la maison aussi, c'est le prochain grand chantier de la feuille de route.
+
+Pour un tunnel, suivez plutôt le guide dédié : **[Installer derrière un tunnel](./INSTALL-TUNNEL.md)**.
+
+---
+
+## 3. Lancer l'installeur
+
+En root, ou avec `sudo` :
+
 ```bash
-ssh root@IP_DE_TON_VPS
+curl -fsSL https://nodyx.org/install.sh | bash
 ```
 
----
+Vous préférez lire le script avant ? Clonez le dépôt et lancez-le depuis là :
 
-### Option 2 — Serveur maison
+```bash
+git clone https://github.com/Pokled/nodyx.git
+cd nodyx
+sudo bash install.sh
+```
 
-Un vieux PC, un laptop inutilisé, ou un Raspberry Pi branché chez toi. Ça marche très bien, mais ça demande :
-- Une IP fixe **ou** un service DDNS (voir [section Serveur maison](#-serveur-maison--derrière-un-routeur-nat))
-- La redirection de ports sur ton routeur
-- Ta machine doit rester allumée 24h/24
+### Les questions qu'il pose
 
-> ⚠️ **Attention :** Beaucoup de FAI bloquent les ports entrants 80/443. Vérifie avec ton FAI avant d'investir du temps. Certains FAI (surtout la fibre) peuvent fournir une IP fixe contre une petite somme.
-
----
-
-### Option 3 — Windows avec WSL (Test / Développement)
-
-Tu peux faire tourner Nodyx sur Windows 10/11 via WSL2 (Sous-système Windows pour Linux). Idéal pour tester ou développer, mais pas recommandé pour un serveur de production 24h/24.
-
-→ [Voir le guide WSL détaillé ci-dessous](#-utilisateurs-windows--guide-wsl)
-
----
-
-## 🌐 Ai-je besoin d'un nom de domaine ?
-
-**Réponse courte : Non !** Pour un VPS avec `install.sh`, l'installateur crée automatiquement un domaine gratuit `203-0-113-10.sslip.io` + un alias mémorable `ton-slug.nodyx.org`. HTTPS fonctionne sans rien acheter.
-
-**Pour `install_tunnel.sh` (Cloudflare Tunnel)**, un vrai domaine à toi est obligatoire — les sous-domaines gratuits de type No-IP ou DuckDNS ne fonctionnent pas.
-
-> 📖 **[→ Guide complet des domaines : types, compatibilité, arbre de décision, où acheter](DOMAIN.md)**
->
-> Tu y trouveras notamment pourquoi No-IP/DuckDNS sont incompatibles avec Cloudflare Tunnel, et un tableau comparatif de toutes les options.
-
-**En résumé rapide :**
-
-| Situation | Solution |
+| Question | Quoi répondre |
 |---|---|
-| VPS, ports 80/443 ouverts, pas de domaine | `install.sh` → sslip.io + nodyx.org gratuits |
-| VPS, ports 80/443 ouverts, domaine perso | `install.sh` → entre ton domaine |
-| Maison, pas de ports ouverts, domaine CF | `install_tunnel.sh` → [guide tunnel](INSTALL-TUNNEL.md) |
-| Maison, pas de ports ouverts, VPS Pangolin | `install_tunnel.sh` → [guide tunnel](INSTALL-TUNNEL.md#-mode-b-pangolin-newt) |
-| Maison, pas de ports ouverts, tunnel custom (frp, rathole, ...) | `install_tunnel.sh` → [guide tunnel](INSTALL-TUNNEL.md#-mode-c-tunnel-custom) |
-| Maison, pas de ports ouverts, No-IP/DuckDNS | ❌ non compatible — [voir DOMAIN.md](DOMAIN.md) |
-| Maison, pas de ports ouverts, pas de domaine | Achète un domaine ~1€/an — [voir DOMAIN.md](DOMAIN.md) |
+| Nom de la communauté | Ce que verront vos membres, par exemple *Les Oiseaux de nuit* |
+| Identifiant (slug) | Court, en minuscules, utilisé dans les adresses, par exemple `oiseaux`. En mode relais il devient `oiseaux.nodyx.org`, et l'installeur vérifie qu'il est libre avant d'aller plus loin |
+| Langue, description, pays | La langue de la communauté ; description et pays sont facultatifs, Entrée pour passer |
+| Mode réseau | Relais, votre propre domaine ou sslip.io (voir plus haut) |
+| Domaine | Seulement pour « votre propre domaine » |
+| Compte administrateur | Pseudo, e-mail, et un mot de passe d'au moins 8 caractères |
+| E-mail (SMTP) | Facultatif. Sans lui, Nodyx fonctionne, il n'envoie simplement pas d'e-mails (un mot de passe perdu se récupère avec `nodyx-recover`, voir plus bas) |
+| Annuaire public | Facultatif. Répondez oui pour apparaître sur [nodyx.org/discover](https://nodyx.org/discover) et être trouvé depuis les autres communautés |
 
-> 💡 **Astuce Cloudflare :** Si tu utilises Cloudflare comme DNS, active le nuage orange (proxy) pour HTTP/HTTPS — protection DDoS gratuite. **Désactive le proxy (nuage gris) pour tout sous-domaine TURN** — les salons vocaux ne passent pas par le proxy CF.
+Chaque confirmation comprend oui et non (`o/n`, `y/n`, `oui/non`, `yes/no`) et repose la question si la réponse n'est pas claire. Un appui malheureux sur Entrée ne détruit jamais rien.
 
----
+### Puis il se met au travail
 
-## 🔌 Quels ports ouvrir ?
+Il installe Node.js, PostgreSQL, Redis, Caddy, PM2 et les composants vocaux en Rust, génère tous les secrets, crée la base, construit Nodyx, crée votre compte administrateur et règle le pare-feu. La règle qui autorise SSH est posée **avant** d'allumer le pare-feu, sur le port que votre SSH utilise vraiment : impossible de vous enfermer dehors.
 
-Le script `install.sh` configure le pare-feu (UFW) automatiquement. Voici ce qu'il ouvre :
+À la fin, un récapitulatif affiche votre adresse et l'état de chaque service. Bandeau vert : tout a répondu. Bandeau rouge : quelque chose mérite un coup d'œil, avec la commande exacte à lancer.
 
-| Port | Protocole | Service | Obligatoire ? |
-|---|---|---|---|
-| 22 | TCP | SSH | ✅ Oui (pour gérer ton serveur) |
-| 80 | TCP | HTTP | ✅ Oui (challenge Let's Encrypt) |
-| 443 | TCP | HTTPS | ✅ Oui (ton site web) |
-| 3478 | TCP + UDP | TURN/STUN (relais vocal) | ✅ Oui (salons vocaux) |
-| 5349 | TCP + UDP | TURN/STUN TLS | ⚠️ Optionnel |
-| 49152–65535 | UDP | Relais médias WebRTC | ✅ Oui (salons vocaux) |
-
-> ❓ **C'est quoi un relais TURN ?** Quand deux utilisateurs veulent parler dans un salon vocal, ils essaient d'établir une connexion directe (P2P). Si l'un d'eux est derrière un NAT restrictif (connexion 4G, réseau d'entreprise), la connexion directe est impossible. Le relais TURN sert d'intermédiaire — la voix passe par ton serveur. C'est uniquement un fallback quand le P2P échoue.
+> **À savoir.** Votre mot de passe administrateur n'est **pas** écrit sur le disque. Gardez-le en lieu sûr. Si vous le perdez, `sudo nodyx-recover` vous redonne l'accès.
 
 ---
 
-## 🚀 Installation — La méthode simple (Recommandée)
+## 4. Votre première soirée
 
-### Étape 1 — Clone le dépôt
+Ouvrez votre adresse, connectez-vous avec le compte administrateur, et faites de l'endroit le vôtre :
 
-Sur ton serveur Linux (via SSH) :
-
-```bash
-git clone https://github.com/Pokled/Nodyx.git /opt/nodyx-install
-cd /opt/nodyx-install
-```
-
-Ou télécharge juste le script d'installation :
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install.sh -o install.sh
-```
-
-### Étape 2 — Lance l'installateur
-
-```bash
-sudo bash install.sh
-```
-
-> 🔐 Le script doit être exécuté en root (ou avec sudo). Il installe des paquets système, configure le pare-feu et met en place les services.
-
-### Étape 3 — Réponds aux questions
-
-L'installateur va te demander :
-
-```
-? Nom de la communauté (ex: Linux France): Ma Super Communauté
-? Identifiant unique (slug) [ma-super-communaute]:
-? Langue principale (fr/en/de/es/it/pt) [fr]:
-
-  Domaine de ton instance
-  ┌─ Si tu as un domaine (ex: moncommunaute.fr), entre-le ci-dessous.
-  └─ Sinon, appuie sur Entrée → domaine gratuit 203-0-113-10.sslip.io utilisé automatiquement.
-
-? Domaine (Entrée pour obtenir un domaine gratuit): macommunaute.fr   ← ou Entrée pour sslip.io
-
-? Nom d'utilisateur admin: alice
-? Email admin: alice@exemple.fr
-? Mot de passe admin: ••••••••
-```
-
-> 💡 **Pas de domaine ?** Appuie sur Entrée — ton instance sera accessible sur `203-0-113-10.sslip.io` avec HTTPS automatique. Tu peux changer pour ton propre domaine plus tard.
-
-C'est tout. Le script s'occupe du reste automatiquement (≈ 3 à 10 minutes selon la vitesse de ton serveur).
-
-### Étape 4 — Attends et profite ☕
-
-L'installateur affiche un résumé à la fin :
-
-```
-╔══════════════════════════════════════════════════╗
-║       ✔  Nodyx installé avec succès !            ║
-╚══════════════════════════════════════════════════╝
-
-  Instance : https://macommunaute.fr
-  Admin    : alice / alice@exemple.fr
-  Vocal    : Relais TURN sur 203.0.113.10:3478
-
-  Credentials sauvegardés dans : /root/nodyx-credentials.txt
-```
-
-> 💡 **Le DNS prend du temps.** Après avoir pointé ton domaine vers l'IP de ton serveur, la propagation DNS peut prendre jusqu'à 24–48h dans le monde entier (en pratique 5–30 minutes). Caddy obtiendra automatiquement ton certificat SSL dès que le DNS sera résolu.
+1. **Choisissez une ambiance.** Administration → Apparence : quatorze ambiances toutes prêtes, ou vos propres couleurs. Personne ne voit rien tant que vous n'avez pas publié.
+2. **Composez la page d'accueil.** Administration → Homepage : lignes, colonnes et widgets, avec un aperçu sur ordinateur, tablette et mobile.
+3. **Ouvrez les portes.** Quelques catégories de forum, un salon texte, un salon vocal.
+4. **Écrivez le premier message.** Une annonce qui dit à quoi sert cet endroit.
+5. **Invitez du monde.** Partagez l'adresse. C'est le moment où un serveur devient une communauté.
 
 ---
 
-## 🪟 Utilisateurs Windows — Guide WSL
+## Installer sans surveillance
 
-WSL (Windows Subsystem for Linux) permet de faire tourner Ubuntu directement dans Windows. Le `install.sh` de Nodyx fonctionne parfaitement dans WSL2.
-
-### Étape 1 — Activer WSL2
-
-Ouvre **PowerShell en Administrateur** et lance :
-
-```powershell
-wsl --install
-```
-
-Cela installe WSL2 et Ubuntu automatiquement. **Redémarre ton PC** quand c'est demandé.
-
-> 💡 Si WSL est déjà installé, mets-le à jour : `wsl --update`
-
-### Étape 2 — Ouvrir Ubuntu
-
-Après le redémarrage, recherche **"Ubuntu"** dans le menu Démarrer et ouvre-le. La première fois, il te demandera de créer un nom d'utilisateur et un mot de passe Linux.
-
-### Étape 3 — Mettre à jour Ubuntu
+Pour un script, Ansible ou une CI, chaque question a son option :
 
 ```bash
-sudo apt update && sudo apt upgrade -y
+sudo bash install.sh --yes \
+  --network=relay \
+  --name="Les Oiseaux de nuit" --slug=oiseaux \
+  --admin-user=admin --admin-email=admin@exemple.fr \
+  --admin-password-file=/root/mot-de-passe-admin.txt
 ```
 
-### Étape 4 — Installer Git (si besoin)
-
-```bash
-sudo apt install -y git
-```
-
-### Étape 5 — Cloner Nodyx
-
-```bash
-git clone https://github.com/Pokled/Nodyx.git
-cd Nodyx
-```
-
-### Étape 6 — Lancer l'installateur
-
-```bash
-sudo bash install.sh
-```
-
-> ⚠️ **Limitation WSL :** Les services lancés dans WSL ne redémarrent pas automatiquement avec Windows. Pour un serveur 24h/24, utilise un vrai VPS Linux. WSL est parfait pour les tests et le développement.
-
-> 💡 **Accès depuis ton navigateur Windows :** Une fois l'installation terminée, ouvre ton navigateur et va sur `http://localhost` — Nodyx sera là.
-
-### Conseils spécifiques à WSL
-
-- **Accès aux fichiers :** Tes fichiers Windows sont accessibles via `/mnt/c/Users/TonNom/` dans WSL
-- **Raccourci terminal WSL :** Dans n'importe quel dossier Windows, tape `wsl` dans la barre d'adresse
-- **Intégration VS Code :** Installe l'extension "WSL" pour VS Code et édite tes fichiers directement
-- **Redirection de ports :** Pour exposer WSL sur ton réseau local, redirige les ports manuellement :
-  ```powershell
-  # En Administrateur dans PowerShell
-  netsh interface portproxy add v4tov4 listenport=80 listenaddress=0.0.0.0 connectport=80 connectaddress=$(wsl hostname -I)
-  netsh interface portproxy add v4tov4 listenport=443 listenaddress=0.0.0.0 connectport=443 connectaddress=$(wsl hostname -I)
-  ```
+- `--yes` accepte les réponses par défaut ; une question sans défaut ni option arrête l'installeur proprement, en la nommant.
+- `--network=direct|relay|sslip` ; `--domain=...` seul implique `direct`.
+- Donnez les secrets par fichier (`--admin-password-file`), pas dans la ligne de commande, où n'importe quel utilisateur du serveur pourrait les lire.
+- `--no-turn`, `--no-sfu`, `--no-subdomain`, `--lang=en|fr` : la liste complète avec `bash install.sh --help`.
 
 ---
 
-## 🏠 Serveur maison / Derrière un routeur (NAT)
+## Vivre avec son instance
 
-Faire tourner Nodyx sur une machine chez toi (derrière ton box/routeur) nécessite quelques étapes supplémentaires.
+Trois commandes couvrent presque tout :
 
-### Étape 1 — Trouve ton IP publique
-
-Va sur [whatismyip.com](https://whatismyip.com) — c'est l'IP que le monde extérieur voit.
-
-> ⚠️ **Problème :** La plupart des FAI attribuent des **IP dynamiques** — ton IP publique peut changer. Solution : utilise un service DDNS.
-
-### Étape 2 — Configurer un DDNS (si tu n'as pas d'IP fixe)
-
-Un service DDNS (DNS dynamique) associe un nom d'hôte à ton IP actuelle et se met à jour automatiquement.
-
-**Options gratuites :**
-- [DuckDNS](https://www.duckdns.org) — complètement gratuit, simple, fiable
-- [No-IP](https://noip.com) — offre gratuite disponible
-- [Dynu](https://dynu.com) — offre gratuite disponible
-
-**Exemple avec DuckDNS :**
-1. Inscris-toi sur duckdns.org
-2. Crée un sous-domaine (ex: `macommunaute.duckdns.org`)
-3. Installe le client de mise à jour automatique sur ton serveur :
-   ```bash
-   # Ajoute au crontab (mise à jour toutes les 5 minutes)
-   */5 * * * * curl -s "https://www.duckdns.org/update?domains=macommunaute&token=TON_TOKEN&ip=" > /dev/null
-   ```
-
-### Étape 3 — Redirection de ports sur ton routeur
-
-Tu dois rediriger le trafic depuis ta box vers ton serveur. La procédure varie selon le modèle de ta box.
-
-**Étapes générales :**
-1. Connecte-toi à l'interface d'administration de ta box (généralement `http://192.168.1.1` ou `http://192.168.0.1`)
-2. Trouve la section **Redirection de ports**, **NAT**, ou **Virtual Server**
-3. Ajoute ces règles :
-
-| Port externe | Protocole | IP interne | Port interne |
-|---|---|---|---|
-| 80 | TCP | `IP_LOCALE_DU_SERVEUR` | 80 |
-| 443 | TCP | `IP_LOCALE_DU_SERVEUR` | 443 |
-| 3478 | TCP+UDP | `IP_LOCALE_DU_SERVEUR` | 3478 |
-| 49152–65535 | UDP | `IP_LOCALE_DU_SERVEUR` | 49152–65535 |
-
-> 💡 **Trouver l'IP locale de ton serveur :**
-> ```bash
-> ip addr show | grep 'inet ' | grep -v '127.0.0.1'
-> # Généralement quelque chose comme 192.168.1.42
-> ```
-
-> 💡 **Donne une IP locale fixe à ton serveur :** Dans les paramètres de ta box, cherche **Bail DHCP statique** ou **Réservation d'adresse**. Associe l'adresse MAC de ton serveur à une IP locale fixe (ex: `192.168.1.100`) pour qu'elle ne change jamais.
-
-### CG-NAT (Carrier-Grade NAT)
-
-Certains FAI utilisent le CG-NAT — ta connexion partage une IP publique avec des centaines d'autres clients. Dans ce cas, la redirection de ports est **impossible**.
-
-**Comment savoir si tu es derrière un CG-NAT :**
 ```bash
-# Compare l'IP WAN de ta box (dans son interface) avec ton IP publique (whatismyip.com)
-# Si elles sont différentes → tu es derrière un CG-NAT
+sudo nodyx-update    # passer à la dernière version
+sudo nodyx-doctor    # vérifier que chaque service va bien
+sudo nodyx-recover   # retrouver l'accès à un compte administrateur perdu
 ```
 
-> 💡 **Astuce Orange/SFR/Bouygues :** Beaucoup de box 4G et certaines offres fibre utilisent le CG-NAT. Appelle le support de ton FAI et demande une "IP publique fixe" — c'est parfois gratuit, parfois quelques €/mois.
+**La mise à jour** sauvegarde et vérifie d'abord la base, puis construit la nouvelle version à côté de celle qui tourne. Le site ne bascule qu'une fois tout construit ; si quelque chose échoue, il continue de tourner sur la version précédente, intacte. Deux mises à jour ne peuvent pas tourner en même temps. Les cinq sauvegardes de mise à jour les plus récentes sont gardées dans `/root/nodyx-db-backup-upgrade-*.sql.gz`.
 
-**Solutions si tu es derrière un CG-NAT :**
-1. **Demande à ton FAI** une IP publique réelle
-2. **Utilise un VPS bon marché comme relais** — installe Nginx sur le VPS et tunnel le trafic vers ton serveur maison via SSH :
-   ```bash
-   # Sur ton serveur maison (crée un tunnel inverse)
-   ssh -R 80:localhost:80 -R 443:localhost:443 user@IP_VPS -N
-   ```
-3. **Utilise Cloudflare Tunnel** — gratuit, sans redirection de ports, sans VPS (mais Cloudflare voit ton trafic)
+**Les journaux**, quand vous voulez voir ce qui se passe :
 
----
+```bash
+sudo -u nodyx pm2 logs nodyx-core       # l'API
+sudo -u nodyx pm2 logs nodyx-frontend   # l'application web
+sudo journalctl -u caddy -n 50          # HTTPS et le proxy
+sudo systemctl status nodyx-turn nodyx-sfud nodyx-relay-client
+```
 
-## 🚇 Héberger chez soi SANS ouvrir de ports
+Nodyx tourne sous son propre utilisateur système, `nodyx` : utilisez `sudo -u nodyx pm2 ...`, pas `pm2` en root.
 
-Tu veux faire tourner Nodyx sur un Raspberry Pi (ou un vieux PC) à la maison, mais tu ne veux pas — ou ne peux pas — ouvrir les ports 80/443 sur ton routeur ? Pas de panique, il existe des solutions gratuites et simples.
+**La désinstallation** enlève Nodyx, et seulement Nodyx : un Caddyfile qui sert aussi d'autres sites n'est pas modifié, les clés Redis des autres applications et vos règles de pare-feu ne sont pas touchées. Elle propose d'abord de sauvegarder la base, les fichiers envoyés et la configuration, et s'arrête sans rien supprimer si cette sauvegarde échoue. Essayez-la d'abord à blanc :
 
-### Pourquoi les ports sont-ils nécessaires ? (explication pour débutant)
-
-Imagine que ton serveur est une maison. Pour que les visiteurs du monde entier puissent sonner à ta porte, il faut :
-1. Que ta maison ait une **adresse visible de l'extérieur** (IP publique)
-2. Que la **porte soit ouverte** (ports 80 et 443 redirigés depuis ta box vers ton serveur)
-
-Si tu ne veux pas ouvrir ces portes, il faut passer par un **tunnel** — un intermédiaire qui reçoit les visiteurs pour toi et les fait entrer par une porte de service que tu contrôles, sans exposer ta maison directement.
-
-> ⚠️ **Important :** Sans HTTPS, les **salons vocaux ne fonctionneront pas** — les navigateurs refusent d'accéder au micro/caméra sur HTTP non sécurisé. Une solution tunnel est obligatoire pour utiliser toutes les fonctionnalités de Nodyx.
+```bash
+sudo bash /opt/nodyx/uninstall.sh --dry-run
+```
 
 ---
 
-### ⚡ Solution 0 — Nodyx Relay *(nouvelle recommandation — zéro prérequis)*
+## Les ports, si vous gérez votre pare-feu
 
-**Nodyx Relay** est la solution intégrée à Nodyx. Aucun compte tiers, aucun domaine, aucun port à ouvrir.
+Avec le **relais Nodyx**, rien n'est ouvert : l'installeur s'assure seulement que SSH reste autorisé.
 
-| | Nodyx Relay | Cloudflare Tunnel |
+Avec **votre propre domaine** ou **sslip.io**, l'installeur ouvre :
+
+| Port | Protocole | Pour |
 |---|---|---|
-| Compte tiers requis | ❌ Non | ✅ Cloudflare |
-| Domaine requis | ❌ Non | ✅ Oui (~1€/an) |
-| URL obtenue | `slug.nodyx.org` | `slug.ton-domaine.com` |
-| Intégré dans `install.sh` | ✅ Oui (option 2) | 🔧 Script séparé |
-| Open source | ✅ Oui | ❌ Non |
+| 80, 443 | TCP | Le site (HTTPS) |
+| 3478, 5349 | TCP et UDP | Le relais vocal (TURN), pour les membres derrière des réseaux stricts |
+| 49152 à 65535 | UDP | Le média du relais vocal |
+| 40000 à 40999 | UDP et TCP | Le SFU : grands salons vocaux et partage d'écran |
 
-**Comment l'activer :** lors de l'installation avec `install.sh`, choisis simplement l'option `[2] Nodyx Relay`. C'est tout.
-
-> 📖 [→ Guide complet Nodyx Relay](RELAY.md)
+Si votre serveur est derrière un pare-feu d'hébergeur (Hetzner, OVH, groupes de sécurité AWS…), ouvrez aussi ces ports là-bas.
 
 ---
 
-### 🌩️ Solution 1 — Cloudflare Tunnel *(alternative si tu as déjà un domaine CF)*
+## Quand quelque chose coince
 
-Cloudflare Tunnel crée une connexion **sortante** depuis ton serveur vers les serveurs Cloudflare. Aucun port à ouvrir. Cloudflare reçoit les visiteurs et les transmet à ton serveur via ce tunnel.
+Commencez par `sudo nodyx-doctor` : il vérifie chaque service et vous dit lequel ne va pas. Ensuite :
 
-**Ce qu'il te faut :**
-- Un compte Cloudflare gratuit → [dash.cloudflare.com](https://dash.cloudflare.com)
-- Un nom de domaine (~1€/an chez [Porkbun](https://porkbun.com) ou [Namecheap](https://namecheap.com))
+**« Address already in use » sur le port 80 ou 443.** Un autre serveur web occupe le port. L'installeur repère nginx et Apache et vous demande avant de les arrêter ; si vous avez dit non, arrêtez-le vous-même, ou choisissez le relais Nodyx, qui n'a besoin d'aucun des deux ports.
 
-> 💡 Tu n'as pas de domaine ? Nodyx t'en offre un gratuitement : lors de l'installation, ton instance reçoit automatiquement un sous-domaine **`ton-slug.nodyx.org`**. Aucun achat nécessaire.
+**Le certificat HTTPS n'arrive pas.** Vérifiez que votre domaine pointe vers le serveur (`getent hosts votredomaine.fr` doit afficher son IP), puis lisez `sudo journalctl -u caddy -n 50`. Un domaine acheté il y a quelques minutes peut mettre un peu de temps à être connu partout.
 
----
+**Le nom du relais est déjà pris.** L'installeur le vérifie avant de commencer et vous en demande un autre : choisissez un autre identifiant.
 
-> 🚀 **`install_tunnel.sh` automatise toute la configuration !**
->
-> Une fois ton compte Cloudflare et ton domaine prêts **(étape 1 ci-dessous uniquement)**, lance simplement :
->
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/Pokled/Nodyx/main/install_tunnel.sh -o install_tunnel.sh
-> sudo bash install_tunnel.sh
-> ```
->
-> Le script se charge de tout :
-> - Détecte l'architecture de ton serveur (arm64, amd64…)
-> - Installe Nodyx complet (PostgreSQL, Redis, coturn, PM2…)
-> - Télécharge et installe `cloudflared`
-> - Te guide pas à pas pour le login Cloudflare (une URL à ouvrir dans le navigateur)
-> - Crée le tunnel, génère le `config.yml`, enregistre le DNS automatiquement
-> - Installe le service systemd et vérifie que tout fonctionne
->
-> **Les étapes 2 à 9 ci-dessous sont données à titre de référence** — utiles pour comprendre ce qui se passe, mais vous n'avez pas à les exécuter manuellement.
+**Le site affiche une erreur après une mise à jour.** Ça ne devrait pas arriver : une mise à jour ratée garde la version précédente en ligne. Lancez `sudo nodyx-doctor`, puis regardez `sudo -u nodyx pm2 logs nodyx-core`.
+
+**Certains membres n'arrivent pas à rejoindre le vocal.** Le vocal passe d'abord en direct entre les participants, puis par le relais TURN. Avec votre propre domaine, vérifiez que les ports TURN et SFU ci-dessus sont ouverts, y compris chez votre hébergeur.
+
+**Une Debian minimale (sans `sudo`, sans `curl`).** Installez d'abord `curl` (`apt install curl` en root) ; l'installeur s'occupe du reste.
 
 ---
 
-#### Étape 1 — Crée un compte Cloudflare
+## Toujours coincé ?
 
-1. Va sur [dash.cloudflare.com](https://dash.cloudflare.com) et crée un compte gratuit
-2. Clique sur **"Add a site"** et entre ton nom de domaine
-3. Choisis le plan **Free** (0€/mois)
-4. Cloudflare te donne deux **serveurs DNS** à configurer (ex: `aria.ns.cloudflare.com`)
-5. Va dans le panneau de gestion de ton registrar (là où tu as acheté le domaine) et remplace les DNS par ceux de Cloudflare
-6. Attends 5-30 minutes que la propagation se fasse (Cloudflare te le confirme par email)
-
-#### Étape 2 — Installe `cloudflared` sur ton serveur
-
-Sur ton Raspberry Pi / serveur Ubuntu/Debian :
-
-```bash
-# Télécharge cloudflared (vérifie l'architecture : arm64 pour Raspberry Pi 4, amd64 pour PC)
-# Raspberry Pi 4 (arm64) :
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 \
-     -o /usr/local/bin/cloudflared
-chmod +x /usr/local/bin/cloudflared
-
-# PC classique (amd64) :
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
-     -o /usr/local/bin/cloudflared
-chmod +x /usr/local/bin/cloudflared
-
-# Vérifie que ça fonctionne :
-cloudflared --version
-```
-
-#### Étape 3 — Connecte-toi à Cloudflare
-
-```bash
-cloudflared tunnel login
-```
-
-👆 Cette commande affiche un lien URL. **Copie-le** et ouvre-le dans ton navigateur. Connecte-toi à ton compte Cloudflare et autorise l'accès. Un fichier de certificat est automatiquement téléchargé sur ton serveur (dans `~/.cloudflared/cert.pem`).
-
-#### Étape 4 — Crée le tunnel
-
-```bash
-# Remplace "ma-communaute" par le nom que tu veux
-cloudflared tunnel create ma-communaute
-```
-
-Cette commande crée un fichier de configuration dans `~/.cloudflared/`. Note l'**ID du tunnel** qui s'affiche (ex: `6ff42ae2-765d-4adf-8112-31c55c1551ef`).
-
-#### Étape 5 — Configure le tunnel
-
-Crée le fichier de configuration :
-
-```bash
-nano ~/.cloudflared/config.yml
-```
-
-Colle ce contenu (remplace `TUNNEL_ID` par l'ID de l'étape 4, et `moncommunaute.fr` par ton domaine) :
-
-```yaml
-tunnel: TUNNEL_ID
-credentials-file: /root/.cloudflared/TUNNEL_ID.json
-
-ingress:
-  # Le frontend (interface web)
-  - hostname: moncommunaute.fr
-    service: http://localhost:4173
-  # L'API backend
-  - hostname: api.moncommunaute.fr
-    service: http://localhost:3000
-  # Route par défaut (obligatoire)
-  - service: http_status:404
-```
-
-#### Étape 6 — Crée les entrées DNS
-
-```bash
-# Pointe moncommunaute.fr vers le tunnel
-cloudflared tunnel route dns ma-communaute moncommunaute.fr
-
-# Pointe api.moncommunaute.fr vers le tunnel
-cloudflared tunnel route dns ma-communaute api.moncommunaute.fr
-```
-
-Ces commandes créent automatiquement les enregistrements DNS dans Cloudflare. Aucune manipulation manuelle dans le panneau DNS.
-
-#### Étape 7 — Lance le tunnel (test)
-
-```bash
-cloudflared tunnel run ma-communaute
-```
-
-Si tout va bien, tu verras `INF Connection established` dans les logs. Ouvre `https://moncommunaute.fr` dans ton navigateur — Nodyx doit s'afficher !
-
-#### Étape 8 — Lance le tunnel automatiquement au démarrage
-
-Pour que le tunnel démarre tout seul quand ton serveur redémarre :
-
-```bash
-# Installe cloudflared comme service système
-cloudflared service install
-
-# Active et démarre le service
-systemctl enable cloudflared
-systemctl start cloudflared
-
-# Vérifie que c'est bien lancé
-systemctl status cloudflared
-```
-
-#### Étape 9 — Configure Nodyx pour utiliser ce domaine
-
-Lors de l'installation, entre ton domaine `moncommunaute.fr` quand l'installateur te le demande. Caddy sera configuré, mais dans le cas d'un tunnel Cloudflare, **tu peux désactiver Caddy** (Cloudflare gère le HTTPS) :
-
-```bash
-systemctl stop caddy
-systemctl disable caddy
-```
-
-Puis modifie le Caddyfile ou configure directement Nodyx pour écouter en HTTP (pas HTTPS) sur localhost — le tunnel Cloudflare s'occupe de chiffrer la connexion.
-
-> 💡 **Le TURN vocal :** Le tunnel Cloudflare ne supporte pas UDP, donc les **salons vocaux utiliseront ton TURN relay** à l'IP de ton serveur. Pour que ça fonctionne, le port **3478 UDP** doit être ouvert sur ton routeur. C'est le seul port indispensable pour la voix. Si tu ne peux pas l'ouvrir, la voix ne fonctionnera qu'en mode relay TCP (dégradé).
-
----
-
-### 🦎 Solution 2 — Tailscale Funnel *(gratuit, aucun domaine nécessaire)*
-
-Tailscale Funnel expose ton serveur sur internet via le réseau Tailscale, sans ouvrir de ports. Tu obtiens une URL HTTPS gratuite du type `https://monserveur.tail1234.ts.net`.
-
-**Ce qu'il te faut :**
-- Un compte Tailscale gratuit → [tailscale.com](https://tailscale.com)
-
-#### Étape 1 — Installe Tailscale
-
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-```
-
-#### Étape 2 — Connecte-toi
-
-```bash
-tailscale up
-```
-
-Un lien s'affiche → ouvre-le dans ton navigateur et connecte-toi à ton compte Tailscale.
-
-#### Étape 3 — Active Funnel
-
-```bash
-# Expose le frontend (port 4173) sur internet
-tailscale funnel 4173
-```
-
-Tailscale te donne une URL HTTPS publique (ex: `https://monserveur.tail1234.ts.net`). Utilise cette URL lors de l'installation de Nodyx quand on te demande le domaine.
-
-> ⚠️ **Limitations de Tailscale Funnel :** L'URL gratuite est en `.ts.net` (pas personnalisable sans abonnement), et le débit est limité sur le plan gratuit. Convient pour une petite communauté ou pour tester.
-
----
-
-### 🖥️ Solution 3 — Un petit VPS *(la plus simple et la plus fiable)*
-
-Franchement, pour une communauté sérieuse et accessible 24h/24, **un VPS reste la meilleure option**. C'est moins cher qu'une abonnement Netflix et ça évite tous ces problèmes de tunnels.
-
-| Hébergeur | Prix/mois | Specs | Idéal pour |
-|---|---|---|---|
-| [Hetzner](https://hetzner.com/cloud) | 3,29€ | 2 vCPU, 4 Go RAM | ✅ Petite communauté (recommandé) |
-| [Hetzner](https://hetzner.com/cloud) | 5,39€ | 2 vCPU, 8 Go RAM | ✅ Communauté active |
-| [OVH VPS](https://ovhcloud.com/fr/vps/) | 3,99€ | 1 vCPU, 2 Go RAM | ✅ Débutant, serveur FR |
-| [Scaleway](https://scaleway.com) | 3,60€ | 2 vCPU, 2 Go RAM | ✅ Datacenter France/Europe |
-
-Sur un VPS :
-- IP publique fixe incluse
-- Ports 80/443 ouverts par défaut
-- `bash install.sh` et c'est terminé en 10 minutes
-- Accès 24h/24 garanti
-
----
-
-## 🔒 Derrière un VPN ou WireGuard
-
-### Nodyx derrière un VPN traditionnel (NordVPN, ProtonVPN, etc.)
-
-Si ton serveur se connecte à un VPN (peu courant, mais possible), tout le trafic sortant passe par le VPN. Ça crée deux problèmes :
-- Ton serveur TURN annonce l'IP du VPN, pas la vraie IP de ton serveur
-- Let's Encrypt ne peut pas atteindre ton serveur pour le challenge HTTP
-
-**Solution :** Configure le VPN pour exclure le trafic local et ne pas router les services publics du serveur via le VPN.
-
-Pour la plupart des configurations, **n'installe pas un VPN personnel sur la même machine que Nodyx**. Utilise-le uniquement sur les appareils clients.
-
----
-
-### WireGuard — Maillage P2P (Fédération Nodyx — Phase 3)
-
-> 🔭 **Ça arrive en Phase 3** — Les nœuds Nodyx formeront automatiquement un réseau maillé WireGuard, rendant le réseau vraiment décentralisé et résilient.
-
-Aujourd'hui, chaque instance Nodyx est indépendante. À l'avenir, les instances se connecteront via des tunnels WireGuard pour :
-- Partager les données de fédération (annuaire des instances)
-- Router le trafic entre communautés
-- Rendre le réseau résilient aux pannes individuelles
-
-**Si tu as déjà WireGuard sur ton serveur** (ex: VPN personnel ou entre serveurs), attention :
-
-1. **Assure-toi que les services Nodyx écoutent sur la bonne interface** — le script utilise `0.0.0.0` par défaut (toutes les interfaces), ce qui est correct
-2. **Règles de pare-feu** — UFW ouvre les ports nécessaires sur toutes les interfaces. Si tu utilises WireGuard avec un routage strict, tu devras peut-être ajouter les règles pour l'interface WireGuard (`wg0`) manuellement :
-   ```bash
-   sudo ufw allow in on wg0 to any port 3478
-   ```
-3. **IP externe TURN** — `install.sh` détecte ton IP publique automatiquement via `api.ipify.org`. Si ton serveur route le trafic sortant via WireGuard, ça pourrait retourner l'IP du pair WireGuard au lieu de ta vraie IP publique. Corrige-le :
-   ```bash
-   # Édite /etc/turnserver.conf
-   # Modifie external-ip= avec ta vraie IP publique
-   sudo systemctl restart coturn
-   ```
-
----
-
-## ❌ Erreurs fréquentes et solutions
-
-### 🔴 "Address already in use" sur le port 80 ou 443
-
-Un autre service utilise le port (souvent Apache ou une autre instance Nginx).
-
-```bash
-# Trouve ce qui utilise le port 80
-sudo lsof -i :80
-sudo lsof -i :443
-
-# Arrête Apache si présent
-sudo systemctl stop apache2
-sudo systemctl disable apache2
-
-# Puis redémarre Caddy
-sudo systemctl restart caddy
-```
-
----
-
-### 🔴 Le domaine ne répond pas / Le certificat SSL échoue
-
-Caddy essaie d'obtenir un certificat SSL de Let's Encrypt au démarrage. Si ton domaine ne pointe pas encore vers le serveur, ça échoue.
-
-```bash
-# Vérifie si ton domaine résout vers ton serveur
-dig +short tondomain.fr
-# Doit retourner l'IP de ton serveur
-
-# Vérifie les logs Caddy pour les erreurs
-sudo journalctl -u caddy -f
-
-# Force Caddy à réessayer
-sudo systemctl restart caddy
-```
-
-> ⏳ **La propagation DNS prend du temps** — si tu viens de changer ton DNS, attends 5–30 minutes et réessaie.
-
----
-
-### 🔴 Le backend ne démarre pas (port 3000)
-
-Consulte les logs PM2 :
-
-```bash
-pm2 logs nodyx-core --lines 50
-```
-
-Causes courantes :
-- **Mauvais mot de passe base de données** — vérifie `/opt/nodyx/nodyx-core/.env`
-- **PostgreSQL pas lancé** — `sudo systemctl start postgresql`
-- **Redis pas lancé** — `sudo systemctl start redis-server`
-- **Port 3000 déjà utilisé** — `sudo lsof -i :3000`
-
----
-
-### 🔴 Les salons vocaux affichent "Relay (TURN)" au lieu de "P2P" pour certains utilisateurs
-
-C'est **normal et attendu**. Les utilisateurs derrière un NAT (réseaux d'entreprise, 4G, certains FAI) ne peuvent pas établir de connexions P2P directes. Le relais TURN est le fallback — il fonctionne correctement, il utilise simplement la bande passante de ton serveur.
-
-Le vrai P2P ne fonctionne que quand les deux utilisateurs ont des IPs publiques accessibles ou des types NAT compatibles.
-
----
-
-### 🔴 Le relais TURN ne fonctionne pas du tout (salons vocaux complètement en panne)
-
-```bash
-# Vérifie que coturn tourne
-sudo systemctl status coturn
-
-# Vérifie les logs coturn
-tail -f /var/log/coturn.log
-
-# Teste la connectivité TURN (depuis ta machine locale)
-# Utilise https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/
-# Saisis : turn:IP_SERVEUR:3478 / utilisateur: nodyx / credential: TON_CREDENTIAL
-```
-
-> 💡 **Utilisateurs Cloudflare :** Si ton domaine est proxifié par Cloudflare, le port 3478 ne fonctionnera pas via le nom de domaine. `install.sh` utilise **l'adresse IP directement** pour l'URL TURN (`turn:IP:3478`) pour contourner ça automatiquement.
-
----
-
-### 🔴 "Failed to fetch" lors de l'upload d'avatar/bannière
-
-Vérifie que Caddy route `/uploads/*` vers le port 3000 :
-
-```bash
-cat /etc/caddy/Caddyfile
-# Doit contenir : reverse_proxy /uploads/* localhost:3000
-```
-
----
-
-### 🔴 Le frontend affiche une page blanche ou des erreurs SvelteKit
-
-```bash
-pm2 logs nodyx-frontend --lines 50
-```
-
-Causes courantes :
-- Le build frontend a échoué — recompile : `cd /opt/nodyx/nodyx-frontend && npm run build && pm2 restart nodyx-frontend`
-- Mauvais `PUBLIC_API_URL` dans `.env` — doit être `https://tondomain.fr` (sans `/api/v1`)
-
----
-
-## 🎛️ Après l'installation
-
-### Première connexion
-
-1. Ouvre `https://tondomain.fr` dans ton navigateur
-2. Connecte-toi avec les identifiants admin définis pendant l'installation
-3. Tu es **owner** de la communauté — tu as accès complet au panel admin
-
-### Panel d'administration
-
-Accessible via le menu → **Admin** (visible uniquement pour les owners et admins).
-
-Depuis le panel admin, tu peux :
-- Uploader un logo et une bannière de communauté
-- Créer des catégories de forum
-- Créer des salons vocaux
-- Gérer les membres (promouvoir, bannir, attribuer des grades)
-- Configurer la description de la communauté
-
-### Inviter tes premiers membres
-
-Partage l'URL de ton instance. Les nouveaux utilisateurs peuvent s'inscrire sur `https://tondomain.fr/auth/register`.
-
-Pour promouvoir quelqu'un en modérateur ou admin :
-1. Panel admin → **Membres**
-2. Trouve l'utilisateur → **Modifier le rôle**
-3. Choisis : `member`, `moderator`, ou `admin`
-
----
-
-## 💡 Conseils et astuces
-
-### Commandes utiles
-
-```bash
-# Vérifier l'état de tous les services
-pm2 list
-
-# Voir les logs du backend (temps réel)
-pm2 logs nodyx-core
-
-# Voir les logs du frontend
-pm2 logs nodyx-frontend
-
-# Redémarrer tout
-pm2 restart all
-
-# Recompiler et redémarrer après une mise à jour
-cd /opt/nodyx/nodyx-core && npm run build && pm2 restart nodyx-core
-cd /opt/nodyx/nodyx-frontend && npm run build && pm2 restart nodyx-frontend
-
-# Vérifier Caddy (HTTPS/proxy)
-sudo systemctl status caddy
-sudo journalctl -u caddy -f
-
-# Vérifier coturn (relais vocal)
-sudo systemctl status coturn
-tail -f /var/log/coturn.log
-
-# Vérifier l'espace disque
-df -h
-
-# Vérifier la mémoire
-free -h
-
-# Voir qui est connecté en SSH
-who
-```
-
-### Sécuriser ton serveur
-
-```bash
-# Changer le port SSH (optionnel mais réduit le bruit)
-# Édite /etc/ssh/sshd_config → Port 2222
-sudo systemctl restart sshd
-
-# Désactiver la connexion root via SSH (utilise un utilisateur normal + sudo)
-# Édite /etc/ssh/sshd_config → PermitRootLogin no
-
-# Installer fail2ban (bloque les tentatives de brute-force)
-sudo apt install -y fail2ban
-sudo systemctl enable fail2ban --now
-```
-
-### Sauvegardes
-
-```bash
-# Sauvegarder la base de données PostgreSQL
-sudo -u postgres pg_dump nodyx > /backup/nodyx_$(date +%Y%m%d).sql
-
-# Sauvegarder les uploads (avatars, bannières)
-tar -czf /backup/uploads_$(date +%Y%m%d).tar.gz /opt/nodyx/nodyx-core/uploads/
-
-# Automatiser avec une tâche cron quotidienne
-crontab -e
-# Ajoute : 0 3 * * * sudo -u postgres pg_dump nodyx > /backup/nodyx_$(date +%Y%m%d).sql
-```
-
-### Mettre à jour Nodyx
-
-```bash
-cd /opt/nodyx
-git pull
-
-# Recompiler le backend
-cd nodyx-core && npm install && npm run build && pm2 restart nodyx-core
-
-# Recompiler le frontend
-cd ../nodyx-frontend && npm install && npm run build && pm2 restart nodyx-frontend
-```
-
-> 💡 **Les migrations s'appliquent automatiquement** — le backend applique les nouvelles migrations SQL au démarrage.
-
----
-
-## 🗑️ Désinstallation propre
-
-Le script `uninstall.sh` retire Nodyx **sans toucher au reste du serveur**. Commence toujours par une simulation : elle affiche tout ce qui serait fait, sans rien modifier.
-
-```bash
-cd /opt/nodyx
-sudo bash uninstall.sh --dry-run   # simulation : rien n'est modifié
-sudo bash uninstall.sh             # pour de vrai
-```
-
-Ce qu'il fait, dans l'ordre :
-
-1. **Vérifie** qu'il s'agit bien d'une installation Nodyx (`/opt/nodyx`, ou `--dir=…`). Sinon il s'arrête sans rien toucher.
-2. **Te demande de taper ton domaine** pour confirmer.
-3. **Sauvegarde** (proposé, recommandé) dans `/root/nodyx-uninstall-<date>/` : la base, les uploads, les `.env`, les archives de sauvegarde de Nodyx et le Caddyfile. Si la sauvegarde de la base échoue, il s'arrête avant toute suppression.
-4. Arrête les applications PM2 de Nodyx et retire ses services (`nodyx-turn`, `nodyx-sfud`, relais, tunnel Cloudflare).
-5. Ne retire **que la part de Nodyx** :
-   - **Caddy** : le Caddyfile n'est remis à zéro que s'il ne sert que Nodyx. S'il contient d'autres sites, il n'y touche pas.
-   - **Redis** : seulement les clés `nodyx:*`. Le serveur Redis reste.
-   - **PostgreSQL** : la base et l'utilisateur de Nodyx. Le serveur PostgreSQL reste.
-   - **Pare-feu** : seulement les ports vocaux de Nodyx (3478, 5349, 40000-40999, 49152-65535). Les ports 80 et 443 sur demande. Il ne touche jamais à la règle SSH ni à la politique par défaut.
-6. Supprime `/opt/nodyx`, puis, sur demande, les identifiants et l'utilisateur système `nodyx`.
-
-Chaque étape destructive demande ton accord. Le bilan final liste les étapes en échec, s'il y en a.
-
-### Désinstaller les paquets système (optionnel)
-
-Le script garde Redis et PostgreSQL : d'autres services peuvent s'en servir. Ne les supprime que s'ils n'ont été installés que pour Nodyx :
-
-```bash
-# Redis (seulement si aucun autre service ne l'utilise)
-sudo apt-get remove --purge -y redis-server
-
-# PostgreSQL (DANGER : supprime TOUTES les bases du serveur)
-# sudo apt-get remove --purge -y postgresql postgresql-contrib
-```
-
----
-
-## 🆘 Toujours bloqué ?
-
-- Consulte les [Issues ouvertes](https://github.com/Pokled/Nodyx/issues)
-- Ouvre une [Discussion](https://github.com/Pokled/Nodyx/discussions)
-- Lis la [doc Architecture](./ARCHITECTURE.md) pour comprendre comment les pièces s'assemblent
-
----
-
-*Guide d'installation Nodyx — v0.4.1 — Mars 2026*
+Ouvrez un ticket sur [GitHub](https://github.com/Pokled/nodyx/issues) avec la sortie de `sudo nodyx-doctor`, ou venez demander sur [nodyx.org](https://nodyx.org). Les personnes qui ont signalé des bugs de l'installeur sont dans notre [galerie des contributeurs](https://github.com/Pokled/nodyx/blob/main/CONTRIBUTORS.md) : un bon signalement, c'est une contribution.
