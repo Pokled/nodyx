@@ -201,7 +201,7 @@ Sustituye `IP_SERVIDOR` por la IP pública de tu servidor (que aparece al inicio
 ## 📎 Enlaces útiles
 
 - [Guía de instalación completa](INSTALL.md)
-- [Sección Cloudflare Tunnel en INSTALL.md](INSTALL.md#-alojar-en-casa-sin-abrir-puertos)
+- [Instalar detrás de un túnel (Cloudflare Tunnel, Pangolin), en inglés](../en/INSTALL-TUNNEL.md)
 - [Cloudflare Registrar](https://cloudflare.com/products/registrar/)
 - [Porkbun — dominios asequibles](https://porkbun.com)
 - [¿Qué es sslip.io?](https://sslip.io)
