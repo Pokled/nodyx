@@ -32,7 +32,7 @@
     "@iconify-json/hugeicons": "^1.2.35",
     "@playwright/test": "^1.64.0",
     "@sveltejs/adapter-node": "5.5.7",
-    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/kit": "^3.1.0",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@tailwindcss/vite": "4.3.3",
     "@types/qrcode": "^1.5.6",
