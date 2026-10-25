@@ -41,7 +41,7 @@
     "pg": "8.23.1",
     "qrcode": "1.5.4",
     "safe-regex": "^2.1.1",
-    "sanitize-html": "2.18.0",
+    "sanitize-html": "2.18.1",
     "sharp": "0.35.5",
     "socket.io": "4.8.4",
     "web-push": "3.6.7",
