@@ -800,13 +800,11 @@
 
 <style>
 /* ── Root ─────────────────────────────────────────────────────────────────── */
-/* flex: 1 0 auto plutôt que min-height: 100dvh : le parent du gabarit est une
-   colonne flex de hauteur fixe, où la racine rétrécissait à 800 px et laissait
-   le reste du fil (6928 px) sans fond, texte de thème clair sur fond noir
-   (mesuré le 29/10). Elle remplit l'écran sans jamais rétrécir sous son contenu. */
+/* Pas de fond ici : la feuille (main, sheetThemed dans +layout) peint celui du
+   thème, avec les réglages de zone de l'admin. flex: 1 0 auto : remplit
+   l'écran sans jamais rétrécir sous son contenu. */
 .feed-root {
 	flex: 1 0 auto;
-	background: var(--nx-sheet-bg, var(--nx-bg));
 }
 
 /* L'en-tête défile avec la page ; ce sont les onglets qui restent collés

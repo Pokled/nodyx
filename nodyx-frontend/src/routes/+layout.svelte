@@ -563,6 +563,14 @@
 		if (ch.name_underline) parts.push('text-decoration: underline')
 		return parts.join(';')
 	}
+	// Pages migrées sur le thème (couleurs --nx-*) : c'est la feuille (main) qui
+	// peint le fond du thème, au lieu du fond sombre historique (--shell-bg). La
+	// page, elle, reste TRANSPARENTE : les réglages de la zone « feuille » posés
+	// sur main par l'écran Apparence (opacité, image, flou) restent visibles.
+	// Une page qui peignait son propre fond les masquait (vieuxlooters, 29/10).
+	const SHEET_THEMED = ['/feed', '/members', '/forum']
+	const sheetThemed = $derived(SHEET_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/')))
+
 	const showChannelSidebar = $derived(
 		!isBanned &&
 		!page.url.pathname.startsWith('/admin') &&
@@ -896,7 +904,8 @@
 		     sous les sidebars. On clippe l'horizontal, plus jamais de scrollbar. -->
 		<main bind:this={mainEl} data-nx-zone="sheet" use:overlayScroll use:editZone={{ zone: page.url.pathname === '/' ? 'home' : 'sheet', label: page.url.pathname === '/' ? tFn('edit.zone_home') : tFn('edit.zone_sheet') }} class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
-		      class:members-collapsed={membersCollapsed}>
+		      class:members-collapsed={membersCollapsed}
+		      class:sheet-themed={sheetThemed}>
 
             <!-- ── System announcement banner ─────────────────────────────────── -->
             {#if showAnnouncement && announcement}
@@ -1274,6 +1283,14 @@
 
 :global(main.app-shell-main) {
   transition: margin-left .42s var(--ease-out-soft), margin-right .42s var(--ease-out-soft);
+}
+
+/* Page migrée sur le thème (sheetThemed) : la feuille prend le fond du thème,
+   à toutes les largeurs. Seule la COULEUR change : l'image de zone posée par
+   la règle de bureau ci-dessous (background-image) reste en place. Plus
+   spécifique que :global(main.app-shell-main), donc gagne quel que soit l'ordre. */
+:global(main.app-shell-main.sheet-themed) {
+  background-color: var(--nx-sheet-bg, var(--nx-bg));
 }
 
 .layout-dragging :global(main.app-shell-main) {
