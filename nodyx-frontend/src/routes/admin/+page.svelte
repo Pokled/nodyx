@@ -30,15 +30,23 @@
 	])
 
 	function buildChartDays(rows: any[]) {
+		// The core returns all 7 days as YYYY-MM-DD text: take its axis as is,
+		// the browser's clock and timezone must not shift it. Older cores
+		// returned only the days with forum posts: rebuild the axis then.
 		const axis: string[] = []
-		for (let i = 6; i >= 0; i--) {
-			const d = new Date(); d.setDate(d.getDate() - i)
-			axis.push(d.toISOString().slice(0, 10))
+		if (rows.length === 7 && rows.every(r => typeof r.day === 'string')) {
+			for (const r of rows) axis.push(r.day.slice(0, 10))
+		} else {
+			for (let i = 6; i >= 0; i--) {
+				const d = new Date(); d.setDate(d.getDate() - i)
+				axis.push(d.toISOString().slice(0, 10))
+			}
 		}
 		const byDay: Record<string, { posts: number; new_members: number }> = {}
 		for (const row of rows) {
 			const key = typeof row.day === 'string' ? row.day.slice(0, 10) : new Date(row.day).toISOString().slice(0, 10)
-			byDay[key] = { posts: row.posts ?? 0, new_members: row.new_members ?? 0 }
+			// "Messages" = forum posts + chat messages
+			byDay[key] = { posts: (row.posts ?? 0) + (row.chat_messages ?? 0), new_members: row.new_members ?? 0 }
 		}
 		return axis.map(d => ({
 			day: d,

@@ -174,33 +174,35 @@ export default async function adminRoutes(app: FastifyInstance) {
     const seenOnline = new Set<string>()
     for (const s of presenceSockets) { if (s.data.userId) seenOnline.add(s.data.userId) }
 
-    // Activity by day — last 7 days (posts + new members)
-    const [activityRes, membersActivityRes] = await Promise.all([
-      db.query(
-        `SELECT DATE(p.created_at) AS day, COUNT(*)::int AS posts
-         FROM posts p
-         JOIN threads t ON t.id = p.thread_id
-         JOIN categories c ON c.id = t.category_id
-         WHERE c.community_id = $1 AND p.created_at > NOW() - INTERVAL '7 days'
-         GROUP BY day ORDER BY day ASC`,
-        [communityId]
-      ).catch(() => ({ rows: [] as any[] })),
-      db.query(
-        `SELECT DATE(joined_at) AS day, COUNT(*)::int AS new_members
-         FROM community_members
-         WHERE community_id = $1 AND joined_at > NOW() - INTERVAL '7 days'
-         GROUP BY day ORDER BY day ASC`,
-        [communityId]
-      ).catch(() => ({ rows: [] as any[] })),
-    ])
+    // Activity by day — last 7 days, one row per day even when empty.
+    // Before: only days with forum posts were returned (signups on a day without
+    // posts vanished), chat was never counted, and DATE() came back as a JS Date
+    // whose toISOString() shifts by one day on a server not running in UTC.
+    // `day` is now text (YYYY-MM-DD), so no timezone conversion can touch it.
+    const activityRes = await db.query(
+      `SELECT to_char(d.day, 'YYYY-MM-DD') AS day,
+              (SELECT COUNT(*)::int FROM posts p
+                 JOIN threads t ON t.id = p.thread_id
+                 JOIN categories c ON c.id = t.category_id
+                WHERE c.community_id = $1
+                  AND p.created_at >= d.day AND p.created_at < d.day + 1) AS posts,
+              (SELECT COUNT(*)::int FROM channel_messages cm
+                 JOIN channels ch ON ch.id = cm.channel_id
+                WHERE ch.community_id = $1 AND cm.is_deleted = false
+                  AND cm.created_at >= d.day AND cm.created_at < d.day + 1) AS chat_messages,
+              (SELECT COUNT(*)::int FROM community_members m
+                WHERE m.community_id = $1
+                  AND m.joined_at >= d.day AND m.joined_at < d.day + 1) AS new_members
+         FROM (SELECT generate_series(CURRENT_DATE - 6, CURRENT_DATE, interval '1 day')::date AS day) d
+        ORDER BY d.day ASC`,
+      [communityId]
+    ).catch(() => ({ rows: [] as any[] }))
 
-    // Merge posts + new_members by day
-    const membersByDay: Record<string, number> = {}
-    for (const r of membersActivityRes.rows) membersByDay[r.day] = r.new_members
     const activity = activityRes.rows.map((r: any) => ({
       day: r.day,
       posts: r.posts,
-      new_members: membersByDay[r.day] ?? 0,
+      chat_messages: r.chat_messages,
+      new_members: r.new_members,
     }))
 
     // Top contributors (last 30 days)
