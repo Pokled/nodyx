@@ -174,33 +174,53 @@ export default async function adminRoutes(app: FastifyInstance) {
     const seenOnline = new Set<string>()
     for (const s of presenceSockets) { if (s.data.userId) seenOnline.add(s.data.userId) }
 
-    // Activity by day — last 7 days (posts + new members)
-    const [activityRes, membersActivityRes] = await Promise.all([
-      db.query(
-        `SELECT DATE(p.created_at) AS day, COUNT(*)::int AS posts
-         FROM posts p
-         JOIN threads t ON t.id = p.thread_id
-         JOIN categories c ON c.id = t.category_id
-         WHERE c.community_id = $1 AND p.created_at > NOW() - INTERVAL '7 days'
-         GROUP BY day ORDER BY day ASC`,
-        [communityId]
-      ).catch(() => ({ rows: [] as any[] })),
-      db.query(
-        `SELECT DATE(joined_at) AS day, COUNT(*)::int AS new_members
-         FROM community_members
-         WHERE community_id = $1 AND joined_at > NOW() - INTERVAL '7 days'
-         GROUP BY day ORDER BY day ASC`,
-        [communityId]
-      ).catch(() => ({ rows: [] as any[] })),
-    ])
+    // Activity by day — last 7 days, one row per day even when empty.
+    // Before: only days with forum posts were returned (signups on a day without
+    // posts vanished), chat was never counted, and DATE() came back as a JS Date
+    // whose toISOString() shifts by one day on a server not running in UTC.
+    // `day` is now text (YYYY-MM-DD), so no timezone conversion can touch it.
+    // Each table is read once over the whole window, then grouped by day
+    // (a subquery per day read ~6x more pages on nodyx.org, for the same result).
+    const activityRes = await db.query(
+      `WITH days AS (
+         SELECT generate_series(CURRENT_DATE - 6, CURRENT_DATE, interval '1 day')::date AS day
+       ), p AS (
+         SELECT p.created_at::date AS day, COUNT(*)::int AS n
+           FROM posts p
+           JOIN threads t ON t.id = p.thread_id
+           JOIN categories c ON c.id = t.category_id
+          WHERE c.community_id = $1 AND p.created_at >= CURRENT_DATE - 6
+          GROUP BY 1
+       ), cm AS (
+         SELECT cm.created_at::date AS day, COUNT(*)::int AS n
+           FROM channel_messages cm
+           JOIN channels ch ON ch.id = cm.channel_id
+          WHERE ch.community_id = $1 AND cm.is_deleted = false
+            AND cm.created_at >= CURRENT_DATE - 6
+          GROUP BY 1
+       ), m AS (
+         SELECT joined_at::date AS day, COUNT(*)::int AS n
+           FROM community_members
+          WHERE community_id = $1 AND joined_at >= CURRENT_DATE - 6
+          GROUP BY 1
+       )
+       SELECT to_char(days.day, 'YYYY-MM-DD') AS day,
+              COALESCE(p.n, 0)  AS posts,
+              COALESCE(cm.n, 0) AS chat_messages,
+              COALESCE(m.n, 0)  AS new_members
+         FROM days
+         LEFT JOIN p  ON p.day  = days.day
+         LEFT JOIN cm ON cm.day = days.day
+         LEFT JOIN m  ON m.day  = days.day
+        ORDER BY days.day ASC`,
+      [communityId]
+    ).catch(() => ({ rows: [] as any[] }))
 
-    // Merge posts + new_members by day
-    const membersByDay: Record<string, number> = {}
-    for (const r of membersActivityRes.rows) membersByDay[r.day] = r.new_members
     const activity = activityRes.rows.map((r: any) => ({
       day: r.day,
       posts: r.posts,
-      new_members: membersByDay[r.day] ?? 0,
+      chat_messages: r.chat_messages,
+      new_members: r.new_members,
     }))
 
     // Top contributors (last 30 days)

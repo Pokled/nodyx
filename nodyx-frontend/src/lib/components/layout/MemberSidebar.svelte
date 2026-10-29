@@ -190,7 +190,7 @@
 							{#if member.avatar}
 								<img src={member.avatar} alt="" class="avatar object-cover" />
 							{:else}
-								<div class="avatar" style="background: linear-gradient(135deg, {avatarColor}80, var(--nx-cyan-deep))">{member.username.charAt(0).toUpperCase()}</div>
+								<div class="avatar avatar--tint" style="background: linear-gradient(135deg, {avatarColor}, var(--nx-cyan-deep))">{member.username.charAt(0).toUpperCase()}</div>
 							{/if}
 							<span class="status-dot">
 								{#if isSharing}
@@ -251,7 +251,7 @@
 							{#if member.avatar}
 								<img src={member.avatar} alt="" class="avatar object-cover" />
 							{:else}
-								<div class="avatar bg-linear-to-br from-[#7c3aed80] to-[var(--nx-cyan-deep)]">{member.username.charAt(0).toUpperCase()}</div>
+								<div class="avatar avatar--tint" style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">{member.username.charAt(0).toUpperCase()}</div>
 							{/if}
 							<span class="status-dot">
 								{#if isSharing}
@@ -650,10 +650,16 @@
 	  justify-content: center;
 	  font-size: 11px;
 	  font-weight: 700;
-	  color: #fff;
+	  color: var(--nx-text-muted);
 	  background: var(--nx-surface-raised);
 	  border: 1px solid var(--nx-border);
 	  user-select: none;
+	}
+	/* Fond coloré plein : la lettre blanche reste lisible sur un thème clair
+	   comme sombre, même quand la couleur du grade est pâle. */
+	.members-c .member .avatar.avatar--tint {
+	  color: #fff;
+	  text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
 	}
 
 	.members-c .member .status-dot {
