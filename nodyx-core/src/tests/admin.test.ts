@@ -154,7 +154,8 @@ describe('GET /api/v1/admin/stats', () => {
     expect(activitySql).toHaveLength(1)
     expect(activitySql[0]).toContain('channel_messages')
     expect(activitySql[0]).toContain('is_deleted = false')
-    expect(activitySql[0]).toContain("to_char(d.day, 'YYYY-MM-DD')")
+    expect(activitySql[0]).toContain("to_char(days.day, 'YYYY-MM-DD')")
+    expect(activitySql[0]).toContain('LEFT JOIN m  ON m.day  = days.day')
   })
 })
 
