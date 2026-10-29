@@ -182,8 +182,13 @@
 	/* Style Nodyx : peu de radius, lignes droites, mono pour technique */
 	/* La page pose son propre fond : la feuille du gabarit reste sombre en
 	   thème clair tant qu'une page n'est pas migrée (lib/shellTheme.ts). */
+	/* flex: 1 0 auto : le parent du gabarit est une colonne flex de hauteur
+	   fixe ; en rétrécissant (défaut), la racine s'arrêtait à la hauteur de
+	   l'écran et la liste débordait SANS fond (722 px de fond pour 6446 px
+	   de liste, mesuré le 29/10). Elle remplit l'écran, sans jamais rétrécir
+	   sous son contenu. */
 	.mb-root {
-		min-height: 100%;
+		flex: 1 0 auto;
 		background: var(--nx-sheet-bg, var(--nx-bg));
 	}
 	.mb-page {

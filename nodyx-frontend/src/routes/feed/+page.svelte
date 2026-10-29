@@ -800,14 +800,21 @@
 
 <style>
 /* ── Root ─────────────────────────────────────────────────────────────────── */
+/* flex: 1 0 auto plutôt que min-height: 100dvh : le parent du gabarit est une
+   colonne flex de hauteur fixe, où la racine rétrécissait à 800 px et laissait
+   le reste du fil (6928 px) sans fond, texte de thème clair sur fond noir
+   (mesuré le 29/10). Elle remplit l'écran sans jamais rétrécir sous son contenu. */
 .feed-root {
-	min-height: 100dvh;
+	flex: 1 0 auto;
 	background: var(--nx-sheet-bg, var(--nx-bg));
 }
 
+/* L'en-tête défile avec la page ; ce sont les onglets qui restent collés
+   (#854). Il était déclaré sticky, mais la racine coupée à la hauteur de
+   l'écran l'emportait avec le défilement : c'est ce comportement qui a été
+   validé, il est maintenant voulu. */
 .feed-header {
-	position: sticky;
-	top: 0;
+	position: relative;
 	z-index: 20;
 	border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 	background: color-mix(in srgb, var(--nx-sheet-bg, var(--nx-bg)) 85%, transparent);
