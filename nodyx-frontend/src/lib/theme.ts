@@ -94,15 +94,41 @@ export const isDarkTheme = derived<typeof themePreference, boolean>(themePrefere
 // par défaut de l'appelant plutôt que de rendre du texte illisible.
 const HEX_RE = /^#[0-9a-f]{6}$/i
 
-function relativeLuminance(hex: string): number {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+// Vrai contraste WCAG contre un fond de référence par thème (la surface la
+// plus défavorable de chaque mode, cf. app.css). L'ancienne règle comparait
+// une luminance perçue à des seuils fixes : un gris #444546 (1,9:1 sur fond
+// sombre) ou un vert fluo #5fff28 (1,3:1 sur blanc) passaient le filet.
+const DARK_REF  = [0x17, 0x14, 0x0f] as const
+const LIGHT_REF = [0xff, 0xff, 0xff] as const
+// 3:1 : le seuil WCAG du texte gras, et de quoi ne toucher que les cas
+// vraiment illisibles. Rouge, indigo, vert moyen passent dans les deux thèmes.
+const MIN_CONTRAST = 3
+
+type RGB = readonly [number, number, number]
+
+function parseHex(hex: string): RGB {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+}
+
+function toHex([r, g, b]: RGB): string {
+  return '#' + [r, g, b].map(c => Math.round(c).toString(16).padStart(2, '0')).join('')
+}
+
+function relativeLuminance([r, g, b]: RGB): number {
+  const lin = (c: number) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+
+function contrast(a: RGB, b: RGB): number {
+  const x = relativeLuminance(a), y = relativeLuminance(b)
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
 }
 
 /**
- * Renvoie `color` si elle reste lisible sur le thème actif, sinon `fallback`.
+ * Renvoie `color` si elle reste lisible sur le thème actif. Sinon, la même
+ * teinte éclaircie (thème sombre) ou assombrie (thème clair) juste assez pour
+ * l'être : un membre garde SA couleur, simplement ajustée. Un gris n'a pas de
+ * teinte à préserver : il retombe sur `fallback`.
  * Ne s'applique qu'aux couleurs hex à 6 chiffres (format du color picker) —
  * toute autre valeur (rgb(), mot-clé CSS, dégradé...) passe inchangée : on
  * préfère ne rien casser sur un format qu'on n'a pas prévu plutôt que
@@ -111,11 +137,15 @@ function relativeLuminance(hex: string): number {
 export function contrastSafeColor(color: string | null | undefined, fallback: string, isDarkBg: boolean): string {
   if (!color) return fallback
   if (!HEX_RE.test(color)) return color
-  const lum = relativeLuminance(color)
-  // Seuils volontairement larges (pas un simple milieu à .5) : on ne corrige
-  // que les cas francs (blanc sur clair, noir sur sombre), pas les couleurs
-  // moyennement saturées qui restent globalement lisibles dans les deux sens.
-  if (isDarkBg  && lum < 0.22) return fallback
-  if (!isDarkBg && lum > 0.82) return fallback
-  return color
+  const rgb = parseHex(color)
+  const bg = isDarkBg ? DARK_REF : LIGHT_REF
+  if (contrast(rgb, bg) >= MIN_CONTRAST) return color
+  if (Math.max(...rgb) - Math.min(...rgb) < 24) return fallback
+  // Mélange progressif vers le blanc (sombre) ou le noir (clair).
+  const target = isDarkBg ? 255 : 0
+  for (let t = 0.05; t <= 1; t += 0.05) {
+    const mixed = rgb.map(c => c + (target - c) * t) as unknown as RGB
+    if (contrast(mixed, bg) >= MIN_CONTRAST) return toHex(mixed)
+  }
+  return fallback
 }
