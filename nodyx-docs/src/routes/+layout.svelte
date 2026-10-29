@@ -2,7 +2,7 @@
   import '../app.css'
   import Header  from '$lib/components/Header.svelte'
   import Sidebar from '$lib/components/Sidebar.svelte'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { splitLangPath } from '$lib/langs.js'
   import { afterNavigate } from '$app/navigation'
 
@@ -10,7 +10,7 @@
 
   // L'URL porte desormais la langue en tete (/fr/relay). Sans la retirer ici,
   // aucun element de la barre laterale ne serait jamais marque comme actif.
-  const chemin      = $derived(splitLangPath($page.url.pathname))
+  const chemin      = $derived(splitLangPath(page.url.pathname))
   const currentSlug = $derived(chemin.slug)
   const langue      = $derived(chemin.lang)
 
@@ -23,7 +23,7 @@
 
 <div class="app">
   <Header />
-  {#if $page.url.pathname === '/'}
+  {#if page.url.pathname === '/'}
     {@render children()}
   {:else}
     <div class="body">
