@@ -1239,7 +1239,7 @@
 										class="w-9 h-9 object-cover" style="outline: 1px solid color-mix(in srgb, var(--nx-text) 7%, transparent)" />
 								{:else}
 									<div class="w-9 h-9 flex items-center justify-center font-black text-[11px] text-white select-none"
-									     style="background: linear-gradient(135deg, color-mix(in srgb, var(--nx-accent-2-strong) 50%, transparent), var(--nx-cyan-deep))">
+									     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">
 										{msg.author_username.charAt(0).toUpperCase()}
 									</div>
 								{/if}
@@ -1518,7 +1518,7 @@
 									class="w-full text-left flex items-center gap-2 px-3 py-2 text-sm transition-colors
 									       {i === mentionIndex ? 'bg-indigo-700 text-white' : 'text-[var(--nx-text)] hover:bg-[var(--nx-border)]'}"
 								>
-									<span class="w-5 h-5 rounded-full bg-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">
+									<span class="w-5 h-5 rounded-full bg-indigo-700 text-white flex items-center justify-center text-xs font-bold shrink-0">
 										{m.username.charAt(0).toUpperCase()}
 									</span>
 									@{m.username}
