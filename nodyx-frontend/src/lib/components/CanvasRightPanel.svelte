@@ -50,9 +50,21 @@
 		const m: Record<string, string> = {
 			select: '↖', pen: '✏', text: 'T', sticky: '📌',
 			rect: '□', circle: '○', arrow: '→', image: '🖼',
-			frame: '⊡', eraser: '◻',
+			frame: '⊡', eraser: '◻', shape: '⬡', connector: '⤳',
 		}
 		return t ? (m[t] ?? '·') : '·'
+	}
+
+	// Literal keys, so the i18n gates can see them.
+	const TOOL_LABEL_KEYS: Record<CanvasTool, string> = {
+		select: 'canvas_ltool.select', pen: 'canvas_ltool.pen', text: 'canvas_ltool.text',
+		sticky: 'canvas_ltool.sticky', rect: 'canvas_ltool.rect', circle: 'canvas_ltool.circle',
+		arrow: 'canvas_ltool.arrow', connector: 'canvas_ltool.connector', image: 'canvas_ltool.image',
+		frame: 'canvas_ltool.frame', shape: 'canvas_ltool.shape', eraser: 'canvas_ltool.eraser',
+	}
+
+	function toolLabel(t?: CanvasTool): string {
+		return t && TOOL_LABEL_KEYS[t] ? tFn(TOOL_LABEL_KEYS[t]) : tFn('canvas_panel.inactive')
 	}
 
 	function initials(name: string) {
@@ -111,7 +123,7 @@
 				<!-- Info -->
 				<div class="peer-info">
 					<span class="peer-name">{peer.username}{peer.userId === userId ? tFn('canvas_panel.you') : ''}</span>
-					<span class="peer-tool">{toolIcon(peer.tool)} {peer.tool ?? tFn('canvas_panel.inactive')}</span>
+					<span class="peer-tool">{toolIcon(peer.tool)} {toolLabel(peer.tool)}</span>
 				</div>
 
 				<!-- Tool color strip -->
