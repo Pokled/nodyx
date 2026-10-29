@@ -67,6 +67,56 @@ exact de ce que posent les installeurs, avec son banc d'essai (#780).
 - nodyx.dev et start.nodyx.org accueillent les moteurs de recherche et les assistants IA :
   `robots.txt`, plan du site multilingue, `llms.txt`, pages françaises et espagnoles enfin
   indexables, données structurées (#816). Vraies images d'aperçu pour les liens partagés (#838).
+- start.nodyx.org refait pour les personnes qui animent une communauté, en anglais et en
+  français, avec uniquement du vrai : chiffres de l'annuaire et de GitHub servis en direct, une
+  vraie photo, plus de démonstration scénarisée (#844). L'accueil de nodyx.dev est réécrit, et la
+  documentation se lit enfin sur téléphone : les 45 pages débordaient à 390 pixels, aucune
+  aujourd'hui (#841, #843).
+- Guide d'installation réécrit dans les trois langues, d'après ce que font réellement
+  `install.sh` et `uninstall.sh` (#842). Page Architecture réécrite d'après le code actuel
+  (#848). Feuille de route mise à jour (#840).
+
+### Interface : chaque page suit l'ambiance, thème clair compris
+
+- **Le chat, le fil d'actu, la liste et la page des membres suivent l'écran Apparence.** Ils
+  avaient chacun leur décor écrit en dur (plus de 230 couleurs fixes pour le chat et le fil) et
+  restaient un bloc noir et violet quelle que soit l'ambiance, y compris au milieu d'un thème
+  clair (#859, #860, #861, #891). Les avatars sans image gardent une lettre lisible sur fond
+  clair (#862).
+- **Une couleur de pseudo ou de canal illisible garde sa teinte.** Le filet de contraste mesure
+  désormais un vrai contraste (3:1) et, au lieu de remplacer la couleur choisie par la couleur
+  par défaut, l'éclaircit ou l'assombrit juste assez : un vert fluo reste vert en thème clair,
+  simplement plus foncé. Il laissait passer un gris à 1,9:1 sur fond sombre (#892).
+- Petits textes lisibles : heures, séparateurs de jours et titres de colonnes passent le seuil de
+  contraste AA (4,5:1) dans le chat, le fil, le profil et la barre du haut. Certains étaient à
+  1,9:1 (#856).
+- Salon vocal : la première personne arrivée ne voit plus une scène vide, mais un mot d'accueil
+  et un bouton pour copier le lien du salon (#857).
+- Les boutons grisés « bientôt », qui ne faisaient rien, sont retirés du profil et du salon
+  vocal en attendant que la fonction existe (#855).
+- Barre du haut : le fil d'Ariane est traduit sur toutes les pages, au lieu du nom technique d'un
+  dossier (« Auth », « Whisper »), et un nom de communauté long ne l'écrase plus jusqu'à une seule
+  lettre ni ne coupe le nom du salon (#853, #858).
+- Fil d'actu : les onglets Découvrir et Abonnements restent collés au bon endroit en défilant
+  (#854).
+- Tableau blanc : l'outil de chaque participant s'affiche traduit au lieu de son nom technique
+  (« pen »), et le français dit « Cadre » et « Aimant » plutôt que « Frame » et « Snap » (#890).
+
+### Sécurité : dépendances
+
+Chaque alerte a été lue une par une pour savoir si Nodyx était réellement exposé, et les
+correctifs qui touchent du code servi sont prouvés par un test qui échoue sur l'ancienne version.
+
+- engine.io 6.6.11, le transport de Socket.IO, ouvert au public (#766).
+- @fastify/busboy 3.2.2 : deux dénis de service sur l'envoi de fichiers, dont une boucle infinie
+  déclenchée par une requête envoyée en deux morceaux (#770).
+- nodemailer 10 dans le cœur et le hub : analyseur d'adresses quadratique (#771).
+- devalue 5.9.4 dans les six applications SvelteKit : fuite de mémoire du processus vers le
+  navigateur, aucune page exposée aujourd'hui (#773). Dernières alertes du cœur, du frontend et
+  du hub fermées (#777).
+- sanitize-html 2.18.1 (récursion sans fin, déni de service), fastify 5.12.7 (validation
+  d'en-têtes contournable) et dix autres mises à jour du cœur (#878). Outils de développement
+  (vite, vitest) à jour dans toutes les applications (#869, #870, #872 à #875, #883).
 
 ### Sécurité : l'IP des visiteurs n'arrivait pas jusqu'à Nodyx (installations standard)
 
@@ -308,6 +358,12 @@ sélecteur de langue enfin traduit lui-même. Une cinquième porte i18n couvre d
 fichiers `.ts`, angle mort des quatre portes précédentes. Fusionner une traduction déploie
 maintenant automatiquement (avant, une traduction mergée pouvait rester invisible plusieurs jours).
 
+Neuvième langue : le **chinois simplifié**, traduit à 100 % (#847, #849). Les navigateurs réglés
+en chinois traditionnel ne le reçoivent pas d'office. Le module Canvas s'appelle désormais
+Tableau blanc (Whiteboard, 白板), sans changer son adresse. Les dates et les nombres suivent
+enfin la langue active : un membre anglais ou chinois lisait « 13 oct. » sur chaque message du
+chat (49 formats écrits en dur en français, dans 26 fichiers, #852).
+
 ### Réseau et sécurité du relais
 
 Le relais écoute en double pile et journalise l'adresse réelle du client derrière le proxy
@@ -357,6 +413,13 @@ découvrir après coup.
   sur trois lignes (#822). Nom de l'instance rogné en tête de barre latérale chez les
   administrateurs (#823). Carte résumé des sondages : type affiché brut et compteur sans nombre
   (#824).
+- Chat : un message supprimé disparaît du fil, en direct et au rechargement, au lieu de laisser
+  une ligne « message supprimé » qui coupait aussi le regroupement des messages de son auteur.
+  Seule la citation d'une réponse qui lui était adressée en garde la trace (#851).
+- Administration : le graphe « Activité · 7 derniers jours » ignorait tout le chat et effaçait
+  les jours sans message de forum, inscriptions comprises. Sur la semaine la plus active de
+  nodyx.org, il montrait une barre au lieu de 214 messages et 10 inscriptions en un jour. Les
+  jours étaient aussi décalés d'un cran sur un serveur qui n'est pas en UTC (#889).
 - Développement : la suite de tests du cœur ne peut plus joindre les vrais services (#813).
 
 ### Exploration (pas encore une décision)

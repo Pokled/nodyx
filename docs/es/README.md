@@ -25,7 +25,7 @@ Foro, chat, voz, pizarra y tu propia página de inicio. Una instalación, en tu 
 
 <img src="../img/vitrine/home.webp" alt="La página de inicio de una comunidad Nodyx: artículos destacados, últimos debates, diseño de revista" width="900"/>
 
-<sub>nodyx.org, la comunidad del proyecto, funcionando con el mismo Nodyx que puedes instalar. La interfaz de las capturas está en francés; Nodyx habla ocho idiomas, español incluido.</sub>
+<sub>nodyx.org, la comunidad del proyecto, funcionando con el mismo Nodyx que puedes instalar. La interfaz de las capturas está en francés; Nodyx habla nueve idiomas, español incluido.</sub>
 
 </div>
 
@@ -103,7 +103,7 @@ La página de inicio la compones tú: filas y columnas sobre una cuadrícula de 
     <td width="50%"><img src="../img/vitrine/profile.webp" alt="Un perfil de miembro con nivel, reputación e intereses"/></td>
   </tr>
   <tr>
-    <td><b>Ocho idiomas, traducidos por la comunidad.</b> Cada idioma es un simple archivo de texto: sin cuenta, sin herramientas, sin plataforma en medio. <a href="https://nodyx.org/translate">Cómo va cada uno, en directo.</a></td>
+    <td><b>Nueve idiomas, traducidos por la comunidad.</b> Cada idioma es un simple archivo de texto: sin cuenta, sin herramientas, sin plataforma en medio. <a href="https://nodyx.org/translate">Cómo va cada uno, en directo.</a></td>
     <td><b>Perfiles que cuentan algo.</b> Nivel, reputación, intereses, presencia: un miembro es más que un nombre de usuario.</td>
   </tr>
 </table>
@@ -240,7 +240,7 @@ Nodyx nació el 18 de febrero de 2026 y desde entonces ha publicado doce version
 
 Nodyx pertenece a su comunidad. Lee [CONTRIBUTING.md](./CONTRIBUTING.md), echa un vistazo a las [issues](https://github.com/Pokled/Nodyx/issues) o abre una [discusión](https://github.com/Pokled/Nodyx/discussions). La documentación y las ideas (`docs/`, `docs/ideas/`) están abiertas a todo el mundo sin pedir permiso; un cambio en el núcleo empieza con una issue.
 
-**Traducir Nodyx.** El francés y el inglés están completos, el portugués de Brasil casi, y otros cinco idiomas van en camino, el español entre ellos. Elige el tuyo en [nodyx.org/translate](https://nodyx.org/translate), completa las líneas que faltan en un archivo JSON y abre una pull request. La CI comprueba cada variable, así que una traducción no puede romper la aplicación.
+**Traducir Nodyx.** El francés, el inglés y el chino simplificado están completos, el portugués de Brasil casi, y otros cinco idiomas van en camino, el español entre ellos. Elige el tuyo en [nodyx.org/translate](https://nodyx.org/translate), completa las líneas que faltan en un archivo JSON y abre una pull request. La CI comprueba cada variable, así que una traducción no puede romper la aplicación.
 
 ### Las Nodyx Stars
 

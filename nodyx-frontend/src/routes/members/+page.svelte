@@ -2,6 +2,7 @@
 	import type { PageData } from './$types'
 	import type { FullMember } from './+page.server'
 	import { t } from '$lib/i18n'
+	import { contrastSafeColor, isDarkTheme } from '$lib/theme'
 
 	const tFn = $derived($t)
 
@@ -63,6 +64,7 @@
 
 <svelte:head><title>{tFn('members.page_title')}</title></svelte:head>
 
+<div class="mb-root" style="--mb-danger: {$isDarkTheme ? '#fca5a5' : '#b91c1c'}">
 <div class="mb-page">
 	<header class="mb-header">
 		<div class="mb-header-title">
@@ -130,6 +132,7 @@
 		{/if}
 	{/if}
 </div>
+</div>
 
 {#snippet row(m: FullMember)}
 	<li class="mb-row">
@@ -149,12 +152,12 @@
 				<div class="mb-row-line1">
 					<span
 						class="mb-display"
-						style={m.name_color ? `color: ${m.name_color}` : ''}
+						style={m.name_color ? `color: ${contrastSafeColor(m.name_color, 'var(--nx-text)', $isDarkTheme)}` : ''}
 					>{m.display_name || m.username}</span>
 					{#if m.grade_name}
 						<span
 							class="mb-grade"
-							style={m.grade_color ? `color: ${m.grade_color}; border-color: ${m.grade_color}55` : ''}
+							style={m.grade_color ? `color: ${contrastSafeColor(m.grade_color, 'var(--nx-header-accent)', $isDarkTheme)}; border-color: ${m.grade_color}55` : ''}
 						>{m.grade_name}</span>
 					{:else if roleLabels[m.role] && m.role !== 'member'}
 						<span class="mb-grade mb-grade--role">{tFn('members.role_' + m.role)}</span>
@@ -177,6 +180,12 @@
 
 <style>
 	/* Style Nodyx : peu de radius, lignes droites, mono pour technique */
+	/* La page pose son propre fond : la feuille du gabarit reste sombre en
+	   thème clair tant qu'une page n'est pas migrée (lib/shellTheme.ts). */
+	.mb-root {
+		min-height: 100%;
+		background: var(--nx-sheet-bg, var(--nx-bg));
+	}
 	.mb-page {
 		max-width: 880px;
 		margin: 0 auto;
@@ -189,13 +198,13 @@
 		gap: 14px;
 		margin-bottom: 18px;
 		padding-bottom: 14px;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 	}
 	.mb-header-title { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 	.mb-title {
 		font-size: 22px;
 		font-weight: 700;
-		color: #f1f5f9;
+		color: var(--nx-text);
 		margin: 0;
 		font-family: 'Space Grotesk', system-ui, sans-serif;
 		letter-spacing: -0.01em;
@@ -208,9 +217,9 @@
 		font-size: 12px;
 	}
 	.mb-count { display: inline-flex; gap: 4px; }
-	.mb-count-num { color: #e2e8f0; font-weight: 600; }
-	.mb-count-label { color: #475569; }
-	.mb-count-sep { color: #334155; }
+	.mb-count-num { color: var(--nx-text); font-weight: 600; }
+	.mb-count-label { color: var(--nx-text-muted); }
+	.mb-count-sep { color: color-mix(in srgb, var(--nx-text) 25%, transparent); }
 
 	.mb-controls {
 		display: flex;
@@ -225,32 +234,32 @@
 		align-items: center;
 		gap: 8px;
 		padding: 7px 10px;
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.06);
+		background: color-mix(in srgb, var(--nx-text) 3%, transparent);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 		border-radius: 4px;
 	}
 	.mb-search:focus-within {
 		border-color: rgb(var(--nx-accent-rgb) / 0.35);
 		background: rgb(var(--nx-accent-rgb) / 0.04);
 	}
-	.mb-search-icon { width: 14px; height: 14px; color: #475569; flex-shrink: 0; }
+	.mb-search-icon { width: 14px; height: 14px; color: var(--nx-text-muted); flex-shrink: 0; }
 	.mb-search-input {
 		flex: 1;
 		background: transparent;
 		border: none;
 		outline: none;
-		color: #e2e8f0;
+		color: var(--nx-text);
 		font-size: 13px;
 		font-family: inherit;
 	}
-	.mb-search-input::placeholder { color: #475569; }
+	.mb-search-input::placeholder { color: var(--nx-text-muted); }
 
 	.mb-sort {
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.06);
+		background: color-mix(in srgb, var(--nx-text) 3%, transparent);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 		border-radius: 4px;
 		padding: 7px 10px;
-		color: #cbd5e1;
+		color: var(--nx-text);
 		font-size: 12px;
 		font-family: inherit;
 		cursor: pointer;
@@ -262,23 +271,23 @@
 		align-items: center;
 		gap: 6px;
 		padding: 7px 10px;
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.06);
+		background: color-mix(in srgb, var(--nx-text) 3%, transparent);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 		border-radius: 4px;
 		font-size: 12px;
-		color: #94a3b8;
+		color: var(--nx-text-muted);
 		cursor: pointer;
 		user-select: none;
 	}
 	.mb-toggle input { accent-color: var(--nx-accent); }
-	.mb-toggle:hover { color: #cbd5e1; }
+	.mb-toggle:hover { color: var(--nx-text); }
 
 	.mb-section-label {
 		font-size: 10px;
 		text-transform: uppercase;
 		letter-spacing: 0.12em;
 		font-family: ui-monospace, SFMono-Regular, monospace;
-		color: #475569;
+		color: var(--nx-text-muted);
 		margin: 14px 0 8px;
 		padding-left: 4px;
 	}
@@ -289,13 +298,13 @@
 		margin: 0;
 		display: flex;
 		flex-direction: column;
-		border: 1px solid rgba(255, 255, 255, 0.05);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent);
 		border-radius: 4px;
 		overflow: hidden;
-		background: rgba(255, 255, 255, 0.01);
+		background: color-mix(in srgb, var(--nx-text) 1.5%, transparent);
 	}
 	.mb-row { padding: 0; }
-	.mb-row + .mb-row { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+	.mb-row + .mb-row { border-top: 1px solid color-mix(in srgb, var(--nx-text) 4%, transparent); }
 	.mb-row-link {
 		display: flex;
 		align-items: center;
@@ -305,7 +314,7 @@
 		color: inherit;
 		transition: background .1s linear;
 	}
-	.mb-row-link:hover { background: rgba(255, 255, 255, 0.03); }
+	.mb-row-link:hover { background: color-mix(in srgb, var(--nx-text) 3%, transparent); }
 
 	.mb-avatar-wrap { position: relative; flex-shrink: 0; }
 	.mb-avatar {
@@ -320,7 +329,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: #a5b4fc;
+		color: var(--nx-header-accent);
 		font-weight: 700;
 		font-size: 15px;
 		font-family: 'Space Grotesk', sans-serif;
@@ -333,7 +342,7 @@
 		height: 9px;
 		border-radius: 50%;
 		background: #22c55e;
-		box-shadow: 0 0 0 2px #0a0a0f;
+		box-shadow: 0 0 0 2px var(--nx-sheet-bg, var(--nx-bg));
 	}
 
 	.mb-row-info {
@@ -352,7 +361,7 @@
 	.mb-display {
 		font-size: 14px;
 		font-weight: 600;
-		color: #e2e8f0;
+		color: var(--nx-text);
 		overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 	}
 	.mb-grade {
@@ -363,13 +372,13 @@
 		letter-spacing: 0.04em;
 		padding: 2px 6px;
 		border: 1px solid rgb(var(--nx-accent-rgb) / 0.3);
-		color: #a5b4fc;
+		color: var(--nx-header-accent);
 		border-radius: 3px;
 		font-family: ui-monospace, SFMono-Regular, monospace;
 	}
 	.mb-grade--role {
-		border-color: rgba(148, 163, 184, 0.3);
-		color: #94a3b8;
+		border-color: color-mix(in srgb, var(--nx-text-muted) 35%, transparent);
+		color: var(--nx-text-muted);
 	}
 
 	.mb-row-line2 {
@@ -377,27 +386,27 @@
 		gap: 6px;
 		font-family: ui-monospace, SFMono-Regular, monospace;
 		font-size: 11px;
-		color: #475569;
+		color: var(--nx-text-muted);
 	}
-	.mb-user { color: #64748b; }
-	.mb-sep  { color: #334155; }
+	.mb-user { color: var(--nx-text-muted); }
+	.mb-sep  { color: color-mix(in srgb, var(--nx-text) 25%, transparent); }
 
 	.mb-row-meta {
 		flex-shrink: 0;
 		font-family: ui-monospace, SFMono-Regular, monospace;
 		font-size: 11px;
 	}
-	.mb-points-num { color: #cbd5e1; font-weight: 600; }
-	.mb-points-label { color: #475569; margin-left: 3px; }
+	.mb-points-num { color: var(--nx-text); font-weight: 600; }
+	.mb-points-label { color: var(--nx-text-muted); margin-left: 3px; }
 
 	.mb-empty {
 		padding: 32px 16px;
 		text-align: center;
-		color: #475569;
+		color: var(--nx-text-muted);
 		font-size: 13px;
 		font-family: ui-monospace, SFMono-Regular, monospace;
-		border: 1px dashed rgba(255, 255, 255, 0.06);
+		border: 1px dashed color-mix(in srgb, var(--nx-text) 6%, transparent);
 		border-radius: 4px;
 	}
-	.mb-empty--error { color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
+	.mb-empty--error { color: var(--mb-danger); border-color: rgba(239, 68, 68, 0.3); }
 </style>

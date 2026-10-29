@@ -122,6 +122,41 @@ describe('GET /api/v1/admin/stats', () => {
     expect(Array.isArray(body.activity_last_7_days)).toBe(true)
     expect(Array.isArray(body.top_contributors)).toBe(true)
   })
+
+  it('activity counts chat, keeps every day, and returns the day as text', async () => {
+    const week = [
+      { day: '2026-05-05', posts: 0, chat_messages: 3,   new_members: 1 },
+      { day: '2026-05-06', posts: 0, chat_messages: 6,   new_members: 1 },
+      { day: '2026-05-07', posts: 1, chat_messages: 0,   new_members: 0 },
+      { day: '2026-05-08', posts: 0, chat_messages: 214, new_members: 10 },
+      { day: '2026-05-09', posts: 0, chat_messages: 83,  new_members: 1 },
+      { day: '2026-05-10', posts: 0, chat_messages: 2,   new_members: 0 },
+      { day: '2026-05-11', posts: 0, chat_messages: 0,   new_members: 0 },
+    ]
+    vi.mocked(db.query).mockImplementation((sql: any) => {
+      const q = String(sql)
+      if (q.includes('generate_series')) return Promise.resolve({ rows: week, rowCount: 7 } as any)
+      if (q.includes('FROM communities')) return Promise.resolve({ rows: [{ id: COMMUNITY_UUID }], rowCount: 1 } as any)
+      return Promise.resolve({ rows: [STATS_ROW], rowCount: 1 } as any)
+    })
+
+    const res = await app.inject({
+      method:  'GET',
+      url:     '/api/v1/admin/stats',
+      headers: { Authorization: `Bearer ${makeAdminToken()}` },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body).activity_last_7_days).toEqual(week)
+
+    const activitySql = vi.mocked(db.query).mock.calls
+      .map(c => String(c[0]))
+      .filter(q => q.includes('generate_series'))
+    expect(activitySql).toHaveLength(1)
+    expect(activitySql[0]).toContain('channel_messages')
+    expect(activitySql[0]).toContain('is_deleted = false')
+    expect(activitySql[0]).toContain("to_char(days.day, 'YYYY-MM-DD')")
+    expect(activitySql[0]).toContain('LEFT JOIN m  ON m.day  = days.day')
+  })
 })
 
 // ── Tests — GET /admin/members ────────────────────────────────
