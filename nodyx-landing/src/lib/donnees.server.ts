@@ -6,6 +6,9 @@
 // (l'API GitHub sans jeton plafonne à 60 requêtes par heure). Une source qui ne
 // répond pas garde sa dernière bonne valeur, ou n'affiche simplement rien.
 
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 export interface Communaute {
   nom: string
   url: string
@@ -29,6 +32,23 @@ export interface Donnees {
 }
 
 const DUREE_MS = 15 * 60 * 1000
+
+// La version affichée est celle DÉPLOYÉE, lue dans VERSION (source unique,
+// docs/RELEASE.md), relue à chaque requête : elle change avec le déploiement,
+// sans cache ni redémarrage. Avant, seule l'API GitHub (cache de 15 min, quota
+// partagé par tout le serveur) la donnait : après la sortie de la 2.13.0 il a
+// fallu redémarrer la page à la main, et ce n'était pas la première fois.
+// GitHub reste le repli si le fichier est introuvable.
+function versionDeployee(): string | null {
+  for (const fichier of [process.env.NODYX_VERSION_FILE, resolve(process.cwd(), '../VERSION')]) {
+    if (!fichier) continue
+    try {
+      const v = readFileSync(fichier, 'utf8').trim()
+      if (/^\d+\.\d+\.\d+/.test(v)) return `v${v}`
+    } catch { /* fichier absent : on tente le suivant */ }
+  }
+  return null
+}
 const cache = new Map<string, { quand: number; valeur: unknown }>()
 
 async function lire<T>(cle: string, url: string, extraire: (json: any) => T | null): Promise<T | null> {
@@ -58,7 +78,7 @@ function image(u: unknown, base: string): string | null {
 
 export async function chargerDonnees(): Promise<Donnees> {
   const [version, communautes, langues] = await Promise.all([
-    lire('version', 'https://api.github.com/repos/Pokled/nodyx/releases/latest',
+    versionDeployee() ?? lire('version', 'https://api.github.com/repos/Pokled/nodyx/releases/latest',
       (j) => (typeof j?.tag_name === 'string' ? j.tag_name : null)),
     lire('communautes', 'https://nodyx.org/api/directory', (j) => {
       if (!Array.isArray(j?.instances)) return null
