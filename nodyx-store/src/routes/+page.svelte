@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { translator, type Locale } from '$lib/i18n'
-	let { data } = $props<{ data: {
+	let { data }: { data: {
 		locale: Locale; q: string; category: string | null; total: number;
 		extensions: Array<{ id: string; label: string; description: string; official: boolean;
 			author: { name: string }; categories: string[]; permissions: number; version: string }>
-	} }>()
+	} } = $props()
 	const t = $derived(translator(data.locale))
 </script>
 

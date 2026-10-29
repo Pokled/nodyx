@@ -8,7 +8,7 @@
 	import { translator, type Locale } from '$lib/i18n'
 	import type { RegistryEntry, RegistryVersion } from '$lib/registry'
 
-	let { data } = $props<{ data: { locale: Locale; entry: RegistryEntry & { categories: string[] }; latest: RegistryVersion | null } }>()
+	let { data }: { data: { locale: Locale; entry: RegistryEntry & { categories: string[] }; latest: RegistryVersion | null } } = $props()
 	const t = $derived(translator(data.locale))
 
 	let domain = $state('')
