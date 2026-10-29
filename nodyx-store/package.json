@@ -22,8 +22,8 @@
     "svelte": "^5.56.4",
     "svelte-check": "4.7.1",
     "typescript": "6.0.3",
-    "vite": "^7.3.5",
-    "vitest": "^4.1.11"
+    "vite": "^7.3.7",
+    "vitest": "^4.1.12"
   },
   "overrides": {
     "cookie": "^0.7.2"

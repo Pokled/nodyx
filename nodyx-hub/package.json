@@ -17,7 +17,7 @@
     "better-sqlite3": "^9.6.0",
     "geoip-lite": "^2.0.2",
     "leaflet": "^1.9.4",
-    "nodemailer": "^10.0.13",
+    "nodemailer": "^10.1.4",
     "pg": "^8.11.5"
   },
   "devDependencies": {
@@ -34,7 +34,7 @@
     "svelte-check": "^4.0.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.4.5",
-    "vite": "^8.0.16"
+    "vite": "^8.3.5"
   },
   "overrides": {
     "cookie": "^0.7.2"
