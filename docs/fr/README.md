@@ -103,7 +103,7 @@ La page d'accueil se compose comme vous l'entendez : des lignes et des colonnes 
     <td width="50%"><img src="../img/vitrine/profile.webp" alt="Un profil de membre avec niveau, réputation et centres d'intérêt"/></td>
   </tr>
   <tr>
-    <td><b>Huit langues, traduites par la communauté.</b> Chaque langue tient dans un simple fichier texte : pas de compte, pas d'outil, aucune plateforme au milieu. <a href="https://nodyx.org/translate">L'état de chacune, en direct.</a></td>
+    <td><b>Neuf langues, traduites par la communauté.</b> Chaque langue tient dans un simple fichier texte : pas de compte, pas d'outil, aucune plateforme au milieu. <a href="https://nodyx.org/translate">L'état de chacune, en direct.</a></td>
     <td><b>Des profils qui racontent quelque chose.</b> Niveau, réputation, centres d'intérêt, présence : un membre est plus qu'un pseudo.</td>
   </tr>
 </table>
@@ -240,7 +240,7 @@ Nodyx est né le 18 février 2026 et a livré douze versions depuis : les fondat
 
 Nodyx appartient à sa communauté. Lisez [CONTRIBUTING.md](./CONTRIBUTING.md), parcourez les [tickets](https://github.com/Pokled/Nodyx/issues) ou lancez une [discussion](https://github.com/Pokled/Nodyx/discussions). La documentation et les idées (`docs/`, `docs/ideas/`) sont ouvertes à tous sans demander ; une modification du cœur commence par un ticket.
 
-**Traduire Nodyx.** Le français et l'anglais sont complets, le portugais du Brésil presque, et cinq autres langues sont en route. Choisissez la vôtre sur [nodyx.org/translate](https://nodyx.org/translate), complétez les lignes manquantes d'un fichier JSON, ouvrez une pull request. La CI vérifie chaque variable, une traduction ne peut pas casser l'application.
+**Traduire Nodyx.** Le français, l'anglais et le chinois simplifié sont complets, le portugais du Brésil presque, et cinq autres langues sont en route. Choisissez la vôtre sur [nodyx.org/translate](https://nodyx.org/translate), complétez les lignes manquantes d'un fichier JSON, ouvrez une pull request. La CI vérifie chaque variable, une traduction ne peut pas casser l'application.
 
 ### Les Nodyx Stars
 

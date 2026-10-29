@@ -28,7 +28,7 @@ Forum, chat, voice, whiteboard and your own homepage. One install, on your serve
 
 <img src="docs/img/vitrine/home.webp" alt="The home page of a Nodyx community: featured articles, latest discussions, magazine layout" width="900"/>
 
-<sub>nodyx.org, the project's own community, running the same Nodyx you can install. The screenshots show the French interface; Nodyx speaks eight languages, English included.</sub>
+<sub>nodyx.org, the project's own community, running the same Nodyx you can install. The screenshots show the French interface; Nodyx speaks nine languages, English included.</sub>
 
 </div>
 
@@ -106,7 +106,7 @@ The homepage is yours to compose. Rows and columns on a 12-unit grid, native wid
     <td width="50%"><img src="docs/img/vitrine/profile.webp" alt="A member profile with level, reputation and tags"/></td>
   </tr>
   <tr>
-    <td><b>Eight languages, translated by the community.</b> Each language is one plain text file: no account, no tool, no platform in between. <a href="https://nodyx.org/translate">See where each one stands, live.</a></td>
+    <td><b>Nine languages, translated by the community.</b> Each language is one plain text file: no account, no tool, no platform in between. <a href="https://nodyx.org/translate">See where each one stands, live.</a></td>
     <td><b>Profiles that tell a story.</b> Levels, reputation, tags, presence: a member is more than a username.</td>
   </tr>
 </table>
@@ -243,7 +243,7 @@ Nodyx was born on February 18, 2026 and has shipped twelve versions since: the f
 
 Nodyx belongs to its community. Read [CONTRIBUTING.md](docs/en/CONTRIBUTING.md), browse the [issues](https://github.com/Pokled/Nodyx/issues) or start a [discussion](https://github.com/Pokled/Nodyx/discussions). Documentation and ideas (`docs/`, `docs/ideas/`) are open to everyone without asking first; changes to the core start with an issue.
 
-**Translate Nodyx.** French and English are complete, Brazilian Portuguese is nearly there, and five more languages are under way. Pick yours on [nodyx.org/translate](https://nodyx.org/translate), fill in the missing lines of one JSON file, open a pull request. The CI checks every placeholder, so a translation can't break the app.
+**Translate Nodyx.** French, English and Simplified Chinese are complete, Brazilian Portuguese is nearly there, and five more languages are under way. Pick yours on [nodyx.org/translate](https://nodyx.org/translate), fill in the missing lines of one JSON file, open a pull request. The CI checks every placeholder, so a translation can't break the app.
 
 ### Nodyx Stars
 
