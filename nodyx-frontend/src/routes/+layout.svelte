@@ -568,7 +568,9 @@
 	// page, elle, reste TRANSPARENTE : les réglages de la zone « feuille » posés
 	// sur main par l'écran Apparence (opacité, image, flou) restent visibles.
 	// Une page qui peignait son propre fond les masquait (vieuxlooters, 29/10).
-	const SHEET_THEMED = ['/feed', '/members', '/forum']
+	// main porte aussi .nx-themed : contenu rédigé, éditeur et menus déroulants
+	// de la page suivent le thème (variables --prose-*, variante themed:, app.css).
+	const SHEET_THEMED = ['/feed', '/members', '/forum', '/wiki', '/calendar', '/tasks']
 	const sheetThemed = $derived(SHEET_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/')))
 
 	const showChannelSidebar = $derived(
@@ -905,7 +907,8 @@
 		<main bind:this={mainEl} data-nx-zone="sheet" use:overlayScroll use:editZone={{ zone: page.url.pathname === '/' ? 'home' : 'sheet', label: page.url.pathname === '/' ? tFn('edit.zone_home') : tFn('edit.zone_sheet') }} class="app-shell-main {langView ? 'h-[calc(100dvh-48px)] overflow-hidden' : 'h-full overflow-y-auto overflow-x-hidden'} min-w-0 pb-[var(--bottom-nav-h)]"
 		      class:panel-collapsed={isBanned || !showChannelSidebar || panelCollapsed}
 		      class:members-collapsed={membersCollapsed}
-		      class:sheet-themed={sheetThemed}>
+		      class:sheet-themed={sheetThemed}
+		      class:nx-themed={sheetThemed}>
 
             <!-- ── System announcement banner ─────────────────────────────────── -->
             {#if showAnnouncement && announcement}

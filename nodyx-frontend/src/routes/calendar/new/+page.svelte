@@ -99,18 +99,18 @@
 </svelte:head>
 
 <div class="max-w-3xl mx-auto">
-	<a href="/calendar" class="text-gray-500 hover:text-gray-300 text-sm flex items-center gap-1.5 mb-5">
+	<a href="/calendar" class="text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] text-sm flex items-center gap-1.5 mb-5">
 		<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 		</svg>
 		{tFn('event.back_to_calendar')}
 	</a>
 
-	<h1 class="text-2xl font-bold text-white mb-1">{tFn('event.new_page_title')}</h1>
-	<p class="text-gray-500 text-sm mb-7">{tFn('event.new_sub')}</p>
+	<h1 class="text-2xl font-bold text-[var(--nx-text)] mb-1">{tFn('event.new_page_title')}</h1>
+	<p class="text-[var(--nx-text-muted)] text-sm mb-7">{tFn('event.new_sub')}</p>
 
 	{#if form?.error}
-		<div class="mb-6 rounded-xl border border-red-800/50 bg-red-950/30 px-4 py-3 text-red-300 text-sm">{form.error}</div>
+		<div class="mb-6 rounded-xl border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] bg-red-950/30 px-4 py-3 text-[var(--nx-bad)] text-sm">{form.error}</div>
 	{/if}
 
 	<form method="POST" use:enhance={() => {
@@ -120,29 +120,29 @@
 
 		<!-- ── COVER IMAGE ───────────────────────────────────────────────────── -->
 		<section>
-			<h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Image de couverture</h2>
+			<h2 class="text-sm font-semibold text-[var(--nx-text)] uppercase tracking-wider mb-3">Image de couverture</h2>
 			<div class="relative">
 				<!-- Zone de drop / preview -->
 				<label class="block relative cursor-pointer group">
 					{#if coverPreview}
-						<img src={coverPreview} alt={tFn('event.cover_alt')} class="w-full h-52 object-cover rounded-xl border border-gray-700"/>
+						<img src={coverPreview} alt={tFn('event.cover_alt')} class="w-full h-52 object-cover rounded-xl border border-[var(--nx-border)]"/>
 						<div class="absolute inset-0 bg-black/50 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-							<span class="text-white text-sm">Changer l'image</span>
+							<span class="text-[var(--nx-text)] text-sm">Changer l'image</span>
 						</div>
 					{:else}
-						<div class="w-full h-40 rounded-xl border-2 border-dashed border-gray-700 bg-gray-800/40
+						<div class="w-full h-40 rounded-xl border-2 border-dashed border-[var(--nx-border)] bg-[var(--nx-surface-raised)]/40
 						           flex flex-col items-center justify-center gap-2
-						           group-hover:border-emerald-600/60 group-hover:bg-gray-800/60 transition-all">
+						           group-hover:border-[color-mix(in_srgb,var(--nx-ok)_40%,transparent)] group-hover:bg-[var(--nx-surface-raised)]/60 transition-all">
 							{#if uploadingCover}
-								<svg class="w-6 h-6 animate-spin text-emerald-400" fill="none" viewBox="0 0 24 24">
+								<svg class="w-6 h-6 animate-spin text-[var(--nx-ok)]" fill="none" viewBox="0 0 24 24">
 									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
 									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
 								</svg>
 							{:else}
-								<svg class="w-8 h-8 text-gray-500 group-hover:text-emerald-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+								<svg class="w-8 h-8 text-[var(--nx-text-muted)] group-hover:text-[var(--nx-ok)] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M13.5 12a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM4.5 19.5h15"/>
 								</svg>
-								<span class="text-gray-500 text-xs group-hover:text-gray-300 transition-colors">Cliquez ou glissez une image (PNG, JPG, WebP)</span>
+								<span class="text-[var(--nx-text-muted)] text-xs group-hover:text-[var(--nx-text)] transition-colors">Cliquez ou glissez une image (PNG, JPG, WebP)</span>
 							{/if}
 						</div>
 					{/if}
@@ -155,31 +155,31 @@
 
 		<!-- ── INFORMATIONS ESSENTIELLES ─────────────────────────────────────── -->
 		<section class="space-y-4">
-			<h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Informations</h2>
+			<h2 class="text-sm font-semibold text-[var(--nx-text)] uppercase tracking-wider">Informations</h2>
 
 			<!-- Titre -->
 			<div>
-				<label for="title" class="block text-sm font-medium text-gray-300 mb-1.5">Titre <span class="text-red-400">*</span></label>
+				<label for="title" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Titre <span class="text-[var(--nx-bad)]">*</span></label>
 				<input id="title" name="title" type="text" required
 				       placeholder={tFn('event.title_placeholder')}
-				       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
+				       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
 
 			<!-- Dates -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div>
-					<label for="starts_at" class="block text-sm font-medium text-gray-300 mb-1.5">{tFn('event.field_start')} <span class="text-red-400">*</span></label>
+					<label for="starts_at" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">{tFn('event.field_start')} <span class="text-[var(--nx-bad)]">*</span></label>
 					<input id="starts_at" name="starts_at" type="{isAllDay ? 'date' : 'datetime-local'}" required
 					       value={isAllDay ? defaultStart.slice(0,10) : defaultStart}
-					       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm
+					       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors [color-scheme:dark]"/>
 				</div>
 				<div>
-					<label for="ends_at" class="block text-sm font-medium text-gray-300 mb-1.5">Fin <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
+					<label for="ends_at" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Fin <span class="text-[var(--nx-text-muted)] text-xs font-normal">(optionnel)</span></label>
 					<input id="ends_at" name="ends_at" type="{isAllDay ? 'date' : 'datetime-local'}"
 					       value={isAllDay ? defaultEnd.slice(0,10) : defaultEnd}
-					       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm
+					       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors [color-scheme:dark]"/>
 				</div>
 			</div>
@@ -187,29 +187,29 @@
 			<!-- Checkboxes -->
 			<div class="flex flex-wrap gap-5">
 				<label class="flex items-center gap-2 cursor-pointer select-none">
-					<input type="checkbox" bind:checked={isAllDay} class="w-4 h-4 rounded border-gray-600 accent-emerald-500"/>
+					<input type="checkbox" bind:checked={isAllDay} class="w-4 h-4 rounded border-[var(--nx-border)] accent-emerald-500"/>
 					<input type="hidden" name="is_all_day" value={isAllDay ? 'true' : 'false'}/>
-					<span class="text-sm text-gray-300">{tFn('event.all_day')}</span>
+					<span class="text-sm text-[var(--nx-text)]">{tFn('event.all_day')}</span>
 				</label>
 				<label class="flex items-center gap-2 cursor-pointer select-none">
-					<input type="checkbox" bind:checked={isPublic} class="w-4 h-4 rounded border-gray-600 accent-emerald-500"/>
+					<input type="checkbox" bind:checked={isPublic} class="w-4 h-4 rounded border-[var(--nx-border)] accent-emerald-500"/>
 					<input type="hidden" name="is_public" value={isPublic ? 'true' : 'false'}/>
-					<span class="text-sm text-gray-300">{tFn('event.public')}</span>
+					<span class="text-sm text-[var(--nx-text)]">{tFn('event.public')}</span>
 				</label>
 			</div>
 
 			<!-- Tags -->
 			<div>
-				<label for="tags" class="block text-sm font-medium text-gray-300 mb-1.5">{tFn('event.field_tags')} <span class="text-gray-600 text-xs font-normal">{tFn('event.tags_hint')}</span></label>
+				<label for="tags" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">{tFn('event.field_tags')} <span class="text-[var(--nx-text-muted)] text-xs font-normal">{tFn('event.tags_hint')}</span></label>
 				<input id="tags" name="tags" type="text" placeholder={tFn('cal_form.tags_ph')}
-				       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
+				       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
 		</section>
 
 		<!-- ── DESCRIPTION (NodyxEditor) ─────────────────────────────────────── -->
 		<section>
-			<h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Description</h2>
+			<h2 class="text-sm font-semibold text-[var(--nx-text)] uppercase tracking-wider mb-3">Description</h2>
 			<NodyxEditor
 				name="description"
 				placeholder={tFn('event.desc_placeholder')}
@@ -218,23 +218,23 @@
 
 		<!-- ── LIEU & CARTE ───────────────────────────────────────────────────── -->
 		<section class="space-y-4">
-			<h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Lieu</h2>
+			<h2 class="text-sm font-semibold text-[var(--nx-text)] uppercase tracking-wider">Lieu</h2>
 
 			<div>
-				<label for="location" class="block text-sm font-medium text-gray-300 mb-1.5">Adresse / nom du lieu <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
+				<label for="location" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Adresse / nom du lieu <span class="text-[var(--nx-text-muted)] text-xs font-normal">(optionnel)</span></label>
 				<input id="location" name="location" type="text" bind:value={locationText}
 				       placeholder={tFn('cal_form.location_ph')}
-				       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
+				       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
 
 			<!-- Coordonnées OSM -->
-			<div class="rounded-xl border border-gray-800 bg-gray-900/40 p-4 space-y-3">
+			<div class="rounded-xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/40 p-4 space-y-3">
 				<div class="flex items-center justify-between">
-					<p class="text-xs font-medium text-gray-400">{tFn('event.gps_coords')} <span class="text-gray-600">{tFn('event.gps_display_hint')}</span></p>
+					<p class="text-xs font-medium text-[var(--nx-text-muted)]">{tFn('event.gps_coords')} <span class="text-[var(--nx-text-muted)]">{tFn('event.gps_display_hint')}</span></p>
 					<div class="flex gap-2">
 						<button type="button" onclick={geolocate}
-						        class="text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors flex items-center gap-1">
+						        class="text-xs px-3 py-1.5 rounded-lg border border-[var(--nx-border)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:border-[var(--nx-border)] transition-colors flex items-center gap-1">
 							<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM2 13h2M20 13h2M13 2v2M13 20v2"/>
 							</svg>
@@ -242,7 +242,7 @@
 						</button>
 						{#if locationText}
 							<a href={osmSearchUrl()} target="_blank" rel="noopener"
-							   class="text-xs px-3 py-1.5 rounded-lg border border-emerald-800/40 text-emerald-400 hover:bg-emerald-950/30 transition-colors">
+							   class="text-xs px-3 py-1.5 rounded-lg border border-[color-mix(in_srgb,var(--nx-ok)_40%,transparent)] text-[var(--nx-ok)] hover:bg-emerald-950/30 transition-colors">
 								Chercher sur OSM →
 							</a>
 						{/if}
@@ -251,24 +251,24 @@
 
 				<div class="grid grid-cols-2 gap-3">
 					<div>
-						<label for="new-location-lat" class="block text-xs text-gray-500 mb-1">Latitude</label>
+						<label for="new-location-lat" class="block text-xs text-[var(--nx-text-muted)] mb-1">Latitude</label>
 						<input id="new-location-lat" type="number" name="location_lat" bind:value={lat} step="any"
 						       placeholder="48.8584"
-						       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
+						       class="w-full bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] rounded-lg px-3 py-2 text-[var(--nx-text)] text-sm
 						              focus:outline-none focus:border-emerald-500 transition-colors"/>
 					</div>
 					<div>
-						<label for="new-location-lng" class="block text-xs text-gray-500 mb-1">Longitude</label>
+						<label for="new-location-lng" class="block text-xs text-[var(--nx-text-muted)] mb-1">Longitude</label>
 						<input id="new-location-lng" type="number" name="location_lng" bind:value={lng} step="any"
 						       placeholder="2.2945"
-						       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
+						       class="w-full bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] rounded-lg px-3 py-2 text-[var(--nx-text)] text-sm
 						              focus:outline-none focus:border-emerald-500 transition-colors"/>
 					</div>
 				</div>
 
 				<!-- Preview carte OSM -->
 				{#if osmPreviewUrl()}
-					<div class="rounded-lg overflow-hidden border border-gray-700 h-44">
+					<div class="rounded-lg overflow-hidden border border-[var(--nx-border)] h-44">
 						<iframe
 							src={osmPreviewUrl()}
 							class="w-full h-full border-0"
@@ -277,7 +277,7 @@
 						></iframe>
 					</div>
 				{:else}
-					<p class="text-xs text-gray-600">{tFn('event.gps_hint')}</p>
+					<p class="text-xs text-[var(--nx-text-muted)]">{tFn('event.gps_hint')}</p>
 				{/if}
 			</div>
 		</section>
@@ -285,25 +285,25 @@
 		<!-- ── BILLETTERIE ────────────────────────────────────────────────────── -->
 		<section class="space-y-4">
 			<div class="flex items-center justify-between">
-				<h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Billetterie</h2>
+				<h2 class="text-sm font-semibold text-[var(--nx-text)] uppercase tracking-wider">Billetterie</h2>
 				<label class="flex items-center gap-2 cursor-pointer select-none">
-					<input type="checkbox" bind:checked={hasTicket} class="w-4 h-4 rounded border-gray-600 accent-emerald-500"/>
-					<span class="text-sm text-gray-400">{tFn('event.paid')}</span>
+					<input type="checkbox" bind:checked={hasTicket} class="w-4 h-4 rounded border-[var(--nx-border)] accent-emerald-500"/>
+					<span class="text-sm text-[var(--nx-text-muted)]">{tFn('event.paid')}</span>
 				</label>
 			</div>
 
 			{#if hasTicket}
-				<div class="rounded-xl border border-gray-800 bg-gray-900/40 p-4 space-y-4">
+				<div class="rounded-xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/40 p-4 space-y-4">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<label for="ticket_price" class="block text-sm font-medium text-gray-300 mb-1.5">Prix du billet</label>
+							<label for="ticket_price" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Prix du billet</label>
 							<div class="relative">
 								<input id="ticket_price" name="ticket_price" type="number" min="0" step="0.01"
 								       placeholder="9.90"
-								       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm pr-16
+								       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm pr-16
 								              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 								<select name="ticket_currency" bind:value={currency}
-								        class="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white">
+								        class="absolute right-2 top-1/2 -translate-y-1/2 bg-[var(--nx-border)] border border-[var(--nx-border)] rounded-lg px-2 py-1 text-xs text-[var(--nx-text)]">
 									{#each CURRENCIES as c}
 										<option value={c}>{c}</option>
 									{/each}
@@ -311,41 +311,41 @@
 							</div>
 						</div>
 						<div>
-							<label for="max_att" class="block text-sm font-medium text-gray-300 mb-1.5">Places disponibles <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
+							<label for="max_att" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Places disponibles <span class="text-[var(--nx-text-muted)] text-xs font-normal">(optionnel)</span></label>
 							<input id="max_att" name="max_attendees" type="number" min="1" placeholder={tFn('event.unlimited')}
-							       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm
+							       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm
 							              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 						</div>
 					</div>
 					<div>
-						<label for="ticket_url" class="block text-sm font-medium text-gray-300 mb-1.5">Lien d'achat <span class="text-gray-600 text-xs font-normal">(Eventbrite, HelloAsso, etc.)</span></label>
+						<label for="ticket_url" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Lien d'achat <span class="text-[var(--nx-text-muted)] text-xs font-normal">(Eventbrite, HelloAsso, etc.)</span></label>
 						<input id="ticket_url" name="ticket_url" type="url"
 						       placeholder={tFn('cal_form.url_ph')}
-						       class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm
+						       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] text-sm
 						              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 					</div>
 				</div>
 			{:else}
 				<input type="hidden" name="ticket_price" value=""/>
-				<p class="text-xs text-gray-600">{tFn('event.free_hint')}</p>
+				<p class="text-xs text-[var(--nx-text-muted)]">{tFn('event.free_hint')}</p>
 			{/if}
 		</section>
 
 		<!-- ── RSVP ───────────────────────────────────────────────────────────── -->
 		<section class="space-y-4">
 			<div class="flex items-center justify-between">
-				<h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Participation</h2>
+				<h2 class="text-sm font-semibold text-[var(--nx-text)] uppercase tracking-wider">Participation</h2>
 				<label class="flex items-center gap-2 cursor-pointer select-none">
-					<input type="checkbox" bind:checked={rsvpEnabled} class="w-4 h-4 rounded border-gray-600 accent-emerald-500"/>
+					<input type="checkbox" bind:checked={rsvpEnabled} class="w-4 h-4 rounded border-[var(--nx-border)] accent-emerald-500"/>
 					<input type="hidden" name="rsvp_enabled" value={rsvpEnabled ? 'true' : 'false'}/>
-					<span class="text-sm text-gray-400">Activer les RSVPs</span>
+					<span class="text-sm text-[var(--nx-text-muted)]">Activer les RSVPs</span>
 				</label>
 			</div>
 			{#if rsvpEnabled && !hasTicket}
 				<div>
-					<label for="new-max-att-rsvp" class="block text-sm font-medium text-gray-300 mb-1.5">Places max <span class="text-gray-600 text-xs font-normal">(optionnel)</span></label>
+					<label for="new-max-att-rsvp" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Places max <span class="text-[var(--nx-text-muted)] text-xs font-normal">(optionnel)</span></label>
 					<input id="new-max-att-rsvp" name="max_attendees" type="number" min="1" placeholder={tFn('event.unlimited')}
-					       class="w-36 bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm
+					       class="w-36 bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 				</div>
 			{/if}
@@ -359,7 +359,7 @@
 				{submitting ? tFn('event.creating') : tFn('event.create_event')}
 			</button>
 			<a href="/calendar"
-			   class="px-5 py-3.5 rounded-xl border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors">
+			   class="px-5 py-3.5 rounded-xl border border-[var(--nx-border)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:border-[var(--nx-border)] text-sm transition-colors">
 				{tFn('common.cancel')}
 			</a>
 		</div>

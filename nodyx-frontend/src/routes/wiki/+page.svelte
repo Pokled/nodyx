@@ -138,9 +138,9 @@
 	position: sticky;
 	top: 0;
 	z-index: 20;
-	background: rgba(9, 9, 15, 0.92);
+	background: color-mix(in srgb, var(--nx-surface) 92%, transparent);
 	backdrop-filter: blur(16px);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 	padding: 20px 28px 0;
 }
 
@@ -159,14 +159,14 @@
 .wiki-title {
 	font-size: 1.125rem;
 	font-weight: 700;
-	color: #fff;
+	color: var(--nx-text);
 	margin: 0 0 2px;
 	letter-spacing: -0.01em;
 }
 
 .wiki-subtitle {
 	font-size: 0.75rem;
-	color: rgba(255, 255, 255, 0.35);
+	color: var(--nx-text-muted);
 	margin: 0;
 }
 
@@ -184,11 +184,11 @@
 }
 
 .wiki-search-input {
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: color-mix(in srgb, var(--nx-text) 4%, transparent);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent);
 	border-right: none;
 	padding: 7px 14px;
-	color: #fff;
+	color: var(--nx-text);
 	font-size: 0.8125rem;
 	outline: none;
 	width: 220px;
@@ -196,7 +196,7 @@
 }
 
 .wiki-search-input::placeholder {
-	color: rgba(255, 255, 255, 0.25);
+	color: var(--nx-text-muted);
 }
 
 .wiki-search-input:focus {
@@ -208,16 +208,16 @@
 	align-items: center;
 	justify-content: center;
 	padding: 7px 12px;
-	background: rgba(255, 255, 255, 0.06);
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	color: rgba(255, 255, 255, 0.5);
+	background: color-mix(in srgb, var(--nx-text) 6%, transparent);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent);
+	color: var(--nx-text-muted);
 	cursor: pointer;
 	transition: background 0.15s, color 0.15s;
 }
 
 .wiki-search-btn:hover {
-	background: rgba(255, 255, 255, 0.1);
-	color: #fff;
+	background: color-mix(in srgb, var(--nx-text) 10%, transparent);
+	color: var(--nx-text);
 }
 
 .wiki-new-btn {
@@ -252,7 +252,7 @@
 	padding: 8px 14px;
 	font-size: 0.75rem;
 	font-weight: 500;
-	color: rgba(255, 255, 255, 0.35);
+	color: var(--nx-text-muted);
 	text-decoration: none;
 	border-bottom: 2px solid transparent;
 	transition: color 0.15s, border-color 0.15s;
@@ -260,12 +260,12 @@
 }
 
 .wiki-cat:hover {
-	color: rgba(255, 255, 255, 0.7);
+	color: var(--nx-text-muted);
 }
 
 .wiki-cat--active {
-	color: var(--nx-accent-2-soft);
-	border-bottom-color: var(--nx-accent-2-soft);
+	color: var(--nx-header-accent);
+	border-bottom-color: var(--nx-header-accent);
 }
 
 /* ── Body ───────────────────────────────────────────────────────────────────── */
@@ -278,13 +278,13 @@
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 	gap: 1px;
-	background: rgba(255, 255, 255, 0.05);
-	border: 1px solid rgba(255, 255, 255, 0.05);
+	background: color-mix(in srgb, var(--nx-text) 5%, transparent);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent);
 }
 
 .wiki-card {
 	display: block;
-	background: rgba(9, 9, 15, 1);
+	background: var(--nx-surface);
 	padding: 18px 20px;
 	text-decoration: none;
 	transition: background 0.15s;
@@ -292,11 +292,11 @@
 }
 
 .wiki-card:hover {
-	background: rgba(255, 255, 255, 0.025);
+	background: color-mix(in srgb, var(--nx-text) 2.5%, transparent);
 }
 
 .wiki-card:hover .wiki-card-title {
-	color: var(--nx-accent-2-soft2);
+	color: var(--nx-header-accent);
 }
 
 .wiki-card-cat {
@@ -305,14 +305,14 @@
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-	color: rgba(251, 191, 36, 0.7);
+	color: var(--nx-warn);
 	margin-bottom: 8px;
 }
 
 .wiki-card-title {
 	font-size: 0.875rem;
 	font-weight: 600;
-	color: rgba(255, 255, 255, 0.9);
+	color: var(--nx-text);
 	margin: 0 0 8px;
 	line-height: 1.4;
 	transition: color 0.15s;
@@ -320,7 +320,7 @@
 
 .wiki-card-excerpt {
 	font-size: 0.75rem;
-	color: rgba(255, 255, 255, 0.3);
+	color: var(--nx-text-muted);
 	line-height: 1.5;
 	margin: 0 0 14px;
 	display: -webkit-box;
@@ -336,7 +336,7 @@
 	justify-content: space-between;
 	gap: 8px;
 	font-size: 0.6875rem;
-	color: rgba(255, 255, 255, 0.2);
+	color: var(--nx-text-muted);
 }
 
 .wiki-card-author {
@@ -356,12 +356,12 @@
 	width: 16px;
 	height: 16px;
 	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.08);
+	background: color-mix(in srgb, var(--nx-text) 8%, transparent);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	font-size: 0.5rem;
-	color: rgba(255, 255, 255, 0.4);
+	color: var(--nx-text-muted);
 }
 
 .wiki-card-right {
@@ -394,7 +394,7 @@
 
 .wiki-empty-main {
 	font-size: 0.875rem;
-	color: rgba(255, 255, 255, 0.35);
+	color: var(--nx-text-muted);
 	margin: 0 0 12px;
 }
 
@@ -406,6 +406,6 @@
 }
 
 .wiki-empty-link:hover {
-	color: var(--nx-accent-2-soft2);
+	color: var(--nx-header-accent);
 }
 </style>

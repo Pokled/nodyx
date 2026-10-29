@@ -110,7 +110,11 @@ html, body {
     --nx-on-accent:            #16120c;
   }
 }
-:root[data-theme="dark"] {
+/* .nx-on-dark : contenu posé sur une image ou un voile sombre (titre sur une
+   couverture…) : jetons du mode sombre quel que soit le thème, sinon le thème
+   clair y mettrait du texte foncé. Même bloc que le sombre forcé : synchronisés. */
+:root[data-theme="dark"],
+.nx-on-dark {
   --nx-bg:                #100e0b;
   --nx-surface:           #17140f;
   --nx-surface-raised:    #1e1a14;
