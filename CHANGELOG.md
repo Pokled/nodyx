@@ -78,10 +78,15 @@ exact de ce que posent les installeurs, avec son banc d'essai (#780).
 
 ### Interface : chaque page suit l'ambiance, thème clair compris
 
-- **Le chat, le fil d'actu et la liste des membres suivent l'écran Apparence.** Ils avaient
-  chacun leur décor écrit en dur (plus de 230 couleurs fixes pour le chat et le fil) et restaient
-  un bloc noir et violet quelle que soit l'ambiance, y compris au milieu d'un thème clair (#859,
-  #860, #861). Les avatars sans image gardent une lettre lisible sur fond clair (#862).
+- **Le chat, le fil d'actu, la liste et la page des membres suivent l'écran Apparence.** Ils
+  avaient chacun leur décor écrit en dur (plus de 230 couleurs fixes pour le chat et le fil) et
+  restaient un bloc noir et violet quelle que soit l'ambiance, y compris au milieu d'un thème
+  clair (#859, #860, #861, #891). Les avatars sans image gardent une lettre lisible sur fond
+  clair (#862).
+- **Une couleur de pseudo ou de canal illisible garde sa teinte.** Le filet de contraste mesure
+  désormais un vrai contraste (3:1) et, au lieu de remplacer la couleur choisie par la couleur
+  par défaut, l'éclaircit ou l'assombrit juste assez : un vert fluo reste vert en thème clair,
+  simplement plus foncé. Il laissait passer un gris à 1,9:1 sur fond sombre (#892).
 - Petits textes lisibles : heures, séparateurs de jours et titres de colonnes passent le seuil de
   contraste AA (4,5:1) dans le chat, le fil, le profil et la barre du haut. Certains étaient à
   1,9:1 (#856).
@@ -94,6 +99,8 @@ exact de ce que posent les installeurs, avec son banc d'essai (#780).
   lettre ni ne coupe le nom du salon (#853, #858).
 - Fil d'actu : les onglets Découvrir et Abonnements restent collés au bon endroit en défilant
   (#854).
+- Tableau blanc : l'outil de chaque participant s'affiche traduit au lieu de son nom technique
+  (« pen »), et le français dit « Cadre » et « Aimant » plutôt que « Frame » et « Snap » (#890).
 
 ### Sécurité : dépendances
 
@@ -409,6 +416,10 @@ découvrir après coup.
 - Chat : un message supprimé disparaît du fil, en direct et au rechargement, au lieu de laisser
   une ligne « message supprimé » qui coupait aussi le regroupement des messages de son auteur.
   Seule la citation d'une réponse qui lui était adressée en garde la trace (#851).
+- Administration : le graphe « Activité · 7 derniers jours » ignorait tout le chat et effaçait
+  les jours sans message de forum, inscriptions comprises. Sur la semaine la plus active de
+  nodyx.org, il montrait une barre au lieu de 214 messages et 10 inscriptions en un jour. Les
+  jours sont aussi décalés d'un cran sur un serveur qui n'est pas en UTC (#889).
 - Développement : la suite de tests du cœur ne peut plus joindre les vrais services (#813).
 
 ### Exploration (pas encore une décision)
