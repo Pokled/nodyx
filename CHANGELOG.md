@@ -7,7 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
-Deux mois de travail depuis la 2.12.0, sur plusieurs chantiers en parallèle. Résumé par thème,
+---
+
+## [2.13.0] — 2026-10-29
+
+Deux mois et demi de travail depuis la 2.12.0, sur plusieurs chantiers en parallèle. Résumé par thème,
 pas par commit : le détail de chacun reste dans son historique git et ses PR.
 
 ### Apparence : le contenant flottant et les ambiances
@@ -78,11 +82,21 @@ exact de ce que posent les installeurs, avec son banc d'essai (#780).
 
 ### Interface : chaque page suit l'ambiance, thème clair compris
 
-- **Le chat, le fil d'actu, la liste et la page des membres suivent l'écran Apparence.** Ils
-  avaient chacun leur décor écrit en dur (plus de 230 couleurs fixes pour le chat et le fil) et
-  restaient un bloc noir et violet quelle que soit l'ambiance, y compris au milieu d'un thème
-  clair (#859, #860, #861, #891). Les avatars sans image gardent une lettre lisible sur fond
-  clair (#862).
+- **Le chat, le fil d'actu, les membres, le forum entier, le wiki, l'agenda et les tâches
+  suivent l'écran Apparence.** Ils avaient chacun leur décor écrit en dur (plus de 230 couleurs
+  fixes rien que pour le chat et le fil, environ 650 pour le forum) et restaient un bloc noir et
+  violet quelle que soit l'ambiance, y compris au milieu d'un thème clair (#859, #860, #861,
+  #891, #894, #896). Le forum couvre ses quatre pages et tout ce qu'elles affichent : éditeur,
+  sondages, réactions, cartes de profil, menus déroulants. Le titre posé sur la couverture d'un
+  événement reste lisible sur l'image dans les deux thèmes. Les avatars sans image gardent une
+  lettre lisible sur fond clair (#862).
+- **Les réglages de la feuille restent visibles sur ces pages.** Opacité (effet verre), image et
+  flou réglés dans l'Apparence étaient repeints par la page elle-même : sur vieuxlooters, une
+  feuille réglée à 49 % s'affichait à environ 74 % (#895). Passé le premier écran, le fond clair
+  de la page des membres et du fil s'arrêtait net et la suite défilait sur fond noir (#893).
+- Les badges d'état (épinglé, sans réponse, erreurs, sondages) et les menus déroulants sont
+  lisibles en thème clair : couleurs d'état propres à chaque thème, au lieu de teintes pâles
+  pensées pour le noir (#894).
 - **Une couleur de pseudo ou de canal illisible garde sa teinte.** Le filet de contraste mesure
   désormais un vrai contraste (3:1) et, au lieu de remplacer la couleur choisie par la couleur
   par défaut, l'éclaircit ou l'assombrit juste assez : un vert fluo reste vert en thème clair,
@@ -115,7 +129,9 @@ correctifs qui touchent du code servi sont prouvés par un test qui échoue sur 
   navigateur, aucune page exposée aujourd'hui (#773). Dernières alertes du cœur, du frontend et
   du hub fermées (#777).
 - sanitize-html 2.18.1 (récursion sans fin, déni de service), fastify 5.12.7 (validation
-  d'en-têtes contournable) et dix autres mises à jour du cœur (#878). Outils de développement
+  d'en-têtes contournable) et dix autres mises à jour du cœur (#878). fast-uri 3.1.9 et 4.2.3,
+  qu'utilise fastify pour valider les requêtes : confusion d'hôte et usurpation de schéma dans
+  l'analyse d'adresses (#898). Outils de développement
   (vite, vitest) à jour dans toutes les applications (#869, #870, #872 à #875, #883).
 
 ### Sécurité : l'IP des visiteurs n'arrivait pas jusqu'à Nodyx (installations standard)
@@ -423,6 +439,11 @@ découvrir après coup.
 - Développement : la suite de tests du cœur ne peut plus joindre les vrais services (#813).
 
 ### Exploration (pas encore une décision)
+
+Page d'accueil en thème clair et sombre : l'admin dessine sa grille une fois, sombre ou claire,
+et Nodyx en calculera la version pour l'autre thème par inversion de contraste (luminosité
+inversée, teintes gardées, contraste garanti). Le calcul et ses tests sont prêts (#897), il
+n'est pas encore branché sur l'accueil. Détail dans `SPECS/NODYX_ACCUEIL_THEME_CDC.md`.
 
 Spike de la Phase A du moteur média Rust natif (`str0m`), pour lever le verrou "zéro port ouvert"
 qui touche encore le SFU vocal (mediasoup est ICE-Lite, un auto-hébergeur derrière une box doit
