@@ -1,4 +1,4 @@
-import type { Handle } from '@sveltejs/kit'
+import type { Handle } from '@sveltejs/kit/hooks'
 import { negotiate, isLocale } from '$lib/i18n'
 
 export const handle: Handle = async ({ event, resolve }) => {
