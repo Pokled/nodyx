@@ -419,7 +419,7 @@ découvrir après coup.
 - Administration : le graphe « Activité · 7 derniers jours » ignorait tout le chat et effaçait
   les jours sans message de forum, inscriptions comprises. Sur la semaine la plus active de
   nodyx.org, il montrait une barre au lieu de 214 messages et 10 inscriptions en un jour. Les
-  jours sont aussi décalés d'un cran sur un serveur qui n'est pas en UTC (#889).
+  jours étaient aussi décalés d'un cran sur un serveur qui n'est pas en UTC (#889).
 - Développement : la suite de tests du cœur ne peut plus joindre les vrais services (#813).
 
 ### Exploration (pas encore une décision)
