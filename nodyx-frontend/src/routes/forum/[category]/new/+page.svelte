@@ -77,17 +77,17 @@
 </svelte:head>
 
 <div class="max-w-3xl">
-	<a href="/forum/{finalCategoryId}" class="text-sm text-gray-500 hover:text-gray-300">{tFn('common.back')}</a>
-	<h1 class="mt-2 text-2xl font-bold text-white mb-6">{tFn('forum.create_topic')}</h1>
+	<a href="/forum/{finalCategoryId}" class="text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-text)]">{tFn('common.back')}</a>
+	<h1 class="mt-2 text-2xl font-bold text-[var(--nx-text)] mb-6">{tFn('forum.create_topic')}</h1>
 
 	{#if form?.error}
-		<p class="mb-4 bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
+		<p class="mb-4 bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-4 py-2 text-sm text-[var(--nx-bad)]">
 			{form.code === 'CATEGORY_RESTRICTED' ? tFn('forum.category_restricted') : form.error}
 		</p>
 	{/if}
 
 	{#if noCategory}
-		<p class="mb-4 bg-gray-800 border border-gray-700 px-4 py-3 text-sm text-gray-400">
+		<p class="mb-4 bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-4 py-3 text-sm text-[var(--nx-text-muted)]">
 			{tFn('forum.new_topic_no_category')}
 		</p>
 	{:else}
@@ -104,11 +104,11 @@
 	>
 		<!-- Sélecteur catégorie + sous-catégorie -->
 		<div>
-			<span class="block text-sm text-gray-400 mb-2">{tFn('forum.category')}</span>
+			<span class="block text-sm text-[var(--nx-text-muted)] mb-2">{tFn('forum.category')}</span>
 			<div class="flex flex-wrap gap-2">
 				<select
 					onchange={onParentChange}
-					class="flex-1 min-w-[180px]bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+					class="flex-1 min-w-[180px] bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2 text-[var(--nx-text)] focus:outline-none focus:border-indigo-500"
 				>
 					{#each rootCategories as cat}
 						<option value={cat.id} selected={cat.id === selectedParentId}>{cat.name}</option>
@@ -117,7 +117,7 @@
 				{#if subcategories.length > 0}
 					<select
 						onchange={(e) => selectedSubId = (e.currentTarget as HTMLSelectElement).value || null}
-						class="flex-1 min-w-[180px]bg-gray-800 border border-gray-700 px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+						class="flex-1 min-w-[180px] bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2 text-[var(--nx-text)] focus:outline-none focus:border-indigo-500"
 					>
 						<option value="">{tFn('forum.no_subcategory')}</option>
 						{#each subcategories as sub}
@@ -130,8 +130,8 @@
 		</div>
 
 		<div>
-			<label for="title" class="block text-sm text-gray-400 mb-1">
-				{tFn('forum.title_label')} <span class="text-gray-600 text-xs">{tFn('forum.title_hint')}</span>
+			<label for="title" class="block text-sm text-[var(--nx-text-muted)] mb-1">
+				{tFn('forum.title_label')} <span class="text-[var(--nx-text-muted)] text-xs">{tFn('forum.title_hint')}</span>
 			</label>
 			<input
 				id="title"
@@ -141,12 +141,12 @@
 				minlength="3"
 				maxlength="300"
 				placeholder={tFn('forum.title_placeholder')}
-				class="w-fullbg-gray-800 border border-gray-700 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+				class="w-full bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2 text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-500"
 			/>
 		</div>
 
 		<div>
-			<span class="block text-sm text-gray-400 mb-2">{tFn('forum.message_label')}</span>
+			<span class="block text-sm text-[var(--nx-text-muted)] mb-2">{tFn('forum.message_label')}</span>
 			<NodyxEditor
 				name="content"
 				placeholder={tFn('forum.message_placeholder')}
@@ -156,8 +156,8 @@
 		<!-- Tags multi-select -->
 		{#if tags.length > 0}
 			<div>
-				<span class="block text-sm text-gray-400 mb-2">
-					Tags <span class="text-gray-600 text-xs">(optionnel, max 5)</span>
+				<span class="block text-sm text-[var(--nx-text-muted)] mb-2">
+					Tags <span class="text-[var(--nx-text-muted)] text-xs">(optionnel, max 5)</span>
 				</span>
 				<div class="flex flex-wrap gap-2">
 					{#each tags as tag}
@@ -188,24 +188,24 @@
 				<button
 					type="button"
 					onclick={() => showPollSection = true}
-					class="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 text-sm text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors"
+					class="flex items-center gap-2 px-3 py-2 border border-dashed border-[var(--nx-border)] text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] hover:border-indigo-700 transition-colors"
 				>
 					<span>📊</span>
-					<span>{tFn('forum.attach_poll')} <span class="text-gray-600 text-xs">{tFn('common.optional')}</span></span>
+					<span>{tFn('forum.attach_poll')} <span class="text-[var(--nx-text-muted)] text-xs">{tFn('common.optional')}</span></span>
 				</button>
 			{:else}
-				<div class="border border-indigo-900/50 bg-gray-900/50 p-4">
+				<div class="border border-indigo-900/50 bg-[var(--nx-surface)]/50 p-4">
 					<div class="flex items-center justify-between mb-3">
-						<span class="text-sm font-medium text-indigo-300">{tFn('forum.poll_attached')}</span>
+						<span class="text-sm font-medium text-[var(--nx-header-accent)]">{tFn('forum.poll_attached')}</span>
 						{#if pollConfig}
 							<div class="flex items-center gap-2">
-								<span class="text-xs text-green-400">{tFn('forum.poll_configured')}</span>
+								<span class="text-xs text-[var(--nx-ok)]">{tFn('forum.poll_configured')}</span>
 								<button type="button" onclick={() => { pollConfig = null; showPollSection = false; }}
-									class="text-xs text-gray-500 hover:text-red-400 transition-colors">Retirer</button>
+									class="text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] transition-colors">Retirer</button>
 							</div>
 						{:else}
 							<button type="button" onclick={() => showPollSection = false}
-								class="text-xs text-gray-500 hover:text-gray-300 transition-colors">{tFn('common.cancel')}</button>
+								class="text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] transition-colors">{tFn('common.cancel')}</button>
 						{/if}
 					</div>
 					{#if !pollConfig}
@@ -216,12 +216,12 @@
 							onClose={() => showPollSection = false}
 						/>
 					{:else}
-						<div class="text-sm text-gray-400">
-							<span class="font-medium text-white">{pollConfig.title}</span>
-							<span class="ml-2 text-gray-600">·</span>
+						<div class="text-sm text-[var(--nx-text-muted)]">
+							<span class="font-medium text-[var(--nx-text)]">{pollConfig.title}</span>
+							<span class="ml-2 text-[var(--nx-text-muted)]">·</span>
 							<span class="ml-2">{tFn('forum.poll_n_options', { n: String(pollConfig.options.length) })}</span>
 							<button type="button" onclick={() => pollConfig = null}
-								class="ml-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">{tFn('common.edit')}</button>
+								class="ml-3 text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)] transition-colors">{tFn('common.edit')}</button>
 						</div>
 					{/if}
 				</div>
@@ -239,7 +239,7 @@
 			>
 				{submitting ? tFn('common.publishing') : tFn('forum.publish_topic')}
 			</button>
-			<a href="/forum/{finalCategoryId}" class="bg-red-900/50 hover:bg-red-800/60 border border-red-700/50 hover:border-red-600 px-5 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-colors">{tFn('common.cancel')}</a>
+			<a href="/forum/{finalCategoryId}" class="bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] hover:bg-[color-mix(in_srgb,var(--nx-bad)_18%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] hover:border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-5 py-2 text-sm font-semibold text-[var(--nx-bad)] hover:text-[var(--nx-bad)] transition-colors">{tFn('common.cancel')}</a>
 		</div>
 	</form>
 	{/if}

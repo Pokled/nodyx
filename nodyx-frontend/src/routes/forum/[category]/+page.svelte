@@ -268,7 +268,7 @@
 <!-- `p-5` sur mobile : `p-8` seul mangeait 64px de rembourrage horizontal
      sur un ecran de 390px, et le contenu de l'en-tete (fil d'Ariane, titre,
      pastilles de statistiques) se faisait couper de 80px. -->
-<div class="relative mb-8 overflow-hidden border border-white/[.06] bg-gradient-to-br from-gray-900 via-gray-900 to-indigo-950/30 p-5 sm:p-8">
+<div class="relative mb-8 overflow-hidden border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-gradient-to-br from-[var(--nx-surface)] via-[var(--nx-surface)] to-[rgb(var(--nx-accent-rgb)/0.08)] p-5 sm:p-8">
 	<!-- Effets de lumière -->
 	<div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
 	<div class="absolute -top-20 -right-20 w-80 h-80 bg-indigo-600/10 blur-3xl"></div>
@@ -287,31 +287,31 @@
 			<div>
 				<!-- Fil d'Ariane -->
 				<div class="flex items-center gap-2 mb-2">
-					<a href="/" class="text-sm text-gray-500 hover:text-indigo-400 transition-colors">{tFn('nav.home')}</a>
-					<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<a href="/" class="text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] transition-colors">{tFn('nav.home')}</a>
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-[var(--nx-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
 					</svg>
-					<span class="text-sm font-medium text-indigo-400">{categoryName}</span>
+					<span class="text-sm font-medium text-[var(--nx-header-accent)]">{categoryName}</span>
 				</div>
 
-				<h1 class="text-2xl sm:text-4xl font-bold text-white tracking-tight mb-2">{categoryName}</h1>
+				<h1 class="text-2xl sm:text-4xl font-bold text-[var(--nx-text)] tracking-tight mb-2">{categoryName}</h1>
 
 				<!-- Stats de la catégorie -->
 				<div class="flex flex-wrap items-center gap-4 mt-4">
-					<div class="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 border border-gray-700">
-						<span class="text-xs text-gray-400">{tFn('forum.total')}</span>
-						<span class="text-sm font-bold text-white">{categoryStats.total}</span>
+					<div class="flex items-center gap-2 px-3 py-1.5 bg-[var(--nx-surface-raised)]/60 border border-[var(--nx-border)]">
+						<span class="text-xs text-[var(--nx-text-muted)]">{tFn('forum.total')}</span>
+						<span class="text-sm font-bold text-[var(--nx-text)]">{categoryStats.total}</span>
 					</div>
 					{#if categoryStats.pinned > 0}
-						<div class="flex items-center gap-2 px-3 py-1.5 bg-indigo-900/20 border border-indigo-800/50">
-							<span class="text-xs text-indigo-400">{tFn('forum.pinned_stat')}</span>
-							<span class="text-sm font-bold text-indigo-400">{categoryStats.pinned}</span>
+						<div class="flex items-center gap-2 px-3 py-1.5 bg-[rgb(var(--nx-accent-rgb)/0.08)] border border-indigo-800/50">
+							<span class="text-xs text-[var(--nx-header-accent)]">{tFn('forum.pinned_stat')}</span>
+							<span class="text-sm font-bold text-[var(--nx-header-accent)]">{categoryStats.pinned}</span>
 						</div>
 					{/if}
 					{#if categoryStats.unanswered > 0}
-						<div class="flex items-center gap-2 px-3 py-1.5 bg-yellow-900/20 border border-yellow-800/50">
-							<span class="text-xs text-yellow-400">{tFn('forum.unanswered_stat')}</span>
-							<span class="text-sm font-bold text-yellow-400">{categoryStats.unanswered}</span>
+						<div class="flex items-center gap-2 px-3 py-1.5 bg-[color-mix(in_srgb,var(--nx-warn)_10%,transparent)] border border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)]">
+							<span class="text-xs text-[var(--nx-warn)]">{tFn('forum.unanswered_stat')}</span>
+							<span class="text-sm font-bold text-[var(--nx-warn)]">{categoryStats.unanswered}</span>
 						</div>
 					{/if}
 				</div>
@@ -323,34 +323,34 @@
 <!-- SOUS-CATÉGORIES -->
 {#if subcategories.length > 0}
 	<div class="mb-6">
-		<h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{tFn('forum.subcategories')}</h2>
+		<h2 class="text-xs font-semibold text-[var(--nx-text-muted)] uppercase tracking-wider mb-3">{tFn('forum.subcategories')}</h2>
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 			{#each subcategories as sub}
 				<a
 					href="/forum/{sub.slug ?? sub.id}"
-					class="flex items-start gap-3 border border-gray-800 bg-gray-900/60
-					       px-4 py-3.5 hover:border-indigo-700/60 hover:bg-gray-900
+					class="flex items-start gap-3 border border-[var(--nx-border)] bg-[var(--nx-surface)]/60
+					       px-4 py-3.5 hover:border-indigo-700/60 hover:bg-[var(--nx-surface)]
 					       transition-all group"
 				>
 					<div class="mt-0.5 w-8 h-8 bg-indigo-600/15 border border-indigo-600/20
-					            flex items-center justify-center flex-shrink-0 text-indigo-400
+					            flex items-center justify-center flex-shrink-0 text-[var(--nx-header-accent)]
 					            group-hover:bg-indigo-600/25 transition-colors">
 						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
 						</svg>
 					</div>
 					<div class="flex-1 min-w-0">
-						<p class="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors truncate">
+						<p class="text-sm font-semibold text-[var(--nx-text)] group-hover:text-[var(--nx-header-accent)] transition-colors truncate">
 							{sub.name}
 						</p>
 						{#if sub.description}
-							<p class="text-xs text-gray-500 mt-0.5 line-clamp-1">{sub.description}</p>
+							<p class="text-xs text-[var(--nx-text-muted)] mt-0.5 line-clamp-1">{sub.description}</p>
 						{/if}
 						{#if sub.thread_count > 0}
-							<p class="text-xs text-gray-600 mt-1">{sub.thread_count} {tFn('common.topics').toLowerCase()}</p>
+							<p class="text-xs text-[var(--nx-text-muted)] mt-1">{sub.thread_count} {tFn('common.topics').toLowerCase()}</p>
 						{/if}
 					</div>
-					<svg class="w-4 h-4 text-gray-700 group-hover:text-indigo-500 transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<svg class="w-4 h-4 text-[var(--nx-text-muted)] group-hover:text-indigo-500 transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
 					</svg>
 				</a>
@@ -370,18 +370,18 @@
 				type="text"
 				placeholder={tFn('forum.search_placeholder')}
 				bind:value={searchQuery}
-				class="w-full pl-10 pr-4 py-2.5 bg-gray-800/80 border border-gray-700
-					   text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500
+				class="w-full pl-10 pr-4 py-2.5 bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)]
+					   text-sm text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-500
 					   transition-colors"
 			/>
-			<svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+			<svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--nx-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 			</svg>
 			{#if searchQuery}
 				<button
 					onclick={() => searchQuery = ''}
 					aria-label={tFn('forum.clear_search_aria')}
-					class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-400"
+					class="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--nx-text-muted)] hover:text-[var(--nx-text-muted)]"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -394,15 +394,15 @@
 		<div class="flex items-center gap-3 text-xs">
 			<div class="flex items-center gap-1.5">
 				<span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-				<span class="text-gray-500">{tFn('forum.legend_active')}</span>
+				<span class="text-[var(--nx-text-muted)]">{tFn('forum.legend_active')}</span>
 			</div>
 			<div class="flex items-center gap-1.5">
 				<span class="w-2 h-2 rounded-full bg-yellow-500"></span>
-				<span class="text-gray-500">{tFn('common.pinned')}</span>
+				<span class="text-[var(--nx-text-muted)]">{tFn('common.pinned')}</span>
 			</div>
 			<div class="flex items-center gap-1.5">
 				<span class="w-2 h-2 rounded-full bg-green-500"></span>
-				<span class="text-gray-500">{tFn('forum.legend_new')}</span>
+				<span class="text-[var(--nx-text-muted)]">{tFn('forum.legend_new')}</span>
 			</div>
 		</div>
 	</div>
@@ -413,8 +413,8 @@
 		<div class="relative" bind:this={filterButtonRef}>
 			<button
 				onclick={() => filterDropdownOpen = !filterDropdownOpen}
-				class="flex items-center gap-2 px-4 py-2 bg-gray-800/80 border border-gray-700
-					   text-gray-300 hover:text-white hover:border-indigo-500/50 transition-all duration-200"
+				class="flex items-center gap-2 px-4 py-2 bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)]
+					   text-[var(--nx-text)] hover:text-[var(--nx-text)] hover:border-indigo-500/50 transition-all duration-200"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -422,16 +422,16 @@
 				<span class="text-sm hidden sm:inline">{tFn('forum.filter_label_full', { label: filterLabels[filterBy] })}</span>
 				<span class="text-sm sm:hidden">{tFn('forum.filter_label_short')}</span>
 				{#if filterBy !== 'all'}
-					<span class="ml-1 px-1.5 py-0.5 bg-indigo-600/30 text-indigo-400 text-xs">{filteredThreads.length}</span>
+					<span class="ml-1 px-1.5 py-0.5 bg-indigo-600/30 text-[var(--nx-header-accent)] text-xs">{filteredThreads.length}</span>
 				{/if}
-				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1 text-gray-500 transition-transform duration-200 {filterDropdownOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1 text-[var(--nx-text-muted)] transition-transform duration-200 {filterDropdownOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
 				</svg>
 			</button>
 
 			{#if filterDropdownOpen}
 				<div
-					class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-gray-900 border border-gray-700 shadow-2xl shadow-indigo-500/10 overflow-hidden z-50"
+					class="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-[var(--nx-surface)] border border-[var(--nx-border)] shadow-2xl shadow-indigo-500/10 overflow-hidden z-50"
 					transition:fly={{ y: -10, duration: 200 }}
 				>
 					<div class="py-1">
@@ -443,18 +443,18 @@
 								}}
 								class="w-full text-left px-4 py-3 text-sm transition-colors
 									   {filterBy === value 
-										   ? 'bg-indigo-600/20 text-indigo-400 border-l-2 border-indigo-500' 
-										   : 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+										   ? 'bg-indigo-600/20 text-[var(--nx-header-accent)] border-l-2 border-indigo-500' 
+										   : 'text-[var(--nx-text)] hover:bg-[var(--nx-surface-raised)] hover:text-[var(--nx-text)]'}"
 							>
 								<div class="flex items-center justify-between">
 									<span>{label}</span>
 									{#if filterBy === value}
-										<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[var(--nx-header-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 										</svg>
 									{/if}
 								</div>
-								<span class="block text-[10px] text-gray-600 mt-0.5">
+								<span class="block text-[10px] text-[var(--nx-text-muted)] mt-0.5">
 									{value === 'all' ? tFn('forum.filter_all') :
 									 value === 'pinned' ? tFn('forum.filter_pinned') :
 									 value === 'unanswered' ? tFn('forum.filter_unanswered') :
@@ -472,22 +472,22 @@
 		<div class="relative" bind:this={sortButtonRef}>
 			<button
 				onclick={() => sortDropdownOpen = !sortDropdownOpen}
-				class="flex items-center gap-2 px-4 py-2 bg-gray-800/80 border border-gray-700
-					   text-gray-300 hover:text-white hover:border-indigo-500/50 transition-all duration-200"
+				class="flex items-center gap-2 px-4 py-2 bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)]
+					   text-[var(--nx-text)] hover:text-[var(--nx-text)] hover:border-indigo-500/50 transition-all duration-200"
 			>
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0h4m-4-4v12m0 0l-4-4m4 4l4-4" />
 				</svg>
 				<span class="text-sm hidden sm:inline">{tFn('forum.sort_label_full', { label: sortLabels[sortBy] })}</span>
 				<span class="text-sm sm:hidden">{tFn('forum.sort_label_short')}</span>
-				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1 text-gray-500 transition-transform duration-200 {sortDropdownOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1 text-[var(--nx-text-muted)] transition-transform duration-200 {sortDropdownOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
 				</svg>
 			</button>
 
 			{#if sortDropdownOpen}
 				<div
-					class="absolute right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-gray-900 border border-gray-700 shadow-2xl shadow-indigo-500/10 overflow-hidden z-50"
+					class="absolute right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-[var(--nx-surface)] border border-[var(--nx-border)] shadow-2xl shadow-indigo-500/10 overflow-hidden z-50"
 					transition:fly={{ y: -10, duration: 200 }}
 				>
 					<div class="py-1">
@@ -499,18 +499,18 @@
 								}}
 								class="w-full text-left px-4 py-3 text-sm transition-colors
 									   {sortBy === value 
-										   ? 'bg-indigo-600/20 text-indigo-400 border-l-2 border-indigo-500' 
-										   : 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+										   ? 'bg-indigo-600/20 text-[var(--nx-header-accent)] border-l-2 border-indigo-500' 
+										   : 'text-[var(--nx-text)] hover:bg-[var(--nx-surface-raised)] hover:text-[var(--nx-text)]'}"
 							>
 								<div class="flex items-center justify-between">
 									<span>{label}</span>
 									{#if sortBy === value}
-										<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[var(--nx-header-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 										</svg>
 									{/if}
 								</div>
-								<span class="block text-[10px] text-gray-600 mt-0.5">
+								<span class="block text-[10px] text-[var(--nx-text-muted)] mt-0.5">
 									{value === 'recent' ? tFn('forum.sort_created') :
 									 value === 'popular' ? tFn('forum.sort_replies') :
 									 value === 'views' ? tFn('forum.sort_views') :
@@ -542,13 +542,13 @@
 <!-- RÉSULTATS DE RECHERCHE -->
 {#if searchQuery}
 	<div class="mb-4 flex items-center justify-between">
-		<p class="text-sm text-gray-400">
-			🔍 {tFn('forum.search_for')} "<span class="text-white font-medium">{searchQuery}</span>" ·
+		<p class="text-sm text-[var(--nx-text-muted)]">
+			🔍 {tFn('forum.search_for')} "<span class="text-[var(--nx-text)] font-medium">{searchQuery}</span>" ·
 			{tFn('forum.results_count', { n: filteredThreads.length })}
 		</p>
 		<button 
 			onclick={() => searchQuery = ''}
-			class="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+			class="text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-text-muted)] transition-colors"
 		>
 			{tFn('common.clear')}
 		</button>
@@ -557,13 +557,13 @@
 
 <!-- LISTE DES SUJETS -->
 {#if paginatedThreads.length === 0}
-	<div class="flex flex-col items-center justify-center py-20 px-4 border border-dashed border-gray-800 bg-gray-900/50">
-		<div class="w-24 h-24 bg-gray-800 flex items-center justify-center mb-4">
-			<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+	<div class="flex flex-col items-center justify-center py-20 px-4 border border-dashed border-[var(--nx-border)] bg-[var(--nx-surface)]/50">
+		<div class="w-24 h-24 bg-[var(--nx-surface-raised)] flex items-center justify-center mb-4">
+			<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-[var(--nx-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 			</svg>
 		</div>
-		<h3 class="text-xl font-semibold text-white mb-2">
+		<h3 class="text-xl font-semibold text-[var(--nx-text)] mb-2">
 			{#if searchQuery}
 				{tFn('forum.no_filter_results')}
 			{:else if filterBy !== 'all'}
@@ -572,7 +572,7 @@
 				{tFn('forum.no_topics_in_category')}
 			{/if}
 		</h3>
-		<p class="text-sm text-gray-500 text-center max-w-sm mb-6">
+		<p class="text-sm text-[var(--nx-text-muted)] text-center max-w-sm mb-6">
 			{#if searchQuery}
 				{tFn('forum.try_keywords')}
 			{:else}
@@ -592,7 +592,7 @@
 			{#if index === 0 && thread.is_pinned && filterBy === 'all' && currentPage === 1}
 				<div class="flex items-center gap-2 mt-2 mb-3">
 					<div class="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
-					<span class="text-xs font-medium text-indigo-400 px-3 py-1 bg-indigo-900/20 border border-indigo-800/50 flex items-center gap-1">
+					<span class="text-xs font-medium text-[var(--nx-header-accent)] px-3 py-1 bg-[rgb(var(--nx-accent-rgb)/0.08)] border border-indigo-800/50 flex items-center gap-1">
 						{tFn('forum.pinned_header')}
 					</span>
 					<div class="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
@@ -605,8 +605,8 @@
 			<a
 				href="/forum/{categoryId}/{thread.slug ?? thread.id}"
 				class="group relative flex flex-wrap sm:flex-nowrap items-center gap-4
-					   border border-white/[.06] bg-gray-900/60
-					   px-5 py-4 hover:border-indigo-700/50 hover:bg-gray-900
+					   border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/60
+					   px-5 py-4 hover:border-indigo-700/50 hover:bg-[var(--nx-surface)]
 					   transition-colors duration-200 overflow-hidden"
 			>
 				<!-- ... reste du code identique ... -->
@@ -616,12 +616,12 @@
 						<img
 							src={thread.author_avatar}
 							alt={thread.author_username}
-							class="w-10 h-10 rounded-full object-cover ring-2 ring-gray-700 group-hover:ring-indigo-500/30 transition-all"
+							class="w-10 h-10 rounded-full object-cover ring-2 ring-[var(--nx-border)] group-hover:ring-indigo-500/30 transition-all"
 						/>
 					{:else}
 						<div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600
 									flex items-center justify-center text-sm font-bold text-white
-									ring-2 ring-gray-700 group-hover:ring-indigo-500/30 transition-all">
+									ring-2 ring-[var(--nx-border)] group-hover:ring-indigo-500/30 transition-all">
 							{thread.author_username.charAt(0).toUpperCase()}
 						</div>
 					{/if}
@@ -632,17 +632,17 @@
 					<!-- Badges -->
 					<div class="flex flex-wrap items-center gap-1.5 mb-1.5">
 						{#if thread.is_pinned}
-							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-indigo-400 bg-indigo-900/20 border border-indigo-800/50 px-2 py-0.5">
+							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--nx-header-accent)] bg-[rgb(var(--nx-accent-rgb)/0.08)] border border-indigo-800/50 px-2 py-0.5">
 								{tFn('forum.badge_pinned')}
 							</span>
 						{/if}
 						{#if thread.is_locked}
-							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5">
+							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--nx-text-muted)] bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-2 py-0.5">
 								{tFn('forum.badge_locked')}
 							</span>
 						{/if}
 						{#if thread.is_featured}
-							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-yellow-400 bg-yellow-900/30 border border-yellow-800/50 px-2 py-0.5">
+							<span class="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--nx-warn)] bg-[color-mix(in_srgb,var(--nx-warn)_12%,transparent)] border border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] px-2 py-0.5">
 								{tFn('forum.badge_featured')}
 							</span>
 						{/if}
@@ -653,7 +653,7 @@
 							</span>
 						{/each}
 						{#if (thread.tags?.length || 0) > 2}
-							<span class="text-xs text-gray-600">+{(thread.tags?.length || 0) - 2}</span>
+							<span class="text-xs text-[var(--nx-text-muted)]">+{(thread.tags?.length || 0) - 2}</span>
 						{/if}
 					</div>
 
@@ -663,22 +663,22 @@
 					     part : sur un téléphone, `line-clamp-1` réduisait des titres comme
 					     « Nodyx Soundboard v2.7.0 : tes sons, ta queue... » à un moignon
 					     illisible. -->
-					<p class="text-base font-semibold text-white group-hover:text-indigo-400 transition-colors line-clamp-2 sm:line-clamp-1">
+					<p class="text-base font-semibold text-[var(--nx-text)] group-hover:text-[var(--nx-header-accent)] transition-colors line-clamp-2 sm:line-clamp-1">
 						{thread.title}
 					</p>
 
 					<!-- Métadonnées -->
 					<div class="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
 						<!-- Auteur -->
-						<div class="flex items-center gap-1 text-gray-500">
+						<div class="flex items-center gap-1 text-[var(--nx-text-muted)]">
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
 							</svg>
-							<span class="text-gray-400">{thread.author_username}</span>
+							<span class="text-[var(--nx-text-muted)]">{thread.author_username}</span>
 						</div>
 
 						<!-- Date -->
-						<div class="flex items-center gap-1 text-gray-600">
+						<div class="flex items-center gap-1 text-[var(--nx-text-muted)]">
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 							</svg>
@@ -686,7 +686,7 @@
 						</div>
 
 						<!-- Vues -->
-						<div class="flex items-center gap-1 text-gray-600">
+						<div class="flex items-center gap-1 text-[var(--nx-text-muted)]">
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 								<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -699,21 +699,21 @@
 				<!-- Stats et dernier posteur -->
 				<div class="flex items-center gap-4 shrink-0">
 					<!-- Compteur de réponses -->
-					<div class="flex flex-col items-center px-3 py-1.5 border border-white/[.06] group-hover:border-indigo-700/50 transition-colors min-w-[60px] text-center">
-						<span class="text-lg font-bold text-indigo-400 leading-none">{replyCount(thread.post_count)}</span>
-						<span class="text-[11px] text-gray-500 uppercase tracking-wider">{tFn('forum.replies_label')}</span>
+					<div class="flex flex-col items-center px-3 py-1.5 border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] group-hover:border-indigo-700/50 transition-colors min-w-[60px] text-center">
+						<span class="text-lg font-bold text-[var(--nx-header-accent)] leading-none">{replyCount(thread.post_count)}</span>
+						<span class="text-[11px] text-[var(--nx-text-muted)] uppercase tracking-wider">{tFn('forum.replies_label')}</span>
 					</div>
 
 					<!-- Dernier posteur -->
 					{#if lastPoster}
-						<div class="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-800">
+						<div class="hidden sm:flex items-center gap-2 pl-2 border-l border-[var(--nx-border)]">
 							<div class="text-right hidden sm:block">
-								<p class="text-[10px] text-gray-600">{tFn('forum.last_reply')}</p>
-								<p class="text-xs font-medium text-gray-300">{lastPoster.author_username}</p>
-								<p class="text-[9px] text-gray-700">{formatRelativeTime(lastPoster.created_at)}</p>
+								<p class="text-[10px] text-[var(--nx-text-muted)]">{tFn('forum.last_reply')}</p>
+								<p class="text-xs font-medium text-[var(--nx-text)]">{lastPoster.author_username}</p>
+								<p class="text-[9px] text-[var(--nx-text-muted)]">{formatRelativeTime(lastPoster.created_at)}</p>
 							</div>
 							{#if lastPoster.author_avatar}
-								<img src={lastPoster.author_avatar} alt="" class="w-8 h-8 rounded-full object-cover ring-1 ring-gray-700" />
+								<img src={lastPoster.author_avatar} alt="" class="w-8 h-8 rounded-full object-cover ring-1 ring-[var(--nx-border)]" />
 							{:else}
 								<div class="w-8 h-8 rounded-full bg-indigo-800 flex items-center justify-center text-xs font-bold text-white">
 									{lastPoster.author_username.charAt(0).toUpperCase()}
@@ -724,7 +724,7 @@
 				</div>
 
 				<!-- Flèche -->
-				<svg xmlns="http://www.w3.org/2000/svg" class="hidden sm:block w-5 h-5 text-gray-700 group-hover:text-indigo-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<svg xmlns="http://www.w3.org/2000/svg" class="hidden sm:block w-5 h-5 text-[var(--nx-text-muted)] group-hover:text-indigo-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
 				</svg>
 			</a>
@@ -733,7 +733,7 @@
 
 	<!-- PAGINATION PROFESSIONNELLE -->
 	<div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-		<div class="text-sm text-gray-600 order-2 sm:order-1">
+		<div class="text-sm text-[var(--nx-text-muted)] order-2 sm:order-1">
 			{tFn('forum.showing', { from: String((currentPage - 1) * itemsPerPage + 1), to: String(Math.min(currentPage * itemsPerPage, filteredThreads.length)), total: String(filteredThreads.length) })}
 		</div>
 		
@@ -743,7 +743,7 @@
 				onclick={() => goToPage(currentPage - 1)}
 				disabled={currentPage === 1}
 				aria-label={tFn('common.prev_page')}
-				class="w-9 h-9 bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600
+				class="w-9 h-9 bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] hover:text-white hover:bg-indigo-600
 					   disabled:opacity-30 disabled:cursor-not-allowed transition-all
 					   flex items-center justify-center"
 			>
@@ -764,7 +764,7 @@
 					class="w-9 h-9 text-sm font-medium transition-all
 						   {currentPage === pageNum
 							   ? 'bg-indigo-600 text-white'
-							   : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'}"
+							   : 'bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:bg-[var(--nx-border)]'}"
 				>
 					{pageNum}
 				</button>
@@ -775,7 +775,7 @@
 				onclick={() => goToPage(currentPage + 1)}
 				disabled={currentPage === totalPages}
 				aria-label={tFn('common.next_page')}
-				class="w-9 h-9 bg-gray-800 text-gray-400 hover:text-white hover:bg-indigo-600
+				class="w-9 h-9 bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] hover:text-white hover:bg-indigo-600
 					   disabled:opacity-30 disabled:cursor-not-allowed transition-all
 					   flex items-center justify-center"
 			>
@@ -787,17 +787,17 @@
 
 		<!-- Sélecteur d'éléments par page -->
 		<div class="flex items-center gap-2 order-3">
-			<span class="text-xs text-gray-600 hidden sm:inline">{tFn('forum.display')}</span>
+			<span class="text-xs text-[var(--nx-text-muted)] hidden sm:inline">{tFn('forum.display')}</span>
 			<select
 				bind:value={itemsPerPage}
 				onchange={() => goToPage(1)}
-				class="bg-gray-800 border border-gray-700 px-3 py-1.5 text-sm text-gray-300
+				class="bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-1.5 text-sm text-[var(--nx-text)]
 					   focus:outline-none focus:border-indigo-500 cursor-pointer"
 			>
-				<option value="10">10 par page</option>
-				<option value="20">20 par page</option>
-				<option value="50">50 par page</option>
-				<option value="100">100 par page</option>
+				<option value="10">10 {tFn('forum.per_page')}</option>
+				<option value="20">20 {tFn('forum.per_page')}</option>
+				<option value="50">50 {tFn('forum.per_page')}</option>
+				<option value="100">100 {tFn('forum.per_page')}</option>
 			</select>
 		</div>
 	</div>

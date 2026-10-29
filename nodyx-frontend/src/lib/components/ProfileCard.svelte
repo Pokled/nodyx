@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n'
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects'
+	import { isDarkTheme } from '$lib/theme'
 
 	const tFn = $derived($t)
 
@@ -95,11 +96,11 @@
 				<img
 					src={avatarUrl}
 					alt={tFn('profile_card.avatar_alt', { name: displayName || username })}
-					class="w-16 h-16 rounded-full object-cover border border-gray-700"
+					class="w-16 h-16 rounded-full object-cover border border-[var(--nx-border)]"
 				/>
 			{:else}
 				<div
-					class="w-16 h-16 rounded-full bg-indigo-700 flex items-center justify-center text-white text-2xl font-bold border border-gray-700 select-none"
+					class="w-16 h-16 rounded-full bg-indigo-700 flex items-center justify-center text-white text-2xl font-bold border border-[var(--nx-border)] select-none"
 					aria-hidden="true"
 				>
 					{initials}
@@ -114,7 +115,7 @@
 		<a
 			href="/users/{username}"
 			class="text-sm font-semibold truncate max-w-full hover:brightness-125 transition-colors {buildAnimClass({ nameAnimation })}"
-			style={buildNameStyle({ nameColor, nameGlow, nameGlowIntensity, nameFontFamily }, '#a5b4fc')}
+			style={buildNameStyle({ nameColor, nameGlow, nameGlowIntensity, nameFontFamily }, 'var(--nx-header-accent)', $isDarkTheme)}
 		>
 			{displayName || username}
 		</a>
@@ -130,13 +131,13 @@
 		{/if}
 
 		<!-- Points + Level -->
-		<span class="text-xs text-yellow-400">{points} pts</span>
+		<span class="text-xs text-[var(--nx-warn)]">{points} pts</span>
 		<div class="w-full px-1">
 			<div class="flex items-center justify-between mb-0.5">
-				<span class="text-[9px] text-gray-500 uppercase tracking-widest">{tFn('profile.level_abbreviation')}</span>
-				<span class="text-[10px] font-black text-indigo-400">{level}</span>
+				<span class="text-[9px] text-[var(--nx-text-muted)] uppercase tracking-widest">{tFn('profile.level_abbreviation')}</span>
+				<span class="text-[10px] font-black text-[var(--nx-header-accent)]">{level}</span>
 			</div>
-			<div class="h-1 rounded-full bg-gray-800 overflow-hidden">
+			<div class="h-1 rounded-full bg-[var(--nx-surface-raised)] overflow-hidden">
 				<div class="h-full rounded-full bg-indigo-500" style="width: {levelProgress}%"></div>
 			</div>
 		</div>
@@ -145,13 +146,13 @@
 		{#if visibleTags.length > 0}
 			<ul class="flex flex-wrap justify-center gap-1" aria-label={tFn('profile_card.tags_aria')}>
 				{#each visibleTags as tag}
-					<li class="text-xs bg-gray-800 text-gray-400 rounded px-1.5 py-0.5">#{tag}</li>
+					<li class="text-xs bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] rounded px-1.5 py-0.5">#{tag}</li>
 				{/each}
 			</ul>
 		{/if}
 
 		<!-- Member since -->
-		<span class="text-xs text-gray-500">
+		<span class="text-xs text-[var(--nx-text-muted)]">
 			{tFn('profile.member_since_label')}<br />{memberSinceFormatted()}
 		</span>
 
@@ -170,11 +171,11 @@
 			<img
 				src={avatarUrl}
 				alt={tFn('profile_card.avatar_alt', { name: displayName || username })}
-				class="w-20 h-20 rounded-full object-cover border-2 border-gray-600"
+				class="w-20 h-20 rounded-full object-cover border-2 border-[var(--nx-border)]"
 			/>
 		{:else}
 			<div
-				class="w-20 h-20 rounded-full bg-indigo-700 flex items-center justify-center text-white text-3xl font-bold border-2 border-gray-600 select-none"
+				class="w-20 h-20 rounded-full bg-indigo-700 flex items-center justify-center text-white text-3xl font-bold border-2 border-[var(--nx-border)] select-none"
 				aria-hidden="true"
 			>
 				{initials}
@@ -182,8 +183,8 @@
 		{/if}
 
 		<div class="flex flex-col gap-1">
-			<span class="text-lg font-bold {buildAnimClass({ nameAnimation })}" style={buildNameStyle({ nameColor, nameGlow, nameGlowIntensity, nameFontFamily }, '#ffffff')}>{displayName || username}</span>
-			<span class="text-sm text-gray-400">@{username}</span>
+			<span class="text-lg font-bold {buildAnimClass({ nameAnimation })}" style={buildNameStyle({ nameColor, nameGlow, nameGlowIntensity, nameFontFamily }, 'var(--nx-text)', $isDarkTheme)}>{displayName || username}</span>
+			<span class="text-sm text-[var(--nx-text-muted)]">@{username}</span>
 
 			<!-- Grade badge -->
 			{#if grade}
@@ -195,10 +196,10 @@
 				</span>
 			{/if}
 
-			<span class="text-sm text-yellow-400">{points} pts</span>
+			<span class="text-sm text-[var(--nx-warn)]">{points} pts</span>
 			<div class="flex items-center gap-2 mt-0.5">
-				<span class="text-xs font-black text-indigo-400">{tFn('profile.level_label_with_number', { n: String(level) })}</span>
-				<div class="flex-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+				<span class="text-xs font-black text-[var(--nx-header-accent)]">{tFn('profile.level_label_with_number', { n: String(level) })}</span>
+				<div class="flex-1 h-1.5 rounded-full bg-[var(--nx-surface-raised)] overflow-hidden">
 					<div class="h-full rounded-full bg-indigo-500" style="width: {levelProgress}%"></div>
 				</div>
 			</div>
@@ -206,12 +207,12 @@
 			{#if visibleTags.length > 0}
 				<ul class="flex flex-wrap gap-1.5 mt-1" aria-label={tFn('profile_card.tags_aria')}>
 					{#each visibleTags as tag}
-						<li class="text-xs bg-gray-800 text-gray-400 rounded px-2 py-0.5">#{tag}</li>
+						<li class="text-xs bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] rounded px-2 py-0.5">#{tag}</li>
 					{/each}
 				</ul>
 			{/if}
 
-			<span class="text-xs text-gray-500 mt-1">{tFn('profile.member_since_label')} {memberSinceFormatted()}</span>
+			<span class="text-xs text-[var(--nx-text-muted)] mt-1">{tFn('profile.member_since_label')} {memberSinceFormatted()}</span>
 		</div>
 	</div>
 {/if}

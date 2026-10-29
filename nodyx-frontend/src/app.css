@@ -13,6 +13,12 @@
   --text-sm--line-height: 1.4286;
 }
 
+/* themed: : ne s'applique que sous une racine de page migrée (.nx-themed).
+   Pour un composant partagé avec des pages encore sombres (l'éditeur sert au
+   wiki, à l'agenda…) : on garde la classe historique et on ajoute sa version
+   branchée sur le thème, qui ne gagne que dans les pages migrées. */
+@custom-variant themed (.nx-themed &);
+
 /* ── Overscroll élastique macOS/iOS — évite la barre blanche ────────────────
    Le navigateur révèle html/body quand on tire au-delà du bord.
    On force la couleur sombre pour que ça soit invisible.                    */
@@ -69,6 +75,13 @@ html, body {
   --nx-text:              #1c1a16;
   --nx-text-muted:        #6b6459;
   --nx-text-faint:        #98917f;
+  /* Couleurs d'état (succès, attention, erreur, info), en TEXTE : AA sur la
+     surface claire ; les teintes vives reviennent en mode sombre. */
+  --nx-ok:                #15803d;
+  --nx-warn:              #b45309;
+  --nx-bad:               #b91c1c;
+  --nx-info:              #1d4ed8;
+  --nx-scheme:            light;
   --nx-header-accent:        #c67c00;
   --nx-header-accent-strong: #a66700;
   --nx-header-accent-soft:   rgb(198 124 0 / 0.12);
@@ -86,6 +99,11 @@ html, body {
     --nx-text:              #f5f2ec;
     --nx-text-muted:        #a89f8d;
     --nx-text-faint:        #6e6759;
+    --nx-ok:                #4ade80;
+    --nx-warn:              #fbbf24;
+    --nx-bad:               #f87171;
+    --nx-info:              #60a5fa;
+    --nx-scheme:            dark;
     --nx-header-accent:        #ffb020;
     --nx-header-accent-strong: #e89900;
     --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
@@ -101,6 +119,11 @@ html, body {
   --nx-text:              #f5f2ec;
   --nx-text-muted:        #a89f8d;
   --nx-text-faint:        #6e6759;
+  --nx-ok:                #4ade80;
+  --nx-warn:              #fbbf24;
+  --nx-bad:               #f87171;
+  --nx-info:              #60a5fa;
+  --nx-scheme:            dark;
   --nx-header-accent:        #ffb020;
   --nx-header-accent-strong: #e89900;
   --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
@@ -271,6 +294,19 @@ select option {
   background-color: #1e2030;
   color: #e2e8f0;
 }
+/* Dans une page migrée (.nx-themed), le menu suit le thème : liste native
+   claire en thème clair, sombre en sombre. Hors @layer comme la règle
+   ci-dessus, qui sinon battrait les classes Tailwind (@layer utilities). */
+.nx-themed select {
+  color-scheme: var(--nx-scheme);
+  background-color: var(--nx-surface-raised);
+  color: var(--nx-text);
+  border-color: var(--nx-border);
+}
+.nx-themed select option {
+  background-color: var(--nx-surface-raised);
+  color: var(--nx-text);
+}
 
 /* ── Bottom nav height (source unique de vérité) ─────────────────────────── */
 :root { --bottom-nav-h: 56px; }
@@ -292,9 +328,50 @@ select option {
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
+/* ── Couleurs du contenu rédigé (.nodyx-prose, éditeur) ─────────────────────
+   Valeurs par défaut = les couleurs historiques, pensées pour un fond sombre :
+   les pages pas encore migrées (wiki, agenda, profil) restent identiques.
+   Une racine de page migrée porte .nx-themed et les rebranche sur le thème :
+   lisible en thème clair comme en sombre. Les blocs terminal et <pre>
+   restent sombres dans les deux thèmes, par nature. */
+:root {
+    --prose-text: rgb(229 231 235);
+    --prose-heading: white;
+    --prose-h3: rgb(243 244 246);
+    --prose-muted: rgb(156 163 175);
+    --prose-border: rgb(55 65 81);
+    --prose-code-bg: rgb(31 41 55);
+    --prose-code-text: rgb(165 180 252);
+    --prose-link: rgb(129 140 248);
+    --prose-link-hover: rgb(165 180 252);
+    --prose-th-text: rgb(209 213 219);
+    --prose-stripe: rgb(17 24 39 / 0.4);
+    --prose-toc-bg: rgb(17 24 39 / 0.7);
+    --prose-col-border: rgb(55 65 81 / 0.5);
+    --prose-col-bg: rgb(31 41 55 / 0.2);
+    --prose-placeholder: rgb(75 85 99);
+}
+.nx-themed {
+    --prose-text: var(--nx-text);
+    --prose-heading: var(--nx-text);
+    --prose-h3: var(--nx-text);
+    --prose-muted: var(--nx-text-muted);
+    --prose-border: var(--nx-border);
+    --prose-code-bg: color-mix(in srgb, var(--nx-text) 7%, transparent);
+    --prose-code-text: var(--nx-text);
+    --prose-link: var(--nx-header-accent);
+    --prose-link-hover: var(--nx-header-accent-strong);
+    --prose-th-text: var(--nx-text);
+    --prose-stripe: color-mix(in srgb, var(--nx-text) 3%, transparent);
+    --prose-toc-bg: var(--nx-surface);
+    --prose-col-border: var(--nx-border);
+    --prose-col-bg: color-mix(in srgb, var(--nx-text) 2%, transparent);
+    --prose-placeholder: var(--nx-text-faint);
+}
+
 .nodyx-prose,
 .nodyx-content .tiptap {
-    color: rgb(229 231 235);
+    color: var(--prose-text);
     font-size: 0.9375rem;   /* 15px (bump doux, réf. Discord) */
     line-height: 1.625;
     word-break: break-word;
@@ -318,18 +395,18 @@ select option {
     max-width: 45%;
     margin: 0 0 1rem 1.25rem;
     padding: 0.875rem 1rem;
-    background: rgb(17 24 39 / 0.7);
-    border: 1px solid rgb(55 65 81);
+    background: var(--prose-toc-bg);
+    border: 1px solid var(--prose-border);
     border-radius: 0.75rem;
     font-size: 0.8125rem;
     line-height: 1.9;
 }
 .nodyx-prose .toc p { margin-bottom: 0.25rem; }
 .nodyx-prose .toc a {
-    color: rgb(165 180 252);
+    color: var(--prose-code-text);
     text-decoration: none;
 }
-.nodyx-prose .toc a:hover { color: white; text-decoration: underline; }
+.nodyx-prose .toc a:hover { color: var(--prose-heading); text-decoration: underline; }
 @media (max-width: 640px) {
     .nodyx-prose .toc,
     .nodyx-content .tiptap .toc {
@@ -505,19 +582,19 @@ select option {
 
 .nodyx-prose h1,
 .nodyx-content .tiptap h1 {
-    font-size: 1.5rem; font-weight: 700; color: white;
+    font-size: 1.5rem; font-weight: 700; color: var(--prose-heading);
     margin-top: 1.25rem; margin-bottom: 0.75rem;
     line-height: 1.25;
 }
 .nodyx-prose h2,
 .nodyx-content .tiptap h2 {
-    font-size: 1.25rem; font-weight: 700; color: white;
+    font-size: 1.25rem; font-weight: 700; color: var(--prose-heading);
     margin-top: 1rem; margin-bottom: 0.5rem;
     line-height: 1.3;
 }
 .nodyx-prose h3,
 .nodyx-content .tiptap h3 {
-    font-size: 1.125rem; font-weight: 600; color: rgb(243 244 246);
+    font-size: 1.125rem; font-weight: 600; color: var(--prose-h3);
     margin-top: 0.75rem; margin-bottom: 0.5rem;
 }
 
@@ -529,22 +606,22 @@ select option {
 
 /* ── Formatage inline ─────────────────────────────────────────────────────── */
 .nodyx-prose strong,
-.nodyx-content .tiptap strong { font-weight: 700; color: white; }
+.nodyx-content .tiptap strong { font-weight: 700; color: var(--prose-heading); }
 .nodyx-prose em,
 .nodyx-content .tiptap em     { font-style: italic; }
 .nodyx-prose u,
 .nodyx-content .tiptap u      { text-decoration: underline; text-underline-offset: 2px; }
 .nodyx-prose s,
-.nodyx-content .tiptap s      { text-decoration: line-through; color: rgb(156 163 175); }
+.nodyx-content .tiptap s      { text-decoration: line-through; color: var(--prose-muted); }
 
 /* ── Code inline ──────────────────────────────────────────────────────────── */
 .nodyx-prose code,
 .nodyx-content .tiptap code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.75rem;
-    background-color: rgb(31 41 55);
-    border: 1px solid rgb(55 65 81);
-    color: rgb(165 180 252);
+    background-color: var(--prose-code-bg);
+    border: 1px solid var(--prose-border);
+    color: var(--prose-code-text);
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
 }
@@ -575,7 +652,7 @@ select option {
     border-left: 4px solid rgb(79 70 229);
     padding-left: 1rem;
     margin: 0.75rem 0;
-    color: rgb(156 163 175);
+    color: var(--prose-muted);
     font-style: italic;
 }
 
@@ -585,7 +662,7 @@ select option {
 .nodyx-prose ol,
 .nodyx-content .tiptap ol { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.75rem; }
 .nodyx-prose li,
-.nodyx-content .tiptap li { color: rgb(229 231 235); }
+.nodyx-content .tiptap li { color: var(--prose-text); }
 .nodyx-prose li + li,
 .nodyx-content .tiptap li + li { margin-top: 0.25rem; }
 
@@ -593,7 +670,7 @@ select option {
 .nodyx-prose hr,
 .nodyx-content .tiptap hr {
     border: none;
-    border-top: 1px solid rgb(55 65 81);
+    border-top: 1px solid var(--prose-border);
     margin: 1.25rem 0;
     clear: both;   /* coupe les flottants (images alignées, boîte .toc) */
 }
@@ -601,14 +678,14 @@ select option {
 /* ── Liens ────────────────────────────────────────────────────────────────── */
 .nodyx-prose a,
 .nodyx-content .tiptap a {
-    color: rgb(129 140 248);
+    color: var(--prose-link);
     text-decoration: underline;
     text-underline-offset: 2px;
     cursor: pointer;
     transition: color 150ms;
 }
 .nodyx-prose a:hover,
-.nodyx-content .tiptap a:hover { color: rgb(165 180 252); }
+.nodyx-content .tiptap a:hover { color: var(--prose-link-hover); }
 
 /* ── Images ───────────────────────────────────────────────────────────────── */
 .nodyx-prose img,
@@ -718,7 +795,7 @@ select option {
     max-width: 100%;
     border-radius: 0.75rem;
     aspect-ratio: 16 / 9;
-    border: 1px solid rgb(55 65 81);
+    border: 1px solid var(--prose-border);
     margin: 0.75rem 0;
 }
 
@@ -755,7 +832,7 @@ select option {
     margin: 1rem 0;
     border-radius: 0.75rem;
     overflow: hidden;
-    border: 1px solid rgb(55 65 81);
+    border: 1px solid var(--prose-border);
     aspect-ratio: 16 / 9;
 }
 .nodyx-prose .youtube-wrapper iframe,
@@ -781,23 +858,23 @@ select option {
 }
 .nodyx-prose th,
 .nodyx-content .tiptap th {
-    background-color: rgb(31 41 55);
-    color: rgb(209 213 219);
+    background-color: var(--prose-code-bg);
+    color: var(--prose-th-text);
     font-weight: 600;
     padding: 0.5rem 0.75rem;
     text-align: left;
-    border: 1px solid rgb(55 65 81);
+    border: 1px solid var(--prose-border);
 }
 .nodyx-prose td,
 .nodyx-content .tiptap td {
     padding: 0.5rem 0.75rem;
-    border: 1px solid rgb(55 65 81);
-    color: rgb(229 231 235);
+    border: 1px solid var(--prose-border);
+    color: var(--prose-text);
     vertical-align: top;
 }
 .nodyx-prose tr:nth-child(even) td,
 .nodyx-content .tiptap tr:nth-child(even) td {
-    background-color: rgb(17 24 39 / 0.4);
+    background-color: var(--prose-stripe);
 }
 /* Cellule sélectionnée dans l'éditeur */
 .nodyx-content .tiptap .selectedCell::after {
@@ -831,8 +908,8 @@ select option {
     display: block !important;
     min-width: 0;
     border-radius: 0.5rem;
-    border: 1px solid rgb(55 65 81 / 0.5);
-    background-color: rgb(31 41 55 / 0.2);
+    border: 1px solid var(--prose-col-border);
+    background-color: var(--prose-col-bg);
     padding: 0.75rem;
     min-height: 80px;
 }
@@ -856,7 +933,7 @@ select option {
 /* ── Placeholder éditeur ──────────────────────────────────────────────────── */
 .nodyx-content .tiptap p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
-    color: rgb(75 85 99);
+    color: var(--prose-placeholder);
     pointer-events: none;
     float: left;
     height: 0;
