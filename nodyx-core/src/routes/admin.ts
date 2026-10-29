@@ -1038,9 +1038,13 @@ export default async function adminRoutes(app: FastifyInstance) {
     '/update-check',
     { preHandler: [rateLimit, adminOnly] },
     async (request, reply) => {
-      const CACHE_KEY = 'update_check'
-      const CACHE_TTL = 3600  // 1h
       const CURRENT   = NODYX_VERSION
+      // La clé porte la version en cours : la réponse mise en cache contient
+      // current_version, et sans cela une instance tout juste mise à jour
+      // ressortait pendant 1h le « Mise à jour disponible 2.12.0 -> 2.13.0 »
+      // de son ancienne version (le bandeau trompeur de commit 134f692).
+      const CACHE_KEY = `update_check:${CURRENT}`
+      const CACHE_TTL = 3600  // 1h
       const force     = request.query.force === 'true' || request.query.force === '1'
 
       if (!force) {
