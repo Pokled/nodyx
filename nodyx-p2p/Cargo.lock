@@ -1763,7 +1763,7 @@ name = "nodyx-gossip"
 version = "0.1.0"
 dependencies = [
  "ed25519-dalek 3.0.0",
- "getrandom 0.2.17",
+ "getrandom 0.4.2",
 ]
 
 [[package]]

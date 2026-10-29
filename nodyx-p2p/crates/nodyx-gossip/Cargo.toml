@@ -14,4 +14,4 @@ path = "src/main.rs"
 # ne se code PAS a la main (constant-time, side-channels). ed25519-dalek est l'une
 # des implementations Rust les plus auditees. Tout le reste reste fait maison.
 ed25519-dalek = "3"
-getrandom = "0.2"   # seed CSPRNG (32 octets) pour la cle d'identite
+getrandom = "0.4"   # seed CSPRNG (32 octets) pour la cle d'identite
