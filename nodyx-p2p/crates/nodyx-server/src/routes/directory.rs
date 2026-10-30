@@ -224,8 +224,8 @@ async fn register(
     }
 
     let token = {
-        use rand::Rng;
-        let bytes: [u8; 32] = rand::thread_rng().gen();
+        use rand::RngExt;
+        let bytes: [u8; 32] = rand::rng().random();
         hex::encode(bytes)
     };
 
