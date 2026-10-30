@@ -188,7 +188,7 @@
 	     la fonctionnalité n'existe pas côté nodyx-core (aucune route, aucune
 	     table), et un bouton qui ne fait rien ment à l'utilisateur. -->
 	<div class="mb-4">
-		<a href="/forum/{thread.category_slug ?? thread.category_id}" class="text-sm text-gray-500 hover:text-indigo-400 transition-colors inline-flex items-center gap-1">
+		<a href="/forum/{thread.category_slug ?? thread.category_id}" class="text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] transition-colors inline-flex items-center gap-1">
 			<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
 			</svg>
@@ -197,7 +197,7 @@
 	</div>
 
 	<!-- Carte d'identité du thread avec avatar du créateur -->
-	<div class="relative overflow-hidden border border-white/[.06] bg-gray-900 p-6">
+	<div class="relative overflow-hidden border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)] p-6">
 		<!-- Effet de glow subtil -->
 		<div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
 
@@ -224,17 +224,17 @@
 				<!-- Badges du thread -->
 				<div class="flex flex-wrap items-center gap-2 mb-2">
 					{#if thread.is_pinned}
-						<span class="inline-flex items-center gap-1 text-xs font-medium text-indigo-400 bg-indigo-900/30 border border-indigo-800/50 px-2 py-0.5">
+						<span class="inline-flex items-center gap-1 text-xs font-medium text-[var(--nx-header-accent)] bg-[rgb(var(--nx-accent-rgb)/0.1)] border border-indigo-800/50 px-2 py-0.5">
 							📌 {tFn('common.pinned')}
 						</span>
 					{/if}
 					{#if thread.is_locked}
-						<span class="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 px-2 py-0.5">
+						<span class="inline-flex items-center gap-1 text-xs font-medium text-[var(--nx-text-muted)] bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-2 py-0.5">
 							🔒 {tFn('common.locked')}
 						</span>
 					{/if}
 					{#if thread.is_featured}
-						<span class="inline-flex items-center gap-1 text-xs font-medium text-yellow-400 bg-yellow-900/30 border border-yellow-800/50 px-2 py-0.5">
+						<span class="inline-flex items-center gap-1 text-xs font-medium text-[var(--nx-warn)] bg-[color-mix(in_srgb,var(--nx-warn)_12%,transparent)] border border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] px-2 py-0.5">
 							⭐ {tFn('common.featured')}
 						</span>
 					{/if}
@@ -263,25 +263,25 @@
 							bind:value={titleInput}
 							maxlength="300"
 							required
-							class="flex-1 bg-gray-800 border border-indigo-600 px-3 py-2 text-white text-xl font-bold focus:outline-none focus:border-indigo-400"
+							class="flex-1 bg-[var(--nx-surface-raised)] border border-indigo-600 px-3 py-2 text-[var(--nx-text)] text-xl font-bold focus:outline-none focus:border-indigo-400"
 						/>
 						<button type="submit"
 							class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
 							{tFn('common.save')}
 						</button>
 						<button type="button" onclick={() => editingTitle = false}
-							class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-sm text-gray-300 transition-colors">
+							class="px-4 py-2 bg-[var(--nx-border)] hover:bg-[var(--nx-border)] text-sm text-[var(--nx-text)] transition-colors">
 							{tFn('common.cancel')}
 						</button>
 					</form>
 				{:else}
 					<div class="flex items-start gap-2 group/title">
-						<h1 class="text-xl sm:text-3xl font-bold text-white leading-tight">{thread.title}</h1>
+						<h1 class="text-xl sm:text-3xl font-bold text-[var(--nx-text)] leading-tight">{thread.title}</h1>
 						{#if canEditTitle}
 							<button
 								type="button"
 								onclick={startEditTitle}
-								class="opacity-0 group-hover/title:opacity-100 transition-opacity mt-1 p-1.5 text-gray-600 hover:text-gray-300 hover:bg-gray-800"
+								class="opacity-0 group-hover/title:opacity-100 transition-opacity mt-1 p-1.5 text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:bg-[var(--nx-surface-raised)]"
 								title={tFn('forum.edit_title')}
 							>
 								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -296,12 +296,12 @@
 				<!-- Métadonnées enrichies -->
 				<div class="mt-3 flex flex-wrap items-center gap-4 text-sm">
 					<!-- Auteur et date -->
-					<div class="flex items-center gap-1.5 text-gray-400">
+					<div class="flex items-center gap-1.5 text-[var(--nx-text-muted)]">
 						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
 						</svg>
-						<span class="font-medium text-gray-300">{thread.author_username}</span>
-						<span class="text-gray-600">·</span>
+						<span class="font-medium text-[var(--nx-text)]">{thread.author_username}</span>
+						<span class="text-[var(--nx-text-muted)]">·</span>
 						<span>{formatDate(thread.created_at)}</span>
 					</div>
 
@@ -312,31 +312,31 @@
 					     telephone. Le conteneur PARENT en avait un, pas celui-ci. -->
 					<div class="flex flex-wrap items-center gap-3">
 						<!-- Vues -->
-						<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 border border-gray-700">
+						<div class="flex items-center gap-1.5 text-[var(--nx-text-muted)] bg-[var(--nx-surface-raised)]/60 px-3 py-1 border border-[var(--nx-border)]">
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 								<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 							</svg>
-							<span class="font-medium text-gray-300">{thread.views}</span>
-							<span class="text-gray-600 text-xs">{tFn('forum.views')}</span>
+							<span class="font-medium text-[var(--nx-text)]">{thread.views}</span>
+							<span class="text-[var(--nx-text-muted)] text-xs">{tFn('forum.views')}</span>
 						</div>
 
 						<!-- Réponses -->
-						<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 border border-gray-700">
+						<div class="flex items-center gap-1.5 text-[var(--nx-text-muted)] bg-[var(--nx-surface-raised)]/60 px-3 py-1 border border-[var(--nx-border)]">
 							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 							</svg>
-							<span class="font-medium text-gray-300">{replies}</span>
-							<span class="text-gray-600 text-xs">{tFn('forum.replies_label')}</span>
+							<span class="font-medium text-[var(--nx-text)]">{replies}</span>
+							<span class="text-[var(--nx-text-muted)] text-xs">{tFn('forum.replies_label')}</span>
 						</div>
 
 						<!-- Dernier posteur (si existe) -->
 						{#if lastPost && lastPost.author_username !== thread.author_username}
-							<div class="flex items-center gap-1.5 text-gray-400 bg-gray-800/60 px-3 py-1 border border-gray-700">
+							<div class="flex items-center gap-1.5 text-[var(--nx-text-muted)] bg-[var(--nx-surface-raised)]/60 px-3 py-1 border border-[var(--nx-border)]">
 								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
 								</svg>
-								<span class="text-xs text-gray-500">{tFn('forum.last_poster')}</span>
+								<span class="text-xs text-[var(--nx-text-muted)]">{tFn('forum.last_poster')}</span>
 								<div class="flex items-center gap-1">
 									{#if lastPost.author_avatar}
 										<img src={lastPost.author_avatar} alt="" class="w-5 h-5 rounded-full object-cover ring-1 ring-indigo-500/30" />
@@ -345,7 +345,7 @@
 											{lastPost.author_username.charAt(0).toUpperCase()}
 										</div>
 									{/if}
-									<span class="font-medium text-gray-300 text-xs">{lastPost.author_username}</span>
+									<span class="font-medium text-[var(--nx-text)] text-xs">{lastPost.author_username}</span>
 								</div>
 							</div>
 						{/if}
@@ -368,7 +368,7 @@
 		<!-- Ce que le lecteur et l'auteur peuvent faire -->
 		<div class="flex flex-wrap items-center gap-2">
 			<button type="button" onclick={shareThread}
-				class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-700 text-xs font-medium text-gray-400 hover:text-indigo-400 hover:border-indigo-700 transition-colors">
+				class="inline-flex items-center gap-2 px-3 py-1.5 border border-[var(--nx-border)] text-xs font-medium text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] hover:border-indigo-700 transition-colors">
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
 				</svg>
@@ -376,14 +376,14 @@
 			</button>
 
 			{#if shareState !== 'idle'}
-				<span role="status" class="text-xs {shareState === 'copied' ? 'text-indigo-400' : 'text-amber-400'}">
+				<span role="status" class="text-xs {shareState === 'copied' ? 'text-[var(--nx-header-accent)]' : 'text-[var(--nx-warn)]'}">
 					{shareState === 'copied' ? tFn('forum.share_copied') : tFn('forum.share_failed')}
 				</span>
 			{/if}
 
 			{#if canAddPoll}
 				<button type="button" onclick={() => showPollCreator = true}
-					class="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed border-gray-700 text-xs font-medium text-gray-500 hover:text-indigo-400 hover:border-indigo-700 transition-colors">
+					class="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed border-[var(--nx-border)] text-xs font-medium text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] hover:border-indigo-700 transition-colors">
 					<span>📊</span>
 					{tFn('forum.add_poll_thread')}
 				</button>
@@ -397,7 +397,7 @@
 				     ligne sur 375 px reproduirait l'encombrement qu'on vient d'ôter. -->
 				<button type="button" onclick={() => showModActions = !showModActions}
 					aria-expanded={showModActions}
-					class="sm:hidden inline-flex items-center gap-2 px-3 py-1.5 border border-gray-700 text-xs font-medium text-gray-400 hover:text-gray-200 transition-colors">
+					class="sm:hidden inline-flex items-center gap-2 px-3 py-1.5 border border-[var(--nx-border)] text-xs font-medium text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] transition-colors">
 					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 3l7 4v5c0 4.418-2.867 7.75-7 9-4.133-1.25-7-4.582-7-9V7l7-4z" />
 					</svg>
@@ -414,8 +414,8 @@
 						<button type="submit"
 							class="px-3 py-1.5 border text-xs font-medium transition-colors
 							{thread.is_pinned
-								? 'border-indigo-700 text-indigo-400 bg-indigo-900/20 hover:bg-indigo-900/40'
-								: 'border-gray-700 text-gray-400 hover:text-indigo-400 hover:border-indigo-700'}">
+								? 'border-indigo-700 text-[var(--nx-header-accent)] bg-[rgb(var(--nx-accent-rgb)/0.08)] hover:bg-[rgb(var(--nx-accent-rgb)/0.14)]'
+								: 'border-[var(--nx-border)] text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] hover:border-indigo-700'}">
 							{thread.is_pinned ? tFn('forum.unpin') : tFn('forum.pin')}
 						</button>
 					</form>
@@ -428,8 +428,8 @@
 						<button type="submit"
 							class="px-3 py-1.5 border text-xs font-medium transition-colors
 							{thread.is_locked
-								? 'border-amber-700 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40'
-								: 'border-gray-700 text-gray-400 hover:text-amber-400 hover:border-amber-700'}">
+								? 'border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] text-[var(--nx-warn)] bg-[color-mix(in_srgb,var(--nx-warn)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--nx-warn)_15%,transparent)]'
+								: 'border-[var(--nx-border)] text-[var(--nx-text-muted)] hover:text-[var(--nx-warn)] hover:border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)]'}">
 							{thread.is_locked ? tFn('forum.unlock') : tFn('forum.lock')}
 						</button>
 					</form>
@@ -442,8 +442,8 @@
 						<button type="submit"
 							class="px-3 py-1.5 border text-xs font-medium transition-colors
 							{thread.is_featured
-								? 'border-yellow-700 text-yellow-400 bg-yellow-900/20 hover:bg-yellow-900/40'
-								: 'border-gray-700 text-gray-400 hover:text-yellow-400 hover:border-yellow-700'}">
+								? 'border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] text-[var(--nx-warn)] bg-[color-mix(in_srgb,var(--nx-warn)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--nx-warn)_15%,transparent)]'
+								: 'border-[var(--nx-border)] text-[var(--nx-text-muted)] hover:text-[var(--nx-warn)] hover:border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)]'}">
 							{thread.is_featured ? tFn('forum.unfeature') : tFn('forum.feature')}
 						</button>
 					</form>
@@ -453,12 +453,12 @@
 					{#if !confirmDeleteThread}
 						<button type="button"
 							onclick={() => confirmDeleteThread = true}
-							class="px-3 py-1.5 border border-red-800 text-xs font-medium text-red-400 hover:bg-red-900/20 transition-colors">
+							class="px-3 py-1.5 border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] text-xs font-medium text-[var(--nx-bad)] hover:bg-[color-mix(in_srgb,var(--nx-bad)_10%,transparent)] transition-colors">
 							🗑 {tFn('common.delete')}
 						</button>
 					{:else}
 						<div class="inline-flex items-center gap-2">
-							<span class="text-xs text-red-400">{tFn('forum.confirm')}</span>
+							<span class="text-xs text-[var(--nx-bad)]">{tFn('forum.confirm')}</span>
 							<form method="POST" action="?/deleteThread"
 								use:enhance={() => async ({ result }) => {
 									// Invalide TOUS les caches de chargement (home, catégorie...)
@@ -471,7 +471,7 @@
 								</button>
 							</form>
 							<button type="button" onclick={() => confirmDeleteThread = false}
-								class="px-2 py-1 bg-gray-700 text-xs text-gray-300 hover:bg-gray-600">
+								class="px-2 py-1 bg-[var(--nx-border)] text-xs text-[var(--nx-text)] hover:bg-[var(--nx-border)]">
 								{tFn('common.cancel')}
 							</button>
 						</div>
@@ -513,15 +513,15 @@
 		{#if index > 0}
 			<div class="relative flex justify-center my-2">
 				<div class="absolute inset-0 flex items-center">
-					<div class="w-full border-t border-gray-800"></div>
+					<div class="w-full border-t border-[var(--nx-border)]"></div>
 				</div>
-				<div class="relative bg-gray-950 px-4 text-xs text-gray-700">
+				<div class="relative bg-[var(--nx-surface)] px-4 text-xs text-[var(--nx-text-muted)]">
 					{tFn('forum.reply_number', { n: String(index + 1) })}
 				</div>
 			</div>
 		{/if}
 
-		<article class="flex flex-col sm:flex-row gap-4 border border-white/[.06] bg-gray-900/60 p-4 hover:border-indigo-900/50 transition-colors duration-200">
+		<article class="flex flex-col sm:flex-row gap-4 border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/60 p-4 hover:border-indigo-900/50 transition-colors duration-200">
 			<!-- Profil auteur -->
 			<ProfileCard
 				username={post.author_username}
@@ -544,13 +544,13 @@
 				<!-- Méta + actions -->
 				<div class="flex items-center justify-between mb-3 gap-2">
 					<div class="flex items-center gap-2">
-						<span class="text-xs text-gray-500">{formatDate(post.created_at)}</span>
+						<span class="text-xs text-[var(--nx-text-muted)]">{formatDate(post.created_at)}</span>
 						{#if post.is_edited}
-							<span class="text-xs text-gray-600 italic">{tFn('forum.edited')}</span>
+							<span class="text-xs text-[var(--nx-text-muted)] italic">{tFn('forum.edited')}</span>
 						{/if}
 						
 						<!-- Numéro de post pour référence -->
-						<span class="text-xs text-gray-700 ml-2">#{index + 1}</span>
+						<span class="text-xs text-[var(--nx-text-muted)] ml-2">#{index + 1}</span>
 					</div>
 
 					<!-- Boutons Edit / Delete (auteur ou mod) -->
@@ -559,7 +559,7 @@
 							{#if canEdit(post) && editingPostId !== post.id}
 								<button type="button"
 									onclick={() => { editingPostId = post.id; deletingPostId = null }}
-									class="px-2 py-1 text-xs text-gray-500 hover:text-indigo-400 hover:bg-indigo-900/20 transition-colors"
+									class="px-2 py-1 text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] hover:bg-[rgb(var(--nx-accent-rgb)/0.08)] transition-colors"
 									title={tFn('forum.edit_message_title')}>
 									✏️ {tFn('common.edit')}
 								</button>
@@ -568,13 +568,13 @@
 								{#if deletingPostId !== post.id}
 									<button type="button"
 										onclick={() => { deletingPostId = post.id; editingPostId = null }}
-										class="px-2 py-1 text-xs text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
+										class="px-2 py-1 text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] hover:bg-[color-mix(in_srgb,var(--nx-bad)_10%,transparent)] transition-colors"
 										title={tFn('forum.delete_message_title')}>
 										🗑 {tFn('common.delete')}
 									</button>
 								{:else}
 									<!-- Confirmation suppression -->
-									<span class="text-xs text-red-400">{tFn('forum.confirm')}</span>
+									<span class="text-xs text-[var(--nx-bad)]">{tFn('forum.confirm')}</span>
 									<form method="POST" action="?/deletePost" use:enhance={() => {
 										return async ({ update }) => {
 											deletingPostId = null
@@ -587,7 +587,7 @@
 											Oui
 										</button>
 										<button type="button" onclick={() => deletingPostId = null}
-											class="px-2 py-1 bg-gray-700 text-xs text-gray-300 hover:bg-gray-600">
+											class="px-2 py-1 bg-[var(--nx-border)] text-xs text-[var(--nx-text)] hover:bg-[var(--nx-border)]">
 											Non
 										</button>
 									</form>
@@ -621,7 +621,7 @@
 							</button>
 							<button type="button"
 								onclick={() => editingPostId = null}
-								class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 transition-colors">
+								class="px-3 py-1.5 bg-[var(--nx-border)] hover:bg-[var(--nx-border)] text-xs text-[var(--nx-text)] transition-colors">
 								{tFn('common.cancel')}
 							</button>
 						</div>
@@ -650,8 +650,8 @@
 <!-- ── Formulaire de réponse (inchangé) ───────────────────────────────────── -->
 {#if !thread.is_locked}
 	{#if user}
-		<div class="mt-8 border-t border-gray-800 pt-6">
-			<h2 class="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+		<div class="mt-8 border-t border-[var(--nx-border)] pt-6">
+			<h2 class="text-sm font-semibold text-[var(--nx-text-muted)] mb-3 flex items-center gap-2">
 				<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
 				</svg>
@@ -685,15 +685,15 @@
 			</form>
 		</div>
 	{:else}
-		<div class="mt-8 border-t border-gray-800 pt-6 text-center">
-			<p class="text-sm text-gray-500 mb-3">{tFn('forum.must_login_reply')}</p>
+		<div class="mt-8 border-t border-[var(--nx-border)] pt-6 text-center">
+			<p class="text-sm text-[var(--nx-text-muted)] mb-3">{tFn('forum.must_login_reply')}</p>
 			<a href="/auth/login" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors">
 				{tFn('common.login')}
 			</a>
 		</div>
 	{/if}
 {:else}
-	<p class="mt-6 text-sm text-gray-500 border-t border-gray-800 pt-4 flex items-center gap-2">
+	<p class="mt-6 text-sm text-[var(--nx-text-muted)] border-t border-[var(--nx-border)] pt-4 flex items-center gap-2">
 		<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
 		</svg>

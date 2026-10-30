@@ -117,7 +117,7 @@
 	}
 </script>
 
-<div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-800/60">
+<div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-[var(--nx-border)]/60">
 	<!-- Emoji reactions -->
 	{#each EMOJIS as emoji}
 		{@const r = reactionFor(emoji)}
@@ -134,8 +134,8 @@
 					onblur={closeTooltip}
 					class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-colors
 					{r?.user_reacted
-						? 'border-indigo-600 bg-indigo-900/40 text-indigo-300'
-						: 'border-gray-700 bg-gray-800/40 text-gray-400 hover:border-gray-600 hover:text-gray-300'}"
+						? 'border-indigo-600 bg-[rgb(var(--nx-accent-rgb)/0.14)] text-[var(--nx-header-accent)]'
+						: 'border-[var(--nx-border)] bg-[var(--nx-surface-raised)]/40 text-[var(--nx-text-muted)] hover:border-[var(--nx-border)] hover:text-[var(--nx-text)]'}"
 					title=""
 				>
 					<span>{emoji}</span>
@@ -144,7 +144,7 @@
 					{/if}
 				</button>
 			{:else if r && r.count > 0}
-				<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border border-gray-700 bg-gray-800/40 text-gray-400">
+				<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border border-[var(--nx-border)] bg-[var(--nx-surface-raised)]/40 text-[var(--nx-text-muted)]">
 					<span>{emoji}</span>
 					<span>{r.count}</span>
 				</span>
@@ -167,14 +167,14 @@
 			onclick={toggleThanks}
 			class="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors
 			{localUserThanked
-				? 'border-yellow-600 bg-yellow-900/30 text-yellow-300'
-				: 'border-gray-700 bg-gray-800/40 text-gray-400 hover:border-yellow-600 hover:text-yellow-300'}"
+				? 'border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] bg-[color-mix(in_srgb,var(--nx-warn)_12%,transparent)] text-[var(--nx-warn)]'
+				: 'border-[var(--nx-border)] bg-[var(--nx-surface-raised)]/40 text-[var(--nx-text-muted)] hover:border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] hover:text-[var(--nx-warn)]'}"
 		>
 			<span>🙏</span>
 			<span>Merci{localThanksCount > 0 ? ` (${localThanksCount})` : ''}</span>
 		</button>
 	{:else if localThanksCount > 0}
-		<span class="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border border-gray-700 bg-gray-800/40 text-gray-500">
+		<span class="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border border-[var(--nx-border)] bg-[var(--nx-surface-raised)]/40 text-[var(--nx-text-muted)]">
 			🙏 {localThanksCount}
 		</span>
 	{/if}

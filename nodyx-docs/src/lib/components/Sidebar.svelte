@@ -1,6 +1,5 @@
 <script lang="ts">
   import { nav, type NavSection, type NavItem } from '../nav.js'
-  import { page } from '$app/stores'
 
   // `lang` prefixe chaque lien. Sans lui, un lecteur arrive sur /fr/relay puis
   // retombe en anglais au premier clic de la barre laterale.

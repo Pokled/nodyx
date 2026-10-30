@@ -30,7 +30,8 @@
 | **Fase 4.23** | Escaparate de música + endurecimiento del escaparate público | Completa |
 | **Fase 4.24** | Los ambientes y el contenedor flotante | Completa |
 | **Fase 4.25** | Instalador reconstruido, auditoría de seguridad | Completa |
-| **Fase 4.26** | Estabilización: cazar errores en uso real | En curso |
+| **Fase 4.26** | Estabilización: cazar errores en uso real | Completa (v2.13) |
+| **Fase 4.27** | Tema claro y oscuro en todas partes, una apariencia que se entiende | En curso |
 | Fase 5 | Móvil + Nodes + Reputación | En curso |
 | **Fase Horizon** | NODYX-ETHER, soberanía de la capa física | Visión |
 | **Fase Radio** | NODYX-RADIO, radio por internet + red publicitaria cooperativa | Visión |
@@ -328,7 +329,7 @@ de un aviso sobre una Debian 13 mínima.
 
 ---
 
-## FASE 4.26, Estabilización: cazar errores en uso real (en curso)
+## FASE 4.26, Estabilización: cazar errores en uso real (completa, v2.13)
 
 Usar Nodyx a diario en nodyx.org, y hacer las capturas de esta documentación, sacó a la luz
 errores que ninguna prueba había visto. Cada corrección llega con una prueba que falla con el
@@ -340,6 +341,21 @@ código antiguo, y se comprueba en directo tras el despliegue.
 - Una primera visita cargaba cada página dos veces; foro y barra lateral aplastados en escritorio
 - Después: que las salas de voz grandes funcionen también desde un servidor casero (el motor
   `str0m`, fase 4.18), para que ningún administrador de Nodyx tenga que abrir nunca un puerto
+
+---
+
+## FASE 4.27, Tema claro y oscuro en todas partes, una apariencia que se entiende (en curso)
+
+Quien elige el tema claro debe encontrarlo en cada página. Y quien administra debe saber dónde se
+cambia cada cosa sin tener que adivinar.
+
+- El chat, el muro, los miembros, el foro, la wiki, la agenda y las tareas ya siguen el ambiente de
+  la instancia en los dos temas, respetando los ajustes de la hoja (transparencia, imagen) (v2.13)
+- Lo siguiente: el perfil, los mensajes privados, el inicio de sesión, la administración
+- Una página de inicio en dos versiones: quien administra diseña su cuadrícula una vez, oscura o
+  clara, y Nodyx deduce la otra conservando sus colores
+- Todos los ajustes de apariencia reunidos en un solo recorrido, de lo general a lo particular, con
+  cada color indicando de dónde viene
 
 ---
 

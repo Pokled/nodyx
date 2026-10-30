@@ -40,24 +40,24 @@
 <div class="max-w-3xl mx-auto py-8 px-4">
 
 	<!-- Breadcrumb -->
-	<div class="flex items-center gap-2 text-sm text-gray-500 mb-6">
-		<a href="/wiki" class="hover:text-gray-300 transition-colors">Wiki</a>
+	<div class="flex items-center gap-2 text-sm text-[var(--nx-text-muted)] mb-6">
+		<a href="/wiki" class="hover:text-[var(--nx-text)] transition-colors">Wiki</a>
 		{#if pg?.category}
 			<span>/</span>
 			<a href="/wiki?category={encodeURIComponent(pg.category)}"
-			   class="hover:text-gray-300 transition-colors text-amber-500/70">{pg.category}</a>
+			   class="hover:text-[var(--nx-text)] transition-colors text-amber-500/70">{pg.category}</a>
 		{/if}
 		<span>/</span>
-		<span class="text-gray-400 truncate">{pg?.title}</span>
+		<span class="text-[var(--nx-text-muted)] truncate">{pg?.title}</span>
 	</div>
 
 	<!-- Title + actions -->
 	<div class="flex items-start justify-between gap-4 mb-6">
-		<h1 class="text-2xl font-bold text-white leading-tight">{pg?.title}</h1>
+		<h1 class="text-2xl font-bold text-[var(--nx-text)] leading-tight">{pg?.title}</h1>
 		{#if canEdit}
 			<div class="flex items-center gap-2 shrink-0">
 				<a href="/wiki/{pg.slug}/edit"
-				   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors">
+				   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--nx-surface-raised)] hover:bg-[var(--nx-border)] text-[var(--nx-text)] text-xs font-medium transition-colors">
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
 						      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -66,7 +66,7 @@
 				</a>
 				{#if data.user?.role === 'owner' || data.user?.role === 'admin' || data.user?.role === 'moderator'}
 					<button onclick={deletePage}
-					        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-red-900/40 text-gray-500 hover:text-red-400 text-xs font-medium transition-colors">
+					        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--nx-surface-raised)] hover:bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] text-xs font-medium transition-colors">
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
 							      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -79,12 +79,12 @@
 	</div>
 
 	<!-- Meta bar -->
-	<div class="flex items-center gap-4 text-xs text-gray-500 mb-8 pb-4 border-b border-gray-800">
+	<div class="flex items-center gap-4 text-xs text-[var(--nx-text-muted)] mb-8 pb-4 border-b border-[var(--nx-border)]">
 		<div class="flex items-center gap-1.5">
 			{#if pg?.author_avatar}
 				<img src={pg.author_avatar} alt="" class="w-5 h-5 rounded-full object-cover" />
 			{:else}
-				<div class="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-gray-400">
+				<div class="w-5 h-5 rounded-full bg-[var(--nx-border)] flex items-center justify-center text-[10px] text-[var(--nx-text-muted)]">
 					{(pg?.author_username ?? '?')[0].toUpperCase()}
 				</div>
 			{/if}
@@ -104,7 +104,7 @@
 			{pg?.views !== 1 ? tFn('wiki_view.views_many', { count: pg?.views }) : tFn('wiki_view.views_one', { count: pg?.views })}
 		</span>
 		{#if pg?.is_public}
-			<span class="px-2 py-0.5 rounded-full bg-green-900/30 text-green-500 border border-green-500/20">
+			<span class="px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--nx-ok)_12%,transparent)] text-green-500 border border-green-500/20">
 				Public
 			</span>
 		{/if}
@@ -116,8 +116,8 @@
 	</div>
 
 	<!-- Back link -->
-	<div class="mt-12 pt-6 border-t border-gray-800">
-		<a href="/wiki" class="text-sm text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1.5">
+	<div class="mt-12 pt-6 border-t border-[var(--nx-border)]">
+		<a href="/wiki" class="text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] transition-colors flex items-center gap-1.5">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 			</svg>

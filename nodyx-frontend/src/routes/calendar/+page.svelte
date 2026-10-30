@@ -164,9 +164,11 @@
 </div>
 
 <style>
+/* Pas de fond : la feuille (main, SHEET_THEMED dans +layout) peint celui du
+   thème avec les réglages de zone de l'admin. flex: 1 0 auto : remplit l'écran
+   sans jamais rétrécir sous son contenu. */
 .cal-root {
-	min-height: 100dvh;
-	background: #09090f;
+	flex: 1 0 auto;
 	display: flex;
 	flex-direction: column;
 }
@@ -176,9 +178,9 @@
 	position: sticky;
 	top: 0;
 	z-index: 20;
-	background: rgba(9,9,15,0.88);
+	background: color-mix(in srgb, var(--nx-surface) 88%, transparent);
 	backdrop-filter: blur(16px);
-	border-bottom: 1px solid rgba(255,255,255,0.06);
+	border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 }
 .cal-header-inner {
 	display: flex;
@@ -196,12 +198,12 @@
 .cal-title {
 	font-size: 1rem;
 	font-weight: 800;
-	color: rgba(255,255,255,0.92);
+	color: var(--nx-text);
 	letter-spacing: -0.2px;
 }
 .cal-sub {
 	font-size: 0.65rem;
-	color: rgba(255,255,255,0.28);
+	color: var(--nx-text-muted);
 	margin-top: 1px;
 }
 .cal-header-right {
@@ -212,25 +214,25 @@
 }
 .cal-toggle {
 	display: flex;
-	border: 1px solid rgba(255,255,255,0.07);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 7%, transparent);
 	overflow: hidden;
 }
 .cal-toggle-btn {
 	padding: 0.3rem 0.75rem;
 	font-size: 0.7rem;
 	font-weight: 600;
-	color: rgba(255,255,255,0.35);
+	color: var(--nx-text-muted);
 	transition: all 0.12s;
 }
-.cal-toggle-btn:hover { color: rgba(255,255,255,0.65); background: rgba(255,255,255,0.04); }
+.cal-toggle-btn:hover { color: var(--nx-text-muted); background: color-mix(in srgb, var(--nx-text) 4%, transparent); }
 .cal-toggle-btn--active {
-	background: rgba(52,211,153,0.12);
-	color: #34d399;
-	border-right: 1px solid rgba(255,255,255,0.07);
+	background: color-mix(in srgb, var(--nx-ok) 12%, transparent);
+	color: var(--nx-ok);
+	border-right: 1px solid color-mix(in srgb, var(--nx-text) 7%, transparent);
 }
 .cal-toggle-btn--past {
-	background: rgba(255,255,255,0.05);
-	color: rgba(255,255,255,0.6);
+	background: color-mix(in srgb, var(--nx-text) 5%, transparent);
+	color: var(--nx-text-muted);
 }
 .cal-new-btn {
 	display: flex;
@@ -239,12 +241,12 @@
 	padding: 0.3rem 0.75rem;
 	font-size: 0.7rem;
 	font-weight: 700;
-	color: rgba(255,255,255,0.7);
-	border: 1px solid rgba(52,211,153,0.3);
-	background: rgba(52,211,153,0.06);
+	color: var(--nx-text-muted);
+	border: 1px solid color-mix(in srgb, var(--nx-ok) 30%, transparent);
+	background: color-mix(in srgb, var(--nx-ok) 6%, transparent);
 	transition: all 0.12s;
 }
-.cal-new-btn:hover { color: #34d399; border-color: rgba(52,211,153,0.5); background: rgba(52,211,153,0.1); }
+.cal-new-btn:hover { color: var(--nx-ok); border-color: color-mix(in srgb, var(--nx-ok) 50%, transparent); background: color-mix(in srgb, var(--nx-ok) 10%, transparent); }
 .cal-new-icon { width: 11px; height: 11px; }
 
 /* ── Body ────────────────────────────────────────────────────────────────── */
@@ -261,9 +263,9 @@
 	text-align: center;
 }
 .cal-empty-icon { font-size: 2.5rem; line-height: 1; }
-.cal-empty-title { font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.4); margin-top: 0.5rem; }
-.cal-empty-link { font-size: 0.75rem; color: rgba(52,211,153,0.7); margin-top: 0.5rem; transition: color 0.12s; }
-.cal-empty-link:hover { color: #34d399; }
+.cal-empty-title { font-size: 0.85rem; font-weight: 700; color: var(--nx-text-muted); margin-top: 0.5rem; }
+.cal-empty-link { font-size: 0.75rem; color: var(--nx-ok); margin-top: 0.5rem; transition: color 0.12s; }
+.cal-empty-link:hover { color: var(--nx-ok); }
 
 /* ── Month section ───────────────────────────────────────────────────────── */
 .cal-month-header {
@@ -277,13 +279,13 @@
 	font-weight: 800;
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
-	color: rgba(255,255,255,0.2);
+	color: var(--nx-text-muted);
 	white-space: nowrap;
 }
 .cal-month-line {
 	flex: 1;
 	height: 1px;
-	background: rgba(255,255,255,0.04);
+	background: color-mix(in srgb, var(--nx-text) 4%, transparent);
 }
 
 /* ── Event row ───────────────────────────────────────────────────────────── */
@@ -292,13 +294,13 @@
 	align-items: flex-start;
 	gap: 1rem;
 	padding: 0.875rem 1.5rem;
-	border-bottom: 1px solid rgba(255,255,255,0.03);
+	border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 3%, transparent);
 	background: transparent;
 	transition: background 0.1s;
 	text-decoration: none;
 }
-.cal-row:hover { background: rgba(255,255,255,0.015); }
-.cal-row--today { border-left: 2px solid #34d399; padding-left: calc(1.5rem - 2px); }
+.cal-row:hover { background: color-mix(in srgb, var(--nx-text) 1.5%, transparent); }
+.cal-row--today { border-left: 2px solid var(--nx-ok); padding-left: calc(1.5rem - 2px); }
 .cal-row--cancelled { opacity: 0.45; }
 
 /* Date badge */
@@ -310,28 +312,28 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	border: 1px solid rgba(255,255,255,0.07);
-	background: rgba(255,255,255,0.02);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 7%, transparent);
+	background: color-mix(in srgb, var(--nx-text) 2%, transparent);
 }
 .cal-date-badge--today {
-	border-color: rgba(52,211,153,0.4);
-	background: rgba(52,211,153,0.08);
+	border-color: color-mix(in srgb, var(--nx-ok) 40%, transparent);
+	background: color-mix(in srgb, var(--nx-ok) 8%, transparent);
 }
 .cal-date-month {
 	font-size: 0.55rem;
 	font-weight: 700;
 	letter-spacing: 0.08em;
-	color: rgba(255,255,255,0.3);
+	color: var(--nx-text-muted);
 	line-height: 1;
 }
-.cal-date-badge--today .cal-date-month { color: rgba(52,211,153,0.7); }
+.cal-date-badge--today .cal-date-month { color: var(--nx-ok); }
 .cal-date-day {
 	font-size: 1.125rem;
 	font-weight: 800;
-	color: rgba(255,255,255,0.85);
+	color: var(--nx-text);
 	line-height: 1.1;
 }
-.cal-date-badge--today .cal-date-day { color: #34d399; }
+.cal-date-badge--today .cal-date-day { color: var(--nx-ok); }
 
 /* Row body */
 .cal-row-body { flex: 1; min-width: 0; }
@@ -344,7 +346,7 @@
 .cal-row-title {
 	font-size: 0.85rem;
 	font-weight: 700;
-	color: rgba(255,255,255,0.88);
+	color: var(--nx-text);
 	letter-spacing: -0.1px;
 	line-height: 1.3;
 	flex: 1;
@@ -361,11 +363,11 @@
 	padding: 0.1rem 0.45rem;
 	border: 1px solid;
 }
-.cal-badge--red   { color: #f87171; border-color: rgba(248,113,113,0.3); }
-.cal-badge--green { color: #34d399; border-color: rgba(52,211,153,0.3); }
+.cal-badge--red   { color: var(--nx-bad); border-color: color-mix(in srgb, var(--nx-bad) 30%, transparent); }
+.cal-badge--green { color: var(--nx-ok); border-color: color-mix(in srgb, var(--nx-ok) 30%, transparent); }
 .cal-row-date {
 	font-size: 0.7rem;
-	color: rgba(255,255,255,0.28);
+	color: var(--nx-text-muted);
 	margin-bottom: 0.25rem;
 }
 .cal-row-location {
@@ -373,7 +375,7 @@
 	align-items: center;
 	gap: 0.25rem;
 	font-size: 0.7rem;
-	color: rgba(255,255,255,0.22);
+	color: var(--nx-text-muted);
 	margin-bottom: 0.25rem;
 }
 .cal-loc-icon { width: 10px; height: 10px; flex-shrink: 0; }
@@ -389,26 +391,26 @@
 	align-items: center;
 	gap: 0.25rem;
 	font-size: 0.65rem;
-	color: rgba(255,255,255,0.22);
+	color: var(--nx-text-muted);
 }
 .cal-meta-icon { width: 10px; height: 10px; }
 .cal-tag {
 	font-size: 0.6rem;
 	padding: 0.1rem 0.4rem;
-	border: 1px solid rgba(255,255,255,0.07);
-	color: rgba(255,255,255,0.3);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 7%, transparent);
+	color: var(--nx-text-muted);
 }
 
 /* Arrow */
 .cal-row-arrow {
 	width: 14px;
 	height: 14px;
-	color: rgba(255,255,255,0.1);
+	color: var(--nx-text-muted);
 	flex-shrink: 0;
 	margin-top: 14px;
 	transition: color 0.1s;
 }
-.cal-row:hover .cal-row-arrow { color: rgba(255,255,255,0.35); }
+.cal-row:hover .cal-row-arrow { color: var(--nx-text-muted); }
 
 @media (max-width: 640px) {
 	.cal-header-inner { padding: 0.875rem 1rem; }

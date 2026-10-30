@@ -1192,11 +1192,11 @@
 <input type="hidden" {name} value={html} />
 
 <!-- ── Editor shell ────────────────────────────────────────────────────── -->
-<div bind:this={wrapperEl} class="nodyx-editor rounded-xl border border-gray-700 bg-gray-900 overflow-visible focus-within:border-indigo-600 transition-colors">
+<div bind:this={wrapperEl} class="nodyx-editor rounded-xl border border-gray-700 themed:border-[var(--nx-border)] bg-gray-900 themed:bg-[var(--nx-surface)] overflow-visible focus-within:border-indigo-600 transition-colors">
 
 	<!-- ── Toolbar ─────────────────────────────────────────────────────── -->
 	{#if editor}
-	<div class="nodyx-toolbar flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-800 bg-gray-900/95 backdrop-blur relative z-10 rounded-t-xl shrink-0"
+	<div class="nodyx-toolbar flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-800 themed:border-[var(--nx-border)] bg-gray-900/95 themed:bg-[var(--nx-surface)]/95 backdrop-blur relative z-10 rounded-t-xl shrink-0"
 		role="toolbar"
 		tabindex="0"
 		onmousedown={(e) => {
@@ -1284,9 +1284,9 @@
 			</button>
 			{#if showColor}
 			<div class="popup w-48 grid grid-cols-6 gap-1 p-2" use:anchoredPopover>
-				<button type="button" onclick={() => editor?.chain().focus().unsetColor().run()} class="col-span-6 text-xs text-gray-400 hover:text-white text-left mb-1">{tFn('editor.color_reset')}</button>
+				<button type="button" onclick={() => editor?.chain().focus().unsetColor().run()} class="col-span-6 text-xs text-gray-400 themed:text-[var(--nx-text-muted)] hover:text-white themed:hover:text-[var(--nx-text)] text-left mb-1">{tFn('editor.color_reset')}</button>
 				{#each COLORS as c}
-					<button type="button" onclick={() => setColor(c)} class="w-6 h-6 rounded border border-gray-700 hover:scale-110 transition-transform" style="background:{c}" title={c}></button>
+					<button type="button" onclick={() => setColor(c)} class="w-6 h-6 rounded border border-gray-700 themed:border-[var(--nx-border)] hover:scale-110 transition-transform" style="background:{c}" title={c}></button>
 				{/each}
 			</div>
 			{/if}
@@ -1325,16 +1325,16 @@
 				{/if}
 				<!-- Bouton médiathèque -->
 				<button type="button" onclick={openMediaPicker}
-					class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-indigo-700/60 bg-indigo-950/30 text-indigo-300 text-xs font-medium hover:bg-indigo-900/40 transition-colors">
+					class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-indigo-700/60 bg-indigo-950/30 text-indigo-300 themed:text-[var(--nx-header-accent)] text-xs font-medium hover:bg-indigo-900/40 transition-colors">
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
 					</svg>
 					{tFn('editor.img.choose_library')}
 				</button>
-				<div class="flex items-center gap-2 text-gray-600">
-					<span class="flex-1 h-px bg-gray-800"></span>
+				<div class="flex items-center gap-2 text-gray-600 themed:text-[var(--nx-text-muted)]">
+					<span class="flex-1 h-px bg-gray-800 themed:bg-[var(--nx-surface-raised)]"></span>
 					<span class="text-[10px]">ou</span>
-					<span class="flex-1 h-px bg-gray-800"></span>
+					<span class="flex-1 h-px bg-gray-800 themed:bg-[var(--nx-surface-raised)]"></span>
 				</div>
 				<input type="url" bind:value={imageUrl} placeholder={tFn('editor.image_url_placeholder')} class="popup-input" />
 				<input type="text" bind:value={imageAlt} placeholder={tFn('editor.image_alt_placeholder')} class="popup-input" />
@@ -1344,7 +1344,7 @@
 				<div class="flex flex-wrap gap-1">
 					{#each [['left', tFn('editor.img_align_left')],['center', tFn('editor.img_align_center')],['right', tFn('editor.img_align_right')],['full', tFn('editor.img_align_full')],['inline', tFn('editor.img_align_inline')]] as [v, label]}
 						<button type="button" onclick={() => imageAlign = v as any}
-							class="flex-1 text-xs px-2 py-1 rounded border transition-colors {imageAlign === v ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300' : 'border-gray-700 text-gray-500 hover:border-gray-500'}">
+							class="flex-1 text-xs px-2 py-1 rounded border transition-colors {imageAlign === v ? 'border-indigo-500 bg-indigo-900/50 text-indigo-300 themed:text-[var(--nx-header-accent)]' : 'border-gray-700 themed:border-[var(--nx-border)] text-gray-500 themed:text-[var(--nx-text-muted)] hover:border-gray-500'}">
 							{label}
 						</button>
 					{/each}
@@ -1361,7 +1361,7 @@
 			</button>
 			{#if showVideo}
 			<div class="popup w-80 flex flex-col gap-2 p-3" use:anchoredPopover>
-				<p class="text-xs text-gray-500">{tFn('editor.video_hint')}</p>
+				<p class="text-xs text-gray-500 themed:text-[var(--nx-text-muted)]">{tFn('editor.video_hint')}</p>
 				<input type="url" bind:value={videoUrl} placeholder={tFn('editor.video.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertVideo()} />
 				<button type="button" onclick={insertVideo} class="popup-btn-primary">{tFn('editor.embed_video')}</button>
 			</div>
@@ -1375,7 +1375,7 @@
 			</button>
 			{#if showAudio}
 			<div class="popup w-96 flex flex-col gap-2 p-3" use:anchoredPopover>
-				<p class="text-xs text-gray-500">{tFn('editor.audio.hint')}</p>
+				<p class="text-xs text-gray-500 themed:text-[var(--nx-text-muted)]">{tFn('editor.audio.hint')}</p>
 				<input
 					bind:this={audioFileEl}
 					type="file"
@@ -1391,12 +1391,12 @@
 							{#if audioCoverPreview}
 								<img src={audioCoverPreview} alt={tFn('editor.audio.cover_alt')} class="w-16 h-16 rounded object-cover border border-indigo-700/40" />
 							{:else}
-								<div class="w-16 h-16 rounded border border-dashed border-gray-700 flex items-center justify-center text-gray-600 text-xs">aucune</div>
+								<div class="w-16 h-16 rounded border border-dashed border-gray-700 themed:border-[var(--nx-border)] flex items-center justify-center text-gray-600 themed:text-[var(--nx-text-muted)] text-xs">aucune</div>
 							{/if}
 							<div class="flex gap-1 mt-1">
-								<button type="button" onclick={() => audioCoverFileEl?.click()} class="flex-1 text-[10px] px-1.5 py-0.5 rounded border border-gray-700 text-gray-400 hover:border-indigo-500 hover:text-indigo-300 transition-colors">{tFn('editor.audio.choose_cover')}</button>
+								<button type="button" onclick={() => audioCoverFileEl?.click()} class="flex-1 text-[10px] px-1.5 py-0.5 rounded border border-gray-700 themed:border-[var(--nx-border)] text-gray-400 themed:text-[var(--nx-text-muted)] hover:border-indigo-500 hover:text-indigo-300 themed:hover:text-[var(--nx-header-accent)] transition-colors">{tFn('editor.audio.choose_cover')}</button>
 								{#if audioCoverPreview}
-									<button type="button" onclick={clearCover} class="text-[10px] px-1.5 py-0.5 rounded border border-gray-700 text-red-400 hover:border-red-500 transition-colors" title={tFn('editor.audio.clear_cover')}>×</button>
+									<button type="button" onclick={clearCover} class="text-[10px] px-1.5 py-0.5 rounded border border-gray-700 themed:border-[var(--nx-border)] text-red-400 hover:border-red-500 transition-colors" title={tFn('editor.audio.clear_cover')}>×</button>
 								{/if}
 							</div>
 							<input bind:this={audioCoverFileEl} type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" onchange={onCoverFileChange} />
@@ -1414,25 +1414,25 @@
 
 				{#if audioStaged.length > 0}
 					<div class="mt-2 flex flex-col gap-1 max-h-40 overflow-y-auto border border-indigo-700/40 rounded p-1.5 bg-indigo-950/30">
-						<div class="text-[10px] text-indigo-300 uppercase tracking-wider px-1">{audioStaged.length === 1 ? tFn('editor.audio.queue_one', { count: audioStaged.length }) : tFn('editor.audio.queue_many', { count: audioStaged.length })}</div>
+						<div class="text-[10px] text-indigo-300 themed:text-[var(--nx-header-accent)] uppercase tracking-wider px-1">{audioStaged.length === 1 ? tFn('editor.audio.queue_one', { count: audioStaged.length }) : tFn('editor.audio.queue_many', { count: audioStaged.length })}</div>
 						{#each audioStaged as t, i}
 							<div class="flex items-center gap-2 text-xs px-1 py-0.5 hover:bg-indigo-900/30 rounded">
-								<span class="text-indigo-400 font-mono">{i + 1}.</span>
+								<span class="text-indigo-400 themed:text-[var(--nx-header-accent)] font-mono">{i + 1}.</span>
 								{#if t.cover}
 									<img src={t.cover} alt="" class="w-6 h-6 rounded object-cover shrink-0" />
 								{:else}
 									<div class="w-6 h-6 rounded bg-indigo-900/40 shrink-0"></div>
 								{/if}
 								<div class="flex-1 min-w-0">
-									<div class="text-gray-200 truncate">{t.title || t.src.split('/').pop()}</div>
-									{#if t.artist}<div class="text-gray-500 text-[10px] truncate">{t.artist}</div>{/if}
+									<div class="text-gray-200 themed:text-[var(--nx-text)] truncate">{t.title || t.src.split('/').pop()}</div>
+									{#if t.artist}<div class="text-gray-500 themed:text-[var(--nx-text-muted)] text-[10px] truncate">{t.artist}</div>{/if}
 								</div>
 								<button type="button" onclick={() => removeStaged(i)} class="text-red-400 hover:text-red-300 text-base leading-none px-1" title={tFn('editor.remove')}>×</button>
 							</div>
 						{/each}
 					</div>
 
-					<label class="flex items-center gap-2 text-xs text-gray-400 mt-1 cursor-pointer select-none">
+					<label class="flex items-center gap-2 text-xs text-gray-400 themed:text-[var(--nx-text-muted)] mt-1 cursor-pointer select-none">
 						<input type="checkbox" bind:checked={audioAllowDownload} class="accent-indigo-500" />
 						<span>{tFn('editor.audio.allow_download')}</span>
 					</label>
@@ -1446,10 +1446,10 @@
 					<p class="text-xs text-red-400">{audioError}</p>
 				{/if}
 
-				<div class="flex items-center gap-2 text-gray-600 mt-1">
-					<span class="flex-1 h-px bg-gray-800"></span>
+				<div class="flex items-center gap-2 text-gray-600 themed:text-[var(--nx-text-muted)] mt-1">
+					<span class="flex-1 h-px bg-gray-800 themed:bg-[var(--nx-surface-raised)]"></span>
 					<span class="text-[10px]">ou URL /uploads/…</span>
-					<span class="flex-1 h-px bg-gray-800"></span>
+					<span class="flex-1 h-px bg-gray-800 themed:bg-[var(--nx-surface-raised)]"></span>
 				</div>
 				<input type="text" bind:value={audioUrlExternal} placeholder={tFn('editor.audio.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertAudioFromUrl()} />
 				<button type="button" onclick={insertAudioFromUrl} class="popup-btn-primary" disabled={audioUploading || !audioUrlExternal.trim()}>{tFn('editor.audio.insert_from_url')}</button>
@@ -1463,7 +1463,7 @@
 			{#if showEmoji}
 			<div class="popup w-72 p-2 grid grid-cols-10 gap-0.5 max-h-48 overflow-y-auto" use:anchoredPopover>
 				{#each EMOJIS as e}
-					<button type="button" onclick={() => insertEmoji(e)} class="text-base p-1 rounded hover:bg-gray-700 transition-colors leading-none">{e}</button>
+					<button type="button" onclick={() => insertEmoji(e)} class="text-base p-1 rounded hover:bg-gray-700 themed:hover:bg-[var(--nx-border)] transition-colors leading-none">{e}</button>
 				{/each}
 			</div>
 			{/if}
@@ -1488,15 +1488,15 @@
 				{#if !a.table}
 					<button type="button" onclick={() => { toggleAny('insertTable'); showTable = false }} class="table-btn">{tFn('editor.insert_table')}</button>
 				{:else}
-					<p class="text-xs text-gray-500 px-1 mb-1">{tFn('editor.rows')}</p>
+					<p class="text-xs text-gray-500 themed:text-[var(--nx-text-muted)] px-1 mb-1">{tFn('editor.rows')}</p>
 					<button type="button" onclick={() => toggleAny('addRowBefore')} class="table-btn">{tFn('editor.add_row_before')}</button>
 					<button type="button" onclick={() => toggleAny('addRowAfter')}  class="table-btn">{tFn('editor.add_row_after')}</button>
 					<button type="button" onclick={() => toggleAny('delRow')}       class="table-btn danger">{tFn('editor.del_row')}</button>
-					<p class="text-xs text-gray-500 px-1 mt-1 mb-1">{tFn('editor.cols')}</p>
+					<p class="text-xs text-gray-500 themed:text-[var(--nx-text-muted)] px-1 mt-1 mb-1">{tFn('editor.cols')}</p>
 					<button type="button" onclick={() => toggleAny('addColBefore')} class="table-btn">{tFn('editor.add_col_before')}</button>
 					<button type="button" onclick={() => toggleAny('addColAfter')}  class="table-btn">{tFn('editor.add_col_after')}</button>
 					<button type="button" onclick={() => toggleAny('delCol')}       class="table-btn danger">{tFn('editor.del_col')}</button>
-					<hr class="border-gray-700 my-1"/>
+					<hr class="border-gray-700 themed:border-[var(--nx-border)] my-1"/>
 					<button type="button" onclick={() => { toggleAny('delTable'); showTable = false }} class="table-btn danger">{tFn('editor.del_table')}</button>
 				{/if}
 			</div>
@@ -1512,12 +1512,12 @@
 	<div class="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm"
 	     role="presentation"
 	     onclick={(e) => { if (e.target === e.currentTarget) showMediaPicker = false }}>
-		<div class="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col overflow-hidden max-h-[80vh]"
+		<div class="bg-gray-900 themed:bg-[var(--nx-surface)] border border-gray-700 themed:border-[var(--nx-border)] rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col overflow-hidden max-h-[80vh]"
 		     onclick={(e) => e.stopPropagation()}>
 			<!-- Header -->
-			<div class="flex items-center justify-between px-5 py-4 border-b border-gray-800 shrink-0">
-				<h3 class="text-sm font-bold text-white">{tFn('editor.library.title')}</h3>
-				<button type="button" onclick={() => showMediaPicker = false} class="text-gray-500 hover:text-white transition-colors">
+			<div class="flex items-center justify-between px-5 py-4 border-b border-gray-800 themed:border-[var(--nx-border)] shrink-0">
+				<h3 class="text-sm font-bold text-white themed:text-[var(--nx-text)]">{tFn('editor.library.title')}</h3>
+				<button type="button" onclick={() => showMediaPicker = false} class="text-gray-500 themed:text-[var(--nx-text-muted)] hover:text-white themed:hover:text-[var(--nx-text)] transition-colors">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 					</svg>
@@ -1526,24 +1526,24 @@
 			<!-- Grid -->
 			<div class="overflow-y-auto p-4 flex-1">
 				{#if mediaLoading}
-					<div class="flex items-center justify-center py-12 text-gray-500 text-sm">{tFn('editor.loading')}</div>
+					<div class="flex items-center justify-center py-12 text-gray-500 themed:text-[var(--nx-text-muted)] text-sm">{tFn('editor.loading')}</div>
 				{:else if mediaImages.length === 0}
-					<div class="flex flex-col items-center justify-center py-12 gap-2 text-gray-600">
+					<div class="flex flex-col items-center justify-center py-12 gap-2 text-gray-600 themed:text-[var(--nx-text-muted)]">
 						<svg class="w-8 h-8 opacity-40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909"/>
 						</svg>
 						<p class="text-sm">{tFn('editor.library.empty')}</p>
-						<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 hover:underline">{tFn('editor.library.open')}</a>
+						<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 themed:text-[var(--nx-header-accent)] hover:underline">{tFn('editor.library.open')}</a>
 					</div>
 				{:else}
 					<div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
 						{#each mediaImages as asset (asset.id)}
 						<button type="button" onclick={() => pickMedia(asset)}
-							class="group relative aspect-square rounded-xl overflow-hidden border-2 border-transparent hover:border-indigo-500 bg-gray-800 transition-all focus:outline-none focus:border-indigo-400">
+							class="group relative aspect-square rounded-xl overflow-hidden border-2 border-transparent hover:border-indigo-500 bg-gray-800 themed:bg-[var(--nx-surface-raised)] transition-all focus:outline-none focus:border-indigo-400">
 							<img src="/uploads/{asset.file_path}" alt={asset.name}
 							     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"/>
 							<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end">
-								<p class="w-full px-2 py-1.5 text-[10px] text-white font-medium truncate opacity-0 group-hover:opacity-100 transition-opacity"
+								<p class="w-full px-2 py-1.5 text-[10px] text-white themed:text-[var(--nx-text)] font-medium truncate opacity-0 group-hover:opacity-100 transition-opacity"
 								   style="background: linear-gradient(transparent, rgba(0,0,0,0.7))">{asset.name}</p>
 							</div>
 						</button>
@@ -1552,10 +1552,10 @@
 				{/if}
 			</div>
 			<!-- Footer -->
-			<div class="px-5 py-3 border-t border-gray-800 shrink-0 flex items-center justify-between">
-				<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 hover:underline">{tFn('editor.library.manage')}</a>
+			<div class="px-5 py-3 border-t border-gray-800 themed:border-[var(--nx-border)] shrink-0 flex items-center justify-between">
+				<a href="/admin/media" target="_blank" class="text-xs text-indigo-400 themed:text-[var(--nx-header-accent)] hover:underline">{tFn('editor.library.manage')}</a>
 				<button type="button" onclick={() => showMediaPicker = false}
-					class="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 text-xs hover:bg-gray-700 transition-colors">{tFn('editor.cancel')}</button>
+					class="px-3 py-1.5 rounded-lg bg-gray-800 themed:bg-[var(--nx-surface-raised)] text-gray-400 themed:text-[var(--nx-text-muted)] text-xs hover:bg-gray-700 themed:hover:bg-[var(--nx-border)] transition-colors">{tFn('editor.cancel')}</button>
 			</div>
 		</div>
 	</div>
@@ -1586,8 +1586,8 @@
 
 	<!-- ── Footer: character count ─────────────────────────────────────── -->
 	{#if editor && !compact}
-	<div class="px-4 py-1.5 border-t border-gray-800 flex justify-end">
-		<span class="text-xs text-gray-600">{tFn(charCount > 1 ? 'editor.char_count_plural' : 'editor.char_count', { n: String(charCount) })}</span>
+	<div class="px-4 py-1.5 border-t border-gray-800 themed:border-[var(--nx-border)] flex justify-end">
+		<span class="text-xs text-gray-600 themed:text-[var(--nx-text-muted)]">{tFn(charCount > 1 ? 'editor.char_count_plural' : 'editor.char_count', { n: String(charCount) })}</span>
 	</div>
 	{/if}
 </div>
@@ -1735,4 +1735,39 @@
 
 	/* Styles éditeur spécifiques à la toolbar (boutons, popups)
 	   Les styles prose sont dans app.css (.nodyx-prose / .nodyx-content .tiptap) */
+
+	/* ── Dans une page migrée (.nx-themed, cf. app.css) ───────────────────
+	   L'éditeur sert aussi au wiki, à l'agenda, aux tâches, encore sombres :
+	   ses couleurs historiques restent la valeur par défaut, et ne suivent le
+	   thème que sous une racine .nx-themed (le forum). */
+	:global(.nx-themed .nodyx-bubble),
+	:global(.nx-themed .popup) {
+		background: var(--nx-surface-raised);
+		border-color: var(--nx-border);
+	}
+	:global(.nx-themed .nb-btn),
+	:global(.nx-themed .tb-btn),
+	:global(.nx-themed .table-btn) { color: var(--nx-text-muted); }
+	:global(.nx-themed .nb-btn:hover),
+	:global(.nx-themed .tb-btn:hover),
+	:global(.nx-themed .table-btn:hover) {
+		color: var(--nx-text);
+		background-color: color-mix(in srgb, var(--nx-text) 8%, transparent);
+	}
+	:global(.nx-themed .nb-btn.active),
+	:global(.nx-themed .tb-btn.active) {
+		background-color: rgb(var(--nx-accent-rgb) / 0.14);
+		color: var(--nx-header-accent);
+	}
+	:global(.nx-themed .nb-anchor) { color: var(--nx-header-accent); }
+	:global(.nx-themed .nb-sep),
+	:global(.nx-themed .tb-sep) { background-color: var(--nx-border); }
+	:global(.nx-themed .popup-input) {
+		background-color: var(--nx-surface);
+		border-color: var(--nx-border);
+		color: var(--nx-text);
+	}
+	:global(.nx-themed .popup-input::placeholder) { color: var(--nx-text-faint); }
+	:global(.nx-themed .popup-btn-danger),
+	:global(.nx-themed .table-btn.danger) { color: var(--nx-bad); }
 </style>

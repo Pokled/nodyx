@@ -66,6 +66,10 @@ export interface GridTheme {
 	 *  couleurs principale, d'accent et de liens viennent de l'écran Apparence.
 	 *  Absent = non : une grille déjà personnalisée ne change pas en silence. */
 	follow_ambiance?:    boolean;
+	/** Adapter la grille au thème du visiteur (SPECS/NODYX_ACCUEIL_THEME_CDC.md) :
+	 *  dessinée sombre, elle s'inverse en thème clair, et inversement.
+	 *  Absent = oui (décision D1 : toutes les grilles, existantes comprises). */
+	adapt_to_mode?:      boolean;
 }
 
 export const DEFAULT_THEME: GridTheme = {

@@ -23,8 +23,8 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between gap-4 flex-wrap">
 		<div>
-			<h1 class="text-2xl font-bold text-white">{tFn('tasks.title')}</h1>
-			<p class="text-sm text-gray-500 mt-0.5">{data.boards.length} {tFn(data.boards.length > 1 ? 'tasks.boards_plural' : 'tasks.boards_one')}</p>
+			<h1 class="text-2xl font-bold text-[var(--nx-text)]">{tFn('tasks.title')}</h1>
+			<p class="text-sm text-[var(--nx-text-muted)] mt-0.5">{data.boards.length} {tFn(data.boards.length > 1 ? 'tasks.boards_plural' : 'tasks.boards_one')}</p>
 		</div>
 		<button
 			onclick={() => showCreate = !showCreate}
@@ -37,8 +37,8 @@
 
 	<!-- Formulaire de création -->
 	{#if showCreate}
-		<div class="rounded-xl border border-indigo-800/50 bg-indigo-950/30 p-5">
-			<h2 class="text-sm font-semibold text-indigo-300 mb-4">{tFn('tasks.new_board')}</h2>
+		<div class="rounded-xl border border-indigo-800/50 bg-[rgb(var(--nx-accent-rgb)/0.1)] p-5">
+			<h2 class="text-sm font-semibold text-[var(--nx-header-accent)] mb-4">{tFn('tasks.new_board')}</h2>
 			<form
 				method="POST"
 				action="?/create"
@@ -49,7 +49,7 @@
 				class="space-y-3"
 			>
 				{#if form?.error}
-					<p class="text-sm text-red-400">{form.error}</p>
+					<p class="text-sm text-[var(--nx-bad)]">{form.error}</p>
 				{/if}
 				<div class="flex gap-3 flex-wrap">
 					<input
@@ -58,16 +58,16 @@
 						placeholder={tFn('tasks.name_placeholder')}
 						required
 						maxlength="100"
-						class="flex-1 min-w-48 rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-sm text-gray-200
-						       placeholder-gray-600 focus:outline-none focus:border-indigo-600"
+						class="flex-1 min-w-48 rounded-lg bg-[var(--nx-surface)] border border-[var(--nx-border)] px-3 py-2 text-sm text-[var(--nx-text)]
+						       placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-600"
 					/>
 					<input
 						name="description"
 						type="text"
 						placeholder={tFn('tasks.desc_placeholder')}
 						maxlength="1000"
-						class="flex-1 min-w-64 rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-sm text-gray-200
-						       placeholder-gray-600 focus:outline-none focus:border-indigo-600"
+						class="flex-1 min-w-64 rounded-lg bg-[var(--nx-surface)] border border-[var(--nx-border)] px-3 py-2 text-sm text-[var(--nx-text)]
+						       placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-600"
 					/>
 				</div>
 				<div class="flex gap-2">
@@ -81,7 +81,7 @@
 					<button
 						type="button"
 						onclick={() => showCreate = false}
-						class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-400 transition-colors"
+						class="px-4 py-2 rounded-lg bg-[var(--nx-surface-raised)] hover:bg-[var(--nx-border)] text-sm text-[var(--nx-text-muted)] transition-colors"
 					>
 						{tFn('common.cancel')}
 					</button>
@@ -92,26 +92,26 @@
 
 	<!-- Grille des tableaux -->
 	{#if data.boards.length === 0}
-		<div class="rounded-xl border border-gray-800 bg-gray-900/30 px-6 py-16 text-center">
+		<div class="rounded-xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/30 px-6 py-16 text-center">
 			<div class="text-4xl mb-3">📋</div>
-			<p class="text-gray-400 font-medium">{tFn('tasks.empty')}</p>
-			<p class="text-sm text-gray-600 mt-1">{tFn('tasks.empty_sub')}</p>
+			<p class="text-[var(--nx-text-muted)] font-medium">{tFn('tasks.empty')}</p>
+			<p class="text-sm text-[var(--nx-text-muted)] mt-1">{tFn('tasks.empty_sub')}</p>
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 			{#each data.boards as board}
-				<div class="rounded-xl border border-gray-800 bg-gray-900/40 hover:bg-gray-900/60 transition-colors flex flex-col">
+				<div class="rounded-xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/40 hover:bg-[var(--nx-surface)]/60 transition-colors flex flex-col">
 					<a href="/tasks/{board.id}" class="flex-1 p-5 block">
 						<div class="flex items-start gap-3">
 							<span class="text-2xl leading-none mt-0.5">📋</span>
 							<div class="min-w-0">
-								<h3 class="font-semibold text-white truncate">{board.name}</h3>
+								<h3 class="font-semibold text-[var(--nx-text)] truncate">{board.name}</h3>
 								{#if board.description}
-									<p class="text-sm text-gray-500 mt-0.5 line-clamp-2">{board.description}</p>
+									<p class="text-sm text-[var(--nx-text-muted)] mt-0.5 line-clamp-2">{board.description}</p>
 								{/if}
 							</div>
 						</div>
-						<div class="flex items-center gap-4 mt-4 text-xs text-gray-600">
+						<div class="flex items-center gap-4 mt-4 text-xs text-[var(--nx-text-muted)]">
 							<span>{board.column_count} {tFn(board.column_count > 1 ? 'tasks.columns_plural' : 'tasks.columns_one')}</span>
 							<span>·</span>
 							<span>{board.card_count} {tFn(board.card_count > 1 ? 'tasks.cards_plural' : 'tasks.cards_one')}</span>
@@ -119,8 +119,8 @@
 							<span>{board.created_by_username}</span>
 						</div>
 					</a>
-					<div class="border-t border-gray-800 px-5 py-2.5 flex items-center justify-between">
-						<span class="text-xs text-gray-600">{fDate(board.created_at)}</span>
+					<div class="border-t border-[var(--nx-border)] px-5 py-2.5 flex items-center justify-between">
+						<span class="text-xs text-[var(--nx-text-muted)]">{fDate(board.created_at)}</span>
 						<form
 							method="POST"
 							action="?/delete"
@@ -134,7 +134,7 @@
 								type="submit"
 								disabled={deleting === board.id}
 								onclick={(e) => { if (!confirm(tFn('tasks.confirm_delete'))) e.preventDefault() }}
-								class="text-xs text-gray-600 hover:text-red-400 transition-colors disabled:opacity-50"
+								class="text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] transition-colors disabled:opacity-50"
 							>
 								{tFn('common.delete')}
 							</button>

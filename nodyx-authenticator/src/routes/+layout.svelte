@@ -2,7 +2,7 @@
 	import '../app.css'
 	import { onMount } from 'svelte'
 	import { goto } from '$app/navigation'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { isSetupDone, purgeExpiredChallenges } from '$lib/storage'
 
 	let { children } = $props()
@@ -10,7 +10,7 @@
 	onMount(async () => {
 		await purgeExpiredChallenges()
 
-		const currentPath = $page.url.pathname
+		const currentPath = page.url.pathname
 		const done = await isSetupDone()
 		if (!done && !currentPath.startsWith('/setup') && !currentPath.startsWith('/connect')) {
 			goto('/setup')

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type { PageServerLoad } from './$types'
 
 // Les chiffres de l'accueil sont lus EN DIRECT, jamais écrits à la main : la
@@ -7,6 +9,23 @@ import type { PageServerLoad } from './$types'
 // répond pas renvoie null, et le chiffre n'est simplement pas affiché.
 
 const DUREE_MS = 15 * 60 * 1000
+
+// La version affichée est celle DÉPLOYÉE, lue dans VERSION (source unique,
+// docs/RELEASE.md), relue à chaque requête : elle change avec le déploiement,
+// sans cache ni redémarrage. Avant, seule l'API GitHub (cache de 15 min, quota
+// partagé par tout le serveur) la donnait : après la sortie de la 2.13.0 il a
+// fallu redémarrer la page à la main, et ce n'était pas la première fois.
+// GitHub reste le repli si le fichier est introuvable.
+function versionDeployee(): string | null {
+  for (const fichier of [process.env.NODYX_VERSION_FILE, resolve(process.cwd(), '../VERSION')]) {
+    if (!fichier) continue
+    try {
+      const v = readFileSync(fichier, 'utf8').trim()
+      if (/^\d+\.\d+\.\d+/.test(v)) return `v${v}`
+    } catch { /* fichier absent : on tente le suivant */ }
+  }
+  return null
+}
 const cache = new Map<string, { quand: number; valeur: unknown }>()
 
 async function lire<T>(cle: string, url: string, extraire: (json: any) => T | null): Promise<T | null> {
@@ -28,7 +47,7 @@ async function lire<T>(cle: string, url: string, extraire: (json: any) => T | nu
 
 export const load: PageServerLoad = async () => {
   const [version, instances, traduction] = await Promise.all([
-    lire('version', 'https://api.github.com/repos/Pokled/nodyx/releases/latest',
+    versionDeployee() ?? lire('version', 'https://api.github.com/repos/Pokled/nodyx/releases/latest',
       (j) => (typeof j?.tag_name === 'string' ? j.tag_name : null)),
     lire('instances', 'https://nodyx.org/api/directory',
       (j) => (typeof j?.total === 'number' ? j.total : Array.isArray(j?.instances) ? j.instances.length : null)),

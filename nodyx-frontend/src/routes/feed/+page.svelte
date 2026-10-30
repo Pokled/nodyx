@@ -800,14 +800,19 @@
 
 <style>
 /* ── Root ─────────────────────────────────────────────────────────────────── */
+/* Pas de fond ici : la feuille (main, sheetThemed dans +layout) peint celui du
+   thème, avec les réglages de zone de l'admin. flex: 1 0 auto : remplit
+   l'écran sans jamais rétrécir sous son contenu. */
 .feed-root {
-	min-height: 100dvh;
-	background: var(--nx-sheet-bg, var(--nx-bg));
+	flex: 1 0 auto;
 }
 
+/* L'en-tête défile avec la page ; ce sont les onglets qui restent collés
+   (#854). Il était déclaré sticky, mais la racine coupée à la hauteur de
+   l'écran l'emportait avec le défilement : c'est ce comportement qui a été
+   validé, il est maintenant voulu. */
 .feed-header {
-	position: sticky;
-	top: 0;
+	position: relative;
 	z-index: 20;
 	border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 	background: color-mix(in srgb, var(--nx-sheet-bg, var(--nx-bg)) 85%, transparent);
