@@ -1,4 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import kitConfig from './sveltekit.config.js';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
@@ -13,7 +14,7 @@ const sansOrigine = (proxy: any) => {
 }
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+	plugins: [tailwindcss(), sveltekit(kitConfig)],
 
 	build: {
 		rollupOptions: {

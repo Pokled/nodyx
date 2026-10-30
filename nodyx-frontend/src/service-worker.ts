@@ -1,7 +1,15 @@
 /// <reference lib="webworker" />
-/// <reference types="@sveltejs/kit/types/ambient" />
 
-import { build, files, version } from '$service-worker'
+// SvelteKit 3 : $service-worker n'existe plus. immutable (ex-build) et assets
+// (ex-files) donnent des { path } RELATIFS au chemin de base : on remet le « / »
+// de tête, pour que les filtres ci-dessous et la comparaison avec url.pathname
+// voient exactement les mêmes chaînes qu'avant.
+import { immutable, assets } from '$app/manifest'
+import { version } from '$app/env'
+
+const absolu = (path: string) => (path.startsWith('/') ? path : `/${path}`)
+const build = immutable.map((f) => absolu(f.path))
+const files = assets.map((f) => absolu(f.path))
 
 declare const self: ServiceWorkerGlobalScope
 
