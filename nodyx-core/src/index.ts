@@ -1,4 +1,4 @@
-import Fastify, { type FastifyRequest } from 'fastify'
+import Fastify, { LogController, type FastifyRequest } from 'fastify'
 import { buildLoggerOptions, journaliserAcces } from './config/logger'
 import { getClientIp } from './utils/clientIp'
 import { Server } from 'socket.io'
@@ -69,10 +69,12 @@ import { startScheduler }  from './scheduler'
 // statut sans l'URL). On emet une ligne unique et complete a la reponse, via le
 // crochet plus bas. GoAccess et les scenarios CrowdSec deviennent utilisables,
 // et le volume est divise par deux. cf src/config/logger.ts
+// Via logController : l'option disableRequestLogging en tete de configuration
+// est depreciee depuis fastify 5.12 (FSTDEP023) et disparait avec fastify 6.
 const server = Fastify({
   logger: buildLoggerOptions(),
   trustProxy: getTrustProxy(),
-  disableRequestLogging: true,
+  logController: new LogController({ disableRequestLogging: true }),
 })
 
 // Duree de la requete, mesuree ici plutot que reconstruite : `reply.elapsedTime`
