@@ -13,7 +13,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
-use rand::Rng;
+use rand::RngExt;
 
 use crate::allocation::{spawn_eviction_task, Allocation, Registry};
 use crate::auth::{compute_message_integrity, extract_mi_input, mi_key, validate_credentials, verify_message_integrity};
@@ -276,7 +276,7 @@ async fn handle_binding(sink: &ResponseSink, msg: StunMessage, src: SocketAddr) 
 async fn bind_relay_socket(cfg: &TurnConfig) -> std::io::Result<UdpSocket> {
     let (min, max) = (cfg.relay_min_port, cfg.relay_max_port);
     let span: u32 = (max as u32) - (min as u32) + 1;
-    let start: u32 = rand::thread_rng().gen_range(0..span);
+    let start: u32 = rand::rng().random_range(0..span);
     let mut last_err: Option<std::io::Error> = None;
     for i in 0..span {
         let port = (min as u32 + (start + i) % span) as u16;
@@ -724,9 +724,9 @@ fn verify_mi_for_request(raw: &[u8], username: &str, realm: &str, password: &str
 }
 
 fn random_txid() -> [u8; 12] {
-    use rand::RngCore;
+    use rand::Rng;
     let mut txid = [0u8; 12];
-    rand::thread_rng().fill_bytes(&mut txid);
+    rand::rng().fill_bytes(&mut txid);
     txid
 }
 

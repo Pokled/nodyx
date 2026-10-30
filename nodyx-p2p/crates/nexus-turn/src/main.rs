@@ -20,8 +20,8 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use rand::distributions::Alphanumeric;
-use rand::Rng;
+use rand::distr::Alphanumeric;
+use rand::RngExt;
 use tokio::net::UdpSocket;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -104,7 +104,7 @@ async fn main() -> Result<()> {
             let registry = new_registry();
 
             // Generate a fresh nonce at startup (used in 401 challenges)
-            let nonce: String = rand::thread_rng()
+            let nonce: String = rand::rng()
                 .sample_iter(&Alphanumeric)
                 .take(32)
                 .map(char::from)
