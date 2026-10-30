@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { translator, type Locale } from '$lib/i18n'
-	let { data } = $props<{ data: { locale: Locale } }>()
+	let { data }: { data: { locale: Locale } } = $props()
 	const t = $derived(translator(data.locale))
 </script>
 

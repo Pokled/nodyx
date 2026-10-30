@@ -30,7 +30,8 @@
 | **Phase 4.23** | Music showcase + public showcase hardening | Complete |
 | **Phase 4.24** | Ambiances and the floating shell | Complete |
 | **Phase 4.25** | Installer rebuilt, security audit | Complete |
-| **Phase 4.26** | Stabilization: hunting bugs in real use | In progress |
+| **Phase 4.26** | Stabilization: hunting bugs in real use | Complete (v2.13) |
+| **Phase 4.27** | Light and dark everywhere, appearance settings that make sense | In progress |
 | Phase 5 | Mobile + Nodes + Reputation | In progress |
 | **Phase Horizon** | NODYX-ETHER, physical layer sovereignty | Vision |
 | **Phase Radio** | NODYX-RADIO, internet radio tuner + cooperative ad network | Vision |
@@ -314,7 +315,7 @@ on a minimal Debian 13.
 
 ---
 
-## PHASE 4.26, Stabilization: Hunting Bugs in Real Use (in progress)
+## PHASE 4.26, Stabilization: Hunting Bugs in Real Use (complete, v2.13)
 
 Using Nodyx every day on nodyx.org, and taking the screenshots for this documentation, surfaced
 bugs that no test had seen. Each fix ships with a test that fails on the old code, and is checked
@@ -325,6 +326,21 @@ live after deployment.
 - A first visit loaded every page twice; forum and sidebar layouts crushed on desktop screens
 - Next: making large voice rooms work from a home server too (the `str0m` engine, Phase 4.18),
   so that no Nodyx admin ever has to open a port
+
+---
+
+## PHASE 4.27, Light and Dark Everywhere, Appearance Settings That Make Sense (in progress)
+
+If you pick the light theme, every page should honour it. And an admin should know where to change
+what without having to guess.
+
+- Chat, the feed, members, the forum, the wiki, the calendar and tasks already follow the
+  instance's ambiance in both themes, and respect the sheet settings (transparency, image) (v2.13)
+- Next up: profiles, direct messages, sign-in, the admin area
+- A homepage in two versions: the admin designs the grid once, dark or light, and Nodyx works out
+  the other one while keeping its colours
+- Every appearance setting gathered into one clear path, from the big picture down to the details,
+  with each colour telling you where it comes from
 
 ---
 

@@ -30,7 +30,8 @@
 | **Phase 4.23** | Vitrine musique + durcissement de la vitrine publique | Complète |
 | **Phase 4.24** | Les ambiances et le contenant flottant | Complète |
 | **Phase 4.25** | Installeur reconstruit, audit de sécurité | Complète |
-| **Phase 4.26** | Stabilisation : chasser les bugs en usage réel | En cours |
+| **Phase 4.26** | Stabilisation : chasser les bugs en usage réel | Complète (v2.13) |
+| **Phase 4.27** | Le thème clair et sombre partout, une apparence qu'on comprend | En cours |
 | Phase 5 | Mobile + Nodes + Réputation | En cours |
 | **Phase Horizon** | NODYX-ETHER, souveraineté de la couche physique | Vision |
 | **Phase Radio** | NODYX-RADIO, tuner radio internet + régie coopérative | Vision |
@@ -321,7 +322,7 @@ suite d'un signalement sur une Debian 13 minimale.
 
 ---
 
-## PHASE 4.26, Stabilisation : chasser les bugs en usage réel (en cours)
+## PHASE 4.26, Stabilisation : chasser les bugs en usage réel (complète, v2.13)
 
 Utiliser Nodyx chaque jour sur nodyx.org, et prendre les captures de cette documentation, a fait
 remonter des bugs qu'aucun test n'avait vus. Chaque correctif arrive avec un test qui échoue sur
@@ -335,6 +336,22 @@ l'ancien code, et il est vérifié en direct après déploiement.
   de bureau
 - Ensuite : faire fonctionner les grands salons vocaux depuis un serveur à la maison aussi (le
   moteur `str0m`, phase 4.18), pour qu'aucun administrateur de Nodyx n'ait jamais à ouvrir un port
+
+---
+
+## PHASE 4.27, Le thème clair et sombre partout, une apparence qu'on comprend (en cours)
+
+Quelqu'un qui choisit le thème clair doit le retrouver sur chaque page. Et un administrateur doit
+savoir, sans deviner, où changer quoi.
+
+- Le chat, le fil d'actu, les membres, le forum, le wiki, l'agenda et les tâches suivent déjà
+  l'ambiance de l'instance, dans les deux thèmes, en respectant les réglages de la feuille
+  (transparence, image) (v2.13)
+- Ensuite : le profil, les messages privés, la connexion, l'administration
+- La page d'accueil en deux versions : l'administrateur dessine sa grille une fois, sombre ou
+  claire, et Nodyx en déduit l'autre en gardant ses couleurs
+- Tous les réglages d'apparence rassemblés en un seul parcours, du général au particulier, chaque
+  couleur indiquant d'où elle vient
 
 ---
 
