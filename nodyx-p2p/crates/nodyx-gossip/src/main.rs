@@ -15,7 +15,7 @@ use node::Node;
 
 fn gen_seed() -> [u8; 32] {
     let mut seed = [0u8; 32];
-    getrandom::getrandom(&mut seed).expect("CSPRNG indisponible");
+    getrandom::fill(&mut seed).expect("CSPRNG indisponible");
     seed
 }
 
