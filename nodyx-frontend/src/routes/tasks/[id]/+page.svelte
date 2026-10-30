@@ -38,8 +38,8 @@
 	const PRIORITY_META: Record<string, { labelKey: string; cls: string }> = {
 		low:    { labelKey: 'tasks.priority.low',    cls: 'text-gray-500 bg-gray-800 border-gray-700' },
 		normal: { labelKey: 'tasks.priority.normal', cls: 'text-gray-400 bg-gray-800 border-gray-700' },
-		high:   { labelKey: 'tasks.priority.high',   cls: 'text-amber-400 bg-amber-900/30 border-amber-800/50' },
-		urgent: { labelKey: 'tasks.priority.urgent', cls: 'text-red-400 bg-red-900/30 border-red-800/50' },
+		high:   { labelKey: 'tasks.priority.high',   cls: 'text-[var(--nx-warn)] bg-[color-mix(in_srgb,var(--nx-warn)_12%,transparent)] border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)]' },
+		urgent: { labelKey: 'tasks.priority.urgent', cls: 'text-[var(--nx-bad)] bg-[color-mix(in_srgb,var(--nx-bad)_12%,transparent)] border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)]' },
 	}
 
 	const COL_COLORS: Record<string, string> = {
@@ -61,9 +61,9 @@
 		const d = new Date(iso)
 		const today = new Date(); today.setHours(0,0,0,0)
 		const diff  = Math.ceil((d.getTime() - today.getTime()) / 86400000)
-		if (diff < 0)   return { labelKey: 'tasks.due.overdue', cls: 'text-red-400 bg-red-900/30 border-red-800/50' }
-		if (diff === 0) return { labelKey: 'tasks.due.today', cls: 'text-amber-400 bg-amber-900/30 border-amber-800/50' }
-		if (diff === 1) return { labelKey: 'tasks.due.tomorrow', cls: 'text-yellow-400 bg-yellow-900/30 border-yellow-800/50' }
+		if (diff < 0)   return { labelKey: 'tasks.due.overdue', cls: 'text-[var(--nx-bad)] bg-[color-mix(in_srgb,var(--nx-bad)_12%,transparent)] border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)]' }
+		if (diff === 0) return { labelKey: 'tasks.due.today', cls: 'text-[var(--nx-warn)] bg-[color-mix(in_srgb,var(--nx-warn)_12%,transparent)] border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)]' }
+		if (diff === 1) return { labelKey: 'tasks.due.tomorrow', cls: 'text-[var(--nx-warn)] bg-[color-mix(in_srgb,var(--nx-warn)_12%,transparent)] border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)]' }
 		return {
 			label: d.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' }),
 			cls:   'text-gray-400 bg-gray-800 border-gray-700',
@@ -200,22 +200,22 @@
 
 <!-- ── Header ──────────────────────────────────────────────────────────────── -->
 <div class="flex items-center gap-3 mb-6 flex-wrap">
-	<a href="/tasks" class="text-gray-500 hover:text-gray-300 text-sm transition-colors">← {tFn('tasks.boards_breadcrumb')}</a>
-	<span class="text-gray-700">/</span>
+	<a href="/tasks" class="text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] text-sm transition-colors">← {tFn('tasks.boards_breadcrumb')}</a>
+	<span class="text-[var(--nx-text-muted)]">/</span>
 
 	{#if editingBoardName}
 		<form onsubmit={(e) => { e.preventDefault(); saveBoardName() }} class="flex items-center gap-2">
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				bind:value={boardNameDraft}
-				class="rounded-lg bg-gray-900 border border-indigo-700 px-3 py-1.5 text-sm text-white focus:outline-none"
+				class="rounded-lg bg-[var(--nx-surface)] border border-indigo-700 px-3 py-1.5 text-sm text-[var(--nx-text)] focus:outline-none"
 				autofocus
 				onblur={saveBoardName}
 			/>
 		</form>
 	{:else}
 		<h1
-			class="text-lg font-bold text-white {data.canManage ? 'cursor-pointer hover:text-indigo-300 transition-colors' : ''}"
+			class="text-lg font-bold text-[var(--nx-text)] {data.canManage ? 'cursor-pointer hover:text-[var(--nx-header-accent)] transition-colors' : ''}"
 			ondblclick={() => data.canManage && (editingBoardName = true)}
 			title={data.canManage ? 'Double-cliquer pour renommer' : ''}
 		>
@@ -224,13 +224,13 @@
 	{/if}
 
 	{#if board.description}
-		<span class="text-sm text-gray-500 hidden sm:inline">· {board.description}</span>
+		<span class="text-sm text-[var(--nx-text-muted)] hidden sm:inline">· {board.description}</span>
 	{/if}
 
 	{#if data.canManage}
 		<button
 			onclick={deleteBoard}
-			class="ml-auto text-xs text-gray-600 hover:text-red-400 transition-colors"
+			class="ml-auto text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] transition-colors"
 		>
 			{tFn('tasks.delete_board')}
 		</button>
@@ -244,21 +244,21 @@
 		<!-- Colonne -->
 		<div
 			class="flex-1 min-w-[15rem] flex flex-col rounded-xl border transition-colors
-			       {dragOverColId === col.id ? 'border-indigo-600 bg-indigo-950/20' : 'border-gray-800 bg-gray-900/40'}"
+			       {dragOverColId === col.id ? 'border-indigo-600 bg-[rgb(var(--nx-accent-rgb)/0.08)]' : 'border-[var(--nx-border)] bg-[var(--nx-surface)]/40'}"
 			ondragover={(e) => onDragOver(e, col.id)}
 			ondragleave={onDragLeave}
 			ondrop={(e) => onDrop(e, col.id)}
 			role="list"
 		>
 			<!-- Header colonne -->
-			<div class="flex items-center gap-2 px-3 py-3 border-b border-gray-800">
+			<div class="flex items-center gap-2 px-3 py-3 border-b border-[var(--nx-border)]">
 				<span class="w-2.5 h-2.5 rounded-full flex-shrink-0 {COL_COLORS[col.color] ?? 'bg-gray-500'}"></span>
-				<span class="flex-1 text-sm font-semibold text-gray-200 truncate">{col.name}</span>
-				<span class="text-xs text-gray-600 tabular-nums">{col.cards.length}</span>
+				<span class="flex-1 text-sm font-semibold text-[var(--nx-text)] truncate">{col.name}</span>
+				<span class="text-xs text-[var(--nx-text-muted)] tabular-nums">{col.cards.length}</span>
 				{#if data.canManage}
 					<button
 						onclick={() => deleteColumn(col.id)}
-						class="text-gray-700 hover:text-red-400 text-sm leading-none transition-colors ml-1"
+						class="text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] text-sm leading-none transition-colors ml-1"
 						title={tFn('tasks.delete_col_title')}
 					>×</button>
 				{/if}
@@ -272,22 +272,22 @@
 					<div
 						draggable="true"
 						ondragstart={(e) => onDragStart(e, card.id)}
-						class="rounded-lg border bg-gray-900 hover:bg-gray-800 border-gray-700/60 hover:border-gray-600
+						class="rounded-lg border bg-[var(--nx-surface)] hover:bg-[var(--nx-surface-raised)] border-[var(--nx-border)]/60 hover:border-[var(--nx-border)]
 						       p-3 cursor-grab active:cursor-grabbing transition-colors group"
 						role="listitem"
 					>
 						<!-- Titre + actions -->
 						<div class="flex items-start gap-2">
-							<p class="flex-1 text-sm text-gray-200 leading-snug">{card.title}</p>
+							<p class="flex-1 text-sm text-[var(--nx-text)] leading-snug">{card.title}</p>
 							<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
 								<button
 									onclick={() => editingCard = $state.snapshot(card)}
-									class="text-gray-600 hover:text-indigo-400 text-xs leading-none"
+									class="text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] text-xs leading-none"
 									title={tFn('tasks.edit')}
 								>✎</button>
 								<button
 									onclick={() => deleteCard(card.id, col.id)}
-									class="text-gray-600 hover:text-red-400 text-xs leading-none ml-0.5"
+									class="text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] text-xs leading-none ml-0.5"
 									title={tFn('tasks.delete')}
 								>×</button>
 							</div>
@@ -296,7 +296,7 @@
 						<!-- Description riche : HTML assaini côté serveur (écriture ET
 						     lecture), donc sûr à rendre. Bornée en hauteur sur la tuile. -->
 						{#if card.description}
-							<div class="task-card-desc mt-1.5 max-h-28 overflow-hidden text-xs leading-snug text-gray-400">
+							<div class="task-card-desc mt-1.5 max-h-28 overflow-hidden text-xs leading-snug text-[var(--nx-text-muted)]">
 								{@html card.description}
 							</div>
 						{/if}
@@ -314,7 +314,7 @@
 								</span>
 							{/if}
 							{#if card.assignee_username}
-								<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] text-gray-400 bg-gray-800 border border-gray-700">
+								<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] text-[var(--nx-text-muted)] bg-[var(--nx-surface-raised)] border border-[var(--nx-border)]">
 									{#if card.assignee_avatar}
 										<img src={card.assignee_avatar} alt="" class="w-3.5 h-3.5 rounded-full" />
 									{/if}
@@ -327,7 +327,7 @@
 			</div>
 
 			<!-- Ajouter une carte -->
-			<div class="p-2 border-t border-gray-800">
+			<div class="p-2 border-t border-[var(--nx-border)]">
 				{#if addingCardColId === col.id}
 					<form onsubmit={(e) => { e.preventDefault(); addCard(col.id) }} class="space-y-2">
 						<!-- svelte-ignore a11y_autofocus -->
@@ -336,8 +336,8 @@
 							placeholder={tFn('tasks.card_title_ph')}
 							maxlength="200"
 							autofocus
-							class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
-							       placeholder-gray-600 focus:outline-none focus:border-indigo-600"
+							class="w-full rounded-lg bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2 text-sm text-[var(--nx-text)]
+							       placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-600"
 						/>
 						<div class="flex gap-2">
 							<button
@@ -347,14 +347,14 @@
 							<button
 								type="button"
 								onclick={() => { addingCardColId = null; newCardTitle = '' }}
-								class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-400 transition-colors"
+								class="px-3 py-1.5 rounded-lg bg-[var(--nx-surface-raised)] hover:bg-[var(--nx-border)] text-xs text-[var(--nx-text-muted)] transition-colors"
 							>{tFn('tasks.cancel')}</button>
 						</div>
 					</form>
 				{:else}
 					<button
 						onclick={() => { addingCardColId = col.id; newCardTitle = '' }}
-						class="w-full text-left px-2 py-1.5 text-xs text-gray-600 hover:text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+						class="w-full text-left px-2 py-1.5 text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:bg-[var(--nx-surface-raised)] rounded-lg transition-colors"
 					>
 						{tFn('tasks.add_card')}
 					</button>
@@ -367,21 +367,21 @@
 	{#if data.canManage}
 		<div class="flex-shrink-0 w-64">
 			{#if addingColumn}
-				<div class="rounded-xl border border-indigo-800/50 bg-indigo-950/20 p-3 space-y-3">
+				<div class="rounded-xl border border-indigo-800/50 bg-[rgb(var(--nx-accent-rgb)/0.08)] p-3 space-y-3">
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						bind:value={newColName}
 						placeholder={tFn('tasks.col_name_ph')}
 						maxlength="100"
 						autofocus
-						class="w-full rounded-lg bg-gray-900 border border-gray-700 px-3 py-2 text-sm text-gray-200
-						       placeholder-gray-600 focus:outline-none focus:border-indigo-600"
+						class="w-full rounded-lg bg-[var(--nx-surface)] border border-[var(--nx-border)] px-3 py-2 text-sm text-[var(--nx-text)]
+						       placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-600"
 					/>
 					<div class="flex flex-wrap gap-1.5">
 						{#each COLOR_OPTS as c}
 							<button
 								onclick={() => newColColor = c}
-								class="w-5 h-5 rounded-full {COL_COLORS[c]} {newColColor === c ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-900' : 'opacity-70 hover:opacity-100'} transition-all"
+								class="w-5 h-5 rounded-full {COL_COLORS[c]} {newColColor === c ? 'ring-2 ring-white ring-offset-1 ring-offset-[var(--nx-surface)]' : 'opacity-70 hover:opacity-100'} transition-all"
 								title={c}
 							></button>
 						{/each}
@@ -393,14 +393,14 @@
 						>{tFn('tasks.add')}</button>
 						<button
 							onclick={() => { addingColumn = false; newColName = '' }}
-							class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-400 transition-colors"
+							class="px-3 py-1.5 rounded-lg bg-[var(--nx-surface-raised)] hover:bg-[var(--nx-border)] text-xs text-[var(--nx-text-muted)] transition-colors"
 						>{tFn('tasks.cancel')}</button>
 					</div>
 				</div>
 			{:else}
 				<button
 					onclick={() => addingColumn = true}
-					class="w-full px-4 py-3 rounded-xl border border-dashed border-gray-700 hover:border-indigo-700 text-sm text-gray-600 hover:text-indigo-400 transition-colors"
+					class="w-full px-4 py-3 rounded-xl border border-dashed border-[var(--nx-border)] hover:border-indigo-700 text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] transition-colors"
 				>
 					{tFn('tasks.new_col')}
 				</button>
@@ -419,27 +419,27 @@
 		role="dialog"
 		tabindex="-1"
 	>
-		<div class="w-full max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6 space-y-4">
+		<div class="w-full max-w-lg bg-[var(--nx-surface)] border border-[var(--nx-border)] rounded-2xl shadow-2xl p-6 space-y-4">
 			<div class="flex items-center justify-between">
-				<h2 class="text-base font-semibold text-white">{tFn('tasks.edit_card')}</h2>
-				<button onclick={() => editingCard = null} class="text-gray-600 hover:text-gray-300 text-lg leading-none">×</button>
+				<h2 class="text-base font-semibold text-[var(--nx-text)]">{tFn('tasks.edit_card')}</h2>
+				<button onclick={() => editingCard = null} class="text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] text-lg leading-none">×</button>
 			</div>
 
 			<!-- Titre -->
 			<div>
-				<label for="task-edit-title" class="block text-xs font-medium text-gray-500 mb-1.5">Titre</label>
+				<label for="task-edit-title" class="block text-xs font-medium text-[var(--nx-text-muted)] mb-1.5">Titre</label>
 				<input
 					id="task-edit-title"
 					bind:value={editingCard.title}
 					maxlength="200"
-					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
+					class="w-full rounded-lg bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2 text-sm text-[var(--nx-text)]
 					       focus:outline-none focus:border-indigo-600"
 				/>
 			</div>
 
 			<!-- Description -->
 			<div>
-				<span class="block text-xs font-medium text-gray-500 mb-1.5">Description</span>
+				<span class="block text-xs font-medium text-[var(--nx-text-muted)] mb-1.5">Description</span>
 				<!-- Éditeur riche (liens, images, mise en forme). Le HTML est assaini
 				     CÔTÉ SERVEUR, à l'écriture et à la lecture.
 				     ⚠ Ne PAS l'envelopper dans un conteneur à overflow : l'éditeur borne
@@ -457,11 +457,11 @@
 			<div class="grid grid-cols-2 gap-3">
 				<!-- Priorité -->
 				<div>
-					<label for="task-edit-priority" class="block text-xs font-medium text-gray-500 mb-1.5">{tFn('tasks.priority_label')}</label>
+					<label for="task-edit-priority" class="block text-xs font-medium text-[var(--nx-text-muted)] mb-1.5">{tFn('tasks.priority_label')}</label>
 					<select
 						id="task-edit-priority"
 						bind:value={editingCard.priority}
-						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
+						class="w-full rounded-lg bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2 text-sm text-[var(--nx-text)]
 						       focus:outline-none focus:border-indigo-600"
 					>
 						{#each Object.entries(PRIORITY_META) as [val, meta]}
@@ -472,12 +472,12 @@
 
 				<!-- Échéance -->
 				<div>
-					<label for="task-edit-due" class="block text-xs font-medium text-gray-500 mb-1.5">{tFn('tasks.due_label')}</label>
+					<label for="task-edit-due" class="block text-xs font-medium text-[var(--nx-text-muted)] mb-1.5">{tFn('tasks.due_label')}</label>
 					<input
 						id="task-edit-due"
 						type="date"
 						bind:value={editingCard.due_date}
-						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
+						class="w-full rounded-lg bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2 text-sm text-[var(--nx-text)]
 						       focus:outline-none focus:border-indigo-600"
 					/>
 				</div>
@@ -485,11 +485,11 @@
 
 			<!-- Assigné à -->
 			<div>
-				<label for="task-edit-assignee" class="block text-xs font-medium text-gray-500 mb-1.5">{tFn('tasks.assignee_label')}</label>
+				<label for="task-edit-assignee" class="block text-xs font-medium text-[var(--nx-text-muted)] mb-1.5">{tFn('tasks.assignee_label')}</label>
 				<select
 					id="task-edit-assignee"
 					bind:value={editingCard.assignee_id}
-					class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-200
+					class="w-full rounded-lg bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2 text-sm text-[var(--nx-text)]
 					       focus:outline-none focus:border-indigo-600"
 				>
 					<option value={null}>{tFn('tasks.none')}</option>
@@ -506,7 +506,7 @@
 				>{tFn('tasks.save')}</button>
 				<button
 					onclick={() => editingCard = null}
-					class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-400 transition-colors"
+					class="px-4 py-2 rounded-lg bg-[var(--nx-surface-raised)] hover:bg-[var(--nx-border)] text-sm text-[var(--nx-text-muted)] transition-colors"
 				>{tFn('tasks.cancel')}</button>
 			</div>
 		</div>
@@ -517,17 +517,17 @@
 	/* Contenu riche des cartes : venu de l'éditeur, assaini côté serveur. On borne
 	   ce qui pourrait casser une tuile étroite, sans imposer tout un thème. */
 	.task-card-desc :global(p)          { margin: 0 0 0.25rem 0; }
-	.task-card-desc :global(a)          { color: rgb(129, 140, 248); text-decoration: underline; }
-	.task-card-desc :global(a:hover)    { color: rgb(165, 180, 252); }
+	.task-card-desc :global(a)          { color: var(--nx-header-accent); text-decoration: underline; }
+	.task-card-desc :global(a:hover)    { color: var(--nx-header-accent-strong); }
 	.task-card-desc :global(img)        { max-width: 100%; max-height: 6rem; border-radius: 0.375rem; margin: 0.25rem 0; }
-	.task-card-desc :global(pre)        { overflow-x: auto; background: rgb(17, 24, 39); border-radius: 0.375rem; padding: 0.375rem 0.5rem; margin: 0.25rem 0; }
+	.task-card-desc :global(pre)        { overflow-x: auto; background: color-mix(in srgb, var(--nx-text) 7%, transparent); border-radius: 0.375rem; padding: 0.375rem 0.5rem; margin: 0.25rem 0; }
 	.task-card-desc :global(code)       { font-size: 0.7rem; }
 	.task-card-desc :global(ul),
 	.task-card-desc :global(ol)         { margin: 0.25rem 0; padding-left: 1.1rem; }
 	.task-card-desc :global(h1),
 	.task-card-desc :global(h2),
 	.task-card-desc :global(h3),
-	.task-card-desc :global(h4)         { font-size: 0.8rem; font-weight: 600; color: rgb(209, 213, 219); margin: 0.25rem 0; }
-	.task-card-desc :global(blockquote) { border-left: 2px solid rgb(75, 85, 99); padding-left: 0.5rem; margin: 0.25rem 0; }
+	.task-card-desc :global(h4)         { font-size: 0.8rem; font-weight: 600; color: var(--nx-text); margin: 0.25rem 0; }
+	.task-card-desc :global(blockquote) { border-left: 2px solid var(--nx-border); padding-left: 0.5rem; margin: 0.25rem 0; }
 	.task-card-desc :global(iframe)     { max-width: 100%; max-height: 8rem; }
 </style>

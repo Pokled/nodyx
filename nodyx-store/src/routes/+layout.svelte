@@ -1,8 +1,9 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte'
 	import { translator, type Locale } from '$lib/i18n'
 	import '../app.css'
 
-	let { data, children } = $props<{ data: { locale: Locale }, children: unknown }>()
+	let { data, children }: { data: { locale: Locale }, children: Snippet } = $props()
 	const t = $derived(translator(data.locale))
 	const other = $derived(data.locale === 'fr' ? 'en' : 'fr')
 </script>

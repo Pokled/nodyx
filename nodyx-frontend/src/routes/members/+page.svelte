@@ -180,11 +180,12 @@
 
 <style>
 	/* Style Nodyx : peu de radius, lignes droites, mono pour technique */
-	/* La page pose son propre fond : la feuille du gabarit reste sombre en
-	   thème clair tant qu'une page n'est pas migrée (lib/shellTheme.ts). */
+	/* Pas de fond ici : c'est la feuille (main, sheetThemed dans +layout)
+	   qui peint celui du thème, avec les réglages de zone de l'admin. */
+	/* flex: 1 0 auto : la racine remplit l'écran sans jamais rétrécir sous son
+	   contenu (enfant d'une colonne flex de hauteur fixe). */
 	.mb-root {
-		min-height: 100%;
-		background: var(--nx-sheet-bg, var(--nx-bg));
+		flex: 1 0 auto;
 	}
 	.mb-page {
 		max-width: 880px;

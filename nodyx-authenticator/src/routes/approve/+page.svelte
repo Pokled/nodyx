@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { goto } from '$app/navigation'
-	import { page } from '$app/stores'
+	import { page } from '$app/state'
 	import { decryptPrivateKey, signChallenge } from '$lib/crypto'
 	import { getDevice, getPendingChallenge, deletePendingChallenge } from '$lib/storage'
 	import { approveChallenge, rejectChallenge } from '$lib/hub'
@@ -16,8 +16,8 @@
 	let result: 'approved' | 'rejected' | null = $state(null)
 
 	onMount(async () => {
-		const challengeId = $page.url.searchParams.get('challengeId')
-		const deviceId = $page.url.searchParams.get('deviceId')
+		const challengeId = page.url.searchParams.get('challengeId')
+		const deviceId = page.url.searchParams.get('deviceId')
 
 		if (!challengeId || !deviceId) {
 			goto('/keys')

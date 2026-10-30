@@ -70,10 +70,12 @@ async function pingDirectory(io: Server) {
 
 // ── Push assets (v0.7 fédération) ────────────────────────────────────────────
 
-async function pushAssetsToDirectory() {
+export async function pushAssetsToDirectory() {
   const token   = process.env.DIRECTORY_TOKEN
   const selfUrl = (process.env.FRONTEND_URL ?? process.env.SELF_URL ?? 'http://localhost:3000').replace(/\/$/, '')
-  const apiBase = (process.env.SELF_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+  // L'annuaire, comme pingDirectory : SELF_URL seul faisait s'envoyer ses
+  // ressources à elle-même chaque instance secondaire (403 toutes les heures).
+  const apiBase = (process.env.DIRECTORY_API_URL ?? process.env.SELF_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 
   if (!token) return  // pas inscrit au directory, on skip
 

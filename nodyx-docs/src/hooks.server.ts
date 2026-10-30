@@ -1,4 +1,4 @@
-import type { Handle } from '@sveltejs/kit'
+import type { Handle } from '@sveltejs/kit/hooks'
 
 // <html lang> suit la langue RÉELLEMENT servie (10/10/2026). Avant, il valait
 // toujours "en", y compris sur les pages françaises et espagnoles : un signal
