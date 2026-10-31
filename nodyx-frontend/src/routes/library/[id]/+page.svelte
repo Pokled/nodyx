@@ -138,7 +138,7 @@
 </svelte:head>
 
 <div class="max-w-3xl mx-auto px-4 py-8">
-	<a href="/library" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-300 mb-6 transition-colors">
+	<a href="/library" class="inline-flex items-center gap-1 text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] mb-6 transition-colors">
 		{tFn('library.back_to')}
 	</a>
 
@@ -146,13 +146,13 @@
 	{#if equipToast}
 		<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border
 		            {equipToast === 'ok'
-		              ? 'bg-gray-900 border-indigo-700/60 text-gray-200'
-		              : 'bg-gray-900 border-red-700/60 text-red-300'}">
+		              ? 'bg-[var(--nx-surface)] border-indigo-700/60 text-[var(--nx-text)]'
+		              : 'bg-[var(--nx-surface)] border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] text-[var(--nx-bad)]'}">
 			<span>{equipToast === 'ok' ? '✅' : '❌'}</span>
 			<span class="text-sm">
 				{#if equipToast === 'ok'}
 					{tFn('library.equipped_toast')}
-					<a href="/users/{me?.username}" class="underline text-indigo-400 hover:text-indigo-300 ml-1">{tFn('library.view_profile')}</a>
+					<a href="/users/{me?.username}" class="underline text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)] ml-1">{tFn('library.view_profile')}</a>
 				{:else}
 					{tFn('library.error_generic')}
 				{/if}
@@ -160,15 +160,15 @@
 		</div>
 	{/if}
 
-	<div class="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+	<div class="rounded-2xl border border-[var(--nx-border)] bg-[var(--nx-surface)] overflow-hidden">
 		<!-- Preview -->
 		{#if asset.mime_type?.startsWith('image/')}
-			<div class="bg-gray-950 flex items-center justify-center min-h-40 p-8">
+			<div class="bg-[var(--nx-surface)] flex items-center justify-center min-h-40 p-8">
 				<img src={fileUrl(asset.file_path)} alt={asset.name}
 					class="max-h-64 max-w-full rounded-lg shadow-xl" />
 			</div>
 		{:else if asset.mime_type?.startsWith('audio/')}
-			<div class="bg-gray-950 p-6">
+			<div class="bg-[var(--nx-surface)] p-6">
 				<nodyx-audio-player
 					src={fileUrl(asset.file_path)}
 					track-title={asset.name}
@@ -176,7 +176,7 @@
 				></nodyx-audio-player>
 			</div>
 		{:else}
-			<div class="bg-gray-950 flex items-center justify-center min-h-40 text-5xl">
+			<div class="bg-[var(--nx-surface)] flex items-center justify-center min-h-40 text-5xl">
 				{TYPE_ICONS[asset.asset_type] ?? '📦'}
 			</div>
 		{/if}
@@ -185,17 +185,17 @@
 		<div class="p-6">
 			<div class="flex items-start justify-between gap-4">
 				<div>
-					<h1 class="text-xl font-bold text-white">{asset.name}</h1>
-					<p class="text-sm text-gray-500 mt-0.5">
+					<h1 class="text-xl font-bold text-[var(--nx-text)]">{asset.name}</h1>
+					<p class="text-sm text-[var(--nx-text-muted)] mt-0.5">
 						{TYPE_ICONS[asset.asset_type]} {asset.asset_type}
 						&nbsp;·&nbsp; {(asset.file_size / 1024).toFixed(1)} Ko
 						&nbsp;·&nbsp; {asset.downloads !== 1 ? tFn('library.downloads_many', { count: asset.downloads }) : tFn('library.downloads_one', { count: asset.downloads })}
 					</p>
 					{#if emojiShortcode}
 						<button onclick={copyShortcode} title={copiedCode ? tFn('library.copied') : tFn('library.copy_shortcode')}
-							class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-white/[0.06] border border-white/10 hover:border-white/25 transition-colors">
+							class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] hover:border-[color-mix(in_srgb,var(--nx-text)_25%,transparent)] transition-colors">
 							<span class="font-mono" style="color: var(--nx-accent-soft)">:{emojiShortcode}:</span>
-							<span style="color: {copiedCode ? '#4ade80' : '#6b7280'}">{copiedCode ? '✓' : '⧉'}</span>
+							<span style="color: {copiedCode ? 'var(--nx-ok)' : 'var(--nx-text-muted)'}">{copiedCode ? '✓' : '⧉'}</span>
 						</button>
 					{/if}
 				</div>
@@ -204,15 +204,15 @@
 						<button
 							onclick={equipAsset}
 							disabled={equipping || equipped}
-							class="px-4 py-2 rounded-lg disabled:opacity-50 text-sm font-semibold text-white transition-colors
-							       {equipped ? 'bg-gray-700 cursor-default' : 'bg-emerald-700 hover:bg-emerald-600'}"
+							class="px-4 py-2 rounded-lg disabled:opacity-50 text-sm font-semibold text-[var(--nx-text)] transition-colors
+							       {equipped ? 'bg-[var(--nx-border)] cursor-default' : 'bg-emerald-700 hover:bg-emerald-600'}"
 						>
 							{equipping ? '…' : equipped ? tFn('library.equipped') : equipLabel}
 						</button>
 					{/if}
 					<button
 						onclick={downloadAsset}
-						class="relative px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors
+						class="relative px-4 py-2 rounded-lg text-sm font-semibold text-[var(--nx-text)] transition-colors
 						       {p2pAvailable ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-indigo-600 hover:bg-indigo-500'}"
 						title={p2pAvailable ? tFn('library.p2p_available') : tFn('library.download_server')}
 					>
@@ -220,25 +220,25 @@
 						{#if downloadSource === 'p2p'}
 							<span class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-yellow-400 text-yellow-900 text-[9px] font-black leading-none">P2P</span>
 						{:else if downloadSource === 'server'}
-							<span class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-gray-600 text-gray-300 text-[9px] font-black leading-none">srv</span>
+							<span class="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-[var(--nx-border)] text-[var(--nx-text)] text-[9px] font-black leading-none">srv</span>
 						{/if}
 					</button>
 				</div>
 			</div>
 
 			{#if asset.description}
-				<p class="mt-4 text-sm text-gray-300 leading-relaxed">{asset.description}</p>
+				<p class="mt-4 text-sm text-[var(--nx-text)] leading-relaxed">{asset.description}</p>
 			{/if}
 
 			{#if asset.tags?.length}
 				<div class="mt-4 flex flex-wrap gap-1.5">
 					{#each asset.tags as tag}
-						<span class="px-2 py-0.5 rounded-full text-xs bg-gray-800 text-gray-400">#{tag}</span>
+						<span class="px-2 py-0.5 rounded-full text-xs bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)]">#{tag}</span>
 					{/each}
 				</div>
 			{/if}
 
-			<p class="mt-4 text-xs text-gray-600">{tFn('library.shared_on', { date: formatDate(asset.created_at) })}</p>
+			<p class="mt-4 text-xs text-[var(--nx-text-muted)]">{tFn('library.shared_on', { date: formatDate(asset.created_at) })}</p>
 		</div>
 	</div>
 </div>

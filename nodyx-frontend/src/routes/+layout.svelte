@@ -570,7 +570,7 @@
 	// Une page qui peignait son propre fond les masquait (vieuxlooters, 29/10).
 	// main porte aussi .nx-themed : contenu rédigé, éditeur et menus déroulants
 	// de la page suivent le thème (variables --prose-*, variante themed:, app.css).
-	const SHEET_THEMED = ['/feed', '/members', '/forum', '/wiki', '/calendar', '/tasks', '/dm', '/musique', '/garden', '/auth/login', '/auth/register']
+	const SHEET_THEMED = ['/feed', '/members', '/forum', '/wiki', '/calendar', '/tasks', '/dm', '/musique', '/garden', '/auth/login', '/auth/register', '/notifications', '/search', '/polls', '/library', '/discover']
 	const sheetThemed = $derived(SHEET_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/')))
 
 	const showChannelSidebar = $derived(
@@ -1291,9 +1291,12 @@
 /* Page migrée sur le thème (sheetThemed) : la feuille prend le fond du thème,
    à toutes les largeurs. Seule la COULEUR change : l'image de zone posée par
    la règle de bureau ci-dessous (background-image) reste en place. Plus
-   spécifique que :global(main.app-shell-main), donc gagne quel que soit l'ordre. */
+   spécifique que :global(main.app-shell-main), donc gagne quel que soit l'ordre.
+   Le texte aussi : un titre sans couleur propre héritait du gris très clair de
+   la coque et disparaissait en thème clair (/polls, 31/10). */
 :global(main.app-shell-main.sheet-themed) {
   background-color: var(--nx-sheet-bg, var(--nx-bg));
+  color: var(--nx-text);
 }
 
 .layout-dragging :global(main.app-shell-main) {

@@ -203,15 +203,15 @@
   .filter-tab {
     padding: 6px 16px;
     background: transparent;
-    border: 1px solid var(--border, #333);
+    border: 1px solid var(--nx-border);
     border-radius: 99px;
-    color: var(--text-muted, #888);
+    color: var(--nx-text-muted);
     font-size: 0.82rem;
     cursor: pointer;
     transition: border-color .15s, color .15s, background .15s;
   }
-  .filter-tab:hover { border-color: #7c3aed88; color: var(--text, #e0e0e0); }
-  .filter-tab.active { border-color: var(--nx-accent-2-strong); color: var(--nx-accent-2-soft); background: #7c3aed18; }
+  .filter-tab:hover { border-color: color-mix(in srgb, var(--nx-header-accent) 50%, transparent); color: var(--nx-text); }
+  .filter-tab.active { border-color: var(--nx-accent-2-strong); color: var(--nx-header-accent); background: color-mix(in srgb, var(--nx-header-accent) 10%, transparent); }
 
   /* ── Empty ── */
   .empty-state {
@@ -221,7 +221,7 @@
     gap: 12px;
     padding: 48px 24px;
     text-align: center;
-    color: var(--text-muted, #888);
+    color: var(--nx-text-muted);
   }
   .empty-icon { font-size: 2.4rem; }
   .btn-new-empty {
@@ -229,7 +229,7 @@
     background: #7c3aed22;
     border: 1px solid #7c3aed44;
     border-radius: 8px;
-    color: var(--nx-accent-2-soft);
+    color: var(--nx-header-accent);
     cursor: pointer;
     font-weight: 600;
     transition: background .15s;
@@ -240,8 +240,8 @@
   .polls-grid { display: flex; flex-direction: column; gap: 16px; }
 
   .poll-list-item {
-    background: var(--bg-2, #1e1e2e);
-    border: 1px solid var(--border, #333);
+    background: var(--nx-surface);
+    border: 1px solid var(--nx-border);
     border-radius: 12px;
     overflow: hidden;
     transition: border-color .15s;
@@ -265,7 +265,7 @@
     padding: 2px 8px;
     border-radius: 99px;
     background: #7c3aed22;
-    color: var(--nx-accent-2-soft);
+    color: var(--nx-header-accent);
     border: 1px solid #7c3aed44;
     font-weight: 600;
     text-transform: capitalize;
@@ -275,16 +275,16 @@
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .status-dot.open   { background: #4ade80; box-shadow: 0 0 6px #4ade8088; }
+  .status-dot.open   { background: var(--nx-ok); box-shadow: 0 0 6px #4ade8088; }
   .status-dot.closed { background: #64748b; }
-  .closes-in  { font-size: 0.72rem; color: #fbbf24; }
-  .closed-label { font-size: 0.72rem; color: var(--text-muted, #888); }
+  .closes-in  { font-size: 0.72rem; color: var(--nx-warn); }
+  .closed-label { font-size: 0.72rem; color: var(--nx-text-muted); }
   .voted-badge {
     font-size: 0.72rem;
     padding: 2px 8px;
     border-radius: 99px;
     background: #16a34a22;
-    color: #4ade80;
+    color: var(--nx-ok);
     border: 1px solid #16a34a44;
     font-weight: 600;
     margin-left: auto;
@@ -298,22 +298,22 @@
     display: flex;
     gap: 6px;
     font-size: 0.75rem;
-    color: var(--text-muted, #888);
+    color: var(--nx-text-muted);
   }
   .channel-badge {
     display: inline-block;
     font-size: 0.72rem;
     padding: 2px 8px;
     border-radius: 99px;
-    background: var(--bg-3, #252535);
-    color: var(--text-muted, #888);
-    border: 1px solid var(--border, #333);
+    background: var(--nx-surface-raised);
+    color: var(--nx-text-muted);
+    border: 1px solid var(--nx-border);
   }
 
   .poll-expand-area {
-    border-top: 1px solid var(--border, #333);
+    border-top: 1px solid var(--nx-border);
     padding: 16px;
-    background: var(--bg-1, #16161e);
+    background: color-mix(in srgb, var(--nx-text) 3%, transparent);
   }
 
   @media (max-width: 480px) {

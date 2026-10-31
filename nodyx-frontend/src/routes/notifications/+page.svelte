@@ -61,10 +61,10 @@
 
 <div class="max-w-2xl">
 	<div class="flex items-center justify-between mb-6">
-		<h1 class="text-2xl font-bold text-white">
+		<h1 class="text-2xl font-bold text-[var(--nx-text)]">
 			Notifications
 			{#if unread > 0}
-				<span class="ml-2 text-sm font-normal text-indigo-400">{tFn('notifications.unread_count', { n: String(unread), s: unread > 1 ? 's' : '' })}</span>
+				<span class="ml-2 text-sm font-normal text-[var(--nx-header-accent)]">{tFn('notifications.unread_count', { n: String(unread), s: unread > 1 ? 's' : '' })}</span>
 			{/if}
 		</h1>
 		<div class="flex items-center gap-2">
@@ -77,8 +77,8 @@
 					}
 				}}>
 					<button type="submit"
-						class="px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
-						Tout marquer comme lu
+						class="px-3 py-1.5 rounded-lg border border-[var(--nx-border)] text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:border-[var(--nx-text-muted)] transition-colors">
+						{tFn('notifications.mark_all_read')}
 					</button>
 				</form>
 			{/if}
@@ -90,7 +90,7 @@
 					}
 				}}>
 					<button type="submit"
-						class="px-3 py-1.5 rounded-lg border border-red-900/50 text-xs text-red-500/70 hover:text-red-400 hover:border-red-700 transition-colors">
+						class="px-3 py-1.5 rounded-lg border border-red-900/50 text-xs text-red-500/70 hover:text-[var(--nx-bad)] hover:border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] transition-colors">
 						{tFn('notifications.clear_read')}
 					</button>
 				</form>
@@ -99,38 +99,38 @@
 	</div>
 
 	<!-- Info purge automatique -->
-	<p class="text-xs text-gray-600 mb-4">{tFn('notifications.auto_purge_info')}</p>
+	<p class="text-xs text-[var(--nx-text-muted)] mb-4">{tFn('notifications.auto_purge_info')}</p>
 
 	{#if notifications.length === 0}
-		<div class="rounded-xl border border-gray-800 bg-gray-900/50 px-6 py-12 text-center">
-			<p class="text-gray-500">{tFn('notifications.empty_state')}</p>
+		<div class="rounded-xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/50 px-6 py-12 text-center">
+			<p class="text-[var(--nx-text-muted)]">{tFn('notifications.empty_state')}</p>
 		</div>
 	{:else}
 		<div class="space-y-2">
 			{#each notifications as notif}
 				<div class="flex items-start gap-3 rounded-lg border px-4 py-3 transition-colors
 					{notif.is_read
-						? 'border-gray-800 bg-gray-900/30'
-						: 'border-indigo-900/50 bg-indigo-950/20'}">
+						? 'border-[var(--nx-border)] bg-[var(--nx-surface)]/30'
+						: 'border-indigo-900/50 bg-[rgb(var(--nx-accent-rgb)/0.08)]'}">
 
 					<!-- Icon -->
 					<div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-base
-						{notif.is_read ? 'bg-gray-800' : 'bg-indigo-900/40'}">
+						{notif.is_read ? 'bg-[var(--nx-surface-raised)]' : 'bg-[rgb(var(--nx-accent-rgb)/0.14)]'}">
 						{TYPE_ICON[notif.type] ?? '🔔'}
 					</div>
 
 					<!-- Content -->
 					<div class="flex-1 min-w-0">
-						<p class="text-sm text-gray-300">
+						<p class="text-sm text-[var(--nx-text)]">
 							{#if notif.actor_username}
-								<span class="font-semibold text-white">{notif.actor_username}</span>
+								<span class="font-semibold text-[var(--nx-text)]">{notif.actor_username}</span>
 							{/if}
 							{TYPE_LABEL[notif.type] ?? notif.type}
 							{#if notif.thread_title}
-								<span class="text-gray-400"> « {notif.thread_title} »</span>
+								<span class="text-[var(--nx-text-muted)]"> « {notif.thread_title} »</span>
 							{/if}
 						</p>
-						<p class="text-xs text-gray-600 mt-0.5">{formatDate(notif.created_at)}</p>
+						<p class="text-xs text-[var(--nx-text-muted)] mt-0.5">{formatDate(notif.created_at)}</p>
 					</div>
 
 					<!-- Actions -->
@@ -138,7 +138,7 @@
 						{#if notif.category_id && notif.thread_id}
 							<button
 								onclick={() => markReadAndNavigate(notif)}
-								class="text-xs text-indigo-400 hover:text-indigo-300">
+								class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">
 								{tFn('notifications.view')}
 							</button>
 						{/if}
@@ -153,7 +153,7 @@
 							}}>
 								<input type="hidden" name="id" value={notif.id} />
 								<button type="submit" title={tFn('notifications.mark_read')}
-									class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-colors bg-gray-800 text-gray-500 hover:bg-indigo-900/40 hover:text-indigo-300">
+									class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-colors bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] hover:bg-[rgb(var(--nx-accent-rgb)/0.14)] hover:text-[var(--nx-header-accent)]">
 									✓
 								</button>
 							</form>
