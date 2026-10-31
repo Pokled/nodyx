@@ -321,19 +321,19 @@
 		position: sticky;
 		top: 0;
 		z-index: 20;
-		background: rgba(9, 9, 15, 0.92);
+		background: color-mix(in srgb, var(--nx-surface) 92%, transparent);
 		backdrop-filter: blur(16px);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 		padding: 16px 28px;
 	}
 
 	.mus-back {
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.45);
+		color: var(--nx-text-muted);
 		text-decoration: none;
 		transition: color 0.15s;
 	}
-	.mus-back:hover { color: var(--nx-accent-2-soft2); }
+	.mus-back:hover { color: var(--nx-header-accent); }
 
 	.mus-body {
 		padding: 24px 28px 48px;
@@ -346,7 +346,7 @@
 		gap: 24px;
 		padding-bottom: 28px;
 		margin-bottom: 8px;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 	}
 
 	.mus-banner-img {
@@ -363,7 +363,7 @@
 		width: 132px;
 		height: 132px;
 		border-radius: 8px;
-		background: rgba(255, 255, 255, 0.03);
+		background: color-mix(in srgb, var(--nx-text) 3%, transparent);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -372,7 +372,7 @@
 	.mus-banner-icon {
 		width: 40px;
 		height: 40px;
-		color: rgba(255, 255, 255, 0.15);
+		color: var(--nx-text-muted);
 	}
 
 	.mus-banner-text {
@@ -382,14 +382,14 @@
 	.mus-title {
 		font-size: 1.75rem;
 		font-weight: 800;
-		color: #fff;
+		color: var(--nx-text);
 		margin: 0 0 8px;
 		letter-spacing: -0.01em;
 	}
 
 	.mus-desc {
 		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.4);
+		color: var(--nx-text-muted);
 		max-width: 60ch;
 		margin: 0 0 8px;
 	}
@@ -400,18 +400,18 @@
 		padding: 2px 7px;
 		font-size: 0.6875rem;
 		font-weight: 500;
-		border: 1px solid rgba(139, 92, 246, 0.25);
-		background: rgba(139, 92, 246, 0.1);
-		color: var(--nx-accent-2-soft2);
+		border: 1px solid color-mix(in srgb, var(--nx-header-accent) 30%, transparent);
+		background: color-mix(in srgb, var(--nx-header-accent) 10%, transparent);
+		color: var(--nx-header-accent);
 	}
 
 	.mus-views {
 		font-size: 0.6875rem;
-		color: rgba(255, 255, 255, 0.3);
+		color: var(--nx-text-muted);
 	}
 
 	.mus-empty {
-		color: rgba(255, 255, 255, 0.4);
+		color: var(--nx-text-muted);
 		font-size: 0.8125rem;
 		font-style: italic;
 	}
@@ -429,11 +429,11 @@
 		padding: 14px 12px;
 		margin: 0 -12px;
 		border-radius: 10px;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+		border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent);
 		transition: background 0.15s;
 	}
 	.mus-track:hover {
-		background: rgba(255, 255, 255, 0.025);
+		background: color-mix(in srgb, var(--nx-text) 2.5%, transparent);
 	}
 
 	.mus-track-num {
@@ -441,7 +441,7 @@
 		width: 2ch;
 		padding-top: 2px;
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.3);
+		color: var(--nx-text-muted);
 		text-align: right;
 		font-variant-numeric: tabular-nums;
 	}
@@ -472,7 +472,7 @@
 	.mus-track-title {
 		font-size: 1rem;
 		font-weight: 700;
-		color: #fff;
+		color: var(--nx-text);
 		margin: 0;
 	}
 
@@ -480,12 +480,12 @@
 		font-family: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace;
 		font-size: 0.75rem;
 		font-weight: 400;
-		color: rgba(255, 255, 255, 0.35);
+		color: var(--nx-text-muted);
 		margin-left: 8px;
 		font-variant-numeric: tabular-nums;
 	}
 
-	.mus-track-artist { color: rgba(255, 255, 255, 0.5); font-weight: 500; }
+	.mus-track-artist { color: var(--nx-text-muted); font-weight: 500; }
 
 	.mus-track-yt {
 		position: relative;
@@ -510,20 +510,20 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 5px;
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.08);
+		background: color-mix(in srgb, var(--nx-text) 3%, transparent);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent);
 		border-radius: 20px;
 		padding: 4px 10px 4px 8px;
 		text-decoration: none;
 		font-size: 0.6875rem;
-		color: rgba(255, 255, 255, 0.45);
+		color: var(--nx-text-muted);
 		cursor: pointer;
 		transition: color 0.15s, border-color 0.15s, background 0.15s;
 	}
 	.mus-share-btn:hover {
-		color: var(--nx-accent-2-soft2);
-		border-color: rgba(139, 92, 246, 0.4);
-		background: rgba(139, 92, 246, 0.08);
+		color: var(--nx-header-accent);
+		border-color: rgb(var(--nx-accent-rgb) / 0.4);
+		background: rgb(var(--nx-accent-rgb) / 0.08);
 	}
 
 	.mus-icon {
@@ -554,7 +554,7 @@
 
 	.mus-track-desc {
 		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.4);
+		color: var(--nx-text-muted);
 		margin: 0;
 	}
 
@@ -562,7 +562,7 @@
 	.mus-comments {
 		margin-top: 12px;
 		padding-top: 12px;
-		border-top: 1px solid rgba(255, 255, 255, 0.05);
+		border-top: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent);
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
@@ -570,7 +570,7 @@
 
 	.mus-comment-error {
 		font-size: 0.75rem;
-		color: #f87171;
+		color: var(--nx-bad);
 		margin: 0;
 	}
 
@@ -589,24 +589,24 @@
 	.mus-comment-author {
 		font-size: 0.8125rem;
 		font-weight: 600;
-		color: #fff;
+		color: var(--nx-text);
 	}
 
 	.mus-comment-date {
 		font-size: 0.6875rem;
-		color: rgba(255, 255, 255, 0.3);
+		color: var(--nx-text-muted);
 	}
 
 	.mus-comment-body {
 		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.55);
+		color: var(--nx-text-muted);
 		margin: 0;
 		white-space: pre-wrap;
 	}
 
 	.mus-comment-empty {
 		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.3);
+		color: var(--nx-text-muted);
 		font-style: italic;
 		margin: 0;
 	}
@@ -619,22 +619,22 @@
 	}
 
 	.mus-comment-input {
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		background: color-mix(in srgb, var(--nx-text) 3%, transparent);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 10%, transparent);
 		border-radius: 6px;
 		padding: 6px 10px;
 		font-size: 0.8125rem;
-		color: #fff;
+		color: var(--nx-text);
 		font-family: inherit;
 		resize: vertical;
 	}
-	.mus-comment-input::placeholder { color: rgba(255, 255, 255, 0.25); }
-	.mus-comment-input:focus { outline: none; border-color: rgba(139, 92, 246, 0.5); }
+	.mus-comment-input::placeholder { color: var(--nx-text-muted); }
+	.mus-comment-input:focus { outline: none; border-color: rgb(var(--nx-accent-rgb) / 0.5); }
 	.mus-comment-input--name { max-width: 220px; }
 
 	.mus-comment-submit {
 		align-self: flex-start;
-		background: rgba(139, 92, 246, 0.85);
+		background: rgb(var(--nx-accent-rgb) / 0.85);
 		border: none;
 		border-radius: 6px;
 		padding: 6px 14px;
@@ -644,7 +644,7 @@
 		cursor: pointer;
 		transition: background 0.15s;
 	}
-	.mus-comment-submit:hover:not(:disabled) { background: rgba(139, 92, 246, 1); }
+	.mus-comment-submit:hover:not(:disabled) { background: rgb(var(--nx-accent-rgb) / 1); }
 	.mus-comment-submit:disabled { opacity: 0.5; cursor: default; }
 
 	@media (max-width: 560px) {

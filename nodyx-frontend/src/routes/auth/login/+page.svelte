@@ -117,7 +117,7 @@
 			// Générer le QR
 			const QRCode = (await import('qrcode')).default
 			if (signetQrCanvas) {
-				await QRCode.toCanvas(signetQrCanvas, signetQrUrl, { width: 200, margin: 1, color: { dark: '#ffffff', light: '#00000000' } })
+				await QRCode.toCanvas(signetQrCanvas, signetQrUrl, { width: 200, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
 			}
 
 			signetStartPolling(challengeId, pollNonce)
@@ -173,19 +173,20 @@
 </svelte:head>
 
 <!-- ── Split layout: presentation a gauche, formulaire a droite ── -->
-<div class="w-full h-full min-h-0 p-6 sm:p-8 overflow-hidden bg-[#06060a]">
+<div class="w-full h-full min-h-0 p-6 sm:p-8 overflow-hidden">
 
-	<div class="w-full h-full min-h-0 grid grid-cols-1 md:grid-cols-[1fr_minmax(420px,35%)] gap-4 bg-[#06060a]">
+	<div class="w-full h-full min-h-0 grid grid-cols-1 md:grid-cols-[1fr_minmax(420px,35%)] gap-4">
 
 		<!-- ════════ Left: texte de presentation ════════ -->
-		<div class="relative overflow-hidden hidden md:flex flex-col justify-start min-h-0 p-6 sm:p-8 bg-[#06060a]">
+		<!-- Affiche sombre dans les deux thèmes (.nx-on-dark) : halos et robot pensés pour le noir. -->
+		<div class="nx-on-dark relative overflow-hidden hidden md:flex flex-col justify-start min-h-0 p-6 sm:p-8 rounded-2xl bg-[#06060a]">
 
 			<!-- Dot grid + radial glows -->
 			<div class="absolute inset-0 pointer-events-none"
 				style="background:
 					radial-gradient(circle at 15% 40%, rgba(124,58,237,0.12) 0%, transparent 45%),
 					radial-gradient(circle at 85% 15%, rgba(6,182,212,0.06) 0%, transparent 35%),
-					radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+					radial-gradient(color-mix(in srgb, var(--nx-text) 3.5%, transparent) 1px, transparent 1px);
 					background-size: 100%, 100%, 28px 28px">
 			</div>
 
@@ -195,40 +196,40 @@
 					style="color: var(--nx-cyan-soft, #67e8f9); font-family: ui-monospace, monospace">
 					{tFn('auth.hero.tagline')}
 				</div>
-				<h2 class="titre-heros text-4xl font-bold leading-tight mb-3 text-white">
-					{tFn('auth.hero.login_title_1')}<span class="titre-heros-sep">{' '}</span><span style="color: var(--nx-accent-2-soft, #a78bfa)">{tFn('auth.hero.login_title_2')}</span><span class="titre-heros-point">.</span>
+				<h2 class="titre-heros text-4xl font-bold leading-tight mb-3 text-[var(--nx-text)]">
+					{tFn('auth.hero.login_title_1')}<span class="titre-heros-sep">{' '}</span><span style="color: var(--nx-accent-2-soft, var(--nx-header-accent))">{tFn('auth.hero.login_title_2')}</span><span class="titre-heros-point">.</span>
 				</h2>
-				<p class="text-sm leading-relaxed text-gray-400">
+				<p class="text-sm leading-relaxed text-[var(--nx-text-muted)]">
 					{tFn('auth.hero.login_desc')}
 				</p>
 			</div>
 		</div>
 
 		<!-- ════════ Right: Login form ════════ -->
-		<div class="relative flex items-center justify-center min-h-0 h-full overflow-y-auto bg-[#06060a] p-6 sm:p-8">
+		<div class="relative flex items-center justify-center min-h-0 h-full overflow-y-auto p-6 sm:p-8">
 
 			<!-- Dot grid (subtle) -->
 			<div class="absolute inset-0 pointer-events-none opacity-50"
-				style="background: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 28px 28px">
+				style="background: radial-gradient(color-mix(in srgb, var(--nx-text) 3.5%, transparent) 1px, transparent 1px); background-size: 28px 28px">
 			</div>
 
 		<div class="relative z-10 w-full max-w-md">
 
 			<!-- Logo & Robot header -->
 			<div class="flex items-center justify-between mb-4">
-				<span class="text-lg font-bold text-white tracking-tight">Nodyx</span>
+				<span class="text-lg font-bold text-[var(--nx-text)] tracking-tight">Nodyx</span>
 				
 				<!-- Robot Avatar directly on top of form -->
 				<div class="flex flex-col items-center">
 					<!-- Speech bubble -->
 					<div class="relative mb-2 w-full max-w-40">
 						<div class="rounded-lg px-3 py-1.5 shadow-md text-center w-full border transition-colors duration-300
-						            {form?.error ? 'bg-red-950/60 border-red-800/60' : 'bg-gray-800/90 border-gray-700'}">
-							<p class="text-[11px] leading-tight transition-colors duration-200 {form?.error ? 'text-red-300' : 'text-gray-300'}">
+						            {form?.error ? 'bg-red-950/60 border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)]' : 'bg-[var(--nx-surface-raised)]/90 border-[var(--nx-border)]'}">
+							<p class="text-[11px] leading-tight transition-colors duration-200 {form?.error ? 'text-[var(--nx-bad)]' : 'text-[var(--nx-text)]'}">
 								{form?.error ? form.error : submitting ? tFn('auth.login.submitting') : focusedField === 'email' ? tFn('auth.register.email_hint') : focusedField === 'password' ? tFn('auth.bot.password_shy') : tFn('auth.register.welcome_message')}
 							</p>
 						</div>
-						<div class="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[7px] border-l-transparent border-r-transparent {form?.error ? 'border-t-red-800/60' : 'border-t-gray-700'}"></div>
+						<div class="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[7px] border-l-transparent border-r-transparent {form?.error ? 'border-t-red-800/60' : 'border-t-[var(--nx-border)]'}"></div>
 					</div>
 
 					<svg width="60" height="90" viewBox="0 0 80 132" class="transition-all duration-300 drop-shadow-lg" class:robot-shake={!!form?.error}>
@@ -258,16 +259,16 @@
 								<animateTransform attributeName="transform" type="rotate" from="0 55 35" to="360 55 35" dur="0.9s" repeatCount="indefinite"/>
 							</circle>
 						{:else if focusedField === 'password'}
-							<path d="M 18 36 Q 25 44 32 36" stroke="#818cf8" stroke-width="3" fill="none" stroke-linecap="round"/>
-							<path d="M 48 36 Q 55 44 62 36" stroke="#818cf8" stroke-width="3" fill="none" stroke-linecap="round"/>
-							<rect x="15" y="26" width="18" height="14" rx="4" fill="#1e293b" stroke="#818cf8" stroke-width="1.5"/>
-							<rect x="47" y="26" width="18" height="14" rx="4" fill="#1e293b" stroke="#818cf8" stroke-width="1.5"/>
+							<path d="M 18 36 Q 25 44 32 36" stroke="var(--nx-header-accent)" stroke-width="3" fill="none" stroke-linecap="round"/>
+							<path d="M 48 36 Q 55 44 62 36" stroke="var(--nx-header-accent)" stroke-width="3" fill="none" stroke-linecap="round"/>
+							<rect x="15" y="26" width="18" height="14" rx="4" fill="#1e293b" stroke="var(--nx-header-accent)" stroke-width="1.5"/>
+							<rect x="47" y="26" width="18" height="14" rx="4" fill="#1e293b" stroke="var(--nx-header-accent)" stroke-width="1.5"/>
 						{:else}
 							<circle cx="25" cy="35" r="8" fill="#0f172a"/>
-							<circle cx={22 + Math.min(6, (emailInput.length || 0) * 0.25)} cy="35" r="4.5" fill={focusedField ? '#818cf8' : '#6366f1'} class="transition-all duration-150"/>
+							<circle cx={22 + Math.min(6, (emailInput.length || 0) * 0.25)} cy="35" r="4.5" fill={focusedField ? 'var(--nx-header-accent)' : '#6366f1'} class="transition-all duration-150"/>
 							<circle cx={19.5 + Math.min(6, (emailInput.length || 0) * 0.25)} cy="32" r="1.5" fill="white" opacity="0.8" class="transition-all duration-150"/>
 							<circle cx="55" cy="35" r="8" fill="#0f172a"/>
-							<circle cx={52 + Math.min(6, (emailInput.length || 0) * 0.25)} cy="35" r="4.5" fill={focusedField ? '#818cf8' : '#6366f1'} class="transition-all duration-150"/>
+							<circle cx={52 + Math.min(6, (emailInput.length || 0) * 0.25)} cy="35" r="4.5" fill={focusedField ? 'var(--nx-header-accent)' : '#6366f1'} class="transition-all duration-150"/>
 							<circle cx={49.5 + Math.min(6, (emailInput.length || 0) * 0.25)} cy="32" r="1.5" fill="white" opacity="0.8" class="transition-all duration-150"/>
 						{/if}
 
@@ -296,10 +297,10 @@
 			</div>
 
 		{#if data.demoMode}
-		<div class="mb-4 rounded-lg border border-white/[0.06] overflow-hidden">
+		<div class="mb-4 rounded-lg border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] overflow-hidden">
 			<button type="button" onclick={() => demoOpen = !demoOpen}
 				class="w-full px-3.5 py-2 flex items-center gap-2 text-left transition-colors"
-				style="background: rgba(255,255,255,0.02); color: rgb(156,163,175)">
+				style="background: color-mix(in srgb, var(--nx-text) 2%, transparent); color: var(--nx-text-muted)">
 				<span class="text-[10px] transition-transform" style="transform: rotate({demoOpen ? '90deg' : '0'})">▶</span>
 				<span class="text-[11px]">{tFn('auth.demo.title')}</span>
 			</button>
@@ -307,13 +308,13 @@
 			<div class="p-1.5 space-y-1">
 				{#each ['alice', 'bob', 'charlie', 'admin'] as u}
 				<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg"
-					style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04)">
-					<span class="font-mono text-[11px] text-white shrink-0">{u}@demo.nodyx.org</span>
-					<span class="text-[11px] shrink-0 text-gray-500">demo1234</span>
+					style="background: color-mix(in srgb, var(--nx-text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--nx-text) 4%, transparent)">
+					<span class="font-mono text-[11px] text-[var(--nx-text)] shrink-0">{u}@demo.nodyx.org</span>
+					<span class="text-[11px] shrink-0 text-[var(--nx-text-muted)]">demo1234</span>
 					<button type="button"
 						onclick={() => { emailInput = u + '@demo.nodyx.org'; passwordInput = 'demo1234'; demoOpen = false; }}
 						class="px-2 py-0.5 rounded text-[10px] font-medium shrink-0 transition-colors active:scale-[0.97]"
-						style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: var(--nx-accent-soft, #818cf8)">
+						style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: var(--nx-accent-soft, var(--nx-header-accent))">
 						use
 					</button>
 				</div>
@@ -324,7 +325,7 @@
 		{/if}
 
 			{#if data.passwordReset}
-				<div class="mb-4 rounded border border-green-700/50 bg-green-900/20 px-4 py-2.5 text-sm text-green-300">
+				<div class="mb-4 rounded border border-[color-mix(in_srgb,var(--nx-ok)_40%,transparent)] bg-[color-mix(in_srgb,var(--nx-ok)_10%,transparent)] px-4 py-2.5 text-sm text-[var(--nx-ok)]">
 					{tFn('auth.password_reset.success_message')}
 				</div>
 			{/if}
@@ -332,15 +333,15 @@
 			{#if form?.requires_signet}
 				<!-- ── Étape 2 : approbation Signet ─────────────────────────────────── -->
 				<div class="rounded-lg border p-6"
-					style="border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.04)">
+					style="border-color: color-mix(in srgb, var(--nx-warn) 30%, transparent); background: color-mix(in srgb, var(--nx-warn) 4%, transparent)">
 					<div class="flex items-center gap-3 mb-5">
 						<div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl font-bold shrink-0"
-							style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35); color: #fbbf24">
+							style="background: color-mix(in srgb, var(--nx-warn) 12%, transparent); border: 1px solid color-mix(in srgb, var(--nx-warn) 35%, transparent); color: var(--nx-warn)">
 							◈
 						</div>
 						<div>
-							<p class="text-sm font-semibold text-white">{tFn('auth.signet.verification_title')}</p>
-							<p class="text-xs mt-0.5 text-gray-400">
+							<p class="text-sm font-semibold text-[var(--nx-text)]">{tFn('auth.signet.verification_title')}</p>
+							<p class="text-xs mt-0.5 text-[var(--nx-text-muted)]">
 								{tFn('auth.signet.verify_description')}
 							</p>
 						</div>
@@ -355,11 +356,11 @@
 								<div class="absolute inset-0 rounded-lg animate-ping opacity-20 signet-ping"></div>
 							</div>
 							<div class="text-center">
-								<p class="text-sm font-semibold text-white">{tFn('common.waiting_approval')}</p>
-								<p class="text-xs mt-1 text-gray-400">{tFn('auth.signet.open_app_message')}</p>
+								<p class="text-sm font-semibold text-[var(--nx-text)]">{tFn('common.waiting_approval')}</p>
+								<p class="text-xs mt-1 text-[var(--nx-text-muted)]">{tFn('auth.signet.open_app_message')}</p>
 							</div>
 							{#if signetError}
-								<p class="text-xs text-center text-red-400">{signetError}</p>
+								<p class="text-xs text-center text-[var(--nx-bad)]">{signetError}</p>
 							{/if}
 						</div>
 
@@ -370,43 +371,43 @@
 						</form>
 						<div class="flex flex-col items-center gap-3 py-3">
 							<div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl signet-ok">✓</div>
-							<p class="text-sm font-semibold text-green-400">{tFn('auth.signet.approved_logging_in')}</p>
+							<p class="text-sm font-semibold text-[var(--nx-ok)]">{tFn('auth.signet.approved_logging_in')}</p>
 						</div>
 
 					{:else if signetState === 'rejected'}
 						<div class="flex flex-col items-center gap-3 py-3">
 							<div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl signet-err">✕</div>
-							<p class="text-sm font-semibold mb-1 text-red-400">{tFn('auth.signet.request_rejected')}</p>
-							<p class="text-xs text-gray-400">{tFn('auth.signet.retry_message')}</p>
-							<a href="/auth/login" class="text-xs underline mt-1 text-amber-400">{tFn('auth.signet.back_to_login')}</a>
+							<p class="text-sm font-semibold mb-1 text-[var(--nx-bad)]">{tFn('auth.signet.request_rejected')}</p>
+							<p class="text-xs text-[var(--nx-text-muted)]">{tFn('auth.signet.retry_message')}</p>
+							<a href="/auth/login" class="text-xs underline mt-1 text-[var(--nx-warn)]">{tFn('auth.signet.back_to_login')}</a>
 						</div>
 
 					{:else if signetState === 'expired'}
 						<div class="flex flex-col items-center gap-3 py-3">
-							<p class="text-sm text-gray-400">{tFn('auth.signet.challenge_expired')}</p>
-							<a href="/auth/login" class="text-xs underline text-amber-400">{tFn('auth.signet.back_to_login')}</a>
+							<p class="text-sm text-[var(--nx-text-muted)]">{tFn('auth.signet.challenge_expired')}</p>
+							<a href="/auth/login" class="text-xs underline text-[var(--nx-warn)]">{tFn('auth.signet.back_to_login')}</a>
 						</div>
 
 					{:else if signetState === 'error'}
 						<div class="flex flex-col items-center gap-3 py-3">
-							<p class="text-xs text-center mb-2 text-red-400">{signetError}</p>
-							<a href="/auth/login" class="text-xs underline text-amber-400">{tFn('auth.signet.back_to_login')}</a>
+							<p class="text-xs text-center mb-2 text-[var(--nx-bad)]">{signetError}</p>
+							<a href="/auth/login" class="text-xs underline text-[var(--nx-warn)]">{tFn('auth.signet.back_to_login')}</a>
 						</div>
 					{/if}
 				</div>
 
 			{:else if form?.requires_totp}
 				<!-- ── Étape 2 : code TOTP ──────────────────────────────────────────── -->
-				<div class="mb-6 rounded-lg border border-indigo-700/40 bg-indigo-900/10 px-5 py-4">
+				<div class="mb-6 rounded-lg border border-indigo-700/40 bg-[rgb(var(--nx-accent-rgb)/0.05)] px-5 py-4">
 					<div class="flex items-center gap-3 mb-3">
 						<span class="text-2xl">🔐</span>
 						<div>
-							<p class="text-sm font-semibold text-white">{tFn('auth.totp.title')}</p>
-							<p class="text-xs text-gray-500 mt-0.5">{tFn('auth.totp.enter_code_instruction')}</p>
+							<p class="text-sm font-semibold text-[var(--nx-text)]">{tFn('auth.totp.title')}</p>
+							<p class="text-xs text-[var(--nx-text-muted)] mt-0.5">{tFn('auth.totp.enter_code_instruction')}</p>
 						</div>
 					</div>
 					{#if form?.error}
-						<p class="mb-3 rounded bg-red-900/40 border border-red-700/50 px-3 py-2 text-xs text-red-300">{form.error}</p>
+						<p class="mb-3 rounded bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-3 py-2 text-xs text-[var(--nx-bad)]">{form.error}</p>
 					{/if}
 					<form
 						method="POST"
@@ -436,7 +437,7 @@
 							bind:value={totpCode}
 							placeholder="000 000"
 							autocomplete="one-time-code"
-							class="w-full rounded bg-gray-800 border border-gray-700 px-3 py-2.5 text-white text-center
+							class="w-full rounded bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] px-3 py-2.5 text-[var(--nx-text)] text-center
 							       text-xl font-mono tracking-[0.5em] focus:outline-none focus:border-indigo-500"
 						/>
 						<button
@@ -455,15 +456,15 @@
 
 			{#if form?.error}
 				{#if form.code === 'EMAIL_NOT_VERIFIED'}
-					<div class="mb-4 rounded border border-amber-700/50 bg-amber-900/20 px-4 py-3 text-sm text-amber-300">
+					<div class="mb-4 rounded border border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] bg-[color-mix(in_srgb,var(--nx-warn)_10%,transparent)] px-4 py-3 text-sm text-[var(--nx-warn)]">
 						<p class="font-semibold mb-1">{tFn('auth.email_not_verified')}</p>
 						<p class="text-amber-400/80">{form.error}</p>
-						<a href="/auth/verify-pending" class="mt-2 inline-block underline text-amber-300 hover:text-amber-200">
+						<a href="/auth/verify-pending" class="mt-2 inline-block underline text-[var(--nx-warn)] hover:text-[var(--nx-warn)]">
 							{tFn('auth.resend_verification_email')}
 						</a>
 					</div>
 				{:else}
-					<p class="mb-4 rounded bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
+					<p class="mb-4 rounded bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-4 py-2 text-sm text-[var(--nx-bad)]">
 						{form.error}
 					</p>
 				{/if}
@@ -491,7 +492,7 @@
 				<input type="hidden" name="redirectTo" value={form?.redirectTo ?? data.redirectTo} />
 
 				<div>
-					<label for="email" class="block text-xs font-medium text-gray-300 mb-1.5 uppercase tracking-wider">{tFn('common.email')}</label>
+					<label for="email" class="block text-xs font-medium text-[var(--nx-text)] mb-1.5 uppercase tracking-wider">{tFn('common.email')}</label>
 					<input
 						id="email"
 						bind:value={emailInput}
@@ -501,14 +502,14 @@
 						autocomplete="email"
 						onfocus={() => focusedField = 'email'}
 						onblur={() => focusedField = null}
-						class="w-full rounded-lg bg-white/[0.04] border border-white/10 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20 transition-colors duration-200"
+						class="w-full rounded-lg bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] px-3.5 py-2.5 text-sm text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20 transition-colors duration-200"
 					/>
 				</div>
 
 				<div>
 					<div class="flex items-center justify-between mb-1.5">
-						<label for="password" class="text-xs font-medium text-gray-300 uppercase tracking-wider">{tFn('common.password')}</label>
-						<a href="/auth/forgot-password" class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+						<label for="password" class="text-xs font-medium text-[var(--nx-text)] uppercase tracking-wider">{tFn('common.password')}</label>
+						<a href="/auth/forgot-password" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)] transition-colors">
 							{tFn('auth.forgot_password_link')}
 						</a>
 					</div>
@@ -521,7 +522,7 @@
 						autocomplete="current-password"
 						onfocus={() => focusedField = 'password'}
 						onblur={() => focusedField = null}
-						class="w-full rounded-lg bg-white/[0.04] border border-white/10 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20 transition-colors duration-200"
+						class="w-full rounded-lg bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] px-3.5 py-2.5 text-sm text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20 transition-colors duration-200"
 					/>
 				</div>
 
@@ -534,9 +535,9 @@
 				</button>
 			</form>
 
-			<p class="mt-5 text-center text-sm text-gray-400">
+			<p class="mt-5 text-center text-sm text-[var(--nx-text-muted)]">
 				{tFn('auth.login.no_account_prompt')}
-				<a href="/auth/register" class="font-medium text-indigo-400 hover:text-indigo-300 transition-colors">{tFn('auth.register_link')}</a>
+				<a href="/auth/register" class="font-medium text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)] transition-colors">{tFn('auth.register_link')}</a>
 			</p>
 
 			{/if}
@@ -545,27 +546,27 @@
 			{#if !form?.requires_signet}
 			<div class="mt-8">
 				<div class="flex items-center gap-3 mb-4">
-					<div class="flex-1 h-px bg-gray-800"></div>
-					<span class="text-xs text-gray-600 uppercase tracking-widest">{tFn('common.or')}</span>
-					<div class="flex-1 h-px bg-gray-800"></div>
+					<div class="flex-1 h-px bg-[var(--nx-surface-raised)]"></div>
+					<span class="text-xs text-[var(--nx-text-muted)] uppercase tracking-widest">{tFn('common.or')}</span>
+					<div class="flex-1 h-px bg-[var(--nx-surface-raised)]"></div>
 				</div>
 
 				<div class="rounded-lg border p-5 transition-colors"
-					style="border-color: rgba(251,191,36,0.25); background: rgba(251,191,36,0.03)">
+					style="border-color: color-mix(in srgb, var(--nx-warn) 25%, transparent); background: color-mix(in srgb, var(--nx-warn) 3%, transparent)">
 
 					<!-- En-tête -->
 					<div class="flex items-center gap-3 mb-4">
 						<div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-bold shrink-0"
-							style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); color: #fbbf24">
+							style="background: color-mix(in srgb, var(--nx-warn) 10%, transparent); border: 1px solid color-mix(in srgb, var(--nx-warn) 30%, transparent); color: var(--nx-warn)">
 							◈
 						</div>
 						<div>
-							<p class="text-sm font-semibold text-white">Nodyx Signet</p>
-							<p class="text-xs text-gray-400">{tFn('auth.signet.tagline')}</p>
+							<p class="text-sm font-semibold text-[var(--nx-text)]">Nodyx Signet</p>
+							<p class="text-xs text-[var(--nx-text-muted)]">{tFn('auth.signet.tagline')}</p>
 						</div>
 						<a href="https://signet.nodyx.org" target="_blank" rel="noopener"
 							class="ml-auto text-xs px-2 py-1 rounded-lg shrink-0 transition-opacity hover:opacity-80"
-							style="color: #fbbf24; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2)">
+							style="color: var(--nx-warn); background: color-mix(in srgb, var(--nx-warn) 8%, transparent); border: 1px solid color-mix(in srgb, var(--nx-warn) 20%, transparent)">
 							{tFn('auth.signet.get_app_button')}
 						</a>
 					</div>
@@ -578,52 +579,52 @@
 								bind:value={signetUsername}
 								placeholder={tFn('auth.signet.username_placeholder')}
 								onkeydown={(e) => e.key === 'Enter' && signetStart()}
-								class="flex-1 min-w-0 rounded-lg px-3 py-2 text-sm text-white focus:outline-none transition-colors"
-								style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.2)"
+								class="flex-1 min-w-0 rounded-lg px-3 py-2 text-sm text-[var(--nx-text)] focus:outline-none transition-colors"
+								style="background: color-mix(in srgb, var(--nx-text) 4%, transparent); border: 1px solid color-mix(in srgb, var(--nx-warn) 20%, transparent)"
 							/>
 							<button
 								onclick={signetStart}
 								disabled={!signetUsername.trim()}
 								class="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40 transition-colors active:scale-[0.97] shrink-0 whitespace-nowrap"
-								style="background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.4); color: #fbbf24">
+								style="background: color-mix(in srgb, var(--nx-warn) 15%, transparent); border: 1px solid color-mix(in srgb, var(--nx-warn) 40%, transparent); color: var(--nx-warn)">
 								{tFn('auth.signet.sign_button')}
 							</button>
 						</div>
 
 						<!-- Séparateur + bouton première connexion -->
-						<div class="mt-3 pt-3" style="border-top: 1px solid rgba(251,191,36,0.1)">
-							<p class="text-xs mb-2 text-gray-500">{tFn('auth.signet.first_visit_prompt')}</p>
+						<div class="mt-3 pt-3" style="border-top: 1px solid color-mix(in srgb, var(--nx-warn) 10%, transparent)">
+							<p class="text-xs mb-2 text-[var(--nx-text-muted)]">{tFn('auth.signet.first_visit_prompt')}</p>
 							<button
 								onclick={signetStartCross}
 								class="w-full py-2 rounded-lg text-sm font-medium transition-colors active:scale-[0.97]"
-								style="background: rgba(251,191,36,0.06); border: 1px dashed rgba(251,191,36,0.3); color: #fbbf24">
+								style="background: color-mix(in srgb, var(--nx-warn) 6%, transparent); border: 1px dashed color-mix(in srgb, var(--nx-warn) 30%, transparent); color: var(--nx-warn)">
 								{tFn('auth.signet.scan_and_create_button')}
 							</button>
 						</div>
 
 						{#if signetError}
-							<p class="mt-2 text-xs text-red-400">{signetError}</p>
+							<p class="mt-2 text-xs text-[var(--nx-bad)]">{signetError}</p>
 						{/if}
 
 					{:else if signetState === 'waiting'}
 						{#if signetQrMode}
 							<!-- Mode QR cross-instance -->
 							<div class="flex flex-col items-center gap-3 py-2">
-								<p class="text-sm font-semibold text-white">{tFn('auth.signet.scan_instruction')}</p>
+								<p class="text-sm font-semibold text-[var(--nx-text)]">{tFn('auth.signet.scan_instruction')}</p>
 								<canvas bind:this={signetQrCanvas}
 									class="rounded-lg"
-									style="background: rgba(0,0,0,0.4); padding: 8px">
+									style="background: #fff; padding: 8px">
 								</canvas>
-								<p class="text-xs text-center text-gray-400">
+								<p class="text-xs text-center text-[var(--nx-text-muted)]">
 									{tFn('auth.signet.auto_create_message')}
 								</p>
 								{#if signetQrUrl}
 									<a href={signetQrUrl} target="_blank" rel="noopener"
-										class="text-xs underline" style="color: rgba(251,191,36,0.6)">
+										class="text-xs underline" style="color: var(--nx-warn)">
 										{tFn('auth.signet.open_on_device_link')}
 									</a>
 								{/if}
-								<button onclick={signetResetFull} class="text-xs text-gray-500">
+								<button onclick={signetResetFull} class="text-xs text-[var(--nx-text-muted)]">
 									{tFn('common.cancel')}
 								</button>
 							</div>
@@ -637,10 +638,10 @@
 									<div class="absolute inset-0 rounded-lg animate-ping opacity-20 signet-ping"></div>
 								</div>
 								<div class="text-center">
-									<p class="text-sm font-semibold text-white">{tFn('common.waiting_approval')}</p>
-									<p class="text-xs mt-1 text-gray-400">{tFn('auth.signet.open_phone_approve_message')}</p>
+									<p class="text-sm font-semibold text-[var(--nx-text)]">{tFn('common.waiting_approval')}</p>
+									<p class="text-xs mt-1 text-[var(--nx-text-muted)]">{tFn('auth.signet.open_phone_approve_message')}</p>
 								</div>
-								<button onclick={signetReset} class="text-xs text-gray-500">
+								<button onclick={signetReset} class="text-xs text-[var(--nx-text-muted)]">
 									{tFn('auth.cancel')}
 								</button>
 							</div>
@@ -656,7 +657,7 @@
 							<div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl signet-ok">
 								✓
 							</div>
-							<p class="text-sm font-semibold text-green-400">{tFn('auth.signet.approved_logging_in')}</p>
+							<p class="text-sm font-semibold text-[var(--nx-ok)]">{tFn('auth.signet.approved_logging_in')}</p>
 						</div>
 
 					{:else if signetState === 'rejected'}
@@ -664,13 +665,13 @@
 							<div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl signet-err">
 								✕
 							</div>
-							<p class="text-sm font-semibold text-red-400">{tFn('auth.signet.request_rejected')}</p>
-							<button onclick={signetReset} class="text-xs underline text-gray-400">{tFn('common.retry')}</button>
+							<p class="text-sm font-semibold text-[var(--nx-bad)]">{tFn('auth.signet.request_rejected')}</p>
+							<button onclick={signetReset} class="text-xs underline text-[var(--nx-text-muted)]">{tFn('common.retry')}</button>
 						</div>
 					{:else if signetState === 'expired'}
 						<div class="flex flex-col items-center gap-3 py-3">
-							<p class="text-sm text-gray-400">{tFn('auth.signet.challenge_expired_90s')}</p>
-							<button onclick={signetReset} class="text-xs underline text-amber-400">{tFn('common.retry')}</button>
+							<p class="text-sm text-[var(--nx-text-muted)]">{tFn('auth.signet.challenge_expired_90s')}</p>
+							<button onclick={signetReset} class="text-xs underline text-[var(--nx-warn)]">{tFn('common.retry')}</button>
 						</div>
 					{/if}
 				</div>
@@ -690,19 +691,19 @@
 		background: var(--nx-accent-2-strong, #7c3aed);
 	}
 	.signet-icon {
-		background: rgba(251, 191, 36, 0.1);
-		border: 1px solid rgba(251, 191, 36, 0.4);
-		color: #fbbf24;
+		background: color-mix(in srgb, var(--nx-warn) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--nx-warn) 40%, transparent);
+		color: var(--nx-warn);
 	}
 	.signet-ping {
-		background: rgba(251, 191, 36, 0.3);
+		background: color-mix(in srgb, var(--nx-warn) 30%, transparent);
 	}
 	.signet-ok {
-		background: rgba(74, 222, 128, 0.1);
+		background: color-mix(in srgb, var(--nx-ok) 10%, transparent);
 		border: 2px solid rgb(74, 222, 128);
 	}
 	.signet-err {
-		background: rgba(248, 113, 113, 0.1);
+		background: color-mix(in srgb, var(--nx-bad) 10%, transparent);
 		border: 2px solid rgb(248, 113, 113);
 	}
 </style>
