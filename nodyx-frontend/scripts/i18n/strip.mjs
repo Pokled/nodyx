@@ -59,3 +59,39 @@ export function stripI18n(line) {
   }
   return out
 }
+
+/**
+ * Mots outils français sans accent. « Tout marquer comme lu » passait entre les
+ * règles de `scan.mjs` (accents, liste de mots d'interface, contractions) : aucun
+ * accent, aucun mot de la liste (2026-10-31). Un seul de ces mots peut exister en
+ * anglais ou dans du code ; DEUX différents sur la même ligne, c'est du français.
+ * « sans » est écarté exprès : il collerait à la classe `font-sans`.
+ */
+const MOTS_OUTILS = /\b(?:pour|avec|dans|comme|tout|tous|toute|toutes|une|des|sur|aux|mais|leur|leurs|ton|tes|ces|sont|est|les|du|au|le|la|un|de|et|ou|ne|pas|plus|ici)\b/gi
+
+/**
+ * @param {string} texte
+ * @returns {boolean} vrai si le texte porte au moins deux mots outils français différents
+ */
+export function aDeuxMotsOutils(texte) {
+  return new Set((texte.match(MOTS_OUTILS) || []).map((m) => m.toLowerCase())).size >= 2
+}
+
+/**
+ * Lignes (index à partir de 0) situées dans un bloc `<script>` d'un fichier
+ * `.svelte`. La règle des mots outils ne vise que le BALISAGE, où vivait l'angle
+ * mort : dans le script, des valeurs par défaut éditables (modèles d'alertes de
+ * stream) et des messages de console relèvent d'autres décisions.
+ * @param {string} txt
+ * @returns {Set<number>}
+ */
+export function lignesDeScript(txt) {
+  const lignes = new Set()
+  let dedans = false
+  txt.split('\n').forEach((l, i) => {
+    if (/<script\b/.test(l)) dedans = true
+    if (dedans) lignes.add(i)
+    if (/<\/script>/.test(l)) dedans = false
+  })
+  return lignes
+}

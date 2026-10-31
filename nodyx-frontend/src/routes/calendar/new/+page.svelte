@@ -142,7 +142,7 @@
 								<svg class="w-8 h-8 text-[var(--nx-text-muted)] group-hover:text-[var(--nx-ok)] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M13.5 12a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM4.5 19.5h15"/>
 								</svg>
-								<span class="text-[var(--nx-text-muted)] text-xs group-hover:text-[var(--nx-text)] transition-colors">Cliquez ou glissez une image (PNG, JPG, WebP)</span>
+								<span class="text-[var(--nx-text-muted)] text-xs group-hover:text-[var(--nx-text)] transition-colors">{tFn('event.cover_dropzone_formats')}</span>
 							{/if}
 						</div>
 					{/if}

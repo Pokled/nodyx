@@ -353,7 +353,7 @@
 		<div class="absolute top-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-zinc-950/85 backdrop-blur-md border border-emerald-500/50 rounded-full shadow-2xl flex items-center gap-2 text-xs pointer-events-none animate-fade-out">
 			<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
 			<span class="text-zinc-100 font-medium">{tFn('overlay_sb.ready')}</span>
-			<span class="text-zinc-500">· appuie sur un bouton 🎵 de ton Stream Deck</span>
+			<span class="text-zinc-500">{tFn('overlay_sb.ready_hint')}</span>
 		</div>
 	{/if}
 	{#if nowPlaying && config.osdPosition !== 'hidden'}
