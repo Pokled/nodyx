@@ -145,3 +145,36 @@ export function themeToStyle(t: ProfileThemeVars): string {
 		`color:${t.text}`,
 	].join(';')
 }
+
+/**
+ * Vrai si le membre s'est donné un thème À LUI. Sinon (rien d'enregistré, ou le
+ * préréglage « Défaut » enregistré tel quel), son profil suit le thème du site,
+ * clair ou sombre. 9 membres de nodyx.org avaient cliqué « Défaut » sans rien
+ * changer : un clic sur « Défaut » n'est pas un choix de fond noir (31/10/2026).
+ * textMuted n'entre pas dans la comparaison : la valeur par défaut est passée de
+ * gray-500 à gray-400 et d'anciens enregistrements gardent l'ancienne.
+ */
+export function isPersonalTheme(saved: Partial<ProfileThemeVars> | null | undefined): boolean {
+	if (!saved || typeof saved !== 'object') return false
+	const keys = ['bg', 'cardBg', 'cardBorder', 'accent', 'text'] as const
+	if (keys.some((k) => saved[k] !== undefined && saved[k] !== DEFAULT_THEME[k])) return true
+	return !!saved.bgImage
+}
+
+/**
+ * Style de .profile-scope quand le profil suit le thème du site : les variables
+ * --p-* pointent vers celles du thème (--nx-*), et la racine ne peint AUCUN fond,
+ * pour laisser passer les réglages de zone de l'Apparence (opacité, image).
+ * --p-bg reste une couleur : la bannière s'y fond en dégradé.
+ */
+export function siteThemeStyle(): string {
+	return [
+		'--p-bg:var(--nx-sheet-bg, var(--nx-bg))',
+		'--p-card-bg:var(--nx-surface)',
+		'--p-card-border:var(--nx-border)',
+		'--p-accent:var(--nx-header-accent)',
+		'--p-text:var(--nx-text)',
+		'--p-text-muted:var(--nx-text-muted)',
+		'color:var(--nx-text)',
+	].join(';')
+}
