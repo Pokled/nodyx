@@ -242,9 +242,9 @@
 	position: sticky;
 	top: 0;
 	z-index: 20;
-	background: rgba(9, 9, 15, 0.92);
+	background: color-mix(in srgb, var(--nx-surface) 92%, transparent);
 	backdrop-filter: blur(16px);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 	padding: 20px 28px 0;
 }
 
@@ -263,14 +263,14 @@
 .disc-title {
 	font-size: 1.125rem;
 	font-weight: 700;
-	color: #fff;
+	color: var(--nx-text);
 	margin: 0 0 2px;
 	letter-spacing: -0.01em;
 }
 
 .disc-subtitle {
 	font-size: 0.75rem;
-	color: rgba(255, 255, 255, 0.35);
+	color: var(--nx-text-muted);
 	margin: 0;
 }
 
@@ -285,21 +285,21 @@
 .disc-search-input {
 	flex: 1;
 	min-width: 0;
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	background: color-mix(in srgb, var(--nx-text) 4%, transparent);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent);
 	padding: 8px 14px;
-	color: #fff;
+	color: var(--nx-text);
 	font-size: 0.8125rem;
 	outline: none;
 	transition: border-color 0.15s;
 }
 
 .disc-search-input::placeholder {
-	color: rgba(255, 255, 255, 0.25);
+	color: var(--nx-text-muted);
 }
 
 .disc-search-input:focus {
-	border-color: rgba(139, 92, 246, 0.5);
+	border-color: rgb(var(--nx-accent-rgb) / 0.5);
 }
 
 .disc-search-btn {
@@ -307,7 +307,7 @@
 	align-items: center;
 	gap: 6px;
 	padding: 8px 16px;
-	background: rgba(139, 92, 246, 0.85);
+	background: rgb(var(--nx-accent-rgb) / 0.85);
 	border: none;
 	color: #fff;
 	font-size: 0.8125rem;
@@ -318,7 +318,7 @@
 }
 
 .disc-search-btn:hover:not(:disabled) {
-	background: rgba(139, 92, 246, 1);
+	background: rgb(var(--nx-accent-rgb) / 1);
 }
 
 .disc-search-btn:disabled {
@@ -343,7 +343,7 @@
 	padding: 9px 16px;
 	font-size: 0.75rem;
 	font-weight: 500;
-	color: rgba(255, 255, 255, 0.4);
+	color: var(--nx-text-muted);
 	text-decoration: none;
 	border-bottom: 2px solid transparent;
 	transition: color 0.15s, border-color 0.15s;
@@ -351,22 +351,22 @@
 }
 
 .disc-tab:hover {
-	color: rgba(255, 255, 255, 0.75);
+	color: var(--nx-text-muted);
 }
 
 .disc-tab--active {
-	color: var(--nx-accent-2-soft);
-	border-bottom-color: var(--nx-accent-2-soft);
+	color: var(--nx-header-accent);
+	border-bottom-color: var(--nx-header-accent);
 }
 
 .disc-tab--upcoming {
 	margin-left: 12px;
-	color: rgba(255, 255, 255, 0.3);
+	color: var(--nx-text-muted);
 }
 
 .disc-tab--upcoming-active {
-	color: #34d399;
-	border-bottom-color: #34d399;
+	color: var(--nx-ok);
+	border-bottom-color: var(--nx-ok);
 }
 
 /* ── Body ───────────────────────────────────────────────────────────────────── */
@@ -376,26 +376,26 @@
 
 .disc-error {
 	margin: 16px 28px;
-	border-left: 3px solid #f87171;
-	background: rgba(239, 68, 68, 0.06);
+	border-left: 3px solid var(--nx-bad);
+	background: color-mix(in srgb, var(--nx-bad) 6%, transparent);
 	padding: 10px 14px;
-	color: #fca5a5;
+	color: var(--nx-bad);
 	font-size: 0.8125rem;
 }
 
 .disc-count {
 	font-size: 0.75rem;
-	color: rgba(255, 255, 255, 0.35);
+	color: var(--nx-text-muted);
 	margin: 0 0 14px;
 }
 
 .disc-count-num {
-	color: rgba(255, 255, 255, 0.8);
+	color: var(--nx-text-muted);
 	font-weight: 600;
 }
 
 .disc-count-query {
-	color: var(--nx-accent-2-soft);
+	color: var(--nx-header-accent);
 }
 
 /* ── Result rows ───────────────────────────────────────────────────────────── */
@@ -410,17 +410,17 @@
 	flex-direction: column;
 	gap: 6px;
 	padding: 16px 40px 16px 16px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent);
 	text-decoration: none;
 	transition: background 0.15s;
 }
 
 .disc-row:hover {
-	background: rgba(255, 255, 255, 0.025);
+	background: color-mix(in srgb, var(--nx-text) 2.5%, transparent);
 }
 
 .disc-row:hover .disc-row-title {
-	color: var(--nx-accent-2-soft2);
+	color: var(--nx-header-accent);
 }
 
 .disc-row-meta {
@@ -441,32 +441,32 @@
 }
 
 .disc-badge--instance {
-	background: rgba(139, 92, 246, 0.1);
-	border-color: rgba(139, 92, 246, 0.25);
-	color: var(--nx-accent-2-soft2);
+	background: rgb(var(--nx-accent-rgb) / 0.1);
+	border-color: rgb(var(--nx-accent-rgb) / 0.25);
+	color: var(--nx-header-accent);
 }
 
 .disc-badge--event {
-	background: rgba(16, 185, 129, 0.08);
-	border-color: rgba(16, 185, 129, 0.2);
-	color: #6ee7b7;
+	background: color-mix(in srgb, var(--nx-ok) 8%, transparent);
+	border-color: color-mix(in srgb, var(--nx-ok) 25%, transparent);
+	color: var(--nx-ok);
 }
 
 .disc-replies {
 	font-size: 0.6875rem;
-	color: rgba(255, 255, 255, 0.2);
+	color: var(--nx-text-muted);
 }
 
 .disc-date {
 	font-size: 0.6875rem;
-	color: rgba(255, 255, 255, 0.2);
+	color: var(--nx-text-muted);
 	margin-left: auto;
 }
 
 .disc-row-title {
 	font-size: 0.875rem;
 	font-weight: 600;
-	color: rgba(255, 255, 255, 0.9);
+	color: var(--nx-text);
 	line-height: 1.4;
 	margin: 0;
 	transition: color 0.15s;
@@ -487,13 +487,13 @@
 	align-items: center;
 	gap: 4px;
 	font-size: 0.6875rem;
-	color: rgba(255, 255, 255, 0.25);
+	color: var(--nx-text-muted);
 	margin: 0;
 }
 
 .disc-excerpt {
 	font-size: 0.75rem;
-	color: rgba(255, 255, 255, 0.3);
+	color: var(--nx-text-muted);
 	line-height: 1.5;
 	margin: 0;
 	display: -webkit-box;
@@ -512,9 +512,9 @@
 .disc-tag {
 	padding: 2px 7px;
 	font-size: 0.6875rem;
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(255, 255, 255, 0.07);
-	color: rgba(255, 255, 255, 0.35);
+	background: color-mix(in srgb, var(--nx-text) 4%, transparent);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 7%, transparent);
+	color: var(--nx-text-muted);
 }
 
 .disc-arrow {
@@ -524,7 +524,7 @@
 	transform: translateY(-50%);
 	width: 16px;
 	height: 16px;
-	color: rgba(255, 255, 255, 0.15);
+	color: var(--nx-text-muted);
 }
 
 /* ── Pagination ─────────────────────────────────────────────────────────────── */
@@ -536,17 +536,17 @@
 
 .disc-next-btn {
 	padding: 9px 22px;
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	background: rgba(255, 255, 255, 0.03);
-	color: rgba(255, 255, 255, 0.6);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 10%, transparent);
+	background: color-mix(in srgb, var(--nx-text) 3%, transparent);
+	color: var(--nx-text-muted);
 	font-size: 0.8125rem;
 	text-decoration: none;
 	transition: background 0.15s, color 0.15s;
 }
 
 .disc-next-btn:hover {
-	background: rgba(255, 255, 255, 0.06);
-	color: #fff;
+	background: color-mix(in srgb, var(--nx-text) 6%, transparent);
+	color: var(--nx-text);
 }
 
 /* ── Empty state ────────────────────────────────────────────────────────────── */
@@ -567,24 +567,24 @@
 
 .disc-empty-main {
 	font-size: 0.875rem;
-	color: rgba(255, 255, 255, 0.45);
+	color: var(--nx-text-muted);
 	margin: 0 0 6px;
 }
 
 .disc-empty-query {
-	color: rgba(255, 255, 255, 0.75);
+	color: var(--nx-text-muted);
 }
 
 .disc-empty-sub {
 	font-size: 0.75rem;
-	color: rgba(255, 255, 255, 0.2);
+	color: var(--nx-text-muted);
 	margin: 0;
 }
 
 .disc-code {
-	background: rgba(255, 255, 255, 0.06);
+	background: color-mix(in srgb, var(--nx-text) 6%, transparent);
 	padding: 1px 5px;
 	font-size: 0.7rem;
-	color: rgba(255, 255, 255, 0.5);
+	color: var(--nx-text-muted);
 }
 </style>
