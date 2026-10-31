@@ -4,6 +4,7 @@
 	import ChannelIcon from '$lib/components/ChannelIcon.svelte';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 	import { t } from '$lib/i18n';
+	import { isDarkTheme, contrastSafeColor } from '$lib/theme';
 
 	const tFn = $derived($t);
 
@@ -20,9 +21,14 @@
 		icon_emoji?:     string | null
 	};
 
+	const safeColor = (c: string | null | undefined) => (c ? contrastSafeColor(c, '', $isDarkTheme) || null : null)
+
 	function nameStyle(ch: Channel): string {
 		const parts: string[] = []
-		if (ch.name_color)     parts.push(`color: ${ch.name_color}`)
+		// Couleur choisie par l'admin (souvent pensée pour le sombre) : ajustée si elle
+		// disparaît sur le fond du thème actif, même règle que la barre latérale du bureau.
+		const color = safeColor(ch.name_color)
+		if (color)             parts.push(`color: ${color}`)
 		if (ch.name_bold)      parts.push('font-weight: 700')
 		if (ch.name_italic)    parts.push('font-style: italic')
 		if (ch.name_underline) parts.push('text-decoration: underline')
@@ -128,14 +134,14 @@
 	aria-modal={drawerOpen ? 'true' : undefined}
 	aria-label={tFn('chsidebar.channels')}
 	class="
-		flex flex-col border-r border-gray-800 bg-gray-900 transition-transform duration-300 ease-in-out
+		flex flex-col border-r border-[var(--nx-border)] bg-[var(--nx-surface)] transition-transform duration-300 ease-in-out
 		max-lg:fixed max-lg:top-12 max-lg:bottom-0 max-lg:left-0 max-lg:z-[60] max-lg:w-[280px]
 		lg:w-56 lg:shrink-0
 		{drawerOpen ? 'translate-x-0' : 'max-lg:-translate-x-full'}
 	"
 >
-	<div class="h-12 flex items-center px-4 border-b border-gray-800">
-		<span class="text-xs font-bold text-gray-300 uppercase tracking-wider">{tFn('chsidebar.channels')}</span>
+	<div class="h-12 flex items-center px-4 border-b border-[var(--nx-border)]">
+		<span class="text-xs font-bold text-[var(--nx-text)] uppercase tracking-wider">{tFn('chsidebar.channels')}</span>
 	</div>
 
 	<nav class="flex-1 overflow-y-auto py-2 px-2 custom-scrollbar">
@@ -165,7 +171,7 @@
 						       {isFlashing ? 'ch-flash' : ''}"
 					>
 						<span class="ch-hash" class:ch-hash-unread={hasUnread}>
-							<ChannelIcon value={ch.icon_emoji} fallback="#" size={14} color={ch.name_color ?? null} />
+							<ChannelIcon value={ch.icon_emoji} fallback="#" size={14} color={safeColor(ch.name_color)} />
 						</span>
 						<span class="truncate flex-1" class:font-semibold={hasUnread} style={nameStyle(ch)}>{ch.slug ?? ch.name}</span>
 						{#if hasUnread}
@@ -201,7 +207,7 @@
 						<!-- Icône : custom prioritaire, sinon onde/micro animé -->
 						{#if ch.icon_emoji}
 							<span class="ch-voice-icon {inThisChannel ? 'ch-voice-icon--live' : ''}" aria-hidden="true">
-								<ChannelIcon value={ch.icon_emoji} size={14} color={ch.name_color ?? null} />
+								<ChannelIcon value={ch.icon_emoji} size={14} color={safeColor(ch.name_color)} />
 							</span>
 						{:else if inThisChannel}
 							<span class="ch-voice-icon ch-voice-icon--live" aria-hidden="true">
@@ -239,7 +245,7 @@
 								<button
 									onclick={() => isInVoice ? onopenVoiceMemberPanel(m) : undefined}
 									class="flex items-center gap-1.5 w-full text-left rounded px-1 py-0.5 -mx-1 transition-colors
-									       {isInVoice ? 'hover:bg-gray-800/60 cursor-pointer' : 'cursor-default'}"
+									       {isInVoice ? 'hover:bg-[var(--nx-surface-raised)]/60 cursor-pointer' : 'cursor-default'}"
 									title={isInVoice ? (isMe ? tFn('chsidebar.my_stats') : tFn('chsidebar.user_stats', { name: m.username })) : m.username}
 								>
 									{#if m.avatar}
@@ -249,18 +255,18 @@
 											{m.username.charAt(0).toUpperCase()}
 										</div>
 									{/if}
-									<span class="text-xs truncate leading-tight {isMe ? 'text-green-400' : 'text-gray-400'}">
+									<span class="text-xs truncate leading-tight {isMe ? 'text-[var(--nx-ok)]' : 'text-[var(--nx-text-muted)]'}">
 										{m.username}{isMe ? ` (${tFn('common.you')})` : ''}
 									</span>
 									{#if isInVoice}
-										<svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 text-gray-700 shrink-0 ml-auto opacity-0 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5 text-[var(--nx-text-muted)] shrink-0 ml-auto opacity-0 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
 										</svg>
 									{/if}
 								</button>
 							{/each}
 							{#if members.length > 6}
-								<span class="text-[10px] text-gray-600 pl-5">+{members.length - 6} autres</span>
+								<span class="text-[10px] text-[var(--nx-text-muted)] pl-5">+{members.length - 6} autres</span>
 							{/if}
 						</div>
 					{/if}
@@ -269,13 +275,13 @@
 		{/if}
 
 		{#if textChannels.length === 0 && voiceChannels.length === 0}
-			<p class="px-3 py-2 text-xs text-gray-600 italic">{tFn('chsidebar.no_channel')}</p>
+			<p class="px-3 py-2 text-xs text-[var(--nx-text-muted)] italic">{tFn('chsidebar.no_channel')}</p>
 		{/if}
 	</nav>
 
 	<!-- Erreur micro -->
 	{#if voiceError}
-		<div class="mx-2 mb-2 p-2.5 rounded-lg bg-red-900/30 border border-red-800/40 text-xs text-red-300 leading-relaxed">
+		<div class="mx-2 mb-2 p-2.5 rounded-lg bg-[color-mix(in_srgb,var(--nx-bad)_12%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] text-xs text-[var(--nx-bad)] leading-relaxed">
 			<div class="flex items-start gap-1.5">
 				<span class="shrink-0 mt-0.5">🎙️</span>
 				<div>
@@ -283,7 +289,7 @@
 					<p>{voiceError}</p>
 				</div>
 			</div>
-			<button onclick={() => ondismissVoiceError?.()} class="mt-2 text-[10px] text-red-500 hover:text-red-300 underline">{tFn('chsidebar.dismiss')}</button>
+			<button onclick={() => ondismissVoiceError?.()} class="mt-2 text-[10px] text-red-500 hover:text-[var(--nx-bad)] underline">{tFn('chsidebar.dismiss')}</button>
 		</div>
 	{/if}
 
@@ -297,12 +303,12 @@
 <style>
 	.custom-scrollbar {
 		scrollbar-width: thin;
-		scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+		scrollbar-color: color-mix(in srgb, var(--nx-text) 10%, transparent) transparent;
 	}
 	.custom-scrollbar::-webkit-scrollbar { width: 6px !important; }
 	.custom-scrollbar::-webkit-scrollbar-track { background: transparent !important; }
 	.custom-scrollbar::-webkit-scrollbar-thumb {
-		background-color: rgba(255, 255, 255, 0.1) !important;
+		background-color: color-mix(in srgb, var(--nx-text) 10%, transparent) !important;
 		border-radius: 20px !important;
 	}
 	.custom-scrollbar:hover::-webkit-scrollbar-thumb {
@@ -316,18 +322,18 @@
 		transition: color .15s, background .15s;
 	}
 
-	.ch-idle  { color: #9ca3af; }
-	.ch-idle:hover { color: #f1f5f9; background: rgba(255,255,255,.06); }
+	.ch-idle  { color: var(--nx-text-muted); }
+	.ch-idle:hover { color: var(--nx-text); background: color-mix(in srgb, var(--nx-text) 6%, transparent); }
 
 	.ch-active {
-		color: #e2e8f0;
+		color: var(--nx-text);
 		background: rgb(var(--nx-accent-2-rgb) / .14);
 		box-shadow: inset 2px 0 0 var(--nx-accent-2-strong);
 	}
 
 	/* ── Unread state: bioluminescent breathing glow ───────────────────────── */
 	.ch-unread {
-		color: #e2e8f0;
+		color: var(--nx-text);
 		background: rgb(var(--nx-accent-rgb) / .07);
 		box-shadow: inset 2px 0 0 rgb(var(--nx-accent-2-rgb) / .7);
 		animation: ch-breathe 2.8s ease-in-out infinite;
@@ -340,7 +346,7 @@
 			background: rgb(var(--nx-accent-rgb) / .06);
 		}
 		50% {
-			box-shadow: inset 2px 0 0 rgba(167,139,250,.95), 0 0 14px rgb(var(--nx-accent-rgb) / .14);
+			box-shadow: inset 2px 0 0 rgb(var(--nx-accent-rgb) / .95), 0 0 14px rgb(var(--nx-accent-rgb) / .14);
 			background: rgb(var(--nx-accent-rgb) / .11);
 		}
 	}
@@ -354,7 +360,7 @@
 			90deg,
 			transparent 0%,
 			rgb(var(--nx-accent-rgb) / .22) 35%,
-			rgba(167,139,250,.30) 50%,
+			rgb(var(--nx-accent-rgb) / .30) 50%,
 			rgb(var(--nx-accent-rgb) / .22) 65%,
 			transparent 100%
 		);
@@ -373,18 +379,18 @@
 		padding: 14px 10px 6px;
 		font-size: 11px; font-weight: 700;
 		text-transform: uppercase; letter-spacing: .12em;
-		color: #94a3b8;
-		border-bottom: 1px solid rgba(255,255,255,.04);
+		color: var(--nx-text-muted);
+		border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 4%, transparent);
 		margin-bottom: 4px;
 	}
 	.ch-section-header svg { width: 12px; height: 12px; flex-shrink: 0; }
-	.ch-section-header--voice { color: #6ee7b7; }
-	.ch-section-header--voice svg { stroke: #34d399; }
+	.ch-section-header--voice { color: var(--nx-ok); }
+	.ch-section-header--voice svg { stroke: var(--nx-ok); }
 
 	/* ── Hash symbol ───────────────────────────────────────────────────────── */
-	.ch-hash { color: #6b7280; transition: color .15s; min-width: 14px; display: inline-flex; justify-content: center; }
+	.ch-hash { color: var(--nx-text-muted); transition: color .15s; min-width: 14px; display: inline-flex; justify-content: center; }
 	.ch-hash-unread { color: var(--nx-accent-2-soft); }
-	.ch-idle:hover .ch-hash { color: #cbd5e1; }
+	.ch-idle:hover .ch-hash { color: var(--nx-text); }
 
 	/* ── Voice channel items ───────────────────────────────────────────────── */
 	.ch-voice-item {
@@ -392,31 +398,31 @@
 		transition: color .15s, background .15s;
 	}
 	.ch-voice-idle {
-		color: #9ca3af;
+		color: var(--nx-text-muted);
 	}
 	.ch-voice-idle:hover {
-		color: #d1fae5;
-		background: rgba(16,185,129,.08);
+		color: var(--nx-ok);
+		background: color-mix(in srgb, var(--nx-ok) 8%, transparent);
 	}
 	.ch-voice-active {
-		color: #86efac;
-		background: rgba(16,185,129,.1);
-		box-shadow: inset 2px 0 0 #16a34a;
+		color: var(--nx-ok);
+		background: color-mix(in srgb, var(--nx-ok) 10%, transparent);
+		box-shadow: inset 2px 0 0 var(--nx-ok);
 	}
 
 	/* Voice icon */
 	.ch-voice-icon {
 		width: 14px; height: 14px; flex-shrink: 0;
 		display: flex; align-items: center; justify-content: center;
-		color: #6b7280; transition: color .15s;
+		color: var(--nx-text-muted); transition: color .15s;
 		font-size: 14px; line-height: 1;
 	}
 	.ch-voice-icon svg { width: 14px; height: 14px; }
-	.ch-voice-idle:hover .ch-voice-icon { color: #4ade80; }
-	.ch-voice-icon--live { color: #4ade80; animation: micpulse 2.5s ease-in-out infinite; }
+	.ch-voice-idle:hover .ch-voice-icon { color: var(--nx-ok); }
+	.ch-voice-icon--live { color: var(--nx-ok); animation: micpulse 2.5s ease-in-out infinite; }
 	@keyframes micpulse {
 		0%,100% { filter: drop-shadow(0 0 0 rgba(74,222,128,0)); }
-		50%      { filter: drop-shadow(0 0 4px rgba(74,222,128,.7)); }
+		50%      { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--nx-ok) 70%, transparent)); }
 	}
 
 	/* Live pill */
@@ -425,19 +431,19 @@
 		padding: 1px 6px;
 		font-size: 9px; font-weight: 800;
 		text-transform: uppercase; letter-spacing: .1em;
-		color: #4ade80;
-		background: rgba(16,185,129,.12);
-		border: 1px solid rgba(16,185,129,.25);
+		color: var(--nx-ok);
+		background: color-mix(in srgb, var(--nx-ok) 12%, transparent);
+		border: 1px solid color-mix(in srgb, var(--nx-ok) 25%, transparent);
 		border-radius: 99px;
 		flex-shrink: 0;
 	}
 	.ch-voice-live-dot {
 		width: 5px; height: 5px; border-radius: 50%;
-		background: #4ade80;
+		background: var(--nx-ok);
 		animation: dotpulse2 1.8s ease-out infinite;
 	}
 	@keyframes dotpulse2 {
-		0%   { box-shadow: 0 0 0 0 rgba(74,222,128,.6); }
+		0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--nx-ok) 60%, transparent); }
 		100% { box-shadow: 0 0 0 5px rgba(74,222,128,0); }
 	}
 
