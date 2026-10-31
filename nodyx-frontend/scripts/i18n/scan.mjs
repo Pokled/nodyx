@@ -27,7 +27,7 @@
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs'
 import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { stripI18n } from './strip.mjs'
+import { stripI18n, aDeuxMotsOutils, lignesDeScript } from './strip.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', '..', 'src')
@@ -92,7 +92,11 @@ const perFile = []
 for (const f of files) {
   if (PUBLIC_ONLY && isAdmin(f)) continue
   const hits = []
-  clean(readFileSync(f, 'utf8')).split('\n').forEach((l, i) => {
+  const brut = readFileSync(f, 'utf8')
+  // Règle des mots outils : balisage des .svelte seulement (cf. strip.mjs). Jamais en
+  // mode --ts : la dette gelée ne doit pas grimper parce que la porte voit mieux.
+  const script = f.endsWith('.svelte') && !TS ? lignesDeScript(brut) : null
+  clean(brut).split('\n').forEach((l, i) => {
     const s = l.trim()
     if (!s || s.startsWith('//') || s.startsWith('*') || s.startsWith('import ') || s.startsWith('console.')) return
     // (a) a translatable attribute holding hardcoded literal text (any language)
@@ -109,7 +113,8 @@ for (const f of files) {
     //
     // Cas reel, trouve le 2026-08-19 : la porte annoncait 0 chaine en dur.
     const reste = stripI18n(l)
-    const frHit = ACC.test(reste) || FR.test(reste) || FR_FUNC.test(reste)
+    const frHit = ACC.test(reste) || FR.test(reste) || FR_FUNC.test(reste) ||
+      (script !== null && !script.has(i) && aDeuxMotsOutils(reste))
     if (attrHit || frHit) hits.push({ n: i + 1, s: s.slice(0, 100) })
   })
   if (hits.length) { perFile.push({ f: relative(SRC, f), hits }); total += hits.length }

@@ -289,7 +289,7 @@
 			<p class="lib-empty-main">{isCommunityTab ? tFn('library.empty.federated') : tFn('library.empty.local')}</p>
 			<p class="lib-empty-sub">
 				{#if isCommunityTab}
-					Les assets apparaissent ici quand d'autres instances les partagent.
+					{tFn('library.empty.federated_sub')}
 				{:else}
 					{tFn('library.empty.cta')}
 				{/if}

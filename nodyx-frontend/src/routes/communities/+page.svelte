@@ -264,7 +264,7 @@
 								<button
 									onclick={() => toggleLink(instance.slug)}
 									disabled={linkLoading === instance.slug}
-									title={linked ? 'Retirer de ma Galaxy Bar' : "J'ai un compte ici"}
+									title={linked ? tFn('communities.unlink_title') : tFn('communities.link_title')}
 									class="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg transition-colors
 									       {linked
 									         ? 'bg-indigo-900/60 text-indigo-300 hover:bg-red-900/40 hover:text-red-400 border border-indigo-800/60'

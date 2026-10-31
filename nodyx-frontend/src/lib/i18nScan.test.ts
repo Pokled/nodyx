@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest'
 // Module d'outillage en JS pur, hors du graphe TypeScript de l'application :
 // il est importé tel quel, ses annotations JSDoc suffisent au typage.
-import { stripI18n } from '../../scripts/i18n/strip.mjs'
+import { stripI18n, aDeuxMotsOutils, lignesDeScript } from '../../scripts/i18n/strip.mjs'
 
 /** Ce que la porte examine réellement, une fois les appels i18n neutralisés. */
 const reste = (ligne: string) => stripI18n(ligne).trim()
@@ -86,4 +86,32 @@ describe('porte i18n : les alias de recherche ne sont pas de l interface', () =>
     expect(reste(l)).toContain('Créer une discussion')
     expect(reste(l)).not.toContain("'créer'")
   })
+})
+
+// ─── Le français sans accent ─────────────────────────────────────────────────
+//
+// Le 2026-10-31, « Tout marquer comme lu » était écrit en dur sur /notifications,
+// visible en français sur une interface anglaise, et la porte annonçait 0 chaîne :
+// pas d'accent, aucun mot de sa liste. D'où la règle des mots outils (au moins
+// deux différents), limitée au balisage des .svelte.
+describe('porte i18n : français sans accent', () => {
+	it('ATTRAPE la phrase qui a échappé à la porte', () => {
+		expect(aDeuxMotsOutils('Tout marquer comme lu')).toBe(true)
+		expect(aDeuxMotsOutils('Demande un nouveau lien au streamer.')).toBe(true)
+	})
+	it('ne prend pas l anglais pour du français', () => {
+		expect(aDeuxMotsOutils('Mark all as read')).toBe(false)
+		expect(aDeuxMotsOutils('Search for an asset')).toBe(false)
+		expect(aDeuxMotsOutils('Unable to decrypt')).toBe(false)
+	})
+	it('un seul mot outil ne suffit pas (code, classes, anglais)', () => {
+		expect(aDeuxMotsOutils('<div class="font-sans px-2">')).toBe(false)
+		expect(aDeuxMotsOutils('const tous = items.filter(Boolean)')).toBe(false)
+	})
+	it('repère les lignes de script, pour que la règle ne vise que le balisage', () => {
+		const svelte = ['<script lang="ts">', "  const t = 'Raid de x avec y'", '</script>', '<p>Tout marquer comme lu</p>'].join('\n')
+		const script = lignesDeScript(svelte)
+		expect([...script]).toEqual([0, 1, 2])
+		expect(script.has(3)).toBe(false)
+	})
 })

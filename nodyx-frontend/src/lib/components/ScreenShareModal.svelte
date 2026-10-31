@@ -213,7 +213,7 @@
                 </div>
                 {#if selectedFps === 60}
                     <p class="text-[10px] text-amber-400/80">
-                        60 fps consomme plus de bande passante et de CPU
+                        {tFn('screenshare.fps60_warning')}
                     </p>
                 {/if}
             </div>

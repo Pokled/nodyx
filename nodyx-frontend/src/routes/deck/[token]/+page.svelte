@@ -355,7 +355,7 @@
 			<div class="text-center space-y-2">
 				<div class="text-rose-400 text-4xl">🔒</div>
 				<div class="text-sm text-rose-200">{tFn('deck.invalid_token')}</div>
-				<div class="text-[11px] text-slate-500">Demande un nouveau lien au streamer.</div>
+				<div class="text-[11px] text-slate-500">{tFn('deck.ask_new_link')}</div>
 			</div>
 		</div>
 	{:else if status === 'error'}
