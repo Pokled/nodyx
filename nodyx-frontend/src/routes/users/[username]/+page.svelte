@@ -338,7 +338,7 @@
 				<div class="profile-aurora-b" style="background: radial-gradient(ellipse 55% 75% at 78% 35%, {accent}77, transparent 65%)"></div>
 				<div class="profile-aurora-c" style="background: radial-gradient(ellipse 45% 65% at 55% 85%, {accent}44, transparent 65%)"></div>
 			{:else}
-				<GenerativeBanner username={profile.username} />
+				<GenerativeBanner username={profile.username} adaptive={!personal} />
 			{/if}
 		</div>
 
