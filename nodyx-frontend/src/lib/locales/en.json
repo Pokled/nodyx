@@ -3372,6 +3372,7 @@
   "library.upload.submit": "Share",
   "library.cancel": "Cancel",
   "library.empty.federated": "No federated asset yet",
+  "library.empty.federated_sub": "Assets show up here when other instances share them.",
   "library.empty.local": "No asset found",
   "library.empty.cta": "Be the first to share something!",
   "library.tips_prefix": "Tips · ",

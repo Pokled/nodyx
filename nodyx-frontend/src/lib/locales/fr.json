@@ -1409,6 +1409,7 @@
   "library.upload.submit": "Partager",
   "library.cancel": "Annuler",
   "library.empty.federated": "Aucun asset fédéré pour le moment",
+  "library.empty.federated_sub": "Les assets apparaissent ici quand d'autres instances les partagent.",
   "library.empty.local": "Aucun asset trouvé",
   "library.empty.cta": "Sois le premier à partager quelque chose !",
   "library.tips_prefix": "Conseils · ",
