@@ -92,16 +92,16 @@
 		word-break: break-word;
 	}
 	.message-body__link {
-		color: #93c5fd;
+		color: var(--msg-link, #93c5fd);
 		text-decoration: underline;
-		text-decoration-color: rgba(147, 197, 253, 0.4);
+		text-decoration-color: color-mix(in srgb, var(--msg-link, #93c5fd) 40%, transparent);
 		text-underline-offset: 2px;
 		transition: color .15s, text-decoration-color .15s;
 		word-break: break-all;
 	}
 	.message-body__link:hover {
-		color: #bfdbfe;
-		text-decoration-color: rgba(191, 219, 254, 0.85);
+		color: var(--msg-link-hover, #bfdbfe);
+		text-decoration-color: color-mix(in srgb, var(--msg-link-hover, #bfdbfe) 85%, transparent);
 	}
 	.message-body__mention {
 		color: var(--nx-accent-2-soft2);
@@ -134,7 +134,7 @@
 		max-height: 280px;
 		object-fit: cover;
 		border-radius: 10px;
-		background: rgba(255, 255, 255, 0.04);
+		background: color-mix(in srgb, var(--nx-text) 4%, transparent);
 	}
 
 	.message-body__audio-wrap {
@@ -151,7 +151,7 @@
 	.message-body__audio-icon {
 		width: 14px;
 		height: 14px;
-		color: #a5b4fc;
+		color: var(--nx-header-accent);
 		flex-shrink: 0;
 	}
 	.message-body__audio {

@@ -62,28 +62,28 @@
 	const gridItems = $derived(searching ? searchItems : (activeTab?.items ?? []));
 </script>
 
-<div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden" style="width: 320px;">
+<div class="bg-[var(--nx-surface)] border border-[var(--nx-border)] rounded-xl shadow-2xl overflow-hidden" style="width: 320px;">
 	<!-- Recherche -->
-	<div class="p-1.5 border-b border-gray-800">
+	<div class="p-1.5 border-b border-[var(--nx-border)]">
 		<input
 			bind:value={query}
 			placeholder={tFn('emoji.search_placeholder')}
-			class="w-full px-2.5 py-1.5 text-sm rounded-md bg-gray-950 border border-gray-800 outline-none focus:border-gray-600"
+			class="w-full px-2.5 py-1.5 text-sm rounded-md bg-[var(--nx-surface)] border border-[var(--nx-border)] outline-none focus:border-[var(--nx-border)]"
 			style="color: #e2e8f0" />
 	</div>
 
 	<!-- Onglets (masqués pendant la recherche) -->
 	{#if !searching}
-		<div class="flex border-b border-gray-800 bg-gray-950/80">
+		<div class="flex border-b border-[var(--nx-border)] bg-[var(--nx-surface)]/80">
 			{#each tabs as cat, i}
 				{#if cat.type === 'custom'}
 					<button onclick={() => (activeCategory = i)} title={tFn(cat.name)}
-						class="flex items-center gap-1 px-2.5 py-2 text-xs font-bold uppercase tracking-wide shrink-0 border-r border-gray-800 transition-colors {activeCategory === i ? 'text-white' : 'text-gray-300 hover:text-white'}"
+						class="flex items-center gap-1 px-2.5 py-2 text-xs font-bold uppercase tracking-wide shrink-0 border-r border-[var(--nx-border)] transition-colors {activeCategory === i ? 'text-[var(--nx-text)]' : 'text-[var(--nx-text)] hover:text-[var(--nx-text)]'}"
 						style="background: rgb(var(--nx-accent-2-rgb) / {activeCategory === i ? '0.28' : '0.16'}); box-shadow: inset 0 -2px 0 var(--nx-accent-2-soft)"
 					><span class="text-sm">{cat.label}</span> {tFn(cat.name)}</button>
 				{:else}
 					<button onclick={() => (activeCategory = i)} title={tFn(cat.name)}
-						class="{cat.type === 'freq' ? 'px-2.5 shrink-0' : 'flex-1 min-w-0'} py-2 text-base transition-colors {activeCategory === i ? 'bg-gray-800/80 text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-gray-900'}"
+						class="{cat.type === 'freq' ? 'px-2.5 shrink-0' : 'flex-1 min-w-0'} py-2 text-base transition-colors {activeCategory === i ? 'bg-[var(--nx-surface-raised)]/80 text-[var(--nx-text)]' : 'text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:bg-[var(--nx-surface)]'}"
 					>{cat.label}</button>
 				{/if}
 			{/each}
@@ -91,17 +91,17 @@
 	{/if}
 
 	<!-- Grille -->
-	<div class="p-1.5 grid grid-cols-8 gap-0 max-h-52 overflow-y-auto" style="scrollbar-width:thin; scrollbar-color: rgba(255,255,255,0.1) transparent;">
+	<div class="p-1.5 grid grid-cols-8 gap-0 max-h-52 overflow-y-auto" style="scrollbar-width:thin; scrollbar-color: color-mix(in srgb, var(--nx-text) 10%, transparent) transparent;">
 		{#each gridItems as it (it.key)}
 			<button onclick={() => onselect(it.sel)} title={it.title}
-				class="p-1.5 rounded hover:bg-gray-700 transition-colors flex items-center justify-center {it.display === 'text' ? 'text-xl leading-none' : ''}">
+				class="p-1.5 rounded hover:bg-[var(--nx-border)] transition-colors flex items-center justify-center {it.display === 'text' ? 'text-xl leading-none' : ''}">
 				{#if it.display === 'img'}
 					<img src={it.src} alt={it.title} class="w-6 h-6 object-contain" draggable="false" />
 				{:else}{it.char}{/if}
 			</button>
 		{/each}
 		{#if gridItems.length === 0}
-			<div class="col-span-8 py-6 text-center text-xs text-gray-600">{tFn('emoji.no_result')}</div>
+			<div class="col-span-8 py-6 text-center text-xs text-[var(--nx-text-muted)]">{tFn('emoji.no_result')}</div>
 		{/if}
 	</div>
 </div>

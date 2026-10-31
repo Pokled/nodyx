@@ -263,7 +263,7 @@
 		cursor: pointer;
 		transition: background .15s, color .15s;
 	}
-	.ar-btn-mic:hover { background: rgba(255,255,255,.06); color: #e5e7eb; }
+	.ar-btn-mic:hover { background: color-mix(in srgb, var(--nx-text) 6%, transparent); color: var(--nx-text); }
 
 	.ar-recording {
 		display: inline-flex;
@@ -330,10 +330,10 @@
 		background: transparent;
 		color: rgba(252, 165, 165, 0.7);
 	}
-	.ar-btn-cancel:hover { background: rgba(255,255,255,.06); color: #e5e7eb; }
+	.ar-btn-cancel:hover { background: color-mix(in srgb, var(--nx-text) 6%, transparent); color: var(--nx-text); }
 	.ar-btn-send {
 		background: rgb(var(--nx-accent-rgb) / 0.18);
-		color: #a5b4fc;
+		color: var(--nx-header-accent);
 	}
 	.ar-btn-send:hover { background: rgb(var(--nx-accent-rgb) / 0.32); color: #c7d2fe; }
 

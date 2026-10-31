@@ -93,7 +93,7 @@
 		background: rgba(15, 15, 22, 0.96);
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
-		border: 1px solid rgba(255, 255, 255, 0.08);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent);
 		border-radius: 10px;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
 		padding: 8px 4px 6px 4px;
@@ -112,7 +112,7 @@
 		align-items: baseline;
 		gap: 6px;
 		padding: 0 8px 6px 8px;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 		margin-bottom: 4px;
 	}
 	.rt-tooltip__emoji { font-size: 14px; line-height: 1; }
@@ -139,7 +139,7 @@
 		padding: 3px 8px;
 		border-radius: 4px;
 	}
-	.rt-tooltip__row:hover { background: rgba(255, 255, 255, 0.04); }
+	.rt-tooltip__row:hover { background: color-mix(in srgb, var(--nx-text) 4%, transparent); }
 
 	.rt-tooltip__name {
 		font-weight: 600;
@@ -165,7 +165,7 @@
 		font-size: 10px;
 		color: rgba(226, 232, 240, 0.35);
 		text-align: center;
-		border-top: 1px solid rgba(255, 255, 255, 0.04);
+		border-top: 1px solid color-mix(in srgb, var(--nx-text) 4%, transparent);
 		margin-top: 4px;
 	}
 
