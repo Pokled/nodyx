@@ -61,27 +61,27 @@
 
 {#await githubPromise}
 	<!-- Loading skeleton -->
-	<div class="border border-gray-700 bg-gray-900 p-4 animate-pulse">
-		<div class="h-4 bg-gray-700 rounded w-32 mb-3"></div>
+	<div class="border border-[var(--p-card-border)] bg-[var(--p-card-bg)] p-4 animate-pulse">
+		<div class="h-4 bg-[var(--p-card-border)] rounded w-32 mb-3"></div>
 		<div class="flex items-center gap-3 mb-3">
-			<div class="w-10 h-10 bg-gray-700 rounded-full"></div>
+			<div class="w-10 h-10 bg-[var(--p-card-border)] rounded-full"></div>
 			<div class="space-y-1.5 flex-1">
-				<div class="h-3 bg-gray-700 rounded w-24"></div>
-				<div class="h-3 bg-gray-700 rounded w-40"></div>
+				<div class="h-3 bg-[var(--p-card-border)] rounded w-24"></div>
+				<div class="h-3 bg-[var(--p-card-border)] rounded w-40"></div>
 			</div>
 		</div>
 		<div class="space-y-2">
-			<div class="h-12 bg-gray-700 rounded"></div>
-			<div class="h-12 bg-gray-700 rounded"></div>
+			<div class="h-12 bg-[var(--p-card-border)] rounded"></div>
+			<div class="h-12 bg-[var(--p-card-border)] rounded"></div>
 		</div>
 	</div>
 
 {:then data}
 	{#if data}
-		<div class="border border-gray-700 bg-gray-900 overflow-hidden">
+		<div class="border border-[var(--p-card-border)] bg-[var(--p-card-bg)] overflow-hidden">
 			<!-- Header -->
-			<div class="flex items-center gap-2 px-4 py-3 bg-gray-800 border-b border-gray-700">
-				<svg viewBox="0 0 16 16" class="w-4 h-4 text-gray-300 fill-current" aria-hidden="true">
+			<div class="flex items-center gap-2 px-4 py-3 bg-[var(--p-card-bg)] border-b border-[var(--p-card-border)]">
+				<svg viewBox="0 0 16 16" class="w-4 h-4 text-[var(--p-text)] fill-current" aria-hidden="true">
 					<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
 					0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01
 					1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
@@ -94,27 +94,27 @@
 					href="https://github.com/{data.login}"
 					target="_blank"
 					rel="noopener noreferrer"
-					class="text-sm font-semibold text-gray-200 hover:text-white"
+					class="text-sm font-semibold text-[var(--p-text)] hover:text-[var(--p-text)]"
 				>
 					GitHub · {data.login}
 				</a>
 			</div>
 
 			<!-- User info -->
-			<div class="flex items-start gap-3 px-4 py-3 border-b border-gray-700">
+			<div class="flex items-start gap-3 px-4 py-3 border-b border-[var(--p-card-border)]">
 				<img
 					src={data.avatar_url}
 					alt={tFn('gh.avatar_alt', { login: data.login })}
-					class="w-10 h-10 rounded-full border border-gray-600 shrink-0"
+					class="w-10 h-10 rounded-full border border-[var(--p-card-border)] shrink-0"
 				/>
 				<div class="flex-1 min-w-0">
 					{#if data.name}
-						<p class="text-sm font-semibold text-white">{data.name}</p>
+						<p class="text-sm font-semibold text-[var(--p-text)]">{data.name}</p>
 					{/if}
 					{#if data.bio}
-						<p class="text-xs text-gray-400 line-clamp-2">{data.bio}</p>
+						<p class="text-xs text-[var(--p-text-muted)] line-clamp-2">{data.bio}</p>
 					{/if}
-					<p class="text-xs text-gray-500 mt-1">
+					<p class="text-xs text-[var(--p-text-muted)] mt-1">
 						<span class="mr-3">📦 {data.public_repos} repos</span>
 						<span>👥 {data.followers} followers</span>
 					</p>
@@ -124,7 +124,7 @@
 			<!-- Repos (max 3) -->
 			{#if data.pinned_repos.length > 0}
 				<div class="px-4 py-3">
-					<p class="text-xs text-gray-500 uppercase tracking-wider mb-2">{tFn('gh.recent_repos')}</p>
+					<p class="text-xs text-[var(--p-text-muted)] uppercase tracking-wider mb-2">{tFn('gh.recent_repos')}</p>
 					<ul class="space-y-2">
 						{#each data.pinned_repos as repo}
 							<li>
@@ -132,15 +132,15 @@
 									href={repo.url}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="block rounded border border-gray-700 px-3 py-2 hover:border-gray-500 hover:bg-gray-800/50 transition-colors"
+									class="block rounded border border-[var(--p-card-border)] px-3 py-2 hover:border-[var(--p-text-muted)] hover:bg-[color-mix(in_srgb,var(--p-text)_5%,transparent)] transition-colors"
 								>
 									<div class="flex items-center justify-between gap-2">
-										<span class="text-sm font-medium text-indigo-300 truncate">{repo.name}</span>
-										<span class="text-xs text-yellow-400 shrink-0">⭐ {repo.stars}</span>
+										<span class="text-sm font-medium text-[var(--p-accent)] truncate">{repo.name}</span>
+										<span class="text-xs text-[var(--nx-warn)] shrink-0">⭐ {repo.stars}</span>
 									</div>
 									<div class="flex items-center gap-2 mt-0.5">
 										{#if repo.description}
-											<span class="text-xs text-gray-400 truncate">{repo.description}</span>
+											<span class="text-xs text-[var(--p-text-muted)] truncate">{repo.description}</span>
 										{/if}
 										{#if repo.language}
 											<span

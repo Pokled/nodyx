@@ -1,5 +1,8 @@
 <script lang="ts">
-	let { username }: { username: string } = $props()
+	// adaptive : le fond se mélange à --p-bg au lieu d'être un dégradé sombre fixe
+	// (profil qui suit le thème du site : clair en thème clair, sombre en sombre).
+	// Par défaut, couverture sombre d'origine (carte de visite, thèmes perso).
+	let { username, adaptive = false }: { username: string; adaptive?: boolean } = $props()
 
 	// ── Deterministic hash (FNV-1a 32-bit, pure JS, SSR-safe) ──────
 	function fnv(str: string, salt = 0): number {
@@ -34,8 +37,14 @@
 	const col2 = $derived(`hsl(${hue2},${sat - 10}%,${light + 5}%)`)
 	const col3 = $derived(`hsl(${hue3},${sat - 5}%,${light - 5}%)`)
 
-	const bgFrom = $derived(`hsl(${hue},${sat - 20}%,12%)`)
-	const bgTo   = $derived(`hsl(${hue2},${sat - 25}%,8%)`)
+	const bgFrom = $derived(adaptive
+		? `color-mix(in srgb, hsl(${hue},${sat - 20}%,45%) 16%, var(--p-bg))`
+		: `hsl(${hue},${sat - 20}%,12%)`)
+	const bgTo   = $derived(adaptive
+		? `color-mix(in srgb, hsl(${hue2},${sat - 25}%,40%) 10%, var(--p-bg))`
+		: `hsl(${hue2},${sat - 25}%,8%)`)
+	// Vignette du bas : vers le noir (couverture) ou vers le fond du profil (adaptive)
+	const vignette = $derived(adaptive ? 'var(--p-bg)' : 'black')
 
 	// ── Lissajous parameters ─────────────────────────────────────────
 	// Pairs (a, b) — classic beautiful ratios
@@ -104,8 +113,8 @@
 		</filter>
 
 		<linearGradient id="bg-grad-{username}" x1="0%" y1="0%" x2="100%" y2="100%">
-			<stop offset="0%"   stop-color={bgFrom}/>
-			<stop offset="100%" stop-color={bgTo}/>
+			<stop offset="0%"   style="stop-color: {bgFrom}"/>
+			<stop offset="100%" style="stop-color: {bgTo}"/>
 		</linearGradient>
 	</defs>
 
@@ -145,9 +154,9 @@
 	<rect width={W} height={H} fill="url(#vignette-{username})"/>
 	<defs>
 		<linearGradient id="vignette-{username}" x1="0" y1="0" x2="0" y2="1">
-			<stop offset="0%"   stop-color="black" stop-opacity="0.0"/>
-			<stop offset="70%"  stop-color="black" stop-opacity="0.0"/>
-			<stop offset="100%" stop-color="black" stop-opacity="0.75"/>
+			<stop offset="0%"   style="stop-color: {vignette}" stop-opacity="0.0"/>
+			<stop offset="70%"  style="stop-color: {vignette}" stop-opacity="0.0"/>
+			<stop offset="100%" style="stop-color: {vignette}" stop-opacity="0.75"/>
 		</linearGradient>
 	</defs>
 </svg>

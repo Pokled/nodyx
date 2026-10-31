@@ -110,19 +110,22 @@
 	// ── Color scale ──────────────────────────────────────────────────
 	// level 0 = empty, 1–4 = intensity ramps from accent
 	function cellColor(level: number, acc: string): string {
-		if (level === 0) return 'color-mix(in srgb, ' + acc + ' 8%, #0d1117)'
+		// mélangé au fond de carte du profil (thème du site ou thème perso du membre)
+		if (level === 0) return 'color-mix(in srgb, ' + acc + ' 8%, var(--p-card-bg))'
 		const alpha = [0, 0.25, 0.45, 0.7, 1][level]
-		return `color-mix(in srgb, ${acc} ${Math.round(alpha * 100)}%, #0d1117)`
+		return `color-mix(in srgb, ${acc} ${Math.round(alpha * 100)}%, var(--p-card-bg))`
 	}
 
-	const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+	// Initiales des jours, lundi d'abord, dans la langue de l'interface (le 1er janvier 2024 est un lundi)
+	const DAY_LABELS = $derived(Array.from({ length: 7 }, (_, i) =>
+		new Date(2024, 0, 1 + i).toLocaleDateString($locale, { weekday: 'narrow' })))
 </script>
 
 {#await promise}
 	<!-- Skeleton -->
 	<div class="animate-pulse space-y-2">
-		<div class="h-3 w-32 bg-gray-800 rounded"></div>
-		<div class="h-24 bg-gray-800/50"></div>
+		<div class="h-3 w-32 rounded" style="background: color-mix(in srgb, var(--p-text) 10%, transparent)"></div>
+		<div class="h-24" style="background: color-mix(in srgb, var(--p-text) 5%, transparent)"></div>
 	</div>
 
 {:then data}
@@ -133,12 +136,12 @@
 				{tFn('heatmap.title')}
 			</p>
 			<div class="flex items-center gap-4 text-[11px]" style="color: var(--p-text-muted)">
-				<span><strong class="text-white">{data.total}</strong> contributions</span>
+				<span><strong style="color: var(--p-text)">{data.total}</strong> {tFn('heatmap.stat_total')}</span>
 				{#if data.streak > 0}
-					<span><strong class="text-white">{data.streak}j</strong> de streak</span>
+					<span><strong style="color: var(--p-text)">{tFn('heatmap.stat_streak_value', { n: String(data.streak) })}</strong> {tFn('heatmap.stat_streak')}</span>
 				{/if}
 				{#if data.best > 0}
-					<span>record <strong class="text-white">{data.best}</strong>/j</span>
+					<span>{tFn('heatmap.stat_best')} <strong style="color: var(--p-text)">{data.best}</strong>{tFn('heatmap.stat_per_day')}</span>
 				{/if}
 			</div>
 		</div>
@@ -190,11 +193,11 @@
 
 		<!-- Legend -->
 		<div class="flex items-center gap-1.5 mt-3 justify-end">
-			<span class="text-[10px]" style="color: var(--p-text-muted)">Moins</span>
+			<span class="text-[10px]" style="color: var(--p-text-muted)">{tFn('heatmap.legend_less')}</span>
 			{#each [0, 1, 2, 3, 4] as level}
 				<div class="w-[11px] h-[11px]" style="background: {cellColor(level, accent)}"></div>
 			{/each}
-			<span class="text-[10px]" style="color: var(--p-text-muted)">Plus</span>
+			<span class="text-[10px]" style="color: var(--p-text-muted)">{tFn('heatmap.legend_more')}</span>
 		</div>
 	</div>
 

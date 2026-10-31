@@ -93,46 +93,46 @@
 		gap: 10px;
 		padding-bottom: 14px;
 		margin-bottom: 18px;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 	}
 	.fl-back {
 		flex-shrink: 0;
 		width: 28px; height: 28px;
 		display: flex; align-items: center; justify-content: center;
-		border: 1px solid rgba(255, 255, 255, 0.06);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 		border-radius: 3px;
-		background: rgba(255, 255, 255, 0.02);
-		color: #94a3b8;
+		background: color-mix(in srgb, var(--nx-text) 2%, transparent);
+		color: var(--nx-text-muted);
 		text-decoration: none;
 		transition: background .1s linear, color .1s linear;
 	}
-	.fl-back:hover { background: rgba(255, 255, 255, 0.05); color: #e2e8f0; }
+	.fl-back:hover { background: color-mix(in srgb, var(--nx-text) 5%, transparent); color: var(--nx-text); }
 	.fl-back :global(svg) { width: 13px; height: 13px; }
 
 	.fl-title-wrap { min-width: 0; flex: 1; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 	.fl-title {
 		font-size: 18px;
 		font-weight: 700;
-		color: #f1f5f9;
+		color: var(--nx-text);
 		margin: 0;
 		font-family: 'Space Grotesk', system-ui, sans-serif;
 		letter-spacing: -0.01em;
 	}
 	.fl-count {
 		font-size: 12px;
-		color: #475569;
+		color: var(--nx-text-muted);
 		margin: 0;
 		font-family: ui-monospace, SFMono-Regular, monospace;
 	}
-	.fl-count-num { color: #e2e8f0; font-weight: 600; }
+	.fl-count-num { color: var(--nx-text); font-weight: 600; }
 
 	.fl-empty {
 		padding: 28px 16px;
 		text-align: center;
-		color: #475569;
+		color: var(--nx-text-muted);
 		font-size: 12px;
 		font-family: ui-monospace, SFMono-Regular, monospace;
-		border: 1px dashed rgba(255, 255, 255, 0.06);
+		border: 1px dashed color-mix(in srgb, var(--nx-text) 6%, transparent);
 		border-radius: 4px;
 	}
 
@@ -140,13 +140,13 @@
 		list-style: none;
 		padding: 0;
 		margin: 0;
-		border: 1px solid rgba(255, 255, 255, 0.05);
+		border: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent);
 		border-radius: 4px;
 		overflow: hidden;
-		background: rgba(255, 255, 255, 0.01);
+		background: color-mix(in srgb, var(--nx-text) 1%, transparent);
 	}
 	.fl-row { padding: 0; }
-	.fl-row + .fl-row { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+	.fl-row + .fl-row { border-top: 1px solid color-mix(in srgb, var(--nx-text) 4%, transparent); }
 	.fl-row-link {
 		display: flex;
 		align-items: center;
@@ -156,7 +156,7 @@
 		color: inherit;
 		transition: background .1s linear;
 	}
-	.fl-row-link:hover { background: rgba(255, 255, 255, 0.03); }
+	.fl-row-link:hover { background: color-mix(in srgb, var(--nx-text) 3%, transparent); }
 
 	.fl-avatar {
 		width: 36px; height: 36px;
@@ -169,7 +169,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: #a5b4fc;
+		color: var(--nx-header-accent);
 		font-weight: 700;
 		font-size: 15px;
 		font-family: 'Space Grotesk', sans-serif;
@@ -179,19 +179,19 @@
 	.fl-name {
 		font-size: 14px;
 		font-weight: 600;
-		color: #e2e8f0;
+		color: var(--nx-text);
 		overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 	}
 	.fl-user {
 		font-size: 11px;
-		color: #64748b;
+		color: var(--nx-text-muted);
 		font-family: ui-monospace, SFMono-Regular, monospace;
 	}
 
 	.fl-date {
 		flex-shrink: 0;
 		font-size: 11px;
-		color: #475569;
+		color: var(--nx-text-muted);
 		font-family: ui-monospace, SFMono-Regular, monospace;
 		white-space: nowrap;
 	}

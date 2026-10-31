@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms'
 	import { goto } from '$app/navigation'
 	import type { PageData, ActionData } from './$types'
-	import { PROFILE_PRESETS, resolveTheme, themeToStyle, type ProfileThemeVars } from '$lib/profileThemes'
+	import { PROFILE_PRESETS, resolveTheme, themeToStyle, siteThemeStyle, isPersonalTheme, type ProfileThemeVars } from '$lib/profileThemes'
 	import { FONT_PRESETS, ANIM_PRESETS, ensureFontLoaded, buildNameStyle, buildAnimClass } from '$lib/nameEffects'
 	import { untrack } from 'svelte'
 	import { t } from '$lib/i18n'
@@ -71,8 +71,12 @@
 
 	// ── Profile Theme ──────────────────────────────────────────────────────────
 	let theme = $state<ProfileThemeVars>(resolveTheme(p.metadata?.theme))
+	// « default » = suivre le thème du site (aucun thème perso). Un thème perso qui ne
+	// correspond à aucun préréglage est « custom » : il s'affichait comme « Défaut ».
 	let selectedPresetId = $state<string>(
-		PROFILE_PRESETS.find(pr => pr.vars.bg === theme.bg && pr.vars.accent === theme.accent)?.id ?? 'default'
+		!isPersonalTheme(p.metadata?.theme)
+			? 'default'
+			: PROFILE_PRESETS.find(pr => pr.id !== 'default' && pr.vars.bg === theme.bg && pr.vars.accent === theme.accent)?.id ?? 'custom'
 	)
 
 	function applyPreset(preset: typeof PROFILE_PRESETS[0]) {
@@ -80,8 +84,11 @@
 		selectedPresetId = preset.id
 	}
 
-	const themeJson = $derived(JSON.stringify(theme))
-	const previewStyle = $derived(themeToStyle(theme))
+	// Suivre le site = objet VIDE : la fusion côté cœur (metadata || ...) remplace
+	// l'ancien thème, et le profil n'a plus de couleurs à lui.
+	const followSite = $derived(selectedPresetId === 'default')
+	const themeJson = $derived(followSite ? '{}' : JSON.stringify(theme))
+	const previewStyle = $derived(followSite ? `${siteThemeStyle()};background:var(--nx-bg)` : themeToStyle(theme))
 
 	const colorPickers: Array<{ key: keyof ProfileThemeVars; label: string }> = [
 		{ key: 'bg',         label: 'Fond' },
@@ -467,6 +474,10 @@
 							         : 'border-gray-700 hover:border-gray-500 bg-gray-800/40'}"
 						>
 							<!-- Mini preview card -->
+							{#if preset.id === 'default'}
+							<div class="w-full rounded-lg overflow-hidden" aria-hidden="true"
+							     style="background: linear-gradient(135deg, #f3f4f6 50%, #030712 50%); aspect-ratio:16/9;"></div>
+							{:else}
 							<div class="w-full rounded-lg overflow-hidden" style="background:{preset.vars.bg}; aspect-ratio:16/9;">
 								<div class="h-2/3 w-full p-1 space-y-0.5"
 								     style="background:{preset.vars.cardBg}; border-bottom:1px solid {preset.vars.cardBorder};">
@@ -474,9 +485,10 @@
 									<div class="h-1 rounded-sm w-1/2" style="background:{preset.vars.textMuted}"></div>
 								</div>
 							</div>
+							{/if}
 							<p class="text-[10px] text-center truncate leading-tight"
 							   style="color:{selectedPresetId === preset.id ? preset.vars.accent : '#9ca3af'}">
-								{preset.emoji} {preset.name}
+								{preset.id === 'default' ? tFn('pedit.preset_follow_site') : `${preset.emoji} ${preset.name}`}
 							</p>
 						</button>
 					{/each}
@@ -512,15 +524,15 @@
 			<div class="rounded-xl overflow-hidden h-20 flex items-center gap-4 px-5 transition-all duration-300"
 			     style={previewStyle}>
 				<div class="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-sm font-bold"
-				     style="background:{theme.accent}; color:{theme.bg}">{initials}</div>
+				     style="background:var(--p-accent); color:var(--p-bg)">{initials}</div>
 				<div>
-					<p class="text-sm font-bold leading-tight" style="color:{theme.text}">{profile.display_name || profile.username}</p>
-					<p class="text-xs" style="color:{theme.textMuted}">@{profile.username}</p>
+					<p class="text-sm font-bold leading-tight" style="color:var(--p-text)">{profile.display_name || profile.username}</p>
+					<p class="text-xs" style="color:var(--p-text-muted)">@{profile.username}</p>
 				</div>
 				<div class="ml-auto flex flex-col gap-1">
-					<div class="h-1.5 w-20 rounded-full" style="background:{theme.accent}"></div>
-					<div class="h-1.5 w-14 rounded-full" style="background:{theme.cardBorder}"></div>
-					<div class="h-1.5 w-16 rounded-full" style="background:{theme.textMuted}; opacity:.5"></div>
+					<div class="h-1.5 w-20 rounded-full" style="background:var(--p-accent)"></div>
+					<div class="h-1.5 w-14 rounded-full" style="background:var(--p-card-border)"></div>
+					<div class="h-1.5 w-16 rounded-full" style="background:var(--p-text-muted); opacity:.5"></div>
 				</div>
 			</div>
 		</div>

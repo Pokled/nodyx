@@ -6,7 +6,9 @@
 	import ActivityHeatmap from '$lib/components/ActivityHeatmap.svelte'
 	import { page } from '$app/state'
 	import { goto } from '$app/navigation'
-	import { resolveTheme, themeToStyle } from '$lib/profileThemes'
+	import { resolveTheme, themeToStyle, isPersonalTheme, siteThemeStyle } from '$lib/profileThemes'
+	import { isDarkTheme, contrastSafeColor } from '$lib/theme'
+	import { DEFAULT_SHELL_THEME } from '$lib/shellTheme'
 	import { socket } from '$lib/socket'
 	import { apiFetch } from '$lib/api'
 	import { t } from '$lib/i18n'
@@ -115,11 +117,21 @@
 	const frameSrc   = $derived(profile.frame_asset_path ? `/uploads/${profile.frame_asset_path}` : null)
 	const badgeSrc   = $derived(profile.badge_asset_path ? `/uploads/${profile.badge_asset_path}` : null)
 
-	// Theme
+	// Theme : le thème perso du membre s'il s'en est donné un (ses couleurs, dans les
+	// deux thèmes du site : c'est sa page) ; sinon le profil suit le thème du site.
+	const personal = $derived(isPersonalTheme(profile.metadata?.theme))
 	const theme = $derived(resolveTheme(profile.metadata?.theme))
-	const scopeStyle = $derived(themeToStyle(theme))
-	// Accent hex direct — used for inline gradient blobs (avoids CSS var chain issues)
-	const accent = $derived(theme.accent ?? '#6366f1')
+	const scopeStyle = $derived(personal ? themeToStyle(theme) : siteThemeStyle())
+	// Accent hex direct — used for inline gradient blobs (avoids CSS var chain issues).
+	// Suivre le site = accent de l'instance (l'ambiance de l'Apparence).
+	const HEX6 = /^#[0-9a-f]{6}$/i
+	const siteAccent = $derived(((page.data as any).shellTheme?.accent ?? DEFAULT_SHELL_THEME.accent) as string)
+	const accent = $derived(personal ? (theme.accent ?? '#6366f1') : (HEX6.test(siteAccent) ? siteAccent : '#6366f1'))
+	// Couleur de pseudo choisie par le membre : telle quelle sur son thème perso ;
+	// sur le thème du site, ajustée si elle disparaît sur le fond (même règle que /members).
+	const nameColor = $derived(personal
+		? (profile.name_color || 'var(--p-text)')
+		: contrastSafeColor(profile.name_color, 'var(--p-text)', $isDarkTheme))
 
 	// Reputation Rings — computed from existing data, no backend needed
 	const ringLongevity  = $derived(Math.min(1, daysSince / 365))
@@ -326,7 +338,7 @@
 				<div class="profile-aurora-b" style="background: radial-gradient(ellipse 55% 75% at 78% 35%, {accent}77, transparent 65%)"></div>
 				<div class="profile-aurora-c" style="background: radial-gradient(ellipse 45% 65% at 55% 85%, {accent}44, transparent 65%)"></div>
 			{:else}
-				<GenerativeBanner username={profile.username} />
+				<GenerativeBanner username={profile.username} adaptive={!personal} />
 			{/if}
 		</div>
 
@@ -401,7 +413,7 @@
 			<div class="pb-1 min-w-0 flex-1">
 				<div class="flex flex-wrap items-center gap-2 mb-1">
 					<h1 class="text-3xl font-black leading-tight drop-shadow-lg truncate"
-					    style="color: {profile.name_color || '#ffffff'}">
+					    style="color: {nameColor}">
 						{profile.display_name || profile.username}
 					</h1>
 					<!-- Level badge — prominent -->
@@ -411,7 +423,7 @@
 				</div>
 
 				<div class="flex flex-wrap items-center gap-2">
-					<span class="text-sm font-medium drop-shadow" style="color: rgba(255,255,255,0.6)">
+					<span class="text-sm font-medium drop-shadow" style="color: var(--p-text-muted)">
 						@{profile.username}
 					</span>
 					{#if profile.grade_name && profile.grade_color}
@@ -432,7 +444,7 @@
 				</div>
 
 				{#if profile.status}
-					<p class="mt-1.5 text-sm drop-shadow" style="color: rgba(255,255,255,0.55)">
+					<p class="mt-1.5 text-sm drop-shadow" style="color: var(--p-text-muted)">
 						{profile.status}
 					</p>
 				{/if}
@@ -542,7 +554,7 @@
 		</div>
 
 		<!-- XP bar with shimmer -->
-		<div class="relative h-3 rounded-full overflow-hidden" style="background: color-mix(in srgb, var(--p-accent) 12%, rgba(0,0,0,0.3))">
+		<div class="relative h-3 rounded-full overflow-hidden" style="background: color-mix(in srgb, var(--p-accent) 12%, color-mix(in srgb, var(--p-text) 10%, transparent))">
 			<div
 				class="profile-xp-bar h-full rounded-full"
 				style="width: {levelProgress}%; background: linear-gradient(90deg, color-mix(in srgb, var(--p-accent) 70%, var(--nx-accent-2-mid)), var(--p-accent))"
@@ -946,8 +958,8 @@
 		font-weight: 900;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: var(--accent);
-		background: color-mix(in srgb, var(--accent) 15%, rgba(0,0,0,0.6));
+		color: var(--p-accent);
+		background: color-mix(in srgb, var(--accent) 15%, var(--p-bg));
 		border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
 	}
 
@@ -996,19 +1008,19 @@
 		gap: 6px;
 		padding: 6px 14px;
 		border-radius: 3px;
-		background: rgba(0,0,0,0.5);
+		background: color-mix(in srgb, var(--p-bg) 60%, transparent);
 		backdrop-filter: blur(8px);
-		border: 1px solid rgba(255,255,255,0.12);
+		border: 1px solid color-mix(in srgb, var(--p-text) 12%, transparent);
 		font-size: 0.75rem;
 		font-weight: 500;
-		color: #e2e8f0;
+		color: var(--p-text);
 		transition: all 0.15s;
 		text-decoration: none;
 	}
 	.profile-action-btn:hover {
-		background: rgba(0,0,0,0.7);
-		border-color: rgba(255,255,255,0.22);
-		color: #fff;
+		background: color-mix(in srgb, var(--p-bg) 85%, transparent);
+		border-color: color-mix(in srgb, var(--p-text) 22%, transparent);
+		color: var(--p-text);
 	}
 
 	/* ── Follow counts ───────────────────────────────────────────── */
@@ -1022,18 +1034,18 @@
 	.profile-follow-count-num {
 		font-size: 0.875rem;
 		font-weight: 800;
-		color: rgba(255,255,255,0.85);
+		color: color-mix(in srgb, var(--p-text) 85%, transparent);
 		drop-shadow: 0 1px 2px rgba(0,0,0,0.5);
 	}
 	.profile-follow-count-label {
 		font-size: 0.7rem;
-		color: rgba(255,255,255,0.55);
+		color: var(--p-text-muted);
 		font-weight: 500;
 	}
 	.profile-follow-sep {
 		width: 1px;
 		height: 12px;
-		background: rgba(255,255,255,0.15);
+		background: color-mix(in srgb, var(--p-text) 15%, transparent);
 	}
 
 	/* ── Follow button ───────────────────────────────────────────── */
@@ -1117,7 +1129,7 @@
 		max-height: 420px;
 		border-radius: 12px;
 		margin: 0.25rem 0 0.625rem;
-		border: 1px solid rgba(255, 255, 255, 0.08);
+		border: 1px solid color-mix(in srgb, var(--p-text) 8%, transparent);
 	}
 	.profile-post-meta {
 		display: flex;

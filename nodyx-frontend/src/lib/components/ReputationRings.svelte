@@ -86,7 +86,7 @@
 					transform="rotate(-90 65 65)"
 					style="transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)"/>
 			{/each}
-			<text x="65" y="70" text-anchor="middle" font-size="16" font-weight="800" fill="white" font-family="inherit">
+			<text x="65" y="70" text-anchor="middle" font-size="16" font-weight="800" style="fill: var(--p-text)" font-family="inherit">
 				{pct((longevity + quality + engagement) / 3)}%
 			</text>
 		</svg>
