@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import { t } from '$lib/i18n'
 
 	const tFn = $derived($t)

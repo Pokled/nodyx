@@ -5,7 +5,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import type { LayoutData } from './$types';
 	import { page } from '$app/state';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { initSocket, unreadCountStore, chatMentionStore, dmUnreadStore, onlineMembersStore, getSocket } from '$lib/socket';
 	import StreamerNotifListener from '$lib/components/streamer/StreamerNotifListener.svelte';
@@ -331,7 +331,7 @@
 		// Fetch full member list for the offline sidebar section + refresh channels client-side
 		if (data.user) {
 			try {
-				const { PUBLIC_API_URL } = await import('$env/static/public')
+				const { PUBLIC_API_URL } = await import('$app/env/public')
 				const [membersRes, channelsRes] = await Promise.all([
 					fetch(`${PUBLIC_API_URL}/api/v1/instance/members`),
 					data.token

@@ -98,7 +98,7 @@
 		dragSrcId = null;
 
 		try {
-			const { PUBLIC_API_URL } = await import('$env/static/public');
+			const { PUBLIC_API_URL } = await import('$app/env/public');
 			await fetch(`${PUBLIC_API_URL}/admin/channels/reorder`, {
 				method: 'PUT',
 				headers: {

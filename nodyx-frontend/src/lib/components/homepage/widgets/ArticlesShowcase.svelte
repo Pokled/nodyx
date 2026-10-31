@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { useFollowAmbiance } from '../followAmbiance'
 	import { onMount, onDestroy } from 'svelte'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import { t, locale } from '$lib/i18n'
 
 	const tFn = $derived($t)

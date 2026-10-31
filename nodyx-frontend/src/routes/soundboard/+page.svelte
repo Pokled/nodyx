@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
-	import { browser } from '$app/environment'
-	import { PUBLIC_API_URL } from '$env/static/public'
+	import { browser } from '$app/env'
+	import { PUBLIC_API_URL } from '$app/env/public'
 	import { t as i18n } from '$lib/i18n'   // `t` est déjà une variable locale (piste)
 
 	const tFn = $derived($i18n)

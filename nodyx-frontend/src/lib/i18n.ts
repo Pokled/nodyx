@@ -9,7 +9,7 @@
  */
 
 import { writable, derived, get } from 'svelte/store'
-import { browser }                from '$app/environment'
+import { browser }                from '$app/env'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

@@ -1,11 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { apiFetch } from '$lib/api';
-import { env } from '$env/dynamic/public';
+import { PUBLIC_DIRECTORY_URL } from '$app/env/public';
 import { getLocaleFromAcceptLanguage, isKnownLocale } from '$lib/i18n';
 import type { ShellTheme } from '$lib/shellTheme';
 
-const DIRECTORY_URL = (env.PUBLIC_DIRECTORY_URL ?? 'https://nodyx.org') + '/api/directory';
+const DIRECTORY_URL = (PUBLIC_DIRECTORY_URL ?? 'https://nodyx.org') + '/api/directory';
 
 // Cache mémoire du directory, partagé entre toutes les requêtes SSR du
 // process. Le directory est un appel réseau EXTERNE (autre instance, ou

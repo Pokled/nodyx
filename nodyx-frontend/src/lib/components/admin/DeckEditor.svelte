@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import { onMount } from 'svelte'
 	import { t as i18n } from '$lib/i18n'
 	import Tooltip from '$lib/components/ui/Tooltip.svelte'

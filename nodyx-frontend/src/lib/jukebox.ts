@@ -6,7 +6,7 @@
  *              peers apply position + elapsed time drift on receive
  */
 import { writable, get } from 'svelte/store'
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import type { Socket } from 'socket.io-client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────

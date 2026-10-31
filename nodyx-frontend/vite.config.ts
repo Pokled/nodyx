@@ -1,4 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import kitConfig from './sveltekit.config.js';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
@@ -13,9 +14,12 @@ const sansOrigine = (proxy: any) => {
 }
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+	plugins: [tailwindcss(), sveltekit(kitConfig)],
 
-	build: {
+	// Découpage en morceaux réservé au navigateur : sous kit 3, le service worker est un
+	// environnement Vite qui hérite du `build` racine, et son bundle unique refuse
+	// manualChunks (« cannot be used when output.codeSplitting is set to false »).
+	environments: { client: { build: {
 		rollupOptions: {
 			output: {
 				manualChunks: (id) => {
@@ -32,7 +36,7 @@ export default defineConfig({
 				},
 			},
 		},
-	},
+	} } },
 
 	server: {
 		host: true,

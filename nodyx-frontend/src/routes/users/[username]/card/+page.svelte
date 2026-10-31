@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import GenerativeBanner from '$lib/components/GenerativeBanner.svelte'
 	import { t as i18n, locale } from '$lib/i18n'   // `t` sert de variable locale
 

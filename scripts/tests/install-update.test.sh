@@ -43,6 +43,9 @@ for outil in git fuser pm2 runuser chown id useradd systemctl; do
   printf '#!/bin/bash\necho "%s $*" >> "$JOURNAL"\n' "$outil" > "$W/bin/$outil"
 done
 printf '#!/bin/bash\necho "Mem: 4096 0 0"\n' > "$W/bin/free"
+# node : une version au-dessus du plancher, sinon nodyx_build_aside appellerait le
+# vrai curl | bash de NodeSource sur un runner en Node trop ancien.
+printf '#!/bin/bash\necho v22.22.0\n' > "$W/bin/node"
 chmod +x "$W/bin"/*
 
 # fausse_install <dossier> : une installation qui sert la version « v1 ».
@@ -206,7 +209,7 @@ cat > "$W/node/bin/apt-get" <<'EON'
 #!/usr/bin/env bash
 echo "apt-get $*" >> "$JOURNAL_NODE"
 [[ -f "$APT_ECHEC" ]] && exit 1
-echo 22 > "$NODE_VERSION_FILE"
+echo v22.22.0 > "$NODE_VERSION_FILE"
 EON
 chmod +x "$W/node/bin/"*
 essai_node() {  # essai_node <version de départ> [echec-apt] -> code de retour de nodyx_ensure_node 22
@@ -215,14 +218,33 @@ essai_node() {  # essai_node <version de départ> [echec-apt] -> code de retour 
   PATH="$W/node/bin:$PATH" NODE_VERSION_FILE="$W/node/version" JOURNAL_NODE="$W/node/journal" APT_ECHEC="$W/node/apt-echec" \
     bash -c ". '$LIB'; nodyx_ensure_node 22"
 }
-essai_node 22; c=$?
-check "Node 22 déjà là : rien n'est installé" '[[ $c -eq 0 && ! -s "$W/node/journal" ]]'
+essai_node v22.22.0; c=$?
+check "Node 22.22 déjà là : rien n'est installé" '[[ $c -eq 0 && ! -s "$W/node/journal" ]]'
+essai_node v22.17.0; c=$?
+check "Node 22.17 pile : rien n'est installé" '[[ $c -eq 0 && ! -s "$W/node/journal" ]]'
+# Le piège de la mise à jour : l'ancien install.sh ne demande que « 22 ». Le
+# plancher 22.17 (SvelteKit 3) doit s'imposer quand même.
+essai_node v22.5.1; c=$?; GOT="$(cat "$W/node/journal")"
+check "Node 22.5 et demande « 22 » : le plancher 22.17 impose la mise à niveau" '[[ $c -eq 0 && "$GOT" == *setup_22.x* && "$GOT" == *"install -y -q nodejs"* ]]'
+essai_node v23.1.0; c=$?
+check "Node 23 : au-dessus du plancher, rien n'est installé" '[[ $c -eq 0 && ! -s "$W/node/journal" ]]'
 essai_node 20; c=$?; GOT="$(cat "$W/node/journal")"
 check "Node 20 : NodeSource 22 puis apt-get nodejs, et succès" '[[ $c -eq 0 && "$GOT" == *setup_22.x* && "$GOT" == *"install -y -q nodejs"* ]]'
 essai_node 20 echec; c=$?
 check "installation ratée : échec signalé (la mise à jour s'arrêtera)" '[[ $c -ne 0 ]]'
 essai_node "pas-un-nombre"; c=$?
 check "version illisible : traitée comme absente, Node 22 installé" '[[ $c -eq 0 && -s "$W/node/journal" ]]'
+# La compilation à côté vérifie elle-même le plancher : c'est elle que l'ANCIEN
+# install.sh appelle dans le nouveau build.sh pendant une mise à jour.
+D2="$W/plancher"; mkdir -p "$D2"; echo build > "$D2/.sortie"; echo v2 > "$D2/version"
+: > "$W/node/journal"; echo v22.5.1 > "$W/node/version"; touch "$W/node/apt-echec"
+PATH="$W/node/bin:$W/bin:$PATH" NODE_VERSION_FILE="$W/node/version" JOURNAL_NODE="$W/node/journal" APT_ECHEC="$W/node/apt-echec" \
+  JOURNAL="$W/journal-plancher" bash -c ". '$LIB'; nodyx_build_aside '$D2' build '$W/plancher-travail'" 2>/dev/null; c=$?
+check "Node 22.5 non mis à niveau : la compilation à côté refuse, sans lancer npm" '[[ $c -ne 0 && ! -s "$W/journal-plancher" ]]'
+rm -f "$W/node/apt-echec"; : > "$W/node/journal"; echo v22.5.1 > "$W/node/version"
+PATH="$W/node/bin:$W/bin:$PATH" NODE_VERSION_FILE="$W/node/version" JOURNAL_NODE="$W/node/journal" APT_ECHEC="$W/node/apt-echec" \
+  JOURNAL="$W/journal-plancher" bash -c ". '$LIB'; nodyx_build_aside '$D2' build '$W/plancher-travail'"; c=$?
+check "Node 22.5 mis à niveau : la compilation à côté passe" '[[ $c -eq 0 && "$(cat "$W/plancher-travail/build/version")" == v2 ]]'
 for f in "$INSTALL" "$TUNNEL"; do
   n="$(basename "$f")"
   corps="$(awk '/^_nodyx_upgrade\(\)/{f=1} f{print} f&&/^}/{exit}' "$f")"

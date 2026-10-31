@@ -2,7 +2,7 @@
  * Nodyx Sound Engine — Web Audio API, zero assets
  * Tous les sons sont synthétisés en temps réel.
  */
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { get } from 'svelte/store'
 import { soundSettings } from './soundSettings'
 

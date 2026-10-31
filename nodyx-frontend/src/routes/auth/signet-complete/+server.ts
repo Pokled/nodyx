@@ -10,7 +10,7 @@
 
 import { redirect, error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { PRIVATE_API_SSR_URL } from '$env/static/private'
+import { PRIVATE_API_SSR_URL } from '$app/env/private'
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
   const challenge   = url.searchParams.get('challenge')

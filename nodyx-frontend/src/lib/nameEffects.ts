@@ -5,7 +5,7 @@
  * Fonts are injected as @font-face rules client-side, SSR-safe.
  */
 
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { contrastSafeColor } from '$lib/theme'
 
 // ── Types ─────────────────────────────────────────────────────────────────────

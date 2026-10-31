@@ -1,4 +1,4 @@
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { writable, type Writable } from 'svelte/store'
 import type { Socket } from 'socket.io-client'
 
@@ -46,7 +46,7 @@ export async function initSocket(token: string, initialCount: number): Promise<v
   // Dynamic import — keeps socket.io-client out of SSR bundle
   const { io: ioClient } = await import('socket.io-client')
 
-  const { PUBLIC_API_URL } = await import('$env/static/public')
+  const { PUBLIC_API_URL } = await import('$app/env/public')
   // Si PUBLIC_API_URL est relatif (/api/v1), Socket.IO se connecte à l'origine courante
   // → le proxy Vite (dev) ou le reverse proxy (prod) redirige vers le backend
   const baseUrl = PUBLIC_API_URL.startsWith('/')
@@ -165,7 +165,7 @@ export async function tryAutoConnect(): Promise<void> {
   // Vérifier que le token est encore valide avant de se reconnecter
   // Évite de se reconnecter avec un token expiré/révoqué
   try {
-    const { PUBLIC_API_URL } = await import('$env/static/public')
+    const { PUBLIC_API_URL } = await import('$app/env/public')
     const res = await fetch(`${PUBLIC_API_URL}/api/v1/notifications/unread-count`, {
       headers: { Authorization: `Bearer ${savedToken}` },
     })

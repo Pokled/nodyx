@@ -10,8 +10,9 @@ export default defineConfig({
 			// importent d'autres modules $lib, ex: voiceSfu → $lib/socket).
 			$lib: fileURLToPath(new URL('./src/lib', import.meta.url)),
 			// Modules virtuels SvelteKit indisponibles hors runtime Kit : stubbés.
-			'$app/environment': fileURLToPath(new URL('./src/tests/stub-app-environment.ts', import.meta.url)),
-			'$env/dynamic/public': fileURLToPath(new URL('./src/tests/stub-env-dynamic-public.ts', import.meta.url)),
+			// Ordre : $app/env/public avant $app/env, l'alias le plus court l'avalerait.
+			'$app/env/public': fileURLToPath(new URL('./src/tests/stub-app-env-public.ts', import.meta.url)),
+			'$app/env': fileURLToPath(new URL('./src/tests/stub-app-env.ts', import.meta.url)),
 		},
 	},
 	test: {

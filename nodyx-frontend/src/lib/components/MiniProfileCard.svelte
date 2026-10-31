@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n'
 	import { onMount } from 'svelte'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects'
 
 	const tFn = $derived($t)
@@ -88,7 +88,7 @@
 		if (!browser) return
 
 		try {
-			const { PUBLIC_API_URL } = await import('$env/static/public')
+			const { PUBLIC_API_URL } = await import('$app/env/public')
 			const res = await fetch(`${PUBLIC_API_URL}/api/v1/users/${username}/profile`)
 			if (res.ok) {
 				profile = await res.json()

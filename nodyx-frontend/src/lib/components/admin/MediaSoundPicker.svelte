@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { apiFetch } from '$lib/api'
-	import { browser } from '$app/environment'
-	import { PUBLIC_API_URL } from '$env/static/public'
+	import { browser } from '$app/env'
+	import { PUBLIC_API_URL } from '$app/env/public'
 	import { fade, fly } from 'svelte/transition'
 	import { t } from '$lib/i18n'
 
