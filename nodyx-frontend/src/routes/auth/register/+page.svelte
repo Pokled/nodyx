@@ -73,7 +73,7 @@
 	)
 
 	const eyeColor = $derived(
-		mood === 'typing'  ? '#818cf8' :
+		mood === 'typing'  ? 'var(--nx-header-accent)' :
 		mood === 'happy'   ? '#10b981' :
 		'#6366f1'
 	)
@@ -91,17 +91,18 @@
 	<title>{tFn('auth.register.title')} · Nodyx</title>
 </svelte:head>
 
-<div class="w-full h-full min-h-0 p-6 sm:p-8 overflow-hidden bg-[#06060a]">
+<div class="w-full h-full min-h-0 p-6 sm:p-8 overflow-hidden">
 
-	<div class="w-full h-full min-h-0 grid grid-cols-1 md:grid-cols-[1fr_minmax(420px,35%)] gap-4 bg-[#06060a]">
+	<div class="w-full h-full min-h-0 grid grid-cols-1 md:grid-cols-[1fr_minmax(420px,35%)] gap-4">
 
 		<!-- ════════ Left: texte de presentation ════════ -->
-		<div class="relative overflow-hidden hidden md:flex flex-col justify-start min-h-0 p-6 sm:p-8 bg-[#06060a]">
+		<!-- Affiche sombre dans les deux thèmes (.nx-on-dark) : halos et robot pensés pour le noir. -->
+		<div class="nx-on-dark relative overflow-hidden hidden md:flex flex-col justify-start min-h-0 p-6 sm:p-8 rounded-2xl bg-[#06060a]">
 			<div class="absolute inset-0 pointer-events-none"
 				style="background:
 					radial-gradient(circle at 15% 40%, rgba(124,58,237,0.12) 0%, transparent 45%),
 					radial-gradient(circle at 85% 15%, rgba(6,182,212,0.06) 0%, transparent 35%),
-					radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+					radial-gradient(color-mix(in srgb, var(--nx-text) 3.5%, transparent) 1px, transparent 1px);
 					background-size: 100%, 100%, 28px 28px">
 			</div>
 			<div class="relative z-10 max-w-md mt-2">
@@ -109,10 +110,10 @@
 					style="color: var(--nx-cyan-soft, #67e8f9); font-family: ui-monospace, monospace">
 					{tFn('auth.hero.tagline')}
 				</div>
-				<h2 class="titre-heros text-4xl font-bold leading-tight mb-3 text-white">
-					{tFn('auth.hero.register_title_1')}<span class="titre-heros-sep">{' '}</span><span style="color: var(--nx-accent-2-soft, #a78bfa)">{tFn('auth.hero.register_title_2')}</span><span class="titre-heros-point">.</span>
+				<h2 class="titre-heros text-4xl font-bold leading-tight mb-3 text-[var(--nx-text)]">
+					{tFn('auth.hero.register_title_1')}<span class="titre-heros-sep">{' '}</span><span style="color: var(--nx-accent-2-soft, var(--nx-header-accent))">{tFn('auth.hero.register_title_2')}</span><span class="titre-heros-point">.</span>
 				</h2>
-				<p class="text-sm leading-relaxed text-gray-400">
+				<p class="text-sm leading-relaxed text-[var(--nx-text-muted)]">
 					{tFn('auth.hero.register_desc')}
 				</p>
 			</div>
@@ -124,17 +125,17 @@
 					<div class="rounded-lg px-4 shadow-md text-center w-full border
 					            h-[50px] flex items-center justify-center
 					            transition-colors duration-300
-					            {isError ? 'bg-red-950/60 border-red-800/60' :
-					             mood === 'happy' ? 'bg-green-950/60 border-green-800/60' :
-					             'bg-gray-800/90 border-gray-700'}">
+					            {isError ? 'bg-red-950/60 border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)]' :
+					             mood === 'happy' ? 'bg-green-950/60 border-[color-mix(in_srgb,var(--nx-ok)_40%,transparent)]' :
+					             'bg-[var(--nx-surface-raised)]/90 border-[var(--nx-border)]'}">
 						<p class="text-xs leading-snug transition-colors duration-200
-						          {isError ? 'text-red-300' : mood === 'happy' ? 'text-green-300' : 'text-gray-300'}">
+						          {isError ? 'text-[var(--nx-bad)]' : mood === 'happy' ? 'text-[var(--nx-ok)]' : 'text-[var(--nx-text)]'}">
 							{message}
 						</p>
 					</div>
 					<div class="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-0 h-0
 					            border-l-[7px] border-r-[7px] border-t-[8px] border-l-transparent border-r-transparent
-					            {isError ? 'border-t-red-800/60' : mood === 'happy' ? 'border-t-green-800/60' : 'border-t-gray-700'}">
+					            {isError ? 'border-t-red-800/60' : mood === 'happy' ? 'border-t-green-800/60' : 'border-t-[var(--nx-border)]'}">
 					</div>
 				</div>
 
@@ -179,10 +180,10 @@
 						</circle>
 					{:else if focusedField === 'password' || focusedField === 'confirm_password'}
 						<!-- Robot hands covering eyes when entering sensitive password -->
-						<path d="M 18 36 Q 25 44 32 36" stroke="#818cf8" stroke-width="3" fill="none" stroke-linecap="round"/>
-						<path d="M 48 36 Q 55 44 62 36" stroke="#818cf8" stroke-width="3" fill="none" stroke-linecap="round"/>
-						<rect x="15" y="26" width="18" height="14" rx="4" fill="#1e293b" stroke="#818cf8" stroke-width="1.5"/>
-						<rect x="47" y="26" width="18" height="14" rx="4" fill="#1e293b" stroke="#818cf8" stroke-width="1.5"/>
+						<path d="M 18 36 Q 25 44 32 36" stroke="var(--nx-header-accent)" stroke-width="3" fill="none" stroke-linecap="round"/>
+						<path d="M 48 36 Q 55 44 62 36" stroke="var(--nx-header-accent)" stroke-width="3" fill="none" stroke-linecap="round"/>
+						<rect x="15" y="26" width="18" height="14" rx="4" fill="#1e293b" stroke="var(--nx-header-accent)" stroke-width="1.5"/>
+						<rect x="47" y="26" width="18" height="14" rx="4" fill="#1e293b" stroke="var(--nx-header-accent)" stroke-width="1.5"/>
 					{:else}
 						<!-- Open eyes with left-to-right pupil tracking -->
 						{@const activeLength = focusedField === 'username' ? username.length : focusedField === 'email' ? email.length : 0}
@@ -277,22 +278,22 @@
 		</div>
 
 		<!-- ════════ Right: Register form ════════ -->
-		<div class="relative flex items-center justify-center min-h-0 h-full overflow-y-auto bg-[#06060a] p-6 sm:p-8">
+		<div class="relative flex items-center justify-center min-h-0 h-full overflow-y-auto p-6 sm:p-8">
 			<div class="absolute inset-0 pointer-events-none opacity-50"
-				style="background: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 28px 28px">
+				style="background: radial-gradient(color-mix(in srgb, var(--nx-text) 3.5%, transparent) 1px, transparent 1px); background-size: 28px 28px">
 			</div>
 
 			<div class="relative z-10 w-full max-w-md">
 
 				<!-- Logo -->
 				<div class="flex items-center gap-2.5 mb-6">
-					<span class="text-lg font-bold text-white tracking-tight">Nodyx</span>
+					<span class="text-lg font-bold text-[var(--nx-text)] tracking-tight">Nodyx</span>
 				</div>
 
-					<h1 class="text-2xl font-bold text-white mb-6">{tFn('auth.register.title')}</h1>
+					<h1 class="text-2xl font-bold text-[var(--nx-text)] mb-6">{tFn('auth.register.title')}</h1>
 
 					{#if form?.error}
-						<p class="mb-4 rounded bg-red-900/50 border border-red-700 px-4 py-2 text-sm text-red-300">
+						<p class="mb-4 rounded bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-4 py-2 text-sm text-[var(--nx-bad)]">
 							{form.error}
 						</p>
 					{/if}
@@ -322,63 +323,63 @@
 						</div>
 
 						<div>
-							<label for="username" class="block text-xs font-medium text-gray-300 mb-1.5 uppercase tracking-wider">{tFn('auth.register.username_label')}</label>
+							<label for="username" class="block text-xs font-medium text-[var(--nx-text)] mb-1.5 uppercase tracking-wider">{tFn('auth.register.username_label')}</label>
 							<input
 								id="username" name="username" type="text"
 								required minlength="3" maxlength="50" autocomplete="username"
 								bind:value={username}
 								onfocus={() => focusedField = 'username'}
 								onblur={() => { focusedField = null; usernameTouched = true; }}
-								class="w-full rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none transition-colors duration-200 bg-white/[0.04]
-								       {usernameShort ? 'border border-red-500/80 focus:ring-2 focus:ring-red-500/20' : 'border border-white/10 focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20'}"
+								class="w-full rounded-lg px-3.5 py-2.5 text-sm text-[var(--nx-text)] focus:outline-none transition-colors duration-200 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)]
+								       {usernameShort ? 'border border-red-500/80 focus:ring-2 focus:ring-red-500/20' : 'border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20'}"
 							/>
 							<div class="mt-1 flex items-center justify-between text-xs">
 								{#if usernameShort}
-									<span class="text-red-400">{tFn('auth.register.username_min_3_error')}</span>
+									<span class="text-[var(--nx-bad)]">{tFn('auth.register.username_min_3_error')}</span>
 								{:else}
-									<span class="text-gray-500">{tFn('auth.register.username_hint_text')}</span>
+									<span class="text-[var(--nx-text-muted)]">{tFn('auth.register.username_hint_text')}</span>
 								{/if}
-								<span class="{username.length < 3 ? 'text-gray-600' : 'text-gray-400'}">{username.length}/50</span>
+								<span class="{username.length < 3 ? 'text-[var(--nx-text-muted)]' : 'text-[var(--nx-text-muted)]'}">{username.length}/50</span>
 							</div>
 						</div>
 
 						<div>
-							<label for="email" class="block text-xs font-medium text-gray-300 mb-1.5 uppercase tracking-wider">{tFn('common.email')}</label>
+							<label for="email" class="block text-xs font-medium text-[var(--nx-text)] mb-1.5 uppercase tracking-wider">{tFn('common.email')}</label>
 							<input
 								id="email" name="email" type="email"
 								required autocomplete="email"
 								bind:value={email}
 								onfocus={() => focusedField = 'email'}
 								onblur={() => { focusedField = null; emailTouched = true; }}
-								class="w-full rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none transition-colors duration-200 bg-white/[0.04]
-								       {emailError ? 'border border-red-500/80 focus:ring-2 focus:ring-red-500/20' : 'border border-white/10 focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20'}"
+								class="w-full rounded-lg px-3.5 py-2.5 text-sm text-[var(--nx-text)] focus:outline-none transition-colors duration-200 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)]
+								       {emailError ? 'border border-red-500/80 focus:ring-2 focus:ring-red-500/20' : 'border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20'}"
 							/>
 							<div class="mt-1 h-4 flex items-center text-xs">
-								<span class="text-red-400">{emailInlineError ?? ''}</span>
+								<span class="text-[var(--nx-bad)]">{emailInlineError ?? ''}</span>
 							</div>
 						</div>
 
 						<div>
-							<label for="password" class="block text-xs font-medium text-gray-300 mb-1.5 uppercase tracking-wider">{tFn('common.password')}</label>
+							<label for="password" class="block text-xs font-medium text-[var(--nx-text)] mb-1.5 uppercase tracking-wider">{tFn('common.password')}</label>
 							<input
 								id="password" name="password" type="password"
 								required minlength="8" autocomplete="new-password"
 								bind:value={password}
 								onfocus={() => focusedField = 'password'}
 								onblur={() => focusedField = null}
-								class="w-full rounded-lg bg-white/[0.04] border border-white/10 px-3.5 py-2.5 text-sm text-white
+								class="w-full rounded-lg bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] px-3.5 py-2.5 text-sm text-[var(--nx-text)]
 								       focus:outline-none focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20 transition-colors duration-200"
 							/>
 							<div class="mt-1 h-4 flex items-center gap-1.5 text-xs">
-								<span class="{pwdOk ? 'text-green-400' : 'text-gray-500'}">{pwdOk ? '✓' : '○'}</span>
-								<span class="{pwdOk ? 'text-green-400' : 'text-gray-500'}">
+								<span class="{pwdOk ? 'text-[var(--nx-ok)]' : 'text-[var(--nx-text-muted)]'}">{pwdOk ? '✓' : '○'}</span>
+								<span class="{pwdOk ? 'text-[var(--nx-ok)]' : 'text-[var(--nx-text-muted)]'}">
 									{tFn('auth.register.password_min_chars_label')}{!pwdOk && password.length > 0 ? ' (' + password.length + '/8)' : ''}
 								</span>
 							</div>
 						</div>
 
 						<div>
-							<label for="confirm_password" class="block text-xs font-medium text-gray-300 mb-1.5 uppercase tracking-wider">
+							<label for="confirm_password" class="block text-xs font-medium text-[var(--nx-text)] mb-1.5 uppercase tracking-wider">
 								{tFn('auth.register.confirm_password_label')}
 							</label>
 							<input
@@ -387,12 +388,12 @@
 								bind:value={confirmPwd}
 								onfocus={() => focusedField = 'confirm_password'}
 								onblur={() => focusedField = null}
-								class="w-full rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none transition-colors duration-200 bg-white/[0.04]
-								       {pwdMismatch ? 'border border-red-500/80 focus:ring-2 focus:ring-red-500/20' : 'border border-white/10 focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20'}"
+								class="w-full rounded-lg px-3.5 py-2.5 text-sm text-[var(--nx-text)] focus:outline-none transition-colors duration-200 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)]
+								       {pwdMismatch ? 'border border-red-500/80 focus:ring-2 focus:ring-red-500/20' : 'border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20'}"
 							/>
 							<div class="mt-1 h-4 flex items-center text-xs">
 								{#if pwdMismatch}
-									<span class="text-red-400">{tFn('auth.register.password_mismatch_error')}</span>
+									<span class="text-[var(--nx-bad)]">{tFn('auth.register.password_mismatch_error')}</span>
 								{/if}
 							</div>
 						</div>
@@ -408,9 +409,9 @@
 						</button>
 					</form>
 
-					<p class="mt-5 text-center text-sm text-gray-400">
+					<p class="mt-5 text-center text-sm text-[var(--nx-text-muted)]">
 						{tFn('auth.register.already_has_account')}
-						<a href="/auth/login" class="font-medium text-indigo-400 hover:text-indigo-300 transition-colors">{tFn('auth.login_link')}</a>
+						<a href="/auth/login" class="font-medium text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)] transition-colors">{tFn('auth.login_link')}</a>
 					</p>
 
 

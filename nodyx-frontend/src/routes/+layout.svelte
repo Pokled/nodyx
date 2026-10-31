@@ -570,7 +570,7 @@
 	// Une page qui peignait son propre fond les masquait (vieuxlooters, 29/10).
 	// main porte aussi .nx-themed : contenu rédigé, éditeur et menus déroulants
 	// de la page suivent le thème (variables --prose-*, variante themed:, app.css).
-	const SHEET_THEMED = ['/feed', '/members', '/forum', '/wiki', '/calendar', '/tasks', '/dm']
+	const SHEET_THEMED = ['/feed', '/members', '/forum', '/wiki', '/calendar', '/tasks', '/dm', '/musique', '/garden', '/auth/login', '/auth/register']
 	const sheetThemed = $derived(SHEET_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/')))
 
 	const showChannelSidebar = $derived(

@@ -166,9 +166,9 @@
 		position: sticky;
 		top: 0;
 		z-index: 20;
-		background: rgba(9, 9, 15, 0.92);
+		background: color-mix(in srgb, var(--nx-surface) 92%, transparent);
 		backdrop-filter: blur(16px);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
 		padding: 20px 28px;
 	}
 
@@ -182,14 +182,14 @@
 	.mus-title {
 		font-size: 1.125rem;
 		font-weight: 700;
-		color: #fff;
+		color: var(--nx-text);
 		margin: 0 0 2px;
 		letter-spacing: -0.01em;
 	}
 
 	.mus-subtitle {
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.35);
+		color: var(--nx-text-muted);
 		margin: 0;
 	}
 
@@ -198,14 +198,14 @@
 	}
 
 	.mus-empty {
-		color: rgba(255, 255, 255, 0.4);
+		color: var(--nx-text-muted);
 		font-size: 0.8125rem;
 	}
 
 	.mus-section { margin-bottom: 32px; }
 	.mus-section-title {
 		font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-		color: rgba(255, 255, 255, 0.4); margin: 0 0 12px;
+		color: var(--nx-text-muted); margin: 0 0 12px;
 	}
 
 	/* ── Grid ─────────────────────────────────────────────────────────────── */
@@ -216,7 +216,7 @@
 		   colonnes vides sur la droite. */
 		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 		gap: 1px;
-		background: rgba(255, 255, 255, 0.04);
+		background: color-mix(in srgb, var(--nx-text) 4%, transparent);
 	}
 	/* Section playlists : peu d'entrées prevues au depart (une seule au 19/09),
 	   un etirement plein ecran d'une seule carte a l'air casse plutot que sobre.
@@ -228,14 +228,14 @@
 
 	.mus-card {
 		display: block;
-		background: rgba(9, 9, 15, 1);
+		background: var(--nx-surface);
 		text-decoration: none;
 		transition: background 0.15s;
 		overflow: hidden;
 	}
 
 	.mus-card:hover {
-		background: rgba(255, 255, 255, 0.03);
+		background: color-mix(in srgb, var(--nx-text) 3%, transparent);
 	}
 
 	.mus-card:hover .mus-card-img {
@@ -253,7 +253,7 @@
 		position: relative;
 		aspect-ratio: 16 / 9;
 		overflow: hidden;
-		background: rgba(255, 255, 255, 0.03);
+		background: color-mix(in srgb, var(--nx-text) 3%, transparent);
 	}
 
 	.mus-card-play {
@@ -283,7 +283,7 @@
 	.mus-card-fallback-icon {
 		width: 28%;
 		height: 28%;
-		color: rgba(255, 255, 255, 0.15);
+		color: var(--nx-text-muted);
 	}
 
 	.mus-card-img {
@@ -300,7 +300,7 @@
 	.mus-card-name {
 		font-size: 0.8125rem;
 		font-weight: 600;
-		color: #fff;
+		color: var(--nx-text);
 		margin: 0 0 3px;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -309,7 +309,7 @@
 
 	.mus-card-desc {
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.4);
+		color: var(--nx-text-muted);
 		margin: 0 0 8px;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
@@ -330,14 +330,14 @@
 		padding: 2px 7px;
 		font-size: 0.6875rem;
 		font-weight: 500;
-		border: 1px solid rgba(139, 92, 246, 0.25);
-		background: rgba(139, 92, 246, 0.1);
-		color: var(--nx-accent-2-soft2);
+		border: 1px solid color-mix(in srgb, var(--nx-header-accent) 30%, transparent);
+		background: color-mix(in srgb, var(--nx-header-accent) 10%, transparent);
+		color: var(--nx-header-accent);
 	}
 
 	.mus-views {
 		font-size: 0.6875rem;
-		color: rgba(255, 255, 255, 0.3);
+		color: var(--nx-text-muted);
 	}
 
 </style>
