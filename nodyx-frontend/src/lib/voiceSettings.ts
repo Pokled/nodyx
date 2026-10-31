@@ -2,7 +2,7 @@
  * Nodyx Voice Settings — store persisté dans localStorage
  */
 import { writable } from 'svelte/store'
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 
 export interface VoiceSettings {
   /** Gain micro 0.1–2.0 (1.0 = nominal, 2.0 = boost ×2)  */

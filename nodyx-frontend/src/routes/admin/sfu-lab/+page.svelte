@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { browser } from '$app/environment'
+  import { browser } from '$app/env'
   import { onDestroy } from 'svelte'
   import {
     sfuJoin, sfuLeave, sfuSetMuted, sfuAudit,

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { useFollowAmbiance } from '../followAmbiance'
 	import { onMount, onDestroy } from 'svelte'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import { apiFetch } from '$lib/api'
 	import { t } from '$lib/i18n'
 

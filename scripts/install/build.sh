@@ -21,6 +21,14 @@
 nodyx_build_aside() {
   local app="$1" out="$2" work="$3"
   [[ -d "$app" && -n "$out" && -n "$work" ]] || return 2
+  # Le plancher de Node est vérifié ICI, pas seulement par l'appelant : à la mise
+  # à jour, c'est l'ANCIEN install.sh qui tourne (il ne connaît que « 22 »), mais
+  # il charge CE fichier, tiré avec le nouveau code. Sans ça, une instance en
+  # 22.0-22.16 échouerait à compiler le frontend (SvelteKit 3) à chaque mise à jour.
+  if ! nodyx_ensure_node "$NODYX_NODE_MIN"; then
+    echo "Node.js >= $NODYX_NODE_MIN requis / required ($(node --version 2>/dev/null || echo absent))." >&2
+    return 1
+  fi
   mkdir -p "$work" || return 1
   # Jamais les données vivantes : uploads/ et backups/ du core pèsent des
   # gigaoctets (1,1 Go sur nodyx.org) et n'ont rien à faire dans une compilation.
@@ -79,23 +87,39 @@ nodyx_purge_stale_work() {
   return 0
 }
 
+# Plancher de Node.js pour tout Nodyx : SvelteKit 3 (frontend) exige 22.17.
+NODYX_NODE_MIN="22.17"
+
 # nodyx_node_major : version majeure de Node.js installée, 0 si absent ou illisible.
+# Plus appelée par le code actuel, GARDÉE : un ancien install.sh qui pilote une mise
+# à jour l'appelle depuis ce fichier (tiré avec le nouveau code).
 nodyx_node_major() {
   local v
   v="$(node --version 2>/dev/null | sed 's/^v//; s/\..*//')"
   [[ "$v" =~ ^[0-9]+$ ]] && echo "$v" || echo 0
 }
 
-# nodyx_ensure_node <majeur minimal> : garantit Node.js >= ce majeur, en
-# l'installant depuis NodeSource au besoin (comme l'installation initiale).
+# _nodyx_version_num <« 22 », « 22.17 », « v22.17.1 »> : majeur*1000 + mineur
+# (22.17 -> 22017), 0 si illisible. Compare des versions avec (( )).
+_nodyx_version_num() {
+  local v="${1#v}"
+  [[ "$v" =~ ^([0-9]+)(\.([0-9]+))? ]] || { echo 0; return; }
+  echo $(( 10#${BASH_REMATCH[1]} * 1000 + 10#${BASH_REMATCH[3]:-0} ))
+}
+
+# nodyx_ensure_node [version minimale] : garantit Node.js >= cette version (et
+# jamais sous NODYX_NODE_MIN, même si un ancien install.sh ne demande que « 22 »),
+# en l'installant depuis NodeSource au besoin (comme l'installation initiale).
 # Code 0 si la version voulue est là au retour. Ajouté le 13/10/2026 : la mise à
 # jour ne revérifiait jamais Node, et une instance installée en tunnel avant le
 # 04/10/2026 restait en Node 20 alors que le vocal exige 22.
 nodyx_ensure_node() {
-  local min="${1:-22}"
-  (( $(nodyx_node_major) >= min )) && return 0
-  curl -fsSL "https://deb.nodesource.com/setup_${min}.x" | bash - >/dev/null 2>&1 || return 1
+  local min="${1:-$NODYX_NODE_MIN}" want
+  (( $(_nodyx_version_num "$min") < $(_nodyx_version_num "$NODYX_NODE_MIN") )) && min="$NODYX_NODE_MIN"
+  want="$(_nodyx_version_num "$min")"
+  (( $(_nodyx_version_num "$(node --version 2>/dev/null)") >= want )) && return 0
+  curl -fsSL "https://deb.nodesource.com/setup_${min%%.*}.x" | bash - >/dev/null 2>&1 || return 1
   apt-get install -y -q nodejs >/dev/null 2>&1 || return 1
-  (( $(nodyx_node_major) >= min ))
+  (( $(_nodyx_version_num "$(node --version 2>/dev/null)") >= want ))
 }
 

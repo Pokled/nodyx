@@ -2,7 +2,7 @@
 	import type { PageData } from './$types'
 	import { goto } from '$app/navigation'
 	import { page } from '$app/state'
-	import { PUBLIC_API_URL } from '$env/static/public'
+	import { PUBLIC_API_URL } from '$app/env/public'
 	import { t } from '$lib/i18n'
 
 	let { data }: { data: PageData } = $props()
@@ -59,14 +59,14 @@
 	}
 
 	function switchTab(tab: 'local' | 'community') {
-		const u = new URL(page.url)
+		const u = new URL(page.url.href)
 		u.searchParams.set('tab', tab)
 		u.searchParams.delete('offset')
 		goto(u.toString())
 	}
 
 	function applyFilter(type: string) {
-		const u = new URL(page.url)
+		const u = new URL(page.url.href)
 		if (type) u.searchParams.set('type', type)
 		else u.searchParams.delete('type')
 		u.searchParams.delete('offset')
@@ -75,7 +75,7 @@
 
 	function submitSearch(e: Event) {
 		e.preventDefault()
-		const u = new URL(page.url)
+		const u = new URL(page.url.href)
 		if (searchInput.trim()) u.searchParams.set('q', searchInput.trim())
 		else u.searchParams.delete('q')
 		u.searchParams.delete('offset')

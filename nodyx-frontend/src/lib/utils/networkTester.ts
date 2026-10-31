@@ -2,7 +2,7 @@ import {
     PUBLIC_TURN_URL,
     PUBLIC_TURN_USERNAME,
     PUBLIC_TURN_CREDENTIAL
-} from '$env/static/public';
+} from '$app/env/public';
 
 /**
  * Nodyx Network Diagnostic Engine

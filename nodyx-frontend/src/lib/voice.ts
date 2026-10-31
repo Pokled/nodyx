@@ -28,7 +28,7 @@ import {
   PUBLIC_TURN_URL,
   PUBLIC_TURN_USERNAME,
   PUBLIC_TURN_CREDENTIAL,
-} from '$env/static/public'
+} from '$app/env/public'
 
 // Dynamic ICE servers received from nodyx-core via voice:init.
 // null = not received yet. [] = received but nodyx-turn not configured.

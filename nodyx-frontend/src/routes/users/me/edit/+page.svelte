@@ -44,7 +44,7 @@
 		fontError    = ''
 		fontUploading = true
 		try {
-			const { PUBLIC_API_URL } = await import('$env/static/public')
+			const { PUBLIC_API_URL } = await import('$app/env/public')
 			const token = (data as Record<string, unknown>).token as string | null
 			const fd = new FormData()
 			fd.append('file', file)
@@ -135,7 +135,7 @@
 	const initials = $derived((profile.display_name || profile.username || '?').charAt(0).toUpperCase())
 
 	async function uploadFile(type: 'avatar' | 'banner', file: File) {
-		const { PUBLIC_API_URL } = await import('$env/static/public')
+		const { PUBLIC_API_URL } = await import('$app/env/public')
 		const token = (data as Record<string, unknown>).token as string | null
 		const fd = new FormData()
 		fd.append('file', file)

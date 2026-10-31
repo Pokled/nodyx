@@ -1,4 +1,4 @@
-// Stub vitest du module virtuel SvelteKit $app/environment (env node).
+// Stub vitest du module virtuel SvelteKit $app/env (env node).
 export const browser = false
 export const dev = false
 export const building = false

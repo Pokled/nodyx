@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import { t } from '$lib/i18n'
 	import {
 		CANVAS_WIDTH, CANVAS_HEIGHT, SOURCE_TYPE_META, FULL_SCENE_VIEWPORT_TYPES,

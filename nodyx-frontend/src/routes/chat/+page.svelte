@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, tick, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
@@ -516,7 +516,7 @@
 		if (linkPreviews.has(url)) return;
 		linkPreviews = new Map(linkPreviews).set(url, false); // mark as loading
 		try {
-			const { PUBLIC_API_URL } = await import('$env/static/public');
+			const { PUBLIC_API_URL } = await import('$app/env/public');
 			const res = await fetch(`${PUBLIC_API_URL}/api/v1/chat/unfurl?url=${encodeURIComponent(url)}`, {
 				headers: token ? { Authorization: `Bearer ${token}` } : {}
 			});
@@ -601,7 +601,7 @@
 		if (!browser) return;
 		loadCustomEmojis();   // emojis custom de l'instance (:shortcode:)
 		// Detect configured GIF provider
-		const { PUBLIC_TENOR_KEY, PUBLIC_GIPHY_KEY } = await import('$env/static/public');
+		const { PUBLIC_TENOR_KEY, PUBLIC_GIPHY_KEY } = await import('$app/env/public');
 		if (PUBLIC_TENOR_KEY) gifProvider = 'tenor';
 		else if (PUBLIC_GIPHY_KEY) gifProvider = 'giphy';
 
@@ -650,7 +650,7 @@
 		if (!q.trim() || !gifProvider) { gifResults = []; return; }
 		gifLoading = true;
 		try {
-			const { PUBLIC_TENOR_KEY, PUBLIC_GIPHY_KEY } = await import('$env/static/public');
+			const { PUBLIC_TENOR_KEY, PUBLIC_GIPHY_KEY } = await import('$app/env/public');
 
 			if (gifProvider === 'tenor' && PUBLIC_TENOR_KEY) {
 				const res = await fetch(
@@ -735,7 +735,7 @@
 		const prevHeight = messagesEl.scrollHeight;
 
 		try {
-			const { PUBLIC_API_URL } = await import('$env/static/public');
+			const { PUBLIC_API_URL } = await import('$app/env/public');
 			const res = await fetch(
 				`${PUBLIC_API_URL}/api/v1/chat/channels/${selectedChannel?.id}/history?limit=50&before=${encodeURIComponent(before)}`,
 				{ headers: token ? { Authorization: `Bearer ${token}` } : {} }
@@ -901,7 +901,7 @@
 		if (match && match[1].length >= 1) {
 			mentionQuery = match[1];
 			try {
-				const { PUBLIC_API_URL } = await import('$env/static/public');
+				const { PUBLIC_API_URL } = await import('$app/env/public');
 				const res = await fetch(`${PUBLIC_API_URL}/api/v1/chat/members?q=${encodeURIComponent(mentionQuery)}`, {
 					headers: token ? { Authorization: `Bearer ${token}` } : {}
 				});

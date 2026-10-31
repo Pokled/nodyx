@@ -1,4 +1,4 @@
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 
 export interface AnchoredPopoverOptions {
 	/** Élément de référence. Par défaut : le parent du nœud AVANT le portal. */

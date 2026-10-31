@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { apiFetch } from '$lib/api'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import { t as i18n } from '$lib/i18n'
 	import AlertBoxConfigEditor    from './AlertBoxConfigEditor.svelte'
 	import GoalBarConfigEditor     from './GoalBarConfigEditor.svelte'

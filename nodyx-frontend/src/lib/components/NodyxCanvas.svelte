@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { portal } from '$lib/actions/portal'
 	import { onMount, onDestroy }   from 'svelte'
-	import { browser }              from '$app/environment'
+	import { browser }              from '$app/env'
 	import CanvasLeftToolbar        from './CanvasLeftToolbar.svelte'
 	import CanvasTopBar             from './CanvasTopBar.svelte'
 	import CanvasBottomBar          from './CanvasBottomBar.svelte'
@@ -16,7 +16,7 @@
 	} from '$lib/canvas'
 	import { voiceStore } from '$lib/voice'
 	import { buildTextLines, noteLines } from '$lib/canvasText'
-	import { PUBLIC_API_URL } from '$env/static/public'
+	import { PUBLIC_API_URL } from '$app/env/public'
 	import { t as i18n } from '$lib/i18n'   // `t` est déjà une variable locale (transform / paramétrage)
 
 	const tFn = $derived($i18n)

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, untrack } from 'svelte';
 	import { t } from '$lib/i18n';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	const tFn = $derived($t);
 
 	interface Props {

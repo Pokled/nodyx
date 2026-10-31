@@ -2,7 +2,7 @@
 	import { t } from '$lib/i18n';
 	const tFn = $derived($t);
 	import { enhance } from '$app/forms';
-	import { PUBLIC_API_URL } from '$env/static/public';
+	import { PUBLIC_API_URL } from '$app/env/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import type { PageData, ActionData } from './$types';
 

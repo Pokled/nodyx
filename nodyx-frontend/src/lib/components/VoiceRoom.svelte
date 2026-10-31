@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { t, locale } from '$lib/i18n';
 	import Table          from '$lib/components/Table.svelte';
 	import NodyxCanvas    from '$lib/components/NodyxCanvas.svelte';

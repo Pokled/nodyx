@@ -191,6 +191,8 @@ Start with `sudo nodyx-doctor`. It checks every service and tells you which one 
 
 **A minimal Debian (no `sudo`, no `curl`).** Install `curl` first (`apt install curl` as root); the installer takes care of the rest, `sudo` included.
 
+**Every form answers "Cross-site POST form submissions are forbidden".** Your instance is served over `http://` (a manual install, on a local IP for instance): Nodyx assumes `https://` when it checks where a form comes from. Add `PROTOCOL_HEADER: 'x-forwarded-proto'` to the `env` block of `nodyx-frontend` in `ecosystem.config.js`, then run `sudo -u nodyx pm2 restart nodyx-frontend --update-env`. Instances set up by the installer use https and are not affected.
+
 ---
 
 ## Still stuck?

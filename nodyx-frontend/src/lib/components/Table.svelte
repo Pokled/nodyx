@@ -3,7 +3,7 @@
 	import { jukeboxStore, initJukebox, cleanupJukebox, mountYTPlayer, jukeboxLoad } from '$lib/jukebox'
 	import VoiceEqualizer from '$lib/components/VoiceEqualizer.svelte'
 	import { goto } from '$app/navigation'
-	import { PUBLIC_API_URL } from '$env/static/public'
+	import { PUBLIC_API_URL } from '$app/env/public'
 	import { page } from '$app/state'
 	import type { Socket } from 'socket.io-client'
 	import { t } from '$lib/i18n'

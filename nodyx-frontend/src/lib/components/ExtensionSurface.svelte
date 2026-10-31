@@ -10,7 +10,7 @@
 	// cf SPECS/NODYX_SDK_CDC.md §4
 
 	import { onMount, onDestroy } from 'svelte'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 	import { t } from '$lib/i18n'
 	import { createHostHandler, buildBootPayload, frameUrl, createStorageCaller, createFetchCaller, type HostSurface } from '$lib/extensions/host'
 

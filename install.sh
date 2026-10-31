@@ -166,10 +166,10 @@ T_EN[upgrade_no_backup_auto]='The database backup could not be verified (--yes n
 T_FR[upgrade_no_backup_auto]="La sauvegarde de la base n'a pas pu être vérifiée (--yes ne met jamais à jour sans)."
 T_EN[upgrade_cancelled_untouched]='Update cancelled. Nothing was changed.'
 T_FR[upgrade_cancelled_untouched]="Mise à jour annulée. Rien n'a été modifié."
-T_EN[node_upgrading]='Node.js is older than 22: installing Node.js 22 before building...'
-T_FR[node_upgrading]="Node.js est antérieur à 22 : installation de Node.js 22 avant la compilation..."
-T_EN[node_upgrade_fail]='Could not install Node.js 22: update stopped, the site still runs the previous version.'
-T_FR[node_upgrade_fail]="Impossible d'installer Node.js 22 : mise à jour arrêtée, le site tourne toujours sur la version précédente."
+T_EN[node_upgrading]='Node.js is older than 22.17: installing the latest Node.js 22 before building...'
+T_FR[node_upgrading]="Node.js est antérieur à 22.17 : installation du dernier Node.js 22 avant la compilation..."
+T_EN[node_upgrade_fail]='Could not install Node.js 22.17 or later: update stopped, the site still runs the previous version.'
+T_FR[node_upgrade_fail]="Impossible d'installer Node.js 22.17 ou plus récent : mise à jour arrêtée, le site tourne toujours sur la version précédente."
 T_EN[upgrade_lib_missing]='scripts/install/build.sh is missing from the updated code: update stopped, the site still runs the previous version.'
 T_FR[upgrade_lib_missing]="scripts/install/build.sh manque dans le code mis à jour : mise à jour arrêtée, le site tourne toujours sur la version précédente."
 T_EN[upgrade_workdir_fail]='Could not create the build directories (disk full?). The site still runs the previous version.'
@@ -1274,11 +1274,11 @@ _nodyx_upgrade() {
   [[ -f "${dir}/scripts/install/build.sh" ]] || die "$(t upgrade_lib_missing)"
   # shellcheck source=scripts/install/build.sh
   . "${dir}/scripts/install/build.sh"
-  # Node.js 22 avant de compiler : une ancienne installation peut être restée
-  # en Node 20 (le vocal et music-metadata exigent 22).
-  if (( $(nodyx_node_major) < 22 )); then
+  # Node.js >= NODYX_NODE_MIN (22.17, SvelteKit 3) avant de compiler : une
+  # ancienne installation peut être restée en Node 20 ou en 22.0-22.16.
+  if (( $(_nodyx_version_num "$(node --version 2>/dev/null)") < $(_nodyx_version_num "$NODYX_NODE_MIN") )); then
     info "$(t node_upgrading)"
-    nodyx_ensure_node 22 || die "$(t node_upgrade_fail)"
+    nodyx_ensure_node "$NODYX_NODE_MIN" || die "$(t node_upgrade_fail)"
     ok "$(printf "$(t node_installed)" "$(node -v)")"
   fi
   nodyx_purge_stale_work "$dir"
@@ -2570,9 +2570,10 @@ TURN_SECRET=$(gen_secret)
 # l'IP du visiteur et être exempté de la limitation de débit (rateLimit.ts).
 INTERNAL_API_SECRET=$(gen_secret)
 
-# Node.js 22 LTS — mediasoup-client/awaitqueue (voice) require >=22 (#642)
-_NODE_MAJOR=$(node --version 2>/dev/null | sed 's/v//;s/\..*//' || echo 0)
-if ! command -v node &>/dev/null || [[ "$_NODE_MAJOR" -lt 22 ]]; then
+# Node.js 22 LTS >= 22.17 : mediasoup-client/awaitqueue (vocal) exigent 22 (#642),
+# SvelteKit 3 (frontend) exige 22.17. Même plancher que NODYX_NODE_MIN (build.sh).
+_node_ok() { node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=17)?0:1)' 2>/dev/null; }
+if ! _node_ok; then
   info "$(t node_installing)"
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null 2>&1
   apt-get install -y -q nodejs >/dev/null 2>&1

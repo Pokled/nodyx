@@ -5,7 +5,7 @@
 // gate par rôle).
 
 import { writable } from 'svelte/store'
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import type { PresetKey } from './presetSounds'
 
 export type StreamerEventKey =

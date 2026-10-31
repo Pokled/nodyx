@@ -1,4 +1,4 @@
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 
 /**
  * Déplace le nœud dans `<body>` tant qu'il est monté, puis le retire.

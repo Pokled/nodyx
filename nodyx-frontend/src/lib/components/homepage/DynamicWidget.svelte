@@ -5,7 +5,7 @@
 	// Charge un widget externe (Web Component) à la volée
 	// Le widget doit s'auto-enregistrer via customElements.define('nodyx-widget-{id}', ...)
 	import { onMount } from 'svelte'
-	import { browser } from '$app/environment'
+	import { browser } from '$app/env'
 
 	interface Props {
 		widgetId: string                      // ex: "my-countdown"

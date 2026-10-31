@@ -54,7 +54,7 @@
 		if (query)    params.set('q', query);
 		if (type !== 'all') params.set('type', type);
 		if (upcoming) params.set('upcoming', 'true');
-		await goto(`/discover?${params}`, { keepFocus: true });
+		await goto(`/discover?${params}`, { reset: false });
 		searching = false;
 	}
 

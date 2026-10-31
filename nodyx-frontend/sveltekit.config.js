@@ -5,13 +5,20 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 // svelte.config.js n'existe plus (config_file_unsupported). Fichier séparé pour garder
 // la CSP lisible et commentée.
 //
-// csrf.trustedOrigins: ['*'] a été retiré : « '*' » n'a jamais été un joker (kit 2 comme
-// kit 3 comparent l'origine littéralement, cf runtime/server/csrf.js), donc l'option ne
-// désactivait rien, contrairement à ce que disait son commentaire. Comportement inchangé.
+// Protection CSRF des formulaires ACTIVE (défaut de SvelteKit). Jusqu'à la 2.13, le frontend
+// portait csrf.trustedOrigins: ['*'], qui la COUPAIT entièrement (« '*' » désactive la
+// vérification, kit 2 comme kit 3) : un formulaire envoyé depuis n'importe quel site était
+// accepté, et le cookie SameSite=lax n'arrête pas un sous-domaine voisin (*.nodyx.org).
+// Posé « pour le dev multi-hôte », il n'y servait à rien : kit ne vérifie jamais en dev.
+//
+// L'origine de référence est reconstruite par adapter-node 6 (ORIGIN n'est plus lu) :
+// https:// + en-tête Host. Juste pour toutes les installs officielles (https, Host transmis).
+// Install manuelle servie en http : poser PROTOCOL_HEADER=x-forwarded-proto, sinon chaque
+// formulaire (connexion comprise) répond 403.
 //
 // alias : garde $lib (remplacé par #lib dans kit 3) sans réécrire les centaines d'imports.
 
-/** @type {import('@sveltejs/kit').Config} */
+/** @type {import('@sveltejs/kit/vite').Config} */
 const config = {
     preprocess: vitePreprocess(),
     alias: { $lib: 'src/lib' },

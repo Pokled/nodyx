@@ -3,7 +3,7 @@
     import E2EKeyBackup from '$lib/components/E2EKeyBackup.svelte';
     import { page } from '$app/state';
 
-    import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$env/static/public';
+    import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$app/env/public';
     import { tick } from 'svelte';
     import { t, locale } from '$lib/i18n';
     import { get } from 'svelte/store';
