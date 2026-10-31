@@ -118,19 +118,19 @@
 	     502px, les 288px de la liste ne laissaient que 214px au panneau de
 	     droite, dont le contenu est prévu en `max-w-sm` (384px). Il était donc
 	     rogné, et la page n'avait aucun point de rupture responsive. -->
-	<div class="w-full md:w-72 shrink-0 flex flex-col md:border-r border-white/[0.06] bg-gray-950/60">
+	<div class="w-full md:w-72 shrink-0 flex flex-col md:border-r border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/60">
 
 		<!-- Header -->
 		<div class="px-4 pt-5 pb-3">
 			<div class="flex items-center gap-2.5 mb-4">
 				<div class="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center shrink-0">
-					<svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<svg class="w-4 h-4 text-[var(--nx-header-accent)]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-4 4v-4z"/>
 					</svg>
 				</div>
 				<div class="flex-1 min-w-0">
-					<h1 class="text-sm font-bold text-white">{tFn('dm.title')}</h1>
-					<p class="text-[11px] text-gray-600">
+					<h1 class="text-sm font-bold text-[var(--nx-text)]">{tFn('dm.title')}</h1>
+					<p class="text-[11px] text-[var(--nx-text-muted)]">
 						{conversations.length !== 1
 							? tFn('dm.n_conversations_plural', { n: String(conversations.length) })
 							: tFn('dm.n_conversations', { n: String(conversations.length) })}
@@ -140,8 +140,8 @@
 
 			<!-- Barre de recherche -->
 			<div class="relative">
-				<div class="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2 focus-within:border-indigo-500/40 focus-within:bg-indigo-500/5 transition-all">
-					<svg class="w-3.5 h-3.5 text-gray-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<div class="flex items-center gap-2 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] rounded-xl px-3 py-2 focus-within:border-indigo-500/40 focus-within:bg-indigo-500/5 transition-all">
+					<svg class="w-3.5 h-3.5 text-[var(--nx-text-muted)] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
 					</svg>
 					<input
@@ -149,7 +149,7 @@
 						bind:value={searchQuery}
 						oninput={onSearchInput}
 						placeholder={tFn('dm.search_placeholder')}
-						class="flex-1 bg-transparent text-xs text-white placeholder-gray-600 outline-none"
+						class="flex-1 bg-transparent text-xs text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] outline-none"
 					/>
 					{#if searching}
 						<div class="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
@@ -158,35 +158,35 @@
 
 				<!-- Résultats de recherche -->
 				{#if searchResults.length > 0}
-					<div class="absolute top-full mt-1.5 left-0 right-0 bg-gray-900 border border-white/[0.08] rounded-xl shadow-2xl z-20 overflow-hidden">
+					<div class="absolute top-full mt-1.5 left-0 right-0 bg-[var(--nx-surface)] border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-20 overflow-hidden">
 						{#each searchResults as u}
 							<button
 								onclick={() => openDM(u.id)}
-								class="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.05] transition-colors text-left"
+								class="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-[color-mix(in_srgb,var(--nx-text)_5%,transparent)] transition-colors text-left"
 							>
 								{#if u.avatar}
 									<img src={u.avatar} alt={u.username} class="w-7 h-7 rounded-full object-cover shrink-0"/>
 								{:else}
-									<div class="w-7 h-7 rounded-full bg-indigo-600/25 flex items-center justify-center shrink-0 text-xs font-bold text-indigo-300">
+									<div class="w-7 h-7 rounded-full bg-indigo-600/25 flex items-center justify-center shrink-0 text-xs font-bold text-[var(--nx-header-accent)]">
 										{u.username[0].toUpperCase()}
 									</div>
 								{/if}
-								<span class="text-sm text-white font-medium flex-1 truncate">{u.username}</span>
-								<svg class="w-3 h-3 text-indigo-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+								<span class="text-sm text-[var(--nx-text)] font-medium flex-1 truncate">{u.username}</span>
+								<svg class="w-3 h-3 text-[var(--nx-header-accent)] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
 								</svg>
 							</button>
 						{/each}
 					</div>
 				{:else if searchQuery.trim().length === 1}
-					<div class="absolute top-full mt-1.5 left-0 right-0 bg-gray-900/95 border border-white/[0.08] rounded-xl shadow-2xl z-20 px-3 py-2.5 flex items-center gap-2 text-[11px] text-gray-500">
-						<svg class="w-3 h-3 shrink-0 text-indigo-400/60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<div class="absolute top-full mt-1.5 left-0 right-0 bg-[var(--nx-surface)]/95 border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-20 px-3 py-2.5 flex items-center gap-2 text-[11px] text-[var(--nx-text-muted)]">
+						<svg class="w-3 h-3 shrink-0 text-[var(--nx-header-accent)]/60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
 						</svg>
 						{tFn('dm.keep_typing')}
 					</div>
 				{:else if searchQuery.trim().length >= 2 && !searching}
-					<div class="absolute top-full mt-1.5 left-0 right-0 bg-gray-900/95 border border-white/[0.08] rounded-xl shadow-2xl z-20 px-3 py-2.5 text-[11px] text-gray-500">
+					<div class="absolute top-full mt-1.5 left-0 right-0 bg-[var(--nx-surface)]/95 border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-20 px-3 py-2.5 text-[11px] text-[var(--nx-text-muted)]">
 						{@html tFn('dm.no_match', { query: searchQuery.trim() })}
 					</div>
 				{/if}
@@ -194,16 +194,16 @@
 		</div>
 
 		<!-- Liste des conversations -->
-		<div class="flex-1 overflow-y-auto px-2 pb-4" style="scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.04) transparent">
+		<div class="flex-1 overflow-y-auto px-2 pb-4" style="scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--nx-text) 4%, transparent) transparent">
 			{#if conversations.length === 0}
 				<div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-					<div class="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-3">
-						<svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+					<div class="w-12 h-12 rounded-2xl bg-[color-mix(in_srgb,var(--nx-text)_3%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] flex items-center justify-center mb-3">
+						<svg class="w-5 h-5 text-[var(--nx-text-muted)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-4 4v-4z"/>
 						</svg>
 					</div>
-					<p class="text-xs text-gray-600 font-medium">{tFn('dm.no_conversations')}</p>
-					<p class="text-[11px] text-gray-700 mt-1">{tFn('dm.no_conversations_hint')}</p>
+					<p class="text-xs text-[var(--nx-text-muted)] font-medium">{tFn('dm.no_conversations')}</p>
+					<p class="text-[11px] text-[var(--nx-text-muted)] mt-1">{tFn('dm.no_conversations_hint')}</p>
 				</div>
 			{:else}
 				<div class="space-y-0.5">
@@ -220,10 +220,10 @@
 										{#each conv.participants.slice(0, 2) as p, i}
 											{#if p.avatar}
 												<img src={p.avatar} alt={p.username}
-													class="w-6 h-6 rounded-full object-cover absolute border-2 border-gray-950"
+													class="w-6 h-6 rounded-full object-cover absolute border-2 border-[var(--nx-border)]"
 													style={i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}/>
 											{:else}
-												<div class="w-6 h-6 rounded-full bg-indigo-600/30 border-2 border-gray-950 flex items-center justify-center text-[10px] font-bold absolute"
+												<div class="w-6 h-6 rounded-full bg-indigo-600/30 border-2 border-[var(--nx-border)] flex items-center justify-center text-[10px] font-bold absolute"
 													style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? 'var(--nx-accent-soft)'}`}>
 													{p.username[0].toUpperCase()}
 												</div>
@@ -248,15 +248,15 @@
 							<!-- Texte -->
 							<div class="flex-1 min-w-0">
 								<div class="flex items-baseline justify-between gap-1">
-									<span class="text-sm font-semibold truncate {conv.unread_count > 0 ? 'text-white' : 'text-gray-300'}"
+									<span class="text-sm font-semibold truncate {conv.unread_count > 0 ? 'text-[var(--nx-text)]' : 'text-[var(--nx-text)]'}"
 										style={!conv.is_group && conv.other_name_color ? `color: ${conv.other_name_color}` : ''}>
 										{convLabel(conv)}
 									</span>
 									{#if conv.last_message_at}
-										<span class="text-[10px] text-gray-700 shrink-0">{formatTime(conv.last_message_at)}</span>
+										<span class="text-[10px] text-[var(--nx-text-muted)] shrink-0">{formatTime(conv.last_message_at)}</span>
 									{/if}
 								</div>
-								<p class="text-[11px] truncate mt-0.5 {conv.unread_count > 0 ? 'text-gray-400 font-medium' : 'text-gray-600'}">
+								<p class="text-[11px] truncate mt-0.5 {conv.unread_count > 0 ? 'text-[var(--nx-text-muted)] font-medium' : 'text-[var(--nx-text-muted)]'}">
 									{#if conv.last_message_content}
 										{#if conv.last_message_encrypted}
 											<span class="opacity-60">{tFn('dm.encrypted')}</span>
@@ -281,7 +281,7 @@
 	     entrées de la liste sont déjà de vrais liens vers `/dm/[id]`. Inviter à
 	     « choisir une conversation » à côté de la liste qu'on est en train de
 	     lire n'apportait rien, et coûtait la moitié de l'écran. -->
-	<div class="hidden md:flex flex-1 flex-col items-center justify-center bg-gray-950/20">
+	<div class="hidden md:flex flex-1 flex-col items-center justify-center bg-[var(--nx-surface)]/20">
 		<div class="flex flex-col items-center gap-4 text-center px-8 max-w-sm">
 			<!-- Illustration -->
 			<div class="relative">
@@ -297,15 +297,15 @@
 			</div>
 
 			<div>
-				<h2 class="text-base font-bold text-white mb-1">{tFn('dm.select_conversation')}</h2>
-				<p class="text-sm text-gray-600 leading-relaxed">{tFn('dm.select_conversation_hint')}</p>
+				<h2 class="text-base font-bold text-[var(--nx-text)] mb-1">{tFn('dm.select_conversation')}</h2>
+				<p class="text-sm text-[var(--nx-text-muted)] leading-relaxed">{tFn('dm.select_conversation_hint')}</p>
 			</div>
 
 			<!-- Recherche centrale : VRAI input qui partage le state avec la
 			     sidebar — taper ici fait apparaître les résultats sous l'input -->
 			<div class="relative w-full max-w-md">
-				<div class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] focus-within:border-indigo-500/40 focus-within:bg-indigo-500/5 transition-all">
-					<svg class="w-4 h-4 shrink-0 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+				<div class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] focus-within:border-indigo-500/40 focus-within:bg-indigo-500/5 transition-all">
+					<svg class="w-4 h-4 shrink-0 text-[var(--nx-text-muted)]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
 					</svg>
 					<input
@@ -313,7 +313,7 @@
 						bind:value={searchQuery}
 						oninput={onSearchInput}
 						placeholder={tFn('dm.search_new_hint')}
-						class="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none"
+						class="flex-1 bg-transparent text-sm text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] outline-none"
 					/>
 					{#if searching}
 						<div class="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
@@ -322,35 +322,35 @@
 
 				<!-- Résultats sous l'input central + feedback intermédiaire -->
 				{#if searchResults.length > 0}
-					<div class="absolute top-full mt-2 left-0 right-0 bg-gray-900 border border-white/[0.08] rounded-xl shadow-2xl z-20 overflow-hidden">
+					<div class="absolute top-full mt-2 left-0 right-0 bg-[var(--nx-surface)] border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-20 overflow-hidden">
 						{#each searchResults as u}
 							<button
 								onclick={() => openDM(u.id)}
-								class="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/[0.05] transition-colors text-left"
+								class="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-[color-mix(in_srgb,var(--nx-text)_5%,transparent)] transition-colors text-left"
 							>
 								{#if u.avatar}
 									<img src={u.avatar} alt={u.username} class="w-7 h-7 rounded-full object-cover shrink-0"/>
 								{:else}
-									<div class="w-7 h-7 rounded-full bg-indigo-600/25 flex items-center justify-center shrink-0 text-xs font-bold text-indigo-300">
+									<div class="w-7 h-7 rounded-full bg-indigo-600/25 flex items-center justify-center shrink-0 text-xs font-bold text-[var(--nx-header-accent)]">
 										{u.username[0].toUpperCase()}
 									</div>
 								{/if}
-								<span class="text-sm text-white font-medium flex-1 truncate">{u.username}</span>
-								<svg class="w-3 h-3 text-indigo-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+								<span class="text-sm text-[var(--nx-text)] font-medium flex-1 truncate">{u.username}</span>
+								<svg class="w-3 h-3 text-[var(--nx-header-accent)] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
 								</svg>
 							</button>
 						{/each}
 					</div>
 				{:else if searchQuery.trim().length === 1}
-					<div class="absolute top-full mt-2 left-0 right-0 bg-gray-900/95 border border-white/[0.08] rounded-xl shadow-2xl z-20 px-3 py-3 flex items-center gap-2 text-xs text-gray-500">
-						<svg class="w-3.5 h-3.5 shrink-0 text-indigo-400/60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<div class="absolute top-full mt-2 left-0 right-0 bg-[var(--nx-surface)]/95 border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-20 px-3 py-3 flex items-center gap-2 text-xs text-[var(--nx-text-muted)]">
+						<svg class="w-3.5 h-3.5 shrink-0 text-[var(--nx-header-accent)]/60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
 						</svg>
 						{tFn('dm.keep_typing')}
 					</div>
 				{:else if searchQuery.trim().length >= 2 && !searching}
-					<div class="absolute top-full mt-2 left-0 right-0 bg-gray-900/95 border border-white/[0.08] rounded-xl shadow-2xl z-20 px-3 py-3 text-xs text-gray-500">
+					<div class="absolute top-full mt-2 left-0 right-0 bg-[var(--nx-surface)]/95 border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-20 px-3 py-3 text-xs text-[var(--nx-text-muted)]">
 						{@html tFn('dm.no_match', { query: searchQuery.trim() })}
 					</div>
 				{/if}
@@ -364,6 +364,6 @@
 	background: transparent;
 }
 .dm-row:hover {
-	background: rgba(255,255,255,0.04);
+	background: color-mix(in srgb, var(--nx-text) 4%, transparent);
 }
 </style>

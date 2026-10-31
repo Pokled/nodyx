@@ -1067,7 +1067,7 @@
 
 	// Couleurs du shield E2E
 	const shieldColor = $derived(
-		e2eStatus === 'active'   ? { dot: '#4ade80', glow: 'rgba(74,222,128,0.25)', label: 'E2E' } :
+		e2eStatus === 'active'   ? { dot: 'var(--nx-ok)', glow: 'color-mix(in srgb, var(--nx-ok) 25%, transparent)', label: 'E2E' } :
 		e2eStatus === 'partial'  ? { dot: '#fb923c', glow: 'rgba(251,146,60,0.25)',  label: '~E2E' } :
 		e2eStatus === 'inactive' ? { dot: '#6b7280', glow: 'transparent',            label: '' } :
 		                           { dot: '#374151', glow: 'transparent',            label: '' }
@@ -1082,7 +1082,7 @@
 <!-- height ajusté dynamiquement via $effect : viewport - top du DM root, pour
      que le header global Nodyx reste visible et que la zone de saisie ne
      déborde pas par le bas. -->
-<div bind:this={dmRootEl} class="flex bg-gray-950/20 min-h-0 relative"
+<div bind:this={dmRootEl} class="flex min-h-0 relative"
      ondragenter={onDragEnter}
      ondragover={onDragOver}
      ondragleave={onDragLeave}
@@ -1143,19 +1143,19 @@
 	{/if}
 
 	<!-- ── Sidebar conversations ──────────────────────────────────────────── -->
-	<aside class="hidden sm:flex flex-col w-72 shrink-0 border-r border-white/[0.06] bg-gray-950/60">
+	<aside class="hidden sm:flex flex-col w-72 shrink-0 border-r border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/60">
 
 		<!-- Header sidebar -->
 		<div class="px-4 pt-4 pb-3">
 			<div class="flex items-center justify-between mb-3">
 				<a href="/dm" class="flex items-center gap-2 group">
-					<svg class="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<svg class="w-4 h-4 text-[var(--nx-text-muted)] group-hover:text-[var(--nx-text-muted)] transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 					</svg>
-					<span class="text-xs font-semibold text-gray-500 group-hover:text-gray-300 uppercase tracking-wider transition-colors">{tFn('dm.sidebar_title')}</span>
+					<span class="text-xs font-semibold text-[var(--nx-text-muted)] group-hover:text-[var(--nx-text)] uppercase tracking-wider transition-colors">{tFn('dm.sidebar_title')}</span>
 				</a>
 				<a href="/dm" class="w-6 h-6 rounded-lg bg-indigo-600/15 hover:bg-indigo-600/30 border border-indigo-500/20 flex items-center justify-center transition-colors" title={tFn('dm.new_conversation_tooltip')}>
-					<svg class="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+					<svg class="w-3 h-3 text-[var(--nx-header-accent)]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
 					</svg>
 				</a>
@@ -1163,13 +1163,13 @@
 		</div>
 
 		<!-- Liste -->
-		<div class="flex-1 overflow-y-auto px-2 pb-3" style="scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.04) transparent">
+		<div class="flex-1 overflow-y-auto px-2 pb-3" style="scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--nx-text) 4%, transparent) transparent">
 			{#each conversations as conv}
 				<a href="/dm/{conv.id}"
 					class="flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl mb-0.5 transition-all
 						{conv.id === conversationId
 							? 'bg-indigo-600/15 border border-indigo-500/20'
-							: 'hover:bg-white/[0.04] border border-transparent'}">
+							: 'hover:bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-transparent'}">
 					<!-- Avatar(s) -->
 					<div class="relative shrink-0">
 						{#if conv.is_group}
@@ -1177,10 +1177,10 @@
 								{#each conv.participants.slice(0, 2) as p, i}
 									{#if p.avatar}
 										<img src={p.avatar} alt={p.username}
-											class="w-5 h-5 rounded-full object-cover absolute border border-gray-950"
+											class="w-5 h-5 rounded-full object-cover absolute border border-[var(--nx-border)]"
 											style={i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}/>
 									{:else}
-										<div class="w-5 h-5 rounded-full bg-indigo-600/30 border border-gray-950 flex items-center justify-center text-[9px] font-bold absolute"
+										<div class="w-5 h-5 rounded-full bg-indigo-600/30 border border-[var(--nx-border)] flex items-center justify-center text-[9px] font-bold absolute"
 											style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? 'var(--nx-accent-soft)'}`}>
 											{p.username[0].toUpperCase()}
 										</div>
@@ -1197,7 +1197,7 @@
 						{/if}
 					</div>
 					<span class="text-sm font-medium truncate
-						{conv.id === conversationId ? 'text-white' : 'text-gray-400'}"
+						{conv.id === conversationId ? 'text-[var(--nx-text)]' : 'text-[var(--nx-text-muted)]'}"
 						style={conv.id === conversationId && !conv.is_group && conv.other_name_color ? `color: ${conv.other_name_color}` : ''}>
 						{convLabel(conv)}
 					</span>
@@ -1215,9 +1215,9 @@
 	<div class="flex-1 flex flex-col min-w-0 min-h-0">
 
 		<!-- Header conversation -->
-		<header class="shrink-0 flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.06] bg-gray-950/40 backdrop-blur-sm">
+		<header class="shrink-0 flex items-center gap-3 px-5 py-3.5 border-b border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/40 backdrop-blur-sm">
 			<!-- Retour mobile -->
-			<a href="/dm" aria-label={tFn('dm.back')} class="sm:hidden p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
+			<a href="/dm" aria-label={tFn('dm.back')} class="sm:hidden p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] transition-colors">
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 				</svg>
@@ -1230,10 +1230,10 @@
 						{#each conversation.participants.slice(0, 2) as p, i}
 							{#if p.avatar}
 								<img src={p.avatar} alt={p.username}
-									class="w-6 h-6 rounded-full object-cover absolute border-2 border-gray-950"
+									class="w-6 h-6 rounded-full object-cover absolute border-2 border-[var(--nx-border)]"
 									style={i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}/>
 							{:else}
-								<div class="w-6 h-6 rounded-full bg-indigo-600/30 border-2 border-gray-950 flex items-center justify-center text-[10px] font-bold absolute"
+								<div class="w-6 h-6 rounded-full bg-indigo-600/30 border-2 border-[var(--nx-border)] flex items-center justify-center text-[10px] font-bold absolute"
 									style={`${i === 0 ? 'top:0;left:0' : 'bottom:0;right:0'}; color: ${p.name_color ?? 'var(--nx-accent-soft)'}`}>
 									{p.username[0].toUpperCase()}
 								</div>
@@ -1243,8 +1243,8 @@
 
 					<!-- Nom groupe + membres -->
 					<div class="flex-1 min-w-0">
-						<span class="text-sm font-semibold text-white block truncate">{convLabel(conversation)}</span>
-						<span class="text-[11px] text-gray-600">{conversation.participants.length + 1} {tFn('dm.members')}</span>
+						<span class="text-sm font-semibold text-[var(--nx-text)] block truncate">{convLabel(conversation)}</span>
+						<span class="text-[11px] text-[var(--nx-text-muted)]">{conversation.participants.length + 1} {tFn('dm.members')}</span>
 					</div>
 
 					<!-- Bouton inviter -->
@@ -1252,7 +1252,7 @@
 						<button
 							onclick={() => showInvite = !showInvite}
 							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors
-								{showInvite ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40' : 'bg-white/[0.05] hover:bg-white/[0.09] text-gray-400 hover:text-white border border-white/[0.08]'}"
+								{showInvite ? 'bg-indigo-600/30 text-[var(--nx-header-accent)] border border-indigo-500/40' : 'bg-[color-mix(in_srgb,var(--nx-text)_5%,transparent)] hover:bg-[color-mix(in_srgb,var(--nx-text)_9%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)]'}"
 							title={tFn('dm.invite_member')}
 						>
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -1263,10 +1263,10 @@
 
 						<!-- Dropdown invite -->
 						{#if showInvite}
-							<div class="absolute top-full right-0 mt-1.5 w-64 bg-gray-900 border border-white/[0.08] rounded-xl shadow-2xl z-30 p-3">
-								<p class="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mb-2">{tFn('dm.invite_member')}</p>
-								<div class="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 focus-within:border-indigo-500/40 transition-all mb-2">
-									<svg class="w-3 h-3 text-gray-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<div class="absolute top-full right-0 mt-1.5 w-64 bg-[var(--nx-surface)] border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-30 p-3">
+								<p class="text-[11px] text-[var(--nx-text-muted)] font-semibold uppercase tracking-wider mb-2">{tFn('dm.invite_member')}</p>
+								<div class="flex items-center gap-2 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] rounded-lg px-2.5 py-1.5 focus-within:border-indigo-500/40 transition-all mb-2">
+									<svg class="w-3 h-3 text-[var(--nx-text-muted)] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 										<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
 									</svg>
 									<input
@@ -1274,7 +1274,7 @@
 										bind:value={inviteQuery}
 										oninput={onInviteInput}
 										placeholder={tFn('dm.search_placeholder')}
-										class="flex-1 bg-transparent text-xs text-white placeholder-gray-600 outline-none"
+										class="flex-1 bg-transparent text-xs text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] outline-none"
 									/>
 									{#if inviteSearching}
 										<div class="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
@@ -1286,16 +1286,16 @@
 											<button
 												onclick={() => inviteUser(u.id)}
 												disabled={inviting === u.id}
-												class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
+												class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] transition-colors text-left disabled:opacity-50"
 											>
 												{#if u.avatar}
 													<img src={u.avatar} alt={u.username} class="w-6 h-6 rounded-full object-cover shrink-0"/>
 												{:else}
-													<div class="w-6 h-6 rounded-full bg-indigo-600/25 flex items-center justify-center shrink-0 text-[10px] font-bold text-indigo-300">
+													<div class="w-6 h-6 rounded-full bg-indigo-600/25 flex items-center justify-center shrink-0 text-[10px] font-bold text-[var(--nx-header-accent)]">
 														{u.username[0].toUpperCase()}
 													</div>
 												{/if}
-												<span class="text-sm text-white flex-1 truncate">{u.username}</span>
+												<span class="text-sm text-[var(--nx-text)] flex-1 truncate">{u.username}</span>
 												{#if inviting === u.id}
 													<div class="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
 												{/if}
@@ -1303,7 +1303,7 @@
 										{/each}
 									</div>
 								{:else if inviteQuery.trim().length >= 2 && !inviteSearching}
-									<p class="text-xs text-gray-600 text-center py-2">{tFn('search.no_results')}</p>
+									<p class="text-xs text-[var(--nx-text-muted)] text-center py-2">{tFn('search.no_results')}</p>
 								{/if}
 							</div>
 						{/if}
@@ -1311,7 +1311,7 @@
 				{:else}
 					<!-- Avatar 1:1 -->
 					{#if conversation.other_avatar}
-						<img src={conversation.other_avatar} alt={conversation.other_username} class="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-white/[0.06]"/>
+						<img src={conversation.other_avatar} alt={conversation.other_username} class="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-[color-mix(in_srgb,var(--nx-text)_6%,transparent)]"/>
 					{:else}
 						<div class="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center shrink-0 text-sm font-bold"
 							style={conversation.other_name_color ? `color: ${conversation.other_name_color}` : 'color: var(--nx-accent-soft)'}>
@@ -1326,11 +1326,11 @@
 							style={conversation.other_name_color ? `color: ${conversation.other_name_color}` : 'color: white'}>
 							{conversation.other_username}
 						</a>
-						<span class="text-[11px] text-gray-600">{tFn('dm.private_message')}</span>
+						<span class="text-[11px] text-[var(--nx-text-muted)]">{tFn('dm.private_message')}</span>
 					</div>
 
 					<!-- Lien profil icône -->
-					<a href="/users/{conversation.other_username}" aria-label={tFn('dm.view_profile')} class="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-600 hover:text-gray-300 transition-colors shrink-0">
+					<a href="/users/{conversation.other_username}" aria-label={tFn('dm.view_profile')} class="p-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] transition-colors shrink-0">
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 							<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
 						</svg>
@@ -1361,7 +1361,7 @@
 
 					<!-- Réglages du chiffrement (sauvegarde / récupération de clé) -->
 					<a href="/settings?section=encryption"
-						class="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-gray-400 hover:text-gray-200 shrink-0"
+						class="p-1.5 rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--nx-text)_5%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] shrink-0"
 						title={tFn('dm.encryption_settings')}>
 						<svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
 							<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -1374,7 +1374,7 @@
 						<button
 							onclick={() => showInvite = !showInvite}
 							class="p-1.5 rounded-lg transition-colors
-								{showInvite ? 'bg-indigo-600/20 text-indigo-400' : 'hover:bg-white/[0.06] text-gray-600 hover:text-gray-300'}"
+								{showInvite ? 'bg-indigo-600/20 text-[var(--nx-header-accent)]' : 'hover:bg-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)]'}"
 							title={tFn('dm.invite_member')}
 						>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1384,10 +1384,10 @@
 
 						<!-- Dropdown invite -->
 						{#if showInvite}
-							<div class="absolute top-full right-0 mt-1.5 w-64 bg-gray-900 border border-white/[0.08] rounded-xl shadow-2xl z-30 p-3">
-								<p class="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mb-2">{tFn('dm.invite_member')}</p>
-								<div class="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 focus-within:border-indigo-500/40 transition-all mb-2">
-									<svg class="w-3 h-3 text-gray-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<div class="absolute top-full right-0 mt-1.5 w-64 bg-[var(--nx-surface)] border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-30 p-3">
+								<p class="text-[11px] text-[var(--nx-text-muted)] font-semibold uppercase tracking-wider mb-2">{tFn('dm.invite_member')}</p>
+								<div class="flex items-center gap-2 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] rounded-lg px-2.5 py-1.5 focus-within:border-indigo-500/40 transition-all mb-2">
+									<svg class="w-3 h-3 text-[var(--nx-text-muted)] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 										<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
 									</svg>
 									<input
@@ -1395,7 +1395,7 @@
 										bind:value={inviteQuery}
 										oninput={onInviteInput}
 										placeholder={tFn('dm.search_placeholder')}
-										class="flex-1 bg-transparent text-xs text-white placeholder-gray-600 outline-none"
+										class="flex-1 bg-transparent text-xs text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] outline-none"
 									/>
 									{#if inviteSearching}
 										<div class="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
@@ -1407,16 +1407,16 @@
 											<button
 												onclick={() => inviteUser(u.id)}
 												disabled={inviting === u.id}
-												class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
+												class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] transition-colors text-left disabled:opacity-50"
 											>
 												{#if u.avatar}
 													<img src={u.avatar} alt={u.username} class="w-6 h-6 rounded-full object-cover shrink-0"/>
 												{:else}
-													<div class="w-6 h-6 rounded-full bg-indigo-600/25 flex items-center justify-center shrink-0 text-[10px] font-bold text-indigo-300">
+													<div class="w-6 h-6 rounded-full bg-indigo-600/25 flex items-center justify-center shrink-0 text-[10px] font-bold text-[var(--nx-header-accent)]">
 														{u.username[0].toUpperCase()}
 													</div>
 												{/if}
-												<span class="text-sm text-white flex-1 truncate">{u.username}</span>
+												<span class="text-sm text-[var(--nx-text)] flex-1 truncate">{u.username}</span>
 												{#if inviting === u.id}
 													<div class="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
 												{/if}
@@ -1424,7 +1424,7 @@
 										{/each}
 									</div>
 								{:else if inviteQuery.trim().length >= 2 && !inviteSearching}
-									<p class="text-xs text-gray-600 text-center py-2">{tFn('search.no_results')}</p>
+									<p class="text-xs text-[var(--nx-text-muted)] text-center py-2">{tFn('search.no_results')}</p>
 								{/if}
 							</div>
 						{/if}
@@ -1495,7 +1495,7 @@
 			ontouchmove={onTouchMove}
 			data-dm-messages
 			class="flex-1 overflow-y-auto px-5 py-4 min-h-0"
-			style="scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.06) transparent"
+			style="scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--nx-text) 6%, transparent) transparent"
 		>
 		<!-- Wrapper interne : c'est lui qu'on observe pour le ResizeObserver,
 		     car il reflète la hauteur réelle du contenu (scrollHeight). -->
@@ -1509,9 +1509,9 @@
 			{#each groupedMessages as group}
 				<!-- Séparateur de date -->
 				<div class="flex items-center gap-3 py-4">
-					<div class="flex-1 h-px bg-white/[0.05]"></div>
-					<span class="text-[10px] text-gray-700 font-semibold uppercase tracking-wider shrink-0 px-2">{group.date}</span>
-					<div class="flex-1 h-px bg-white/[0.05]"></div>
+					<div class="flex-1 h-px bg-[color-mix(in_srgb,var(--nx-text)_5%,transparent)]"></div>
+					<span class="text-[10px] text-[var(--nx-text-muted)] font-semibold uppercase tracking-wider shrink-0 px-2">{group.date}</span>
+					<div class="flex-1 h-px bg-[color-mix(in_srgb,var(--nx-text)_5%,transparent)]"></div>
 				</div>
 
 				{#each group.msgs as msg, i}
@@ -1521,9 +1521,9 @@
 
 					{#if msg._systemMessage}
 						<div class="flex items-center gap-3 py-2">
-							<div class="flex-1 h-px bg-white/[0.04]"></div>
-							<span class="text-[10px] text-gray-600 italic px-2 shrink-0">{msg.content}</span>
-							<div class="flex-1 h-px bg-white/[0.04]"></div>
+							<div class="flex-1 h-px bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)]"></div>
+							<span class="text-[10px] text-[var(--nx-text-muted)] italic px-2 shrink-0">{msg.content}</span>
+							<div class="flex-1 h-px bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)]"></div>
 						</div>
 					{:else}
 
@@ -1550,7 +1550,7 @@
 								<div class="flex gap-0.5 mb-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
 									{#if isMine}
 										<button onclick={() => startEdit(msg)}
-											class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-indigo-400 transition-colors"
+											class="p-1 rounded-md hover:bg-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] transition-colors"
 											title={tFn('common.edit')}>
 											<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 												<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -1558,7 +1558,7 @@
 											</svg>
 										</button>
 										<button onclick={() => deleteMessage(msg.id)}
-											class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-red-400 transition-colors"
+											class="p-1 rounded-md hover:bg-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] transition-colors"
 											title={tFn('common.delete')}>
 											<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 												<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/>
@@ -1567,7 +1567,7 @@
 									{/if}
 									<!-- Bouton répondre (visible pour tous, sauf messages systèmes) -->
 									<button onclick={() => startReply(msg)}
-										class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-indigo-400 transition-colors"
+										class="p-1 rounded-md hover:bg-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-header-accent)] transition-colors"
 										title={tFn('dm.reply')}>
 										<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 											<polyline points="9 14 4 9 9 4"/>
@@ -1577,7 +1577,7 @@
 									<!-- Bouton réaction -->
 									<button
 										onclick={() => pickerOpenMsgId = pickerOpenMsgId === msg.id ? null : msg.id}
-										class="p-1 rounded-md hover:bg-white/[0.08] text-gray-600 hover:text-yellow-400 transition-colors"
+										class="p-1 rounded-md hover:bg-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] text-[var(--nx-text-muted)] hover:text-[var(--nx-warn)] transition-colors"
 										title={tFn('dm.react')}>
 										<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 											<circle cx="12" cy="12" r="10"/>
@@ -1593,11 +1593,11 @@
 							{#if pickerOpenMsgId === msg.id}
 								<div class="dm-picker flex items-center gap-0.5 px-1.5 py-1 rounded-xl mb-1
 								            {isMine ? 'self-end' : 'self-start'}"
-								     style="background: #1a1a2e; border: 1px solid rgba(255,255,255,.1)">
+								     style="background: var(--nx-surface); border: 1px solid color-mix(in srgb, var(--nx-text) 10%, transparent)">
 									{#each QUICK_EMOJIS as emoji}
 										<button
 											onclick={() => { toggleReaction(msg, emoji); pickerOpenMsgId = null; }}
-											class="dm-picker-emoji w-7 h-7 flex items-center justify-center rounded-lg text-base transition-all hover:scale-125 hover:bg-white/[0.08]"
+											class="dm-picker-emoji w-7 h-7 flex items-center justify-center rounded-lg text-base transition-all hover:scale-125 hover:bg-[color-mix(in_srgb,var(--nx-text)_8%,transparent)]"
 											title={emoji}>
 											{emoji}
 										</button>
@@ -1606,7 +1606,7 @@
 							{/if}
 
 							{#if msg.deleted_at}
-								<div class="px-3 py-2 rounded-2xl text-xs italic text-gray-700 bg-white/[0.03] border border-white/[0.05]">
+								<div class="px-3 py-2 rounded-2xl text-xs italic text-[var(--nx-text-muted)] bg-[color-mix(in_srgb,var(--nx-text)_3%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_5%,transparent)]">
 									{tFn('dm.deleted_message')}
 								</div>
 							{:else}
@@ -1615,7 +1615,7 @@
 									{isMine
 										? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/10 '
 											+ (first ? 'rounded-t-2xl rounded-bl-2xl rounded-br-md' : last ? 'rounded-b-2xl rounded-tl-2xl rounded-tr-md' : 'rounded-l-2xl rounded-r-md')
-										: 'bg-white/[0.07] border border-white/[0.06] text-gray-100 '
+										: 'bg-[color-mix(in_srgb,var(--nx-text)_7%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] text-[var(--nx-text)] [--msg-link:var(--nx-info)] [--msg-link-hover:var(--nx-text)] '
 											+ (first ? 'rounded-t-2xl rounded-br-2xl rounded-bl-md' : last ? 'rounded-b-2xl rounded-tr-2xl rounded-tl-md' : 'rounded-r-2xl rounded-l-md')}">
 									{#if editingMsgId === msg.id}
 									<!-- Mode édition inline -->
@@ -1623,12 +1623,12 @@
 										bind:value={editingContent}
 										onkeydown={onEditKeydown}
 										rows="1"
-										class="w-full bg-transparent outline-none resize-none text-sm text-white leading-relaxed"
+										class="w-full bg-transparent outline-none resize-none text-sm text-[var(--nx-text)] leading-relaxed"
 										style="field-sizing: content;"
 									></textarea>
 									<div class="flex gap-1.5 mt-1.5">
 										<button onclick={saveEdit} class="text-[10px] px-2 py-0.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">{tFn('dm.enter')}</button>
-										<button onclick={cancelEdit} class="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] hover:bg-white/[0.10] text-gray-400 transition-colors">{tFn('dm_conv.esc')}</button>
+										<button onclick={cancelEdit} class="text-[10px] px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] text-[var(--nx-text-muted)] transition-colors">{tFn('dm_conv.esc')}</button>
 									</div>
 								{:else}
 									<!-- Quote inline si ce message est une réponse à un autre -->
@@ -1693,7 +1693,7 @@
 							{/if}
 
 							{#if last}
-								<span class="text-[10px] text-gray-700 mt-1 px-1">
+								<span class="text-[10px] text-[var(--nx-text-muted)] mt-1 px-1">
 									{formatTime(msg.created_at)}
 									{#if msg.edited_at}<span class="italic"> · {tFn('common.edited')}</span>{/if}
 								</span>
@@ -1712,13 +1712,13 @@
 						{#if conversation.participants[0]?.avatar}
 							<img src={conversation.participants[0].avatar} alt="" class="w-5 h-5 rounded-full object-cover shrink-0 mb-0.5 opacity-70" />
 						{:else}
-							<div class="w-5 h-5 rounded-full shrink-0 mb-0.5 opacity-70 flex items-center justify-center text-[8px] font-bold text-white"
+							<div class="w-5 h-5 rounded-full shrink-0 mb-0.5 opacity-70 flex items-center justify-center text-[8px] font-bold text-[var(--nx-text)]"
 							     style="background: var(--nx-accent-strong)">{conversation.participants[0]?.username?.[0]?.toUpperCase() ?? '?'}</div>
 						{/if}
 					{:else if conversation?.other_avatar}
 						<img src={conversation.other_avatar} alt="" class="w-5 h-5 rounded-full object-cover shrink-0 mb-0.5 opacity-70" />
 					{:else}
-						<div class="w-5 h-5 rounded-full shrink-0 mb-0.5 opacity-70 flex items-center justify-center text-[8px] font-bold text-white"
+						<div class="w-5 h-5 rounded-full shrink-0 mb-0.5 opacity-70 flex items-center justify-center text-[8px] font-bold text-[var(--nx-text)]"
 						     style="background: var(--nx-accent-strong)">{conversation?.other_username?.[0]?.toUpperCase() ?? '?'}</div>
 					{/if}
 					<!-- Bulle dots -->
@@ -1727,7 +1727,7 @@
 						<span class="dm-dot" style="animation-delay: 150ms"></span>
 						<span class="dm-dot" style="animation-delay: 300ms"></span>
 					</div>
-					<span class="text-[10px] text-gray-700 mb-1 italic">{typingLabel}</span>
+					<span class="text-[10px] text-[var(--nx-text-muted)] mb-1 italic">{typingLabel}</span>
 				</div>
 			{/if}
 		</div>
@@ -1739,7 +1739,7 @@
 		     variable vaut 56px plus la zone sûre du téléphone, et 0 à partir de
 		     `lg` où la barre n'existe plus. Le chat le faisait déjà, cette page
 		     ne l'a jamais fait : on y écrivait sous le menu. -->
-		<div class="shrink-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/30"
+		<div class="shrink-0 px-5 py-4 border-t border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/30"
 		     style="padding-bottom: calc(var(--bottom-nav-h) + 1rem)">
 			<!-- Banner reply : indique le message qu'on est en train de citer -->
 			{#if replyingTo}
@@ -1758,14 +1758,14 @@
 			{/if}
 			<!-- Animation barbare d'envoi -->
 			{#if sendingVisual}
-				<div class="mb-2 px-3 py-1.5 rounded-xl bg-indigo-900/20 border border-indigo-500/15 text-xs font-mono text-indigo-300/60 truncate tracking-widest animate-pulse">
+				<div class="mb-2 px-3 py-1.5 rounded-xl bg-[rgb(var(--nx-accent-rgb)/0.08)] border border-indigo-500/15 text-xs font-mono text-[var(--nx-header-accent)]/60 truncate tracking-widest animate-pulse">
 					{sendingVisual}
 				</div>
 			{/if}
 			<!-- Échec d'envoi/édition (ex: chiffrement E2E indisponible) : visible,
 			     jamais silencieux — cf issue #752. -->
 			{#if sendError}
-				<div class="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-900/20 border border-red-500/25 text-xs text-red-300">
+				<div class="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[color-mix(in_srgb,var(--nx-bad)_10%,transparent)] border border-red-500/25 text-xs text-[var(--nx-bad)]">
 					<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
 					</svg>
@@ -1777,7 +1777,7 @@
 					</button>
 				</div>
 			{/if}
-			<div class="flex items-end gap-3 bg-white/[0.04] border border-white/[0.07] rounded-2xl px-4 py-3
+			<div class="flex items-end gap-3 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_7%,transparent)] rounded-2xl px-4 py-3
 						focus-within:border-indigo-500/35 focus-within:bg-indigo-500/[0.04] transition-all duration-200">
 				<!-- Mémo audio (signature Nodyx) -->
 				<div class="shrink-0">
@@ -1795,7 +1795,7 @@
 						type="button"
 						onclick={(e) => { e.stopPropagation(); composerEmojiOpen = !composerEmojiOpen }}
 						class="dm-composer-emoji-btn w-8 h-8 rounded-xl flex items-center justify-center
-						       text-gray-500 hover:text-gray-200 hover:bg-white/[0.06]
+						       text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:bg-[color-mix(in_srgb,var(--nx-text)_6%,transparent)]
 						       transition-all duration-150"
 						title={tFn('common.add_emoji')}
 						aria-label={tFn('dm.insert_emoji')}
@@ -1820,7 +1820,7 @@
 					oninput={emitTyping}
 					placeholder={conversation ? tFn('dm.message_placeholder_user', { user: convLabel(conversation) }) : tFn('dm.message_placeholder')}
 					rows="1"
-					class="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none resize-none max-h-36 leading-relaxed"
+					class="flex-1 bg-transparent text-sm text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] outline-none resize-none max-h-36 leading-relaxed"
 					style="field-sizing: content;"
 				></textarea>
 				<button
@@ -1831,13 +1831,13 @@
 						transition-all duration-150 shadow-lg shadow-indigo-500/20"
 					title={tFn('common.send')}
 				>
-					<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+					<svg class="w-3.5 h-3.5 text-[var(--nx-text)]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
 						<line x1="22" y1="2" x2="11" y2="13"/>
 						<polygon points="22 2 15 22 11 13 2 9 22 2"/>
 					</svg>
 				</button>
 			</div>
-			<p class="text-[10px] text-gray-800 mt-1.5 text-right">{tFn('dm.send_instructions')}</p>
+			<p class="text-[10px] text-[var(--nx-text-muted)] mt-1.5 text-right">{tFn('dm.send_instructions')}</p>
 		</div>
 
 	</div>
@@ -1859,8 +1859,8 @@
 .kb-modal {
 	width: 100%;
 	max-width: 460px;
-	background: #0f172a;
-	border: 1px solid rgba(148, 163, 184, .18);
+	background: var(--nx-surface-raised);
+	border: 1px solid var(--nx-border);
 	border-radius: 16px;
 	padding: 22px;
 	box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
@@ -1879,9 +1879,9 @@
 }
 .e2e-banner-icon { font-size: 20px; line-height: 1.2; flex-shrink: 0; }
 .e2e-banner-body { flex: 1; min-width: 0; }
-.e2e-banner-title { font-size: 13.5px; font-weight: 700; color: #e0e7ff; }
-.e2e-banner-text { font-size: 12.5px; color: #c7d2fe; line-height: 1.5; margin-top: 2px; }
-.e2e-banner-text strong { color: #fff; }
+.e2e-banner-title { font-size: 13.5px; font-weight: 700; color: var(--nx-text); }
+.e2e-banner-text { font-size: 12.5px; color: var(--nx-text-muted); line-height: 1.5; margin-top: 2px; }
+.e2e-banner-text strong { color: var(--nx-text); }
 .e2e-banner-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-self: center; }
 .e2e-banner-cta {
 	white-space: nowrap; text-align: center; padding: 7px 14px; border-radius: 9px;
@@ -1891,22 +1891,22 @@
 .e2e-banner-cta:hover { filter: brightness(1.08); }
 .e2e-banner-dismiss {
 	white-space: nowrap; padding: 5px 14px; border-radius: 9px; cursor: pointer;
-	font-size: 12px; font-weight: 600; color: #c7d2fe;
-	background: transparent; border: 1px solid rgba(148,163,184,.25);
+	font-size: 12px; font-weight: 600; color: var(--nx-text-muted);
+	background: transparent; border: 1px solid var(--nx-border);
 }
 
 /* ── Modal garde-fou avant envoi ──────────────────────────────────────────── */
 .sg-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
 .sg-icon { font-size: 24px; line-height: 1.1; flex-shrink: 0; }
-.sg-title { font-size: 16px; font-weight: 700; color: #fff; }
-.sg-text { font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-top: 4px; }
-.sg-text strong { color: #fca5a5; }
+.sg-title { font-size: 16px; font-weight: 700; color: var(--nx-text); }
+.sg-text { font-size: 13px; color: var(--nx-text-muted); line-height: 1.5; margin-top: 4px; }
+.sg-text strong { color: var(--nx-bad); }
 .sg-skip {
 	margin-top: 16px; width: 100%; padding: 9px; border-radius: 10px; cursor: pointer;
-	font-size: 13px; font-weight: 500; color: #94a3b8;
-	background: transparent; border: 1px solid rgba(148,163,184,.2);
+	font-size: 13px; font-weight: 500; color: var(--nx-text-muted);
+	background: transparent; border: 1px solid var(--nx-border);
 }
-.sg-skip:hover { color: #cbd5e1; }
+.sg-skip:hover { color: var(--nx-text); }
 
 /* ── Drag & drop image overlay ────────────────────────────────────────────── */
 .dm-drop-overlay {
@@ -1932,7 +1932,7 @@
 	align-items: center;
 	gap: 12px;
 	padding: 32px 48px;
-	background: rgba(15, 15, 22, 0.85);
+	background: color-mix(in srgb, var(--nx-surface) 85%, transparent);
 	border: 2px dashed rgb(var(--nx-accent-2-rgb) / 0.6);
 	border-radius: 14px;
 	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
@@ -1945,12 +1945,12 @@
 .dm-drop-title {
 	font-size: 18px;
 	font-weight: 700;
-	color: #f1f5f9;
+	color: var(--nx-text);
 	font-family: 'Space Grotesk', sans-serif;
 }
 .dm-drop-hint {
 	font-size: 12px;
-	color: rgba(226, 232, 240, 0.5);
+	color: var(--nx-text-muted);
 }
 
 /* ── Reply / quote inline ─────────────────────────────────────────────────── */
@@ -1976,12 +1976,12 @@
 .dm-quote-author {
 	font-size: 11px;
 	font-weight: 700;
-	color: #a5b4fc;
+	color: var(--nx-header-accent);
 	margin-bottom: 1px;
 }
 .dm-quote-preview {
 	font-size: 12px;
-	color: rgba(226, 232, 240, 0.6);
+	color: var(--nx-text-muted);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	display: -webkit-box;
@@ -2019,13 +2019,13 @@
 }
 .dm-reply-banner-label {
 	font-size: 11px;
-	color: #a5b4fc;
+	color: var(--nx-header-accent);
 	margin-bottom: 2px;
 }
-.dm-reply-banner-label strong { color: #c7d2fe; font-weight: 700; }
+.dm-reply-banner-label strong { color: var(--nx-header-accent); font-weight: 700; }
 .dm-reply-banner-preview {
 	font-size: 12px;
-	color: rgba(226, 232, 240, 0.55);
+	color: var(--nx-text-muted);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -2036,11 +2036,11 @@
 	border-radius: 6px;
 	background: transparent;
 	border: none;
-	color: rgba(165, 180, 252, 0.6);
+	color: var(--nx-header-accent);
 	cursor: pointer;
 	transition: background .15s, color .15s;
 }
-.dm-reply-banner-close:hover { background: rgb(var(--nx-accent-rgb) / 0.12); color: #c7d2fe; }
+.dm-reply-banner-close:hover { background: rgb(var(--nx-accent-rgb) / 0.12); color: var(--nx-header-accent-strong); }
 
 /* ── Hero d'ouverture ─────────────────────────────────────────────────────── */
 .dm-hero-overlay {
@@ -2087,7 +2087,7 @@
 	border-radius: 50%;
 	object-fit: cover;
 	box-shadow:
-		0 0 0 3px rgba(255, 255, 255, 0.06),
+		0 0 0 3px color-mix(in srgb, var(--nx-text) 6%, transparent),
 		0 0 32px rgb(var(--nx-accent-2-rgb) / 0.25),
 		0 8px 24px rgba(0, 0, 0, 0.4);
 }
@@ -2122,10 +2122,10 @@
 	bottom: calc(100% + 8px);
 	left: 0;
 	z-index: 50;
-	background: rgba(15, 15, 22, 0.98);
+	background: color-mix(in srgb, var(--nx-surface) 98%, transparent);
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent);
 	border-radius: 12px;
 	box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
 	animation: dm-emoji-pop 0.18s cubic-bezier(.2, .8, .25, 1) both;
@@ -2138,22 +2138,22 @@
 
 /* ── Reaction pills ───────────────────────────────────────────────────────── */
 .dm-reaction-pill {
-	border: 1px solid rgba(255,255,255,.08);
-	background: rgba(255,255,255,.04);
-	color: #9ca3af;
+	border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent);
+	background: color-mix(in srgb, var(--nx-text) 4%, transparent);
+	color: var(--nx-text-muted);
 	animation: pill-pop .2s cubic-bezier(.34,1.56,.64,1) both;
 	cursor: pointer;
 }
 .dm-reaction-pill:hover {
 	border-color: rgb(var(--nx-accent-rgb) / .4);
 	background: rgb(var(--nx-accent-rgb) / .12);
-	color: #e2e8f0;
+	color: var(--nx-text);
 	transform: scale(1.08);
 }
 .dm-reaction-mine {
 	border-color: rgb(var(--nx-accent-rgb) / .5);
 	background: rgb(var(--nx-accent-rgb) / .18);
-	color: #c7d2fe;
+	color: var(--nx-header-accent);
 }
 .dm-reaction-mine:hover {
 	background: rgb(var(--nx-accent-rgb) / .08);
@@ -2166,8 +2166,8 @@
 
 /* ── Typing indicator ────────────────────────────────────────────────────── */
 .dm-typing-bubble {
-	background: rgba(255,255,255,.06);
-	border: 1px solid rgba(255,255,255,.07);
+	background: color-mix(in srgb, var(--nx-text) 6%, transparent);
+	border: 1px solid color-mix(in srgb, var(--nx-text) 7%, transparent);
 	animation: bubble-in .2s cubic-bezier(.16,1,.3,1) both;
 }
 @keyframes bubble-in {
@@ -2178,11 +2178,11 @@
 	display: inline-block;
 	width: 5px; height: 5px;
 	border-radius: 50%;
-	background: #6b7280;
+	background: var(--nx-text-muted);
 	animation: dot-bounce 1.2s ease-in-out infinite both;
 }
 @keyframes dot-bounce {
-	0%, 80%, 100% { transform: translateY(0);    background: #4b5563; }
+	0%, 80%, 100% { transform: translateY(0);    background: var(--nx-text-faint); }
 	40%           { transform: translateY(-5px); background: var(--nx-accent-2-soft); }
 }
 
