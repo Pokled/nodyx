@@ -11,7 +11,7 @@
 	import StreamerNotifListener from '$lib/components/streamer/StreamerNotifListener.svelte';
 	import { tryAutoConnect } from '$lib/socket';
 	import type { UserStatus } from '$lib/socket';
-	import { resolveTheme, themeToVars } from '$lib/profileThemes';
+	import { resolveTheme, themeToVars, isPersonalTheme } from '$lib/profileThemes';
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded, GOOGLE_FONTS_URL } from '$lib/nameEffects';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import StageView from '$lib/components/StageView.svelte';
@@ -174,6 +174,10 @@
 
 	// App-wide theme — cascade : défaut → thème d'INSTANCE (owner, son univers) → thème du MEMBRE (override perso)
 	const appVars = $derived(themeToVars(resolveTheme((data as any).appTheme, (data as any).instanceTheme)))
+	// La chrome mobile (barre du bas) suit le thème du site, sauf si l'owner a posé une
+	// palette d'instance ou si le visiteur s'est donné un thème perso (même règle que les
+	// profils, #918). Avant, elle gardait le « Défaut » sombre même en thème clair.
+	const chromeFollowsSite = $derived(!(data as any).instanceTheme && !isPersonalTheme((data as any).appTheme))
 	// Effet de fond posé par l'owner (ex 'matrix' = pluie de caractères derrière le contenu)
 	const hasMatrix = $derived((data as any).instanceEffect === 'matrix')
 
@@ -1043,11 +1047,11 @@
 	     dessus les icônes. `--p-bg` est opaque sur les sept thèmes.
 	     Gardé par tests/responsive/bottom-nav.spec.ts. -->
 	<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-45 border-t border-gray-800 flex items-stretch"
-	     style="background: var(--p-bg); border-color: var(--p-card-border); padding-bottom: env(safe-area-inset-bottom, 0px)">
+	     style="background: {chromeFollowsSite ? 'var(--nx-bg)' : 'var(--p-bg)'}; border-color: {chromeFollowsSite ? 'var(--nx-border)' : 'var(--p-card-border)'}; padding-bottom: env(safe-area-inset-bottom, 0px)">
 
 		<!-- Fil d'actu (si connecté) -->
 		{#if user}
-		<a href="/feed" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {isActive('/feed') ? 'text-indigo-400' : 'text-gray-500'}">
+		<a href="/feed" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {isActive('/feed') ? 'text-[var(--nx-header-accent)]' : 'text-gray-500'}">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18M3 6h18M3 18h12"/>
 			</svg>
@@ -1056,7 +1060,7 @@
 		{/if}
 
 		<!-- Forum -->
-		<a href="/forum" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {isActive('/forum') ? 'text-indigo-400' : 'text-gray-500'}">
+		<a href="/forum" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {isActive('/forum') ? 'text-[var(--nx-header-accent)]' : 'text-gray-500'}">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
 				<polyline stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/>
@@ -1066,7 +1070,7 @@
 
 		<!-- Chat (si connecté) -->
 		{#if user}
-		<a href="/chat" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 relative {isActive('/chat') ? 'text-indigo-400' : 'text-gray-500'}">
+		<a href="/chat" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 relative {isActive('/chat') ? 'text-[var(--nx-header-accent)]' : 'text-gray-500'}">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
 			</svg>
@@ -1081,7 +1085,7 @@
 
 		<!-- Messages privés (si connecté) -->
 		{#if user}
-		<a href="/dm" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 relative {isActive('/dm') ? 'text-indigo-400' : 'text-gray-500'}">
+		<a href="/dm" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 relative {isActive('/dm') ? 'text-[var(--nx-header-accent)]' : 'text-gray-500'}">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-4 4v-4z"/>
 			</svg>
@@ -1095,7 +1099,7 @@
 		{/if}
 
 		<!-- Bibliothèque -->
-		<a href="/library" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {isActive('/library') ? 'text-indigo-400' : 'text-gray-500'}">
+		<a href="/library" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {isActive('/library') ? 'text-[var(--nx-header-accent)]' : 'text-gray-500'}">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
 				<path stroke-linecap="round" stroke-linejoin="round" d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -1104,7 +1108,7 @@
 		</a>
 
 		<!-- Annuaire -->
-		<a href="/communities" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {isActive('/communities') ? 'text-indigo-400' : 'text-gray-500'}">
+		<a href="/communities" class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {isActive('/communities') ? 'text-[var(--nx-header-accent)]' : 'text-gray-500'}">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 				<circle cx="12" cy="12" r="10"/>
 				<line x1="2" y1="12" x2="22" y2="12"/>
@@ -1116,7 +1120,7 @@
 		<!-- Profil / Connexion -->
 		{#if user}
 		<a href="/users/{user.username}"
-		   class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {page.url.pathname.startsWith('/users/') ? 'text-indigo-400' : 'text-gray-500'}">
+		   class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {page.url.pathname.startsWith('/users/') ? 'text-[var(--nx-header-accent)]' : 'text-gray-500'}">
 			{#if user.avatar}
 				<img src={user.avatar} class="w-5 h-5 rounded-full object-cover" alt="" />
 			{:else}
@@ -1302,6 +1306,18 @@
 :global(main.app-shell-main.sheet-themed) {
   background-color: var(--nx-sheet-bg, var(--nx-bg));
   color: var(--nx-text);
+}
+/* Sur mobile, la coque garde son fond historique sombre (--shell-bg = --p-bg) : les
+   pages pas encore migrées en dépendent. Une feuille thémée TRANSLUCIDE (opacité de
+   zone de l'Apparence, 49 % sur vieuxlooters) le laissait voir : gris moyen sous un
+   texte foncé, illisible en thème clair sur toutes les pages migrées (31/10). La
+   feuille se pose donc sur le fond du site. Opaque (nodyx.org) : rien ne change.
+   Pas d'image de zone sur mobile (règle de bureau), le background-image est libre. */
+@media (max-width: 1023px) {
+  :global(main.app-shell-main.sheet-themed) {
+    background-color: var(--nx-bg);
+    background-image: linear-gradient(var(--nx-sheet-bg, var(--nx-bg)), var(--nx-sheet-bg, var(--nx-bg)));
+  }
 }
 
 .layout-dragging :global(main.app-shell-main) {
