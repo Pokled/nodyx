@@ -9,6 +9,7 @@ import { Server } from 'socket.io'
 import { NODYX_VERSION } from './utils/version'
 import * as NotificationModel from './models/notification'
 import { getInstanceCommunityId } from './middleware/adminOnly'
+import { countActiveMembers } from './models/memberCount'
 
 const PING_INTERVAL_MS         = 5  * 60 * 1000        // 5 minutes
 const ASSET_PUSH_INTERVAL_MS   = 60 * 60 * 1000        // 1 heure
@@ -24,8 +25,7 @@ async function pingDirectory(io: Server) {
   if (!token) return
 
   try {
-    const membersResult = await db.query('SELECT COUNT(*) AS count FROM users WHERE is_system = false AND id NOT IN (SELECT user_id FROM community_bans)')
-    const members = parseInt(membersResult.rows[0]?.count ?? '0', 10)
+    const { total: members } = await countActiveMembers()
     // Deduplicate by userId — same approach as instance.ts online_count
     const presenceSockets = await io.in('presence').fetchSockets()
     const seen = new Set<string>()

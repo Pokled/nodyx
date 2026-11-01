@@ -71,7 +71,8 @@ describe('GET /api/v1/admin/stats', () => {
     // + 2 activity Promise.all + 1 topContrib + 1 recentMembers
     vi.mocked(db.query)
       .mockResolvedValueOnce({ rows: [{ id: COMMUNITY_UUID }], rowCount: 1 } as any) // getCommunityId
-      .mockResolvedValueOnce({ rows: [STATS_ROW], rowCount: 1 } as any)              // users count
+      .mockResolvedValueOnce({ rows: [{ total: 7, new_this_week: 1 }], rowCount: 1 } as any) // members (countActiveMembers)
+      .mockResolvedValueOnce({ rows: [STATS_ROW], rowCount: 1 } as any)              // users count (comptes)
       .mockResolvedValueOnce({ rows: [{ total: 5, new_this_week: 1, locked: 0, pinned: 0 }], rowCount: 1 } as any) // threads
       .mockResolvedValueOnce({ rows: [{ total: 20, new_this_week: 3 }], rowCount: 1 } as any) // posts
       .mockResolvedValueOnce({ rows: [{ total: 4 }], rowCount: 1 } as any)            // categories
@@ -105,6 +106,9 @@ describe('GET /api/v1/admin/stats', () => {
     expect(res.statusCode).toBe(200)
     const body = JSON.parse(res.body)
     expect(body.users).toBeDefined()
+    // Membres (définition unique) et comptes sont deux chiffres distincts.
+    expect(body.members).toEqual({ total: 7, new_this_week: 1 })
+    expect(body.users).toEqual(STATS_ROW)
     expect(body.threads).toBeDefined()
     expect(body.posts).toBeDefined()
     expect(typeof body.online).toBe('number')
