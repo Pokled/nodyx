@@ -24,6 +24,7 @@ import { createWriteStream, mkdirSync } from 'fs'
 import { pipeline } from 'stream/promises'
 import path from 'path'
 import { getClientIp } from '../utils/clientIp'
+import { countActiveMembers, ACTIVE_MEMBERS_FROM } from '../models/memberCount'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 const ALLOWED_MIME_BRANDING = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -129,8 +130,12 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (_req, reply) => {
     const communityId = await getCommunityId()
 
-    const [usersRes, threadsRes, postsRes, catRes, presenceSockets,
+    const [members, usersRes, threadsRes, postsRes, catRes, presenceSockets,
            eventsRes, pollsRes, assetsRes, chatRes, dmRes] = await Promise.all([
+      // Les membres : la définition unique de l'instance (models/memberCount.ts).
+      countActiveMembers(),
+      // Les comptes : toutes les lignes de users, bots, bannis et inscriptions
+      // non validées comprises. Un chiffre technique, PAS le nombre de membres.
       db.query(`SELECT COUNT(*)::int AS total,
                        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::int AS new_this_week
                 FROM users`),
@@ -242,16 +247,17 @@ export default async function adminRoutes(app: FastifyInstance) {
       // L'adresse ne sort PAS du tableau de bord : on veut y voir qui vient
       // d'arriver, pas son courriel. Ouvrir cette page en direct diffusait
       // les adresses des membres.
+      // Mêmes membres que le compteur (ni bot, ni banni).
       `SELECT u.username, u.avatar, cm.joined_at, cm.role
-       FROM community_members cm
-       JOIN users u ON u.id = cm.user_id
-       WHERE cm.community_id = $1
+       ${ACTIVE_MEMBERS_FROM}
+         AND cm.community_id = $1
        ORDER BY cm.joined_at DESC
        LIMIT 5`,
       [communityId]
     ).catch(() => ({ rows: [] as any[] }))
 
     return reply.send({
+      members,
       users:    usersRes.rows[0],
       threads:  threadsRes.rows[0],
       posts:    postsRes.rows[0],
@@ -293,6 +299,7 @@ export default async function adminRoutes(app: FastifyInstance) {
        JOIN users u ON u.id = cm.user_id
        LEFT JOIN community_grades cg ON cg.id = cm.grade_id
        WHERE cm.community_id = $1
+         AND u.is_system = false
          AND NOT EXISTS (
            SELECT 1 FROM community_bans cb
            WHERE cb.community_id = $1 AND cb.user_id = cm.user_id

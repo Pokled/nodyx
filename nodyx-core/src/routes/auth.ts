@@ -14,6 +14,7 @@ import { isSmtpConfigured, sendPasswordResetEmail, sendVerificationEmail } from 
 import { resolveServerLocale } from '../i18n/serverStrings'
 import { getUserTotp, TOTP_PENDING_TTL } from './totp'
 import { getClientIp, estPubliquementRoutable } from '../utils/clientIp'
+import { countActiveMembers } from '../models/memberCount'
 
 // ── Discord security alerts ───────────────────────────────────────────────────
 
@@ -201,16 +202,8 @@ export default async function authRoutes(app: FastifyInstance) {
          LIMIT 1`,
         [email]
       ),
-      maxMembers
-        ? db.query<{ count: number }>(
-            `SELECT COUNT(*)::int AS count FROM users u
-             WHERE NOT EXISTS (
-               SELECT 1 FROM community_bans cb
-               JOIN communities c ON c.id = cb.community_id
-               WHERE cb.user_id = u.id LIMIT 1
-             )`
-          )
-        : Promise.resolve(null),
+      // La limite plafonne le même chiffre que celui affiché partout (models/memberCount.ts).
+      maxMembers ? countActiveMembers() : Promise.resolve(null),
     ])
 
     if (existingEmail) {
@@ -225,7 +218,7 @@ export default async function authRoutes(app: FastifyInstance) {
     if (emailBan.rows.length > 0) {
       return reply.code(403).send({ error: 'Registration not allowed', code: 'FORBIDDEN' })
     }
-    if (maxMembers !== null && memberCount && memberCount.rows[0].count >= maxMembers) {
+    if (maxMembers !== null && memberCount && memberCount.total >= maxMembers) {
       return reply.code(403).send({ error: 'This instance has reached its member limit', code: 'INSTANCE_FULL' })
     }
 
