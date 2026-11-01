@@ -938,6 +938,7 @@
   "settings.encryption.desc": "Backup and recovery of your end-to-end encryption key.",
   "settings.connected.label": "Connected accounts",
   "settings.sounds.desc": "Sounds synthesized in real time, no audio files.",
+  "settings.sounds.title": "Sound notifications",
   "settings.sounds.enabled": "Sounds enabled",
   "settings.sounds.enabled_desc": "Enable or disable all notification sounds.",
   "settings.sounds.hint": "Sounds generated via the Web Audio API: no downloaded files, no network latency. Settings are saved locally in your browser.",

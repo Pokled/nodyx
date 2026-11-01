@@ -241,54 +241,54 @@
 	.kb { display: flex; flex-direction: column; gap: 12px; }
 	.kb-head { display: flex; align-items: flex-start; gap: 12px; }
 	.kb-icon { font-size: 22px; line-height: 1; }
-	.kb-title { font-size: 15px; font-weight: 600; color: #fff; }
-	.kb-sub { font-size: 13px; color: #94a3b8; margin-top: 2px; line-height: 1.45; }
+	.kb-title { font-size: 15px; font-weight: 600; color: var(--nx-text); }
+	.kb-sub { font-size: 13px; color: var(--nx-text-muted); margin-top: 2px; line-height: 1.45; }
 	.kb-pill { margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
 		padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-	.kb-pill.on  { background: rgba(34,197,94,.12);  color: #4ade80; }
-	.kb-pill.off { background: rgba(148,163,184,.12); color: #94a3b8; }
+	.kb-pill.on  { background: color-mix(in srgb, var(--nx-ok) 12%, transparent);  color: var(--nx-ok); }
+	.kb-pill.off { background: color-mix(in srgb, var(--nx-text) 12%, transparent); color: var(--nx-text-muted); }
 	.kb-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 	.kb-input { width: 100%; padding: 10px 12px; border-radius: 10px;
-		background: rgba(15,23,42,.6); border: 1px solid rgba(148,163,184,.2);
-		color: #f1f5f9; font-size: 14px; outline: none; transition: border-color .15s; }
+		background: color-mix(in srgb, var(--nx-text) 5%, transparent); border: 1px solid color-mix(in srgb, var(--nx-text) 20%, transparent);
+		color: var(--nx-text); font-size: 14px; outline: none; transition: border-color .15s; }
 	.kb-input:focus { border-color: var(--nx-accent); }
 	.kb-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 	.kb-btn-primary { padding: 9px 16px; border-radius: 10px; border: none; cursor: pointer;
-		font-weight: 600; font-size: 14px; color: #fff;
+		font-weight: 600; font-size: 14px; color: #fff;  /* sur l'accent */
 		background: linear-gradient(135deg, var(--nx-accent), var(--nx-accent-2)); transition: transform .12s, opacity .12s; }
 	.kb-btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
 	.kb-btn-ghost, .kb-btn-danger { padding: 9px 16px; border-radius: 10px; cursor: pointer;
 		font-weight: 600; font-size: 14px; background: transparent; }
-	.kb-btn-ghost  { border: 1px solid rgba(148,163,184,.3); color: #cbd5e1; }
-	.kb-btn-danger { border: 1px solid rgba(239,68,68,.35); color: #f87171; }
+	.kb-btn-ghost  { border: 1px solid color-mix(in srgb, var(--nx-text) 30%, transparent); color: var(--nx-text); }
+	.kb-btn-danger { border: 1px solid color-mix(in srgb, var(--nx-bad) 35%, transparent); color: var(--nx-bad); }
 	.kb-btn-primary:disabled, .kb-btn-ghost:disabled, .kb-btn-danger:disabled { opacity: .5; cursor: default; }
-	.kb-error   { font-size: 13px; color: #f87171; }
-	.kb-success { font-size: 13px; color: #4ade80; }
-	.kb-warn { font-size: 13px; color: #fbbf24; background: rgba(251,191,36,.08);
-		border: 1px solid rgba(251,191,36,.2); border-radius: 10px; padding: 10px 12px; line-height: 1.45; }
-	.kb-hint { font-size: 12px; color: #64748b; line-height: 1.4; }
+	.kb-error   { font-size: 13px; color: var(--nx-bad); }
+	.kb-success { font-size: 13px; color: var(--nx-ok); }
+	.kb-warn { font-size: 13px; color: var(--nx-warn); background: color-mix(in srgb, var(--nx-warn) 8%, transparent);
+		border: 1px solid color-mix(in srgb, var(--nx-warn) 20%, transparent); border-radius: 10px; padding: 10px 12px; line-height: 1.45; }
+	.kb-hint { font-size: 12px; color: var(--nx-text-muted); line-height: 1.4; }
 
 	.kb-info { display: flex; flex-direction: column; gap: 8px;
 		background: rgb(var(--nx-accent-rgb) / .06); border: 1px solid rgb(var(--nx-accent-rgb) / .16);
 		border-radius: 12px; padding: 12px 14px; }
-	.kb-info-row { display: flex; gap: 10px; font-size: 13px; color: #c7d2fe; line-height: 1.45; }
+	.kb-info-row { display: flex; gap: 10px; font-size: 13px; color: var(--nx-text); line-height: 1.45; }
 	.kb-info-row span:first-child { flex-shrink: 0; }
-	.kb-info-row :global(strong) { color: #e0e7ff; }
-	.kb-note { font-size: 13px; color: #cbd5e1; line-height: 1.45; }
+	.kb-info-row :global(strong) { color: var(--nx-text); }
+	.kb-note { font-size: 13px; color: var(--nx-text); line-height: 1.45; }
 	.kb-btn-soft { padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
-		color: #c7d2fe; background: rgb(var(--nx-accent-rgb) / .12); border: 1px solid rgb(var(--nx-accent-rgb) / .25);
+		color: var(--nx-header-accent); background: rgb(var(--nx-accent-rgb) / .12); border: 1px solid rgb(var(--nx-accent-rgb) / .25);
 		transition: background .15s; }
 	.kb-btn-soft:hover { background: rgb(var(--nx-accent-rgb) / .2); }
 	.kb-code-box { display: flex; align-items: center; gap: 10px; padding: 12px 14px;
-		background: rgba(15,23,42,.7); border: 1px solid rgb(var(--nx-accent-rgb) / .3); border-radius: 12px; }
+		background: color-mix(in srgb, var(--nx-text) 5%, transparent); border: 1px solid rgb(var(--nx-accent-rgb) / .3); border-radius: 12px; }
 	.kb-code { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		font-size: 14px; font-weight: 600; color: #e0e7ff; letter-spacing: .01em;
+		font-size: 14px; font-weight: 600; color: var(--nx-text); letter-spacing: .01em;
 		white-space: pre-wrap; word-break: break-word; user-select: all; }
 	.kb-copy { flex-shrink: 0; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px;
-		color: #cbd5e1; background: transparent; border: 1px solid rgba(148,163,184,.3); }
+		color: var(--nx-text); background: transparent; border: 1px solid color-mix(in srgb, var(--nx-text) 30%, transparent); }
 	.kb-restore-box { display: flex; flex-direction: column; gap: 10px;
-		background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.2);
+		background: color-mix(in srgb, var(--nx-ok) 6%, transparent); border: 1px solid color-mix(in srgb, var(--nx-ok) 20%, transparent);
 		border-radius: 12px; padding: 12px 14px; }
-	.kb-restore-head { display: flex; gap: 10px; font-size: 13px; color: #bbf7d0; line-height: 1.45; }
+	.kb-restore-head { display: flex; gap: 10px; font-size: 13px; color: var(--nx-ok); line-height: 1.45; }
 	.kb-restore-head span:first-child { flex-shrink: 0; }
 </style>

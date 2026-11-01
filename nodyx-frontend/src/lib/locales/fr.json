@@ -938,6 +938,7 @@
   "settings.encryption.desc": "Sauvegarde et récupération de ta clé de chiffrement de bout en bout.",
   "settings.connected.label": "Comptes liés",
   "settings.sounds.desc": "Sons synthétisés en temps réel, aucun fichier audio.",
+  "settings.sounds.title": "Notifications sonores",
   "settings.sounds.enabled": "Sons activés",
   "settings.sounds.enabled_desc": "Active ou désactive tous les sons de notification.",
   "settings.sounds.hint": "Sons générés via Web Audio API : aucun fichier téléchargé, aucune latence réseau. Les réglages sont sauvegardés localement dans votre navigateur.",
