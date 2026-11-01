@@ -7,11 +7,13 @@
 	let { data }: { data: PageData } = $props()
 	const s = $derived(data.stats)
 
-	// Cartes stats : style UNIFORME (fond zinc, bordure discrète), un seul
-	// accent. L'émeraude est réservée aux deltas positifs (sémantique), pas
-	// de couleur par carte. Icônes SVG monochromes (iconPath outline 24x24).
+	// Cartes stats : style UNIFORME (kit admin), un seul accent. Le vert est réservé
+	// aux deltas positifs (sémantique), pas de couleur par carte. Icônes SVG
+	// monochromes (iconPath outline 24x24).
+	// « Comptes » et non « Membres » : le cœur compte la table users (bannis et
+	// comptes jamais rattachés compris), la page Membres les membres actifs.
 	const statCards = $derived([
-		{ label: tFn('adash.card_members'),    value: s.users.total,   delta: s.users.new_this_week,   sub: tFn('adash.this_week'),
+		{ label: tFn('adash.card_accounts'),   value: s.users.total,   delta: s.users.new_this_week,   sub: tFn('adash.this_week'),
 		  iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
 		{ label: tFn('adash.card_threads'),       value: s.threads.total, delta: s.threads.new_this_week, sub: tFn('adash.this_week'),
 		  iconPath: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 13h4a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l4.586-4.586z' },
@@ -86,32 +88,31 @@
 
 <svelte:head><title>{tFn('adash.page_title')}</title></svelte:head>
 
-<div class="space-y-5 max-w-6xl">
-	<div>
-		<h1 class="text-xl font-semibold text-zinc-100">{tFn('adash.title')}</h1>
-		<p class="text-[13px] text-zinc-500 mt-0.5">{tFn('adash.subtitle')}</p>
-	</div>
+<div class="adm-page">
+	<header class="adm-head">
+		<div>
+			<h1 class="adm-title">{tFn('adash.title')}</h1>
+			<p class="adm-desc">{tFn('adash.subtitle')}</p>
+		</div>
+	</header>
 
-	<!-- ── Stats : 8 cartes uniformes ───────────────────────────────────────── -->
-	<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+	<!-- ── Chiffres clés ─────────────────────────────────────────────────── -->
+	<div class="adm-stats">
 		{#each statCards as card}
-			<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
-				<div class="flex items-center justify-between mb-3">
-					<span class="text-[11px] font-medium text-zinc-500 uppercase tracking-wide">{card.label}</span>
-					<svg class="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+			<div class="adm-stat">
+				<div class="adm-stat-top">
+					<span class="adm-label">{card.label}</span>
+					<svg class="adm-stat-icon" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
 						<path d={card.iconPath}/>
 					</svg>
 				</div>
-				<div class="flex items-baseline gap-2">
-					<span class="text-2xl font-semibold text-zinc-100 tabular-nums leading-none">{card.value.toLocaleString($locale)}</span>
-					{#if card.live}
-						<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mb-0.5"></span>
-					{/if}
+				<div class="adm-stat-value">
+					{card.value.toLocaleString($locale)}
+					{#if card.live}<span class="adm-live" aria-hidden="true"></span>{/if}
 				</div>
-				<div class="text-xs text-zinc-600 mt-1.5">
+				<div class="adm-stat-sub">
 					{#if card.delta !== null && card.delta !== undefined && card.delta > 0}
-						<span class="text-emerald-400 font-medium tabular-nums">+{card.delta}</span>
-						<span> {card.sub}</span>
+						<span class="adm-delta">+{card.delta}</span> {card.sub}
 					{:else}
 						{card.sub}
 					{/if}
@@ -120,166 +121,132 @@
 		{/each}
 	</div>
 
-	<!-- ── Grille principale ────────────────────────────────────────────────── -->
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-		<!-- Activité 7j — posts + nouveaux membres -->
-		<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
-			<div class="flex items-center justify-between mb-4">
-				<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">
-					{tFn('adash.activity_7d')}
-				</h2>
-				<div class="flex items-center gap-3 text-[11px] text-zinc-500">
-					<span class="flex items-center gap-1.5">
-						<span class="w-2 h-2 rounded-sm bg-indigo-500 inline-block"></span>
-						{tFn('adash.legend_messages')}
-					</span>
-					<span class="flex items-center gap-1.5">
-						<span class="w-2 h-2 rounded-sm bg-zinc-600 inline-block"></span>
-						{tFn('adash.legend_signups')}
-					</span>
+	<div class="adm-grid-2">
+		<!-- Activité 7 jours : messages (forum + chat) et inscriptions -->
+		<section class="adm-card">
+			<div class="adm-card-head">
+				<h2 class="adm-label">{tFn('adash.activity_7d')}</h2>
+				<div class="flex items-center gap-3 text-[11px] adm-muted">
+					<span class="flex items-center gap-1.5"><span class="chart-key chart-key--posts"></span>{tFn('adash.legend_messages')}</span>
+					<span class="flex items-center gap-1.5"><span class="chart-key chart-key--signups"></span>{tFn('adash.legend_signups')}</span>
 				</div>
 			</div>
-			<div class="flex items-end gap-1.5 h-28">
+			<div class="flex items-end gap-1.5 h-32">
 				{#each chartDays as day}
-					<div class="flex-1 flex flex-col items-center gap-1">
-						<div class="w-full flex items-end gap-0.5 h-20">
-							<!-- Posts bar -->
-							<div
-								class="flex-1 rounded-t-sm bg-indigo-500/80 hover:bg-indigo-400 transition-colors min-h-[2px]"
-								style="height: {Math.max((day.posts / chartMax) * 76, day.posts > 0 ? 3 : 0)}px"
-								title={day.posts !== 1 ? tFn('adash.messages_many', { n: day.posts }) : tFn('adash.messages_one', { n: day.posts })}
-							></div>
-							<!-- New members bar -->
-							<div
-								class="flex-1 rounded-t-sm bg-zinc-600/80 hover:bg-zinc-500 transition-colors min-h-[2px]"
-								style="height: {Math.max((day.new_members / chartMax) * 76, day.new_members > 0 ? 3 : 0)}px"
-								title={day.new_members !== 1 ? tFn('adash.signups_many', { n: day.new_members }) : tFn('adash.signups_one', { n: day.new_members })}
-							></div>
+					<div class="flex-1 flex flex-col items-center gap-1.5">
+						<div class="w-full flex items-end gap-0.5 h-24">
+							<div class="chart-bar chart-bar--posts"
+							     style="height: {Math.max((day.posts / chartMax) * 92, day.posts > 0 ? 3 : 0)}px"
+							     title={day.posts !== 1 ? tFn('adash.messages_many', { n: day.posts }) : tFn('adash.messages_one', { n: day.posts })}></div>
+							<div class="chart-bar chart-bar--signups"
+							     style="height: {Math.max((day.new_members / chartMax) * 92, day.new_members > 0 ? 3 : 0)}px"
+							     title={day.new_members !== 1 ? tFn('adash.signups_many', { n: day.new_members }) : tFn('adash.signups_one', { n: day.new_members })}></div>
 						</div>
-						<span class="text-[10px] text-zinc-600 tabular-nums">{day.label}</span>
+						<span class="text-[10px] adm-muted tabular-nums">{day.label}</span>
 					</div>
 				{/each}
 			</div>
-		</div>
+		</section>
 
 		<!-- Top contributeurs -->
-		<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
-			<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-4">
-				{tFn('adash.top_contributors')}
-			</h2>
+		<section class="adm-card">
+			<div class="adm-card-head"><h2 class="adm-label">{tFn('adash.top_contributors')}</h2></div>
 			{#if s.top_contributors.length === 0}
-				<p class="text-sm text-zinc-600">{tFn('adash.no_messages_month')}</p>
+				<p class="text-sm adm-muted">{tFn('adash.no_messages_month')}</p>
 			{:else}
-				<ol class="space-y-2.5">
+				<ol class="people">
 					{#each s.top_contributors as c, i}
-						<li class="flex items-center gap-3">
-							<span class="text-xs font-medium text-zinc-600 w-4 tabular-nums">{i + 1}</span>
-							<div class="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-semibold text-zinc-300 shrink-0 overflow-hidden">
-								{#if c.avatar}
-									<img src={c.avatar} alt={c.username} class="w-full h-full object-cover" />
-								{:else}
-									{c.username.charAt(0).toUpperCase()}
-								{/if}
-							</div>
-							<a href="/users/{c.username}" class="text-[13px] text-zinc-300 hover:text-white flex-1 font-medium transition-colors">
-								{c.username}
-							</a>
-							<span class="text-xs text-zinc-500 tabular-nums">{tFn('adash.msg_short', { n: c.post_count })}</span>
+						<li>
+							<span class="people-rank">{i + 1}</span>
+							<span class="people-avatar">
+								{#if c.avatar}<img src={c.avatar} alt="" />{:else}{c.username.charAt(0).toUpperCase()}{/if}
+							</span>
+							<a href="/users/{c.username}" class="people-name">{c.username}</a>
+							<span class="people-meta">{tFn('adash.msg_short', { n: c.post_count })}</span>
 						</li>
 					{/each}
 				</ol>
 			{/if}
-		</div>
+		</section>
 
 		<!-- Derniers inscrits -->
-		<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
-			<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-4">
-				{tFn('adash.recent_members')}
-			</h2>
+		<section class="adm-card">
+			<div class="adm-card-head">
+				<h2 class="adm-label">{tFn('adash.recent_members')}</h2>
+				<a href="/admin/members" class="adm-btn adm-btn--sm">{tFn('adash.see_all_members')}</a>
+			</div>
 			{#if !s.recent_members || s.recent_members.length === 0}
-				<p class="text-sm text-zinc-600">{tFn('adash.no_recent_members')}</p>
+				<p class="text-sm adm-muted">{tFn('adash.no_recent_members')}</p>
 			{:else}
-				<ul class="space-y-2.5">
+				<ul class="people">
 					{#each s.recent_members as m}
-						<li class="flex items-center gap-3">
-							<div class="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-semibold text-zinc-300 shrink-0 overflow-hidden">
-								{#if m.avatar}
-									<img src={m.avatar} alt={m.username} class="w-full h-full object-cover" />
-								{:else}
-									{m.username.charAt(0).toUpperCase()}
-								{/if}
-							</div>
-							<div class="flex-1 min-w-0">
-								<a href="/users/{m.username}" class="text-[13px] text-zinc-300 hover:text-white font-medium block truncate transition-colors">
-									{m.username}
-								</a>
-							</div>
-							<div class="text-right shrink-0">
-								<span class="text-xs text-zinc-500 tabular-nums">{timeAgo(m.joined_at)}</span>
-								{#if m.role !== 'member'}
-									<span class="block text-[10px] text-indigo-400 font-medium capitalize">{m.role}</span>
-								{/if}
-							</div>
+						<li>
+							<span class="people-avatar">
+								{#if m.avatar}<img src={m.avatar} alt="" />{:else}{m.username.charAt(0).toUpperCase()}{/if}
+							</span>
+							<a href="/users/{m.username}" class="people-name">{m.username}</a>
+							{#if m.role !== 'member'}
+								<span class="adm-pill adm-pill--{m.role}">{tFn(`amem.role_${m.role}`)}</span>
+							{/if}
+							<span class="people-meta">{timeAgo(m.joined_at)}</span>
 						</li>
 					{/each}
 				</ul>
-				<a href="/admin/members" class="mt-4 text-xs text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1 transition-colors">
-					{tFn('adash.see_all_members')}
-					<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-				</a>
 			{/if}
-		</div>
+		</section>
 
-		<!-- Forum + Actions rapides -->
-		<div class="space-y-4">
-			<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
-				<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-4">{tFn('adash.forum_state')}</h2>
-				<dl class="space-y-2 text-[13px]">
-					<div class="flex justify-between">
-						<dt class="text-zinc-500">{tFn('adash.categories')}</dt>
-						<dd class="text-zinc-200 font-medium tabular-nums">{s.categories.total}</dd>
-					</div>
-					<div class="flex justify-between">
-						<dt class="text-zinc-500">{tFn('adash.threads_pinned')}</dt>
-						<dd class="text-zinc-200 font-medium tabular-nums">{s.threads.pinned}</dd>
-					</div>
-					<div class="flex justify-between">
-						<dt class="text-zinc-500">{tFn('adash.threads_locked')}</dt>
-						<dd class="text-zinc-200 font-medium tabular-nums">{s.threads.locked}</dd>
-					</div>
-					<div class="flex justify-between">
-						<dt class="text-zinc-500">{tFn('adash.avg_msgs')}</dt>
-						<dd class="text-zinc-200 font-medium tabular-nums">
-							{s.threads.total > 0 ? (s.posts.total / s.threads.total).toFixed(1) : '·'}
-						</dd>
-					</div>
-					{#if s.dms}
-					<div class="flex justify-between">
-						<dt class="text-zinc-500">{tFn('adash.dm_convos')}</dt>
-						<dd class="text-zinc-200 font-medium tabular-nums">{s.dms.total}</dd>
-					</div>
-					{/if}
+		<!-- État du forum + actions rapides -->
+		<div class="flex flex-col gap-4">
+			<section class="adm-card">
+				<div class="adm-card-head"><h2 class="adm-label">{tFn('adash.forum_state')}</h2></div>
+				<dl class="facts">
+					<div><dt>{tFn('adash.categories')}</dt><dd>{s.categories.total}</dd></div>
+					<div><dt>{tFn('adash.threads_pinned')}</dt><dd>{s.threads.pinned}</dd></div>
+					<div><dt>{tFn('adash.threads_locked')}</dt><dd>{s.threads.locked}</dd></div>
+					<div><dt>{tFn('adash.avg_msgs')}</dt><dd>{s.threads.total > 0 ? (s.posts.total / s.threads.total).toFixed(1) : '·'}</dd></div>
+					{#if s.dms}<div><dt>{tFn('adash.dm_convos')}</dt><dd>{s.dms.total}</dd></div>{/if}
 				</dl>
-			</div>
+			</section>
 
-			<div class="rounded-lg border border-zinc-800 bg-zinc-900/60 p-5">
-				<h2 class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-3">{tFn('adash.quick_actions')}</h2>
+			<section class="adm-card">
+				<div class="adm-card-head"><h2 class="adm-label">{tFn('adash.quick_actions')}</h2></div>
 				<div class="grid grid-cols-2 gap-2">
 					{#each quickActions as link}
-						<a
-							href={link.href}
-							class="flex items-center gap-2.5 px-3 py-2 rounded-md bg-zinc-900 hover:bg-zinc-800/70
-							       border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-100 transition-colors"
-						>
-							<svg class="w-4 h-4 text-zinc-500 shrink-0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+						<a href={link.href} class="adm-btn quick">
+							<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
 								<path d={link.iconPath}/>
 							</svg>
-							<span class="text-xs font-medium">{tFn(link.labelKey)}</span>
+							<span class="truncate">{tFn(link.labelKey)}</span>
 						</a>
 					{/each}
 				</div>
-			</div>
+			</section>
 		</div>
 	</div>
 </div>
+
+<style>
+	.chart-key { width: 0.55rem; height: 0.55rem; border-radius: 2px; display: inline-block; }
+	.chart-key--posts, .chart-bar--posts { background: var(--nx-header-accent); }
+	.chart-key--signups, .chart-bar--signups { background: color-mix(in srgb, var(--nx-text) 28%, transparent); }
+	.chart-bar { flex: 1; min-height: 2px; border-radius: 3px 3px 0 0; transition: opacity 0.15s; }
+	.chart-bar:hover { opacity: 0.8; }
+	.people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+	.people li { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
+	.people-rank { width: 1rem; font-size: 0.75rem; color: var(--nx-text-muted); font-variant-numeric: tabular-nums; }
+	.people-avatar {
+		width: 1.75rem; height: 1.75rem; flex: none; border-radius: 999px; overflow: hidden;
+		display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 650;
+		background: color-mix(in srgb, var(--nx-text) 8%, transparent); color: var(--nx-text);
+	}
+	.people-avatar img { width: 100%; height: 100%; object-fit: cover; }
+	.people-name { flex: 1; min-width: 0; font-size: 0.8125rem; font-weight: 550; color: var(--nx-text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.people-name:hover { color: var(--nx-header-accent); }
+	.people-meta { font-size: 0.75rem; color: var(--nx-text-muted); font-variant-numeric: tabular-nums; flex: none; }
+	.facts { margin: 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8125rem; }
+	.facts div { display: flex; justify-content: space-between; gap: 1rem; }
+	.facts dt { color: var(--nx-text-muted); }
+	.facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+	.quick { justify-content: flex-start; font-weight: 500; }
+	.quick svg { color: var(--nx-text-muted); }
+</style>

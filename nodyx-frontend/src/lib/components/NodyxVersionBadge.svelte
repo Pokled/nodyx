@@ -24,6 +24,13 @@
 		: variant === 'admin'  ? 'text-xs gap-1.5'
 		: 'text-sm gap-2'
 	)
+	// Variante admin : couleur secondaire du thème (la barre de l'admin suit le
+	// thème clair/sombre) ; les autres variantes gardent leur style d'origine.
+	const colorClass = $derived(
+		variant === 'admin'
+			? 'text-[var(--nx-text-muted)] hover:text-[var(--nx-text)]'
+			: 'opacity-60 hover:opacity-100 text-zinc-400 hover:text-zinc-200'
+	)
 	const logoSizeClass = $derived(
 		variant === 'footer' ? 'h-3.5 w-3.5'
 		: variant === 'admin'  ? 'h-3.5 w-3.5'
@@ -33,7 +40,7 @@
 
 <a
 	href="/about"
-	class="inline-flex items-center {sizeClass} opacity-60 hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-200"
+	class="inline-flex items-center {sizeClass} {colorClass} transition-colors"
 	title={tFn('about.meta_title')}
 >
 	{#if showLogo}

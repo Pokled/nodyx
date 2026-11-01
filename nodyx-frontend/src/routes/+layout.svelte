@@ -12,6 +12,7 @@
 	import { tryAutoConnect } from '$lib/socket';
 	import type { UserStatus } from '$lib/socket';
 	import { resolveTheme, themeToVars, isPersonalTheme } from '$lib/profileThemes';
+	import { isAdminThemed } from '$lib/adminTheme';
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded, GOOGLE_FONTS_URL } from '$lib/nameEffects';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import StageView from '$lib/components/StageView.svelte';
@@ -578,8 +579,10 @@
 	// Exclusions : sous-routes pas encore migrées d'un préfixe thémé (éditeur de profil).
 	const SHEET_NOT_THEMED: string[] = []
 	const sheetThemed = $derived(
-		SHEET_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/')) &&
-		!SHEET_NOT_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/'))
+		isAdminThemed(page.url.pathname) || (
+			SHEET_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/')) &&
+			!SHEET_NOT_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/'))
+		)
 	)
 
 	const showChannelSidebar = $derived(

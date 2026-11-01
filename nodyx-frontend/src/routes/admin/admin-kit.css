@@ -1,0 +1,412 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Kit de l'administration (01/11/2026)
+
+   Une seule source de style pour les pages admin : en-tête de page, sections,
+   cartes de chiffres, boutons, champs, pastilles, tableaux (cartes sur mobile)
+   et menus d'actions. Tout est sur les variables du thème (--nx-*) : clair et
+   sombre suivent le site. Sobre : UN accent, celui de l'ambiance de l'instance
+   (--nx-header-accent, calé par mode, avec --nx-on-accent pour le texte posé
+   dessus ; --nx-accent est un ancien accent qui peut diverger), des
+   surfaces calmes, de l'air, aucune couleur par carte.
+
+   Une page migrée s'inscrit dans lib/adminTheme.ts (ADMIN_THEMED_ROUTES).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page ───────────────────────────────────────────────────────────────── */
+.adm-page {
+	max-width: 72rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+	color: var(--nx-text);
+}
+.adm-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 0.75rem 1.5rem;
+}
+.adm-title {
+	margin: 0;
+	font-size: 1.375rem;
+	font-weight: 650;
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	color: var(--nx-text);
+}
+.adm-desc {
+	margin: 0.25rem 0 0;
+	font-size: 0.8125rem;
+	color: var(--nx-text-muted);
+}
+.adm-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* Contenu traduit qui porte du balisage (<strong>, <code>) : la page donne la
+   couleur, jamais la traduction (une classe de couleur écrite dans un texte
+   traduit disparaît sur l'autre thème). */
+.adm-page :where(strong) { color: var(--nx-text); font-weight: 600; }
+.adm-page :where(code) {
+	font-size: 0.85em;
+	padding: 0.05rem 0.3rem;
+	border-radius: 4px;
+	background: color-mix(in srgb, var(--nx-text) 7%, transparent);
+	color: var(--nx-text);
+}
+
+/* ── Sections et cartes ─────────────────────────────────────────────────── */
+.adm-card {
+	border: 1px solid var(--nx-border);
+	border-radius: 12px;
+	background: var(--nx-surface);
+	padding: 1.25rem;
+	min-width: 0;
+}
+.adm-card-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+.adm-label {
+	margin: 0;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--nx-text-muted);
+}
+.adm-muted { color: var(--nx-text-muted); }
+.adm-grid-2 {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+	gap: 1rem;
+}
+
+/* ── Chiffres clés ──────────────────────────────────────────────────────── */
+.adm-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+	gap: 0.75rem;
+}
+.adm-stat {
+	border: 1px solid var(--nx-border);
+	border-radius: 12px;
+	background: var(--nx-surface);
+	padding: 1rem 1.1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	min-width: 0;
+}
+.adm-stat-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+.adm-stat-icon { width: 1rem; height: 1rem; color: var(--nx-text-muted); flex: none; }
+.adm-stat-value {
+	font-size: 1.625rem;
+	font-weight: 650;
+	line-height: 1.1;
+	font-variant-numeric: tabular-nums;
+	color: var(--nx-text);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.adm-stat-sub { font-size: 0.75rem; color: var(--nx-text-muted); }
+.adm-delta { color: var(--nx-ok); font-weight: 600; font-variant-numeric: tabular-nums; }
+.adm-live {
+	width: 0.45rem;
+	height: 0.45rem;
+	border-radius: 999px;
+	background: var(--nx-ok);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-ok) 20%, transparent);
+}
+
+/* ── Boutons ────────────────────────────────────────────────────────────── */
+.adm-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.4rem;
+	min-height: 2.25rem;
+	padding: 0 0.9rem;
+	border-radius: 8px;
+	border: 1px solid var(--nx-border);
+	background: var(--nx-surface);
+	color: var(--nx-text);
+	font-size: 0.8125rem;
+	font-weight: 550;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.adm-btn:hover { background: color-mix(in srgb, var(--nx-text) 6%, var(--nx-surface)); }
+.adm-btn:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
+.adm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.adm-btn--primary {
+	border-color: transparent;
+	background: var(--nx-header-accent);
+	color: var(--nx-on-accent, #fff);
+}
+.adm-btn--primary:hover { background: color-mix(in srgb, var(--nx-header-accent) 88%, black); }
+.adm-btn--danger {
+	border-color: color-mix(in srgb, var(--nx-bad) 35%, transparent);
+	background: color-mix(in srgb, var(--nx-bad) 8%, transparent);
+	color: var(--nx-bad);
+}
+.adm-btn--danger:hover { background: color-mix(in srgb, var(--nx-bad) 14%, transparent); }
+.adm-btn--sm { min-height: 1.875rem; padding: 0 0.65rem; font-size: 0.75rem; }
+.adm-btn--icon { width: 2rem; min-height: 2rem; padding: 0; }
+
+/* ── Champs ─────────────────────────────────────────────────────────────── */
+.adm-input {
+	min-height: 2.25rem;
+	padding: 0 0.75rem;
+	border-radius: 8px;
+	border: 1px solid var(--nx-border);
+	background: var(--nx-surface);
+	color: var(--nx-text);
+	font-size: 0.8125rem;
+	outline: none;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+.adm-input::placeholder { color: var(--nx-text-muted); }
+.adm-input:focus {
+	border-color: var(--nx-header-accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-header-accent) 18%, transparent);
+}
+.adm-search { position: relative; display: inline-flex; align-items: center; }
+.adm-search svg {
+	position: absolute;
+	left: 0.65rem;
+	width: 0.95rem;
+	height: 0.95rem;
+	color: var(--nx-text-muted);
+	pointer-events: none;
+}
+.adm-search .adm-input { padding-left: 2rem; width: min(100%, 18rem); }
+
+/* Filtres en pastilles (segmented control) */
+.adm-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.adm-chip {
+	min-height: 1.875rem;
+	padding: 0 0.7rem;
+	border-radius: 999px;
+	border: 1px solid var(--nx-border);
+	background: transparent;
+	color: var(--nx-text-muted);
+	font-size: 0.75rem;
+	font-weight: 550;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+}
+.adm-chip:hover { color: var(--nx-text); }
+.adm-chip[aria-pressed='true'] {
+	border-color: color-mix(in srgb, var(--nx-header-accent) 45%, transparent);
+	background: color-mix(in srgb, var(--nx-header-accent) 12%, transparent);
+	color: var(--nx-header-accent);
+}
+.adm-chip-count { font-variant-numeric: tabular-nums; opacity: 0.75; }
+
+/* ── Pastilles (rôles, états) ───────────────────────────────────────────── */
+.adm-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.1rem 0.55rem;
+	border-radius: 999px;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	background: color-mix(in srgb, currentColor 10%, transparent);
+	color: var(--nx-text-muted);
+	white-space: nowrap;
+}
+/* Préfixe .adm-page : passe devant les règles globales des <select> de l'app
+   (app.css : select, .nx-themed select), qui imposaient leur gris. */
+.adm-page .adm-pill--owner { color: var(--nx-warn); }
+.adm-page .adm-pill--admin { color: var(--nx-bad); }
+.adm-page .adm-pill--moderator { color: var(--nx-info); }
+.adm-page .adm-pill--member { color: var(--nx-text-muted); }
+/* Sélecteur habillé en pastille (le <select> natif reste : clavier, lecteurs d'écran) */
+.adm-page select.adm-pill {
+	appearance: none;
+	color-scheme: var(--nx-scheme);
+	border-color: color-mix(in srgb, currentColor 30%, transparent);
+	cursor: pointer;
+	padding-right: 1.4rem;
+	background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+	background-position: calc(100% - 0.7rem) 55%, calc(100% - 0.45rem) 55%;
+	background-size: 0.25rem 0.25rem;
+	background-repeat: no-repeat;
+	background-color: color-mix(in srgb, currentColor 10%, transparent);
+}
+.adm-page select.adm-pill option { color: var(--nx-text); background: var(--nx-surface); }
+
+/* ── Tableaux ───────────────────────────────────────────────────────────── */
+.adm-table-wrap {
+	border: 1px solid var(--nx-border);
+	border-radius: 12px;
+	background: var(--nx-surface);
+	overflow-x: auto;
+}
+.adm-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.adm-table th {
+	padding: 0.65rem 1rem;
+	text-align: left;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--nx-text-muted);
+	background: color-mix(in srgb, var(--nx-text) 3%, var(--nx-surface));
+	border-bottom: 1px solid var(--nx-border);
+	white-space: nowrap;
+}
+.adm-table td {
+	padding: 0.7rem 1rem;
+	border-bottom: 1px solid color-mix(in srgb, var(--nx-border) 70%, transparent);
+	vertical-align: middle;
+	color: var(--nx-text);
+}
+.adm-table tbody tr:last-child td { border-bottom: none; }
+.adm-table tbody tr:hover td { background: color-mix(in srgb, var(--nx-text) 3%, transparent); }
+.adm-num { text-align: right; font-variant-numeric: tabular-nums; }
+.adm-table th.adm-num { text-align: right; }
+/* En-tête triable : un vrai bouton, l'état est porté par aria-sort sur le <th> */
+.adm-sort {
+	all: unset;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	color: inherit;
+}
+.adm-sort:hover { color: var(--nx-text); }
+.adm-sort:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; border-radius: 3px; }
+.adm-sort-arrow { width: 0.7rem; height: 0.7rem; opacity: 0.35; transition: transform 0.15s, opacity 0.15s; }
+th[aria-sort='ascending'] .adm-sort,
+th[aria-sort='descending'] .adm-sort { color: var(--nx-text); }
+th[aria-sort='ascending'] .adm-sort-arrow { opacity: 1; transform: rotate(180deg); }
+th[aria-sort='descending'] .adm-sort-arrow { opacity: 1; }
+.adm-empty { padding: 2.5rem 1rem; text-align: center; color: var(--nx-text-muted); }
+/* Colonne principale figée à gauche quand le tableau défile horizontalement
+   (fenêtre étroite, panneau des membres ouvert) : on sait toujours de qui on parle. */
+@media (min-width: 768px) {
+	.adm-table td.adm-cell-main,
+	.adm-table thead th:first-child {
+		position: sticky;
+		left: 0;
+		z-index: 1;
+		background: var(--nx-surface);
+		box-shadow: 1px 0 0 var(--nx-border);
+	}
+	.adm-table thead th:first-child { background: color-mix(in srgb, var(--nx-text) 3%, var(--nx-surface)); }
+	.adm-table tbody tr:hover td.adm-cell-main { background: color-mix(in srgb, var(--nx-text) 3%, var(--nx-surface)); }
+}
+
+/* Sous 768px : chaque ligne devient une carte (libellé de colonne via data-label) */
+@media (max-width: 767px) {
+	.adm-table thead { display: none; }
+	.adm-table, .adm-table tbody, .adm-table tr, .adm-table td { display: block; width: 100%; }
+	.adm-table tr { padding: 0.6rem 0; border-bottom: 1px solid var(--nx-border); }
+	.adm-table tbody tr:last-child { border-bottom: none; }
+	.adm-table td { border: none; padding: 0.3rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; text-align: right; }
+	.adm-table td[data-label]::before {
+		content: attr(data-label);
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--nx-text-muted);
+		text-align: left;
+	}
+	.adm-table td.adm-cell-main { justify-content: flex-start; text-align: left; }
+}
+
+/* ── Menu d'actions (popover natif : au-dessus de tout, jamais coupé par un
+      conteneur à défilement ; position posée au clic) ───────────────────── */
+.adm-menu {
+	margin: 0;
+	padding: 0.3rem;
+	min-width: 13rem;
+	border: 1px solid var(--nx-border);
+	border-radius: 10px;
+	background: var(--nx-surface);
+	color: var(--nx-text);
+	box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.35);
+	inset: auto;
+	position: fixed;
+}
+.adm-menu-item {
+	all: unset;
+	box-sizing: border-box;
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	padding: 0.5rem 0.65rem;
+	border-radius: 6px;
+	font-size: 0.8125rem;
+	color: var(--nx-text);
+	cursor: pointer;
+}
+.adm-menu-item:hover, .adm-menu-item:focus-visible { background: color-mix(in srgb, var(--nx-text) 7%, transparent); }
+.adm-menu-item svg { width: 0.95rem; height: 0.95rem; color: var(--nx-text-muted); flex: none; }
+.adm-menu-item--danger, .adm-menu-item--danger svg { color: var(--nx-bad); }
+.adm-menu-sep { height: 1px; margin: 0.3rem 0.2rem; background: var(--nx-border); }
+
+/* ── Bandeaux d'information ─────────────────────────────────────────────── */
+.adm-notice {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.65rem 0.9rem;
+	border-radius: 10px;
+	border: 1px solid color-mix(in srgb, var(--tone, var(--nx-info)) 35%, transparent);
+	background: color-mix(in srgb, var(--tone, var(--nx-info)) 9%, transparent);
+	color: var(--nx-text);
+	font-size: 0.8125rem;
+}
+.adm-notice--ok { --tone: var(--nx-ok); }
+.adm-notice--warn { --tone: var(--nx-warn); }
+.adm-notice--bad { --tone: var(--nx-bad); }
+
+/* ── Fenêtre modale ─────────────────────────────────────────────────────── */
+.adm-dialog-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+	background: rgb(0 0 0 / 0.55);
+	backdrop-filter: blur(3px);
+}
+.adm-dialog {
+	width: min(100%, 28rem);
+	border: 1px solid var(--nx-border);
+	border-radius: 14px;
+	background: var(--nx-surface);
+	color: var(--nx-text);
+	padding: 1.25rem;
+	box-shadow: 0 24px 60px -12px rgb(0 0 0 / 0.45);
+	display: flex;
+	flex-direction: column;
+	gap: 0.9rem;
+}
+.adm-dialog h2 { margin: 0; font-size: 1rem; font-weight: 650; }
