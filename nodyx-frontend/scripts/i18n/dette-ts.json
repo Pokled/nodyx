@@ -19,8 +19,6 @@
   "lib/i18n.ts": 3,
   "lib/jukebox.ts": 2,
   "lib/modules.ts": 31,
-  "lib/nameEffects.ts": 2,
-  "lib/profileThemes.ts": 2,
   "lib/sounds/presetSounds.ts": 4,
   "lib/types/homepage.ts": 1,
   "lib/types/obsScenes.ts": 6,

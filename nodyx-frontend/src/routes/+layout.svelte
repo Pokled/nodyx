@@ -576,7 +576,7 @@
 	// de la page suivent le thème (variables --prose-*, variante themed:, app.css).
 	const SHEET_THEMED = ['/feed', '/members', '/forum', '/wiki', '/calendar', '/tasks', '/dm', '/musique', '/garden', '/auth/login', '/auth/register', '/notifications', '/search', '/polls', '/library', '/discover', '/users']
 	// Exclusions : sous-routes pas encore migrées d'un préfixe thémé (éditeur de profil).
-	const SHEET_NOT_THEMED = ['/users/me']
+	const SHEET_NOT_THEMED: string[] = []
 	const sheetThemed = $derived(
 		SHEET_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/')) &&
 		!SHEET_NOT_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/'))
