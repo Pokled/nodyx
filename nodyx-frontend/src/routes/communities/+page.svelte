@@ -117,13 +117,13 @@
 		<div>
 			<div class="flex items-center gap-2 mb-2">
 				<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
-				             bg-indigo-900/60 text-indigo-300 border border-indigo-800/60">
+				             bg-[rgb(var(--nx-accent-rgb)/0.18)] text-[var(--nx-header-accent)] border border-indigo-800/60">
 					<span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
 					{tFn('communities.badge')}
 				</span>
 			</div>
-			<h1 class="text-3xl font-bold text-white">{tFn('communities.h1')}</h1>
-			<p class="text-gray-400 mt-1 max-w-xl">
+			<h1 class="text-3xl font-bold text-[var(--nx-text)]">{tFn('communities.h1')}</h1>
+			<p class="text-[var(--nx-text-muted)] mt-1 max-w-xl">
 				{tFn('communities.tagline1')}
 				{tFn('communities.tagline2')}
 			</p>
@@ -131,13 +131,13 @@
 
 		<!-- Network stats -->
 		<div class="flex gap-4 text-center shrink-0">
-			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
-				<div class="text-xl font-bold text-white">{instances.length}</div>
-				<div class="text-xs text-gray-500">{tFn('communities.stat_instances')}</div>
+			<div class="px-4 py-3 rounded-lg bg-[var(--nx-surface)] border border-[var(--nx-border)]">
+				<div class="text-xl font-bold text-[var(--nx-text)]">{instances.length}</div>
+				<div class="text-xs text-[var(--nx-text-muted)]">{tFn('communities.stat_instances')}</div>
 			</div>
-			<div class="px-4 py-3 rounded-lg bg-gray-900 border border-gray-800">
-				<div class="text-xl font-bold text-white">{instances.reduce((s,i)=>s+(i.members??0),0).toLocaleString($locale)}</div>
-				<div class="text-xs text-gray-500">{tFn('communities.stat_members')}</div>
+			<div class="px-4 py-3 rounded-lg bg-[var(--nx-surface)] border border-[var(--nx-border)]">
+				<div class="text-xl font-bold text-[var(--nx-text)]">{instances.reduce((s,i)=>s+(i.members??0),0).toLocaleString($locale)}</div>
+				<div class="text-xs text-[var(--nx-text-muted)]">{tFn('communities.stat_members')}</div>
 			</div>
 		</div>
 	</div>
@@ -146,7 +146,7 @@
 <!-- ── Filters ────────────────────────────────────────────────────────────── -->
 <div class="flex flex-wrap gap-4 mb-6">
 	<div class="relative flex-1 min-w-[200px]">
-		<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+		<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--nx-text-muted)]"
 		     fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
 			      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -155,8 +155,8 @@
 			type="text"
 			placeholder={tFn('communities.search_ph')}
 			bind:value={searchQuery}
-			class="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-900 border border-gray-800
-			       text-sm text-gray-200 placeholder-gray-600
+			class="w-full pl-9 pr-4 py-2 rounded-lg bg-[var(--nx-surface)] border border-[var(--nx-border)]
+			       text-sm text-[var(--nx-text)] placeholder-[var(--nx-text-muted)]
 			       focus:outline-none focus:border-indigo-700 transition-colors"
 		/>
 	</div>
@@ -167,8 +167,8 @@
 				onclick={() => langFilter = l.key}
 				class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
 				       {langFilter === l.key
-				         ? 'bg-gray-700 text-white'
-				         : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800'}"
+				         ? 'bg-[var(--nx-border)] text-[var(--nx-text)]'
+				         : 'bg-[var(--nx-surface)] border border-[var(--nx-border)] text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] hover:bg-[var(--nx-surface-raised)]'}"
 			>
 				{tFn(l.labelKey)}
 			</button>
@@ -177,28 +177,28 @@
 </div>
 
 <!-- ── Results count ──────────────────────────────────────────────────────── -->
-<div class="flex items-center justify-between mb-4 text-xs text-gray-600">
+<div class="flex items-center justify-between mb-4 text-xs text-[var(--nx-text-muted)]">
 	<span>{filtered.length > 1 ? tFn('communities.found_many', { count: filtered.length }) : tFn('communities.found_one', { count: filtered.length })}</span>
 	{#if langFilter !== 'all' || searchQuery}
-		<span class="text-gray-500">{totalMembers.toLocaleString($locale)} {tFn('communities.stat_members')}</span>
+		<span class="text-[var(--nx-text-muted)]">{totalMembers.toLocaleString($locale)} {tFn('communities.stat_members')}</span>
 	{/if}
 </div>
 
 <!-- ── Grid ───────────────────────────────────────────────────────────────── -->
 {#if instances.length === 0}
-	<div class="text-center py-16 border border-dashed border-gray-800 rounded-xl">
-		<p class="text-gray-500 mb-2">{tFn('communities.empty_none')}</p>
-		<p class="text-xs text-gray-600">{tFn('communities.empty_cta')}</p>
+	<div class="text-center py-16 border border-dashed border-[var(--nx-border)] rounded-xl">
+		<p class="text-[var(--nx-text-muted)] mb-2">{tFn('communities.empty_none')}</p>
+		<p class="text-xs text-[var(--nx-text-muted)]">{tFn('communities.empty_cta')}</p>
 	</div>
 {:else if filtered.length === 0}
-	<div class="text-center py-16 border border-dashed border-gray-800 rounded-xl">
-		<p class="text-gray-500">{tFn('communities.empty_filtered')}</p>
+	<div class="text-center py-16 border border-dashed border-[var(--nx-border)] rounded-xl">
+		<p class="text-[var(--nx-text-muted)]">{tFn('communities.empty_filtered')}</p>
 	</div>
 {:else}
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 		{#each filtered as instance}
-			<div class="flex flex-col rounded-xl border border-gray-800 bg-gray-900/50
-			            hover:border-indigo-800/60 hover:bg-gray-900/80 transition-all group overflow-hidden">
+			<div class="flex flex-col rounded-xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/50
+			            hover:border-indigo-800/60 hover:bg-[var(--nx-surface)]/80 transition-all group overflow-hidden">
 
 				<!-- Bannière -->
 				<div class="relative h-24 shrink-0 bg-gradient-to-br from-indigo-950 to-gray-900">
@@ -209,53 +209,55 @@
 					<div class="absolute top-2 right-2 flex items-center gap-1.5
 					            bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5">
 						<span class="w-1.5 h-1.5 rounded-full {isOnline(instance) ? 'bg-green-400' : 'bg-gray-500'}"></span>
-						<span class="text-xs text-gray-300">{isOnline(instance) ? 'en ligne' : 'hors ligne'}</span>
+						<span class="text-xs text-white">{isOnline(instance) ? tFn('common.online') : tFn('common.offline')}</span>
 					</div>
 				</div>
 
 				<div class="relative z-10 px-5 pb-5 flex flex-col flex-1">
 					<!-- Logo + nom (logo chevauche la bannière) -->
-					<div class="flex items-end gap-3 -mt-6 mb-3">
-						<div class="w-12 h-12 rounded-xl border-2 border-gray-800 bg-indigo-900
+					<div class="flex items-start gap-3 -mt-6 mb-3">
+						<div class="w-12 h-12 rounded-xl border-2 border-[var(--nx-border)] bg-indigo-900
 						            flex items-center justify-center shrink-0 overflow-hidden shadow-lg">
 							{#if instance.logo_url}
 								<img src={instance.logo_url.startsWith('http') ? instance.logo_url : instance.url.replace(/\/$/, '') + instance.logo_url} alt={instance.name} class="w-full h-full object-cover" />
 							{:else}
-								<span class="text-lg font-bold text-indigo-200 select-none">
+								<span class="text-lg font-bold text-[var(--nx-header-accent)] select-none">
 									{instance.name.charAt(0).toUpperCase()}
 								</span>
 							{/if}
 						</div>
-						<div class="pb-0.5">
-							<h2 class="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors leading-tight">
+						<!-- pt-7 : le nom commence sous la couverture (l'avatar seul la chevauche),
+						     lisible quelle que soit la bannière de l'instance. -->
+						<div class="pt-7">
+							<h2 class="text-sm font-semibold text-[var(--nx-text)] group-hover:text-[var(--nx-header-accent)] transition-colors leading-tight">
 								{instance.name}
 							</h2>
-							<span class="text-xs text-gray-600 font-mono">{instance.url.replace('https://', '')}</span>
+							<span class="text-xs text-[var(--nx-text-muted)] font-mono">{instance.url.replace('https://', '')}</span>
 						</div>
 					</div>
 
-					<p class="text-xs text-gray-400 leading-relaxed line-clamp-2 flex-1 mb-4">
+					<p class="text-xs text-[var(--nx-text-muted)] leading-relaxed line-clamp-2 flex-1 mb-4">
 						{instance.description ?? tFn('communities.no_desc')}
 					</p>
 
 					<div class="flex flex-wrap items-center gap-1.5 mb-4">
 						{#if instance.language}
-							<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
+							<span class="px-2 py-0.5 rounded text-xs bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] border border-[var(--nx-border)]">
 								{instance.language.toUpperCase()}
 							</span>
 						{/if}
 						{#if instance.theme}
-							<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700">
+							<span class="px-2 py-0.5 rounded text-xs bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] border border-[var(--nx-border)]">
 								{instance.theme}
 							</span>
 						{/if}
-						<span class="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-500 border border-gray-700">
+						<span class="px-2 py-0.5 rounded text-xs bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] border border-[var(--nx-border)]">
 							{instance.members ?? 0} {tFn('communities.stat_members')}
 						</span>
 					</div>
 
-					<div class="flex items-center justify-between pt-3 border-t border-gray-800/60 gap-2">
-						<div class="text-xs text-gray-600 shrink-0">
+					<div class="flex items-center justify-between pt-3 border-t border-[var(--nx-border)]/60 gap-2">
+						<div class="text-xs text-[var(--nx-text-muted)] shrink-0">
 							{tFn('communities.since', { date: new Date(instance.registered_at).toLocaleDateString($locale, { month: 'short', year: 'numeric' }) })}
 						</div>
 						<div class="flex items-center gap-2">
@@ -267,8 +269,8 @@
 									title={linked ? tFn('communities.unlink_title') : tFn('communities.link_title')}
 									class="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg transition-colors
 									       {linked
-									         ? 'bg-indigo-900/60 text-indigo-300 hover:bg-red-900/40 hover:text-red-400 border border-indigo-800/60'
-									         : 'bg-gray-800 text-gray-400 hover:bg-indigo-900/40 hover:text-indigo-300 border border-gray-700'}"
+									         ? 'bg-[rgb(var(--nx-accent-rgb)/0.18)] text-[var(--nx-header-accent)] hover:bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] hover:text-[var(--nx-bad)] border border-indigo-800/60'
+									         : 'bg-[var(--nx-surface-raised)] text-[var(--nx-text-muted)] hover:bg-[rgb(var(--nx-accent-rgb)/0.14)] hover:text-[var(--nx-header-accent)] border border-[var(--nx-border)]'}"
 								>
 									{#if linkLoading === instance.slug}
 										<svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
@@ -277,7 +279,7 @@
 										{tFn('communities.linked')}
 									{:else}
 										<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-										J'ai un compte
+										{tFn('communities.link_title')}
 									{/if}
 								</button>
 							{/if}
@@ -285,10 +287,10 @@
 								href={instanceUrl(instance)}
 								target="_blank"
 								rel="noopener noreferrer"
-								class="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors
+								class="text-xs font-medium text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)] transition-colors
 								       flex items-center gap-1"
 							>
-								Visiter
+								{tFn('communities.visit')}
 								<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
 									      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -303,15 +305,15 @@
 {/if}
 
 <!-- ── Register CTA ───────────────────────────────────────────────────────── -->
-<div class="mt-10 rounded-xl border border-dashed border-indigo-900/60 bg-indigo-950/20 p-8 text-center">
-	<div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-900/60
+<div class="mt-10 rounded-xl border border-dashed border-indigo-900/60 bg-[rgb(var(--nx-accent-rgb)/0.08)] p-8 text-center">
+	<div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[rgb(var(--nx-accent-rgb)/0.18)]
 	            border border-indigo-800 mb-4">
-		<svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<svg class="w-6 h-6 text-[var(--nx-header-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
 		</svg>
 	</div>
-	<h3 class="text-lg font-semibold text-white mb-2">Vous avez une instance Nodyx ?</h3>
-	<p class="text-sm text-gray-400 max-w-md mx-auto mb-5">
+	<h3 class="text-lg font-semibold text-[var(--nx-text)] mb-2">Vous avez une instance Nodyx ?</h3>
+	<p class="text-sm text-[var(--nx-text-muted)] max-w-md mx-auto mb-5">
 		{@html tFn('communities.register_intro')}
 		{tFn('communities.register_desc')}
 	</p>
@@ -327,11 +329,11 @@
 		<a
 			href="https://github.com/Pokled/Nodyx"
 			target="_blank" rel="noopener"
-			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700
-			       border border-gray-700 text-sm font-semibold text-gray-200 transition-colors"
+			class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--nx-surface-raised)] hover:bg-[var(--nx-border)]
+			       border border-[var(--nx-border)] text-sm font-semibold text-[var(--nx-text)] transition-colors"
 		>
 			Installer Nodyx
 		</a>
 	</div>
-	<p class="text-xs text-gray-600 mt-4">Sous-domaine gratuit · SSL automatique · AGPL-3.0</p>
+	<p class="text-xs text-[var(--nx-text-muted)] mt-4">Sous-domaine gratuit · SSL automatique · AGPL-3.0</p>
 </div>

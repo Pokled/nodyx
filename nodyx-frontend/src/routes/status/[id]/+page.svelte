@@ -204,42 +204,42 @@
 	.s-wrap { max-width: 880px; margin: 0 auto; padding: 1.25rem 1rem 5rem; }
 	.s-back { display: inline-block; margin-bottom: 1rem; color: var(--nx-accent-soft); text-decoration: none; font-size: 0.875rem; }
 	.s-back:hover { text-decoration: underline; }
-	.s-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(255,255,255,0.02); padding: 1.1rem; margin-bottom: 0.75rem; }
-	.s-card--reply { background: rgba(255,255,255,0.01); }
+	.s-card { border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--nx-text) 2%, transparent); padding: 1.1rem; margin-bottom: 0.75rem; }
+	.s-card--reply { background: color-mix(in srgb, var(--nx-text) 1%, transparent); }
 	.s-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
 	.s-avatar { width: 42px; height: 42px; border-radius: 999px; object-fit: cover; display: block; }
 	.s-avatar--i { display: inline-flex; align-items: center; justify-content: center; background: rgb(var(--nx-accent-2-rgb) / 0.3); color: #fff; font-weight: 700; }
-	.s-name { font-weight: 700; color: #fff; text-decoration: none; }
-	.s-handle { display: block; color: rgba(255,255,255,0.45); font-size: 0.8rem; }
+	.s-name { font-weight: 700; color: var(--nx-text); text-decoration: none; }
+	.s-handle { display: block; color: var(--nx-text-muted); font-size: 0.8rem; }
 	.s-replyto { color: var(--nx-accent-soft); }
-	.s-text { color: rgba(255,255,255,0.9); font-size: 0.95rem; line-height: 1.55; }
+	.s-text { color: var(--nx-text); font-size: 0.95rem; line-height: 1.55; }
 	.s-media { width: 100%; max-height: 420px; object-fit: cover; border-radius: 12px; margin-top: 0.6rem; display: block; }
-	.s-link { display: block; margin-top: 0.6rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; text-decoration: none; }
+	.s-link { display: block; margin-top: 0.6rem; border: 1px solid color-mix(in srgb, var(--nx-text) 10%, transparent); border-radius: 12px; overflow: hidden; text-decoration: none; }
 	.s-link-img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
 	.s-link-body { padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.2rem; }
 	.s-link-site { font-size: 0.7rem; text-transform: uppercase; color: var(--nx-accent-soft); font-weight: 700; }
-	.s-link-title { font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.9rem; }
-	.s-reshare-label { font-size: 0.78rem; color: rgba(255,255,255,0.45); font-weight: 600; margin-bottom: 0.5rem; }
-	.s-reshare-label :global(a) { color: rgba(255,255,255,0.6); text-decoration: none; }
+	.s-link-title { font-weight: 700; color: var(--nx-text); font-size: 0.9rem; }
+	.s-reshare-label { font-size: 0.78rem; color: var(--nx-text-muted); font-weight: 600; margin-bottom: 0.5rem; }
+	.s-reshare-label :global(a) { color: var(--nx-text-muted); text-decoration: none; }
 	.s-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.9rem; flex-wrap: wrap; }
 	.s-react-wrap { position: relative; }
-	.s-action { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.7); border-radius: 999px; padding: 0.35rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
-	.s-action:hover { border-color: var(--nx-accent-soft); color: #fff; }
+	.s-action { border: 1px solid color-mix(in srgb, var(--nx-text) 10%, transparent); background: color-mix(in srgb, var(--nx-text) 3%, transparent); color: var(--nx-text-muted); border-radius: 999px; padding: 0.35rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+	.s-action:hover { border-color: var(--nx-accent-soft); color: var(--nx-text); }
 	.s-action--static { cursor: default; }
 	.s-action--on { color: #f43f5e; border-color: rgba(244,63,94,0.4); }
-	.s-action--reshare { color: #34d399; border-color: rgba(52,211,153,0.4); }
-	.s-picker { position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 50; display: flex; gap: 0.15rem; padding: 0.3rem; border-radius: 999px; background: #1a1a24; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 8px 28px rgba(0,0,0,0.5); }
+	.s-action--reshare { color: var(--nx-ok); border-color: color-mix(in srgb, var(--nx-ok) 40%, transparent); }
+	.s-picker { position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 50; display: flex; gap: 0.15rem; padding: 0.3rem; border-radius: 999px; background: var(--nx-surface-raised); border: 1px solid color-mix(in srgb, var(--nx-text) 12%, transparent); box-shadow: 0 8px 28px rgba(0,0,0,0.5); }
 	.s-pick { border: none; background: transparent; cursor: pointer; font-size: 1.25rem; padding: 0.2rem 0.3rem; border-radius: 999px; }
 	.s-pick:hover { transform: scale(1.3); }
 	.s-backdrop { position: fixed; inset: 0; z-index: 40; }
 	.s-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.6rem; }
-	.s-chip { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); }
+	.s-chip { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--nx-text) 10%, transparent); background: color-mix(in srgb, var(--nx-text) 4%, transparent); }
 	.s-chip--mine { background: rgb(var(--nx-accent-2-rgb) / 0.22); border-color: rgb(var(--nx-accent-2-rgb) / 0.6); }
-	.s-replies-title { font-size: 0.95rem; font-weight: 700; color: rgba(255,255,255,0.8); margin: 1.4rem 0 0.6rem; }
-	.s-composer { border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(255,255,255,0.02); padding: 0.9rem; margin-bottom: 1rem; }
-	.s-composer-target { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem; }
+	.s-replies-title { font-size: 0.95rem; font-weight: 700; color: var(--nx-text-muted); margin: 1.4rem 0 0.6rem; }
+	.s-composer { border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--nx-text) 2%, transparent); padding: 0.9rem; margin-bottom: 1rem; }
+	.s-composer-target { font-size: 0.8rem; color: var(--nx-text-muted); margin-bottom: 0.5rem; }
 	.s-composer-target :global(strong) { color: var(--nx-accent-soft); }
-	.s-composer-cancel { border: none; background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 1rem; margin-left: 0.3rem; }
+	.s-composer-cancel { border: none; background: transparent; color: var(--nx-text-muted); cursor: pointer; font-size: 1rem; margin-left: 0.3rem; }
 	.s-composer-foot { display: flex; justify-content: flex-end; margin-top: 0.6rem; }
 	.s-send { border: none; border-radius: 999px; padding: 0.45rem 1.2rem; font-size: 0.85rem; font-weight: 700; color: #fff; cursor: pointer; background: linear-gradient(135deg, var(--nx-accent), var(--nx-accent-2)); }
 	.s-send:disabled { opacity: 0.4; cursor: default; }
