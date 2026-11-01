@@ -133,6 +133,39 @@ html, body {
   --nx-header-accent-soft:   rgb(255 176 32 / 0.16);
   --nx-on-accent:            #16120c;
 }
+
+/* Violets pâles (--nx-accent-2-soft, -soft2) en thème CLAIR, sur les pages qui suivent le
+   thème. Définis une seule fois pour le sombre, ils servaient de couleur de TEXTE (146
+   usages) et devenaient illisibles sur fond clair (contraste ~2:1). Foncés ici par
+   mélange avec du noir, À PARTIR DE LA VALEUR EN PLACE : une instance qui les redéfinit
+   (sleemstudio : vert) garde sa teinte. Les pages pas encore migrées, toujours sombres,
+   ne sont pas concernées (ni .nx-themed ni .chat-shell). Dosage mesuré : au moins
+   4,5:1 sur le fond de page ET sur carte blanche, violet par défaut comme vert de
+   sleemstudio (soft 40 % de noir, soft2 45 %). 01/11/2026. */
+:root {
+  --nx-accent-2-soft-base:  var(--nx-accent-2-soft);
+  --nx-accent-2-soft2-base: var(--nx-accent-2-soft2);
+}
+.nx-themed,
+.chat-shell {
+  --nx-accent-2-soft:  color-mix(in oklab, var(--nx-accent-2-soft-base) 60%, black);
+  --nx-accent-2-soft2: color-mix(in oklab, var(--nx-accent-2-soft2-base) 55%, black);
+}
+/* Sombre (choix explicite ou système) et contenu posé sur une couverture : valeurs d'origine. */
+:root[data-theme="dark"] .nx-themed,
+:root[data-theme="dark"] .chat-shell,
+.nx-themed .nx-on-dark,
+.chat-shell .nx-on-dark {
+  --nx-accent-2-soft:  var(--nx-accent-2-soft-base);
+  --nx-accent-2-soft2: var(--nx-accent-2-soft2-base);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .nx-themed,
+  :root:not([data-theme="light"]) .chat-shell {
+    --nx-accent-2-soft:  var(--nx-accent-2-soft-base);
+    --nx-accent-2-soft2: var(--nx-accent-2-soft2-base);
+  }
+}
 /* Mascotte poulpe (nodyx-octopus.png) : PNG blanc plein, neutre par choix
    (cf SPECS/NODYX_CONTENANT_DESIGN_CDC.md, une mascotte ne doit pas rentrer
    en concurrence avec la couleur d'état actif). Inversé en clair. */
