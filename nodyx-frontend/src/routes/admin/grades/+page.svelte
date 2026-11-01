@@ -2,12 +2,14 @@
 	import { enhance } from '$app/forms'
 	import type { PageData, ActionData } from './$types'
 	import { t } from '$lib/i18n'
+	import { inkOn } from '$lib/adminTheme'
 
 	const tFn = $derived($t)
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
-	let editingId = $state<string | null>(null)
+	const grades  = $derived(data.grades ?? [])
+	const members = $derived(data.members ?? [])
 
 	const PERM_LABELS: Record<string, string> = {
 		can_post:            'agrade.perm_post',
@@ -18,131 +20,203 @@
 		can_manage_grades:   'agrade.perm_manage_grades',
 	}
 
-	function permSummary(perms: Record<string, boolean>) {
-		return Object.entries(perms).filter(([,v])=>v).map(([k])=>PERM_LABELS[k]?tFn(PERM_LABELS[k]):k).join(', ') || '·'
+	const errorText = $derived(
+		(form as any)?.error ?? ((form as any)?.errorKey ? tFn((form as any).errorKey) : null)
+	)
+
+	// ── Création / édition ────────────────────────────────────────────────
+	let newName  = $state('')
+	let newColor = $state('#99aab5')
+
+	let editingId = $state<string | null>(null)
+	let editName  = $state('')
+	let editColor = $state('#99aab5')
+	function startEdit(g: any) {
+		editingId = g.id
+		editName  = g.name
+		editColor = g.color
 	}
 
-	function luminance(hex: string) {
-		return (0.299*parseInt(hex.slice(1,3),16) + 0.587*parseInt(hex.slice(3,5),16) + 0.114*parseInt(hex.slice(5,7),16)) / 255
-	}
+	// Combien de membres portent chaque grade (lu dans la liste déjà chargée)
+	const holders = $derived.by(() => {
+		const c: Record<string, number> = {}
+		for (const m of members) if (m.grade_id) c[m.grade_id] = (c[m.grade_id] ?? 0) + 1
+		return c
+	})
+	const ungraded = $derived(members.filter((m: any) => !m.grade_id).length)
+
+	// ── Attribution ───────────────────────────────────────────────────────
+	let search      = $state('')
+	let gradeFilter = $state<'all' | 'none' | string>('all')
+	const filteredMembers = $derived.by(() => {
+		const q = search.trim().toLowerCase()
+		return members
+			.filter((m: any) => gradeFilter === 'all' || (gradeFilter === 'none' ? !m.grade_id : m.grade_id === gradeFilter))
+			.filter((m: any) => !q || m.username.toLowerCase().includes(q))
+			.sort((a: any, b: any) => a.username.localeCompare(b.username))
+	})
+
+	let savedFor  = $state<string | null>(null)
+	let savingFor = $state<string | null>(null)
+	let failedFor = $state<string | null>(null)
 </script>
 
 <svelte:head><title>{tFn('agrade.page_title')}</title></svelte:head>
 
-<div>
-	<h1 class="text-2xl font-bold text-white mb-6">{tFn('agrade.title')}</h1>
+{#snippet permChecks(current: Record<string, boolean> | null)}
+	<fieldset class="adm-field">
+		<legend class="adm-label mb-2">{tFn('agrade.permissions')}</legend>
+		<div class="adm-checks">
+			{#each Object.entries(PERM_LABELS) as [key, label]}
+				<label class="adm-check">
+					<input type="checkbox" name={key} checked={current?.[key] ?? false} />
+					{tFn(label)}
+				</label>
+			{/each}
+		</div>
+		<p class="adm-hint mt-2">{tFn('agrade.perm_not_enforced')}</p>
+	</fieldset>
+{/snippet}
 
-	{#if form?.error}
-		<p class="mb-4 rounded-lg bg-red-900/40 border border-red-800 px-4 py-2 text-sm text-red-300">{form.error}</p>
+<div class="adm-page">
+	<header class="adm-head">
+		<div>
+			<h1 class="adm-title">{tFn('agrade.title')}</h1>
+			<p class="adm-desc">{tFn('agrade.desc')}</p>
+		</div>
+	</header>
+
+	{#if errorText}
+		<div class="adm-notice adm-notice--bad" role="alert">{errorText}</div>
 	{/if}
 
-	<!-- Create -->
-	<details class="mb-6 rounded-xl border border-gray-800 bg-gray-900/50">
-		<summary class="cursor-pointer px-5 py-3.5 text-sm font-semibold text-indigo-300 hover:text-indigo-200 select-none flex items-center gap-2">
-			<span class="text-base">+</span> {tFn('agrade.create_grade')}
+	<!-- Créer -->
+	<details class="adm-card adm-disclosure" open={grades.length === 0}>
+		<summary>
+			<svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+			{tFn('agrade.create_grade')}
 		</summary>
-		<form method="POST" action="?/create" use:enhance class="px-5 pb-5 pt-3 space-y-4 border-t border-gray-800">
-			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-				<div>
-					<label for="grade-create-name" class="block text-xs text-gray-400 mb-1">{tFn('agrade.name')}</label>
-					<input id="grade-create-name" name="name" type="text" required maxlength="100"
-						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+		<form method="POST" action="?/create" class="adm-form"
+			use:enhance={() => async ({ result, update }) => {
+				await update()
+				if (result.type === 'success') newName = ''
+			}}>
+			<input type="hidden" name="position" value={grades.length} />
+			<div class="adm-form-grid">
+				<label class="adm-field">
+					<span class="adm-label">{tFn('agrade.name')}</span>
+					<input name="name" type="text" required maxlength="100" class="adm-input" bind:value={newName} />
+				</label>
+				<div class="adm-field">
+					<label class="adm-label" for="grade-create-color">{tFn('agrade.color')}</label>
+					<div class="adm-color">
+						<input id="grade-create-color" name="color" type="color" bind:value={newColor} />
+						<code>{newColor}</code>
+					</div>
 				</div>
-				<div>
-					<label for="grade-create-color" class="block text-xs text-gray-400 mb-1">{tFn('agrade.color')}</label>
-					<input id="grade-create-color" name="color" type="color" value="#99AAB5"
-						class="h-10 w-full rounded-lg bg-gray-800 border border-gray-700 px-1 cursor-pointer" />
-				</div>
-				<div>
-					<label for="grade-create-position" class="block text-xs text-gray-400 mb-1">{tFn('agrade.position')}</label>
-					<input id="grade-create-position" name="position" type="number" value="0" min="0"
-						class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+				<div class="adm-field">
+					<span class="adm-label">{tFn('atags.preview')}</span>
+					<div class="flex items-center min-h-9">
+						<span class="adm-swatch" style="background:{newColor}; color:{inkOn(newColor)}">{newName.trim() || tFn('agrade.name')}</span>
+					</div>
 				</div>
 			</div>
-			<fieldset>
-				<legend class="text-xs text-gray-400 mb-2">{tFn('agrade.permissions')}</legend>
-				<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-					{#each Object.entries(PERM_LABELS) as [key, label]}
-						<label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-							<input type="checkbox" name={key} class="accent-indigo-500" />
-							{tFn(label)}
-						</label>
-					{/each}
-				</div>
-			</fieldset>
-			<button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition-colors">
-				{tFn('agrade.create')}
-			</button>
+			{@render permChecks(null)}
+			<div>
+				<button type="submit" class="adm-btn adm-btn--primary">{tFn('agrade.create')}</button>
+			</div>
 		</form>
 	</details>
 
-	<!-- Table -->
-	{#if data.grades.length === 0}
-		<p class="text-sm text-gray-500">{tFn('agrade.empty')}</p>
+	<!-- Liste des grades -->
+	{#if grades.length === 0}
+		<p class="adm-empty adm-card">{tFn('agrade.empty')}</p>
 	{:else}
-		<div class="rounded-xl border border-gray-800 overflow-x-auto mb-10">
-			<table class="tableau-cartes w-full text-sm md:min-w-[480px]">
-				<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
+		<div class="adm-table-wrap">
+			<table class="adm-table">
+				<thead>
 					<tr>
-						<th class="px-4 py-3 text-left">{tFn('agrade.col_grade')}</th>
-						<th class="px-4 py-3 text-left">{tFn('agrade.permissions')}</th>
-						<th class="px-4 py-3 text-right">{tFn('agrade.col_actions')}</th>
+						<th>{tFn('agrade.col_grade')}</th>
+						<th>{tFn('agrade.permissions')}</th>
+						<th class="adm-num">{tFn('agrade.col_holders')}</th>
+						<th class="adm-num"><span class="sr-only">{tFn('agrade.col_actions')}</span></th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-gray-800/60">
-					{#each data.grades as grade}
-						<tr class="bg-gray-900/30 hover:bg-gray-900/60 transition-colors">
+				<tbody>
+					{#each grades as grade, i (grade.id)}
+						<tr>
 							{#if editingId === grade.id}
-								<td colspan="3" class="px-4 py-4">
-									<form method="POST" action="?/update" use:enhance={() => {
-										return async ({ update }) => { await update(); editingId = null }
-									}} class="space-y-3">
+								<td colspan="4">
+									<form method="POST" action="?/update" class="adm-form py-2"
+										use:enhance={() => async ({ result, update }) => {
+											await update()
+											if (result.type === 'success') editingId = null
+										}}>
 										<input type="hidden" name="grade_id" value={grade.id} />
-										<div class="grid sm:grid-cols-2 gap-3">
-											<div>
-												<label for="grade-edit-name-{grade.id}" class="block text-xs text-gray-400 mb-1">{tFn('agrade.name')}</label>
-												<input id="grade-edit-name-{grade.id}" name="name" type="text" required value={grade.name}
-													class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+										<div class="adm-form-grid">
+											<label class="adm-field">
+												<span class="adm-label">{tFn('agrade.name')}</span>
+												<input name="name" type="text" required maxlength="100" class="adm-input" bind:value={editName} />
+											</label>
+											<div class="adm-field">
+												<label class="adm-label" for="grade-edit-color-{grade.id}">{tFn('agrade.color')}</label>
+												<div class="adm-color">
+													<input id="grade-edit-color-{grade.id}" name="color" type="color" bind:value={editColor} />
+													<code>{editColor}</code>
+												</div>
 											</div>
-											<div>
-												<label for="grade-edit-color-{grade.id}" class="block text-xs text-gray-400 mb-1">{tFn('agrade.color')}</label>
-												<input id="grade-edit-color-{grade.id}" name="color" type="color" value={grade.color}
-													class="h-10 w-full rounded-lg bg-gray-800 border border-gray-700 px-1 cursor-pointer" />
+											<div class="adm-field">
+												<span class="adm-label">{tFn('atags.preview')}</span>
+												<div class="flex items-center min-h-9">
+													<span class="adm-swatch" style="background:{editColor}; color:{inkOn(editColor)}">{editName.trim() || grade.name}</span>
+												</div>
 											</div>
 										</div>
-										<fieldset>
-											<legend class="text-xs text-gray-400 mb-2">{tFn('agrade.permissions')}</legend>
-											<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-												{#each Object.entries(PERM_LABELS) as [key, label]}
-													<label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-														<input type="checkbox" name={key} class="accent-indigo-500"
-															checked={grade.permissions?.[key] ?? false} />
-														{tFn(label)}
-													</label>
-												{/each}
-											</div>
-										</fieldset>
-										<div class="flex gap-2">
-											<button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white">{tFn('agrade.save')}</button>
-											<button type="button" onclick={() => editingId = null} class="rounded-lg bg-gray-700 hover:bg-gray-600 px-3 py-1.5 text-xs text-gray-300">{tFn('agrade.cancel')}</button>
+										{@render permChecks(grade.permissions ?? {})}
+										<div class="adm-actions">
+											<button type="submit" class="adm-btn adm-btn--primary adm-btn--sm">{tFn('agrade.save')}</button>
+											<button type="button" class="adm-btn adm-btn--sm" onclick={() => editingId = null}>{tFn('agrade.cancel')}</button>
 										</div>
 									</form>
 								</td>
 							{:else}
-								<td class="px-4 py-3" data-label={tFn('agrade.col_grade')}>
-									<span class="inline-block rounded px-2.5 py-1 text-xs font-semibold"
-										style="background:{grade.color}; color:{luminance(grade.color)>0.5?'#111':'#fff'}">
-										{grade.name}
-									</span>
+								<td class="adm-cell-main">
+									<span class="adm-swatch" style="background:{grade.color}; color:{inkOn(grade.color)}">{grade.name}</span>
 								</td>
-								<td class="px-4 py-3 text-xs text-gray-400" data-label={tFn('agrade.permissions')}>{permSummary(grade.permissions ?? {})}</td>
-								<td class="px-4 py-3 text-right flex items-center justify-end gap-3">
-									<button onclick={() => editingId = grade.id} class="text-xs text-indigo-400 hover:text-indigo-300">{tFn('agrade.edit')}</button>
-									<form method="POST" action="?/delete" use:enhance class="inline">
-										<input type="hidden" name="grade_id" value={grade.id} />
-										<button type="submit" onclick={(e) => { if (!confirm(tFn('agrade.confirm_delete', { name: grade.name }))) e.preventDefault() }}
-											class="text-xs text-red-500 hover:text-red-400">{tFn('agrade.delete')}</button>
-									</form>
+								<td data-label={tFn('agrade.permissions')}>
+									{#if Object.values(grade.permissions ?? {}).some(Boolean)}
+										<div class="flex flex-wrap gap-1 justify-end md:justify-start">
+											{#each Object.entries(PERM_LABELS).filter(([k]) => grade.permissions?.[k]) as [, label]}
+												<span class="adm-pill">{tFn(label)}</span>
+											{/each}
+										</div>
+									{:else}
+										<span class="adm-muted">·</span>
+									{/if}
+								</td>
+								<td class="adm-num" data-label={tFn('agrade.col_holders')}>{holders[grade.id] ?? 0}</td>
+								<td class="adm-num">
+									<div class="adm-actions adm-actions--row">
+										<form method="POST" action="?/move" use:enhance class="adm-move">
+											<input type="hidden" name="grade_id" value={grade.id} />
+											<button type="submit" name="dir" value="up" class="adm-btn adm-btn--icon" disabled={i === 0}
+												aria-label={tFn('agrade.move_up', { name: grade.name })} title={tFn('agrade.move_up', { name: grade.name })}>
+												<svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
+											</button>
+											<button type="submit" name="dir" value="down" class="adm-btn adm-btn--icon" disabled={i === grades.length - 1}
+												aria-label={tFn('agrade.move_down', { name: grade.name })} title={tFn('agrade.move_down', { name: grade.name })}>
+												<svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+											</button>
+										</form>
+										<button type="button" class="adm-btn adm-btn--sm" onclick={() => startEdit(grade)}>{tFn('agrade.edit')}</button>
+										<form method="POST" action="?/delete" use:enhance class="inline">
+											<input type="hidden" name="grade_id" value={grade.id} />
+											<button type="submit" class="adm-btn adm-btn--sm adm-btn--danger"
+												onclick={(e) => { if (!confirm(tFn('agrade.confirm_delete', { name: grade.name }))) e.preventDefault() }}>
+												{tFn('agrade.delete')}
+											</button>
+										</form>
+									</div>
 								</td>
 							{/if}
 						</tr>
@@ -152,50 +226,92 @@
 		</div>
 	{/if}
 
-	<!-- Assign grades to members -->
-	<h2 class="text-lg font-bold text-white mb-4">{tFn('agrade.assign_title')}</h2>
-	<div class="rounded-xl border border-gray-800 overflow-x-auto">
-		<table class="tableau-cartes w-full text-sm md:min-w-[480px]">
-			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
-				<tr>
-					<th class="px-4 py-3 text-left">{tFn('agrade.col_member')}</th>
-					<th class="px-4 py-3 text-left">{tFn('agrade.col_role')}</th>
-					<th class="px-4 py-3 text-left">{tFn('agrade.col_current_grade')}</th>
-					<th class="px-4 py-3 text-left">{tFn('agrade.col_assign')}</th>
-				</tr>
-			</thead>
-			<tbody class="divide-y divide-gray-800/60">
-				{#each data.members as member}
-					<tr class="bg-gray-900/30 hover:bg-gray-900/60">
-						<td class="px-4 py-3 font-medium text-white" data-label={tFn('agrade.col_member')}>{member.username}</td>
-						<td class="px-4 py-3 text-xs text-gray-500 capitalize" data-label={tFn('agrade.col_role')}>{member.role}</td>
-						<td class="px-4 py-3" data-label={tFn('agrade.col_current_grade')}>
-							{#if member.grade_name && member.grade_color}
-								<span class="inline-block rounded px-2 py-0.5 text-xs font-medium"
-									style="background:{member.grade_color}; color:{luminance(member.grade_color)>0.5?'#111':'#fff'}">
-									{member.grade_name}
-								</span>
-							{:else}
-								<span class="text-gray-600 text-xs">·</span>
-							{/if}
-						</td>
-						<td class="px-4 py-3" data-label={tFn('agrade.col_assign')}>
-							<form method="POST" action="?/assign" use:enhance class="flex items-center gap-2">
-								<input type="hidden" name="user_id" value={member.user_id} />
-								<select name="grade_id" class="rounded-lg bg-gray-800 border border-gray-700 px-2 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500">
-									<option value="">{tFn('agrade.none')}</option>
-									{#each data.grades as g}
-										<option value={g.id} selected={g.id === member.grade_id}>{g.name}</option>
-									{/each}
-								</select>
-								<button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white">
-									{tFn('agrade.assign_btn')}
-								</button>
-							</form>
-						</td>
-					</tr>
+	<!-- Attribution aux membres -->
+	<section class="flex flex-col gap-3 mt-2">
+		<div class="adm-head">
+			<div>
+				<h2 class="adm-title" style="font-size:1.0625rem">{tFn('agrade.assign_title')}</h2>
+				<p class="adm-desc">{tFn('agrade.assign_desc')}</p>
+			</div>
+			<label class="adm-search">
+				<svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+				<input type="search" class="adm-input" placeholder={tFn('agrade.search_ph')} aria-label={tFn('agrade.search_ph')} bind:value={search} />
+			</label>
+		</div>
+
+		{#if grades.length > 0}
+			<div class="adm-chips" role="group" aria-label={tFn('agrade.col_current_grade')}>
+				<button type="button" class="adm-chip" aria-pressed={gradeFilter === 'all'} onclick={() => gradeFilter = 'all'}>
+					{tFn('amem.filter_all')} <span class="adm-chip-count">{members.length}</span>
+				</button>
+				<button type="button" class="adm-chip" aria-pressed={gradeFilter === 'none'} onclick={() => gradeFilter = 'none'}>
+					{tFn('agrade.filter_none')} <span class="adm-chip-count">{ungraded}</span>
+				</button>
+				{#each grades as g (g.id)}
+					<button type="button" class="adm-chip" aria-pressed={gradeFilter === g.id} onclick={() => gradeFilter = g.id}>
+						<span class="inline-block w-2 h-2 rounded-full" style="background:{g.color}" aria-hidden="true"></span>
+						{g.name} <span class="adm-chip-count">{holders[g.id] ?? 0}</span>
+					</button>
 				{/each}
-			</tbody>
-		</table>
-	</div>
+			</div>
+		{/if}
+
+		<div class="adm-table-wrap">
+			<table class="adm-table">
+				<thead>
+					<tr>
+						<th>{tFn('agrade.col_member')}</th>
+						<th>{tFn('agrade.col_role')}</th>
+						<th>{tFn('agrade.col_assign')}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each filteredMembers as member (member.user_id)}
+						<tr>
+							<td class="adm-cell-main font-medium">{member.username}</td>
+							<td data-label={tFn('agrade.col_role')}>
+								<span class="adm-pill adm-pill--{member.role}">{tFn(`amem.role_${member.role}`)}</span>
+							</td>
+							<td data-label={tFn('agrade.col_assign')}>
+								<form method="POST" action="?/assign" class="flex items-center gap-2 justify-end md:justify-start"
+									use:enhance={({ formElement }) => {
+										savingFor = member.user_id
+										failedFor = null
+										return async ({ result, update }) => {
+											savingFor = null
+											if (result.type === 'success') {
+												await update({ reset: false })
+												savedFor = member.user_id
+												setTimeout(() => { if (savedFor === member.user_id) savedFor = null }, 2000)
+											} else {
+												// Échec : le menu revient sur le grade réellement en base,
+												// et la ligne le dit (jamais de « Enregistré » mensonger).
+												const sel = formElement.querySelector('select')
+												if (sel) sel.value = member.grade_id ?? ''
+												failedFor = member.user_id
+											}
+										}
+									}}>
+									<input type="hidden" name="user_id" value={member.user_id} />
+									<select name="grade_id" class="adm-input" aria-label={tFn('agrade.assign_to', { name: member.username })}
+										disabled={grades.length === 0 || savingFor === member.user_id}
+										onchange={(e) => (e.currentTarget as HTMLSelectElement).form?.requestSubmit()}>
+										<option value="" selected={!member.grade_id}>{tFn('agrade.none')}</option>
+										{#each grades as g (g.id)}
+											<option value={g.id} selected={g.id === member.grade_id}>{g.name}</option>
+										{/each}
+									</select>
+									<span class="text-xs adm-muted min-w-[4.5rem]" role="status">
+										{#if savedFor === member.user_id}{tFn('agrade.saved')}{:else if failedFor === member.user_id}<span style="color:var(--nx-bad)">{tFn('agrade.assign_failed')}</span>{/if}
+									</span>
+								</form>
+							</td>
+						</tr>
+					{:else}
+						<tr><td colspan="3" class="adm-empty">{tFn('amem.none_found')}</td></tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	</section>
 </div>
