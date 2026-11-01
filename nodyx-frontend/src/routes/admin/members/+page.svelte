@@ -45,11 +45,67 @@
 	let search  = $state('')
 	let members = $state(untrack(() => data.members.map((m: any) => ({ ...m }))))
 
-	const filtered = $derived(
-		members.filter((m: any) =>
-			!search || m.username.toLowerCase().includes(search.toLowerCase())
-		)
+	// ── Recherche, filtre par rôle, tri ───────────────────────────────────────
+	// Recherche sur le pseudo, le grade, le rôle (dans la langue affichée) et
+	// l'adresse si elle a été révélée. Tri par en-tête de colonne (aria-sort).
+	const ROLES = ['owner', 'admin', 'moderator', 'member'] as const
+	const ROLE_RANK: Record<string, number> = { owner: 0, admin: 1, moderator: 2, member: 3 }
+	type SortKey = 'username' | 'role' | 'grade' | 'threads' | 'posts' | 'joined'
+	let roleFilter = $state<string>('all')
+	let sortKey    = $state<SortKey | null>(null)
+	let sortDir    = $state<'asc' | 'desc'>('asc')
+
+	const roleCounts = $derived(
+		Object.fromEntries(ROLES.map((r) => [r, members.filter((m: any) => m.role === r).length]))
 	)
+
+	function toggleSort(key: SortKey) {
+		if (sortKey === key) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; return }
+		sortKey = key
+		// Les quantités et les dates se lisent d'abord du plus grand au plus récent.
+		sortDir = key === 'threads' || key === 'posts' || key === 'joined' ? 'desc' : 'asc'
+	}
+	const ariaSort = (key: SortKey) =>
+		sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'
+
+	const filtered = $derived.by(() => {
+		const q = search.trim().toLowerCase()
+		const list = members.filter((m: any) =>
+			(roleFilter === 'all' || m.role === roleFilter) &&
+			(!q ||
+				m.username.toLowerCase().includes(q) ||
+				(m.grade_name ?? '').toLowerCase().includes(q) ||
+				tFn(`amem.role_${m.role}`).toLowerCase().includes(q) ||
+				(revealed[m.user_id] ?? '').toLowerCase().includes(q))
+		)
+		if (!sortKey) return list
+		const dir = sortDir === 'asc' ? 1 : -1
+		const key = sortKey
+		return [...list].sort((a: any, b: any) => {
+			switch (key) {
+				case 'username': return a.username.localeCompare(b.username, $locale) * dir
+				case 'role':     return ((ROLE_RANK[a.role] ?? 9) - (ROLE_RANK[b.role] ?? 9)) * dir
+				case 'grade':    return (a.grade_name ?? '\uffff').localeCompare(b.grade_name ?? '\uffff', $locale) * dir
+				case 'threads':  return (a.thread_count - b.thread_count) * dir
+				case 'posts':    return (a.post_count - b.post_count) * dir
+				case 'joined':   return (new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()) * dir
+			}
+		})
+	})
+
+	// ── Menu d'actions par ligne (popover natif : jamais coupé par le tableau) ─
+	function placeMenu(button: HTMLElement, id: string) {
+		const menu = document.getElementById(id)
+		if (!menu) return
+		const r = button.getBoundingClientRect()
+		menu.style.top = `${Math.round(r.bottom + 4)}px`
+		menu.style.right = `${Math.round(window.innerWidth - r.right)}px`
+		menu.style.left = 'auto'
+	}
+	function closeMenu(id: string) {
+		const menu = document.getElementById(id) as (HTMLElement & { hidePopover?: () => void }) | null
+		menu?.hidePopover?.()
+	}
 
 	// Adresses revelees pendant cette session d'ecran, jamais persistees.
 	let revealed:  Record<string, string>  = $state({})
@@ -80,13 +136,6 @@
 	// Message affiché après un ban : dit si l'IP a réellement été bannie.
 	let banNotice  = $state<{ kind: 'ok' | 'warn'; text: string } | null>(null)
 
-	const ROLE_COLORS: Record<string, string> = {
-		owner:     'bg-yellow-900/50 text-yellow-400 border-yellow-800/50',
-		admin:     'bg-red-900/50 text-red-400 border-red-800/50',
-		moderator: 'bg-blue-900/50 text-blue-400 border-blue-800/50',
-		member:    'bg-gray-800 text-gray-400 border-gray-700',
-	}
-
 	function luminance(hex: string): number {
 		const r = parseInt(hex.slice(1,3), 16)
 		const g = parseInt(hex.slice(3,5), 16)
@@ -97,159 +146,161 @@
 
 <svelte:head><title>{tFn('amem.page_title')}</title></svelte:head>
 
-<div>
+{#snippet sortHead(key: 'username' | 'role' | 'grade' | 'threads' | 'posts' | 'joined', label: string, num = false)}
+	<th aria-sort={ariaSort(key)} class={num ? 'adm-num' : ''}>
+		<button type="button" class="adm-sort" onclick={() => toggleSort(key)}>
+			{label}
+			<svg class="adm-sort-arrow" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+		</button>
+	</th>
+{/snippet}
+
+{#snippet email(userId: string, masked: string)}
+	<!-- Adresse masquée par défaut, révélée par un geste explicite qui laisse une
+	     trace dans le journal d'audit. Un mode discret à activer ne protégerait
+	     personne : c'est le soir où on oublie de l'allumer que ça se voit. -->
+	<span class="member-mail">
+		<span>{revealed[userId] ?? masked}</span>
+		{#if !revealed[userId]}
+			<button type="button" class="member-reveal" onclick={() => revealEmail(userId)} disabled={revealing[userId]}>
+				{revealing[userId] ? tFn('amem.revealing') : tFn('amem.reveal_email')}
+			</button>
+		{/if}
+	</span>
+{/snippet}
+
+<div class="adm-page">
 	{#if banNotice}
-		<div class="mb-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm
-			{banNotice.kind === 'ok'
-				? 'bg-green-900/30 border-green-800 text-green-300'
-				: 'bg-amber-900/30 border-amber-800 text-amber-300'}">
+		<div class="adm-notice {banNotice.kind === 'ok' ? 'adm-notice--ok' : 'adm-notice--warn'}" role="status">
 			<span>{banNotice.text}</span>
-			<button onclick={() => banNotice = null} class="text-lg leading-none opacity-70 hover:opacity-100">✕</button>
+			<button type="button" class="adm-btn adm-btn--sm" onclick={() => banNotice = null}>{tFn('amem.close')}</button>
 		</div>
 	{/if}
-	<div class="flex items-center justify-between mb-6">
+
+	<header class="adm-head">
 		<div>
-			<h1 class="text-2xl font-bold text-white">{tFn('amem.title')}</h1>
-			<p class="text-sm text-gray-500 mt-0.5">{data.members.length > 1 ? tFn('amem.total_many', { n: data.members.length }) : tFn('amem.total_one', { n: data.members.length })}</p>
+			<h1 class="adm-title">{tFn('amem.title')}</h1>
+			<p class="adm-desc">
+				{members.length > 1 ? tFn('amem.total_many', { n: members.length }) : tFn('amem.total_one', { n: members.length })}
+				{#if filtered.length !== members.length} · {tFn('amem.shown', { n: filtered.length })}{/if}
+			</p>
 		</div>
-		<input
-			type="text"
-			placeholder={tFn('amem.search_ph')}
-			bind:value={search}
-			class="px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-sm text-gray-200
-			       placeholder-gray-600 focus:outline-none focus:border-indigo-700 w-48"
-		/>
+		<label class="adm-search">
+			<svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+			<input type="search" class="adm-input" placeholder={tFn('amem.search_ph2')} aria-label={tFn('amem.search_ph2')} bind:value={search} />
+		</label>
+	</header>
+
+	<div class="adm-chips" role="group" aria-label={tFn('amem.col_role')}>
+		<button type="button" class="adm-chip" aria-pressed={roleFilter === 'all'} onclick={() => roleFilter = 'all'}>
+			{tFn('amem.filter_all')} <span class="adm-chip-count">{members.length}</span>
+		</button>
+		{#each ROLES as r}
+			{#if roleCounts[r] > 0}
+				<button type="button" class="adm-chip" aria-pressed={roleFilter === r} onclick={() => roleFilter = r}>
+					{tFn(`amem.role_${r}`)} <span class="adm-chip-count">{roleCounts[r]}</span>
+				</button>
+			{/if}
+		{/each}
 	</div>
 
-	<div class="rounded-xl border border-gray-800 overflow-x-auto">
-		<table class="tableau-cartes w-full text-sm md:min-w-[720px]">
-			<thead class="bg-gray-900 border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wider">
+	<div class="adm-table-wrap">
+		<table class="adm-table">
+			<thead>
 				<tr>
-					<th class="px-4 py-3 text-left">{tFn('amem.col_member')}</th>
-					<th class="px-4 py-3 text-left">{tFn('amem.col_role')}</th>
-					<th class="px-4 py-3 text-left">{tFn('amem.col_grade')}</th>
-					<th class="px-4 py-3 text-center">{tFn('amem.col_threads')}</th>
-					<th class="px-4 py-3 text-center">{tFn('amem.col_messages')}</th>
-					<th class="px-4 py-3 text-left">{tFn('amem.col_joined')}</th>
-					<th class="px-4 py-3 text-right">{tFn('amem.col_actions')}</th>
+					{@render sortHead('username', tFn('amem.col_member'))}
+					{@render sortHead('role', tFn('amem.col_role'))}
+					{@render sortHead('grade', tFn('amem.col_grade'))}
+					{@render sortHead('threads', tFn('amem.col_threads'), true)}
+					{@render sortHead('posts', tFn('amem.col_messages'), true)}
+					{@render sortHead('joined', tFn('amem.col_joined'))}
+					<th class="adm-num"><span class="sr-only">{tFn('amem.col_actions')}</span></th>
 				</tr>
 			</thead>
-			<tbody class="divide-y divide-gray-800/60">
-				{#each filtered as member}
-					<tr class="bg-gray-900/30 hover:bg-gray-900/60 transition-colors">
-						<!-- Member -->
-						<td class="px-4 py-3" data-label={tFn('amem.col_member')}>
-							<div class="flex items-center gap-2.5">
-								<div class="w-8 h-8 rounded-full bg-indigo-800 flex items-center justify-center text-xs font-bold text-indigo-200 shrink-0">
-									{member.username.charAt(0).toUpperCase()}
-								</div>
-								<div>
-									<a href="/users/{member.username}" class="font-medium text-white hover:text-indigo-300 transition-colors">
-										{member.username}
-									</a>
-									<!-- Adresse masquée par défaut, révélée par un geste explicite qui
-									     laisse une trace dans le journal d'audit. Un mode discret à
-									     activer ne protégerait personne : c'est le soir où on oublie
-									     de l'allumer que ça se voit. -->
-									<div class="text-xs text-gray-600 flex items-center gap-1.5">
-										<span>{revealed[member.user_id] ?? member.email}</span>
-										{#if !revealed[member.user_id]}
-											<button
-												type="button"
-												class="text-[10px] text-gray-500 hover:text-gray-300 underline underline-offset-2"
-												onclick={() => revealEmail(member.user_id)}
-												disabled={revealing[member.user_id]}
-											>{revealing[member.user_id] ? tFn('amem.revealing') : tFn('amem.reveal_email')}</button>
-										{/if}
-									</div>
+			<tbody>
+				{#each filtered as member (member.user_id)}
+					{@const menuId = `menu-${member.user_id}`}
+					<tr>
+						<td class="adm-cell-main">
+							<div class="flex items-center gap-2.5 min-w-0">
+								<span class="member-avatar">
+									{#if member.avatar}<img src={member.avatar} alt="" />{:else}{member.username.charAt(0).toUpperCase()}{/if}
+								</span>
+								<div class="min-w-0 text-left">
+									<a href="/users/{member.username}" class="member-name">{member.username}</a>
+									{@render email(member.user_id, member.email)}
 								</div>
 							</div>
 						</td>
 
-						<!-- Role (editable) -->
-						<td class="px-4 py-3" data-label={tFn('amem.col_role')}>
+						<td data-label={tFn('amem.col_role')}>
 							{#if member.role === 'owner'}
-								<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border {ROLE_COLORS.owner}">
-									owner
-								</span>
+								<span class="adm-pill adm-pill--owner">{tFn('amem.role_owner')}</span>
 							{:else}
 								<form method="POST" action="?/changeRole" use:enhance={() => {
 									return async ({ update }) => { await update({ reset: false }) }
-								}} class="inline">
+								}}>
 									<input type="hidden" name="user_id" value={member.user_id} />
 									<select
 										name="role"
+										aria-label={tFn('amem.col_role')}
+										class="adm-pill adm-pill--{member.role}"
 										onchange={(e) => {
 											const newRole = (e.currentTarget as HTMLSelectElement).value
 											const m = members.find((x: any) => x.user_id === member.user_id)
 											if (m) m.role = newRole;
 											(e.currentTarget as HTMLSelectElement).form?.submit()
 										}}
-										class="rounded border px-2 py-0.5 text-xs font-medium cursor-pointer bg-transparent
-										       focus:outline-none {ROLE_COLORS[member.role]}"
 									>
-										{#each ['admin','moderator','member'] as r}
-											<option value={r} selected={r === member.role} class="bg-gray-900 text-white">
-												{r}
-											</option>
+										{#each ['admin', 'moderator', 'member'] as r}
+											<option value={r} selected={r === member.role}>{tFn(`amem.role_${r}`)}</option>
 										{/each}
 									</select>
 								</form>
 							{/if}
 						</td>
 
-						<!-- Grade -->
-						<td class="px-4 py-3" data-label={tFn('amem.col_grade')}>
+						<td data-label={tFn('amem.col_grade')}>
 							{#if member.grade_name && member.grade_color}
-								<span
-									class="inline-block rounded px-2 py-0.5 text-xs font-medium"
-									style="background-color:{member.grade_color}; color:{luminance(member.grade_color)>0.5?'#111':'#fff'}"
-								>
-									{member.grade_name}
-								</span>
+								<span class="grade" style="background-color:{member.grade_color}; color:{luminance(member.grade_color) > 0.5 ? '#111' : '#fff'}">{member.grade_name}</span>
 							{:else}
-								<span class="text-gray-700 text-xs">·</span>
+								<span class="adm-muted">·</span>
 							{/if}
 						</td>
 
-						<!-- Counts -->
-						<td class="px-4 py-3 text-center text-gray-400 tabular-nums" data-label={tFn('amem.col_threads')}>{member.thread_count}</td>
-						<td class="px-4 py-3 text-center text-gray-400 tabular-nums" data-label={tFn('amem.col_messages')}>{member.post_count}</td>
+						<td class="adm-num" data-label={tFn('amem.col_threads')}>{member.thread_count}</td>
+						<td class="adm-num" data-label={tFn('amem.col_messages')}>{member.post_count}</td>
+						<td class="adm-muted" data-label={tFn('amem.col_joined')}>{new Date(member.joined_at).toLocaleDateString($locale)}</td>
 
-						<!-- Date -->
-						<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_joined')}>
-							{new Date(member.joined_at).toLocaleDateString($locale)}
-						</td>
-
-						<!-- Actions -->
-						<td class="px-4 py-3 text-right">
+						<td class="adm-num">
 							{#if member.role !== 'owner'}
-								<div class="flex items-center justify-end gap-2">
-									<a href="/admin/grades" class="text-xs text-indigo-400 hover:text-indigo-300">
-										{tFn('amem.grade_link')}
+								<button type="button" class="adm-btn adm-btn--icon" popovertarget={menuId}
+								        aria-label={tFn('amem.actions_for', { username: member.username })}
+								        onclick={(e) => placeMenu(e.currentTarget, menuId)}>
+									<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+								</button>
+								<div id={menuId} popover class="adm-menu" role="menu">
+									<a role="menuitem" class="adm-menu-item" href="/admin/grades">
+										<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4z"/></svg>
+										{tFn('amem.action_grade')}
 									</a>
-									<button
-										onclick={() => generateResetLink(member.user_id)}
-										disabled={generatingFor === member.user_id}
-										title={tFn('amem.reset_title')}
-										class="text-xs text-amber-500 hover:text-amber-400 disabled:opacity-50"
-									>
-										{generatingFor === member.user_id ? '…' : '🔑 Reset'}
+									<button type="button" role="menuitem" class="adm-menu-item" disabled={generatingFor === member.user_id}
+									        onclick={() => { closeMenu(menuId); generateResetLink(member.user_id) }}>
+										<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+										{tFn('amem.action_reset')}
 									</button>
-									<form method="POST" action="?/kick" use:enhance class="inline">
+									<div class="adm-menu-sep" role="separator"></div>
+									<form method="POST" action="?/kick" use:enhance>
 										<input type="hidden" name="user_id" value={member.user_id} />
-										<button
-											type="submit"
-											onclick={(e) => { if (!confirm(tFn('amem.confirm_kick', { username: member.username }))) e.preventDefault() }}
-											class="text-xs text-orange-500 hover:text-orange-400"
-										>
+										<button type="submit" role="menuitem" class="adm-menu-item adm-menu-item--danger"
+										        onclick={(e) => { if (!confirm(tFn('amem.confirm_kick', { username: member.username }))) e.preventDefault(); else closeMenu(menuId) }}>
+											<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
 											{tFn('amem.kick')}
 										</button>
 									</form>
-									<button
-										onclick={() => { banTarget = { userId: member.user_id, username: member.username }; banReason = ''; banIp = false; banEmail = false; banNotice = null }}
-										class="text-xs text-red-500 hover:text-red-400 font-medium"
-									>
+									<button type="button" role="menuitem" class="adm-menu-item adm-menu-item--danger"
+									        onclick={() => { closeMenu(menuId); banTarget = { userId: member.user_id, username: member.username }; banReason = ''; banIp = false; banEmail = false; banNotice = null }}>
+										<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
 										{tFn('amem.ban')}
 									</button>
 								</div>
@@ -257,71 +308,47 @@
 						</td>
 					</tr>
 				{:else}
-					<tr>
-						<td colspan="7" class="px-4 py-8 text-center text-gray-600">
-							{tFn('amem.none_found')}
-						</td>
-					</tr>
+					<tr><td colspan="7" class="adm-empty">{tFn('amem.none_found')}</td></tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
 
-	<!-- ── Membres bannis ──────────────────────────────────────────────────── -->
+	<!-- ── Membres bannis ─────────────────────────────────────────────────── -->
 	{#if bans.length > 0}
-		<div class="mt-10">
-			<h2 class="text-base font-semibold text-white mb-1">{tFn('amem.banned_members')} <span class="text-gray-600 font-normal text-sm">({bans.length})</span></h2>
-			<p class="text-xs text-gray-600 mb-4">{tFn('amem.banned_hint')}</p>
-			<div class="rounded-xl border border-red-900/40 overflow-x-auto">
-				<table class="tableau-cartes w-full text-sm md:min-w-[620px]">
-					<thead class="bg-red-950/30 border-b border-red-900/40 text-xs text-red-400/70 uppercase tracking-wider">
-						<tr>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_member')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_reason')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_banned_by')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_date')}</th>
-							<th class="px-4 py-3 text-right">{tFn('amem.col_action')}</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-red-900/20">
+		<section class="flex flex-col gap-3 mt-4">
+			<div>
+				<h2 class="section-title">{tFn('amem.banned_members')} <span class="adm-muted font-normal">({bans.length})</span></h2>
+				<p class="adm-desc">{tFn('amem.banned_hint')}</p>
+			</div>
+			<div class="adm-table-wrap">
+				<table class="adm-table">
+					<thead><tr>
+						<th>{tFn('amem.col_member')}</th><th>{tFn('amem.col_reason')}</th><th>{tFn('amem.col_banned_by')}</th><th>{tFn('amem.col_date')}</th>
+						<th class="adm-num"><span class="sr-only">{tFn('amem.col_action')}</span></th>
+					</tr></thead>
+					<tbody>
 						{#each bans as ban}
-							<tr class="bg-red-950/10 hover:bg-red-950/20 transition-colors">
-								<td class="px-4 py-3" data-label={tFn('amem.col_member')}>
-									<div class="flex items-center gap-2.5">
-										<div class="w-8 h-8 rounded-full bg-red-900/50 flex items-center justify-center text-xs font-bold text-red-400 shrink-0">
-											{ban.username.charAt(0).toUpperCase()}
-										</div>
-										<div>
-											<p class="font-medium text-gray-300">{ban.username}</p>
+							<tr>
+								<td class="adm-cell-main">
+									<div class="flex items-center gap-2.5 min-w-0">
+										<span class="member-avatar member-avatar--banned">{ban.username.charAt(0).toUpperCase()}</span>
+										<div class="min-w-0 text-left">
+											<span class="member-name">{ban.username}</span>
 											<!-- Même masquage par défaut que la liste des membres (#540) :
 											     ce panneau s'ouvre parfois en direct/partage d'écran. -->
-											<div class="text-xs text-gray-600 flex items-center gap-1.5">
-												<span>{revealed[ban.user_id] ?? ban.email}</span>
-												{#if !revealed[ban.user_id]}
-													<button
-														type="button"
-														class="text-[10px] text-gray-500 hover:text-gray-300 underline underline-offset-2"
-														onclick={() => revealEmail(ban.user_id)}
-														disabled={revealing[ban.user_id]}
-													>{revealing[ban.user_id] ? tFn('amem.revealing') : tFn('amem.reveal_email')}</button>
-												{/if}
-											</div>
+											{@render email(ban.user_id, ban.email)}
 										</div>
 									</div>
 								</td>
-								<td class="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate" title={ban.reason ?? ''} data-label={tFn('amem.col_reason')}>
-									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
-								</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
-								<td class="px-4 py-3 text-right">
-									<form method="POST" action="?/unban" use:enhance class="inline">
+								<td class="adm-muted reason" title={ban.reason ?? ''} data-label={tFn('amem.col_reason')}>{ban.reason || '·'}</td>
+								<td class="adm-muted" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
+								<td class="adm-muted" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
+								<td class="adm-num">
+									<form method="POST" action="?/unban" use:enhance>
 										<input type="hidden" name="user_id" value={ban.user_id} />
-										<button
-											type="submit"
-											onclick={(e) => { if (!confirm(tFn('amem.confirm_unban', { username: ban.username }))) e.preventDefault() }}
-											class="text-xs text-green-500 hover:text-green-400"
-										>
+										<button type="submit" class="adm-btn adm-btn--sm"
+										        onclick={(e) => { if (!confirm(tFn('amem.confirm_unban', { username: ban.username }))) e.preventDefault() }}>
 											{tFn('amem.unban')}
 										</button>
 									</form>
@@ -331,180 +358,124 @@
 					</tbody>
 				</table>
 			</div>
-		</div>
+		</section>
 	{/if}
 
-	<!-- ── Ajouter un ban IP ────────────────────────────────────────────────── -->
-	<div class="mt-8">
-		<h2 class="text-base font-semibold text-white mb-1">{tFn('amem.ban_ip_title')}</h2>
-		<p class="text-xs text-gray-600 mb-3">{@html tFn('amem.ban_ip_hint')}</p>
-		<form method="POST" action="?/banIp" use:enhance class="flex flex-wrap gap-2 items-end">
-			<div class="flex-1 min-w-[180px]">
-				<label for="ban-ip-input" class="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">{tFn('amem.ip_cidr')}</label>
-				<input
-					id="ban-ip-input" name="ip" type="text" required
-					placeholder="93.123.109.163"
-					class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 focus:border-red-500/40 text-sm text-white font-mono outline-none"
-				/>
-			</div>
-			<div class="flex-[2] min-w-[200px]">
-				<label for="ban-ip-reason" class="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">{tFn('amem.reason_optional')}</label>
-				<input
-					id="ban-ip-reason" name="reason" type="text"
-					placeholder={tFn('amem.ip_reason_ph')}
-					class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 focus:border-red-500/40 text-sm text-white outline-none"
-				/>
-			</div>
-			<button type="submit" class="px-4 py-2 rounded-lg bg-red-900/30 hover:bg-red-900/50 border border-red-700/40 text-sm text-red-200 transition-colors">
-				{tFn('amem.ban_ip_btn')}
-			</button>
+	<!-- ── Bans d'adresses IP ─────────────────────────────────────────────── -->
+	<section class="adm-card flex flex-col gap-3 mt-4">
+		<div>
+			<h2 class="section-title">{tFn('amem.ban_ip_title')}</h2>
+			<p class="adm-desc">{@html tFn('amem.ban_ip_hint')}</p>
+		</div>
+		<form method="POST" action="?/banIp" use:enhance class="ban-form">
+			<label class="field field--sm">
+				<span class="adm-label">{tFn('amem.ip_cidr')}</span>
+				<input name="ip" type="text" required placeholder="93.123.109.163" class="adm-input font-mono" />
+			</label>
+			<label class="field">
+				<span class="adm-label">{tFn('amem.reason_optional')}</span>
+				<input name="reason" type="text" placeholder={tFn('amem.ip_reason_ph')} class="adm-input" />
+			</label>
+			<button type="submit" class="adm-btn adm-btn--danger">{tFn('amem.ban_ip_btn')}</button>
 		</form>
-	</div>
-
-	<!-- ── IPs bannies ─────────────────────────────────────────────────────── -->
-	{#if ipBans.length > 0}
-		<div class="mt-8">
-			<h2 class="text-base font-semibold text-white mb-1">{tFn('amem.banned_ips')} <span class="text-gray-600 font-normal text-sm">({ipBans.length})</span></h2>
-			<p class="text-xs text-gray-600 mb-4">{tFn('amem.banned_ips_hint')}</p>
-			<div class="rounded-xl border border-orange-900/40 overflow-x-auto">
-				<table class="tableau-cartes w-full text-sm md:min-w-[620px]">
-					<thead class="bg-orange-950/20 border-b border-orange-900/40 text-xs text-orange-400/70 uppercase tracking-wider">
-						<tr>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_ip')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_reason')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_banned_by')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_date')}</th>
-							<th class="px-4 py-3 text-right">{tFn('amem.col_action')}</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-orange-900/20">
-						{#each ipBans as ban}
-							<tr class="bg-orange-950/10 hover:bg-orange-950/20 transition-colors">
-								<td class="px-4 py-3 font-mono text-sm text-orange-300" data-label={tFn('amem.col_ip')}>{ban.ip}</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_reason')}>
-									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
-								</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
-								<td class="px-4 py-3 text-right">
-									<form method="POST" action="?/unbanIp" use:enhance class="inline">
-										<input type="hidden" name="ip" value={ban.ip} />
-										<button
-											type="submit"
-											onclick={(e) => { if (!confirm(tFn('amem.confirm_unban_ip', { ip: ban.ip }))) e.preventDefault() }}
-											class="text-xs text-green-500 hover:text-green-400"
-										>
-											{tFn('amem.remove')}
-										</button>
-									</form>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+		{#if ipBans.length > 0}
+			<div>
+				<h3 class="adm-label mt-2">{tFn('amem.banned_ips')} ({ipBans.length})</h3>
+				<p class="adm-desc mb-2">{tFn('amem.banned_ips_hint')}</p>
+				<div class="adm-table-wrap">
+					<table class="adm-table">
+						<thead><tr>
+							<th>{tFn('amem.col_ip')}</th><th>{tFn('amem.col_reason')}</th><th>{tFn('amem.col_banned_by')}</th><th>{tFn('amem.col_date')}</th>
+							<th class="adm-num"><span class="sr-only">{tFn('amem.col_action')}</span></th>
+						</tr></thead>
+						<tbody>
+							{#each ipBans as ban}
+								<tr>
+									<td class="adm-cell-main font-mono">{ban.ip}</td>
+									<td class="adm-muted reason" data-label={tFn('amem.col_reason')}>{ban.reason || '·'}</td>
+									<td class="adm-muted" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
+									<td class="adm-muted" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
+									<td class="adm-num">
+										<form method="POST" action="?/unbanIp" use:enhance>
+											<input type="hidden" name="ip" value={ban.ip} />
+											<button type="submit" class="adm-btn adm-btn--sm"
+											        onclick={(e) => { if (!confirm(tFn('amem.confirm_unban_ip', { ip: ban.ip }))) e.preventDefault() }}>
+												{tFn('amem.remove')}
+											</button>
+										</form>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</div>
+		{/if}
+	</section>
+
+	<!-- ── Bans d'adresses e-mail et de domaines ──────────────────────────── -->
+	<section class="adm-card flex flex-col gap-3">
+		<div>
+			<h2 class="section-title">{tFn('amem.ban_email_title')}</h2>
+			<p class="adm-desc">{@html tFn('amem.ban_email_hint')}</p>
 		</div>
-	{/if}
-
-	<!-- ── Ajouter un ban email / domain ───────────────────────────────────── -->
-	<div class="mt-8">
-		<h2 class="text-base font-semibold text-white mb-1">{tFn('amem.ban_email_title')}</h2>
-		<p class="text-xs text-gray-600 mb-3">
-			{@html tFn('amem.ban_email_hint')}
-		</p>
-		<form method="POST" action="?/banEmail" use:enhance class="flex flex-wrap gap-2 items-end">
-			<div class="flex-1 min-w-[200px]">
-				<label for="ban-email-input" class="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">{tFn('amem.email_or_domain')}</label>
-				<input
-					id="ban-email-input" name="email" type="text" required
-					placeholder={tFn('amem.email_ph')}
-					class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 focus:border-yellow-500/40 text-sm text-white font-mono outline-none"
-				/>
-			</div>
-			<div class="flex-[2] min-w-[200px]">
-				<label for="ban-email-reason" class="block text-[10px] font-bold uppercase tracking-wider text-gray-600 mb-1">{tFn('amem.reason_optional')}</label>
-				<input
-					id="ban-email-reason" name="reason" type="text"
-					placeholder={tFn('amem.email_reason_ph')}
-					class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 focus:border-yellow-500/40 text-sm text-white outline-none"
-				/>
-			</div>
-			<button type="submit" class="px-4 py-2 rounded-lg bg-yellow-900/30 hover:bg-yellow-900/50 border border-yellow-700/40 text-sm text-yellow-200 transition-colors">
-				{tFn('amem.ban')}
-			</button>
+		<form method="POST" action="?/banEmail" use:enhance class="ban-form">
+			<label class="field field--sm">
+				<span class="adm-label">{tFn('amem.email_or_domain')}</span>
+				<input name="email" type="text" required placeholder={tFn('amem.email_ph')} class="adm-input font-mono" />
+			</label>
+			<label class="field">
+				<span class="adm-label">{tFn('amem.reason_optional')}</span>
+				<input name="reason" type="text" placeholder={tFn('amem.email_reason_ph')} class="adm-input" />
+			</label>
+			<button type="submit" class="adm-btn adm-btn--danger">{tFn('amem.ban')}</button>
 		</form>
-	</div>
-
-	<!-- ── Emails bannis ───────────────────────────────────────────────────── -->
-	{#if emailBans.length > 0}
-		<div class="mt-8">
-			<h2 class="text-base font-semibold text-white mb-1">{tFn('amem.banned_emails')} <span class="text-gray-600 font-normal text-sm">({emailBans.length})</span></h2>
-			<p class="text-xs text-gray-600 mb-4">{tFn('amem.banned_emails_hint')}</p>
-			<div class="rounded-xl border border-yellow-900/40 overflow-x-auto">
-				<table class="tableau-cartes w-full text-sm md:min-w-[620px]">
-					<thead class="bg-yellow-950/20 border-b border-yellow-900/40 text-xs text-yellow-400/70 uppercase tracking-wider">
-						<tr>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_email_domain')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_reason')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_banned_by')}</th>
-							<th class="px-4 py-3 text-left">{tFn('amem.col_date')}</th>
-							<th class="px-4 py-3 text-right">{tFn('amem.col_action')}</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-yellow-900/20">
-						{#each emailBans as ban}
-							<tr class="bg-yellow-950/10 hover:bg-yellow-950/20 transition-colors">
-								<td class="px-4 py-3 font-mono text-sm text-yellow-300" data-label={tFn('amem.col_email_domain')}>{ban.email}</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_reason')}>
-									{#if ban.reason}{ban.reason}{:else}<span class="text-gray-700 italic">·</span>{/if}
-								</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
-								<td class="px-4 py-3 text-xs text-gray-500" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
-								<td class="px-4 py-3 text-right">
-									<form method="POST" action="?/unbanEmail" use:enhance class="inline">
-										<input type="hidden" name="email" value={ban.email} />
-										<button
-											type="submit"
-											onclick={(e) => { if (!confirm(tFn('amem.confirm_unban_email', { email: ban.email }))) e.preventDefault() }}
-											class="text-xs text-green-500 hover:text-green-400"
-										>
-											{tFn('amem.remove')}
-										</button>
-									</form>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+		{#if emailBans.length > 0}
+			<div>
+				<h3 class="adm-label mt-2">{tFn('amem.banned_emails')} ({emailBans.length})</h3>
+				<p class="adm-desc mb-2">{tFn('amem.banned_emails_hint')}</p>
+				<div class="adm-table-wrap">
+					<table class="adm-table">
+						<thead><tr>
+							<th>{tFn('amem.col_email_domain')}</th><th>{tFn('amem.col_reason')}</th><th>{tFn('amem.col_banned_by')}</th><th>{tFn('amem.col_date')}</th>
+							<th class="adm-num"><span class="sr-only">{tFn('amem.col_action')}</span></th>
+						</tr></thead>
+						<tbody>
+							{#each emailBans as ban}
+								<tr>
+									<td class="adm-cell-main font-mono">{ban.email}</td>
+									<td class="adm-muted reason" data-label={tFn('amem.col_reason')}>{ban.reason || '·'}</td>
+									<td class="adm-muted" data-label={tFn('amem.col_banned_by')}>{ban.banned_by_username ?? '·'}</td>
+									<td class="adm-muted" data-label={tFn('amem.col_date')}>{new Date(ban.banned_at).toLocaleDateString($locale)}</td>
+									<td class="adm-num">
+										<form method="POST" action="?/unbanEmail" use:enhance>
+											<input type="hidden" name="email" value={ban.email} />
+											<button type="submit" class="adm-btn adm-btn--sm"
+											        onclick={(e) => { if (!confirm(tFn('amem.confirm_unban_email', { email: ban.email }))) e.preventDefault() }}>
+												{tFn('amem.remove')}
+											</button>
+										</form>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</div>
-		</div>
-	{/if}
+		{/if}
+	</section>
 </div>
 
-<!-- Ban confirmation modal -->
+<!-- Fenêtre de bannissement -->
 {#if banTarget}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-		role="presentation"
-		onclick={() => banTarget = null}
-		onkeydown={(e) => { if (e.key === 'Escape') banTarget = null }}
-	>
-		<div
-			role="dialog"
-			aria-modal="true"
-			tabindex="-1"
-			class="bg-gray-900 border border-red-900/60 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
-			<div class="flex items-center justify-between mb-4">
-				<h2 class="text-base font-semibold text-white">{tFn('amem.ban')} <span class="text-red-400">{banTarget.username}</span></h2>
-				<button onclick={() => banTarget = null} class="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
-			</div>
-			<p class="text-sm text-gray-400 mb-4">
-				{tFn('amem.ban_modal_desc')}
-			</p>
-			<form method="POST" action="?/ban" use:enhance={() => {
+	<div class="adm-dialog-backdrop" role="presentation"
+	     onclick={() => banTarget = null}
+	     onkeydown={(e) => { if (e.key === 'Escape') banTarget = null }}>
+		<div class="adm-dialog" role="dialog" aria-modal="true" aria-labelledby="ban-title" tabindex="-1"
+		     onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+			<h2 id="ban-title">{tFn('amem.ban')} <span style="color: var(--nx-bad)">{banTarget.username}</span></h2>
+			<p class="adm-desc">{tFn('amem.ban_modal_desc')}</p>
+			<form method="POST" action="?/ban" class="flex flex-col gap-3" use:enhance={() => {
 					return async ({ result, update }) => {
 						await update()
 						if (result.type === 'success') {
@@ -521,101 +492,76 @@
 				<input type="hidden" name="user_id" value={banTarget.userId} />
 				<input type="hidden" name="ban_ip" value={banIp ? 'true' : 'false'} />
 				<input type="hidden" name="ban_email" value={banEmail ? 'true' : 'false'} />
-				<div class="mb-4">
-					<label for="ban-reason" class="block text-xs text-gray-500 mb-1.5">{tFn('amem.reason')} <span class="text-gray-700">{tFn('amem.optional')}</span></label>
-					<input
-						id="ban-reason"
-						type="text"
-						name="reason"
-						bind:value={banReason}
-						placeholder={tFn('amem.ban_reason_ph')}
-						class="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-200
-						       placeholder-gray-600 focus:outline-none focus:border-red-700 transition-colors"
-					/>
-				</div>
-				<div class="flex flex-col gap-2 mb-5">
-					<label class="flex items-center gap-2.5 cursor-pointer group">
-						<input type="checkbox" bind:checked={banIp}
-							class="w-4 h-4 rounded border-gray-600 bg-gray-800 accent-orange-600 cursor-pointer" />
-						<span class="text-sm text-gray-300 group-hover:text-white transition-colors">
-							{tFn('amem.ban_ip_check')}
-						</span>
-					</label>
-					<label class="flex items-center gap-2.5 cursor-pointer group">
-						<input type="checkbox" bind:checked={banEmail}
-							class="w-4 h-4 rounded border-gray-600 bg-gray-800 accent-yellow-600 cursor-pointer" />
-						<span class="text-sm text-gray-300 group-hover:text-white transition-colors">
-							{tFn('amem.ban_email_check')}
-						</span>
-					</label>
-				</div>
-				<div class="flex gap-2 justify-end">
-					<button type="button" onclick={() => banTarget = null}
-						class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 transition-colors">
-						{tFn('amem.cancel')}
-					</button>
-					<button type="submit"
-						class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-sm font-semibold text-white transition-colors">
-						{tFn('amem.confirm_ban')}
-					</button>
+				<label class="field">
+					<span class="adm-label">{tFn('amem.reason')} <span class="font-normal normal-case tracking-normal">{tFn('amem.optional')}</span></span>
+					<input type="text" name="reason" bind:value={banReason} placeholder={tFn('amem.ban_reason_ph')} class="adm-input" />
+				</label>
+				<label class="check"><input type="checkbox" bind:checked={banIp} /> {tFn('amem.ban_ip_check')}</label>
+				<label class="check"><input type="checkbox" bind:checked={banEmail} /> {tFn('amem.ban_email_check')}</label>
+				<div class="flex gap-2 justify-end pt-1">
+					<button type="button" class="adm-btn" onclick={() => banTarget = null}>{tFn('amem.cancel')}</button>
+					<button type="submit" class="adm-btn adm-btn--danger">{tFn('amem.confirm_ban')}</button>
 				</div>
 			</form>
 		</div>
 	</div>
 {/if}
 
-<!-- Reset link result modal -->
+<!-- Lien de réinitialisation -->
 {#if resetLinkResult || resetLinkError}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-		role="presentation"
-		onclick={() => { resetLinkResult = null; resetLinkError = '' }}
-		onkeydown={(e) => { if (e.key === 'Escape') { resetLinkResult = null; resetLinkError = '' } }}
-	>
-		<div
-			role="dialog"
-			aria-modal="true"
-			tabindex="-1"
-			class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
+	<div class="adm-dialog-backdrop" role="presentation"
+	     onclick={() => { resetLinkResult = null; resetLinkError = '' }}
+	     onkeydown={(e) => { if (e.key === 'Escape') { resetLinkResult = null; resetLinkError = '' } }}>
+		<div class="adm-dialog" style="width: min(100%, 32rem)" role="dialog" aria-modal="true" aria-labelledby="reset-title" tabindex="-1"
+		     onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 			{#if resetLinkResult}
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-base font-semibold text-white">{tFn('amem.reset_link_title')}</h2>
-					<button
-						onclick={() => resetLinkResult = null}
-						class="text-gray-500 hover:text-gray-300 transition-colors text-lg leading-none"
-					>✕</button>
+				<h2 id="reset-title">{tFn('amem.reset_link_title')}</h2>
+				<p class="adm-desc">{@html tFn('amem.reset_link_desc', { username: resetLinkResult.username })}</p>
+				<div class="reset-box">
+					<code class="break-all flex-1 select-all">{resetLinkResult.reset_url}</code>
+					<button type="button" class="adm-btn adm-btn--sm" onclick={() => copyToClipboard(resetLinkResult!.reset_url)}>{tFn('amem.copy')}</button>
 				</div>
-
-				<p class="text-sm text-gray-400 mb-4">
-					{@html tFn('amem.reset_link_desc', { username: resetLinkResult.username })}
-				</p>
-
-				<div class="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-4 flex items-center gap-2">
-					<code class="text-xs text-amber-300 break-all flex-1 select-all">{resetLinkResult.reset_url}</code>
-					<button
-						onclick={() => copyToClipboard(resetLinkResult!.reset_url)}
-						class="shrink-0 px-3 py-1.5 rounded bg-amber-700/40 hover:bg-amber-700/60 text-amber-300 text-xs font-medium transition-colors"
-					>
-						{tFn('amem.copy')}
-					</button>
-				</div>
-
-				<p class="text-xs text-gray-600">
-					{tFn('amem.expires_at', { date: new Date(resetLinkResult.expires_at).toLocaleString($locale) })}
-				</p>
+				<p class="adm-desc">{tFn('amem.expires_at', { date: new Date(resetLinkResult.expires_at).toLocaleString($locale) })}</p>
+				<div class="flex justify-end"><button type="button" class="adm-btn" onclick={() => resetLinkResult = null}>{tFn('amem.close')}</button></div>
 			{:else if resetLinkError}
-				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-base font-semibold text-white">{tFn('amem.error')}</h2>
-					<button
-						onclick={() => resetLinkError = ''}
-						class="text-gray-500 hover:text-gray-300 transition-colors text-lg leading-none"
-					>✕</button>
-				</div>
-				<p class="text-sm text-red-400">{resetLinkError}</p>
+				<h2 id="reset-title">{tFn('amem.error')}</h2>
+				<p class="adm-desc" style="color: var(--nx-bad)">{resetLinkError}</p>
+				<div class="flex justify-end"><button type="button" class="adm-btn" onclick={() => resetLinkError = ''}>{tFn('amem.close')}</button></div>
 			{/if}
 		</div>
 	</div>
 {/if}
+
+<style>
+	.section-title { margin: 0; font-size: 0.9375rem; font-weight: 650; color: var(--nx-text); }
+	.member-avatar {
+		width: 2rem; height: 2rem; flex: none; border-radius: 999px; overflow: hidden;
+		display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 650;
+		background: color-mix(in srgb, var(--nx-header-accent) 16%, transparent); color: var(--nx-header-accent);
+	}
+	.member-avatar img { width: 100%; height: 100%; object-fit: cover; }
+	.member-avatar--banned { background: color-mix(in srgb, var(--nx-bad) 14%, transparent); color: var(--nx-bad); }
+	.member-name { display: block; font-weight: 600; color: var(--nx-text); text-decoration: none; }
+	a.member-name:hover { color: var(--nx-header-accent); }
+	.member-mail { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--nx-text-muted); }
+	.member-reveal {
+		all: unset; cursor: pointer; font-size: 0.6875rem; text-decoration: underline; text-underline-offset: 2px;
+		color: var(--nx-text-muted);
+	}
+	.member-reveal:hover { color: var(--nx-text); }
+	.member-reveal:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
+	.grade { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; }
+	.reason { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.ban-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.6rem; }
+	.field { display: flex; flex-direction: column; gap: 0.35rem; flex: 2 1 14rem; min-width: 0; }
+	.field--sm { flex: 1 1 11rem; }
+	.field .adm-input { width: 100%; }
+	.check { display: flex; align-items: center; gap: 0.55rem; font-size: 0.8125rem; color: var(--nx-text); cursor: pointer; }
+	.check input { width: 1rem; height: 1rem; accent-color: var(--nx-header-accent); }
+	.reset-box {
+		display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.75rem; border-radius: 10px;
+		border: 1px solid var(--nx-border); background: color-mix(in srgb, var(--nx-text) 4%, transparent);
+		font-size: 0.75rem;
+	}
+	.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+</style>
