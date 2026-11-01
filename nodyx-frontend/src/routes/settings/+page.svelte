@@ -202,7 +202,7 @@
                     const QRCode = (await import('qrcode')).default
                     await QRCode.toCanvas(signetQrCanvas, signetQrLink, {
                         width: 200, margin: 1,
-                        color: { dark: '#fbbf24', light: '#0a0a0a' }
+                        color: { dark: '#000000', light: '#ffffff' }  // canvas : jamais de var() CSS ; noir sur blanc pour les scanners
                     })
                 }
             }
@@ -487,14 +487,14 @@
 
             <button class="sb-item {activeSection === 'notifications' ? 'active' : ''}"
                     onclick={() => activeSection = 'notifications'}>
-                <span class="sb-icon" style="background: rgba(139,92,246,0.15); color: var(--nx-accent-2-soft)">
+                <span class="sb-icon" style="background: color-mix(in srgb, var(--nx-accent-2) 15%, transparent); color: var(--nx-accent-2-soft)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                     </svg>
                 </span>
                 <span class="sb-label">{tFn('settings.notifications.label')}</span>
                 {#if pushEnabled}
-                    <span class="sb-badge-dot" style="background:#4ade80"></span>
+                    <span class="sb-badge-dot" style="background:var(--nx-ok)"></span>
                 {/if}
             </button>
 
@@ -515,14 +515,14 @@
 
             <button class="sb-item {activeSection === 'security' ? 'active' : ''}"
                     onclick={() => activeSection = 'security'}>
-                <span class="sb-icon" style="background: rgba(239,68,68,0.1); color: #f87171">
+                <span class="sb-icon" style="background: color-mix(in srgb, var(--nx-bad) 10%, transparent); color: var(--nx-bad)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                     </svg>
                 </span>
                 <span class="sb-label">{tFn('settings.security.label')}</span>
                 {#if totpEnabled}
-                    <span class="sb-badge-dot" style="background:#4ade80"></span>
+                    <span class="sb-badge-dot" style="background:var(--nx-ok)"></span>
                 {:else if totpLoaded}
                     <span class="sb-badge-dot" style="background:#6b7280"></span>
                 {/if}
@@ -540,7 +540,7 @@
 
             <button class="sb-item {activeSection === 'signet' ? 'active' : ''}"
                     onclick={() => activeSection = 'signet'}>
-                <span class="sb-icon" style="background: rgba(251,191,36,0.1); color: #fbbf24">
+                <span class="sb-icon" style="background: color-mix(in srgb, var(--nx-warn) 10%, transparent); color: var(--nx-warn)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
                     </svg>
@@ -568,7 +568,7 @@
 
             <button class="sb-item {activeSection === 'sounds' ? 'active' : ''}"
                     onclick={() => activeSection = 'sounds'}>
-                <span class="sb-icon" style="background: rgba(251,146,60,0.12); color: #fb923c">
+                <span class="sb-icon" style="background: color-mix(in srgb, var(--nx-warn) 12%, transparent); color: var(--nx-warn)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>
                     </svg>
@@ -606,7 +606,8 @@
                     <p class="s-pane-desc">{tFn('settings.network.desc')}</p>
                 </div>
             </div>
-            <div class="s-card">
+            <!-- Instrument au look terminal : sombre dans les deux thèmes (.nx-on-dark force les jetons sombres). -->
+            <div class="s-card nx-on-dark">
                 <NetworkDoctor />
             </div>
         </div>
@@ -614,7 +615,7 @@
 
         <!-- ═══ NOTIFICATIONS ════════════════════════════════════════════════ -->
         {#if activeSection === 'notifications'}
-        <div class="s-pane" style="--accent: var(--nx-accent-2-soft); --accent-bg: rgba(139,92,246,0.08); --accent-border: rgba(139,92,246,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-accent-2-soft); --accent-bg: color-mix(in srgb, var(--nx-accent-2) 8%, transparent); --accent-border: color-mix(in srgb, var(--nx-accent-2) 20%, transparent)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -766,7 +767,7 @@
 
         <!-- ═══ SÉCURITÉ 2FA ════════════════════════════════════════════════ -->
         {#if activeSection === 'security' && page.data.user}
-        <div class="s-pane" style="--accent: #f87171; --accent-bg: rgba(239,68,68,0.07); --accent-border: rgba(239,68,68,0.18)">
+        <div class="s-pane" style="--accent: var(--nx-bad); --accent-bg: color-mix(in srgb, var(--nx-bad) 7%, transparent); --accent-border: color-mix(in srgb, var(--nx-bad) 18%, transparent)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -873,7 +874,7 @@
 
             <!-- Disable -->
             {:else if totpStep === 'disable'}
-            <div class="s-card" style="border-color: rgba(239,68,68,0.2)">
+            <div class="s-card" style="border-color: color-mix(in srgb, var(--nx-bad) 20%, transparent)">
                 <p class="s-row-title">{tFn('settings.security.2fa.disable_title')}</p>
                 <p class="s-row-sub" style="margin-bottom:16px">{tFn('settings.security.2fa.disable_hint')}</p>
                 {#if totpError}
@@ -891,7 +892,7 @@
                         class="s-input totp-input"
                     />
                     <button onclick={totpDisable} disabled={totpLoading || totpCode.length < 6}
-                            class="s-primary-btn" style="background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.3)">
+                            class="s-primary-btn" style="background: color-mix(in srgb, var(--nx-bad) 15%, transparent); color: var(--nx-bad); border-color: color-mix(in srgb, var(--nx-bad) 30%, transparent)">
                         {totpLoading ? '…' : tFn('common.disable')}
                     </button>
                     <button onclick={totpCancel} class="s-ghost-btn">{tFn('common.cancel')}</button>
@@ -933,7 +934,7 @@
 
         <!-- ═══ NODYX SIGNET ════════════════════════════════════════════════ -->
         {#if activeSection === 'signet' && user}
-        <div class="s-pane" style="--accent: #fbbf24; --accent-bg: rgba(251,191,36,0.07); --accent-border: rgba(251,191,36,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-warn); --accent-bg: color-mix(in srgb, var(--nx-warn) 7%, transparent); --accent-border: color-mix(in srgb, var(--nx-warn) 20%, transparent)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -1048,14 +1049,14 @@
                     </div>
                     <div style="flex: 1; min-width: 0;">
                         <div style="display:flex; align-items:center; gap:8px; flex-wrap: wrap;">
-                            <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #fff;">Twitch</h3>
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--nx-text);">Twitch</h3>
                             {#if twitchLink}
-                                <span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(16,185,129,0.15); color:#34d399; border: 1px solid rgba(16,185,129,0.3);">
+                                <span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--nx-ok) 15%, transparent); color:var(--nx-ok); border: 1px solid color-mix(in srgb, var(--nx-ok) 30%, transparent);">
                                     {tFn('settings.connected.linked')}
                                 </span>
                             {/if}
                         </div>
-                        <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8; line-height: 1.5;">
+                        <p style="margin: 6px 0 0; font-size: 13px; color: var(--nx-text-muted); line-height: 1.5;">
                             {#if twitchLink}
                                 {tFn('settings.connected.twitch_connected_pre')} <strong style="color:var(--nx-accent-2-soft);">@{twitchLink.twitchLogin}</strong>{tFn('settings.connected.twitch_connected_post')}
                             {:else}
@@ -1064,21 +1065,21 @@
                         </p>
 
                         {#if twitchError}
-                            <div style="margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; font-size: 12px;">
+                            <div style="margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, var(--nx-bad) 12%, transparent); border: 1px solid color-mix(in srgb, var(--nx-bad) 30%, transparent); color: #fca5a5; font-size: 12px;">
                                 {twitchError}
                             </div>
                         {/if}
 
                         <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
                             {#if !twitchLoaded}
-                                <span style="font-size: 12px; color: #64748b;">{tFn('common.loading')}</span>
+                                <span style="font-size: 12px; color: var(--nx-text-muted);">{tFn('common.loading')}</span>
                             {:else if twitchLink}
                                 <button
                                     onclick={unlinkTwitch}
                                     disabled={twitchUnlinking}
-                                    style="font-size: 13px; padding: 8px 14px; border-radius: 8px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; cursor: pointer; transition: background 0.15s;"
-                                    onmouseenter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.2)' }}
-                                    onmouseleave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.12)' }}
+                                    style="font-size: 13px; padding: 8px 14px; border-radius: 8px; background: color-mix(in srgb, var(--nx-bad) 12%, transparent); border: 1px solid color-mix(in srgb, var(--nx-bad) 30%, transparent); color: #fca5a5; cursor: pointer; transition: background 0.15s;"
+                                    onmouseenter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--nx-bad) 20%, transparent)' }}
+                                    onmouseleave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--nx-bad) 12%, transparent)' }}
                                 >
                                     {twitchUnlinking ? tFn('settings.connected.unlinking') : tFn('settings.connected.unlink_twitch')}
                                 </button>
@@ -1086,7 +1087,7 @@
                                 <button
                                     onclick={connectTwitch}
                                     disabled={twitchConnecting}
-                                    style="font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 8px; background: var(--nx-accent-2-strong); border: 1px solid var(--nx-accent-2-strong); color: #fff; cursor: pointer; transition: background 0.15s; display: inline-flex; align-items: center; gap: 8px;"
+                                    style="font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 8px; background: var(--nx-accent-2-strong); border: 1px solid var(--nx-accent-2-strong); color: var(--nx-text); cursor: pointer; transition: background 0.15s; display: inline-flex; align-items: center; gap: 8px;"
                                     onmouseenter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--nx-accent-deep)' }}
                                     onmouseleave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--nx-accent-2-strong)' }}
                                 >
@@ -1103,7 +1104,7 @@
             </div>
 
             {#if twitchToast}
-                <div style="position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px; background: rgba(16,185,129,0.18); border: 1px solid rgba(16,185,129,0.4); color: #6ee7b7; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 1000;">
+                <div style="position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px; background: color-mix(in srgb, var(--nx-ok) 18%, transparent); border: 1px solid color-mix(in srgb, var(--nx-ok) 40%, transparent); color: var(--nx-ok); font-size: 14px; box-shadow: 0 4px 16px color-mix(in srgb, var(--nx-text) 5%, transparent); z-index: 1000;">
                     {twitchToast}
                 </div>
             {/if}
@@ -1112,7 +1113,7 @@
 
         <!-- ═══ SONS ══════════════════════════════════════════════════════════ -->
         {#if activeSection === 'sounds'}
-        <div class="s-pane" style="--accent: #fb923c; --accent-bg: rgba(251,146,60,0.08); --accent-border: rgba(251,146,60,0.2)">
+        <div class="s-pane" style="--accent: var(--nx-warn); --accent-bg: color-mix(in srgb, var(--nx-warn) 8%, transparent); --accent-border: color-mix(in srgb, var(--nx-warn) 20%, transparent)">
             <div class="s-pane-header">
                 <div class="s-pane-icon" style="background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -1120,7 +1121,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="s-pane-title">Notifications sonores</h2>
+                    <h2 class="s-pane-title">{tFn('settings.sounds.title')}</h2>
                     <p class="s-pane-desc">{tFn('settings.sounds.desc')}</p>
                 </div>
             </div>
@@ -1148,7 +1149,7 @@
                         <div class="s-row-title">{tFn('settings.sounds.volume')}</div>
                     </div>
                     <div class="sound-volume-wrap">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#6b7280;flex-shrink:0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--nx-text-muted);flex-shrink:0">
                             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
                         </svg>
                         <input
@@ -1157,7 +1158,7 @@
                             oninput={(e) => soundSettings.update(s => ({ ...s, volume: parseFloat((e.target as HTMLInputElement).value) }))}
                             class="sound-slider"
                         />
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#fb923c;flex-shrink:0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--nx-warn);flex-shrink:0">
                             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>
                         </svg>
                         <span class="sound-vol-label">{Math.round(sounds.volume * 100)}%</span>
@@ -1276,7 +1277,7 @@
                         <div class="s-row-title">{tFn('settings.sounds.volume')}</div>
                     </div>
                     <div class="sound-volume-wrap">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#6b7280;flex-shrink:0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--nx-text-muted);flex-shrink:0">
                             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
                         </svg>
                         <input
@@ -1352,9 +1353,10 @@
 /* ── Root layout ─────────────────────────────────────────────────────────── */
 .settings-root {
     display: flex;
+    /* racine transparente : la feuille thémée peint le fond (réglages de zone respectés) */
+    flex: 1 0 auto;
     min-height: calc(100dvh - 48px);
-    background: #06060a;
-    color: #e2e8f0;
+    color: var(--nx-text);
 }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
@@ -1363,10 +1365,12 @@
     min-width: 240px;
     display: flex;
     flex-direction: column;
-    background: #0a0a10;
-    border-right: 1px solid rgba(255,255,255,0.05);
+    background: var(--nx-surface);
+    border-right: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent);
     position: sticky;
-    top: 48px;
+    /* 0 et non 48px : depuis le contenant flottant, c'est la feuille qui défile, plus le
+       document sous une barre fixe de 48px. Le décalage laissait un vide au-dessus. */
+    top: 0;
     height: calc(100dvh - 48px);
     overflow-y: auto;
     scrollbar-width: thin;
@@ -1374,7 +1378,7 @@
 
 .sb-header {
     padding: 14px 16px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 4%, transparent);
 }
 
 .sb-back {
@@ -1382,25 +1386,25 @@
     align-items: center;
     gap: 6px;
     font-size: 11px;
-    color: #4b5563;
+    color: var(--nx-text-muted);
     text-decoration: none;
     transition: color 150ms;
     margin-bottom: 14px;
 }
-.sb-back:hover { color: #9ca3af; }
+.sb-back:hover { color: var(--nx-text-muted); }
 
 .sb-title-block { display: flex; flex-direction: column; gap: 2px; }
 .sb-eyebrow {
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #374151;
+    color: var(--nx-text-muted);
     font-weight: 600;
 }
 .sb-title {
     font-size: 18px;
     font-weight: 800;
-    color: #f1f5f9;
+    color: var(--nx-text);
     font-family: 'Space Grotesk', sans-serif;
     letter-spacing: -0.02em;
     margin: 0;
@@ -1418,7 +1422,7 @@
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #374151;
+    color: var(--nx-text-muted);
     font-weight: 700;
     padding: 0 8px;
     margin-bottom: 4px;
@@ -1432,17 +1436,17 @@
     border-radius: 6px;
     border: none;
     background: transparent;
-    color: #6b7280;
+    color: var(--nx-text-muted);
     cursor: pointer;
     transition: all 150ms;
     text-align: left;
     width: 100%;
     position: relative;
 }
-.sb-item:hover { background: rgba(255,255,255,0.04); color: #9ca3af; }
+.sb-item:hover { background: color-mix(in srgb, var(--nx-text) 4%, transparent); color: var(--nx-text-muted); }
 .sb-item.active {
     background: rgb(var(--nx-accent-rgb) / 0.12);
-    color: #e0e7ff;
+    color: var(--nx-text);
 }
 .sb-item.active .sb-icon { opacity: 1; }
 
@@ -1470,7 +1474,7 @@
     font-size: 10px;
     font-weight: 700;
     background: rgb(var(--nx-accent-rgb) / 0.2);
-    color: #a5b4fc;
+    color: var(--nx-header-accent);
     padding: 1px 6px;
     border-radius: 5px;
     min-width: 18px;
@@ -1486,13 +1490,13 @@
 
 .sb-footer {
     padding: 12px 16px;
-    border-top: 1px solid rgba(255,255,255,0.04);
+    border-top: 1px solid color-mix(in srgb, var(--nx-text) 4%, transparent);
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
-.sb-version { font-size: 11px; color: #1f2937; font-family: monospace; }
-.sb-docs-link { font-size: 11px; color: #374151; text-decoration: none; transition: color 150ms; }
+.sb-version { font-size: 11px; color: var(--nx-text-muted); font-family: monospace; }
+.sb-docs-link { font-size: 11px; color: var(--nx-text-muted); text-decoration: none; transition: color 150ms; }
 .sb-docs-link:hover { color: var(--nx-accent); }
 
 /* ── Main content ────────────────────────────────────────────────────────── */
@@ -1526,7 +1530,7 @@
 .s-pane-title {
     font-size: 20px;
     font-weight: 800;
-    color: #f1f5f9;
+    color: var(--nx-text);
     font-family: 'Space Grotesk', sans-serif;
     letter-spacing: -0.02em;
     margin: 0 0 4px 0;
@@ -1535,21 +1539,21 @@
 
 .s-pane-desc {
     font-size: 13px;
-    color: #4b5563;
+    color: var(--nx-text-muted);
     line-height: 1.5;
     margin: 0;
 }
 
 /* ── Cards ───────────────────────────────────────────────────────────────── */
 .s-card {
-    background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: color-mix(in srgb, var(--nx-text) 2.5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
     border-radius: 8px;
     padding: 20px;
 }
 .s-card-muted {
     background: transparent;
-    border-color: rgba(255,255,255,0.04);
+    border-color: color-mix(in srgb, var(--nx-text) 4%, transparent);
 }
 
 /* ── Rows ────────────────────────────────────────────────────────────────── */
@@ -1560,8 +1564,8 @@
     gap: 16px;
 }
 .s-row-info { flex: 1; }
-.s-row-title { font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 3px; }
-.s-row-sub { font-size: 12px; color: #4b5563; line-height: 1.5; }
+.s-row-title { font-size: 14px; font-weight: 600; color: var(--nx-text); margin-bottom: 3px; }
+.s-row-sub { font-size: 12px; color: var(--nx-text-muted); line-height: 1.5; }
 .s-row-actions { margin-top: 16px; display: flex; gap: 8px; }
 
 /* ── Toggle ──────────────────────────────────────────────────────────────── */
@@ -1576,7 +1580,7 @@
     flex-shrink: 0;
 }
 .s-toggle.on  { background: var(--nx-accent); }
-.s-toggle.off { background: rgba(255,255,255,0.1); }
+.s-toggle.off { background: color-mix(in srgb, var(--nx-text) 10%, transparent); }
 .s-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .s-toggle-thumb {
@@ -1605,8 +1609,8 @@
     border-radius: 5px;
     flex-shrink: 0;
 }
-.s-status-pill.active  { background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
-.s-status-pill.inactive { background: rgba(107,114,128,0.1); color: #6b7280; border: 1px solid rgba(107,114,128,0.15); }
+.s-status-pill.active  { background: color-mix(in srgb, var(--nx-ok) 10%, transparent); color: var(--nx-ok); border: 1px solid color-mix(in srgb, var(--nx-ok) 20%, transparent); }
+.s-status-pill.inactive { background: color-mix(in srgb, var(--nx-text) 10%, transparent); color: var(--nx-text-muted); border: 1px solid color-mix(in srgb, var(--nx-text) 15%, transparent); }
 
 .s-status-dot {
     width: 7px; height: 7px; border-radius: 50%;
@@ -1627,7 +1631,7 @@
     font-size: 13px;
     font-weight: 600;
     background: rgb(var(--nx-accent-rgb) / 0.15);
-    color: #a5b4fc;
+    color: var(--nx-header-accent);
     border: 1px solid rgb(var(--nx-accent-rgb) / 0.3);
     cursor: pointer;
     transition: all 150ms;
@@ -1636,7 +1640,7 @@
 .s-primary-btn:hover:not(:disabled) {
     background: rgb(var(--nx-accent-rgb) / 0.25);
     border-color: rgb(var(--nx-accent-rgb) / 0.5);
-    color: #c7d2fe;
+    color: var(--nx-text);
 }
 .s-primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -1646,54 +1650,54 @@
     font-size: 13px;
     font-weight: 500;
     background: transparent;
-    color: #4b5563;
+    color: var(--nx-text-muted);
     border: none;
     cursor: pointer;
     transition: color 150ms;
 }
-.s-ghost-btn:hover { color: #9ca3af; }
+.s-ghost-btn:hover { color: var(--nx-text-muted); }
 
 .s-ghost-danger-btn {
     padding: 7px 14px;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
-    background: rgba(239,68,68,0.07);
-    color: #f87171;
-    border: 1px solid rgba(239,68,68,0.2);
+    background: color-mix(in srgb, var(--nx-bad) 7%, transparent);
+    color: var(--nx-bad);
+    border: 1px solid color-mix(in srgb, var(--nx-bad) 20%, transparent);
     cursor: pointer;
     transition: all 150ms;
 }
-.s-ghost-danger-btn:hover { background: rgba(239,68,68,0.14); }
+.s-ghost-danger-btn:hover { background: color-mix(in srgb, var(--nx-bad) 14%, transparent); }
 
 .s-danger-btn {
     font-size: 11px;
     font-weight: 600;
     padding: 5px 12px;
     border-radius: 7px;
-    background: rgba(239,68,68,0.07);
-    color: #f87171;
-    border: 1px solid rgba(239,68,68,0.18);
+    background: color-mix(in srgb, var(--nx-bad) 7%, transparent);
+    color: var(--nx-bad);
+    border: 1px solid color-mix(in srgb, var(--nx-bad) 18%, transparent);
     cursor: pointer;
     transition: all 150ms;
     flex-shrink: 0;
 }
-.s-danger-btn:hover { background: rgba(239,68,68,0.14); }
+.s-danger-btn:hover { background: color-mix(in srgb, var(--nx-bad) 14%, transparent); }
 
 /* ── Input ───────────────────────────────────────────────────────────────── */
 .s-input {
     width: 100%;
     padding: 9px 14px;
     border-radius: 6px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #e2e8f0;
+    background: color-mix(in srgb, var(--nx-text) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nx-text) 8%, transparent);
+    color: var(--nx-text);
     font-size: 13px;
     outline: none;
     transition: border-color 150ms;
 }
-.s-input::placeholder { color: #374151; }
-.s-input:focus { border-color: rgb(var(--nx-accent-rgb) / 0.5); background: rgba(255,255,255,0.06); }
+.s-input::placeholder { color: var(--nx-text-muted); }
+.s-input:focus { border-color: rgb(var(--nx-accent-rgb) / 0.5); background: color-mix(in srgb, var(--nx-text) 6%, transparent); }
 
 /* ── Banners ─────────────────────────────────────────────────────────────── */
 .s-info-banner {
@@ -1703,33 +1707,33 @@
     margin-top: 14px;
     padding: 10px 14px;
     border-radius: 6px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: color-mix(in srgb, var(--nx-text) 3%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nx-text) 6%, transparent);
     font-size: 12px;
-    color: #4b5563;
+    color: var(--nx-text-muted);
 }
 .s-error-banner {
     padding: 10px 14px;
     border-radius: 6px;
-    background: rgba(239,68,68,0.07);
-    border: 1px solid rgba(239,68,68,0.2);
+    background: color-mix(in srgb, var(--nx-bad) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nx-bad) 20%, transparent);
     font-size: 12px;
-    color: #f87171;
+    color: var(--nx-bad);
 }
 .s-success-banner {
     padding: 12px 16px;
     border-radius: 6px;
-    background: rgba(74,222,128,0.07);
-    border: 1px solid rgba(74,222,128,0.2);
+    background: color-mix(in srgb, var(--nx-ok) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nx-ok) 20%, transparent);
     font-size: 13px;
-    color: #4ade80;
+    color: var(--nx-ok);
     font-weight: 500;
 }
 
-.s-hint-text { font-size: 12px; color: #374151; line-height: 1.6; margin: 0; }
+.s-hint-text { font-size: 12px; color: var(--nx-text-muted); line-height: 1.6; margin: 0; }
 :global(.s-hint-text code) { color: var(--nx-accent); background: rgb(var(--nx-accent-rgb) / 0.1); padding: 1px 5px; border-radius: 4px; }
 
-.s-field-error { font-size: 11px; color: #f87171; margin-top: 6px; }
+.s-field-error { font-size: 11px; color: var(--nx-bad); margin-top: 6px; }
 
 /* ── Empty state ─────────────────────────────────────────────────────────── */
 .s-empty-state {
@@ -1738,8 +1742,8 @@
     align-items: center;
     padding: 32px 24px;
     border-radius: 8px;
-    border: 1px dashed rgba(255,255,255,0.07);
-    color: #374151;
+    border: 1px dashed color-mix(in srgb, var(--nx-text) 7%, transparent);
+    color: var(--nx-text-muted);
     font-size: 13px;
     text-align: center;
 }
@@ -1751,7 +1755,7 @@
     gap: 12px;
     padding: 14px 16px;
 }
-.s-instance-row.border-top { border-top: 1px solid rgba(255,255,255,0.05); }
+.s-instance-row.border-top { border-top: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent); }
 
 .s-instance-logo {
     width: 36px;
@@ -1771,8 +1775,8 @@
 .s-instance-logo img { width: 100%; height: 100%; object-fit: cover; }
 
 .s-instance-info { flex: 1; min-width: 0; }
-.s-instance-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
-.s-instance-url  { font-size: 11px; color: #374151; font-family: monospace; margin-top: 1px; }
+.s-instance-name { font-size: 13px; font-weight: 600; color: var(--nx-text); }
+.s-instance-url  { font-size: 11px; color: var(--nx-text-muted); font-family: monospace; margin-top: 1px; }
 
 .s-add-instance-row { display: flex; gap: 8px; }
 
@@ -1799,7 +1803,7 @@
     margin-top: 2px;
 }
 .totp-step-content { flex: 1; }
-.totp-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 0; }
+.totp-divider { height: 1px; background: color-mix(in srgb, var(--nx-text) 5%, transparent); margin: 0; }
 .totp-qr-wrap {
     display: inline-block;
     padding: 12px;
@@ -1825,54 +1829,54 @@
 
 /* ── Signet ──────────────────────────────────────────────────────────────── */
 .signet-device-logo {
-    background: rgba(251,191,36,0.08);
-    border-color: rgba(251,191,36,0.2);
-    color: #fbbf24;
+    background: color-mix(in srgb, var(--nx-warn) 8%, transparent);
+    border-color: color-mix(in srgb, var(--nx-warn) 20%, transparent);
+    color: var(--nx-warn);
     font-size: 16px;
 }
-.signet-add-card { border-color: rgba(251,191,36,0.15); background: rgba(251,191,36,0.03); }
+.signet-add-card { border-color: color-mix(in srgb, var(--nx-warn) 15%, transparent); background: color-mix(in srgb, var(--nx-warn) 3%, transparent); }
 .signet-gen-btn  {
-    background: rgba(251,191,36,0.12);
-    color: #fbbf24;
-    border-color: rgba(251,191,36,0.3);
+    background: color-mix(in srgb, var(--nx-warn) 12%, transparent);
+    color: var(--nx-warn);
+    border-color: color-mix(in srgb, var(--nx-warn) 30%, transparent);
 }
 .signet-gen-btn:hover:not(:disabled) {
-    background: rgba(251,191,36,0.2);
-    border-color: rgba(251,191,36,0.5);
-    color: #fde68a;
+    background: color-mix(in srgb, var(--nx-warn) 20%, transparent);
+    border-color: color-mix(in srgb, var(--nx-warn) 50%, transparent);
+    color: var(--nx-warn);
 }
 .signet-token-block {
     margin-top: 18px;
     padding-top: 18px;
-    border-top: 1px solid rgba(251,191,36,0.1);
+    border-top: 1px solid color-mix(in srgb, var(--nx-warn) 10%, transparent);
 }
 .signet-qr-wrap {
     display: inline-block;
     padding: 12px;
     border-radius: 8px;
-    background: #0a0a0a;
-    border: 1px solid rgba(251,191,36,0.2);
+    background: #ffffff;  /* fond du QR : blanc, comme le QR lui-même */
+    border: 1px solid color-mix(in srgb, var(--nx-warn) 20%, transparent);
 }
 .signet-open-link {
     display: inline-block;
     margin-top: 12px;
     font-size: 12px;
-    color: #fbbf24;
-    background: rgba(251,191,36,0.08);
-    border: 1px solid rgba(251,191,36,0.2);
+    color: var(--nx-warn);
+    background: color-mix(in srgb, var(--nx-warn) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nx-warn) 20%, transparent);
     padding: 6px 14px;
     border-radius: 8px;
     text-decoration: none;
     transition: all 150ms;
 }
-.signet-open-link:hover { background: rgba(251,191,36,0.15); }
+.signet-open-link:hover { background: color-mix(in srgb, var(--nx-warn) 15%, transparent); }
 .signet-token-raw {
     margin-top: 10px;
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(251,191,36,0.15);
+    background: color-mix(in srgb, var(--nx-text) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--nx-warn) 15%, transparent);
     padding: 10px 14px;
     border-radius: 6px;
 }
@@ -1880,7 +1884,7 @@
     flex: 1;
     font-size: 11px;
     font-family: monospace;
-    color: #fbbf24;
+    color: var(--nx-warn);
     word-break: break-all;
 }
 .signet-copy-btn {
@@ -1888,14 +1892,14 @@
     font-weight: 600;
     padding: 4px 10px;
     border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid color-mix(in srgb, var(--nx-text) 10%, transparent);
     background: transparent;
-    color: #6b7280;
+    color: var(--nx-text-muted);
     cursor: pointer;
     transition: all 150ms;
     flex-shrink: 0;
 }
-.signet-copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.3); }
+.signet-copy-btn.copied { color: var(--nx-ok); border-color: color-mix(in srgb, var(--nx-ok) 30%, transparent); }
 
 
 
@@ -1913,7 +1917,7 @@
     appearance: none;
     height: 4px;
     border-radius: 2px;
-    background: linear-gradient(to right, #fb923c calc(var(--val, 50) * 1%), rgba(255,255,255,0.1) calc(var(--val, 50) * 1%));
+    background: linear-gradient(to right, var(--nx-warn) calc(var(--val, 50) * 1%), color-mix(in srgb, var(--nx-text) 10%, transparent) calc(var(--val, 50) * 1%));
     outline: none;
     cursor: pointer;
 }
@@ -1922,13 +1926,13 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #fb923c;
+    background: var(--nx-warn);
     cursor: pointer;
-    box-shadow: 0 0 6px rgba(251,146,60,0.5);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--nx-warn) 50%, transparent);
     transition: box-shadow 0.15s;
 }
-.sound-slider:hover::-webkit-slider-thumb { box-shadow: 0 0 10px rgba(251,146,60,0.7); }
-.sound-vol-label { font-size: 12px; font-weight: 600; color: #fb923c; min-width: 32px; text-align: right; }
+.sound-slider:hover::-webkit-slider-thumb { box-shadow: 0 0 10px color-mix(in srgb, var(--nx-warn) 70%, transparent); }
+.sound-vol-label { font-size: 12px; font-weight: 600; color: var(--nx-warn); min-width: 32px; text-align: right; }
 .sound-test-btn {
     display: flex;
     align-items: center;
@@ -1936,20 +1940,20 @@
     width: 26px;
     height: 26px;
     border-radius: 6px;
-    border: 1px solid rgba(251,146,60,0.2);
-    background: rgba(251,146,60,0.08);
-    color: #fb923c;
+    border: 1px solid color-mix(in srgb, var(--nx-warn) 20%, transparent);
+    background: color-mix(in srgb, var(--nx-warn) 8%, transparent);
+    color: var(--nx-warn);
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
 }
-.sound-test-btn:hover { background: rgba(251,146,60,0.16); border-color: rgba(251,146,60,0.35); }
-.s-divider { border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 10px 0; }
+.sound-test-btn:hover { background: color-mix(in srgb, var(--nx-warn) 16%, transparent); border-color: color-mix(in srgb, var(--nx-warn) 35%, transparent); }
+.s-divider { border: none; border-top: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent); margin: 10px 0; }
 
 /* Streamer notif preset selector */
 .streamer-preset-select {
-    background: rgba(15, 23, 42, 0.6);
+    background: color-mix(in srgb, var(--nx-text) 5%, transparent);
     border: 1px solid rgba(168, 85, 247, 0.30);
-    color: #e5e7eb;
+    color: var(--nx-text);
     border-radius: 6px;
     padding: 4px 8px;
     font-size: 12px;
@@ -1962,7 +1966,7 @@
 .s-spin {
     width: 16px;
     height: 16px;
-    border: 2px solid rgba(255,255,255,0.1);
+    border: 2px solid color-mix(in srgb, var(--nx-text) 10%, transparent);
     border-top-color: var(--nx-accent-soft);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
@@ -1979,7 +1983,7 @@
         height: auto;
         position: static;
         border-right: none;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
+        border-bottom: 1px solid color-mix(in srgb, var(--nx-text) 5%, transparent);
     }
     .sb-nav { flex-direction: row; flex-wrap: wrap; padding: 8px; gap: 4px; }
     .sb-section-label { display: none; }
