@@ -10,10 +10,12 @@
 	// Cartes stats : style UNIFORME (kit admin), un seul accent. Le vert est réservé
 	// aux deltas positifs (sémantique), pas de couleur par carte. Icônes SVG
 	// monochromes (iconPath outline 24x24).
-	// « Comptes » et non « Membres » : le cœur compte la table users (bannis et
-	// comptes jamais rattachés compris), la page Membres les membres actifs.
+	// « Membres » = la définition unique du cœur (models/memberCount.ts) : ni bot,
+	// ni banni, ni inscription jamais validée. Même chiffre que la page Membres,
+	// la page publique et l'annuaire. Repli sur users tant qu'un cœur plus ancien
+	// ne renvoie pas encore le bloc members.
 	const statCards = $derived([
-		{ label: tFn('adash.card_accounts'),   value: s.users.total,   delta: s.users.new_this_week,   sub: tFn('adash.this_week'),
+		{ label: tFn('adash.card_members'),    value: (s.members ?? s.users).total, delta: (s.members ?? s.users).new_this_week,   sub: tFn('adash.this_week'),
 		  iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
 		{ label: tFn('adash.card_threads'),       value: s.threads.total, delta: s.threads.new_this_week, sub: tFn('adash.this_week'),
 		  iconPath: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 13h4a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l4.586-4.586z' },
