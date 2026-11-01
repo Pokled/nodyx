@@ -27,12 +27,12 @@
 			class="h-16 w-16 object-contain"
 		/>
 		<div>
-			<h1 class="text-3xl font-bold text-white tracking-tight">Nodyx</h1>
-			<p class="text-sm text-zinc-400 font-mono mt-0.5">v{version}</p>
+			<h1 class="text-3xl font-bold text-[var(--nx-text)] tracking-tight">Nodyx</h1>
+			<p class="text-sm text-[var(--nx-text-muted)] font-mono mt-0.5">v{version}</p>
 		</div>
 	</div>
 
-	<p class="text-zinc-300 leading-relaxed mb-8">
+	<p class="text-[var(--nx-text)] leading-relaxed mb-8">
 		{tFn('about.tagline')}
 	</p>
 
@@ -41,48 +41,48 @@
 			href={releaseUrl}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="block p-4 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors bg-zinc-900/40"
+			class="block p-4 rounded-lg border border-[var(--nx-border)] hover:border-[var(--nx-border)] transition-colors bg-[var(--nx-surface)]/40"
 		>
-			<div class="text-xs uppercase tracking-wider text-zinc-500 mb-1">{tFn('about.this_release')}</div>
-			<div class="text-sm font-mono text-white">v{version}</div>
-			<div class="text-xs text-zinc-500 mt-2">{tFn('about.release_notes')}</div>
+			<div class="text-xs uppercase tracking-wider text-[var(--nx-text-muted)] mb-1">{tFn('about.this_release')}</div>
+			<div class="text-sm font-mono text-[var(--nx-text)]">v{version}</div>
+			<div class="text-xs text-[var(--nx-text-muted)] mt-2">{tFn('about.release_notes')}</div>
 		</a>
 
 		<a
 			href={data.changelogUrl}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="block p-4 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors bg-zinc-900/40"
+			class="block p-4 rounded-lg border border-[var(--nx-border)] hover:border-[var(--nx-border)] transition-colors bg-[var(--nx-surface)]/40"
 		>
-			<div class="text-xs uppercase tracking-wider text-zinc-500 mb-1">{tFn('about.history')}</div>
-			<div class="text-sm font-mono text-white">CHANGELOG.md</div>
-			<div class="text-xs text-zinc-500 mt-2">{tFn('about.all_versions')}</div>
+			<div class="text-xs uppercase tracking-wider text-[var(--nx-text-muted)] mb-1">{tFn('about.history')}</div>
+			<div class="text-sm font-mono text-[var(--nx-text)]">CHANGELOG.md</div>
+			<div class="text-xs text-[var(--nx-text-muted)] mt-2">{tFn('about.all_versions')}</div>
 		</a>
 
 		<a
 			href={data.repoUrl}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="block p-4 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors bg-zinc-900/40"
+			class="block p-4 rounded-lg border border-[var(--nx-border)] hover:border-[var(--nx-border)] transition-colors bg-[var(--nx-surface)]/40"
 		>
-			<div class="text-xs uppercase tracking-wider text-zinc-500 mb-1">{tFn('about.source_code')}</div>
-			<div class="text-sm font-mono text-white">Pokled/Nodyx</div>
-			<div class="text-xs text-zinc-500 mt-2">github.com →</div>
+			<div class="text-xs uppercase tracking-wider text-[var(--nx-text-muted)] mb-1">{tFn('about.source_code')}</div>
+			<div class="text-sm font-mono text-[var(--nx-text)]">Pokled/Nodyx</div>
+			<div class="text-xs text-[var(--nx-text-muted)] mt-2">github.com →</div>
 		</a>
 
 		<a
 			href={data.licenseUrl}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="block p-4 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors bg-zinc-900/40"
+			class="block p-4 rounded-lg border border-[var(--nx-border)] hover:border-[var(--nx-border)] transition-colors bg-[var(--nx-surface)]/40"
 		>
-			<div class="text-xs uppercase tracking-wider text-zinc-500 mb-1">{tFn('about.license_label')}</div>
-			<div class="text-sm font-mono text-white">{data.licenseName}</div>
-			<div class="text-xs text-zinc-500 mt-2">GNU AGPL v3 →</div>
+			<div class="text-xs uppercase tracking-wider text-[var(--nx-text-muted)] mb-1">{tFn('about.license_label')}</div>
+			<div class="text-sm font-mono text-[var(--nx-text)]">{data.licenseName}</div>
+			<div class="text-xs text-[var(--nx-text-muted)] mt-2">GNU AGPL v3 →</div>
 		</a>
 	</div>
 
-	<div class="text-xs text-zinc-500 leading-relaxed border-t border-zinc-800 pt-6">
+	<div class="text-xs text-[var(--nx-text-muted)] leading-relaxed border-t border-[var(--nx-border)] pt-6">
 		{tFn('about.license')}
 	</div>
 

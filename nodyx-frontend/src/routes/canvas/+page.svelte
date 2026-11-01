@@ -115,10 +115,10 @@
 <div class="max-w-5xl mx-auto px-4 py-8">
 	<div class="flex items-center justify-between mb-6">
 		<div>
-			<h1 class="text-2xl font-bold text-white flex items-center gap-2">
+			<h1 class="text-2xl font-bold text-[var(--nx-text)] flex items-center gap-2">
 				<span class="text-cyan-400">🎨</span> {tFn('canvas.heading')}
 			</h1>
-			<p class="text-sm text-gray-500 mt-1">{tFn('canvas.subtitle')}</p>
+			<p class="text-sm text-[var(--nx-text-muted)] mt-1">{tFn('canvas.subtitle')}</p>
 		</div>
 		<button
 			onclick={() => { newName = ''; newVis = 'private'; showCreate = true }}
@@ -130,15 +130,15 @@
 	</div>
 
 	{#if boards.length === 0}
-		<div class="rounded-2xl border border-white/10 bg-white/[0.02] py-16 text-center">
+		<div class="rounded-2xl border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] bg-[color-mix(in_srgb,var(--nx-text)_2%,transparent)] py-16 text-center">
 			<div class="text-5xl mb-3">🎨</div>
-			<p class="text-gray-300 font-medium">{tFn('canvas.empty_title')}</p>
-			<p class="text-gray-500 text-sm mt-1">{tFn('canvas.empty_sub')}</p>
+			<p class="text-[var(--nx-text)] font-medium">{tFn('canvas.empty_title')}</p>
+			<p class="text-[var(--nx-text-muted)] text-sm mt-1">{tFn('canvas.empty_sub')}</p>
 		</div>
 	{:else}
 		<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
 			{#each boards as b (b.id)}
-				<div class="group relative rounded-xl border border-white/10 bg-white/[0.02] hover:border-cyan-500/40 transition-all overflow-hidden">
+				<div class="group relative rounded-xl border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] bg-[color-mix(in_srgb,var(--nx-text)_2%,transparent)] hover:border-cyan-500/40 transition-all overflow-hidden">
 					<button
 						onclick={() => goto(`/canvas/${b.id}`)}
 						class="block w-full text-left">
@@ -147,13 +147,13 @@
 						</div>
 						<div class="p-4">
 							<div class="flex items-center gap-2">
-								<h3 class="flex-1 font-semibold text-white truncate">{b.name}</h3>
+								<h3 class="flex-1 font-semibold text-[var(--nx-text)] truncate">{b.name}</h3>
 								<span class="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded
-								             {b.visibility === 'public' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-gray-500/15 text-gray-400'}">
+								             {b.visibility === 'public' ? 'bg-emerald-500/15 text-[var(--nx-ok)]' : 'bg-gray-500/15 text-[var(--nx-text-muted)]'}">
 									{b.visibility === 'public' ? tFn('canvas.public') : tFn('canvas.private')}
 								</span>
 							</div>
-							<p class="text-xs text-gray-500 mt-1">{b.element_count > 1 ? tFn('canvas.elements_many', { count: b.element_count }) : tFn('canvas.elements_one', { count: b.element_count })} · {fmtDate(b.updated_at)}</p>
+							<p class="text-xs text-[var(--nx-text-muted)] mt-1">{b.element_count > 1 ? tFn('canvas.elements_many', { count: b.element_count }) : tFn('canvas.elements_one', { count: b.element_count })} · {fmtDate(b.updated_at)}</p>
 						</div>
 					</button>
 					{#if (b.pending_requests ?? 0) > 0}
@@ -165,11 +165,11 @@
 					{/if}
 					<div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 						<button onclick={() => renameProject(b)} disabled={busyId === b.id} title={tFn('canvas.rename')}
-							class="p-1.5 rounded-md bg-black/40 text-gray-300 hover:text-white hover:bg-black/60">
+							class="p-1.5 rounded-md bg-black/40 text-white hover:bg-black/60">
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
 						</button>
 						<button onclick={() => deleteProject(b)} disabled={busyId === b.id} title={tFn('canvas.delete')}
-							class="p-1.5 rounded-md bg-black/40 text-gray-300 hover:text-red-400 hover:bg-black/60">
+							class="p-1.5 rounded-md bg-black/40 text-white hover:text-red-300 hover:bg-black/60">
 							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
 						</button>
 					</div>
@@ -180,21 +180,21 @@
 
 	{#if publicBoards.length > 0}
 		<div class="mt-10">
-			<h2 class="text-lg font-bold text-white mb-1">{tFn('canvas.public_projects_title')}</h2>
-			<p class="text-sm text-gray-500 mb-4">{tFn('canvas.public_projects_sub')}</p>
+			<h2 class="text-lg font-bold text-[var(--nx-text)] mb-1">{tFn('canvas.public_projects_title')}</h2>
+			<p class="text-sm text-[var(--nx-text-muted)] mb-4">{tFn('canvas.public_projects_sub')}</p>
 			<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				{#each publicBoards as b (b.id)}
 					<button onclick={() => goto(`/canvas/${b.id}`)}
-						class="group text-left rounded-xl border border-white/10 bg-white/[0.02] hover:border-cyan-500/40 transition-all overflow-hidden">
+						class="group text-left rounded-xl border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] bg-[color-mix(in_srgb,var(--nx-text)_2%,transparent)] hover:border-cyan-500/40 transition-all overflow-hidden">
 						<div class="h-28 bg-gradient-to-br from-emerald-500/10 via-cyan-500/10 to-transparent flex items-center justify-center">
 							<span class="text-3xl opacity-40">🎨</span>
 						</div>
 						<div class="p-4">
 							<div class="flex items-center gap-2">
-								<h3 class="flex-1 font-semibold text-white truncate">{b.name}</h3>
-								<span class="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">Public</span>
+								<h3 class="flex-1 font-semibold text-[var(--nx-text)] truncate">{b.name}</h3>
+								<span class="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-[var(--nx-ok)]">Public</span>
 							</div>
-							<p class="text-xs text-gray-500 mt-1">{tFn('canvas.by', { user: b.creator_username ?? '?' })} · {b.element_count > 1 ? tFn('canvas.elements_many', { count: b.element_count }) : tFn('canvas.elements_one', { count: b.element_count })} · {tFn('canvas.read_only')}</p>
+							<p class="text-xs text-[var(--nx-text-muted)] mt-1">{tFn('canvas.by', { user: b.creator_username ?? '?' })} · {b.element_count > 1 ? tFn('canvas.elements_many', { count: b.element_count }) : tFn('canvas.elements_one', { count: b.element_count })} · {tFn('canvas.read_only')}</p>
 						</div>
 					</button>
 				{/each}
@@ -207,28 +207,28 @@
 	<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
 	     onclick={(e) => { if (e.target === e.currentTarget) showCreate = false }}
 	     role="presentation">
-		<div class="w-full max-w-md rounded-2xl border border-white/10 bg-[#12121a] p-6">
-			<h2 class="text-lg font-bold text-white mb-4">{tFn('canvas.create_title')}</h2>
-			<label class="block text-xs font-semibold text-gray-400 mb-1" for="cv-name">Nom du projet</label>
+		<div class="w-full max-w-md rounded-2xl border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] bg-[#12121a] p-6">
+			<h2 class="text-lg font-bold text-[var(--nx-text)] mb-4">{tFn('canvas.create_title')}</h2>
+			<label class="block text-xs font-semibold text-[var(--nx-text-muted)] mb-1" for="cv-name">Nom du projet</label>
 			<input id="cv-name" bind:value={newName} placeholder={tFn('canvas.name_ph')} maxlength="100"
-				class="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm mb-4 focus:border-cyan-500/50 outline-none" />
+				class="w-full px-3 py-2 rounded-lg bg-[color-mix(in_srgb,var(--nx-text)_5%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] text-white text-sm mb-4 focus:border-cyan-500/50 outline-none" />
 
-			<p class="text-xs font-semibold text-gray-400 mb-2">{tFn('canvas.visibility')}</p>
+			<p class="text-xs font-semibold text-[var(--nx-text-muted)] mb-2">{tFn('canvas.visibility')}</p>
 			<div class="grid grid-cols-2 gap-2 mb-6">
 				<button type="button" onclick={() => newVis = 'private'}
-					class="rounded-lg border px-3 py-2.5 text-left transition-all {newVis === 'private' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-white/10 bg-white/[0.02]'}">
-					<div class="text-sm font-semibold text-white">🔒 {tFn('canvas.private')}</div>
-					<div class="text-[11px] text-gray-500 mt-0.5">{tFn('canvas.private_desc')}</div>
+					class="rounded-lg border px-3 py-2.5 text-left transition-all {newVis === 'private' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] bg-[color-mix(in_srgb,var(--nx-text)_2%,transparent)]'}">
+					<div class="text-sm font-semibold text-[var(--nx-text)]">🔒 {tFn('canvas.private')}</div>
+					<div class="text-[11px] text-[var(--nx-text-muted)] mt-0.5">{tFn('canvas.private_desc')}</div>
 				</button>
 				<button type="button" onclick={() => newVis = 'public'}
-					class="rounded-lg border px-3 py-2.5 text-left transition-all {newVis === 'public' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-white/10 bg-white/[0.02]'}">
-					<div class="text-sm font-semibold text-white">🌐 {tFn('canvas.public')}</div>
-					<div class="text-[11px] text-gray-500 mt-0.5">{tFn('canvas.public_desc')}</div>
+					class="rounded-lg border px-3 py-2.5 text-left transition-all {newVis === 'public' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] bg-[color-mix(in_srgb,var(--nx-text)_2%,transparent)]'}">
+					<div class="text-sm font-semibold text-[var(--nx-text)]">🌐 {tFn('canvas.public')}</div>
+					<div class="text-[11px] text-[var(--nx-text-muted)] mt-0.5">{tFn('canvas.public_desc')}</div>
 				</button>
 			</div>
 
 			<div class="flex justify-end gap-2">
-				<button onclick={() => showCreate = false} class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white">{tFn('canvas.cancel')}</button>
+				<button onclick={() => showCreate = false} class="px-4 py-2 rounded-lg text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-text)]">{tFn('canvas.cancel')}</button>
 				<button onclick={createProject} disabled={creating}
 					class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 disabled:opacity-50">
 					{creating ? tFn('canvas.creating') : tFn('canvas.create_open')}
@@ -242,31 +242,31 @@
 	<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
 	     onclick={(e) => { if (e.target === e.currentTarget) requestsFor = null }}
 	     role="presentation">
-		<div class="w-full max-w-md rounded-2xl border border-white/10 bg-[#12121a] p-6">
-			<h2 class="text-lg font-bold text-white mb-1">{tFn('canvas.access_requests')}</h2>
-			<p class="text-sm text-gray-500 mb-4">{tFn('canvas.access_sub')}</p>
+		<div class="w-full max-w-md rounded-2xl border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] bg-[#12121a] p-6">
+			<h2 class="text-lg font-bold text-[var(--nx-text)] mb-1">{tFn('canvas.access_requests')}</h2>
+			<p class="text-sm text-[var(--nx-text-muted)] mb-4">{tFn('canvas.access_sub')}</p>
 			{#if reqLoading}
-				<p class="text-sm text-gray-500 py-6 text-center">{tFn('canvas.loading')}</p>
+				<p class="text-sm text-[var(--nx-text-muted)] py-6 text-center">{tFn('canvas.loading')}</p>
 			{:else if requests.length === 0}
-				<p class="text-sm text-gray-500 py-6 text-center">{tFn('canvas.no_requests')}</p>
+				<p class="text-sm text-[var(--nx-text-muted)] py-6 text-center">{tFn('canvas.no_requests')}</p>
 			{:else}
 				<div class="space-y-2">
 					{#each requests as r (r.user_id)}
-						<div class="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-2.5">
+						<div class="flex items-center gap-3 rounded-lg border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] bg-[color-mix(in_srgb,var(--nx-text)_2%,transparent)] p-2.5">
 							<div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-sm shrink-0 overflow-hidden">
 								{#if r.avatar}<img src={r.avatar} alt={r.username} class="w-full h-full object-cover" />{:else}{r.username?.[0]?.toUpperCase() ?? '?'}{/if}
 							</div>
-							<span class="flex-1 text-sm text-white truncate">{r.username}</span>
+							<span class="flex-1 text-sm text-[var(--nx-text)] truncate">{r.username}</span>
 							<button onclick={() => requestsFor && approve(requestsFor, r.user_id)}
 								class="px-2.5 py-1 rounded-md text-xs font-semibold text-emerald-950 bg-emerald-400 hover:bg-emerald-300">Accepter</button>
 							<button onclick={() => requestsFor && deny(requestsFor, r.user_id)}
-								class="px-2.5 py-1 rounded-md text-xs font-semibold text-gray-300 bg-white/5 hover:bg-white/10">Refuser</button>
+								class="px-2.5 py-1 rounded-md text-xs font-semibold text-[var(--nx-text)] bg-[color-mix(in_srgb,var(--nx-text)_5%,transparent)] hover:bg-[color-mix(in_srgb,var(--nx-text)_10%,transparent)]">Refuser</button>
 						</div>
 					{/each}
 				</div>
 			{/if}
 			<div class="flex justify-end mt-5">
-				<button onclick={() => requestsFor = null} class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white">{tFn('canvas.close')}</button>
+				<button onclick={() => requestsFor = null} class="px-4 py-2 rounded-lg text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-text)]">{tFn('canvas.close')}</button>
 			</div>
 		</div>
 	</div>
