@@ -10,7 +10,7 @@ export interface ProfileThemeVars {
 
 export interface ProfilePreset {
 	id: string
-	name: string
+	nameKey: string  // clé i18n (pedit.preset_*), traduite à l'affichage
 	emoji: string
 	vars: ProfileThemeVars
 }
@@ -30,13 +30,13 @@ export const DEFAULT_THEME: ProfileThemeVars = {
 export const PROFILE_PRESETS: ProfilePreset[] = [
 	{
 		id: 'default',
-		name: 'Défaut',
+		nameKey: 'pedit.preset_default',
 		emoji: '🌑',
 		vars: DEFAULT_THEME,
 	},
 	{
 		id: 'midnight',
-		name: 'Minuit',
+		nameKey: 'pedit.preset_midnight',
 		emoji: '🌌',
 		vars: {
 			bg:         '#020617',
@@ -50,7 +50,7 @@ export const PROFILE_PRESETS: ProfilePreset[] = [
 	},
 	{
 		id: 'forest',
-		name: 'Forêt',
+		nameKey: 'pedit.preset_forest',
 		emoji: '🌲',
 		vars: {
 			bg:         '#052e16',
@@ -64,7 +64,7 @@ export const PROFILE_PRESETS: ProfilePreset[] = [
 	},
 	{
 		id: 'warm',
-		name: 'Chaleur',
+		nameKey: 'pedit.preset_warm',
 		emoji: '🔥',
 		vars: {
 			bg:         '#1c0a00',
@@ -78,7 +78,7 @@ export const PROFILE_PRESETS: ProfilePreset[] = [
 	},
 	{
 		id: 'rose',
-		name: 'Rose',
+		nameKey: 'pedit.preset_rose',
 		emoji: '🌸',
 		vars: {
 			bg:         '#1a0010',
@@ -92,7 +92,7 @@ export const PROFILE_PRESETS: ProfilePreset[] = [
 	},
 	{
 		id: 'glass',
-		name: 'Verre',
+		nameKey: 'pedit.preset_glass',
 		emoji: '💎',
 		vars: {
 			bg:         '#0f172a',

@@ -39,7 +39,7 @@ export interface FontPreset {
 }
 
 export const FONT_PRESETS: FontPreset[] = [
-  { family: '',              label: 'Défaut',           google: false, preview: 'Abc' },
+  { family: '',              label: 'Default',          google: false, preview: 'Abc' },  // affiché via tFn('pedit.default')
   { family: 'Orbitron',      label: 'Orbitron',         google: true,  preview: 'Orb' },
   { family: 'Rajdhani',      label: 'Rajdhani',         google: true,  preview: 'Raj' },
   { family: 'Audiowide',     label: 'Audiowide',        google: true,  preview: 'Aud' },
@@ -65,19 +65,19 @@ export const GOOGLE_FONTS_URL = (() => {
 // ── Animation presets ─────────────────────────────────────────────────────────
 
 export interface AnimPreset {
-  key:    string
-  label:  string
+  key:      string
+  labelKey: string  // clé i18n (pedit.anim_*), traduite à l'affichage
   always: boolean  // true = permanent animation, false = hover-only
 }
 
 export const ANIM_PRESETS: AnimPreset[] = [
-  { key: '',          label: 'Aucune',      always: false },
-  { key: 'pulse',     label: 'Pulse',       always: false },
-  { key: 'shake',     label: 'Tremblement', always: false },
-  { key: 'float',     label: 'Flottement',  always: true  },
-  { key: 'glitch',    label: 'Glitch',      always: false },
-  { key: 'rainbow',   label: 'Arc-en-ciel', always: false },
-  { key: 'glow-pulse',label: 'Lueur puls.', always: true  },
+  { key: '',          labelKey: 'pedit.anim_none',       always: false },
+  { key: 'pulse',     labelKey: 'pedit.anim_pulse',      always: false },
+  { key: 'shake',     labelKey: 'pedit.anim_shake',      always: false },
+  { key: 'float',     labelKey: 'pedit.anim_float',      always: true  },
+  { key: 'glitch',    labelKey: 'pedit.anim_glitch',     always: false },
+  { key: 'rainbow',   labelKey: 'pedit.anim_rainbow',    always: false },
+  { key: 'glow-pulse',labelKey: 'pedit.anim_glow_pulse', always: true  },
 ]
 
 // ── Injected font tracking (browser-only, prevent duplicate <style> tags) ─────
