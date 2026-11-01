@@ -4,6 +4,7 @@ import { requireAuth, optionalAuth } from '../middleware/auth'
 import { db, redis }     from '../config/database'
 import { io }            from '../socket/io'
 import * as Notification from '../models/notification'
+import { countActiveMembers } from '../models/memberCount'
 
 interface AuthRequest {
   user?: { userId: string; username: string }
@@ -270,8 +271,5 @@ export default async function memberRoutes(app: FastifyInstance) {
 }
 
 async function getTotalMembers(): Promise<number> {
-  const { rows } = await db.query<{ count: number }>(
-    `SELECT COUNT(*)::int AS count FROM users`
-  )
-  return rows[0]?.count ?? 0
+  return (await countActiveMembers()).total
 }

@@ -20,6 +20,7 @@ import * as ThreadModel from '../models/thread'
 import * as TagModel from '../models/tag'
 import { io } from '../socket/io'
 import { buildIceServers } from '../socket/voice'
+import { countActiveMembers } from '../models/memberCount'
 
 // ── ESY Key (lazy-loaded once from disk) ─────────────────────────────────────
 
@@ -95,7 +96,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
     const communityId = await getCommunityId()
 
     const [memberRes, threadRes, postRes, presenceSockets, brandingRes, themeRes] = await Promise.all([
-      db.query(`SELECT COUNT(*)::int AS count FROM users WHERE is_system = false`),
+      countActiveMembers(),
       db.query(`SELECT COUNT(*)::int AS count FROM threads`),
       db.query(`SELECT COUNT(*)::int AS count FROM posts`),
       io ? io.in('presence').fetchSockets() : Promise.resolve([]),
@@ -125,7 +126,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
       slug:        process.env.NODYX_COMMUNITY_SLUG        || '',
       version:     NODYX_VERSION,
       community_id: communityId,
-      member_count: memberRes.rows[0].count,
+      member_count: memberRes.total,
       online_count: seen.size,
       thread_count: threadRes.rows[0].count,
       post_count:   postRes.rows[0].count,

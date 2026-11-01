@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { buildApp } from './helpers/buildApp'
 
 // ── Mocks (hoisted before imports) ───────────────────────────
@@ -363,5 +363,49 @@ describe('POST /api/v1/auth/logout', () => {
 
     expect(res.statusCode).toBe(200)
     expect(JSON.parse(res.body).message).toBe('Logged out')
+  })
+})
+
+// ── Limite d'inscriptions : même chiffre que celui affiché (models/memberCount.ts) ──
+
+describe('POST /api/v1/auth/register avec NODYX_MAX_MEMBERS', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+  const payload = { username: 'testuser', email: 'test@nodyx.dev', password: 'password123' }
+
+  // countActiveMembers() lit db.query : on route sa requête par son SQL.
+  function membersAre(total: number) {
+    vi.mocked(db.query).mockImplementation(((sql: string) => {
+      if (typeof sql === 'string' && sql.includes('COUNT(DISTINCT cm.user_id)')) {
+        return Promise.resolve({ rows: [{ total, new_this_week: 0 }], rowCount: 1 })
+      }
+      if (typeof sql === 'string' && (sql.includes('community_bans') || sql.includes('ip_bans') || sql.includes('email_bans') || sql.includes('authenticator_devices'))) {
+        return Promise.resolve({ rows: [], rowCount: 0 })
+      }
+      return Promise.resolve({ rows: [{ id: 'community-uuid' }], rowCount: 1 })
+    }) as never)
+  }
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    process.env.NODYX_MAX_MEMBERS = '50'
+    vi.mocked(UserModel.findByEmail).mockResolvedValue(null)
+    vi.mocked(UserModel.findByUsername).mockResolvedValue(null)
+    vi.mocked(UserModel.create).mockResolvedValue(FAKE_PUBLIC_USER)
+    app = await buildApp(a => a.register(authRoutes, { prefix: '/api/v1/auth' }))
+  })
+
+  afterEach(() => { delete process.env.NODYX_MAX_MEMBERS })
+
+  it('refuse avec INSTANCE_FULL quand les membres atteignent la limite', async () => {
+    membersAre(50)
+    const res = await app.inject({ method: 'POST', url: '/api/v1/auth/register', payload })
+    expect(res.statusCode).toBe(403)
+    expect(JSON.parse(res.body).code).toBe('INSTANCE_FULL')
+  })
+
+  it('accepte sous la limite, même si la table users contient plus de comptes', async () => {
+    membersAre(49)
+    const res = await app.inject({ method: 'POST', url: '/api/v1/auth/register', payload })
+    expect(res.statusCode).toBe(201)
   })
 })
