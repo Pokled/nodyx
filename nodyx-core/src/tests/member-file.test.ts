@@ -178,3 +178,24 @@ describe('la sourdine s’applique enfin, au forum aussi', () => {
     expect((await reply()).statusCode).toBe(201)
   })
 })
+
+describe('journal : une sourdine posée à la main porte le nom de son auteur', () => {
+  it('logOctoGuardAction transmet actor_id, le journal résout le pseudo', async () => {
+    const { logOctoGuardAction } = await import('../services/octoguard/logger')
+    logOctoGuardAction({
+      action: 'octoguard.mute_user', target_type: 'user', target_id: U.member, target_label: null,
+      actor_id: U.mod, metadata: { event_id: 'e1', actor: 'admin' },
+    })
+    await new Promise(r => setTimeout(r, 20))
+    const ins = calls.find(c => c.sql.startsWith('INSERT INTO admin_audit_log'))!
+    expect(ins.sql).toContain('COALESCE((SELECT username FROM users WHERE id = $7::uuid), $1)')
+    expect(ins.params[0]).toBe('octoguard:auto')
+    expect(ins.params[6]).toBe(U.mod)
+  })
+  it('sans auteur humain, l’action reste à OctoGuard', async () => {
+    const { logOctoGuardAction } = await import('../services/octoguard/logger')
+    logOctoGuardAction({ action: 'octoguard.delete_message', target_type: 'message', target_id: 'x', target_label: null, metadata: { event_id: 'e2', actor: 'octoguard:auto' } })
+    await new Promise(r => setTimeout(r, 20))
+    expect(calls.find(c => c.sql.startsWith('INSERT INTO admin_audit_log'))!.params[6]).toBeNull()
+  })
+})

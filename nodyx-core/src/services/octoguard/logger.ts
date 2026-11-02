@@ -37,9 +37,11 @@ export function logOctoGuardAction(entry: ActionLogEntry): void {
   void (async () => {
     try {
       await db.query(
+        // Action d'un humain via OctoGuard (sourdine posée à la main) : le
+        // journal porte son nom ; sinon c'est OctoGuard lui-même.
         `INSERT INTO admin_audit_log
            (actor_id, actor_username, action, target_type, target_id, target_label, metadata)
-         VALUES (NULL, $1, $2, $3, $4, $5, $6)`,
+         VALUES ($7::uuid, COALESCE((SELECT username FROM users WHERE id = $7::uuid), $1), $2, $3, $4, $5, $6)`,
         [
           'octoguard:auto',
           entry.action,
@@ -47,6 +49,7 @@ export function logOctoGuardAction(entry: ActionLogEntry): void {
           entry.target_id,
           entry.target_label,
           JSON.stringify(entry.metadata ?? {}),
+          entry.actor_id ?? null,
         ]
       )
     } catch (err) {

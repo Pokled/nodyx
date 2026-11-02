@@ -158,6 +158,7 @@ export async function applyMute(input: ApplyMuteInput): Promise<ChatMuteRow | nu
       target_type:  'user',
       target_id:    input.userId,
       target_label: input.reason ?? null,
+      actor_id:     input.appliedBy ?? null,
       metadata: {
         event_id:    input.eventId ?? randomUUID(),
         actor:       input.appliedBy ? 'admin' : 'octoguard:auto',
@@ -194,6 +195,7 @@ export async function removeMute(muteId: string, removedBy?: string | null): Pro
       target_type:  'user',
       target_id:    rows[0].user_id,
       target_label: null,
+      actor_id:     removedBy ?? null,
       metadata: {
         event_id:  randomUUID(),
         actor:     removedBy ? 'admin' : 'octoguard:auto',
