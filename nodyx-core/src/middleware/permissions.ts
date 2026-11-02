@@ -1,94 +1,49 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { db } from '../config/database'
-import type { Permissions } from '../models/grade'
+// Garde des routes de l'équipe par PERMISSION (et non plus par rôle).
+// Le calcul des droits vit dans services/permissions.ts (socle du rôle + grade).
+// Remplace l'ancien checkPermission, qui n'était branché nulle part.
 
-// Default permissions for each system role
-const ROLE_PERMISSIONS: Record<string, Permissions> = {
-  owner: {
-    can_post:            true,
-    can_create_thread:   true,
-    can_create_category: true,
-    can_moderate:        true,
-    can_manage_members:  true,
-    can_manage_grades:   true,
-  },
-  admin: {
-    can_post:            true,
-    can_create_thread:   true,
-    can_create_category: true,
-    can_moderate:        true,
-    can_manage_members:  true,
-    can_manage_grades:   true,
-  },
-  moderator: {
-    can_post:            true,
-    can_create_thread:   true,
-    can_create_category: false,
-    can_moderate:        true,
-    can_manage_members:  false,
-    can_manage_grades:   false,
-  },
-  member: {
-    can_post:            true,
-    can_create_thread:   true,
-    can_create_category: false,
-    can_moderate:        false,
-    can_manage_members:  false,
-    can_manage_grades:   false,
-  },
+import { FastifyRequest, FastifyReply } from 'fastify'
+import { redis } from '../config/database'
+import { verifyStaffSession } from './adminOnly'
+import { getInstanceAccess, type Permission, type MemberAccess } from '../services/permissions'
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    /** Droits de l'utilisateur dans la communauté de l'instance (posé par requirePermission). */
+    access?: MemberAccess
+  }
 }
 
-/**
- * Verify the authenticated user has the required permission in the community
- * identified by :slug in the route params.
- *
- * Resolution order:
- *   1. System role (owner/admin → all permissions)
- *   2. Grade permissions (if member has an assigned grade)
- *   3. Default role permissions (moderator / member)
- */
-export function checkPermission(permission: keyof Permissions) {
-  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    if (!request.user) {
-      reply.code(401).send({ error: 'Authentication required', code: 'UNAUTHORIZED' })
-      return
-    }
-
-    const { slug } = request.params as { slug: string }
-
-    // Fetch community + member + grade in one query
-    const { rows } = await db.query<{
-      community_id: string
-      role: string
-      grade_permissions: Permissions | null
-    }>(
-      `SELECT
-         cm.community_id,
-         cm.role,
-         cg.permissions AS grade_permissions
-       FROM communities c
-       JOIN community_members cm ON cm.community_id = c.id AND cm.user_id = $1
-       LEFT JOIN community_grades cg ON cg.id = cm.grade_id
-       WHERE c.slug = $2`,
-      [request.user.userId, slug]
-    )
-
-    if (!rows[0]) {
-      reply.code(403).send({ error: 'Not a member of this community', code: 'FORBIDDEN' })
-      return
-    }
-
-    const { role, grade_permissions } = rows[0]
-
-    // Owner/admin always pass
-    if (role === 'owner' || role === 'admin') return
-
-    // Grade permissions override default role permissions when assigned
-    const effectivePerms: Permissions =
-      grade_permissions ?? ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS['member']
-
-    if (!effectivePerms[permission]) {
-      reply.code(403).send({ error: `Missing permission: ${permission}`, code: 'FORBIDDEN' })
-    }
+async function guard(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  allowed: (access: MemberAccess) => boolean,
+): Promise<FastifyReply | void> {
+  const payload = await verifyStaffSession(request, reply)
+  // Réponse 401 déjà envoyée : rendre la reply arrête la chaîne Fastify
+  if (!payload) return reply
+  const access = await getInstanceAccess(payload.userId)
+  if (!allowed(access)) {
+    return reply.code(403).send({ error: 'Missing permission', code: 'FORBIDDEN' })
   }
+  request.user = payload
+  request.access = access
+  redis.setex(`heartbeat:${payload.userId}`, 900, '1').catch(() => {})
+}
+
+/** La route exige CETTE permission dans la communauté de l'instance. */
+export function requirePermission(permission: Permission) {
+  return (request: FastifyRequest, reply: FastifyReply) =>
+    guard(request, reply, a => a.permissions.includes(permission))
+}
+
+/** La route exige L'UNE de ces permissions. */
+export function requireAnyPermission(...permissions: Permission[]) {
+  return (request: FastifyRequest, reply: FastifyReply) =>
+    guard(request, reply, a => permissions.some(p => a.permissions.includes(p)))
+}
+
+/** La route est ouverte à toute l'équipe (au moins une permission). */
+export async function requireStaff(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply | void> {
+  return guard(request, reply, a => a.permissions.length > 0)
 }

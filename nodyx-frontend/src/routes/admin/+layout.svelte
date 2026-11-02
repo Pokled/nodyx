@@ -4,6 +4,7 @@
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte'
 	import { t } from '$lib/i18n'
 	import { isAdminThemed } from '$lib/adminTheme'
+	import { mayOpenAdmin } from '$lib/adminAccess'
 	import './admin-kit.css'
 
 	const tFn = $derived($t)
@@ -75,6 +76,25 @@
 		},
 	]
 
+	// Seulement les pages des droits de l'utilisateur (D3) : un admin voit tout,
+	// un modérateur ses pages de modération. OctoGuard : sans manage_octoguard
+	// mais avec moderate_members, l'entrée mène directement aux signalements.
+	const visibleNav = $derived.by(() => {
+		const access = (data as any).access
+		return nav
+			.map((g) => ({
+				...g,
+				items: g.items
+					.map((i) =>
+						i.href === '/admin/octoguard' && !mayOpenAdmin(i.href, access) && mayOpenAdmin('/admin/octoguard/reports', access)
+							? { ...i, href: '/admin/octoguard/reports' }
+							: i,
+					)
+					.filter((i) => mayOpenAdmin(i.href, access)),
+			}))
+			.filter((g) => g.items.length > 0)
+	})
+
 	const isActive = (href: string, exact = false) =>
 		exact
 			? page.url.pathname === href
@@ -85,7 +105,7 @@
 	const themed = $derived(isAdminThemed(page.url.pathname))
 	// Entrée de navigation de la page courante : titre de la barre mobile.
 	const current = $derived(
-		nav.flatMap((g) => g.items)
+		visibleNav.flatMap((g) => g.items)
 			.filter((i) => isActive(i.href, i.exact))
 			.sort((a, b) => b.href.length - a.href.length)[0]
 	)
@@ -144,7 +164,7 @@
 		</a>
 
 		<nav class="flex-1 overflow-y-auto px-2.5 pb-3" aria-label={tFn('anav.admin_title')}>
-			{#each nav as group}
+			{#each visibleNav as group}
 				<p class="adm-side-group">{tFn(group.sectionKey)}</p>
 				{#each group.items as item}
 					{@const active = isActive(item.href, item.exact) && current?.href === item.href}

@@ -410,6 +410,8 @@ describe('PATCH /api/v1/forums/threads/:id — is_featured réservé aux admins'
     vi.mocked(db.query).mockImplementation(async (sql: string) => {
       const s = String(sql)
       if (s.includes('FROM communities')) return { rows: [{ id: 'community-1' }], rowCount: 1 } as any
+      // Communauté du fil (droits du forum, services/permissions.communityOfThread)
+      if (s.includes('FROM threads t JOIN categories')) return { rows: [{ community_id: 'community-1' }], rowCount: 1 } as any
       return { rows: [{ role: 'admin' }], rowCount: 1 } as any
     })
     vi.mocked(ThreadModel.update).mockResolvedValueOnce({ ...FAKE_THREAD, is_featured: true } as any)

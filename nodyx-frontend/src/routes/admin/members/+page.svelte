@@ -50,6 +50,19 @@
 	// l'adresse si elle a été révélée. Tri par en-tête de colonne (aria-sort).
 	const ROLES = ['owner', 'admin', 'moderator', 'member'] as const
 	const ROLE_RANK: Record<string, number> = { owner: 0, admin: 1, moderator: 2, member: 3 }
+
+	// Ce que l'utilisateur peut faire ici (D3) : les admins tout ; un modérateur
+	// exclut (moderate_members), bannit seulement avec un grade ban_members (D4).
+	// Changer un rôle, voir une adresse, générer un lien de réinitialisation :
+	// admins seulement. Sous le rang d'admin, on n'agit que sur un rang
+	// inférieur (le serveur le revérifie).
+	const access     = $derived((page.data as any).access as { role: string | null; permissions: string[] } | undefined)
+	const isAdmin    = $derived(access?.role === 'owner' || access?.role === 'admin')
+	const canKick    = $derived(!!access?.permissions.includes('moderate_members'))
+	const canBan     = $derived(!!access?.permissions.includes('ban_members'))
+	const canGrades  = $derived(!!access?.permissions.includes('manage_grades'))
+	// ROLE_RANK ici : 0 = le plus haut. Viser = être strictement au-dessus.
+	const mayTarget  = (role: string) => isAdmin || (ROLE_RANK[access?.role ?? 'member'] ?? 9) < (ROLE_RANK[role] ?? 9)
 	type SortKey = 'username' | 'role' | 'grade' | 'threads' | 'posts' | 'joined'
 	let roleFilter = $state<string>('all')
 	let sortKey    = $state<SortKey | null>(null)
@@ -161,7 +174,7 @@
 	     personne : c'est le soir où on oublie de l'allumer que ça se voit. -->
 	<span class="member-mail">
 		<span>{revealed[userId] ?? masked}</span>
-		{#if !revealed[userId]}
+		{#if !revealed[userId] && isAdmin}
 			<button type="button" class="member-reveal" onclick={() => revealEmail(userId)} disabled={revealing[userId]}>
 				{revealing[userId] ? tFn('amem.revealing') : tFn('amem.reveal_email')}
 			</button>
@@ -234,8 +247,8 @@
 						</td>
 
 						<td data-label={tFn('amem.col_role')}>
-							{#if member.role === 'owner'}
-								<span class="adm-pill adm-pill--owner">{tFn('amem.role_owner')}</span>
+							{#if member.role === 'owner' || !isAdmin}
+								<span class="adm-pill adm-pill--{member.role}">{tFn(`amem.role_${member.role}`)}</span>
 							{:else}
 								<form method="POST" action="?/changeRole" use:enhance={() => {
 									return async ({ update }) => { await update({ reset: false }) }
@@ -273,23 +286,30 @@
 						<td class="adm-muted" data-label={tFn('amem.col_joined')}>{new Date(member.joined_at).toLocaleDateString($locale)}</td>
 
 						<td class="adm-num">
-							{#if member.role !== 'owner'}
+							{#if member.role !== 'owner' && mayTarget(member.role) && (isAdmin || canKick || canBan || canGrades)}
 								<button type="button" class="adm-btn adm-btn--icon" popovertarget={menuId}
 								        aria-label={tFn('amem.actions_for', { username: member.username })}
 								        onclick={(e) => placeMenu(e.currentTarget, menuId)}>
 									<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
 								</button>
 								<div id={menuId} popover class="adm-menu" role="menu">
+									{#if canGrades}
 									<a role="menuitem" class="adm-menu-item" href="/admin/grades">
 										<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4z"/></svg>
 										{tFn('amem.action_grade')}
 									</a>
+									{/if}
+									{#if isAdmin}
 									<button type="button" role="menuitem" class="adm-menu-item" disabled={generatingFor === member.user_id}
 									        onclick={() => { closeMenu(menuId); generateResetLink(member.user_id) }}>
 										<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
 										{tFn('amem.action_reset')}
 									</button>
+									{/if}
+									{#if canKick || canBan}
 									<div class="adm-menu-sep" role="separator"></div>
+									{/if}
+									{#if canKick}
 									<form method="POST" action="?/kick" use:enhance>
 										<input type="hidden" name="user_id" value={member.user_id} />
 										<button type="submit" role="menuitem" class="adm-menu-item adm-menu-item--danger"
@@ -298,11 +318,14 @@
 											{tFn('amem.kick')}
 										</button>
 									</form>
+									{/if}
+									{#if canBan}
 									<button type="button" role="menuitem" class="adm-menu-item adm-menu-item--danger"
 									        onclick={() => { closeMenu(menuId); banTarget = { userId: member.user_id, username: member.username }; banReason = ''; banIp = false; banEmail = false; banNotice = null }}>
 										<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
 										{tFn('amem.ban')}
 									</button>
+									{/if}
 								</div>
 							{/if}
 						</td>
@@ -315,7 +338,7 @@
 	</div>
 
 	<!-- ── Membres bannis ─────────────────────────────────────────────────── -->
-	{#if bans.length > 0}
+	{#if canBan && bans.length > 0}
 		<section class="flex flex-col gap-3 mt-4">
 			<div>
 				<h2 class="section-title">{tFn('amem.banned_members')} <span class="adm-muted font-normal">({bans.length})</span></h2>
@@ -361,7 +384,8 @@
 		</section>
 	{/if}
 
-	<!-- ── Bans d'adresses IP ─────────────────────────────────────────────── -->
+	<!-- ── Bans d'adresses IP et d'emails : ban_members ─────────────────── -->
+	{#if canBan}
 	<section class="adm-card flex flex-col gap-3 mt-4">
 		<div>
 			<h2 class="section-title">{tFn('amem.ban_ip_title')}</h2>
@@ -464,6 +488,7 @@
 			</div>
 		{/if}
 	</section>
+	{/if}
 </div>
 
 <!-- Fenêtre de bannissement -->

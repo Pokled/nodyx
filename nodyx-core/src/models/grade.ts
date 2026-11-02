@@ -1,15 +1,12 @@
 import { db } from '../config/database'
+import type { Permission } from '../services/permissions'
 
 // ── Types ────────────────────────────────────────────────────
 
-export interface Permissions {
-  can_post:             boolean
-  can_create_thread:    boolean
-  can_create_category:  boolean
-  can_moderate:         boolean
-  can_manage_members:   boolean
-  can_manage_grades:    boolean
-}
+// Permissions d'un grade : uniquement les permissions de l'équipe
+// (services/permissions.ts, GRADE_PERMISSIONS). Un grade AJOUTE ces droits au
+// socle du rôle, il n'en retire jamais (migration 126).
+export type Permissions = Partial<Record<Permission, boolean>>
 
 export interface Grade {
   id:           string

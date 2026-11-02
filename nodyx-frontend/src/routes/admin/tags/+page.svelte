@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import type { PageData, ActionData } from './$types';
 	import { t } from '$lib/i18n';
@@ -9,6 +10,11 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const tags = $derived(data.tags ?? []);
+
+	// Panneau « créer » : ouvert d'office tant que la liste est vide, puis libre.
+	// Jamais open={expression} : Svelte 5 la réévalue à chaque frappe dans le
+	// formulaire et refermait le panneau pendant qu'on tapait le nom.
+	let createOpen = $state(untrack(() => tags.length === 0))
 
 	// Aperçu en direct de l'étiquette en cours de création
 	let newName  = $state('');
@@ -42,7 +48,7 @@
 		<div class="adm-notice adm-notice--bad" role="alert">{form.error}</div>
 	{/if}
 
-	<details class="adm-card adm-disclosure" open={tags.length === 0}>
+	<details class="adm-card adm-disclosure" bind:open={createOpen}>
 		<summary>
 			<svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
 			{tFn('atags.create_tag')}

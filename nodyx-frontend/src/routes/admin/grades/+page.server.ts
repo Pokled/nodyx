@@ -1,6 +1,13 @@
 import { fail } from '@sveltejs/kit'
 import type { PageServerLoad, Actions } from './$types'
 import { apiFetch } from '$lib/api'
+import { GRADE_PERMISSIONS } from '$lib/permissions'
+
+// Les cases cochées du formulaire, pour les 7 permissions de grade
+// (lib/permissions.ts). Une case absente vaut false.
+function permissionsFrom(form: FormData): Record<string, boolean> {
+	return Object.fromEntries(GRADE_PERMISSIONS.map((p) => [p, form.get(p) === 'on']))
+}
 
 export const load: PageServerLoad = async ({ fetch, parent }) => {
 	const { token } = await parent()
@@ -32,14 +39,7 @@ export const actions: Actions = {
 			name:     form.get('name')     as string,
 			color:    form.get('color')    as string,
 			position: Number(form.get('position') ?? 0),
-			permissions: {
-				can_post:            form.get('can_post')            === 'on',
-				can_create_thread:   form.get('can_create_thread')   === 'on',
-				can_create_category: form.get('can_create_category') === 'on',
-				can_moderate:        form.get('can_moderate')        === 'on',
-				can_manage_members:  form.get('can_manage_members')  === 'on',
-				can_manage_grades:   form.get('can_manage_grades')   === 'on',
-			},
+			permissions: permissionsFrom(form),
 		}
 		const res = await apiFetch(fetch, `/communities/${slug}/grades`, {
 			method: 'POST',
@@ -58,14 +58,7 @@ export const actions: Actions = {
 		const body = {
 			name:  form.get('name')  as string,
 			color: form.get('color') as string,
-			permissions: {
-				can_post:            form.get('can_post')            === 'on',
-				can_create_thread:   form.get('can_create_thread')   === 'on',
-				can_create_category: form.get('can_create_category') === 'on',
-				can_moderate:        form.get('can_moderate')        === 'on',
-				can_manage_members:  form.get('can_manage_members')  === 'on',
-				can_manage_grades:   form.get('can_manage_grades')   === 'on',
-			},
+			permissions: permissionsFrom(form),
 		}
 		const res = await apiFetch(fetch, `/communities/${slug}/grades/${gradeId}`, {
 			method: 'PATCH',

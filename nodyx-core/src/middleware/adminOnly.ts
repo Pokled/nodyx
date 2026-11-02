@@ -28,11 +28,14 @@ export async function getInstanceCommunityId(): Promise<string | null> {
   return null
 }
 
-// Requires the current user to be owner or admin of this instance's community
-export async function adminOnly(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+// Vérifie le jeton Bearer et la session Redis. Renvoie le payload, ou null
+// après avoir déjà répondu 401. Partagé par adminOnly et requirePermission
+// (middleware/permissions.ts) : une seule façon d'authentifier l'équipe.
+export async function verifyStaffSession(request: FastifyRequest, reply: FastifyReply): Promise<JwtPayload | null> {
   const header = request.headers.authorization
   if (!header?.startsWith('Bearer ')) {
-    return reply.code(401).send({ error: 'Missing token', code: 'UNAUTHORIZED' })
+    reply.code(401).send({ error: 'Missing token', code: 'UNAUTHORIZED' })
+    return null
   }
   const token = header.slice(7)
 
@@ -40,14 +43,24 @@ export async function adminOnly(request: FastifyRequest, reply: FastifyReply): P
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET!, { algorithms: ['HS256'] }) as JwtPayload
   } catch {
-    return reply.code(401).send({ error: 'Invalid or expired token', code: 'UNAUTHORIZED' })
+    reply.code(401).send({ error: 'Invalid or expired token', code: 'UNAUTHORIZED' })
+    return null
   }
 
   // Confirm session is alive — ioredis keyPrefix 'nodyx:' applied automatically
   const alive = await redis.exists(`session:${token}`)
   if (!alive) {
-    return reply.code(401).send({ error: 'Session expired', code: 'SESSION_EXPIRED' })
+    reply.code(401).send({ error: 'Session expired', code: 'SESSION_EXPIRED' })
+    return null
   }
+  return payload
+}
+
+// Requires the current user to be owner or admin of this instance's community
+export async function adminOnly(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply | void> {
+  const payload = await verifyStaffSession(request, reply)
+  // Réponse 401 déjà envoyée : rendre la reply arrête la chaîne Fastify
+  if (!payload) return reply
 
   const communityId = await getInstanceCommunityId()
   if (!communityId) {

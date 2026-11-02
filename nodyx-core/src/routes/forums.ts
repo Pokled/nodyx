@@ -18,6 +18,7 @@ import { resolveMentions } from '../utils/mentions'
 import { db, redis } from '../config/database'
 import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
+import { can, getAccess, communityOfThread, outranks, rankOf } from '../services/permissions'
 
 // Un titre de fil est du texte brut, jamais du HTML : checkHtmlContent() ne fait
 // que SCANNER (mots interdits) sans jamais retirer de balises. Sans ce nettoyage,
@@ -28,35 +29,18 @@ function stripTitleTags(title: string): string {
   return title.replace(/<[^>]*>/g, '').trim()
 }
 
-// Check if userId is owner/admin/moderator in the community that owns a thread
-async function isMod(userId: string, threadId: string): Promise<boolean> {
-  const { rows } = await db.query<{ role: string }>(
-    `SELECT cm.role
-     FROM community_members cm
-     JOIN categories cat ON cat.community_id = cm.community_id
-     JOIN threads t ON t.category_id = cat.id
-     WHERE t.id = $1 AND cm.user_id = $2
-     LIMIT 1`,
-    [threadId, userId]
-  )
-  const role = rows[0]?.role
-  return role === 'owner' || role === 'admin' || role === 'moderator'
-}
-
-// Check if userId is owner or admin (not moderator) in the community that owns a thread
-// Used for privileged operations: lock thread, pin thread
-async function isAdmin(userId: string, threadId: string): Promise<boolean> {
-  const { rows } = await db.query<{ role: string }>(
-    `SELECT cm.role
-     FROM community_members cm
-     JOIN categories cat ON cat.community_id = cm.community_id
-     JOIN threads t ON t.category_id = cat.id
-     WHERE t.id = $1 AND cm.user_id = $2
-     LIMIT 1`,
-    [threadId, userId]
-  )
-  const role = rows[0]?.role
-  return role === 'owner' || role === 'admin'
+// Droit de modérer le contenu d'un fil (permission moderate_content dans la
+// communauté du fil, socle du rôle + grade), avec le garde-fou de rang : un
+// membre de l'équipe ne modère pas le contenu de quelqu'un de rang égal ou
+// supérieur, sauf s'il est admin ou propriétaire.
+async function canModerateThreadContent(userId: string, threadId: string, authorId: string | null): Promise<boolean> {
+  const communityId = await communityOfThread(threadId)
+  if (!communityId) return false
+  const actor = await getAccess(communityId, userId)
+  if (!actor.permissions.includes('moderate_content')) return false
+  if (actor.rank >= rankOf('admin') || !authorId) return true
+  const author = await getAccess(communityId, authorId)
+  return outranks(actor, author.role)
 }
 
 // `is_featured` pilote la vitrine PUBLIQUE de l'instance (GET
@@ -154,9 +138,8 @@ export default async function forumRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Community not found', code: 'NOT_FOUND' })
     }
 
-    const member = await CommunityModel.getMember(community.id, request.user!.userId)
-    if (!member || member.role === 'member') {
-      return reply.code(403).send({ error: 'Only moderators and owners can create categories', code: 'FORBIDDEN' })
+    if (!(await can(community.id, request.user!.userId, 'manage_categories'))) {
+      return reply.code(403).send({ error: 'Missing permission: manage_categories', code: 'FORBIDDEN' })
     }
 
     const category = await CommunityModel.createCategory(data)
@@ -459,7 +442,7 @@ app.get('/threads', {
 
     const userId = request.user!.userId
     const isAuthor = existing.author_id === userId
-    const modAccess = !isAuthor && await isMod(userId, existing.thread_id)
+    const modAccess = !isAuthor && await canModerateThreadContent(userId, existing.thread_id, existing.author_id)
 
     if (!isAuthor && !modAccess) {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
@@ -494,7 +477,7 @@ app.get('/threads', {
 
     const userId = request.user!.userId
     const isAuthor = existing.author_id === userId
-    const modAccess = !isAuthor && await isMod(userId, existing.thread_id)
+    const modAccess = !isAuthor && await canModerateThreadContent(userId, existing.thread_id, existing.author_id)
 
     if (!isAuthor && !modAccess) {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
@@ -530,7 +513,7 @@ app.get('/threads', {
 
     const userId    = request.user!.userId
     const isAuthor  = thread.author_id === userId
-    const modAccess = await isMod(userId, threadId)
+    const modAccess = await canModerateThreadContent(userId, threadId, isAuthor ? null : thread.author_id)
 
     if (!isAuthor && !modAccess) {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
@@ -547,14 +530,8 @@ app.get('/threads', {
       return reply.send({ thread: updated })
     }
 
-    // Pin / lock : restreint à owner/admin DE LA COMMUNAUTÉ DU FIL (une action
-    // de modération locale a du sens dans n'importe quelle communauté).
-    if (body.is_pinned !== undefined || body.is_locked !== undefined) {
-      const adminAccess = await isAdmin(userId, threadId)
-      if (!adminAccess) {
-        return reply.code(403).send({ error: 'Only admins and owners can pin or lock threads', code: 'FORBIDDEN' })
-      }
-    }
+    // Pin / lock : relèvent de moderate_content (modAccess ci-dessus), comme
+    // supprimer ou modifier. Avant le 02/11/2026 c'était réservé aux admins.
 
     // Feature : restreint à owner/admin DE L'INSTANCE, jamais "de n'importe
     // quelle communauté", cf isInstanceAdmin ci-dessus.

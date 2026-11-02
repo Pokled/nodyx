@@ -1,6 +1,6 @@
 /**
- * Tests for: requireModule, validate, checkPermission (permissions.ts)
- * These three middleware were completely untested.
+ * Tests for: requireModule, validate.
+ * (Les droits de l'équipe sont testés dans permissions.test.ts.)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import Fastify from 'fastify'
@@ -24,7 +24,6 @@ vi.mock('../config/database', () => ({
 import { db, redis } from '../config/database'
 import { requireModule }   from '../middleware/requireModule'
 import { validate }        from '../middleware/validate'
-import { checkPermission } from '../middleware/permissions'
 import { requireAuth }     from '../middleware/auth'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -198,135 +197,5 @@ describe('validate middleware', () => {
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
-// checkPermission (permissions.ts)
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('checkPermission', () => {
-  beforeEach(() => { vi.resetAllMocks() })
-
-  async function buildPermApp(permission: 'can_post' | 'can_create_category' | 'can_moderate') {
-    const app = Fastify({ logger: false })
-
-    // requireAuth mock: set req.user from token
-    app.addHook('preHandler', async (req) => {
-      const header = req.headers.authorization
-      if (header?.startsWith('Bearer ')) {
-        try {
-          req.user = jwt.verify(header.slice(7), SECRET) as any
-        } catch {}
-      }
-    })
-
-    // session check for requireAuth: always alive in tests
-    vi.mocked(redis.exists).mockResolvedValue(1 as any)
-
-    app.get('/:slug/test', {
-      preHandler: [checkPermission(permission)],
-    }, async () => ({ ok: true }))
-    await app.ready()
-    return app
-  }
-
-  it('returns 401 when no user attached', async () => {
-    const app = await buildPermApp('can_post')
-    // No auth header → no req.user
-    const app2 = Fastify({ logger: false })
-    app2.get('/:slug/test', { preHandler: [checkPermission('can_post')] }, async () => ({ ok: true }))
-    await app2.ready()
-    const res = await app2.inject({ method: 'GET', url: '/mycommunity/test' })
-    expect(res.statusCode).toBe(401)
-  })
-
-  it('returns 403 when user is not a member', async () => {
-    vi.mocked(db.query).mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-    const app = await buildPermApp('can_post')
-    const res = await app.inject({
-      method: 'GET', url: '/mycommunity/test',
-      headers: { Authorization: AUTH },
-    })
-    expect(res.statusCode).toBe(403)
-    expect(res.json()).toMatchObject({ code: 'FORBIDDEN' })
-  })
-
-  it('owner always passes regardless of permission', async () => {
-    vi.mocked(db.query).mockResolvedValueOnce({
-      rows: [{ community_id: 'c1', role: 'owner', grade_permissions: null }],
-    } as any)
-    const app = await buildPermApp('can_create_category')
-    const res = await app.inject({
-      method: 'GET', url: '/mycommunity/test',
-      headers: { Authorization: AUTH },
-    })
-    expect(res.statusCode).toBe(200)
-  })
-
-  it('admin always passes', async () => {
-    vi.mocked(db.query).mockResolvedValueOnce({
-      rows: [{ community_id: 'c1', role: 'admin', grade_permissions: null }],
-    } as any)
-    const app = await buildPermApp('can_manage_grades')
-    const res = await app.inject({
-      method: 'GET', url: '/mycommunity/test',
-      headers: { Authorization: AUTH },
-    })
-    expect(res.statusCode).toBe(200)
-  })
-
-  it('moderator passes can_moderate', async () => {
-    vi.mocked(db.query).mockResolvedValueOnce({
-      rows: [{ community_id: 'c1', role: 'moderator', grade_permissions: null }],
-    } as any)
-    const app = await buildPermApp('can_moderate')
-    const res = await app.inject({
-      method: 'GET', url: '/mycommunity/test',
-      headers: { Authorization: AUTH },
-    })
-    expect(res.statusCode).toBe(200)
-  })
-
-  it('moderator blocked on can_create_category', async () => {
-    vi.mocked(db.query).mockResolvedValueOnce({
-      rows: [{ community_id: 'c1', role: 'moderator', grade_permissions: null }],
-    } as any)
-    const app = await buildPermApp('can_create_category')
-    const res = await app.inject({
-      method: 'GET', url: '/mycommunity/test',
-      headers: { Authorization: AUTH },
-    })
-    expect(res.statusCode).toBe(403)
-    expect(res.json()).toMatchObject({ code: 'FORBIDDEN' })
-  })
-
-  it('member with grade override passes can_create_category', async () => {
-    vi.mocked(db.query).mockResolvedValueOnce({
-      rows: [{
-        community_id: 'c1',
-        role: 'member',
-        grade_permissions: {
-          can_post: true, can_create_thread: true,
-          can_create_category: true, // grade elevates this
-          can_moderate: false, can_manage_members: false, can_manage_grades: false,
-        },
-      }],
-    } as any)
-    const app = await buildPermApp('can_create_category')
-    const res = await app.inject({
-      method: 'GET', url: '/mycommunity/test',
-      headers: { Authorization: AUTH },
-    })
-    expect(res.statusCode).toBe(200)
-  })
-
-  it('member without grade blocked on can_moderate', async () => {
-    vi.mocked(db.query).mockResolvedValueOnce({
-      rows: [{ community_id: 'c1', role: 'member', grade_permissions: null }],
-    } as any)
-    const app = await buildPermApp('can_moderate')
-    const res = await app.inject({
-      method: 'GET', url: '/mycommunity/test',
-      headers: { Authorization: AUTH },
-    })
-    expect(res.statusCode).toBe(403)
-  })
-})
+// checkPermission (jamais branché) a été remplacé le 02/11/2026 par
+// requirePermission + services/permissions.ts : voir permissions.test.ts.
