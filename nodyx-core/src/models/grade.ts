@@ -108,13 +108,17 @@ export async function assignToMember(
   userId: string,
   gradeId: string | null
 ): Promise<{ found: boolean; gradeValid: boolean }> {
-  // Atomic: verify grade belongs to this community in the same statement
+  // Atomic: verify grade belongs to this community in the same statement.
+  // $1 est typé (::uuid) à CHAQUE usage : sans type, « $1 IS NULL » laisse
+  // PostgreSQL incapable de déduire le type du paramètre et la requête plante
+  // (42P08 « could not determine data type of parameter $1 ») pour TOUTE
+  // attribution, grade comme retrait. L'attribution n'a jamais marché avant ça.
   const { rowCount } = await db.query(
-    `UPDATE community_members SET grade_id = $1
+    `UPDATE community_members SET grade_id = $1::uuid
      WHERE community_id = $2 AND user_id = $3
      AND (
-       $1 IS NULL
-       OR EXISTS (SELECT 1 FROM community_grades WHERE id = $1 AND community_id = $2)
+       $1::uuid IS NULL
+       OR EXISTS (SELECT 1 FROM community_grades WHERE id = $1::uuid AND community_id = $2)
      )`,
     [gradeId, communityId, userId]
   )
