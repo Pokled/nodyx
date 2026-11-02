@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms'
 	import type { PageData } from './$types'
 	import { page } from '$app/state'
+	import { goto } from '$app/navigation'
 	import { PUBLIC_API_URL } from '$app/env/public'
 	import { untrack } from 'svelte'
 	import { t, locale } from '$lib/i18n'
@@ -62,6 +63,13 @@
 	const canBan     = $derived(!!access?.permissions.includes('ban_members'))
 	const canGrades  = $derived(!!access?.permissions.includes('manage_grades'))
 	// ROLE_RANK ici : 0 = le plus haut. Viser = être strictement au-dessus.
+	// Un clic n'importe où sur la ligne ouvre la fiche, sauf sur un contrôle
+	// (lien, bouton, menu, sélecteur de rôle) qui garde son propre rôle.
+	function openFileFromRow(e: MouseEvent, userId: string) {
+		if ((e.target as HTMLElement).closest('a, button, select, input, form, [popover], label')) return
+		if (window.getSelection()?.toString()) return
+		goto(`/admin/members/${userId}`)
+	}
 	const mayTarget  = (role: string) => isAdmin || (ROLE_RANK[access?.role ?? 'member'] ?? 9) < (ROLE_RANK[role] ?? 9)
 	type SortKey = 'username' | 'role' | 'grade' | 'threads' | 'posts' | 'joined'
 	let roleFilter = $state<string>('all')
@@ -233,12 +241,15 @@
 			<tbody>
 				{#each filtered as member (member.user_id)}
 					{@const menuId = `menu-${member.user_id}`}
-					<tr>
+					<!-- Toute la ligne ouvre la fiche (sauf les commandes qu'elle contient). Au
+					     clavier, le pseudo et le bouton « Fiche » sont les vrais liens. -->
+					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+					<tr class="adm-row-link" onclick={(e) => openFileFromRow(e, member.user_id)}>
 						<td class="adm-cell-main">
 							<div class="flex items-center gap-2.5 min-w-0">
-								<span class="member-avatar">
+								<a class="member-avatar" href="/admin/members/{member.user_id}" tabindex="-1" aria-hidden="true">
 									{#if member.avatar}<img src={member.avatar} alt="" />{:else}{member.username.charAt(0).toUpperCase()}{/if}
-								</span>
+								</a>
 								<div class="min-w-0 text-left">
 									<a href="/admin/members/{member.user_id}" class="member-name" title={tFn('amem.open_file')}>{member.username}</a>
 									{@render email(member.user_id, member.email)}
@@ -286,6 +297,11 @@
 						<td class="adm-muted" data-label={tFn('amem.col_joined')}>{new Date(member.joined_at).toLocaleDateString($locale)}</td>
 
 						<td class="adm-num">
+							<div class="adm-actions adm-actions--row">
+							<a class="adm-btn adm-btn--sm" href="/admin/members/{member.user_id}" aria-label={tFn('amem.open_file_for', { username: member.username })}>
+								<svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.6a1 1 0 01.7.3l5.4 5.4a1 1 0 01.3.7V19a2 2 0 01-2 2z"/></svg>
+								<span class="max-md:sr-only">{tFn('amem.file_btn')}</span>
+							</a>
 							{#if member.role !== 'owner' && mayTarget(member.role) && (isAdmin || canKick || canBan || canGrades)}
 								<button type="button" class="adm-btn adm-btn--icon" popovertarget={menuId}
 								        aria-label={tFn('amem.actions_for', { username: member.username })}
@@ -293,6 +309,11 @@
 									<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
 								</button>
 								<div id={menuId} popover class="adm-menu" role="menu">
+									<a role="menuitem" class="adm-menu-item" href="/admin/members/{member.user_id}">
+										<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.6a1 1 0 01.7.3l5.4 5.4a1 1 0 01.3.7V19a2 2 0 01-2 2z"/></svg>
+										{tFn('amem.open_file')}
+									</a>
+									<div class="adm-menu-sep" role="separator"></div>
 									{#if canGrades}
 									<a role="menuitem" class="adm-menu-item" href="/admin/grades">
 										<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4z"/></svg>
@@ -328,6 +349,7 @@
 									{/if}
 								</div>
 							{/if}
+							</div>
 						</td>
 					</tr>
 				{:else}
@@ -566,6 +588,8 @@
 	}
 	.member-avatar img { width: 100%; height: 100%; object-fit: cover; }
 	.member-avatar--banned { background: color-mix(in srgb, var(--nx-bad) 14%, transparent); color: var(--nx-bad); }
+	.adm-row-link { cursor: pointer; }
+	a.member-avatar { text-decoration: none; }
 	.member-name { display: block; font-weight: 600; color: var(--nx-text); text-decoration: none; }
 	a.member-name:hover { color: var(--nx-header-accent); }
 	.member-mail { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--nx-text-muted); }

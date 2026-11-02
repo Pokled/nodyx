@@ -13,6 +13,7 @@
 	import { apiFetch } from '$lib/api'
 	import { t } from '$lib/i18n'
 	import { openReport } from '$lib/report'
+	import { can } from '$lib/permissions'
 	import { untrack } from 'svelte'
 
 	const tFn = $derived($t)
@@ -23,6 +24,8 @@
 	// Logged-in user — from parent layout
 	const me = $derived((page.data as any).user)
 	const isOwnProfile = $derived(me?.username === profile.username)
+	// L'équipe (modérer ou bannir) voit un accès direct à la fiche de modération
+	const isStaff = $derived(can(me as never, 'moderate_members') || can(me as never, 'ban_members'))
 
 	// Initials fallback
 	const initials = $derived((profile.display_name || profile.username).trim().charAt(0).toUpperCase())
@@ -519,6 +522,13 @@
 							</svg>
 							{tFn('user.message_btn')}
 						</button>
+						{#if isStaff}
+							<!-- Équipe seulement : la fiche de modération de ce membre -->
+							<a href="/admin/members/{profile.id}" class="profile-action-btn" title={tFn('profile.moderation_file')}>
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 4v5c0 4.4-2.9 7.8-7 9-4.1-1.2-7-4.6-7-9V7l7-4z"/></svg>
+								{tFn('profile.moderate_btn')}
+							</a>
+						{/if}
 						<!-- Signaler ce profil : bouton discret, icône seule -->
 						<button type="button" class="profile-action-btn"
 							onclick={() => openReport({ type: 'user', id: profile.id, label: tFn('report.label_user', { name: profile.username }) })}
