@@ -26,12 +26,15 @@ export async function create(data: {
   actor_id?: string | null
   thread_id?: string | null
   post_id?:   string | null
+  /** Court contenu propre au type (ex. motif d'un avertissement), migration 128 */
+  meta?:      Record<string, unknown> | null
 }): Promise<Notification> {
   const { rows } = await db.query<Notification>(
-    `INSERT INTO notifications (user_id, type, actor_id, thread_id, post_id)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO notifications (user_id, type, actor_id, thread_id, post_id, meta)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [data.user_id, data.type, data.actor_id ?? null, data.thread_id ?? null, data.post_id ?? null]
+    [data.user_id, data.type, data.actor_id ?? null, data.thread_id ?? null, data.post_id ?? null,
+     data.meta ? JSON.stringify(data.meta) : null]
   )
   return rows[0]
 }

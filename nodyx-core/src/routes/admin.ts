@@ -24,6 +24,8 @@ import { createWriteStream, mkdirSync } from 'fs'
 import { pipeline } from 'stream/promises'
 import path from 'path'
 import { getClientIp } from '../utils/clientIp'
+import { buildMemberFile } from '../services/memberFile'
+import * as NotificationModel from '../models/notification'
 import { requirePermission, requireAnyPermission, requireStaff } from '../middleware/permissions'
 import { invalidatePermissions, rankOf, outranks, type MemberAccess } from '../services/permissions'
 
@@ -492,6 +494,87 @@ export default async function adminRoutes(app: FastifyInstance) {
     await invalidatePermissions(communityId)
     logAction(adminUser.userId, 'kick_member', 'user', userId, check[0].username, {})
     return reply.send({ ok: true })
+  })
+
+  // ── Fiche membre (CDC modération, E3) ──────────────────────────────────────
+
+  const UuidParam = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  // Tout ce que l'équipe sait d'un membre, en une fiche
+  app.get('/members/:userId/file', {
+    preHandler: [rateLimit, requireAnyPermission('moderate_members', 'ban_members')],
+  }, async (request, reply) => {
+    const { userId } = request.params as { userId: string }
+    if (!UuidParam.test(userId)) return reply.code(400).send({ error: 'Invalid user id', code: 'VALIDATION_ERROR' })
+    const file = await buildMemberFile((await getCommunityId())!, userId)
+    if (!file) return reply.code(404).send({ error: 'Member not found', code: 'NOT_FOUND' })
+    return reply.send(file)
+  })
+
+  // Note de l'équipe (D5 : jamais visible du membre, effacée avec son compte)
+  app.post('/members/:userId/notes', {
+    preHandler: [rateLimit, requirePermission('moderate_members'), validate({ body: z.object({ body: z.string().trim().min(1).max(2000) }) })],
+  }, async (request, reply) => {
+    const { userId } = request.params as { userId: string }
+    if (!UuidParam.test(userId)) return reply.code(400).send({ error: 'Invalid user id', code: 'VALIDATION_ERROR' })
+    const { body } = request.body as { body: string }
+    const { rows } = await db.query(
+      `INSERT INTO member_notes (community_id, user_id, author_id, body)
+       SELECT $1, u.id, $3, $4 FROM users u WHERE u.id = $2
+       RETURNING id, created_at::text AS created_at`,
+      [await getCommunityId(), userId, request.user!.userId, body]
+    )
+    if (!rows[0]) return reply.code(404).send({ error: 'Member not found', code: 'NOT_FOUND' })
+    return reply.code(201).send({ note: rows[0] })
+  })
+
+  // Supprimer une note : son auteur, ou un admin
+  app.delete('/members/:userId/notes/:noteId', {
+    preHandler: [rateLimit, requirePermission('moderate_members')],
+  }, async (request, reply) => {
+    const { userId, noteId } = request.params as { userId: string; noteId: string }
+    if (!UuidParam.test(userId) || !UuidParam.test(noteId)) return reply.code(400).send({ error: 'Invalid id', code: 'VALIDATION_ERROR' })
+    const isAdmin = (request.access?.rank ?? -1) >= rankOf('admin')
+    const { rowCount } = await db.query(
+      `DELETE FROM member_notes
+        WHERE id = $1 AND user_id = $2 AND community_id = $3 AND ($4 OR author_id = $5)`,
+      [noteId, userId, await getCommunityId(), isAdmin, request.user!.userId]
+    )
+    if (!rowCount) return reply.code(404).send({ error: 'Note not found', code: 'NOT_FOUND' })
+    return reply.send({ ok: true })
+  })
+
+  // Avertir : le membre reçoit le motif en notification, l'avertissement entre
+  // dans sa fiche (et compte pour l'escalade d'OctoGuard).
+  app.post('/members/:userId/warn', {
+    preHandler: [rateLimit, requirePermission('moderate_members'), validate({ body: z.object({ reason: z.string().trim().min(3).max(500) }) })],
+  }, async (request, reply) => {
+    const { userId } = request.params as { userId: string }
+    if (!UuidParam.test(userId)) return reply.code(400).send({ error: 'Invalid user id', code: 'VALIDATION_ERROR' })
+    const { reason } = request.body as { reason: string }
+    const communityId = await getCommunityId()
+    const { rows: target } = await db.query<{ role: string | null; username: string }>(
+      `SELECT cm.role, u.username FROM users u
+       LEFT JOIN community_members cm ON cm.user_id = u.id AND cm.community_id = $1
+       WHERE u.id = $2 AND u.is_system = false`, [communityId, userId])
+    if (!target[0]) return reply.code(404).send({ error: 'Member not found', code: 'NOT_FOUND' })
+    if (target[0].role === 'owner' || !mayTarget(request.access, target[0].role) || userId === request.user!.userId) {
+      return reply.code(403).send({ error: 'Cannot act on a member of equal or higher rank', code: 'RANK_TOO_LOW' })
+    }
+    const { rows } = await db.query(
+      `INSERT INTO octoguard_warns (user_id, reason, issued_by) VALUES ($1, $2, $3)
+       RETURNING id, created_at::text AS created_at`,
+      [userId, reason, request.user!.userId]
+    )
+    logAction(request.user!.userId, 'warn_user', 'user', userId, target[0].username, { reason })
+    try {
+      await NotificationModel.create({ user_id: userId, type: 'moderation_warning', meta: { reason } })
+      if (io) {
+        const count = await NotificationModel.getUnreadCount(userId)
+        io.to(`user:${userId}`).emit('notification:new', { unreadCount: count })
+      }
+    } catch { /* la notification ne bloque jamais l'avertissement */ }
+    return reply.code(201).send({ warn: rows[0] })
   })
 
   // ── Bans ───────────────────────────────────────────────────────────────────
