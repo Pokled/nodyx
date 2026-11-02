@@ -25,11 +25,20 @@ export type ModerationVerdict =
 /** Rôle et grade du membre dans la communauté de l'instance (immunités). */
 export async function buildUserCtx(userId: string): Promise<PipelineUserCtx> {
   const communityId = await getInstanceCommunityId()
-  const { rows } = await db.query<{ role: string; grade_id: string | null }>(
-    `SELECT role, grade_id FROM community_members WHERE community_id = $1 AND user_id = $2`,
+  const { rows } = await db.query<{ role: string | null; grade_id: string | null; account_age_days: number | null }>(
+    `SELECT cm.role, cm.grade_id, EXTRACT(EPOCH FROM (NOW() - u.created_at)) / 86400 AS account_age_days
+     FROM users u
+     LEFT JOIN community_members cm ON cm.user_id = u.id AND cm.community_id = $1
+     WHERE u.id = $2`,
     [communityId, userId]
   )
-  return { userId, role: rows[0]?.role ?? 'member', gradeIds: rows[0]?.grade_id ? [rows[0].grade_id] : [] }
+  const age = rows[0]?.account_age_days
+  return {
+    userId,
+    role: rows[0]?.role ?? 'member',
+    gradeIds: rows[0]?.grade_id ? [rows[0].grade_id] : [],
+    ...(age !== null && age !== undefined ? { accountAgeDays: Number(age) } : {}),
+  }
 }
 
 /** Les textes d'une publication (titre, corps, bio…) sont examinés ensemble. */

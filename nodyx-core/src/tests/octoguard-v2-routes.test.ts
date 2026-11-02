@@ -108,7 +108,7 @@ describe('API des règles', () => {
   it('les endroits surveillés sont enregistrés', async () => {
     re2.on = true
     await create({ name: 'Liens', type: 'link_spam', params: { max_links: 2 }, action: 'report_only', scopes: ['chat', 'forum'] })
-    expect(calls.find(c => c.sql.startsWith('INSERT INTO octoguard_automod_rules'))!.params.at(-1)).toEqual(['chat', 'forum'])
+    expect(calls.find(c => c.sql.startsWith('INSERT INTO octoguard_automod_rules'))!.params.at(-2)).toEqual(['chat', 'forum'])
   })
   it('un endroit inconnu est refusé', async () => {
     expect((await create({ name: 'x', type: 'caps', params: {}, action: 'delete', scopes: ['partout'] })).statusCode).toBe(400)

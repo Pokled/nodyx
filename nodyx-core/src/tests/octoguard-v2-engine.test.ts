@@ -51,7 +51,7 @@ beforeEach(() => {
     if (s.includes('SELECT COUNT(*)::int AS cnt')) return { rows: [{ cnt: 3 }] }
     if (s.startsWith('INSERT INTO community_bans')) return { rows: [{ user_id: USER }] }
     if (s.startsWith('DELETE FROM community_bans')) return { rows: [{ user_id: USER, community_id: 'c1' }] }
-    if (s.includes('FROM community_members WHERE community_id')) return { rows: [{ role: 'member', grade_id: null }] }
+    if (s.includes('LEFT JOIN community_members cm')) return { rows: [{ role: 'member', grade_id: null, account_age_days: 400 }] }
     return { rows: [] }
   })
 })
@@ -143,7 +143,7 @@ describe('le point d’entrée unique (forum, profils, sondages, wiki)', () => {
     expect(await moderateText(USER, 'profile', [SPAM])).toMatchObject({ blocked: false, report: { rule_name: 'Liens' } })
   })
   it('les immunités par rôle valent partout', async () => {
-    dbQueryMock.mockImplementation(async (sql: string) => String(sql).includes('FROM community_members WHERE community_id') ? { rows: [{ role: 'moderator', grade_id: null }] } : String(sql).includes('FROM communities') ? { rows: [{ id: 'c1' }] } : { rows: [] })
+    dbQueryMock.mockImplementation(async (sql: string) => String(sql).includes('LEFT JOIN community_members cm') ? { rows: [{ role: 'moderator', grade_id: null, account_age_days: 400 }] } : String(sql).includes('FROM communities') ? { rows: [{ id: 'c1' }] } : { rows: [] })
     _setRulesForBench([rule({ scopes: ['forum'], immunized_role_types: ['moderator'] })])
     expect((await moderateText(USER, 'forum', [SPAM])).blocked).toBe(false)
   })

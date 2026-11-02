@@ -138,6 +138,9 @@ export function assessPatternSafety(pattern: string, flags: string = 'i'): Patte
 export interface MatchContext {
   /** Contenu après sanitize() existant. Peut contenir du HTML (tags ok). */
   content: string
+  /** Auteur (détecteurs à état : inondation). */
+  userId?: string
+  now?:    number
 }
 
 export interface MatchResult {
@@ -305,6 +308,8 @@ export const matchLinkSpam: Matcher = (ctx, params) => {
   }
 }
 
+import { matchKeywords, matchFlood, matchZalgo } from './matchers2'
+
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
 const MATCHERS: Record<string, Matcher> = {
@@ -313,11 +318,14 @@ const MATCHERS: Record<string, Matcher> = {
   link_domain:   matchLinkDomain,
   mention_spam:  matchMentionSpam,
   link_spam:     matchLinkSpam,
+  keywords:      matchKeywords,
+  flood:         matchFlood,
+  zalgo:         matchZalgo,
 }
 
 /** Évalue une règle contre un message. Retourne le match ou null. */
-export function matchRule(content: string, rule: AutomodRuleRow): MatchResult | null {
+export function matchRule(content: string, rule: AutomodRuleRow, extra: { userId?: string; now?: number } = {}): MatchResult | null {
   const fn = MATCHERS[rule.type]
   if (!fn) return null
-  return fn({ content }, rule.params ?? {})
+  return fn({ content, ...extra }, rule.params ?? {})
 }

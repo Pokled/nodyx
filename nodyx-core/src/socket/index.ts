@@ -450,12 +450,15 @@ export function registerSocketIO(server: Server): void {
       // Contrôle d'accès : le socket doit avoir rejoint ce canal via chat:join (qui vérifie membership)
       // Double-check DB pour éviter les races après expulsion de la communauté
       if (!socket.rooms.has(`channel:${channelId}`)) return
-      const { rows: memberCheck } = await db.query<{ role: string; is_system_managed: boolean; grade_id: string | null; community_id: string }>(
-        `SELECT cm.role, c.is_system_managed, cm.grade_id, c.community_id FROM channels c
+      const { rows: memberCheck } = await db.query<{ role: string; is_system_managed: boolean; grade_id: string | null; community_id: string; account_age_days: number }>(
+        `SELECT cm.role, c.is_system_managed, cm.grade_id, c.community_id,
+                EXTRACT(EPOCH FROM (NOW() - u.created_at)) / 86400 AS account_age_days
+         FROM channels c
          JOIN community_members cm ON c.community_id = cm.community_id
+         JOIN users u ON u.id = cm.user_id
          WHERE c.id = $1 AND cm.user_id = $2 LIMIT 1`,
         [channelId, userId]
-      ).catch(() => ({ rows: [] as { role: string; is_system_managed: boolean; grade_id: string | null; community_id: string }[] }))
+      ).catch(() => ({ rows: [] as { role: string; is_system_managed: boolean; grade_id: string | null; community_id: string; account_age_days: number }[] }))
       if (!memberCheck.length) return
 
       // Channel system-managed (ex: #streamer-events auto-créé) : seuls
@@ -536,6 +539,7 @@ export function registerSocketIO(server: Server): void {
               userId,
               role:     memberCheck[0].role,
               gradeIds: memberCheck[0].grade_id ? [memberCheck[0].grade_id] : [],
+              accountAgeDays: Number(memberCheck[0].account_age_days),
             },
             surface:   'chat',
             channelId,
