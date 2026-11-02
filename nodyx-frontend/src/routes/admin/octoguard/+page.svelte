@@ -73,7 +73,7 @@
 			<div class="og-stat-label">{tFn('octoguard.mutes_h2')}</div>
 		</a>
 
-		<a href="/admin/octoguard/reports" class="og-stat-card" class:og-stat-card--warn={openReports > 0}>
+		<a href="/admin/reports" class="og-stat-card" class:og-stat-card--warn={openReports > 0}>
 			<div class="og-stat-num">{openReports}</div>
 			<div class="og-stat-label">{tFn('octoguard.overview_stat_reports')}</div>
 		</a>
@@ -88,7 +88,7 @@
 		<li><strong>{tFn('octoguard.help2_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/automod">{tFn('octoguard.tab_automod')}</a>. {tFn('octoguard.help2_b')} <code>report_only</code> {tFn('octoguard.help2_c')}</li>
 		<li><strong>{tFn('octoguard.help3_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/welcome">{tFn('octoguard.tab_welcome')}</a> {tFn('octoguard.help3_b')}</li>
 		<li><strong>{tFn('octoguard.help4_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/commands">{tFn('octoguard.tab_commands')}</a> {tFn('octoguard.help4_b')} <code>!regles</code>, <code>!faq</code>, etc.</li>
-		<li><strong>{tFn('octoguard.help5_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/logs">{tFn('octoguard.tab_logs')}</a> {tFn('octoguard.help5_b')} <a href="/admin/octoguard/reports">{tFn('octoguard.help5_reports_link')}</a>.</li>
+		<li><strong>{tFn('octoguard.help5_strong')}</strong> {tFn('octoguard.help_in')} <a href="/admin/octoguard/logs">{tFn('octoguard.tab_logs')}</a> {tFn('octoguard.help5_b')} <a href="/admin/reports">{tFn('octoguard.help5_reports_link')}</a>.</li>
 	</ol>
 </section>
 

@@ -28,6 +28,7 @@
 		mention:      '@',
 		canvas_access_request: '🎨',
 		canvas_access_granted: '🎨',
+		report_resolved: '✓',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
@@ -36,6 +37,7 @@
 		mention:      tFn('notifications.mention_label'),
 		canvas_access_request: tFn('notifications.canvas_access_request_label'),
 		canvas_access_granted: tFn('notifications.canvas_access_granted_label'),
+		report_resolved: tFn('notifications.report_resolved_label'),
 	});
 
 	function formatDate(iso: string) {

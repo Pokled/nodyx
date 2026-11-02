@@ -37,6 +37,7 @@
 	import { t } from '$lib/i18n';
 	import { replyCount } from '$lib/forumCounts';
 	import { can, isAdminRole } from '$lib/permissions';
+	import { openReport } from '$lib/report';
 
 	const tFn = $derived($t)
 
@@ -140,6 +141,8 @@
 	const canEditTitle = $derived(user && (user.id === thread.author_id || isMod));
 	function canEdit(post: any)   { return user && (user.id === post.author_id || isMod); }
 	function canDelete(post: any) { return user && (user.id === post.author_id || isMod); }
+	// Signaler : tout membre connecté, sauf son propre message (le serveur refuse aussi)
+	function canReport(post: any) { return !!user && user.id !== post.author_id; }
 	
 	// ── Dernier posteur ───────────────────────────────────────────────────
 	const lastPost = $derived(posts.length > 0 ? posts[posts.length - 1] : null);
@@ -523,7 +526,7 @@
 			</div>
 		{/if}
 
-		<article class="flex flex-col sm:flex-row gap-4 border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/60 p-4 hover:border-indigo-900/50 transition-colors duration-200">
+		<article id="post-{post.id}" class="flex flex-col sm:flex-row gap-4 border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/60 p-4 hover:border-indigo-900/50 transition-colors duration-200">
 			<!-- Profil auteur -->
 			<ProfileCard
 				username={post.author_username}
@@ -555,9 +558,18 @@
 						<span class="text-xs text-[var(--nx-text-muted)] ml-2">#{index + 1}</span>
 					</div>
 
-					<!-- Boutons Edit / Delete (auteur ou mod) -->
-					{#if canEdit(post) || canDelete(post)}
+					<!-- Boutons Signaler / Edit / Delete -->
+					{#if canEdit(post) || canDelete(post) || canReport(post)}
 						<div class="flex items-center gap-1">
+							{#if canReport(post)}
+								<button type="button"
+									onclick={() => openReport({ type: 'post', id: post.id, label: tFn('report.label_post', { name: post.author_username ?? '' }) })}
+									class="inline-flex items-center gap-1 px-2 py-1 text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-bad)] hover:bg-[color-mix(in_srgb,var(--nx-bad)_10%,transparent)] transition-colors"
+									title={tFn('report.action')}>
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V4m0 0h11l-1.5 4L15 12H4"/></svg>
+									<span class="max-sm:sr-only">{tFn('report.action')}</span>
+								</button>
+							{/if}
 							{#if canEdit(post) && editingPostId !== post.id}
 								<button type="button"
 									onclick={() => { editingPostId = post.id; deletingPostId = null }}

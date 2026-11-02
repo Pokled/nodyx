@@ -23,6 +23,13 @@ import { z } from 'zod'
 import { db, redis } from '../config/database'
 import { requirePermission, requireAnyPermission } from '../middleware/permissions'
 import { getInstanceAccess, outranks, rankOf } from '../services/permissions'
+import { getInstanceCommunityId } from '../middleware/adminOnly'
+import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
+import * as NotificationModel from '../models/notification'
+import * as PostModel from '../models/post'
+import * as ThreadModel from '../models/thread'
+import { awardPoints, REPUTATION } from '../models/reputation'
+import { io } from '../socket/io'
 import { requireAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
@@ -102,17 +109,27 @@ const WebhookBody = z.object({
 const ReportTargetType = z.enum(['message', 'user', 'thread', 'post', 'dm_message'])
 const ReportCategory   = z.enum(['spam', 'harassment', 'hate', 'illegal', 'other'])
 
+// Le motif (category) est obligatoire, la précision (reason) facultative.
+// Format UUID tel que PostgreSQL l'accepte : z.string().uuid() (Zod 4) exige
+// les bits de version RFC et refusait les contenus créés par les données de
+// démonstration (identifiants « b1000004-0003-0000-... »), pourtant bien réels.
+const AnyUuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Invalid UUID')
+
 const CreateReportBody = z.object({
   target_type: ReportTargetType,
-  target_id:   z.string().uuid(),
-  reason:      z.string().min(3).max(1000),
-  category:    ReportCategory.optional(),
+  target_id:   AnyUuid,
+  reason:      z.string().max(1000).optional(),
+  category:    ReportCategory,
 })
 
+// Traiter un dossier : le prendre en charge (claim), ou le clore (status),
+// éventuellement en supprimant le contenu signalé (delete_content).
 const PatchReportBody = z.object({
-  status:     z.enum(['reviewed', 'dismissed', 'actioned']),
-  resolution: z.string().max(1000).optional(),
-})
+  claim:          z.boolean().optional(),
+  status:         z.enum(['reviewed', 'dismissed', 'actioned']).optional(),
+  resolution:     z.string().max(1000).optional(),
+  delete_content: z.boolean().optional(),
+}).refine(b => b.claim === true || b.status !== undefined, { message: 'claim or status required' })
 
 // ─── Helper : audit log pour actions admin manuelles ─────────────────────────
 
@@ -147,6 +164,33 @@ async function logAdminAction(
 const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|reports(?!\/settings))(\/|$)/
 const guardMemberModeration = requireAnyPermission('moderate_members', 'manage_octoguard')
 const guardOctoguard = requirePermission('manage_octoguard')
+
+// Supprime le contenu d'un signalement, comme le ferait le bouton du forum
+// ou du chat (mêmes effets : réputation, diffusion temps réel).
+async function deleteReportedContent(type: string, id: string): Promise<boolean> {
+  if (type === 'post') {
+    const post = await PostModel.getAuthorAndThread(id)
+    if (!post) return true // déjà supprimé : rien à faire
+    await PostModel.removeById(id)
+    await awardPoints(post.author_id, -REPUTATION.REPLY)
+    return true
+  }
+  if (type === 'thread') {
+    const thread = await ThreadModel.findById(id)
+    if (!thread) return true
+    await ThreadModel.remove(id)
+    await awardPoints(thread.author_id, -REPUTATION.THREAD)
+    return true
+  }
+  if (type === 'message') {
+    const { rows } = await db.query<{ channel_id: string }>(
+      `UPDATE channel_messages SET is_deleted = true, content = ''
+        WHERE id = $1 AND is_deleted = false RETURNING channel_id`, [id])
+    if (rows[0] && io) io.to(`channel:${rows[0].channel_id}`).emit('chat:message_deleted', { messageId: id })
+    return true
+  }
+  return false // un profil ne se « supprime » pas d'ici
+}
 
 export async function octoguardAdminPlugin(app: FastifyInstance) {
   app.addHook('preHandler', async (request, reply) => {
@@ -594,17 +638,33 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     let i = 1
     if (q.status) { conditions.push(`r.status = $${i++}`); params.push(q.status) }
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+    // Rôle de l'auteur dans LA communauté de l'instance (rang, garde-fou)
+    const communityParam = i++
+    params.push(await getInstanceCommunityId())
 
     const { rows } = await db.query(
-      `SELECT r.*, u.username AS reporter_username
+      `SELECT r.*, u.username AS reporter_username,
+              a.username AS target_author_username,
+              cm.role    AS target_author_role,
+              c.username AS claimed_by_username,
+              v.username AS reviewed_by_username
          FROM reports r
          LEFT JOIN users u ON u.id = r.reporter_id
+         LEFT JOIN users a ON a.id = r.target_author_id
+         LEFT JOIN community_members cm ON cm.user_id = r.target_author_id
+              AND cm.community_id = $${communityParam}
+         LEFT JOIN users c ON c.id = r.claimed_by
+         LEFT JOIN users v ON v.id = r.reviewed_by
          ${whereClause}
         ORDER BY r.created_at DESC
         LIMIT ${limit} OFFSET ${offset}`,
       params
     )
-    return reply.send({ reports: rows, page, limit })
+    // Compteurs par état pour les onglets de la file
+    const { rows: counts } = await db.query<{ status: string; n: number }>(
+      `SELECT status, COUNT(*)::int AS n FROM reports GROUP BY status`
+    )
+    return reply.send({ reports: rows, page, limit, counts: Object.fromEntries(counts.map(c => [c.status, c.n])) })
   })
 
   app.patch('/reports/:id', {
@@ -612,20 +672,75 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = request.body as z.infer<typeof PatchReportBody>
-    const adminUser = request.user!
-    const { rows } = await db.query(
+    const actor = request.user!
+    const access = request.access!
+
+    const { rows: found } = await db.query<{
+      id: string; target_type: string; target_id: string; target_author_id: string | null; status: string
+    }>(`SELECT id, target_type, target_id, target_author_id, status FROM reports WHERE id = $1`, [id])
+    const report = found[0]
+    if (!report) return reply.code(404).send({ error: 'Report not found', code: 'NOT_FOUND' })
+
+    // Prendre en charge : « je regarde », visible de toute l'équipe
+    if (body.claim && !body.status) {
+      const { rows } = await db.query(
+        `UPDATE reports SET claimed_by = $1, claimed_at = NOW()
+          WHERE target_type = $2 AND target_id = $3 AND status = 'open'
+          RETURNING id`,
+        [actor.userId, report.target_type, report.target_id]
+      )
+      return reply.send({ claimed: rows.length })
+    }
+
+    // Garde-fou de rang : sous le rang d'admin, on ne traite pas le dossier
+    // d'un auteur de rang égal ou supérieur (ce serait juger un pair).
+    if (report.target_author_id && access.rank < rankOf('admin')) {
+      const author = await getInstanceAccess(report.target_author_id)
+      if (!outranks(access, author.role)) {
+        return reply.code(403).send({ error: 'Cannot act on a member of equal or higher rank', code: 'RANK_TOO_LOW' })
+      }
+    }
+
+    // Supprimer le contenu signalé : moderate_content en plus
+    if (body.delete_content) {
+      if (!access.permissions.includes('moderate_content')) {
+        return reply.code(403).send({ error: 'Missing permission: moderate_content', code: 'FORBIDDEN' })
+      }
+      const deleted = await deleteReportedContent(report.target_type, report.target_id)
+      if (!deleted) {
+        return reply.code(400).send({ error: 'This content cannot be deleted from here', code: 'NOT_DELETABLE' })
+      }
+    }
+
+    // Le dossier se ferme pour TOUS les signalements ouverts du même contenu
+    const { rows } = await db.query<{ id: string; reporter_id: string | null }>(
       `UPDATE reports
           SET status      = $1,
               resolution  = COALESCE($2, resolution),
               reviewed_by = $3,
               reviewed_at = NOW()
-        WHERE id = $4
-        RETURNING *`,
-      [body.status, body.resolution ?? null, adminUser.userId, id]
+        WHERE target_type = $4 AND target_id = $5 AND (status = 'open' OR id = $6)
+        RETURNING id, reporter_id`,
+      [body.status, body.resolution ?? null, actor.userId, report.target_type, report.target_id, id]
     )
-    if (!rows[0]) return reply.code(404).send({ error: 'Report not found' })
-    await logAdminAction(adminUser.userId, `octoguard.report_${body.status}`, 'report', id, null, { resolution: body.resolution })
-    return reply.send({ report: rows[0] })
+    await logAdminAction(actor.userId, `report_${body.status}`, report.target_type, report.target_id, null, {
+      reports: rows.length, deleted: !!body.delete_content, resolution: body.resolution ?? null,
+    })
+
+    // D6 : chaque signaleur apprend que son signalement a été traité, sans
+    // détail de la décision (ni qui, ni quelle sanction).
+    const reporters = [...new Set(rows.map(r => r.reporter_id).filter((x): x is string => !!x))]
+    for (const reporterId of reporters) {
+      try {
+        await NotificationModel.create({ user_id: reporterId, type: 'report_resolved' })
+        if (io) {
+          const count = await NotificationModel.getUnreadCount(reporterId)
+          io.to(`user:${reporterId}`).emit('notification:new', { unreadCount: count })
+        }
+      } catch { /* une notification ratée ne bloque jamais la modération */ }
+    }
+
+    return reply.send({ resolved: rows.length, notified: reporters.length })
   })
 
   // ─── Reports settings (anti-abuse) ────────────────────────────────────────
@@ -680,6 +795,20 @@ export async function reportsPublicPlugin(app: FastifyInstance) {
     const body = request.body as z.infer<typeof CreateReportBody>
     const reporterId = request.user!.userId
 
+    // Les messages privés sont chiffrés de bout en bout : rien à montrer à
+    // l'équipe, et ce n'est pas à elle de les lire. Pas de signalement ici.
+    if (body.target_type === 'dm_message') {
+      return reply.code(400).send({ error: 'Private messages cannot be reported here', code: 'UNSUPPORTED_TARGET' })
+    }
+    // La cible doit exister, et on ne se signale pas soi-même
+    const target = await resolveReportTarget(body.target_type as ResolvableTarget, body.target_id)
+    if (!target) {
+      return reply.code(404).send({ error: 'Content not found', code: 'NOT_FOUND' })
+    }
+    if (target.authorId === reporterId) {
+      return reply.code(400).send({ error: 'You cannot report your own content', code: 'CANNOT_REPORT_SELF' })
+    }
+
     // Charger les anti-abuse settings
     const { rows: cfgRows } = await db.query<{
       rate_limit_per_hour: number; cooldown_per_target_hours: number; enabled: boolean
@@ -713,10 +842,12 @@ export async function reportsPublicPlugin(app: FastifyInstance) {
 
     // INSERT
     const { rows } = await db.query(
-      `INSERT INTO reports (reporter_id, target_type, target_id, reason, category)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO reports (reporter_id, target_type, target_id, reason, category,
+                            target_author_id, snapshot, target_label, target_link)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id, status, created_at::text AS created_at`,
-      [reporterId, body.target_type, body.target_id, body.reason, body.category ?? null]
+      [reporterId, body.target_type, body.target_id, (body.reason ?? '').trim(), body.category,
+       target.authorId, target.snapshot, target.label, target.link]
     )
 
     // Log dans admin_audit_log via le logger OctoGuard (fire-and-forget)
@@ -725,12 +856,12 @@ export async function reportsPublicPlugin(app: FastifyInstance) {
       action:       'octoguard.report_filed',
       target_type:  body.target_type,
       target_id:    body.target_id,
-      target_label: body.reason.slice(0, 120),
+      target_label: target.label.slice(0, 120),
       metadata: {
         event_id:    rows[0].id,
         actor:       'octoguard:auto',
         reporter_id: reporterId,
-        category:    body.category ?? null,
+        category:    body.category,
       },
     })
 
