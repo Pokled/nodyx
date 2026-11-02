@@ -19,6 +19,7 @@ import { db, redis } from '../config/database'
 import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
 import { can, getAccess, communityOfThread, outranks, rankOf } from '../services/permissions'
+import { isUserMuted } from '../services/octoguard'
 
 // Un titre de fil est du texte brut, jamais du HTML : checkHtmlContent() ne fait
 // que SCANNER (mots interdits) sans jamais retirer de balises. Sans ce nettoyage,
@@ -60,6 +61,13 @@ async function isInstanceAdmin(userId: string): Promise<boolean> {
   )
   const role = rows[0]?.role
   return role === 'owner' || role === 'admin'
+}
+
+// Sourdine globale active ? Renvoie le corps de la réponse 403, sinon null.
+async function globalMute(userId: string): Promise<{ error: string; code: string; expires_at: string | null } | null> {
+  const state = await isUserMuted(userId)
+  if (!state.muted || state.channel_id) return null
+  return { error: 'You are muted', code: 'MUTED', expires_at: state.expires_at ?? null }
 }
 
 // Ordre des rôles communautaires. Un rôle inconnu (non membre) vaut -1, donc
@@ -240,6 +248,11 @@ app.get('/threads', {
         return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
       }
 
+      // Sourdine globale (posée par l'équipe, sans salon précis) : vaut aussi
+      // pour le forum. Une sourdine limitée à un salon du chat ne bloque pas ici.
+      const muteThread = await globalMute(request.user!.userId)
+      if (muteThread) return reply.code(403).send(muteThread)
+
       // Catégorie restreinte : vérifier que le rôle de l'auteur est suffisant.
       // 'member' (défaut) laisse tout le monde poster — aucun coût si la
       // catégorie n'est pas restreinte.
@@ -359,6 +372,9 @@ app.get('/threads', {
     if (banRows.length > 0) {
       return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
     }
+
+    const mutePost = await globalMute(userId)
+    if (mutePost) return reply.code(403).send(mutePost)
 
     // Rehost les <img> externes avant sanitize (cf POST /threads).
     const rehostReply = await rehostExternalImages(content)

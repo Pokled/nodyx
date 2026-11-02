@@ -29,6 +29,7 @@
 		canvas_access_request: '🎨',
 		canvas_access_granted: '🎨',
 		report_resolved: '✓',
+		moderation_warning: '!',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
@@ -38,6 +39,7 @@
 		canvas_access_request: tFn('notifications.canvas_access_request_label'),
 		canvas_access_granted: tFn('notifications.canvas_access_granted_label'),
 		report_resolved: tFn('notifications.report_resolved_label'),
+		moderation_warning: tFn('notifications.moderation_warning_label'),
 	});
 
 	function formatDate(iso: string) {
@@ -128,6 +130,9 @@
 								<span class="font-semibold text-[var(--nx-text)]">{notif.actor_username}</span>
 							{/if}
 							{TYPE_LABEL[notif.type] ?? notif.type}
+							{#if notif.type === 'moderation_warning' && notif.meta?.reason}
+								<span class="block mt-1 text-[var(--nx-text)]">« {notif.meta.reason} »</span>
+							{/if}
 							{#if notif.thread_title}
 								<span class="text-[var(--nx-text-muted)]"> « {notif.thread_title} »</span>
 							{/if}

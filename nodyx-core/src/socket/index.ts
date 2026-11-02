@@ -485,10 +485,11 @@ export function registerSocketIO(server: Server): void {
         )
         if (banCheck.length > 0) return
 
-        // ▼ OCTOGUARD HOOK (Sessions B + C, cf docs/specs/016-Octoguard/)
-        if (isOctoGuardEnabled()) {
-          // 1. Check mute (Module 6, Session C) AVANT le pipeline auto-mod.
-          //    Un user muté ne doit pas matcher de règles ni polluer les logs.
+        // Sourdine : vérifiée TOUJOURS, OctoGuard allumé ou non. Une sourdine
+        // posée par l'équipe est de la modération humaine ; jusqu'au
+        // 02/11/2026 elle n'était lue que si OctoGuard tournait, donc jamais
+        // (éteint partout depuis août) : elle ne faisait rien.
+        {
           const muteState = await isUserMuted(userId, channelId)
           if (muteState.muted) {
             socket.emit('chat:blocked', {
@@ -502,6 +503,10 @@ export function registerSocketIO(server: Server): void {
             })
             return
           }
+        }
+
+        // ▼ OCTOGUARD HOOK (Sessions B + C, cf docs/specs/016-Octoguard/)
+        if (isOctoGuardEnabled()) {
 
           // 2. Détection de commandes custom (Module 3, Session C).
           //    Si "!cmd" en début de message → on poste la réponse bot et

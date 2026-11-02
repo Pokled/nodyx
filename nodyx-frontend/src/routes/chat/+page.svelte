@@ -445,8 +445,13 @@
 			showPinned = true;
 		});
 
-		sock.on('chat:blocked', ({ reason }: { reason: string }) => {
-			blockedNotice = reason ?? tFn('chat.message_refused');
+		sock.on('chat:blocked', ({ reason, octoguard }: { reason: string; octoguard?: { expires_at?: string | null } }) => {
+			// Sourdine posée par l'équipe : une phrase, avec sa fin (jamais le code brut « muted »)
+			blockedNotice = reason === 'muted'
+				? (octoguard?.expires_at
+					? tFn('chat.muted_until', { date: new Date(octoguard.expires_at).toLocaleString() })
+					: tFn('chat.muted'))
+				: (reason ?? tFn('chat.message_refused'));
 			if (blockedTimer) clearTimeout(blockedTimer);
 			blockedTimer = setTimeout(() => { blockedNotice = null; }, 5000);
 		});

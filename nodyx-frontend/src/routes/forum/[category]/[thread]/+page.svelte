@@ -143,6 +143,7 @@
 	function canDelete(post: any) { return user && (user.id === post.author_id || isMod); }
 	// Signaler : tout membre connecté, sauf son propre message (le serveur refuse aussi)
 	function canReport(post: any) { return !!user && user.id !== post.author_id; }
+	let replyFailure = $state<string | null>(null);
 	
 	// ── Dernier posteur ───────────────────────────────────────────────────
 	const lastPost = $derived(posts.length > 0 ? posts[posts.length - 1] : null);
@@ -674,8 +675,20 @@
 			<form method="POST" action="?/reply"
 				use:enhance={() => {
 					submitting = true
-					return async ({ update }) => {
+					replyFailure = null
+					return async ({ result, update }) => {
 						submitting = false
+						if (result.type === 'failure') {
+							// Refus : on GARDE le texte (avant, l'éditeur était vidé et
+							// aucune erreur ne s'affichait) et on dit pourquoi.
+							const d = (result.data ?? {}) as { replyCode?: string | null; mutedUntil?: string | null }
+							replyFailure = d.replyCode === 'MUTED'
+								? (d.mutedUntil ? tFn('forum.err_muted_until', { date: new Date(d.mutedUntil).toLocaleString() }) : tFn('forum.err_muted'))
+								: d.replyCode === 'BANNED' ? tFn('forum.err_banned')
+								: d.replyCode === 'THREAD_LOCKED' ? tFn('forum.err_locked')
+								: tFn('forum.err_reply')
+							return
+						}
 						replyKey++    // Vide l'éditeur en le remontant
 						await update()
 					}
@@ -696,6 +709,9 @@
 				>
 					{submitting ? tFn('common.publishing') : tFn('forum.publish_reply')}
 				</button>
+				{#if replyFailure}
+					<p class="text-sm text-[var(--nx-bad)]" role="alert">{replyFailure}</p>
+				{/if}
 			</form>
 		</div>
 	{:else}

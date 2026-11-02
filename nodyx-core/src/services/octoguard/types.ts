@@ -198,6 +198,9 @@ export interface ActionLogEntry {
   target_type:  'message' | 'user' | 'channel' | 'thread' | 'post' | 'dm_message' | 'rule' | 'report' | 'log' | 'welcome' | 'command' | null
   target_id:    string | null
   target_label: string | null
+  /** Membre de l'équipe à l'origine de l'action (sourdine posée à la main…).
+   *  Absent = OctoGuard lui-même. Le journal attribue alors l'action au bon nom. */
+  actor_id?:    string | null
   metadata: {
     rule_id?:    string
     rule_name?:  string

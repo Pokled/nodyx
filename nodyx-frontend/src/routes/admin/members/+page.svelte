@@ -240,7 +240,7 @@
 									{#if member.avatar}<img src={member.avatar} alt="" />{:else}{member.username.charAt(0).toUpperCase()}{/if}
 								</span>
 								<div class="min-w-0 text-left">
-									<a href="/users/{member.username}" class="member-name">{member.username}</a>
+									<a href="/admin/members/{member.user_id}" class="member-name" title={tFn('amem.open_file')}>{member.username}</a>
 									{@render email(member.user_id, member.email)}
 								</div>
 							</div>
