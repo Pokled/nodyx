@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io'
 import * as crypto from 'crypto'
+import { getAccess, outranks, rankOf } from '../services/permissions'
 import { checkRateLimit } from './rateLimiter'
 import { db } from '../config/database'
 // Bascule mesh↔SFU (§17-B) : additif & dormant. Flag OFF ⇒ channelMode()==='mesh'
@@ -7,7 +8,6 @@ import { db } from '../config/database'
 import * as bascule from './voiceBascule'
 
 type CommunityRole = 'owner' | 'admin' | 'moderator' | 'member'
-const MOD_ROLES: ReadonlyArray<CommunityRole> = ['owner', 'admin', 'moderator']
 
 export async function getCommunityRoleForChannel(
   channelId: string, userId: string,
@@ -263,8 +263,13 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
     const room = voiceRoom(channelId)
     if (!socket.rooms.has(room)) return
 
-    const actorRole = await getCommunityRoleForChannel(channelId, userId)
-    if (!actorRole || !MOD_ROLES.includes(actorRole)) return
+    // moderate_members (socle modérateur + grade), dans la communauté du canal
+    const { rows: chanRows } = await db.query<{ community_id: string }>(
+      `SELECT community_id FROM channels WHERE id = $1`, [channelId]
+    )
+    if (!chanRows[0]) return
+    const actor = await getAccess(chanRows[0].community_id, userId)
+    if (!actor.permissions.includes('moderate_members')) return
 
     const sockets = await server.in(room).fetchSockets()
     const target  = sockets.find(s => s.id === targetSocketId)
@@ -275,10 +280,11 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
     if (targetUserId === userId) return
 
     const targetRole = await getCommunityRoleForChannel(channelId, targetUserId)
-    // Owners are untouchable.
+    // Le propriétaire est intouchable. Sous le rang d'admin, on ne vise qu'un
+    // rang strictement inférieur (un modérateur n'exclut ni un admin ni un
+    // autre modérateur) ; un admin peut exclure un admin, comme avant.
     if (targetRole === 'owner') return
-    // Moderators cannot kick admins; only admin/owner can.
-    if (actorRole === 'moderator' && targetRole === 'admin') return
+    if (actor.rank < rankOf('admin') && !outranks(actor, targetRole)) return
 
     target.emit('voice:kicked', { channelId, by: username })
     freeSeat(channelId, target.id)

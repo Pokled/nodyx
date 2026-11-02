@@ -17,6 +17,7 @@ import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
 import { checkHtmlContent } from '../services/contentFilter'
 import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
+import { getAccess, outranks, rankOf } from '../services/permissions'
 import { isContainedUploadPath } from '../utils/uploadPath'
 
 interface JwtPayload {
@@ -719,19 +720,29 @@ export function registerSocketIO(server: Server): void {
       if (!isUuid(messageId)) return
 
       try {
-        // Récupérer le channel du message pour scoper la vérification admin
-        const msgInfo = await ChannelModel.findMessageById(messageId)
-        if (!msgInfo) return
-
-        // Vérifier admin/owner dans la communauté du channel spécifique (pas n'importe quelle communauté)
-        const { rows: roleRows } = await db.query(
-          `SELECT 1 FROM community_members cm
-           JOIN channels c ON c.community_id = cm.community_id
-           WHERE c.id = $1 AND cm.user_id = $2 AND cm.role IN ('admin', 'owner') LIMIT 1`,
-          [msgInfo.channel_id, userId]
+        // Le message, sa communauté (celle de SON canal, pas n'importe laquelle)
+        // et son auteur : la permission et le rang se vérifient là.
+        const { rows: msgRows } = await db.query<{ community_id: string; author_id: string }>(
+          `SELECT c.community_id, m.author_id
+           FROM channel_messages m JOIN channels c ON c.id = m.channel_id
+           WHERE m.id = $1`,
+          [messageId]
         )
-        const byAdmin = roleRows.length > 0
-        const { ok, channelId } = await ChannelModel.deleteMessage(messageId, userId, byAdmin)
+        if (!msgRows[0]) return
+
+        // Supprimer le message d'un autre = moderate_content (socle modérateur
+        // + grade), et jamais celui de quelqu'un de rang égal ou supérieur,
+        // sauf pour un admin. Son propre message : toujours (deleteMessage le
+        // vérifie quand byModerator est faux).
+        let byModerator = false
+        if (msgRows[0].author_id !== userId) {
+          const actor = await getAccess(msgRows[0].community_id, userId)
+          if (actor.permissions.includes('moderate_content')) {
+            byModerator = actor.rank >= rankOf('admin')
+              || outranks(actor, (await getAccess(msgRows[0].community_id, msgRows[0].author_id)).role)
+          }
+        }
+        const { ok, channelId } = await ChannelModel.deleteMessage(messageId, userId, byModerator)
         if (!ok || !channelId) return
 
         if (io) {
@@ -752,13 +763,12 @@ export function registerSocketIO(server: Server): void {
         // Rôle scopé à la COMMUNAUTÉ DE CE CANAL, pas admin/owner de n'importe
         // quelle communauté (trouvé en audit le 16/09 : la requête précédente
         // ne joignait jamais sur le canal ciblé).
-        const { rows: roleRows } = await db.query(
-          `SELECT 1 FROM channels c
-           JOIN community_members cm ON cm.community_id = c.community_id
-           WHERE c.id = $1 AND cm.user_id = $2 AND cm.role IN ('admin', 'owner') LIMIT 1`,
-          [channelId, userId]
+        // Épingler = moderate_content (socle modérateur + grade), avant le
+        // 02/11/2026 réservé aux admins.
+        const { rows: chanRows } = await db.query<{ community_id: string }>(
+          `SELECT community_id FROM channels WHERE id = $1`, [channelId]
         )
-        if (roleRows.length === 0) {
+        if (!chanRows[0] || !(await getAccess(chanRows[0].community_id, userId)).permissions.includes('moderate_content')) {
           console.warn(`[chat:pin] Denied for userId=${userId}`)
           return
         }

@@ -24,6 +24,16 @@ import { createWriteStream, mkdirSync } from 'fs'
 import { pipeline } from 'stream/promises'
 import path from 'path'
 import { getClientIp } from '../utils/clientIp'
+import { requirePermission, requireAnyPermission, requireStaff } from '../middleware/permissions'
+import { invalidatePermissions, rankOf, outranks, type MemberAccess } from '../services/permissions'
+
+// Garde-fou de rang des actions sur un membre : un admin ou le propriétaire
+// peut viser tout le monde sauf le propriétaire (vérifié à part) ; en dessous,
+// on ne vise qu'un rang STRICTEMENT inférieur au sien.
+function mayTarget(actor: MemberAccess | undefined, targetRole: string | null | undefined): boolean {
+  if (!actor) return false
+  return actor.rank >= rankOf('admin') || outranks(actor, targetRole)
+}
 import { countActiveMembers, ACTIVE_MEMBERS_FROM } from '../models/memberCount'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
@@ -123,10 +133,20 @@ export async function logAction(
 
 export default async function adminRoutes(app: FastifyInstance) {
 
+  // ── Mes droits dans l'administration ───────────────────────────────────────
+  // Ouvert à toute l'équipe (au moins une permission) : l'interface admin s'en
+  // sert pour n'afficher que les pages auxquelles on a droit (D3).
+  app.get('/me', {
+    preHandler: [rateLimit, requireStaff],
+  }, async (request, reply) => {
+    const access = request.access!
+    return reply.send({ role: access.role, permissions: access.permissions })
+  })
+
   // ── Dashboard stats ────────────────────────────────────────────────────────
 
   app.get('/stats', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requireStaff],
   }, async (_req, reply) => {
     const communityId = await getCommunityId()
 
@@ -277,7 +297,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   // ── Members ────────────────────────────────────────────────────────────────
 
   app.get('/members', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requireAnyPermission('moderate_members', 'ban_members', 'manage_grades')],
   }, async (_req, reply) => {
     const communityId = await getCommunityId()
 
@@ -349,6 +369,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         `UPDATE community_members SET role = $1 WHERE community_id = $2 AND user_id = $3`,
         [body.role, communityId, userId]
       )
+      await invalidatePermissions(communityId)
       logAction(adminUser.userId, 'change_role', 'user', userId, check[0].username,
         { old_role: check[0].role, new_role: body.role })
     }
@@ -441,7 +462,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // Kick member from community (not a full ban — can re-join if public)
   app.delete('/members/:userId', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('moderate_members')],
   }, async (request, reply) => {
     const { userId }  = request.params as { userId: string }
     const communityId = await getCommunityId()
@@ -453,11 +474,16 @@ export default async function adminRoutes(app: FastifyInstance) {
     )
     if (!check[0]) return reply.code(404).send({ error: 'Member not found' })
     if (check[0].role === 'owner') return reply.code(403).send({ error: 'Cannot kick the owner' })
+    // Garde-fou de rang : sous le rang d'admin, on ne vise qu'un rang inférieur
+    if (!mayTarget(request.access, check[0].role)) {
+      return reply.code(403).send({ error: 'Cannot act on a member of equal or higher rank', code: 'RANK_TOO_LOW' })
+    }
 
     await db.query(
       `DELETE FROM community_members WHERE community_id = $1 AND user_id = $2`,
       [communityId, userId]
     )
+    await invalidatePermissions(communityId)
     logAction(adminUser.userId, 'kick_member', 'user', userId, check[0].username, {})
     return reply.send({ ok: true })
   })
@@ -466,7 +492,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // GET /api/v1/admin/bans — list banned users
   app.get('/bans', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (_req, reply) => {
     const communityId = await getCommunityId()
     const { rows } = await db.query(
@@ -494,7 +520,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // POST /api/v1/admin/members/:userId/ban — ban member (kick + blacklist)
   app.post('/members/:userId/ban', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (request, reply) => {
     const { userId }  = request.params as { userId: string }
     const communityId = await getCommunityId()
@@ -512,6 +538,9 @@ export default async function adminRoutes(app: FastifyInstance) {
     )
     if (!userRows[0]) return reply.code(404).send({ error: 'User not found' })
     if (userRows[0].role === 'owner') return reply.code(403).send({ error: 'Cannot ban the owner' })
+    if (!mayTarget(request.access, userRows[0].role)) {
+      return reply.code(403).send({ error: 'Cannot act on a member of equal or higher rank', code: 'RANK_TOO_LOW' })
+    }
 
     const { username: targetUsername, email, registration_ip, last_seen_ip } = userRows[0]
 
@@ -527,6 +556,7 @@ export default async function adminRoutes(app: FastifyInstance) {
       `DELETE FROM community_members WHERE community_id = $1 AND user_id = $2`,
       [communityId, userId]
     )
+    await invalidatePermissions(communityId)
 
     // Optional: ban IP — jamais une adresse interne/loopback. On préfère
     // last_seen_ip (vraie adresse captée au login) à registration_ip, qui vaut
@@ -589,7 +619,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // DELETE /api/v1/admin/members/:userId/ban — unban
   app.delete('/members/:userId/ban', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (request, reply) => {
     const { userId }  = request.params as { userId: string }
     const communityId = await getCommunityId()
@@ -611,7 +641,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // GET /api/v1/admin/ip-bans
   app.get('/ip-bans', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (_req, reply) => {
     const { rows } = await db.query(
       `SELECT ib.ip, ib.reason, ib.banned_at, u.username AS banned_by_username
@@ -624,7 +654,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // POST /api/v1/admin/ip-bans
   app.post('/ip-bans', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (request, reply) => {
     const adminUser = (request as any).user as { userId: string }
     const body = (request.body ?? {}) as { ip: string; reason?: string }
@@ -645,7 +675,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // DELETE /api/v1/admin/ip-bans/:ip
   app.delete('/ip-bans/:ip', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (request, reply) => {
     const adminUser = (request as any).user as { userId: string }
     const { ip } = request.params as { ip: string }
@@ -658,7 +688,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // GET /api/v1/admin/email-bans
   app.get('/email-bans', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (_req, reply) => {
     const { rows } = await db.query(
       `SELECT eb.email, eb.reason, eb.banned_at, u.username AS banned_by_username
@@ -675,7 +705,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   // les comptes légitimes sur ce provider — c'est une erreur facile à faire
   // depuis le formulaire admin, on protège l'admin contre lui-même.
   app.post('/email-bans', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (request, reply) => {
     const adminUser = (request as any).user as { userId: string }
     const body = (request.body ?? {}) as { email: string; reason?: string; force?: boolean }
@@ -725,7 +755,7 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // DELETE /api/v1/admin/email-bans/:email
   app.delete('/email-bans/:email', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('ban_members')],
   }, async (request, reply) => {
     const adminUser = (request as any).user as { userId: string }
     const { email } = request.params as { email: string }
@@ -738,7 +768,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   // ── Threads (moderation) ───────────────────────────────────────────────────
 
   app.get('/threads', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('moderate_content')],
   }, async (request, reply) => {
     const communityId = await getCommunityId()
     const q = request.query as { limit?: string; offset?: string; category_id?: string }
@@ -785,7 +815,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   })
 
   app.patch('/threads/:id', {
-    preHandler: [rateLimit, adminOnly, validate({ body: PatchThreadBody })],
+    preHandler: [rateLimit, requirePermission('moderate_content'), validate({ body: PatchThreadBody })],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body   = request.body as z.infer<typeof PatchThreadBody>
@@ -819,7 +849,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   })
 
   app.delete('/threads/:id', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('moderate_content')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const adminUser = (request as any).user as { userId: string }
@@ -834,7 +864,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   // ── Categories ────────────────────────────────────────────────────────────
 
   app.patch('/categories/:id', {
-    preHandler: [rateLimit, adminOnly, validate({ body: PatchCategoryBody })],
+    preHandler: [rateLimit, requirePermission('manage_categories'), validate({ body: PatchCategoryBody })],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body   = request.body as z.infer<typeof PatchCategoryBody>
@@ -868,7 +898,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   })
 
   app.delete('/categories/:id', {
-    preHandler: [rateLimit, adminOnly],
+    preHandler: [rateLimit, requirePermission('manage_categories')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
 
@@ -1214,7 +1244,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   // ── Audit log ─────────────────────────────────────────────────────────────
 
   // GET /admin/audit-log
-  app.get('/audit-log', { preHandler: [adminOnly] }, async (request, reply) => {
+  app.get('/audit-log', { preHandler: [requirePermission('view_audit_log')] }, async (request, reply) => {
     const q = request.query as { limit?: string; offset?: string; action?: string; actor?: string }
     const limit  = Math.min(Number(q.limit  ?? 50), 200)
     const offset = Math.max(0, Math.min(Number(q.offset ?? 0), 100000))

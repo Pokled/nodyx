@@ -43,6 +43,31 @@ vi.mock('../middleware/adminOnly', () => ({
   }),
 }))
 
+// Les routes de l'équipe sont gardées par PERMISSION (middleware/permissions) :
+// même règle de test que adminOnly, l'appelant reçoit les droits d'un admin.
+vi.mock('../middleware/permissions', () => {
+  const ALL = ['manage_categories', 'moderate_content', 'moderate_members', 'ban_members', 'manage_grades', 'view_audit_log', 'manage_octoguard']
+  const guard = async (req: any, reply: any) => {
+    const header = req.headers.authorization
+    if (!header?.startsWith('Bearer ')) {
+      return reply.code(401).send({ error: 'Missing token', code: 'UNAUTHORIZED' })
+    }
+    if (header.includes('notadmin')) {
+      return reply.code(403).send({ error: 'Missing permission', code: 'FORBIDDEN' })
+    }
+    req.user = { userId: 'admin-uuid', username: 'admin' }
+    // « asmod » dans le jeton : l'appelant est un modérateur (socle D2)
+    req.access = header.includes('asmod')
+      ? { role: 'moderator', rank: 1, permissions: ['moderate_content', 'moderate_members'] }
+      : { role: 'admin', rank: 2, permissions: ALL }
+  }
+  return {
+    requirePermission:    () => guard,
+    requireAnyPermission: () => guard,
+    requireStaff:         guard,
+  }
+})
+
 // ── Imports ───────────────────────────────────────────────────
 
 import { db, redis } from '../config/database'
@@ -375,5 +400,50 @@ describe('POST /api/v1/admin/members/:userId/ban', () => {
     expect(body.ip_ban_applied).toBe('31.215.70.26')
     const ipBanInsert = vi.mocked(db.query).mock.calls.find(c => String(c[0]).includes('INTO ip_bans'))
     expect(ipBanInsert?.[1]).toEqual(expect.arrayContaining(['31.215.70.26']))
+  })
+})
+
+
+// ── Garde-fou de rang sur l'exclusion (CDC modération, E1) ────────────────
+
+describe('DELETE /api/v1/admin/members/:userId : garde-fou de rang', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+  const TARGET = '9ba7b810-9dad-11d1-80b4-00c04fd430c8'
+
+  function targetIs(role: string) {
+    vi.mocked(db.query).mockImplementation((sql: any) => {
+      const q = String(sql)
+      if (q.includes('FROM communities')) return Promise.resolve({ rows: [{ id: COMMUNITY_UUID }], rowCount: 1 } as any)
+      if (q.includes('SELECT cm.role, u.username')) return Promise.resolve({ rows: [{ role, username: 'cible' }], rowCount: 1 } as any)
+      return Promise.resolve({ rows: [], rowCount: 1 } as any)
+    })
+  }
+  const kick = (asMod: boolean) => app.inject({
+    method: 'DELETE', url: `/api/v1/admin/members/${TARGET}`,
+    headers: { Authorization: `Bearer ${makeAdminToken()}${asMod ? 'asmod' : ''}` },
+  })
+
+  beforeEach(async () => {
+    vi.resetAllMocks()
+    app = await buildApp(a => a.register(adminRoutes, { prefix: '/api/v1/admin' }))
+  })
+
+  it('un modérateur exclut un membre', async () => {
+    targetIs('member')
+    expect((await kick(true)).statusCode).toBe(200)
+  })
+  it('un modérateur n’exclut pas un autre modérateur', async () => {
+    targetIs('moderator')
+    const res = await kick(true)
+    expect(res.statusCode).toBe(403)
+    expect(res.json().code).toBe('RANK_TOO_LOW')
+  })
+  it('un modérateur n’exclut pas un admin', async () => {
+    targetIs('admin')
+    expect((await kick(true)).statusCode).toBe(403)
+  })
+  it('un admin exclut un modérateur', async () => {
+    targetIs('moderator')
+    expect((await kick(false)).statusCode).toBe(200)
   })
 })

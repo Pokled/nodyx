@@ -3,7 +3,8 @@
  * Spec : docs/specs/016-Octoguard/016-OctoGuard.md v2.1.1
  *
  * Deux plugins exportés :
- *  - octoguardAdminPlugin : préfixe /api/v1/admin/octoguard (adminOnly).
+ *  - octoguardAdminPlugin : préfixe /api/v1/admin/octoguard (manage_octoguard ;
+ *    sourdines et signalements : moderate_members, cf services/permissions.ts).
  *    CRUD règles, welcome, commandes, mutes, reports, webhook + logs.
  *  - reportsPublicPlugin : préfixe /api/v1/reports (requireAuth).
  *    POST pour signaler du contenu, avec anti-abuse rate-limit + cooldown.
@@ -20,7 +21,8 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { db, redis } from '../config/database'
-import { adminOnly } from '../middleware/adminOnly'
+import { requirePermission, requireAnyPermission } from '../middleware/permissions'
+import { getInstanceAccess, outranks, rankOf } from '../services/permissions'
 import { requireAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
@@ -139,8 +141,20 @@ async function logAdminAction(
 // ADMIN PLUGIN — préfixe /api/v1/admin/octoguard
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Qui peut quoi dans OctoGuard (CDC modération, E1) : régler OctoGuard =
+// manage_octoguard ; les sourdines et les signalements sont du travail de
+// modération des membres (moderate_members), ouvert aussi à manage_octoguard.
+const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|reports(?!\/settings))(\/|$)/
+const guardMemberModeration = requireAnyPermission('moderate_members', 'manage_octoguard')
+const guardOctoguard = requirePermission('manage_octoguard')
+
 export async function octoguardAdminPlugin(app: FastifyInstance) {
-  app.addHook('preHandler', adminOnly)
+  app.addHook('preHandler', async (request, reply) => {
+    const route = request.routeOptions.url ?? request.url
+    return MEMBER_MODERATION_ROUTES.test(route)
+      ? guardMemberModeration(request, reply)
+      : guardOctoguard(request, reply)
+  })
 
   // ─── Settings (état global) ───────────────────────────────────────────────
 
@@ -431,6 +445,15 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
   }, async (request, reply) => {
     const body = request.body as z.infer<typeof MuteBody>
     const adminUser = request.user!
+    // Garde-fou de rang : sous le rang d'admin, on ne met en sourdine qu'un rang inférieur
+    const actor = request.access
+    if (!actor) return reply.code(403).send({ error: 'Missing permission', code: 'FORBIDDEN' })
+    if (actor.rank < rankOf('admin')) {
+      const target = await getInstanceAccess(body.user_id)
+      if (target.role === 'owner' || !outranks(actor, target.role)) {
+        return reply.code(403).send({ error: 'Cannot act on a member of equal or higher rank', code: 'RANK_TOO_LOW' })
+      }
+    }
     const row = await applyMute({
       userId:    body.user_id,
       channelId: body.channel_id ?? null,

@@ -9,6 +9,7 @@ import { requireAuth } from '../middleware/auth'
 import { validate } from '../middleware/validate'
 import * as UserModel from '../models/user'
 import { toPublicUser, toSelfUser } from '../utils/publicUser'
+import { getAccess } from '../services/permissions'
 import { db, redis } from '../config/database'
 import { io } from '../socket/io'
 import { scanBuffer } from '../services/fileScanner'
@@ -156,6 +157,9 @@ export default async function userRoutes(app: FastifyInstance) {
     let role: string | null = null
     let grade: { name: string; color: string } | null = null
     let is_banned = false
+    // Droits effectifs (socle du rôle + grade) : l'interface n'affiche que les
+    // actions permises, le serveur les revérifie de toute façon.
+    let permissions: string[] = []
     if (communityId) {
       const [memberRows, banRows] = await Promise.all([
         db.query<{ role: string; grade_name: string | null; grade_color: string | null }>(
@@ -171,11 +175,12 @@ export default async function userRoutes(app: FastifyInstance) {
         ),
       ])
       role      = memberRows.rows[0]?.role ?? null
+      permissions = (await getAccess(communityId, request.user!.userId)).permissions
       grade     = memberRows.rows[0]?.grade_name ? { name: memberRows.rows[0].grade_name, color: memberRows.rows[0].grade_color! } : null
       is_banned = banRows.rows.length > 0
     }
     // Whitelist before sending: email, email_verified and any PII stay backend-only.
-    return reply.send({ user: { ...toSelfUser(user), role, grade, is_banned } })
+    return reply.send({ user: { ...toSelfUser(user), role, grade, is_banned, permissions } })
   })
 
   // PATCH /api/v1/users/me/linked-instances — ajouter ou retirer une instance liée

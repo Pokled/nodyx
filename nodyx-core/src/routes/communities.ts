@@ -7,20 +7,34 @@ import { adminOnly } from '../middleware/adminOnly'
 import * as CommunityModel from '../models/community'
 import * as GradeModel from '../models/grade'
 import { db } from '../config/database'
+import {
+  GRADE_PERMISSIONS, getAccess, invalidatePermissions, rankOf,
+  type Permission, type MemberAccess,
+} from '../services/permissions'
+
+const GradePermissionsBody = z.object(
+  Object.fromEntries(GRADE_PERMISSIONS.map(p => [p, z.boolean().optional()])) as Record<Permission, z.ZodOptional<z.ZodBoolean>>
+)
 
 const GradeBody = z.object({
   name:        z.string().min(1).max(100),
   color:       z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   position:    z.number().int().optional(),
-  permissions: z.object({
-    can_post:            z.boolean().optional(),
-    can_create_thread:   z.boolean().optional(),
-    can_create_category: z.boolean().optional(),
-    can_moderate:        z.boolean().optional(),
-    can_manage_members:  z.boolean().optional(),
-    can_manage_grades:   z.boolean().optional(),
-  }).optional(),
+  permissions: GradePermissionsBody.optional(),
 })
+
+// Permissions qu'un grade accorde (clés à true reconnues)
+const ROLE_ADMIN_RANK = rankOf('admin')
+
+function grantedBy(perms: Record<string, unknown> | null | undefined): Permission[] {
+  return GRADE_PERMISSIONS.filter(p => perms?.[p] === true)
+}
+
+// Anti-escalade : on ne crée, ne modifie, ne supprime, n'attribue ni ne retire
+// un grade qui accorde une permission que l'on n'a pas soi-même.
+function exceeds(actor: MemberAccess, perms: Record<string, unknown> | null | undefined): Permission[] {
+  return grantedBy(perms).filter(p => !actor.permissions.includes(p))
+}
 
 const PatchGradeBody = GradeBody.partial()
 
@@ -180,9 +194,12 @@ export default async function communityRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Community not found', code: 'NOT_FOUND' })
     }
 
-    const member = await CommunityModel.getMember(community.id, request.user!.userId)
-    if (!member || !['owner', 'admin'].includes(member.role)) {
-      return reply.code(403).send({ error: 'Admin required', code: 'FORBIDDEN' })
+    const actor = await getAccess(community.id, request.user!.userId)
+    if (!actor.permissions.includes('manage_grades')) {
+      return reply.code(403).send({ error: 'Missing permission: manage_grades', code: 'FORBIDDEN' })
+    }
+    if (exceeds(actor, data.permissions).length > 0) {
+      return reply.code(403).send({ error: 'Cannot grant a permission you do not have', code: 'GRADE_ESCALATION' })
     }
 
     const grade = await GradeModel.create({ community_id: community.id, ...data })
@@ -201,15 +218,24 @@ export default async function communityRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Community not found', code: 'NOT_FOUND' })
     }
 
-    const member = await CommunityModel.getMember(community.id, request.user!.userId)
-    if (!member || !['owner', 'admin'].includes(member.role)) {
-      return reply.code(403).send({ error: 'Admin required', code: 'FORBIDDEN' })
+    const actor = await getAccess(community.id, request.user!.userId)
+    if (!actor.permissions.includes('manage_grades')) {
+      return reply.code(403).send({ error: 'Missing permission: manage_grades', code: 'FORBIDDEN' })
+    }
+    const current = await GradeModel.findById(id)
+    if (!current || current.community_id !== community.id) {
+      return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
+    }
+    // Ni toucher à un grade plus puissant que soi, ni en fabriquer un
+    if (exceeds(actor, current.permissions).length > 0 || exceeds(actor, data.permissions).length > 0) {
+      return reply.code(403).send({ error: 'Cannot grant a permission you do not have', code: 'GRADE_ESCALATION' })
     }
 
     const grade = await GradeModel.update(id, community.id, data)
     if (!grade) {
       return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
     }
+    if (data.permissions !== undefined) await invalidatePermissions(community.id)
 
     return reply.send({ grade })
   })
@@ -225,15 +251,23 @@ export default async function communityRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Community not found', code: 'NOT_FOUND' })
     }
 
-    const member = await CommunityModel.getMember(community.id, request.user!.userId)
-    if (!member || !['owner', 'admin'].includes(member.role)) {
-      return reply.code(403).send({ error: 'Admin required', code: 'FORBIDDEN' })
+    const actor = await getAccess(community.id, request.user!.userId)
+    if (!actor.permissions.includes('manage_grades')) {
+      return reply.code(403).send({ error: 'Missing permission: manage_grades', code: 'FORBIDDEN' })
+    }
+    const current = await GradeModel.findById(id)
+    if (!current || current.community_id !== community.id) {
+      return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
+    }
+    if (exceeds(actor, current.permissions).length > 0) {
+      return reply.code(403).send({ error: 'Cannot remove a grade more powerful than yours', code: 'GRADE_ESCALATION' })
     }
 
     const deleted = await GradeModel.remove(id, community.id)
     if (!deleted) {
       return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
     }
+    await invalidatePermissions(community.id)
 
     return reply.code(204).send()
   })
@@ -250,9 +284,32 @@ export default async function communityRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Community not found', code: 'NOT_FOUND' })
     }
 
-    const actor = await CommunityModel.getMember(community.id, request.user!.userId)
-    if (!actor || !['owner', 'admin'].includes(actor.role)) {
-      return reply.code(403).send({ error: 'Admin required', code: 'FORBIDDEN' })
+    const actor = await getAccess(community.id, request.user!.userId)
+    if (!actor.permissions.includes('manage_grades')) {
+      return reply.code(403).send({ error: 'Missing permission: manage_grades', code: 'FORBIDDEN' })
+    }
+
+    // La cible : son rang, et le grade qu'elle porte déjà
+    const { rows: targetRows } = await db.query<{ role: string; permissions: Record<string, unknown> | null }>(
+      `SELECT cm.role, cg.permissions
+       FROM community_members cm
+       LEFT JOIN community_grades cg ON cg.id = cm.grade_id
+       WHERE cm.community_id = $1 AND cm.user_id = $2`,
+      [community.id, userId]
+    )
+    if (!targetRows[0]) {
+      return reply.code(404).send({ error: 'Member not found', code: 'NOT_FOUND' })
+    }
+    // Un modérateur ne touche pas au grade d'un admin ; entre admins (titres
+    // honorifiques), c'est permis. On peut toujours se l'attribuer à soi.
+    const self = userId === request.user!.userId
+    if (!self && actor.rank < ROLE_ADMIN_RANK && rankOf(targetRows[0].role) >= actor.rank) {
+      return reply.code(403).send({ error: 'Cannot change the grade of a member of equal or higher rank', code: 'RANK_TOO_LOW' })
+    }
+    // Ni retirer un grade plus puissant que soi, ni en donner un
+    const next = grade_id ? await GradeModel.findById(grade_id) : null
+    if (exceeds(actor, targetRows[0].permissions).length > 0 || exceeds(actor, next?.permissions).length > 0) {
+      return reply.code(403).send({ error: 'Cannot grant or remove a permission you do not have', code: 'GRADE_ESCALATION' })
     }
 
     const result = await GradeModel.assignToMember(community.id, userId, grade_id)
@@ -262,6 +319,7 @@ export default async function communityRoutes(app: FastifyInstance) {
     if (!result.gradeValid) {
       return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
     }
+    await invalidatePermissions(community.id)
 
     return reply.send({ ok: true })
   })
