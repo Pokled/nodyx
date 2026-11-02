@@ -25,6 +25,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { can } from '$lib/permissions';
 	import { openReport } from '$lib/report';
+	import { octoguardMessage } from '$lib/octoguardMessages';
 	import { isDarkTheme } from '$lib/theme';
 	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
@@ -445,13 +446,15 @@
 			showPinned = true;
 		});
 
-		sock.on('chat:blocked', ({ reason, octoguard }: { reason: string; octoguard?: { expires_at?: string | null } }) => {
+		sock.on('chat:blocked', ({ reason, octoguard }: { reason: string; octoguard?: { expires_at?: string | null; i18n_key?: string } }) => {
 			// Sourdine posée par l'équipe : une phrase, avec sa fin (jamais le code brut « muted »)
 			blockedNotice = reason === 'muted'
 				? (octoguard?.expires_at
 					? tFn('chat.muted_until', { date: new Date(octoguard.expires_at).toLocaleString() })
 					: tFn('chat.muted'))
-				: (reason ?? tFn('chat.message_refused'));
+				: octoguard?.i18n_key
+					? octoguardMessage(tFn, octoguard.i18n_key)
+					: (reason ?? tFn('chat.message_refused'));
 			if (blockedTimer) clearTimeout(blockedTimer);
 			blockedTimer = setTimeout(() => { blockedNotice = null; }, 5000);
 		});

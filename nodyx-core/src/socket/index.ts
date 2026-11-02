@@ -16,6 +16,7 @@ import { sendPushToUser } from '../routes/notifications'
 import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
 import { checkHtmlContent } from '../services/contentFilter'
 import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
+import { fileAutoReport } from '../services/octoguard/autoReport'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { getAccess, outranks, rankOf } from '../services/permissions'
 import { isContainedUploadPath } from '../utils/uploadPath'
@@ -505,6 +506,9 @@ export function registerSocketIO(server: Server): void {
           }
         }
 
+        // Cran « signaler » d'une règle : dossier ouvert après l'enregistrement (D13)
+        let ogReport: { rule_name: string; excerpt: string } | undefined
+
         // ▼ OCTOGUARD HOOK (Sessions B + C, cf docs/specs/016-Octoguard/)
         if (isOctoGuardEnabled()) {
 
@@ -533,8 +537,10 @@ export function registerSocketIO(server: Server): void {
               role:     memberCheck[0].role,
               gradeIds: memberCheck[0].grade_id ? [memberCheck[0].grade_id] : [],
             },
+            surface:   'chat',
             channelId,
           })
+          ogReport = og.report
           if (og.blocked) {
             socket.emit('chat:blocked', {
               reason:    og.reason ?? 'octoguard',
@@ -572,6 +578,7 @@ export function registerSocketIO(server: Server): void {
           content:      finalContent,
           reply_to_id:  replyToId ?? null,
         })
+        if (ogReport) void fileAutoReport({ targetType: 'message', targetId: message.id, ruleName: ogReport.rule_name, excerpt: ogReport.excerpt })
         if (io) {
           io.to(`channel:${channelId}`).emit('chat:message', message)
         }

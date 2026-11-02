@@ -5088,6 +5088,8 @@
   "forum.err_banned": "You are banned from this community.",
   "forum.err_locked": "This thread is locked: it no longer accepts replies.",
   "forum.err_reply": "The reply could not be posted. Your text has been kept, please try again.",
+  "forum.text_kept": "Your text has been kept.",
+  "forum.err_forbidden_content": "This message contains a symbol that is not allowed in the community (a hate symbol, or a pattern blocked by the admin).",
   "nav.canvas": "Whiteboard",
   "communities.since": "Since {{date}}",
   "ucard.og_description": "Level {{level}} · {{posts}} posts · {{xp}} XP",
@@ -5163,6 +5165,7 @@
   "areports.err_rank": "This case concerns a member of equal or higher rank: it is for an admin.",
   "areports.err_forbidden": "You are not allowed to do that.",
   "areports.err_generic": "The action failed. Reload the page and try again.",
+  "areports.by_octoguard": "OctoGuard (automatic)",
   "afile.page_title": "{{name}}: member file",
   "afile.back": "All members",
   "afile.joined": "Member since {{date}}",
@@ -5229,5 +5232,10 @@
   "afile.err_rank": "This member is of equal or higher rank: this action is for an admin.",
   "afile.err_forbidden": "You are not allowed to do that.",
   "afile.err_invalid": "The input is not valid (a reason needs at least 3 characters).",
-  "afile.err_generic": "The action failed. Reload the page and try again."
+  "afile.err_generic": "The action failed. Reload the page and try again.",
+  "ogmsg.message_deleted": "OctoGuard held back this message: it breaks a community rule. Rephrase it, or ask a moderator if this is a mistake.",
+  "ogmsg.warn_given": "OctoGuard held back this message and gave you a warning: it breaks a community rule. Several warnings can lead to a mute.",
+  "ogmsg.mute_applied": "OctoGuard muted you for a while: you can read, but not write. Take a breather.",
+  "ogmsg.ban_temp_applied": "OctoGuard has temporarily removed you from the community. You can come back when the period ends.",
+  "ogmsg.blocked": "OctoGuard held back this message. Rephrase it, or ask a moderator."
 }

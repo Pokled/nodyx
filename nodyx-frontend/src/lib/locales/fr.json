@@ -5088,6 +5088,8 @@
   "forum.err_banned": "Vous êtes banni de cette communauté.",
   "forum.err_locked": "Ce fil est verrouillé : il n'accepte plus de réponses.",
   "forum.err_reply": "La réponse n'a pas pu être publiée. Votre texte est conservé, réessayez.",
+  "forum.text_kept": "Ton texte est conservé.",
+  "forum.err_forbidden_content": "Ce message contient un symbole interdit sur la communauté (symbole haineux, ou motif bloqué par l'admin).",
   "nav.canvas": "Tableau blanc",
   "communities.since": "Depuis {{date}}",
   "ucard.og_description": "Niveau {{level}} · {{posts}} posts · {{xp}} XP",
@@ -5163,6 +5165,7 @@
   "areports.err_rank": "Ce dossier concerne un membre de rang égal ou supérieur au vôtre : il revient à un admin.",
   "areports.err_forbidden": "Vous n'avez pas le droit de faire cela.",
   "areports.err_generic": "L'action n'a pas abouti. Rechargez la page et réessayez.",
+  "areports.by_octoguard": "OctoGuard (automatique)",
   "afile.page_title": "{{name}} : fiche membre",
   "afile.back": "Tous les membres",
   "afile.joined": "Membre depuis le {{date}}",
@@ -5229,5 +5232,10 @@
   "afile.err_rank": "Ce membre est de rang égal ou supérieur au vôtre : cette action revient à un admin.",
   "afile.err_forbidden": "Vous n'avez pas le droit de faire cela.",
   "afile.err_invalid": "Ce qui a été saisi n'est pas valide (un motif fait au moins 3 caractères).",
-  "afile.err_generic": "L'action n'a pas abouti. Rechargez la page et réessayez."
+  "afile.err_generic": "L'action n'a pas abouti. Rechargez la page et réessayez.",
+  "ogmsg.message_deleted": "OctoGuard a retenu ce message : il enfreint une règle de la communauté. Reformule-le, ou demande à un modérateur s'il s'agit d'une erreur.",
+  "ogmsg.warn_given": "OctoGuard a retenu ce message et t'adresse un avertissement : il enfreint une règle de la communauté. Plusieurs avertissements peuvent mener à une sourdine.",
+  "ogmsg.mute_applied": "OctoGuard t'a mis en sourdine un moment : tu peux lire, mais pas écrire. Prends le temps de souffler.",
+  "ogmsg.ban_temp_applied": "OctoGuard t'a temporairement exclu de la communauté. Tu pourras revenir à la fin de la période.",
+  "ogmsg.blocked": "OctoGuard a retenu ce message. Reformule-le, ou demande à un modérateur."
 }

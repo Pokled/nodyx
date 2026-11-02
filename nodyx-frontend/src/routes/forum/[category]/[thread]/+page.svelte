@@ -38,6 +38,7 @@
 	import { replyCount } from '$lib/forumCounts';
 	import { can, isAdminRole } from '$lib/permissions';
 	import { openReport } from '$lib/report';
+	import { octoguardMessage } from '$lib/octoguardMessages';
 
 	const tFn = $derived($t)
 
@@ -681,9 +682,11 @@
 						if (result.type === 'failure') {
 							// Refus : on GARDE le texte (avant, l'éditeur était vidé et
 							// aucune erreur ne s'affichait) et on dit pourquoi.
-							const d = (result.data ?? {}) as { replyCode?: string | null; mutedUntil?: string | null }
+							const d = (result.data ?? {}) as { replyCode?: string | null; mutedUntil?: string | null; ogKey?: string | null }
 							replyFailure = d.replyCode === 'MUTED'
 								? (d.mutedUntil ? tFn('forum.err_muted_until', { date: new Date(d.mutedUntil).toLocaleString() }) : tFn('forum.err_muted'))
+								: d.replyCode === 'OCTOGUARD_BLOCKED' ? `${octoguardMessage(tFn, d.ogKey)} ${tFn('forum.text_kept')}`
+								: d.replyCode === 'CONTENT_BLOCKED' ? `${tFn('forum.err_forbidden_content')} ${tFn('forum.text_kept')}`
 								: d.replyCode === 'BANNED' ? tFn('forum.err_banned')
 								: d.replyCode === 'THREAD_LOCKED' ? tFn('forum.err_locked')
 								: tFn('forum.err_reply')

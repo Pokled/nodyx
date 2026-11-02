@@ -35,7 +35,7 @@ import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
 import {
   reloadRules, assessPatternSafety,
-  applyMute, removeMute, isUserMuted,
+  applyMute, removeMute, isUserMuted, hasRE2,
   getWebhookConfig, setWebhookConfig, invalidateWebhookConfig,
 } from '../services/octoguard'
 
@@ -69,9 +69,18 @@ const CreateRuleBody = z.object({
   immunized_grade_ids:   z.array(z.string().uuid()).optional(),
   dry_run:               z.boolean().optional(),
   enabled:               z.boolean().optional(),
+  // Où la règle s'applique (OctoGuard 2) : au moins un endroit
+  scopes:                z.array(z.enum(['chat', 'forum', 'profile', 'poll', 'wiki'])).min(1).max(5).optional(),
 })
 
 const UpdateRuleBody = CreateRuleBody.partial()
+
+// Une règle à expression régulière ne s'active jamais sans re2 : sans lui, une
+// expression piégée peut geler le serveur (CDC OctoGuard 2, E4a).
+function re2Missing(type: string | undefined, enabled: boolean | undefined): boolean {
+  return type === 'regex' && enabled !== false && !hasRE2()
+}
+const RE2_REQUIRED = { error: 'Regex rules need the re2 engine, which is not installed on this server', code: 'RE2_REQUIRED' }
 
 const WelcomeBody = z.object({
   channel_id:      z.string().uuid().nullable().optional(),
@@ -225,6 +234,8 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const body = request.body as z.infer<typeof CreateRuleBody>
     const adminUser = request.user!
 
+    if (re2Missing(body.type, body.enabled)) return reply.code(409).send(RE2_REQUIRED)
+
     // Validation amont des patterns regex via safe-regex + re2
     if (body.type === 'regex') {
       const pattern = (body.params as { pattern?: string }).pattern
@@ -245,11 +256,12 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const { rows } = await db.query(
       `INSERT INTO octoguard_automod_rules
          (name, type, params, action, action_duration, escalation,
-          immunized_role_types, immunized_grade_ids, dry_run, enabled)
+          immunized_role_types, immunized_grade_ids, dry_run, enabled, scopes)
        VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb,
                COALESCE($7, ARRAY['owner','admin','moderator']),
                COALESCE($8, '{}'::uuid[]),
-               COALESCE($9, false), COALESCE($10, true))
+               COALESCE($9, false), COALESCE($10, true),
+               COALESCE($11::text[], '{chat}'))
        RETURNING *`,
       [
         body.name, body.type, JSON.stringify(body.params), body.action,
@@ -259,6 +271,7 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
         body.immunized_grade_ids ?? null,
         body.dry_run ?? null,
         body.enabled ?? null,
+        body.scopes ?? null,
       ]
     )
 
@@ -273,6 +286,14 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const { id } = request.params as { id: string }
     const body = request.body as z.infer<typeof UpdateRuleBody>
     const adminUser = request.user!
+
+    if (!hasRE2()) {
+      const { rows: cur } = await db.query<{ type: string; enabled: boolean }>(
+        `SELECT type, enabled FROM octoguard_automod_rules WHERE id = $1`, [id])
+      if (cur[0] && re2Missing(body.type ?? cur[0].type, body.enabled ?? cur[0].enabled)) {
+        return reply.code(409).send(RE2_REQUIRED)
+      }
+    }
 
     // Re-validation regex si pattern modifié
     if (body.type === 'regex' || body.params) {
@@ -309,6 +330,13 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     if (body.immunized_grade_ids !== undefined)  { fields.push(`immunized_grade_ids = $${i++}`);  values.push(body.immunized_grade_ids) }
     if (body.dry_run !== undefined)         { fields.push(`dry_run = $${i++}`);                    values.push(body.dry_run) }
     if (body.enabled !== undefined)         { fields.push(`enabled = $${i++}`);                    values.push(body.enabled) }
+    if (body.scopes !== undefined)          { fields.push(`scopes = $${i++}::text[]`);            values.push(body.scopes) }
+    // Une règle issue d'un modèle du profil de base, modifiée sur le fond par
+    // l'admin, devient « personnalisée » : les mises à jour du profil n'y
+    // touchent plus. L'interrupteur seul ne compte pas comme une modification.
+    const substantive = ['type', 'params', 'action', 'action_duration', 'escalation', 'immunized_role_types', 'immunized_grade_ids', 'dry_run', 'scopes']
+      .some(k => (body as Record<string, unknown>)[k] !== undefined)
+    if (substantive) fields.push(`customized = (preset_key IS NOT NULL)`)
     fields.push(`updated_at = NOW()`)
     void set  // suppress unused
 

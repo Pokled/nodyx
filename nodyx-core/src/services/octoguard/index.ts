@@ -39,6 +39,7 @@ export type { WebhookPayload } from './webhook'
 import { reloadRules, getRules } from './cache'
 import { hasRE2 } from './matchers'
 import { startMutePurgeWorker } from './mutes'
+import { startBanExpiryWorker } from './bans'
 import { ensureOctoGuardBotUser } from './welcome'
 import { migrateEnvPatternsToDB } from './envMigration'
 import { startWebhookWorker } from './webhook'
@@ -58,16 +59,22 @@ export function isOctoGuardEnabled(): boolean {
  *   (table vide) plutôt que de crasher le backend entier.
  */
 export async function initOctoGuard(): Promise<void> {
+  // Ces deux nettoyages tournent TOUJOURS : sourdines et bannissements
+  // temporaires sont aussi posés à la main par l'équipe, OctoGuard allumé ou
+  // non (depuis E3, une sourdine s'applique même OctoGuard éteint).
+  startMutePurgeWorker()
+  startBanExpiryWorker()
+
+  // État de la protection contre les expressions piégées, affiché dans tous les cas
+  console.log(hasRE2()
+    ? '[octoguard] regex DoS protection: re2 native engine active'
+    : '[octoguard] re2 NOT installed: regex rules cannot be enabled (see SPECS/NODYX_OCTOGUARD_V2_CDC.md)')
+
   if (!isOctoGuardEnabled()) {
     console.log('[octoguard] disabled (OCTOGUARD_ENABLED!=true)')
     return
   }
 
-  if (hasRE2()) {
-    console.log('[octoguard] regex DoS protection: re2 native engine active')
-  } else {
-    console.warn('[octoguard] re2 not installed, falling back to native RegExp + safe-regex admission check. Regex DoS protection is reduced.')
-  }
 
   try {
     await reloadRules()
@@ -89,9 +96,6 @@ export async function initOctoGuard(): Promise<void> {
     console.warn('[octoguard] envMigration failed (non-fatal):', err)
   }
 
-  // Démarrer le worker de purge des mutes expirés (Module 6).
-  // Le worker est non-blocking grâce à unref().
-  startMutePurgeWorker()
 
   // Pré-créer le user fantôme OctoGuard pour qu'il soit prêt quand le
   // premier welcome est déclenché (Module 2).

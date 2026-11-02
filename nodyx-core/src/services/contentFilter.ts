@@ -24,7 +24,25 @@
 export interface ContentCheckResult {
   ok:      boolean
   reason?: string
+  /** Ce qui a bloqué : un symbole haineux, ou un motif posé par l'admin */
+  rule?:   'hate_symbol' | 'admin_pattern'
 }
+
+// Règle système du profil de base d'OctoGuard (D11, CDC OctoGuard 2) : active
+// MÊME OctoGuard éteint, et désormais visible au journal. Le texte n'est pas
+// recopié en entier : un court extrait suffit à l'équipe.
+function journal(rule: 'hate_symbol' | 'admin_pattern', text: string): void {
+  logOctoGuardAction({
+    action:       rule === 'hate_symbol' ? 'octoguard.hate_symbol_blocked' : 'octoguard.admin_pattern_blocked',
+    target_type:  null,
+    target_id:    null,
+    target_label: text.replace(/\s+/g, ' ').trim().slice(0, 80),
+    metadata:     { event_id: randomUUID(), actor: 'octoguard:auto', system_rule: rule },
+  })
+}
+
+import { randomUUID } from 'crypto'
+import { logOctoGuardAction } from './octoguard/logger'
 
 // ── Code points bloqués ───────────────────────────────────────────────────────
 
@@ -68,9 +86,11 @@ export function checkContent(text: string): ContentCheckResult {
   for (const char of text) {
     const cp = char.codePointAt(0) ?? 0
     if (BLOCKED_CODEPOINTS.has(cp)) {
+      journal('hate_symbol', text)
       return {
         ok:     false,
         reason: 'Contenu refusé : symbole haineux ou interdit détecté',
+        rule:   'hate_symbol',
       }
     }
   }
@@ -78,9 +98,11 @@ export function checkContent(text: string): ContentCheckResult {
   // 2 — Patterns personnalisés de l'admin
   for (const pattern of ADMIN_PATTERNS) {
     if (pattern.test(text)) {
+      journal('admin_pattern', text)
       return {
         ok:     false,
         reason: 'Contenu refusé : correspond à un filtre de l\'administrateur',
+        rule:   'admin_pattern',
       }
     }
   }
