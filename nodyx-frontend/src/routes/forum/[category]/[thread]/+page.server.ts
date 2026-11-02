@@ -62,7 +62,7 @@ export const actions: Actions = {
 		if (!res.ok) {
 			const json = await res.json().catch(() => ({}));
 			// Le code et la fin d'une sourdine : la page en fait une phrase claire
-			return fail(res.status, { replyError: json.error ?? null, replyCode: json.code ?? null, mutedUntil: json.expires_at ?? null });
+			return fail(res.status, { replyError: json.error ?? null, replyCode: json.code ?? null, mutedUntil: json.expires_at ?? null, ogKey: json.i18n_key ?? null });
 		}
 	},
 

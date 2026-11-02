@@ -56,6 +56,7 @@ export const actions: Actions = {
 			return fail(res.status, {
 				error: json.error,
 				code: json.code ?? null,
+				i18n_key: json.i18n_key ?? null,
 			});
 		}
 

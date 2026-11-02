@@ -146,7 +146,7 @@
 				<ul class="adm-reporters">
 					{#each c.reports as rep (rep.id)}
 						<li>
-							<strong>{rep.reporter_username ?? tFn('areports.deleted_account')}</strong>
+							<strong>{(rep as any).source === 'octoguard' ? tFn('areports.by_octoguard') : (rep.reporter_username ?? tFn('areports.deleted_account'))}</strong>
 							<span class="adm-muted">{tFn(`report.cat_${rep.category ?? 'other'}`)} · {ago(rep.created_at)}</span>
 							{#if rep.reason}<span class="adm-reason">« {rep.reason} »</span>{/if}
 						</li>

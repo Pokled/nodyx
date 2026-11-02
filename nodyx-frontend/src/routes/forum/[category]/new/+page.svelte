@@ -5,6 +5,7 @@
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import { t } from '$lib/i18n';
+	import { octoguardMessage } from '$lib/octoguardMessages';
 	import { untrack } from 'svelte';
 
 	const tFn = $derived($t)
@@ -82,7 +83,7 @@
 
 	{#if form?.error}
 		<p class="mb-4 bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-4 py-2 text-sm text-[var(--nx-bad)]">
-			{form.code === 'CATEGORY_RESTRICTED' ? tFn('forum.category_restricted') : form.error}
+			{form.code === 'CATEGORY_RESTRICTED' ? tFn('forum.category_restricted') : form.code === 'OCTOGUARD_BLOCKED' ? octoguardMessage(tFn, form.i18n_key) : form.code === 'MUTED' ? tFn('forum.err_muted') : form.code === 'CONTENT_BLOCKED' ? tFn('forum.err_forbidden_content') : form.error}
 		</p>
 	{/if}
 
