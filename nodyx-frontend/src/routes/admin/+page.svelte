@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types'
 	import { t, locale } from '$lib/i18n'
+	import { mayOpenAdmin } from '$lib/adminAccess'
 
 	const tFn = $derived($t)
 
@@ -213,7 +214,7 @@
 			<section class="adm-card">
 				<div class="adm-card-head"><h2 class="adm-label">{tFn('adash.quick_actions')}</h2></div>
 				<div class="grid grid-cols-2 gap-2">
-					{#each quickActions as link}
+					{#each quickActions.filter((q) => mayOpenAdmin(q.href, (data as any).access)) as link}
 						<a href={link.href} class="adm-btn quick">
 							<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
 								<path d={link.iconPath}/>

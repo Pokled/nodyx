@@ -23,6 +23,7 @@
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects';
 	// FloatingReactions : retiré, géré globalement dans +layout.svelte
 	import { t, locale } from '$lib/i18n';
+	import { can } from '$lib/permissions';
 	import { isDarkTheme } from '$lib/theme';
 	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
@@ -53,6 +54,9 @@
 	const isAdmin   = $derived(
 		((data as any)?.user?.role === 'owner' || (data as any)?.user?.role === 'admin')
 	);
+	// Épingler et supprimer le message d'un autre : moderate_content (socle du
+	// modérateur + grade). Le serveur revérifie, rang compris.
+	const canModerateContent = $derived(can((data as any)?.user, 'moderate_content'));
 
 	// ── Types ─────────────────────────────────────────────────────────────────
 	type Channel = (typeof localChannels)[number];
@@ -1180,7 +1184,7 @@
 					<span class="truncate flex-1" style="color: var(--nx-text-muted)">
 						<span class="font-semibold" style="color: var(--nx-text-muted)">{pinnedMessage.author_username} · </span>{pinnedMessage.content?.replace(/<[^>]*>/g, '').slice(0, 120) ?? ''}
 					</span>
-					{#if isAdmin}
+					{#if canModerateContent}
 						<button onclick={() => s?.emit('chat:pin', { channelId: selectedChannel?.id, messageId: null })}
 						        class="ml-auto shrink-0 transition-colors w-4 h-4 flex items-center justify-center text-sm leading-none" style="color: var(--nx-text-muted)" title={tFn('chat.unpin')}>×</button>
 					{:else}
@@ -1411,7 +1415,7 @@
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
 									</button>
 								{/if}
-								{#if isAdmin}
+								{#if canModerateContent}
 									<!-- Épingler -->
 									<button onclick={() => pinMessage(msg)} title={pinnedMessage?.id === msg.id ? tFn('common.unpin') : tFn('common.pin')}
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: {pinnedMessage?.id === msg.id ? 'var(--nx-accent-2-soft)' : 'var(--nx-text-muted)'}"
@@ -1420,7 +1424,7 @@
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
 									</button>
 								{/if}
-								{#if msg.author_id === userId || isAdmin}
+								{#if msg.author_id === userId || canModerateContent}
 									<!-- Supprimer -->
 									<button onclick={() => confirmDelete(msg.id)} title={tFn('common.delete')}
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: var(--nx-text-muted)"

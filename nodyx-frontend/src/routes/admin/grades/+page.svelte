@@ -1,24 +1,37 @@
 <script lang="ts">
+	import { untrack } from 'svelte'
 	import { enhance } from '$app/forms'
 	import type { PageData, ActionData } from './$types'
 	import { t } from '$lib/i18n'
 	import { inkOn } from '$lib/adminTheme'
+	import { GRADE_PERMISSIONS, ROLE_BASE, type Permission } from '$lib/permissions'
 
 	const tFn = $derived($t)
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 
 	const grades  = $derived(data.grades ?? [])
+
+	// Panneau « créer » : ouvert d'office tant que la liste est vide, puis libre.
+	// Jamais open={expression} : Svelte 5 la réévalue à chaque frappe dans le
+	// formulaire et refermait le panneau pendant qu'on tapait le nom.
+	let createOpen = $state(untrack(() => grades.length === 0))
 	const members = $derived(data.members ?? [])
 
-	const PERM_LABELS: Record<string, string> = {
-		can_post:            'agrade.perm_post',
-		can_create_thread:   'agrade.perm_create_thread',
-		can_create_category: 'agrade.perm_create_category',
-		can_moderate:        'agrade.perm_moderate',
-		can_manage_members:  'agrade.perm_manage_members',
-		can_manage_grades:   'agrade.perm_manage_grades',
-	}
+	// Les 7 permissions qu'un grade peut AJOUTER au rôle (lib/permissions.ts),
+	// rangées par famille, chacune avec sa sensibilité. Textes : agrade.p_<clé>_name
+	// / _short / _tip. Écrire et ouvrir un fil sont acquis à tout membre.
+	type Risk = 'low' | 'medium' | 'high'
+	const PERM_GROUPS: Array<{ key: string; icon: string; perms: Array<[Permission, Risk]> }> = [
+		{ key: 'agrade.fam_content', icon: 'M4 6h16M4 12h16M4 18h10', perms: [['moderate_content', 'medium'], ['manage_categories', 'medium']] },
+		{ key: 'agrade.fam_members', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M9 20H4v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0z', perms: [['moderate_members', 'medium'], ['ban_members', 'high']] },
+		{ key: 'agrade.fam_admin', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z', perms: [['manage_grades', 'high'], ['view_audit_log', 'low'], ['manage_octoguard', 'high']] },
+	]
+	const ROLES_SHOWN = ['member', 'moderator', 'admin'] as const
+
+	// Rôles qui ont déjà cette permission d'office (rappel sous chaque carte)
+	const inheritedBy = (p: Permission) =>
+		ROLES_SHOWN.filter((r) => ROLE_BASE[r].includes(p)).map((r) => tFn(`amem.role_${r}`))
 
 	const errorText = $derived(
 		(form as any)?.error ?? ((form as any)?.errorKey ? tFn((form as any).errorKey) : null)
@@ -63,18 +76,45 @@
 
 <svelte:head><title>{tFn('agrade.page_title')}</title></svelte:head>
 
-{#snippet permChecks(current: Record<string, boolean> | null)}
+{#snippet tip(id: string, title: string, body: string)}
+	<span class="adm-tip">
+		<button type="button" class="adm-tip-btn" aria-label={title} aria-describedby={id}>?</button>
+		<span class="adm-tip-bubble" role="tooltip" id={id}><strong>{title}</strong>{body}</span>
+	</span>
+{/snippet}
+
+{#snippet permChecks(current: Record<string, boolean> | null, scope: string)}
 	<fieldset class="adm-field">
-		<legend class="adm-label mb-2">{tFn('agrade.permissions')}</legend>
-		<div class="adm-checks">
-			{#each Object.entries(PERM_LABELS) as [key, label]}
-				<label class="adm-check">
-					<input type="checkbox" name={key} checked={current?.[key] ?? false} />
-					{tFn(label)}
-				</label>
+		<legend class="adm-label mb-1">{tFn('agrade.permissions')}</legend>
+		<p class="adm-hint mb-3">{tFn('agrade.perm_intro')}</p>
+		<div class="adm-perm-groups">
+			{#each PERM_GROUPS as g (g.key)}
+				<div>
+					<h3 class="adm-perm-group-title">
+						<svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d={g.icon}/></svg>
+						{tFn(g.key)}
+					</h3>
+					<div class="adm-perm-grid">
+						{#each g.perms as [perm, risk] (perm)}
+							{@const inh = inheritedBy(perm)}
+							<div class="adm-perm">
+								<input type="checkbox" id="{scope}-{perm}" name={perm} checked={current?.[perm] ?? false} />
+								<label for="{scope}-{perm}" class="min-w-0 cursor-pointer">
+									<span class="adm-perm-name block">{tFn(`agrade.p_${perm}_name`)}</span>
+									<span class="adm-perm-short block">{tFn(`agrade.p_${perm}_short`)}</span>
+									<span class="adm-perm-meta">
+										<span class="adm-risk adm-risk--{risk}">{tFn(`agrade.risk_${risk}`)}</span>
+										{#if inh.length}<span class="adm-perm-inherit">{tFn('agrade.inherited', { roles: inh.join(', ') })}</span>{/if}
+									</span>
+								</label>
+								{@render tip(`${scope}-${perm}-tip`, tFn(`agrade.p_${perm}_name`), tFn(`agrade.p_${perm}_tip`))}
+							</div>
+						{/each}
+					</div>
+				</div>
 			{/each}
 		</div>
-		<p class="adm-hint mt-2">{tFn('agrade.perm_not_enforced')}</p>
+		<p class="adm-hint mt-3">{tFn('agrade.perm_guard')}</p>
 	</fieldset>
 {/snippet}
 
@@ -90,8 +130,47 @@
 		<div class="adm-notice adm-notice--bad" role="alert">{errorText}</div>
 	{/if}
 
+	<!-- Ce que chaque rôle a déjà, avant tout grade (D2) -->
+	<details class="adm-card adm-disclosure">
+		<summary>
+			<svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+			{tFn('agrade.matrix_title')}
+		</summary>
+		<p class="adm-hint mb-3">{tFn('agrade.matrix_desc')}</p>
+		<div class="overflow-x-auto">
+			<table class="adm-matrix">
+				<thead>
+					<tr>
+						<th scope="col">{tFn('agrade.permissions')}</th>
+						{#each ROLES_SHOWN as r (r)}<th scope="col">{tFn(`amem.role_${r}`)}</th>{/each}
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<th scope="row">{tFn('agrade.p_post_name')}</th>
+						{#each ROLES_SHOWN as r (r)}<td><span class="adm-yes" aria-label={tFn('agrade.yes')}><svg fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg></span></td>{/each}
+					</tr>
+					{#each GRADE_PERMISSIONS as p (p)}
+						<tr>
+							<th scope="row">{tFn(`agrade.p_${p}_name`)}</th>
+							{#each ROLES_SHOWN as r (r)}
+								<td>
+									{#if ROLE_BASE[r].includes(p)}
+										<span class="adm-yes" aria-label={tFn('agrade.yes')}><svg fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg></span>
+									{:else}
+										<span class="adm-no" aria-label={tFn('agrade.no')}><svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></span>
+									{/if}
+								</td>
+							{/each}
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	</details>
+
 	<!-- Créer -->
-	<details class="adm-card adm-disclosure" open={grades.length === 0}>
+	<details class="adm-card adm-disclosure" bind:open={createOpen}>
 		<summary>
 			<svg fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
 			{tFn('agrade.create_grade')}
@@ -121,7 +200,7 @@
 					</div>
 				</div>
 			</div>
-			{@render permChecks(null)}
+			{@render permChecks(null, 'new')}
 			<div>
 				<button type="submit" class="adm-btn adm-btn--primary">{tFn('agrade.create')}</button>
 			</div>
@@ -172,7 +251,7 @@
 												</div>
 											</div>
 										</div>
-										{@render permChecks(grade.permissions ?? {})}
+										{@render permChecks(grade.permissions ?? {}, `edit-${grade.id}`)}
 										<div class="adm-actions">
 											<button type="submit" class="adm-btn adm-btn--primary adm-btn--sm">{tFn('agrade.save')}</button>
 											<button type="button" class="adm-btn adm-btn--sm" onclick={() => editingId = null}>{tFn('agrade.cancel')}</button>
@@ -184,10 +263,10 @@
 									<span class="adm-swatch" style="background:{grade.color}; color:{inkOn(grade.color)}">{grade.name}</span>
 								</td>
 								<td data-label={tFn('agrade.permissions')}>
-									{#if Object.values(grade.permissions ?? {}).some(Boolean)}
+									{#if GRADE_PERMISSIONS.some((p) => grade.permissions?.[p])}
 										<div class="flex flex-wrap gap-1 justify-end md:justify-start">
-											{#each Object.entries(PERM_LABELS).filter(([k]) => grade.permissions?.[k]) as [, label]}
-												<span class="adm-pill">{tFn(label)}</span>
+											{#each GRADE_PERMISSIONS.filter((p) => grade.permissions?.[p]) as p (p)}
+												<span class="adm-pill" title={tFn(`agrade.p_${p}_short`)}>{tFn(`agrade.p_${p}_name`)}</span>
 											{/each}
 										</div>
 									{:else}

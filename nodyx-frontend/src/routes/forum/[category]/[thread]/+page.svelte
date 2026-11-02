@@ -36,6 +36,7 @@
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import { t } from '$lib/i18n';
 	import { replyCount } from '$lib/forumCounts';
+	import { can, isAdminRole } from '$lib/permissions';
 
 	const tFn = $derived($t)
 
@@ -56,10 +57,11 @@
 	// réponses. Voir $lib/forumCounts.
 	const replies = $derived(replyCount(thread.post_count));
 	const user   = $derived(data.user);
-	const isMod   = $derived(user?.role === 'owner' || user?.role === 'admin' || user?.role === 'moderator');
-	// Épingler / verrouiller / mettre en avant : réservé owner + admin côté back
-	// (routes/forums.ts). Les modérateurs voient le reste du panneau, pas ça.
-	const canAdmin = $derived(user?.role === 'owner' || user?.role === 'admin');
+	// Modérer le contenu (modifier, supprimer, épingler, verrouiller) : permission
+	// moderate_content, socle du modérateur + grade (lib/permissions.ts). Mettre
+	// en avant sur la vitrine reste réservé aux admins de l'instance.
+	const isMod   = $derived(can(user, 'moderate_content'));
+	const canAdmin = $derived(isAdminRole(user));
 
 	// ── État local ────────────────────────────────────────────────────────
 	let replyKey      = $state(0);
@@ -405,7 +407,6 @@
 				</button>
 
 				<div class="{showModActions ? 'flex' : 'hidden'} sm:flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
-					{#if canAdmin}
 					<!-- Épingler/Désépingler -->
 					<form method="POST" action="?/pinThread" use:enhance={() => {
 						return async ({ update }) => { await update({ reset: false }) }
@@ -434,7 +435,8 @@
 						</button>
 					</form>
 
-					<!-- Promouvoir / rétrograder -->
+					<!-- Promouvoir / rétrograder : vitrine publique, admins seulement -->
+					{#if canAdmin}
 					<form method="POST" action="?/featureThread" use:enhance={() => {
 						return async ({ update }) => { await update({ reset: false }) }
 					}}>

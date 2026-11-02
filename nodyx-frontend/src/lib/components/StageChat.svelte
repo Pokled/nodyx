@@ -17,6 +17,7 @@
     // l'éditeur riche s'ouvre en plein écran sur mobile, en carte sur desktop.
 
     import { socket } from '$lib/socket'
+    import { can } from '$lib/permissions'
     import { page } from '$app/state'
     import { linkifyHtml } from '$lib/linkify'
     import { renderCustomEmojis, customEmojisStore } from '$lib/customEmojis'
@@ -75,10 +76,11 @@
     let editorKey   = $state(0)                     // remonte l'éditeur à chaque ouverture
 
     // ── Qui suis-je (pour la modération) ──────────────────────────────────────
-    const me      = $derived((page.data as { user?: { id?: string; role?: string } })?.user)
+    const me      = $derived((page.data as { user?: { id?: string; role?: string; permissions?: string[] } })?.user)
     const userId  = $derived(me?.id ?? '')
-    const isAdmin = $derived(me?.role === 'owner' || me?.role === 'admin')
-    const canActOn = (m: StageMessage) => m.author_id === userId || isAdmin
+    // Supprimer le message d'un autre : moderate_content (lib/permissions.ts)
+    const canModerateContent = $derived(can(me as never, 'moderate_content'))
+    const canActOn = (m: StageMessage) => m.author_id === userId || canModerateContent
 
     const emojis = $derived($customEmojisStore)
 

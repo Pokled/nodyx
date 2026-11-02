@@ -17,11 +17,11 @@
     import { t } from '$lib/i18n'
     import { voicePanelTarget } from '$lib/voicePanel'
     import { page } from '$app/state'
+    import { can } from '$lib/permissions'
 
-    const userRole = $derived((page.data as any)?.user?.role as string | undefined)
-    const canModerate = $derived(
-        userRole === 'owner' || userRole === 'admin' || userRole === 'moderator'
-    )
+    // Exclure d'un salon vocal : moderate_members (socle du modérateur + grade).
+    // Le serveur revérifie, rang compris.
+    const canModerate = $derived(can((page.data as any)?.user, 'moderate_members'))
 
     function confirmKick(peer: VoicePeer): void {
         const message = tFn('voice.kick_confirm', { username: peer.username })

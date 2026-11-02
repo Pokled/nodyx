@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state'
 	import { t as i18n } from '$lib/i18n'
+	import { mayOpenAdmin } from '$lib/adminAccess'
 	let { children } = $props()
 
 	const tFn = $derived($i18n)
@@ -15,6 +16,9 @@
 		{ href: '/admin/octoguard/logs',     key: 'octoguard.tab_logs',     icon: '📋' },
 		{ href: '/admin/octoguard/webhook',  key: 'octoguard.tab_webhook',  icon: '🔗' },
 	]
+
+	// Un modérateur sans manage_octoguard ne voit que sourdines et signalements
+	const visibleTabs = $derived(tabs.filter((tab) => mayOpenAdmin(tab.href, (page.data as any).access)))
 
 	function isActive(href: string): boolean {
 		if (href === '/admin/octoguard') return page.url.pathname === href
@@ -31,7 +35,7 @@
 	</header>
 
 	<nav class="og-nav">
-		{#each tabs as t (t.href)}
+		{#each visibleTabs as t (t.href)}
 			<a href={t.href} class="og-tab" class:og-tab--active={isActive(t.href)}>
 				<span class="og-tab-icon">{t.icon}</span>
 				<span>{tFn(t.key)}</span>

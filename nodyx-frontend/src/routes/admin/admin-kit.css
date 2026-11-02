@@ -523,3 +523,119 @@ th[aria-sort='descending'] .adm-sort-arrow { opacity: 1; }
 .adm-tree-branch { color: var(--nx-text-muted); opacity: 0.6; flex: none; }
 /* Rangée d'actions d'une ligne de tableau : jamais sur deux lignes */
 .adm-actions--row { flex-wrap: nowrap; justify-content: flex-end; }
+
+/* ── Permissions (grades, CDC modération E1) ────────────────────────────── */
+.adm-perm-groups { display: flex; flex-direction: column; gap: 1rem; }
+.adm-perm-group-title {
+	margin: 0 0 0.5rem;
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	font-size: 0.75rem;
+	font-weight: 650;
+	color: var(--nx-text);
+}
+.adm-perm-group-title svg { width: 0.95rem; height: 0.95rem; color: var(--nx-header-accent); }
+.adm-perm-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+	gap: 0.5rem;
+}
+/* Une permission = une carte cliquable (la case est dans le label) */
+.adm-perm {
+	position: relative;
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: start;
+	gap: 0.6rem;
+	padding: 0.7rem 0.75rem;
+	border: 1px solid var(--nx-border);
+	border-radius: 10px;
+	background: var(--nx-surface);
+	transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+}
+.adm-perm:hover { border-color: color-mix(in srgb, var(--nx-header-accent) 35%, var(--nx-border)); }
+.adm-perm:has(input:checked) {
+	border-color: color-mix(in srgb, var(--nx-header-accent) 55%, transparent);
+	background: color-mix(in srgb, var(--nx-header-accent) 7%, var(--nx-surface));
+}
+.adm-perm:has(input:focus-visible) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-header-accent) 25%, transparent); }
+.adm-perm input { accent-color: var(--nx-header-accent); margin-top: 0.2rem; width: 1rem; height: 1rem; }
+.adm-perm-name { font-size: 0.8125rem; font-weight: 600; color: var(--nx-text); line-height: 1.3; }
+.adm-perm-short { margin-top: 0.15rem; font-size: 0.75rem; color: var(--nx-text-muted); line-height: 1.4; }
+.adm-perm-meta { margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+/* Déjà acquis par un rôle : rappel discret */
+.adm-perm-inherit { font-size: 0.6875rem; color: var(--nx-text-muted); }
+
+/* Sensibilité d'une permission : un point + un mot, jamais la couleur seule */
+.adm-risk {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	color: var(--tone);
+}
+.adm-risk::before { content: ''; width: 0.45rem; height: 0.45rem; border-radius: 999px; background: currentColor; }
+.adm-risk--low { --tone: var(--nx-ok); }
+.adm-risk--medium { --tone: var(--nx-warn); }
+.adm-risk--high { --tone: var(--nx-bad); }
+
+/* Bulle d'aide : bouton « ? » focusable, bulle au survol ET au focus (clavier,
+   tactile). Le texte reste lu par les lecteurs d'écran via aria-describedby. */
+.adm-tip { position: relative; display: inline-flex; }
+.adm-tip-btn {
+	all: unset;
+	box-sizing: border-box;
+	width: 1.25rem;
+	height: 1.25rem;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.6875rem;
+	font-weight: 700;
+	color: var(--nx-text-muted);
+	border: 1px solid var(--nx-border);
+	background: var(--nx-surface);
+	cursor: help;
+}
+.adm-tip-btn:hover, .adm-tip-btn:focus-visible { color: var(--nx-header-accent); border-color: var(--nx-header-accent); }
+.adm-tip-btn:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
+.adm-tip-bubble {
+	position: absolute;
+	z-index: 20;
+	right: -0.5rem;
+	bottom: calc(100% + 0.5rem);
+	width: min(19rem, 80vw);
+	padding: 0.7rem 0.8rem;
+	border-radius: 10px;
+	border: 1px solid var(--nx-border);
+	background: var(--nx-surface);
+	color: var(--nx-text);
+	box-shadow: 0 14px 34px -10px rgb(0 0 0 / 0.4);
+	font-size: 0.75rem;
+	font-weight: 400;
+	line-height: 1.5;
+	text-align: left;
+	opacity: 0;
+	visibility: hidden;
+	transform: translateY(4px);
+	transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+	pointer-events: none;
+}
+.adm-tip-bubble strong { display: block; margin-bottom: 0.25rem; color: var(--nx-header-accent); }
+.adm-tip:hover .adm-tip-bubble,
+.adm-tip:focus-within .adm-tip-bubble { opacity: 1; visibility: visible; transform: none; }
+
+/* Matrice « ce que chaque rôle a déjà » */
+.adm-matrix { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.adm-matrix th, .adm-matrix td { padding: 0.5rem 0.6rem; border-bottom: 1px solid color-mix(in srgb, var(--nx-border) 70%, transparent); }
+.adm-matrix thead th { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--nx-text-muted); text-align: center; }
+.adm-matrix thead th:first-child, .adm-matrix tbody th { text-align: left; }
+.adm-matrix tbody th { font-weight: 550; color: var(--nx-text); }
+.adm-matrix td { text-align: center; }
+.adm-matrix tbody tr:last-child > * { border-bottom: none; }
+.adm-yes { color: var(--nx-ok); }
+.adm-no { color: var(--nx-text-muted); opacity: 0.5; }
+.adm-yes svg, .adm-no svg { width: 1rem; height: 1rem; display: inline-block; vertical-align: middle; }
