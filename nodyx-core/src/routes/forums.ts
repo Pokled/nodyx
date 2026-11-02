@@ -20,6 +20,9 @@ import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
 import { can, getAccess, communityOfThread, outranks, rankOf } from '../services/permissions'
 import { isUserMuted } from '../services/octoguard'
+import { moderateText, blockedBody } from '../services/octoguard/moderate'
+import { fileAutoReport } from '../services/octoguard/autoReport'
+import { toPlainText } from '../services/reports'
 
 // Un titre de fil est du texte brut, jamais du HTML : checkHtmlContent() ne fait
 // que SCANNER (mots interdits) sans jamais retirer de balises. Sans ce nettoyage,
@@ -270,6 +273,10 @@ app.get('/threads', {
       }
     }
 
+    // OctoGuard (forum) : examiné AVANT de créer quoi que ce soit
+    const ogThread = await moderateText(request.user!.userId, 'forum', [title, toPlainText(content)])
+    if (ogThread.blocked) return reply.code(422).send(blockedBody(ogThread))
+
     const thread = await ThreadModel.create({
       category_id,
       author_id: request.user!.userId,
@@ -305,6 +312,8 @@ app.get('/threads', {
     if (tag_ids && tag_ids.length > 0) {
       await TagModel.setThreadTags(thread.id, tag_ids)
     }
+
+    if (ogThread.report) void fileAutoReport({ targetType: 'thread', targetId: thread.id, ruleName: ogThread.report.rule_name, excerpt: ogThread.report.excerpt })
 
     const tags = await TagModel.getTagsForThread(thread.id)
     return reply.code(201).send({
@@ -384,11 +393,15 @@ app.get('/threads', {
       return reply.code(422).send({ error: replyContentCheck.reason, code: 'CONTENT_BLOCKED' })
     }
 
+    const ogPost = await moderateText(userId, 'forum', [toPlainText(sanitized)])
+    if (ogPost.blocked) return reply.code(422).send(blockedBody(ogPost))
+
     const post = await PostModel.create({
       thread_id: resolvedThreadId,
       author_id: userId,
       content:   sanitized,
     })
+    if (ogPost.report) void fileAutoReport({ targetType: 'post', targetId: post.id, ruleName: ogPost.report.rule_name, excerpt: ogPost.report.excerpt })
     bumpThreadsCache()
     // Réputation : répondre = +2
     await awardPoints(userId, REPUTATION.REPLY)
@@ -472,7 +485,13 @@ app.get('/threads', {
       return reply.code(422).send({ error: editCheck.reason, code: 'CONTENT_BLOCKED' })
     }
 
+    // La modification passe par OctoGuard comme la publication (sinon : publier
+    // propre, puis modifier pour contourner)
+    const ogEdit = await moderateText(userId, 'forum', [toPlainText(editSanitized)])
+    if (ogEdit.blocked) return reply.code(422).send(blockedBody(ogEdit))
+
     const post = await PostModel.updateContent(id, editSanitized)
+    if (ogEdit.report) void fileAutoReport({ targetType: 'post', targetId: id, ruleName: ogEdit.report.rule_name, excerpt: ogEdit.report.excerpt })
     bumpThreadsCache()
     return reply.send({
       post,

@@ -71,9 +71,19 @@ export interface AutomodRuleRow {
   immunized_grade_ids:   string[]
   dry_run:               boolean
   enabled:               boolean
+  /** Où la règle s'applique (migration 129). */
+  scopes:                Surface[]
+  /** Modèle du profil de base d'où vient la règle, null si écrite à la main. */
+  preset_key:            string | null
+  /** Règle issue d'un modèle mais modifiée par l'admin : les mises à jour du profil ne la touchent plus. */
+  customized:            boolean
   created_at:            string
   updated_at:            string
 }
+
+/** Les endroits du site que surveille OctoGuard. */
+export type Surface = 'chat' | 'forum' | 'profile' | 'poll' | 'wiki'
+export const SURFACES: readonly Surface[] = ['chat', 'forum', 'profile', 'poll', 'wiki']
 
 // ─── Welcome (singleton) ──────────────────────────────────────────────────────
 
@@ -176,6 +186,9 @@ export interface PipelineResult {
   i18n_key?:         string
   event_id?:         string
   command_response?: string
+  /** Cran « signaler » : l'appelant crée un dossier dans la file APRÈS avoir
+   *  enregistré le contenu (il en connaît alors l'identifiant). D13. */
+  report?:           { rule_id: string; rule_name: string; excerpt: string }
 }
 
 /**

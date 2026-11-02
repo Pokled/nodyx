@@ -10,6 +10,8 @@ import { validate } from '../middleware/validate'
 import * as UserModel from '../models/user'
 import { toPublicUser, toSelfUser } from '../utils/publicUser'
 import { getAccess } from '../services/permissions'
+import { moderateText, blockedBody } from '../services/octoguard/moderate'
+import { fileAutoReport } from '../services/octoguard/autoReport'
 import { db, redis } from '../config/database'
 import { io } from '../socket/io'
 import { scanBuffer } from '../services/fileScanner'
@@ -235,6 +237,10 @@ export default async function userRoutes(app: FastifyInstance) {
       if (!fc.ok) return reply.code(422).send({ error: fc.reason, code: 'CONTENT_BLOCKED' })
     }
 
+    // OctoGuard (profils) : pseudo affiché, bio, statut, lieu
+    const ogProfile = await moderateText(request.user!.userId, 'profile', textsToCheck)
+    if (ogProfile.blocked) return reply.code(422).send(blockedBody(ogProfile))
+
     const fields: string[] = []
     const values: unknown[] = []
     let i = 1
@@ -319,6 +325,8 @@ export default async function userRoutes(app: FastifyInstance) {
       })
     }
 
+    // Dossier OctoGuard (cran « signaler ») APRÈS l'enregistrement : la photo montre le profil tel que publié
+    if (ogProfile.report) void fileAutoReport({ targetType: 'user', targetId: request.user!.userId, ruleName: ogProfile.report.rule_name, excerpt: ogProfile.report.excerpt })
     return reply.send({ profile: rows[0] })
   })
 

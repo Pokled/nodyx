@@ -18,12 +18,13 @@ import { getRules } from './cache'
 import { matchRule } from './matchers'
 import { logOctoGuardAction } from './logger'
 import { applyMute } from './mutes'
+import { applyTempBan } from './bans'
 import type {
   AutomodRuleRow,
   PipelineUserCtx,
   PipelineResult,
   AutomodAction,
-  Duration,
+  Duration, Surface,
 } from './types'
 
 const PIPELINE_TIMEOUT_MS = 50
@@ -31,7 +32,9 @@ const PIPELINE_TIMEOUT_MS = 50
 export interface PipelineInput {
   content:    string
   userCtx:    PipelineUserCtx
-  channelId:  string
+  /** Où le contenu est écrit. Défaut : le chat (seul endroit surveillé avant OctoGuard 2). */
+  surface?:   Surface
+  channelId?: string
   messageId?: string  // optionnel (undefined si message pas encore inséré)
 }
 
@@ -60,12 +63,34 @@ export function computeExpiresAt(duration: Duration | null): Date | null {
   return new Date(Date.now() + ms)
 }
 
+// ─── Escalade ────────────────────────────────────────────────────────────────
+
+async function escalate(rule: AutomodRuleRow, user: PipelineUserCtx, warnCount: number, eventId: string): Promise<void> {
+  const esc = rule.escalation
+  if (!esc) return
+  const reason = `${warnCount} avertissements (règle "${rule.name}")`
+  if (esc.action === 'mute') {
+    await applyMute({ userId: user.userId, channelId: null, duration: esc.duration ?? { value: 1, unit: 'h' }, reason, appliedBy: null, ruleId: rule.id, eventId })
+  } else if (esc.action === 'ban_temp') {
+    await applyTempBan({ userId: user.userId, duration: esc.duration ?? { value: 1, unit: 'd' }, reason, ruleId: rule.id, eventId })
+  }
+  logOctoGuardAction({
+    action:       `octoguard.escalation_${esc.action}`,
+    target_type:  'user',
+    target_id:    user.userId,
+    target_label: reason,
+    metadata:     { rule_id: rule.id, rule_name: rule.name, event_id: eventId, actor: 'octoguard:auto', escalated_to: esc.action, warn_count: warnCount },
+  })
+}
+
 // ─── Application d'une action ────────────────────────────────────────────────
 
 interface ActionOutcome {
   blocked:  boolean
   reason:   string
   i18nKey:  string
+  /** Cran « signaler » : un dossier à ouvrir dans la file (D13) */
+  report?:  boolean
 }
 
 async function applyAction(
@@ -84,8 +109,8 @@ async function applyAction(
     would_be:   dryRun,
   }
 
-  // dry_run OU action report_only : on log et on laisse passer
-  if (dryRun || action === 'report_only') {
+  // Cran « observer » (dry_run) : on note ce qui AURAIT été fait, rien ne se passe
+  if (dryRun) {
     logOctoGuardAction({
       action:       `octoguard.would_${action}`,
       target_type:  'message',
@@ -93,7 +118,21 @@ async function applyAction(
       target_label: excerpt,
       metadata:     { ...meta, would_be: true },
     })
-    return { blocked: false, reason: 'report_only', i18nKey: 'octoguard.report_only' }
+    return { blocked: false, reason: 'observe', i18nKey: 'octoguard.observe' }
+  }
+
+  // Cran « signaler » (report_only) : le contenu passe, et un dossier arrive
+  // dans la file de l'équipe, signé OctoGuard (D13). L'appelant ouvre le
+  // dossier une fois le contenu enregistré (il en connaît alors l'identifiant).
+  if (action === 'report_only') {
+    logOctoGuardAction({
+      action:       'octoguard.report_filed',
+      target_type:  'user',
+      target_id:    user.userId,
+      target_label: excerpt,
+      metadata:     { ...meta, would_be: false },
+    })
+    return { blocked: false, reason: 'report_only', i18nKey: 'octoguard.report_only', report: true }
   }
 
   // notify_only : log + webhook (webhook Session D), pas de blocage
@@ -160,14 +199,9 @@ async function applyAction(
           )
           const cnt = rows[0]?.cnt ?? 0
           if (cnt >= rule.escalation.warns_threshold) {
-            console.warn(`[octoguard] escalation triggered (cnt=${cnt} >= ${rule.escalation.warns_threshold}, action=${rule.escalation.action}) → TODO Session C apply mute/ban_temp`)
-            logOctoGuardAction({
-              action:       `octoguard.escalation_${rule.escalation.action}`,
-              target_type:  'user',
-              target_id:    user.userId,
-              target_label: `escalated after ${cnt} warns`,
-              metadata:     { ...meta, escalated_to: rule.escalation.action, warn_count: cnt, stub: true },
-            })
+            // L'escalade pour de vrai : N avertissements en X jours donnent une
+            // sourdine ou un bannissement temporaire (avant : un « TODO » au journal).
+            await escalate(rule, user, cnt, eventId)
           }
         }
       } catch (err) {
@@ -211,19 +245,14 @@ async function applyAction(
     }
   }
 
-  // ban_temp : STUB Session C, bloque comme delete + log "TODO"
+  // ban_temp : bannissement temporaire réel (community_bans.expires_at), levé
+  // automatiquement à l'échéance. Décision immédiate, écriture en arrière-plan
+  // (même patron que mute : jamais dépasser le budget du pipeline).
   if (action === 'ban_temp') {
-    console.warn(`[octoguard] action=ban_temp STUB Session C, blocking like delete for now`)
-    logOctoGuardAction({
-      action:       'octoguard.ban_temp_user',
-      target_type:  'user',
-      target_id:    user.userId,
-      target_label: excerpt,
-      metadata:     { ...meta, stub: 'Session C will implement community_bans INSERT + expires_at', duration: rule.action_duration },
-    })
+    void applyTempBan({ userId: user.userId, duration: rule.action_duration, reason: `règle "${rule.name}"`, ruleId: rule.id, eventId })
     return {
       blocked: true,
-      reason:  `Bannissement temporaire (stub) : règle "${rule.name}"`,
+      reason:  `Bannissement temporaire : règle "${rule.name}"`,
       i18nKey: 'octoguard.ban_temp.applied',
     }
   }
@@ -238,8 +267,11 @@ async function applyAction(
 async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
   const rules = getRules()
   if (rules.length === 0) return { blocked: false }
+  const surface: Surface = input.surface ?? 'chat'
 
   for (const rule of rules) {
+    // Une règle d'avant OctoGuard 2 (sans scopes) ne surveillait que le chat
+    if (!(rule.scopes?.length ? rule.scopes : ['chat']).includes(surface)) continue
     if (isImmunized(rule, input.userCtx)) continue
 
     const match = matchRule(input.content, rule)
@@ -259,6 +291,7 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
       reason:   outcome.reason,
       i18n_key: outcome.i18nKey,
       event_id: eventId,
+      ...(outcome.report ? { report: { rule_id: rule.id, rule_name: rule.name, excerpt: match.excerpt } } : {}),
     }
   }
 
@@ -272,9 +305,13 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
 export async function runPipeline(input: PipelineInput): Promise<PipelineResult> {
   if (!isOctoGuardEnabled()) return { blocked: false }
 
+  // Le minuteur est ANNULÉ dès que le moteur répond. Avant, il n'était jamais
+  // annulé : il écrivait « timeout » 50 ms après CHAQUE message, même traité à
+  // temps, ce qui noyait les vrais dépassements dans de faux.
+  let timer: NodeJS.Timeout | undefined
   try {
     const timeout = new Promise<PipelineResult>((resolve) => {
-      setTimeout(() => {
+      timer = setTimeout(() => {
         console.warn(`[octoguard] pipeline timeout >${PIPELINE_TIMEOUT_MS}ms, bypassing`)
         resolve({ blocked: false })
       }, PIPELINE_TIMEOUT_MS)
@@ -283,5 +320,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
   } catch (err) {
     console.warn('[octoguard] pipeline error, bypassing:', err)
     return { blocked: false }
+  } finally {
+    if (timer) clearTimeout(timer)
   }
 }

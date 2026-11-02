@@ -9,6 +9,8 @@
  *   - Delete: admin or moderator only
  */
 
+import { moderateText, blockedBody } from '../services/octoguard/moderate'
+import { toPlainText } from '../services/reports'
 import { FastifyInstance } from 'fastify'
 import { z }               from 'zod'
 import { db }              from '../config/database.js'
@@ -143,6 +145,10 @@ export default async function wikiRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'Seuls les admins et modérateurs peuvent créer des pages wiki.' })
     }
 
+    // OctoGuard (wiki) : titre et contenu. Sans dossier (une page wiki n'est pas une cible de signalement).
+    const ogWiki = await moderateText(user.userId, 'wiki', [body.title, body.excerpt, toPlainText(body.content)])
+    if (ogWiki.blocked) return reply.code(422).send(blockedBody(ogWiki))
+
     const slug = generateWikiSlug(body.title)
 
     const { rows } = await db.query(
@@ -182,6 +188,9 @@ export default async function wikiRoutes(app: FastifyInstance) {
     if (role === 'member' && !isAuthor) {
       return reply.code(403).send({ error: 'Permission insuffisante pour modifier cette page.' })
     }
+
+    const ogWikiEdit = await moderateText(user.userId, 'wiki', [body.title, body.excerpt, body.content ? toPlainText(body.content) : undefined])
+    if (ogWikiEdit.blocked) return reply.code(422).send(blockedBody(ogWikiEdit))
 
     const setParts: string[] = ['updated_at = NOW()', 'editor_id = $1']
     const values:   unknown[] = [user.userId]
