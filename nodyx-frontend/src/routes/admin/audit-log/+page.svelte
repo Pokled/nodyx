@@ -14,7 +14,7 @@
 	const GROUPS: Array<{ key: string; actions: Array<[string, Tone]> }> = [
 		{ key: 'alog.grp_members', actions: [
 			['ban_user', 'bad'], ['unban_user', 'ok'], ['kick_member', 'bad'], ['change_role', 'warn'],
-			['voice_kick', 'bad'], ['reveal_email', 'warn'],
+			['voice_kick', 'bad'], ['reveal_email', 'warn'], ['warn_user', 'warn'],
 		] },
 		{ key: 'alog.grp_bans', actions: [
 			['ip_ban_add', 'bad'], ['ip_ban_remove', 'ok'], ['email_ban_add', 'bad'], ['email_ban_remove', 'ok'],

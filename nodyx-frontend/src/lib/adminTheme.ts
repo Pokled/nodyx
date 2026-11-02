@@ -11,9 +11,12 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	'/admin/reports',
 ]
 
+// Sous-pages dynamiques déjà migrées (fiche d'un membre : /admin/members/<id>)
+const ADMIN_THEMED_PREFIXES: readonly string[] = ['/admin/members/']
+
 export function isAdminThemed(pathname: string): boolean {
 	const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
-	return ADMIN_THEMED_ROUTES.includes(path)
+	return ADMIN_THEMED_ROUTES.includes(path) || ADMIN_THEMED_PREFIXES.some((p) => path.startsWith(p))
 }
 
 // Encre lisible posée sur une couleur choisie par l'admin (grade, étiquette) :

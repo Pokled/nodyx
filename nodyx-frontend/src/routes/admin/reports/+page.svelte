@@ -14,7 +14,7 @@
 	type Report = {
 		id: string; target_type: string; target_id: string; category: string | null; reason: string
 		status: string; created_at: string; reporter_username: string | null
-		target_author_username: string | null; target_author_role: string | null
+		target_author_id: string | null; target_author_username: string | null; target_author_role: string | null
 		snapshot: string | null; target_label: string | null; target_link: string | null
 		claimed_by_username: string | null; reviewed_by_username: string | null
 		reviewed_at: string | null; resolution: string | null
@@ -112,7 +112,7 @@
 						<div class="adm-case-label">
 							{tFn(`areports.type_${r.target_type}`)}
 							{#if r.target_author_username}
-								· <a href="/users/{encodeURIComponent(r.target_author_username)}" class="hover:underline">{r.target_author_username}</a>
+								· <a href="/admin/members/{r.target_author_id}" class="hover:underline" title={tFn('amem.open_file')}>{r.target_author_username}</a>
 							{/if}
 							{#if r.target_author_role && r.target_author_role !== 'member'}
 								<span class="adm-pill adm-pill--{r.target_author_role}">{tFn(`amem.role_${r.target_author_role}`)}</span>
