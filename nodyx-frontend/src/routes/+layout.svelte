@@ -46,6 +46,7 @@
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
 	import { activeCommunityNameStore, panelCollapsedStore, membersCollapsedStore } from '$lib/communityStore';
 	import { playMention, playDm } from '$lib/sounds';
+	import ReportDialog from '$lib/components/ReportDialog.svelte';
 	const tFn = $derived($t)
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
@@ -1285,6 +1286,12 @@
 <!-- ── Screen share hover preview ────────────────────────────────────────── -->
 {#if screenPreview}
 	<MemberScreenPreview {...screenPreview} />
+{/if}
+
+
+<!-- Fenêtre « Signaler », une pour tout le site (lib/report.ts) -->
+{#if user}
+	<ReportDialog />
 {/if}
 
 <style>

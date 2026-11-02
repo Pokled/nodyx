@@ -24,6 +24,9 @@
 			['category_set_post_role', 'info'],
 			['create_announcement', 'info'], ['update_announcement', 'info'], ['delete_announcement', 'muted'],
 		] },
+		{ key: 'alog.grp_reports', actions: [
+			['report_actioned', 'bad'], ['report_dismissed', 'muted'], ['report_reviewed', 'info'],
+		] },
 		{ key: 'alog.grp_instance', actions: [
 			['settings_update', 'info'], ['module_toggle', 'info'], ['publish_appearance', 'info'],
 		] },

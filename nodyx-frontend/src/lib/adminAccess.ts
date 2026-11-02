@@ -12,6 +12,7 @@ export type AdminAccess = { role: string | null; permissions: readonly string[] 
 const RULES: Array<{ prefix: string; exact?: boolean; any: Permission[] | 'staff' }> = [
 	{ prefix: '/admin', exact: true, any: 'staff' },
 	{ prefix: '/admin/members', any: ['moderate_members', 'ban_members'] },
+	{ prefix: '/admin/reports', any: ['moderate_members', 'manage_octoguard'] },
 	{ prefix: '/admin/grades', any: ['manage_grades'] },
 	{ prefix: '/admin/categories', any: ['manage_categories'] },
 	{ prefix: '/admin/moderation', any: ['moderate_content'] },

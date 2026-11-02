@@ -12,7 +12,6 @@
 		{ href: '/admin/octoguard/welcome',  key: 'octoguard.tab_welcome',  icon: '👋' },
 		{ href: '/admin/octoguard/commands', key: 'octoguard.tab_commands', icon: '⚡' },
 		{ href: '/admin/octoguard/mutes',    key: 'octoguard.tab_mutes',    icon: '🔇' },
-		{ href: '/admin/octoguard/reports',  key: 'octoguard.tab_reports',  icon: '🚩' },
 		{ href: '/admin/octoguard/logs',     key: 'octoguard.tab_logs',     icon: '📋' },
 		{ href: '/admin/octoguard/webhook',  key: 'octoguard.tab_webhook',  icon: '🔗' },
 	]

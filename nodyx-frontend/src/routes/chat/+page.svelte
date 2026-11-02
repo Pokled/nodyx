@@ -24,6 +24,7 @@
 	// FloatingReactions : retiré, géré globalement dans +layout.svelte
 	import { t, locale } from '$lib/i18n';
 	import { can } from '$lib/permissions';
+	import { openReport } from '$lib/report';
 	import { isDarkTheme } from '$lib/theme';
 	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
@@ -1431,6 +1432,16 @@
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = '#ef4444'}
 									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-text-muted)'}>
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+									</button>
+								{/if}
+								{#if msg.author_id !== userId}
+									<!-- Signaler (jamais son propre message) -->
+									<button onclick={() => openReport({ type: 'message', id: msg.id, label: tFn('report.label_message', { name: msg.author_username }) })}
+									        title={tFn('report.action')} aria-label={tFn('report.action')}
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: var(--nx-text-muted)"
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-bad)'}
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-text-muted)'}>
+										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V4m0 0h11l-1.5 4L15 12H4"/></svg>
 									</button>
 								{/if}
 								<!-- Copier -->

@@ -7,6 +7,8 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	'/admin', '/admin/members',
 	// Lot 1 : gestion de la communauté
 	'/admin/grades', '/admin/categories', '/admin/tags', '/admin/moderation', '/admin/audit-log',
+	// Modération unifiée (E2)
+	'/admin/reports',
 ]
 
 export function isAdminThemed(pathname: string): boolean {
