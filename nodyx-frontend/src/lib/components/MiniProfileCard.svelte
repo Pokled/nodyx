@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { t } from '$lib/i18n'
 	import { onMount } from 'svelte'
+	import { page } from '$app/state'
+	import { can } from '$lib/permissions'
 	import { browser } from '$app/env'
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded } from '$lib/nameEffects'
 
@@ -15,6 +17,7 @@
 	let { username, anchorEl = null, onclose }: Props = $props()
 
 	type Profile = {
+		id?: string
 		username:           string
 		display_name:       string | null
 		avatar_url:         string | null
@@ -35,6 +38,8 @@
 	}
 
 	let profile = $state<Profile | null>(null)
+	// Membres de l'équipe qui peuvent ouvrir une fiche de modération
+	const isStaff = $derived(can((page.data as any)?.user, 'moderate_members') || can((page.data as any)?.user, 'ban_members'))
 	let loading  = $state(true)
 	let cardEl   = $state<HTMLDivElement | null>(null)
 
@@ -151,13 +156,25 @@
 			</div>
 
 			<!-- Profile link — top right -->
-			<a
-				href="/users/{profile.username}"
-				onclick={onclose}
-				class="absolute top-2 right-2 text-[10px] text-gray-500 hover:text-gray-300 transition-colors px-2 py-1 rounded bg-black/30 hover:bg-black/50"
-			>
-				{tFn('profile.view_full_profile')}
-			</a>
+			<div class="absolute top-2 right-2 flex gap-1">
+				{#if isStaff && profile.id}
+					<!-- Équipe seulement : la fiche de modération du membre -->
+					<a
+						href="/admin/members/{profile.id}"
+						onclick={onclose}
+						class="text-[10px] font-semibold text-amber-200 hover:text-white transition-colors px-2 py-1 rounded bg-black/40 hover:bg-black/60"
+					>
+						{tFn('profile.moderation_file')}
+					</a>
+				{/if}
+				<a
+					href="/users/{profile.username}"
+					onclick={onclose}
+					class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors px-2 py-1 rounded bg-black/30 hover:bg-black/50"
+				>
+					{tFn('profile.view_full_profile')}
+				</a>
+			</div>
 		</div>
 
 		<!-- Name area — push down to clear avatar overflow -->
