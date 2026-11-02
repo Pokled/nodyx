@@ -110,9 +110,14 @@ const ReportTargetType = z.enum(['message', 'user', 'thread', 'post', 'dm_messag
 const ReportCategory   = z.enum(['spam', 'harassment', 'hate', 'illegal', 'other'])
 
 // Le motif (category) est obligatoire, la précision (reason) facultative.
+// Format UUID tel que PostgreSQL l'accepte : z.string().uuid() (Zod 4) exige
+// les bits de version RFC et refusait les contenus créés par les données de
+// démonstration (identifiants « b1000004-0003-0000-... »), pourtant bien réels.
+const AnyUuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Invalid UUID')
+
 const CreateReportBody = z.object({
   target_type: ReportTargetType,
-  target_id:   z.string().uuid(),
+  target_id:   AnyUuid,
   reason:      z.string().max(1000).optional(),
   category:    ReportCategory,
 })

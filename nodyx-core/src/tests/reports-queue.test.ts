@@ -121,6 +121,11 @@ describe('POST /reports : signaler', () => {
     expect(res.statusCode).toBe(400)
     expect(res.json().code).toBe('CANNOT_REPORT_SELF')
   })
+  it('accepte un identifiant de démonstration (UUID non RFC, valide pour PostgreSQL)', async () => {
+    const res = await report(U.other, { target_type: 'post', target_id: 'b1000004-0003-0000-0000-000000000004', category: 'spam' })
+    // Passe la validation : la cible n'existe pas dans ce monde de test, d'où 404 et non 400
+    expect(res.statusCode).toBe(404)
+  })
   it('les messages privés (chiffrés) ne se signalent pas ici', async () => {
     const res = await report(U.other, { target_type: 'dm_message', target_id: POST_ID, category: 'harassment' })
     expect(res.statusCode).toBe(400)
