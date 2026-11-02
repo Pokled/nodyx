@@ -240,6 +240,7 @@
 .adm-page .adm-pill--admin { color: var(--nx-bad); }
 .adm-page .adm-pill--moderator { color: var(--nx-info); }
 .adm-page .adm-pill--member { color: var(--nx-text-muted); }
+.adm-page .adm-pill--ok { color: var(--nx-ok); }
 /* Sélecteur habillé en pastille (le <select> natif reste : clavier, lecteurs d'écran) */
 .adm-page select.adm-pill {
 	appearance: none;
@@ -410,3 +411,115 @@ th[aria-sort='descending'] .adm-sort-arrow { opacity: 1; }
 	gap: 0.9rem;
 }
 .adm-dialog h2 { margin: 0; font-size: 1rem; font-weight: 650; }
+
+/* ── Formulaires (lot 1) ────────────────────────────────────────────────── */
+.adm-form { display: flex; flex-direction: column; gap: 0.9rem; }
+.adm-form-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+	gap: 0.75rem 1rem;
+}
+.adm-field { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+.adm-field > .adm-input, .adm-field > select.adm-input { width: 100%; }
+.adm-hint { margin: 0; font-size: 0.75rem; color: var(--nx-text-muted); }
+.adm-page select.adm-input {
+	color-scheme: var(--nx-scheme);
+	background-color: var(--nx-surface);
+	color: var(--nx-text);
+	border-color: var(--nx-border);
+	padding-right: 1.75rem;
+}
+/* Couleur : pastille native + valeur hexadécimale lisible à côté */
+.adm-color { display: flex; align-items: center; gap: 0.5rem; }
+.adm-color input[type='color'] {
+	width: 2.25rem;
+	height: 2.25rem;
+	padding: 0.2rem;
+	border-radius: 8px;
+	border: 1px solid var(--nx-border);
+	background: var(--nx-surface);
+	cursor: pointer;
+	flex: none;
+}
+.adm-color input[type='color']::-webkit-color-swatch-wrapper { padding: 0; }
+.adm-color input[type='color']::-webkit-color-swatch { border: none; border-radius: 5px; }
+.adm-color input[type='color']::-moz-color-swatch { border: none; border-radius: 5px; }
+.adm-color code { font-size: 0.75rem; }
+/* Cases à cocher en grille (permissions) */
+.adm-checks {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+	gap: 0.4rem 1rem;
+	margin: 0;
+	padding: 0;
+	border: none;
+}
+.adm-check {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	font-size: 0.8125rem;
+	color: var(--nx-text);
+	cursor: pointer;
+	line-height: 1.35;
+}
+.adm-check input { accent-color: var(--nx-header-accent); margin-top: 0.15rem; flex: none; }
+/* Panneau « créer » repliable */
+.adm-disclosure > summary {
+	list-style: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--nx-text);
+}
+.adm-disclosure > summary::-webkit-details-marker { display: none; }
+.adm-disclosure > summary svg { width: 1rem; height: 1rem; color: var(--nx-header-accent); transition: transform 0.15s; }
+.adm-disclosure[open] > summary svg { transform: rotate(45deg); }
+.adm-disclosure[open] > summary { margin-bottom: 1rem; }
+.adm-disclosure > summary:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 4px; border-radius: 4px; }
+
+/* Étiquette colorée (grade, tag) : fond = couleur choisie, texte calculé */
+.adm-swatch {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.15rem 0.6rem;
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	white-space: nowrap;
+	box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+
+/* Boutons de déplacement (monter / descendre) */
+.adm-move { display: inline-flex; gap: 0.15rem; }
+.adm-move .adm-btn--icon { width: 1.75rem; min-height: 1.75rem; }
+.adm-move svg { width: 0.9rem; height: 0.9rem; }
+
+/* Bouton-icône à bascule (épingler, verrouiller) : actif = accent sémantique */
+.adm-toggle[aria-pressed='true'] {
+	border-color: color-mix(in srgb, var(--tone, var(--nx-header-accent)) 40%, transparent);
+	background: color-mix(in srgb, var(--tone, var(--nx-header-accent)) 12%, transparent);
+	color: var(--tone, var(--nx-header-accent));
+}
+.adm-btn svg { width: 0.95rem; height: 0.95rem; flex: none; }
+
+/* Pagination */
+.adm-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	font-size: 0.8125rem;
+	color: var(--nx-text-muted);
+}
+.adm-pager-links { display: flex; gap: 0.5rem; }
+
+/* Arborescence (catégories) */
+.adm-tree-indent { display: inline-block; flex: none; }
+.adm-tree-branch { color: var(--nx-text-muted); opacity: 0.6; flex: none; }
+/* Rangée d'actions d'une ligne de tableau : jamais sur deux lignes */
+.adm-actions--row { flex-wrap: nowrap; justify-content: flex-end; }
