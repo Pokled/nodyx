@@ -16,6 +16,7 @@ import { db } from '../../config/database'
 import { isOctoGuardEnabled } from './index'
 import { getRules } from './cache'
 import { matchRule } from './matchers'
+import { recordActivity } from './matchers2'
 import { logOctoGuardAction } from './logger'
 import { applyMute } from './mutes'
 import { applyTempBan } from './bans'
@@ -61,6 +62,18 @@ export function computeExpiresAt(duration: Duration | null): Date | null {
     0
   if (ms <= 0) return null
   return new Date(Date.now() + ms)
+}
+
+// ─── Conditions (OctoGuard 2) ───────────────────────────────────────────────
+
+/** « Comptes récents seulement » : un âge inconnu ne déclenche jamais la règle. */
+export function conditionsMet(rule: AutomodRuleRow, user: PipelineUserCtx): boolean {
+  const maxAge = rule.conditions?.account_max_age_days
+  if (typeof maxAge === 'number') {
+    if (typeof user.accountAgeDays !== 'number') return false
+    if (user.accountAgeDays >= maxAge) return false
+  }
+  return true
 }
 
 // ─── Escalade ────────────────────────────────────────────────────────────────
@@ -268,13 +281,17 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
   const rules = getRules()
   if (rules.length === 0) return { blocked: false }
   const surface: Surface = input.surface ?? 'chat'
+  // Inondation : on note le message UNE fois, avant les règles (clé par endroit)
+  const floodKey = `${surface}:${input.userCtx.userId}`
+  recordActivity(floodKey, input.content)
 
   for (const rule of rules) {
     // Une règle d'avant OctoGuard 2 (sans scopes) ne surveillait que le chat
     if (!(rule.scopes?.length ? rule.scopes : ['chat']).includes(surface)) continue
     if (isImmunized(rule, input.userCtx)) continue
+    if (!conditionsMet(rule, input.userCtx)) continue
 
-    const match = matchRule(input.content, rule)
+    const match = matchRule(input.content, rule, { userId: floodKey })
     if (!match) continue
 
     const eventId = randomUUID()

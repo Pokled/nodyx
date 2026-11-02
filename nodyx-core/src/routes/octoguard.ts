@@ -24,6 +24,8 @@ import { db, redis } from '../config/database'
 import { requirePermission, requireAnyPermission } from '../middleware/permissions'
 import { getInstanceAccess, outranks, rankOf } from '../services/permissions'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
+import { runSandbox, ruleStats, ruleHits } from '../services/octoguard/sandbox'
+import { BASE_PRESETS, BASE_PROFILE_VERSION, startingLevel, exportProfile, previewImport, applyImport, ProfileZ, type Profile } from '../services/octoguard/profile'
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
 import * as NotificationModel from '../models/notification'
 import * as PostModel from '../models/post'
@@ -48,7 +50,7 @@ const Duration = z.object({
 
 const RuleParams = z.object({}).passthrough()
 
-const RuleType   = z.enum(['regex', 'caps', 'link_domain', 'mention_spam', 'link_spam'])
+const RuleType   = z.enum(['regex', 'caps', 'link_domain', 'mention_spam', 'link_spam', 'keywords', 'flood', 'zalgo'])
 const RuleAction = z.enum(['delete', 'warn', 'mute', 'ban_temp', 'notify_only', 'report_only'])
 
 const Escalation = z.object({
@@ -71,6 +73,8 @@ const CreateRuleBody = z.object({
   enabled:               z.boolean().optional(),
   // Où la règle s'applique (OctoGuard 2) : au moins un endroit
   scopes:                z.array(z.enum(['chat', 'forum', 'profile', 'poll', 'wiki'])).min(1).max(5).optional(),
+  // Restrictions : ne viser que les comptes récents (OctoGuard 2)
+  conditions:            z.object({ account_max_age_days: z.number().int().min(1).max(365).optional() }).optional(),
 })
 
 const UpdateRuleBody = CreateRuleBody.partial()
@@ -219,6 +223,99 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     })
   })
 
+  // ─── OctoGuard 2 : bac à sable, chiffres, profils (E4b) ───────────────────
+
+  // Tester un message contre toutes les règles, sans aucun effet de bord
+  app.post('/sandbox', {
+    preHandler: [rateLimit, validate({ body: z.object({
+      content:          z.string().min(1).max(5000),
+      surface:          z.enum(['chat', 'forum', 'profile', 'poll', 'wiki']).default('chat'),
+      account_age_days: z.number().min(0).max(36_500).optional(),
+      role:             z.enum(['member', 'moderator', 'admin', 'owner']).optional(),
+    }) })],
+  }, async (request, reply) => {
+    const b = request.body as { content: string; surface: 'chat'; account_age_days?: number; role?: string }
+    return reply.send(await runSandbox({ content: b.content, surface: b.surface, accountAgeDays: b.account_age_days, role: b.role }))
+  })
+
+  // Ce que chaque règle a fait, et aurait fait, sur N jours
+  app.get('/stats', async (request, reply) => {
+    const q = request.query as { days?: string }
+    return reply.send(await ruleStats(Number(q.days ?? 7)))
+  })
+
+  // Les derniers déclenchements d'une règle (« voir lesquels »)
+  app.get('/rules/:id/hits', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const q = request.query as { limit?: string }
+    return reply.send({ hits: await ruleHits(id, Number(q.limit ?? 20)) })
+  })
+
+  // Le catalogue du profil de base, avec ce qui est installé
+  app.get('/profile/base', async (_request, reply) => {
+    const { rows } = await db.query<{ preset_key: string; customized: boolean }>(
+      `SELECT preset_key, customized FROM octoguard_automod_rules WHERE preset_key IS NOT NULL`)
+    const installed = new Map(rows.map(r => [r.preset_key, r.customized]))
+    return reply.send({
+      version: BASE_PROFILE_VERSION,
+      presets: BASE_PRESETS.map(p => ({ ...p, installed: installed.has(p.key), customized: installed.get(p.key) ?? false })),
+    })
+  })
+
+  // Réinstaller un modèle supprimé (au cran de départ d'une instance existante, D12)
+  app.post('/profile/base/:key', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { key } = request.params as { key: string }
+    const preset = BASE_PRESETS.find(p => p.key === key)
+    if (!preset) return reply.code(404).send({ error: 'Unknown preset', code: 'NOT_FOUND' })
+    const lvl = startingLevel(preset, true)
+    const { rows } = await db.query(
+      `INSERT INTO octoguard_automod_rules
+         (name, type, params, action, action_duration, escalation, immunized_role_types,
+          dry_run, enabled, scopes, conditions, preset_key, customized)
+       VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb, ARRAY['owner','admin','moderator'],
+               $7, $8, $9::text[], $10::jsonb, $11, false)
+       ON CONFLICT (preset_key) WHERE preset_key IS NOT NULL DO NOTHING
+       RETURNING *`,
+      [preset.name[(process.env.NODYX_COMMUNITY_LANGUAGE ?? 'fr').startsWith('fr') ? 'fr' : 'en'], preset.type,
+       JSON.stringify(preset.params), lvl.action, JSON.stringify(preset.action_duration ?? null),
+       JSON.stringify(preset.escalation ?? null), lvl.dry_run, preset.enabled ?? true, preset.scopes,
+       JSON.stringify(preset.conditions ?? {}), preset.key])
+    if (!rows[0]) return reply.code(409).send({ error: 'Already installed', code: 'ALREADY_INSTALLED' })
+    await reloadRules()
+    await logAdminAction(request.user!.userId, 'octoguard.rule_created', 'rule', rows[0].id, rows[0].name, { preset: key })
+    return reply.code(201).send({ rule: rows[0] })
+  })
+
+  // Exporter les règles en profil partageable
+  app.get('/profile/export', async (request, reply) => {
+    const q = request.query as { name?: string }
+    const profile = await exportProfile((q.name ?? process.env.NODYX_COMMUNITY_NAME ?? 'Nodyx').slice(0, 100))
+    return reply
+      .header('Content-Disposition', 'attachment; filename="octoguard-profile.json"')
+      .send(profile)
+  })
+
+  // Ce qu'un import changerait (aucun effet de bord)
+  app.post('/profile/preview', {
+    preHandler: [rateLimit, validate({ body: z.object({ profile: ProfileZ }) })],
+  }, async (request, reply) => {
+    const { profile } = request.body as { profile: Profile }
+    return reply.send({ preview: await previewImport(profile) })
+  })
+
+  // Importer un profil : ajoute et met à jour, ne supprime jamais rien
+  app.post('/profile/import', {
+    preHandler: [rateLimit, validate({ body: z.object({ profile: ProfileZ }) })],
+  }, async (request, reply) => {
+    const { profile } = request.body as { profile: Profile }
+    const result = await applyImport(profile)
+    await reloadRules()
+    await logAdminAction(request.user!.userId, 'octoguard.profile_imported', null, null, profile.name, {
+      added: result.add.length, updated: result.update.length, refused: result.problems.length,
+    })
+    return reply.send({ result })
+  })
+
   // ─── Rules CRUD (Module 1 Auto-mod) ───────────────────────────────────────
 
   app.get('/rules', async (_request, reply) => {
@@ -256,12 +353,12 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const { rows } = await db.query(
       `INSERT INTO octoguard_automod_rules
          (name, type, params, action, action_duration, escalation,
-          immunized_role_types, immunized_grade_ids, dry_run, enabled, scopes)
+          immunized_role_types, immunized_grade_ids, dry_run, enabled, scopes, conditions)
        VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb,
                COALESCE($7, ARRAY['owner','admin','moderator']),
                COALESCE($8, '{}'::uuid[]),
                COALESCE($9, false), COALESCE($10, true),
-               COALESCE($11::text[], '{chat}'))
+               COALESCE($11::text[], '{chat}'), COALESCE($12::jsonb, '{}'::jsonb))
        RETURNING *`,
       [
         body.name, body.type, JSON.stringify(body.params), body.action,
@@ -272,6 +369,7 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
         body.dry_run ?? null,
         body.enabled ?? null,
         body.scopes ?? null,
+        body.conditions ? JSON.stringify(body.conditions) : null,
       ]
     )
 
@@ -331,10 +429,11 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     if (body.dry_run !== undefined)         { fields.push(`dry_run = $${i++}`);                    values.push(body.dry_run) }
     if (body.enabled !== undefined)         { fields.push(`enabled = $${i++}`);                    values.push(body.enabled) }
     if (body.scopes !== undefined)          { fields.push(`scopes = $${i++}::text[]`);            values.push(body.scopes) }
+    if (body.conditions !== undefined)      { fields.push(`conditions = $${i++}::jsonb`);         values.push(JSON.stringify(body.conditions)) }
     // Une règle issue d'un modèle du profil de base, modifiée sur le fond par
     // l'admin, devient « personnalisée » : les mises à jour du profil n'y
     // touchent plus. L'interrupteur seul ne compte pas comme une modification.
-    const substantive = ['type', 'params', 'action', 'action_duration', 'escalation', 'immunized_role_types', 'immunized_grade_ids', 'dry_run', 'scopes']
+    const substantive = ['type', 'params', 'action', 'action_duration', 'escalation', 'immunized_role_types', 'immunized_grade_ids', 'dry_run', 'scopes', 'conditions']
       .some(k => (body as Record<string, unknown>)[k] !== undefined)
     if (substantive) fields.push(`customized = (preset_key IS NOT NULL)`)
     fields.push(`updated_at = NOW()`)

@@ -14,6 +14,9 @@ export type AutomodRuleType =
   | 'link_domain'
   | 'mention_spam'
   | 'link_spam'
+  | 'keywords'   // liste de mots interdits, sans expression régulière (OctoGuard 2)
+  | 'flood'      // même message répété, ou rafale (OctoGuard 2)
+  | 'zalgo'      // texte corrompu (OctoGuard 2)
 
 export type AutomodAction =
   | 'delete'
@@ -50,6 +53,22 @@ export interface AutomodRuleParams {
   max_mentions?: number
   // link_spam
   max_links?: number
+  // keywords : « mot » (mot entier), « *mot* » (n'importe où), « mot* » (début)
+  words?:      string[]
+  exceptions?: string[]
+  // flood
+  max_repeats?:     number   // même message N fois…
+  repeat_window_s?: number   // …en X secondes
+  max_messages?:    number   // ou plus de N messages…
+  burst_window_s?:  number   // …en X secondes
+  // zalgo
+  max_combining?:   number   // caractères combinés tolérés par lettre
+}
+
+/** Restrictions d'une règle (OctoGuard 2, migration 130). */
+export interface RuleConditions {
+  /** La règle ne vise que les comptes créés il y a moins de N jours. */
+  account_max_age_days?: number
 }
 
 export interface Escalation {
@@ -73,6 +92,8 @@ export interface AutomodRuleRow {
   enabled:               boolean
   /** Où la règle s'applique (migration 129). */
   scopes:                Surface[]
+  /** Restrictions (migration 130) : comptes récents seulement, etc. */
+  conditions?:           RuleConditions
   /** Modèle du profil de base d'où vient la règle, null si écrite à la main. */
   preset_key:            string | null
   /** Règle issue d'un modèle mais modifiée par l'admin : les mises à jour du profil ne la touchent plus. */
@@ -199,6 +220,8 @@ export interface PipelineUserCtx {
   userId:    string
   role:      'owner' | 'admin' | 'moderator' | 'member' | string
   gradeIds:  string[]
+  /** Âge du compte en jours (conditions « comptes récents »). Inconnu = règle ignorée. */
+  accountAgeDays?: number
 }
 
 /**

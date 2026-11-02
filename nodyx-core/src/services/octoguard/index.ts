@@ -40,6 +40,7 @@ import { reloadRules, getRules } from './cache'
 import { hasRE2 } from './matchers'
 import { startMutePurgeWorker } from './mutes'
 import { startBanExpiryWorker } from './bans'
+import { ensureBaseProfile } from './profile'
 import { ensureOctoGuardBotUser } from './welcome'
 import { migrateEnvPatternsToDB } from './envMigration'
 import { startWebhookWorker } from './webhook'
@@ -69,6 +70,11 @@ export async function initOctoGuard(): Promise<void> {
   console.log(hasRE2()
     ? '[octoguard] regex DoS protection: re2 native engine active'
     : '[octoguard] re2 NOT installed: regex rules cannot be enabled (see SPECS/NODYX_OCTOGUARD_V2_CDC.md)')
+
+  // Profil de base (CDC OctoGuard 2, E4b) : semé une fois, même OctoGuard
+  // éteint, pour que l'admin trouve ses règles prêtes dans l'interface.
+  const base = await ensureBaseProfile()
+  if (base.seeded || base.updated) console.log(`[octoguard] base profile: ${base.seeded} rule(s) seeded, ${base.updated} updated`)
 
   if (!isOctoGuardEnabled()) {
     console.log('[octoguard] disabled (OCTOGUARD_ENABLED!=true)')

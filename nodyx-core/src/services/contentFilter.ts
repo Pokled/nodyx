@@ -81,12 +81,12 @@ const ADMIN_PATTERNS: readonly RegExp[] = buildAdminPatterns()
  * @returns { ok: true } si le contenu est propre
  *          { ok: false, reason } si un symbole interdit est détecté
  */
-export function checkContent(text: string): ContentCheckResult {
+export function checkContent(text: string, opts: { silent?: boolean } = {}): ContentCheckResult {
   // 1 — Scan code-point par code-point
   for (const char of text) {
     const cp = char.codePointAt(0) ?? 0
     if (BLOCKED_CODEPOINTS.has(cp)) {
-      journal('hate_symbol', text)
+      if (!opts.silent) journal('hate_symbol', text)
       return {
         ok:     false,
         reason: 'Contenu refusé : symbole haineux ou interdit détecté',
@@ -98,7 +98,7 @@ export function checkContent(text: string): ContentCheckResult {
   // 2 — Patterns personnalisés de l'admin
   for (const pattern of ADMIN_PATTERNS) {
     if (pattern.test(text)) {
-      journal('admin_pattern', text)
+      if (!opts.silent) journal('admin_pattern', text)
       return {
         ok:     false,
         reason: 'Contenu refusé : correspond à un filtre de l\'administrateur',
