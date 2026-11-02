@@ -140,7 +140,13 @@ export default async function adminRoutes(app: FastifyInstance) {
     preHandler: [rateLimit, requireStaff],
   }, async (request, reply) => {
     const access = request.access!
-    return reply.send({ role: access.role, permissions: access.permissions })
+    // Dossiers en attente dans la file de signalements : le compteur du menu
+    let open_reports: number | null = null
+    if (access.permissions.includes('moderate_members') || access.permissions.includes('manage_octoguard')) {
+      const { rows } = await db.query<{ n: number }>(`SELECT COUNT(DISTINCT (target_type, target_id))::int AS n FROM reports WHERE status = 'open'`)
+      open_reports = rows[0]?.n ?? 0
+    }
+    return reply.send({ role: access.role, permissions: access.permissions, open_reports })
   })
 
   // ── Dashboard stats ────────────────────────────────────────────────────────
