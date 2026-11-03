@@ -31,8 +31,14 @@
 	// État local, remis à zéro quand la version enregistrée change.
 	let lists = $state<WordLists>({ exact: [], prefix: [], contains: [] })
 	let allow = $state<string[]>([])
+	// Ne remettre à zéro que si la version ENREGISTRÉE a vraiment changé : basculer
+	// l'interrupteur ou le cran de la carte ne doit pas effacer une saisie en cours.
+	let lastSaved = ''
 	$effect(() => {
 		const w = words, e = exceptions
+		const key = JSON.stringify([w, e])
+		if (key === lastSaved) return
+		lastSaved = key
 		untrack(() => { lists = splitWords(w); allow = [...e] })
 	})
 	const dirty = $derived(
@@ -79,8 +85,8 @@
 	}
 
 	// Essai en direct, et mots innocents qu'une case large prendrait aussi.
-	let tryText = $state('')
-	$effect(() => { if (!tryText) untrack(() => { tryText = tFn('og2.words_try_default') }) })
+	// Phrase d'exemple posée une seule fois : vider le champ doit le laisser vide.
+	let tryText = $state(untrack(() => $t('og2.words_try_default')))
 	const segments = $derived(scan(tryText, joinWords(lists), allow))
 	const caught = $derived(segments.filter((s) => s.state === 'hit'))
 	const allowedSeen = $derived(segments.filter((s) => s.state === 'allowed'))

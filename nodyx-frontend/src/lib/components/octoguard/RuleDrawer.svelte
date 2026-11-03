@@ -37,7 +37,9 @@
 		try { hits = (await og<{ hits: Hit[] }>(token, `/rules/${start.id}/hits?limit=10`)).hits }
 		catch { hits = [] }
 	})
+	let closeBtn = $state<HTMLButtonElement | null>(null)
 	onMount(() => {
+		closeBtn?.focus()
 		const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onclose() }
 		window.addEventListener('keydown', onKey)
 		return () => window.removeEventListener('keydown', onKey)
@@ -60,8 +62,18 @@
 		error = null
 		const p = { ...params }
 		if (start.type === 'link_domain') p.domains = domainsText.split(/[\s,]+/).map((d) => d.trim().toLowerCase()).filter(Boolean)
-		const body: Record<string, unknown> = { ...patchForLevel(start, level), params: p, scopes, immunized_role_types: immune }
-		if (categoryOf(start) === 'newcomers' && maxAge > 0) body.conditions = { ...(start.conditions ?? {}), account_max_age_days: Math.round(maxAge) }
+		// Seulement ce qui a changé : le serveur marque « personnalisée » toute
+		// règle du profil de base modifiée sur le fond, et elle ne reçoit alors
+		// plus les mises à jour du profil. Ouvrir puis enregistrer sans rien
+		// toucher ne doit RIEN changer.
+		const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+		const body: Record<string, unknown> = {}
+		if (level !== levelOf(start)) Object.assign(body, patchForLevel(start, level))
+		if (!same(p, $state.snapshot(start.params ?? {}))) body.params = p
+		if (!same([...scopes].sort(), [...(start.scopes?.length ? start.scopes : ['chat'])].sort())) body.scopes = scopes
+		if (!same([...immune].sort(), [...(start.immunized_role_types ?? [])].sort())) body.immunized_role_types = immune
+		if (categoryOf(start) === 'newcomers' && maxAge > 0 && Math.round(maxAge) !== start.conditions?.account_max_age_days) body.conditions = { ...(start.conditions ?? {}), account_max_age_days: Math.round(maxAge) }
+		if (Object.keys(body).length === 0) { busy = false; onclose(); return }
 		try {
 			const res = await og<{ rule: Rule }>(token, `/rules/${start.id}`, 'PUT', body)
 			onchange(res.rule)
@@ -95,7 +107,7 @@
 				<div id="og-drawer-title" style="font-weight:600;font-size:1rem">{start.name}</div>
 				<div class="og-help">{describe(start, tFn)}</div>
 			</div>
-			<button type="button" class="adm-btn adm-btn--icon" onclick={onclose} aria-label={tFn('og2.close')}><Icon d="M6 6l12 12 M18 6L6 18" /></button>
+			<button type="button" class="adm-btn adm-btn--icon" bind:this={closeBtn} onclick={onclose} aria-label={tFn('og2.close')}><Icon d="M6 6l12 12 M18 6L6 18" /></button>
 		</div>
 
 		<div class="og-drawer-body">
