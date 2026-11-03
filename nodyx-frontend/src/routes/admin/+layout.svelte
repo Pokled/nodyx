@@ -5,6 +5,7 @@
 	import { t } from '$lib/i18n'
 	import { isAdminThemed } from '$lib/adminTheme'
 	import { mayOpenAdmin } from '$lib/adminAccess'
+	import { OG_NAV, OG_ICON } from '$lib/octoguard/nav'
 	import './admin-kit.css'
 
 	const tFn = $derived($t)
@@ -96,6 +97,23 @@
 			.filter((g) => g.items.length > 0)
 	})
 
+	// OctoGuard a son propre menu : il REMPLACE celui de l'administration (même
+	// colonne, même largeur) au lieu de s'y ajouter. « Administration » en tête
+	// le fait revenir sans quitter la page en cours.
+	const inOctoguard = $derived(page.url.pathname.startsWith('/admin/octoguard'))
+	let adminPeek = $state(false)
+	$effect(() => {
+		void page.url.pathname
+		adminPeek = false
+	})
+	const ogMenu = $derived(inOctoguard && !adminPeek)
+	const visibleOgNav = $derived.by(() => {
+		const access = (data as any).access
+		return OG_NAV
+			.map((g) => ({ ...g, items: g.items.filter((i) => mayOpenAdmin(i.href, access)) }))
+			.filter((g) => g.items.length > 0)
+	})
+
 	// Dossiers de signalement en attente (GET /admin/me) : compteur du menu
 	const openReports = $derived(((data as any).access?.open_reports as number | null) ?? 0)
 
@@ -109,7 +127,7 @@
 	const themed = $derived(isAdminThemed(page.url.pathname))
 	// Entrée de navigation de la page courante : titre de la barre mobile.
 	const current = $derived(
-		visibleNav.flatMap((g) => g.items)
+		(inOctoguard ? visibleOgNav : visibleNav).flatMap((g) => g.items as Array<{ href: string; labelKey: string; exact?: boolean }>)
 			.filter((i) => isActive(i.href, i.exact))
 			.sort((a, b) => b.href.length - a.href.length)[0]
 	)
@@ -145,52 +163,92 @@
 	               max-lg:transition-transform max-lg:duration-200
 	               {menuOuvert ? 'max-lg:translate-x-0' : 'max-lg:-translate-x-full'}">
 
-		<div class="adm-side-head">
-			<div class="adm-side-logo" aria-hidden="true">
-				<svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-					<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/>
+		{#if ogMenu}
+			<!-- OctoGuard : son menu prend la place de celui de l'administration. -->
+			<div class="adm-side-head">
+				<div class="adm-side-logo" aria-hidden="true">
+					<svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d={OG_ICON}/></svg>
+				</div>
+				<div class="min-w-0">
+					<div class="adm-side-title">OctoGuard</div>
+					<div class="adm-side-sub">{tFn('og2.side_sub')}</div>
+				</div>
+			</div>
+			<button type="button" class="adm-side-back" onclick={() => (adminPeek = true)}>
+				<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+					<path d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
 				</svg>
-			</div>
-			<div class="min-w-0">
-				<div class="adm-side-title">{tFn('anav.admin_title')}</div>
-				<div class="adm-side-sub">{data.communityName ?? 'Nodyx'}</div>
-			</div>
-		</div>
-
-		<!-- Retour au forum : en tête de sidebar, pas en pied. Une sidebar longue
-		     (beaucoup de sections) pousse le pied de page hors champ, il faut
-		     dérouler toute la page pour l'atteindre (retour Jonathan, 2026-08-08). -->
-		<a href="/" class="adm-side-back">
-			<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-				<path d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-			</svg>
-			<span>{tFn('anav.back_to_forum')}</span>
-		</a>
-
-		<nav class="flex-1 overflow-y-auto px-2.5 pb-3" aria-label={tFn('anav.admin_title')}>
-			{#each visibleNav as group}
-				<p class="adm-side-group">{tFn(group.sectionKey)}</p>
-				{#each group.items as item}
-					{@const active = isActive(item.href, item.exact) && current?.href === item.href}
-					<a
-						href={item.href}
-						class="adm-side-link {item.soon ? 'opacity-60 pointer-events-none' : ''}"
-						aria-current={active ? 'page' : undefined}
-					>
-						<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-							<path d={item.iconPath}/>
-						</svg>
-						<span class="flex-1 truncate">{tFn(item.labelKey)}</span>
-						{#if item.href === '/admin/reports' && openReports > 0}
-							<span class="adm-side-badge" aria-label={tFn('areports.badge_label', { n: openReports })}>{openReports}</span>
-						{/if}
-						{#if item.soon}
-							<span class="adm-side-soon">{tFn('anav.soon')}</span>
-						{/if}
-					</a>
+				<span>{tFn('anav.admin_title')}</span>
+			</button>
+			<nav class="flex-1 overflow-y-auto px-2.5 pb-3" aria-label={tFn('og2.nav_aria')}>
+				{#each visibleOgNav as group}
+					{#if group.sectionKey}<p class="adm-side-group">{tFn(group.sectionKey)}</p>{:else}<div class="h-1"></div>{/if}
+					{#each group.items as item}
+						{@const active = isActive(item.href, item.exact) && current?.href === item.href}
+						<a href={item.href} class="adm-side-link" aria-current={active ? 'page' : undefined}>
+							<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+								<path d={item.iconPath}/>
+							</svg>
+							<span class="adm-side-label">{tFn(item.labelKey)}</span>
+							{#if item.reports && openReports > 0}
+								<span class="adm-side-badge" aria-label={tFn('areports.badge_label', { n: openReports })}>{openReports}</span>
+							{/if}
+						</a>
+					{/each}
 				{/each}
-			{/each}
-		</nav>
+			</nav>
+		{:else}
+		<div class="adm-side-head">
+				<div class="adm-side-logo" aria-hidden="true">
+					<svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+						<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/>
+					</svg>
+				</div>
+				<div class="min-w-0">
+					<div class="adm-side-title">{tFn('anav.admin_title')}</div>
+					<div class="adm-side-sub">{data.communityName ?? 'Nodyx'}</div>
+				</div>
+			</div>
+	
+			<!-- Retour au forum : en tête de sidebar, pas en pied. Une sidebar longue
+			     (beaucoup de sections) pousse le pied de page hors champ, il faut
+			     dérouler toute la page pour l'atteindre (retour Jonathan, 2026-08-08). -->
+			<a href="/" class="adm-side-back">
+				<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+					<path d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+				</svg>
+				<span>{tFn('anav.back_to_forum')}</span>
+			</a>
+	
+			<nav class="flex-1 overflow-y-auto px-2.5 pb-3" aria-label={tFn('anav.admin_title')}>
+				{#each visibleNav as group}
+					<p class="adm-side-group">{tFn(group.sectionKey)}</p>
+					{#each group.items as item}
+						{@const active = isActive(item.href, item.exact) && current?.href === item.href}
+						<a
+							href={item.href}
+							onclick={() => { if (item.href.startsWith('/admin/octoguard')) adminPeek = false }}
+							class="adm-side-link {item.soon ? 'opacity-60 pointer-events-none' : ''}"
+							aria-current={active ? 'page' : undefined}
+						>
+							<svg fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+								<path d={item.iconPath}/>
+							</svg>
+							<span class="adm-side-label">{tFn(item.labelKey)}</span>
+							{#if item.href === '/admin/octoguard'}
+								<svg class="adm-side-chev" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+							{/if}
+							{#if item.href === '/admin/reports' && openReports > 0}
+								<span class="adm-side-badge" aria-label={tFn('areports.badge_label', { n: openReports })}>{openReports}</span>
+							{/if}
+							{#if item.soon}
+								<span class="adm-side-soon">{tFn('anav.soon')}</span>
+							{/if}
+						</a>
+					{/each}
+				{/each}
+			</nav>
+		{/if}
 
 		<div class="adm-side-foot">
 			<NodyxVersionBadge
@@ -272,6 +330,10 @@
 		transition: background-color 0.12s, color 0.12s;
 	}
 	.adm-side-link svg { width: 1rem; height: 1rem; flex: none; }
+	/* Une langue longue passe sur deux lignes plutôt que d'être coupée (test +40 %). */
+	.adm-side-label { flex: 1; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+	.adm-side-link svg.adm-side-chev { width: 0.85rem; height: 0.85rem; color: var(--nx-text-muted); opacity: .7; }
+	button.adm-side-back { width: calc(100% - 1.2rem); text-align: left; background: transparent; cursor: pointer; font: inherit; }
 	.adm-side-link:hover { color: var(--nx-text); background: color-mix(in srgb, var(--nx-text) 5%, transparent); }
 	.adm-side-link[aria-current='page'] {
 		color: var(--nx-text); font-weight: 550;
