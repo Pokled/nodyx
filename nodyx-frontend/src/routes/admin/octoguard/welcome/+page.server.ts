@@ -1,34 +1,20 @@
-import type { PageServerLoad, Actions } from './$types'
+import type { PageServerLoad } from './$types'
 import { apiFetch } from '$lib/api'
-import { fail } from '@sveltejs/kit'
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const token = cookies.get('token')
-	const headers: Record<string, string> = {}
-	if (token) headers.Authorization = `Bearer ${token}`
-	const res = await apiFetch(fetch, '/admin/octoguard/welcome', { headers })
-	const data = res.ok ? await res.json() : { welcome: null }
-	return { welcome: data.welcome }
-}
-
-export const actions: Actions = {
-	save: async ({ fetch, request, cookies }) => {
-		const token = cookies.get('token')!
-		const form = await request.formData()
-		const body = {
-			channel_id:     (form.get('channel_id') as string)?.trim() || null,
-			public_message: (form.get('public_message') as string) || null,
-			dm_message:     null,  // DM système : reporté à spec 019
-			dm_enabled:     false,
-			auto_grade_id:  (form.get('auto_grade_id') as string)?.trim() || null,
-			enabled:        form.get('enabled') === '1',
-		}
-		const res = await apiFetch(fetch, '/admin/octoguard/welcome', {
-			method:  'PUT',
-			headers: { Authorization: `Bearer ${token}` },
-			body:    JSON.stringify(body),
-		})
-		if (!res.ok) return fail(res.status, { error: 'Erreur de sauvegarde' })
-		return { ok: true }
-	},
+	const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+	const get = async (path: string, auth = true) => {
+		try { const r = await apiFetch(fetch, path, auth ? { headers } : {}); return r.ok ? await r.json() : null } catch { return null }
+	}
+	const [w, ch, info] = await Promise.all([get('/admin/octoguard/welcome'), get('/chat/channels'), get('/instance/info', false)])
+	const slug = info?.community?.slug ?? info?.slug ?? null
+	const gr = slug ? await get(`/communities/${encodeURIComponent(slug)}/grades`, false) : null
+	return {
+		welcome: w?.welcome ?? null,
+		channels: (ch?.channels ?? []).filter((c: any) => (c.type ?? 'text') === 'text').map((c: any) => ({ id: c.id, name: c.name })),
+		grades: (gr?.grades ?? []).map((g: any) => ({ id: g.id, name: g.name })),
+		communityName: info?.community?.name ?? info?.name ?? 'Nodyx',
+		failed: w === null,
+	}
 }

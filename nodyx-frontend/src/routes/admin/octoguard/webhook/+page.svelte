@@ -1,64 +1,80 @@
 <script lang="ts">
-	import { enhance } from '$app/forms'
+	// Le webhook : chaque action d'OctoGuard envoyée à une adresse de votre choix,
+	// signée avec un secret. Le secret ne revient jamais du serveur.
+	import { page } from '$app/state'
+	import { untrack } from 'svelte'
 	import { t } from '$lib/i18n'
-	import type { PageData, ActionData } from './$types'
-	let { data, form }: { data: PageData; form: ActionData } = $props()
-	const tFn = $derived($t)
+	import Icon from '$lib/components/octoguard/Icon.svelte'
+	import { og } from '$lib/octoguard/api'
+	import type { PageData } from './$types'
 
-	let url = $state(data.webhook?.url ?? '')
-	let enabled = $state(data.webhook?.enabled ?? false)
+	let { data }: { data: PageData } = $props()
+	const tFn = $derived($t)
+	const token = $derived(((page.data as any).token as string | null) ?? null)
+
+	const w = untrack(() => (data.webhook ?? {}) as Record<string, any>)
+	let enabled = $state<boolean>(!!w.enabled)
+	let url = $state<string>(w.url ?? '')
+	let secret = $state('')
+	let hasSecret = $state<boolean>(!!w.has_secret)
+	let busy = $state(false)
+	let status = $state<{ ok: boolean; text: string } | null>(null)
+
+	async function save() {
+		const u = url.trim()
+		if (u && !/^https?:\/\/[^\s]+$/i.test(u)) { status = { ok: false, text: tFn('og2.wh_err_url') }; return }
+		if (enabled && !u) { status = { ok: false, text: tFn('og2.wh_need_url') }; return }
+		if (secret && (secret.length < 8 || secret.length > 256)) { status = { ok: false, text: tFn('og2.wh_err_secret') }; return }
+		busy = true; status = null
+		try {
+			await og(token, '/webhook', 'PUT', { enabled, url: u || null, ...(secret ? { secret } : {}) })
+			if (secret) hasSecret = true
+			secret = ''
+			status = { ok: true, text: tFn('og2.saved') }
+		} catch { status = { ok: false, text: tFn('og2.err_save') } }
+		finally { busy = false }
+	}
 </script>
 
-<svelte:head><title>{tFn('octoguard.webhook_title')} · OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('og2.nav_webhook')} · OctoGuard</title></svelte:head>
 
-<header class="og-h">
-	<h2>{tFn('octoguard.webhook_h2')}</h2>
-	<p>{tFn('octoguard.webhook_desc')}</p>
-</header>
+<div class="adm-page og-page">
+	<header class="adm-head">
+		<div class="og-head-l">
+			<span class="og-mark"><Icon d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1 M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" /></span>
+			<div>
+				<h1 class="adm-title">{tFn('og2.nav_webhook')}</h1>
+				<p class="adm-desc">{tFn('og2.wh_desc')}</p>
+			</div>
+		</div>
+		<label class="og-switch"><input type="checkbox" bind:checked={enabled} /><span class="og-track"></span>{tFn(enabled ? 'og2.wh_on' : 'og2.wh_off')}</label>
+	</header>
 
-{#if form?.error}<div class="og-err">⚠ {form.error}</div>{/if}
-{#if form?.ok}<div class="og-ok">✓ {tFn('octoguard.saved')}</div>{/if}
+	{#if data.failed}<p class="og-error" role="alert">{tFn('og2.err_load')}</p>{/if}
 
-<form method="POST" action="?/save" use:enhance class="og-form">
-	<label class="og-checkbox">
-		<input type="checkbox" name="enabled" bind:checked={enabled} value="1" />
-		<span>{tFn('octoguard.webhook_enable')}</span>
-	</label>
-
-	<label>
-		<span>{tFn('octoguard.webhook_url_label')}</span>
-		<input name="url" type="url" bind:value={url} placeholder={tFn('octoguard.webhook_url_ph')} />
-	</label>
-
-	<label>
-		<span>{tFn('octoguard.webhook_secret_label')}</span>
-		<input name="secret" type="password" autocomplete="new-password" minlength="8" maxlength="256"
-			placeholder={data.webhook?.has_secret ? tFn('octoguard.webhook_secret_set_ph') : tFn('octoguard.webhook_secret_min_ph')} />
-	</label>
-
-	<div class="og-info">
-		<strong>{tFn('octoguard.webhook_info_format_label')}</strong> : <code>{`{ action, event_id, target_type, target_id, target_label, metadata, at }`}</code><br/>
-		<strong>{tFn('octoguard.webhook_info_header_label')}</strong> : <code>X-Octoguard-Signature: sha256=hex</code> {tFn('octoguard.webhook_info_header_note')}<br/>
-		<strong>{tFn('octoguard.webhook_info_perf_label')}</strong> : {tFn('octoguard.webhook_info_perf_note')}
+	<div class="og-grid2">
+		<section class="adm-card" style="display:flex;flex-direction:column;gap:1rem">
+			<div class="og-field">
+				<label class="og-lbl" for="wh-url">{tFn('og2.wh_url')}</label>
+				<input id="wh-url" class="adm-input" type="url" bind:value={url} placeholder={tFn('og2.wh_url_ph')} />
+			</div>
+			<div class="og-field">
+				<label class="og-lbl" for="wh-secret">{tFn('og2.wh_secret')}</label>
+				<input id="wh-secret" class="adm-input" type="password" autocomplete="new-password" maxlength="256" bind:value={secret} placeholder={tFn(hasSecret ? 'og2.wh_secret_set' : 'og2.wh_secret_ph')} />
+				<p class="og-help">{tFn('og2.wh_secret_help')}</p>
+			</div>
+			<div class="adm-actions" style="justify-content:flex-end">
+				{#if status}<span class={status.ok ? 'og-okmsg' : 'og-error'} role="status">{status.text}</span>{/if}
+				<button type="button" class="adm-btn adm-btn--primary" disabled={busy} onclick={save}>{tFn('og2.save')}</button>
+			</div>
+		</section>
+		<section class="adm-card" aria-labelledby="wh-how">
+			<h2 id="wh-how" class="adm-title" style="font-size:0.9375rem">{tFn('og2.wh_how')}</h2>
+			<div class="og-rows" style="margin-top:0.75rem">
+				<div class="og-row"><span class="og-ic og-k-acc"><Icon d="M4 4h16v16H4z M8 9h8 M8 13h5" /></span><div class="og-row-body"><b style="font-weight:600">{tFn('og2.wh_format')}</b><div class="og-meta"><code>{'{ action, event_id, target_type, target_id, target_label, metadata, at }'}</code></div></div></div>
+				<div class="og-row"><span class="og-ic og-k-acc"><Icon d="M5 11h14v10H5z M8 11V7a4 4 0 018 0v4" /></span><div class="og-row-body"><b style="font-weight:600">{tFn('og2.wh_sign')}</b><div class="og-meta"><code>X-Octoguard-Signature: sha256=…</code> · {tFn('og2.wh_sign_help')}</div></div></div>
+				<div class="og-row"><span class="og-ic og-k-acc"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 7v5l3 2" /></span><div class="og-row-body"><b style="font-weight:600">{tFn('og2.wh_perf')}</b><div class="og-meta">{tFn('og2.wh_perf_help')}</div></div></div>
+			</div>
+		</section>
 	</div>
-
-	<div class="og-actions">
-		<button type="submit" class="og-btn-primary">{tFn('octoguard.save')}</button>
-	</div>
-</form>
-
-<style>
-	.og-h h2 { font-size: 16px; font-weight: 600; color: #f1f5f9; margin: 0; }
-	.og-h p { font-size: 12px; color: #94a3b8; margin: 4px 0 16px; }
-	.og-err, .og-ok { padding: 10px 14px; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
-	.og-err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
-	.og-ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
-	.og-form { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; background: rgba(255,255,255,0.01); }
-	label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #94a3b8; }
-	input { padding: 6px 8px; font-size: 12px; background: #1f2937; border: 1px solid #374151; border-radius: 3px; color: #e2e8f0; font-family: ui-monospace, monospace; }
-	.og-checkbox { flex-direction: row; align-items: center; color: #cbd5e1; font-size: 12px; }
-	.og-info { font-size: 11px; color: #c7d2fe; background: rgb(var(--nx-accent-rgb) / 0.05); border: 1px solid rgb(var(--nx-accent-rgb) / 0.2); padding: 10px 12px; border-radius: 3px; line-height: 1.6; }
-	.og-info code { background: rgba(255,255,255,0.05); padding: 1px 4px; border-radius: 2px; font-size: 10px; font-family: ui-monospace, monospace; }
-	.og-actions { display: flex; justify-content: flex-end; }
-	.og-btn-primary { padding: 6px 12px; font-size: 12px; color: #fff; background: var(--nx-accent); border: none; border-radius: 3px; cursor: pointer; }
-</style>
+</div>
