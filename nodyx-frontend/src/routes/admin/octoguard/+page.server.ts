@@ -3,28 +3,24 @@ import { apiFetch } from '$lib/api'
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const token = cookies.get('token')
-	const headers: Record<string, string> = {}
-	if (token) headers.Authorization = `Bearer ${token}`
-
-	async function safeGet(path: string) {
+	const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+	const get = async (path: string) => {
 		try {
 			const res = await apiFetch(fetch, path, { headers })
-			if (!res.ok) return null
-			return await res.json()
+			return res.ok ? await res.json() : null
 		} catch { return null }
 	}
-
-	const [settings, rulesData, mutesData, reportsData] = await Promise.all([
-		safeGet('/admin/octoguard/settings'),
-		safeGet('/admin/octoguard/rules'),
-		safeGet('/admin/octoguard/mutes?active=true'),
-		safeGet('/admin/octoguard/reports?status=open'),
+	const [settings, rules, stats, logs] = await Promise.all([
+		get('/admin/octoguard/settings'),
+		get('/admin/octoguard/rules'),
+		get('/admin/octoguard/stats?days=7'),
+		get('/admin/octoguard/logs?limit=6'),
 	])
-
 	return {
 		settings,
-		rules:        rulesData?.rules ?? [],
-		activeMutes:  mutesData?.mutes ?? [],
-		openReports:  reportsData?.reports ?? [],
+		rules: rules?.rules ?? [],
+		stats,
+		logs: logs?.logs ?? [],
+		failed: rules === null,
 	}
 }

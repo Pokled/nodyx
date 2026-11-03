@@ -1,0 +1,11 @@
+{
+	"_why": "Lots de départ, par langue de l'instance. L'admin les relit dans les cases avant d'enregistrer. Données, pas interface.",
+	"fr": {
+		"insults": { "exact": ["connard", "connasse", "enculé", "salope", "pute", "bâtard", "abruti", "bouffon", "pétasse", "fdp", "ntm"], "prefix": ["enfoiré"], "contains": [] },
+		"adult": { "exact": ["nudes", "sexe", "baise"], "prefix": [], "contains": ["porno", "hentai", "onlyfans"] }
+	},
+	"en": {
+		"insults": { "exact": ["asshole", "bitch", "bastard", "dickhead", "prick", "twat", "wanker", "moron", "stfu"], "prefix": ["fuck"], "contains": [] },
+		"adult": { "exact": ["nudes", "sex"], "prefix": [], "contains": ["porn", "hentai", "onlyfans"] }
+	}
+}

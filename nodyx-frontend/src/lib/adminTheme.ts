@@ -9,6 +9,8 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	'/admin/grades', '/admin/categories', '/admin/tags', '/admin/moderation', '/admin/audit-log',
 	// Modération unifiée (E2)
 	'/admin/reports',
+	// OctoGuard 2, livraison 3a
+	'/admin/octoguard', '/admin/octoguard/rules', '/admin/octoguard/sandbox',
 ]
 
 // Sous-pages dynamiques déjà migrées (fiche d'un membre : /admin/members/<id>)
