@@ -218,22 +218,35 @@ export const matchCaps: Matcher = (ctx, params) => {
 
 // ─── Matcher 3 : link_domain ─────────────────────────────────────────────────
 
-const URL_RE = /https?:\/\/([^\s/<>"'`]+)/gi
+// Hôte ET chemin : une entrée « discord.com/invite » ne vaut que pour les
+// invitations. Avant, seul l'hôte était lu : une entrée avec chemin ne
+// correspondait à RIEN (les invitations discord.com/invite passaient).
+const URL_RE = /https?:\/\/([^\s<>"'`]+)/gi
 
-function extractDomain(host: string): string {
-  // 'sub.example.com:8080/path' → 'sub.example.com'
-  return host.split('/')[0].split(':')[0].toLowerCase()
+type LinkTarget = { host: string; path: string }
+
+function splitUrl(rest: string): LinkTarget {
+  // 'Sub.Example.com:8080/Path?x' → { host: 'sub.example.com', path: '/path?x' }
+  const cut = rest.search(/[/?#]/)
+  const hostPort = cut < 0 ? rest : rest.slice(0, cut)
+  const path = cut < 0 ? '/' : rest.slice(cut)
+  return { host: hostPort.split(':')[0].toLowerCase(), path: (path.startsWith('/') ? path : '/' + path).toLowerCase() }
 }
 
-function domainMatches(host: string, listed: string): boolean {
+function domainMatches(link: LinkTarget, listed: string): boolean {
   // Wildcard simple : '*.example.com' matche n'importe quel sous-domaine
   const l = listed.toLowerCase().trim()
   if (!l) return false
-  if (l.startsWith('*.')) {
-    const root = l.slice(2)
-    return host === root || host.endsWith('.' + root)
-  }
-  return host === l || host.endsWith('.' + l)
+  const slash = l.indexOf('/')
+  const lHost = slash < 0 ? l : l.slice(0, slash)
+  const lPath = slash < 0 ? '' : l.slice(slash).replace(/\/+$/, '')
+  const root = lHost.startsWith('*.') ? lHost.slice(2) : lHost
+  const hostOk = link.host === root || link.host.endsWith('.' + root)
+  if (!hostOk) return false
+  if (!lPath) return true
+  // « /invite » prend /invite, /invite/abc, /invite?x, pas /invitement
+  const p = link.path
+  return p === lPath || /^[/?#]/.test(p.slice(lPath.length)) && p.startsWith(lPath)
 }
 
 export const matchLinkDomain: Matcher = (ctx, params) => {
@@ -242,11 +255,11 @@ export const matchLinkDomain: Matcher = (ctx, params) => {
     const domains = Array.isArray(params.domains) ? params.domains : []
     if (domains.length === 0) return null
 
-    const found: string[] = []
+    const found: LinkTarget[] = []
     let m: RegExpExecArray | null
     URL_RE.lastIndex = 0
     while ((m = URL_RE.exec(ctx.content))) {
-      found.push(extractDomain(m[1]))
+      found.push(splitUrl(m[1]))
       if (found.length > 50) break  // garde-fou anti-DoS sur message géant
     }
     if (found.length === 0) return null
@@ -255,7 +268,7 @@ export const matchLinkDomain: Matcher = (ctx, params) => {
       for (const host of found) {
         for (const banned of domains) {
           if (domainMatches(host, banned)) {
-            return { excerpt: `domain blacklist match: ${host}` }
+            return { excerpt: `domain blacklist match: ${host.host}` }
           }
         }
       }
@@ -269,7 +282,7 @@ export const matchLinkDomain: Matcher = (ctx, params) => {
         if (domainMatches(host, ok)) { allowed = true; break }
       }
       if (!allowed) {
-        return { excerpt: `domain not in whitelist: ${host}` }
+        return { excerpt: `domain not in whitelist: ${host.host}` }
       }
     }
     return null
