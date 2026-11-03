@@ -199,3 +199,6 @@
 .og-linkbtn:hover { text-decoration: underline; }
 .og-quote { margin: 0.375rem 0 0; padding: 0.4rem 0.625rem; border-left: 2px solid var(--nx-border); background: var(--og-soft); border-radius: 0 6px 6px 0; font-size: 0.78rem; color: var(--nx-text); overflow-wrap: anywhere; }
 .og-okmsg { font-size: 0.78rem; color: var(--nx-ok); margin: 0.25rem 0 0; }
+.og-guide-banner { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; padding: 1rem 1.25rem; }
+.og-gb-art .og-illu { padding: 0.5rem; }
+@media (max-width: 760px) { .og-guide-banner { grid-template-columns: 1fr; } .og-gb-art { display: none; } }

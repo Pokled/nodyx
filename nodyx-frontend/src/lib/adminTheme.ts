@@ -14,6 +14,8 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	// OctoGuard 2, livraison 3b
 	'/admin/octoguard/templates', '/admin/octoguard/logs', '/admin/octoguard/mutes',
 	'/admin/octoguard/welcome', '/admin/octoguard/commands', '/admin/octoguard/webhook',
+	// OctoGuard 2, livraison 3c
+	'/admin/octoguard/guide', '/admin/octoguard/member-view',
 ]
 
 // Sous-pages dynamiques déjà migrées (fiche d'un membre : /admin/members/<id>)

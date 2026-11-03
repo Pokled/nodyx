@@ -18,6 +18,10 @@ export const OG_NAV: OgNavGroup[] = [
 		{ href: '/admin/octoguard/mutes', labelKey: 'og2.nav_mutes', iconPath: 'M11 5L6 9H3v6h3l5 4z M22 9l-6 6 M16 9l6 6' },
 		{ href: '/admin/octoguard/logs', labelKey: 'og2.nav_log', iconPath: 'M9 6h11 M9 12h11 M9 18h11 M4.5 6h.01 M4.5 12h.01 M4.5 18h.01' },
 	] },
+	{ sectionKey: 'og2.nav_sec_help', items: [
+		{ href: '/admin/octoguard/guide', labelKey: 'og2.nav_guide', iconPath: 'M4 5a2 2 0 012-2h13v15H6a2 2 0 00-2 2z M4 20a2 2 0 002 1h13' },
+		{ href: '/admin/octoguard/member-view', labelKey: 'og2.nav_member_view', iconPath: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 9a3 3 0 100 6 3 3 0 000-6z' },
+	] },
 	{ sectionKey: 'og2.nav_sec_auto', items: [
 		{ href: '/admin/octoguard/welcome', labelKey: 'og2.nav_welcome', iconPath: 'M7 11V6a2 2 0 014 0v4 M11 10V5a2 2 0 014 0v5 M15 10V7a2 2 0 014 0v6a8 8 0 01-8 8 7 7 0 01-6-3l-2.5-4a2 2 0 013.4-2L7 13' },
 		{ href: '/admin/octoguard/commands', labelKey: 'og2.nav_commands', iconPath: 'M5 7l5 5-5 5 M12 17h7' },
