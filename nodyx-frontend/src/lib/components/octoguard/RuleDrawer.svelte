@@ -48,7 +48,8 @@
 	const NUM: Record<string, Array<{ key: string; min: number; max: number }>> = {
 		link_spam: [{ key: 'max_links', min: 0, max: 50 }],
 		mention_spam: [{ key: 'max_mentions', min: 1, max: 100 }],
-		caps: [{ key: 'min_length', min: 1, max: 500 }, { key: 'threshold_percent', min: 1, max: 100 }],
+		// Planchers volontaires : sous 50 % de capitales ou 5 lettres, la règle prendrait presque tout.
+		caps: [{ key: 'min_length', min: 5, max: 500 }, { key: 'threshold_percent', min: 50, max: 100 }],
 		flood: [{ key: 'max_repeats', min: 2, max: 50 }, { key: 'repeat_window_s', min: 5, max: 3600 }, { key: 'max_messages', min: 2, max: 100 }, { key: 'burst_window_s', min: 1, max: 600 }],
 		zalgo: [{ key: 'max_combining', min: 1, max: 20 }],
 	}
@@ -56,8 +57,31 @@
 
 	function toggleIn<T>(list: T[], v: T): T[] { return list.includes(v) ? list.filter((x) => x !== v) : [...list, v] }
 
+	// Le serveur accepte les réglages tels quels (RuleParams en passthrough) : un
+	// seuil absurde (1 répétition, -1 lien, 1 % de capitales) ferait prendre
+	// TOUS les messages. On refuse ici, avant tout envoi, en disant pourquoi.
+	const DOMAIN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
+	function invalid(): string | null {
+		for (const f of numFields) {
+			const v = params[f.key]
+			if (typeof v !== 'number' || !Number.isInteger(v) || v < f.min || v > f.max)
+				return tFn('og2.err_range', { field: tFn(`og2.p_${f.key}`), min: f.min, max: f.max })
+		}
+		if (categoryOf(start) === 'newcomers' && (!Number.isInteger(maxAge) || maxAge < 1 || maxAge > 365))
+			return tFn('og2.err_range', { field: tFn('og2.p_account_max_age_days'), min: 1, max: 365 })
+		if (start.type === 'link_domain') {
+			const list = domainsText.split(/[\s,]+/).map((d) => d.trim().toLowerCase()).filter(Boolean)
+			if (list.length === 0) return tFn('og2.err_domains_empty')
+			const bad = list.find((d) => !DOMAIN.test(d))
+			if (bad) return tFn('og2.err_domain', { d: bad })
+		}
+		return null
+	}
+
 	async function saveAll() {
 		if (scopes.length === 0) { error = tFn('og2.err_scope'); return }
+		const why = invalid()
+		if (why) { error = why; return }
 		busy = true
 		error = null
 		const p = { ...params }

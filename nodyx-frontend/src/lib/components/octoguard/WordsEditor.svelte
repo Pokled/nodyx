@@ -92,6 +92,9 @@
 	const allowedSeen = $derived(segments.filter((s) => s.state === 'allowed'))
 	const warnings = $derived(overreach(lists, allow, SAMPLE.words))
 	const total = $derived(lists.exact.length + lists.prefix.length + lists.contains.length)
+	// Le moteur ne lit que les 500 premiers mots : au-delà, ils seraient ignorés sans bruit.
+	const MAX_WORDS = 500
+	const tooMany = $derived(total > MAX_WORDS)
 
 	function reset() { lists = splitWords(words); allow = [...exceptions]; added = {} }
 </script>
@@ -183,7 +186,8 @@
 		<div class="og-savebar">
 			<span class="og-help">{tFn('og2.words_unsaved')}</span>
 			<button type="button" class="adm-btn adm-btn--sm" onclick={reset} disabled={busy}>{tFn('og2.cancel')}</button>
-			<button type="button" class="adm-btn adm-btn--primary adm-btn--sm" disabled={busy} onclick={() => onsave(joinWords(lists), allow)}>{tFn('og2.words_save')}</button>
+			{#if tooMany}<span class="og-error">{tFn('og2.words_too_many', { max: MAX_WORDS })}</span>{/if}
+			<button type="button" class="adm-btn adm-btn--primary adm-btn--sm" disabled={busy || tooMany} onclick={() => onsave(joinWords(lists), allow)}>{tFn('og2.words_save')}</button>
 		</div>
 	{/if}
 </div>

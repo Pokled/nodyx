@@ -5526,5 +5526,9 @@
   "og2.health_hate_off": "Hate symbol filter off",
   "og2.health_scope": "Watches: chat, forum, profiles, polls, wiki",
   "og2.p_domains_ph": "discord.gg, example.com",
-  "og2.nav_aria": "OctoGuard menu"
+  "og2.nav_aria": "OctoGuard menu",
+  "og2.err_range": "“{{field}}”: a whole number between {{min}} and {{max}}.",
+  "og2.err_domains_empty": "Enter at least one site.",
+  "og2.err_domain": "“{{d}}” is not a valid site address (example: discord.gg).",
+  "og2.words_too_many": "Beyond {{max}} words, the engine would ignore the rest. Remove a few."
 }

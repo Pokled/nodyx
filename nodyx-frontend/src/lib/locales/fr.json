@@ -5526,5 +5526,9 @@
   "og2.health_hate_off": "Filtre des symboles haineux coupé",
   "og2.health_scope": "Surveille : chat, forum, profils, sondages, wiki",
   "og2.p_domains_ph": "discord.gg, exemple.fr",
-  "og2.nav_aria": "Menu d'OctoGuard"
+  "og2.nav_aria": "Menu d'OctoGuard",
+  "og2.err_range": "« {{field}} » : un nombre entier entre {{min}} et {{max}}.",
+  "og2.err_domains_empty": "Indiquez au moins un site.",
+  "og2.err_domain": "« {{d}} » n'est pas une adresse de site valide (exemple : discord.gg).",
+  "og2.words_too_many": "Au-delà de {{max}} mots, le moteur ignorerait les suivants. Retirez-en quelques-uns."
 }
