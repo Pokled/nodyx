@@ -58,6 +58,7 @@ beforeEach(() => {
     }
     if (s.startsWith('INSERT INTO octoguard_automod_rules')) return { rows: [{ id: 'r1', name: 'x' }], rowCount: 1 }
     if (s.startsWith('SELECT type, enabled FROM octoguard_automod_rules')) return { rows: [{ type: 'regex', enabled: false }], rowCount: 1 }
+    if (s.startsWith('SELECT type, params FROM octoguard_automod_rules')) return { rows: [{ type: 'link_spam', params: { max_links: 3 } }], rowCount: 1 }
     if (s.startsWith('UPDATE octoguard_automod_rules')) return { rows: [{ id: 'r1', name: 'x' }], rowCount: 1 }
     return { rows: [], rowCount: 0 }
   }) as never)
@@ -117,6 +118,25 @@ describe('API des règles', () => {
     re2.on = true
     await app.inject({ method: 'PUT', url: '/api/v1/admin/octoguard/rules/r1', headers: { authorization: token(ADMIN) }, payload: { params: { max_links: 5 } } })
     expect(calls.find(c => c.sql.startsWith('UPDATE octoguard_automod_rules'))!.sql).toContain('customized = (preset_key IS NOT NULL)')
+  })
+  it('un réglage absurde est refusé à la création (400 INVALID_PARAMS), rien n’est écrit', async () => {
+    const res = await create({ name: 'Inondation', type: 'flood', params: { max_repeats: 1 }, action: 'warn' })
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toMatchObject({ code: 'INVALID_PARAMS', field: 'max_repeats' })
+    expect(calls.some(c => c.sql.startsWith('INSERT INTO octoguard_automod_rules'))).toBe(false)
+  })
+  it('un réglage absurde est refusé à la modification, contre le type réel de la règle', async () => {
+    const put = (payload: Record<string, unknown>) =>
+      app.inject({ method: 'PUT', url: '/api/v1/admin/octoguard/rules/r1', headers: { authorization: token(ADMIN) }, payload })
+    const res = await put({ params: { max_links: -1 } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json()).toMatchObject({ code: 'INVALID_PARAMS', field: 'max_links' })
+    expect(calls.some(c => c.sql.startsWith('UPDATE octoguard_automod_rules'))).toBe(false)
+    expect((await put({ params: { max_links: 4 } })).statusCode).toBe(200)
+  })
+  it('un site avec chemin est accepté, un site mal formé refusé', async () => {
+    expect((await create({ name: 'i', type: 'link_domain', params: { mode: 'blacklist', domains: ['discord.com/invite', '*.t.me'] }, action: 'report_only' })).statusCode).toBe(201)
+    expect((await create({ name: 'i', type: 'link_domain', params: { mode: 'blacklist', domains: ['pas un site'] }, action: 'report_only' })).json().code).toBe('INVALID_PARAMS')
   })
   it('basculer l’interrupteur seul ne la marque pas', async () => {
     re2.on = true

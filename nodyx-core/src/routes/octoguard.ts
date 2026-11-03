@@ -26,6 +26,7 @@ import { getInstanceAccess, outranks, rankOf } from '../services/permissions'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { runSandbox, ruleStats, ruleHits } from '../services/octoguard/sandbox'
 import { BASE_PRESETS, BASE_PROFILE_VERSION, startingLevel, exportProfile, previewImport, applyImport, ProfileZ, type Profile } from '../services/octoguard/profile'
+import { checkRuleParams } from '../services/octoguard/params'
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
 import * as NotificationModel from '../models/notification'
 import * as PostModel from '../models/post'
@@ -333,6 +334,10 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
 
     if (re2Missing(body.type, body.enabled)) return reply.code(409).send(RE2_REQUIRED)
 
+    // Réglages vérifiés par type : une valeur absurde ferait prendre tous les messages.
+    const badParams = checkRuleParams(body.type, body.params)
+    if (badParams) return reply.code(400).send({ error: `Invalid rule settings: ${badParams.field} (${badParams.message})`, code: 'INVALID_PARAMS', field: badParams.field })
+
     // Validation amont des patterns regex via safe-regex + re2
     if (body.type === 'regex') {
       const pattern = (body.params as { pattern?: string }).pattern
@@ -391,6 +396,15 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
       if (cur[0] && re2Missing(body.type ?? cur[0].type, body.enabled ?? cur[0].enabled)) {
         return reply.code(409).send(RE2_REQUIRED)
       }
+    }
+
+    // Réglages vérifiés par type, contre le type final de la règle.
+    if (body.params !== undefined || body.type !== undefined) {
+      const { rows: cur } = await db.query<{ type: string; params: unknown }>(
+        `SELECT type, params FROM octoguard_automod_rules WHERE id = $1`, [id])
+      if (!cur[0]) return reply.code(404).send({ error: 'Rule not found', code: 'NOT_FOUND' })
+      const badParams = checkRuleParams(body.type ?? cur[0].type, body.params ?? cur[0].params)
+      if (badParams) return reply.code(400).send({ error: `Invalid rule settings: ${badParams.field} (${badParams.message})`, code: 'INVALID_PARAMS', field: badParams.field })
     }
 
     // Re-validation regex si pattern modifié
