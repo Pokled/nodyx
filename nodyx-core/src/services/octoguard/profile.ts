@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod'
+import { checkRuleParams } from './params'
 import { db } from '../../config/database'
 import { assessPatternSafety, hasRE2 } from './matchers'
 import type { AutomodAction, AutomodRuleParams, Duration, Escalation, RuleConditions, Surface } from './types'
@@ -214,6 +215,7 @@ export async function previewImport(profile: Profile): Promise<ImportPreview> {
   const { rows } = await db.query(`SELECT name, type, params, action, scopes, conditions, escalation, dry_run, enabled, preset_key FROM octoguard_automod_rules`)
   const out: ImportPreview = { add: [], update: [], unchanged: [], problems: [] }
   for (const r of profile.rules) {
+    if (checkRuleParams(r.type, r.params)) { out.problems.push({ rule: r.name, reason: 'invalid_params' }); continue }
     if (r.type === 'regex') {
       const pattern = (r.params as { pattern?: unknown }).pattern
       if (typeof pattern !== 'string') { out.problems.push({ rule: r.name, reason: 'regex_missing_pattern' }); continue }
