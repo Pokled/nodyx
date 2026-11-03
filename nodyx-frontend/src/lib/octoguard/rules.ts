@@ -112,7 +112,11 @@ export function describe(r: Rule, t: T): string {
 		case 'mention_spam': return t('og2.desc_mention_spam', { n: p.max_mentions ?? 5 })
 		case 'flood': return t('og2.desc_flood', { r: p.max_repeats ?? 4, rw: p.repeat_window_s ?? 60, m: p.max_messages ?? 8, bw: p.burst_window_s ?? 10 })
 		case 'zalgo': return t('og2.desc_zalgo', { n: p.max_combining ?? 3 })
-		case 'link_domain': return t(p.mode === 'whitelist' ? 'og2.desc_domains_allow' : 'og2.desc_domains_block', { list: (p.domains ?? []).slice(0, 4).join(', ') })
+		case 'link_domain': {
+			const all: string[] = p.domains ?? []
+			const list = all.slice(0, 4).join(', ') + (all.length > 4 ? ', …' : '')
+			return t(p.mode === 'whitelist' ? 'og2.desc_domains_allow' : 'og2.desc_domains_block', { list })
+		}
 		default: return t('og2.desc_regex')
 	}
 }

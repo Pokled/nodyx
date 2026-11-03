@@ -9,6 +9,7 @@ export const OG_NAV: OgNavGroup[] = [
 	] },
 	{ sectionKey: 'og2.nav_sec_rules', items: [
 		{ href: '/admin/octoguard/rules', labelKey: 'og2.nav_rules', iconPath: 'M4 7h10 M18 7h2 M4 17h4 M12 17h8 M16 5a2 2 0 100 4 2 2 0 000-4z M10 15a2 2 0 100 4 2 2 0 000-4z' },
+		{ href: '/admin/octoguard/templates', labelKey: 'og2.nav_templates', iconPath: 'M12 3l9 5-9 5-9-5z M3 13l9 5 9-5' },
 		{ href: '/admin/octoguard/sandbox', labelKey: 'og2.nav_sandbox', iconPath: 'M9 3h6 M10 3v6L4.5 19A1.5 1.5 0 006 21h12a1.5 1.5 0 001.5-2L14 9V3 M7 15h10' },
 		{ href: '/admin/octoguard/automod', labelKey: 'og2.nav_advanced', iconPath: 'M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6' },
 	] },

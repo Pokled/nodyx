@@ -4,7 +4,8 @@
 	import { t, locale } from '$lib/i18n'
 	import Icon from '$lib/components/octoguard/Icon.svelte'
 	import { og } from '$lib/octoguard/api'
-	import { LEVEL_ICON, levelOf, intendedOf, type Level, type Rule } from '$lib/octoguard/rules'
+	import { LEVEL_ICON, intendedOf, type Level, type Rule } from '$lib/octoguard/rules'
+	import { eventOf, KIND_ICON } from '$lib/octoguard/events'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -49,25 +50,7 @@
 		finally { promoting = null }
 	}
 
-	// Les dernières actions, racontées en phrases.
-	type Log = { id: string; action: string; actor_username: string | null; target_label: string | null; metadata: any; created_at: string }
-	function eventOf(l: Log): { kind: Level | 'ok' | 'acc'; key: string } {
-		// Le nom d'action sans son préfixe (« octoguard. ») : ce ne sont pas des clés de traduction.
-		const a = l.action.replace(/^octoguard\./, '')
-		if (a.startsWith('would_')) return { kind: 'observe', key: 'ev_would' }
-		switch (a) {
-			case 'delete_message': return { kind: 'delete', key: 'ev_delete' }
-			case 'warn_user': return { kind: 'warn', key: 'ev_warn' }
-			case 'mute_user': return { kind: 'delete', key: 'ev_mute' }
-			case 'ban_temp_user': return { kind: 'delete', key: 'ev_ban_temp' }
-			case 'report_filed': case 'notify': return { kind: 'report', key: 'ev_report' }
-			case 'action_undone': return { kind: 'ok', key: 'ev_undone' }
-			case 'hate_symbol_blocked': return { kind: 'delete', key: 'ev_hate' }
-		}
-		if (/^(rule|profile|command|welcome|webhook)_/.test(a)) return { kind: 'acc', key: 'ev_config' }
-		return { kind: 'observe', key: 'ev_other' }
-	}
-	const KIND_ICON: Record<string, string> = { ...LEVEL_ICON, ok: 'M9 14L4 9l5-5 M4 9h11a5 5 0 010 10h-3', acc: 'M4 7h10 M18 7h2 M4 17h4 M12 17h8 M16 5a2 2 0 100 4 2 2 0 000-4z M10 15a2 2 0 100 4 2 2 0 000-4z' }
+	// Les dernières actions, racontées en phrases (lib/octoguard/events.ts).
 	const ago = (iso: string) => {
 		const d = new Date(iso)
 		if (isNaN(d.getTime())) return ''

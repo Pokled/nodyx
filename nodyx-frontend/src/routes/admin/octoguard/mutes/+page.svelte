@@ -1,84 +1,88 @@
 <script lang="ts">
-	import { enhance } from '$app/forms'
+	// Les sourdines en cours. Mettre un membre en sourdine se fait depuis sa
+	// fiche (on sait alors QUI on vise) ; ici on voit, et on lève.
+	import { page } from '$app/state'
+	import { untrack, onMount } from 'svelte'
 	import { t } from '$lib/i18n'
-	import type { PageData, ActionData } from './$types'
-	let { data, form }: { data: PageData; form: ActionData } = $props()
+	import Icon from '$lib/components/octoguard/Icon.svelte'
+	import { og } from '$lib/octoguard/api'
+	import type { PageData } from './$types'
+
+	type Mute = { id: string; user_id: string; user_username: string | null; channel_id: string | null; reason: string | null; applied_by: string | null; applied_at: string; expires_at: string | null }
+	let { data }: { data: PageData } = $props()
 	const tFn = $derived($t)
+	const token = $derived(((page.data as any).token as string | null) ?? null)
+
+	let mutes = $state<Mute[]>(untrack(() => data.mutes as Mute[]))
+	let now = $state(Date.now())
+	onMount(() => { const id = setInterval(() => (now = Date.now()), 30_000); return () => clearInterval(id) })
+
+	function left(iso: string | null): string {
+		if (!iso) return tFn('og2.mute_forever')
+		const min = Math.max(0, Math.round((new Date(iso).getTime() - now) / 60000))
+		if (min < 1) return tFn('og2.mute_ending')
+		if (min < 60) return tFn('og2.mute_left_min', { n: min })
+		if (min < 2880) return tFn('og2.mute_left_h', { n: Math.round(min / 60) })
+		return tFn('og2.mute_left_d', { n: Math.round(min / 1440) })
+	}
+
+	let confirmId = $state<string | null>(null)
+	let busy = $state<string | null>(null)
+	let error = $state<string | null>(null)
+	async function lift(m: Mute) {
+		busy = m.id; error = null
+		try {
+			await og(token, `/mutes/${m.id}`, 'DELETE')
+			mutes = mutes.filter((x) => x.id !== m.id)
+		} catch { error = tFn('og2.mute_lift_err') }
+		finally { busy = null; confirmId = null }
+	}
 </script>
 
-<svelte:head><title>{tFn('octoguard.mutes_title')} · OctoGuard</title></svelte:head>
+<svelte:head><title>{tFn('og2.nav_mutes')} · OctoGuard</title></svelte:head>
 
-<header class="og-h">
-	<h2>{tFn('octoguard.mutes_h2')}</h2>
-	<p>{tFn('octoguard.mutes_desc')}</p>
-</header>
-
-{#if form?.error}<div class="og-err">⚠ {form.error}</div>{/if}
-
-<details class="og-create">
-	<summary>{tFn('octoguard.mutes_add')}</summary>
-	<form method="POST" action="?/create" use:enhance class="og-form">
-		<label>{tFn('octoguard.mutes_user_uuid')}<input name="user_id" type="text" required /></label>
-		<label>{tFn('octoguard.mutes_channel_uuid')}<input name="channel_id" type="text" /></label>
-		<div class="og-row">
-			<label>{tFn('octoguard.mutes_duration')}<input name="duration_value" type="number" min="1" placeholder="1" /></label>
-			<label>{tFn('octoguard.mutes_unit')}
-				<select name="duration_unit">
-					<option value="m">{tFn('octoguard.unit_minutes')}</option>
-					<option value="h" selected>{tFn('octoguard.unit_hours')}</option>
-					<option value="d">{tFn('octoguard.unit_days')}</option>
-					<option value="w">{tFn('octoguard.unit_weeks')}</option>
-				</select>
-			</label>
+<div class="adm-page og-page">
+	<header class="adm-head">
+		<div class="og-head-l">
+			<span class="og-mark"><Icon d="M11 5L6 9H3v6h3l5 4z M22 9l-6 6 M16 9l6 6" /></span>
+			<div>
+				<h1 class="adm-title">{tFn('og2.nav_mutes')}</h1>
+				<p class="adm-desc">{tFn('og2.mutes_desc')}</p>
+			</div>
 		</div>
-		<label>{tFn('octoguard.field_reason')}<input name="reason" type="text" maxlength="500" placeholder={tFn('octoguard.mutes_reason_ph')} /></label>
-		<div class="og-actions"><button type="submit" class="og-btn-primary">{tFn('octoguard.mutes_apply')}</button></div>
-	</form>
-</details>
+		<a class="adm-btn" href="/admin/members"><Icon d="M9 4.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7z M2.5 20a6.5 6.5 0 0113 0 M16 4.6a3.5 3.5 0 010 6.8 M21.5 20a6.5 6.5 0 00-4-6" />{tFn('og2.mutes_to_members')}</a>
+	</header>
 
-{#if data.mutes.length === 0}
-	<div class="og-empty">{tFn('octoguard.mutes_empty')}</div>
-{:else}
-	<table class="tableau-cartes og-table md:min-w-[620px]">
-		<thead>
-			<tr><th>{tFn('octoguard.col_user')}</th><th>{tFn('octoguard.col_channel')}</th><th>{tFn('octoguard.col_reason')}</th><th>{tFn('octoguard.col_expires')}</th><th></th></tr>
-		</thead>
-		<tbody>
-			{#each data.mutes as m (m.id)}
-				<tr>
-					<td data-label={tFn('octoguard.col_user')}>{m.user_username ?? m.user_id?.slice(0,8)}</td>
-					<td data-label={tFn('octoguard.col_channel')}>{m.channel_id ? m.channel_id.slice(0,8) : tFn('octoguard.global_dash')}</td>
-					<td data-label={tFn('octoguard.col_reason')}>{m.reason ?? '·'}</td>
-					<td data-label={tFn('octoguard.col_expires')}>{m.expires_at ? new Date(m.expires_at).toLocaleString() : tFn('octoguard.permanent_dash')}</td>
-					<td>
-						<form method="POST" action="?/unmute" use:enhance>
-							<input type="hidden" name="id" value={m.id} />
-							<button type="submit" class="og-btn-link">{tFn('octoguard.mutes_unmute')}</button>
-						</form>
-					</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-{/if}
+	<div class="og-note"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 11v5 M12 8h.01" />{tFn('og2.mutes_how')}</div>
 
-<style>
-	.og-h h2 { font-size: 16px; font-weight: 600; color: #f1f5f9; margin: 0; }
-	.og-h p { font-size: 12px; color: #94a3b8; margin: 4px 0 16px; }
-	.og-err { padding: 10px 14px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
-	.og-create { margin-bottom: 16px; }
-	.og-create summary { cursor: pointer; padding: 8px 12px; border: 1px dashed rgba(255,255,255,0.08); border-radius: 3px; color: #94a3b8; font-size: 12px; }
-	.og-form { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.06); border-radius: 4px; background: rgba(255,255,255,0.01); margin-top: 8px; }
-	.og-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-	label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #94a3b8; }
-	input, select { padding: 6px 8px; font-size: 12px; background: #1f2937; border: 1px solid #374151; border-radius: 3px; color: #e2e8f0; font-family: ui-monospace, monospace; }
-	.og-actions { display: flex; justify-content: flex-end; }
-	.og-btn-primary { padding: 6px 12px; font-size: 12px; color: #fff; background: var(--nx-accent); border: none; border-radius: 3px; cursor: pointer; }
-	.og-btn-link { background: transparent; border: none; color: #94a3b8; font-size: 11px; cursor: pointer; padding: 0; }
-	.og-btn-link:hover { color: #e2e8f0; }
-	.og-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-	.og-table th, .og-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.04); }
-	.og-table th { color: #64748b; font-weight: 500; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; font-family: ui-monospace, monospace; }
-	.og-table td { color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px; }
-	.og-empty { padding: 24px; text-align: center; color: #64748b; font-size: 13px; border: 1px dashed rgba(255,255,255,0.08); border-radius: 4px; }
-</style>
+	{#if error}<p class="og-error" role="alert">{error}</p>{/if}
+
+	<section class="adm-card">
+		{#if data.failed}
+			<p class="og-error" role="alert">{tFn('og2.err_load')}</p>
+		{:else if mutes.length === 0}
+			<p class="og-empty">{tFn('og2.mutes_none')}</p>
+		{:else}
+			<div class="og-rows">
+				{#each mutes as m (m.id)}
+					<div class="og-row">
+						<span class="og-ic og-k-delete"><Icon d="M11 5L6 9H3v6h3l5 4z M22 9l-6 6 M16 9l6 6" /></span>
+						<div class="og-row-body">
+							<div><a class="og-linkbtn" href="/admin/members/{m.user_id}">{m.user_username ?? m.user_id.slice(0, 8)}</a> · {tFn(m.channel_id ? 'og2.mute_one_channel' : 'og2.mute_everywhere')}</div>
+							{#if m.reason}<p class="og-quote">{m.reason}</p>{/if}
+							<div class="og-meta">{tFn(m.applied_by ? 'og2.mute_by_team' : 'og2.mute_by_og')} · <b>{left(m.expires_at)}</b></div>
+						</div>
+						{#if confirmId === m.id}
+							<span class="adm-actions">
+								<button type="button" class="adm-btn adm-btn--primary adm-btn--sm" disabled={busy === m.id} onclick={() => lift(m)}>{tFn('og2.mute_lift_yes')}</button>
+								<button type="button" class="adm-btn adm-btn--sm" onclick={() => (confirmId = null)}>{tFn('og2.cancel')}</button>
+							</span>
+						{:else}
+							<button type="button" class="adm-btn adm-btn--sm" onclick={() => (confirmId = m.id)}>{tFn('og2.mute_lift')}</button>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
+</div>
