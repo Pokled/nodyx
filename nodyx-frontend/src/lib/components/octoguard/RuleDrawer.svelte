@@ -60,7 +60,9 @@
 	// Le serveur accepte les réglages tels quels (RuleParams en passthrough) : un
 	// seuil absurde (1 répétition, -1 lien, 1 % de capitales) ferait prendre
 	// TOUS les messages. On refuse ici, avant tout envoi, en disant pourquoi.
-	const DOMAIN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
+	// Même expression que le cœur (services/octoguard/params.ts, SITE_ENTRY) :
+	// « exemple.com », « *.exemple.com », « exemple.com/chemin ».
+	const DOMAIN = /^(\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(\/[a-z0-9._~%/-]*)?$/i
 	function invalid(): string | null {
 		for (const f of numFields) {
 			const v = params[f.key]
@@ -70,7 +72,7 @@
 		if (categoryOf(start) === 'newcomers' && (!Number.isInteger(maxAge) || maxAge < 1 || maxAge > 365))
 			return tFn('og2.err_range', { field: tFn('og2.p_account_max_age_days'), min: 1, max: 365 })
 		if (start.type === 'link_domain') {
-			const list = domainsText.split(/[\s,]+/).map((d) => d.trim().toLowerCase()).filter(Boolean)
+			const list = domainsText.split(/[\s,]+/).map((d) => d.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '')).filter(Boolean)
 			if (list.length === 0) return tFn('og2.err_domains_empty')
 			const bad = list.find((d) => !DOMAIN.test(d))
 			if (bad) return tFn('og2.err_domain', { d: bad })
@@ -85,7 +87,7 @@
 		busy = true
 		error = null
 		const p = { ...params }
-		if (start.type === 'link_domain') p.domains = domainsText.split(/[\s,]+/).map((d) => d.trim().toLowerCase()).filter(Boolean)
+		if (start.type === 'link_domain') p.domains = domainsText.split(/[\s,]+/).map((d) => d.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '')).filter(Boolean)
 		// Seulement ce qui a changé : le serveur marque « personnalisée » toute
 		// règle du profil de base modifiée sur le fond, et elle ne reçoit alors
 		// plus les mises à jour du profil. Ouvrir puis enregistrer sans rien

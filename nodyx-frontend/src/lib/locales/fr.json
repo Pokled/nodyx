@@ -5402,7 +5402,7 @@
   "og2.p_domains": "Sites",
   "og2.p_mode_block": "Refuser ces sites",
   "og2.p_mode_allow": "Autoriser seulement ces sites",
-  "og2.p_domains_help": "Séparez les sites par des virgules. Un site couvre aussi ses sous-domaines.",
+  "og2.p_domains_help": "Séparez les sites par des virgules. Un site couvre ses sous-domaines ; « exemple.com/chemin » ne vise que ce chemin.",
   "og2.p_pattern": "Expression",
   "og2.edit_advanced": "Modifier dans l'éditeur avancé",
   "og2.where": "Où surveiller",

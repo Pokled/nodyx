@@ -5402,7 +5402,7 @@
   "og2.p_domains": "Sites",
   "og2.p_mode_block": "Refuse these sites",
   "og2.p_mode_allow": "Allow only these sites",
-  "og2.p_domains_help": "Separate sites with commas. A site also covers its subdomains.",
+  "og2.p_domains_help": "Separate sites with commas. A site covers its subdomains; “example.com/path” only targets that path.",
   "og2.p_pattern": "Expression",
   "og2.edit_advanced": "Edit in the advanced editor",
   "og2.where": "Where to watch",
