@@ -680,7 +680,9 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const whereClause = `WHERE ${conditions.join(' AND ')}`
     const { rows } = await db.query(
       `SELECT id, actor_id, actor_username, action, target_type, target_id, target_label,
-              metadata, created_at::text AS created_at
+              metadata, created_at::text AS created_at,
+              EXISTS (SELECT 1 FROM admin_audit_log u
+                       WHERE u.action = 'octoguard.action_undone' AND u.target_id::text = admin_audit_log.id::text) AS undone
          FROM admin_audit_log
          ${whereClause}
         ORDER BY created_at DESC
@@ -703,29 +705,43 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const { id } = request.params as { id: string }
     const adminUser = request.user!
     const { rows } = await db.query(
-      `SELECT action, metadata FROM admin_audit_log WHERE id = $1`, [id]
+      `SELECT action, metadata, created_at FROM admin_audit_log WHERE id = $1`, [id]
     )
     const log = rows[0]
-    if (!log) return reply.code(404).send({ error: 'Log not found' })
+    if (!log) return reply.code(404).send({ error: 'Log not found', code: 'NOT_FOUND' })
 
-    const meta = (log.metadata ?? {}) as { undoable?: boolean; undo_op?: { type?: string; mute_id?: string; user_id?: string } }
+    const meta = (log.metadata ?? {}) as { undoable?: boolean; rule_id?: string; undo_op?: { type?: string; mute_id?: string; user_id?: string } }
     if (!meta.undoable || !meta.undo_op) {
       return reply.code(400).send({ error: 'Action not undoable', code: 'NOT_UNDOABLE' })
     }
 
+    // Une action ne s'annule qu'une fois : sinon, un double clic effaçait un
+    // SECOND avertissement, qui n'avait rien à voir.
+    const { rows: done } = await db.query(
+      `SELECT 1 FROM admin_audit_log WHERE action = 'octoguard.action_undone' AND target_id::text = $1 LIMIT 1`, [id])
+    if (done.length) return reply.code(409).send({ error: 'Already undone', code: 'ALREADY_UNDONE' })
+
     if (meta.undo_op.type === 'remove_mute' && meta.undo_op.mute_id) {
       const ok = await removeMute(meta.undo_op.mute_id, adminUser.userId)
-      await logAdminAction(adminUser.userId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op, success: ok })
-      return reply.send({ ok })
+      if (!ok) return reply.code(409).send({ error: 'Nothing left to undo (mute already lifted)', code: 'NOTHING_TO_UNDO' })
+      await logAdminAction(adminUser.userId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op, success: true })
+      return reply.send({ ok: true })
     }
     if (meta.undo_op.type === 'clear_last_warn' && meta.undo_op.user_id) {
-      await db.query(
+      // PostgreSQL n'accepte ni ORDER BY ni LIMIT dans un UPDATE : l'ancienne
+      // requête échouait TOUJOURS, l'erreur était avalée et la route répondait
+      // « ok ». On efface l'avertissement actif de ce membre, pour cette règle,
+      // le plus proche dans le temps de l'action annulée.
+      const { rows: cleared } = await db.query(
         `UPDATE octoguard_warns SET cleared_at = NOW()
-          WHERE user_id = $1 AND cleared_at IS NULL
-          ORDER BY created_at DESC LIMIT 1`,
-        [meta.undo_op.user_id]
-      ).catch(() => {})
-      await logAdminAction(adminUser.userId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op })
+          WHERE id = (SELECT id FROM octoguard_warns
+                       WHERE user_id = $1 AND cleared_at IS NULL AND ($2::uuid IS NULL OR rule_id = $2::uuid)
+                       ORDER BY abs(extract(epoch FROM created_at - $3::timestamptz)) LIMIT 1)
+          RETURNING id`,
+        [meta.undo_op.user_id, meta.rule_id ?? null, log.created_at]
+      )
+      if (cleared.length === 0) return reply.code(409).send({ error: 'Nothing left to undo (warning already cleared or expired)', code: 'NOTHING_TO_UNDO' })
+      await logAdminAction(adminUser.userId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op, warn_id: cleared[0].id })
       return reply.send({ ok: true })
     }
     return reply.code(400).send({ error: 'Undo type not implemented', code: 'UNSUPPORTED' })

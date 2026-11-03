@@ -6,7 +6,8 @@ import { buildApp } from './helpers/buildApp'
 // un dossier au cran « signaler » ; l'API des règles connaît les endroits
 // surveillés et refuse une expression régulière sans re2.
 
-const { moderateMock, autoReportMock, re2, calls, THREAD } = vi.hoisted(() => ({
+const { moderateMock, autoReportMock, re2, calls, THREAD, undo } = vi.hoisted(() => ({
+  undo: { log: null as null | Record<string, unknown>, alreadyUndone: false, warnsCleared: 1 },
   moderateMock: vi.fn(),
   autoReportMock: vi.fn(),
   re2: { on: false },
@@ -48,6 +49,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   calls.length = 0
   re2.on = false
+  undo.log = null; undo.alreadyUndone = false; undo.warnsCleared = 1
   vi.mocked(redis.exists).mockImplementation((async (k: string) => (k.startsWith('banned:') ? 0 : 1)) as never)
   vi.mocked(db.query).mockImplementation((async (sql: string, params: unknown[] = []) => {
     const s = String(sql).replace(/\s+/g, ' ').trim()
@@ -60,6 +62,9 @@ beforeEach(() => {
     if (s.startsWith('SELECT type, enabled FROM octoguard_automod_rules')) return { rows: [{ type: 'regex', enabled: false }], rowCount: 1 }
     if (s.startsWith('SELECT type, params FROM octoguard_automod_rules')) return { rows: [{ type: 'link_spam', params: { max_links: 3 } }], rowCount: 1 }
     if (s.startsWith('UPDATE octoguard_automod_rules')) return { rows: [{ id: 'r1', name: 'x' }], rowCount: 1 }
+    if (s.startsWith('SELECT action, metadata, created_at FROM admin_audit_log')) return { rows: undo.log ? [undo.log] : [], rowCount: undo.log ? 1 : 0 }
+    if (s.startsWith("SELECT 1 FROM admin_audit_log WHERE action = 'octoguard.action_undone'")) return { rows: undo.alreadyUndone ? [{}] : [], rowCount: 0 }
+    if (s.startsWith('UPDATE octoguard_warns')) return { rows: Array.from({ length: undo.warnsCleared }, () => ({ id: 'w1' })), rowCount: undo.warnsCleared }
     return { rows: [], rowCount: 0 }
   }) as never)
   vi.mocked(ThreadModel.findById).mockResolvedValue({ id: THREAD, author_id: ADMIN, is_locked: false, category_id: 'cat' } as never)
@@ -142,5 +147,42 @@ describe('API des règles', () => {
     re2.on = true
     await app.inject({ method: 'PUT', url: '/api/v1/admin/octoguard/rules/r1', headers: { authorization: token(ADMIN) }, payload: { enabled: true } })
     expect(calls.find(c => c.sql.startsWith('UPDATE octoguard_automod_rules'))!.sql).not.toContain('customized')
+  })
+})
+
+describe('Annuler une action d’OctoGuard', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+  beforeEach(async () => { app = await buildApp(a => a.register(octoguardAdminPlugin, { prefix: '/api/v1/admin/octoguard' })) })
+  const undoIt = () => app.inject({ method: 'POST', url: '/api/v1/admin/octoguard/logs/l1/undo', headers: { authorization: token(ADMIN) } })
+  const WARN_LOG = { action: 'octoguard.warn_user', created_at: '2026-11-03T20:00:00Z',
+    metadata: { undoable: true, rule_id: '33333333-3333-4333-8333-333333333333', undo_op: { type: 'clear_last_warn', user_id: MEMBER } } }
+
+  it('un avertissement s’annule pour de vrai : UPDATE valide pour PostgreSQL, ciblé sur la règle et le moment', async () => {
+    undo.log = WARN_LOG
+    const res = await undoIt()
+    expect(res.statusCode).toBe(200)
+    const upd = calls.find(c => c.sql.startsWith('UPDATE octoguard_warns'))!
+    // L'ancienne requête mettait ORDER BY / LIMIT au niveau de l'UPDATE : refusée par PostgreSQL.
+    expect(upd.sql).toMatch(/^UPDATE octoguard_warns SET cleared_at = NOW\(\) WHERE id = \(SELECT id FROM octoguard_warns/)
+    expect(upd.params).toEqual([MEMBER, WARN_LOG.metadata.rule_id, WARN_LOG.created_at])
+    expect(calls.some(c => c.sql.startsWith('INSERT INTO admin_audit_log') && c.params.includes('octoguard.action_undone'))).toBe(true)
+  })
+  it('plus rien à annuler : 409 honnête, et rien n’est journalisé comme annulé', async () => {
+    undo.log = WARN_LOG; undo.warnsCleared = 0
+    const res = await undoIt()
+    expect(res.statusCode).toBe(409)
+    expect(res.json().code).toBe('NOTHING_TO_UNDO')
+    expect(calls.some(c => c.params.includes('octoguard.action_undone'))).toBe(false)
+  })
+  it('une action ne s’annule qu’une fois (un double clic n’efface pas un 2e avertissement)', async () => {
+    undo.log = WARN_LOG; undo.alreadyUndone = true
+    const res = await undoIt()
+    expect(res.statusCode).toBe(409)
+    expect(res.json().code).toBe('ALREADY_UNDONE')
+    expect(calls.some(c => c.sql.startsWith('UPDATE octoguard_warns'))).toBe(false)
+  })
+  it('une action non annulable est refusée', async () => {
+    undo.log = { action: 'octoguard.delete_message', created_at: 'x', metadata: { undoable: false } }
+    expect((await undoIt()).json().code).toBe('NOT_UNDOABLE')
   })
 })
