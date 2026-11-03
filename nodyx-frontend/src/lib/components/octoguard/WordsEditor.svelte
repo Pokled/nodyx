@@ -10,10 +10,12 @@
 	import SAMPLE from '$lib/octoguard/word-sample.json'
 	import PACKS from '$lib/octoguard/word-packs.json'
 
-	let { words, exceptions, busy = false, onsave }: {
+	let { words, exceptions, busy = false, demo = false, onsave }: {
 		words: string[]
 		exceptions: string[]
 		busy?: boolean
+		/** Guide : on essaie tout, rien ne s'enregistre. */
+		demo?: boolean
 		onsave: (words: string[], exceptions: string[]) => void | Promise<void>
 	} = $props()
 	const tFn = $derived($t)
@@ -182,7 +184,9 @@
 		<span class="og-help">{tFn('og2.packs_hint')}</span>
 	</div>
 
-	{#if dirty}
+	{#if demo}
+		<p class="og-note"><svg class="og-ico" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 11v5 M12 8h.01" /></svg>{tFn('og2.guide_demo_note')}</p>
+	{:else if dirty}
 		<div class="og-savebar">
 			<span class="og-help">{tFn('og2.words_unsaved')}</span>
 			<button type="button" class="adm-btn adm-btn--sm" onclick={reset} disabled={busy}>{tFn('og2.cancel')}</button>

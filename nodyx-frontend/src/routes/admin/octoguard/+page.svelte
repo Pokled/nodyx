@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state'
-	import { untrack } from 'svelte'
+	import { untrack, onMount } from 'svelte'
 	import { t, locale } from '$lib/i18n'
 	import Icon from '$lib/components/octoguard/Icon.svelte'
 	import { og } from '$lib/octoguard/api'
 	import { LEVEL_ICON, intendedOf, type Level, type Rule } from '$lib/octoguard/rules'
 	import { eventOf, KIND_ICON } from '$lib/octoguard/events'
+	import GuideArt from '$lib/components/octoguard/GuideArt.svelte'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -50,6 +51,17 @@
 		finally { promoting = null }
 	}
 
+	// Bandeau du Guide : masquable, et absent une fois le guide entièrement lu.
+	let showGuide = $state(false)
+	onMount(() => {
+		try {
+			const hidden = localStorage.getItem('og-guide-banner-hidden') === '1'
+			const read = (JSON.parse(localStorage.getItem('og-guide-done') ?? '[]') as string[]).length
+			showGuide = !hidden && read < 8
+		} catch { showGuide = true }
+	})
+	function hideGuide() { showGuide = false; try { localStorage.setItem('og-guide-banner-hidden', '1') } catch { /* sans importance */ } }
+
 	// Les dernières actions, racontées en phrases (lib/octoguard/events.ts).
 	const ago = (iso: string) => {
 		const d = new Date(iso)
@@ -82,6 +94,20 @@
 
 	{#if data.failed}
 		<div class="adm-card og-empty" role="alert">{tFn('og2.err_load')}</div>
+	{/if}
+
+	{#if showGuide}
+		<section class="adm-card og-guide-banner" aria-labelledby="og-guide-b">
+			<div class="og-gb-art"><GuideArt name="intro" /></div>
+			<div>
+				<h2 id="og-guide-b" class="adm-title" style="font-size:0.9375rem">{tFn('og2.guide_banner_title')}</h2>
+				<p class="og-help" style="margin-top:0.25rem;font-size:0.8125rem">{tFn('og2.guide_banner_text')}</p>
+			</div>
+			<div class="adm-actions">
+				<a class="adm-btn adm-btn--primary" href="/admin/octoguard/guide"><Icon d="M8 5v14l11-7z" />{tFn('og2.guide_banner_go')}</a>
+				<button type="button" class="adm-btn adm-btn--icon" style="border-color:transparent;background:transparent" onclick={hideGuide} aria-label={tFn('og2.guide_banner_hide')}><Icon d="M6 6l12 12 M18 6L6 18" /></button>
+			</div>
+		</section>
 	{/if}
 
 	<div class="adm-stats">
