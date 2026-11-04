@@ -4,8 +4,9 @@ import { apiFetch } from '$lib/api'
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const token = cookies.get('token')
 	const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
-	try {
-		const res = await apiFetch(fetch, '/admin/octoguard/profile/base', { headers })
-		return res.ok ? { base: await res.json(), failed: false } : { base: null, failed: true }
-	} catch { return { base: null, failed: true } }
+	const get = async (path: string) => {
+		try { const r = await apiFetch(fetch, path, { headers }); return r.ok ? await r.json() : null } catch { return null }
+	}
+	const [base, rules] = await Promise.all([get('/admin/octoguard/profile/base'), get('/admin/octoguard/rules')])
+	return { base, rules: rules?.rules ?? [], failed: base === null }
 }

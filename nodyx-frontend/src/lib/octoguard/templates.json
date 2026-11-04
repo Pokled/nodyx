@@ -1,0 +1,562 @@
+{
+	"_why": "Les modèles de communauté de la page Modèles. Données, pas interface. Un modèle ajuste les règles du profil de base (même preset_key) et ajoute ses propres règles ; il n'écrase jamais la liste de mots de l'admin. Les règles fermes arrivent en observation (dry_run).",
+	"templates": [
+		{
+			"id": "youth",
+			"tone": "report",
+			"art": "youth",
+			"rules": [
+				{
+					"name": {
+						"fr": "Spam de liens",
+						"en": "Link spam"
+					},
+					"type": "link_spam",
+					"params": {
+						"max_links": 2
+					},
+					"action": "report_only",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": false,
+					"enabled": true,
+					"preset_key": "base.link_spam"
+				},
+				{
+					"name": {
+						"fr": "Liens des comptes tout neufs",
+						"en": "Links from brand-new accounts"
+					},
+					"type": "link_spam",
+					"params": {
+						"max_links": 0
+					},
+					"action": "delete",
+					"scopes": [
+						"chat",
+						"forum",
+						"profile"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.new_account_links",
+					"conditions": {
+						"account_max_age_days": 7
+					}
+				},
+				{
+					"name": {
+						"fr": "Mentions en masse",
+						"en": "Mass mentions"
+					},
+					"type": "mention_spam",
+					"params": {
+						"max_mentions": 4
+					},
+					"action": "warn",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.mention_spam",
+					"escalation": {
+						"warns_threshold": 3,
+						"window_days": 7,
+						"action": "mute",
+						"duration": {
+							"value": 1,
+							"unit": "h"
+						}
+					}
+				},
+				{
+					"name": {
+						"fr": "Majuscules",
+						"en": "All caps"
+					},
+					"type": "caps",
+					"params": {
+						"min_length": 15,
+						"threshold_percent": 70
+					},
+					"action": "warn",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.caps"
+				},
+				{
+					"name": {
+						"fr": "Mots interdits : lot jeunesse",
+						"en": "Banned words: youth set"
+					},
+					"type": "keywords",
+					"params": {
+						"words_by_lang": {
+							"fr": [
+								"connard",
+								"connasse",
+								"enculé",
+								"salope",
+								"pute",
+								"bâtard",
+								"abruti",
+								"bouffon",
+								"pétasse",
+								"fdp",
+								"ntm",
+								"enfoiré*",
+								"nudes",
+								"sexe",
+								"baise",
+								"*porno*",
+								"*hentai*",
+								"*onlyfans*"
+							],
+							"en": [
+								"asshole",
+								"bitch",
+								"bastard",
+								"dickhead",
+								"prick",
+								"twat",
+								"wanker",
+								"moron",
+								"stfu",
+								"fuck*",
+								"nudes",
+								"sex",
+								"*porn*",
+								"*hentai*",
+								"*onlyfans*"
+							]
+						},
+						"exceptions": []
+					},
+					"action": "delete",
+					"scopes": [
+						"chat",
+						"forum",
+						"profile",
+						"poll",
+						"wiki"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": null
+				}
+			]
+		},
+		{
+			"id": "gaming",
+			"tone": "warn",
+			"art": "gaming",
+			"rules": [
+				{
+					"name": {
+						"fr": "Inondation",
+						"en": "Flooding"
+					},
+					"type": "flood",
+					"params": {
+						"max_repeats": 3,
+						"repeat_window_s": 30,
+						"max_messages": 6,
+						"burst_window_s": 8
+					},
+					"action": "warn",
+					"scopes": [
+						"chat"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.flood",
+					"escalation": {
+						"warns_threshold": 3,
+						"window_days": 1,
+						"action": "mute",
+						"duration": {
+							"value": 10,
+							"unit": "m"
+						}
+					}
+				},
+				{
+					"name": {
+						"fr": "Invitations vers d’autres serveurs",
+						"en": "Invites to other servers"
+					},
+					"type": "link_domain",
+					"params": {
+						"mode": "blacklist",
+						"domains": [
+							"discord.gg",
+							"discord.com/invite",
+							"discordapp.com/invite",
+							"t.me",
+							"chat.whatsapp.com"
+						]
+					},
+					"action": "delete",
+					"scopes": [
+						"chat",
+						"forum",
+						"profile"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.invites"
+				},
+				{
+					"name": {
+						"fr": "Mentions en masse",
+						"en": "Mass mentions"
+					},
+					"type": "mention_spam",
+					"params": {
+						"max_mentions": 6
+					},
+					"action": "warn",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.mention_spam"
+				},
+				{
+					"name": {
+						"fr": "Majuscules",
+						"en": "All caps"
+					},
+					"type": "caps",
+					"params": {
+						"min_length": 20,
+						"threshold_percent": 85
+					},
+					"action": "report_only",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": false,
+					"enabled": true,
+					"preset_key": "base.caps"
+				}
+			]
+		},
+		{
+			"id": "help",
+			"tone": "observe",
+			"art": "help",
+			"rules": [
+				{
+					"name": {
+						"fr": "Spam de liens",
+						"en": "Link spam"
+					},
+					"type": "link_spam",
+					"params": {
+						"max_links": 8
+					},
+					"action": "report_only",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": false,
+					"enabled": true,
+					"preset_key": "base.link_spam"
+				},
+				{
+					"name": {
+						"fr": "Mentions en masse",
+						"en": "Mass mentions"
+					},
+					"type": "mention_spam",
+					"params": {
+						"max_mentions": 4
+					},
+					"action": "warn",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.mention_spam"
+				},
+				{
+					"name": {
+						"fr": "Majuscules",
+						"en": "All caps"
+					},
+					"type": "caps",
+					"params": {
+						"min_length": 20,
+						"threshold_percent": 80
+					},
+					"action": "report_only",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": false,
+					"enabled": true,
+					"preset_key": "base.caps"
+				},
+				{
+					"name": {
+						"fr": "Raccourcisseurs de liens",
+						"en": "Link shorteners"
+					},
+					"type": "link_domain",
+					"params": {
+						"mode": "blacklist",
+						"domains": [
+							"bit.ly",
+							"tinyurl.com",
+							"t.co",
+							"is.gd",
+							"cutt.ly",
+							"shorturl.at"
+						]
+					},
+					"action": "report_only",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": false,
+					"enabled": true,
+					"preset_key": null
+				}
+			]
+		},
+		{
+			"id": "creative",
+			"tone": "hold",
+			"art": "creative",
+			"rules": [
+				{
+					"name": {
+						"fr": "Spam de liens",
+						"en": "Link spam"
+					},
+					"type": "link_spam",
+					"params": {
+						"max_links": 12
+					},
+					"action": "report_only",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": false,
+					"enabled": true,
+					"preset_key": "base.link_spam"
+				},
+				{
+					"name": {
+						"fr": "Majuscules",
+						"en": "All caps"
+					},
+					"type": "caps",
+					"params": {
+						"min_length": 25,
+						"threshold_percent": 90
+					},
+					"action": "report_only",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.caps"
+				},
+				{
+					"name": {
+						"fr": "Arnaques à la revente",
+						"en": "Resale scams"
+					},
+					"type": "keywords",
+					"params": {
+						"words_by_lang": {
+							"fr": [
+								"*arnaque*",
+								"*escroc*",
+								"*giveaway*",
+								"*airdrop*"
+							],
+							"en": [
+								"*scam*",
+								"*scammer*",
+								"*giveaway*",
+								"*airdrop*"
+							]
+						},
+						"exceptions": []
+					},
+					"action": "report_only",
+					"scopes": [
+						"chat",
+						"forum",
+						"profile"
+					],
+					"dry_run": false,
+					"enabled": true,
+					"preset_key": null
+				}
+			]
+		},
+		{
+			"id": "strict",
+			"tone": "delete",
+			"art": "strict",
+			"rules": [
+				{
+					"name": {
+						"fr": "Spam de liens",
+						"en": "Link spam"
+					},
+					"type": "link_spam",
+					"params": {
+						"max_links": 2
+					},
+					"action": "delete",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.link_spam"
+				},
+				{
+					"name": {
+						"fr": "Liens des comptes tout neufs",
+						"en": "Links from brand-new accounts"
+					},
+					"type": "link_spam",
+					"params": {
+						"max_links": 0
+					},
+					"action": "delete",
+					"scopes": [
+						"chat",
+						"forum",
+						"profile"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.new_account_links",
+					"conditions": {
+						"account_max_age_days": 7
+					}
+				},
+				{
+					"name": {
+						"fr": "Mentions en masse",
+						"en": "Mass mentions"
+					},
+					"type": "mention_spam",
+					"params": {
+						"max_mentions": 3
+					},
+					"action": "warn",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.mention_spam",
+					"escalation": {
+						"warns_threshold": 2,
+						"window_days": 7,
+						"action": "mute",
+						"duration": {
+							"value": 24,
+							"unit": "h"
+						}
+					}
+				},
+				{
+					"name": {
+						"fr": "Majuscules",
+						"en": "All caps"
+					},
+					"type": "caps",
+					"params": {
+						"min_length": 12,
+						"threshold_percent": 60
+					},
+					"action": "warn",
+					"scopes": [
+						"chat",
+						"forum"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.caps"
+				},
+				{
+					"name": {
+						"fr": "Texte corrompu",
+						"en": "Corrupted text"
+					},
+					"type": "zalgo",
+					"params": {
+						"max_combining": 2
+					},
+					"action": "delete",
+					"scopes": [
+						"chat",
+						"forum",
+						"profile",
+						"poll",
+						"wiki"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.zalgo"
+				},
+				{
+					"name": {
+						"fr": "Invitations vers d’autres serveurs",
+						"en": "Invites to other servers"
+					},
+					"type": "link_domain",
+					"params": {
+						"mode": "blacklist",
+						"domains": [
+							"discord.gg",
+							"discord.com/invite",
+							"discordapp.com/invite",
+							"t.me",
+							"chat.whatsapp.com"
+						]
+					},
+					"action": "delete",
+					"scopes": [
+						"chat",
+						"forum",
+						"profile"
+					],
+					"dry_run": true,
+					"enabled": true,
+					"preset_key": "base.invites"
+				}
+			]
+		}
+	]
+}

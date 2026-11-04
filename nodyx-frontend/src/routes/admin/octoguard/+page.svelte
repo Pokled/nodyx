@@ -19,6 +19,12 @@
 	const on = $derived(rules.filter((r) => r.enabled))
 	const observing = $derived(on.filter((r) => r.dry_run))
 	const enabled = $derived(!!data.settings?.enabled)
+	// Justesse : la part des actions de la semaine que l'équipe n'a PAS annulées.
+	const precision = $derived.by(() => {
+		const acted = stats.totals?.acted ?? 0
+		if (!acted) return null
+		return Math.max(0, Math.round((100 * (acted - (stats.totals?.undone ?? 0))) / acted))
+	})
 
 	// Ce qui mérite un coup d'œil : OctoGuard suggère, l'équipe décide.
 	type Tip = { key: string; kind: Level | 'ok' | 'acc'; icon: string; text: string; meta?: string; href?: string; hrefLabel?: string; rule?: Rule }
@@ -110,10 +116,10 @@
 		</section>
 	{/if}
 
-	<div class="adm-stats">
+	<div class="adm-stats og-stats4">
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_acted')}</span><Icon d={LEVEL_ICON.delete} cls="adm-stat-icon" /></div><div class="adm-stat-value">{stats.totals?.acted ?? 0}</div><div class="adm-stat-sub">{tFn('og2.st_acted_sub')}</div></div>
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_observed')}</span><Icon d={LEVEL_ICON.observe} cls="adm-stat-icon" /></div><div class="adm-stat-value">{stats.totals?.observed ?? 0}</div><div class="adm-stat-sub">{tFn('og2.st_observed_sub')}</div></div>
-		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_undone')}</span><Icon d={KIND_ICON.ok} cls="adm-stat-icon" /></div><div class="adm-stat-value">{stats.totals?.undone ?? 0}</div><div class="adm-stat-sub">{tFn('og2.st_undone_sub')}</div></div>
+		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_precision')}</span><Icon d="M5 13l4 4L19 7" cls="adm-stat-icon" /></div><div class="adm-stat-value">{precision === null ? '·' : `${precision} %`}</div><div class="adm-stat-sub">{precision === null ? tFn('og2.st_precision_none') : tFn('og2.st_precision_sub', { u: stats.totals?.undone ?? 0, n: stats.totals?.acted ?? 0 })}</div></div>
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.nav_reports')}</span><Icon d={LEVEL_ICON.report} cls="adm-stat-icon" /></div><div class="adm-stat-value">{openReports}</div><div class="adm-stat-sub"><a class="og-linkbtn" href="/admin/reports">{tFn('og2.open_queue')}</a></div></div>
 	</div>
 
@@ -172,10 +178,14 @@
 
 	<section aria-labelledby="og-start">
 		<h2 id="og-start" class="adm-title" style="font-size:0.9375rem;margin-bottom:0.75rem">{tFn('og2.where_to')}</h2>
-		<div class="og-grid3">
+		<div class="og-grid4">
 			<a class="adm-card og-tile" href="/admin/octoguard/rules">
 				<div class="og-tile-art"><svg viewBox="0 0 160 84" aria-hidden="true"><rect class="og-art-p" x="20" y="14" width="120" height="56" rx="10"/><rect x="32" y="40" width="96" height="16" rx="6" fill="color-mix(in srgb, var(--nx-text) 10%, transparent)"/><rect x="56" y="40" width="24" height="16" rx="6" fill="var(--nx-surface)" stroke="var(--nx-info)" stroke-width="1.5"/><circle cx="44" cy="27" r="3.5" fill="var(--nx-text-muted)"/><circle cx="68" cy="27" r="3.5" fill="var(--nx-info)"/><circle cx="92" cy="27" r="3.5" fill="var(--nx-warn)"/><circle cx="116" cy="27" r="3.5" fill="var(--nx-bad)"/></svg></div>
 				<div class="og-tile-tx"><b>{tFn('og2.nav_rules')}</b><span>{tFn('og2.tile_rules')}</span><span class="og-go">{tFn('og2.tile_rules_go')}</span></div>
+			</a>
+			<a class="adm-card og-tile" href="/admin/octoguard/templates">
+				<div class="og-tile-art"><svg viewBox="0 0 160 84" aria-hidden="true"><rect class="og-art-p" x="28" y="10" width="64" height="44" rx="8"/><rect class="og-art-p" x="48" y="22" width="64" height="44" rx="8"/><rect class="og-art-a" x="68" y="34" width="64" height="44" rx="8"/><path d="M88 56l7 7 14-14" fill="none" stroke="var(--nx-header-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+				<div class="og-tile-tx"><b>{tFn('og2.nav_templates')}</b><span>{tFn('og2.tile_templates')}</span><span class="og-go">{tFn('og2.tile_templates_go')}</span></div>
 			</a>
 			<a class="adm-card og-tile" href="/admin/octoguard/sandbox">
 				<div class="og-tile-art"><svg viewBox="0 0 160 84" aria-hidden="true"><rect class="og-art-p" x="14" y="16" width="64" height="52" rx="8"/><path class="og-art-s" d="M24 32h40M24 44h44M24 56h28"/><path d="M84 42h14 M94 37l6 5-6 5" fill="none" stroke="var(--nx-header-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect class="og-art-p" x="106" y="16" width="42" height="52" rx="8"/><circle cx="118" cy="30" r="4" fill="var(--nx-info)"/><circle cx="118" cy="44" r="4" fill="var(--nx-ok)"/><circle cx="118" cy="58" r="4" fill="var(--nx-text-muted)"/></svg></div>

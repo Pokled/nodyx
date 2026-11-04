@@ -171,7 +171,12 @@
 				</div>
 				<div class="min-w-0">
 					<div class="adm-side-title">OctoGuard</div>
-					<div class="adm-side-sub">{tFn('og2.side_sub')}</div>
+					{#if (page.data as any).ogStatus}
+						{@const st = (page.data as any).ogStatus}
+						<div class="adm-side-sub"><span class="adm-og-dot" style="background:{st.enabled ? 'var(--nx-ok)' : 'var(--nx-text-muted)'}"></span>{tFn(st.enabled ? 'og2.side_on' : 'og2.side_off', { n: st.active })}</div>
+					{:else}
+						<div class="adm-side-sub">{tFn('og2.side_sub')}</div>
+					{/if}
 				</div>
 			</div>
 			<button type="button" class="adm-side-back" onclick={() => (adminPeek = true)}>
@@ -331,6 +336,7 @@
 	}
 	.adm-side-link svg { width: 1rem; height: 1rem; flex: none; }
 	/* Une langue longue passe sur deux lignes plutôt que d'être coupée (test +40 %). */
+	.adm-og-dot { display: inline-block; width: 0.45rem; height: 0.45rem; border-radius: 99px; margin-right: 0.35rem; vertical-align: 1px; }
 	.adm-side-label { flex: 1; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 	.adm-side-link svg.adm-side-chev { width: 0.85rem; height: 0.85rem; color: var(--nx-text-muted); opacity: .7; }
 	button.adm-side-back { width: calc(100% - 1.2rem); text-align: left; background: transparent; cursor: pointer; font: inherit; }
