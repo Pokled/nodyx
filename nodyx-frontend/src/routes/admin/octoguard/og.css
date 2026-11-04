@@ -202,3 +202,7 @@
 .og-guide-banner { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; padding: 1rem 1.25rem; }
 .og-gb-art .og-illu { padding: 0.5rem; }
 @media (max-width: 760px) { .og-guide-banner { grid-template-columns: 1fr; } .og-gb-art { display: none; } }
+/* Vue d'ensemble : 4 chiffres et 4 raccourcis sur une ligne, comme la maquette */
+.adm-stats.og-stats4 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); }
+.og-grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0.875rem; }
+.og-drawer-scrim { background: rgb(10 9 7 / .45) !important; }
