@@ -223,6 +223,7 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     return reply.send({
       enabled:        og.isOctoGuardEnabled(),
       locked_off:     og.isOctoGuardLockedOff(),
+      latency:        (await import('../services/octoguard/pipeline')).pipelineLatency(),
       re2_active:     (await import('../services/octoguard')).hasRE2(),
       hate_filter:    process.env.NODYX_HATE_FILTER_ENABLED !== 'false',
     })

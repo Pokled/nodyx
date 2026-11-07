@@ -5548,6 +5548,8 @@
   "og2.health_hate": "Filtre des symboles haineux actif",
   "og2.health_hate_off": "Filtre des symboles haineux coupé",
   "og2.health_scope": "Surveille : chat, forum, profils, sondages, wiki",
+  "og2.health_ms": "{{ms}} ms par message en moyenne",
+  "og2.from_template": "Depuis un modèle",
   "og2.p_domains_ph": "discord.gg, exemple.fr",
   "og2.nav_aria": "Menu d'OctoGuard",
   "og2.err_range": "« {{field}} » : un nombre entier entre {{min}} et {{max}}.",
