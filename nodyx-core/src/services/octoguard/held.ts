@@ -23,6 +23,7 @@ import * as NotificationModel from '../../models/notification'
 import { awardPoints, REPUTATION } from '../../models/reputation'
 import { io } from '../../socket/io'
 import { logOctoGuardAction } from './logger'
+import { purgeOldEdits, EDITS_RETENTION_DAYS } from './context'
 
 /** D17 : un contenu retenu sans décision est refusé au bout de 72 h. */
 export const HELD_EXPIRY_HOURS = 72
@@ -237,7 +238,7 @@ async function publish(h: HeldRow): Promise<string | null> {
     return thread.id
   }
   if (h.kind === 'post_edit' && h.post_id) {
-    const post = await PostModel.updateContent(h.post_id, p.content)
+    const post = await PostModel.updateContent(h.post_id, p.content, h.author_id)
     await sideEffect('cache', async () => { await redis.incr('threads:cache:ver') })
     return post?.id ?? null
   }
@@ -338,6 +339,9 @@ export function startHeldExpiryWorker(): void {
     expireHeld()
       .then(n => { if (n > 0) console.log(`[octoguard:held] ${n} held item(s) expired after ${HELD_EXPIRY_HOURS}h`) })
       .catch(err => console.warn('[octoguard:held] expiry failed:', err))
+    purgeOldEdits()
+      .then(n => { if (n > 0) console.log(`[octoguard:held] ${n} old edit(s) erased after ${EDITS_RETENTION_DAYS} days`) })
+      .catch(err => console.warn('[octoguard:held] edits purge failed:', err))
     purgeDecidedHeld()
       .then(n => { if (n > 0) console.log(`[octoguard:held] ${n} decided item(s) erased after ${HELD_RETENTION_DAYS} days`) })
       .catch(err => console.warn('[octoguard:held] purge failed:', err))

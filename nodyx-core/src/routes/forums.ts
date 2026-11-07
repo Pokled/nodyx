@@ -515,7 +515,7 @@ app.get('/threads', {
       return held.ok ? reply.code(202).send(heldBody(held.row)) : reply.code(422).send(holdRefusal(held.code))
     }
 
-    const post = await PostModel.updateContent(id, editSanitized)
+    const post = await PostModel.updateContent(id, editSanitized, userId)
     if (ogEdit.report) void fileAutoReport({ targetType: 'post', targetId: id, ruleName: ogEdit.report.rule_name, excerpt: ogEdit.report.excerpt })
     bumpThreadsCache()
     return reply.send({

@@ -27,6 +27,7 @@ import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { runSandbox, ruleStats, ruleHits } from '../services/octoguard/sandbox'
 import { BASE_PRESETS, BASE_PROFILE_VERSION, startingLevel, exportProfile, previewImport, applyImport, ProfileZ, type Profile } from '../services/octoguard/profile'
 import { checkRuleParams } from '../services/octoguard/params'
+import { reportContext, heldContext } from '../services/octoguard/context'
 import { listPending, countPending, approveHeld, refuseHeld, listMine, forAuthor, HELD_EXPIRY_HOURS } from '../services/octoguard/held'
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
 import * as NotificationModel from '../models/notification'
@@ -790,6 +791,15 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     return reply.send({ held: items, count: await countPending(), expiry_hours: HELD_EXPIRY_HOURS })
   })
 
+  // Le contexte d'un contenu retenu (lot 3) : la conversation au moment où il a été écrit
+  app.get('/held/:id/context', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    const ctx = await heldContext(id)
+    if (!ctx) return reply.code(404).send({ error: 'Not found', code: 'NOT_FOUND' })
+    return reply.send({ context: ctx })
+  })
+
   app.post('/held/:id/:decision', {
     preHandler: [rateLimit],
   }, async (request, reply) => {
@@ -870,6 +880,17 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
       `SELECT status, COUNT(*)::int AS n FROM reports GROUP BY status`
     )
     return reply.send({ reports: rows, page, limit, counts: Object.fromEntries(counts.map(c => [c.status, c.n])) })
+  })
+
+  // Le contexte d'un signalement (lot 3) : conversation autour, modifications, fiche courte
+  app.get('/reports/:id/context', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    const { rows } = await db.query<{ target_type: string; target_id: string }>(`SELECT target_type, target_id FROM reports WHERE id = $1`, [id])
+    if (!rows[0]) return reply.code(404).send({ error: 'Not found', code: 'NOT_FOUND' })
+    const ctx = await reportContext(rows[0].target_type, rows[0].target_id)
+    if (!ctx) return reply.code(404).send({ error: 'The content no longer exists', code: 'CONTENT_GONE' })
+    return reply.send({ context: ctx })
   })
 
   app.patch('/reports/:id', {

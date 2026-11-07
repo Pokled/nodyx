@@ -250,3 +250,23 @@
 .og-rp-empty p { margin: 0.125rem 0 0; }
 p.og-meta { display: flex; align-items: center; gap: 0.375rem; margin: 0; }
 p.og-meta svg { width: 0.9rem; height: 0.9rem; flex: none; }
+
+/* ─── La conversation autour et ce que l'auteur a modifié (lot 3) ─── */
+.og-conv { display: flex; flex-direction: column; border: 1px solid var(--nx-border); border-radius: 10px; overflow: hidden; }
+.og-msg { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr) auto; gap: 0.625rem; padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
+.og-msg + .og-msg { border-top: 1px solid var(--og-line); }
+.og-msg-av { width: 1.75rem; height: 1.75rem; border-radius: 99px; display: grid; place-items: center; font-weight: 600; font-size: 0.6875rem; color: #fff; }
+.og-msg-av-held { background: color-mix(in srgb, var(--og-hold) 22%, transparent); color: var(--og-hold); }
+.og-msg-body { min-width: 0; }
+.og-msg-who { font-weight: 600; font-size: 0.78rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
+.og-msg-tag { font-size: 0.6875rem; font-weight: 600; color: var(--nx-bad); }
+.og-msg-ed { font-size: 0.6875rem; font-weight: 500; color: var(--nx-text-muted); font-style: italic; }
+.og-msg-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 9rem; overflow: hidden; }
+.og-msg-gone { color: var(--nx-text-muted); }
+.og-msg-time { font-size: 0.72rem; color: var(--nx-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.og-msg-hot { background: color-mix(in srgb, var(--nx-bad) 7%, transparent); box-shadow: inset 2px 0 0 var(--nx-bad); }
+.og-msg-held { background: color-mix(in srgb, var(--og-hold) 7%, transparent); box-shadow: inset 2px 0 0 var(--og-hold); }
+.og-msg-held .og-msg-who { color: var(--og-hold); }
+.og-diff { white-space: pre-wrap; font-size: 0.8125rem; line-height: 1.55; max-height: 18rem; overflow: auto; }
+.og-diff del { color: var(--nx-bad); background: color-mix(in srgb, var(--nx-bad) 10%, transparent); text-decoration-thickness: 1.5px; }
+.og-diff ins { color: var(--nx-ok); background: color-mix(in srgb, var(--nx-ok) 12%, transparent); text-decoration: none; }
