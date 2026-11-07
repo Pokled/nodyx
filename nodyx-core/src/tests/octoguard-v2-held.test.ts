@@ -297,3 +297,26 @@ describe('sécurité de la mise en attente (revue du 07/11)', () => {
     expect(q.params).toEqual(['30'])
   })
 })
+
+describe('approuver ne publie jamais deux fois (relecture du 07/11)', () => {
+  const who = { id: MOD, username: 'mod' }
+  it('les points de réputation échouent APRÈS la création : publié, acquis, pas de remise en attente', async () => {
+    const { awardPoints } = await import('../models/reputation')
+    vi.mocked(awardPoints).mockRejectedValueOnce(new Error('redis down'))
+    st.held = heldRow({ kind: 'post', channel_id: null, thread_id: THREAD })
+    const r = await approveHeld(HELD, who)
+    expect(r).toMatchObject({ ok: true, published_id: 'p-new' })
+    expect(calls.some(c => c.sql.startsWith("UPDATE octoguard_held SET status = 'pending'"))).toBe(false)
+    // un second clic ne trouve plus rien à publier
+    expect(await approveHeld(HELD, who)).toEqual({ ok: false, code: 'ALREADY_DECIDED' })
+    expect(postCreateMock).toHaveBeenCalledTimes(1)
+  })
+  it('nouveau fil dont le premier message échoue : le fil vide est retiré, rien n’est publié', async () => {
+    vi.mocked(ThreadModel.create).mockResolvedValueOnce({ id: 'th-new' } as never)
+    postCreateMock.mockRejectedValueOnce(new Error('fk'))
+    st.held = heldRow({ kind: 'thread', channel_id: null, category_id: 'cat', payload: { content: '<p>x</p>', title: 'Titre' } })
+    const r = await approveHeld(HELD, who)
+    expect(r).toEqual({ ok: false, code: 'PUBLISH_FAILED' })
+    expect(ThreadModel.remove).toHaveBeenCalledWith('th-new')
+  })
+})

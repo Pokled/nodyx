@@ -5895,5 +5895,8 @@
   "og2.rp_age_d": "compte de {{n}} jours",
   "og2.rp_age_m": "membre depuis {{n}} mois",
   "og2.rp_err_banned": "Son auteur a été banni depuis : rien n'a été publié. Refusez ce message.",
-  "og2.rp_err_locked": "Le fil a été verrouillé depuis : rien n'a été publié. Refusez ce message."
+  "og2.rp_err_locked": "Le fil a été verrouillé depuis : rien n'a été publié. Refusez ce message.",
+  "og2.rp_held_waiting_1": "En revanche, 1 message retenu attend dans « À relire ».",
+  "og2.rp_held_waiting_n": "En revanche, {{n}} messages retenus attendent dans « À relire ».",
+  "og2.rp_go_held": "Ouvrir « À relire »"
 }

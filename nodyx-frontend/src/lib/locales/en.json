@@ -5895,5 +5895,8 @@
   "og2.rp_age_d": "account {{n}} days old",
   "og2.rp_age_m": "member for {{n}} months",
   "og2.rp_err_banned": "Its author has been banned since: nothing was published. Refuse this message.",
-  "og2.rp_err_locked": "The thread has been locked since: nothing was published. Refuse this message."
+  "og2.rp_err_locked": "The thread has been locked since: nothing was published. Refuse this message.",
+  "og2.rp_held_waiting_1": "However, 1 held message is waiting in \"To review\".",
+  "og2.rp_held_waiting_n": "However, {{n}} held messages are waiting in \"To review\".",
+  "og2.rp_go_held": "Open \"To review\""
 }

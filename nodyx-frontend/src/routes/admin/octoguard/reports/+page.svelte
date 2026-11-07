@@ -171,6 +171,10 @@
 			<div>
 				<b>{tFn(data.tab === 'held' ? 'og2.rp_empty_held' : data.tab === 'open' ? 'areports.empty_open' : 'areports.empty_other')}</b>
 				{#if data.tab === 'held'}<p class="og-help">{tFn('og2.rp_empty_held_sub')}</p>{/if}
+				{#if data.tab === 'open' && data.heldCount > 0}
+					<p class="og-help">{tFn(data.heldCount > 1 ? 'og2.rp_held_waiting_n' : 'og2.rp_held_waiting_1', { n: data.heldCount })}</p>
+					<a class="adm-btn adm-btn--sm adm-btn--primary og-rp-open" style="margin-top:0.5rem" href="/admin/octoguard/reports?tab=held"><Icon d={LEVEL_ICON.hold} />{tFn('og2.rp_go_held')}</a>
+				{/if}
 			</div>
 		</div>
 	{:else}

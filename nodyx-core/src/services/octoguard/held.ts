@@ -188,7 +188,20 @@ async function blockedNow(h: HeldRow): Promise<PublishBlock | null> {
   return null
 }
 
-/** Publie pour de vrai ce qui était retenu. Renvoie l'identifiant publié. */
+/** Effet secondaire d'une publication (points, notification, étiquettes, cache) :
+ *  son échec ne doit JAMAIS faire croire que rien n'a été publié. */
+async function sideEffect(label: string, fn: () => Promise<unknown>): Promise<void> {
+  try { await fn() } catch (err) { console.warn(`[octoguard:held] ${label} failed after publishing (kept):`, err) }
+}
+
+/**
+ * Publie pour de vrai ce qui était retenu. Renvoie l'identifiant publié, ou
+ * null si RIEN n'a été écrit. Règle : dès que le message (ou le fil) existe, la
+ * publication est acquise ; tout ce qui suit est au mieux. Avant (relu le
+ * 07/11), une erreur sur les points de réputation après la création renvoyait
+ * « rien publié », le contenu repassait en attente et une seconde approbation
+ * le publiait DEUX fois.
+ */
 async function publish(h: HeldRow): Promise<string | null> {
   const p = h.payload
   if (h.kind === 'chat' && h.channel_id) {
@@ -202,24 +215,30 @@ async function publish(h: HeldRow): Promise<string | null> {
     const thread = await ThreadModel.findById(h.thread_id)
     if (!thread) return null
     const post = await PostModel.create({ thread_id: h.thread_id, author_id: h.author_id, content: p.content })
-    redis.incr('threads:cache:ver').catch(() => {})
-    await awardPoints(h.author_id, REPUTATION.REPLY)
+    await sideEffect('cache', async () => { await redis.incr('threads:cache:ver') })
+    await sideEffect('reputation', () => awardPoints(h.author_id, REPUTATION.REPLY))
     if (thread.author_id !== h.author_id) {
-      await NotificationModel.create({ user_id: thread.author_id, type: 'thread_reply', actor_id: h.author_id, thread_id: thread.id, post_id: post.id }).catch(() => {})
+      await sideEffect('notification', () => NotificationModel.create({ user_id: thread.author_id, type: 'thread_reply', actor_id: h.author_id, thread_id: thread.id, post_id: post.id }))
     }
     return post.id
   }
   if (h.kind === 'thread' && h.category_id && p.title) {
     const thread = await ThreadModel.create({ category_id: h.category_id, author_id: h.author_id, title: p.title })
-    await PostModel.create({ thread_id: thread.id, author_id: h.author_id, content: p.content })
-    if (p.tag_ids?.length) await TagModel.setThreadTags(thread.id, p.tag_ids)
-    redis.incr('threads:cache:ver').catch(() => {})
-    await awardPoints(h.author_id, REPUTATION.THREAD)
+    try {
+      await PostModel.create({ thread_id: thread.id, author_id: h.author_id, content: p.content })
+    } catch (err) {
+      // Un fil sans son premier message ne doit pas rester : on le retire, rien n'est publié
+      await ThreadModel.remove(thread.id).catch(() => {})
+      throw err
+    }
+    if (p.tag_ids?.length) await sideEffect('tags', () => TagModel.setThreadTags(thread.id, p.tag_ids!))
+    await sideEffect('cache', async () => { await redis.incr('threads:cache:ver') })
+    await sideEffect('reputation', () => awardPoints(h.author_id, REPUTATION.THREAD))
     return thread.id
   }
   if (h.kind === 'post_edit' && h.post_id) {
     const post = await PostModel.updateContent(h.post_id, p.content)
-    redis.incr('threads:cache:ver').catch(() => {})
+    await sideEffect('cache', async () => { await redis.incr('threads:cache:ver') })
     return post?.id ?? null
   }
   return null
@@ -233,7 +252,7 @@ function tellAuthor(h: HeldRow, outcome: 'approved' | 'refused' | 'expired', pub
     user_id:   h.author_id,
     type:      outcome === 'approved' ? 'held_approved' : 'held_refused',
     thread_id: h.kind === 'thread' && outcome === 'approved' ? publishedId : h.thread_id,
-    meta:      { kind: h.kind, excerpt: h.payload.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120), expired: outcome === 'expired' },
+    meta:      { kind: h.kind, excerpt: h.payload.content.slice(0, 2000).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120), expired: outcome === 'expired' },
   }).then(async () => {
     const count = await NotificationModel.getUnreadCount(h.author_id).catch(() => 0)
     io?.to(`user:${h.author_id}`).emit('notification:new', { unreadCount: count })
