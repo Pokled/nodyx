@@ -17,7 +17,7 @@ import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
 import { checkHtmlContent } from '../services/contentFilter'
 import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
 import { fileAutoReport } from '../services/octoguard/autoReport'
-import { holdContent, forAuthor } from '../services/octoguard/held'
+import { holdContent, forAuthor, holdRefusal } from '../services/octoguard/held'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { getAccess, outranks, rankOf } from '../services/permissions'
 import { isContainedUploadPath } from '../utils/uploadPath'
@@ -553,10 +553,14 @@ export function registerSocketIO(server: Server): void {
               kind: 'chat', authorId: userId, channelId,
               payload: { content: sanitized, reply_to_id: replyToId ?? null }, rule: og.hold,
             })
-            if (held) {
-              io?.to(`user:${userId}`).emit('octoguard:held', forAuthor(held))
-              return
+            if (held.ok) {
+              io?.to(`user:${userId}`).emit('octoguard:held', forAuthor(held.row))
+            } else {
+              const refusal = holdRefusal(held.code)
+              socket.emit('chat:blocked', { reason: refusal.code, octoguard: { i18n_key: refusal.i18n_key } })
             }
+            // Retenu ou refus : dans les deux cas, RIEN n'est publié
+            return
           }
           if (og.blocked) {
             socket.emit('chat:blocked', {

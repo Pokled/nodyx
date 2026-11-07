@@ -92,7 +92,7 @@
 
 	{#if form?.error}
 		<p class="mb-4 bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-4 py-2 text-sm text-[var(--nx-bad)]">
-			{form.code === 'CATEGORY_RESTRICTED' ? tFn('forum.category_restricted') : form.code === 'OCTOGUARD_BLOCKED' ? octoguardMessage(tFn, form.i18n_key) : form.code === 'MUTED' ? tFn('forum.err_muted') : form.code === 'CONTENT_BLOCKED' ? tFn('forum.err_forbidden_content') : form.error}
+			{form.code === 'CATEGORY_RESTRICTED' ? tFn('forum.category_restricted') : form.code === 'OCTOGUARD_BLOCKED' || form.code === 'OCTOGUARD_HELD_LIMIT' ? octoguardMessage(tFn, form.i18n_key) : form.code === 'MUTED' ? tFn('forum.err_muted') : form.code === 'CONTENT_BLOCKED' ? tFn('forum.err_forbidden_content') : form.error}
 		</p>
 	{/if}
 

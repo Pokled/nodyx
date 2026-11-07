@@ -26,6 +26,11 @@ import { logOctoGuardAction } from './logger'
 
 /** D17 : un contenu retenu sans décision est refusé au bout de 72 h. */
 export const HELD_EXPIRY_HOURS = 72
+/** Au-delà, un auteur ne peut plus rien mettre en attente : sa file est pleine
+ *  et l'envoi est refusé. Empêche un compte de noyer l'équipe sous la relecture. */
+export const HELD_MAX_PENDING_PER_AUTHOR = 5
+/** Le texte d'un contenu refusé ou expiré n'est pas gardé : effacé 30 jours après la décision. */
+export const HELD_RETENTION_DAYS = 30
 
 export type HeldKind = 'chat' | 'post' | 'thread' | 'post_edit'
 
@@ -75,17 +80,33 @@ export function forAuthor(r: HeldRow) {
   }
 }
 
-/** Met un contenu de côté. Renvoie la ligne, ou null si l'écriture a échoué. */
-export async function holdContent(input: HoldInput): Promise<HeldRow | null> {
-  const { rows } = await db.query<HeldRow>(
-    `INSERT INTO octoguard_held (kind, author_id, channel_id, thread_id, post_id, category_id, payload, rule_id, rule_name, excerpt)
-     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)
-     RETURNING *`,
-    [input.kind, input.authorId, input.channelId ?? null, input.threadId ?? null, input.postId ?? null,
-     input.categoryId ?? null, JSON.stringify(input.payload), input.rule.rule_id, input.rule.rule_name, input.rule.excerpt]
-  )
-  const row = rows[0] ?? null
-  if (row) {
+export type HoldResult = { ok: true; row: HeldRow } | { ok: false; code: 'HELD_LIMIT' | 'HOLD_FAILED' }
+
+/**
+ * Met un contenu de côté. Ne lève jamais. L'appelant ne publie JAMAIS sur un
+ * échec (ok: false) : un contenu qu'une règle voulait retenir n'est pas publié
+ * parce que la base a eu un hoquet (on refuse l'envoi, l'auteur réessaiera).
+ */
+export async function holdContent(input: HoldInput): Promise<HoldResult> {
+  let row: HeldRow | null = null
+  try {
+    // Insertion conditionnelle : pas plus de N contenus en attente par auteur
+    const { rows } = await db.query<HeldRow>(
+      `INSERT INTO octoguard_held (kind, author_id, channel_id, thread_id, post_id, category_id, payload, rule_id, rule_name, excerpt)
+       SELECT $1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10
+        WHERE (SELECT COUNT(*) FROM octoguard_held WHERE author_id = $2 AND status = 'pending') < $11
+       RETURNING *`,
+      [input.kind, input.authorId, input.channelId ?? null, input.threadId ?? null, input.postId ?? null,
+       input.categoryId ?? null, JSON.stringify(input.payload), input.rule.rule_id, input.rule.rule_name, input.rule.excerpt,
+       HELD_MAX_PENDING_PER_AUTHOR]
+    )
+    row = rows[0] ?? null
+  } catch (err) {
+    console.warn('[octoguard:held] hold failed, refusing the content:', err)
+    return { ok: false, code: 'HOLD_FAILED' }
+  }
+  if (!row) return { ok: false, code: 'HELD_LIMIT' }
+  {
     logOctoGuardAction({
       action:       'octoguard.message_held',
       target_type:  'user',
@@ -94,7 +115,14 @@ export async function holdContent(input: HoldInput): Promise<HeldRow | null> {
       metadata:     { event_id: randomUUID(), rule_id: input.rule.rule_id, rule_name: input.rule.rule_name, held_id: row.id, kind: input.kind, actor: 'octoguard:auto', would_be: false },
     })
   }
-  return row
+  return { ok: true, row }
+}
+
+/** Corps de refus quand la mise en attente n'a pas pu se faire (jamais de publication). */
+export function holdRefusal(code: 'HELD_LIMIT' | 'HOLD_FAILED') {
+  return code === 'HELD_LIMIT'
+    ? { error: 'Too many messages awaiting review', code: 'OCTOGUARD_HELD_LIMIT', i18n_key: 'octoguard.held_limit' }
+    : { error: 'Could not hold the message for review', code: 'OCTOGUARD_BLOCKED', i18n_key: 'octoguard.blocked' }
 }
 
 export async function listPending(limit = 100): Promise<Array<HeldRow & { author_username: string; author_created_at: string; channel_name: string | null; thread_title: string | null }>> {
@@ -140,6 +168,24 @@ async function claim(id: string, status: 'approved' | 'refused' | 'expired', act
     [id, status, actorId]
   )
   return rows[0] ?? null
+}
+
+export type PublishBlock = 'AUTHOR_BANNED' | 'THREAD_LOCKED' | 'PUBLISH_FAILED'
+
+/**
+ * Ce qui a pu changer depuis la mise en attente : l'auteur a été banni, le fil
+ * a été verrouillé. Approuver ne doit pas contourner ces décisions.
+ */
+async function blockedNow(h: HeldRow): Promise<PublishBlock | null> {
+  const { rows } = await db.query<{ banned: boolean; locked: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM community_bans cb WHERE cb.user_id = $1
+                     AND (cb.expires_at IS NULL OR cb.expires_at > NOW())) AS banned,
+            COALESCE((SELECT t.is_locked FROM threads t WHERE t.id = $2), false) AS locked`,
+    [h.author_id, h.thread_id]
+  )
+  if (rows[0]?.banned) return 'AUTHOR_BANNED'
+  if (rows[0]?.locked && (h.kind === 'post' || h.kind === 'post_edit')) return 'THREAD_LOCKED'
+  return null
 }
 
 /** Publie pour de vrai ce qui était retenu. Renvoie l'identifiant publié. */
@@ -196,21 +242,23 @@ function tellAuthor(h: HeldRow, outcome: 'approved' | 'refused' | 'expired', pub
 
 export type DecideResult =
   | { ok: true; held: HeldRow; published_id: string | null }
-  | { ok: false; code: 'ALREADY_DECIDED' | 'PUBLISH_FAILED' }
+  | { ok: false; code: 'ALREADY_DECIDED' | PublishBlock }
 
 export async function approveHeld(id: string, actor: { id: string; username: string }): Promise<DecideResult> {
   const h = await claim(id, 'approved', actor.id)
   if (!h) return { ok: false, code: 'ALREADY_DECIDED' }
   let publishedId: string | null = null
+  let block: PublishBlock | null = null
   try {
-    publishedId = await publish(h)
+    block = await blockedNow(h)
+    if (!block) publishedId = await publish(h)
   } catch (err) {
     console.warn('[octoguard:held] publish failed:', err)
   }
   if (!publishedId) {
-    // Rien n'a été publié (salon ou fil supprimé entre-temps) : on remet en attente
+    // Rien n'a été publié (auteur banni, fil verrouillé, salon supprimé) : on remet en attente
     await db.query(`UPDATE octoguard_held SET status = 'pending', decided_by = NULL, decided_at = NULL WHERE id = $1`, [id])
-    return { ok: false, code: 'PUBLISH_FAILED' }
+    return { ok: false, code: block ?? 'PUBLISH_FAILED' }
   }
   await db.query(`UPDATE octoguard_held SET published_id = $2 WHERE id = $1`, [id, publishedId])
   logOctoGuardAction({
@@ -232,6 +280,17 @@ export async function refuseHeld(id: string, actor: { id: string; username: stri
   })
   tellAuthor(h, 'refused', null)
   return { ok: true, held: h, published_id: null }
+}
+
+/** Efface les contenus décidés depuis plus de 30 jours (le journal garde l'extrait). */
+export async function purgeDecidedHeld(): Promise<number> {
+  const { rows } = await db.query(
+    `DELETE FROM octoguard_held
+      WHERE status <> 'pending' AND decided_at < NOW() - ($1 || ' days')::interval
+      RETURNING id`,
+    [String(HELD_RETENTION_DAYS)]
+  )
+  return rows.length
 }
 
 /** D17 : appelé par le planificateur. Refuse ce qui attend depuis plus de 72 h. */
@@ -260,6 +319,9 @@ export function startHeldExpiryWorker(): void {
     expireHeld()
       .then(n => { if (n > 0) console.log(`[octoguard:held] ${n} held item(s) expired after ${HELD_EXPIRY_HOURS}h`) })
       .catch(err => console.warn('[octoguard:held] expiry failed:', err))
+    purgeDecidedHeld()
+      .then(n => { if (n > 0) console.log(`[octoguard:held] ${n} decided item(s) erased after ${HELD_RETENTION_DAYS} days`) })
+      .catch(err => console.warn('[octoguard:held] purge failed:', err))
   }, 10 * 60_000)
   _timer.unref?.()
 }

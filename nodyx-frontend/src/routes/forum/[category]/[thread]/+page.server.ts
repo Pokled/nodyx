@@ -93,8 +93,8 @@ export const actions: Actions = {
 		});
 
 		if (!res.ok) {
-			const json = await res.json();
-			return fail(res.status, { editError: json.error });
+			const json = await res.json().catch(() => ({}));
+			return fail(res.status, { editError: json.error ?? null, editCode: json.code ?? null, ogKey: json.i18n_key ?? null, editPostId: postId });
 		}
 		if (res.status === 202) return { editHeld: true };
 	},

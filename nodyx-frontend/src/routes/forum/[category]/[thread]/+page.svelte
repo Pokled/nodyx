@@ -145,6 +145,7 @@
 	function canDelete(post: any) { return user && (user.id === post.author_id || isMod); }
 	// Signaler : tout membre connecté, sauf son propre message (le serveur refuse aussi)
 	function canReport(post: any) { return !!user && user.id !== post.author_id; }
+	let editFailure = $state<string | null>(null)
 	let replyFailure = $state<string | null>(null);
 	
 	// ── Dernier posteur ───────────────────────────────────────────────────
@@ -618,7 +619,20 @@
 				{#if editingPostId === post.id}
 					<form method="POST" action="?/editPost"
 						use:enhance={() => {
-							return async ({ update }) => {
+							editFailure = null
+							return async ({ result, update }) => {
+								// Refus (OctoGuard, sourdine, contenu interdit) : l'éditeur reste
+								// ouvert avec le texte, et on dit pourquoi. Avant, il se fermait
+								// sans un mot et la modification était perdue.
+								if (result.type === 'failure') {
+									const d = (result.data ?? {}) as { editCode?: string | null; ogKey?: string | null }
+									editFailure = d.editCode === 'OCTOGUARD_BLOCKED' || d.editCode === 'OCTOGUARD_HELD_LIMIT'
+										? `${octoguardMessage(tFn, d.ogKey)} ${tFn('forum.text_kept')}`
+										: d.editCode === 'MUTED' ? tFn('forum.err_muted')
+										: d.editCode === 'CONTENT_BLOCKED' ? `${tFn('forum.err_forbidden_content')} ${tFn('forum.text_kept')}`
+										: tFn('forum.err_reply')
+									return
+								}
 								editingPostId = null
 								await update()
 							}
@@ -637,11 +651,12 @@
 								{tFn('common.save')}
 							</button>
 							<button type="button"
-								onclick={() => editingPostId = null}
+								onclick={() => { editingPostId = null; editFailure = null }}
 								class="px-3 py-1.5 bg-[var(--nx-border)] hover:bg-[var(--nx-border)] text-xs text-[var(--nx-text)] transition-colors">
 								{tFn('common.cancel')}
 							</button>
 						</div>
+						{#if editFailure}<p class="text-sm text-[var(--nx-bad)]" role="alert">{editFailure}</p>{/if}
 					</form>
 				{:else}
 					<!-- Contenu HTML rendu -->
@@ -689,7 +704,7 @@
 							const d = (result.data ?? {}) as { replyCode?: string | null; mutedUntil?: string | null; ogKey?: string | null }
 							replyFailure = d.replyCode === 'MUTED'
 								? (d.mutedUntil ? tFn('forum.err_muted_until', { date: new Date(d.mutedUntil).toLocaleString() }) : tFn('forum.err_muted'))
-								: d.replyCode === 'OCTOGUARD_BLOCKED' ? `${octoguardMessage(tFn, d.ogKey)} ${tFn('forum.text_kept')}`
+								: d.replyCode === 'OCTOGUARD_BLOCKED' || d.replyCode === 'OCTOGUARD_HELD_LIMIT' ? `${octoguardMessage(tFn, d.ogKey)} ${tFn('forum.text_kept')}`
 								: d.replyCode === 'CONTENT_BLOCKED' ? `${tFn('forum.err_forbidden_content')} ${tFn('forum.text_kept')}`
 								: d.replyCode === 'BANNED' ? tFn('forum.err_banned')
 								: d.replyCode === 'THREAD_LOCKED' ? tFn('forum.err_locked')

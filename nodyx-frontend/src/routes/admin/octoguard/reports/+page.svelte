@@ -109,6 +109,7 @@
 	const ERR: Record<string, string> = {
 		CANNOT_REVIEW_SELF: 'og2.rp_err_self', RANK_TOO_LOW: 'areports.err_rank', ALREADY_DECIDED: 'og2.rp_err_decided',
 		PUBLISH_FAILED: 'og2.rp_err_gone', FORBIDDEN: 'areports.err_forbidden',
+		AUTHOR_BANNED: 'og2.rp_err_banned', THREAD_LOCKED: 'og2.rp_err_locked',
 	}
 	async function run(fn: () => Promise<unknown>, okKey: string) {
 		busy = true; error = null; done = null

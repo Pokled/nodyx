@@ -52,19 +52,73 @@ export async function buildUserCtx(userId: string): Promise<PipelineUserCtx> {
  *   après passait.
  */
 export function textForModeration(html: string | null | undefined): string {
-  return (html ?? '')
-    .replace(/<a\b[^>]*?\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/gi, (_m, _q, href: string, label: string) => {
-      const text = label.replace(/<[^>]*>/g, '').trim()
-      return text && text !== href ? `${text} ${href}` : href
-    })
-    .replace(/<\s*(br|\/p|\/div|\/li|\/h\d)\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, ' ')
+  return stripTags(htmlTextWithLinks(html ?? '')
+    .replace(/<(br|\/p|\/div|\/li|\/h\d)\s?\/?>/gi, '\n'))
     .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
     .replace(/&amp;/g, '&')
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
+}
+
+/** Retire les balises en un passage. « < » sans « > » derrière : le reste est du texte. */
+function stripTags(s: string): string {
+  let out = ''
+  let i = 0
+  while (i < s.length) {
+    const lt = s.indexOf('<', i)
+    if (lt === -1) { out += s.slice(i); break }
+    const gt = s.indexOf('>', lt)
+    if (gt === -1) { out += s.slice(i); break }
+    out += s.slice(i, lt) + ' '
+    i = gt + 1
+  }
+  return out
+}
+
+/**
+ * Remplace chaque lien par « texte adresse », en UN passage. Pas d'expression
+ * régulière sur le document entier : le texte est celui du membre, AVANT
+ * nettoyage, jusqu'à 500 Ko. Une version à base de regex mettait plus de deux
+ * minutes sur 40 000 « <a href> » jamais fermés, et bloquait tout le cœur
+ * (mesuré le 07/11, avant fusion). Ici chaque caractère est lu un nombre
+ * borné de fois : la position de « </a> » est cherchée une seule fois par
+ * avancée, et une absence est retenue pour la suite.
+ */
+function htmlTextWithLinks(html: string): string {
+  const lower = html.toLowerCase()
+  let out = ''
+  let i = 0
+  let noMoreClose = false
+  let close = -1
+  while (i < html.length) {
+    const a = lower.indexOf('<a', i)
+    if (a === -1) { out += html.slice(i); break }
+    const after = lower.charCodeAt(a + 2)
+    // « <a » suivi d'un espace ou de « > » : une ancre (pas « <abbr », « <aside »)
+    if (!(after === 32 || after === 9 || after === 10 || after === 13 || after === 62)) { out += html.slice(i, a + 2); i = a + 2; continue }
+    const tagEnd = html.indexOf('>', a)
+    if (tagEnd === -1) { out += html.slice(i); break }
+    const tag = html.slice(a, tagEnd + 1)
+    const hrefM = tag.length <= 4096 ? /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(tag) : null
+    const href = hrefM ? (hrefM[1] ?? hrefM[2] ?? hrefM[3] ?? '') : ''
+    if (!noMoreClose && close < tagEnd) {
+      close = lower.indexOf('</a>', tagEnd)
+      if (close === -1) noMoreClose = true
+    }
+    out += html.slice(i, a)
+    if (noMoreClose) {
+      // Ancre jamais fermée : on garde l'adresse, le reste est lu comme du texte
+      out += ` ${href} `
+      i = tagEnd + 1
+      continue
+    }
+    const label = stripTags(html.slice(tagEnd + 1, close)).trim()
+    out += label && label !== href ? `${label} ${href}` : href
+    i = close + 4
+  }
+  return out
 }
 
 /** Les textes d'une publication (titre, corps, bio…) sont examinés ensemble. */

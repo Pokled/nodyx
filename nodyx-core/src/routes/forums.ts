@@ -21,7 +21,7 @@ import { io } from '../socket/io'
 import { can, getAccess, communityOfThread, outranks, rankOf } from '../services/permissions'
 import { isUserMuted } from '../services/octoguard'
 import { moderateText, textForModeration, blockedBody, heldBody } from '../services/octoguard/moderate'
-import { holdContent } from '../services/octoguard/held'
+import { holdContent, holdRefusal } from '../services/octoguard/held'
 import { fileAutoReport } from '../services/octoguard/autoReport'
 
 // Un titre de fil est du texte brut, jamais du HTML : checkHtmlContent() ne fait
@@ -290,7 +290,7 @@ app.get('/threads', {
         kind: 'thread', authorId: request.user!.userId, categoryId: category_id,
         payload: { content: heldContent, title, tag_ids: tag_ids ?? [] }, rule: ogThread.hold,
       })
-      if (held) return reply.code(202).send(heldBody(held))
+      return held.ok ? reply.code(202).send(heldBody(held.row)) : reply.code(422).send(holdRefusal(held.code))
     }
 
     const thread = await ThreadModel.create({
@@ -413,7 +413,7 @@ app.get('/threads', {
     if (ogPost.blocked) return reply.code(422).send(blockedBody(ogPost))
     if (ogPost.hold) {
       const held = await holdContent({ kind: 'post', authorId: userId, threadId: resolvedThreadId, payload: { content: sanitized }, rule: ogPost.hold })
-      if (held) return reply.code(202).send(heldBody(held))
+      return held.ok ? reply.code(202).send(heldBody(held.row)) : reply.code(422).send(holdRefusal(held.code))
     }
 
     const post = await PostModel.create({
@@ -512,7 +512,7 @@ app.get('/threads', {
     // Modification retenue : l'ancien texte reste en ligne jusqu'à la décision
     if (ogEdit.hold) {
       const held = await holdContent({ kind: 'post_edit', authorId: userId, threadId: existing.thread_id, postId: id, payload: { content: editSanitized }, rule: ogEdit.hold })
-      if (held) return reply.code(202).send(heldBody(held))
+      return held.ok ? reply.code(202).send(heldBody(held.row)) : reply.code(422).send(holdRefusal(held.code))
     }
 
     const post = await PostModel.updateContent(id, editSanitized)

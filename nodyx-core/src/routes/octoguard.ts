@@ -819,9 +819,13 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const who = { id: actor.userId, username: actor.username }
     const res = decision === 'approve' ? await approveHeld(id, who) : await refuseHeld(id, who)
     if (!res.ok) {
-      return res.code === 'ALREADY_DECIDED'
-        ? reply.code(409).send({ error: 'Already decided', code: 'ALREADY_DECIDED' })
-        : reply.code(409).send({ error: 'The channel or thread no longer exists', code: 'PUBLISH_FAILED' })
+      const why: Record<string, string> = {
+        ALREADY_DECIDED: 'Already decided',
+        AUTHOR_BANNED: 'The author has been banned since: refuse this content',
+        THREAD_LOCKED: 'The thread has been locked since: refuse this content',
+        PUBLISH_FAILED: 'The channel or thread no longer exists',
+      }
+      return reply.code(409).send({ error: why[res.code], code: res.code })
     }
     return reply.send({ ok: true, published_id: res.published_id })
   })

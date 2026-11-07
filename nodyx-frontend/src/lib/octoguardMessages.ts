@@ -11,6 +11,7 @@ const BY_CORE_KEY: Record<string, string> = {
 	[OG + 'warn' + '.given']: 'ogmsg.warn_given',
 	[OG + 'mute' + '.applied']: 'ogmsg.mute_applied',
 	[OG + 'ban_temp' + '.applied']: 'ogmsg.ban_temp_applied',
+	[OG + 'held_limit']: 'ogmsg.held_limit',
 }
 
 export function octoguardMessage(tFn: (k: string) => string, coreKey: string | null | undefined): string {

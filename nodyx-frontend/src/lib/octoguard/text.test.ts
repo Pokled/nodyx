@@ -11,3 +11,13 @@ describe('htmlToText : relire un contenu retenu tel quel', () => {
 		expect(htmlToText('&lt;script&gt;x&lt;/script&gt;')).toBe('<script>x</script>')
 	})
 })
+
+describe('htmlToText tient face à un texte hostile', () => {
+	it('500 Ko d’ancres jamais fermées ou de chevrons : instantané', () => {
+		for (const s of ['<a href="x">'.repeat(40000), '<'.repeat(500000), '<a href="'.repeat(50000), '<a href="x"><b>'.repeat(30000) + '</a>', '<a href="x">'.repeat(30000) + '</a>'.repeat(30000)]) {
+			const t = performance.now()
+			htmlToText(s)
+			expect(performance.now() - t).toBeLessThan(500)
+		}
+	})
+})
