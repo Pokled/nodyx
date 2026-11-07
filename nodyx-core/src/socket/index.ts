@@ -17,6 +17,7 @@ import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
 import { checkHtmlContent } from '../services/contentFilter'
 import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
 import { fileAutoReport } from '../services/octoguard/autoReport'
+import { buildUserCtx } from '../services/octoguard/moderate'
 import { holdContent, forAuthor, holdRefusal } from '../services/octoguard/held'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { getAccess, outranks, rankOf } from '../services/permissions'
@@ -731,8 +732,36 @@ export function registerSocketIO(server: Server): void {
       }
 
       try {
+        // Une modification passe par les mêmes contrôles qu'un envoi (lot 3,
+        // OctoGuard 2). Avant : ni sourdine ni règles, donc on publiait propre
+        // puis on modifiait en spam ou en insulte, et une sourdine n'empêchait
+        // pas de réécrire ses anciens messages.
+        const target = await ChannelModel.findMessageById(messageId)
+        if (!target || target.author_id !== userId) return
+        const muteState = await isUserMuted(userId, target.channel_id)
+        if (muteState.muted) {
+          socket.emit('chat:blocked', { reason: 'muted', octoguard: { i18n_key: 'octoguard.mute.active', expires_at: muteState.expires_at ?? null } })
+          return
+        }
+        let editReport: { rule_name: string; excerpt: string } | undefined
+        if (isOctoGuardEnabled()) {
+          const og = await runPipeline({ content: sanitized, userCtx: await buildUserCtx(userId), surface: 'chat', channelId: target.channel_id })
+          if (og.blocked) {
+            socket.emit('chat:blocked', { reason: og.reason ?? 'octoguard', octoguard: { i18n_key: og.i18n_key, event_id: og.event_id } })
+            return
+          }
+          // Retenir une modification du chat n'a pas d'attente : elle est refusée,
+          // l'ancien texte reste (jamais publiée sans relecture).
+          if (og.hold) {
+            socket.emit('chat:blocked', { reason: 'held_edit', octoguard: { i18n_key: 'octoguard.held_edit' } })
+            return
+          }
+          editReport = og.report
+        }
+
         const updated = await ChannelModel.editMessage(messageId, userId, sanitized)
         if (!updated) return
+        if (editReport) void fileAutoReport({ targetType: 'message', targetId: messageId, ruleName: editReport.rule_name, excerpt: editReport.excerpt })
 
         if (io) {
           io.to(`channel:${updated.channel_id}`).emit('chat:message_edited', {

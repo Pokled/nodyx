@@ -82,9 +82,9 @@ export async function findById(id: string): Promise<Channel | null> {
   return rows[0] ?? null
 }
 
-export async function findMessageById(messageId: string): Promise<{ channel_id: string } | null> {
-  const { rows } = await db.query<{ channel_id: string }>(
-    `SELECT channel_id FROM channel_messages WHERE id = $1`,
+export async function findMessageById(messageId: string): Promise<{ channel_id: string; author_id: string } | null> {
+  const { rows } = await db.query<{ channel_id: string; author_id: string }>(
+    `SELECT channel_id, author_id FROM channel_messages WHERE id = $1`,
     [messageId]
   )
   return rows[0] ?? null
@@ -346,11 +346,22 @@ export async function editMessage(
   userId:    string,
   content:   string
 ): Promise<ChannelMessage | null> {
+  // L'ancien texte est gardé dans message_edits par la MÊME requête (lot 3
+  // d'OctoGuard 2) : une modification ne peut pas échapper à l'historique.
   const { rows } = await db.query<ChannelMessage>(
-    `UPDATE channel_messages
-     SET content = $3, edited_at = NOW()
-     WHERE id = $1 AND author_id = $2 AND is_deleted = false
-     RETURNING *`,
+    `WITH old AS (
+       SELECT id, content FROM channel_messages
+        WHERE id = $1 AND author_id = $2 AND is_deleted = false
+        FOR UPDATE
+     ), upd AS (
+       UPDATE channel_messages m SET content = $3, edited_at = NOW()
+         FROM old WHERE m.id = old.id
+       RETURNING m.*
+     ), kept AS (
+       INSERT INTO message_edits (target_type, target_id, editor_id, old_content)
+       SELECT 'message', old.id, $2, old.content FROM old WHERE old.content IS DISTINCT FROM $3
+     )
+     SELECT * FROM upd`,
     [messageId, userId, content]
   )
   return rows[0] ?? null

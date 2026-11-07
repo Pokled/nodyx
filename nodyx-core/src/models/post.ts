@@ -149,13 +149,23 @@ export async function remove(id: string, authorId: string): Promise<boolean> {
   return (rowCount ?? 0) > 0
 }
 
-// Mod-level: update without author restriction
-export async function updateContent(id: string, content: string): Promise<Post | null> {
+// Mod-level: update without author restriction.
+// L'ancien texte est gardé dans message_edits par la MÊME requête (lot 3
+// d'OctoGuard 2), avec qui a modifié (l'auteur ou un modérateur).
+export async function updateContent(id: string, content: string, editorId: string | null = null): Promise<Post | null> {
   const { rows } = await db.query<Post>(
-    `UPDATE posts SET content = $1, is_edited = true, updated_at = NOW()
-     WHERE id = $2
-     RETURNING *`,
-    [content, id]
+    `WITH old AS (
+       SELECT id, content FROM posts WHERE id = $2 FOR UPDATE
+     ), upd AS (
+       UPDATE posts p SET content = $1, is_edited = true, updated_at = NOW()
+         FROM old WHERE p.id = old.id
+       RETURNING p.*
+     ), kept AS (
+       INSERT INTO message_edits (target_type, target_id, editor_id, old_content)
+       SELECT 'post', old.id, $3, old.content FROM old WHERE old.content IS DISTINCT FROM $1
+     )
+     SELECT * FROM upd`,
+    [content, id, editorId]
   )
   return rows[0] ?? null
 }

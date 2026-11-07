@@ -9,6 +9,7 @@
 	import { og, OgError } from '$lib/octoguard/api'
 	import { LEVEL_ICON } from '$lib/octoguard/rules'
 	import { htmlToText } from '$lib/octoguard/text'
+	import ContextView from '$lib/components/octoguard/ContextView.svelte'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -57,6 +58,21 @@
 	const selHeld = $derived(data.tab === 'held' ? (held.find((h) => h.id === sel) ?? null) : null)
 	const selCase = $derived(data.tab !== 'held' ? (cases.find((c) => c.key === sel) ?? null) : null)
 
+	// Le contexte (lot 3) : chargé à la sélection, gardé en mémoire le temps de la page
+	type Brief = { id: string; username: string; created_at: string; warns_active: number; muted: boolean; muted_until: string | null }
+	type Ctx = { place: string; around: any[]; current: string | null; edits: any[]; author: Brief | null }
+	let ctxCache = $state<Record<string, Ctx | 'gone' | 'error'>>({})
+	const ctxPath = $derived(selHeld ? `/held/${selHeld.id}/context` : selCase ? `/reports/${selCase.first.id}/context` : null)
+	const ctx = $derived(ctxPath ? ctxCache[ctxPath] : undefined)
+	$effect(() => {
+		const path = ctxPath
+		if (!path || ctxCache[path]) return
+		og<{ context: Ctx }>(token, path)
+			.then((r) => { ctxCache[path] = r.context })
+			.catch((e) => { ctxCache[path] = e instanceof OgError && (e.code === 'CONTENT_GONE' || e.status === 404) ? 'gone' : 'error' })
+	})
+	const ctxOk = $derived(ctx && typeof ctx === 'object' ? ctx : null)
+
 	const TABS = $derived([
 		{ id: 'open', label: tFn('og2.rp_tab_open'), n: cases.length && data.tab === 'open' ? cases.length : data.openCount },
 		{ id: 'held', label: tFn('og2.rp_tab_held'), n: data.heldCount },
@@ -95,6 +111,14 @@
 		if (d < 60) return tFn('og2.rp_age_d', { n: d })
 		return tFn('og2.rp_age_m', { n: Math.floor(d / 30) })
 	}
+	/** « Léa, Max et OctoGuard » : qui a signalé, dans la langue de l'écran. */
+	function reporters(c: Case) {
+		const names = [...new Set(c.reports.map((r) => (r.source === 'octoguard' ? 'OctoGuard' : (r.reporter_username ?? tFn('areports.deleted_account')))))]
+		try { return new Intl.ListFormat($locale, { style: 'long', type: 'conjunction' }).format(names) } catch { return names.join(', ') }
+	}
+	const caseTitle = (r: Report) => r.target_type === 'user'
+		? tFn('og2.rp_case_title_user', { name: r.target_author_username ?? tFn('areports.deleted_account') })
+		: tFn(`og2.rp_case_title_${r.target_type === 'message' ? 'message' : 'forum'}`, { name: r.target_author_username ?? tFn('areports.deleted_account'), place: r.target_label ?? '' })
 	function heldPlace(h: Held) {
 		if (h.kind === 'chat') return h.channel_name ? `#${h.channel_name}` : tFn('og2.rp_place_chat')
 		if (h.kind === 'thread') return tFn('og2.rp_place_new_thread')
@@ -136,6 +160,14 @@
 		if (next) { current = next; document.getElementById(`q-${next}`)?.focus() }
 	}
 </script>
+
+{#snippet facts(a: Brief)}
+	<div class="og-rp-facts">
+		<span class="adm-pill og-tone {Date.now() - new Date(a.created_at).getTime() < 7 * 86_400_000 ? 'og-k-warn' : 'og-k-observe'}">{accountAge(a.created_at)}</span>
+		{#if a.warns_active > 0}<span class="adm-pill og-tone og-k-warn">{tFn(a.warns_active > 1 ? 'og2.cx_warns_n' : 'og2.cx_warns_1', { n: a.warns_active })}</span>{/if}
+		{#if a.muted}<span class="adm-pill og-tone og-k-delete">{a.muted_until ? tFn('og2.cx_muted_until', { at: clock(a.muted_until) }) : tFn('og2.cx_muted')}</span>{/if}
+	</div>
+{/snippet}
 
 <svelte:head><title>{tFn('og2.nav_reports')} · OctoGuard</title></svelte:head>
 
@@ -195,11 +227,10 @@
 						{@const r = c.first}
 						<button type="button" class="og-q" id="q-{c.key}" role="option" aria-selected={sel === c.key} onclick={() => { current = c.key; done = null; error = null }}>
 							<span class="og-ic {c.octoguard ? 'og-k-report' : 'og-k-delete'}"><Icon d={LEVEL_ICON.report} /></span>
-							<b>{r.target_author_username ?? tFn('areports.deleted_account')}, {tFn(`areports.type_${r.target_type}`)}</b>
+							<b>{r.target_author_username ?? tFn('areports.deleted_account')}, {r.target_label ?? tFn(`areports.type_${r.target_type}`)}</b>
 							<span class="og-q-time">{ago(r.created_at)}</span>
 							<span class="og-q-sub">
-								{c.reports.length > 1 ? tFn('areports.count_many', { n: c.reports.length }) : tFn('areports.count_one')}
-								· {Object.keys(c.categories).map((k) => tFn(`report.cat_${k}`)).join(', ')}
+								{reporters(c)} · {Object.keys(c.categories).map((k) => tFn(`report.cat_${k}`).toLowerCase()).join(', ')}
 							</span>
 						</button>
 					{/each}
@@ -223,13 +254,14 @@
 						<blockquote class="og-quote og-rp-text">{htmlToText(h.payload.content)}</blockquote>
 						<p class="og-help">{tFn('og2.rp_only_author')}</p>
 					</div>
+					{#if ctxOk}<ContextView around={ctxOk.around} current={ctxOk.current} edits={ctxOk.edits} heldAt={h.kind === 'chat' || h.kind === 'post' ? h.created_at : null} />{:else if ctx === undefined}<p class="og-help">{tFn('og2.cx_loading')}</p>{/if}
 					<p class="og-meta"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 7v5l3 2" />{tFn('og2.rp_expires', { left: expiresIn(h.created_at) })}</p>
 				{:else if selCase}
 					{@const r = selCase.first}
 					<div class="og-rp-top">
 						<div>
-							<div class="og-rp-title">{tFn(`areports.type_${r.target_type}`)}{#if r.target_author_username} · {r.target_author_username}{/if}</div>
-							<div class="og-meta">{r.target_label ?? ''} · {clock(r.created_at)}</div>
+							<div class="og-rp-title">{caseTitle(r)}</div>
+							<div class="og-meta">{tFn('og2.rp_reported_by', { names: reporters(selCase), at: clock(r.created_at) })}</div>
 						</div>
 						<div class="og-rp-pills">
 							{#each Object.entries(selCase.categories) as [cat, n] (cat)}
@@ -237,7 +269,14 @@
 							{/each}
 						</div>
 					</div>
-					{#if r.snapshot}
+					{#if ctxOk}
+						<ContextView around={ctxOk.around} current={ctxOk.current} edits={ctxOk.edits} reportedAt={r.created_at} />
+					{:else if ctx === undefined}
+						<p class="og-help">{tFn('og2.cx_loading')}</p>
+					{:else if ctx === 'gone'}
+						<p class="og-help">{tFn('og2.cx_gone')}</p>
+					{/if}
+					{#if r.snapshot && (!ctxOk || ctxOk.current === null)}
 						<div class="og-field">
 							<span class="og-lbl">{tFn('areports.snapshot')}</span>
 							<blockquote class="og-quote og-rp-text">{r.snapshot}</blockquote>
@@ -267,7 +306,7 @@
 					{@const h = selHeld}
 					<div class="adm-card og-rp-card">
 						<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: h.author_username })}</h2>
-						<div class="og-rp-facts"><span class="adm-pill og-tone {Date.now() - new Date(h.author_created_at).getTime() < 7 * 86_400_000 ? 'og-k-warn' : 'og-k-observe'}">{accountAge(h.author_created_at)}</span></div>
+						{@render facts(ctxOk?.author ?? { id: h.author_id, username: h.author_username, created_at: h.author_created_at, warns_active: 0, muted: false, muted_until: null })}
 						<a class="adm-btn adm-btn--sm" href="/admin/members/{h.author_id}"><Icon d={KIND_ICON.user} />{tFn('amem.open_file')}</a>
 					</div>
 					<div class="adm-card og-rp-card">
@@ -318,6 +357,7 @@
 					{#if r.target_author_id}
 						<div class="adm-card og-rp-card">
 							<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: r.target_author_username ?? '' })}</h2>
+							{#if ctxOk?.author}{@render facts(ctxOk.author)}{/if}
 							<a class="adm-btn adm-btn--sm" href="/admin/members/{r.target_author_id}"><Icon d={KIND_ICON.user} />{tFn('amem.open_file')}</a>
 						</div>
 					{/if}
