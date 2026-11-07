@@ -5252,6 +5252,7 @@
   "ogmsg.held_expired": "Ton message n'a pas pu être relu à temps : il n'a pas été publié.",
   "ogmsg.held_poll_dropped": "Le sondage joint n'a pas été créé : tu pourras l'ajouter une fois le fil publié.",
   "ogmsg.held_back": "Revenir à la catégorie",
+  "ogmsg.held_limit": "Tu as déjà plusieurs messages en attente de relecture. Attends qu'un modérateur les ait vus avant d'en envoyer d'autres.",
   "og2.side_sub": "Le gardien de la communauté",
   "og2.nav_overview": "Vue d'ensemble",
   "og2.nav_sec_rules": "Règles",
@@ -5892,5 +5893,7 @@
   "og2.rp_age_new": "compte de moins d'une heure",
   "og2.rp_age_h": "compte de {{n}} h",
   "og2.rp_age_d": "compte de {{n}} jours",
-  "og2.rp_age_m": "membre depuis {{n}} mois"
+  "og2.rp_age_m": "membre depuis {{n}} mois",
+  "og2.rp_err_banned": "Son auteur a été banni depuis : rien n'a été publié. Refusez ce message.",
+  "og2.rp_err_locked": "Le fil a été verrouillé depuis : rien n'a été publié. Refusez ce message."
 }

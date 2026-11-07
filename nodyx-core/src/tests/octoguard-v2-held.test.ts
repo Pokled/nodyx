@@ -7,7 +7,7 @@ import { buildApp } from './helpers/buildApp'
 // l'approbation (même sur double clic), jeté au refus ou après 72 h.
 
 const { st, calls, addMessageMock, postCreateMock, emitMock } = vi.hoisted(() => ({
-  st: { held: null as null | Record<string, unknown>, claimable: true, role: 'member' as string },
+  st: { held: null as null | Record<string, unknown>, claimable: true, role: 'member' as string, full: false, insertFails: false, banned: false, locked: false },
   calls: [] as Array<{ sql: string; params: unknown[] }>,
   addMessageMock: vi.fn(),
   postCreateMock: vi.fn(),
@@ -67,7 +67,7 @@ function heldRow(extra: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks()
   calls.length = 0
-  st.held = heldRow(); st.claimable = true; st.role = 'member'
+  st.held = heldRow(); st.claimable = true; st.role = 'member'; st.full = false; st.insertFails = false; st.banned = false; st.locked = false
   process.env.OCTOGUARD_ENABLED = 'true'
   clearRules()
   vi.mocked(redis.exists).mockImplementation((async (k: string) => (k.startsWith('banned:') ? 0 : 1)) as never)
@@ -82,7 +82,14 @@ beforeEach(() => {
       return { rows: [{ role: params[1] === MOD ? 'admin' : st.role, permissions: null }], rowCount: 1 }
     }
     if (s.includes('LEFT JOIN community_members cm ON cm.user_id = u.id')) return { rows: [{ role: 'member', grade_id: null, account_age_days: 400 }] }
-    if (s.startsWith('INSERT INTO octoguard_held')) return { rows: [heldRow({ kind: params[0], payload: JSON.parse(String(params[6])) })], rowCount: 1 }
+    if (s.startsWith('INSERT INTO octoguard_held')) {
+      if (st.insertFails) throw new Error('db down')
+      // La condition « moins de N en attente » est dans la requête : file pleine = aucune ligne
+      if (st.full) return { rows: [], rowCount: 0 }
+      return { rows: [heldRow({ kind: params[0], payload: JSON.parse(String(params[6])) })], rowCount: 1 }
+    }
+    if (s.startsWith('SELECT EXISTS (SELECT 1 FROM community_bans')) return { rows: [{ banned: st.banned, locked: st.locked }], rowCount: 1 }
+    if (s.startsWith('DELETE FROM octoguard_held')) return { rows: [{ id: 'old' }], rowCount: 1 }
     if (s.startsWith("UPDATE octoguard_held SET status = $2")) {
       // La décision ne se prend qu'une fois : le second clic ne trouve plus de ligne « pending »
       if (!st.claimable) return { rows: [], rowCount: 0 }
@@ -125,7 +132,7 @@ describe('la mise de côté et les décisions', () => {
 
   it('holdContent écrit dans octoguard_held, PAS dans channel_messages', async () => {
     const h = await holdContent({ kind: 'chat', authorId: AUTHOR, channelId: CHAN, payload: { content: 'x' }, rule: { rule_id: 'r1', rule_name: 'Liens', excerpt: 'x' } })
-    expect(h?.id).toBe(HELD)
+    expect(h.ok && h.row.id).toBe(HELD)
     expect(calls.some(c => c.sql.includes('channel_messages'))).toBe(false)
     expect(addMessageMock).not.toHaveBeenCalled()
   })
@@ -238,5 +245,55 @@ describe('ce que le moteur lit du forum (trous trouvés au banc d’essai du 04/
     const app = await buildApp(a => a.register(forumRoutes, { prefix: '/f' }))
     const res = await app.inject({ method: 'POST', url: '/f/posts', headers: { authorization: token(AUTHOR) }, payload: { thread_id: THREAD, content: '<p>Lien : <a href="https://bit.ly/x9k">ici</a></p>' } })
     expect(res.statusCode).toBe(202)
+  })
+})
+
+describe('sécurité de la mise en attente (revue du 07/11)', () => {
+  const who = { id: MOD, username: 'mod' }
+  const hold = () => holdContent({ kind: 'chat', authorId: AUTHOR, channelId: CHAN, payload: { content: 'x' }, rule: { rule_id: 'r1', rule_name: 'Liens', excerpt: 'x' } })
+
+  it('la limite par auteur est DANS la requête (5 en attente)', async () => {
+    await hold()
+    const q = calls.find(c => c.sql.startsWith('INSERT INTO octoguard_held'))!
+    expect(q.sql).toContain("WHERE author_id = $2 AND status = 'pending') < $11")
+    expect(q.params[10]).toBe(5)
+  })
+  it('file pleine : refus, code stable', async () => {
+    st.full = true
+    expect(await hold()).toEqual({ ok: false, code: 'HELD_LIMIT' })
+  })
+  it('base en panne : refus, jamais d’exception, jamais de publication', async () => {
+    st.insertFails = true
+    expect(await hold()).toEqual({ ok: false, code: 'HOLD_FAILED' })
+    expect(addMessageMock).not.toHaveBeenCalled()
+  })
+  it('forum : file pleine ou base en panne = 422, la réponse N’EST PAS publiée', async () => {
+    _setRulesForBench([rule()])
+    const app = await buildApp(a => a.register(forumRoutes, { prefix: '/f' }))
+    for (const k of ['full', 'insertFails'] as const) {
+      st.full = false; st.insertFails = false; st[k] = true
+      const res = await app.inject({ method: 'POST', url: '/f/posts', headers: { authorization: token(AUTHOR) }, payload: { thread_id: THREAD, content: `<p>${SPAM}</p>` } })
+      expect(res.statusCode).toBe(422)
+      expect(postCreateMock).not.toHaveBeenCalled()
+    }
+  })
+  it('auteur banni depuis : l’approbation ne publie pas, le contenu reste en attente', async () => {
+    st.banned = true
+    expect(await approveHeld(HELD, who)).toEqual({ ok: false, code: 'AUTHOR_BANNED' })
+    expect(addMessageMock).not.toHaveBeenCalled()
+    expect(calls.some(c => c.sql.startsWith("UPDATE octoguard_held SET status = 'pending'"))).toBe(true)
+  })
+  it('fil verrouillé depuis : une réponse retenue n’est pas publiée', async () => {
+    st.locked = true
+    st.held = heldRow({ kind: 'post', channel_id: null, thread_id: THREAD })
+    expect(await approveHeld(HELD, who)).toEqual({ ok: false, code: 'THREAD_LOCKED' })
+    expect(postCreateMock).not.toHaveBeenCalled()
+  })
+  it('le texte des contenus décidés est effacé après 30 jours, jamais ce qui attend', async () => {
+    const { purgeDecidedHeld } = await import('../services/octoguard/held')
+    await purgeDecidedHeld()
+    const q = calls.find(c => c.sql.startsWith('DELETE FROM octoguard_held'))!
+    expect(q.sql).toContain("status <> 'pending'")
+    expect(q.params).toEqual(['30'])
   })
 })

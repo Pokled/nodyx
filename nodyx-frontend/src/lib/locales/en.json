@@ -5252,6 +5252,7 @@
   "ogmsg.held_expired": "Your message could not be reviewed in time: it was not published.",
   "ogmsg.held_poll_dropped": "The attached poll was not created: you can add it once the thread is published.",
   "ogmsg.held_back": "Back to the category",
+  "ogmsg.held_limit": "You already have several messages awaiting review. Wait until a moderator has seen them before sending more.",
   "og2.side_sub": "The community guardian",
   "og2.nav_overview": "Overview",
   "og2.nav_sec_rules": "Rules",
@@ -5892,5 +5893,7 @@
   "og2.rp_age_new": "account less than an hour old",
   "og2.rp_age_h": "account {{n}} h old",
   "og2.rp_age_d": "account {{n}} days old",
-  "og2.rp_age_m": "member for {{n}} months"
+  "og2.rp_age_m": "member for {{n}} months",
+  "og2.rp_err_banned": "Its author has been banned since: nothing was published. Refuse this message.",
+  "og2.rp_err_locked": "The thread has been locked since: nothing was published. Refuse this message."
 }
