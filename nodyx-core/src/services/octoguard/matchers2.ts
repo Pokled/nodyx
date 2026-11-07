@@ -62,11 +62,11 @@ export function matchKeywords(ctx: MatchContext, params: AutomodRuleParams): Mat
   // Jamais de recollage entre deux vrais mots (« bacon nard » ne doit pas
   // donner « connard ») : seuls les mots épelés lettre à lettre sont recollés.
   for (const p of patterns) {
-    const hit =
-      p.kind === 'word'     ? tokens.includes(p.value) :
-      p.kind === 'prefix'   ? tokens.some(t => t.startsWith(p.value)) :
-      /* contains */          tokens.some(t => t.includes(p.value))
-    if (hit) return { excerpt: `mot interdit : ${p.raw}` }
+    const token =
+      p.kind === 'word'     ? tokens.find(t => t === p.value) :
+      p.kind === 'prefix'   ? tokens.find(t => t.startsWith(p.value)) :
+      /* contains */          tokens.find(t => t.includes(p.value))
+    if (token !== undefined) return { excerpt: `mot interdit : ${p.raw}`, found: { token: token.slice(0, 64), pattern: p.raw, kind: p.kind } }
   }
   return null
 }

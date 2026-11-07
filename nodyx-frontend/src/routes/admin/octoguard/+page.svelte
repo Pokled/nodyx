@@ -36,11 +36,13 @@
 			switchError = tFn((e as any)?.code === 'OCTOGUARD_LOCKED_OFF' ? 'og2.sw_locked' : 'og2.sw_err')
 		} finally { switching = false }
 	}
-	// Justesse : la part des actions de la semaine que l'équipe n'a PAS annulées.
+	// Justesse : la part des actions de la semaine que l'équipe n'a ni annulées
+	// ni marquées « faux positif » (le cœur compte chaque action une seule fois).
+	const wrong = $derived(stats.totals?.wrong ?? stats.totals?.undone ?? 0)
 	const precision = $derived.by(() => {
 		const acted = stats.totals?.acted ?? 0
 		if (!acted) return null
-		return Math.max(0, Math.round((100 * (acted - (stats.totals?.undone ?? 0))) / acted))
+		return Math.max(0, Math.round((100 * (acted - wrong)) / acted))
 	})
 
 	// Ce qui mérite un coup d'œil : OctoGuard suggère, l'équipe décide.
@@ -155,7 +157,7 @@
 	<div class="adm-stats og-stats4">
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_acted')}</span><Icon d={LEVEL_ICON.delete} cls="adm-stat-icon" /></div><div class="adm-stat-value">{stats.totals?.acted ?? 0}</div><div class="adm-stat-sub">{tFn('og2.st_acted_sub')}</div></div>
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_observed')}</span><Icon d={LEVEL_ICON.observe} cls="adm-stat-icon" /></div><div class="adm-stat-value">{stats.totals?.observed ?? 0}</div><div class="adm-stat-sub">{tFn('og2.st_observed_sub')}</div></div>
-		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_precision')}</span><Icon d="M5 13l4 4L19 7" cls="adm-stat-icon" /></div><div class="adm-stat-value">{precision === null ? '·' : `${precision} %`}</div><div class="adm-stat-sub">{precision === null ? tFn('og2.st_precision_none') : tFn('og2.st_precision_sub', { u: stats.totals?.undone ?? 0, n: stats.totals?.acted ?? 0 })}</div></div>
+		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_precision')}</span><Icon d="M5 13l4 4L19 7" cls="adm-stat-icon" /></div><div class="adm-stat-value">{precision === null ? '·' : `${precision} %`}</div><div class="adm-stat-sub">{precision === null ? tFn('og2.st_precision_none') : tFn('og2.st_precision_sub', { u: wrong, n: stats.totals?.acted ?? 0 })}</div></div>
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.nav_reports')}</span><Icon d={LEVEL_ICON.report} cls="adm-stat-icon" /></div><div class="adm-stat-value">{openReports}</div><div class="adm-stat-sub"><a class="og-linkbtn" href="/admin/octoguard/reports">{tFn('og2.open_queue')}</a></div></div>
 	</div>
 
@@ -203,7 +205,7 @@
 							<span class="og-ic og-k-{ev.kind}"><Icon d={KIND_ICON[ev.kind]} /></span>
 							<div class="og-row-body">
 								<div>{tFn(`og2.${ev.key}`, { rule: l.metadata?.rule_name ?? '', who: l.actor_username ?? '' })}</div>
-								<div class="og-meta">{#if l.target_label}{tFn('og2.quoted', { t: l.target_label.slice(0, 90) })} · {/if}{ago(l.created_at)}</div>
+								<div class="og-meta">{#if l.target_label && !l.target_label.startsWith('octoguard' + '.')}{tFn('og2.quoted', { t: l.target_label.slice(0, 90) })} · {/if}{ago(l.created_at)}</div>
 							</div>
 						</div>
 					{/each}

@@ -15,7 +15,7 @@ import { randomUUID } from 'crypto'
 import { db } from '../../config/database'
 import { isOctoGuardEnabled } from './index'
 import { getRules } from './cache'
-import { matchRule } from './matchers'
+import { matchRule, type MatchResult } from './matchers'
 import { recordActivity } from './matchers2'
 import { logOctoGuardAction } from './logger'
 import { applyMute } from './mutes'
@@ -130,6 +130,7 @@ async function applyAction(
   excerpt:  string,
   eventId:  string,
   dryRun:   boolean,
+  found?:   MatchResult['found'],
 ): Promise<ActionOutcome> {
   const action: AutomodAction = rule.action
   const meta = {
@@ -138,6 +139,8 @@ async function applyAction(
     event_id:   eventId,
     actor:      'octoguard:auto' as const,
     would_be:   dryRun,
+    // Mots interdits : le mot trouvé et le motif (D25, « Faux positif »)
+    ...(found ? { found } : {}),
   }
 
   // Cran « observer » (dry_run) : on note ce qui AURAIT été fait, rien ne se passe
@@ -326,6 +329,7 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
       match.excerpt,
       eventId,
       rule.dry_run,
+      match.found,
     )
 
     return {

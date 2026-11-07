@@ -79,7 +79,7 @@ export async function ruleStats(days: number) {
      FROM admin_audit_log
      WHERE action LIKE 'octoguard.%' AND created_at > NOW() - ($1 || ' days')::interval
      GROUP BY 1, 2`, [String(d)])
-  const rules: Record<string, { acted: number; observed: number; by_action: Record<string, number> }> = {}
+  const rules: Record<string, { acted: number; observed: number; false_positive: number; normal: number; by_action: Record<string, number> }> = {}
   const system = { hate_symbol_blocked: 0, admin_pattern_blocked: 0 }
   let undone = 0
   for (const r of rows) {
@@ -87,14 +87,24 @@ export async function ruleStats(days: number) {
     if (r.action === 'octoguard.admin_pattern_blocked') { system.admin_pattern_blocked += r.n; continue }
     if (r.action === 'octoguard.action_undone') { undone += r.n; continue }
     if (!r.rule_id) continue
-    const s = (rules[r.rule_id] ??= { acted: 0, observed: 0, by_action: {} })
+    const s = (rules[r.rule_id] ??= { acted: 0, observed: 0, false_positive: 0, normal: 0, by_action: {} })
+    // Lot 10 : les marques de l'équipe, comptées à part (ni action ni observation)
+    if (r.action === 'octoguard.false_positive') { s.false_positive += r.n; continue }
+    if (r.action === 'octoguard.observed_normal') { s.normal += r.n; continue }
     s.by_action[r.action] = (s.by_action[r.action] ?? 0) + r.n
     if (r.action.startsWith('octoguard.would_')) s.observed += r.n
     else if (ACTED.includes(r.action)) s.acted += r.n
   }
   const acted = Object.values(rules).reduce((a, s) => a + s.acted, 0)
   const observed = Object.values(rules).reduce((a, s) => a + s.observed, 0)
-  return { days: d, rules, system, totals: { acted, observed, undone } }
+  const normal = Object.values(rules).reduce((a, s) => a + s.normal, 0)
+  // « Justesse » : une action annulée ET marquée faux positif ne compte qu'une fois
+  const { rows: w } = await db.query<{ n: number }>(
+    `SELECT COUNT(DISTINCT target_id)::int AS n FROM admin_audit_log
+      WHERE action IN ('octoguard.action_undone', 'octoguard.false_positive')
+        AND created_at > NOW() - ($1 || ' days')::interval`, [String(d)])
+  const wrong = Math.min(w[0]?.n ?? 0, acted)
+  return { days: d, rules, system, totals: { acted, observed, undone, wrong, normal } }
 }
 
 export async function ruleHits(ruleId: string, limit = 20) {

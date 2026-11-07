@@ -14,3 +14,10 @@ describe('les événements racontés', () => {
 		expect(eventOf({ action: 'octoguard.truc_nouveau', metadata: null }).key).toBe('ev_other')
 	})
 })
+
+describe('les marques de l’équipe (lot 10)', () => {
+	it('« faux positif » et « c’était normal » sont des phrases de l’équipe, pas un « événement » générique', () => {
+		expect(eventOf({ action: 'octoguard.false_positive', metadata: {} })).toEqual({ kind: 'ok', key: 'ev_false_positive', source: 'team' })
+		expect(eventOf({ action: 'octoguard.observed_normal', metadata: {} })).toEqual({ kind: 'ok', key: 'ev_observed_normal', source: 'team' })
+	})
+})

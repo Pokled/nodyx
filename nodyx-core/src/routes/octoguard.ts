@@ -27,6 +27,7 @@ import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { runSandbox, ruleStats, ruleHits } from '../services/octoguard/sandbox'
 import { BASE_PRESETS, BASE_PROFILE_VERSION, startingLevel, exportProfile, previewImport, applyImport, ProfileZ, type Profile } from '../services/octoguard/profile'
 import { checkRuleParams } from '../services/octoguard/params'
+import { planLearning, ACTED_BY_ENGINE, type LogMeta } from '../services/octoguard/falsePositive'
 import { reportContext, heldContext } from '../services/octoguard/context'
 import { listPending, countPending, approveHeld, refuseHeld, listMine, forAuthor, HELD_EXPIRY_HOURS } from '../services/octoguard/held'
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
@@ -707,7 +708,11 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
       `SELECT id, actor_id, actor_username, action, target_type, target_id, target_label,
               metadata, created_at::text AS created_at,
               EXISTS (SELECT 1 FROM admin_audit_log u
-                       WHERE u.action = 'octoguard.action_undone' AND u.target_id::text = admin_audit_log.id::text) AS undone
+                       WHERE u.action = 'octoguard.action_undone' AND u.target_id::text = admin_audit_log.id::text) AS undone,
+              EXISTS (SELECT 1 FROM admin_audit_log u
+                       WHERE u.action = 'octoguard.false_positive' AND u.target_id::text = admin_audit_log.id::text) AS false_positive,
+              EXISTS (SELECT 1 FROM admin_audit_log u
+                       WHERE u.action = 'octoguard.observed_normal' AND u.target_id::text = admin_audit_log.id::text) AS normal
          FROM admin_audit_log
          ${whereClause}
         ORDER BY created_at DESC
@@ -726,31 +731,36 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     })
   })
 
-  app.post('/logs/:id/undo', async (request, reply) => {
-    const { id } = request.params as { id: string }
-    const adminUser = request.user!
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  type UndoResult = { ok: true } | { ok: false; status: number; code: string; error: string }
+  /**
+   * Annule une action d'OctoGuard (avertissement, sourdine). Partagé par
+   * « Annuler » et « Faux positif » : une seule logique, testée une fois.
+   */
+  async function undoLogEntry(id: string, actorId: string): Promise<UndoResult> {
     const { rows } = await db.query(
       `SELECT action, metadata, created_at FROM admin_audit_log WHERE id = $1`, [id]
     )
     const log = rows[0]
-    if (!log) return reply.code(404).send({ error: 'Log not found', code: 'NOT_FOUND' })
+    if (!log) return { ok: false, status: 404, code: 'NOT_FOUND', error: 'Log not found' }
 
     const meta = (log.metadata ?? {}) as { undoable?: boolean; rule_id?: string; undo_op?: { type?: string; mute_id?: string; user_id?: string } }
     if (!meta.undoable || !meta.undo_op) {
-      return reply.code(400).send({ error: 'Action not undoable', code: 'NOT_UNDOABLE' })
+      return { ok: false, status: 400, code: 'NOT_UNDOABLE', error: 'Action not undoable' }
     }
 
     // Une action ne s'annule qu'une fois : sinon, un double clic effaçait un
     // SECOND avertissement, qui n'avait rien à voir.
     const { rows: done } = await db.query(
       `SELECT 1 FROM admin_audit_log WHERE action = 'octoguard.action_undone' AND target_id::text = $1 LIMIT 1`, [id])
-    if (done.length) return reply.code(409).send({ error: 'Already undone', code: 'ALREADY_UNDONE' })
+    if (done.length) return { ok: false, status: 409, code: 'ALREADY_UNDONE', error: 'Already undone' }
 
     if (meta.undo_op.type === 'remove_mute' && meta.undo_op.mute_id) {
-      const ok = await removeMute(meta.undo_op.mute_id, adminUser.userId)
-      if (!ok) return reply.code(409).send({ error: 'Nothing left to undo (mute already lifted)', code: 'NOTHING_TO_UNDO' })
-      await logAdminAction(adminUser.userId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op, success: true })
-      return reply.send({ ok: true })
+      const ok = await removeMute(meta.undo_op.mute_id, actorId)
+      if (!ok) return { ok: false, status: 409, code: 'NOTHING_TO_UNDO', error: 'Nothing left to undo (mute already lifted)' }
+      await logAdminAction(actorId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op, success: true })
+      return { ok: true }
     }
     if (meta.undo_op.type === 'clear_last_warn' && meta.undo_op.user_id) {
       // PostgreSQL n'accepte ni ORDER BY ni LIMIT dans un UPDATE : l'ancienne
@@ -765,11 +775,139 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
           RETURNING id`,
         [meta.undo_op.user_id, meta.rule_id ?? null, log.created_at]
       )
-      if (cleared.length === 0) return reply.code(409).send({ error: 'Nothing left to undo (warning already cleared or expired)', code: 'NOTHING_TO_UNDO' })
-      await logAdminAction(adminUser.userId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op, warn_id: cleared[0].id })
-      return reply.send({ ok: true })
+      if (cleared.length === 0) return { ok: false, status: 409, code: 'NOTHING_TO_UNDO', error: 'Nothing left to undo (warning already cleared or expired)' }
+      await logAdminAction(actorId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op, warn_id: cleared[0].id })
+      return { ok: true }
     }
-    return reply.code(400).send({ error: 'Undo type not implemented', code: 'UNSUPPORTED' })
+    return { ok: false, status: 400, code: 'UNSUPPORTED', error: 'Undo type not implemented' }
+  }
+
+  app.post('/logs/:id/undo', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    // Avant : un identifiant mal formé partait tel quel dans la requête (erreur 500)
+    if (!UUID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    const r = await undoLogEntry(id, request.user!.userId)
+    return r.ok ? reply.send({ ok: true }) : reply.code(r.status).send({ error: r.error, code: r.code })
+  })
+
+  // ─── Lot 10 (D25) : « Faux positif » et « C'était normal » ───────────────
+
+  /**
+   * Pose la marque (« faux positif » ou « c'était normal ») AVANT toute autre
+   * écriture : c'est elle qui décide. L'index unique de la migration 133 garantit
+   * qu'un second clic, même simultané, ne passe pas. null = déjà marqué.
+   */
+  async function claimMark(action: 'octoguard.false_positive' | 'octoguard.observed_normal', logId: string, actorId: string, label: string, meta: Record<string, unknown>): Promise<string | null> {
+    const { rows } = await db.query<{ id: string }>(
+      `INSERT INTO admin_audit_log (actor_id, actor_username, action, target_type, target_id, target_label, metadata)
+       SELECT $1, COALESCE((SELECT username FROM users WHERE id = $1), 'unknown'), $2, 'log', $3, $4, $5::jsonb
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [actorId, action, logId, label, JSON.stringify(meta)]
+    )
+    return rows[0]?.id ?? null
+  }
+
+  /** Lit une entrée du journal d'OctoGuard et ce qu'on sait déjà d'elle. */
+  async function readEntry(id: string) {
+    const { rows } = await db.query(
+      `SELECT l.id, l.action, l.metadata, l.target_label,
+              EXISTS (SELECT 1 FROM admin_audit_log u WHERE u.action = 'octoguard.action_undone'   AND u.target_id::text = l.id::text) AS undone,
+              EXISTS (SELECT 1 FROM admin_audit_log u WHERE u.action = 'octoguard.false_positive'  AND u.target_id::text = l.id::text) AS false_positive,
+              EXISTS (SELECT 1 FROM admin_audit_log u WHERE u.action = 'octoguard.observed_normal' AND u.target_id::text = l.id::text) AS normal
+         FROM admin_audit_log l WHERE l.id = $1`, [id])
+    return rows[0] as { id: string; action: string; metadata: LogMeta | null; target_label: string | null; undone: boolean; false_positive: boolean; normal: boolean } | undefined
+  }
+  async function ruleOf(meta: LogMeta | null) {
+    if (!meta?.rule_id || !UUID_RE.test(meta.rule_id)) return null
+    const { rows } = await db.query(`SELECT id, name, type, params FROM octoguard_automod_rules WHERE id = $1`, [meta.rule_id])
+    return (rows[0] ?? null) as { id: string; name: string; type: string; params: { words?: string[]; exceptions?: string[] } } | null
+  }
+
+  // Ce que « Faux positif » va faire, AVANT que l'admin valide (rien n'est écrit)
+  app.get('/logs/:id/false-positive', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    if (!UUID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    const e = await readEntry(id)
+    if (!e) return reply.code(404).send({ error: 'Log not found', code: 'NOT_FOUND' })
+    if (!ACTED_BY_ENGINE.has(e.action) || e.metadata?.actor !== 'octoguard:auto') {
+      return reply.code(400).send({ error: 'Only an action taken by OctoGuard can be a false positive', code: 'NOT_ENGINE_ACTION' })
+    }
+    const rule = await ruleOf(e.metadata)
+    return reply.send({
+      already: e.false_positive,
+      will_undo: !!e.metadata?.undoable && !e.undone,
+      rule: rule ? { id: rule.id, name: rule.name } : null,
+      plan: planLearning(e.metadata ?? {}, rule),
+    })
+  })
+
+  app.post('/logs/:id/false-positive', {
+    preHandler: [rateLimit, validate({ body: z.object({ learn: z.boolean().default(false) }) })],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    if (!UUID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    const { learn } = request.body as { learn: boolean }
+    const actorId = request.user!.userId
+    const e = await readEntry(id)
+    if (!e) return reply.code(404).send({ error: 'Log not found', code: 'NOT_FOUND' })
+    if (!ACTED_BY_ENGINE.has(e.action) || e.metadata?.actor !== 'octoguard:auto') {
+      return reply.code(400).send({ error: 'Only an action taken by OctoGuard can be a false positive', code: 'NOT_ENGINE_ACTION' })
+    }
+    if (e.false_positive) return reply.code(409).send({ error: 'Already marked', code: 'ALREADY_MARKED' })
+    const markId = await claimMark('octoguard.false_positive', id, actorId, e.action, { rule_id: e.metadata?.rule_id ?? null })
+    if (!markId) return reply.code(409).send({ error: 'Already marked', code: 'ALREADY_MARKED' })
+
+    // 1. Annuler ce qui peut l'être (avertissement, sourdine). Un refus de
+    //    l'annulation (déjà levée) n'empêche pas de compter le faux positif.
+    let undone = false
+    if (e.metadata?.undoable && !e.undone) {
+      const u = await undoLogEntry(id, actorId)
+      undone = u.ok
+    }
+
+    // 2. Apprendre, seulement si l'admin l'a demandé ET que le cas est sûr
+    //    (plan recalculé ici : jamais sur la foi du navigateur).
+    const rule = await ruleOf(e.metadata)
+    const plan = planLearning(e.metadata ?? {}, rule)
+    let learned: string | null = null
+    if (learn && plan.learn && rule) {
+      // Ajout atomique, sans doublon, plafonné comme l'éditeur (500 exceptions)
+      const { rows } = await db.query(
+        `UPDATE octoguard_automod_rules
+            SET params = jsonb_set(params, '{exceptions}',
+                  COALESCE(params->'exceptions', '[]'::jsonb) || to_jsonb($2::text)),
+                customized = true, updated_at = NOW()
+          WHERE id = $1 AND type = 'keywords'
+            AND NOT (COALESCE(params->'exceptions', '[]'::jsonb) ? $2::text)
+            AND jsonb_array_length(COALESCE(params->'exceptions', '[]'::jsonb)) < 500
+          RETURNING id`,
+        [rule.id, plan.token]
+      )
+      if (rows.length) { learned = plan.token; await reloadRules() }
+    }
+
+    // 3. Compléter la marque (compte pour « Justesse ») avec ce qui a été fait
+    await db.query(
+      `UPDATE admin_audit_log SET metadata = metadata || $2::jsonb WHERE id = $1`,
+      [markId, JSON.stringify({ undone, learned })]
+    )
+    return reply.send({ ok: true, undone, learned })
+  })
+
+  // « C'était normal » : une entrée d'observation était une fausse alerte
+  app.post('/logs/:id/normal', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    if (!UUID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    const e = await readEntry(id)
+    if (!e) return reply.code(404).send({ error: 'Log not found', code: 'NOT_FOUND' })
+    if (!e.action.startsWith('octoguard.would_')) {
+      return reply.code(400).send({ error: 'Only an observation can be marked normal', code: 'NOT_OBSERVATION' })
+    }
+    if (e.normal) return reply.code(409).send({ error: 'Already marked', code: 'ALREADY_MARKED' })
+    const markId = await claimMark('octoguard.observed_normal', id, request.user!.userId, e.action, { rule_id: e.metadata?.rule_id ?? null })
+    if (!markId) return reply.code(409).send({ error: 'Already marked', code: 'ALREADY_MARKED' })
+    return reply.send({ ok: true })
   })
 
   // ─── Webhook config (Module 5) ────────────────────────────────────────────

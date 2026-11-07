@@ -6,6 +6,7 @@ export type EventKind = Level | 'ok' | 'acc'
 export type OgLog = {
 	id: string; action: string; actor_username: string | null; target_type: string | null; target_id: string | null
 	target_label: string | null; metadata: Record<string, any> | null; created_at: string; undone?: boolean
+	false_positive?: boolean; normal?: boolean
 }
 
 export const KIND_ICON: Record<EventKind, string> = {
@@ -31,6 +32,8 @@ export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKin
 		case 'escalation_mute': case 'escalation_ban_temp': return { kind: 'delete', key: 'ev_escalation', source: 'octoguard' }
 		case 'report_filed': case 'notify': return { kind: 'report', key: 'ev_report', source: 'octoguard' }
 		case 'action_undone': return { kind: 'ok', key: 'ev_undone', source: 'team' }
+		case 'false_positive': return { kind: 'ok', key: 'ev_false_positive', source: 'team' }
+		case 'observed_normal': return { kind: 'ok', key: 'ev_observed_normal', source: 'team' }
 		case 'message_held': return { kind: 'hold', key: 'ev_held', source: 'octoguard' }
 		case 'held_approved': return { kind: 'ok', key: 'ev_held_approved', source: 'team' }
 		case 'held_refused': return { kind: 'delete', key: 'ev_held_refused', source: 'team' }
