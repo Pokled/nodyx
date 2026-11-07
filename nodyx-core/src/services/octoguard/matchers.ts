@@ -146,6 +146,10 @@ export interface MatchContext {
 export interface MatchResult {
   /** Extrait pertinent pour le log/UI admin (max ~120 chars). */
   excerpt: string
+  /** Mots interdits : le mot du message qui a déclenché, et le motif qui l'a
+   *  attrapé. Sert à « Faux positif » (D25) : on ne propose d'apprendre un mot
+   *  que s'il a été attrapé par un motif partiel sans être le motif lui-même. */
+  found?: { token: string; pattern: string; kind: 'word' | 'prefix' | 'contains' }
 }
 
 export type Matcher = (

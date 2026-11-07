@@ -155,7 +155,7 @@ describe('API des règles', () => {
 describe('Annuler une action d’OctoGuard', () => {
   let app: Awaited<ReturnType<typeof buildApp>>
   beforeEach(async () => { app = await buildApp(a => a.register(octoguardAdminPlugin, { prefix: '/api/v1/admin/octoguard' })) })
-  const undoIt = () => app.inject({ method: 'POST', url: '/api/v1/admin/octoguard/logs/l1/undo', headers: { authorization: token(ADMIN) } })
+  const undoIt = () => app.inject({ method: 'POST', url: '/api/v1/admin/octoguard/logs/88888888-8888-4888-8888-888888888888/undo', headers: { authorization: token(ADMIN) } })
   const WARN_LOG = { action: 'octoguard.warn_user', created_at: '2026-11-03T20:00:00Z',
     metadata: { undoable: true, rule_id: '33333333-3333-4333-8333-333333333333', undo_op: { type: 'clear_last_warn', user_id: MEMBER } } }
 
