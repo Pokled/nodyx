@@ -114,7 +114,7 @@ export function describe(r: Rule, t: T): string {
 		case 'zalgo': return t('og2.desc_zalgo', { n: p.max_combining ?? 3 })
 		case 'link_domain': {
 			const all: string[] = p.domains ?? []
-			const list = all.slice(0, 4).join(', ') + (all.length > 4 ? ', …' : '')
+			const list = all.slice(0, 4).join(', ') + (all.length > 4 ? t('og2.list_more', { n: all.length - 4 }) : '')
 			return t(p.mode === 'whitelist' ? 'og2.desc_domains_allow' : 'og2.desc_domains_block', { list })
 		}
 		default: return t('og2.desc_regex')
