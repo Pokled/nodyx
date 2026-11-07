@@ -270,3 +270,9 @@ p.og-meta svg { width: 0.9rem; height: 0.9rem; flex: none; }
 .og-diff { white-space: pre-wrap; font-size: 0.8125rem; line-height: 1.55; max-height: 18rem; overflow: auto; }
 .og-diff del { color: var(--nx-bad); background: color-mix(in srgb, var(--nx-bad) 10%, transparent); text-decoration-thickness: 1.5px; }
 .og-diff ins { color: var(--nx-ok); background: color-mix(in srgb, var(--nx-ok) 12%, transparent); text-decoration: none; }
+
+/* L'interrupteur général (lot 9) */
+.og-master { font-weight: 600; padding: 0.375rem 0.75rem; border: 1px solid var(--nx-border); border-radius: 99px; background: var(--nx-surface); }
+.og-confirm { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.875rem; align-items: center; border-color: color-mix(in srgb, var(--nx-header-accent) 40%, var(--nx-border)); }
+.og-confirm p { margin: 0.25rem 0 0; }
+@media (max-width: 640px) { .og-confirm { grid-template-columns: 1fr; } }
