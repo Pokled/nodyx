@@ -237,6 +237,7 @@
 	<div class="og-health">
 		<span><span class="og-dot" style="--k:{data.settings?.re2_active ? 'var(--nx-ok)' : 'var(--nx-warn)'}"></span>{tFn(data.settings?.re2_active ? 'og2.health_re2' : 'og2.health_re2_off')}</span>
 		<span><span class="og-dot" style="--k:{data.settings?.hate_filter !== false ? 'var(--nx-ok)' : 'var(--nx-warn)'}"></span>{tFn(data.settings?.hate_filter !== false ? 'og2.health_hate' : 'og2.health_hate_off')}</span>
+		{#if data.settings?.latency}<span><span class="og-dot" style="--k:{data.settings.latency.avg_ms < 10 ? 'var(--nx-ok)' : 'var(--nx-warn)'}"></span>{tFn('og2.health_ms', { ms: data.settings.latency.avg_ms.toLocaleString(String($locale ?? 'fr'), { maximumFractionDigits: 1 }) })}</span>{/if}
 		<span>{tFn('og2.health_scope')}</span>
 	</div>
 </div>

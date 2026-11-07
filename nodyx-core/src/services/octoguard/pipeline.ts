@@ -30,6 +30,22 @@ import type {
 
 const PIPELINE_TIMEOUT_MS = 50
 
+// ─── Le temps du moteur (ligne de santé : « N ms par message en moyenne ») ───
+// Les 500 derniers passages, en mémoire. Rien n'est écrit nulle part.
+const LATENCY_WINDOW = 500
+const latencies: number[] = []
+let latencyNext = 0
+function recordLatency(ms: number): void {
+  if (latencies.length < LATENCY_WINDOW) latencies.push(ms)
+  else { latencies[latencyNext] = ms; latencyNext = (latencyNext + 1) % LATENCY_WINDOW }
+}
+/** Moyenne des derniers passages, null tant que rien n'est passé. */
+export function pipelineLatency(): { avg_ms: number; samples: number } | null {
+  if (latencies.length === 0) return null
+  return { avg_ms: latencies.reduce((a, b) => a + b, 0) / latencies.length, samples: latencies.length }
+}
+export function _resetLatencyForTests(): void { latencies.length = 0; latencyNext = 0 }
+
 export interface PipelineInput {
   content:    string
   userCtx:    PipelineUserCtx
@@ -343,7 +359,10 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
         resolve({ blocked: false })
       }, PIPELINE_TIMEOUT_MS)
     })
-    return await Promise.race([runPipelineInner(input), timeout])
+    const t0 = performance.now()
+    const res = await Promise.race([runPipelineInner(input), timeout])
+    recordLatency(performance.now() - t0)
+    return res
   } catch (err) {
     console.warn('[octoguard] pipeline error, bypassing:', err)
     return { blocked: false }

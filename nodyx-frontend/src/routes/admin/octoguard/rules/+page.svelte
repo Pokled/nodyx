@@ -49,6 +49,7 @@
 		</div>
 		<div class="adm-actions">
 			<a class="adm-btn" href="/admin/octoguard/sandbox"><Icon d="M9 3h6 M10 3v6L4.5 19A1.5 1.5 0 006 21h12a1.5 1.5 0 001.5-2L14 9V3 M7 15h10" />{tFn('og2.nav_sandbox')}</a>
+			<a class="adm-btn" href="/admin/octoguard/templates"><Icon d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5" />{tFn('og2.from_template')}</a>
 			<a class="adm-btn adm-btn--primary" href="/admin/octoguard/automod"><Icon d="M12 5v14 M5 12h14" />{tFn('og2.new_rule')}</a>
 		</div>
 	</header>

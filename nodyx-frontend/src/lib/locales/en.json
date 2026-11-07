@@ -5548,6 +5548,8 @@
   "og2.health_hate": "Hate symbol filter on",
   "og2.health_hate_off": "Hate symbol filter off",
   "og2.health_scope": "Watches: chat, forum, profiles, polls, wiki",
+  "og2.health_ms": "{{ms}} ms per message on average",
+  "og2.from_template": "From a template",
   "og2.p_domains_ph": "discord.gg, example.com",
   "og2.nav_aria": "OctoGuard menu",
   "og2.err_range": "“{{field}}”: a whole number between {{min}} and {{max}}.",

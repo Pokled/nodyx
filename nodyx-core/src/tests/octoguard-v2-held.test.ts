@@ -320,3 +320,23 @@ describe('approuver ne publie jamais deux fois (relecture du 07/11)', () => {
     expect(ThreadModel.remove).toHaveBeenCalledWith('th-new')
   })
 })
+
+describe('ligne de santé : le temps du moteur (lot 12)', () => {
+  it('chaque passage est mesuré, la moyenne est exposée ; rien avant le premier message', async () => {
+    const { pipelineLatency, _resetLatencyForTests } = await import('../services/octoguard/pipeline')
+    _resetLatencyForTests()
+    expect(pipelineLatency()).toBeNull()
+    _setRulesForBench([rule({ action: 'report_only' })])
+    for (let i = 0; i < 3; i++) await runPipeline({ content: 'bonjour', userCtx: { userId: AUTHOR, role: 'member', gradeIds: [] } })
+    const l = pipelineLatency()!
+    expect(l.samples).toBe(3)
+    expect(l.avg_ms).toBeGreaterThanOrEqual(0)
+    expect(l.avg_ms).toBeLessThan(50)
+  })
+  it('éteint : rien n’est mesuré (le moteur ne tourne pas)', async () => {
+    const { pipelineLatency, _resetLatencyForTests } = await import('../services/octoguard/pipeline')
+    _resetLatencyForTests(); process.env.OCTOGUARD_ENABLED = 'false'
+    await runPipeline({ content: 'x', userCtx: { userId: AUTHOR, role: 'member', gradeIds: [] } })
+    expect(pipelineLatency()).toBeNull()
+  })
+})
