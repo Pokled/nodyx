@@ -19,9 +19,11 @@ vi.mock('../config/database', () => ({
   db: { query: vi.fn() },
   redis: { get: vi.fn().mockResolvedValue(null), setex: vi.fn().mockResolvedValue('OK'), exists: vi.fn(), incr: vi.fn().mockResolvedValue(1), expire: vi.fn().mockResolvedValue(1) },
 }))
-vi.mock('../services/octoguard/moderate', () => ({
+vi.mock('../services/octoguard/moderate', async (orig) => ({
+  textForModeration: ((await orig()) as { textForModeration: (h: string) => string }).textForModeration,
   moderateText: moderateMock,
   blockedBody: (v: { reason: string; i18n_key: string }) => ({ error: v.reason, code: 'OCTOGUARD_BLOCKED', i18n_key: v.i18n_key }),
+  heldBody: (h: { id: string }) => ({ held: true, held_id: h.id, code: 'OCTOGUARD_HELD' }),
 }))
 vi.mock('../services/octoguard/autoReport', () => ({ fileAutoReport: autoReportMock }))
 vi.mock('../services/octoguard', () => ({

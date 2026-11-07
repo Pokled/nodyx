@@ -20,9 +20,9 @@ import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
 import { can, getAccess, communityOfThread, outranks, rankOf } from '../services/permissions'
 import { isUserMuted } from '../services/octoguard'
-import { moderateText, blockedBody } from '../services/octoguard/moderate'
+import { moderateText, textForModeration, blockedBody, heldBody } from '../services/octoguard/moderate'
+import { holdContent } from '../services/octoguard/held'
 import { fileAutoReport } from '../services/octoguard/autoReport'
-import { toPlainText } from '../services/reports'
 
 // Un titre de fil est du texte brut, jamais du HTML : checkHtmlContent() ne fait
 // que SCANNER (mots interdits) sans jamais retirer de balises. Sans ce nettoyage,
@@ -274,8 +274,24 @@ app.get('/threads', {
     }
 
     // OctoGuard (forum) : examiné AVANT de créer quoi que ce soit
-    const ogThread = await moderateText(request.user!.userId, 'forum', [title, toPlainText(content)])
+    const ogThread = await moderateText(request.user!.userId, 'forum', [title, textForModeration(content)])
     if (ogThread.blocked) return reply.code(422).send(blockedBody(ogThread))
+
+    // Cran « retenir » : le fil n'est PAS créé. Le contenu, nettoyé comme pour
+    // une publication, attend la relecture de l'équipe (CDC E4h, lot 2).
+    if (ogThread.hold) {
+      const rehostHeld = await rehostExternalImages(content)
+      const heldContent = sanitize(rehostHeld.html)
+      const heldCheck = checkHtmlContent(heldContent)
+      if (!heldCheck.ok) return reply.code(422).send({ error: heldCheck.reason, code: 'CONTENT_BLOCKED' })
+      const titleHeldCheck = checkHtmlContent(title)
+      if (!titleHeldCheck.ok) return reply.code(422).send({ error: titleHeldCheck.reason, code: 'CONTENT_BLOCKED' })
+      const held = await holdContent({
+        kind: 'thread', authorId: request.user!.userId, categoryId: category_id,
+        payload: { content: heldContent, title, tag_ids: tag_ids ?? [] }, rule: ogThread.hold,
+      })
+      if (held) return reply.code(202).send(heldBody(held))
+    }
 
     const thread = await ThreadModel.create({
       category_id,
@@ -393,8 +409,12 @@ app.get('/threads', {
       return reply.code(422).send({ error: replyContentCheck.reason, code: 'CONTENT_BLOCKED' })
     }
 
-    const ogPost = await moderateText(userId, 'forum', [toPlainText(sanitized)])
+    const ogPost = await moderateText(userId, 'forum', [textForModeration(sanitized)])
     if (ogPost.blocked) return reply.code(422).send(blockedBody(ogPost))
+    if (ogPost.hold) {
+      const held = await holdContent({ kind: 'post', authorId: userId, threadId: resolvedThreadId, payload: { content: sanitized }, rule: ogPost.hold })
+      if (held) return reply.code(202).send(heldBody(held))
+    }
 
     const post = await PostModel.create({
       thread_id: resolvedThreadId,
@@ -487,8 +507,13 @@ app.get('/threads', {
 
     // La modification passe par OctoGuard comme la publication (sinon : publier
     // propre, puis modifier pour contourner)
-    const ogEdit = await moderateText(userId, 'forum', [toPlainText(editSanitized)])
+    const ogEdit = await moderateText(userId, 'forum', [textForModeration(editSanitized)])
     if (ogEdit.blocked) return reply.code(422).send(blockedBody(ogEdit))
+    // Modification retenue : l'ancien texte reste en ligne jusqu'à la décision
+    if (ogEdit.hold) {
+      const held = await holdContent({ kind: 'post_edit', authorId: userId, threadId: existing.thread_id, postId: id, payload: { content: editSanitized }, rule: ogEdit.hold })
+      if (held) return reply.code(202).send(heldBody(held))
+    }
 
     const post = await PostModel.updateContent(id, editSanitized)
     if (ogEdit.report) void fileAutoReport({ targetType: 'post', targetId: id, ruleName: ogEdit.report.rule_name, excerpt: ogEdit.report.excerpt })

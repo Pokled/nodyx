@@ -142,7 +142,7 @@ export async function ensureBaseProfile(): Promise<{ seeded: number; updated: nu
 
 const SurfaceZ = z.enum(['chat', 'forum', 'profile', 'poll', 'wiki'])
 const DurationZ = z.object({ value: z.number().int().positive().max(10_000), unit: z.enum(['m', 'h', 'd', 'w', 'M']) }).nullable()
-const ActionZ = z.enum(['delete', 'warn', 'mute', 'ban_temp', 'notify_only', 'report_only'])
+const ActionZ = z.enum(['delete', 'warn', 'mute', 'ban_temp', 'notify_only', 'report_only', 'hold'])
 
 export const ProfileRuleZ = z.object({
   name:            z.string().min(1).max(100),

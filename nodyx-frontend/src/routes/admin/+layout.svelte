@@ -24,7 +24,7 @@
 			items: [
 				{ href: '/admin',             labelKey: 'anav.lbl_dashboard',    exact: true, iconPath: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
 				{ href: '/admin/members',     labelKey: 'anav.lbl_members',      iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-				{ href: '/admin/reports',     labelKey: 'anav.lbl_reports',      iconPath: 'M4 21V4m0 0h11l-1.5 4L15 12H4' },
+				{ href: '/admin/octoguard/reports', labelKey: 'anav.lbl_reports',      iconPath: 'M4 21V4m0 0h11l-1.5 4L15 12H4' },
 				{ href: '/admin/grades',      labelKey: 'anav.lbl_grades',       iconPath: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z' },
 				{ href: '/admin/categories',  labelKey: 'anav.lbl_categories',   iconPath: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
 				{ href: '/admin/moderation',  labelKey: 'anav.lbl_moderation',   iconPath: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
@@ -243,7 +243,7 @@
 							{#if item.href === '/admin/octoguard'}
 								<svg class="adm-side-chev" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
 							{/if}
-							{#if item.href === '/admin/reports' && openReports > 0}
+							{#if item.href === '/admin/octoguard/reports' && openReports > 0}
 								<span class="adm-side-badge" aria-label={tFn('areports.badge_label', { n: openReports })}>{openReports}</span>
 							{/if}
 							{#if item.soon}

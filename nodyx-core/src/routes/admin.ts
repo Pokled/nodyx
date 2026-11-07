@@ -143,12 +143,17 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const access = request.access!
     // Dossiers en attente dans la file de signalements : le compteur du menu
+    // (dossiers ouverts + contenus retenus à relire, cran « Retenir »)
     let open_reports: number | null = null
+    let held_pending: number | null = null
     if (access.permissions.includes('moderate_members') || access.permissions.includes('manage_octoguard')) {
-      const { rows } = await db.query<{ n: number }>(`SELECT COUNT(DISTINCT (target_type, target_id))::int AS n FROM reports WHERE status = 'open'`)
-      open_reports = rows[0]?.n ?? 0
+      const { rows } = await db.query<{ n: number; h: number }>(
+        `SELECT (SELECT COUNT(DISTINCT (target_type, target_id)) FROM reports WHERE status = 'open')::int AS n,
+                (SELECT COUNT(*) FROM octoguard_held WHERE status = 'pending')::int AS h`)
+      held_pending = rows[0]?.h ?? 0
+      open_reports = (rows[0]?.n ?? 0) + held_pending
     }
-    return reply.send({ role: access.role, permissions: access.permissions, open_reports })
+    return reply.send({ role: access.role, permissions: access.permissions, open_reports, held_pending })
   })
 
   // ── Dashboard stats ────────────────────────────────────────────────────────

@@ -14,11 +14,11 @@
 	const token = $derived(((page.data as any).token as string | null) ?? null)
 	const focusRule = page.url.searchParams.get('rule')
 
-	type Outcome = 'none' | 'observe' | 'report' | 'warn' | 'delete' | 'mute' | 'ban_temp' | 'notify'
+	type Outcome = 'none' | 'observe' | 'report' | 'hold' | 'warn' | 'delete' | 'mute' | 'ban_temp' | 'notify'
 	type R = { id: string; name: string; type: string; enabled: boolean; applies_here: boolean; immune: boolean; conditions_ok: boolean; testable: boolean; matched: boolean; excerpt: string | null; outcome: Outcome; intended: Outcome }
 	type Result = { system: { blocked: boolean; rule: string | null }; rules: R[]; first: string | null }
 
-	const LV: Record<Outcome, Level | null> = { none: null, observe: 'observe', report: 'report', notify: 'report', warn: 'warn', delete: 'delete', mute: 'delete', ban_temp: 'delete' }
+	const LV: Record<Outcome, Level | null> = { none: null, observe: 'observe', report: 'report', notify: 'report', hold: 'hold', warn: 'warn', delete: 'delete', mute: 'delete', ban_temp: 'delete' }
 
 	let content = $state('')
 	let surface = $state<Surface>('chat')

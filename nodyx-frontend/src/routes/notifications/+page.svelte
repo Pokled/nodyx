@@ -30,6 +30,8 @@
 		canvas_access_granted: '🎨',
 		report_resolved: '✓',
 		moderation_warning: '!',
+		held_approved: '✓',
+		held_refused: '×',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
@@ -40,6 +42,8 @@
 		canvas_access_granted: tFn('notifications.canvas_access_granted_label'),
 		report_resolved: tFn('notifications.report_resolved_label'),
 		moderation_warning: tFn('notifications.moderation_warning_label'),
+		held_approved: tFn('notifications.held_approved_label'),
+		held_refused: tFn('notifications.held_refused_label'),
 	});
 
 	function formatDate(iso: string) {
@@ -130,6 +134,12 @@
 								<span class="font-semibold text-[var(--nx-text)]">{notif.actor_username}</span>
 							{/if}
 							{TYPE_LABEL[notif.type] ?? notif.type}
+							{#if notif.type === 'held_refused' && notif.meta?.expired}
+								<span class="block mt-1 text-[var(--nx-text-muted)]">{tFn('notifications.held_expired_hint')}</span>
+							{/if}
+							{#if (notif.type === 'held_approved' || notif.type === 'held_refused') && notif.meta?.excerpt}
+								<span class="block mt-1 text-[var(--nx-text)]">« {notif.meta.excerpt} »</span>
+							{/if}
 							{#if notif.type === 'moderation_warning' && notif.meta?.reason}
 								<span class="block mt-1 text-[var(--nx-text)]">« {notif.meta.reason} »</span>
 							{/if}

@@ -7,8 +7,6 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	'/admin', '/admin/members',
 	// Lot 1 : gestion de la communauté
 	'/admin/grades', '/admin/categories', '/admin/tags', '/admin/moderation', '/admin/audit-log',
-	// Modération unifiée (E2)
-	'/admin/reports',
 	// OctoGuard 2, livraison 3a
 	'/admin/octoguard', '/admin/octoguard/rules', '/admin/octoguard/sandbox',
 	// OctoGuard 2, livraison 3b
@@ -16,6 +14,8 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	'/admin/octoguard/welcome', '/admin/octoguard/commands', '/admin/octoguard/webhook',
 	// OctoGuard 2, livraison 3c
 	'/admin/octoguard/guide', '/admin/octoguard/member-view',
+	// OctoGuard 2, mise en conformité (E4h) : Signalements dans OctoGuard
+	'/admin/octoguard/reports',
 ]
 
 // Sous-pages dynamiques déjà migrées (fiche d'un membre : /admin/members/<id>)
