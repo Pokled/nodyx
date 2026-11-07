@@ -40,7 +40,7 @@
 		const kw = rules.find((r) => r.type === 'keywords')
 		if (kw && !(kw.params?.words ?? []).length) out.push({ key: 'kw-empty', kind: 'warn', icon: LEVEL_ICON.warn, text: tFn('og2.tip_words_empty'), meta: tFn('og2.tip_words_empty_meta'), href: `/admin/octoguard/rules#rule-${kw.id}`, hrefLabel: tFn('og2.tip_words_fill') })
 		else if (kw && !kw.enabled) out.push({ key: 'kw-off', kind: 'acc', icon: LEVEL_ICON.report, text: tFn('og2.tip_words_off'), href: `/admin/octoguard/rules#rule-${kw.id}`, hrefLabel: tFn('og2.see') })
-		if (openReports > 0) out.push({ key: 'reports', kind: 'report', icon: LEVEL_ICON.report, text: tFn('og2.tip_reports', { n: openReports }), href: '/admin/reports', hrefLabel: tFn('og2.open') })
+		if (openReports > 0) out.push({ key: 'reports', kind: 'report', icon: LEVEL_ICON.report, text: tFn('og2.tip_reports', { n: openReports }), href: '/admin/octoguard/reports', hrefLabel: tFn('og2.open') })
 		return out.slice(0, 5)
 	})
 
@@ -120,7 +120,7 @@
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_acted')}</span><Icon d={LEVEL_ICON.delete} cls="adm-stat-icon" /></div><div class="adm-stat-value">{stats.totals?.acted ?? 0}</div><div class="adm-stat-sub">{tFn('og2.st_acted_sub')}</div></div>
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_observed')}</span><Icon d={LEVEL_ICON.observe} cls="adm-stat-icon" /></div><div class="adm-stat-value">{stats.totals?.observed ?? 0}</div><div class="adm-stat-sub">{tFn('og2.st_observed_sub')}</div></div>
 		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.st_precision')}</span><Icon d="M5 13l4 4L19 7" cls="adm-stat-icon" /></div><div class="adm-stat-value">{precision === null ? '·' : `${precision} %`}</div><div class="adm-stat-sub">{precision === null ? tFn('og2.st_precision_none') : tFn('og2.st_precision_sub', { u: stats.totals?.undone ?? 0, n: stats.totals?.acted ?? 0 })}</div></div>
-		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.nav_reports')}</span><Icon d={LEVEL_ICON.report} cls="adm-stat-icon" /></div><div class="adm-stat-value">{openReports}</div><div class="adm-stat-sub"><a class="og-linkbtn" href="/admin/reports">{tFn('og2.open_queue')}</a></div></div>
+		<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('og2.nav_reports')}</span><Icon d={LEVEL_ICON.report} cls="adm-stat-icon" /></div><div class="adm-stat-value">{openReports}</div><div class="adm-stat-sub"><a class="og-linkbtn" href="/admin/octoguard/reports">{tFn('og2.open_queue')}</a></div></div>
 	</div>
 
 	<div class="og-grid2">
@@ -191,7 +191,7 @@
 				<div class="og-tile-art"><svg viewBox="0 0 160 84" aria-hidden="true"><rect class="og-art-p" x="14" y="16" width="64" height="52" rx="8"/><path class="og-art-s" d="M24 32h40M24 44h44M24 56h28"/><path d="M84 42h14 M94 37l6 5-6 5" fill="none" stroke="var(--nx-header-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect class="og-art-p" x="106" y="16" width="42" height="52" rx="8"/><circle cx="118" cy="30" r="4" fill="var(--nx-info)"/><circle cx="118" cy="44" r="4" fill="var(--nx-ok)"/><circle cx="118" cy="58" r="4" fill="var(--nx-text-muted)"/></svg></div>
 				<div class="og-tile-tx"><b>{tFn('og2.nav_sandbox')}</b><span>{tFn('og2.tile_sandbox')}</span><span class="og-go">{tFn('og2.tile_sandbox_go')}</span></div>
 			</a>
-			<a class="adm-card og-tile" href="/admin/reports">
+			<a class="adm-card og-tile" href="/admin/octoguard/reports">
 				<div class="og-tile-art"><svg viewBox="0 0 160 84" aria-hidden="true"><rect class="og-art-p" x="16" y="12" width="96" height="14" rx="5"/><rect class="og-art-p" x="16" y="32" width="84" height="14" rx="5"/><rect x="16" y="52" width="96" height="14" rx="5" fill="color-mix(in srgb, var(--nx-bad) 12%, transparent)" stroke="var(--nx-bad)" stroke-width="1.5"/><rect class="og-art-a" x="118" y="20" width="30" height="44" rx="7"/><path d="M128 32v20 M128 32h12l-2 5 2 5h-12" fill="none" stroke="var(--nx-header-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
 				<div class="og-tile-tx"><b>{tFn('og2.nav_reports')}</b><span>{tFn('og2.tile_reports')}</span><span class="og-go">{tFn('og2.tile_reports_go')}</span></div>
 			</a>

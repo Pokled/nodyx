@@ -17,7 +17,7 @@ import { matchRule } from './matchers'
 import { conditionsMet } from './pipeline'
 import type { AutomodRuleRow, Surface } from './types'
 
-export type SandboxOutcome = 'none' | 'observe' | 'report' | 'warn' | 'delete' | 'mute' | 'ban_temp' | 'notify'
+export type SandboxOutcome = 'none' | 'observe' | 'report' | 'hold' | 'warn' | 'delete' | 'mute' | 'ban_temp' | 'notify'
 
 export interface SandboxRuleResult {
   id: string; name: string; preset_key: string | null; type: string
@@ -35,7 +35,7 @@ export interface SandboxResult {
 }
 
 const ACTION_OUTCOME: Record<string, SandboxOutcome> = {
-  delete: 'delete', warn: 'warn', mute: 'mute', ban_temp: 'ban_temp', report_only: 'report', notify_only: 'notify',
+  delete: 'delete', warn: 'warn', mute: 'mute', ban_temp: 'ban_temp', report_only: 'report', notify_only: 'notify', hold: 'hold',
 }
 
 export async function runSandbox(input: { content: string; surface: Surface; accountAgeDays?: number; role?: string }): Promise<SandboxResult> {
@@ -55,7 +55,9 @@ export async function runSandbox(input: { content: string; surface: Surface; acc
     const condOk = conditionsMet(rule, user)
     const testable = rule.type !== 'flood'
     const m = testable ? matchRule(input.content, rule, { userId: `sandbox-${Math.random()}` }) : null
-    const intended = ACTION_OUTCOME[rule.action] ?? 'none'
+    // Retenir n'existe qu'au chat et au forum ; ailleurs la règle signale (moderate.ts)
+    const mapped = ACTION_OUTCOME[rule.action] ?? 'none'
+    const intended: SandboxOutcome = mapped === 'hold' && input.surface !== 'chat' && input.surface !== 'forum' ? 'report' : mapped
     const acts = !!m && applies && !immune && condOk
     const outcome: SandboxOutcome = acts ? (rule.dry_run ? 'observe' : intended) : 'none'
     if (acts && rule.enabled && !rule.dry_run && first === null) first = rule.id

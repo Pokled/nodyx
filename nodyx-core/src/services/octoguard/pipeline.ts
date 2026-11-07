@@ -104,6 +104,8 @@ interface ActionOutcome {
   i18nKey:  string
   /** Cran « signaler » : un dossier à ouvrir dans la file (D13) */
   report?:  boolean
+  /** Cran « retenir » : le contenu attend la relecture (lot 2) */
+  hold?:    boolean
 }
 
 async function applyAction(
@@ -146,6 +148,13 @@ async function applyAction(
       metadata:     { ...meta, would_be: false },
     })
     return { blocked: false, reason: 'report_only', i18nKey: 'octoguard.report_only', report: true }
+  }
+
+  // Cran « retenir » : rien n'est publié. L'appelant confie le contenu à
+  // holdContent() (qui journalise « octoguard.message_held ») ; l'auteur le voit
+  // « en attente de validation », les autres ne le voient pas.
+  if (action === 'hold') {
+    return { blocked: false, reason: 'hold', i18nKey: 'octoguard.held', hold: true }
   }
 
   // notify_only : log + webhook (webhook Session D), pas de blocage
@@ -309,6 +318,7 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
       i18n_key: outcome.i18nKey,
       event_id: eventId,
       ...(outcome.report ? { report: { rule_id: rule.id, rule_name: rule.name, excerpt: match.excerpt } } : {}),
+      ...(outcome.hold ? { hold: { rule_id: rule.id, rule_name: rule.name, excerpt: match.excerpt } } : {}),
     }
   }
 

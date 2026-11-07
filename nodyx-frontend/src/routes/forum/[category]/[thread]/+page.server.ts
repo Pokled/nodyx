@@ -40,7 +40,16 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 		}
 	}
 
-	return { thread: json.thread, posts: json.posts, poll, token, ogImagePath };
+	// Mes réponses et modifications retenues par OctoGuard dans ce fil : moi seul les vois
+	let heldMine: Array<{ id: string; kind: 'post' | 'post_edit'; content: string; post_id: string | null }> = [];
+	if (token) {
+		try {
+			const hr = await apiFetch(fetch, `/reports/held/mine?thread_id=${thread.id}`, { headers: { Authorization: `Bearer ${token}` } });
+			if (hr.ok) heldMine = ((await hr.json()).held ?? []).filter((h: { kind: string }) => h.kind === 'post' || h.kind === 'post_edit');
+		} catch { /* rien à montrer */ }
+	}
+
+	return { thread: json.thread, posts: json.posts, poll, token, ogImagePath, heldMine };
 };
 
 export const actions: Actions = {
@@ -64,6 +73,8 @@ export const actions: Actions = {
 			// Le code et la fin d'une sourdine : la page en fait une phrase claire
 			return fail(res.status, { replyError: json.error ?? null, replyCode: json.code ?? null, mutedUntil: json.expires_at ?? null, ogKey: json.i18n_key ?? null });
 		}
+		// 202 : retenue pour relecture, elle s'affiche « en attente » pour moi seul
+		if (res.status === 202) return { held: true };
 	},
 
 	// ── Éditer un post ────────────────────────────────────────────────────
@@ -82,9 +93,10 @@ export const actions: Actions = {
 		});
 
 		if (!res.ok) {
-			const json = await res.json();
-			return fail(res.status, { editError: json.error });
+			const json = await res.json().catch(() => ({}));
+			return fail(res.status, { editError: json.error ?? null, editCode: json.code ?? null, ogKey: json.i18n_key ?? null, editPostId: postId });
 		}
+		if (res.status === 202) return { editHeld: true };
 	},
 
 	// ── Supprimer un post ─────────────────────────────────────────────────

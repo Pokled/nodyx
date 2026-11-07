@@ -26,6 +26,7 @@
 	import { can } from '$lib/permissions';
 	import { openReport } from '$lib/report';
 	import { octoguardMessage } from '$lib/octoguardMessages';
+	import { htmlToText as heldText } from '$lib/octoguard/text';
 	import { isDarkTheme } from '$lib/theme';
 	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
@@ -149,6 +150,21 @@
 
 	// Content filter feedback
 	let blockedNotice = $state<string | null>(null);
+	// Mes messages retenus par OctoGuard (cran « Retenir ») dans ce salon : moi
+	// seul les vois, « en attente de validation », jusqu'à la décision.
+	type HeldMine = { id: string; channel_id: string | null; content: string; created_at: string };
+	let heldMine = $state<HeldMine[]>([]);
+	async function loadHeldMine(channelId: string) {
+		try {
+			const { PUBLIC_API_URL } = await import('$app/env/public');
+			const res = await fetch(`${PUBLIC_API_URL}/api/v1/reports/held/mine?channel_id=${encodeURIComponent(channelId)}`, {
+				headers: token ? { Authorization: `Bearer ${token}` } : {},
+			});
+			if (!res.ok) return;
+			const { held } = await res.json();
+			if (selectedChannel?.id === channelId) heldMine = held as HeldMine[];
+		} catch { /* rien à montrer */ }
+	}
 	let blockedTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// Emoji picker
@@ -383,7 +399,7 @@
 		// onDestroy ne retirait pas ces handlers -> à chaque remontage ils s'accumulaient
 		// -> events (messages, notifs vocales join/leave…) déclenchés en double.
 		// On retire d'abord les handlers chat-exclusifs avant de rebrancher.
-		for (const ev of ['chat:history','chat:message','chat:typing','chat:message_edited','chat:message_deleted','chat:pinned','chat:reaction_update','chat:blocked','chat:rate_limited','voice:channel_update']) sock.off(ev);
+		for (const ev of ['chat:history','chat:message','chat:typing','chat:message_edited','chat:message_deleted','chat:pinned','chat:reaction_update','chat:blocked','chat:rate_limited','voice:channel_update','octoguard:held','octoguard:held_decided']) sock.off(ev);
 
 		// 'connect' est PARTAGÉ (voice, store socket) -> on ne retire QUE notre handler, par référence.
 		const sk = sock as unknown as { __chatOnConnect?: () => void };
@@ -395,7 +411,26 @@
 		sock.on('chat:history', ({ channelId, messages: hist }: { channelId: string; messages: Message[] }) => {
 			if (channelId !== selectedChannel?.id) return;
 			messages = hist.map(normalizeMsg);
+			heldMine = [];
+			void loadHeldMine(channelId);
 			scrollToBottom({ force: true });
+		});
+
+		sock.on('octoguard:held', (h: HeldMine) => {
+			if (h.channel_id !== selectedChannel?.id) return;
+			heldMine = [...heldMine.filter((x) => x.id !== h.id), h];
+			scrollToBottom({ force: true });
+		});
+
+		sock.on('octoguard:held_decided', ({ id, outcome }: { id: string; outcome: 'approved' | 'refused' | 'expired' }) => {
+			const was = heldMine.some((x) => x.id === id);
+			heldMine = heldMine.filter((x) => x.id !== id);
+			// Approuvé : le vrai message arrive par « chat:message ». Sinon on le dit.
+			if (was && outcome !== 'approved') {
+				blockedNotice = tFn(outcome === 'expired' ? 'ogmsg.held_expired' : 'ogmsg.held_refused');
+				if (blockedTimer) clearTimeout(blockedTimer);
+				blockedTimer = setTimeout(() => { blockedNotice = null; }, 8000);
+			}
 		});
 
 		sock.on('chat:message', (msg: Message) => {
@@ -1465,7 +1500,25 @@
 					{/each}
 				{/each}
 
-				{#if messages.length === 0}
+				{#each heldMine as h (h.id)}
+					<div class="og-held-row" role="listitem">
+						<div class="og-held-av" aria-hidden="true">{currentUsername.charAt(0).toUpperCase() || '?'}</div>
+						<div class="min-w-0 flex-1">
+							<div class="flex flex-wrap items-baseline gap-2 mb-0.5">
+								<span class="text-sm font-black" style="color: var(--nx-text)">{currentUsername}</span>
+								<span class="og-held-pill">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+									{tFn('ogmsg.held_pill')}
+								</span>
+								<span class="text-[10px] tabular-nums" style="color: var(--nx-text-muted)">{formatTime(h.created_at)}</span>
+							</div>
+							<p class="og-held-text">{heldText(h.content)}</p>
+							<p class="og-held-help">{tFn('ogmsg.held_only_you')}</p>
+						</div>
+					</div>
+				{/each}
+
+				{#if messages.length === 0 && heldMine.length === 0}
 					<div class="flex flex-col items-center justify-center gap-3 mt-16 px-8">
 						<div class="w-12 h-12 flex items-center justify-center" style="background: rgb(var(--nx-accent-2-rgb) / .08); border: 1px solid rgb(var(--nx-accent-2-rgb) / .15)">
 							<svg class="w-6 h-6" fill="none" stroke="var(--nx-accent-2-strong)" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -1823,6 +1876,16 @@
 {/if}
 
 <style>
+	/* Message retenu par OctoGuard : seul son auteur le voit, en attente de validation */
+	.og-held-row { display: flex; align-items: flex-start; gap: 0.75rem; margin: 0.375rem 0.5rem; padding: 0.625rem 0.75rem; border-radius: 10px;
+		background: color-mix(in srgb, var(--nx-hold) 7%, transparent); box-shadow: inset 2px 0 0 var(--nx-hold); }
+	.og-held-av { width: 2.25rem; height: 2.25rem; flex: none; display: grid; place-items: center; font-weight: 900; font-size: 11px; color: #fff;
+		background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep)); opacity: 0.75; }
+	.og-held-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 1px 8px; border-radius: 99px; font-size: 11px; font-weight: 600;
+		color: var(--nx-hold); border: 1px solid color-mix(in srgb, var(--nx-hold) 35%, transparent); background: color-mix(in srgb, var(--nx-hold) 10%, transparent); }
+	.og-held-pill svg { width: 12px; height: 12px; }
+	.og-held-text { margin: 0; font-size: 0.875rem; color: var(--nx-text); opacity: 0.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+	.og-held-help { margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--nx-text-muted); }
 	/* Le chat se pose en `fixed` au lieu de vivre dans <main> : il reprend la
 	   géométrie du contenant flottant (--shell-left / --shell-members, calculées
 	   dans +layout.svelte) au lieu des 276px/220px codés en dur d'avant, qui ne
