@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state'
 	import { untrack, onMount } from 'svelte'
+	import { invalidateAll } from '$app/navigation'
 	import { t, locale } from '$lib/i18n'
 	import Icon from '$lib/components/octoguard/Icon.svelte'
 	import { og } from '$lib/octoguard/api'
@@ -18,7 +19,23 @@
 	const stats = $derived((data.stats ?? { rules: {}, totals: { acted: 0, observed: 0, undone: 0 } }) as any)
 	const on = $derived(rules.filter((r) => r.enabled))
 	const observing = $derived(on.filter((r) => r.dry_run))
+	// L'interrupteur général (lot 9, D24) : allumer se confirme, éteindre est immédiat
 	const enabled = $derived(!!data.settings?.enabled)
+	const lockedOff = $derived(!!data.settings?.locked_off)
+	let confirmOn = $state(false)
+	let switching = $state(false)
+	let switchError = $state<string | null>(null)
+	async function setEnabled(on: boolean) {
+		switching = true; switchError = null
+		try {
+			await og<{ enabled: boolean }>(token, '/settings', 'PUT', { enabled: on })
+			confirmOn = false
+			// Toute la page ET la colonne (« Actif · 7 règles ») relisent l'état
+			await invalidateAll()
+		} catch (e) {
+			switchError = tFn((e as any)?.code === 'OCTOGUARD_LOCKED_OFF' ? 'og2.sw_locked' : 'og2.sw_err')
+		} finally { switching = false }
+	}
 	// Justesse : la part des actions de la semaine que l'équipe n'a PAS annulées.
 	const precision = $derived.by(() => {
 		const acted = stats.totals?.acted ?? 0
@@ -93,10 +110,29 @@
 				</p>
 			</div>
 		</div>
-		<span class="adm-pill {enabled ? 'adm-pill--ok' : ''}" title={tFn('og2.ov_switch_help')}>
-			<span class="og-dot" style="--k:{enabled ? 'var(--nx-ok)' : 'var(--nx-text-muted)'}"></span>{tFn(enabled ? 'og2.ov_on' : 'og2.ov_off')}
-		</span>
+		<label class="og-switch og-master" title={tFn(lockedOff ? 'og2.sw_locked' : 'og2.ov_switch_help')}>
+			<input type="checkbox" checked={enabled} disabled={switching || (lockedOff && !enabled)}
+				onchange={(e) => { const wantOn = e.currentTarget.checked; if (wantOn) { e.currentTarget.checked = false; confirmOn = true } else setEnabled(false) }} />
+			<span class="og-track"></span>
+			<span>{tFn(enabled ? 'og2.sw_on' : 'og2.sw_off')}</span>
+		</label>
 	</header>
+
+	{#if confirmOn}
+		<div class="adm-card og-confirm" role="alertdialog" aria-modal="false" aria-labelledby="og-sw-t" tabindex="-1">
+			<span class="og-ic og-k-acc"><Icon d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" /></span>
+			<div>
+				<h2 id="og-sw-t" class="og-rp-h">{tFn('og2.sw_confirm_title')}</h2>
+				<p class="og-help">{tFn('og2.sw_confirm_text', { n: on.length - observing.length, k: observing.length })}</p>
+			</div>
+			<div class="adm-actions">
+				<button type="button" class="adm-btn" onclick={() => (confirmOn = false)}>{tFn('common.cancel')}</button>
+				<button type="button" class="adm-btn adm-btn--primary" disabled={switching} onclick={() => setEnabled(true)}>{tFn('og2.sw_confirm_go')}</button>
+			</div>
+		</div>
+	{/if}
+	{#if lockedOff}<div class="og-note"><Icon d="M6 11h12v9H6z M8 11V8a4 4 0 018 0v3" />{tFn('og2.sw_locked')}</div>{/if}
+	{#if switchError}<p class="og-error" role="alert">{switchError}</p>{/if}
 
 	{#if data.failed}
 		<div class="adm-card og-empty" role="alert">{tFn('og2.err_load')}</div>

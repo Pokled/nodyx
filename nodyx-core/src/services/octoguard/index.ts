@@ -46,9 +46,18 @@ import { ensureOctoGuardBotUser } from './welcome'
 import { migrateEnvPatternsToDB } from './envMigration'
 import { startWebhookWorker } from './webhook'
 
-/** Vrai si OctoGuard est activé via env. Par défaut false. */
+/**
+ * Vrai si OctoGuard est allumé. L'interrupteur (OCTOGUARD_ENABLED) se règle
+ * depuis l'écran d'OctoGuard ou les Paramètres, effet immédiat.
+ * D24 : le serveur garde un verrou. OCTOGUARD_FORCE_OFF=true dans le .env
+ * éteint OctoGuard quoi que dise l'écran. Cette variable n'est PAS dans le
+ * registre des réglages : aucun écran ne peut la modifier.
+ */
+export function isOctoGuardLockedOff(): boolean {
+  return process.env.OCTOGUARD_FORCE_OFF === 'true'
+}
 export function isOctoGuardEnabled(): boolean {
-  return process.env.OCTOGUARD_ENABLED === 'true'
+  return !isOctoGuardLockedOff() && process.env.OCTOGUARD_ENABLED === 'true'
 }
 
 /**

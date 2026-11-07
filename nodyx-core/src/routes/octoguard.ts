@@ -219,11 +219,33 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
   // ─── Settings (état global) ───────────────────────────────────────────────
 
   app.get('/settings', async (_request, reply) => {
+    const og = await import('../services/octoguard')
     return reply.send({
-      enabled:        process.env.OCTOGUARD_ENABLED === 'true',
+      enabled:        og.isOctoGuardEnabled(),
+      locked_off:     og.isOctoGuardLockedOff(),
       re2_active:     (await import('../services/octoguard')).hasRE2(),
       hate_filter:    process.env.NODYX_HATE_FILTER_ENABLED !== 'false',
     })
+  })
+
+  // L'interrupteur général (lot 9, D24) : effet immédiat, journalisé.
+  // Refusé si le serveur a verrouillé OctoGuard (OCTOGUARD_FORCE_OFF).
+  app.put('/settings', {
+    preHandler: [rateLimit, validate({ body: z.object({ enabled: z.boolean() }) })],
+  }, async (request, reply) => {
+    const { enabled } = request.body as { enabled: boolean }
+    const og = await import('../services/octoguard')
+    if (enabled && og.isOctoGuardLockedOff()) {
+      return reply.code(409).send({ error: 'OctoGuard is locked off by the server (OCTOGUARD_FORCE_OFF)', code: 'OCTOGUARD_LOCKED_OFF' })
+    }
+    const { setSettings } = await import('../config/settings')
+    const res = await setSettings({ OCTOGUARD_ENABLED: enabled ? 'true' : 'false' }, request.user!.userId)
+    if (Object.keys(res.errors ?? {}).length) {
+      return reply.code(400).send({ error: 'Could not save the setting', code: 'SETTING_INVALID' })
+    }
+    if (enabled) await og.reloadRules()
+    await logAdminAction(request.user!.userId, enabled ? 'octoguard.enabled' : 'octoguard.disabled', null, null, null, {})
+    return reply.send({ enabled: og.isOctoGuardEnabled() })
   })
 
   // ─── OctoGuard 2 : bac à sable, chiffres, profils (E4b) ───────────────────
