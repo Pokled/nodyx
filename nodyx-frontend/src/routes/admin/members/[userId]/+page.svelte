@@ -120,7 +120,7 @@
 				</span>
 			{/each}
 			{#if st.reports_open > 0}
-				<a class="adm-state adm-state--info" href="/admin/reports">{tFn('afile.state_reports', { n: st.reports_open })}</a>
+				<a class="adm-state adm-state--info" href="/admin/octoguard/reports">{tFn('afile.state_reports', { n: st.reports_open })}</a>
 			{/if}
 			{#if !st.banned && st.mutes.length === 0 && st.reports_open === 0}
 				<span class="adm-state adm-state--ok">{tFn('afile.state_clean')}</span>

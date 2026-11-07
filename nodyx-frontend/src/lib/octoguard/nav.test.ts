@@ -12,7 +12,7 @@ describe('menu d\'OctoGuard selon les droits', () => {
 	})
 
 	it('un modérateur des membres ne voit que signalements et sourdines', () => {
-		expect(visible({ role: 'moderator', permissions: ['moderate_members'] })).toEqual(['/admin/reports', '/admin/octoguard/mutes'])
+		expect(visible({ role: 'moderator', permissions: ['moderate_members'] })).toEqual(['/admin/octoguard/reports', '/admin/octoguard/mutes'])
 	})
 
 	it('le droit « gérer OctoGuard » ouvre les règles, le bac à sable et le journal', () => {

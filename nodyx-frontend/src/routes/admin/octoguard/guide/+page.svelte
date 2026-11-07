@@ -28,7 +28,7 @@
 		{ id: 'words', go: '/admin/octoguard/rules', points: 4, demo: 'words' },
 		{ id: 'sandbox', go: '/admin/octoguard/sandbox', points: 2, demo: 'sandbox' },
 		{ id: 'log', go: '/admin/octoguard/logs', points: 3, demo: 'journal' },
-		{ id: 'team', go: '/admin/reports', points: 3 },
+		{ id: 'team', go: '/admin/octoguard/reports', points: 3 },
 		{ id: 'share', go: '/admin/octoguard/templates', points: 3 },
 		{ id: 'launch', go: '/admin/octoguard/rules', points: 0, demo: 'checklist' },
 	]

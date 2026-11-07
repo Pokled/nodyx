@@ -25,6 +25,7 @@ export type AutomodAction =
   | 'ban_temp'
   | 'notify_only'
   | 'report_only'
+  | 'hold'         // Retenir : le contenu attend une relecture de l'équipe (lot 2, CDC E4h)
 
 export type DurationUnit = 'm' | 'h' | 'd' | 'w' | 'M'
 
@@ -210,6 +211,9 @@ export interface PipelineResult {
   /** Cran « signaler » : l'appelant crée un dossier dans la file APRÈS avoir
    *  enregistré le contenu (il en connaît alors l'identifiant). D13. */
   report?:           { rule_id: string; rule_name: string; excerpt: string }
+  /** Cran « retenir » : l'appelant N'ÉCRIT PAS le contenu, il le confie à
+   *  holdContent() ; il ne sera publié qu'à l'approbation (CDC E4h, lot 2). */
+  hold?:             { rule_id: string; rule_name: string; excerpt: string }
 }
 
 /**

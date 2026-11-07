@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { levelOf, intendedOf, patchForLevel, categoryOf, sanctionOf } from './rules'
+import { levelOf, intendedOf, patchForLevel, categoryOf, sanctionOf, LEVELS } from './rules'
 
 describe('les crans, traduits vers et depuis le moteur', () => {
 	it('lit le cran d\'une règle', () => {
@@ -36,5 +36,19 @@ describe('les catégories', () => {
 		expect(categoryOf({ type: 'link_spam', conditions: { account_max_age_days: 2 } })).toBe('newcomers')
 		expect(categoryOf({ type: 'zalgo' })).toBe('content')
 		expect(categoryOf({ type: 'regex' })).toBe('custom')
+	})
+})
+
+describe('le cran « Retenir » (lot 2)', () => {
+	it('cinq crans, Retenir entre Signaler et Avertir', () => {
+		expect(LEVELS).toEqual(['observe', 'report', 'hold', 'warn', 'delete'])
+	})
+	it('une règle « hold » s’affiche au cran Retenir, et y revient en sortant de l’observation', () => {
+		expect(levelOf({ action: 'hold', dry_run: false })).toBe('hold')
+		expect(levelOf({ action: 'hold', dry_run: true })).toBe('observe')
+		expect(intendedOf({ action: 'hold' })).toBe('hold')
+	})
+	it('mettre une règle au cran Retenir envoie action « hold »', () => {
+		expect(patchForLevel({ action: 'report_only' }, 'hold')).toEqual({ dry_run: false, action: 'hold' })
 	})
 })

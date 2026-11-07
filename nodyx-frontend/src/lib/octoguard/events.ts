@@ -31,6 +31,10 @@ export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKin
 		case 'escalation_mute': case 'escalation_ban_temp': return { kind: 'delete', key: 'ev_escalation', source: 'octoguard' }
 		case 'report_filed': case 'notify': return { kind: 'report', key: 'ev_report', source: 'octoguard' }
 		case 'action_undone': return { kind: 'ok', key: 'ev_undone', source: 'team' }
+		case 'message_held': return { kind: 'hold', key: 'ev_held', source: 'octoguard' }
+		case 'held_approved': return { kind: 'ok', key: 'ev_held_approved', source: 'team' }
+		case 'held_refused': return { kind: 'delete', key: 'ev_held_refused', source: 'team' }
+		case 'held_expired': return { kind: 'observe', key: 'ev_held_expired', source: 'octoguard' }
 		case 'hate_symbol_blocked': return { kind: 'delete', key: 'ev_hate', source: 'octoguard' }
 	}
 	if (/^(rule|profile|command|welcome|webhook)_/.test(a)) return { kind: 'acc', key: 'ev_config', source: 'team' }

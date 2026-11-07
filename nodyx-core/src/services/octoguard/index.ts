@@ -40,6 +40,7 @@ import { reloadRules, getRules } from './cache'
 import { hasRE2 } from './matchers'
 import { startMutePurgeWorker } from './mutes'
 import { startBanExpiryWorker } from './bans'
+import { startHeldExpiryWorker } from './held'
 import { ensureBaseProfile } from './profile'
 import { ensureOctoGuardBotUser } from './welcome'
 import { migrateEnvPatternsToDB } from './envMigration'
@@ -65,6 +66,8 @@ export async function initOctoGuard(): Promise<void> {
   // non (depuis E3, une sourdine s'applique même OctoGuard éteint).
   startMutePurgeWorker()
   startBanExpiryWorker()
+  // Contenus retenus sans décision : refusés au bout de 72 h (D17), toujours
+  startHeldExpiryWorker()
 
   // État de la protection contre les expressions piégées, affiché dans tous les cas
   console.log(hasRE2()

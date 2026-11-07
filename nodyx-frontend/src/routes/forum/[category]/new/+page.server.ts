@@ -60,6 +60,12 @@ export const actions: Actions = {
 			});
 		}
 
+		// 202 : le fil est retenu pour relecture (OctoGuard, cran « Retenir »). Il
+		// n'existe pas encore : on reste sur la page et on le montre en attente.
+		if (res.status === 202) {
+			return { held: true, heldTitle: title, heldContent: content, pollDropped: !!pollJson };
+		}
+
 		// Si un sondage est joint, le créer avec le thread_id
 		if (pollJson) {
 			try {

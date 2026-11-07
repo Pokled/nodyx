@@ -27,6 +27,7 @@ import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { runSandbox, ruleStats, ruleHits } from '../services/octoguard/sandbox'
 import { BASE_PRESETS, BASE_PROFILE_VERSION, startingLevel, exportProfile, previewImport, applyImport, ProfileZ, type Profile } from '../services/octoguard/profile'
 import { checkRuleParams } from '../services/octoguard/params'
+import { listPending, countPending, approveHeld, refuseHeld, listMine, forAuthor, HELD_EXPIRY_HOURS } from '../services/octoguard/held'
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
 import * as NotificationModel from '../models/notification'
 import * as PostModel from '../models/post'
@@ -52,7 +53,7 @@ const Duration = z.object({
 const RuleParams = z.object({}).passthrough()
 
 const RuleType   = z.enum(['regex', 'caps', 'link_domain', 'mention_spam', 'link_spam', 'keywords', 'flood', 'zalgo'])
-const RuleAction = z.enum(['delete', 'warn', 'mute', 'ban_temp', 'notify_only', 'report_only'])
+const RuleAction = z.enum(['delete', 'warn', 'mute', 'ban_temp', 'notify_only', 'report_only', 'hold'])
 
 const Escalation = z.object({
   warns_threshold: z.number().int().positive(),
@@ -175,7 +176,7 @@ async function logAdminAction(
 // Qui peut quoi dans OctoGuard (CDC modération, E1) : régler OctoGuard =
 // manage_octoguard ; les sourdines et les signalements sont du travail de
 // modération des membres (moderate_members), ouvert aussi à manage_octoguard.
-const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|reports(?!\/settings))(\/|$)/
+const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|held|reports(?!\/settings))(\/|$)/
 const guardMemberModeration = requireAnyPermission('moderate_members', 'manage_octoguard')
 const guardOctoguard = requirePermission('manage_octoguard')
 
@@ -782,6 +783,49 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     })
   })
 
+  // ─── Contenus retenus (cran « Retenir », CDC E4h lot 2) ────────────────────
+
+  app.get('/held', async (_request, reply) => {
+    const items = await listPending(200)
+    return reply.send({ held: items, count: await countPending(), expiry_hours: HELD_EXPIRY_HOURS })
+  })
+
+  app.post('/held/:id/:decision', {
+    preHandler: [rateLimit],
+  }, async (request, reply) => {
+    const { id, decision } = request.params as { id: string; decision: string }
+    if (!/^[0-9a-f-]{36}$/i.test(id) || (decision !== 'approve' && decision !== 'refuse')) {
+      return reply.code(400).send({ error: 'Invalid request', code: 'INVALID_REQUEST' })
+    }
+    const actor = request.user!
+    const { rows } = await db.query<{ author_id: string; status: string }>(
+      `SELECT author_id, status FROM octoguard_held WHERE id = $1`, [id]
+    )
+    const h = rows[0]
+    if (!h) return reply.code(404).send({ error: 'Not found', code: 'NOT_FOUND' })
+    if (h.status !== 'pending') return reply.code(409).send({ error: 'Already decided', code: 'ALREADY_DECIDED' })
+    // On ne relit pas son propre contenu
+    if (h.author_id === actor.userId) {
+      return reply.code(403).send({ error: 'You cannot review your own content', code: 'CANNOT_REVIEW_SELF' })
+    }
+    // Même garde-fou de rang que les signalements : pas de jugement d'un pair
+    const access = await getInstanceAccess(actor.userId)
+    if (access.rank < rankOf('admin')) {
+      const author = await getInstanceAccess(h.author_id)
+      if (!outranks(access, author.role)) {
+        return reply.code(403).send({ error: 'Cannot act on a member of equal or higher rank', code: 'RANK_TOO_LOW' })
+      }
+    }
+    const who = { id: actor.userId, username: actor.username }
+    const res = decision === 'approve' ? await approveHeld(id, who) : await refuseHeld(id, who)
+    if (!res.ok) {
+      return res.code === 'ALREADY_DECIDED'
+        ? reply.code(409).send({ error: 'Already decided', code: 'ALREADY_DECIDED' })
+        : reply.code(409).send({ error: 'The channel or thread no longer exists', code: 'PUBLISH_FAILED' })
+    }
+    return reply.send({ ok: true, published_id: res.published_id })
+  })
+
   // ─── Reports admin (Module 7) ─────────────────────────────────────────────
 
   app.get('/reports', async (request, reply) => {
@@ -945,6 +989,18 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
 
 export async function reportsPublicPlugin(app: FastifyInstance) {
   app.addHook('preHandler', requireAuth)
+
+  // Mes contenus retenus, pour les afficher « en attente de validation » là
+  // où je les ai écrits. Jamais le nom de la règle (D20).
+  app.get('/held/mine', { preHandler: [rateLimit] }, async (request, reply) => {
+    const q = request.query as { channel_id?: string; thread_id?: string }
+    const uuid = /^[0-9a-f-]{36}$/i
+    if ((q.channel_id && !uuid.test(q.channel_id)) || (q.thread_id && !uuid.test(q.thread_id))) {
+      return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    }
+    const rows = await listMine(request.user!.userId, { channelId: q.channel_id, threadId: q.thread_id })
+    return reply.send({ held: rows.map(forAuthor), expiry_hours: HELD_EXPIRY_HOURS })
+  })
 
   app.post('/', {
     preHandler: [rateLimit, validate({ body: CreateReportBody })],

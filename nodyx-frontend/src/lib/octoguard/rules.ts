@@ -25,14 +25,16 @@ export interface Rule {
 
 // ─── Les crans ───────────────────────────────────────────────────────────────
 // Le moteur connaît : observation (dry_run), report_only / notify_only, warn,
-// delete, et deux sanctions (mute, ban_temp). L'écran les range en 4 crans ;
-// une règle qui sanctionne s'affiche au cran Supprimer, sa sanction à côté.
-export type Level = 'observe' | 'report' | 'warn' | 'delete'
-export const LEVELS: readonly Level[] = ['observe', 'report', 'warn', 'delete']
+// hold (retenir pour relecture), delete, et deux sanctions (mute, ban_temp).
+// L'écran les range en 5 crans ; une règle qui sanctionne s'affiche au cran
+// Supprimer, sa sanction à côté.
+export type Level = 'observe' | 'report' | 'hold' | 'warn' | 'delete'
+export const LEVELS: readonly Level[] = ['observe', 'report', 'hold', 'warn', 'delete']
 export type Acting = Exclude<Level, 'observe'>
 
 export function intendedOf(r: Pick<Rule, 'action'>): Acting {
 	if (r.action === 'report_only' || r.action === 'notify_only') return 'report'
+	if (r.action === 'hold') return 'hold'
 	if (r.action === 'warn') return 'warn'
 	return 'delete'
 }
@@ -53,6 +55,7 @@ export const sanctionOf = (r: Pick<Rule, 'action'>) => (r.action === 'mute' || r
 export const LEVEL_ICON: Record<Level, string> = {
 	observe: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 9a3 3 0 100 6 3 3 0 000-6z',
 	report: 'M5 21V4h11l-1.5 4L16 12H5',
+	hold: 'M12 3a9 9 0 100 18 9 9 0 000-18z M10 9v6 M14 9v6',
 	warn: 'M12 9v4 M12 17h.01 M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
 	delete: 'M4 7h16 M10 11v6 M14 11v6 M5 7l1 13h12l1-13 M9 7V4h6v3',
 }

@@ -39,6 +39,7 @@
 	import { can, isAdminRole } from '$lib/permissions';
 	import { openReport } from '$lib/report';
 	import { octoguardMessage } from '$lib/octoguardMessages';
+	import HeldBlock from '$lib/components/octoguard/HeldBlock.svelte';
 
 	const tFn = $derived($t)
 
@@ -660,6 +661,9 @@
 				{/if}
 			</div>
 		</article>
+	{/each}
+	{#each (data.heldMine ?? []) as h (h.id)}
+		<HeldBlock kind={h.kind} content={h.content} />
 	{/each}
 </div>
 

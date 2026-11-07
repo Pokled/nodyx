@@ -181,6 +181,9 @@
 						<button type="button" class="adm-chip" aria-pressed={scopes.includes(s)} onclick={() => (scopes = toggleIn(scopes, s))}>{tFn(`og2.surface_${s}`)}</button>
 					{/each}
 				</div>
+				{#if (level === 'hold' || (level === 'observe' && intendedOf(start) === 'hold')) && scopes.some((s) => s === 'profile' || s === 'poll' || s === 'wiki')}
+					<p class="og-help">{tFn('og2.hold_scope_note')}</p>
+				{/if}
 			</div>
 
 			<div class="og-field">

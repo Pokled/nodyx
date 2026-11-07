@@ -6,6 +6,7 @@
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import { t } from '$lib/i18n';
 	import { octoguardMessage } from '$lib/octoguardMessages';
+	import HeldBlock from '$lib/components/octoguard/HeldBlock.svelte';
 	import { untrack } from 'svelte';
 
 	const tFn = $derived($t)
@@ -80,6 +81,14 @@
 <div class="max-w-3xl">
 	<a href="/forum/{finalCategoryId}" class="text-sm text-[var(--nx-text-muted)] hover:text-[var(--nx-text)]">{tFn('common.back')}</a>
 	<h1 class="mt-2 text-2xl font-bold text-[var(--nx-text)] mb-6">{tFn('forum.create_topic')}</h1>
+
+	{#if form && 'held' in form && form.held}
+		<div class="mb-6 flex flex-col gap-3">
+			<HeldBlock kind="thread" title={form.heldTitle} content={form.heldContent} />
+			{#if form.pollDropped}<p class="text-sm text-[var(--nx-text-muted)]">{tFn('ogmsg.held_poll_dropped')}</p>{/if}
+			<a href="/forum/{finalCategoryId}" class="self-start text-sm font-semibold text-[var(--nx-text)] hover:underline">{tFn('ogmsg.held_back')}</a>
+		</div>
+	{/if}
 
 	{#if form?.error}
 		<p class="mb-4 bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-4 py-2 text-sm text-[var(--nx-bad)]">
