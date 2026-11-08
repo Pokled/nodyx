@@ -37,6 +37,7 @@ function mayTarget(actor: MemberAccess | undefined, targetRole: string | null | 
   return actor.rank >= rankOf('admin') || outranks(actor, targetRole)
 }
 import { countActiveMembers, ACTIVE_MEMBERS_FROM } from '../models/memberCount'
+import { restoreAfterBan } from '../services/octoguard/bans'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 const ALLOWED_MIME_BRANDING = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -642,7 +643,8 @@ export default async function adminRoutes(app: FastifyInstance) {
     await db.query(
       `INSERT INTO community_bans (community_id, user_id, banned_by, reason)
        VALUES ($1, $2, $3, $4)
-       ON CONFLICT (community_id, user_id) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now()`,
+       ON CONFLICT (community_id, user_id) DO UPDATE SET reason = EXCLUDED.reason, banned_by = EXCLUDED.banned_by, banned_at = now(),
+         expires_at = NULL`,
       [communityId, userId, adminUser.userId, body.reason ?? null]
     )
     // Remove from members if still present
@@ -721,12 +723,15 @@ export default async function adminRoutes(app: FastifyInstance) {
 
     const { rows: targetRows } = await db.query(`SELECT username FROM users WHERE id = $1`, [userId])
 
-    await db.query(
-      `DELETE FROM community_bans WHERE community_id = $1 AND user_id = $2`,
+    const { rows: lifted } = await db.query(
+      `DELETE FROM community_bans WHERE community_id = $1 AND user_id = $2
+       RETURNING user_id, community_id, prev_role, prev_grade_id, prev_joined_at::text AS prev_joined_at`,
       [communityId, userId]
     )
-    // Remove Redis ban flag so user can log in again
+    // Efface la marque Redis (le membre peut se reconnecter) et, si c'était une
+    // exclusion temporaire, lui rend son rôle et son grade (lot 4a, D32)
     await redis.del(`banned:${userId}`)
+    if (lifted.length) await restoreAfterBan(lifted as never)
     logAction(adminUser.userId, 'unban_user', 'user', userId, targetRows[0]?.username ?? null, {})
     return reply.send({ ok: true })
   })

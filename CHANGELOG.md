@@ -66,6 +66,13 @@ défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
 
 Quelques trous trouvés en chemin, et bouchés :
 
+- **Une exclusion temporaire pouvait devenir définitive.** Si la personne exclue tentait de se
+  reconnecter pendant son exclusion, elle restait bloquée pour toujours, même une fois sa peine
+  finie, et elle revenait sans son rôle ni son grade. Un bannissement définitif posé par-dessus
+  une exclusion redevenait temporaire. Les trois sont réparés : l'exclusion se lève vraiment à
+  son échéance, le membre retrouve sa place, et un bannissement définitif le reste. Ça n'a touché
+  personne, OctoGuard étant éteint et seul à poser ces exclusions.
+
 - Un lien caché derrière un texte (« ici ») échappait aux règles de liens du forum, et OctoGuard
   ne lisait que les 1000 premiers caractères d'un message du forum ou du wiki (#951).
 - Modifier un message du chat contournait toutes les règles, et une sourdine n'empêchait pas de
