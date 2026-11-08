@@ -72,6 +72,9 @@ Quelques trous trouvés en chemin, et bouchés :
   réécrire ses anciens messages (#949).
 - Une règle de liens ne savait pas lire le chemin d'une adresse (`discord.com/invite`), et ses
   réglages n'étaient pas vérifiés par le serveur (#943).
+- Lever une sourdine ne vérifiait pas le rang, alors que la poser le faisait : un modérateur
+  pouvait lever celle qu'un admin avait posée sur un autre modérateur. C'est le même garde-fou
+  dans les deux sens maintenant, et l'écran dit pourquoi quand il refuse.
 
 **Si tu veux l'allumer**, on te conseille de laisser les règles une semaine en observation, de
 regarder le journal, puis de passer au cran qui te convient. Si tu préfères qu'il ne puisse pas

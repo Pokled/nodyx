@@ -5618,6 +5618,8 @@
   "og2.mute_lift": "Lever",
   "og2.mute_lift_yes": "Oui, lever",
   "og2.mute_lift_err": "La sourdine n'a pas pu être levée. Réessayez.",
+  "og2.mute_lift_rank": "Cette sourdine vise un membre de rang égal ou supérieur au vôtre : seul un admin peut la lever.",
+  "og2.mute_lift_gone": "Cette sourdine avait déjà été levée.",
   "og2.tpl_desc": "Un modèle est un ensemble de règles pensé pour un type de communauté. Avant d'appliquer, vous voyez exactement ce qui change. Rien n'est jamais supprimé.",
   "og2.tpl_base_title": "Profil de base de Nodyx",
   "og2.tpl_base_desc": "Version {{v}}. Les règles installées suivent les mises à jour du profil, sauf celles que vous avez personnalisées.",
