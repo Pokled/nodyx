@@ -57,7 +57,7 @@ export interface PipelineInput {
 
 // ─── Immunisation ────────────────────────────────────────────────────────────
 
-function isImmunized(rule: AutomodRuleRow, user: PipelineUserCtx): boolean {
+export function isImmunized(rule: AutomodRuleRow, user: PipelineUserCtx): boolean {
   const roleTypes  = rule.immunized_role_types ?? []
   const gradeIds   = rule.immunized_grade_ids  ?? []
   if (roleTypes.includes(user.role)) return true
