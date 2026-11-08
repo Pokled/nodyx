@@ -20,6 +20,10 @@ function sanitizeDM(raw: string): string {
   }).trim()
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+/** Taille maximale d'un groupe de messages privés. */
+export const DM_GROUP_MAX = 10
+
 // ── Helpers DB ────────────────────────────────────────────────────────────────
 
 /** Trouve ou crée une conversation 1:1 entre deux users. Retourne l'id. */
@@ -139,59 +143,65 @@ export default async function dmRoutes(app: FastifyInstance) {
     return reply.send({ conversations })
   })
 
-  // POST /api/v1/dm/conversations/:id/participants — inviter un membre dans une conversation
+  // POST /api/v1/dm/conversations/:id/participants : inviter quelqu'un
+  //
+  // Une conversation ne gagne JAMAIS de membre : inviter crée un NOUVEAU groupe
+  // (les participants actuels + l'invité), et la conversation d'origine reste
+  // telle quelle. Avant le 08/11, l'invité était ajouté à la conversation
+  // existante et lisait tout ce qui s'y était dit avant son arrivée, sans que
+  // les autres aient rien demandé. Avec cette règle, chaque participant d'une
+  // conversation est là depuis son premier message : l'historique, les
+  // modifications, les réactions et les citations ne peuvent pas fuiter.
   app.post('/conversations/:id/participants', {
     preHandler: [rateLimit, requireAuth],
   }, async (request, reply) => {
     const me = request.user!.userId
     const { id } = request.params as { id: string }
-    const { userId } = request.body as { userId?: string }
+    const { userId } = (request.body ?? {}) as { userId?: string }
 
-    if (!userId) return reply.code(400).send({ error: 'Missing userId' })
-    if (userId === me) return reply.code(400).send({ error: 'Cannot invite yourself' })
+    if (!UUID_RE.test(id) || typeof userId !== 'string' || !UUID_RE.test(userId)) {
+      return reply.code(400).send({ error: 'Missing or invalid userId', code: 'INVALID_REQUEST' })
+    }
+    if (userId === me) return reply.code(400).send({ error: 'Cannot invite yourself', code: 'CANNOT_INVITE_SELF' })
 
-    // Vérifier que l'invitant est participant
-    const { rows: [part] } = await db.query(
-      `SELECT 1 FROM dm_participants WHERE conversation_id = $1 AND user_id = $2`, [id, me]
-    )
-    if (!part) return reply.code(403).send({ error: 'Not a participant' })
-
-    // Vérifier que l'invité existe
-    const { rows: [target] } = await db.query(
-      `SELECT id, username, avatar FROM users WHERE id = $1`, [userId]
-    )
-    if (!target) return reply.code(404).send({ error: 'User not found' })
-
-    // Vérifier qu'il n'est pas déjà dans la conversation
-    const { rows: [already] } = await db.query(
-      `SELECT 1 FROM dm_participants WHERE conversation_id = $1 AND user_id = $2`, [id, userId]
-    )
-    if (already) return reply.code(409).send({ error: 'Already a participant' })
-
-    // Convertir en groupe si 1:1, ajouter le participant
-    await db.query(
-      `UPDATE dm_conversations SET is_group = TRUE WHERE id = $1`, [id]
-    )
-    await db.query(
-      `INSERT INTO dm_participants (conversation_id, user_id) VALUES ($1, $2)`, [id, userId]
-    )
-
-    // Notifier tous les participants existants
-    const { rows: participants } = await db.query<{ user_id: string }>(
+    // Les participants actuels, et l'invitant doit en faire partie
+    const { rows: members } = await db.query<{ user_id: string }>(
       `SELECT user_id FROM dm_participants WHERE conversation_id = $1`, [id]
     )
-    const { rows: [inviter] } = await db.query(
+    if (!members.some(m => m.user_id === me)) return reply.code(403).send({ error: 'Not a participant', code: 'NOT_A_PARTICIPANT' })
+    if (members.some(m => m.user_id === userId)) return reply.code(409).send({ error: 'Already a participant', code: 'ALREADY_PARTICIPANT' })
+    if (members.length + 1 > DM_GROUP_MAX) {
+      return reply.code(409).send({ error: 'Group is full', code: 'GROUP_FULL' })
+    }
+
+    const { rows: [target] } = await db.query<{ id: string; username: string; avatar: string | null }>(
+      `SELECT id, username, avatar FROM users WHERE id = $1`, [userId]
+    )
+    if (!target) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' })
+
+    // Le nouveau groupe et tous ses membres en UNE requête : atomique
+    const everyone = [...members.map(m => m.user_id), userId]
+    const { rows: created } = await db.query<{ conversation_id: string }>(
+      `WITH conv AS (INSERT INTO dm_conversations (is_group) VALUES (TRUE) RETURNING id)
+       INSERT INTO dm_participants (conversation_id, user_id)
+       SELECT conv.id, u FROM conv, unnest($1::uuid[]) AS u
+       RETURNING conversation_id`,
+      [everyone]
+    )
+    const conversationId = created[0].conversation_id
+
+    const { rows: [inviter] } = await db.query<{ username: string }>(
       `SELECT username FROM users WHERE id = $1`, [me]
     )
-    for (const p of participants) {
-      io?.to(`user:${p.user_id}`).emit('dm:participant_added', {
-        conversation_id: id,
-        user: { id: target.id, username: target.username, avatar: target.avatar },
-        invited_by: inviter.username,
+    for (const uid of everyone) {
+      io?.to(`user:${uid}`).emit('dm:group_created', {
+        conversation_id: conversationId,
+        invited: { id: target.id, username: target.username },
+        invited_by: inviter?.username ?? null,
       })
     }
 
-    return reply.code(201).send({ ok: true })
+    return reply.code(201).send({ conversationId })
   })
 
   // GET /api/v1/dm/conversations/:id/messages — historique paginé

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { t, locale } from '$lib/i18n'
 	import { onMount, onDestroy, tick, untrack } from 'svelte'
+	import { goto } from '$app/navigation'
 	import { getSocket, dmUnreadStore } from '$lib/socket'
 	import { apiFetch } from '$lib/api'
 	import {
@@ -119,6 +120,11 @@
 
 	async function initE2E() {
 		if (!conversation) return
+		// Le chiffrement de bout en bout ne sait parler qu'à UNE personne. En
+		// groupe, il chiffrait pour le seul premier participant : les autres
+		// recevaient des messages illisibles. Un groupe part donc en clair, et
+		// le panneau d'invitation le dit avant de le créer.
+		if (conversation.is_group) { e2eStatus = 'inactive'; return }
 		try {
 			// 0. Nouvel appareil ? backup serveur présent mais pas de clé locale →
 			//    proposer la restauration AVANT de générer une clé neuve (sinon on
@@ -266,14 +272,14 @@
 			sock.off('dm:edited', onDmEdited)
 			sock.off('dm:deleted', onDmDeleted)
 			sock.off('dm:reaction_update', onDmReactionUpdate)
-			sock.off('dm:participant_added', onParticipantAdded)
+			sock.off('dm:group_created', onGroupCreated)
 			sock.off('chat:blocked', onDmBlocked)
 			sock.on('dm:message', onDmMessage)
 			sock.on('dm:typing', onDmTyping)
 			sock.on('dm:edited', onDmEdited)
 			sock.on('dm:deleted', onDmDeleted)
 			sock.on('dm:reaction_update', onDmReactionUpdate)
-			sock.on('dm:participant_added', onParticipantAdded)
+			sock.on('dm:group_created', onGroupCreated)
 			sock.on('dm:read_ack', () => {})
 			sock.on('chat:blocked', onDmBlocked)
 		}
@@ -299,6 +305,7 @@
 			sock.off('dm:message', onDmMessage)
 			sock.off('dm:typing', onDmTyping)
 			sock.off('chat:blocked', onDmBlocked)
+			sock.off('dm:group_created', onGroupCreated)
 		}
 		// Cleanup des $effect (ResizeObserver, timeouts) est automatique
 		// via les return cleanup de chaque effect.
@@ -382,35 +389,10 @@
 		messages = messages.map(m => m.id === messageId ? { ...m, reactions } : m)
 	}
 
-	function onParticipantAdded({ conversation_id, user, invited_by }: { conversation_id: string; user: Participant; invited_by: string }) {
-		if (conversation_id !== conversationId) return
-		if (!conversation) return
-		// Ajouter le nouveau participant si pas déjà là
-		const already = conversation.participants.find(p => p.id === user.id)
-		if (!already) {
-			const updated = {
-				...conversation,
-				is_group: true,
-				participants: [...conversation.participants, user],
-			}
-			conversation = updated
-			// Mettre aussi à jour la sidebar conversations
-			conversations = conversations.map(c => c.id === conversation_id ? updated : c)
-		}
-		// Message système local
-		messages = [...messages, {
-			id: crypto.randomUUID(),
-			conversation_id,
-			sender_id: '',
-			sender_username: '',
-			sender_avatar: null,
-			sender_name_color: null,
-			content: tFn('dm_conv.added', { by: invited_by, user: user.username }),
-			created_at: new Date().toISOString(),
-			deleted_at: null,
-			_systemMessage: true,
-		}]
-		tick().then(scrollToBottom)
+	// Quelqu'un a créé un groupe dont on fait partie : on rafraîchit la liste
+	async function onGroupCreated() {
+		const res = await apiFetch(fetch, '/dm/conversations', { headers: { Authorization: `Bearer ${data.token}` } }).catch(() => null)
+		if (res?.ok) conversations = (await res.json()).conversations ?? conversations
 	}
 
 	// ── Invite panel ────────────────────────────────────────────────────────────
@@ -445,19 +427,32 @@
 		inviteTimeout = setTimeout(() => searchInvite(inviteQuery), 300)
 	}
 
+	// Inviter crée un NOUVEAU groupe (le cœur ne fait jamais entrer quelqu'un
+	// dans une conversation existante : il lirait tout ce qui s'y est dit avant
+	// lui). On emmène l'invitant dans ce groupe ; un refus est dit, jamais muet.
+	let inviteError = $state('')
 	async function inviteUser(userId: string) {
 		inviting = userId
+		inviteError = ''
 		try {
 			const res = await apiFetch(fetch, `/dm/conversations/${conversationId}/participants`, {
 				method: 'POST',
 				headers: { Authorization: `Bearer ${data.token}`, 'Content-Type': 'application/json' },
 				body: JSON.stringify({ userId })
 			})
-			if (res.ok) {
+			const j = await res.json().catch(() => ({}))
+			if (res.ok && j.conversationId) {
 				inviteQuery = ''
 				inviteResults = []
 				showInvite = false
+				await goto(`/dm/${j.conversationId}`, { invalidateAll: true })
+				return
 			}
+			inviteError = j.code === 'ALREADY_PARTICIPANT' ? tFn('dm.invite_err_already')
+				: j.code === 'GROUP_FULL' ? tFn('dm.invite_err_full', { max: '10' })
+				: tFn('dm.invite_err')
+		} catch {
+			inviteError = tFn('dm.invite_err')
 		} finally { inviting = null }
 	}
 
@@ -1280,6 +1275,8 @@
 						{#if showInvite}
 							<div class="absolute top-full right-0 mt-1.5 w-64 bg-[var(--nx-surface)] border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-30 p-3">
 								<p class="text-[11px] text-[var(--nx-text-muted)] font-semibold uppercase tracking-wider mb-2">{tFn('dm.invite_member')}</p>
+								<p class="text-[11px] leading-snug text-[var(--nx-text-muted)] mb-2">{tFn('dm.invite_new_group_hint')}</p>
+								{#if inviteError}<p class="text-[11px] leading-snug text-[var(--nx-bad)] mb-2" role="alert">{inviteError}</p>{/if}
 								<div class="flex items-center gap-2 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] rounded-lg px-2.5 py-1.5 focus-within:border-indigo-500/40 transition-all mb-2">
 									<svg class="w-3 h-3 text-[var(--nx-text-muted)] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 										<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -1401,6 +1398,8 @@
 						{#if showInvite}
 							<div class="absolute top-full right-0 mt-1.5 w-64 bg-[var(--nx-surface)] border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-30 p-3">
 								<p class="text-[11px] text-[var(--nx-text-muted)] font-semibold uppercase tracking-wider mb-2">{tFn('dm.invite_member')}</p>
+								<p class="text-[11px] leading-snug text-[var(--nx-text-muted)] mb-2">{tFn('dm.invite_new_group_hint')}</p>
+								{#if inviteError}<p class="text-[11px] leading-snug text-[var(--nx-bad)] mb-2" role="alert">{inviteError}</p>{/if}
 								<div class="flex items-center gap-2 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] rounded-lg px-2.5 py-1.5 focus-within:border-indigo-500/40 transition-all mb-2">
 									<svg class="w-3 h-3 text-[var(--nx-text-muted)] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 										<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>

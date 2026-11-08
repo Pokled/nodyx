@@ -66,6 +66,14 @@ défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
 
 Quelques trous trouvés en chemin, et bouchés :
 
+- **Inviter quelqu'un dans une conversation privée lui donnait tout l'historique.** Ajouter une
+  troisième personne à une conversation à deux la transformait en groupe, et le nouveau venu
+  lisait tout ce qui s'y était dit avant lui, sans que personne ne l'ait accepté. Maintenant,
+  inviter crée un nouveau groupe : ce qui s'est dit à deux reste à deux. Au passage, un groupe ne
+  chiffrait ses messages que pour un seul de ses membres, et les autres recevaient des messages
+  illisibles. Un groupe part donc en clair, et l'écran le dit avant de le créer. Un groupe compte
+  dix personnes au plus.
+
 - **Une exclusion temporaire pouvait devenir définitive.** Si la personne exclue tentait de se
   reconnecter pendant son exclusion, elle restait bloquée pour toujours, même une fois sa peine
   finie, et elle revenait sans son rôle ni son grade. Un bannissement définitif posé par-dessus
