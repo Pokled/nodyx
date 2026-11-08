@@ -5618,6 +5618,8 @@
   "og2.mute_lift": "Lift",
   "og2.mute_lift_yes": "Yes, lift",
   "og2.mute_lift_err": "The mute could not be lifted. Please try again.",
+  "og2.mute_lift_rank": "This mute is on a member of equal or higher rank than yours: only an admin can lift it.",
+  "og2.mute_lift_gone": "This mute had already been lifted.",
   "og2.tpl_desc": "A template is a rule set designed for a kind of community. Before applying, you see exactly what changes. Nothing is ever deleted.",
   "og2.tpl_base_title": "Nodyx base profile",
   "og2.tpl_base_desc": "Version {{v}}. Installed rules follow profile updates, except the ones you customised.",

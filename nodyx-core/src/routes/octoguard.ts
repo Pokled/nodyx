@@ -46,6 +46,9 @@ import {
   getWebhookConfig, setWebhookConfig, invalidateWebhookConfig,
 } from '../services/octoguard'
 
+/** Un identifiant de la base (UUID), vérifié AVANT toute requête. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
 
 const Duration = z.object({
@@ -644,14 +647,15 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     return reply.send({ command: rows[0] })
   })
 
-  app.delete('/commands/:id', async (request, reply) => {
+  app.delete('/commands/:id', { preHandler: [rateLimit] }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    if (!UUID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
     const adminUser = request.user!
     const { rows } = await db.query(
       `DELETE FROM octoguard_commands WHERE id = $1 RETURNING command`,
       [id]
     )
-    if (!rows[0]) return reply.code(404).send({ error: 'Command not found' })
+    if (!rows[0]) return reply.code(404).send({ error: 'Command not found', code: 'NOT_FOUND' })
     await logAdminAction(adminUser.userId, 'octoguard.command_deleted', 'command', id, rows[0].command)
     return reply.send({ ok: true })
   })
@@ -708,11 +712,26 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     return reply.code(201).send({ mute: row })
   })
 
-  app.delete('/mutes/:id', async (request, reply) => {
+  app.delete('/mutes/:id', { preHandler: [rateLimit] }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    if (!UUID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
     const adminUser = request.user!
+    // Même garde-fou de rang que pour POSER une sourdine : sous le rang d'admin,
+    // on ne lève que celle d'un membre de rang inférieur. Avant (relu le 08/11),
+    // lever ne vérifiait rien : un modérateur pouvait lever la sourdine qu'un
+    // admin avait posée sur un autre modérateur.
+    const { rows } = await db.query<{ user_id: string }>(`SELECT user_id FROM chat_mutes WHERE id = $1`, [id])
+    if (!rows[0]) return reply.code(404).send({ error: 'Mute not found', code: 'NOT_FOUND' })
+    const actor = request.access
+    if (!actor) return reply.code(403).send({ error: 'Missing permission', code: 'FORBIDDEN' })
+    if (actor.rank < rankOf('admin')) {
+      const target = await getInstanceAccess(rows[0].user_id)
+      if (target.role === 'owner' || !outranks(actor, target.role)) {
+        return reply.code(403).send({ error: 'Cannot act on a member of equal or higher rank', code: 'RANK_TOO_LOW' })
+      }
+    }
     const ok = await removeMute(id, adminUser.userId)
-    if (!ok) return reply.code(404).send({ error: 'Mute not found' })
+    if (!ok) return reply.code(404).send({ error: 'Mute not found', code: 'NOT_FOUND' })
     return reply.send({ ok: true })
   })
 
@@ -763,7 +782,6 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     })
   })
 
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
   type UndoResult = { ok: true } | { ok: false; status: number; code: string; error: string }
   /**

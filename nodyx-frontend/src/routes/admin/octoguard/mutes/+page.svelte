@@ -34,7 +34,11 @@
 		try {
 			await og(token, `/mutes/${m.id}`, 'DELETE')
 			mutes = mutes.filter((x) => x.id !== m.id)
-		} catch { error = tFn('og2.mute_lift_err') }
+		} catch (e: any) {
+			// Refus explicite du cœur : on dit pourquoi au lieu d'un échec générique
+			if (e?.code === 'NOT_FOUND') { mutes = mutes.filter((x) => x.id !== m.id); error = tFn('og2.mute_lift_gone') }
+			else error = tFn(e?.code === 'RANK_TOO_LOW' ? 'og2.mute_lift_rank' : 'og2.mute_lift_err')
+		}
 		finally { busy = null; confirmId = null }
 	}
 </script>
