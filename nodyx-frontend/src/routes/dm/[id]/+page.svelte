@@ -14,6 +14,7 @@
 	import EmojiPicker from '$lib/components/EmojiPicker.svelte'
 	import MessageBody from '$lib/components/MessageBody.svelte'
 	import AudioRecorder from '$lib/components/AudioRecorder.svelte'
+	import { blockedMessage, type BlockedPayload } from '$lib/chatBlocked'
 
 	const tFn = $derived($t)
 
@@ -266,6 +267,7 @@
 			sock.off('dm:deleted', onDmDeleted)
 			sock.off('dm:reaction_update', onDmReactionUpdate)
 			sock.off('dm:participant_added', onParticipantAdded)
+			sock.off('chat:blocked', onDmBlocked)
 			sock.on('dm:message', onDmMessage)
 			sock.on('dm:typing', onDmTyping)
 			sock.on('dm:edited', onDmEdited)
@@ -273,6 +275,7 @@
 			sock.on('dm:reaction_update', onDmReactionUpdate)
 			sock.on('dm:participant_added', onParticipantAdded)
 			sock.on('dm:read_ack', () => {})
+			sock.on('chat:blocked', onDmBlocked)
 		}
 		const sock = getSocket()
 		if (sock) {
@@ -295,10 +298,21 @@
 		if (sock) {
 			sock.off('dm:message', onDmMessage)
 			sock.off('dm:typing', onDmTyping)
+			sock.off('chat:blocked', onDmBlocked)
 		}
 		// Cleanup des $effect (ResizeObserver, timeouts) est automatique
 		// via les return cleanup de chaque effect.
 	})
+
+	// Message en clair refusé par le serveur (filtre de contenu) : avant, il
+	// disparaissait sans un mot, le champ déjà vidé. On dit pourquoi, et on rend
+	// le texte au membre pour qu'il puisse le corriger.
+	let lastPlainSent = ''
+	function onDmBlocked(payload: BlockedPayload) {
+		sendError = blockedMessage(tFn, payload)
+		if (lastPlainSent && !messageInput) messageInput = lastPlainSent
+		lastPlainSent = ''
+	}
 
 	async function onDmMessage(msg: DmMessage) {
 		if (msg.conversation_id !== conversationId) return
@@ -976,6 +990,7 @@
 			} else {
 				// ── Fallback texte clair ────────────────────────────────────────
 				messageInput = ''
+				lastPlainSent = content
 				if (sock) {
 					sock.emit('dm:send', { conversationId, content, reply_to_id: replyId })
 				}

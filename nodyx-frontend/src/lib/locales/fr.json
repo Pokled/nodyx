@@ -200,6 +200,7 @@
   "chat.rich_editor": "Éditeur riche (Ctrl+Maj+E)",
   "chat.input_placeholder": "Message dans # {{channel}}",
   "chat.message_refused": "Message refusé : contenu interdit",
+  "chat.blocked_read_only": "Ce salon est en lecture seule : seule l’équipe peut y écrire.",
   "chat.voice.insecure": "WebRTC exige HTTPS ou localhost.",
   "chat.voice.denied": "Microphone bloqué. Vérifiez les paramètres du navigateur.",
   "chat.voice.notfound": "Aucun microphone détecté sur cet appareil.",
