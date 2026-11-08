@@ -97,20 +97,34 @@ export function recordActivity(userId: string, content: string, now = Date.now()
 
 export function _resetActivity(): void { _recent.clear() }
 
-export function matchFlood(ctx: MatchContext & { userId?: string; now?: number }, params: AutomodRuleParams): MatchResult | null {
-  if (!ctx.userId) return null
-  const now = ctx.now ?? Date.now()
-  const list = _recent.get(ctx.userId) ?? []
+/**
+ * La décision « inondation ? », pure : la liste des messages récents d'un
+ * membre (le message examiné compris), l'empreinte du message, l'instant.
+ * Partagée par le moteur en direct (mémoire _recent) et par « Rejouer sur
+ * 30 jours », qui garde SA PROPRE mémoire : rejouer ne doit jamais pousser
+ * hors de _recent la trace des membres réellement actifs (lot 11).
+ */
+export function floodVerdict(list: ReadonlyArray<{ t: number; h: string }>, h: string, now: number, params: AutomodRuleParams): MatchResult | null {
   const maxRepeats = params.max_repeats ?? 4
   const repeatWin = (params.repeat_window_s ?? 60) * 1000
   const maxMsgs = params.max_messages ?? 8
   const burstWin = (params.burst_window_s ?? 10) * 1000
-  const h = fingerprint(ctx.content)
   const same = list.filter(e => now - e.t <= repeatWin && e.h === h && h.length > 0).length
   if (same >= maxRepeats) return { excerpt: `même message ${same} fois en ${repeatWin / 1000} s` }
   const burst = list.filter(e => now - e.t <= burstWin).length
   if (burst > maxMsgs) return { excerpt: `${burst} messages en ${burstWin / 1000} s` }
   return null
+}
+
+/** L'empreinte d'un message pour l'inondation (exportée pour le rejeu). */
+export const floodFingerprint = (content: string) => fingerprint(content)
+export const FLOOD_MEMORY_MS = RECENT_MS
+export const FLOOD_MEMORY_PER_USER = MAX_PER_USER
+
+export function matchFlood(ctx: MatchContext & { userId?: string; now?: number }, params: AutomodRuleParams): MatchResult | null {
+  if (!ctx.userId) return null
+  const now = ctx.now ?? Date.now()
+  return floodVerdict(_recent.get(ctx.userId) ?? [], fingerprint(ctx.content), now, params)
 }
 
 // ─── zalgo ───────────────────────────────────────────────────────────────────

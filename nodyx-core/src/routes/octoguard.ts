@@ -25,6 +25,7 @@ import { requirePermission, requireAnyPermission } from '../middleware/permissio
 import { getInstanceAccess, outranks, rankOf } from '../services/permissions'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { runSandbox, ruleStats, ruleHits } from '../services/octoguard/sandbox'
+import { replayRule } from '../services/octoguard/replay'
 import { BASE_PRESETS, BASE_PROFILE_VERSION, startingLevel, exportProfile, previewImport, applyImport, ProfileZ, type Profile } from '../services/octoguard/profile'
 import { checkRuleParams } from '../services/octoguard/params'
 import { planLearning, ACTED_BY_ENGINE, type LogMeta } from '../services/octoguard/falsePositive'
@@ -272,6 +273,37 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
   })
 
   // Les derniers déclenchements d'une règle (« voir lesquels »)
+  // Lot 11 (D26) : rejouer une règle sur 30 jours, sans rien toucher.
+  // Un seul rejeu à la fois sur l'instance, et un délai par admin : c'est un
+  // calcul lourd lancé à la main.
+  let replayRunning = false
+  app.post('/rules/:id/replay', { preHandler: [rateLimit] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    }
+    const actor = request.user!.userId
+    const cool = await redis.set(`octoguard:replay:${actor}`, '1', 'EX', 10, 'NX').catch(() => 'OK')
+    if (cool === null) return reply.code(429).send({ error: 'Wait a few seconds before replaying again', code: 'REPLAY_COOLDOWN' })
+    if (replayRunning) return reply.code(429).send({ error: 'A replay is already running', code: 'REPLAY_BUSY' })
+    const { rows } = await db.query(
+      `SELECT id, name, type, params, action, action_duration, escalation, immunized_role_types, immunized_grade_ids,
+              dry_run, enabled, scopes, preset_key, customized, conditions, created_at::text, updated_at::text
+         FROM octoguard_automod_rules WHERE id = $1`, [id])
+    const r = rows[0]
+    if (!r) return reply.code(404).send({ error: 'Rule not found', code: 'NOT_FOUND' })
+    const rule = {
+      ...r, params: r.params ?? {}, immunized_role_types: r.immunized_role_types ?? [], immunized_grade_ids: r.immunized_grade_ids ?? [],
+      scopes: r.scopes?.length ? r.scopes : ['chat'], conditions: r.conditions ?? {},
+    }
+    replayRunning = true
+    try {
+      return reply.send({ rule: { id: r.id, name: r.name, action: r.action, dry_run: r.dry_run }, ...(await replayRule(rule)) })
+    } finally {
+      replayRunning = false
+    }
+  })
+
   app.get('/rules/:id/hits', async (request, reply) => {
     const { id } = request.params as { id: string }
     const q = request.query as { limit?: string }

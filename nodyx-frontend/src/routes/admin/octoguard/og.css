@@ -285,3 +285,12 @@ p.og-meta svg { width: 0.9rem; height: 0.9rem; flex: none; }
 .og-fp-learn { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.8125rem; cursor: pointer; }
 .og-fp-learn input { margin-top: 0.2rem; }
 .og-fp p { margin: 0; }
+
+/* Rejouer une règle sur 30 jours (lot 11) */
+.og-replay { display: flex; flex-direction: column; gap: 0.75rem; }
+.og-replay-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; }
+.og-replay-head .og-help { margin: 0.125rem 0 0; }
+.og-replay-select { min-width: 16rem; max-width: 100%; }
+.og-replay-day { white-space: nowrap; min-width: 3.5rem; margin: 0.1rem 0 0; }
+.og-replay p { margin: 0; }
+.og-replay-tag { margin-left: 0.375rem; }

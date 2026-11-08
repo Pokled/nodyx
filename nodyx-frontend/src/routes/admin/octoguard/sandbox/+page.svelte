@@ -3,10 +3,10 @@
 	// effet de bord. On tape, on voit ce que chaque règle ferait, et pourquoi.
 	import { page } from '$app/state'
 	import { onMount, untrack } from 'svelte'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 	import Icon from '$lib/components/octoguard/Icon.svelte'
-	import { og } from '$lib/octoguard/api'
-	import { LEVEL_ICON, SURFACES, ruleIcon, type Level, type Surface } from '$lib/octoguard/rules'
+	import { og, OgError } from '$lib/octoguard/api'
+	import { LEVEL_ICON, SURFACES, ruleIcon, intendedOf, type Level, type Surface, type Rule } from '$lib/octoguard/rules'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -50,6 +50,34 @@
 
 	const firstRule = $derived(result?.first ? result.rules.find((r) => r.id === result!.first) ?? null : null)
 	const observedHits = $derived(result ? result.rules.filter((r) => r.matched && r.outcome === 'observe').length : 0)
+
+	// ─── Rejouer une règle sur 30 jours (lot 11, D26) ────────────────────────
+	// Le cœur relit les messages du mois, sans rien toucher ni enregistrer.
+	type Example = { at: string; author: string | null; place: string | null; surface: 'chat' | 'forum'; text: string; excerpt: string; probable_fp: boolean }
+	type Replay = { rule: { id: string; name: string }; scanned: number; matched: number; members: number; probable_fp: number; examples: Example[]; truncated: null | 'too_many' | 'too_long' }
+	const replayRules = $derived(data.rules as Rule[])
+	let replayId = $state<string>(untrack(() => focusRule ?? ((data.rules as Rule[]).find((r) => !r.enabled || r.dry_run)?.id ?? (data.rules as Rule[])[0]?.id ?? '')))
+	let replay = $state<Replay | null>(null)
+	let replayBusy = $state(false)
+	let replayError = $state<string | null>(null)
+	let dismissed = $state<Set<number>>(new Set())
+	const replayLevel = (r: Rule | undefined): Level => (r ? (intendedOf(r) as Level) : 'warn')
+	const ruleLabel = (r: Rule) => tFn('og2.rpl_option', { name: r.name, lv: tFn(`og2.lv_${replayLevel(r)}`) })
+	async function runReplay() {
+		if (!replayId) return
+		replayBusy = true; replayError = null; replay = null; dismissed = new Set()
+		try { replay = await og<Replay>(token, `/rules/${replayId}/replay`, 'POST') }
+		catch (e) {
+			const code = e instanceof OgError ? e.code : null
+			replayError = tFn(code === 'REPLAY_COOLDOWN' ? 'og2.rpl_err_cooldown' : code === 'REPLAY_BUSY' ? 'og2.rpl_err_busy' : 'og2.rpl_err')
+		} finally { replayBusy = false }
+	}
+	// « Pas un abus » : retire l'exemple du calcul AFFICHÉ, rien n'est enregistré
+	const shownMatched = $derived(replay ? Math.max(0, replay.matched - dismissed.size) : 0)
+	const shownFp = $derived(replay ? Math.max(0, replay.probable_fp - [...dismissed].filter((i) => replay!.examples[i]?.probable_fp).length) : 0)
+	const replayedRule = $derived((data.rules as Rule[]).find((r) => r.id === replay?.rule.id))
+	const num = (n: number) => n.toLocaleString(String($locale ?? 'fr'))
+	const day = (iso: string) => new Date(iso).toLocaleDateString(String($locale ?? 'fr'), { day: 'numeric', month: 'short' })
 
 	function why(r: R): string {
 		if (!r.enabled) return tFn('og2.sb_off')
@@ -153,4 +181,59 @@
 			{/if}
 		</div>
 	</div>
+
+	<section class="adm-card og-replay" aria-labelledby="og-rpl-t">
+		<div class="og-replay-head">
+			<div class="og-head-l">
+				<span class="og-ic og-k-acc"><Icon d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8 M3 3v5h5 M12 7v5l3 2" /></span>
+				<div>
+					<h2 id="og-rpl-t" class="og-rp-h">{tFn('og2.rpl_title')}</h2>
+					<p class="og-help">{tFn('og2.rpl_help')}</p>
+				</div>
+			</div>
+			<div class="adm-actions">
+				<select class="adm-input og-replay-select" bind:value={replayId} aria-label={tFn('og2.rpl_pick')}>
+					{#each replayRules as r (r.id)}<option value={r.id}>{ruleLabel(r)}</option>{/each}
+				</select>
+				<button type="button" class="adm-btn adm-btn--primary" disabled={replayBusy || !replayId} onclick={runReplay}>
+					<Icon d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8 M3 3v5h5" />{tFn(replayBusy ? 'og2.rpl_running' : 'og2.rpl_go')}
+				</button>
+			</div>
+		</div>
+
+		{#if replayError}<p class="og-error" role="alert">{replayError}</p>{/if}
+		{#if !replay && !replayError}
+			<p class="og-help">{tFn(replayBusy ? 'og2.rpl_running_long' : 'og2.rpl_idle')}</p>
+		{:else if replay}
+			{@const lv = replayLevel(replayedRule)}
+			<div role="status">
+				{#if shownMatched === 0}
+					<p class="og-okmsg">{tFn('og2.rpl_none', { n: num(replay.scanned) })}</p>
+				{:else}
+					<div class="og-rp-facts">
+						<span class="adm-pill og-tone og-k-{lv}"><Icon d={LEVEL_ICON[lv]} />{tFn(`og2.rpl_did_${lv}`, { n: shownMatched })}</span>
+						<span class="adm-pill">{tFn(replay.members > 1 ? 'og2.rpl_members_n' : 'og2.rpl_members_1', { n: replay.members })}</span>
+						{#if shownFp > 0}<span class="adm-pill og-tone og-k-warn" title={tFn('og2.rpl_fp_help')}>{tFn(shownFp > 1 ? 'og2.rpl_fp_n' : 'og2.rpl_fp_1', { n: shownFp })}</span>{/if}
+					</div>
+					<div class="og-rows" style="margin-top:0.75rem">
+						{#each replay.examples as e, i (i)}
+							{#if !dismissed.has(i)}
+								<div class="og-row">
+									<span class="og-meta og-replay-day">{day(e.at)}</span>
+									<div class="og-row-body">
+										<div><b style="font-weight:600">{e.author ?? tFn('areports.deleted_account')}</b> · {e.surface === 'chat' ? `#${e.place ?? ''}` : tFn('og2.rpl_in_thread', { t: e.place ?? '' })}{#if e.probable_fp}<span class="adm-pill og-tone og-k-warn og-replay-tag">{tFn('og2.rpl_fp_tag')}</span>{/if}</div>
+										<p class="og-quote">{e.text}</p>
+										<div class="og-meta">{e.excerpt}</div>
+									</div>
+									<button type="button" class="adm-btn adm-btn--sm" onclick={() => (dismissed = new Set([...dismissed, i]))}>{tFn('og2.rpl_not_abuse')}</button>
+								</div>
+							{/if}
+						{/each}
+					</div>
+					{#if replay.matched > replay.examples.length}<p class="og-help">{tFn('og2.rpl_more', { n: replay.examples.length, total: num(replay.matched) })}</p>{/if}
+				{/if}
+				<p class="og-help">{[tFn('og2.rpl_scanned', { n: num(replay.scanned) }), replay.truncated ? tFn(`og2.rpl_trunc_${replay.truncated}`) : '', tFn('og2.rpl_nothing_kept')].filter(Boolean).join(' ')}</p>
+			</div>
+		{/if}
+	</section>
 </div>
