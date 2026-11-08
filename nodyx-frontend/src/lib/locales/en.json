@@ -940,6 +940,7 @@
   "dm.reply_to": "Reply to",
   "dm.cancel_reply": "Cancel reply",
   "dm.err.send_failed": "Your message could not be sent (encryption unavailable). Try again, or report it to the administrator if it keeps happening.",
+  "dm.err.not_connected": "No live connection right now: your message is kept, try again in a moment.",
   "dm.err.edit_failed": "Your edit could not be sent (encryption unavailable). Your text is kept, try again.",
   "dm.insert_emoji": "Insert an emoji",
   "settings.encryption.label": "Encrypted messages",

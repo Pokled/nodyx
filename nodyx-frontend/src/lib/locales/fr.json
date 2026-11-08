@@ -940,6 +940,7 @@
   "dm.reply_to": "Réponse à",
   "dm.cancel_reply": "Annuler la réponse",
   "dm.err.send_failed": "Le message n'a pas pu être envoyé (chiffrement indisponible). Réessayez, ou signalez-le à l'administrateur si ça persiste.",
+  "dm.err.not_connected": "Pas de connexion en temps réel pour l’instant : ton message est gardé, réessaie dans un instant.",
   "dm.err.edit_failed": "La modification n'a pas pu être envoyée (chiffrement indisponible). Le texte est conservé, réessayez.",
   "dm.insert_emoji": "Insérer un emoji",
   "settings.encryption.label": "Messages chiffrés",
