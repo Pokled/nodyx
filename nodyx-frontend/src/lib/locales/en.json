@@ -200,6 +200,7 @@
   "chat.rich_editor": "Rich editor (Ctrl+Shift+E)",
   "chat.input_placeholder": "Message in # {{channel}}",
   "chat.message_refused": "Message refused: prohibited content",
+  "chat.blocked_read_only": "This channel is read-only: only the team can post here.",
   "chat.voice.insecure": "WebRTC requires HTTPS or localhost.",
   "chat.voice.denied": "Microphone blocked. Check your browser settings.",
   "chat.voice.notfound": "No microphone detected on this device.",
