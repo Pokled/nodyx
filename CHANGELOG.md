@@ -7,6 +7,112 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
+Depuis la 2.13.0, on s'est surtout occupés de ce qui se passe quand une communauté grandit et que
+tout ne se passe pas bien : qui a le droit de faire quoi dans l'équipe, comment un membre signale
+un problème, et comment Nodyx peut aider à garder le calme sans jamais décider à la place des
+humains. Le reste, c'est de l'administration refaite et des pages qui suivent enfin le thème.
+
+### Modération : une équipe, des droits, une file
+
+- **Les grades donnent enfin de vrais droits.** Les permissions d'un grade étaient enregistrées
+  mais aucune route ne les vérifiait : un grade « Modérer » ne donnait rien. Les droits d'un
+  membre sont maintenant le socle de son rôle plus ce qu'ajoutent ses grades, et un grade n'en
+  retire jamais (#935). Attribuer un grade plantait à chaque fois, c'est réparé (#928).
+- **Un bouton « Signaler »** sur les messages du forum, du chat et sur les profils. Le serveur
+  savait recevoir un signalement depuis longtemps, mais il n'y avait aucun bouton pour le faire.
+  On choisit un motif, on peut préciser, et la personne signalée ne sait pas qui l'a signalée
+  (#936).
+- **La fiche d'un membre**, pour l'équipe : qui il est, où il en est (sourdine, avertissements,
+  bannissement, signalements en attente), et les gestes possibles selon ses droits et son rang
+  (#937). On l'ouvre de partout : la liste des membres, la carte de profil, le profil public
+  (#938). Au passage, la sourdine posée par l'équipe ne faisait plus rien depuis août, elle
+  s'applique de nouveau.
+
+### OctoGuard 2 : un gardien qu'on comprend
+
+OctoGuard, l'auto-modération de Nodyx, a été repris de fond en comble. Il reste **éteint par
+défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
+
+- **Le moteur** surveille maintenant tout le site, pas seulement le chat : forum, profils,
+  sondages et wiki (#939). Les règles écrites en expressions régulières passent par re2, qui ne se
+  laisse pas bloquer par un texte piégé. Plusieurs avertissements peuvent maintenant mener à une
+  sourdine ou à une exclusion temporaire, ce qui n'était qu'une promesse avant.
+- **Huit règles prêtes à l'emploi** (spam de liens, invitations, mentions en masse, inondation,
+  majuscules, liens des comptes tout neufs, texte corrompu, mots interdits). Sur une instance qui
+  existait déjà, aucune ne touche un membre sans ton accord : celles qui avertiraient ou
+  supprimeraient commencent en observation, elles notent ce qu'elles auraient fait sans rien
+  faire, pour que tu juges avant d'agir. Les autres se contentent de signaler à l'équipe, et les
+  mots interdits attendent ta liste (#941). Cinq modèles de communauté (jeunesse, jeu compétitif,
+  entraide, créatifs, stricte) les règlent d'un coup, avec un aperçu de ce qui change avant
+  d'appliquer (#947).
+- **Cinq crans, du plus doux au plus ferme** : observer, signaler à l'équipe, retenir, avertir,
+  supprimer. Le cran « Retenir » met un message de côté : son auteur le voit « en attente de
+  validation », personne d'autre ne le voit, et l'équipe l'approuve ou le refuse. Sans décision au
+  bout de 72 heures, il est refusé et l'auteur est prévenu (#951).
+- **Un écran pour l'admin** : une vue d'ensemble, les règles rangées par catégorie, un bac à sable
+  pour tester une phrase sans risque, un journal raconté en phrases, un guide interactif, et une
+  page pour voir ce que voit un membre (#942, #945, #946). Un interrupteur « OctoGuard actif »
+  l'allume ou l'éteint d'un clic (#950).
+- **On ne juge jamais un message seul.** Les signalements des membres, ceux d'OctoGuard et les
+  messages retenus arrivent dans une seule file. Pour chacun, l'équipe voit la conversation autour
+  et ce que l'auteur a modifié depuis : l'ancien texte barré, le nouveau à côté (#951, #949).
+  L'ancien texte n'est visible que de l'équipe et s'efface au bout de 90 jours.
+- **Se tromper fait partie du jeu.** « Annuler » une action d'OctoGuard ne marchait pas, il marche
+  maintenant, et une seule fois (#944). Une action marquée « faux positif » peut apprendre une
+  exception à la règle, mais seulement dans un cas sûr (« contenu » attrapé par « \*con\* ») et
+  seulement si tu coches la case : une règle ne s'adoucit jamais toute seule (#953). Avant
+  d'allumer une règle, tu peux la rejouer sur les 30 derniers jours pour voir qui elle aurait
+  concerné, sans toucher à personne (#954).
+
+Quelques trous trouvés en chemin, et bouchés :
+
+- Un lien caché derrière un texte (« ici ») échappait aux règles de liens du forum, et OctoGuard
+  ne lisait que les 1000 premiers caractères d'un message du forum ou du wiki (#951).
+- Modifier un message du chat contournait toutes les règles, et une sourdine n'empêchait pas de
+  réécrire ses anciens messages (#949).
+- Une règle de liens ne savait pas lire le chemin d'une adresse (`discord.com/invite`), et ses
+  réglages n'étaient pas vérifiés par le serveur (#943).
+
+**Si tu veux l'allumer**, on te conseille de laisser les règles une semaine en observation, de
+regarder le journal, puis de passer au cran qui te convient. Si tu préfères qu'il ne puisse pas
+être allumé depuis l'écran, ajoute `OCTOGUARD_FORCE_OFF=true` dans le `.env` du cœur.
+
+### Administration refaite
+
+- Un kit commun pour l'administration, et les premières pages refaites avec : tableau de bord,
+  membres, grades, catégories, étiquettes, modération, journal (#925, #927). L'admin suit
+  maintenant le thème clair ou sombre, au lieu de rester toute noire.
+- Le tableau de bord annonçait 158 membres quand la page Membres en comptait 105. Il y avait cinq
+  façons de compter les membres, donc cinq chiffres différents ; il n'y en a plus qu'une (#926).
+- Après une mise à jour, l'admin ne propose plus de « mettre à jour » vers la version qu'on vient
+  d'installer (#901).
+
+### Interface : le thème clair, page après page
+
+Les messages privés, la musique, le jardin, la connexion et l'inscription, les notifications, la
+recherche, les sondages, la bibliothèque, Discover, l'éditeur de profil, les réglages, les
+tableaux blancs, la page À propos, l'annuaire, la réputation et les statuts suivent maintenant le
+thème clair ou sombre, tout comme le tiroir des salons et la barre du bas sur mobile (#913, #915,
+#916, #919 à
+#924). Le profil suit le thème du site, sauf si son propriétaire
+s'en est donné un (#918). Le QR code de Signet s'affiche enfin dans les réglages (#923).
+
+### Sous le capot
+
+- Toutes les applications du dépôt passent à SvelteKit 3 (#904, #905, #907, #908, #909, #914), ce
+  qui ferme les dernières alertes Dependabot de ce côté.
+- Les instances secondaires envoient enfin leurs ressources à l'annuaire : elles se les envoyaient
+  à elles-mêmes depuis des mois et essuyaient un refus toutes les heures (#902).
+- La version affichée par nodyx.dev et start.nodyx.org suit le déploiement, sans redémarrage
+  (#900).
+- La porte des traductions repère aussi le français sans accent (#917), et un avertissement de
+  fastify au démarrage a disparu (#912). Mises à jour Rust dans le serveur TURN, le serveur et le
+  gossip (#910, #911).
+
+Merci à celles et ceux qui animent leur communauté sur Nodyx et nous disent quand quelque chose
+coince. C'est pour vous qu'on prend le temps de bien faire, même quand ça prend plus longtemps que
+prévu.
+
 ---
 
 ## [2.13.0] — 2026-10-29
