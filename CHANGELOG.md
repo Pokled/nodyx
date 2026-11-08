@@ -107,6 +107,12 @@ thème clair ou sombre, tout comme le tiroir des salons et la barre du bas sur m
 #924). Le profil suit le thème du site, sauf si son propriétaire
 s'en est donné un (#918). Le QR code de Signet s'affiche enfin dans les réglages (#923).
 
+Quand le chat refusait un message, il affichait ce que le serveur lui disait, tel quel : un code
+technique (`channel_read_only`) dans un salon en lecture seule, ou une phrase en français même pour
+qui avait choisi une autre langue. C'est maintenant une vraie phrase, dans la langue du membre. Et
+un message privé refusé ne disparaît plus sans un mot : on dit pourquoi, et le texte revient dans
+le champ pour être corrigé.
+
 ### Sous le capot
 
 - Toutes les applications du dépôt passent à SvelteKit 3 (#904, #905, #907, #908, #909, #914), ce
