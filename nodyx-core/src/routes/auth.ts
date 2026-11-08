@@ -15,6 +15,7 @@ import { resolveServerLocale } from '../i18n/serverStrings'
 import { getUserTotp, TOTP_PENDING_TTL } from './totp'
 import { getClientIp, estPubliquementRoutable } from '../utils/clientIp'
 import { countActiveMembers } from '../models/memberCount'
+import { setBanMark } from '../services/octoguard/bans'
 
 // ── Discord security alerts ───────────────────────────────────────────────────
 
@@ -361,13 +362,15 @@ export default async function authRoutes(app: FastifyInstance) {
     }
     const loginCommunityId = await getDefaultCommunityId()
     if (loginCommunityId) {
-      const { rows: banRows } = await db.query(
-        `SELECT 1 FROM community_bans WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
+      const { rows: banRows } = await db.query<{ expires_at: string | null }>(
+        `SELECT expires_at FROM community_bans WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
         [loginCommunityId, user.id]
       )
       if (banRows.length > 0) {
-        // Populate Redis cache for future checks
-        await redis.set(`banned:${user.id}`, '1')
+        // Marque Redis pour les vérifications suivantes. Une exclusion
+        // temporaire garde son échéance : avant (lot 4a, 08/11/2026), la marque
+        // était posée pour toujours et l'exclusion devenait définitive.
+        await setBanMark(user.id, banRows[0].expires_at)
         return reply.code(403).send({ error: 'You are banned from this community', code: 'BANNED' })
       }
     }
