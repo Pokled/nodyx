@@ -128,6 +128,7 @@ export interface ApplyMuteInput {
   appliedBy?: string | null      // null = action automatique OctoGuard
   ruleId?:    string | null      // si déclenché par une règle auto-mod
   eventId?:   string             // si non fourni, généré ici (UUID v4)
+  silent?:    boolean            // true : l'appelant écrit lui-même au journal (barème)
 }
 
 export async function applyMute(input: ApplyMuteInput): Promise<ChatMuteRow | null> {
@@ -152,8 +153,8 @@ export async function applyMute(input: ApplyMuteInput): Promise<ChatMuteRow | nu
 
     invalidateMuteCache(input.userId)
 
-    // Log dans admin_audit_log
-    logOctoGuardAction({
+    // Log dans admin_audit_log (sauf si l'appelant le fait lui-même)
+    if (!input.silent) logOctoGuardAction({
       action:       'octoguard.mute_user',
       target_type:  'user',
       target_id:    input.userId,

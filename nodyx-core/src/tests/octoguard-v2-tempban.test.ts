@@ -54,7 +54,8 @@ describe('poser une exclusion temporaire', () => {
   it('ce que le membre était (rôle, grade, arrivée) est gardé dans la ligne d’exclusion', async () => {
     await applyTempBan({ userId: U, duration: { value: 1, unit: 'h' }, reason: 'test' })
     const ins = calls.find(c => c.sql.startsWith('INSERT INTO community_bans'))!
-    expect(ins.params.slice(4)).toEqual(['moderator', GRADE, '2025-03-01 10:00:00'])
+    expect(ins.params.slice(4, 7)).toEqual(['moderator', GRADE, '2025-03-01 10:00:00'])
+    expect(ins.params[7]).toBeNull()   // posée par OctoGuard : personne dans banned_by
     // une exclusion prolongée ne remplace pas ce qu'il était avant la première
     expect(ins.sql).toContain('prev_role = COALESCE(community_bans.prev_role, EXCLUDED.prev_role)')
   })
