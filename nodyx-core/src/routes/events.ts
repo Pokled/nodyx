@@ -198,7 +198,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
         `SELECT community_id FROM community_members WHERE user_id = $1 LIMIT 1`,
         [userId]
       )
-      if (!comm[0]) return reply.status(400).send({ error: "Vous devez faire partie d'une communaute" })
+      if (!comm[0]) return reply.status(400).send({ error: "Tu dois faire partie d'une communauté" })
 
       const description = sanitize(body.description ?? '')
 

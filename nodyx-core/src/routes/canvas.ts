@@ -321,7 +321,7 @@ export default async function canvasRoutes(app: FastifyInstance) {
 
     const access = await resolveAccess(board, userId)
     if (!access.view)  return reply.code(403).send({ error: 'Accès refusé à ce board.' })
-    if (access.write)  return reply.code(400).send({ error: 'Vous avez déjà l\'accès en édition.' })
+    if (access.write)  return reply.code(400).send({ error: 'Tu as déjà l\'accès en édition.' })
 
     await db.query(
       `INSERT INTO canvas_board_collaborators (board_id, user_id, role, status)

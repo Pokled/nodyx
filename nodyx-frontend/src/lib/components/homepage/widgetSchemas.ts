@@ -56,7 +56,7 @@ export const WIDGET_SCHEMAS: Record<string, WidgetSchema> = {
 
 	'hero-banner': {
 		label:       'Hero Banner',
-		description: 'La grande section d\'accueil de votre page.',
+		description: 'La grande section d\'accueil de ta page.',
 		icon:        '🌟',
 		fields: [
 			{

@@ -1238,7 +1238,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     if (!isSmtpConfigured()) {
       return reply.code(503).send({
-        error: 'SMTP non configuré. Ajoutez SMTP_HOST, SMTP_USER et SMTP_PASS dans le fichier .env.',
+        error: 'SMTP non configuré. Ajoute SMTP_HOST, SMTP_USER et SMTP_PASS dans le fichier .env.',
         code: 'SMTP_NOT_CONFIGURED',
         doc: 'https://github.com/Pokled/Nodyx/blob/main/docs/fr/EMAIL.md',
       })
@@ -1259,7 +1259,7 @@ export default async function adminRoutes(app: FastifyInstance) {
       return reply.code(500).send({
         error: `Échec de l'envoi : ${message}`,
         code: 'SMTP_SEND_FAILED',
-        hint: `Vérifiez vos identifiants SMTP dans .env — voir docs/fr/EMAIL.md`,
+        hint: `Vérifie tes identifiants SMTP dans .env, voir docs/fr/EMAIL.md`,
       })
     }
   })

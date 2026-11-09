@@ -536,7 +536,7 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
       const creationCount = await redis.incr(creationKey)
       if (creationCount === 1) await redis.expire(creationKey, 3600)
       if (creationCount > 3) {
-        return reply.code(429).send({ error: 'Trop de créations de compte. Réessayez dans une heure.', code: 'RATE_LIMITED' })
+        return reply.code(429).send({ error: 'Trop de créations de compte. Réessaie dans une heure.', code: 'RATE_LIMITED' })
       }
 
       // Créer un compte automatiquement.

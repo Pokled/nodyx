@@ -68,7 +68,7 @@ export function getTrustProxy(): boolean | string[] {
       console.warn(
         `[trustProxy] valeur numérique ignorée (${numeric.join(', ')}) : `
         + 'le mode compteur de hops a été retiré par fastify. '
-        + 'Utilisez une liste IP/CIDR.',
+        + 'Utilise une liste IP/CIDR.',
       )
     }
     return list.filter((s) => !/^\d+$/.test(s))

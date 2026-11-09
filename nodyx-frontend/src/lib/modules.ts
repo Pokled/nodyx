@@ -71,7 +71,7 @@ export const MODULE_DISPLAY: Record<string, ModuleDisplay> = {
 
 export const FAMILY_META: Record<ModuleFamily, { label: string; description: string; accent: string }> = {
   core:        { label: 'Core',          description: 'Toujours actifs, fondations de chaque instance.',          accent: '#374151' },
-  community:   { label: 'Communauté',    description: 'Outils internes activables selon votre communauté.',        accent: '#7c3aed' },
+  community:   { label: 'Communauté',    description: 'Outils internes activables selon ta communauté.',        accent: '#7c3aed' },
   website:     { label: 'Site public',   description: 'Widgets pour construire la vitrine publique de l\'instance.', accent: '#ec4899' },
   integration: { label: 'Intégrations',  description: 'Connexions avec des services et protocoles externes.',       accent: '#6b7280' },
 }
