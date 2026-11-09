@@ -132,7 +132,7 @@
 				<p class="adm-desc">{tFn('og2.tpl_desc')}</p>
 			</div>
 		</div>
-		<div class="adm-actions">
+		<div class="adm-actions relative">
 			<button type="button" class="adm-btn" onclick={() => fileInput?.click()}><Icon d="M12 16V5m0 0l4 4m-4-4l-4 4 M4 20h16" />{tFn('og2.tpl_import_btn')}</button>
 			<input bind:this={fileInput} type="file" accept="application/json,.json" class="sr-only" onchange={onFile} aria-label={tFn('og2.tpl_import_btn')} />
 			<button type="button" class="adm-btn" onclick={exportRules}><Icon d="M12 4v11m0 0l4-4m-4 4l-4-4 M4 20h16" />{tFn('og2.tpl_export_btn')}</button>

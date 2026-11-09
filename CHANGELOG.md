@@ -70,7 +70,9 @@ Quelques trous trouvés en chemin, et bouchés :
   tout autre interrupteur d'OctoGuard) faisait remonter toute l'administration hors de l'écran,
   sans moyen de revenir. La case cachée de l'interrupteur prenait pour repère un conteneur de la
   page que personne ne peut faire défiler. Même correctif pour deux interrupteurs de l'apparence
-  et du constructeur de page d'accueil.
+  et du constructeur de page d'accueil, puis, après une seconde passe page par page, pour les
+  boutons « Choisir un fichier » de l'éditeur de profil (avatar, bannière, police), l'import d'un
+  modèle d'OctoGuard, deux panneaux d'apparence et la bibliothèque de sons.
 - **Inviter quelqu'un dans une conversation privée lui donnait tout l'historique.** Ajouter une
   troisième personne à une conversation à deux la transformait en groupe, et le nouveau venu
   lisait tout ce qui s'y était dit avant lui, sans que personne ne l'ait accepté. Maintenant,

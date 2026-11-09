@@ -330,6 +330,7 @@
 	.amb-upload.hidden { display: none; }
 	.amb-thumb { width: 96px; height: 54px; object-fit: cover; border-radius: 8px; box-shadow: 0 0 0 1px #374151; }
 	.amb-btn {
+		position: relative; /* repère de la case cachée (voir .og-switch, #968) */
 		padding: 7px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
 		background: #1f2937; border: 1px solid #374151; color: #e5e7eb;
 	}

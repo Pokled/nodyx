@@ -597,7 +597,7 @@
 
 	<!-- Zone d'upload : drag & drop + click. -->
 	<label
-		class="block border-2 border-dashed transition-colors cursor-pointer {dragHover ? 'border-purple-500/80 bg-purple-500/[0.06]' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'}"
+		class="relative block border-2 border-dashed transition-colors cursor-pointer {dragHover ? 'border-purple-500/80 bg-purple-500/[0.06]' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'}"
 		ondragover={onDragOver}
 		ondragleave={onDragLeave}
 		ondrop={onDrop}>
