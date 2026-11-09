@@ -2634,6 +2634,7 @@
 		transform: translate(-50%, -50%);
 	}
 	.follow-amb {
+		position: relative; /* repère de la case cachée (voir .og-switch) */
 		display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 12px; border-radius: 10px; cursor: pointer;
 		background: #111827; border: 1px solid #1f2937;
 	}

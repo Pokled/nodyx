@@ -66,6 +66,11 @@ défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
 
 Quelques trous trouvés en chemin, et bouchés :
 
+- **Cocher une règle coupait la page en deux.** Dans Mes règles, allumer « Mots interdits » (ou
+  tout autre interrupteur d'OctoGuard) faisait remonter toute l'administration hors de l'écran,
+  sans moyen de revenir. La case cachée de l'interrupteur prenait pour repère un conteneur de la
+  page que personne ne peut faire défiler. Même correctif pour deux interrupteurs de l'apparence
+  et du constructeur de page d'accueil.
 - **Inviter quelqu'un dans une conversation privée lui donnait tout l'historique.** Ajouter une
   troisième personne à une conversation à deux la transformait en groupe, et le nouveau venu
   lisait tout ce qui s'y était dit avant lui, sans que personne ne l'ait accepté. Maintenant,

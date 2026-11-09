@@ -184,7 +184,7 @@
 	.edp-note { font-size: 12.5px; color: #9ca3af; margin-bottom: 16px; line-height: 1.45; }
 	.edp-gap { height: 22px; }
 	.edp-follow { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
-	.edp-switch { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: #111827; border: 1px solid #1f2937; cursor: pointer; }
+	.edp-switch { position: relative; /* repère de la case cachée (voir .og-switch) */ display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: #111827; border: 1px solid #1f2937; cursor: pointer; }
 	.edp-switch.on { border-color: var(--nx-header-accent); }
 	.edp-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 	.edp-knob { flex-shrink: 0; position: relative; width: 32px; height: 18px; margin-top: 2px; border-radius: 999px; background: #374151; transition: background-color .2s; }
