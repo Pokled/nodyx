@@ -398,7 +398,7 @@
 						class="w-full rounded-lg bg-[var(--nx-surface-raised)]/70 border border-[var(--nx-border)] px-3 py-2 text-[var(--nx-text)] text-sm
 						       placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-500 transition-colors" />
 				{:else}
-					<label class="flex items-center gap-2 cursor-pointer">
+					<label class="relative flex items-center gap-2 cursor-pointer">
 						<span class="px-3 py-1.5 rounded-lg bg-[var(--nx-border)] hover:bg-[var(--nx-border)] text-xs text-[var(--nx-text)] transition-colors">
 							{avatarUploading ? tFn('pedit.uploading') : tFn('pedit.choose_file')}
 						</span>
@@ -447,7 +447,7 @@
 						class="w-full rounded-lg bg-[var(--nx-surface-raised)]/70 border border-[var(--nx-border)] px-3 py-2 text-[var(--nx-text)] text-sm
 						       placeholder-[var(--nx-text-muted)] focus:outline-none focus:border-indigo-500 transition-colors" />
 				{:else}
-					<label class="flex items-center gap-2 cursor-pointer">
+					<label class="relative flex items-center gap-2 cursor-pointer">
 						<span class="px-3 py-1.5 rounded-lg bg-[var(--nx-border)] hover:bg-[var(--nx-border)] text-xs text-[var(--nx-text)] transition-colors">
 							{bannerUploading ? tFn('pedit.uploading') : tFn('pedit.choose_file')}
 						</span>
@@ -585,7 +585,7 @@
 				</div>
 				<!-- Custom font upload -->
 				<div class="pt-1">
-					<label class="flex items-center gap-2 cursor-pointer">
+					<label class="relative flex items-center gap-2 cursor-pointer">
 						<span class="px-3 py-1.5 rounded-lg bg-[var(--nx-border)] hover:bg-[var(--nx-border)] text-xs text-[var(--nx-text)] transition-colors shrink-0">
 							{fontUploading ? tFn('pedit.uploading') : tFn('pedit.import_font')}
 						</span>

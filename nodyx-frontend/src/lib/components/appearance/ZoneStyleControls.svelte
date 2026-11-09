@@ -236,6 +236,7 @@
 	.zs-error { font-size: 12px; color: #f87171; margin-top: 6px; }
 	.zs-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 	.zs-btn {
+		position: relative; /* repère de la case cachée (voir .og-switch, #968) */
 		padding: 7px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
 		background: #1f2937; border: 1px solid #374151; color: #e5e7eb;
 	}
