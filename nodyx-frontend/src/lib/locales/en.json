@@ -469,6 +469,7 @@
   "auth.login_link": "Sign in",
   "auth.resend_verification_email": "Resend confirmation email",
   "auth.email_not_verified": "Email not verified",
+  "auth.email_not_verified_hint": "Please confirm your email address before signing in. Link expired or lost? Ask for a new one below.",
   "auth.password_reset.success_message": "✓ Password reset. Sign in with your new password.",
   "auth.login.title": "Sign in",
   "auth.login.button": "Sign in",

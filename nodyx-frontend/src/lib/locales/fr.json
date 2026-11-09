@@ -469,6 +469,7 @@
   "auth.login_link": "Se connecter",
   "auth.resend_verification_email": "Renvoyer l'email de confirmation",
   "auth.email_not_verified": "Email non vérifié",
+  "auth.email_not_verified_hint": "Confirmez votre adresse e-mail avant de vous connecter. Le lien a expiré ou s’est perdu ? Demandez-en un nouveau ci-dessous.",
   "auth.password_reset.success_message": "✓ Mot de passe réinitialisé. Connectez-vous avec votre nouveau mot de passe.",
   "auth.login.title": "Connexion",
   "auth.login.button": "Se connecter",
