@@ -139,6 +139,9 @@ le champ pour être corrigé.
 - La porte des traductions repère aussi le français sans accent (#917), et un avertissement de
   fastify au démarrage a disparu (#912). Mises à jour Rust dans le serveur TURN, le serveur et le
   gossip (#910, #911).
+- Un peu de ménage dans les traductions : 158 phrases que plus rien n'affichait (l'ancien
+  OctoGuard, l'ancienne page des signalements, quelques restes) quittent les fichiers de langue.
+  Pour les traducteurs, c'est autant de lignes qu'ils n'auront pas à traduire pour rien.
 
 Merci à celles et ceux qui animent leur communauté sur Nodyx et nous disent quand quelque chose
 coince. C'est pour vous qu'on prend le temps de bien faire, même quand ça prend plus longtemps que
