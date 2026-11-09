@@ -273,9 +273,11 @@ export default async function authRoutes(app: FastifyInstance) {
     // Email verification — only when SMTP is configured
     if (isSmtpConfigured()) {
       const verificationToken = crypto.randomBytes(32).toString('hex')
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
+      // L'e-mail promet 24 h : l'échéance est enregistrée et vérifiée (avant : jamais)
       await db.query(
-        `UPDATE users SET email_verified = false, email_verification_token = $1 WHERE id = $2`,
+        `UPDATE users SET email_verified = false, email_verification_token = $1,
+                email_verification_expires_at = NOW() + INTERVAL '24 hours'
+          WHERE id = $2`,
         [verificationToken, user.id]
       )
       const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173'
@@ -609,16 +611,25 @@ export default async function authRoutes(app: FastifyInstance) {
   app.get('/verify-email/:token', async (request, reply) => {
     const { token } = request.params as { token: string }
 
+    // Ce lien ouvre une session : il ne vaut que 24 h, comme l'e-mail le promet.
+    // Sans échéance enregistrée, il est refusé (fermé par défaut).
     const { rows } = await db.query<{ id: string; username: string; email: string }>(
       `UPDATE users
-       SET email_verified = true, email_verification_token = NULL
+       SET email_verified = true, email_verification_token = NULL, email_verification_expires_at = NULL
        WHERE email_verification_token = $1
          AND email_verified = false
+         AND email_verification_expires_at > NOW()
        RETURNING id, username, email`,
       [token]
     )
 
     if (!rows[0]) {
+      // Expiré ou inconnu ? Le dire permet de proposer un nouveau lien. Le jeton fait 256 bits :
+      // distinguer les deux cas n'aide pas à en deviner un.
+      const { rows: [old] } = await db.query<{ id: string }>(
+        `SELECT id FROM users WHERE email_verification_token = $1 AND email_verified = false`, [token]
+      )
+      if (old) return reply.code(400).send({ error: 'Verification link expired', code: 'TOKEN_EXPIRED' })
       return reply.code(400).send({ error: 'Lien invalide ou déjà utilisé.', code: 'INVALID_TOKEN' })
     }
 
@@ -658,7 +669,8 @@ export default async function authRoutes(app: FastifyInstance) {
 
     const verificationToken = crypto.randomBytes(32).toString('hex')
     await db.query(
-      `UPDATE users SET email_verification_token = $1 WHERE id = $2`,
+      `UPDATE users SET email_verification_token = $1, email_verification_expires_at = NOW() + INTERVAL '24 hours'
+        WHERE id = $2`,
       [verificationToken, user.id]
     )
 

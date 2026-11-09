@@ -459,7 +459,7 @@
 					<div class="mb-4 rounded border border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] bg-[color-mix(in_srgb,var(--nx-warn)_10%,transparent)] px-4 py-3 text-sm text-[var(--nx-warn)]">
 						<p class="font-semibold mb-1">{tFn('auth.email_not_verified')}</p>
 						<p class="text-amber-400/80">{form.error}</p>
-						<a href="/auth/verify-pending" class="mt-2 inline-block underline text-[var(--nx-warn)] hover:text-[var(--nx-warn)]">
+						<a href={`/auth/verify-pending?email=${encodeURIComponent(form.email ?? '')}`} class="mt-2 inline-block underline text-[var(--nx-warn)] hover:text-[var(--nx-warn)]">
 							{tFn('auth.resend_verification_email')}
 						</a>
 					</div>
