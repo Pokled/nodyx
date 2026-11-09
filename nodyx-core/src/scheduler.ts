@@ -397,7 +397,7 @@ async function purgeExpiredEmailTokens() {
         WHERE email_verification_token IS NOT NULL AND email_verification_expires_at < NOW()`
     )
     if (rowCount && rowCount > 0) {
-      console.log(`[Scheduler] Email tokens — ${rowCount} lien(s) de vérification expiré(s) effacé(s)`)
+      console.log(`[Scheduler] Email tokens : ${rowCount} lien(s) de vérification expiré(s) effacé(s)`)
     }
   } catch (err: any) {
     console.warn('[Scheduler] Email tokens purge error:', err.message)
