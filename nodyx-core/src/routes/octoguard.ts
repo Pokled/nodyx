@@ -33,6 +33,7 @@ import { reportContext, heldContext } from '../services/octoguard/context'
 import { listPending, countPending, approveHeld, refuseHeld, listMine, forAuthor, HELD_EXPIRY_HOURS } from '../services/octoguard/held'
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
 import { closeReports } from '../services/octoguard/reportClose'
+import { SANCTIONS, FORGET_CHOICES, countBanCapable, getLadderSettings, saveLadderSettings, memberLadder, applyLadder, approveLadder, refuseLadder, undoLadder } from '../services/octoguard/ladder'
 import * as NotificationModel from '../models/notification'
 import * as PostModel from '../models/post'
 import * as ThreadModel from '../models/thread'
@@ -183,7 +184,9 @@ async function logAdminAction(
 // Qui peut quoi dans OctoGuard (CDC modération, E1) : régler OctoGuard =
 // manage_octoguard ; les sourdines et les signalements sont du travail de
 // modération des membres (moderate_members), ouvert aussi à manage_octoguard.
-const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|held|reports(?!\/settings))(\/|$)/
+const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|held|reports(?!\/settings)|ladder(?!\/settings))(\/|$)/
+// Le barème : toute l'équipe le LIT (la jauge), seul manage_octoguard le RÈGLE
+const LADDER_SETTINGS_ROUTE = /^\/api\/v1\/admin\/octoguard\/ladder\/settings$/
 const guardMemberModeration = requireAnyPermission('moderate_members', 'manage_octoguard')
 const guardOctoguard = requirePermission('manage_octoguard')
 
@@ -217,6 +220,7 @@ async function deleteReportedContent(type: string, id: string): Promise<boolean>
 export async function octoguardAdminPlugin(app: FastifyInstance) {
   app.addHook('preHandler', async (request, reply) => {
     const route = request.routeOptions.url ?? request.url
+    if (LADDER_SETTINGS_ROUTE.test(route) && request.method === 'GET') return guardMemberModeration(request, reply)
     return MEMBER_MODERATION_ROUTES.test(route)
       ? guardMemberModeration(request, reply)
       : guardOctoguard(request, reply)
@@ -830,6 +834,13 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
       await logAdminAction(actorId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op, warn_id: cleared[0].id })
       return { ok: true }
     }
+    if (meta.undo_op.type === 'ladder_undo' && (meta.undo_op as { ladder_id?: string }).ladder_id) {
+      const ladderId = (meta.undo_op as { ladder_id: string }).ladder_id
+      const r = await undoLadder({ userId: actorId, access: await getInstanceAccess(actorId) }, ladderId)
+      if (!r.ok) return { ok: false, status: r.status, code: r.code === 'ALREADY_UNDONE' ? 'ALREADY_UNDONE' : r.code, error: r.error }
+      await logAdminAction(actorId, 'octoguard.action_undone', 'log', id, log.action, { undo_op: meta.undo_op })
+      return { ok: true }
+    }
     return { ok: false, status: 400, code: 'UNSUPPORTED', error: 'Undo type not implemented' }
   }
 
@@ -1158,6 +1169,51 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     })
     return reply.send({ resolved: closed.resolved, notified: closed.notified })
   })
+
+  // ─── Le barème des sanctions (lot 4b, CDC §E4i) ───────────────────────────
+
+  app.get('/ladder/settings', async (_request, reply) => {
+    return reply.send({
+      settings:            await getLadderSettings(),
+      sanctions:           SANCTIONS,
+      forget_choices:      FORGET_CHOICES,
+      can_double_validate: await countBanCapable(null) >= 2,
+    })
+  })
+
+  app.put('/ladder/settings', {
+    preHandler: [rateLimit, validate({ body: z.object({ steps: z.array(z.string()), forget_days: z.number().int(), double_validation: z.boolean() }) })],
+  }, async (request, reply) => {
+    const r = await saveLadderSettings(request.body as { steps: unknown; forget_days: unknown; double_validation: unknown }, request.user!.userId)
+    return r.ok ? reply.send({ settings: r.settings }) : reply.code(r.status).send({ error: r.error, code: r.code })
+  })
+
+  app.get('/ladder/member/:userId', async (request, reply) => {
+    const { userId } = request.params as { userId: string }
+    if (!UUID_RE.test(userId)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    return reply.send(await memberLadder(userId))
+  })
+
+  app.post('/ladder/apply', {
+    preHandler: [rateLimit, validate({ body: z.object({
+      user_id:       z.string().regex(UUID_RE),
+      expected_step: z.number().int().min(1).max(4),
+      report_id:     z.string().regex(UUID_RE).nullable().optional(),
+      reason:        z.string().max(500).nullable().optional(),
+    }) })],
+  }, async (request, reply) => {
+    const r = await applyLadder({ userId: request.user!.userId, access: request.access! }, request.body as { user_id: string; expected_step: number; report_id?: string | null; reason?: string | null })
+    return r.ok ? reply.code(201).send(r) : reply.code(r.status).send({ error: r.error, code: r.code })
+  })
+
+  for (const [path, fn] of [['approve', approveLadder], ['refuse', refuseLadder], ['undo', undoLadder]] as const) {
+    app.post(`/ladder/:id/${path}`, { preHandler: [rateLimit] }, async (request, reply) => {
+      const { id } = request.params as { id: string }
+      if (!UUID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+      const r = await fn({ userId: request.user!.userId, access: request.access! }, id)
+      return r.ok ? reply.send(r) : reply.code(r.status).send({ error: r.error, code: r.code })
+    })
+  }
 
   // ─── Reports settings (anti-abuse) ────────────────────────────────────────
 

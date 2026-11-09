@@ -164,6 +164,8 @@ export function startBanExpiryWorker(): void {
   if (_timer) return
   _timer = setInterval(() => {
     purgeExpiredBans().then(n => { if (n > 0) console.log(`[octoguard:bans] lifted ${n} expired temporary ban(s)`) })
+    // Barème : une demande sans second avis depuis 72 h tombe (import dynamique : ladder importe ce module)
+    import('./ladder').then(m => m.expirePendingLadder()).catch(() => {})
   }, PURGE_INTERVAL_MS)
   if (_timer.unref) _timer.unref()
 }
