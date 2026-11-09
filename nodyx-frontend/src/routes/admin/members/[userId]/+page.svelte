@@ -157,8 +157,8 @@
 			{#if canMembers && targetable && ladder}
 				<div class="flex flex-col gap-2">
 					<h2 class="adm-label">{tFn('og2.lad_title')}</h2>
-					<LadderGauge state={ladder} />
-					<LadderAction {token} userId={m.id} username={m.username} state={ladder} {canMembers} {canBan} {myId} onChanged={ladderChanged} />
+					<LadderGauge {ladder} />
+					<LadderAction {token} userId={m.id} username={m.username} {ladder} {canMembers} {canBan} {myId} onChanged={ladderChanged} />
 					{#if ladder.history.length}
 						<ul class="adm-lad-hist">
 							{#each ladder.history.slice(0, 6) as e (e.id)}

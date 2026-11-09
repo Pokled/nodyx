@@ -344,7 +344,7 @@
 						<div class="adm-card og-rp-card">
 							<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: r.target_author_username ?? '' })}</h2>
 							{#if ctxOk?.author}{@render facts(ctxOk.author)}{/if}
-							{#if data.tab === 'open'}<LadderGauge state={ladder} />{/if}
+							{#if data.tab === 'open'}<LadderGauge {ladder} />{/if}
 							<a class="adm-btn adm-btn--sm" href="/admin/members/{r.target_author_id}"><Icon d={KIND_ICON.user} />{tFn('amem.open_file')}</a>
 						</div>
 					{/if}
@@ -353,7 +353,7 @@
 							<h2 class="og-rp-h">{tFn('og2.rp_decide')}</h2>
 							{#if r.target_author_id}
 								<LadderAction {token} userId={r.target_author_id} username={r.target_author_username ?? ''} reportId={r.id}
-									state={ladder} {canMembers} {canBan} {myId} onChanged={ladderChanged} />
+									{ladder} {canMembers} {canBan} {myId} onChanged={ladderChanged} />
 							{/if}
 							{#if r.claimed_by_username}
 								<span class="og-meta"><Icon d={LEVEL_ICON.observe} />{tFn('areports.claimed_by', { name: r.claimed_by_username })}</span>

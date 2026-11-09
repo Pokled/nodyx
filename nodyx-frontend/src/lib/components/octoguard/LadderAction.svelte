@@ -7,9 +7,9 @@
 	import { og, OgError } from '$lib/octoguard/api'
 	import { kindOf, needsSecondOpinion, optionKey, durationKey, LADDER_ERR, type MemberLadder } from '$lib/octoguard/ladder'
 
-	let { token, userId, username, reportId = null, state, canMembers, canBan, myId, onChanged }: {
+	let { token, userId, username, reportId = null, ladder, canMembers, canBan, myId, onChanged }: {
 		token: string | null; userId: string; username: string; reportId?: string | null
-		state: MemberLadder | null; canMembers: boolean; canBan: boolean; myId: string | undefined
+		ladder: MemberLadder | null; canMembers: boolean; canBan: boolean; myId: string | undefined
 		onChanged: () => Promise<void> | void
 	} = $props()
 	const tFn = $derived($t)
@@ -21,12 +21,12 @@
 	let error = $state<string | null>(null)
 	let done = $state<string | null>(null)
 
-	const next = $derived(state?.next ?? null)
+	const next = $derived(ladder?.next ?? null)
 	const kind = $derived(next ? kindOf(next.sanction) : null)
 	const allowed = $derived(kind === 'ban' ? canBan : canMembers)
-	const waits = $derived(!!next && !!state?.settings.double_validation && needsSecondOpinion(next.sanction))
+	const waits = $derived(!!next && !!ladder?.settings.double_validation && needsSecondOpinion(next.sanction))
 	const reasonOk = $derived(kind !== 'ban' || reason.trim().length >= 3)
-	const pending = $derived(state?.pending ?? null)
+	const pending = $derived(ladder?.pending ?? null)
 	const mine = $derived(!!pending && pending.actor_id === myId)
 
 	async function act(fn: () => Promise<unknown>, okKey: string) {
@@ -51,7 +51,7 @@
 	)
 </script>
 
-{#if state}
+{#if ladder}
 	<div class="lad-act">
 		{#if pending}
 			<div class="lad-box lad-box--wait">

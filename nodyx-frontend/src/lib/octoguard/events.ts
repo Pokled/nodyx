@@ -25,7 +25,7 @@ const ladderKind = (s: unknown): 'warn' | 'mute' | 'ban' =>
  * Les valeurs qu'une phrase du journal peut utiliser. Le barème a besoin de plus
  * que la règle et l'auteur : le membre visé, la durée, l'étape.
  */
-export function eventVars(l: Pick<OgLog, 'metadata' | 'actor_username' | 'target_label'>, tFn: (k: string, v?: Record<string, unknown>) => string): Record<string, string | number> {
+export function eventVars(l: Pick<OgLog, 'metadata' | 'actor_username' | 'target_label'>, tFn: (k: string, v?: Record<string, string | number>) => string): Record<string, string | number> {
 	const md = l.metadata ?? {}
 	return {
 		rule: md.rule_name ?? '',
