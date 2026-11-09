@@ -42,7 +42,10 @@
 .og-empty { font-size: 0.8125rem; color: var(--nx-text-muted); padding: 0.5rem 0; }
 
 /* Interrupteur */
-.og-switch { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8125rem; }
+/* position: relative : la case cachée doit avoir l'interrupteur pour repère. Sans lui, son repère
+   devenait un conteneur du layout en overflow: hidden, que le focus du clic faisait défiler :
+   la page restait coupée en deux, sans moyen de revenir (vécu le 09/11 en cochant une règle). */
+.og-switch { position: relative; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8125rem; }
 .og-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .og-switch .og-track { width: 2rem; height: 1.125rem; border-radius: 99px; background: color-mix(in srgb, var(--nx-text) 18%, transparent); position: relative; transition: background-color .15s; flex: none; }
 .og-switch .og-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 0.875rem; height: 0.875rem; border-radius: 99px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .3); transition: transform .15s; }
