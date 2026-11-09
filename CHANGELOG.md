@@ -77,6 +77,12 @@ Quelques trous trouvés en chemin, et bouchés :
   l'on quittait une conversation pendant que sa clé arrivait, cette clé se posait sur la
   suivante, et le message écrit là devenait illisible pour son destinataire, même après
   rechargement. Le message chiffré part aussi toujours dans la conversation où il a été écrit.
+- **Le lien de vérification d'e-mail expire vraiment.** L'e-mail promettait « valable 24 heures »,
+  mais l'échéance n'était jamais vérifiée : ce lien, qui ouvre une session, restait bon pour
+  toujours. Il expire maintenant au bout de 24 heures, comme annoncé. Et si on le laisse passer,
+  on peut enfin en demander un autre depuis la connexion : le bouton « Renvoyer l'email » ne
+  savait pas à quelle adresse l'envoyer et ne faisait rien. La page du lien et la connexion d'un
+  compte à vérifier parlent maintenant la langue du membre.
   Dans la foulée : une erreur ou une réponse en cours ne suit plus d'une conversation à l'autre,
   un message n'est plus perdu sans un mot quand la connexion n'est pas prête, et le bandeau
   « chiffrés de bout en bout » ne s'affiche plus sur une conversation qui part en clair.
