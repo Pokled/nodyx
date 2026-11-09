@@ -312,7 +312,7 @@
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
 		</svg>
 	</div>
-	<h3 class="text-lg font-semibold text-[var(--nx-text)] mb-2">Vous avez une instance Nodyx ?</h3>
+	<h3 class="text-lg font-semibold text-[var(--nx-text)] mb-2">{tFn('communities.have_instance')}</h3>
 	<p class="text-sm text-[var(--nx-text-muted)] max-w-md mx-auto mb-5">
 		{@html tFn('communities.register_intro')}
 		{tFn('communities.register_desc')}

@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const json = await res.json();
 
 	if (!res.ok) error(res.status, json.error ?? 'Événement introuvable');
-	if (!json.event.can_manage) error(403, "Vous n'êtes pas autorisé à modifier cet événement");
+	if (!json.event.can_manage) error(403, "Tu n'es pas autorisé à modifier cet événement");
 
 	return { event: json.event, token };
 };

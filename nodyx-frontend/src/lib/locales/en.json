@@ -4513,6 +4513,7 @@
   "deck.server_unreachable": "Could not connect to the server.",
   "forum.delete_confirm_yes": "Yes, delete",
   "communities.register_intro": "Register it in the directory and get a free subdomain <code class=\"text-indigo-400\">your-name.nodyx.org</code>.",
+  "communities.have_instance": "Got a Nodyx instance?",
   "community_page.member_one": "{{n}} member",
   "community_page.member_many": "{{n}} members",
   "user_card.stat_xp": "XP points",

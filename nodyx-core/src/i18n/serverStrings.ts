@@ -70,21 +70,21 @@ interface PushStrings {
 
 const VERIFY_EMAIL: Record<ServerLocale, VerifyEmailStrings> = {
   fr: {
-    subject:  (c) => `Confirmez votre adresse email — ${c}`,
-    textBody: (u, c, url) => `Bonjour ${u},\n\nMerci de vous être inscrit sur ${c} !\n\nCliquez sur ce lien pour activer votre compte (valable 24 heures) :\n${url}\n\nSi vous n'êtes pas à l'origine de cette inscription, ignorez cet email.\n\n— L'équipe ${c}`,
-    htmlTitle:    'Confirmez votre adresse email',
+    subject:  (c) => `Confirme ton adresse email · ${c}`,
+    textBody: (u, c, url) => `Bonjour ${u},\n\nMerci de t'être inscrit sur ${c} !\n\nClique sur ce lien pour activer ton compte (valable 24 heures) :\n${url}\n\nSi tu n'es pas à l'origine de cette inscription, ignore cet email.\n\nL'équipe ${c}`,
+    htmlTitle:    'Confirme ton adresse email',
     htmlGreeting: (u) => `Bonjour <strong style="color:#c8c4bc;">${u}</strong>,`,
-    htmlIntro:    (c) => `Merci de rejoindre <strong style="color:#c8c4bc;">${c}</strong> ! Cliquez sur le bouton ci-dessous pour activer votre compte.`,
+    htmlIntro:    (c) => `Merci de rejoindre <strong style="color:#c8c4bc;">${c}</strong> ! Clique sur le bouton ci-dessous pour activer ton compte.`,
     htmlCta:      'Activer mon compte',
     htmlInfoLabel:  'Informations',
     htmlInfoExpiry: 'Ce lien expire dans <strong style="color:#c8c4bc;">24 heures</strong>',
     htmlInfoOnce:   'Il ne peut être utilisé <strong style="color:#c8c4bc;">qu\'une seule fois</strong>',
-    htmlIgnore:     'Si vous n\'êtes pas à l\'origine de cette inscription, ignorez simplement cet email.',
-    htmlFallback:   'Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :',
+    htmlIgnore:     'Si tu n\'es pas à l\'origine de cette inscription, ignore simplement cet email.',
+    htmlFallback:   'Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :',
   },
   en: {
-    subject:  (c) => `Confirm your email address — ${c}`,
-    textBody: (u, c, url) => `Hi ${u},\n\nThanks for signing up on ${c}!\n\nClick this link to activate your account (valid for 24 hours):\n${url}\n\nIf you didn't sign up for this, just ignore this email.\n\n— The ${c} team`,
+    subject:  (c) => `Confirm your email address · ${c}`,
+    textBody: (u, c, url) => `Hi ${u},\n\nThanks for signing up on ${c}!\n\nClick this link to activate your account (valid for 24 hours):\n${url}\n\nIf you didn't sign up for this, just ignore this email.\n\nThe ${c} team`,
     htmlTitle:    'Confirm your email address',
     htmlGreeting: (u) => `Hi <strong style="color:#c8c4bc;">${u}</strong>,`,
     htmlIntro:    (c) => `Thanks for joining <strong style="color:#c8c4bc;">${c}</strong>! Click the button below to activate your account.`,
@@ -99,22 +99,22 @@ const VERIFY_EMAIL: Record<ServerLocale, VerifyEmailStrings> = {
 
 const RESET_EMAIL: Record<ServerLocale, ResetEmailStrings> = {
   fr: {
-    subject:  (c) => `Réinitialisation de votre mot de passe — ${c}`,
-    textBody: (u, c, url) => `Bonjour ${u},\n\nVous avez demandé la réinitialisation de votre mot de passe sur ${c}.\n\nCliquez sur ce lien pour choisir un nouveau mot de passe (valable 1 heure) :\n${url}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email — votre mot de passe restera inchangé.\n\nCe lien ne peut être utilisé qu'une seule fois.\n\n— L'équipe ${c}`,
+    subject:  (c) => `Réinitialisation de ton mot de passe · ${c}`,
+    textBody: (u, c, url) => `Bonjour ${u},\n\nTu as demandé la réinitialisation de ton mot de passe sur ${c}.\n\nClique sur ce lien pour choisir un nouveau mot de passe (valable 1 heure) :\n${url}\n\nSi tu n'es pas à l'origine de cette demande, ignore simplement cet email : ton mot de passe restera inchangé.\n\nCe lien ne peut être utilisé qu'une seule fois.\n\nL'équipe ${c}`,
     htmlTitle:    'Réinitialisation du mot de passe',
     htmlGreeting: (u) => `Bonjour <strong style="color:#c8c4bc;">${u}</strong>,`,
-    htmlIntro:    'Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.',
+    htmlIntro:    'Tu as demandé la réinitialisation de ton mot de passe. Clique sur le bouton ci-dessous pour en choisir un nouveau.',
     htmlCta:      'Réinitialiser mon mot de passe',
     htmlSecurityLabel: '🔒 Informations de sécurité',
     htmlInfoExpiry:    'Ce lien expire dans <strong style="color:#c8c4bc;">1 heure</strong>',
     htmlInfoOnce:      'Il ne peut être utilisé <strong style="color:#c8c4bc;">qu\'une seule fois</strong>',
-    htmlInfoSessions:  'Toutes vos sessions seront déconnectées après le changement',
-    htmlIgnore:        'Si vous n\'êtes pas à l\'origine de cette demande, ignorez simplement cet email — votre mot de passe restera inchangé.',
-    htmlFallback:      'Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :',
+    htmlInfoSessions:  'Toutes tes sessions seront déconnectées après le changement',
+    htmlIgnore:        'Si tu n\'es pas à l\'origine de cette demande, ignore simplement cet email : ton mot de passe restera inchangé.',
+    htmlFallback:      'Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :',
   },
   en: {
-    subject:  (c) => `Reset your password — ${c}`,
-    textBody: (u, c, url) => `Hi ${u},\n\nYou requested a password reset on ${c}.\n\nClick this link to choose a new password (valid for 1 hour):\n${url}\n\nIf you didn't request this, just ignore this email — your password stays unchanged.\n\nThis link can only be used once.\n\n— The ${c} team`,
+    subject:  (c) => `Reset your password · ${c}`,
+    textBody: (u, c, url) => `Hi ${u},\n\nYou requested a password reset on ${c}.\n\nClick this link to choose a new password (valid for 1 hour):\n${url}\n\nIf you didn't request this, just ignore this email: your password stays unchanged.\n\nThis link can only be used once.\n\nThe ${c} team`,
     htmlTitle:    'Password reset',
     htmlGreeting: (u) => `Hi <strong style="color:#c8c4bc;">${u}</strong>,`,
     htmlIntro:    'You requested a password reset. Click the button below to choose a new one.',
@@ -123,13 +123,13 @@ const RESET_EMAIL: Record<ServerLocale, ResetEmailStrings> = {
     htmlInfoExpiry:    'This link expires in <strong style="color:#c8c4bc;">1 hour</strong>',
     htmlInfoOnce:      'It can only be used <strong style="color:#c8c4bc;">once</strong>',
     htmlInfoSessions:  'All your sessions will be signed out after the change',
-    htmlIgnore:        'If you didn\'t request this, just ignore this email — your password stays unchanged.',
+    htmlIgnore:        'If you didn\'t request this, just ignore this email: your password stays unchanged.',
     htmlFallback:      'If the button doesn\'t work, copy this link into your browser:',
   },
 }
 
 const PUSH: Record<ServerLocale, PushStrings> = {
-  fr: { mentionTitle: (u) => `@${u} vous a mentionné` },
+  fr: { mentionTitle: (u) => `@${u} t'a mentionné` },
   en: { mentionTitle: (u) => `@${u} mentioned you` },
 }
 

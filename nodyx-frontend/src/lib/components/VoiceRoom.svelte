@@ -390,7 +390,7 @@
 				</button>
 				<!-- Badge -->
 				<span class="absolute bottom-2 left-2 text-[10px] text-white font-semibold px-2 py-0.5 rounded pointer-events-none"
-				      style="background: rgba(0,0,0,0.7);">Vous</span>
+				      style="background: rgba(0,0,0,0.7);">{tFn('voice.you_badge')}</span>
 				<!-- Fullscreen btn -->
 				<button
 					onclick={(e) => (e.currentTarget as HTMLElement).closest('div')?.querySelector('video')?.requestFullscreen?.()}

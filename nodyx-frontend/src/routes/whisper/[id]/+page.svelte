@@ -248,7 +248,7 @@
 				<!-- Bubble -->
 				<div class="max-w-[75%] {msg.user_id === me?.id ? 'items-end' : 'items-start'} flex flex-col gap-0.5">
 					<span class="text-[10px] text-gray-500 px-1">
-						{msg.user_id === me?.id ? 'Vous' : msg.username} · {formatTime(msg.created_at)}
+						{msg.user_id === me?.id ? tFn('common.you') : msg.username} · {formatTime(msg.created_at)}
 					</span>
 					<div class="px-3 py-2 rounded-2xl text-sm leading-relaxed break-words
 						{msg.user_id === me?.id

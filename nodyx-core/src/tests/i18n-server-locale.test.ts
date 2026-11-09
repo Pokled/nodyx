@@ -58,7 +58,7 @@ describe('emailService — le contenu généré suit la locale demandée', () =>
 
 		expect(sendMailMock).toHaveBeenCalledTimes(1)
 		const call = sendMailMock.mock.calls[0][0]
-		expect(call.subject).toBe('Confirm your email address — TestCommunity')
+		expect(call.subject).toBe('Confirm your email address · TestCommunity')
 		expect(call.text).toContain('Hi Bob,')
 		expect(call.html).toContain('lang="en"')
 		expect(call.html).toContain('Activate my account')
@@ -69,7 +69,7 @@ describe('emailService — le contenu généré suit la locale demandée', () =>
 		await sendVerificationEmail({ to: 'a@b.com', username: 'Bob', verifyUrl: 'https://x/y' })
 
 		const call = sendMailMock.mock.calls[0][0]
-		expect(call.subject).toBe('Confirmez votre adresse email — TestCommunity')
+		expect(call.subject).toBe('Confirme ton adresse email · TestCommunity')
 		expect(call.html).toContain('lang="fr"')
 	})
 
@@ -78,7 +78,7 @@ describe('emailService — le contenu généré suit la locale demandée', () =>
 		await sendPasswordResetEmail({ to: 'a@b.com', username: 'Bob', resetUrl: 'https://x/y', locale: 'en' })
 
 		const call = sendMailMock.mock.calls[0][0]
-		expect(call.subject).toBe('Reset your password — TestCommunity')
+		expect(call.subject).toBe('Reset your password · TestCommunity')
 		expect(call.text).toContain('You requested a password reset')
 		expect(call.html).toContain('Reset my password')
 	})
@@ -88,7 +88,7 @@ describe('emailService — le contenu généré suit la locale demandée', () =>
 		await sendPasswordResetEmail({ to: 'a@b.com', username: 'Bob', resetUrl: 'https://x/y', locale: 'fr' })
 
 		const call = sendMailMock.mock.calls[0][0]
-		expect(call.subject).toBe('Réinitialisation de votre mot de passe — TestCommunity')
+		expect(call.subject).toBe('Réinitialisation de ton mot de passe · TestCommunity')
 		expect(call.html).toContain('Réinitialiser mon mot de passe')
 	})
 })
