@@ -226,7 +226,7 @@
 						<div class="rounded-lg px-3 py-1.5 shadow-md text-center w-full border transition-colors duration-300
 						            {form?.error ? 'bg-red-950/60 border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)]' : 'bg-[var(--nx-surface-raised)]/90 border-[var(--nx-border)]'}">
 							<p class="text-[11px] leading-tight transition-colors duration-200 {form?.error ? 'text-[var(--nx-bad)]' : 'text-[var(--nx-text)]'}">
-								{form?.error ? form.error : submitting ? tFn('auth.login.submitting') : focusedField === 'email' ? tFn('auth.register.email_hint') : focusedField === 'password' ? tFn('auth.bot.password_shy') : tFn('auth.register.welcome_message')}
+								{form?.error ? (form.code === 'EMAIL_NOT_VERIFIED' ? tFn('auth.email_not_verified') : form.error) : submitting ? tFn('auth.login.submitting') : focusedField === 'email' ? tFn('auth.register.email_hint') : focusedField === 'password' ? tFn('auth.bot.password_shy') : tFn('auth.register.welcome_message')}
 							</p>
 						</div>
 						<div class="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[7px] border-l-transparent border-r-transparent {form?.error ? 'border-t-red-800/60' : 'border-t-[var(--nx-border)]'}"></div>
@@ -458,8 +458,8 @@
 				{#if form.code === 'EMAIL_NOT_VERIFIED'}
 					<div class="mb-4 rounded border border-[color-mix(in_srgb,var(--nx-warn)_40%,transparent)] bg-[color-mix(in_srgb,var(--nx-warn)_10%,transparent)] px-4 py-3 text-sm text-[var(--nx-warn)]">
 						<p class="font-semibold mb-1">{tFn('auth.email_not_verified')}</p>
-						<p class="text-amber-400/80">{form.error}</p>
-						<a href="/auth/verify-pending" class="mt-2 inline-block underline text-[var(--nx-warn)] hover:text-[var(--nx-warn)]">
+						<p class="text-amber-400/80">{tFn('auth.email_not_verified_hint')}</p>
+						<a href={`/auth/verify-pending?email=${encodeURIComponent(form.email ?? '')}`} class="mt-2 inline-block underline text-[var(--nx-warn)] hover:text-[var(--nx-warn)]">
 							{tFn('auth.resend_verification_email')}
 						</a>
 					</div>

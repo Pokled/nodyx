@@ -6,10 +6,11 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const { token } = params;
 
 	const res  = await apiFetch(fetch, `/auth/verify-email/${token}`);
-	const json = await res.json();
+	const json = await res.json().catch(() => ({}));
 
+	// Le code seulement : la page le traduit (jamais la phrase du cœur)
 	if (!res.ok) {
-		return { error: json.error ?? 'Lien invalide ou expiré.' };
+		return { code: json.code === 'TOKEN_EXPIRED' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN' };
 	}
 
 	cookies.set('token', json.token, {

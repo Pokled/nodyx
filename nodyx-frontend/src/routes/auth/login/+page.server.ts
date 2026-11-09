@@ -47,7 +47,8 @@ export const actions: Actions = {
 		const json = await res.json();
 
 		if (!res.ok) {
-			return fail(res.status, { error: json.error, code: json.code ?? null, redirectTo });
+			// Compte à vérifier : on rend l'adresse tapée, pour que « Renvoyer l'email » sache où l'envoyer
+			return fail(res.status, { error: json.error, code: json.code ?? null, redirectTo, ...(json.code === 'EMAIL_NOT_VERIFIED' ? { email } : {}) });
 		}
 
 		// 2FA Signet — on délègue à l'app Signet (prioritaire)

@@ -388,15 +388,19 @@ export async function pullBlocklist() {
 // ── Purge tokens de vérification email expirés ───────────────────────────────
 
 async function purgeExpiredEmailTokens() {
+  // Le jeton vit dans users (migration 049), pas dans une table à part : cette purge
+  // visait « email_verification_tokens », qui n'a jamais existé, et son erreur était
+  // avalée en silence. Un lien expiré est effacé ; le compte reste, à vérifier.
   try {
     const { rowCount } = await db.query(
-      `DELETE FROM email_verification_tokens WHERE expires_at < NOW()`
+      `UPDATE users SET email_verification_token = NULL, email_verification_expires_at = NULL
+        WHERE email_verification_token IS NOT NULL AND email_verification_expires_at < NOW()`
     )
     if (rowCount && rowCount > 0) {
-      console.log(`[Scheduler] Email tokens — ${rowCount} token(s) expiré(s) supprimé(s)`)
+      console.log(`[Scheduler] Email tokens : ${rowCount} lien(s) de vérification expiré(s) effacé(s)`)
     }
-  } catch {
-    // Table may not exist on older instances — silently ignore
+  } catch (err: any) {
+    console.warn('[Scheduler] Email tokens purge error:', err.message)
   }
 }
 
