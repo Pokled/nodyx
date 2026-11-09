@@ -18,6 +18,24 @@ export const KIND_ICON: Record<EventKind, string> = {
 /** Qui a agi : le moteur, l'équipe, ou rien (observation). */
 export type EventSource = 'octoguard' | 'team' | 'observed'
 
+const ladderKind = (s: unknown): 'warn' | 'mute' | 'ban' =>
+	typeof s === 'string' && s.startsWith('mute') ? 'mute' : typeof s === 'string' && s.startsWith('ban') ? 'ban' : 'warn'
+
+/**
+ * Les valeurs qu'une phrase du journal peut utiliser. Le barème a besoin de plus
+ * que la règle et l'auteur : le membre visé, la durée, l'étape.
+ */
+export function eventVars(l: Pick<OgLog, 'metadata' | 'actor_username' | 'target_label'>, tFn: (k: string, v?: Record<string, unknown>) => string): Record<string, string | number> {
+	const md = l.metadata ?? {}
+	return {
+		rule: md.rule_name ?? '',
+		who: l.actor_username ?? '',
+		name: l.target_label ?? '',
+		step: md.step ?? '',
+		d: typeof md.sanction === 'string' && md.sanction !== 'warn' ? tFn(`og2.lad_d_${md.sanction}`) : '',
+	}
+}
+
 export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKind; key: string; source: EventSource } {
 	// Le nom d'action sans son préfixe « octoguard. » : ce ne sont pas des clés de traduction.
 	const a = l.action.replace(/^octoguard\./, '')
@@ -39,6 +57,17 @@ export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKin
 		case 'held_refused': return { kind: 'delete', key: 'ev_held_refused', source: 'team' }
 		case 'held_expired': return { kind: 'observe', key: 'ev_held_expired', source: 'octoguard' }
 		case 'hate_symbol_blocked': return { kind: 'delete', key: 'ev_hate', source: 'octoguard' }
+		// Le barème (lot 4b) : la phrase dépend de la sanction (« a mis Rémi en sourdine 1 heure »)
+		case 'ladder_applied': {
+			const k = ladderKind(l.metadata?.sanction)
+			return { kind: k === 'warn' ? 'warn' : 'delete', key: `ev_ladder_applied_${k}`, source: 'team' }
+		}
+		case 'ladder_approved': return { kind: 'delete', key: 'ev_ladder_approved', source: 'team' }
+		case 'ladder_proposed': return { kind: 'report', key: 'ev_ladder_proposed', source: 'team' }
+		case 'ladder_refused': return { kind: 'ok', key: 'ev_ladder_refused', source: 'team' }
+		case 'ladder_expired': return { kind: 'observe', key: 'ev_ladder_expired', source: 'octoguard' }
+		case 'ladder_undone': return { kind: 'ok', key: 'ev_ladder_undone', source: 'team' }
+		case 'ladder_settings': return { kind: 'acc', key: 'ev_config', source: 'team' }
 	}
 	if (/^(rule|profile|command|welcome|webhook)_/.test(a)) return { kind: 'acc', key: 'ev_config', source: 'team' }
 	return { kind: 'observe', key: 'ev_other', source: auto ? 'octoguard' : 'team' }

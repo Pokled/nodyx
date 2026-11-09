@@ -10,6 +10,9 @@
 	import { LEVEL_ICON } from '$lib/octoguard/rules'
 	import { htmlToText } from '$lib/octoguard/text'
 	import ContextView from '$lib/components/octoguard/ContextView.svelte'
+	import LadderGauge from '$lib/components/octoguard/LadderGauge.svelte'
+	import LadderAction from '$lib/components/octoguard/LadderAction.svelte'
+	import { loadMemberLadder, type MemberLadder } from '$lib/octoguard/ladder'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -17,6 +20,9 @@
 	const token = $derived(((page.data as any).token as string | null) ?? null)
 	const access = $derived((page.data as any).access as { permissions: string[] } | undefined)
 	const canDeleteContent = $derived(!!access?.permissions.includes('moderate_content'))
+	const canMembers = $derived(!!access?.permissions.includes('moderate_members'))
+	const canBan = $derived(!!access?.permissions.includes('ban_members'))
+	const myId = $derived(((page.data as any).user?.id as string | undefined))
 
 	type Report = {
 		id: string; target_type: string; target_id: string; category: string | null; reason: string; source?: string
@@ -72,6 +78,19 @@
 			.catch((e) => { ctxCache[path] = e instanceof OgError && (e.code === 'CONTENT_GONE' || e.status === 404) ? 'gone' : 'error' })
 	})
 	const ctxOk = $derived(ctx && typeof ctx === 'object' ? ctx : null)
+
+	// Le barème (lot 4b) : où en est l'auteur du contenu signalé
+	let ladderCache = $state<Record<string, MemberLadder>>({})
+	const ladderUser = $derived(data.tab === 'open' ? (selCase?.first.target_author_id ?? null) : null)
+	const ladder = $derived(ladderUser ? (ladderCache[ladderUser] ?? null) : null)
+	async function loadLadder(id: string) {
+		try { ladderCache[id] = await loadMemberLadder(token, id) } catch { /* la jauge reste simplement absente */ }
+	}
+	$effect(() => { const id = ladderUser; if (id && !ladderCache[id]) loadLadder(id) })
+	async function ladderChanged() {
+		if (ladderUser) await loadLadder(ladderUser)
+		await invalidateAll()
+	}
 
 	const TABS = $derived([
 		{ id: 'open', label: tFn('og2.rp_tab_open'), n: cases.length && data.tab === 'open' ? cases.length : data.openCount },
@@ -321,9 +340,21 @@
 					</div>
 				{:else if selCase}
 					{@const r = selCase.first}
+					{#if r.target_author_id}
+						<div class="adm-card og-rp-card">
+							<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: r.target_author_username ?? '' })}</h2>
+							{#if ctxOk?.author}{@render facts(ctxOk.author)}{/if}
+							{#if data.tab === 'open'}<LadderGauge state={ladder} />{/if}
+							<a class="adm-btn adm-btn--sm" href="/admin/members/{r.target_author_id}"><Icon d={KIND_ICON.user} />{tFn('amem.open_file')}</a>
+						</div>
+					{/if}
 					{#if data.tab === 'open'}
 						<div class="adm-card og-rp-card">
 							<h2 class="og-rp-h">{tFn('og2.rp_decide')}</h2>
+							{#if r.target_author_id}
+								<LadderAction {token} userId={r.target_author_id} username={r.target_author_username ?? ''} reportId={r.id}
+									state={ladder} {canMembers} {canBan} {myId} onChanged={ladderChanged} />
+							{/if}
 							{#if r.claimed_by_username}
 								<span class="og-meta"><Icon d={LEVEL_ICON.observe} />{tFn('areports.claimed_by', { name: r.claimed_by_username })}</span>
 							{:else}
@@ -352,13 +383,6 @@
 								{#if r.reviewed_at} · {ago(r.reviewed_at)}{/if}
 							</p>
 							{#if r.resolution}<p class="og-rp-reason">« {r.resolution} »</p>{/if}
-						</div>
-					{/if}
-					{#if r.target_author_id}
-						<div class="adm-card og-rp-card">
-							<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: r.target_author_username ?? '' })}</h2>
-							{#if ctxOk?.author}{@render facts(ctxOk.author)}{/if}
-							<a class="adm-btn adm-btn--sm" href="/admin/members/{r.target_author_id}"><Icon d={KIND_ICON.user} />{tFn('amem.open_file')}</a>
 						</div>
 					{/if}
 				{/if}

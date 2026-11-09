@@ -681,7 +681,9 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
     const { rows } = await db.query(
-      `SELECT cm.*, u.username AS user_username
+      `SELECT cm.*, u.username AS user_username,
+              -- La sourdine posée par le barème : son étape (l'écran affiche « Barème, étape 2 »)
+              (SELECT l.step FROM octoguard_ladder l WHERE l.mute_id = cm.id AND l.status = 'applied' LIMIT 1) AS ladder_step
          FROM chat_mutes cm
          JOIN users u ON u.id = cm.user_id
          ${where}

@@ -8,7 +8,7 @@
 	import { og } from '$lib/octoguard/api'
 	import type { PageData } from './$types'
 
-	type Mute = { id: string; user_id: string; user_username: string | null; channel_id: string | null; reason: string | null; applied_by: string | null; applied_at: string; expires_at: string | null }
+	type Mute = { id: string; user_id: string; user_username: string | null; channel_id: string | null; reason: string | null; applied_by: string | null; applied_at: string; expires_at: string | null; ladder_step?: number | null }
 	let { data }: { data: PageData } = $props()
 	const tFn = $derived($t)
 	const token = $derived(((page.data as any).token as string | null) ?? null)
@@ -73,6 +73,7 @@
 						<span class="og-ic og-k-delete"><Icon d="M11 5L6 9H3v6h3l5 4z M22 9l-6 6 M16 9l6 6" /></span>
 						<div class="og-row-body">
 							<div><a class="og-linkbtn" href="/admin/members/{m.user_id}">{m.user_username ?? m.user_id.slice(0, 8)}</a> · {tFn(m.channel_id ? 'og2.mute_one_channel' : 'og2.mute_everywhere')}</div>
+							{#if m.ladder_step}<p class="og-meta">{tFn('og2.lad_mute_reason', { n: m.ladder_step })}</p>{/if}
 							{#if m.reason}<p class="og-quote">{m.reason}</p>{/if}
 							<div class="og-meta">{tFn(m.applied_by ? 'og2.mute_by_team' : 'og2.mute_by_og')} · <b>{left(m.expires_at)}</b></div>
 						</div>

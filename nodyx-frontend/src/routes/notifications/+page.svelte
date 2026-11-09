@@ -32,6 +32,8 @@
 		moderation_warning: '!',
 		held_approved: '✓',
 		held_refused: '×',
+		ladder_pending: '⚖',
+		ladder_expired: '⚖',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
@@ -45,6 +47,14 @@
 		held_approved: tFn('notifications.held_approved_label'),
 		held_refused: tFn('notifications.held_refused_label'),
 	});
+
+	// Les étiquettes qui nomment quelqu'un (le barème) ou dépendent d'un motif
+	function labelOf(n: any): string {
+		if (n.type === 'ladder_pending') return tFn('notifications.ladder_pending_label', { name: n.meta?.username ?? '' })
+		if (n.type === 'ladder_expired') return tFn('notifications.ladder_expired_label', { name: n.meta?.username ?? '' })
+		if (n.type === 'moderation_warning' && !n.meta?.reason) return tFn('notifications.moderation_warning_plain')
+		return TYPE_LABEL[n.type] ?? n.type
+	}
 
 	function formatDate(iso: string) {
 		return new Date(iso).toLocaleDateString($locale, {
@@ -133,7 +143,7 @@
 							{#if notif.actor_username}
 								<span class="font-semibold text-[var(--nx-text)]">{notif.actor_username}</span>
 							{/if}
-							{TYPE_LABEL[notif.type] ?? notif.type}
+							{labelOf(notif)}
 							{#if notif.type === 'held_refused' && notif.meta?.expired}
 								<span class="block mt-1 text-[var(--nx-text-muted)]">{tFn('notifications.held_expired_hint')}</span>
 							{/if}
@@ -152,6 +162,9 @@
 
 					<!-- Actions -->
 					<div class="flex items-center gap-2 shrink-0">
+						{#if (notif.type === 'ladder_pending' || notif.type === 'ladder_expired') && notif.meta?.user_id}
+							<a href="/admin/members/{notif.meta.user_id}" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.open_file')}</a>
+						{/if}
 						{#if notif.category_id && notif.thread_id}
 							<button
 								onclick={() => markReadAndNavigate(notif)}

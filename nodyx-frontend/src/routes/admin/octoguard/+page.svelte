@@ -6,7 +6,7 @@
 	import Icon from '$lib/components/octoguard/Icon.svelte'
 	import { og } from '$lib/octoguard/api'
 	import { LEVEL_ICON, intendedOf, type Level, type Rule } from '$lib/octoguard/rules'
-	import { eventOf, KIND_ICON } from '$lib/octoguard/events'
+	import { eventOf, eventVars, KIND_ICON } from '$lib/octoguard/events'
 	import GuideArt from '$lib/components/octoguard/GuideArt.svelte'
 	import type { PageData } from './$types'
 
@@ -204,7 +204,7 @@
 						<div class="og-row">
 							<span class="og-ic og-k-{ev.kind}"><Icon d={KIND_ICON[ev.kind]} /></span>
 							<div class="og-row-body">
-								<div>{tFn(`og2.${ev.key}`, { rule: l.metadata?.rule_name ?? '', who: l.actor_username ?? '' })}</div>
+								<div>{tFn(`og2.${ev.key}`, eventVars(l, tFn))}</div>
 								<div class="og-meta">{#if l.target_label && !l.target_label.startsWith('octoguard' + '.')}{tFn('og2.quoted', { t: l.target_label.slice(0, 90) })} · {/if}{ago(l.created_at)}</div>
 							</div>
 						</div>
