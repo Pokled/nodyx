@@ -35,9 +35,13 @@ export function expiryFrom(duration: Duration | null | undefined, now = Date.now
 export interface TempBanInput {
   userId:   string
   duration: Duration | null | undefined
-  reason:   string
+  reason:   string | null
   ruleId?:  string | null
   eventId?: string
+  /** Qui exclut (l'équipe via le barème). Absent = OctoGuard. */
+  actorId?: string | null
+  /** true : l'appelant écrit lui-même au journal (le barème : une seule entrée par étape). */
+  silent?:  boolean
 }
 
 /** Délai de grâce ajouté à la marque Redis : la levée tourne chaque minute. */
@@ -103,7 +107,7 @@ export async function applyTempBan(input: TempBanInput): Promise<boolean> {
     // exclusion prolongée garde ce que le membre était AVANT la première.
     const { rows } = await db.query<{ user_id: string; expires_at: string }>(
       `INSERT INTO community_bans (community_id, user_id, banned_by, reason, expires_at, prev_role, prev_grade_id, prev_joined_at)
-       VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)
+       VALUES ($1, $2, $8, $3, $4, $5, $6, $7)
        ON CONFLICT (community_id, user_id) DO UPDATE
          SET expires_at     = GREATEST(community_bans.expires_at, EXCLUDED.expires_at),
              reason         = EXCLUDED.reason,
@@ -112,14 +116,14 @@ export async function applyTempBan(input: TempBanInput): Promise<boolean> {
              prev_joined_at = COALESCE(community_bans.prev_joined_at, EXCLUDED.prev_joined_at)
          WHERE community_bans.expires_at IS NOT NULL
        RETURNING user_id, expires_at`,
-      [communityId, input.userId, input.reason, expiresAt, prev?.role ?? null, prev?.grade_id ?? null, prev?.joined_at ?? null]
+      [communityId, input.userId, input.reason, expiresAt, prev?.role ?? null, prev?.grade_id ?? null, prev?.joined_at ?? null, input.actorId ?? null]
     )
     if (!rows[0]) return true // déjà banni définitivement
     // Les sessions déjà ouvertes sont bloquées tout de suite, jusqu'à l'échéance
     await setBanMark(input.userId, rows[0].expires_at)
     await db.query(`DELETE FROM community_members WHERE community_id = $1 AND user_id = $2 AND role NOT IN ('owner', 'admin')`, [communityId, input.userId])
     await invalidatePermissions(communityId)
-    logOctoGuardAction({
+    if (!input.silent) logOctoGuardAction({
       action:       'octoguard.ban_temp_user',
       target_type:  'user',
       target_id:    input.userId,

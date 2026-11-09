@@ -32,6 +32,7 @@ import { planLearning, ACTED_BY_ENGINE, type LogMeta } from '../services/octogua
 import { reportContext, heldContext } from '../services/octoguard/context'
 import { listPending, countPending, approveHeld, refuseHeld, listMine, forAuthor, HELD_EXPIRY_HOURS } from '../services/octoguard/held'
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
+import { closeReports } from '../services/octoguard/reportClose'
 import * as NotificationModel from '../models/notification'
 import * as PostModel from '../models/post'
 import * as ThreadModel from '../models/thread'
@@ -1149,35 +1150,13 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
       }
     }
 
-    // Le dossier se ferme pour TOUS les signalements ouverts du même contenu
-    const { rows } = await db.query<{ id: string; reporter_id: string | null }>(
-      `UPDATE reports
-          SET status      = $1,
-              resolution  = COALESCE($2, resolution),
-              reviewed_by = $3,
-              reviewed_at = NOW()
-        WHERE target_type = $4 AND target_id = $5 AND (status = 'open' OR id = $6)
-        RETURNING id, reporter_id`,
-      [body.status, body.resolution ?? null, actor.userId, report.target_type, report.target_id, id]
-    )
+    // Le dossier se ferme pour TOUS les signalements ouverts du même contenu, et
+    // chaque personne qui a signalé est prévenue (services/octoguard/reportClose.ts)
+    const closed = await closeReports(report, body.status!, actor.userId, body.resolution ?? null)
     await logAdminAction(actor.userId, `report_${body.status}`, report.target_type, report.target_id, null, {
-      reports: rows.length, deleted: !!body.delete_content, resolution: body.resolution ?? null,
+      reports: closed.resolved, deleted: !!body.delete_content, resolution: body.resolution ?? null,
     })
-
-    // D6 : chaque signaleur apprend que son signalement a été traité, sans
-    // détail de la décision (ni qui, ni quelle sanction).
-    const reporters = [...new Set(rows.map(r => r.reporter_id).filter((x): x is string => !!x))]
-    for (const reporterId of reporters) {
-      try {
-        await NotificationModel.create({ user_id: reporterId, type: 'report_resolved' })
-        if (io) {
-          const count = await NotificationModel.getUnreadCount(reporterId)
-          io.to(`user:${reporterId}`).emit('notification:new', { unreadCount: count })
-        }
-      } catch { /* une notification ratée ne bloque jamais la modération */ }
-    }
-
-    return reply.send({ resolved: rows.length, notified: reporters.length })
+    return reply.send({ resolved: closed.resolved, notified: closed.notified })
   })
 
   // ─── Reports settings (anti-abuse) ────────────────────────────────────────
