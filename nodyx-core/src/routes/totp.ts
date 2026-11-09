@@ -142,7 +142,7 @@ export default async function totpRoutes(fastify: FastifyInstance) {
     // Récupère la session pending depuis Redis
     const pendingData = await redis.get(`totp_pending:${totp_pending}`)
     if (!pendingData) {
-      return reply.code(401).send({ error: 'Session expirée. Reconnectez-vous.', code: 'SESSION_EXPIRED' })
+      return reply.code(401).send({ error: 'Session expirée. Reconnecte-toi.', code: 'SESSION_EXPIRED' })
     }
 
     const { userId, token } = JSON.parse(pendingData) as { userId: string; token: string }

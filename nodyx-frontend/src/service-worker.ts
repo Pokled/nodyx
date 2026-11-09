@@ -234,8 +234,8 @@ function offlineHTML(): string {
 <body>
   <div class="card">
     <div class="icon">⚡</div>
-    <h1>Vous êtes hors ligne</h1>
-    <p>Nodyx n'a pas pu se connecter au réseau.<br>Vérifiez votre connexion et réessayez.</p>
+    <h1>Tu es hors ligne</h1>
+    <p>Nodyx n'a pas pu se connecter au réseau.<br>Vérifie ta connexion et réessaie.</p>
     <button onclick="location.reload()">Réessayer</button>
   </div>
 </body>

@@ -148,6 +148,10 @@ le champ pour être corrigé.
 - Un peu de ménage dans les traductions : 158 phrases que plus rien n'affichait (l'ancien
   OctoGuard, l'ancienne page des signalements, quelques restes) quittent les fichiers de langue.
   Pour les traducteurs, c'est autant de lignes qu'ils n'auront pas à traduire pour rien.
+- **Nodyx te tutoie.** Le français mélangeait « tu » et « vous », parfois dans la même phrase.
+  C'est « tu » partout maintenant : l'interface, les e-mails, les messages d'erreur. Une
+  communauté, ça se tutoie, et ça parle plus simplement aux plus jeunes. Le « vous » reste là
+  où il veut dire « vous tous », et dans les textes juridiques.
 
 Merci à celles et ceux qui animent leur communauté sur Nodyx et nous disent quand quelque chose
 coince. C'est pour vous qu'on prend le temps de bien faire, même quand ça prend plus longtemps que

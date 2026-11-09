@@ -523,7 +523,7 @@ export default async function userRoutes(app: FastifyInstance) {
       if (count === 1) await redis.expire(key, 600)
       if (count > 10) {
         reply.header('Retry-After', String(await redis.ttl(key)))
-        return reply.code(429).send({ error: 'Trop d\'uploads. Réessayez dans quelques minutes.', code: 'RATE_LIMITED' })
+        return reply.code(429).send({ error: 'Trop d\'uploads. Réessaie dans quelques minutes.', code: 'RATE_LIMITED' })
       }
     }],
   }, async (request, reply) => {

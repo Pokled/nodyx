@@ -192,7 +192,7 @@ export default async function directoryRoutes(app: FastifyInstance) {
       return reply.status(400).send({
         error: 'This slug is reserved for Nodyx infrastructure',
         code: 'SLUG_RESERVED',
-        hint: 'Choisissez un autre nom : celui-ci designe un service de la plateforme.',
+        hint: 'Choisis un autre nom : celui-ci désigne un service de la plateforme.',
       });
     }
 
@@ -713,7 +713,7 @@ export default async function directoryRoutes(app: FastifyInstance) {
         return reply.status(400).send({
           error: 'ip is not publicly routable',
           code: 'IP_NOT_ROUTABLE',
-          hint: "Votre instance enregistre peut-etre l'adresse du proxy au lieu de celle du visiteur.",
+          hint: "Ton instance enregistre peut-être l'adresse du proxy au lieu de celle du visiteur.",
         })
       }
 

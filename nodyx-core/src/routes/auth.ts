@@ -58,7 +58,7 @@ async function forgotPasswordRateLimit(request: FastifyRequest, reply: FastifyRe
   if (count > 3) {
     reply.header('Retry-After', String(15 * 60))
     return reply.code(429).send({
-      error: 'Trop de tentatives. Réessayez dans 15 minutes.',
+      error: 'Trop de tentatives. Réessaie dans 15 minutes.',
       code:  'RATE_LIMITED',
     })
   }
@@ -73,7 +73,7 @@ async function loginRateLimit(request: FastifyRequest, reply: FastifyReply): Pro
     const ttl = await redis.ttl(key)
     reply.header('Retry-After', String(ttl))
     return reply.code(429).send({
-      error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
+      error: 'Trop de tentatives de connexion. Réessaie dans 15 minutes.',
       code:  'RATE_LIMITED',
     })
   }
@@ -87,7 +87,7 @@ async function registerRateLimit(request: FastifyRequest, reply: FastifyReply): 
   if (count > 5) {
     reply.header('Retry-After', String(60 * 60))
     return reply.code(429).send({
-      error: 'Trop de créations de compte depuis cette IP. Réessayez dans une heure.',
+      error: 'Trop de créations de compte depuis cette IP. Réessaie dans une heure.',
       code:  'RATE_LIMITED',
     })
   }
@@ -354,7 +354,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     // Block login if email not verified
     if (user.email_verified === false) {
-      return reply.code(403).send({ error: 'Veuillez confirmer votre adresse email avant de vous connecter.', code: 'EMAIL_NOT_VERIFIED' })
+      return reply.code(403).send({ error: 'Confirme ton adresse email avant de te connecter.', code: 'EMAIL_NOT_VERIFIED' })
     }
 
     // Block banned users — check Redis first (fast), then DB as fallback for pre-existing bans
@@ -540,7 +540,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     // Toujours la même réponse (anti-énumération)
     return reply.send({
-      message: 'Si cet email est enregistré, vous recevrez un lien de réinitialisation.',
+      message: 'Si cet email est enregistré, tu recevras un lien de réinitialisation.',
     })
   })
 
@@ -602,7 +602,7 @@ export default async function authRoutes(app: FastifyInstance) {
     // Invalider toutes les sessions actives de l'utilisateur
     await invalidateUserSessions(userId)
 
-    return reply.send({ message: 'Mot de passe réinitialisé. Vous pouvez vous connecter.' })
+    return reply.send({ message: 'Mot de passe réinitialisé. Tu peux te connecter.' })
   })
 
   // ── Vérification email ────────────────────────────────────────────────────
@@ -657,7 +657,7 @@ export default async function authRoutes(app: FastifyInstance) {
     if (countEmail === 1) await redis.expire(rateLimitKey, 5 * 60)
     if (countIp === 1)    await redis.expire(rateLimitIp, 5 * 60)
     if (countEmail > 1 || countIp > 3) {
-      return reply.code(429).send({ error: 'Un email a déjà été envoyé récemment. Attendez 5 minutes.', code: 'RATE_LIMITED' })
+      return reply.code(429).send({ error: 'Un email a déjà été envoyé récemment. Attends 5 minutes.', code: 'RATE_LIMITED' })
     }
 
     const user = await UserModel.findByEmail(email)

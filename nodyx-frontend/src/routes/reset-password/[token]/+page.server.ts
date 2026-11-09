@@ -7,7 +7,7 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 
   if (!res.ok) {
     error(400, {
-      message: 'Ce lien de réinitialisation est invalide ou a expiré. Veuillez faire une nouvelle demande.',
+      message: 'Ce lien de réinitialisation est invalide ou a expiré. Fais une nouvelle demande.',
     })
   }
 
@@ -36,7 +36,7 @@ export const actions: Actions = {
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
       return fail(res.status, {
-        error: json.error ?? 'Le lien a expiré. Veuillez faire une nouvelle demande.',
+        error: json.error ?? 'Le lien a expiré. Fais une nouvelle demande.',
       })
     }
 

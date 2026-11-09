@@ -15,7 +15,7 @@ export const actions: Actions = {
     })
 
     if (!res.ok && res.status === 429) {
-      return fail(429, { error: 'Trop de tentatives. Réessayez dans 15 minutes.' })
+      return fail(429, { error: 'Trop de tentatives. Réessaie dans 15 minutes.' })
     }
 
     // Toujours afficher le message de succès (anti-énumération)

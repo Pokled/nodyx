@@ -234,7 +234,7 @@
 					{@const members = inThisChannel
 						? [
 								...voiceState.peers.map((p: any) => ({ username: p.username, avatar: p.avatar ?? null, speaking: p.speaking ?? false })),
-								{ username: myUsername || 'Vous', avatar: myAvatar ?? null, speaking: voiceState.mySpeaking },
+								{ username: myUsername || tFn('common.you'), avatar: myAvatar ?? null, speaking: voiceState.mySpeaking },
 							]
 						: (voiceChannelMembers[ch.id] ?? []).map((m: any) => ({ ...m, speaking: false }))}
 					{#if members.length > 0}
