@@ -73,6 +73,13 @@ Quelques trous trouvés en chemin, et bouchés :
   chiffrait ses messages que pour un seul de ses membres, et les autres recevaient des messages
   illisibles. Un groupe part donc en clair, et l'écran le dit avant de le créer. Un groupe compte
   dix personnes au plus.
+- **Changer vite de conversation pouvait chiffrer un message pour la mauvaise personne.** Si
+  l'on quittait une conversation pendant que sa clé arrivait, cette clé se posait sur la
+  suivante, et le message écrit là devenait illisible pour son destinataire, même après
+  rechargement. Le message chiffré part aussi toujours dans la conversation où il a été écrit.
+  Dans la foulée : une erreur ou une réponse en cours ne suit plus d'une conversation à l'autre,
+  un message n'est plus perdu sans un mot quand la connexion n'est pas prête, et le bandeau
+  « chiffrés de bout en bout » ne s'affiche plus sur une conversation qui part en clair.
 
 - **Une exclusion temporaire pouvait devenir définitive.** Si la personne exclue tentait de se
   reconnecter pendant son exclusion, elle restait bloquée pour toujours, même une fois sa peine

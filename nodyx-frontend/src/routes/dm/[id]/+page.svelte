@@ -125,17 +125,28 @@
 		// recevaient des messages illisibles. Un groupe part donc en clair, et
 		// le panneau d'invitation le dit avant de le créer.
 		if (conversation.is_group) { e2eStatus = 'inactive'; return }
+		// Tout ce qui suit attend le réseau (jusqu'à ~2 s avec le nouvel essai).
+		// Si on change de conversation entre-temps, ce calcul appartient à
+		// l'ANCIENNE : il ne doit plus rien poser. Avant le 08/11, la clé du
+		// correspondant de A finissait sur B, et le message suivant dans B était
+		// chiffré pour la mauvaise personne (illisible pour son destinataire).
+		const cid = conversationId
+		const peerName = conversation.other_username
+		const stale = () => cid !== conversationId
 		try {
 			// 0. Nouvel appareil ? backup serveur présent mais pas de clé locale →
 			//    proposer la restauration AVANT de générer une clé neuve (sinon on
 			//    perdrait l'accès à l'historique chiffré).
-			if (!restoreDismissed && await shouldOfferRestore(data.token)) {
+			const offerRestore = !restoreDismissed && await shouldOfferRestore(data.token)
+			if (stale()) return
+			if (offerRestore) {
 				showRestore = true
 				return
 			}
 
 			// 1. Init keypair local + enregistrer sur le serveur
 			const registered = await registerPublicKey(data.token)
+			if (stale()) return
 			if (!registered) {
 				e2eStatus = 'inactive'
 				return
@@ -152,17 +163,19 @@
 
 			// 2. Récupérer la clé publique du peer — un essai, puis un seul retry
 			// après 1,5s si absent (cf. note 1bis ci-dessus).
-			peerPublicKey = await fetchPeerPublicKey(conversation.other_username, data.token)
-			if (!peerPublicKey) {
+			let peer = await fetchPeerPublicKey(peerName, data.token)
+			if (!peer && !stale()) {
 				await new Promise(r => setTimeout(r, 1500))
-				peerPublicKey = await fetchPeerPublicKey(conversation.other_username, data.token)
+				if (!stale()) peer = await fetchPeerPublicKey(peerName, data.token)
 			}
 
 			// 3. Charger la clé ESY de l'instance
-			try {
-				esyKey = await loadEsyKey(data.token)
-				esyFingerprint = esyKey.fingerprint
-			} catch { esyKey = null }
+			let esy: typeof esyKey = null
+			try { esy = await loadEsyKey(data.token) } catch { esy = null }
+			if (stale()) return
+			peerPublicKey = peer
+			esyKey = esy
+			if (esy) esyFingerprint = esy.fingerprint
 
 			// 4. Déterminer le statut E2E
 			if (peerPublicKey) {
@@ -178,28 +191,36 @@
 			//    → on explique et on propose, une seule fois (sauf si déjà ignoré).
 			try {
 				if (e2eStatus === 'active' || e2eStatus === 'partial') {
-					hasBackup = await hasServerBackup(data.token)
+					const backup = await hasServerBackup(data.token)
+					if (stale()) return
+					hasBackup = backup
 					sendGuardAck = localStorage.getItem('nodyx_e2e_send_ack') === '1'
 					const dismissed = localStorage.getItem('nodyx_e2e_banner_dismissed') === '1'
-					if (!dismissed) showE2eBanner = !hasBackup
+					// « Tes messages sont chiffrés de bout en bout » : seulement quand
+					// c'est vrai. En mode partiel, ils partent en clair.
+					if (!dismissed) showE2eBanner = e2eStatus === 'active' && !hasBackup
 				}
 			} catch { /* ignore */ }
 		} catch {
-			e2eStatus = 'inactive'
+			if (!stale()) e2eStatus = 'inactive'
 		}
 	}
 
 	async function decryptPendingMessages() {
 		if (!peerPublicKey) return
+		const cid = conversationId, peer = peerPublicKey
 		// Mémoriser si on était au fond AVANT le re-rendu : si le user lit
 		// son historique en haut, on ne veut pas le téléporter en bas après
 		// déchiffrement. Sinon, on suit l'élargissement.
 		const stickToBottom = isNearBottom()
 		const updated = await Promise.all(messages.map(async (m) => {
 			if (!m.is_encrypted || !m.encryption_nonce || m._decrypted !== undefined) return m
-			const plain = await decryptDM(m.content, m.encryption_nonce, peerPublicKey!, data.token)
+			const plain = await decryptDM(m.content, m.encryption_nonce, peer, data.token)
 			return { ...m, _decrypted: plain ?? undefined, _decryptFailed: plain === null }
 		}))
+		// Conversation changée pendant le déchiffrement : ces messages sont ceux
+		// de l'ancienne, ils n'écrasent pas la liste de la nouvelle
+		if (cid !== conversationId) return
 		messages = updated
 		if (stickToBottom) {
 			await tick()
@@ -215,6 +236,18 @@
 		messages = data.messages ?? []
 		hasMore = (data.messages ?? []).length >= 50
 		messageInput = ''
+		// Ce qui appartenait à la conversation précédente ne la suit pas
+		sendError = ''
+		replyingTo = null
+		editingMsgId = null
+		editingContent = ''
+		lastPlainSent = ''
+		showSendGuard = false
+		showInvite = false
+		inviteQuery = ''
+		inviteResults = []
+		inviteError = ''
+		showE2eBanner = false
 		typingLabel = ''
 		typingUsers.clear()
 		peerPublicKey = null
@@ -249,6 +282,19 @@
 	let editingMsgId: string | null = $state(null)
 	let editingContent = $state('')
 
+	let destroyed = false
+	let socketWait: ReturnType<typeof setInterval> | null = null
+	const onReadAck = () => {}
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const dmListeners: Array<[string, (...a: any[]) => unknown]> = [
+		['dm:message', onDmMessage], ['dm:typing', onDmTyping], ['dm:edited', onDmEdited],
+		['dm:deleted', onDmDeleted], ['dm:reaction_update', onDmReactionUpdate],
+		['dm:group_created', onGroupCreated], ['dm:read_ack', onReadAck], ['chat:blocked', onDmBlocked],
+	]
+	function attachListeners(sock: NonNullable<ReturnType<typeof getSocket>>) {
+		for (const [ev, fn] of dmListeners) { sock.off(ev, fn); sock.on(ev, fn) }
+	}
+
 	onMount(async () => {
 		const res = await apiFetch(fetch, '/users/me', {
 			headers: { Authorization: `Bearer ${data.token}` }
@@ -264,35 +310,20 @@
 		// occupent (ResizeObserver + dépendance sur conversationId + dépendance
 		// sur messages.length). Tout est piloté par le state.
 
-		// Écoute socket DM — attendre que le socket soit prêt si nécessaire
-		const attachListeners = (sock: ReturnType<typeof getSocket>) => {
-			if (!sock) return
-			sock.off('dm:message', onDmMessage)
-			sock.off('dm:typing', onDmTyping)
-			sock.off('dm:edited', onDmEdited)
-			sock.off('dm:deleted', onDmDeleted)
-			sock.off('dm:reaction_update', onDmReactionUpdate)
-			sock.off('dm:group_created', onGroupCreated)
-			sock.off('chat:blocked', onDmBlocked)
-			sock.on('dm:message', onDmMessage)
-			sock.on('dm:typing', onDmTyping)
-			sock.on('dm:edited', onDmEdited)
-			sock.on('dm:deleted', onDmDeleted)
-			sock.on('dm:reaction_update', onDmReactionUpdate)
-			sock.on('dm:group_created', onGroupCreated)
-			sock.on('dm:read_ack', () => {})
-			sock.on('chat:blocked', onDmBlocked)
-		}
+		// Écoute socket DM : UNE liste, la même pour attacher et pour retirer.
+		// Avant le 08/11, la sortie de page n'en retirait que 4 sur 8 : à chaque
+		// visite, un jeu d'écouteurs de plus restait accroché au socket.
+		if (destroyed) return
 		const sock = getSocket()
 		if (sock) {
 			attachListeners(sock)
 		} else {
-			// Socket pas encore initialisé — poll court jusqu'à disponibilité
-			const interval = setInterval(() => {
+			// Socket pas encore initialisé : on attend tant que la page est ouverte
+			// (avant : abandon au bout de 5 s, et la page restait sans temps réel)
+			socketWait = setInterval(() => {
 				const s = getSocket()
-				if (s) { clearInterval(interval); attachListeners(s) }
-			}, 100)
-			setTimeout(() => clearInterval(interval), 5000)
+				if (s) { clearInterval(socketWait!); socketWait = null; attachListeners(s) }
+			}, 250)
 		}
 
 		// Init E2E après le mount
@@ -300,13 +331,10 @@
 	})
 
 	onDestroy(() => {
+		destroyed = true
+		if (socketWait) clearInterval(socketWait)
 		const sock = getSocket()
-		if (sock) {
-			sock.off('dm:message', onDmMessage)
-			sock.off('dm:typing', onDmTyping)
-			sock.off('chat:blocked', onDmBlocked)
-			sock.off('dm:group_created', onGroupCreated)
-		}
+		if (sock) for (const [ev, fn] of dmListeners) sock.off(ev, fn)
 		// Cleanup des $effect (ResizeObserver, timeouts) est automatique
 		// via les return cleanup de chaque effect.
 	})
@@ -942,21 +970,34 @@
 
 		// Garde-fou : E2E actif, aucune sauvegarde de clé, pas encore acquitté →
 		// on alerte AVANT d'envoyer (perte définitive possible si l'appareil est perdu).
-		if ((e2eStatus === 'active' || e2eStatus === 'partial') && !hasBackup && !sendGuardAck) {
+		// (En mode partiel le message part en clair : rien à perdre, pas d'alerte.)
+		if (e2eStatus === 'active' && !hasBackup && !sendGuardAck) {
 			showSendGuard = true
+			return
+		}
+
+		// Pas de connexion temps réel : on le dit et on garde le texte. Avant,
+		// le champ était vidé et le message partait nulle part, sans un mot.
+		const sock = getSocket()
+		if (!sock) {
+			sendError = tFn('dm.err.not_connected')
 			return
 		}
 
 		sendingMsg = true
 		sendError = ''
+		// La conversation où l'on a ÉCRIT : le chiffrement prend du temps, on
+		// peut en changer avant l'envoi. Avant le 08/11, le message chiffré pour
+		// A partait dans B (illisible là-bas, jamais reçu par A).
+		const convId = conversationId
+		const peer = peerPublicKey
 		// On capture le replyingTo AVANT le clear (pour l'envoyer avec le message)
 		const replyId = replyingTo?.id ?? null
 		replyingTo = null
 
 		try {
-			const sock = getSocket()
 
-			if (e2eStatus === 'active' && peerPublicKey) {
+			if (e2eStatus === 'active' && peer) {
 				// ── E2E : animation barbare → chiffrement → envoi ──────────────
 				// 1. Afficher l'animation barbare pendant le chiffrement
 				if (esyKey) {
@@ -969,26 +1010,23 @@
 				// 23/09 le champ était vidé AVANT ce bloc, donc un échec de
 				// chiffrement (ex: instance.esy absent, cf issue #752) faisait
 				// disparaître le message sans jamais l'envoyer ni prévenir personne.
-				const { ciphertext, nonce } = await encryptDM(content, peerPublicKey, data.token)
-				messageInput = ''
+				const { ciphertext, nonce } = await encryptDM(content, peer, data.token)
+				// Toujours sur la conversation d'origine : sinon on viderait le champ de la nouvelle
+				if (conversationId === convId) messageInput = ''
 				sendingVisual = null
 
-				if (sock) {
-					sock.emit('dm:send', {
-						conversationId,
-						content: ciphertext,
-						is_encrypted: true,
-						encryption_nonce: nonce,
-						reply_to_id: replyId,
-					})
-				}
+				sock.emit('dm:send', {
+					conversationId: convId,
+					content: ciphertext,
+					is_encrypted: true,
+					encryption_nonce: nonce,
+					reply_to_id: replyId,
+				})
 			} else {
 				// ── Fallback texte clair ────────────────────────────────────────
 				messageInput = ''
 				lastPlainSent = content
-				if (sock) {
-					sock.emit('dm:send', { conversationId, content, reply_to_id: replyId })
-				}
+				sock.emit('dm:send', { conversationId: convId, content, reply_to_id: replyId })
 			}
 		} catch (err) {
 			console.error('[DM] sendMessage failed:', err)
