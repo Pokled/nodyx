@@ -71,7 +71,7 @@
 	{#if status}<p class={status.ok ? 'og-okmsg' : 'og-error'} role="status">{status.text}</p>{/if}
 	{#if !canEdit}<div class="og-note"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 11v5 M12 8h.01" />{tFn('og2.lad_readonly')}</div>{/if}
 
-	<div class="lad-steps">
+	<div class="lad-wrap"><div class="lad-steps">
 		{#each steps as s, i (i)}
 			<div class="lad-st {tone(i)}">
 				<div class="lad-bar" style="height:{(i + 1) * 20}px"></div>
@@ -89,7 +89,7 @@
 			<b>{tFn('og2.lad_t5')}</b>
 			<span class="og-help">{tFn('og2.lad_never_auto')}</span>
 		</div>
-	</div>
+	</div></div>
 
 	<div class="og-grid2">
 		<section class="adm-card lad-card">
@@ -119,6 +119,7 @@
 </div>
 
 <style>
+	.lad-wrap { container-type: inline-size; }
 	.lad-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: end; }
 	.lad-st { border: 1px solid var(--nx-border); border-radius: 10px; background: var(--nx-surface); padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 	.lad-n { font-size: 11px; font-weight: 650; color: var(--nx-text-faint, var(--nx-text-muted)); }
@@ -127,5 +128,9 @@
 	.lad-card { display: flex; gap: 14px; }
 	.lad-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.8125rem; }
 	.lad-sel { width: auto; }
-	@media (max-width: 760px) { .lad-steps { grid-template-columns: 1fr; } }
+	/* Les noms des sanctions doivent rester lisibles : sous ~860 px de large (la colonne des
+	   membres réduit la zone), les marches passent sur deux lignes, puis une seule colonne. */
+	.lad-st select { padding-inline: 8px; font-size: 0.8125rem; text-overflow: clip; }
+	@container (max-width: 860px) { .lad-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+	@container (max-width: 520px) { .lad-steps { grid-template-columns: 1fr; } }
 </style>

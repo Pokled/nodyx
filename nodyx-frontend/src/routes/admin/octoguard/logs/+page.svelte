@@ -114,7 +114,7 @@
 							<div>{tFn(`og2.${ev.key}`, eventVars(l, tFn))}</div>
 							{#if l.target_label && !l.target_label.startsWith('octoguard' + '.') && !ev.key.startsWith('ev_ladder')}<p class="og-quote">{l.target_label}</p>{/if}
 							<div class="og-meta">
-								{when(l.created_at)}{#if ev.source === 'team' && l.actor_username && !ev.key.startsWith('ev_ladder')} · {l.actor_username}{/if}{#if ev.source === 'observed'} · {tFn('og2.log_observed_note')}{/if}{#if l.metadata?.report_category} · {tFn('og2.lad_log_report', { cat: tFn(`report.cat_${l.metadata.report_category}`) })}{/if}
+								{when(l.created_at)}{#if ev.source === 'team' && l.actor_username && !ev.key.startsWith('ev_ladder')}{' · '}{l.actor_username}{/if}{#if ev.source === 'observed'}{' · '}{tFn('og2.log_observed_note')}{/if}{#if l.metadata?.report_category}{' · '}{tFn('og2.lad_log_report', { cat: tFn(`report.cat_${l.metadata.report_category}`) })}{/if}
 							</div>
 							{#if fpOpen === l.id}
 								<div class="og-fp" role="group" aria-label={tFn('og2.fp_title')}>
