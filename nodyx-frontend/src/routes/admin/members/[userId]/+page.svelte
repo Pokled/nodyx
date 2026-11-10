@@ -4,6 +4,11 @@
 	import type { PageData, ActionData } from './$types'
 	import { t, locale } from '$lib/i18n'
 	import { inkOn } from '$lib/adminTheme'
+	import { invalidateAll } from '$app/navigation'
+	import LadderGauge from '$lib/components/octoguard/LadderGauge.svelte'
+	import LadderAction from '$lib/components/octoguard/LadderAction.svelte'
+	import { og, OgError } from '$lib/octoguard/api'
+	import { loadMemberLadder, optionKey, kindOf, LADDER_ERR, type MemberLadder, type LadderEntry } from '$lib/octoguard/ladder'
 
 	const tFn = $derived($t)
 
@@ -42,6 +47,8 @@
 		'ban_user', 'unban_user', 'kick_member', 'change_role', 'voice_kick', 'reveal_email', 'warn_user',
 		'octoguard_delete_message', 'octoguard_mute_user', 'octoguard_unmute_user', 'octoguard_ban_temp_user',
 		'octoguard_notify', 'octoguard_action_undone',
+		'octoguard_ladder_applied', 'octoguard_ladder_proposed', 'octoguard_ladder_approved',
+		'octoguard_ladder_refused', 'octoguard_ladder_expired', 'octoguard_ladder_undone',
 	])
 	function auditLabel(action: string) {
 		const k = action.replace(/\./g, '_')
@@ -64,6 +71,22 @@
 
 	const errorText = $derived((form as any)?.errorKey ? tFn((form as any).errorKey) : null)
 	const okText = $derived((form as any)?.ok ? tFn(`afile.ok_${(form as any).ok}`) : null)
+
+	// Le barème (lot 4b) : la jauge, l'action, et l'historique des étapes
+	const token = $derived(((page.data as any).token as string | null) ?? null)
+	let ladder = $state<MemberLadder | null>(null)
+	let ladderErr = $state<string | null>(null)
+	async function loadLadder() {
+		try { ladder = await loadMemberLadder(token, m.id) } catch { ladder = null }
+	}
+	$effect(() => { if (m.id && canMembers) loadLadder() })
+	async function ladderChanged() { await loadLadder(); await invalidateAll() }
+	async function undoStep(e: LadderEntry) {
+		ladderErr = null
+		try { await og(token, `/ladder/${e.id}/undo`, 'POST'); await ladderChanged() }
+		catch (err) { ladderErr = tFn((err instanceof OgError && err.code && LADDER_ERR[err.code]) || 'areports.err_generic') }
+	}
+	const canUndo = (e: LadderEntry) => e.status === 'applied' && (kindOf(e.sanction) === 'ban' ? canBan : canMembers)
 
 	let warnReason = $state('')
 	let noteBody = $state('')
@@ -131,6 +154,26 @@
 	<div class="adm-file-grid">
 		<!-- ── Actions ──────────────────────────────────────────────────── -->
 		<section class="adm-card flex flex-col gap-4">
+			{#if canMembers && targetable && ladder}
+				<div class="flex flex-col gap-2">
+					<h2 class="adm-label">{tFn('og2.lad_title')}</h2>
+					<LadderGauge {ladder} />
+					<LadderAction {token} userId={m.id} username={m.username} {ladder} {canMembers} {canBan} {myId} onChanged={ladderChanged} />
+					{#if ladder.history.length}
+						<ul class="adm-lad-hist">
+							{#each ladder.history.slice(0, 6) as e (e.id)}
+								<li class:adm-lad-off={e.status !== 'applied' && e.status !== 'pending'}>
+									<span>{tFn('og2.lad_hist_line', { n: e.step, what: tFn(optionKey(e.sanction)) })}</span>
+									<span class="adm-hint">{tFn(`og2.lad_status_${e.status}`)} · {e.actor ?? 'OctoGuard'} · {fmt(e.created_at)}</span>
+									{#if canUndo(e)}<button type="button" class="adm-btn adm-btn--sm" onclick={() => undoStep(e)}>{tFn('og2.lad_undo')}</button>{/if}
+								</li>
+							{/each}
+						</ul>
+					{/if}
+					{#if ladderErr}<p class="adm-hint" role="alert" style="color:var(--nx-bad)">{ladderErr}</p>{/if}
+				</div>
+				<hr class="adm-sep" />
+			{/if}
 			<h2 class="adm-label">{tFn('afile.actions')}</h2>
 			{#if !targetable}
 				<p class="adm-hint">{isSelf ? tFn('afile.self') : tFn('afile.rank_hint')}</p>
@@ -284,3 +327,11 @@
 		{/if}
 	</section>
 </div>
+
+<style>
+	.adm-lad-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+	.adm-lad-hist li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 0.8125rem; }
+	.adm-lad-hist li > span:first-child { font-weight: 600; }
+	.adm-lad-off { opacity: 0.6; }
+	.adm-sep { border: 0; border-top: 1px solid var(--nx-border); margin: 4px 0; }
+</style>

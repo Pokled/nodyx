@@ -279,7 +279,7 @@ export async function applyLadder(actor: Actor, input: { user_id: string; expect
 
     if (pending) {
       if (report) await claimReports(report.id, actor.userId)
-      await notifySecondOpinion(actor.userId, ladderId, input.user_id)
+      await notifySecondOpinion(actor.userId, ladderId, input.user_id, who.username)
       journal('octoguard.ladder_proposed', input.user_id, who.username, actor.userId, meta)
       return { ok: true, status: 'pending', ladder_id: ladderId, step: next, sanction }
     }
@@ -297,10 +297,10 @@ export async function applyLadder(actor: Actor, input: { user_id: string; expect
 }
 
 /** Prévient les personnes qui peuvent donner le second avis (pas celle qui propose). */
-async function notifySecondOpinion(proposerId: string, ladderId: string, userId: string): Promise<void> {
+async function notifySecondOpinion(proposerId: string, ladderId: string, userId: string, username: string): Promise<void> {
   try {
     for (const id of await banCapableIds(proposerId)) {
-      await NotificationModel.create({ user_id: id, type: 'ladder_pending', actor_id: proposerId, meta: { ladder_id: ladderId, user_id: userId } })
+      await NotificationModel.create({ user_id: id, type: 'ladder_pending', actor_id: proposerId, meta: { ladder_id: ladderId, user_id: userId, username } })
       if (io) io.to(`user:${id}`).emit('notification:new', { unreadCount: await NotificationModel.getUnreadCount(id) })
     }
   } catch { /* la notification ne bloque jamais la demande */ }
@@ -361,16 +361,17 @@ export async function refuseLadder(actor: Actor, ladderId: string): Promise<{ ok
 /** Les demandes sans réponse depuis 72 h tombent ; la personne qui l'a proposée est prévenue. */
 export async function expirePendingLadder(): Promise<number> {
   try {
-    const { rows } = await db.query<{ id: string; user_id: string; actor_id: string | null; report_id: string | null; step: number; sanction: string }>(
-      `UPDATE octoguard_ladder SET status = 'expired', decided_at = NOW()
-        WHERE status = 'pending' AND created_at < NOW() - ($1 || ' hours')::interval
-        RETURNING id, user_id, actor_id, report_id, step, sanction`, [String(PENDING_HOURS)])
+    const { rows } = await db.query<{ id: string; user_id: string; username: string; actor_id: string | null; report_id: string | null; step: number; sanction: string }>(
+      `UPDATE octoguard_ladder l SET status = 'expired', decided_at = NOW()
+         FROM users u
+        WHERE u.id = l.user_id AND l.status = 'pending' AND l.created_at < NOW() - ($1 || ' hours')::interval
+        RETURNING l.id, l.user_id, u.username, l.actor_id, l.report_id, l.step, l.sanction`, [String(PENDING_HOURS)])
     for (const r of rows) {
       if (r.report_id) await claimReports(r.report_id, null)
       journal('octoguard.ladder_expired', r.user_id, null, null, { via: 'ladder', ladder_id: r.id, step: r.step, sanction: r.sanction, proposed_by: r.actor_id })
       if (r.actor_id) {
         try {
-          await NotificationModel.create({ user_id: r.actor_id, type: 'ladder_expired', meta: { ladder_id: r.id, user_id: r.user_id } })
+          await NotificationModel.create({ user_id: r.actor_id, type: 'ladder_expired', meta: { ladder_id: r.id, user_id: r.user_id, username: r.username } })
         } catch { /* rien de bloquant */ }
       }
     }

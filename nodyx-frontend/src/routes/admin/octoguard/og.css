@@ -17,6 +17,7 @@
 }
 .og-k-observe { --k: var(--og-observe); } .og-k-report { --k: var(--og-report); } .og-k-hold { --k: var(--og-hold); }
 .og-k-warn { --k: var(--og-warn); } .og-k-delete { --k: var(--og-delete); }
+.og-k-team { --k: var(--og-report); }
 .og-k-ok { --k: var(--nx-ok); } .og-k-acc { --k: var(--nx-header-accent); }
 .og-tone, .adm-pill.og-tone { color: var(--k); }
 

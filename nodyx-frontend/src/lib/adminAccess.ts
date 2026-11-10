@@ -19,6 +19,8 @@ const RULES: Array<{ prefix: string; exact?: boolean; any: Permission[] | 'staff
 	{ prefix: '/admin/audit-log', any: ['view_audit_log'] },
 	{ prefix: '/admin/octoguard/mutes', any: ['moderate_members', 'manage_octoguard'] },
 	{ prefix: '/admin/octoguard/reports', any: ['moderate_members', 'manage_octoguard'] },
+	// Le barème : toute l'équipe le lit (la jauge y renvoie), seul manage_octoguard le règle
+	{ prefix: '/admin/octoguard/ladder', any: ['moderate_members', 'manage_octoguard'] },
 	{ prefix: '/admin/octoguard', any: ['manage_octoguard'] },
 ]
 

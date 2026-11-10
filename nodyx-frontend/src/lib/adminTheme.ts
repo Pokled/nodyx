@@ -16,6 +16,8 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	'/admin/octoguard/guide', '/admin/octoguard/member-view',
 	// OctoGuard 2, mise en conformité (E4h) : Signalements dans OctoGuard
 	'/admin/octoguard/reports',
+	// Lot 4b : le barème des sanctions
+	'/admin/octoguard/ladder',
 ]
 
 // Sous-pages dynamiques déjà migrées (fiche d'un membre : /admin/members/<id>)

@@ -8,7 +8,7 @@
 	import { t, locale } from '$lib/i18n'
 	import Icon from '$lib/components/octoguard/Icon.svelte'
 	import { og } from '$lib/octoguard/api'
-	import { eventOf, KIND_ICON, type OgLog, type EventSource } from '$lib/octoguard/events'
+	import { eventOf, eventVars, KIND_ICON, type OgLog, type EventSource } from '$lib/octoguard/events'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -111,10 +111,10 @@
 					<div class="og-row">
 						<span class="og-ic og-k-{ev.kind}"><Icon d={KIND_ICON[ev.kind]} /></span>
 						<div class="og-row-body">
-							<div>{tFn(`og2.${ev.key}`, { rule: l.metadata?.rule_name ?? '', who: l.actor_username ?? '' })}</div>
-							{#if l.target_label && !l.target_label.startsWith('octoguard' + '.')}<p class="og-quote">{l.target_label}</p>{/if}
+							<div>{tFn(`og2.${ev.key}`, eventVars(l, tFn))}</div>
+							{#if l.target_label && !l.target_label.startsWith('octoguard' + '.') && !ev.key.startsWith('ev_ladder')}<p class="og-quote">{l.target_label}</p>{/if}
 							<div class="og-meta">
-								{when(l.created_at)}{#if ev.source === 'team' && l.actor_username} · {l.actor_username}{/if}{#if ev.source === 'observed'} · {tFn('og2.log_observed_note')}{/if}
+								{when(l.created_at)}{#if ev.source === 'team' && l.actor_username && !ev.key.startsWith('ev_ladder')}{' · '}{l.actor_username}{/if}{#if ev.source === 'observed'}{' · '}{tFn('og2.log_observed_note')}{/if}{#if l.metadata?.report_category}{' · '}{tFn('og2.lad_log_report', { cat: tFn(`report.cat_${l.metadata.report_category}`) })}{/if}
 							</div>
 							{#if fpOpen === l.id}
 								<div class="og-fp" role="group" aria-label={tFn('og2.fp_title')}>

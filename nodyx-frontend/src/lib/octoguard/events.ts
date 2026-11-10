@@ -2,7 +2,7 @@
 // Partagé par la Vue d'ensemble et le Journal. Aucune chaîne affichée ici.
 import { LEVEL_ICON, type Level } from './rules'
 
-export type EventKind = Level | 'ok' | 'acc'
+export type EventKind = Level | 'ok' | 'acc' | 'team'
 export type OgLog = {
 	id: string; action: string; actor_username: string | null; target_type: string | null; target_id: string | null
 	target_label: string | null; metadata: Record<string, any> | null; created_at: string; undone?: boolean
@@ -12,11 +12,31 @@ export type OgLog = {
 export const KIND_ICON: Record<EventKind, string> = {
 	...LEVEL_ICON,
 	ok: 'M9 14L4 9l5-5 M4 9h11a5 5 0 010 10h-3',
+	// Une personne de l'équipe a appliqué le barème (maquette : la silhouette bleue)
+	team: 'M12 4a4 4 0 100 8 4 4 0 000-8z M4 21a8 8 0 0116 0',
 	acc: 'M4 7h10 M18 7h2 M4 17h4 M12 17h8 M16 5a2 2 0 100 4 2 2 0 000-4z M10 15a2 2 0 100 4 2 2 0 000-4z',
 }
 
 /** Qui a agi : le moteur, l'équipe, ou rien (observation). */
 export type EventSource = 'octoguard' | 'team' | 'observed'
+
+const ladderKind = (s: unknown): 'warn' | 'mute' | 'ban' =>
+	typeof s === 'string' && s.startsWith('mute') ? 'mute' : typeof s === 'string' && s.startsWith('ban') ? 'ban' : 'warn'
+
+/**
+ * Les valeurs qu'une phrase du journal peut utiliser. Le barème a besoin de plus
+ * que la règle et l'auteur : le membre visé, la durée, l'étape.
+ */
+export function eventVars(l: Pick<OgLog, 'metadata' | 'actor_username' | 'target_label'>, tFn: (k: string, v?: Record<string, string | number>) => string): Record<string, string | number> {
+	const md = l.metadata ?? {}
+	return {
+		rule: md.rule_name ?? '',
+		who: l.actor_username ?? '',
+		name: l.target_label ?? '',
+		step: md.step ?? '',
+		d: typeof md.sanction === 'string' && md.sanction !== 'warn' ? tFn(`og2.lad_d_${md.sanction}`) : '',
+	}
+}
 
 export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKind; key: string; source: EventSource } {
 	// Le nom d'action sans son préfixe « octoguard. » : ce ne sont pas des clés de traduction.
@@ -39,6 +59,17 @@ export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKin
 		case 'held_refused': return { kind: 'delete', key: 'ev_held_refused', source: 'team' }
 		case 'held_expired': return { kind: 'observe', key: 'ev_held_expired', source: 'octoguard' }
 		case 'hate_symbol_blocked': return { kind: 'delete', key: 'ev_hate', source: 'octoguard' }
+		// Le barème (lot 4b) : la phrase dépend de la sanction (« a mis Rémi en sourdine 1 heure »)
+		case 'ladder_applied': {
+			const k = ladderKind(l.metadata?.sanction)
+			return { kind: 'team', key: `ev_ladder_applied_${k}`, source: 'team' }
+		}
+		case 'ladder_approved': return { kind: 'team', key: 'ev_ladder_approved', source: 'team' }
+		case 'ladder_proposed': return { kind: 'report', key: 'ev_ladder_proposed', source: 'team' }
+		case 'ladder_refused': return { kind: 'ok', key: 'ev_ladder_refused', source: 'team' }
+		case 'ladder_expired': return { kind: 'observe', key: 'ev_ladder_expired', source: 'octoguard' }
+		case 'ladder_undone': return { kind: 'ok', key: 'ev_ladder_undone', source: 'team' }
+		case 'ladder_settings': return { kind: 'acc', key: 'ev_config', source: 'team' }
 	}
 	if (/^(rule|profile|command|welcome|webhook)_/.test(a)) return { kind: 'acc', key: 'ev_config', source: 'team' }
 	return { kind: 'observe', key: 'ev_other', source: auto ? 'octoguard' : 'team' }
