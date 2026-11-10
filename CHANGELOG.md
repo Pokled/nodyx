@@ -57,6 +57,14 @@ défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
   messages retenus arrivent dans une seule file. Pour chacun, l'équipe voit la conversation autour
   et ce que l'auteur a modifié depuis : l'ancien texte barré, le nouveau à côté (#951, #949).
   L'ancien texte n'est visible que de l'équipe et s'efface au bout de 90 jours.
+- **Un barème des sanctions, le même pour toute l'équipe.** Quatre marches, réglées une fois :
+  un avertissement, puis une sourdine, puis une plus longue, puis une exclusion temporaire. On
+  monte ou descend chaque marche d'un clic, jamais en dessous de la précédente. Depuis un
+  signalement ou la fiche d'un membre, « Appliquer le barème » dit exactement ce qui va se passer
+  avant de le faire, et une jauge montre où en est le membre. Une exclusion demande toujours un
+  motif écrit ; si l'équipe le veut, une exclusion de 7 jours ou plus attend l'accord d'une seconde
+  personne. Les écarts anciens s'effacent avec le temps, et au-delà de la dernière marche, c'est un
+  admin qui décide, jamais l'automatisme.
 - **Se tromper fait partie du jeu.** « Annuler » une action d'OctoGuard ne marchait pas, il marche
   maintenant, et une seule fois (#944). Une action marquée « faux positif » peut apprendre une
   exception à la règle, mais seulement dans un cas sûr (« contenu » attrapé par « \*con\* ») et
