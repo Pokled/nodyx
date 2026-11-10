@@ -85,6 +85,8 @@ const CreateRuleBody = z.object({
   scopes:                z.array(z.enum(['chat', 'forum', 'profile', 'poll', 'wiki'])).min(1).max(5).optional(),
   // Restrictions : ne viser que les comptes récents (OctoGuard 2)
   conditions:            z.object({ account_max_age_days: z.number().int().min(1).max(365).optional() }).optional(),
+  // Au cran Avertir : suivre le barème des sanctions au lieu de l'escalade propre (D28)
+  follow_ladder:         z.boolean().optional(),
 })
 
 const UpdateRuleBody = CreateRuleBody.partial()
@@ -510,10 +512,11 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     if (body.enabled !== undefined)         { fields.push(`enabled = $${i++}`);                    values.push(body.enabled) }
     if (body.scopes !== undefined)          { fields.push(`scopes = $${i++}::text[]`);            values.push(body.scopes) }
     if (body.conditions !== undefined)      { fields.push(`conditions = $${i++}::jsonb`);         values.push(JSON.stringify(body.conditions)) }
+    if (body.follow_ladder !== undefined)   { fields.push(`follow_ladder = $${i++}`);              values.push(body.follow_ladder) }
     // Une règle issue d'un modèle du profil de base, modifiée sur le fond par
     // l'admin, devient « personnalisée » : les mises à jour du profil n'y
     // touchent plus. L'interrupteur seul ne compte pas comme une modification.
-    const substantive = ['type', 'params', 'action', 'action_duration', 'escalation', 'immunized_role_types', 'immunized_grade_ids', 'dry_run', 'scopes', 'conditions']
+    const substantive = ['type', 'params', 'action', 'action_duration', 'escalation', 'immunized_role_types', 'immunized_grade_ids', 'dry_run', 'scopes', 'conditions', 'follow_ladder']
       .some(k => (body as Record<string, unknown>)[k] !== undefined)
     if (substantive) fields.push(`customized = (preset_key IS NOT NULL)`)
     fields.push(`updated_at = NOW()`)

@@ -16,7 +16,7 @@
  * Règle de langue (§E4i) : rien n'est enregistré en phrase. Le journal et la table
  * ne portent que des valeurs ; « Barème, étape 2 » se construit à l'affichage.
  */
-import { db } from '../../config/database'
+import { db, redis } from '../../config/database'
 import { getInstanceCommunityId } from '../../middleware/adminOnly'
 import { getInstanceAccess, outranks, rankOf, invalidatePermissions, type MemberAccess } from '../permissions'
 import { applyMute, removeMute } from './mutes'
@@ -205,13 +205,13 @@ function permissionFor(s: Sanction): 'ban_members' | 'moderate_members' {
 }
 
 /** Pose la sanction avec les vrais outils. Renvoie les identifiants, ou null si elle a échoué. */
-async function perform(row: { user_id: string; sanction: Sanction; step: number; reason: string | null }, actorId: string): Promise<{ mute_id?: string; warn_id?: string } | null> {
+async function perform(row: { user_id: string; sanction: Sanction; step: number; reason: string | null }, actorId: string | null, ruleId: string | null = null): Promise<{ mute_id?: string; warn_id?: string } | null> {
   const minutes = SANCTION_MINUTES[row.sanction]
   const kind = kindOf(row.sanction)
   if (kind === 'warn') {
     const { rows } = await db.query<{ id: string }>(
-      `INSERT INTO octoguard_warns (user_id, reason, issued_by) VALUES ($1, $2, $3) RETURNING id`,
-      [row.user_id, row.reason, actorId])
+      `INSERT INTO octoguard_warns (user_id, reason, issued_by, rule_id) VALUES ($1, $2, $3, $4) RETURNING id`,
+      [row.user_id, row.reason, actorId, ruleId])
     try {
       // Structure seulement : l'écran du membre dit « avertissement », et le motif s'il y en a un
       await NotificationModel.create({ user_id: row.user_id, type: 'moderation_warning', meta: { ladder_step: row.step, ...(row.reason ? { reason: row.reason } : {}) } })
@@ -220,10 +220,10 @@ async function perform(row: { user_id: string; sanction: Sanction; step: number;
     return { warn_id: rows[0].id }
   }
   if (kind === 'mute') {
-    const mute = await applyMute({ userId: row.user_id, duration: { value: minutes, unit: 'm' }, reason: row.reason, appliedBy: actorId, silent: true })
+    const mute = await applyMute({ userId: row.user_id, duration: { value: minutes, unit: 'm' }, reason: row.reason, appliedBy: actorId, ruleId, silent: true })
     return mute ? { mute_id: mute.id } : null
   }
-  const ok = await applyTempBan({ userId: row.user_id, duration: { value: minutes, unit: 'm' }, reason: row.reason, actorId, silent: true })
+  const ok = await applyTempBan({ userId: row.user_id, duration: { value: minutes, unit: 'm' }, reason: row.reason, actorId: actorId ?? undefined, silent: true })
   if (!ok) return null
   // Les connexions en direct tombent tout de suite (sinon jusqu'à 30 s de répit)
   if (io) {
@@ -414,4 +414,69 @@ export async function undoLadder(actor: Actor, ladderId: string): Promise<{ ok: 
   }
   journal('octoguard.ladder_undone', row.user_id, who.username, actor.userId, { via: 'ladder', ladder_id: ladderId, step: row.step, sanction: row.sanction })
   return { ok: true }
+}
+
+// ─── Une règle qui suit le barème (D28) ─────────────────────────────────────
+
+/** OctoGuard ne fait monter un même membre que d'une marche par 24 heures au plus. */
+export const ENGINE_STEP_HOURS = 24
+
+/**
+ * Appelée par le moteur, en tâche de fond, quand une règle « qui suit le barème »
+ * se déclenche au cran Avertir (le message, lui, est déjà bloqué).
+ *  - OctoGuard n'applique JAMAIS une exclusion : si la prochaine marche en est une
+ *    (ou s'il n'y en a plus), il prévient l'équipe, une fois par 24 h pour un membre ;
+ *  - une marche par 24 h au plus : une rafale ne fait pas grimper de trois marches ;
+ *  - une demande d'exclusion en attente de second avis : il ne touche à rien.
+ * Renvoie ce qui s'est passé (pour les tests et le journal).
+ */
+export async function engineLadderStep(rule: { id: string; name: string }, userId: string): Promise<'applied' | 'too_soon' | 'team_alerted' | 'already_alerted' | 'pending' | 'failed'> {
+  return withLock(userId, async () => {
+    const { rows: recent } = await db.query(
+      `SELECT 1 FROM octoguard_ladder
+        WHERE user_id = $1 AND actor_id IS NULL AND status = 'applied'
+          AND created_at > NOW() - ($2 || ' hours')::interval LIMIT 1`,
+      [userId, String(ENGINE_STEP_HOURS)])
+    if (recent.length) return 'too_soon'
+
+    const { rows: pend } = await db.query(`SELECT 1 FROM octoguard_ladder WHERE user_id = $1 AND status = 'pending'`, [userId])
+    if (pend.length) return 'pending'
+
+    const settings = await getLadderSettings()
+    const next = nextStepOf(positionOf(await lastApplied(userId), settings.forget_days))
+    const sanction = next ? settings.steps[next - 1] : null
+    const { rows: u } = await db.query<{ username: string }>(`SELECT username FROM users WHERE id = $1`, [userId])
+    const username = u[0]?.username ?? null
+
+    // Jamais d'exclusion par l'automatisme : l'équipe est prévenue, elle décide
+    if (!next || !sanction || kindOf(sanction) === 'ban') {
+      const first = await redis.set(`ladder_alert:${userId}`, '1', 'EX', ENGINE_STEP_HOURS * 3600, 'NX')
+      if (first !== 'OK') return 'already_alerted'
+      journal('octoguard.ladder_engine_alert', userId, username, null, { via: 'ladder', rule_id: rule.id, rule_name: rule.name, step: next, sanction })
+      try {
+        for (const id of await banCapableIds(null)) {
+          await NotificationModel.create({ user_id: id, type: 'ladder_engine_alert', meta: { user_id: userId, username, rule_name: rule.name } })
+          if (io) io.to(`user:${id}`).emit('notification:new', { unreadCount: await NotificationModel.getUnreadCount(id) })
+        }
+      } catch { /* la notification ne bloque jamais le moteur */ }
+      return 'team_alerted'
+    }
+
+    const { rows: ins } = await db.query<{ id: string }>(
+      `INSERT INTO octoguard_ladder (user_id, step, sanction, status, actor_id, rule_id)
+       VALUES ($1, $2, $3, 'applied', NULL, $4) RETURNING id`,
+      [userId, next, sanction, rule.id])
+    const ladderId = ins[0].id
+    const done = await perform({ user_id: userId, sanction, step: next, reason: null }, null, rule.id)
+    if (!done) {
+      await db.query(`DELETE FROM octoguard_ladder WHERE id = $1`, [ladderId])
+      return 'failed'
+    }
+    await db.query(`UPDATE octoguard_ladder SET mute_id = $2, warn_id = $3 WHERE id = $1`, [ladderId, done.mute_id ?? null, done.warn_id ?? null])
+    journal('octoguard.ladder_applied', userId, username, null, {
+      via: 'ladder', ladder_id: ladderId, step: next, sanction, duration_min: SANCTION_MINUTES[sanction],
+      rule_id: rule.id, rule_name: rule.name, undoable: true, undo_op: { type: 'ladder_undo', ladder_id: ladderId },
+    })
+    return 'applied'
+  })
 }
