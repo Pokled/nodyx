@@ -574,7 +574,8 @@ export default async function adminRoutes(app: FastifyInstance) {
     )
     logAction(request.user!.userId, 'warn_user', 'user', userId, target[0].username, { reason })
     try {
-      await NotificationModel.create({ user_id: userId, type: 'moderation_warning', meta: { reason } })
+      // warn_id : l'écran du membre y accroche « Contester » (OctoGuard lot 8)
+      await NotificationModel.create({ user_id: userId, type: 'moderation_warning', meta: { reason, warn_id: rows[0].id } })
       if (io) {
         const count = await NotificationModel.getUnreadCount(userId)
         io.to(`user:${userId}`).emit('notification:new', { unreadCount: count })
