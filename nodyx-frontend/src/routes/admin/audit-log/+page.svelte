@@ -40,6 +40,7 @@
 			['welcome_sent', 'muted'],
 			['ladder_applied', 'bad'], ['ladder_proposed', 'warn'], ['ladder_approved', 'bad'],
 			['ladder_refused', 'ok'], ['ladder_expired', 'muted'], ['ladder_undone', 'ok'], ['ladder_settings', 'info'],
+			['ladder_engine_alert', 'warn'],
 		] as Array<[string, Tone]>).map(([a, tone]) => [`${OCTO}${a}`, tone] as [string, Tone]) },
 	]
 	const TONE: Record<string, Tone> = Object.fromEntries(GROUPS.flatMap(g => g.actions))

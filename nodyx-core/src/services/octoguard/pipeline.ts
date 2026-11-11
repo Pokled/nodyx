@@ -19,6 +19,7 @@ import { matchRule, type MatchResult } from './matchers'
 import { recordActivity } from './matchers2'
 import { logOctoGuardAction } from './logger'
 import { applyMute } from './mutes'
+import { engineLadderStep } from './ladder'
 import { applyTempBan } from './bans'
 import type {
   AutomodRuleRow,
@@ -211,44 +212,53 @@ async function applyAction(
   // D4 tranché fire-and-forget). L'INSERT précède le COUNT DANS le même bloc
   // async -> pas de race d'escalade.
   if (action === 'warn') {
-    logOctoGuardAction({
-      action:       'octoguard.warn_user',
-      target_type:  'user',
-      target_id:    user.userId,
-      target_label: excerpt,
-      metadata:     { ...meta, undoable: true, undo_op: { type: 'clear_last_warn', user_id: user.userId } },
-    })
+    if (rule.follow_ladder) {
+      // La règle suit le barème (D28) : au lieu d'un avertissement brut et de
+      // l'escalade propre à la règle, la prochaine marche du membre, en tâche de
+      // fond (jamais d'exclusion, une marche par 24 h au plus : ladder.ts).
+      // Le message, lui, est bloqué tout de suite, comme pour tout avertissement.
+      void engineLadderStep({ id: rule.id, name: rule.name }, user.userId)
+        .catch((err) => console.warn('[octoguard] ladder step failed:', err))
+    } else {
+      logOctoGuardAction({
+        action:       'octoguard.warn_user',
+        target_type:  'user',
+        target_id:    user.userId,
+        target_label: excerpt,
+        metadata:     { ...meta, undoable: true, undo_op: { type: 'clear_last_warn', user_id: user.userId } },
+      })
 
-    void (async () => {
-      try {
-        await db.query(
-          `INSERT INTO octoguard_warns (user_id, rule_id, reason) VALUES ($1, $2, $3)`,
-          [user.userId, rule.id, excerpt]
-        )
-
-        // Escalation : check count + apply si seuil atteint (STUB Session C pour mute/ban_temp)
-        if (rule.escalation) {
-          const windowDays = rule.escalation.window_days
-          const { rows } = await db.query<{ cnt: number }>(
-            `SELECT COUNT(*)::int AS cnt
-               FROM octoguard_warns
-              WHERE user_id = $1
-                AND rule_id = $2
-                AND cleared_at IS NULL
-                AND created_at > NOW() - ($3 || ' days')::interval`,
-            [user.userId, rule.id, String(windowDays)]
+      void (async () => {
+        try {
+          await db.query(
+            `INSERT INTO octoguard_warns (user_id, rule_id, reason) VALUES ($1, $2, $3)`,
+            [user.userId, rule.id, excerpt]
           )
-          const cnt = rows[0]?.cnt ?? 0
-          if (cnt >= rule.escalation.warns_threshold) {
-            // L'escalade pour de vrai : N avertissements en X jours donnent une
-            // sourdine ou un bannissement temporaire (avant : un « TODO » au journal).
-            await escalate(rule, user, cnt, eventId)
+
+          // Escalation : check count + apply si seuil atteint (STUB Session C pour mute/ban_temp)
+          if (rule.escalation) {
+            const windowDays = rule.escalation.window_days
+            const { rows } = await db.query<{ cnt: number }>(
+              `SELECT COUNT(*)::int AS cnt
+                 FROM octoguard_warns
+                WHERE user_id = $1
+                  AND rule_id = $2
+                  AND cleared_at IS NULL
+                  AND created_at > NOW() - ($3 || ' days')::interval`,
+              [user.userId, rule.id, String(windowDays)]
+            )
+            const cnt = rows[0]?.cnt ?? 0
+            if (cnt >= rule.escalation.warns_threshold) {
+              // L'escalade pour de vrai : N avertissements en X jours donnent une
+              // sourdine ou un bannissement temporaire (avant : un « TODO » au journal).
+              await escalate(rule, user, cnt, eventId)
+            }
           }
+        } catch (err) {
+          console.warn('[octoguard] warn side-effects failed:', err)
         }
-      } catch (err) {
-        console.warn('[octoguard] warn side-effects failed:', err)
-      }
-    })()
+      })()
+    }
 
     return {
       blocked: true,

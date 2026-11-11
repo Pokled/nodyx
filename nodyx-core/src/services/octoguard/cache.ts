@@ -33,12 +33,13 @@ export async function reloadRules(): Promise<void> {
     preset_key:            string | null
     customized:            boolean
     conditions:            unknown
+    follow_ladder:         boolean
     created_at:            string
     updated_at:            string
   }>(`
     SELECT id, name, type, params, action, action_duration, escalation,
            immunized_role_types, immunized_grade_ids, dry_run, enabled,
-           scopes, preset_key, customized, conditions, created_at, updated_at
+           scopes, preset_key, customized, conditions, follow_ladder, created_at, updated_at
       FROM octoguard_automod_rules
      WHERE enabled = true
      ORDER BY created_at ASC
@@ -60,6 +61,7 @@ export async function reloadRules(): Promise<void> {
     preset_key:            r.preset_key ?? null,
     customized:            !!r.customized,
     conditions:            (r.conditions ?? {}) as RuleConditions,
+    follow_ladder:         r.follow_ladder === true,
     created_at:            r.created_at,
     updated_at:            r.updated_at,
   }))

@@ -34,6 +34,7 @@
 		held_refused: '×',
 		ladder_pending: '⚖',
 		ladder_expired: '⚖',
+		ladder_engine_alert: '⚖',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
@@ -52,6 +53,7 @@
 	function labelOf(n: any): string {
 		if (n.type === 'ladder_pending') return tFn('notifications.ladder_pending_label', { name: n.meta?.username ?? '' })
 		if (n.type === 'ladder_expired') return tFn('notifications.ladder_expired_label', { name: n.meta?.username ?? '' })
+		if (n.type === 'ladder_engine_alert') return tFn('notifications.ladder_engine_alert_label', { name: n.meta?.username ?? '' })
 		if (n.type === 'moderation_warning' && !n.meta?.reason) return tFn('notifications.moderation_warning_plain')
 		return TYPE_LABEL[n.type] ?? n.type
 	}
@@ -162,7 +164,7 @@
 
 					<!-- Actions -->
 					<div class="flex items-center gap-2 shrink-0">
-						{#if (notif.type === 'ladder_pending' || notif.type === 'ladder_expired') && notif.meta?.user_id}
+						{#if (notif.type === 'ladder_pending' || notif.type === 'ladder_expired' || notif.type === 'ladder_engine_alert') && notif.meta?.user_id}
 							<a href="/admin/members/{notif.meta.user_id}" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.open_file')}</a>
 						{/if}
 						{#if notif.category_id && notif.thread_id}

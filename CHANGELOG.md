@@ -64,7 +64,9 @@ défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
   avant de le faire, et une jauge montre où en est le membre. Une exclusion demande toujours un
   motif écrit ; si l'équipe le veut, une exclusion de 7 jours ou plus attend l'accord d'une seconde
   personne. Les écarts anciens s'effacent avec le temps, et au-delà de la dernière marche, c'est un
-  admin qui décide, jamais l'automatisme.
+  admin qui décide, jamais l'automatisme. Une règle d'OctoGuard au cran « Avertir » peut aussi
+  « suivre le barème » : chaque déclenchement fait monter le membre d'une marche, une par
+  24 heures au plus, et arrivé à l'exclusion, OctoGuard n'exclut pas, il prévient l'équipe.
 - **Se tromper fait partie du jeu.** « Annuler » une action d'OctoGuard ne marchait pas, il marche
   maintenant, et une seule fois (#944). Une action marquée « faux positif » peut apprendre une
   exception à la règle, mais seulement dans un cas sûr (« contenu » attrapé par « \*con\* ») et

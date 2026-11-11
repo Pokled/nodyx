@@ -87,6 +87,8 @@ export interface AutomodRuleRow {
   action:                AutomodAction
   action_duration:       Duration | null
   escalation:            Escalation | null
+  /** Au cran Avertir : suivre le barème au lieu de l'escalade propre (D28). */
+  follow_ladder?:        boolean
   immunized_role_types:  string[]
   immunized_grade_ids:   string[]
   dry_run:               boolean

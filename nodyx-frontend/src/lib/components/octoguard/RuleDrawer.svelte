@@ -7,7 +7,7 @@
 	import Icon from './Icon.svelte'
 	import LevelPicker from './LevelPicker.svelte'
 	import { og } from '$lib/octoguard/api'
-	import { levelOf, intendedOf, patchForLevel, describe, ruleIcon, SURFACES, IMMUNE_ROLES, categoryOf, type Rule, type Level, type Surface } from '$lib/octoguard/rules'
+	import { levelOf, intendedOf, patchForLevel, describe, ruleIcon, SURFACES, IMMUNE_ROLES, categoryOf, durationText, type Rule, type Level, type Surface } from '$lib/octoguard/rules'
 
 	let { rule, token, onchange, ondelete, onclose }: {
 		rule: Rule
@@ -25,6 +25,8 @@
 	let scopes = $state<Surface[]>([...(start.scopes?.length ? start.scopes : (['chat'] as Surface[]))])
 	let immune = $state<string[]>([...(start.immunized_role_types ?? [])])
 	let maxAge = $state<number>(start.conditions?.account_max_age_days ?? 0)
+	// Escalade : la sienne, ou le barème des sanctions (D28)
+	let follow = $state<boolean>(!!start.follow_ladder)
 	let domainsText = $state<string>((start.params?.domains ?? []).join(', '))
 
 	let busy = $state(false)
@@ -98,6 +100,7 @@
 		if (!same(p, $state.snapshot(start.params ?? {}))) body.params = p
 		if (!same([...scopes].sort(), [...(start.scopes?.length ? start.scopes : ['chat'])].sort())) body.scopes = scopes
 		if (!same([...immune].sort(), [...(start.immunized_role_types ?? [])].sort())) body.immunized_role_types = immune
+		if (follow !== !!start.follow_ladder) body.follow_ladder = follow
 		if (categoryOf(start) === 'newcomers' && maxAge > 0 && Math.round(maxAge) !== start.conditions?.account_max_age_days) body.conditions = { ...(start.conditions ?? {}), account_max_age_days: Math.round(maxAge) }
 		if (Object.keys(body).length === 0) { busy = false; onclose(); return }
 		try {
@@ -196,6 +199,26 @@
 				<p class="og-help">{tFn('og2.exempt_help')}</p>
 			</div>
 
+			<details class="og-field og-esc" open={follow}>
+				<summary class="og-lbl og-esc-sum">{tFn('og2.esc_title')}</summary>
+				{#if follow}
+					<p class="og-help">{tFn('og2.esc_ladder_on')}</p>
+					<div class="og-esc-row">
+						<button type="button" class="adm-btn adm-btn--sm" disabled={busy} onclick={() => (follow = false)}>{tFn('og2.esc_back_own')}</button>
+						<span class="og-help"><a class="og-linkbtn" href="/admin/octoguard/ladder">{tFn('og2.esc_see_ladder')}</a></span>
+					</div>
+				{:else}
+					<p class="og-help">{start.escalation
+						? tFn('og2.escalation_line', { n: start.escalation.warns_threshold, d: start.escalation.window_days, what: tFn(`og2.sanction_short_${start.escalation.action === 'ban_temp' ? 'ban_temp' : 'mute'}`, { dur: durationText(start.escalation.duration, tFn) }) })
+						: tFn('og2.esc_none')}</p>
+					<div class="og-esc-row">
+						<button type="button" class="adm-btn adm-btn--sm" disabled={busy} onclick={() => (follow = true)}>{tFn('og2.esc_follow')}</button>
+						<span class="og-help"><a class="og-linkbtn" href="/admin/octoguard/ladder">{tFn('og2.esc_see_ladder')}</a></span>
+					</div>
+				{/if}
+				{#if level !== 'warn'}<p class="og-help">{tFn('og2.esc_only_warn')}</p>{/if}
+			</details>
+
 			<div class="og-field">
 				<span class="og-lbl">{tFn('og2.recent_hits')}</span>
 				{#if hits === null}
@@ -237,3 +260,9 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.og-esc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 8px; }
+	.og-esc-row .og-help { margin: 0; }
+	.og-esc-sum { cursor: pointer; }
+</style>

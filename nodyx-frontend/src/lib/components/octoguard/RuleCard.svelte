@@ -75,7 +75,9 @@
 	{#if sanction && level === 'delete'}
 		<div class="og-note"><Icon d="M11 5L6 9H3v6h3l5 4z M22 9l-6 6 M16 9l6 6" />{tFn(`og2.sanction_${sanction}`, { dur: durationText(rule.action_duration, tFn) })}</div>
 	{/if}
-	{#if rule.escalation && (level === 'warn' || level === 'observe')}
+	{#if rule.follow_ladder && (level === 'warn' || level === 'observe')}
+		<div class="og-note"><Icon d="M12 3v18 M5 21h14 M6 7h12 M6 7l-3 7a3 3 0 006 0z M18 7l-3 7a3 3 0 006 0z" />{tFn('og2.esc_ladder_short')}</div>
+	{:else if rule.escalation && (level === 'warn' || level === 'observe')}
 		<div class="og-note"><Icon d="M3 17l6-6 4 4 8-8 M15 7h6v6" />{tFn('og2.escalation_line', {
 			n: rule.escalation.warns_threshold,
 			d: rule.escalation.window_days,
