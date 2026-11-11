@@ -84,9 +84,9 @@ export async function loadDecision(type: DecisionType, id: string): Promise<Deci
 
 const tooOld = (at: string, now = Date.now()) => now - new Date(at).getTime() > APPEAL_DAYS * 86_400_000
 
-function journal(action: string, targetId: string, actorId: string, actor: 'member' | 'admin', meta: Record<string, unknown>): void {
+function journal(action: string, targetId: string, label: string | null, actorId: string, actor: 'member' | 'admin', meta: Record<string, unknown>): void {
   logOctoGuardAction({
-    action, target_type: 'user', target_id: targetId, target_label: null, actor_id: actorId,
+    action, target_type: 'user', target_id: targetId, target_label: label, actor_id: actorId,
     metadata: { event_id: randomUUID(), actor, ...meta },
   })
 }
@@ -134,7 +134,8 @@ export async function fileAppeal(userId: string, input: { decision_type: Decisio
      RETURNING id, created_at::text AS created_at`,
     [userId, d.type, d.id, d.decided_by, d.decided_by === null, message])
   if (!rows[0]) return fail(409, 'APPEAL_EXISTS', 'This decision has already been contested')
-  journal('octoguard.appeal_filed', userId, userId, 'member', { appeal_id: rows[0].id, decision_type: d.type, decision_id: d.id })
+  const { rows: u } = await db.query<{ username: string }>(`SELECT username FROM users WHERE id = $1`, [userId])
+  journal('octoguard.appeal_filed', userId, u[0]?.username ?? null, userId, 'member', { appeal_id: rows[0].id, decision_type: d.type, decision_id: d.id })
   return { ok: true as const, id: rows[0].id, status: 'open' as const, created_at: rows[0].created_at }
 }
 
@@ -231,7 +232,7 @@ export async function decideAppeal(actor: Actor, appealId: string, input: { outc
     }
   }
 
-  journal(input.outcome === 'overturned' ? 'octoguard.appeal_overturned' : 'octoguard.appeal_upheld', a.user_id, actor.userId, 'admin',
+  journal(input.outcome === 'overturned' ? 'octoguard.appeal_overturned' : 'octoguard.appeal_upheld', a.user_id, a.username, actor.userId, 'admin',
     { appeal_id: appealId, decision_type: a.decision_type, decision_id: a.decision_id, undone })
   try {
     // Structure seulement : l'écran du membre construit la phrase. La réponse est celle d'un humain.

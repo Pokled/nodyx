@@ -35,6 +35,7 @@
 		ladder_pending: '⚖',
 		ladder_expired: '⚖',
 		ladder_engine_alert: '⚖',
+		appeal_resolved: '⚖',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
@@ -55,6 +56,8 @@
 		if (n.type === 'ladder_expired') return tFn('notifications.ladder_expired_label', { name: n.meta?.username ?? '' })
 		if (n.type === 'ladder_engine_alert') return tFn('notifications.ladder_engine_alert_label', { name: n.meta?.username ?? '' })
 		if (n.type === 'moderation_warning' && !n.meta?.reason) return tFn('notifications.moderation_warning_plain')
+		// Lot 8 : une valeur du cœur, la phrase se construit ici
+		if (n.type === 'appeal_resolved') return tFn(n.meta?.outcome === 'overturned' ? 'notifications.appeal_overturned_label' : 'notifications.appeal_upheld_label')
 		return TYPE_LABEL[n.type] ?? n.type
 	}
 
@@ -155,6 +158,9 @@
 							{#if notif.type === 'moderation_warning' && notif.meta?.reason}
 								<span class="block mt-1 text-[var(--nx-text)]">« {notif.meta.reason} »</span>
 							{/if}
+							{#if notif.type === 'appeal_resolved' && notif.meta?.reply}
+								<span class="block mt-1 text-[var(--nx-text)]">« {notif.meta.reply} »</span>
+							{/if}
 							{#if notif.thread_title}
 								<span class="text-[var(--nx-text-muted)]"> « {notif.thread_title} »</span>
 							{/if}
@@ -164,6 +170,15 @@
 
 					<!-- Actions -->
 					<div class="flex items-center gap-2 shrink-0">
+						{#if notif.type === 'moderation_warning'}
+							<!-- Lot 8 : contester, une autre personne de l'équipe relira -->
+							<a href={notif.meta?.warn_id ? `/settings/sanctions?decision=${notif.meta.warn_id}&contest=1` : '/settings/sanctions'}
+								title={tFn('notifications.contest_hint')}
+								class="text-xs px-2 py-1 rounded-md border border-[var(--nx-border)] text-[var(--nx-text)] hover:border-[var(--nx-text-muted)]">{tFn('notifications.contest')}</a>
+						{/if}
+						{#if notif.type === 'appeal_resolved'}
+							<a href="/settings/sanctions" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.view')}</a>
+						{/if}
 						{#if (notif.type === 'ladder_pending' || notif.type === 'ladder_expired' || notif.type === 'ladder_engine_alert') && notif.meta?.user_id}
 							<a href="/admin/members/{notif.meta.user_id}" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.open_file')}</a>
 						{/if}

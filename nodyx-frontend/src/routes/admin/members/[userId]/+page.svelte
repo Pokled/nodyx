@@ -49,7 +49,7 @@
 		'octoguard_notify', 'octoguard_action_undone',
 		'octoguard_ladder_applied', 'octoguard_ladder_proposed', 'octoguard_ladder_approved',
 		'octoguard_ladder_refused', 'octoguard_ladder_expired', 'octoguard_ladder_undone',
-		'octoguard_ladder_engine_alert',
+		'octoguard_ladder_engine_alert', 'octoguard_appeal_filed', 'octoguard_appeal_upheld', 'octoguard_appeal_overturned',
 	])
 	function auditLabel(action: string) {
 		const k = action.replace(/\./g, '_')

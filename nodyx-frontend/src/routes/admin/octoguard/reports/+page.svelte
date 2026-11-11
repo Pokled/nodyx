@@ -13,6 +13,7 @@
 	import LadderGauge from '$lib/components/octoguard/LadderGauge.svelte'
 	import LadderAction from '$lib/components/octoguard/LadderAction.svelte'
 	import { loadMemberLadder, type MemberLadder } from '$lib/octoguard/ladder'
+	import { durationText, type Duration } from '$lib/octoguard/rules'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -36,6 +37,15 @@
 		channel_name: string | null; thread_title: string | null; payload: { content: string; title?: string }
 		rule_name: string; created_at: string
 	}
+	// Lot 8 : une contestation, et la décision qu'elle vise
+	type Appeal = {
+		id: string; user_id: string; username: string | null; decision_type: 'warn' | 'mute'; decision_id: string
+		decided_by: string | null; decided_by_engine: boolean; decided_by_username: string | null
+		message: string; status: 'open' | 'upheld' | 'overturned'; reply: string | null; created_at: string
+		handled_by_username: string | null; handled_at: string | null
+		decision: { at: string; reason: string | null; rule_name: string | null; ladder_step: number | null; ladder_status: string | null; expires_at: string | null; active: boolean; undone: boolean } | null
+		cannot_decide: 'APPEAL_SAME_AUTHOR' | 'APPEAL_OWN' | null
+	}
 	type Case = { key: string; first: Report; reports: Report[]; categories: Record<string, number>; octoguard: boolean }
 
 	// Un dossier par contenu (plusieurs membres peuvent signaler le même message)
@@ -57,12 +67,14 @@
 			: list.sort((a, b) => (b.first.reviewed_at ?? '').localeCompare(a.first.reviewed_at ?? ''))
 	})
 	const held = $derived(data.held as Held[])
+	const appeals = $derived((data.appeals ?? []) as Appeal[])
 
 	let current = $state<string | null>(null)
-	const items = $derived(data.tab === 'held' ? held.map((h) => h.id) : cases.map((c) => c.key))
+	const items = $derived(data.tab === 'held' ? held.map((h) => h.id) : data.tab === 'appeals' ? appeals.map((a) => a.id) : cases.map((c) => c.key))
 	const sel = $derived(current && items.includes(current) ? current : (items[0] ?? null))
 	const selHeld = $derived(data.tab === 'held' ? (held.find((h) => h.id === sel) ?? null) : null)
-	const selCase = $derived(data.tab !== 'held' ? (cases.find((c) => c.key === sel) ?? null) : null)
+	const selCase = $derived(data.tab === 'open' || data.tab === 'done' ? (cases.find((c) => c.key === sel) ?? null) : null)
+	const selAppeal = $derived(data.tab === 'appeals' ? (appeals.find((a) => a.id === sel) ?? null) : null)
 
 	// Le contexte (lot 3) : chargé à la sélection, gardé en mémoire le temps de la page
 	type Brief = { id: string; username: string; created_at: string; warns_active: number; muted: boolean; muted_until: string | null }
@@ -81,7 +93,7 @@
 
 	// Le barème (lot 4b) : où en est l'auteur du contenu signalé
 	let ladderCache = $state<Record<string, MemberLadder>>({})
-	const ladderUser = $derived(data.tab === 'open' ? (selCase?.first.target_author_id ?? null) : null)
+	const ladderUser = $derived(data.tab === 'open' ? (selCase?.first.target_author_id ?? null) : data.tab === 'appeals' ? (selAppeal?.user_id ?? null) : null)
 	const ladder = $derived(ladderUser ? (ladderCache[ladderUser] ?? null) : null)
 	async function loadLadder(id: string) {
 		try { ladderCache[id] = await loadMemberLadder(token, id) } catch { /* la jauge reste simplement absente */ }
@@ -95,9 +107,11 @@
 	const TABS = $derived([
 		{ id: 'open', label: tFn('og2.rp_tab_open'), n: cases.length && data.tab === 'open' ? cases.length : data.openCount },
 		{ id: 'held', label: tFn('og2.rp_tab_held'), n: data.heldCount },
+		{ id: 'appeals', label: tFn('og2.ap_tab'), n: data.appealCount },
 		{ id: 'done', label: tFn('og2.rp_tab_done'), n: null as number | null },
 	])
 
+	const SCALE = 'M12 3v18 M5 21h14 M6 7h12 M6 7l-3 7a3 3 0 006 0z M18 7l-3 7a3 3 0 006 0z'
 	const KIND_ICON = {
 		chat: 'M21 12a8 8 0 01-11.6 7.1L4 20l1.2-4.4A8 8 0 1121 12z',
 		post: 'M4 6h16 M4 12h16 M4 18h10',
@@ -171,6 +185,49 @@
 	const patchReport = (r: Report, body: Record<string, unknown>, okKey: string) =>
 		run(() => og(token, `/reports/${r.id}`, 'PATCH', body), okKey)
 
+	// ─── Contestations (lot 8) ───
+	let reply = $state('')
+	function decisionWhat(a: Appeal): string {
+		if (a.decision_type === 'warn') return tFn('og2.ap_warn')
+		const d = a.decision
+		if (!d?.expires_at) return tFn('og2.ap_mute_open')
+		const min = Math.round((new Date(d.expires_at).getTime() - new Date(d.at).getTime()) / 60_000)
+		const dur: Duration = min % 1440 === 0 ? { value: min / 1440, unit: 'd' } : min % 60 === 0 ? { value: min / 60, unit: 'h' } : { value: min, unit: 'm' }
+		return tFn('og2.ap_mute', { dur: durationText(dur, tFn) })
+	}
+	function decisionState(a: Appeal): { key: string; tone: string; vars?: Record<string, string> } {
+		const d = a.decision
+		if (!d) return { key: 'og2.ap_st_gone', tone: 'og-k-observe' }
+		if (d.undone) return { key: a.decision_type === 'warn' ? 'og2.ap_st_undone_warn' : 'og2.ap_st_undone_mute', tone: 'og-k-ok' }
+		if (a.decision_type === 'warn') return { key: 'og2.ap_st_active_warn', tone: 'og-k-warn' }
+		if (d.active) return d.expires_at ? { key: 'og2.ap_st_active_mute', tone: 'og-k-delete', vars: { at: clock(d.expires_at) } } : { key: 'og2.ap_st_active_mute_open', tone: 'og-k-delete' }
+		return { key: 'og2.ap_st_ended', tone: 'og-k-observe' }
+	}
+	/** Ce que fera « Annuler la décision », dit avant de cliquer. */
+	function overturnEffect(a: Appeal): string {
+		const d = a.decision
+		if (!d || d.undone) return tFn('og2.ap_eff_nothing')
+		const base = a.decision_type === 'warn' ? tFn('og2.ap_eff_warn') : d.active ? tFn('og2.ap_eff_mute') : tFn('og2.ap_eff_mute_ended')
+		return d.ladder_status === 'applied' ? `${base} ${tFn('og2.ap_eff_ladder')}` : base
+	}
+	const AP_ERR: Record<string, string> = {
+		APPEAL_SAME_AUTHOR: 'og2.ap_err_same_author', APPEAL_OWN: 'og2.ap_err_own', APPEAL_DECIDED: 'og2.ap_err_decided',
+		RANK_TOO_LOW: 'areports.err_rank', FORBIDDEN: 'areports.err_forbidden',
+	}
+	async function decideAppeal(a: Appeal, outcome: 'upheld' | 'overturned') {
+		if (outcome === 'overturned' && !confirm(`${tFn('og2.ap_confirm_overturn', { name: a.username ?? '' })}\n\n${overturnEffect(a)}`)) return
+		busy = true; error = null; done = null
+		try {
+			await og(token, `/appeals/${a.id}/decide`, 'POST', { outcome, reply: reply.trim() || null })
+			done = tFn(outcome === 'overturned' ? 'og2.ap_ok_overturned' : 'og2.ap_ok_upheld', { name: a.username ?? '' })
+			reply = ''
+			await invalidateAll()
+		} catch (e) {
+			error = tFn((e instanceof OgError && e.code && AP_ERR[e.code]) || 'areports.err_generic')
+			if (e instanceof OgError && e.code === 'APPEAL_DECIDED') await invalidateAll()
+		} finally { busy = false }
+	}
+
 	function onQueueKey(e: KeyboardEvent) {
 		if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
 		e.preventDefault()
@@ -212,6 +269,13 @@
 	{#if data.tab === 'held'}
 		<div class="og-note"><Icon d={LEVEL_ICON.hold} />{tFn('og2.rp_held_how', { h: data.expiryHours })}</div>
 	{/if}
+	{#if data.tab === 'appeals'}
+		<div class="og-note og-ap-note">
+			<Icon d={SCALE} />
+			<span>{tFn('og2.ap_how')}</span>
+			<a class="og-linkbtn" href={data.appealsDone ? '/admin/octoguard/reports?tab=appeals' : '/admin/octoguard/reports?tab=appeals&done=1'}>{tFn(data.appealsDone ? 'og2.ap_see_open' : 'og2.ap_see_done')}</a>
+		</div>
+	{/if}
 	{#if data.failed}<p class="og-error" role="alert">{tFn('areports.err_generic')}</p>{/if}
 	{#if error}<p class="og-error" role="alert">{error}</p>{/if}
 	{#if done}<p class="og-okmsg" role="status">{done}</p>{/if}
@@ -220,7 +284,8 @@
 		<div class="adm-card og-rp-empty">
 			<span class="og-ic og-k-ok"><Icon d="M20 6L9 17l-5-5" /></span>
 			<div>
-				<b>{tFn(data.tab === 'held' ? 'og2.rp_empty_held' : data.tab === 'open' ? 'areports.empty_open' : 'areports.empty_other')}</b>
+				<b>{tFn(data.tab === 'held' ? 'og2.rp_empty_held' : data.tab === 'appeals' ? (data.appealsDone ? 'og2.ap_empty_done' : 'og2.ap_empty') : data.tab === 'open' ? 'areports.empty_open' : 'areports.empty_other')}</b>
+				{#if data.tab === 'appeals' && !data.appealsDone}<p class="og-help">{tFn('og2.ap_empty_sub')}</p>{/if}
 				{#if data.tab === 'held'}<p class="og-help">{tFn('og2.rp_empty_held_sub')}</p>{/if}
 				{#if data.tab === 'open' && data.heldCount > 0}
 					<p class="og-help">{tFn(data.heldCount > 1 ? 'og2.rp_held_waiting_n' : 'og2.rp_held_waiting_1', { n: data.heldCount })}</p>
@@ -239,6 +304,15 @@
 							<b>{h.author_username}, {heldPlace(h)}</b>
 							<span class="og-q-time">{ago(h.created_at)}</span>
 							<span class="og-q-sub">{tFn('og2.rp_q_held', { age: accountAge(h.author_created_at), rule: h.rule_name })}</span>
+						</button>
+					{/each}
+				{:else if data.tab === 'appeals'}
+					{#each appeals as a (a.id)}
+						<button type="button" class="og-q" id="q-{a.id}" role="option" aria-selected={sel === a.id} onclick={() => { current = a.id; done = null; error = null; reply = '' }}>
+							<span class="og-ic {a.status === 'overturned' ? 'og-k-ok' : 'og-k-warn'}"><Icon d={SCALE} /></span>
+							<b>{tFn('og2.ap_q_title', { name: a.username ?? tFn('areports.deleted_account') })}</b>
+							<span class="og-q-time">{ago(a.created_at)}</span>
+							<span class="og-q-sub">{tFn('og2.ap_q_sub', { what: decisionWhat(a), at: a.decision ? clock(a.decision.at) : '' })}{a.decision?.rule_name ? ` · ${a.decision.rule_name}` : ''}</span>
 						</button>
 					{/each}
 				{:else}
@@ -275,6 +349,36 @@
 					</div>
 					{#if ctxOk}<ContextView around={ctxOk.around} current={ctxOk.current} edits={ctxOk.edits} heldAt={h.kind === 'chat' || h.kind === 'post' ? h.created_at : null} />{:else if ctx === undefined}<p class="og-help">{tFn('og2.cx_loading')}</p>{/if}
 					<p class="og-meta"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 7v5l3 2" />{tFn('og2.rp_expires', { left: expiresIn(h.created_at) })}</p>
+				{:else if selAppeal}
+					{@const a = selAppeal}
+					{@const st = decisionState(a)}
+					<div class="og-rp-top">
+						<div>
+							<div class="og-rp-title">{tFn('og2.ap_title', { name: a.username ?? tFn('areports.deleted_account') })}</div>
+							<div class="og-meta">{tFn('og2.ap_filed_at', { at: clock(a.created_at) })}</div>
+						</div>
+						<span class="adm-pill og-tone {st.tone}">{tFn(st.key, st.vars)}</span>
+					</div>
+					<div class="og-field">
+						<span class="og-lbl">{tFn('og2.ap_says', { name: a.username ?? '' })}</span>
+						<blockquote class="og-quote og-rp-text">{a.message}</blockquote>
+					</div>
+					<div class="og-field">
+						<span class="og-lbl">{tFn('og2.ap_the_decision')}</span>
+						<dl class="og-ap-facts">
+							<dt>{tFn('og2.ap_f_what')}</dt><dd>{decisionWhat(a)}{#if a.decision?.ladder_step} · {tFn('og2.ap_f_step', { n: a.decision.ladder_step })}{/if}</dd>
+							<dt>{tFn('og2.ap_f_when')}</dt><dd>{a.decision ? clock(a.decision.at) : '·'}</dd>
+							<dt>{tFn('og2.ap_f_by')}</dt><dd>{a.decided_by_engine ? 'OctoGuard' : (a.decided_by_username ?? tFn('areports.deleted_account'))}</dd>
+							{#if a.decision?.rule_name}<dt>{tFn('og2.ap_f_rule')}</dt><dd>{a.decision.rule_name}</dd>{/if}
+							<dt>{tFn('og2.ap_f_reason')}</dt><dd>{a.decision?.reason ? `« ${a.decision.reason} »` : tFn('og2.ap_f_no_reason')}</dd>
+						</dl>
+					</div>
+					{#if a.status !== 'open'}
+						<div class="og-field">
+							<span class="og-lbl">{tFn(a.status === 'overturned' ? 'og2.ap_done_overturned' : 'og2.ap_done_upheld', { name: a.handled_by_username ?? tFn('areports.deleted_account'), at: a.handled_at ? clock(a.handled_at) : '' })}</span>
+							{#if a.reply}<blockquote class="og-quote">{a.reply}</blockquote>{:else}<p class="og-help">{tFn('og2.ap_no_reply')}</p>{/if}
+						</div>
+					{/if}
 				{:else if selCase}
 					{@const r = selCase.first}
 					<div class="og-rp-top">
@@ -338,6 +442,39 @@
 						</button>
 						<p class="og-help">{tFn('og2.rp_decide_help')}</p>
 					</div>
+				{:else if selAppeal}
+					{@const a = selAppeal}
+					<div class="adm-card og-rp-card">
+						<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: a.username ?? '' })}</h2>
+						<LadderGauge {ladder} />
+						<a class="adm-btn adm-btn--sm" href="/admin/members/{a.user_id}"><Icon d={KIND_ICON.user} />{tFn('amem.open_file')}</a>
+					</div>
+					{#if a.status === 'open'}
+						<div class="adm-card og-rp-card">
+							<h2 class="og-rp-h">{tFn('og2.rp_decide')}</h2>
+							{#if a.cannot_decide}
+								<p class="og-ap-block"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M5.6 5.6l12.8 12.8" />{tFn(a.cannot_decide === 'APPEAL_OWN' ? 'og2.ap_cannot_own' : 'og2.ap_cannot_author')}</p>
+							{:else if !canMembers}
+								<p class="og-help">{tFn('areports.err_forbidden')}</p>
+							{:else}
+								<div class="og-field og-ap-field">
+								<label class="og-lbl" for="ap-reply">
+									{tFn('og2.ap_reply_label', { name: a.username ?? '' })}
+									<span class="og-tipwrap"><button type="button" class="og-info" aria-label={tFn('og2.help')}><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 11v5 M12 8h.01" /><span class="og-tip" role="tooltip">{tFn('og2.ap_reply_tip')}</span></button></span>
+								</label>
+								<textarea id="ap-reply" class="adm-input og-ap-reply" rows="3" maxlength="500" bind:value={reply} placeholder={tFn('og2.ap_reply_ph')}></textarea>
+								</div>
+								<button type="button" class="adm-btn adm-btn--primary" disabled={busy} onclick={() => decideAppeal(a, 'overturned')}>
+									<Icon d="M3 12a9 9 0 109-9 M3 4v5h5" />{tFn('og2.ap_overturn')}
+								</button>
+								<p class="og-help">{overturnEffect(a)}</p>
+								<button type="button" class="adm-btn" disabled={busy} onclick={() => decideAppeal(a, 'upheld')}>
+									<Icon d="M20 6L9 17l-5-5" />{tFn('og2.ap_uphold')}
+								</button>
+								<p class="og-help">{tFn('og2.ap_uphold_help')}</p>
+							{/if}
+						</div>
+					{/if}
 				{:else if selCase}
 					{@const r = selCase.first}
 					{#if r.target_author_id}
@@ -390,3 +527,18 @@
 		</div></div>
 	{/if}
 </div>
+
+<style>
+	.og-ap-note { align-items: center; flex-wrap: wrap; }
+	.og-ap-note .og-linkbtn { margin-left: auto; }
+	.og-ap-facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0; font-size: 0.875rem; }
+	.og-ap-facts dt { color: var(--nx-text-muted); }
+	.og-ap-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+	.og-ap-reply { width: 100%; box-sizing: border-box; resize: vertical; min-height: 4.5rem; font: inherit; font-size: 0.875rem; line-height: 1.45; }
+	.og-ap-field { gap: 0.4rem; }
+	.og-ap-field .og-lbl { display: flex; align-items: center; gap: 0.35rem; }
+	.og-ap-block { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0; font-size: 0.85rem; color: var(--nx-text-muted); }
+	.og-tipwrap { position: relative; display: inline-block; vertical-align: middle; }
+	/* La colonne de droite : la bulle s'ouvre vers la gauche, jamais hors de l'écran */
+	@media (min-width: 641px) { .og-tipwrap .og-tip { left: auto; right: -0.5rem; } }
+</style>

@@ -67,6 +67,13 @@ défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
   admin qui décide, jamais l'automatisme. Une règle d'OctoGuard au cran « Avertir » peut aussi
   « suivre le barème » : chaque déclenchement fait monter le membre d'une marche, une par
   24 heures au plus, et arrivé à l'exclusion, OctoGuard n'exclut pas, il prévient l'équipe.
+- **Une décision se conteste.** Un avertissement ou une sourdine reçus se contestent une fois,
+  dans les 30 jours, depuis la notification, le message « tu es en sourdine » du chat ou la page
+  « Avertissements et sourdines » du compte (#973). Une autre personne de l'équipe tranche dans
+  l'onglet « Contestations » des signalements : celle qui a pris la décision ne le peut pas.
+  Annuler la décision la défait vraiment (avertissement retiré, sourdine levée, une marche de
+  moins sur le barème), et le membre reçoit la réponse. Il ne voit jamais le nom de la règle ni
+  celui de la personne qui l'a sanctionné.
 - **Se tromper fait partie du jeu.** « Annuler » une action d'OctoGuard ne marchait pas, il marche
   maintenant, et une seule fois (#944). Une action marquée « faux positif » peut apprendre une
   exception à la règle, mais seulement dans un cas sûr (« contenu » attrapé par « \*con\* ») et

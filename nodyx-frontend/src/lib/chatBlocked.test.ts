@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fr from './locales/fr.json'
 import en from './locales/en.json'
-import { blockedMessage } from './chatBlocked'
+import { blockedMessage, isContestable } from './chatBlocked'
 
 // Un tFn qui lit les vrais fichiers de langue : une clé absente ressortirait telle quelle
 const make = (dict: Record<string, string>) => (k: string, vars: Record<string, string> = {}) =>
@@ -54,5 +54,19 @@ describe('ce que voit un membre dont le message est refusé', () => {
 		const out = blockedMessage(make(en as Record<string, string>), { reason: CORE_PROSE[0] })
 		expect(out).toBe(en['chat.message_refused'])
 		expect(out).not.toMatch(/refusé|interdit/)
+	})
+})
+
+describe('le lien « Contester » (lot 8)', () => {
+	it('une sourdine en cours, un avertissement ou une sourdine reçus : contestables', () => {
+		expect(isContestable({ reason: 'muted' })).toBe(true)
+		expect(isContestable({ octoguard: { i18n_key: 'octoguard' + '.warn' + '.given' } })).toBe(true)
+		expect(isContestable({ octoguard: { i18n_key: 'octoguard' + '.mute' + '.applied' } })).toBe(true)
+	})
+	it('un message supprimé, retenu, un salon en lecture seule : rien à contester', () => {
+		expect(isContestable({ octoguard: { i18n_key: 'octoguard' + '.message' + '.deleted' } })).toBe(false)
+		expect(isContestable({ octoguard: { i18n_key: 'octoguard' + '.held_limit' } })).toBe(false)
+		expect(isContestable({ reason: 'channel_read_only' })).toBe(false)
+		expect(isContestable(null)).toBe(false)
 	})
 })

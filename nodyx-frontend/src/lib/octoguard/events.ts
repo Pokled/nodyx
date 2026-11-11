@@ -71,6 +71,10 @@ export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKin
 		case 'ladder_refused': return { kind: 'ok', key: 'ev_ladder_refused', source: 'team' }
 		case 'ladder_expired': return { kind: 'observe', key: 'ev_ladder_expired', source: 'octoguard' }
 		case 'ladder_engine_alert': return { kind: 'report', key: 'ev_ladder_engine_alert', source: 'octoguard' }
+		// Lot 8 : contester une décision. Le dépôt vient du membre, la suite de l'équipe.
+		case 'appeal_filed': return { kind: 'report', key: 'ev_appeal_filed', source: 'team' }
+		case 'appeal_upheld': return { kind: 'team', key: 'ev_appeal_upheld', source: 'team' }
+		case 'appeal_overturned': return { kind: 'ok', key: 'ev_appeal_overturned', source: 'team' }
 		case 'ladder_undone': return { kind: 'ok', key: 'ev_ladder_undone', source: 'team' }
 		case 'ladder_settings': return { kind: 'acc', key: 'ev_config', source: 'team' }
 	}

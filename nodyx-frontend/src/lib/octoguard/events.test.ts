@@ -35,3 +35,12 @@ describe('une règle qui suit le barème (D28)', () => {
 		expect(eventOf({ action: 'octoguard.ladder_engine_alert', metadata: { actor: 'octoguard:auto' } })).toEqual({ kind: 'report', key: 'ev_ladder_engine_alert', source: 'octoguard' })
 	})
 })
+
+describe('contester une décision (lot 8)', () => {
+	it('le dépôt et les deux issues ont chacun leur phrase', () => {
+		expect(eventOf({ action: 'octoguard.appeal_filed', metadata: { actor: 'member' } })).toEqual({ kind: 'report', key: 'ev_appeal_filed', source: 'team' })
+		expect(eventOf({ action: 'octoguard.appeal_upheld', metadata: { actor: 'admin' } })).toMatchObject({ key: 'ev_appeal_upheld', source: 'team' })
+		expect(eventOf({ action: 'octoguard.appeal_overturned', metadata: { actor: 'admin' } })).toMatchObject({ key: 'ev_appeal_overturned', source: 'team' })
+	})
+})
+
