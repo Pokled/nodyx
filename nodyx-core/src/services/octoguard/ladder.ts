@@ -181,7 +181,7 @@ async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
 interface Actor { userId: string; access: MemberAccess }
 
 /** Le garde-fou de rang, comme partout : jamais le propriétaire, jamais soi-même, jamais un pair. */
-async function checkTarget(actor: Actor, targetId: string): Promise<{ ok: true; username: string } | Fail> {
+export async function checkTarget(actor: Actor, targetId: string): Promise<{ ok: true; username: string } | Fail> {
   if (targetId === actor.userId) return fail(403, 'RANK_TOO_LOW', 'Cannot sanction yourself')
   const { rows } = await db.query<{ username: string; is_system: boolean }>(`SELECT username, is_system FROM users WHERE id = $1`, [targetId])
   if (!rows[0] || rows[0].is_system) return fail(404, 'NOT_FOUND', 'Member not found')
@@ -214,7 +214,8 @@ async function perform(row: { user_id: string; sanction: Sanction; step: number;
       [row.user_id, row.reason, actorId, ruleId])
     try {
       // Structure seulement : l'écran du membre dit « avertissement », et le motif s'il y en a un
-      await NotificationModel.create({ user_id: row.user_id, type: 'moderation_warning', meta: { ladder_step: row.step, ...(row.reason ? { reason: row.reason } : {}) } })
+      // warn_id : l'écran du membre y accroche « Contester » (lot 8)
+      await NotificationModel.create({ user_id: row.user_id, type: 'moderation_warning', meta: { warn_id: rows[0].id, ladder_step: row.step, ...(row.reason ? { reason: row.reason } : {}) } })
       if (io) io.to(`user:${row.user_id}`).emit('notification:new', { unreadCount: await NotificationModel.getUnreadCount(row.user_id) })
     } catch { /* la notification ne bloque jamais la sanction */ }
     return { warn_id: rows[0].id }

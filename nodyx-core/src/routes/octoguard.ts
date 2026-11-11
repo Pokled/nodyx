@@ -34,6 +34,7 @@ import { listPending, countPending, approveHeld, refuseHeld, listMine, forAuthor
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
 import { closeReports } from '../services/octoguard/reportClose'
 import { SANCTIONS, FORGET_CHOICES, countBanCapable, getLadderSettings, saveLadderSettings, memberLadder, applyLadder, approveLadder, refuseLadder, undoLadder } from '../services/octoguard/ladder'
+import { listMine as listMyDecisions, fileAppeal, listAppeals, decideAppeal, APPEAL_DAYS, APPEAL_MIN, APPEAL_MAX, REPLY_MAX } from '../services/octoguard/appeals'
 import * as NotificationModel from '../models/notification'
 import * as PostModel from '../models/post'
 import * as ThreadModel from '../models/thread'
@@ -186,7 +187,7 @@ async function logAdminAction(
 // Qui peut quoi dans OctoGuard (CDC modération, E1) : régler OctoGuard =
 // manage_octoguard ; les sourdines et les signalements sont du travail de
 // modération des membres (moderate_members), ouvert aussi à manage_octoguard.
-const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|held|reports(?!\/settings)|ladder(?!\/settings))(\/|$)/
+const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|held|reports(?!\/settings)|ladder(?!\/settings)|appeals)(\/|$)/
 // Le barème : toute l'équipe le LIT (la jauge), seul manage_octoguard le RÈGLE
 const LADDER_SETTINGS_ROUTE = /^\/api\/v1\/admin\/octoguard\/ladder\/settings$/
 const guardMemberModeration = requireAnyPermission('moderate_members', 'manage_octoguard')
@@ -1221,6 +1222,25 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     })
   }
 
+  // ─── Contestations (lot 8) ────────────────────────────────────────────────
+
+  app.get('/appeals', async (request, reply) => {
+    const which = (request.query as { status?: string }).status === 'done' ? 'done' : 'open'
+    return reply.send(await listAppeals(request.user!.userId, which))
+  })
+
+  app.post('/appeals/:id/decide', {
+    preHandler: [rateLimit, validate({ body: z.object({
+      outcome: z.enum(['upheld', 'overturned']),
+      reply:   z.string().max(REPLY_MAX).nullable().optional(),
+    }) })],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    if (!UUID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    const r = await decideAppeal({ userId: request.user!.userId, access: request.access! }, id, request.body as { outcome: 'upheld' | 'overturned'; reply?: string | null })
+    return r.ok ? reply.send(r) : reply.code(r.status).send({ error: r.error, code: r.code })
+  })
+
   // ─── Reports settings (anti-abuse) ────────────────────────────────────────
 
   app.get('/reports/settings', async (_request, reply) => {
@@ -1277,6 +1297,23 @@ export async function reportsPublicPlugin(app: FastifyInstance) {
     }
     const rows = await listMine(request.user!.userId, { channelId: q.channel_id, threadId: q.thread_id })
     return reply.send({ held: rows.map(forAuthor), expiry_hours: HELD_EXPIRY_HOURS })
+  })
+
+  // Lot 8 : mes avertissements et sourdines des 30 derniers jours, et les contester.
+  // Jamais le nom de la règle (D20) ni celui de la personne qui a décidé.
+  app.get('/decisions/mine', { preHandler: [rateLimit] }, async (request, reply) => {
+    return reply.send({ decisions: await listMyDecisions(request.user!.userId), appeal_days: APPEAL_DAYS })
+  })
+
+  app.post('/appeals', {
+    preHandler: [rateLimit, validate({ body: z.object({
+      decision_type: z.enum(['warn', 'mute']),
+      decision_id:   z.string().regex(UUID_RE),
+      message:       z.string().trim().min(APPEAL_MIN).max(APPEAL_MAX),
+    }) })],
+  }, async (request, reply) => {
+    const r = await fileAppeal(request.user!.userId, request.body as { decision_type: 'warn' | 'mute'; decision_id: string; message: string })
+    return r.ok ? reply.code(201).send(r) : reply.code(r.status).send({ error: r.error, code: r.code })
   })
 
   app.post('/', {

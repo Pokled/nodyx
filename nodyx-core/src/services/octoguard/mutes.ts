@@ -135,8 +135,8 @@ export async function applyMute(input: ApplyMuteInput): Promise<ChatMuteRow | nu
   try {
     const expiresAt = durationToExpiresAt(input.duration ?? null)
     const { rows } = await db.query<ChatMuteRow>(
-      `INSERT INTO chat_mutes (user_id, channel_id, reason, applied_by, expires_at)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO chat_mutes (user_id, channel_id, reason, applied_by, expires_at, rule_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, user_id, channel_id, reason, applied_by,
                  applied_at::text AS applied_at,
                  expires_at::text AS expires_at`,
@@ -146,6 +146,7 @@ export async function applyMute(input: ApplyMuteInput): Promise<ChatMuteRow | nu
         input.reason ?? null,
         input.appliedBy ?? null,
         expiresAt,
+        input.ruleId ?? null,
       ]
     )
     const row = rows[0]

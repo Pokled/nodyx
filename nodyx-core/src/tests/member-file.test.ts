@@ -129,7 +129,7 @@ describe('routes de la fiche', () => {
     expect(res.statusCode).toBe(201)
     const ins = calls.find(c => c.sql.startsWith('INSERT INTO octoguard_warns'))!
     expect(ins.params).toEqual([U.member, 'Propos insultants envers Tom', U.mod])
-    expect(NotificationModel.create).toHaveBeenCalledWith({ user_id: U.member, type: 'moderation_warning', meta: { reason: 'Propos insultants envers Tom' } })
+    expect(NotificationModel.create).toHaveBeenCalledWith({ user_id: U.member, type: 'moderation_warning', meta: { reason: 'Propos insultants envers Tom', warn_id: 'w1' } })   // warn_id : « Contester » (lot 8)
   })
   it('un modérateur n’avertit pas un autre modérateur (rang)', async () => {
     const res = await warn(U.mod, U.mod2)
