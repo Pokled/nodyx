@@ -426,12 +426,12 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const { rows } = await db.query(
       `INSERT INTO octoguard_automod_rules
          (name, type, params, action, action_duration, escalation,
-          immunized_role_types, immunized_grade_ids, dry_run, enabled, scopes, conditions)
+          immunized_role_types, immunized_grade_ids, dry_run, enabled, scopes, conditions, follow_ladder)
        VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb,
                COALESCE($7, ARRAY['owner','admin','moderator']),
                COALESCE($8, '{}'::uuid[]),
                COALESCE($9, false), COALESCE($10, true),
-               COALESCE($11::text[], '{chat}'), COALESCE($12::jsonb, '{}'::jsonb))
+               COALESCE($11::text[], '{chat}'), COALESCE($12::jsonb, '{}'::jsonb), COALESCE($13, false))
        RETURNING *`,
       [
         body.name, body.type, JSON.stringify(body.params), body.action,
@@ -443,6 +443,7 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
         body.enabled ?? null,
         body.scopes ?? null,
         body.conditions ? JSON.stringify(body.conditions) : null,
+        body.follow_ladder ?? null,
       ]
     )
 

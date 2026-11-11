@@ -14,6 +14,8 @@ export interface Rule {
 	action: string
 	action_duration: Duration | null
 	escalation: { warns_threshold: number; window_days: number; action: string; duration?: Duration | null } | null
+	/** Au cran Avertir : suivre le barème des sanctions au lieu de l'escalade propre (D28). */
+	follow_ladder?: boolean
 	immunized_role_types: string[]
 	dry_run: boolean
 	enabled: boolean

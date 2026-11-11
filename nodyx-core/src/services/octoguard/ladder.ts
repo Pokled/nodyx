@@ -418,7 +418,8 @@ export async function undoLadder(actor: Actor, ladderId: string): Promise<{ ok: 
 
 // ─── Une règle qui suit le barème (D28) ─────────────────────────────────────
 
-/** OctoGuard ne fait monter un même membre que d'une marche par 24 heures au plus. */
+/** OctoGuard ne fait pas monter un membre qui a déjà monté d'une marche (par lui ou
+ * par l'équipe) dans les 24 dernières heures. */
 export const ENGINE_STEP_HOURS = 24
 
 /**
@@ -434,7 +435,7 @@ export async function engineLadderStep(rule: { id: string; name: string }, userI
   return withLock(userId, async () => {
     const { rows: recent } = await db.query(
       `SELECT 1 FROM octoguard_ladder
-        WHERE user_id = $1 AND actor_id IS NULL AND status = 'applied'
+        WHERE user_id = $1 AND status = 'applied'
           AND created_at > NOW() - ($2 || ' hours')::interval LIMIT 1`,
       [userId, String(ENGINE_STEP_HOURS)])
     if (recent.length) return 'too_soon'

@@ -21,3 +21,17 @@ describe('les marques de l’équipe (lot 10)', () => {
 		expect(eventOf({ action: 'octoguard.observed_normal', metadata: {} })).toEqual({ kind: 'ok', key: 'ev_observed_normal', source: 'team' })
 	})
 })
+
+describe('une règle qui suit le barème (D28)', () => {
+	it('une marche posée par OctoGuard se raconte comme OctoGuard, avec la règle', () => {
+		expect(eventOf({ action: 'octoguard.ladder_applied', metadata: { actor: 'octoguard:auto', sanction: 'warn', rule_id: 'r' } })).toEqual({ kind: 'delete', key: 'ev_ladder_engine_warn', source: 'octoguard' })
+		expect(eventOf({ action: 'octoguard.ladder_applied', metadata: { actor: 'octoguard:auto', sanction: 'mute_1h', rule_id: 'r' } })).toMatchObject({ key: 'ev_ladder_engine_mute', source: 'octoguard' })
+	})
+	it('une marche posée par l’équipe reste une phrase de l’équipe', () => {
+		expect(eventOf({ action: 'octoguard.ladder_applied', metadata: { actor: 'admin', sanction: 'mute_1h' } })).toMatchObject({ key: 'ev_ladder_applied_mute', source: 'team' })
+		expect(eventOf({ action: 'octoguard.ladder_applied', metadata: { actor: 'admin', sanction: 'ban_7d' } })).toMatchObject({ key: 'ev_ladder_applied_ban', source: 'team' })
+	})
+	it('l’alerte à l’équipe a sa phrase', () => {
+		expect(eventOf({ action: 'octoguard.ladder_engine_alert', metadata: { actor: 'octoguard:auto' } })).toEqual({ kind: 'report', key: 'ev_ladder_engine_alert', source: 'octoguard' })
+	})
+})

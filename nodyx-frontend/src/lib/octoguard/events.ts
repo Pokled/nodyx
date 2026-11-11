@@ -62,12 +62,15 @@ export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKin
 		// Le barème (lot 4b) : la phrase dépend de la sanction (« a mis Rémi en sourdine 1 heure »)
 		case 'ladder_applied': {
 			const k = ladderKind(l.metadata?.sanction)
+			// Posée par OctoGuard, une règle qui suit le barème (D28) : jamais une exclusion
+			if (l.metadata?.actor === 'octoguard:auto' && k !== 'ban') return { kind: 'delete', key: `ev_ladder_engine_${k}`, source: 'octoguard' }
 			return { kind: 'team', key: `ev_ladder_applied_${k}`, source: 'team' }
 		}
 		case 'ladder_approved': return { kind: 'team', key: 'ev_ladder_approved', source: 'team' }
 		case 'ladder_proposed': return { kind: 'report', key: 'ev_ladder_proposed', source: 'team' }
 		case 'ladder_refused': return { kind: 'ok', key: 'ev_ladder_refused', source: 'team' }
 		case 'ladder_expired': return { kind: 'observe', key: 'ev_ladder_expired', source: 'octoguard' }
+		case 'ladder_engine_alert': return { kind: 'report', key: 'ev_ladder_engine_alert', source: 'octoguard' }
 		case 'ladder_undone': return { kind: 'ok', key: 'ev_ladder_undone', source: 'team' }
 		case 'ladder_settings': return { kind: 'acc', key: 'ev_config', source: 'team' }
 	}
