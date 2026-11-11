@@ -344,7 +344,7 @@
 	// le texte au membre pour qu'il puisse le corriger.
 	let lastPlainSent = ''
 	function onDmBlocked(payload: BlockedPayload) {
-		sendError = blockedMessage(tFn, payload)
+		sendError = blockedMessage(tFn, payload, (iso) => new Date(iso).toLocaleString($locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))
 		if (lastPlainSent && !messageInput) messageInput = lastPlainSent
 		lastPlainSent = ''
 	}

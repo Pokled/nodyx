@@ -25,7 +25,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { can } from '$lib/permissions';
 	import { openReport } from '$lib/report';
-	import { blockedMessage, type BlockedPayload } from '$lib/chatBlocked';
+	import { blockedMessage, isContestable, type BlockedPayload } from '$lib/chatBlocked';
 	import { htmlToText as heldText } from '$lib/octoguard/text';
 	import { isDarkTheme } from '$lib/theme';
 	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
@@ -150,6 +150,8 @@
 
 	// Content filter feedback
 	let blockedNotice = $state<string | null>(null);
+	// Lot 8 : une sourdine ou un avertissement se contestent depuis le message même
+	let blockedContest = $state(false);
 	// Mes messages retenus par OctoGuard (cran « Retenir ») dans ce salon : moi
 	// seul les vois, « en attente de validation », jusqu'à la décision.
 	type HeldMine = { id: string; channel_id: string | null; content: string; created_at: string };
@@ -483,9 +485,11 @@
 
 		sock.on('chat:blocked', (payload: BlockedPayload) => {
 			// Jamais la raison brute du cœur : une phrase traduite (cf. lib/chatBlocked.ts)
-			blockedNotice = blockedMessage(tFn, payload);
+			// La fin de sourdine dans la langue de l'écran (sans locale : celle du navigateur, « 6:48:17 AM »)
+			blockedNotice = blockedMessage(tFn, payload, (iso) => new Date(iso).toLocaleString($locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }));
+			blockedContest = isContestable(payload);
 			if (blockedTimer) clearTimeout(blockedTimer);
-			blockedTimer = setTimeout(() => { blockedNotice = null; }, 5000);
+			blockedTimer = setTimeout(() => { blockedNotice = null; blockedContest = false; }, blockedContest ? 10000 : 5000);
 		});
 
 		sock.on('chat:rate_limited', ({ retryAfter }: { retryAfter: number }) => {
@@ -1673,7 +1677,8 @@
 				{#if blockedNotice}
 					<div class="flex items-center gap-2 px-3 py-2 mb-1 bg-red-950/60 border border-red-600/60 rounded-lg text-xs text-red-300">
 						<span>⛔</span>
-						<span>{blockedNotice}</span>
+						<span class="flex-1">{blockedNotice}</span>
+						{#if blockedContest}<a href="/settings/sanctions" class="shrink-0 underline font-semibold text-red-200 hover:text-white" title={tFn('notifications.contest_hint')}>{tFn('chat.contest_link')}</a>{/if}
 					</div>
 				{/if}
 

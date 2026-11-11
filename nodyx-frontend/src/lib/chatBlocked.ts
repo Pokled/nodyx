@@ -27,3 +27,14 @@ export function blockedMessage(tFn: T, p: BlockedPayload | null | undefined, for
 	// Filtre de contenu (phrase française du cœur) ou raison inconnue
 	return tFn('chat.message_refused')
 }
+
+// Lot 8 : ces refus-là viennent d'une décision qui se conteste (sourdine en cours,
+// avertissement qu'on vient de recevoir, sourdine qu'on vient de prendre). Les clés
+// du cœur sont reconstruites par morceaux (cf. octoguardMessages.ts).
+const OG = 'octoguard' + '.'
+const CONTESTABLE_KEYS = new Set([OG + 'warn' + '.given', OG + 'mute' + '.applied', OG + 'mute' + '.active'])
+export function isContestable(p: BlockedPayload | null | undefined): boolean {
+	if (p?.reason === 'muted') return true
+	const k = p?.octoguard?.i18n_key
+	return !!k && CONTESTABLE_KEYS.has(k)
+}
