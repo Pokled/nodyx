@@ -201,7 +201,15 @@
 
 			<details class="og-field og-esc" open={follow}>
 				<summary class="og-lbl og-esc-sum">{tFn('og2.esc_title')}</summary>
-				{#if follow}
+				{#if level !== 'warn'}
+					<!-- Hors du cran Avertir, ni l'escalade ni le barème ne jouent : le dire, sans
+					     décrire ce qui n'arrivera pas (une règle qui signale n'avertit personne). -->
+					<p class="og-help">{tFn('og2.esc_only_warn')}</p>
+					<div class="og-esc-row">
+						{#if follow}<button type="button" class="adm-btn adm-btn--sm" disabled={busy} onclick={() => (follow = false)}>{tFn('og2.esc_back_own')}</button>{/if}
+						<span class="og-help"><a class="og-linkbtn" href="/admin/octoguard/ladder">{tFn('og2.esc_see_ladder')}</a></span>
+					</div>
+				{:else if follow}
 					<p class="og-help">{tFn('og2.esc_ladder_on')}</p>
 					<div class="og-esc-row">
 						<button type="button" class="adm-btn adm-btn--sm" disabled={busy} onclick={() => (follow = false)}>{tFn('og2.esc_back_own')}</button>
@@ -216,7 +224,6 @@
 						<span class="og-help"><a class="og-linkbtn" href="/admin/octoguard/ladder">{tFn('og2.esc_see_ladder')}</a></span>
 					</div>
 				{/if}
-				{#if level !== 'warn'}<p class="og-help">{tFn('og2.esc_only_warn')}</p>{/if}
 			</details>
 
 			<div class="og-field">
