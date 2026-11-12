@@ -20,6 +20,19 @@ import { validate }        from '../middleware/validate.js'
 import { requireModule }   from '../middleware/requireModule.js'
 import { randomUUID }      from 'crypto'
 import { announceWikiPage } from '../services/webhooks/announce'
+import { sanitize } from '../utils/sanitize'
+import { rehostExternalImages } from '../services/inlineImageRehost'
+
+// Le contenu d'une page wiki est affiché tel quel ({@html}) : il passe par le
+// MÊME nettoyeur que le forum et les tâches (images externes rapatriées, puis
+// seulement les balises et attributs connus). Avant le 12/11/2026, il était
+// enregistré brut : un modérateur pouvait y glisser un script exécuté chez
+// chaque lecteur, propriétaire compris.
+async function cleanWikiContent(raw: string): Promise<string> {
+  if (!raw) return ''
+  const rehost = await rehostExternalImages(raw)
+  return sanitize(rehost.html)
+}
 
 // ── Slug generation ───────────────────────────────────────────────────────────
 
@@ -130,7 +143,9 @@ export default async function wikiRoutes(app: FastifyInstance) {
     // Async view counter — never blocks the response
     db.query(`UPDATE wiki_pages SET views = views + 1 WHERE slug = $1`, [slug]).catch(() => {})
 
-    return reply.send(rows[0])
+    // Nettoyée aussi à la lecture : rien de ce qui aurait été enregistré avant
+    // le correctif (contenu brut) ne peut s'exécuter chez le lecteur.
+    return reply.send({ ...rows[0], content: sanitize(rows[0].content ?? '') })
   })
 
   // POST /api/v1/wiki — create a new page (admin / moderator only)
@@ -150,6 +165,7 @@ export default async function wikiRoutes(app: FastifyInstance) {
     if (ogWiki.blocked) return reply.code(422).send(blockedBody(ogWiki))
 
     const slug = generateWikiSlug(body.title)
+    const content = await cleanWikiContent(body.content)
 
     const { rows } = await db.query(
       `INSERT INTO wiki_pages (slug, title, content, excerpt, category, is_public, author_id)
@@ -158,7 +174,7 @@ export default async function wikiRoutes(app: FastifyInstance) {
       [
         slug,
         body.title,
-        body.content,
+        content,
         body.excerpt  ?? null,
         body.category ?? null,
         body.is_public ?? false,
@@ -199,7 +215,7 @@ export default async function wikiRoutes(app: FastifyInstance) {
     let i = 2
 
     if (body.title     !== undefined) { setParts.push(`title = $${i++}`);     values.push(body.title) }
-    if (body.content   !== undefined) { setParts.push(`content = $${i++}`);   values.push(body.content) }
+    if (body.content   !== undefined) { setParts.push(`content = $${i++}`);   values.push(await cleanWikiContent(body.content)) }
     if (body.excerpt   !== undefined) { setParts.push(`excerpt = $${i++}`);   values.push(body.excerpt) }
     if (body.category  !== undefined) { setParts.push(`category = $${i++}`);  values.push(body.category) }
     if (body.is_public !== undefined) { setParts.push(`is_public = $${i++}`); values.push(body.is_public) }
