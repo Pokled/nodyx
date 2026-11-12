@@ -24,6 +24,7 @@ import { awardPoints, REPUTATION } from '../../models/reputation'
 import { io } from '../../socket/io'
 import { logOctoGuardAction } from './logger'
 import { purgeOldEdits, EDITS_RETENTION_DAYS } from './context'
+import { announceThread } from '../webhooks/announce'
 
 /** D17 : un contenu retenu sans décision est refusé au bout de 72 h. */
 export const HELD_EXPIRY_HOURS = 72
@@ -235,6 +236,8 @@ async function publish(h: HeldRow): Promise<string | null> {
     if (p.tag_ids?.length) await sideEffect('tags', () => TagModel.setThreadTags(thread.id, p.tag_ids!))
     await sideEffect('cache', async () => { await redis.incr('threads:cache:ver') })
     await sideEffect('reputation', () => awardPoints(h.author_id, REPUTATION.THREAD))
+    // Webhooks : le fil retenu est maintenant publié, il peut s'annoncer
+    announceThread(thread.id)
     return thread.id
   }
   if (h.kind === 'post_edit' && h.post_id) {

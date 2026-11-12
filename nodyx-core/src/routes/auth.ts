@@ -16,6 +16,7 @@ import { getUserTotp, TOTP_PENDING_TTL } from './totp'
 import { getClientIp, estPubliquementRoutable } from '../utils/clientIp'
 import { countActiveMembers } from '../models/memberCount'
 import { setBanMark } from '../services/octoguard/bans'
+import { announceMember } from '../services/webhooks/announce'
 
 // ── Discord security alerts ───────────────────────────────────────────────────
 
@@ -257,6 +258,8 @@ export default async function authRoutes(app: FastifyInstance) {
          ON CONFLICT DO NOTHING`,
         [communityId, user.id]
       )
+      // Webhooks : une nouvelle arrivée (famille éteinte par défaut, par discrétion)
+      announceMember(user.username)
     }
 
     // OctoGuard welcome (Module 2). Fire-and-forget : ne bloque jamais

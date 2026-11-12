@@ -982,49 +982,17 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
 
   // ─── Webhook config (Module 5) ────────────────────────────────────────────
 
+  // Le webhook d'OctoGuard est devenu « Webhooks » dans Intégrations (migration 139) :
+  // ici, le résumé des destinations d'ÉQUIPE (celles qui reçoivent la modération).
   app.get('/webhook', async (_request, reply) => {
-    const cfg = await getWebhookConfig()
-    if (!cfg) return reply.send({ webhook: null })
-    // Ne pas exposer le secret en GET, juste sa présence
-    return reply.send({
-      webhook: {
-        url:        cfg.url,
-        has_secret: !!cfg.secret,
-        enabled:    cfg.enabled,
-        updated_at: cfg.updated_at,
-      },
-    })
+    const { rows } = await db.query(
+      `SELECT id, name, format, enabled, paused_at::text AS paused_at, events
+         FROM webhook_destinations WHERE kind = 'team' ORDER BY created_at`)
+    return reply.send({ destinations: rows, moved_to: '/admin/webhooks' })
   })
 
-  app.put('/webhook', {
-    preHandler: [rateLimit, validate({ body: WebhookBody })],
-  }, async (request, reply) => {
-    const body = request.body as z.infer<typeof WebhookBody>
-    const adminUser = request.user!
-    // Garde anti-SSRF (11/11/2026) : jamais une adresse du serveur lui-même ni de
-    // son réseau (127.0.0.1:2019 = l'API d'administration de Caddy, partagée par
-    // toutes les instances). Vérifiée ici pour le dire tout de suite, et de
-    // nouveau à chaque envoi (une réponse DNS peut changer entre-temps).
-    if (body.url) {
-      try {
-        await checkOutboundUrl(body.url, { allowPrivate: webhookAllowsPrivate() })
-      } catch (err) {
-        const code = err instanceof OutboundBlocked ? err.code : 'URL_INVALID'
-        return reply.code(400).send({ error: 'This address cannot receive the webhook', code: `WEBHOOK_${code}` })
-      }
-    }
-    const updated = await setWebhookConfig(body)
-    if (!updated) return reply.code(500).send({ error: 'Failed to update webhook', code: 'WEBHOOK_SAVE_FAILED' })
-    invalidateWebhookConfig()
-    await logAdminAction(adminUser.userId, 'octoguard.webhook_updated', null, null, null, { enabled: updated.enabled })
-    return reply.send({
-      webhook: {
-        url:        updated.url,
-        has_secret: !!updated.secret,
-        enabled:    updated.enabled,
-        updated_at: updated.updated_at,
-      },
-    })
+  app.put('/webhook', async (_request, reply) => {
+    return reply.code(410).send({ error: 'The OctoGuard webhook moved to Administration > Integrations > Webhooks', code: 'WEBHOOK_MOVED' })
   })
 
   // ─── Contenus retenus (cran « Retenir », CDC E4h lot 2) ────────────────────
