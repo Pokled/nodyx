@@ -6431,5 +6431,22 @@
   "wh.t_4xx": "La destination refuse le message (réponse {{s}})",
   "wh.t_4xx_sub": "Vérifie que l'outil choisi correspond bien à l'adresse (une adresse Discord avec le format Discord, par exemple).",
   "wh.t_network": "La destination ne répond pas",
-  "wh.t_network_sub": "La connexion n'a pas pu s'établir. Vérifie l'adresse, ou réessaie dans un moment."
+  "wh.t_network_sub": "La connexion n'a pas pu s'établir. Vérifie l'adresse, ou réessaie dans un moment.",
+  "atags.edit_help": "Les discussions gardent leur tag : seuls le nom et la couleur changent.",
+  "atags.err_name": "Le nom est obligatoire.",
+  "atags.err_taken": "Un tag porte déjà ce nom.",
+  "atags.err_too_long": "Le nom fait 50 caractères au plus.",
+  "atags.err_color": "Cette couleur n'est pas valide.",
+  "atags.err_gone": "Ce tag n'existe plus. Recharge la page.",
+  "atags.err_forbidden": "Tu n'as pas le droit de gérer les tags.",
+  "atags.err_create": "Le tag n'a pas pu être créé.",
+  "atags.err_update": "Le tag n'a pas pu être modifié.",
+  "aann.edit_help": "Le changement s'affiche dans la barre du haut au prochain chargement de page.",
+  "aann.no_expiry": "Sans fin",
+  "aann.err_message": "Le message est requis.",
+  "aann.err_create": "L'annonce n'a pas pu être créée.",
+  "aann.err_update": "L'annonce n'a pas pu être modifiée.",
+  "aann.err_color": "Cette couleur n'est pas disponible.",
+  "aann.err_expiry": "Cette date d'expiration n'est pas lisible.",
+  "aann.err_gone": "Cette annonce n'existe plus. Recharge la page."
 }

@@ -6431,5 +6431,22 @@
   "wh.t_4xx": "The destination refuses the message (answer {{s}})",
   "wh.t_4xx_sub": "Check that the chosen tool matches the address (a Discord address with the Discord format, for example).",
   "wh.t_network": "The destination does not answer",
-  "wh.t_network_sub": "The connection could not be made. Check the address, or try again in a moment."
+  "wh.t_network_sub": "The connection could not be made. Check the address, or try again in a moment.",
+  "atags.edit_help": "Threads keep their tag: only the name and color change.",
+  "atags.err_name": "A name is required.",
+  "atags.err_taken": "A tag already has this name.",
+  "atags.err_too_long": "The name is 50 characters at most.",
+  "atags.err_color": "This color is not valid.",
+  "atags.err_gone": "This tag no longer exists. Reload the page.",
+  "atags.err_forbidden": "You are not allowed to manage tags.",
+  "atags.err_create": "The tag could not be created.",
+  "atags.err_update": "The tag could not be updated.",
+  "aann.edit_help": "The change shows in the top bar on the next page load.",
+  "aann.no_expiry": "No end",
+  "aann.err_message": "A message is required.",
+  "aann.err_create": "The announcement could not be created.",
+  "aann.err_update": "The announcement could not be updated.",
+  "aann.err_color": "This color is not available.",
+  "aann.err_expiry": "This expiry date cannot be read.",
+  "aann.err_gone": "This announcement no longer exists. Reload the page."
 }

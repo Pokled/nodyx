@@ -27,6 +27,36 @@
 
 	let selectedColor = $state('indigo')
 	let previewMsg    = $state('')
+	let createExpires = $state('')
+
+	// Le champ date-heure donne une heure LOCALE sans fuseau : on l'envoie en ISO
+	// (avec fuseau) pour que 18:00 à Paris reste 18:00 à Paris, pas 18:00 UTC.
+	function localToIso(local: string): string {
+		if (!local) return ''
+		const d = new Date(local)
+		return Number.isNaN(d.getTime()) ? '' : d.toISOString()
+	}
+	function isoToLocal(iso: string | null): string {
+		if (!iso) return ''
+		const d = new Date(iso)
+		if (Number.isNaN(d.getTime())) return ''
+		return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+	}
+
+	// Modifier une annonce publiée, en place
+	let editId      = $state<string | null>(null)
+	let editMsg     = $state('')
+	let editColor   = $state('indigo')
+	let editExpires = $state('')
+	let editBusy    = $state(false)
+	function startEdit(ann: { id: string; message: string; color: string; expires_at: string | null }) {
+		editId = ann.id; editMsg = ann.message; editColor = ann.color; editExpires = isoToLocal(ann.expires_at)
+		queueMicrotask(() => (document.getElementById(`ann-edit-message-${ann.id}`) as HTMLTextAreaElement | null)?.focus())
+	}
+	function stopEdit() { editId = null }
+
+	const errorText = $derived(form && 'errorKey' in form && form.errorKey ? tFn(form.errorKey as string) : null)
+	const editError = $derived(form && 'editId' in form && form.editId === editId ? errorText : null)
 
 	function timeAgo(d: string) {
 		const diff = Date.now() - new Date(d).getTime()
@@ -54,10 +84,10 @@
 	<div class="rounded-xl border border-gray-800 bg-gray-900/40 p-5">
 		<h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">{tFn('aann.new_announcement')}</h2>
 
-		{#if form?.error}
-			<p class="mb-4 text-sm text-red-400 bg-red-900/30 border border-red-800/50 rounded-lg px-4 py-2">{form.error}</p>
+		{#if errorText && !editError}
+			<p class="mb-4 text-sm text-red-400 bg-red-900/30 border border-red-800/50 rounded-lg px-4 py-2" role="alert">{errorText}</p>
 		{/if}
-		{#if form?.ok}
+		{#if form && 'ok' in form && form.ok}
 			<p class="mb-4 text-sm text-green-400 bg-green-900/30 border border-green-800/50 rounded-lg px-4 py-2">{tFn('aann.created')}</p>
 		{/if}
 
@@ -102,10 +132,11 @@
 					<input
 						id="ann-create-expires"
 						type="datetime-local"
-						name="expires_at"
+						bind:value={createExpires}
 						class="rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-sm text-white
 						       focus:outline-none focus:border-indigo-500"
 					/>
+					<input type="hidden" name="expires_at" value={localToIso(createExpires)} />
 				</div>
 			</div>
 
@@ -149,7 +180,7 @@
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-gray-800/60">
-					{#each data.announcements as ann}
+					{#each data.announcements as ann (ann.id)}
 						<tr class="bg-gray-900/30 hover:bg-gray-900/60 transition-colors">
 							<!-- Message -->
 							<td class="px-4 py-3 max-w-xs" data-label={tFn('aann.message')}>
@@ -201,20 +232,88 @@
 								{/if}
 							</td>
 
-							<!-- Delete -->
+							<!-- Modifier / supprimer -->
 							<td class="px-4 py-3 text-right">
-								<form method="POST" action="?/delete" use:enhance>
-									<input type="hidden" name="id" value={ann.id} />
-									<button type="submit"
-										onclick={(e) => { if (!confirm(tFn('aann.confirm_delete'))) e.preventDefault() }}
-										class="text-xs px-2 py-1 rounded bg-gray-800 text-gray-500
-										       hover:text-red-400 hover:bg-gray-700 transition-colors"
-										title={tFn('aann.delete_title')}>
-										🗑️
+								<div class="inline-flex items-center gap-1.5">
+									<button type="button"
+										onclick={() => (editId === ann.id ? stopEdit() : startEdit(ann))}
+										aria-expanded={editId === ann.id}
+										class="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">
+										{tFn('common.edit')}
 									</button>
-								</form>
+									<form method="POST" action="?/delete" use:enhance>
+										<input type="hidden" name="id" value={ann.id} />
+										<button type="submit"
+											onclick={(e) => { if (!confirm(tFn('aann.confirm_delete'))) e.preventDefault() }}
+											class="text-xs px-2 py-1 rounded bg-gray-800 text-gray-500
+											       hover:text-red-400 hover:bg-gray-700 transition-colors"
+											title={tFn('aann.delete_title')}>
+											🗑️
+										</button>
+									</form>
+								</div>
 							</td>
 						</tr>
+						{#if editId === ann.id}
+							<tr class="ann-edit-row">
+								<td colspan="6" class="px-4 py-4">
+									<form method="POST" action="?/update" class="space-y-3"
+										use:enhance={() => { editBusy = true; return async ({ result, update }) => {
+											editBusy = false
+											await update({ reset: false })
+											if (result.type === 'success') stopEdit()
+										} }}>
+										<input type="hidden" name="id" value={ann.id} />
+										<div>
+											<label for="ann-edit-message-{ann.id}" class="block text-sm font-medium text-gray-300 mb-1.5">{tFn('aann.message')}</label>
+											<textarea id="ann-edit-message-{ann.id}" onkeydown={(e) => { if (e.key === 'Escape') stopEdit() }} name="message" rows="2" required bind:value={editMsg}
+												class="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+										</div>
+										<div class="flex flex-wrap gap-4 items-end">
+											<div>
+												<span class="block text-xs font-medium text-gray-400 mb-2">{tFn('aann.color')}</span>
+												<div class="flex gap-2" role="radiogroup" aria-label={tFn('aann.color')}>
+													{#each COLORS as c (c.key)}
+														<button type="button" role="radio" aria-checked={editColor === c.key} aria-label={tFn(c.labelKey)}
+															onclick={() => (editColor = c.key)} title={tFn(c.labelKey)}
+															class="w-7 h-7 rounded-full border-2 transition-all {c.bg.split(' ')[0]}
+															       {editColor === c.key ? 'border-white scale-110' : 'border-transparent opacity-60 hover:opacity-90'}"></button>
+													{/each}
+												</div>
+												<input type="hidden" name="color" value={editColor} />
+											</div>
+											<div class="min-w-[180px]">
+												<label for="ann-edit-expires-{ann.id}" class="block text-xs font-medium text-gray-400 mb-2">{tFn('aann.expires_optional')}</label>
+												<div class="flex items-center gap-2">
+													<input id="ann-edit-expires-{ann.id}" type="datetime-local" bind:value={editExpires}
+														class="rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+													{#if editExpires}
+														<button type="button" class="text-xs text-gray-400 hover:text-white underline" onclick={() => (editExpires = '')}>{tFn('aann.no_expiry')}</button>
+													{/if}
+												</div>
+												<input type="hidden" name="expires_at" value={localToIso(editExpires)} />
+											</div>
+										</div>
+										{#if editMsg.trim()}
+											<div>
+												<p class="text-xs text-gray-500 mb-1.5">{tFn('aann.preview')}</p>
+												<div class="rounded-lg border px-4 py-3 text-sm font-medium flex items-center gap-2 {COLOR_BANNER[editColor] ?? COLOR_BANNER.indigo}">{editMsg}</div>
+											</div>
+										{/if}
+										{#if editError}
+											<p class="text-sm text-red-400 bg-red-900/30 border border-red-800/50 rounded-lg px-4 py-2" role="alert">{editError}</p>
+										{/if}
+										<div class="flex flex-wrap items-center gap-2">
+											<button type="submit" disabled={editBusy || !editMsg.trim()}
+												class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-sm font-semibold text-white transition-colors">{tFn('common.save')}</button>
+											<button type="button" onclick={stopEdit}
+												class="px-4 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 transition-colors">{tFn('common.cancel')}</button>
+											<span class="text-xs text-gray-500">{tFn('aann.edit_help')}</span>
+										</div>
+									</form>
+								</td>
+							</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>

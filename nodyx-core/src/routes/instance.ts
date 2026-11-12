@@ -18,6 +18,10 @@ import { requireAuth } from '../middleware/auth'
 import * as CommunityModel from '../models/community'
 import * as ThreadModel from '../models/thread'
 import * as TagModel from '../models/tag'
+
+const TAG_COLOR_RE = /^#[0-9a-f]{6}$/i
+const TAG_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isUniqueViolation = (err: unknown) => (err as { code?: string } | null)?.code === '23505'
 import { io } from '../socket/io'
 import { buildIceServers } from '../socket/voice'
 import { countActiveMembers } from '../models/memberCount'
@@ -426,13 +430,56 @@ export default async function instanceRoutes(app: FastifyInstance) {
     if (!name?.trim()) {
       return reply.code(400).send({ error: 'Name required', code: 'BAD_REQUEST' })
     }
+    if (name.trim().length > 50) return reply.code(400).send({ error: 'Name too long', code: 'TAG_NAME_TOO_LONG' })
+    if (color !== undefined && (typeof color !== 'string' || !TAG_COLOR_RE.test(color))) {
+      return reply.code(400).send({ error: 'Invalid color', code: 'TAG_BAD_COLOR' })
+    }
 
-    const tag = await TagModel.create({
-      community_id: communityId,
-      name:         name.trim(),
-      color:        color ?? '#6366f1',
-    })
-    return reply.code(201).send({ tag })
+    try {
+      const tag = await TagModel.create({
+        community_id: communityId,
+        name:         name.trim(),
+        color:        color ?? '#6366f1',
+      })
+      return reply.code(201).send({ tag })
+    } catch (err) {
+      if (isUniqueViolation(err)) return reply.code(409).send({ error: 'A tag with this name already exists', code: 'TAG_NAME_TAKEN' })
+      throw err
+    }
+  })
+
+  // PATCH /api/v1/instance/tags/:id (admin) : renommer, recolorer.
+  // Les sujets gardent leur tag : seuls le nom, le slug et la couleur changent.
+  app.patch('/tags/:id', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const communityId = await getCommunityId()
+    if (!communityId) return reply.code(404).send({ error: 'Community not found', code: 'NOT_FOUND' })
+
+    const member = await CommunityModel.getMember(communityId, request.user!.userId)
+    if (!member || member.role === 'member') {
+      return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
+    }
+
+    const { id } = request.params as { id: string }
+    if (!TAG_ID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    const { name, color } = (request.body ?? {}) as { name?: unknown; color?: unknown }
+    if (name === undefined && color === undefined) return reply.code(400).send({ error: 'Nothing to update', code: 'INVALID_REQUEST' })
+    if (name !== undefined && (typeof name !== 'string' || !name.trim())) return reply.code(400).send({ error: 'Name required', code: 'BAD_REQUEST' })
+    if (typeof name === 'string' && name.trim().length > 50) return reply.code(400).send({ error: 'Name too long', code: 'TAG_NAME_TOO_LONG' })
+    if (color !== undefined && (typeof color !== 'string' || !TAG_COLOR_RE.test(color))) {
+      return reply.code(400).send({ error: 'Invalid color', code: 'TAG_BAD_COLOR' })
+    }
+
+    try {
+      const tag = await TagModel.update(id, communityId, {
+        ...(typeof name === 'string' ? { name: name.trim() } : {}),
+        ...(typeof color === 'string' ? { color } : {}),
+      })
+      if (!tag) return reply.code(404).send({ error: 'Tag not found', code: 'NOT_FOUND' })
+      return reply.send({ tag })
+    } catch (err) {
+      if (isUniqueViolation(err)) return reply.code(409).send({ error: 'A tag with this name already exists', code: 'TAG_NAME_TAKEN' })
+      throw err
+    }
   })
 
   // DELETE /api/v1/instance/tags/:id — admin only

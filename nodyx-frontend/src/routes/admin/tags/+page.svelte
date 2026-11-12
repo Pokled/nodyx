@@ -20,6 +20,21 @@
 	let newName  = $state('');
 	let newColor = $state('#6366f1');
 
+	// Modifier une étiquette en place : la ligne devient un petit formulaire.
+	// Les sujets gardent leur étiquette, seuls le nom et la couleur changent.
+	let editId    = $state<string | null>(null);
+	let editName  = $state('');
+	let editColor = $state('#6366f1');
+	let editBusy  = $state(false);
+	function startEdit(tag: { id: string; name: string; color: string }) {
+		editId = tag.id; editName = tag.name; editColor = tag.color;
+		queueMicrotask(() => (document.getElementById(`tag-edit-name-${tag.id}`) as HTMLInputElement | null)?.select());
+	}
+	function stopEdit() { editId = null; }
+
+	const errorText = $derived(form && 'errorKey' in form && form.errorKey ? tFn(form.errorKey as string) : null);
+	const editError = $derived(form && 'editId' in form && form.editId === editId ? errorText : null);
+
 	let search = $state('');
 	const filtered = $derived.by(() => {
 		const q = search.trim().toLowerCase();
@@ -44,8 +59,8 @@
 		{/if}
 	</header>
 
-	{#if form?.error}
-		<div class="adm-notice adm-notice--bad" role="alert">{form.error}</div>
+	{#if errorText && !editError}
+		<div class="adm-notice adm-notice--bad" role="alert">{errorText}</div>
 	{/if}
 
 	<details class="adm-card adm-disclosure" bind:open={createOpen}>
@@ -55,7 +70,8 @@
 		</summary>
 		<form method="POST" action="?/create" class="adm-form"
 			use:enhance={() => async ({ result, update }) => {
-				await update();
+				// Sans remise à zéro du formulaire : elle effaçait la couleur (noir, aperçu vide)
+				await update({ reset: false });
 				if (result.type === 'success') newName = '';
 			}}>
 			<div class="adm-form-grid">
@@ -101,21 +117,62 @@
 				</thead>
 				<tbody>
 					{#each filtered as tag (tag.id)}
+						{#if editId === tag.id}
+							<tr class="tag-editing">
+								<td colspan="3">
+									<form method="POST" action="?/update" class="tag-edit"
+										use:enhance={() => { editBusy = true; return async ({ result, update }) => {
+											editBusy = false;
+											await update({ reset: false });
+											if (result.type === 'success') stopEdit();
+										} }}>
+										<input type="hidden" name="tag_id" value={tag.id} />
+										<label class="adm-field tag-edit-name">
+											<span class="adm-label">{tFn('atags.name')}</span>
+											<input id="tag-edit-name-{tag.id}" onkeydown={(e) => { if (e.key === 'Escape') stopEdit() }} name="name" type="text" required maxlength="50" class="adm-input" bind:value={editName} />
+										</label>
+										<div class="adm-field">
+											<label class="adm-label" for="tag-edit-color-{tag.id}">{tFn('atags.color')}</label>
+											<div class="adm-color">
+												<input id="tag-edit-color-{tag.id}" name="color" type="color" bind:value={editColor} />
+												<code>{editColor}</code>
+											</div>
+										</div>
+										<div class="adm-field">
+											<span class="adm-label">{tFn('atags.preview')}</span>
+											<div class="flex items-center min-h-9">
+												<span class="adm-swatch" style="background:{editColor}; color:{inkOn(editColor)}">{editName.trim() || tag.name}</span>
+											</div>
+										</div>
+										<div class="tag-edit-actions">
+											<button type="button" class="adm-btn adm-btn--sm" onclick={stopEdit}>{tFn('common.cancel')}</button>
+											<button type="submit" class="adm-btn adm-btn--sm adm-btn--primary" disabled={editBusy || !editName.trim()}>{tFn('common.save')}</button>
+										</div>
+										<p class="tag-edit-help">{tFn('atags.edit_help')}</p>
+										{#if editError}<p class="adm-notice adm-notice--bad tag-edit-err" role="alert">{editError}</p>{/if}
+									</form>
+								</td>
+							</tr>
+						{:else}
 						<tr>
 							<td class="adm-cell-main">
 								<span class="adm-swatch" style="background:{tag.color}; color:{inkOn(tag.color)}">{tag.name}</span>
 							</td>
 							<td class="adm-muted" data-label={tFn('atags.col_slug')}><code>{tag.slug}</code></td>
 							<td class="adm-num">
-								<form method="POST" action="?/delete" use:enhance class="inline">
-									<input type="hidden" name="tag_id" value={tag.id} />
-									<button type="submit" class="adm-btn adm-btn--sm adm-btn--danger"
-										onclick={(e) => { if (!confirm(tFn('atags.confirm_delete', { name: tag.name }))) e.preventDefault() }}>
-										{tFn('atags.delete')}
-									</button>
-								</form>
+								<div class="tag-row-actions">
+									<button type="button" class="adm-btn adm-btn--sm" onclick={() => startEdit(tag)}>{tFn('common.edit')}</button>
+									<form method="POST" action="?/delete" use:enhance class="inline">
+										<input type="hidden" name="tag_id" value={tag.id} />
+										<button type="submit" class="adm-btn adm-btn--sm adm-btn--danger"
+											onclick={(e) => { if (!confirm(tFn('atags.confirm_delete', { name: tag.name }))) e.preventDefault() }}>
+											{tFn('atags.delete')}
+										</button>
+									</form>
+								</div>
 							</td>
 						</tr>
+						{/if}
 					{:else}
 						<tr><td colspan="3" class="adm-empty">{tFn('atags.none_found')}</td></tr>
 					{/each}
@@ -124,3 +181,17 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.tag-row-actions { display: inline-flex; gap: 0.375rem; justify-content: flex-end; flex-wrap: wrap; }
+	.tag-editing td { background: color-mix(in srgb, var(--nx-header-accent) 5%, var(--nx-surface)) !important; }
+	.tag-edit { display: grid; grid-template-columns: minmax(10rem, 1.4fr) auto minmax(8rem, 1fr) auto; gap: 0.75rem 1rem; align-items: end; text-align: left; }
+	.tag-edit-actions { display: flex; gap: 0.375rem; justify-content: flex-end; }
+	.tag-edit-help { grid-column: 1 / -1; margin: 0; font-size: 0.75rem; color: var(--nx-text-muted); }
+	.tag-edit-err { grid-column: 1 / -1; margin: 0; }
+	@media (max-width: 720px) {
+		.tag-edit { grid-template-columns: 1fr; }
+		.tag-edit-actions .adm-btn { flex: 1; }
+		.tag-editing td { display: block; text-align: left; }
+	}
+</style>

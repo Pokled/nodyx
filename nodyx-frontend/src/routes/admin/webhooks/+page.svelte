@@ -61,6 +61,19 @@
 		const res = await apiFetch(fetch, `/admin/webhooks${path}`, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) })
 		return { ok: res.ok, status: res.status, json: await res.json().catch(() => ({})) }
 	}
+	// Le réglage est sous la liste, souvent hors de l'écran : choisir une
+	// destination y descend et y pose le focus, sinon le clic semble ne rien faire.
+	function revealEditor() {
+		queueMicrotask(() => {
+			const el = document.getElementById('wh-editing')
+			el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+			el?.focus({ preventScroll: true })
+		})
+	}
+	async function openDest(d: Dest) {
+		if (draft?.id !== d.id) await select(d)
+		revealEditor()
+	}
 	async function select(d: Dest) {
 		draft = toDraft(d); picking = false; msg = null; test = null; newSecret = ''; openRow = null; catsOpen = false
 		example = d.kind === 'team' ? 'mute' : 'article'
@@ -71,7 +84,7 @@
 		draft = { id: null, name: tFn(kind === 'public' ? 'wh.new_name_public' : 'wh.new_name_team'), kind, format: kind === 'public' ? 'discord' : 'ntfy', url: '', secret: '', hasSecret: false, events: [...DEFAULTS[kind]], include_text: false, cats: [], enabled: true }
 		picking = false; msg = null; test = null; deliveries = []; newSecret = ''
 		example = kind === 'team' ? 'mute' : 'article'
-		queueMicrotask(() => document.getElementById('wh-editing')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+		revealEditor()
 	}
 	$effect(() => { if (!draft && list.length) untrack(() => select(list[0])) })
 
@@ -280,13 +293,14 @@ http_response_code(204);`,
 		{#each (['public', 'team'] as Kind[]) as k (k)}
 			<div class="wh-group wh-group--{k}">{tFn(`wh.group_${k}`)}</div>
 			{#each list.filter((d) => d.kind === k) as d (d.id)}
-				<button type="button" class="wh-row" aria-current={draft?.id === d.id} onclick={() => select(d)}>
+				<button type="button" class="wh-row" aria-current={draft?.id === d.id} onclick={() => openDest(d)}>
 					<span class="wh-tool">{TAG[d.format]}</span>
 					<span class="wh-nm"><b>{d.name}</b><span>{tFn(`wh.fmt_${d.format}`)} · {tFn('wh.row_sub', { n: d.sent_7d })}{d.last_ok_at ? ` · ${tFn('wh.row_last', { at: fmtTime(d.last_ok_at) })}` : ''}</span></span>
 					<span class="wh-badge wh-badge--{d.kind}">{tFn(`wh.badge_${d.kind}`)}</span>
 					{#if d.paused_at}<span class="wh-pill wh-pill--warn">{tFn('wh.st_paused')}</span>
 					{:else if !d.enabled}<span class="wh-pill">{tFn('wh.st_off')}</span>
 					{:else}<span class="wh-pill wh-pill--ok">{tFn('wh.st_on')}</span>{/if}
+					<span class="wh-edit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" /></svg>{tFn('common.edit')}</span>
 				</button>
 			{:else}
 				<p class="wh-empty">{tFn(`wh.group_empty_${k}`)}</p>
@@ -303,7 +317,7 @@ http_response_code(204);`,
 			</div>
 		{/if}
 
-		<div class="wh-editing" id="wh-editing"><span>{tFn('wh.editing')}</span> <b>{draft.name || tFn('wh.unnamed')}</b> <span class="wh-badge wh-badge--{draft.kind}">{tFn(`wh.badge_${draft.kind}`)}</span></div>
+		<div class="wh-editing" id="wh-editing" tabindex="-1"><span>{tFn('wh.editing')}</span> <b>{draft.name || tFn('wh.unnamed')}</b> <span class="wh-badge wh-badge--{draft.kind}">{tFn(`wh.badge_${draft.kind}`)}</span></div>
 
 		<!-- 1. L'outil -->
 		<div class="wh-step"><span class="wh-n">1</span><div><h2>{tFn('wh.s1')}</h2><p>{tFn('wh.s1_sub')}</p></div></div>
@@ -497,9 +511,13 @@ http_response_code(204);`,
 	.wh-pick-q { margin: 0 0 0.625rem; font-size: 0.85rem; }
 	.wh-group { padding: 0.625rem 0.875rem 0.375rem; font-size: 0.7rem; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--nx-ok); }
 	.wh-group--team { color: #8b5cf6; border-top: 1px solid var(--nx-border); }
-	.wh-row { display: grid; grid-template-columns: 2.125rem minmax(0, 1fr) auto auto; gap: 0.75rem; align-items: center; width: 100%; padding: 0.7rem 0.875rem; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-bottom: 1px solid color-mix(in srgb, var(--nx-border) 60%, transparent); color: inherit; font: inherit; cursor: pointer; }
+	.wh-row { display: grid; grid-template-columns: 2.125rem minmax(0, 1fr) auto auto auto; gap: 0.75rem; align-items: center; width: 100%; padding: 0.7rem 0.875rem; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-bottom: 1px solid color-mix(in srgb, var(--nx-border) 60%, transparent); color: inherit; font: inherit; cursor: pointer; }
 	.wh-row:hover { background: color-mix(in srgb, var(--nx-text) 2.5%, transparent); }
 	.wh-row[aria-current='true'] { background: color-mix(in srgb, var(--nx-header-accent) 7%, transparent); border-left-color: var(--nx-header-accent); }
+	.wh-edit { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border-radius: 8px; border: 1px solid var(--nx-border); font-size: 0.75rem; font-weight: 600; color: var(--nx-text-muted); white-space: nowrap; transition: color 0.15s, border-color 0.15s, background 0.15s; }
+	.wh-edit svg { width: 0.85rem; height: 0.85rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+	.wh-row:hover .wh-edit, .wh-row:focus-visible .wh-edit, .wh-row[aria-current='true'] .wh-edit { color: var(--nx-header-accent); border-color: color-mix(in srgb, var(--nx-header-accent) 45%, var(--nx-border)); background: color-mix(in srgb, var(--nx-header-accent) 8%, transparent); }
+	.wh-editing { scroll-margin-top: 1rem; outline: none; }
 	.wh-tool { width: 2.125rem; height: 2.125rem; border-radius: 9px; display: grid; place-items: center; font: 700 0.7rem ui-monospace, SFMono-Regular, Menlo, monospace; background: color-mix(in srgb, var(--nx-text) 6%, transparent); }
 	.wh-nm { display: flex; flex-direction: column; min-width: 0; }
 	.wh-nm b { font-size: 0.85rem; font-weight: 600; }
@@ -615,5 +633,5 @@ http_response_code(204);`,
 	.pv-chat--matrix .pv-embed { background: color-mix(in srgb, var(--nx-text) 4%, transparent); }
 	.pv-f { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.75rem; opacity: 0.85; }
 	.pv-link { color: #4ea4ff; font-size: 0.78rem; }
-	@media (max-width: 640px) { .wh-row { grid-template-columns: 2.125rem minmax(0, 1fr) auto; } .wh-row .wh-badge { display: none; } .wh-hide-s { display: none; } .wh-ev { grid-template-columns: minmax(0, 1fr) auto; } .wh-ev-n { grid-column: 1; grid-row: 2; } .wh-ev .wh-switch { grid-row: 1 / span 2; grid-column: 2; } }
+	@media (max-width: 640px) { .wh-row { grid-template-columns: 2.125rem minmax(0, 1fr) auto auto; } .wh-row .wh-badge { display: none; } .wh-hide-s { display: none; } .wh-ev { grid-template-columns: minmax(0, 1fr) auto; } .wh-ev-n { grid-column: 1; grid-row: 2; } .wh-ev .wh-switch { grid-row: 1 / span 2; grid-column: 2; } }
 </style>
