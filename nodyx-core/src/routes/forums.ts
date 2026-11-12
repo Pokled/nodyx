@@ -612,8 +612,8 @@ app.get('/threads', {
     }
 
     // Les tags d'un sujet, changés par l'équipe : vérifiés AVANT toute écriture.
-    // setThreadTags efface puis réinsère : un tag inconnu ferait échouer
-    // l'insertion après l'effacement, et le sujet perdrait tous ses tags.
+    // Un tag inconnu est refusé avec un code clair au lieu d'être ignoré en
+    // silence (setThreadTags, atomique, ne poserait que les tags existants).
     let tagIds: string[] | undefined
     if (body.tag_ids !== undefined) {
       const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

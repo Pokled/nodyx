@@ -98,16 +98,21 @@ export async function getTagsForThreads(threadIds: string[]): Promise<Map<string
   return map
 }
 
+/**
+ * Les tags d'un sujet deviennent EXACTEMENT ceux demandés, en UNE requête :
+ * tout ou rien. Avant, on effaçait puis on réinsérait en deux temps ; une
+ * coupure entre les deux laissait le sujet sans aucun tag.
+ * Seuls les tags qui existent sont posés, sans doublon : un identifiant en
+ * double ou disparu entre-temps ne fait plus tomber l'enregistrement du sujet.
+ * Ceux qui restent ne sont pas touchés (ni effacés, ni recréés).
+ */
 export async function setThreadTags(threadId: string, tagIds: string[]): Promise<void> {
-  await db.query(`DELETE FROM thread_tags WHERE thread_id = $1`, [threadId])
-  if (tagIds.length > 0) {
-    // Seulement des tags qui existent, sans doublon : un identifiant en double
-    // ou disparu entre-temps ne fait plus tomber l'enregistrement du sujet.
-    await db.query(
-      `INSERT INTO thread_tags (thread_id, tag_id)
-       SELECT $1, t.id FROM tags t WHERE t.id = ANY($2::uuid[])
-       ON CONFLICT DO NOTHING`,
-      [threadId, [...new Set(tagIds)]]
-    )
-  }
+  await db.query(
+    `WITH wanted AS (SELECT t.id FROM tags t WHERE t.id = ANY($2::uuid[])),
+          gone   AS (DELETE FROM thread_tags WHERE thread_id = $1 AND tag_id NOT IN (SELECT id FROM wanted))
+     INSERT INTO thread_tags (thread_id, tag_id)
+     SELECT $1, id FROM wanted
+     ON CONFLICT DO NOTHING`,
+    [threadId, [...new Set(tagIds)]]
+  )
 }

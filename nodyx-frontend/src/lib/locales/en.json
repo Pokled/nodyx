@@ -6501,5 +6501,6 @@
   "forum.tags_err_many": "5 tags at most per thread.",
   "forum.tags_err_unknown": "One of these tags no longer exists. Reload the page.",
   "forum.tags_err_forbidden": "You are not allowed to change this thread's tags.",
-  "forum.tags_err_save": "The tags could not be saved."
+  "forum.tags_err_save": "The tags could not be saved.",
+  "forum.tags_err_load": "The tag list could not be loaded. Try again."
 }

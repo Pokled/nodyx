@@ -49,17 +49,7 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 		} catch { /* rien à montrer */ }
 	}
 
-	// Tous les tags de la communauté : l'équipe peut changer ceux du sujet.
-	// Seulement pour un membre connecté (les visiteurs n'en ont pas l'usage).
-	let allTags: Array<{ id: string; name: string; slug: string; color: string }> = [];
-	if (token) {
-		try {
-			const tr = await apiFetch(fetch, '/instance/tags');
-			if (tr.ok) allTags = (await tr.json()).tags ?? [];
-		} catch { /* le bouton restera sans choix */ }
-	}
-
-	return { thread: json.thread, posts: json.posts, poll, token, ogImagePath, heldMine, allTags };
+	return { thread: json.thread, posts: json.posts, poll, token, ogImagePath, heldMine };
 };
 
 export const actions: Actions = {

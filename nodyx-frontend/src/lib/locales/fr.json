@@ -6501,5 +6501,6 @@
   "forum.tags_err_many": "5 tags au plus par sujet.",
   "forum.tags_err_unknown": "Un de ces tags n'existe plus. Recharge la page.",
   "forum.tags_err_forbidden": "Tu n'as pas le droit de changer les tags de ce sujet.",
-  "forum.tags_err_save": "Les tags n'ont pas pu être enregistrés."
+  "forum.tags_err_save": "Les tags n'ont pas pu être enregistrés.",
+  "forum.tags_err_load": "La liste des tags n'a pas pu être chargée. Réessaie."
 }

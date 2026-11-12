@@ -35,6 +35,7 @@
 	import PollCard from '$lib/components/PollCard.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import { t } from '$lib/i18n';
+	import { apiFetch } from '$lib/api';
 	import { replyCount } from '$lib/forumCounts';
 	import { can, isAdminRole } from '$lib/permissions';
 	import { openReport } from '$lib/report';
@@ -136,14 +137,22 @@
 	let showModActions = $state(false);
 
 	// L'équipe change les tags d'un sujet sur place (l'auteur, lui, ne change que le titre)
-	const allTags = $derived((data.allTags ?? []) as Array<{ id: string; name: string; slug: string; color: string }>);
+	// La liste des tags n'est chargée qu'à l'ouverture du panneau : un lecteur
+	// ordinaire (la quasi-totalité des vues) ne paie pas cette requête.
+	let allTags     = $state<Array<{ id: string; name: string; slug: string; color: string }> | null>(null);
 	let tagsEditing = $state(false);
 	let tagsPick    = $state<string[]>([]);
 	let tagsBusy    = $state(false);
 	let tagsError   = $state<string | null>(null);
-	function openTags() {
+	async function openTags() {
 		tagsPick = (thread.tags ?? []).map((t: { id: string }) => t.id);
 		tagsError = null; tagsEditing = true;
+		if (allTags) return;
+		try {
+			const res = await apiFetch(fetch, '/instance/tags');
+			allTags = res.ok ? ((await res.json()).tags ?? []) : [];
+			if (!res.ok) tagsError = tFn('forum.tags_err_load');
+		} catch { allTags = []; tagsError = tFn('forum.tags_err_load'); }
 	}
 	function togglePick(id: string) {
 		if (tagsPick.includes(id)) tagsPick = tagsPick.filter((x) => x !== id);
@@ -298,7 +307,9 @@
 							<b id="tags-panel-title">{tFn('forum.tags_panel_title')}</b>
 							<span>{tFn('forum.tags_pick_hint', { n: tagsPick.length })}</span>
 						</div>
-						{#if allTags.length === 0}
+						{#if allTags === null}
+							<p class="tags-panel-note" aria-live="polite">{tFn('common.loading')}</p>
+						{:else if allTags.length === 0 && !tagsError}
 							<p class="tags-panel-note">{tFn('forum.tags_none_yet')}{#if canAdmin} <a href="/admin/tags">{tFn('forum.tags_none_admin')}</a>{/if}</p>
 						{:else}
 							<div class="tags-panel-list" role="group" aria-labelledby="tags-panel-title">
@@ -316,7 +327,7 @@
 						{#if tagsError}<p class="tags-panel-err" role="alert">{tagsError}</p>{/if}
 						<div class="tags-panel-actions">
 							<button type="button" class="tags-btn" onclick={() => (tagsEditing = false)}>{tFn('common.cancel')}</button>
-							<button type="submit" class="tags-btn tags-btn--primary" disabled={tagsBusy || allTags.length === 0}>{tFn('common.save')}</button>
+							<button type="submit" class="tags-btn tags-btn--primary" disabled={tagsBusy || !allTags || allTags.length === 0}>{tFn('common.save')}</button>
 						</div>
 					</form>
 				{/if}
