@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state'
 	import { apiFetch } from '$lib/api'
-	import { t } from '$lib/i18n'
+	import { t, escHtml } from '$lib/i18n'
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
 	import type { PageData } from './$types'
 
@@ -165,7 +165,7 @@
 
 	<article class="s-card">
 		{#if post.reshare_of}
-			<div class="s-reshare-label">{@html tFn('status.reshared', { username: post.username, name: post.display_name || post.username })}</div>
+			<div class="s-reshare-label">{@html tFn('status.reshared', { username: escHtml(post.username), name: escHtml(post.display_name || post.username) })}</div>
 		{/if}
 		{@render body(post)}
 		{@render actions(post)}
@@ -175,7 +175,7 @@
 	<div class="s-composer">
 		{#if replyTarget}
 			<div class="s-composer-target">
-				{@html tFn('status.reply_to', { name: replyTarget.username })}
+				{@html tFn('status.reply_to', { name: escHtml(replyTarget.username) })}
 				<button class="s-composer-cancel" onclick={() => (replyTarget = null)} aria-label={tFn('status.cancel')}>×</button>
 			</div>
 		{/if}

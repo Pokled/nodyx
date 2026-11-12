@@ -29,6 +29,7 @@ export const actions: Actions = {
 		const json = await res.json();
 
 		if (!res.ok) {
+			if (json.code === 'USERNAME_INVALID_CHARS') return fail(res.status, { errorKey: 'auth.register.username_chars' });
 			return fail(res.status, { error: json.error });
 		}
 

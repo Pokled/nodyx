@@ -6594,5 +6594,6 @@
   "og2.g_raid_lead": "A wave of accounts showing up together, dozens of messages in a few seconds: that's a raid. Don't panic, one button: \"Raise the shield\".",
   "og2.g_raid_p1": "Brand-new accounts read without writing, links wait for review, chat slows down. Your regular members barely notice.",
   "og2.g_raid_p2": "It lowers by itself after 30 minutes. The whole moderation team can raise or lower it, even with OctoGuard off.",
-  "og2.g_raid_p3": "With OctoGuard on, it spots the wave and warns you. You can even let it raise the shield by itself."
+  "og2.g_raid_p3": "With OctoGuard on, it spots the wave and warns you. You can even let it raise the shield by itself.",
+  "auth.register.username_chars": "Your username can't contain these signs: < > \" ' ` & / \\. Letters, numbers, accents, spaces and - . _ @ are fine."
 }

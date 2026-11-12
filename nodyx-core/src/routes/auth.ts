@@ -113,6 +113,10 @@ export async function invalidateUserSessions(userId: string): Promise<void> {
   }
 }
 
+/** Ce qu'un pseudo ne peut pas contenir : de quoi écrire du HTML, des
+ *  caractères de contrôle ou de mise en forme invisibles (usurpation). */
+export const USERNAME_FORBIDDEN = /[<>"'`&\\/\p{Cc}\p{Cf}]/u
+
 const RegisterBody = z.object({
   // trim() AVANT min/max : une espace de tête ou de fin donnait un pseudo
   // « nerti » (avec espace) dont la page profil renvoie 404. Incident 2026-09.
@@ -189,6 +193,15 @@ export default async function authRoutes(app: FastifyInstance) {
     // /^[a-z]{10}$/ recalait des pseudos parfaitement humains (alexandria,
     // strawberry, lapersonne...) pour ~0 bot que le honeypot ne prend pas déjà.
     // Le honeypot (couche 1) + le timing (couche 2) portent la défense.
+
+    // Sécurité (12/11/2026) : un pseudo s'affiche partout, parfois DANS du HTML
+    // (textes traduits rendus en {@html}). Il acceptait n'importe quel caractère :
+    // `<img src=x onerror=…>` tenait en 50 caractères. On refuse ce qui sert à
+    // écrire du code ou à se cacher (caractères de contrôle, invisibles). Les
+    // accents, espaces, - . @ _ des pseudos existants restent permis.
+    if (USERNAME_FORBIDDEN.test(username)) {
+      return reply.code(400).send({ error: 'Username contains forbidden characters', code: 'USERNAME_INVALID_CHARS' })
+    }
 
     const clientIp = clientIpEarly
 
