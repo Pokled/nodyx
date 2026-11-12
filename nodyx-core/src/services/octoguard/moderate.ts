@@ -18,10 +18,11 @@ import { db } from '../../config/database'
 import { getInstanceCommunityId } from '../../middleware/adminOnly'
 import { isOctoGuardEnabled } from './index'
 import { runPipeline } from './pipeline'
+import { shieldGate, hasLink, shieldHoldRule } from './shield'
 import type { PipelineUserCtx, Surface } from './types'
 
 export type ModerationVerdict =
-  | { blocked: false; report?: { rule_name: string; excerpt: string }; hold?: { rule_id: string; rule_name: string; excerpt: string } }
+  | { blocked: false; report?: { rule_name: string; excerpt: string }; hold?: { rule_id: string | null; rule_name: string; excerpt: string } }
   | { blocked: true; reason: string; i18n_key: string }
 
 /** Rôle et grade du membre dans la communauté de l'instance (immunités). */
@@ -124,8 +125,14 @@ function htmlTextWithLinks(html: string): string {
 /** Les textes d'une publication (titre, corps, bio…) sont examinés ensemble. */
 export async function moderateText(userId: string, surface: Surface, texts: Array<string | null | undefined>): Promise<ModerationVerdict> {
   try {
-    if (!isOctoGuardEnabled()) return { blocked: false }
     const content = texts.filter((t): t is string => !!t && t.trim().length > 0).join('\n')
+    // Le bouclier anti-raid passe AVANT OctoGuard et marche même éteint (D21c) :
+    // un compte tout neuf n'écrit plus nulle part ; un lien du forum attend
+    // d'être relu (l'équipe n'est jamais concernée, cf. shieldGate).
+    const gate = await shieldGate(userId, surface === 'forum' ? 'forum' : 'other', { isNew: false })
+    if (!gate.allow) return { blocked: true, reason: gate.code, i18n_key: gate.i18n_key }
+    if (surface === 'forum' && gate.holdLinks && content && hasLink(content)) return { blocked: false, hold: shieldHoldRule(content) }
+    if (!isOctoGuardEnabled()) return { blocked: false }
     if (!content) return { blocked: false }
     const userCtx = await buildUserCtx(userId)
     const res = await runPipeline({ content, userCtx, surface })

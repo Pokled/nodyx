@@ -281,6 +281,21 @@ When a chat or forum message would be held or refused, its author is told **befo
 - Off by default. Turn it on in **Vu par un membre**, where a live preview shows exactly what members will see. The **Communauté jeunesse** template turns it on too.
 - It only speaks when OctoGuard is on, and it never slows anyone down: if the check takes more than 1.5 seconds, the message simply leaves and OctoGuard judges it as always.
 
+### Raid shield: one button when a wave hits
+
+A raid is a gang of accounts showing up all at once to wreck a community: insults, shady links, floods of messages. In **Bouclier anti-raid** (Protection), one button raises the shield for 30 minutes (or 15, 60, 120). While it is up:
+
+- **Brand-new accounts read but don't write.** Accounts created less than a day ago see everything but cannot post in chat, on the forum, or send private messages until the end.
+- **Links wait for review.** In chat and on the forum, a message with a link is held, for everyone except the team. You approve it in Signalements, like any held message.
+- **Chat slows down.** One message every 10 seconds per person.
+- **The team is notified**, and the team webhooks that asked for the "Raid shield" family get an alert (ideal on a phone with ntfy).
+
+The moderation team is never slowed down or blocked. The shield lowers by itself at the end, even if the server restarts in between, and anyone in the team can lower it sooner.
+
+- The button **always works, even with OctoGuard off**. Only the automatic alert needs OctoGuard on.
+- **The alert:** OctoGuard counts new accounts over 10 minutes and held messages over 5 minutes (10 and 20 by default, adjustable). At the threshold it notifies the team once, then stays quiet for 30 minutes. It raises the shield by itself only if you turned on **Raise automatically**.
+- Raising, lowering and every alert are written to the Journal.
+
 ### Webhook: pipe events to your own tools (advanced)
 
 The OctoGuard webhook moved to **Administration > Integrations > Webhooks**, where you can send moderation alerts to your phone (ntfy), a private team channel (Discord, Matrix, Slack) or your own tool (signed JSON), next to public community announcements. The OctoGuard **Webhook** tab lists the destinations that receive moderation and links there. See [Webhooks](./WEBHOOKS.md).

@@ -19,6 +19,7 @@ import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '
 import { fileAutoReport } from '../services/octoguard/autoReport'
 import { buildUserCtx } from '../services/octoguard/moderate'
 import { holdContent, forAuthor, holdRefusal } from '../services/octoguard/held'
+import { shieldGate, hasLink, shieldHoldRule } from '../services/octoguard/shield'
 import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { getAccess, outranks, rankOf } from '../services/permissions'
 import { sanitizeChat } from '../utils/chatSanitize'
@@ -428,6 +429,32 @@ export function registerSocketIO(server: Server): void {
           }
         }
 
+        // Bouclier anti-raid (lot 6) : AVANT OctoGuard, et même OctoGuard éteint
+        // (D21c). Compte tout neuf : lecture seule. Tout le monde sauf l'équipe :
+        // un message toutes les 10 s, et un lien attend d'être relu.
+        {
+          const gate = await shieldGate(userId, 'chat', { isNew: true })
+          if (!gate.allow) {
+            socket.emit('chat:blocked', {
+              reason:    gate.code === 'SHIELD_SLOW' ? 'shield_slow' : 'shield_new_account',
+              octoguard: { i18n_key: gate.i18n_key, expires_at: gate.until, retry_after_s: gate.retry_after_s ?? null },
+            })
+            return
+          }
+          if (gate.holdLinks && hasLink(sanitized)) {
+            const held = await holdContent({
+              kind: 'chat', authorId: userId, channelId,
+              payload: { content: sanitized, reply_to_id: replyToId ?? null }, rule: shieldHoldRule(sanitized),
+            })
+            if (held.ok) io?.to(`user:${userId}`).emit('octoguard:held', forAuthor(held.row))
+            else {
+              const refusal = holdRefusal(held.code)
+              socket.emit('chat:blocked', { reason: refusal.code, octoguard: { i18n_key: refusal.i18n_key } })
+            }
+            return
+          }
+        }
+
         // Cran « signaler » d'une règle : dossier ouvert après l'enregistrement (D13)
         let ogReport: { rule_name: string; excerpt: string } | undefined
 
@@ -660,6 +687,23 @@ export function registerSocketIO(server: Server): void {
           socket.emit('chat:blocked', { reason: 'muted', octoguard: { i18n_key: 'octoguard.mute.active', expires_at: muteState.expires_at ?? null } })
           return
         }
+        // Bouclier anti-raid : compte tout neuf en lecture seule ; ajouter un lien
+        // pendant le bouclier est refusé comme une modification à relire
+        {
+          const gate = await shieldGate(userId, 'chat', { isNew: false })
+          if (!gate.allow) {
+            socket.emit('chat:blocked', { reason: 'shield_new_account', octoguard: { i18n_key: gate.i18n_key, expires_at: gate.until } })
+            return
+          }
+          if (gate.holdLinks && hasLink(sanitized)) {
+            // Seulement si la modification AJOUTE un lien (il n'était pas déjà là)
+            const { rows: before } = await db.query<{ content: string }>(`SELECT content FROM channel_messages WHERE id = $1`, [messageId])
+            if (!hasLink(before[0]?.content ?? '')) {
+              socket.emit('chat:blocked', { reason: 'held_edit', octoguard: { i18n_key: 'octoguard.held_edit' } })
+              return
+            }
+          }
+        }
         let editReport: { rule_name: string; excerpt: string } | undefined
         if (isOctoGuardEnabled()) {
           const og = await runPipeline({ content: sanitized, userCtx: await buildUserCtx(userId), surface: 'chat', channelId: target.channel_id })
@@ -813,6 +857,14 @@ export function registerSocketIO(server: Server): void {
           [data.conversationId, userId]
         )
         if (!part) return
+
+        // Bouclier anti-raid (D21b) : un compte tout neuf n'envoie pas de message
+        // privé pendant le bouclier (un raid passe souvent par des MP en masse)
+        const dmGate = await shieldGate(userId, 'dm', { isNew: true })
+        if (!dmGate.allow) {
+          socket.emit('chat:blocked', { reason: 'shield_new_account', octoguard: { i18n_key: dmGate.i18n_key, expires_at: dmGate.until } })
+          return
+        }
 
         const isEncrypted = data.is_encrypted === true
           && typeof data.encryption_nonce === 'string'

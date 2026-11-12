@@ -44,6 +44,7 @@
 			['ladder_applied', 'bad'], ['ladder_proposed', 'warn'], ['ladder_approved', 'bad'],
 			['ladder_refused', 'ok'], ['ladder_expired', 'muted'], ['ladder_undone', 'ok'], ['ladder_settings', 'info'],
 			['ladder_engine_alert', 'warn'],
+			['shield_raised', 'warn'], ['shield_suggested', 'warn'], ['shield_lowered', 'ok'],
 			['appeal_filed', 'warn'], ['appeal_upheld', 'info'], ['appeal_overturned', 'ok'],
 			['enabled', 'ok'], ['disabled', 'warn'], ['nudge_enabled', 'info'], ['nudge_disabled', 'muted'],
 		] as Array<[string, Tone]>).map(([a, tone]) => [`${OCTO}${a}`, tone] as [string, Tone]) },

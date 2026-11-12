@@ -225,6 +225,8 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     const user  = await UserModel.create({ username, email, password })
+    // Une vague d'inscriptions peut annoncer un raid (bouclier anti-raid, lot 6)
+    void import('../services/octoguard/shield').then((m) => m.recordSignup()).catch(() => {})
     // Store registration IP
     await db.query(`UPDATE users SET registration_ip = $1::inet WHERE id = $2`, [clientIp, user.id]).catch(() => {})
 

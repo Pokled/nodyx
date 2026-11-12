@@ -74,6 +74,15 @@ défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
   Annuler la décision la défait vraiment (avertissement retiré, sourdine levée, une marche de
   moins sur le barème), et le membre reçoit la réponse. Il ne voit jamais le nom de la règle ni
   celui de la personne qui l'a sanctionné.
+- **Le bouclier anti-raid.** Quand une bande de comptes débarque d'un coup pour tout saccager, un
+  bouton dans OctoGuard (Protection, Bouclier anti-raid) lève le bouclier 30 minutes : les comptes
+  créés depuis moins d'un jour lisent sans écrire (chat, forum, messages privés), les liens du chat
+  et du forum attendent d'être relus, le chat passe à un message toutes les 10 secondes, et
+  l'équipe est prévenue (notification, webhooks d'équipe). L'équipe n'est jamais touchée. Il se
+  baisse tout seul, même si le serveur redémarre. Le bouton marche même OctoGuard éteint ; allumé,
+  OctoGuard repère la vague (trop de comptes neufs en 10 minutes, trop de messages retenus en 5)
+  et prévient l'équipe, ou lève le bouclier tout seul si on l'y autorise. Chaque membre voit avant
+  d'écrire ce qui le concerne, et le guide a un chapitre de plus : « Quand un raid arrive ».
 - **« Tu es sûr ? » avant d'envoyer.** Quand un message du chat ou du forum serait retenu ou
   refusé, son auteur le sait avant de l'envoyer : « Ton message risque d'être retenu. Il pourrait
   blesser quelqu'un, et personne ne l'a encore vu. » Il le reformule, ou l'envoie quand même, et

@@ -21,6 +21,8 @@ const RULES: Array<{ prefix: string; exact?: boolean; any: Permission[] | 'staff
 	{ prefix: '/admin/octoguard/reports', any: ['moderate_members', 'manage_octoguard'] },
 	// Le barème : toute l'équipe le lit (la jauge y renvoie), seul manage_octoguard le règle
 	{ prefix: '/admin/octoguard/ladder', any: ['moderate_members', 'manage_octoguard'] },
+	// Le bouclier : toute l'équipe le lève et le baisse (pendant un raid, on n'attend pas un admin)
+	{ prefix: '/admin/octoguard/shield', any: ['moderate_members', 'manage_octoguard'] },
 	{ prefix: '/admin/octoguard', any: ['manage_octoguard'] },
 ]
 

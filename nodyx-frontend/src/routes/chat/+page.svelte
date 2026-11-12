@@ -28,6 +28,7 @@
 	import { blockedMessage, isContestable, type BlockedPayload } from '$lib/chatBlocked';
 	import { htmlToText as heldText } from '$lib/octoguard/text';
 	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte';
+	import ShieldBanner from '$lib/components/octoguard/ShieldBanner.svelte';
 	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
 	import { isDarkTheme } from '$lib/theme';
 	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
@@ -1716,6 +1717,8 @@
 						        class="shrink-0 w-4 h-4 flex items-center justify-center text-sm leading-none transition-colors" style="color: var(--nx-text-muted)">×</button>
 					</div>
 				{/if}
+
+				<ShieldBanner {token} surface="chat" />
 
 				{#if plainNudge}
 					<NudgeBanner nudge={plainNudge} busy={prechecking} onReformulate={reformulate} onSendAnyway={() => sendMessage(true)} />

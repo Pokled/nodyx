@@ -123,3 +123,28 @@ describe('le journal d’OctoGuard devient un événement d’équipe', () => {
     expect(fromOctoGuardLog({ action: 'octoguard.ban_expired', target_type: 'user', target_label: null, metadata: {} })).toBeNull()
   })
 })
+
+describe('webhooks : le bouclier anti-raid (lot 6)', () => {
+  it('lever, proposer, baisser : famille d’équipe « shield », jamais publique', () => {
+    expect(TEAM_FAMILIES).toContain('shield')
+    expect(PUBLIC_FAMILIES as readonly string[]).not.toContain('shield')
+    const up = fromOctoGuardLog({ action: 'octoguard.shield_raised', target_type: null, target_label: null, actor_id: 'u1', metadata: { event_id: 'e', actor: 'u1', minutes: 30, until: '2026-11-12T21:30:00Z', reason: 'manual' } })
+    expect(up).toMatchObject({ type: 'shield.raised', family: 'shield', details: { minutes: 30, reason: 'manual' } })
+    expect(fromOctoGuardLog({ action: 'octoguard.shield_suggested', target_type: null, target_label: null, metadata: { event_id: 'e', actor: 'octoguard:auto' } })?.type).toBe('shield.suggested')
+    expect(fromOctoGuardLog({ action: 'octoguard.shield_lowered', target_type: null, target_label: null, actor_id: 'u1', metadata: { event_id: 'e', actor: 'u1' } })?.family).toBe('shield')
+  })
+  it('le texte : clair, en haute priorité, sans jargon', () => {
+    const base = { at: '2026-11-12T21:00:00Z', family: 'shield' } as unknown as NodyxEvent
+    const auto = renderEvent({ ...base, type: 'shield.raised', actor: { type: 'octoguard' }, details: { minutes: 30, reason: 'auto' } } as NodyxEvent, 'fr')
+    expect(auto.title).toBe('Bouclier anti-raid levé')
+    expect(auto.text).toContain('OctoGuard a repéré une vague')
+    expect(auto.priority).toBe('high')
+    const hand = renderEvent({ ...base, type: 'shield.raised', actor: { type: 'member', name: 'lea' }, details: { minutes: 60, reason: 'manual' } } as NodyxEvent, 'en')
+    expect(hand.text).toMatch(/^lea raised the shield for 1 hour/)
+    expect(renderEvent({ ...base, type: 'shield.suggested', actor: { type: 'octoguard' } } as NodyxEvent, 'fr').title).toBe('Raid probable')
+  })
+  it('un message mis de côté par le bouclier : la « règle » se traduit', () => {
+    const r = renderEvent({ at: '2026-11-12T21:00:00Z', type: 'held.created', family: 'held', actor: { type: 'octoguard' }, rule: 'shield', target: { type: 'user', name: 'neo' } } as unknown as NodyxEvent, 'fr')
+    expect(r.fields).toContainEqual(['Règle', 'Bouclier anti-raid'])
+  })
+})

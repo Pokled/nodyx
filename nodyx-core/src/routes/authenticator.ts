@@ -573,6 +573,8 @@ export default async function authenticatorRoutes(app: FastifyInstance) {
       )
       userId   = newUser[0].id
       username = newUser[0].username
+      // Une vague d'inscriptions peut annoncer un raid (bouclier anti-raid, lot 6)
+      void import('../services/octoguard/shield').then((m) => m.recordSignup()).catch(() => {})
 
       // Ajouter à la communauté
       const { rows: community } = await db.query(

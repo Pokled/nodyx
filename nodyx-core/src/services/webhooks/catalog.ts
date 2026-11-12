@@ -8,7 +8,7 @@
  */
 
 export const PUBLIC_FAMILIES = ['forum_article', 'forum_pinned', 'music', 'calendar', 'polls', 'wiki', 'live', 'members'] as const
-export const TEAM_FAMILIES = ['sanctions', 'reports', 'held', 'appeals', 'ladder', 'og_settings', 'observations'] as const
+export const TEAM_FAMILIES = ['shield', 'sanctions', 'reports', 'held', 'appeals', 'ladder', 'og_settings', 'observations'] as const
 export type PublicFamily = typeof PUBLIC_FAMILIES[number]
 export type TeamFamily = typeof TEAM_FAMILIES[number]
 export type Family = PublicFamily | TeamFamily
@@ -21,7 +21,7 @@ export const isFamily = (f: string): f is Family => isPublicFamily(f) || isTeamF
 /** Les familles cochées par défaut pour une nouvelle destination, selon sa sorte. */
 export const DEFAULT_EVENTS: Record<'public' | 'team', Family[]> = {
   public: ['forum_article', 'music', 'calendar', 'live'],
-  team: ['sanctions', 'reports', 'held', 'appeals', 'ladder'],
+  team: ['shield', 'sanctions', 'reports', 'held', 'appeals', 'ladder'],
 }
 
 /** Un événement, en valeurs : le texte se construit à l'envoi, dans la langue de l'instance. */
@@ -88,6 +88,10 @@ export function fromOctoGuardLog(entry: { action: string; target_type: string | 
     case 'ladder_approved': return ev('ladder.approved', 'ladder', { step: (md.step as number) ?? null, sanction: str(md.sanction) })
     case 'ladder_refused': case 'ladder_expired': case 'ladder_undone': return ev('ladder.dropped', 'ladder')
     case 'ladder_engine_alert': return ev('ladder.alert', 'ladder')
+    // Le bouclier anti-raid (lot 6) : levé (à la main ou tout seul), proposé, baissé
+    case 'shield_raised': return ev('shield.raised', 'shield', { minutes: (md.minutes as number) ?? null, until: str(md.until), reason: str(md.reason) })
+    case 'shield_suggested': return ev('shield.suggested', 'shield')
+    case 'shield_lowered': return ev('shield.lowered', 'shield')
     case 'enabled': return ev('octoguard.enabled', 'og_settings')
     case 'disabled': return ev('octoguard.disabled', 'og_settings')
   }
