@@ -6459,7 +6459,7 @@
   "atags.how_1": "Tu crées les tags ici.",
   "atags.how_1_sub": "Un nom court et une couleur : Question, Tutoriel, Résolu…",
   "atags.how_2": "L'auteur d'un sujet en choisit.",
-  "atags.how_2_sub": "Jusqu'à 5 par sujet, au moment de l'écrire. Ils s'affichent dans la liste et en haut du sujet.",
+  "atags.how_2_sub": "Jusqu'à 5 par sujet, au moment de l'écrire. L'équipe de modération peut les changer ensuite.",
   "atags.how_3": "Les membres trient d'un clic.",
   "atags.how_3_sub": "Au-dessus de la liste d'une catégorie, un tag n'affiche que les sujets qui le portent. La recherche les trouve aussi.",
   "atags.how_note": "Conseil : peu de tags, bien choisis. Cinq à dix suffisent à la plupart des communautés.",
@@ -6490,5 +6490,16 @@
   "atags.confirm_delete_one": "Supprimer « {{name}} » ? Il sera retiré de {{n}} discussion.",
   "atags.confirm_delete_many": "Supprimer « {{name}} » ? Il sera retiré de {{n}} discussions.",
   "atags.summary_one": "{{n}} tag.",
-  "atags.summary_many": "{{n}} tags, dont {{used}} déjà sur des discussions."
+  "atags.summary_many": "{{n}} tags, dont {{used}} déjà sur des discussions.",
+  "forum.tags_edit": "Changer les tags",
+  "forum.tags_add": "Ajouter des tags",
+  "forum.tags_edit_tip": "Réservé à l'équipe de modération",
+  "forum.tags_panel_title": "Les tags de ce sujet",
+  "forum.tags_panel_note": "Seule l'équipe de modération voit ce réglage. Le reste du sujet ne bouge pas.",
+  "forum.tags_none_yet": "Aucun tag n'existe encore.",
+  "forum.tags_none_admin": "Créer les premiers",
+  "forum.tags_err_many": "5 tags au plus par sujet.",
+  "forum.tags_err_unknown": "Un de ces tags n'existe plus. Recharge la page.",
+  "forum.tags_err_forbidden": "Tu n'as pas le droit de changer les tags de ce sujet.",
+  "forum.tags_err_save": "Les tags n'ont pas pu être enregistrés."
 }

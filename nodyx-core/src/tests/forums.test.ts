@@ -502,3 +502,67 @@ describe('PATCH /api/v1/forums/threads/:id : nettoyage du titre (injection audit
     expect(ThreadModel.update).not.toHaveBeenCalled()
   })
 })
+
+describe('PATCH /api/v1/forums/threads/:id : l’équipe change les tags d’un sujet', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+  const OTHER_AUTHOR = '8ba7b810-9dad-11d1-80b4-00c04fd430c8'
+  const T1 = '11111111-1111-4111-8111-111111111111', T2 = '22222222-2222-4222-8222-222222222222'
+  let known: string[]
+  let role: string
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    vi.mocked(redis.exists).mockImplementation((key: string) => Promise.resolve(key.startsWith('banned:') ? 0 : 1))
+    vi.mocked(redis.incr).mockResolvedValue(1 as any)
+    vi.mocked(redis.expire).mockResolvedValue(1 as any)
+    known = [T1, T2]; role = 'admin'
+    vi.mocked(db.query).mockImplementation(async (sql: string, params?: unknown[]) => {
+      const s = String(sql)
+      if (s.includes('FROM communities')) return { rows: [{ id: 'community-1' }], rowCount: 1 } as any
+      if (s.includes('FROM threads t JOIN categories')) return { rows: [{ community_id: 'community-1' }], rowCount: 1 } as any
+      if (s.includes('FROM tags WHERE id = ANY')) return { rows: [{ n: (params![0] as string[]).filter((i) => known.includes(i)).length }], rowCount: 1 } as any
+      return { rows: [{ role }], rowCount: 1 } as any
+    })
+    vi.mocked(ThreadModel.update).mockResolvedValue({ ...FAKE_THREAD } as any)
+    app = await buildApp(a => a.register(forumRoutes, { prefix: '/api/v1/forums' }))
+  })
+  const patch = (tag_ids: unknown, author = OTHER_AUTHOR) => {
+    vi.mocked(ThreadModel.findById).mockResolvedValueOnce({ ...FAKE_THREAD, author_id: author } as any)
+    return app.inject({ method: 'PATCH', url: `/api/v1/forums/threads/${THREAD_UUID}`, headers: { authorization: `Bearer ${makeToken()}` }, payload: { tag_ids } })
+  }
+  const TagModel = () => import('../models/tag')
+
+  it('un membre de l’équipe change les tags : doublons retirés', async () => {
+    const res = await patch([T1, T2, T1.toUpperCase()])
+    expect(res.statusCode).toBe(200)
+    expect((await TagModel()).setThreadTags).toHaveBeenCalledWith(THREAD_UUID, [T1, T2])
+  })
+  it('retirer tous les tags : liste vide acceptée', async () => {
+    expect((await patch([])).statusCode).toBe(200)
+    expect((await TagModel()).setThreadTags).toHaveBeenCalledWith(THREAD_UUID, [])
+  })
+  it('plus de 5 tags : 400, rien n’est touché', async () => {
+    known = Array.from({ length: 6 }, (_, i) => `${i}1111111-1111-4111-8111-111111111111`)
+    const res = await patch(known)
+    expect(res.json().code).toBe('THREAD_TAGS_TOO_MANY')
+    expect((await TagModel()).setThreadTags).not.toHaveBeenCalled()
+    expect(ThreadModel.update).not.toHaveBeenCalled()
+  })
+  it('un tag inconnu : 400 AVANT d’effacer les tags existants', async () => {
+    const res = await patch([T1, '33333333-3333-4333-8333-333333333333'])
+    expect(res.json().code).toBe('THREAD_TAGS_UNKNOWN')
+    expect((await TagModel()).setThreadTags).not.toHaveBeenCalled()
+  })
+  it('pas une liste d’identifiants : 400 au lieu d’une erreur 500', async () => {
+    for (const bad of ['tuto', [42], ['pas-un-uuid'], { a: 1 }]) {
+      expect((await patch(bad)).json().code).toBe('THREAD_TAGS_INVALID')
+    }
+    expect((await TagModel()).setThreadTags).not.toHaveBeenCalled()
+  })
+  it('l’auteur sans droit de modération ne change pas les tags', async () => {
+    role = 'member'
+    const res = await patch([T1], USER_UUID)
+    expect(res.statusCode).toBe(403)
+    expect((await TagModel()).setThreadTags).not.toHaveBeenCalled()
+  })
+})

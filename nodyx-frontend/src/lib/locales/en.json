@@ -6459,7 +6459,7 @@
   "atags.how_1": "You create tags here.",
   "atags.how_1_sub": "A short name and a color: Question, Tutorial, Solved…",
   "atags.how_2": "Thread authors pick them.",
-  "atags.how_2_sub": "Up to 5 per thread, when writing it. They show in the list and at the top of the thread.",
+  "atags.how_2_sub": "Up to 5 per thread, when writing it. The moderation team can change them afterwards.",
   "atags.how_3": "Members sort with one click.",
   "atags.how_3_sub": "Above a category's list, a tag shows only the threads that carry it. Search finds them too.",
   "atags.how_note": "Tip: few tags, well chosen. Five to ten are enough for most communities.",
@@ -6490,5 +6490,16 @@
   "atags.confirm_delete_one": "Delete \"{{name}}\"? It will be removed from {{n}} thread.",
   "atags.confirm_delete_many": "Delete \"{{name}}\"? It will be removed from {{n}} threads.",
   "atags.summary_one": "{{n}} tag.",
-  "atags.summary_many": "{{n}} tags, {{used}} already on threads."
+  "atags.summary_many": "{{n}} tags, {{used}} already on threads.",
+  "forum.tags_edit": "Change tags",
+  "forum.tags_add": "Add tags",
+  "forum.tags_edit_tip": "Moderation team only",
+  "forum.tags_panel_title": "This thread's tags",
+  "forum.tags_panel_note": "Only the moderation team sees this. Nothing else in the thread changes.",
+  "forum.tags_none_yet": "No tags exist yet.",
+  "forum.tags_none_admin": "Create the first ones",
+  "forum.tags_err_many": "5 tags at most per thread.",
+  "forum.tags_err_unknown": "One of these tags no longer exists. Reload the page.",
+  "forum.tags_err_forbidden": "You are not allowed to change this thread's tags.",
+  "forum.tags_err_save": "The tags could not be saved."
 }

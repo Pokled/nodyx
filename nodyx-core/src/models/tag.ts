@@ -101,10 +101,13 @@ export async function getTagsForThreads(threadIds: string[]): Promise<Map<string
 export async function setThreadTags(threadId: string, tagIds: string[]): Promise<void> {
   await db.query(`DELETE FROM thread_tags WHERE thread_id = $1`, [threadId])
   if (tagIds.length > 0) {
-    const values = tagIds.map((_, i) => `($1, $${i + 2})`).join(', ')
+    // Seulement des tags qui existent, sans doublon : un identifiant en double
+    // ou disparu entre-temps ne fait plus tomber l'enregistrement du sujet.
     await db.query(
-      `INSERT INTO thread_tags (thread_id, tag_id) VALUES ${values}`,
-      [threadId, ...tagIds]
+      `INSERT INTO thread_tags (thread_id, tag_id)
+       SELECT $1, t.id FROM tags t WHERE t.id = ANY($2::uuid[])
+       ON CONFLICT DO NOTHING`,
+      [threadId, [...new Set(tagIds)]]
     )
   }
 }
