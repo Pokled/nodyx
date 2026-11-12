@@ -673,6 +673,10 @@ export async function ingestEvent(args: {
   if (args.eventType === 'stream.online') {
     const evt = (args.payload as { event?: { id?: string; started_at?: string; type?: string; broadcaster_user_id?: string; broadcaster_user_name?: string; broadcaster_user_login?: string } }).event
     if (evt?.id && evt.started_at) {
+      // streamer_sessions n'a pas de contrainte d'unicité : ON CONFLICT ne protège de rien.
+      // On regarde donc AVANT si la session existe, pour n'annoncer un live qu'une fois.
+      const known = await db.query(`SELECT 1 FROM streamer_sessions WHERE provider = $1 AND external_id = $2 LIMIT 1`, [args.provider, evt.id])
+        .then((r) => r.rows.length > 0).catch(() => true)
       const opened = await db.query(
         `INSERT INTO streamer_sessions (provider, external_id, started_at)
          VALUES ($1, $2, $3)
@@ -681,7 +685,7 @@ export async function ingestEvent(args: {
         [args.provider, evt.id, evt.started_at],
       ).catch(err => { console.error('[streamerHub] streamer_sessions insert failed', err); return null })
       // Webhooks : un live qui commence, une seule fois par session (Twitch peut renvoyer l'événement)
-      if (opened && opened.rows.length) {
+      if (!known && opened && opened.rows.length) {
         const name = evt.broadcaster_user_name || evt.broadcaster_user_login || null
         if (name) announceLive(name, null, null, evt.broadcaster_user_login ? `https://twitch.tv/${evt.broadcaster_user_login}` : '/')
       }
