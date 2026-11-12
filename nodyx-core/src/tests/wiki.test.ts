@@ -517,3 +517,67 @@ describe('DELETE /api/v1/wiki/:slug', () => {
     expect(res.statusCode).toBe(404)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sécurité (12/11/2026) : le contenu d'une page est affiché tel quel ({@html}).
+// Il était enregistré BRUT : un modérateur pouvait y glisser un script exécuté
+// chez chaque lecteur, propriétaire compris (escalade de privilèges).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('wiki : le contenu est nettoyé (écriture ET lecture)', () => {
+  beforeEach(() => { vi.resetAllMocks(); restoreRedis() })
+  const TRAP = '<h2>Règles</h2><p>Bonjour</p><script>steal(document.cookie)</script>' +
+    '<img src="/uploads/x.png" onerror="steal(1)"><a href="javascript:steal(2)">clic</a>' +
+    '<iframe src="https://evil.example/x"></iframe><div style="position:fixed" onclick="steal(3)">x</div>'
+  const clean = (html: string) => {
+    expect(html).not.toMatch(/<script|onerror|onclick|javascript:|evil\.example/i)
+    expect(html).toContain('<h2>Règles</h2>')
+    expect(html).toContain('<p>Bonjour</p>')
+  }
+  const sqlCalls = () => vi.mocked(db.query).mock.calls.map(([sql, params]) => ({ sql: String(sql), params: (params ?? []) as unknown[] }))
+
+  it('création : ce qui est enregistré est nettoyé', async () => {
+    mockModuleEnabled()
+    mockRoleAnd('moderator', { rows: [{ id: 'p1', slug: 'regles-ab12cd34' }], rowCount: 1 })
+    const app = await buildApp(app => wikiRoutes(app))
+    const res = await app.inject({ method: 'POST', url: '/', headers: { 'content-type': 'application/json', Authorization: `Bearer ${MOD_TOKEN}` }, payload: { title: 'Règles', content: TRAP } })
+    expect(res.statusCode).toBe(201)
+    const ins = sqlCalls().find((c) => c.sql.includes('INSERT INTO wiki_pages'))!
+    clean(String(ins.params[2]))
+  })
+
+  it('modification : ce qui est enregistré est nettoyé', async () => {
+    mockModuleEnabled()
+    mockPatch({ rows: [{ id: 'p1', author_id: 'mod-uuid' }], rowCount: 1 }, 'moderator', { rows: [{ slug: 'regles-ab12cd34' }], rowCount: 1 })
+    const app = await buildApp(app => wikiRoutes(app))
+    const res = await app.inject({ method: 'PATCH', url: '/regles-ab12cd34', headers: { 'content-type': 'application/json', Authorization: `Bearer ${MOD_TOKEN}` }, payload: { content: TRAP } })
+    expect(res.statusCode).toBe(200)
+    const upd = sqlCalls().find((c) => c.sql.includes('UPDATE wiki_pages SET'))!
+    clean(String(upd.params.find((p) => typeof p === 'string' && p.includes('Bonjour'))))
+  })
+
+  it('lecture : une page enregistrée AVANT le correctif ne s’exécute plus', async () => {
+    mockModuleEnabled()
+    vi.mocked(db.query).mockImplementation(async (sql: string) => {
+      const s = String(sql)
+      if (s.includes('FROM wiki_pages w')) return { rows: [{ ...FAKE_PAGE, content: TRAP }], rowCount: 1 } as any
+      return { rows: [], rowCount: 0 } as any
+    })
+    const app = await buildApp(app => wikiRoutes(app))
+    const res = await app.inject({ method: 'GET', url: '/' + FAKE_PAGE.slug, headers: { Authorization: `Bearer ${MEMBER_TOKEN}` } })
+    expect(res.statusCode).toBe(200)
+    clean(res.json().content)
+  })
+
+  it('un contenu honnête ne perd rien (titres ancrés, image, lien, tableau, couleur)', async () => {
+    mockModuleEnabled()
+    const honest = '<h2 id="regles">Règles</h2><p style="text-align: center">Centré <span style="color: #22c55e">vert</span></p>' +
+      '<img src="/uploads/a.png" alt="A" data-align="right"><a href="/forum/aide">aide</a>' +
+      '<table><tbody><tr><td>a</td><td>b</td></tr></tbody></table>'
+    vi.mocked(db.query).mockImplementation(async (sql: string) =>
+      String(sql).includes('FROM wiki_pages w') ? { rows: [{ ...FAKE_PAGE, content: honest }], rowCount: 1 } as any : { rows: [], rowCount: 0 } as any)
+    const app = await buildApp(app => wikiRoutes(app))
+    const out = (await app.inject({ method: 'GET', url: '/' + FAKE_PAGE.slug, headers: { Authorization: `Bearer ${MEMBER_TOKEN}` } })).json().content
+    for (const bit of ['<h2 id="regles">', 'color:#22c55e', 'data-align="right"', 'href="/forum/aide"', '<td>b</td>']) expect(out).toContain(bit)
+  })
+})

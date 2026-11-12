@@ -125,6 +125,9 @@ export function sanitize(raw: string): string {
       if (frame.tag === 'audio')               return !isAllowedAudioSrc(frame.attribs?.src ?? '')
       if (frame.tag === 'nodyx-audio-player')  return !!frame.attribs?.src && !isAllowedAudioSrc(frame.attribs.src)
       if (frame.tag === 'nodyx-track')         return !isAllowedAudioSrc(frame.attribs?.src ?? '')
+      // Une iframe dont la source a été refusée (domaine inconnu, srcdoc) reste
+      // sinon une boîte VIDE de 300 × 150 dans la page : on la retire entière.
+      if (frame.tag === 'iframe')              return !frame.attribs?.src
       if (frame.tag === 'a') {
         const href = frame.attribs?.href ?? ''
         try {

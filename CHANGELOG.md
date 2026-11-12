@@ -207,6 +207,12 @@ le champ pour être corrigé.
 
 ### Sous le capot
 
+- **Sécurité : le contenu d'une page du wiki est nettoyé.** Il était enregistré tel quel, puis
+  affiché tel quel : un membre de l'équipe pouvait y glisser du code exécuté chez chaque lecteur.
+  Il passe maintenant par le même nettoyeur que le forum, à l'enregistrement et à la lecture
+  (une page écrite avant le correctif ne peut plus rien exécuter). Aucune page n'avait été
+  piégée ; les pages existantes s'affichent à l'identique. Au passage, une vidéo intégrée dont
+  la source est refusée ne laisse plus de cadre vide dans un message.
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
   recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
   y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde
