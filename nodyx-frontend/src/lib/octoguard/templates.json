@@ -4,7 +4,7 @@
 		{
 			"id": "youth",
 			"tone": "report",
-			"art": "youth",
+			"art": "youth", "nudge": true,
 			"rules": [
 				{
 					"name": {

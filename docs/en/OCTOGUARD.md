@@ -272,6 +272,15 @@ Every action OctoGuard takes, and every relevant admin action, is written here, 
 
 It's paginated (**Suivant →**). This is where your **test-mode** rules record their would-be catches, so the Journal is the first place you look when tuning a new rule, and the place you go to answer "wait, why was this message removed?".
 
+### "Are you sure?" before sending
+
+When a chat or forum message would be held or refused, its author is told **before** sending it: "Your message may be held for review. It could hurt someone, and nobody has seen it yet." They can **Rephrase** it, or **Send anyway**, and the message is then judged as usual.
+
+- Nothing is recorded while they decide: no Journal entry, no warning, no step on the sanction ladder, and the check does not count towards flood rules.
+- The rule is never named. The member only learns what would happen (held, refused, warned, sanctioned) and what kind of problem it is (words, links, capitals, mentions).
+- Off by default. Turn it on in **Vu par un membre**, where a live preview shows exactly what members will see. The **Communauté jeunesse** template turns it on too.
+- It only speaks when OctoGuard is on, and it never slows anyone down: if the check takes more than 1.5 seconds, the message simply leaves and OctoGuard judges it as always.
+
 ### Webhook: pipe events to your own tools (advanced)
 
 The OctoGuard webhook moved to **Administration > Integrations > Webhooks**, where you can send moderation alerts to your phone (ntfy), a private team channel (Discord, Matrix, Slack) or your own tool (signed JSON), next to public community announcements. The OctoGuard **Webhook** tab lists the destinations that receive moderation and links there. See [Webhooks](./WEBHOOKS.md).

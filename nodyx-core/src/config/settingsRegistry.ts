@@ -209,6 +209,13 @@ export const SETTINGS_REGISTRY: SettingDescriptor[] = [
     helpEn: 'Turns on the chat auto-moderation engine. With no rule configured it does nothing. Applies instantly, no restart. Configure rules in /admin/octoguard.',
     optional: true,
   },
+  {
+    key: 'OCTOGUARD_NUDGE', group: 'security', type: 'boolean', tier: 3, secret: false,
+    labelFr: 'OctoGuard : « Tu es sûr ? » avant d’envoyer', labelEn: 'OctoGuard: "Are you sure?" before sending',
+    helpFr: "Prévient l'auteur d'un message du chat ou du forum qu'OctoGuard le retiendrait ou le refuserait, avant l'envoi. Il peut le reformuler ou l'envoyer quand même. Éteint par défaut. Effet immédiat.",
+    helpEn: 'Tells the author of a chat or forum message, before sending, that OctoGuard would hold or refuse it. They can rephrase it or send it anyway. Off by default. Applies instantly.',
+    optional: true,
+  },
 ]
 
 const BY_KEY = new Map(SETTINGS_REGISTRY.map(d => [d.key, d]))

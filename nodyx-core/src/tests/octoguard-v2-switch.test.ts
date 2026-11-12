@@ -4,7 +4,7 @@ import { buildApp } from './helpers/buildApp'
 
 // Lot 9 (D24) : l'interrupteur dans l'écran, et le verrou du serveur.
 const { setSettingsMock, reloadMock } = vi.hoisted(() => ({
-  setSettingsMock: vi.fn(async (u: Record<string, string>) => { process.env.OCTOGUARD_ENABLED = u.OCTOGUARD_ENABLED; return { ok: true, errors: {}, applied: ['OCTOGUARD_ENABLED'], restartRequired: false } }),
+  setSettingsMock: vi.fn(async (u: Record<string, string>) => { for (const [k, v] of Object.entries(u)) process.env[k] = v; return { ok: true, errors: {}, applied: Object.keys(u), restartRequired: false } }),
   reloadMock: vi.fn(),
 }))
 vi.mock('../config/database', () => ({
@@ -27,6 +27,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   delete process.env.OCTOGUARD_FORCE_OFF
   process.env.OCTOGUARD_ENABLED = 'false'
+  delete process.env.OCTOGUARD_NUDGE
   vi.mocked(redis.exists).mockImplementation((async (k: string) => (k.startsWith('banned:') ? 0 : 1)) as never)
   vi.mocked(db.query).mockImplementation((async (sql: string, params: unknown[] = []) => {
     const s = String(sql).replace(/\s+/g, ' ')
@@ -44,7 +45,7 @@ describe('l’interrupteur général', () => {
   it('allumer depuis l’écran : effet immédiat, règles rechargées', async () => {
     const res = await put(ADMIN, true)
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ enabled: true })
+    expect(res.json()).toEqual({ enabled: true, nudge: false })
     expect(isOctoGuardEnabled()).toBe(true)
     expect(reloadMock).toHaveBeenCalled()
   })
@@ -66,6 +67,42 @@ describe('l’interrupteur général', () => {
   })
   it('un membre ne touche pas à l’interrupteur', async () => {
     expect((await put(MEMBER, true)).statusCode).toBe(403)
+    expect(setSettingsMock).not.toHaveBeenCalled()
+  })
+})
+
+// Lot 5 : « Tu es sûr ? » se règle au même endroit, sans toucher à l'interrupteur.
+describe('« Tu es sûr ? »', () => {
+  let app: Awaited<ReturnType<typeof buildApp>>
+  beforeEach(async () => { app = await buildApp(a => a.register(octoguardAdminPlugin, { prefix: '/o' })) })
+  const put = (u: string, payload: unknown) => app.inject({ method: 'PUT', url: '/o/settings', headers: { authorization: token(u) }, payload: payload as object })
+  const audited = () => vi.mocked(db.query).mock.calls.flatMap(c => (c[1] as unknown[] | undefined) ?? []).filter(v => typeof v === 'string' && v.startsWith('octoguard.'))
+
+  it('l’allumer ne touche ni à l’interrupteur ni aux règles, et s’inscrit au journal', async () => {
+    const res = await put(ADMIN, { nudge: true })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ enabled: false, nudge: true })
+    expect(setSettingsMock).toHaveBeenCalledWith({ OCTOGUARD_NUDGE: 'true' }, ADMIN)
+    expect(reloadMock).not.toHaveBeenCalled()
+    expect(audited()).toEqual(['octoguard.nudge_enabled'])
+  })
+  it('l’éteindre', async () => {
+    process.env.OCTOGUARD_NUDGE = 'true'
+    const res = await put(ADMIN, { nudge: false })
+    expect(res.json()).toEqual({ enabled: false, nudge: false })
+    expect(audited()).toEqual(['octoguard.nudge_disabled'])
+  })
+  it('lu par GET /settings', async () => {
+    process.env.OCTOGUARD_NUDGE = 'true'
+    const res = await app.inject({ method: 'GET', url: '/o/settings', headers: { authorization: token(ADMIN) } })
+    expect(res.json().nudge).toBe(true)
+  })
+  it('un corps vide est refusé', async () => {
+    expect((await put(ADMIN, {})).statusCode).toBe(400)
+    expect(setSettingsMock).not.toHaveBeenCalled()
+  })
+  it('un membre n’y touche pas', async () => {
+    expect((await put(MEMBER, { nudge: true })).statusCode).toBe(403)
     expect(setSettingsMock).not.toHaveBeenCalled()
   })
 })

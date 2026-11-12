@@ -74,6 +74,12 @@ défaut** : rien ne change sur ton instance tant que tu ne l'allumes pas.
   Annuler la décision la défait vraiment (avertissement retiré, sourdine levée, une marche de
   moins sur le barème), et le membre reçoit la réponse. Il ne voit jamais le nom de la règle ni
   celui de la personne qui l'a sanctionné.
+- **« Tu es sûr ? » avant d'envoyer.** Quand un message du chat ou du forum serait retenu ou
+  refusé, son auteur le sait avant de l'envoyer : « Ton message risque d'être retenu. Il pourrait
+  blesser quelqu'un, et personne ne l'a encore vu. » Il le reformule, ou l'envoie quand même, et
+  le message est alors jugé normalement. Rien n'est noté nulle part tant qu'il n'a pas envoyé, et
+  la règle en cause n'est jamais nommée. Éteint par défaut ; le réglage est dans « Vu par un
+  membre », avec un aperçu, et le modèle « Communauté jeunesse » l'allume.
 - **Se tromper fait partie du jeu.** « Annuler » une action d'OctoGuard ne marchait pas, il marche
   maintenant, et une seule fois (#944). Une action marquée « faux positif » peut apprendre une
   exception à la règle, mais seulement dans un cas sûr (« contenu » attrapé par « \*con\* ») et

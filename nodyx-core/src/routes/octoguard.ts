@@ -34,6 +34,7 @@ import { listPending, countPending, approveHeld, refuseHeld, listMine, forAuthor
 import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '../services/reports'
 import { closeReports } from '../services/octoguard/reportClose'
 import { SANCTIONS, FORGET_CHOICES, countBanCapable, getLadderSettings, saveLadderSettings, memberLadder, applyLadder, approveLadder, refuseLadder, undoLadder } from '../services/octoguard/ladder'
+import { precheck, isNudgeEnabled, PRECHECK_MAX_CHARS, PRECHECK_PER_MINUTE } from '../services/octoguard/precheck'
 import { listMine as listMyDecisions, fileAppeal, listAppeals, decideAppeal, APPEAL_DAYS, APPEAL_MIN, APPEAL_MAX, REPLY_MAX } from '../services/octoguard/appeals'
 import * as NotificationModel from '../models/notification'
 import * as PostModel from '../models/post'
@@ -240,27 +241,39 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
       latency:        (await import('../services/octoguard/pipeline')).pipelineLatency(),
       re2_active:     (await import('../services/octoguard')).hasRE2(),
       hate_filter:    process.env.NODYX_HATE_FILTER_ENABLED !== 'false',
+      // Lot 5 : « Tu es sûr ? » avant d'envoyer (éteint par défaut)
+      nudge:          process.env.OCTOGUARD_NUDGE === 'true',
     })
   })
 
-  // L'interrupteur général (lot 9, D24) : effet immédiat, journalisé.
-  // Refusé si le serveur a verrouillé OctoGuard (OCTOGUARD_FORCE_OFF).
+  // L'interrupteur général (lot 9, D24) et « Tu es sûr ? » (lot 5) : effet
+  // immédiat, journalisés. Allumer OctoGuard est refusé si le serveur l'a
+  // verrouillé (OCTOGUARD_FORCE_OFF).
   app.put('/settings', {
-    preHandler: [rateLimit, validate({ body: z.object({ enabled: z.boolean() }) })],
+    preHandler: [rateLimit, validate({ body: z.object({ enabled: z.boolean().optional(), nudge: z.boolean().optional() })
+      .refine(b => b.enabled !== undefined || b.nudge !== undefined, { message: 'enabled or nudge required' }) })],
   }, async (request, reply) => {
-    const { enabled } = request.body as { enabled: boolean }
+    const { enabled, nudge } = request.body as { enabled?: boolean; nudge?: boolean }
     const og = await import('../services/octoguard')
     if (enabled && og.isOctoGuardLockedOff()) {
       return reply.code(409).send({ error: 'OctoGuard is locked off by the server (OCTOGUARD_FORCE_OFF)', code: 'OCTOGUARD_LOCKED_OFF' })
     }
     const { setSettings } = await import('../config/settings')
-    const res = await setSettings({ OCTOGUARD_ENABLED: enabled ? 'true' : 'false' }, request.user!.userId)
+    const changes: Record<string, string> = {}
+    if (enabled !== undefined) changes.OCTOGUARD_ENABLED = enabled ? 'true' : 'false'
+    if (nudge !== undefined) changes.OCTOGUARD_NUDGE = nudge ? 'true' : 'false'
+    const res = await setSettings(changes, request.user!.userId)
     if (Object.keys(res.errors ?? {}).length) {
       return reply.code(400).send({ error: 'Could not save the setting', code: 'SETTING_INVALID' })
     }
-    if (enabled) await og.reloadRules()
-    await logAdminAction(request.user!.userId, enabled ? 'octoguard.enabled' : 'octoguard.disabled', null, null, null, {})
-    return reply.send({ enabled: og.isOctoGuardEnabled() })
+    if (enabled !== undefined) {
+      if (enabled) await og.reloadRules()
+      await logAdminAction(request.user!.userId, enabled ? 'octoguard.enabled' : 'octoguard.disabled', null, null, null, {})
+    }
+    if (nudge !== undefined) {
+      await logAdminAction(request.user!.userId, nudge ? 'octoguard.nudge_enabled' : 'octoguard.nudge_disabled', null, null, null, {})
+    }
+    return reply.send({ enabled: og.isOctoGuardEnabled(), nudge: process.env.OCTOGUARD_NUDGE === 'true' })
   })
 
   // ─── OctoGuard 2 : bac à sable, chiffres, profils (E4b) ───────────────────
@@ -1278,6 +1291,34 @@ export async function reportsPublicPlugin(app: FastifyInstance) {
     }
     const rows = await listMine(request.user!.userId, { channelId: q.channel_id, threadId: q.thread_id })
     return reply.send({ held: rows.map(forAuthor), expiry_hours: HELD_EXPIRY_HOURS })
+  })
+
+  // Lot 5 : « Tu es sûr ? ». Ce que le moteur ferait de ce texte, sans RIEN
+  // enregistrer. Pas le limiteur général (100 requêtes/min par adresse, toutes
+  // routes) : une annonce par message du chat l'épuiserait. Un compteur par
+  // membre à la place ; au-delà, pas d'annonce (le moteur juge le vrai envoi).
+  // Jamais le nom de la règle (D20).
+  // Allumé ou non : le chat et le forum le demandent une fois, et ne
+  // pré-vérifient rien quand c'est éteint (aucun aller-retour de plus).
+  app.get('/precheck', { preHandler: [rateLimit] }, async (_request, reply) => {
+    return reply.send({ enabled: isNudgeEnabled() })
+  })
+
+  app.post('/precheck', {
+    preHandler: [validate({ body: z.object({
+      surface: z.enum(['chat', 'forum']),
+      content: z.string().max(PRECHECK_MAX_CHARS),
+      title:   z.string().max(300).nullish(),
+    }) })],
+  }, async (request, reply) => {
+    if (!isNudgeEnabled()) return reply.send({ enabled: false, nudge: null })
+    const userId = request.user!.userId
+    const key = `precheck:${userId}`
+    const n = await redis.incr(key).catch(() => PRECHECK_PER_MINUTE + 1)
+    if (n === 1) await redis.expire(key, 60).catch(() => {})
+    if (n > PRECHECK_PER_MINUTE) return reply.send({ enabled: true, nudge: null, limited: true })
+    const { surface, content, title } = request.body as { surface: 'chat' | 'forum'; content: string; title?: string | null }
+    return reply.send({ enabled: true, nudge: await precheck(userId, surface, content, title) })
   })
 
   // Lot 8 : mes avertissements et sourdines des 30 derniers jours, et les contester.
