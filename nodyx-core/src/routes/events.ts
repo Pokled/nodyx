@@ -5,41 +5,24 @@
  */
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import sanitizeHtml from 'sanitize-html'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth, optionalAuth } from '../middleware/auth'
 import { db } from '../config/database'
 import { io } from '../socket/io'
 import { announceCalendarEvent } from '../services/webhooks/announce'
+import { sanitize } from '../utils/sanitize'
+import { rehostExternalImages } from '../services/inlineImageRehost'
 
-const ALLOWED_TAGS = [
-  'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-  'h1', 'h2', 'h3', 'h4',
-  'ul', 'ol', 'li',
-  'blockquote', 'hr',
-  'a', 'img',
-  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-  'div', 'span',
-  'iframe',
-]
-
-const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
-  '*':      ['class', 'data-align', 'data-type', 'data-two-cols', 'data-col'],
-  'span':   ['class', 'style', 'data-align', 'data-type'],
-  'p':      ['class', 'style', 'data-align', 'data-type'],
-  'a':      ['href', 'target', 'rel'],
-  'img':    ['src', 'alt', 'width', 'height', 'data-align'],
-  'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
-  'th':     ['rowspan', 'colspan'],
-  'td':     ['rowspan', 'colspan'],
-}
-
-function sanitize(html: string): string {
-  return sanitizeHtml(html, {
-    allowedTags:       ALLOWED_TAGS,
-    allowedAttributes: ALLOWED_ATTRS,
-  })
+// La description d'un événement vient de NodyxEditor, comme un message du forum :
+// même nettoyeur (utils/sanitize) et même recopie des images externes. Avant, une
+// liste locale sans filtre d'images ni de domaines bloqués laissait une image
+// d'un autre site en place : chaque lecteur la chargeait chez ce site, qui voyait
+// son adresse IP. Une seule règle pour tous les outils, sinon ils divergent.
+async function cleanDescription(raw: string): Promise<string> {
+  if (!raw) return ''
+  const rehost = await rehostExternalImages(raw)
+  return sanitize(rehost.html)
 }
 
 // -- Schemas -------------------------------------------------------------------
@@ -201,7 +184,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       )
       if (!comm[0]) return reply.status(400).send({ error: "Tu dois faire partie d'une communauté" })
 
-      const description = sanitize(body.description ?? '')
+      const description = await cleanDescription(body.description ?? '')
 
       const { rows } = await db.query(
         `INSERT INTO events
@@ -253,7 +236,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       }
 
       if (body.title           !== undefined) addField('title',           body.title?.trim())
-      if (body.description     !== undefined) addField('description',     sanitize(body.description ?? ''))
+      if (body.description     !== undefined) addField('description',     await cleanDescription(body.description ?? ''))
       if (body.location        !== undefined) addField('location',        body.location)
       if (body.location_lat    !== undefined) addField('location_lat',    body.location_lat)
       if (body.location_lng    !== undefined) addField('location_lng',    body.location_lng)

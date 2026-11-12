@@ -221,6 +221,12 @@ le champ pour être corrigé.
   chaque nom inséré dans un texte mis en forme est échappé, y compris le nom affiché, libre.
   Un test fait échouer la construction si un nouveau texte oublie l'échappement. Aucun compte
   existant n'était concerné.
+- **Les événements suivent les mêmes règles que le forum.** La description d'un événement avait
+  son propre nettoyeur, plus laxiste : une image hébergée sur un autre site restait en place, et
+  chaque personne qui ouvrait l'événement la chargeait chez ce site, qui voyait son adresse IP.
+  Elle est maintenant recopiée sur l'instance, comme au forum. Les liens vers les domaines
+  bloqués sont retirés. Dans l'autre sens, l'événement garde enfin ce que l'éditeur propose et
+  que l'ancien nettoyeur jetait sans prévenir : le lecteur audio et les ancres des titres.
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
   recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
   y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde
