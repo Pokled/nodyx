@@ -115,6 +115,13 @@ describe('tags : modifier après la création', () => {
     expect((await patch(null, { name: 'X' })).statusCode).toBe(401)
     expect(upd()).toBeUndefined()
   })
+  it('la liste donne, pour chaque tag, le nombre de sujets qui le portent', async () => {
+    const res = await app.inject({ method: 'GET', url: '/i/tags' })
+    expect(res.statusCode).toBe(200)
+    const q = calls.find((c) => c.sql.includes('FROM tags t WHERE t.community_id = $1'))!
+    expect(q.sql).toContain('(SELECT COUNT(*)::int FROM thread_tags tt WHERE tt.tag_id = t.id) AS thread_count')
+    expect(q.params).toEqual(['c1'])
+  })
   it('création : un nom déjà pris donne 409, une couleur invalide 400', async () => {
     const post = (payload: object) => app.inject({ method: 'POST', url: '/i/tags', headers: { authorization: 'Bearer admin' }, payload })
     expect((await post({ name: 'Ok', color: '#abcdef' })).statusCode).toBe(201)

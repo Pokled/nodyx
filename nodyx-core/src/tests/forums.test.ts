@@ -136,6 +136,37 @@ describe('GET /api/v1/forums/threads', () => {
 
     expect(res.statusCode).toBe(404)
   })
+
+  // Filtrer par tag : fait par la base, sur tous les sujets de la catégorie
+  const listCall = () => vi.mocked(db.query).mock.calls.find(([sql]) => String(sql).includes('FROM threads t') && String(sql).includes('LIMIT $2'))
+  it('?tag=slug : seuls les sujets qui portent ce tag, filtre posé dans la requête', async () => {
+    const res = await app.inject({ method: 'GET', url: `/api/v1/forums/threads?category_id=${CATEGORY_UUID}&tag=tutoriels-video` })
+    expect(res.statusCode).toBe(200)
+    const [sql, params] = listCall()!
+    expect(String(sql).replace(/\s+/g, ' ')).toContain('AND ($4::text IS NULL OR EXISTS ( SELECT 1 FROM thread_tags tt JOIN tags g ON g.id = tt.tag_id WHERE tt.thread_id = t.id AND g.slug = $4))')
+    expect(params).toEqual([CATEGORY_UUID, 50, 0, 'tutoriels-video'])
+  })
+  it('sans tag : aucun filtre (null)', async () => {
+    await app.inject({ method: 'GET', url: `/api/v1/forums/threads?category_id=${CATEGORY_UUID}` })
+    expect(listCall()![1]).toEqual([CATEGORY_UUID, 50, 0, null])
+  })
+  it('un tag malformé est refusé avant la base', async () => {
+    for (const tag of ['Majuscules', "x' OR 1=1", 'a b', 'x'.repeat(61)]) {
+      const res = await app.inject({ method: 'GET', url: `/api/v1/forums/threads?category_id=${CATEGORY_UUID}&tag=${encodeURIComponent(tag)}` })
+      expect(res.statusCode).toBe(400)
+    }
+    expect(listCall()).toBeUndefined()
+  })
+  it('la réponse donne les tags de la catégorie, avec leur nombre de sujets', async () => {
+    const TAGS = [{ id: 't1', name: 'Tutoriel', slug: 'tutoriel', color: '#8b5cf6', thread_count: 3 }]
+    vi.mocked(db.query).mockImplementation((async (sql: string) =>
+      String(sql).includes('GROUP BY g.id') ? { rows: TAGS, rowCount: 1 } : { rows: [], rowCount: 0 }) as never)
+    const res = await app.inject({ method: 'GET', url: `/api/v1/forums/threads?category_id=${CATEGORY_UUID}` })
+    expect(res.json().tags).toEqual(TAGS)
+    const tagSql = vi.mocked(db.query).mock.calls.find(([s]) => String(s).includes('GROUP BY g.id'))!
+    expect(String(tagSql[0])).toContain('WHERE t.category_id = $1')
+    expect(tagSql[1]).toEqual([CATEGORY_UUID])
+  })
 })
 
 describe('POST /api/v1/forums/threads', () => {

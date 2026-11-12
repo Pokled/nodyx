@@ -254,11 +254,14 @@
 							⭐ {tFn('common.featured')}
 						</span>
 					{/if}
-					{#each (thread.tags ?? []) as tag}
-						<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium"
+					{#each (thread.tags ?? []) as tag (tag.id)}
+						<!-- Un tag mène aux autres sujets qui le portent, dans cette catégorie -->
+						<a href="/forum/{thread.category_slug ?? thread.category_id}?tag={tag.slug}"
+							title={tFn('forum.tag_see_all', { name: tag.name })}
+							class="inline-flex items-center px-2 py-0.5 text-xs font-medium no-underline hover:brightness-110 transition"
 							style="background-color: {tag.color}22; color: {tag.color}; border: 1px solid {tag.color}55">
 							{tag.name}
-						</span>
+						</a>
 					{/each}
 				</div>
 

@@ -152,6 +152,12 @@ regarder le journal, puis de passer au cran qui te convient. Si tu préfères qu
   la barre du haut se corrige : texte, couleur, date de fin. Un webhook affiche « Modifier » dans
   la liste, et le clic descend jusqu'à son réglage, qui restait caché sous la liste. L'heure de fin
   d'une annonce est enregistrée dans ton fuseau : 18 h à Paris n'est plus 19 h.
+- Les tags servent enfin à quelque chose. Au-dessus de la liste d'une catégorie, « Filtrer par
+  tag » n'affiche que les sujets qui le portent, avec une adresse qu'on peut partager ; dans un
+  sujet, cliquer un tag mène au même filtre. La page Tags de l'admin explique à quoi ils servent,
+  montre ce que voient les membres, propose huit idées à créer en un clic (Question, Résolu,
+  Tutoriel…) et compte les discussions de chaque tag : supprimer un tag dit de combien de sujets
+  il sera retiré.
 
 ### Interface : le thème clair, page après page
 

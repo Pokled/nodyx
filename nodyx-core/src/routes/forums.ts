@@ -105,6 +105,8 @@ const ThreadsQuery = z.object({
   category_id: z.string().min(1), // accepts UUID or slug — resolved server-side
   limit:       z.coerce.number().int().min(1).max(100).optional(),
   offset:      z.coerce.number().int().min(0).optional(),
+  // Filtrer par tag (son slug) : seuls les sujets qui le portent
+  tag:         z.string().max(60).regex(/^[a-z0-9-]+$/).optional(),
 })
 
 const CreateThreadBody = z.object({
@@ -162,7 +164,7 @@ export default async function forumRoutes(app: FastifyInstance) {
 app.get('/threads', {
   preHandler: [rateLimit, validate({ query: ThreadsQuery })],
 }, async (request, reply) => {
-  const { category_id: rawCatId, limit, offset } = request.query as z.infer<typeof ThreadsQuery>
+  const { category_id: rawCatId, limit, offset, tag } = request.query as z.infer<typeof ThreadsQuery>
 
   // Resolve slug → UUID if needed
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCatId)
@@ -188,6 +190,9 @@ app.get('/threads', {
     LEFT JOIN categories c ON t.category_id = c.id
     LEFT JOIN users u ON t.author_id = u.id
     WHERE t.category_id = $1
+      AND ($4::text IS NULL OR EXISTS (
+        SELECT 1 FROM thread_tags tt JOIN tags g ON g.id = tt.tag_id
+         WHERE tt.thread_id = t.id AND g.slug = $4))
     ORDER BY
       t.is_pinned DESC,
       COALESCE(
@@ -195,7 +200,19 @@ app.get('/threads', {
         t.created_at
       ) DESC
     LIMIT $2 OFFSET $3
-  `, [category_id, limit || 50, offset || 0])
+  `, [category_id, limit || 50, offset || 0, tag ?? null])
+
+  // Les tags portés par les sujets de CETTE catégorie, avec leur nombre :
+  // la barre « Filtrer par tag » ne propose que ce qui donne un résultat.
+  const { rows: categoryTags } = await db.query(`
+    SELECT g.id, g.name, g.slug, g.color, COUNT(*)::int AS thread_count
+      FROM thread_tags tt
+      JOIN tags g ON g.id = tt.tag_id
+      JOIN threads t ON t.id = tt.thread_id
+     WHERE t.category_id = $1
+     GROUP BY g.id, g.name, g.slug, g.color
+     ORDER BY thread_count DESC, g.name ASC
+  `, [category_id])
 
   const threadIds = rows.map(t => t.id)
   const tagsMap = await TagModel.getTagsForThreads(threadIds)
@@ -214,7 +231,8 @@ app.get('/threads', {
 
   return reply.send({
     threads: enriched,
-    category: categoryInfo
+    category: categoryInfo,
+    tags: categoryTags,
   })
 })
 

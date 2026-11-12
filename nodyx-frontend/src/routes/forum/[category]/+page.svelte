@@ -3,6 +3,7 @@
 	import { fly, fade } from 'svelte/transition';
 	import type { FlyParams, FadeParams } from 'svelte/transition';
 	import { page } from '$app/state';
+	import { inkOn } from '$lib/adminTheme';
 	import { t } from '$lib/i18n';
 	import { replyCount, isUnanswered } from '$lib/forumCounts';
 
@@ -12,6 +13,8 @@
 
 	// ── Données typées ────────────────────────────────────────────────
 	const threads = $derived(data.threads as Thread[] || []);
+	const categoryTags = $derived(data.categoryTags ?? []);
+	const activeTag = $derived(data.activeTag ?? null);
 	// Use slug for URLs if available (SEO), fall back to UUID
 	const categoryId = $derived((data.category?.slug ?? data.categoryId) as string);
 	const subcategories = $derived((data.category?.children ?? []) as any[]);
@@ -83,6 +86,8 @@
 
 	// ── État pour la pagination ───────────────────────────────────────
 	let currentPage = $state(1);
+	// Changer de tag ramène à la première page
+	$effect(() => { activeTag; currentPage = 1 });
 	let itemsPerPage = $state(20);
 	let pageInputValue = $state('1');
 
@@ -555,6 +560,22 @@
 	</div>
 {/if}
 
+<!-- FILTRER PAR TAG : seulement les tags portés par des sujets de cette catégorie -->
+{#if categoryTags.length > 0 || activeTag}
+	<nav class="tag-bar" aria-label={tFn('forum.tags_filter')}>
+		<span class="tag-bar-label">{tFn('forum.tags_filter')}</span>
+		<a href={page.url.pathname} class="tag-chip" aria-current={!activeTag ? 'true' : undefined} data-sveltekit-noscroll>{tFn('forum.tags_all')}</a>
+		{#each categoryTags as tag (tag.id)}
+			<a href="?tag={tag.slug}" class="tag-chip" style="--tc:{tag.color}; --ink:{inkOn(tag.color)}" aria-current={activeTag === tag.slug ? 'true' : undefined} data-sveltekit-noscroll>
+				{tag.name}<span class="tag-chip-n">{tag.thread_count}</span>
+			</a>
+		{/each}
+		{#if activeTag && !categoryTags.some((t) => t.slug === activeTag)}
+			<span class="tag-chip" aria-current="true">{activeTag}</span>
+		{/if}
+	</nav>
+{/if}
+
 <!-- LISTE DES SUJETS -->
 {#if paginatedThreads.length === 0}
 	<div class="flex flex-col items-center justify-center py-20 px-4 border border-dashed border-[var(--nx-border)] bg-[var(--nx-surface)]/50">
@@ -564,7 +585,7 @@
 			</svg>
 		</div>
 		<h3 class="text-xl font-semibold text-[var(--nx-text)] mb-2">
-			{#if searchQuery}
+			{#if searchQuery || activeTag}
 				{tFn('forum.no_filter_results')}
 			{:else if filterBy !== 'all'}
 				{tFn('forum.no_filter_results')}
@@ -575,11 +596,13 @@
 		<p class="text-sm text-[var(--nx-text-muted)] text-center max-w-sm mb-6">
 			{#if searchQuery}
 				{tFn('forum.try_keywords')}
+			{:else if activeTag}
+				{tFn('forum.tags_empty')} <a href={page.url.pathname} class="underline">{tFn('forum.tags_all')}</a>
 			{:else}
 				{tFn('forum.empty_cta')}
 			{/if}
 		</p>
-		{#if user && !searchQuery}
+		{#if user && !searchQuery && !activeTag}
 			<a href="/forum/{categoryId}/new" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors">
 				{tFn('forum.create_first')}
 			</a>
@@ -802,3 +825,14 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.tag-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; margin-bottom: 1rem; }
+	.tag-bar-label { font-size: 0.75rem; font-weight: 600; color: var(--nx-text-muted); margin-right: 0.25rem; }
+	.tag-chip { --tc: var(--nx-header-accent); display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.2rem 0.625rem; font-size: 0.75rem; font-weight: 600; color: var(--tc); border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent); background: color-mix(in srgb, var(--tc) 8%, transparent); text-decoration: none; transition: background 0.15s, border-color 0.15s; }
+	.tag-chip:hover { background: color-mix(in srgb, var(--tc) 16%, transparent); }
+	.tag-chip[aria-current='true'] { background: var(--tc); border-color: var(--tc); color: var(--ink, #fff); }
+	.tag-chip:first-of-type:not([style]) { --tc: var(--nx-text-muted); }
+	.tag-chip:first-of-type[aria-current='true']:not([style]) { --tc: var(--nx-header-accent); color: #16120c; }
+	.tag-chip-n { font-weight: 500; opacity: 0.75; font-variant-numeric: tabular-nums; }
+</style>
