@@ -69,6 +69,7 @@ async function estimates(): Promise<Record<string, number>> {
     wiki:          await q(`SELECT COUNT(*)::int AS n FROM wiki_pages WHERE is_public AND created_at > ${since}`),
     live:          0,
     members:       await q(`SELECT COUNT(*)::int AS n FROM users WHERE is_system = false AND created_at > ${since}`),
+    shield:        await audit('octoguard.shield_(raised|suggested)'),
     sanctions:     await audit('octoguard.(warn_user|mute_user|unmute_user|ban_temp_user|delete_message|escalation_%|hate_symbol_blocked|action_undone|false_positive)'),
     reports:       await audit('octoguard.(report_filed|notify)'),
     held:          await audit('octoguard.(message_held|held_%)'),

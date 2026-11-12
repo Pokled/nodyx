@@ -35,6 +35,7 @@ import { resolveReportTarget, type ReportTargetType as ResolvableTarget } from '
 import { closeReports } from '../services/octoguard/reportClose'
 import { SANCTIONS, FORGET_CHOICES, countBanCapable, getLadderSettings, saveLadderSettings, memberLadder, applyLadder, approveLadder, refuseLadder, undoLadder } from '../services/octoguard/ladder'
 import { precheck, isNudgeEnabled, PRECHECK_MAX_CHARS, PRECHECK_PER_MINUTE } from '../services/octoguard/precheck'
+import { getShield, raiseShield, lowerShield, shieldSettings, shieldActivity, SHIELD_DURATIONS, SHIELD_DEFAULT_MINUTES, SHIELD_NEW_ACCOUNT_DAYS, SHIELD_SLOW_SECONDS } from '../services/octoguard/shield'
 import { listMine as listMyDecisions, fileAppeal, listAppeals, decideAppeal, APPEAL_DAYS, APPEAL_MIN, APPEAL_MAX, REPLY_MAX } from '../services/octoguard/appeals'
 import * as NotificationModel from '../models/notification'
 import * as PostModel from '../models/post'
@@ -189,7 +190,7 @@ async function logAdminAction(
 // Qui peut quoi dans OctoGuard (CDC modération, E1) : régler OctoGuard =
 // manage_octoguard ; les sourdines et les signalements sont du travail de
 // modération des membres (moderate_members), ouvert aussi à manage_octoguard.
-const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|held|reports(?!\/settings)|ladder(?!\/settings)|appeals)(\/|$)/
+const MEMBER_MODERATION_ROUTES = /^\/api\/v1\/admin\/octoguard\/(mutes|mute-check|held|reports(?!\/settings)|ladder(?!\/settings)|appeals|shield(?!\/settings))(\/|$)/
 // Le barème : toute l'équipe le LIT (la jauge), seul manage_octoguard le RÈGLE
 const LADDER_SETTINGS_ROUTE = /^\/api\/v1\/admin\/octoguard\/ladder\/settings$/
 const guardMemberModeration = requireAnyPermission('moderate_members', 'manage_octoguard')
@@ -229,6 +230,61 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     return MEMBER_MODERATION_ROUTES.test(route)
       ? guardMemberModeration(request, reply)
       : guardOctoguard(request, reply)
+  })
+
+  // ─── Le bouclier anti-raid (lot 6, D21) ───────────────────────────────────
+  // Lever et baisser : toute l'équipe (pendant un raid, on n'attend pas un admin).
+  // Régler l'alerte : manage_octoguard. Le bouton marche OctoGuard éteint (D21c).
+
+  app.get('/shield', async (request, reply) => {
+    const og = await import('../services/octoguard')
+    const access = await getInstanceAccess(request.user!.userId)
+    return reply.send({
+      state:             await getShield(),
+      settings:          shieldSettings(),
+      activity:          await shieldActivity(),
+      octoguard_enabled: og.isOctoGuardEnabled(),
+      can_configure:     access.permissions.includes('manage_octoguard'),
+      durations:         SHIELD_DURATIONS,
+      default_minutes:   SHIELD_DEFAULT_MINUTES,
+      new_account_days:  SHIELD_NEW_ACCOUNT_DAYS,
+      slow_seconds:      SHIELD_SLOW_SECONDS,
+    })
+  })
+
+  app.post('/shield/raise', {
+    preHandler: [rateLimit, validate({ body: z.object({ minutes: z.number().int().optional() }).optional() })],
+  }, async (request, reply) => {
+    const minutes = (request.body as { minutes?: number } | undefined)?.minutes
+    if (minutes !== undefined && !(SHIELD_DURATIONS as readonly number[]).includes(minutes)) {
+      return reply.code(400).send({ error: 'Unsupported duration', code: 'SHIELD_BAD_DURATION' })
+    }
+    const state = await raiseShield({ actorId: request.user!.userId, actorName: request.user!.username ?? null, minutes })
+    return reply.send({ state })
+  })
+
+  app.post('/shield/lower', { preHandler: [rateLimit] }, async (request, reply) => {
+    const lowered = await lowerShield({ actorId: request.user!.userId, actorName: request.user!.username ?? null })
+    return reply.send({ lowered, state: null })
+  })
+
+  app.put('/shield/settings', {
+    preHandler: [rateLimit, validate({ body: z.object({
+      alert_accounts: z.number().int().min(2).max(1000).optional(),
+      alert_held:     z.number().int().min(2).max(1000).optional(),
+      auto:           z.boolean().optional(),
+    }) })],
+  }, async (request, reply) => {
+    const b = request.body as { alert_accounts?: number; alert_held?: number; auto?: boolean }
+    const changes: Record<string, string> = {}
+    if (b.alert_accounts !== undefined) changes.OCTOGUARD_SHIELD_ALERT_ACCOUNTS = String(b.alert_accounts)
+    if (b.alert_held !== undefined) changes.OCTOGUARD_SHIELD_ALERT_HELD = String(b.alert_held)
+    if (b.auto !== undefined) changes.OCTOGUARD_SHIELD_AUTO = b.auto ? 'true' : 'false'
+    if (!Object.keys(changes).length) return reply.code(400).send({ error: 'Nothing to change', code: 'INVALID_REQUEST' })
+    const { setSettings } = await import('../config/settings')
+    const res = await setSettings(changes, request.user!.userId)
+    if (!res.ok) return reply.code(400).send({ error: 'Invalid settings', code: 'SHIELD_SETTINGS_INVALID', errors: res.errors })
+    return reply.send({ settings: shieldSettings() })
   })
 
   // ─── Settings (état global) ───────────────────────────────────────────────
@@ -1298,6 +1354,22 @@ export async function reportsPublicPlugin(app: FastifyInstance) {
   // routes) : une annonce par message du chat l'épuiserait. Un compteur par
   // membre à la place ; au-delà, pas d'annonce (le moteur juge le vrai envoi).
   // Jamais le nom de la règle (D20).
+  // Le bouclier, vu par un membre : levé ou non, jusqu'à quand, et si MOI je
+  // peux écrire (compte de moins d'1 jour). Sert à expliquer AVANT l'envoi.
+  app.get('/shield', { preHandler: [rateLimit] }, async (request, reply) => {
+    const s = await getShield()
+    if (!s) return reply.send({ active: false, until: null, readonly: false, slow_seconds: SHIELD_SLOW_SECONDS })
+    const access = await getInstanceAccess(request.user!.userId)
+    const team = access.permissions.includes('moderate_content') || access.permissions.includes('moderate_members')
+    let readonly = false
+    if (!team) {
+      const { rows } = await db.query<{ age_days: number | null }>(
+        `SELECT EXTRACT(EPOCH FROM (NOW() - created_at)) / 86400 AS age_days FROM users WHERE id = $1`, [request.user!.userId])
+      readonly = rows[0]?.age_days != null && Number(rows[0].age_days) < SHIELD_NEW_ACCOUNT_DAYS
+    }
+    return reply.send({ active: true, until: s.until, readonly, team, slow_seconds: SHIELD_SLOW_SECONDS })
+  })
+
   // Allumé ou non : le chat et le forum le demandent une fois, et ne
   // pré-vérifient rien quand c'est éteint (aucun aller-retour de plus).
   app.get('/precheck', { preHandler: [rateLimit] }, async (_request, reply) => {

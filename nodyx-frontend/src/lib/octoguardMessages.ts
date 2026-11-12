@@ -13,6 +13,9 @@ const BY_CORE_KEY: Record<string, string> = {
 	[OG + 'ban_temp' + '.applied']: 'ogmsg.ban_temp_applied',
 	[OG + 'held_limit']: 'ogmsg.held_limit',
 	[OG + 'held_edit']: 'ogmsg.held_edit',
+	// Bouclier anti-raid (lot 6)
+	[OG + 'shield' + '.new_account']: 'ogmsg.shield_new_account',
+	[OG + 'shield' + '.slow']: 'ogmsg.shield_slow',
 }
 
 export function octoguardMessage(tFn: (k: string) => string, coreKey: string | null | undefined): string {

@@ -18,6 +18,8 @@
 
 	let { data }: { data: PageData } = $props()
 	const tFn = $derived($t)
+	// Un message mis de côté par le bouclier anti-raid n'a pas de règle : son nom réservé se traduit
+	const ruleLabel = (name: string) => (name === 'shield' ? tFn('og2.shield_rule_name') : name)
 	const token = $derived(((page.data as any).token as string | null) ?? null)
 	const access = $derived((page.data as any).access as { permissions: string[] } | undefined)
 	const canDeleteContent = $derived(!!access?.permissions.includes('moderate_content'))
@@ -303,7 +305,7 @@
 							<span class="og-ic og-k-hold"><Icon d={LEVEL_ICON.hold} /></span>
 							<b>{h.author_username}, {heldPlace(h)}</b>
 							<span class="og-q-time">{ago(h.created_at)}</span>
-							<span class="og-q-sub">{tFn('og2.rp_q_held', { age: accountAge(h.author_created_at), rule: h.rule_name })}</span>
+							<span class="og-q-sub">{tFn('og2.rp_q_held', { age: accountAge(h.author_created_at), rule: ruleLabel(h.rule_name) })}</span>
 						</button>
 					{/each}
 				{:else if data.tab === 'appeals'}
@@ -337,7 +339,7 @@
 					<div class="og-rp-top">
 						<div>
 							<div class="og-rp-title">{tFn(`og2.rp_held_title_${h.kind}`, { name: h.author_username, place: heldPlace(h) })}</div>
-							<div class="og-meta">{tFn('og2.rp_held_by', { rule: h.rule_name, at: clock(h.created_at) })}</div>
+							<div class="og-meta">{tFn('og2.rp_held_by', { rule: ruleLabel(h.rule_name), at: clock(h.created_at) })}</div>
 						</div>
 						<span class="adm-pill og-tone og-k-hold"><Icon d={LEVEL_ICON.hold} />{tFn('og2.rp_pending')}</span>
 					</div>

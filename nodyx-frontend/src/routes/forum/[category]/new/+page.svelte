@@ -8,6 +8,7 @@
 	import { octoguardMessage } from '$lib/octoguardMessages';
 	import HeldBlock from '$lib/components/octoguard/HeldBlock.svelte';
 	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte';
+	import ShieldBanner from '$lib/components/octoguard/ShieldBanner.svelte';
 	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
 	import { untrack } from 'svelte';
 
@@ -273,6 +274,8 @@
 				{/if}
 			{/if}
 		</div>
+
+		<ShieldBanner token={data.token} surface="forum" />
 
 		{#if nudge}
 			<NudgeBanner nudge={nudge.n} busy={submitting} publish onReformulate={reformulate} onSendAnyway={publishAnyway} />

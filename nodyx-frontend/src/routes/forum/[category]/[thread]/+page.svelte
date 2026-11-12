@@ -42,6 +42,7 @@
 	import { octoguardMessage } from '$lib/octoguardMessages';
 	import HeldBlock from '$lib/components/octoguard/HeldBlock.svelte';
 	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte';
+	import ShieldBanner from '$lib/components/octoguard/ShieldBanner.svelte';
 	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
 
 	const tFn = $derived($t)
@@ -812,6 +813,7 @@
 						compact={true}
 					/>
 				{/key}
+				<ShieldBanner token={data.token} surface="forum" space="0.5rem 0 0" />
 				{#if replyNudge}
 					<NudgeBanner nudge={replyNudge.n} busy={submitting} publish
 						onReformulate={() => { replyNudge = null; replyForm?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus() }}

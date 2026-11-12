@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t, locale } from '$lib/i18n'
+	import ShieldBanner from '$lib/components/octoguard/ShieldBanner.svelte'
 	import { onMount, onDestroy, tick, untrack } from 'svelte'
 	import { goto } from '$app/navigation'
 	import { getSocket, dmUnreadStore } from '$lib/socket'
@@ -1816,6 +1817,7 @@
 			{/if}
 			<!-- Échec d'envoi/édition (ex: chiffrement E2E indisponible) : visible,
 			     jamais silencieux — cf issue #752. -->
+			<ShieldBanner token={data.token} surface="dm" space="0 0 0.5rem" />
 			{#if sendError}
 				<div class="mb-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[color-mix(in_srgb,var(--nx-bad)_10%,transparent)] border border-red-500/25 text-xs text-[var(--nx-bad)]">
 					<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

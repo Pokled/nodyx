@@ -52,6 +52,8 @@ export function renderEvent(ev: NodyxEvent, locale: ServerLocale): Rendered {
   const t = fr ? FR : EN
   const who = ev.actor?.type === 'octoguard' ? t.octoguard : (ev.actor?.name || t.someone)
   const target = ev.target?.name || t.a_member
+  // Un message mis de côté par le bouclier anti-raid n'a pas de règle : son nom réservé se traduit
+  if (ev.rule === 'shield') ev = { ...ev, rule: fr ? 'Bouclier anti-raid' : 'Raid shield' }
   const title = ev.item?.title ?? ''
   const f: Array<[string, string]> = []
   const add = (k: string, v: string | null | undefined) => { if (v) f.push([k, v]) }
@@ -133,6 +135,20 @@ export function renderEvent(ev: NodyxEvent, locale: ServerLocale): Rendered {
     case 'ladder.alert':
       r = { title: fr ? 'Barème : l\'équipe doit décider' : 'Ladder: the team must decide', text: fr ? `${target} a atteint l'exclusion du barème : OctoGuard n'exclut pas, à toi de voir` : `${target} reached the ban step: OctoGuard does not ban, your call`, color: C.red, priority: 'high', link: t.link_file }
       add(t.field_rule, ev.rule); break
+    case 'shield.raised': {
+      const d = minutesText(ev.details?.minutes as number | null, locale)
+      const auto = ev.details?.reason === 'auto'
+      r = { title: fr ? 'Bouclier anti-raid levé' : 'Raid shield raised',
+        text: auto
+          ? (fr ? `OctoGuard a repéré une vague et a levé le bouclier${d ? ` pour ${d}` : ''}. Les comptes tout neufs lisent sans écrire, les liens attendent d'être relus.` : `OctoGuard spotted a wave and raised the shield${d ? ` for ${d}` : ''}. Brand-new accounts can read but not write, links wait for review.`)
+          : (fr ? `${who} a levé le bouclier${d ? ` pour ${d}` : ''}. Les comptes tout neufs lisent sans écrire, les liens attendent d'être relus.` : `${who} raised the shield${d ? ` for ${d}` : ''}. Brand-new accounts can read but not write, links wait for review.`),
+        color: C.amber, priority: 'high', link: t.link_open }
+      if (!auto) add(t.field_by, who); break
+    }
+    case 'shield.suggested':
+      r = { title: fr ? 'Raid probable' : 'Possible raid', text: fr ? 'Une vague inhabituelle arrive. OctoGuard propose de lever le bouclier anti-raid : un bouton dans OctoGuard, Bouclier.' : 'An unusual wave is coming in. OctoGuard suggests raising the raid shield: one button in OctoGuard, Shield.', color: C.red, priority: 'high', link: t.link_open }; break
+    case 'shield.lowered':
+      r = { title: fr ? 'Bouclier baissé' : 'Shield lowered', text: fr ? `${who} a baissé le bouclier : tout le monde peut de nouveau écrire` : `${who} lowered the shield: everyone can write again`, color: C.green, priority: 'default', link: t.link_open }; break
     case 'octoguard.enabled':
       r = { title: fr ? 'OctoGuard allumé' : 'OctoGuard turned on', text: fr ? `${who} a allumé OctoGuard` : `${who} turned OctoGuard on`, color: C.green, priority: 'default', link: t.link_open }; break
     case 'octoguard.disabled':

@@ -51,7 +51,8 @@ export interface HoldInput {
   postId?:     string | null
   categoryId?: string | null
   payload:     HeldPayload
-  rule:        { rule_id: string; rule_name: string; excerpt: string }
+  /** rule_id vide : mis de côté par le bouclier anti-raid (rule_name « shield »), pas par une règle. */
+  rule:        { rule_id: string | null; rule_name: string; excerpt: string }
 }
 
 export interface HeldRow {
@@ -108,13 +109,15 @@ export async function holdContent(input: HoldInput): Promise<HoldResult> {
     return { ok: false, code: 'HOLD_FAILED' }
   }
   if (!row) return { ok: false, code: 'HELD_LIMIT' }
+  // Une vague de messages retenus peut annoncer un raid (bouclier, lot 6)
+  void import('./shield').then((m) => m.recordHeld()).catch(() => {})
   {
     logOctoGuardAction({
       action:       'octoguard.message_held',
       target_type:  'user',
       target_id:    input.authorId,
       target_label: input.rule.excerpt,
-      metadata:     { event_id: randomUUID(), rule_id: input.rule.rule_id, rule_name: input.rule.rule_name, held_id: row.id, kind: input.kind, actor: 'octoguard:auto', would_be: false },
+      metadata:     { event_id: randomUUID(), ...(input.rule.rule_id ? { rule_id: input.rule.rule_id } : {}), rule_name: input.rule.rule_name, held_id: row.id, kind: input.kind, actor: 'octoguard:auto', would_be: false },
     })
   }
   return { ok: true, row }

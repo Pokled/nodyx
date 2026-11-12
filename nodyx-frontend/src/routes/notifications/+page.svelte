@@ -37,6 +37,8 @@
 		ladder_engine_alert: '⚖',
 		appeal_resolved: '⚖',
 		webhook_paused: '!',
+		shield_raised: '🛡',
+		shield_suggested: '🛡',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
@@ -59,6 +61,9 @@
 		if (n.type === 'moderation_warning' && !n.meta?.reason) return tFn('notifications.moderation_warning_plain')
 		// Lot 8 : une valeur du cœur, la phrase se construit ici
 		if (n.type === 'webhook_paused') return tFn('notifications.webhook_paused_label', { name: n.meta?.name ?? '' })
+		// Bouclier anti-raid (lot 6) : levé par quelqu'un, levé tout seul, ou proposé
+		if (n.type === 'shield_raised') return n.meta?.reason === 'auto' ? tFn('notifications.shield_raised_auto_label') : tFn('notifications.shield_raised_label', { name: n.meta?.by ?? '' })
+		if (n.type === 'shield_suggested') return tFn(n.meta?.trigger?.kind === 'held' ? 'notifications.shield_suggested_held_label' : 'notifications.shield_suggested_accounts_label', { n: n.meta?.trigger?.count ?? '' })
 		if (n.type === 'appeal_resolved') return tFn(n.meta?.outcome === 'overturned' ? 'notifications.appeal_overturned_label' : 'notifications.appeal_upheld_label')
 		return TYPE_LABEL[n.type] ?? n.type
 	}
@@ -180,6 +185,9 @@
 						{/if}
 						{#if notif.type === 'webhook_paused'}
 							<a href="/admin/webhooks" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.open_webhooks')}</a>
+						{/if}
+						{#if notif.type === 'shield_raised' || notif.type === 'shield_suggested'}
+							<a href="/admin/octoguard/shield" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.open_shield')}</a>
 						{/if}
 						{#if notif.type === 'appeal_resolved'}
 							<a href="/settings/sanctions" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.view')}</a>

@@ -216,6 +216,31 @@ export const SETTINGS_REGISTRY: SettingDescriptor[] = [
     helpEn: 'Tells the author of a chat or forum message, before sending, that OctoGuard would hold or refuse it. They can rephrase it or send it anyway. Off by default. Applies instantly.',
     optional: true,
   },
+  // Lot 6 : le bouclier anti-raid. Le bouton marche toujours ; ces réglages ne
+  // servent qu'à l'alerte automatique (OctoGuard allumé).
+  {
+    key: 'OCTOGUARD_SHIELD_ALERT_ACCOUNTS', group: 'security', type: 'number', tier: 3, secret: false,
+    placeholder: '10', optional: true,
+    labelFr: 'Bouclier : alerte à N nouveaux comptes en 10 minutes', labelEn: 'Shield: alert at N new accounts in 10 minutes',
+    helpFr: "OctoGuard prévient l'équipe (ou lève le bouclier, si c'est autorisé) quand autant de comptes sont créés en 10 minutes. 10 par défaut.",
+    helpEn: 'OctoGuard alerts the team (or raises the shield, if allowed) when this many accounts are created within 10 minutes. 10 by default.',
+    validate: (v) => /^\d+$/.test(v) && Number(v) >= 2 && Number(v) <= 1000 ? null : 'Entre 2 et 1000',
+  },
+  {
+    key: 'OCTOGUARD_SHIELD_ALERT_HELD', group: 'security', type: 'number', tier: 3, secret: false,
+    placeholder: '20', optional: true,
+    labelFr: 'Bouclier : alerte à N messages retenus en 5 minutes', labelEn: 'Shield: alert at N held messages in 5 minutes',
+    helpFr: "OctoGuard prévient l'équipe (ou lève le bouclier, si c'est autorisé) quand autant de messages sont retenus pour relecture en 5 minutes. 20 par défaut.",
+    helpEn: 'OctoGuard alerts the team (or raises the shield, if allowed) when this many messages are held for review within 5 minutes. 20 by default.',
+    validate: (v) => /^\d+$/.test(v) && Number(v) >= 2 && Number(v) <= 1000 ? null : 'Entre 2 et 1000',
+  },
+  {
+    key: 'OCTOGUARD_SHIELD_AUTO', group: 'security', type: 'boolean', tier: 3, secret: false,
+    labelFr: 'Bouclier : lever automatiquement', labelEn: 'Shield: raise automatically',
+    helpFr: "Si une alerte se déclenche, OctoGuard lève le bouclier 30 minutes sans attendre l'équipe (qui est prévenue). Éteint par défaut : OctoGuard propose, l'équipe décide.",
+    helpEn: 'When an alert fires, OctoGuard raises the shield for 30 minutes without waiting for the team (who is notified). Off by default: OctoGuard suggests, the team decides.',
+    optional: true,
+  },
 ]
 
 const BY_KEY = new Map(SETTINGS_REGISTRY.map(d => [d.key, d]))

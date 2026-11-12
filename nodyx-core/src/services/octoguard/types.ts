@@ -215,7 +215,7 @@ export interface PipelineResult {
   report?:           { rule_id: string; rule_name: string; excerpt: string }
   /** Cran « retenir » : l'appelant N'ÉCRIT PAS le contenu, il le confie à
    *  holdContent() ; il ne sera publié qu'à l'approbation (CDC E4h, lot 2). */
-  hold?:             { rule_id: string; rule_name: string; excerpt: string }
+  hold?:             { rule_id: string | null; rule_name: string; excerpt: string }
 }
 
 /**
