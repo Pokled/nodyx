@@ -7,6 +7,7 @@
 	import Icon from '$lib/components/octoguard/Icon.svelte'
 	import { OG_ICON } from '$lib/octoguard/nav'
 	import { page } from '$app/state'
+	import { untrack } from 'svelte'
 	import { og } from '$lib/octoguard/api'
 	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte'
 	import type { Nudge } from '$lib/octoguard/nudge'
@@ -38,7 +39,8 @@
 		{ id: 'caps', nudge: { outcome: 'warn', kind: 'caps' } },
 	]
 	let sample = $state(SAMPLES[0])
-	let nudgeOn = $state(!!data.settings?.nudge)
+	// Valeur de départ seulement : l'interrupteur la fait vivre ensuite
+	let nudgeOn = $state(untrack(() => !!data.settings?.nudge))
 	const ogOn = $derived(!!data.settings?.enabled)
 	let nudgeSaving = $state(false)
 	let nudgeError = $state<string | null>(null)
