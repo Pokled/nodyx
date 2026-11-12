@@ -134,6 +134,28 @@ describe('POST /api/v1/auth/register', () => {
     expect(res.statusCode).toBe(400)
   })
 
+  // Sécurité (12/11/2026) : un pseudo s'affiche parfois DANS du HTML. Il ne doit
+  // jamais pouvoir contenir de quoi écrire du code ni des caractères invisibles.
+  it.each([
+    ['<img src=x onerror=alert(1)>'], ['a"b'], ["l'ami"], ['x&y'], ['a`b'], ['a/b'], ['a\\b'],
+    ['ad​min'], ['ad‮min'], ['tab\tname'],
+  ])('refuse un pseudo avec des caractères interdits : %j', async (username) => {
+    const res = await app.inject({ method: 'POST', url: '/api/v1/auth/register', payload: { username, email: 'x@nodyx.dev', password: 'password123' } })
+    expect(res.statusCode).toBe(400)
+    expect(UserModel.create).not.toHaveBeenCalled()
+  })
+  it('le code du refus est stable (USERNAME_INVALID_CHARS)', async () => {
+    const res = await app.inject({ method: 'POST', url: '/api/v1/auth/register', payload: { username: '<b>moi</b>', email: 'x@nodyx.dev', password: 'password123' } })
+    expect(res.json().code).toBe('USERNAME_INVALID_CHARS')
+  })
+  it.each([['Léa'], ['jean-pierre'], ['max.dupont'], ['neo_42'], ['Marie Claire'], ['ana@home']])('accepte un pseudo ordinaire : %j', async (username) => {
+    vi.mocked(UserModel.findByEmail).mockResolvedValueOnce(null)
+    vi.mocked(UserModel.findByUsername).mockResolvedValueOnce(null)
+    vi.mocked(UserModel.create).mockResolvedValueOnce({ ...FAKE_PUBLIC_USER, username })
+    const res = await app.inject({ method: 'POST', url: '/api/v1/auth/register', payload: { username, email: 'x@nodyx.dev', password: 'password123' } })
+    expect(res.statusCode).toBe(201)
+  })
+
   it('returns 400 when email is invalid', async () => {
     const res = await app.inject({
       method: 'POST',

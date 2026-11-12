@@ -168,6 +168,18 @@ export const locale = createLocaleStore()
 // ── Fonction de traduction ────────────────────────────────────────────────────
 
 /**
+ * Échappe une valeur avant de l'insérer dans un texte traduit rendu en {@html}.
+ * OBLIGATOIRE pour toute variable venant d'un membre (pseudo, nom affiché,
+ * recherche…) : `{@html tFn('cle', { name: escHtml(user.name) })}`.
+ * Un test (i18nHtmlVars.test.ts) fait échouer le build sinon.
+ */
+export function escHtml(v: unknown): string {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+/**
  * Store dérivé qui retourne une fonction de traduction.
  *
  * $t('key')           → string traduite

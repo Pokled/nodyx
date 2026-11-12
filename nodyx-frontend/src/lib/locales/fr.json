@@ -6594,5 +6594,6 @@
   "og2.g_raid_lead": "Une vague de comptes qui débarquent ensemble, des dizaines de messages en quelques secondes : c'est un raid. Pas de panique, un seul bouton : « Lever le bouclier ».",
   "og2.g_raid_p1": "Les comptes tout neufs lisent sans écrire, les liens attendent d'être relus, le chat ralentit. Tes membres habituels ne sentent presque rien.",
   "og2.g_raid_p2": "Il se baisse tout seul au bout de 30 minutes. Toute l'équipe de modération peut le lever ou le baisser, même OctoGuard éteint.",
-  "og2.g_raid_p3": "OctoGuard allumé, il repère la vague et te prévient. Tu peux même l'autoriser à lever le bouclier tout seul."
+  "og2.g_raid_p3": "OctoGuard allumé, il repère la vague et te prévient. Tu peux même l'autoriser à lever le bouclier tout seul.",
+  "auth.register.username_chars": "Ton pseudo ne peut pas contenir ces signes : < > \" ' ` & / \\. Les lettres, les chiffres, les accents, les espaces et - . _ @ sont permis."
 }

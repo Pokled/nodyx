@@ -5,7 +5,7 @@
 	import { goto } from '$app/navigation'
 	import { PUBLIC_API_URL } from '$app/env/public'
 	import { untrack } from 'svelte'
-	import { t, locale } from '$lib/i18n'
+	import { t, locale, escHtml } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -563,7 +563,7 @@
 		     onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 			{#if resetLinkResult}
 				<h2 id="reset-title">{tFn('amem.reset_link_title')}</h2>
-				<p class="adm-desc">{@html tFn('amem.reset_link_desc', { username: resetLinkResult.username })}</p>
+				<p class="adm-desc">{@html tFn('amem.reset_link_desc', { username: escHtml(resetLinkResult.username) })}</p>
 				<div class="reset-box">
 					<code class="break-all flex-1 select-all">{resetLinkResult.reset_url}</code>
 					<button type="button" class="adm-btn adm-btn--sm" onclick={() => copyToClipboard(resetLinkResult!.reset_url)}>{tFn('amem.copy')}</button>

@@ -2,7 +2,7 @@
 	import { onMount, untrack } from 'svelte'
 	import { apiFetch } from '$lib/api'
 	import { dmUnreadStore } from '$lib/socket'
-	import { t } from '$lib/i18n'
+	import { t, escHtml } from '$lib/i18n'
 
 	const tFn = $derived($t)
 
@@ -187,7 +187,7 @@
 					</div>
 				{:else if searchQuery.trim().length >= 2 && !searching}
 					<div class="absolute top-full mt-1.5 left-0 right-0 bg-[var(--nx-surface)]/95 border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-20 px-3 py-2.5 text-[11px] text-[var(--nx-text-muted)]">
-						{@html tFn('dm.no_match', { query: searchQuery.trim() })}
+						{@html tFn('dm.no_match', { query: escHtml(searchQuery.trim()) })}
 					</div>
 				{/if}
 			</div>
@@ -351,7 +351,7 @@
 					</div>
 				{:else if searchQuery.trim().length >= 2 && !searching}
 					<div class="absolute top-full mt-2 left-0 right-0 bg-[var(--nx-surface)]/95 border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] rounded-xl shadow-2xl z-20 px-3 py-3 text-xs text-[var(--nx-text-muted)]">
-						{@html tFn('dm.no_match', { query: searchQuery.trim() })}
+						{@html tFn('dm.no_match', { query: escHtml(searchQuery.trim()) })}
 					</div>
 				{/if}
 			</div>

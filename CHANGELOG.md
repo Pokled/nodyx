@@ -208,11 +208,19 @@ le champ pour être corrigé.
 ### Sous le capot
 
 - **Sécurité : le contenu d'une page du wiki est nettoyé.** Il était enregistré tel quel, puis
-  affiché tel quel : un membre de l'équipe pouvait y glisser du code exécuté chez chaque lecteur.
-  Il passe maintenant par le même nettoyeur que le forum, à l'enregistrement et à la lecture
-  (une page écrite avant le correctif ne peut plus rien exécuter). Aucune page n'avait été
-  piégée ; les pages existantes s'affichent à l'identique. Au passage, une vidéo intégrée dont
-  la source est refusée ne laisse plus de cadre vide dans un message.
+  affiché tel quel : un membre de l'équipe pouvait y glisser du HTML trompeur (faux contenu, faux
+  formulaire). Le code, lui, était déjà bloqué par la politique de sécurité du navigateur, qui
+  restait la seule ligne de défense. Le contenu passe maintenant par le même nettoyeur que le
+  forum, à l'enregistrement et à la lecture. Aucune page n'avait été piégée ; les pages
+  existantes s'affichent à l'identique. Au passage, une vidéo intégrée dont la source est refusée
+  ne laisse plus de cadre vide dans un message.
+- **Sécurité : un pseudo ne peut plus contenir de HTML.** Il acceptait n'importe quel signe et
+  s'affiche parfois à l'intérieur d'un texte mis en forme (« Envoie ce lien à … », « En réponse
+  à … ») : un pseudo comme `<img …>` devenait une balise. Deux serrures : l'inscription refuse
+  les signes < > " ' ` & / \ et les caractères invisibles (la page le dit pendant la frappe), et
+  chaque nom inséré dans un texte mis en forme est échappé, y compris le nom affiché, libre.
+  Un test fait échouer la construction si un nouveau texte oublie l'échappement. Aucun compte
+  existant n'était concerné.
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
   recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
   y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde

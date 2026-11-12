@@ -23,6 +23,8 @@
 
 	// Username validation
 	const usernameShort = $derived(usernameTouched && username.length > 0 && username.length < 3)
+	// Les signes qu'un pseudo ne peut pas contenir (même règle que le serveur) : on le dit tout de suite
+	const usernameBadChars = $derived(/[<>"'`&\\/\p{Cc}\p{Cf}]/u.test(username))
 
 	// Email validation
 	const validEmail  = $derived(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -292,9 +294,9 @@
 
 					<h1 class="text-2xl font-bold text-[var(--nx-text)] mb-6">{tFn('auth.register.title')}</h1>
 
-					{#if form?.error}
+					{#if form?.errorKey || form?.error}
 						<p class="mb-4 rounded bg-[color-mix(in_srgb,var(--nx-bad)_15%,transparent)] border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] px-4 py-2 text-sm text-[var(--nx-bad)]">
-							{form.error}
+							{form?.errorKey ? tFn(form.errorKey) : form?.error}
 						</p>
 					{/if}
 
@@ -331,10 +333,12 @@
 								onfocus={() => focusedField = 'username'}
 								onblur={() => { focusedField = null; usernameTouched = true; }}
 								class="w-full rounded-lg px-3.5 py-2.5 text-sm text-[var(--nx-text)] focus:outline-none transition-colors duration-200 bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)]
-								       {usernameShort ? 'border border-red-500/80 focus:ring-2 focus:ring-red-500/20' : 'border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20'}"
+								       {usernameShort || usernameBadChars ? 'border border-red-500/80 focus:ring-2 focus:ring-red-500/20' : 'border border-[color-mix(in_srgb,var(--nx-text)_10%,transparent)] focus:border-indigo-500/80 focus:ring-2 focus:ring-indigo-500/20'}"
 							/>
 							<div class="mt-1 flex items-center justify-between text-xs">
-								{#if usernameShort}
+								{#if usernameBadChars}
+									<span class="text-[var(--nx-bad)]" role="alert">{tFn('auth.register.username_chars')}</span>
+								{:else if usernameShort}
 									<span class="text-[var(--nx-bad)]">{tFn('auth.register.username_min_3_error')}</span>
 								{:else}
 									<span class="text-[var(--nx-text-muted)]">{tFn('auth.register.username_hint_text')}</span>
