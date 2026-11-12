@@ -611,6 +611,27 @@ app.get('/threads', {
       return reply.send({ thread: updated })
     }
 
+    // Les tags d'un sujet, changés par l'équipe : vérifiés AVANT toute écriture.
+    // Un tag inconnu est refusé avec un code clair au lieu d'être ignoré en
+    // silence (setThreadTags, atomique, ne poserait que les tags existants).
+    let tagIds: string[] | undefined
+    if (body.tag_ids !== undefined) {
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (!Array.isArray(body.tag_ids) || !body.tag_ids.every((t) => typeof t === 'string' && uuid.test(t))) {
+        return reply.code(400).send({ error: 'tag_ids must be a list of tag ids', code: 'THREAD_TAGS_INVALID' })
+      }
+      tagIds = [...new Set(body.tag_ids.map((t) => t.toLowerCase()))]
+      if (tagIds.length > 5) {
+        return reply.code(400).send({ error: 'A thread has at most 5 tags', code: 'THREAD_TAGS_TOO_MANY' })
+      }
+      if (tagIds.length) {
+        const { rows } = await db.query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM tags WHERE id = ANY($1::uuid[])`, [tagIds])
+        if ((rows[0]?.n ?? 0) !== tagIds.length) {
+          return reply.code(400).send({ error: 'Unknown tag', code: 'THREAD_TAGS_UNKNOWN' })
+        }
+      }
+    }
+
     // Pin / lock : relèvent de moderate_content (modAccess ci-dessus), comme
     // supprimer ou modifier. Avant le 02/11/2026 c'était réservé aux admins.
 
@@ -632,8 +653,8 @@ app.get('/threads', {
       return reply.code(204).send()
     }
 
-    if (body.tag_ids !== undefined) {
-      await TagModel.setThreadTags(threadId, body.tag_ids)
+    if (tagIds !== undefined) {
+      await TagModel.setThreadTags(threadId, tagIds)
     }
 
     const wasPinned = !!(thread as { is_pinned?: boolean }).is_pinned

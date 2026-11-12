@@ -150,6 +150,26 @@ export const actions: Actions = {
 		});
 	},
 
+	// ── Changer les tags du sujet (équipe de modération) ──────────────────
+	setTags: async ({ fetch, request, params, cookies }) => {
+		const token = cookies.get('token');
+		if (!token) return fail(401, { tagsErrorKey: 'forum.tags_err_forbidden' });
+
+		const form = await request.formData();
+		const tagIds = (form.getAll('tag_ids') as string[]).filter(Boolean);
+
+		const res = await apiFetch(fetch, `/forums/threads/${params.thread}`, {
+			method: 'PATCH',
+			headers: { Authorization: `Bearer ${token}` },
+			body: JSON.stringify({ tag_ids: tagIds })
+		});
+		if (!res.ok) {
+			const code = (await res.json().catch(() => ({}))).code ?? '';
+			return fail(res.status, { tagsErrorKey: code === 'THREAD_TAGS_TOO_MANY' ? 'forum.tags_err_many' : code === 'THREAD_TAGS_UNKNOWN' ? 'forum.tags_err_unknown' : res.status === 403 ? 'forum.tags_err_forbidden' : 'forum.tags_err_save' });
+		}
+		return { tagsSaved: true };
+	},
+
 	// ── Verrouiller / déverrouiller ───────────────────────────────────────
 	lockThread: async ({ fetch, request, params, cookies }) => {
 		const token = cookies.get('token');

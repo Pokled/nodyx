@@ -35,6 +35,7 @@
 	import PollCard from '$lib/components/PollCard.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import { t } from '$lib/i18n';
+	import { apiFetch } from '$lib/api';
 	import { replyCount } from '$lib/forumCounts';
 	import { can, isAdminRole } from '$lib/permissions';
 	import { openReport } from '$lib/report';
@@ -134,6 +135,29 @@
 	// Repli des actions de modération sur mobile : quatre boutons de plus sur
 	// une ligne de 375 px reproduiraient l'encombrement qu'on vient d'enlever.
 	let showModActions = $state(false);
+
+	// L'équipe change les tags d'un sujet sur place (l'auteur, lui, ne change que le titre)
+	// La liste des tags n'est chargée qu'à l'ouverture du panneau : un lecteur
+	// ordinaire (la quasi-totalité des vues) ne paie pas cette requête.
+	let allTags     = $state<Array<{ id: string; name: string; slug: string; color: string }> | null>(null);
+	let tagsEditing = $state(false);
+	let tagsPick    = $state<string[]>([]);
+	let tagsBusy    = $state(false);
+	let tagsError   = $state<string | null>(null);
+	async function openTags() {
+		tagsPick = (thread.tags ?? []).map((t: { id: string }) => t.id);
+		tagsError = null; tagsEditing = true;
+		if (allTags) return;
+		try {
+			const res = await apiFetch(fetch, '/instance/tags');
+			allTags = res.ok ? ((await res.json()).tags ?? []) : [];
+			if (!res.ok) tagsError = tFn('forum.tags_err_load');
+		} catch { allTags = []; tagsError = tFn('forum.tags_err_load'); }
+	}
+	function togglePick(id: string) {
+		if (tagsPick.includes(id)) tagsPick = tagsPick.filter((x) => x !== id);
+		else if (tagsPick.length < 5) tagsPick = [...tagsPick, id];
+	}
 
 	function startEditTitle() {
 		titleInput   = thread.title;
@@ -263,7 +287,50 @@
 							{tag.name}
 						</a>
 					{/each}
+					{#if isMod && !tagsEditing}
+						<button type="button" onclick={openTags} class="tags-edit-btn" title={tFn('forum.tags_edit_tip')}>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" /></svg>
+							{(thread.tags ?? []).length ? tFn('forum.tags_edit') : tFn('forum.tags_add')}
+						</button>
+					{/if}
 				</div>
+
+				{#if isMod && tagsEditing}
+					<form method="POST" action="?/setTags" class="tags-panel"
+						use:enhance={() => { tagsBusy = true; tagsError = null; return async ({ result, update }) => {
+							tagsBusy = false;
+							if (result.type === 'failure') { tagsError = tFn(String(result.data?.tagsErrorKey ?? 'forum.tags_err_save')); return; }
+							await update({ reset: false });
+							if (result.type === 'success') tagsEditing = false;
+						} }}>
+						<div class="tags-panel-head">
+							<b id="tags-panel-title">{tFn('forum.tags_panel_title')}</b>
+							<span>{tFn('forum.tags_pick_hint', { n: tagsPick.length })}</span>
+						</div>
+						{#if allTags === null}
+							<p class="tags-panel-note" aria-live="polite">{tFn('common.loading')}</p>
+						{:else if allTags.length === 0 && !tagsError}
+							<p class="tags-panel-note">{tFn('forum.tags_none_yet')}{#if canAdmin} <a href="/admin/tags">{tFn('forum.tags_none_admin')}</a>{/if}</p>
+						{:else}
+							<div class="tags-panel-list" role="group" aria-labelledby="tags-panel-title">
+								{#each allTags as tag (tag.id)}
+									{@const on = tagsPick.includes(tag.id)}
+									<button type="button" class="tags-pick" style="--tc:{tag.color}" aria-pressed={on}
+										disabled={!on && tagsPick.length >= 5} onclick={() => togglePick(tag.id)}>
+										{#if on}<span aria-hidden="true">✓</span>{/if}{tag.name}
+									</button>
+								{/each}
+							</div>
+						{/if}
+						{#each tagsPick as id (id)}<input type="hidden" name="tag_ids" value={id} />{/each}
+						<p class="tags-panel-note">{tFn('forum.tags_panel_note')}</p>
+						{#if tagsError}<p class="tags-panel-err" role="alert">{tagsError}</p>{/if}
+						<div class="tags-panel-actions">
+							<button type="button" class="tags-btn" onclick={() => (tagsEditing = false)}>{tFn('common.cancel')}</button>
+							<button type="submit" class="tags-btn tags-btn--primary" disabled={tagsBusy || !allTags || allTags.length === 0}>{tFn('common.save')}</button>
+						</div>
+					</form>
+				{/if}
 
 				<!-- Titre avec édition -->
 				{#if editingTitle}
@@ -778,3 +845,24 @@
 		{tFn('forum.thread_locked')}
 	</p>
 {/if}
+
+<style>
+	.tags-edit-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--nx-text-muted); border: 1px dashed var(--nx-border); background: none; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+	.tags-edit-btn:hover { color: var(--nx-header-accent); border-color: var(--nx-header-accent); }
+	.tags-edit-btn svg { width: 0.8rem; height: 0.8rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+	.tags-panel { margin: 0.25rem 0 0.875rem; padding: 0.875rem; border: 1px solid var(--nx-border); border-left: 3px solid var(--nx-header-accent); background: color-mix(in srgb, var(--nx-header-accent) 4%, var(--nx-surface)); display: flex; flex-direction: column; gap: 0.625rem; }
+	.tags-panel-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.625rem; font-size: 0.85rem; }
+	.tags-panel-head span { font-size: 0.75rem; color: var(--nx-text-muted); }
+	.tags-panel-list { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+	.tags-pick { --tc: var(--nx-header-accent); display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; font-size: 0.75rem; font-weight: 600; color: var(--tc); border: 1px solid color-mix(in srgb, var(--tc) 40%, transparent); background: transparent; cursor: pointer; transition: background 0.15s; }
+	.tags-pick:hover:not(:disabled) { background: color-mix(in srgb, var(--tc) 10%, transparent); }
+	.tags-pick[aria-pressed='true'] { background: color-mix(in srgb, var(--tc) 20%, transparent); border-color: var(--tc); }
+	.tags-pick:disabled { opacity: 0.4; cursor: not-allowed; }
+	.tags-panel-note { margin: 0; font-size: 0.75rem; color: var(--nx-text-muted); }
+	.tags-panel-note a { color: var(--nx-header-accent); font-weight: 600; }
+	.tags-panel-err { margin: 0; font-size: 0.8rem; color: var(--nx-bad); }
+	.tags-panel-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+	.tags-btn { padding: 0.375rem 0.875rem; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--nx-border); background: var(--nx-surface); color: var(--nx-text); cursor: pointer; }
+	.tags-btn--primary { background: var(--nx-header-accent); border-color: var(--nx-header-accent); color: #16120c; }
+	.tags-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>

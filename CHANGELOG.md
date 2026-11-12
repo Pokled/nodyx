@@ -158,6 +158,10 @@ regarder le journal, puis de passer au cran qui te convient. Si tu préfères qu
   montre ce que voient les membres, propose huit idées à créer en un clic (Question, Résolu,
   Tutoriel…) et compte les discussions de chaque tag : supprimer un tag dit de combien de sujets
   il sera retiré.
+- L'équipe de modération change les tags d'un sujet sur place (« Changer les tags », à côté des
+  tags) : l'auteur choisit en écrivant, l'équipe range ensuite. Un tag en double ou disparu ne
+  fait plus échouer l'enregistrement d'un sujet, et un tag inconnu est refusé avant d'effacer
+  ceux qui étaient posés.
 
 ### Interface : le thème clair, page après page
 
