@@ -18,6 +18,8 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	'/admin/octoguard/reports',
 	// Lot 4b : le barème des sanctions
 	'/admin/octoguard/ladder',
+	// Intégrations : les webhooks de la communauté (D38-D39)
+	'/admin/webhooks',
 ]
 
 // Sous-pages dynamiques déjà migrées (fiche d'un membre : /admin/members/<id>)

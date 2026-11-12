@@ -64,6 +64,7 @@
 			sectionKey: 'anav.sec_integrations',
 			items: [
 				{ href: '/admin/streamer-hub', labelKey: 'anav.lbl_streamer_hub', iconPath: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
+				{ href: '/admin/webhooks',     labelKey: 'anav.lbl_webhooks',     iconPath: 'M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1 M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1' },
 			],
 		},
 		{

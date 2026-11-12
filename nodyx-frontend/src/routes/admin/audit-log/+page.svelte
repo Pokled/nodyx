@@ -11,6 +11,7 @@
 	// information), jamais une couleur par action.
 	type Tone = 'bad' | 'ok' | 'warn' | 'info' | 'muted'
 	const OCTO = 'octoguard' + '.'
+	const WH = 'webhook' + '.'
 	const GROUPS: Array<{ key: string; actions: Array<[string, Tone]> }> = [
 		{ key: 'alog.grp_members', actions: [
 			['ban_user', 'bad'], ['unban_user', 'ok'], ['kick_member', 'bad'], ['change_role', 'warn'],
@@ -29,6 +30,8 @@
 		] },
 		{ key: 'alog.grp_instance', actions: [
 			['settings_update', 'info'], ['module_toggle', 'info'], ['publish_appearance', 'info'],
+			// Webhooks (préfixe reconstruit, même raison que pour OctoGuard plus bas)
+			...([['created', 'info'], ['updated', 'info'], ['deleted', 'muted'], ['resumed', 'ok']] as Array<[string, Tone]>).map(([a, tone]) => [`${WH}${a}`, tone] as [string, Tone]),
 		] },
 		// Préfixe « octoguard. » ajouté plus bas : écrit en toutes lettres, le
 		// vérificateur i18n prendrait ces noms d'action pour des clés.
