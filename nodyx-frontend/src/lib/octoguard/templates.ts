@@ -14,7 +14,8 @@ export type TemplateRule = {
 	escalation?: Record<string, any>
 	conditions?: Record<string, any>
 }
-export type Template = { id: string; tone: string; art: string; rules: TemplateRule[] }
+/** nudge : le modèle allume aussi « Tu es sûr ? » avant l'envoi (lot 5) */
+export type Template = { id: string; tone: string; art: string; nudge?: boolean; rules: TemplateRule[] }
 export const TEMPLATES = DATA.templates as Template[]
 
 const pick = (lang: string) => (String(lang).startsWith('fr') ? 'fr' : 'en') as 'fr' | 'en'

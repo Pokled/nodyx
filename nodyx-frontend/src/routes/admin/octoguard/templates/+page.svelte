@@ -34,12 +34,15 @@
 	let rows = $state<Row[]>([])
 	let preview = $state<Preview | null>(null)
 	let sendProfile: any = null
+	// Le modèle allume « Tu es sûr ? » et il est éteint ici : un changement de plus
+	let nudgeChange = $state(false)
+	const NUDGE_ICON = 'M21 12a8 8 0 01-11.6 7.1L3 21l1.9-6.4A8 8 0 1121 12z M12 8v4 M12 15h.01'
 	let busy = $state(false)
 	let error = $state<string | null>(null)
 	let done = $state<string | null>(null)
 
 	const asRule = (r: any) => ({ scopes: [], dry_run: false, enabled: true, ...r }) as Rule
-	function close() { modal = null; preview = null; rows = []; error = null; done = null; sendProfile = null }
+	function close() { modal = null; preview = null; rows = []; error = null; done = null; sendProfile = null; nudgeChange = false }
 
 	async function openTemplate(tpl: Template) {
 		close(); modal = { kind: 'tpl', tpl }; busy = true
@@ -54,6 +57,11 @@
 				...send.map((r) => ({ name: r.name, desc: describe(asRule(r), tFn), icon: ruleIcon(asRule(r)), state: st(r.name) })),
 				...kept.map((r) => ({ name: r.name, desc: describe(asRule(r), tFn), icon: ruleIcon(asRule(r)), state: 'kept' as const })),
 			]
+			if (tpl.nudge) {
+				const cur = await og<{ nudge?: boolean }>(token, '/settings')
+				nudgeChange = !cur.nudge
+				rows = [...rows, { name: tFn('og2.tpl_nudge_name'), desc: tFn('og2.tpl_nudge_desc'), icon: NUDGE_ICON, state: nudgeChange ? 'add' : 'unchanged' }]
+			}
 		} catch { error = tFn('og2.tpl_preview_err') }
 		finally { busy = false }
 	}
@@ -65,8 +73,12 @@
 		if (!sendProfile) return
 		busy = true; error = null
 		try {
-			const res = (await og<{ result: Preview }>(token, '/profile/import', 'POST', { profile: sendProfile })).result
-			done = tFn('og2.imp_done', { a: res.add.length, u: res.update.length, r: res.problems.length })
+			const res = sendProfile.rules?.length
+				? (await og<{ result: Preview }>(token, '/profile/import', 'POST', { profile: sendProfile })).result
+				: { add: [], update: [], unchanged: [], problems: [] }
+			const nudgeAdded = nudgeChange
+			if (nudgeChange) { await og(token, '/settings', 'PUT', { nudge: true }); nudgeChange = false }
+			done = tFn('og2.imp_done', { a: res.add.length, u: res.update.length, r: res.problems.length }) + (nudgeAdded ? ' ' + tFn('og2.tpl_nudge_done') : '')
 			rows = rows.map((r) => (r.state === 'add' || r.state === 'update' ? { ...r, state: 'unchanged' } : r))
 			preview = { ...preview!, add: [], update: [] }
 			try { rules = (await og<{ rules: Rule[] }>(token, '/rules')).rules } catch { /* l'affichage suivra au rechargement */ }
@@ -82,7 +94,7 @@
 		} catch { error = tFn('og2.tpl_reinstall_err') }
 		finally { busy = false }
 	}
-	const changes = $derived(preview ? preview.add.length + preview.update.length : 0)
+	const changes = $derived((preview ? preview.add.length + preview.update.length : 0) + (nudgeChange ? 1 : 0))
 
 	// ── Importer / exporter ──────────────────────────────────────────────────
 	let fileInput: HTMLInputElement | null = $state(null)

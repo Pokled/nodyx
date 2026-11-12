@@ -40,6 +40,8 @@
 	import { openReport } from '$lib/report';
 	import { octoguardMessage } from '$lib/octoguardMessages';
 	import HeldBlock from '$lib/components/octoguard/HeldBlock.svelte';
+	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte';
+	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
 
 	const tFn = $derived($t)
 
@@ -74,6 +76,11 @@
 	let editingTitle  = $state(false);
 	let titleInput    = $state('');
 	let submitting    = $state(false);
+	// « Tu es sûr ? » (OctoGuard, lot 5) avant de publier une réponse. « Publier
+	// quand même » ne vaut que pour le texte annoncé : modifié, il est revérifié.
+	let replyNudge = $state<{ n: Nudge; content: string } | null>(null)
+	let replyAnyway: string | null = null
+	let replyForm = $state<HTMLFormElement | null>(null)
 
 	// ── Sondage du thread ─────────────────────────────────────────────────
 	let threadPoll     = $state(untrack(() => data.poll ?? null));
@@ -692,8 +699,19 @@
 				</svg>
 				{tFn('forum.reply_to')}
 			</h2>
-			<form method="POST" action="?/reply"
-				use:enhance={() => {
+			<form method="POST" action="?/reply" bind:this={replyForm}
+				use:enhance={async ({ formData, cancel }) => {
+					if (submitting) { cancel(); return }
+					const content = String(formData.get('content') ?? '')
+					const forced = replyAnyway !== null && replyAnyway === content
+					replyAnyway = null
+					if (!forced) {
+						submitting = true
+						const n = await precheckMessage(data.token as string | null, 'forum', content)
+						submitting = false
+						if (n) { replyNudge = { n, content }; cancel(); return }
+					}
+					replyNudge = null
 					submitting = true
 					replyFailure = null
 					return async ({ result, update }) => {
@@ -724,6 +742,11 @@
 						compact={true}
 					/>
 				{/key}
+				{#if replyNudge}
+					<NudgeBanner nudge={replyNudge.n} busy={submitting} publish
+						onReformulate={() => { replyNudge = null; replyForm?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus() }}
+						onSendAnyway={() => { if (replyNudge) { replyAnyway = replyNudge.content; replyForm?.requestSubmit() } }} />
+				{/if}
 				<button
 					type="submit"
 					disabled={submitting}

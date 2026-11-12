@@ -7,6 +7,8 @@
 	import { t } from '$lib/i18n';
 	import { octoguardMessage } from '$lib/octoguardMessages';
 	import HeldBlock from '$lib/components/octoguard/HeldBlock.svelte';
+	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte';
+	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
 	import { untrack } from 'svelte';
 
 	const tFn = $derived($t)
@@ -16,6 +18,22 @@
 	const tags = $derived(data.tags ?? []);
 	let selectedTagIds = $state<string[]>([]);
 	let submitting = $state(false);
+
+	// « Tu es sûr ? » (OctoGuard, lot 5) : avant de publier, OctoGuard dit s'il
+	// retiendrait ou refuserait ce sujet. « Publier quand même » ne vaut que pour
+	// le texte annoncé : modifié, il est vérifié à nouveau.
+	let nudge = $state<{ n: Nudge; title: string; content: string } | null>(null);
+	let sendAnyway: { title: string; content: string } | null = null;
+	let formEl = $state<HTMLFormElement | null>(null);
+	function publishAnyway() {
+		if (!nudge || !formEl) return;
+		sendAnyway = { title: nudge.title, content: nudge.content };
+		formEl.requestSubmit();
+	}
+	function reformulate() {
+		nudge = null;
+		document.getElementById('title')?.focus();
+	}
 
 	// ── Sélecteur catégorie / sous-catégorie ──────────────────────────────
 	type CatNode = { id: string; name: string; post_min_role?: string; children: CatNode[] };
@@ -103,7 +121,20 @@
 	{:else}
 	<form
 		method="POST"
-		use:enhance={() => {
+		bind:this={formEl}
+		use:enhance={async ({ formData, cancel }) => {
+			if (submitting) { cancel(); return; }
+			const title = String(formData.get('title') ?? '');
+			const content = String(formData.get('content') ?? '');
+			const forced = sendAnyway && sendAnyway.title === title && sendAnyway.content === content;
+			sendAnyway = null;
+			if (!forced) {
+				submitting = true;
+				const n = await precheckMessage(page.data.token as string | null, 'forum', content, title);
+				submitting = false;
+				if (n) { nudge = { n, title, content }; cancel(); return; }
+			}
+			nudge = null;
 			submitting = true;
 			return async ({ update }) => {
 				await update();
@@ -240,6 +271,10 @@
 				{/if}
 			{/if}
 		</div>
+
+		{#if nudge}
+			<NudgeBanner nudge={nudge.n} busy={submitting} publish onReformulate={reformulate} onSendAnyway={publishAnyway} />
+		{/if}
 
 		<div class="flex items-center gap-3">
 			<button

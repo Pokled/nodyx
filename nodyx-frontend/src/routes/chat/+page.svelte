@@ -27,6 +27,8 @@
 	import { openReport } from '$lib/report';
 	import { blockedMessage, isContestable, type BlockedPayload } from '$lib/chatBlocked';
 	import { htmlToText as heldText } from '$lib/octoguard/text';
+	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte';
+	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
 	import { isDarkTheme } from '$lib/theme';
 	import { messagesVisibles, marquerSupprime } from '$lib/chatFil';
 	import { unreadCountsStore, flashChannelIdStore } from '$lib/unreadStore';
@@ -843,11 +845,45 @@
 	}
 
 	// ── Send ──────────────────────────────────────────────────────────────────
-	function sendMessage() {
+	// « Tu es sûr ? » (OctoGuard, lot 5) : avant l'envoi, OctoGuard dit s'il
+	// retiendrait ou refuserait ce message. Le bandeau ne vaut que pour CE texte,
+	// dans CE salon : il disparaît dès qu'on le modifie ou qu'on change de salon.
+	let nudge = $state<{ n: Nudge; source: 'plain' | 'rich'; text: string; channelId: string } | null>(null);
+	let prechecking = $state(false);
+	const plainNudge = $derived(nudge && nudge.source === 'plain' && nudge.channelId === selectedChannel?.id && nudge.text === inputText.trim() ? nudge.n : null);
+	const richNudge = $derived(nudge && nudge.source === 'rich' && showRichModal && nudge.channelId === selectedChannel?.id && nudge.text === richContent.trim() ? nudge.n : null);
+
+	/** true : on peut envoyer. false : le bandeau est affiché (ou une vérification est en cours). */
+	async function passesPrecheck(source: 'plain' | 'rich', content: string, channelId: string): Promise<boolean> {
+		if (prechecking) return false;
+		prechecking = true;
+		try {
+			const n = await precheckMessage(token, 'chat', content);
+			if (!n) return true;
+			nudge = { n, source, text: content, channelId };
+			return false;
+		} finally {
+			prechecking = false;
+		}
+	}
+
+	function reformulate() {
+		const source = nudge?.source;
+		nudge = null;
+		if (source === 'plain') document.querySelector<HTMLTextAreaElement>('textarea#chat-input')?.focus();
+	}
+
+	async function sendMessage(force = false) {
 		if (!s || !selectedChannel || !inputText.trim()) return;
+		const channelId = selectedChannel.id;
 		const cmdResult = parseSlashCommand(inputText.trim());
 		const content   = cmdResult ?? inputText.trim();
-		s.emit('chat:send', { channelId: selectedChannel.id, content, replyToId: replyTo?.id ?? null });
+		// Une commande (/roll, /flip…) écrit un texte du robot : rien à pré-vérifier
+		if (!force && !cmdResult && !(await passesPrecheck('plain', content, channelId))) return;
+		// Pendant la vérification, on a pu changer de salon ou de texte : on ne part pas
+		if (selectedChannel?.id !== channelId || (!cmdResult && inputText.trim() !== content)) return;
+		nudge = null;
+		s.emit('chat:send', { channelId, content, replyToId: replyTo?.id ?? null });
 		inputText = '';
 		showMentions = false;
 		replyTo = null;
@@ -856,8 +892,15 @@
 		ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input'));
 	}
 
-	function sendRich() {
+	async function sendRich(force = false) {
 		if (!s || !richContent.trim()) return;
+		if (!editingRichId && selectedChannel && !force) {
+			const channelId = selectedChannel.id;
+			const html = richContent.trim();
+			if (!(await passesPrecheck('rich', html, channelId))) return;
+			if (selectedChannel?.id !== channelId || richContent.trim() !== html) return;
+		}
+		nudge = null;
 		if (editingRichId) {
 			// Réédition : on renvoie le HTML complet (table/colonnes/br préservés)
 			s.emit('chat:edit', { messageId: editingRichId, content: richContent });
@@ -899,7 +942,7 @@
 			if (e.key === 'Enter')      { e.preventDefault(); if (mentionSuggestions[mentionIndex]) selectMention(mentionSuggestions[mentionIndex].username); return; }
 			if (e.key === 'Escape')     { showMentions = false; return; }
 		}
-		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); }
 		// Ctrl+Shift+E → open rich modal
 		if (e.key === 'E' && e.ctrlKey && e.shiftKey) { e.preventDefault(); openRichCompose(); }
 	}
@@ -1674,6 +1717,10 @@
 					</div>
 				{/if}
 
+				{#if plainNudge}
+					<NudgeBanner nudge={plainNudge} busy={prechecking} onReformulate={reformulate} onSendAnyway={() => sendMessage(true)} />
+				{/if}
+
 				{#if blockedNotice}
 					<div class="flex items-center gap-2 px-3 py-2 mb-1 bg-red-950/60 border border-red-600/60 rounded-lg text-xs text-red-300">
 						<span>⛔</span>
@@ -1765,7 +1812,7 @@
 						<!-- Divider -->
 						<span class="w-px h-4 mx-1" style="background: color-mix(in srgb, var(--nx-text) 7%, transparent)"></span>
 						<!-- Send -->
-						<button onclick={sendMessage} disabled={!inputText.trim() || isRateLimited}
+						<button onclick={() => sendMessage()} disabled={!inputText.trim() || isRateLimited || prechecking}
 						        class="w-7 h-7 flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed"
 						        style="background: {isRateLimited ? 'rgba(239,68,68,.3)' : inputText.trim() ? 'linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))' : 'color-mix(in srgb, var(--nx-text) 6%, transparent)'}; color: {inputText.trim() ? '#fff' : 'var(--nx-text-muted)'}"
 						        title={isRateLimited ? tFn('chat.antispam_loading') : tFn('chat.send')}>
@@ -1847,13 +1894,16 @@
 					/>
 				{/key}
 			</div>
+			{#if richNudge}
+				<div class="px-6 pt-3"><NudgeBanner nudge={richNudge} busy={prechecking} onReformulate={reformulate} onSendAnyway={() => sendRich(true)} /></div>
+			{/if}
 			<div class="px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
 				<button onclick={closeRichModal} class="px-4 py-2 rounded bg-[var(--nx-border)] hover:bg-[var(--nx-border-soft)] text-sm text-[var(--nx-text)] transition-colors">
 					{tFn('common.cancel')}
 				</button>
 				<button
-					onclick={sendRich}
-					disabled={!richContent.trim()}
+					onclick={() => sendRich()}
+					disabled={!richContent.trim() || prechecking}
 					class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-sm text-white font-medium transition-colors"
 				>
 					{editingRichId ? tFn('common.save') : tFn('chat.send')}
