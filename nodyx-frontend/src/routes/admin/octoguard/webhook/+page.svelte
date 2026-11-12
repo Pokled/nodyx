@@ -5,7 +5,7 @@
 	import { untrack } from 'svelte'
 	import { t } from '$lib/i18n'
 	import Icon from '$lib/components/octoguard/Icon.svelte'
-	import { og } from '$lib/octoguard/api'
+	import { og, OgError } from '$lib/octoguard/api'
 	import type { PageData } from './$types'
 
 	let { data }: { data: PageData } = $props()
@@ -31,7 +31,12 @@
 			if (secret) hasSecret = true
 			secret = ''
 			status = { ok: true, text: tFn('og2.saved') }
-		} catch { status = { ok: false, text: tFn('og2.err_save') } }
+		} catch (e) {
+			// La garde anti-SSRF du serveur (11/11/2026) dit pourquoi elle refuse
+			const code = e instanceof OgError ? e.code : null
+			const key = code === 'WEBHOOK_URL_FORBIDDEN' ? 'og2.wh_err_forbidden' : code === 'WEBHOOK_URL_UNRESOLVED' ? 'og2.wh_err_unresolved' : code === 'WEBHOOK_URL_INVALID' ? 'og2.wh_err_url' : 'og2.err_save'
+			status = { ok: false, text: tFn(key) }
+		}
 		finally { busy = false }
 	}
 </script>

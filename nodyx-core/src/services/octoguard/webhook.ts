@@ -20,6 +20,7 @@
 import { createHmac, randomUUID } from 'crypto'
 import { db, redis } from '../../config/database'
 import type { WebhookRow } from './types'
+import { safeRequest, webhookAllowsPrivate } from '../../utils/ssrfGuard'
 
 // ─── Queue Redis ─────────────────────────────────────────────────────────────
 
@@ -78,16 +79,23 @@ export async function setWebhookConfig(input: {
   secret?:  string | null
   enabled?: boolean
 }): Promise<WebhookRow | null> {
+  // undefined = ne pas toucher ; null = EFFACER (avant : COALESCE, on ne pouvait
+  // jamais retirer une adresse ni un secret une fois posés).
+  const sets: string[] = []
+  const vals: unknown[] = []
+  if (input.url !== undefined)     { vals.push(input.url);     sets.push(`url = $${vals.length}`) }
+  if (input.secret !== undefined)  { vals.push(input.secret);  sets.push(`secret = $${vals.length}`) }
+  // (une colonne ne s'assigne qu'une fois : sans adresse, « éteint » l'emporte)
+  if (input.enabled !== undefined && input.url !== null) { vals.push(input.enabled); sets.push(`enabled = $${vals.length}`) }
+  // Sans adresse, rien à appeler : le webhook s'éteint
+  if (input.url === null) sets.push('enabled = false')
+  sets.push('updated_at = NOW()')
   try {
     const { rows } = await db.query<WebhookRow>(
-      `UPDATE octoguard_webhook
-          SET url        = COALESCE($1, url),
-              secret     = COALESCE($2, secret),
-              enabled    = COALESCE($3, enabled),
-              updated_at = NOW()
+      `UPDATE octoguard_webhook SET ${sets.join(', ')}
         WHERE id = 1
         RETURNING id, url, secret, enabled, updated_at::text AS updated_at`,
-      [input.url ?? null, input.secret ?? null, input.enabled ?? null]
+      vals
     )
     invalidateWebhookConfig()
     return rows[0] ?? null
@@ -143,21 +151,16 @@ async function processOne(rawPayload: string, url: string, secret: string | null
     }
     if (signature) headers['X-Octoguard-Signature'] = signature
 
-    // AbortController pour timeout dur 10s (URL admin peut être lente)
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 10_000)
-    try {
-      const res = await fetch(url, {
-        method:  'POST',
-        headers,
-        body:    rawPayload,
-        signal:  ctrl.signal,
-      })
-      if (!res.ok) {
-        console.warn(`[octoguard:webhook] POST ${url} returned ${res.status}`)
-      }
-    } finally {
-      clearTimeout(t)
+    // Garde anti-SSRF (11/11/2026) : l'adresse est vérifiée à la connexion même
+    // (jamais 127.0.0.1, dont l'API d'administration de Caddy partagée par toutes
+    // les instances du serveur ; réseau local seulement si l'admin du SERVEUR l'a
+    // permis, D36). Aucune redirection suivie. Temps borné à 10 s.
+    const res = await safeRequest(url, {
+      method: 'POST', headers, body: rawPayload, timeoutMs: 10_000, maxBytes: 4096,
+      allowPrivate: webhookAllowsPrivate(),
+    })
+    if (res.status < 200 || res.status >= 300) {
+      console.warn(`[octoguard:webhook] POST returned ${res.status}`)
     }
   } catch (err) {
     // Tout échec : on drop + warn. Pas de retry pour éviter d'embouteiller la queue.

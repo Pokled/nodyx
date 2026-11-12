@@ -48,6 +48,7 @@ import {
   applyMute, removeMute, isUserMuted, hasRE2,
   getWebhookConfig, setWebhookConfig, invalidateWebhookConfig,
 } from '../services/octoguard'
+import { checkOutboundUrl, OutboundBlocked, webhookAllowsPrivate } from '../utils/ssrfGuard'
 
 /** Un identifiant de la base (UUID), vérifié AVANT toute requête. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -1000,8 +1001,20 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
   }, async (request, reply) => {
     const body = request.body as z.infer<typeof WebhookBody>
     const adminUser = request.user!
+    // Garde anti-SSRF (11/11/2026) : jamais une adresse du serveur lui-même ni de
+    // son réseau (127.0.0.1:2019 = l'API d'administration de Caddy, partagée par
+    // toutes les instances). Vérifiée ici pour le dire tout de suite, et de
+    // nouveau à chaque envoi (une réponse DNS peut changer entre-temps).
+    if (body.url) {
+      try {
+        await checkOutboundUrl(body.url, { allowPrivate: webhookAllowsPrivate() })
+      } catch (err) {
+        const code = err instanceof OutboundBlocked ? err.code : 'URL_INVALID'
+        return reply.code(400).send({ error: 'This address cannot receive the webhook', code: `WEBHOOK_${code}` })
+      }
+    }
     const updated = await setWebhookConfig(body)
-    if (!updated) return reply.code(500).send({ error: 'Failed to update webhook' })
+    if (!updated) return reply.code(500).send({ error: 'Failed to update webhook', code: 'WEBHOOK_SAVE_FAILED' })
     invalidateWebhookConfig()
     await logAdminAction(adminUser.userId, 'octoguard.webhook_updated', null, null, null, { enabled: updated.enabled })
     return reply.send({
