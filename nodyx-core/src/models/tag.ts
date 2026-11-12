@@ -43,6 +43,23 @@ export async function create(data: {
   return rows[0]
 }
 
+/** Renommer ou recolorer. Le slug suit le nom (il ne sert dans aucune adresse). Null si absent. */
+export async function update(id: string, communityId: string, data: { name?: string; color?: string }): Promise<Tag | null> {
+  const sets: string[] = []
+  const vals: unknown[] = [id, communityId]
+  if (data.name !== undefined) {
+    vals.push(data.name); sets.push(`name = $${vals.length}`)
+    vals.push(slugify(data.name)); sets.push(`slug = $${vals.length}`)
+  }
+  if (data.color !== undefined) { vals.push(data.color); sets.push(`color = $${vals.length}`) }
+  if (!sets.length) return null
+  const { rows } = await db.query<Tag>(
+    `UPDATE tags SET ${sets.join(', ')} WHERE id = $1 AND community_id = $2 RETURNING *`,
+    vals
+  )
+  return rows[0] ?? null
+}
+
 export async function remove(id: string): Promise<boolean> {
   const { rowCount } = await db.query(`DELETE FROM tags WHERE id = $1`, [id])
   return (rowCount ?? 0) > 0

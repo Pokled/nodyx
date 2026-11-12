@@ -39,6 +39,10 @@ function mayTarget(actor: MemberAccess | undefined, targetRole: string | null | 
 import { countActiveMembers, ACTIVE_MEMBERS_FROM } from '../models/memberCount'
 import { restoreAfterBan } from '../services/octoguard/bans'
 
+// Les couleurs du bandeau d'annonce (la barre du haut ne sait en dessiner aucune autre)
+const ANNOUNCEMENT_COLORS: readonly string[] = ['indigo', 'amber', 'green', 'red', 'sky', 'rose']
+const ANNOUNCEMENT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 const ALLOWED_MIME_BRANDING = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
@@ -1284,15 +1288,17 @@ export default async function adminRoutes(app: FastifyInstance) {
       message: string; color?: string; expires_at?: string | null
     }
     if (!message?.trim()) return reply.code(400).send({ error: 'message requis' })
+    if (expires_at && Number.isNaN(Date.parse(expires_at))) {
+      return reply.code(400).send({ error: 'Invalid expiry date', code: 'ANNOUNCEMENT_BAD_EXPIRY' })
+    }
 
-    const validColors = ['indigo', 'amber', 'green', 'red', 'sky', 'rose']
-    const safeColor = validColors.includes(color ?? '') ? color : 'indigo'
+    const safeColor = ANNOUNCEMENT_COLORS.includes(color ?? '') ? color : 'indigo'
 
     const { rows } = await db.query(
       `INSERT INTO system_announcements (message, color, expires_at)
        VALUES ($1, $2, $3)
        RETURNING id, message, color, is_active, created_at, expires_at`,
-      [message.trim(), safeColor, expires_at ?? null]
+      [message.trim(), safeColor, expires_at ? new Date(expires_at).toISOString() : null]
     )
     logAction(adminUser.userId, 'create_announcement', 'announcement', rows[0].id,
       message.trim().slice(0, 60), { color: safeColor })
@@ -1303,19 +1309,31 @@ export default async function adminRoutes(app: FastifyInstance) {
   app.patch('/announcements/:id', { preHandler: [adminOnly] }, async (request, reply) => {
     const adminUser = (request as any).user as { userId: string }
     const { id } = request.params as { id: string }
-    const { is_active, message, color } = request.body as {
-      is_active?: boolean; message?: string; color?: string
+    const { is_active, message, color, expires_at } = (request.body ?? {}) as {
+      is_active?: boolean; message?: string; color?: string; expires_at?: string | null
+    }
+    if (!ANNOUNCEMENT_ID_RE.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
+    if (message !== undefined && (typeof message !== 'string' || !message.trim())) {
+      return reply.code(400).send({ error: 'Message required', code: 'ANNOUNCEMENT_MESSAGE_REQUIRED' })
+    }
+    if (color !== undefined && !ANNOUNCEMENT_COLORS.includes(color)) {
+      return reply.code(400).send({ error: 'Invalid color', code: 'ANNOUNCEMENT_BAD_COLOR' })
+    }
+    // null efface l'expiration ; une date doit être lisible
+    if (expires_at !== undefined && expires_at !== null && (typeof expires_at !== 'string' || Number.isNaN(Date.parse(expires_at)))) {
+      return reply.code(400).send({ error: 'Invalid expiry date', code: 'ANNOUNCEMENT_BAD_EXPIRY' })
     }
 
     const sets: string[] = []
     const vals: unknown[] = []
     let idx = 1
 
-    if (is_active !== undefined) { sets.push(`is_active = $${idx++}`); vals.push(is_active) }
-    if (message)                 { sets.push(`message = $${idx++}`);   vals.push(message.trim()) }
-    if (color)                   { sets.push(`color = $${idx++}`);     vals.push(color) }
+    if (is_active !== undefined)  { sets.push(`is_active = $${idx++}`);  vals.push(is_active) }
+    if (message !== undefined)    { sets.push(`message = $${idx++}`);    vals.push(message.trim()) }
+    if (color !== undefined)      { sets.push(`color = $${idx++}`);      vals.push(color) }
+    if (expires_at !== undefined) { sets.push(`expires_at = $${idx++}`); vals.push(expires_at === null ? null : new Date(expires_at).toISOString()) }
 
-    if (sets.length === 0) return reply.code(400).send({ error: 'rien à mettre à jour' })
+    if (sets.length === 0) return reply.code(400).send({ error: 'rien à mettre à jour', code: 'INVALID_REQUEST' })
 
     vals.push(id)
     const { rows } = await db.query(
@@ -1326,7 +1344,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     )
     if (!rows[0]) return reply.code(404).send({ error: 'not found' })
     logAction(adminUser.userId, 'update_announcement', 'announcement', id,
-      rows[0].message?.slice(0, 60) ?? null, { is_active, color })
+      rows[0].message?.slice(0, 60) ?? null, { is_active, color, ...(message !== undefined ? { message_changed: true } : {}), ...(expires_at !== undefined ? { expires_at } : {}) })
     return reply.send({ announcement: rows[0] })
   })
 

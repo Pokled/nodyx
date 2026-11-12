@@ -147,6 +147,11 @@ regarder le journal, puis de passer au cran qui te convient. Si tu préfères qu
   façons de compter les membres, donc cinq chiffres différents ; il n'y en a plus qu'une (#926).
 - Après une mise à jour, l'admin ne propose plus de « mettre à jour » vers la version qu'on vient
   d'installer (#901).
+- Ce qu'on crée se modifie ensuite. Un tag se renomme et change de couleur sans quitter les
+  discussions qui le portent (avant, il fallait le supprimer et le reposer partout). Une annonce de
+  la barre du haut se corrige : texte, couleur, date de fin. Un webhook affiche « Modifier » dans
+  la liste, et le clic descend jusqu'à son réglage, qui restait caché sous la liste. L'heure de fin
+  d'une annonce est enregistrée dans ton fuseau : 18 h à Paris n'est plus 19 h.
 
 ### Interface : le thème clair, page après page
 
