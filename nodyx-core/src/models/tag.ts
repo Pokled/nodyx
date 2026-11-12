@@ -20,9 +20,11 @@ function slugify(name: string): string {
     .trim()
 }
 
-export async function listByCommunity(communityId: string): Promise<Tag[]> {
-  const { rows } = await db.query<Tag>(
-    `SELECT * FROM tags WHERE community_id = $1 ORDER BY name ASC`,
+/** Tous les tags, chacun avec le nombre de sujets qui le portent (le forum se lit en public). */
+export async function listByCommunity(communityId: string): Promise<Array<Tag & { thread_count: number }>> {
+  const { rows } = await db.query<Tag & { thread_count: number }>(
+    `SELECT t.*, (SELECT COUNT(*)::int FROM thread_tags tt WHERE tt.tag_id = t.id) AS thread_count
+       FROM tags t WHERE t.community_id = $1 ORDER BY t.name ASC`,
     [communityId]
   )
   return rows

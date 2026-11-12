@@ -197,15 +197,17 @@
 		<!-- Tags multi-select -->
 		{#if tags.length > 0}
 			<div>
-				<span class="block text-sm text-[var(--nx-text-muted)] mb-2">
-					Tags <span class="text-[var(--nx-text-muted)] text-xs">(optionnel, max 5)</span>
+				<span id="tag-pick-label" class="block text-sm text-[var(--nx-text-muted)] mb-2">
+					{tFn('forum.tags_pick')} <span class="text-[var(--nx-text-muted)] text-xs">{tFn('forum.tags_pick_hint', { n: selectedTagIds.length })}</span>
 				</span>
-				<div class="flex flex-wrap gap-2">
+				<div class="flex flex-wrap gap-2" role="group" aria-labelledby="tag-pick-label">
 					{#each tags as tag}
 						<button
 							type="button"
 							onclick={() => toggleTag(tag.id)}
-							class="inline-flex items-center px-2.5 py-1 text-xs font-medium border transition-colors cursor-pointer"
+							aria-pressed={selectedTagIds.includes(tag.id)}
+							disabled={!selectedTagIds.includes(tag.id) && selectedTagIds.length >= 5}
+							class="inline-flex items-center px-2.5 py-1 text-xs font-medium border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 							style="
 								background-color: {selectedTagIds.includes(tag.id) ? tag.color + '33' : 'transparent'};
 								color: {tag.color};
