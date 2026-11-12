@@ -20,6 +20,7 @@ import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { isContainedUploadPath } from '../utils/uploadPath'
+import { safeRequest, OutboundBlocked, type SafeResponse } from '../utils/ssrfGuard'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'inline_images')
 
@@ -71,36 +72,36 @@ async function downloadAndStore(src: string): Promise<string> {
     throw new Error('unsupported_protocol')
   }
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-
-  let res: Response
-  try {
-    res = await fetch(src, {
-      signal:   controller.signal,
-      headers:  { 'User-Agent': 'Nodyx-Rehost/1.0' },
-      redirect: 'follow',
-    })
-  } catch (err) {
-    clearTimeout(timer)
-    const name = (err as { name?: string }).name
-    throw new Error(name === 'AbortError' ? 'timeout' : 'network')
+  // Garde anti-SSRF (11/11/2026) : l'adresse vient d'un MEMBRE. Elle est vérifiée
+  // à la connexion même (jamais loopback, réseau privé, métadonnées), et chaque
+  // redirection repasse par la garde (3 au plus).
+  let res: SafeResponse
+  let url = parsed.href
+  for (let hop = 0; ; hop++) {
+    try {
+      res = await safeRequest(url, { headers: { 'User-Agent': 'Nodyx-Rehost/1.0' }, timeoutMs: FETCH_TIMEOUT_MS, maxBytes: MAX_SIZE_BYTES + 1 })
+    } catch (err) {
+      if (err instanceof OutboundBlocked) throw new Error(err.code === 'URL_FORBIDDEN' ? 'forbidden_address' : 'invalid_url')
+      throw new Error((err as { name?: string }).name === 'AbortError' ? 'timeout' : 'network')
+    }
+    const loc = res.headers.location
+    if (res.status >= 300 && res.status < 400 && loc) {
+      if (hop >= 3) throw new Error('too_many_redirects')
+      url = new URL(loc, url).href
+      continue
+    }
+    break
   }
-  clearTimeout(timer)
 
-  if (!res.ok) throw new Error(`http_${res.status}`)
+  if (res.status < 200 || res.status >= 300) throw new Error(`http_${res.status}`)
 
-  const contentType = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+  const contentType = String(res.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase()
   const ext = MIME_EXT[contentType]
   if (!ext) throw new Error(`mime_${contentType || 'unknown'}`)
 
-  // Garde-fou taille via Content-Length quand dispo
-  const lenHdr = res.headers.get('content-length')
-  if (lenHdr && Number(lenHdr) > MAX_SIZE_BYTES) throw new Error('too_large')
-
-  const buffer = Buffer.from(await res.arrayBuffer())
+  const buffer = res.body
+  if (res.truncated || buffer.length > MAX_SIZE_BYTES) throw new Error('too_large')
   if (buffer.length === 0)              throw new Error('empty')
-  if (buffer.length > MAX_SIZE_BYTES)   throw new Error('too_large')
 
   // Hash sha256 du contenu → dédup naturelle entre users.
   const hash = createHash('sha256').update(buffer).digest('hex')

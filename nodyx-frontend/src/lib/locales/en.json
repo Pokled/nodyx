@@ -5705,6 +5705,8 @@
   "og2.wh_secret_set": "A secret is already saved: leave empty to keep it",
   "og2.wh_secret_help": "The secret is never shown again. It proves the delivery really comes from your server.",
   "og2.wh_err_url": "Invalid address: it must start with https:// or http://.",
+  "og2.wh_err_forbidden": "This address leads to the server itself or its local network: it is refused, for security. Use a public address (https://…).",
+  "og2.wh_err_unresolved": "This address cannot be found: the domain name does not resolve. Check the spelling.",
   "og2.wh_need_url": "Enter an address before turning sending on.",
   "og2.wh_err_secret": "The secret must be 8 to 256 characters long.",
   "og2.wh_how": "What is sent",

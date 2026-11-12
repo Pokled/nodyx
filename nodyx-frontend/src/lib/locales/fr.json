@@ -5705,6 +5705,8 @@
   "og2.wh_secret_set": "Un secret est déjà enregistré : laisse vide pour le garder",
   "og2.wh_secret_help": "Le secret n'est jamais réaffiché. Il sert à prouver que l'envoi vient bien de ton serveur.",
   "og2.wh_err_url": "Adresse invalide : elle doit commencer par https:// ou http://.",
+  "og2.wh_err_forbidden": "Cette adresse mène au serveur lui-même ou à son réseau local : elle est refusée, par sécurité. Utilise une adresse publique (https://…).",
+  "og2.wh_err_unresolved": "Cette adresse est introuvable : le nom de domaine ne répond pas. Vérifie l'orthographe.",
   "og2.wh_need_url": "Indique une adresse avant d'allumer l'envoi.",
   "og2.wh_err_secret": "Le secret doit compter de 8 à 256 caractères.",
   "og2.wh_how": "Ce qui est envoyé",

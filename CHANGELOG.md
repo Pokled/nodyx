@@ -160,6 +160,12 @@ le champ pour être corrigé.
 
 ### Sous le capot
 
+- **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
+  recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
+  y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde
+  partagée, vérifiée au moment même de la connexion, sans suivre de redirection à l'aveugle. Le
+  réseau local reste possible pour le webhook si l'admin du serveur l'autorise
+  (`OCTOGUARD_WEBHOOK_ALLOW_PRIVATE`). On peut aussi enfin effacer l'adresse ou le secret du webhook.
 - Toutes les applications du dépôt passent à SvelteKit 3 (#904, #905, #907, #908, #909, #914), ce
   qui ferme les dernières alertes Dependabot de ce côté.
 - Les instances secondaires envoient enfin leurs ressources à l'annuaire : elles se les envoyaient
