@@ -7,27 +7,24 @@
 	// Suit le bouclier en direct (événement « octoguard:shield »).
 	import { onMount, onDestroy } from 'svelte'
 	import { t, locale } from '$lib/i18n'
-	import { apiFetch } from '$lib/api'
+	import { shieldState, type ShieldView } from '$lib/octoguard/shieldState'
 	import { getSocket } from '$lib/socket'
 
 	let { token, surface = 'chat', space = '' }: { token: string | null | undefined; surface?: 'chat' | 'forum' | 'dm'; space?: string } = $props()
 	const tFn = $derived($t)
 
-	type Shield = { active: boolean; until: string | null; readonly: boolean; team?: boolean; slow_seconds: number }
-	let s = $state<Shield | null>(null)
+	let s = $state<ShieldView | null>(null)
 	let timer: ReturnType<typeof setTimeout> | null = null
 
-	async function load() {
+	async function load(force = false) {
 		if (!token) return
-		try {
-			const res = await apiFetch(fetch, '/reports/shield', { headers: { Authorization: `Bearer ${token}` } })
-			s = res.ok ? await res.json() : null
-		} catch { s = null }
+		s = await shieldState(token, force)
 		// Il retombe tout seul : on le relit à l'heure dite
 		if (timer) clearTimeout(timer)
-		if (s?.active && s.until) timer = setTimeout(load, Math.max(1000, Date.parse(s.until) - Date.now() + 1000))
+		if (s?.active && s.until) timer = setTimeout(() => load(true), Math.max(1000, Date.parse(s.until) - Date.now() + 1000))
 	}
-	const onShield = () => { void load() }
+	// Levé ou baissé par l'équipe : relecture immédiate, sans attendre la minute
+	const onShield = () => { void load(true) }
 	onMount(() => { void load(); getSocket()?.on('octoguard:shield', onShield) })
 	onDestroy(() => { if (timer) clearTimeout(timer); getSocket()?.off('octoguard:shield', onShield) })
 
