@@ -61,6 +61,7 @@ export const nav: NavSection[] = [
     items: [
       { title: 'OctoGuard (auto-mod)',  slug: 'octoguard' },
       { title: 'Streamer Hub (Twitch)', slug: 'streamer-hub' },
+      { title: 'Webhooks',              slug: 'webhooks' },
     ],
   },
   {

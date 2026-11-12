@@ -158,6 +158,23 @@ qui avait choisi une autre langue. C'est maintenant une vraie phrase, dans la la
 un message privé refusé ne disparaît plus sans un mot : on dit pourquoi, et le texte revient dans
 le champ pour être corrigé.
 
+### Webhooks : ta communauté parle aux autres outils
+
+- **Plusieurs destinations, chacune de sa sorte.** Dans Administration, Intégrations, Webhooks : un
+  salon Discord ou Matrix pour annoncer les nouveautés, ton téléphone (ntfy) pour la modération,
+  ton propre outil (n8n, Node-RED, un script) en JSON signé. Les annonces publiques et les alertes
+  de modération sont séparées dès la liste : une alerte de modération nomme des membres, elle ne
+  part jamais vers une destination publique, et le serveur le refuse même si l'écran se trompait.
+- **De quoi annoncer** : nouvel article du forum (un message retenu seulement une fois approuvé),
+  article mis en avant, nouveau morceau, événement public, sondage, page wiki publique, live qui
+  commence, nouvelle arrivée (éteint par défaut). Côté modération : sanctions, signalements,
+  messages retenus, contestations, barème, réglages d'OctoGuard, observations.
+- **Fait pour qu'on s'en serve** : un guide pas à pas par outil, un aperçu du message tel qu'il
+  arrivera, « Envoyer un test » qui répond tout de suite et explique un échec, l'historique des 50
+  derniers envois. Un envoi raté est réessayé après 1 puis 10 minutes ; après 10 échecs de suite la
+  destination se met en pause et les admins sont prévenus. L'ancien webhook d'OctoGuard est repris
+  tel quel.
+
 ### Sous le capot
 
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la

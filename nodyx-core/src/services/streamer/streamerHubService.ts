@@ -19,6 +19,7 @@ import { audit } from './audit'
 import { io } from '../../socket/io'
 import { twitchProvider } from './providers/twitchProvider'
 import type { StreamerProvider, ProviderId } from './providers/_types'
+import { announceLive } from '../webhooks/announce'
 
 // ── State CSRF (OAuth) ───────────────────────────────────────────────────────
 // Le state discrimine deux flows :
@@ -670,14 +671,24 @@ export async function ingestEvent(args: {
   // Nécessaire pour le check "stream live ?" du chat bridge outbound (§6.4).
   // Phase 4 ajoutera les stats agrégées (peak_viewers, etc).
   if (args.eventType === 'stream.online') {
-    const evt = (args.payload as { event?: { id?: string; started_at?: string; type?: string; broadcaster_user_id?: string } }).event
+    const evt = (args.payload as { event?: { id?: string; started_at?: string; type?: string; broadcaster_user_id?: string; broadcaster_user_name?: string; broadcaster_user_login?: string } }).event
     if (evt?.id && evt.started_at) {
-      await db.query(
+      // streamer_sessions n'a pas de contrainte d'unicité : ON CONFLICT ne protège de rien.
+      // On regarde donc AVANT si la session existe, pour n'annoncer un live qu'une fois.
+      const known = await db.query(`SELECT 1 FROM streamer_sessions WHERE provider = $1 AND external_id = $2 LIMIT 1`, [args.provider, evt.id])
+        .then((r) => r.rows.length > 0).catch(() => true)
+      const opened = await db.query(
         `INSERT INTO streamer_sessions (provider, external_id, started_at)
          VALUES ($1, $2, $3)
-         ON CONFLICT DO NOTHING`,
+         ON CONFLICT DO NOTHING
+         RETURNING external_id`,
         [args.provider, evt.id, evt.started_at],
-      ).catch(err => console.error('[streamerHub] streamer_sessions insert failed', err))
+      ).catch(err => { console.error('[streamerHub] streamer_sessions insert failed', err); return null })
+      // Webhooks : un live qui commence, une seule fois par session (Twitch peut renvoyer l'événement)
+      if (!known && opened && opened.rows.length) {
+        const name = evt.broadcaster_user_name || evt.broadcaster_user_login || null
+        if (name) announceLive(name, null, null, evt.broadcaster_user_login ? `https://twitch.tv/${evt.broadcaster_user_login}` : '/')
+      }
     }
   } else if (args.eventType === 'stream.offline') {
     // stream.offline n'a pas de stream_id, on clôt toutes les sessions

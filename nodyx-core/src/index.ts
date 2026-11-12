@@ -54,6 +54,7 @@ import { loadSettingsIntoEnv } from './config/settings'
 import { initOctoGuard }    from './services/octoguard'
 import { ensureEsyKeyExists } from './utils/esyKeyGen'
 import { octoguardAdminPlugin, reportsPublicPlugin } from './routes/octoguard'
+import { webhooksAdminPlugin } from './routes/webhooks'
 import { startScheduler }  from './scheduler'
 
 // trustProxy : PAS `true` (ferait confiance à un X-Forwarded-For usurpé et
@@ -214,6 +215,7 @@ server.register(adminRoutes,     { prefix: '/api/v1/admin' })
 server.register(settingsRoutes,  { prefix: '/api/v1/admin/settings' })
 server.register(appearanceRoutes, { prefix: '/api/v1/admin/appearance' })
 server.register(octoguardAdminPlugin, { prefix: '/api/v1/admin/octoguard' })
+server.register(webhooksAdminPlugin,  { prefix: '/api/v1/admin/webhooks' })
 server.register(reportsPublicPlugin,  { prefix: '/api/v1/reports' })
 server.register(communityRoutes, { prefix: '/api/v1/communities' })
 server.register(forumRoutes,     { prefix: '/api/v1/forums' })

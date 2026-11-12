@@ -36,6 +36,7 @@
 		ladder_expired: '⚖',
 		ladder_engine_alert: '⚖',
 		appeal_resolved: '⚖',
+		webhook_paused: '!',
 	};
 
 	const TYPE_LABEL = $derived<Record<string, string>>({
@@ -57,6 +58,7 @@
 		if (n.type === 'ladder_engine_alert') return tFn('notifications.ladder_engine_alert_label', { name: n.meta?.username ?? '' })
 		if (n.type === 'moderation_warning' && !n.meta?.reason) return tFn('notifications.moderation_warning_plain')
 		// Lot 8 : une valeur du cœur, la phrase se construit ici
+		if (n.type === 'webhook_paused') return tFn('notifications.webhook_paused_label', { name: n.meta?.name ?? '' })
 		if (n.type === 'appeal_resolved') return tFn(n.meta?.outcome === 'overturned' ? 'notifications.appeal_overturned_label' : 'notifications.appeal_upheld_label')
 		return TYPE_LABEL[n.type] ?? n.type
 	}
@@ -175,6 +177,9 @@
 							<a href={notif.meta?.warn_id ? `/settings/sanctions?decision=${notif.meta.warn_id}&contest=1` : '/settings/sanctions'}
 								title={tFn('notifications.contest_hint')}
 								class="text-xs px-2 py-1 rounded-md border border-[var(--nx-border)] text-[var(--nx-text)] hover:border-[var(--nx-text-muted)]">{tFn('notifications.contest')}</a>
+						{/if}
+						{#if notif.type === 'webhook_paused'}
+							<a href="/admin/webhooks" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.open_webhooks')}</a>
 						{/if}
 						{#if notif.type === 'appeal_resolved'}
 							<a href="/settings/sanctions" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.view')}</a>

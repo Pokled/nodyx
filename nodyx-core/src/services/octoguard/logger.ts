@@ -14,7 +14,8 @@
  */
 
 import { db } from '../../config/database'
-import { triggerWebhook, buildWebhookPayload } from './webhook'
+import { fromOctoGuardLog } from '../webhooks/catalog'
+import { emitEvent } from '../webhooks/dispatch'
 import type { ActionLogEntry } from './types'
 
 /**
@@ -58,13 +59,22 @@ export function logOctoGuardAction(entry: ActionLogEntry): void {
     }
   })()
 
-  // Webhook out (Module 5) : fire-and-forget, push dans queue Redis.
-  // Si le webhook est désactivé en config, c'est un no-op silencieux.
-  triggerWebhook(buildWebhookPayload({
-    action:       entry.action,
-    target_type:  entry.target_type,
-    target_id:    entry.target_id,
-    target_label: entry.target_label,
-    metadata:     entry.metadata,
-  }))
+  // Webhooks (migration 139) : l'action devient un événement d'ÉQUIPE, envoyé aux
+  // seules destinations d'équipe qui l'ont demandé (D39). Jamais bloquant.
+  void (async () => {
+    try {
+      const ev = fromOctoGuardLog(entry)
+      if (!ev) return
+      const actorId = entry.actor_id ?? (typeof entry.metadata?.reporter_id === 'string' ? entry.metadata.reporter_id : null)
+      if (ev.actor?.type === 'member' && actorId) {
+        const { rows } = await db.query<{ username: string }>(`SELECT username FROM users WHERE id = $1`, [actorId])
+        ev.actor.name = rows[0]?.username ?? null
+      }
+      if (ev.target && entry.target_type === 'user' && entry.target_id) {
+        const { rows } = await db.query<{ username: string }>(`SELECT username FROM users WHERE id = $1`, [entry.target_id])
+        ev.target.name = rows[0]?.username ?? null
+      }
+      emitEvent(ev)
+    } catch { /* le journal ne dépend jamais du webhook */ }
+  })()
 }

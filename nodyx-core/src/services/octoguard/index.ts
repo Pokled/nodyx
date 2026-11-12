@@ -44,7 +44,7 @@ import { startHeldExpiryWorker } from './held'
 import { ensureBaseProfile } from './profile'
 import { ensureOctoGuardBotUser } from './welcome'
 import { migrateEnvPatternsToDB } from './envMigration'
-import { startWebhookWorker } from './webhook'
+import { startWebhookDispatcher } from '../webhooks/dispatch'
 
 /**
  * Vrai si OctoGuard est allumé. L'interrupteur (OCTOGUARD_ENABLED) se règle
@@ -77,6 +77,9 @@ export async function initOctoGuard(): Promise<void> {
   startBanExpiryWorker()
   // Contenus retenus sans décision : refusés au bout de 72 h (D17), toujours
   startHeldExpiryWorker()
+  // Le facteur des webhooks de la communauté (migration 139) : TOUJOURS, car un
+  // nouvel article ou un morceau s'annoncent même OctoGuard éteint
+  startWebhookDispatcher()
 
   // État de la protection contre les expressions piégées, affiché dans tous les cas
   console.log(hasRE2()
@@ -121,7 +124,4 @@ export async function initOctoGuard(): Promise<void> {
     console.warn('[octoguard] ensureOctoGuardBotUser at boot failed (non-fatal):', err)
   )
 
-  // Démarrer le worker webhook out (Module 5). Tick toutes les 5s,
-  // batch jusqu'à 20 events/tick, fire-and-forget POST signé HMAC.
-  startWebhookWorker()
 }

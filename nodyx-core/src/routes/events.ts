@@ -11,6 +11,7 @@ import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth, optionalAuth } from '../middleware/auth'
 import { db } from '../config/database'
 import { io } from '../socket/io'
+import { announceCalendarEvent } from '../services/webhooks/announce'
 
 const ALLOWED_TAGS = [
   'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
@@ -226,6 +227,8 @@ export default async function eventsRoutes(app: FastifyInstance) {
       )
 
       io?.emit('event:created', { event: rows[0] })
+      // Webhooks : seulement un événement public (relu en base par announceCalendarEvent)
+      announceCalendarEvent(rows[0].id)
       return reply.status(201).send({ event: rows[0] })
     }
   )

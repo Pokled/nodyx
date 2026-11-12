@@ -23,6 +23,7 @@ import { isUserMuted } from '../services/octoguard'
 import { moderateText, textForModeration, blockedBody, heldBody } from '../services/octoguard/moderate'
 import { holdContent, holdRefusal } from '../services/octoguard/held'
 import { fileAutoReport } from '../services/octoguard/autoReport'
+import { announceThread } from '../services/webhooks/announce'
 
 // Un titre de fil est du texte brut, jamais du HTML : checkHtmlContent() ne fait
 // que SCANNER (mots interdits) sans jamais retirer de balises. Sans ce nettoyage,
@@ -332,6 +333,8 @@ app.get('/threads', {
     if (ogThread.report) void fileAutoReport({ targetType: 'thread', targetId: thread.id, ruleName: ogThread.report.rule_name, excerpt: ogThread.report.excerpt })
 
     const tags = await TagModel.getTagsForThread(thread.id)
+    // Webhooks : l'article est publié (pas retenu) ; il s'annonce aux destinations qui l'ont demandé
+    announceThread(thread.id)
     return reply.code(201).send({
       thread: { ...thread, tags },
       post,
@@ -615,6 +618,7 @@ app.get('/threads', {
       await TagModel.setThreadTags(threadId, body.tag_ids)
     }
 
+    const wasPinned = !!(thread as { is_pinned?: boolean }).is_pinned
     const updated = await ThreadModel.update(threadId, {
       title:       body.title ? (stripTitleTags(body.title) || undefined) : undefined,
       is_pinned:   body.is_pinned,
@@ -622,6 +626,8 @@ app.get('/threads', {
       is_featured: body.is_featured,
     })
     bumpThreadsCache()
+    // Webhooks : un article qui vient d'être mis en avant (pas à chaque enregistrement)
+    if (body.is_pinned === true && !wasPinned) announceThread(threadId, 'forum_pinned')
     return reply.send({ thread: updated })
   })
 

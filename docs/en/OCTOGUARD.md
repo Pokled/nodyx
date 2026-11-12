@@ -43,7 +43,7 @@ Now open **`/admin/octoguard`**. You'll see the **Vue d'ensemble** (Overview) wi
 | **Sourdines** | Who is currently muted, add or lift a mute |
 | **Signalements** | Reports your members filed, to review |
 | **Journal** | The log of everything OctoGuard did (or would have done) |
-| **Webhook** | Advanced: send signed events to your own service |
+| **Webhook** | Shortcut to the destinations that receive moderation (see Webhooks) |
 
 We'll spend most of our time in **Auto-mod**.
 
@@ -274,14 +274,7 @@ It's paginated (**Suivant →**). This is where your **test-mode** rules record 
 
 ### Webhook: pipe events to your own tools (advanced)
 
-For people who want OctoGuard events in their own dashboard, an alerts channel, or a log aggregator. OctoGuard can POST every action to a URL you own.
-
-1. Open the **Webhook** tab and switch on **Activer le webhook**.
-2. **URL POST**: where the events should be sent.
-3. **Secret HMAC**: a shared secret. OctoGuard signs every POST with it in a header, `X-Octoguard-Signature: sha256=<hex>`, so your receiver can verify the request genuinely came from your instance and wasn't forged. Leave the field empty to keep the current secret.
-4. **Enregistrer**.
-
-Your chat is **never slowed down** by this: webhooks fire asynchronously, after the action, so a slow or offline receiver can never lag your community.
+The OctoGuard webhook moved to **Administration > Integrations > Webhooks**, where you can send moderation alerts to your phone (ntfy), a private team channel (Discord, Matrix, Slack) or your own tool (signed JSON), next to public community announcements. The OctoGuard **Webhook** tab lists the destinations that receive moderation and links there. See [Webhooks](./WEBHOOKS.md).
 
 ---
 
@@ -310,7 +303,7 @@ That's exactly what test mode is for. A rule in "Test (dry-run)" only logs to th
 No. OctoGuard uses Google's `re2`, a linear-time engine immune to catastrophic backtracking. A pattern that would hang a normal regex engine simply runs safely here.
 
 **Does any of this leave my server?**
-No. OctoGuard is native to your Nodyx instance. The only thing that can leave is what *you* configure in the Webhook tab, signed and pointed at a URL you chose.
+No. OctoGuard is native to your Nodyx instance. The only thing that can leave is what *you* configure in Webhooks, signed and pointed at a URL you chose.
 
 ---
 

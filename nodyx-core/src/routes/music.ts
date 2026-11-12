@@ -20,6 +20,7 @@ import { checkContent } from '../services/contentFilter'
 import * as MusicCategoryModel from '../models/musicCategory'
 import * as MusicTrackModel from '../models/musicTrack'
 import * as MusicCommentModel from '../models/musicComment'
+import { announceTrack } from '../services/webhooks/announce'
 
 const ALLOWED_AUDIO_MIME = ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/flac']
 const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -332,6 +333,7 @@ export default async function musicRoutes(app: FastifyInstance) {
       image_asset_id:    body.image_asset_id || null,
       duration_seconds:  Number.isFinite(body.duration_seconds) ? body.duration_seconds : null,
     })
+    announceTrack(track.id)
     return reply.code(201).send({ track })
   })
 

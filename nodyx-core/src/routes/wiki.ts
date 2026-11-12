@@ -19,6 +19,7 @@ import { rateLimit }       from '../middleware/rateLimit.js'
 import { validate }        from '../middleware/validate.js'
 import { requireModule }   from '../middleware/requireModule.js'
 import { randomUUID }      from 'crypto'
+import { announceWikiPage } from '../services/webhooks/announce'
 
 // ── Slug generation ───────────────────────────────────────────────────────────
 
@@ -165,6 +166,8 @@ export default async function wikiRoutes(app: FastifyInstance) {
       ]
     )
 
+    // Webhooks : seulement une page publique (relue en base par announceWikiPage)
+    announceWikiPage(rows[0].slug)
     return reply.code(201).send(rows[0])
   })
 
