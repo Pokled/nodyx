@@ -6615,5 +6615,11 @@
   "editor.link.type_event": "Event",
   "editor.link.type_member": "Member",
   "editor.link.type_channel": "Channel",
-  "editor.link.type_wiki": "Wiki"
+  "editor.link.type_wiki": "Wiki",
+  "event.unavailable_title": "This event isn't available",
+  "event.unavailable_text": "It may have been deleted. If it's for community members only, log in to see it.",
+  "event.unavailable_text_member": "It may have been deleted, or its link is no longer right.",
+  "event.unavailable_back": "See the calendar",
+  "event.load_error_title": "The event couldn't be displayed",
+  "event.load_error_text": "Something went wrong on our side. Try again in a moment."
 }

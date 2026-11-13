@@ -3,7 +3,7 @@
 	import { page } from '$app/state'
 	import { apiFetch } from '$lib/api'
 	import { anchoredPopover } from '$lib/actions/anchoredPopover'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 	import { TextSelection } from '@tiptap/pm/state'
 	import { draftKey, readDraft, writeDraft, removeDraft } from '$lib/editorDrafts'
 
@@ -817,7 +817,7 @@
 		draftOffer = null
 	}
 	const draftWhen = $derived(draftOffer
-		? new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(draftOffer.at)
+		? new Intl.DateTimeFormat($locale, { dateStyle: 'medium', timeStyle: 'short' }).format(draftOffer.at)
 		: '')
 
 	// ── Close popups when clicking outside the editor ─────────────────────────
@@ -925,7 +925,7 @@
 	const linkTypeLabel = (t: LinkResult['type']) => tFn(`editor.link.type_${t}`)
 	function linkSubtitle(r: LinkResult): string {
 		if (r.type === 'event' && r.subtitle) {
-			try { return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(r.subtitle)) } catch { return '' }
+			try { return new Intl.DateTimeFormat($locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(r.subtitle)) } catch { return '' }
 		}
 		return r.subtitle ?? ''
 	}
@@ -1003,6 +1003,15 @@
 		if (!dt) return []
 		return Array.from(dt.files ?? []).filter(f => f.type.startsWith('image/')).slice(0, MAX_PASTED_IMAGES)
 	}
+	function naturalWidth(file: File): Promise<number> {
+		return new Promise(resolve => {
+			const url = URL.createObjectURL(file)
+			const img = new Image()
+			img.onload  = () => { resolve(img.naturalWidth); URL.revokeObjectURL(url) }
+			img.onerror = () => { resolve(0); URL.revokeObjectURL(url) }
+			img.src = url
+		})
+	}
 	async function uploadAndInsertImages(files: File[], pos: number | null) {
 		pasteError = ''
 		for (const file of files) {
@@ -1013,7 +1022,13 @@
 				const res = await apiFetch(fetch, '/social/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
 				const j = await res.json().catch(() => ({}))
 				if (!res.ok || !j.url) { pasteError = tFn('editor.paste_failed', { reason: j.error ?? String(res.status) }); continue }
-				const attrs = { src: j.url, alt: '', class: 'mx-auto block', 'data-align': 'center', align: 'center' }
+				const attrs: Record<string, string> = { src: j.url, alt: '', class: 'mx-auto block', 'data-align': 'center', align: 'center' }
+				// Une petite image (icône, capture d'un bouton) garde sa taille : sans largeur,
+				// l'éditeur l'étire sur toute la ligne et elle devient floue. Même unité que les
+				// poignées de redimensionnement (pourcentage de la largeur de l'éditeur).
+				const natural = await naturalWidth(file)
+				const room = editorEl?.clientWidth ?? 0
+				if (natural && room && natural < room) attrs.width = `${Math.max(5, Math.round(natural / room * 100))}%`
 				if (pos !== null && editor) {
 					editor.chain().focus().insertContentAt(pos, { type: 'image', attrs }).run()
 				} else {
@@ -1552,20 +1567,20 @@
 					{#each linkResults as r, i (r.type + r.url)}
 					<li role="option" aria-selected={i === linkActive}>
 						<button type="button" onclick={() => pickLink(r)} onmouseenter={() => linkActive = i}
-							class="w-full text-left px-2 py-1.5 rounded-md flex items-start gap-2 {i === linkActive ? 'bg-[var(--nx-surface-raised)]' : ''}">
-							<span class="shrink-0 mt-0.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--nx-header-accent)_15%,transparent)] text-[var(--nx-header-accent)]">{linkTypeLabel(r.type)}</span>
+							class="link-opt w-full text-left px-2 py-1.5 rounded-md flex items-start gap-2 {i === linkActive ? 'active' : ''}">
+							<span class="link-badge shrink-0 mt-0.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded">{linkTypeLabel(r.type)}</span>
 							<span class="min-w-0">
-								<span class="block text-sm text-[var(--nx-text)] truncate">{r.title}</span>
-								{#if linkSubtitle(r)}<span class="block text-xs text-[var(--nx-text-muted)] truncate">{linkSubtitle(r)}</span>{/if}
+								<span class="block text-sm truncate">{r.title}</span>
+								{#if linkSubtitle(r)}<span class="link-sub block text-xs truncate">{linkSubtitle(r)}</span>{/if}
 							</span>
 						</button>
 					</li>
 					{/each}
 				</ul>
 				{:else if linkSearching}
-				<p class="text-xs text-[var(--nx-text-muted)] px-1">{tFn('editor.link.searching')}</p>
+				<p class="link-note text-xs px-1">{tFn('editor.link.searching')}</p>
 				{:else if linkSearched}
-				<p class="text-xs text-[var(--nx-text-muted)] px-1">{tFn('editor.link.no_result')}</p>
+				<p class="link-note text-xs px-1">{tFn('editor.link.no_result')}</p>
 				{/if}
 				<div class="flex gap-2">
 					<button type="button" onclick={insertLink} class="flex-1 popup-btn-primary">{tFn('editor.insert')}</button>
@@ -2033,6 +2048,18 @@
 		background: var(--nx-surface-raised);
 		border-color: var(--nx-border);
 	}
+	/* Résultats de la fenêtre Lien : lisibles sur la fenêtre sombre par défaut, et aux
+	   couleurs du thème dans une page migrée (.nx-themed). Vu sur capture le 13/11 : avec
+	   les seules variables du thème, le texte était sombre sur sombre. */
+	.link-opt { color: rgb(229 231 235); }
+	.link-opt.active { background-color: rgb(55 65 81); }
+	.link-sub, .link-note { color: rgb(156 163 175); }
+	.link-badge { background-color: rgb(55 65 81); color: rgb(229 231 235); }
+	.link-opt.active .link-badge { background-color: rgb(75 85 99); }
+	:global(.nx-themed) .link-opt { color: var(--nx-text); }
+	:global(.nx-themed) .link-opt.active { background-color: color-mix(in srgb, var(--nx-header-accent) 14%, transparent); }
+	:global(.nx-themed) .link-sub, :global(.nx-themed) .link-note { color: var(--nx-text-muted); }
+	:global(.nx-themed) .link-badge { background-color: color-mix(in srgb, var(--nx-header-accent) 18%, transparent); color: var(--nx-header-accent); }
 	:global(.nx-themed .nb-btn),
 	:global(.nx-themed .tb-btn),
 	:global(.nx-themed .table-btn) { color: var(--nx-text-muted); }
