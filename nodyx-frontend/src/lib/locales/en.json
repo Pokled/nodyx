@@ -6653,5 +6653,10 @@
   "link_card.unavailable_text": "It may have been deleted, or it isn't visible to you.",
   "link_card.remove": "Remove the card",
   "link_card.removed_note": "Card removed, the link stays.",
-  "link_card.restore": "Put the card back"
+  "link_card.restore": "Put the card back",
+  "editor.link_view.aria": "How the link is shown",
+  "editor.link_view.card": "Card",
+  "editor.link_view.link": "Plain link",
+  "editor.link_view.raw": "Plain text",
+  "editor.link_view.undo_hint": "Ctrl+Z: as pasted"
 }

@@ -5,6 +5,9 @@
 	import { anchoredPopover } from '$lib/actions/anchoredPopover'
 	import { t, locale } from '$lib/i18n'
 	import { TextSelection } from '@tiptap/pm/state'
+	import { closeHistory } from '@tiptap/pm/history'
+	import { toInternalPath, cardFor } from '$lib/linkCards'
+	import { internalLinkAt, linkCardPreviewPlugin, type LinkHit } from './linkCardPreview'
 	import { draftKey, readDraft, writeDraft, removeDraft } from '$lib/editorDrafts'
 
 	let {
@@ -344,6 +347,18 @@
 					return ['a', mergeAttributes(interne), 0]
 				}
 				return ['a', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0]
+			},
+			// « Nodyx relié » : data-card="off" = ce lien Nodyx s'affiche SANS sa carte
+			// (bulle « Lien simple », « Retirer la carte » du chat). Gardé à la réédition.
+			addAttributes() {
+				return {
+					...this.parent?.(),
+					card: {
+						default: null,
+						parseHTML: (el: HTMLElement) => el.getAttribute('data-card') === 'off' ? 'off' : null,
+						renderHTML: (attrs: any) => attrs.card === 'off' ? { 'data-card': 'off' } : {},
+					},
+				}
 			},
 		})
 
@@ -709,6 +724,14 @@
 			},
 		})
 
+		// Aperçu des cartes de liens Nodyx sous leur ligne (linkCardPreview.ts)
+		const LinkCardPreview = Extension.create({
+			name: 'nxLinkCardPreview',
+			addProseMirrorPlugins() {
+				return [linkCardPreviewPlugin({ origin: () => location.origin, token: () => token ?? null })]
+			},
+		})
+
 		editor = new Editor({
 			element: editorEl!,
 			extensions: [
@@ -728,11 +751,19 @@
 				NodyxTwoCols, NodyxColumn,
 				NodyxAudio, NodyxTrack,
 				NodyxTerm, TwitchLive,
+				LinkCardPreview,
 			],
 			content: initialContent,
 			editorProps: {
 				handlePaste(_view: any, event: ClipboardEvent) {
 					const files = imageFilesOf(event.clipboardData)
+					// L'adresse d'un contenu Nodyx, seule, sur un simple curseur : un lien
+					// qui prendra le titre du contenu (bulle Carte | Lien simple | Texte brut)
+					const pasted = (event.clipboardData?.getData('text/plain') ?? '').trim()
+					if (!files.length && pasted && !/\s/.test(pasted) && editor?.state.selection.empty && !editor.isActive('codeBlock')) {
+						const path = toInternalPath(pasted, location.origin)
+						if (path) { event.preventDefault(); pasteInternalLink(pasted, path); return true }
+					}
 					// Du texte avec ? C'est un morceau de page : collage normal.
 					if (!files.length || (event.clipboardData?.getData('text/plain') ?? '').trim()) return false
 					event.preventDefault()
@@ -750,7 +781,7 @@
 				},
 			},
 			onCreate({ editor: e }) { ensureCodeColors(e) },
-			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); if (transaction.docChanged) ensureCodeColors(e) },
+			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); syncLinkBubble(); if (transaction.docChanged) ensureCodeColors(e) },
 			onUpdate({ editor: e }) {
 				html = e.getHTML()
 				charCount = e.storage.characterCount.characters()
@@ -829,6 +860,7 @@
 		if (wrapperEl && !wrapperEl.contains(t) && !inPopup) {
 			showColor = showEmoji = showLink = showImage = showVideo = showAudio = showTable = false
 			bubbleVisible = false
+			linkHit = null
 		}
 	}
 
@@ -840,7 +872,7 @@
 		document.addEventListener('click', onDocClick)
 		// Repositionne la barre flottante au scroll/resize tant qu'elle est
 		// visible (sinon, position: fixed, elle « décrochait » de la sélection).
-		const reposition = () => { if (bubbleVisible) syncBubble() }
+		const reposition = () => { if (bubbleVisible) syncBubble(); if (linkHit) syncLinkBubble() }
 		window.addEventListener('scroll', reposition, true)
 		window.addEventListener('resize', reposition)
 		return () => {
@@ -1409,6 +1441,78 @@
 		}
 	}
 
+	// ── « Nodyx relié » : coller un lien, et la bulle Carte | Lien simple | Texte brut ──
+	// Coller l'adresse d'un sujet, d'une réponse ou d'un événement l'insère en lien ;
+	// dès que sa carte est connue, le texte devient son titre, dans une étape d'annulation
+	// À PART : Ctrl+Z revient au lien tel qu'il a été collé. Toute transformation se
+	// défait (CDC E5) : la bulle propose Carte (par défaut), Lien simple (pas de carte,
+	// data-card="off") ou Texte brut (l'adresse en texte, sans lien).
+	let linkHit      = $state<LinkHit | null>(null)
+	let linkBubbleTop  = $state(0)
+	let linkBubbleLeft = $state(0)
+	let linkBubbleBelow = $state(false)
+
+	function syncLinkBubble(): void {
+		if (!editor) { linkHit = null; return }
+		const hit = internalLinkAt(editor.state, location.origin)
+		if (!hit) { linkHit = null; return }
+		try {
+			const a = editor.view.coordsAtPos(hit.from)
+			// Au-dessus du lien, sauf si elle recouvrirait la barre d'outils (lien sur la
+			// première ligne) ou le haut de la fenêtre : alors sous le lien.
+			const barBottom = wrapperEl?.querySelector('.nodyx-toolbar')?.getBoundingClientRect().bottom ?? 0
+			linkBubbleBelow = a.top - 44 < Math.max(64, barBottom)
+			linkBubbleTop  = linkBubbleBelow ? a.bottom : a.top
+			linkBubbleLeft = a.left
+			linkHit = hit
+		} catch { linkHit = null }
+	}
+
+	function pasteInternalLink(raw: string, path: string): void {
+		if (!editor) return
+		editor.chain().focus().insertContent({ type: 'text', text: raw, marks: [{ type: 'link', attrs: { href: raw } }] }).run()
+		let unsub: (() => void) | null = null
+		let done = false
+		unsub = cardFor(path, token ?? null).subscribe(st => {
+			if (done || st.status === 'loading') return
+			done = true
+			queueMicrotask(() => unsub?.())
+			if (st.status !== 'ready' || !st.card) return
+			const c = st.card
+			const title = c.type === 'post' ? c.thread.title : c.type === 'unavailable' ? null : c.title
+			if (title) retitleLink(raw, title)
+		})
+	}
+
+	/** Le lien collé (texte = adresse brute) prend le titre, dans une étape d'annulation à part. */
+	function retitleLink(raw: string, title: string): void {
+		if (!editor) return
+		const { state } = editor
+		const linkType = state.schema.marks.link
+		let target: { from: number; to: number; marks: readonly any[] } | null = null
+		state.doc.descendants((node: any, pos: number) => {
+			if (target || !node.isText || node.text !== raw) return
+			const m = node.marks.find((mm: any) => mm.type === linkType && mm.attrs.href === raw)
+			if (m) target = { from: pos, to: pos + node.nodeSize, marks: node.marks }
+		})
+		if (!target) return   // déjà retouché à la main : on ne touche à rien
+		const t = target as { from: number; to: number; marks: readonly any[] }
+		const tr = closeHistory(state.tr)
+		tr.replaceWith(t.from, t.to, state.schema.text(title, t.marks))
+		editor.view.dispatch(tr)
+	}
+
+	function setLinkView(view: 'card' | 'link' | 'raw'): void {
+		if (!editor || !linkHit) return
+		const { state } = editor
+		const { from, to, href, mark } = linkHit
+		const tr = state.tr
+		if (view === 'raw') tr.replaceWith(from, to, state.schema.text(href))
+		else tr.addMark(from, to, mark.type.create({ ...mark.attrs, card: view === 'link' ? 'off' : null }))
+		editor.view.dispatch(tr)
+		editor.view.focus()
+	}
+
 	// ── Preset colours & emoji ────────────────────────────────────────────────
 	const COLORS = [
 		'#ffffff','#d1d5db','#9ca3af','#6b7280','#374151','#111827',
@@ -1875,6 +1979,28 @@
 	</div>
 	{/if}
 
+	<!-- ── Bulle d'un lien Nodyx : Carte | Lien simple | Texte brut ──────────── -->
+	{#if linkHit}
+	<div class="nodyx-bubble nx-link-bubble {linkBubbleBelow ? 'below' : ''}" style="top:{linkBubbleTop}px; left:{linkBubbleLeft}px;" role="group" aria-label={tFn('editor.link_view.aria')}>
+		<button type="button" class="nb-btn {!linkHit.off ? 'active' : ''}" aria-pressed={!linkHit.off}
+			onmousedown={(e) => e.preventDefault()} onclick={() => setLinkView('card')}>
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="7" y1="10" x2="17" y2="10"/><line x1="7" y1="14" x2="13" y2="14"/></svg>
+			<span>{tFn('editor.link_view.card')}</span>
+		</button>
+		<button type="button" class="nb-btn {linkHit.off ? 'active' : ''}" aria-pressed={linkHit.off}
+			onmousedown={(e) => e.preventDefault()} onclick={() => setLinkView('link')}>
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+			<span>{tFn('editor.link_view.link')}</span>
+		</button>
+		<button type="button" class="nb-btn" aria-pressed="false"
+			onmousedown={(e) => e.preventDefault()} onclick={() => setLinkView('raw')}>
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+			<span>{tFn('editor.link_view.raw')}</span>
+		</button>
+		<span class="nb-hint">{tFn('editor.link_view.undo_hint')}</span>
+	</div>
+	{/if}
+
 	<!-- ── Envoi d'une image collée ou déposée ─────────────────────────────── -->
 	{#if pasteUploading > 0 || pasteError}
 	<div class="px-4 py-1.5 border-t border-gray-800 themed:border-[var(--nx-border)] text-xs flex items-center gap-2" role="status" aria-live="polite">
@@ -1914,6 +2040,19 @@
 	:global(.nodyx-bubble.below) {
 		transform: translate(-50%, 8px);
 	}
+	/* Bulle d'un lien Nodyx : alignée sur le DÉBUT du lien, pas centrée */
+	:global(.nodyx-bubble.nx-link-bubble)       { transform: translate(0, calc(-100% - 8px)); }
+	:global(.nodyx-bubble.nx-link-bubble.below) { transform: translate(0, 8px); }
+	:global(.nb-hint) { font-size: 0.7rem; color: rgb(156 163 175); padding: 0 0.5rem 0 0.35rem; white-space: nowrap; }
+	@media (max-width: 520px) { :global(.nb-hint) { display: none; } }
+	/* Aperçu des cartes sous la ligne : ni cliquable ni éditable (ce n'est qu'un aperçu) */
+	:global(.nx-ed-cards) { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px; pointer-events: none; user-select: none; white-space: normal; }
+	/* Plus précis que « .nodyx-content .tiptap a » (app.css), qui soulignerait le titre */
+	:global(.nodyx-content .tiptap .nx-ed-cards a.lc-title) { text-decoration: none; color: var(--nx-text, inherit); }
+	:global(.nodyx-content .tiptap .nx-ed-cards a.lc-go) { color: var(--nx-header-accent, #f59e0b); }
+	/* Pas de bouton dans l'aperçu : on n'agit pas sur une carte pendant qu'on écrit */
+	:global(.nx-ed-cards .lc-btn) { display: none; }
+	:global(.nx-ed-card.active .lc-card) { outline: 2px solid var(--nx-header-accent, #f59e0b); outline-offset: 2px; }
 	@keyframes nb-pop {
 		from { opacity: 0; }
 		to   { opacity: 1; }
