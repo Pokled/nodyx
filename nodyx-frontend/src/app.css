@@ -1265,8 +1265,14 @@ select option {
 }
 .nx-mention:hover, .nx-mention:focus-visible { background: color-mix(in srgb, var(--nx-info, #3b82f6) 24%, transparent); outline: none; }
 .nx-mention:focus-visible { box-shadow: 0 0 0 2px var(--nx-header-accent, #f59e0b); }
-.nx-mention-av { display: inline-block; width: 16px; height: 16px; margin-right: 4px; vertical-align: -0.22em; border-radius: 5px; color: #fff; font-size: 9px; line-height: 16px; text-align: center; font-weight: 700; overflow: hidden; }
-.nx-mention-av img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* Avatar centré sur le texte de la puce (écart mesuré ≤ 0,5 px, banc du 13/11). */
+.nx-mention-av { display: inline-block; width: 16px; height: 16px; margin-right: 4px; vertical-align: -0.33em; border-radius: 5px; color: #fff; font-size: 9px; line-height: 16px; text-align: center; font-weight: 700; overflow: hidden; }
+/* Plus précis que « .nodyx-prose img » (marges, hauteur auto, coins, ombre) qui poussait
+   l'image hors de sa case : on ne voyait qu'une mince bande en bas (vu par Jonathan le 13/11). */
+.nodyx-prose .nx-mention .nx-mention-av img, .nx-mention .nx-mention-av img {
+  display: block; width: 16px; height: 16px; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; object-fit: cover;
+}
 .nx-mention.nx-mention-me { background: color-mix(in srgb, var(--nx-header-accent, #f59e0b) 24%, transparent); color: var(--nx-text); }
 .nx-mention.nx-mention-gone { cursor: default; padding-left: 6px; background: color-mix(in srgb, var(--nx-text, #fff) 7%, transparent); color: var(--nx-text-muted); font-style: italic; }
 /* !important : la ligne du chat pose son fond en style direct (et le change au survol) */
