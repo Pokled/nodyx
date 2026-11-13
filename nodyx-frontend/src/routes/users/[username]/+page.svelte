@@ -15,6 +15,9 @@
 	import { openReport } from '$lib/report'
 	import { can } from '$lib/permissions'
 	import { untrack } from 'svelte'
+	import LinkCards from '$lib/components/LinkCards.svelte'
+	import { createSoleSet } from '$lib/linkCardsSole.svelte'
+	const sole = createSoleSet() // D40 : messages réduits à leur carte
 
 	const tFn = $derived($t)
 
@@ -855,7 +858,8 @@
 							role="link" tabindex="0"
 							onclick={(e) => { if (!(e.target as HTMLElement).closest('a, button')) goto(`/status/${post.id}`) }}
 							onkeydown={(e) => { if (e.key === 'Enter') goto(`/status/${post.id}`) }}>
-							<div class="profile-post-text nodyx-prose">{@html post.content}</div>
+							<div class="profile-post-text nodyx-prose" hidden={sole.has(post.id)}>{@html post.content}</div>
+							<LinkCards html={post.content ?? ''} token={(page.data as any)?.token ?? null} onsole={(v) => sole.set(post.id, v)} />
 							{#if post.media_url}
 								<img src={post.media_url} alt="" class="profile-post-media" loading="lazy" />
 							{/if}

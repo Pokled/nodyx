@@ -14,9 +14,7 @@ import { fetchLinkPreview } from '../services/linkPreview'
 import { scanBuffer } from '../services/fileScanner'
 
 // Premier lien http(s) dans le contenu HTML (pour l'aperçu de lien).
-function firstLink(html: string): string | null {
-  return html.match(/<a[^>]+href=["'](https?:\/\/[^"']+)["']/i)?.[1] ?? null
-}
+import { firstExternalLink } from '../utils/firstExternalLink'
 import { db } from '../config/database'
 import { io } from '../socket/io'
 
@@ -196,7 +194,7 @@ export default async function socialRoutes(app: FastifyInstance) {
     // on récupère ses métadonnées Open Graph (fetch SSRF-safe, borné).
     let linkPreview = null
     if (!media_url) {
-      const link = firstLink(safeContent)
+      const link = firstExternalLink(safeContent)
       if (link) linkPreview = await fetchLinkPreview(link).catch(() => null)
     }
 

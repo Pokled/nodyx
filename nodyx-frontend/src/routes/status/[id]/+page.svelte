@@ -4,6 +4,10 @@
 	import { t, escHtml } from '$lib/i18n'
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
 	import type { PageData } from './$types'
+	import LinkCards from '$lib/components/LinkCards.svelte'
+	import { toInternalPath } from '$lib/linkCards'
+	import { createSoleSet } from '$lib/linkCardsSole.svelte'
+	const sole = createSoleSet() // D40 : messages réduits à leur carte
 
 	let { data }: { data: PageData } = $props()
 	const tFn   = $derived($t)
@@ -147,9 +151,12 @@
 			<span class="s-handle">@{p.username} · {timeAgo(p.created_at)}{#if p.reply_to_username && p.reply_to_id !== post.id} · <span class="s-replyto">↳ @{p.reply_to_username}</span>{/if}</span>
 		</div>
 	</div>
-	{#if p.content}<div class="s-text prose-feed">{@html p.content}</div>{/if}
+	{#if p.content}
+		<div class="s-text prose-feed" hidden={sole.has(p.id)}>{@html p.content}</div>
+		<LinkCards html={p.content} {token} onsole={(v) => sole.set(p.id, v)} />
+	{/if}
 	{#if p.media_url}<img src={p.media_url} alt="" class="s-media" loading="lazy" />{/if}
-	{#if p.link_preview}
+	{#if p.link_preview && !toInternalPath(p.link_preview.url, page.url.origin)}
 		<a href={p.link_preview.url} target="_blank" rel="noopener noreferrer nofollow" class="s-link">
 			{#if p.link_preview.image}<img src={p.link_preview.image} alt="" class="s-link-img" />{/if}
 			<div class="s-link-body">

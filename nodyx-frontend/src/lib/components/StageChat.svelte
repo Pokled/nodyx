@@ -24,6 +24,9 @@
     import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte'
     import { t } from '$lib/i18n'
     import { messagesVisibles } from '$lib/chatFil'
+	import LinkCards from '$lib/components/LinkCards.svelte'
+	import { createSoleSet } from '$lib/linkCardsSole.svelte'
+	const sole = createSoleSet() // D40 : messages réduits à leur carte
 
     const tFn = $derived($t)
 
@@ -270,9 +273,10 @@
                                 </div>
                             {/if}
                         </div>
-                        <div class="stage-msg break-words text-[13px]" style="color: rgb(209,213,219)">
+                        <div class="stage-msg break-words text-[13px]" style="color: rgb(209,213,219)" hidden={sole.has(msg.id)}>
                             {@html renderCustomEmojis(linkifyHtml(msg.content ?? ''), emojis)}
                         </div>
+                        <div class="stage-cards"><LinkCards html={msg.content ?? ''} token={(page.data as any)?.token ?? null} onsole={(v) => sole.set(msg.id, v)} /></div>
                     </div>
                 </div>
             {/if}
@@ -360,6 +364,14 @@
 {/if}
 
 <style>
+    /* Le chat d'un salon vocal est toujours sombre : ses cartes aussi, quel que soit le
+       thème du site (sinon une carte blanche sur le panneau sombre). */
+    .stage-cards {
+        --nx-surface: rgb(31 41 55); --nx-text: rgb(229 231 235);
+        --nx-text-muted: rgb(156 163 175); --nx-text-faint: rgb(107 114 128);
+        color-scheme: dark;
+    }
+
     /* Le contenu vient de l'éditeur (HTML assaini côté serveur) : on borne juste
        ce qui pourrait casser la colonne étroite du panneau. */
     .stage-msg :global(p)   { margin: 0; }
