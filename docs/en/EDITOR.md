@@ -94,4 +94,4 @@ Re-click Anchor on the section, or anchor any section again, and the menu is reb
 
 ---
 
-*Editor component: [`nodyx-frontend/src/lib/components/editor/NodyxEditor.svelte`](https://github.com/Pokled/nodyx/blob/main/nodyx-frontend/src/lib/components/editor/NodyxEditor.svelte). Robustness audit: [`docs/audits/2026-06-15-editeur-rich.md`](https://github.com/Pokled/nodyx/blob/main/docs/audits/2026-06-15-editeur-rich.md).*
+*Editor component: [`nodyx-frontend/src/lib/components/editor/NodyxEditorCore.svelte`](https://github.com/Pokled/nodyx/blob/main/nodyx-frontend/src/lib/components/editor/NodyxEditorCore.svelte). Robustness audit: [`docs/audits/2026-06-15-editeur-rich.md`](https://github.com/Pokled/nodyx/blob/main/docs/audits/2026-06-15-editeur-rich.md).*

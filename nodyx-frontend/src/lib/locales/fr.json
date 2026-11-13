@@ -6596,5 +6596,7 @@
   "og2.g_raid_p2": "Il se baisse tout seul au bout de 30 minutes. Toute l'équipe de modération peut le lever ou le baisser, même OctoGuard éteint.",
   "og2.g_raid_p3": "OctoGuard allumé, il repère la vague et te prévient. Tu peux même l'autoriser à lever le bouclier tout seul.",
   "auth.register.username_chars": "Ton pseudo ne peut pas contenir ces signes : < > \" ' ` & / \\. Les lettres, les chiffres, les accents, les espaces et - . _ @ sont permis.",
-  "event.cover_invalid": "L'image de couverture doit être envoyée ici, sur la communauté. Utilise le bouton pour choisir une image."
+  "event.cover_invalid": "L'image de couverture doit être envoyée ici, sur la communauté. Utilise le bouton pour choisir une image.",
+  "editor.load_failed": "L'éditeur n'a pas pu se charger. Tu peux écrire ici en texte simple, rien ne sera perdu.",
+  "editor.load_failed_reload": "Recharger l'éditeur"
 }

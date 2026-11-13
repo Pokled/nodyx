@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import Link from '@tiptap/extension-link'
 
-const COMPOSANT = new URL('./components/editor/NodyxEditor.svelte', import.meta.url).pathname
+const COMPOSANT = new URL('./components/editor/NodyxEditorCore.svelte', import.meta.url).pathname
 const src = readFileSync(COMPOSANT, 'utf-8')
 
 describe("le danger vient du paquet, pas de notre code", () => {

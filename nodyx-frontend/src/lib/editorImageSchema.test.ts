@@ -17,7 +17,7 @@ import { getSchema } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 
-const COMPOSANT = new URL('./components/editor/NodyxEditor.svelte', import.meta.url).pathname
+const COMPOSANT = new URL('./components/editor/NodyxEditorCore.svelte', import.meta.url).pathname
 
 /** Le schéma tel que ProseMirror le construira, avec l'option testée. */
 function schemaAvec(inline: boolean) {

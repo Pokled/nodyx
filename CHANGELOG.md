@@ -239,6 +239,13 @@ le champ pour être corrigé.
   l'envoi sans prévenir, et une vidéo refusée laissait une boîte vide dans le message. Le chat
   et les messages privés utilisent maintenant les mêmes règles que le forum, avec une seule
   différence : les titres n'y portent pas d'ancre.
+- **Toutes les pages sont plus légères.** L'éditeur de texte était chargé par chaque page de
+  Nodyx, même celles où l'on n'écrit rien, l'accueil compris : environ 40 Ko compressés de trop
+  à chaque visite. Il ne se charge plus que là où il s'affiche. Si son chargement échoue (une
+  page restée ouverte pendant une mise à jour, par exemple), un champ texte simple prend le
+  relais, pré-rempli, pour ne jamais perdre ce qu'on écrit.
+  Dans l'éditeur lui-même, la coloration du code (environ 50 Ko) n'est plus chargée qu'au
+  premier bloc de code : écrire un message sans code ne la télécharge plus.
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
   recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
   y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde
