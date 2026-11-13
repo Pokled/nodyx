@@ -158,9 +158,51 @@
 		const { default: Placeholder }           = await import('@tiptap/extension-placeholder')
 		const { default: CharacterCount }        = await import('@tiptap/extension-character-count')
 		const { CodeBlockLowlight }              = await import('@tiptap/extension-code-block-lowlight')
-		const { common, createLowlight }         = await import('lowlight')
 
-		const lowlight = createLowlight(common)
+		// ── Coloration du code, chargée au PREMIER bloc de code ───────────────
+		// lowlight + ses 37 langages pèsent ~50 Ko (gzip) : les charger à l'ouverture
+		// de l'éditeur, c'est les faire payer à chaque message, même sans code. Le
+		// greffon reçoit d'abord un lowlight « vide » (texte sans couleur), puis le
+		// vrai dès qu'un bloc de code existe (document qui en contient, ou bloc inséré).
+		// Le langage est DEVINÉ (pas de choix de langage) : il faut donc tous les
+		// langages d'un coup, pas un par un.
+		type LowlightLike = {
+			highlight: (lang: string, value: string) => any
+			highlightAuto: (value: string) => any
+			listLanguages: () => string[]
+			registered: (lang: string) => boolean
+		}
+		let realLowlight: LowlightLike | null = null
+		const plain = (value: string) => ({ type: 'root', children: [{ type: 'text', value }] })
+		const lowlight: LowlightLike = {
+			highlight:     (lang, value) => realLowlight ? realLowlight.highlight(lang, value) : plain(value),
+			highlightAuto: (value)       => realLowlight ? realLowlight.highlightAuto(value) : plain(value),
+			listLanguages: ()            => realLowlight ? realLowlight.listLanguages() : [],
+			registered:    (lang)        => realLowlight ? realLowlight.registered(lang) : false,
+		}
+		let grammarsRequested = false
+		function hasCodeBlock(doc: any): boolean {
+			let found = false
+			doc.descendants((node: any) => { if (found) return false; if (node.type.name === 'codeBlock') found = true })
+			return found
+		}
+		function ensureCodeColors(ed: any) {
+			if (grammarsRequested || !hasCodeBlock(ed.state.doc)) return
+			grammarsRequested = true
+			import('lowlight').then(({ common, createLowlight }) => {
+				realLowlight = createLowlight(common)
+				if (ed.isDestroyed) return
+				// Forcer le greffon à recolorer : un « setNodeMarkup » sans changement sur
+				// chaque bloc de code est une modification du document qui touche ces
+				// blocs (seule condition de recalcul du greffon), sans entrée d'annulation.
+				const tr = ed.state.tr
+				ed.state.doc.descendants((node: any, pos: number) => {
+					if (node.type.name === 'codeBlock') tr.setNodeMarkup(pos, undefined, node.attrs)
+				})
+				tr.setMeta('addToHistory', false)
+				ed.view.dispatch(tr)
+			}).catch(() => { grammarsRequested = false })
+		}
 
 		// ── Custom Image with alignment ──────────────────────────────────────
 		const AlignableImage = Image.extend({
@@ -685,7 +727,8 @@
 				NodyxTerm, TwitchLive,
 			],
 			content: initialContent,
-			onTransaction() { syncActive(); syncBubble() },
+			onCreate({ editor: e }) { ensureCodeColors(e) },
+			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); if (transaction.docChanged) ensureCodeColors(e) },
 			onUpdate({ editor: e }) {
 				html = e.getHTML()
 				charCount = e.storage.characterCount.characters()
