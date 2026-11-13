@@ -244,6 +244,14 @@ le champ pour être corrigé.
   et Refaire, pour le téléphone où il n'y a pas de Ctrl+Z. Et un brouillon automatique, gardé
   dans ton navigateur seulement : en revenant sur la page, l'éditeur te propose de reprendre
   ton texte ou de l'effacer. Le brouillon s'efface à l'envoi et à la déconnexion.
+- **Un lien Nodyx devient une carte.** Partager un sujet, une réponse ou un événement dans le
+  chat ou dans le forum affiche sa carte sous le message : titre, auteur, réponses et tags pour
+  un sujet, extrait pour une réponse, date, lieu, image et participants pour un événement, avec
+  un bouton « Je participe » qu'on défait d'un second clic. La carte est lue au moment où tu la
+  vois, avec tes droits : un contenu supprimé ou qui ne t'est pas ouvert devient « Contenu
+  indisponible », sans rien en révéler. Trois cartes au plus par message, un message qui n'est
+  qu'un lien ne montre que sa carte, et l'auteur d'un message du chat peut retirer la carte (le
+  lien reste) puis la remettre. Les liens vers d'autres sites ne changent pas.
 - **Toutes les pages sont plus légères.** L'éditeur de texte était chargé par chaque page de
   Nodyx, même celles où l'on n'écrit rien, l'accueil compris : environ 40 Ko compressés de trop
   à chaque visite. Il ne se charge plus que là où il s'affiche. Si son chargement échoue (une

@@ -375,7 +375,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       if (!ev[0] || !(await canReadEvent(ev[0], userId))) {
         return reply.status(404).send({ error: 'Evenement introuvable', code: 'EVENT_NOT_FOUND' })
       }
-      if (!ev[0].rsvp_enabled) return reply.status(400).send({ error: 'Les RSVPs ne sont pas actives' })
+      if (!ev[0].rsvp_enabled) return reply.status(400).send({ error: 'Les RSVPs ne sont pas actives', code: 'RSVP_DISABLED' })
 
       if (req.body.status === 'going' && ev[0].max_attendees !== null) {
         const { rows: existing } = await db.query(
@@ -384,7 +384,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
         )
         const alreadyGoing = existing[0]?.status === 'going'
         if (!alreadyGoing && ev[0].going_count >= ev[0].max_attendees) {
-          return reply.status(400).send({ error: "L'evenement est complet" })
+          return reply.status(400).send({ error: "L'evenement est complet", code: 'EVENT_FULL' })
         }
       }
 

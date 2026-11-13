@@ -13,6 +13,8 @@
 	import { bumpEmoji, emojiUsageStore, topEmojis } from '$lib/emojiUsage';
 	import ChannelSidebar from '$lib/components/ChannelSidebar.svelte';
 	import PollCard    from '$lib/components/PollCard.svelte';
+	import LinkCards   from '$lib/components/LinkCards.svelte';
+	import { findInternalLinks, setCardOff, toInternalPath } from '$lib/linkCards';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import VoiceRoom from '$lib/components/VoiceRoom.svelte';
 	import { joinVoice, leaveVoice, voiceStore, startPTT, stopPTT, voiceChannelMembersStore, voiceEventsStore } from '$lib/voice';
@@ -248,6 +250,35 @@
 	// Link preview cache: url → preview data
 	type LinkPreview = { url: string; title: string | null; description: string | null; image: string | null; siteName: string | null };
 	let linkPreviews = $state(new Map<string, LinkPreview | false>());
+	// Cartes « Nodyx relié » : messages réduits à leur carte (D40), et cartes que l'auteur
+	// vient de retirer (D43, « Remettre la carte » reste proposé pendant la session).
+	const ORIGIN     = browser ? location.origin : null; // jamais `location` au rendu serveur
+	let soleIds      = $state(new Set<string>());
+	let cardsRemoved = $state(new Map<string, string[]>());
+
+	function setSole(id: string, sole: boolean) {
+		if (soleIds.has(id) === sole) return;
+		const next = new Set(soleIds);
+		if (sole) next.add(id); else next.delete(id);
+		soleIds = next;
+	}
+
+	function removeCards(msg: Message) {
+		if (!s || !msg.content) return;
+		const paths = findInternalLinks(msg.content, location.origin);
+		if (!paths.length) return;
+		const content = paths.reduce((h, p) => setCardOff(h, p, true, location.origin), msg.content);
+		s.emit('chat:edit', { messageId: msg.id, content });
+		cardsRemoved = new Map(cardsRemoved).set(msg.id, paths);
+	}
+
+	function restoreCards(msg: Message) {
+		const paths = cardsRemoved.get(msg.id);
+		if (!s || !msg.content || !paths) return;
+		const content = paths.reduce((h, p) => setCardOff(h, p, false, location.origin), msg.content);
+		s.emit('chat:edit', { messageId: msg.id, content });
+		const next = new Map(cardsRemoved); next.delete(msg.id); cardsRemoved = next;
+	}
 
 	// Rich editor modal — sert à la fois à composer ET à rééditer un message riche
 	let showRichModal = $state(false);
@@ -619,7 +650,9 @@
 		if (!content) return [];
 		// Strip HTML tags, find bare URLs
 		const text = content.replace(/<[^>]*>/g, ' ');
-		return [...new Set((text.match(URL_RE) ?? []).slice(0, 1))]; // max 1 preview per message
+		// Un lien vers un contenu de CETTE instance a sa carte Nodyx (LinkCards), pas d'aperçu externe
+		const external = (text.match(URL_RE) ?? []).filter(u => !toInternalPath(u, ORIGIN));
+		return [...new Set(external.slice(0, 1))]; // max 1 preview per message
 	}
 
 	// Fetch previews for new messages (only plain-text URL messages)
@@ -1388,12 +1421,20 @@
 							<!-- ── Sondage intégré ── -->
 							<PollCard pollId={msg.poll_id} inline={true} {token} socket={s} />
 						{:else}
-								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: var(--nx-text)">
+								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: var(--nx-text)" hidden={soleIds.has(msg.id)}>
 									{@html renderCustomEmojis(linkifyHtml(msg.content ?? ''), customEmojis)}
 									{#if shouldGroup && msg.edited_at}
 										<span class="text-[9px] italic ml-2" style="color: var(--nx-text-muted)">{tFn('chat.edited')}</span>
 									{/if}
 								</div>
+								<!-- Cartes « Nodyx relié » : sujets, réponses, événements de cette instance -->
+								<LinkCards html={msg.content ?? ''} {token} onsole={(v) => setSole(msg.id, v)} />
+								{#if msg.author_id === userId && cardsRemoved.has(msg.id) && msg.content?.includes('data-card="off"')}
+									<p class="mt-1 text-[11.5px] flex gap-1.5 items-center" style="color: var(--nx-text-faint)">
+										{tFn('link_card.removed_note')}
+										<button type="button" class="underline" style="color: var(--nx-header-accent)" onclick={() => restoreCards(msg)}>{tFn('link_card.restore')}</button>
+									</p>
+								{/if}
 								<!-- Link preview card -->
 								{#each extractUrls(msg.content) as previewUrl (previewUrl)}
 									{@const preview = linkPreviews.get(previewUrl)}
@@ -1492,6 +1533,15 @@
 								        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-text-muted)'}>
 									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
 								</button>
+								{#if msg.author_id === userId && !msg.poll_id && findInternalLinks(msg.content ?? '', ORIGIN).length}
+									<!-- Retirer la carte (D43 : l'auteur seul ; le lien reste) -->
+									<button onclick={() => removeCards(msg)} title={tFn('link_card.remove')} aria-label={tFn('link_card.remove')}
+									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: var(--nx-text-muted)"
+									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}
+									        onmouseleave={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-text-muted)'}>
+										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="9" y1="10" x2="15" y2="16"/><line x1="15" y1="10" x2="9" y2="16"/></svg>
+									</button>
+								{/if}
 								{#if msg.author_id === userId}
 									<!-- Modifier -->
 									<button onclick={() => startEdit(msg)} title={tFn('common.edit')}
