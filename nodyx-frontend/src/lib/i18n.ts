@@ -55,12 +55,16 @@ const messages: Partial<Record<Locale, Record<string, any>>> = {}
 // Bumpé à chaque langue chargée : `t` se recalcule même si la langue ne change pas.
 const loadedVersion = writable(0)
 
-async function loadOne(code: Locale): Promise<void> {
-  if (messages[code]) return
+// Un seul chargement à la fois par langue (deux appels simultanés partagent le même).
+const inflight: Partial<Record<Locale, Promise<void>>> = {}
+function loadOne(code: Locale): Promise<void> {
+  if (messages[code]) return Promise.resolve()
   const loader = loaders[`./locales/${code}.json`]
-  if (!loader) return
-  messages[code] = (await loader()).default
-  loadedVersion.update(n => n + 1)
+  if (!loader) return Promise.resolve()
+  return inflight[code] ??= loader().then(mod => {
+    messages[code] = mod.default
+    loadedVersion.update(n => n + 1)
+  }).finally(() => { delete inflight[code] })
 }
 
 /**
@@ -156,6 +160,13 @@ function getInitialLocale(): Locale {
 
 function createLocaleStore() {
   const { subscribe, set } = writable<Locale>('fr')
+  // Seul le DERNIER choix s'applique : « English » puis vite « Español », si l'anglais
+  // arrive après l'espagnol, on ne repasse pas en anglais. Vaut aussi pour init().
+  let lastAsked = 0
+  const switchTo = (code: Locale, onError: () => void) => {
+    const ticket = ++lastAsked
+    ensureLocale(code).then(() => { if (ticket === lastAsked) set(code) }).catch(() => { if (ticket === lastAsked) onError() })
+  }
 
   return {
     subscribe,
@@ -163,8 +174,7 @@ function createLocaleStore() {
       // Appelé une seule fois côté client (onMount dans +layout.svelte). La langue
       // retenue peut différer de celle du serveur (choix gardé dans le navigateur) :
       // on la charge AVANT de basculer, sinon des clés brutes s'afficheraient.
-      const wanted = getInitialLocale()
-      ensureLocale(wanted).then(() => set(wanted)).catch(() => { /* reste sur la langue du serveur */ })
+      switchTo(getInitialLocale(), () => { /* reste sur la langue du serveur */ })
     },
     setLocale(locale: Locale) {
       if (browser) {
@@ -175,7 +185,7 @@ function createLocaleStore() {
       // Chargée puis appliquée. Si le fichier est introuvable (page ouverte avant une
       // mise à jour, il a changé de nom), on recharge : le cookie est déjà posé, la page
       // revient dans la bonne langue avec les bons fichiers.
-      ensureLocale(locale).then(() => set(locale)).catch(() => { if (browser) location.reload() })
+      switchTo(locale, () => { if (browser) location.reload() })
     },
     /** Set initial locale from SSR data (cookie) — avoids flash on hydration */
     setSSR(locale: Locale) {
