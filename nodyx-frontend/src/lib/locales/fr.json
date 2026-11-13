@@ -6661,5 +6661,10 @@
   "editor.link_view.undo_hint": "Ctrl+Z : comme collé",
   "link_card.replies_zero": "Aucune réponse pour l'instant",
   "link_card.going_zero": "Personne n'est encore inscrit",
-  "link_card.went_zero": "Personne ne s'était inscrit"
+  "link_card.went_zero": "Personne ne s'était inscrit",
+  "link_card.peek": "Voir l'aperçu",
+  "link_card.peek_many": "Voir les {{count}} aperçus",
+  "link_card.peek_why": "Pourquoi ce bouton ?",
+  "link_card.peek_why_text": "Ta conversation est chiffrée : Nodyx ne lit pas vos messages. Pour montrer l'aperçu, ton navigateur demande au serveur ce qu'il y a derrière ce lien. C'est la même chose que d'ouvrir le lien : c'est donc toi qui décides.",
+  "link_card.peek_always": "Toujours afficher les aperçus dans cette conversation (sur cet appareil)"
 }

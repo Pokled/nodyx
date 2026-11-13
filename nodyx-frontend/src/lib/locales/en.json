@@ -6661,5 +6661,10 @@
   "editor.link_view.undo_hint": "Ctrl+Z: as pasted",
   "link_card.replies_zero": "No replies yet",
   "link_card.going_zero": "No one has signed up yet",
-  "link_card.went_zero": "No one signed up"
+  "link_card.went_zero": "No one signed up",
+  "link_card.peek": "Show preview",
+  "link_card.peek_many": "Show the {{count}} previews",
+  "link_card.peek_why": "Why this button?",
+  "link_card.peek_why_text": "This conversation is encrypted: Nodyx can't read your messages. To show the preview, your browser asks the server what's behind this link. It's the same as opening the link, so it's your call.",
+  "link_card.peek_always": "Always show previews in this conversation (on this device)"
 }

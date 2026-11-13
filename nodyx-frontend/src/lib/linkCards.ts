@@ -148,6 +148,63 @@ export function setCardOff(html: string, path: string, off: boolean, origin: str
 	return out
 }
 
+/**
+ * Messages privés (texte brut, pas de HTML) : les liens internes du texte, dans l'ordre,
+ * sans doublon, trois au plus. Lu comme du TEXTE : un « < » dans une phrase ne casse rien.
+ */
+export function findInternalLinksInText(text: string, origin: string | null): string[] {
+	const out: string[] = []
+	for (const u of (text ?? '').match(BARE_URL) ?? []) {
+		const p = toInternalPath(u.replace(/[.,;:!?)\]]+$/, ''), origin)
+		if (p && !out.includes(p)) out.push(p)
+		if (out.length === MAX_CARDS) break
+	}
+	return out
+}
+
+const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'])
+
+/**
+ * Wiki (D48) : découpe un article en blocs de PREMIER niveau ; un paragraphe qui n'est
+ * qu'un lien Nodyx (sans « Lien simple ») porte son chemin, pour qu'une carte prenne sa
+ * place. Les paragraphes dans une liste, une citation ou des colonnes ne sont jamais
+ * détachés de leur conteneur (la structure de la page reste intacte). Recoller les
+ * morceaux redonne exactement le HTML de départ. Un seul passage, sans retour arrière.
+ */
+export function splitSoleLinkBlocks(html: string, origin: string | null): { html: string; path: string | null }[] {
+	const out: { html: string; path: string | null }[] = []
+	if (!html) return out
+	let depth = 0, start = 0, pStart = -1
+	const re = /<\/?([a-z][a-z0-9-]*)\b[^>]*>/gi
+	let m: RegExpExecArray | null
+	const push = (h: string, path: string | null) => {
+		if (!h) return
+		const last = out[out.length - 1]
+		if (!path && last && !last.path) last.html += h
+		else out.push({ html: h, path })
+	}
+	while ((m = re.exec(html))) {
+		const tag = m[1].toLowerCase()
+		const closing = m[0][1] === '/'
+		if (VOID.has(tag) || m[0].endsWith('/>')) continue
+		if (!closing) {
+			if (depth === 0 && tag === 'p') pStart = m.index
+			depth++
+		} else {
+			depth = Math.max(0, depth - 1)
+			if (depth === 0 && tag === 'p' && pStart >= 0) {
+				const end = m.index + m[0].length
+				const para = html.slice(pStart, end)
+				const path = isSoleLink(para, origin) ? findInternalLinks(para, origin)[0] ?? null : null
+				if (path) { push(html.slice(start, pStart), null); push(para, path); start = end }
+				pStart = -1
+			}
+		}
+	}
+	push(html.slice(start), null)
+	return out
+}
+
 // ── Les cartes, telles que le cœur les renvoie (services/linkCards.ts) ──────────────
 
 export interface Person { username: string; avatar: string | null }

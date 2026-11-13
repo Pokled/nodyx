@@ -262,6 +262,13 @@ le champ pour être corrigé.
   serveur allait copier sa propre page) : la carte, à jour, le remplace. Sans réponse ni inscrit,
   une carte le dit en clair (« Aucune réponse pour l'instant », « Personne n'est encore inscrit »)
   au lieu d'un « 0 ».
+- **Les cartes dans le wiki et les messages privés.** Dans une page du wiki, un lien seul sur sa
+  ligne devient une carte, à sa place dans l'article ; un lien dans une phrase reste un lien. Dans
+  un message privé chiffré, aucune carte ne s'affiche toute seule : afficher une carte demande au
+  serveur ce qu'il y a derrière le lien, et Nodyx ne doit pas apprendre ce qui circule dans une
+  conversation qui lui est cachée. Un bouton « Voir l'aperçu » laisse le choix, avec une option
+  « toujours » par conversation, gardée sur ton appareil seulement et effacée à la déconnexion.
+  Les anciens messages non chiffrés ont leurs cartes comme le chat.
 - **Toutes les pages sont plus légères.** L'éditeur de texte était chargé par chaque page de
   Nodyx, même celles où l'on n'écrit rien, l'accueil compris : environ 40 Ko compressés de trop
   à chaque visite. Il ne se charge plus que là où il s'affiche. Si son chargement échoue (une

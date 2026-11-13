@@ -2,12 +2,30 @@
 	import type { PageData } from './$types'
 	import { page } from '$app/state'
 	import { t, locale } from '$lib/i18n'
+	import { onMount } from 'svelte'
+	import LinkCard from '$lib/components/LinkCard.svelte'
+	import { splitSoleLinkBlocks } from '$lib/linkCards'
 
 	const tFn = $derived($t)
 
 	let { data }: { data: PageData } = $props()
 
 	const pg = $derived(data.wikiPage)
+
+	// D48 (« Nodyx relié ») : un lien Nodyx seul sur sa ligne devient une carte, à sa place.
+	// Le serveur rend le lien (lecture sans JavaScript, moteurs de recherche) ; dans le
+	// navigateur, la carte prend sa place une fois affichée. Découpage identique côté
+	// serveur et navigateur (page.url.origin) : pas d'écart à l'hydratation.
+	const blocks = $derived(splitSoleLinkBlocks(pg?.content ?? '', page.url.origin))
+	let mounted = $state(false)
+	onMount(() => { mounted = true })
+	let cardShown = $state(new Set<string>())
+	function setShown(key: string, on: boolean) {
+		if (cardShown.has(key) === on) return
+		const next = new Set(cardShown)
+		if (on) next.add(key); else next.delete(key)
+		cardShown = next
+	}
 	const canEdit = $derived(
 		data.user?.role === 'owner' ||
 		data.user?.role === 'admin' ||
@@ -112,7 +130,17 @@
 
 	<!-- Content — rendered HTML from NodyxEditor -->
 	<div class="nodyx-prose">
-		{@html pg?.content ?? ''}
+		{#each blocks as b, i (`${pg?.id}:${i}`)}
+			{@const key = `${pg?.id}:${i}`}
+			{#if b.path}
+				<div hidden={cardShown.has(key)}>{@html b.html}</div>
+				{#if mounted}
+					<div class="wiki-card"><LinkCard path={b.path} token={(page.data as any)?.token ?? null} onready={(v) => setShown(key, v)} /></div>
+				{/if}
+			{:else}
+				{@html b.html}
+			{/if}
+		{/each}
 	</div>
 
 	<!-- Back link -->
@@ -125,3 +153,8 @@
 		</a>
 	</div>
 </div>
+
+<style>
+	.wiki-card { margin: 0.9rem 0 1.1rem; }
+	.wiki-card :global(.lc-slot) { max-width: 520px; }
+</style>
