@@ -5,42 +5,52 @@
  */
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import sanitizeHtml from 'sanitize-html'
 import { validate } from '../middleware/validate'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth, optionalAuth } from '../middleware/auth'
 import { db } from '../config/database'
 import { io } from '../socket/io'
 import { announceCalendarEvent } from '../services/webhooks/announce'
+import { sanitize } from '../utils/sanitize'
+import { rehostExternalImages } from '../services/inlineImageRehost'
+import { isContainedUploadPath } from '../utils/uploadPath'
+import { canReadEvent } from '../services/eventAccess'
 
-const ALLOWED_TAGS = [
-  'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
-  'h1', 'h2', 'h3', 'h4',
-  'ul', 'ol', 'li',
-  'blockquote', 'hr',
-  'a', 'img',
-  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-  'div', 'span',
-  'iframe',
-]
-
-const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
-  '*':      ['class', 'data-align', 'data-type', 'data-two-cols', 'data-col'],
-  'span':   ['class', 'style', 'data-align', 'data-type'],
-  'p':      ['class', 'style', 'data-align', 'data-type'],
-  'a':      ['href', 'target', 'rel'],
-  'img':    ['src', 'alt', 'width', 'height', 'data-align'],
-  'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
-  'th':     ['rowspan', 'colspan'],
-  'td':     ['rowspan', 'colspan'],
+// La description d'un événement vient de NodyxEditor, comme un message du forum :
+// même nettoyeur (utils/sanitize) et même recopie des images externes. Avant, une
+// liste locale sans filtre d'images ni de domaines bloqués laissait une image
+// d'un autre site en place : chaque lecteur la chargeait chez ce site, qui voyait
+// son adresse IP. Une seule règle pour tous les outils, sinon ils divergent.
+async function cleanDescription(raw: string): Promise<string> {
+  if (!raw) return ''
+  const rehost = await rehostExternalImages(raw)
+  return sanitize(rehost.html)
 }
 
-function sanitize(html: string): string {
-  return sanitizeHtml(html, {
-    allowedTags:       ALLOWED_TAGS,
-    allowedAttributes: ALLOWED_ATTRS,
-  })
+// L'image de couverture est un fichier envoyé SUR l'instance : l'interface l'écrit
+// `${PUBLIC_API_URL}/uploads/...`. Rien d'autre n'est accepté, sinon un appel
+// direct à l'API pose l'image d'un autre site, chargée par chaque lecteur (son
+// adresse IP part chez ce site). Adresse complète acceptée seulement sur l'origine
+// de l'instance (FRONTEND_URL, SELF_URL, et PUBLIC_API_URL quand l'API vit sur un
+// autre domaine que le site : l'image est alors servie par ce domaine-là).
+function ownOrigins(): Set<string> {
+  const out = new Set<string>()
+  for (const v of [process.env.FRONTEND_URL, process.env.SELF_URL, process.env.PUBLIC_API_URL]) {
+    if (!v) continue
+    try { out.add(new URL(v).origin) } catch { /* variable mal formée : ignorée */ }
+  }
+  return out
 }
+
+export function isOwnUploadUrl(value: string): boolean {
+  if (isContainedUploadPath(value)) return true
+  let u: URL
+  try { u = new URL(value) } catch { return false }
+  if (u.username || u.password) return false
+  return ownOrigins().has(u.origin) && isContainedUploadPath(u.pathname)
+}
+
+const COVER_INVALID = { error: 'The cover image must be a file uploaded to this instance', code: 'COVER_URL_INVALID' }
 
 // -- Schemas -------------------------------------------------------------------
 
@@ -54,7 +64,7 @@ const CreateEventSchema = z.object({
   ends_at:         z.string().datetime().nullable().optional(),
   is_all_day:      z.boolean().optional().default(false),
   is_public:       z.boolean().optional().default(true),
-  cover_url:       z.string().nullable().optional(),
+  cover_url:       z.string().max(2048).nullable().optional(),
   tags:            z.array(z.string().max(50)).max(10).optional().default([]),
   rsvp_enabled:    z.boolean().optional().default(false),
   max_attendees:   z.number().int().positive().nullable().optional(),
@@ -160,7 +170,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
               e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
               e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
-              e.created_at, e.updated_at,
+              e.created_at, e.updated_at, e.community_id,
               u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
               (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going')    AS going_count,
               (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'maybe')   AS maybe_count,
@@ -170,7 +180,12 @@ export default async function eventsRoutes(app: FastifyInstance) {
        WHERE e.id = $1`,
       [req.params.id, userId]
     )
-    if (!rows[0]) return reply.status(404).send({ error: 'Evenement introuvable' })
+    // Privé et lecteur non membre : 404 comme un événement inexistant, pour ne pas
+    // confirmer qu'il existe.
+    if (!rows[0] || !(await canReadEvent(rows[0], userId))) {
+      return reply.status(404).send({ error: 'Evenement introuvable', code: 'EVENT_NOT_FOUND' })
+    }
+    const { community_id: _community, ...event } = rows[0]
 
     let attendees: any[] = []
     if (rows[0].rsvp_enabled) {
@@ -184,7 +199,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
     }
 
     const canManage = userId ? await canManageEvent(userId, req.params.id) : false
-    return reply.send({ event: { ...rows[0], can_manage: canManage }, attendees })
+    return reply.send({ event: { ...event, can_manage: canManage }, attendees })
   })
 
   // POST /events
@@ -201,7 +216,9 @@ export default async function eventsRoutes(app: FastifyInstance) {
       )
       if (!comm[0]) return reply.status(400).send({ error: "Tu dois faire partie d'une communauté" })
 
-      const description = sanitize(body.description ?? '')
+      if (body.cover_url && !isOwnUploadUrl(body.cover_url)) return reply.status(400).send(COVER_INVALID)
+
+      const description = await cleanDescription(body.description ?? '')
 
       const { rows } = await db.query(
         `INSERT INTO events
@@ -244,6 +261,15 @@ export default async function eventsRoutes(app: FastifyInstance) {
       }
 
       const body = req.body
+      // Couverture vérifiée AVANT tout travail (recopie des images de la description).
+      // Le formulaire renvoie toujours la couverture actuelle : une ancienne couverture
+      // posée avant cette règle (autre domaine de l'instance, par exemple) reste acceptée
+      // tant qu'on n'y touche pas, sinon modifier le vieil événement deviendrait impossible.
+      if (body.cover_url && !isOwnUploadUrl(body.cover_url)) {
+        const { rows: cur } = await db.query<{ cover_url: string | null }>(
+          `SELECT cover_url FROM events WHERE id = $1`, [req.params.id])
+        if (cur[0]?.cover_url !== body.cover_url) return reply.status(400).send(COVER_INVALID)
+      }
       const sets: string[] = []
       const vals: any[]    = []
 
@@ -253,7 +279,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       }
 
       if (body.title           !== undefined) addField('title',           body.title?.trim())
-      if (body.description     !== undefined) addField('description',     sanitize(body.description ?? ''))
+      if (body.description     !== undefined) addField('description',     await cleanDescription(body.description ?? ''))
       if (body.location        !== undefined) addField('location',        body.location)
       if (body.location_lat    !== undefined) addField('location_lat',    body.location_lat)
       if (body.location_lng    !== undefined) addField('location_lng',    body.location_lng)
@@ -309,12 +335,14 @@ export default async function eventsRoutes(app: FastifyInstance) {
       const userId = (req as any).user.userId
 
       const { rows: ev } = await db.query(
-        `SELECT id, rsvp_enabled, max_attendees,
+        `SELECT id, rsvp_enabled, max_attendees, is_public, community_id,
                 (SELECT COUNT(*)::int FROM event_rsvps WHERE event_id = $1 AND status = 'going') AS going_count
          FROM events WHERE id = $1`,
         [req.params.id]
       )
-      if (!ev[0]) return reply.status(404).send({ error: 'Evenement introuvable' })
+      if (!ev[0] || !(await canReadEvent(ev[0], userId))) {
+        return reply.status(404).send({ error: 'Evenement introuvable', code: 'EVENT_NOT_FOUND' })
+      }
       if (!ev[0].rsvp_enabled) return reply.status(400).send({ error: 'Les RSVPs ne sont pas actives' })
 
       if (req.body.status === 'going' && ev[0].max_attendees !== null) {

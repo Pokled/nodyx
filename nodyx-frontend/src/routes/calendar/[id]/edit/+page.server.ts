@@ -74,7 +74,10 @@ export const actions: Actions = {
 		});
 
 		const json = await res.json();
-		if (!res.ok) return fail(res.status, { error: json.error });
+		if (!res.ok) {
+			if (json.code === 'COVER_URL_INVALID') return fail(res.status, { errorKey: 'event.cover_invalid' });
+			return fail(res.status, { error: json.error });
+		}
 
 		redirect(303, `/calendar/${params.id}`);
 	},
