@@ -6598,5 +6598,14 @@
   "auth.register.username_chars": "Your username can't contain these signs: < > \" ' ` & / \\. Letters, numbers, accents, spaces and - . _ @ are fine.",
   "event.cover_invalid": "The cover image must be uploaded here, to this community. Use the button to pick an image.",
   "editor.load_failed": "The editor couldn't load. You can write here in plain text, nothing will be lost.",
-  "editor.load_failed_reload": "Reload the editor"
+  "editor.load_failed_reload": "Reload the editor",
+  "editor.paste_uploading": "Uploading the image…",
+  "editor.paste_failed": "The image couldn't be uploaded: {{reason}}",
+  "editor.paste_network": "connection lost",
+  "editor.paste_dismiss": "Dismiss",
+  "editor.undo": "Undo (Ctrl+Z)",
+  "editor.redo": "Redo (Ctrl+Y)",
+  "editor.draft_offer": "You have an unsent draft, saved on {{when}}.",
+  "editor.draft_restore": "Restore",
+  "editor.draft_discard": "Discard"
 }

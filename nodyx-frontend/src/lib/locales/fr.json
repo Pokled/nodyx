@@ -6598,5 +6598,14 @@
   "auth.register.username_chars": "Ton pseudo ne peut pas contenir ces signes : < > \" ' ` & / \\. Les lettres, les chiffres, les accents, les espaces et - . _ @ sont permis.",
   "event.cover_invalid": "L'image de couverture doit être envoyée ici, sur la communauté. Utilise le bouton pour choisir une image.",
   "editor.load_failed": "L'éditeur n'a pas pu se charger. Tu peux écrire ici en texte simple, rien ne sera perdu.",
-  "editor.load_failed_reload": "Recharger l'éditeur"
+  "editor.load_failed_reload": "Recharger l'éditeur",
+  "editor.paste_uploading": "Envoi de l'image…",
+  "editor.paste_failed": "L'image n'a pas pu être envoyée : {{reason}}",
+  "editor.paste_network": "connexion interrompue",
+  "editor.paste_dismiss": "Fermer",
+  "editor.undo": "Annuler (Ctrl+Z)",
+  "editor.redo": "Refaire (Ctrl+Y)",
+  "editor.draft_offer": "Tu as un brouillon non envoyé, enregistré le {{when}}.",
+  "editor.draft_restore": "Reprendre",
+  "editor.draft_discard": "Effacer"
 }

@@ -5,6 +5,7 @@
 	import { anchoredPopover } from '$lib/actions/anchoredPopover'
 	import { t } from '$lib/i18n'
 	import { TextSelection } from '@tiptap/pm/state'
+	import { draftKey, readDraft, writeDraft, removeDraft } from '$lib/editorDrafts'
 
 	let {
 		name       = 'content',
@@ -113,7 +114,7 @@
 		bullet: false, ordered: false,
 		quote: false, codeBlock: false, link: false,
 		left: false, center: false, right: false, justify: false,
-		table: false,
+		table: false, canUndo: false, canRedo: false,
 	})
 
 	function syncActive() {
@@ -137,6 +138,8 @@
 			right:    editor.isActive({ textAlign: 'right' }),
 			justify:  editor.isActive({ textAlign: 'justify' }),
 			table:    editor.isActive('table'),
+			canUndo:  editor.can().undo(),
+			canRedo:  editor.can().redo(),
 		}
 	}
 
@@ -727,17 +730,86 @@
 				NodyxTerm, TwitchLive,
 			],
 			content: initialContent,
+			editorProps: {
+				handlePaste(_view: any, event: ClipboardEvent) {
+					const files = imageFilesOf(event.clipboardData)
+					// Du texte avec ? C'est un morceau de page : collage normal.
+					if (!files.length || (event.clipboardData?.getData('text/plain') ?? '').trim()) return false
+					event.preventDefault()
+					uploadAndInsertImages(files, null)
+					return true
+				},
+				handleDrop(view: any, event: DragEvent, _slice: any, moved: boolean) {
+					if (moved) return false
+					const files = imageFilesOf(event.dataTransfer)
+					if (!files.length) return false
+					event.preventDefault()
+					const at = view.posAtCoords({ left: event.clientX, top: event.clientY })
+					uploadAndInsertImages(files, at ? at.pos : null)
+					return true
+				},
+			},
 			onCreate({ editor: e }) { ensureCodeColors(e) },
 			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); if (transaction.docChanged) ensureCodeColors(e) },
 			onUpdate({ editor: e }) {
 				html = e.getHTML()
 				charCount = e.storage.characterCount.characters()
 				onchange(html)
+				scheduleDraft(html)
 			},
 		})
 
 		syncActive()
+		setupDraft()
 	})
+
+	// ── Brouillon automatique (lib/editorDrafts.ts) ──────────────────────────
+	// Seulement dans un formulaire : c'est lui qui dit « envoyé » (événement submit).
+	// Un brouillon trouvé au retour est PROPOSÉ (gardé en mémoire pour « Reprendre »
+	// pendant toute la visite). Si la personne écrit sans répondre, CE QU'ELLE ÉCRIT
+	// est enregistré : le travail le plus récent gagne, rien de ce qu'elle tape ne se
+	// perd en fermant l'onglet.
+	let draftOffer = $state<{ html: string; at: number } | null>(null)
+	let draftStore: string | null = null
+	let draftTimer: ReturnType<typeof setTimeout> | null = null
+	let draftPending: string | null = null
+	function flushDraft() {
+		if (draftTimer) { clearTimeout(draftTimer); draftTimer = null }
+		if (draftStore && draftPending !== null) writeDraft(draftStore, draftPending)
+		draftPending = null
+	}
+	function scheduleDraft(h: string) {
+		if (!draftStore) return
+		draftPending = h
+		if (draftTimer) clearTimeout(draftTimer)
+		draftTimer = setTimeout(flushDraft, 800)
+	}
+	function setupDraft() {
+		const form = wrapperEl?.closest('form')
+		if (!form) return
+		draftStore = draftKey(location.pathname, name)
+		const d = readDraft(draftStore)
+		if (d && d.html !== initialContent) draftOffer = d
+		form.addEventListener('submit', () => {
+			if (draftTimer) { clearTimeout(draftTimer); draftTimer = null }
+			draftPending = null
+			if (draftStore) removeDraft(draftStore)
+		})
+		window.addEventListener('pagehide', flushDraft)
+	}
+	function restoreDraft() {
+		if (!draftOffer || !editor) return
+		const h = draftOffer.html
+		draftOffer = null
+		editor.commands.setContent(h, { emitUpdate: true })
+	}
+	function discardDraft() {
+		if (draftStore) removeDraft(draftStore)
+		draftOffer = null
+	}
+	const draftWhen = $derived(draftOffer
+		? new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(draftOffer.at)
+		: '')
 
 	// ── Close popups when clicking outside the editor ─────────────────────────
 	function onDocClick(e: MouseEvent) {
@@ -769,7 +841,11 @@
 		}
 	})
 
-	onDestroy(() => editor?.destroy())
+	onDestroy(() => {
+		flushDraft()
+		if (typeof window !== 'undefined') window.removeEventListener('pagehide', flushDraft)
+		editor?.destroy()
+	})
 
 	// ── Toolbar commands (shortcuts to editor chain) ──────────────────────────
 	const run = (fn: () => void) => { fn(); showColor = showEmoji = showLink = showImage = showVideo = showAudio = showTable = false }
@@ -840,6 +916,41 @@
 		audioStaged = []
 		if (audioFileEl) audioFileEl.value = ''
 		if (audioCoverFileEl) audioCoverFileEl.value = ''
+	}
+
+	// ── Coller ou déposer une image (capture d'écran, fichier) ───────────────
+	// Avant : rien ne se passait. Une image SEULE dans le presse-papiers (capture) ou
+	// déposée est envoyée sur l'instance (/social/upload : vérifiée, convertie en webp),
+	// puis insérée. Un morceau de page web (texte + images) garde le collage normal.
+	let pasteUploading = $state(0)
+	let pasteError     = $state('')
+	const MAX_PASTED_IMAGES = 5
+	function imageFilesOf(dt: DataTransfer | null): File[] {
+		if (!dt) return []
+		return Array.from(dt.files ?? []).filter(f => f.type.startsWith('image/')).slice(0, MAX_PASTED_IMAGES)
+	}
+	async function uploadAndInsertImages(files: File[], pos: number | null) {
+		pasteError = ''
+		for (const file of files) {
+			pasteUploading++
+			try {
+				const fd = new FormData()
+				fd.append('file', file)
+				const res = await apiFetch(fetch, '/social/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+				const j = await res.json().catch(() => ({}))
+				if (!res.ok || !j.url) { pasteError = tFn('editor.paste_failed', { reason: j.error ?? String(res.status) }); continue }
+				const attrs = { src: j.url, alt: '', class: 'mx-auto block', 'data-align': 'center', align: 'center' }
+				if (pos !== null && editor) {
+					editor.chain().focus().insertContentAt(pos, { type: 'image', attrs }).run()
+				} else {
+					editor?.chain().focus().setImage(attrs).run()
+				}
+			} catch {
+				pasteError = tFn('editor.paste_failed', { reason: tFn('editor.paste_network') })
+			} finally {
+				pasteUploading--
+			}
+		}
 	}
 
 	async function uploadBlobToPosts(blob: Blob, filename: string): Promise<string | null> {
@@ -1250,6 +1361,20 @@
 		}}
 	>
 
+		<!-- Annuler / refaire : avant, seulement au clavier, donc rien sur téléphone -->
+		<div class="flex items-center gap-0.5">
+			<button type="button" onclick={() => editor?.chain().focus().undo().run()} disabled={!a.canUndo}
+				class="tb-btn disabled:opacity-30 disabled:cursor-default" title={tFn('editor.undo')} aria-label={tFn('editor.undo')}>
+				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11"/></svg>
+			</button>
+			<button type="button" onclick={() => editor?.chain().focus().redo().run()} disabled={!a.canRedo}
+				class="tb-btn disabled:opacity-30 disabled:cursor-default" title={tFn('editor.redo')} aria-label={tFn('editor.redo')}>
+				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 000 11H13"/></svg>
+			</button>
+		</div>
+
+		<div class="tb-sep"></div>
+
 		<!-- Inline formatting -->
 		<div class="flex items-center gap-0.5">
 			<button type="button" onclick={() => toggleAny('bold')}      class="tb-btn {a.bold      ? 'active' : ''}" title={tFn('editor.bold')}>         <b>B</b></button>
@@ -1604,6 +1729,17 @@
 	</div>
 	{/if}
 
+	<!-- ── Brouillon trouvé : proposé, jamais imposé ──────────────────────── -->
+	{#if draftOffer}
+	<div class="px-4 py-2 border-b border-gray-800 themed:border-[var(--nx-border)] text-xs flex flex-wrap items-center gap-2 bg-[color-mix(in_srgb,var(--nx-header-accent)_8%,transparent)]" role="status">
+		<span class="text-[var(--nx-text)]">{tFn('editor.draft_offer', { when: draftWhen })}</span>
+		<span class="ml-auto flex gap-2">
+			<button type="button" onclick={restoreDraft} class="px-2.5 py-1 rounded-md bg-[var(--nx-header-accent)] text-white font-medium">{tFn('editor.draft_restore')}</button>
+			<button type="button" onclick={discardDraft} class="px-2.5 py-1 rounded-md border border-[var(--nx-border)] text-[var(--nx-text-muted)]">{tFn('editor.draft_discard')}</button>
+		</span>
+	</div>
+	{/if}
+
 	<!-- ── Tiptap content area ──────────────────────────────────────────── -->
 	<div
 		bind:this={editorEl}
@@ -1624,6 +1760,18 @@
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.4"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12a7 7 0 0014 0"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>
 			<span>{blockIsAnchored ? tFn('editor.anchor.anchored') : tFn('editor.anchor.anchor')}</span>
 		</button>
+	</div>
+	{/if}
+
+	<!-- ── Envoi d'une image collée ou déposée ─────────────────────────────── -->
+	{#if pasteUploading > 0 || pasteError}
+	<div class="px-4 py-1.5 border-t border-gray-800 themed:border-[var(--nx-border)] text-xs flex items-center gap-2" role="status" aria-live="polite">
+		{#if pasteUploading > 0}
+			<span class="text-[var(--nx-text-muted)]">{tFn('editor.paste_uploading')}</span>
+		{:else}
+			<span class="text-[var(--nx-bad)]">{pasteError}</span>
+			<button type="button" class="ml-auto text-[var(--nx-text-muted)] hover:underline" onclick={() => pasteError = ''}>{tFn('editor.paste_dismiss')}</button>
+		{/if}
 	</div>
 	{/if}
 
