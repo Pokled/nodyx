@@ -40,19 +40,37 @@ export const LOCALES: LocaleMeta[] = [
 
 // ── Messages ──────────────────────────────────────────────────────────────────
 
-// Import statique — tree-shaken, résolu au build
-import fr from './locales/fr.json'
-import en from './locales/en.json'
-import es from './locales/es.json'
-import de from './locales/de.json'
-import ru from './locales/ru.json'
-import ptPT from './locales/pt-PT.json'
-import ptBR from './locales/pt-BR.json'
-import vi from './locales/vi.json'
-import zhHans from './locales/zh-Hans.json'
+// Chargées À LA DEMANDE. Importées en dur, les 9 langues (~1,5 Mo brut, ~437 Ko gzip)
+// partaient avec CHAQUE page, alors qu'un visiteur n'en lit qu'une (mesuré le
+// 13/11/2026). Chaque fichier devient un bloc séparé : la page ne télécharge que la
+// langue affichée, plus l'anglais quand elle n'est pas complète (repli universel).
+// Le layout (+layout.ts) attend la langue AVANT le rendu : ni clé brute affichée, ni
+// décalage d'hydratation. La page /translate, qui compte les traductions, garde ses
+// propres imports (translationProgress.ts) : elle a vraiment besoin des neuf.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const loaders = import.meta.glob<{ default: Record<string, any> }>('./locales/*.json')
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const messages: Record<Locale, Record<string, any>> = { fr, en, es, de, ru, 'pt-PT': ptPT, 'pt-BR': ptBR, vi, 'zh-Hans': zhHans }
+const messages: Partial<Record<Locale, Record<string, any>>> = {}
+// Bumpé à chaque langue chargée : `t` se recalcule même si la langue ne change pas.
+const loadedVersion = writable(0)
+
+async function loadOne(code: Locale): Promise<void> {
+  if (messages[code]) return
+  const loader = loaders[`./locales/${code}.json`]
+  if (!loader) return
+  messages[code] = (await loader()).default
+  loadedVersion.update(n => n + 1)
+}
+
+/**
+ * Charge une langue et son repli. Le français (source) et l'anglais (parité à 100 %,
+ * vérifiée en CI) se suffisent ; les autres, partiellement traduites, ont besoin de
+ * l'anglais pour les clés manquantes.
+ */
+export async function ensureLocale(code: Locale): Promise<void> {
+  await Promise.all([loadOne(code), code === 'fr' || code === 'en' ? null : loadOne('en')])
+}
 
 // ── Store locale ──────────────────────────────────────────────────────────────
 
@@ -142,8 +160,11 @@ function createLocaleStore() {
   return {
     subscribe,
     init() {
-      // Appelé une seule fois côté client (onMount dans +layout.svelte)
-      set(getInitialLocale())
+      // Appelé une seule fois côté client (onMount dans +layout.svelte). La langue
+      // retenue peut différer de celle du serveur (choix gardé dans le navigateur) :
+      // on la charge AVANT de basculer, sinon des clés brutes s'afficheraient.
+      const wanted = getInitialLocale()
+      ensureLocale(wanted).then(() => set(wanted)).catch(() => { /* reste sur la langue du serveur */ })
     },
     setLocale(locale: Locale) {
       if (browser) {
@@ -151,7 +172,10 @@ function createLocaleStore() {
         // Sync cookie for SSR — avoids flash of default locale
         document.cookie = `${COOKIE_KEY}=${locale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
       }
-      set(locale)
+      // Chargée puis appliquée. Si le fichier est introuvable (page ouverte avant une
+      // mise à jour, il a changé de nom), on recharge : le cookie est déjà posé, la page
+      // revient dans la bonne langue avec les bons fichiers.
+      ensureLocale(locale).then(() => set(locale)).catch(() => { if (browser) location.reload() })
     },
     /** Set initial locale from SSR data (cookie) — avoids flash on hydration */
     setSSR(locale: Locale) {
@@ -185,7 +209,7 @@ export function escHtml(v: unknown): string {
  * $t('key')           → string traduite
  * $t('key', { n: 3 }) → interpolation simple {{n}} → '3'
  */
-export const t = derived(locale, ($locale) => {
+export const t = derived([locale, loadedVersion], ([$locale]) => {
   return (key: string, vars?: Record<string, string | number>): string => {
     let str =
       messages[$locale]?.[key] ??
