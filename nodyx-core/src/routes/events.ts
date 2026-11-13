@@ -13,6 +13,7 @@ import { io } from '../socket/io'
 import { announceCalendarEvent } from '../services/webhooks/announce'
 import { sanitize } from '../utils/sanitize'
 import { rehostExternalImages } from '../services/inlineImageRehost'
+import { isContainedUploadPath } from '../utils/uploadPath'
 
 // La description d'un événement vient de NodyxEditor, comme un message du forum :
 // même nettoyeur (utils/sanitize) et même recopie des images externes. Avant, une
@@ -24,6 +25,31 @@ async function cleanDescription(raw: string): Promise<string> {
   const rehost = await rehostExternalImages(raw)
   return sanitize(rehost.html)
 }
+
+// L'image de couverture est un fichier envoyé SUR l'instance : l'interface l'écrit
+// `${PUBLIC_API_URL}/uploads/...`. Rien d'autre n'est accepté, sinon un appel
+// direct à l'API pose l'image d'un autre site, chargée par chaque lecteur (son
+// adresse IP part chez ce site). Adresse complète acceptée seulement sur l'origine
+// de l'instance (FRONTEND_URL, SELF_URL, et PUBLIC_API_URL quand l'API vit sur un
+// autre domaine que le site : l'image est alors servie par ce domaine-là).
+function ownOrigins(): Set<string> {
+  const out = new Set<string>()
+  for (const v of [process.env.FRONTEND_URL, process.env.SELF_URL, process.env.PUBLIC_API_URL]) {
+    if (!v) continue
+    try { out.add(new URL(v).origin) } catch { /* variable mal formée : ignorée */ }
+  }
+  return out
+}
+
+export function isOwnUploadUrl(value: string): boolean {
+  if (isContainedUploadPath(value)) return true
+  let u: URL
+  try { u = new URL(value) } catch { return false }
+  if (u.username || u.password) return false
+  return ownOrigins().has(u.origin) && isContainedUploadPath(u.pathname)
+}
+
+const COVER_INVALID = { error: 'The cover image must be a file uploaded to this instance', code: 'COVER_URL_INVALID' }
 
 // -- Schemas -------------------------------------------------------------------
 
@@ -37,7 +63,7 @@ const CreateEventSchema = z.object({
   ends_at:         z.string().datetime().nullable().optional(),
   is_all_day:      z.boolean().optional().default(false),
   is_public:       z.boolean().optional().default(true),
-  cover_url:       z.string().nullable().optional(),
+  cover_url:       z.string().max(2048).nullable().optional(),
   tags:            z.array(z.string().max(50)).max(10).optional().default([]),
   rsvp_enabled:    z.boolean().optional().default(false),
   max_attendees:   z.number().int().positive().nullable().optional(),
@@ -184,6 +210,8 @@ export default async function eventsRoutes(app: FastifyInstance) {
       )
       if (!comm[0]) return reply.status(400).send({ error: "Tu dois faire partie d'une communauté" })
 
+      if (body.cover_url && !isOwnUploadUrl(body.cover_url)) return reply.status(400).send(COVER_INVALID)
+
       const description = await cleanDescription(body.description ?? '')
 
       const { rows } = await db.query(
@@ -227,6 +255,15 @@ export default async function eventsRoutes(app: FastifyInstance) {
       }
 
       const body = req.body
+      // Couverture vérifiée AVANT tout travail (recopie des images de la description).
+      // Le formulaire renvoie toujours la couverture actuelle : une ancienne couverture
+      // posée avant cette règle (autre domaine de l'instance, par exemple) reste acceptée
+      // tant qu'on n'y touche pas, sinon modifier le vieil événement deviendrait impossible.
+      if (body.cover_url && !isOwnUploadUrl(body.cover_url)) {
+        const { rows: cur } = await db.query<{ cover_url: string | null }>(
+          `SELECT cover_url FROM events WHERE id = $1`, [req.params.id])
+        if (cur[0]?.cover_url !== body.cover_url) return reply.status(400).send(COVER_INVALID)
+      }
       const sets: string[] = []
       const vals: any[]    = []
 

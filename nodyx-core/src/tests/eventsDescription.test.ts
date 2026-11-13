@@ -125,3 +125,74 @@ describe('Description d’un événement : le nettoyeur partagé', () => {
     expect(String(writes[0][3])).toBe(honest)
   })
 })
+
+describe('Image de couverture : seulement un fichier de l’instance', () => {
+  beforeEach(() => {
+    process.env.FRONTEND_URL = 'https://communaute.example'
+    delete process.env.SELF_URL
+    delete process.env.PUBLIC_API_URL
+  })
+
+  it.each([
+    ['/uploads/assets/abc.webp'],
+    ['https://communaute.example/uploads/assets/abc.webp'],
+  ])('acceptée : %s', async (cover) => {
+    const writes = captureWrites()
+    const app = await buildApp(a => eventRoutes(a))
+    const res = await app.inject({ method: 'POST', url: '/', headers: AUTH, payload: { ...BASE, cover_url: cover } })
+    expect(res.statusCode).toBe(201)
+    expect(writes[0][11]).toBe(cover)
+  })
+
+  it.each([
+    ['https://pisteur.example/uploads/assets/abc.webp', 'autre site, même chemin'],
+    ['https://pisteur.example/pixel.png',               'autre site'],
+    ['https://communaute.example/autre/abc.webp',       'hors de /uploads'],
+    ['https://communaute.example/uploads/../.env',      'remontée de dossier'],
+    ['https://x@communaute.example/uploads/a.webp',     'identifiants dans l’adresse'],
+    ['/uploads/../secret',                              'remontée relative'],
+    ['javascript:alert(1)',                             'pseudo-protocole'],
+  ])('refusée : %s (%s), avec un code stable et sans rien écrire', async (cover) => {
+    const writes = captureWrites()
+    const app = await buildApp(a => eventRoutes(a))
+    const res = await app.inject({ method: 'POST', url: '/', headers: AUTH, payload: { ...BASE, cover_url: cover } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().code).toBe('COVER_URL_INVALID')
+    expect(writes).toHaveLength(0)
+    expect(rehostExternalImages).not.toHaveBeenCalled()
+  })
+
+  it('API sur un autre domaine : son origine est reconnue quand PUBLIC_API_URL est posée', async () => {
+    process.env.PUBLIC_API_URL = 'https://api.communaute.example'
+    captureWrites()
+    const app = await buildApp(a => eventRoutes(a))
+    const res = await app.inject({ method: 'POST', url: '/', headers: AUTH, payload: { ...BASE, cover_url: 'https://api.communaute.example/uploads/assets/abc.webp' } })
+    expect(res.statusCode).toBe(201)
+  })
+
+  it('modification : une ANCIENNE couverture qu’on ne touche pas reste acceptée (vieil événement modifiable)', async () => {
+    const legacy = 'https://ancien-domaine.example/uploads/assets/abc.webp'
+    const writes = captureWrites()
+    const base = vi.mocked(db.query).getMockImplementation()!
+    vi.mocked(db.query).mockImplementation(async (sql: any, params?: any) =>
+      String(sql).includes('SELECT cover_url FROM events') ? { rows: [{ cover_url: legacy }] } as any : base(sql, params))
+    const app = await buildApp(a => eventRoutes(a))
+    const res = await app.inject({ method: 'PATCH', url: '/ev1', headers: AUTH, payload: { title: 'Nouveau titre', cover_url: legacy } })
+    expect(res.statusCode).toBe(200)
+    expect(writes).toHaveLength(1)
+  })
+
+  it('modification : une NOUVELLE couverture d’un autre site est refusée, avant toute recopie d’image', async () => {
+    const writes = captureWrites()
+    const base = vi.mocked(db.query).getMockImplementation()!
+    vi.mocked(db.query).mockImplementation(async (sql: any, params?: any) =>
+      String(sql).includes('SELECT cover_url FROM events') ? { rows: [{ cover_url: '/uploads/assets/old.webp' }] } as any : base(sql, params))
+    const app = await buildApp(a => eventRoutes(a))
+    const res = await app.inject({ method: 'PATCH', url: '/ev1', headers: AUTH, payload: {
+      description: '<img src="https://pisteur.example/pixel.png">', cover_url: 'https://pisteur.example/c.png' } })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().code).toBe('COVER_URL_INVALID')
+    expect(writes).toHaveLength(0)
+    expect(rehostExternalImages).not.toHaveBeenCalled()
+  })
+})

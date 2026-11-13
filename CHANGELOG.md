@@ -227,6 +227,9 @@ le champ pour être corrigé.
   Elle est maintenant recopiée sur l'instance, comme au forum. Les liens vers les domaines
   bloqués sont retirés. Dans l'autre sens, l'événement garde enfin ce que l'éditeur propose et
   que l'ancien nettoyeur jetait sans prévenir : le lecteur audio et les ancres des titres.
+  L'image de couverture, elle, doit être un fichier envoyé sur l'instance : l'interface le
+  faisait déjà, un appel direct à l'API ne peut plus y mettre l'image d'un autre site. Une
+  ancienne couverture reste en place tant qu'on n'y touche pas.
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
   recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
   y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde

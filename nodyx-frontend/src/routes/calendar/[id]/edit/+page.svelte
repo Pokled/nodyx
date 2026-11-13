@@ -117,8 +117,8 @@
 	<h1 class="text-2xl font-bold text-[var(--nx-text)] mb-1">{tFn('event.edit_event')}</h1>
 	<p class="text-[var(--nx-text-muted)] text-sm mb-7">{tFn('event.edit_sub')}</p>
 
-	{#if form?.error}
-		<div class="mb-6 rounded-xl border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] bg-red-950/30 px-4 py-3 text-[var(--nx-bad)] text-sm">{form.error}</div>
+	{#if form?.errorKey || form?.error}
+		<div class="mb-6 rounded-xl border border-[color-mix(in_srgb,var(--nx-bad)_40%,transparent)] bg-red-950/30 px-4 py-3 text-[var(--nx-bad)] text-sm">{form?.errorKey ? tFn(form.errorKey) : form?.error}</div>
 	{/if}
 
 	<form method="POST" use:enhance={() => {
