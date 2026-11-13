@@ -44,6 +44,15 @@
 	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte';
 	import ShieldBanner from '$lib/components/octoguard/ShieldBanner.svelte';
 	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
+	import LinkCards from '$lib/components/LinkCards.svelte'
+	// D40 : réponses réduites à leur carte (le message n'est QUE le lien)
+	let soleIds = $state(new Set<string>())
+	function setSole(id: string, sole: boolean) {
+		if (soleIds.has(id) === sole) return
+		const next = new Set(soleIds)
+		if (sole) next.add(id); else next.delete(id)
+		soleIds = next
+	}
 
 	const tFn = $derived($t)
 
@@ -738,9 +747,11 @@
 					</form>
 				{:else}
 					<!-- Contenu HTML rendu -->
-					<div class="nodyx-prose">
+					<div class="nodyx-prose" hidden={soleIds.has(post.id)}>
 						{@html post.content}
 					</div>
+					<!-- Cartes « Nodyx relié » : sujets, réponses, événements de cette instance -->
+					<LinkCards html={post.content ?? ''} token={data.token} onsole={(v) => setSole(post.id, v)} />
 					<!-- Réactions + Merci -->
 					<PostReactions
 						postId={post.id}

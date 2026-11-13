@@ -39,7 +39,11 @@ const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
   'h2':     ['class', 'id', 'style', 'data-align', 'data-type'],
   'h3':     ['class', 'id', 'data-align', 'data-type'],
   'h4':     ['class', 'id', 'data-align', 'data-type'],
-  'a':      ['href', 'target', 'rel'],
+  // data-card="off" : l'auteur a choisi d'afficher ce lien Nodyx SANS sa carte
+  // (« Retirer la carte », « Lien simple »). Seule la valeur « off » passe : toute
+  // autre est retirée en entier par transformTags.a (une liste de valeurs laisserait
+  // un « data-card » vide).
+  'a':      ['href', 'target', 'rel', 'data-card'],
   'img':    ['src', 'alt', 'width', 'height'],
   'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
   'audio':              ['src', 'controls', 'preload'],
@@ -121,6 +125,12 @@ export function sanitize(raw: string, opts: SanitizeOptions = {}): string {
       'player.twitch.tv', 'www.twitch.tv',
     ],
     transformTags: {
+      'a': (tagName, attribs) => {
+        if (attribs['data-card'] === undefined || attribs['data-card'] === 'off') return { tagName, attribs }
+        const cleaned: Record<string, string> = { ...attribs }
+        delete cleaned['data-card']
+        return { tagName, attribs: cleaned }
+      },
       'nodyx-audio-player': (tagName, attribs) => {
         if (attribs.cover && !isAllowedImgSrc(attribs.cover)) {
           const cleaned: Record<string, string> = { ...attribs }

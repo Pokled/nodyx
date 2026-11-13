@@ -77,7 +77,7 @@ describe('Extrait d’une réponse', () => {
 })
 
 /** Base simulée : un sujet T (catégorie « Général »), une réponse P dans T, un événement E. */
-function world(opts: { eventPublic: boolean; members: string[] }) {
+function world(opts: { eventPublic: boolean; members: string[]; max?: number }) {
   vi.mocked(db.query).mockImplementation(async (sql: any, params?: any) => {
     const s = String(sql)
     if (s.includes('FROM threads t')) {
@@ -92,6 +92,12 @@ function world(opts: { eventPublic: boolean; members: string[] }) {
       }] : [] } as any
     }
     if (s.includes('FROM categories WHERE id')) return { rows: [{ name: 'Général' }] } as any
+    if (s.includes('FROM thread_tags tt')) {
+      return { rows: [params[0] === T ? { last_at: new Date('2026-11-04T08:30:00Z'), tags: ['inscriptions', 'tournoi'] } : { last_at: null, tags: null }] } as any
+    }
+    if (s.includes('FROM event_rsvps r JOIN users u')) {
+      return { rows: [{ username: 'lea', avatar: '/uploads/avatars/lea.webp' }, { username: 'max', avatar: null }] } as any
+    }
     if (s.includes('FROM posts p JOIN users u')) {
       // Fidèle à la requête : la réponse P vit dans le sujet T. Le filtre sur le sujet ne
       // s'applique QUE si la requête le demande (sinon le sabotage ne pourrait pas tomber).
@@ -102,7 +108,7 @@ function world(opts: { eventPublic: boolean; members: string[] }) {
       return { rows: params[0] === E ? [{
         id: E, title: 'Réunion de l’équipe', starts_at: '2026-12-01T19:00:00Z', ends_at: null, is_all_day: false,
         location: 'Discord', cover_url: null, is_cancelled: false, rsvp_enabled: true, is_public: opts.eventPublic,
-        community_id: 'c1', going_count: 3, my_rsvp: params[1] ? 'going' : null,
+        community_id: 'c1', going_count: 3, my_rsvp: params[1] ? 'going' : null, max_attendees: opts.max ?? null,
       }] : [] } as any
     }
     if (s.includes('FROM community_members WHERE community_id = $1 AND user_id = $2')) {
@@ -137,7 +143,8 @@ describe('GET /links/resolve', () => {
     expect(res.json().card).toEqual({
       type: 'thread', url: '/forum/general/soiree-jeux-ab12', title: 'Soirée jeux', category: 'Général',
       author: { username: 'lea', avatar: '/uploads/avatars/lea.webp' }, replies: 3,
-      created_at: '2026-11-01T10:00:00.000Z', is_locked: false,
+      created_at: '2026-11-01T10:00:00.000Z', last_activity_at: '2026-11-04T08:30:00.000Z', is_locked: false,
+      tags: ['inscriptions', 'tournoi'],
     })
     expect(res.headers['cache-control']).toBe('private, no-store')
   })
@@ -197,5 +204,40 @@ describe('GET /links/resolve', () => {
       expect(body).not.toContain('author_id')
       expect(body).not.toContain('lea-id')
     }
+  })
+})
+
+describe('Carte enrichie (affichage dans le chat et le forum)', () => {
+  it('un sujet sans tag ni réponse : tags vides, dernière activité = sa création', async () => {
+    world({ eventPublic: true, members: [] })
+    const card = (await resolve(`/forum/general/${T2}`)).json().card
+    expect(card.tags).toEqual([])
+    expect(card.last_activity_at).toBe('2026-11-03T10:00:00.000Z')
+  })
+
+  it('un événement : trois inscrits au plus, pseudo et avatar SEULEMENT', async () => {
+    world({ eventPublic: true, members: [] })
+    const res = await resolve(`/calendar/${E}`)
+    expect(res.json().card.going_preview).toEqual([
+      { username: 'lea', avatar: '/uploads/avatars/lea.webp' }, { username: 'max', avatar: null },
+    ])
+    const sql = vi.mocked(db.query).mock.calls.map(c => String(c[0])).find(q => q.includes('FROM event_rsvps r JOIN users u'))!
+    expect(sql).toContain('LIMIT 3')
+    // Colonnes LUES (avant FROM) : pseudo et avatar, rien d'autre
+    expect(sql.split('FROM')[0].replace(/\s+/g, ' ').trim()).toBe('SELECT u.username, u.avatar')
+  })
+
+  it('un événement complet : is_full, pour que la carte ne propose pas « Je participe » en vain', async () => {
+    world({ eventPublic: true, members: [], max: 3 })
+    expect((await resolve(`/calendar/${E}`)).json().card.is_full).toBe(true)
+    world({ eventPublic: true, members: [], max: 10 })
+    expect((await resolve(`/calendar/${E}`)).json().card.is_full).toBe(false)
+  })
+
+  it('un événement PRIVÉ refusé : la liste des inscrits n’est même pas lue', async () => {
+    world({ eventPublic: false, members: ['lea-id'] })
+    const res = await resolve(`/calendar/${E}`, 'etranger')
+    expect(res.json().card).toEqual({ type: 'unavailable' })
+    expect(vi.mocked(db.query).mock.calls.some(c => String(c[0]).includes('FROM event_rsvps r JOIN users u'))).toBe(false)
   })
 })

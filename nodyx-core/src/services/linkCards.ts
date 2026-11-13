@@ -62,12 +62,13 @@ export function plainExcerpt(html: string, max = 200): string {
 
 export type LinkCard =
   | { type: 'thread'; url: string; title: string; category: string | null; author: { username: string; avatar: string | null }
-      replies: number; created_at: string; is_locked: boolean }
+      replies: number; created_at: string; last_activity_at: string; is_locked: boolean; tags: string[] }
   | { type: 'post'; url: string; thread: { title: string; url: string }; author: { username: string; avatar: string | null }
       excerpt: string; created_at: string }
   | { type: 'event'; url: string; title: string; starts_at: string; ends_at: string | null; is_all_day: boolean
       location: string | null; cover_url: string | null; is_cancelled: boolean; going_count: number
-      rsvp_enabled: boolean; my_rsvp: string | null }
+      rsvp_enabled: boolean; my_rsvp: string | null; is_full: boolean
+      going_preview: { username: string; avatar: string | null }[] }
   | { type: 'unavailable' }
 
 const UNAVAILABLE: LinkCard = { type: 'unavailable' }
@@ -94,21 +95,32 @@ export async function resolveCard(ref: LinkRef, viewerId: string | null): Promis
       }
     }
     const { rows: cat } = await db.query<{ name: string }>(`SELECT name FROM categories WHERE id = $1`, [t.category_id])
+    // Tags (trois au plus, comme sur la liste du forum) et dernière activité : ce qu'on
+    // voit sur la page du sujet, rien de plus.
+    const { rows: extra } = await db.query<{ last_at: string | Date | null; tags: string[] | null }>(
+      `SELECT (SELECT MAX(p.created_at) FROM posts p WHERE p.thread_id = $1) AS last_at,
+              (SELECT array_agg(x.name ORDER BY x.name) FROM (
+                 SELECT tg.name FROM thread_tags tt JOIN tags tg ON tg.id = tt.tag_id
+                 WHERE tt.thread_id = $1 ORDER BY tg.name LIMIT 3) x) AS tags`,
+      [t.id],
+    )
+    const lastAt = extra[0]?.last_at ? new Date(extra[0].last_at) : new Date(t.created_at)
     return {
       type: 'thread', url: threadUrl, title: t.title, category: cat[0]?.name ?? null,
       author: { username: t.author_username, avatar: t.author_avatar ?? null },
       // post_count compte le premier message : les RÉPONSES sont les suivants.
-      replies: Math.max(0, (t.post_count ?? 1) - 1), created_at: new Date(t.created_at).toISOString(), is_locked: !!t.is_locked,
+      replies: Math.max(0, (t.post_count ?? 1) - 1), created_at: new Date(t.created_at).toISOString(),
+      last_activity_at: lastAt.toISOString(), is_locked: !!t.is_locked, tags: extra[0]?.tags ?? [],
     }
   }
 
   const { rows } = await db.query<{
     id: string; title: string; starts_at: string; ends_at: string | null; is_all_day: boolean; location: string | null
     cover_url: string | null; is_cancelled: boolean; rsvp_enabled: boolean; is_public: boolean; community_id: string
-    going_count: number; my_rsvp: string | null
+    going_count: number; my_rsvp: string | null; max_attendees: number | null
   }>(
     `SELECT e.id, e.title, e.starts_at, e.ends_at, e.is_all_day, e.location, e.cover_url, e.is_cancelled,
-            e.rsvp_enabled, e.is_public, e.community_id,
+            e.rsvp_enabled, e.is_public, e.community_id, e.max_attendees,
             (SELECT COUNT(*)::int FROM event_rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS going_count,
             (SELECT r2.status FROM event_rsvps r2 WHERE r2.event_id = e.id AND r2.user_id = $2 LIMIT 1) AS my_rsvp
      FROM events e WHERE e.id = $1`,
@@ -116,9 +128,20 @@ export async function resolveCard(ref: LinkRef, viewerId: string | null): Promis
   )
   const e = rows[0]
   if (!e || !(await canReadEvent(e, viewerId))) return UNAVAILABLE
+  // Les trois premiers inscrits : la page de l'événement les montre déjà à ce lecteur
+  // (même règle canReadEvent). Pseudo et avatar seulement.
+  const { rows: going } = e.rsvp_enabled
+    ? await db.query<{ username: string; avatar: string | null }>(
+        `SELECT u.username, u.avatar FROM event_rsvps r JOIN users u ON u.id = r.user_id
+         WHERE r.event_id = $1 AND r.status = 'going' ORDER BY r.created_at ASC LIMIT 3`,
+        [e.id],
+      )
+    : { rows: [] as { username: string; avatar: string | null }[] }
   return {
     type: 'event', url: `/calendar/${e.id}`, title: e.title, starts_at: e.starts_at, ends_at: e.ends_at,
     is_all_day: e.is_all_day, location: e.location, cover_url: e.cover_url, is_cancelled: e.is_cancelled,
     going_count: e.going_count, rsvp_enabled: e.rsvp_enabled, my_rsvp: viewerId ? e.my_rsvp : null,
+    is_full: e.max_attendees !== null && e.going_count >= e.max_attendees,
+    going_preview: going.map(g => ({ username: g.username, avatar: g.avatar })),
   }
 }
