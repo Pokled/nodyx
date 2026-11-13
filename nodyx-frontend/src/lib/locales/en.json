@@ -6658,5 +6658,8 @@
   "editor.link_view.card": "Card",
   "editor.link_view.link": "Plain link",
   "editor.link_view.raw": "Plain text",
-  "editor.link_view.undo_hint": "Ctrl+Z: as pasted"
+  "editor.link_view.undo_hint": "Ctrl+Z: as pasted",
+  "link_card.replies_zero": "No replies yet",
+  "link_card.going_zero": "No one has signed up yet",
+  "link_card.went_zero": "No one signed up"
 }

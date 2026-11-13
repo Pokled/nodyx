@@ -6658,5 +6658,8 @@
   "editor.link_view.card": "Carte",
   "editor.link_view.link": "Lien simple",
   "editor.link_view.raw": "Texte brut",
-  "editor.link_view.undo_hint": "Ctrl+Z : comme collé"
+  "editor.link_view.undo_hint": "Ctrl+Z : comme collé",
+  "link_card.replies_zero": "Aucune réponse pour l'instant",
+  "link_card.going_zero": "Personne n'est encore inscrit",
+  "link_card.went_zero": "Personne ne s'était inscrit"
 }

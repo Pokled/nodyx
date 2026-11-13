@@ -256,6 +256,12 @@ le champ pour être corrigé.
   événement l'insère avec son titre et montre l'aperçu de sa carte sous la ligne. Une petite
   bulle propose « Carte », « Lien simple » (le lien sans carte) ou « Texte brut » (l'adresse telle
   quelle), et Ctrl+Z revient au lien exactement comme tu l'as collé.
+- **Les cartes partout où l'on publie.** Le fil d'actu, la page d'un statut, les messages d'un
+  profil et le chat d'un salon vocal affichent eux aussi la carte d'un lien Nodyx, avec les mêmes
+  règles que le chat et le forum. Un statut ne garde plus d'aperçu figé d'une page de Nodyx (le
+  serveur allait copier sa propre page) : la carte, à jour, le remplace. Sans réponse ni inscrit,
+  une carte le dit en clair (« Aucune réponse pour l'instant », « Personne n'est encore inscrit »)
+  au lieu d'un « 0 ».
 - **Toutes les pages sont plus légères.** L'éditeur de texte était chargé par chaque page de
   Nodyx, même celles où l'on n'écrit rien, l'accueil compris : environ 40 Ko compressés de trop
   à chaque visite. Il ne se charge plus que là où il s'affiche. Si son chargement échoue (une

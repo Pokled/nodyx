@@ -144,7 +144,7 @@
 					<a class="lc-title" href={c.url}>{c.title}</a>
 					<div class="lc-meta">
 						<span class="lc-p">{@render avatar(c.author)}{c.author.username}</span>
-						<span class="lc-p">{@render icon('msg')}{plural(c.replies, 'link_card.replies_one', 'link_card.replies_other')}</span>
+						<span class="lc-p">{@render icon('msg')}{c.replies === 0 ? $t('link_card.replies_zero') : plural(c.replies, 'link_card.replies_one', 'link_card.replies_other')}</span>
 						{#if c.replies > 0}<span>{$t('link_card.last_activity', { when: relative(c.last_activity_at) })}</span>{/if}
 						{#if c.is_locked}<span class="lc-badge lc-muted">{@render icon('lock')}{$t('link_card.locked')}</span>{/if}
 					</div>
@@ -194,7 +194,9 @@
 					<div class="lc-ev-foot">
 						<span class="lc-going">
 							{#if c.going_preview.length}<span class="lc-stack">{#each c.going_preview as p (p.username)}{@render avatar(p, 'lc-av lc-av-xs')}{/each}</span>{/if}
-							<span>{past
+							<span>{c.going_count === 0
+								? $t(past ? 'link_card.went_zero' : 'link_card.going_zero')
+								: past
 								? plural(c.going_count, 'link_card.went_one', 'link_card.went_other')
 								: going
 									? plural(c.going_count, 'link_card.going_with_you_one', 'link_card.going_with_you_other')
