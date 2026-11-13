@@ -7,6 +7,7 @@
 	import LinkCards from '$lib/components/LinkCards.svelte'
 	import { toInternalPath } from '$lib/linkCards'
 	import { createSoleSet } from '$lib/linkCardsSole.svelte'
+	import { mentionChips } from '$lib/actions/mentionChips'
 	const sole = createSoleSet() // D40 : messages réduits à leur carte
 
 	let { data }: { data: PageData } = $props()
@@ -152,7 +153,7 @@
 		</div>
 	</div>
 	{#if p.content}
-		<div class="s-text prose-feed" hidden={sole.has(p.id)}>{@html p.content}</div>
+		<div class="s-text prose-feed" hidden={sole.has(p.id)} use:mentionChips={{ html: p.content ?? '', token: token ?? null, me: (page.data as any)?.user?.id ?? null }}>{@html p.content}</div>
 		<LinkCards html={p.content} {token} onsole={(v) => sole.set(p.id, v)} />
 	{/if}
 	{#if p.media_url}<img src={p.media_url} alt="" class="s-media" loading="lazy" />{/if}

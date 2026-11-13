@@ -45,6 +45,7 @@
 	import ShieldBanner from '$lib/components/octoguard/ShieldBanner.svelte';
 	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
 	import LinkCards from '$lib/components/LinkCards.svelte'
+	import { mentionChips } from '$lib/actions/mentionChips'
 	// D40 : réponses réduites à leur carte (le message n'est QUE le lien)
 	let soleIds = $state(new Set<string>())
 	function setSole(id: string, sole: boolean) {
@@ -617,7 +618,7 @@
 			</div>
 		{/if}
 
-		<article id="post-{post.id}" class="flex flex-col sm:flex-row gap-4 border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/60 p-4 hover:border-indigo-900/50 transition-colors duration-200">
+		<article id="post-{post.id}" data-mention-scope class="flex flex-col sm:flex-row gap-4 border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] bg-[var(--nx-surface)]/60 p-4 hover:border-indigo-900/50 transition-colors duration-200">
 			<!-- Profil auteur -->
 			<ProfileCard
 				username={post.author_username}
@@ -747,7 +748,7 @@
 					</form>
 				{:else}
 					<!-- Contenu HTML rendu -->
-					<div class="nodyx-prose" hidden={soleIds.has(post.id)}>
+					<div class="nodyx-prose" hidden={soleIds.has(post.id)} use:mentionChips={{ html: post.content ?? '', token: data.token ?? null, me: user?.id ?? null }}>
 						{@html post.content}
 					</div>
 					<!-- Cartes « Nodyx relié » : sujets, réponses, événements de cette instance -->

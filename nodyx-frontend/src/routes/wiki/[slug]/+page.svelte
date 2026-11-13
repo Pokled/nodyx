@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte'
 	import LinkCard from '$lib/components/LinkCard.svelte'
 	import { splitSoleLinkBlocks } from '$lib/linkCards'
+	import { mentionChips } from '$lib/actions/mentionChips'
 
 	const tFn = $derived($t)
 
@@ -129,7 +130,7 @@
 	</div>
 
 	<!-- Content — rendered HTML from NodyxEditor -->
-	<div class="nodyx-prose">
+	<div class="nodyx-prose" use:mentionChips={{ html: pg?.content ?? '', token: (page.data as any)?.token ?? null, me: (page.data as any)?.user?.id ?? null }}>
 		{#each blocks as b, i (`${pg?.id}:${i}`)}
 			{@const key = `${pg?.id}:${i}`}
 			{#if b.path}

@@ -24,7 +24,9 @@ const ALLOWED_TAGS = [
 
 const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
   '*':      ['class', 'data-align', 'data-type'],
-  'span':   ['class', 'style', 'data-align', 'data-type'],
+  // data-mention : une mention liée à la PERSONNE (« u:<id> ») ou à un groupe
+  // (« g:ici »…), voir SPECS/NODYX_MENTIONS_CDC.md. Valeur vérifiée par transformTags.span.
+  'span':   ['class', 'style', 'data-align', 'data-type', 'data-mention'],
   'p':      ['class', 'style', 'data-align', 'data-type'],
   // id sur les titres : permet les sommaires à ancres (#section). Pas d'id
   // ailleurs pour limiter le risque de DOM clobbering.
@@ -93,6 +95,9 @@ const ATTRS_NO_HEADING_IDS: sanitizeHtml.IOptions['allowedAttributes'] = Object.
     [tag, /^h[1-4]$/.test(tag) ? attrs.filter(a => a !== 'id') : attrs]),
 )
 
+/** Valeurs acceptées pour data-mention : une personne (u:<uuid>) ou un groupe connu. */
+export const MENTION_VALUE = /^(?:u:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|g:(?:ici|equipe|moderation|tous|grade:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))$/
+
 export interface SanitizeOptions {
   /**
    * Garder l'id des titres (ancres d'un sommaire). Vrai par défaut : forum, wiki,
@@ -125,6 +130,13 @@ export function sanitize(raw: string, opts: SanitizeOptions = {}): string {
       'player.twitch.tv', 'www.twitch.tv',
     ],
     transformTags: {
+      'span': (tagName, attribs) => {
+        const m = attribs['data-mention']
+        if (m === undefined || MENTION_VALUE.test(m)) return { tagName, attribs }
+        const cleaned: Record<string, string> = { ...attribs }
+        delete cleaned['data-mention']
+        return { tagName, attribs: cleaned }
+      },
       'a': (tagName, attribs) => {
         if (attribs['data-card'] === undefined || attribs['data-card'] === 'off') return { tagName, attribs }
         const cleaned: Record<string, string> = { ...attribs }
