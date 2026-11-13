@@ -234,6 +234,11 @@ le champ pour être corrigé.
   aux membres, mais son lien direct s'ouvrait pour n'importe qui, même sans compte, et un
   compte extérieur à la communauté pouvait s'y inscrire. Les deux sont fermés. Un seul
   événement privé existait sur nos instances, sur l'instance de démonstration.
+- **Le chat garde ce que l'éditeur propose.** Il avait sa propre liste de ce qui est permis,
+  restée en retard sur celle du forum : un lecteur audio ou un direct Twitch disparaissait à
+  l'envoi sans prévenir, et une vidéo refusée laissait une boîte vide dans le message. Le chat
+  et les messages privés utilisent maintenant les mêmes règles que le forum, avec une seule
+  différence : les titres n'y portent pas d'ancre.
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
   recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
   y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde

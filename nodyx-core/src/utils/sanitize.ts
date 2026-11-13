@@ -83,10 +83,28 @@ const BLOCKED_LINK_DOMAINS = new Set([
   ..._envBlocked,
 ])
 
-export function sanitize(raw: string): string {
+// Les titres SANS id : même liste, moins l'ancre. Voir SanitizeOptions.headingIds.
+const ATTRS_NO_HEADING_IDS: sanitizeHtml.IOptions['allowedAttributes'] = Object.fromEntries(
+  Object.entries(ALLOWED_ATTRS as Record<string, string[]>).map(([tag, attrs]) =>
+    [tag, /^h[1-4]$/.test(tag) ? attrs.filter(a => a !== 'id') : attrs]),
+)
+
+export interface SanitizeOptions {
+  /**
+   * Garder l'id des titres (ancres d'un sommaire). Vrai par défaut : forum, wiki,
+   * tâches, événements. FAUX pour le chat et les messages privés : la page du chat
+   * retrouve sa zone de saisie par getElementById('chat-input'), et les messages
+   * sont AU-DESSUS d'elle dans le document ; un titre id="chat-input" serait trouvé
+   * en premier et détournerait la saisie. Un sommaire n'a pas d'usage dans un
+   * message de chat : on perd une ancre, pas une fonction.
+   */
+  headingIds?: boolean
+}
+
+export function sanitize(raw: string, opts: SanitizeOptions = {}): string {
   return sanitizeHtml(raw, {
     allowedTags: ALLOWED_TAGS,
-    allowedAttributes: ALLOWED_ATTRS,
+    allowedAttributes: opts.headingIds === false ? ATTRS_NO_HEADING_IDS : ALLOWED_ATTRS,
     // Embeds vidéo : uniquement les domaines de lecteur OFFICIELS de chaque
     // plateforme (pas une page quelconque du site). Twitch permet d'intégrer un
     // live dans un post : le LECTEUR vit sur player.twitch.tv, le CHAT sur
