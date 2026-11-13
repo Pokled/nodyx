@@ -784,10 +784,19 @@
 		if (draftTimer) clearTimeout(draftTimer)
 		draftTimer = setTimeout(flushDraft, 800)
 	}
+	function djb2(str: string): string {
+		let h = 5381
+		for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0
+		return (h >>> 0).toString(36)
+	}
 	function setupDraft() {
 		const form = wrapperEl?.closest('form')
 		if (!form) return
-		draftStore = draftKey(location.pathname, name)
+		// Une page peut avoir plusieurs éditeurs du même nom (sujet du forum : réponse
+		// ET modification d'un message, tous deux « content »). On distingue par l'action
+		// du formulaire et par le contenu de départ : chaque message modifié a son brouillon,
+		// la réponse a le sien.
+		draftStore = draftKey(location.pathname, `${name}:${form.getAttribute('action') ?? ''}:${djb2(initialContent)}`)
 		const d = readDraft(draftStore)
 		if (d && d.html !== initialContent) draftOffer = d
 		form.addEventListener('submit', () => {
