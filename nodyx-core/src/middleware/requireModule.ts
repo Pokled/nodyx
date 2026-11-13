@@ -52,3 +52,22 @@ export function requireModule(moduleId: string) {
     }
   }
 }
+
+/**
+ * Le module est-il activé ? Même cache que requireModule. Pour un usage hors route
+ * (recherche de liens) : en cas de panne Redis/DB on répond FAUX (on cache le contenu),
+ * à l'inverse de requireModule qui laisse passer pour ne pas bloquer le trafic.
+ */
+export async function isModuleEnabled(moduleId: string): Promise<boolean> {
+  try {
+    const cacheKey = `module:${moduleId}:enabled`
+    const cached   = await redis.get(cacheKey)
+    if (cached !== null) return cached === '1'
+    const { rows } = await db.query(`SELECT enabled FROM modules WHERE id = $1`, [moduleId])
+    const enabled = rows[0]?.enabled ?? false
+    await redis.setex(cacheKey, CACHE_TTL_SECONDS, enabled ? '1' : '0')
+    return enabled
+  } catch {
+    return false
+  }
+}
