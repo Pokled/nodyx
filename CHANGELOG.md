@@ -12,6 +12,19 @@ tout ne se passe pas bien : qui a le droit de faire quoi dans l'équipe, comment
 un problème, et comment Nodyx peut aider à garder le calme sans jamais décider à la place des
 humains. Le reste, c'est de l'administration refaite et des pages qui suivent enfin le thème.
 
+### Mentions : appeler quelqu'un, sans jamais tomber à côté
+
+- **Taper @ propose les bonnes personnes.** D'abord celles qui parlent dans ce salon ou ce
+  sujet, puis celles que tu mentionnes souvent, puis les autres membres, chacune avec la raison
+  (« a parlé ici il y a 2 minutes »). Les accents, les majuscules et une petite faute ne
+  comptent pas : « lea » trouve Léa. Au clavier comme à la souris, dans le chat comme dans
+  l'éditeur du forum et du wiki.
+- **Une mention suit la personne, pas son pseudo.** Elle s'affiche en puce avec son avatar et
+  son nom à jour : si Léa change de nom, ses anciennes mentions suivent. Au survol, sa carte
+  (en ligne, dans un salon vocal), avec « Profil » et « Écrire ». Un message qui te mentionne
+  est surligné. Une personne partie de la communauté devient « ancien membre ». Les anciennes
+  mentions écrites « @pseudo » continuent de prévenir.
+
 ### Modération : une équipe, des droits, une file
 
 - **Les grades donnent enfin de vrais droits.** Les permissions d'un grade étaient enregistrées

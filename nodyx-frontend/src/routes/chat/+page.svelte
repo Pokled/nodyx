@@ -14,6 +14,9 @@
 	import ChannelSidebar from '$lib/components/ChannelSidebar.svelte';
 	import PollCard    from '$lib/components/PollCard.svelte';
 	import LinkCards   from '$lib/components/LinkCards.svelte';
+	import MentionList from '$lib/components/MentionList.svelte';
+	import { mentionChips } from '$lib/actions/mentionChips';
+	import { suggestMentions, applyPickedMentions, labelOf, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions';
 	import { findInternalLinks, setCardOff, toInternalPath } from '$lib/linkCards';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import VoiceRoom from '$lib/components/VoiceRoom.svelte';
@@ -209,7 +212,10 @@
 
 	// @mention autocomplete
 	let mentionQuery       = $state('');
-	let mentionSuggestions = $state<{ username: string; avatar: string | null }[]>([]);
+	let mentionSuggestions = $state<MentionSuggestion[]>([]);
+	// Mentions choisies dans la liste : deviennent des marques liées à la personne à l'envoi (D49)
+	let pickedMentions     = $state<{ id: string; label: string }[]>([]);
+	let mentionSeq = 0;
 	let showMentions       = $state(false);
 
 	/**
@@ -911,14 +917,15 @@
 		if (!s || !selectedChannel || !inputText.trim()) return;
 		const channelId = selectedChannel.id;
 		const cmdResult = parseSlashCommand(inputText.trim());
-		const content   = cmdResult ?? inputText.trim();
+		const content   = cmdResult ?? applyPickedMentions(inputText.trim(), pickedMentions);
 		// Une commande (/roll, /flip…) écrit un texte du robot : rien à pré-vérifier
 		if (!force && !cmdResult && !(await passesPrecheck('plain', content, channelId))) return;
 		// Pendant la vérification, on a pu changer de salon ou de texte : on ne part pas
-		if (selectedChannel?.id !== channelId || (!cmdResult && inputText.trim() !== content)) return;
+		if (selectedChannel?.id !== channelId || (!cmdResult && applyPickedMentions(inputText.trim(), pickedMentions) !== content)) return;
 		nudge = null;
 		s.emit('chat:send', { channelId, content, replyToId: replyTo?.id ?? null });
 		inputText = '';
+		pickedMentions = [];
 		showMentions = false;
 		replyTo = null;
 		// Le champ vient d'être vidé : sans ça il resterait à la hauteur du
@@ -973,7 +980,7 @@
 		if (showMentions) {
 			if (e.key === 'ArrowDown')  { e.preventDefault(); mentionIndex = Math.min(mentionIndex + 1, mentionSuggestions.length - 1); return; }
 			if (e.key === 'ArrowUp')    { e.preventDefault(); mentionIndex = Math.max(mentionIndex - 1, 0); return; }
-			if (e.key === 'Enter')      { e.preventDefault(); if (mentionSuggestions[mentionIndex]) selectMention(mentionSuggestions[mentionIndex].username); return; }
+			if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); if (mentionSuggestions[mentionIndex]) selectMention(mentionSuggestions[mentionIndex]); return; }
 			if (e.key === 'Escape')     { showMentions = false; return; }
 		}
 		if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); }
@@ -1019,34 +1026,34 @@
 		const textarea  = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
 		const cursor    = textarea?.selectionStart ?? inputText.length;
 		const textBefore = inputText.slice(0, cursor);
-		const match      = textBefore.match(/@([\w\-]{0,30})$/);
+		const match      = textBefore.match(MENTION_TRIGGER);
 
-		if (match && match[1].length >= 1) {
+		// Dès « @ » seul : ceux qui parlent ici et ceux que tu mentionnes souvent (D50)
+		if (match) {
 			mentionQuery = match[1];
-			try {
-				const { PUBLIC_API_URL } = await import('$app/env/public');
-				const res = await fetch(`${PUBLIC_API_URL}/api/v1/chat/members?q=${encodeURIComponent(mentionQuery)}`, {
-					headers: token ? { Authorization: `Bearer ${token}` } : {}
-				});
-				if (res.ok) {
-					mentionSuggestions = (await res.json()).members ?? [];
-					showMentions = mentionSuggestions.length > 0;
-					mentionIndex = 0;
-				}
-			} catch { showMentions = false; }
+			const seq = ++mentionSeq;
+			const found = await suggestMentions(mentionQuery, token ?? null, { channelId: selectedChannel?.id });
+			if (seq !== mentionSeq) return;          // une frappe plus récente a pris le relais
+			mentionSuggestions = found;
+			showMentions = found.length > 0;
+			mentionIndex = 0;
 		} else {
+			mentionSeq++;
 			showMentions = false;
 		}
 	}
 
-	function selectMention(username: string) {
+	function selectMention(m: MentionSuggestion) {
 		const textarea    = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
 		const cursor      = textarea?.selectionStart ?? inputText.length;
 		const textBefore  = inputText.slice(0, cursor);
 		const textAfter   = inputText.slice(cursor);
-		const replaced    = textBefore.replace(/@[\w\-]{0,30}$/, `@${username} `);
+		const label       = labelOf(m);
+		const replaced    = textBefore.replace(/@[\p{L}\p{N}_.\-]{0,30}$/u, `@${label} `);
 		inputText         = replaced + textAfter;
+		if (!pickedMentions.some(p => p.id === m.id && p.label === label)) pickedMentions = [...pickedMentions, { id: m.id, label }];
 		showMentions      = false;
+		mentionSeq++;
 		// Re-focus textarea
 		setTimeout(() => { textarea?.focus(); textarea?.setSelectionRange(replaced.length, replaced.length); }, 0);
 	}
@@ -1344,6 +1351,7 @@
 					{@const actionsVisible = pickerMsgId === msg.id || longPressMsg === msg.id}
 					<div
 						class="group message-row relative flex items-start gap-3 px-4 transition-all {shouldGroup ? 'py-px' : 'pt-2.5 pb-px'}"
+						data-mention-scope
 						style="background: transparent"
 						role="listitem"
 						onmouseenter={(e) => (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--nx-text) 1.8%, transparent)'}
@@ -1421,7 +1429,7 @@
 							<!-- ── Sondage intégré ── -->
 							<PollCard pollId={msg.poll_id} inline={true} {token} socket={s} />
 						{:else}
-								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: var(--nx-text)" hidden={soleIds.has(msg.id)}>
+								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: var(--nx-text)" hidden={soleIds.has(msg.id)} use:mentionChips={{ html: msg.content ?? '', token: token ?? null, me: userId }}>
 									{@html renderCustomEmojis(linkifyHtml(msg.content ?? ''), customEmojis)}
 									{#if shouldGroup && msg.edited_at}
 										<span class="text-[9px] italic ml-2" style="color: var(--nx-text-muted)">{tFn('chat.edited')}</span>
@@ -1679,19 +1687,8 @@
 				<!-- @mention dropdown -->
 				{#if showMentions && mentionSuggestions.length > 0}
 					<div class="relative">
-						<div class="absolute bottom-full left-0 mb-1 w-56 bg-[var(--nx-surface-raised)] border border-gray-600 rounded-lg shadow-xl overflow-hidden z-20">
-							{#each mentionSuggestions as m, i}
-								<button
-									onclick={() => selectMention(m.username)}
-									class="w-full text-left flex items-center gap-2 px-3 py-2 text-sm transition-colors
-									       {i === mentionIndex ? 'bg-indigo-700 text-white' : 'text-[var(--nx-text)] hover:bg-[var(--nx-border)]'}"
-								>
-									<span class="w-5 h-5 rounded-full bg-indigo-700 text-white flex items-center justify-center text-xs font-bold shrink-0">
-										{m.username.charAt(0).toUpperCase()}
-									</span>
-									@{m.username}
-								</button>
-							{/each}
+						<div class="absolute bottom-full left-0 mb-1 z-30">
+							<MentionList items={mentionSuggestions} active={mentionIndex} query={mentionQuery} id="chat-mention-list" onpick={selectMention} />
 						</div>
 					</div>
 				{/if}
@@ -1826,6 +1823,11 @@
 						bind:value={inputText}
 						onkeydown={handleKeydown}
 						oninput={handleInput}
+						role="combobox"
+						aria-autocomplete="list"
+						aria-expanded={showMentions && mentionSuggestions.length > 0}
+						aria-controls="chat-mention-list"
+						aria-activedescendant={showMentions && mentionSuggestions.length > 0 ? `chat-mention-list-${mentionIndex}` : undefined}
 						disabled={isRateLimited}
 					></textarea>
 					<!-- Toolbar -->

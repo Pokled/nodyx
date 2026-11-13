@@ -8,6 +8,8 @@
 	import { closeHistory } from '@tiptap/pm/history'
 	import { toInternalPath, cardFor } from '$lib/linkCards'
 	import { internalLinkAt, linkCardPreviewPlugin, type LinkHit } from './linkCardPreview'
+	import MentionList from '$lib/components/MentionList.svelte'
+	import { suggestMentions, labelOf, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions'
 	import { draftKey, readDraft, writeDraft, removeDraft } from '$lib/editorDrafts'
 
 	let {
@@ -724,6 +726,34 @@
 			},
 		})
 
+		// ── Mention liée à la PERSONNE (SPECS/NODYX_MENTIONS_CDC.md, D49) ──────────
+		// Enregistrée en <span data-mention="u:<id>">@Nom</span> : le nom n'est qu'un
+		// repli lisible, l'affichage relit le nom à jour. Un atome : on l'efface d'un coup.
+		const MentionNode = Node.create({
+			name: 'mention',
+			group: 'inline',
+			inline: true,
+			atom: true,
+			selectable: false,
+			addAttributes() {
+				return { id: { default: null }, label: { default: '' } }
+			},
+			parseHTML() {
+				return [{
+					tag: 'span[data-mention]',
+					getAttrs: (el: HTMLElement) => {
+						const v = el.getAttribute('data-mention') ?? ''
+						if (!v.startsWith('u:')) return false
+						return { id: v.slice(2), label: (el.textContent ?? '').replace(/^@/, '') }
+					},
+				}]
+			},
+			renderHTML({ node }: any) {
+				return ['span', { 'data-mention': 'u:' + node.attrs.id, class: 'nx-mention' }, '@' + node.attrs.label]
+			},
+			renderText({ node }: any) { return '@' + node.attrs.label },
+		})
+
 		// Aperçu des cartes de liens Nodyx sous leur ligne (linkCardPreview.ts)
 		const LinkCardPreview = Extension.create({
 			name: 'nxLinkCardPreview',
@@ -752,9 +782,19 @@
 				NodyxAudio, NodyxTrack,
 				NodyxTerm, TwitchLive,
 				LinkCardPreview,
+				MentionNode,
 			],
 			content: initialContent,
 			editorProps: {
+				// Liste des mentions ouverte : flèches, Entrée, Tab et Échap lui reviennent
+				handleKeyDown(_view: any, event: KeyboardEvent) {
+					if (!mentionOpen || !mentionItems.length) return false
+					if (event.key === 'ArrowDown') { mentionActive = (mentionActive + 1) % mentionItems.length; return true }
+					if (event.key === 'ArrowUp') { mentionActive = (mentionActive - 1 + mentionItems.length) % mentionItems.length; return true }
+					if (event.key === 'Enter' || event.key === 'Tab') { pickMention(mentionItems[mentionActive]); return true }
+					if (event.key === 'Escape') { closeMention(); return true }
+					return false
+				},
 				handlePaste(_view: any, event: ClipboardEvent) {
 					const files = imageFilesOf(event.clipboardData)
 					// L'adresse d'un contenu Nodyx, seule, sur un simple curseur : un lien
@@ -781,7 +821,7 @@
 				},
 			},
 			onCreate({ editor: e }) { ensureCodeColors(e) },
-			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); syncLinkBubble(); if (transaction.docChanged) ensureCodeColors(e) },
+			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); syncLinkBubble(); syncMention(); if (transaction.docChanged) ensureCodeColors(e) },
 			onUpdate({ editor: e }) {
 				html = e.getHTML()
 				charCount = e.storage.characterCount.characters()
@@ -861,6 +901,7 @@
 			showColor = showEmoji = showLink = showImage = showVideo = showAudio = showTable = false
 			bubbleVisible = false
 			linkHit = null
+			if (mentionOpen) closeMention()
 		}
 	}
 
@@ -1513,6 +1554,61 @@
 		editor.view.focus()
 	}
 
+	// ── Mentions : « @ » propose les personnes (SPECS/NODYX_MENTIONS_CDC.md, D50) ─────
+	let mentionOpen   = $state(false)
+	let mentionItems  = $state<MentionSuggestion[]>([])
+	let mentionActive = $state(0)
+	let mentionQuery  = $state('')
+	let mentionTop    = $state(0)
+	let mentionLeft   = $state(0)
+	let mentionFrom = 0, mentionTo = 0, mentionSeq = 0
+	let mentionTimer: ReturnType<typeof setTimeout> | null = null
+	let mentionDismissedAt = -1
+
+	/** Le contexte « ici » : le salon du chat ou le sujet du forum de la page. */
+	function mentionContext(): { channelId?: string; threadId?: string } {
+		const u = page.url
+		if (u.pathname.startsWith('/chat')) return { channelId: u.searchParams.get('channel') ?? undefined }
+		const m = u.pathname.match(/^\/forum\/[^/]+\/([^/]+)$/)
+		return m ? { threadId: decodeURIComponent(m[1]) } : {}
+	}
+
+	function closeMention() { mentionOpen = false; mentionItems = []; mentionSeq++; mentionDismissedAt = mentionFrom }
+
+	function syncMention(): void {
+		if (!editor) return
+		const { state } = editor
+		const sel = state.selection
+		if (!sel.empty || editor.isActive('codeBlock') || !sel.$from.parent.isTextblock) { if (mentionOpen) closeMention(); return }
+		const at = sel.$from
+		const before = at.parent.textBetween(Math.max(0, at.parentOffset - 40), at.parentOffset, undefined, '\ufffc')
+		const m = before.match(MENTION_TRIGGER)
+		if (!m) { if (mentionOpen) { mentionOpen = false; mentionItems = []; mentionSeq++ } ; mentionDismissedAt = -1; return }
+		const from = sel.from - m[1].length - 1
+		if (from === mentionDismissedAt) return        // fermée par Échap : on ne la rouvre pas sur la même mention
+		mentionFrom = from; mentionTo = sel.from; mentionQuery = m[1]
+		try {
+			const c = editor.view.coordsAtPos(from)
+			mentionTop = c.bottom + 6; mentionLeft = Math.min(c.left, window.innerWidth - 380)
+		} catch { /* position indisponible */ }
+		if (mentionTimer) clearTimeout(mentionTimer)
+		const seq = ++mentionSeq
+		mentionTimer = setTimeout(async () => {
+			const found = await suggestMentions(mentionQuery, token ?? null, mentionContext())
+			if (seq !== mentionSeq) return
+			mentionItems = found; mentionActive = 0; mentionOpen = found.length > 0
+		}, 120)
+	}
+
+	function pickMention(s: MentionSuggestion | undefined): void {
+		if (!editor || !s) return
+		editor.chain().focus().insertContentAt({ from: mentionFrom, to: mentionTo }, [
+			{ type: 'mention', attrs: { id: s.id, label: labelOf(s) } },
+			{ type: 'text', text: ' ' },
+		]).run()
+		mentionOpen = false; mentionItems = []; mentionSeq++
+	}
+
 	// ── Preset colours & emoji ────────────────────────────────────────────────
 	const COLORS = [
 		'#ffffff','#d1d5db','#9ca3af','#6b7280','#374151','#111827',
@@ -1979,6 +2075,14 @@
 	</div>
 	{/if}
 
+	<!-- ── Mentions : liste des propositions sous le « @ » ──────────────────── -->
+	{#if mentionOpen && mentionItems.length}
+	<div class="nx-mention-pop" style="top:{mentionTop}px; left:{mentionLeft}px;">
+		<MentionList items={mentionItems} active={mentionActive} query={mentionQuery} id="{name}-mention-list"
+			context={mentionContext().threadId ? 'thread' : 'channel'} onpick={pickMention} />
+	</div>
+	{/if}
+
 	<!-- ── Bulle d'un lien Nodyx : Carte | Lien simple | Texte brut ──────────── -->
 	{#if linkHit}
 	<div class="nodyx-bubble nx-link-bubble {linkBubbleBelow ? 'below' : ''}" style="top:{linkBubbleTop}px; left:{linkBubbleLeft}px;" role="group" aria-label={tFn('editor.link_view.aria')}>
@@ -2040,6 +2144,11 @@
 	:global(.nodyx-bubble.below) {
 		transform: translate(-50%, 8px);
 	}
+	/* Liste des mentions : sous le « @ », au-dessus de tout */
+	:global(.nx-mention-pop) { position: fixed; z-index: 70; }
+	/* Une mention dans l'éditeur : la même puce qu'à l'affichage */
+	:global(.nodyx-content .tiptap .nx-mention) { display: inline; padding: 0 5px; border-radius: 6px; font-weight: 600;
+		background: color-mix(in srgb, var(--nx-info, #3b82f6) 15%, transparent); color: color-mix(in srgb, var(--nx-info, #3b82f6) 80%, var(--nx-text, #fff)); }
 	/* Bulle d'un lien Nodyx : alignée sur le DÉBUT du lien, pas centrée */
 	:global(.nodyx-bubble.nx-link-bubble)       { transform: translate(0, calc(-100% - 8px)); }
 	:global(.nodyx-bubble.nx-link-bubble.below) { transform: translate(0, 8px); }
