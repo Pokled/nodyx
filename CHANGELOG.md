@@ -252,6 +252,10 @@ le champ pour être corrigé.
   indisponible », sans rien en révéler. Trois cartes au plus par message, un message qui n'est
   qu'un lien ne montre que sa carte, et l'auteur d'un message du chat peut retirer la carte (le
   lien reste) puis la remettre. Les liens vers d'autres sites ne changent pas.
+- **Dans l'éditeur, c'est toi qui choisis.** Coller l'adresse d'un sujet, d'une réponse ou d'un
+  événement l'insère avec son titre et montre l'aperçu de sa carte sous la ligne. Une petite
+  bulle propose « Carte », « Lien simple » (le lien sans carte) ou « Texte brut » (l'adresse telle
+  quelle), et Ctrl+Z revient au lien exactement comme tu l'as collé.
 - **Toutes les pages sont plus légères.** L'éditeur de texte était chargé par chaque page de
   Nodyx, même celles où l'on n'écrit rien, l'accueil compris : environ 40 Ko compressés de trop
   à chaque visite. Il ne se charge plus que là où il s'affiche. Si son chargement échoue (une

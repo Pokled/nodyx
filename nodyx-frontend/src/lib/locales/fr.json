@@ -6653,5 +6653,10 @@
   "link_card.unavailable_text": "Il a peut-être été supprimé, ou il n'est pas visible pour toi.",
   "link_card.remove": "Retirer la carte",
   "link_card.removed_note": "Carte retirée, le lien reste.",
-  "link_card.restore": "Remettre la carte"
+  "link_card.restore": "Remettre la carte",
+  "editor.link_view.aria": "Affichage du lien",
+  "editor.link_view.card": "Carte",
+  "editor.link_view.link": "Lien simple",
+  "editor.link_view.raw": "Texte brut",
+  "editor.link_view.undo_hint": "Ctrl+Z : comme collé"
 }
