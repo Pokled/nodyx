@@ -15,6 +15,7 @@
 	import ReactionTooltip from '$lib/components/ReactionTooltip.svelte'
 	import EmojiPicker from '$lib/components/EmojiPicker.svelte'
 	import MessageBody from '$lib/components/MessageBody.svelte'
+	import DmLinkCards from '$lib/components/DmLinkCards.svelte'
 	import AudioRecorder from '$lib/components/AudioRecorder.svelte'
 	import { blockedMessage, type BlockedPayload } from '$lib/chatBlocked'
 
@@ -1697,6 +1698,10 @@
 										</div>
 									{/if}
 									<MessageBody text={displayContent(msg)} />
+									<!-- Cartes « Nodyx relié » : jamais automatiques si le message est chiffré (D45-D47) -->
+									{#if !msg.is_encrypted || (msg._decrypted !== undefined && !msg._barbarizing)}
+										<DmLinkCards text={msg.is_encrypted ? (msg._decrypted ?? '') : msg.content} token={data.token ?? null} encrypted={!!msg.is_encrypted} {conversationId} />
+									{/if}
 
 									<!-- Lock badge si message chiffré -->
 									{#if msg.is_encrypted && !msg._decryptFailed}

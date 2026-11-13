@@ -45,13 +45,17 @@ export function removeDraft(key: string): void {
 	try { localStorage.removeItem(key) } catch { /* rien */ }
 }
 
-/** À la déconnexion : aucun brouillon ne reste pour la personne suivante. */
+// Les choix « toujours afficher les aperçus » des messages privés (lib/dmPeek.ts) partent
+// avec les brouillons : la personne suivante sur ce navigateur ne les hérite pas.
+const PEEK_PREFIX = 'nodyx_peek:'
+
+/** À la déconnexion : aucun brouillon (ni choix d'aperçu) ne reste pour la personne suivante. */
 export function clearAllDrafts(): void {
 	try {
 		const keys: string[] = []
 		for (let i = 0; i < localStorage.length; i++) {
 			const k = localStorage.key(i)
-			if (k?.startsWith(PREFIX)) keys.push(k)
+			if (k?.startsWith(PREFIX) || k?.startsWith(PEEK_PREFIX)) keys.push(k)
 		}
 		keys.forEach(k => localStorage.removeItem(k))
 	} catch { /* rien */ }

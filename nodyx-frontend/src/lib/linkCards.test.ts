@@ -88,3 +88,48 @@ describe('D43 : retirer / remettre la carte', () => {
 		expect(findInternalLinks(off, O)).toEqual([`/calendar/${E}`])
 	})
 })
+
+import { findInternalLinksInText, splitSoleLinkBlocks } from './linkCards'
+
+describe('messages privés (texte brut)', () => {
+	it('les liens du texte, sans doublon, trois au plus ; un « < » ne casse rien', () => {
+		const t = `si a < b alors ${O}/calendar/${E} et ${O}/forum/jeux/a-1. Encore ${O}/calendar/${E}, ${O}/forum/jeux/b-2 ${O}/forum/jeux/c-3`
+		expect(findInternalLinksInText(t, O)).toEqual([`/calendar/${E}`, '/forum/jeux/a-1', '/forum/jeux/b-2'])
+	})
+	it('lien externe : rien', () => expect(findInternalLinksInText('https://autre.example/calendar/' + E, O)).toEqual([]))
+})
+
+describe('wiki (D48) : un lien seul sur sa ligne devient une carte à sa place', () => {
+	const sole = `<p><a href="/calendar/${E}">la soirée</a></p>`
+	it('recoller les morceaux redonne exactement l’article', () => {
+		const html = `<h2 id="a">Titre</h2><p>Lis <a href="/forum/jeux/a-1">ce sujet</a>.</p>${sole}<p>Fin</p>`
+		const parts = splitSoleLinkBlocks(html, O)
+		expect(parts.map(p => p.html).join('')).toBe(html)
+		expect(parts.map(p => p.path)).toEqual([null, `/calendar/${E}`, null])
+	})
+	it('un lien dans une phrase reste un lien', () => {
+		expect(splitSoleLinkBlocks(`<p>Voir <a href="/calendar/${E}">ici</a></p>`, O).every(p => !p.path)).toBe(true)
+	})
+	it('« Lien simple » reste un lien', () => {
+		expect(splitSoleLinkBlocks(`<p><a href="/calendar/${E}" data-card="off">x</a></p>`, O).every(p => !p.path)).toBe(true)
+	})
+	it('dans une liste, une citation ou des colonnes : jamais détaché du conteneur', () => {
+		for (const html of [`<ul><li>${sole}</li></ul>`, `<blockquote>${sole}</blockquote>`, `<div data-type="cols"><div>${sole}</div></div>`]) {
+			const parts = splitSoleLinkBlocks(html, O)
+			expect(parts).toEqual([{ html, path: null }])
+		}
+	})
+	it('pas de limite de trois dans un article', () => {
+		const html = Array.from({ length: 5 }, (_, i) => `<p><a href="/forum/jeux/s-${i}">s${i}</a></p>`).join('')
+		expect(splitSoleLinkBlocks(html, O).filter(p => p.path)).toHaveLength(5)
+	})
+	it('balises vides et images ne dérèglent pas la profondeur', () => {
+		const html = `<p>a<br>b</p><img src="/x.webp"><hr>${sole}`
+		expect(splitSoleLinkBlocks(html, O).map(p => p.path)).toEqual([null, `/calendar/${E}`])
+	})
+	it('un article hostile de 500 Ko se découpe vite', () => {
+		const html = '<p>' + '<b>x</b>'.repeat(60_000) + '</p>' + '<div>'.repeat(20_000)
+		const t = performance.now(); splitSoleLinkBlocks(html, O)
+		expect(performance.now() - t).toBeLessThan(500)
+	})
+})
