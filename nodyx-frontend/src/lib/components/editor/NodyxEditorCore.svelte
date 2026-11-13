@@ -5,6 +5,7 @@
 	import { anchoredPopover } from '$lib/actions/anchoredPopover'
 	import { t } from '$lib/i18n'
 	import { TextSelection } from '@tiptap/pm/state'
+	import { draftKey, readDraft, writeDraft, removeDraft } from '$lib/editorDrafts'
 
 	let {
 		name       = 'content',
@@ -113,7 +114,7 @@
 		bullet: false, ordered: false,
 		quote: false, codeBlock: false, link: false,
 		left: false, center: false, right: false, justify: false,
-		table: false,
+		table: false, canUndo: false, canRedo: false,
 	})
 
 	function syncActive() {
@@ -137,6 +138,8 @@
 			right:    editor.isActive({ textAlign: 'right' }),
 			justify:  editor.isActive({ textAlign: 'justify' }),
 			table:    editor.isActive('table'),
+			canUndo:  editor.can().undo(),
+			canRedo:  editor.can().redo(),
 		}
 	}
 
@@ -727,17 +730,95 @@
 				NodyxTerm, TwitchLive,
 			],
 			content: initialContent,
+			editorProps: {
+				handlePaste(_view: any, event: ClipboardEvent) {
+					const files = imageFilesOf(event.clipboardData)
+					// Du texte avec ? C'est un morceau de page : collage normal.
+					if (!files.length || (event.clipboardData?.getData('text/plain') ?? '').trim()) return false
+					event.preventDefault()
+					uploadAndInsertImages(files, null)
+					return true
+				},
+				handleDrop(view: any, event: DragEvent, _slice: any, moved: boolean) {
+					if (moved) return false
+					const files = imageFilesOf(event.dataTransfer)
+					if (!files.length) return false
+					event.preventDefault()
+					const at = view.posAtCoords({ left: event.clientX, top: event.clientY })
+					uploadAndInsertImages(files, at ? at.pos : null)
+					return true
+				},
+			},
 			onCreate({ editor: e }) { ensureCodeColors(e) },
 			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); if (transaction.docChanged) ensureCodeColors(e) },
 			onUpdate({ editor: e }) {
 				html = e.getHTML()
 				charCount = e.storage.characterCount.characters()
 				onchange(html)
+				scheduleDraft(html)
 			},
 		})
 
 		syncActive()
+		setupDraft()
 	})
+
+	// ── Brouillon automatique (lib/editorDrafts.ts) ──────────────────────────
+	// Seulement dans un formulaire : c'est lui qui dit « envoyé » (événement submit).
+	// Un brouillon trouvé au retour est PROPOSÉ (gardé en mémoire pour « Reprendre »
+	// pendant toute la visite). Si la personne écrit sans répondre, CE QU'ELLE ÉCRIT
+	// est enregistré : le travail le plus récent gagne, rien de ce qu'elle tape ne se
+	// perd en fermant l'onglet.
+	let draftOffer = $state<{ html: string; at: number } | null>(null)
+	let draftStore: string | null = null
+	let draftTimer: ReturnType<typeof setTimeout> | null = null
+	let draftPending: string | null = null
+	function flushDraft() {
+		if (draftTimer) { clearTimeout(draftTimer); draftTimer = null }
+		if (draftStore && draftPending !== null) writeDraft(draftStore, draftPending)
+		draftPending = null
+	}
+	function scheduleDraft(h: string) {
+		if (!draftStore) return
+		draftPending = h
+		if (draftTimer) clearTimeout(draftTimer)
+		draftTimer = setTimeout(flushDraft, 800)
+	}
+	function djb2(str: string): string {
+		let h = 5381
+		for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0
+		return (h >>> 0).toString(36)
+	}
+	function setupDraft() {
+		const form = wrapperEl?.closest('form')
+		if (!form) return
+		// Une page peut avoir plusieurs éditeurs du même nom (sujet du forum : réponse
+		// ET modification d'un message, tous deux « content »). On distingue par l'action
+		// du formulaire et par le contenu de départ : chaque message modifié a son brouillon,
+		// la réponse a le sien.
+		draftStore = draftKey(location.pathname, `${name}:${form.getAttribute('action') ?? ''}:${djb2(initialContent)}`)
+		const d = readDraft(draftStore)
+		if (d && d.html !== initialContent) draftOffer = d
+		form.addEventListener('submit', () => {
+			if (draftTimer) { clearTimeout(draftTimer); draftTimer = null }
+			draftPending = null
+			if (draftStore) removeDraft(draftStore)
+		})
+		window.addEventListener('pagehide', flushDraft)
+	}
+	function restoreDraft() {
+		if (!draftOffer || !editor) return
+		const h = draftOffer.html
+		draftOffer = null
+		editor.commands.setContent(h, { emitUpdate: true })
+	}
+	function discardDraft() {
+		if (draftStore) removeDraft(draftStore)
+		draftOffer = null
+	}
+	const draftWhen = $derived(draftOffer
+		? new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(draftOffer.at)
+		: '')
 
 	// ── Close popups when clicking outside the editor ─────────────────────────
 	function onDocClick(e: MouseEvent) {
@@ -769,7 +850,11 @@
 		}
 	})
 
-	onDestroy(() => editor?.destroy())
+	onDestroy(() => {
+		flushDraft()
+		if (typeof window !== 'undefined') window.removeEventListener('pagehide', flushDraft)
+		editor?.destroy()
+	})
 
 	// ── Toolbar commands (shortcuts to editor chain) ──────────────────────────
 	const run = (fn: () => void) => { fn(); showColor = showEmoji = showLink = showImage = showVideo = showAudio = showTable = false }
@@ -777,7 +862,72 @@
 	function insertLink() {
 		if (!linkUrl.trim()) return
 		editor?.chain().focus().setLink({ href: linkUrl }).run()
-		linkUrl = ''; showLink = false
+		linkUrl = ''; showLink = false; linkResults = []
+	}
+
+	// ── « Nodyx relié » : chercher dans tout Nodyx depuis la fenêtre Lien ─────
+	// Un seul champ : une adresse s'insère telle quelle ; un mot cherche les sujets,
+	// événements, membres, salons et pages du wiki que TU peux ouvrir (le cœur filtre :
+	// GET /links/search). Sans sélection, le titre devient le texte du lien.
+	type LinkResult = { type: 'thread' | 'event' | 'member' | 'channel' | 'wiki'; title: string; url: string; subtitle: string | null }
+	let linkResults   = $state<LinkResult[]>([])
+	let linkSearching = $state(false)
+	let linkSearched  = $state(false)
+	let linkActive    = $state(0)
+	let linkTimer: ReturnType<typeof setTimeout> | null = null
+	let linkSeq = 0
+	const looksLikeAddress = (v: string) => /^(https?:\/\/|\/|#|mailto:)/i.test(v.trim())
+	function onLinkInput() {
+		if (linkTimer) clearTimeout(linkTimer)
+		const q = linkUrl.trim()
+		if (q.length < 2 || looksLikeAddress(q) || !token) { linkResults = []; linkSearched = false; linkSearching = false; return }
+		linkSearching = true
+		linkTimer = setTimeout(async () => {
+			const seq = ++linkSeq
+			try {
+				const res = await apiFetch(fetch, `/links/search?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } })
+				const j = res.ok ? await res.json() : { results: [] }
+				if (seq !== linkSeq) return          // une frappe plus récente a pris le relais
+				linkResults = Array.isArray(j.results) ? j.results : []
+			} catch {
+				if (seq === linkSeq) linkResults = []
+			} finally {
+				if (seq === linkSeq) { linkSearching = false; linkSearched = true; linkActive = 0 }
+			}
+		}, 250)
+	}
+	function pickLink(r: LinkResult) {
+		if (!editor) return
+		const { empty } = editor.state.selection
+		if (empty) {
+			editor.chain().focus().insertContent([
+				{ type: 'text', text: r.title, marks: [{ type: 'link', attrs: { href: r.url } }] },
+				{ type: 'text', text: ' ' },
+			]).run()
+		} else {
+			editor.chain().focus().setLink({ href: r.url }).run()
+		}
+		linkUrl = ''; linkResults = []; linkSearched = false; showLink = false
+	}
+	function onLinkKey(e: KeyboardEvent) {
+		if (e.key === 'Escape') { showLink = false; return }
+		if (linkResults.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+			e.preventDefault()
+			linkActive = (linkActive + (e.key === 'ArrowDown' ? 1 : linkResults.length - 1)) % linkResults.length
+			return
+		}
+		if (e.key === 'Enter') {
+			e.preventDefault()
+			if (linkResults.length && !looksLikeAddress(linkUrl)) pickLink(linkResults[linkActive])
+			else insertLink()
+		}
+	}
+	const linkTypeLabel = (t: LinkResult['type']) => tFn(`editor.link.type_${t}`)
+	function linkSubtitle(r: LinkResult): string {
+		if (r.type === 'event' && r.subtitle) {
+			try { return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(r.subtitle)) } catch { return '' }
+		}
+		return r.subtitle ?? ''
 	}
 
 	// Ouvre/ferme le menu image. À l'ouverture, si une image est sélectionnée
@@ -840,6 +990,41 @@
 		audioStaged = []
 		if (audioFileEl) audioFileEl.value = ''
 		if (audioCoverFileEl) audioCoverFileEl.value = ''
+	}
+
+	// ── Coller ou déposer une image (capture d'écran, fichier) ───────────────
+	// Avant : rien ne se passait. Une image SEULE dans le presse-papiers (capture) ou
+	// déposée est envoyée sur l'instance (/social/upload : vérifiée, convertie en webp),
+	// puis insérée. Un morceau de page web (texte + images) garde le collage normal.
+	let pasteUploading = $state(0)
+	let pasteError     = $state('')
+	const MAX_PASTED_IMAGES = 5
+	function imageFilesOf(dt: DataTransfer | null): File[] {
+		if (!dt) return []
+		return Array.from(dt.files ?? []).filter(f => f.type.startsWith('image/')).slice(0, MAX_PASTED_IMAGES)
+	}
+	async function uploadAndInsertImages(files: File[], pos: number | null) {
+		pasteError = ''
+		for (const file of files) {
+			pasteUploading++
+			try {
+				const fd = new FormData()
+				fd.append('file', file)
+				const res = await apiFetch(fetch, '/social/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+				const j = await res.json().catch(() => ({}))
+				if (!res.ok || !j.url) { pasteError = tFn('editor.paste_failed', { reason: j.error ?? String(res.status) }); continue }
+				const attrs = { src: j.url, alt: '', class: 'mx-auto block', 'data-align': 'center', align: 'center' }
+				if (pos !== null && editor) {
+					editor.chain().focus().insertContentAt(pos, { type: 'image', attrs }).run()
+				} else {
+					editor?.chain().focus().setImage(attrs).run()
+				}
+			} catch {
+				pasteError = tFn('editor.paste_failed', { reason: tFn('editor.paste_network') })
+			} finally {
+				pasteUploading--
+			}
+		}
 	}
 
 	async function uploadBlobToPosts(blob: Blob, filename: string): Promise<string | null> {
@@ -1250,6 +1435,20 @@
 		}}
 	>
 
+		<!-- Annuler / refaire : avant, seulement au clavier, donc rien sur téléphone -->
+		<div class="flex items-center gap-0.5">
+			<button type="button" onclick={() => editor?.chain().focus().undo().run()} disabled={!a.canUndo}
+				class="tb-btn disabled:opacity-30 disabled:cursor-default" title={tFn('editor.undo')} aria-label={tFn('editor.undo')}>
+				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11"/></svg>
+			</button>
+			<button type="button" onclick={() => editor?.chain().focus().redo().run()} disabled={!a.canRedo}
+				class="tb-btn disabled:opacity-30 disabled:cursor-default" title={tFn('editor.redo')} aria-label={tFn('editor.redo')}>
+				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 000 11H13"/></svg>
+			</button>
+		</div>
+
+		<div class="tb-sep"></div>
+
 		<!-- Inline formatting -->
 		<div class="flex items-center gap-0.5">
 			<button type="button" onclick={() => toggleAny('bold')}      class="tb-btn {a.bold      ? 'active' : ''}" title={tFn('editor.bold')}>         <b>B</b></button>
@@ -1343,8 +1542,31 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
 			</button>
 			{#if showLink}
-			<div class="popup w-72 flex flex-col gap-2 p-3" use:anchoredPopover>
-				<input type="url" bind:value={linkUrl} placeholder={tFn('editor.link.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertLink()} />
+			<div class="popup w-80 flex flex-col gap-2 p-3" use:anchoredPopover>
+				<input type="text" bind:value={linkUrl} oninput={onLinkInput} onkeydown={onLinkKey}
+					placeholder={tFn('editor.link.search_ph')} aria-label={tFn('editor.link.search_ph')}
+					class="popup-input" autocomplete="off"
+					role="combobox" aria-expanded={linkResults.length > 0} aria-controls="nx-link-results" />
+				{#if linkResults.length}
+				<ul id="nx-link-results" role="listbox" class="max-h-64 overflow-y-auto -mx-1">
+					{#each linkResults as r, i (r.type + r.url)}
+					<li role="option" aria-selected={i === linkActive}>
+						<button type="button" onclick={() => pickLink(r)} onmouseenter={() => linkActive = i}
+							class="w-full text-left px-2 py-1.5 rounded-md flex items-start gap-2 {i === linkActive ? 'bg-[var(--nx-surface-raised)]' : ''}">
+							<span class="shrink-0 mt-0.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--nx-header-accent)_15%,transparent)] text-[var(--nx-header-accent)]">{linkTypeLabel(r.type)}</span>
+							<span class="min-w-0">
+								<span class="block text-sm text-[var(--nx-text)] truncate">{r.title}</span>
+								{#if linkSubtitle(r)}<span class="block text-xs text-[var(--nx-text-muted)] truncate">{linkSubtitle(r)}</span>{/if}
+							</span>
+						</button>
+					</li>
+					{/each}
+				</ul>
+				{:else if linkSearching}
+				<p class="text-xs text-[var(--nx-text-muted)] px-1">{tFn('editor.link.searching')}</p>
+				{:else if linkSearched}
+				<p class="text-xs text-[var(--nx-text-muted)] px-1">{tFn('editor.link.no_result')}</p>
+				{/if}
 				<div class="flex gap-2">
 					<button type="button" onclick={insertLink} class="flex-1 popup-btn-primary">{tFn('editor.insert')}</button>
 					{#if a.link}<button type="button" onclick={() => { editor?.chain().focus().unsetLink().run(); showLink = false }} class="popup-btn-danger">{tFn('editor.delete_link')}</button>{/if}
@@ -1604,6 +1826,17 @@
 	</div>
 	{/if}
 
+	<!-- ── Brouillon trouvé : proposé, jamais imposé ──────────────────────── -->
+	{#if draftOffer}
+	<div class="px-4 py-2 border-b border-gray-800 themed:border-[var(--nx-border)] text-xs flex flex-wrap items-center gap-2 bg-[color-mix(in_srgb,var(--nx-header-accent)_8%,transparent)]" role="status">
+		<span class="text-[var(--nx-text)]">{tFn('editor.draft_offer', { when: draftWhen })}</span>
+		<span class="ml-auto flex gap-2">
+			<button type="button" onclick={restoreDraft} class="px-2.5 py-1 rounded-md bg-[var(--nx-header-accent)] text-white font-medium">{tFn('editor.draft_restore')}</button>
+			<button type="button" onclick={discardDraft} class="px-2.5 py-1 rounded-md border border-[var(--nx-border)] text-[var(--nx-text-muted)]">{tFn('editor.draft_discard')}</button>
+		</span>
+	</div>
+	{/if}
+
 	<!-- ── Tiptap content area ──────────────────────────────────────────── -->
 	<div
 		bind:this={editorEl}
@@ -1624,6 +1857,18 @@
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.4"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12a7 7 0 0014 0"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>
 			<span>{blockIsAnchored ? tFn('editor.anchor.anchored') : tFn('editor.anchor.anchor')}</span>
 		</button>
+	</div>
+	{/if}
+
+	<!-- ── Envoi d'une image collée ou déposée ─────────────────────────────── -->
+	{#if pasteUploading > 0 || pasteError}
+	<div class="px-4 py-1.5 border-t border-gray-800 themed:border-[var(--nx-border)] text-xs flex items-center gap-2" role="status" aria-live="polite">
+		{#if pasteUploading > 0}
+			<span class="text-[var(--nx-text-muted)]">{tFn('editor.paste_uploading')}</span>
+		{:else}
+			<span class="text-[var(--nx-bad)]">{pasteError}</span>
+			<button type="button" class="ml-auto text-[var(--nx-text-muted)] hover:underline" onclick={() => pasteError = ''}>{tFn('editor.paste_dismiss')}</button>
+		{/if}
 	</div>
 	{/if}
 

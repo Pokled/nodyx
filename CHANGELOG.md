@@ -239,6 +239,11 @@ le champ pour être corrigé.
   l'envoi sans prévenir, et une vidéo refusée laissait une boîte vide dans le message. Le chat
   et les messages privés utilisent maintenant les mêmes règles que le forum, avec une seule
   différence : les titres n'y portent pas d'ancre.
+- **L'éditeur ne perd plus rien et se laisse faire.** Coller une capture d'écran ou déposer
+  une image l'envoie et l'insère directement (avant, rien ne se passait). Deux boutons Annuler
+  et Refaire, pour le téléphone où il n'y a pas de Ctrl+Z. Et un brouillon automatique, gardé
+  dans ton navigateur seulement : en revenant sur la page, l'éditeur te propose de reprendre
+  ton texte ou de l'effacer. Le brouillon s'efface à l'envoi et à la déconnexion.
 - **Toutes les pages sont plus légères.** L'éditeur de texte était chargé par chaque page de
   Nodyx, même celles où l'on n'écrit rien, l'accueil compris : environ 40 Ko compressés de trop
   à chaque visite. Il ne se charge plus que là où il s'affiche. Si son chargement échoue (une

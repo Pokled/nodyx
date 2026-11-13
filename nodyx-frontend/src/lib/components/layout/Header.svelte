@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { clearAllDrafts } from '$lib/editorDrafts';
 	import { editMode } from '$lib/editMode';
 	import { editZone } from '$lib/actions/editZone';
 	import { page } from '$app/state';
@@ -356,7 +357,7 @@
 							</div>
 							<div class="mx-3" style="border-top: 1px solid var(--nx-border)"></div>
 							<div class="py-1.5">
-								<form method="POST" action="/auth/logout">
+								<form method="POST" action="/auth/logout" onsubmit={clearAllDrafts}>
 									<button type="submit" class="nx-dropdown-item nx-dropdown-item--danger w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors text-left">
 										<span class="text-base">🚪</span><span>{tFn('common.logout')}</span>
 									</button>
