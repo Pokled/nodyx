@@ -6615,5 +6615,11 @@
   "editor.link.type_event": "Événement",
   "editor.link.type_member": "Membre",
   "editor.link.type_channel": "Salon",
-  "editor.link.type_wiki": "Wiki"
+  "editor.link.type_wiki": "Wiki",
+  "event.unavailable_title": "Cet événement n'est pas disponible",
+  "event.unavailable_text": "Il a peut-être été supprimé. S'il est réservé aux membres de la communauté, connecte-toi pour le voir.",
+  "event.unavailable_text_member": "Il a peut-être été supprimé, ou son lien n'est plus le bon.",
+  "event.unavailable_back": "Voir le calendrier",
+  "event.load_error_title": "L'événement n'a pas pu s'afficher",
+  "event.load_error_text": "Un souci de notre côté. Réessaie dans un instant."
 }
