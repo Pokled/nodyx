@@ -6607,5 +6607,13 @@
   "editor.redo": "Refaire (Ctrl+Y)",
   "editor.draft_offer": "Tu as un brouillon non envoyé, enregistré le {{when}}.",
   "editor.draft_restore": "Reprendre",
-  "editor.draft_discard": "Effacer"
+  "editor.draft_discard": "Effacer",
+  "editor.link.search_ph": "Une adresse, ou cherche un sujet, un membre…",
+  "editor.link.searching": "Recherche…",
+  "editor.link.no_result": "Rien trouvé. Tu peux aussi coller une adresse.",
+  "editor.link.type_thread": "Sujet",
+  "editor.link.type_event": "Événement",
+  "editor.link.type_member": "Membre",
+  "editor.link.type_channel": "Salon",
+  "editor.link.type_wiki": "Wiki"
 }

@@ -853,7 +853,72 @@
 	function insertLink() {
 		if (!linkUrl.trim()) return
 		editor?.chain().focus().setLink({ href: linkUrl }).run()
-		linkUrl = ''; showLink = false
+		linkUrl = ''; showLink = false; linkResults = []
+	}
+
+	// ── « Nodyx relié » : chercher dans tout Nodyx depuis la fenêtre Lien ─────
+	// Un seul champ : une adresse s'insère telle quelle ; un mot cherche les sujets,
+	// événements, membres, salons et pages du wiki que TU peux ouvrir (le cœur filtre :
+	// GET /links/search). Sans sélection, le titre devient le texte du lien.
+	type LinkResult = { type: 'thread' | 'event' | 'member' | 'channel' | 'wiki'; title: string; url: string; subtitle: string | null }
+	let linkResults   = $state<LinkResult[]>([])
+	let linkSearching = $state(false)
+	let linkSearched  = $state(false)
+	let linkActive    = $state(0)
+	let linkTimer: ReturnType<typeof setTimeout> | null = null
+	let linkSeq = 0
+	const looksLikeAddress = (v: string) => /^(https?:\/\/|\/|#|mailto:)/i.test(v.trim())
+	function onLinkInput() {
+		if (linkTimer) clearTimeout(linkTimer)
+		const q = linkUrl.trim()
+		if (q.length < 2 || looksLikeAddress(q) || !token) { linkResults = []; linkSearched = false; linkSearching = false; return }
+		linkSearching = true
+		linkTimer = setTimeout(async () => {
+			const seq = ++linkSeq
+			try {
+				const res = await apiFetch(fetch, `/links/search?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } })
+				const j = res.ok ? await res.json() : { results: [] }
+				if (seq !== linkSeq) return          // une frappe plus récente a pris le relais
+				linkResults = Array.isArray(j.results) ? j.results : []
+			} catch {
+				if (seq === linkSeq) linkResults = []
+			} finally {
+				if (seq === linkSeq) { linkSearching = false; linkSearched = true; linkActive = 0 }
+			}
+		}, 250)
+	}
+	function pickLink(r: LinkResult) {
+		if (!editor) return
+		const { empty } = editor.state.selection
+		if (empty) {
+			editor.chain().focus().insertContent([
+				{ type: 'text', text: r.title, marks: [{ type: 'link', attrs: { href: r.url } }] },
+				{ type: 'text', text: ' ' },
+			]).run()
+		} else {
+			editor.chain().focus().setLink({ href: r.url }).run()
+		}
+		linkUrl = ''; linkResults = []; linkSearched = false; showLink = false
+	}
+	function onLinkKey(e: KeyboardEvent) {
+		if (e.key === 'Escape') { showLink = false; return }
+		if (linkResults.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+			e.preventDefault()
+			linkActive = (linkActive + (e.key === 'ArrowDown' ? 1 : linkResults.length - 1)) % linkResults.length
+			return
+		}
+		if (e.key === 'Enter') {
+			e.preventDefault()
+			if (linkResults.length && !looksLikeAddress(linkUrl)) pickLink(linkResults[linkActive])
+			else insertLink()
+		}
+	}
+	const linkTypeLabel = (t: LinkResult['type']) => tFn(`editor.link.type_${t}`)
+	function linkSubtitle(r: LinkResult): string {
+		if (r.type === 'event' && r.subtitle) {
+			try { return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(r.subtitle)) } catch { return '' }
+		}
+		return r.subtitle ?? ''
 	}
 
 	// Ouvre/ferme le menu image. À l'ouverture, si une image est sélectionnée
@@ -1468,8 +1533,31 @@
 				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
 			</button>
 			{#if showLink}
-			<div class="popup w-72 flex flex-col gap-2 p-3" use:anchoredPopover>
-				<input type="url" bind:value={linkUrl} placeholder={tFn('editor.link.url_ph')} class="popup-input" onkeydown={e => e.key === 'Enter' && insertLink()} />
+			<div class="popup w-80 flex flex-col gap-2 p-3" use:anchoredPopover>
+				<input type="text" bind:value={linkUrl} oninput={onLinkInput} onkeydown={onLinkKey}
+					placeholder={tFn('editor.link.search_ph')} aria-label={tFn('editor.link.search_ph')}
+					class="popup-input" autocomplete="off"
+					role="combobox" aria-expanded={linkResults.length > 0} aria-controls="nx-link-results" />
+				{#if linkResults.length}
+				<ul id="nx-link-results" role="listbox" class="max-h-64 overflow-y-auto -mx-1">
+					{#each linkResults as r, i (r.type + r.url)}
+					<li role="option" aria-selected={i === linkActive}>
+						<button type="button" onclick={() => pickLink(r)} onmouseenter={() => linkActive = i}
+							class="w-full text-left px-2 py-1.5 rounded-md flex items-start gap-2 {i === linkActive ? 'bg-[var(--nx-surface-raised)]' : ''}">
+							<span class="shrink-0 mt-0.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--nx-header-accent)_15%,transparent)] text-[var(--nx-header-accent)]">{linkTypeLabel(r.type)}</span>
+							<span class="min-w-0">
+								<span class="block text-sm text-[var(--nx-text)] truncate">{r.title}</span>
+								{#if linkSubtitle(r)}<span class="block text-xs text-[var(--nx-text-muted)] truncate">{linkSubtitle(r)}</span>{/if}
+							</span>
+						</button>
+					</li>
+					{/each}
+				</ul>
+				{:else if linkSearching}
+				<p class="text-xs text-[var(--nx-text-muted)] px-1">{tFn('editor.link.searching')}</p>
+				{:else if linkSearched}
+				<p class="text-xs text-[var(--nx-text-muted)] px-1">{tFn('editor.link.no_result')}</p>
+				{/if}
 				<div class="flex gap-2">
 					<button type="button" onclick={insertLink} class="flex-1 popup-btn-primary">{tFn('editor.insert')}</button>
 					{#if a.link}<button type="button" onclick={() => { editor?.chain().focus().unsetLink().run(); showLink = false }} class="popup-btn-danger">{tFn('editor.delete_link')}</button>{/if}

@@ -6607,5 +6607,13 @@
   "editor.redo": "Redo (Ctrl+Y)",
   "editor.draft_offer": "You have an unsent draft, saved on {{when}}.",
   "editor.draft_restore": "Restore",
-  "editor.draft_discard": "Discard"
+  "editor.draft_discard": "Discard",
+  "editor.link.search_ph": "An address, or search a topic, a member…",
+  "editor.link.searching": "Searching…",
+  "editor.link.no_result": "Nothing found. You can also paste an address.",
+  "editor.link.type_thread": "Topic",
+  "editor.link.type_event": "Event",
+  "editor.link.type_member": "Member",
+  "editor.link.type_channel": "Channel",
+  "editor.link.type_wiki": "Wiki"
 }
