@@ -52,6 +52,8 @@ export interface ThreadSummary extends Thread {
   author_username: string
   author_avatar:   string | null
   post_count:      number
+  /** Renvoyé par findById (jointure categories) ; absent des listes. */
+  category_slug?:  string | null
 }
 
 // ── Queries ──────────────────────────────────────────────────

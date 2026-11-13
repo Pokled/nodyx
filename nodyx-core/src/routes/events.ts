@@ -15,6 +15,7 @@ import { sanitize } from '../utils/sanitize'
 import { rehostExternalImages } from '../services/inlineImageRehost'
 import { isContainedUploadPath } from '../utils/uploadPath'
 import { canReadEvent } from '../services/eventAccess'
+import { ownOrigins } from '../utils/instanceOrigins'
 
 // La description d'un événement vient de NodyxEditor, comme un message du forum :
 // même nettoyeur (utils/sanitize) et même recopie des images externes. Avant, une
@@ -33,15 +34,6 @@ async function cleanDescription(raw: string): Promise<string> {
 // adresse IP part chez ce site). Adresse complète acceptée seulement sur l'origine
 // de l'instance (FRONTEND_URL, SELF_URL, et PUBLIC_API_URL quand l'API vit sur un
 // autre domaine que le site : l'image est alors servie par ce domaine-là).
-function ownOrigins(): Set<string> {
-  const out = new Set<string>()
-  for (const v of [process.env.FRONTEND_URL, process.env.SELF_URL, process.env.PUBLIC_API_URL]) {
-    if (!v) continue
-    try { out.add(new URL(v).origin) } catch { /* variable mal formée : ignorée */ }
-  }
-  return out
-}
-
 export function isOwnUploadUrl(value: string): boolean {
   if (isContainedUploadPath(value)) return true
   let u: URL
