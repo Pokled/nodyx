@@ -46,26 +46,50 @@ const COVER_INVALID = { error: 'The cover image must be a file uploaded to this 
 
 // -- Schemas -------------------------------------------------------------------
 
-const CreateEventSchema = z.object({
+// Les champs d'un événement, SANS valeur par défaut. Les défauts ne valent qu'à la
+// création : en zod 4, `.partial()` les garde, et une modification partielle les
+// réécrivait. Jusqu'au 13/11/2026, « Annuler l'événement » (qui n'envoie que
+// is_cancelled) rendait un événement privé PUBLIC, vidait sa description et ses tags,
+// coupait les inscriptions et remettait « toute la journée » et la devise par défaut.
+const EventFields = {
   title:           z.string().min(3).max(200),
-  description:     z.string().max(50000).optional().default(''),
-  location:        z.string().max(500).nullable().optional(),
-  location_lat:    z.number().nullable().optional(),
-  location_lng:    z.number().nullable().optional(),
+  description:     z.string().max(50000),
+  location:        z.string().max(500).nullable(),
+  location_lat:    z.number().nullable(),
+  location_lng:    z.number().nullable(),
   starts_at:       z.string().datetime(),
-  ends_at:         z.string().datetime().nullable().optional(),
-  is_all_day:      z.boolean().optional().default(false),
-  is_public:       z.boolean().optional().default(true),
-  cover_url:       z.string().max(2048).nullable().optional(),
-  tags:            z.array(z.string().max(50)).max(10).optional().default([]),
-  rsvp_enabled:    z.boolean().optional().default(false),
-  max_attendees:   z.number().int().positive().nullable().optional(),
-  ticket_price:    z.number().nonnegative().nullable().optional(),
-  ticket_currency: z.string().length(3).optional().default('EUR'),
-  ticket_url:      z.string().nullable().optional(),
+  ends_at:         z.string().datetime().nullable(),
+  is_all_day:      z.boolean(),
+  is_public:       z.boolean(),
+  cover_url:       z.string().max(2048).nullable(),
+  tags:            z.array(z.string().max(50)).max(10),
+  rsvp_enabled:    z.boolean(),
+  max_attendees:   z.number().int().positive().nullable(),
+  ticket_price:    z.number().nonnegative().nullable(),
+  ticket_currency: z.string().length(3),
+  ticket_url:      z.string().nullable(),
+}
+
+const CreateEventSchema = z.object({
+  ...EventFields,
+  description:     EventFields.description.optional().default(''),
+  location:        EventFields.location.optional(),
+  location_lat:    EventFields.location_lat.optional(),
+  location_lng:    EventFields.location_lng.optional(),
+  ends_at:         EventFields.ends_at.optional(),
+  is_all_day:      EventFields.is_all_day.optional().default(false),
+  is_public:       EventFields.is_public.optional().default(true),
+  cover_url:       EventFields.cover_url.optional(),
+  tags:            EventFields.tags.optional().default([]),
+  rsvp_enabled:    EventFields.rsvp_enabled.optional().default(false),
+  max_attendees:   EventFields.max_attendees.optional(),
+  ticket_price:    EventFields.ticket_price.optional(),
+  ticket_currency: EventFields.ticket_currency.optional().default('EUR'),
+  ticket_url:      EventFields.ticket_url.optional(),
 })
 
-const UpdateEventSchema = CreateEventSchema.partial().extend({
+// Modification : seuls les champs ENVOYÉS changent.
+const UpdateEventSchema = z.object(EventFields).partial().extend({
   is_cancelled: z.boolean().optional(),
 })
 
@@ -74,6 +98,21 @@ const RsvpSchema = z.object({
 })
 
 // -- Helper: authz -------------------------------------------------------------
+
+// Annonces en direct (Socket.IO). `io.emit` part vers TOUTES les connexions, membres ou
+// non (un compte retiré de la communauté garde sa session). Avant le 13/11/2026, un
+// événement privé y passait en entier (titre, description, lieu), avec ses inscriptions.
+// Règle : seul un événement PUBLIC est annoncé, et sans identifiant de communauté (comme
+// sa page). Un privé n'est annoncé à personne ; sa page relit tout en base, avec les
+// droits du lecteur.
+function announcePublic(name: string, ev: { is_public?: boolean } | undefined, payload: Record<string, unknown>) {
+  if (ev?.is_public === true) io?.emit(name, payload)
+}
+
+function withoutCommunity<T extends Record<string, unknown>>(row: T): Omit<T, 'community_id'> {
+  const { community_id: _community, ...rest } = row
+  return rest
+}
 
 async function canManageEvent(userId: string, eventId: string): Promise<boolean> {
   const { rows } = await db.query<{ author_id: string; community_id: string }>(
@@ -235,7 +274,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
         ]
       )
 
-      io?.emit('event:created', { event: rows[0] })
+      announcePublic('event:created', rows[0], { event: withoutCommunity(rows[0]) })
       // Webhooks : seulement un événement public (relu en base par announceCalendarEvent)
       announceCalendarEvent(rows[0].id)
       return reply.status(201).send({ event: rows[0] })
@@ -298,7 +337,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
         vals
       )
 
-      io?.emit('event:updated', { event: rows[0] })
+      announcePublic('event:updated', rows[0], { event: withoutCommunity(rows[0]) })
       return reply.send({ event: rows[0] })
     }
   )
@@ -313,8 +352,9 @@ export default async function eventsRoutes(app: FastifyInstance) {
         return reply.status(403).send({ error: 'Non autorise' })
       }
 
-      await db.query(`DELETE FROM events WHERE id = $1`, [req.params.id])
-      io?.emit('event:deleted', { eventId: req.params.id })
+      const { rows: gone } = await db.query<{ is_public: boolean }>(
+        `DELETE FROM events WHERE id = $1 RETURNING is_public`, [req.params.id])
+      announcePublic('event:deleted', gone[0], { eventId: req.params.id })
       return reply.status(204).send()
     }
   )
@@ -359,7 +399,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
         `SELECT id, username, avatar FROM users WHERE id = $1`,
         [userId]
       )
-      io?.emit('event:rsvp', { eventId: req.params.id, user: userData[0], status: req.body.status })
+      announcePublic('event:rsvp', ev[0], { eventId: req.params.id, user: userData[0], status: req.body.status })
       return reply.send({ ok: true })
     }
   )

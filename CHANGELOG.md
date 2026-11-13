@@ -256,6 +256,17 @@ le champ pour être corrigé.
   langue affichée, et l'anglais en plus quand elle n'est pas encore entièrement traduite. Pour
   un visiteur francophone, la première visite passe d'environ 666 à 341 Ko. Changer de langue
   reste instantané à l'œil : la nouvelle se charge au moment du choix.
+- **Annuler un événement privé ne le rend plus public.** Le bouton « Annuler l'événement » (et
+  « Rétablir ») n'envoie qu'une seule information, mais le serveur réécrivait au passage les autres
+  réglages avec leurs valeurs de création : l'événement devenait public, perdait sa description et
+  ses tags, et les inscriptions étaient coupées. Une modification ne change plus que ce qu'on
+  envoie. Si un de tes événements annulés a perdu sa description ou est passé en public, il faut
+  le corriger à la main depuis sa page de modification.
+- **Sécurité : un événement privé n'est plus annoncé à toutes les connexions.** Créer, modifier,
+  supprimer un événement ou s'y inscrire était diffusé en direct à toutes les personnes connectées,
+  y compris un compte retiré de la communauté qui gardait sa session : titre, description, lieu
+  et inscrits d'un événement privé compris. Seul un événement public est encore annoncé, et sans
+  identifiant interne.
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
   recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
   y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde
