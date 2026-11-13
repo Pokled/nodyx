@@ -27,6 +27,7 @@ import whisperRoutes      from './routes/whispers'
 import pollRoutes         from './routes/polls'
 import dmRoutes           from './routes/dm'
 import eventRoutes           from './routes/events'
+import linksRoutes           from './routes/links'
 import authenticatorRoutes   from './routes/authenticator'
 import taskRoutes            from './routes/tasks'
 import honeypotRoutes        from './routes/honeypot'
@@ -231,6 +232,7 @@ server.register(whisperRoutes,       { prefix: '/api/v1/whispers' })
 server.register(pollRoutes,          { prefix: '/api/v1/polls' })
 server.register(dmRoutes,            { prefix: '/api/v1/dm' })
 server.register(eventRoutes,          { prefix: '/api/v1/events' })
+server.register(linksRoutes,          { prefix: '/api/v1/links' })
 server.register(authenticatorRoutes,  { prefix: '/api/auth' })
 server.register(taskRoutes,           { prefix: '/api/v1/tasks' })
 server.register(honeypotRoutes,       { prefix: '/api/v1' })
