@@ -246,6 +246,11 @@ le champ pour être corrigé.
   relais, pré-rempli, pour ne jamais perdre ce qu'on écrit.
   Dans l'éditeur lui-même, la coloration du code (environ 50 Ko) n'est plus chargée qu'au
   premier bloc de code : écrire un message sans code ne la télécharge plus.
+- **Chaque page télécharge deux fois moins.** Les neuf langues de Nodyx partaient avec chaque
+  page, alors qu'on n'en lit qu'une : 437 Ko compressés sur 666. La page ne charge plus que la
+  langue affichée, et l'anglais en plus quand elle n'est pas encore entièrement traduite. Pour
+  un visiteur francophone, la première visite passe d'environ 666 à 341 Ko. Changer de langue
+  reste instantané à l'œil : la nouvelle se charge au moment du choix.
 - **Sécurité : le serveur ne s'appelle plus lui-même sur demande.** Le webhook d'OctoGuard et la
   recopie des images collées dans le forum ou les tâches allaient chercher n'importe quelle adresse,
   y compris celles du serveur et de son réseau local. Les deux passent maintenant par la garde
