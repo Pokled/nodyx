@@ -20,7 +20,7 @@ export interface AnchoredPopoverOptions {
  * depuis le rectangle de son ancre, borné à l'écran DES DEUX CÔTÉS, et bascule
  * de l'autre côté quand il n'y a plus la place.
  *
- * Extrait de `editor/NodyxEditor.svelte` (action `autoFlip`), où ce calcul est
+ * Extrait de `editor/NodyxEditorCore.svelte` (action `autoFlip`), où ce calcul est
  * en production depuis longtemps : c'est le seul endroit du dépôt qui traitait
  * correctement le problème. Il est promu ici en primitive partagée plutôt que
  * recopié une nième fois, parce que six stratégies de positionnement
