@@ -65,7 +65,7 @@ export type LinkCard =
       replies: number; created_at: string; last_activity_at: string; is_locked: boolean; tags: string[] }
   | { type: 'post'; url: string; thread: { title: string; url: string }; author: { username: string; avatar: string | null }
       excerpt: string; created_at: string }
-  | { type: 'event'; url: string; title: string; starts_at: string; ends_at: string | null; is_all_day: boolean
+  | { type: 'event'; url: string; title: string; starts_at: string; ends_at: string | null; is_all_day: boolean; timezone: string | null
       location: string | null; cover_url: string | null; is_cancelled: boolean; going_count: number
       rsvp_enabled: boolean; my_rsvp: string | null; is_full: boolean
       going_preview: { username: string; avatar: string | null }[] }
@@ -115,11 +115,11 @@ export async function resolveCard(ref: LinkRef, viewerId: string | null): Promis
   }
 
   const { rows } = await db.query<{
-    id: string; title: string; starts_at: string; ends_at: string | null; is_all_day: boolean; location: string | null
+    id: string; title: string; starts_at: string; ends_at: string | null; is_all_day: boolean; timezone: string | null; location: string | null
     cover_url: string | null; is_cancelled: boolean; rsvp_enabled: boolean; is_public: boolean; community_id: string
     going_count: number; my_rsvp: string | null; max_attendees: number | null
   }>(
-    `SELECT e.id, e.title, e.starts_at, e.ends_at, e.is_all_day, e.location, e.cover_url, e.is_cancelled,
+    `SELECT e.id, e.title, e.starts_at, e.ends_at, e.is_all_day, e.timezone, e.location, e.cover_url, e.is_cancelled,
             e.rsvp_enabled, e.is_public, e.community_id, e.max_attendees,
             (SELECT COUNT(*)::int FROM event_rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS going_count,
             (SELECT r2.status FROM event_rsvps r2 WHERE r2.event_id = e.id AND r2.user_id = $2 LIMIT 1) AS my_rsvp
@@ -139,7 +139,7 @@ export async function resolveCard(ref: LinkRef, viewerId: string | null): Promis
     : { rows: [] as { username: string; avatar: string | null }[] }
   return {
     type: 'event', url: `/calendar/${e.id}`, title: e.title, starts_at: e.starts_at, ends_at: e.ends_at,
-    is_all_day: e.is_all_day, location: e.location, cover_url: e.cover_url, is_cancelled: e.is_cancelled,
+    is_all_day: e.is_all_day, timezone: e.timezone, location: e.location, cover_url: e.cover_url, is_cancelled: e.is_cancelled,
     going_count: e.going_count, rsvp_enabled: e.rsvp_enabled, my_rsvp: viewerId ? e.my_rsvp : null,
     is_full: e.max_attendees !== null && e.going_count >= e.max_attendees,
     going_preview: going.map(g => ({ username: g.username, avatar: g.avatar })),

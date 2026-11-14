@@ -3,6 +3,7 @@
 	import type { PageData } from './$types';
 	import { untrack } from 'svelte';
 	import { t } from '$lib/i18n';
+	import { viewerZone, showZone } from '$lib/eventTime';
 
 	const tFn = $derived($t);
 
@@ -19,13 +20,14 @@
 		upcoming = data.upcoming === 'true';
 	});
 
-	function formatDate(iso: string) {
+	// Dans le fuseau du lecteur (lib/eventTime) ; une journée entière est une date (UTC)
+	function formatDate(iso: string, allDay = false) {
 		return new Date(iso).toLocaleDateString([], {
-			day: '2-digit', month: 'short', year: 'numeric'
+			day: '2-digit', month: 'short', year: 'numeric', timeZone: showZone({ is_all_day: allDay }, $viewerZone),
 		});
 	}
 	function formatTime(iso: string) {
-		return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: showZone({}, $viewerZone) });
 	}
 
 	function threadUrl(r: any): string {
@@ -165,7 +167,7 @@
 
 						<span class="disc-date">
 							{#if result.content_type === 'event' && result.starts_at}
-								{formatDate(result.starts_at)}{#if !result.is_all_day} {tFn('discover.at_time')} {formatTime(result.starts_at)}{/if}
+								{formatDate(result.starts_at, !!result.is_all_day)}{#if !result.is_all_day && $viewerZone} {tFn('discover.at_time')} {formatTime(result.starts_at)}{/if}
 							{:else}
 								{formatDate(result.updated_at)}
 							{/if}

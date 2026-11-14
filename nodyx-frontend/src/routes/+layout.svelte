@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount, tick } from 'svelte';
+	import { viewerZone, browserZone } from '$lib/eventTime';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import type { LayoutData } from './$types';
@@ -208,6 +209,10 @@
 	// figée.
 	let swUpdateReady = false;
 	let swReloading   = false;
+	// Le fuseau du lecteur, pour les heures d'événement (lib/eventTime) : connu dès que
+	// la page est chargée ; avant, on affiche l'heure de l'organisateur en le disant.
+	onMount(() => { viewerZone.set(browserZone()); });
+
 	onMount(() => {
 		if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
 

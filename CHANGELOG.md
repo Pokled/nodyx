@@ -96,6 +96,15 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
 - **Les bonnes personnes gèrent un événement** : la même règle que le reste de la modération (rôle,
   grade et garde-fou de rang), et un auteur qui a quitté la communauté ou qui a été banni n'a plus
   la main dessus.
+- **Chacun voit l'heure dans son fuseau.** Un événement prévu à 20 h à Paris s'affiche 19 h à
+  Abidjan, 14 h à Montréal, 4 h du matin le lendemain à Tokyo, et Nodyx le dit en clair : « Chez
+  toi (heure moyenne de Greenwich) · soit 20:00 pour l'organisateur (heure d'Europe centrale) ».
+  Indispensable pour un événement en ligne (réunion, stream, raid) où tout le monde arrive au même
+  instant depuis partout. Sur la page, la liste, l'accueil, Découvrir et les cartes dans le chat.
+  Avant le chargement de la page, l'heure affichée est celle de l'organisateur, et dite comme telle.
+- **Les annonces d'événement (webhooks) ne sont plus à l'heure de Paris pour tout le monde** :
+  Discord et Slack affichent l'heure dans le fuseau de chaque lecteur, Matrix et ntfy disent celle
+  de l'organisateur avec son fuseau.
 - **« Trouver sur la carte ».** Plus besoin de chercher latitude et longitude ailleurs : tu écris
   le lieu, tu cliques, tu choisis le bon résultat, et la carte se place toute seule. C'est le
   serveur de la communauté qui demande à OpenStreetMap (ton navigateur ne lui parle jamais), une

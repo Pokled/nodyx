@@ -5,6 +5,7 @@
 // reste retombe sur EN), cf serverStrings.ts. Les noms (membres, articles, règles)
 // sont ceux de la communauté, insérés tels quels : chaque format les échappe.
 
+import { isTimeZone, zoneName } from '../utils/timezone'
 import type { NodyxEvent } from '../services/webhooks/catalog'
 import type { ServerLocale } from './serverStrings'
 
@@ -17,6 +18,8 @@ export interface Rendered {
   /** Priorité (ntfy) : 'high' pour une sanction ou une alerte, sinon 'default'. */
   priority: 'high' | 'default'
   link: string
+  /** Un moment précis : Discord et Slack l'affichent dans le fuseau de CHAQUE lecteur. */
+  when?: { field: string; unix: number; allDay: boolean }
 }
 
 const C = { blue: 0x3b82f6, red: 0xe5484d, orange: 0xf59e0b, violet: 0x8b5cf6, green: 0x22c55e, grey: 0xa1a1aa, amber: 0xffb020 }
@@ -42,9 +45,22 @@ function minutesText(m: number | null | undefined, l: ServerLocale): string {
   if (m % 60 === 0) { const h = m / 60; return fr ? `${h} heure${h > 1 ? 's' : ''}` : `${h} hour${h > 1 ? 's' : ''}` }
   return fr ? `${m} minutes` : `${m} minutes`
 }
-function clock(iso: string | null | undefined, l: ServerLocale): string {
+// L'heure d'un événement, en clair (Matrix, ntfy, et repli). Avant le 14/11/2026 :
+// toujours à l'heure de Paris, codée en dur, quelle que soit la communauté.
+// Maintenant : dans le fuseau de l'ORGANISATEUR, et dit en toutes lettres ; une
+// journée entière est une date, sans heure ni fuseau.
+function clock(iso: string | null | undefined, l: ServerLocale, tz?: string | null, allDay = false): string {
   if (!iso) return ''
-  try { return new Date(iso).toLocaleString(l === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: process.env.TZ || 'Europe/Paris' }) } catch { return iso }
+  const loc = l === 'fr' ? 'fr-FR' : 'en-GB'
+  try {
+    if (allDay) return new Date(iso).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+    const zone = isTimeZone(tz) ? tz : 'UTC'
+    const txt = new Date(iso).toLocaleString(loc, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: zone })
+    // Le nom du fuseau dans la langue de l'annonce (« heure d'Europe centrale »), jamais une
+    // ville : Montréal se range sous « America/Toronto », on ne dira pas « Toronto » à Montréal
+    const label = zone === 'UTC' ? 'UTC' : zoneName(zone, loc, iso)
+    return `${txt} (${label})`
+  } catch { return iso }
 }
 
 export function renderEvent(ev: NodyxEvent, locale: ServerLocale): Rendered {
@@ -74,7 +90,11 @@ export function renderEvent(ev: NodyxEvent, locale: ServerLocale): Rendered {
       break
     case 'calendar.event':
       r = { title: title || (fr ? 'Nouvel événement' : 'New event'), text: fr ? 'Nouvel événement au calendrier' : 'New event on the calendar', color: C.orange, priority: 'default', link: t.link_event }
-      add(t.field_when, clock(ev.item?.starts_at, locale)); add(t.field_where, ev.item?.place); break
+      add(t.field_when, clock(ev.item?.starts_at, locale, ev.item?.timezone, ev.item?.all_day === true)); add(t.field_where, ev.item?.place)
+      if (ev.item?.starts_at && !isNaN(Date.parse(ev.item.starts_at))) {
+        r.when = { field: t.field_when, unix: Math.floor(Date.parse(ev.item.starts_at) / 1000), allDay: ev.item?.all_day === true }
+      }
+      break
     case 'poll.created':
       r = { title: title || (fr ? 'Nouveau sondage' : 'New poll'), text: fr ? `Nouveau sondage de ${who}` : `New poll by ${who}`, color: C.grey, priority: 'default', link: t.link_open }
       break

@@ -22,6 +22,16 @@ export interface FormatContext {
 }
 
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
+
+/** La valeur d'un champ, avec l'heure d'un événement remise à l'outil qui sait la traduire. */
+function fieldValue(r: Rendered, name: string, value: string, tool: 'discord' | 'slack'): string {
+  if (!r.when || r.when.allDay || r.when.field !== name) return value
+  const u = r.when.unix
+  // Discord : <t:…:F> s'affiche dans le fuseau de chaque lecteur, <t:…:R> en relatif (« dans 3 jours »)
+  if (tool === 'discord') return `<t:${u}:F> (<t:${u}:R>)`
+  // Slack : jeton de date, le texte après | est le repli
+  return `<!date^${u}^{date_long_pretty} {time}|${value}>`
+}
 const absolute = (base: string, path?: string | null) => {
   if (!path) return base
   try { return new URL(path, base.endsWith('/') ? base : `${base}/`).href } catch { return base }
@@ -40,7 +50,7 @@ export function buildOutgoing(format: Format, url: string, ev: NodyxEvent, r: Re
         allowed_mentions: { parse: [] },
         embeds: [{
           title: cut(r.title, 256), description: cut(r.text, 2000), color: r.color, url: link,
-          fields: r.fields.slice(0, 10).map(([name, value]) => ({ name: cut(name, 256), value: cut(value, 1024), inline: value.length <= 40 })),
+          fields: r.fields.slice(0, 10).map(([name, value]) => ({ name: cut(name, 256), value: cut(fieldValue(r, name, value, 'discord'), 1024), inline: value.length <= 40 })),
           footer: { text: cut(ctx.community.name, 2048) }, timestamp: ev.at,
         }],
       })
@@ -51,7 +61,7 @@ export function buildOutgoing(format: Format, url: string, ev: NodyxEvent, r: Re
         text: `${r.title} : ${r.text}`,
         blocks: [
           { type: 'section', text: { type: 'mrkdwn', text: cut(`*${esc(r.title)}*\n${esc(r.text)}`, 3000) } },
-          ...(r.fields.length ? [{ type: 'section', fields: r.fields.slice(0, 10).map(([k, v]) => ({ type: 'mrkdwn', text: cut(`*${esc(k)}*\n${esc(v)}`, 2000) })) }] : []),
+          ...(r.fields.length ? [{ type: 'section', fields: r.fields.slice(0, 10).map(([k, v]) => ({ type: 'mrkdwn', text: cut(`*${esc(k)}*\n${fieldValue(r, k, esc(v), 'slack')}`, 2000) })) }] : []),
           { type: 'context', elements: [{ type: 'mrkdwn', text: `<${link}|${esc(r.link)}> · ${esc(ctx.community.name)}` }] },
         ],
       })

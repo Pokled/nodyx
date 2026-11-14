@@ -5,6 +5,7 @@
 	// lecteur d'écran) ; « Je participe » reste un vrai bouton, à part.
 	import { onMount } from 'svelte'
 	import { t, locale } from '$lib/i18n'
+	import { viewerZone, showZone, organizerTime } from '$lib/eventTime'
 	import { apiFetch } from '$lib/api'
 	import { cardFor, patchEvent, type CardState, type Person } from '$lib/linkCards'
 
@@ -66,16 +67,21 @@
 		const d = new Date(c.starts_at); d.setHours(23, 59, 59, 999); return d
 	}
 
-	function eventLine(c: { starts_at: string; ends_at: string | null; is_all_day: boolean }): string {
+	// Dans le fuseau du LECTEUR (lib/eventTime) ; une journée entière est une date (UTC)
+	type EvTime = { starts_at: string; ends_at: string | null; is_all_day: boolean; timezone?: string | null }
+	function eventLine(c: EvTime): string {
+		const z = { timeZone: showZone(c, $viewerZone) }
 		const start = new Date(c.starts_at)
-		const day = fmt({ weekday: 'long', day: 'numeric', month: 'short' }).format(start)
+		const day = fmt({ weekday: 'long', day: 'numeric', month: 'short', ...z }).format(start)
 		if (c.is_all_day) return $t('link_card.all_day', { day })
-		const startTxt = fmt({ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(start)
-		if (!c.ends_at) return startTxt
+		const startTxt = fmt({ weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', ...z }).format(start)
+		const org = organizerTime(c.starts_at, c, $viewerZone, $locale)
+		const orgTxt = org ? ` · ${$t('event.tz_yours', { zone: org.mine })}, ${$t('event.tz_organizer', { time: org.time, zone: org.name })}` : ''
+		if (!c.ends_at) return startTxt + orgTxt
 		const end = new Date(c.ends_at)
-		const sameDay = end.toDateString() === start.toDateString()
-		const endTxt = sameDay ? fmt({ hour: '2-digit', minute: '2-digit' }).format(end) : when(c.ends_at)
-		return $t('link_card.time_range', { start: startTxt, end: endTxt })
+		const sameDay = fmt({ day: 'numeric', month: 'numeric', year: 'numeric', ...z }).format(end) === fmt({ day: 'numeric', month: 'numeric', year: 'numeric', ...z }).format(start)
+		const endTxt = sameDay ? fmt({ hour: '2-digit', minute: '2-digit', ...z }).format(end) : fmt({ day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', ...z }).format(end)
+		return $t('link_card.time_range', { start: startTxt, end: endTxt }) + orgTxt
 	}
 
 	const COLORS = ['#7c3aed', '#0f766e', '#b45309', '#be185d', '#334155', '#1d4ed8', '#15803d']
@@ -170,8 +176,8 @@
 				{#if c.cover_url && !past && !c.is_cancelled}<img class="lc-cover" src={c.cover_url} alt="" loading="lazy" />{/if}
 				<div class="lc-ev-row">
 					<div class="lc-cal" class:lc-faded={past || c.is_cancelled} aria-hidden="true">
-						<div class="lc-m">{fmt({ month: 'short' }).format(new Date(c.starts_at)).replace('.', '')}</div>
-						<div class="lc-d">{fmt({ day: 'numeric' }).format(new Date(c.starts_at))}</div>
+						<div class="lc-m">{fmt({ month: 'short', timeZone: showZone(c, $viewerZone) }).format(new Date(c.starts_at)).replace('.', '')}</div>
+						<div class="lc-d">{fmt({ day: 'numeric', timeZone: showZone(c, $viewerZone) }).format(new Date(c.starts_at))}</div>
 					</div>
 					<div class="lc-in lc-in-flat">
 						<div class="lc-kind">{@render icon('cal')}{$t('link_card.kind_event')}

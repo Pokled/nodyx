@@ -4,7 +4,7 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import type { PageData, ActionData } from './$types';
-	import { displayZone } from '$lib/eventTime';
+	import { viewerZone, showZone, zoneNote, organizerTime } from '$lib/eventTime';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -17,16 +17,19 @@
 	let confirmCancel = $state(false);
 
 	// ── Formatage dates ────────────────────────────────────────────────────────
-	// Une journée entière est une date de calendrier (minuit UTC) : affichée en UTC,
-	// la même date pour tout le monde. Une heure, elle, s'affiche à l'heure du lecteur.
-	const zone = $derived(displayZone(!!ev.is_all_day));
+	// Nodyx se plie à l'heure du LECTEUR (son navigateur, lib/eventTime). Une journée
+	// entière est une date (UTC, la même partout). Avant le chargement de la page, le
+	// lecteur est inconnu : heure de l'organisateur, et on le dit (zoneNote).
+	const zone = $derived({ timeZone: showZone(ev, $viewerZone) });
+	const note = $derived(zoneNote(ev, $viewerZone, $locale, ev.starts_at));
+	const orgStart = $derived(organizerTime(ev.starts_at, ev, $viewerZone, $locale));
 	function fDate(iso: string) {
 		return new Date(iso).toLocaleDateString($locale, {
 			weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...zone,
 		});
 	}
 	function fTime(iso: string) {
-		return new Date(iso).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' });
+		return new Date(iso).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit', ...zone });
 	}
 	function fDateShort(iso: string) {
 		return new Date(iso).toLocaleDateString($locale, { day: 'numeric', month: 'short', ...zone });
@@ -267,6 +270,10 @@
 					<p class="text-[var(--nx-text)] font-semibold text-sm capitalize">{fDate(ev.starts_at)}</p>
 					{#if !ev.is_all_day}
 						<p class="text-[var(--nx-ok)] text-sm mt-0.5">{fTime(ev.starts_at)}{ev.ends_at ? ` - ${fTime(ev.ends_at)}` : ''}</p>
+						<!-- De quelle heure il s'agit : celle de l'organisateur (avant le chargement), ou
+						     la tienne quand l'organisateur vit ailleurs, avec la sienne à côté -->
+						{#if note}<p class="ev-zone">{note.kind === 'organizer' ? tFn('event.tz_of', { zone: note.name ?? '' }) : tFn('event.tz_utc')}</p>
+						{:else if orgStart}<p class="ev-zone" title={tFn('event.tz_help', { mine: orgStart.mine, theirs: orgStart.name })}>{tFn('event.tz_yours', { zone: orgStart.mine })} · {tFn('event.tz_organizer', { time: orgStart.time, zone: orgStart.name })}</p>{/if}
 					{:else}
 						<p class="text-[var(--nx-ok)] text-xs mt-0.5">{tFn('event.all_day')}</p>
 					{/if}
@@ -442,6 +449,7 @@
 </div>
 
 <style>
+	.ev-zone { margin: 3px 0 0; font-size: 11.5px; line-height: 1.35; color: var(--nx-text-muted); }
 	.ev-confirm { border-radius: 12px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--nx-warn) 40%, transparent); background: color-mix(in srgb, var(--nx-warn) 8%, transparent); }
 	.ev-confirm.bad { border-color: color-mix(in srgb, var(--nx-bad) 40%, transparent); background: color-mix(in srgb, var(--nx-bad) 8%, transparent); }
 	.ev-confirm p { margin: 0 0 8px; font-size: 12.5px; color: var(--nx-text); }

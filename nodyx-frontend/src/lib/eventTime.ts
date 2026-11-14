@@ -1,3 +1,5 @@
+import { writable } from 'svelte/store'
+
 // L'heure d'un événement (audit du 14/11/2026, SPECS/NODYX_EVENEMENTS_AUDIT.md, B1 à B3).
 //
 // Le défaut : le formulaire envoyait « 2026-11-20T20:00 » sans fuseau, et c'est le
@@ -85,4 +87,68 @@ export function eventErrorKey(json: { code?: string; error?: string } | null | u
 	if (/location_l(at|ng)/.test(msg)) return 'event.err_coords'
 	if (code === 'EVENT_FORBIDDEN') return 'event.err_forbidden'
 	return null
+}
+
+// ── Le fuseau de CHACUN (14/11/2026) ────────────────────────────────────────────
+// Nodyx se plie à l'heure du lecteur : son navigateur connaît son fuseau, la
+// conversion est faite par le navigateur lui-même (Intl), sans calcul côté serveur.
+// Avant que la page soit chargée (rendu serveur), on ne connaît pas le lecteur :
+// on affiche l'heure de l'organisateur, en le DISANT, jamais une heure muette.
+
+/** Le fuseau du lecteur, connu une fois la page chargée (posé par le layout). */
+export const viewerZone = writable<string | null>(null)
+
+export function browserZone(): string | null {
+	try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null } catch { return null }
+}
+
+/** « Europe/Paris » → « Paris », « America/New_York » → « New York ». */
+export function zoneCity(tz: string): string {
+	return (tz.split('/').pop() ?? tz).replace(/_/g, ' ')
+}
+
+/**
+ * Le nom d'un fuseau, dans la langue du lecteur, donné par le navigateur lui-même :
+ * « heure d'Europe centrale », « heure de l'Est nord-américain ». Jamais un nom de ville :
+ * le navigateur ramène des fuseaux à leur ville officielle (Montréal devient « Toronto »),
+ * ce qui ferait lire « Chez toi (Toronto) » à quelqu'un de Montréal.
+ */
+export function zoneLabel(tz: string, locale: string, at: string | Date = new Date()): string {
+	const d = typeof at === 'string' ? new Date(at) : at
+	for (const style of ['longGeneric', 'long'] as const) {
+		try {
+			const n = new Intl.DateTimeFormat(locale, { timeZone: tz, timeZoneName: style }).formatToParts(d).find(x => x.type === 'timeZoneName')?.value
+			if (n) return n
+		} catch { /* style non pris en charge : le suivant */ }
+	}
+	return tz
+}
+
+type Ev = { is_all_day?: boolean | null; timezone?: string | null }
+
+/** Le fuseau où afficher : journée entière = UTC (une date) ; sinon le lecteur, sinon l'organisateur, sinon UTC. */
+export function showZone(ev: Ev, viewer: string | null): string {
+	if (ev.is_all_day) return 'UTC'
+	return viewer ?? ev.timezone ?? 'UTC'
+}
+
+/** Avant le chargement (lecteur inconnu) : de quelle heure il s'agit, en clair. */
+export function zoneNote(ev: Ev, viewer: string | null, locale = 'fr', at?: string): { kind: 'organizer' | 'utc'; name?: string } | null {
+	if (ev.is_all_day || viewer) return null
+	return ev.timezone ? { kind: 'organizer', name: zoneLabel(ev.timezone, locale, at) } : { kind: 'utc' }
+}
+
+/**
+ * L'heure telle que l'organisateur la voit, quand elle diffère de celle du lecteur
+ * (« soit 20:00 à Paris, heure de l'organisateur »). null : même heure, ou inconnu.
+ */
+export function organizerTime(iso: string, ev: Ev, viewer: string | null, locale: string): { time: string; name: string; mine: string } | null {
+	if (ev.is_all_day || !viewer || !ev.timezone || viewer === ev.timezone) return null
+	const fmt = (tz: string) => new Date(iso).toLocaleString(locale, { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: tz })
+	try {
+		if (fmt(viewer) === fmt(ev.timezone)) return null    // fuseaux différents, même heure (ex. Paris et Bruxelles)
+		const sameDay = new Date(iso).toLocaleDateString('en-CA', { timeZone: viewer }) === new Date(iso).toLocaleDateString('en-CA', { timeZone: ev.timezone })
+		const time = new Date(iso).toLocaleString(locale, sameDay ? { hour: '2-digit', minute: '2-digit', timeZone: ev.timezone } : { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: ev.timezone })
+		return { time, name: zoneLabel(ev.timezone, locale, iso), mine: zoneLabel(viewer, locale, iso) }
+	} catch { return null }
 }

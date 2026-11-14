@@ -5,7 +5,8 @@
 	import { PUBLIC_API_URL } from '$app/env/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import LocationFinder from '$lib/components/LocationFinder.svelte';
-	import { defaultLocal, sendIso } from '$lib/eventTime';
+	import { defaultLocal, sendIso, browserZone } from '$lib/eventTime';
+	import { onMount } from 'svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -18,6 +19,11 @@
 	// Date par défaut = demain à 18 h, À L'HEURE DU MEMBRE (toISOString donnait l'heure UTC : 17:00 en France)
 	const defaultStart = defaultLocal(18);
 	const defaultEnd   = defaultLocal(18, 2);
+
+	// Le fuseau de l'organisateur (« Europe/Paris »), donné par son navigateur : chaque
+	// lecteur verra l'heure dans le sien, et « 20:00 à Paris, heure de l'organisateur ».
+	let organizerZone = $state('');
+	onMount(() => { organizerZone = browserZone() ?? ''; });
 
 	let isAllDay    = $state(false);
 	let rsvpEnabled = $state(false);
@@ -151,6 +157,7 @@
 					<input type="file" accept="image/*" onchange={onCoverChange} class="sr-only"/>
 				</label>
 				<!-- Champ caché envoyé au serveur -->
+				<input type="hidden" name="timezone" value={organizerZone}/>
 				<input type="hidden" name="cover_url" value={coverUrl}/>
 			</div>
 		</section>

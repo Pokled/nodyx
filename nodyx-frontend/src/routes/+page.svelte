@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { onMount, onDestroy } from 'svelte';
 	import { t, locale } from '$lib/i18n';
+	import { viewerZone, showZone } from '$lib/eventTime';
 	import { replyCount } from '$lib/forumCounts';
 	import WidgetZone from '$lib/components/homepage/WidgetZone.svelte';
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte';
@@ -769,9 +770,10 @@
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 			{#each publicEvents as ev}
 				{@const d  = new Date(ev.starts_at)}
-				{@const day = d.toLocaleDateString($locale, { day: 'numeric' })}
-				{@const mon = d.toLocaleDateString($locale, { month: 'short' })}
-				{@const time = ev.is_all_day ? tFn('home.all_day') : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+				{@const z  = { timeZone: showZone(ev, $viewerZone) }}
+				{@const day = d.toLocaleDateString($locale, { day: 'numeric', ...z })}
+				{@const mon = d.toLocaleDateString($locale, { month: 'short', ...z })}
+				{@const time = ev.is_all_day ? tFn('home.all_day') : d.toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit', ...z })}
 				<a href="/calendar" class="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200"
 					style="background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);"
 					onmouseenter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgb(var(--nx-cyan-rgb) / .35)'; (e.currentTarget as HTMLElement).style.background = 'rgb(var(--nx-cyan-rgb) / .06)' }}

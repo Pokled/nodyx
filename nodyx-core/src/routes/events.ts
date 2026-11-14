@@ -17,6 +17,7 @@ import { isContainedUploadPath } from '../utils/uploadPath'
 import { canReadEvent } from '../services/eventAccess'
 import { ownOrigins } from '../utils/instanceOrigins'
 import { getAccess, rankOf, outranks } from '../services/permissions'
+import { isTimeZone } from '../utils/timezone'
 
 // La description d'un événement vient de NodyxEditor, comme un message du forum :
 // même nettoyeur (utils/sanitize) et même recopie des images externes. Avant, une
@@ -94,6 +95,9 @@ const CreateEventSchema = z.object({
   ticket_price:    EventFields.ticket_price.optional(),
   ticket_currency: EventFields.ticket_currency.optional().default('EUR'),
   ticket_url:      EventFields.ticket_url.optional(),
+  // Fuseau de l'organisateur, donné par son navigateur. Fixé à la création, jamais
+  // modifié ensuite : il dit d'où l'heure a été pensée, il ne la change pas.
+  timezone:        z.string().max(64).refine(isTimeZone, { message: 'TIMEZONE_INVALID' }).nullable().optional(),
 }).refine(b => !b.ends_at || new Date(b.ends_at) >= new Date(b.starts_at), { message: 'EVENT_ENDS_BEFORE_START', path: ['ends_at'] })
 
 // Modification : seuls les champs ENVOYÉS changent.
@@ -174,7 +178,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
     const { rows: events } = safeOrder === 'DESC'
       ? await db.query(
           `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
-                  e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
+                  e.starts_at, e.ends_at, e.is_all_day, e.timezone, e.is_public, e.cover_url, e.tags, e.is_cancelled,
                   e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
                   e.created_at, e.updated_at,
                   u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
@@ -189,7 +193,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
         )
       : await db.query(
           `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
-                  e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
+                  e.starts_at, e.ends_at, e.is_all_day, e.timezone, e.is_public, e.cover_url, e.tags, e.is_cancelled,
                   e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
                   e.created_at, e.updated_at,
                   u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
@@ -211,7 +215,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
     const userId = (req as any).user?.userId ?? null
     const { rows } = await db.query(
       `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
-              e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
+              e.starts_at, e.ends_at, e.is_all_day, e.timezone, e.is_public, e.cover_url, e.tags, e.is_cancelled,
               e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
               e.created_at, e.updated_at, e.community_id,
               u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
@@ -267,8 +271,8 @@ export default async function eventsRoutes(app: FastifyInstance) {
         `INSERT INTO events
            (community_id, author_id, title, description, location, location_lat, location_lng,
             starts_at, ends_at, is_all_day, is_public, cover_url, tags,
-            rsvp_enabled, max_attendees, ticket_price, ticket_currency, ticket_url)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13::text[],$14,$15,$16,$17,$18)
+            rsvp_enabled, max_attendees, ticket_price, ticket_currency, ticket_url, timezone)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13::text[],$14,$15,$16,$17,$18,$19)
          RETURNING *`,
         [
           comm[0].community_id, userId,
@@ -283,6 +287,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
           body.ticket_price ?? null,
           body.ticket_currency ?? 'EUR',
           body.ticket_url ?? null,
+          body.timezone ?? null,
         ]
       )
 
