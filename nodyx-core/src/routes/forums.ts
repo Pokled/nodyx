@@ -294,7 +294,7 @@ app.get('/threads', {
     }
 
     // OctoGuard (forum) : examiné AVANT de créer quoi que ce soit
-    const ogThread = await moderateText(request.user!.userId, 'forum', [title, textForModeration(content)])
+    const ogThread = await moderateText(request.user!.userId, 'forum', [title, textForModeration(content)], { mentionTexts: [title, content] })
     if (ogThread.blocked) return reply.code(422).send(blockedBody(ogThread))
 
     // Cran « retenir » : le fil n'est PAS créé. Le contenu, nettoyé comme pour
@@ -438,7 +438,7 @@ app.get('/threads', {
       return reply.code(422).send({ error: replyContentCheck.reason, code: 'CONTENT_BLOCKED' })
     }
 
-    const ogPost = await moderateText(userId, 'forum', [textForModeration(sanitized)])
+    const ogPost = await moderateText(userId, 'forum', [textForModeration(sanitized)], { mentionTexts: [sanitized] })
     if (ogPost.blocked) return reply.code(422).send(blockedBody(ogPost))
     if (ogPost.hold) {
       const held = await holdContent({ kind: 'post', authorId: userId, threadId: resolvedThreadId, payload: { content: sanitized }, rule: ogPost.hold })
@@ -526,7 +526,7 @@ app.get('/threads', {
 
     // La modification passe par OctoGuard comme la publication (sinon : publier
     // propre, puis modifier pour contourner)
-    const ogEdit = await moderateText(userId, 'forum', [textForModeration(editSanitized)])
+    const ogEdit = await moderateText(userId, 'forum', [textForModeration(editSanitized)], { mentionTexts: [editSanitized] })
     if (ogEdit.blocked) return reply.code(422).send(blockedBody(ogEdit))
     // Modification retenue : l'ancien texte reste en ligne jusqu'à la décision
     if (ogEdit.hold) {

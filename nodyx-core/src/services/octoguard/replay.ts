@@ -21,6 +21,7 @@ import { getInstanceCommunityId } from '../../middleware/adminOnly'
 import { matchRule } from './matchers'
 import { floodVerdict, floodFingerprint, FLOOD_MEMORY_MS, FLOOD_MEMORY_PER_USER, normalize } from './matchers2'
 import { textForModeration } from './moderate'
+import { mentionWeight } from './mentionWeight'
 import { conditionsMet, isImmunized } from './pipeline'
 import type { AutomodRuleRow, Surface } from './types'
 
@@ -87,6 +88,8 @@ export async function replayRule(rule: AutomodRuleRow): Promise<ReplayResult> {
   const authors = new Set<string>()
   const warnedCache = new Map<string, boolean>()
   const started = Date.now()
+  // Tailles des groupes et équipe des auteurs, lues une fois pour tout le rejeu
+  const mentionCache = new Map<string, number>()
 
   // Qui n'a jamais été averti : lu par paquet, une fois par auteur
   async function neverWarned(ids: string[]): Promise<void> {
@@ -158,7 +161,10 @@ export async function replayRule(rule: AutomodRuleRow): Promise<ReplayResult> {
           match = floodVerdict(list, list[list.length - 1].h, at, rule.params ?? {})
         } else {
           if (isImmunized(rule, user) || !conditionsMet(rule, user)) continue
-          match = matchRule(content, rule, {})
+          // Mentions : le HTML d'origine (marques de groupe comprises). « @enligne »
+          // pèse les membres en ligne MAINTENANT : qui l'était alors n'est pas gardé.
+          const mentionCount = rule.type === 'mention_spam' ? await mentionWeight(r.content, communityId, r.author_id, mentionCache) : undefined
+          match = matchRule(content, rule, { mentionCount })
         }
         if (!match) continue
 

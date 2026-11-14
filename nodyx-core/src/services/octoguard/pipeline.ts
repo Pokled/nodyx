@@ -17,6 +17,8 @@ import { isOctoGuardEnabled } from './index'
 import { getRules } from './cache'
 import { matchRule, type MatchResult } from './matchers'
 import { recordActivity } from './matchers2'
+import { mentionWeight } from './mentionWeight'
+import { instanceCommunityId } from '../mentionPeople'
 import { logOctoGuardAction } from './logger'
 import { applyMute } from './mutes'
 import { engineLadderStep } from './ladder'
@@ -54,6 +56,10 @@ export interface PipelineInput {
   surface?:   Surface
   channelId?: string
   messageId?: string  // optionnel (undefined si message pas encore inséré)
+  /** Les mêmes textes avec le corps en HTML, quand `content` n'en est que
+   *  l'extraction (forum, wiki) : les mentions y sont des marques, que
+   *  l'extraction a perdues. Défaut : `content` (le chat juge déjà du HTML). */
+  mentionHtml?: string
 }
 
 // ─── Immunisation ────────────────────────────────────────────────────────────
@@ -315,6 +321,17 @@ async function applyAction(
 
 // ─── Pipeline principal ──────────────────────────────────────────────────────
 
+// Taille des groupes mentionnés et appartenance à l'équipe, gardées 30 s : le
+// moteur a 50 ms, il ne relit pas la base à chaque message d'une conversation.
+const MENTION_CACHE_MS = 30_000
+let mentionCache = new Map<string, number>()
+let mentionCacheAt = 0
+function liveMentionCache(): Map<string, number> {
+  if (Date.now() - mentionCacheAt > MENTION_CACHE_MS) { mentionCache = new Map(); mentionCacheAt = Date.now() }
+  return mentionCache
+}
+export function _resetMentionCacheForTests(): void { mentionCache = new Map(); mentionCacheAt = 0 }
+
 async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
   const rules = getRules()
   if (rules.length === 0) return { blocked: false }
@@ -322,6 +339,9 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
   // Inondation : on note le message UNE fois, avant les règles (clé par endroit)
   const floodKey = `${surface}:${input.userCtx.userId}`
   recordActivity(floodKey, input.content)
+  // Poids des mentions : calculé une fois, et seulement si une règle le lira
+  let mentionCount: number | undefined
+  let mentionCounted = false
 
   for (const rule of rules) {
     // Une règle d'avant OctoGuard 2 (sans scopes) ne surveillait que le chat
@@ -329,7 +349,11 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
     if (isImmunized(rule, input.userCtx)) continue
     if (!conditionsMet(rule, input.userCtx)) continue
 
-    const match = matchRule(input.content, rule, { userId: floodKey })
+    if (rule.type === 'mention_spam' && !mentionCounted) {
+      mentionCounted = true
+      mentionCount = await mentionWeight(input.mentionHtml || input.content, await instanceCommunityId().catch(() => null), input.userCtx.userId, liveMentionCache())
+    }
+    const match = matchRule(input.content, rule, { userId: floodKey, mentionCount })
     if (!match) continue
 
     const eventId = randomUUID()

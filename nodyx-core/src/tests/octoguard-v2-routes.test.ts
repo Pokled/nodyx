@@ -90,10 +90,10 @@ describe('forum', () => {
     expect((await reply()).statusCode).toBe(201)
     expect(autoReportMock).toHaveBeenCalledWith({ targetType: 'post', targetId: 'p-new', ruleName: 'Liens', excerpt: 'https://a' })
   })
-  it('le texte examiné est le texte brut, sans balises', async () => {
+  it('le texte examiné est le texte brut, sans balises ; le HTML suit pour compter les mentions', async () => {
     moderateMock.mockResolvedValue({ blocked: false })
     await reply()
-    expect(moderateMock).toHaveBeenCalledWith(MEMBER, 'forum', ['texte'])
+    expect(moderateMock).toHaveBeenCalledWith(MEMBER, 'forum', ['texte'], { mentionTexts: ['<p>texte</p>'] })
   })
 })
 
