@@ -42,7 +42,7 @@ beforeEach(() => {
     ] } as any
     if (s.includes('FROM channels WHERE id = ANY')) return { rows: params[0].includes(GEN) ? [{ id: GEN, name: 'général' }] : [] } as any
     if (s.includes('FROM streamer_oauth_tokens')) return { rows: twitchLinked ? [{ external_login: 'pokled' }] : [] } as any
-    if (s.includes('FROM streamer_chat_commands')) return { rows: [{ name: '!github', mod_only: false, response_template: 'SECRET-TWITCH' }] } as any
+    if (s.includes('FROM streamer_chat_commands')) return { rows: [{ name: '!github', mod_only: false, response_template: 'SECRET-TWITCH' }, { name: '!nodyx', mod_only: false }] } as any
     return { rows: [] } as any
   })
 })
@@ -72,6 +72,10 @@ describe('bangCommands', () => {
     const r = await bangCommands('lea')
     expect(r.twitch).toBeNull()
     expect(r.commands.some(c => c.source === 'twitch')).toBe(false)
+  })
+  it('une commande personnalisée homonyme d’une native n’est pas annoncée deux fois', async () => {
+    const r = await bangCommands('lea')
+    expect(r.commands.filter(c => c.source === 'twitch' && c.name === 'nodyx')).toHaveLength(1)
   })
   it('jamais le texte d’une réponse', async () => {
     expect(JSON.stringify(await bangCommands('modo'))).not.toMatch(/SECRET/)

@@ -23,6 +23,11 @@ describe('bangToCommands', () => {
     expect(rows.find(r => r.name === 'github')?.descKey).toBe('cmd.bang_tw_custom')
     expect(rows.find(r => r.name === 'so')?.restricted).toBe(true)
   })
+  it('deux commandes de même nom et même source : une seule ligne (sinon la page meurt)', () => {
+    const r = bangToCommands({ twitch: 'p', commands: [{ name: 'nodyx', source: 'twitch', restricted: false, native: true }, { name: 'nodyx', source: 'twitch', restricted: false }] })
+    expect(r).toHaveLength(1)
+    expect(new Set(r.map(x => x.id)).size).toBe(r.length)
+  })
   it('un nom hors règle est écarté', () => {
     expect(rows.some(r => r.name.includes('<'))).toBe(false)
   })

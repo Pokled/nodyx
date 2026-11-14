@@ -127,7 +127,17 @@ const TWITCH_NATIVE = new Set(['nodyx', 'uptime', 'commands', 'topclips', 'so', 
 /** La réponse de GET /commands/bang, en lignes de l'aide (jamais le texte d'une réponse). */
 export function bangToCommands(api: { commands?: BangCommandApi[]; twitch?: string | null } | null): CommandDef[] {
 	const channel = api?.twitch ?? ''
-	return (api?.commands ?? []).filter(c => /^[a-z0-9_-]{1,64}$/i.test(c.name)).map(c => c.source === 'octoguard'
+	// Une commande par nom et par source : deux lignes de même clé tuent TOUTE la page
+	// (each_key_duplicate). Vécu en prod le 14/11 : nodyx.org avait une commande Twitch
+	// personnalisée « !nodyx », homonyme de la native. La native gagne, comme au chat.
+	const seen = new Set<string>()
+	const unique = (api?.commands ?? []).filter(c => {
+		const k = `${c.source}:${c.name.toLowerCase()}`
+		if (seen.has(k)) return false
+		seen.add(k)
+		return true
+	})
+	return unique.filter(c => /^[a-z0-9_-]{1,64}$/i.test(c.name)).map(c => c.source === 'octoguard'
 		? { id: `og-${c.name}`, trigger: '!' as const, name: c.name, descKey: 'cmd.bang_og', group: 'bang' as const, where: ['chat' as Place], restricted: c.restricted, channels: c.channels?.map(x => x.name), keywordsKey: 'cmd.kw_bang' }
 		: { id: `tw-${c.name}`, trigger: '!' as const, name: c.name, descKey: c.native && TWITCH_NATIVE.has(c.name) ? `cmd.bang_tw_${c.name}` : 'cmd.bang_tw_custom', descVars: { channel }, group: 'bang' as const, where: ['twitch' as Place], restricted: c.restricted, keywordsKey: 'cmd.kw_bang_twitch' })
 }
