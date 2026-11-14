@@ -24,6 +24,7 @@ export function blockedMessage(tFn: T, p: BlockedPayload | null | undefined, for
 	}
 	if (og?.i18n_key) return octoguardMessage(tFn, og.i18n_key)
 	if (reason === 'channel_read_only') return tFn('chat.blocked_read_only')
+	if (reason === 'game_locked') return tFn('chat.game_locked')
 	// Filtre de contenu (phrase française du cœur) ou raison inconnue
 	return tFn('chat.message_refused')
 }

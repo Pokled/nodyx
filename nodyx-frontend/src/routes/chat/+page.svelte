@@ -16,6 +16,7 @@
 	import LinkCards   from '$lib/components/LinkCards.svelte';
 	import MentionList from '$lib/components/MentionList.svelte';
 	import CommandList from '$lib/components/CommandList.svelte';
+	import GameResult from '$lib/components/GameResult.svelte';
 	import CommandHelp from '$lib/components/CommandHelp.svelte';
 	import { slashMatches, exactSlash, isTeamRole, type CommandDef, type Trigger } from '$lib/commands';
 	import { openHelpOverlay } from '$lib/helpOverlay';
@@ -98,6 +99,8 @@
 		reply_to_username?:   string | null;
 		reply_to_content?:    string | null;
 		poll_id?:             string | null;
+		/** Jeu tiré par le serveur (lot C2) : seul le cœur l'écrit. */
+		game?:                any;
 		poll?:                any;
 	};
 
@@ -930,47 +933,12 @@
 		finally { isLoadingOld = false; }
 	}
 
-	// ── Slash commands ────────────────────────────────────────────────────────
-	const EIGHT_BALL = $derived(Array.from({ length: 17 }, (_, i) => tFn(`chat.cmd.8ball_${i + 1}`)));
-
-	function parseSlashCommand(text: string): string | null {
-		if (!text.startsWith('/')) return null;
-		const parts = text.slice(1).split(' ');
-		const cmd   = parts[0].toLowerCase();
-		const args  = parts.slice(1);
-		const u     = `<strong>${currentUsername}</strong>`;
-
-		switch (cmd) {
-			case 'roll': {
-				const match = (args[0] ?? '1d6').match(/^(\d{1,2})d(\d{1,4})$/i);
-				const n     = match ? Math.min(parseInt(match[1]), 10)    : 1;
-				const sides = match ? Math.min(parseInt(match[2]), 10000) : 6;
-				const rolls = Array.from({ length: n }, () => Math.floor(Math.random() * sides) + 1);
-				const total = rolls.reduce((a, b) => a + b, 0);
-				const detail = n > 1 ? ` <em>(${rolls.join(' + ')})</em>` : '';
-				return tFn('chat.cmd.roll', { user: u, dice: `${n}d${sides}`, detail, total });
-			}
-			case 'flip': {
-				const r = Math.random() < 0.5 ? tFn('chat.cmd.flip_heads') : tFn('chat.cmd.flip_tails');
-				return tFn('chat.cmd.flip', { user: u, result: r });
-			}
-			case '8ball': {
-				const q = args.length ? ` « ${args.join(' ')} »` : '';
-				const a = EIGHT_BALL[Math.floor(Math.random() * EIGHT_BALL.length)];
-				return tFn('chat.cmd.8ball', { user: u, q, answer: a });
-			}
-			case 'rps': {
-				const opts   = ['🪨', '📄', '✂️'];
-				const wins   = { '🪨': '✂️', '📄': '🪨', '✂️': '📄' };
-				const me     = opts.includes(args[0]) ? args[0] : opts[Math.floor(Math.random() * 3)];
-				const bot    = opts[Math.floor(Math.random() * 3)];
-				const result = me === bot ? tFn('chat.cmd.rps_tie') : wins[me as keyof typeof wins] === bot ? tFn('chat.cmd.rps_win', { user: u }) : tFn('chat.cmd.rps_lose');
-				return tFn('chat.cmd.rps', { user: u, me, bot, result });
-			}
-			default:
-				return null; // Commande inconnue → message normal
-		}
-	}
+	// ── Jeux du chat ──────────────────────────────────────────────────────────
+	// /roll, /flip, /8ball, /rps sont tirés par le SERVEUR (lot C2, D56) : on lui
+	// envoie le texte de la commande (chat:command), il tire et publie le résultat
+	// avec la marque « Lancé par Nodyx ». Avant, le navigateur tirait lui-même :
+	// n'importe qui pouvait écrire un faux résultat.
+	const GAME_COMMAND = /^\/(roll|flip|8ball|rps)(?:\s|$)/i;
 
 	// ── Send ──────────────────────────────────────────────────────────────────
 	// « Tu es sûr ? » (OctoGuard, lot 5) : avant l'envoi, OctoGuard dit s'il
@@ -1008,12 +976,20 @@
 		// D51 : un grand groupe demande une confirmation, donnée par le panneau d'avertissement
 		if (mentionGateBlocked && !mentionsConfirmed) return;
 		const channelId = selectedChannel.id;
-		const cmdResult = parseSlashCommand(inputText.trim());
-		const content   = cmdResult ?? applyPickedMentions(inputText.trim(), pickedMentions);
-		// Une commande (/roll, /flip…) écrit un texte du robot : rien à pré-vérifier
-		if (!force && !cmdResult && !(await passesPrecheck('plain', content, channelId))) return;
+		// Un jeu : le serveur tire (rien à pré-vérifier ici, le cœur juge la question de /8ball)
+		if (GAME_COMMAND.test(inputText.trim())) {
+			s.emit('chat:command', { channelId, text: inputText.trim(), replyToId: replyTo?.id ?? null });
+			inputText = '';
+			pickedMentions = [];
+			showMentions = false;
+			replyTo = null;
+			ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input'));
+			return;
+		}
+		const content   = applyPickedMentions(inputText.trim(), pickedMentions);
+		if (!force && !(await passesPrecheck('plain', content, channelId))) return;
 		// Pendant la vérification, on a pu changer de salon ou de texte : on ne part pas
-		if (selectedChannel?.id !== channelId || (!cmdResult && applyPickedMentions(inputText.trim(), pickedMentions) !== content)) return;
+		if (selectedChannel?.id !== channelId || applyPickedMentions(inputText.trim(), pickedMentions) !== content) return;
 		nudge = null;
 		s.emit('chat:send', { channelId, content, replyToId: replyTo?.id ?? null });
 		inputText = '';
@@ -1534,6 +1510,9 @@
 							{:else if msg.poll_id}
 							<!-- ── Sondage intégré ── -->
 							<PollCard pollId={msg.poll_id} inline={true} {token} socket={s} />
+							{:else if msg.game}
+							<!-- ── Jeu tiré par le serveur ── -->
+							<GameResult game={msg.game} author={msg.author_username} />
 						{:else}
 								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: var(--nx-text)" hidden={soleIds.has(msg.id)} use:mentionChips={{ html: msg.content ?? '', token: token ?? null, me: userId }}>
 									{@html renderCustomEmojis(linkifyHtml(msg.content ?? ''), customEmojis)}
@@ -1656,8 +1635,8 @@
 										<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="9" y1="10" x2="15" y2="16"/><line x1="15" y1="10" x2="9" y2="16"/></svg>
 									</button>
 								{/if}
-								{#if msg.author_id === userId}
-									<!-- Modifier -->
+								{#if msg.author_id === userId && !msg.game}
+									<!-- Modifier (un tirage du serveur ne se réécrit pas, il se supprime) -->
 									<button onclick={() => startEdit(msg)} title={tFn('common.edit')}
 									        class="w-7 h-7 flex items-center justify-center transition-colors" style="color: var(--nx-text-muted)"
 									        onmouseenter={(e) => (e.currentTarget as HTMLElement).style.color = 'var(--nx-accent-2-soft)'}

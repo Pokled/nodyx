@@ -54,6 +54,8 @@ export interface ChannelMessage {
   reply_to_username?:  string | null
   reply_to_content?:   string | null
   poll_id?:            string | null
+  /** Jeu tiré par le serveur (services/chatGames.ts), null sinon. */
+  game?:               unknown | null
 }
 
 function slugify(name: string): string {
@@ -82,9 +84,9 @@ export async function findById(id: string): Promise<Channel | null> {
   return rows[0] ?? null
 }
 
-export async function findMessageById(messageId: string): Promise<{ channel_id: string; author_id: string } | null> {
-  const { rows } = await db.query<{ channel_id: string; author_id: string }>(
-    `SELECT channel_id, author_id FROM channel_messages WHERE id = $1`,
+export async function findMessageById(messageId: string): Promise<{ channel_id: string; author_id: string; is_game: boolean } | null> {
+  const { rows } = await db.query<{ channel_id: string; author_id: string; is_game: boolean }>(
+    `SELECT channel_id, author_id, (game IS NOT NULL) AS is_game FROM channel_messages WHERE id = $1`,
     [messageId]
   )
   return rows[0] ?? null
@@ -175,11 +177,13 @@ export async function addMessage(data: {
   author_id:    string
   content:      string
   reply_to_id?: string | null
+  /** Seulement depuis services/chatGames.ts (socket chat:command). */
+  game?:        unknown | null
 }): Promise<ChannelMessage> {
   const { rows } = await db.query<ChannelMessage>(
     `WITH inserted AS (
-       INSERT INTO channel_messages (channel_id, author_id, content, reply_to_id)
-       VALUES ($1, $2, $3, $4)
+       INSERT INTO channel_messages (channel_id, author_id, content, reply_to_id, game)
+       VALUES ($1, $2, $3, $4, $5::jsonb)
        RETURNING *
      )
      SELECT
@@ -200,7 +204,7 @@ export async function addMessage(data: {
      LEFT JOIN user_profiles p ON p.user_id = i.author_id
      LEFT JOIN channel_messages rp ON rp.id = i.reply_to_id
      LEFT JOIN users ru ON ru.id = rp.author_id`,
-    [data.channel_id, data.author_id, data.content, data.reply_to_id ?? null]
+    [data.channel_id, data.author_id, data.content, data.reply_to_id ?? null, data.game ? JSON.stringify(data.game) : null]
   )
   return { ...rows[0], reactions: [] }
 }
@@ -226,6 +230,7 @@ export async function getHistory(
        cm.is_deleted,
        cm.created_at,
        cm.poll_id,
+       CASE WHEN cm.is_deleted THEN NULL ELSE cm.game END AS game,
        CASE WHEN cm.is_deleted THEN NULL ELSE cm.content END AS content,
        u.username              AS author_username,
        u.avatar                AS author_avatar,
