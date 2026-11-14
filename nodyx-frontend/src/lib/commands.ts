@@ -22,7 +22,11 @@ export interface CommandDef {
 	descKey: string
 	exampleKey?: string
 	/** Famille, pour regrouper la liste du « / ». */
-	group: 'call' | 'play'
+	group: 'help' | 'call' | 'play'
+	/** Autres noms acceptés (`/?`), trouvés aussi par la liste. Jamais rien en « ai » (réservé). */
+	aliases?: string[]
+	/** Action locale : la commande ne s'envoie pas, elle agit dans la page. */
+	local?: 'help'
 	where: Place[]
 	/** Réservé à l'équipe : montré à l'équipe seulement (le serveur refuse de toute façon). */
 	team?: boolean
@@ -38,6 +42,9 @@ export const COMMANDS: CommandDef[] = [
 	{ id: 'at-mods', trigger: '@', name: '', nameKey: 'mention.g_moderation', descKey: 'cmd.at_mods', group: 'call', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_at_mods' },
 	{ id: 'at-grade', trigger: '@', name: '', argsKey: 'cmd.arg_grade', descKey: 'cmd.at_grade', exampleKey: 'cmd.at_grade_ex', group: 'call', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_at_grade' },
 	{ id: 'at-all', trigger: '@', name: '', nameKey: 'mention.g_tous', descKey: 'cmd.at_all', group: 'call', where: ['chat', 'forum'], team: true, keywordsKey: 'cmd.kw_at_all' },
+	// / : l'aide, EN TÊTE de la liste du « / » (ouvre le pop-up, rien n'est envoyé).
+	// Pas d'alias « aide » : « /ai » est RÉSERVÉ à une future commande d'IA (Jonathan, 14/11).
+	{ id: 'help', trigger: '/', name: 'help', aliases: ['?'], local: 'help', descKey: 'cmd.help_cmd', exampleKey: 'cmd.help_cmd_ex', group: 'help', where: ['chat'], keywordsKey: 'cmd.kw_help' },
 	// / : jouer (le chat)
 	{ id: 'roll', trigger: '/', name: 'roll', args: '2d6', descKey: 'cmd.roll', exampleKey: 'cmd.roll_ex', group: 'play', where: ['chat'], keywordsKey: 'cmd.kw_roll' },
 	{ id: 'flip', trigger: '/', name: 'flip', descKey: 'cmd.flip', group: 'play', where: ['chat'], keywordsKey: 'cmd.kw_flip' },
@@ -61,8 +68,16 @@ export function visibleCommands(isTeam: boolean): CommandDef[] {
 
 /** Les commandes « / » qui commencent par ce qui est tapé après la barre. */
 export function slashMatches(typed: string, isTeam = false): CommandDef[] {
-	const q = typed.toLowerCase()
-	return visibleCommands(isTeam).filter(c => c.trigger === '/' && c.name.startsWith(q))
+	const q = fold(typed)
+	return visibleCommands(isTeam).filter(c => c.trigger === '/' && [c.name, ...(c.aliases ?? [])].some(n => fold(n).startsWith(q)))
+}
+
+/** La commande écrite en entier (nom ou autre nom), ou null : « /help », « /? ». */
+export function exactSlash(text: string): CommandDef | null {
+	const m = /^\/(\S+)\s*$/.exec(text.trim())
+	if (!m) return null
+	const q = fold(m[1])
+	return COMMANDS.find(c => c.trigger === '/' && [c.name, ...(c.aliases ?? [])].some(n => fold(n) === q)) ?? null
 }
 
 /** Minuscules sans accents. */
