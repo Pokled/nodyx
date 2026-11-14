@@ -4,6 +4,7 @@
 	import { enhance } from '$app/forms';
 	import { PUBLIC_API_URL } from '$app/env/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
+	import LocationFinder from '$lib/components/LocationFinder.svelte';
 	import type { PageData, ActionData } from './$types';
 	import { untrack } from 'svelte';
 	import { inputValue, sendIso } from '$lib/eventTime';
@@ -33,6 +34,8 @@
 	let locationText = $state(ev.location ?? '');
 	let lat = $state(ev.location_lat ? String(ev.location_lat) : '');
 	let lng = $state(ev.location_lng ? String(ev.location_lng) : '');
+	// Le lieu choisi par « Trouver sur la carte » (affiché tant qu'il est retenu)
+	let pickedPlace = $state<string | null>(null);
 
 	const osmPreviewUrl = $derived(() => {
 		const la = parseFloat(lat);
@@ -227,17 +230,29 @@
 
 		<!-- ── LIEU ───────────────────────────────────────────────────────────── -->
 		<section class="space-y-4">
-			<h2 class="text-sm font-semibold text-[var(--nx-text)] uppercase tracking-wider">Lieu</h2>
+			<h2 class="text-sm font-semibold text-[var(--nx-text)] uppercase tracking-wider">{tFn('event.location_heading')}</h2>
 
 			<div>
-				<label for="location" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Adresse / nom du lieu <span class="text-[var(--nx-text-muted)] text-xs font-normal">(optionnel)</span></label>
+				<label for="location" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">{tFn('event.field_location')} <span class="text-[var(--nx-text-muted)] text-xs font-normal">{tFn('event.optional')}</span></label>
 				<input id="location" name="location" type="text" bind:value={locationText}
 				       placeholder={tFn('cal_form.location_ph')}
 				       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
 
-			<div class="rounded-xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/40 p-4 space-y-3">
+			<LocationFinder query={locationText} token={data.token ?? null} picked={pickedPlace}
+				onpick={(r) => { lat = String(r.lat); lng = String(r.lng); pickedPlace = r.label; }} />
+
+			<!-- L'aperçu reste visible : c'est la preuve que la carte est au bon endroit -->
+			{#if osmPreviewUrl()}
+				<div class="rounded-xl overflow-hidden border border-[var(--nx-border)] h-52">
+					<iframe src={osmPreviewUrl()} class="w-full h-full border-0" title={tFn('event.map_preview_title')} loading="lazy"></iframe>
+				</div>
+			{/if}
+
+			<details class="rounded-xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/40 px-4 py-3">
+				<summary class="cursor-pointer text-xs font-medium text-[var(--nx-text-muted)]">{tFn('event.geo_manual')}</summary>
+				<div class="space-y-3 mt-3">
 				<div class="flex items-center justify-between">
 					<p class="text-xs font-medium text-[var(--nx-text-muted)]">{tFn('event.gps_coords')} <span class="text-[var(--nx-text-muted)]">{tFn('event.gps_display_hint')}</span></p>
 					<div class="flex gap-2">
@@ -246,12 +261,12 @@
 							<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM2 13h2M20 13h2M13 2v2M13 20v2"/>
 							</svg>
-							Ma position
+							{tFn('event.my_position')}
 						</button>
 						{#if locationText}
 							<a href={osmSearchUrl()} target="_blank" rel="noopener"
 							   class="text-xs px-3 py-1.5 rounded-lg border border-[color-mix(in_srgb,var(--nx-ok)_40%,transparent)] text-[var(--nx-ok)] hover:bg-emerald-950/30 transition-colors">
-								Chercher sur OSM →
+								{tFn('event.search_osm')}
 							</a>
 						{/if}
 					</div>
@@ -259,29 +274,22 @@
 
 				<div class="grid grid-cols-2 gap-3">
 					<div>
-						<label for="edit-location-lat" class="block text-xs text-[var(--nx-text-muted)] mb-1">Latitude</label>
+						<label for="edit-location-lat" class="block text-xs text-[var(--nx-text-muted)] mb-1">{tFn('event.lat')}</label>
 						<input id="edit-location-lat" type="number" name="location_lat" bind:value={lat} step="any"
 						       placeholder="48.8584"
 						       class="w-full bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] rounded-lg px-3 py-2 text-[var(--nx-text)] text-sm
 						              focus:outline-none focus:border-emerald-500 transition-colors"/>
 					</div>
 					<div>
-						<label for="edit-location-lng" class="block text-xs text-[var(--nx-text-muted)] mb-1">Longitude</label>
+						<label for="edit-location-lng" class="block text-xs text-[var(--nx-text-muted)] mb-1">{tFn('event.lng')}</label>
 						<input id="edit-location-lng" type="number" name="location_lng" bind:value={lng} step="any"
 						       placeholder="2.2945"
 						       class="w-full bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] rounded-lg px-3 py-2 text-[var(--nx-text)] text-sm
 						              focus:outline-none focus:border-emerald-500 transition-colors"/>
 					</div>
 				</div>
-
-				{#if osmPreviewUrl()}
-					<div class="rounded-lg overflow-hidden border border-[var(--nx-border)] h-44">
-						<iframe src={osmPreviewUrl()} class="w-full h-full border-0" title={tFn('event.map_preview_title')} loading="lazy"></iframe>
-					</div>
-				{:else}
-					<p class="text-xs text-[var(--nx-text-muted)]">{tFn('event.gps_hint')}</p>
-				{/if}
 			</div>
+			</details>
 		</section>
 
 		<!-- ── BILLETTERIE ────────────────────────────────────────────────────── -->

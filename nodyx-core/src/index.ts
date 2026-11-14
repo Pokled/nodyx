@@ -27,6 +27,7 @@ import whisperRoutes      from './routes/whispers'
 import pollRoutes         from './routes/polls'
 import dmRoutes           from './routes/dm'
 import eventRoutes           from './routes/events'
+import geoRoutes from './routes/geo'
 import linksRoutes           from './routes/links'
 import mentionsRoutes        from './routes/mentions'
 import authenticatorRoutes   from './routes/authenticator'
@@ -233,6 +234,7 @@ server.register(whisperRoutes,       { prefix: '/api/v1/whispers' })
 server.register(pollRoutes,          { prefix: '/api/v1/polls' })
 server.register(dmRoutes,            { prefix: '/api/v1/dm' })
 server.register(eventRoutes,          { prefix: '/api/v1/events' })
+server.register(geoRoutes,            { prefix: '/api/v1/geo' })
 server.register(linksRoutes,          { prefix: '/api/v1/links' })
 server.register(mentionsRoutes,       { prefix: '/api/v1/mentions' })
 server.register(authenticatorRoutes,  { prefix: '/api/auth' })

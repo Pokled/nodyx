@@ -96,6 +96,12 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
 - **Les bonnes personnes gèrent un événement** : la même règle que le reste de la modération (rôle,
   grade et garde-fou de rang), et un auteur qui a quitté la communauté ou qui a été banni n'a plus
   la main dessus.
+- **« Trouver sur la carte ».** Plus besoin de chercher latitude et longitude ailleurs : tu écris
+  le lieu, tu cliques, tu choisis le bon résultat, et la carte se place toute seule. C'est le
+  serveur de la communauté qui demande à OpenStreetMap (ton navigateur ne lui parle jamais), une
+  fois par lieu (cache) et une requête par seconde au plus, selon les règles du service. Les
+  coordonnées à la main restent possibles, repliées sous « Réglage précis ». L'admin peut couper
+  la recherche avec `NODYX_GEOCODER=off`.
 - Le serveur refuse un lien d'achat qui n'est pas une adresse `https://`, des coordonnées hors du
   globe, et une fin avant le début ; chaque refus s'affiche en une phrase claire.
 
