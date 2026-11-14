@@ -4656,6 +4656,7 @@
   "forum.share_copied": "Link copied",
   "forum.share_failed": "Copy failed",
   "forum.moderate": "Moderate",
+  "cmd.back": "Back",
   "cmd.help_title": "What you can type",
   "cmd.hint_at": "call someone",
   "cmd.hint_slash": "do something",

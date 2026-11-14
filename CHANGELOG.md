@@ -58,6 +58,11 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
   quelqu'un) et `/` (faire une action) : cliquer l'écrit dans le champ. Le « ? » ouvre une aide avec
   un exemple par touche, un bouton « Essayer » et les raccourcis clavier (en panneau du bas sur
   téléphone). Pendant la frappe, la ligne montre les raccourcis d'envoi, comme avant.
+- **L'aide s'ouvre par-dessus, sans quitter le chat.** « Tout voir » ouvre l'aide complète en
+  fenêtre : la croix, Échap ou un clic à côté la ferment, et on retrouve son salon et son message
+  intacts. La page `/help` ouverte directement a un bouton « Retour ». Et le message en cours est
+  gardé par salon : quitter le chat puis revenir, ou changer de salon et revenir, ne le fait plus
+  perdre (il s'efface à l'envoi).
 - **Taper « / » montre une vraie liste.** Les commandes avec leur explication, au clavier (flèches,
   Tab, Entrée, Échap), comme la liste des mentions.
 - **Une page d'aide : « Tout ce que tu peux taper ».** Toutes les mentions et commandes avec un

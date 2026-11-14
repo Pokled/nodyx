@@ -4,6 +4,7 @@
 	// c'est le champ qui la pilote (flèches, Entrée, Tab, Échap).
 	import { t } from '$lib/i18n'
 	import { argsOf, type CommandDef } from '$lib/commands'
+	import { openHelpOverlay } from '$lib/helpOverlay'
 
 	let { items, active = 0, typed = '', onpick, id = 'nx-command-list' }: {
 		items: CommandDef[]
@@ -34,7 +35,7 @@
 		<span><kbd>↑</kbd> <kbd>↓</kbd> {$t('mention.key_choose')}</span>
 		<span><kbd>{$t('mention.key_enter')}</kbd> {$t('cmd.key_write')}</span>
 		<span><kbd>{$t('mention.key_esc')}</kbd> {$t('mention.key_close')}</span>
-		<a href="/help" class="cl-all" onmousedown={(e) => e.preventDefault()}>{$t('cmd.see_all')}</a>
+		<a href="/help" class="cl-all" onmousedown={(e) => e.preventDefault()} onclickcapture={(e) => openHelpOverlay(e)}>{$t('cmd.see_all')}</a>
 	</div>
 </div>
 

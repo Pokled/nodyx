@@ -11,6 +11,7 @@
 	import { anchoredPopover } from '$lib/actions/anchoredPopover'
 	import { portal } from '$lib/actions/portal'
 	import type { Trigger } from '$lib/commands'
+	import { openHelpOverlay } from '$lib/helpOverlay'
 
 	let { empty, triggers, ontry, hint = '', id = 'nx-cmd-help' }: {
 		/** Le champ est vide : on montre les touches. */
@@ -120,7 +121,11 @@
 		</ul>
 	</details>
 	<div class="ch-f">
-		<a href="/help" onclick={() => hide(false)}>{$t('cmd.see_all_examples')}</a>
+		<!-- Par-dessus la page : on ne quitte pas ce qu'on écrivait (le focus revient au « ? »).
+		     `onclickcapture`, pas `onclick` : la bulle est portalée dans <body>, hors de la
+		     racine où Svelte délègue les clics ; le routeur de SvelteKit verrait le clic
+		     AVANT nous et changerait de page (vécu au banc le 14/11). -->
+		<a href="/help" onclickcapture={(e) => { openHelpOverlay(e, btn); if (e.defaultPrevented) hide(false) }}>{$t('cmd.see_all_examples')}</a>
 	</div>
 {/snippet}
 
