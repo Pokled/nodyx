@@ -56,3 +56,48 @@ describe('les refus du cœur deviennent une phrase', () => {
 		expect(eventErrorKey({ code: 'X', error: 'autre' })).toBeNull()
 	})
 })
+
+describe('Nodyx se plie au fuseau de chaque lecteur', () => {
+	const ev = { is_all_day: false, timezone: 'Europe/Paris' }
+	const iso = '2026-12-20T19:00:00.000Z'           // 20:00 à Paris
+	it('fuseau d’affichage : lecteur, sinon organisateur, sinon UTC ; journée entière = UTC', async () => {
+		const { showZone } = await import('./eventTime')
+		expect(showZone(ev, 'America/Montreal')).toBe('America/Montreal')
+		expect(showZone(ev, null)).toBe('Europe/Paris')
+		expect(showZone({ timezone: null }, null)).toBe('UTC')
+		expect(showZone({ is_all_day: true, timezone: 'Asia/Tokyo' }, 'America/Montreal')).toBe('UTC')
+	})
+	it('avant le chargement (lecteur inconnu) : on DIT de quelle heure il s’agit', async () => {
+		const { zoneNote } = await import('./eventTime')
+		expect(zoneNote(ev, null, 'fr-FR', iso)).toEqual({ kind: 'organizer', name: 'heure d’Europe centrale' })
+		expect(zoneNote({ timezone: null }, null)).toEqual({ kind: 'utc' })
+		expect(zoneNote(ev, 'America/Montreal')).toBeNull()
+		expect(zoneNote({ is_all_day: true }, null)).toBeNull()
+	})
+	it('Abidjan (l’exemple de Jonathan) : 20:00 pour l’organisateur, chez toi heure moyenne de Greenwich', async () => {
+		const { organizerTime } = await import('./eventTime')
+		expect(organizerTime(iso, ev, 'Africa/Abidjan', 'fr-FR')).toEqual({ time: '20:00', name: 'heure d’Europe centrale', mine: 'heure moyenne de Greenwich' })
+	})
+	it('Montréal ramené à Toronto par le navigateur : le nom reste juste (pas « Toronto »)', async () => {
+		const { zoneLabel } = await import('./eventTime')
+		expect(zoneLabel('America/Toronto', 'fr-FR', iso)).toBe(zoneLabel('America/Montreal', 'fr-FR', iso))
+		expect(zoneLabel('America/Toronto', 'fr-FR', iso)).not.toMatch(/Toronto/)
+	})
+	it('Montréal : « soit 20:00 pour l’organisateur »', async () => {
+		const { organizerTime } = await import('./eventTime')
+		expect(organizerTime(iso, ev, 'America/Montreal', 'fr-FR')).toEqual({ time: '20:00', name: 'heure d’Europe centrale', mine: 'heure de l’Est nord-américain' })
+	})
+	it('Bruxelles (même heure que Paris) ou Paris : rien de plus', async () => {
+		const { organizerTime } = await import('./eventTime')
+		expect(organizerTime(iso, ev, 'Europe/Brussels', 'fr-FR')).toBeNull()
+		expect(organizerTime(iso, ev, 'Europe/Paris', 'fr-FR')).toBeNull()
+	})
+	it('Tokyo (le lendemain) : le jour est précisé', async () => {
+		const { organizerTime } = await import('./eventTime')
+		expect(organizerTime(iso, ev, 'Asia/Tokyo', 'fr-FR')?.time).toBe('dimanche 20:00')
+	})
+	it('événement sans fuseau (d’avant) : rien d’inventé', async () => {
+		const { organizerTime } = await import('./eventTime')
+		expect(organizerTime(iso, { timezone: null }, 'America/Montreal', 'fr-FR')).toBeNull()
+	})
+})

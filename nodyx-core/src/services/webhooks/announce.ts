@@ -47,13 +47,13 @@ export function announceTrack(trackId: string): void {
 
 export function announceCalendarEvent(eventId: string): void {
   run(async () => {
-    const { rows } = await db.query<{ title: string; starts_at: string; location: string | null; is_public: boolean; is_cancelled: boolean }>(
-      `SELECT title, starts_at, location, is_public, is_cancelled FROM events WHERE id = $1`, [eventId])
+    const { rows } = await db.query<{ title: string; starts_at: string; location: string | null; is_public: boolean; is_cancelled: boolean; is_all_day: boolean; timezone: string | null }>(
+      `SELECT title, starts_at, location, is_public, is_cancelled, is_all_day, timezone FROM events WHERE id = $1`, [eventId])
     const e = rows[0]
     if (!e || !e.is_public || e.is_cancelled) return
     emitEvent({
       type: 'calendar.event', family: 'calendar', at: new Date().toISOString(),
-      item: { title: e.title, starts_at: e.starts_at ? new Date(e.starts_at).toISOString() : null, place: e.location },
+      item: { title: e.title, starts_at: e.starts_at ? new Date(e.starts_at).toISOString() : null, all_day: e.is_all_day, timezone: e.timezone, place: e.location },
       path: `/calendar/${eventId}`,
     })
   })

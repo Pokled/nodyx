@@ -26,6 +26,8 @@ export const actions: Actions = {
 		const is_public    = form.get('is_public')    !== 'false';
 		const rsvp_enabled = form.get('rsvp_enabled') === 'true';
 		const cover_url    = (form.get('cover_url')   as string | null)?.trim() || null;
+		// Fuseau de l'organisateur (son navigateur) ; le cœur le vérifie (IANA)
+		const timezone     = (form.get('timezone')    as string | null)?.trim().slice(0, 64) || null;
 
 		const tagsRaw = (form.get('tags') as string | null) ?? '';
 		const tags    = tagsRaw.split(',').map(t => t.trim()).filter(Boolean).slice(0, 10);
@@ -60,6 +62,7 @@ export const actions: Actions = {
 				is_all_day, is_public, rsvp_enabled,
 				max_attendees, tags, cover_url,
 				ticket_price, ticket_currency, ticket_url,
+				timezone,
 			}),
 		});
 

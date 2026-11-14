@@ -1,39 +1,45 @@
 <script lang="ts">
 	import { t, locale } from '$lib/i18n';
-	import { displayZone } from '$lib/eventTime';
+	import { viewerZone, showZone, zoneNote, organizerTime } from '$lib/eventTime';
 	const tFn = $derived($t);
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	// Dans la langue choisie dans Nodyx (et non celle du navigateur) ; une journée
-	// entière est une date de calendrier, affichée en UTC (la même pour tout le monde).
-	function formatDate(iso: string, allDay = false) {
+	// Dans la langue de Nodyx et dans le fuseau du LECTEUR (lib/eventTime) ; une journée
+	// entière est une date (UTC, la même partout). Avant le chargement de la page, le
+	// lecteur est inconnu : heure de l'organisateur, et on le dit.
+	const zoneOf = (ev: any) => ({ timeZone: showZone(ev, $viewerZone) });
+	function formatDate(iso: string, ev: any) {
 		return new Date(iso).toLocaleDateString($locale, {
-			weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...displayZone(allDay),
+			weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...zoneOf(ev),
 		});
 	}
-	function formatTime(iso: string) {
-		return new Date(iso).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' });
+	function formatTime(iso: string, ev: any) {
+		return new Date(iso).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit', ...zoneOf(ev) });
 	}
 	function formatDateRange(ev: any): string {
-		if (ev.is_all_day) return formatDate(ev.starts_at, true);
-		const start = tFn('event.at', { date: formatDate(ev.starts_at), time: formatTime(ev.starts_at) });
-		if (!ev.ends_at) return start;
-		const sameDay = new Date(ev.starts_at).toDateString() === new Date(ev.ends_at).toDateString();
-		return sameDay ? `${start} - ${formatTime(ev.ends_at)}` : `${start} → ${formatDate(ev.ends_at)}`;
+		if (ev.is_all_day) return formatDate(ev.starts_at, ev);
+		const start = tFn('event.at', { date: formatDate(ev.starts_at, ev), time: formatTime(ev.starts_at, ev) });
+		const n = zoneNote(ev, $viewerZone, $locale, ev.starts_at);
+		const tail = n ? ` (${n.kind === 'organizer' ? tFn('event.tz_of', { zone: n.name ?? '' }) : tFn('event.tz_utc')})` : '';
+		if (!ev.ends_at) return start + tail;
+		const sameDay = formatDate(ev.starts_at, ev) === formatDate(ev.ends_at, ev);
+		return (sameDay ? `${start} - ${formatTime(ev.ends_at, ev)}` : `${start} → ${formatDate(ev.ends_at, ev)}`) + tail;
 	}
+	/** « soit 20:00 à Paris, heure de l'organisateur », quand le lecteur est ailleurs. */
+	const orgLine = (ev: any) => organizerTime(ev.starts_at, ev, $viewerZone, $locale);
 
 	function isToday(ev: any): boolean {
 		const day = (d: Date, z: { timeZone?: string }) => d.toLocaleDateString('en-CA', z);
-		return day(new Date(ev.starts_at), displayZone(!!ev.is_all_day)) === day(new Date(), {});
+		return day(new Date(ev.starts_at), zoneOf(ev)) === day(new Date(), $viewerZone ? { timeZone: $viewerZone } : {});
 	}
 
 	const grouped = $derived(() => {
 		const map = new Map<string, any[]>();
 		for (const ev of data.events) {
-			const key = new Date(ev.starts_at).toLocaleDateString($locale, { month: 'long', year: 'numeric', ...displayZone(!!ev.is_all_day) });
+			const key = new Date(ev.starts_at).toLocaleDateString($locale, { month: 'long', year: 'numeric', ...zoneOf(ev) });
 			if (!map.has(key)) map.set(key, []);
 			map.get(key)!.push(ev);
 		}
@@ -102,10 +108,10 @@
 							<!-- Date badge -->
 							<div class="cal-date-badge {isToday(ev) ? 'cal-date-badge--today' : ''}">
 								<span class="cal-date-month">
-									{new Date(ev.starts_at).toLocaleDateString($locale, { month: 'short', ...displayZone(!!ev.is_all_day) }).toUpperCase()}
+									{new Date(ev.starts_at).toLocaleDateString($locale, { month: 'short', ...zoneOf(ev) }).toUpperCase()}
 								</span>
 								<span class="cal-date-day">
-									{new Date(ev.starts_at).toLocaleDateString($locale, { day: 'numeric', ...displayZone(!!ev.is_all_day) })}
+									{new Date(ev.starts_at).toLocaleDateString($locale, { day: 'numeric', ...zoneOf(ev) })}
 								</span>
 							</div>
 
@@ -123,6 +129,7 @@
 									</div>
 								</div>
 								<p class="cal-row-date">{formatDateRange(ev)}</p>
+								{#if orgLine(ev)}{@const o = orgLine(ev)}<p class="cal-row-org">{tFn('event.tz_yours', { zone: o?.mine ?? '' })} · {tFn('event.tz_organizer', { time: o?.time ?? '', zone: o?.name ?? '' })}</p>{/if}
 								{#if ev.location}
 									<p class="cal-row-location">
 										<svg class="cal-loc-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -268,6 +275,7 @@
 .cal-empty-link:hover { color: var(--nx-ok); }
 
 /* ── Month section ───────────────────────────────────────────────────────── */
+.cal-row-org { margin: 2px 0 0; font-size: 11.5px; color: var(--nx-text-muted); }
 .cal-month-header {
 	display: flex;
 	align-items: center;

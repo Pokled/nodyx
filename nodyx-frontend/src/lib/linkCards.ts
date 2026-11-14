@@ -212,7 +212,7 @@ export type Card =
 	| { type: 'thread'; url: string; title: string; category: string | null; author: Person
 		replies: number; created_at: string; last_activity_at: string; is_locked: boolean; tags: string[] }
 	| { type: 'post'; url: string; thread: { title: string; url: string }; author: Person; excerpt: string; created_at: string }
-	| { type: 'event'; url: string; title: string; starts_at: string; ends_at: string | null; is_all_day: boolean
+	| { type: 'event'; url: string; title: string; starts_at: string; ends_at: string | null; is_all_day: boolean; timezone?: string | null
 		location: string | null; cover_url: string | null; is_cancelled: boolean; going_count: number
 		rsvp_enabled: boolean; my_rsvp: string | null; is_full: boolean; going_preview: Person[] }
 	| { type: 'unavailable' }

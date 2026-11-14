@@ -31,7 +31,7 @@ export interface NodyxEvent {
   at: string
   actor?: { type: 'member' | 'octoguard' | 'system'; name?: string | null }
   target?: { type: string; name?: string | null }
-  item?: { title?: string | null; excerpt?: string | null; category?: string | null; artist?: string | null; duration_seconds?: number | null; starts_at?: string | null; place?: string | null; game?: string | null }
+  item?: { title?: string | null; excerpt?: string | null; category?: string | null; artist?: string | null; duration_seconds?: number | null; starts_at?: string | null; all_day?: boolean; timezone?: string | null; place?: string | null; game?: string | null }
   rule?: string | null
   place?: string | null
   details?: Record<string, string | number | boolean | null>

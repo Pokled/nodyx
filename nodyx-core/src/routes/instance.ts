@@ -610,7 +610,7 @@ export default async function instanceRoutes(app: FastifyInstance) {
     const lim = Math.min(Math.max(1, Number(limit) || 4), 10)
     const communityId = await getCommunityId()
     const { rows } = await db.query(`
-      SELECT id, title, description, location, starts_at, ends_at, is_all_day,
+      SELECT id, title, description, location, starts_at, ends_at, is_all_day, timezone,
              cover_url, tags, rsvp_enabled,
              (SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id) AS rsvp_count
       FROM   events e
