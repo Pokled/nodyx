@@ -243,7 +243,30 @@
 		const onControllerChange = () => signal(navigator.serviceWorker.controller);
 		navigator.serviceWorker.addEventListener('message', onMessage);
 		navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+		// Un onglet resté ouvert ne découvre une nouvelle version que lorsque le
+		// navigateur revérifie le service worker : à une navigation COMPLÈTE, ou
+		// au bout de 24 h. Or une application SvelteKit ne fait que des navigations
+		// internes : l'onglet du salon ouvert le matin tournait encore l'ancien
+		// JavaScript le soir, et la nouveauté du jour « ne marchait pas » (vécu
+		// le 14/11 avec « # »). On demande donc au navigateur de revérifier
+		// toutes les 5 minutes, et dès que l'onglet redevient visible (au plus
+		// une fois par minute). Le fichier du service worker porte la version du
+		// build : s'il a changé, le nouveau s'installe, prend la main, et la
+		// chaîne ci-dessus recharge la page (en épargnant un texte en cours).
+		let derniereVerif = Date.now();
+		const verifier = () => {
+			derniereVerif = Date.now();
+			navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => {});
+		};
+		const minuterie = setInterval(verifier, 5 * 60_000);
+		const onVisible = () => {
+			if (document.visibilityState === 'visible' && Date.now() - derniereVerif > 60_000) verifier();
+		};
+		document.addEventListener('visibilitychange', onVisible);
 		return () => {
+			clearInterval(minuterie);
+			document.removeEventListener('visibilitychange', onVisible);
 			navigator.serviceWorker.removeEventListener('message', onMessage);
 			navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
 		};
