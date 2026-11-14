@@ -6993,5 +6993,8 @@
   "seo.desc_forum": "The {{name}} forum: every discussion, open to read without an account.",
   "seo.desc_calendar": "{{name}} events: game nights, meetups, streams and meetings, shown in everyone's own time.",
   "seo.desc_help": "Everything you can type on {{name}}: @ to call someone, # to show a place, / to run an action.",
-  "seo.desc_category": "Discussions in the {{category}} category, on the {{name}} forum."
+  "seo.desc_category": "Discussions in the {{category}} category, on the {{name}} forum.",
+  "forum.views_one": "view",
+  "forum.replies_one": "reply",
+  "seo.desc_thread_fallback": "A discussion by {{author}} on {{name}}: {{title}}"
 }
