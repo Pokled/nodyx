@@ -4,6 +4,7 @@
 	import { enhance } from '$app/forms';
 	import { PUBLIC_API_URL } from '$app/env/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
+	import { defaultLocal, sendIso } from '$lib/eventTime';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -13,12 +14,9 @@
 	let coverUrl      = $state('');
 	let uploadingCover = $state(false);
 
-	// Date par défaut = demain à 18h
-	const tomorrow = new Date();
-	tomorrow.setDate(tomorrow.getDate() + 1);
-	tomorrow.setHours(18, 0, 0, 0);
-	const defaultStart = tomorrow.toISOString().slice(0, 16);
-	const defaultEnd   = new Date(tomorrow.getTime() + 2 * 3600_000).toISOString().slice(0, 16);
+	// Date par défaut = demain à 18 h, À L'HEURE DU MEMBRE (toISOString donnait l'heure UTC : 17:00 en France)
+	const defaultStart = defaultLocal(18);
+	const defaultEnd   = defaultLocal(18, 2);
 
 	let isAllDay    = $state(false);
 	let rsvpEnabled = $state(false);
@@ -98,7 +96,8 @@
 	<title>{tFn('event.new_page_title')}</title>
 </svelte:head>
 
-<div class="max-w-3xl mx-auto">
+<!-- `/calendar` est dans le groupe SANS marge du layout : chaque page pose la sienne -->
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8">
 	<a href="/calendar" class="text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] text-sm flex items-center gap-1.5 mb-5">
 		<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -170,14 +169,14 @@
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div>
 					<label for="starts_at" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">{tFn('event.field_start')} <span class="text-[var(--nx-bad)]">*</span></label>
-					<input id="starts_at" name="starts_at" type="{isAllDay ? 'date' : 'datetime-local'}" required
+					<input id="starts_at" name="starts_at" use:sendIso type="{isAllDay ? 'date' : 'datetime-local'}" required
 					       value={isAllDay ? defaultStart.slice(0,10) : defaultStart}
 					       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors [color-scheme:dark]"/>
 				</div>
 				<div>
 					<label for="ends_at" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Fin <span class="text-[var(--nx-text-muted)] text-xs font-normal">(optionnel)</span></label>
-					<input id="ends_at" name="ends_at" type="{isAllDay ? 'date' : 'datetime-local'}"
+					<input id="ends_at" name="ends_at" use:sendIso type="{isAllDay ? 'date' : 'datetime-local'}"
 					       value={isAllDay ? defaultEnd.slice(0,10) : defaultEnd}
 					       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors [color-scheme:dark]"/>

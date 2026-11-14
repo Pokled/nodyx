@@ -6,6 +6,7 @@
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import type { PageData, ActionData } from './$types';
 	import { untrack } from 'svelte';
+	import { inputValue, sendIso } from '$lib/eventTime';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -17,15 +18,10 @@
 	let uploadingCover = $state(false);
 	let uploadError    = $state<string | null>(null);
 
-	// Dates → format datetime-local (YYYY-MM-DDTHH:mm)
-	function toLocal(iso: string | null): string {
-		if (!iso) return '';
-		return new Date(iso).toISOString().slice(0, 16);
-	}
-	function toDate(iso: string | null): string {
-		if (!iso) return '';
-		return new Date(iso).toISOString().slice(0, 10);
-	}
+	// Dates → valeur des champs À L'HEURE DU MEMBRE (toISOString montrait l'heure UTC :
+	// le formulaire disait 09:00 quand la page affichait 11 h)
+	const toLocal = (iso: string | null) => inputValue(iso, false);
+	const toDate  = (iso: string | null) => inputValue(iso, true);
 
 	let isAllDay    = $state(ev.is_all_day   ?? false);
 	let rsvpEnabled = $state(ev.rsvp_enabled ?? false);
@@ -106,7 +102,8 @@
 	<title>{tFn('event.edit_page_title', { title: ev.title })}</title>
 </svelte:head>
 
-<div class="max-w-3xl mx-auto">
+<!-- `/calendar` est dans le groupe SANS marge du layout : chaque page pose la sienne -->
+<div class="max-w-3xl mx-auto px-4 sm:px-6 py-8">
 	<a href="/calendar/{ev.id}" class="text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] text-sm flex items-center gap-1.5 mb-5">
 		<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -182,14 +179,14 @@
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div>
 					<label for="starts_at" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">{tFn('event.field_start')} <span class="text-[var(--nx-bad)]">*</span></label>
-					<input id="starts_at" name="starts_at" type="{isAllDay ? 'date' : 'datetime-local'}" required
+					<input id="starts_at" name="starts_at" use:sendIso type="{isAllDay ? 'date' : 'datetime-local'}" required
 					       value={isAllDay ? toDate(ev.starts_at) : toLocal(ev.starts_at)}
 					       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors [color-scheme:dark]"/>
 				</div>
 				<div>
 					<label for="ends_at" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Fin <span class="text-[var(--nx-text-muted)] text-xs font-normal">(optionnel)</span></label>
-					<input id="ends_at" name="ends_at" type="{isAllDay ? 'date' : 'datetime-local'}"
+					<input id="ends_at" name="ends_at" use:sendIso type="{isAllDay ? 'date' : 'datetime-local'}"
 					       value={isAllDay ? toDate(ev.ends_at) : toLocal(ev.ends_at)}
 					       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] text-sm
 					              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors [color-scheme:dark]"/>

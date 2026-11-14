@@ -16,6 +16,7 @@ import { rehostExternalImages } from '../services/inlineImageRehost'
 import { isContainedUploadPath } from '../utils/uploadPath'
 import { canReadEvent } from '../services/eventAccess'
 import { ownOrigins } from '../utils/instanceOrigins'
+import { getAccess, rankOf, outranks } from '../services/permissions'
 
 // La description d'un événement vient de NodyxEditor, comme un message du forum :
 // même nettoyeur (utils/sanitize) et même recopie des images externes. Avant, une
@@ -51,12 +52,19 @@ const COVER_INVALID = { error: 'The cover image must be a file uploaded to this 
 // réécrivait. Jusqu'au 13/11/2026, « Annuler l'événement » (qui n'envoie que
 // is_cancelled) rendait un événement privé PUBLIC, vidait sa description et ses tags,
 // coupait les inscriptions et remettait « toute la journée » et la devise par défaut.
+// Lien d'achat : une vraie adresse https, rien d'autre (un `javascript:` enregistré
+// devenait un lien sur la page ; la CSP en bloquait l'exécution, mais la règle est ici).
+const HttpsUrl = z.string().max(2048).refine((v) => {
+  try { const u = new URL(v); return u.protocol === 'https:' && !u.username && !u.password } catch { return false }
+}, { message: 'TICKET_URL_INVALID' })
+
 const EventFields = {
   title:           z.string().min(3).max(200),
   description:     z.string().max(50000),
   location:        z.string().max(500).nullable(),
-  location_lat:    z.number().nullable(),
-  location_lng:    z.number().nullable(),
+  // Bornes réelles : une valeur absurde cassait la carte
+  location_lat:    z.number().min(-90).max(90).nullable(),
+  location_lng:    z.number().min(-180).max(180).nullable(),
   starts_at:       z.string().datetime(),
   ends_at:         z.string().datetime().nullable(),
   is_all_day:      z.boolean(),
@@ -67,7 +75,7 @@ const EventFields = {
   max_attendees:   z.number().int().positive().nullable(),
   ticket_price:    z.number().nonnegative().nullable(),
   ticket_currency: z.string().length(3),
-  ticket_url:      z.string().nullable(),
+  ticket_url:      HttpsUrl.nullable(),
 }
 
 const CreateEventSchema = z.object({
@@ -86,7 +94,7 @@ const CreateEventSchema = z.object({
   ticket_price:    EventFields.ticket_price.optional(),
   ticket_currency: EventFields.ticket_currency.optional().default('EUR'),
   ticket_url:      EventFields.ticket_url.optional(),
-})
+}).refine(b => !b.ends_at || new Date(b.ends_at) >= new Date(b.starts_at), { message: 'EVENT_ENDS_BEFORE_START', path: ['ends_at'] })
 
 // Modification : seuls les champs ENVOYÉS changent.
 const UpdateEventSchema = z.object(EventFields).partial().extend({
@@ -114,20 +122,24 @@ function withoutCommunity<T extends Record<string, unknown>>(row: T): Omit<T, 'c
   return rest
 }
 
+// Qui gère un événement : la même règle que le reste de la modération (rôle +
+// grade, via getAccess), plus son auteur TANT QU'IL EST MEMBRE. Avant le 14/11/2026 :
+// rôle seul (un grade « Modérer » ne servait à rien ici), et un auteur parti ou
+// banni gardait la main sur ses événements. Garde-fou de rang comme au forum :
+// un modérateur ne touche pas l'événement de quelqu'un de rang égal ou supérieur.
 async function canManageEvent(userId: string, eventId: string): Promise<boolean> {
-  const { rows } = await db.query<{ author_id: string; community_id: string }>(
+  const { rows } = await db.query<{ author_id: string | null; community_id: string }>(
     `SELECT e.author_id, e.community_id FROM events e WHERE e.id = $1 LIMIT 1`,
     [eventId]
   )
   if (!rows[0]) return false
+  const actor = await getAccess(rows[0].community_id, userId)
+  if (actor.role === null) return false                       // plus membre : plus rien
   if (rows[0].author_id === userId) return true
-
-  const { rows: mods } = await db.query<{ role: string }>(
-    `SELECT role FROM community_members WHERE community_id = $1 AND user_id = $2 LIMIT 1`,
-    [rows[0].community_id, userId]
-  )
-  const role = mods[0]?.role
-  return role === 'owner' || role === 'admin' || role === 'moderator'
+  if (!actor.permissions.includes('moderate_content')) return false
+  if (actor.rank >= rankOf('admin') || !rows[0].author_id) return true
+  const author = await getAccess(rows[0].community_id, rows[0].author_id)
+  return outranks(actor, author.role)
 }
 
 // -- Routes -------------------------------------------------------------------
@@ -163,7 +175,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       ? await db.query(
           `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
                   e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
-                  e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
+                  e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
                   e.created_at, e.updated_at,
                   u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
                   (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going') AS going_count,
@@ -178,7 +190,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       : await db.query(
           `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
                   e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
-                  e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
+                  e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
                   e.created_at, e.updated_at,
                   u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
                   (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going') AS going_count,
@@ -200,7 +212,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
     const { rows } = await db.query(
       `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
               e.starts_at, e.ends_at, e.is_all_day, e.is_public, e.cover_url, e.tags, e.is_cancelled,
-              e.rsvp_enabled, e.max_attendees, e.ticket_price, e.ticket_currency, e.ticket_url,
+              e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
               e.created_at, e.updated_at, e.community_id,
               u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
               (SELECT COUNT(*)::int FROM event_rsvps er WHERE er.event_id = e.id AND er.status = 'going')    AS going_count,
@@ -245,7 +257,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
         `SELECT community_id FROM community_members WHERE user_id = $1 LIMIT 1`,
         [userId]
       )
-      if (!comm[0]) return reply.status(400).send({ error: "Tu dois faire partie d'une communauté" })
+      if (!comm[0]) return reply.status(400).send({ error: "Tu dois faire partie d'une communauté", code: 'NOT_A_MEMBER' })
 
       if (body.cover_url && !isOwnUploadUrl(body.cover_url)) return reply.status(400).send(COVER_INVALID)
 
@@ -288,7 +300,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const userId = (req as any).user.userId
       if (!(await canManageEvent(userId, req.params.id))) {
-        return reply.status(403).send({ error: 'Non autorise' })
+        return reply.status(403).send({ error: 'Non autorise', code: 'EVENT_FORBIDDEN' })
       }
 
       const body = req.body
@@ -327,7 +339,18 @@ export default async function eventsRoutes(app: FastifyInstance) {
       if (body.ticket_currency !== undefined) addField('ticket_currency', body.ticket_currency)
       if (body.ticket_url      !== undefined) addField('ticket_url',      body.ticket_url)
 
-      if (sets.length === 0) return reply.status(400).send({ error: 'Aucun champ a modifier' })
+      if (sets.length === 0) return reply.status(400).send({ error: 'Aucun champ a modifier', code: 'EVENT_NOTHING_TO_UPDATE' })
+
+      // La fin ne précède jamais le début, même si un seul des deux change
+      if (body.starts_at !== undefined || body.ends_at !== undefined) {
+        const { rows: cur } = await db.query<{ starts_at: string; ends_at: string | null }>(
+          `SELECT starts_at, ends_at FROM events WHERE id = $1`, [req.params.id])
+        const st = body.starts_at ?? cur[0]?.starts_at
+        const en = body.ends_at !== undefined ? body.ends_at : cur[0]?.ends_at
+        if (st && en && new Date(en) < new Date(st)) {
+          return reply.status(400).send({ error: 'The end is before the start', code: 'EVENT_ENDS_BEFORE_START' })
+        }
+      }
 
       sets.push('updated_at = NOW()', 'last_indexed_at = NULL')
       vals.push(req.params.id)
@@ -349,7 +372,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const userId = (req as any).user.userId
       if (!(await canManageEvent(userId, req.params.id))) {
-        return reply.status(403).send({ error: 'Non autorise' })
+        return reply.status(403).send({ error: 'Non autorise', code: 'EVENT_FORBIDDEN' })
       }
 
       const { rows: gone } = await db.query<{ is_public: boolean }>(
@@ -367,8 +390,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       const userId = (req as any).user.userId
 
       const { rows: ev } = await db.query(
-        `SELECT id, rsvp_enabled, max_attendees, is_public, community_id,
-                (SELECT COUNT(*)::int FROM event_rsvps WHERE event_id = $1 AND status = 'going') AS going_count
+        `SELECT id, rsvp_enabled, max_attendees, is_public, community_id, is_cancelled, starts_at
          FROM events WHERE id = $1`,
         [req.params.id]
       )
@@ -376,24 +398,40 @@ export default async function eventsRoutes(app: FastifyInstance) {
         return reply.status(404).send({ error: 'Evenement introuvable', code: 'EVENT_NOT_FOUND' })
       }
       if (!ev[0].rsvp_enabled) return reply.status(400).send({ error: 'Les RSVPs ne sont pas actives', code: 'RSVP_DISABLED' })
+      if (ev[0].is_cancelled) return reply.status(400).send({ error: 'This event is cancelled', code: 'EVENT_CANCELLED' })
+      if (new Date(ev[0].starts_at) < new Date()) return reply.status(400).send({ error: 'This event has already started', code: 'EVENT_PAST' })
 
-      if (req.body.status === 'going' && ev[0].max_attendees !== null) {
-        const { rows: existing } = await db.query(
-          `SELECT status FROM event_rsvps WHERE event_id = $1 AND user_id = $2`,
-          [req.params.id, userId]
-        )
-        const alreadyGoing = existing[0]?.status === 'going'
-        if (!alreadyGoing && ev[0].going_count >= ev[0].max_attendees) {
-          return reply.status(400).send({ error: "L'evenement est complet", code: 'EVENT_FULL' })
+      // La dernière place : compter PUIS inscrire laissait passer deux personnes en
+      // même temps. On verrouille la ligne de l'événement le temps de recompter et
+      // d'inscrire (transaction) : la seconde attend, recompte, et trouve complet.
+      const client = await (db as any).connect()
+      try {
+        await client.query('BEGIN')
+        const { rows: locked } = await client.query(
+          `SELECT max_attendees FROM events WHERE id = $1 FOR UPDATE`, [req.params.id])
+        if (req.body.status === 'going' && locked[0]?.max_attendees != null) {
+          const { rows: cnt } = await client.query(
+            `SELECT COUNT(*) FILTER (WHERE status = 'going')::int AS going,
+                    COUNT(*) FILTER (WHERE status = 'going' AND user_id = $2)::int AS mine
+               FROM event_rsvps WHERE event_id = $1`, [req.params.id, userId])
+          if (!cnt[0]?.mine && cnt[0]?.going >= locked[0].max_attendees) {
+            await client.query('ROLLBACK')
+            return reply.status(400).send({ error: "L'evenement est complet", code: 'EVENT_FULL' })
+          }
         }
+        await client.query(
+          `INSERT INTO event_rsvps (event_id, user_id, status)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (event_id, user_id) DO UPDATE SET status = EXCLUDED.status, created_at = NOW()`,
+          [req.params.id, userId, req.body.status]
+        )
+        await client.query('COMMIT')
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => {})
+        throw err
+      } finally {
+        client.release()
       }
-
-      await db.query(
-        `INSERT INTO event_rsvps (event_id, user_id, status)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (event_id, user_id) DO UPDATE SET status = EXCLUDED.status, created_at = NOW()`,
-        [req.params.id, userId, req.body.status]
-      )
 
       const { rows: userData } = await db.query(
         `SELECT id, username, avatar FROM users WHERE id = $1`,

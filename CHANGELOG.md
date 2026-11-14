@@ -81,6 +81,24 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
   (`@équipe` à 12 personnes vaut 12), et les noms accentués sont lus. Partout où OctoGuard juge :
   chat, forum (titre compris), wiki, « Tu es sûr ? » avant l'envoi et rejeu d'une règle sur 30 jours.
 
+### Calendrier : un socle sain
+
+- **Les heures sont justes.** Un événement tapé à 20 h par un membre en France s'enregistrait 20 h
+  à l'heure du serveur, donc s'affichait 21 h l'hiver et 22 h l'été ; « demain 18 h » proposé par
+  défaut s'affichait 17 h ; le formulaire de modification ne disait pas la même heure que la page.
+  C'est maintenant le navigateur, qui connaît ton fuseau, qui donne l'heure ; une journée entière
+  reste la même date pour tout le monde.
+- **Un billet gratuit affiche « Gratuit »** (et plus « 0,00 € »), **les avatars des participants
+  s'affichent**, et « Participants » ne compte plus ceux qui ont répondu « Je ne peux pas ».
+- **La dernière place ne part qu'une fois** : deux inscriptions en même temps sur la dernière place
+  n'en font plus passer deux. Un événement annulé ou passé n'accepte plus d'inscription.
+- **Supprimer et annuler demandent une confirmation** (un clic suffisait).
+- **Les bonnes personnes gèrent un événement** : la même règle que le reste de la modération (rôle,
+  grade et garde-fou de rang), et un auteur qui a quitté la communauté ou qui a été banni n'a plus
+  la main dessus.
+- Le serveur refuse un lien d'achat qui n'est pas une adresse `https://`, des coordonnées hors du
+  globe, et une fin avant le début ; chaque refus s'affiche en une phrase claire.
+
 ### Modération : une équipe, des droits, une file
 
 - **Les grades donnent enfin de vrais droits.** Les permissions d'un grade étaient enregistrées
