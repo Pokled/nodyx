@@ -38,6 +38,7 @@
 	import ChannelSidebar from '$lib/components/layout/ChannelSidebar.svelte';
 	import MemberSidebar from '$lib/components/layout/MemberSidebar.svelte';
 	import { get } from 'svelte/store';
+	import { isInVoice } from '$lib/voice';
 	import { voiceStore, voiceChannelMembersStore, voiceEventsStore, screenShareStore, remoteScreenStore } from '$lib/voice';
 	import { locale, t, LOCALES, type Locale } from '$lib/i18n';
 	import { filAriane } from '$lib/filAriane';
@@ -209,6 +210,15 @@
 	// figée.
 	let swUpdateReady = false;
 	let swReloading   = false;
+
+	/**
+	 * Un appel vocal, un partage d'écran ou un son en cours : un rechargement le
+	 * couperait net. On attend que ce soit fini (la navigation suivante recharge).
+	 */
+	function occupeAvecUnMedia(): boolean {
+		if (get(isInVoice)) return true;
+		return [...document.querySelectorAll<HTMLMediaElement>('audio, video')].some((m) => !m.paused && !m.ended);
+	}
 	// Le fuseau du lecteur, pour les heures d'événement (lib/eventTime) : connu dès que
 	// la page est chargée ; avant, on affiche l'heure de l'organisateur en le disant.
 	onMount(() => { viewerZone.set(browserZone()); });
@@ -229,7 +239,7 @@
 			// et un rechargement en boucle serait pire que le bug d'origine.
 			if (swReloading) return;
 			swUpdateReady = true;
-			if (enTrainDEcrire()) return;   // le beforeNavigate ci-dessous prendra le relais
+			if (enTrainDEcrire() || occupeAvecUnMedia()) return;   // le beforeNavigate ci-dessous prendra le relais
 			swReloading = true;
 			window.location.reload();
 		}
@@ -243,7 +253,31 @@
 		const onControllerChange = () => signal(navigator.serviceWorker.controller);
 		navigator.serviceWorker.addEventListener('message', onMessage);
 		navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+		// Un onglet resté ouvert ne découvre une nouvelle version que lorsque le
+		// navigateur revérifie le service worker : à une navigation COMPLÈTE, ou
+		// au bout de 24 h. Or une application SvelteKit ne fait que des navigations
+		// internes : l'onglet du salon ouvert le matin tournait encore l'ancien
+		// JavaScript le soir, et la nouveauté du jour « ne marchait pas » (vécu
+		// le 14/11 avec « # »). On demande donc au navigateur de revérifier
+		// toutes les 5 minutes, et dès que l'onglet redevient visible (au plus
+		// une fois par minute). Le fichier du service worker porte la version du
+		// build : s'il a changé, le nouveau s'installe, prend la main, et la
+		// chaîne ci-dessus recharge la page (en épargnant un texte en cours, un
+		// appel vocal ou un son qui joue : voir occupeAvecUnMedia).
+		let derniereVerif = Date.now();
+		const verifier = () => {
+			derniereVerif = Date.now();
+			navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => {});
+		};
+		const minuterie = setInterval(verifier, 5 * 60_000);
+		const onVisible = () => {
+			if (document.visibilityState === 'visible' && Date.now() - derniereVerif > 60_000) verifier();
+		};
+		document.addEventListener('visibilitychange', onVisible);
 		return () => {
+			clearInterval(minuterie);
+			document.removeEventListener('visibilitychange', onVisible);
 			navigator.serviceWorker.removeEventListener('message', onMessage);
 			navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
 		};
@@ -251,7 +285,7 @@
 	beforeNavigate((nav) => {
 		// Navigation interne vers une URL connue : on force un rechargement complet
 		// pour basculer sur la nouvelle version (assets + SSR frais).
-		if (swUpdateReady && nav.to?.url && nav.type !== 'leave') {
+		if (swUpdateReady && nav.to?.url && nav.type !== 'leave' && !occupeAvecUnMedia()) {
 			nav.cancel();
 			window.location.href = nav.to.url.href;
 		}
