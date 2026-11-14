@@ -26,11 +26,11 @@ export interface CommandDef {
 	descVars?: Record<string, string>
 	exampleKey?: string
 	/** Famille, pour regrouper la liste du « / ». */
-	group: 'help' | 'call' | 'show' | 'play' | 'bang'
+	group: 'help' | 'create' | 'call' | 'show' | 'play' | 'bang'
 	/** Autres noms acceptés (`/?`), trouvés aussi par la liste. Jamais rien en « ai » (réservé). */
 	aliases?: string[]
 	/** Action locale : la commande ne s'envoie pas, elle agit dans la page. */
-	local?: 'help'
+	local?: 'help' | 'event'
 	where: Place[]
 	/** Réservé à l'équipe : montré à l'équipe seulement (le serveur refuse de toute façon). */
 	team?: boolean
@@ -60,6 +60,9 @@ export const COMMANDS: CommandDef[] = [
 	// / : l'aide, EN TÊTE de la liste du « / » (ouvre le pop-up, rien n'est envoyé).
 	// Pas d'alias « aide » : « /ai » est RÉSERVÉ à une future commande d'IA (Jonathan, 14/11).
 	{ id: 'help', trigger: '/', name: 'help', aliases: ['?'], local: 'help', descKey: 'cmd.help_cmd', exampleKey: 'cmd.help_cmd_ex', group: 'help', where: ['chat'], keywordsKey: 'cmd.kw_help' },
+	// Créer (lot C3) : rien n'est publié par la commande, elle ouvre le formulaire déjà rempli.
+	// Nom sans accent : « /événement » est retrouvé quand même (comparaison sans accents).
+	{ id: 'event', trigger: '/', name: 'evenement', nameKey: 'cmd.event_cmd_name', aliases: ['event'], argsKey: 'cmd.arg_event_cmd', local: 'event', descKey: 'cmd.event_cmd', exampleKey: 'cmd.event_cmd_ex', group: 'create', where: ['chat'], keywordsKey: 'cmd.kw_event_cmd' },
 	// / : jouer (le chat)
 	{ id: 'roll', trigger: '/', name: 'roll', args: '2d6', descKey: 'cmd.roll', exampleKey: 'cmd.roll_ex', group: 'play', where: ['chat'], keywordsKey: 'cmd.kw_roll' },
 	{ id: 'flip', trigger: '/', name: 'flip', descKey: 'cmd.flip', group: 'play', where: ['chat'], keywordsKey: 'cmd.kw_flip' },

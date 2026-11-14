@@ -5,7 +5,9 @@
 	import { PUBLIC_API_URL } from '$app/env/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import LocationFinder from '$lib/components/LocationFinder.svelte';
-	import { defaultLocal, sendIso, browserZone } from '$lib/eventTime';
+	import { defaultLocal, inputValue, sendIso, browserZone } from '$lib/eventTime';
+	import { page } from '$app/state';
+	import { readStartParam, readTitleParam } from '$lib/eventCommand';
 	import { onMount } from 'svelte';
 	import type { PageData, ActionData } from './$types';
 
@@ -17,8 +19,18 @@
 	let uploadingCover = $state(false);
 
 	// Date par défaut = demain à 18 h, À L'HEURE DU MEMBRE (toISOString donnait l'heure UTC : 17:00 en France)
-	const defaultStart = defaultLocal(18);
-	const defaultEnd   = defaultLocal(18, 2);
+	// « /événement Pizza vendredi 20h » arrive ici avec ?title= et ?start= (lot C3) : on
+	// préremplit seulement ce qui est sûr (readTitleParam / readStartParam : format strict,
+	// jour réel, pas dans le passé). Jamais d'envoi : la personne vérifie et publie.
+	const preTitle = readTitleParam(page.url.searchParams.get('title'));
+	const preStart = readStartParam(page.url.searchParams.get('start'));
+	function plusHours(date: string, time: string, h: number): string {
+		const [y, m, d] = date.split('-').map(Number);
+		const [hh, mi] = time.split(':').map(Number);
+		return inputValue(new Date(y, m - 1, d, hh + h, mi).toISOString(), false);
+	}
+	const defaultStart = preStart ? `${preStart.date}T${preStart.time ?? '18:00'}` : defaultLocal(18);
+	const defaultEnd   = preStart ? plusHours(preStart.date, preStart.time ?? '18:00', 2) : defaultLocal(18, 2);
 
 	// Le fuseau de l'organisateur (« Europe/Paris »), donné par son navigateur : chaque
 	// lecteur verra l'heure dans le sien, et « 20:00 à Paris, heure de l'organisateur ».
@@ -169,7 +181,7 @@
 			<!-- Titre -->
 			<div>
 				<label for="title" class="block text-sm font-medium text-[var(--nx-text)] mb-1.5">Titre <span class="text-[var(--nx-bad)]">*</span></label>
-				<input id="title" name="title" type="text" required
+				<input id="title" name="title" type="text" required value={preTitle}
 				       placeholder={tFn('event.title_placeholder')}
 				       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
